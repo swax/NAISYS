@@ -7,10 +7,10 @@ interface MemoryNode {
   loaded: boolean;
   readonly: boolean;
 }
-const memoryStack: MemoryNode[] = [];
+const memoryList: MemoryNode[] = [];
 
 export function addMemory(title: string, value: string) {
-  memoryStack.push({
+  memoryList.push({
     title,
     value,
     loaded: true,
@@ -19,17 +19,19 @@ export function addMemory(title: string, value: string) {
 }
 
 export function deleteMemory(index: number) {
-  memoryStack.splice(index, 1);
+  memoryList.splice(index, 1);
 }
 
 export function updateMemory(index: number, value: string) {
-  memoryStack[index].value = value;
+  memoryList[index].value = value;
 }
 
-export function printMemories() {
-  return memoryStack.map((memory, index) => {
-    return `${index}: ${memory.title}\n${
-      memory.loaded ? memory.value : "Not Loaded"
-    }\n\n`;
-  });
+export function printMemoryList() {
+  return memoryList
+    .map((memory, index) => {
+      return `${index}: ${memory.title}\n${
+        memory.loaded ? memory.value : "Not Loaded"
+      }`;
+    })
+    .join("\n\n");
 }

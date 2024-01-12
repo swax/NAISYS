@@ -1,3 +1,5 @@
-export function setSystemMessage(x: string) {
-    
+import { printMemoryList } from "./memoryListService.js";
+
+export function buildContext() {
+    return printMemoryList();
 }
