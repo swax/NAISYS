@@ -1,6 +1,10 @@
 import * as readline from "readline";
-import OpenAI from "openai";
-import { memoryTreeToString, deleteMemoryBranch, addMemoryLeaf } from "./services/memoryTreeService";
+//import OpenAI from "openai";
+import {
+  memoryTreeToString,
+  deleteMemoryBranch,
+  addMemoryLeaf,
+} from "./services/memoryTreeService.js";
 
 require("dotenv").config();
 
@@ -45,7 +49,7 @@ readlineInterface
         break;
       case "wait":
         console.log("Waiting...");
-        await new Promise((r) => setTimeout(r, 60 * 1000));
+        //await new Promise((r) => setTimeout(r, 60 * 1000));
         break;
       case "push":
         const pushId = parseInt(line.trim().split(" ")[1]);
@@ -59,7 +63,7 @@ readlineInterface
       case "ask_gpt":
         const question = line.trim().split(" ").slice(1).join(" ");
 
-        const openai = new OpenAI({
+        /*const openai = new OpenAI({
           apiKey: process.env.OPENAI_API_KEY,
         });
         const chatCompletion = await openai.chat.completions.create({
@@ -68,7 +72,7 @@ readlineInterface
         });
 
         const answer = chatCompletion.choices[0].message.content;
-        console.log(answer);
+        console.log(answer);*/
         break;
       case "exit":
         readlineInterface.close();

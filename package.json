@@ -2,9 +2,10 @@
   "name": "naisys",
   "version": "1.0.0",
   "main": "index.js",
+  "type": "module",
   "scripts": {
     "compile": "tsc",
-    "start": "node dist/shell.js"
+    "start": "node dist/shell2.js"
   },
   "devDependencies": {
     "@types/node": "^20.10.8",

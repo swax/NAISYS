@@ -1,31 +1,59 @@
-import { addMemory } from "./services/memoryMapService";
+import { buildContext } from "./services/contextService.js";
+import { init } from "./services/startupService.js";
+import * as readline from "readline";
+import dotenv from "dotenv";
+dotenv.config();
 
-addMemory(
-  "MOTD",
-  `VR News World! The latest in Virtual Reality news from across the internet.
-Welcome back Jill, you have 1 new message from Jack`
-);
 
-addMemory(
-  "System Users",
-  `john: IT Support
-jack: Reporter
-steve: Proofreader
-bob: Business Manager
-ashley: HR
-jill: Editor`
-);
+const readlineInterface = readline.createInterface({
+  input: process.stdin,
+  output: process.stdout,
+});
 
-addMemory(
-  "Shell Commands",
-  `ask_gpt <question>: Ask GPT-3 a question
-mail: Checks your mail for messages
-xxccdd: Do not use this command yet
-wait: Take a break until a notification wakes you up
-suggestion: Suggest a command for adding to the system
-unix commands: ls, cd, mkdir, rm, rmdir, touch, cat, exit
-memory_tree <add|update|delete|finish> [--id ID] [--data DATA]`
-);
+interface StartupParams {
+  username: string;
+  model: string;
+  input: "manual" | "gpt";
+}
 
-// prompt 
-// jill@vr-news-world:~$
+const startupParams: StartupParams = {
+  username: "jill",
+  model: "gpt-3.5-turbo",
+  input: "manual",
+};
+
+const getInput = (query: string) => {
+  return new Promise<string>((resolve) => {
+    readlineInterface.question(query, (answer) => {
+      resolve(answer);
+    });
+  });
+};
+
+init(startupParams.username);
+
+let lastInput = "";
+
+while (true) {
+  // clear console
+  readline.cursorTo(process.stdout, 0, 0);
+  readline.clearScreenDown(process.stdout);
+
+  const prompt = `${startupParams.username}@vr-news-world:~$ `;
+
+  let context = buildContext();
+
+  context = prompt + lastInput + "\n" + context;
+
+  if (startupParams.input === "manual") {
+    console.log(context);
+    lastInput = await getInput(prompt);
+  } else {
+    context += prompt;
+
+    console.log(context);
+
+    // todo send gpt request
+    lastInput = "...Response from gpt...";
+  }
+}
