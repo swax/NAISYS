@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "compile": "tsc",
-    "start": "node dist/shell2.js"
+    "start": "node dist/shell3.js"
   },
   "devDependencies": {
     "@types/node": "^20.10.8",
