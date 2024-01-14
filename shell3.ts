@@ -132,12 +132,11 @@ MOTD:
       processNextLine = false;
 
       const line = gptConsoleInputLines.shift() || "";
-      const command = line.trim().split(" ")[0];
-      const cmdParams = line.trim().split(" ")[1];
+      const cmdParams = line.trim().split(" ");
 
-      if (!command) continue;
-      
-      switch (command) {
+      if (!cmdParams[0]) continue;
+
+      switch (cmdParams[0]) {
         case "suggest":
           addToContext("Suggestion noted. Thank you for your feedback!");
           break;
@@ -158,7 +157,7 @@ MOTD:
           break;
 
         case "mkdir":
-          const newDirName = cmdParams;
+          const newDirName = cmdParams[1];
           if (!newDirName) {
             addToContext("Please enter a directory name");
             break;
@@ -173,7 +172,7 @@ MOTD:
           break;
 
         case "cd":
-          const dirName = cmdParams;
+          const dirName = cmdParams[1];
           if (!dirName) {
             addToContext("Please enter a directory name");
             break;
@@ -191,7 +190,7 @@ MOTD:
           break;
 
         case "touch":
-          const fileName = cmdParams;
+          const fileName = cmdParams[1];
           if (!fileName) {
             addToContext("Please enter a file name");
             break;
@@ -205,8 +204,72 @@ MOTD:
           processNextLine = true;
           break;
 
+        case "ls":
+          addToContext("Directories: ");
+          currentDirectory.directories.forEach((dir) => addToContext(dir.name));
+          addToContext("Files: ");
+          currentDirectory.files?.forEach((file) => addToContext(file.name));
+          break;
+
+        case "echo":
+          addToContext(
+            "Echo not supported. Use 'cat' to view a file and 'cat > filename << EOF' to write a file"
+          );
+          break;
+
+        case "vi":
+          addToContext(
+            "VI not supported. Use 'cat' to view a file and 'cat > filename << EOF' to write a file"
+          );
+          break;
+
+        case "nano":
+          addToContext(
+            "Nano not supported. Use 'cat' to view a file and 'cat > filename << EOF' to write a file"
+          );
+          break;
+
+        case "cat":
+          // print out the file
+          let filename = cmdParams[1];
+          if (!filename) {
+            addToContext("Please enter a file name");
+            break;
+          }
+
+          // write
+          if (filename == ">") {
+            filename = cmdParams[2];
+            if (!filename) {
+              addToContext("Please enter a file name");
+              break;
+            }
+            const catWriteFile = currentDirectory.files?.find(
+              (file) => file.name === filename
+            );
+            if (!catWriteFile) {
+              addToContext(`File ${filename} not found`);
+              break;
+            }
+            const catWriteFileContent = gptConsoleInputLines.join("\n");
+            catWriteFile.content = catWriteFileContent;
+            addToContext(`File ${filename} updated!`);
+          } else {
+            const catFile = currentDirectory.files?.find(
+              (file) => file.name === filename
+            );
+            if (!catFile) {
+              addToContext(`File ${filename} not found`);
+              break;
+            }
+            addToContext(catFile.content);
+          }
+          break;
+
         default:
-          addToContext(`Please enter a valid command: '${command}' is unknown`);
+          addToContext(
+            `Please enter a valid command: '${cmdParams[0]}' is unknown`
+          );
       }
     }
   }
@@ -216,20 +279,3 @@ function addToContext(message: string) {
   context += message + "\n";
   console.log(message);
 }
-`
-
-chatgpt@system-01:~$ gpt input
-
-gpt output
-
-after command switch to root
-swax@system-01:~#
-
-dont send root 
-
-rootcomamnds - set MOTD, manually endcycle, context, etc..
-  context prints context that will be sent after root command
-  no input on rootcommand will jump right to gpt 
-  input into root will give another chance for a root command
-
-then back to chatgpt@system-01:~$`;
