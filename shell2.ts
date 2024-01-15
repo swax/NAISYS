@@ -1,4 +1,4 @@
-import { buildContext } from "./services/contextService.js";
+//import { buildContext } from "./services/contextService.js";
 import { init } from "./services/startupService.js";
 import * as readline from "readline";
 import dotenv from "dotenv";
@@ -41,7 +41,7 @@ while (true) {
 
   const prompt = `${startupParams.username}@vr-news-world:~$ `;
 
-  let context = buildContext();
+  let context = ""; //buildContext();
 
   context = prompt + lastInput + "\n" + context;
 
