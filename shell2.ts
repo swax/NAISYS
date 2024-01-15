@@ -1,5 +1,5 @@
 //import { buildContext } from "./services/contextService.js";
-import { init } from "./services/startupService.js";
+import { init } from "./services/inactive/startupService.js";
 import * as readline from "readline";
 import dotenv from "dotenv";
 dotenv.config();

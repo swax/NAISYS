@@ -1,11 +1,11 @@
 import { consoleService } from "./consoleService.js";
 import { contextService } from "./contextService.js";
 import { envService } from "./envService.js";
-import { sandboxFileSystem } from "./sandboxFileSystemService.js";
+import { fileSystemService } from "./file-system/fileSystemService.js";
 import { promptService } from "./promptService.js";
 
 class CommandService {
-  public handleConsoleInput(prompt: string, consoleInput: string) {
+  public async handleConsoleInput(prompt: string, consoleInput: string) {
     const consoleInputLines = consoleInput.trim().split("\n");
 
     // iterate lines
@@ -51,16 +51,6 @@ class CommandService {
         break;
       }
 
-      const inMemResponse = sandboxFileSystem.handleCommand(
-        line,
-        consoleInputLines
-      );
-
-      if (inMemResponse.commandHandled) {
-        processNextLine = inMemResponse.processNextLine;
-        continue;
-      }
-
       switch (cmdParams[0]) {
         case "suggest":
           contextService.append(
@@ -102,9 +92,14 @@ class CommandService {
           break;
 
         default:
-          contextService.append(
-            `Please enter a valid command: '${cmdParams[0]}' is unknown`
+          const fsResponse = await fileSystemService.handleCommand(
+            line,
+            consoleInputLines
           );
+
+          if (fsResponse.commandHandled) {
+            processNextLine = fsResponse.processNextLine;
+          }
       }
     }
 

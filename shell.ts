@@ -4,7 +4,7 @@ import {
   memoryTreeToString,
   deleteMemoryBranch,
   addMemoryLeaf,
-} from "./services/memoryTreeService.js";
+} from "./services/inactive/memoryTreeService.js";
 
 require("dotenv").config();
 

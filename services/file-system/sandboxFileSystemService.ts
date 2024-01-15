@@ -1,5 +1,5 @@
-import { consoleService } from "./consoleService.js";
-import { contextService } from "./contextService.js";
+import { consoleService } from "../consoleService.js";
+import { contextService } from "../contextService.js";
 
 interface FileSystemFile {
   name: string;
@@ -23,7 +23,11 @@ class SandboxFileSystem {
 
   currentDirectory = this.rootDirectory;
 
-  getCurrentPath() {
+  getName() {
+    return "Sandbox";
+  }
+
+  async getCurrentPath() {
     let path = "";
     let currentDir: FileSystemDirectory | undefined = this.currentDirectory;
     while (currentDir?.parent) {
@@ -33,7 +37,7 @@ class SandboxFileSystem {
     return "/" + path;
   }
 
-  handleCommand(line: string, consoleInputLines: string[]) {
+  async handleCommand(line: string, consoleInputLines: string[]) {
     const cmdParams = line.trim().split(" ");
 
     // Route user to context friendly edit commands that can read/write the entire file in one go
@@ -182,6 +186,10 @@ class SandboxFileSystem {
         break;
 
       default:
+        contextService.append(
+          `Please enter a valid command: '${cmdParams[0]}' is unknown`
+        );
+
         commandHandled = false;
         processNextLine = false;
         break;

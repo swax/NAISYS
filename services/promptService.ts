@@ -1,11 +1,13 @@
 import { envService } from "./envService.js";
-import { sandboxFileSystem } from "./sandboxFileSystemService.js";
+import { fileSystemService } from "./file-system/fileSystemService.js";
 
 class PromptService {
-  public getPrompt() {
+  public async getPrompt() {
     const promptSuffix = envService.inputMode == "root" ? "#" : "$";
 
-    return `${this.getPromptPrefix()}:${sandboxFileSystem.getCurrentPath()}${promptSuffix} `;
+    const currentPath = await fileSystemService.getCurrentPath();
+
+    return `${this.getPromptPrefix()}:${currentPath}${promptSuffix} `;
   }
 
   public getPromptPrefix() {
