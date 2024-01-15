@@ -2,11 +2,12 @@ import dotenv from "dotenv";
 import OpenAI from "openai";
 import { contextService } from "./contextService.js";
 import { envService } from "./envService.js";
+import { consoleService } from "./consoleService.js";
 
 dotenv.config();
 
 if (process.env.OPENAI_API_KEY === undefined) {
-  console.log("Error: OPENAI_API_KEY is not defined");
+  consoleService.comment("Error: OPENAI_API_KEY is not defined");
 }
 
 class GptService {
@@ -20,7 +21,7 @@ class GptService {
         {
           role: "system",
           content: `You are ${envService.username} a new hire with the job of creating a news website from the command line. 
-            The 'user' is the command line interface itself presenting you with the next command prompt. 
+            The 'user' role is the command line interface itself presenting you with the next command prompt. 
             Make sure the read the command line rules in the MOTD carefully.`,
         },
         { role: "user", content: contextService.context },

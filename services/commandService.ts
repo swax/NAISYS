@@ -2,6 +2,7 @@ import { consoleService } from "./consoleService.js";
 import { contextService } from "./contextService.js";
 import { envService } from "./envService.js";
 import { inMemoryFileSystem } from "./inMemoryFileSystemService.js";
+import { promptService } from "./promptService.js";
 
 class CommandService {
   public handleConsoleInput(prompt: string, consoleInput: string) {
@@ -11,30 +12,37 @@ class CommandService {
     let firstLine = true;
     let processNextLine = true;
     let endcycle = false;
-    const promptPrefix = envService.getPromptPrefix();
+    const promptPrefix = promptService.getPromptPrefix();
 
     while (processNextLine) {
       processNextLine = false;
 
-      const line = consoleInputLines.shift() || "";
+      let line = consoleInputLines.shift() || "";
       if (!line) {
         break;
       }
 
-      // trim repeat prompts
-      if (line.startsWith(promptPrefix)) {
+      // fix common error where chat gpt tries to by the prompt
+      if (line.startsWith(prompt)) {
+        line = line.slice(prompt.length);
+      } else if (line.startsWith(promptPrefix)) {
         consoleService.comment(
-          `Breaking processing of GPT response due to prompt in the response: ${line}`
+          `Breaking processing of GPT response due to prompt in the response and wrong current folder: ${line}`
         );
         break;
-      } else if (firstLine) {
-        firstLine = false;
-        // append break line in case gpt did not send one
-        // later calls to contextService.append() will automatically append a break line
-        contextService.append(line, "endPrompt");
-        consoleService.output(prompt + line);
-      } else {
-        contextService.append(line);
+      }
+
+      if (envService.inputMode == "gpt") {
+        // trim repeat prompts
+        if (firstLine) {
+          firstLine = false;
+          // append break line in case gpt did not send one
+          // later calls to contextService.append() will automatically append a break line
+          contextService.append(line, "endPrompt");
+          consoleService.output(prompt + line);
+        } else {
+          contextService.append(line);
+        }
       }
 
       const cmdParams = line.trim().split(" ");
@@ -60,10 +68,6 @@ class CommandService {
           );
           break;
 
-        case "talk":
-          contextService.append("Message sent!");
-          break;
-
         case "endsession":
           envService.previousSessionNotes = consoleInput
             .trim()
@@ -71,7 +75,30 @@ class CommandService {
             .slice(1)
             .join(" ");
           endcycle = true;
-          console.log("------------------------------------------------------");
+          consoleService.comment(
+            "------------------------------------------------------"
+          );
+          break;
+
+        case "talk":
+          const talkMsg = consoleInput.trim().split(" ").slice(1).join(" ");
+
+          if (envService.inputMode === "gpt") {
+            contextService.append("Message sent!");
+          } else if (envService.inputMode === "root") {
+            envService.toggleInputMode("gpt");
+            contextService.append(
+              `Message from root@${envService.hostname}: ${talkMsg}`
+            );
+            envService.toggleInputMode("root");
+          }
+
+          break;
+
+        case "context":
+          consoleService.output("#####################");
+          consoleService.output(contextService.context);
+          consoleService.output("#####################");
           break;
 
         default:
