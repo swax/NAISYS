@@ -4,6 +4,8 @@ import { contextService } from "./services/contextService.js";
 import { gptService } from "./services/gptService.js";
 import { envService } from "./services/envService.js";
 import { promptService } from "./services/promptService.js";
+import { consoleService } from "./services/consoleService.js";
+import { fileSystemService } from "./services/file-system/fileSystemService.js";
 
 const readlineInterface = readline.createInterface({
   input: process.stdin,
@@ -17,6 +19,8 @@ const getInput = (query: string) => {
     });
   });
 };
+
+consoleService.comment("File System set to: " + fileSystemService.getName());
 
 while (true) {
   envService.toggleInputMode("gpt");
@@ -36,7 +40,7 @@ MOTD:
   let endcycle = false;
 
   while (!endcycle) {
-    let prompt = promptService.getPrompt();
+    let prompt = await promptService.getPrompt();
     let input = "";
 
     // Root runs in a shadow mode
@@ -50,7 +54,7 @@ MOTD:
       input = await gptService.send();
     }
 
-    endcycle = commandService.handleConsoleInput(prompt, input);
+    endcycle = await commandService.handleConsoleInput(prompt, input);
 
     if (endcycle) {
       contextService.clear();
