@@ -1,4 +1,6 @@
+import { consoleService } from "../consoleService.js";
 import { contextService } from "../contextService.js";
+import { promptService } from "../promptService.js";
 import { LongRunningShell } from "./longRunningShell.js";
 
 class HybridFileSystem {
@@ -36,12 +38,18 @@ class HybridFileSystem {
     }
 
     let allInput = line;
+    const promptPrefix = promptService.getPromptPrefix();
 
-    if (consoleInputLines.length) {
-      const restOfInput = consoleInputLines.join("\n");
-      contextService.append(restOfInput);
-      allInput += "\n" + restOfInput;
-      consoleInputLines.splice(0, consoleInputLines.length);
+    while (consoleInputLines.length) {
+      const nextLine = consoleInputLines.shift() || "";
+      if (nextLine.startsWith(promptPrefix)) {
+        consoleService.comment(`Breaking due to prompt in the response:`);
+        break;
+      } else {
+        contextService.append(nextLine);
+      }
+
+      allInput += "\n" + nextLine;
     }
 
     const output = await this._shell.executeCommand(allInput);
