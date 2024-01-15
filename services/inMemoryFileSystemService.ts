@@ -11,7 +11,7 @@ interface FileSystemDirectory {
   name: string;
   parent?: FileSystemDirectory;
   directories: FileSystemDirectory[];
-  files?: FileSystemFile[];
+  files: FileSystemFile[];
 }
 
 class InMemoryFileSystem {
@@ -62,6 +62,7 @@ class InMemoryFileSystem {
           name: newDirName,
           parent: this.currentDirectory,
           directories: [],
+          files: [],
         });
         consoleService.comment(`Directory ${newDirName} created!`);
         processNextLine = true;
@@ -118,6 +119,7 @@ class InMemoryFileSystem {
         this.currentDirectory.files?.forEach((file) =>
           contextService.append(file.name)
         );
+        processNextLine = true;
         break;
 
       case "cat":
@@ -142,9 +144,30 @@ class InMemoryFileSystem {
             contextService.append(`File ${filename} not found`);
             break;
           }
-          const catWriteFileContent = consoleInputLines.join("\n");
-          catWriteFile.content = catWriteFileContent;
+
+          if (!consoleInputLines.length) {
+            contextService.append("Please enter file contents followed by EOF");
+            break;
+          }
+
+          let fileContents = "";
+          let line = consoleInputLines.shift();
+          contextService.append(line!);
+
+          while (line !== "EOF") {
+            fileContents += line + "\n";
+
+            if (!consoleInputLines.length) {
+              contextService.append("EOF not found");
+              break;
+            }
+
+            line = consoleInputLines.shift();
+            contextService.append(line!);
+          }
+          catWriteFile.content = fileContents.trim();
           consoleService.comment(`File ${filename} updated!`);
+          processNextLine = true;
         } else {
           const catFile = this.currentDirectory.files?.find(
             (file) => file.name === filename
@@ -154,11 +177,13 @@ class InMemoryFileSystem {
             break;
           }
           contextService.append(catFile.content);
+          processNextLine = true;
         }
         break;
 
       default:
         commandHandled = false;
+        processNextLine = false;
         break;
     }
 

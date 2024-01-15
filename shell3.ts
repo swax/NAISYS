@@ -1,9 +1,9 @@
 import * as readline from "readline";
 import { commandService } from "./services/commandService.js";
 import { contextService } from "./services/contextService.js";
-import { inMemoryFileSystem } from "./services/inMemoryFileSystemService.js";
 import { gptService } from "./services/gptService.js";
 import { envService } from "./services/envService.js";
+import { promptService } from "./services/promptService.js";
 
 const readlineInterface = readline.createInterface({
   input: process.stdin,
@@ -19,6 +19,7 @@ const getInput = (query: string) => {
 };
 
 while (true) {
+  envService.toggleInputMode("gpt");
   contextService.append(`NAISYS 1.0 Shell
 Welcome back ${envService.username}!
 MOTD:
@@ -30,45 +31,36 @@ MOTD:
     talk <user> <message>: Use this command to send a message to another user
     endsession <note>: Ends this session, clears the console log. Add notes to carry over to the next session
   Previous session notes: ${envService.previousSessionNotes}`);
+  envService.toggleInputMode("root");
 
   let endcycle = false;
 
   while (!endcycle) {
-    // Get root input - hidden from context
-    // Accept root commands until a blank one is entered
-    let rootInput = "...";
-    while (rootInput) {
-      rootInput = await getInput(
-        `\nroot@${envService.hostname}:${inMemoryFileSystem.getCurrentPath()}# `
-      );
+    let prompt = promptService.getPrompt();
+    let input = "";
 
-      const rootCommand = rootInput.trim().split(" ")[0];
-      if (!rootCommand) continue;
-
-      switch (rootCommand) {
-        case "talk":
-          const talkMsg = rootInput.trim().split(" ").slice(1).join(" ");
-          contextService.append(
-            `Broadcast Message from root@${envService.hostname}: ${talkMsg}`
-          );
-          break;
-        case "context":
-          console.log("#####################");
-          console.log(contextService.context);
-          console.log("#####################`");
-          break;
-        default:
-          console.log("Invalid root command");
-      }
+    // Root runs in a shadow mode
+    if (envService.inputMode === "root") {
+      input = await getInput(`${prompt}`);
     }
-    console.log("");
+    // When GPT runs input/output is added to the context
+    else if (envService.inputMode === "gpt") {
+      contextService.append(prompt, "startPrompt");
 
-    const gptPrompt = `${envService.getPromptPrefix()}:${inMemoryFileSystem.getCurrentPath()}$ `;
+      input = await gptService.send();
+    }
 
-    contextService.append(gptPrompt, "startPrompt");
+    endcycle = commandService.handleConsoleInput(prompt, input);
 
-    const gptConsoleInput = await gptService.send();
+    if (endcycle) {
+      contextService.clear();
+    }
 
-    endcycle = commandService.handleConsoleInput(gptPrompt, gptConsoleInput);
+    if (
+      (envService.inputMode == "root" && !input) ||
+      envService.inputMode == "gpt"
+    ) {
+      envService.toggleInputMode();
+    }
   }
 }
