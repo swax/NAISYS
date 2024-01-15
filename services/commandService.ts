@@ -23,11 +23,9 @@ class CommandService {
       }
 
       // fix common error where chat gpt tries to by the prompt
-      if (line.startsWith(prompt)) {
-        line = line.slice(prompt.length);
-      } else if (line.startsWith(promptPrefix)) {
+      if (line.startsWith(promptPrefix)) {
         consoleService.comment(
-          `Breaking processing of GPT response due to prompt in the response and wrong current folder: ${line}`
+          `Breaking due to prompt in the response: ${line}`
         );
         break;
       }
