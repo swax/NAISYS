@@ -14,7 +14,7 @@ interface FileSystemDirectory {
   files: FileSystemFile[];
 }
 
-class InMemoryFileSystem {
+class SandboxFileSystem {
   rootDirectory: FileSystemDirectory = {
     name: "",
     directories: [],
@@ -194,4 +194,4 @@ class InMemoryFileSystem {
   }
 }
 
-export const inMemoryFileSystem = new InMemoryFileSystem();
+export const sandboxFileSystem = new SandboxFileSystem();

@@ -1,11 +1,11 @@
 import { envService } from "./envService.js";
-import { inMemoryFileSystem } from "./inMemoryFileSystemService.js";
+import { sandboxFileSystem } from "./sandboxFileSystemService.js";
 
 class PromptService {
   public getPrompt() {
     const promptSuffix = envService.inputMode == "root" ? "#" : "$";
 
-    return `${this.getPromptPrefix()}:${inMemoryFileSystem.getCurrentPath()}${promptSuffix} `;
+    return `${this.getPromptPrefix()}:${sandboxFileSystem.getCurrentPath()}${promptSuffix} `;
   }
 
   public getPromptPrefix() {

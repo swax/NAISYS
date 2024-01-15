@@ -1,5 +1,3 @@
-import { envService } from "./envService.js";
-
 class ConsoleService {
   public output(msg: string) {
     console.log(msg);

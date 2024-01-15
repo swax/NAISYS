@@ -1,7 +1,7 @@
 import { consoleService } from "./consoleService.js";
 import { contextService } from "./contextService.js";
 import { envService } from "./envService.js";
-import { inMemoryFileSystem } from "./inMemoryFileSystemService.js";
+import { sandboxFileSystem } from "./sandboxFileSystemService.js";
 import { promptService } from "./promptService.js";
 
 class CommandService {
@@ -51,7 +51,7 @@ class CommandService {
         break;
       }
 
-      const inMemResponse = inMemoryFileSystem.handleCommand(
+      const inMemResponse = sandboxFileSystem.handleCommand(
         line,
         consoleInputLines
       );
