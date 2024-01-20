@@ -1,4 +1,4 @@
-import { ChildProcessWithoutNullStreams, exec, spawn } from "child_process";
+import { ChildProcessWithoutNullStreams, spawn } from "child_process";
 import { consoleService } from "../consoleService.js";
 
 export class LongRunningShell {
@@ -25,9 +25,9 @@ export class LongRunningShell {
       return;
     }
 
-    if (eventType === "stderr") {
+    /*if (eventType === "stderr") {
       this.output += "stderr: ";
-    }
+    }*/
 
     this.output += dataStr;
 

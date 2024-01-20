@@ -12,3 +12,9 @@ Node.js is used to create a simple shell environment for the LLM that
 - Give the LLM the ability to 'reset' the context and carry over information to a new session/context
 - Proxy commands to a real shell, and help guide the LLM to use context friendly commands
 - Prevent the context from being polluted by catching common errors like output that includes the command prompt itself
+
+Console Colors
+- Purple: Response from GPT, added to context
+- White: Generated locally or from a real shell, added to context
+- Green: Root prompt and root command reponses. Not added to context. Used for diagnostics between calls to GPT
+- Red: Errors, not added to context

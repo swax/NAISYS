@@ -1,5 +1,6 @@
 import { consoleService } from "../consoleService.js";
 import { contextService } from "../contextService.js";
+import { envService } from "../envService.js";
 import { promptService } from "../promptService.js";
 import { LongRunningShell } from "./longRunningShell.js";
 
@@ -14,8 +15,16 @@ class HybridFileSystem {
   async getCurrentPath() {
     if (!this._initd) {
       this._initd = true;
-      await this._shell.executeCommand("mkdir webserver");
-      await this._shell.executeCommand("cd webserver");
+
+      consoleService.commentIfNotEmpty(await this._shell.executeCommand(
+        "mkdir -p /mnt/c/naisys/home/" + envService.username
+      ));
+      consoleService.commentIfNotEmpty(
+        await this._shell.executeCommand(
+          "cd /mnt/c/naisys/home/" + envService.username
+        )
+      );
+
       this._initd = true;
     }
 

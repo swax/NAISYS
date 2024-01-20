@@ -21,6 +21,7 @@ class GptService {
         {
           role: "system",
           content: `You are ${envService.username} a new hire with the job of creating a news website from the command line. 
+            The website should be very simple, able to be used from a text based browser like lynx. Pages should be relatively short. 
             The 'user' role is the command line interface itself presenting you with the next command prompt. 
             Make sure the read the command line rules in the MOTD carefully.`,
         },
