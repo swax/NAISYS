@@ -1,3 +1,4 @@
+import { contextService } from "./contextService.js";
 import { envService } from "./envService.js";
 import { fileSystemService } from "./file-system/fileSystemService.js";
 
@@ -7,7 +8,11 @@ class PromptService {
 
     const currentPath = await fileSystemService.getCurrentPath();
 
-    return `${this.getPromptPrefix()}:${currentPath}${promptSuffix} `;
+    const tokenMax = envService.tokenMax;
+
+    const usedTokens = contextService.getTokenCount();
+
+    return `${this.getPromptPrefix()}:${currentPath} [Tokens: ${usedTokens}/${tokenMax}]${promptSuffix} `;
   }
 
   public getPromptPrefix() {

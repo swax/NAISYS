@@ -1,7 +1,10 @@
+import { get_encoding } from "tiktoken";
 import { ConsoleColor, consoleService } from "./consoleService.js";
 import { envService } from "./envService.js";
 
 class ContextService {
+  private _gpt2encoding = get_encoding("gpt2");
+
   private _context: string = "";
   get context() {
     return this._context;
@@ -36,6 +39,10 @@ class ContextService {
 
   public clear() {
     this._context = "";
+  }
+
+  public getTokenCount() {
+    return this._gpt2encoding.encode(this._context).length;
   }
 }
 
