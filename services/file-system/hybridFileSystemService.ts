@@ -43,10 +43,10 @@ class HybridFileSystem {
     while (consoleInputLines.length) {
       const nextLine = consoleInputLines.shift() || "";
       if (nextLine.startsWith(promptPrefix)) {
-        consoleService.comment(`Breaking due to prompt in the response:`);
+        consoleInputLines.unshift(nextLine);
         break;
       } else {
-        contextService.append(nextLine);
+        contextService.append(nextLine, "gpt");
       }
 
       allInput += "\n" + nextLine;

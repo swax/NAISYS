@@ -6,6 +6,7 @@ import { envService } from "./services/envService.js";
 import { promptService } from "./services/promptService.js";
 import { consoleService } from "./services/consoleService.js";
 import { fileSystemService } from "./services/file-system/fileSystemService.js";
+import chalk from "chalk";
 
 const readlineInterface = readline.createInterface({
   input: process.stdin,
@@ -14,7 +15,7 @@ const readlineInterface = readline.createInterface({
 
 const getInput = (query: string) => {
   return new Promise<string>((resolve) => {
-    readlineInterface.question(query, (answer) => {
+    readlineInterface.question(chalk.greenBright(query), (answer) => {
       resolve(answer);
     });
   });
@@ -37,9 +38,9 @@ MOTD:
   Previous session notes: ${envService.previousSessionNotes}`);
   envService.toggleInputMode("root");
 
-  let endcycle = false;
+  let endsession = false;
 
-  while (!endcycle) {
+  while (!endsession) {
     let prompt = await promptService.getPrompt();
     let input = "";
 
@@ -54,9 +55,9 @@ MOTD:
       input = await gptService.send();
     }
 
-    endcycle = await commandService.handleConsoleInput(prompt, input);
+    endsession = await commandService.handleConsoleInput(prompt, input);
 
-    if (endcycle) {
+    if (endsession) {
       contextService.clear();
     }
 

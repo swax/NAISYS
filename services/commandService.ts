@@ -1,4 +1,5 @@
-import { consoleService } from "./consoleService.js";
+import chalk from "chalk";
+import { ConsoleColor, consoleService } from "./consoleService.js";
 import { contextService } from "./contextService.js";
 import { envService } from "./envService.js";
 import { fileSystemService } from "./file-system/fileSystemService.js";
@@ -8,10 +9,10 @@ class CommandService {
   public async handleConsoleInput(prompt: string, consoleInput: string) {
     const consoleInputLines = consoleInput.trim().split("\n");
 
-    // iterate lines
+    // We process the lines one at a time so we can support multiple commands with line breaks
     let firstLine = true;
     let processNextLine = true;
-    let endcycle = false;
+    let endsession = false;
     const promptPrefix = promptService.getPromptPrefix();
 
     while (processNextLine) {
@@ -24,9 +25,7 @@ class CommandService {
 
       // fix common error where chat gpt tries to by the prompt
       if (line.startsWith(promptPrefix)) {
-        consoleService.comment(
-          `Breaking due to prompt in the response: ${line}`
-        );
+        consoleInputLines.unshift(line);
         break;
       }
 
@@ -37,9 +36,9 @@ class CommandService {
           // append break line in case gpt did not send one
           // later calls to contextService.append() will automatically append a break line
           contextService.append(line, "endPrompt");
-          consoleService.output(prompt + line);
+          consoleService.output(prompt + chalk[ConsoleColor.gpt](line));
         } else {
-          contextService.append(line);
+          contextService.append(line, "gpt");
         }
       }
 
@@ -62,7 +61,7 @@ class CommandService {
             .split(" ")
             .slice(1)
             .join(" ");
-          endcycle = true;
+          endsession = true;
           consoleService.comment(
             "------------------------------------------------------"
           );
@@ -84,9 +83,9 @@ class CommandService {
           break;
 
         case "context":
-          consoleService.output("#####################");
-          consoleService.output(contextService.context);
-          consoleService.output("#####################");
+          consoleService.comment("#####################");
+          consoleService.comment(contextService.context);
+          consoleService.comment("#####################");
           break;
 
         default:
@@ -103,13 +102,13 @@ class CommandService {
 
     // iterate unprocessed lines
     if (consoleInputLines.length) {
-      consoleService.comment("Unprocessed lines from GPT response:");
+      consoleService.error("Unprocessed lines from GPT response:");
       for (const line of consoleInputLines) {
-        consoleService.comment(line);
+        consoleService.error(line);
       }
     }
 
-    return endcycle;
+    return endsession;
   }
 }
 
