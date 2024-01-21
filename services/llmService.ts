@@ -6,7 +6,7 @@ import { ContextService } from "./contextService.js";
 import { EnvService } from "./envService.js";
 
 @injectable()
-export class GptService {
+export class LlmService {
   constructor(
     private _consoleService: ConsoleService,
     private _contextService: ContextService,

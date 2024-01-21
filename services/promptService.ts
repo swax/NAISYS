@@ -1,7 +1,7 @@
 import { injectable } from "inversify";
-import { InputMode } from "../enums.js";
 import { ContextService } from "./contextService.js";
 import { EnvService } from "./envService.js";
+import { InputMode, InputModeService } from "./inputModeService.js";
 import { ShellService } from "./shellService.js";
 
 @injectable()
@@ -9,16 +9,17 @@ export class PromptService {
   constructor(
     private _contextService: ContextService,
     private _envService: EnvService,
+    private _inputModeService: InputModeService,
     private _shellService: ShellService,
   ) {}
 
   public async getPrompt() {
     const promptSuffix =
-      this._envService.inputMode == InputMode.Debug ? "#" : "$";
+      this._inputModeService.current == InputMode.Debug ? "#" : "$";
     const currentPath = await this._shellService.getCurrentPath();
 
     let tokenSuffix = "";
-    if (this._envService.inputMode == InputMode.LLM) {
+    if (this._inputModeService.current == InputMode.LLM) {
       const tokenMax = this._envService.tokenMax;
       const usedTokens = this._contextService.getTokenCount();
       tokenSuffix = ` [Tokens: ${usedTokens}/${tokenMax}]`;
@@ -29,7 +30,7 @@ export class PromptService {
 
   public getPromptPrefix() {
     const username =
-      this._envService.inputMode == InputMode.Debug
+      this._inputModeService.current == InputMode.Debug
         ? "debug"
         : this._envService.username;
 

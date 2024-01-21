@@ -66,7 +66,9 @@ export class ShellService {
     }
   }
 
-  executeCommand(command: string) {
+  async executeCommand(command: string) {
+    await this.ensureOpen();
+
     return new Promise<string>((resolve) => {
       this._resolveCurrentCommand = resolve;
       this._shellProcess?.stdin.write(

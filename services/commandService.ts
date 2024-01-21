@@ -1,9 +1,9 @@
 import chalk from "chalk";
 import { injectable } from "inversify";
-import { InputMode } from "../enums.js";
 import { ConsoleColor, ConsoleService } from "./consoleService.js";
 import { ContextService } from "./contextService.js";
 import { EnvService } from "./envService.js";
+import { InputMode, InputModeService } from "./inputModeService.js";
 import { PromptService } from "./promptService.js";
 import { ShellCommandService } from "./shellCommandService.js";
 
@@ -15,10 +15,13 @@ export enum NextCommandAction {
 
 @injectable()
 export class CommandService {
+  public previousSessionNotes = "";
+
   constructor(
     private _consoleService: ConsoleService,
     private _contextService: ContextService,
     private _envService: EnvService,
+    private _inputModeService: InputModeService,
     private _promptService: PromptService,
     private _shellCommandService: ShellCommandService,
   ) {}
@@ -47,7 +50,7 @@ export class CommandService {
         break;
       }
 
-      if (this._envService.inputMode == InputMode.LLM) {
+      if (this._inputModeService.current == InputMode.LLM) {
         // trim repeat prompts
         if (firstLine) {
           firstLine = false;
@@ -66,17 +69,6 @@ export class CommandService {
         break;
       }
 
-      if (cmdParams[0] == "exit") {
-        if (this._envService.inputMode == InputMode.LLM) {
-          this._contextService.append(
-            "Use 'endsession' to end the session and clear the console log.",
-          );
-        } else if (this._envService.inputMode == InputMode.Debug) {
-          nextCommandAction = NextCommandAction.ExitApplication;
-          break;
-        }
-      }
-
       switch (cmdParams[0]) {
         case "suggest":
           this._contextService.append(
@@ -85,7 +77,7 @@ export class CommandService {
           break;
 
         case "endsession":
-          this._envService.previousSessionNotes = consoleInput
+          this.previousSessionNotes = consoleInput
             .trim()
             .split(" ")
             .slice(1)
@@ -100,14 +92,14 @@ export class CommandService {
         case "talk": {
           const talkMsg = consoleInput.trim().split(" ").slice(1).join(" ");
 
-          if (this._envService.inputMode === InputMode.LLM) {
+          if (this._inputModeService.current === InputMode.LLM) {
             this._contextService.append("Message sent!");
-          } else if (this._envService.inputMode === InputMode.Debug) {
-            this._envService.toggleInputMode(InputMode.LLM);
+          } else if (this._inputModeService.current === InputMode.Debug) {
+            this._inputModeService.toggle(InputMode.LLM);
             this._contextService.append(
               `Message from root@${this._envService.hostname}: ${talkMsg}`,
             );
-            this._envService.toggleInputMode(InputMode.Debug);
+            this._inputModeService.toggle(InputMode.Debug);
           }
 
           break;
@@ -120,13 +112,16 @@ export class CommandService {
           break;
 
         default: {
-          const fsResponse = await this._shellCommandService.handleCommand(
+          const shellResponse = await this._shellCommandService.handleCommand(
             line,
             consoleInputLines,
           );
 
-          if (fsResponse.commandHandled) {
-            processNextLine = fsResponse.processNextLine;
+          if (shellResponse.commandHandled) {
+            processNextLine = Boolean(shellResponse.processNextLine);
+            nextCommandAction = shellResponse.terminate
+              ? NextCommandAction.ExitApplication
+              : NextCommandAction.Continue;
           }
         }
       }

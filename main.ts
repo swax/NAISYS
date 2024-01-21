@@ -7,8 +7,6 @@ const container = new Container({
   defaultScope: "Singleton",
 });
 
-container.bind(CommandLoopService).toSelf();
-
 await container.resolve(CommandLoopService).run();
 
 process.exit(0);
