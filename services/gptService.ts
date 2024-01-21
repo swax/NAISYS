@@ -1,8 +1,8 @@
 import dotenv from "dotenv";
 import OpenAI from "openai";
+import { consoleService } from "./consoleService.js";
 import { contextService } from "./contextService.js";
 import { envService } from "./envService.js";
-import { consoleService } from "./consoleService.js";
 
 dotenv.config();
 

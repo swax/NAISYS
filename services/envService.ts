@@ -1,3 +1,5 @@
+import { InputMode } from "../enums.js";
+
 class EnvService {
   public username = "jill";
 
@@ -7,15 +9,15 @@ class EnvService {
 
   public previousSessionNotes = "";
 
-  public inputMode: "root" | "gpt" = "root";
+  public inputMode = InputMode.Debug;
 
-  public toggleInputMode(forceMode: "root" | "gpt" | undefined = undefined) {
+  public toggleInputMode(forceMode?: InputMode) {
     if (forceMode) {
       envService.inputMode = forceMode;
-    } else if (envService.inputMode == "root") {
-      envService.inputMode = "gpt";
-    } else if (envService.inputMode == "gpt") {
-      envService.inputMode = "root";
+    } else if (envService.inputMode == InputMode.Debug) {
+      envService.inputMode = InputMode.LLM;
+    } else if (envService.inputMode == InputMode.LLM) {
+      envService.inputMode = InputMode.Debug;
     }
   }
 }

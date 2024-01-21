@@ -4,7 +4,7 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "compile/start": "tsc && node dist/shell3.js"
+    "compile/start": "tsc && node dist/main.js"
   },
   "devDependencies": {
     "@types/node": "^20.10.8",

@@ -1,4 +1,5 @@
 import { get_encoding } from "tiktoken";
+import { InputMode } from "../enums.js";
 import { ConsoleColor, consoleService } from "./consoleService.js";
 import { envService } from "./envService.js";
 
@@ -14,7 +15,7 @@ class ContextService {
     input: string,
     source: "startPrompt" | "endPrompt" | "console" | "gpt" = "console"
   ) {
-    if (envService.inputMode === "gpt") {
+    if (envService.inputMode === InputMode.LLM) {
       this._context += input;
 
       // End the line except for the start prompt which needs the following input appended to it on the same line
@@ -32,7 +33,7 @@ class ContextService {
     }
     // Root runs in a shadow mode where their activity is not recorded in the context
     // Mark with a # to make it clear that it is not part of the context
-    else if (envService.inputMode === "root") {
+    else if (envService.inputMode === InputMode.Debug) {
       consoleService.comment(input);
     }
   }

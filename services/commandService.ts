@@ -1,9 +1,10 @@
 import chalk from "chalk";
+import { InputMode } from "../enums.js";
 import { ConsoleColor, consoleService } from "./consoleService.js";
 import { contextService } from "./contextService.js";
 import { envService } from "./envService.js";
-import { fileSystemService } from "./file-system/fileSystemService.js";
 import { promptService } from "./promptService.js";
+import { realShellService } from "./real-shell/realShellService.js";
 
 class CommandService {
   public async handleConsoleInput(prompt: string, consoleInput: string) {
@@ -29,7 +30,7 @@ class CommandService {
         break;
       }
 
-      if (envService.inputMode == "gpt") {
+      if (envService.inputMode == InputMode.LLM) {
         // trim repeat prompts
         if (firstLine) {
           firstLine = false;
@@ -70,14 +71,14 @@ class CommandService {
         case "talk":
           const talkMsg = consoleInput.trim().split(" ").slice(1).join(" ");
 
-          if (envService.inputMode === "gpt") {
+          if (envService.inputMode === InputMode.LLM) {
             contextService.append("Message sent!");
-          } else if (envService.inputMode === "root") {
-            envService.toggleInputMode("gpt");
+          } else if (envService.inputMode === InputMode.Debug) {
+            envService.toggleInputMode(InputMode.LLM);
             contextService.append(
               `Message from root@${envService.hostname}: ${talkMsg}`
             );
-            envService.toggleInputMode("root");
+            envService.toggleInputMode(InputMode.Debug);
           }
 
           break;
@@ -89,7 +90,7 @@ class CommandService {
           break;
 
         default:
-          const fsResponse = await fileSystemService.handleCommand(
+          const fsResponse = await realShellService.handleCommand(
             line,
             consoleInputLines
           );
