@@ -1,5 +1,5 @@
 import dotenv from "dotenv";
-import * as commandLoopService from "./services/commandLoopService.js";
+import * as commandLoopService from "./commandLoopService.js";
 
 dotenv.config();
 
