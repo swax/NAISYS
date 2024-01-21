@@ -1,9 +1,11 @@
+import { injectable } from "inversify";
 import { get_encoding } from "tiktoken";
 import { InputMode } from "../enums.js";
-import { ConsoleColor, consoleService } from "./consoleService.js";
-import { envService } from "./envService.js";
+import { ConsoleColor, ConsoleService } from "./consoleService.js";
+import { EnvService } from "./envService.js";
 
-class ContextService {
+@injectable()
+export class ContextService {
   private _gpt2encoding = get_encoding("gpt2");
 
   private _context: string = "";
@@ -11,11 +13,16 @@ class ContextService {
     return this._context;
   }
 
+  constructor(
+    private _consoleService: ConsoleService,
+    private _envService: EnvService,
+  ) {}
+
   public append(
     input: string,
     source: "startPrompt" | "endPrompt" | "console" | "gpt" = "console",
   ) {
-    if (envService.inputMode === InputMode.LLM) {
+    if (this._envService.inputMode === InputMode.LLM) {
       this._context += input;
 
       // End the line except for the start prompt which needs the following input appended to it on the same line
@@ -25,7 +32,7 @@ class ContextService {
 
       // Prompts are manually added to the console log
       if (source != "startPrompt" && source != "endPrompt") {
-        consoleService.output(
+        this._consoleService.output(
           input,
           source == "gpt" ? ConsoleColor.gpt : ConsoleColor.console,
         );
@@ -33,8 +40,8 @@ class ContextService {
     }
     // Root runs in a shadow mode where their activity is not recorded in the context
     // Mark with a # to make it clear that it is not part of the context
-    else if (envService.inputMode === InputMode.Debug) {
-      consoleService.comment(input);
+    else if (this._envService.inputMode === InputMode.Debug) {
+      this._consoleService.comment(input);
     }
   }
 
@@ -46,5 +53,3 @@ class ContextService {
     return this._gpt2encoding.encode(this._context).length;
   }
 }
-
-export const contextService = new ContextService();
