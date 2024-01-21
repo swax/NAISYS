@@ -1,17 +1,26 @@
+import { injectable } from "inversify";
 import { InputMode } from "../enums.js";
-import { contextService } from "./contextService.js";
-import { envService } from "./envService.js";
-import { realShellService } from "./real-shell/realShellService.js";
+import { ContextService } from "./contextService.js";
+import { EnvService } from "./envService.js";
+import { ShellService } from "./shellService.js";
 
-class PromptService {
+@injectable()
+export class PromptService {
+  constructor(
+    private _contextService: ContextService,
+    private _envService: EnvService,
+    private _shellService: ShellService,
+  ) {}
+
   public async getPrompt() {
-    const promptSuffix = envService.inputMode == InputMode.Debug ? "#" : "$";
-    const currentPath = await realShellService.getCurrentPath();
+    const promptSuffix =
+      this._envService.inputMode == InputMode.Debug ? "#" : "$";
+    const currentPath = await this._shellService.getCurrentPath();
 
     let tokenSuffix = "";
-    if (envService.inputMode == InputMode.LLM) {
-      const tokenMax = envService.tokenMax;
-      const usedTokens = contextService.getTokenCount();
+    if (this._envService.inputMode == InputMode.LLM) {
+      const tokenMax = this._envService.tokenMax;
+      const usedTokens = this._contextService.getTokenCount();
       tokenSuffix = ` [Tokens: ${usedTokens}/${tokenMax}]`;
     }
 
@@ -20,10 +29,10 @@ class PromptService {
 
   public getPromptPrefix() {
     const username =
-      envService.inputMode == InputMode.Debug ? "debug" : envService.username;
+      this._envService.inputMode == InputMode.Debug
+        ? "debug"
+        : this._envService.username;
 
-    return `${username}@${envService.hostname}`;
+    return `${username}@${this._envService.hostname}`;
   }
 }
-
-export const promptService = new PromptService();

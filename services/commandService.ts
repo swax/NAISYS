@@ -1,10 +1,11 @@
 import chalk from "chalk";
+import { injectable } from "inversify";
 import { InputMode } from "../enums.js";
-import { ConsoleColor, consoleService } from "./consoleService.js";
-import { contextService } from "./contextService.js";
-import { envService } from "./envService.js";
-import { promptService } from "./promptService.js";
-import { realShellService } from "./real-shell/realShellService.js";
+import { ConsoleColor, ConsoleService } from "./consoleService.js";
+import { ContextService } from "./contextService.js";
+import { EnvService } from "./envService.js";
+import { PromptService } from "./promptService.js";
+import { ShellCommandService } from "./shellCommandService.js";
 
 export enum NextCommandAction {
   Continue,
@@ -12,14 +13,23 @@ export enum NextCommandAction {
   ExitApplication,
 }
 
-class CommandService {
+@injectable()
+export class CommandService {
+  constructor(
+    private _consoleService: ConsoleService,
+    private _contextService: ContextService,
+    private _envService: EnvService,
+    private _promptService: PromptService,
+    private _shellCommandService: ShellCommandService,
+  ) {}
+
   public async handleConsoleInput(prompt: string, consoleInput: string) {
     const consoleInputLines = consoleInput.trim().split("\n");
 
     // We process the lines one at a time so we can support multiple commands with line breaks
     let firstLine = true;
     let processNextLine = true;
-    const promptPrefix = promptService.getPromptPrefix();
+    const promptPrefix = this._promptService.getPromptPrefix();
 
     let nextCommandAction = NextCommandAction.Continue;
 
@@ -37,16 +47,16 @@ class CommandService {
         break;
       }
 
-      if (envService.inputMode == InputMode.LLM) {
+      if (this._envService.inputMode == InputMode.LLM) {
         // trim repeat prompts
         if (firstLine) {
           firstLine = false;
           // append break line in case gpt did not send one
           // later calls to contextService.append() will automatically append a break line
-          contextService.append(line, "endPrompt");
-          consoleService.output(prompt + chalk[ConsoleColor.gpt](line));
+          this._contextService.append(line, "endPrompt");
+          this._consoleService.output(prompt + chalk[ConsoleColor.gpt](line));
         } else {
-          contextService.append(line, "gpt");
+          this._contextService.append(line, "gpt");
         }
       }
 
@@ -57,11 +67,11 @@ class CommandService {
       }
 
       if (cmdParams[0] == "exit") {
-        if (envService.inputMode == InputMode.LLM) {
-          contextService.append(
+        if (this._envService.inputMode == InputMode.LLM) {
+          this._contextService.append(
             "Use 'endsession' to end the session and clear the console log.",
           );
-        } else if (envService.inputMode == InputMode.Debug) {
+        } else if (this._envService.inputMode == InputMode.Debug) {
           nextCommandAction = NextCommandAction.ExitApplication;
           break;
         }
@@ -69,18 +79,18 @@ class CommandService {
 
       switch (cmdParams[0]) {
         case "suggest":
-          contextService.append(
+          this._contextService.append(
             "Suggestion noted. Thank you for your feedback!",
           );
           break;
 
         case "endsession":
-          envService.previousSessionNotes = consoleInput
+          this._envService.previousSessionNotes = consoleInput
             .trim()
             .split(" ")
             .slice(1)
             .join(" ");
-          consoleService.comment(
+          this._consoleService.comment(
             "------------------------------------------------------",
           );
           nextCommandAction = NextCommandAction.EndSession;
@@ -90,27 +100,27 @@ class CommandService {
         case "talk": {
           const talkMsg = consoleInput.trim().split(" ").slice(1).join(" ");
 
-          if (envService.inputMode === InputMode.LLM) {
-            contextService.append("Message sent!");
-          } else if (envService.inputMode === InputMode.Debug) {
-            envService.toggleInputMode(InputMode.LLM);
-            contextService.append(
-              `Message from root@${envService.hostname}: ${talkMsg}`,
+          if (this._envService.inputMode === InputMode.LLM) {
+            this._contextService.append("Message sent!");
+          } else if (this._envService.inputMode === InputMode.Debug) {
+            this._envService.toggleInputMode(InputMode.LLM);
+            this._contextService.append(
+              `Message from root@${this._envService.hostname}: ${talkMsg}`,
             );
-            envService.toggleInputMode(InputMode.Debug);
+            this._envService.toggleInputMode(InputMode.Debug);
           }
 
           break;
         }
 
         case "context":
-          consoleService.comment("#####################");
-          consoleService.comment(contextService.context);
-          consoleService.comment("#####################");
+          this._consoleService.comment("#####################");
+          this._consoleService.comment(this._contextService.context);
+          this._consoleService.comment("#####################");
           break;
 
         default: {
-          const fsResponse = await realShellService.handleCommand(
+          const fsResponse = await this._shellCommandService.handleCommand(
             line,
             consoleInputLines,
           );
@@ -124,14 +134,12 @@ class CommandService {
 
     // iterate unprocessed lines
     if (consoleInputLines.length) {
-      consoleService.error("Unprocessed lines from GPT response:");
+      this._consoleService.error("Unprocessed lines from GPT response:");
       for (const line of consoleInputLines) {
-        consoleService.error(line);
+        this._consoleService.error(line);
       }
     }
 
     return nextCommandAction;
   }
 }
-
-export const commandService = new CommandService();

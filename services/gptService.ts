@@ -1,16 +1,24 @@
 import dotenv from "dotenv";
+import { injectable } from "inversify";
 import OpenAI from "openai";
-import { consoleService } from "./consoleService.js";
-import { contextService } from "./contextService.js";
-import { envService } from "./envService.js";
+import { ConsoleService } from "./consoleService.js";
+import { ContextService } from "./contextService.js";
+import { EnvService } from "./envService.js";
 
-dotenv.config();
+@injectable()
+export class GptService {
+  constructor(
+    private _consoleService: ConsoleService,
+    private _contextService: ContextService,
+    private _envService: EnvService,
+  ) {
+    dotenv.config();
 
-if (process.env.OPENAI_API_KEY === undefined) {
-  consoleService.comment("Error: OPENAI_API_KEY is not defined");
-}
+    if (process.env.OPENAI_API_KEY === undefined) {
+      this._consoleService.comment("Error: OPENAI_API_KEY is not defined");
+    }
+  }
 
-class GptService {
   public async send() {
     const openai = new OpenAI({
       apiKey: process.env.OPENAI_API_KEY,
@@ -20,17 +28,15 @@ class GptService {
       messages: [
         {
           role: "system",
-          content: `You are ${envService.username} a new hire with the job of creating a news website from the command line. 
+          content: `You are ${this._envService.username} a new hire with the job of creating a news website from the command line. 
             The website should be very simple, able to be used from a text based browser like lynx. Pages should be relatively short. 
             The 'user' role is the command line interface itself presenting you with the next command prompt. 
             Make sure the read the command line rules in the MOTD carefully.`,
         },
-        { role: "user", content: contextService.context },
+        { role: "user", content: this._contextService.context },
       ],
     });
 
     return chatCompletion.choices[0].message.content || "";
   }
 }
-
-export const gptService = new GptService();

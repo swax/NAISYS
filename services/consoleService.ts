@@ -1,4 +1,5 @@
 import chalk from "chalk";
+import { injectable } from "inversify";
 
 export enum ConsoleColor {
   comment = "greenBright",
@@ -7,7 +8,8 @@ export enum ConsoleColor {
   console = "white",
 }
 
-class ConsoleService {
+@injectable()
+export class ConsoleService {
   // color available on chalk
   public output(msg: string, color: ConsoleColor = ConsoleColor.console) {
     console.log(chalk[color](msg));
@@ -28,5 +30,3 @@ class ConsoleService {
     this.output(msg, ConsoleColor.error);
   }
 }
-
-export const consoleService = new ConsoleService();

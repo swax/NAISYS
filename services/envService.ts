@@ -1,6 +1,8 @@
+import { injectable } from "inversify";
 import { InputMode } from "../enums.js";
 
-class EnvService {
+@injectable()
+export class EnvService {
   public username = "jill";
 
   public hostname = "system-01";
@@ -13,13 +15,11 @@ class EnvService {
 
   public toggleInputMode(forceMode?: InputMode) {
     if (forceMode) {
-      envService.inputMode = forceMode;
-    } else if (envService.inputMode == InputMode.Debug) {
-      envService.inputMode = InputMode.LLM;
-    } else if (envService.inputMode == InputMode.LLM) {
-      envService.inputMode = InputMode.Debug;
+      this.inputMode = forceMode;
+    } else if (this.inputMode == InputMode.Debug) {
+      this.inputMode = InputMode.LLM;
+    } else if (this.inputMode == InputMode.LLM) {
+      this.inputMode = InputMode.Debug;
     }
   }
 }
-
-export const envService = new EnvService();
