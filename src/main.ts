@@ -1,8 +1,8 @@
 import dotenv from "dotenv";
-import * as commandLoopService from "./commandLoopService.js";
+import * as commandLoop from "./commandLoop.js";
 
 dotenv.config();
 
-await commandLoopService.run();
+await commandLoop.run();
 
 process.exit(0);

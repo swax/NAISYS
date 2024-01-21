@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "clean:win": "rmdir dist /s /q",
-    "eslint": "npx eslint .",
+    "eslint": "npx eslint --rulesdir eslint-rules src",
     "prettier": "npx prettier --write .",
     "compile": "tsc",
     "dependency-graph": "madge --image dependency-graph.png dist",

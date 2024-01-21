@@ -1,8 +1,8 @@
-import * as contextService from "./contextService.js";
-import * as inputModeService from "./inputModeService.js";
-import { InputMode } from "./inputModeService.js";
-import * as promptService from "./promptService.js";
-import * as shellService from "./shellService.js";
+import * as contextManager from "./contextManager.js";
+import * as inputMode from "./inputMode.js";
+import { InputMode } from "./inputMode.js";
+import * as promptBuilder from "./promptBuilder.js";
+import * as shellWrapper from "./shellWrapper.js";
 
 interface HandleShellCommandResponse {
   commandHandled: boolean;
@@ -18,7 +18,7 @@ export async function handleCommand(
 
   // Route user to context friendly edit commands that can read/write the entire file in one go
   if (["nano", "vi", "vim"].includes(cmdParams[0])) {
-    contextService.append(
+    contextManager.append(
       `${cmdParams[0]} not supported. Use 'cat' to view a file and 'cat > filename << EOF' to write a file`,
     );
 
@@ -30,12 +30,12 @@ export async function handleCommand(
   if (cmdParams[0] == "exit") {
     let terminate = false;
 
-    if (inputModeService.current == InputMode.LLM) {
-      contextService.append(
+    if (inputMode.current == InputMode.LLM) {
+      contextManager.append(
         "Use 'endsession' to end the session and clear the console log.",
       );
-    } else if (inputModeService.current == InputMode.Debug) {
-      await shellService.terminate();
+    } else if (inputMode.current == InputMode.Debug) {
+      await shellWrapper.terminate();
       terminate = true;
     }
 
@@ -46,7 +46,7 @@ export async function handleCommand(
   }
 
   let allInput = line;
-  const promptPrefix = promptService.getPromptPrefix();
+  const promptPrefix = promptBuilder.getPromptPrefix();
 
   while (consoleInputLines.length) {
     const nextLine = consoleInputLines.shift() || "";
@@ -54,16 +54,16 @@ export async function handleCommand(
       consoleInputLines.unshift(nextLine);
       break;
     } else {
-      contextService.append(nextLine, "llm");
+      contextManager.append(nextLine, "llm");
     }
 
     allInput += "\n" + nextLine;
   }
 
-  const output = await shellService.executeCommand(allInput);
+  const output = await shellWrapper.executeCommand(allInput);
 
   if (output) {
-    contextService.append(output);
+    contextManager.append(output);
   }
 
   return {

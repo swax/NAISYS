@@ -1,12 +1,12 @@
 import chalk from "chalk";
-import * as consoleService from "./consoleService.js";
-import { ConsoleColor } from "./consoleService.js";
-import * as contextService from "./contextService.js";
-import * as envService from "./envService.js";
-import * as inputModeService from "./inputModeService.js";
-import { InputMode } from "./inputModeService.js";
-import * as promptService from "./promptService.js";
-import * as shellCommandService from "./shellCommandService.js";
+import * as config from "./config.js";
+import * as contextManager from "./contextManager.js";
+import * as inputMode from "./inputMode.js";
+import { InputMode } from "./inputMode.js";
+import * as output from "./output.js";
+import { OutputColor } from "./output.js";
+import * as promptBuilder from "./promptBuilder.js";
+import * as shellCommand from "./shellCommand.js";
 
 export enum NextCommandAction {
   Continue,
@@ -16,13 +16,13 @@ export enum NextCommandAction {
 
 export let previousSessionNotes = "";
 
-export async function handleConsoleInput(prompt: string, consoleInput: string) {
+export async function consoleInput(prompt: string, consoleInput: string) {
   const consoleInputLines = consoleInput.trim().split("\n");
 
   // We process the lines one at a time so we can support multiple commands with line breaks
   let firstLine = true;
   let processNextLine = true;
-  const promptPrefix = promptService.getPromptPrefix();
+  const promptPrefix = promptBuilder.getPromptPrefix();
 
   let nextCommandAction = NextCommandAction.Continue;
 
@@ -40,16 +40,16 @@ export async function handleConsoleInput(prompt: string, consoleInput: string) {
       break;
     }
 
-    if (inputModeService.current == InputMode.LLM) {
+    if (inputMode.current == InputMode.LLM) {
       // trim repeat prompts
       if (firstLine) {
         firstLine = false;
         // append break line in case llm did not send one
         // later calls to contextService.append() will automatically append a break line
-        contextService.append(line, "endPrompt");
-        consoleService.output(prompt + chalk[ConsoleColor.llm](line));
+        contextManager.append(line, "endPrompt");
+        output.write(prompt + chalk[OutputColor.llm](line));
       } else {
-        contextService.append(line, "llm");
+        contextManager.append(line, "llm");
       }
     }
 
@@ -61,7 +61,7 @@ export async function handleConsoleInput(prompt: string, consoleInput: string) {
 
     switch (cmdParams[0]) {
       case "suggest":
-        contextService.append("Suggestion noted. Thank you for your feedback!");
+        contextManager.append("Suggestion noted. Thank you for your feedback!");
         break;
 
       case "endsession":
@@ -70,7 +70,7 @@ export async function handleConsoleInput(prompt: string, consoleInput: string) {
           .split(" ")
           .slice(1)
           .join(" ");
-        consoleService.comment(
+        output.comment(
           "------------------------------------------------------",
         );
         nextCommandAction = NextCommandAction.EndSession;
@@ -80,27 +80,27 @@ export async function handleConsoleInput(prompt: string, consoleInput: string) {
       case "talk": {
         const talkMsg = consoleInput.trim().split(" ").slice(1).join(" ");
 
-        if (inputModeService.current === InputMode.LLM) {
-          contextService.append("Message sent!");
-        } else if (inputModeService.current === InputMode.Debug) {
-          inputModeService.toggle(InputMode.LLM);
-          contextService.append(
-            `Message from root@${envService.hostname}: ${talkMsg}`,
+        if (inputMode.current === InputMode.LLM) {
+          contextManager.append("Message sent!");
+        } else if (inputMode.current === InputMode.Debug) {
+          inputMode.toggle(InputMode.LLM);
+          contextManager.append(
+            `Message from root@${config.hostname}: ${talkMsg}`,
           );
-          inputModeService.toggle(InputMode.Debug);
+          inputMode.toggle(InputMode.Debug);
         }
 
         break;
       }
 
       case "context":
-        consoleService.comment("#####################");
-        consoleService.comment(contextService.context);
-        consoleService.comment("#####################");
+        output.comment("#####################");
+        output.comment(contextManager.content);
+        output.comment("#####################");
         break;
 
       default: {
-        const shellResponse = await shellCommandService.handleCommand(
+        const shellResponse = await shellCommand.handleCommand(
           line,
           consoleInputLines,
         );
@@ -117,9 +117,9 @@ export async function handleConsoleInput(prompt: string, consoleInput: string) {
 
   // iterate unprocessed lines
   if (consoleInputLines.length) {
-    consoleService.error("Unprocessed lines from LLM response:");
+    output.error("Unprocessed lines from LLM response:");
     for (const line of consoleInputLines) {
-      consoleService.error(line);
+      output.error(line);
     }
   }
 
