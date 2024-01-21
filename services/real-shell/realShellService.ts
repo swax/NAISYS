@@ -4,7 +4,7 @@ import { envService } from "../envService.js";
 import { promptService } from "../promptService.js";
 import { LongRunningShell } from "./longRunningShell.js";
 
-class HybridFileSystem {
+class RealShellService {
   _shell = new LongRunningShell();
   _initd = false;
 
@@ -74,4 +74,4 @@ class HybridFileSystem {
   }
 }
 
-export const hybridFileSystem = new HybridFileSystem();
+export const realShellService = new RealShellService();

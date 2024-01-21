@@ -5,8 +5,9 @@ import { gptService } from "./services/gptService.js";
 import { envService } from "./services/envService.js";
 import { promptService } from "./services/promptService.js";
 import { consoleService } from "./services/consoleService.js";
-import { fileSystemService } from "./services/file-system/fileSystemService.js";
 import chalk from "chalk";
+import { InputMode } from "./enums.js";
+import { realShellService } from "./services/real-shell/realShellService.js";
 
 const readlineInterface = readline.createInterface({
   input: process.stdin,
@@ -21,10 +22,10 @@ const getInput = (query: string) => {
   });
 };
 
-consoleService.comment("File System set to: " + fileSystemService.getName());
+consoleService.comment("File System set to: " + realShellService.getName());
 
 while (true) {
-  envService.toggleInputMode("gpt");
+  envService.toggleInputMode(InputMode.LLM);
 
   contextService.append(`NAISYS 1.0 Shell
 Welcome back ${envService.username}!
@@ -43,9 +44,9 @@ Previous session notes: ${envService.previousSessionNotes || "None"}
 `);
 
   contextService.append(await promptService.getPrompt() + "ls");
-  await fileSystemService.handleCommand("ls", []);
+  await realShellService.handleCommand("ls", []);
 
-  envService.toggleInputMode("root");
+  envService.toggleInputMode(InputMode.Debug);
 
   let endsession = false;
 
@@ -54,11 +55,11 @@ Previous session notes: ${envService.previousSessionNotes || "None"}
     let input = "";
 
     // Root runs in a shadow mode
-    if (envService.inputMode === "root") {
+    if (envService.inputMode === InputMode.Debug) {
       input = await getInput(`${prompt}`);
     }
     // When GPT runs input/output is added to the context
-    else if (envService.inputMode === "gpt") {
+    else if (envService.inputMode === "llm") {
       contextService.append(prompt, "startPrompt");
 
       input = await gptService.send();
@@ -71,8 +72,8 @@ Previous session notes: ${envService.previousSessionNotes || "None"}
     }
 
     if (
-      (envService.inputMode == "root" && !input) ||
-      envService.inputMode == "gpt"
+      (envService.inputMode == "debug" && !input) ||
+      envService.inputMode == "llm"
     ) {
       envService.toggleInputMode();
     }
