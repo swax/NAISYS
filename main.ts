@@ -1,5 +1,8 @@
 import * as readline from "readline";
-import { commandService } from "./services/commandService.js";
+import {
+  NextCommandAction,
+  commandService,
+} from "./services/commandService.js";
 import { contextService } from "./services/contextService.js";
 import { gptService } from "./services/gptService.js";
 import { envService } from "./services/envService.js";
@@ -24,7 +27,9 @@ const getInput = (query: string) => {
 
 consoleService.comment("File System set to: " + realShellService.getName());
 
-while (true) {
+let nextCommandAction = NextCommandAction.Continue;
+
+while (nextCommandAction != NextCommandAction.ExitApplication) {
   envService.toggleInputMode(InputMode.LLM);
 
   contextService.append(`NAISYS 1.0 Shell
@@ -43,15 +48,13 @@ The console log can only hold a certain number of 'tokens' that is specified in 
 Previous session notes: ${envService.previousSessionNotes || "None"}
 `);
 
-  contextService.append(await promptService.getPrompt() + "ls");
+  contextService.append((await promptService.getPrompt()) + "ls");
   await realShellService.handleCommand("ls", []);
 
   envService.toggleInputMode(InputMode.Debug);
 
-  let endsession = false;
-
-  while (!endsession) {
-    let prompt = await promptService.getPrompt();
+  while (nextCommandAction == NextCommandAction.Continue) {
+    const prompt = await promptService.getPrompt();
     let input = "";
 
     // Root runs in a shadow mode
@@ -59,23 +62,28 @@ Previous session notes: ${envService.previousSessionNotes || "None"}
       input = await getInput(`${prompt}`);
     }
     // When GPT runs input/output is added to the context
-    else if (envService.inputMode === "llm") {
+    else if (envService.inputMode === InputMode.LLM) {
       contextService.append(prompt, "startPrompt");
 
       input = await gptService.send();
     }
 
-    endsession = await commandService.handleConsoleInput(prompt, input);
+    nextCommandAction = await commandService.handleConsoleInput(prompt, input);
 
-    if (endsession) {
-      contextService.clear();
-    }
-
+    // If the user is in debug mode and they didn't enter anything, switch to LLM
+    // If in LLM mode, auto switch back to debug
     if (
-      (envService.inputMode == "debug" && !input) ||
-      envService.inputMode == "llm"
+      (envService.inputMode == InputMode.Debug && !input) ||
+      envService.inputMode == InputMode.LLM
     ) {
       envService.toggleInputMode();
     }
   }
+
+  if (nextCommandAction == NextCommandAction.EndSession) {
+    contextService.clear();
+    nextCommandAction = NextCommandAction.Continue;
+  }
 }
+
+consoleService.comment("NAISYS Terminated");

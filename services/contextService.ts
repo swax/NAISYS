@@ -13,7 +13,7 @@ class ContextService {
 
   public append(
     input: string,
-    source: "startPrompt" | "endPrompt" | "console" | "gpt" = "console"
+    source: "startPrompt" | "endPrompt" | "console" | "gpt" = "console",
   ) {
     if (envService.inputMode === InputMode.LLM) {
       this._context += input;
@@ -27,7 +27,7 @@ class ContextService {
       if (source != "startPrompt" && source != "endPrompt") {
         consoleService.output(
           input,
-          source == "gpt" ? ConsoleColor.gpt : ConsoleColor.console
+          source == "gpt" ? ConsoleColor.gpt : ConsoleColor.console,
         );
       }
     }

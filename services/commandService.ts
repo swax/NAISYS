@@ -6,6 +6,12 @@ import { envService } from "./envService.js";
 import { promptService } from "./promptService.js";
 import { realShellService } from "./real-shell/realShellService.js";
 
+export enum NextCommandAction {
+  Continue,
+  EndSession,
+  ExitApplication,
+}
+
 class CommandService {
   public async handleConsoleInput(prompt: string, consoleInput: string) {
     const consoleInputLines = consoleInput.trim().split("\n");
@@ -13,13 +19,14 @@ class CommandService {
     // We process the lines one at a time so we can support multiple commands with line breaks
     let firstLine = true;
     let processNextLine = true;
-    let endsession = false;
     const promptPrefix = promptService.getPromptPrefix();
+
+    let nextCommandAction = NextCommandAction.Continue;
 
     while (processNextLine) {
       processNextLine = false;
 
-      let line = consoleInputLines.shift() || "";
+      const line = consoleInputLines.shift() || "";
       if (!line) {
         break;
       }
@@ -49,10 +56,21 @@ class CommandService {
         break;
       }
 
+      if (cmdParams[0] == "exit") {
+        if (envService.inputMode == InputMode.LLM) {
+          contextService.append(
+            "Use 'endsession' to end the session and clear the console log.",
+          );
+        } else if (envService.inputMode == InputMode.Debug) {
+          nextCommandAction = NextCommandAction.ExitApplication;
+          break;
+        }
+      }
+
       switch (cmdParams[0]) {
         case "suggest":
           contextService.append(
-            "Suggestion noted. Thank you for your feedback!"
+            "Suggestion noted. Thank you for your feedback!",
           );
           break;
 
@@ -62,13 +80,14 @@ class CommandService {
             .split(" ")
             .slice(1)
             .join(" ");
-          endsession = true;
           consoleService.comment(
-            "------------------------------------------------------"
+            "------------------------------------------------------",
           );
+          nextCommandAction = NextCommandAction.EndSession;
+          processNextLine = false;
           break;
 
-        case "talk":
+        case "talk": {
           const talkMsg = consoleInput.trim().split(" ").slice(1).join(" ");
 
           if (envService.inputMode === InputMode.LLM) {
@@ -76,12 +95,13 @@ class CommandService {
           } else if (envService.inputMode === InputMode.Debug) {
             envService.toggleInputMode(InputMode.LLM);
             contextService.append(
-              `Message from root@${envService.hostname}: ${talkMsg}`
+              `Message from root@${envService.hostname}: ${talkMsg}`,
             );
             envService.toggleInputMode(InputMode.Debug);
           }
 
           break;
+        }
 
         case "context":
           consoleService.comment("#####################");
@@ -89,15 +109,16 @@ class CommandService {
           consoleService.comment("#####################");
           break;
 
-        default:
+        default: {
           const fsResponse = await realShellService.handleCommand(
             line,
-            consoleInputLines
+            consoleInputLines,
           );
 
           if (fsResponse.commandHandled) {
             processNextLine = fsResponse.processNextLine;
           }
+        }
       }
     }
 
@@ -109,7 +130,7 @@ class CommandService {
       }
     }
 
-    return endsession;
+    return nextCommandAction;
   }
 }
 

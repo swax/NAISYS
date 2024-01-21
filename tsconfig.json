@@ -3,6 +3,6 @@
     "target": "ES2018",
     "module": "NodeNext",
     "outDir": "dist",
-    "strict": true
-  }
+    "strict": true,
+  },
 }

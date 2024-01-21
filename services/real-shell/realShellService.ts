@@ -16,13 +16,15 @@ class RealShellService {
     if (!this._initd) {
       this._initd = true;
 
-      consoleService.commentIfNotEmpty(await this._shell.executeCommand(
-        "mkdir -p /mnt/c/naisys/home/" + envService.username
-      ));
       consoleService.commentIfNotEmpty(
         await this._shell.executeCommand(
-          "cd /mnt/c/naisys/home/" + envService.username
-        )
+          "mkdir -p /mnt/c/naisys/home/" + envService.username,
+        ),
+      );
+      consoleService.commentIfNotEmpty(
+        await this._shell.executeCommand(
+          "cd /mnt/c/naisys/home/" + envService.username,
+        ),
       );
 
       this._initd = true;
@@ -37,7 +39,7 @@ class RealShellService {
     // Route user to context friendly edit commands that can read/write the entire file in one go
     if (["nano", "vi", "vim"].includes(cmdParams[0])) {
       contextService.append(
-        `${cmdParams[0]} not supported. Use 'cat' to view a file and 'cat > filename << EOF' to write a file`
+        `${cmdParams[0]} not supported. Use 'cat' to view a file and 'cat > filename << EOF' to write a file`,
       );
 
       return {
