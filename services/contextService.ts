@@ -1,8 +1,8 @@
 import { injectable } from "inversify";
 import { get_encoding } from "tiktoken";
-import { InputMode } from "../enums.js";
 import { ConsoleColor, ConsoleService } from "./consoleService.js";
 import { EnvService } from "./envService.js";
+import { InputMode, InputModeService } from "./inputModeService.js";
 
 @injectable()
 export class ContextService {
@@ -16,13 +16,14 @@ export class ContextService {
   constructor(
     private _consoleService: ConsoleService,
     private _envService: EnvService,
+    private _inputModeService: InputModeService,
   ) {}
 
   public append(
     input: string,
     source: "startPrompt" | "endPrompt" | "console" | "gpt" = "console",
   ) {
-    if (this._envService.inputMode === InputMode.LLM) {
+    if (this._inputModeService.current === InputMode.LLM) {
       this._context += input;
 
       // End the line except for the start prompt which needs the following input appended to it on the same line
@@ -40,7 +41,7 @@ export class ContextService {
     }
     // Root runs in a shadow mode where their activity is not recorded in the context
     // Mark with a # to make it clear that it is not part of the context
-    else if (this._envService.inputMode === InputMode.Debug) {
+    else if (this._inputModeService.current === InputMode.Debug) {
       this._consoleService.comment(input);
     }
   }

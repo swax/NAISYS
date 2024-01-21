@@ -1,11 +1,14 @@
 {
   "name": "naisys",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "main.js",
   "type": "module",
   "scripts": {
-    "prettier": "npx prettier --write .",
+    "clean:win": "rmdir dist /s /q",
     "eslint": "npx eslint .",
+    "prettier": "npx prettier --write .",
+    "compile": "tsc",
+    "dependency-graph": "madge --image dependency-graph.svg dist",
     "compile & start": "tsc && node dist/main.js"
   },
   "devDependencies": {
