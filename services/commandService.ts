@@ -1,11 +1,12 @@
 import chalk from "chalk";
-import { injectable } from "inversify";
-import { ConsoleColor, ConsoleService } from "./consoleService.js";
-import { ContextService } from "./contextService.js";
-import { EnvService } from "./envService.js";
-import { InputMode, InputModeService } from "./inputModeService.js";
-import { PromptService } from "./promptService.js";
-import { ShellCommandService } from "./shellCommandService.js";
+import * as consoleService from "./consoleService.js";
+import { ConsoleColor } from "./consoleService.js";
+import * as contextService from "./contextService.js";
+import * as envService from "./envService.js";
+import * as inputModeService from "./inputModeService.js";
+import { InputMode } from "./inputModeService.js";
+import * as promptService from "./promptService.js";
+import * as shellCommandService from "./shellCommandService.js";
 
 export enum NextCommandAction {
   Continue,
@@ -13,128 +14,114 @@ export enum NextCommandAction {
   ExitApplication,
 }
 
-@injectable()
-export class CommandService {
-  public previousSessionNotes = "";
+export let previousSessionNotes = "";
 
-  constructor(
-    private _consoleService: ConsoleService,
-    private _contextService: ContextService,
-    private _envService: EnvService,
-    private _inputModeService: InputModeService,
-    private _promptService: PromptService,
-    private _shellCommandService: ShellCommandService,
-  ) {}
+export async function handleConsoleInput(prompt: string, consoleInput: string) {
+  const consoleInputLines = consoleInput.trim().split("\n");
 
-  public async handleConsoleInput(prompt: string, consoleInput: string) {
-    const consoleInputLines = consoleInput.trim().split("\n");
+  // We process the lines one at a time so we can support multiple commands with line breaks
+  let firstLine = true;
+  let processNextLine = true;
+  const promptPrefix = promptService.getPromptPrefix();
 
-    // We process the lines one at a time so we can support multiple commands with line breaks
-    let firstLine = true;
-    let processNextLine = true;
-    const promptPrefix = this._promptService.getPromptPrefix();
+  let nextCommandAction = NextCommandAction.Continue;
 
-    let nextCommandAction = NextCommandAction.Continue;
+  while (processNextLine) {
+    processNextLine = false;
 
-    while (processNextLine) {
-      processNextLine = false;
+    const line = consoleInputLines.shift() || "";
+    if (!line) {
+      break;
+    }
 
-      const line = consoleInputLines.shift() || "";
-      if (!line) {
-        break;
-      }
+    // fix common error where chat llm tries to by the prompt
+    if (line.startsWith(promptPrefix)) {
+      consoleInputLines.unshift(line);
+      break;
+    }
 
-      // fix common error where chat gpt tries to by the prompt
-      if (line.startsWith(promptPrefix)) {
-        consoleInputLines.unshift(line);
-        break;
-      }
-
-      if (this._inputModeService.current == InputMode.LLM) {
-        // trim repeat prompts
-        if (firstLine) {
-          firstLine = false;
-          // append break line in case gpt did not send one
-          // later calls to contextService.append() will automatically append a break line
-          this._contextService.append(line, "endPrompt");
-          this._consoleService.output(prompt + chalk[ConsoleColor.gpt](line));
-        } else {
-          this._contextService.append(line, "gpt");
-        }
-      }
-
-      const cmdParams = line.trim().split(" ");
-
-      if (!cmdParams[0]) {
-        break;
-      }
-
-      switch (cmdParams[0]) {
-        case "suggest":
-          this._contextService.append(
-            "Suggestion noted. Thank you for your feedback!",
-          );
-          break;
-
-        case "endsession":
-          this.previousSessionNotes = consoleInput
-            .trim()
-            .split(" ")
-            .slice(1)
-            .join(" ");
-          this._consoleService.comment(
-            "------------------------------------------------------",
-          );
-          nextCommandAction = NextCommandAction.EndSession;
-          processNextLine = false;
-          break;
-
-        case "talk": {
-          const talkMsg = consoleInput.trim().split(" ").slice(1).join(" ");
-
-          if (this._inputModeService.current === InputMode.LLM) {
-            this._contextService.append("Message sent!");
-          } else if (this._inputModeService.current === InputMode.Debug) {
-            this._inputModeService.toggle(InputMode.LLM);
-            this._contextService.append(
-              `Message from root@${this._envService.hostname}: ${talkMsg}`,
-            );
-            this._inputModeService.toggle(InputMode.Debug);
-          }
-
-          break;
-        }
-
-        case "context":
-          this._consoleService.comment("#####################");
-          this._consoleService.comment(this._contextService.context);
-          this._consoleService.comment("#####################");
-          break;
-
-        default: {
-          const shellResponse = await this._shellCommandService.handleCommand(
-            line,
-            consoleInputLines,
-          );
-
-          if (shellResponse.commandHandled) {
-            processNextLine = Boolean(shellResponse.processNextLine);
-            nextCommandAction = shellResponse.terminate
-              ? NextCommandAction.ExitApplication
-              : NextCommandAction.Continue;
-          }
-        }
+    if (inputModeService.current == InputMode.LLM) {
+      // trim repeat prompts
+      if (firstLine) {
+        firstLine = false;
+        // append break line in case llm did not send one
+        // later calls to contextService.append() will automatically append a break line
+        contextService.append(line, "endPrompt");
+        consoleService.output(prompt + chalk[ConsoleColor.llm](line));
+      } else {
+        contextService.append(line, "llm");
       }
     }
 
-    // iterate unprocessed lines
-    if (consoleInputLines.length) {
-      this._consoleService.error("Unprocessed lines from GPT response:");
-      for (const line of consoleInputLines) {
-        this._consoleService.error(line);
-      }
+    const cmdParams = line.trim().split(" ");
+
+    if (!cmdParams[0]) {
+      break;
     }
 
-    return nextCommandAction;
+    switch (cmdParams[0]) {
+      case "suggest":
+        contextService.append("Suggestion noted. Thank you for your feedback!");
+        break;
+
+      case "endsession":
+        previousSessionNotes = consoleInput
+          .trim()
+          .split(" ")
+          .slice(1)
+          .join(" ");
+        consoleService.comment(
+          "------------------------------------------------------",
+        );
+        nextCommandAction = NextCommandAction.EndSession;
+        processNextLine = false;
+        break;
+
+      case "talk": {
+        const talkMsg = consoleInput.trim().split(" ").slice(1).join(" ");
+
+        if (inputModeService.current === InputMode.LLM) {
+          contextService.append("Message sent!");
+        } else if (inputModeService.current === InputMode.Debug) {
+          inputModeService.toggle(InputMode.LLM);
+          contextService.append(
+            `Message from root@${envService.hostname}: ${talkMsg}`,
+          );
+          inputModeService.toggle(InputMode.Debug);
+        }
+
+        break;
+      }
+
+      case "context":
+        consoleService.comment("#####################");
+        consoleService.comment(contextService.context);
+        consoleService.comment("#####################");
+        break;
+
+      default: {
+        const shellResponse = await shellCommandService.handleCommand(
+          line,
+          consoleInputLines,
+        );
+
+        if (shellResponse.commandHandled) {
+          processNextLine = Boolean(shellResponse.processNextLine);
+          nextCommandAction = shellResponse.terminate
+            ? NextCommandAction.ExitApplication
+            : NextCommandAction.Continue;
+        }
+      }
+    }
   }
+
+  // iterate unprocessed lines
+  if (consoleInputLines.length) {
+    consoleService.error("Unprocessed lines from LLM response:");
+    for (const line of consoleInputLines) {
+      consoleService.error(line);
+    }
+  }
+
+  return nextCommandAction;
 }

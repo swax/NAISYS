@@ -16,7 +16,7 @@ Node.js is used to create a simple shell environment for the LLM that
 
 Console Colors
 
-- Purple: Response from GPT, added to context
+- Purple: Response from LLM, added to context
 - White: Generated locally or from a real shell, added to context
-- Green: Root prompt and root command reponses. Not added to context. Used for diagnostics between calls to GPT
+- Green: Root prompt and root command reponses. Not added to context. Used for diagnostics between calls to LLM
 - Red: Processing errors, not added to context (Not shell errors which are on the context)

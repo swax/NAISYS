@@ -1,91 +1,79 @@
 import { ChildProcessWithoutNullStreams, spawn } from "child_process";
-import { injectable } from "inversify";
-import { ConsoleService } from "./consoleService.js";
-import { EnvService } from "./envService.js";
+import * as consoleService from "./consoleService.js";
+import * as envService from "./envService.js";
 
-@injectable()
-export class ShellService {
-  private _shellProcess?: ChildProcessWithoutNullStreams;
-  private _output = "";
-  private _resolveCurrentCommand?: (value: string) => void;
-  private _commandDelimiter = "__COMMAND_END_X7YUTT__";
+let _shellProcess: ChildProcessWithoutNullStreams | undefined;
+let _output = "";
+let _resolveCurrentCommand: ((value: string) => void) | undefined;
+const _commandDelimiter = "__COMMAND_END_X7YUTT__";
 
-  constructor(
-    private _consoleService: ConsoleService,
-    private _envService: EnvService,
-  ) {}
-
-  async ensureOpen() {
-    if (this._shellProcess) {
-      return;
-    }
-
-    this._shellProcess = spawn("wsl", [], { stdio: "pipe" });
-
-    this._shellProcess.stdout.on("data", (data) => {
-      this.processOutput(data.toString(), "stdout");
-    });
-
-    this._shellProcess.stderr.on("data", (data) => {
-      this.processOutput(data.toString(), "stderr");
-    });
-
-    this._shellProcess.on("close", (code) => {
-      this.processOutput(`${code}`, "exit");
-      this._shellProcess = undefined;
-    });
-
-    this._consoleService.commentIfNotEmpty(
-      await this.executeCommand(
-        "mkdir -p /mnt/c/naisys/home/" + this._envService.username,
-      ),
-    );
-    this._consoleService.commentIfNotEmpty(
-      await this.executeCommand(
-        "cd /mnt/c/naisys/home/" + this._envService.username,
-      ),
-    );
+async function _ensureOpen() {
+  if (_shellProcess) {
+    return;
   }
 
-  processOutput(dataStr: string, eventType: "stdout" | "stderr" | "exit") {
-    if (!this._resolveCurrentCommand) {
-      this._consoleService.comment(eventType + " without handler: " + dataStr);
-      return;
-    }
+  _shellProcess = spawn("wsl", [], { stdio: "pipe" });
 
-    /*if (eventType === "stderr") {
-      this.output += "stderr: ";
+  _shellProcess.stdout.on("data", (data) => {
+    processOutput(data.toString(), "stdout");
+  });
+
+  _shellProcess.stderr.on("data", (data) => {
+    processOutput(data.toString(), "stderr");
+  });
+
+  _shellProcess.on("close", (code) => {
+    processOutput(`${code}`, "exit");
+    _shellProcess = undefined;
+  });
+
+  consoleService.commentIfNotEmpty(
+    await executeCommand("mkdir -p /mnt/c/naisys/home/" + envService.username),
+  );
+  consoleService.commentIfNotEmpty(
+    await executeCommand("cd /mnt/c/naisys/home/" + envService.username),
+  );
+}
+
+export function processOutput(
+  dataStr: string,
+  eventType: "stdout" | "stderr" | "exit",
+) {
+  if (!_resolveCurrentCommand) {
+    consoleService.comment(eventType + " without handler: " + dataStr);
+    return;
+  }
+
+  /*if (eventType === "stderr") {
+      output += "stderr: ";
     }*/
 
-    this._output += dataStr;
+  _output += dataStr;
 
-    if (dataStr.includes(this._commandDelimiter) || eventType === "exit") {
-      this._output = this._output.replace(this._commandDelimiter, "");
-      this._resolveCurrentCommand(this._output.trim());
-      this._output = "";
-    }
+  if (dataStr.includes(_commandDelimiter) || eventType === "exit") {
+    _output = _output.replace(_commandDelimiter, "");
+    _resolveCurrentCommand(_output.trim());
+    _output = "";
   }
+}
 
-  async executeCommand(command: string) {
-    await this.ensureOpen();
+export async function executeCommand(command: string) {
+  await _ensureOpen();
 
-    return new Promise<string>((resolve) => {
-      this._resolveCurrentCommand = resolve;
-      this._shellProcess?.stdin.write(
-        `${command}\necho "${this._commandDelimiter}"\n`,
-      );
-    });
-  }
+  return new Promise<string>((resolve) => {
+    _resolveCurrentCommand = resolve;
+    _shellProcess?.stdin.write(`${command}\necho "${_commandDelimiter}"\n`);
+  });
+}
 
-  async getCurrentPath() {
-    await this.ensureOpen();
+export async function getCurrentPath() {
+  await _ensureOpen();
 
-    return await this.executeCommand("pwd");
-  }
+  return await executeCommand("pwd");
+}
 
-  async terminate() {
-    /*const exitCode = */ await this.executeCommand("exit");
+export async function terminate() {
+  /*const exitCode = */ await executeCommand("exit");
 
-    // For some reason showing the exit code clears the console
-  }
+  // For some reason showing the exit code clears the console
 }

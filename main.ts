@@ -1,12 +1,8 @@
-import "reflect-metadata";
-import { Container } from "inversify";
-import { CommandLoopService } from "./services/commandLoopService.js";
+import dotenv from "dotenv";
+import * as commandLoopService from "./services/commandLoopService.js";
 
-const container = new Container({
-  autoBindInjectable: true,
-  defaultScope: "Singleton",
-});
+dotenv.config();
 
-await container.resolve(CommandLoopService).run();
+await commandLoopService.run();
 
 process.exit(0);

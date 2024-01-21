@@ -8,7 +8,7 @@
     "eslint": "npx eslint .",
     "prettier": "npx prettier --write .",
     "compile": "tsc",
-    "dependency-graph": "madge --image dependency-graph.svg dist",
+    "dependency-graph": "madge --image dependency-graph.png dist",
     "compile & start": "tsc && node dist/main.js"
   },
   "devDependencies": {
@@ -23,9 +23,7 @@
   "dependencies": {
     "chalk": "^5.3.0",
     "dotenv": "^16.3.1",
-    "inversify": "^6.0.2",
     "openai": "^4.24.2",
-    "reflect-metadata": "^0.2.1",
     "tiktoken": "^1.0.11"
   }
 }
