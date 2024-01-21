@@ -1,14 +1,14 @@
 import chalk from "chalk";
 import * as readline from "readline";
-import * as commandService from "./commandService.js";
-import { NextCommandAction } from "./commandService.js";
-import * as consoleService from "./consoleService.js";
-import * as contextService from "./contextService.js";
-import * as envService from "./envService.js";
-import * as inputModeService from "./inputModeService.js";
-import { InputMode } from "./inputModeService.js";
+import * as commandHandler from "./commandHandler.js";
+import { NextCommandAction } from "./commandHandler.js";
+import * as config from "./config.js";
+import * as contextManager from "./contextManager.js";
+import * as inputMode from "./inputMode.js";
+import { InputMode } from "./inputMode.js";
 import * as llmService from "./llmService.js";
-import * as promptService from "./promptService.js";
+import * as output from "./output.js";
+import * as promptBuilder from "./promptBuilder.js";
 
 const _readlineInterface = readline.createInterface({
   input: process.stdin,
@@ -19,10 +19,10 @@ export async function run() {
   let nextCommandAction = NextCommandAction.Continue;
 
   while (nextCommandAction != NextCommandAction.ExitApplication) {
-    inputModeService.toggle(InputMode.LLM);
+    inputMode.toggle(InputMode.LLM);
 
-    contextService.append(`NAISYS 1.0 Shell
-Welcome back ${envService.username}!
+    contextManager.append(`NAISYS 1.0 Shell
+Welcome back ${config.username}!
 MOTD:
 Date: ${new Date().toUTCString()}
 Standard Unix Commands available. 
@@ -34,53 +34,47 @@ Special Commands:
   endsession <note>: Ends this session, clears the console log. Add notes to carry over to the next session
 The console log can only hold a certain number of 'tokens' that is specified in the prompt.
   Make sure to call endsession before the limit is hit to you can continue your work with a fresh console.
-Previous session notes: ${commandService.previousSessionNotes || "None"}
+Previous session notes: ${commandHandler.previousSessionNotes || "None"}
 `);
 
-    await commandService.handleConsoleInput(
-      await promptService.getPrompt(),
-      "ls",
-    );
+    await commandHandler.consoleInput(await promptBuilder.getPrompt(), "ls");
 
-    inputModeService.toggle(InputMode.Debug);
+    inputMode.toggle(InputMode.Debug);
 
     while (nextCommandAction == NextCommandAction.Continue) {
-      const prompt = await promptService.getPrompt();
+      const prompt = await promptBuilder.getPrompt();
       let input = "";
 
       // Root runs in a shadow mode
-      if (inputModeService.current === InputMode.Debug) {
+      if (inputMode.current === InputMode.Debug) {
         input = await _getInput(`${prompt}`);
       }
       // When LLM runs input/output is added to the context
-      else if (inputModeService.current === InputMode.LLM) {
-        contextService.append(prompt, "startPrompt");
+      else if (inputMode.current === InputMode.LLM) {
+        contextManager.append(prompt, "startPrompt");
 
         input = await llmService.send();
       }
 
-      nextCommandAction = await commandService.handleConsoleInput(
-        prompt,
-        input,
-      );
+      nextCommandAction = await commandHandler.consoleInput(prompt, input);
 
       // If the user is in debug mode and they didn't enter anything, switch to LLM
       // If in LLM mode, auto switch back to debug
       if (
-        (inputModeService.current == InputMode.Debug && !input) ||
-        inputModeService.current == InputMode.LLM
+        (inputMode.current == InputMode.Debug && !input) ||
+        inputMode.current == InputMode.LLM
       ) {
-        inputModeService.toggle();
+        inputMode.toggle();
       }
     }
 
     if (nextCommandAction == NextCommandAction.EndSession) {
-      contextService.clear();
+      contextManager.clear();
       nextCommandAction = NextCommandAction.Continue;
     }
   }
 
-  consoleService.comment("NAISYS Terminated");
+  output.comment("NAISYS Terminated");
 }
 
 function _getInput(query: string) {

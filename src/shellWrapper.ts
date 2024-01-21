@@ -1,37 +1,37 @@
 import { ChildProcessWithoutNullStreams, spawn } from "child_process";
-import * as consoleService from "./consoleService.js";
-import * as envService from "./envService.js";
+import * as config from "./config.js";
+import * as output from "./output.js";
 
-let _shellProcess: ChildProcessWithoutNullStreams | undefined;
+let _process: ChildProcessWithoutNullStreams | undefined;
 let _output = "";
 let _resolveCurrentCommand: ((value: string) => void) | undefined;
 const _commandDelimiter = "__COMMAND_END_X7YUTT__";
 
 async function _ensureOpen() {
-  if (_shellProcess) {
+  if (_process) {
     return;
   }
 
-  _shellProcess = spawn("wsl", [], { stdio: "pipe" });
+  _process = spawn("wsl", [], { stdio: "pipe" });
 
-  _shellProcess.stdout.on("data", (data) => {
+  _process.stdout.on("data", (data) => {
     processOutput(data.toString(), "stdout");
   });
 
-  _shellProcess.stderr.on("data", (data) => {
+  _process.stderr.on("data", (data) => {
     processOutput(data.toString(), "stderr");
   });
 
-  _shellProcess.on("close", (code) => {
+  _process.on("close", (code) => {
     processOutput(`${code}`, "exit");
-    _shellProcess = undefined;
+    _process = undefined;
   });
 
-  consoleService.commentIfNotEmpty(
-    await executeCommand("mkdir -p /mnt/c/naisys/home/" + envService.username),
+  output.commentIfNotEmpty(
+    await executeCommand("mkdir -p /mnt/c/naisys/home/" + config.username),
   );
-  consoleService.commentIfNotEmpty(
-    await executeCommand("cd /mnt/c/naisys/home/" + envService.username),
+  output.commentIfNotEmpty(
+    await executeCommand("cd /mnt/c/naisys/home/" + config.username),
   );
 }
 
@@ -40,7 +40,7 @@ export function processOutput(
   eventType: "stdout" | "stderr" | "exit",
 ) {
   if (!_resolveCurrentCommand) {
-    consoleService.comment(eventType + " without handler: " + dataStr);
+    output.comment(eventType + " without handler: " + dataStr);
     return;
   }
 
@@ -62,7 +62,7 @@ export async function executeCommand(command: string) {
 
   return new Promise<string>((resolve) => {
     _resolveCurrentCommand = resolve;
-    _shellProcess?.stdin.write(`${command}\necho "${_commandDelimiter}"\n`);
+    _process?.stdin.write(`${command}\necho "${_commandDelimiter}"\n`);
   });
 }
 

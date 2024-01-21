@@ -1,6 +1,6 @@
 import chalk from "chalk";
 
-export enum ConsoleColor {
+export enum OutputColor {
   comment = "greenBright",
   error = "redBright",
   llm = "magenta",
@@ -8,16 +8,13 @@ export enum ConsoleColor {
 }
 
 // color available on chalk
-export function output(
-  msg: string,
-  color: ConsoleColor = ConsoleColor.console,
-) {
+export function write(msg: string, color: OutputColor = OutputColor.console) {
   console.log(chalk[color](msg));
 }
 
 /** Meant for non-content output we show in the console, but is not added to the context */
 export function comment(msg: string) {
-  output(msg, ConsoleColor.comment);
+  write(msg, OutputColor.comment);
 }
 
 export function commentIfNotEmpty(msg: string) {
@@ -27,5 +24,5 @@ export function commentIfNotEmpty(msg: string) {
 }
 
 export function error(msg: string) {
-  output(msg, ConsoleColor.error);
+  write(msg, OutputColor.error);
 }
