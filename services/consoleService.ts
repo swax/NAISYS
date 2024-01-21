@@ -4,7 +4,7 @@ export enum ConsoleColor {
   comment = "greenBright",
   error = "redBright",
   gpt = "magenta",
-  console = "white"
+  console = "white",
 }
 
 class ConsoleService {
