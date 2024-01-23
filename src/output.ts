@@ -5,6 +5,7 @@ export enum OutputColor {
   error = "redBright",
   llm = "magenta",
   console = "white",
+  loading = "yellow",
 }
 
 // color available on chalk

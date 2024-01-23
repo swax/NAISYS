@@ -4,26 +4,29 @@
   "main": "main.js",
   "type": "module",
   "scripts": {
+    "build & run": "tsc && node dist/main.js",
     "clean:win": "rmdir dist /s /q",
     "eslint": "npx eslint --rulesdir eslint-rules src",
     "prettier": "npx prettier --write .",
     "compile": "tsc",
+    "detect-cycles": "madge --circular dist",
     "dependency-graph": "madge --image dependency-graph.png dist",
-    "compile & start": "tsc && node dist/main.js"
+    "updates:check": "npm-check-updates",
+    "updates:apply": "npm-check-updates -u && npm update"
   },
   "devDependencies": {
-    "@types/node": "^20.10.8",
-    "@typescript-eslint/eslint-plugin": "^6.19.0",
-    "@typescript-eslint/parser": "^6.19.0",
-    "eslint": "^8.56.0",
+    "@types/node": "20.11.5",
+    "@typescript-eslint/eslint-plugin": "6.19.0",
+    "@typescript-eslint/parser": "6.19.0",
+    "eslint": "8.56.0",
     "prettier": "3.2.4",
-    "ts-node": "^10.9.2",
-    "typescript": "^5.3.3"
+    "ts-node": "10.9.2",
+    "typescript": "5.3.3"
   },
   "dependencies": {
-    "chalk": "^5.3.0",
-    "dotenv": "^16.3.1",
-    "openai": "^4.24.2",
-    "tiktoken": "^1.0.11"
+    "chalk": "5.3.0",
+    "dotenv": "16.3.2",
+    "openai": "4.25.0",
+    "tiktoken": "1.0.11"
   }
 }

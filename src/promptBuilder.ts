@@ -6,7 +6,6 @@ import * as shellWrapper from "./shellWrapper.js";
 
 export async function getPrompt() {
   const promptSuffix = inputMode.current == InputMode.Debug ? "#" : "$";
-  const currentPath = await shellWrapper.getCurrentPath();
 
   let tokenSuffix = "";
   if (inputMode.current == InputMode.LLM) {
@@ -15,10 +14,16 @@ export async function getPrompt() {
     tokenSuffix = ` [Tokens: ${usedTokens}/${tokenMax}]`;
   }
 
-  return `${getPromptPrefix()}:${currentPath}${tokenSuffix}${promptSuffix} `;
+  return `${await getUserHostPathPrompt()}${tokenSuffix}${promptSuffix} `;
 }
 
-export function getPromptPrefix() {
+export async function getUserHostPathPrompt() {
+  const currentPath = await shellWrapper.getCurrentPath();
+
+  return `${getUserHostPrompt()}:${currentPath}`;
+}
+
+export function getUserHostPrompt() {
   const username =
     inputMode.current == InputMode.Debug ? "debug" : config.username;
 

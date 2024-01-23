@@ -13,6 +13,7 @@ Node.js is used to create a simple shell environment for the LLM that
 - Give the LLM the ability to 'reset' the context and carry over information to a new session/context
 - Proxy commands to a real shell, and help guide the LLM to use context friendly commands
 - Prevent the context from being polluted by catching common errors like output that includes the command prompt itself
+- Allows communication with the LLM by way of a 'debug' prompt after each run of the LLM
 
 Console Colors
 
