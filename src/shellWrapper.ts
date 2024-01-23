@@ -60,6 +60,11 @@ export function processOutput(
 export async function executeCommand(command: string) {
   await _ensureOpen();
 
+  // add line break to command if one not there already
+  if (!command.endsWith("\n")) {
+    command += "\n";
+  }
+
   return new Promise<string>((resolve) => {
     _resolveCurrentCommand = resolve;
     _process?.stdin.write(`${command}\necho "${_commandDelimiter}"\n`);

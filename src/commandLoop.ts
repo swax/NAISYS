@@ -25,15 +25,15 @@ export async function run() {
 Welcome back ${config.username}!
 MOTD:
 Date: ${new Date().toUTCString()}
-Standard Unix Commands available. 
-  vi and nano are not supported. 
-  Read/write entire files with cat and echo.
+Standard Unix Commands available.
+  vi and nano are not supported
+  Read/write entire files with cat and echo
 Special Commands:
   suggest <note>: Suggest something to be implemented for the next cycle
   talk <user> <message>: Use this command to send a message to another user
   endsession <note>: Ends this session, clears the console log. Add notes to carry over to the next session
-The console log can only hold a certain number of 'tokens' that is specified in the prompt.
-  Make sure to call endsession before the limit is hit to you can continue your work with a fresh console.
+The console log can only hold a certain number of 'tokens' that is specified in the prompt
+  Make sure to call endsession before the limit is hit to you can continue your work with a fresh console
 Previous session notes: ${commandHandler.previousSessionNotes || "None"}
 `);
 
@@ -53,7 +53,16 @@ Previous session notes: ${commandHandler.previousSessionNotes || "None"}
       else if (inputMode.current === InputMode.LLM) {
         contextManager.append(prompt, "startPrompt");
 
+        const waitingMessage =
+          prompt + chalk[output.OutputColor.loading]("LLM Working...");
+        process.stdout.write(waitingMessage);
+
         input = await llmService.send();
+
+        // erase waiting message
+        readline.moveCursor(process.stdout, -waitingMessage.length, 0);
+        process.stdout.write(" ".repeat(waitingMessage.length));
+        readline.moveCursor(process.stdout, -waitingMessage.length, 0);
       }
 
       nextCommandAction = await commandHandler.consoleInput(prompt, input);
