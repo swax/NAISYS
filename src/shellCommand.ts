@@ -4,7 +4,7 @@ import { InputMode } from "./inputMode.js";
 import * as shellWrapper from "./shellWrapper.js";
 
 interface HandleShellCommandResponse {
-  commandHandled: boolean;
+  hasErrors: boolean;
   terminate?: boolean;
 }
 
@@ -13,7 +13,7 @@ export async function handleCommand(
 ): Promise<HandleShellCommandResponse> {
   const cmdParams = input.split(" ");
   const response: HandleShellCommandResponse = {
-    commandHandled: true,
+    hasErrors: true,
   };
 
   // Route user to context friendly edit commands that can read/write the entire file in one go
@@ -48,9 +48,11 @@ export async function handleCommand(
 
   const output = await shellWrapper.executeCommand(input);
 
-  if (output) {
-    contextManager.append(output);
+  if (output.value) {
+    contextManager.append(output.value);
   }
+
+  response.hasErrors = output.hasErrors;
 
   return response;
 }

@@ -18,12 +18,6 @@ export function comment(msg: string) {
   write(msg, OutputColor.comment);
 }
 
-export function commentIfNotEmpty(msg: string) {
-  if (msg) {
-    comment(msg);
-  }
-}
-
 export function error(msg: string) {
   write(msg, OutputColor.error);
 }

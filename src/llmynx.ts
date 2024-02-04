@@ -5,31 +5,8 @@ import yaml from "js-yaml";
 import OpenAI from "openai";
 import { get_encoding } from "tiktoken";
 import { parse } from "url";
+import { llmModel } from "./llmModel.js";
 import * as output from "./output.js";
-
-const llmModel = {
-  gpt4turbo: {
-    baseUrl: undefined,
-    name: "gpt-4-0125-preview",
-    maxTokens: 128_000,
-    inputCost: 0.01,
-    outputCost: 0.03,
-  },
-  gpt3turbo: {
-    baseUrl: undefined,
-    name: "gpt-3.5-turbo-1106",
-    maxTokens: 16_000,
-    inputCost: 0.001,
-    outputCost: 0.002,
-  },
-  local: {
-    baseUrl: "http://localhost:1234/v1",
-    name: "local",
-    maxTokens: 8_000,
-    inputCost: 0,
-    outputCost: 0,
-  },
-};
 
 enum RunMode {
   Content = "content",
@@ -93,7 +70,7 @@ async function _getContent(url: string, goal: string, tokenMax: number) {
     output.comment(`Processing Piece ${i + 1}/${pieceCount}:`);
 
     output.comment(
-      "  Reduced output tokens: " + _gpt2encoding.encode(reducedOutput).length
+      "  Reduced output tokens: " + _gpt2encoding.encode(reducedOutput).length,
     );
     output.comment("  Piece tokens: " + _gpt2encoding.encode(pieceStr).length);
 
@@ -105,7 +82,7 @@ async function _getContent(url: string, goal: string, tokenMax: number) {
       i + 1,
       pieceCount,
       pieceStr,
-      tokenMax
+      tokenMax,
     );
   }
 
@@ -144,7 +121,7 @@ async function _llmReduce(
   pieceNumber: number,
   pieceTotal: number,
   pieceStr: string,
-  tokenMax: number
+  tokenMax: number,
 ) {
   if (process.env.OPENAI_API_KEY === undefined) {
     return "Error: OPENAI_API_KEY is not defined";
