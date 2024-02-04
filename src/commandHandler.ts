@@ -1,6 +1,7 @@
 import chalk from "chalk";
 import * as config from "./config.js";
 import * as contextManager from "./contextManager.js";
+import { ContentSource } from "./contextManager.js";
 import * as inputMode from "./inputMode.js";
 import { InputMode } from "./inputMode.js";
 import * as llmynx from "./llmynx.js";
@@ -65,11 +66,11 @@ export async function consoleInput(prompt: string, consoleInput: string) {
     if (inputMode.current == InputMode.LLM) {
       if (firstLine) {
         firstLine = false;
-        contextManager.append(input, "endPrompt");
+        contextManager.append(input, ContentSource.EndPrompt);
         output.write(prompt + chalk[OutputColor.llm](input));
       } else {
         output.comment("Continuing with next optimistic command from LLM...");
-        contextManager.append(input, "llm");
+        contextManager.append(input, ContentSource.EndPrompt);
       }
     }
 
@@ -116,9 +117,7 @@ export async function consoleInput(prompt: string, consoleInput: string) {
       }
 
       case "context":
-        output.comment("#####################");
-        output.comment(contextManager.content);
-        output.comment("#####################");
+        contextManager.printContext();
         break;
 
       default: {

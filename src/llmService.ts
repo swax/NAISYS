@@ -11,12 +11,19 @@ export async function send() {
     return "";
   }
 
-  const model = llmModel.local;
+  const model = llmModel.gpt4turbo;
 
   const openai = new OpenAI({
     baseURL: model.baseUrl,
     apiKey: process.env.OPENAI_API_KEY,
   });
+
+  // Assert the last message on the context is a user message
+  const lastMessage = contextManager.messages[contextManager.messages.length - 1];
+  if (lastMessage.role !== "user") {
+    output.error("Error: Last message on context is not a user message");
+    return "";
+  }
 
   const chatCompletion = await openai.chat.completions.create({
     model: model.name,
@@ -31,7 +38,8 @@ export async function send() {
             For example when you run 'cat' or 'ls', don't write what you think the output will be. Let the system do that.
             Your role is that of the user. Command responses and the next prompt will be provided by the 'user' role.`,
       },
-      { role: "user", content: contextManager.content },
+      ...contextManager.messages,
+      //{ role: "user", content: contextManager.content },
     ],
   });
 
