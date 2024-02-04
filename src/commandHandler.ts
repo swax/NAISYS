@@ -20,14 +20,14 @@ export let previousSessionNotes = "";
 export async function consoleInput(prompt: string, consoleInput: string) {
   // We process the lines one at a time so we can support multiple commands with line breaks
   let firstLine = true;
-  let continuingProcessing = true;
+  let processNextLLMpromptBlock = true;
   const userHostPrompt = promptBuilder.getUserHostPrompt();
 
   let nextCommandAction = NextCommandAction.Continue;
 
   let nextInput = consoleInput.trim();
 
-  while (continuingProcessing && nextInput) {
+  while (processNextLLMpromptBlock && nextInput) {
     let input = "";
 
     // if the prompt exists in the input, save if for the next run
@@ -84,10 +84,10 @@ export async function consoleInput(prompt: string, consoleInput: string) {
       case "endsession":
         previousSessionNotes = cmdArgs;
         output.comment(
-          "------------------------------------------------------"
+          "------------------------------------------------------",
         );
         nextCommandAction = NextCommandAction.EndSession;
-        continuingProcessing = false;
+        processNextLLMpromptBlock = false;
         break;
 
       case "talk": {
@@ -98,7 +98,7 @@ export async function consoleInput(prompt: string, consoleInput: string) {
         } else if (inputMode.current === InputMode.Debug) {
           inputMode.toggle(InputMode.LLM);
           contextManager.append(
-            `Message from root@${config.hostname}: ${talkMsg}`
+            `Message from root@${config.hostname}: ${talkMsg}`,
           );
           inputMode.toggle(InputMode.Debug);
         }
@@ -124,11 +124,14 @@ export async function consoleInput(prompt: string, consoleInput: string) {
       default: {
         const shellResponse = await shellCommand.handleCommand(input);
 
-        if (shellResponse.commandHandled) {
-          nextCommandAction = shellResponse.terminate
-            ? NextCommandAction.ExitApplication
-            : NextCommandAction.Continue;
+        if (shellResponse.hasErrors) {
+          output.error(`Error detected processing shell command:`);
+          processNextLLMpromptBlock = false;
         }
+
+        nextCommandAction = shellResponse.terminate
+          ? NextCommandAction.ExitApplication
+          : NextCommandAction.Continue;
       }
     }
   }
