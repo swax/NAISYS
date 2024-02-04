@@ -33,6 +33,10 @@ async function _ensureOpen() {
   output.commentIfNotEmpty(
     await executeCommand("cd /mnt/c/naisys/home/" + config.username),
   );
+
+  // Stop running commands if one fails
+  // Often the LLM will give us back all kinds of invalid commands, we want to break on the first one
+  output.commentIfNotEmpty(await executeCommand("set -e"));
 }
 
 export function processOutput(

@@ -3,6 +3,7 @@ import * as config from "./config.js";
 import * as contextManager from "./contextManager.js";
 import * as inputMode from "./inputMode.js";
 import { InputMode } from "./inputMode.js";
+import * as llmynx from "./llmynx.js";
 import * as output from "./output.js";
 import { OutputColor } from "./output.js";
 import * as promptBuilder from "./promptBuilder.js";
@@ -73,6 +74,7 @@ export async function consoleInput(prompt: string, consoleInput: string) {
     }
 
     const cmdParams = input.split(" ");
+    const cmdArgs = input.slice(cmdParams[0].length).trim();
 
     switch (cmdParams[0]) {
       case "suggest":
@@ -80,27 +82,36 @@ export async function consoleInput(prompt: string, consoleInput: string) {
         break;
 
       case "endsession":
-        previousSessionNotes = input.slice("endsession".length).trim();
+        previousSessionNotes = cmdArgs;
         output.comment(
-          "------------------------------------------------------",
+          "------------------------------------------------------"
         );
         nextCommandAction = NextCommandAction.EndSession;
         continuingProcessing = false;
         break;
 
       case "talk": {
-        const talkMsg = input.slice("talk".length).trim();
+        const talkMsg = cmdArgs;
 
         if (inputMode.current === InputMode.LLM) {
           contextManager.append("Message sent!");
         } else if (inputMode.current === InputMode.Debug) {
           inputMode.toggle(InputMode.LLM);
           contextManager.append(
-            `Message from root@${config.hostname}: ${talkMsg}`,
+            `Message from root@${config.hostname}: ${talkMsg}`
           );
           inputMode.toggle(InputMode.Debug);
         }
 
+        break;
+      }
+
+      case "llmynx": {
+        const argParams = cmdArgs.split(" ");
+        const url = argParams[0];
+        const goal = cmdArgs.slice(argParams[0].length).trim();
+        const reducedUrlContent = await llmynx.run(url, goal, 2500);
+        contextManager.append(reducedUrlContent);
         break;
       }
 

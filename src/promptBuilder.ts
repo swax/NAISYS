@@ -7,12 +7,9 @@ import * as shellWrapper from "./shellWrapper.js";
 export async function getPrompt() {
   const promptSuffix = inputMode.current == InputMode.Debug ? "#" : "$";
 
-  let tokenSuffix = "";
-  if (inputMode.current == InputMode.LLM) {
-    const tokenMax = config.tokenMax;
-    const usedTokens = contextManager.getTokenCount();
-    tokenSuffix = ` [Tokens: ${usedTokens}/${tokenMax}]`;
-  }
+  const tokenMax = config.tokenMax;
+  const usedTokens = contextManager.getTokenCount();
+  const tokenSuffix = ` [Tokens: ${usedTokens}/${tokenMax}]`;
 
   return `${await getUserHostPathPrompt()}${tokenSuffix}${promptSuffix} `;
 }
