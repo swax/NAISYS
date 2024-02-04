@@ -4,6 +4,7 @@ import * as commandHandler from "./commandHandler.js";
 import { NextCommandAction } from "./commandHandler.js";
 import * as config from "./config.js";
 import * as contextManager from "./contextManager.js";
+import { ContentSource } from "./contextManager.js";
 import * as inputMode from "./inputMode.js";
 import { InputMode } from "./inputMode.js";
 import * as llmService from "./llmService.js";
@@ -51,7 +52,7 @@ Previous session notes: ${commandHandler.previousSessionNotes || "None"}
       }
       // When LLM runs input/output is added to the context
       else if (inputMode.current === InputMode.LLM) {
-        contextManager.append(prompt, "startPrompt");
+        contextManager.append(prompt, ContentSource.StartPrompt);
 
         const waitingMessage =
           prompt + chalk[output.OutputColor.loading]("LLM Working...");
