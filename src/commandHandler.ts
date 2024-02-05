@@ -123,7 +123,7 @@ export async function consoleInput(prompt: string, consoleInput: string) {
       default: {
         const shellResponse = await shellCommand.handleCommand(input);
 
-        if (shellResponse.hasErrors) {
+        if (shellResponse.hasErrors && nextInput) {
           output.error(`Error detected processing shell command:`);
           processNextLLMpromptBlock = false;
         }

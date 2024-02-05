@@ -30,13 +30,14 @@ export async function send() {
     messages: [
       {
         role: "system",
-        content: `You are ${config.username} a new hire with the job of creating a website about animals from the command line. 
+        content: `You are ${config.username} a new hire with the job of creating a Neon Genesis Evangelion fan website from the command line. 
             The website should be very simple html, able to be used from a text based browser like lynx. Pages should be relatively short. 
             The 'user' role is the command line interface itself presenting you with the next command prompt. 
             Make sure the read the command line rules in the MOTD carefully.
             Don't try to guess the output of commands. 
             For example when you run 'cat' or 'ls', don't write what you think the output will be. Let the system do that.
-            Your role is that of the user. Command responses and the next prompt will be provided by the 'user' role.`,
+            Your role is that of the user. Command responses and the next prompt will be provided by the 'user' role.
+            Be careful when writing files through prompt close and escape quotes properly.`,
       },
       ...contextManager.messages,
       //{ role: "user", content: contextManager.content },

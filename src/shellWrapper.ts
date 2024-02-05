@@ -1,11 +1,18 @@
 import { ChildProcessWithoutNullStreams, spawn } from "child_process";
 import * as config from "./config.js";
 import * as output from "./output.js";
+import { clear } from "console";
 
 type CommandResponse = {
   value: string;
   hasErrors: boolean;
 };
+
+enum ShellEvent {
+  Ouptput = "stdout",
+  Error = "stderr",
+  Exit = "exit",
+}
 
 let _process: ChildProcessWithoutNullStreams | undefined;
 let _log = "";
@@ -14,6 +21,7 @@ let _hasErrors = false;
 let _currentPath: string | undefined;
 
 let _resolveCurrentCommand: ((value: CommandResponse) => void) | undefined;
+let _currentCommandTimeout: NodeJS.Timeout | undefined;
 
 const _commandDelimiter = "__COMMAND_END_X7YUTT__";
 
@@ -23,36 +31,35 @@ async function _ensureOpen() {
   }
 
   _log = "";
-  _commandOutput = "";
-  _hasErrors = false;
+  resetCommand();
 
   _process = spawn("wsl", [], { stdio: "pipe" });
 
   _process.stdout.on("data", (data) => {
-    processOutput(data.toString(), "stdout");
+    processOutput(data.toString(), ShellEvent.Ouptput);
   });
 
   _process.stderr.on("data", (data) => {
-    processOutput(data.toString(), "stderr");
+    processOutput(data.toString(), ShellEvent.Error);
   });
 
   _process.on("close", (code) => {
-    processOutput(`${code}`, "exit");
+    processOutput(`${code}`, ShellEvent.Exit);
     _process = undefined;
   });
 
   // Init users home dir on first run, on shell crash/rerun go back to the current path
   if (!_currentPath) {
-    output.comment("NEW SHELL OPENED");
+    output.comment("NEW SHELL OPENED. PID: " + _process.pid);
 
     commentIfNotEmpty(
-      await executeCommand("mkdir -p /mnt/c/naisys/home/" + config.username),
+      await executeCommand("mkdir -p /mnt/c/naisys/home/" + config.username)
     );
     commentIfNotEmpty(
-      await executeCommand("cd /mnt/c/naisys/home/" + config.username),
+      await executeCommand("cd /mnt/c/naisys/home/" + config.username)
     );
   } else {
-    output.comment("SHELL RESTORED");
+    output.comment("SHELL RESTORED. PID: " + _process.pid);
 
     commentIfNotEmpty(await executeCommand("cd " + _currentPath));
   }
@@ -70,23 +77,20 @@ function commentIfNotEmpty(response: CommandResponse) {
   }
 }
 
-export function processOutput(
-  dataStr: string,
-  eventType: "stdout" | "stderr" | "exit",
-) {
+export function processOutput(dataStr: string, eventType: ShellEvent) {
   if (!_resolveCurrentCommand) {
     output.comment(eventType + " without handler: " + dataStr);
     return;
   }
 
-  if (eventType === "exit") {
-    output.error("SHELL EXITED: " + dataStr);
+  if (eventType === ShellEvent.Exit) {
+    output.error("SHELL EXITED. PID: " + _process?.pid + " CODE: " + dataStr);
   } else {
     _log += "OUTPUT: " + dataStr;
     _commandOutput += dataStr;
   }
 
-  if (eventType === "stderr") {
+  if (eventType === ShellEvent.Error) {
     _hasErrors = true;
     //output += "stderr: ";
 
@@ -116,19 +120,19 @@ export function processOutput(
   }
 
   const delimiterIndex = _commandOutput.indexOf(_commandDelimiter);
-  if (delimiterIndex != -1 || eventType === "exit") {
+  if (delimiterIndex != -1 || eventType === ShellEvent.Exit) {
     // trim everything after delimiter
     _commandOutput = _commandOutput.slice(0, delimiterIndex);
 
-    _resolveCurrentCommand({
+    const response = {
       value: _commandOutput.trim(),
       hasErrors: _hasErrors,
-    });
-    _commandOutput = "";
-    _hasErrors = false;
+    };
+
+    resetCommand();
+    _resolveCurrentCommand(response);
   }
 }
-
 export async function executeCommand(command: string) {
   /*if (command == "shelllog") {
     _log.split("\n").forEach((line, i) => {
@@ -148,6 +152,21 @@ export async function executeCommand(command: string) {
     const commandWithDelimiter = `${command.trim()}\necho "${_commandDelimiter} LINE:\${LINENO}"\n`;
     _log += "INPUT: " + commandWithDelimiter;
     _process?.stdin.write(commandWithDelimiter);
+
+    // If no response after 5 seconds, kill and reset the shell, often hanging on some unescaped input
+    const timeoutSeconds = 5;
+    _currentCommandTimeout = setTimeout(() => {
+      if (_resolveCurrentCommand) {
+        _process?.kill();
+        output.error("SHELL TIMEMOUT/KILLED. PID: " + _process?.pid);
+        resetProcess();
+
+        _resolveCurrentCommand({
+          value: `Error: Command timed out after ${timeoutSeconds} seconds.`,
+          hasErrors: true,
+        });
+      }
+    }, timeoutSeconds * 1000);
   });
 }
 
@@ -163,4 +182,17 @@ export async function terminate() {
   /*const exitCode = */ await executeCommand("exit");
 
   // For some reason showing the exit code clears the console
+  resetProcess();
+}
+
+function resetCommand() {
+  _commandOutput = "";
+  _hasErrors = false;
+  clearTimeout(_currentCommandTimeout);
+}
+
+function resetProcess() {
+  resetCommand();
+  _process?.removeAllListeners();
+  _process = undefined;
 }
