@@ -58,12 +58,18 @@ Previous session notes: ${commandHandler.previousSessionNotes || "None"}
           prompt + chalk[output.OutputColor.loading]("LLM Working...");
         process.stdout.write(waitingMessage);
 
-        input = await llmService.send();
+        const llmResponse = await llmService.send();
 
         // erase waiting message
         readline.moveCursor(process.stdout, -waitingMessage.length, 0);
         process.stdout.write(" ".repeat(waitingMessage.length));
         readline.moveCursor(process.stdout, -waitingMessage.length, 0);
+
+        if (llmResponse.error) {
+          output.error(llmResponse.value);
+        } else {
+          input = llmResponse.value;
+        }
       }
 
       nextCommandAction = await commandHandler.consoleInput(prompt, input);
