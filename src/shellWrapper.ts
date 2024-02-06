@@ -1,7 +1,7 @@
 import { ChildProcessWithoutNullStreams, spawn } from "child_process";
 import * as config from "./config.js";
 import * as output from "./output.js";
-import { clear } from "console";
+import * as fs from "fs";
 
 type CommandResponse = {
   value: string;
@@ -67,7 +67,7 @@ async function _ensureOpen() {
   // Stop running commands if one fails
   // Often the LLM will give us back all kinds of invalid commands, we want to break on the first one
   // Unfortunately this also causes the shell to exit on failures, so we need to handle that
-  commentIfNotEmpty(await executeCommand("set -e"));
+  //commentIfNotEmpty(await executeCommand("set -e"));
 }
 
 /** Basically don't show anything in the console unless there is an error */
@@ -147,6 +147,10 @@ export async function executeCommand(command: string) {
 
   await _ensureOpen();
 
+  if (_currentPath && command.trim().split("\n").length > 1) {
+    command = await runCommandFromScript(command);
+  }
+
   return new Promise<CommandResponse>((resolve) => {
     _resolveCurrentCommand = resolve;
     const commandWithDelimiter = `${command.trim()}\necho "${_commandDelimiter} LINE:\${LINENO}"\n`;
@@ -195,4 +199,23 @@ function resetProcess() {
   resetCommand();
   _process?.removeAllListeners();
   _process = undefined;
+}
+
+/** Wraps multi line commands in a script to make it easier to diagnose the source of errors based on line number 
+ * May also help with common escaping errors
+*/
+async function runCommandFromScript(command: string) {
+  const scriptPathWin = "C:\\naisys\\command.sh";
+  const scriptPathUnix = "/mnt/c/naisys/command.sh";
+
+  // set -e causes the script to exit on any error
+  const scriptContent = `#!/bin/bash
+set -e
+cd ${_currentPath}
+${command.trim()}`;
+
+  // create/writewrite file
+  fs.writeFileSync(scriptPathWin, scriptContent);
+
+  return `bash ${scriptPathUnix}`;
 }
