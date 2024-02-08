@@ -22,7 +22,7 @@ export let messages: Array<{
 
 export function append(
   text: string,
-  source: ContentSource = ContentSource.Console
+  source: ContentSource = ContentSource.Console,
 ) {
   // Root runs in a shadow mode where their activity is not recorded in the context
   // Mark with a # to make it clear that it is not part of the context

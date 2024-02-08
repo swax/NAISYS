@@ -8,10 +8,10 @@ export const llmModel = {
   },
   gpt3turbo: {
     baseUrl: undefined,
-    name: "gpt-3.5-turbo-1106",
+    name: "gpt-3.5-turbo-0125",
     maxTokens: 16_000,
-    inputCost: 0.001,
-    outputCost: 0.002,
+    inputCost: 0.0005,
+    outputCost: 0.0015,
   },
   local: {
     baseUrl: "http://localhost:1234/v1",

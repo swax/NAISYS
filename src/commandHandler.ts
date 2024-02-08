@@ -69,7 +69,7 @@ export async function consoleInput(prompt: string, consoleInput: string) {
         contextManager.append(input, ContentSource.EndPrompt);
         output.write(prompt + chalk[OutputColor.llm](input));
       } else {
-        output.comment("Continuing with next optimistic command from LLM...");
+        output.comment("Optimistically continuing with the next command...");
         contextManager.append(input, ContentSource.EndPrompt);
       }
     }
@@ -78,14 +78,21 @@ export async function consoleInput(prompt: string, consoleInput: string) {
     const cmdArgs = input.slice(cmdParams[0].length).trim();
 
     switch (cmdParams[0]) {
-      case "suggest":
-        contextManager.append("Suggestion noted. Thank you for your feedback!");
-        break;
+      case "comment": {
+        contextManager.append(
+          "Comment noted. Try running commands now to achieve your goal."
+        );
 
+        // There may be additional commands after the comment, try to slice it out after the new line and continue
+        const nextNewLine = input.indexOf("\n");
+        nextInput = nextNewLine > 0 ? input.slice(nextNewLine).trim() : "";
+
+        break;
+      }
       case "endsession":
         previousSessionNotes = cmdArgs;
         output.comment(
-          "------------------------------------------------------",
+          "------------------------------------------------------"
         );
         nextCommandAction = NextCommandAction.EndSession;
         processNextLLMpromptBlock = false;
@@ -99,7 +106,7 @@ export async function consoleInput(prompt: string, consoleInput: string) {
         } else if (inputMode.current === InputMode.Debug) {
           inputMode.toggle(InputMode.LLM);
           contextManager.append(
-            `Message from root@${config.hostname}: ${talkMsg}`,
+            `Message from root@${config.hostname}: ${talkMsg}`
           );
           inputMode.toggle(InputMode.Debug);
         }
