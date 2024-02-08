@@ -26,16 +26,20 @@ export async function run() {
 Welcome back ${config.username}!
 MOTD:
 Date: ${new Date().toUTCString()}
-Standard Unix Commands available.
+Commands: 
+  Standard Unix commands are available
   vi and nano are not supported
-  Read/write entire files with cat and echo
+  Read/write entire files with cat
+  Do not input notes after the prompt. Only valid commands.
 Special Commands:
-  suggest <note>: Suggest something to be implemented for the next cycle
+  comment <thought>: Any non-command output like thinking out loud, prefix with the 'comment' command
   talk <user> <message>: Use this command to send a message to another user
   endsession <note>: Ends this session, clears the console log. Add notes to carry over to the next session
-The console log can only hold a certain number of 'tokens' that is specified in the prompt
-  Make sure to call endsession before the limit is hit to you can continue your work with a fresh console
-Previous session notes: ${commandHandler.previousSessionNotes || "None"}
+Tokens:
+  The console log can only hold a certain number of 'tokens' that is specified in the prompt
+  Make sure to call endsession before the limit is hit so you can continue your work with a fresh console
+Previous session notes: 
+  ${commandHandler.previousSessionNotes || "None"}
 `);
 
     await commandHandler.consoleInput(await promptBuilder.getPrompt(), "ls");

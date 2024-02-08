@@ -1,7 +1,7 @@
 import { ChildProcessWithoutNullStreams, spawn } from "child_process";
+import * as fs from "fs";
 import * as config from "./config.js";
 import * as output from "./output.js";
-import * as fs from "fs";
 
 type CommandResponse = {
   value: string;
@@ -53,10 +53,10 @@ async function _ensureOpen() {
     output.comment("NEW SHELL OPENED. PID: " + _process.pid);
 
     commentIfNotEmpty(
-      await executeCommand("mkdir -p /mnt/c/naisys/home/" + config.username)
+      await executeCommand("mkdir -p /mnt/c/naisys/home/" + config.username),
     );
     commentIfNotEmpty(
-      await executeCommand("cd /mnt/c/naisys/home/" + config.username)
+      await executeCommand("cd /mnt/c/naisys/home/" + config.username),
     );
   } else {
     output.comment("SHELL RESTORED. PID: " + _process.pid);
@@ -201,10 +201,10 @@ function resetProcess() {
   _process = undefined;
 }
 
-/** Wraps multi line commands in a script to make it easier to diagnose the source of errors based on line number 
+/** Wraps multi line commands in a script to make it easier to diagnose the source of errors based on line number
  * May also help with common escaping errors
-*/
-async function runCommandFromScript(command: string) {
+ */
+function runCommandFromScript(command: string) {
   const scriptPathWin = "C:\\naisys\\command.sh";
   const scriptPathUnix = "/mnt/c/naisys/command.sh";
 
