@@ -20,4 +20,11 @@ export const llmModel = {
     inputCost: 0,
     outputCost: 0,
   },
+  google: {
+    baseUrl: undefined,
+    name: "gemini-pro",
+    maxTokens: 8_000,
+    inputCost: 0,
+    outputCost: 0,
+  },
 };

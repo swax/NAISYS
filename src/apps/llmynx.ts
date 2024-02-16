@@ -5,8 +5,8 @@ import yaml from "js-yaml";
 import OpenAI from "openai";
 import { get_encoding } from "tiktoken";
 import { parse } from "url";
-import { llmModel } from "./llmModel.js";
-import * as output from "./output.js";
+import { llmModel } from "../llmModel.js";
+import * as output from "../output.js";
 
 enum RunMode {
   Content = "content",

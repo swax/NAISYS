@@ -1,10 +1,10 @@
 import chalk from "chalk";
+import * as llmynx from "./apps/llmynx.js";
 import * as config from "./config.js";
 import * as contextManager from "./contextManager.js";
 import { ContentSource } from "./contextManager.js";
 import * as inputMode from "./inputMode.js";
 import { InputMode } from "./inputMode.js";
-import * as llmynx from "./llmynx.js";
 import * as output from "./output.js";
 import { OutputColor } from "./output.js";
 import * as promptBuilder from "./promptBuilder.js";
@@ -80,7 +80,7 @@ export async function consoleInput(prompt: string, consoleInput: string) {
     switch (cmdParams[0]) {
       case "comment": {
         contextManager.append(
-          "Comment noted. Try running commands now to achieve your goal."
+          "Comment noted. Try running commands now to achieve your goal.",
         );
 
         // There may be additional commands after the comment, try to slice it out after the new line and continue
@@ -92,7 +92,7 @@ export async function consoleInput(prompt: string, consoleInput: string) {
       case "endsession":
         previousSessionNotes = cmdArgs;
         output.comment(
-          "------------------------------------------------------"
+          "------------------------------------------------------",
         );
         nextCommandAction = NextCommandAction.EndSession;
         processNextLLMpromptBlock = false;
@@ -106,7 +106,7 @@ export async function consoleInput(prompt: string, consoleInput: string) {
         } else if (inputMode.current === InputMode.Debug) {
           inputMode.toggle(InputMode.LLM);
           contextManager.append(
-            `Message from root@${config.hostname}: ${talkMsg}`
+            `Message from root@${config.hostname}: ${talkMsg}`,
           );
           inputMode.toggle(InputMode.Debug);
         }
