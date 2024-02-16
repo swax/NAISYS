@@ -15,8 +15,15 @@ export enum ContentSource {
 
 export let content = "";
 
+export enum LlmRole {
+  Assistant = "assistant",
+  User = "user",
+  /** Not supported by Google API */
+  System = "system",
+}
+
 export let messages: Array<{
-  role: "assistant" | "user";
+  role: LlmRole;
   content: string;
 }> = [];
 
@@ -34,10 +41,31 @@ export function append(
   // Else otherwise we're running in LLM mode
   content += text;
 
-  if (source == ContentSource.StartPrompt || source == ContentSource.Console) {
-    messages.push({ role: "user", content: text });
-  } else if (source == ContentSource.EndPrompt || source == ContentSource.LLM) {
-    messages.push({ role: "assistant", content: text });
+  const role =
+    source == ContentSource.StartPrompt || source == ContentSource.Console
+      ? LlmRole.User
+      : source == ContentSource.EndPrompt || source == ContentSource.LLM
+        ? LlmRole.Assistant
+        : undefined;
+
+  if (!role) {
+    throw new Error("Invalid source");
+  }
+
+  // If last message is the same role then combine - Googl API requires alterntating roles
+  let combined = false;
+
+  if (messages.length > 0) {
+    const lastMessage = messages[messages.length - 1];
+
+    if (lastMessage.role == role) {
+      lastMessage.content += `\n${text}`;
+      combined = true;
+    }
+  }
+
+  if (!combined) {
+    messages.push({ role, content: text });
   }
 
   // End the line except for the start prompt which needs the following input appended to it on the same line
