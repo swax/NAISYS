@@ -1,5 +1,6 @@
 import { ChildProcessWithoutNullStreams, spawn } from "child_process";
 import * as fs from "fs";
+import * as os from "os";
 import * as config from "./config.js";
 import * as output from "./output.js";
 
@@ -33,7 +34,9 @@ async function _ensureOpen() {
   _log = "";
   resetCommand();
 
-  _process = spawn("wsl", [], { stdio: "pipe" });
+  const spawnProcess = os.platform() === "win32" ? "wsl" : "bash";
+
+  _process = spawn(spawnProcess, [], { stdio: "pipe" });
 
   _process.stdout.on("data", (data) => {
     processOutput(data.toString(), ShellEvent.Ouptput);
@@ -53,10 +56,10 @@ async function _ensureOpen() {
     output.comment("NEW SHELL OPENED. PID: " + _process.pid);
 
     commentIfNotEmpty(
-      await executeCommand("mkdir -p /mnt/c/naisys/home/" + config.username),
+      await executeCommand("mkdir -p /mnt/c/naisys/home/" + config.username)
     );
     commentIfNotEmpty(
-      await executeCommand("cd /mnt/c/naisys/home/" + config.username),
+      await executeCommand("cd /mnt/c/naisys/home/" + config.username)
     );
   } else {
     output.comment("SHELL RESTORED. PID: " + _process.pid);
@@ -214,8 +217,10 @@ set -e
 cd ${_currentPath}
 ${command.trim()}`;
 
+  const scriptPath = os.platform() === "win32" ? scriptPathWin : scriptPathUnix;
+
   // create/writewrite file
-  fs.writeFileSync(scriptPathWin, scriptContent);
+  fs.writeFileSync(scriptPath, scriptContent);
 
   return `bash ${scriptPathUnix}`;
 }
