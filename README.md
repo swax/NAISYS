@@ -7,7 +7,7 @@ Since the LLM has a limited context, a shell built for it should take this into 
 perform 'context friendly' operations. For example reading/writing a file can't use a typical editor like
 vim or nano so point the LLM to use cat to read/write files in a single operation.
 
-Node.js is used to create a simple shell environment for the LLM that
+#### Node.js is used to create a simple shell environment for the LLM that
 
 - Helps the LLM keep track of its current context size
 - Give the LLM the ability to 'reset' the context and carry over information to a new session/context
@@ -15,7 +15,20 @@ Node.js is used to create a simple shell environment for the LLM that
 - Prevent the context from being polluted by catching common errors like output that includes the command prompt itself
 - Allows communication with the LLM by way of a 'debug' prompt after each run of the LLM
 
-Console Colors
+
+
+#### Getting started
+
+- Install Node.js
+- Clone this repository
+- Run `npm install` to install dependencies
+- Configure the `.env` file
+- If on Windows:
+    - Install WSL (Windows Subsystem for Linux)
+    - The root folder should be set to the WSL path
+    - So `C:\naisys` should be `/mnt/c/naisys` in the `.env` file
+
+#### Console Colors
 
 - Purple: Response from LLM, added to context
 - White: Generated locally or from a real shell, added to context

@@ -90,7 +90,7 @@ export async function consoleInput(prompt: string, consoleInput: string) {
 
         break;
       }
-      case "endsession":
+      case "endsession": {
         previousSessionNotes = cmdArgs;
         output.comment(
           "------------------------------------------------------",
@@ -98,6 +98,7 @@ export async function consoleInput(prompt: string, consoleInput: string) {
         nextCommandAction = NextCommandAction.EndSession;
         processNextLLMpromptBlock = false;
         break;
+      }
 
       case "talk": {
         const talkMsg = cmdArgs;

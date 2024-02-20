@@ -1,8 +1,9 @@
+import * as fs from "fs";
 import { open } from "sqlite";
 import sqlite3 from "sqlite3";
 import * as config from "../config.js";
-import * as fs from "fs";
 import * as output from "../output.js";
+import { naisysToHostPath } from "../utilities.js";
 
 // checking mail should probably be done in a 'cycle' where the llm reads, cleans and decides what actions to take
 
@@ -46,7 +47,7 @@ Command:
     Hey Bob, I agree let's do that
 */
 
-const _dbFilePath = `${config.rootFolder}/var/llmail.db`;
+const _dbFilePath = naisysToHostPath(`${config.rootFolder}/var/llmail.db`);
 
 export async function init() {
   const createDb = !fs.existsSync(_dbFilePath);
