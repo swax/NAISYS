@@ -1,3 +1,9 @@
+import { open } from "sqlite";
+import sqlite3 from "sqlite3";
+import * as config from "../config.js";
+import * as fs from "fs";
+import * as output from "../output.js";
+
 // checking mail should probably be done in a 'cycle' where the llm reads, cleans and decides what actions to take
 
 /*
@@ -19,6 +25,11 @@ Command:
         use llmail read 123 to see the thread  
         max token length for threads - consolidate or page?
 
+    how to detect new messages
+      keep track of the latest message id in the db
+      if changed, check if the user is on the thread
+      if so, show the thread in the next prompt
+
     llmail read <id>
     Thread Subject: hello world
     Members: Bob, Jill, Steve, John
@@ -34,3 +45,61 @@ Command:
     Message: 
     Hey Bob, I agree let's do that
 */
+
+const _dbFilePath = `${config.rootFolder}/var/llmail.db`;
+
+export async function init() {
+  const createDb = !fs.existsSync(_dbFilePath);
+
+  const db = await open({
+    filename: _dbFilePath,
+    driver: sqlite3.Database,
+    mode: sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE,
+  });
+
+  try {
+    if (createDb) {
+      await db.exec(
+        "CREATE TABLE Users (id INTEGER PRIMARY KEY, username TEXT)",
+      );
+      await db.exec(
+        "CREATE TABLE Threads (id INTEGER PRIMARY KEY, subject TEXT)",
+      );
+      await db.exec(
+        "CREATE TABLE ThreadMembers (id INTEGER PRIMARY KEY, threadId INTEGER, userId INTEGER)",
+      );
+      await db.exec(
+        "CREATE TABLE ThreadMessages (id INTEGER PRIMARY KEY, threadId INTEGER, userId INTEGER, message TEXT)",
+      );
+
+      output.comment("llmail database initialized");
+    }
+
+    // If user is not in the db, add them
+    const users = await db.all("SELECT * FROM Users WHERE username = ?", [
+      config.username,
+    ]);
+
+    if (users.length == 0) {
+      await db.run("INSERT INTO Users (username) VALUES (?)", [
+        config.username,
+      ]);
+    }
+
+    output.comment(`${config.username} added to llmail database `);
+  } finally {
+    await db.close();
+  }
+}
+
+export async function run(args: string) {
+  if (args.startsWith("reset")) {
+    if (fs.existsSync(_dbFilePath)) {
+      fs.unlinkSync(_dbFilePath);
+    }
+
+    await init();
+  }
+
+  return "Unknown llmail command";
+}

@@ -23,7 +23,7 @@ export async function send(): Promise<LLMServiceResponse> {
 function getSystemMessage() {
   return `You are ${config.username} a new hire with the job of creating a Neon Genesis Evangelion fan website from the command line. 
 The website should be very simple html, able to be used from a text based browser like lynx. Pages should be relatively short.
-The location of the website should be in /mnt/c/naisys/www 
+The location of the website should be in ${config.rootFolder}/www 
 When website can be tested at http://swax-elitebook.local/ use --dump with lynx as it does not work in interactive mode.
 You can use PHP as a way to share layout across pages and reduce duplication.
 The 'user' role is the command line interface itself presenting you with the next command prompt. 

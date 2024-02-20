@@ -1,4 +1,5 @@
 import chalk from "chalk";
+import * as llmail from "./apps/llmail.js";
 import * as llmynx from "./apps/llmynx.js";
 import * as config from "./config.js";
 import * as contextManager from "./contextManager.js";
@@ -122,6 +123,11 @@ export async function consoleInput(prompt: string, consoleInput: string) {
         contextManager.append(reducedUrlContent);
         break;
       }
+
+      case "llmail":
+        const mailResponse = await llmail.run(cmdArgs);
+        contextManager.append(mailResponse);
+        break;
 
       case "context":
         contextManager.printContext();
