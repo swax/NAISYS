@@ -3,6 +3,7 @@ import * as fs from "fs";
 import * as os from "os";
 import * as config from "./config.js";
 import * as output from "./output.js";
+import { naisysToHostPath } from "./utilities.js";
 
 type CommandResponse = {
   value: string;
@@ -210,11 +211,7 @@ function resetProcess() {
  * May also help with common escaping errors
  */
 function runCommandFromScript(command: string) {
-  const scriptPathUnix = `${config.rootFolder}/home/${config.username}/.command.tmp.sh`;
-
-  const scriptPathWin = scriptPathUnix
-    .replace("/mnt/c/", "C:\\")
-    .replace(/\//g, "\\");
+  const scriptPath = `${config.rootFolder}/home/${config.username}/.command.tmp.sh`;
 
   // set -e causes the script to exit on any error
   const scriptContent = `#!/bin/bash
@@ -222,10 +219,8 @@ set -e
 cd ${_currentPath}
 ${command.trim()}`;
 
-  const scriptPath = os.platform() === "win32" ? scriptPathWin : scriptPathUnix;
-
   // create/writewrite file
-  fs.writeFileSync(scriptPath, scriptContent);
+  fs.writeFileSync(naisysToHostPath(scriptPath), scriptContent);
 
-  return `bash ${scriptPathUnix}`;
+  return `bash ${scriptPath}`;
 }
