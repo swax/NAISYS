@@ -56,10 +56,12 @@ async function _ensureOpen() {
     output.comment("NEW SHELL OPENED. PID: " + _process.pid);
 
     commentIfNotEmpty(
-      await executeCommand("mkdir -p /mnt/c/naisys/home/" + config.username)
+      await executeCommand(
+        `mkdir -p ${config.rootFolder}/home/` + config.username,
+      ),
     );
     commentIfNotEmpty(
-      await executeCommand("cd /mnt/c/naisys/home/" + config.username)
+      await executeCommand(`cd ${config.rootFolder}/home/` + config.username),
     );
   } else {
     output.comment("SHELL RESTORED. PID: " + _process.pid);
@@ -208,8 +210,11 @@ function resetProcess() {
  * May also help with common escaping errors
  */
 function runCommandFromScript(command: string) {
-  const scriptPathWin = "C:\\naisys\\command.sh";
-  const scriptPathUnix = "/mnt/c/naisys/command.sh";
+  const scriptPathUnix = `${config.rootFolder}/home/${config.username}/.command.tmp.sh`;
+
+  const scriptPathWin = scriptPathUnix
+    .replace("/mnt/c/", "C:\\")
+    .replace(/\//g, "\\");
 
   // set -e causes the script to exit on any error
   const scriptContent = `#!/bin/bash
