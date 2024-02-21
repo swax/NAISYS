@@ -78,16 +78,16 @@ export async function init() {
 
     // If user is not in the db, add them
     const users = await db.all("SELECT * FROM Users WHERE username = ?", [
-      config.username,
+      config.agent.username,
     ]);
 
     if (users.length == 0) {
       await db.run("INSERT INTO Users (username) VALUES (?)", [
-        config.username,
+        config.agent.username,
       ]);
     }
 
-    output.comment(`${config.username} added to llmail database `);
+    output.comment(`${config.agent.username} added to llmail database `);
   } finally {
     await db.close();
   }

@@ -15,8 +15,6 @@ vim or nano so point the LLM to use cat to read/write files in a single operatio
 - Prevent the context from being polluted by catching common errors like output that includes the command prompt itself
 - Allows communication with the LLM by way of a 'debug' prompt after each run of the LLM
 
-
-
 #### Getting started
 
 - Install Node.js
@@ -24,9 +22,9 @@ vim or nano so point the LLM to use cat to read/write files in a single operatio
 - Run `npm install` to install dependencies
 - Configure the `.env` file
 - If on Windows:
-    - Install WSL (Windows Subsystem for Linux)
-    - The root folder should be set to the WSL path
-    - So `C:\naisys` should be `/mnt/c/naisys` in the `.env` file
+  - Install WSL (Windows Subsystem for Linux)
+  - The root folder should be set to the WSL path
+  - So `C:\naisys` should be `/mnt/c/naisys` in the `.env` file
 
 #### Console Colors
 

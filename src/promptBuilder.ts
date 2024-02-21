@@ -22,7 +22,7 @@ export async function getUserHostPathPrompt() {
 
 export function getUserHostPrompt() {
   const username =
-    inputMode.current == InputMode.Debug ? "debug" : config.username;
+    inputMode.current == InputMode.Debug ? "debug" : config.agent.username;
 
   return `${username}@${config.hostname}`;
 }

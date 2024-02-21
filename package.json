@@ -1,14 +1,14 @@
 {
   "name": "naisys",
   "version": "1.0.0",
-  "main": "main.js",
+  "main": "naisys.js",
   "type": "module",
   "scripts": {
-    "build & run": "tsc && node dist/main.js",
+    "compile": "tsc",
+    "run agent:coder": "node dist/naisys.js ./agents/coder.yaml",
     "clean:win": "rmdir dist /s /q",
     "eslint": "npx eslint --rulesdir eslint-rules src",
     "prettier": "npx prettier --write .",
-    "compile": "tsc",
     "detect-cycles": "madge --circular dist",
     "dependency-graph": "madge --image dependency-graph.png dist",
     "updates:check": "npm-check-updates",
@@ -27,10 +27,10 @@
   "dependencies": {
     "@google/generative-ai": "^0.2.1",
     "chalk": "5.3.0",
+    "commander": "^12.0.0",
     "dotenv": "16.4.5",
     "js-yaml": "^4.1.0",
     "openai": "4.28.0",
-    "sql-template-strings": "^2.2.2",
     "sqlite": "^5.1.1",
     "sqlite3": "^5.1.7",
     "tiktoken": "1.0.13"

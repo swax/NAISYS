@@ -5,7 +5,8 @@ import yaml from "js-yaml";
 import OpenAI from "openai";
 import { get_encoding } from "tiktoken";
 import { parse } from "url";
-import { llmModel } from "../llmModel.js";
+import * as config from "../config.js";
+import { getLLModel } from "../llmModels.js";
 import * as output from "../output.js";
 
 enum RunMode {
@@ -52,7 +53,7 @@ async function _getContent(url: string, goal: string, tokenMax: number) {
     return content;
   }
 
-  const model = llmModel.gpt3turbo;
+  const model = getLLModel(config.agent.webModel);
 
   // For example if context is 16k, and max tokens is 2k, 3k with 1.5x overrun
   // That would be 3k for the current compressed content, 10k for the chunk, and 3k for the output
@@ -123,18 +124,14 @@ async function _llmReduce(
   pieceStr: string,
   tokenMax: number,
 ) {
-  if (process.env.OPENAI_API_KEY === undefined) {
-    return "Error: OPENAI_API_KEY is not defined";
-  }
-
   const reducedTokenCount = _gpt2encoding.encode(reducedOutput).length;
   const pieceTokenCount = _gpt2encoding.encode(pieceStr).length;
 
-  const model = llmModel.gpt3turbo;
+  const model = getLLModel(config.agent.webModel);
 
   const openai = new OpenAI({
     baseURL: model.baseUrl,
-    apiKey: process.env.OPENAI_API_KEY,
+    apiKey: config.openaiApiKey,
   });
 
   /*let modeMsg = "";

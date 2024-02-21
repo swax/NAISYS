@@ -125,10 +125,11 @@ export async function consoleInput(prompt: string, consoleInput: string) {
         break;
       }
 
-      case "llmail":
+      case "llmail": {
         const mailResponse = await llmail.run(cmdArgs);
         contextManager.append(mailResponse);
         break;
+      }
 
       case "context":
         contextManager.printContext();
