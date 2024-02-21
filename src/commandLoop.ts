@@ -66,21 +66,34 @@ Previous session notes:
           prompt + chalk[output.OutputColor.loading]("LLM Working...");
         process.stdout.write(waitingMessage);
 
-        const llmResponse = await llmService.send();
+        const clearWaitingMessage = () => {
+          readline.moveCursor(process.stdout, -waitingMessage.length, 0);
+          process.stdout.write(" ".repeat(waitingMessage.length));
+          readline.moveCursor(process.stdout, -waitingMessage.length, 0);
+        };
 
-        // erase waiting message
-        readline.moveCursor(process.stdout, -waitingMessage.length, 0);
-        process.stdout.write(" ".repeat(waitingMessage.length));
-        readline.moveCursor(process.stdout, -waitingMessage.length, 0);
-
-        if (llmResponse.error) {
-          output.error(llmResponse.value);
-        } else {
-          input = llmResponse.value;
+        try {
+          input = await llmService.send();
+          clearWaitingMessage();
+        } catch (e) {
+          clearWaitingMessage();
+          output.error(`${e}`);
         }
       }
 
-      nextCommandAction = await commandHandler.consoleInput(prompt, input);
+      try {
+        nextCommandAction = await commandHandler.consoleInput(prompt, input);
+      } catch (e) {
+        const maxErrorLength = 200;
+        const errorMsg = `${e}`;
+
+        contextManager.append(errorMsg.slice(0, maxErrorLength));
+
+        if (errorMsg.length > maxErrorLength) {
+          contextManager.append("...");
+          output.error(`Error too long for context: ${errorMsg.slice(200)}`);
+        }
+      }
 
       // If the user is in debug mode and they didn't enter anything, switch to LLM
       // If in LLM mode, auto switch back to debug
