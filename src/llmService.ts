@@ -3,29 +3,37 @@ import OpenAI from "openai";
 import * as config from "./config.js";
 import * as contextManager from "./contextManager.js";
 import { LlmRole } from "./contextManager.js";
-import { llmModel } from "./llmModel.js";
+import { getLLModel } from "./llmModels.js";
+import { valueFromString } from "./utilities.js";
 
 interface LLMServiceResponse {
   value: string;
   error?: boolean;
 }
 
-const model = llmModel.gpt4turbo;
-
 export async function send(): Promise<LLMServiceResponse> {
-  if (model === llmModel.google) {
+  const model = getLLModel(config.agent.consoleModel);
+
+  if (model.key === "google") {
     return sendWithGoogle();
   } else {
     return sendWithOpenAiCompatible();
   }
 }
 
-function getSystemMessage() {
-  return `You are ${config.username} a new hire with the job of creating a Neon Genesis Evangelion fan website from the command line. 
-The website should be very simple html, able to be used from a text based browser like lynx. Pages should be relatively short.
-The location of the website should be in ${config.rootFolder}/www 
-When website can be tested at http://swax-elitebook.local/ use --dump with lynx as it does not work in interactive mode.
-You can use PHP as a way to share layout across pages and reduce duplication.
+export function getSystemMessage() {
+  const agentPrompt = config.agent.agentPrompt.replace(
+    /\$\{config\.([^\}]+)\}/g,
+    (match, key) => {
+      const value = valueFromString(config, key);
+      if (value === undefined) {
+        throw `Agent config: Error, ${key} is not defined`;
+      }
+      return value;
+    },
+  );
+
+  return `${agentPrompt}
 The 'user' role is the command line interface itself presenting you with the next command prompt. 
 Make sure the read the command line rules in the MOTD carefully.
 Don't try to guess the output of commands. 
@@ -35,14 +43,12 @@ Be careful when writing files through prompt close and escape quotes properly.`;
 }
 
 async function sendWithOpenAiCompatible(): Promise<LLMServiceResponse> {
+  const model = getLLModel(config.agent.consoleModel);
+
   const openAI = new OpenAI({
     baseURL: model.baseUrl,
-    apiKey: process.env.OPENAI_API_KEY,
+    apiKey: config.openaiApiKey,
   });
-
-  if (process.env.OPENAI_API_KEY === undefined) {
-    throw "LLM Service: Error, OPENAI_API_KEY is not defined";
-  }
 
   // Assert the last message on the context is a user message
   const lastMessage =
@@ -81,7 +87,9 @@ async function sendWithOpenAiCompatible(): Promise<LLMServiceResponse> {
 }
 
 async function sendWithGoogle(): Promise<LLMServiceResponse> {
-  const googleAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY || "");
+  const model = getLLModel(config.agent.consoleModel);
+
+  const googleAI = new GoogleGenerativeAI(config.googleApiKey);
 
   const googleModel = googleAI.getGenerativeModel({ model: model.name });
 

@@ -22,8 +22,12 @@ export async function run() {
   while (nextCommandAction != NextCommandAction.ExitApplication) {
     inputMode.toggle(InputMode.LLM);
 
+    output.comment("System Message:");
+    output.write(llmService.getSystemMessage());
+
+    output.comment("First Prompt:");
     contextManager.append(`NAISYS 1.0 Shell
-Welcome back ${config.username}!
+Welcome back ${config.agent.username}!
 MOTD:
 Date: ${new Date().toUTCString()}
 Commands: 
