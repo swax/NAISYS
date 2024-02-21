@@ -6,12 +6,7 @@ import { LlmRole } from "./contextManager.js";
 import { getLLModel } from "./llmModels.js";
 import { valueFromString } from "./utilities.js";
 
-interface LLMServiceResponse {
-  value: string;
-  error?: boolean;
-}
-
-export async function send(): Promise<LLMServiceResponse> {
+export async function send(): Promise<string> {
   const model = getLLModel(config.agent.consoleModel);
 
   if (model.key === "google") {
@@ -42,7 +37,7 @@ Your role is that of the user. Command responses and the next prompt will be pro
 Be careful when writing files through prompt close and escape quotes properly.`;
 }
 
-async function sendWithOpenAiCompatible(): Promise<LLMServiceResponse> {
+async function sendWithOpenAiCompatible(): Promise<string> {
   const model = getLLModel(config.agent.consoleModel);
 
   const openAI = new OpenAI({
@@ -55,38 +50,25 @@ async function sendWithOpenAiCompatible(): Promise<LLMServiceResponse> {
     contextManager.messages[contextManager.messages.length - 1];
 
   if (lastMessage.role !== LlmRole.User) {
-    return {
-      value:
-        "LLM Service: Error, last message on context is not a user message",
-      error: true,
-    };
+    throw "LLM Service: Error, last message on context is not a user message";
   }
 
-  try {
-    const chatCompletion = await openAI.chat.completions.create({
-      model: model.name,
-      messages: [
-        {
-          role: LlmRole.System,
-          content: getSystemMessage(),
-        },
-        ...contextManager.messages,
-        //{ role: LlmRole.User, content: contextManager.content },
-      ],
-    });
+  const chatCompletion = await openAI.chat.completions.create({
+    model: model.name,
+    messages: [
+      {
+        role: LlmRole.System,
+        content: getSystemMessage(),
+      },
+      ...contextManager.messages,
+      //{ role: LlmRole.User, content: contextManager.content },
+    ],
+  });
 
-    return {
-      value: chatCompletion.choices[0].message.content || "",
-    };
-  } catch (e) {
-    return {
-      value: "LLM Service: " + e,
-      error: true,
-    };
-  }
+  return chatCompletion.choices[0].message.content || "";
 }
 
-async function sendWithGoogle(): Promise<LLMServiceResponse> {
+async function sendWithGoogle(): Promise<string> {
   const model = getLLModel(config.agent.consoleModel);
 
   const googleAI = new GoogleGenerativeAI(config.googleApiKey);
@@ -98,11 +80,7 @@ async function sendWithGoogle(): Promise<LLMServiceResponse> {
     contextManager.messages[contextManager.messages.length - 1];
 
   if (lastMessage.role !== LlmRole.User) {
-    return {
-      value:
-        "LLM Service: Error, last message on context is not a user message",
-      error: true,
-    };
+    throw "LLM Service: Error, last message on context is not a user message";
   }
 
   const history = [
@@ -129,17 +107,8 @@ async function sendWithGoogle(): Promise<LLMServiceResponse> {
     },
   });
 
-  try {
-    const result = await chat.sendMessage(lastMessage.content);
-    const response = await result.response;
+  const result = await chat.sendMessage(lastMessage.content);
+  const response = await result.response;
 
-    return {
-      value: response.text(),
-    };
-  } catch (e) {
-    return {
-      value: "LLM Service: " + e,
-      error: true,
-    };
-  }
+  return response.text();
 }

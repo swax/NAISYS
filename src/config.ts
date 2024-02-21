@@ -15,6 +15,8 @@ export const rootFolder = getEnv("ROOT_FOLDER");
 
 export const localWebsite = getEnv("LOCAL_WEBSITE");
 
+export const localLlmUrl = getEnv("LOCAL_LLM_URL");
+
 export const openaiApiKey = getEnv("OPENAI_API_KEY");
 
 export const googleApiKey = getEnv("GOOGLE_API_KEY");

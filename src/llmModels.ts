@@ -1,3 +1,5 @@
+import * as config from "./config.js";
+
 interface LlmModel {
   key: string;
   baseUrl: string | undefined;
@@ -26,7 +28,7 @@ const llmModels: LlmModel[] = [
   },
   {
     key: "local",
-    baseUrl: "http://localhost:1234/v1", // move to config file
+    baseUrl: config.localLlmUrl,
     name: "local",
     maxTokens: 8_000,
     inputCost: 0,

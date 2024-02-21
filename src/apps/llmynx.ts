@@ -17,16 +17,11 @@ enum RunMode {
 const _gpt2encoding = get_encoding("gpt2");
 
 export async function run(url: string, goal: string, tokenMax: number) {
-  try {
-    return await _getContent(url, goal, tokenMax);
+  return await _getContent(url, goal, tokenMax);
 
-    //return await _getLinks(url, goal);
+  //return await _getLinks(url, goal);
 
-    return "";
-  } catch (e) {
-    output.comment(`llmynx Error: ${e}`);
-    return "";
-  }
+  return "";
 }
 
 async function _getContent(url: string, goal: string, tokenMax: number) {
