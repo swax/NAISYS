@@ -127,7 +127,6 @@ export async function run(args: string): Promise<string> {
   reply <id> <message>: Reply to a thread
   adduser <id> <username>: Add a user to a thread
   archive <id>: Archive a thread
-  wait: Wait for new messages (sleep until a a new message arrives)
     `;
     }
 

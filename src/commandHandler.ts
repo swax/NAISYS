@@ -17,9 +17,17 @@ export enum NextCommandAction {
   ExitApplication,
 }
 
+interface NextCommandResponse {
+  nextCommandAction: NextCommandAction;
+  pauseSeconds?: number;
+}
+
 export let previousSessionNotes = "";
 
-export async function consoleInput(prompt: string, consoleInput: string) {
+export async function consoleInput(
+  prompt: string,
+  consoleInput: string,
+): Promise<NextCommandResponse> {
   // We process the lines one at a time so we can support multiple commands with line breaks
   let firstLine = true;
   let processNextLLMpromptBlock = true;
@@ -116,6 +124,20 @@ export async function consoleInput(prompt: string, consoleInput: string) {
         break;
       }
 
+      case "pause": {
+        const pauseSeconds = cmdArgs ? parseInt(cmdArgs) : config.WAKE_ON_MSG;
+
+        if (isNaN(pauseSeconds)) {
+          output.error("Invalid pause value");
+        } else {
+          return {
+            nextCommandAction: NextCommandAction.Continue,
+            pauseSeconds,
+          };
+        }
+        break;
+      }
+
       case "llmynx": {
         const argParams = cmdArgs.split(" ");
         const url = argParams[0];
@@ -155,5 +177,8 @@ export async function consoleInput(prompt: string, consoleInput: string) {
     output.error(`Unprocessed LLM response:\n${nextInput}`);
   }
 
-  return nextCommandAction;
+  return {
+    nextCommandAction,
+    pauseSeconds: config.debugPauseSeconds,
+  };
 }
