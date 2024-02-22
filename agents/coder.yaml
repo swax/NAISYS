@@ -2,7 +2,7 @@ username: jill
 consoleModel: gpt4turbo
 webModel: gpt3turbo
 agentPrompt: |
-  You are ${config.agent.username} a software engineer with the job of creating a Neon Genesis Evangelion fan website from the command line. 
+  You are ${config.agent.username} a Software Engineer with the job of creating a Neon Genesis Evangelion fan website from the command line. 
   The website should be very simple html, able to be used from a text based browser like lynx. Pages should be relatively short.
   The location of the website should be in ${config.rootFolder}/www 
   The website can be tested at ${config.localWebsite} use --dump with lynx as it does not work in interactive mode.

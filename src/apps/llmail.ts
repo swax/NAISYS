@@ -6,24 +6,6 @@ import * as config from "../config.js";
 import * as output from "../output.js";
 import { naisysToHostPath } from "../utilities.js";
 
-/*
-  implement notifications
-
-  checking mail should probably be done in a 'cycle' where the llm reads, cleans and decides what actions to take
-
-  make sure receiving a new msg unarchives a thread
-
-    On new thread post if user is on the thread
-        show in the next prompt that thread has been updated
-        use llmail read 123 to see the thread  
-        max token length for threads - consolidate or page?
-
-    how to detect new messages
-      keep track of the latest message id in the db
-      if changed, check if the user is on the thread
-      if so, show the thread in the next prompt
-*/
-
 const _dbFilePath = naisysToHostPath(`${config.rootFolder}/var/llmail.db`);
 
 let _myUserId = -1;
@@ -198,24 +180,50 @@ export async function run(args: string): Promise<string> {
   return "Unknown llmail command: " + argParams[0];
 }
 
+export async function getNotifications(): Promise<string> {
+  return await usingDatabase(async (db) => {
+    const updatedThreads = await db.all(
+      `SELECT tm.threadId
+        FROM ThreadMembers tm
+        WHERE tm.userId = ? AND tm.newMsg = 1 AND tm.archived = 0`,
+      [_myUserId],
+    );
+
+    if (updatedThreads.length === 0) {
+      return "";
+    }
+
+    const threadIds = updatedThreads.map((t) => t.threadId).join(", ");
+
+    return `New Messages on Thread ID ${threadIds}: Use 'llmail read <id>' to read the thread`;
+  });
+}
+
 async function listThreads(): Promise<string> {
   return await usingDatabase(async (db) => {
     const threads = await db.all(
-      `SELECT t.id, t.subject, max(tm.date) as date
+      `SELECT t.id, t.subject, max(msg.date) as date,
+      (
+            SELECT GROUP_CONCAT(u.username, ', ') 
+            FROM ThreadMembers tm 
+            JOIN Users u ON tm.userId = u.id
+            WHERE tm.threadId = t.id
+            GROUP BY tm.threadId
+        ) AS members
         FROM Threads t 
-        JOIN ThreadMessages tm ON t.id = tm.threadId
-        JOIN ThreadMembers tm2 ON t.id = tm2.threadId
-        WHERE tm2.userId = ? and tm2.archived = 0
+        JOIN ThreadMessages msg ON t.id = msg.threadId
+        JOIN ThreadMembers member ON t.id = member.threadId
+        WHERE member.userId = ? and member.archived = 0
         GROUP BY t.id, t.subject
-        ORDER BY max(tm.date) DESC`,
+        ORDER BY max(msg.date)`,
       [_myUserId],
     );
 
     // Show threads as a table
     return table(
       [
-        ["id", "subject", "date"],
-        ...threads.map((t) => [t.id, t.subject, t.date]),
+        ["id", "subject", "date", "members"],
+        ...threads.map((t) => [t.id, t.subject, t.date, t.members]),
       ],
       { hsep: " | " },
     );
@@ -248,8 +256,8 @@ async function newThread(
 
       if (user) {
         await db.run(
-          "INSERT INTO ThreadMembers (threadId, userId) VALUES (?, ?)",
-          [thread.lastID, user.id],
+          "INSERT INTO ThreadMembers (threadId, userId, newMsg) VALUES (?, ?, ?)",
+          [thread.lastID, user.id, user.id === _myUserId ? 0 : 1],
         );
       } else {
         await db.run("ROLLBACK");
@@ -303,6 +311,14 @@ Message: ${message.message}
 `;
     }
 
+    // Update thread as read
+    await db.run(
+      `UPDATE ThreadMembers 
+        SET newMsg = 0 
+        WHERE threadId = ? AND userId = ?`,
+      [threadId, _myUserId],
+    );
+
     return threadMessages;
   });
 }
@@ -323,6 +339,14 @@ async function replyThread(threadId: number, message: string) {
       [thread.id, _myUserId, message, new Date().toISOString()],
     );
 
+    // Mark thread has new message
+    await db.run(
+      `UPDATE ThreadMembers 
+        SET newMsg = 1 and archived = 0  
+        WHERE threadId = ? AND userId != ?`,
+      [thread.id, _myUserId],
+    );
+
     return `Message added to thread ${threadId}`;
   });
 }
@@ -332,10 +356,10 @@ async function addUser(threadId: number, username: string) {
     const thread = await getThread(db, threadId);
     const user = await getUser(db, username);
 
-    await db.run("INSERT INTO ThreadMembers (threadId, userId) VALUES (?, ?)", [
-      thread.id,
-      user.id,
-    ]);
+    await db.run(
+      "INSERT INTO ThreadMembers (threadId, userId, newMsg) VALUES (?, ?, 1)",
+      [thread.id, user.id],
+    );
 
     return `User ${username} added to thread ${threadId}`;
   });
@@ -344,7 +368,9 @@ async function addUser(threadId: number, username: string) {
 async function archiveThread(threadId: number) {
   return await usingDatabase(async (db) => {
     await db.run(
-      "UPDATE ThreadMembers SET archived = 1 WHERE threadId = ? AND userId = ?",
+      `UPDATE ThreadMembers 
+        SET archived = 1 
+        WHERE threadId = ? AND userId = ?`,
       [threadId, _myUserId],
     );
 
