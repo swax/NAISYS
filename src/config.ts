@@ -5,6 +5,8 @@ import { valueFromString } from "./utilities.js";
 
 dotenv.config();
 
+export const WAKE_ON_MSG = -1; // Should not be changed
+
 export const hostname = "system-01";
 
 export const tokenMax = 4000; // gpt4 has a 8k token max, but also $0.03 per 1k tokens
@@ -20,6 +22,15 @@ export const localLlmUrl = getEnv("LOCAL_LLM_URL");
 export const openaiApiKey = getEnv("OPENAI_API_KEY");
 
 export const googleApiKey = getEnv("GOOGLE_API_KEY");
+
+const pauseSeconds = getEnv("DEBUG_PAUSE_SECONDS");
+
+/** Seconds to pause on the debug prompt before continuing LLM. undefined for indefinte. -1 to wake on new mail only */
+export const debugPauseSeconds = !pauseSeconds
+  ? undefined
+  : pauseSeconds == "-1"
+    ? WAKE_ON_MSG
+    : parseInt(pauseSeconds);
 
 interface AgentConfig {
   username: string;

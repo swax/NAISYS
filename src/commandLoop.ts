@@ -12,11 +12,6 @@ import * as llmService from "./llmService.js";
 import * as output from "./output.js";
 import * as promptBuilder from "./promptBuilder.js";
 
-const _readlineInterface = readline.createInterface({
-  input: process.stdin,
-  output: process.stdout,
-});
-
 export async function run() {
   let nextCommandAction = NextCommandAction.Continue;
 
@@ -39,6 +34,7 @@ Commands:
 Special Commands:
   comment <thought>: Any non-command output like thinking out loud, prefix with the 'comment' command
   talk <user> <message>: Use this command to send a message to another user
+  pause <seconds>: Pause for <seconds> or indeterminite if no argument is provided. Auto wake up on new mail message
   endsession <note>: Ends this session, clears the console log. Add notes to carry over to the next session
 Tokens:
   The console log can only hold a certain number of 'tokens' that is specified in the prompt
@@ -56,13 +52,15 @@ Previous session notes:
 
     inputMode.toggle(InputMode.Debug);
 
+    let pauseSeconds = config.debugPauseSeconds;
+
     while (nextCommandAction == NextCommandAction.Continue) {
-      const prompt = await promptBuilder.getPrompt();
+      const prompt = await promptBuilder.getPrompt(pauseSeconds);
       let input = "";
 
       // Root runs in a shadow mode
       if (inputMode.current === InputMode.Debug) {
-        input = await _getInput(`${prompt}`);
+        input = await promptBuilder.getInput(`${prompt}`, pauseSeconds);
       }
       // When LLM runs input/output is added to the context
       else if (inputMode.current === InputMode.LLM) {
@@ -90,7 +88,8 @@ Previous session notes:
       }
 
       try {
-        nextCommandAction = await commandHandler.consoleInput(prompt, input);
+        ({ nextCommandAction, pauseSeconds } =
+          await commandHandler.consoleInput(prompt, input));
       } catch (e) {
         const maxErrorLength = 200;
         const errorMsg = `${e}`;
@@ -120,14 +119,6 @@ Previous session notes:
   }
 
   output.comment("NAISYS Terminated");
-}
-
-function _getInput(query: string) {
-  return new Promise<string>((resolve) => {
-    _readlineInterface.question(chalk.greenBright(query), (answer) => {
-      resolve(answer);
-    });
-  });
 }
 
 async function showMailNotifiactions() {
