@@ -46,6 +46,8 @@ Previous session notes:
   ${commandHandler.previousSessionNotes || "None"}
 `);
 
+    await commandHandler.consoleInput(await promptBuilder.getPrompt(), "llmail help");
+
     await commandHandler.consoleInput(await promptBuilder.getPrompt(), "ls");
 
     inputMode.toggle(InputMode.Debug);

@@ -17,6 +17,7 @@
   "devDependencies": {
     "@types/js-yaml": "^4.0.9",
     "@types/node": "20.11.19",
+    "@types/text-table": "^0.2.5",
     "@typescript-eslint/eslint-plugin": "7.0.2",
     "@typescript-eslint/parser": "7.0.2",
     "eslint": "8.56.0",
@@ -33,6 +34,7 @@
     "openai": "4.28.0",
     "sqlite": "^5.1.1",
     "sqlite3": "^5.1.7",
+    "text-table": "^0.2.0",
     "tiktoken": "1.0.13"
   }
 }
