@@ -1,5 +1,6 @@
 import chalk from "chalk";
 import * as readline from "readline";
+import * as llmail from "./apps/llmail.js";
 import * as commandHandler from "./commandHandler.js";
 import { NextCommandAction } from "./commandHandler.js";
 import * as config from "./config.js";
@@ -46,7 +47,10 @@ Previous session notes:
   ${commandHandler.previousSessionNotes || "None"}
 `);
 
-    await commandHandler.consoleInput(await promptBuilder.getPrompt(), "llmail help");
+    await commandHandler.consoleInput(
+      await promptBuilder.getPrompt(),
+      "llmail help",
+    );
 
     await commandHandler.consoleInput(await promptBuilder.getPrompt(), "ls");
 
@@ -62,6 +66,8 @@ Previous session notes:
       }
       // When LLM runs input/output is added to the context
       else if (inputMode.current === InputMode.LLM) {
+        await showMailNotifiactions();
+
         contextManager.append(prompt, ContentSource.StartPrompt);
 
         const waitingMessage =
@@ -122,4 +128,15 @@ function _getInput(query: string) {
       resolve(answer);
     });
   });
+}
+
+async function showMailNotifiactions() {
+  try {
+    const llmailNotifiactions = await llmail.getNotifications();
+    if (llmailNotifiactions) {
+      contextManager.append(llmailNotifiactions, ContentSource.Console);
+    }
+  } catch (e) {
+    output.error(`Error getting notifications: ${e}`);
+  }
 }
