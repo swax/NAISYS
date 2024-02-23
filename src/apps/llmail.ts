@@ -6,7 +6,9 @@ import * as config from "../config.js";
 import * as output from "../output.js";
 import { naisysToHostPath } from "../utilities.js";
 
-const _dbFilePath = naisysToHostPath(`${config.rootFolder}/var/llmail.db`);
+const _dbFilePath = naisysToHostPath(
+  `${config.rootFolder}/var/naisys/llmail.db`,
+);
 
 let _myUserId = -1;
 
@@ -164,8 +166,13 @@ export async function run(args: string): Promise<string> {
     }
 
     case "archive": {
-      const threadId = parseInt(argParams[1]);
-      return await archiveThread(threadId);
+      const threadIds = argParams
+        .slice(1)
+        .join(" ")
+        .split(",")
+        .map((id) => parseInt(id));
+
+      return await archiveThreads(threadIds);
     }
 
     // Root level 'secret command'. Don't let the LLM know about this
@@ -379,16 +386,16 @@ async function addUser(threadId: number, username: string) {
   });
 }
 
-async function archiveThread(threadId: number) {
+async function archiveThreads(threadIds: number[]) {
   return await usingDatabase(async (db) => {
     await db.run(
       `UPDATE ThreadMembers 
         SET archived = 1 
-        WHERE threadId = ? AND userId = ?`,
-      [threadId, _myUserId],
+        WHERE threadId IN (${threadIds.join(",")}) AND userId = ?`,
+      [_myUserId],
     );
 
-    return `Thread ${threadId} archived`;
+    return `Threads ${threadIds.join(",")} archived`;
   });
 }
 
