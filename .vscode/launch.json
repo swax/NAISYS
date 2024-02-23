@@ -2,11 +2,19 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Debug Project",
+      "name": "Attach to NAISYS",
+      "type": "pwa-node",
+      "request": "attach",
+      "port": 9229,
+      "skipFiles": ["<node_internals>/**"]
+    },
+    {
+      "name": "Debug NAISYS",
       "type": "pwa-node",
       "request": "launch",
       "runtimeArgs": ["--loader", "ts-node/esm"],
-      "program": "${workspaceFolder}/src/main.ts",
+      "program": "${workspaceFolder}/src/naisys.ts",
+      "args": ["./agents/coder.yaml"],
       "cwd": "${workspaceFolder}",
       "console": "integratedTerminal",
       "internalConsoleOptions": "neverOpen",

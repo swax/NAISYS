@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "compile": "tsc",
+    "compile/run/attach": "tsc && node --inspect dist/naisys.js ./agents/coder.yaml",
     "run agent:coder": "node dist/naisys.js ./agents/coder.yaml",
     "run agent:quality": "node dist/naisys.js ./agents/quality.yaml",
     "run agent:manager": "node dist/naisys.js ./agents/manager.yaml",

@@ -94,6 +94,7 @@ export function getInput(commandPrompt: string, pauseSeconds?: number) {
       let firstError = true;
 
       interval = setInterval(() => {
+        // setInterval does not support async/await, but that's okay as this call easily runs within the 3s interval
         llmail
           .getUnreadThreadIds()
           .then((unreadThreadIds) => {
@@ -102,6 +103,7 @@ export function getInput(commandPrompt: string, pauseSeconds?: number) {
               output.comment(`Wait broken by new mail notification.`);
             }
           })
+          // Catch and log errors, but don't break the interval on hopefully an intermittent error
           .catch((e) => {
             if (firstError) {
               output.error(`Mail interval check error: ${e}`);
