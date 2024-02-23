@@ -33,7 +33,6 @@ Commands:
   Do not input notes after the prompt. Only valid commands.
 Special Commands:
   comment <thought>: Any non-command output like thinking out loud, prefix with the 'comment' command
-  talk <user> <message>: Use this command to send a message to another user
   pause <seconds>: Pause for <seconds> or indeterminite if no argument is provided. Auto wake up on new mail message
   endsession <note>: Ends this session, clears the console log. Add notes to carry over to the next session
 Tokens:
@@ -46,6 +45,11 @@ Previous session notes:
     await commandHandler.consoleInput(
       await promptBuilder.getPrompt(),
       "llmail help",
+    );
+
+    await commandHandler.consoleInput(
+      await promptBuilder.getPrompt(),
+      "llmail users",
     );
 
     await commandHandler.consoleInput(await promptBuilder.getPrompt(), "ls");
@@ -64,7 +68,7 @@ Previous session notes:
       }
       // When LLM runs input/output is added to the context
       else if (inputMode.current === InputMode.LLM) {
-        await showMailNotifiactions();
+        await showNewMail();
 
         contextManager.append(prompt, ContentSource.StartPrompt);
 
@@ -121,11 +125,15 @@ Previous session notes:
   output.comment("NAISYS Terminated");
 }
 
-async function showMailNotifiactions() {
+async function showNewMail() {
   try {
-    const llmailNotifiactions = await llmail.getNotifications();
-    if (llmailNotifiactions) {
-      contextManager.append(llmailNotifiactions, ContentSource.Console);
+    const unreadThreads = await llmail.getUnreadThreadIds();
+    if (unreadThreads.length) {
+      for (const { threadId, newMsgId } of unreadThreads) {
+        contextManager.append("New Message:", ContentSource.Console);
+        const unreadThread = await llmail.readThread(threadId, newMsgId);
+        contextManager.append(unreadThread, ContentSource.Console);
+      }
     }
   } catch (e) {
     output.error(`Error getting notifications: ${e}`);

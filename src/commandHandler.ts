@@ -108,6 +108,7 @@ export async function consoleInput(
         break;
       }
 
+      // Hidden for now as the LLM will use this instead of llmail
       case "talk": {
         const talkMsg = cmdArgs;
 

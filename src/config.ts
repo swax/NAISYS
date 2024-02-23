@@ -23,7 +23,7 @@ export const openaiApiKey = getEnv("OPENAI_API_KEY");
 
 export const googleApiKey = getEnv("GOOGLE_API_KEY");
 
-const pauseSeconds = getEnv("DEBUG_PAUSE_SECONDS");
+const pauseSeconds = process.env.DEBUG_PAUSE_SECONDS;
 
 /** Seconds to pause on the debug prompt before continuing LLM. undefined for indefinte. -1 to wake on new mail only */
 export const debugPauseSeconds = !pauseSeconds
@@ -34,6 +34,7 @@ export const debugPauseSeconds = !pauseSeconds
 
 interface AgentConfig {
   username: string;
+  title: string;
   consoleModel: string;
   webModel: string;
   agentPrompt: string;
@@ -45,7 +46,13 @@ export function init(agentPath: string) {
   agent = yaml.load(fs.readFileSync(agentPath, "utf8")) as AgentConfig;
 
   // throw if any property is undefined
-  for (const key of ["username", "consoleModel", "webModel", "agentPrompt"]) {
+  for (const key of [
+    "username",
+    "title",
+    "consoleModel",
+    "webModel",
+    "agentPrompt",
+  ]) {
     if (!valueFromString(agent, key)) {
       throw `Agent config: Error, ${key} is not defined`;
     }

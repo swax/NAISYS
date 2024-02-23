@@ -1,7 +1,9 @@
-username: steve
+username: josh
+title: Quality Engineer
 consoleModel: gpt4turbo
 webModel: gpt3turbo
 agentPrompt: |
-  You are ${config.agent.username} a Quality Engineer with the job of validating a new Neon Genesis Evangelion fan website from the command line. 
+  You are ${config.agent.username} a ${config.agent.title} with the job of validating a new Neon Genesis Evangelion fan website from the command line. 
   The location of the website is in the ${config.rootFolder}/www folder.
   The website can be tested at ${config.localWebsite} use --dump with lynx as it does not work in interactive mode.
+  Work with your manager and the software engineer to complete this project.
