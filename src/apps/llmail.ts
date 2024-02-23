@@ -28,10 +28,10 @@ async function openDatabase(create?: boolean): Promise<Database> {
   return db;
 }
 
-async function usingDatabase(
-  run: (db: Database) => Promise<string>,
+async function usingDatabase<T>(
+  run: (db: Database) => Promise<T>,
   create?: boolean,
-): Promise<string> {
+): Promise<T> {
   const db = await openDatabase(create);
 
   try {
@@ -49,7 +49,8 @@ export async function init() {
       const createTables = [
         `CREATE TABLE Users (
           id INTEGER PRIMARY KEY, 
-          username TEXT NOT NULL
+          username TEXT NOT NULL,
+          title TEXT NOT NULL
       )`,
         `CREATE TABLE Threads (
           id INTEGER PRIMARY KEY, 
@@ -59,7 +60,7 @@ export async function init() {
           id INTEGER PRIMARY KEY, 
           threadId INTEGER NOT NULL, 
           userId INTEGER NOT NULL,
-          newMsg INTEGER NOT NULL DEFAULT 0,
+          newMsgId INTEGER NOT NULL DEFAULT -1,
           archived INTEGER NOT NULL DEFAULT 0,
 	        UNIQUE(threadId,userId),
           FOREIGN KEY(threadId) REFERENCES Threads(id),
@@ -91,8 +92,8 @@ export async function init() {
 
     if (!user) {
       const insertedUser = await db.run(
-        "INSERT INTO Users (username) VALUES (?)",
-        [config.agent.username],
+        "INSERT INTO Users (username, title) VALUES (?, ?)",
+        [config.agent.username, config.agent.title],
       );
 
       if (!insertedUser.lastID) {
@@ -125,8 +126,8 @@ export async function run(args: string): Promise<string> {
   send "<users>" "subject" "message": Send a new mail, starting a new thread
   read <id>: Read a thread
   reply <id> <message>: Reply to a thread
-  adduser <id> <username>: Add a user to a thread
-  archive <id>: Archive a thread
+  adduser <id> <username>: Add a user to thread with id
+  archive <ids>: Archives a comma separated list of threads
     `;
     }
 
@@ -179,22 +180,20 @@ export async function run(args: string): Promise<string> {
   return "Unknown llmail command: " + argParams[0];
 }
 
-export async function getNotifications(): Promise<string> {
+interface UnreadThread {
+  threadId: number;
+  newMsgId: number;
+}
+export async function getUnreadThreadIds(): Promise<UnreadThread[]> {
   return await usingDatabase(async (db) => {
-    const updatedThreads = await db.all(
-      `SELECT tm.threadId
+    const updatedThreads = await db.all<UnreadThread[]>(
+      `SELECT tm.threadId, tm.newMsgId
         FROM ThreadMembers tm
-        WHERE tm.userId = ? AND tm.newMsg = 1 AND tm.archived = 0`,
+        WHERE tm.userId = ? AND tm.newMsgId >= 0 AND tm.archived = 0`,
       [_myUserId],
     );
 
-    if (updatedThreads.length === 0) {
-      return "";
-    }
-
-    const threadIds = updatedThreads.map((t) => t.threadId).join(", ");
-
-    return `New Messages on Thread ID ${threadIds}: Use 'llmail read <id>' to read the thread`;
+    return updatedThreads;
   });
 }
 
@@ -212,7 +211,7 @@ async function listThreads(): Promise<string> {
         FROM Threads t 
         JOIN ThreadMessages msg ON t.id = msg.threadId
         JOIN ThreadMembers member ON t.id = member.threadId
-        WHERE member.userId = ? and member.archived = 0
+        WHERE member.userId = ? AND member.archived = 0
         GROUP BY t.id, t.subject
         ORDER BY max(msg.date)`,
       [_myUserId],
@@ -221,7 +220,7 @@ async function listThreads(): Promise<string> {
     // Show threads as a table
     return table(
       [
-        ["id", "subject", "date", "members"],
+        ["ID", "Subject", "Date", "Members"],
         ...threads.map((t) => [t.id, t.subject, t.date, t.members]),
       ],
       { hsep: " | " },
@@ -255,8 +254,8 @@ async function newThread(
 
       if (user) {
         await db.run(
-          "INSERT INTO ThreadMembers (threadId, userId, newMsg) VALUES (?, ?, ?)",
-          [thread.lastID, user.id, user.id === _myUserId ? 0 : 1],
+          "INSERT INTO ThreadMembers (threadId, userId, newMsgId) VALUES (?, ?, ?)",
+          [thread.lastID, user.id, user.id === _myUserId ? -1 : 0],
         );
       } else {
         await db.run("ROLLBACK");
@@ -276,7 +275,10 @@ async function newThread(
   });
 }
 
-async function readThread(threadId: number): Promise<string> {
+export async function readThread(
+  threadId: number,
+  newMsgId?: number,
+): Promise<string> {
   return await usingDatabase(async (db) => {
     const thread = await getThread(db, threadId);
 
@@ -288,16 +290,19 @@ async function readThread(threadId: number): Promise<string> {
       [threadId],
     );
 
-    let threadMessages = `Thread ID: ${thread.id}
-Thread Subject: ${thread.subject}
-Thread Members: ${threadMembers.map((m) => m.username).join(", ")}
+    let threadMessages = `Thread ${thread.id}: ${thread.subject}
+Members: ${threadMembers.map((m) => m.username).join(", ")}
 `;
+    let unreadFilter = "";
+    if (newMsgId != undefined) {
+      unreadFilter = `AND tm.id >= ${newMsgId}`;
+    }
 
     const messages = await db.all(
       `SELECT u.username, tm.date, tm.message
          FROM ThreadMessages tm
          JOIN Users u ON tm.userId = u.id
-         WHERE tm.threadId = ?
+         WHERE tm.threadId = ? ${unreadFilter}
          ORDER BY tm.date`,
       [threadId],
     );
@@ -310,10 +315,13 @@ Message: ${message.message}
 `;
     }
 
+    threadMessages += `
+Use 'llmail reply ${threadId}' to reply.`;
+
     // Update thread as read
     await db.run(
       `UPDATE ThreadMembers 
-        SET newMsg = 0 
+        SET newMsgId = -1 
         WHERE threadId = ? AND userId = ?`,
       [threadId, _myUserId],
     );
@@ -325,7 +333,14 @@ Message: ${message.message}
 async function listUsers() {
   return await usingDatabase(async (db) => {
     const usersList = await db.all("SELECT * FROM Users");
-    return usersList.map((u) => u.username).join(", ");
+
+    return table(
+      [
+        ["Username", "Title"],
+        ...usersList.map((ul) => [ul.username, ul.title]),
+      ],
+      { hsep: " | " },
+    );
   });
 }
 
@@ -333,17 +348,17 @@ async function replyThread(threadId: number, message: string) {
   return await usingDatabase(async (db) => {
     const thread = await getThread(db, threadId);
 
-    await db.run(
+    const insertedMessage = await db.run(
       "INSERT INTO ThreadMessages (threadId, userId, message, date) VALUES (?, ?, ?, ?)",
       [thread.id, _myUserId, message, new Date().toISOString()],
     );
 
-    // Mark thread has new message
+    // Mark thread has new message only if it hasnt already been marked
     await db.run(
       `UPDATE ThreadMembers 
-        SET newMsg = 1 and archived = 0  
-        WHERE threadId = ? AND userId != ?`,
-      [thread.id, _myUserId],
+        SET newMsgId = ?, archived = 0  
+        WHERE newMsgId = -1 AND threadId = ? AND userId != ?`,
+      [insertedMessage.lastID, thread.id, _myUserId],
     );
 
     return `Message added to thread ${threadId}`;
@@ -356,7 +371,7 @@ async function addUser(threadId: number, username: string) {
     const user = await getUser(db, username);
 
     await db.run(
-      "INSERT INTO ThreadMembers (threadId, userId, newMsg) VALUES (?, ?, 1)",
+      "INSERT INTO ThreadMembers (threadId, userId, newMsgId) VALUES (?, ?, 0)",
       [thread.id, user.id],
     );
 

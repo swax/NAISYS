@@ -95,9 +95,9 @@ export function getInput(commandPrompt: string, pauseSeconds?: number) {
 
       interval = setInterval(() => {
         llmail
-          .getNotifications()
-          .then((notifications) => {
-            if (notifications) {
+          .getUnreadThreadIds()
+          .then((unreadThreadIds) => {
+            if (unreadThreadIds.length) {
               abortQuestion();
               output.comment(`Wait broken by new mail notification.`);
             }
