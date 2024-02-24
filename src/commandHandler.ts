@@ -75,11 +75,11 @@ export async function consoleInput(
     if (inputMode.current == InputMode.LLM) {
       if (firstLine) {
         firstLine = false;
-        contextManager.append(input, ContentSource.EndPrompt);
+        await contextManager.append(input, ContentSource.EndPrompt);
         output.write(prompt + chalk[OutputColor.llm](input));
       } else {
         output.comment("Optimistically continuing with the next command...");
-        contextManager.append(input, ContentSource.EndPrompt);
+        await contextManager.append(input, ContentSource.EndPrompt);
       }
     }
 
@@ -88,7 +88,7 @@ export async function consoleInput(
 
     switch (cmdParams[0]) {
       case "comment": {
-        contextManager.append(
+        await contextManager.append(
           "Comment noted. Try running commands now to achieve your goal.",
         );
 
@@ -113,10 +113,10 @@ export async function consoleInput(
         const talkMsg = cmdArgs;
 
         if (inputMode.current === InputMode.LLM) {
-          contextManager.append("Message sent!");
+          await contextManager.append("Message sent!");
         } else if (inputMode.current === InputMode.Debug) {
           inputMode.toggle(InputMode.LLM);
-          contextManager.append(
+          await contextManager.append(
             `Message from root@${config.hostname}: ${talkMsg}`,
           );
           inputMode.toggle(InputMode.Debug);
@@ -144,13 +144,13 @@ export async function consoleInput(
         const url = argParams[0];
         const goal = cmdArgs.slice(argParams[0].length).trim();
         const reducedUrlContent = await llmynx.run(url, goal, 2500);
-        contextManager.append(reducedUrlContent);
+        await contextManager.append(reducedUrlContent);
         break;
       }
 
       case "llmail": {
         const mailResponse = await llmail.run(cmdArgs);
-        contextManager.append(mailResponse);
+        await contextManager.append(mailResponse);
         break;
       }
 

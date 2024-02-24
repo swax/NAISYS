@@ -1,11 +1,10 @@
 import * as fs from "fs";
-import { Database, open } from "sqlite";
-import sqlite3 from "sqlite3";
+import { Database } from "sqlite";
 import table from "text-table";
 import * as config from "../config.js";
-import * as output from "../output.js";
 import * as utilities from "../utilities.js";
 import { naisysToHostPath } from "../utilities.js";
+import * as dbUtils from "../dbUtils.js";
 
 const _dbFilePath = naisysToHostPath(
   `${config.rootFolder}/var/naisys/llmail.db`,
@@ -17,48 +16,11 @@ let _myUserId = -1;
 const _threadTokenMax = config.tokenMax / 2; // So 4000, would be 2000 thread max
 const _messageTokenMax = _threadTokenMax / 5; // Given the above a 400 token max, and 5 big messages per thread
 
-async function openDatabase(create?: boolean): Promise<Database> {
-  let mode = sqlite3.OPEN_READWRITE;
-  if (create) {
-    mode |= sqlite3.OPEN_CREATE;
-  }
-
-  const db = await open({
-    filename: _dbFilePath,
-    driver: sqlite3.Database,
-    mode,
-  });
-
-  // Turn foreign key constraints on
-  await db.exec("PRAGMA foreign_keys = ON");
-
-  return db;
-}
-
-async function usingDatabase<T>(
-  run: (db: Database) => Promise<T>,
-  create?: boolean,
-): Promise<T> {
-  const db = await openDatabase(create);
-
-  try {
-    return await run(db);
-  } finally {
-    await db.close();
-  }
-}
-
 export async function init() {
-  const createDb = !fs.existsSync(_dbFilePath);
-  if (createDb) {
-    const dbDir = _dbFilePath.split("/").slice(0, -1).join("/");
-    if (!fs.existsSync(dbDir)) {
-      fs.mkdirSync(dbDir, { recursive: true });
-    }
-  }
+  const dbCreated = await dbUtils.initDatabase(_dbFilePath);
 
   await usingDatabase(async (db) => {
-    if (createDb) {
+    if (dbCreated) {
       const createTables = [
         `CREATE TABLE Users (
           id INTEGER PRIMARY KEY, 
@@ -95,8 +57,6 @@ export async function init() {
       for (const createTable of createTables) {
         await db.exec(createTable);
       }
-
-      output.comment("llmail database initialized");
     }
 
     // If user is not in the db, add them
@@ -115,14 +75,10 @@ export async function init() {
       }
 
       _myUserId = insertedUser.lastID;
-
-      output.comment(`${config.agent.username} added to llmail database `);
     } else {
       _myUserId = user.id;
     }
-
-    return "";
-  }, createDb);
+  });
 }
 
 export async function run(args: string): Promise<string> {
@@ -482,4 +438,8 @@ function validateMsgTokenCount(message: string) {
   }
 
   return msgTokenCount;
+}
+
+async function usingDatabase<T>(run: (db: Database) => Promise<T>): Promise<T> {
+  return dbUtils.usingDatabase(_dbFilePath, run);
 }

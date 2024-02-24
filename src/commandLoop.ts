@@ -23,7 +23,7 @@ export async function run() {
     output.write(llmService.getSystemMessage());
 
     output.comment("First Prompt:");
-    contextManager.append(`NAISYS 1.0 Shell
+    await contextManager.append(`NAISYS 1.0 Shell
 Welcome back ${config.agent.username}!
 MOTD:
 Date: ${new Date().toUTCString()}
@@ -69,7 +69,7 @@ Previous session notes:
       else if (inputMode.current === InputMode.LLM) {
         await showNewMail();
 
-        contextManager.append(prompt, ContentSource.StartPrompt);
+        await contextManager.append(prompt, ContentSource.StartPrompt);
 
         const waitingMessage =
           prompt + chalk[output.OutputColor.loading]("LLM Working...");
@@ -97,10 +97,10 @@ Previous session notes:
         const maxErrorLength = 200;
         const errorMsg = `${e}`;
 
-        contextManager.append(errorMsg.slice(0, maxErrorLength));
+        await contextManager.append(errorMsg.slice(0, maxErrorLength));
 
         if (errorMsg.length > maxErrorLength) {
-          contextManager.append("...");
+          await contextManager.append("...");
           output.error(`Error too long for context: ${errorMsg.slice(200)}`);
         }
       }
@@ -121,7 +121,7 @@ Previous session notes:
     }
   }
 
-  output.comment("NAISYS Terminated");
+  await output.comment("NAISYS Terminated");
 }
 
 async function showNewMail() {
@@ -150,8 +150,8 @@ async function showNewMail() {
     // Show full messages unless we are close to the token limit of the session
     if (sessionTokens + newMsgTokenCount < tokenMax * 0.75) {
       for (const newMessage of newMessages) {
-        contextManager.append("New Message:", ContentSource.Console);
-        contextManager.append(newMessage, ContentSource.Console);
+        await contextManager.append("New Message:", ContentSource.Console);
+        await contextManager.append(newMessage, ContentSource.Console);
       }
 
       for (const unreadThread of unreadThreads) {
@@ -163,7 +163,7 @@ async function showNewMail() {
     else {
       const threadIds = unreadThreads.map((t) => t.threadId).join(", ");
 
-      contextManager.append(
+      await contextManager.append(
         `New Messages on Thread ID ${threadIds}
 Use 'llmail read <id>' to read the thread, but be mindful you are close to the token limit for the session.`,
         ContentSource.Console,
