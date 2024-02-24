@@ -18,7 +18,7 @@ export async function handleCommand(
 
   // Route user to context friendly edit commands that can read/write the entire file in one go
   if (["nano", "vi", "vim"].includes(cmdParams[0])) {
-    contextManager.append(
+    await contextManager.append(
       `${cmdParams[0]} not supported. Use 'cat' to view a file and 'cat > filename << EOF' to write a file`,
     );
 
@@ -26,7 +26,7 @@ export async function handleCommand(
   }
 
   if (cmdParams[0] == "lynx" && cmdParams[1] != "--dump") {
-    contextManager.append(
+    await contextManager.append(
       `Interactive mode with lynx is not supported. Use --dump with lynx to view a website`,
     );
 
@@ -35,7 +35,7 @@ export async function handleCommand(
 
   if (cmdParams[0] == "exit") {
     if (inputMode.current == InputMode.LLM) {
-      contextManager.append(
+      await contextManager.append(
         "Use 'endsession' to end the session and clear the console log.",
       );
     } else if (inputMode.current == InputMode.Debug) {
@@ -49,7 +49,7 @@ export async function handleCommand(
   const output = await shellWrapper.executeCommand(input);
 
   if (output.value) {
-    contextManager.append(output.value);
+    await contextManager.append(output.value);
   }
 
   response.hasErrors = output.hasErrors;

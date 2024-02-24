@@ -1,8 +1,8 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import OpenAI from "openai";
 import * as config from "./config.js";
+import { LlmRole } from "./contextLog.js";
 import * as contextManager from "./contextManager.js";
-import { LlmRole } from "./contextManager.js";
 import { getLLModel } from "./llmModels.js";
 import { valueFromString } from "./utilities.js";
 

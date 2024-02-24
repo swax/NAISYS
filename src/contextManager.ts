@@ -1,3 +1,5 @@
+import * as contextLog from "./contextLog.js";
+import { LlmMessage, LlmRole } from "./contextLog.js";
 import * as inputMode from "./inputMode.js";
 import { InputMode } from "./inputMode.js";
 import * as output from "./output.js";
@@ -13,19 +15,9 @@ export enum ContentSource {
 
 export let content = "";
 
-export enum LlmRole {
-  Assistant = "assistant",
-  User = "user",
-  /** Not supported by Google API */
-  System = "system",
-}
+export let messages: LlmMessage[] = [];
 
-export let messages: Array<{
-  role: LlmRole;
-  content: string;
-}> = [];
-
-export function append(
+export async function append(
   text: string,
   source: ContentSource = ContentSource.Console,
 ) {
@@ -59,11 +51,14 @@ export function append(
     if (lastMessage.role == role) {
       lastMessage.content += `\n${text}`;
       combined = true;
+      contextLog.update(lastMessage);
     }
   }
 
   if (!combined) {
-    messages.push({ role, content: text });
+    const llmMessage = { role, content: text };
+    await contextLog.add(llmMessage);
+    messages.push(llmMessage);
   }
 
   // End the line except for the start prompt which needs the following input appended to it on the same line
