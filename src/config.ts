@@ -1,7 +1,18 @@
+import { program } from "commander";
 import dotenv from "dotenv";
 import * as fs from "fs";
 import yaml from "js-yaml";
 import { valueFromString } from "./utilities.js";
+
+interface AgentConfig {
+  username: string;
+  title: string;
+  consoleModel: string;
+  webModel: string;
+  agentPrompt: string;
+}
+
+program.argument("<agent-path>", "Path to agent configuration file").parse();
 
 dotenv.config();
 
@@ -23,27 +34,24 @@ export const openaiApiKey = getEnv("OPENAI_API_KEY");
 
 export const googleApiKey = getEnv("GOOGLE_API_KEY");
 
-const pauseSeconds = process.env.DEBUG_PAUSE_SECONDS;
+export const debugPauseSeconds = loadPauseSeconds();
 
-/** Seconds to pause on the debug prompt before continuing LLM. undefined for indefinte. -1 to wake on new mail only */
-export const debugPauseSeconds = !pauseSeconds
-  ? undefined
-  : pauseSeconds == "-1"
-    ? WAKE_ON_MSG
-    : parseInt(pauseSeconds);
+export const agent = loadAgentConfig();
 
-interface AgentConfig {
-  username: string;
-  title: string;
-  consoleModel: string;
-  webModel: string;
-  agentPrompt: string;
+function getEnv(key: string) {
+  const value = process.env[key];
+  if (!value) {
+    throw `Config: Error, .env ${key} is not defined`;
+  }
+  return value;
 }
 
-export let agent = <AgentConfig>{};
+function loadAgentConfig() {
+  const agentPath = program.args[0];
 
-export function init(agentPath: string) {
-  agent = yaml.load(fs.readFileSync(agentPath, "utf8")) as AgentConfig;
+  const checkAgentConfig = yaml.load(
+    fs.readFileSync(agentPath, "utf8"),
+  ) as AgentConfig;
 
   // throw if any property is undefined
   for (const key of [
@@ -53,16 +61,21 @@ export function init(agentPath: string) {
     "webModel",
     "agentPrompt",
   ]) {
-    if (!valueFromString(agent, key)) {
+    if (!valueFromString(checkAgentConfig, key)) {
       throw `Agent config: Error, ${key} is not defined`;
     }
   }
+
+  return checkAgentConfig;
 }
 
-function getEnv(key: string) {
-  const value = process.env[key];
-  if (!value) {
-    throw `Config: Error, .env ${key} is not defined`;
-  }
-  return value;
+/** Seconds to pause on the debug prompt before continuing LLM. undefined for indefinte. -1 to wake on new mail only */
+function loadPauseSeconds() {
+  const pauseSeconds = process.env.DEBUG_PAUSE_SECONDS;
+
+  return !pauseSeconds
+    ? undefined
+    : pauseSeconds == "-1"
+      ? WAKE_ON_MSG
+      : parseInt(pauseSeconds);
 }

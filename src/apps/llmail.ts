@@ -2,9 +2,9 @@ import * as fs from "fs";
 import { Database } from "sqlite";
 import table from "text-table";
 import * as config from "../config.js";
+import * as dbUtils from "../dbUtils.js";
 import * as utilities from "../utilities.js";
 import { naisysToHostPath } from "../utilities.js";
-import * as dbUtils from "../dbUtils.js";
 
 const _dbFilePath = naisysToHostPath(
   `${config.rootFolder}/var/naisys/llmail.db`,
@@ -17,10 +17,10 @@ const _threadTokenMax = config.tokenMax / 2; // So 4000, would be 2000 thread ma
 const _messageTokenMax = _threadTokenMax / 5; // Given the above a 400 token max, and 5 big messages per thread
 
 export async function init() {
-  const dbCreated = await dbUtils.initDatabase(_dbFilePath);
+  const newDbCreated = await dbUtils.initDatabase(_dbFilePath);
 
   await usingDatabase(async (db) => {
-    if (dbCreated) {
+    if (newDbCreated) {
       const createTables = [
         `CREATE TABLE Users (
           id INTEGER PRIMARY KEY, 

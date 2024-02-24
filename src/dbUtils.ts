@@ -1,20 +1,17 @@
 import * as fs from "fs";
-import sqlite3 from "sqlite3";
 import { Database, open } from "sqlite";
+import sqlite3 from "sqlite3";
+import { ensureFileDirExists } from "./utilities.js";
 
-export async function initDatabase(path: string) {
-  if (fs.existsSync(path)) {
+export async function initDatabase(filepath: string) {
+  if (fs.existsSync(filepath)) {
     return false;
   }
 
-  const dbDir = path.split("/").slice(0, -1).join("/");
-
-  if (!fs.existsSync(dbDir)) {
-    fs.mkdirSync(dbDir, { recursive: true });
-  }
+  ensureFileDirExists(filepath);
 
   const db = await open({
-    filename: path,
+    filename: filepath,
     driver: sqlite3.Database,
     mode: sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE,
   });
@@ -24,9 +21,9 @@ export async function initDatabase(path: string) {
   return true;
 }
 
-export async function openDatabase(path: string): Promise<Database> {
+export async function openDatabase(filepath: string): Promise<Database> {
   const db = await open({
-    filename: path,
+    filename: filepath,
     driver: sqlite3.Database,
     mode: sqlite3.OPEN_READWRITE,
   });
@@ -38,10 +35,10 @@ export async function openDatabase(path: string): Promise<Database> {
 }
 
 export async function usingDatabase<T>(
-  path: string,
+  filepath: string,
   run: (db: Database) => Promise<T>,
 ): Promise<T> {
-  const db = await openDatabase(path);
+  const db = await openDatabase(filepath);
 
   try {
     return await run(db);
