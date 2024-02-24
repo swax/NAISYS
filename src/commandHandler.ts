@@ -4,6 +4,7 @@ import * as llmynx from "./apps/llmynx.js";
 import * as config from "./config.js";
 import * as contextManager from "./contextManager.js";
 import { ContentSource } from "./contextManager.js";
+import * as costTracker from "./costTracker.js";
 import * as inputMode from "./inputMode.js";
 import { InputMode } from "./inputMode.js";
 import * as output from "./output.js";
@@ -136,6 +137,12 @@ export async function consoleInput(
             pauseSeconds,
           };
         }
+        break;
+      }
+
+      case "cost": {
+        const totalCost = await costTracker.getTotalCosts();
+        output.comment(`Total cost so far: $${totalCost.toFixed(2)}`);
         break;
       }
 

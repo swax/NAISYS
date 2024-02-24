@@ -16,7 +16,9 @@ let _myUserId = -1;
 const _threadTokenMax = config.tokenMax / 2; // So 4000, would be 2000 thread max
 const _messageTokenMax = _threadTokenMax / 5; // Given the above a 400 token max, and 5 big messages per thread
 
-export async function init() {
+await init();
+
+async function init() {
   const newDbCreated = await dbUtils.initDatabase(_dbFilePath);
 
   await usingDatabase(async (db) => {
