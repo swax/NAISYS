@@ -4,7 +4,6 @@ import * as config from "./config.js";
 import { LlmRole } from "./contextLog.js";
 import * as contextManager from "./contextManager.js";
 import { getLLModel } from "./llmModels.js";
-import { valueFromString } from "./utilities.js";
 
 export async function send(): Promise<string> {
   const model = getLLModel(config.agent.consoleModel);
@@ -14,27 +13,6 @@ export async function send(): Promise<string> {
   } else {
     return sendWithOpenAiCompatible();
   }
-}
-
-export function getSystemMessage() {
-  const agentPrompt = config.agent.agentPrompt.replace(
-    /\$\{config\.([^\}]+)\}/g,
-    (match, key) => {
-      const value = valueFromString(config, key);
-      if (value === undefined) {
-        throw `Agent config: Error, ${key} is not defined`;
-      }
-      return value;
-    },
-  );
-
-  return `${agentPrompt}
-The 'user' role is the command line interface itself presenting you with the next command prompt. 
-Make sure the read the command line rules in the MOTD carefully.
-Don't try to guess the output of commands. 
-For example when you run 'cat' or 'ls', don't write what you think the output will be. Let the system do that.
-Your role is that of the user. Command responses and the next prompt will be provided by the 'user' role.
-Be careful when writing files through prompt close and escape quotes properly.`;
 }
 
 async function sendWithOpenAiCompatible(): Promise<string> {
@@ -58,10 +36,12 @@ async function sendWithOpenAiCompatible(): Promise<string> {
     messages: [
       {
         role: LlmRole.System,
-        content: getSystemMessage(),
+        content: contextManager.getSystemMessage(),
       },
-      ...contextManager.messages,
-      //{ role: LlmRole.User, content: contextManager.content },
+      ...contextManager.messages.map((m) => ({
+        content: m.content,
+        role: m.role,
+      })),
     ],
   });
 
@@ -86,7 +66,7 @@ async function sendWithGoogle(): Promise<string> {
   const history = [
     {
       role: LlmRole.User, // System role is not supported by Google API
-      parts: getSystemMessage(),
+      parts: contextManager.getSystemMessage(),
     },
     {
       role: "model",

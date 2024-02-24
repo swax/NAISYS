@@ -1,7 +1,9 @@
+import escapeHtml from "escape-html";
+import * as fs from "fs";
 import { Database } from "sqlite";
 import * as config from "./config.js";
 import * as dbUtils from "./dbUtils.js";
-import { naisysToHostPath } from "./utilities.js";
+import { ensureFileDirExists, naisysToHostPath } from "./utilities.js";
 
 export enum LlmRole {
   Assistant = "assistant",
@@ -18,32 +20,72 @@ export interface LlmMessage {
 
 const _dbFilePath = naisysToHostPath(`${config.rootFolder}/var/naisys/log.db`);
 
+const _combinedLogFilePath = naisysToHostPath(
+  `${config.rootFolder}/var/www/logs/combined-log.html`,
+);
+
+const _userLogFilePath = naisysToHostPath(
+  `${config.rootFolder}/var/www/logs/${config.agent.username}-log.html`,
+);
+
 export async function init() {
-  const dbCreated = await dbUtils.initDatabase(_dbFilePath);
+  initLogFile(_combinedLogFilePath);
+  initLogFile(_userLogFilePath);
+
+  // Init log database
+  const newDbCreated = await dbUtils.initDatabase(_dbFilePath);
 
   await usingDatabase(async (db) => {
-    if (dbCreated) {
-      const createTables = [
-        `CREATE TABLE ContextLog (
+    if (!newDbCreated) {
+      return;
+    }
+
+    const createTables = [
+      `CREATE TABLE ContextLog (
           id INTEGER PRIMARY KEY, 
           role TEXT NOT NULL,
           message TEXT NOT NULL,
           date TEXT NOT NULL
       )`,
-      ];
+    ];
 
-      for (const createTable of createTables) {
-        await db.exec(createTable);
-      }
+    for (const createTable of createTables) {
+      await db.exec(createTable);
     }
   });
+}
+
+function initLogFile(filePath: string) {
+  ensureFileDirExists(filePath);
+
+  if (fs.existsSync(filePath)) {
+    return;
+  }
+
+  // Start html file with table: date, user, role, messages
+  fs.writeFileSync(
+    filePath,
+    `<html>
+        <head><title>Context Log</title></head>
+        <style>
+          body { font-family: monospace; background-color: black; color: white; }
+          table { border-collapse: collapse; width: 100%; }
+          th, td { border: 1px solid grey; padding: 8px; }
+          th { text-align: left; }
+          td { vertical-align: top; }
+          .assistant { color: magenta; }
+        </style>
+        <body>
+          <table border="1">
+            <tr><th>Date</th><th>User</th><th>Role</th><th>Message</th></tr>`,
+  );
 }
 
 export async function add(message: LlmMessage) {
   await usingDatabase(async (db) => {
     const inserted = await db.run(
       "INSERT INTO ContextLog (role, message, date) VALUES (?, ?, ?)",
-      message.role,
+      roleToString(message.role),
       message.content,
       new Date().toISOString(),
     );
@@ -51,10 +93,11 @@ export async function add(message: LlmMessage) {
     message.logId = inserted.lastID;
   });
 
-  // Write to file: date, user, role, message
+  appendToLogFile(_combinedLogFilePath, message);
+  appendToLogFile(_userLogFilePath, message);
 }
 
-export async function update(message: LlmMessage) {
+export async function update(message: LlmMessage, appendedText: string) {
   await usingDatabase(async (db) => {
     await db.run(
       "UPDATE ContextLog SET message = ? WHERE id = ?",
@@ -62,8 +105,42 @@ export async function update(message: LlmMessage) {
       message.logId,
     );
   });
+
+  // Can't rewrite the log like we can the db, so just log the appended text
+  const appendedMessage = {
+    role: message.role,
+    content: appendedText,
+  };
+
+  appendToLogFile(_combinedLogFilePath, appendedMessage);
+  appendToLogFile(_userLogFilePath, appendedMessage);
+}
+
+function appendToLogFile(filepath: string, message: LlmMessage) {
+  fs.appendFileSync(
+    filepath,
+    `<tr>
+      <td>${new Date().toISOString()}</td>
+      <td>${config.agent.username}</td>
+      <td>${roleToString(message.role)}</td>
+      <td class='${message.role}'>
+        <pre>${escapeHtml(message.content)}</pre>
+      </td>
+    </tr>`,
+  );
 }
 
 async function usingDatabase<T>(run: (db: Database) => Promise<T>): Promise<T> {
   return dbUtils.usingDatabase(_dbFilePath, run);
+}
+
+function roleToString(role: LlmRole) {
+  switch (role) {
+    case LlmRole.Assistant:
+      return "LLM";
+    case LlmRole.User:
+      return "NAISYS";
+    case LlmRole.System:
+      return "NAISYS";
+  }
 }

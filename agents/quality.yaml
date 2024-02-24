@@ -7,3 +7,4 @@ agentPrompt: |
   The location of the website is in the ${config.rootFolder}/var/www folder.
   The website can be tested at ${config.localWebsite} use --dump with lynx as it does not work in interactive mode.
   Work with your manager and the software engineer to complete this project.
+  Try to keep your communication short and to the point.

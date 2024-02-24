@@ -18,6 +18,7 @@
     "updates:apply": "npm-check-updates -u && npm update"
   },
   "devDependencies": {
+    "@types/escape-html": "^1.0.4",
     "@types/js-yaml": "^4.0.9",
     "@types/node": "20.11.19",
     "@types/text-table": "^0.2.5",
@@ -33,6 +34,7 @@
     "chalk": "5.3.0",
     "commander": "^12.0.0",
     "dotenv": "16.4.5",
+    "escape-html": "^1.0.3",
     "js-yaml": "^4.1.0",
     "openai": "4.28.0",
     "sqlite": "^5.1.1",

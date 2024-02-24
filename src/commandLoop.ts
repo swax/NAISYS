@@ -4,6 +4,8 @@ import * as llmail from "./apps/llmail.js";
 import * as commandHandler from "./commandHandler.js";
 import { NextCommandAction } from "./commandHandler.js";
 import * as config from "./config.js";
+import * as contextLog from "./contextLog.js";
+import { LlmRole } from "./contextLog.js";
 import * as contextManager from "./contextManager.js";
 import { ContentSource } from "./contextManager.js";
 import * as inputMode from "./inputMode.js";
@@ -14,34 +16,22 @@ import * as promptBuilder from "./promptBuilder.js";
 import * as utilities from "./utilities.js";
 
 export async function run() {
+  output.comment("System Message:");
+  const systemMessage = contextManager.getSystemMessage();
+  output.write(systemMessage);
+  await contextLog.add({
+    role: LlmRole.System,
+    content: systemMessage,
+  });
+
   let nextCommandAction = NextCommandAction.Continue;
 
   while (nextCommandAction != NextCommandAction.ExitApplication) {
     inputMode.toggle(InputMode.LLM);
 
-    output.comment("System Message:");
-    output.write(llmService.getSystemMessage());
-
-    output.comment("First Prompt:");
-    await contextManager.append(`NAISYS 1.0 Shell
-Welcome back ${config.agent.username}!
-MOTD:
-Date: ${new Date().toUTCString()}
-Commands: 
-  Standard Unix commands are available
-  vi and nano are not supported
-  Read/write entire files in a single command with cat
-  Do not input notes after the prompt. Only valid commands.
-Special Commands:
-  comment <thought>: Any non-command output like thinking out loud, prefix with the 'comment' command
-  pause <seconds>: Pause for <seconds> or indeterminite if no argument is provided. Auto wake up on new mail message
-  endsession <note>: Ends this session, clears the console log. Add notes to carry over to the next session
-Tokens:
-  The console log can only hold a certain number of 'tokens' that is specified in the prompt
-  Make sure to call endsession before the limit is hit so you can continue your work with a fresh console
-Previous session notes: 
-  ${commandHandler.previousSessionNotes || "None"}
-`);
+    output.comment("Starting Context:");
+    await contextManager.append("Previous session notes:");
+    await contextManager.append(commandHandler.previousSessionNotes || "None");
 
     await commandHandler.consoleInput(
       await promptBuilder.getPrompt(),
