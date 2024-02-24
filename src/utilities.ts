@@ -1,4 +1,5 @@
 import * as os from "os";
+import { get_encoding } from "tiktoken";
 
 /** Take a NAISYS path and convert to something that can be
  *  opened by the host with the native fs library and such */
@@ -22,4 +23,10 @@ export function valueFromString(obj: any, path: string, defaultValue?: string) {
     }
   }
   return result;
+}
+
+const _gpt2encoding = get_encoding("gpt2");
+
+export function getTokenCount(text: string) {
+  return _gpt2encoding.encode(text).length;
 }

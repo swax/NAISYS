@@ -11,6 +11,7 @@ import { InputMode } from "./inputMode.js";
 import * as llmService from "./llmService.js";
 import * as output from "./output.js";
 import * as promptBuilder from "./promptBuilder.js";
+import * as utilities from "./utilities.js";
 
 export async function run() {
   let nextCommandAction = NextCommandAction.Continue;
@@ -29,7 +30,7 @@ Date: ${new Date().toUTCString()}
 Commands: 
   Standard Unix commands are available
   vi and nano are not supported
-  Read/write entire files with cat
+  Read/write entire files in a single command with cat
   Do not input notes after the prompt. Only valid commands.
 Special Commands:
   comment <thought>: Any non-command output like thinking out loud, prefix with the 'comment' command
@@ -51,8 +52,6 @@ Previous session notes:
       await promptBuilder.getPrompt(),
       "llmail users",
     );
-
-    await commandHandler.consoleInput(await promptBuilder.getPrompt(), "ls");
 
     inputMode.toggle(InputMode.Debug);
 
@@ -127,13 +126,48 @@ Previous session notes:
 
 async function showNewMail() {
   try {
-    const unreadThreads = await llmail.getUnreadThreadIds();
-    if (unreadThreads.length) {
-      for (const { threadId, newMsgId } of unreadThreads) {
+    // Check for unread threads
+    const unreadThreads = await llmail.getUnreadThreads();
+    if (!unreadThreads.length) {
+      return;
+    }
+
+    // Get the new messages for each thread
+    const newMessages: string[] = [];
+    for (const { threadId, newMsgId } of unreadThreads) {
+      newMessages.push(await llmail.readThread(threadId, newMsgId, true));
+    }
+
+    // Check that token max for session will not be exceeded
+    const newMsgTokenCount = newMessages.reduce(
+      (acc, msg) => acc + utilities.getTokenCount(msg),
+      0,
+    );
+
+    const sessionTokens = contextManager.getTokenCount();
+    const tokenMax = config.tokenMax;
+
+    // Show full messages unless we are close to the token limit of the session
+    if (sessionTokens + newMsgTokenCount < tokenMax * 0.75) {
+      for (const newMessage of newMessages) {
         contextManager.append("New Message:", ContentSource.Console);
-        const unreadThread = await llmail.readThread(threadId, newMsgId);
-        contextManager.append(unreadThread, ContentSource.Console);
+        contextManager.append(newMessage, ContentSource.Console);
       }
+
+      for (const unreadThread of unreadThreads) {
+        await llmail.markAsRead(unreadThread.threadId);
+      }
+    }
+    // LLM will in many cases end the session here, when the new session starts
+    // this code will run again, and show a full preview of the messages
+    else {
+      const threadIds = unreadThreads.map((t) => t.threadId).join(", ");
+
+      contextManager.append(
+        `New Messages on Thread ID ${threadIds}
+Use 'llmail read <id>' to read the thread, but be mindful you are close to the token limit for the session.`,
+        ContentSource.Console,
+      );
     }
   } catch (e) {
     output.error(`Error getting notifications: ${e}`);

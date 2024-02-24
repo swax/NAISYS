@@ -4,6 +4,7 @@ import sqlite3 from "sqlite3";
 import table from "text-table";
 import * as config from "../config.js";
 import * as output from "../output.js";
+import * as utilities from "../utilities.js";
 import { naisysToHostPath } from "../utilities.js";
 
 const _dbFilePath = naisysToHostPath(
@@ -12,10 +13,14 @@ const _dbFilePath = naisysToHostPath(
 
 let _myUserId = -1;
 
+// Implement maxes so that LLMs actively manage threads, archive, and create new ones
+const _threadTokenMax = config.tokenMax / 2; // So 4000, would be 2000 thread max
+const _messageTokenMax = _threadTokenMax / 5; // Given the above a 400 token max, and 5 big messages per thread
+
 async function openDatabase(create?: boolean): Promise<Database> {
   let mode = sqlite3.OPEN_READWRITE;
   if (create) {
-    mode = mode | sqlite3.OPEN_CREATE;
+    mode |= sqlite3.OPEN_CREATE;
   }
 
   const db = await open({
@@ -24,7 +29,7 @@ async function openDatabase(create?: boolean): Promise<Database> {
     mode,
   });
 
-  // turn foreign key constraints on
+  // Turn foreign key constraints on
   await db.exec("PRAGMA foreign_keys = ON");
 
   return db;
@@ -45,6 +50,12 @@ async function usingDatabase<T>(
 
 export async function init() {
   const createDb = !fs.existsSync(_dbFilePath);
+  if (createDb) {
+    const dbDir = _dbFilePath.split("/").slice(0, -1).join("/");
+    if (!fs.existsSync(dbDir)) {
+      fs.mkdirSync(dbDir, { recursive: true });
+    }
+  }
 
   await usingDatabase(async (db) => {
     if (createDb) {
@@ -56,7 +67,8 @@ export async function init() {
       )`,
         `CREATE TABLE Threads (
           id INTEGER PRIMARY KEY, 
-          subject TEXT NOT NULL
+          subject TEXT NOT NULL,
+          tokenCount INTEGER NOT NULL DEFAULT 0
       )`,
         `CREATE TABLE ThreadMembers (
           id INTEGER PRIMARY KEY, 
@@ -99,7 +111,7 @@ export async function init() {
       );
 
       if (!insertedUser.lastID) {
-        throw new Error("Error adding local user to llmail database");
+        throw "Error adding local user to llmail database";
       }
 
       _myUserId = insertedUser.lastID;
@@ -191,7 +203,7 @@ interface UnreadThread {
   threadId: number;
   newMsgId: number;
 }
-export async function getUnreadThreadIds(): Promise<UnreadThread[]> {
+export async function getUnreadThreads(): Promise<UnreadThread[]> {
   return await usingDatabase(async (db) => {
     const updatedThreads = await db.all<UnreadThread[]>(
       `SELECT tm.threadId, tm.newMsgId
@@ -207,7 +219,7 @@ export async function getUnreadThreadIds(): Promise<UnreadThread[]> {
 async function listThreads(): Promise<string> {
   return await usingDatabase(async (db) => {
     const threads = await db.all(
-      `SELECT t.id, t.subject, max(msg.date) as date,
+      `SELECT t.id, t.subject, max(msg.date) as date, t.tokenCount, 
       (
             SELECT GROUP_CONCAT(u.username, ', ') 
             FROM ThreadMembers tm 
@@ -227,8 +239,14 @@ async function listThreads(): Promise<string> {
     // Show threads as a table
     return table(
       [
-        ["ID", "Subject", "Date", "Members"],
-        ...threads.map((t) => [t.id, t.subject, t.date, t.members]),
+        ["ID", "Subject", "Date", "Members", "Token Count"],
+        ...threads.map((t) => [
+          t.id,
+          t.subject,
+          t.date,
+          t.members,
+          `${t.tokenCount}/${_threadTokenMax}`,
+        ]),
       ],
       { hsep: " | " },
     );
@@ -240,18 +258,23 @@ async function newThread(
   subject: string,
   message: string,
 ): Promise<string> {
-  // Ensure user ifself is in the list
+  // Ensure user itself is in the list
   if (!usernames.includes(config.agent.username)) {
     usernames.push(config.agent.username);
   }
+
+  message = message.replace(/\\n/g, "\n");
+
+  const msgTokenCount = validateMsgTokenCount(message);
 
   return await usingDatabase(async (db) => {
     await db.run("BEGIN TRANSACTION");
 
     // Create thread
-    const thread = await db.run("INSERT INTO Threads (subject) VALUES (?)", [
-      subject,
-    ]);
+    const thread = await db.run(
+      "INSERT INTO Threads (subject, tokenCount) VALUES (?, ?)",
+      [subject, msgTokenCount],
+    );
 
     // Add users
     for (const username of usernames) {
@@ -266,7 +289,7 @@ async function newThread(
         );
       } else {
         await db.run("ROLLBACK");
-        throw `User ${username} not found`;
+        throw `Error: User ${username} not found`;
       }
     }
 
@@ -285,6 +308,8 @@ async function newThread(
 export async function readThread(
   threadId: number,
   newMsgId?: number,
+  /** For checking new messages and getting a token count, while not showing the user */
+  peek?: boolean,
 ): Promise<string> {
   return await usingDatabase(async (db) => {
     const thread = await getThread(db, threadId);
@@ -325,15 +350,22 @@ Message: ${message.message}
     threadMessages += `
 Use 'llmail reply ${threadId}' to reply.`;
 
-    // Update thread as read
+    if (!peek) {
+      await markAsRead(threadId);
+    }
+
+    return threadMessages;
+  });
+}
+
+export async function markAsRead(threadId: number) {
+  await usingDatabase(async (db) => {
     await db.run(
       `UPDATE ThreadMembers 
         SET newMsgId = -1 
         WHERE threadId = ? AND userId = ?`,
       [threadId, _myUserId],
     );
-
-    return threadMessages;
   });
 }
 
@@ -352,8 +384,21 @@ async function listUsers() {
 }
 
 async function replyThread(threadId: number, message: string) {
+  message = message.replace(/\\n/g, "\n");
+
+  // Validate message does not exceed token limit
+  const msgTokenCount = validateMsgTokenCount(message);
+
   return await usingDatabase(async (db) => {
     const thread = await getThread(db, threadId);
+
+    const newThreadTokenTotal = thread.tokenCount + msgTokenCount;
+
+    if (newThreadTokenTotal > _threadTokenMax) {
+      throw `Error: Reply is ${msgTokenCount} tokens and thread is ${thread.tokenCount} tokens. 
+Reply would cause thread to exceed total thread token limit of ${_threadTokenMax} tokens. 
+Consider archiving this thread and starting a new one.`;
+    }
 
     const insertedMessage = await db.run(
       "INSERT INTO ThreadMessages (threadId, userId, message, date) VALUES (?, ?, ?, ?)",
@@ -366,6 +411,14 @@ async function replyThread(threadId: number, message: string) {
         SET newMsgId = ?, archived = 0  
         WHERE newMsgId = -1 AND threadId = ? AND userId != ?`,
       [insertedMessage.lastID, thread.id, _myUserId],
+    );
+
+    // Update token total
+    await db.run(
+      `UPDATE Threads 
+        SET tokenCount = ? 
+        WHERE id = ?`,
+      [newThreadTokenTotal, thread.id],
     );
 
     return `Message added to thread ${threadId}`;
@@ -403,7 +456,7 @@ async function getThread(db: Database, threadId: number) {
   const thread = await db.get(`SELECT * FROM Threads WHERE id = ?`, [threadId]);
 
   if (!thread) {
-    throw `Thread ${threadId} not found`;
+    throw `Error: Thread ${threadId} not found`;
   }
 
   return thread;
@@ -415,8 +468,18 @@ async function getUser(db: Database, username: string) {
   ]);
 
   if (!user) {
-    throw `User ${username} not found`;
+    throw `Error: User ${username} not found`;
   }
 
   return user;
+}
+
+function validateMsgTokenCount(message: string) {
+  const msgTokenCount = utilities.getTokenCount(message);
+
+  if (msgTokenCount > _messageTokenMax) {
+    throw `Error: Message is ${msgTokenCount} tokens, exceeding the limit of ${_messageTokenMax} tokens`;
+  }
+
+  return msgTokenCount;
 }

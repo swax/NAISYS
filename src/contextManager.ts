@@ -1,10 +1,8 @@
-import { get_encoding } from "tiktoken";
 import * as inputMode from "./inputMode.js";
 import { InputMode } from "./inputMode.js";
 import * as output from "./output.js";
 import { OutputColor } from "./output.js";
-
-const _gpt2encoding = get_encoding("gpt2");
+import * as utilities from "./utilities.js";
 
 export enum ContentSource {
   StartPrompt = "startPrompt",
@@ -85,7 +83,7 @@ export function clear() {
 }
 
 export function getTokenCount() {
-  return _gpt2encoding.encode(content).length;
+  return utilities.getTokenCount(content);
 }
 
 export function printContext() {

@@ -1,20 +1,18 @@
-// A bad play on words, but this is like lynx but for LLMs
-
 import { exec } from "child_process";
 import yaml from "js-yaml";
 import OpenAI from "openai";
-import { get_encoding } from "tiktoken";
 import { parse } from "url";
 import * as config from "../config.js";
 import { getLLModel } from "../llmModels.js";
 import * as output from "../output.js";
+import * as utilities from "../utilities.js";
+
+// A bad play on words, but this is like lynx but for LLMs
 
 enum RunMode {
   Content = "content",
   Links = "links",
 }
-
-const _gpt2encoding = get_encoding("gpt2");
 
 export async function run(url: string, goal: string, tokenMax: number) {
   return await _getContent(url, goal, tokenMax);
@@ -36,8 +34,8 @@ async function _getContent(url: string, goal: string, tokenMax: number) {
   }
 
   // get the token size of the output
-  const contentTokenSize = _gpt2encoding.encode(content).length;
-  const refTokenSize = _gpt2encoding.encode(references).length;
+  const contentTokenSize = utilities.getTokenCount(content);
+  const refTokenSize = utilities.getTokenCount(references);
 
   output.comment(`Content Token size: ${contentTokenSize}. 
   References Token size: ${refTokenSize}.
@@ -66,9 +64,9 @@ async function _getContent(url: string, goal: string, tokenMax: number) {
     output.comment(`Processing Piece ${i + 1}/${pieceCount}:`);
 
     output.comment(
-      "  Reduced output tokens: " + _gpt2encoding.encode(reducedOutput).length,
+      "  Reduced output tokens: " + utilities.getTokenCount(reducedOutput),
     );
-    output.comment("  Piece tokens: " + _gpt2encoding.encode(pieceStr).length);
+    output.comment("  Piece tokens: " + utilities.getTokenCount(pieceStr));
 
     reducedOutput = await _llmReduce(
       url,
@@ -82,7 +80,7 @@ async function _getContent(url: string, goal: string, tokenMax: number) {
     );
   }
 
-  const finalTokenSize = _gpt2encoding.encode(reducedOutput).length;
+  const finalTokenSize = utilities.getTokenCount(reducedOutput);
 
   output.comment(`Final reduced output tokens: ${finalTokenSize}`);
 
@@ -119,8 +117,8 @@ async function _llmReduce(
   pieceStr: string,
   tokenMax: number,
 ) {
-  const reducedTokenCount = _gpt2encoding.encode(reducedOutput).length;
-  const pieceTokenCount = _gpt2encoding.encode(pieceStr).length;
+  const reducedTokenCount = utilities.getTokenCount(reducedOutput);
+  const pieceTokenCount = utilities.getTokenCount(pieceStr);
 
   const model = getLLModel(config.agent.webModel);
 
@@ -208,9 +206,9 @@ async function _getLinks(url: string, goal: string) {
   output.comment(yamlLinks);
 
   // link tokens
-  const linkTokens = _gpt2encoding.encode(yamlLinks).length;
+  const linkTokens = utilities.getTokenCount(yamlLinks);
   output.comment(`Link Tokens: ${linkTokens}`);
-  output.comment(`Original tokens: ${_gpt2encoding.encode(linkOutput).length}`);
+  output.comment(`Original tokens: ${utilities.getTokenCount(linkOutput)}`);
 
   return yamlLinks;
 }
