@@ -39,3 +39,15 @@ vim or nano so point the LLM to use cat to read/write files in a single operatio
 - White: Generated locally or from a real shell, added to context
 - Green: Root prompt and root command reponses. Not added to context. Used for diagnostics between calls to LLM
 - Red: High level NAISYS errors, not added to the context
+
+#### Code Notes
+
+- The entry point is `./naisys.ts`
+- A helpful `dependency-graph.png` is included to get an idea of the overall architecture
+  - This also doubles as a way to prevent cyclic dependencies as a DI library is not used currently
+- The code is organzied into module based services
+  - Think poor mans singleton dependency injection
+  - A previous version had class based services using real DI, but that added a lot of `this.` overhead making the code hard to read
+  - Code from these services are imported with \* so it's clear when you're calling out to a service like llmService.send()
+- There is a command loop that first checks for internally handled NAISYS commands, unhandled commands fall through to an actual shell
+- Multiline commands are adding to a bash script and then executed so it's easier to pinpoint where a command failed by line number in the script versus the entire shell log

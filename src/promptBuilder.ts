@@ -96,7 +96,7 @@ export function getInput(commandPrompt: string, pauseSeconds?: number) {
       interval = setInterval(() => {
         // setInterval does not support async/await, but that's okay as this call easily runs within the 3s interval
         llmail
-          .getUnreadThreadIds()
+          .getUnreadThreads()
           .then((unreadThreadIds) => {
             if (unreadThreadIds.length) {
               abortQuestion();
