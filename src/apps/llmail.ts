@@ -2,9 +2,9 @@ import * as fs from "fs";
 import { Database } from "sqlite";
 import table from "text-table";
 import * as config from "../config.js";
-import * as dbUtils from "../dbUtils.js";
-import * as utilities from "../utilities.js";
-import { naisysToHostPath } from "../utilities.js";
+import * as dbUtils from "../utils/dbUtils.js";
+import * as utilities from "../utils/utilities.js";
+import { naisysToHostPath } from "../utils/utilities.js";
 
 const _dbFilePath = naisysToHostPath(
   `${config.rootFolder}/var/naisys/llmail.db`,

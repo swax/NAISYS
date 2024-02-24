@@ -1,6 +1,6 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import OpenAI from "openai";
-import * as config from "./config.js";
+import * as config from "../config.js";
 import { LlmRole } from "./contextLog.js";
 import * as contextManager from "./contextManager.js";
 import * as costTracker from "./costTracker.js";

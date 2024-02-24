@@ -1,4 +1,4 @@
-import * as commandLoop from "./commandLoop.js";
+import * as commandLoop from "./command/commandLoop.js";
 
 await commandLoop.run();
 
