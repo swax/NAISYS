@@ -1,9 +1,9 @@
 import { ChildProcessWithoutNullStreams, spawn } from "child_process";
 import * as fs from "fs";
 import * as os from "os";
-import * as config from "./config.js";
-import * as output from "./output.js";
-import { naisysToHostPath } from "./utilities.js";
+import * as config from "../config.js";
+import * as output from "../utils/output.js";
+import { naisysToHostPath } from "../utils/utilities.js";
 
 type CommandResponse = {
   value: string;

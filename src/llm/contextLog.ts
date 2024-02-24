@@ -1,9 +1,9 @@
 import escapeHtml from "escape-html";
 import * as fs from "fs";
 import { Database } from "sqlite";
-import * as config from "./config.js";
-import * as dbUtils from "./dbUtils.js";
-import { ensureFileDirExists, naisysToHostPath } from "./utilities.js";
+import * as config from "../config.js";
+import * as dbUtils from "../utils/dbUtils.js";
+import { ensureFileDirExists, naisysToHostPath } from "../utils/utilities.js";
 
 export enum LlmRole {
   Assistant = "assistant",

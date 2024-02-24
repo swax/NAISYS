@@ -1,19 +1,19 @@
 import chalk from "chalk";
 import * as readline from "readline";
-import * as llmail from "./apps/llmail.js";
+import * as llmail from "../apps/llmail.js";
 import * as commandHandler from "./commandHandler.js";
 import { NextCommandAction } from "./commandHandler.js";
-import * as config from "./config.js";
-import * as contextLog from "./contextLog.js";
-import { LlmRole } from "./contextLog.js";
-import * as contextManager from "./contextManager.js";
-import { ContentSource } from "./contextManager.js";
-import * as inputMode from "./inputMode.js";
-import { InputMode } from "./inputMode.js";
-import * as llmService from "./llmService.js";
-import * as output from "./output.js";
+import * as config from "../config.js";
+import * as contextLog from "../llm/contextLog.js";
+import { LlmRole } from "../llm/contextLog.js";
+import * as contextManager from "../llm/contextManager.js";
+import { ContentSource } from "../llm/contextManager.js";
+import * as inputMode from "../utils/inputMode.js";
+import { InputMode } from "../utils/inputMode.js";
+import * as llmService from "../llm/llmService.js";
+import * as output from "../utils/output.js";
 import * as promptBuilder from "./promptBuilder.js";
-import * as utilities from "./utilities.js";
+import * as utilities from "../utils/utilities.js";
 
 export async function run() {
   output.comment("System Message:");

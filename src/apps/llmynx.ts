@@ -3,9 +3,9 @@ import yaml from "js-yaml";
 import OpenAI from "openai";
 import { parse } from "url";
 import * as config from "../config.js";
-import { getLLModel } from "../llmModels.js";
-import * as output from "../output.js";
-import * as utilities from "../utilities.js";
+import { getLLModel } from "../llm/llmModels.js";
+import * as output from "../utils/output.js";
+import * as utilities from "../utils/utilities.js";
 
 // A bad play on words, but this is like lynx but for LLMs
 

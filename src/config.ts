@@ -2,7 +2,7 @@ import { program } from "commander";
 import dotenv from "dotenv";
 import * as fs from "fs";
 import yaml from "js-yaml";
-import { valueFromString } from "./utilities.js";
+import { valueFromString } from "./utils/utilities.js";
 
 program.argument("<agent-path>", "Path to agent configuration file").parse();
 

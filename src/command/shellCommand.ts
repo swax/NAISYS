@@ -1,6 +1,6 @@
-import * as contextManager from "./contextManager.js";
-import * as inputMode from "./inputMode.js";
-import { InputMode } from "./inputMode.js";
+import * as contextManager from "../llm/contextManager.js";
+import * as inputMode from "../utils/inputMode.js";
+import { InputMode } from "../utils/inputMode.js";
 import * as shellWrapper from "./shellWrapper.js";
 
 interface HandleShellCommandResponse {
