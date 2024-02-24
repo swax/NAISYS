@@ -4,23 +4,14 @@ import * as fs from "fs";
 import yaml from "js-yaml";
 import { valueFromString } from "./utilities.js";
 
-interface AgentConfig {
-  username: string;
-  title: string;
-  consoleModel: string;
-  webModel: string;
-  agentPrompt: string;
-}
-
 program.argument("<agent-path>", "Path to agent configuration file").parse();
 
 dotenv.config();
 
-export const WAKE_ON_MSG = -1; // Should not be changed
-
 export const hostname = "system-01";
 
-export const tokenMax = 4000; // gpt4 has a 8k token max, but also $0.03 per 1k tokens
+/** The number of tokens you want to limit a session to, Independent of the LLM token max */
+export const tokenMax = 4000;
 
 /* .env is used for global configs across naisys, while agent configs for the specific agent */
 
@@ -34,6 +25,11 @@ export const openaiApiKey = getEnv("OPENAI_API_KEY");
 
 export const googleApiKey = getEnv("GOOGLE_API_KEY");
 
+export const costLimitDollars = parseFloat(getEnv("COST_LIMIT_DOLLARS"));
+
+/** Special valur for debugPauseSeconds that means only wake on new mail */
+export const WAKE_ON_MSG = -1;
+
 export const debugPauseSeconds = loadPauseSeconds();
 
 export const agent = loadAgentConfig();
@@ -44,6 +40,14 @@ function getEnv(key: string) {
     throw `Config: Error, .env ${key} is not defined`;
   }
   return value;
+}
+
+interface AgentConfig {
+  username: string;
+  title: string;
+  consoleModel: string;
+  webModel: string;
+  agentPrompt: string;
 }
 
 function loadAgentConfig() {

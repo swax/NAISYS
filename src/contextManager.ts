@@ -23,7 +23,7 @@ export function getSystemMessage() {
   }
 
   const agentPrompt = config.agent.agentPrompt.replace(
-    /\$\{config\.([^\}]+)\}/g,
+    /\$\{config\.([^}]+)\}/g,
     (match, key) => {
       const value = valueFromString(config, key);
       if (value === undefined) {

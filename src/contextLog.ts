@@ -28,7 +28,9 @@ const _userLogFilePath = naisysToHostPath(
   `${config.rootFolder}/var/www/logs/${config.agent.username}-log.html`,
 );
 
-export async function init() {
+await init();
+
+async function init() {
   initLogFile(_combinedLogFilePath);
   initLogFile(_userLogFilePath);
 

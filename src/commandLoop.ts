@@ -62,7 +62,10 @@ export async function run() {
         await contextManager.append(prompt, ContentSource.StartPrompt);
 
         const waitingMessage =
-          prompt + chalk[output.OutputColor.loading]("LLM Working...");
+          prompt +
+          chalk[output.OutputColor.loading](
+            `LLM (${config.agent.consoleModel}) Working...`,
+          );
         process.stdout.write(waitingMessage);
 
         const clearWaitingMessage = () => {

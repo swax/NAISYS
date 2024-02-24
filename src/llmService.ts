@@ -3,9 +3,15 @@ import OpenAI from "openai";
 import * as config from "./config.js";
 import { LlmRole } from "./contextLog.js";
 import * as contextManager from "./contextManager.js";
+import * as costTracker from "./costTracker.js";
 import { getLLModel } from "./llmModels.js";
 
 export async function send(): Promise<string> {
+  const currentTotalCost = await costTracker.getTotalCosts();
+  if (config.costLimitDollars < currentTotalCost) {
+    throw `LLM Service: Cost limit of $${config.costLimitDollars} reached`;
+  }
+
   const model = getLLModel(config.agent.consoleModel);
 
   if (model.key === "google") {
@@ -44,6 +50,16 @@ async function sendWithOpenAiCompatible(): Promise<string> {
       })),
     ],
   });
+
+  // Total up costs, prices are per 1000 tokens
+  if (chatCompletion.usage) {
+    const cost =
+      chatCompletion.usage.prompt_tokens * model.inputCost +
+      chatCompletion.usage.completion_tokens * model.outputCost;
+    await costTracker.recordCost(cost / 1000);
+  } else {
+    throw "LLM Service: Error, no usage data returned from OpenAI API.";
+  }
 
   return chatCompletion.choices[0].message.content || "";
 }
@@ -88,7 +104,20 @@ async function sendWithGoogle(): Promise<string> {
   });
 
   const result = await chat.sendMessage(lastMessage.content);
-  const response = await result.response;
 
-  return response.text();
+  if (result.response.promptFeedback?.blockReason) {
+    throw `LLM Service: Request Blocked, ${result.response.promptFeedback.blockReason}`;
+  }
+
+  const responseText = result.response.text();
+
+  // Total up cost, per 1000 characters with google
+  // todo: take into account google allows 60 queries per minute for free
+  const cost =
+    lastMessage.content.length * model.inputCost +
+    responseText.length * model.outputCost;
+
+  await costTracker.recordCost(cost / 1000);
+
+  return responseText;
 }
