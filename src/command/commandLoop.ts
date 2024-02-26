@@ -1,19 +1,19 @@
 import chalk from "chalk";
 import * as readline from "readline";
 import * as llmail from "../apps/llmail.js";
-import * as commandHandler from "./commandHandler.js";
-import { NextCommandAction } from "./commandHandler.js";
 import * as config from "../config.js";
 import * as contextLog from "../llm/contextLog.js";
 import { LlmRole } from "../llm/contextLog.js";
 import * as contextManager from "../llm/contextManager.js";
 import { ContentSource } from "../llm/contextManager.js";
+import * as llmService from "../llm/llmService.js";
 import * as inputMode from "../utils/inputMode.js";
 import { InputMode } from "../utils/inputMode.js";
-import * as llmService from "../llm/llmService.js";
 import * as output from "../utils/output.js";
-import * as promptBuilder from "./promptBuilder.js";
 import * as utilities from "../utils/utilities.js";
+import * as commandHandler from "./commandHandler.js";
+import { NextCommandAction } from "./commandHandler.js";
+import * as promptBuilder from "./promptBuilder.js";
 
 export async function run() {
   output.comment("System Message:");
@@ -45,7 +45,7 @@ export async function run() {
 
     inputMode.toggle(InputMode.Debug);
 
-    let pauseSeconds = config.debugPauseSeconds;
+    let pauseSeconds = config.agent.debugPauseSeconds;
 
     while (nextCommandAction == NextCommandAction.Continue) {
       const prompt = await promptBuilder.getPrompt(pauseSeconds);

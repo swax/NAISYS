@@ -20,7 +20,7 @@ export enum NextCommandAction {
 
 interface NextCommandResponse {
   nextCommandAction: NextCommandAction;
-  pauseSeconds?: number;
+  pauseSeconds: number;
 }
 
 export let previousSessionNotes = "";
@@ -187,6 +187,6 @@ export async function consoleInput(
 
   return {
     nextCommandAction,
-    pauseSeconds: config.debugPauseSeconds,
+    pauseSeconds: config.agent.debugPauseSeconds,
   };
 }

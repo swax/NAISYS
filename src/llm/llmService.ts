@@ -8,8 +8,8 @@ import { getLLModel } from "./llmModels.js";
 
 export async function send(): Promise<string> {
   const currentTotalCost = await costTracker.getTotalCosts();
-  if (config.costLimitDollars < currentTotalCost) {
-    throw `LLM Service: Cost limit of $${config.costLimitDollars} reached`;
+  if (config.agent.costLimitDollars < currentTotalCost) {
+    throw `LLM Service: Cost limit of $${config.agent.costLimitDollars} reached`;
   }
 
   const model = getLLModel(config.agent.consoleModel);

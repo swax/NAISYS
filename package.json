@@ -5,10 +5,9 @@
   "type": "module",
   "scripts": {
     "compile": "tsc",
-    "compile/run/attach": "tsc && node --inspect dist/naisys.js ./agents/coder.yaml",
-    "run agent:coder": "node dist/naisys.js ./agents/coder.yaml",
-    "run agent:quality": "node dist/naisys.js ./agents/quality.yaml",
-    "run agent:manager": "node dist/naisys.js ./agents/manager.yaml",
+    "compile/run/attachable": "tsc && node --inspect dist/naisys.js ./agents/example.yaml",
+    "run agent:dev": "node dist/naisys.js ./agents/eva-site-2-team/dev.yaml",
+    "run agent:admin": "node dist/naisys.js ./agents/eva-site-2-team/admin.yaml",
     "clean:win": "rmdir dist /s /q",
     "eslint": "npx eslint --rulesdir eslint-rules src",
     "prettier": "npx prettier --write .",

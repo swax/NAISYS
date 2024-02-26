@@ -43,7 +43,12 @@ export async function recordCost(cost: number) {
 
 export async function getTotalCosts() {
   return usingDatabase(async (db) => {
-    const result = await db.get(`SELECT sum(cost) as total FROM Costs`);
+    const result = await db.get(
+      `SELECT sum(cost) as total 
+        FROM Costs 
+        WHERE username = ?`,
+      [config.agent.username],
+    );
 
     return result.total;
   });
