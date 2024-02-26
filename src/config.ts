@@ -25,12 +25,8 @@ export const openaiApiKey = getEnv("OPENAI_API_KEY");
 
 export const googleApiKey = getEnv("GOOGLE_API_KEY");
 
-export const costLimitDollars = parseFloat(getEnv("COST_LIMIT_DOLLARS"));
-
 /** Special valur for debugPauseSeconds that means only wake on new mail */
 export const WAKE_ON_MSG = -1;
-
-export const debugPauseSeconds = loadPauseSeconds();
 
 export const agent = loadAgentConfig();
 
@@ -48,6 +44,9 @@ interface AgentConfig {
   consoleModel: string;
   webModel: string;
   agentPrompt: string;
+  /** Seconds to pause on the debug prompt before continuing LLM. undefined for indefinte. -1 to wake on new mail only */
+  debugPauseSeconds: number;
+  costLimitDollars: number;
 }
 
 function loadAgentConfig() {
@@ -64,6 +63,8 @@ function loadAgentConfig() {
     "consoleModel",
     "webModel",
     "agentPrompt",
+    // debugPauseSeconds can be undefined
+    "costLimitDollars",
   ]) {
     if (!valueFromString(checkAgentConfig, key)) {
       throw `Agent config: Error, ${key} is not defined`;
@@ -71,15 +72,4 @@ function loadAgentConfig() {
   }
 
   return checkAgentConfig;
-}
-
-/** Seconds to pause on the debug prompt before continuing LLM. undefined for indefinte. -1 to wake on new mail only */
-function loadPauseSeconds() {
-  const pauseSeconds = process.env.DEBUG_PAUSE_SECONDS;
-
-  return !pauseSeconds
-    ? undefined
-    : pauseSeconds == "-1"
-      ? WAKE_ON_MSG
-      : parseInt(pauseSeconds);
 }

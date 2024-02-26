@@ -1,0 +1,29 @@
+# Used to identify the agent on the prompt, logs, home dir, mail, etc..
+username: jill
+
+# How other agents will understand the role of this agent
+title: Software Engineer
+
+# The model to use for console interactions
+consoleModel: gpt4turbo
+
+# The model to use for llmynx, pre-processing websites to fit into a smaller context
+webModel: gpt3turbo
+
+# A system like prompt explaining the agent's role and responsibilities
+# You can use config variables in this string
+agentPrompt: |
+  You are ${config.agent.username} a ${config.agent.title} with the job of creating current weather website.
+  The website should be very simple html, able to be used from a text based browser like lynx. Pages should be relatively short.
+  The location of the website files should be in ${config.rootFolder}/var/www 
+  The website can be tested at ${config.localWebsite} use --dump with lynx as it does not work in interactive mode.
+  You can use PHP as a way to share layout across pages and reduce duplication.
+  Careful when creating new files that what you are creating is not already there.
+
+# The number of seconds to pause after each console interaction for debugging and rate limiting
+# 0 means wait indefinitely, -1 means only wake on a new message from another agent
+debugPauseSeconds: 0
+
+# The maximum amount to spend on LLM interactions
+# Once reached the agent will stop and this value will need to be increased to continue
+costLimitDollars: 1.00

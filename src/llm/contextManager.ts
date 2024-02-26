@@ -1,12 +1,12 @@
 import * as config from "../config.js";
-import * as contextLog from "./contextLog.js";
-import { LlmMessage, LlmRole } from "./contextLog.js";
 import * as inputMode from "../utils/inputMode.js";
 import { InputMode } from "../utils/inputMode.js";
 import * as output from "../utils/output.js";
 import { OutputColor } from "../utils/output.js";
 import * as utilities from "../utils/utilities.js";
 import { valueFromString } from "../utils/utilities.js";
+import * as contextLog from "./contextLog.js";
+import { LlmMessage, LlmRole } from "./contextLog.js";
 
 export enum ContentSource {
   StartPrompt = "startPrompt",
