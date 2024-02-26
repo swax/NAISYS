@@ -18,14 +18,14 @@ export interface LlmMessage {
   logId?: number;
 }
 
-const _dbFilePath = naisysToHostPath(`${config.rootFolder}/var/naisys/log.db`);
+const _dbFilePath = naisysToHostPath(`${config.naisysFolder}/var/log.db`);
 
 const _combinedLogFilePath = naisysToHostPath(
-  `${config.rootFolder}/var/www/logs/combined-log.html`,
+  `${config.websiteFolder}/logs/combined-log.html`,
 );
 
 const _userLogFilePath = naisysToHostPath(
-  `${config.rootFolder}/var/www/logs/${config.agent.username}-log.html`,
+  `${config.websiteFolder}/logs/${config.agent.username}-log.html`,
 );
 
 await init();

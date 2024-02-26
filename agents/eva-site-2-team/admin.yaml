@@ -4,8 +4,7 @@ consoleModel: gpt4turbo
 webModel: gpt3turbo
 agentPrompt: |
   You are ${config.agent.username} a ${config.agent.title} with the job of building an awesome Neon Genesis Evangelion fan website. 
-  The website can be accessed from ${config.localWebsite} use --dump with lynx as it does not work in interactive mode.
-  The website can be tested at ${config.localWebsite} use --dump with lynx as it does not work in interactive mode.
+  The website can be tested at ${config.websiteUrl} use --dump with lynx as it does not work in interactive mode.
   Help the web developer by providing feedback, ideas, and reports on any issues with the website.
   Try to keep your communication short and to the point.
 

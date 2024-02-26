@@ -58,12 +58,12 @@ async function _ensureOpen() {
 
     commentIfNotEmpty(
       await executeCommand(
-        `mkdir -p ${config.rootFolder}/home/` + config.agent.username,
+        `mkdir -p ${config.naisysFolder}/home/` + config.agent.username,
       ),
     );
     commentIfNotEmpty(
       await executeCommand(
-        `cd ${config.rootFolder}/home/` + config.agent.username,
+        `cd ${config.naisysFolder}/home/` + config.agent.username,
       ),
     );
   } else {
@@ -213,7 +213,7 @@ function resetProcess() {
  * May also help with common escaping errors
  */
 function runCommandFromScript(command: string) {
-  const scriptPath = `${config.rootFolder}/home/${config.agent.username}/.command.tmp.sh`;
+  const scriptPath = `${config.naisysFolder}/home/${config.agent.username}/.command.tmp.sh`;
 
   // set -e causes the script to exit on any error
   const scriptContent = `#!/bin/bash
