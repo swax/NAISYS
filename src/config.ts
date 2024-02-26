@@ -15,9 +15,11 @@ export const tokenMax = 4000;
 
 /* .env is used for global configs across naisys, while agent configs for the specific agent */
 
-export const rootFolder = getEnv("ROOT_FOLDER");
+export const naisysFolder = getEnv("NAISYS_FOLDER");
 
-export const localWebsite = getEnv("LOCAL_WEBSITE");
+export const websiteFolder = getEnv("WEBSITE_FOLDER");
+
+export const websiteUrl = getEnv("WEBSITE_URL");
 
 export const localLlmUrl = getEnv("LOCAL_LLM_URL");
 

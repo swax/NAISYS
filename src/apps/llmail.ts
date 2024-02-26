@@ -7,7 +7,7 @@ import * as utilities from "../utils/utilities.js";
 import { naisysToHostPath } from "../utils/utilities.js";
 
 const _dbFilePath = naisysToHostPath(
-  `${config.rootFolder}/var/naisys/llmail.db`,
+  `${config.naisysFolder}/var/llmail.db`,
 );
 
 let _myUserId = -1;
