@@ -22,16 +22,10 @@ export function getSystemMessage() {
     return _cachedSystemMessage;
   }
 
-  const agentPrompt = config.agent.agentPrompt.replace(
-    /\$\{config\.([^}]+)\}/g,
-    (match, key) => {
-      const value = valueFromString(config, key);
-      if (value === undefined) {
-        throw `Agent config: Error, ${key} is not defined`;
-      }
-      return value;
-    },
-  );
+  // Fill out the templates in the agent prompt and stick it to the front of the system message
+  let agentPrompt = config.agent.agentPrompt;
+  agentPrompt = resolveTemplateVars(agentPrompt, "agent", config.agent);
+  agentPrompt = resolveTemplateVars(agentPrompt, "env", process.env);
 
   const systemMessage = `${agentPrompt}
 
@@ -42,10 +36,10 @@ For example when you run 'cat' or 'ls', don't write what you think the output wi
 Your role is that of the user. The system will provide responses and next command prompt. Don't output your own command prompt.
 Be careful when writing files through the command prompt with cat. Make sure to close and escape quotes properly.
 
-NAISYS 1.0 Shell
+NAISYS ${process.env.npm_package_version} Shell
 Welcome back ${config.agent.username}!
 MOTD:
-Date: ${new Date().toUTCString()}
+Date: ${new Date().toLocaleString()}
 Commands: 
   Standard Unix commands are available
   vi and nano are not supported
@@ -63,13 +57,29 @@ Tokens:
   return systemMessage;
 }
 
+function resolveTemplateVars(
+  templateString: string,
+  allowedVarString: string,
+  mappedVar: any,
+) {
+  const pattern = new RegExp(`\\$\\{${allowedVarString}\\.([^}]+)\\}`, "g");
+
+  return templateString.replace(pattern, (match, key) => {
+    const value = valueFromString(mappedVar, key);
+    if (value === undefined) {
+      throw `Agent config: Error, ${key} is not defined`;
+    }
+    return value;
+  });
+}
+
 export let messages: LlmMessage[] = [];
 
 export async function append(
   text: string,
   source: ContentSource = ContentSource.Console,
 ) {
-  // Root runs in a shadow mode where their activity is not recorded in the context
+  // Debug runs in a shadow mode where their activity is not recorded in the context
   // Mark with a # to make it clear that it is not part of the context
   if (inputMode.current === InputMode.Debug) {
     output.comment(text);

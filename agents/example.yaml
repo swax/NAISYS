@@ -13,17 +13,18 @@ webModel: gpt3turbo
 # A system like prompt explaining the agent's role and responsibilities
 # You can use config variables in this string
 agentPrompt: |
-  You are ${config.agent.username} a ${config.agent.title} with the job of creating a Neon Genesis Evangelion fan website.
+  You are ${agent.username} a ${agent.title} with the job of creating a Neon Genesis Evangelion fan website.
   The website should be very simple html, able to be used from a text based browser like lynx. Pages should be relatively short.
-  The location of the website files should be in ${config.websiteFolder} 
-  The website can be tested at ${config.websiteUrl} use --dump with lynx as it does not work in interactive mode.
+  The location of the website files should be in ${env.WEBSITE_FOLDER} 
+  The website can be tested at ${env.WEBSITE_URL} use --dump with lynx as it does not work in interactive mode.
   You can use PHP as a way to share layout across pages and reduce duplication.
   Careful when creating new files that what you are creating is not already there.
 
 # The number of seconds to pause after each console interaction for debugging and rate limiting
 # 0 means wait indefinitely, -1 means only wake on a new message from another agent
-debugPauseSeconds: 5
+debugPauseSeconds: 0
 
 # The maximum amount to spend on LLM interactions
 # Once reached the agent will stop and this value will need to be increased to continue
 costLimitDollars: 1.00
+# Additional custom variables can be defined here and/or in the .env file to be loaded into the agent prompt

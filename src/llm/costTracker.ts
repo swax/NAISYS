@@ -3,9 +3,7 @@ import * as config from "../config.js";
 import * as dbUtils from "../utils/dbUtils.js";
 import { naisysToHostPath } from "../utils/utilities.js";
 
-const _dbFilePath = naisysToHostPath(
-  `${config.naisysFolder}/var/costs.db`,
-);
+const _dbFilePath = naisysToHostPath(`${config.naisysFolder}/lib/costs.db`);
 
 await init();
 

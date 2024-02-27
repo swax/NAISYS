@@ -8,7 +8,7 @@ program.argument("<agent-path>", "Path to agent configuration file").parse();
 
 dotenv.config();
 
-export const hostname = "system-01";
+export const hostname = "naisys";
 
 /** The number of tokens you want to limit a session to, Independent of the LLM token max */
 export const tokenMax = 4000;

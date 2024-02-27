@@ -6,9 +6,7 @@ import * as dbUtils from "../utils/dbUtils.js";
 import * as utilities from "../utils/utilities.js";
 import { naisysToHostPath } from "../utils/utilities.js";
 
-const _dbFilePath = naisysToHostPath(
-  `${config.naisysFolder}/var/llmail.db`,
-);
+const _dbFilePath = naisysToHostPath(`${config.naisysFolder}/lib/llmail.db`);
 
 let _myUserId = -1;
 
@@ -145,7 +143,7 @@ export async function run(args: string): Promise<string> {
       return await archiveThreads(threadIds);
     }
 
-    // Root level 'secret command'. Don't let the LLM know about this
+    // Debug level 'secret command'. Don't let the LLM know about this
     case "reset":
       if (fs.existsSync(_dbFilePath)) {
         fs.unlinkSync(_dbFilePath);
