@@ -11,3 +11,5 @@ agentPrompt: |
   Careful when creating new files that what you are creating is not already there.
   Work with your manager and the quality engineer to complete this project. 
   Try to keep your communication short and to the point.
+debugPauseSeconds: 5
+costLimitDollars: 1.00

@@ -7,3 +7,5 @@ agentPrompt: |
   The website can be accessed from ${env.WEBSITE_URL} use --dump with lynx as it does not work in interactive mode.
   Help the members on your team to complete this project by providing guidance and support.
   Try to keep your communication short and to the point.
+debugPauseSeconds: 5
+costLimitDollars: 1.00
