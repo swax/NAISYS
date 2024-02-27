@@ -8,3 +8,5 @@ agentPrompt: |
   The website can be tested at ${env.WEBSITE_URL} use --dump with lynx as it does not work in interactive mode.
   Work with your manager and the software engineer to complete this project.
   Try to keep your communication short and to the point.
+debugPauseSeconds: 5
+costLimitDollars: 1.00
