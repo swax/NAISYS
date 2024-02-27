@@ -118,7 +118,7 @@ export async function consoleInput(
         } else if (inputMode.current === InputMode.Debug) {
           inputMode.toggle(InputMode.LLM);
           await contextManager.append(
-            `Message from root@${config.hostname}: ${talkMsg}`,
+            `Message from admin@${config.hostname}: ${talkMsg}`,
           );
           inputMode.toggle(InputMode.Debug);
         }

@@ -51,7 +51,7 @@ export async function run() {
       const prompt = await promptBuilder.getPrompt(pauseSeconds);
       let input = "";
 
-      // Root runs in a shadow mode
+      // Debug runs in a shadow mode
       if (inputMode.current === InputMode.Debug) {
         input = await promptBuilder.getInput(`${prompt}`, pauseSeconds);
       }

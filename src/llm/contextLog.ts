@@ -18,7 +18,7 @@ export interface LlmMessage {
   logId?: number;
 }
 
-const _dbFilePath = naisysToHostPath(`${config.naisysFolder}/var/log.db`);
+const _dbFilePath = naisysToHostPath(`${config.naisysFolder}/lib/log.db`);
 
 const _combinedLogFilePath = naisysToHostPath(
   `${config.websiteFolder}/logs/combined-log.html`,
@@ -122,7 +122,7 @@ function appendToLogFile(filepath: string, message: LlmMessage) {
   fs.appendFileSync(
     filepath,
     `<tr>
-      <td>${new Date().toISOString()}</td>
+      <td>${new Date().toLocaleString()}</td>
       <td>${config.agent.username}</td>
       <td>${roleToString(message.role)}</td>
       <td class='${message.role}'>
@@ -139,7 +139,7 @@ async function usingDatabase<T>(run: (db: Database) => Promise<T>): Promise<T> {
 function roleToString(role: LlmRole) {
   switch (role) {
     case LlmRole.Assistant:
-      return "LLM";
+      return config.agent.consoleModel;
     case LlmRole.User:
       return "NAISYS";
     case LlmRole.System:
