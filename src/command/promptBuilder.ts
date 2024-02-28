@@ -23,10 +23,14 @@ export async function getPrompt(pauseSeconds?: number) {
   const tokenSuffix = ` [Tokens: ${usedTokens}/${tokenMax}]`;
 
   let pause = "";
-  if (pauseSeconds && inputMode.current == InputMode.Debug) {
-    const value =
-      pauseSeconds == config.WAKE_ON_MSG ? "<WakeOnMsg>" : pauseSeconds + "s";
-    pause = ` [Paused: ${value}]`;
+
+  if (inputMode.current == InputMode.Debug) {
+    if (pauseSeconds) {
+      pause += ` [Paused: ${pauseSeconds}s]`;
+    }
+    if (config.agent.wakeOnMessage) {
+      pause += " [WakeOnMsg]";
+    }
   }
 
   return `${await getUserHostPathPrompt()}${tokenSuffix}${pause}${promptSuffix} `;
@@ -74,22 +78,20 @@ export function getInput(commandPrompt: string, pauseSeconds?: number) {
       },
     );
 
+    const abortQuestion = () => {
+      cancelTimeouts();
+      ac.abort();
+      resolve("");
+    };
+
     if (pauseSeconds) {
-      if (pauseSeconds == config.WAKE_ON_MSG) {
-        pauseSeconds = 2_000_000; // About 20 days, the max allowed by setTimeout()
-      }
-
-      const abortQuestion = () => {
-        cancelTimeouts();
-        ac.abort();
-        resolve("");
-      };
-
       timeout = setTimeout(() => {
         abortQuestion();
         output.comment(`Wait expired. Continuing...`);
       }, pauseSeconds * 1000);
+    }
 
+    if (config.agent.wakeOnMessage) {
       // Break timeout if new message is received
       let firstError = true;
 

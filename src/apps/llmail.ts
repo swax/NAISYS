@@ -298,7 +298,7 @@ Members: ${threadMembers.map((m) => m.username).join(", ")}
     for (const message of messages) {
       threadMessages += `
 From: ${message.username}
-Date: ${message.date}
+Date: ${new Date(message.date).toLocaleString()}
 Message: ${message.message}
 `;
     }

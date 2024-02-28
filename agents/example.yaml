@@ -21,10 +21,14 @@ agentPrompt: |
   Careful when creating new files that what you are creating is not already there.
 
 # The number of seconds to pause after each console interaction for debugging and rate limiting
-# 0 means wait indefinitely, -1 means only wake on a new message from another agent
+# No value or zero means wait indefinitely (debug driven)
 debugPauseSeconds: 0
+
+# If true, regardless of the debugPauseSeconds, the agent will not wake up on messages
+# With lots of agents this could be costly if they all end up mailing/replying each other in quick succession
+wakeOnMessage: true
 
 # The maximum amount to spend on LLM interactions
 # Once reached the agent will stop and this value will need to be increased to continue
-costLimitDollars: 1.00
+spendLimitDollars: 1.00
 # Additional custom variables can be defined here and/or in the .env file to be loaded into the agent prompt

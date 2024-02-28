@@ -8,4 +8,5 @@ agentPrompt: |
   Help the members on your team to complete this project by providing guidance and support.
   Try to keep your communication short and to the point.
 debugPauseSeconds: 5
-costLimitDollars: 1.00
+wakeOnMessage: false
+spendLimitDollars: 1.00

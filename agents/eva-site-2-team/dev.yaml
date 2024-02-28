@@ -11,5 +11,6 @@ agentPrompt: |
   Careful when creating new files that what you are creating is not already there.
   Work your partner the website administrator to complete this project.
   Try to keep your communication short and to the point.
-debugPauseSeconds: 5
-costLimitDollars: 2.00
+debugPauseSeconds: 0
+wakeOnMessage: false
+spendLimitDollars: 2.00
