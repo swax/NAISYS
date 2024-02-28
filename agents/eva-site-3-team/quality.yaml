@@ -9,4 +9,5 @@ agentPrompt: |
   Work with your manager and the software engineer to complete this project.
   Try to keep your communication short and to the point.
 debugPauseSeconds: 5
-costLimitDollars: 1.00
+wakeOnMessage: false
+spendLimitDollars: 1.00

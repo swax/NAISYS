@@ -27,9 +27,6 @@ export const openaiApiKey = getEnv("OPENAI_API_KEY");
 
 export const googleApiKey = getEnv("GOOGLE_API_KEY");
 
-/** Special valur for debugPauseSeconds that means only wake on new mail */
-export const WAKE_ON_MSG = -1;
-
 export const agent = loadAgentConfig();
 
 function getEnv(key: string) {
@@ -46,9 +43,10 @@ interface AgentConfig {
   consoleModel: string;
   webModel: string;
   agentPrompt: string;
-  /** Seconds to pause on the debug prompt before continuing LLM. undefined for indefinte. -1 to wake on new mail only */
-  debugPauseSeconds: number;
-  costLimitDollars: number;
+  spendLimitDollars: number;
+  /** Seconds to pause on the debug prompt before continuing LLM. No value or zero implies indefinite wait (debug driven) */
+  debugPauseSeconds?: number;
+  wakeOnMessage?: boolean;
 }
 
 function loadAgentConfig() {
@@ -65,8 +63,8 @@ function loadAgentConfig() {
     "consoleModel",
     "webModel",
     "agentPrompt",
-    // debugPauseSeconds can be undefined
-    "costLimitDollars",
+    "spendLimitDollars",
+    // debugPauseSeconds and wakeOnMessage can be undefined
   ]) {
     if (!valueFromString(checkAgentConfig, key)) {
       throw `Agent config: Error, ${key} is not defined`;

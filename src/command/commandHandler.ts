@@ -20,7 +20,7 @@ export enum NextCommandAction {
 
 interface NextCommandResponse {
   nextCommandAction: NextCommandAction;
-  pauseSeconds: number;
+  pauseSeconds?: number;
 }
 
 export let previousSessionNotes = "";
@@ -127,7 +127,7 @@ export async function consoleInput(
       }
 
       case "pause": {
-        const pauseSeconds = cmdArgs ? parseInt(cmdArgs) : config.WAKE_ON_MSG;
+        const pauseSeconds = cmdArgs ? parseInt(cmdArgs) : 0;
 
         if (isNaN(pauseSeconds)) {
           output.error("Invalid pause value");
