@@ -31,7 +31,7 @@ export function getSystemMessage() {
 
 This is a command line interface presenting you with the next command prompt. 
 Make sure the read the command line rules in the MOTD carefully.
-Don't try to guess the output of commands. 
+Don't try to guess the output of commands. Don't put commands in \`\`\` blocks.
 For example when you run 'cat' or 'ls', don't write what you think the output will be. Let the system do that.
 Your role is that of the user. The system will provide responses and next command prompt. Don't output your own command prompt.
 Be careful when writing files through the command prompt with cat. Make sure to close and escape quotes properly.
@@ -48,7 +48,10 @@ Commands:
 Special Commands:
   comment <thought>: Any non-command output like thinking out loud, prefix with the 'comment' command
   pause <seconds>: Pause for <seconds> or indeterminite if no argument is provided. Auto wake up on new mail message
-  endsession <note>: Ends this session, clears the console log. Add notes to carry over to the next session
+  endsession <note>: Ends this session, clears the console log and context.
+    The note should help you prevent from having to find your bearings in the next session. 
+    The note should contain your next goal. Important things should you remember. Maybe a task list.
+    Try to keep the note around 400 tokens.
 Tokens:
   The console log can only hold a certain number of 'tokens' that is specified in the prompt
   Make sure to call endsession before the limit is hit so you can continue your work with a fresh console`;
