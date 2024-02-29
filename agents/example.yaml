@@ -22,7 +22,7 @@ agentPrompt: |
 
 # The number of seconds to pause after each console interaction for debugging and rate limiting
 # No value or zero means wait indefinitely (debug driven)
-debugPauseSeconds: 0
+debugPauseSeconds: 5
 
 # If true, regardless of the debugPauseSeconds, the agent will not wake up on messages
 # With lots of agents this could be costly if they all end up mailing/replying each other in quick succession
