@@ -5,8 +5,8 @@
 # Check if an argument is provided
 if [ $# -eq 0 ]; then
   echo "Runs an entire team of agents in a tmux session"
-  echo "  The folder the agents are in will be treated as the tmux session name"
   echo "  Usage: $0 <path_to_agent_directory>"
+  echo "  Note: The folder the agents are in will be treated as the tmux session name"
   exit 1
 fi
 

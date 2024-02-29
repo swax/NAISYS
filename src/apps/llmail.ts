@@ -14,6 +14,11 @@ let _myUserId = -1;
 const _threadTokenMax = config.tokenMax / 2; // So 4000, would be 2000 thread max
 const _messageTokenMax = _threadTokenMax / 5; // Given the above a 400 token max, and 5 big messages per thread
 
+/** The 'non-simple' version of this is a thread first mail system. Where agents can create threads, add users, and reply to threads, etc..
+ * The problem with this was the agents were too chatty with so many mail commands, wasting context replying, reading threads, etc..
+ * Simple mode only has two commands. It still requires db persistance to support offline agents. */
+export const simpleMode = true;
+
 await init();
 
 async function init() {
@@ -85,12 +90,22 @@ export async function run(args: string): Promise<string> {
   const argParams = args.split(" ");
 
   if (!argParams[0]) {
-    return await listThreads();
+    if (simpleMode) {
+      argParams[0] = "help";
+    } else {
+      return await listThreads();
+    }
   }
 
   switch (argParams[0]) {
     case "help": {
-      return `llmail: Local email system
+      if (simpleMode) {
+        return `llmail Commands:
+  llmail users: Get list of users on the system
+  llmail send "<users>" "subject" "message": Send a message. ${_messageTokenMax} token max.
+    `;
+      } else {
+        return `llmail: Local email system
   no params: List all active threads
   users: Get list of users on the system
   send "<users>" "subject" "message": Send a new mail, starting a new thread
@@ -99,6 +114,7 @@ export async function run(args: string): Promise<string> {
   adduser <id> <username>: Add a user to thread with id
   archive <ids>: Archives a comma separated list of threads
     `;
+      }
     }
 
     case "send": {
@@ -257,7 +273,7 @@ async function newThread(
 
     await db.run("COMMIT");
 
-    return `Thread created with id ${thread.lastID}`;
+    return simpleMode ? "Mail sent" : `Thread created with id ${thread.lastID}`;
   });
 }
 
@@ -271,16 +287,13 @@ export async function readThread(
     const thread = await getThread(db, threadId);
 
     const threadMembers = await db.all(
-      `SELECT u.username
+      `SELECT u.id, u.username
          FROM ThreadMembers tm
          JOIN Users u ON tm.userId = u.id
          WHERE tm.threadId = ?`,
       [threadId],
     );
 
-    let threadMessages = `Thread ${thread.id}: ${thread.subject}
-Members: ${threadMembers.map((m) => m.username).join(", ")}
-`;
     let unreadFilter = "";
     if (newMsgId != undefined) {
       unreadFilter = `AND tm.id >= ${newMsgId}`;
@@ -295,16 +308,43 @@ Members: ${threadMembers.map((m) => m.username).join(", ")}
       [threadId],
     );
 
-    for (const message of messages) {
-      threadMessages += `
-From: ${message.username}
-Date: ${new Date(message.date).toLocaleString()}
-Message: ${message.message}
-`;
-    }
+    let threadMessages = "";
 
-    threadMessages += `
-Use 'llmail reply ${threadId}' to reply.`;
+    // If simple mode just show subject/from/to
+    // Buildings strings with \n here because otherwise this code is super hard to read
+    if (simpleMode) {
+      for (const message of messages) {
+        const toMembers = threadMembers
+          .filter((m) => m.username !== message.username)
+          .map((m) => m.username)
+          .join(", ");
+
+        threadMessages +=
+          `Subject: ${thread.subject}\n` +
+          `From: ${message.username}\n` +
+          `To: ${toMembers}\n` +
+          `Date: ${new Date(message.date).toLocaleString()}\n` +
+          `Message:\n` +
+          `${message.message}\n`;
+      }
+    }
+    // Else threaded version
+    else {
+      const toMembers = threadMembers.map((m) => m.username).join(", ");
+      threadMessages =
+        `Thread ${thread.id}: ${thread.subject}\n` + `Members: ${toMembers}\n`;
+
+      for (const message of messages) {
+        threadMessages +=
+          `\n` +
+          `From: ${message.username}\n` +
+          `Date: ${new Date(message.date).toLocaleString()}\n` +
+          `Message:\n` +
+          `${message.message}\n`;
+      }
+
+      threadMessages += `\nUse 'llmail reply ${threadId}' to reply.`;
+    }
 
     if (!peek) {
       await markAsRead(threadId);

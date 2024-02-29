@@ -30,7 +30,7 @@ export async function run() {
     inputMode.toggle(InputMode.LLM);
 
     output.comment("Starting Context:");
-    await contextManager.append("Previous session notes:");
+    await contextManager.append("Previous Session Note:");
     await contextManager.append(commandHandler.previousSessionNotes || "None");
 
     await commandHandler.consoleInput(
@@ -141,6 +141,7 @@ async function showNewMail() {
     const tokenMax = config.tokenMax;
 
     // Show full messages unless we are close to the token limit of the session
+    // or in simple mode, which means non-threaded messages
     if (sessionTokens + newMsgTokenCount < tokenMax * 0.75) {
       for (const newMessage of newMessages) {
         await contextManager.append("New Message:", ContentSource.Console);
@@ -150,6 +151,12 @@ async function showNewMail() {
       for (const unreadThread of unreadThreads) {
         await llmail.markAsRead(unreadThread.threadId);
       }
+    } else if (llmail.simpleMode) {
+      await contextManager.append(
+        `You have new mail, but not enough context to read them.\n` +
+          `Finish up what you're doing. After you 'endsession' and the context resets, you will be able to read them.`,
+        ContentSource.Console,
+      );
     }
     // LLM will in many cases end the session here, when the new session starts
     // this code will run again, and show a full preview of the messages
@@ -157,8 +164,8 @@ async function showNewMail() {
       const threadIds = unreadThreads.map((t) => t.threadId).join(", ");
 
       await contextManager.append(
-        `New Messages on Thread ID ${threadIds}
-Use 'llmail read <id>' to read the thread, but be mindful you are close to the token limit for the session.`,
+        `New Messages on Thread ID ${threadIds}\n` +
+          `Use llmail read <id>' to read the thread, but be mindful you are close to the token limit for the session.`,
         ContentSource.Console,
       );
     }
