@@ -1,4 +1,6 @@
 import chalk from "chalk";
+import { LlmRole } from "../llm/llmDtos.js";
+import * as logService from "./logService.js";
 
 export enum OutputColor {
   comment = "greenBright",
@@ -18,6 +20,26 @@ export function comment(msg: string) {
   write(msg, OutputColor.comment);
 }
 
+export async function commentAndLog(msg: string) {
+  comment(msg);
+
+  await writeDbLog(msg, "comment");
+}
+
 export function error(msg: string) {
   write(msg, OutputColor.error);
+}
+
+export async function errorAndLog(msg: string) {
+  error(msg);
+
+  await writeDbLog(msg, "error");
+}
+
+async function writeDbLog(msg: string, type: string) {
+  await logService.write({
+    role: LlmRole.User,
+    content: msg,
+    type,
+  });
 }

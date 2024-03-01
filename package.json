@@ -12,8 +12,8 @@
     "clean:win": "rmdir dist /s /q",
     "eslint": "npx eslint --rulesdir eslint-rules src",
     "prettier": "npx prettier --write .",
-    "detect-cycles": "madge --circular dist",
     "dependency-graph": "madge --image dependency-graph.png dist",
+    "detect-cycles": "madge --circular dist",
     "updates:check": "npm-check-updates",
     "updates:apply": "npm-check-updates -u && npm update"
   },
