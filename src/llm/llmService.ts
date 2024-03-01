@@ -3,13 +3,13 @@ import OpenAI from "openai";
 import * as config from "../config.js";
 import * as contextManager from "./contextManager.js";
 import * as costTracker from "./costTracker.js";
+import { getLLModel } from "./llModels.js";
 import { LlmRole } from "./llmDtos.js";
-import { getLLModel } from "./llmModels.js";
 
 export async function send(): Promise<string> {
   const currentTotalCost = await costTracker.getTotalCosts();
   if (config.agent.spendLimitDollars < currentTotalCost) {
-    throw `LLM Service: Spend limit of $${config.agent.spendLimitDollars} reached`;
+    throw `LLM Spend limit of $${config.agent.spendLimitDollars} reached`;
   }
 
   const model = getLLModel(config.agent.consoleModel);
@@ -24,6 +24,14 @@ export async function send(): Promise<string> {
 async function sendWithOpenAiCompatible(): Promise<string> {
   const model = getLLModel(config.agent.consoleModel);
 
+  if (model.key === "local") {
+    if (!model.baseUrl) {
+      throw "Error, local model baseUrl is not defined";
+    }
+  } else if (!config.openaiApiKey) {
+    throw "Error, openaiApiKey is not defined";
+  }
+
   const openAI = new OpenAI({
     baseURL: model.baseUrl,
     apiKey: config.openaiApiKey,
@@ -34,7 +42,7 @@ async function sendWithOpenAiCompatible(): Promise<string> {
     contextManager.messages[contextManager.messages.length - 1];
 
   if (lastMessage.role !== LlmRole.User) {
-    throw "LLM Service: Error, last message on context is not a user message";
+    throw "Error, last message on context is not a user message";
   }
 
   const chatCompletion = await openAI.chat.completions.create({
@@ -58,13 +66,16 @@ async function sendWithOpenAiCompatible(): Promise<string> {
       chatCompletion.usage.completion_tokens * model.outputCost;
     await costTracker.recordCost(cost / 1000);
   } else {
-    throw "LLM Service: Error, no usage data returned from OpenAI API.";
+    throw "Error, no usage data returned from OpenAI API.";
   }
 
   return chatCompletion.choices[0].message.content || "";
 }
 
 async function sendWithGoogle(): Promise<string> {
+  if (!config.googleApiKey) {
+    throw "Error, googleApiKey is not defined";
+  }
   const model = getLLModel(config.agent.consoleModel);
 
   const googleAI = new GoogleGenerativeAI(config.googleApiKey);
@@ -76,7 +87,7 @@ async function sendWithGoogle(): Promise<string> {
     contextManager.messages[contextManager.messages.length - 1];
 
   if (lastMessage.role !== LlmRole.User) {
-    throw "LLM Service: Error, last message on context is not a user message";
+    throw "Error, last message on context is not a user message";
   }
 
   const history = [
@@ -106,7 +117,7 @@ async function sendWithGoogle(): Promise<string> {
   const result = await chat.sendMessage(lastMessage.content);
 
   if (result.response.promptFeedback?.blockReason) {
-    throw `LLM Service: Request Blocked, ${result.response.promptFeedback.blockReason}`;
+    throw `Google API Request Blocked, ${result.response.promptFeedback.blockReason}`;
   }
 
   const responseText = result.response.text();

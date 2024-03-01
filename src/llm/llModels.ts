@@ -2,7 +2,7 @@ import * as config from "../config.js";
 
 interface LlmModel {
   key: string;
-  baseUrl: string | undefined;
+  baseUrl?: string;
   name: string;
   maxTokens: number;
   inputCost: number;
@@ -12,7 +12,6 @@ interface LlmModel {
 const llmModels: LlmModel[] = [
   {
     key: "gpt4turbo",
-    baseUrl: undefined,
     name: "gpt-4-0125-preview",
     maxTokens: 128_000,
     // Prices are per 1000 tokens
@@ -21,7 +20,6 @@ const llmModels: LlmModel[] = [
   },
   {
     key: "gpt3turbo",
-    baseUrl: undefined,
     name: "gpt-3.5-turbo-0125",
     maxTokens: 16_000,
     // Prices are per 1000 tokens
@@ -38,7 +36,6 @@ const llmModels: LlmModel[] = [
   },
   {
     key: "google",
-    baseUrl: undefined,
     name: "gemini-pro",
     maxTokens: 8_000,
     // 60 queries per minute free then the prices below are per 1000 characters

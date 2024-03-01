@@ -9,11 +9,11 @@ import { ensureFileDirExists, naisysToHostPath } from "./utilities.js";
 const _dbFilePath = naisysToHostPath(`${config.naisysFolder}/lib/log.db`);
 
 const _combinedLogFilePath = naisysToHostPath(
-  `${config.websiteFolder}/logs/combined-log.html`,
+  `${config.websiteFolder || config.naisysFolder}/logs/combined-log.html`,
 );
 
 const _userLogFilePath = naisysToHostPath(
-  `${config.websiteFolder}/logs/${config.agent.username}-log.html`,
+  `${config.websiteFolder || config.naisysFolder}/logs/${config.agent.username}-log.html`,
 );
 
 await init();

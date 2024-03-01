@@ -15,6 +15,8 @@ import * as commandHandler from "./commandHandler.js";
 import { NextCommandAction } from "./commandHandler.js";
 import * as promptBuilder from "./promptBuilder.js";
 
+const maxErrorCount = 5;
+
 export async function run() {
   // Show Agent Config exept the agent prompt
   await output.commentAndLog(
@@ -32,6 +34,8 @@ export async function run() {
   });
 
   let nextCommandAction = NextCommandAction.Continue;
+
+  let llmErrorCount = 0;
 
   while (nextCommandAction != NextCommandAction.ExitApplication) {
     inputMode.toggle(InputMode.LLM);
@@ -53,58 +57,63 @@ export async function run() {
     inputMode.toggle(InputMode.Debug);
 
     let pauseSeconds = config.agent.debugPauseSeconds;
+    let wakeOnMessage = config.agent.wakeOnMessage;
 
     while (nextCommandAction == NextCommandAction.Continue) {
-      const prompt = await promptBuilder.getPrompt(pauseSeconds);
+      const prompt = await promptBuilder.getPrompt(pauseSeconds, wakeOnMessage);
       let input = "";
 
-      // Debug runs in a shadow mode
+      // Debug command prompt
       if (inputMode.current === InputMode.Debug) {
-        input = await promptBuilder.getInput(`${prompt}`, pauseSeconds);
+        input = await promptBuilder.getInput(
+          `${prompt}`,
+          pauseSeconds,
+          wakeOnMessage,
+        );
       }
-      // When LLM runs input/output is added to the context
+      // LLM command prompt
       else if (inputMode.current === InputMode.LLM) {
-        await showNewMail();
-
-        await contextManager.append(prompt, ContentSource.StartPrompt);
-
-        const waitingMessage =
+        const workingMsg =
           prompt +
           chalk[output.OutputColor.loading](
             `LLM (${config.agent.consoleModel}) Working...`,
           );
-        process.stdout.write(waitingMessage);
-
-        const clearWaitingMessage = () => {
-          readline.moveCursor(process.stdout, -waitingMessage.length, 0);
-          process.stdout.write(" ".repeat(waitingMessage.length));
-          readline.moveCursor(process.stdout, -waitingMessage.length, 0);
-        };
 
         try {
+          await showNewMail();
+
+          await contextManager.append(prompt, ContentSource.ConsolePrompt);
+
+          process.stdout.write(workingMsg);
+
           input = await llmService.send();
-          clearWaitingMessage();
+
+          clearPromptMessage(workingMsg);
         } catch (e) {
-          clearWaitingMessage();
-          await output.errorAndLog(`${e}`);
+          // Can't do this in a finally because it needs to happen before the error is printed
+          clearPromptMessage(workingMsg);
+
+          ({ llmErrorCount, pauseSeconds, wakeOnMessage } =
+            await handleErrorAndSwitchToDebugMode(e, llmErrorCount, false));
+
+          continue;
         }
+      } else {
+        throw `Invalid input mode: ${inputMode.current}`;
       }
 
+      // Run the command
       try {
-        ({ nextCommandAction, pauseSeconds } =
+        ({ nextCommandAction, pauseSeconds, wakeOnMessage } =
           await commandHandler.consoleInput(prompt, input));
-      } catch (e) {
-        const maxErrorLength = 200;
-        const errorMsg = `${e}`;
 
-        await contextManager.append(errorMsg.slice(0, maxErrorLength));
-
-        if (errorMsg.length > maxErrorLength) {
-          await contextManager.append("...");
-          await output.errorAndLog(
-            `Error too long for context: ${errorMsg.slice(200)}`,
-          );
+        if (inputMode.current == InputMode.LLM) {
+          llmErrorCount = 0;
         }
+      } catch (e) {
+        ({ llmErrorCount, pauseSeconds, wakeOnMessage } =
+          await handleErrorAndSwitchToDebugMode(e, llmErrorCount, true));
+        continue;
       }
 
       // If the user is in debug mode and they didn't enter anything, switch to LLM
@@ -124,59 +133,109 @@ export async function run() {
   }
 }
 
+function clearPromptMessage(waitingMessage: string) {
+  readline.moveCursor(process.stdout, -waitingMessage.length, 0);
+  process.stdout.write(" ".repeat(waitingMessage.length));
+  readline.moveCursor(process.stdout, -waitingMessage.length, 0);
+}
+
+/** Name is comically long because of a prettier formatting issue when the name is too short */
+async function handleErrorAndSwitchToDebugMode(
+  e: unknown,
+  llmErrorCount: number,
+  addToContext: boolean,
+) {
+  const maxErrorLength = 200;
+  const errorMsg = `${e}`;
+
+  if (addToContext) {
+    await contextManager.append(errorMsg.slice(0, maxErrorLength));
+
+    if (errorMsg.length > maxErrorLength) {
+      await contextManager.append("...");
+      await output.errorAndLog(
+        `Error too long for context: ${errorMsg.slice(200)}`,
+      );
+    }
+  } else {
+    await output.errorAndLog(errorMsg);
+  }
+
+  // If llm is in some error loop then hold in debug mode
+  let pauseSeconds = config.agent.debugPauseSeconds;
+  let wakeOnMessage = config.agent.wakeOnMessage;
+
+  if (inputMode.current == InputMode.LLM) {
+    llmErrorCount++;
+
+    if (llmErrorCount >= maxErrorCount) {
+      pauseSeconds = 0;
+      wakeOnMessage = false;
+
+      if (llmErrorCount == maxErrorCount) {
+        await output.errorAndLog(`Too many LLM errors. Holding in debug mode.`);
+      }
+    }
+  }
+
+  inputMode.toggle(InputMode.Debug);
+
+  return {
+    llmErrorCount,
+    pauseSeconds,
+    wakeOnMessage,
+  };
+}
+
 async function showNewMail() {
-  try {
-    // Check for unread threads
-    const unreadThreads = await llmail.getUnreadThreads();
-    if (!unreadThreads.length) {
-      return;
+  // Check for unread threads
+  const unreadThreads = await llmail.getUnreadThreads();
+  if (!unreadThreads.length) {
+    return;
+  }
+
+  // Get the new messages for each thread
+  const newMessages: string[] = [];
+  for (const { threadId, newMsgId } of unreadThreads) {
+    newMessages.push(await llmail.readThread(threadId, newMsgId, true));
+  }
+
+  // Check that token max for session will not be exceeded
+  const newMsgTokenCount = newMessages.reduce(
+    (acc, msg) => acc + utilities.getTokenCount(msg),
+    0,
+  );
+
+  const sessionTokens = contextManager.getTokenCount();
+  const tokenMax = config.tokenMax;
+
+  // Show full messages unless we are close to the token limit of the session
+  // or in simple mode, which means non-threaded messages
+  if (sessionTokens + newMsgTokenCount < tokenMax * 0.75) {
+    for (const newMessage of newMessages) {
+      await contextManager.append("New Message:", ContentSource.Console);
+      await contextManager.append(newMessage, ContentSource.Console);
     }
 
-    // Get the new messages for each thread
-    const newMessages: string[] = [];
-    for (const { threadId, newMsgId } of unreadThreads) {
-      newMessages.push(await llmail.readThread(threadId, newMsgId, true));
+    for (const unreadThread of unreadThreads) {
+      await llmail.markAsRead(unreadThread.threadId);
     }
-
-    // Check that token max for session will not be exceeded
-    const newMsgTokenCount = newMessages.reduce(
-      (acc, msg) => acc + utilities.getTokenCount(msg),
-      0,
+  } else if (llmail.simpleMode) {
+    await contextManager.append(
+      `You have new mail, but not enough context to read them.\n` +
+        `Finish up what you're doing. After you 'endsession' and the context resets, you will be able to read them.`,
+      ContentSource.Console,
     );
+  }
+  // LLM will in many cases end the session here, when the new session starts
+  // this code will run again, and show a full preview of the messages
+  else {
+    const threadIds = unreadThreads.map((t) => t.threadId).join(", ");
 
-    const sessionTokens = contextManager.getTokenCount();
-    const tokenMax = config.tokenMax;
-
-    // Show full messages unless we are close to the token limit of the session
-    // or in simple mode, which means non-threaded messages
-    if (sessionTokens + newMsgTokenCount < tokenMax * 0.75) {
-      for (const newMessage of newMessages) {
-        await contextManager.append("New Message:", ContentSource.Console);
-        await contextManager.append(newMessage, ContentSource.Console);
-      }
-
-      for (const unreadThread of unreadThreads) {
-        await llmail.markAsRead(unreadThread.threadId);
-      }
-    } else if (llmail.simpleMode) {
-      await contextManager.append(
-        `You have new mail, but not enough context to read them.\n` +
-          `Finish up what you're doing. After you 'endsession' and the context resets, you will be able to read them.`,
-        ContentSource.Console,
-      );
-    }
-    // LLM will in many cases end the session here, when the new session starts
-    // this code will run again, and show a full preview of the messages
-    else {
-      const threadIds = unreadThreads.map((t) => t.threadId).join(", ");
-
-      await contextManager.append(
-        `New Messages on Thread ID ${threadIds}\n` +
-          `Use llmail read <id>' to read the thread, but be mindful you are close to the token limit for the session.`,
-        ContentSource.Console,
-      );
-    }
-  } catch (e) {
-    await output.errorAndLog(`Error getting notifications: ${e}`);
+    await contextManager.append(
+      `New Messages on Thread ID ${threadIds}\n` +
+        `Use llmail read <id>' to read the thread, but be mindful you are close to the token limit for the session.`,
+      ContentSource.Console,
+    );
   }
 }

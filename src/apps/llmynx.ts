@@ -3,11 +3,11 @@ import yaml from "js-yaml";
 import OpenAI from "openai";
 import { parse } from "url";
 import * as config from "../config.js";
-import { getLLModel } from "../llm/llmModels.js";
+import { getLLModel } from "../llm/llModels.js";
 import * as output from "../utils/output.js";
 import * as utilities from "../utils/utilities.js";
 
-// A bad play on words, but this is like lynx but for LLMs
+// A bad play on words, but this is like lynx but for LLMs..
 
 enum RunMode {
   Content = "content",

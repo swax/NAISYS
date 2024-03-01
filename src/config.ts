@@ -8,18 +8,17 @@ program.argument("<agent-path>", "Path to agent configuration file").parse();
 
 dotenv.config();
 
+/** The system name that shows after the @ in the command prompt */
 export const hostname = "naisys";
 
-/** The number of tokens you want to limit a session to, Independent of the LLM token max */
+/** The number of tokens you want to limit a session to, independent of the LLM token max */
 export const tokenMax = 4000;
 
 /* .env is used for global configs across naisys, while agent configs for the specific agent */
 
-export const naisysFolder = getEnv("NAISYS_FOLDER");
+export const naisysFolder = getEnv("NAISYS_FOLDER", true);
 
 export const websiteFolder = getEnv("WEBSITE_FOLDER");
-
-export const websiteUrl = getEnv("WEBSITE_URL");
 
 export const localLlmUrl = getEnv("LOCAL_LLM_URL");
 
@@ -29,9 +28,9 @@ export const googleApiKey = getEnv("GOOGLE_API_KEY");
 
 export const agent = loadAgentConfig();
 
-function getEnv(key: string) {
+function getEnv(key: string, required?: boolean) {
   const value = process.env[key];
-  if (!value) {
+  if (!value && required) {
     throw `Config: Error, .env ${key} is not defined`;
   }
   return value;
