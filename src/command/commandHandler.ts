@@ -2,12 +2,12 @@ import chalk from "chalk";
 import * as llmail from "../apps/llmail.js";
 import * as llmynx from "../apps/llmynx.js";
 import * as config from "../config.js";
-import * as contextLog from "../llm/contextLog.js";
 import * as contextManager from "../llm/contextManager.js";
 import { ContentSource } from "../llm/contextManager.js";
 import * as costTracker from "../llm/costTracker.js";
 import * as inputMode from "../utils/inputMode.js";
 import { InputMode } from "../utils/inputMode.js";
+import * as logService from "../utils/logService.js";
 import * as output from "../utils/output.js";
 import { OutputColor } from "../utils/output.js";
 import * as promptBuilder from "./promptBuilder.js";
@@ -24,7 +24,7 @@ interface NextCommandResponse {
   pauseSeconds?: number;
 }
 
-export let previousSessionNotes = await contextLog.getPreviousEndSessionNote();
+export let previousSessionNotes = await logService.getPreviousEndSessionNote();
 
 export async function consoleInput(
   prompt: string,
@@ -80,7 +80,9 @@ export async function consoleInput(
         await contextManager.append(input, ContentSource.EndPrompt);
         output.write(prompt + chalk[OutputColor.llm](input));
       } else {
-        output.comment("Optimistically continuing with the next command...");
+        await output.commentAndLog(
+          "Optimistically continuing with the next command...",
+        );
         await contextManager.append(input, ContentSource.EndPrompt);
       }
     }
@@ -102,7 +104,7 @@ export async function consoleInput(
       }
       case "endsession": {
         previousSessionNotes = cmdArgs;
-        output.comment(
+        await output.commentAndLog(
           "------------------------------------------------------",
         );
         nextCommandAction = NextCommandAction.EndSession;
@@ -143,7 +145,9 @@ export async function consoleInput(
 
       case "cost": {
         const totalCost = await costTracker.getTotalCosts();
-        output.comment(`Total cost so far: $${totalCost.toFixed(2)}`);
+        output.comment(
+          `Total cost so far $${totalCost.toFixed(2)} of $${config.agent.spendLimitDollars} limit`,
+        );
         break;
       }
 
@@ -170,7 +174,7 @@ export async function consoleInput(
         const shellResponse = await shellCommand.handleCommand(input);
 
         if (shellResponse.hasErrors && nextInput) {
-          output.error(`Error detected processing shell command:`);
+          await output.errorAndLog(`Error detected processing shell command:`);
           processNextLLMpromptBlock = false;
         }
 
@@ -183,7 +187,7 @@ export async function consoleInput(
 
   // display unprocessed lines to aid in debugging
   if (nextInput.trim()) {
-    output.error(`Unprocessed LLM response:\n${nextInput}`);
+    await output.errorAndLog(`Unprocessed LLM response:\n${nextInput}`);
   }
 
   return {

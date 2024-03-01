@@ -102,8 +102,7 @@ export async function handleCommand(args: string): Promise<string> {
       if (simpleMode) {
         return `llmail Commands:
   llmail users: Get list of users on the system
-  llmail send "<users>" "subject" "message": Send a message. ${_messageTokenMax} token max.
-    `;
+  llmail send "<users>" "subject" "message": Send a message. ${_messageTokenMax} token max.`;
       } else {
         return `llmail: Local email system
   no params: List all active threads
@@ -112,8 +111,7 @@ export async function handleCommand(args: string): Promise<string> {
   read <id>: Read a thread
   reply <id> <message>: Reply to a thread
   adduser <id> <username>: Add a user to thread with id
-  archive <ids>: Archives a comma separated list of threads
-    `;
+  archive <ids>: Archives a comma separated list of threads`;
       }
     }
 

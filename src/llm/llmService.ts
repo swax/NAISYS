@@ -1,9 +1,9 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import OpenAI from "openai";
 import * as config from "../config.js";
-import { LlmRole } from "./contextLog.js";
 import * as contextManager from "./contextManager.js";
 import * as costTracker from "./costTracker.js";
+import { LlmRole } from "./llmDtos.js";
 import { getLLModel } from "./llmModels.js";
 
 export async function send(): Promise<string> {

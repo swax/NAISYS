@@ -1,12 +1,12 @@
 import * as config from "../config.js";
 import * as inputMode from "../utils/inputMode.js";
 import { InputMode } from "../utils/inputMode.js";
+import * as logService from "../utils/logService.js";
 import * as output from "../utils/output.js";
 import { OutputColor } from "../utils/output.js";
 import * as utilities from "../utils/utilities.js";
 import { valueFromString } from "../utils/utilities.js";
-import * as contextLog from "./contextLog.js";
-import { LlmMessage, LlmRole } from "./contextLog.js";
+import { LlmMessage, LlmRole } from "./llmDtos.js";
 
 export enum ContentSource {
   StartPrompt = "startPrompt",
@@ -113,13 +113,13 @@ export async function append(
     if (lastMessage.role == role) {
       lastMessage.content += `\n${text}`;
       combined = true;
-      await contextLog.update(lastMessage, text);
+      await logService.update(lastMessage, text);
     }
   }
 
   if (!combined) {
-    const llmMessage = { role, content: text };
-    await contextLog.write(llmMessage);
+    const llmMessage = <LlmMessage>{ role, content: text };
+    llmMessage.logId = await logService.write(llmMessage);
     messages.push(llmMessage);
   }
 

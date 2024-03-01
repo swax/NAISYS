@@ -2,21 +2,9 @@ import escapeHtml from "escape-html";
 import * as fs from "fs";
 import { Database } from "sqlite";
 import * as config from "../config.js";
-import * as dbUtils from "../utils/dbUtils.js";
-import { ensureFileDirExists, naisysToHostPath } from "../utils/utilities.js";
-
-export enum LlmRole {
-  Assistant = "assistant",
-  User = "user",
-  /** Not supported by Google API */
-  System = "system",
-}
-
-export interface LlmMessage {
-  role: LlmRole;
-  content: string;
-  logId?: number;
-}
+import { LlmMessage, LlmRole } from "../llm/llmDtos.js";
+import * as dbUtils from "./dbUtils.js";
+import { ensureFileDirExists, naisysToHostPath } from "./utilities.js";
 
 const _dbFilePath = naisysToHostPath(`${config.naisysFolder}/lib/log.db`);
 
@@ -46,7 +34,8 @@ async function init() {
       `CREATE TABLE ContextLog (
           id INTEGER PRIMARY KEY, 
           username TEXT NOT NULL,
-          role TEXT NOT NULL,
+          source TEXT NOT NULL,
+          type TEXT NOT NULL,
           message TEXT NOT NULL,
           date TEXT NOT NULL
       )`,
@@ -76,29 +65,35 @@ function initLogFile(filePath: string) {
           th, td { border: 1px solid grey; padding: 8px; }
           th { text-align: left; }
           td { vertical-align: top; }
-          .assistant { color: magenta; }
+          .date { white-space: nowrap; }
+          .llm { color: magenta; }
+          .error { color: red; }
+          .comment { color: green; }
         </style>
         <body>
           <table border="1">
-            <tr><th>Date</th><th>User</th><th>Role</th><th>Message</th></tr>`,
+            <tr><th>Date</th><th>User</th><th>Source</th><th>Message</th></tr>`,
   );
 }
 
 export async function write(message: LlmMessage) {
-  await usingDatabase(async (db) => {
+  const insertedId = await usingDatabase(async (db) => {
     const inserted = await db.run(
-      "INSERT INTO ContextLog (username, role, message, date) VALUES (?, ?, ?, ?)",
+      "INSERT INTO ContextLog (username, source, type, message, date) VALUES (?, ?, ?, ?, ?)",
       config.agent.username,
-      roleToString(message.role),
+      roleToSource(message.role),
+      message.type || "",
       message.content,
       new Date().toISOString(),
     );
 
-    message.logId = inserted.lastID;
+    return inserted.lastID;
   });
 
   appendToLogFile(_combinedLogFilePath, message);
   appendToLogFile(_userLogFilePath, message);
+
+  return insertedId;
 }
 
 export async function update(message: LlmMessage, appendedText: string) {
@@ -121,13 +116,15 @@ export async function update(message: LlmMessage, appendedText: string) {
 }
 
 function appendToLogFile(filepath: string, message: LlmMessage) {
+  const source = roleToSource(message.role);
+
   fs.appendFileSync(
     filepath,
     `<tr>
-      <td>${new Date().toLocaleString()}</td>
+      <td class='date'>${new Date().toLocaleString()}</td>
       <td>${config.agent.username}</td>
-      <td>${roleToString(message.role)}</td>
-      <td class='${message.role}'>
+      <td>${source}</td>
+      <td class='${source.toLocaleLowerCase()} ${message.type}'>
         <pre>${escapeHtml(message.content)}</pre>
       </td>
     </tr>`,
@@ -157,10 +154,10 @@ async function usingDatabase<T>(run: (db: Database) => Promise<T>): Promise<T> {
   return dbUtils.usingDatabase(_dbFilePath, run);
 }
 
-function roleToString(role: LlmRole) {
+function roleToSource(role: LlmRole) {
   switch (role) {
     case LlmRole.Assistant:
-      return config.agent.consoleModel;
+      return "LLM";
     case LlmRole.User:
       return "NAISYS";
     case LlmRole.System:

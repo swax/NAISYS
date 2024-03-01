@@ -2,13 +2,13 @@ import chalk from "chalk";
 import * as readline from "readline";
 import * as llmail from "../apps/llmail.js";
 import * as config from "../config.js";
-import * as contextLog from "../llm/contextLog.js";
-import { LlmRole } from "../llm/contextLog.js";
 import * as contextManager from "../llm/contextManager.js";
 import { ContentSource } from "../llm/contextManager.js";
+import { LlmRole } from "../llm/llmDtos.js";
 import * as llmService from "../llm/llmService.js";
 import * as inputMode from "../utils/inputMode.js";
 import { InputMode } from "../utils/inputMode.js";
+import * as logService from "../utils/logService.js";
 import * as output from "../utils/output.js";
 import * as utilities from "../utils/utilities.js";
 import * as commandHandler from "./commandHandler.js";
@@ -16,12 +16,19 @@ import { NextCommandAction } from "./commandHandler.js";
 import * as promptBuilder from "./promptBuilder.js";
 
 export async function run() {
-  output.comment("System Message:");
+  // Show Agent Config exept the agent prompt
+  await output.commentAndLog(
+    `Agent configured to use ${config.agent.consoleModel} model`,
+  );
+
+  // Show System Message
+  await output.commentAndLog("System Message:");
   const systemMessage = contextManager.getSystemMessage();
   output.write(systemMessage);
-  await contextLog.write({
+  await logService.write({
     role: LlmRole.System,
     content: systemMessage,
+    type: "system",
   });
 
   let nextCommandAction = NextCommandAction.Continue;
@@ -29,7 +36,7 @@ export async function run() {
   while (nextCommandAction != NextCommandAction.ExitApplication) {
     inputMode.toggle(InputMode.LLM);
 
-    output.comment("Starting Context:");
+    await output.commentAndLog("Starting Context:");
     await contextManager.append("Previous Session Note:");
     await contextManager.append(commandHandler.previousSessionNotes || "None");
 
@@ -79,7 +86,7 @@ export async function run() {
           clearWaitingMessage();
         } catch (e) {
           clearWaitingMessage();
-          output.error(`${e}`);
+          await output.errorAndLog(`${e}`);
         }
       }
 
@@ -94,7 +101,9 @@ export async function run() {
 
         if (errorMsg.length > maxErrorLength) {
           await contextManager.append("...");
-          output.error(`Error too long for context: ${errorMsg.slice(200)}`);
+          await output.errorAndLog(
+            `Error too long for context: ${errorMsg.slice(200)}`,
+          );
         }
       }
 
@@ -113,8 +122,6 @@ export async function run() {
       nextCommandAction = NextCommandAction.Continue;
     }
   }
-
-  await output.comment("NAISYS Terminated");
 }
 
 async function showNewMail() {
@@ -170,6 +177,6 @@ async function showNewMail() {
       );
     }
   } catch (e) {
-    output.error(`Error getting notifications: ${e}`);
+    await output.errorAndLog(`Error getting notifications: ${e}`);
   }
 }
