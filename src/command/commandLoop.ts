@@ -19,7 +19,7 @@ export async function run() {
   output.comment("System Message:");
   const systemMessage = contextManager.getSystemMessage();
   output.write(systemMessage);
-  await contextLog.add({
+  await contextLog.write({
     role: LlmRole.System,
     content: systemMessage,
   });

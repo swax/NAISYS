@@ -23,6 +23,8 @@ export function getSystemMessage() {
   }
 
   // Fill out the templates in the agent prompt and stick it to the front of the system message
+  // A lot of the stipulations in here are to prevent common LLM mistakes
+  // Like we can't jump between standard and special commands in a single prompt, which the LLM will try to do if not warned
   let agentPrompt = config.agent.agentPrompt;
   agentPrompt = resolveTemplateVars(agentPrompt, "agent", config.agent);
   agentPrompt = resolveTemplateVars(agentPrompt, "env", process.env);
@@ -45,7 +47,8 @@ Commands:
   vi and nano are not supported
   Read/write entire files in a single command with cat
   Do not input notes after the prompt. Only valid commands.
-Special Commands:
+Special Commands: (Don't mix with standard commands on the same prompt)
+  llmail: A local mail system for communicating with your team
   comment <thought>: Any non-command output like thinking out loud, prefix with the 'comment' command
   pause <seconds>: Pause for <seconds> or indeterminite if no argument is provided. Auto wake up on new mail message
   endsession <note>: Ends this session, clears the console log and context.
@@ -116,7 +119,7 @@ export async function append(
 
   if (!combined) {
     const llmMessage = { role, content: text };
-    await contextLog.add(llmMessage);
+    await contextLog.write(llmMessage);
     messages.push(llmMessage);
   }
 

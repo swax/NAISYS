@@ -2,6 +2,7 @@ import chalk from "chalk";
 import * as llmail from "../apps/llmail.js";
 import * as llmynx from "../apps/llmynx.js";
 import * as config from "../config.js";
+import * as contextLog from "../llm/contextLog.js";
 import * as contextManager from "../llm/contextManager.js";
 import { ContentSource } from "../llm/contextManager.js";
 import * as costTracker from "../llm/costTracker.js";
@@ -23,7 +24,7 @@ interface NextCommandResponse {
   pauseSeconds?: number;
 }
 
-export let previousSessionNotes = "";
+export let previousSessionNotes = await contextLog.getPreviousEndSessionNote();
 
 export async function consoleInput(
   prompt: string,
@@ -156,7 +157,7 @@ export async function consoleInput(
       }
 
       case "llmail": {
-        const mailResponse = await llmail.run(cmdArgs);
+        const mailResponse = await llmail.handleCommand(cmdArgs);
         await contextManager.append(mailResponse);
         break;
       }
