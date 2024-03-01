@@ -27,7 +27,10 @@ const _readlineInterface = readline.createInterface({
   output: process.stdout,
 });
 
-export async function getPrompt(pauseSeconds?: number) {
+export async function getPrompt(
+  pauseSeconds?: number,
+  wakeOnMessage?: boolean,
+) {
   const promptSuffix = inputMode.current == InputMode.Debug ? "#" : "$";
 
   const tokenMax = config.tokenMax;
@@ -40,7 +43,7 @@ export async function getPrompt(pauseSeconds?: number) {
     if (pauseSeconds) {
       pause += ` [Paused: ${pauseSeconds}s]`;
     }
-    if (config.agent.wakeOnMessage) {
+    if (wakeOnMessage) {
       pause += " [WakeOnMsg]";
     }
   }
@@ -61,37 +64,46 @@ export function getUserHostPrompt() {
   return `${username}@${config.hostname}`;
 }
 
-export function getInput(commandPrompt: string, pauseSeconds?: number) {
+export function getInput(
+  commandPrompt: string,
+  pauseSeconds?: number,
+  wakeOnMessage?: boolean,
+) {
   return new Promise<string>((resolve) => {
     const ac = new AbortController();
-    let timeout: NodeJS.Timeout;
-    let interval: NodeJS.Timeout;
+    let timeout: NodeJS.Timeout | undefined;
+    let interval: NodeJS.Timeout | undefined;
 
-    function cancelTimeouts(expired?: boolean) {
+    /** Cancels waiting for user input */
+    function cancelTimeouts(waitForUserInputExpired?: boolean) {
+      _outputEmitter.off(_writeEventName, cancelTimeouts);
+
       if (timeout) {
         clearTimeout(timeout);
+        timeout = undefined;
       }
       if (interval) {
         clearInterval(interval);
+        interval = undefined;
       }
 
-      _outputEmitter.off(_writeEventName, cancelTimeouts);
+      if (waitForUserInputExpired) {
+        return;
+      }
 
-      // If timeout interrupted by user input, clear out the timeout information from the prompt
+      // Else timeout interrupted by user input, clear out the timeout information from the prompt
       // to prevent the user from thinking the timeout still applies
-      // BUG: When the user hits delete, the prompt is reset to the original which is confusing as user will think timeout is still active
-      // Fix is probably to reset the entire the question when the timeout is interrupted
-      if (!expired) {
-        let pausePos = commandPrompt.indexOf("[Paused:");
-        pausePos =
-          pausePos == -1 ? commandPrompt.indexOf("[WakeOnMsg]") : pausePos;
+      let pausePos = commandPrompt.indexOf("[Paused:");
+      pausePos =
+        pausePos == -1 ? commandPrompt.indexOf("[WakeOnMsg]") : pausePos;
 
-        if (pausePos > 0) {
-          const charsBack = commandPrompt.length - pausePos - 1; // pluse 1 for the space after the #
-          readline.moveCursor(process.stdout, -charsBack, 0);
-          process.stdout.write("-".repeat(charsBack - 3));
-          readline.moveCursor(process.stdout, 3, 0);
-        }
+      if (pausePos > 0) {
+        // BUG: When the user hits delete, the prompt is reset to the original which is confusing as user will think timeout is still active
+        // Fix is probably to reset the entire the question when the timeout is interrupted
+        const charsBack = commandPrompt.length - pausePos - 1; // pluse 1 for the space after the #
+        readline.moveCursor(process.stdout, -charsBack, 0);
+        process.stdout.write("-".repeat(charsBack - 3));
+        readline.moveCursor(process.stdout, 3, 0);
       }
     }
 
@@ -118,7 +130,7 @@ export function getInput(commandPrompt: string, pauseSeconds?: number) {
       }, pauseSeconds * 1000);
     }
 
-    if (config.agent.wakeOnMessage) {
+    if (wakeOnMessage) {
       // Break timeout if new message is received
       let firstError = true;
 

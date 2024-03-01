@@ -9,8 +9,8 @@ import { valueFromString } from "../utils/utilities.js";
 import { LlmMessage, LlmRole } from "./llmDtos.js";
 
 export enum ContentSource {
-  StartPrompt = "startPrompt",
-  EndPrompt = "endPrompt",
+  ConsolePrompt = "startPrompt",
+  LlmPromptResponse = "endPrompt",
   Console = "console",
   LLM = "llm",
 }
@@ -94,9 +94,9 @@ export async function append(
 
   // Else otherwise we're running in LLM mode
   const role =
-    source == ContentSource.StartPrompt || source == ContentSource.Console
+    source == ContentSource.ConsolePrompt || source == ContentSource.Console
       ? LlmRole.User
-      : source == ContentSource.EndPrompt || source == ContentSource.LLM
+      : source == ContentSource.LlmPromptResponse || source == ContentSource.LLM
         ? LlmRole.Assistant
         : undefined;
 
@@ -124,7 +124,10 @@ export async function append(
   }
 
   // Prompts are manually added to the console log
-  if (source != "startPrompt" && source != "endPrompt") {
+  if (
+    source != ContentSource.ConsolePrompt &&
+    source != ContentSource.LlmPromptResponse
+  ) {
     output.write(text, source == "llm" ? OutputColor.llm : OutputColor.console);
   }
 }

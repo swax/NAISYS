@@ -22,6 +22,7 @@ export enum NextCommandAction {
 interface NextCommandResponse {
   nextCommandAction: NextCommandAction;
   pauseSeconds?: number;
+  wakeOnMessage?: boolean;
 }
 
 export let previousSessionNotes = await logService.getPreviousEndSessionNote();
@@ -77,13 +78,13 @@ export async function consoleInput(
     if (inputMode.current == InputMode.LLM) {
       if (firstLine) {
         firstLine = false;
-        await contextManager.append(input, ContentSource.EndPrompt);
+        await contextManager.append(input, ContentSource.LlmPromptResponse);
         output.write(prompt + chalk[OutputColor.llm](input));
       } else {
         await output.commentAndLog(
           "Optimistically continuing with the next command...",
         );
-        await contextManager.append(input, ContentSource.EndPrompt);
+        await contextManager.append(input, ContentSource.LlmPromptResponse);
       }
     }
 
@@ -129,18 +130,15 @@ export async function consoleInput(
         break;
       }
 
+      // With no argument, in debug mode, pause will pause forever,
+      // in LLM mode it will pause until a message is receieved (don't want the llm to hang itself)
+      // The setting only lasts for the next command, next loop it uses the agent default
       case "pause": {
-        const pauseSeconds = cmdArgs ? parseInt(cmdArgs) : 0;
-
-        if (isNaN(pauseSeconds)) {
-          output.error("Invalid pause value");
-        } else {
-          return {
-            nextCommandAction: NextCommandAction.Continue,
-            pauseSeconds,
-          };
-        }
-        break;
+        return {
+          nextCommandAction: NextCommandAction.Continue,
+          pauseSeconds: cmdArgs ? parseInt(cmdArgs) : 0,
+          wakeOnMessage: inputMode.current === InputMode.LLM,
+        };
       }
 
       case "cost": {
@@ -193,5 +191,6 @@ export async function consoleInput(
   return {
     nextCommandAction,
     pauseSeconds: config.agent.debugPauseSeconds,
+    wakeOnMessage: config.agent.wakeOnMessage,
   };
 }
