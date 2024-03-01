@@ -45,6 +45,7 @@ async function init() {
     const createTables = [
       `CREATE TABLE ContextLog (
           id INTEGER PRIMARY KEY, 
+          username TEXT NOT NULL,
           role TEXT NOT NULL,
           message TEXT NOT NULL,
           date TEXT NOT NULL
@@ -83,10 +84,11 @@ function initLogFile(filePath: string) {
   );
 }
 
-export async function add(message: LlmMessage) {
+export async function write(message: LlmMessage) {
   await usingDatabase(async (db) => {
     const inserted = await db.run(
-      "INSERT INTO ContextLog (role, message, date) VALUES (?, ?, ?)",
+      "INSERT INTO ContextLog (username, role, message, date) VALUES (?, ?, ?, ?)",
+      config.agent.username,
       roleToString(message.role),
       message.content,
       new Date().toISOString(),
@@ -130,6 +132,25 @@ function appendToLogFile(filepath: string, message: LlmMessage) {
       </td>
     </tr>`,
   );
+}
+
+export function getPreviousEndSessionNote() {
+  // Find the most recent message in the log that starts with 'endsession' for the local user
+  return usingDatabase(async (db) => {
+    const result = await db.get(
+      `SELECT message 
+        FROM ContextLog 
+        WHERE username = ? AND message LIKE 'endsession %' 
+        ORDER BY id DESC 
+        LIMIT 1`,
+      [config.agent.username],
+    );
+
+    const endSessionMsg: string = result?.message;
+
+    // Trim endsession prefix
+    return endSessionMsg?.slice("endsession ".length) || "";
+  });
 }
 
 async function usingDatabase<T>(run: (db: Database) => Promise<T>): Promise<T> {

@@ -83,8 +83,9 @@ export function getInput(commandPrompt: string, pauseSeconds?: number) {
       // Fix is probably to reset the entire the question when the timeout is interrupted
       if (!expired) {
         let pausePos = commandPrompt.indexOf("[Paused:");
-        pausePos = pausePos == -1 ? commandPrompt.indexOf("[WakeOnMsg]") : pausePos;
-        
+        pausePos =
+          pausePos == -1 ? commandPrompt.indexOf("[WakeOnMsg]") : pausePos;
+
         if (pausePos > 0) {
           const charsBack = commandPrompt.length - pausePos - 1; // pluse 1 for the space after the #
           readline.moveCursor(process.stdout, -charsBack, 0);
@@ -96,7 +97,7 @@ export function getInput(commandPrompt: string, pauseSeconds?: number) {
 
     _readlineInterface.question(
       chalk.greenBright(commandPrompt),
-      { signal: ac.signal  },
+      { signal: ac.signal },
       (answer) => {
         resolve(answer);
       },

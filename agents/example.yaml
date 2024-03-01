@@ -22,11 +22,11 @@ agentPrompt: |
 
 # The number of seconds to pause after each console interaction for debugging and rate limiting
 # No value or zero means wait indefinitely (debug driven)
-debugPauseSeconds: 5
+debugPauseSeconds: 3
 
 # If true, regardless of the debugPauseSeconds, the agent will not wake up on messages
 # With lots of agents this could be costly if they all end up mailing/replying each other in quick succession
-wakeOnMessage: true
+wakeOnMessage: false
 
 # The maximum amount to spend on LLM interactions
 # Once reached the agent will stop and this value will need to be increased to continue

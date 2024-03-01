@@ -86,7 +86,7 @@ async function init() {
   });
 }
 
-export async function run(args: string): Promise<string> {
+export async function handleCommand(args: string): Promise<string> {
   const argParams = args.split(" ");
 
   if (!argParams[0]) {
