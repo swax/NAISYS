@@ -1,48 +1,79 @@
 import { exec } from "child_process";
-import yaml from "js-yaml";
-import OpenAI from "openai";
-import { parse } from "url";
 import * as config from "../config.js";
 import { getLLModel } from "../llm/llModels.js";
 import * as output from "../utils/output.js";
 import * as utilities from "../utils/utilities.js";
+import * as llmService from "../llm/llmService.js";
+import { LlmMessage, LlmRole } from "../llm/llmDtos.js";
 
 // A bad play on words, but this is like lynx but for LLMs..
 
-enum RunMode {
-  Content = "content",
-  Links = "links",
+const debugMode = false;
+
+export async function handleCommand(cmdArgs: string) {
+  outputInDebugMode("LLMYNX DEBUG MODE IS ON");
+
+  const argParams = cmdArgs.split(" ");
+  const defualtTokenMax = 400;
+
+  if (!argParams[0]) {
+    argParams[0] = "help";
+  }
+
+  switch (argParams[0]) {
+    case "help":
+      return `llmynx Commands: (results will be reduced to the given token count which is ${defualtTokenMax} if not specified)
+  search <query>: Search google for the given query
+  open <url> <token_count>: Opens the given url
+  follow <link number> <token_count>: Opens the given link number`;
+    case "search": {
+      const query = argParams.slice(1).join(" ");
+
+      return await _getContent(
+        "https://www.google.com/search?q=" + encodeURIComponent(query),
+        2500,
+      );
+    }
+    case "open": {
+      const url = argParams[1];
+      const isNumber = !isNaN(parseInt(argParams[2]));
+      const tokenMax = isNumber ? parseInt(argParams[2]) : defualtTokenMax;
+      return await _getContent(url, tokenMax);
+    }
+    case "follow": {
+      const url = parseInt(argParams[1]);
+      const isNumber = !isNaN(parseInt(argParams[2]));
+      const tokenMax = isNumber ? parseInt(argParams[2]) : defualtTokenMax;
+      throw new Error("Not implemented");
+      //return await _getContent(url, tokenMax);
+    }
+    default:
+      return "Unknown llmynx command: " + argParams[0];
+  }
 }
 
-export async function run(url: string, goal: string, tokenMax: number) {
-  return await _getContent(url, goal, tokenMax);
-
-  //return await _getLinks(url, goal);
-
-  return "";
-}
-
-async function _getContent(url: string, goal: string, tokenMax: number) {
-  let content = await _runLynx(url, RunMode.Content);
-  let references = "";
+async function _getContent(url: string, tokenMax: number) {
+  let content = await _runLynx(url);
+  let links = "";
 
   // Reverse find 'References: ' and cut everything after it from the content
-  const refPos = content.lastIndexOf("References");
+  const refPos = content.lastIndexOf("References\n");
   if (refPos > 0) {
-    references = content.slice(refPos);
+    links = content.slice(refPos);
     content = content.slice(0, refPos);
   }
 
-  // get the token size of the output
+  // Get the token size of the output
   const contentTokenSize = utilities.getTokenCount(content);
-  const refTokenSize = utilities.getTokenCount(references);
+  const linksTokenSize = utilities.getTokenCount(links);
 
-  output.comment(`Content Token size: ${contentTokenSize}. 
-  References Token size: ${refTokenSize}.
-  Goal: ${goal}`);
+  outputInDebugMode(
+    `Content Token size: ${contentTokenSize}\n` +
+      `Links Token size: ${linksTokenSize}`,
+  );
 
   if (contentTokenSize < tokenMax) {
-    output.comment(`Content is already under ${tokenMax} tokens.`);
+    outputInDebugMode(`Content is already under ${tokenMax} tokens.`);
     return content;
   }
 
@@ -52,7 +83,8 @@ async function _getContent(url: string, goal: string, tokenMax: number) {
   // That would be 3k for the current compressed content, 10k for the chunk, and 3k for the output
   const tokenChunkSize = model.maxTokens - tokenMax * 2 * 1.5;
 
-  output.comment(`Token max chunk size: ${tokenChunkSize}`);
+  outputInDebugMode(`Token max chunk size: ${tokenChunkSize}`);
+
   const pieceCount = Math.ceil(contentTokenSize / tokenChunkSize);
   const pieceSize = content.length / pieceCount;
   let reducedOutput = "";
@@ -61,18 +93,15 @@ async function _getContent(url: string, goal: string, tokenMax: number) {
     const startPos = i * pieceSize;
     const pieceStr = content.substring(startPos, startPos + pieceSize);
 
-    output.comment(`Processing Piece ${i + 1}/${pieceCount}:`);
-
-    output.comment(
-      "  Reduced output tokens: " + utilities.getTokenCount(reducedOutput),
+    outputInDebugMode(
+      `Processing Piece ${i + 1}/${pieceCount}:\n` +
+        `  Reduced output tokens: ${utilities.getTokenCount(reducedOutput)}\n` +
+        `  Current Piece tokens: ${utilities.getTokenCount(pieceStr)}`,
     );
-    output.comment("  Piece tokens: " + utilities.getTokenCount(pieceStr));
 
     reducedOutput = await _llmReduce(
       url,
       reducedOutput,
-      RunMode.Content,
-      goal,
       i + 1,
       pieceCount,
       pieceStr,
@@ -82,14 +111,16 @@ async function _getContent(url: string, goal: string, tokenMax: number) {
 
   const finalTokenSize = utilities.getTokenCount(reducedOutput);
 
-  output.comment(`Final reduced output tokens: ${finalTokenSize}`);
+  outputInDebugMode(`Final reduced output tokens: ${finalTokenSize}`);
 
   return reducedOutput;
 }
 
-async function _runLynx(url: string, mode: RunMode) {
+async function _runLynx(url: string) {
   return new Promise<string>((resolve) => {
-    const modeParams = ""; //mode == RunMode.Content ? "-nolist" : "-listonly";
+    // Option here to output the content and links separately, might be useful in future
+    // mode == RunMode.Content ? "-nolist" : "-listonly";
+    const modeParams = "";
 
     exec(`wsl lynx -dump ${modeParams} ${url}`, (error, stdout, stderr) => {
       if (error) {
@@ -110,8 +141,6 @@ async function _runLynx(url: string, mode: RunMode) {
 async function _llmReduce(
   url: string,
   reducedOutput: string,
-  mode: "content" | "links",
-  goal: string,
   pieceNumber: number,
   pieceTotal: number,
   pieceStr: string,
@@ -120,128 +149,37 @@ async function _llmReduce(
   const reducedTokenCount = utilities.getTokenCount(reducedOutput);
   const pieceTokenCount = utilities.getTokenCount(pieceStr);
 
-  const model = getLLModel(config.agent.webModel);
+  const systemMessage = `You will be iteratively fed the web page ${url} broken into ${pieceTotal} sequential equally sized pieces.
+Each piece should be reduced into the final content in order to maintain the meaning of the page while reducing verbosity and duplication.
+The final output should be around ${tokenMax} tokens. 
+Maintain links which are represented as numbers in brackets which prefix the word they are linking. Like this: [1]link.
+Try to prioritize content of substance over navigation and advertising content.`;
 
-  const openai = new OpenAI({
-    baseURL: model.baseUrl,
-    apiKey: config.openaiApiKey,
-  });
+  const content = `Web page piece ${pieceNumber} of ${pieceTotal} (${pieceTokenCount} tokens): 
+${pieceStr}
 
-  /*let modeMsg = "";
-  if (mode == RunMode.Content) {
-    modeMsg = `Reformat the page to aid in understanding and navigation. `;
-  } else if (mode == RunMode.Links) {
-    modeMsg = "Try to keep the most relevant links.";
-  }
+Current reduced content (${reducedTokenCount} tokens): 
+${reducedOutput}
 
-  let goalMsg = "";
-  if (goal) {
-    goalMsg = `Try to focus on ${mode} related to ${goal}. `;
-  }*/
+Please merge the new piece into the existing reduced content above while keeping the reduced content around ${tokenMax} tokens.
 
-  /*const completion = await openai.completions.create({
-    model: "gpt-3.5-turbo-instruct", // "gpt-3.5-turbo", //"gpt-4", //
-    prompt: `You will be iteratively fed the web page ${url} broken into ${pieceTotal} sequential pieces.
-    Each piece should be compressed into the previous in order to maintain the meaning of the page and good formatting while reducing verbosity.
-    The compressed output should be under ${tokenMax} tokens.
-    Links are represented as numbers in brackets. Try to maintain them when reducing the content.
-    ${modeMsg}
-    ${goalMsg}
-    Current compressed content (${reducedTokenCount} tokens): ${reducedOutput}
-    Piece ${pieceNumber} of ${pieceTotal} (${pieceTokenCount} tokens): ${pieceStr}
-    New compressed content:`,
-  });
+Just output the new reduced content so it can be fed into the next iteration. Thank you.`;
 
-  return completion.choices[0].text || "";*/
+  const context: LlmMessage = {
+    role: LlmRole.User,
+    content,
+  };
 
-  const chatCompletion = await openai.chat.completions.create({
-    model: model.name,
-    messages: [
-      {
-        role: "system",
-        content: `You will be iteratively fed the web page ${url} broken into ${pieceTotal} sequential equally sized pieces.
-        Each part should be merged into the final content in order to maintain the meaning of the page while reducing verbosity and duplication.
-        The final output should be under ${tokenMax} tokens. 
-        Try to maintain links which are represented as numbers in brackets.
-        Even if you think the character limit has been met, try anyways. 
-        `, //${modeMsg}
-        //${goalMsg}`,
-      },
-      {
-        role: "user",
-        content: `Final content (${reducedTokenCount} tokens): ${reducedOutput}`,
-      },
-      {
-        role: "user",
-        content: `Web page part ${pieceNumber} of ${pieceTotal} (${pieceTokenCount} tokens): ${pieceStr}`,
-      },
-      {
-        role: "user",
-        content: `Please merge this new part into the existing final content above while keeping the total tokens under ${tokenMax} tokens.`,
-      },
-      {
-        role: "user",
-        content: `Just output the new final content to feed into the next iteration.`,
-      },
-    ],
-  });
-
-  return chatCompletion.choices[0].message.content || "";
+  return await llmService.query(
+    config.agent.webModel,
+    systemMessage,
+    [context],
+    "llmynx",
+  );
 }
 
-async function _getLinks(url: string, goal: string) {
-  const linkOutput = await _runLynx(url, RunMode.Links);
-
-  const uniqueUrls = new Set<string>();
-
-  linkOutput.split("\n").forEach((line) => {
-    const urlMatch = line.match(/https?:\/\/\S+/i);
-    if (urlMatch && urlMatch[0]) {
-      uniqueUrls.add(urlMatch[0]);
-    }
-  });
-
-  // organize alphabetically
-  const yamlLinks = urlsToYaml(Array.from(uniqueUrls).sort()); //.join("\n");
-  output.comment(yamlLinks);
-
-  // link tokens
-  const linkTokens = utilities.getTokenCount(yamlLinks);
-  output.comment(`Link Tokens: ${linkTokens}`);
-  output.comment(`Original tokens: ${utilities.getTokenCount(linkOutput)}`);
-
-  return yamlLinks;
-}
-
-function urlsToYaml(urls: string[]): string {
-  const root: Record<string, any> = {};
-
-  for (const urlString of urls) {
-    const { hostname, pathname } = parse(urlString);
-    if (!pathname || !hostname) continue;
-
-    let currentNode = root;
-
-    if (!currentNode[hostname]) {
-      currentNode[hostname] = {};
-    }
-    currentNode = currentNode[hostname];
-
-    const segments = pathname.split("/").filter(Boolean); // Split and remove empty segments
-
-    for (const segment of segments) {
-      if (!currentNode[segment]) {
-        currentNode[segment] = {};
-      }
-      currentNode = currentNode[segment];
-    }
+function outputInDebugMode(msg: string) {
+  if (debugMode) {
+    output.comment(msg);
   }
-
-  // iternate through yaml str for each instance of {} and replace with an increasing number
-  // this is a hack to get around the fact that yaml.dump() doesn't support empty objects
-  let counter = 1;
-  return yaml
-    .dump(root)
-    .replace(/: {}/g, () => ` #${counter++}`)
-    .replace(/:/g, ""); // replace : with
 }

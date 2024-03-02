@@ -164,9 +164,10 @@ export async function handleCommand(args: string): Promise<string> {
       }
       await init();
       return "llmail database reset";
-  }
 
-  return "Unknown llmail command: " + argParams[0];
+    default:
+      return "Unknown llmail command: " + argParams[0];
+  }
 }
 
 interface UnreadThread {

@@ -80,13 +80,18 @@ export async function run() {
           );
 
         try {
-          await showNewMail();
+          await displayNewMail();
 
           await contextManager.append(prompt, ContentSource.ConsolePrompt);
 
           process.stdout.write(workingMsg);
 
-          input = await llmService.send();
+          input = await llmService.query(
+            config.agent.consoleModel,
+            contextManager.getSystemMessage(),
+            contextManager.messages,
+            "console",
+          );
 
           clearPromptMessage(workingMsg);
         } catch (e) {
@@ -187,7 +192,7 @@ async function handleErrorAndSwitchToDebugMode(
   };
 }
 
-async function showNewMail() {
+async function displayNewMail() {
   // Check for unread threads
   const unreadThreads = await llmail.getUnreadThreads();
   if (!unreadThreads.length) {

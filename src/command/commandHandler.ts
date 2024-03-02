@@ -150,11 +150,8 @@ export async function consoleInput(
       }
 
       case "llmynx": {
-        const argParams = cmdArgs.split(" ");
-        const url = argParams[0];
-        const goal = cmdArgs.slice(argParams[0].length).trim();
-        const reducedUrlContent = await llmynx.run(url, goal, 2500);
-        await contextManager.append(reducedUrlContent);
+        const llmynxResponse = await llmynx.handleCommand(cmdArgs);
+        await contextManager.append(llmynxResponse);
         break;
       }
 
