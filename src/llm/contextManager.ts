@@ -49,6 +49,7 @@ Commands:
   Do not input notes after the prompt. Only valid commands.
 Special Commands: (Don't mix with standard commands on the same prompt)
   llmail: A local mail system for communicating with your team
+  llmynx: A context optimized web browser. Enter 'llmynx' with no arguments to learn how to use it
   comment <thought>: Any non-command output like thinking out loud, prefix with the 'comment' command
   pause <seconds>: Pause for <seconds> or indeterminite if no argument is provided. Auto wake up on new mail message
   endsession <note>: Ends this session, clears the console log and context.
@@ -105,6 +106,7 @@ export async function append(
   }
 
   // If last message is the same role then combine - Googl API requires alterntating roles
+  // TODO: Maybe dont do this here, but in the google api call
   let combined = false;
 
   if (messages.length > 0) {

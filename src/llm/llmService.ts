@@ -1,28 +1,38 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import OpenAI from "openai";
 import * as config from "../config.js";
-import * as contextManager from "./contextManager.js";
 import * as costTracker from "./costTracker.js";
 import { getLLModel } from "./llModels.js";
-import { LlmRole } from "./llmDtos.js";
+import { LlmMessage, LlmRole } from "./llmDtos.js";
 
-export async function send(): Promise<string> {
+export async function query(
+  modelName: string,
+  systemMessage: string,
+  context: LlmMessage[],
+  source: string,
+): Promise<string> {
   const currentTotalCost = await costTracker.getTotalCosts();
+
   if (config.agent.spendLimitDollars < currentTotalCost) {
     throw `LLM Spend limit of $${config.agent.spendLimitDollars} reached`;
   }
 
-  const model = getLLModel(config.agent.consoleModel);
+  const model = getLLModel(modelName);
 
   if (model.key === "google") {
-    return sendWithGoogle();
+    return sendWithGoogle(modelName, systemMessage, context, source);
   } else {
-    return sendWithOpenAiCompatible();
+    return sendWithOpenAiCompatible(modelName, systemMessage, context, source);
   }
 }
 
-async function sendWithOpenAiCompatible(): Promise<string> {
-  const model = getLLModel(config.agent.consoleModel);
+async function sendWithOpenAiCompatible(
+  modelName: string,
+  systemMessage: string,
+  context: LlmMessage[],
+  source: string,
+): Promise<string> {
+  const model = getLLModel(modelName);
 
   if (model.key === "local") {
     if (!model.baseUrl) {
@@ -38,8 +48,7 @@ async function sendWithOpenAiCompatible(): Promise<string> {
   });
 
   // Assert the last message on the context is a user message
-  const lastMessage =
-    contextManager.messages[contextManager.messages.length - 1];
+  const lastMessage = context[context.length - 1];
 
   if (lastMessage.role !== LlmRole.User) {
     throw "Error, last message on context is not a user message";
@@ -50,9 +59,9 @@ async function sendWithOpenAiCompatible(): Promise<string> {
     messages: [
       {
         role: LlmRole.System,
-        content: contextManager.getSystemMessage(),
+        content: systemMessage,
       },
-      ...contextManager.messages.map((m) => ({
+      ...context.map((m) => ({
         content: m.content,
         role: m.role,
       })),
@@ -64,7 +73,7 @@ async function sendWithOpenAiCompatible(): Promise<string> {
     const cost =
       chatCompletion.usage.prompt_tokens * model.inputCost +
       chatCompletion.usage.completion_tokens * model.outputCost;
-    await costTracker.recordCost(cost / 1000);
+    await costTracker.recordCost(cost / 1000, source);
   } else {
     throw "Error, no usage data returned from OpenAI API.";
   }
@@ -72,19 +81,23 @@ async function sendWithOpenAiCompatible(): Promise<string> {
   return chatCompletion.choices[0].message.content || "";
 }
 
-async function sendWithGoogle(): Promise<string> {
+async function sendWithGoogle(
+  modelName: string,
+  systemMessage: string,
+  context: LlmMessage[],
+  source: string,
+): Promise<string> {
   if (!config.googleApiKey) {
     throw "Error, googleApiKey is not defined";
   }
-  const model = getLLModel(config.agent.consoleModel);
+  const model = getLLModel(modelName);
 
   const googleAI = new GoogleGenerativeAI(config.googleApiKey);
 
   const googleModel = googleAI.getGenerativeModel({ model: model.name });
 
   // Assert the last message on the context is a user message
-  const lastMessage =
-    contextManager.messages[contextManager.messages.length - 1];
+  const lastMessage = context[context.length - 1];
 
   if (lastMessage.role !== LlmRole.User) {
     throw "Error, last message on context is not a user message";
@@ -93,13 +106,13 @@ async function sendWithGoogle(): Promise<string> {
   const history = [
     {
       role: LlmRole.User, // System role is not supported by Google API
-      parts: contextManager.getSystemMessage(),
+      parts: systemMessage,
     },
     {
       role: "model",
       parts: "Understood",
     },
-    ...contextManager.messages
+    ...context
       .filter((m) => m != lastMessage)
       .map((m) => ({
         role: m.role == LlmRole.Assistant ? "model" : LlmRole.User,
@@ -128,7 +141,7 @@ async function sendWithGoogle(): Promise<string> {
     lastMessage.content.length * model.inputCost +
     responseText.length * model.outputCost;
 
-  await costTracker.recordCost(cost / 1000);
+  await costTracker.recordCost(cost / 1000, source);
 
   return responseText;
 }

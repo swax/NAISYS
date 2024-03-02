@@ -20,7 +20,8 @@ async function init() {
           id INTEGER PRIMARY KEY,
           date TEXT NOT NULL, 
           username TEXT NOT NULL,
-          cost REAL NOT NULL
+          cost REAL NOT NULL,
+          source TEXT NOT NULL
       )`,
     ];
 
@@ -30,11 +31,11 @@ async function init() {
   });
 }
 
-export async function recordCost(cost: number) {
+export async function recordCost(cost: number, source: string) {
   await usingDatabase(async (db) => {
     await db.run(
-      `INSERT INTO Costs (date, username, cost) VALUES (datetime('now'), ?, ?)`,
-      [config.agent.username, cost],
+      `INSERT INTO Costs (date, username, cost, source) VALUES (datetime('now'), ?, ?, ?)`,
+      [config.agent.username, cost, source],
     );
   });
 }
