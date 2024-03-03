@@ -17,13 +17,12 @@ export const tokenMax = 4000;
 /* .env is used for global configs across naisys, while agent configs for the specific agent */
 
 export const naisysFolder = getEnv("NAISYS_FOLDER", true);
-
 export const websiteFolder = getEnv("WEBSITE_FOLDER");
 
 export const localLlmUrl = getEnv("LOCAL_LLM_URL");
+export const localLlmName = getEnv("LOCAL_LLM_NAME");
 
 export const openaiApiKey = getEnv("OPENAI_API_KEY");
-
 export const googleApiKey = getEnv("GOOGLE_API_KEY");
 
 export const agent = loadAgentConfig();

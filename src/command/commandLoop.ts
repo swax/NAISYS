@@ -1,6 +1,7 @@
 import chalk from "chalk";
 import * as readline from "readline";
 import * as llmail from "../apps/llmail.js";
+import * as llmynx from "../apps/llmynx.js";
 import * as config from "../config.js";
 import * as contextManager from "../llm/contextManager.js";
 import { ContentSource } from "../llm/contextManager.js";
@@ -132,6 +133,7 @@ export async function run() {
     }
 
     if (nextCommandAction == NextCommandAction.EndSession) {
+      llmynx.clear();
       contextManager.clear();
       nextCommandAction = NextCommandAction.Continue;
     }

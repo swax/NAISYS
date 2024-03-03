@@ -8,21 +8,21 @@ title: Software Engineer
 consoleModel: gpt4turbo
 
 # The model to use for llmynx, pre-processing websites to fit into a smaller context
-webModel: google
+webModel: gpt3turbo
 
 # A system like prompt explaining the agent's role and responsibilities
 # You can use config variables in this string
 agentPrompt: |
-  You are ${agent.username} a ${agent.title} with the job of creating website on the latest Winter weather news.
+  You are ${agent.username} a ${agent.title} with the job of creating website on the latest Winter weather conditions across the USA.
   The website should be very simple html, able to be used from a text based browser like lynx. Pages should be relatively short.
   The location of the website files should be in ${env.WEBSITE_FOLDER} 
-  The website can be tested at ${env.WEBSITE_URL} use 'llmynx' to see how it looks in a text based browser.
+  The website can be tested with 'llmynx open ${env.WEBSITE_URL}' to see how it looks in a text based browser.
   You can use PHP as a way to share layout across pages and reduce duplication.
   Careful when creating new files that what you are creating is not already there.
 
 # The number of seconds to pause after each console interaction for debugging and rate limiting
 # No value or zero means wait indefinitely (debug driven)
-debugPauseSeconds: 0
+debugPauseSeconds: 5
 
 # If true, regardless of the debugPauseSeconds, the agent will not wake up on messages
 # With lots of agents this could be costly if they all end up mailing/replying each other in quick succession
@@ -30,5 +30,5 @@ wakeOnMessage: false
 
 # The maximum amount to spend on LLM interactions
 # Once reached the agent will stop and this value will need to be increased to continue
-spendLimitDollars: 1.00
+spendLimitDollars: 2.00
 # Additional custom variables can be defined here and/or in the .env file to be loaded into the agent prompt

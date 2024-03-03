@@ -2,11 +2,11 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import OpenAI from "openai";
 import * as config from "../config.js";
 import * as costTracker from "./costTracker.js";
-import { getLLModel } from "./llModels.js";
+import { LlmApiType, getLLModel } from "./llModels.js";
 import { LlmMessage, LlmRole } from "./llmDtos.js";
 
 export async function query(
-  modelName: string,
+  modelKey: string,
   systemMessage: string,
   context: LlmMessage[],
   source: string,
@@ -17,22 +17,24 @@ export async function query(
     throw `LLM Spend limit of $${config.agent.spendLimitDollars} reached`;
   }
 
-  const model = getLLModel(modelName);
+  const model = getLLModel(modelKey);
 
-  if (model.key === "google") {
-    return sendWithGoogle(modelName, systemMessage, context, source);
+  if (model.apiType == LlmApiType.Google) {
+    return sendWithGoogle(modelKey, systemMessage, context, source);
+  } else if (model.apiType == LlmApiType.OpenAI) {
+    return sendWithOpenAiCompatible(modelKey, systemMessage, context, source);
   } else {
-    return sendWithOpenAiCompatible(modelName, systemMessage, context, source);
+    throw `Error, unknown LLM API type ${model.apiType}`;
   }
 }
 
 async function sendWithOpenAiCompatible(
-  modelName: string,
+  modelKey: string,
   systemMessage: string,
   context: LlmMessage[],
   source: string,
 ): Promise<string> {
-  const model = getLLModel(modelName);
+  const model = getLLModel(modelKey);
 
   if (model.key === "local") {
     if (!model.baseUrl) {
@@ -73,7 +75,7 @@ async function sendWithOpenAiCompatible(
     const cost =
       chatCompletion.usage.prompt_tokens * model.inputCost +
       chatCompletion.usage.completion_tokens * model.outputCost;
-    await costTracker.recordCost(cost / 1000, source);
+    await costTracker.recordCost(cost / 1000, source, model.name);
   } else {
     throw "Error, no usage data returned from OpenAI API.";
   }
@@ -82,7 +84,7 @@ async function sendWithOpenAiCompatible(
 }
 
 async function sendWithGoogle(
-  modelName: string,
+  modelKey: string,
   systemMessage: string,
   context: LlmMessage[],
   source: string,
@@ -90,7 +92,7 @@ async function sendWithGoogle(
   if (!config.googleApiKey) {
     throw "Error, googleApiKey is not defined";
   }
-  const model = getLLModel(modelName);
+  const model = getLLModel(modelKey);
 
   const googleAI = new GoogleGenerativeAI(config.googleApiKey);
 
@@ -141,7 +143,7 @@ async function sendWithGoogle(
     lastMessage.content.length * model.inputCost +
     responseText.length * model.outputCost;
 
-  await costTracker.recordCost(cost / 1000, source);
+  await costTracker.recordCost(cost / 1000, source, model.name);
 
   return responseText;
 }
