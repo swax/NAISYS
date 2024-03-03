@@ -27,7 +27,7 @@ let _currentCommandTimeout: NodeJS.Timeout | undefined;
 
 const _commandDelimiter = "__COMMAND_END_X7YUTT__";
 
-async function _ensureOpen() {
+async function ensureOpen() {
   if (_process) {
     return;
   }
@@ -153,7 +153,7 @@ export async function executeCommand(command: string) {
     };
   }*/
 
-  await _ensureOpen();
+  await ensureOpen();
 
   if (_currentPath && command.trim().split("\n").length > 1) {
     command = await runCommandFromScript(command);
@@ -183,7 +183,7 @@ export async function executeCommand(command: string) {
 }
 
 export async function getCurrentPath() {
-  await _ensureOpen();
+  await ensureOpen();
 
   _currentPath = (await executeCommand("pwd")).value;
 

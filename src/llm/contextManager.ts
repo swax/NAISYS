@@ -29,7 +29,7 @@ export function getSystemMessage() {
   agentPrompt = resolveTemplateVars(agentPrompt, "agent", config.agent);
   agentPrompt = resolveTemplateVars(agentPrompt, "env", process.env);
 
-  const systemMessage = `${agentPrompt}
+  const systemMessage = `${agentPrompt.trim()}
 
 This is a command line interface presenting you with the next command prompt. 
 Make sure the read the command line rules in the MOTD carefully.
@@ -49,7 +49,7 @@ Commands:
   Do not input notes after the prompt. Only valid commands.
 Special Commands: (Don't mix with standard commands on the same prompt)
   llmail: A local mail system for communicating with your team
-  llmynx: A context optimized web browser. Enter 'llmynx' with no arguments to learn how to use it
+  llmynx: A context optimized web browser. Enter 'llmynx help' to learn how to use it
   comment <thought>: Any non-command output like thinking out loud, prefix with the 'comment' command
   pause <seconds>: Pause for <seconds> or indeterminite if no argument is provided. Auto wake up on new mail message
   endsession <note>: Ends this session, clears the console log and context.

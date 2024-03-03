@@ -18,13 +18,20 @@ const _outputEmitter = new events.EventEmitter();
 const _originalWrite = process.stdout.write.bind(process.stdout);
 
 process.stdout.write = (...args) => {
-  _outputEmitter.emit(_writeEventName);
+  _outputEmitter.emit(_writeEventName, false, ...args);
   return _originalWrite.apply(process.stdout, <any>args);
 };
 
 const _readlineInterface = readline.createInterface({
   input: process.stdin,
   output: process.stdout,
+});
+
+// Happens when ctrl+c is pressed
+let readlineInterfaceClosed = false;
+_readlineInterface.on("close", () => {
+  readlineInterfaceClosed = true;
+  output.error("Readline interface closed");
 });
 
 export async function getPrompt(
@@ -70,24 +77,35 @@ export function getInput(
   wakeOnMessage?: boolean,
 ) {
   return new Promise<string>((resolve) => {
-    const ac = new AbortController();
+    const questionController = new AbortController();
     let timeout: NodeJS.Timeout | undefined;
     let interval: NodeJS.Timeout | undefined;
+    let timeoutCancelled = false;
+
+    if (readlineInterfaceClosed) {
+      output.error("Hanging because readline interface is closed.");
+      return;
+    }
 
     /** Cancels waiting for user input */
-    function cancelTimeouts(waitForUserInputExpired?: boolean) {
-      _outputEmitter.off(_writeEventName, cancelTimeouts);
-
-      if (timeout) {
-        clearTimeout(timeout);
-        timeout = undefined;
-      }
-      if (interval) {
-        clearInterval(interval);
-        interval = undefined;
+    function onStdinWrite_cancelTimers(
+      questionAborted: boolean,
+      buffer?: string,
+    ) {
+      // Don't allow console escape commands like \x1B[1G to cancel the timeout
+      if (timeoutCancelled || (buffer && !/^[a-zA-Z0-9 ]+$/.test(buffer))) {
+        return;
       }
 
-      if (waitForUserInputExpired) {
+      timeoutCancelled = true;
+      _outputEmitter.off(_writeEventName, onStdinWrite_cancelTimers);
+
+      clearTimeout(timeout);
+      clearInterval(interval);
+      timeout = undefined;
+      interval = undefined;
+
+      if (questionAborted) {
         return;
       }
 
@@ -109,18 +127,18 @@ export function getInput(
 
     _readlineInterface.question(
       chalk.greenBright(commandPrompt),
-      { signal: ac.signal },
+      { signal: questionController.signal },
       (answer) => {
         resolve(answer);
       },
     );
 
     // If user starts typing in prompt, cancel any auto timeouts or wake on msg
-    _outputEmitter.on(_writeEventName, cancelTimeouts);
+    _outputEmitter.on(_writeEventName, onStdinWrite_cancelTimers);
 
     const abortQuestion = () => {
-      cancelTimeouts(true);
-      ac.abort();
+      onStdinWrite_cancelTimers(true);
+      questionController.abort();
       resolve("");
     };
 
