@@ -1,4 +1,5 @@
 import { exec } from "child_process";
+import * as os from "os";
 import * as config from "../config.js";
 import { getLLModel } from "../llm/llModels.js";
 import { LlmMessage, LlmRole } from "../llm/llmDtos.js";
@@ -177,7 +178,9 @@ async function runLynx(url: string) {
     // mode == RunMode.Content ? "-nolist" : "-listonly";
     const modeParams = "";
 
-    exec(`wsl lynx -dump ${modeParams} "${url}"`, (error, stdout, stderr) => {
+    const ifWindows = os.platform() === "win32" ? "wsl " : "";
+
+    exec(`${ifWindows}lynx -dump ${modeParams} "${url}"`, (error, stdout, stderr) => {
       if (error) {
         resolve(`error: ${error.message}`);
         return;
