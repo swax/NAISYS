@@ -15,6 +15,9 @@ export function naisysToHostPath(filePath: string) {
 }
 
 export function valueFromString(obj: any, path: string, defaultValue?: string) {
+  if (!path) {
+    return obj;
+  }
   const keys = path.split(".");
   let result = obj;
   for (const key of keys) {

@@ -17,7 +17,7 @@ enum ShellEvent {
 }
 
 let _process: ChildProcessWithoutNullStreams | undefined;
-let _log = "";
+//let _log = "";
 let _commandOutput = "";
 let _hasErrors = false;
 let _currentPath: string | undefined;
@@ -32,7 +32,7 @@ async function ensureOpen() {
     return;
   }
 
-  _log = "";
+  //_log = "";
   resetCommand();
 
   const spawnProcess = os.platform() === "win32" ? "wsl" : "bash";
@@ -94,7 +94,7 @@ export function processOutput(dataStr: string, eventType: ShellEvent) {
   if (eventType === ShellEvent.Exit) {
     output.error("SHELL EXITED. PID: " + _process?.pid + " CODE: " + dataStr);
   } else {
-    _log += "OUTPUT: " + dataStr;
+    //_log += "OUTPUT: " + dataStr;
     _commandOutput += dataStr;
   }
 
@@ -162,7 +162,7 @@ export async function executeCommand(command: string) {
   return new Promise<CommandResponse>((resolve) => {
     _resolveCurrentCommand = resolve;
     const commandWithDelimiter = `${command.trim()}\necho "${_commandDelimiter} LINE:\${LINENO}"\n`;
-    _log += "INPUT: " + commandWithDelimiter;
+    //_log += "INPUT: " + commandWithDelimiter;
     _process?.stdin.write(commandWithDelimiter);
 
     // If no response after 5 seconds, kill and reset the shell, often hanging on some unescaped input
@@ -210,8 +210,7 @@ function resetProcess() {
 }
 
 /** Wraps multi line commands in a script to make it easier to diagnose the source of errors based on line number
- * May also help with common escaping errors
- */
+ * May also help with common escaping errors */
 function runCommandFromScript(command: string) {
   const scriptPath = `${config.naisysFolder}/home/${config.agent.username}/.command.tmp.sh`;
 
