@@ -1,13 +1,13 @@
 ## NAISYS (Node.js Autonomous Intelligence System)
 
-Testing the limits of cognitive architectures with LLMs. The goal is to see how far a LLM can
+Basically a proxy between a LLM and a real shell. The goal is to see how far a LLM can
 get into writing an website from scratch as well as work with other LLM agents on the same project.
 
-Since the LLM has a limited context, a shell built for it should take this into account and help the LLM
+Since the LLM has a limited context, a proxy shell built for it should take this into account and help the LLM
 perform 'context friendly' operations. For example reading/writing a file can't use a typical editor like
 vim or nano so point the LLM to use cat to read/write files in a single operation.
 
-#### Node.js is used to create a simple shell environment for the LLM that
+#### Node.js is used to create a simple proxy shell environment for the LLM that
 
 - Helps the LLM keep track of its current context size
 - Give the LLM the ability to 'reset' the context and carry over information to a new session/context
@@ -50,10 +50,11 @@ vim or nano so point the LLM to use cat to read/write files in a single operatio
 - Install `nvm` using the `curl` url from these [instructions](https://github.com/nvm-sh/nvm?tab=readme-ov-file#installing-and-updating)
   - Run `nvm install/use 20` to set node version to 20
 - Create a `.env` from the `.env.example` file
+  - Set the api keys for the LLMs you need to access
   - Set `NAISYS_FOLDER` to `/var/naisys`
+- If you plan to use NAISYS for a website
   - Set `WEBSITE_FOLDER` to `/var/www/html`
   - Set `WEBSITE_URL` to the `http://<IP address of the droplet>`
-  - Set the api keys for the LLMs you need to access
 - Follow the instructions for getting started locally above
 
 ## Using NAISYS
@@ -63,7 +64,7 @@ vim or nano so point the LLM to use cat to read/write files in a single operatio
 - NAISYS will start with a debug prompt, this is where you can use and run commands in NAISYS just like the LLM will
 - If you hit `Enter` without typing anything, the LLM will run against the prompt
 - Afterwards NAISYS will return to the debug prompt
-- Depending on how `DEBUG_PAUSE_SECONDS` is configured NAISYS will
+- Depending on how the agents' `debugPauseSeconds` is configured NAISYS will
   - Pause on the debug prompt for that many seconds
   - Pause indefinitely
   - Pause until a new message is received from another agent
