@@ -38,7 +38,8 @@ export async function handleCommand(cmdArgs: string) {
 
       return await loadUrl(
         "https://www.google.com/search?q=" + encodeURIComponent(query),
-        2500,
+        config.tokenMax / 2, // Prevent form being reduced as google results are usually short anyways and we want to maintainq the links
+        true,
         true,
       );
     }
@@ -46,7 +47,7 @@ export async function handleCommand(cmdArgs: string) {
       const url = argParams[1];
       const isNumber = !isNaN(parseInt(argParams[2]));
       const tokenMax = isNumber ? parseInt(argParams[2]) : defualtTokenMax;
-      return await loadUrl(url, tokenMax, false);
+      return await loadUrl(url, tokenMax, false, true);
     }
     case "follow": {
       const linkNum = parseInt(argParams[1]);
@@ -58,13 +59,13 @@ export async function handleCommand(cmdArgs: string) {
         return "Link number not found";
       }
 
-      return await loadUrl(linkUrl, tokenMax, true);
+      return await loadUrl(linkUrl, tokenMax, true, false);
     }
     case "links": {
       const url = argParams[1];
       const isNumber = !isNaN(parseInt(argParams[2]));
       const pageNumber = isNumber ? parseInt(argParams[2]) : 1;
-      return await loadUrl(url, 600, false, pageNumber);
+      return await loadUrl(url, 600, false, false, pageNumber);
     }
     // Secret command to toggle debug mode
     case "debug":
@@ -79,6 +80,7 @@ async function loadUrl(
   url: string,
   tokenMax: number,
   showUrl: boolean,
+  showFollowHint: boolean,
   linkPageAsContent?: number,
 ) {
   let content = await runLynx(url);
@@ -166,7 +168,12 @@ async function loadUrl(
 
   // Prefix content with url if following as otherwise the url is never shown
   if (showUrl) {
-    content = `URL: ${url}\n` + content;
+    content = `URL: ${url}\n\n` + content;
+  }
+
+  if (showFollowHint) {
+    content +=
+      "\n\nLinks are in brackets. Use `llmynx follow <link number>` to follow a link.";
   }
 
   return storeMapSetLinks(content, links);
@@ -180,19 +187,22 @@ async function runLynx(url: string) {
 
     const ifWindows = os.platform() === "win32" ? "wsl " : "";
 
-    exec(`${ifWindows}lynx -dump ${modeParams} "${url}"`, (error, stdout, stderr) => {
-      if (error) {
-        resolve(`error: ${error.message}`);
-        return;
-      }
+    exec(
+      `${ifWindows}lynx -dump ${modeParams} "${url}"`,
+      (error, stdout, stderr) => {
+        if (error) {
+          resolve(`error: ${error.message}`);
+          return;
+        }
 
-      if (stderr) {
-        resolve(`stderr: ${stderr}`);
-        return;
-      }
+        if (stderr) {
+          resolve(`stderr: ${stderr}`);
+          return;
+        }
 
-      resolve(stdout);
-    });
+        resolve(stdout);
+      },
+    );
   });
 }
 
