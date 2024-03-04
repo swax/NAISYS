@@ -5,7 +5,7 @@
 # Check if an argument is provided
 if [ $# -eq 0 ]; then
   echo "Runs an entire team of agents in a tmux session"
-  echo "  Usage: $0 <path_to_agent_directory>"
+  echo "  Usage: naisys <path_to_agent_directory>"
   echo "  Note: The folder the agents are in will be treated as the tmux session name"
   exit 1
 fi
@@ -14,6 +14,10 @@ fi
 # Will require an outer loop to create new windows
 # How many agents per window
 # AGENTS_PER_WINDOW=4
+
+# Resolves the location of naisys from the bin directory
+SCRIPT=$(readlink -f "$0" || echo "$0")
+SCRIPT_DIR=$(dirname "$SCRIPT")
 
 # Directory containing agent files
 AGENT_DIR="$1"
@@ -32,7 +36,7 @@ for ((i = 0; i < ${#AGENT_FILES[@]}; i++)); do
   
   # For the first agent, no split is needed
   if [ $i -eq 0 ]; then
-    tmux send-keys -t $TEAM_NAME:0.0 "node ./dist/naisys.js '${AGENT_FILES[i]}'" C-m # Quote the path
+    tmux send-keys -t $TEAM_NAME:0.0 "node $SCRIPT_DIR/dist/naisys.js '${AGENT_FILES[i]}'" C-m # Quote the path
   else
     # Determine pane split direction based on odd/even pane index
     if [ $((i % 2)) -eq 0 ]; then
@@ -40,7 +44,7 @@ for ((i = 0; i < ${#AGENT_FILES[@]}; i++)); do
     else
       tmux split-window -h -t $TEAM_NAME:0
     fi
-    tmux send-keys "node ./dist/naisys.js '${AGENT_FILES[i]}'" C-m # Quote the path
+    tmux send-keys "node $SCRIPT_DIR/dist/naisys.js '${AGENT_FILES[i]}'" C-m # Quote the path
     tmux last-pane # Move focus back to the last pane to ensure correct targeting in the next iteration
   fi
 done
