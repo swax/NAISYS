@@ -1,5 +1,5 @@
 {
-  "name": "@swax/naisys",
+  "name": "naisys",
   "description": "Node.js Autonomous Intelligence System",
   "version": "1.0.1",
   "main": "naisys.js",

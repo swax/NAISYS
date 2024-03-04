@@ -1,23 +1,31 @@
 ## NAISYS (Node.js Autonomous Intelligence System)
 
-Basically a proxy between a LLM and a real shell. The goal is to see how far a LLM can
-get into writing an website from scratch as well as work with other LLM agents on the same project.
+NAISYS is acts as a proxy shell between a LLM and a real shell. The goal is to see how far a LLM can
+get into writing a website from scratch as well as work with other LLM agents on the same project. Trying to figure
+out what works and what doesn't when it comes to 'cognitive architectures'. NAISYS isn't
+limited to websites, but it seemed like a good place to start.
 
-Since the LLM has a limited context, a proxy shell built for it should take this into account and help the LLM
+Since the LLM has a limited context, NAISYS should take this into account and help the LLM
 perform 'context friendly' operations. For example reading/writing a file can't use a typical editor like
 vim or nano so point the LLM to use cat to read/write files in a single operation.
 
 #### Node.js is used to create a simple proxy shell environment for the LLM that
 
-- Helps the LLM keep track of its current context size
-- Give the LLM the ability to 'reset' the context and carry over information to a new session/context
-- Proxy commands to a real shell, and help guide the LLM to use context friendly commansds
+- NAISYS helps the LLM keep track of its current context size
+- Gives the LLM the ability to 'reset' the context and carry over information to a new session/context
+- Proxy commands to a real shell, and help guide the LLM to use context friendly commands
 - Prevent the context from being polluted by catching common errors like output that includes the command prompt itself
 - Allows communication with the LLM by way of a 'debug' prompt after each run of the LLM
 - A custom 'mail' system for context friendly inter-agent communication
 - A 'lynx' browser wrapper called 'llmynx' that uses a separate LLM to reduce the size of web pages to fit in the context
 - Cost tracking built in, and cost limits must be set in the config to run NAISYS
-- Supports mutiple LLM backends, configurable per agent - Google, OpenAI, and self-hosted LLMs
+- Supports multiple LLM backends, configurable per agent - Google, OpenAI, and self-hosted LLMs
+
+## Resources
+
+- [Website](https://naisys.org)
+- [Discord](https://discord.gg/JBUPWSbaEt)
+- [NPM Package](https://www.npmjs.com/package/naisys)
 
 ## Installation
 
