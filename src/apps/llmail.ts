@@ -100,11 +100,11 @@ export async function handleCommand(args: string): Promise<string> {
   switch (argParams[0]) {
     case "help": {
       if (simpleMode) {
-        return `llmail Commands:
-  llmail users: Get list of users on the system
-  llmail send "<users>" "subject" "message": Send a message. ${_messageTokenMax} token max.`;
+        return `llmail <command>
+  users: Get list of users on the system
+  send "<users>" "subject" "message": Send a message. ${_messageTokenMax} token max.`;
       } else {
-        return `llmail: Local email system
+        return `llmail <command>
   no params: List all active threads
   users: Get list of users on the system
   send "<users>" "subject" "message": Send a new mail, starting a new thread
