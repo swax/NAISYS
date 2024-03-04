@@ -15,6 +15,7 @@ vim or nano so point the LLM to use cat to read/write files in a single operatio
 - Prevent the context from being polluted by catching common errors like output that includes the command prompt itself
 - Allows communication with the LLM by way of a 'debug' prompt after each run of the LLM
 - A custom 'mail' system for context friendly inter-agent communication
+- A 'lynx' browser wrapper called 'llmynx' that uses a separate LLM to reduce the size of web pages to fit in the context
 - Cost tracking built in, and cost limits must be set in the config to run NAISYS
 - Supports mutiple LLM backends, configurable per agent - Google, OpenAI, and self-hosted LLMs
 

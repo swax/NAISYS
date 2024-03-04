@@ -5,12 +5,13 @@
   "main": "naisys.js",
   "type": "module",
   "scripts": {
-    "compile": "tsc",
     "compile/run/attachable": "tsc && node --inspect dist/naisys.js ./agents/example.yaml",
     "run agent:dev": "node dist/naisys.js ./agents/eva-site-2-team/dev.yaml",
     "run agent:admin": "node dist/naisys.js ./agents/eva-site-2-team/admin.yaml",
-    "clean:win": "rmdir dist /s /q",
+    "clean": "wsl rm -rf dist",
+    "compile": "tsc",
     "eslint": "npx eslint --rulesdir eslint-rules src",
+    "test": "tsc && node --experimental-vm-modules node_modules/jest/bin/jest.js --testPathPattern=dist/__tests__",
     "prettier": "npx prettier --write .",
     "dependency-graph": "madge --image dependency-graph.png dist",
     "detect-cycles": "madge --circular dist",
@@ -39,6 +40,7 @@
     "@typescript-eslint/eslint-plugin": "7.1.0",
     "@typescript-eslint/parser": "7.1.0",
     "eslint": "8.57.0",
+    "jest": "29.7.0",
     "prettier": "3.2.5",
     "ts-node": "10.9.2",
     "typescript": "5.3.3"
