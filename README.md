@@ -65,6 +65,14 @@ vim or nano so point the LLM to use cat to read/write files in a single operatio
   - Set `WEBSITE_URL` to the `http://<IP address of the droplet>`
 - Follow the instructions for getting started locally above
 
+#### Getting started from NPM (Still in development)
+
+- Run `npm install -g naisys`
+- Create a `.env` from the `.env.example` file, and configure
+- Run `naisys <path to directory or yaml>`
+  - If a directory is passed, naisys will start a tmux session with the agents in the directory
+  - If a yaml file is passed, naisys will start a single agent
+
 ## Using NAISYS
 
 #### The Basics

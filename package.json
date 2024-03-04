@@ -1,9 +1,18 @@
 {
   "name": "naisys",
   "description": "Node.js Autonomous Intelligence System",
-  "version": "1.0.1",
-  "main": "naisys.js",
+  "version": "1.0.2",
   "type": "module",
+  "main": "dist/naisys.js",
+  "preferGlobal": true,
+  "bin": {
+    "naisys": "naisys.sh"
+  },
+  "files": [
+    "agents/example.yaml",
+    "dist/**/*",
+    ".env.example"
+  ],
   "scripts": {
     "compile/run/attachable": "tsc && node --inspect dist/naisys.js ./agents/example.yaml",
     "run agent:dev": "node dist/naisys.js ./agents/eva-site-2-team/dev.yaml",
