@@ -24,6 +24,7 @@ export const localLlmName = getEnv("LOCAL_LLM_NAME");
 
 export const openaiApiKey = getEnv("OPENAI_API_KEY");
 export const googleApiKey = getEnv("GOOGLE_API_KEY");
+export const anthropicApiKey = getEnv("ANTHROPIC_API_KEY");
 
 export const agent = loadAgentConfig();
 

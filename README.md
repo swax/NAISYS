@@ -9,69 +9,99 @@ Since the LLM has a limited context, NAISYS should take this into account and he
 perform 'context friendly' operations. For example reading/writing a file can't use a typical editor like
 vim or nano so point the LLM to use cat to read/write files in a single operation.
 
+[NPM](https://www.npmjs.com/package/naisys) | [Website](https://naisys.org) | [Discord](https://discord.gg/JBUPWSbaEt)
+
 #### Node.js is used to create a simple proxy shell environment for the LLM that
 
-- NAISYS helps the LLM keep track of its current context size
+- Helps the LLM keep track of its current context size
 - Gives the LLM the ability to 'reset' the context and carry over information to a new session/context
 - Proxy commands to a real shell, and help guide the LLM to use context friendly commands
 - Prevent the context from being polluted by catching common errors like output that includes the command prompt itself
-- Allows communication with the LLM by way of a 'debug' prompt after each run of the LLM
+- Allows debugging by way of a 'debug' prompt after each run of the LLM
 - A custom 'mail' system for context friendly inter-agent communication
-- A 'lynx' browser wrapper called 'llmynx' that uses a separate LLM to reduce the size of web pages to fit in the context
-- Cost tracking built in, and cost limits must be set in the config to run NAISYS
-- Supports multiple LLM backends, configurable per agent - Google, OpenAI, and self-hosted LLMs
+- A browser called 'llmynx' that uses a separate LLM to reduce web page size as well as make links unique across the context
+- Cost tracking and cost limits that must be set in the config
+- Support for multiple LLM backends, configurable per agent - OpenAI, Google, Anthropic, and self-hosted LLMs
 
-## Resources
+## Getting Started
 
-- [Website](https://naisys.org)
-- [Discord](https://discord.gg/JBUPWSbaEt)
-- [NPM Package](https://www.npmjs.com/package/naisys)
-
-## Installation
-
-#### Getting started locally
-
+- See notes for Windows users at the bottom of this file
 - Install Node.js, NAISYS has been tested with version 20
-- Clone this repository
-- Run `npm install` to install dependencies
-- Create a `.env` from the `.env.example` file, and configure
-- Run `npm run compile`
-- Configure your agent using the examples in the `./agents` folder
-- Run `node dist/naisys.js <path to agent yaml file>`
+- Install lynx using `apt install lynx`
+- Run `npm install -g naisys`
+- Create a `.env` file:
 
-#### Notes for Windows users
+```bash
+# Agent home files and NAISYS specific databases will be stored here
+NAISYS_FOLDER="/var/naisys"
 
-- Install WSL (Windows Subsystem for Linux)
-- The naisys/website folder should be set to the WSL path
-  - So `C:\var\naisys` should be `/mnt/c/var/naisys` in the `.env` file
-- If you want to use NAISYS for a website
-  - Install a local web server, for example [XAMPP](https://www.apachefriends.org/) on Windows
-  - Start the server and put the URL in the `.env` file
+# The folder where the website and logs are served from (if not defined then logs put in the naisys folder)
+WEBSITE_FOLDER="/var/www"
 
-#### Getting started on a VM (Digital Ocean for example)
+# Leave api keys/url blank if not using the service
+OPENAI_API_KEY="xxx"
+GOOGLE_API_KEY="yyy"
+ANTHROPIC_API_KEY="zzz"
+
+LOCAL_LLM_URL="http://localhost:1234/v1"
+LOCAL_LLM_NAME="minstral instruct v0.2"
+
+# Custom global vars for use in agent configurations here
+WEBSITE_URL="http://localhost:8080/"
+```
+
+- Create an agent configuration file `smith.yaml`:
+
+```yaml
+# Used to identify the agent on the prompt, logs, home dir, mail, etc..
+username: smith
+
+# How other agents will understand the role of this agent
+title: Software Engineer
+
+# The model to use for console interactions
+# (gpt4turbo, gpt4turbo, gemini-pro, claude3sonnet, claude3opus, local)
+consoleModel: claude3sonnet
+
+# The model to use for llmynx, pre-processing websites to fit into a smaller context
+webModel: gpt3turbo
+
+# A system like prompt explaining the agent's role and responsibilities
+# You can use config variables in this string
+agentPrompt: |
+  You are ${agent.username} a ${agent.title} with the job of creating a Neon Genesis Evangelion fan website.
+  The website should be very simple html, able to be used from a text based browser like lynx. Pages should be relatively short.
+  The location of the website files should be in ${env.WEBSITE_FOLDER} 
+  The website can be tested with 'llmynx open ${env.WEBSITE_URL}' to see how it looks in a text based browser.
+  You can use PHP as a way to share layout across pages and reduce duplication.
+  Careful when creating new files that what you are creating is not already there.
+
+# The number of seconds to pause after each console interaction for debugging and rate limiting
+# No value or zero means wait indefinitely (debug driven)
+debugPauseSeconds: 5
+
+# If true, regardless of the debugPauseSeconds, the agent will not wake up on messages
+# With lots of agents this could be costly if they all end up mailing/replying each other in quick succession
+wakeOnMessage: false
+
+# The maximum amount to spend on LLM interactions
+# Once reached the agent will stop and this value will need to be increased to continue
+spendLimitDollars: 2.00
+# Additional custom variables can be defined here and/or in the .env file to be loaded into the agent prompt
+```
+
+- Run `naisys <path to yaml or directory>`
+  - If a yaml file is passed, naisys will start a single agent
+  - If a directory is passed, naisys will start a tmux session with the screen split for each agent
+
+### Creating a persistent agent run website (on Digital Ocean for example)
 
 - Create new VM using the [LAMP stack droplet template](https://marketplace.digitalocean.com/apps/lamp)
 - Login to the droplet using the web console
-- Clone this repo using the [instructions from GitHub](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent)
-- Run `apt install lynx`
 - Run `apt install npm`
 - Install `nvm` using the `curl` url from these [instructions](https://github.com/nvm-sh/nvm?tab=readme-ov-file#installing-and-updating)
   - Run `nvm install/use 20` to set node version to 20
-- Create a `.env` from the `.env.example` file
-  - Set the api keys for the LLMs you need to access
-  - Set `NAISYS_FOLDER` to `/var/naisys`
-- If you plan to use NAISYS for a website
-  - Set `WEBSITE_FOLDER` to `/var/www/html`
-  - Set `WEBSITE_URL` to the `http://<IP address of the droplet>`
-- Follow the instructions for getting started locally above
-
-#### Getting started from NPM (Still in development)
-
-- Run `npm install -g naisys`
-- Create a `.env` from the `.env.example` file, and configure
-- Run `naisys <path to directory or yaml>`
-  - If a directory is passed, naisys will start a tmux session with the agents in the directory
-  - If a yaml file is passed, naisys will start a single agent
+  - Follow the general install instructions above
 
 ## Using NAISYS
 
@@ -84,7 +114,7 @@ vim or nano so point the LLM to use cat to read/write files in a single operatio
   - Pause on the debug prompt for that many seconds
   - Pause indefinitely
   - Pause until a new message is received from another agent
-- Combined logs across all agents are written to the `{WEBSITE_FOLDER}/logs` folder as html
+- Agents logs are written as html to `{WEBSITE_FOLDER or NAISYS_FOLDER}/logs`
 
 #### Console Colors Legend
 
@@ -98,11 +128,11 @@ vim or nano so point the LLM to use cat to read/write files in a single operatio
 - NAISYS tries to be light, acting as a helpful proxy between the LLM and a real shell, most commands should pass right though to the shell
 - Debug Commands
   - `cost` - Prints the current total LLM cost
-  - `context` - Prints the current context
+  - `context` - Prints the current context 
   - `exit` - Exits NAISYS. If the LLM tries to use `exit`, it is directed to use `endsession` instead
   - `talk` - Communicate with the local agent to give hints or ask questions (the agent itself does not know about talk and is directed to use `comment` or `llmail` for communication)
 - Special Commands usable by the LLM as well as by the debug prompt
-  - `comment <notes>` - The LLM is directed to use this for 'thinking out loud' which avoid 'invalid command' errors
+  - `comment <notes>` - The LLM is directed to use this for 'thinking out loud' which avoids 'invalid command' errors
   - `endsession <notes>` - Clear the context and start a new session.
     - The LLM is directed to track it's context size and to end the session with a note before running over the context limit
   - `pause <seconds>` - Can be used by the debug agent or the LLM to pause execution indefinitely, or until a new message is received from another agent, or for a set number of seconds
@@ -110,16 +140,23 @@ vim or nano so point the LLM to use cat to read/write files in a single operatio
   - `llmail` - A context friendly 'mail system' used for agent to agent communication
   - `llmynx` - A context friendly wrapping on the lynx browser that can use a separate LLM to reduce the size of a large webpage into something that can fit into the LLM's context
 
-## Code Design Notes
+## Running NAISYS from Source
 
-- The entry point is in `./naisys.ts`
-- LLM configurations are in the `src/llm/llmModels.ts` file
-- A helpful `dependency-graph.png` is included to get an idea of the overall architecture
-  - This also doubles as a way to prevent cyclic dependencies as a DI library is not used currently
-- The code is organzied into module based services
-  - Think poor mans singleton dependency injection
-  - A previous version had class based services using real DI, but made the code a soup of `this.` statements
-  - Code from these services are imported with \* so it's clear when you're calling out to a service like llmService.send()
-- There is a command loop that first checks for internally handled NAISYS commands, unhandled commands fall through to an actual shell
-  - Multiline commands are added to a temporary shell script and then executed so it's easier to pinpoint where a command failed by line number in the script versus the entire shell log
-- Various sqlite databases are used for logging, cost tracking and mail. All stored in the `{NAISYS_FOLDER}/lib` folder
+#### Getting started locally
+
+- Install Node.js, NAISYS has been tested with version 20
+- Clone the NAISYS repository from Github
+- Run `npm install` to install dependencies
+- Create a `.env` from the example above
+- Run `npm run compile`
+- Configure your agent using the examples in the `./agents` folder
+- Run `node dist/naisys.js <path to agent yaml file>`
+
+#### Notes for Windows users
+
+- Install WSL (Windows Subsystem for Linux)
+- The `NAISYS_FOLDER` and `WEBSITE_FOLDER` should be set to the WSL path
+  - So `C:\var\naisys` should be `/mnt/c/var/naisys` in the `.env` file
+- If you want to use NAISYS for a website
+  - Install a local web server, for example [XAMPP](https://www.apachefriends.org/) on Windows
+  - Start the server and put the URL in the `.env` file

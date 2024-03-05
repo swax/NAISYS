@@ -45,6 +45,7 @@ export async function consoleInput(
 
     // if the prompt exists in the input, save if for the next run
     const nextPromptPos = nextInput.indexOf(userHostPrompt);
+    const newLinePos = nextInput.indexOf("\n");
 
     if (nextPromptPos == 0) {
       const pathPrompt = await promptBuilder.getUserHostPathPrompt();
@@ -65,6 +66,11 @@ export async function consoleInput(
     else if (nextPromptPos > 0) {
       input = nextInput.slice(0, nextPromptPos);
       nextInput = nextInput.slice(nextPromptPos).trim();
+    }
+    // Else for single line custom NAISYS commands, only process the first line as there may be follow up shell commands
+    else if (newLinePos > 0 && nextInput.startsWith("comment ")) {
+      input = nextInput.slice(0, newLinePos);
+      nextInput = nextInput.slice(newLinePos).trim();
     } else {
       input = nextInput;
       nextInput = "";
@@ -82,9 +88,9 @@ export async function consoleInput(
         output.write(prompt + chalk[OutputColor.llm](input));
       } else {
         await output.commentAndLog(
-          "Optimistically continuing with the next command...",
+          "Continuing with next command from same LLM response...",
         );
-        await contextManager.append(input, ContentSource.LlmPromptResponse);
+        await contextManager.append(input, ContentSource.LLM);
       }
     }
 
@@ -93,14 +99,10 @@ export async function consoleInput(
 
     switch (cmdParams[0]) {
       case "comment": {
+        // Important - Hint the LLM to turn their thoughts into accounts
         await contextManager.append(
           "Comment noted. Try running commands now to achieve your goal.",
         );
-
-        // There may be additional commands after the comment, try to slice it out after the new line and continue
-        const nextNewLine = input.indexOf("\n");
-        nextInput = nextNewLine > 0 ? input.slice(nextNewLine).trim() : "";
-
         break;
       }
       case "endsession": {
@@ -131,7 +133,8 @@ export async function consoleInput(
       }
 
       // With no argument, in debug mode, pause will pause forever,
-      // in LLM mode it will pause until a message is receieved (don't want the llm to hang itself)
+      // in LLM mode it will pause until a message is receieved
+      //    Don't want the llm to hang itself, but it still can if it's the only agent or if all the agents pause..
       // The setting only lasts for the next command, next loop it uses the agent default
       case "pause": {
         return {

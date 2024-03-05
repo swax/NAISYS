@@ -45,7 +45,7 @@ Date: ${new Date().toLocaleString()}
 Commands: 
   Standard Unix commands are available
   vi and nano are not supported
-  Read/write entire files in a single command with cat
+  Read files with cat. Write files with \`cat > filename << 'EOF'\`
   Do not input notes after the prompt. Only valid commands.
 Special Commands: (Don't mix with standard commands on the same prompt)
   llmail: A local mail system for communicating with your team
@@ -53,8 +53,8 @@ Special Commands: (Don't mix with standard commands on the same prompt)
   comment <thought>: Any non-command output like thinking out loud, prefix with the 'comment' command
   pause <seconds>: Pause for <seconds> or indeterminite if no argument is provided. Auto wake up on new mail message
   endsession <note>: Ends this session, clears the console log and context.
-    The note should help you prevent from having to find your bearings in the next session. 
-    The note should contain your next goal. Important things should you remember. Maybe a task list.
+    The note should help you find your bearings in the next session. 
+    The note should contain your next goal, and important things should you remember.
     Try to keep the note around 400 tokens.
 Tokens:
   The console log can only hold a certain number of 'tokens' that is specified in the prompt

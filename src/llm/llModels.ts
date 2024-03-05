@@ -3,6 +3,7 @@ import * as config from "../config.js";
 export enum LlmApiType {
   OpenAI = "openai",
   Google = "google",
+  Anthropic = "anthropic",
 }
 
 interface LlmModel {
@@ -21,18 +22,18 @@ const llmModels: LlmModel[] = [
     name: "gpt-4-0125-preview",
     apiType: LlmApiType.OpenAI,
     maxTokens: 128_000,
-    // Prices are per 1000 tokens
-    inputCost: 0.01,
-    outputCost: 0.03,
+    // Prices are per 1M tokens
+    inputCost: 10,
+    outputCost: 30,
   },
   {
     key: "gpt3turbo",
     name: "gpt-3.5-turbo-0125",
     apiType: LlmApiType.OpenAI,
     maxTokens: 16_000,
-    // Prices are per 1000 tokens
-    inputCost: 0.0005,
-    outputCost: 0.0015,
+    // Prices are per 1M tokens
+    inputCost: 0.5,
+    outputCost: 1.5,
   },
   {
     key: "local",
@@ -40,17 +41,36 @@ const llmModels: LlmModel[] = [
     baseUrl: config.localLlmUrl,
     apiType: LlmApiType.OpenAI,
     maxTokens: 8_000,
+    // Prices are per 1M tokens
     inputCost: 0,
     outputCost: 0,
   },
   {
-    key: "google",
+    key: "gemini-pro",
     name: "gemini-pro",
     apiType: LlmApiType.Google,
     maxTokens: 8_000,
     // 60 queries per minute free then the prices below are per 1000 characters
     inputCost: 0.000125,
     outputCost: 0.000375,
+  },
+  {
+    key: "claude3opus",
+    name: "claude-3-opus-20240229",
+    apiType: LlmApiType.Anthropic,
+    maxTokens: 200_000,
+    // Prices are per 1M tokens
+    inputCost: 15,
+    outputCost: 75,
+  },
+  {
+    key: "claude3sonnet",
+    name: "claude-3-sonnet-20240229",
+    apiType: LlmApiType.Anthropic,
+    maxTokens: 200_000,
+    // Prices are per 1M tokens
+    inputCost: 3,
+    outputCost: 15,
   },
 ];
 

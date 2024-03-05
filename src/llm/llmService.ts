@@ -1,3 +1,5 @@
+import Anthropic from "@anthropic-ai/sdk";
+import { MessageParam } from "@anthropic-ai/sdk/resources/messages.mjs";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import OpenAI from "openai";
 import * as config from "../config.js";
@@ -21,6 +23,8 @@ export async function query(
 
   if (model.apiType == LlmApiType.Google) {
     return sendWithGoogle(modelKey, systemMessage, context, source);
+  } else if (model.apiType == LlmApiType.Anthropic) {
+    return sendWithAnthropic(modelKey, systemMessage, context, source);
   } else if (model.apiType == LlmApiType.OpenAI) {
     return sendWithOpenAiCompatible(modelKey, systemMessage, context, source);
   } else {
@@ -56,7 +60,7 @@ async function sendWithOpenAiCompatible(
     throw "Error, last message on context is not a user message";
   }
 
-  const chatCompletion = await openAI.chat.completions.create({
+  const chatResponse = await openAI.chat.completions.create({
     model: model.name,
     messages: [
       {
@@ -70,17 +74,17 @@ async function sendWithOpenAiCompatible(
     ],
   });
 
-  // Total up costs, prices are per 1000 tokens
-  if (chatCompletion.usage) {
+  // Total up costs, prices are per 1M tokens
+  if (chatResponse.usage) {
     const cost =
-      chatCompletion.usage.prompt_tokens * model.inputCost +
-      chatCompletion.usage.completion_tokens * model.outputCost;
-    await costTracker.recordCost(cost / 1000, source, model.name);
+      chatResponse.usage.prompt_tokens * model.inputCost +
+      chatResponse.usage.completion_tokens * model.outputCost;
+    await costTracker.recordCost(cost / 1_000_000, source, model.name);
   } else {
     throw "Error, no usage data returned from OpenAI API.";
   }
 
-  return chatCompletion.choices[0].message.content || "";
+  return chatResponse.choices[0].message.content || "";
 }
 
 async function sendWithGoogle(
@@ -139,11 +143,74 @@ async function sendWithGoogle(
 
   // Total up cost, per 1000 characters with google
   // todo: take into account google allows 60 queries per minute for free
+  const inputCharCount =
+    systemMessage.length +
+    context
+      .map((m) => m.content.length)
+      .reduce((prevVal, currVal) => prevVal + currVal, 0);
+
   const cost =
-    lastMessage.content.length * model.inputCost +
-    responseText.length * model.outputCost;
+    inputCharCount * model.inputCost + responseText.length * model.outputCost;
 
   await costTracker.recordCost(cost / 1000, source, model.name);
 
   return responseText;
+}
+
+async function sendWithAnthropic(
+  modelKey: string,
+  systemMessage: string,
+  context: LlmMessage[],
+  source: string,
+): Promise<string> {
+  const model = getLLModel(modelKey);
+
+  if (!config.anthropicApiKey) {
+    throw "Error, anthropicApiKey is not defined";
+  }
+
+  const anthropic = new Anthropic({
+    apiKey: config.anthropicApiKey,
+  });
+
+  // Assert the last message on the context is a user message
+  const lastMessage = context[context.length - 1];
+
+  if (lastMessage.role !== LlmRole.User) {
+    throw "Error, last message on context is not a user message";
+  }
+
+  const msgResponse = await anthropic.messages.create({
+    model: model.name,
+    max_tokens: 4096, // Blows up on anything higher
+    messages: [
+      {
+        role: "user",
+        content: systemMessage,
+      },
+      {
+        role: "assistant",
+        content: "Understood",
+      },
+      ...context.map(
+        (msg) =>
+          ({
+            role: msg.role == LlmRole.Assistant ? "assistant" : "user",
+            content: msg.content,
+          }) satisfies MessageParam,
+      ),
+    ],
+  });
+
+  // Total up costs, prices are per 1M tokens
+  if (msgResponse.usage) {
+    const cost =
+      msgResponse.usage.input_tokens * model.inputCost +
+      msgResponse.usage.output_tokens * model.outputCost;
+    await costTracker.recordCost(cost / 1_000_000, source, model.name);
+  } else {
+    throw "Error, no usage data returned from Anthropic API.";
+  }
+
+  return msgResponse.content.find((c) => c.type == "text")?.text || "";
 }

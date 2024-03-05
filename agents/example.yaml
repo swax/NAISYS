@@ -5,7 +5,7 @@ username: jill
 title: Software Engineer
 
 # The model to use for console interactions
-consoleModel: gpt4turbo
+consoleModel: claude3sonnet
 
 # The model to use for llmynx, pre-processing websites to fit into a smaller context
 webModel: gpt3turbo
@@ -13,7 +13,7 @@ webModel: gpt3turbo
 # A system like prompt explaining the agent's role and responsibilities
 # You can use config variables in this string
 agentPrompt: |
-  You are ${agent.username} a ${agent.title} with the job of creating website on the latest Winter weather conditions across the USA.
+  You are ${agent.username} a ${agent.title} with the job of creating a Neon Genesis Evangelion fan website.
   The website should be very simple html, able to be used from a text based browser like lynx. Pages should be relatively short.
   The location of the website files should be in ${env.WEBSITE_FOLDER} 
   The website can be tested with 'llmynx open ${env.WEBSITE_URL}' to see how it looks in a text based browser.
@@ -31,4 +31,5 @@ wakeOnMessage: false
 # The maximum amount to spend on LLM interactions
 # Once reached the agent will stop and this value will need to be increased to continue
 spendLimitDollars: 2.00
+
 # Additional custom variables can be defined here and/or in the .env file to be loaded into the agent prompt
