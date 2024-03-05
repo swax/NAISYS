@@ -223,5 +223,6 @@ ${command.trim()}`;
   // create/writewrite file
   fs.writeFileSync(naisysToHostPath(scriptPath), scriptContent);
 
-  return `bash ${scriptPath}`;
+  // Source will run the script in the current shell, so any change directories in the script should persist in the current shell
+  return `source ${scriptPath}`;
 }

@@ -17,9 +17,10 @@ export async function handleCommand(
   };
 
   // Route user to context friendly edit commands that can read/write the entire file in one go
+  // Having EOF in quotes is important as it prevents the shell from replacing $variables with bash values
   if (["nano", "vi", "vim"].includes(cmdParams[0])) {
     await contextManager.append(
-      `${cmdParams[0]} not supported. Use 'cat' to view a file and 'cat > filename << EOF' to write a file`,
+      `${cmdParams[0]} not supported. Use \`cat\` to read a file and \`cat > filename << 'EOF'\` to write a file`,
     );
 
     return response;

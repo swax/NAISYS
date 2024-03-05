@@ -4,20 +4,32 @@
 
 # Check if an argument is provided
 if [ $# -eq 0 ]; then
-  echo "Runs an entire team of agents in a tmux session"
-  echo "  Usage: naisys <path_to_agent_directory>"
-  echo "  Note: The folder the agents are in will be treated as the tmux session name"
+  echo "NAISYS: Node.js Autonomous Intelligence System"
+  echo "  Usage: naisys <path to agent config yaml, or directory>"
+  echo "  Note: If a folder is passed then all agents will be started in a tmux session"
   exit 1
+fi
+
+# Resolves the location of naisys from the bin directory
+SCRIPT=$(readlink -f "$0" || echo "$0")
+SCRIPT_DIR=$(dirname "$SCRIPT")
+
+# if path is a yaml file then start a single agent
+if [ -f "$1" ]; then
+  if [[ "$1" == *".yaml" ]]; then
+    echo "Starting single agent..."
+    node $SCRIPT_DIR/dist/naisys.js "$1"
+    exit 0
+  else
+    echo "Invalid file type. Please provide a .yaml file."
+    exit 1
+  fi
 fi
 
 # TODO: In the future should implement a max agents per window in the session
 # Will require an outer loop to create new windows
 # How many agents per window
 # AGENTS_PER_WINDOW=4
-
-# Resolves the location of naisys from the bin directory
-SCRIPT=$(readlink -f "$0" || echo "$0")
-SCRIPT_DIR=$(dirname "$SCRIPT")
 
 # Directory containing agent files
 AGENT_DIR="$1"

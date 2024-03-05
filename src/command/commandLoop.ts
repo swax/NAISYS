@@ -82,6 +82,7 @@ export async function run() {
 
         try {
           await displayNewMail();
+          await displayContextWarning();
 
           await contextManager.append(prompt, ContentSource.ConsolePrompt);
 
@@ -242,6 +243,22 @@ async function displayNewMail() {
     await contextManager.append(
       `New Messages on Thread ID ${threadIds}\n` +
         `Use llmail read <id>' to read the thread, but be mindful you are close to the token limit for the session.`,
+      ContentSource.Console,
+    );
+  }
+}
+
+async function displayContextWarning() {
+  const tokenCount = contextManager.getTokenCount();
+  const tokenMax = config.tokenMax;
+
+  if (tokenCount > tokenMax) {
+    await contextManager.append(
+      `The token limit for this session has been exceeded.
+Use \`endsession <note>\` to clear the console and reset the session.
+  The note should help you find your bearings in the next session. 
+  The note should contain your next goal, and important things should you remember.
+  Try to keep the note around 400 tokens.`,
       ContentSource.Console,
     );
   }
