@@ -50,9 +50,9 @@ Commands:
 Special Commands: (Don't mix with standard commands on the same prompt)
   llmail: A local mail system for communicating with your team
   llmynx: A context optimized web browser. Enter 'llmynx help' to learn how to use it
-  comment <thought>: Any non-command output like thinking out loud, prefix with the 'comment' command
+  comment "<thought>": Any non-command output like thinking out loud, prefix with the 'comment' command
   pause <seconds>: Pause for <seconds> or indeterminite if no argument is provided. Auto wake up on new mail message
-  endsession <note>: Ends this session, clears the console log and context.
+  endsession "<note>": Ends this session, clears the console log and context.
     The note should help you find your bearings in the next session. 
     The note should contain your next goal, and important things should you remember.
     Try to keep the note around 400 tokens.

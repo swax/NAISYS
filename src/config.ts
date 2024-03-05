@@ -11,11 +11,7 @@ dotenv.config();
 /** The system name that shows after the @ in the command prompt */
 export const hostname = "naisys";
 
-/** The number of tokens you want to limit a session to, independent of the LLM token max */
-export const tokenMax = 4000;
-
-/* .env is used for global configs across naisys, while agent configs for the specific agent */
-
+/* .env is used for global configs across naisys, while agent configs are for the specific agent */
 export const naisysFolder = getEnv("NAISYS_FOLDER", true);
 export const websiteFolder = getEnv("WEBSITE_FOLDER");
 
@@ -43,6 +39,7 @@ interface AgentConfig {
   webModel: string;
   agentPrompt: string;
   spendLimitDollars: number;
+  tokenMax: number;
   /** Seconds to pause on the debug prompt before continuing LLM. No value or zero implies indefinite wait (debug driven) */
   debugPauseSeconds?: number;
   wakeOnMessage?: boolean;
@@ -63,6 +60,7 @@ function loadAgentConfig() {
     "webModel",
     "agentPrompt",
     "spendLimitDollars",
+    "tokenMax",
     // debugPauseSeconds and wakeOnMessage can be undefined
   ]) {
     if (!valueFromString(checkAgentConfig, key)) {

@@ -76,6 +76,11 @@ agentPrompt: |
   You can use PHP as a way to share layout across pages and reduce duplication.
   Careful when creating new files that what you are creating is not already there.
 
+# The number of tokens you want to limit a session to, independent of the LLM token max itself
+# A lower max relies more on the LLM ending the session with good enough notes to not get lost when the session restarts
+# A higher max allows the LLM to do more without losing track, but is more expensive
+tokenMax: 5000
+
 # The number of seconds to pause after each console interaction for debugging and rate limiting
 # No value or zero means wait indefinitely (debug driven)
 debugPauseSeconds: 5
@@ -94,14 +99,14 @@ spendLimitDollars: 2.00
   - If a yaml file is passed, naisys will start a single agent
   - If a directory is passed, naisys will start a tmux session with the screen split for each agent
 
-### Creating a persistent agent run website (on Digital Ocean for example)
+#### Creating a persistent agent run website (on Digital Ocean for example)
 
 - Create new VM using the [LAMP stack droplet template](https://marketplace.digitalocean.com/apps/lamp)
 - Login to the droplet using the web console
 - Run `apt install npm`
 - Install `nvm` using the `curl` url from these [instructions](https://github.com/nvm-sh/nvm?tab=readme-ov-file#installing-and-updating)
   - Run `nvm install/use 20` to set node version to 20
-  - Follow the general install instructions above
+- Follow the general install instructions above
 
 ## Using NAISYS
 
@@ -128,12 +133,12 @@ spendLimitDollars: 2.00
 - NAISYS tries to be light, acting as a helpful proxy between the LLM and a real shell, most commands should pass right though to the shell
 - Debug Commands
   - `cost` - Prints the current total LLM cost
-  - `context` - Prints the current context 
+  - `context` - Prints the current context
   - `exit` - Exits NAISYS. If the LLM tries to use `exit`, it is directed to use `endsession` instead
   - `talk` - Communicate with the local agent to give hints or ask questions (the agent itself does not know about talk and is directed to use `comment` or `llmail` for communication)
 - Special Commands usable by the LLM as well as by the debug prompt
-  - `comment <notes>` - The LLM is directed to use this for 'thinking out loud' which avoids 'invalid command' errors
-  - `endsession <notes>` - Clear the context and start a new session.
+  - `comment "<note>"` - The LLM is directed to use this for 'thinking out loud' which avoids 'invalid command' errors
+  - `endsession "<note>"` - Clear the context and start a new session.
     - The LLM is directed to track it's context size and to end the session with a note before running over the context limit
   - `pause <seconds>` - Can be used by the debug agent or the LLM to pause execution indefinitely, or until a new message is received from another agent, or for a set number of seconds
 - NAISYS apps
@@ -154,6 +159,8 @@ spendLimitDollars: 2.00
 
 #### Notes for Windows users
 
+- To use NAISYS on Windows you need to run it locally from source (or from within WSL)
+- Use the above instructions to install locally, and then continue with the instructions below
 - Install WSL (Windows Subsystem for Linux)
 - The `NAISYS_FOLDER` and `WEBSITE_FOLDER` should be set to the WSL path
   - So `C:\var\naisys` should be `/mnt/c/var/naisys` in the `.env` file

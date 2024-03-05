@@ -215,7 +215,7 @@ async function displayNewMail() {
   );
 
   const sessionTokens = contextManager.getTokenCount();
-  const tokenMax = config.tokenMax;
+  const tokenMax = config.agent.tokenMax;
 
   // Show full messages unless we are close to the token limit of the session
   // or in simple mode, which means non-threaded messages
@@ -250,7 +250,7 @@ async function displayNewMail() {
 
 async function displayContextWarning() {
   const tokenCount = contextManager.getTokenCount();
-  const tokenMax = config.tokenMax;
+  const tokenMax = config.agent.tokenMax;
 
   if (tokenCount > tokenMax) {
     await contextManager.append(

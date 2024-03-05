@@ -40,7 +40,7 @@ export async function getPrompt(
 ) {
   const promptSuffix = inputMode.current == InputMode.Debug ? "#" : "$";
 
-  const tokenMax = config.tokenMax;
+  const tokenMax = config.agent.tokenMax;
   const usedTokens = contextManager.getTokenCount();
   const tokenSuffix = ` [Tokens: ${usedTokens}/${tokenMax}]`;
 
