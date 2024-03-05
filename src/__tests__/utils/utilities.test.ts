@@ -1,7 +1,16 @@
 import { describe, expect, test } from "@jest/globals";
-import { valueFromString } from "../../utils/utilities.js";
+import { trimChars, valueFromString } from "../../utils/utilities.js";
 
-describe("valueFromString", () => {
+describe("trimChars function", () => {
+  test("trims the specified characters from the start and end of the string", () => {
+    expect(trimChars("  hello  ", " ")).toBe("hello");
+    expect(trimChars("  hello  ", " h")).toBe("ello");
+    expect(trimChars("  hello  ", "eh")).toBe("  hello  ");
+    expect(trimChars("  hello  ", "ehlo ")).toBe("");
+  });
+});
+
+describe("valueFromString function", () => {
   const obj = {
     user: {
       name: "John Doe",

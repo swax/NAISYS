@@ -1,8 +1,10 @@
 import { describe, expect, it, jest } from "@jest/globals";
 import { LlmMessage } from "../../llm/llmDtos.js";
+import { mockConfig } from "../mocks.js";
 
-jest.unstable_mockModule("../../config.js", () => ({}));
+mockConfig();
 
+// Mock logService module
 const mockLogServiceWrite = jest
   .fn<(message: LlmMessage) => Promise<number | undefined>>()
   .mockResolvedValue(1);
@@ -11,6 +13,7 @@ jest.unstable_mockModule("../../utils/logService.js", () => ({
   write: mockLogServiceWrite,
 }));
 
+// Load target module
 const output = await import("../../utils/output.js");
 
 describe("commentAndLog function", () => {

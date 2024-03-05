@@ -11,7 +11,7 @@ const _dbFilePath = naisysToHostPath(`${config.naisysFolder}/lib/llmail.db`);
 let _myUserId = -1;
 
 // Implement maxes so that LLMs actively manage threads, archive, and create new ones
-const _threadTokenMax = config.tokenMax / 2; // So 4000, would be 2000 thread max
+const _threadTokenMax = config.agent.tokenMax / 2; // So 4000, would be 2000 thread max
 const _messageTokenMax = _threadTokenMax / 5; // Given the above a 400 token max, and 5 big messages per thread
 
 /** The 'non-simple' version of this is a thread first mail system. Where agents can create threads, add users, and reply to threads, etc..

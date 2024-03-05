@@ -10,6 +10,7 @@ import { InputMode } from "../utils/inputMode.js";
 import * as logService from "../utils/logService.js";
 import * as output from "../utils/output.js";
 import { OutputColor } from "../utils/output.js";
+import * as utilities from "../utils/utilities.js";
 import * as promptBuilder from "./promptBuilder.js";
 import * as shellCommand from "./shellCommand.js";
 
@@ -34,53 +35,27 @@ export async function consoleInput(
   // We process the lines one at a time so we can support multiple commands with line breaks
   let firstLine = true;
   let processNextLLMpromptBlock = true;
-  const userHostPrompt = promptBuilder.getUserHostPrompt();
 
   let nextCommandAction = NextCommandAction.Continue;
 
-  let nextInput = consoleInput.trim();
+  consoleInput = consoleInput.trim();
 
-  while (processNextLLMpromptBlock && nextInput) {
-    let input = "";
+  while (processNextLLMpromptBlock && consoleInput) {
+    const { input, nextInput, splitResult } =
+      await splitMultipleInputCommands(consoleInput);
 
-    // if the prompt exists in the input, save if for the next run
-    const nextPromptPos = nextInput.indexOf(userHostPrompt);
-    const newLinePos = nextInput.indexOf("\n");
+    consoleInput = nextInput;
 
-    if (nextPromptPos == 0) {
-      const pathPrompt = await promptBuilder.getUserHostPathPrompt();
-
-      // check working directory is the same
-      if (nextInput.startsWith(pathPrompt)) {
-        // slice nextInput after $
-        const endPrompt = nextInput.indexOf("$", pathPrompt.length);
-        nextInput = nextInput.slice(endPrompt + 1).trim();
-        continue;
-      }
-      // else prompt did not match, stop processing input
-      else {
-        break;
-      }
-    }
-    // we can't validate that the working directory in the prompt is good until the commands are processed
-    else if (nextPromptPos > 0) {
-      input = nextInput.slice(0, nextPromptPos);
-      nextInput = nextInput.slice(nextPromptPos).trim();
-    }
-    // Else for single line custom NAISYS commands, only process the first line as there may be follow up shell commands
-    else if (newLinePos > 0 && nextInput.startsWith("comment ")) {
-      input = nextInput.slice(0, newLinePos);
-      nextInput = nextInput.slice(newLinePos).trim();
-    } else {
-      input = nextInput;
-      nextInput = "";
-    }
-
-    if (!input.trim()) {
+    if (splitResult == SplitResult.InputIsPrompt) {
+      continue;
+    } else if (
+      splitResult == SplitResult.InputPromptMismatch ||
+      !input.trim()
+    ) {
       break;
     }
 
-    // first line is special because we want to append the output to the context without a line break
+    // First line is special because we want to append the output to the context without a line break
     if (inputMode.current == InputMode.LLM) {
       if (firstLine) {
         firstLine = false;
@@ -106,7 +81,16 @@ export async function consoleInput(
         break;
       }
       case "endsession": {
-        previousSessionNotes = cmdArgs;
+        // Don't need to check end line as this is the last command in the context, just read to the end
+        previousSessionNotes = utilities.trimChars(cmdArgs, '"');
+
+        if (!previousSessionNotes) {
+          await contextManager.append(
+            `End session notes are required. Use endsession "<notes>"`,
+          );
+          break;
+        }
+
         await output.commentAndLog(
           "------------------------------------------------------",
         );
@@ -184,8 +168,8 @@ export async function consoleInput(
   }
 
   // display unprocessed lines to aid in debugging
-  if (nextInput.trim()) {
-    await output.errorAndLog(`Unprocessed LLM response:\n${nextInput}`);
+  if (consoleInput.trim()) {
+    await output.errorAndLog(`Unprocessed LLM response:\n${consoleInput}`);
   }
 
   return {
@@ -194,3 +178,73 @@ export async function consoleInput(
     wakeOnMessage: config.agent.wakeOnMessage,
   };
 }
+
+enum SplitResult {
+  InputIsPrompt,
+  InputPromptMismatch,
+}
+
+async function splitMultipleInputCommands(nextInput: string) {
+  let input = "";
+  let splitResult: SplitResult | undefined;
+
+  // If the prompt exists in the input, save if for the next run
+  const userHostPrompt = promptBuilder.getUserHostPrompt();
+  const nextPromptPos = nextInput.indexOf(userHostPrompt);
+  const newLinePos = nextInput.indexOf("\n");
+
+  if (nextPromptPos == 0) {
+    const pathPrompt = await promptBuilder.getUserHostPathPrompt();
+
+    // Check working directory is the same
+    if (nextInput.startsWith(pathPrompt)) {
+      // Slice nextInput after $
+      const endPrompt = nextInput.indexOf("$", pathPrompt.length);
+      nextInput = nextInput.slice(endPrompt + 1).trim();
+      splitResult = SplitResult.InputIsPrompt;
+    }
+    // Else prompt did not match, stop processing input
+    else {
+      splitResult = SplitResult.InputPromptMismatch;
+    }
+  }
+  // We can't validate that the working directory in the prompt is good until the commands are processed
+  else if (nextPromptPos > 0) {
+    input = nextInput.slice(0, nextPromptPos);
+    nextInput = nextInput.slice(nextPromptPos).trim();
+  }
+  // Most custom NAISYS commands are single line, but comment in quotes can span multiple lines so we need to handle that
+  // because often the LLM puts shell commands after the comment
+  else if (nextInput.startsWith(`comment "`)) {
+    // Find next double quote in nextInput that isn't escaped
+    let endQuote = nextInput.indexOf(`"`, 9);
+    while (endQuote > 0 && nextInput[endQuote - 1] === "\\") {
+      endQuote = nextInput.indexOf(`"`, endQuote + 1);
+    }
+
+    if (endQuote > 0) {
+      input = nextInput.slice(0, endQuote + 1);
+      nextInput = nextInput.slice(endQuote + 1).trim();
+    } else {
+      input = nextInput;
+      nextInput = "";
+    }
+  }
+  // If the LLM forgets the quote on the comment, treat it as a single line comment
+  else if (newLinePos > 0 && nextInput.startsWith("comment ")) {
+    input = nextInput.slice(0, newLinePos);
+    nextInput = nextInput.slice(newLinePos).trim();
+  }
+  // Else process the entire input now
+  else {
+    input = nextInput;
+    nextInput = "";
+  }
+
+  return { input, nextInput, splitResult };
+}
+
+export const exportedForTesting = {
+  splitMultipleInputCommands,
+  SplitResult,
+};

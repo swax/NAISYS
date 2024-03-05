@@ -5,20 +5,27 @@ username: jill
 title: Software Engineer
 
 # The model to use for console interactions
-consoleModel: claude3sonnet
+consoleModel: gpt4turbo
 
 # The model to use for llmynx, pre-processing websites to fit into a smaller context
-webModel: gpt3turbo
+webModel: claude3sonnet
 
 # A system like prompt explaining the agent's role and responsibilities
 # You can use config variables in this string
 agentPrompt: |
-  You are ${agent.username} a ${agent.title} with the job of creating a Neon Genesis Evangelion fan website.
+  You are ${agent.username} a ${agent.title} with the job of creating a west coast skiing weather website.
+  You can use the 'llmynx search <term>' command to search for information on the web.
+  There is information on a weather api here https://www.weather.gov/documentation/services-web-api
   The website should be very simple html, able to be used from a text based browser like lynx. Pages should be relatively short.
   The location of the website files should be in ${env.WEBSITE_FOLDER} 
   The website can be tested with 'llmynx open ${env.WEBSITE_URL}' to see how it looks in a text based browser.
   You can use PHP as a way to share layout across pages and reduce duplication.
   Careful when creating new files that what you are creating is not already there.
+
+# The number of tokens you want to limit a session to, independent of the LLM token max itself
+# A lower max relies more on the LLM ending the session with good enough notes to not get lost when the session restarts
+# A higher max allows the LLM to do more without losing track, but is more expensive
+tokenMax: 5000
 
 # The number of seconds to pause after each console interaction for debugging and rate limiting
 # No value or zero means wait indefinitely (debug driven)
@@ -31,5 +38,4 @@ wakeOnMessage: false
 # The maximum amount to spend on LLM interactions
 # Once reached the agent will stop and this value will need to be increased to continue
 spendLimitDollars: 2.00
-
 # Additional custom variables can be defined here and/or in the .env file to be loaded into the agent prompt

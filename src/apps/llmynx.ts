@@ -20,7 +20,7 @@ export async function handleCommand(cmdArgs: string) {
   outputInDebugMode("LLMYNX DEBUG MODE IS ON");
 
   const argParams = cmdArgs.split(" ");
-  const defualtTokenMax = config.tokenMax / 8;
+  const defualtTokenMax = config.agent.tokenMax / 8;
 
   if (!argParams[0]) {
     argParams[0] = "help";
@@ -38,7 +38,7 @@ export async function handleCommand(cmdArgs: string) {
 
       return await loadUrl(
         "https://www.google.com/search?q=" + encodeURIComponent(query),
-        config.tokenMax / 2, // Prevent form being reduced as google results are usually short anyways and we want to maintainq the links
+        config.agent.tokenMax / 2, // Prevent form being reduced as google results are usually short anyways and we want to maintainq the links
         true,
         true,
       );

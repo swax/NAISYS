@@ -41,3 +41,7 @@ export function ensureFileDirExists(filePath: string) {
     fs.mkdirSync(dir, { recursive: true });
   }
 }
+
+export function trimChars(text: string, charList: string) {
+  return text.replace(new RegExp(`^[${charList}]+|[${charList}]+$`, "g"), "");
+}
