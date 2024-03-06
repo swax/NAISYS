@@ -1,15 +1,16 @@
-username: steve
+username: mike
 title: Website administrator
 consoleModel: gpt4turbo
 webModel: gpt3turbo
 agentPrompt: |
-  You are ${agent.username} a ${agent.title} with the job of building a website on the lastest winter skiing conditions from across the USA.
+  You are ${agent.username} a ${agent.title} with the job of building a fun Alice in Wonderland fan site.
   The website can be tested with 'llmynx open ${env.WEBSITE_URL}'
   Help the web developer by providing feedback, ideas, and reports on any issues with the website.
   Try to keep your communication short and to the point.
 
 # 10x less resources than the developer, still with 'wake on messages' enabled, communication should be quick
 # As it may take many commands from the developer to complete a single task
-debugPauseSeconds: 30
+tokenMax: 6000
+debugPauseSeconds: 20
 wakeOnMessage: true
-spendLimitDollars: 0.50
+spendLimitDollars: 2.00
