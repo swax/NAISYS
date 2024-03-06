@@ -1,15 +1,15 @@
 ## NAISYS (Node.js Autonomous Intelligence System)
 
-NAISYS is acts as a proxy shell between a LLM and a real shell. The goal is to see how far a LLM can
+NAISYS acts as a proxy shell between LLM(s) and a real shell. The goal is to see how far a LLM can
 get into writing a website from scratch as well as work with other LLM agents on the same project. Trying to figure
-out what works and what doesn't when it comes to 'cognitive architectures'. NAISYS isn't
+out what works and what doesn't when it comes to 'cognitive architectures' for autonomy. NAISYS isn't
 limited to websites, but it seemed like a good place to start.
 
-Since the LLM has a limited context, NAISYS should take this into account and help the LLM
+Since the LLM has a limited context, NAISYS takes this into account and helps the LLM
 perform 'context friendly' operations. For example reading/writing a file can't use a typical editor like
 vim or nano so point the LLM to use cat to read/write files in a single operation.
 
-[NPM](https://www.npmjs.com/package/naisys) | [Website](https://naisys.org) | [Discord](https://discord.gg/JBUPWSbaEt)
+[NPM](https://www.npmjs.com/package/naisys) | [Website](https://naisys.org) | [Discord](https://discord.gg/JBUPWSbaEt) | [Demo Video](https://www.youtube.com/watch?v=Ttya3ixjumo)
 
 #### Node.js is used to create a simple proxy shell environment for the LLM that
 

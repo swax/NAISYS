@@ -40,10 +40,10 @@
   "devDependencies": {
     "@types/escape-html": "1.0.4",
     "@types/js-yaml": "4.0.9",
-    "@types/node": "20.11.22",
+    "@types/node": "20.11.25",
     "@types/text-table": "0.2.5",
-    "@typescript-eslint/eslint-plugin": "7.1.0",
-    "@typescript-eslint/parser": "7.1.0",
+    "@typescript-eslint/eslint-plugin": "7.1.1",
+    "@typescript-eslint/parser": "7.1.1",
     "eslint": "8.57.0",
     "jest": "29.7.0",
     "prettier": "3.2.5",
