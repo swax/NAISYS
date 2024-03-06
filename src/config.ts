@@ -70,3 +70,19 @@ function loadAgentConfig() {
 
   return checkAgentConfig;
 }
+
+export const packageVersion = await getVersion();
+
+/** Can only get version from env variable when naisys is started with npm,
+ * otherwise need to rip it from the package ourselves relative to where this file is located */
+async function getVersion() {
+  try {
+    const packageJsonPath = new URL("../package.json", import.meta.url);
+    const packageJson = await import(packageJsonPath.href, {
+      assert: { type: "json" },
+    });
+    return packageJson.default.version;
+  } catch (e) {
+    return "0.1";
+  }
+}

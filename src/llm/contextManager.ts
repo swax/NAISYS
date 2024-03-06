@@ -38,7 +38,7 @@ For example when you run 'cat' or 'ls', don't write what you think the output wi
 Your role is that of the user. The system will provide responses and next command prompt. Don't output your own command prompt.
 Be careful when writing files through the command prompt with cat. Make sure to close and escape quotes properly.
 
-NAISYS ${process.env.npm_package_version} Shell
+NAISYS ${config.packageVersion} Shell
 Welcome back ${config.agent.username}!
 MOTD:
 Date: ${new Date().toLocaleString()}
