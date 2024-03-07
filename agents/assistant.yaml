@@ -1,5 +1,7 @@
 # See `README.md` for more information on the agent configuration
 
+# Basically just use 'talk' command to ask the AI to do stuff for you
+
 username: jill
 title: Software Engineer
 consoleModel: gpt4turbo

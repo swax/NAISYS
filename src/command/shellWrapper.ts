@@ -56,12 +56,12 @@ async function ensureOpen() {
   if (!_currentPath) {
     output.comment("NEW SHELL OPENED. PID: " + _process.pid);
 
-    commentIfNotEmpty(
+    errorIfNotEmpty(
       await executeCommand(
         `mkdir -p ${config.naisysFolder}/home/` + config.agent.username,
       ),
     );
-    commentIfNotEmpty(
+    errorIfNotEmpty(
       await executeCommand(
         `cd ${config.naisysFolder}/home/` + config.agent.username,
       ),
@@ -69,7 +69,7 @@ async function ensureOpen() {
   } else {
     output.comment("SHELL RESTORED. PID: " + _process.pid);
 
-    commentIfNotEmpty(await executeCommand("cd " + _currentPath));
+    errorIfNotEmpty(await executeCommand("cd " + _currentPath));
   }
 
   // Stop running commands if one fails
@@ -79,9 +79,9 @@ async function ensureOpen() {
 }
 
 /** Basically don't show anything in the console unless there is an error */
-function commentIfNotEmpty(response: CommandResponse) {
+function errorIfNotEmpty(response: CommandResponse) {
   if (response.value) {
-    output.comment(response.value);
+    output.error(response.value);
   }
 }
 
@@ -162,23 +162,36 @@ export async function executeCommand(command: string) {
   return new Promise<CommandResponse>((resolve) => {
     _resolveCurrentCommand = resolve;
     const commandWithDelimiter = `${command.trim()}\necho "${_commandDelimiter} LINE:\${LINENO}"\n`;
+
     //_log += "INPUT: " + commandWithDelimiter;
     _process?.stdin.write(commandWithDelimiter);
 
-    // If no response after 5 seconds, kill and reset the shell, often hanging on some unescaped input
-    const timeoutSeconds = 5;
-    _currentCommandTimeout = setTimeout(() => {
-      if (_resolveCurrentCommand) {
-        _process?.kill();
-        output.error("SHELL TIMEMOUT/KILLED. PID: " + _process?.pid);
-        resetProcess();
+    // If no response, kill and reset the shell, often hanging on some unescaped input
+    _currentCommandTimeout = setTimeout(
+      resetShell,
+      config.shellCommmandTimeoutSeconds * 1000,
+    );
+  });
+}
 
-        _resolveCurrentCommand({
-          value: `Error: Command timed out after ${timeoutSeconds} seconds.`,
-          hasErrors: true,
-        });
-      }
-    }, timeoutSeconds * 1000);
+function resetShell() {
+  if (!_resolveCurrentCommand) {
+    return;
+  }
+
+  _process?.kill();
+
+  output.error("SHELL TIMEMOUT/KILLED. PID: " + _process?.pid);
+
+  const outputWithError =
+    _commandOutput.trim() +
+    `\n\nError: Command timed out after ${config.shellCommmandTimeoutSeconds} seconds.`;
+
+  resetProcess();
+
+  _resolveCurrentCommand({
+    value: outputWithError,
+    hasErrors: true,
   });
 }
 

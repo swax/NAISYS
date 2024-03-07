@@ -11,6 +11,9 @@ dotenv.config();
 /** The system name that shows after the @ in the command prompt */
 export const hostname = "naisys";
 
+export const shellOutputTokenMax = 2500;
+export const shellCommmandTimeoutSeconds = 10;
+
 /* .env is used for global configs across naisys, while agent configs are for the specific agent */
 export const naisysFolder = getEnv("NAISYS_FOLDER", true);
 export const websiteFolder = getEnv("WEBSITE_FOLDER");
@@ -43,6 +46,7 @@ interface AgentConfig {
   /** Seconds to pause on the debug prompt before continuing LLM. No value or zero implies indefinite wait (debug driven) */
   debugPauseSeconds?: number;
   wakeOnMessage?: boolean;
+  mailHelpOnStart?: boolean;
 }
 
 function loadAgentConfig() {
@@ -66,6 +70,11 @@ function loadAgentConfig() {
     if (!valueFromString(checkAgentConfig, key)) {
       throw `Agent config: Error, ${key} is not defined`;
     }
+  }
+
+  // Because this is a new config option and the previous default was true
+  if (checkAgentConfig.mailHelpOnStart === undefined) {
+    checkAgentConfig.mailHelpOnStart = true;
   }
 
   return checkAgentConfig;

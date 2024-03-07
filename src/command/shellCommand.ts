@@ -1,6 +1,8 @@
+import * as config from "../config.js";
 import * as contextManager from "../llm/contextManager.js";
 import * as inputMode from "../utils/inputMode.js";
 import { InputMode } from "../utils/inputMode.js";
+import * as utilities from "../utils/utilities.js";
 import * as shellWrapper from "./shellWrapper.js";
 
 interface HandleShellCommandResponse {
@@ -50,7 +52,27 @@ export async function handleCommand(
   const output = await shellWrapper.executeCommand(input);
 
   if (output.value) {
-    await contextManager.append(output.value);
+    let text = output.value;
+    let outputLimitExceeded = false;
+    const tokenCount = utilities.getTokenCount(text);
+
+    // Prevent too much output from blowing up the context
+    if (tokenCount > config.shellOutputTokenMax) {
+      outputLimitExceeded = true;
+
+      const trimLength =
+        (text.length * config.shellOutputTokenMax) / tokenCount;
+
+      text = text.slice(0, trimLength);
+    }
+
+    await contextManager.append(text);
+
+    if (outputLimitExceeded) {
+      await contextManager.append(
+        `\nThe shell command generated too much output (${tokenCount} tokens). Only 2,000 tokens worth are shown above.`,
+      );
+    }
   }
 
   response.hasErrors = output.hasErrors;
