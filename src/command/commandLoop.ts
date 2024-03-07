@@ -45,15 +45,17 @@ export async function run() {
     await contextManager.append("Previous Session Note:");
     await contextManager.append(commandHandler.previousSessionNotes || "None");
 
-    await commandHandler.consoleInput(
-      await promptBuilder.getPrompt(),
-      "llmail help",
-    );
+    if (config.agent.mailHelpOnStart) {
+      await commandHandler.consoleInput(
+        await promptBuilder.getPrompt(),
+        "llmail help",
+      );
 
-    await commandHandler.consoleInput(
-      await promptBuilder.getPrompt(),
-      "llmail users",
-    );
+      await commandHandler.consoleInput(
+        await promptBuilder.getPrompt(),
+        "llmail users",
+      );
+    }
 
     inputMode.toggle(InputMode.Debug);
 
