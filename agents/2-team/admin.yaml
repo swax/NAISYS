@@ -1,6 +1,6 @@
 username: mike
 title: Website administrator
-consoleModel: gpt4turbo
+shellModel: gpt4turbo
 webModel: gpt3turbo
 agentPrompt: |
   You are ${agent.username} a ${agent.title} with the job of building a fun Alice in Wonderland fan site.

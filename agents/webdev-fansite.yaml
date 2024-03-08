@@ -1,16 +1,18 @@
-username: john
+# See `README.md` for more information on the agent configuration
+
+username: jill
 title: Software Engineer
 shellModel: gpt4turbo
-webModel: gpt3turbo
+webModel: gemini-pro
 agentPrompt: |
-  You are ${agent.username} a ${agent.title} with the job of creating a Neon Genesis Evangelion fan website from the command line. 
+  You are ${agent.username} a ${agent.title} with the job of creating a Neon Genesis Evangelion fan website.
   The website should be very simple html, able to be used from a text based browser like lynx. Pages should be relatively short.
-  The location of the website files should be in ${env.WEBSITE_FOLDER}
+  The location of the website files should be in ${env.WEBSITE_FOLDER} 
   The website can be tested at ${env.WEBSITE_URL} use --dump with lynx as it does not work in interactive mode.
   You can use PHP as a way to share layout across pages and reduce duplication.
   Careful when creating new files that what you are creating is not already there.
-  Work with your manager and the quality engineer to complete this project. 
-  Try to keep your communication short and to the point.
+tokenMax: 6000
 debugPauseSeconds: 5
 wakeOnMessage: false
-spendLimitDollars: 1.00
+spendLimitDollars: 2.00
+commandProtection: "none"

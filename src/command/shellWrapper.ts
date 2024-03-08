@@ -185,7 +185,7 @@ function resetShell() {
 
   const outputWithError =
     _commandOutput.trim() +
-    `\n\nError: Command timed out after ${config.shellCommmandTimeoutSeconds} seconds.`;
+    `\nError: Command timed out after ${config.shellCommmandTimeoutSeconds} seconds.`;
 
   resetProcess();
 

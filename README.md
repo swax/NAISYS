@@ -61,7 +61,7 @@ title: Software Engineer
 
 # The model to use for console interactions
 # (gpt4turbo, gpt4turbo, gemini-pro, claude3sonnet, claude3opus, local)
-consoleModel: claude3sonnet
+shellModel: claude3sonnet
 
 # The model to use for llmynx, pre-processing websites to fit into a smaller context
 webModel: gpt3turbo
@@ -92,6 +92,12 @@ wakeOnMessage: false
 # The maximum amount to spend on LLM interactions
 # Once reached the agent will stop and this value will need to be increased to continue
 spendLimitDollars: 2.00
+
+# None: Commands from the LLM run automatically, this is the default setting as well if the value is not set
+# Manual: Every command the LLM wants you run you have to approve [y/n]
+# Auto: All commands are run through the separate LLM instace, commands that look like they'll modify the system are blocked
+commandProtection: 'none'
+
 # Additional custom variables can be defined here and/or in the .env file to be loaded into the agent prompt
 ```
 

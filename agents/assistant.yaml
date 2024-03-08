@@ -4,7 +4,7 @@
 
 username: jill
 title: Software Engineer
-consoleModel: gpt4turbo
+shellModel: gpt4turbo
 webModel: gemini-pro
 agentPrompt: |
   You are ${agent.username} a ${agent.title} with the job of helping out the admin with what he wants to do.
@@ -12,4 +12,3 @@ tokenMax: 6000
 debugPauseSeconds: 0
 wakeOnMessage: false
 spendLimitDollars: 2.00
-sessionMailHelp: false

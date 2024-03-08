@@ -2,6 +2,7 @@ import { program } from "commander";
 import dotenv from "dotenv";
 import * as fs from "fs";
 import yaml from "js-yaml";
+import { CommandProtection } from "./utils/enums.js";
 import { valueFromString } from "./utils/utilities.js";
 
 program.argument("<agent-path>", "Path to agent configuration file").parse();
@@ -27,18 +28,10 @@ export const anthropicApiKey = getEnv("ANTHROPIC_API_KEY");
 
 export const agent = loadAgentConfig();
 
-function getEnv(key: string, required?: boolean) {
-  const value = process.env[key];
-  if (!value && required) {
-    throw `Config: Error, .env ${key} is not defined`;
-  }
-  return value;
-}
-
 interface AgentConfig {
   username: string;
   title: string;
-  consoleModel: string;
+  shellModel: string;
   webModel: string;
   agentPrompt: string;
   spendLimitDollars: number;
@@ -46,7 +39,7 @@ interface AgentConfig {
   /** Seconds to pause on the debug prompt before continuing LLM. No value or zero implies indefinite wait (debug driven) */
   debugPauseSeconds?: number;
   wakeOnMessage?: boolean;
-  mailHelpOnStart?: boolean;
+  commandProtection?: CommandProtection;
 }
 
 function loadAgentConfig() {
@@ -60,21 +53,28 @@ function loadAgentConfig() {
   for (const key of [
     "username",
     "title",
-    "consoleModel",
+    "shellModel",
     "webModel",
     "agentPrompt",
     "spendLimitDollars",
     "tokenMax",
-    // debugPauseSeconds and wakeOnMessage can be undefined
+    // other properties can be undefined
   ]) {
     if (!valueFromString(checkAgentConfig, key)) {
       throw `Agent config: Error, ${key} is not defined`;
     }
   }
 
-  // Because this is a new config option and the previous default was true
-  if (checkAgentConfig.mailHelpOnStart === undefined) {
-    checkAgentConfig.mailHelpOnStart = true;
+  if (!checkAgentConfig.commandProtection) {
+    checkAgentConfig.commandProtection = CommandProtection.None;
+  }
+
+  if (
+    !Object.values(CommandProtection).includes(
+      checkAgentConfig.commandProtection,
+    )
+  ) {
+    throw `Agent config: Error, 'commandProtection' is not a valid value`;
   }
 
   return checkAgentConfig;
@@ -94,4 +94,12 @@ async function getVersion() {
   } catch (e) {
     return "0.1";
   }
+}
+
+function getEnv(key: string, required?: boolean) {
+  const value = process.env[key];
+  if (!value && required) {
+    throw `Config: Error, .env ${key} is not defined`;
+  }
+  return value;
 }

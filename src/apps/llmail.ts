@@ -482,3 +482,11 @@ function validateMsgTokenCount(message: string) {
 async function usingDatabase<T>(run: (db: Database) => Promise<T>): Promise<T> {
   return dbUtils.usingDatabase(_dbFilePath, run);
 }
+
+export async function hasMultipleUsers(): Promise<boolean> {
+  return await usingDatabase(async (db) => {
+    const users = await db.all("SELECT * FROM Users");
+
+    return users.length > 1;
+  });
+}
