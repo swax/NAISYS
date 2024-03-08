@@ -21,7 +21,7 @@ const maxErrorCount = 5;
 export async function run() {
   // Show Agent Config exept the agent prompt
   await output.commentAndLog(
-    `Agent configured to use ${config.agent.consoleModel} model`,
+    `Agent configured to use ${config.agent.shellModel} model`,
   );
 
   // Show System Message
@@ -45,13 +45,13 @@ export async function run() {
     await contextManager.append("Previous Session Note:");
     await contextManager.append(commandHandler.previousSessionNotes || "None");
 
-    if (config.agent.mailHelpOnStart) {
-      await commandHandler.consoleInput(
+    if (await llmail.hasMultipleUsers()) {
+      await commandHandler.processCommand(
         await promptBuilder.getPrompt(),
         "llmail help",
       );
 
-      await commandHandler.consoleInput(
+      await commandHandler.processCommand(
         await promptBuilder.getPrompt(),
         "llmail users",
       );
@@ -64,11 +64,11 @@ export async function run() {
 
     while (nextCommandAction == NextCommandAction.Continue) {
       const prompt = await promptBuilder.getPrompt(pauseSeconds, wakeOnMessage);
-      let input = "";
+      let consoleInput = "";
 
       // Debug command prompt
       if (inputMode.current === InputMode.Debug) {
-        input = await promptBuilder.getInput(
+        consoleInput = await promptBuilder.getInput(
           `${prompt}`,
           pauseSeconds,
           wakeOnMessage,
@@ -79,19 +79,19 @@ export async function run() {
         const workingMsg =
           prompt +
           chalk[output.OutputColor.loading](
-            `LLM (${config.agent.consoleModel}) Working...`,
+            `LLM (${config.agent.shellModel}) Working...`,
           );
 
         try {
-          await displayNewMail();
-          await displayContextWarning();
+          await checkNewMailNotification();
+          await checkContextLimitWarning();
 
           await contextManager.append(prompt, ContentSource.ConsolePrompt);
 
           process.stdout.write(workingMsg);
 
-          input = await llmService.query(
-            config.agent.consoleModel,
+          consoleInput = await llmService.query(
+            config.agent.shellModel,
             contextManager.getSystemMessage(),
             contextManager.messages,
             "console",
@@ -114,7 +114,7 @@ export async function run() {
       // Run the command
       try {
         ({ nextCommandAction, pauseSeconds, wakeOnMessage } =
-          await commandHandler.consoleInput(prompt, input));
+          await commandHandler.processCommand(prompt, consoleInput));
 
         if (inputMode.current == InputMode.LLM) {
           llmErrorCount = 0;
@@ -128,7 +128,7 @@ export async function run() {
       // If the user is in debug mode and they didn't enter anything, switch to LLM
       // If in LLM mode, auto switch back to debug
       if (
-        (inputMode.current == InputMode.Debug && !input) ||
+        (inputMode.current == InputMode.Debug && !consoleInput) ||
         inputMode.current == InputMode.LLM
       ) {
         inputMode.toggle();
@@ -197,7 +197,7 @@ async function handleErrorAndSwitchToDebugMode(
   };
 }
 
-async function displayNewMail() {
+async function checkNewMailNotification() {
   // Check for unread threads
   const unreadThreads = await llmail.getUnreadThreads();
   if (!unreadThreads.length) {
@@ -250,7 +250,7 @@ async function displayNewMail() {
   }
 }
 
-async function displayContextWarning() {
+async function checkContextLimitWarning() {
   const tokenCount = contextManager.getTokenCount();
   const tokenMax = config.agent.tokenMax;
 

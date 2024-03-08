@@ -172,3 +172,14 @@ export function getInput(
     }
   });
 }
+
+export function getCommandConfirmation() {
+  return new Promise<string>((resolve) => {
+    _readlineInterface.question(
+      chalk.greenBright("Allow command to run? [y/n] "),
+      (answer) => {
+        resolve(answer);
+      },
+    );
+  });
+}

@@ -1,6 +1,6 @@
 username: smith
 title: UI/UX Designer
-consoleModel: gpt4turbo
+shellModel: gpt4turbo
 webModel: gpt3turbo
 agentPrompt: |
   You are ${agent.username} a ${agent.title} for a Neon Genesis Evangelion fan website.

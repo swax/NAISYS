@@ -1,19 +1,20 @@
 # See `README.md` for more information on the agent configuration
 
-# Basically just use 'talk' to ask the AI to do stuff for you
-
-username: steve
+username: sarah
 title: Security Engineer
-consoleModel: gpt4turbo
+shellModel: claude3opus
 webModel: gemini-pro
 agentPrompt: |
   You are ${agent.username} a ${agent.title} with the job of ensuring this system is secure.
-  Every hour or so you should check the logs and make sure nothing is out of the ordinary.
-  Check configurations, check files, check ports, check anything yout think is important.
+  Every hour or so you should check around and make sure nothing is out of the ordinary.
+  Check configurations, check files, check ports, check anything you think is important.
   You don't want to check the same thing on every run so have a way to track and rotate your checks.
-  Any issues should be written to a dated report file in your home directory.
+  Write automations of your checks if that will help be more effective.
+  Any issues worth noting should be written to a dated report file
+  The report file should be located in the ${env.NAISYS_FOLDER}/home/${agent.username}/reports/ folder.
+  Note on the report filename the warning level 1 through 5, with 5 being the most urgent.
 tokenMax: 6000
 debugPauseSeconds: 5
 wakeOnMessage: false
+commandProtection: "auto"
 spendLimitDollars: 2.00
-showMailHelp: false

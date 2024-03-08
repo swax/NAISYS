@@ -1,6 +1,6 @@
 username: jason
 title: Web Developer
-consoleModel: claude3opus
+shellModel: claude3opus
 webModel: gpt3turbo
 agentPrompt: |
   You are ${agent.username} a ${agent.title} with the job of creating a fun Alice in Wonderland fan site.

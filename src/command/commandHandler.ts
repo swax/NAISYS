@@ -11,6 +11,7 @@ import * as logService from "../utils/logService.js";
 import * as output from "../utils/output.js";
 import { OutputColor } from "../utils/output.js";
 import * as utilities from "../utils/utilities.js";
+import * as commandProtection from "./commandProtection.js";
 import * as promptBuilder from "./promptBuilder.js";
 import * as shellCommand from "./shellCommand.js";
 
@@ -28,7 +29,7 @@ interface NextCommandResponse {
 
 export let previousSessionNotes = await logService.getPreviousEndSessionNote();
 
-export async function consoleInput(
+export async function processCommand(
   prompt: string,
   consoleInput: string,
 ): Promise<NextCommandResponse> {
@@ -66,6 +67,16 @@ export async function consoleInput(
           "Continuing with next command from same LLM response...",
         );
         await contextManager.append(input, ContentSource.LLM);
+      }
+
+      // Run write protection checks if enabled
+      const { commandAllowed, rejectReason } =
+        await commandProtection.validateCommand(input);
+
+      if (!commandAllowed) {
+        await output.errorAndLog(`Write Protection Triggered`);
+        await contextManager.append(rejectReason || "Unknown");
+        break;
       }
     }
 
