@@ -85,20 +85,26 @@ tokenMax: 5000
 # No value or zero means wait indefinitely (debug driven)
 debugPauseSeconds: 5
 
-# If true, regardless of the debugPauseSeconds, the agent will not wake up on messages
-# With lots of agents this could be costly if they all end up mailing/replying each other in quick succession
+# If true, regardless of the debugPauseSeconds, the agent will wake up on messages
+# Useful for agents with long debugPauseSeconds, so that they can wake up and reply quickly
 wakeOnMessage: false
 
 # The maximum amount to spend on LLM interactions
 # Once reached the agent will stop and this value will need to be increased to continue
 spendLimitDollars: 2.00
 
-# None: Commands from the LLM run automatically, this is the default setting as well if the value is not set
-# Manual: Every command the LLM wants you run you have to approve [y/n]
-# Auto: All commands are run through the separate LLM instace, commands that look like they'll modify the system are blocked
+# Command Protection: Useful for agents you want to restrict from modifying the system
+#   None: Commands from the LLM run automatically, this is the default setting as well if the value is not set
+#   Manual: Every command the LLM wants to run has to be approved [y/n]. Not very autonomous.
+#   Auto: All commands are run through the separate LLM instace that will check to see if the command is safe
 commandProtection: 'none'
 
-# Additional custom variables can be defined here and/or in the .env file to be loaded into the agent prompt
+# Run these commands on session start, in the example below the agent will see how to use mail and a list of other agents
+initialCommands: 
+  - 'llmail users'
+  - 'llmail help'
+
+# Additional custom variables can be defined here and/or in the agent config to be loaded into the agent prompt
 ```
 
 - Run `naisys <path to yaml or directory>`

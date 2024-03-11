@@ -5,7 +5,6 @@ import * as logService from "../utils/logService.js";
 import * as output from "../utils/output.js";
 import { OutputColor } from "../utils/output.js";
 import * as utilities from "../utils/utilities.js";
-import { valueFromString } from "../utils/utilities.js";
 import { LlmMessage, LlmRole } from "./llmDtos.js";
 
 export enum ContentSource {
@@ -26,8 +25,7 @@ export function getSystemMessage() {
   // A lot of the stipulations in here are to prevent common LLM mistakes
   // Like we can't jump between standard and special commands in a single prompt, which the LLM will try to do if not warned
   let agentPrompt = config.agent.agentPrompt;
-  agentPrompt = resolveTemplateVars(agentPrompt, "agent", config.agent);
-  agentPrompt = resolveTemplateVars(agentPrompt, "env", process.env);
+  agentPrompt = config.resolveConfigVars(agentPrompt);
 
   const systemMessage = `${agentPrompt.trim()}
 
@@ -47,7 +45,7 @@ Commands:
   vi and nano are not supported
   Read files with cat. Write files with \`cat > filename << 'EOF'\`
   Do not input notes after the prompt. Only valid commands.
-Special Commands: (Don't mix with standard commands on the same prompt)
+Special Commands: (Can prefix a standard command, but not suffix one)
   llmail: A local mail system for communicating with your team
   llmynx: A context optimized web browser. Enter 'llmynx help' to learn how to use it
   comment "<thought>": Any non-command output like thinking out loud, prefix with the 'comment' command
@@ -62,22 +60,6 @@ Tokens:
 
   _cachedSystemMessage = systemMessage;
   return systemMessage;
-}
-
-function resolveTemplateVars(
-  templateString: string,
-  allowedVarString: string,
-  mappedVar: any,
-) {
-  const pattern = new RegExp(`\\$\\{${allowedVarString}\\.([^}]+)\\}`, "g");
-
-  return templateString.replace(pattern, (match, key) => {
-    const value = valueFromString(mappedVar, key);
-    if (value === undefined) {
-      throw `Agent config: Error, ${key} is not defined`;
-    }
-    return value;
-  });
 }
 
 export let messages: LlmMessage[] = [];

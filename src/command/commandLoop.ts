@@ -45,16 +45,13 @@ export async function run() {
     await contextManager.append("Previous Session Note:");
     await contextManager.append(commandHandler.previousSessionNotes || "None");
 
-    if (await llmail.hasMultipleUsers()) {
-      await commandHandler.processCommand(
-        await promptBuilder.getPrompt(),
-        "llmail help",
-      );
-
-      await commandHandler.processCommand(
-        await promptBuilder.getPrompt(),
-        "llmail users",
-      );
+    if (config.agent.initialCommands) {
+      for (const initialCommand of config.agent.initialCommands) {
+        await commandHandler.processCommand(
+          await promptBuilder.getPrompt(),
+          config.resolveConfigVars(initialCommand),
+        );
+      }
     }
 
     inputMode.toggle(InputMode.Debug);
