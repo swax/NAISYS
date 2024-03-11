@@ -9,11 +9,10 @@
     "naisys": "naisys.sh"
   },
   "scripts": {
-    "compile/run/attachable": "tsc && node --inspect dist/naisys.js ./agents/webdev-fansite.yaml",
-    "run agent:dev": "node dist/naisys.js ./agents/2-team/dev.yaml",
-    "run agent:admin": "node dist/naisys.js ./agents/2-team/admin.yaml",
+    "compile/run/attachable": "tsc && node --inspect dist/naisys.js ./agents/education.yaml",
+    "run agent:p1": "node dist/naisys.js ./agents/webdev-battle/player1.yaml",
+    "run agent:p2": "node dist/naisys.js ./agents/webdev-battle/player2.yaml",
     "clean": "rm -rf dist",
-    "clean:win": "wsl rm -rf dist",
     "compile": "tsc",
     "eslint": "npx eslint --rulesdir eslint-rules src",
     "test": "tsc && node --experimental-vm-modules node_modules/jest/bin/jest.js --testPathPattern=dist/__tests__",

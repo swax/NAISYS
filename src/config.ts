@@ -40,6 +40,7 @@ interface AgentConfig {
   debugPauseSeconds?: number;
   wakeOnMessage?: boolean;
   commandProtection?: CommandProtection;
+  initialCommands?: string[];
 }
 
 function loadAgentConfig() {
@@ -102,4 +103,27 @@ function getEnv(key: string, required?: boolean) {
     throw `Config: Error, .env ${key} is not defined`;
   }
   return value;
+}
+
+export function resolveConfigVars(templateString: string) {
+  let resolvedString = templateString;
+  resolvedString = resolveTemplateVars(resolvedString, "agent", agent);
+  resolvedString = resolveTemplateVars(resolvedString, "env", process.env);
+  return resolvedString;
+}
+
+function resolveTemplateVars(
+  templateString: string,
+  allowedVarString: string,
+  mappedVar: any,
+) {
+  const pattern = new RegExp(`\\$\\{${allowedVarString}\\.([^}]+)\\}`, "g");
+
+  return templateString.replace(pattern, (match, key) => {
+    const value = valueFromString(mappedVar, key);
+    if (value === undefined) {
+      throw `Agent config: Error, ${key} is not defined`;
+    }
+    return value;
+  });
 }

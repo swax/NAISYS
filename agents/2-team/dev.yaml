@@ -15,3 +15,8 @@ tokenMax: 6000
 debugPauseSeconds: 6
 wakeOnMessage: false
 spendLimitDollars: 6.00
+
+# Familiarize LLM with how to contact other users on the system
+initialCommands:
+  - llmail help
+  - llmail users
