@@ -2,7 +2,7 @@
 
 username: dylon
 title: Software Engineer
-shellModel: claude3opus
+shellModel: gpt4turbo
 webModel: gpt4turbo
 agentPrompt: |
   You are ${agent.username} a ${agent.title} with the job of creating a 15 week high school Chemistry 101 online course website.
@@ -22,5 +22,5 @@ debugPauseSeconds: 8
 spendLimitDollars: 10.00
 
 # Familiarize LLM with existing notes when new session starts
-initialCommands: 
+initialCommands:
   - ls ${env.NAISYS_FOLDER}/home/${agent.username}/notes/

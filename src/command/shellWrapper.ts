@@ -227,7 +227,7 @@ function resetProcess() {
 function runCommandFromScript(command: string) {
   const scriptPath = `${config.naisysFolder}/home/${config.agent.username}/.command.tmp.sh`;
 
-  // set -e causes the script to exit on any error
+  // set -e causes the script to exit on the first error
   const scriptContent = `#!/bin/bash
 set -e
 cd ${_currentPath}
@@ -236,6 +236,8 @@ ${command.trim()}`;
   // create/writewrite file
   fs.writeFileSync(naisysToHostPath(scriptPath), scriptContent);
 
-  // Source will run the script in the current shell, so any change directories in the script should persist in the current shell
-  return `source ${scriptPath}`;
+  // `Path` is set to the ./bin folder because custom NAISYS commands that follow shell commands will be handled by the shell, which will fail
+  // so we need to remind the LLM that 'naisys commands cannot be used with other commands on the same prompt'
+  // `source` will run the script in the current shell, so any change directories in the script will persist in the current shell
+  return `PATH=${config.binPath}:$PATH source ${scriptPath}`;
 }

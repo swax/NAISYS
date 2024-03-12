@@ -83,6 +83,8 @@ function loadAgentConfig() {
 
 export const packageVersion = await getVersion();
 
+export const binPath = getBinPath();
+
 /** Can only get version from env variable when naisys is started with npm,
  * otherwise need to rip it from the package ourselves relative to where this file is located */
 async function getVersion() {
@@ -126,4 +128,15 @@ function resolveTemplateVars(
     }
     return value;
   });
+}
+
+function getBinPath() {
+  // C:/git/naisys/dist/config.js
+  let binPath = new URL("../bin", import.meta.url).pathname;
+
+  if (binPath.startsWith("/C:")) {
+    binPath = "/mnt/c" + binPath.substring(3);
+  }
+
+  return binPath;
 }

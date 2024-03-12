@@ -1,0 +1,4 @@
+#!/bin/bash
+
+# ./src/command/commandHandler.ts has the same message
+echo "Comment noted. Try running commands now to achieve your goal. ."

@@ -86,6 +86,7 @@ export async function processCommand(
     switch (cmdParams[0]) {
       case "comment": {
         // Important - Hint the LLM to turn their thoughts into accounts
+        // ./bin/comment shell script has the same message
         await contextManager.append(
           "Comment noted. Try running commands now to achieve your goal.",
         );

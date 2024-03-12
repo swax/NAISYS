@@ -1,15 +1,15 @@
 {
   "name": "naisys",
   "description": "Node.js Autonomous Intelligence System",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "type": "module",
   "main": "dist/naisys.js",
   "preferGlobal": true,
   "bin": {
-    "naisys": "naisys.sh"
+    "naisys": "./bin/naisys"
   },
   "scripts": {
-    "compile/run/attachable": "tsc && node --inspect dist/naisys.js ./agents/education.yaml",
+    "compile/run/attachable": "tsc && node --inspect dist/naisys.js ./agents/gipitedia.yaml",
     "run agent:p1": "node dist/naisys.js ./agents/webdev-battle/player1.yaml",
     "run agent:p2": "node dist/naisys.js ./agents/webdev-battle/player2.yaml",
     "clean": "rm -rf dist",
@@ -21,7 +21,8 @@
     "detect-cycles": "madge --circular dist",
     "updates:check": "npm-check-updates",
     "updates:apply": "npm-check-updates -u && npm update",
-    "npm:publish:dryrun": "npm run clean && npm run compile && npm publish --dry-run"
+    "npm:publish:dryrun": "npm run clean && npm run compile && npm publish --dry-run",
+    "postinstall": "chmod +x ./bin/*"
   },
   "repository": {
     "type": "git",

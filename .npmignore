@@ -1,8 +1,9 @@
 # ignore everything
 *
 
-# bring back the dist folder
+# bring back the dist and bin folders
 !dist/**/*
+!bin/*
 
 # except for tests and map files
 dist/**/*.js.map
