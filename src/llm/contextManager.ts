@@ -40,12 +40,12 @@ NAISYS ${config.packageVersion} Shell
 Welcome back ${config.agent.username}!
 MOTD:
 Date: ${new Date().toLocaleString()}
-Commands: 
-  Standard Unix commands are available
+LINUX Commands: 
+  Standard Linux commands are available
   vi and nano are not supported
   Read files with cat. Write files with \`cat > filename << 'EOF'\`
   Do not input notes after the prompt. Only valid commands.
-Special Commands: (Can prefix a standard command, but not suffix one)
+NAISYS Commands: (cannot be used with other commands on the same prompt)
   llmail: A local mail system for communicating with your team
   llmynx: A context optimized web browser. Enter 'llmynx help' to learn how to use it
   comment "<thought>": Any non-command output like thinking out loud, prefix with the 'comment' command

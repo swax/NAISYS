@@ -97,13 +97,12 @@ spendLimitDollars: 2.00
 #   None: Commands from the LLM run automatically, this is the default setting as well if the value is not set
 #   Manual: Every command the LLM wants to run has to be approved [y/n]. Not very autonomous.
 #   Auto: All commands are run through the separate LLM instace that will check to see if the command is safe
-commandProtection: 'none'
+commandProtection: "none"
 
 # Run these commands on session start, in the example below the agent will see how to use mail and a list of other agents
-initialCommands: 
-  - 'llmail users'
-  - 'llmail help'
-
+initialCommands:
+  - "llmail users"
+  - "llmail help"
 # Additional custom variables can be defined here and/or in the agent config to be loaded into the agent prompt
 ```
 

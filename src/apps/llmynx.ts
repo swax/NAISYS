@@ -32,7 +32,9 @@ export async function handleCommand(cmdArgs: string) {
   search <query>: Search google for the given query
   open <url>: Opens the given url. Links are represented as numbers in brackets which prefix the word they are linking like [123]
   follow <link number>: Opens the given link number. Link numbers work across all previous outputs
-  links <url> <page>: Lists only the links for the given url. Use the page number to get more links`;
+  links <url> <page>: Lists only the links for the given url. Use the page number to get more links
+  
+*llmynx does not support input. Use llmynx or curl to call APIs directly*`;
     case "search": {
       const query = argParams.slice(1).join(" ");
 
