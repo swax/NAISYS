@@ -16,11 +16,10 @@ const _globalLinkMap = new Map<number, string>();
 const _globalUrlMap = new Map<string, number>();
 let _nextGlobalLinkNum = 1;
 
-export async function handleCommand(cmdArgs: string) {
+export async function handleCommand(cmdArgs: string): Promise<string> {
   outputInDebugMode("LLMYNX DEBUG MODE IS ON");
 
   const argParams = cmdArgs.split(" ");
-  const defualtTokenMax = config.agent.tokenMax / 8;
 
   if (!argParams[0]) {
     argParams[0] = "help";
@@ -28,7 +27,7 @@ export async function handleCommand(cmdArgs: string) {
 
   switch (argParams[0]) {
     case "help":
-      return `llmynx <command> (results will be reduced to around ${defualtTokenMax})
+      return `llmynx <command> (results will be reduced to around ${config.webTokenMax})
   search <query>: Search google for the given query
   open <url>: Opens the given url. Links are represented as numbers in brackets which prefix the word they are linking like [123]
   follow <link number>: Opens the given link number. Link numbers work across all previous outputs
@@ -40,47 +39,44 @@ export async function handleCommand(cmdArgs: string) {
 
       return await loadUrl(
         "https://www.google.com/search?q=" + encodeURIComponent(query),
-        config.agent.tokenMax / 2, // Prevent form being reduced as google results are usually short anyways and we want to maintainq the links
         true,
         true,
       );
     }
     case "open": {
       const url = argParams[1];
-      const isNumber = !isNaN(parseInt(argParams[2]));
-      const tokenMax = isNumber ? parseInt(argParams[2]) : defualtTokenMax;
-      return await loadUrl(url, tokenMax, false, true);
+      return await loadUrl(url, false, true);
     }
     case "follow": {
       const linkNum = parseInt(argParams[1]);
-      const isNumber = !isNaN(parseInt(argParams[2]));
-      const tokenMax = isNumber ? parseInt(argParams[2]) : defualtTokenMax;
 
       const linkUrl = _globalLinkMap.get(linkNum);
       if (!linkUrl) {
         return "Link number not found";
       }
 
-      return await loadUrl(linkUrl, tokenMax, true, false);
+      return await loadUrl(linkUrl, true, false);
     }
     case "links": {
       const url = argParams[1];
       const isNumber = !isNaN(parseInt(argParams[2]));
       const pageNumber = isNumber ? parseInt(argParams[2]) : 1;
-      return await loadUrl(url, 600, false, false, pageNumber);
+      return await loadUrl(url, false, false, pageNumber);
     }
     // Secret command to toggle debug mode
     case "debug":
       debugMode = !debugMode;
       return "Debug mode toggled " + (debugMode ? "on" : "off");
     default:
-      return "Unknown llmynx command: " + argParams[0];
+      return (
+        "Error, unknown command. See valid commands below:\n" +
+        (await handleCommand("help"))
+      );
   }
 }
 
 async function loadUrl(
   url: string,
-  tokenMax: number,
   showUrl: boolean,
   showFollowHint: boolean,
   linkPageAsContent?: number,
@@ -109,14 +105,14 @@ async function loadUrl(
   );
 
   // Reduce content using LLM if it's over the token max
-  if (contentTokenSize > tokenMax) {
+  if (contentTokenSize > config.webTokenMax) {
     const model = getLLModel(config.agent.webModel);
 
     // For example if context is 16k, and max tokens is 2k, 3k with 1.5x overrun
     // That would be 3k for the current compressed content, 10k for the chunk, and 3k for the output
-    let tokenChunkSize = model.maxTokens - tokenMax * 2 * 1.5;
+    let tokenChunkSize = model.maxTokens - config.webTokenMax * 2 * 1.5;
     if (linkPageAsContent) {
-      tokenChunkSize = tokenMax;
+      tokenChunkSize = config.webTokenMax;
     }
 
     outputInDebugMode(`Token max chunk size: ${tokenChunkSize}`);
@@ -136,7 +132,9 @@ async function loadUrl(
         continue;
       }
 
-      output.comment(`Processing Piece ${i + 1} of ${pieceCount}...`);
+      output.comment(
+        `Processing Piece ${i + 1} of ${pieceCount} with ${model.key}...`,
+      );
 
       outputInDebugMode(
         `  Reduced output tokens: ${utilities.getTokenCount(reducedOutput)}\n` +
@@ -149,7 +147,6 @@ async function loadUrl(
         i + 1,
         pieceCount,
         pieceStr,
-        tokenMax,
       );
     }
 
@@ -165,7 +162,7 @@ async function loadUrl(
       `Content reduced from ${contentTokenSize} to ${finalTokenSize} tokens`,
     );
   } else {
-    output.comment(`Content is already under ${tokenMax} tokens.`);
+    output.comment(`Content is already under ${config.webTokenMax} tokens.`);
   }
 
   // Prefix content with url if following as otherwise the url is never shown
@@ -192,17 +189,22 @@ async function runLynx(url: string) {
     exec(
       `${ifWindows}lynx -dump ${modeParams} "${url}"`,
       (error, stdout, stderr) => {
-        if (error) {
-          resolve(`error: ${error.message}`);
-          return;
+        let output = "";
+
+        if (stdout) {
+          output += stdout;
+        }
+
+        // I've only seen either/or, but just in case
+        if (stdout && stderr) {
+          output += "\nError:\n";
         }
 
         if (stderr) {
-          resolve(`stderr: ${stderr}`);
-          return;
+          output += stderr;
         }
 
-        resolve(stdout);
+        resolve(output);
       },
     );
   });
@@ -214,11 +216,10 @@ async function llmReduce(
   pieceNumber: number,
   pieceTotal: number,
   pieceStr: string,
-  tokenMax: number,
 ) {
   const systemMessage = `You will be iteratively fed the web page ${url} broken into ${pieceTotal} sequential equally sized pieces.
 Each piece should be reduced into the final content in order to maintain the meaning of the page while reducing verbosity and duplication.
-The final output should be around ${tokenMax} tokens. 
+The final output should be around ${config.webTokenMax} tokens. 
 Don't remove links which are represented as numbers in brackets which prefix the word they are linking like [123].
 Try to prioritize content of substance over advertising content.`;
 
@@ -228,7 +229,7 @@ ${pieceStr}
 Current reduced content: 
 ${reducedOutput}
 
-Please merge the new piece into the existing reduced content above while keeping the result to around ${tokenMax} tokens.
+Please merge the new piece into the existing reduced content above while keeping the result to around ${config.webTokenMax} tokens.
 
 Merged reduced content:
 `;

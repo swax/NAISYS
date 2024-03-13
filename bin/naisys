@@ -12,7 +12,7 @@ fi
 
 # Resolves the location of naisys from the bin directory
 SCRIPT=$(readlink -f "$0" || echo "$0")
-SCRIPT_DIR=$(dirname "$SCRIPT")
+SCRIPT_DIR=$(dirname "$SCRIPT")/..
 
 # if path is a yaml file then start a single agent
 if [ -f "$1" ]; then

@@ -1,6 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { MessageParam } from "@anthropic-ai/sdk/resources/messages.mjs";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { Content, GoogleGenerativeAI } from "@google/generative-ai";
 import OpenAI from "openai";
 import * as config from "../config.js";
 import * as costTracker from "./costTracker.js";
@@ -109,25 +109,39 @@ async function sendWithGoogle(
     throw "Error, last message on context is not a user message";
   }
 
-  const history = [
+  const contextHistory: Content[] = context
+    .filter((m) => m != lastMessage)
+    .map((m) => ({
+      role: m.role == LlmRole.Assistant ? "model" : "user",
+      parts: [
+        {
+          text: m.content,
+        },
+      ],
+    }));
+
+  const history: Content[] = [
     {
       role: LlmRole.User, // System role is not supported by Google API
-      parts: systemMessage,
+      parts: [
+        {
+          text: systemMessage,
+        },
+      ],
     },
     {
       role: "model",
-      parts: "Understood",
+      parts: [
+        {
+          text: "Understood",
+        },
+      ],
     },
-    ...context
-      .filter((m) => m != lastMessage)
-      .map((m) => ({
-        role: m.role == LlmRole.Assistant ? "model" : LlmRole.User,
-        parts: m.content,
-      })),
+    ...contextHistory,
   ];
 
   const chat = googleModel.startChat({
-    history: history,
+    history,
     generationConfig: {
       maxOutputTokens: 2000,
     },

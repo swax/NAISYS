@@ -34,10 +34,7 @@ _readlineInterface.on("close", () => {
   output.error("Readline interface closed");
 });
 
-export async function getPrompt(
-  pauseSeconds?: number,
-  wakeOnMessage?: boolean,
-) {
+export async function getPrompt(pauseSeconds: number, wakeOnMessage: boolean) {
   const promptSuffix = inputMode.current == InputMode.Debug ? "#" : "$";
 
   const tokenMax = config.agent.tokenMax;
@@ -73,8 +70,8 @@ export function getUserHostPrompt() {
 
 export function getInput(
   commandPrompt: string,
-  pauseSeconds?: number,
-  wakeOnMessage?: boolean,
+  pauseSeconds: number,
+  wakeOnMessage: boolean,
 ) {
   return new Promise<string>((resolve) => {
     const questionController = new AbortController();

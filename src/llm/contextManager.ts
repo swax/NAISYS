@@ -53,7 +53,6 @@ NAISYS Commands: (cannot be used with other commands on the same prompt)
   endsession "<note>": Ends this session, clears the console log and context.
     The note should help you find your bearings in the next session. 
     The note should contain your next goal, and important things should you remember.
-    Try to keep the note around 400 tokens.
 Tokens:
   The console log can only hold a certain number of 'tokens' that is specified in the prompt
   Make sure to call endsession before the limit is hit so you can continue your work with a fresh console`;

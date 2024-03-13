@@ -45,13 +45,11 @@ export async function run() {
     await contextManager.append("Previous Session Note:");
     await contextManager.append(commandHandler.previousSessionNotes || "None");
 
-    if (config.agent.initialCommands) {
-      for (const initialCommand of config.agent.initialCommands) {
-        await commandHandler.processCommand(
-          await promptBuilder.getPrompt(),
-          config.resolveConfigVars(initialCommand),
-        );
-      }
+    for (const initialCommand of config.agent.initialCommands) {
+      await commandHandler.processCommand(
+        await promptBuilder.getPrompt(0, false),
+        config.resolveConfigVars(initialCommand),
+      );
     }
 
     inputMode.toggle(InputMode.Debug);

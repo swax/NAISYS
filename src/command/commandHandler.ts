@@ -23,8 +23,8 @@ export enum NextCommandAction {
 
 interface NextCommandResponse {
   nextCommandAction: NextCommandAction;
-  pauseSeconds?: number;
-  wakeOnMessage?: boolean;
+  pauseSeconds: number;
+  wakeOnMessage: boolean;
 }
 
 export let previousSessionNotes = await logService.getPreviousEndSessionNote();

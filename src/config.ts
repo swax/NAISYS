@@ -12,8 +12,10 @@ dotenv.config();
 /** The system name that shows after the @ in the command prompt */
 export const hostname = "naisys";
 
-export const shellOutputTokenMax = 2500;
-export const shellCommmandTimeoutSeconds = 10;
+export const shellOutputTokenMax = 2500; // Limits the size of files that can be read/wrote
+export const shellCommmandTimeoutSeconds = 15; // The number of seconds NAISYS will wait for a shell command to complete
+export const webTokenMax = 2500;
+export const mailMessageTokenMax = 400;
 
 /* .env is used for global configs across naisys, while agent configs are for the specific agent */
 export const naisysFolder = getEnv("NAISYS_FOLDER", true);
@@ -37,18 +39,16 @@ interface AgentConfig {
   spendLimitDollars: number;
   tokenMax: number;
   /** Seconds to pause on the debug prompt before continuing LLM. No value or zero implies indefinite wait (debug driven) */
-  debugPauseSeconds?: number;
-  wakeOnMessage?: boolean;
-  commandProtection?: CommandProtection;
-  initialCommands?: string[];
+  debugPauseSeconds: number;
+  wakeOnMessage: boolean;
+  commandProtection: CommandProtection;
+  initialCommands: string[];
 }
 
 function loadAgentConfig() {
   const agentPath = program.args[0];
 
-  const checkAgentConfig = yaml.load(
-    fs.readFileSync(agentPath, "utf8"),
-  ) as AgentConfig;
+  const config = yaml.load(fs.readFileSync(agentPath, "utf8")) as AgentConfig;
 
   // throw if any property is undefined
   for (const key of [
@@ -61,24 +61,33 @@ function loadAgentConfig() {
     "tokenMax",
     // other properties can be undefined
   ]) {
-    if (!valueFromString(checkAgentConfig, key)) {
+    if (!valueFromString(config, key)) {
       throw `Agent config: Error, ${key} is not defined`;
     }
   }
 
-  if (!checkAgentConfig.commandProtection) {
-    checkAgentConfig.commandProtection = CommandProtection.None;
+  // Sanitize input
+  if (!config.initialCommands) {
+    config.initialCommands = [];
+  } else if (!Array.isArray(config.initialCommands)) {
+    throw `Agent config: Error, 'initialCommands' is not an array`;
   }
 
-  if (
-    !Object.values(CommandProtection).includes(
-      checkAgentConfig.commandProtection,
-    )
-  ) {
+  config.debugPauseSeconds = config.debugPauseSeconds
+    ? Number(config.debugPauseSeconds)
+    : 0;
+
+  config.wakeOnMessage = Boolean(config.wakeOnMessage);
+
+  if (!config.commandProtection) {
+    config.commandProtection = CommandProtection.None;
+  }
+
+  if (!Object.values(CommandProtection).includes(config.commandProtection)) {
     throw `Agent config: Error, 'commandProtection' is not a valid value`;
   }
 
-  return checkAgentConfig;
+  return config;
 }
 
 export const packageVersion = await getVersion();

@@ -10,9 +10,8 @@ const _dbFilePath = naisysToHostPath(`${config.naisysFolder}/lib/llmail.db`);
 
 let _myUserId = -1;
 
-// Implement maxes so that LLMs actively manage threads, archive, and create new ones
-const _threadTokenMax = config.agent.tokenMax / 2; // So 4000, would be 2000 thread max
-const _messageTokenMax = _threadTokenMax / 5; // Given the above a 400 token max, and 5 big messages per thread
+/** Threading is not currently used so this doesn't matter */
+const _threadTokenMax = config.mailMessageTokenMax * 5;
 
 /** The 'non-simple' version of this is a thread first mail system. Where agents can create threads, add users, and reply to threads, etc..
  * The problem with this was the agents were too chatty with so many mail commands, wasting context replying, reading threads, etc..
@@ -102,7 +101,7 @@ export async function handleCommand(args: string): Promise<string> {
       if (simpleMode) {
         return `llmail <command>
   users: Get list of users on the system
-  send "<users>" "subject" "message": Send a message. ${_messageTokenMax} token max.`;
+  send "<users>" "subject" "message": Send a message. ${config.mailMessageTokenMax} token max.`;
       } else {
         return `llmail <command>
   no params: List all active threads
@@ -166,7 +165,10 @@ export async function handleCommand(args: string): Promise<string> {
       return "llmail database reset";
 
     default:
-      return "Unknown llmail command: " + argParams[0];
+      return (
+        "Error, unknown command. See valid commands below:\n" +
+        (await handleCommand("help"))
+      );
   }
 }
 
@@ -472,8 +474,8 @@ async function getUser(db: Database, username: string) {
 function validateMsgTokenCount(message: string) {
   const msgTokenCount = utilities.getTokenCount(message);
 
-  if (msgTokenCount > _messageTokenMax) {
-    throw `Error: Message is ${msgTokenCount} tokens, exceeding the limit of ${_messageTokenMax} tokens`;
+  if (msgTokenCount > config.mailMessageTokenMax) {
+    throw `Error: Message is ${msgTokenCount} tokens, exceeding the limit of ${config.mailMessageTokenMax} tokens`;
   }
 
   return msgTokenCount;
