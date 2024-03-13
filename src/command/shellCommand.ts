@@ -63,7 +63,10 @@ export async function handleCommand(
       const trimLength =
         (text.length * config.shellOutputTokenMax) / tokenCount;
 
-      text = text.slice(0, trimLength);
+      text =
+        text.slice(0, trimLength / 2) +
+        "\n\n...\n\n" +
+        text.slice(-trimLength / 2);
     }
 
     await contextManager.append(text);

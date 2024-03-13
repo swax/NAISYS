@@ -1,0 +1,13 @@
+# See `README.md` for more information on the agent configuration
+
+username: ralph
+title: Software Engineer
+shellModel: claude3opus
+webModel: claude3opus
+agentPrompt: |
+  Use "llmynx open https://www.factsmachine.ai/p/hidden-in-plain-sight" 
+  to figure out how to generate an image with a hidden word in it. 
+  Then generate a sample image with the word 'NAISYS' hidden in it, in big letters.
+debugPauseSeconds: 5
+spendLimitDollars: 10.00
+tokenMax: 20000

@@ -11,6 +11,10 @@ vim or nano so point the LLM to use cat to read/write files in a single operatio
 
 [NPM](https://www.npmjs.com/package/naisys) | [Website](https://naisys.org) | [Discord](https://discord.gg/JBUPWSbaEt) | [Demo Video](https://www.youtube.com/watch?v=Ttya3ixjumo)
 
+```bash
+npm install -g naisys
+```
+
 #### Node.js is used to create a simple proxy shell environment for the LLM that
 
 - Helps the LLM keep track of its current context size
@@ -101,8 +105,9 @@ commandProtection: "none"
 
 # Run these commands on session start, in the example below the agent will see how to use mail and a list of other agents
 initialCommands:
-  - "llmail users"
-  - "llmail help"
+  - llmail users
+  - llmail help
+  - cat ${env.NAISYS_FOLDER}/home/${agent.username}/PLAN.md
 # Additional custom variables can be defined here and/or in the agent config to be loaded into the agent prompt
 ```
 
