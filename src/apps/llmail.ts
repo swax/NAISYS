@@ -101,7 +101,9 @@ export async function handleCommand(args: string): Promise<string> {
       if (simpleMode) {
         return `llmail <command>
   users: Get list of users on the system
-  send "<users>" "subject" "message": Send a message. ${config.mailMessageTokenMax} token max.`;
+  send "<users>" "subject" "message": Send a message. ${config.mailMessageTokenMax} token max.
+  
+* Attachments are not supported, use file paths to refence files in emails as all users are on the same machine`;
       } else {
         return `llmail <command>
   no params: List all active threads

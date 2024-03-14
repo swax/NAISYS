@@ -11,6 +11,14 @@ import * as utilities from "../utils/utilities.js";
 
 let debugMode = false;
 
+const _contentCache = new Map<
+  string,
+  {
+    originalContent: string;
+    reducedContent: string;
+  }
+>();
+
 /** Links numbers are unique in the context so that `llmynx follow <linknum>` can be called on all previous output */
 const _globalLinkMap = new Map<number, string>();
 const _globalUrlMap = new Map<string, number>();
@@ -37,7 +45,7 @@ export async function handleCommand(cmdArgs: string): Promise<string> {
     case "search": {
       const query = argParams.slice(1).join(" ");
 
-      return await loadUrl(
+      return await loadUrlContent(
         "https://www.google.com/search?q=" + encodeURIComponent(query),
         true,
         true,
@@ -45,7 +53,7 @@ export async function handleCommand(cmdArgs: string): Promise<string> {
     }
     case "open": {
       const url = argParams[1];
-      return await loadUrl(url, false, true);
+      return await loadUrlContent(url, false, true);
     }
     case "follow": {
       const linkNum = parseInt(argParams[1]);
@@ -55,13 +63,13 @@ export async function handleCommand(cmdArgs: string): Promise<string> {
         return "Link number not found";
       }
 
-      return await loadUrl(linkUrl, true, false);
+      return await loadUrlContent(linkUrl, true, false);
     }
     case "links": {
       const url = argParams[1];
       const isNumber = !isNaN(parseInt(argParams[2]));
       const pageNumber = isNumber ? parseInt(argParams[2]) : 1;
-      return await loadUrl(url, false, false, pageNumber);
+      return await loadUrlLinks(url, pageNumber);
     }
     // Secret command to toggle debug mode
     case "debug":
@@ -75,13 +83,68 @@ export async function handleCommand(cmdArgs: string): Promise<string> {
   }
 }
 
-async function loadUrl(
+/** The content here is not reduced by an LLM, just a paged list of global links is returned */
+async function loadUrlLinks(url: string, linkPageAsContent: number) {
+  let content = await runLynx(url);
+  let links = "";
+
+  // Reverse find 'References: ' and cut everything after it from the content
+  const refPos = content.lastIndexOf("References\n");
+  if (refPos > 0) {
+    links = content.slice(refPos);
+    content = "";
+  } else {
+    return "No Links Found";
+  }
+
+  // Iterate links and de-duplicate
+  const linkLines = links.split("\n");
+  const linkSet = new Set<string>();
+  for (const linkLine of linkLines) {
+    const dotPos = linkLine.indexOf(".");
+    if (dotPos < 0) {
+      continue;
+    }
+
+    const url = linkLine.substring(dotPos + 1).trim();
+
+    if (!linkSet.has(url)) {
+      linkSet.add(url);
+      content += url + "\n";
+    }
+  }
+
+  // Get the token size of the output
+  const linksTokenSize = utilities.getTokenCount(content);
+
+  outputInDebugMode(`Links Token size: ${linksTokenSize}`);
+
+  // Reduce content using LLM if it's over the token max
+  if (linksTokenSize > config.webTokenMax) {
+    content = await reduceContent(
+      url,
+      content,
+      linksTokenSize,
+      linkPageAsContent,
+    );
+  } else {
+    output.comment(
+      `Link Content is already under ${config.webTokenMax} tokens.`,
+    );
+
+    content = globalizeLinkList(content);
+  }
+
+  return content;
+}
+
+async function loadUrlContent(
   url: string,
   showUrl: boolean,
   showFollowHint: boolean,
-  linkPageAsContent?: number,
 ) {
-  let content = await runLynx(url);
+  const originalContent = await runLynx(url);
+  let content = originalContent;
   let links = "";
 
   // Reverse find 'References: ' and cut everything after it from the content
@@ -91,8 +154,14 @@ async function loadUrl(
     content = content.slice(0, refPos);
   }
 
-  if (linkPageAsContent) {
-    content = links;
+  let usingCachedContent = false;
+
+  if (_contentCache.has(url)) {
+    const cachedContent = _contentCache.get(url)!;
+    if (cachedContent.originalContent === originalContent) {
+      content = cachedContent.reducedContent;
+      usingCachedContent = true;
+    }
   }
 
   // Get the token size of the output
@@ -105,62 +174,15 @@ async function loadUrl(
   );
 
   // Reduce content using LLM if it's over the token max
-  if (contentTokenSize > config.webTokenMax) {
-    const model = getLLModel(config.agent.webModel);
+  if (usingCachedContent) {
+    output.comment("No changes detected, using already cached reduced content");
+  } else if (contentTokenSize > config.webTokenMax) {
+    content = await reduceContent(url, content, contentTokenSize);
 
-    // For example if context is 16k, and max tokens is 2k, 3k with 1.5x overrun
-    // That would be 3k for the current compressed content, 10k for the chunk, and 3k for the output
-    let tokenChunkSize = model.maxTokens - config.webTokenMax * 2 * 1.5;
-    if (linkPageAsContent) {
-      tokenChunkSize = config.webTokenMax;
-    }
-
-    outputInDebugMode(`Token max chunk size: ${tokenChunkSize}`);
-
-    const pieceCount = Math.ceil(contentTokenSize / tokenChunkSize);
-    const pieceSize = content.length / pieceCount;
-    let reducedOutput = "";
-
-    for (let i = 0; i < pieceCount; i++) {
-      const startPos = i * pieceSize;
-      const pieceStr = content.substring(startPos, startPos + pieceSize);
-
-      if (linkPageAsContent) {
-        if (linkPageAsContent === i + 1) {
-          return formatLinkPiece(pieceStr);
-        }
-        continue;
-      }
-
-      output.comment(
-        `Processing Piece ${i + 1} of ${pieceCount} with ${model.key}...`,
-      );
-
-      outputInDebugMode(
-        `  Reduced output tokens: ${utilities.getTokenCount(reducedOutput)}\n` +
-          `  Current Piece tokens: ${utilities.getTokenCount(pieceStr)}`,
-      );
-
-      reducedOutput = await llmReduce(
-        url,
-        reducedOutput,
-        i + 1,
-        pieceCount,
-        pieceStr,
-      );
-    }
-
-    if (linkPageAsContent) {
-      return "";
-    }
-
-    content = reducedOutput;
-
-    const finalTokenSize = utilities.getTokenCount(reducedOutput);
-
-    output.comment(
-      `Content reduced from ${contentTokenSize} to ${finalTokenSize} tokens`,
-    );
+    _contentCache.set(url, {
+      originalContent,
+      reducedContent: content,
+    });
   } else {
     output.comment(`Content is already under ${config.webTokenMax} tokens.`);
   }
@@ -210,6 +232,69 @@ async function runLynx(url: string) {
   });
 }
 
+async function reduceContent(
+  url: string,
+  content: string,
+  contentTokenSize: number,
+  linkPageAsContent?: number,
+) {
+  const model = getLLModel(config.agent.webModel);
+
+  // For example if context is 16k, and max tokens is 2k, 3k with 1.5x overrun
+  // That would be 3k for the current compressed content, 10k for the chunk, and 3k for the output
+  let tokenChunkSize = model.maxTokens - config.webTokenMax * 2 * 1.5;
+  if (linkPageAsContent) {
+    tokenChunkSize = config.webTokenMax;
+  }
+
+  outputInDebugMode(`Token max chunk size: ${tokenChunkSize}`);
+
+  const pieceCount = Math.ceil(contentTokenSize / tokenChunkSize);
+  const pieceSize = content.length / pieceCount;
+  let reducedOutput = "";
+
+  for (let i = 0; i < pieceCount; i++) {
+    const startPos = i * pieceSize;
+    const pieceStr = content.substring(startPos, startPos + pieceSize);
+
+    if (linkPageAsContent) {
+      if (linkPageAsContent === i + 1) {
+        return globalizeLinkList(pieceStr);
+      }
+      continue;
+    }
+
+    output.comment(
+      `Processing Piece ${i + 1} of ${pieceCount} with ${model.key}...`,
+    );
+
+    outputInDebugMode(
+      `  Reduced output tokens: ${utilities.getTokenCount(reducedOutput)}\n` +
+        `  Current Piece tokens: ${utilities.getTokenCount(pieceStr)}`,
+    );
+
+    reducedOutput = await llmReduce(
+      url,
+      reducedOutput,
+      i + 1,
+      pieceCount,
+      pieceStr,
+    );
+  }
+
+  if (linkPageAsContent) {
+    return "";
+  }
+
+  const finalTokenSize = utilities.getTokenCount(reducedOutput);
+
+  output.comment(
+    `Content reduced from ${contentTokenSize} to ${finalTokenSize} tokens`,
+  );
+
+  return reducedOutput;
+}
+
 async function llmReduce(
   url: string,
   reducedOutput: string,
@@ -217,21 +302,22 @@ async function llmReduce(
   pieceTotal: number,
   pieceStr: string,
 ) {
-  const systemMessage = `You will be iteratively fed the web page ${url} broken into ${pieceTotal} sequential equally sized pieces.
-Each piece should be reduced into the final content in order to maintain the meaning of the page while reducing verbosity and duplication.
+  const systemMessage = `You will be iteratively fed the web page "${url}" broken into ${pieceTotal} pieces.
+Each 'Web Page Piece' should be merged with the  in order 'Current Reduced Content' to maintain the meaning of the page while reducing verbosity and duplication.
 The final output should be around ${config.webTokenMax} tokens. 
-Don't remove links which are represented as numbers in brackets which prefix the word they are linking like [123].
+Links are represented as numbers in brackets, for example [4]. Try not to remove them in the 'Final Merged Content'
 Try to prioritize content of substance over advertising content.`;
 
-  const content = `Web page piece ${pieceNumber} of ${pieceTotal}: 
+  const content = `Web Page Piece ${pieceNumber} of ${pieceTotal}: 
 ${pieceStr}
 
-Current reduced content: 
+Please merge the 'Web Page Piece' above into the 'Current Reduced Content' below while keeping the result to around ${config.webTokenMax} tokens.
+
+Current Reduced Content: 
 ${reducedOutput}
 
-Please merge the new piece into the existing reduced content above while keeping the result to around ${config.webTokenMax} tokens.
 
-Merged reduced content:
+Final Merged Content:
 `;
 
   const context: LlmMessage = {
@@ -302,27 +388,23 @@ function registerUrl(url: string) {
   return globalLinkNum;
 }
 
-function formatLinkPiece(pieceStr: string) {
+function globalizeLinkList(pieceStr: string) {
   const alreadySeen = new Set<string>();
   const linkLines = pieceStr.split("\n");
-  let links = "";
+  let globalLinks = "";
 
   for (const linkLine of linkLines) {
-    const dotPos = linkLine.indexOf(".");
-    if (dotPos < 0) {
-      continue;
-    }
+    const url = linkLine.trim();
 
-    const url = linkLine.substring(dotPos + 1).trim();
-    if (alreadySeen.has(url)) {
+    if (!url || alreadySeen.has(url)) {
       continue;
     }
     alreadySeen.add(url);
 
     const globalLinkNum = registerUrl(url);
 
-    links += `[${globalLinkNum}]${url}\n`;
+    globalLinks += `[${globalLinkNum}]${url}\n`;
   }
 
-  return links;
+  return globalLinks;
 }

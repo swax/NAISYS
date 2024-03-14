@@ -55,7 +55,6 @@ function loadAgentConfig() {
     "username",
     "title",
     "shellModel",
-    "webModel",
     "agentPrompt",
     "spendLimitDollars",
     "tokenMax",
@@ -78,6 +77,8 @@ function loadAgentConfig() {
     : 0;
 
   config.wakeOnMessage = Boolean(config.wakeOnMessage);
+
+  config.webModel = config.webModel || config.shellModel;
 
   if (!config.commandProtection) {
     config.commandProtection = CommandProtection.None;
