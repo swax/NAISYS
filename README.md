@@ -65,10 +65,15 @@ title: Software Engineer
 
 # The model to use for console interactions
 # (gpt4turbo, gpt4turbo, gemini-pro, claude3sonnet, claude3opus, local)
-shellModel: claude3sonnet
+shellModel: gpt4turbo
 
-# The model to use for llmynx, pre-processing websites to fit into a smaller context
-webModel: gpt3turbo
+# Only used between sessions to provide guidance for the next session (use a more powerful model for this)
+# defaults to the shellModel if omitted
+dreamModel: claude3opus
+
+# The model to use for llmynx, pre-processing websites to fit into a smaller context (use a cheaper model)
+# defaults to the shellModel if omitted
+webModel: gemini-pro
 
 # A system like prompt explaining the agent's role and responsibilities
 # You can use config variables in this string

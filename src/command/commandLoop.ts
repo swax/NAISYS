@@ -5,6 +5,7 @@ import * as llmynx from "../apps/llmynx.js";
 import * as config from "../config.js";
 import * as contextManager from "../llm/contextManager.js";
 import { ContentSource } from "../llm/contextManager.js";
+import * as dreamMaker from "../llm/dreamMaker.js";
 import { LlmRole } from "../llm/llmDtos.js";
 import * as llmService from "../llm/llmService.js";
 import * as inputMode from "../utils/inputMode.js";
@@ -42,8 +43,12 @@ export async function run() {
     inputMode.toggle(InputMode.LLM);
 
     await output.commentAndLog("Starting Context:");
-    await contextManager.append("Previous Session Note:");
-    await contextManager.append(commandHandler.previousSessionNotes || "None");
+
+    const latestDream = await dreamMaker.goodmorning();
+    if (latestDream) {
+      await contextManager.append("Previous Session Notes:");
+      await contextManager.append(latestDream);
+    }
 
     for (const initialCommand of config.agent.initialCommands) {
       await commandHandler.processCommand(

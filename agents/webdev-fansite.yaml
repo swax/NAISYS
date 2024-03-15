@@ -11,8 +11,6 @@ agentPrompt: |
   The website can be tested with 'llmynx open ${env.WEBSITE_URL}'
   You can use PHP as a way to share layout across pages and reduce duplication.
   Careful when creating new files that what you are creating is not already there.
-tokenMax: 20000
+tokenMax: 5000
 debugPauseSeconds: 5
-spendLimitDollars: 3.00
-initialCommands:
-  - ls ${env.WEBSITE_FOLDER}/evangelion_fan_site
+spendLimitDollars: 2.00
