@@ -1,0 +1,16 @@
+# https://twitter.com/emollick/status/1768496382149640539/photo/1
+
+username: phillip
+title: Software Engineer
+shellModel: claude3opus
+dreamModel: claude3opus
+agentPrompt: |
+  Create a map where I can select major airports in the US and see travel time between them.
+
+  The location of the website files should be in ${env.WEBSITE_FOLDER}.
+  The website accessed with 'llmynx open ${env.WEBSITE_URL}'
+  Use curl to test form submissions and APIs.
+  You can use PHP for server side scripting.
+tokenMax: 20000
+debugPauseSeconds: 5
+spendLimitDollars: 10.00

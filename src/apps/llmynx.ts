@@ -35,7 +35,7 @@ export async function handleCommand(cmdArgs: string): Promise<string> {
 
   switch (argParams[0]) {
     case "help":
-      return `llmynx <command> (results will be reduced to around ${config.webTokenMax})
+      return `llmynx <command> (results will be reduced to around ${config.webTokenMax} tokens)
   search <query>: Search google for the given query
   open <url>: Opens the given url. Links are represented as numbers in brackets which prefix the word they are linking like [123]
   follow <link number>: Opens the given link number. Link numbers work across all previous outputs

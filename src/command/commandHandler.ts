@@ -5,9 +5,9 @@ import * as config from "../config.js";
 import * as contextManager from "../llm/contextManager.js";
 import { ContentSource } from "../llm/contextManager.js";
 import * as costTracker from "../llm/costTracker.js";
+import * as dreamMaker from "../llm/dreamMaker.js";
 import * as inputMode from "../utils/inputMode.js";
 import { InputMode } from "../utils/inputMode.js";
-import * as logService from "../utils/logService.js";
 import * as output from "../utils/output.js";
 import { OutputColor } from "../utils/output.js";
 import * as utilities from "../utils/utilities.js";
@@ -26,8 +26,6 @@ interface NextCommandResponse {
   pauseSeconds: number;
   wakeOnMessage: boolean;
 }
-
-export let previousSessionNotes = await logService.getPreviousEndSessionNote();
 
 export async function processCommand(
   prompt: string,
@@ -94,14 +92,16 @@ export async function processCommand(
       }
       case "endsession": {
         // Don't need to check end line as this is the last command in the context, just read to the end
-        previousSessionNotes = utilities.trimChars(cmdArgs, '"');
+        const endSessionNotes = utilities.trimChars(cmdArgs, '"');
 
-        if (!previousSessionNotes) {
+        if (!endSessionNotes) {
           await contextManager.append(
             `End session notes are required. Use endsession "<notes>"`,
           );
           break;
         }
+
+        await dreamMaker.goodnight();
 
         await output.commentAndLog(
           "------------------------------------------------------",

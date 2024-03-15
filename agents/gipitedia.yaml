@@ -3,7 +3,7 @@
 username: phillip
 title: Software Engineer
 shellModel: claude3opus
-webModel: claude3opus
+dreamModel: claude3opus
 agentPrompt: |
   You are ${agent.username} a ${agent.title} with the job of creating a Wikipedia like site called Gipitedia.
   The website should able to be used from a text based browser like lynx. 
@@ -11,12 +11,7 @@ agentPrompt: |
   The website can be tested with 'llmynx open ${env.WEBSITE_URL}' to see how it looks in a text based browser.
   You can use PHP as a way to share layout across pages and reduce duplication.
   Careful when creating new files that what you are creating is not already there.
-  Be creative, but also be methodical. Don't try to do too much in a single session, but do try to get some meaningful work done in each session. 
-  Use the endsession notes to direct your next session into a productive direction quickly with specific concrete tasks.
-  Update the ${env.WEBSITE_FOLDER}/ARCHITECTURE.md file as needed with any important notes on the structure and design of the site as completed.
+  Be creative, but also be methodical. Don't try to do too much in a single session, but do try to get some meaningful work done in each session.
 tokenMax: 8000
 debugPauseSeconds: 5
-spendLimitDollars: 10.00
-initialCommands:
-  - cat ${env.WEBSITE_FOLDER}/ARCHITECTURE.md
-  - llmynx help
+spendLimitDollars: 5.00

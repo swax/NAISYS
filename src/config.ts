@@ -35,6 +35,7 @@ interface AgentConfig {
   title: string;
   shellModel: string;
   webModel: string;
+  dreamModel: string;
   agentPrompt: string;
   spendLimitDollars: number;
   tokenMax: number;
@@ -78,7 +79,8 @@ function loadAgentConfig() {
 
   config.wakeOnMessage = Boolean(config.wakeOnMessage);
 
-  config.webModel = config.webModel || config.shellModel;
+  config.webModel ||= config.shellModel;
+  config.dreamModel ||= config.shellModel;
 
   if (!config.commandProtection) {
     config.commandProtection = CommandProtection.None;
