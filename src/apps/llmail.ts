@@ -85,6 +85,8 @@ async function init() {
   });
 }
 
+export const waitingForMailMessage = "Waiting for new mail messages...";
+
 export async function handleCommand(args: string): Promise<string> {
   const argParams = args.split(" ");
 
@@ -102,6 +104,7 @@ export async function handleCommand(args: string): Promise<string> {
         return `llmail <command>
   users: Get list of users on the system
   send "<users>" "subject" "message": Send a message. ${config.mailMessageTokenMax} token max.
+  wait: Pause the session until a new mail message is received
   
 * Attachments are not supported, use file paths to refence files in emails as all users are on the same machine`;
       } else {
@@ -109,6 +112,7 @@ export async function handleCommand(args: string): Promise<string> {
   no params: List all active threads
   users: Get list of users on the system
   send "<users>" "subject" "message": Send a new mail, starting a new thread
+  wait: Pause the session until a new mail message is received
   read <id>: Read a thread
   reply <id> <message>: Reply to a thread
   adduser <id> <username>: Add a user to thread with id
@@ -125,6 +129,9 @@ export async function handleCommand(args: string): Promise<string> {
       return await newThread(usernames, subject, message);
     }
 
+    case "wait": {
+      return waitingForMailMessage;
+    }
     case "read": {
       const threadId = parseInt(argParams[1]);
 
