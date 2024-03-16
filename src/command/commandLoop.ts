@@ -51,8 +51,10 @@ export async function run() {
     }
 
     for (const initialCommand of config.agent.initialCommands) {
+      const prompt = await promptBuilder.getPrompt(0, false);
+      await contextManager.append(prompt, ContentSource.ConsolePrompt);
       await commandHandler.processCommand(
-        await promptBuilder.getPrompt(0, false),
+        prompt,
         config.resolveConfigVars(initialCommand),
       );
     }
@@ -197,10 +199,25 @@ async function handleErrorAndSwitchToDebugMode(
   };
 }
 
+let mailBlackoutCountdown = 0;
+
 async function checkNewMailNotification() {
+  let supressMail = false;
+  if (mailBlackoutCountdown > 0) {
+    mailBlackoutCountdown--;
+    supressMail = true;
+  }
+
   // Check for unread threads
   const unreadThreads = await llmail.getUnreadThreads();
   if (!unreadThreads.length) {
+    return;
+  }
+
+  if (supressMail) {
+    await output.commentAndLog(
+      `New mail notifications blackout in effect. ${mailBlackoutCountdown} cycles remaining.`,
+    );
     return;
   }
 
@@ -230,10 +247,12 @@ async function checkNewMailNotification() {
     for (const unreadThread of unreadThreads) {
       await llmail.markAsRead(unreadThread.threadId);
     }
+
+    mailBlackoutCountdown = config.mailBlackoutCycles;
   } else if (llmail.simpleMode) {
     await contextManager.append(
       `You have new mail, but not enough context to read them.\n` +
-        `Finish up what you're doing. After you 'endsession' and the context resets, you will be able to read them.`,
+        `After you 'endsession' and the context resets, you will be able to read them.`,
       ContentSource.Console,
     );
   }

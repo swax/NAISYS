@@ -128,15 +128,21 @@ export async function processCommand(
         break;
       }
 
-      // With no argument, in debug mode, pause will pause forever,
-      // in LLM mode it will pause until a message is receieved
-      //    Don't want the llm to hang itself, but it still can if it's the only agent or if all the agents pause..
-      // The setting only lasts for the next command, next loop it uses the agent default
       case "pause": {
+        const pauseSeconds = cmdArgs ? parseInt(cmdArgs) : 0;
+
+        // Don't allow the LLM to hang itself
+        if (inputMode.current === InputMode.LLM && !pauseSeconds) {
+          await contextManager.append(
+            "Puase command requires a number of seconds to pause for",
+          );
+          break;
+        }
+
         return {
           nextCommandAction: NextCommandAction.Continue,
-          pauseSeconds: cmdArgs ? parseInt(cmdArgs) : 0,
-          wakeOnMessage: inputMode.current === InputMode.LLM,
+          pauseSeconds,
+          wakeOnMessage: false, // llmail has a 'wait' command that is useful in multi-agent situations
         };
       }
 
@@ -157,6 +163,14 @@ export async function processCommand(
       case "llmail": {
         const mailResponse = await llmail.handleCommand(cmdArgs);
         await contextManager.append(mailResponse);
+
+        if (mailResponse == llmail.waitingForMailMessage) {
+          return {
+            nextCommandAction: NextCommandAction.Continue,
+            pauseSeconds: 0,
+            wakeOnMessage: true,
+          };
+        }
         break;
       }
 

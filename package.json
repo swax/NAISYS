@@ -1,7 +1,7 @@
 {
   "name": "naisys",
   "description": "Node.js Autonomous Intelligence System",
-  "version": "1.3.0",
+  "version": "1.3.1",
   "type": "module",
   "main": "dist/naisys.js",
   "preferGlobal": true,
@@ -9,7 +9,7 @@
     "naisys": "bin/naisys"
   },
   "scripts": {
-    "compile/run/attachable": "tsc && node --inspect dist/naisys.js ./agents/webdev-fansite.yaml",
+    "compile/run/attachable": "tsc && node --inspect dist/naisys.js ./agents/juicer.yaml",
     "agent:dev": "node dist/naisys.js ./agents/3-team-dev-db-content/dev.yaml",
     "agent:db": "node dist/naisys.js ./agents/3-team-dev-db-content/db.yaml",
     "agent:content": "node dist/naisys.js ./agents/3-team-dev-db-content/content.yaml",
@@ -61,7 +61,7 @@
     "dotenv": "16.4.5",
     "escape-html": "1.0.3",
     "js-yaml": "4.1.0",
-    "openai": "4.29.0",
+    "openai": "4.29.1",
     "sqlite": "5.1.1",
     "sqlite3": "5.1.7",
     "text-table": "0.2.0",

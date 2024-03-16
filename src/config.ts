@@ -12,10 +12,16 @@ dotenv.config();
 /** The system name that shows after the @ in the command prompt */
 export const hostname = "naisys";
 
-export const shellOutputTokenMax = 2500; // Limits the size of files that can be read/wrote
-export const shellCommmandTimeoutSeconds = 15; // The number of seconds NAISYS will wait for a shell command to complete
+/** Limits the size of files that can be read/wrote */
+export const shellOutputTokenMax = 2500; //
+
+/** The number of seconds NAISYS will wait for a shell command to complete */
+export const shellCommmandTimeoutSeconds = 15;
 export const webTokenMax = 2500;
 export const mailMessageTokenMax = 400;
+
+/** Used to prevent the agent from constantly responding to mail and not getting any work done */
+export const mailBlackoutCycles = 3;
 
 /* .env is used for global configs across naisys, while agent configs are for the specific agent */
 export const naisysFolder = getEnv("NAISYS_FOLDER", true);
