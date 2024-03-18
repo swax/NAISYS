@@ -2,8 +2,9 @@ import { program } from "commander";
 import dotenv from "dotenv";
 import * as fs from "fs";
 import yaml from "js-yaml";
+import path from "path";
 import { CommandProtection } from "./utils/enums.js";
-import { valueFromString } from "./utils/utilities.js";
+import { hostToUnixPath, valueFromString } from "./utils/utilities.js";
 
 program.argument("<agent-path>", "Path to agent configuration file").parse();
 
@@ -37,11 +38,14 @@ export const anthropicApiKey = getEnv("ANTHROPIC_API_KEY");
 export const agent = loadAgentConfig();
 
 interface AgentConfig {
+  path: string;
+  directory: string;
   username: string;
   title: string;
   shellModel: string;
   webModel: string;
   dreamModel: string;
+  imageModel?: string;
   agentPrompt: string;
   spendLimitDollars: number;
   tokenMax: number;
@@ -53,9 +57,12 @@ interface AgentConfig {
 }
 
 function loadAgentConfig() {
-  const agentPath = program.args[0];
+  const config = yaml.load(
+    fs.readFileSync(program.args[0], "utf8"),
+  ) as AgentConfig;
 
-  const config = yaml.load(fs.readFileSync(agentPath, "utf8")) as AgentConfig;
+  config.path = hostToUnixPath(path.resolve(program.args[0]));
+  config.directory = config.path.substring(0, config.path.lastIndexOf("/"));
 
   // throw if any property is undefined
   for (const key of [

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Make sure to enable this script for execution with `chmod +x runteam.sh`
+# Make sure to enable this script for execution with `chmod +x naisys`
 
 # Check if an argument is provided
 if [ $# -eq 0 ]; then

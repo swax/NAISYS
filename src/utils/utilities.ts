@@ -1,17 +1,30 @@
 import * as fs from "fs";
 import * as os from "os";
+import path from "path";
 import { get_encoding } from "tiktoken";
 
-/** Take a NAISYS path and convert to something that can be
+/** Take a unix path and convert to something that can be
  *  opened by the host with the native fs library and such */
-export function naisysToHostPath(filePath: string) {
-  if (os.platform() === "win32" && filePath.startsWith("/mnt/")) {
-    // "/mnt/c/" -> "c:/"
-    filePath = filePath.substring(5);
-    return filePath[0] + ":" + filePath.substring(1);
-  } else {
-    return filePath;
+export function unixToHostPath(unixPath: string) {
+  const match = unixPath.match(/^\/mnt\/([a-zA-Z])\//);
+
+  if (os.platform() === "win32" && match) {
+    // Replace '/mnt/c/' with 'C:/' and convert forward slashes to backslashes
+    return unixPath
+      .replace(`/mnt/${match[1]}/`, `${match[1].toLowerCase()}:\\`)
+      .replace(/\//g, "\\");
   }
+  return unixPath;
+}
+
+export function hostToUnixPath(hostPath: string) {
+  const match = hostPath.match(/^([a-zA-Z]):\\(.*)/);
+
+  if (os.platform() === "win32" && match) {
+    // Replace 'C:\' with '/mnt/c/' and convert backslashes to forward slashes
+    return `/mnt/${match[1].toLowerCase()}/${match[2].replace(/\\/g, "/")}`;
+  }
+  return hostPath; // Return the original path if it doesn't match the pattern
 }
 
 export function valueFromString(obj: any, path: string, defaultValue?: string) {
@@ -36,9 +49,9 @@ export function getTokenCount(text: string) {
 }
 
 export function ensureFileDirExists(filePath: string) {
-  const dir = filePath.split("/").slice(0, -1).join("/");
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
+  const dirname = path.dirname(filePath);
+  if (!fs.existsSync(dirname)) {
+    fs.mkdirSync(dirname, { recursive: true });
   }
 }
 

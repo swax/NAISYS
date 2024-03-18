@@ -76,6 +76,12 @@ export async function handleCommand(
         `\nThe shell command generated too much output (${tokenCount} tokens). Only 2,000 tokens worth are shown above.`,
       );
     }
+
+    if (text.endsWith(": command not found")) {
+      await contextManager.append(
+        "Please enter a valid Linux or NAISYS command after the prompt. Use the 'comment' command for thoughts.",
+      );
+    }
   }
 
   response.hasErrors = output.hasErrors;

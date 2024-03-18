@@ -75,6 +75,10 @@ dreamModel: claude3opus
 # defaults to the shellModel if omitted
 webModel: gemini-pro
 
+# The model used by the 'genimg' command. If not defined then the genimg command is not available to the LLM
+# Valid values: dalle2-256, dalle2-512, dalle2-1024, dalle3-1024, dalle3-1024-HD
+imageModel: dalle3-1024
+
 # A system like prompt explaining the agent's role and responsibilities
 # You can use config variables in this string
 agentPrompt: |
@@ -161,10 +165,11 @@ initialCommands:
   - `comment "<note>"` - The LLM is directed to use this for 'thinking out loud' which avoids 'invalid command' errors
   - `endsession "<note>"` - Clear the context and start a new session.
     - The LLM is directed to track it's context size and to end the session with a note before running over the context limit
-  - `pause <seconds>` - Can be used by the debug agent or the LLM to pause execution indefinitely, or until a new message is received from another agent, or for a set number of seconds
+  - `pause <seconds>` - Can be used by the debug agent or the LLM to pause execution for a set number of seconds
 - NAISYS apps
   - `llmail` - A context friendly 'mail system' used for agent to agent communication
   - `llmynx` - A context friendly wrapping on the lynx browser that can use a separate LLM to reduce the size of a large webpage into something that can fit into the LLM's context
+  - `genimg "<description>" <filename>` - Generates an image with the given description, save at the specified path
 
 ## Running NAISYS from Source
 

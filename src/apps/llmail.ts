@@ -4,9 +4,9 @@ import table from "text-table";
 import * as config from "../config.js";
 import * as dbUtils from "../utils/dbUtils.js";
 import * as utilities from "../utils/utilities.js";
-import { naisysToHostPath } from "../utils/utilities.js";
+import { unixToHostPath } from "../utils/utilities.js";
 
-const _dbFilePath = naisysToHostPath(`${config.naisysFolder}/lib/llmail.db`);
+const _dbFilePath = unixToHostPath(`${config.naisysFolder}/lib/llmail.db`);
 
 let _myUserId = -1;
 

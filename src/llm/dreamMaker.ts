@@ -2,12 +2,12 @@ import { Database } from "sqlite";
 import * as config from "../config.js";
 import * as dbUtils from "../utils/dbUtils.js";
 import * as output from "../utils/output.js";
-import { naisysToHostPath } from "../utils/utilities.js";
+import { unixToHostPath } from "../utils/utilities.js";
 import * as contextManager from "./contextManager.js";
 import { LlmRole } from "./llmDtos.js";
 import * as llmService from "./llmService.js";
 
-const _dbFilePath = naisysToHostPath(`${config.naisysFolder}/lib/dream.db`);
+const _dbFilePath = unixToHostPath(`${config.naisysFolder}/lib/dream.db`);
 
 await init();
 
@@ -55,8 +55,10 @@ export async function goodnight(): Promise<string> {
 async function runDreamSequence(): Promise<string> {
   const systemMessage = `You are ${config.agent.username}'s unconcious sleep process. You compile all ${config.agent.username}'s
 thoughts during the day and reduce them down to important things to remember - references, plans, project structure, schemas, 
-file locations, urls, and more. You are the sleep process, and you are the most important process. Using your results, 
-when ${config.agent.username} wakes up they'll know exactly what to do and how to do it.`;
+file locations, urls, and more. You don't need to summarize what happened today, or what to do in the far future, just focus on the
+near term. Check what happened during the day for inconsistencies, things to fix and/or check tomorrow. You are the sleep process, 
+and you are the most important process. Using your results, when ${config.agent.username} wakes up they'll know exactly what to do 
+and how to do it with minimal time spent scanning existing work because you've laid everything out so well.`;
 
   const allTheThings = contextManager.messages.map((m) => m.content).join("\n");
 
