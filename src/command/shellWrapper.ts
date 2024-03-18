@@ -3,7 +3,7 @@ import * as fs from "fs";
 import * as os from "os";
 import * as config from "../config.js";
 import * as output from "../utils/output.js";
-import { naisysToHostPath } from "../utils/utilities.js";
+import { unixToHostPath } from "../utils/utilities.js";
 
 type CommandResponse = {
   value: string;
@@ -85,7 +85,7 @@ function errorIfNotEmpty(response: CommandResponse) {
   }
 }
 
-export function processOutput(dataStr: string, eventType: ShellEvent) {
+function processOutput(dataStr: string, eventType: ShellEvent) {
   if (!_resolveCurrentCommand) {
     output.comment(eventType + " without handler: " + dataStr);
     return;
@@ -234,7 +234,7 @@ cd ${_currentPath}
 ${command.trim()}`;
 
   // create/writewrite file
-  fs.writeFileSync(naisysToHostPath(scriptPath), scriptContent);
+  fs.writeFileSync(unixToHostPath(scriptPath), scriptContent);
 
   // `Path` is set to the ./bin folder because custom NAISYS commands that follow shell commands will be handled by the shell, which will fail
   // so we need to remind the LLM that 'naisys commands cannot be used with other commands on the same prompt'

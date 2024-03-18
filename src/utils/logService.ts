@@ -4,15 +4,15 @@ import { Database } from "sqlite";
 import * as config from "../config.js";
 import { LlmMessage, LlmRole } from "../llm/llmDtos.js";
 import * as dbUtils from "./dbUtils.js";
-import { ensureFileDirExists, naisysToHostPath } from "./utilities.js";
+import { ensureFileDirExists, unixToHostPath } from "./utilities.js";
 
-const _dbFilePath = naisysToHostPath(`${config.naisysFolder}/lib/log.db`);
+const _dbFilePath = unixToHostPath(`${config.naisysFolder}/lib/log.db`);
 
-const _combinedLogFilePath = naisysToHostPath(
+const _combinedLogFilePath = unixToHostPath(
   `${config.websiteFolder || config.naisysFolder}/logs/combined-log.html`,
 );
 
-const _userLogFilePath = naisysToHostPath(
+const _userLogFilePath = unixToHostPath(
   `${config.websiteFolder || config.naisysFolder}/logs/${config.agent.username}-log.html`,
 );
 

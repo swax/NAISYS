@@ -1,9 +1,9 @@
 import { Database } from "sqlite";
 import * as config from "../config.js";
 import * as dbUtils from "../utils/dbUtils.js";
-import { naisysToHostPath } from "../utils/utilities.js";
+import { unixToHostPath } from "../utils/utilities.js";
 
-const _dbFilePath = naisysToHostPath(`${config.naisysFolder}/lib/costs.db`);
+const _dbFilePath = unixToHostPath(`${config.naisysFolder}/lib/costs.db`);
 
 await init();
 

@@ -21,6 +21,12 @@ export function getSystemMessage() {
     return _cachedSystemMessage;
   }
 
+  let genImgCmd = "";
+  if (config.agent.imageModel) {
+    genImgCmd = `
+  genimg "<description>" <filename>: Generate an image with the description and save it to the given filename`;
+  }
+
   // Fill out the templates in the agent prompt and stick it to the front of the system message
   // A lot of the stipulations in here are to prevent common LLM mistakes
   // Like we can't jump between standard and special commands in a single prompt, which the LLM will try to do if not warned
@@ -35,6 +41,7 @@ Don't try to guess the output of commands. Don't put commands in \`\`\` blocks.
 For example when you run 'cat' or 'ls', don't write what you think the output will be. Let the system do that.
 Your role is that of the user. The system will provide responses and next command prompt. Don't output your own command prompt.
 Be careful when writing files through the command prompt with cat. Make sure to close and escape quotes properly.
+Don't blindly overwrite existing files without reading them first.
 
 NAISYS ${config.packageVersion} Shell
 Welcome back ${config.agent.username}!
@@ -47,7 +54,7 @@ LINUX Commands:
   Do not input notes after the prompt. Only valid commands.
 NAISYS Commands: (cannot be used with other commands on the same prompt)
   llmail: A local mail system for communicating with your team
-  llmynx: A context optimized web browser. Enter 'llmynx help' to learn how to use it
+  llmynx: A context optimized web browser. Enter 'llmynx help' to learn how to use it${genImgCmd}
   comment "<thought>": Any non-command output like thinking out loud, prefix with the 'comment' command
   pause <seconds>: Pause for <seconds>
   endsession "<note>": Ends this session, clears the console log and context.

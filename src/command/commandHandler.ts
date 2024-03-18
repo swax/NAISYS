@@ -1,4 +1,5 @@
 import chalk from "chalk";
+import * as genimg from "../apps/genimg.js";
 import * as llmail from "../apps/llmail.js";
 import * as llmynx from "../apps/llmynx.js";
 import * as config from "../config.js";
@@ -171,6 +172,12 @@ export async function processCommand(
             wakeOnMessage: true,
           };
         }
+        break;
+      }
+
+      case "genimg": {
+        const genimgResponse = await genimg.handleCommand(cmdArgs);
+        await contextManager.append(genimgResponse);
         break;
       }
 
