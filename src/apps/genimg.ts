@@ -1,28 +1,35 @@
+import * as fs from "fs";
 import OpenAI from "openai";
 import path from "path";
 import sharp from "sharp";
-import * as shellWrapper from "../command/shellWrapper.js";
 import * as config from "../config.js";
 import * as costTracker from "../llm/costTracker.js";
 import * as output from "../utils/output.js";
 import { unixToHostPath } from "../utils/utilities.js";
 
-/** genimg "<description>" <filename>: Generate an image with the description and save it to the file path */
+/** genimg "<description>" <filepath>: Generate an image with the description and save it to the file path */
 export async function handleCommand(args: string): Promise<string> {
   // genimg sholdn't even be presented as an available command unless it is defined in the config
   if (!config.agent.imageModel) {
     throw "Agent config: Error, 'imageModel' is not defined";
   }
 
-  const description = args.split('"')[1];
-  let filename = args.split('"')[2];
+  const description = args.split('"')[1].trim();
+  const filepath = args.split('"')[2].trim();
 
   if (!description) {
     throw "Error: Description is required";
   }
 
-  if (!filename) {
-    filename = `${config.naisysFolder}/home/${config.agent.username}/generated_image.jpg`;
+  if (!filepath) {
+    throw "Error: Filepath is required";
+  }
+
+  // Check directory exists
+  const hostpath = unixToHostPath(filepath);
+  const dirname = path.dirname(hostpath);
+  if (!fs.existsSync(dirname)) {
+    throw `Error: Directory does not exist`;
   }
 
   output.comment(`Generating image with ${config.agent.imageModel}...`);
@@ -50,16 +57,18 @@ export async function handleCommand(args: string): Promise<string> {
   const imageBuffer = Buffer.from(base64Image, "base64");
 
   // Use sharp to convert the buffer and save it as a JPG file
-  const currentPath = unixToHostPath(await shellWrapper.getCurrentPath());
-  const filepath = path.join(currentPath, filename);
+  //const currentPath = unixToHostPath(await shellWrapper.getCurrentPath());
+  //const filepath = path.join(currentPath, filename);
   const fileExtension = path.extname(filepath).substring(1);
 
-  await sharp(imageBuffer).toFormat(<any>fileExtension).toFile(filepath);
+  await sharp(imageBuffer)
+    .toFormat(<any>fileExtension)
+    .toFile(hostpath);
 
   // Record the cost
   await costTracker.recordCost(model.cost, "genimg", model.name);
 
-  return "Image generated and saved to " + filename;
+  return "Image generated and saved to " + filepath;
 }
 
 interface ImageModel {

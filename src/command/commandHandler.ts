@@ -264,7 +264,10 @@ async function splitMultipleInputCommands(nextInput: string) {
     }
   }
   // If the LLM forgets the quote on the comment, treat it as a single line comment
-  else if (newLinePos > 0 && nextInput.startsWith("comment ")) {
+  else if (
+    newLinePos > 0 &&
+    (nextInput.startsWith("comment ") || nextInput.startsWith("genimg "))
+  ) {
     input = nextInput.slice(0, newLinePos);
     nextInput = nextInput.slice(newLinePos).trim();
   }

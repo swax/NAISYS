@@ -169,7 +169,7 @@ initialCommands:
 - NAISYS apps
   - `llmail` - A context friendly 'mail system' used for agent to agent communication
   - `llmynx` - A context friendly wrapping on the lynx browser that can use a separate LLM to reduce the size of a large webpage into something that can fit into the LLM's context
-  - `genimg "<description>" <filename>` - Generates an image with the given description, save at the specified path
+  - `genimg "<description>" <filepath>` - Generates an image with the given description, save at the specified path
 
 ## Running NAISYS from Source
 

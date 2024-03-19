@@ -24,7 +24,7 @@ export function getSystemMessage() {
   let genImgCmd = "";
   if (config.agent.imageModel) {
     genImgCmd = `
-  genimg "<description>" <filename>: Generate an image with the description and save it to the given filename`;
+  genimg "<description>" <filepath>: Generate an image with the description and save it to the given filename`;
   }
 
   // Fill out the templates in the agent prompt and stick it to the front of the system message
