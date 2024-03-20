@@ -9,10 +9,9 @@
     "naisys": "bin/naisys"
   },
   "scripts": {
-    "compile/run/attachable": "tsc && node --inspect dist/naisys.js ./agents/single-agent-websites/mud.yaml",
-    "agent:dev": "node dist/naisys.js ./agents/3-team-dev-db-content/dev.yaml",
-    "agent:db": "node dist/naisys.js ./agents/3-team-dev-db-content/db.yaml",
-    "agent:content": "node dist/naisys.js ./agents/3-team-dev-db-content/content.yaml",
+    "compile/run/attachable": "tsc && node --inspect dist/naisys.js ./agents/mud/mud.yaml",
+    "agent:claude": "node dist/naisys.js ./agents/mud/battle-claude.yaml",
+    "agent:gpt": "node dist/naisys.js ./agents/mud/battle-gpt.yaml",
     "clean": "rm -rf dist",
     "compile": "tsc",
     "eslint": "npx eslint --rulesdir eslint-rules src",

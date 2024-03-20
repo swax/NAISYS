@@ -193,3 +193,11 @@ initialCommands:
 - If you want to use NAISYS for a website
   - Install a local web server, for example [XAMPP](https://www.apachefriends.org/) on Windows
   - Start the server and put the URL in the `.env` file
+
+## Changelog
+
+- 1.4: `genimg` command for generating images
+- 1.3: Post-session 'dreaming' as well as a mail 'blackout' period
+- 1.2: Created stand-in shell commands for custom Naisys commands
+- 1.1: Added command protection settings to prevent unwanted writes
+- 1.0: Initial release

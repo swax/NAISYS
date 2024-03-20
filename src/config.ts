@@ -1,8 +1,10 @@
 import { program } from "commander";
 import dotenv from "dotenv";
 import * as fs from "fs";
+import { readFile } from "fs/promises";
 import yaml from "js-yaml";
 import path from "path";
+import { fileURLToPath } from "url";
 import { CommandProtection } from "./utils/enums.js";
 import { hostToUnixPath, valueFromString } from "./utils/utilities.js";
 
@@ -14,11 +16,11 @@ dotenv.config();
 export const hostname = "naisys";
 
 /** Limits the size of files that can be read/wrote */
-export const shellOutputTokenMax = 2500; //
+export const shellOutputTokenMax = 3000; //
 
 /** The number of seconds NAISYS will wait for a shell command to complete */
 export const shellCommmandTimeoutSeconds = 15;
-export const webTokenMax = 2500;
+export const webTokenMax = 3000;
 export const mailMessageTokenMax = 400;
 
 /** Used to prevent the agent from constantly responding to mail and not getting any work done */
@@ -114,11 +116,15 @@ export const binPath = getBinPath();
  * otherwise need to rip it from the package ourselves relative to where this file is located */
 async function getVersion() {
   try {
-    const packageJsonPath = new URL("../package.json", import.meta.url);
-    const packageJson = await import(packageJsonPath.href, {
+    /* Removed for compatibility with https://bundlephobia.com/package/naisys
+    const packageJson = await import(packageJsonUrl.href, {
       assert: { type: "json" },
-    });
-    return packageJson.default.version;
+    });*/
+
+    const packageJsonUrl = new URL("../package.json", import.meta.url);
+    const packageJsonPath = fileURLToPath(packageJsonUrl);
+    const packageJson = JSON.parse(await readFile(packageJsonPath, "utf8"));
+    return packageJson.version;
   } catch (e) {
     return "0.1";
   }
