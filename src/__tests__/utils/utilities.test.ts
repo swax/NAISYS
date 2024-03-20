@@ -1,9 +1,9 @@
 import { describe, expect, test } from "@jest/globals";
 import {
-  hostToUnixPath,
-  trimChars,
-  unixToHostPath,
-  valueFromString,
+    hostToUnixPath,
+    trimChars,
+    unixToHostPath,
+    valueFromString,
 } from "../../utils/utilities.js";
 
 describe("trimChars function", () => {

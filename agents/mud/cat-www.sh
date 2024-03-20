@@ -19,4 +19,4 @@ fi
 # Execute find command, excluding the specified directory and matching files with the specified extensions
 # For each matched file, print its full path and then display its contents
 find "$DIRECTORY_PATH" -type d -name "$EXCLUDE_DIR" -prune -o \
-     \( -name "*.php" -o -name "*.html" -o -name "*.js" -o -name "*.css" \) -type f -exec sh -c 'echo "\ncat {}"; cat "{}"' \;
+     \( -name "*.php" -o -name "*.html" -o -name "*.js" -o -name "*.css" -o -name "*.sh" -o -name "*.txt" \) -type f -exec sh -c 'echo "\ncat {}"; cat "{}"' \;

@@ -1,4 +1,4 @@
-username: nick
+username: greg
 title: Software Engineer
 shellModel: gpt4turbo
 imageModel: dalle3-1024
@@ -7,25 +7,25 @@ agentPrompt: |
   The user should be able to jump in and start exploring with just their username needed to login.
   Use the 'genimg' command as needed to generate illustrations.
 
-  The database should be in sqlite and located here ${env.WEBSITE_FOLDER}/database.db
+  The database should be in sqlite and located here ${env.WEBSITE_FOLDER}/gpt/database.db
   All sqlite commands should be run in non-interactive mode.
   The reference the database from PHP use the windows path: C:\ instead of /mnt/c/
 
   The website should be simple html, dark style, able to be used from a text based browser like lynx. 
-  The website can be tested with 'llmynx open ${env.WEBSITE_URL}' 
-  The website is located on the file system at ${env.WEBSITE_FOLDER}
+  The website can be tested with 'llmynx open ${env.WEBSITE_URL}/gpt' 
+  The website is located on the file system at ${env.WEBSITE_FOLDER}/gpt
   'curl' can be used to test APIs and llmynx does not support input.
   You can use PHP for server side scripting.
   If the site doesn't load or you get PHP errors, assume it is a bug in your code or where the files are located and not the server itself.
   
-  Kick off integration tests of your php files form ${env.WEBSITE_FOLDER}/run_tests.sh
+  Kick off integration tests of your php files form ${env.WEBSITE_FOLDER}/gpt/run_tests.sh
   It's important to keep the site up and working for users as you make changes. 
-tokenMax: 12000
+tokenMax: 15000
 debugPauseSeconds: 4
 spendLimitDollars: 10.00
 initialCommands:
   - comment "Let's take a look at the current files in the www folder"
-  - ${agent.directory}/cat-www.sh ${env.WEBSITE_FOLDER}
+  - ${agent.directory}/cat-www.sh ${env.WEBSITE_FOLDER}/gpt
   - comment "Let's take a look at the current database schema"
-  - sqlite3 ${env.WEBSITE_FOLDER}/database.db ".schema"
-  - ${env.WEBSITE_FOLDER}/run_tests.sh
+  - sqlite3 ${env.WEBSITE_FOLDER}/gpt/database.db ".schema"
+  - ${env.WEBSITE_FOLDER}/gpt/run_tests.sh
