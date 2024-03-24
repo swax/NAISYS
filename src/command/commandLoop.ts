@@ -4,9 +4,8 @@ import * as llmail from "../apps/llmail.js";
 import * as llmynx from "../apps/llmynx.js";
 import * as config from "../config.js";
 import * as contextManager from "../llm/contextManager.js";
-import { ContentSource } from "../llm/contextManager.js";
 import * as dreamMaker from "../llm/dreamMaker.js";
-import { LlmRole } from "../llm/llmDtos.js";
+import { ContentSource, LlmRole } from "../llm/llmDtos.js";
 import * as llmService from "../llm/llmService.js";
 import * as inputMode from "../utils/inputMode.js";
 import { InputMode } from "../utils/inputMode.js";
@@ -38,6 +37,7 @@ export async function run() {
   let nextCommandAction = NextCommandAction.Continue;
 
   let llmErrorCount = 0;
+  let nextPromptIndex = 0;
 
   while (nextCommandAction != NextCommandAction.ExitApplication) {
     inputMode.toggle(InputMode.LLM);
@@ -51,8 +51,13 @@ export async function run() {
     }
 
     for (const initialCommand of config.agent.initialCommands) {
-      const prompt = await promptBuilder.getPrompt(0, false);
-      await contextManager.append(prompt, ContentSource.ConsolePrompt);
+      let prompt = await promptBuilder.getPrompt(0, false);
+      prompt = `${++nextPromptIndex}. ${prompt}`;
+      await contextManager.append(
+        prompt,
+        ContentSource.ConsolePrompt,
+        nextPromptIndex,
+      );
       await commandHandler.processCommand(
         prompt,
         config.resolveConfigVars(initialCommand),
@@ -65,7 +70,7 @@ export async function run() {
     let wakeOnMessage = config.agent.wakeOnMessage;
 
     while (nextCommandAction == NextCommandAction.Continue) {
-      const prompt = await promptBuilder.getPrompt(pauseSeconds, wakeOnMessage);
+      let prompt = await promptBuilder.getPrompt(pauseSeconds, wakeOnMessage);
       let consoleInput = "";
 
       // Debug command prompt
@@ -78,6 +83,8 @@ export async function run() {
       }
       // LLM command prompt
       else if (inputMode.current === InputMode.LLM) {
+        prompt = `${++nextPromptIndex}. ${prompt}`;
+
         const workingMsg =
           prompt +
           chalk[output.OutputColor.loading](
@@ -88,14 +95,18 @@ export async function run() {
           await checkNewMailNotification();
           await checkContextLimitWarning();
 
-          await contextManager.append(prompt, ContentSource.ConsolePrompt);
+          await contextManager.append(
+            prompt,
+            ContentSource.ConsolePrompt,
+            nextPromptIndex,
+          );
 
           process.stdout.write(workingMsg);
 
           consoleInput = await llmService.query(
             config.agent.shellModel,
             contextManager.getSystemMessage(),
-            contextManager.messages,
+            contextManager.getCombinedMessages(),
             "console",
           );
 
@@ -141,6 +152,7 @@ export async function run() {
       llmynx.clear();
       contextManager.clear();
       nextCommandAction = NextCommandAction.Continue;
+      nextPromptIndex = 0;
     }
   }
 }

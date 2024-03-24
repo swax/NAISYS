@@ -1,7 +1,7 @@
 {
   "name": "naisys",
   "description": "Node.js Autonomous Intelligence System",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "type": "module",
   "main": "dist/naisys.js",
   "preferGlobal": true,
@@ -9,7 +9,7 @@
     "naisys": "bin/naisys"
   },
   "scripts": {
-    "compile/run/attachable": "tsc && node --inspect dist/naisys.js ./agents/mud/mud.yaml",
+    "compile/run/attachable": "tsc && node --inspect dist/naisys.js ./agents/solo-websites/webdev-fansite.yaml",
     "agent:claude": "node dist/naisys.js ./agents/mud/battle-claude.yaml",
     "agent:gpt": "node dist/naisys.js ./agents/mud/battle-gpt.yaml",
     "clean": "rm -rf dist",

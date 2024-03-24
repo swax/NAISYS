@@ -4,9 +4,9 @@ import * as llmail from "../apps/llmail.js";
 import * as llmynx from "../apps/llmynx.js";
 import * as config from "../config.js";
 import * as contextManager from "../llm/contextManager.js";
-import { ContentSource } from "../llm/contextManager.js";
 import * as costTracker from "../llm/costTracker.js";
 import * as dreamMaker from "../llm/dreamMaker.js";
+import { ContentSource } from "../llm/llmDtos.js";
 import * as inputMode from "../utils/inputMode.js";
 import { InputMode } from "../utils/inputMode.js";
 import * as output from "../utils/output.js";
@@ -89,6 +89,11 @@ export async function processCommand(
         await contextManager.append(
           "Comment noted. Try running commands now to achieve your goal.",
         );
+        break;
+      }
+      case "trimsession": {
+        const trimSummary = contextManager.trim(cmdArgs);
+        await contextManager.append(trimSummary);
         break;
       }
       case "endsession": {
@@ -266,7 +271,9 @@ async function splitMultipleInputCommands(nextInput: string) {
   // If the LLM forgets the quote on the comment, treat it as a single line comment
   else if (
     newLinePos > 0 &&
-    (nextInput.startsWith("comment ") || nextInput.startsWith("genimg "))
+    (nextInput.startsWith("comment ") ||
+      nextInput.startsWith("genimg ") ||
+      nextInput.startsWith("trimsession "))
   ) {
     input = nextInput.slice(0, newLinePos);
     nextInput = nextInput.slice(newLinePos).trim();

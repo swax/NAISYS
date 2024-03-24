@@ -96,25 +96,6 @@ export async function write(message: LlmMessage) {
   return insertedId;
 }
 
-export async function update(message: LlmMessage, appendedText: string) {
-  await usingDatabase(async (db) => {
-    await db.run(
-      "UPDATE ContextLog SET message = ? WHERE id = ?",
-      message.content,
-      message.logId,
-    );
-  });
-
-  // Can't rewrite the log like we can the db, so just log the appended text
-  const appendedMessage = {
-    role: message.role,
-    content: appendedText,
-  };
-
-  appendToLogFile(_combinedLogFilePath, appendedMessage);
-  appendToLogFile(_userLogFilePath, appendedMessage);
-}
-
 function appendToLogFile(filepath: string, message: LlmMessage) {
   const source = roleToSource(message.role);
 

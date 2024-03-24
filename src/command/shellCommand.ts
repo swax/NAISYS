@@ -49,27 +49,27 @@ export async function handleCommand(
     return response;
   }
 
-  const output = await shellWrapper.executeCommand(input);
+  const commandResponse = await shellWrapper.executeCommand(input);
 
-  if (output.value) {
-    let text = output.value;
+  if (commandResponse.value) {
+    let response = commandResponse.value;
     let outputLimitExceeded = false;
-    const tokenCount = utilities.getTokenCount(text);
+    const tokenCount = utilities.getTokenCount(response);
 
     // Prevent too much output from blowing up the context
     if (tokenCount > config.shellOutputTokenMax) {
       outputLimitExceeded = true;
 
       const trimLength =
-        (text.length * config.shellOutputTokenMax) / tokenCount;
+        (response.length * config.shellOutputTokenMax) / tokenCount;
 
-      text =
-        text.slice(0, trimLength / 2) +
+      response =
+        response.slice(0, trimLength / 2) +
         "\n\n...\n\n" +
-        text.slice(-trimLength / 2);
+        response.slice(-trimLength / 2);
     }
 
-    await contextManager.append(text);
+    await contextManager.append(response);
 
     if (outputLimitExceeded) {
       await contextManager.append(
@@ -77,14 +77,14 @@ export async function handleCommand(
       );
     }
 
-    if (text.endsWith(": command not found")) {
+    if (response.endsWith(": command not found")) {
       await contextManager.append(
         "Please enter a valid Linux or NAISYS command after the prompt. Use the 'comment' command for thoughts.",
       );
     }
   }
 
-  response.hasErrors = output.hasErrors;
+  response.hasErrors = commandResponse.hasErrors;
 
   return response;
 }
