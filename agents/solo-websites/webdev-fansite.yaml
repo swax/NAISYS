@@ -2,7 +2,7 @@
 
 username: jill
 title: Software Engineer
-shellModel: claude3opus
+shellModel: gpt4turbo
 imageModel: dalle3-1024
 agentPrompt: |
   You are ${agent.username} a ${agent.title} with the job of creating a Neon Genesis Evangelion fan website.
@@ -15,4 +15,4 @@ agentPrompt: |
   You can use PHP for server side scripting, and 'genimg' to illustrate.
 tokenMax: 8000
 debugPauseSeconds: 4
-spendLimitDollars: 5.00
+spendLimitDollars: 6.00

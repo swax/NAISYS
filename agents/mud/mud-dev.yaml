@@ -29,7 +29,7 @@ tokenMax: 16000
 debugPauseSeconds: 5
 spendLimitDollars: 7.00
 # Somehow agents seem to just break the websites they create the longer they run
-# So just show everything so the agent can get off to a good start 
+# So just show everything so the agent can get off to a good start
 initialCommands:
   - llmail users
   - llmail help

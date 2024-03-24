@@ -17,9 +17,9 @@ agentPrompt: |
   'curl' can be used to test APIs and llmynx does not support input.
   You can use PHP for server side scripting.
   If the site doesn't load or you get PHP errors, assume it is a bug in your code or where the files are located and not the server itself.
-  
+
   Kick off integration tests of your php files form ${env.WEBSITE_FOLDER}/claude/run_tests.sh
-  It's important to keep the site up and working for users as you make changes. 
+  It's important to keep the site up and working for users as you make changes.
 tokenMax: 15000
 debugPauseSeconds: 4
 spendLimitDollars: 10.00

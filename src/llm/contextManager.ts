@@ -5,14 +5,7 @@ import * as logService from "../utils/logService.js";
 import * as output from "../utils/output.js";
 import { OutputColor } from "../utils/output.js";
 import * as utilities from "../utils/utilities.js";
-import { LlmMessage, LlmRole } from "./llmDtos.js";
-
-export enum ContentSource {
-  ConsolePrompt = "startPrompt",
-  LlmPromptResponse = "endPrompt",
-  Console = "console",
-  LLM = "llm",
-}
+import { ContentSource, LlmMessage, LlmRole } from "./llmDtos.js";
 
 let _cachedSystemMessage = "";
 
@@ -24,7 +17,7 @@ export function getSystemMessage() {
   let genImgCmd = "";
   if (config.agent.imageModel) {
     genImgCmd = `
-  genimg "<description>" <filepath>: Generate an image with the description and save it to the given filename`;
+  genimg "<description>" <filepath>: Generate an image with the description and save it to the given fully qualified path`;
   }
 
   // Fill out the templates in the agent prompt and stick it to the front of the system message
@@ -57,27 +50,41 @@ NAISYS Commands: (cannot be used with other commands on the same prompt)
   llmynx: A context optimized web browser. Enter 'llmynx help' to learn how to use it${genImgCmd}
   comment "<thought>": Any non-command output like thinking out loud, prefix with the 'comment' command
   pause <seconds>: Pause for <seconds>
+  trimsession <indexes>: Removes the specified prompts and respective output with matching <indexes>. For example '1-5, 8, 11-13'
   endsession "<note>": Ends this session, clears the console log and context.
     The note should help you find your bearings in the next session. 
     The note should contain your next goal, and important things should you remember.
 Tokens:
   The console log can only hold a certain number of 'tokens' that is specified in the prompt
-  Make sure to call endsession before the limit is hit so you can continue your work with a fresh console`;
+  Make sure to call endsession before the limit is hit so you can continue your work with a fresh console
+  Each prompt is prefixed with an index like '1.' 
+  You can use 'trimsession' to recover tokens by removing unwanted prompts and their respective output`;
 
   _cachedSystemMessage = systemMessage;
   return systemMessage;
 }
 
-export let messages: LlmMessage[] = [];
+let _messages: LlmMessage[] = [];
 
 export async function append(
-  text: string,
+  content: string,
   source: ContentSource = ContentSource.Console,
+  promptIndex?: number,
 ) {
+  if (
+    promptIndex &&
+    (source != ContentSource.ConsolePrompt ||
+      inputMode.current === InputMode.Debug)
+  ) {
+    throw new Error(
+      "Prompt index can only be set for console prompts in LLM input mode",
+    );
+  }
+
   // Debug runs in a shadow mode where their activity is not recorded in the context
   // Mark with a # to make it clear that it is not part of the context
   if (inputMode.current === InputMode.Debug) {
-    output.comment(text);
+    output.comment(content);
     return;
   }
 
@@ -93,43 +100,30 @@ export async function append(
     throw new Error("Invalid source");
   }
 
-  // If last message is the same role then combine - Googl API requires alterntating roles
-  // TODO: Maybe dont do this here, but in the google api call
-  let combined = false;
-
-  if (messages.length > 0) {
-    const lastMessage = messages[messages.length - 1];
-
-    if (lastMessage.role == role) {
-      lastMessage.content += `\n${text}`;
-      combined = true;
-      await logService.update(lastMessage, text);
-    }
-  }
-
-  if (!combined) {
-    const llmMessage = <LlmMessage>{ role, content: text };
-    llmMessage.logId = await logService.write(llmMessage);
-    messages.push(llmMessage);
-  }
+  const llmMessage = <LlmMessage>{ source, role, content, promptIndex };
+  llmMessage.logId = await logService.write(llmMessage);
+  _messages.push(llmMessage);
 
   // Prompts are manually added to the console log
   if (
     source != ContentSource.ConsolePrompt &&
     source != ContentSource.LlmPromptResponse
   ) {
-    output.write(text, source == "llm" ? OutputColor.llm : OutputColor.console);
+    output.write(
+      content,
+      source == "llm" ? OutputColor.llm : OutputColor.console,
+    );
   }
 }
 
 export function clear() {
-  messages = [];
+  _messages = [];
 }
 
 export function getTokenCount() {
   const sytemMessageTokens = utilities.getTokenCount(getSystemMessage());
 
-  return messages.reduce((acc, message) => {
+  return _messages.reduce((acc, message) => {
     return acc + utilities.getTokenCount(message.content);
   }, sytemMessageTokens);
 }
@@ -137,8 +131,90 @@ export function getTokenCount() {
 export function printContext() {
   output.comment("#####################");
   // output.comment(content);
-  messages.forEach((message) => {
+  _messages.forEach((message) => {
     output.comment(`${message.role}: ${message.content}`);
   });
   output.comment("#####################");
 }
+
+/** Combine message list with adjacent messages of the same role role combined */
+export function getCombinedMessages() {
+  const combinedMessages: LlmMessage[] = [];
+  let lastMessage: LlmMessage | undefined;
+
+  for (const message of _messages) {
+    if (lastMessage && lastMessage.role == message.role) {
+      lastMessage.content += `\n${message.content}`;
+    } else {
+      const clonedMsg = { ...message };
+      combinedMessages.push(clonedMsg);
+      lastMessage = clonedMsg;
+    }
+  }
+
+  return combinedMessages;
+}
+
+export function trim(
+  /** Example: 1-5, 8, 11-13 */
+  args: string,
+): string {
+  args = utilities.trimChars(args, " \"'");
+
+  const indexGroups = args.split(",");
+
+  let tokensReduced = 0;
+
+  for (const indexGroup of indexGroups) {
+    const indexRange = indexGroup.split("-");
+
+    let trimStart = 0;
+    let trimEnd = 0;
+
+    if (indexRange.length == 1) {
+      trimStart = trimEnd = parseInt(indexRange[0]);
+    } else if (indexRange.length == 2) {
+      trimStart = parseInt(indexRange[0]);
+      trimEnd = parseInt(indexRange[1]);
+    } else {
+      throw "Invalid index range: " + indexGroup;
+    }
+
+    if (trimEnd < trimStart) {
+      throw "End index must be greater than start index";
+    }
+
+    const trimmedMessages = [];
+    let trimming = false;
+
+    for (let i = 0; i < _messages.length; i++) {
+      const m = _messages[i];
+
+      // Trim until the next console prompt is hit
+      if (m.source == ContentSource.ConsolePrompt && trimming) {
+        trimming = false;
+      }
+
+      if (
+        trimming ||
+        (m.promptIndex &&
+          m.promptIndex >= trimStart &&
+          m.promptIndex <= trimEnd)
+      ) {
+        output.comment(`Trimmed: ${m.content}`);
+        tokensReduced += utilities.getTokenCount(m.content);
+        trimming = true;
+      } else {
+        trimmedMessages.push(m);
+      }
+    }
+
+    _messages = trimmedMessages;
+  }
+
+  return `Trimmed session by ${tokensReduced} tokens`;
+}
+
+export const exportedForTesting = {
+  getMessages: () => _messages,
+};

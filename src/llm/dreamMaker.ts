@@ -60,7 +60,10 @@ near term. Check what happened during the day for inconsistencies, things to fix
 and you are the most important process. Using your results, when ${config.agent.username} wakes up they'll know exactly what to do 
 and how to do it with minimal time spent scanning existing work because you've laid everything out so well.`;
 
-  const allTheThings = contextManager.messages.map((m) => m.content).join("\n");
+  const allTheThings = contextManager
+    .getCombinedMessages()
+    .map((m) => m.content)
+    .join("\n");
 
   return await llmService.query(
     config.agent.dreamModel,
