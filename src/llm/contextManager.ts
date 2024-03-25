@@ -1,3 +1,4 @@
+import * as workspaces from "../apps/workspaces.js";
 import * as config from "../config.js";
 import * as inputMode from "../utils/inputMode.js";
 import { InputMode } from "../utils/inputMode.js";
@@ -9,6 +10,10 @@ import { ContentSource, LlmMessage, LlmRole } from "./llmDtos.js";
 
 let _cachedSystemMessage = "";
 
+let _messages: LlmMessage[] = [];
+
+clear();
+
 export function getSystemMessage() {
   if (_cachedSystemMessage) {
     return _cachedSystemMessage;
@@ -16,8 +21,37 @@ export function getSystemMessage() {
 
   let genImgCmd = "";
   if (config.agent.imageModel) {
-    genImgCmd = `
-  genimg "<description>" <filepath>: Generate an image with the description and save it to the given fully qualified path`;
+    genImgCmd = `\ngenimg "<description>" <filepath>: Generate an image with the description and save it to the given fully qualified path`;
+  }
+
+  let workspaces = "";
+  if (config.workspacesEnabled) {
+    workspaces = `\nWorkspaces:`;
+    workspaces += `\n  Put file soft links into ~/workspace/ to see their latest contents live updated here.`;
+  }
+
+  let endsession = "";
+  if (config.endSessionEnabled) {
+    endsession = `\nendsession "<note>": Ends this session, clears the console log and context.
+    The note should help you find your bearings in the next session. 
+    The note should contain your next goal, and important things should you remember.`;
+  }
+
+  let trimSession = "";
+  if (config.trimSessionEnabled) {
+    trimSession = `\ntrimsession <indexes>: Saves tokesn by removing the specified prompts and respective output with matching <indexes>. For example '1-5, 8, 11-13'`;
+  }
+
+  let tokenNote = "";
+
+  if (config.endSessionEnabled) {
+    tokenNote =
+      "\n  Make sure to call 'endsession' before the limit is hit so you can continue your work with a fresh console";
+  }
+
+  if (!config.endSessionEnabled && config.trimSessionEnabled) {
+    tokenNote =
+      "\n  Make sure to call 'trimsession' before the limit is hit so you stay under the limit.\n  Use comments to remember important things from trimmed prompts.";
   }
 
   // Fill out the templates in the agent prompt and stick it to the front of the system message
@@ -49,22 +83,13 @@ NAISYS Commands: (cannot be used with other commands on the same prompt)
   llmail: A local mail system for communicating with your team
   llmynx: A context optimized web browser. Enter 'llmynx help' to learn how to use it${genImgCmd}
   comment "<thought>": Any non-command output like thinking out loud, prefix with the 'comment' command
-  pause <seconds>: Pause for <seconds>
-  trimsession <indexes>: Removes the specified prompts and respective output with matching <indexes>. For example '1-5, 8, 11-13'
-  endsession "<note>": Ends this session, clears the console log and context.
-    The note should help you find your bearings in the next session. 
-    The note should contain your next goal, and important things should you remember.
+  pause <seconds>: Pause for <seconds>${trimSession}${endsession}
 Tokens:
-  The console log can only hold a certain number of 'tokens' that is specified in the prompt
-  Make sure to call endsession before the limit is hit so you can continue your work with a fresh console
-  Each prompt is prefixed with an index like '1.' 
-  You can use 'trimsession' to recover tokens by removing unwanted prompts by index and their respective output`;
+  The console log can only hold a certain number of 'tokens' that is specified in the prompt${tokenNote}${workspaces}`;
 
   _cachedSystemMessage = systemMessage;
   return systemMessage;
 }
-
-let _messages: LlmMessage[] = [];
 
 export async function append(
   content: string,
@@ -121,10 +146,24 @@ export async function append(
 
 export function clear() {
   _messages = [];
+
+  if (!config.workspacesEnabled) {
+    return;
+  }
+
+  // Append workspace
+  _messages.push({
+    source: ContentSource.Console,
+    role: LlmRole.User,
+    content: "",
+    type: "workspace",
+  });
 }
 
 export function getTokenCount() {
   const sytemMessageTokens = utilities.getTokenCount(getSystemMessage());
+
+  updateWorkspaces();
 
   return _messages.reduce((acc, message) => {
     return acc + utilities.getTokenCount(message.content);
@@ -145,6 +184,8 @@ export function printContext() {
 
 /** Combine message list with adjacent messages of the same role role combined */
 export function getCombinedMessages() {
+  updateWorkspaces();
+
   const combinedMessages: LlmMessage[] = [];
   let lastMessage: LlmMessage | undefined;
 
@@ -224,3 +265,17 @@ export function trim(
 export const exportedForTesting = {
   getMessages: () => _messages,
 };
+
+function updateWorkspaces() {
+  if (!config.workspacesEnabled) {
+    return;
+  }
+
+  // Find the workspaces type message
+  const workspaceMessage = _messages.find((m) => m.type == "workspace");
+  if (!workspaceMessage) {
+    throw "Workspace message not found in context";
+  }
+
+  workspaceMessage.content = workspaces.getLatestContent();
+}

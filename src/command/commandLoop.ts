@@ -2,6 +2,7 @@ import chalk from "chalk";
 import * as readline from "readline";
 import * as llmail from "../apps/llmail.js";
 import * as llmynx from "../apps/llmynx.js";
+import * as workspaces from "../apps/workspaces.js";
 import * as config from "../config.js";
 import * as contextManager from "../llm/contextManager.js";
 import * as dreamMaker from "../llm/dreamMaker.js";
@@ -95,6 +96,7 @@ export async function run() {
         try {
           await checkNewMailNotification();
           await checkContextLimitWarning();
+          await workspaces.displayActive();
 
           await contextManager.append(
             prompt,
@@ -287,12 +289,22 @@ async function checkContextLimitWarning() {
   const tokenMax = config.agent.tokenMax;
 
   if (tokenCount > tokenMax) {
-    await contextManager.append(
-      `The token limit for this session has been exceeded.
-Use \`endsession <note>\` to clear the console and reset the session.
+    let tokenNote = "";
+
+    if (config.endSessionEnabled) {
+      tokenNote += `\nUse 'endsession <note>' to clear the console and reset the session.
   The note should help you find your bearings in the next session. 
   The note should contain your next goal, and important things should you remember.
-  Try to keep the note around 400 tokens.`,
+  Try to keep the note around 400 tokens.`;
+    }
+
+    if (config.trimSessionEnabled) {
+      tokenNote += `\nUse 'trimsession' to reduce the size of the session.
+  Use comments to remember important things from trimmed prompts.`;
+    }
+
+    await contextManager.append(
+      `The token limit for this session has been exceeded.${tokenNote}`,
       ContentSource.Console,
     );
   }
@@ -302,6 +314,10 @@ Use \`endsession <note>\` to clear the console and reset the session.
  * Insert at the end of the prompt so that 'prompt splitting' still works in the command handler
  */
 function setPromptIndex(prompt: string, index: number) {
+  if (!config.trimSessionEnabled) {
+    return prompt;
+  }
+
   let newPrompt = prompt;
 
   const endPromptPos = prompt.lastIndexOf("$");

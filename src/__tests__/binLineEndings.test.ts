@@ -3,13 +3,13 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 
-test("all files in bin folder have LF line endings", async () => {
+test("all files in bin folder have LF line endings", () => {
   const url = new URL("../../bin", import.meta.url);
   const binPath = fileURLToPath(url);
-  const files = await fs.promises.readdir(binPath);
+  const files = fs.readdirSync(binPath);
   for (const file of files) {
     const filePath = path.join(binPath, file);
-    const fileContents = await fs.promises.readFile(filePath, "utf8");
+    const fileContents = fs.readFileSync(filePath, "utf8");
     const hasCrlf = fileContents.includes("\r\n");
 
     if (hasCrlf) {

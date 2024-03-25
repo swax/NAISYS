@@ -92,11 +92,17 @@ export async function processCommand(
         break;
       }
       case "trimsession": {
+        if (!config.trimSessionEnabled) {
+          throw 'The "trimsession" command is not enabled in this environment.';
+        }
         const trimSummary = contextManager.trim(cmdArgs);
         await contextManager.append(trimSummary);
         break;
       }
       case "endsession": {
+        if (!config.endSessionEnabled) {
+          throw 'The "trimsession" command is not enabled in this environment.';
+        }
         // Don't need to check end line as this is the last command in the context, just read to the end
         const endSessionNotes = utilities.trimChars(cmdArgs, '"');
 
