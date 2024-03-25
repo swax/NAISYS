@@ -148,6 +148,7 @@ export function resolveConfigVars(templateString: string) {
 function resolveTemplateVars(
   templateString: string,
   allowedVarString: string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   mappedVar: any,
 ) {
   const pattern = new RegExp(`\\$\\{${allowedVarString}\\.([^}]+)\\}`, "g");

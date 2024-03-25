@@ -116,7 +116,7 @@ async function usingDatabase<T>(run: (db: Database) => Promise<T>): Promise<T> {
   return dbUtils.usingDatabase(_dbFilePath, run);
 }
 
-function roleToSource(role: LlmRole) {
+export function roleToSource(role: LlmRole) {
   switch (role) {
     case LlmRole.Assistant:
       return "LLM";
@@ -125,4 +125,14 @@ function roleToSource(role: LlmRole) {
     case LlmRole.System:
       return "NAISYS";
   }
+}
+/** Write entire context to a file in the users home directory */
+export function recordContext(contextLog: string) {
+  const filePath = unixToHostPath(
+    `${config.naisysFolder}/home/${config.agent.username}/.current-context.txt`,
+  );
+
+  ensureFileDirExists(filePath);
+
+  fs.writeFileSync(filePath, contextLog);
 }
