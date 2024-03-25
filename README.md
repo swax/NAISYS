@@ -163,7 +163,6 @@ initialCommands:
   - `talk` - Communicate with the local agent to give hints or ask questions (the agent itself does not know about talk and is directed to use `comment` or `llmail` for communication)
 - Special Commands usable by the LLM as well as by the debug prompt
   - `comment "<note>"` - The LLM is directed to use this for 'thinking out loud' which avoids 'invalid command' errors
-  - `trimsession <indexes>` - Removes the specified prompts and respective output with matching `<indexes>`. For example '1-5, 8, 11-13'
   - `endsession "<note>"` - Clear the context and start a new session.
     - The LLM is directed to track it's context size and to end the session with a note before running over the context limit
   - `pause <seconds>` - Can be used by the debug agent or the LLM to pause execution for a set number of seconds
@@ -197,7 +196,7 @@ initialCommands:
 
 ## Changelog
 
-- 1.5: Added `trimsession` which allows the LLM to prune its own context
+- 1.5: Experimental `trimsession` which allows the LLM to prune its own context and `workspaces`
 - 1.4: `genimg` command for generating images
 - 1.3: Post-session 'dreaming' as well as a mail 'blackout' period
 - 1.2: Created stand-in shell commands for custom Naisys commands

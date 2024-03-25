@@ -54,9 +54,13 @@ export function getTokenCount(text: string) {
 }
 
 export function ensureFileDirExists(filePath: string) {
-  const dirname = path.dirname(filePath);
-  if (!fs.existsSync(dirname)) {
-    fs.mkdirSync(dirname, { recursive: true });
+  const dirPath = path.dirname(filePath);
+  ensureDirExists(dirPath);
+}
+
+export function ensureDirExists(dirPath: string) {
+  if (!fs.existsSync(dirPath)) {
+    fs.mkdirSync(dirPath, { recursive: true });
   }
 }
 
