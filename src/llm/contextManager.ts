@@ -58,7 +58,7 @@ Tokens:
   The console log can only hold a certain number of 'tokens' that is specified in the prompt
   Make sure to call endsession before the limit is hit so you can continue your work with a fresh console
   Each prompt is prefixed with an index like '1.' 
-  You can use 'trimsession' to recover tokens by removing unwanted prompts and their respective output`;
+  You can use 'trimsession' to recover tokens by removing unwanted prompts by index and their respective output`;
 
   _cachedSystemMessage = systemMessage;
   return systemMessage;
@@ -100,10 +100,6 @@ export async function append(
     throw new Error("Invalid source");
   }
 
-  const llmMessage = <LlmMessage>{ source, role, content, promptIndex };
-  llmMessage.logId = await logService.write(llmMessage);
-  _messages.push(llmMessage);
-
   // Prompts are manually added to the console log
   if (
     source != ContentSource.ConsolePrompt &&
@@ -114,6 +110,13 @@ export async function append(
       source == "llm" ? OutputColor.llm : OutputColor.console,
     );
   }
+
+  const llmMessage = <LlmMessage>{ source, role, content, promptIndex };
+  _messages.push(llmMessage);
+
+  // Log the message
+  llmMessage.logId = await logService.write(llmMessage);
+  logService.recordContext(printContext());
 }
 
 export function clear() {
@@ -129,12 +132,15 @@ export function getTokenCount() {
 }
 
 export function printContext() {
-  output.comment("#####################");
-  // output.comment(content);
-  _messages.forEach((message) => {
-    output.comment(`${message.role}: ${message.content}`);
+  let content = `------ System ------`;
+  content += `\n${getSystemMessage()}`;
+
+  getCombinedMessages().forEach((message) => {
+    content += `\n\n------ ${logService.roleToSource(message.role)} ------`;
+    content += `\n${message.content}`;
   });
-  output.comment("#####################");
+
+  return content;
 }
 
 /** Combine message list with adjacent messages of the same role role combined */

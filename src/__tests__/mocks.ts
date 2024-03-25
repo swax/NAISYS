@@ -5,6 +5,7 @@ export function mockConfig() {
     agent: {
       tokenMax: 2000,
     },
+    resolveConfigVars: jest.fn(() => ""),
   }));
 }
 

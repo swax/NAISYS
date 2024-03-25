@@ -11,6 +11,7 @@ import * as inputMode from "../utils/inputMode.js";
 import { InputMode } from "../utils/inputMode.js";
 import * as logService from "../utils/logService.js";
 import * as output from "../utils/output.js";
+import { OutputColor } from "../utils/output.js";
 import * as utilities from "../utils/utilities.js";
 import * as commandHandler from "./commandHandler.js";
 import { NextCommandAction } from "./commandHandler.js";
@@ -52,7 +53,7 @@ export async function run() {
 
     for (const initialCommand of config.agent.initialCommands) {
       let prompt = await promptBuilder.getPrompt(0, false);
-      prompt = `${++nextPromptIndex}. ${prompt}`;
+      prompt = setPromptIndex(prompt, ++nextPromptIndex);
       await contextManager.append(
         prompt,
         ContentSource.ConsolePrompt,
@@ -83,11 +84,11 @@ export async function run() {
       }
       // LLM command prompt
       else if (inputMode.current === InputMode.LLM) {
-        prompt = `${++nextPromptIndex}. ${prompt}`;
+        prompt = setPromptIndex(prompt, ++nextPromptIndex);
 
         const workingMsg =
           prompt +
-          chalk[output.OutputColor.loading](
+          chalk[OutputColor.loading](
             `LLM (${config.agent.shellModel}) Working...`,
           );
 
@@ -295,4 +296,21 @@ Use \`endsession <note>\` to clear the console and reset the session.
       ContentSource.Console,
     );
   }
+}
+
+/** Insert prompt index [Index: 1] before the $.
+ * Insert at the end of the prompt so that 'prompt splitting' still works in the command handler
+ */
+function setPromptIndex(prompt: string, index: number) {
+  let newPrompt = prompt;
+
+  const endPromptPos = prompt.lastIndexOf("$");
+  if (endPromptPos != -1) {
+    newPrompt =
+      prompt.slice(0, endPromptPos) +
+      ` [Index: ${index}]` +
+      prompt.slice(endPromptPos);
+  }
+
+  return newPrompt;
 }

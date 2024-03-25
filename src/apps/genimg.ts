@@ -62,6 +62,10 @@ export async function handleCommand(args: string): Promise<string> {
   const fileExtension = path.extname(filepath).substring(1);
 
   await sharp(imageBuffer)
+    .resize(256, 256, {
+      fit: "inside",
+    })
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     .toFormat(<any>fileExtension)
     .toFile(hostpath);
 

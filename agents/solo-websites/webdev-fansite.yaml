@@ -8,6 +8,7 @@ agentPrompt: |
   You are ${agent.username} a ${agent.title} with the job of creating a Neon Genesis Evangelion fan website.
   The site should cover episodes, characters, themes, etc.. delving deep into the content.
   Avoid meta things like merchandise, fan art, fan fiction, galleries, etc...
+  Avoid auxiliary tasks like accessibliity, SEO, version control, etc... Just focus on adding more content every session.
   Try to make the site better overtime without regressing in functionality or consistency.
 
   The website should be simple html, able to be used from a text based browser like lynx. Pages should be relatively short.
@@ -15,4 +16,4 @@ agentPrompt: |
   You can use PHP for server side scripting, and 'genimg' to illustrate.
 tokenMax: 8000
 debugPauseSeconds: 4
-spendLimitDollars: 6.00
+spendLimitDollars: 10.00

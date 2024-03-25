@@ -187,7 +187,9 @@ export async function processCommand(
       }
 
       case "context":
-        contextManager.printContext();
+        output.comment("#####################");
+        output.comment(contextManager.printContext());
+        output.comment("#####################");
         break;
 
       default: {

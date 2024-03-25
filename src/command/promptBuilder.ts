@@ -19,6 +19,7 @@ const _originalWrite = process.stdout.write.bind(process.stdout);
 
 process.stdout.write = (...args) => {
   _outputEmitter.emit(_writeEventName, false, ...args);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return _originalWrite.apply(process.stdout, <any>args);
 };
 
