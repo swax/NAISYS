@@ -13,7 +13,7 @@ agentPrompt: |
 
   The website should be simple html, able to be used from a text based browser like lynx. Pages should be relatively short.
   The website can be tested with 'llmynx open ${env.WEBSITE_URL}' which maps to ${env.WEBSITE_FOLDER}/ on the file system.
-  You can use PHP for server side scripting, and 'genimg' to illustrate.
+  You can use PHP to reducing common code. Also you can use 'genimg' to illustrate.
 tokenMax: 8000
 debugPauseSeconds: 4
 spendLimitDollars: 10.00

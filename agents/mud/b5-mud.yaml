@@ -10,19 +10,13 @@ agentPrompt: |
 
   The database should be in sqlite and located here ${env.WEBSITE_FOLDER}/database.db
   All sqlite commands should be run in non-interactive mode.
-  The reference the database from PHP use the windows path: C:\ instead of /mnt/c/
 
   The website should be simple html, dark style, able to be used from a text based browser like lynx. 
   The website can be tested with 'llmynx open ${env.WEBSITE_URL}' 
   The website is located on the file system at ${env.WEBSITE_FOLDER}/
   'curl' can be used to test APIs as llmynx does not support input.
-  You can use PHP for server side scripting.
+  You can use PHP for server side scripting and simplifying frontend code.
   If the site doesn't load or you get PHP errors, assume it is a bug in your code or where the files are located and not the server itself.
-tokenMax: 15000
-debugPauseSeconds: 5
+tokenMax: 8000
+debugPauseSeconds: 4
 spendLimitDollars: 20.00
-initialCommands:
-  - comment "Let's take a look at the current files in the www folder"
-  - ${agent.directory}/cat-www.sh ${env.WEBSITE_FOLDER}
-  - comment "Let's take a look at the current database schema"
-  - sqlite3 ${env.WEBSITE_FOLDER}/database.db ".schema"

@@ -21,7 +21,12 @@ export function getSystemMessage() {
 
   let genImgCmd = "";
   if (config.agent.imageModel) {
-    genImgCmd = `\ngenimg "<description>" <filepath>: Generate an image with the description and save it to the given fully qualified path`;
+    genImgCmd = `\n  genimg "<description>" <filepath>: Generate an image with the description and save it to the given fully qualified path`;
+  }
+
+  let llmailCmd = "";
+  if (config.mailEnabled) {
+    llmailCmd = `\n  llmail: A local mail system for communicating with your team`;
   }
 
   let workspaces = "";
@@ -32,14 +37,14 @@ export function getSystemMessage() {
 
   let endsession = "";
   if (config.endSessionEnabled) {
-    endsession = `\nendsession "<note>": Ends this session, clears the console log and context.
+    endsession = `\n  endsession "<note>": Ends this session, clears the console log and context.
     The note should help you find your bearings in the next session. 
     The note should contain your next goal, and important things should you remember.`;
   }
 
   let trimSession = "";
   if (config.trimSessionEnabled) {
-    trimSession = `\ntrimsession <indexes>: Saves tokesn by removing the specified prompts and respective output with matching <indexes>. For example '1-5, 8, 11-13'`;
+    trimSession = `\n  trimsession <indexes>: Saves tokesn by removing the specified prompts and respective output with matching <indexes>. For example '1-5, 8, 11-13'`;
   }
 
   let tokenNote = "";
@@ -79,8 +84,7 @@ LINUX Commands:
   vi and nano are not supported
   Read files with cat. Write files with \`cat > filename << 'EOF'\`
   Do not input notes after the prompt. Only valid commands.
-NAISYS Commands: (cannot be used with other commands on the same prompt)
-  llmail: A local mail system for communicating with your team
+NAISYS Commands: (cannot be used with other commands on the same prompt)${llmailCmd}
   llmynx: A context optimized web browser. Enter 'llmynx help' to learn how to use it${genImgCmd}
   comment "<thought>": Any non-command output like thinking out loud, prefix with the 'comment' command
   pause <seconds>: Pause for <seconds>${trimSession}${endsession}

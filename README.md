@@ -190,9 +190,12 @@ initialCommands:
 - Install WSL (Windows Subsystem for Linux)
 - The `NAISYS_FOLDER` and `WEBSITE_FOLDER` should be set to the WSL path
   - So `C:\var\naisys` should be `/mnt/c/var/naisys` in the `.env` file
-- If you want to use NAISYS for a website
-  - Install a local web server, for example [XAMPP](https://www.apachefriends.org/) on Windows
-  - Start the server and put the URL in the `.env` file
+
+#### Using NAISYS for a website
+
+- Many frameworks come with their own dev server
+  - PHP for example can start a server with `php -S localhost:8000`
+- Start the server and put the URL in the `.env` file
 
 ## Changelog
 
