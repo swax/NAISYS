@@ -21,12 +21,13 @@ export const shellOutputTokenMax = 3000; //
 /** The number of seconds NAISYS will wait for a shell command to complete */
 export const shellCommmandTimeoutSeconds = 15;
 export const webTokenMax = 3000;
-export const mailMessageTokenMax = 400;
 
 export const endSessionEnabled = true;
 
 /** Used to prevent the agent from constantly responding to mail and not getting any work done */
+export const mailEnabled = false;
 export const mailBlackoutCycles = 3;
+export const mailMessageTokenMax = 400;
 
 /** Experimental, live updating spot in the context for the LLM to put files, to avoid having to continually cat */
 export const workspacesEnabled = false;

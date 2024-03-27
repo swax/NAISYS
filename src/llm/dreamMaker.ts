@@ -4,7 +4,7 @@ import * as dbUtils from "../utils/dbUtils.js";
 import * as output from "../utils/output.js";
 import { unixToHostPath } from "../utils/utilities.js";
 import * as contextManager from "./contextManager.js";
-import { LlmRole } from "./llmDtos.js";
+import { ContentSource, LlmRole } from "./llmDtos.js";
 import * as llmService from "./llmService.js";
 
 const _dbFilePath = unixToHostPath(`${config.naisysFolder}/lib/dream.db`);
@@ -43,7 +43,7 @@ export async function goodmorning(): Promise<string> {
 }
 
 export async function goodnight(): Promise<string> {
-  output.comment("Dreaming about the session...");
+  output.comment("Wrapping up the session...");
 
   const dream = await runDreamSequence();
 
@@ -53,17 +53,22 @@ export async function goodnight(): Promise<string> {
 }
 
 async function runDreamSequence(): Promise<string> {
-  const systemMessage = `You are ${config.agent.username}'s unconcious sleep process. You compile all ${config.agent.username}'s
-thoughts during the day and reduce them down to important things to remember - references, plans, project structure, schemas, 
-file locations, urls, and more. You don't need to summarize what happened today, or what to do in the far future, just focus on the
-near term. Check what happened during the day for inconsistencies, things to fix and/or check tomorrow. You are the sleep process, 
-and you are the most important process. Using your results, when ${config.agent.username} wakes up they'll know exactly what to do 
-and how to do it with minimal time spent scanning existing work because you've laid everything out so well.`;
+  const systemMessage = `${config.agent.agentPrompt}
 
-  const allTheThings = contextManager
+Below is the console log from this session. Please process this log and 
+reduce it down to important things to remember - references, plans, project structure, schemas, 
+file locations, urls, and more. You don't need to summarize what happened, or what to do in the far future, just focus on the
+near term. Check the console log for inconsistencies, things to fix and/or check. Using this information the
+next session should be able to start with minimal scanning of existing files to figure out what to do 
+and how to do it.`;
+
+  const combinedContextLog = contextManager
     .getCombinedMessages()
-    .map((m) => m.content)
-    .join("\n");
+    .map((m) => {
+      const suffix = m.source == ContentSource.ConsolePrompt ? "" : "\n";
+      return m.content + suffix;
+    })
+    .join("");
 
   return await llmService.query(
     config.agent.dreamModel,
@@ -71,17 +76,16 @@ and how to do it with minimal time spent scanning existing work because you've l
     [
       {
         role: LlmRole.User,
-        content: allTheThings,
+        content: combinedContextLog,
       },
       {
         role: LlmRole.Assistant,
-        content: "We sure had an eventful day",
+        content:
+          "Console log processed so that the next session can start with minimal scanning of existing files.",
       },
       {
         role: LlmRole.User,
-        content: `Dream on all these things and let me know what you come up with. Use what was done in the previous session as a guide 
-          for what's possible tomorrow. Don't overload yourself with too many thoughts and ideas. Keep important references for the future
-          but don't go into any great detail of future plans unless it's happening soon. `,
+        content: `Please show the results of the processing.`,
       },
     ],
     "dream",

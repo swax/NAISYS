@@ -9,7 +9,7 @@
     "naisys": "bin/naisys"
   },
   "scripts": {
-    "compile/run/attachable": "tsc && node --inspect dist/naisys.js ./agents/solo-websites/webdev-fansite.yaml",
+    "compile/run/attachable": "tsc && node --inspect dist/naisys.js ./agents/mud/b5-mud.yaml",
     "agent:claude": "node dist/naisys.js ./agents/mud/battle-claude.yaml",
     "agent:gpt": "node dist/naisys.js ./agents/mud/battle-gpt.yaml",
     "clean": "rm -rf dist",
