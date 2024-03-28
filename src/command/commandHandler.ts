@@ -15,6 +15,7 @@ import * as utilities from "../utils/utilities.js";
 import * as commandProtection from "./commandProtection.js";
 import * as promptBuilder from "./promptBuilder.js";
 import * as shellCommand from "./shellCommand.js";
+import * as subagent from "../apps/subagent.js";
 
 export enum NextCommandAction {
   Continue,
@@ -198,6 +199,11 @@ export async function processCommand(
         output.comment("#####################");
         break;
 
+      case "subagent": {
+         const subagentResponse = await subagent.handleCommand(cmdArgs);
+         await contextManager.append(subagentResponse);
+         break;
+      }
       default: {
         const shellResponse = await shellCommand.handleCommand(input);
 

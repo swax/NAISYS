@@ -8,6 +8,7 @@ export enum OutputColor {
   llm = "magenta",
   console = "white",
   loading = "yellow",
+  subagent = "cyan",
 }
 
 // color available on chalk
