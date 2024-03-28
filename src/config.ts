@@ -25,7 +25,7 @@ export const webTokenMax = 3000;
 export const endSessionEnabled = true;
 
 /** Used to prevent the agent from constantly responding to mail and not getting any work done */
-export const mailEnabled = false;
+export const mailEnabled = true;
 export const mailBlackoutCycles = 3;
 export const mailMessageTokenMax = 400;
 
@@ -34,6 +34,8 @@ export const workspacesEnabled = false;
 
 /** Experimental, allow LLM to trim prompts from it's own session context */
 export const trimSessionEnabled = false;
+
+export const subagentsEnabled = true;
 
 /* .env is used for global configs across naisys, while agent configs are for the specific agent */
 export const naisysFolder = getEnv("NAISYS_FOLDER", true);

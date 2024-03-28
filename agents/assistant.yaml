@@ -10,5 +10,8 @@ agentPrompt: |
   You are ${agent.username} a ${agent.title} with the job of helping out the admin with what he wants to do.
 tokenMax: 6000
 debugPauseSeconds: 0
-wakeOnMessage: false
+wakeOnMessage: true
 spendLimitDollars: 2.00
+initialCommands:
+  - llmail users
+  - llmail help

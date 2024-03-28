@@ -389,6 +389,14 @@ async function listUsers() {
   });
 }
 
+export async function getUserNames() {
+  return await usingDatabase(async (db) => {
+    const usersList = await db.all("SELECT username FROM Users");
+
+    return usersList.map((ul) => ul.username);
+  });
+}
+
 async function replyThread(threadId: number, message: string) {
   message = message.replace(/\\n/g, "\n");
 
