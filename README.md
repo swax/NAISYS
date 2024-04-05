@@ -194,12 +194,12 @@ initialCommands:
 #### Using NAISYS for a website
 
 - Many frameworks come with their own dev server
-  - PHP for example can start a server with `php -S localhost:8000`
+  - PHP for example can start a server with `php -S localhost:8000 -d display_errors=On -d error_reporting=E_ALL`
 - Start the server and put the URL in the `.env` file
 
 ## Changelog
 
-- 1.5: Experimental `trimsession` which allows the LLM to prune its own context and `workspaces`
+- 1.5: Allow agents to start their own parallel `subagents`
 - 1.4: `genimg` command for generating images
 - 1.3: Post-session 'dreaming' as well as a mail 'blackout' period
 - 1.2: Created stand-in shell commands for custom Naisys commands

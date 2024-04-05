@@ -1,6 +1,7 @@
 import { Database } from "sqlite";
 import * as config from "../config.js";
 import * as dbUtils from "../utils/dbUtils.js";
+import * as output from "../utils/output.js";
 import { unixToHostPath } from "../utils/utilities.js";
 
 const _dbFilePath = unixToHostPath(`${config.naisysFolder}/lib/costs.db`);
@@ -20,6 +21,7 @@ async function init() {
           id INTEGER PRIMARY KEY,
           date TEXT NOT NULL, 
           username TEXT NOT NULL,
+          subagent TEXT,
           source TEXT NOT NULL,
           model TEXT NOT NULL,
           cost REAL NOT NULL
@@ -39,8 +41,14 @@ export async function recordCost(
 ) {
   await usingDatabase(async (db) => {
     await db.run(
-      `INSERT INTO Costs (date, username, source, model, cost) VALUES (datetime('now'), ?, ?, ?, ?)`,
-      [config.agent.username, source, modelName, cost],
+      `INSERT INTO Costs (date, username, subagent, source, model, cost) VALUES (datetime('now'), ?, ?, ?, ?, ?)`,
+      [
+        config.agent.leadAgent || config.agent.username,
+        config.agent.leadAgent ? config.agent.username : null,
+        source,
+        modelName,
+        cost,
+      ],
     );
   });
 }
@@ -51,10 +59,37 @@ export async function getTotalCosts() {
       `SELECT sum(cost) as total 
         FROM Costs 
         WHERE username = ?`,
-      [config.agent.username],
+      [config.agent.leadAgent || config.agent.username],
     );
 
     return result.total;
+  });
+}
+
+export async function printCosts() {
+  const totalCost = await getTotalCosts();
+  output.comment(
+    `Total cost so far $${totalCost.toFixed(2)} of $${config.agent.spendLimitDollars} limit`,
+  );
+
+  // Costs by subagents
+  await usingDatabase(async (db) => {
+    const result = await db.all(
+      `SELECT subagent, sum(cost) as total 
+        FROM Costs 
+        WHERE username = ? 
+        GROUP BY subagent`,
+      [config.agent.leadAgent || config.agent.username],
+    );
+
+    if (result.length <= 1) {
+      return;
+    }
+
+    for (const row of result) {
+      const label = row.subagent ? `Subagent ${row.subagent}` : "Lead agent";
+      output.comment(`  ${label} cost $${row.total.toFixed(2)}`);
+    }
   });
 }
 

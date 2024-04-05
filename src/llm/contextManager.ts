@@ -59,6 +59,11 @@ export function getSystemMessage() {
       "\n  Make sure to call 'trimsession' before the limit is hit so you stay under the limit.\n  Use comments to remember important things from trimmed prompts.";
   }
 
+  let subagentNote = "";
+  if (config.agent.subagentMax && config.agent.subagentMax > 0) {
+    subagentNote += `\n  subagent: You can create subagents to help you with your work. You can have up to ${config.agent.subagentMax} subagents.`;
+  }
+
   // Fill out the templates in the agent prompt and stick it to the front of the system message
   // A lot of the stipulations in here are to prevent common LLM mistakes
   // Like we can't jump between standard and special commands in a single prompt, which the LLM will try to do if not warned
@@ -84,7 +89,7 @@ LINUX Commands:
   vi and nano are not supported
   Read files with cat. Write files with \`cat > filename << 'EOF'\`
   Do not input notes after the prompt. Only valid commands.
-NAISYS Commands: (cannot be used with other commands on the same prompt)${llmailCmd}
+NAISYS Commands: (cannot be used with other commands on the same prompt)${llmailCmd}${subagentNote}
   llmynx: A context optimized web browser. Enter 'llmynx help' to learn how to use it${genImgCmd}
   comment "<thought>": Any non-command output like thinking out loud, prefix with the 'comment' command
   pause <seconds>: Pause for <seconds>${trimSession}${endsession}

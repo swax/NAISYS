@@ -2,6 +2,7 @@ import chalk from "chalk";
 import * as readline from "readline";
 import * as llmail from "../apps/llmail.js";
 import * as llmynx from "../apps/llmynx.js";
+import * as subagent from "../apps/subagent.js";
 import * as workspaces from "../apps/workspaces.js";
 import * as config from "../config.js";
 import * as contextManager from "../llm/contextManager.js";
@@ -77,6 +78,8 @@ export async function run() {
 
       // Debug command prompt
       if (inputMode.current === InputMode.Debug) {
+        subagent.unreadContextSummary();
+
         consoleInput = await promptBuilder.getInput(
           `${prompt}`,
           pauseSeconds,

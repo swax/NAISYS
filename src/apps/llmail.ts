@@ -5,6 +5,7 @@ import * as config from "../config.js";
 import * as dbUtils from "../utils/dbUtils.js";
 import * as utilities from "../utils/utilities.js";
 import { unixToHostPath } from "../utils/utilities.js";
+import * as subagent from "./subagent.js";
 
 const _dbFilePath = unixToHostPath(`${config.naisysFolder}/lib/llmail.db`);
 
@@ -29,7 +30,11 @@ async function init() {
         `CREATE TABLE Users (
           id INTEGER PRIMARY KEY, 
           username TEXT NOT NULL,
-          title TEXT NOT NULL
+          title TEXT NOT NULL,
+          configPath TEXT NOT NULL,
+          leadUsername TEXT,
+          UNIQUE(username),
+          UNIQUE(configPath)
       )`,
         `CREATE TABLE Threads (
           id INTEGER PRIMARY KEY, 
@@ -68,10 +73,16 @@ async function init() {
       config.agent.username,
     ]);
 
+    // If user not in database, add them
     if (!user) {
       const insertedUser = await db.run(
-        "INSERT INTO Users (username, title) VALUES (?, ?)",
-        [config.agent.username, config.agent.title],
+        "INSERT INTO Users (username, title, configPath, leadUsername) VALUES (?, ?, ?, ?)",
+        [
+          config.agent.username,
+          config.agent.title,
+          config.agent.path,
+          config.agent.leadAgent,
+        ],
       );
 
       if (!insertedUser.lastID) {
@@ -79,8 +90,21 @@ async function init() {
       }
 
       _myUserId = insertedUser.lastID;
-    } else {
+    }
+    // Else already exists, validate it's config path is correct
+    else {
       _myUserId = user.id;
+
+      if (user.configPath !== config.agent.path) {
+        throw `Error: User ${config.agent.username} already exists in the database with a different config path (${user.configPath})`;
+      }
+
+      if (
+        config.agent.leadAgent &&
+        config.agent.leadAgent != user.leadUsername
+      ) {
+        throw `Error: User ${config.agent.username} already exists in the database with a different lead agent (${user.leadUsername})`;
+      }
     }
   });
 }
@@ -377,19 +401,54 @@ export async function markAsRead(threadId: number) {
 
 async function listUsers() {
   return await usingDatabase(async (db) => {
-    const usersList = await db.all("SELECT * FROM Users");
+    let userList: any[] = [];
+
+    // If this is a subagent, just allow it to communicate with its lead
+    if (config.agent.leadAgent) {
+      userList = await db.all(
+        "SELECT * FROM Users WHERE  username = ? OR username = ?",
+        [config.agent.username, config.agent.leadAgent],
+      );
+
+      userList = userList.map((u) => ({
+        ...u,
+        extra: u.username === config.agent.leadAgent ? "My Lead" : u.extra,
+      }));
+    }
+    // Else return all non-subagent users, except for the ones we are leading
+    else {
+      userList = await db.all(
+        "SELECT * FROM Users WHERE leadUsername IS NULL OR leadUsername = ?",
+        [config.agent.username],
+      );
+
+      // Filter out non-running sub-agents
+      const runnnigSubagents = subagent.getRunningSubagentNames();
+
+      userList = userList
+        .filter((u) => !u.leadUsername || runnnigSubagents.includes(u.username))
+        .map((u) => ({
+          ...u,
+          extra: u.leadUsername ? "My Subagent" : u.extra,
+        }));
+    }
+
+    userList = userList.map((u) => ({
+      ...u,
+      extra: u.username == config.agent.username ? "Me" : u.extra,
+    }));
 
     return table(
       [
-        ["Username", "Title"],
-        ...usersList.map((ul) => [ul.username, ul.title]),
+        ["Username", "Title", ""],
+        ...userList.map((ul) => [ul.username, ul.title, ul.extra || ""]),
       ],
       { hsep: " | " },
     );
   });
 }
 
-export async function getUserNames() {
+export async function getAllUserNames() {
   return await usingDatabase(async (db) => {
     const usersList = await db.all("SELECT username FROM Users");
 
