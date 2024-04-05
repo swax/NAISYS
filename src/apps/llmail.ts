@@ -5,14 +5,15 @@ import * as config from "../config.js";
 import * as dbUtils from "../utils/dbUtils.js";
 import * as utilities from "../utils/utilities.js";
 import { unixToHostPath } from "../utils/utilities.js";
-import * as subagent from "./subagent.js";
 
 const _dbFilePath = unixToHostPath(`${config.naisysFolder}/lib/llmail.db`);
 
 let _myUserId = -1;
 
-/** Threading is not currently used so this doesn't matter */
-const _threadTokenMax = config.mailMessageTokenMax * 5;
+/** Threading is not currently used in `simpleMode` so this doesn't matter */
+const _threadTokenMax = config.agent.mailMessageTokenMax
+  ? config.agent.mailMessageTokenMax * 5
+  : undefined;
 
 /** The 'non-simple' version of this is a thread first mail system. Where agents can create threads, add users, and reply to threads, etc..
  * The problem with this was the agents were too chatty with so many mail commands, wasting context replying, reading threads, etc..
@@ -31,10 +32,10 @@ async function init() {
           id INTEGER PRIMARY KEY, 
           username TEXT NOT NULL,
           title TEXT NOT NULL,
-          configPath TEXT NOT NULL,
+          agentPath TEXT NOT NULL,
           leadUsername TEXT,
           UNIQUE(username),
-          UNIQUE(configPath)
+          UNIQUE(agentPath)
       )`,
         `CREATE TABLE Threads (
           id INTEGER PRIMARY KEY, 
@@ -76,7 +77,7 @@ async function init() {
     // If user not in database, add them
     if (!user) {
       const insertedUser = await db.run(
-        "INSERT INTO Users (username, title, configPath, leadUsername) VALUES (?, ?, ?, ?)",
+        "INSERT INTO Users (username, title, agentPath, leadUsername) VALUES (?, ?, ?, ?)",
         [
           config.agent.username,
           config.agent.title,
@@ -95,8 +96,8 @@ async function init() {
     else {
       _myUserId = user.id;
 
-      if (user.configPath !== config.agent.path) {
-        throw `Error: User ${config.agent.username} already exists in the database with a different config path (${user.configPath})`;
+      if (user.agentPath !== config.agent.path) {
+        throw `Error: User ${config.agent.username} already exists in the database with a different config path (${user.agentPath})`;
       }
 
       if (
@@ -122,12 +123,16 @@ export async function handleCommand(args: string): Promise<string> {
     }
   }
 
+  const tokenMaxNote = config.agent.mailMessageTokenMax
+    ? ` ${config.agent.mailMessageTokenMax} token max`
+    : "";
+
   switch (argParams[0]) {
     case "help": {
       if (simpleMode) {
         return `llmail <command>
   users: Get list of users on the system
-  send "<users>" "subject" "message": Send a message. ${config.mailMessageTokenMax} token max.
+  send "<users>" "subject" "message": Send a message.${tokenMaxNote}
   wait: Pause the session until a new mail message is received
   
 * Attachments are not supported, use file paths to refence files in emails as all users are on the same machine`;
@@ -146,6 +151,11 @@ export async function handleCommand(args: string): Promise<string> {
 
     case "send": {
       const newParams = argParams.slice(1).join(" ").split('"');
+
+      if (newParams.length < 6) {
+        throw "Invalid parameters. There should be a username, subject and message. All contained in quotes.";
+      }
+
       const usernames = newParams[1].split(",").map((u) => u.trim());
       const subject = newParams[3];
       const message = newParams[5];
@@ -251,7 +261,7 @@ async function listThreads(): Promise<string> {
           t.subject,
           t.date,
           t.members,
-          `${t.tokenCount}/${_threadTokenMax}`,
+          `${t.tokenCount}/${_threadTokenMax ? _threadTokenMax : "∞"}`,
         ]),
       ],
       { hsep: " | " },
@@ -422,15 +432,10 @@ async function listUsers() {
         [config.agent.username],
       );
 
-      // Filter out non-running sub-agents
-      const runnnigSubagents = subagent.getRunningSubagentNames();
-
-      userList = userList
-        .filter((u) => !u.leadUsername || runnnigSubagents.includes(u.username))
-        .map((u) => ({
-          ...u,
-          extra: u.leadUsername ? "My Subagent" : u.extra,
-        }));
+      userList = userList.map((u) => ({
+        ...u,
+        extra: u.leadUsername ? "My Subagent" : u.extra,
+      }));
     }
 
     userList = userList.map((u) => ({
@@ -467,7 +472,7 @@ async function replyThread(threadId: number, message: string) {
 
     const newThreadTokenTotal = thread.tokenCount + msgTokenCount;
 
-    if (newThreadTokenTotal > _threadTokenMax) {
+    if (_threadTokenMax && newThreadTokenTotal > _threadTokenMax) {
       throw `Error: Reply is ${msgTokenCount} tokens and thread is ${thread.tokenCount} tokens. 
 Reply would cause thread to exceed total thread token limit of ${_threadTokenMax} tokens. 
 Consider archiving this thread and starting a new one.`;
@@ -549,9 +554,10 @@ async function getUser(db: Database, username: string) {
 
 function validateMsgTokenCount(message: string) {
   const msgTokenCount = utilities.getTokenCount(message);
+  const msgTokenMax = config.agent.mailMessageTokenMax;
 
-  if (msgTokenCount > config.mailMessageTokenMax) {
-    throw `Error: Message is ${msgTokenCount} tokens, exceeding the limit of ${config.mailMessageTokenMax} tokens`;
+  if (msgTokenMax && msgTokenCount > msgTokenMax) {
+    throw `Error: Message is ${msgTokenCount} tokens, exceeding the limit of ${msgTokenMax} tokens`;
   }
 
   return msgTokenCount;
