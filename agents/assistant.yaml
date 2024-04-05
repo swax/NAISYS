@@ -4,14 +4,10 @@
 
 username: jill
 title: Software Engineer
-shellModel: gpt4turbo
-webModel: gemini-pro
+shellModel: gemini-pro
 agentPrompt: |
   You are ${agent.username} a ${agent.title} with the job of helping out the admin with what he wants to do.
-tokenMax: 6000
+tokenMax: 8000
 debugPauseSeconds: 0
-wakeOnMessage: true
+subagentMax: 1
 spendLimitDollars: 2.00
-initialCommands:
-  - llmail users
-  - llmail help

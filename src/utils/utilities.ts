@@ -69,3 +69,18 @@ export function ensureDirExists(dirPath: string) {
 export function trimChars(text: string, charList: string) {
   return text.replace(new RegExp(`^[${charList}]+|[${charList}]+$`, "g"), "");
 }
+
+export function shuffle<T>(array: T[]) {
+  // Create a copy of the array to shuffle
+  let shuffled = array.slice();
+
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    // Pick a random index from 0 to i
+    const j = Math.floor(Math.random() * (i + 1));
+
+    // Swap elements shuffled[i] and shuffled[j]
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+
+  return shuffled;
+}

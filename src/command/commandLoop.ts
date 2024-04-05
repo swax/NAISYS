@@ -9,6 +9,7 @@ import * as contextManager from "../llm/contextManager.js";
 import * as dreamMaker from "../llm/dreamMaker.js";
 import { ContentSource, LlmRole } from "../llm/llmDtos.js";
 import * as llmService from "../llm/llmService.js";
+import { systemMessage } from "../llm/systemMessage.js";
 import * as inputMode from "../utils/inputMode.js";
 import { InputMode } from "../utils/inputMode.js";
 import * as logService from "../utils/logService.js";
@@ -29,7 +30,6 @@ export async function run() {
 
   // Show System Message
   await output.commentAndLog("System Message:");
-  const systemMessage = contextManager.getSystemMessage();
   output.write(systemMessage);
   await logService.write({
     role: LlmRole.System,
@@ -111,7 +111,7 @@ export async function run() {
 
           consoleInput = await llmService.query(
             config.agent.shellModel,
-            contextManager.getSystemMessage(),
+            systemMessage,
             contextManager.getCombinedMessages(),
             "console",
           );
@@ -266,7 +266,7 @@ async function checkNewMailNotification() {
       await llmail.markAsRead(unreadThread.threadId);
     }
 
-    mailBlackoutCountdown = config.mailBlackoutCycles;
+    mailBlackoutCountdown = config.agent.mailBlackoutCycles || 0;
   } else if (llmail.simpleMode) {
     await contextManager.append(
       `You have new mail, but not enough context to read them.\n` +

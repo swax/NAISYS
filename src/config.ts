@@ -25,9 +25,6 @@ export const webTokenMax = 3000;
 export const endSessionEnabled = true;
 
 export const mailEnabled = true;
-/** Used to prevent the agent from constantly responding to mail and not getting any work done */
-export const mailBlackoutCycles = 0;
-export const mailMessageTokenMax = 400;
 
 /** Experimental, live updating spot in the context for the LLM to put files, to avoid having to continually cat */
 export const workspacesEnabled = false;
@@ -49,28 +46,40 @@ export const anthropicApiKey = getEnv("ANTHROPIC_API_KEY");
 export const agent = loadAgentConfig();
 
 export interface AgentConfig {
-  path: string;
-  directory: string;
   username: string;
   title: string;
+  agentPrompt: string;
+  spendLimitDollars: number;
+  tokenMax: number;
+
   shellModel: string;
   webModel: string;
   dreamModel: string;
   imageModel?: string;
-  agentPrompt: string;
-  spendLimitDollars: number;
-  tokenMax: number;
+
   /** Seconds to pause on the debug prompt before continuing LLM. No value or zero implies indefinite wait (debug driven) */
   debugPauseSeconds: number;
   wakeOnMessage: boolean;
   commandProtection: CommandProtection;
   initialCommands: string[];
+
   /** The max number of subagents allowed to be started and managed. Costs by the subagent are applied to the spend limit. */
   subagentMax?: number;
+
+  /** Used to prevent the agent from constantly responding to mail and not getting any work done */
+  mailBlackoutCycles?: number;
+
+  /** Try to enfore smaller messages between agents to improve communication efficiency */
+  mailMessageTokenMax?: number;
+
   /** ONLY used by agent start process. Indicates that this is a subagent, and this is the lead agent */
   leadAgent?: string;
+
   /** ONLY used by agent start process. The task given to the subagent */
   taskDescription?: string;
+
+  /** The path of the config file. Set automatically on load */
+  path: string;
 }
 
 function loadAgentConfig() {
@@ -79,7 +88,6 @@ function loadAgentConfig() {
   ) as AgentConfig;
 
   config.path = hostToUnixPath(path.resolve(program.args[0]));
-  config.directory = config.path.substring(0, config.path.lastIndexOf("/"));
 
   // throw if any property is undefined
   for (const key of [

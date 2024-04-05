@@ -4,6 +4,7 @@ import yaml from "js-yaml";
 import table from "text-table";
 import * as config from "../config.js";
 import { AgentConfig } from "../config.js";
+import { agentNames } from "../utils/agentNames.js";
 import * as inputMode from "../utils/inputMode.js";
 import { InputMode } from "../utils/inputMode.js";
 import * as output from "../utils/output.js";
@@ -11,6 +12,7 @@ import { OutputColor } from "../utils/output.js";
 import {
   ensureFileDirExists,
   getTokenCount,
+  shuffle,
   unixToHostPath,
 } from "../utils/utilities.js";
 import * as llmail from "./llmail.js";
@@ -158,7 +160,9 @@ async function _createAgent(title: string, taskDescription: string) {
   const usernames = await llmail.getAllUserNames();
   let agentName = "";
 
-  for (const name of _agentNames) {
+  const shuffledNames = shuffle(agentNames);
+
+  for (const name of shuffledNames) {
     if (!usernames.includes(name)) {
       agentName = name;
       break;
@@ -207,7 +211,7 @@ async function _createAgent(title: string, taskDescription: string) {
     tokensSpent: 0,
   });
 
-  return _startAgent(id);
+  return "Subagent Created\n" + _startAgent(id);
 }
 
 function _startAgent(id: number) {
@@ -251,7 +255,7 @@ function _startAgent(id: number) {
     subagent.status = "stopped";
   });
 
-  return `Subagent ${id} started`;
+  return `Subagent Started, ID: ${id}, Name: ${subagent.agentName}`;
 }
 
 function _stopAgent(id: number) {
@@ -284,62 +288,3 @@ function _debugFlushContext(subagentId: number) {
 function _getSubagentDir() {
   return `${config.naisysFolder}/home/${config.agent.username}/.subagents`;
 }
-
-const _agentNames = [
-  "adrian",
-  "alex",
-  "allen",
-  "andrew",
-  "austin",
-  "bill",
-  "bob",
-  "brian",
-  "alice",
-  "charlie",
-  "christian",
-  "daniel",
-  "dave",
-  "dylan",
-  "edward",
-  "eric",
-  "eve",
-  "frank",
-  "gina",
-  "greg",
-  "harry",
-  "irene",
-  "james",
-  "jason",
-  "jeff",
-  "jenny",
-  "joe",
-  "john",
-  "joyce",
-  "julie",
-  "kate",
-  "kenny",
-  "kenzo",
-  "larry",
-  "marge",
-  "mike",
-  "nate",
-  "olivia",
-  "paul",
-  "quinn",
-  "rose",
-  "russell",
-  "sam",
-  "scott",
-  "shaddy",
-  "simon",
-  "ted",
-  "tina",
-  "tj",
-  "ulysses",
-  "victor",
-  "wendy",
-  "xander",
-  "yaron",
-  "yvonne",
-  "zack",
-];

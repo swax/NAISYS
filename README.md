@@ -112,6 +112,11 @@ spendLimitDollars: 2.00
 #   Auto: All commands are run through the separate LLM instace that will check to see if the command is safe
 commandProtection: "none"
 
+# The max number of subagents allowed to be started and managed. Leave out to disable.
+# Costs by the subagent are applied to the host agent's spend limit
+# Careful: Sub-agents can be chatty, slowing down progress.
+subagentMax: 0
+
 # Run these commands on session start, in the example below the agent will see how to use mail and a list of other agents
 initialCommands:
   - llmail users
@@ -170,6 +175,7 @@ initialCommands:
   - `llmail` - A context friendly 'mail system' used for agent to agent communication
   - `llmynx` - A context friendly wrapping on the lynx browser that can use a separate LLM to reduce the size of a large webpage into something that can fit into the LLM's context
   - `genimg "<description>" <filepath>` - Generates an image with the given description, save at the specified fully qualified path
+  - `subagent` - A way for LLMs to start/stop their own sub-agents. Communicating with each other with `llmail`. Set the `subagentMax` in the agent config to enable.
 
 ## Running NAISYS from Source
 
