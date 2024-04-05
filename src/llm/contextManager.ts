@@ -1,5 +1,5 @@
-import * as workspaces from "../apps/workspaces.js";
 import * as config from "../config.js";
+import * as workspaces from "../features/workspaces.js";
 import * as inputMode from "../utils/inputMode.js";
 import { InputMode } from "../utils/inputMode.js";
 import * as logService from "../utils/logService.js";
