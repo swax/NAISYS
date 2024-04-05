@@ -1,9 +1,9 @@
 import chalk from "chalk";
-import * as genimg from "../apps/genimg.js";
-import * as llmail from "../apps/llmail.js";
-import * as llmynx from "../apps/llmynx.js";
-import * as subagent from "../apps/subagent.js";
 import * as config from "../config.js";
+import * as genimg from "../features/genimg.js";
+import * as llmail from "../features/llmail.js";
+import * as llmynx from "../features/llmynx.js";
+import * as subagent from "../features/subagent.js";
 import * as contextManager from "../llm/contextManager.js";
 import * as costTracker from "../llm/costTracker.js";
 import * as dreamMaker from "../llm/dreamMaker.js";

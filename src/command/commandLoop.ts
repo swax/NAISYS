@@ -1,10 +1,10 @@
 import chalk from "chalk";
 import * as readline from "readline";
-import * as llmail from "../apps/llmail.js";
-import * as llmynx from "../apps/llmynx.js";
-import * as subagent from "../apps/subagent.js";
-import * as workspaces from "../apps/workspaces.js";
 import * as config from "../config.js";
+import * as llmail from "../features/llmail.js";
+import * as llmynx from "../features/llmynx.js";
+import * as subagent from "../features/subagent.js";
+import * as workspaces from "../features/workspaces.js";
 import * as contextManager from "../llm/contextManager.js";
 import * as dreamMaker from "../llm/dreamMaker.js";
 import { ContentSource, LlmRole } from "../llm/llmDtos.js";
