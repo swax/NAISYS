@@ -16,7 +16,7 @@ dotenv.config();
 export const hostname = "naisys";
 
 /** Limits the size of files that can be read/wrote */
-export const shellOutputTokenMax = 3000; //
+export const shellOutputTokenMax = 3000;
 
 /** The number of seconds NAISYS will wait for a shell command to complete */
 export const shellCommmandTimeoutSeconds = 15;
@@ -24,9 +24,9 @@ export const webTokenMax = 3000;
 
 export const endSessionEnabled = true;
 
-/** Used to prevent the agent from constantly responding to mail and not getting any work done */
 export const mailEnabled = true;
-export const mailBlackoutCycles = 3;
+/** Used to prevent the agent from constantly responding to mail and not getting any work done */
+export const mailBlackoutCycles = 0;
 export const mailMessageTokenMax = 400;
 
 /** Experimental, live updating spot in the context for the LLM to put files, to avoid having to continually cat */
@@ -34,8 +34,6 @@ export const workspacesEnabled = false;
 
 /** Experimental, allow LLM to trim prompts from it's own session context */
 export const trimSessionEnabled = false;
-
-export const subagentsEnabled = true;
 
 /* .env is used for global configs across naisys, while agent configs are for the specific agent */
 export const naisysFolder = getEnv("NAISYS_FOLDER", true);
@@ -50,7 +48,7 @@ export const anthropicApiKey = getEnv("ANTHROPIC_API_KEY");
 
 export const agent = loadAgentConfig();
 
-interface AgentConfig {
+export interface AgentConfig {
   path: string;
   directory: string;
   username: string;
@@ -67,6 +65,12 @@ interface AgentConfig {
   wakeOnMessage: boolean;
   commandProtection: CommandProtection;
   initialCommands: string[];
+  /** The max number of subagents allowed to be started and managed. Costs by the subagent are applied to the spend limit. */
+  subagentMax?: number;
+  /** ONLY used by agent start process. Indicates that this is a subagent, and this is the lead agent */
+  leadAgent?: string;
+  /** ONLY used by agent start process. The task given to the subagent */
+  taskDescription?: string;
 }
 
 function loadAgentConfig() {

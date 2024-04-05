@@ -2,6 +2,7 @@ import chalk from "chalk";
 import * as genimg from "../apps/genimg.js";
 import * as llmail from "../apps/llmail.js";
 import * as llmynx from "../apps/llmynx.js";
+import * as subagent from "../apps/subagent.js";
 import * as config from "../config.js";
 import * as contextManager from "../llm/contextManager.js";
 import * as costTracker from "../llm/costTracker.js";
@@ -15,7 +16,6 @@ import * as utilities from "../utils/utilities.js";
 import * as commandProtection from "./commandProtection.js";
 import * as promptBuilder from "./promptBuilder.js";
 import * as shellCommand from "./shellCommand.js";
-import * as subagent from "../apps/subagent.js";
 
 export enum NextCommandAction {
   Continue,
@@ -160,10 +160,7 @@ export async function processCommand(
       }
 
       case "cost": {
-        const totalCost = await costTracker.getTotalCosts();
-        output.comment(
-          `Total cost so far $${totalCost.toFixed(2)} of $${config.agent.spendLimitDollars} limit`,
-        );
+        await costTracker.printCosts();
         break;
       }
 
@@ -200,9 +197,9 @@ export async function processCommand(
         break;
 
       case "subagent": {
-         const subagentResponse = await subagent.handleCommand(cmdArgs);
-         await contextManager.append(subagentResponse);
-         break;
+        const subagentResponse = await subagent.handleCommand(cmdArgs);
+        await contextManager.append(subagentResponse);
+        break;
       }
       default: {
         const shellResponse = await shellCommand.handleCommand(input);
@@ -283,6 +280,7 @@ async function splitMultipleInputCommands(nextInput: string) {
     }
   }
   // If the LLM forgets the quote on the comment, treat it as a single line comment
+  // Not something we want to use for multi-line commands like llmail and subagent
   else if (
     newLinePos > 0 &&
     (nextInput.startsWith("comment ") ||
