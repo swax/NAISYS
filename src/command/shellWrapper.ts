@@ -3,7 +3,7 @@ import * as fs from "fs";
 import * as os from "os";
 import * as config from "../config.js";
 import * as output from "../utils/output.js";
-import { unixToHostPath } from "../utils/utilities.js";
+import { NaisysPath } from "../utils/pathService.js";
 
 type CommandResponse = {
   value: string;
@@ -225,7 +225,9 @@ function resetProcess() {
 /** Wraps multi line commands in a script to make it easier to diagnose the source of errors based on line number
  * May also help with common escaping errors */
 function runCommandFromScript(command: string) {
-  const scriptPath = `${config.naisysFolder}/home/${config.agent.username}/.command.tmp.sh`;
+  const scriptPath = new NaisysPath(
+    `${config.naisysFolder}/home/${config.agent.username}/.command.tmp.sh`,
+  );
 
   // set -e causes the script to exit on the first error
   const scriptContent = `#!/bin/bash
@@ -233,11 +235,11 @@ set -e
 cd ${_currentPath}
 ${command.trim()}`;
 
-  // create/writewrite file
-  fs.writeFileSync(unixToHostPath(scriptPath), scriptContent);
+  // create/write file
+  fs.writeFileSync(scriptPath.toHostPath(), scriptContent);
 
   // `Path` is set to the ./bin folder because custom NAISYS commands that follow shell commands will be handled by the shell, which will fail
   // so we need to remind the LLM that 'naisys commands cannot be used with other commands on the same prompt'
   // `source` will run the script in the current shell, so any change directories in the script will persist in the current shell
-  return `PATH=${config.binPath}:$PATH source ${scriptPath}`;
+  return `PATH=${config.binPath}:$PATH source ${scriptPath.getNaisysPath()}`;
 }

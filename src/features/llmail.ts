@@ -3,10 +3,10 @@ import { Database } from "sqlite";
 import table from "text-table";
 import * as config from "../config.js";
 import * as dbUtils from "../utils/dbUtils.js";
+import { NaisysPath } from "../utils/pathService.js";
 import * as utilities from "../utils/utilities.js";
-import { unixToHostPath } from "../utils/utilities.js";
 
-const _dbFilePath = unixToHostPath(`${config.naisysFolder}/lib/llmail.db`);
+const _dbFilePath = new NaisysPath(`${config.naisysFolder}/lib/llmail.db`);
 
 let _myUserId = -1;
 
@@ -81,7 +81,7 @@ async function init() {
         [
           config.agent.username,
           config.agent.title,
-          config.agent.path,
+          config.agent.path.getHostPath(),
           config.agent.leadAgent,
         ],
       );
@@ -96,7 +96,7 @@ async function init() {
     else {
       _myUserId = user.id;
 
-      if (user.agentPath !== config.agent.path) {
+      if (user.agentPath != config.agent.path?.getHostPath()) {
         throw `Error: User ${config.agent.username} already exists in the database with a different config path (${user.agentPath})`;
       }
 
@@ -200,12 +200,14 @@ export async function handleCommand(args: string): Promise<string> {
     }
 
     // Debug level 'secret command'. Don't let the LLM know about this
-    case "reset":
-      if (fs.existsSync(_dbFilePath)) {
-        fs.unlinkSync(_dbFilePath);
+    case "reset": {
+      const hostPath = _dbFilePath.toHostPath();
+      if (fs.existsSync(hostPath)) {
+        fs.unlinkSync(hostPath);
       }
       await init();
       return "llmail database reset";
+    }
 
     default:
       return (
@@ -411,7 +413,12 @@ export async function markAsRead(threadId: number) {
 
 async function listUsers() {
   return await usingDatabase(async (db) => {
-    let userList: any[] = [];
+    let userList: {
+      username: string;
+      title: string;
+      extra: string;
+      leadUsername?: string;
+    }[] = [];
 
     // If this is a subagent, just allow it to communicate with its lead
     if (config.agent.leadAgent) {

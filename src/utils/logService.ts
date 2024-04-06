@@ -4,15 +4,16 @@ import { Database } from "sqlite";
 import * as config from "../config.js";
 import { LlmMessage, LlmRole } from "../llm/llmDtos.js";
 import * as dbUtils from "./dbUtils.js";
-import { ensureFileDirExists, unixToHostPath } from "./utilities.js";
+import * as pathService from "./pathService.js";
+import { NaisysPath } from "./pathService.js";
 
-const _dbFilePath = unixToHostPath(`${config.naisysFolder}/lib/log.db`);
+const _dbFilePath = new NaisysPath(`${config.naisysFolder}/lib/log.db`);
 
-const _combinedLogFilePath = unixToHostPath(
+const _combinedLogFilePath = new NaisysPath(
   `${config.websiteFolder || config.naisysFolder}/logs/combined-log.html`,
 );
 
-const _userLogFilePath = unixToHostPath(
+const _userLogFilePath = new NaisysPath(
   `${config.websiteFolder || config.naisysFolder}/logs/${config.agent.username}-log.html`,
 );
 
@@ -47,16 +48,16 @@ async function init() {
   });
 }
 
-function initLogFile(filePath: string) {
-  ensureFileDirExists(filePath);
+function initLogFile(filePath: NaisysPath) {
+  pathService.ensureFileDirExists(filePath);
 
-  if (fs.existsSync(filePath)) {
+  if (fs.existsSync(filePath.toHostPath())) {
     return;
   }
 
   // Start html file with table: date, user, role, messages
   fs.writeFileSync(
-    filePath,
+    filePath.toHostPath(),
     `<html>
         <head><title>Context Log</title></head>
         <style>
@@ -96,11 +97,11 @@ export async function write(message: LlmMessage) {
   return insertedId;
 }
 
-function appendToLogFile(filepath: string, message: LlmMessage) {
+function appendToLogFile(filepath: NaisysPath, message: LlmMessage) {
   const source = roleToSource(message.role);
 
   fs.appendFileSync(
-    filepath,
+    filepath.toHostPath(),
     `<tr>
       <td class='date'>${new Date().toLocaleString()}</td>
       <td>${config.agent.username}</td>
@@ -128,11 +129,11 @@ export function roleToSource(role: LlmRole) {
 }
 /** Write entire context to a file in the users home directory */
 export function recordContext(contextLog: string) {
-  const filePath = unixToHostPath(
+  const filePath = new NaisysPath(
     `${config.naisysFolder}/home/${config.agent.username}/.current-context.txt`,
   );
 
-  ensureFileDirExists(filePath);
+  pathService.ensureFileDirExists(filePath);
 
-  fs.writeFileSync(filePath, contextLog);
+  fs.writeFileSync(filePath.toHostPath(), contextLog);
 }

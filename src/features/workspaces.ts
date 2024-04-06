@@ -2,8 +2,9 @@ import * as fs from "fs";
 import path from "path";
 import * as config from "../config.js";
 import * as output from "../utils/output.js";
+import * as pathService from "../utils/pathService.js";
+import { NaisysPath } from "../utils/pathService.js";
 import * as utilities from "../utils/utilities.js";
-import { ensureDirExists, unixToHostPath } from "../utils/utilities.js";
 
 const _suffixHelp =
   "Add and remove file soft links in the ~/workspaces/ folder to manage what files you see previews of before each prompt";
@@ -14,12 +15,13 @@ export function getLatestContent() {
   }
 
   const workspacesDir = _getWorkspacesDir();
+  const workspacesHostDir = workspacesDir.toHostPath();
 
-  ensureDirExists(workspacesDir);
+  pathService.ensureDirExists(workspacesDir);
 
   let response = `Current Workspaces:`;
 
-  const files = fs.readdirSync(workspacesDir);
+  const files = fs.readdirSync(workspacesHostDir);
 
   if (!files.length) {
     response += `\n  None\n${_suffixHelp}`;
@@ -28,13 +30,14 @@ export function getLatestContent() {
 
   // Iterate files in workspacesDir
   for (const file of files) {
-    const filePath = path.join(workspacesDir, file);
+    const filePath = path.join(workspacesHostDir, file);
     const fileContents = fs.readFileSync(filePath, "utf8");
 
     // get the path of what this file is soft linked to
-    const realPath = fs.realpathSync(filePath);
+    const realHostPath = fs.realpathSync(filePath);
+    const realNaisysPath = new NaisysPath(realHostPath);
 
-    response += `\n${realPath} (${utilities.getTokenCount(fileContents)} tokens):`;
+    response += `\n${realNaisysPath} (${utilities.getTokenCount(fileContents)} tokens):`;
     response += `\n${fileContents}`;
     response += `\nEOF\n`;
   }
@@ -47,9 +50,9 @@ export function displayActive() {
     return;
   }
 
-  const workspacesDir = _getWorkspacesDir();
+  const workspacesHostDir = _getWorkspacesDir().toHostPath();
 
-  const files = fs.readdirSync(workspacesDir);
+  const files = fs.readdirSync(workspacesHostDir);
 
   if (!files.length) {
     return;
@@ -60,7 +63,7 @@ export function displayActive() {
 }
 
 function _getWorkspacesDir() {
-  return unixToHostPath(
+  return new NaisysPath(
     `${config.naisysFolder}/home/${config.agent.username}/workspaces/`,
   );
 }

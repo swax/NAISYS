@@ -17,6 +17,11 @@ jest.unstable_mockModule("../../command/promptBuilder.js", () => ({
   getUserHostPathPrompt: mockGetUserHostPathPrompt,
 }));
 
+// Mock subagent module
+jest.unstable_mockModule("../../features/subagent.js", () => ({
+  handleCommand: jest.fn(),
+}));
+
 // Load target module
 const commandHandler = await import("../../command/commandHandler.js");
 

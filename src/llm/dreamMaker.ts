@@ -2,12 +2,12 @@ import { Database } from "sqlite";
 import * as config from "../config.js";
 import * as dbUtils from "../utils/dbUtils.js";
 import * as output from "../utils/output.js";
-import { unixToHostPath } from "../utils/utilities.js";
+import { NaisysPath } from "../utils/pathService.js";
 import * as contextManager from "./contextManager.js";
 import { ContentSource, LlmRole } from "./llmDtos.js";
 import * as llmService from "./llmService.js";
 
-const _dbFilePath = unixToHostPath(`${config.naisysFolder}/lib/dream.db`);
+const _dbFilePath = new NaisysPath(`${config.naisysFolder}/lib/dream.db`);
 
 await init();
 

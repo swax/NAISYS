@@ -5,6 +5,7 @@
 username: jill
 title: Software Engineer
 shellModel: gemini-pro
+imageModel: dalle3-1024
 agentPrompt: |
   You are ${agent.username} a ${agent.title} with the job of helping out the admin with what he wants to do.
 tokenMax: 8000

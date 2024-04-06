@@ -1,6 +1,7 @@
 import { ChildProcess, spawn } from "child_process";
 import * as fs from "fs";
 import yaml from "js-yaml";
+import path from "path";
 import table from "text-table";
 import * as config from "../config.js";
 import { AgentConfig } from "../config.js";
@@ -9,18 +10,15 @@ import * as inputMode from "../utils/inputMode.js";
 import { InputMode } from "../utils/inputMode.js";
 import * as output from "../utils/output.js";
 import { OutputColor } from "../utils/output.js";
-import {
-  ensureFileDirExists,
-  getTokenCount,
-  shuffle,
-  unixToHostPath,
-} from "../utils/utilities.js";
+import * as pathService from "../utils/pathService.js";
+import { NaisysPath } from "../utils/pathService.js";
+import { getTokenCount, shuffle } from "../utils/utilities.js";
 import * as llmail from "./llmail.js";
 
 interface Subagent {
   id: number;
   agentName: string;
-  agentPath: string;
+  agentPath: NaisysPath;
   taskDescription: string;
   process?: ChildProcess;
   log: string;
@@ -35,25 +33,26 @@ _init();
 
 function _init() {
   // Load subagents for user from file system
-  const subagentDir = unixToHostPath(_getSubagentDir());
+  const subagentDir = _getSubagentDir();
+  const subagentHostDir = subagentDir.toHostPath();
 
-  if (!fs.existsSync(subagentDir)) {
+  if (!fs.existsSync(subagentHostDir)) {
     return;
   }
 
-  const subagentFiles = fs.readdirSync(subagentDir);
+  const subagentFiles = fs.readdirSync(subagentHostDir);
 
   // Iterate files
   for (const subagentFile of subagentFiles) {
-    const agentPath = `${subagentDir}/${subagentFile}`;
-    const subagentYaml = fs.readFileSync(agentPath, "utf8");
+    const agentHostPath = path.join(subagentHostDir, subagentFile);
+    const subagentYaml = fs.readFileSync(agentHostPath, "utf8");
     const subagentConfig = yaml.load(subagentYaml) as AgentConfig;
 
     // Add to subagents
     _subagents.push({
       id: _nextAgentId++,
       agentName: subagentConfig.username,
-      agentPath,
+      agentPath: new NaisysPath(agentHostPath),
       taskDescription: subagentConfig.taskDescription || "No task description",
       log: "",
       status: "stopped",
@@ -195,9 +194,15 @@ async function _createAgent(title: string, taskDescription: string) {
 
   // write agent yaml to file
   const subagentDir = _getSubagentDir();
-  const agentPath = unixToHostPath(`${subagentDir}/${agentName}.yaml`);
-  ensureFileDirExists(agentPath);
-  fs.writeFileSync(agentPath, agentYaml);
+  const agentHostPath = path.join(
+    subagentDir.toHostPath(),
+    `${agentName}.yaml`,
+  );
+  const agentPath = new NaisysPath(agentHostPath);
+
+  pathService.ensureFileDirExists(agentPath);
+
+  fs.writeFileSync(agentHostPath, agentYaml);
 
   const id = _nextAgentId++;
 
@@ -230,10 +235,17 @@ function _startAgent(id: number) {
     throw `Max subagents already running`;
   }
 
-  // TODO fix dist path for npm
-  subagent.process = spawn("node", ["dist/naisys.js", subagent.agentPath], {
-    stdio: "pipe",
-  });
+  // Start subagent
+  const installPath = pathService.getInstallPath();
+  const naisysJsPath = path.join(installPath.getHostPath(), "dist/naisys.js");
+
+  subagent.process = spawn(
+    "node",
+    [naisysJsPath, subagent.agentPath.toHostPath()],
+    {
+      stdio: "pipe",
+    },
+  );
 
   subagent.process.on("spawn", () => {
     subagent.status = "running";
@@ -286,5 +298,7 @@ function _debugFlushContext(subagentId: number) {
 }
 
 function _getSubagentDir() {
-  return `${config.naisysFolder}/home/${config.agent.username}/.subagents`;
+  return new NaisysPath(
+    `${config.naisysFolder}/home/${config.agent.username}/.subagents`,
+  );
 }
