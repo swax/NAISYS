@@ -1,11 +1,11 @@
-import * as fs from "fs";
 import OpenAI from "openai";
 import path from "path";
 import sharp from "sharp";
 import * as config from "../config.js";
 import * as costTracker from "../llm/costTracker.js";
 import * as output from "../utils/output.js";
-import { unixToHostPath } from "../utils/utilities.js";
+import * as pathService from "../utils/pathService.js";
+import { NaisysPath } from "../utils/pathService.js";
 
 /** genimg "<description>" <filepath>: Generate an image with the description and save it to the file path */
 export async function handleCommand(args: string): Promise<string> {
@@ -14,8 +14,14 @@ export async function handleCommand(args: string): Promise<string> {
     throw "Agent config: Error, 'imageModel' is not defined";
   }
 
-  const description = args.split('"')[1].trim();
-  const filepath = args.split('"')[2].trim();
+  const newParams = args.split('"');
+
+  if (newParams.length < 3) {
+    throw "Invalid parameters: Description in quotes and fully qualified filepath with desired image extension are required";
+  }
+
+  const description = newParams[1].trim();
+  const filepath = new NaisysPath(newParams[2].trim() || "");
 
   if (!description) {
     throw "Error: Description is required";
@@ -25,12 +31,7 @@ export async function handleCommand(args: string): Promise<string> {
     throw "Error: Filepath is required";
   }
 
-  // Check directory exists
-  const hostpath = unixToHostPath(filepath);
-  const dirname = path.dirname(hostpath);
-  if (!fs.existsSync(dirname)) {
-    throw `Error: Directory does not exist`;
-  }
+  pathService.ensureFileDirExists(filepath);
 
   output.comment(`Generating image with ${config.agent.imageModel}...`);
 
@@ -57,9 +58,8 @@ export async function handleCommand(args: string): Promise<string> {
   const imageBuffer = Buffer.from(base64Image, "base64");
 
   // Use sharp to convert the buffer and save it as a JPG file
-  //const currentPath = unixToHostPath(await shellWrapper.getCurrentPath());
-  //const filepath = path.join(currentPath, filename);
-  const fileExtension = path.extname(filepath).substring(1);
+  const hostPath = filepath.toHostPath();
+  const fileExtension = path.extname(hostPath).substring(1);
 
   await sharp(imageBuffer)
     .resize(256, 256, {
@@ -67,12 +67,12 @@ export async function handleCommand(args: string): Promise<string> {
     })
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     .toFormat(<any>fileExtension)
-    .toFile(hostpath);
+    .toFile(hostPath);
 
   // Record the cost
   await costTracker.recordCost(model.cost, "genimg", model.name);
 
-  return "Image generated and saved to " + filepath;
+  return "Image generated and saved to " + filepath.getNaisysPath();
 }
 
 interface ImageModel {

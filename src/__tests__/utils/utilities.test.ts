@@ -1,10 +1,5 @@
 import { describe, expect, test } from "@jest/globals";
-import {
-  hostToUnixPath,
-  trimChars,
-  unixToHostPath,
-  valueFromString,
-} from "../../utils/utilities.js";
+import { trimChars, valueFromString } from "../../utils/utilities.js";
 
 describe("trimChars function", () => {
   test("trims the specified characters from the start and end of the string", () => {
@@ -59,40 +54,6 @@ describe("valueFromString function", () => {
     expect(valueFromString({}, "user.name")).toBeUndefined();
     expect(valueFromString(obj, "user.nonexistent.prop", "default")).toBe(
       "default",
-    );
-  });
-});
-
-describe("unixToHostPath", () => {
-  test("converts a unix path to a host path", () => {
-    expect(unixToHostPath("/mnt/c/")).toBe("c:\\");
-    expect(unixToHostPath("/mnt/c/Users/")).toBe("c:\\Users\\");
-    expect(unixToHostPath("/mnt/d/")).toBe("d:\\");
-    expect(unixToHostPath("/mnt/d/Program Files/")).toBe("d:\\Program Files\\");
-  });
-
-  test("returns the input path if not a NAISYS path", () => {
-    expect(unixToHostPath("c:\\")).toBe("c:\\");
-    expect(unixToHostPath("c:\\Users\\")).toBe("c:\\Users\\");
-    expect(unixToHostPath("d:\\")).toBe("d:\\");
-    expect(unixToHostPath("d:\\Program Files\\")).toBe("d:\\Program Files\\");
-  });
-});
-
-describe("hostToUnixPath", () => {
-  test("converts a host path to a unix path", () => {
-    expect(hostToUnixPath("c:\\")).toBe("/mnt/c/");
-    expect(hostToUnixPath("c:\\Users\\")).toBe("/mnt/c/Users/");
-    expect(hostToUnixPath("d:\\")).toBe("/mnt/d/");
-    expect(hostToUnixPath("d:\\Program Files\\")).toBe("/mnt/d/Program Files/");
-  });
-
-  test("returns the input path if not a host path", () => {
-    expect(hostToUnixPath("/mnt/c/")).toBe("/mnt/c/");
-    expect(hostToUnixPath("/mnt/c/Users/")).toBe("/mnt/c/Users/");
-    expect(hostToUnixPath("/mnt/d/")).toBe("/mnt/d/");
-    expect(hostToUnixPath("/mnt/d/Program Files/")).toBe(
-      "/mnt/d/Program Files/",
     );
   });
 });

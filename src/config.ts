@@ -4,9 +4,10 @@ import * as fs from "fs";
 import { readFile } from "fs/promises";
 import yaml from "js-yaml";
 import path from "path";
-import { fileURLToPath } from "url";
 import { CommandProtection } from "./utils/enums.js";
-import { hostToUnixPath, valueFromString } from "./utils/utilities.js";
+import * as pathService from "./utils/pathService.js";
+import { HostPath } from "./utils/pathService.js";
+import { valueFromString } from "./utils/utilities.js";
 
 program.argument("<agent-path>", "Path to agent configuration file").parse();
 
@@ -79,7 +80,7 @@ export interface AgentConfig {
   taskDescription?: string;
 
   /** The path of the config file. Set automatically on load */
-  path: string;
+  path: HostPath;
 }
 
 function loadAgentConfig() {
@@ -87,7 +88,7 @@ function loadAgentConfig() {
     fs.readFileSync(program.args[0], "utf8"),
   ) as AgentConfig;
 
-  config.path = hostToUnixPath(path.resolve(program.args[0]));
+  config.path = new HostPath(path.resolve(program.args[0]));
 
   // throw if any property is undefined
   for (const key of [
@@ -144,12 +145,15 @@ async function getVersion() {
       assert: { type: "json" },
     });*/
 
-    const packageJsonUrl = new URL("../package.json", import.meta.url);
-    const packageJsonPath = fileURLToPath(packageJsonUrl);
+    const installPath = pathService.getInstallPath();
+    const packageJsonPath = path.join(
+      installPath.getHostPath(),
+      "package.json",
+    );
     const packageJson = JSON.parse(await readFile(packageJsonPath, "utf8"));
     return packageJson.version;
   } catch (e) {
-    return "0.1";
+    return "Error getting NAISYS verison";
   }
 }
 
