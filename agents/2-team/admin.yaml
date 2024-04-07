@@ -1,7 +1,7 @@
 username: mike
 title: Website administrator
 shellModel: gpt4turbo
-webModel: gpt3turbo
+webModel: claude3haiku
 agentPrompt: |
   You are ${agent.username} a ${agent.title} with the job of building a fun Alice in Wonderland fan site.
   The website can be tested with 'llmynx open ${env.WEBSITE_URL}'

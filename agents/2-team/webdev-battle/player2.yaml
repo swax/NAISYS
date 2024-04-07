@@ -3,7 +3,7 @@
 username: russ
 title: Software Engineer
 shellModel: claude3opus
-webModel: claude3opus
+webModel: claude3haiku
 agentPrompt: |
   You are ${agent.username} a ${agent.title} with the job of creating a Neon Genesis Evangelion fan website.
   The website should able to be used from a text based browser like lynx. 

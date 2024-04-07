@@ -2,17 +2,20 @@
 
 # Make sure to enable this script for execution with `chmod +x naisys`
 
+# Resolves the location of naisys from the bin directory
+SCRIPT=$(readlink -f "$0" || echo "$0")
+SCRIPT_DIR=$(dirname "$SCRIPT")/..
+
 # Check if an argument is provided
 if [ $# -eq 0 ]; then
+  # get version from package.json
+  VERSION=$(node -e "console.log(require('${SCRIPT_DIR}/package.json').version)")
   echo "NAISYS: Node.js Autonomous Intelligence System"
+  echo "  Version: $VERSION"
   echo "  Usage: naisys <path to agent config yaml, or directory>"
   echo "  Note: If a folder is passed then all agents will be started in a tmux session"
   exit 1
 fi
-
-# Resolves the location of naisys from the bin directory
-SCRIPT=$(readlink -f "$0" || echo "$0")
-SCRIPT_DIR=$(dirname "$SCRIPT")/..
 
 # if path is a yaml file then start a single agent
 if [ -f "$1" ]; then

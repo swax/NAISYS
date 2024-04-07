@@ -1,7 +1,7 @@
 username: brown
 title: Content Creator/Editor
 shellModel: gpt4turbo
-webModel: gpt3turbo
+webModel: claude3haiku
 agentPrompt: |
   You are ${agent.username} a ${agent.title} for a Neon Genesis Evangelion fan website.
 

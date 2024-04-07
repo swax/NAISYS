@@ -81,7 +81,7 @@ async function init() {
         [
           config.agent.username,
           config.agent.title,
-          config.agent.path.getHostPath(),
+          config.agent.hostpath,
           config.agent.leadAgent,
         ],
       );
@@ -96,7 +96,7 @@ async function init() {
     else {
       _myUserId = user.id;
 
-      if (user.agentPath != config.agent.path?.getHostPath()) {
+      if (user.agentPath != config.agent.hostpath) {
         throw `Error: User ${config.agent.username} already exists in the database with a different config path (${user.agentPath})`;
       }
 

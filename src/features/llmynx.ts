@@ -1,3 +1,7 @@
+/**
+ * A bad play on words, but this is like lynx but for LLMs..
+ */
+
 import { exec } from "child_process";
 import * as os from "os";
 import * as config from "../config.js";
@@ -6,8 +10,6 @@ import { LlmMessage, LlmRole } from "../llm/llmDtos.js";
 import * as llmService from "../llm/llmService.js";
 import * as output from "../utils/output.js";
 import * as utilities from "../utils/utilities.js";
-
-// A bad play on words, but this is like lynx but for LLMs..
 
 let debugMode = false;
 
@@ -129,7 +131,7 @@ async function loadUrlLinks(url: string, linkPageAsContent: number) {
     );
   } else {
     output.comment(
-      `Link Content is already under ${config.webTokenMax} tokens.`,
+      `No need to reduce, link Content is already under ${config.webTokenMax} tokens.`,
     );
 
     content = globalizeLinkList(content);
@@ -184,7 +186,9 @@ async function loadUrlContent(
       reducedContent: content,
     });
   } else {
-    output.comment(`Content is already under ${config.webTokenMax} tokens.`);
+    output.comment(
+      `No need to reduce, content is already under ${config.webTokenMax} tokens.`,
+    );
   }
 
   // Prefix content with url if following as otherwise the url is never shown
@@ -201,15 +205,16 @@ async function loadUrlContent(
 }
 
 async function runLynx(url: string) {
-  return new Promise<string>((resolve) => {
+  return new Promise<string>((resolve, reject) => {
     // Option here to output the content and links separately, might be useful in future
     // mode == RunMode.Content ? "-nolist" : "-listonly";
     const modeParams = "";
 
     const ifWindows = os.platform() === "win32" ? "wsl " : "";
+    const timeoutSecs = config.shellCommand.noResponseTimeoutSeconds;
 
     exec(
-      `${ifWindows}lynx -dump ${modeParams} "${url}"`,
+      `${ifWindows}timeout ${timeoutSecs}s lynx -dump ${modeParams} "${url}"`,
       (error, stdout, stderr) => {
         let output = "";
 
@@ -226,7 +231,11 @@ async function runLynx(url: string) {
           output += stderr;
         }
 
-        resolve(output);
+        if (output.includes("Exiting via interrupt")) {
+          reject("Timed out loading URL: May be inaccessible");
+        } else {
+          resolve(output);
+        }
       },
     );
   });
@@ -247,7 +256,9 @@ async function reduceContent(
     tokenChunkSize = config.webTokenMax;
   }
 
-  outputInDebugMode(`Token max chunk size: ${tokenChunkSize}`);
+  outputInDebugMode(
+    `Token max chunk size: ${tokenChunkSize}. Total content size: ${contentTokenSize}`,
+  );
 
   const pieceCount = Math.ceil(contentTokenSize / tokenChunkSize);
   const pieceSize = content.length / pieceCount;
@@ -264,14 +275,20 @@ async function reduceContent(
       continue;
     }
 
-    output.comment(
-      `Processing Piece ${i + 1} of ${pieceCount} with ${model.key}...`,
-    );
+    if (pieceCount == 1) {
+      output.comment(
+        `Reducing content from ${contentTokenSize} tokens to under ${config.webTokenMax} tokens with ${model.key}...`,
+      );
+    } else {
+      output.comment(
+        `Processing Piece ${i + 1} of ${pieceCount} with ${model.key}...`,
+      );
 
-    outputInDebugMode(
-      `  Reduced output tokens: ${utilities.getTokenCount(reducedOutput)}\n` +
-        `  Current Piece tokens: ${utilities.getTokenCount(pieceStr)}`,
-    );
+      outputInDebugMode(
+        `  Reduced output tokens: ${utilities.getTokenCount(reducedOutput)}\n` +
+          `  Current Piece tokens: ${utilities.getTokenCount(pieceStr)}`,
+      );
+    }
 
     reducedOutput = await llmReduce(
       url,
@@ -279,6 +296,7 @@ async function reduceContent(
       i + 1,
       pieceCount,
       pieceStr,
+      contentTokenSize,
     );
   }
 
@@ -301,14 +319,28 @@ async function llmReduce(
   pieceNumber: number,
   pieceTotal: number,
   pieceStr: string,
+  contentTokenSize: number,
 ) {
-  const systemMessage = `You will be iteratively fed the web page "${url}" broken into ${pieceTotal} pieces.
+  let systemMessage = "";
+  let content = "";
+
+  if (pieceTotal === 1) {
+    systemMessage = `The web page "${url}" content that is currently ${contentTokenSize} tokens needs to be reduced down to around ${config.webTokenMax} tokens.
+Links are represented as numbers in brackets, for example [4]. Keep links in the reduced output'
+Try to prioritize content of substance and primary navigation links over advertising content.`;
+
+    content = `Web Page Content:
+${pieceStr}
+
+Please reduce the content above to around ${config.webTokenMax} tokens while maintaining relevant links in brackets like [4].`;
+  } else {
+    systemMessage = `You will be iteratively fed the web page "${url}" broken into ${pieceTotal} pieces.
 Each 'Web Page Piece' should be merged with the  in order 'Current Reduced Content' to maintain the meaning of the page while reducing verbosity and duplication.
 The final output should be around ${config.webTokenMax} tokens. 
 Links are represented as numbers in brackets, for example [4]. Try not to remove them in the 'Final Merged Content'
 Try to prioritize content of substance over advertising content.`;
 
-  const content = `Web Page Piece ${pieceNumber} of ${pieceTotal}: 
+    content = `Web Page Piece ${pieceNumber} of ${pieceTotal}: 
 ${pieceStr}
 
 Please merge the 'Web Page Piece' above into the 'Current Reduced Content' below while keeping the result to around ${config.webTokenMax} tokens.
@@ -319,6 +351,7 @@ ${reducedOutput}
 
 Final Merged Content:
 `;
+  }
 
   const context: LlmMessage = {
     role: LlmRole.User,

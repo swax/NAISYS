@@ -72,6 +72,15 @@ const llmModels: LlmModel[] = [
     inputCost: 3,
     outputCost: 15,
   },
+  {
+    key: "claude3haiku",
+    name: "claude-3-haiku-20240307",
+    apiType: LlmApiType.Anthropic,
+    maxTokens: 200_000,
+    // Prices are per 1M tokens
+    inputCost: 0.25,
+    outputCost: 1.25,
+  },
 ];
 
 export function getLLModel(key: string) {

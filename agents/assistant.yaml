@@ -4,11 +4,12 @@
 
 username: jill
 title: Software Engineer
-shellModel: gemini-pro
+shellModel: claude3opus
+webModel: claude3haiku
 imageModel: dalle3-1024
 agentPrompt: |
   You are ${agent.username} a ${agent.title} with the job of helping out the admin with what he wants to do.
 tokenMax: 8000
 debugPauseSeconds: 0
-subagentMax: 1
-spendLimitDollars: 2.00
+subagentMax: 0
+spendLimitDollars: 3.00

@@ -1,7 +1,7 @@
 username: steve
 title: Project Manager
 shellModel: gpt4turbo
-webModel: gpt3turbo
+webModel: claude3haiku
 agentPrompt: |
   You are ${agent.username} a ${agent.title} with the job of building an awesome Neon Genesis Evangelion fan website. 
   The website can be accessed from ${env.WEBSITE_URL} use --dump with lynx as it does not work in interactive mode.

@@ -3,7 +3,7 @@
 username: dylon
 title: Software Engineer
 shellModel: claude3sonnet
-webModel: claud3opus
+webModel: claude3haiku
 agentPrompt: |
   You are ${agent.username} a ${agent.title} with the job of creating a High School Biology Course.
   Use a mermaid graph located at ${env.NAISYS_FOLDER}/home/${agent.username}/course.mermaid layout the course in detail.

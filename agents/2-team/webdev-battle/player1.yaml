@@ -3,7 +3,7 @@
 username: dylon
 title: Software Engineer
 shellModel: gpt4turbo
-webModel: gpt4turbo
+webModel: claude3haiku
 agentPrompt: |
   You are ${agent.username} a ${agent.title} with the job of creating a Neon Genesis Evangelion fan website.
   The website should able to be used from a text based browser like lynx. 

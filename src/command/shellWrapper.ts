@@ -24,6 +24,7 @@ let _currentPath: string | undefined;
 
 let _resolveCurrentCommand: ((value: CommandResponse) => void) | undefined;
 let _currentCommandTimeout: NodeJS.Timeout | undefined;
+let _startTime: Date | undefined;
 
 const _commandDelimiter = "__COMMAND_END_X7YUTT__";
 
@@ -40,6 +41,9 @@ async function ensureOpen() {
   _process = spawn(spawnProcess, [], { stdio: "pipe" });
 
   _process.stdout.on("data", (data) => {
+    // Extend the timeout of the current command, important to do before processing the output
+    setOrExtendShellTimeout();
+
     processOutput(data.toString(), ShellEvent.Ouptput);
   });
 
@@ -166,12 +170,27 @@ export async function executeCommand(command: string) {
     //_log += "INPUT: " + commandWithDelimiter;
     _process?.stdin.write(commandWithDelimiter);
 
+    _startTime = new Date();
+
     // If no response, kill and reset the shell, often hanging on some unescaped input
-    _currentCommandTimeout = setTimeout(
-      resetShell,
-      config.shellCommmandTimeoutSeconds * 1000,
-    );
+    setOrExtendShellTimeout();
   });
+}
+
+function setOrExtendShellTimeout() {
+  // Don't extend if past a minute
+  const timeWaiting = new Date().getTime() - (_startTime?.getTime() || 0);
+
+  if (timeWaiting > config.shellCommand.maxTimeoutSeconds) {
+    return;
+  }
+
+  clearTimeout(_currentCommandTimeout);
+
+  _currentCommandTimeout = setTimeout(
+    resetShell,
+    config.shellCommand.noResponseTimeoutSeconds * 1000,
+  );
 }
 
 function resetShell() {
@@ -183,9 +202,13 @@ function resetShell() {
 
   output.error("SHELL TIMEMOUT/KILLED. PID: " + _process?.pid);
 
+  const elapsedSeconds = _startTime
+    ? Math.round((new Date().getTime() - _startTime.getTime()) / 1000)
+    : -1;
+
   const outputWithError =
     _commandOutput.trim() +
-    `\nError: Command timed out after ${config.shellCommmandTimeoutSeconds} seconds.`;
+    `\nError: Command timed out after ${elapsedSeconds} seconds.`;
 
   resetProcess();
 
@@ -213,6 +236,8 @@ export async function terminate() {
 function resetCommand() {
   _commandOutput = "";
   _hasErrors = false;
+  _startTime = undefined;
+
   clearTimeout(_currentCommandTimeout);
 }
 
