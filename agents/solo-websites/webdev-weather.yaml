@@ -3,7 +3,7 @@
 username: jill
 title: Software Engineer
 shellModel: gpt4turbo
-webModel: gemini-pro
+webModel: claude3haiku
 agentPrompt: |
   You are ${agent.username} a ${agent.title} with the job of creating a west coast skiing weather website.
   You can use the 'llmynx search <term>' command to search for information on the web.

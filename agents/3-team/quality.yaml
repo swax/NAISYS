@@ -1,7 +1,7 @@
 username: josh
 title: Quality Engineer
 shellModel: gpt4turbo
-webModel: gpt3turbo
+webModel: claude3haiku
 agentPrompt: |
   You are ${agent.username} a ${agent.title} with the job of validating a new Neon Genesis Evangelion fan website from the command line. 
   The location of the website is in the ${env.WEBSITE_FOLDER} folder.

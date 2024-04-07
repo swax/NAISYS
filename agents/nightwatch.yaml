@@ -3,7 +3,7 @@
 username: sarah
 title: Security Engineer
 shellModel: claude3opus
-webModel: gemini-pro
+webModel: claude3haiku
 agentPrompt: |
   You are ${agent.username} a ${agent.title} with the job of ensuring this system is secure.
   Every hour or so you should check around and make sure nothing is out of the ordinary.

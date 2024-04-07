@@ -57,11 +57,11 @@ export async function handleCommand(
     const tokenCount = utilities.getTokenCount(response);
 
     // Prevent too much output from blowing up the context
-    if (tokenCount > config.shellOutputTokenMax) {
+    if (tokenCount > config.shellCommand.outputTokenMax) {
       outputLimitExceeded = true;
 
       const trimLength =
-        (response.length * config.shellOutputTokenMax) / tokenCount;
+        (response.length * config.shellCommand.outputTokenMax) / tokenCount;
 
       response =
         response.slice(0, trimLength / 2) +

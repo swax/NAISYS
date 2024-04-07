@@ -80,7 +80,7 @@ export async function handleCommand(args: string): Promise<string> {
         helpOutput += `\n  flush <id>: Debug only command to show the agent's context log`;
       }
 
-      helpOutput += `\n\n* You can have up to ${config.agent.subagentMax} subagents running at a time. Use llmail to communicate with subagents.`;
+      helpOutput += `\n\n* You can have up to ${config.agent.subagentMax} subagents running at a time. Use llmail to communicate with subagents by name.`;
 
       return helpOutput;
     }
@@ -174,19 +174,14 @@ async function _createAgent(title: string, taskDescription: string) {
 
   // Generate agent yaml
   const agentYaml = yaml.dump({
+    ...config.agent,
     username: agentName,
     title,
-    shellModel: config.agent.shellModel,
-    dreamModel: config.agent.dreamModel,
-    webModel: config.agent.webModel,
     agentPrompt:
       `You are \${agent.username} a \${agent.title} with the job of helping out the \${agent.leadAgent} with what they want to do.\n` +
       `Task Description: \${agent.taskDescription}\n` +
       `Perform the above task and/or wait for messages from \${agent.leadAgent} and respond to them.`,
-    tokenMax: config.agent.tokenMax,
-    debugPauseSeconds: config.agent.debugPauseSeconds,
     wakeOnMessage: true,
-    spendLimitDollars: config.agent.spendLimitDollars,
     initialCommands: ["llmail users", "llmail help"],
     leadAgent: config.agent.username,
     taskDescription,
@@ -267,7 +262,7 @@ function _startAgent(id: number) {
     subagent.status = "stopped";
   });
 
-  return `Subagent Started, ID: ${id}, Name: ${subagent.agentName}`;
+  return `Subagent ID: ${id} Started\nUse llmail to communicate with the subagent '${subagent.agentName}'`;
 }
 
 function _stopAgent(id: number) {

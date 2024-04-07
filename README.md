@@ -73,7 +73,7 @@ dreamModel: claude3opus
 
 # The model to use for llmynx, pre-processing websites to fit into a smaller context (use a cheaper model)
 # defaults to the shellModel if omitted
-webModel: gemini-pro
+webModel: claude3haiku
 
 # The model used by the 'genimg' command. If not defined then the genimg command is not available to the LLM
 # Valid values: dalle2-256, dalle2-512, dalle2-1024, dalle3-1024, dalle3-1024-HD

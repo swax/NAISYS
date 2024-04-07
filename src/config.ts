@@ -6,7 +6,6 @@ import yaml from "js-yaml";
 import path from "path";
 import { CommandProtection } from "./utils/enums.js";
 import * as pathService from "./utils/pathService.js";
-import { HostPath } from "./utils/pathService.js";
 import { valueFromString } from "./utils/utilities.js";
 
 program.argument("<agent-path>", "Path to agent configuration file").parse();
@@ -16,12 +15,17 @@ dotenv.config();
 /** The system name that shows after the @ in the command prompt */
 export const hostname = "naisys";
 
-/** Limits the size of files that can be read/wrote */
-export const shellOutputTokenMax = 3000;
+export const shellCommand = {
+  /** Limits the size of files that can be read/wrote */
+  outputTokenMax: 3000,
+  /** The time NAISYS will wait for new shell output before giving up */
+  noResponseTimeoutSeconds: 10,
+  /** The max time NAISYS will wait for a shell command to complete */
+  maxTimeoutSeconds: 100,
+};
 
-/** The number of seconds NAISYS will wait for a shell command to complete */
-export const shellCommmandTimeoutSeconds = 15;
-export const webTokenMax = 3000;
+/** Web pages loaded with llmynx will be reduced down to around this number of tokens */
+export const webTokenMax = 2500;
 
 export const endSessionEnabled = true;
 
@@ -80,7 +84,7 @@ export interface AgentConfig {
   taskDescription?: string;
 
   /** The path of the config file. Set automatically on load */
-  path: HostPath;
+  hostpath: string;
 }
 
 function loadAgentConfig() {
@@ -88,7 +92,7 @@ function loadAgentConfig() {
     fs.readFileSync(program.args[0], "utf8"),
   ) as AgentConfig;
 
-  config.path = new HostPath(path.resolve(program.args[0]));
+  config.hostpath = path.resolve(program.args[0]);
 
   // throw if any property is undefined
   for (const key of [

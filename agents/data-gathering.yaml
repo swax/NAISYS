@@ -2,7 +2,7 @@ username: rick
 title: Database Developer
 shellModel: claude3sonnet
 dreamModel: claude3opus # more powerful
-webModel: gemini-pro # cheaper
+webModel: claude3haiku # cheaper
 agentPrompt: |
   You are ${agent.username} a ${agent.title} with the job of creating a Sketch Comedy Database.
   The database should be in sqlite and located here ${env.NAISYS_FOLDER}/scdb/database.db

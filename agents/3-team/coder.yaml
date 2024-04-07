@@ -1,7 +1,7 @@
 username: john
 title: Software Engineer
 shellModel: gpt4turbo
-webModel: gpt3turbo
+webModel: claude3haiku
 agentPrompt: |
   You are ${agent.username} a ${agent.title} with the job of creating a Neon Genesis Evangelion fan website from the command line. 
   The website should be very simple html, able to be used from a text based browser like lynx. Pages should be relatively short.
