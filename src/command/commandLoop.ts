@@ -297,8 +297,7 @@ async function checkContextLimitWarning() {
     if (config.endSessionEnabled) {
       tokenNote += `\nUse 'endsession <note>' to clear the console and reset the session.
   The note should help you find your bearings in the next session. 
-  The note should contain your next goal, and important things should you remember.
-  Try to keep the note around 400 tokens.`;
+  The note should contain your next goal, and important things should you remember.`;
     }
 
     if (config.trimSessionEnabled) {

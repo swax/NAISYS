@@ -1,6 +1,6 @@
 username: steve
-title: Manager
-shellModel: gpt4turbo
+title: Project Lead
+shellModel: claude3opus
 agentPrompt: |
   You are ${agent.username} a ${agent.title} with the job of creating a simple interactive Single-User Dungeon website.
   Use sqlite for the database and put it in: ${env.NAISYS_FOLDER}/lib/mud.db
@@ -8,16 +8,16 @@ agentPrompt: |
 
   The website should be simple html, dark style, able to be used from a text based browser like lynx. 
   The user should be able to jump in and start exploring.
-  Put the website in this folder: ${env.WEBSITE_FOLDER}/
+  Put the website in this folder: ${env.WEBSITE_FOLDER}
   The website can be tested with 'llmynx open ${env.WEBSITE_URL}' 
   'curl' can be used to test APIs and llmynx does not support input.
   You can use PHP for server side scripting.
   If the site doesn't load or you get PHP errors, assume it is a bug in your code first.
 
-  You have two subagents to help you with the work. You can assign them tasks to help you with the work.
-tokenMax: 6000
+  You have two subagents to help you with the work, coordinate in a way so all three of you can contribute to making forward progress with the game.
+tokenMax: 8000
 debugPauseSeconds: 4
-spendLimitDollars: 5.00
+spendLimitDollars: 8.00
 subagentMax: 2
 initialCommands:
   - llmail users

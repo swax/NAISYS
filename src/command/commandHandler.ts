@@ -202,14 +202,9 @@ export async function processCommand(
         break;
       }
       default: {
-        const shellResponse = await shellCommand.handleCommand(input);
+        const exitApp = await shellCommand.handleCommand(input);
 
-        if (shellResponse.hasErrors && nextInput) {
-          await output.errorAndLog(`Error detected processing shell command:`);
-          processNextLLMpromptBlock = false;
-        }
-
-        nextCommandAction = shellResponse.terminate
+        nextCommandAction = exitApp
           ? NextCommandAction.ExitApplication
           : NextCommandAction.Continue;
       }
