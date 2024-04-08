@@ -5,11 +5,6 @@ import * as config from "../config.js";
 import * as output from "../utils/output.js";
 import { NaisysPath } from "../utils/pathService.js";
 
-type CommandResponse = {
-  value: string;
-  hasErrors: boolean;
-};
-
 enum ShellEvent {
   Ouptput = "stdout",
   Error = "stderr",
@@ -17,12 +12,10 @@ enum ShellEvent {
 }
 
 let _process: ChildProcessWithoutNullStreams | undefined;
-//let _log = "";
 let _commandOutput = "";
-let _hasErrors = false;
 let _currentPath: string | undefined;
 
-let _resolveCurrentCommand: ((value: CommandResponse) => void) | undefined;
+let _resolveCurrentCommand: ((value: string) => void) | undefined;
 let _currentCommandTimeout: NodeJS.Timeout | undefined;
 let _startTime: Date | undefined;
 
@@ -33,7 +26,6 @@ async function ensureOpen() {
     return;
   }
 
-  //_log = "";
   resetCommand();
 
   const spawnProcess = os.platform() === "win32" ? "wsl" : "bash";
@@ -53,7 +45,6 @@ async function ensureOpen() {
 
   _process.on("close", (code) => {
     processOutput(`${code}`, ShellEvent.Exit);
-    _process = undefined;
   });
 
   // Init users home dir on first run, on shell crash/rerun go back to the current path
@@ -83,9 +74,9 @@ async function ensureOpen() {
 }
 
 /** Basically don't show anything in the console unless there is an error */
-function errorIfNotEmpty(response: CommandResponse) {
-  if (response.value) {
-    output.error(response.value);
+function errorIfNotEmpty(response: string) {
+  if (response) {
+    output.error(response);
   }
 }
 
@@ -97,15 +88,26 @@ function processOutput(dataStr: string, eventType: ShellEvent) {
 
   if (eventType === ShellEvent.Exit) {
     output.error("SHELL EXITED. PID: " + _process?.pid + " CODE: " + dataStr);
+
+    const elapsedSeconds = _startTime
+      ? Math.round((new Date().getTime() - _startTime.getTime()) / 1000)
+      : -1;
+
+    const outputWithError =
+      _commandOutput.trim() +
+      `\nError: Command timed out after ${elapsedSeconds} seconds.`;
+
+    resetProcess();
+
+    _resolveCurrentCommand(outputWithError);
+    return;
   } else {
     //_log += "OUTPUT: " + dataStr;
     _commandOutput += dataStr;
   }
 
   if (eventType === ShellEvent.Error) {
-    _hasErrors = true;
     //output += "stderr: ";
-
     // parse out the line number from '-bash: line 999: '
     /*if (dataStr.startsWith("-bash: line ")) {
       output.error(dataStr);
@@ -132,43 +134,35 @@ function processOutput(dataStr: string, eventType: ShellEvent) {
   }
 
   const delimiterIndex = _commandOutput.indexOf(_commandDelimiter);
-  if (delimiterIndex != -1 || eventType === ShellEvent.Exit) {
+  if (delimiterIndex != -1) {
     // trim everything after delimiter
     _commandOutput = _commandOutput.slice(0, delimiterIndex);
 
-    const response = {
-      value: _commandOutput.trim(),
-      hasErrors: _hasErrors,
-    };
+    const response = _commandOutput.trim();
 
     resetCommand();
     _resolveCurrentCommand(response);
   }
 }
+
 export async function executeCommand(command: string) {
-  /*if (command == "shelllog") {
-    _log.split("\n").forEach((line, i) => {
-      output.comment(`${i}. ${line}`);
-    });
-
-    return <CommandResponse>{
-      value: "",
-      hasErrors: false,
-    };
-  }*/
-
   await ensureOpen();
 
   if (_currentPath && command.trim().split("\n").length > 1) {
     command = await runCommandFromScript(command);
   }
 
-  return new Promise<CommandResponse>((resolve) => {
+  return new Promise<string>((resolve, reject) => {
     _resolveCurrentCommand = resolve;
+
     const commandWithDelimiter = `${command.trim()}\necho "${_commandDelimiter} LINE:\${LINENO}"\n`;
 
-    //_log += "INPUT: " + commandWithDelimiter;
-    _process?.stdin.write(commandWithDelimiter);
+    if (!_process) {
+      reject("Shell process is not open");
+      return;
+    }
+
+    _process.stdin.write(commandWithDelimiter);
 
     _startTime = new Date();
 
@@ -178,7 +172,7 @@ export async function executeCommand(command: string) {
 }
 
 function setOrExtendShellTimeout() {
-  // Don't extend if past a minute
+  // Don't extend if we've been waiting longer than the max timeout seconds
   const timeWaiting = new Date().getTime() - (_startTime?.getTime() || 0);
 
   if (timeWaiting > config.shellCommand.maxTimeoutSeconds) {
@@ -194,34 +188,21 @@ function setOrExtendShellTimeout() {
 }
 
 function resetShell() {
-  if (!_resolveCurrentCommand) {
+  if (!_process) {
     return;
   }
 
-  _process?.kill();
+  output.error("COMMAND TIMEMOUT. KILL PID: " + _process.pid);
 
-  output.error("SHELL TIMEMOUT/KILLED. PID: " + _process?.pid);
+  _process.kill("SIGINT");
 
-  const elapsedSeconds = _startTime
-    ? Math.round((new Date().getTime() - _startTime.getTime()) / 1000)
-    : -1;
-
-  const outputWithError =
-    _commandOutput.trim() +
-    `\nError: Command timed out after ${elapsedSeconds} seconds.`;
-
-  resetProcess();
-
-  _resolveCurrentCommand({
-    value: outputWithError,
-    hasErrors: true,
-  });
+  // Should trigger the process close event from here
 }
 
 export async function getCurrentPath() {
   await ensureOpen();
 
-  _currentPath = (await executeCommand("pwd")).value;
+  _currentPath = await executeCommand("pwd");
 
   return _currentPath;
 }
@@ -235,7 +216,6 @@ export async function terminate() {
 
 function resetCommand() {
   _commandOutput = "";
-  _hasErrors = false;
   _startTime = undefined;
 
   clearTimeout(_currentCommandTimeout);
