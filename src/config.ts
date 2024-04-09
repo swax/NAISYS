@@ -19,9 +19,9 @@ export const shellCommand = {
   /** Limits the size of files that can be read/wrote */
   outputTokenMax: 3000,
   /** The time NAISYS will wait for new shell output before giving up */
-  noResponseTimeoutSeconds: 10,
+  timeoutSeconds: 15,
   /** The max time NAISYS will wait for a shell command to complete */
-  maxTimeoutSeconds: 100,
+  maxTimeoutSeconds: 60,
 };
 
 /** Web pages loaded with llmynx will be reduced down to around this number of tokens */

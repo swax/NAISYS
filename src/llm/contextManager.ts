@@ -18,6 +18,10 @@ export async function append(
   source: ContentSource = ContentSource.Console,
   promptIndex?: number,
 ) {
+  if (!content) {
+    return;
+  }
+
   if (
     promptIndex &&
     (source != ContentSource.ConsolePrompt ||

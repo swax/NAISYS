@@ -9,7 +9,7 @@
     "naisys": "bin/naisys"
   },
   "scripts": {
-    "compile/run/attachable": "tsc && node --inspect dist/naisys.js ./agents/netmap.yaml",
+    "compile/run/attachable": "tsc && node --inspect dist/naisys.js ./agents/assistant.yaml",
     "agent:assistant": "node dist/naisys.js ./agents/assistant.yaml",
     "agent:nightwatch": "node dist/naisys.js ./agents/nightwatch.yaml",
     "clean": "rm -rf dist",
