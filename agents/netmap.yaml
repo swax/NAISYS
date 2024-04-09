@@ -7,6 +7,7 @@ agentPrompt: |
   Try to create the diagram in as much detail as possible, going as far out as possible into the network.
   If you get stuck, move on to something else and come back to it later. 
   Try to add something to the diagram every session.
+  Prefix long running commands to prevent them from hanging the console, for example 'timeout -s INT 20s'
 tokenMax: 8000
 debugPauseSeconds: 4
-spendLimitDollars: 8.00
+spendLimitDollars: 5.00

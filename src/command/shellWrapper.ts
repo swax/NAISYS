@@ -12,6 +12,7 @@ enum ShellEvent {
 }
 
 let _process: ChildProcessWithoutNullStreams | undefined;
+let _currentProcessId: number | undefined;
 let _commandOutput = "";
 let _currentPath: string | undefined;
 
@@ -19,6 +20,7 @@ let _resolveCurrentCommand: ((value: string) => void) | undefined;
 let _currentCommandTimeout: NodeJS.Timeout | undefined;
 let _startTime: Date | undefined;
 
+/** How we know the command has completed when running the command inside a shell like bash or wsl */
 const _commandDelimiter = "__COMMAND_END_X7YUTT__";
 
 async function ensureOpen() {
@@ -32,24 +34,29 @@ async function ensureOpen() {
 
   _process = spawn(spawnProcess, [], { stdio: "pipe" });
 
-  _process.stdout.on("data", (data) => {
-    // Extend the timeout of the current command, important to do before processing the output
-    setOrExtendShellTimeout();
+  const pid = _process.pid;
 
-    processOutput(data.toString(), ShellEvent.Ouptput);
+  if (!pid) {
+    throw "Shell process failed to start";
+  }
+
+  _currentProcessId = pid;
+
+  _process.stdout.on("data", (data) => {
+    processOutput(data.toString(), ShellEvent.Ouptput, pid);
   });
 
   _process.stderr.on("data", (data) => {
-    processOutput(data.toString(), ShellEvent.Error);
+    processOutput(data.toString(), ShellEvent.Error, pid);
   });
 
   _process.on("close", (code) => {
-    processOutput(`${code}`, ShellEvent.Exit);
+    processOutput(`${code}`, ShellEvent.Exit, pid);
   });
 
   // Init users home dir on first run, on shell crash/rerun go back to the current path
   if (!_currentPath) {
-    output.comment("NEW SHELL OPENED. PID: " + _process.pid);
+    output.comment("NEW SHELL OPENED. PID: " + pid);
 
     errorIfNotEmpty(
       await executeCommand(
@@ -62,7 +69,7 @@ async function ensureOpen() {
       ),
     );
   } else {
-    output.comment("SHELL RESTORED. PID: " + _process.pid);
+    output.comment("SHELL RESTORED. PID: " + pid);
 
     errorIfNotEmpty(await executeCommand("cd " + _currentPath));
   }
@@ -80,9 +87,19 @@ function errorIfNotEmpty(response: string) {
   }
 }
 
-function processOutput(dataStr: string, eventType: ShellEvent) {
+function processOutput(dataStr: string, eventType: ShellEvent, pid: number) {
+  if (pid != _currentProcessId) {
+    output.comment(
+      `Ignoring '${eventType}' from old shell process ${pid}: ` + dataStr,
+    );
+    return;
+  }
+
   if (!_resolveCurrentCommand) {
-    output.comment(eventType + " without handler: " + dataStr);
+    output.comment(
+      `Ignoring '${eventType}' from process ${pid} with no resolve handler: ` +
+        dataStr,
+    );
     return;
   }
 
@@ -95,42 +112,17 @@ function processOutput(dataStr: string, eventType: ShellEvent) {
 
     const outputWithError =
       _commandOutput.trim() +
-      `\nError: Command timed out after ${elapsedSeconds} seconds.`;
+      `\nNAISYS: Command hit time out limit after ${elapsedSeconds} seconds. If possible figure out how to run the command faster or break it up into smaller parts.`;
 
     resetProcess();
 
     _resolveCurrentCommand(outputWithError);
     return;
   } else {
-    //_log += "OUTPUT: " + dataStr;
+    // Extend the timeout of the current command
+    setOrExtendShellTimeout();
+
     _commandOutput += dataStr;
-  }
-
-  if (eventType === ShellEvent.Error) {
-    //output += "stderr: ";
-    // parse out the line number from '-bash: line 999: '
-    /*if (dataStr.startsWith("-bash: line ")) {
-      output.error(dataStr);
-
-      const lineNum = dataStr.slice(11, dataStr.indexOf(": ", 11));
-      output.error(`Detected error on line ${lineNum} of output`);
-
-      // display the same line of _output
-      const logLines = _log.split("\n");
-      const lineIndex = parseInt(lineNum) - 1;
-      if (logLines.length > lineIndex) {
-        output.error(`Line ${lineIndex} in log: ` + logLines[lineIndex]);
-      }
-
-      // output all lines for debugging
-      for (let i = 0; i < logLines.length; i++) {
-        // if withing 10 lines of the error, show the line
-        //if (Math.abs(i - lineIndex) < 10) {
-          const lineStr = logLines[i].replace(/\n/g, "");
-          output.error(`${i}: ${lineStr}`);
-        //}
-      }
-    }*/
   }
 
   const delimiterIndex = _commandOutput.indexOf(_commandDelimiter);
@@ -149,7 +141,7 @@ export async function executeCommand(command: string) {
   await ensureOpen();
 
   if (_currentPath && command.trim().split("\n").length > 1) {
-    command = await runCommandFromScript(command);
+    command = await putMultilineCommandInAScript(command);
   }
 
   return new Promise<string>((resolve, reject) => {
@@ -175,26 +167,34 @@ function setOrExtendShellTimeout() {
   // Don't extend if we've been waiting longer than the max timeout seconds
   const timeWaiting = new Date().getTime() - (_startTime?.getTime() || 0);
 
-  if (timeWaiting > config.shellCommand.maxTimeoutSeconds) {
+  if (
+    !_process?.pid ||
+    timeWaiting > config.shellCommand.maxTimeoutSeconds * 1000
+  ) {
     return;
   }
+
+  // Define the pid for use in the timeout closure, as _process.pid may change
+  const pid = _process.pid;
 
   clearTimeout(_currentCommandTimeout);
 
-  _currentCommandTimeout = setTimeout(
-    resetShell,
-    config.shellCommand.noResponseTimeoutSeconds * 1000,
-  );
+  _currentCommandTimeout = setTimeout(() => {
+    resetShell(pid);
+  }, config.shellCommand.timeoutSeconds * 1000);
 }
 
-function resetShell() {
-  if (!_process) {
+function resetShell(pid: number) {
+  if (!_process || _process.pid != pid) {
+    output.comment("Ignoring timeout for old shell process " + pid);
     return;
   }
 
-  output.error("COMMAND TIMEMOUT. KILL PID: " + _process.pid);
+  const killResponse = _process.kill();
 
-  _process.kill("SIGINT");
+  output.error(
+    `KILL SIGNAL SENT TO PID: ${_process.pid}, RESPONSE: ${killResponse ? "SUCCESS" : "FAILED"}`,
+  );
 
   // Should trigger the process close event from here
 }
@@ -229,7 +229,7 @@ function resetProcess() {
 
 /** Wraps multi line commands in a script to make it easier to diagnose the source of errors based on line number
  * May also help with common escaping errors */
-function runCommandFromScript(command: string) {
+function putMultilineCommandInAScript(command: string) {
   const scriptPath = new NaisysPath(
     `${config.naisysFolder}/home/${config.agent.username}/.command.tmp.sh`,
   );

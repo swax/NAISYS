@@ -211,7 +211,7 @@ async function runLynx(url: string) {
     const modeParams = "";
 
     const ifWindows = os.platform() === "win32" ? "wsl " : "";
-    const timeoutSecs = config.shellCommand.noResponseTimeoutSeconds;
+    const timeoutSecs = config.shellCommand.timeoutSeconds;
 
     exec(
       `${ifWindows}timeout ${timeoutSecs}s lynx -dump ${modeParams} "${url}"`,
