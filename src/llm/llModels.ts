@@ -46,13 +46,22 @@ const llmModels: LlmModel[] = [
     outputCost: 0,
   },
   {
-    key: "gemini-pro",
+    key: "gemini1.5",
+    name: "gemini-1.5-pro-latest",
+    apiType: LlmApiType.Google,
+    maxTokens: 1_048_576,
+    // 2 queries per minute free then the prices below are per 1000 characters
+    inputCost: 7,
+    outputCost: 21,
+  },
+  {
+    key: "gemini1.0",
     name: "gemini-pro",
     apiType: LlmApiType.Google,
-    maxTokens: 8_000,
+    maxTokens: 30_720,
     // 60 queries per minute free then the prices below are per 1000 characters
-    inputCost: 0.000125,
-    outputCost: 0.000375,
+    inputCost: 0.50,
+    outputCost: 1.50,
   },
   {
     key: "claude3opus",
