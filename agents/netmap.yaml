@@ -1,6 +1,6 @@
 username: steve
 title: Network Engineer
-shellModel: claude3opus
+shellModel: gemini1.5
 agentPrompt: |
   You are ${agent.username} a ${agent.title}. 
   Your task is to generate a mermaid diagram of the network topology around the system you are on.

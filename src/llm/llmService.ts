@@ -3,6 +3,7 @@ import { MessageParam } from "@anthropic-ai/sdk/resources/messages.mjs";
 import { Content, GoogleGenerativeAI } from "@google/generative-ai";
 import OpenAI from "openai";
 import * as config from "../config.js";
+import { getTokenCount } from "../utils/utilities.js";
 import * as costTracker from "./costTracker.js";
 import { LlmApiType, getLLModel } from "./llModels.js";
 import { LlmMessage, LlmRole } from "./llmDtos.js";
@@ -142,9 +143,7 @@ async function sendWithGoogle(
 
   const chat = googleModel.startChat({
     history,
-    generationConfig: {
-      maxOutputTokens: 2000,
-    },
+    generationConfig: {},
   });
 
   const result = await chat.sendMessage(lastMessage.content);
@@ -155,18 +154,21 @@ async function sendWithGoogle(
 
   const responseText = result.response.text();
 
-  // Total up cost, per 1000 characters with google
-  // todo: take into account google allows 60 queries per minute for free
-  const inputCharCount =
-    systemMessage.length +
+  // todo: take into account google allows 60 queries per minute for free for 1.0, 2 queries/min for 1.5
+
+  // AFAIK Google API doesn't provide usage data, so we have to estimate it ourselves
+  const inputTokenCount =
+    getTokenCount(systemMessage) +
     context
-      .map((m) => m.content.length)
+      .map((m) => getTokenCount(m.content))
       .reduce((prevVal, currVal) => prevVal + currVal, 0);
 
-  const cost =
-    inputCharCount * model.inputCost + responseText.length * model.outputCost;
+  const outputTokenCount = getTokenCount(responseText);
 
-  await costTracker.recordCost(cost / 1000, source, model.name);
+  const cost =
+    inputTokenCount * model.inputCost + outputTokenCount * model.outputCost;
+
+  await costTracker.recordCost(cost / 1_000_000, source, model.name);
 
   return responseText;
 }

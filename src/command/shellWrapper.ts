@@ -190,6 +190,9 @@ function resetShell(pid: number) {
     return;
   }
 
+  // There is still an issue here when running on linux where if a command like 'ping' is running
+  // then kill() won't actually kill the 'bash' process hosting the ping, it will just hang here indefinitely
+  // A not fail proof workaround is to tell the LLM to prefix long running commands with 'timeout 10s' or similar
   const killResponse = _process.kill();
 
   output.error(
