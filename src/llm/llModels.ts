@@ -60,8 +60,8 @@ const llmModels: LlmModel[] = [
     apiType: LlmApiType.Google,
     maxTokens: 30_720,
     // 60 queries per minute free then the prices below are per 1000 characters
-    inputCost: 0.50,
-    outputCost: 1.50,
+    inputCost: 0.5,
+    outputCost: 1.5,
   },
   {
     key: "claude3opus",

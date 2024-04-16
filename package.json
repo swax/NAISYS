@@ -9,7 +9,7 @@
     "naisys": "bin/naisys"
   },
   "scripts": {
-    "compile/run/attachable": "tsc && node --inspect dist/naisys.js ./agents/assistant.yaml",
+    "compile/run/attachable": "tsc && node --inspect dist/naisys.js ./agents/netmap.yaml",
     "agent:assistant": "node dist/naisys.js ./agents/assistant.yaml",
     "agent:nightwatch": "node dist/naisys.js ./agents/nightwatch.yaml",
     "clean": "rm -rf dist",
@@ -42,29 +42,30 @@
   "devDependencies": {
     "@types/escape-html": "1.0.4",
     "@types/js-yaml": "4.0.9",
-    "@types/node": "20.12.4",
+    "@types/node": "20.12.7",
     "@types/text-table": "0.2.5",
-    "@typescript-eslint/eslint-plugin": "7.5.0",
-    "@typescript-eslint/parser": "7.5.0",
-    "eslint": "8.57.0",
+    "@typescript-eslint/eslint-plugin": "7.7.0",
+    "@typescript-eslint/parser": "7.7.0",
+    "eslint": "8.56.0",
     "jest": "29.7.0",
     "prettier": "3.2.5",
     "ts-node": "10.9.2",
-    "typescript": "5.4.4"
+    "typescript": "5.4.5"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "0.20.1",
-    "@google/generative-ai": "0.5.0",
+    "@anthropic-ai/sdk": "0.20.5",
+    "@google/generative-ai": "0.7.1",
     "chalk": "5.3.0",
     "commander": "12.0.0",
     "dotenv": "16.4.5",
     "escape-html": "1.0.3",
     "js-yaml": "4.1.0",
-    "openai": "4.33.0",
+    "openai": "4.36.0",
     "sharp": "0.33.3",
     "sqlite": "5.1.1",
     "sqlite3": "5.1.7",
+    "strip-ansi": "7.1.0",
     "text-table": "0.2.0",
-    "tiktoken": "1.0.13"
+    "tiktoken": "1.0.14"
   }
 }

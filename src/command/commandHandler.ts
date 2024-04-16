@@ -104,6 +104,14 @@ export async function processCommand(
         if (!config.endSessionEnabled) {
           throw 'The "trimsession" command is not enabled in this environment.';
         }
+
+        if (shellCommand.isShellSuspended()) {
+          await contextManager.append(
+            "Session cannot be ended while a shell command is active.",
+          );
+          break;
+        }
+
         // Don't need to check end line as this is the last command in the context, just read to the end
         const endSessionNotes = utilities.trimChars(cmdArgs, '"');
 

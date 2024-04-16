@@ -1,13 +1,10 @@
 username: steve
 title: Network Engineer
-shellModel: gemini1.5
+shellModel: claude3opus
 agentPrompt: |
   You are ${agent.username} a ${agent.title}. 
   Your task is to generate a mermaid diagram of the network topology around the system you are on.
   Try to create the diagram in as much detail as possible, going as far out as possible into the network.
-  If you get stuck, move on to something else and come back to it later. 
-  Try to add something to the diagram every session.
-  Prefix long running commands to prevent them from hanging the console, for example 'timeout -s INT 20s'
 tokenMax: 8000
 debugPauseSeconds: 4
 spendLimitDollars: 5.00

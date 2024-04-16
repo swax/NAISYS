@@ -1,8 +1,10 @@
 import { ChildProcessWithoutNullStreams, spawn } from "child_process";
 import * as fs from "fs";
 import * as os from "os";
+import stripAnsi from "strip-ansi";
 import * as config from "../config.js";
 import * as output from "../utils/output.js";
+import * as pathService from "../utils/pathService.js";
 import { NaisysPath } from "../utils/pathService.js";
 
 enum ShellEvent {
@@ -22,6 +24,14 @@ let _startTime: Date | undefined;
 
 /** How we know the command has completed when running the command inside a shell like bash or wsl */
 const _commandDelimiter = "__COMMAND_END_X7YUTT__";
+
+let _wrapperSuspended = false;
+
+const _queuedOutput: {
+  dataStr: string;
+  eventType: ShellEvent;
+  pid: number;
+}[] = [];
 
 async function ensureOpen() {
   if (_process) {
@@ -43,7 +53,9 @@ async function ensureOpen() {
   _currentProcessId = pid;
 
   _process.stdout.on("data", (data) => {
-    processOutput(data.toString(), ShellEvent.Ouptput, pid);
+    // Need more advanced shell handling to understand commands and modify the existing buffer
+    const cleanData = stripAnsi(data.toString());
+    processOutput(cleanData, ShellEvent.Ouptput, pid);
   });
 
   _process.stderr.on("data", (data) => {
@@ -88,6 +100,11 @@ function errorIfNotEmpty(response: string) {
 }
 
 function processOutput(dataStr: string, eventType: ShellEvent, pid: number) {
+  if (_wrapperSuspended) {
+    _queuedOutput.push({ dataStr, eventType, pid });
+    return;
+  }
+
   if (pid != _currentProcessId) {
     output.comment(
       `Ignoring '${eventType}' from old shell process ${pid}: ` + dataStr,
@@ -104,24 +121,16 @@ function processOutput(dataStr: string, eventType: ShellEvent, pid: number) {
   }
 
   if (eventType === ShellEvent.Exit) {
-    output.error("SHELL EXITED. PID: " + _process?.pid + " CODE: " + dataStr);
+    output.error("SHELL EXIT. PID: " + _process?.pid + " CODE: " + dataStr);
 
-    const elapsedSeconds = _startTime
-      ? Math.round((new Date().getTime() - _startTime.getTime()) / 1000)
-      : -1;
-
-    const outputWithError =
-      _commandOutput.trim() +
-      `\nNAISYS: Command hit time out limit after ${elapsedSeconds} seconds. If possible figure out how to run the command faster or break it up into smaller parts.`;
+    const contextOutputWithError =
+      _commandOutput.trim() + `\nNAISYS: Command killed.`; // If possible figure out how to run the command faster or break it up into smaller parts.`;
 
     resetProcess();
 
-    _resolveCurrentCommand(outputWithError);
+    _completeCommand(contextOutputWithError);
     return;
   } else {
-    // Extend the timeout of the current command
-    setOrExtendShellTimeout();
-
     _commandOutput += dataStr;
   }
 
@@ -133,21 +142,27 @@ function processOutput(dataStr: string, eventType: ShellEvent, pid: number) {
     const response = _commandOutput.trim();
 
     resetCommand();
-    _resolveCurrentCommand(response);
+    _completeCommand(response);
   }
 }
 
 export async function executeCommand(command: string) {
+  if (_wrapperSuspended) {
+    throw "Use continueCommand to send input to a shell command in process";
+  }
+
+  command = command.trim();
+
   await ensureOpen();
 
-  if (_currentPath && command.trim().split("\n").length > 1) {
+  if (_currentPath && command.split("\n").length > 1) {
     command = await putMultilineCommandInAScript(command);
   }
 
   return new Promise<string>((resolve, reject) => {
     _resolveCurrentCommand = resolve;
 
-    const commandWithDelimiter = `${command.trim()}\necho "${_commandDelimiter} LINE:\${LINENO}"\n`;
+    const commandWithDelimiter = `${command}\necho "${_commandDelimiter} LINE:\${LINENO}"\n`;
 
     if (!_process) {
       reject("Shell process is not open");
@@ -158,36 +173,108 @@ export async function executeCommand(command: string) {
 
     _startTime = new Date();
 
-    // If no response, kill and reset the shell, often hanging on some unescaped input
-    setOrExtendShellTimeout();
+    // Set timeout to wait for response from command
+    setCommandTimeout();
   });
 }
 
-function setOrExtendShellTimeout() {
-  // Don't extend if we've been waiting longer than the max timeout seconds
-  const timeWaiting = new Date().getTime() - (_startTime?.getTime() || 0);
-
-  if (
-    !_process?.pid ||
-    timeWaiting > config.shellCommand.maxTimeoutSeconds * 1000
-  ) {
-    return;
+/** The LLM made its decision on how it wants to continue with the shell that previously timed out */
+export function continueCommand(command: string) {
+  if (!_wrapperSuspended) {
+    throw "Shell is not suspended, use execute command";
   }
 
-  // Define the pid for use in the timeout closure, as _process.pid may change
-  const pid = _process.pid;
+  command = command.trim();
 
-  clearTimeout(_currentCommandTimeout);
+  _wrapperSuspended = false;
 
+  let choice: "wait" | "kill" | "input";
+
+  if (command != "wait" && command != "kill") {
+    choice = "input";
+  } else {
+    choice = command;
+  }
+
+  return new Promise<string>((resolve, reject) => {
+    _resolveCurrentCommand = resolve;
+
+    // If new output from the shell was queued while waiting for the LLM to decide what to do
+    if (_queuedOutput.length > 0) {
+      for (const output of _queuedOutput) {
+        processOutput(output.dataStr, output.eventType, output.pid);
+      }
+      _queuedOutput.length = 0;
+
+      // If processing queue resolved the command, then we're done
+      if (!_resolveCurrentCommand) {
+        return;
+      }
+      // Can't process new input since new output was generated and log would be confusing/out of order
+      else if (choice == "input") {
+        returnControlToNaisys(false);
+        return;
+      }
+      // Else kill or wait, continue with the LLM's choice
+    }
+
+    // LLM wants to wait for more output
+    if (choice == "wait") {
+      setCommandTimeout();
+      return;
+    }
+    // Else LLM wants to kill the process
+    else if (choice == "kill") {
+      if (!_currentProcessId) {
+        reject("No process to kill");
+      } else if (resetShell(_currentProcessId)) {
+        return; // Wait for exit event
+      } else {
+        reject("Unable to kill. Process not found");
+      }
+
+      return;
+    }
+    // Else LLM wants to send input to the process
+    else {
+      if (!_process) {
+        reject("Shell process is not open");
+        return;
+      }
+
+      _process.stdin.write(command + "\n");
+      setCommandTimeout();
+    }
+  });
+}
+
+function setCommandTimeout() {
   _currentCommandTimeout = setTimeout(() => {
-    resetShell(pid);
+    returnControlToNaisys(true);
   }, config.shellCommand.timeoutSeconds * 1000);
+}
+
+function returnControlToNaisys(timedOut: boolean) {
+  _wrapperSuspended = true;
+  _queuedOutput.length = 0;
+
+  // Flush the output to the consol, and give the LLM instructions of how it might continue
+  let outputWithInstruction = _commandOutput.trim();
+  _commandOutput = "";
+
+  if (timedOut) {
+    outputWithInstruction += `\nNAISYS: Command timed out after ${config.shellCommand.timeoutSeconds} seconds.`;
+  } else {
+    outputWithInstruction += `\nNAISYS: Unable to send your input as new output was generated in the interm.`;
+  }
+
+  _completeCommand(outputWithInstruction);
 }
 
 function resetShell(pid: number) {
   if (!_process || _process.pid != pid) {
     output.comment("Ignoring timeout for old shell process " + pid);
-    return;
+    return false;
   }
 
   // There is still an issue here when running on linux where if a command like 'ping' is running
@@ -199,10 +286,18 @@ function resetShell(pid: number) {
     `KILL SIGNAL SENT TO PID: ${_process.pid}, RESPONSE: ${killResponse ? "SUCCESS" : "FAILED"}`,
   );
 
+  // TODO: Timeout to 'hard close' basically create a new process and ignore the old one
+
   // Should trigger the process close event from here
+  return true;
 }
 
 export async function getCurrentPath() {
+  // If wrapper suspended just give the last known path
+  if (_wrapperSuspended) {
+    return _currentPath;
+  }
+
   await ensureOpen();
 
   _currentPath = await executeCommand("pwd");
@@ -234,8 +329,10 @@ function resetProcess() {
  * May also help with common escaping errors */
 function putMultilineCommandInAScript(command: string) {
   const scriptPath = new NaisysPath(
-    `${config.naisysFolder}/home/${config.agent.username}/.command.tmp.sh`,
+    `${config.naisysFolder}/agent-data/${config.agent.username}/multiline-command.sh`,
   );
+
+  pathService.ensureFileDirExists(scriptPath);
 
   // set -e causes the script to exit on the first error
   const scriptContent = `#!/bin/bash
@@ -250,4 +347,17 @@ ${command.trim()}`;
   // so we need to remind the LLM that 'naisys commands cannot be used with other commands on the same prompt'
   // `source` will run the script in the current shell, so any change directories in the script will persist in the current shell
   return `PATH=${config.binPath}:$PATH source ${scriptPath.getNaisysPath()}`;
+}
+
+function _completeCommand(output: string) {
+  if (!_resolveCurrentCommand) {
+    throw "No command to resolve";
+  }
+
+  _resolveCurrentCommand(output);
+  _resolveCurrentCommand = undefined;
+}
+
+export function isShellSuspended() {
+  return _wrapperSuspended;
 }

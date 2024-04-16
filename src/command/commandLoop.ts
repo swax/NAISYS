@@ -19,6 +19,7 @@ import * as utilities from "../utils/utilities.js";
 import * as commandHandler from "./commandHandler.js";
 import { NextCommandAction } from "./commandHandler.js";
 import * as promptBuilder from "./promptBuilder.js";
+import * as shellCommand from "./shellCommand.js";
 
 const maxErrorCount = 5;
 
@@ -73,6 +74,13 @@ export async function run() {
     let wakeOnMessage = config.agent.wakeOnMessage;
 
     while (nextCommandAction == NextCommandAction.Continue) {
+      if (shellCommand.isShellSuspended()) {
+        await contextManager.append(
+          `Command still running. Enter 'wait' to continue waiting for output, or 'kill' to terminate the process. `,
+          ContentSource.Console,
+        );
+      }
+
       let prompt = await promptBuilder.getPrompt(pauseSeconds, wakeOnMessage);
       let consoleInput = "";
 
