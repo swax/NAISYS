@@ -130,7 +130,7 @@ export function roleToSource(role: LlmRole) {
 /** Write entire context to a file in the users home directory */
 export function recordContext(contextLog: string) {
   const filePath = new NaisysPath(
-    `${config.naisysFolder}/home/${config.agent.username}/.current-context.txt`,
+    `${config.naisysFolder}/agent-data/${config.agent.username}/current-context.txt`,
   );
 
   pathService.ensureFileDirExists(filePath);

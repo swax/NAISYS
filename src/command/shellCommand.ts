@@ -5,31 +5,40 @@ import { InputMode } from "../utils/inputMode.js";
 import * as utilities from "../utils/utilities.js";
 import * as shellWrapper from "./shellWrapper.js";
 
+export const isShellSuspended = () => shellWrapper.isShellSuspended();
+
 export async function handleCommand(input: string): Promise<boolean> {
   const cmdParams = input.split(" ");
+  let response: string;
 
-  // Route user to context friendly edit commands that can read/write the entire file in one go
-  // Having EOF in quotes is important as it prevents the shell from replacing $variables with bash values
-  if (["nano", "vi", "vim"].includes(cmdParams[0])) {
-    throw `${cmdParams[0]} not supported. Use \`cat\` to read a file and \`cat > filename << 'EOF'\` to write a file`;
-  }
-
-  if (cmdParams[0] == "lynx" && cmdParams[1] != "--dump") {
-    throw `Interactive mode with lynx is not supported. Use --dump with lynx to view a website`;
-  }
-
-  if (cmdParams[0] == "exit") {
-    if (inputMode.current == InputMode.LLM) {
-      throw "Use 'endsession' to end the session and clear the console log.";
+  if (!isShellSuspended()) {
+    if (["nano", "vi", "vim"].includes(cmdParams[0])) {
+      // Route user to context friendly edit commands that can read/write the entire file in one go
+      // Having EOF in quotes is important as it prevents the shell from replacing $variables with bash values
+      throw `${cmdParams[0]} not supported. Use \`cat\` to read a file and \`cat > filename << 'EOF'\` to write a file`;
     }
-    // Only the debug user is allowed to exit the shell
-    else if (inputMode.current == InputMode.Debug) {
-      await shellWrapper.terminate();
-      return true;
-    }
-  }
 
-  let response = await shellWrapper.executeCommand(input);
+    if (cmdParams[0] == "lynx" && cmdParams[1] != "--dump") {
+      throw `Interactive mode with lynx is not supported. Use --dump with lynx to view a website`;
+    }
+
+    if (cmdParams[0] == "exit") {
+      if (inputMode.current == InputMode.LLM) {
+        throw "Use 'endsession' to end the session and clear the console log.";
+      }
+      // Only the debug user is allowed to exit the shell
+      else if (inputMode.current == InputMode.Debug) {
+        await shellWrapper.terminate();
+        return true;
+      }
+    }
+
+    response = await shellWrapper.executeCommand(input);
+  }
+  // Else shell is suspended, continue
+  else {
+    response = await shellWrapper.continueCommand(input);
+  }
 
   let outputLimitExceeded = false;
   const tokenCount = utilities.getTokenCount(response);
@@ -53,7 +62,7 @@ export async function handleCommand(input: string): Promise<boolean> {
 
   if (response.endsWith(": command not found")) {
     response +=
-      "Please enter a valid Linux or NAISYS command after the prompt. Use the 'comment' command for thoughts.";
+      "\nPlease enter a valid Linux or NAISYS command after the prompt. Use the 'comment' command for thoughts.";
   }
 
   // todo move this into the command handler to remove the context manager dependency

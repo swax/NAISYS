@@ -68,6 +68,8 @@ export async function handleCommand(args: string): Promise<string> {
     argParams[0] = "help";
   }
 
+  let errorText = "";
+
   switch (argParams[0]) {
     case "help": {
       let helpOutput = `subagent <command>
@@ -104,6 +106,12 @@ export async function handleCommand(args: string): Promise<string> {
       const title = newParams[1];
       const task = newParams[3];
 
+      // Validate title and task set
+      if (!title || !task) {
+        errorText = "See valid 'create' syntax below:\n";
+        break;
+      }
+
       return await _createAgent(title, task);
     }
     case "start": {
@@ -119,12 +127,12 @@ export async function handleCommand(args: string): Promise<string> {
       _debugFlushContext(subagentId);
       return "";
     }
-    default:
-      return (
-        "Error, unknown command. See valid commands below:\n" +
-        (await handleCommand("help"))
-      );
+    default: {
+      errorText = "Error, unknown command. See valid commands below:\n";
+    }
   }
+
+  return errorText + (await handleCommand("help"));
 }
 
 export function getRunningSubagentNames() {
@@ -150,11 +158,6 @@ export function unreadContextSummary() {
 }
 
 async function _createAgent(title: string, taskDescription: string) {
-  // Validate title and task set
-  if (!title || !taskDescription) {
-    throw "Title and task description must be set";
-  }
-
   // Get available username
   const usernames = await llmail.getAllUserNames();
   let agentName = "";
@@ -294,6 +297,6 @@ function _debugFlushContext(subagentId: number) {
 
 function _getSubagentDir() {
   return new NaisysPath(
-    `${config.naisysFolder}/home/${config.agent.username}/.subagents`,
+    `${config.naisysFolder}/agent-data/${config.agent.username}/subagents`,
   );
 }
