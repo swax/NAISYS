@@ -12,7 +12,7 @@ export async function query(
   modelKey: string,
   systemMessage: string,
   context: LlmMessage[],
-  source: string,
+  source: string
 ): Promise<string> {
   const currentTotalCost = await costTracker.getTotalCosts();
 
@@ -37,7 +37,7 @@ async function sendWithOpenAiCompatible(
   modelKey: string,
   systemMessage: string,
   context: LlmMessage[],
-  source: string,
+  source: string
 ): Promise<string> {
   const model = getLLModel(modelKey);
 
@@ -75,8 +75,11 @@ async function sendWithOpenAiCompatible(
     ],
   });
 
+  // Don't cost models with no costs
+  if (!model.inputCost && !model.outputCost) {
+  }
   // Total up costs, prices are per 1M tokens
-  if (chatResponse.usage) {
+  else if (chatResponse.usage) {
     const cost =
       chatResponse.usage.prompt_tokens * model.inputCost +
       chatResponse.usage.completion_tokens * model.outputCost;
@@ -92,7 +95,7 @@ async function sendWithGoogle(
   modelKey: string,
   systemMessage: string,
   context: LlmMessage[],
-  source: string,
+  source: string
 ): Promise<string> {
   if (!config.googleApiKey) {
     throw "Error, googleApiKey is not defined";
@@ -177,7 +180,7 @@ async function sendWithAnthropic(
   modelKey: string,
   systemMessage: string,
   context: LlmMessage[],
-  source: string,
+  source: string
 ): Promise<string> {
   const model = getLLModel(modelKey);
 
@@ -213,7 +216,7 @@ async function sendWithAnthropic(
           ({
             role: msg.role == LlmRole.Assistant ? "assistant" : "user",
             content: msg.content,
-          }) satisfies MessageParam,
+          }) satisfies MessageParam
       ),
     ],
   });

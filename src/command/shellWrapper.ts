@@ -5,7 +5,8 @@ import stripAnsi from "strip-ansi";
 import * as config from "../config.js";
 import * as output from "../utils/output.js";
 import * as pathService from "../utils/pathService.js";
-import { NaisysPath } from "../utils/pathService.js";
+import { NaisysPath } from "../utils/pathService.js"
+import xterm from "@xterm/headless";
 
 enum ShellEvent {
   Ouptput = "stdout",
@@ -18,6 +19,9 @@ let _currentProcessId: number | undefined;
 let _commandOutput = "";
 let _currentPath: string | undefined;
 
+let _terminal: xterm.Terminal | undefined;
+let useTerminal = true;
+
 let _resolveCurrentCommand: ((value: string) => void) | undefined;
 let _currentCommandTimeout: NodeJS.Timeout | undefined;
 let _startTime: Date | undefined;
@@ -28,7 +32,7 @@ const _commandDelimiter = "__COMMAND_END_X7YUTT__";
 let _wrapperSuspended = false;
 
 const _queuedOutput: {
-  dataStr: string;
+  rawDataStr: string;
   eventType: ShellEvent;
   pid: number;
 }[] = [];
@@ -44,6 +48,10 @@ async function ensureOpen() {
 
   _process = spawn(spawnProcess, [], { stdio: "pipe" });
 
+  _terminal = new xterm.Terminal({
+    allowProposedApi: true,
+  });
+
   const pid = _process.pid;
 
   if (!pid) {
@@ -53,9 +61,7 @@ async function ensureOpen() {
   _currentProcessId = pid;
 
   _process.stdout.on("data", (data) => {
-    // Need more advanced shell handling to understand commands and modify the existing buffer
-    const cleanData = stripAnsi(data.toString());
-    processOutput(cleanData, ShellEvent.Ouptput, pid);
+    processOutput(data.toString(), ShellEvent.Ouptput, pid);
   });
 
   _process.stderr.on("data", (data) => {
@@ -72,13 +78,13 @@ async function ensureOpen() {
 
     errorIfNotEmpty(
       await executeCommand(
-        `mkdir -p ${config.naisysFolder}/home/` + config.agent.username,
-      ),
+        `mkdir -p ${config.naisysFolder}/home/` + config.agent.username
+      )
     );
     errorIfNotEmpty(
       await executeCommand(
-        `cd ${config.naisysFolder}/home/` + config.agent.username,
-      ),
+        `cd ${config.naisysFolder}/home/` + config.agent.username
+      )
     );
   } else {
     output.comment("SHELL RESTORED. PID: " + pid);
@@ -99,15 +105,17 @@ function errorIfNotEmpty(response: string) {
   }
 }
 
-function processOutput(dataStr: string, eventType: ShellEvent, pid: number) {
+function processOutput(rawDataStr: string, eventType: ShellEvent, pid: number) {
   if (_wrapperSuspended) {
-    _queuedOutput.push({ dataStr, eventType, pid });
+    _queuedOutput.push({ rawDataStr, eventType, pid });
     return;
   }
 
+  const dataStr = stripAnsi(rawDataStr);
+
   if (pid != _currentProcessId) {
     output.comment(
-      `Ignoring '${eventType}' from old shell process ${pid}: ` + dataStr,
+      `Ignoring '${eventType}' from old shell process ${pid}: ` + dataStr
     );
     return;
   }
@@ -115,7 +123,7 @@ function processOutput(dataStr: string, eventType: ShellEvent, pid: number) {
   if (!_resolveCurrentCommand) {
     output.comment(
       `Ignoring '${eventType}' from process ${pid} with no resolve handler: ` +
-        dataStr,
+        dataStr
     );
     return;
   }
@@ -132,14 +140,22 @@ function processOutput(dataStr: string, eventType: ShellEvent, pid: number) {
     return;
   } else {
     _commandOutput += dataStr;
+    _terminal?.write(rawDataStr);
   }
 
-  const delimiterIndex = _commandOutput.indexOf(_commandDelimiter);
-  if (delimiterIndex != -1) {
-    // trim everything after delimiter
-    _commandOutput = _commandOutput.slice(0, delimiterIndex);
+  let delimiterIndex = _commandOutput.indexOf(_commandDelimiter);
 
-    const response = _commandOutput.trim();
+  if (delimiterIndex != -1) {
+    let response = "";
+    if (useTerminal) {
+      response = _getTerminalOutput();
+      delimiterIndex = _commandOutput.indexOf(_commandDelimiter);
+      response = _commandOutput.slice(0, delimiterIndex);
+    } else {
+      // trim everything after delimiter
+      _commandOutput = _commandOutput.slice(0, delimiterIndex);
+      response = _commandOutput.trim();
+    }
 
     resetCommand();
     _completeCommand(response);
@@ -155,14 +171,15 @@ export async function executeCommand(command: string) {
 
   await ensureOpen();
 
-  if (_currentPath && command.split("\n").length > 1) {
-    command = await putMultilineCommandInAScript(command);
+  let commandWithDelimiter: string;
+  if (command.startsWith("rm") || (_currentPath && command.split("\n").length > 1)) {
+    commandWithDelimiter = await putMultilineCommandInAScript(command);
+  } else {
+    commandWithDelimiter = `${command}\necho "${_commandDelimiter} LINE:\${LINENO}"\n`;
   }
 
   return new Promise<string>((resolve, reject) => {
     _resolveCurrentCommand = resolve;
-
-    const commandWithDelimiter = `${command}\necho "${_commandDelimiter} LINE:\${LINENO}"\n`;
 
     if (!_process) {
       reject("Shell process is not open");
@@ -202,7 +219,7 @@ export function continueCommand(command: string) {
     // If new output from the shell was queued while waiting for the LLM to decide what to do
     if (_queuedOutput.length > 0) {
       for (const output of _queuedOutput) {
-        processOutput(output.dataStr, output.eventType, output.pid);
+        processOutput(output.rawDataStr, output.eventType, output.pid);
       }
       _queuedOutput.length = 0;
 
@@ -259,8 +276,12 @@ function returnControlToNaisys(timedOut: boolean) {
   _queuedOutput.length = 0;
 
   // Flush the output to the consol, and give the LLM instructions of how it might continue
-  let outputWithInstruction = _commandOutput.trim();
+  let outputWithInstruction = useTerminal
+    ? _getTerminalOutput()
+    : _commandOutput.trim();
+
   _commandOutput = "";
+  _terminal?.clear();
 
   if (timedOut) {
     outputWithInstruction += `\nNAISYS: Command timed out after ${config.shellCommand.timeoutSeconds} seconds.`;
@@ -283,7 +304,7 @@ function resetShell(pid: number) {
   const killResponse = _process.kill();
 
   output.error(
-    `KILL SIGNAL SENT TO PID: ${_process.pid}, RESPONSE: ${killResponse ? "SUCCESS" : "FAILED"}`,
+    `KILL SIGNAL SENT TO PID: ${_process.pid}, RESPONSE: ${killResponse ? "SUCCESS" : "FAILED"}`
   );
 
   // TODO: Timeout to 'hard close' basically create a new process and ignore the old one
@@ -316,6 +337,8 @@ function resetCommand() {
   _commandOutput = "";
   _startTime = undefined;
 
+  _terminal?.clear();
+
   clearTimeout(_currentCommandTimeout);
 }
 
@@ -323,22 +346,26 @@ function resetProcess() {
   resetCommand();
   _process?.removeAllListeners();
   _process = undefined;
+
+  _terminal?.dispose();
+  _terminal = undefined;
 }
 
 /** Wraps multi line commands in a script to make it easier to diagnose the source of errors based on line number
  * May also help with common escaping errors */
 function putMultilineCommandInAScript(command: string) {
   const scriptPath = new NaisysPath(
-    `${config.naisysFolder}/agent-data/${config.agent.username}/multiline-command.sh`,
+    `${config.naisysFolder}/agent-data/${config.agent.username}/multiline-command.sh`
   );
 
   pathService.ensureFileDirExists(scriptPath);
 
-  // set -e causes the script to exit on the first error
+  // set -e causes the script to exit on the first error 
   const scriptContent = `#!/bin/bash
 set -e
 cd ${_currentPath}
-${command.trim()}`;
+${command.trim()}
+echo "${_commandDelimiter} LINE:\${LINENO}"`;
 
   // create/write file
   fs.writeFileSync(scriptPath.toHostPath(), scriptContent);
@@ -360,4 +387,15 @@ function _completeCommand(output: string) {
 
 export function isShellSuspended() {
   return _wrapperSuspended;
+}
+
+function _getTerminalOutput() {
+  let output = "";
+  let bufferLineCount = _terminal?.buffer.active?.length || 0;
+
+  for (let i = 0; i < bufferLineCount; i++) {
+    output += _terminal?.buffer.active?.getLine(i)?.translateToString() + "\n";
+  }
+
+  return output.trim();
 }

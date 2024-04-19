@@ -23,17 +23,12 @@ process.stdout.write = (...args) => {
   return _originalWrite.apply(process.stdout, <any>args);
 };
 
-const _readlineInterface = readline.createInterface({
-  input: process.stdin,
-  output: process.stdout,
-});
-
-// Happens when ctrl+c is pressed
-let readlineInterfaceClosed = false;
-_readlineInterface.on("close", () => {
-  readlineInterfaceClosed = true;
-  output.error("Readline interface closed");
-});
+function createReadlineInterface() {
+  return readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  });
+}
 
 export async function getPrompt(pauseSeconds: number, wakeOnMessage: boolean) {
   const promptSuffix = inputMode.current == InputMode.Debug ? "#" : "$";
@@ -72,7 +67,7 @@ export function getUserHostPrompt() {
 export function getInput(
   commandPrompt: string,
   pauseSeconds: number,
-  wakeOnMessage: boolean,
+  wakeOnMessage: boolean
 ) {
   return new Promise<string>((resolve) => {
     const questionController = new AbortController();
@@ -80,15 +75,10 @@ export function getInput(
     let interval: NodeJS.Timeout | undefined;
     let timeoutCancelled = false;
 
-    if (readlineInterfaceClosed) {
-      output.error("Hanging because readline interface is closed.");
-      return;
-    }
-
     /** Cancels waiting for user input */
     function onStdinWrite_cancelTimers(
       questionAborted: boolean,
-      buffer?: string,
+      buffer?: string
     ) {
       // Don't allow console escape commands like \x1B[1G to cancel the timeout
       if (timeoutCancelled || (buffer && !/^[a-zA-Z0-9 ]+$/.test(buffer))) {
@@ -123,12 +113,14 @@ export function getInput(
       }
     }
 
-    _readlineInterface.question(
+    const readlineInterface = createReadlineInterface();
+    readlineInterface.question(
       chalk.greenBright(commandPrompt),
       { signal: questionController.signal },
       (answer) => {
+        readlineInterface.close();
         resolve(answer);
-      },
+      }
     );
 
     // If user starts typing in prompt, cancel any auto timeouts or wake on msg
@@ -173,11 +165,13 @@ export function getInput(
 
 export function getCommandConfirmation() {
   return new Promise<string>((resolve) => {
-    _readlineInterface.question(
+    const readlineInterface = createReadlineInterface();
+    readlineInterface.question(
       chalk.greenBright("Allow command to run? [y/n] "),
       (answer) => {
+        readlineInterface.close();
         resolve(answer);
-      },
+      }
     );
   });
 }

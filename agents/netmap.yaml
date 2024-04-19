@@ -1,10 +1,11 @@
 username: steve
 title: Network Engineer
-shellModel: claude3opus
+shellModel: local
 agentPrompt: |
   You are ${agent.username} a ${agent.title}. 
   Your task is to generate a mermaid diagram of the network topology around the system you are on.
   Try to create the diagram in as much detail as possible, going as far out as possible into the network.
+  Type commands directly as input, do not wrap them in ```. Prefix non-commands with 'comment' so they are not interpretted as invalid commands.
 tokenMax: 8000
 debugPauseSeconds: 4
 spendLimitDollars: 5.00
