@@ -19,7 +19,7 @@ interface LlmModel {
 const llmModels: LlmModel[] = [
   {
     key: "gpt4turbo",
-    name: "gpt-4-0125-preview",
+    name: "gpt-4-turbo",
     apiType: LlmApiType.OpenAI,
     maxTokens: 128_000,
     // Prices are per 1M tokens
@@ -28,7 +28,7 @@ const llmModels: LlmModel[] = [
   },
   {
     key: "gpt3turbo",
-    name: "gpt-3.5-turbo-0125",
+    name: "gpt-3.5-turbo",
     apiType: LlmApiType.OpenAI,
     maxTokens: 16_000,
     // Prices are per 1M tokens

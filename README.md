@@ -193,7 +193,8 @@ initialCommands:
 
 - To use NAISYS on Windows you need to run it locally from source (or from within WSL)
 - Use the above instructions to install locally, and then continue with the instructions below
-- Install WSL (Windows Subsystem for Linux)
+- Install WSL (Windows Subsystem for Linux) 
+- Install a Linux distribution, Ubuntu can easily be installed from the Microsoft Store
 - The `NAISYS_FOLDER` and `WEBSITE_FOLDER` should be set to the WSL path
   - So `C:\var\naisys` should be `/mnt/c/var/naisys` in the `.env` file
 
