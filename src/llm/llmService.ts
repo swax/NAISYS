@@ -75,8 +75,8 @@ async function sendWithOpenAiCompatible(
     ],
   });
 
-  // Don't cost models with no costs
   if (!model.inputCost && !model.outputCost) {
+    // Don't cost models with no costs
   }
   // Total up costs, prices are per 1M tokens
   else if (chatResponse.usage) {

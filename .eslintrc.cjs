@@ -9,6 +9,7 @@ module.exports = {
   root: true,
   rules: {
     "alias-match-filename": "error",
+    //"module-local-underscore": "error",
     "@typescript-eslint/require-await": "error",
     "@typescript-eslint/no-floating-promises": "error",
   },
