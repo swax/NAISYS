@@ -1,3 +1,17 @@
+/**
+ * A version of the shell wrapper that uses pty to create an 'interactive' shell.
+ * Haven't gotten it to work yet, but it's a good reference for how to use pty.
+ * A command like `rm -i file` will prompt the user for confirmation, but only works correctly 
+ * in an interactive shell.
+ * 
+ * Unlike pipe where std in/out are separated, with pty they are combined in the output so 
+ * it's hard to parse out just the output. Also the dependencies on node-pty require c++ build tools
+ * and the full windows sdk for windows at least, so it's not as portable as the child_process module.
+ * 
+ * The entire context could be rethought to make this work by using the full terminal output as the context 
+ * itself so parsing in from out isn't necessary.
+ */
+
 import { ChildProcessWithoutNullStreams, spawn } from "child_process";
 import * as fs from "fs";
 import * as os from "os";
@@ -7,6 +21,7 @@ import * as output from "../utils/output.js";
 import * as pathService from "../utils/pathService.js";
 import { NaisysPath } from "../utils/pathService.js";
 import xterm from "@xterm/headless";
+import * as pty from "node-pty";
 
 enum ShellEvent {
   Ouptput = "stdout",
@@ -14,20 +29,34 @@ enum ShellEvent {
   Exit = "exit",
 }
 
-let _process: ChildProcessWithoutNullStreams | undefined;
+let _childProcess: ChildProcessWithoutNullStreams | undefined;
 let _currentProcessId: number | undefined;
+
 let _commandOutput = "";
 let _currentPath: string | undefined;
 
+/**
+ * Use xterm to interpret command codes in the shell output.
+ * For example a command like `top` uses command codes to constantly update the output buffer
+ */
+const _useTerminal = true;
 let _terminal: xterm.Terminal | undefined;
-let _bufferChangeEvent: xterm.IDisposable | undefined;
-let _currentBufferType: "normal" | "alternate" | undefined;
+
+/**
+ * Use pty to create an 'interactive' shell. For example a command like `rm -i` will prompt the user for input
+ * without running it in an interactive shell, the command will not wait for input
+ */
+const _usePty = true;
+let _ptyProcess: pty.IPty | undefined;
+let _ptyRemoveListeners: (() => void) | undefined;
 
 let _resolveCurrentCommand: ((value: string) => void) | undefined;
 let _currentCommandTimeout: NodeJS.Timeout | undefined;
 
 /** How we know the command has completed when running the command inside a shell like bash or wsl */
-const _commandDelimiter = "__COMMAND_END_X7YUTT__";
+const _startCommandDelimiter = "__COMMAND_START_JPP2XO__";
+const _endCommandDelimiter = "__COMMAND_END_X7YUTT__";
+let _outputStarted = false;
 
 let _wrapperSuspended = false;
 
@@ -38,39 +67,23 @@ const _queuedOutput: {
 }[] = [];
 
 async function ensureOpen() {
-  if (_process) {
+  if (_childProcess || _ptyProcess) {
     return;
   }
 
   resetCommand();
 
-  const spawnCmd = os.platform() === "win32" ? "wsl" : "bash";
-
-  _process = spawn(spawnCmd, [], { stdio: "pipe" });
-
-  const pid = _process.pid;
-
-  if (!pid) {
-    throw "Shell process failed to start";
+  if (_useTerminal) {
+    _terminal = new xterm.Terminal({
+      allowProposedApi: true,
+    });
   }
 
-  _currentProcessId = pid;
-
-  _process.stdout.on("data", (data) => {
-    processOutput(data.toString(), ShellEvent.Ouptput, pid);
-  });
-
-  _process.stderr.on("data", (data) => {
-    processOutput(data.toString(), ShellEvent.Error, pid);
-  });
-
-  _process.on("close", (code) => {
-    processOutput(`${code}`, ShellEvent.Exit, pid);
-  });
+  _currentProcessId = startProcess();
 
   // Init users home dir on first run, on shell crash/rerun go back to the current path
   if (!_currentPath) {
-    output.comment("NEW SHELL OPENED. PID: " + pid);
+    output.comment("NEW SHELL OPENED. PID: " + _currentProcessId);
 
     errorIfNotEmpty(
       await executeCommand(
@@ -83,7 +96,7 @@ async function ensureOpen() {
       )
     );
   } else {
-    output.comment("SHELL RESTORED. PID: " + pid);
+    output.comment("SHELL RESTORED. PID: " + _currentProcessId);
 
     errorIfNotEmpty(await executeCommand("cd " + _currentPath));
   }
@@ -94,6 +107,63 @@ async function ensureOpen() {
   //commentIfNotEmpty(await executeCommand("set -e"));
 }
 
+function startProcess() {
+  /** Define locally so closures fire events tagged with the pid from the process from which they were created */
+  let pid: number;
+
+  if (_usePty) {
+    const shell = os.platform() === "win32" ? "powershell.exe" : "bash";
+
+    _ptyProcess = pty.spawn(shell, ["wsl"], {
+      name: "xterm-color",
+      cols: process.stdout.columns,
+      rows: process.stdout.rows,
+      env: process.env, // Not sure if this is necessary
+    });
+
+    pid = _ptyProcess.pid;
+
+    _ptyProcess.clear();
+
+    const onDataEvent = _ptyProcess.onData((data) => {
+      processOutput(data, ShellEvent.Ouptput, pid);
+    });
+
+    const onExitEvent = _ptyProcess.onExit((code) => {
+      processOutput(code.exitCode.toString(), ShellEvent.Exit, pid);
+    });
+
+    _ptyRemoveListeners = () => {
+      onDataEvent.dispose();
+      onExitEvent.dispose();
+    };
+  } else {
+    const command = os.platform() === "win32" ? "wsl" : "bash";
+
+    _childProcess = spawn(command, [], { stdio: "pipe" });
+
+    if (!_childProcess || !_childProcess.pid) {
+      throw "Shell process failed to start";
+    }
+
+    pid = _childProcess.pid;
+
+    _childProcess.stdout.on("data", (data) => {
+      processOutput(data.toString(), ShellEvent.Ouptput, pid);
+    });
+
+    _childProcess.stderr.on("data", (data) => {
+      processOutput(data.toString(), ShellEvent.Error, pid);
+    });
+
+    _childProcess.on("close", (code) => {
+      processOutput(`${code}`, ShellEvent.Exit, pid);
+    });
+  }
+
+  return pid;
+}
+
 /** Basically don't show anything in the console unless there is an error */
 function errorIfNotEmpty(response: string) {
   if (response) {
@@ -102,37 +172,66 @@ function errorIfNotEmpty(response: string) {
 }
 
 function processOutput(rawDataStr: string, eventType: ShellEvent, pid: number) {
+  // If suspended, queue the output
   if (_wrapperSuspended) {
     _queuedOutput.push({ rawDataStr, eventType, pid });
     return;
   }
 
+  // Strip terminal commands from the output
   let dataStr = stripAnsi(rawDataStr);
 
+  // Ignore output from old shell processes
   if (pid != _currentProcessId) {
-    output.comment(
-      `Ignoring '${eventType}' from old shell process ${pid}: ` + dataStr
-    );
+    !dataStr.trim() ||
+      output.error(
+        `Ignoring '${eventType}' from old shell process ${pid}: ` + dataStr
+      );
     return;
   }
 
+  // Ignore output from shell processes with no resolve handler
   if (!_resolveCurrentCommand) {
-    output.comment(
-      `Ignoring '${eventType}' from process ${pid} with no resolve handler: ` +
-        dataStr
-    );
+    !dataStr.trim() ||
+      output.error(
+        `Ignoring '${eventType}' from process ${pid} with no resolve handler: ` +
+          dataStr
+      );
     return;
   }
 
+  // If start marker detected, start recording the output
+  const startDelimiterPos = rawDataStr.indexOf(_startCommandDelimiter);
+  if (startDelimiterPos != -1 && rawDataStr[startDelimiterPos - 1] != '"') {
+    rawDataStr = rawDataStr.slice(
+      startDelimiterPos + _startCommandDelimiter.length
+    );
+    dataStr = stripAnsi(rawDataStr);
+
+    _outputStarted = true;
+  }
+
+  // If not started, end here
+  if (!_outputStarted) {
+    !dataStr.trim() ||
+      output.error(
+        `Ignoring '${eventType}' from process ${pid} before command start delimiter: ` +
+          dataStr
+      );
+    return;
+  }
+
+  // If exit event
   if (eventType === ShellEvent.Exit) {
-    output.error("SHELL EXIT. PID: " + _process?.pid + " CODE: " + dataStr);
+    output.error(`SHELL EXIT. PID: ${pid} CODE: ${dataStr}`);
 
-    let finalOutput =
-      _currentBufferType == "alternate"
-        ? _getTerminalActiveBuffer()
-        : _commandOutput.trim();
+    const msg = `NAISYS: Command killed.`;
+    _commandOutput += `n${msg}`;
+    _terminal?.writeln("NAISYS: Command killed.");
 
-    finalOutput += `\nNAISYS: Command killed.`;
+    const finalOutput = _useTerminal
+      ? _getTerminalOutput()
+      : _commandOutput.trim();
 
     resetProcess();
 
@@ -140,32 +239,24 @@ function processOutput(rawDataStr: string, eventType: ShellEvent, pid: number) {
     return;
   }
 
-  const endDelimiterPos = rawDataStr.indexOf(_commandDelimiter);
-  if (endDelimiterPos != -1) {
+  const endDelimiterPos = rawDataStr.indexOf(_endCommandDelimiter);
+  if (endDelimiterPos != -1 && rawDataStr[endDelimiterPos - 1] != '"') {
     rawDataStr = rawDataStr.slice(0, endDelimiterPos);
     dataStr = stripAnsi(rawDataStr);
   }
 
-  if (_currentBufferType != "alternate") {
-    _commandOutput += dataStr;
+  _commandOutput += dataStr;
+  _terminal?.write(rawDataStr);
+
+  if (endDelimiterPos != -1) {
+    const finalOutput = _useTerminal
+      ? _getTerminalOutput()
+      : _commandOutput.trim();
+
+    resetCommand();
+
+    _completeCommand(finalOutput);
   }
-
-  // get token size of buffer, if too big, switch it front/middle/back
-
-  // use function for endDelimiter, only use callback in alternate mode, test that this hopefully fixes 'yes'
-
-  _terminal?.write(rawDataStr, () => {
-    if (endDelimiterPos != -1) {
-      const finalOutput =
-        _currentBufferType == "alternate"
-          ? _getTerminalActiveBuffer()
-          : _commandOutput.trim();
-
-      resetCommand();
-
-      _completeCommand(finalOutput);
-    }
-  });
 }
 
 export async function executeCommand(command: string) {
@@ -181,18 +272,19 @@ export async function executeCommand(command: string) {
   if (_currentPath && command.split("\n").length > 1) {
     commandWithDelimiter = await putMultilineCommandInAScript(command);
   } else {
-    commandWithDelimiter = `${command}\necho "${_commandDelimiter}"\n`;
+    commandWithDelimiter = `echo "${_startCommandDelimiter}"\n${command}\necho "${_endCommandDelimiter}"\n`;
   }
 
   return new Promise<string>((resolve, reject) => {
     _resolveCurrentCommand = resolve;
 
-    if (!_process) {
+    if (!_childProcess && !_ptyProcess) {
       reject("Shell process is not open");
       return;
     }
 
-    _process.stdin.write(commandWithDelimiter);
+    _childProcess?.stdin.write(commandWithDelimiter);
+    _ptyProcess?.write(commandWithDelimiter);
 
     // Set timeout to wait for response from command
     setCommandTimeout();
@@ -258,12 +350,14 @@ export function continueCommand(command: string) {
     }
     // Else LLM wants to send input to the process
     else {
-      if (!_process) {
+      if (!_childProcess && !_ptyProcess) {
         reject("Shell process is not open");
         return;
       }
 
-      _process.stdin.write(command + "\n");
+      _childProcess?.stdin.write(command + "\n");
+      _ptyProcess?.write(command + "\n");
+
       setCommandTimeout();
     }
   });
@@ -279,31 +373,25 @@ function returnControlToNaisys(timedOut: boolean) {
   _wrapperSuspended = true;
   _queuedOutput.length = 0;
 
-  // Flush the output to the consol, and give the LLM instructions of how it might continue
-  let outputWithInstruction =
-    _currentBufferType == "alternate"
-      ? _getTerminalActiveBuffer()
-      : _commandOutput.trim();
+  // Flush the output to the console, and give the LLM instructions of how it might continue
+  let finalOutput = _useTerminal ? _getTerminalOutput() : _commandOutput.trim();
 
   _commandOutput = "";
-
-  // Don't clear the alternate buffer, it's a special terminal full screen mode that the
-  // LLM might want to see updates too
-  if (_currentBufferType != "alternate") {
-    resetTerminal();
-  }
+  _terminal?.clear();
 
   if (timedOut) {
-    outputWithInstruction += `\nNAISYS: Command timed out after ${config.shellCommand.timeoutSeconds} seconds.`;
+    finalOutput += `\nNAISYS: Command timed out after ${config.shellCommand.timeoutSeconds} seconds.`;
   } else {
-    outputWithInstruction += `\nNAISYS: Unable to send your input as new output was generated in the interm.`;
+    finalOutput += `\nNAISYS: Unable to send your input as new output was generated in the interm.`;
   }
 
-  _completeCommand(outputWithInstruction);
+  _completeCommand(finalOutput);
 }
 
 function resetShell(pid: number) {
-  if (!_process || _process.pid != pid) {
+  const process = _childProcess || _ptyProcess;
+
+  if (!process || process.pid != pid) {
     output.comment("Ignoring timeout for old shell process " + pid);
     return false;
   }
@@ -311,10 +399,10 @@ function resetShell(pid: number) {
   // There is still an issue here when running on linux where if a command like 'ping' is running
   // then kill() won't actually kill the 'bash' process hosting the ping, it will just hang here indefinitely
   // A not fail proof workaround is to tell the LLM to prefix long running commands with 'timeout 10s' or similar
-  const killResponse = _process.kill();
+  const killResponse = process.kill();
 
   output.error(
-    `KILL SIGNAL SENT TO PID: ${_process.pid}, RESPONSE: ${killResponse ? "SUCCESS" : "FAILED"}`
+    `KILL SIGNAL SENT TO PID: ${process.pid}, RESPONSE: ${killResponse ? "SUCCESS" : "FAILED"}`
   );
 
   // TODO: Timeout to 'hard close' basically create a new process and ignore the old one
@@ -344,39 +432,21 @@ export async function terminate() {
 }
 
 function resetCommand() {
+  _outputStarted = false;
   _commandOutput = "";
-
-  resetTerminal();
+  _terminal?.clear();
 
   clearTimeout(_currentCommandTimeout);
 }
 
-function resetTerminal() {
-  _bufferChangeEvent?.dispose();
-  _terminal?.dispose();
-
-  _terminal = new xterm.Terminal({
-    allowProposedApi: true,
-    rows: process.stdout.rows,
-    cols: process.stdout.columns,
-  });
-
-  _bufferChangeEvent = _terminal.buffer.onBufferChange((buffer) => {
-    // If changing back to normal, copy the alternate buffer back to the output
-    // so it shows up when the command is resolved
-    if (_currentBufferType == "alternate" && buffer.type == "normal") {
-      output.comment("NAISYS: BUFFER CHANGE BACK TO NORMAL");
-      _commandOutput += "\n" + _getTerminalActiveBuffer() + "\n";
-    }
-
-    _currentBufferType = buffer.type;
-  });
-}
-
 function resetProcess() {
   resetCommand();
-  _process?.removeAllListeners();
-  _process = undefined;
+
+  _childProcess?.removeAllListeners();
+  _childProcess = undefined;
+
+  _ptyRemoveListeners?.();
+  _ptyProcess = undefined;
 
   _terminal?.dispose();
   _terminal = undefined;
@@ -394,9 +464,10 @@ function putMultilineCommandInAScript(command: string) {
   // set -e causes the script to exit on the first error
   const scriptContent = `#!/bin/bash
 set -e
+echo "${_startCommandDelimiter}"
 cd ${_currentPath}
 ${command.trim()}
-echo "${_commandDelimiter}"`;
+echo "${_endCommandDelimiter}"`;
 
   // create/write file
   fs.writeFileSync(scriptPath.toHostPath(), scriptContent);
@@ -420,23 +491,12 @@ export function isShellSuspended() {
   return _wrapperSuspended;
 }
 
-/**
- * The alternate/active buffer is a special terminal mode that runs full screen
- *  independent of the 'normal' buffer that is more like a log
- */
-function _getTerminalActiveBuffer() {
+function _getTerminalOutput() {
   let output = "";
-  const bufferLineCount = _terminal?.buffer.normal?.length || 0;
+  const bufferLineCount = _terminal?.buffer.active?.length || 0;
 
   for (let i = 0; i < bufferLineCount; i++) {
-    const line = _terminal?.buffer.alternate
-      ?.getLine(i)
-      ?.translateToString()
-      .trim();
-
-    if (line) {
-      output += line + "\n";
-    }
+    output += _terminal?.buffer.active?.getLine(i)?.translateToString() + "\n";
   }
 
   return output.trim();
