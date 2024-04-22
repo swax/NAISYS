@@ -9,26 +9,38 @@ import { InputMode } from "../utils/inputMode.js";
 import * as output from "../utils/output.js";
 import * as shellWrapper from "./shellWrapper.js";
 
-// When actual output is entered by the user we want to cancel any auto-continue timers and/or wake on message
-// We don't want to cancel if the user is entering a chords like ctrl+b then down arrow, when using tmux
-// This is why we can't put the event listener on the standard process.stdin/keypress event.
-// There is no 'data entered' output event so this monkey patch does that
+/**
+ * When actual output is entered by the user we want to cancel any auto-continue timers and/or wake on message
+ * We don't want to cancel if the user is entering a chords like ctrl+b then down arrow, when using tmux
+ * This is why we can't put the event listener on the standard process.stdin/keypress event.
+ * There is no 'data entered' output event so this monkey patch does that
+ */
+const _writeEventEmitter = new events.EventEmitter();
 const _writeEventName = "write";
-const _outputEmitter = new events.EventEmitter();
 const _originalWrite = process.stdout.write.bind(process.stdout);
 
 process.stdout.write = (...args) => {
-  _outputEmitter.emit(_writeEventName, false, ...args);
+  _writeEventEmitter.emit(_writeEventName, false, ...args);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return _originalWrite.apply(process.stdout, <any>args);
 };
 
-function createReadlineInterface() {
-  return readline.createInterface({
-    input: process.stdin,
-    output: process.stdout,
-  });
-}
+/**
+ * Tried to make this local and have it cleaned up with close() after using it, but
+ * due to the terminal settings below there are bugs with both terminal true and false
+ * pause() actually is nice in that it queues up the input, and doesn't allow the user
+ * to enter anything while the LLM is working
+ */
+const readlineInterface = readline.createInterface({
+  input: process.stdin,
+  output: process.stdout,
+  // With this set to ture, after an abort the second input will not be processed, see:
+  // https://gist.github.com/swax/964a2488494048c8e03d05493d9370f8
+  // With this set to false, the stdout.write event above will not be triggered
+  terminal: true,
+});
+
+readlineInterface.pause();
 
 export async function getPrompt(pauseSeconds: number, wakeOnMessage: boolean) {
   const promptSuffix = inputMode.current == InputMode.Debug ? "#" : "$";
@@ -67,7 +79,7 @@ export function getUserHostPrompt() {
 export function getInput(
   commandPrompt: string,
   pauseSeconds: number,
-  wakeOnMessage: boolean
+  wakeOnMessage: boolean,
 ) {
   return new Promise<string>((resolve) => {
     const questionController = new AbortController();
@@ -75,30 +87,32 @@ export function getInput(
     let interval: NodeJS.Timeout | undefined;
     let timeoutCancelled = false;
 
+    function clearTimers() {
+      timeoutCancelled = true;
+      _writeEventEmitter.off(_writeEventName, cancelWaitingForUserInput);
+
+      clearTimeout(timeout);
+      clearInterval(interval);
+    }
+
     /** Cancels waiting for user input */
-    function onStdinWrite_cancelTimers(
+    const cancelWaitingForUserInput = (
       questionAborted: boolean,
-      buffer?: string
-    ) {
+      buffer?: string,
+    ) => {
       // Don't allow console escape commands like \x1B[1G to cancel the timeout
       if (timeoutCancelled || (buffer && !/^[a-zA-Z0-9 ]+$/.test(buffer))) {
         return;
       }
 
-      timeoutCancelled = true;
-      _outputEmitter.off(_writeEventName, onStdinWrite_cancelTimers);
-
-      clearTimeout(timeout);
-      clearInterval(interval);
-      timeout = undefined;
-      interval = undefined;
+      clearTimers();
 
       if (questionAborted) {
         return;
       }
+      // Else timeout interrupted by user input
 
-      // Else timeout interrupted by user input, clear out the timeout information from the prompt
-      // to prevent the user from thinking the timeout still applies
+      // Clear out the timeout information from the prompt to prevent the user from thinking the timeout still applies
       let pausePos = commandPrompt.indexOf("[Paused:");
       pausePos =
         pausePos == -1 ? commandPrompt.indexOf("[WakeOnMsg]") : pausePos;
@@ -111,31 +125,30 @@ export function getInput(
         process.stdout.write("-".repeat(charsBack - 3));
         readline.moveCursor(process.stdout, 3, 0);
       }
-    }
+    };
 
-    const readlineInterface = createReadlineInterface();
     readlineInterface.question(
       chalk.greenBright(commandPrompt),
       { signal: questionController.signal },
       (answer) => {
-        readlineInterface.close();
+        clearTimers();
+        readlineInterface.pause();
         resolve(answer);
-      }
+      },
     );
 
     // If user starts typing in prompt, cancel any auto timeouts or wake on msg
-    _outputEmitter.on(_writeEventName, onStdinWrite_cancelTimers);
+    _writeEventEmitter.on(_writeEventName, cancelWaitingForUserInput);
 
-    const abortQuestion = () => {
-      onStdinWrite_cancelTimers(true);
+    function abortQuestion() {
+      cancelWaitingForUserInput(true);
       questionController.abort();
+      readlineInterface.pause();
       resolve("");
-    };
+    }
 
     if (pauseSeconds) {
-      timeout = setTimeout(() => {
-        abortQuestion();
-      }, pauseSeconds * 1000);
+      timeout = setTimeout(abortQuestion, pauseSeconds * 1000);
     }
 
     if (wakeOnMessage) {
@@ -165,13 +178,12 @@ export function getInput(
 
 export function getCommandConfirmation() {
   return new Promise<string>((resolve) => {
-    const readlineInterface = createReadlineInterface();
     readlineInterface.question(
       chalk.greenBright("Allow command to run? [y/n] "),
       (answer) => {
-        readlineInterface.close();
+        readlineInterface.pause();
         resolve(answer);
-      }
+      },
     );
   });
 }

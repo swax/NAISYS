@@ -76,7 +76,7 @@ export async function run() {
     while (nextCommandAction == NextCommandAction.Continue) {
       if (shellCommand.isShellSuspended()) {
         await contextManager.append(
-          `Command still running. Enter 'wait' to continue waiting for output, or 'kill' to terminate the process. `,
+          `Command still running. Enter 'wait' to continue waiting. 'kill' to terminate. Other input will be sent to the process.`,
           ContentSource.Console,
         );
       }
