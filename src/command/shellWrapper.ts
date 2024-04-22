@@ -1,3 +1,4 @@
+import xterm from "@xterm/headless";
 import { ChildProcessWithoutNullStreams, spawn } from "child_process";
 import * as fs from "fs";
 import * as os from "os";
@@ -6,7 +7,6 @@ import * as config from "../config.js";
 import * as output from "../utils/output.js";
 import * as pathService from "../utils/pathService.js";
 import { NaisysPath } from "../utils/pathService.js";
-import xterm from "@xterm/headless";
 
 enum ShellEvent {
   Ouptput = "stdout",
@@ -21,7 +21,7 @@ let _currentPath: string | undefined;
 
 let _terminal: xterm.Terminal | undefined;
 let _bufferChangeEvent: xterm.IDisposable | undefined;
-let _currentBufferType: "normal" | "alternate" | undefined;
+let _currentBufferType: "normal" | "alternate" = "normal";
 
 let _resolveCurrentCommand: ((value: string) => void) | undefined;
 let _currentCommandTimeout: NodeJS.Timeout | undefined;
@@ -32,7 +32,7 @@ const _commandDelimiter = "__COMMAND_END_X7YUTT__";
 let _wrapperSuspended = false;
 
 const _queuedOutput: {
-  rawDataStr: string;
+  rawDataStr: Buffer;
   eventType: ShellEvent;
   pid: number;
 }[] = [];
@@ -56,16 +56,16 @@ async function ensureOpen() {
 
   _currentProcessId = pid;
 
-  _process.stdout.on("data", (data) => {
-    processOutput(data.toString(), ShellEvent.Ouptput, pid);
+  _process.stdout.on("data", (data: Buffer) => {
+    processOutput(data, ShellEvent.Ouptput, pid);
   });
 
-  _process.stderr.on("data", (data) => {
-    processOutput(data.toString(), ShellEvent.Error, pid);
+  _process.stderr.on("data", (data: Buffer) => {
+    processOutput(data, ShellEvent.Error, pid);
   });
 
   _process.on("close", (code) => {
-    processOutput(`${code}`, ShellEvent.Exit, pid);
+    processOutput(Buffer.from(`${code}`), ShellEvent.Exit, pid);
   });
 
   // Init users home dir on first run, on shell crash/rerun go back to the current path
@@ -74,13 +74,13 @@ async function ensureOpen() {
 
     errorIfNotEmpty(
       await executeCommand(
-        `mkdir -p ${config.naisysFolder}/home/` + config.agent.username
-      )
+        `mkdir -p ${config.naisysFolder}/home/` + config.agent.username,
+      ),
     );
     errorIfNotEmpty(
       await executeCommand(
-        `cd ${config.naisysFolder}/home/` + config.agent.username
-      )
+        `cd ${config.naisysFolder}/home/` + config.agent.username,
+      ),
     );
   } else {
     output.comment("SHELL RESTORED. PID: " + pid);
@@ -101,17 +101,17 @@ function errorIfNotEmpty(response: string) {
   }
 }
 
-function processOutput(rawDataStr: string, eventType: ShellEvent, pid: number) {
+function processOutput(rawDataStr: Buffer, eventType: ShellEvent, pid: number) {
   if (_wrapperSuspended) {
     _queuedOutput.push({ rawDataStr, eventType, pid });
     return;
   }
 
-  let dataStr = stripAnsi(rawDataStr);
+  let dataStr = stripAnsi(rawDataStr.toString());
 
   if (pid != _currentProcessId) {
     output.comment(
-      `Ignoring '${eventType}' from old shell process ${pid}: ` + dataStr
+      `Ignoring '${eventType}' from old shell process ${pid}: ` + dataStr,
     );
     return;
   }
@@ -119,7 +119,7 @@ function processOutput(rawDataStr: string, eventType: ShellEvent, pid: number) {
   if (!_resolveCurrentCommand) {
     output.comment(
       `Ignoring '${eventType}' from process ${pid} with no resolve handler: ` +
-        dataStr
+        dataStr,
     );
     return;
   }
@@ -140,13 +140,13 @@ function processOutput(rawDataStr: string, eventType: ShellEvent, pid: number) {
     return;
   }
 
-  const endDelimiterPos = rawDataStr.indexOf(_commandDelimiter);
+  // Should only happen back in normal mode, so we don't need to modify the rawDataStr
+  const endDelimiterPos = dataStr.indexOf(_commandDelimiter);
   if (endDelimiterPos != -1) {
-    rawDataStr = rawDataStr.slice(0, endDelimiterPos);
-    dataStr = stripAnsi(rawDataStr);
+    dataStr = dataStr.slice(0, endDelimiterPos);
   }
 
-  if (_currentBufferType != "alternate") {
+  if (_currentBufferType == "normal") {
     _commandOutput += dataStr;
   }
 
@@ -154,18 +154,20 @@ function processOutput(rawDataStr: string, eventType: ShellEvent, pid: number) {
 
   // use function for endDelimiter, only use callback in alternate mode, test that this hopefully fixes 'yes'
 
-  _terminal?.write(rawDataStr, () => {
-    if (endDelimiterPos != -1) {
-      const finalOutput =
-        _currentBufferType == "alternate"
-          ? _getTerminalActiveBuffer()
-          : _commandOutput.trim();
+  _terminal?.write(rawDataStr); // Not syncronous, second param takes a call back, don't need to wait for it AFAIK
 
-      resetCommand();
-
-      _completeCommand(finalOutput);
+  if (endDelimiterPos != -1) {
+    // AFAIK this shoudln't happen, but if it does log it so I can figure out why/how and what to do about it
+    if (_currentBufferType == "alternate") {
+      output.error("UNEXPECTED END DELIMITER IN ALTERNATE BUFFER: " + dataStr);
     }
-  });
+
+    const finalOutput = _commandOutput.trim();
+
+    resetCommand();
+
+    _completeCommand(finalOutput);
+  }
 }
 
 export async function executeCommand(command: string) {
@@ -177,11 +179,8 @@ export async function executeCommand(command: string) {
 
   await ensureOpen();
 
-  let commandWithDelimiter: string;
   if (_currentPath && command.split("\n").length > 1) {
-    commandWithDelimiter = await putMultilineCommandInAScript(command);
-  } else {
-    commandWithDelimiter = `${command}\necho "${_commandDelimiter}"\n`;
+    command = await putMultilineCommandInAScript(command);
   }
 
   return new Promise<string>((resolve, reject) => {
@@ -192,6 +191,7 @@ export async function executeCommand(command: string) {
       return;
     }
 
+    const commandWithDelimiter = `${command}\necho "${_commandDelimiter}"\n`;
     _process.stdin.write(commandWithDelimiter);
 
     // Set timeout to wait for response from command
@@ -231,12 +231,11 @@ export function continueCommand(command: string) {
       if (!_resolveCurrentCommand) {
         return;
       }
-      // Can't process new input since new output was generated and log would be confusing/out of order
-      else if (choice == "input") {
-        returnControlToNaisys(false);
-        return;
-      }
-      // Else kill or wait, continue with the LLM's choice
+
+      // Used to return here if LLM was sending if output was generated while waiting for the LLM
+      // In normal mode this would make the log confusing and out of order
+      // But since we only use the terminal in alternate mode, this is fine and works
+      // with commands like `mtr` changing the display type
     }
 
     // LLM wants to wait for more output
@@ -271,11 +270,11 @@ export function continueCommand(command: string) {
 
 function setCommandTimeout() {
   _currentCommandTimeout = setTimeout(() => {
-    returnControlToNaisys(true);
+    returnControlToNaisys();
   }, config.shellCommand.timeoutSeconds * 1000);
 }
 
-function returnControlToNaisys(timedOut: boolean) {
+function returnControlToNaisys() {
   _wrapperSuspended = true;
   _queuedOutput.length = 0;
 
@@ -293,11 +292,7 @@ function returnControlToNaisys(timedOut: boolean) {
     resetTerminal();
   }
 
-  if (timedOut) {
-    outputWithInstruction += `\nNAISYS: Command timed out after ${config.shellCommand.timeoutSeconds} seconds.`;
-  } else {
-    outputWithInstruction += `\nNAISYS: Unable to send your input as new output was generated in the interm.`;
-  }
+  outputWithInstruction += `\nNAISYS: Command interrupted after waiting ${config.shellCommand.timeoutSeconds} seconds.`;
 
   _completeCommand(outputWithInstruction);
 }
@@ -314,7 +309,7 @@ function resetShell(pid: number) {
   const killResponse = _process.kill();
 
   output.error(
-    `KILL SIGNAL SENT TO PID: ${_process.pid}, RESPONSE: ${killResponse ? "SUCCESS" : "FAILED"}`
+    `KILL SIGNAL SENT TO PID: ${_process.pid}, RESPONSE: ${killResponse ? "SUCCESS" : "FAILED"}`,
   );
 
   // TODO: Timeout to 'hard close' basically create a new process and ignore the old one
@@ -361,6 +356,8 @@ function resetTerminal() {
     cols: process.stdout.columns,
   });
 
+  _currentBufferType = "normal";
+
   _bufferChangeEvent = _terminal.buffer.onBufferChange((buffer) => {
     // If changing back to normal, copy the alternate buffer back to the output
     // so it shows up when the command is resolved
@@ -386,7 +383,7 @@ function resetProcess() {
  * May also help with common escaping errors */
 function putMultilineCommandInAScript(command: string) {
   const scriptPath = new NaisysPath(
-    `${config.naisysFolder}/agent-data/${config.agent.username}/multiline-command.sh`
+    `${config.naisysFolder}/agent-data/${config.agent.username}/multiline-command.sh`,
   );
 
   pathService.ensureFileDirExists(scriptPath);
@@ -395,8 +392,7 @@ function putMultilineCommandInAScript(command: string) {
   const scriptContent = `#!/bin/bash
 set -e
 cd ${_currentPath}
-${command.trim()}
-echo "${_commandDelimiter}"`;
+${command.trim()}`;
 
   // create/write file
   fs.writeFileSync(scriptPath.toHostPath(), scriptContent);

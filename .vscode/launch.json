@@ -14,11 +14,12 @@
       "request": "launch",
       "runtimeArgs": ["--loader", "ts-node/esm"],
       "program": "${workspaceFolder}/src/naisys.ts",
-      "args": ["./agents/assistant.yaml"],
+      "args": ["./agents/solo-websites/webdev-fansite.yaml"],
       "cwd": "${workspaceFolder}",
       "console": "integratedTerminal",
       "internalConsoleOptions": "neverOpen",
-      "skipFiles": ["<node_internals>/**"]
+      "skipFiles": ["<node_internals>/**"],
+      "preLaunchTask": "Compile NAISYS"
     }
   ]
 }

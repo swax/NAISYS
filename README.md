@@ -193,10 +193,15 @@ initialCommands:
 
 - To use NAISYS on Windows you need to run it locally from source (or from within WSL)
 - Use the above instructions to install locally, and then continue with the instructions below
-- Install WSL (Windows Subsystem for Linux) 
+- Install WSL (Windows Subsystem for Linux)
 - Install a Linux distribution, Ubuntu can easily be installed from the Microsoft Store
 - The `NAISYS_FOLDER` and `WEBSITE_FOLDER` should be set to the WSL path
   - So `C:\var\naisys` should be `/mnt/c/var/naisys` in the `.env` file
+
+#### Notes for MacOS users
+- The browser llmynx requires `timeout` and `lynx`. Run these commands to install them:  
+  - `brew install coreutils`  
+  - `brew install lynx`
 
 #### Using NAISYS for a website
 
@@ -205,7 +210,8 @@ initialCommands:
 - Start the server and put the URL in the `.env` file
 
 ## Changelog
-- 1.6: Long running shell commands supported. LLM can wait, kill or send input. 
+
+- 1.6: Long running shell commands supported. LLM can wait, kill or send input.
 - 1.5: Allow agents to start their own parallel `subagents`
 - 1.4: `genimg` command for generating images
 - 1.3: Post-session 'dreaming' as well as a mail 'blackout' period

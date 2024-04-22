@@ -9,7 +9,7 @@
     "naisys": "bin/naisys"
   },
   "scripts": {
-    "compile/run/attachable": "tsc && node --inspect dist/naisys.js ./agents/assistant.yaml",
+    "compile/run/attachable": "tsc && node --inspect dist/naisys.js ./agents/netmap.yaml",
     "agent:assistant": "node dist/naisys.js ./agents/assistant.yaml",
     "agent:nightwatch": "node dist/naisys.js ./agents/nightwatch.yaml",
     "clean": "rm -rf dist",
@@ -55,7 +55,7 @@
   "dependencies": {
     "@anthropic-ai/sdk": "0.20.5",
     "@google/generative-ai": "0.7.1",
-    "@xterm/headless": "^5.5.0",
+    "@xterm/headless": "5.5.0",
     "chalk": "5.3.0",
     "commander": "12.0.0",
     "dotenv": "16.4.5",

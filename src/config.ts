@@ -19,7 +19,7 @@ export const shellCommand = {
   /** Limits the size of files that can be read/wrote */
   outputTokenMax: 3000,
   /** The time NAISYS will wait for new shell output before giving up */
-  timeoutSeconds: 5,
+  timeoutSeconds: 15,
   /** The max time NAISYS will wait for a shell command to complete */
   maxTimeoutSeconds: 60,
 };
