@@ -184,6 +184,7 @@ export async function executeCommand(command: string) {
   }
 
   command = command.trim();
+  _lastCommand = command; // Set here before it gets reset by the multi line script below
 
   await ensureOpen();
 
@@ -203,7 +204,7 @@ export async function executeCommand(command: string) {
     _process.stdin.write(commandWithDelimiter);
 
     // Set timeout to wait for response from command
-    setCommandTimeout(commandWithDelimiter);
+    setCommandTimeout();
   });
 }
 
@@ -271,20 +272,23 @@ export function continueCommand(command: string) {
       }
 
       _process.stdin.write(command + "\n");
-      setCommandTimeout(command);
+      _lastCommand = command;
+      setCommandTimeout();
     }
   });
 }
 
 let _startCommandTime: Date | undefined;
+/** Pulled out because for commands like 'wait' we want to vary the run time based on the 'last command' */
+let _lastCommand: string | undefined;
 
-function setCommandTimeout(command?: string) {
+function setCommandTimeout() {
   _startCommandTime = new Date();
   let timeoutSeconds = config.shellCommand.timeoutSeconds;
 
   if (
     config.shellCommand.longRunningCommands.some((cmd) =>
-      command?.startsWith(cmd),
+      _lastCommand?.startsWith(cmd),
     )
   ) {
     timeoutSeconds = config.shellCommand.longRunningTimeoutSeconds;
