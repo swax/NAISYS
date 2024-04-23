@@ -22,6 +22,11 @@ if (config.mailEnabled) {
   llmailCmd = `\n  llmail: A local mail system for communicating with your team`;
 }
 
+let llmynxCmd = "";
+if (config.webEnabled) {
+  llmynxCmd = `\n  llmynx: A context optimized web browser. Enter 'llmynx help' to learn how to use it`;
+}
+
 let workspaces = "";
 if (config.workspacesEnabled) {
   workspaces = `\nWorkspaces:`;
@@ -83,8 +88,7 @@ LINUX Commands:
   vi and nano are not supported
   Read files with cat. Write files with \`cat > filename << 'EOF'\`
   Do not input notes after the prompt. Only valid commands.
-NAISYS Commands: (cannot be used with other commands on the same prompt)${llmailCmd}${subagentNote}
-  llmynx: A context optimized web browser. Enter 'llmynx help' to learn how to use it${genImgCmd}
+NAISYS Commands: (cannot be used with other commands on the same prompt)${llmailCmd}${subagentNote}${llmynxCmd}${genImgCmd}
   comment "<thought>": Any non-command output like thinking out loud, prefix with the 'comment' command
   pause <seconds>: Pause for <seconds>${trimSession}${endsession}
 Tokens:

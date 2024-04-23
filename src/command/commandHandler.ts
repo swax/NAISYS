@@ -216,8 +216,8 @@ export async function processCommand(
           ? NextCommandAction.ExitApplication
           : NextCommandAction.Continue;
       }
-    }
-  }
+    } // End switch
+  } // End loop processing LLM response
 
   // display unprocessed lines to aid in debugging
   if (consoleInput.trim()) {
@@ -293,6 +293,16 @@ async function splitMultipleInputCommands(nextInput: string) {
     input = nextInput.slice(0, newLinePos);
     nextInput = nextInput.slice(newLinePos).trim();
   }
+  // If shell is suspended, the process can kill/wait the shell, and may run some commands after
+  else if (
+    newLinePos > 0 &&
+    shellCommand.isShellSuspended() &&
+    (nextInput.startsWith("kill") || nextInput.startsWith("wait"))
+  ) {
+    input = nextInput.slice(0, newLinePos);
+    nextInput = nextInput.slice(newLinePos).trim();
+  }
+
   // Else process the entire input now
   else {
     input = nextInput;

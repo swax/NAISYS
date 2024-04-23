@@ -157,7 +157,7 @@ async function sendWithGoogle(
 
   const responseText = result.response.text();
 
-  // todo: take into account google allows 60 queries per minute for free for 1.0, 2 queries/min for 1.5
+  // TODO: take into account google allows 60 queries per minute for free for 1.0, 2 queries/min for 1.5
 
   // AFAIK Google API doesn't provide usage data, so we have to estimate it ourselves
   const inputTokenCount =

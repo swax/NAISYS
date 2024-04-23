@@ -20,8 +20,9 @@ export const shellCommand = {
   outputTokenMax: 3000,
   /** The time NAISYS will wait for new shell output before giving up */
   timeoutSeconds: 15,
-  /** The max time NAISYS will wait for a shell command to complete */
-  maxTimeoutSeconds: 60,
+  /** These commands have their own timeout so the LLM doesn't have to continually waste tokens on wait commands */
+  longRunningCommands: ["nmap", "traceroute", "tracepath", "mtr"],
+  longRunningTimeoutSeconds: 120,
 };
 
 /** Web pages loaded with llmynx will be reduced down to around this number of tokens */
@@ -30,6 +31,8 @@ export const webTokenMax = 2500;
 export const endSessionEnabled = true;
 
 export const mailEnabled = true;
+
+export const webEnabled = true;
 
 /** Experimental, live updating spot in the context for the LLM to put files, to avoid having to continually cat */
 export const workspacesEnabled = false;
