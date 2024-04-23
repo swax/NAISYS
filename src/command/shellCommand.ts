@@ -65,7 +65,7 @@ export async function handleCommand(input: string): Promise<boolean> {
       "\nPlease enter a valid Linux or NAISYS command after the prompt. Use the 'comment' command for thoughts.";
   }
 
-  // todo move this into the command handler to remove the context manager dependency
+  // TODO: move this into the command handler to remove the context manager dependency
   await contextManager.append(response);
 
   return false;

@@ -141,27 +141,35 @@ function processOutput(rawDataStr: Buffer, eventType: ShellEvent, pid: number) {
   }
 
   // Should only happen back in normal mode, so we don't need to modify the rawDataStr
+  let endDelimiterHit = false;
   const endDelimiterPos = dataStr.indexOf(_commandDelimiter);
-  if (endDelimiterPos != -1) {
+
+  if (
+    endDelimiterPos != -1 &&
+    // Quotes will only precede the delimiter if the echo command got in the output, so don't count it
+    // For example running nano or vi will cause this
+    dataStr[endDelimiterPos - 1] != '"'
+  ) {
+    endDelimiterHit = true;
     dataStr = dataStr.slice(0, endDelimiterPos);
+
+    // If it does happen somehow, log it so I can figure out why/how and what to do about it
+    if (_currentBufferType == "alternate") {
+      output.error("UNEXPECTED END DELIMITER IN ALTERNATE BUFFER: " + dataStr);
+    }
   }
 
+  // If we're in alternate mode, just write the data to the terminal
+  // When the buffer changes back to normal, the output will be copied back to the command output
   if (_currentBufferType == "normal") {
     _commandOutput += dataStr;
   }
 
-  // get token size of buffer, if too big, switch it front/middle/back
+  // TODO: get token size of buffer, if too big, switch it front/middle/back
 
-  // use function for endDelimiter, only use callback in alternate mode, test that this hopefully fixes 'yes'
+  _terminal?.write(rawDataStr); // Not synchronous, second param takes a call back, don't need to handle it AFAIK
 
-  _terminal?.write(rawDataStr); // Not syncronous, second param takes a call back, don't need to wait for it AFAIK
-
-  if (endDelimiterPos != -1) {
-    // AFAIK this shoudln't happen, but if it does log it so I can figure out why/how and what to do about it
-    if (_currentBufferType == "alternate") {
-      output.error("UNEXPECTED END DELIMITER IN ALTERNATE BUFFER: " + dataStr);
-    }
-
+  if (endDelimiterHit) {
     const finalOutput = _commandOutput.trim();
 
     resetCommand();
@@ -195,7 +203,7 @@ export async function executeCommand(command: string) {
     _process.stdin.write(commandWithDelimiter);
 
     // Set timeout to wait for response from command
-    setCommandTimeout();
+    setCommandTimeout(commandWithDelimiter);
   });
 }
 
@@ -263,15 +271,28 @@ export function continueCommand(command: string) {
       }
 
       _process.stdin.write(command + "\n");
-      setCommandTimeout();
+      setCommandTimeout(command);
     }
   });
 }
 
-function setCommandTimeout() {
+let _startCommandTime: Date | undefined;
+
+function setCommandTimeout(command?: string) {
+  _startCommandTime = new Date();
+  let timeoutSeconds = config.shellCommand.timeoutSeconds;
+
+  if (
+    config.shellCommand.longRunningCommands.some((cmd) =>
+      command?.startsWith(cmd),
+    )
+  ) {
+    timeoutSeconds = config.shellCommand.longRunningTimeoutSeconds;
+  }
+
   _currentCommandTimeout = setTimeout(() => {
     returnControlToNaisys();
-  }, config.shellCommand.timeoutSeconds * 1000);
+  }, timeoutSeconds * 1000);
 }
 
 function returnControlToNaisys() {
@@ -292,7 +313,11 @@ function returnControlToNaisys() {
     resetTerminal();
   }
 
-  outputWithInstruction += `\nNAISYS: Command interrupted after waiting ${config.shellCommand.timeoutSeconds} seconds.`;
+  const waitSeconds = Math.round(
+    (new Date().getTime() - _startCommandTime!.getTime()) / 1000,
+  );
+
+  outputWithInstruction += `\nNAISYS: Command interrupted after waiting ${waitSeconds} seconds.`;
 
   _completeCommand(outputWithInstruction);
 }

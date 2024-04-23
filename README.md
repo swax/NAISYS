@@ -211,7 +211,7 @@ initialCommands:
 
 ## Changelog
 
-- 1.6: Long running shell commands supported. LLM can wait, kill or send input.
+- 1.6: Support for long running shell commands and full screen terminal output
 - 1.5: Allow agents to start their own parallel `subagents`
 - 1.4: `genimg` command for generating images
 - 1.3: Post-session 'dreaming' as well as a mail 'blackout' period
