@@ -199,8 +199,9 @@ initialCommands:
   - So `C:\var\naisys` should be `/mnt/c/var/naisys` in the `.env` file
 
 #### Notes for MacOS users
-- The browser llmynx requires `timeout` and `lynx`. Run these commands to install them:  
-  - `brew install coreutils`  
+
+- The browser llmynx requires `timeout` and `lynx`. Run these commands to install them:
+  - `brew install coreutils`
   - `brew install lynx`
 
 #### Using NAISYS for a website
