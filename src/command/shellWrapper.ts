@@ -3,6 +3,7 @@ import { ChildProcessWithoutNullStreams, spawn } from "child_process";
 import * as fs from "fs";
 import * as os from "os";
 import stripAnsi from "strip-ansi";
+import treeKill from "tree-kill";
 import * as config from "../config.js";
 import * as output from "../utils/output.js";
 import * as pathService from "../utils/pathService.js";
@@ -125,7 +126,7 @@ function processOutput(rawDataStr: Buffer, eventType: ShellEvent, pid: number) {
   }
 
   if (eventType === ShellEvent.Exit) {
-    output.error("SHELL EXIT. PID: " + _process?.pid + " CODE: " + dataStr);
+    output.error(`SHELL EXIT. PID: ${_process?.pid}, CODE: ${rawDataStr}`);
 
     let finalOutput =
       _currentBufferType == "alternate"
@@ -332,16 +333,9 @@ function resetShell(pid: number) {
     return false;
   }
 
-  // There is still an issue here when running on linux where if a command like 'ping' is running
-  // then kill() won't actually kill the 'bash' process hosting the ping, it will just hang here indefinitely
-  // A not fail proof workaround is to tell the LLM to prefix long running commands with 'timeout 10s' or similar
-  const killResponse = _process.kill();
+  output.error(`KILL-TREE SIGNAL SENT TO PID: ${_process.pid}`);
 
-  output.error(
-    `KILL SIGNAL SENT TO PID: ${_process.pid}, RESPONSE: ${killResponse ? "SUCCESS" : "FAILED"}`,
-  );
-
-  // TODO: Timeout to 'hard close' basically create a new process and ignore the old one
+  treeKill(pid, "SIGKILL");
 
   // Should trigger the process close event from here
   return true;

@@ -27,6 +27,8 @@ async function init() {
 
   await usingDatabase(async (db) => {
     if (newDbCreated) {
+      // For llmail to work, the usernames need to be unique
+      // The agentPaths also need to be unique so we know what configuration each agent should use when we restart/reload naisys
       const createTables = [
         `CREATE TABLE Users (
           id INTEGER PRIMARY KEY, 
@@ -76,21 +78,28 @@ async function init() {
 
     // If user not in database, add them
     if (!user) {
-      const insertedUser = await db.run(
-        "INSERT INTO Users (username, title, agentPath, leadUsername) VALUES (?, ?, ?, ?)",
-        [
-          config.agent.username,
-          config.agent.title,
-          config.agent.hostpath,
-          config.agent.leadAgent,
-        ],
-      );
+      try {
+        const insertedUser = await db.run(
+          "INSERT INTO Users (username, title, agentPath, leadUsername) VALUES (?, ?, ?, ?)",
+          [
+            config.agent.username,
+            config.agent.title,
+            config.agent.hostpath,
+            config.agent.leadAgent,
+          ],
+        );
 
-      if (!insertedUser.lastID) {
-        throw "Error adding local user to llmail database";
+        if (!insertedUser.lastID) {
+          throw "Error adding local user to llmail database";
+        }
+
+        _myUserId = insertedUser.lastID;
+      } catch (e) {
+        throw (
+          `A user already exists in the database with the agent path (${config.agent.hostpath})\n` +
+          `Either create a new agent config file, or delete the ${config.naisysFolder} folder to reset the database.`
+        );
       }
-
-      _myUserId = insertedUser.lastID;
     }
     // Else already exists, validate it's config path is correct
     else {

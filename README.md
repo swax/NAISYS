@@ -1,13 +1,18 @@
 ## NAISYS (Node.js Autonomous Intelligence System)
 
-NAISYS acts as a proxy shell between LLM(s) and a real shell. The goal is to see how far a LLM can
-get into writing a website from scratch as well as work with other LLM agents on the same project. Trying to figure
-out what works and what doesn't when it comes to 'cognitive architectures' for autonomy. NAISYS isn't
-limited to websites, but it seemed like a good place to start.
+NAISYS allows any LLM you want to operate a standard linux shell given your instructions. You can control how much
+to spend, the maximum number of tokens to use per session, how long to wait between commands, etc.. Between each command
+NAISYS will wait a few seconds to accept any input you want to put in yourself in case you want to colllaborate with the 
+LLM, give it hints, and/or diagnose the session.  Once the LLM reaches the token max you specified for the sesssion it
+will wrap things up, and start a fresh shell for the LLM to continue on its work. 
 
-Since the LLM has a limited context, NAISYS takes this into account and helps the LLM
-perform 'context friendly' operations. For example reading/writing a file can't use a typical editor like
-vim or nano so point the LLM to use cat to read/write files in a single operation.
+NAISYS tries to be a minimal wrapper, just helping the LLM operate in the shell 'better'. Making commands 'context friendly'. For instace if a command is long running, NAISYS will interrupt it, show the LLM the current output, and ask the LLM what it wants to 
+do next - wait, kill, or send input. The custom command prompt helps the LLM keep track of its token usage during the session. The 'comment' command helps the LLM think outloud without putting invalid commands into the shell. 
+
+Some use cases are building websites, diagnosing a system for security concerns, mapping out the topology of the local 
+network, learning and performing arbitrary tasks, or just plain exploring the limits of autonomy. NAISYS has a built-in 
+system for inter-agent communiation. You can manually startup mulitple instances of NAISYS with different roles, or 
+you can allow agents to start their own sub-agents on demand with instructions defined by the LLM itself!
 
 [NPM](https://www.npmjs.com/package/naisys) | [Website](https://naisys.org) | [Discord](https://discord.gg/JBUPWSbaEt) | [Demo Video](https://www.youtube.com/watch?v=Ttya3ixjumo)
 
