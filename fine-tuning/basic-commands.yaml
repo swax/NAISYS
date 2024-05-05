@@ -1,29 +1,7 @@
 # naisys is the user, llm is the assistant
 
-# Commands: comment, ls, cd, mkdir, touch, cp, mv
+# Commands: cd, comment, cp, ls, mkdir, mv, pwd, rm, touch
 
-# comment
-- example:
-    - system: You are running on a command shell demonstrating the 'comment' command.
-    - naisys: "amy@naisys:/ [Tokens: 100/1000]$"
-    - llm: |
-        comment "The 'comment' command lets me add notes or thoughts without executing them as actual commands. It's handy for explaining what I'm doing or planning to do next."
-    - naisys: |
-        Comment noted. Try running commands now to achieve your goal.
-        amy@naisys:/ [Tokens: 150/1000]$
-# ls
-- example:
-    - system: You are running on a command shell demonstrating the 'ls' command.
-    - naisys: "bob@naisys:/ [Tokens: 200/2000]$"
-    - llm: |
-        comment "I'll run the 'ls' command to list the contents of the current directory."
-        ls
-    - naisys: |
-        dev
-        etc
-        home
-        var
-        bob@naisys:/ [Tokens: 250/2000]$
 # cd
 - example:
     - system: You are running on a command shell demonstrating the 'cd' command.
@@ -37,56 +15,124 @@
         home
         lib
         cindy@naisys:/var/naisys [Tokens: 350/3000]$
-# mkdir
 - example:
-    - system: You are running on a command shell demonstrating the 'mkdir' command.
-    - naisys: "dave@naisys:/var/naisys [Tokens: 400/4000]$"
+    - system: You are executing commands in a shell designed to demonstrate how to change to the right directory.
+    - naisys: "chuck@naisys:/home/chuck [Tokens: 300/3000]$"
     - llm: |
-        comment "To demonstrate the 'mkdir' command, I'll create a new directory called 'test_dir' in the current 'naisys' directory. After that, I'll run 'ls' again to verify the new directory was created."
-        mkdir test_dir
+        comment "The web page is hosted from /var/www/html, so I'll change to that directory with 'cd'"
+        cd /var/www/html
         ls
     - naisys: |
-        agent-data
-        home
-        lib
-        test_dir
-        dave@naisys:/var/naisys [Tokens: 450/4000]$
-# touch
+        index.html
+        styles.css
+        script.js
+        chuck@naisys:/var/www/html [Tokens: 350/3000]$
+# comment
 - example:
-    - system: You are running on a command shell demonstrating the 'touch' command.
-    - naisys: "eve@naisys:/var/naisys/home/eve/test_dir [Tokens: 500/5000]$"
+    - system: You find yourself in a command shell, which is being used to demonstrate the 'comment' command.
+    - naisys: "amy@naisys:/usr/bin [Tokens: 100/1000]$"
     - llm: |
-        comment "I'll use the 'touch' command to create a new file called 'test_file.txt' in the 'test_dir' directory. After that, I'll run 'ls' to verify the new file was created."
-        touch test_file.txt
-        ls
+        comment "The 'comment' command lets me add notes or thoughts without executing them as actual commands. It's handy for explaining what I'm doing or planning to do next."
     - naisys: |
-        test_file.txt
-        eve@naisys:/var/naisys/home/eve/test_dir [Tokens: 550/5000]$
+        Comment noted. Try running commands now to achieve your goal.
+        amy@naisys:/usr/bin [Tokens: 150/1000]$
 # cp
 - example:
-    - system: You are running on a command shell demonstrating the 'cp' command.
-    - naisys: "frank@naisys:/home/frank [Tokens: 600/6000]$"
+    - system: You're engaged in a command shell that showcases the 'cp' command.
+    - naisys: "frank@naisys:/media [Tokens: 600/6000]$"
     - llm: |
-        comment "I'll use the 'cp' command to copy the 'test_file.txt' file to a new file called 'test_file_copy.txt'. After that, I'll run 'ls' to verify the new file was created."
-        cp test_file.txt test_file_copy.txt
+        comment "I'll use the 'cp' command to copy the 'file.txt' file to a new file called 'file_copy.txt'. After that, I'll run 'ls' to verify the new file was created."
+        cp file.txt file_copy.txt
         ls
     - naisys: |
-        test_file.txt
-        test_file_copy.txt
-        frank@naisys:/home/frank [Tokens: 650/6000]$
+        file.txt
+        file_copy.txt
+        frank@naisys:/media [Tokens: 650/6000]$
+# ls
+- example:
+    - system: You are active on a command shell aimed at demonstrating the 'ls' command.
+    - naisys: "bob@naisys:/ [Tokens: 200/2000]$"
+    - llm: |
+        comment "I'll run the 'ls' command to list the contents of the current directory."
+        ls
+    - naisys: |
+        dev
+        etc
+        home
+        var
+        bob@naisys:/ [Tokens: 250/2000]$
+# mkdir
+- example:
+    - system: You're working within a command shell that illustrates the 'mkdir' command.
+    - naisys: "dave@naisys:/tmp [Tokens: 400/4000]$"
+    - llm: |
+        comment "First I'll list the files in the current directory"
+        ls
+    - naisys: |
+        alpha
+        bravo
+        dave@naisys:/tmp [Tokens: 425/4000]$
+    - llm: |
+        comment "To demonstrate the 'mkdir' command, I'll create a new directory called 'charlie' in the current directory. After that, I'll run 'ls' again to verify the new directory was created."
+        mkdir charlie
+        ls
+    - naisys: |
+        alpha
+        bravo
+        charlie
+        dave@naisys:/tmp [Tokens: 450/4000]$
 # mv
 - example:
-    - system: You are running on a command shell demonstrating the 'mv' command.
+    - system: You are utilizing a command shell set up to demonstrate the 'mv' command.
     - naisys: "gina@naisys:/home/gina [Tokens: 700/7000]$"
     - llm: |
-        comment "To demonstrate the 'mv' command, I'll rename the 'test_dir' directory to 'new_test_dir'. I'll run 'ls' before and after to show the change."
+        comment "To demonstrate the 'mv' command, I'll rename the '2022_photos' directory to 'photos_2022'. I'll run 'ls' before and after to show the change."
         ls
     - naisys: |
-        test_dir
+        2022_photos
         gina@naisys:/home/gina [Tokens: 725/7000]$
     - llm: |
-        mv test_dir new_test_dir
+        mv 2022_photos photos_2022
         ls
     - naisys: |
-        new_test_dir
+        photos_2022
         gina@naisys:/home/gina [Tokens: 750/7000]$
+# pwd
+- example:
+    - system: You are on a command shell, which serves to demonstrate the 'pwd' command.
+    - naisys: "hank@naisys:/etc/cron.d [Tokens: 800/8000]$"
+    - llm: |
+        comment "I'll use the 'pwd' command to print the current working directory."
+        pwd
+    - naisys: |
+        /etc/cron.d
+        hank@naisys:/etc/cron.d [Tokens: 850/8000]$
+# rm
+- example:
+    - system: You are functioning in a command shell intended to demonstrate the 'rm' command.
+    - naisys: "jane@naisys:/git/project [Tokens: 900/9000]"
+    - llm: | 
+        comment "First I'll list the files in the current directory"
+        ls
+    - naisys: |
+        license.md
+        readme.md
+        jane@naisys:/git/project [Tokens: 925/9000]$
+    - llm: |
+        comment "Now I'll use the 'rm' command to remove the 'readme.md' file. After that, I'll run 'ls' to verify the file was deleted."
+        rm readme.md
+        ls
+    - naisys: |
+        license.md
+        jane@naisys:/git/project [Tokens: 950/9000]$
+# touch
+- example:
+    - system: You are interacting with a command shell, exemplifying the 'touch' command.
+    - naisys: "eve@naisys:/var/www [Tokens: 500/5000]$"
+    - llm: |
+        comment "I'll use the 'touch' command to create a new file called 'index.html' in the current directory. After that, I'll run 'ls' to verify the new file was created."
+        touch index.html
+        ls
+    - naisys: |
+        index.html
+        eve@naisys:/var/www [Tokens: 550/5000]$

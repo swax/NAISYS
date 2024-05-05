@@ -1,5 +1,5 @@
 /**
- * Iterate all yaml files in the fine-tuning directory and generate a jsonl file
+ * Iterate all yaml files in the fine-tuning directory and generate a jsonl file which is what's needed for OpenAI
  *
  * YAML Format:
  * - example:
@@ -18,19 +18,26 @@ import fs from "fs";
 import yaml from "js-yaml";
 import path from "path";
 
-// Iterate all yaml files in the fine-tuning directory
-const directory = "./fine-tuning";
-const filenames = fs
-  .readdirSync(directory)
-  .filter((file) => file.endsWith(".yaml"));
+const tuningDir = "./fine-tuning";
 
-const outputDirectory = "./fine-tuning/jsonl";
+// Setup output directory
+const outputDirectory = path.join(tuningDir, "output");
 if (!fs.existsSync(outputDirectory)) {
   fs.mkdirSync(outputDirectory);
 }
 
+const jsonlFilename = "openai-training.jsonl";
+const jsonlPath = path.join(outputDirectory, jsonlFilename);
+const jsonlStream = fs.createWriteStream(jsonlPath);
+console.log(`Writing output to ${jsonlPath}...`);
+
+// Iterate all yaml files in the fine-tuning directory
+const filenames = fs
+  .readdirSync(tuningDir)
+  .filter((file) => file.endsWith(".yaml"));
+
 for (const filename of filenames) {
-  const filePath = path.join(directory, filename);
+  const filePath = path.join(tuningDir, filename);
   console.log(`Reading ${filePath}...`);
 
   const content = fs.readFileSync(filePath, "utf-8");
@@ -39,12 +46,6 @@ for (const filename of filenames) {
   }[];
 
   // Write as a jsonl file to the jsonl directory
-  const jsonlFilename = filename.replace(".yaml", ".jsonl");
-  const jsonlPath = path.join(outputDirectory, jsonlFilename);
-  console.log(`Writing ${jsonlPath}...`);
-
-  const jsonlStream = fs.createWriteStream(jsonlPath);
-
   let index = 1;
   for (const { example } of dataset) {
     console.log(`  Example ${index++}...`);
@@ -71,8 +72,8 @@ for (const filename of filenames) {
 
     jsonlStream.write(JSON.stringify({ messages }) + "\n");
   }
-
-  jsonlStream.close();
 }
 
-console.log("All files processed.");
+jsonlStream.close();
+
+console.log("Finished writing jsonl file.");
