@@ -36,6 +36,15 @@ const llmModels: LlmModel[] = [
     outputCost: 1.5,
   },
   {
+    key: "gpt3tuned",
+    name: "<Set in agent config>",
+    apiType: LlmApiType.OpenAI,
+    maxTokens: 16_000,
+    // Prices are per 1M tokens
+    inputCost: 3,
+    outputCost: 6,
+  },
+  {
     key: "local",
     name: config.localLlmName || "local",
     baseUrl: config.localLlmUrl,
@@ -92,11 +101,17 @@ const llmModels: LlmModel[] = [
   },
 ];
 
-export function getLLModel(key: string) {
-  const model = llmModels.find((m) => m.key === key);
+export function getLLModel(keyName: string) {
+  const [key, name] = keyName.split("/");
+
+  const model = structuredClone(llmModels.find((m) => m.key === key));
 
   if (!model) {
     throw `Error, model not found: ${key}`;
+  }
+
+  if (name) {
+    model.name = name;
   }
 
   return model;

@@ -2,7 +2,7 @@
 
 username: andy
 title: Software Engineer
-shellModel: gpt4turbo
+shellModel: gpt3tuned/ft:gpt-3.5-turbo-0125:personal:test-5:9LbfKJkZ
 imageModel: dalle3-1024
 agentPrompt: |
   You are ${agent.username} a ${agent.title} with the job of creating a Neon Genesis Evangelion fan website.
