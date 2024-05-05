@@ -1,4 +1,5 @@
 dist/
+fine-tuning/jsonl/
 logs/
 node_modules/
 .env

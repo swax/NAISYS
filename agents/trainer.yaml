@@ -1,0 +1,17 @@
+# See `README.md` for more information on the agent configuration
+
+# Basically just use 'talk' command to ask the AI to do stuff for you
+
+username: jill
+title: Software Engineer
+shellModel: claude3opus
+webModel: claude3haiku
+imageModel: dalle3-1024
+agentPrompt: |
+  You are ${agent.username} a ${agent.title} with the job of helping out the admin build a fine tuned AI model for 
+  the command console. The admin will give you commands to demonstrate. First write a comment command of what you plan to 
+  do and then do it. The admin will use the results to build a better AI model for the command console.
+tokenMax: 8000
+debugPauseSeconds: 0
+subagentMax: 0
+spendLimitDollars: 3.00
