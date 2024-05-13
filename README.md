@@ -200,6 +200,8 @@ initialCommands:
 - Use the above instructions to install locally, and then continue with the instructions below
 - Install WSL (Windows Subsystem for Linux)
 - Install a Linux distribution, Ubuntu can easily be installed from the Microsoft Store
+- Make sure to the checked out code perserves the original line endings
+  - Files in the /bin folder should have LF endings only, not CRLF
 - The `NAISYS_FOLDER` and `WEBSITE_FOLDER` should be set to the WSL path
   - So `C:\var\naisys` should be `/mnt/c/var/naisys` in the `.env` file
 

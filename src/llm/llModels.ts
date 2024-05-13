@@ -18,6 +18,15 @@ interface LlmModel {
 
 const llmModels: LlmModel[] = [
   {
+    key: "gpt4o",
+    name: "gpt-4o",
+    apiType: LlmApiType.OpenAI,
+    maxTokens: 128_000,
+    // Prices are per 1M tokens
+    inputCost: 5,
+    outputCost: 15,
+  },
+  {
     key: "gpt4turbo",
     name: "gpt-4-turbo",
     apiType: LlmApiType.OpenAI,
