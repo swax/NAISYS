@@ -50,8 +50,7 @@ export async function run() {
 
     const latestDream = await dreamMaker.goodmorning();
     if (latestDream) {
-      await contextManager.append("Previous Session Notes:");
-      await contextManager.append(latestDream);
+      await displayPreviousSessionNotes(latestDream, nextPromptIndex++);
     }
 
     for (const initialCommand of config.agent.initialCommands) {
@@ -339,4 +338,24 @@ function setPromptIndex(prompt: string, index: number) {
   }
 
   return newPrompt;
+}
+
+async function displayPreviousSessionNotes(
+  prevSessionNotes: string,
+  nextPromptIndex: number,
+) {
+  let prompt = await promptBuilder.getPrompt(0, false);
+  prompt = setPromptIndex(prompt, ++nextPromptIndex);
+  await contextManager.append(
+    prompt,
+    ContentSource.ConsolePrompt,
+    nextPromptIndex,
+  );
+  const prevSessionNotesCommand = "cat ~/prev_session_notes";
+  await contextManager.append(
+    prevSessionNotesCommand,
+    ContentSource.LlmPromptResponse,
+  );
+  output.write(prompt + chalk[OutputColor.llm](prevSessionNotesCommand));
+  await contextManager.append(prevSessionNotes);
 }

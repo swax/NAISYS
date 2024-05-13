@@ -1,1 +1,2 @@
+# Even on Windows, these bin commands are run by WSL so the line endings need to be LF, or bash will error out
 * text eol=lf
