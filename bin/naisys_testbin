@@ -1,0 +1,4 @@
+#!/bin/bash
+
+# ./src/command/commandHandler.ts has the same message
+echo "Successful: Naisys fallback bash commands are being caught."
