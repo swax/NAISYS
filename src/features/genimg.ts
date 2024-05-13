@@ -62,9 +62,9 @@ export async function handleCommand(args: string): Promise<string> {
   const fileExtension = path.extname(hostPath).substring(1);
 
   await sharp(imageBuffer)
-    .resize(256, 256, {
+    /*.resize(512, 512, {
       fit: "inside",
-    })
+    })*/
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     .toFormat(<any>fileExtension)
     .toFile(hostPath);
@@ -72,7 +72,7 @@ export async function handleCommand(args: string): Promise<string> {
   // Record the cost
   await costTracker.recordCost(model.cost, "genimg", model.name);
 
-  return "Image generated and saved to " + filepath.getNaisysPath();
+  return "1024x1024 Image generated and saved to " + filepath.getNaisysPath();
 }
 
 interface ImageModel {
