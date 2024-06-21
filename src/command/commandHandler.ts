@@ -288,7 +288,8 @@ async function splitMultipleInputCommands(nextInput: string) {
     newLinePos > 0 &&
     (nextInput.startsWith("comment ") ||
       nextInput.startsWith("genimg ") ||
-      nextInput.startsWith("trimsession "))
+      nextInput.startsWith("trimsession ") ||
+      nextInput.startsWith("pause "))
   ) {
     input = nextInput.slice(0, newLinePos);
     nextInput = nextInput.slice(newLinePos).trim();
