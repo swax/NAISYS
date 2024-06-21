@@ -4,7 +4,7 @@
 
 username: jill
 title: Software Engineer
-shellModel: claude3opus
+shellModel: claude3.5sonnet
 webModel: claude3haiku
 imageModel: dalle3-1024
 agentPrompt: |

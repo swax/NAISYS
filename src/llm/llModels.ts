@@ -100,6 +100,15 @@ const llmModels: LlmModel[] = [
     outputCost: 15,
   },
   {
+    key: "claude3.5sonnet",
+    name: "claude-3-5-sonnet-20240620",
+    apiType: LlmApiType.Anthropic,
+    maxTokens: 200_000,
+    // Prices are per 1M tokens
+    inputCost: 3,
+    outputCost: 15,
+  },
+  {
     key: "claude3haiku",
     name: "claude-3-haiku-20240307",
     apiType: LlmApiType.Anthropic,

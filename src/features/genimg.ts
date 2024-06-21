@@ -31,6 +31,11 @@ export async function handleCommand(args: string): Promise<string> {
     throw "Error: Filepath is required";
   }
 
+  // Validate path is fully qualified
+  if (!filepath.getNaisysPath().startsWith("/")) {
+    throw "Error: Filepath must be fully qualified";
+  }
+
   pathService.ensureFileDirExists(filepath);
 
   output.comment(`Generating image with ${config.agent.imageModel}...`);

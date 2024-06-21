@@ -1,6 +1,6 @@
 username: andy
 title: Software Engineer
-shellModel: gpt4o
+shellModel: claude3.5sonnet
 imageModel: dalle3-1024
 agentPrompt: |
   You are ${agent.username} a ${agent.title} with the job of creating a Neon Genesis Evangelion fan website.
@@ -8,7 +8,9 @@ agentPrompt: |
 
   The website should be able to be used from a text based browser like lynx, but can still have styles and images.
   The website can be tested with 'llmynx open ${env.WEBSITE_URL}' which maps to ${env.WEBSITE_FOLDER} on the file system.
-  You can use PHP to reducing common code. Also you can use 'genimg' to illustrate.
-tokenMax: 10000
+
+  You can use PHP to reducing common code. 
+  Also you can use 'genimg' to illustrate, make sure they are sized appropriately in the html.
+tokenMax: 20000
 debugPauseSeconds: 4
-spendLimitDollars: 10.00
+spendLimitDollars: 15.00
