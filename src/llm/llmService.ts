@@ -26,8 +26,22 @@ export async function query(
     return sendWithGoogle(modelKey, systemMessage, context, source);
   } else if (model.apiType == LlmApiType.Anthropic) {
     return sendWithAnthropic(modelKey, systemMessage, context, source);
-  } else if (model.apiType == LlmApiType.OpenAI) {
-    return sendWithOpenAiCompatible(modelKey, systemMessage, context, source);
+  } else if (
+    model.apiType == LlmApiType.OpenAI ||
+    model.apiType == LlmApiType.OpenRouter
+  ) {
+    const apiKey =
+      model.apiType == LlmApiType.OpenAI
+        ? config.openaiApiKey
+        : config.openRouterApiKey;
+
+    return sendWithOpenAiCompatible(
+      modelKey,
+      systemMessage,
+      context,
+      source,
+      apiKey,
+    );
   } else {
     throw `Error, unknown LLM API type ${model.apiType}`;
   }
@@ -38,6 +52,7 @@ async function sendWithOpenAiCompatible(
   systemMessage: string,
   context: LlmMessage[],
   source: string,
+  apiKey?: string,
 ): Promise<string> {
   const model = getLLModel(modelKey);
 
@@ -51,7 +66,7 @@ async function sendWithOpenAiCompatible(
 
   const openAI = new OpenAI({
     baseURL: model.baseUrl,
-    apiKey: config.openaiApiKey,
+    apiKey,
   });
 
   // Assert the last message on the context is a user message

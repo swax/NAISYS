@@ -4,6 +4,7 @@ export enum LlmApiType {
   OpenAI = "openai",
   Google = "google",
   Anthropic = "anthropic",
+  OpenRouter = "openrouter",
 }
 
 interface LlmModel {
@@ -17,6 +18,25 @@ interface LlmModel {
 }
 
 const llmModels: LlmModel[] = [
+  {
+    key: "llama3-405b",
+    name: "meta-llama/llama-3.1-405b-instruct",
+    baseUrl: "https://openrouter.ai/api/v1",
+    apiType: LlmApiType.OpenRouter,
+    maxTokens: 128_000,
+    // Prices are per 1M tokens
+    inputCost: 2.7,
+    outputCost: 2.7,
+  },
+  {
+    key: "gpt4mini",
+    name: "gpt-4o-mini",
+    apiType: LlmApiType.OpenAI,
+    maxTokens: 128_000,
+    // Prices are per 1M tokens
+    inputCost: 0.15,
+    outputCost: 0.60,
+  },
   {
     key: "gpt4o",
     name: "gpt-4o",
@@ -34,15 +54,6 @@ const llmModels: LlmModel[] = [
     // Prices are per 1M tokens
     inputCost: 10,
     outputCost: 30,
-  },
-  {
-    key: "gpt3turbo",
-    name: "gpt-3.5-turbo",
-    apiType: LlmApiType.OpenAI,
-    maxTokens: 16_000,
-    // Prices are per 1M tokens
-    inputCost: 0.5,
-    outputCost: 1.5,
   },
   {
     key: "gpt3tuned",
