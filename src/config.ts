@@ -17,7 +17,7 @@ export const hostname = "naisys";
 
 export const shellCommand = {
   /** Limits the size of files that can be read/wrote */
-  outputTokenMax: 3000,
+  outputTokenMax: 5000,
   /** The time NAISYS will wait for new shell output before giving up */
   timeoutSeconds: 15,
   /** These commands have their own timeout so the LLM doesn't have to continually waste tokens on wait commands */
@@ -25,19 +25,24 @@ export const shellCommand = {
   longRunningTimeoutSeconds: 120,
 };
 
-/** Web pages loaded with llmynx will be reduced down to around this number of tokens */
-export const webTokenMax = 2500;
+export const agent = loadAgentConfig();
 
+/** Web pages loaded with llmynx will be reduced down to around this number of tokens */
+export const webTokenMax = 3000;
+
+/** Allows the LLM to end it's own session */
 export const endSessionEnabled = true;
 
-export const mailEnabled = true;
+/** Inter agent communication */
+export const mailEnabled = agent.mailEnabled || false;
 
-export const webEnabled = true;
+/** The LLM optimized browser */
+export const webEnabled = agent.webEnabled || false;
 
 /** Experimental, live updating spot in the context for the LLM to put files, to avoid having to continually cat */
 export const workspacesEnabled = false;
 
-/** Experimental, allow LLM to trim prompts from it's own session context */
+/** Experimental, allow LLM to trim it's own session context to avoid having to restart the session */
 export const trimSessionEnabled = false;
 
 /* .env is used for global configs across naisys, while agent configs are for the specific agent */
@@ -50,8 +55,7 @@ export const localLlmName = getEnv("LOCAL_LLM_NAME");
 export const openaiApiKey = getEnv("OPENAI_API_KEY");
 export const googleApiKey = getEnv("GOOGLE_API_KEY");
 export const anthropicApiKey = getEnv("ANTHROPIC_API_KEY");
-
-export const agent = loadAgentConfig();
+export const openRouterApiKey = getEnv("OPENROUTER_API_KEY");
 
 export interface AgentConfig {
   username: string;
@@ -64,6 +68,9 @@ export interface AgentConfig {
   webModel: string;
   dreamModel: string;
   imageModel?: string;
+
+  mailEnabled?: boolean;
+  webEnabled?: boolean;
 
   /** Seconds to pause on the debug prompt before continuing LLM. No value or zero implies indefinite wait (debug driven) */
   debugPauseSeconds: number;
@@ -182,7 +189,6 @@ export function resolveConfigVars(templateString: string) {
 function resolveTemplateVars(
   templateString: string,
   allowedVarString: string,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   mappedVar: any,
 ) {
   const pattern = new RegExp(`\\$\\{${allowedVarString}\\.([^}]+)\\}`, "g");

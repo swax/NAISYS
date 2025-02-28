@@ -111,7 +111,7 @@
 - example:
     - system: You are functioning in a command shell intended to demonstrate the 'rm' command.
     - naisys: "jane@naisys:/git/project [Tokens: 900/9000]"
-    - llm: | 
+    - llm: |
         comment "First I'll list the files in the current directory"
         ls
     - naisys: |

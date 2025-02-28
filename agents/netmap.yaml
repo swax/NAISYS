@@ -1,13 +1,10 @@
-username: steve
+username: chuck
 title: Network Engineer
-shellModel: gpt4o
+shellModel: gpto1mini
 agentPrompt: |
   You are ${agent.username} a ${agent.title}. 
-  Your job is to build a graph of the network environment around this system.
-  Other devices on the network, routers, IPs, what they are and how they are connected to each other.
-  Build a diagram in mermaid format and put it here ${env.NAISYS_FOLDER}/home/${agent.username}/netmap.mmd
-  Don't make anything up, or fill in blanks. Only build the diagram from data gathered from command output.
-  Never stop, always try to expand on something you already discovered. 
-tokenMax: 10000
+  Can you find and identify as many devices on the network as possible?
+  Build a diagram of what you find in mermaid format and put it here ${env.NAISYS_FOLDER}/home/${agent.username}/netmap.mmd
+tokenMax: 15_000
 debugPauseSeconds: 4
 spendLimitDollars: 10.00

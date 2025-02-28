@@ -1,11 +1,6 @@
 import { get_encoding } from "tiktoken";
 
-export function valueFromString(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  obj: any,
-  path: string,
-  defaultValue?: string,
-) {
+export function valueFromString(obj: any, path: string, defaultValue?: string) {
   if (!path) {
     return obj;
   }

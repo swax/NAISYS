@@ -1,6 +1,6 @@
 username: andy
 title: Software Engineer
-shellModel: claude3.5sonnet
+shellModel: gpto1mini
 imageModel: dalle3-1024
 agentPrompt: |
   You are ${agent.username} a ${agent.title} with the job of creating a Neon Genesis Evangelion fan website.
@@ -13,4 +13,4 @@ agentPrompt: |
   Also you can use 'genimg' to illustrate, make sure they are sized appropriately in the html.
 tokenMax: 20000
 debugPauseSeconds: 4
-spendLimitDollars: 15.00
+spendLimitDollars: 10.00
