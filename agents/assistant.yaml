@@ -2,14 +2,12 @@
 
 # Basically just use 'talk' command to ask the AI to do stuff for you
 
-username: jill
-title: Software Engineer
-shellModel: claude3.5sonnet
-webModel: claude3haiku
+username: ryan
+title: Network Engineer
+shellModel: gpto3mini
 imageModel: dalle3-1024
 agentPrompt: |
   You are ${agent.username} a ${agent.title} with the job of helping out the admin with what he wants to do.
-tokenMax: 8000
-debugPauseSeconds: 0
-subagentMax: 0
-spendLimitDollars: 3.00
+tokenMax: 15000
+debugPauseSeconds: 3
+spendLimitDollars: 10.00

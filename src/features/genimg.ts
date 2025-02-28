@@ -70,7 +70,6 @@ export async function handleCommand(args: string): Promise<string> {
     /*.resize(512, 512, {
       fit: "inside",
     })*/
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     .toFormat(<any>fileExtension)
     .toFile(hostPath);
 

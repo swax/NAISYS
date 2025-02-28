@@ -1,4 +1,4 @@
-module.exports = {
+export default {
   create: function (context) {
     // This object will store the local variables and functions
     let localDeclarations = new Set();

@@ -80,7 +80,7 @@ async function sendWithOpenAiCompatible(
     model: model.name,
     messages: [
       {
-        role: LlmRole.System,
+        role: LlmRole.System, // LlmRole.User, //
         content: systemMessage,
       },
       ...context.map((m) => ({
