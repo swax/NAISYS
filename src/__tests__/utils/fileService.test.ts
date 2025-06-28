@@ -1,4 +1,5 @@
 import { describe, expect, test } from "@jest/globals";
+import * as os from "os";
 import { HostPath, NaisysPath } from "../../utils/pathService.js";
 
 function naisysToHostPath(path: string): string {
@@ -11,12 +12,23 @@ function hostToNaisysPath(path: string): string {
 
 describe("NaisysPath::toHostPath", () => {
   test("converts a unix path to a host path", () => {
-    expect(naisysToHostPath("/mnt/c/")).toBe("c:\\");
-    expect(naisysToHostPath("/mnt/c/Users/")).toBe("c:\\Users\\");
-    expect(naisysToHostPath("/mnt/d/")).toBe("d:\\");
-    expect(naisysToHostPath("/mnt/d/Program Files/")).toBe(
-      "d:\\Program Files\\",
-    );
+    if (os.platform() === "win32") {
+      // On Windows, conversion should happen
+      expect(naisysToHostPath("/mnt/c/")).toBe("c:\\");
+      expect(naisysToHostPath("/mnt/c/Users/")).toBe("c:\\Users\\");
+      expect(naisysToHostPath("/mnt/d/")).toBe("d:\\");
+      expect(naisysToHostPath("/mnt/d/Program Files/")).toBe(
+        "d:\\Program Files\\",
+      );
+    } else {
+      // On non-Windows platforms, no conversion should happen
+      expect(naisysToHostPath("/mnt/c/")).toBe("/mnt/c/");
+      expect(naisysToHostPath("/mnt/c/Users/")).toBe("/mnt/c/Users/");
+      expect(naisysToHostPath("/mnt/d/")).toBe("/mnt/d/");
+      expect(naisysToHostPath("/mnt/d/Program Files/")).toBe(
+        "/mnt/d/Program Files/",
+      );
+    }
   });
 
   test("returns the input path if not a NAISYS path", () => {
@@ -29,12 +41,21 @@ describe("NaisysPath::toHostPath", () => {
 
 describe("HostPath::toNaisysPath", () => {
   test("converts a host path to a unix path", () => {
-    expect(hostToNaisysPath("c:\\")).toBe("/mnt/c/");
-    expect(hostToNaisysPath("c:\\Users\\")).toBe("/mnt/c/Users/");
-    expect(hostToNaisysPath("d:\\")).toBe("/mnt/d/");
-    expect(hostToNaisysPath("d:\\Program Files\\")).toBe(
-      "/mnt/d/Program Files/",
-    );
+    if (os.platform() === "win32") {
+      // On Windows, conversion should happen
+      expect(hostToNaisysPath("c:\\")).toBe("/mnt/c/");
+      expect(hostToNaisysPath("c:\\Users\\")).toBe("/mnt/c/Users/");
+      expect(hostToNaisysPath("d:\\")).toBe("/mnt/d/");
+      expect(hostToNaisysPath("d:\\Program Files\\")).toBe(
+        "/mnt/d/Program Files/",
+      );
+    } else {
+      // On non-Windows platforms, no conversion should happen
+      expect(hostToNaisysPath("c:\\")).toBe("c:\\");
+      expect(hostToNaisysPath("c:\\Users\\")).toBe("c:\\Users\\");
+      expect(hostToNaisysPath("d:\\")).toBe("d:\\");
+      expect(hostToNaisysPath("d:\\Program Files\\")).toBe("d:\\Program Files\\");
+    }
   });
 
   test("returns the input path if not a host path", () => {

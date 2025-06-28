@@ -1,5 +1,5 @@
 import { describe, expect, it, jest } from "@jest/globals";
-import { LlmMessage } from "../../llm/llmDtos.js";
+import { LlmMessage, LlmRole } from "../../llm/llmDtos.js";
 import { mockConfig } from "../mocks.js";
 
 mockConfig();
@@ -24,7 +24,7 @@ describe("commentAndLog function", () => {
     // Verify the mock was called correctly
     expect(mockLogServiceWrite).toHaveBeenCalledWith({
       content: "Test message",
-      role: "user",
+      role: LlmRole.User,
       type: "comment",
     });
   });
