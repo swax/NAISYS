@@ -53,6 +53,10 @@ export async function handleCommand(args: string): Promise<string> {
   });
 
   // save to filepath
+  if (!response.data || response.data.length === 0) {
+    throw 'Error: No image data returned from OpenAI';
+  }
+
   const base64Image = response.data[0].b64_json;
 
   if (!base64Image) {

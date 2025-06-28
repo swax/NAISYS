@@ -379,8 +379,8 @@ function resetTerminal() {
 
   _terminal = new xterm.Terminal({
     allowProposedApi: true,
-    rows: process.stdout.rows,
-    cols: process.stdout.columns,
+    rows: process.stdout.rows || 24,
+    cols: process.stdout.columns || 80,
   });
 
   _currentBufferType = "normal";
