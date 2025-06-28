@@ -145,6 +145,54 @@ initialCommands:
 
 ## Using NAISYS
 
+#### Testing with tmux (for Development)
+
+For development and testing purposes, you can run NAISYS in a tmux session and send commands to it programmatically:
+
+1. **Use the tmux wrapper script:**
+   ```bash
+   # Start the agent in a tmux session
+   ./naisys-tmux.sh start
+   
+   # Send a talk command and wait for completion
+   ./naisys-tmux.sh talk "create a file called hello.txt with Hello World"
+   
+   # Send any command manually
+   ./naisys-tmux.sh send "comment 'testing the agent'"
+   ./naisys-tmux.sh trigger  # Send enter to execute
+   
+   # Get current output
+   ./naisys-tmux.sh output
+   
+   # Attach to session for manual interaction
+   ./naisys-tmux.sh attach
+   
+   # Stop the session
+   ./naisys-tmux.sh stop
+   ```
+
+2. **How it works:**
+   - The script starts NAISYS in a detached tmux session
+   - You can send `talk` commands to communicate with the agent
+   - The agent receives messages as if from `admin@naisys`
+   - A carriage return triggers the agent to switch from debug to LLM mode
+   - The script waits for the command prompt to return, indicating completion
+
+3. **Manual workflow:**
+   ```bash
+   # Start session
+   tmux new-session -d -s naisys-agent 'npm run agent:assistant'
+   
+   # Send commands
+   tmux send-keys -t naisys-agent 'talk "your message here"' Enter
+   tmux send-keys -t naisys-agent Enter  # Trigger agent execution
+   
+   # View output
+   tmux capture-pane -t naisys-agent -p
+   ```
+
+This approach is useful for automated testing, CI/CD integration, or when you want to control the agent programmatically while it runs in the background.
+
 #### The Basics
 
 - NAISYS will start with a debug prompt, this is where you can use and run commands in NAISYS just like the LLM will
