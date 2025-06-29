@@ -98,7 +98,7 @@ async function sendWithOpenAiCompatible(
     const inputCost = (chatResponse.usage.prompt_tokens * model.inputCost) / 1_000_000;
     const outputCost = (chatResponse.usage.completion_tokens * model.outputCost) / 1_000_000;
     const totalCost = inputCost + outputCost;
-    await costTracker.recordCost(totalCost, source, model.name, inputCost, outputCost);
+    await costTracker.recordCost(totalCost, source, model.key, inputCost, outputCost);
   } else {
     throw "Error, no usage data returned from OpenAI API.";
   }
@@ -221,18 +221,34 @@ async function sendWithAnthropic(
     messages: [
       {
         role: "user",
-        content: systemMessage,
+        content: [
+          {
+            type: "text",
+            text: systemMessage,
+            cache_control: { type: "ephemeral" },
+          },
+        ],
       },
       {
         role: "assistant",
         content: "Understood",
       },
       ...context.map(
-        (msg) =>
-          ({
+        (msg, index) => {
+          const isLastMessage = index === context.length - 1;
+          return {
             role: msg.role == LlmRole.Assistant ? "assistant" : "user",
-            content: msg.content,
-          }) satisfies MessageParam,
+            content: isLastMessage && msg.role === LlmRole.User
+              ? [
+                  {
+                    type: "text",
+                    text: msg.content,
+                    cache_control: { type: "ephemeral" },
+                  },
+                ]
+              : msg.content,
+          } satisfies MessageParam;
+        },
       ),
     ],
   });
@@ -241,8 +257,21 @@ async function sendWithAnthropic(
   if (msgResponse.usage) {
     const inputCost = (msgResponse.usage.input_tokens * model.inputCost) / 1_000_000;
     const outputCost = (msgResponse.usage.output_tokens * model.outputCost) / 1_000_000;
-    const totalCost = inputCost + outputCost;
-    await costTracker.recordCost(totalCost, source, model.name, inputCost, outputCost);
+    
+    // Calculate cache costs if present
+    let cacheWriteCost = 0;
+    let cacheReadCost = 0;
+    
+    if (msgResponse.usage.cache_creation_input_tokens && model.cacheWriteCost) {
+      cacheWriteCost = (msgResponse.usage.cache_creation_input_tokens * model.cacheWriteCost) / 1_000_000;
+    }
+    
+    if (msgResponse.usage.cache_read_input_tokens && model.cacheReadCost) {
+      cacheReadCost = (msgResponse.usage.cache_read_input_tokens * model.cacheReadCost) / 1_000_000;
+    }
+    
+    const totalCost = inputCost + outputCost + cacheWriteCost + cacheReadCost;
+    await costTracker.recordCost(totalCost, source, model.key, inputCost, outputCost, cacheWriteCost, cacheReadCost);
   } else {
     throw "Error, no usage data returned from Anthropic API.";
   }
