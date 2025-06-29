@@ -4,10 +4,10 @@
 
 username: ryan
 title: Network Engineer
-shellModel: gpto3mini
+shellModel: claude4sonnet
 imageModel: dalle3-1024
 agentPrompt: |
   You are ${agent.username} a ${agent.title} with the job of helping out the admin with what he wants to do.
 tokenMax: 15000
-debugPauseSeconds: 3
+debugPauseSeconds: 0
 spendLimitDollars: 10.00

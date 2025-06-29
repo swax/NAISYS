@@ -15,6 +15,8 @@ interface LlmModel {
   maxTokens: number;
   inputCost: number;
   outputCost: number;
+  cacheWriteCost?: number;
+  cacheReadCost?: number;
 }
 
 const llmModels: LlmModel[] = [
@@ -114,6 +116,17 @@ const llmModels: LlmModel[] = [
     // Prices are per 1M tokens
     inputCost: 0.8,
     outputCost: 4,
+  },
+  {
+    key: "claude4sonnet",
+    name: "claude-sonnet-4-20250514",
+    apiType: LlmApiType.Anthropic,
+    maxTokens: 200_000,
+    // Prices are per 1M tokens
+    inputCost: 3,
+    outputCost: 15,
+    cacheWriteCost: 3.75, // 25% more than input cost
+    cacheReadCost: 0.3,   // 10% of input cost
   },
 ];
 

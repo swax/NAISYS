@@ -24,7 +24,9 @@ async function init() {
           subagent TEXT,
           source TEXT NOT NULL,
           model TEXT NOT NULL,
-          cost REAL NOT NULL
+          cost REAL NOT NULL,
+          input_cost REAL DEFAULT 0,
+          output_cost REAL DEFAULT 0
       )`,
     ];
 
@@ -38,16 +40,20 @@ export async function recordCost(
   cost: number,
   source: string,
   modelName: string,
+  inputCost: number = 0,
+  outputCost: number = 0,
 ) {
   await usingDatabase(async (db) => {
     await db.run(
-      `INSERT INTO Costs (date, username, subagent, source, model, cost) VALUES (datetime('now'), ?, ?, ?, ?, ?)`,
+      `INSERT INTO Costs (date, username, subagent, source, model, cost, input_cost, output_cost) VALUES (datetime('now'), ?, ?, ?, ?, ?, ?, ?)`,
       [
         config.agent.leadAgent || config.agent.username,
         config.agent.leadAgent ? config.agent.username : null,
         source,
         modelName,
         cost,
+        inputCost,
+        outputCost,
       ],
     );
   });
@@ -66,10 +72,27 @@ export async function getTotalCosts() {
   });
 }
 
+export async function getCostBreakdown() {
+  return usingDatabase(async (db) => {
+    const result = await db.get(
+      `SELECT sum(cost) as total, sum(input_cost) as input, sum(output_cost) as output 
+        FROM Costs 
+        WHERE username = ?`,
+      [config.agent.leadAgent || config.agent.username],
+    );
+
+    return {
+      total: result.total || 0,
+      input: result.input || 0,
+      output: result.output || 0,
+    };
+  });
+}
+
 export async function printCosts() {
-  const totalCost = await getTotalCosts();
+  const costBreakdown = await getCostBreakdown();
   output.comment(
-    `Total cost so far $${totalCost.toFixed(2)} of $${config.agent.spendLimitDollars} limit`,
+    `Total cost so far $${costBreakdown.total.toFixed(2)} of $${config.agent.spendLimitDollars} limit ($${costBreakdown.input.toFixed(2)} input, $${costBreakdown.output.toFixed(2)} output)`,
   );
 
   // Costs by subagents
