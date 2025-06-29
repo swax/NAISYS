@@ -98,7 +98,19 @@ async function sendWithOpenAiCompatible(
     const inputCost = (chatResponse.usage.prompt_tokens * model.inputCost) / 1_000_000;
     const outputCost = (chatResponse.usage.completion_tokens * model.outputCost) / 1_000_000;
     const totalCost = inputCost + outputCost;
-    await costTracker.recordCost(totalCost, source, model.key, inputCost, outputCost);
+    await costTracker.recordCost(
+      totalCost, 
+      source, 
+      model.key, 
+      inputCost, 
+      outputCost, 
+      0, 
+      0, 
+      chatResponse.usage.prompt_tokens, 
+      chatResponse.usage.completion_tokens, 
+      0, 
+      0
+    );
   } else {
     throw "Error, no usage data returned from OpenAI API.";
   }
@@ -187,7 +199,19 @@ async function sendWithGoogle(
   const outputCost = (outputTokenCount * model.outputCost) / 1_000_000;
   const totalCost = inputCost + outputCost;
 
-  await costTracker.recordCost(totalCost, source, model.name, inputCost, outputCost);
+  await costTracker.recordCost(
+    totalCost, 
+    source, 
+    model.name, 
+    inputCost, 
+    outputCost, 
+    0, 
+    0, 
+    inputTokenCount, 
+    outputTokenCount, 
+    0, 
+    0
+  );
 
   return responseText;
 }
@@ -271,7 +295,19 @@ async function sendWithAnthropic(
     }
     
     const totalCost = inputCost + outputCost + cacheWriteCost + cacheReadCost;
-    await costTracker.recordCost(totalCost, source, model.key, inputCost, outputCost, cacheWriteCost, cacheReadCost);
+    await costTracker.recordCost(
+      totalCost, 
+      source, 
+      model.key, 
+      inputCost, 
+      outputCost, 
+      cacheWriteCost, 
+      cacheReadCost,
+      msgResponse.usage.input_tokens,
+      msgResponse.usage.output_tokens,
+      msgResponse.usage.cache_creation_input_tokens || 0,
+      msgResponse.usage.cache_read_input_tokens || 0
+    );
   } else {
     throw "Error, no usage data returned from Anthropic API.";
   }
