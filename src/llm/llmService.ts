@@ -95,10 +95,10 @@ async function sendWithOpenAiCompatible(
   }
   // Total up costs, prices are per 1M tokens
   else if (chatResponse.usage) {
-    const cost =
-      chatResponse.usage.prompt_tokens * model.inputCost +
-      chatResponse.usage.completion_tokens * model.outputCost;
-    await costTracker.recordCost(cost / 1_000_000, source, model.name);
+    const inputCost = (chatResponse.usage.prompt_tokens * model.inputCost) / 1_000_000;
+    const outputCost = (chatResponse.usage.completion_tokens * model.outputCost) / 1_000_000;
+    const totalCost = inputCost + outputCost;
+    await costTracker.recordCost(totalCost, source, model.name, inputCost, outputCost);
   } else {
     throw "Error, no usage data returned from OpenAI API.";
   }
@@ -183,10 +183,11 @@ async function sendWithGoogle(
 
   const outputTokenCount = getTokenCount(responseText);
 
-  const cost =
-    inputTokenCount * model.inputCost + outputTokenCount * model.outputCost;
+  const inputCost = (inputTokenCount * model.inputCost) / 1_000_000;
+  const outputCost = (outputTokenCount * model.outputCost) / 1_000_000;
+  const totalCost = inputCost + outputCost;
 
-  await costTracker.recordCost(cost / 1_000_000, source, model.name);
+  await costTracker.recordCost(totalCost, source, model.name, inputCost, outputCost);
 
   return responseText;
 }
@@ -238,10 +239,10 @@ async function sendWithAnthropic(
 
   // Total up costs, prices are per 1M tokens
   if (msgResponse.usage) {
-    const cost =
-      msgResponse.usage.input_tokens * model.inputCost +
-      msgResponse.usage.output_tokens * model.outputCost;
-    await costTracker.recordCost(cost / 1_000_000, source, model.name);
+    const inputCost = (msgResponse.usage.input_tokens * model.inputCost) / 1_000_000;
+    const outputCost = (msgResponse.usage.output_tokens * model.outputCost) / 1_000_000;
+    const totalCost = inputCost + outputCost;
+    await costTracker.recordCost(totalCost, source, model.name, inputCost, outputCost);
   } else {
     throw "Error, no usage data returned from Anthropic API.";
   }
