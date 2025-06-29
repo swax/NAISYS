@@ -98,6 +98,8 @@ const llmModels: LlmModel[] = [
     // Prices are per 1M tokens
     inputCost: 15,
     outputCost: 75,
+    cacheWriteCost: 18.75, // 25% more than input cost
+    cacheReadCost: 1.5,    // 10% of input cost
   },
   {
     key: "claude3.7sonnet",
@@ -107,6 +109,8 @@ const llmModels: LlmModel[] = [
     // Prices are per 1M tokens
     inputCost: 3,
     outputCost: 15,
+    cacheWriteCost: 3.75, // 25% more than input cost
+    cacheReadCost: 0.3,   // 10% of input cost
   },
   {
     key: "claude3.5haiku",
@@ -116,6 +120,8 @@ const llmModels: LlmModel[] = [
     // Prices are per 1M tokens
     inputCost: 0.8,
     outputCost: 4,
+    cacheWriteCost: 1.0,  // 25% more than input cost
+    cacheReadCost: 0.08,  // 10% of input cost
   },
   {
     key: "claude4sonnet",

@@ -78,7 +78,7 @@ export async function handleCommand(args: string): Promise<string> {
     .toFile(hostPath);
 
   // Record the cost
-  await costTracker.recordCost(model.cost, "genimg", model.name);
+  await costTracker.recordCost(model.cost, "genimg", model.key);
 
   return "1024x1024 Image generated and saved to " + filepath.getNaisysPath();
 }
