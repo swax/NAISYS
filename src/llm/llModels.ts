@@ -44,6 +44,61 @@ const llmModels: LlmModel[] = [
   // OpenAI Models
   // https://openai.com/api/pricing/
   {
+    key: "gpt4.1",
+    name: "gpt-4.1",
+    apiType: LlmApiType.OpenAI,
+    maxTokens: 200_000,
+    // Prices are per 1M tokens
+    inputCost: 2.0,
+    outputCost: 8.0,
+    cacheWriteCost: 0.5,  // Cached input cost
+    cacheReadCost: 0.5,   // Cached input cost
+  },
+  {
+    key: "gpt4.1mini",
+    name: "gpt-4.1-mini",
+    apiType: LlmApiType.OpenAI,
+    maxTokens: 200_000,
+    // Prices are per 1M tokens
+    inputCost: 0.4,
+    outputCost: 1.6,
+    cacheWriteCost: 0.1,  // Cached input cost
+    cacheReadCost: 0.1,   // Cached input cost
+  },
+  {
+    key: "gpt4.1nano",
+    name: "gpt-4.1-nano",
+    apiType: LlmApiType.OpenAI,
+    maxTokens: 200_000,
+    // Prices are per 1M tokens
+    inputCost: 0.1,
+    outputCost: 0.4,
+    cacheWriteCost: 0.025, // Cached input cost
+    cacheReadCost: 0.025,  // Cached input cost
+  },
+  {
+    key: "o3",
+    name: "o3",
+    apiType: LlmApiType.OpenAI,
+    maxTokens: 200_000,
+    // Prices are per 1M tokens
+    inputCost: 2.0,
+    outputCost: 8.0,
+    cacheWriteCost: 0.5,  // Cached input cost
+    cacheReadCost: 0.5,   // Cached input cost
+  },
+  {
+    key: "o4mini",
+    name: "o4-mini",
+    apiType: LlmApiType.OpenAI,
+    maxTokens: 200_000,
+    // Prices are per 1M tokens
+    inputCost: 1.1,
+    outputCost: 4.4,
+    cacheWriteCost: 0.275, // Cached input cost
+    cacheReadCost: 0.275,  // Cached input cost
+  },
+  {
     key: "gpto3mini",
     name: "o3-mini",
     apiType: LlmApiType.OpenAI,
@@ -70,24 +125,69 @@ const llmModels: LlmModel[] = [
     inputCost: 2.5,
     outputCost: 10,
   },
-  // Google Models
+  // Google Models - Prices are per 1M tokens
   {
-    key: "gemini1.5",
-    name: "gemini-1.5-pro-latest",
+    key: "gemini2.5pro",
+    name: "gemini-2.5-pro",
+    apiType: LlmApiType.Google,
+    maxTokens: 2_000_000,
+    // Prices are per 1M tokens
+    inputCost: 1.25, // ≤200k tokens, 2.50 for >200k tokens
+    outputCost: 10.0, // ≤200k tokens, 15.0 for >200k tokens
+  },
+  {
+    key: "gemini2.5flash",
+    name: "gemini-2.5-flash",
     apiType: LlmApiType.Google,
     maxTokens: 1_000_000,
-    // 2 queries per minute free then the prices below are per 1000 characters
-    inputCost: 1.25,
-    outputCost: 5,
+    // Prices are per 1M tokens
+    inputCost: 0.30,
+    outputCost: 2.50,
+  },
+  {
+    key: "gemini2.5flashlite",
+    name: "gemini-2.5-flash-lite",
+    apiType: LlmApiType.Google,
+    maxTokens: 1_000_000,
+    // Prices are per 1M tokens
+    inputCost: 0.10,
+    outputCost: 0.40,
+  },
+  {
+    key: "gemini1.5pro",
+    name: "gemini-1.5-pro",
+    apiType: LlmApiType.Google,
+    maxTokens: 2_000_000,
+    // Prices are per 1M tokens
+    inputCost: 1.25, // ≤128k tokens, 2.50 for >128k tokens
+    outputCost: 5.0,  // ≤128k tokens, 10.0 for >128k tokens
+  },
+  {
+    key: "gemini1.5flash",
+    name: "gemini-1.5-flash",
+    apiType: LlmApiType.Google,
+    maxTokens: 1_000_000,
+    // Prices are per 1M tokens
+    inputCost: 0.075, // ≤128k tokens, 0.15 for >128k tokens
+    outputCost: 0.30,  // ≤128k tokens, 0.60 for >128k tokens
+  },
+  {
+    key: "gemini1.5flash8b",
+    name: "gemini-1.5-flash-8b",
+    apiType: LlmApiType.Google,
+    maxTokens: 1_000_000,
+    // Prices are per 1M tokens
+    inputCost: 0.0375, // ≤128k tokens, 0.075 for >128k tokens
+    outputCost: 0.15,   // ≤128k tokens, 0.30 for >128k tokens
   },
   {
     key: "gemini2.0flash",
     name: "gemini-2.0-flash",
     apiType: LlmApiType.Google,
     maxTokens: 1_000_000,
-    // 60 queries per minute free then the prices below are per 1000 characters
-    inputCost: 0.1,
-    outputCost: 0.4,
+    // Prices are per 1M tokens
+    inputCost: 0.10, // text/image/video, 0.70 for audio
+    outputCost: 0.40,
   },
   // Anthropic Models
   {
