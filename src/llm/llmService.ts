@@ -93,23 +93,22 @@ async function sendWithOpenAiCompatible(
   if (!model.inputCost && !model.outputCost) {
     // Don't cost models with no costs
   }
-  // Total up costs, prices are per 1M tokens
-  else if (chatResponse.usage) {
-    const inputCost = (chatResponse.usage.prompt_tokens * model.inputCost) / 1_000_000;
-    const outputCost = (chatResponse.usage.completion_tokens * model.outputCost) / 1_000_000;
-    const totalCost = inputCost + outputCost;
-    await costTracker.recordCost(
-      totalCost, 
+  // Record token usage
+  if (chatResponse.usage) {
+    let cacheReadTokens = 0;
+    
+    // OpenAI's caching is automatic - check for cached tokens in the response
+    if (chatResponse.usage.prompt_tokens_details?.cached_tokens) {
+      cacheReadTokens = chatResponse.usage.prompt_tokens_details.cached_tokens;
+    }
+    
+    await costTracker.recordTokens(
       source, 
       model.key, 
-      inputCost, 
-      outputCost, 
-      0, 
-      0, 
       chatResponse.usage.prompt_tokens, 
       chatResponse.usage.completion_tokens, 
-      0, 
-      0
+      0, // OpenAI doesn't report cache write tokens separately - it's automatic
+      cacheReadTokens
     );
   } else {
     throw "Error, no usage data returned from OpenAI API.";
@@ -184,34 +183,23 @@ async function sendWithGoogle(
 
   const responseText = result.response.text();
 
-  // TODO: take into account google allows 60 queries per minute for free for 1.0, 2 queries/min for 1.5
+  // Use actual token counts from Google API response
+  if (result.response.usageMetadata) {
+    const inputTokenCount = result.response.usageMetadata.promptTokenCount || 0;
+    const outputTokenCount = result.response.usageMetadata.candidatesTokenCount || 0;
+    const cachedTokenCount = result.response.usageMetadata.cachedContentTokenCount || 0;
 
-  // AFAIK Google API doesn't provide usage data, so we have to estimate it ourselves
-  const inputTokenCount =
-    getTokenCount(systemMessage) +
-    context
-      .map((m) => getTokenCount(m.content))
-      .reduce((prevVal, currVal) => prevVal + currVal, 0);
-
-  const outputTokenCount = getTokenCount(responseText);
-
-  const inputCost = (inputTokenCount * model.inputCost) / 1_000_000;
-  const outputCost = (outputTokenCount * model.outputCost) / 1_000_000;
-  const totalCost = inputCost + outputCost;
-
-  await costTracker.recordCost(
-    totalCost, 
-    source, 
-    model.name, 
-    inputCost, 
-    outputCost, 
-    0, 
-    0, 
-    inputTokenCount, 
-    outputTokenCount, 
-    0, 
-    0
-  );
+    await costTracker.recordTokens(
+      source, 
+      model.key, 
+      inputTokenCount, 
+      outputTokenCount, 
+      0, // Cache write tokens (not separately reported)
+      cachedTokenCount // Cache read tokens
+    );
+  } else {
+    throw "Error, no usage metadata returned from Google API.";
+  }
 
   return responseText;
 }
@@ -277,32 +265,11 @@ async function sendWithAnthropic(
     ],
   });
 
-  // Total up costs, prices are per 1M tokens
+  // Record token usage
   if (msgResponse.usage) {
-    const inputCost = (msgResponse.usage.input_tokens * model.inputCost) / 1_000_000;
-    const outputCost = (msgResponse.usage.output_tokens * model.outputCost) / 1_000_000;
-    
-    // Calculate cache costs if present
-    let cacheWriteCost = 0;
-    let cacheReadCost = 0;
-    
-    if (msgResponse.usage.cache_creation_input_tokens && model.cacheWriteCost) {
-      cacheWriteCost = (msgResponse.usage.cache_creation_input_tokens * model.cacheWriteCost) / 1_000_000;
-    }
-    
-    if (msgResponse.usage.cache_read_input_tokens && model.cacheReadCost) {
-      cacheReadCost = (msgResponse.usage.cache_read_input_tokens * model.cacheReadCost) / 1_000_000;
-    }
-    
-    const totalCost = inputCost + outputCost + cacheWriteCost + cacheReadCost;
-    await costTracker.recordCost(
-      totalCost, 
+    await costTracker.recordTokens(
       source, 
       model.key, 
-      inputCost, 
-      outputCost, 
-      cacheWriteCost, 
-      cacheReadCost,
       msgResponse.usage.input_tokens,
       msgResponse.usage.output_tokens,
       msgResponse.usage.cache_creation_input_tokens || 0,

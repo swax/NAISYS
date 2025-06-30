@@ -5,6 +5,21 @@ import * as output from "../utils/output.js";
 import { NaisysPath } from "../utils/pathService.js";
 import { getLLModel } from "./llModels.js";
 
+// Keep only interfaces that are used as parameters or need explicit typing
+interface LlmModelCosts {
+  inputCost: number;
+  outputCost: number;
+  cacheWriteCost?: number;
+  cacheReadCost?: number;
+}
+
+interface TokenUsage {
+  inputTokens: number;
+  outputTokens: number;
+  cacheWriteTokens: number;
+  cacheReadTokens: number;
+}
+
 const _dbFilePath = new NaisysPath(`${config.naisysFolder}/lib/costs.db`);
 
 await init();
@@ -25,11 +40,7 @@ async function init() {
           subagent TEXT,
           source TEXT NOT NULL,
           model TEXT NOT NULL,
-          cost REAL NOT NULL,
-          input_cost REAL DEFAULT 0,
-          output_cost REAL DEFAULT 0,
-          cache_write_cost REAL DEFAULT 0,
-          cache_read_cost REAL DEFAULT 0,
+          cost REAL DEFAULT 0,
           input_tokens INTEGER DEFAULT 0,
           output_tokens INTEGER DEFAULT 0,
           cache_write_tokens INTEGER DEFAULT 0,
@@ -43,32 +54,29 @@ async function init() {
   });
 }
 
-export async function recordCost(
-  cost: number,
+// Record token usage for LLM calls - calculate and store total cost
+export async function recordTokens(
   source: string,
-  modelName: string,
-  inputCost: number = 0,
-  outputCost: number = 0,
-  cacheWriteCost: number = 0,
-  cacheReadCost: number = 0,
+  modelKey: string,
   inputTokens: number = 0,
   outputTokens: number = 0,
   cacheWriteTokens: number = 0,
   cacheReadTokens: number = 0,
 ) {
+  // Calculate total cost from tokens - will throw if model not found
+  const model = getLLModel(modelKey);
+  const tokenUsage: TokenUsage = { inputTokens, outputTokens, cacheWriteTokens, cacheReadTokens };
+  const totalCost = calculateCostFromTokens(tokenUsage, model);
+
   await usingDatabase(async (db) => {
     await db.run(
-      `INSERT INTO Costs (date, username, subagent, source, model, cost, input_cost, output_cost, cache_write_cost, cache_read_cost, input_tokens, output_tokens, cache_write_tokens, cache_read_tokens) VALUES (datetime('now'), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO Costs (date, username, subagent, source, model, cost, input_tokens, output_tokens, cache_write_tokens, cache_read_tokens) VALUES (datetime('now'), ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         config.agent.leadAgent || config.agent.username,
         config.agent.leadAgent ? config.agent.username : null,
         source,
-        modelName,
-        cost,
-        inputCost,
-        outputCost,
-        cacheWriteCost,
-        cacheReadCost,
+        modelKey,
+        totalCost,
         inputTokens,
         outputTokens,
         cacheWriteTokens,
@@ -76,6 +84,40 @@ export async function recordCost(
       ],
     );
   });
+}
+
+// Record fixed cost for non-token services like image generation
+export async function recordCost(
+  cost: number,
+  source: string,
+  modelKey: string,
+) {
+  await usingDatabase(async (db) => {
+    await db.run(
+      `INSERT INTO Costs (date, username, subagent, source, model, cost, input_tokens, output_tokens, cache_write_tokens, cache_read_tokens) VALUES (datetime('now'), ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        config.agent.leadAgent || config.agent.username,
+        config.agent.leadAgent ? config.agent.username : null,
+        source,
+        modelKey,
+        cost,
+        0, // No tokens for fixed cost services
+        0,
+        0,
+        0,
+      ],
+    );
+  });
+}
+
+// Common function to calculate cost from token usage
+export function calculateCostFromTokens(tokenUsage: TokenUsage, model: LlmModelCosts): number {
+  const inputCost = (tokenUsage.inputTokens * model.inputCost) / 1_000_000;
+  const outputCost = (tokenUsage.outputTokens * model.outputCost) / 1_000_000;
+  const cacheWriteCost = (tokenUsage.cacheWriteTokens * (model.cacheWriteCost || 0)) / 1_000_000;
+  const cacheReadCost = (tokenUsage.cacheReadTokens * (model.cacheReadCost || 0)) / 1_000_000;
+  
+  return inputCost + outputCost + cacheWriteCost + cacheReadCost;
 }
 
 export async function getTotalCosts() {
@@ -94,7 +136,7 @@ export async function getTotalCosts() {
 export async function getCostBreakdown() {
   return usingDatabase(async (db) => {
     const result = await db.get(
-      `SELECT sum(cost) as total, sum(input_cost) as input, sum(output_cost) as output, sum(cache_write_cost) as cache_write, sum(cache_read_cost) as cache_read, sum(input_tokens) as input_tokens, sum(output_tokens) as output_tokens, sum(cache_write_tokens) as cache_write_tokens, sum(cache_read_tokens) as cache_read_tokens 
+      `SELECT sum(input_tokens) as input_tokens, sum(output_tokens) as output_tokens, sum(cache_write_tokens) as cache_write_tokens, sum(cache_read_tokens) as cache_read_tokens 
         FROM Costs 
         WHERE username = ?`,
       [config.agent.leadAgent || config.agent.username],
@@ -104,11 +146,6 @@ export async function getCostBreakdown() {
     const totalInputTokens = (result.input_tokens || 0) + totalCacheTokens;
     
     return {
-      total: result.total || 0,
-      input: result.input || 0,
-      output: result.output || 0,
-      cacheWrite: result.cache_write || 0,
-      cacheRead: result.cache_read || 0,
       inputTokens: result.input_tokens || 0,
       outputTokens: result.output_tokens || 0,
       cacheWriteTokens: result.cache_write_tokens || 0,
@@ -122,11 +159,11 @@ export async function getCostBreakdown() {
 export async function getCostBreakdownWithModels() {
   return usingDatabase(async (db) => {
     const result = await db.all(
-      `SELECT model, sum(cost) as total, sum(input_cost) as input, sum(output_cost) as output, sum(cache_write_cost) as cache_write, sum(cache_read_cost) as cache_read, sum(input_tokens) as input_tokens, sum(output_tokens) as output_tokens, sum(cache_write_tokens) as cache_write_tokens, sum(cache_read_tokens) as cache_read_tokens 
+      `SELECT model, sum(cost) as total_cost, sum(input_tokens) as input_tokens, sum(output_tokens) as output_tokens, sum(cache_write_tokens) as cache_write_tokens, sum(cache_read_tokens) as cache_read_tokens 
         FROM Costs 
         WHERE username = ?
         GROUP BY model
-        ORDER BY total DESC`,
+        ORDER BY sum(cost) DESC`,
       [config.agent.leadAgent || config.agent.username],
     );
 
@@ -138,7 +175,10 @@ function formatCostDetail(label: string, cost: number, tokens: number, rate: num
   return `    ${label}: $${cost.toFixed(4)} for ${tokens.toLocaleString()} tokens at $${rate}/MTokens`;
 }
 
-export function calculateModelCacheSavings(modelData: any, model: any) {
+export function calculateModelCacheSavings(
+  modelData: { model: string; input_tokens: number; output_tokens: number; cache_write_tokens: number; cache_read_tokens: number },
+  model: LlmModelCosts
+) {
   const cacheWriteTokens = modelData.cache_write_tokens || 0;
   const cacheReadTokens = modelData.cache_read_tokens || 0;
   const totalCacheTokens = cacheWriteTokens + cacheReadTokens;
@@ -151,15 +191,29 @@ export function calculateModelCacheSavings(modelData: any, model: any) {
   const cacheSavingsAmount = (cacheWriteTokens * (model.inputCost - (model.cacheWriteCost || 0))) / 1_000_000 + 
                            (cacheReadTokens * (model.inputCost - (model.cacheReadCost || 0))) / 1_000_000;
   
-  const actualCacheSpend = modelData.cache_write + modelData.cache_read;
-  const costWithoutCaching = modelData.total + cacheSavingsAmount;
+  // Calculate actual cache cost from tokens
+  const actualCacheSpend = (cacheWriteTokens * (model.cacheWriteCost || 0)) / 1_000_000 + 
+                          (cacheReadTokens * (model.cacheReadCost || 0)) / 1_000_000;
+  
+  // Calculate total cost for this model from tokens
+  const inputTokens = modelData.input_tokens || 0;
+  const outputTokens = modelData.output_tokens || 0;
+  const inputCost = (inputTokens * model.inputCost) / 1_000_000;
+  const outputCost = (outputTokens * model.outputCost) / 1_000_000;
+  const totalCost = inputCost + outputCost + actualCacheSpend;
+  
+  const costWithoutCaching = totalCost + cacheSavingsAmount;
   const savingsPercent = cacheSavingsAmount > 0 ? (cacheSavingsAmount / costWithoutCaching) * 100 : 0;
   
   return {
     savingsAmount: cacheSavingsAmount,
     costWithoutCaching,
     savingsPercent,
-    totalCacheTokens
+    totalCacheTokens,
+    totalCost,
+    inputCost,
+    outputCost,
+    actualCacheSpend
   };
 }
 
@@ -167,31 +221,37 @@ export async function printCosts() {
   const costBreakdown = await getCostBreakdown();
   const modelBreakdowns = await getCostBreakdownWithModels();
   
+  // Use stored total costs
+  const totalStoredCost = modelBreakdowns.reduce((sum, model) => sum + (model.total_cost || 0), 0);
+  
+  // Calculate cache savings for display
+  let totalCacheSavingsAmount = 0;
+  let totalCostWithoutCaching = 0;
+  
+  for (const modelData of modelBreakdowns) {
+    try {
+      const model = getLLModel(modelData.model);
+      
+      // Calculate cache savings for display
+      const cacheSavings = calculateModelCacheSavings(modelData, model);
+      if (cacheSavings) {
+        totalCacheSavingsAmount += cacheSavings.savingsAmount;
+        totalCostWithoutCaching += cacheSavings.costWithoutCaching;
+      } else {
+        totalCostWithoutCaching += modelData.total_cost || 0;
+      }
+    } catch {
+      // Use stored cost for unknown models
+      totalCostWithoutCaching += modelData.total_cost || 0;
+    }
+  }
+  
   output.comment(
-    `Total cost so far $${costBreakdown.total.toFixed(2)} of $${config.agent.spendLimitDollars} limit`,
+    `Total cost so far $${totalStoredCost.toFixed(2)} of $${config.agent.spendLimitDollars} limit`,
   );
 
   // Calculate and display cache savings if caching was used
   if (costBreakdown.totalCacheTokens > 0) {
-    // Calculate total savings by summing up all model-level savings
-    let totalCacheSavingsAmount = 0;
-    let totalCostWithoutCaching = 0;
-    
-    for (const modelData of modelBreakdowns) {
-      try {
-        const model = getLLModel(modelData.model);
-        const cacheSavings = calculateModelCacheSavings(modelData, model);
-        if (cacheSavings) {
-          totalCacheSavingsAmount += cacheSavings.savingsAmount;
-          totalCostWithoutCaching += cacheSavings.costWithoutCaching;
-        } else {
-          totalCostWithoutCaching += modelData.total;
-        }
-      } catch {
-        totalCostWithoutCaching += modelData.total;
-      }
-    }
-    
     const savingsPercent = totalCostWithoutCaching > 0 ? (totalCacheSavingsAmount / totalCostWithoutCaching) * 100 : 0;
     
     output.comment(
@@ -213,21 +273,35 @@ export async function printCosts() {
     }
 
     // Show all models, even with zero usage
-    output.comment(`  ${model.name}:`);
+    output.comment(`  ${model.name}: $${(modelData.total_cost || 0).toFixed(4)} total`);
     
-    const inputDetail = formatCostDetail('Input', modelData.input, modelData.input_tokens, model.inputCost);
-    output.comment(inputDetail);
+    // Show token breakdown
+    const inputTokens = modelData.input_tokens || 0;
+    const outputTokens = modelData.output_tokens || 0;
+    const cacheWriteTokens = modelData.cache_write_tokens || 0;
+    const cacheReadTokens = modelData.cache_read_tokens || 0;
     
-    const outputDetail = formatCostDetail('Output', modelData.output, modelData.output_tokens, model.outputCost);
-    output.comment(outputDetail);
+    if (inputTokens > 0) {
+      const inputCost = (inputTokens * model.inputCost) / 1_000_000;
+      const inputDetail = formatCostDetail('Input', inputCost, inputTokens, model.inputCost);
+      output.comment(inputDetail);
+    }
     
-    if (model.cacheWriteCost) {
-      const cacheWriteDetail = formatCostDetail('Cache write', modelData.cache_write, modelData.cache_write_tokens, model.cacheWriteCost);
+    if (outputTokens > 0) {
+      const outputCost = (outputTokens * model.outputCost) / 1_000_000;
+      const outputDetail = formatCostDetail('Output', outputCost, outputTokens, model.outputCost);
+      output.comment(outputDetail);
+    }
+    
+    if (model.cacheWriteCost && cacheWriteTokens > 0) {
+      const cacheWriteCost = (cacheWriteTokens * model.cacheWriteCost) / 1_000_000;
+      const cacheWriteDetail = formatCostDetail('Cache write', cacheWriteCost, cacheWriteTokens, model.cacheWriteCost);
       output.comment(cacheWriteDetail);
     }
     
-    if (model.cacheReadCost) {
-      const cacheReadDetail = formatCostDetail('Cache read', modelData.cache_read, modelData.cache_read_tokens, model.cacheReadCost);
+    if (model.cacheReadCost && cacheReadTokens > 0) {
+      const cacheReadCost = (cacheReadTokens * model.cacheReadCost) / 1_000_000;
+      const cacheReadDetail = formatCostDetail('Cache read', cacheReadCost, cacheReadTokens, model.cacheReadCost);
       output.comment(cacheReadDetail);
     }
     
@@ -241,7 +315,7 @@ export async function printCosts() {
   // Costs by subagents
   await usingDatabase(async (db) => {
     const result = await db.all(
-      `SELECT subagent, sum(cost) as total 
+      `SELECT subagent, sum(cost) as total_cost
         FROM Costs 
         WHERE username = ? 
         GROUP BY subagent`,
@@ -254,7 +328,7 @@ export async function printCosts() {
 
     for (const row of result) {
       const label = row.subagent ? `Subagent ${row.subagent}` : "Lead agent";
-      output.comment(`  ${label} cost $${row.total.toFixed(2)}`);
+      output.comment(`  ${label} cost $${(row.total_cost || 0).toFixed(2)}`);
     }
   });
 }
