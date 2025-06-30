@@ -2,7 +2,11 @@
  * A bad play on words, but this is like lynx but for LLMs..
  */
 
+// Flag to control LLM-based content reduction - set to false for pagination instead
+const USE_LLM_REDUCTION = false;
+
 import { exec } from "child_process";
+import * as crypto from "crypto";
 import * as os from "os";
 import * as config from "../config.js";
 import { getLLModel } from "../llm/llModels.js";
@@ -13,10 +17,18 @@ import * as utilities from "../utils/utilities.js";
 
 let debugMode = false;
 
-const _contentCache = new Map<
+// Single pagination state since we only navigate one page at a time
+let _currentPagination: {
+  url: string;
+  pages: string[];
+  currentPage: number;
+  contentHash: string;
+} | null = null;
+
+const _reducedContentCache = new Map<
   string,
   {
-    originalContent: string;
+    contentHash: string;
     reducedContent: string;
   }
 >();
@@ -37,11 +49,12 @@ export async function handleCommand(cmdArgs: string): Promise<string> {
 
   switch (argParams[0]) {
     case "help":
-      return `llmynx <command> (results will be reduced to around ${config.webTokenMax} tokens)
+      return `llmynx <command> (results will be paginated to ${config.webTokenMax} tokens per page)
   search <query>: Search google for the given query
   open <url>: Opens the given url. Links are represented as numbers in brackets which prefix the word they are linking like [123]
   follow <link number>: Opens the given link number. Link numbers work across all previous outputs
   links <url> <page>: Lists only the links for the given url. Use the page number to get more links
+  more: Show the next page of content from the last URL opened
   
 *llmynx does not support input. Use llmynx or curl to call APIs directly*`;
     case "search": {
@@ -72,6 +85,9 @@ export async function handleCommand(cmdArgs: string): Promise<string> {
       const isNumber = !isNaN(parseInt(argParams[2]));
       const pageNumber = isNumber ? parseInt(argParams[2]) : 1;
       return await loadUrlLinks(url, pageNumber);
+    }
+    case "more": {
+      return await showMoreContent();
     }
     // Secret command to toggle debug mode
     case "debug":
@@ -156,39 +172,71 @@ async function loadUrlContent(
     content = content.slice(0, refPos);
   }
 
-  let usingCachedContent = false;
-
-  if (_contentCache.has(url)) {
-    const cachedContent = _contentCache.get(url)!;
-    if (cachedContent.originalContent === originalContent) {
-      content = cachedContent.reducedContent;
-      usingCachedContent = true;
-    }
-  }
-
   // Get the token size of the output
   const contentTokenSize = utilities.getTokenCount(content);
   const linksTokenSize = utilities.getTokenCount(links);
+  const contentHash = createContentHash(originalContent);
 
   outputInDebugMode(
     `Content Token size: ${contentTokenSize}\n` +
       `Links Token size: ${linksTokenSize}`,
   );
 
-  // Reduce content using LLM if it's over the token max
-  if (usingCachedContent) {
-    output.comment("No changes detected, using already cached reduced content");
-  } else if (contentTokenSize > config.webTokenMax) {
-    content = await reduceContent(url, content, contentTokenSize);
+  if (USE_LLM_REDUCTION) {
+    // Original LLM reduction logic
+    let usingCachedContent = false;
+    
+    if (_reducedContentCache.has(url)) {
+      const cachedContent = _reducedContentCache.get(url)!;
+      if (cachedContent.contentHash === contentHash) {
+        content = cachedContent.reducedContent;
+        usingCachedContent = true;
+      }
+    }
 
-    _contentCache.set(url, {
-      originalContent,
-      reducedContent: content,
-    });
+    if (usingCachedContent) {
+      output.comment("No changes detected, using already cached reduced content");
+    } else if (contentTokenSize > config.webTokenMax) {
+      content = await reduceContent(url, content, contentTokenSize);
+
+      _reducedContentCache.set(url, {
+        contentHash,
+        reducedContent: content,
+      });
+    } else {
+      output.comment(
+        `No need to reduce, content is already under ${config.webTokenMax} tokens.`,
+      );
+    }
   } else {
-    output.comment(
-      `No need to reduce, content is already under ${config.webTokenMax} tokens.`,
-    );
+    // New pagination logic
+    if (contentTokenSize > config.webTokenMax) {
+      const pages = breakContentIntoPages(content, config.webTokenMax);
+      
+      // Set up pagination state
+      _currentPagination = {
+        url: url,
+        pages: pages,
+        currentPage: 1,
+        contentHash: contentHash
+      };
+      
+      // Get first page content
+      content = pages[0];
+      
+      // Add pagination info if there are more pages
+      if (pages.length > 1) {
+        content += `\n\n--- More content available. Use 'llmynx more' to view page 2 of ${pages.length} ---`;
+      }
+      
+      output.comment(
+        `Content is ${contentTokenSize} tokens. Showing page 1 of ${pages.length}. Use 'llmynx more' for next page.`,
+      );
+    } else {
+      output.comment(
+        `Content is already under ${config.webTokenMax} tokens.`,
+      );
+    }
   }
 
   // Prefix content with url if following as otherwise the url is never shown
@@ -405,6 +453,7 @@ export function clear() {
   _globalLinkMap.clear();
   _globalUrlMap.clear();
   _nextGlobalLinkNum = 1;
+  _currentPagination = null;
 }
 
 function registerUrl(url: string) {
@@ -440,4 +489,55 @@ function globalizeLinkList(pieceStr: string) {
   }
 
   return globalLinks;
+}
+
+// Helper functions for pagination
+function createContentHash(content: string): string {
+  return crypto.createHash('md5').update(content).digest('hex');
+}
+
+function breakContentIntoPages(content: string, tokensPerPage: number): string[] {
+  const totalTokens = utilities.getTokenCount(content);
+  const pages: string[] = [];
+  
+  if (totalTokens <= tokensPerPage) {
+    pages.push(content);
+    return pages;
+  }
+  
+  const charactersPerToken = content.length / totalTokens;
+  const charactersPerPage = Math.ceil(tokensPerPage * charactersPerToken);
+  
+  let startIndex = 0;
+  while (startIndex < content.length) {
+    const endIndex = Math.min(startIndex + charactersPerPage, content.length);
+    pages.push(content.substring(startIndex, endIndex));
+    startIndex = endIndex;
+  }
+  
+  return pages;
+}
+
+async function showMoreContent(): Promise<string> {
+  if (!_currentPagination) {
+    return "No paginated content available. Open a URL first with 'llmynx open <url>'.";
+  }
+  
+  if (_currentPagination.currentPage >= _currentPagination.pages.length) {
+    return `Already at the last page (${_currentPagination.pages.length}) of content for ${_currentPagination.url}.`;
+  }
+  
+  // Move to next page
+  _currentPagination.currentPage++;
+  
+  let pageContent = _currentPagination.pages[_currentPagination.currentPage - 1];
+  
+  // Add pagination info
+  if (_currentPagination.currentPage < _currentPagination.pages.length) {
+    pageContent += `\n\n--- More content available. Use 'llmynx more' to view page ${_currentPagination.currentPage + 1} of ${_currentPagination.pages.length} ---`;
+  }
+  
+  let result = `URL: ${_currentPagination.url} (Page ${_currentPagination.currentPage} of ${_currentPagination.pages.length})\n\n${pageContent}`;
+  
+  return storeMapSetLinks(result, "");
 }

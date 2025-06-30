@@ -191,8 +191,8 @@ const llmModels: LlmModel[] = [
   },
   // Anthropic Models
   {
-    key: "claude3opus",
-    name: "claude-3-opus-latest",
+    key: "claude4opus",
+    name: "claude-opus-4-20250514",
     apiType: LlmApiType.Anthropic,
     maxTokens: 200_000,
     // Prices are per 1M tokens
@@ -200,28 +200,6 @@ const llmModels: LlmModel[] = [
     outputCost: 75,
     cacheWriteCost: 18.75, // 25% more than input cost
     cacheReadCost: 1.5,    // 10% of input cost
-  },
-  {
-    key: "claude3.7sonnet",
-    name: "claude-3-7-sonnet-latest",
-    apiType: LlmApiType.Anthropic,
-    maxTokens: 200_000,
-    // Prices are per 1M tokens
-    inputCost: 3,
-    outputCost: 15,
-    cacheWriteCost: 3.75, // 25% more than input cost
-    cacheReadCost: 0.3,   // 10% of input cost
-  },
-  {
-    key: "claude3.5haiku",
-    name: "claude-3-5-haiku-latest",
-    apiType: LlmApiType.Anthropic,
-    maxTokens: 200_000,
-    // Prices are per 1M tokens
-    inputCost: 0.8,
-    outputCost: 4,
-    cacheWriteCost: 1.0,  // 25% more than input cost
-    cacheReadCost: 0.08,  // 10% of input cost
   },
   {
     key: "claude4sonnet",
@@ -233,6 +211,17 @@ const llmModels: LlmModel[] = [
     outputCost: 15,
     cacheWriteCost: 3.75, // 25% more than input cost
     cacheReadCost: 0.3,   // 10% of input cost
+  },
+  {
+    key: "claude4haiku",
+    name: "claude-haiku-4-20250514",
+    apiType: LlmApiType.Anthropic,
+    maxTokens: 200_000,
+    // Prices are per 1M tokens
+    inputCost: 0.8,
+    outputCost: 4,
+    cacheWriteCost: 1.0,  // 25% more than input cost
+    cacheReadCost: 0.08,  // 10% of input cost
   },
 ];
 
