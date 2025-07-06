@@ -133,7 +133,7 @@ function processOutput(rawDataStr: Buffer, eventType: ShellEvent, pid: number) {
         ? _getTerminalActiveBuffer()
         : _commandOutput.trim();
 
-    if (finalOutput.endsWith("command not found")) {
+    if (finalOutput.endsWith("command not found") || finalOutput.includes("unexpected EOF")) {
       finalOutput += `\nNAISYS: Make sure that you are using valid linux commands, and that any non-commands are prefixed with the 'commment' command.`;
     }
 
