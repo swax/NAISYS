@@ -33,9 +33,9 @@ if (config.workspacesEnabled) {
   workspaces += `\n  Put file soft links into ~/workspace/ to see their latest contents live updated here.`;
 }
 
-let endsession = "";
+let endSession = "";
 if (config.endSessionEnabled) {
-  endsession = `\n  endsession "<note>": Ends this session, clears the console log and context.
+  endSession = `\n  endsession "<note>": Ends this session, clears the console log and context.
     The note should help you find your bearings in the next session. 
     The note should contain your next goal, and important things should you remember.`;
 }
@@ -43,6 +43,12 @@ if (config.endSessionEnabled) {
 let trimSession = "";
 if (config.trimSessionEnabled) {
   trimSession = `\n  trimsession <indexes>: Saves tokesn by removing the specified prompts and respective output with matching <indexes>. For example '1-5, 8, 11-13'`;
+}
+
+let completeTask = "";
+if (config.completeTaskEnabled) {
+  completeTask = `\n  completetask "<result>": Marks the current task as complete and saves the result.
+    The result should contain any important information or output from the task.`;
 }
 
 let tokenNote = "";
@@ -55,6 +61,11 @@ if (config.endSessionEnabled) {
 if (!config.endSessionEnabled && config.trimSessionEnabled) {
   tokenNote =
     "\n  Make sure to call 'trimsession' before the limit is hit so you stay under the limit.\n  Use comments to remember important things from trimmed prompts.";
+}
+
+if (config.agent.disableMultipleCommands) {
+  tokenNote +=
+    "\n  Multiple commands are disabled. You can only run one command per prompt.";
 }
 
 let subagentNote = "";
@@ -72,10 +83,12 @@ agentPrompt = config.resolveConfigVars(agentPrompt);
 export const systemMessage = `${agentPrompt.trim()}
 
 This is a command line interface presenting you with the next command prompt. 
+*** Your response will literally be piped into a command shell, so you must use valid commands.
 Make sure the read the command line rules in the MOTD carefully.
-Don't try to guess the output of commands. Don't put commands in \`\`\` blocks.
+Don't put commands in \`\`\` blocks.
+Do not preempt or hallucinate the output of commands. The system will provide the output of commands you.
 For example when you run 'cat' or 'ls', don't write what you think the output will be. Let the system do that.
-Your role is that of the user. The system will provide responses and next command prompt. Don't output your own command prompt.
+The system will provide responses and next command prompt. Don't output your own command prompt.
 Be careful when writing files through the command prompt with cat. Make sure to close and escape quotes properly.
 Don't blindly overwrite existing files without reading them first.
 
@@ -90,6 +103,6 @@ LINUX Commands:
   Do not input notes after the prompt. Only valid commands.
 NAISYS Commands: (cannot be used with other commands on the same prompt)${llmailCmd}${subagentNote}${llmynxCmd}${genImgCmd}
   comment "<thought>": Any non-command output like thinking out loud, prefix with the 'comment' command
-  pause <seconds>: Pause for <seconds>${trimSession}${endsession}
+  pause <seconds>: Pause for <seconds>${trimSession}${endSession}${completeTask}
 Tokens:
   The console log can only hold a certain number of 'tokens' that is specified in the prompt${tokenNote}${workspaces}`;

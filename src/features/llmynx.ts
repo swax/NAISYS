@@ -87,7 +87,7 @@ export async function handleCommand(cmdArgs: string): Promise<string> {
       return await loadUrlLinks(url, pageNumber);
     }
     case "more": {
-      return await showMoreContent();
+      return showMoreContent();
     }
     // Secret command to toggle debug mode
     case "debug":
@@ -518,7 +518,7 @@ function breakContentIntoPages(content: string, tokensPerPage: number): string[]
   return pages;
 }
 
-async function showMoreContent(): Promise<string> {
+function showMoreContent(): string {
   if (!_currentPagination) {
     return "No paginated content available. Open a URL first with 'llmynx open <url>'.";
   }

@@ -39,6 +39,8 @@ export const mailEnabled = agent.mailEnabled || false;
 /** The LLM optimized browser */
 export const webEnabled = agent.webEnabled || false;
 
+export const completeTaskEnabled = agent.completeTaskEnabled || false;
+
 /** Experimental, live updating spot in the context for the LLM to put files, to avoid having to continually cat */
 export const workspacesEnabled = false;
 
@@ -72,6 +74,9 @@ export interface AgentConfig {
   mailEnabled?: boolean;
   webEnabled?: boolean;
 
+  /** Allows agent a way to stop running completely unless a message is received. In subagent mode the app is exited */
+  completeTaskEnabled?: boolean;
+
   /** Seconds to pause on the debug prompt before continuing LLM. No value or zero implies indefinite wait (debug driven) */
   debugPauseSeconds: number;
   wakeOnMessage: boolean;
@@ -86,6 +91,9 @@ export interface AgentConfig {
 
   /** Try to enfore smaller messages between agents to improve communication efficiency */
   mailMessageTokenMax?: number;
+
+  /** Disable multiple commands. Breaks the chain of LLMs hallucinating command output, the next prompt, and so on  */
+  disableMultipleCommands?: boolean;
 
   /** ONLY used by agent start process. Indicates that this is a subagent, and this is the lead agent */
   leadAgent?: string;

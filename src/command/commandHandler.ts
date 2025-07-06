@@ -63,6 +63,13 @@ export async function processCommand(
         await contextManager.append(input, ContentSource.LlmPromptResponse);
         output.write(prompt + chalk[OutputColor.llm](input));
       } else {
+        // Check if multiple commands are disabled
+        if (config.agent.disableMultipleCommands) {
+          await output.commentAndLog(
+            `Multiple commands disabled. Blocked command: ${input}`,
+          );
+          break;
+        }
         await output.commentAndLog(
           "Continuing with next command from same LLM response...",
         );
@@ -155,7 +162,7 @@ export async function processCommand(
         // Don't allow the LLM to hang itself
         if (inputMode.current === InputMode.LLM && !pauseSeconds) {
           await contextManager.append(
-            "Puase command requires a number of seconds to pause for",
+            "Pause command requires a number of seconds to pause for",
           );
           break;
         }
@@ -163,7 +170,34 @@ export async function processCommand(
         return {
           nextCommandAction: NextCommandAction.Continue,
           pauseSeconds,
-          wakeOnMessage: false, // llmail has a 'wait' command that is useful in multi-agent situations
+          wakeOnMessage: false, // Agent has decided to wait, don't side track agent with messages
+        };
+      }
+
+      case "completetask": {
+        if (!cmdArgs) {
+          await output.errorAndLog(
+            "The 'completetask' command requires a result parameter",
+          );
+          break;
+        }
+
+        if (config.agent.leadAgent) {
+          await output.commentAndLog(
+            "Sub agent has completed the task. Exiting application.",
+          );
+          nextCommandAction = NextCommandAction.ExitApplication;
+        } else {
+          await output.commentAndLog(
+            "Task completed. Waiting for user input or a message.",
+          );
+          nextCommandAction = NextCommandAction.Continue;
+        }
+
+        return {
+          nextCommandAction,
+          pauseSeconds: 0, // Hold until message or input is received
+          wakeOnMessage: config.agent.wakeOnMessage
         };
       }
 

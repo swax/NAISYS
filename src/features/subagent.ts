@@ -185,6 +185,7 @@ async function _createAgent(title: string, taskDescription: string) {
       `Task Description: \${agent.taskDescription}\n` +
       `Perform the above task and/or wait for messages from \${agent.leadAgent} and respond to them.`,
     wakeOnMessage: true,
+    completeTaskEnabled: true,
     initialCommands: ["llmail users", "llmail help"],
     leadAgent: config.agent.username,
     taskDescription,
