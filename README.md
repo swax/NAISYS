@@ -122,6 +122,10 @@ commandProtection: "none"
 # Careful: Sub-agents can be chatty, slowing down progress.
 subagentMax: 0
 
+# Enable the completetask command for this agent (default: false)
+# When enabled, the agent can use completetask to signal task completion, hanging or aborting execution
+completeTaskEnabled: true
+
 # Run these commands on session start, in the example below the agent will see how to use mail and a list of other agents
 initialCommands:
   - llmail users
@@ -224,6 +228,9 @@ This approach is useful for automated testing, CI/CD integration, or when you wa
   - `endsession "<note>"` - Clear the context and start a new session.
     - The LLM is directed to track it's context size and to end the session with a note before running over the context limit
   - `pause <seconds>` - Can be used by the debug agent or the LLM to pause execution for a set number of seconds
+  - `completetask "<result>"` - Signals that the agent has completed its assigned task
+    - For sub-agents: exits the application and returns control to the lead agent
+    - For main agents: pauses execution and waits for user input or messages
 - NAISYS apps
   - `llmail` - A context friendly 'mail system' used for agent to agent communication
   - `llmynx` - A context friendly wrapping on the lynx browser that can use a separate LLM to reduce the size of a large webpage into something that can fit into the LLM's context

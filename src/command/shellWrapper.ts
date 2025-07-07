@@ -8,6 +8,7 @@ import * as config from "../config.js";
 import * as output from "../utils/output.js";
 import * as pathService from "../utils/pathService.js";
 import { NaisysPath } from "../utils/pathService.js";
+import { getCleanEnv } from "../utils/utilities.js";
 
 enum ShellEvent {
   Ouptput = "stdout",
@@ -47,7 +48,7 @@ async function ensureOpen() {
 
   const spawnCmd = os.platform() === "win32" ? "wsl" : "bash";
 
-  _process = spawn(spawnCmd, [], { stdio: "pipe" });
+  _process = spawn(spawnCmd, [], { stdio: "pipe", env: getCleanEnv() });
 
   const pid = _process.pid;
 
@@ -193,7 +194,7 @@ export async function executeCommand(command: string) {
 
   await ensureOpen();
 
-  if (_currentPath && command.split("\n").length > 1) {
+  if (_currentPath && (command.split("\n").length > 1)) { // } || command.includes("&&"))){
     command = await putMultilineCommandInAScript(command);
   }
 

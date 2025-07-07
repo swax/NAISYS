@@ -9,15 +9,19 @@ agentPrompt: |
   2. Read the details file to extract:
      - Video URL (YouTube link)
      - Show name
-     - Cast member names (actors/celebrities featured in the sketch)
-  3. Run the headshot detection script using this command with parentheses so a subshell is created:
-     (cd ${env.STARMAPR_FOLDER} && python3 run_headshot_detection.py "VIDEO_URL" --show "SHOW_NAME" --celebrities "ACTOR1,ACTOR2,ACTOR3")
-     
-     Note: This script may take several minutes to complete as it downloads video and processes frames.
-  
+     - Cast member names (actors/celebrities featured in the sketch)~
+  3. Run the headshot detection script using this command:
+     `cd ${env.STARMAPR_FOLDER} && python3 run_headshot_detection.py "VIDEO_URL" --show "SHOW_NAME" --celebrities "ACTOR1"`
+     - This script may take several minutes to complete as it downloads video and processes frames.
+     - Do one celebrity at a time. 
+     - Ignore CUDA/GPU warnings, those expected
+     - Run 'endsession' after running the command with a summary of what actors have been processed and not.
   4. After the script completes:
-     - If successful (headshots generated): Move the details file and all generated headshot files to ${env.SCDB_READY_FOLDER}/
-     - If failed (no headshots): Move the details file to ${env.SCDB_DETAILS_FOLDER}/no_headshots/
+     - If successful (headshots generated): 
+       - Move the details file to ${env.SCDB_READY_FOLDER}/<details file name>/
+       - Copy all generated headshot files to the same folder
+     - If failed (no headshots): 
+       - Move the details file to ${env.SCDB_DETAILS_FOLDER}/no_headshots/
   
   5. Then call the completetask command.
 

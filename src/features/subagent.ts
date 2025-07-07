@@ -12,7 +12,7 @@ import * as output from "../utils/output.js";
 import { OutputColor } from "../utils/output.js";
 import * as pathService from "../utils/pathService.js";
 import { NaisysPath } from "../utils/pathService.js";
-import { getTokenCount, shuffle } from "../utils/utilities.js";
+import { getTokenCount, shuffle, getCleanEnv } from "../utils/utilities.js";
 import * as llmail from "./llmail.js";
 
 interface Subagent {
@@ -243,6 +243,7 @@ function _startAgent(id: number) {
     [naisysJsPath, subagent.agentPath.toHostPath()],
     {
       stdio: "pipe",
+      env: getCleanEnv(),
     },
   );
 
