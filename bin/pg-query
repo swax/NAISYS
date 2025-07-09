@@ -1,0 +1,79 @@
+#!/bin/bash
+
+# pg-query: A script to run SQL queries against a remote PostgreSQL database 
+# with smart display limits to prevent blowing out the context
+
+# Unlike the other files in this directory, this must be moved to your ~/.local/bin directory
+# and made executable with `chmod +x' to use. Also the agent needs to be made aware it exists.
+
+# Config
+HOST=""
+PORT=""
+USER=""
+PASSWORD=""
+DATABASE=""
+
+# Default display limit
+DEFAULT_LIMIT=20
+
+smart-query() {
+    local query="$1"
+    local display_limit=${2:-$DEFAULT_LIMIT}
+    local check_limit=$((display_limit + 1))  # Get one extra row to detect truncation
+    
+    if [[ $query =~ ^[[:space:]]*SELECT|^[[:space:]]*select ]]; then
+        # Always enforce our display limit, even if query has existing LIMIT
+        local temp_file=$(mktemp)
+        
+        # Check if query already has LIMIT clause
+        if [[ $query =~ LIMIT|limit ]]; then
+            echo "Query has existing LIMIT - enforcing display limit of $display_limit rows"
+        else
+            echo "Checking for truncation (display limit: $display_limit rows)..."
+        fi
+        
+        # Add our LIMIT to get one more than we want to display (overrides any existing LIMIT)
+        local check_query="SELECT * FROM ($query) AS subquery LIMIT $check_limit"
+        
+        PAGER="" PGPASSWORD="$PASSWORD" psql -h "$HOST" -p "$PORT" -U "$USER" -d "$DATABASE" --pset=pager=off -A -c "$check_query" > "$temp_file"
+        
+        local total_lines=$(wc -l < "$temp_file")
+        local data_lines=$((total_lines - 2))  # Subtract psql headers (usually 2 lines)
+        
+        if [ "$data_lines" -eq "$check_limit" ]; then
+            echo "⚠️  Results truncated: showing first $display_limit rows (more data available)"
+            echo "---"
+            head -$((display_limit + 2)) "$temp_file"  # +2 for headers
+            echo "---"
+            echo "Note: Additional rows exist beyond what is displayed above, page the query to see more, or query more strategically."
+        else
+            echo "✓ Complete result: all $data_lines rows shown"
+            echo "---"
+            cat "$temp_file"
+        fi
+        
+        rm "$temp_file"
+    else
+        # Non-SELECT query (INSERT, UPDATE, DELETE, etc.)
+        echo "✓ Executing non-SELECT query"
+        PAGER="" PGPASSWORD="$PASSWORD" psql -h "$HOST" -p "$PORT" -U "$USER" -d "$DATABASE" --pset=pager=off -A -c "$query"
+    fi
+}
+
+# Main function - can be called as remote-pg
+remote-pg() {
+    local query="$1"
+    local limit="$2"
+    
+    if [ -z "$query" ]; then
+        echo "Usage: $(basename "$0") \"SQL_QUERY\" [DISPLAY_LIMIT]"
+        echo "Example: $(basename "$0") \"SELECT * FROM users\" 50"
+        echo "Default limit: $DEFAULT_LIMIT rows"
+        exit 1
+    fi
+    
+    smart-query "$query" "$limit"
+}
+
+# Execute the function with command line arguments
+remote-pg "$@"
