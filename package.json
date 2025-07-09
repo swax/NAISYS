@@ -15,6 +15,7 @@
     "agent:scdb:find-sketch": "node dist/naisys.js ./agents/scdb/01-find-sketch.yaml",
     "agent:scdb:sketch-details": "node dist/naisys.js ./agents/scdb/02-sketch-details.yaml",
     "agent:scdb:get-headshots": "node dist/naisys.js ./agents/scdb/03-get-headshots.yaml",
+    "agent:scdb:update-database": "node dist/naisys.js ./agents/scdb/04-update-database.yaml",
     "clean": "rm -rf dist",
     "compile": "tsc",
     "eslint": "npx eslint src",

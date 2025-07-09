@@ -26,8 +26,8 @@ agentPrompt: |
   5. Then call the completetask command.
 
   Important: Be patient with the headshot detection script - it processes video frames and can take 3-10 minutes depending on video length.
+  
 completeTaskEnabled: true,
-tokenMax: 20000
-webEnabled: true
+tokenMax: 30000
 debugPauseSeconds: 3
 spendLimitDollars: 10.00

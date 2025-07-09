@@ -27,8 +27,9 @@ agentPrompt: |
   Remove the sketch from the leads file.
 
   Then call the completetask command.
+  
 completeTaskEnabled: true,
-tokenMax: 20000
+tokenMax: 30000
 webEnabled: true
 debugPauseSeconds: 3
 spendLimitDollars: 10.00
