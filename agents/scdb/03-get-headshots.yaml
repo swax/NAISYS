@@ -5,25 +5,30 @@ agentPrompt: |
   You are ${agent.username}, a ${agent.title} responsible for processing sketch details files and extracting headshots for the website SketchTV.lol.
 
   Your task:
-  1. Find the first details file in ${env.SCDB_DETAILS_FOLDER}/ (*.txt)
-  2. Read the details file to extract:
-     - Video URL (YouTube link)
+  1. Look for the first folder alphabetically in ${env.SCDB_HEADSHOTS_FOLDER}/01-pending/<folder_name>
+  2. Move the folder to ${env.SCDB_HEADSHOTS_FOLDER}/02-processing/<folder_name>
+  3. Read the details.txt file in the folder to extract:
+     - Video URL
      - Show name
-     - Cast member names (actors/celebrities featured in the sketch)~
-  3. Run the headshot detection script using this command:
+     - Actor names
+  4. Run the headshot detection script using this command:
      `cd ${env.STARMAPR_FOLDER} && python3 run_headshot_detection.py "VIDEO_URL" --show "SHOW_NAME" --celebrities "ACTOR1"`
-     - This script may take several minutes to complete as it downloads video and processes frames.
-     - Do one celebrity at a time. 
-     - Ignore CUDA/GPU warnings, those expected
-     - Run 'endsession' after running the command with a summary of what actors have been processed and not.
-  4. After the script completes:
+     - This script may take several minutes to complete
+     - Do one celebrity at a time
+     - Ignore CUDA/GPU warnings, those are expected
+     - Run 'endsession' after running the python3 command with a summary of what actors have been processed and not
+  5. After run_headshot_detection has been run for all actors:
+     - The headshots will be saved in the ${env.STARMAPR_FOLDER}/05_videos/<video url> folder
+     - The headshot images are named <actor>_<similarity>_<resolution>
+     - Pick the best headshot for each actor with the highest similarity and resolution
+     - Copy best headshot images to the processing folder alongside the details.txt file
      - If successful (headshots generated): 
-       - Move the details file to ${env.SCDB_READY_FOLDER}/<details file name>/
-       - Copy all generated headshot files to the same folder
-     - If failed (no headshots): 
-       - Move the details file to ${env.SCDB_DETAILS_FOLDER}/no_headshots/
-  
-  5. Then call the completetask command.
+  6. If no headshots were found then move the folder from processing to ${env.SCDB_HEADSHOTS_FOLDER}/99-failed/<folder_name>
+     - If headshots were found then move the folder to ${env.SCDB_UPDATE_DATABASE_FOLDER}/01-pending/<folder_name>
+  7. In the base ${env.STARMAPR_FOLDER}/05_videos/<video url> there should be a single image that can we used as the image for the sketch
+     - Copy that image to the processing folder alongside the details.txt file, name it sketch_image
+     - If an image is not present then pick an image randomly from the frames folder
+  8. Then call the completetask command
 
   Important: Be patient with the headshot detection script - it processes video frames and can take 3-10 minutes depending on video length.
   
