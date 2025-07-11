@@ -280,7 +280,7 @@ async function listThreads(): Promise<string> {
   });
 }
 
-async function newThread(
+export async function newThread(
   usernames: string[],
   subject: string,
   message: string,

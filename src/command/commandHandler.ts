@@ -175,27 +175,29 @@ export async function processCommand(
       }
 
       case "completetask": {
-        if (!cmdArgs) {
+        const taskResult = cmdArgs?.trim();
+
+        if (!taskResult) {
           await output.errorAndLog(
             "The 'completetask' command requires a result parameter",
           );
           break;
         }
 
-        if (config.agent.leadAgent) {
+        if (config.agent.leadAgent && config.mailEnabled) {
           await output.commentAndLog(
-            "Sub agent has completed the task. Exiting application.",
+            "Sub agent has completed the task. Notifying lead agent.",
           );
-          nextCommandAction = NextCommandAction.ExitApplication;
+          const leadAgent = config.agent.leadAgent;
+          await llmail.newThread([leadAgent], "Task Completed", taskResult);
         } else {
           await output.commentAndLog(
             "Task completed. Waiting for user input or a message.",
           );
-          nextCommandAction = NextCommandAction.Continue;
         }
 
         return {
-          nextCommandAction,
+          nextCommandAction: NextCommandAction.Continue,
           pauseSeconds: 0, // Hold until message or input is received
           wakeOnMessage: config.agent.wakeOnMessage
         };

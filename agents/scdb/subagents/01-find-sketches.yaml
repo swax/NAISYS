@@ -1,6 +1,8 @@
 username: alex
 title: Content Researcher
 shellModel: claude4sonnet
+leadAgent: zane
+taskDescription: Find new sketches
 agentPrompt: |
   You are ${agent.username}, a ${agent.title} responsible for finding sketches to add to the website SketchTV.lol.
 
@@ -22,6 +24,8 @@ agentPrompt: |
   7. Then call the completetask command.
   
 completeTaskEnabled: true,
+mailEnabled: true,
+wakeOnMessage: true,
 tokenMax: 30000
 webEnabled: true
 debugPauseSeconds: 3

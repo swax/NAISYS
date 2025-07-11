@@ -9,6 +9,8 @@ import * as llmService from "./llmService.js";
 
 const _dbFilePath = new NaisysPath(`${config.naisysFolder}/lib/dream.db`);
 
+let _lastDream = "";
+
 await init();
 
 async function init() {
@@ -29,6 +31,10 @@ async function init() {
 }
 
 export async function goodmorning(): Promise<string> {
+  if (!config.agent.persistAcrossRuns) {
+    return _lastDream;
+  }
+
   return await usingDatabase(async (db) => {
     const row = await db.get(
       `SELECT dream 
@@ -47,7 +53,11 @@ export async function goodnight(): Promise<string> {
 
   const dream = await runDreamSequence();
 
-  await storeDream(dream);
+  if (config.agent.persistAcrossRuns) {
+    await storeDream(dream);
+  } else {
+    _lastDream = dream;
+  }
 
   return dream;
 }
@@ -57,7 +67,7 @@ async function runDreamSequence(): Promise<string> {
 
 Below is the console log from this session. Please process this log and 
 reduce it down to important things to remember - references, plans, project structure, schemas, 
-file locations, urls, and more. You don't need to summarize what happened, or what to do in the far future, just focus on the
+file locations, urls, and more. You don't need to summarize what happened, or plan what to do in the far future, just focus on the
 near term. Check the console log for inconsistencies, things to fix and/or check. Using this information the
 next session should be able to start with minimal scanning of existing files to figure out what to do 
 and how to do it.`;

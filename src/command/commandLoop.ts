@@ -104,7 +104,9 @@ export async function run() {
           );
 
         try {
-          await checkNewMailNotification();
+          if (config.mailEnabled) {
+            await checkNewMailNotification();
+          }
           await checkContextLimitWarning();
           await workspaces.displayActive();
 

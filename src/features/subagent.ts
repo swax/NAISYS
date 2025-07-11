@@ -82,7 +82,11 @@ export async function handleCommand(args: string): Promise<string> {
         helpOutput += `\n  flush <id>: Debug only command to show the agent's context log`;
       }
 
-      helpOutput += `\n\n* You can have up to ${config.agent.subagentMax} subagents running at a time. Use llmail to communicate with subagents by name.`;
+      helpOutput += `\n\n* You can have up to ${config.agent.subagentMax} subagents running at a time.`;
+
+      if (config.agent.mailEnabled) {
+        helpOutput += ` Use llmail to communicate with subagents by name.`;
+      }
 
       return helpOutput;
     }
@@ -116,7 +120,7 @@ export async function handleCommand(args: string): Promise<string> {
     }
     case "start": {
       const subagentId = parseInt(argParams[1]);
-      return _startAgent(subagentId);
+      return await _startAgent(subagentId);
     }
     case "stop": {
       const subagentId = parseInt(argParams[1]);
@@ -176,7 +180,7 @@ async function _createAgent(title: string, taskDescription: string) {
   }
 
   // Generate agent yaml
-  const agentYaml = yaml.dump({
+  const subagentConfig: AgentConfig = {
     ...config.agent,
     username: agentName,
     title,
@@ -186,10 +190,16 @@ async function _createAgent(title: string, taskDescription: string) {
       `Perform the above task and/or wait for messages from \${agent.leadAgent} and respond to them.`,
     wakeOnMessage: true,
     completeTaskEnabled: true,
-    initialCommands: ["llmail users", "llmail help"],
     leadAgent: config.agent.username,
-    taskDescription,
-  });
+    taskDescription, 
+  };
+
+  if (config.mailEnabled) {
+    subagentConfig.mailEnabled = true;
+    subagentConfig.initialCommands = ["llmail users", "llmail help"];
+  }
+
+  const agentYaml = yaml.dump(subagentConfig);
 
   // write agent yaml to file
   const subagentDir = _getSubagentDir();
@@ -215,10 +225,10 @@ async function _createAgent(title: string, taskDescription: string) {
     tokensSpent: 0,
   });
 
-  return "Subagent Created\n" + _startAgent(id);
+  return "Subagent Created\n" + await _startAgent(id);
 }
 
-function _startAgent(id: number) {
+async function _startAgent(id: number) {
   const subagent = _subagents.find((p) => p.id === id);
   if (!subagent) {
     throw `Subagent ${id} not found`;
@@ -247,9 +257,39 @@ function _startAgent(id: number) {
     },
   );
 
-  subagent.process.on("spawn", () => {
-    subagent.status = "running";
-    subagent.log += `SUBAGENT ${id} SPAWNED\n`;
+  // Wait 5 seconds for startup errors, then return success
+  const startupPromise = new Promise<string>((resolve) => {
+    let hasSpawned = false;
+    
+    const timeout = setTimeout(() => {
+      if (hasSpawned && subagent.status === "running") {
+        let response = `Subagent ID: ${id} Started`;
+        if (config.mailEnabled) {
+          response += `\nUse llmail to communicate with the subagent '${subagent.agentName}'`;
+        }
+        resolve(response);
+      } else {
+        resolve(`Subagent ${id} failed to start properly`);
+      }
+    }, 5000);
+
+    subagent.process!.on("spawn", () => {
+      hasSpawned = true;
+      subagent.status = "running";
+      subagent.log += `SUBAGENT ${id} SPAWNED\n`;
+    });
+
+    subagent.process!.on("error", (error) => {
+      clearTimeout(timeout);
+      resolve(`Failed to start subagent ${id}: ${error}`);
+    });
+
+    subagent.process!.on("close", (code) => {
+      if (!hasSpawned || code !== 0) {
+        clearTimeout(timeout);
+        resolve(`Subagent ${id} exited early with code ${code}`);
+      }
+    });
   });
 
   subagent.process.stdout!.on("data", (data) => {
@@ -259,7 +299,7 @@ function _startAgent(id: number) {
   });
 
   subagent.process.stderr!.on("data", (data) => {
-    output.error(`SUBAGENT ${id} ERROR: ${data}`);
+    subagent.log += `\nSUBAGENT ${id} ERROR: ${data}`;
   });
 
   subagent.process.on("close", () => {
@@ -267,7 +307,7 @@ function _startAgent(id: number) {
     subagent.status = "stopped";
   });
 
-  return `Subagent ID: ${id} Started\nUse llmail to communicate with the subagent '${subagent.agentName}'`;
+  return await startupPromise;
 }
 
 function _stopAgent(id: number) {
@@ -298,7 +338,9 @@ function _debugFlushContext(subagentId: number) {
 }
 
 function _getSubagentDir() {
+  const agentDirectory =  path.dirname(config.agent.hostpath);
+
   return new NaisysPath(
-    `${config.naisysFolder}/agent-data/${config.agent.username}/subagents`,
+    `${agentDirectory}/subagents`,
   );
 }

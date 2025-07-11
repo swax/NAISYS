@@ -103,6 +103,9 @@ export interface AgentConfig {
 
   /** The path of the config file. Set automatically on load */
   hostpath: string;
+
+  /** Currently just persists the agent's end session notes, but TODO persist the context to reload if the process is terminated */
+  persistAcrossRuns?: boolean;
 }
 
 function loadAgentConfig() {
