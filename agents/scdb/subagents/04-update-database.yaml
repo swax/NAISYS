@@ -28,7 +28,7 @@ agentPrompt: |
      - Tags and categories
      - Any other relevant metadata from the details file
   8. Create a database.txt file alongside the details.txt file with IDs and such of the entries you created/updated
-  9. After successfully updating the the database, move and rename the folder to ${env.SCDB_SKETCH_DATA_FOLDER}/<sketch url slug>
+  9. After successfully updating the the database, move and rename the folder to ${env.SCDB_SKETCH_DATA_FOLDER}/<sketch id>_<sketch url slug>
   10. Then call the completetask command
 
   Notes:

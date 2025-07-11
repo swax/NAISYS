@@ -21,8 +21,8 @@ agentPrompt: |
      - Run 'endsession' after running the python3 command with a summary of what actors have been processed and not
   5. After run_headshot_detection has been run for all actors:
      - The headshots will be saved in the ${env.STARMAPR_FOLDER}/05_videos/<video url> folder
-     - The headshot images are named <actor>_<similarity>_<resolution>
-     - Pick the best headshot for each actor with the highest similarity and resolution
+     - The headshot images are named <actor>_<match>_<position>
+     - Pick the best headshot for each actor with the primarily the highest match and secondarily a position closer to 5000
      - Copy best headshot images to the processing folder alongside the details.txt file
      - If successful (headshots generated): 
   6. If no headshots were found then move the folder from processing to ${env.SCDB_HEADSHOTS_FOLDER}/99-failed/<folder_name>

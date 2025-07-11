@@ -74,8 +74,9 @@ export async function run() {
 
     while (nextCommandAction == NextCommandAction.Continue) {
       if (shellCommand.isShellSuspended()) {
+        const elapsedTime = shellCommand.getCommandElapsedTimeString();
         await contextManager.append(
-          `Command still running. Enter 'wait' to continue waiting. 'kill' to terminate. Other input will be sent to the process.`,
+          `Command has been running for ${elapsedTime}. Enter 'wait <seconds>' to continue waiting. 'kill' to terminate. Other input will be sent to the process.`,
           ContentSource.Console,
         );
       }

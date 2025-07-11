@@ -216,12 +216,12 @@ export async function processCommand(
 
       case "llmail": {
         const mailResponse = await llmail.handleCommand(cmdArgs);
-        await contextManager.append(mailResponse);
+        await contextManager.append(mailResponse.content);
 
-        if (mailResponse == llmail.waitingForMailMessage) {
+        if (mailResponse.pauseSeconds) {
           return {
             nextCommandAction: NextCommandAction.Continue,
-            pauseSeconds: 0,
+            pauseSeconds: mailResponse.pauseSeconds,
             wakeOnMessage: true,
           };
         }
