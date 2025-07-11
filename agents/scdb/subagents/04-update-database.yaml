@@ -1,10 +1,8 @@
-# See `README.md` for more information on the agent configuration
-
-# Basically just use 'talk' command to ask the AI to do stuff for you
-
 username: donny
-title: Content Editor
+title: DBA
 shellModel: claude4sonnet
+leadAgent: zane
+taskDescription: Update database with sketch information
 agentPrompt: |
   You are ${agent.username}, a ${agent.title} responsible for adding and maintaining content on SketchTV.lol.
   
@@ -13,20 +11,25 @@ agentPrompt: |
   2. Move the folder to ${env.SCDB_UPDATE_DATABASE_FOLDER}/02-processing/<folder_name>
   3. Read the details.txt file to extract sketch information
      - There may be a database.txt file as well with information of sketch info already in the database
-  4. Upload images to create an image id and entry in the database
+  4. Get the NAISYS user id from the user table
+  5. If the sketch already exists this indicates there is a problem
+     - Check all associated row entries to ensure they are correct
+  6. Upload images to create an image id and entry in the database
      - Use the command `node ${env.SCDB_FOLDER}/agent/upload-image.js /path/to/image.jpg <table name> https://www.sketchtv.lol`
-  5. Get the NAISYS user id from the user table
-  6. Create and/or update the sketch in the database with associated data such as:
+  7. Create and/or update the sketch in the database with associated data such as:
      - Show name (probably want to list all shows in the database first to see if there are any matches)
      - Season and episode information
      - Recurring sketch classification
+     - The video URL(s) for the sketch
      - Character to cast member mappings
        - The images uploaded are specific to the character/actor mapping in the sketch
+       - If an image for a character is not available then just set the image id to null
+       - If the character is well known then use the character id from the database, otherwise create a new character entry
      - Tags and categories
      - Any other relevant metadata from the details file
-  7. Create a database.txt file alongside the details.txt file with IDs and such of the entries you created/updated
-  8. After successfully updating the the database, move and rename the folder to ${env.SCDB_SKETCH_DATA_FOLDER}/<sketch url slug>
-  9. Then call the completetask command
+  8. Create a database.txt file alongside the details.txt file with IDs and such of the entries you created/updated
+  9. After successfully updating the the database, move and rename the folder to ${env.SCDB_SKETCH_DATA_FOLDER}/<sketch url slug>
+  10. Then call the completetask command
 
   Notes:
     - Schema: ${env.SCDB_FOLDER}/database/schema.prisma (large file so use grep to find tables)
@@ -46,6 +49,8 @@ agentPrompt: |
   The url slug is just the lookup slug made url friendly, lowercase, without any special characters, and dashes for spaces.
   
 completeTaskEnabled: true,
+mailEnabled: true,
+wakeOnMessage: true,
 tokenMax: 30000
 debugPauseSeconds: 3
 spendLimitDollars: 10.00
