@@ -190,7 +190,6 @@ export async function executeCommand(command: string) {
   }
 
   command = command.trim();
-  _lastCommand = command; // Set here before it gets reset by the multi line script below
 
   await ensureOpen();
 
@@ -210,7 +209,7 @@ export async function executeCommand(command: string) {
     _process.stdin.write(commandWithDelimiter);
 
     // Set timeout to wait for response from command
-    setCommandTimeout();
+    setCommandTimeout("start");
   });
 }
 
@@ -226,10 +225,15 @@ export function continueCommand(command: string) {
 
   let choice: "wait" | "kill" | "input";
 
-  if (command != "wait" && command != "kill") {
-    choice = "input";
+  const cmdParts = command.split(" ");
+  const baseCommand = cmdParts[0];
+
+  if (baseCommand === "wait") {
+    choice = "wait";
+  } else if (baseCommand === "kill") {
+    choice = "kill";
   } else {
-    choice = command;
+    choice = "input";
   }
 
   return new Promise<string>((resolve, reject) => {
@@ -255,7 +259,8 @@ export function continueCommand(command: string) {
 
     // LLM wants to wait for more output
     if (choice == "wait") {
-      setCommandTimeout();
+      const waitParam = cmdParts[1];
+      setCommandTimeout("extend", waitParam);
       return;
     }
     // Else LLM wants to kill the process
@@ -278,31 +283,39 @@ export function continueCommand(command: string) {
       }
 
       _process.stdin.write(command + "\n");
-      _lastCommand = command;
-      setCommandTimeout();
+      setCommandTimeout("start");
     }
   });
 }
 
 let _startCommandTime: Date | undefined;
-/** Pulled out because for commands like 'wait' we want to vary the run time based on the 'last command' */
-let _lastCommand: string | undefined;
+let _startWaitTime: Date | undefined;
 
-function setCommandTimeout() {
-  _startCommandTime = new Date();
-  let timeoutSeconds = config.shellCommand.timeoutSeconds;
+function setCommandTimeout(type: "start" | "extend", waitParam?: string) {
+  _startWaitTime = new Date();
 
-  if (
-    config.shellCommand.longRunningCommands.some((cmd) =>
-      _lastCommand?.startsWith(cmd),
-    )
-  ) {
-    timeoutSeconds = config.shellCommand.longRunningTimeoutSeconds;
+  if (type == "start") {
+    _startCommandTime = new Date();
+  }
+
+  let waitSeconds = config.shellCommand.timeoutSeconds;
+
+    // Parse wait time parameter if provided
+  if (waitParam) {
+    const waitTime = parseInt(waitParam, 10);
+    if (!isNaN(waitTime) && waitTime > 0) {
+      waitSeconds = waitTime;
+    }
+  }
+
+  const maxTimeoutSeconds = config.shellCommand.maxTimeoutSeconds;
+  if (waitSeconds > maxTimeoutSeconds) {
+    waitSeconds = maxTimeoutSeconds;
   }
 
   _currentCommandTimeout = setTimeout(() => {
     returnControlToNaisys();
-  }, timeoutSeconds * 1000);
+  }, waitSeconds * 1000);
 }
 
 function returnControlToNaisys() {
@@ -323,11 +336,11 @@ function returnControlToNaisys() {
     resetTerminal();
   }
 
-  const waitSeconds = Math.round(
-    (new Date().getTime() - _startCommandTime!.getTime()) / 1000,
-  );
+  const actualWaitSeconds = _startWaitTime ? Math.round(
+    (new Date().getTime() - _startWaitTime.getTime()) / 1000,
+  ).toString() : "?";
 
-  outputWithInstruction += `\nNAISYS: Command interrupted after waiting ${waitSeconds} seconds.`;
+  outputWithInstruction += `\nNAISYS: Command interrupted after waiting ${actualWaitSeconds} seconds.`;
 
   _completeCommand(outputWithInstruction);
 }
@@ -442,6 +455,22 @@ function _completeCommand(output: string) {
 
 export function isShellSuspended() {
   return _wrapperSuspended;
+}
+
+export function getCommandElapsedTimeString() {
+  if (!_startCommandTime) {
+    return 0;
+  }
+
+  const totalSeconds = Math.round((new Date().getTime() - _startCommandTime.getTime()) / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  
+  if (minutes > 0) {
+    return `${minutes}m ${seconds}s`;
+  } else {
+    return `${seconds}s`;
+  }
 }
 
 /**

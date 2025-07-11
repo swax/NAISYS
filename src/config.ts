@@ -20,9 +20,7 @@ export const shellCommand = {
   outputTokenMax: 5000,
   /** The time NAISYS will wait for new shell output before giving up */
   timeoutSeconds: 15,
-  /** These commands have their own timeout so the LLM doesn't have to continually waste tokens on wait commands */
-  longRunningCommands: ["nmap", "traceroute", "tracepath", "mtr"],
-  longRunningTimeoutSeconds: 120,
+  maxTimeoutSeconds: 60 * 10, // 10 minutes
 };
 
 export const agent = loadAgentConfig();

@@ -119,16 +119,17 @@ async function init() {
   });
 }
 
-export const waitingForMailMessage = "Waiting for new mail messages...";
-
-export async function handleCommand(args: string): Promise<string> {
+export async function handleCommand(args: string): Promise<{content: string, pauseSeconds?: number}> {
   const argParams = args.split(" ");
+  let content: string;
+  let pauseSeconds: number | undefined;
 
   if (!argParams[0]) {
     if (simpleMode) {
       argParams[0] = "help";
     } else {
-      return await listThreads();
+      content = await listThreads();
+      return { content };
     }
   }
 
@@ -139,23 +140,24 @@ export async function handleCommand(args: string): Promise<string> {
   switch (argParams[0]) {
     case "help": {
       if (simpleMode) {
-        return `llmail <command>
+        content = `llmail <command>
   users: Get list of users on the system
   send "<users>" "subject" "message": Send a message.${tokenMaxNote}
-  wait: Pause the session until a new mail message is received
+  wait <seconds>: Pause the session until a new mail message is received
   
 * Attachments are not supported, use file paths to refence files in emails as all users are on the same machine`;
       } else {
-        return `llmail <command>
+        content = `llmail <command>
   no params: List all active threads
   users: Get list of users on the system
   send "<users>" "subject" "message": Send a new mail, starting a new thread
-  wait: Pause the session until a new mail message is received
+  wait <seconds>: Pause the session until a new mail message is received
   read <id>: Read a thread
   reply <id> <message>: Reply to a thread
   adduser <id> <username>: Add a user to thread with id
   archive <ids>: Archives a comma separated list of threads`;
       }
+      break;
     }
 
     case "send": {
@@ -169,33 +171,41 @@ export async function handleCommand(args: string): Promise<string> {
       const subject = newParams[3];
       const message = newParams[5];
 
-      return await newThread(usernames, subject, message);
+      content = await newThread(usernames, subject, message);
+      break;
     }
 
     case "wait": {
-      return waitingForMailMessage;
+      pauseSeconds = argParams[1] ? parseInt(argParams[1]) : config.shellCommand.timeoutSeconds;
+
+      content = `Waiting ${pauseSeconds} seconds for new mail messages...`;
+      break;
     }
     case "read": {
       const threadId = parseInt(argParams[1]);
 
-      return await readThread(threadId);
+      content = await readThread(threadId);
+      break;
     }
 
     case "users": {
-      return await listUsers();
+      content = await listUsers();
+      break;
     }
 
     case "reply": {
       const threadId = parseInt(argParams[1]);
       const message = argParams.slice(2).join(" ");
 
-      return await replyThread(threadId, message);
+      content = await replyThread(threadId, message);
+      break;
     }
 
     case "adduser": {
       const threadId = parseInt(argParams[1]);
       const username = argParams[2];
-      return await addUser(threadId, username);
+      content = await addUser(threadId, username);
+      break;
     }
 
     case "archive": {
@@ -205,7 +215,8 @@ export async function handleCommand(args: string): Promise<string> {
         .split(",")
         .map((id) => parseInt(id));
 
-      return await archiveThreads(threadIds);
+      content = await archiveThreads(threadIds);
+      break;
     }
 
     // Debug level 'secret command'. Don't let the LLM know about this
@@ -215,15 +226,17 @@ export async function handleCommand(args: string): Promise<string> {
         fs.unlinkSync(hostPath);
       }
       await init();
-      return "llmail database reset";
+      content = "llmail database reset";
+      break;
     }
 
     default:
-      return (
-        "Error, unknown command. See valid commands below:\n" +
-        (await handleCommand("help"))
-      );
+      const helpResponse = await handleCommand("help");
+      content = "Error, unknown command. See valid commands below:\n" + helpResponse.content;
+      break;
   }
+
+  return { content, pauseSeconds };
 }
 
 interface UnreadThread {

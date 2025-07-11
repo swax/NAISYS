@@ -6,6 +6,7 @@ import * as utilities from "../utils/utilities.js";
 import * as shellWrapper from "./shellWrapper.js";
 
 export const isShellSuspended = () => shellWrapper.isShellSuspended();
+export const getCommandElapsedTimeString = () => shellWrapper.getCommandElapsedTimeString();
 
 export async function handleCommand(input: string): Promise<boolean> {
   const cmdParams = input.split(" ");
