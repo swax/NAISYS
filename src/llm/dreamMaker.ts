@@ -1,5 +1,5 @@
 import * as config from "../config.js";
-import { usingDatabase } from "../utils/dbUtils.js";
+import { usingDatabase } from "../services/dbService.js";
 import * as output from "../utils/output.js";
 import { NaisysPath } from "../services/pathService.js";
 import * as contextManager from "./contextManager.js";
