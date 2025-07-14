@@ -1,44 +1,24 @@
 import * as fs from "fs";
 import { Database, open } from "sqlite";
 import sqlite3 from "sqlite3";
-import * as pathService from "../services/pathService.js";
-import { NaisysPath } from "../services/pathService.js";
+import * as pathService from "./pathService.js";
+import { NaisysPath } from "./pathService.js";
 import * as config from "../config.js";
 
 export let myUserId = -1;
 
 export async function initDatabase(filepath: NaisysPath) {
+  pathService.ensureFileDirExists(filepath);
+  
   const hostPath = filepath.toHostPath();
 
-  if (fs.existsSync(hostPath)) {
-    return;
+  const dbExists = fs.existsSync(hostPath);
+
+  if (!dbExists) {
+    createDatabase(hostPath);
   }
-
-  pathService.ensureFileDirExists(filepath);
-
-  const db = await open({
-    filename: hostPath,
-    driver: sqlite3.Database,
-    mode: sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE,
-  });
-
-  await db.close();
-
+  
   await usingDatabase(async (db) => {
-    const createTables = [
-      createCostsTable,
-      createContextLogTable,
-      createDreamLogTable,
-      createThreadsTable,
-      createThreadMembersTable,
-      createThreadMessagesTable,
-      createUserTable,
-    ];
-
-    for (const createTable of createTables) {
-      await db.exec(createTable);
-    }
-
     // If user is not in the db, add them
     const user = await db.get("SELECT * FROM Users WHERE username = ?", [
       config.agent.username,
@@ -83,6 +63,43 @@ export async function initDatabase(filepath: NaisysPath) {
       ) {
         throw `Error: User ${config.agent.username} already exists in the database with a different lead agent (${user.leadUsername})`;
       }
+
+      // Update user title in database
+      if (user.title !== config.agent.title) {
+        await db.run(
+          "UPDATE Users SET title = ? WHERE id = ?",
+          [config.agent.title, myUserId],
+        );
+      }
+    }
+  });
+  
+  // Start the lastActive updater after user is initialized
+  setInterval(updateLastActive, 2000);
+}
+
+async function createDatabase(hostPath: string) {
+    const db = await open({
+    filename: hostPath,
+    driver: sqlite3.Database,
+    mode: sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE,
+  });
+
+  await db.close();
+
+  await usingDatabase(async (db) => {
+    const createTables = [
+      createCostsTable,
+      createContextLogTable,
+      createDreamLogTable,
+      createThreadsTable,
+      createThreadMembersTable,
+      createThreadMessagesTable,
+      createUserTable,
+    ];
+
+    for (const createTable of createTables) {
+      await db.exec(createTable);
     }
   });
 }
@@ -98,8 +115,26 @@ export async function openDatabase(filepath: NaisysPath): Promise<Database> {
 
   // Turn foreign key constraints on
   await db.exec("PRAGMA foreign_keys = ON");
+  
+  // Enable WAL mode for better concurrency
+  await db.exec("PRAGMA journal_mode = WAL");
 
   return db;
+}
+
+export async function updateLastActive(): Promise<void> {
+  if (myUserId === -1) return;
+  
+  try {
+    await usingDatabase(async (db) => {
+      await db.run(
+        "UPDATE Users SET lastActive = ? WHERE id = ?",
+        [new Date().toISOString(), myUserId]
+      );
+    });
+  } catch (error) {
+    console.error("Error updating lastActive:", error);
+  }
 }
 
 export async function usingDatabase<T>(
@@ -120,7 +155,7 @@ export const createUserTable = `CREATE TABLE Users (
     title TEXT NOT NULL,
     agentPath TEXT NOT NULL,
     leadUsername TEXT,
-    lastActive TEXT DEFAULT CURRENT_TIMESTAMP,
+    lastActive TEXT DEFAULT '',
     UNIQUE(username),
     UNIQUE(agentPath)
   )`;

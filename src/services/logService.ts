@@ -2,7 +2,7 @@ import escapeHtml from "escape-html";
 import * as fs from "fs";
 import * as config from "../config.js";
 import { LlmMessage, LlmRole } from "../llm/llmDtos.js";
-import { usingDatabase } from "../utils/dbUtils.js";
+import { usingDatabase } from "./dbService.js";
 import * as pathService from "./pathService.js";
 import { NaisysPath } from "./pathService.js";
 

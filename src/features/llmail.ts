@@ -1,7 +1,7 @@
 import { Database } from "sqlite";
 import table from "text-table";
 import * as config from "../config.js";
-import { usingDatabase, myUserId } from "../utils/dbUtils.js";
+import { usingDatabase, myUserId } from "../services/dbService.js";
 import * as utilities from "../utils/utilities.js";
 
 /** Threading is not currently used in `simpleMode` so this doesn't matter */
