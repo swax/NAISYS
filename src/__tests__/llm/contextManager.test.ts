@@ -6,7 +6,7 @@ import { mockConfig } from "../mocks.js";
 
 mockConfig();
 
-jest.unstable_mockModule("../../utils/logService.js", () => ({
+jest.unstable_mockModule("../../services/logService.js", () => ({
   recordContext: jest.fn(),
   roleToSource: jest.fn(),
   write: jest.fn(),

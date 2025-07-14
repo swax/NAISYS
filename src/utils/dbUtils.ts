@@ -1,14 +1,17 @@
 import * as fs from "fs";
 import { Database, open } from "sqlite";
 import sqlite3 from "sqlite3";
-import * as pathService from "./pathService.js";
-import { NaisysPath } from "./pathService.js";
+import * as pathService from "../services/pathService.js";
+import { NaisysPath } from "../services/pathService.js";
+import * as config from "../config.js";
+
+export let myUserId = -1;
 
 export async function initDatabase(filepath: NaisysPath) {
   const hostPath = filepath.toHostPath();
 
   if (fs.existsSync(hostPath)) {
-    return false;
+    return;
   }
 
   pathService.ensureFileDirExists(filepath);
@@ -21,7 +24,67 @@ export async function initDatabase(filepath: NaisysPath) {
 
   await db.close();
 
-  return true;
+  await usingDatabase(async (db) => {
+    const createTables = [
+      createCostsTable,
+      createContextLogTable,
+      createDreamLogTable,
+      createThreadsTable,
+      createThreadMembersTable,
+      createThreadMessagesTable,
+      createUserTable,
+    ];
+
+    for (const createTable of createTables) {
+      await db.exec(createTable);
+    }
+
+    // If user is not in the db, add them
+    const user = await db.get("SELECT * FROM Users WHERE username = ?", [
+      config.agent.username,
+    ]);
+
+    // If user not in database, add them
+    if (!user) {
+      try {
+        const insertedUser = await db.run(
+          "INSERT INTO Users (username, title, agentPath, leadUsername) VALUES (?, ?, ?, ?)",
+          [
+            config.agent.username,
+            config.agent.title,
+            config.agent.hostpath,
+            config.agent.leadAgent,
+          ],
+        );
+
+        if (!insertedUser.lastID) {
+          throw "Error adding local user to llmail database";
+        }
+
+        myUserId = insertedUser.lastID;
+      } catch (e) {
+        throw (
+          `A user already exists in the database with the agent path (${config.agent.hostpath})\n` +
+          `Either create a new agent config file, or delete the ${config.naisysFolder} folder to reset the database.`
+        );
+      }
+    }
+    // Else already exists, validate it's config path is correct
+    else {
+      myUserId = user.id;
+
+      if (user.agentPath != config.agent.hostpath) {
+        throw `Error: User ${config.agent.username} already exists in the database with a different config path (${user.agentPath})`;
+      }
+
+      if (
+        config.agent.leadAgent &&
+        config.agent.leadAgent != user.leadUsername
+      ) {
+        throw `Error: User ${config.agent.username} already exists in the database with a different lead agent (${user.leadUsername})`;
+      }
+    }
+  });
 }
 
 export async function openDatabase(filepath: NaisysPath): Promise<Database> {
@@ -40,10 +103,9 @@ export async function openDatabase(filepath: NaisysPath): Promise<Database> {
 }
 
 export async function usingDatabase<T>(
-  filepath: NaisysPath,
   run: (db: Database) => Promise<T>,
 ): Promise<T> {
-  const db = await openDatabase(filepath);
+  const db = await openDatabase(config.dbFilePath);
 
   try {
     return await run(db);
@@ -51,3 +113,73 @@ export async function usingDatabase<T>(
     await db.close();
   }
 }
+
+export const createUserTable = `CREATE TABLE Users (
+    id INTEGER PRIMARY KEY, 
+    username TEXT NOT NULL,
+    title TEXT NOT NULL,
+    agentPath TEXT NOT NULL,
+    leadUsername TEXT,
+    lastActive TEXT DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(username),
+    UNIQUE(agentPath)
+  )`;
+
+export const createThreadsTable = `CREATE TABLE Threads (
+    id INTEGER PRIMARY KEY, 
+    subject TEXT NOT NULL,
+    tokenCount INTEGER NOT NULL DEFAULT 0
+  )`;
+
+export const createThreadMembersTable = `CREATE TABLE ThreadMembers (
+    id INTEGER PRIMARY KEY, 
+    threadId INTEGER NOT NULL, 
+    userId INTEGER NOT NULL,
+    newMsgId INTEGER NOT NULL DEFAULT -1,
+    archived INTEGER NOT NULL DEFAULT 0,
+    UNIQUE(threadId,userId),
+    FOREIGN KEY(threadId) REFERENCES Threads(id),
+    FOREIGN KEY(userId) REFERENCES Users(id)
+  )`;
+
+export const createThreadMessagesTable = `CREATE TABLE ThreadMessages (
+    id INTEGER PRIMARY KEY, 
+    threadId INTEGER NOT NULL, 
+    userId INTEGER NOT NULL, 
+    message TEXT NOT NULL,
+    date TEXT NOT NULL,
+    FOREIGN KEY(threadId) REFERENCES Threads(id),
+    FOREIGN KEY(userId) REFERENCES Users(id)
+  )`;
+
+export const createCostsTable = `CREATE TABLE Costs (
+    id INTEGER PRIMARY KEY,
+    date TEXT NOT NULL, 
+    username TEXT NOT NULL,
+    subagent TEXT,
+    source TEXT NOT NULL,
+    model TEXT NOT NULL,
+    cost REAL DEFAULT 0,
+    input_tokens INTEGER DEFAULT 0,
+    output_tokens INTEGER DEFAULT 0,
+    cache_write_tokens INTEGER DEFAULT 0,
+    cache_read_tokens INTEGER DEFAULT 0
+  )`;
+
+export const createDreamLogTable = `CREATE TABLE DreamLog (
+    id INTEGER PRIMARY KEY, 
+    username TEXT NOT NULL,
+    date TEXT NOT NULL,
+    dream TEXT NOT NULL
+  )`;
+
+export const createContextLogTable = `CREATE TABLE ContextLog (
+    id INTEGER PRIMARY KEY, 
+    username TEXT NOT NULL,
+    source TEXT NOT NULL,
+    type TEXT NOT NULL,
+    message TEXT NOT NULL,
+    date TEXT NOT NULL
+  )`;
+
+await initDatabase(config.dbFilePath);

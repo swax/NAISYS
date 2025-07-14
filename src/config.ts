@@ -5,8 +5,9 @@ import { readFile } from "fs/promises";
 import yaml from "js-yaml";
 import path from "path";
 import { CommandProtection } from "./utils/enums.js";
-import * as pathService from "./utils/pathService.js";
+import * as pathService from "./services/pathService.js";
 import { valueFromString } from "./utils/utilities.js";
+import { NaisysPath } from "./services/pathService.js";
 
 program.argument("<agent-path>", "Path to agent configuration file").parse();
 
@@ -19,8 +20,8 @@ export const shellCommand = {
   /** Limits the size of files that can be read/wrote */
   outputTokenMax: 5000,
   /** The time NAISYS will wait for new shell output before giving up */
-  timeoutSeconds: 15,
-  maxTimeoutSeconds: 60 * 10, // 10 minutes
+  timeoutSeconds: 10,
+  maxTimeoutSeconds: 60 * 5, // 5 minutes
 };
 
 export const agent = loadAgentConfig();
@@ -48,6 +49,7 @@ export const trimSessionEnabled = false;
 /* .env is used for global configs across naisys, while agent configs are for the specific agent */
 export const naisysFolder = getEnv("NAISYS_FOLDER", true);
 export const websiteFolder = getEnv("WEBSITE_FOLDER");
+export const dbFilePath = new NaisysPath(`${naisysFolder}/database/naisys.sqlite`);
 
 export const localLlmUrl = getEnv("LOCAL_LLM_URL");
 export const localLlmName = getEnv("LOCAL_LLM_NAME");

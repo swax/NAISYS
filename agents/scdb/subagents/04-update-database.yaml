@@ -1,5 +1,5 @@
 username: donny
-title: DBA
+title: DB Admin
 shellModel: claude4sonnet
 leadAgent: zane
 taskDescription: Update database with sketch information
@@ -47,6 +47,8 @@ agentPrompt: |
     - Sketch: <Show/Season/Episode slug> <Sketch title>
     - Recurring Sketch: <Show title>: <Recurring sketch title>
   The url slug is just the lookup slug made url friendly, lowercase, without any special characters, and dashes for spaces.
+  
+  Special instructions may come in from the Pipeline Manager. If that happens prioritize those tasks and when complete call the completetask command.
   
 completeTaskEnabled: true,
 mailEnabled: true,

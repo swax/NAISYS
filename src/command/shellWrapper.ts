@@ -6,8 +6,8 @@ import stripAnsi from "strip-ansi";
 import treeKill from "tree-kill";
 import * as config from "../config.js";
 import * as output from "../utils/output.js";
-import * as pathService from "../utils/pathService.js";
-import { NaisysPath } from "../utils/pathService.js";
+import * as pathService from "../services/pathService.js";
+import { NaisysPath } from "../services/pathService.js";
 import { getCleanEnv } from "../utils/utilities.js";
 
 enum ShellEvent {

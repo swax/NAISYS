@@ -1,6 +1,6 @@
 import chalk from "chalk";
 import { LlmMessageType, LlmRole } from "../llm/llmDtos.js";
-import * as logService from "./logService.js";
+import * as logService from "../services/logService.js";
 
 export enum OutputColor {
   comment = "greenBright",

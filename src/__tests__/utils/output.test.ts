@@ -9,7 +9,7 @@ const mockLogServiceWrite = jest
   .fn<(message: LlmMessage) => Promise<number | undefined>>()
   .mockResolvedValue(1);
 
-jest.unstable_mockModule("../../utils/logService.js", () => ({
+jest.unstable_mockModule("../../services/logService.js", () => ({
   write: mockLogServiceWrite,
 }));
 

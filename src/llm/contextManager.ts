@@ -2,7 +2,7 @@ import * as config from "../config.js";
 import * as workspaces from "../features/workspaces.js";
 import * as inputMode from "../utils/inputMode.js";
 import { InputMode } from "../utils/inputMode.js";
-import * as logService from "../utils/logService.js";
+import * as logService from "../services/logService.js";
 import * as output from "../utils/output.js";
 import { OutputColor } from "../utils/output.js";
 import * as utilities from "../utils/utilities.js";

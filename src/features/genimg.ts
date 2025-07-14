@@ -4,8 +4,8 @@ import sharp from "sharp";
 import * as config from "../config.js";
 import * as costTracker from "../llm/costTracker.js";
 import * as output from "../utils/output.js";
-import * as pathService from "../utils/pathService.js";
-import { NaisysPath } from "../utils/pathService.js";
+import * as pathService from "../services/pathService.js";
+import { NaisysPath } from "../services/pathService.js";
 
 /** genimg "<description>" <filepath>: Generate an image with the description and save it to the file path */
 export async function handleCommand(args: string): Promise<string> {

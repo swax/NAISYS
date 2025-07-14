@@ -2,8 +2,8 @@ import * as fs from "fs";
 import path from "path";
 import * as config from "../config.js";
 import * as output from "../utils/output.js";
-import * as pathService from "../utils/pathService.js";
-import { NaisysPath } from "../utils/pathService.js";
+import * as pathService from "../services/pathService.js";
+import { NaisysPath } from "../services/pathService.js";
 import * as utilities from "../utils/utilities.js";
 
 const _suffixHelp =

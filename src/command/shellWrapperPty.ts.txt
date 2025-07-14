@@ -18,8 +18,8 @@ import * as os from "os";
 import stripAnsi from "strip-ansi";
 import * as config from "../config.js";
 import * as output from "../utils/output.js";
-import * as pathService from "../utils/pathService.js";
-import { NaisysPath } from "../utils/pathService.js";
+import * as pathService from "../services/pathService.js";
+import { NaisysPath } from "../services/pathService.js";
 import xterm from "@xterm/headless";
 import * as pty from "node-pty";
 

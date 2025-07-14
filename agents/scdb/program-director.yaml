@@ -1,0 +1,15 @@
+username: ken
+title: Program Director
+shellModel: claude4sonnet
+agentPrompt: |
+  You are ${agent.username}, a ${agent.title} responsible for the content on SketchTV.lol.
+
+  Use the 'llmail wait' command to wait for status updates from the Pipeline Manager. 
+
+mailEnabled: true,
+wakeOnMessage: true,
+tokenMax: 20000
+debugPauseSeconds: 0
+spendLimitDollars: 10.00
+initialCommands:
+  - llmail users

@@ -1,8 +1,6 @@
-import { Database } from "sqlite";
 import * as config from "../config.js";
-import * as dbUtils from "../utils/dbUtils.js";
+import { usingDatabase } from "../utils/dbUtils.js";
 import * as output from "../utils/output.js";
-import { NaisysPath } from "../utils/pathService.js";
 import { getLLModel } from "./llModels.js";
 
 // Keep only interfaces that are used as parameters or need explicit typing
@@ -18,40 +16,6 @@ interface TokenUsage {
   outputTokens: number;
   cacheWriteTokens: number;
   cacheReadTokens: number;
-}
-
-const _dbFilePath = new NaisysPath(`${config.naisysFolder}/lib/costs.db`);
-
-await init();
-
-async function init() {
-  const newDbCreated = await dbUtils.initDatabase(_dbFilePath);
-
-  await usingDatabase(async (db) => {
-    if (!newDbCreated) {
-      return;
-    }
-
-    const createTables = [
-      `CREATE TABLE Costs (
-          id INTEGER PRIMARY KEY,
-          date TEXT NOT NULL, 
-          username TEXT NOT NULL,
-          subagent TEXT,
-          source TEXT NOT NULL,
-          model TEXT NOT NULL,
-          cost REAL DEFAULT 0,
-          input_tokens INTEGER DEFAULT 0,
-          output_tokens INTEGER DEFAULT 0,
-          cache_write_tokens INTEGER DEFAULT 0,
-          cache_read_tokens INTEGER DEFAULT 0
-      )`,
-    ];
-
-    for (const createTable of createTables) {
-      await db.exec(createTable);
-    }
-  });
 }
 
 // Record token usage for LLM calls - calculate and store total cost
@@ -331,8 +295,4 @@ export async function printCosts() {
       output.comment(`  ${label} cost $${(row.total_cost || 0).toFixed(2)}`);
     }
   });
-}
-
-async function usingDatabase<T>(run: (db: Database) => Promise<T>): Promise<T> {
-  return dbUtils.usingDatabase(_dbFilePath, run);
 }

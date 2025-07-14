@@ -25,8 +25,11 @@ agentPrompt: |
   5. Write your findings to a details.txt file in the same folder
   6. When complete move the folder to ${env.SCDB_HEADSHOTS_FOLDER}/01-pending/<folder_name>
     - If there's no video URL then move the folder to ${env.SCDB_DETAILS_FOLDER}/99-failed/<folder_name>
+    - Write a fail.txt file in folder_name with the reason for failure
   7. Call the completetask command
   
+  Special instructions may come in from the Pipeline Manager. If that happens prioritize those tasks and when complete call the completetask command.
+
 completeTaskEnabled: true,
 mailEnabled: true,
 wakeOnMessage: true,
