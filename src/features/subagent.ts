@@ -10,8 +10,8 @@ import * as inputMode from "../utils/inputMode.js";
 import { InputMode } from "../utils/inputMode.js";
 import * as output from "../utils/output.js";
 import { OutputColor } from "../utils/output.js";
-import * as pathService from "../utils/pathService.js";
-import { NaisysPath } from "../utils/pathService.js";
+import * as pathService from "../services/pathService.js";
+import { NaisysPath } from "../services/pathService.js";
 import { getTokenCount, shuffle, getCleanEnv } from "../utils/utilities.js";
 import * as llmail from "./llmail.js";
 

@@ -1,5 +1,5 @@
 username: alex
-title: Content Researcher
+title: Content Finder
 shellModel: claude4sonnet
 leadAgent: zane
 taskDescription: Find new sketches
@@ -22,6 +22,8 @@ agentPrompt: |
   6. Move the instructions file to ${env.SCDB_FIND_SKETCHES_FOLDER}/03-completed
     - If the sketch information couldn't be found then move the instructions file to ${env.SCDB_FIND_SKETCHES_FOLDER}/99-failed
   7. Then call the completetask command.
+
+  Special instructions may come in from the Pipeline Manager. If that happens prioritize those tasks and when complete call the completetask command.
   
 completeTaskEnabled: true,
 mailEnabled: true,

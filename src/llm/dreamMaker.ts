@@ -1,34 +1,12 @@
-import { Database } from "sqlite";
 import * as config from "../config.js";
-import * as dbUtils from "../utils/dbUtils.js";
+import { usingDatabase } from "../utils/dbUtils.js";
 import * as output from "../utils/output.js";
-import { NaisysPath } from "../utils/pathService.js";
+import { NaisysPath } from "../services/pathService.js";
 import * as contextManager from "./contextManager.js";
 import { ContentSource, LlmRole } from "./llmDtos.js";
 import * as llmService from "./llmService.js";
 
-const _dbFilePath = new NaisysPath(`${config.naisysFolder}/lib/dream.db`);
-
 let _lastDream = "";
-
-await init();
-
-async function init() {
-  const newDbCreated = await dbUtils.initDatabase(_dbFilePath);
-
-  await usingDatabase(async (db) => {
-    if (!newDbCreated) {
-      return;
-    }
-
-    await db.exec(`CREATE TABLE DreamLog (
-      id INTEGER PRIMARY KEY, 
-      username TEXT NOT NULL,
-      date TEXT NOT NULL,
-      dream TEXT NOT NULL
-    )`);
-  });
-}
 
 export async function goodmorning(): Promise<string> {
   if (!config.agent.persistAcrossRuns) {
@@ -100,10 +78,6 @@ and how to do it.`;
     ],
     "dream",
   );
-}
-
-async function usingDatabase<T>(run: (db: Database) => Promise<T>): Promise<T> {
-  return dbUtils.usingDatabase(_dbFilePath, run);
 }
 
 async function storeDream(dream: string) {

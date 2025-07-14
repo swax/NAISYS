@@ -1,13 +1,10 @@
 import escapeHtml from "escape-html";
 import * as fs from "fs";
-import { Database } from "sqlite";
 import * as config from "../config.js";
 import { LlmMessage, LlmRole } from "../llm/llmDtos.js";
-import * as dbUtils from "./dbUtils.js";
+import { usingDatabase } from "../utils/dbUtils.js";
 import * as pathService from "./pathService.js";
 import { NaisysPath } from "./pathService.js";
-
-const _dbFilePath = new NaisysPath(`${config.naisysFolder}/lib/log.db`);
 
 const _combinedLogFilePath = new NaisysPath(
   `${config.websiteFolder || config.naisysFolder}/logs/combined-log.html`,
@@ -22,30 +19,6 @@ await init();
 async function init() {
   initLogFile(_combinedLogFilePath);
   initLogFile(_userLogFilePath);
-
-  // Init log database
-  const newDbCreated = await dbUtils.initDatabase(_dbFilePath);
-
-  await usingDatabase(async (db) => {
-    if (!newDbCreated) {
-      return;
-    }
-
-    const createTables = [
-      `CREATE TABLE ContextLog (
-          id INTEGER PRIMARY KEY, 
-          username TEXT NOT NULL,
-          source TEXT NOT NULL,
-          type TEXT NOT NULL,
-          message TEXT NOT NULL,
-          date TEXT NOT NULL
-      )`,
-    ];
-
-    for (const createTable of createTables) {
-      await db.exec(createTable);
-    }
-  });
 }
 
 function initLogFile(filePath: NaisysPath) {
@@ -111,10 +84,6 @@ function appendToLogFile(filepath: NaisysPath, message: LlmMessage) {
       </td>
     </tr>`,
   );
-}
-
-async function usingDatabase<T>(run: (db: Database) => Promise<T>): Promise<T> {
-  return dbUtils.usingDatabase(_dbFilePath, run);
 }
 
 export function roleToSource(role: LlmRole) {

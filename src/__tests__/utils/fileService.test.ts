@@ -1,6 +1,6 @@
 import { describe, expect, test } from "@jest/globals";
 import * as os from "os";
-import { HostPath, NaisysPath } from "../../utils/pathService.js";
+import { HostPath, NaisysPath } from "../../services/pathService.js";
 
 function naisysToHostPath(path: string): string {
   return new NaisysPath(path).toHostPath();

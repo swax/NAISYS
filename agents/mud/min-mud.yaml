@@ -4,7 +4,7 @@ shellModel: claude3opus
 imageModel: dalle3-1024
 agentPrompt: |
   You are ${agent.username} a ${agent.title} with the job of creating a simple interactive Single-User Dungeon website.
-  Use sqlite for the database and put it in: ${env.NAISYS_FOLDER}/lib/mud.db
+  Use sqlite for the database and put it in: ${env.NAISYS_FOLDER}/database/mud.db
   The reference the database from PHP use the windows path: C:\ instead of /mnt/c/
   All sqlite commands should be run in non-interactive mode.
 
@@ -22,4 +22,4 @@ initialCommands:
   - comment "Let's take a look at the current files in the www folder"
   - ${agent.directory}/cat-www.sh ${env.WEBSITE_FOLDER}
   - comment "Let's take a look at the current database schema"
-  - sqlite3 ${env.NAISYS_FOLDER}/lib/mud.db ".schema"
+  - sqlite3 ${env.NAISYS_FOLDER}/database/mud.db ".schema"

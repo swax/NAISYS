@@ -1,14 +1,8 @@
-import * as fs from "fs";
 import { Database } from "sqlite";
 import table from "text-table";
 import * as config from "../config.js";
-import * as dbUtils from "../utils/dbUtils.js";
-import { NaisysPath } from "../utils/pathService.js";
+import { usingDatabase, myUserId } from "../utils/dbUtils.js";
 import * as utilities from "../utils/utilities.js";
-
-const _dbFilePath = new NaisysPath(`${config.naisysFolder}/lib/llmail.db`);
-
-let _myUserId = -1;
 
 /** Threading is not currently used in `simpleMode` so this doesn't matter */
 const _threadTokenMax = config.agent.mailMessageTokenMax
@@ -20,117 +14,15 @@ const _threadTokenMax = config.agent.mailMessageTokenMax
  * Simple mode only has two commands. It still requires db persistance to support offline agents. */
 export const simpleMode = true;
 
-await init();
-
-async function init() {
-  const newDbCreated = await dbUtils.initDatabase(_dbFilePath);
-
-  await usingDatabase(async (db) => {
-    if (newDbCreated) {
-      // For llmail to work, the usernames need to be unique
-      // The agentPaths also need to be unique so we know what configuration each agent should use when we restart/reload naisys
-      const createTables = [
-        `CREATE TABLE Users (
-          id INTEGER PRIMARY KEY, 
-          username TEXT NOT NULL,
-          title TEXT NOT NULL,
-          agentPath TEXT NOT NULL,
-          leadUsername TEXT,
-          UNIQUE(username),
-          UNIQUE(agentPath)
-      )`,
-        `CREATE TABLE Threads (
-          id INTEGER PRIMARY KEY, 
-          subject TEXT NOT NULL,
-          tokenCount INTEGER NOT NULL DEFAULT 0
-      )`,
-        `CREATE TABLE ThreadMembers (
-          id INTEGER PRIMARY KEY, 
-          threadId INTEGER NOT NULL, 
-          userId INTEGER NOT NULL,
-          newMsgId INTEGER NOT NULL DEFAULT -1,
-          archived INTEGER NOT NULL DEFAULT 0,
-	        UNIQUE(threadId,userId),
-          FOREIGN KEY(threadId) REFERENCES Threads(id),
-          FOREIGN KEY(userId) REFERENCES Users(id)
-
-      )`,
-        `CREATE TABLE ThreadMessages (
-          id INTEGER PRIMARY KEY, 
-          threadId INTEGER NOT NULL, 
-          userId INTEGER NOT NULL, 
-          message TEXT NOT NULL,
-          date TEXT NOT NULL,
-          FOREIGN KEY(threadId) REFERENCES Threads(id),
-          FOREIGN KEY(userId) REFERENCES Users(id)
-      )`,
-      ];
-
-      for (const createTable of createTables) {
-        await db.exec(createTable);
-      }
-    }
-
-    // If user is not in the db, add them
-    const user = await db.get("SELECT * FROM Users WHERE username = ?", [
-      config.agent.username,
-    ]);
-
-    // If user not in database, add them
-    if (!user) {
-      try {
-        const insertedUser = await db.run(
-          "INSERT INTO Users (username, title, agentPath, leadUsername) VALUES (?, ?, ?, ?)",
-          [
-            config.agent.username,
-            config.agent.title,
-            config.agent.hostpath,
-            config.agent.leadAgent,
-          ],
-        );
-
-        if (!insertedUser.lastID) {
-          throw "Error adding local user to llmail database";
-        }
-
-        _myUserId = insertedUser.lastID;
-      } catch (e) {
-        throw (
-          `A user already exists in the database with the agent path (${config.agent.hostpath})\n` +
-          `Either create a new agent config file, or delete the ${config.naisysFolder} folder to reset the database.`
-        );
-      }
-    }
-    // Else already exists, validate it's config path is correct
-    else {
-      _myUserId = user.id;
-
-      if (user.agentPath != config.agent.hostpath) {
-        throw `Error: User ${config.agent.username} already exists in the database with a different config path (${user.agentPath})`;
-      }
-
-      if (
-        config.agent.leadAgent &&
-        config.agent.leadAgent != user.leadUsername
-      ) {
-        throw `Error: User ${config.agent.username} already exists in the database with a different lead agent (${user.leadUsername})`;
-      }
-    }
-  });
-}
-
-export async function handleCommand(args: string): Promise<{content: string, pauseSeconds?: number}> {
+export async function handleCommand(
+  args: string,
+): Promise<{ content: string; pauseSeconds?: number }> {
   const argParams = args.split(" ");
   let content: string;
   let pauseSeconds: number | undefined;
 
   if (!argParams[0]) {
-    if (simpleMode) {
-      argParams[0] = "help";
-    } else {
-      content = await listThreads();
-      return { content };
-    }
+    argParams[0] = "help";
   }
 
   const tokenMaxNote = config.agent.mailMessageTokenMax
@@ -148,7 +40,7 @@ export async function handleCommand(args: string): Promise<{content: string, pau
 * Attachments are not supported, use file paths to refence files in emails as all users are on the same machine`;
       } else {
         content = `llmail <command>
-  no params: List all active threads
+  list: List all active threads
   users: Get list of users on the system
   send "<users>" "subject" "message": Send a new mail, starting a new thread
   wait <seconds>: Pause the session until a new mail message is received
@@ -160,6 +52,10 @@ export async function handleCommand(args: string): Promise<{content: string, pau
       break;
     }
 
+    case "list": {
+      content = await listThreads();
+      break;
+    }
     case "send": {
       const newParams = argParams.slice(1).join(" ").split('"');
 
@@ -176,7 +72,9 @@ export async function handleCommand(args: string): Promise<{content: string, pau
     }
 
     case "wait": {
-      pauseSeconds = argParams[1] ? parseInt(argParams[1]) : config.shellCommand.timeoutSeconds;
+      pauseSeconds = argParams[1]
+        ? parseInt(argParams[1])
+        : config.shellCommand.maxTimeoutSeconds;
 
       content = `Waiting ${pauseSeconds} seconds for new mail messages...`;
       break;
@@ -220,7 +118,7 @@ export async function handleCommand(args: string): Promise<{content: string, pau
     }
 
     // Debug level 'secret command'. Don't let the LLM know about this
-    case "reset": {
+    /*case "reset": {
       const hostPath = _dbFilePath.toHostPath();
       if (fs.existsSync(hostPath)) {
         fs.unlinkSync(hostPath);
@@ -228,11 +126,13 @@ export async function handleCommand(args: string): Promise<{content: string, pau
       await init();
       content = "llmail database reset";
       break;
-    }
+    }*/
 
     default:
       const helpResponse = await handleCommand("help");
-      content = "Error, unknown command. See valid commands below:\n" + helpResponse.content;
+      content =
+        "Error, unknown command. See valid commands below:\n" +
+        helpResponse.content;
       break;
   }
 
@@ -249,7 +149,7 @@ export async function getUnreadThreads(): Promise<UnreadThread[]> {
       `SELECT tm.threadId, tm.newMsgId
         FROM ThreadMembers tm
         WHERE tm.userId = ? AND tm.newMsgId >= 0 AND tm.archived = 0`,
-      [_myUserId],
+      [myUserId],
     );
 
     return updatedThreads;
@@ -273,7 +173,7 @@ async function listThreads(): Promise<string> {
         WHERE member.userId = ? AND member.archived = 0
         GROUP BY t.id, t.subject
         ORDER BY max(msg.date)`,
-      [_myUserId],
+      [myUserId],
     );
 
     // Show threads as a table
@@ -325,7 +225,7 @@ export async function newThread(
       if (user) {
         await db.run(
           "INSERT INTO ThreadMembers (threadId, userId, newMsgId) VALUES (?, ?, ?)",
-          [thread.lastID, user.id, user.id === _myUserId ? -1 : 0],
+          [thread.lastID, user.id, user.id === myUserId ? -1 : 0],
         );
       } else {
         await db.run("ROLLBACK");
@@ -336,7 +236,7 @@ export async function newThread(
     // Add message
     await db.run(
       "INSERT INTO ThreadMessages (threadId, userId, message, date) VALUES (?, ?, ?, ?)",
-      [thread.lastID, _myUserId, message, new Date().toISOString()],
+      [thread.lastID, myUserId, message, new Date().toISOString()],
     );
 
     await db.run("COMMIT");
@@ -368,7 +268,7 @@ export async function readThread(
     }
 
     const messages = await db.all(
-      `SELECT u.username, tm.date, tm.message
+      `SELECT u.username, u.title, tm.date, tm.message
          FROM ThreadMessages tm
          JOIN Users u ON tm.userId = u.id
          WHERE tm.threadId = ? ${unreadFilter}
@@ -390,6 +290,7 @@ export async function readThread(
         threadMessages +=
           `Subject: ${thread.subject}\n` +
           `From: ${message.username}\n` +
+          `Title: ${message.title}\n` +
           `To: ${toMembers}\n` +
           `Date: ${new Date(message.date).toLocaleString()}\n` +
           `Message:\n` +
@@ -428,7 +329,7 @@ export async function markAsRead(threadId: number) {
       `UPDATE ThreadMembers 
         SET newMsgId = -1 
         WHERE threadId = ? AND userId = ?`,
-      [threadId, _myUserId],
+      [threadId, myUserId],
     );
   });
 }
@@ -474,7 +375,7 @@ async function listUsers() {
 
     return table(
       [
-        ["Username", "Title", ""],
+        ["Username", "Title", "Relation"],
         ...userList.map((ul) => [ul.username, ul.title, ul.extra || ""]),
       ],
       { hsep: " | " },
@@ -509,7 +410,7 @@ Consider archiving this thread and starting a new one.`;
 
     const insertedMessage = await db.run(
       "INSERT INTO ThreadMessages (threadId, userId, message, date) VALUES (?, ?, ?, ?)",
-      [thread.id, _myUserId, message, new Date().toISOString()],
+      [thread.id, myUserId, message, new Date().toISOString()],
     );
 
     // Mark thread has new message only if it hasnt already been marked
@@ -517,7 +418,7 @@ Consider archiving this thread and starting a new one.`;
       `UPDATE ThreadMembers 
         SET newMsgId = ?, archived = 0  
         WHERE newMsgId = -1 AND threadId = ? AND userId != ?`,
-      [insertedMessage.lastID, thread.id, _myUserId],
+      [insertedMessage.lastID, thread.id, myUserId],
     );
 
     // Update token total
@@ -552,7 +453,7 @@ async function archiveThreads(threadIds: number[]) {
       `UPDATE ThreadMembers 
         SET archived = 1 
         WHERE threadId IN (${threadIds.join(",")}) AND userId = ?`,
-      [_myUserId],
+      [myUserId],
     );
 
     return `Threads ${threadIds.join(",")} archived`;
@@ -590,10 +491,6 @@ function validateMsgTokenCount(message: string) {
   }
 
   return msgTokenCount;
-}
-
-async function usingDatabase<T>(run: (db: Database) => Promise<T>): Promise<T> {
-  return dbUtils.usingDatabase(_dbFilePath, run);
 }
 
 export async function hasMultipleUsers(): Promise<boolean> {
