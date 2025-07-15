@@ -1,5 +1,7 @@
 export enum LlmRole {
+  /** The LLM: ContentSource.LlmPromptResponse || source == ContentSource.LLM */
   Assistant = "assistant",
+  /** The Console: source == ContentSource.ConsolePrompt || source == ContentSource.Console */
   User = "user",
   /** Not supported by Google API */
   System = "system",

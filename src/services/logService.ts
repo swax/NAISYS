@@ -14,9 +14,9 @@ const _userLogFilePath = new NaisysPath(
   `${config.websiteFolder || config.naisysFolder}/logs/${config.agent.username}-log.html`,
 );
 
-await init();
+init();
 
-async function init() {
+function init() {
   initLogFile(_combinedLogFilePath);
   initLogFile(_userLogFilePath);
 }
@@ -53,9 +53,10 @@ function initLogFile(filePath: NaisysPath) {
 export async function write(message: LlmMessage) {
   const insertedId = await usingDatabase(async (db) => {
     const inserted = await db.run(
-      "INSERT INTO ContextLog (username, source, type, message, date) VALUES (?, ?, ?, ?, ?)",
+      "INSERT INTO ContextLog (username, role, source, type, message, date) VALUES (?, ?, ?, ?, ?, ?)",
       config.agent.username,
-      roleToSource(message.role),
+      toSimpleRole(message.role),
+      message.source?.toString() || "",
       message.type || "",
       message.content,
       new Date().toISOString(),
@@ -71,7 +72,7 @@ export async function write(message: LlmMessage) {
 }
 
 function appendToLogFile(filepath: NaisysPath, message: LlmMessage) {
-  const source = roleToSource(message.role);
+  const source = toSimpleRole(message.role);
 
   fs.appendFileSync(
     filepath.toHostPath(),
@@ -86,7 +87,7 @@ function appendToLogFile(filepath: NaisysPath, message: LlmMessage) {
   );
 }
 
-export function roleToSource(role: LlmRole) {
+export function toSimpleRole(role: LlmRole) {
   switch (role) {
     case LlmRole.Assistant:
       return "LLM";

@@ -38,7 +38,7 @@ export async function handleCommand(args: string): Promise<string> {
 
   pathService.ensureFileDirExists(filepath);
 
-  output.comment(`Generating image with ${config.agent.imageModel}...`);
+  output.commentAndLog(`Generating image with ${config.agent.imageModel}...`);
 
   const openai = new OpenAI();
 

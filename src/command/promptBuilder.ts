@@ -166,7 +166,7 @@ export function getInput(
           // Catch and log errors, but don't break the interval on hopefully an intermittent error
           .catch((e) => {
             if (firstError) {
-              output.error(`Mail interval check error: ${e}`);
+              output.errorAndLog(`Mail interval check error: ${e}`);
               firstError = false;
             }
           });
