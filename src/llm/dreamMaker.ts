@@ -27,7 +27,7 @@ export async function goodmorning(): Promise<string> {
 }
 
 export async function goodnight(): Promise<string> {
-  output.comment("Wrapping up the session...");
+  output.commentAndLog("Wrapping up the session...");
 
   const dream = await runDreamSequence();
 

@@ -1,8 +1,8 @@
 import * as config from "../config.js";
 import * as workspaces from "../features/workspaces.js";
+import * as logService from "../services/logService.js";
 import * as inputMode from "../utils/inputMode.js";
 import { InputMode } from "../utils/inputMode.js";
-import * as logService from "../services/logService.js";
 import * as output from "../utils/output.js";
 import { OutputColor } from "../utils/output.js";
 import * as utilities from "../utils/utilities.js";
@@ -101,7 +101,7 @@ export function printContext() {
   content += `\n${systemMessage}`;
 
   getCombinedMessages().forEach((message) => {
-    content += `\n\n------ ${logService.roleToSource(message.role)} ------`;
+    content += `\n\n------ ${logService.toSimpleRole(message.role)} ------`;
     content += `\n${message.content}`;
   });
 

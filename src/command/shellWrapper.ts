@@ -72,7 +72,7 @@ async function ensureOpen() {
 
   // Init users home dir on first run, on shell crash/rerun go back to the current path
   if (!_currentPath) {
-    output.comment("NEW SHELL OPENED. PID: " + pid);
+    output.commentAndLog("NEW SHELL OPENED. PID: " + pid);
 
     errorIfNotEmpty(
       await executeCommand(
@@ -85,7 +85,7 @@ async function ensureOpen() {
       ),
     );
   } else {
-    output.comment("SHELL RESTORED. PID: " + pid);
+    output.commentAndLog("SHELL RESTORED. PID: " + pid);
 
     errorIfNotEmpty(await executeCommand("cd " + _currentPath));
   }
@@ -99,7 +99,7 @@ async function ensureOpen() {
 /** Basically don't show anything in the console unless there is an error */
 function errorIfNotEmpty(response: string) {
   if (response) {
-    output.error(response);
+    output.errorAndLog(response);
   }
 }
 
@@ -112,14 +112,14 @@ function processOutput(rawDataStr: Buffer, eventType: ShellEvent, pid: number) {
   let dataStr = stripAnsi(rawDataStr.toString());
 
   if (pid != _currentProcessId) {
-    output.comment(
+    output.commentAndLog(
       `Ignoring '${eventType}' from old shell process ${pid}: ` + dataStr,
     );
     return;
   }
 
   if (!_resolveCurrentCommand) {
-    output.comment(
+    output.commentAndLog(
       `Ignoring '${eventType}' from process ${pid} with no resolve handler: ` +
         dataStr,
     );
@@ -127,7 +127,7 @@ function processOutput(rawDataStr: Buffer, eventType: ShellEvent, pid: number) {
   }
 
   if (eventType === ShellEvent.Exit) {
-    output.error(`SHELL EXIT. PID: ${_process?.pid}, CODE: ${rawDataStr}`);
+    output.errorAndLog(`SHELL EXIT. PID: ${_process?.pid}, CODE: ${rawDataStr}`);
 
     let finalOutput =
       _currentBufferType == "alternate"
@@ -161,7 +161,7 @@ function processOutput(rawDataStr: Buffer, eventType: ShellEvent, pid: number) {
 
     // If it does happen somehow, log it so I can figure out why/how and what to do about it
     if (_currentBufferType == "alternate") {
-      output.error("UNEXPECTED END DELIMITER IN ALTERNATE BUFFER: " + dataStr);
+      output.errorAndLog("UNEXPECTED END DELIMITER IN ALTERNATE BUFFER: " + dataStr);
     }
   }
 
@@ -347,11 +347,11 @@ function returnControlToNaisys() {
 
 function resetShell(pid: number) {
   if (!_process || _process.pid != pid) {
-    output.comment("Ignoring timeout for old shell process " + pid);
+    output.commentAndLog("Ignoring timeout for old shell process " + pid);
     return false;
   }
 
-  output.error(`KILL-TREE SIGNAL SENT TO PID: ${_process.pid}`);
+  output.errorAndLog(`KILL-TREE SIGNAL SENT TO PID: ${_process.pid}`);
 
   treeKill(pid, "SIGKILL");
 

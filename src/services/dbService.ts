@@ -1,23 +1,23 @@
 import * as fs from "fs";
 import { Database, open } from "sqlite";
 import sqlite3 from "sqlite3";
+import * as config from "../config.js";
 import * as pathService from "./pathService.js";
 import { NaisysPath } from "./pathService.js";
-import * as config from "../config.js";
 
 export let myUserId = -1;
 
 export async function initDatabase(filepath: NaisysPath) {
   pathService.ensureFileDirExists(filepath);
-  
+
   const hostPath = filepath.toHostPath();
 
   const dbExists = fs.existsSync(hostPath);
 
   if (!dbExists) {
-    createDatabase(hostPath);
+    await createDatabase(hostPath);
   }
-  
+
   await usingDatabase(async (db) => {
     // If user is not in the db, add them
     const user = await db.get("SELECT * FROM Users WHERE username = ?", [
@@ -66,20 +66,20 @@ export async function initDatabase(filepath: NaisysPath) {
 
       // Update user title in database
       if (user.title !== config.agent.title) {
-        await db.run(
-          "UPDATE Users SET title = ? WHERE id = ?",
-          [config.agent.title, myUserId],
-        );
+        await db.run("UPDATE Users SET title = ? WHERE id = ?", [
+          config.agent.title,
+          myUserId,
+        ]);
       }
     }
   });
-  
+
   // Start the lastActive updater after user is initialized
   setInterval(updateLastActive, 2000);
 }
 
 async function createDatabase(hostPath: string) {
-    const db = await open({
+  const db = await open({
     filename: hostPath,
     driver: sqlite3.Database,
     mode: sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE,
@@ -89,13 +89,13 @@ async function createDatabase(hostPath: string) {
 
   await usingDatabase(async (db) => {
     const createTables = [
+      createUserTable,
       createCostsTable,
       createContextLogTable,
       createDreamLogTable,
       createThreadsTable,
       createThreadMembersTable,
       createThreadMessagesTable,
-      createUserTable,
     ];
 
     for (const createTable of createTables) {
@@ -115,7 +115,7 @@ export async function openDatabase(filepath: NaisysPath): Promise<Database> {
 
   // Turn foreign key constraints on
   await db.exec("PRAGMA foreign_keys = ON");
-  
+
   // Enable WAL mode for better concurrency
   await db.exec("PRAGMA journal_mode = WAL");
 
@@ -124,13 +124,13 @@ export async function openDatabase(filepath: NaisysPath): Promise<Database> {
 
 export async function updateLastActive(): Promise<void> {
   if (myUserId === -1) return;
-  
+
   try {
     await usingDatabase(async (db) => {
-      await db.run(
-        "UPDATE Users SET lastActive = ? WHERE id = ?",
-        [new Date().toISOString(), myUserId]
-      );
+      await db.run("UPDATE Users SET lastActive = ? WHERE id = ?", [
+        new Date().toISOString(),
+        myUserId,
+      ]);
     });
   } catch (error) {
     console.error("Error updating lastActive:", error);
@@ -211,6 +211,7 @@ export const createDreamLogTable = `CREATE TABLE DreamLog (
 export const createContextLogTable = `CREATE TABLE ContextLog (
     id INTEGER PRIMARY KEY, 
     username TEXT NOT NULL,
+    role TEXT NOT NULL,
     source TEXT NOT NULL,
     type TEXT NOT NULL,
     message TEXT NOT NULL,
