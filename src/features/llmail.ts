@@ -1,7 +1,7 @@
 import { Database } from "sqlite";
 import table from "text-table";
 import * as config from "../config.js";
-import { usingDatabase, myUserId } from "../services/dbService.js";
+import { myUserId, usingDatabase } from "../services/dbService.js";
 import * as utilities from "../utils/utilities.js";
 
 /** Threading is not currently used in `simpleMode` so this doesn't matter */
@@ -341,6 +341,8 @@ async function listUsers() {
       title: string;
       extra: string;
       leadUsername?: string;
+      lastActive: string;
+      active?: boolean;
     }[] = [];
 
     // If this is a subagent, just allow it to communicate with its lead
@@ -371,12 +373,20 @@ async function listUsers() {
     userList = userList.map((u) => ({
       ...u,
       extra: u.username == config.agent.username ? "Me" : u.extra,
+      active: u.lastActive
+        ? new Date(u.lastActive).getTime() > Date.now() - 5 * 1000 // 5 seconds
+        : false,
     }));
 
     return table(
       [
-        ["Username", "Title", "Relation"],
-        ...userList.map((ul) => [ul.username, ul.title, ul.extra || ""]),
+        ["Username", "Title", "Relation", "Status"],
+        ...userList.map((ul) => [
+          ul.username,
+          ul.title,
+          ul.extra || "",
+          ul.active ? "Online" : "Offline",
+        ]),
       ],
       { hsep: " | " },
     );

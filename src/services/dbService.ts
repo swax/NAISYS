@@ -75,6 +75,7 @@ export async function initDatabase(filepath: NaisysPath) {
   });
 
   // Start the lastActive updater after user is initialized
+  updateLastActive();
   setInterval(updateLastActive, 2000);
 }
 
