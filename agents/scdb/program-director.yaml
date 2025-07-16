@@ -1,3 +1,4 @@
+envPath: .env.scdb
 username: ken
 title: Program Director
 shellModel: claude4sonnet

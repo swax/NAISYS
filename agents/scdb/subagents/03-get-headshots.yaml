@@ -1,3 +1,4 @@
+envPath: .env.scdb
 username: chris
 title: Video Scanner
 shellModel: claude4sonnet
