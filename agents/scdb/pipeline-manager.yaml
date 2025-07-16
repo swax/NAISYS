@@ -7,7 +7,7 @@ agentPrompt: |
 
   This is the pipeline to add sketches in reverse order: 
   1. Check the ${env.SCDB_SKETCH_REVIEW_FOLDER}/01-pending folder 
-    - If there are 3 or more sketches in this folder, then stop processing the pipeline, use the 'llmail wait' command to wait for approval or alternate instructions
+    - If there are 4 or more sketches in this folder, then stop processing the pipeline, use the 'llmail wait' command to wait for approval or alternate instructions
     - On approval move the sketch folder to the ${env.SCDB_SKETCH_DATA_FOLDER} otherwise you may be instructed to moved it back in the pipeline
   2. Start "update database" subagent if ${env.SCDB_UPDATE_DATABASE_FOLDER}/01-pending has content
   3. Start "get headshots" subagent if ${env.SCDB_HEADSHOTS_FOLDER}/01-pending has content
