@@ -1,3 +1,4 @@
+envPath: .env.scdb
 username: buck
 title: Content Researcher
 shellModel: claude4sonnet

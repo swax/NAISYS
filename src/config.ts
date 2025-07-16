@@ -11,8 +11,6 @@ import { NaisysPath } from "./services/pathService.js";
 
 program.argument("<agent-path>", "Path to agent configuration file").parse();
 
-dotenv.config();
-
 /** The system name that shows after the @ in the command prompt */
 export const hostname = "naisys";
 
@@ -25,6 +23,9 @@ export const shellCommand = {
 };
 
 export const agent = loadAgentConfig();
+
+const envPath = agent.envPath || '.env';
+dotenv.config({ path: envPath });
 
 /** Web pages loaded with llmynx will be reduced down to around this number of tokens */
 export const webTokenMax = 3000;
@@ -82,6 +83,9 @@ export interface AgentConfig {
   wakeOnMessage: boolean;
   commandProtection: CommandProtection;
   initialCommands: string[];
+
+  /** Custom or non-standard env path */
+  envPath?: string;
 
   /** The max number of subagents allowed to be started and managed. Costs by the subagent are applied to the spend limit. */
   subagentMax?: number;
