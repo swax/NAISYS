@@ -19,7 +19,7 @@ agentPrompt: |
     - Title of the sketch
     - Short description
   5. For each sketch create a folder in ${env.SCDB_DETAILS_FOLDER}/01-pending/<folder_name> 
-    - The folder_name should be in the format <show>_<year>_<sketch title>
+    - The folder_name should be snake case in the format <show>_<year>_<sketch title>
     - In that folder create a summary.txt with the basic information you found
   6. Move the file to ${env.SCDB_FIND_SKETCHES_FOLDER}/03-completed
     - If the sketch information couldn't be found then move the file to ${env.SCDB_FIND_SKETCHES_FOLDER}/99-failed

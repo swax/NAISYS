@@ -82,6 +82,9 @@ async function createDatabase(hostPath: string) {
     mode: sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE,
   });
 
+  // Enable WAL mode for better concurrency
+  await db.exec("PRAGMA journal_mode = WAL");
+
   await db.close();
 
   await usingDatabase(async (db) => {
@@ -126,9 +129,6 @@ export async function openDatabase(filepath: NaisysPath): Promise<Database> {
 
   // Turn foreign key constraints on
   await db.exec("PRAGMA foreign_keys = ON");
-
-  // Enable WAL mode for better concurrency
-  await db.exec("PRAGMA journal_mode = WAL");
 
   return db;
 }

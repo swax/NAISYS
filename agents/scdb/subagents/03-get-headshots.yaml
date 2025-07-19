@@ -15,7 +15,7 @@ agentPrompt: |
      - Show name
      - Names of the *actors* in the sketch, not the people they may be impersonating.
   4. Run the headshot detection script using this command:
-     `cd ${env.STARMAPR_FOLDER} && python3 run_headshot_detection.py "VIDEO_URL" --show "SHOW_NAME" --actors "ACTOR1"`
+     `cd ${env.STARMAPR_FOLDER} && python3 run_headshot_detection.py "VIDEO_URL" --show "SHOW_NAME" --actors "ACTOR_NAME"`
      - If the script fails on video download and the details has more video URLs then try the next video URL
      - This script may take several minutes to complete
      - Do one actor at a time
@@ -26,16 +26,17 @@ agentPrompt: |
      - The headshot images are named <actor>_<match>_<position>
      - Pick the best headshot for each actor with the primarily the highest match and secondarily a position closer to 5000
      - Copy best headshot images to the processing folder alongside the details.txt file
-     - If successful (headshots generated): 
-  6. If no headshots were found
+  6. Write a small summary of what headshots could and could not be found
+     - Name it headshots.txt and place it alongside the details.txt file
+  7. If no headshots were found
      - Move the folder from processing to ${env.SCDB_HEADSHOTS_FOLDER}/99-failed/<folder_name>
      - Write a fail.txt file in folder_name with the reason for failure
-  7. If headshots were found 
+  8. If headshots were found
      - Move the folder to ${env.SCDB_UPDATE_DATABASE_FOLDER}/01-pending/<folder_name>
-  8. In the base ${env.STARMAPR_FOLDER}/05_videos/<video url> there should be a single image that can we used as the image for the sketch
+  9. In the base ${env.STARMAPR_FOLDER}/05_videos/<video url> there should be a single image that can we used as the image for the sketch
      - Copy that image to the processing folder alongside the details.txt file, name it sketch_image
      - If an image is not present then pick an image randomly from the frames folder
-  9. Then call the completetask command
+  10. Call the completetask command
 
   Important: Be patient with the headshot detection script - it processes video frames and can take 3-10 minutes depending on video length.
   
