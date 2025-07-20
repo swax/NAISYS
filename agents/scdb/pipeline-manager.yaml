@@ -7,9 +7,11 @@ agentPrompt: |
 
   This is the priority order in which you should process the multi stage work queue of sketches: 
   1. Check the ${env.SCDB_REVIEW_FOLDER}/01-pending folder 
-    - If there are 4 or more sketches in this folder, then stop processing the pipeline, use the 'llmail wait' command to wait for review from the Program Director
-    - When a review is received from the Director, move the sketch folder to the ${env.SCDB_APPROVAL_FOLDER}/01-pending/<folder_name> folder
-    - Add a review.txt in the folder with the review notes
+    - If there are 5 or more sketches in this folder, then stop processing the pipeline, use the 'llmail wait' command to wait for review from the Program Director
+    - If an approval is received from the Director, move the sketch folder to the ${env.SCDB_APPROVAL_FOLDER}/01-pending/<folder_name> folder
+    - If the sketch is *not* approved then add a notes.txt file in the folder with the notes from the Director
+      - Reroute the sketch to the appropriate pending folder as specified
+      - Send the agent in charge of that pending folder a mail of the sketch needing priority reprocessing
   2. Start "approval processor" subagent if ${env.SCDB_APPROVAL_FOLDER}/01-pending has content
   3. Start "update database" subagent if ${env.SCDB_UPDATE_DATABASE_FOLDER}/01-pending has content
   4. Start "get headshots" subagent if ${env.SCDB_HEADSHOTS_FOLDER}/01-pending has content
@@ -25,6 +27,7 @@ agentPrompt: |
   Special instructions may come in from the Program Director. If that happens prioritize those tasks before returning to the pipeline.
     - If there is a subagent already running wait for it to finish first unless directed otherwise
     - In this case you may need to find a particular sketch folder and move it to the appropriate pending folder for the subagent to process
+      - Make sure to communicate with the subagent if there is a special consideration they need to address
     - Sketches not currently active in the pipeline can be found in the ${env.SCDB_DATA_FOLDER} folder
 
 subagentMax: 1
@@ -32,7 +35,7 @@ mailEnabled: true,
 wakeOnMessage: true,
 tokenMax: 20000
 debugPauseSeconds: 3
-spendLimitDollars: 10.00
+spendLimitDollars: 20.00
 initialCommands:
   - llmail help
   - llmail users

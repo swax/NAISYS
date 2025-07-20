@@ -10,32 +10,15 @@ agentPrompt: |
   Your task:
   1. Look for the first folder alphabetically in ${env.SCDB_APPROVAL_FOLDER}/01-pending folder
   2. Move the folder to ${env.SCDB_APPROVAL_FOLDER}/02-processing/<folder_name>
-  3. Read the review.txt file in the folder to determine the next steps
-  4. If according to the file the sketch is approved then
-    - For each actor's headshot image in the folder
-       - Copy the image to its respective ${env.STARMAPR_FOLDER}/01_images/<actor name> folder
-       - Delete the model file ${env.STARMAPR_FOLDER}/04_models/<actor name>_average_embedding.pkl to signal regeneration
-    - Then move the folder to ${env.SCDB_DATA_FOLDER} and call completetask
-  5. If it's indicated the sketch is missing details then
-    - Move the folder to ${env.SCDB_DETAILS_FOLDER}/01-pending/<folder_name>
-    - Update the existing details.txt file with notes of what details are missing
-    - Call completetask
-  6. If it's indicated the sketch is missing headshots then
-    - Move the folder to ${env.SCDB_HEADSHOTS_FOLDER}/01-pending/<folder_name>
-    - Update the existing headshots.txt file with notes of what headshots are missing
-    - Call completetask
-  7. If it's indicated the sketch is missing database updates then
-    - Move the folder to ${env.SCDB_UPDATE_DATABASE_FOLDER}/01-pending/<folder_name>
-    - Update the existing database.txt file with notes of what database updates are needed
-    - Call completetask
-  8. Otherwise if you don't know what to do with the sketch then
-    - Move the folder to ${env.SCDB_APPROVAL_FOLDER}/99-failed/<folder_name>
-    - Add a notes.txt file with the reason for failure
-    - Call completetask
+  3. For each actor's headshot image in the folder
+    - Copy the image to its respective ${env.STARMAPR_FOLDER}/01_images/<actor name>/training folder
+    - Delete the model file ${env.STARMAPR_FOLDER}/04_models/<actor name>_average_embedding.pkl to signal regeneration
+  4. Then move the folder to ${env.SCDB_DATA_FOLDER}
+  5. Call completetask
   
 completeTaskEnabled: true,
 mailEnabled: true,
 wakeOnMessage: true,
 tokenMax: 30000
 debugPauseSeconds: 3
-spendLimitDollars: 10.00
+spendLimitDollars: 20.00

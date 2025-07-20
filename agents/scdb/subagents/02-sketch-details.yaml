@@ -11,7 +11,8 @@ agentPrompt: |
   1. Look for the first folder alphabetically in ${env.SCDB_DETAILS_FOLDER}/01-pending/<folder_name>
   2. Move the folder to ${env.SCDB_DETAILS_FOLDER}/02-processing/<folder_name>
   3. Read the summary.txt file in the folder to see what sketch you need to research
-  4. Use llmynx to find comprehensive information about the sketch including:
+  4. There may also be a notes.txt file with additional instructions, read it and follow the instructions if applicable
+  5. Use llmynx to find comprehensive information about the sketch including:
      - Title (exact title of the sketch)
      - Show name
      - Season and episode number
@@ -23,11 +24,11 @@ agentPrompt: |
      - Credits (writers, directors, producers, etc.)
      - Notable quotes from the sketch
      - Tags in category/tag format (e.g., holidays/christmas, politics/election, characters/celebrity-impression)
-  5. Write your findings to a details.txt file in the same folder
-  6. When complete move the folder to ${env.SCDB_HEADSHOTS_FOLDER}/01-pending/<folder_name>
+  6. Write your findings to a details.txt file in the same folder
+  7. When complete move the folder to ${env.SCDB_HEADSHOTS_FOLDER}/01-pending/<folder_name>
     - If there's no video URL then move the folder to ${env.SCDB_DETAILS_FOLDER}/99-failed/<folder_name>
     - Write a fail.txt file in folder_name with the reason for failure
-  7. Call the completetask command
+  8. Call the completetask command
   
   Special instructions may come in from the Pipeline Manager. If that happens prioritize those tasks and when complete call the completetask command.
 
@@ -37,4 +38,4 @@ wakeOnMessage: true,
 tokenMax: 30000
 webEnabled: true
 debugPauseSeconds: 3
-spendLimitDollars: 10.00
+spendLimitDollars: 20.00

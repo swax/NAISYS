@@ -11,6 +11,6 @@ mailEnabled: true,
 wakeOnMessage: true,
 tokenMax: 20000
 debugPauseSeconds: 0
-spendLimitDollars: 10.00
+spendLimitDollars: 20.00
 initialCommands:
   - llmail users
