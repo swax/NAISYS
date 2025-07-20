@@ -33,4 +33,4 @@ wakeOnMessage: true,
 tokenMax: 30000
 webEnabled: true
 debugPauseSeconds: 3
-spendLimitDollars: 10.00
+spendLimitDollars: 20.00

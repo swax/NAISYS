@@ -138,64 +138,7 @@ initialCommands:
   - If a yaml file is passed, naisys will start a single agent
   - If a directory is passed, naisys will start a tmux session with the screen split for each agent
 
-#### Creating a persistent agent run website (on Digital Ocean for example)
-
-- Create new VM using the [LAMP stack droplet template](https://marketplace.digitalocean.com/apps/lamp)
-- Login to the droplet using the web console
-- Run `apt install npm`
-- Install `nvm` using the `curl` url from these [instructions](https://github.com/nvm-sh/nvm?tab=readme-ov-file#installing-and-updating)
-  - Run `nvm install/use 20` to set node version to 20
-- Follow the general install instructions above
-
 ## Using NAISYS
-
-#### Testing with tmux (for Development)
-
-For development and testing purposes, you can run NAISYS in a tmux session and send commands to it programmatically:
-
-1. **Use the tmux wrapper script:**
-   ```bash
-   # Start the agent in a tmux session
-   ./naisys-tmux.sh start
-   
-   # Send a talk command and wait for completion
-   ./naisys-tmux.sh talk "create a file called hello.txt with Hello World"
-   
-   # Send any command manually
-   ./naisys-tmux.sh send "comment 'testing the agent'"
-   ./naisys-tmux.sh trigger  # Send enter to execute
-   
-   # Get current output
-   ./naisys-tmux.sh output
-   
-   # Attach to session for manual interaction
-   ./naisys-tmux.sh attach
-   
-   # Stop the session
-   ./naisys-tmux.sh stop
-   ```
-
-2. **How it works:**
-   - The script starts NAISYS in a detached tmux session
-   - You can send `talk` commands to communicate with the agent
-   - The agent receives messages as if from `admin@naisys`
-   - A carriage return triggers the agent to switch from debug to LLM mode
-   - The script waits for the command prompt to return, indicating completion
-
-3. **Manual workflow:**
-   ```bash
-   # Start session
-   tmux new-session -d -s naisys-agent 'npm run agent:assistant'
-   
-   # Send commands
-   tmux send-keys -t naisys-agent 'talk "your message here"' Enter
-   tmux send-keys -t naisys-agent Enter  # Trigger agent execution
-   
-   # View output
-   tmux capture-pane -t naisys-agent -p
-   ```
-
-This approach is useful for automated testing, CI/CD integration, or when you want to control the agent programmatically while it runs in the background.
 
 #### The Basics
 
@@ -266,14 +209,8 @@ This approach is useful for automated testing, CI/CD integration, or when you wa
   - `brew install coreutils`
   - `brew install lynx`
 
-#### Using NAISYS for a website
-
-- Many frameworks come with their own dev server
-  - PHP for example can start a server with `php -S localhost:8000 -d display_errors=On -d error_reporting=E_ALL`
-- Start the server and put the URL in the `.env` file
-
 ## Changelog
-
+- 1.7: Prompt cachinging, llmynx pagination, complete task command
 - 1.6: Support for long running shell commands and full screen terminal output
 - 1.5: Allow agents to start their own parallel `subagents`
 - 1.4: `genimg` command for generating images
