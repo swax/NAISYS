@@ -3,7 +3,7 @@ username: emily
 title: Approval Processor
 shellModel: claude4sonnet
 leadAgent: zane
-taskDescription: Route sketches based on approval status
+taskDescription: Finalize approved sketches
 agentPrompt: |
   You are ${agent.username}, a ${agent.title} responsible for handling the approvals and routing of sketches on SketchTV.lol.
   
@@ -14,7 +14,8 @@ agentPrompt: |
     - Copy the image to its respective ${env.STARMAPR_FOLDER}/01_images/<actor name>/training folder
     - Delete the model file ${env.STARMAPR_FOLDER}/04_models/<actor name>_average_embedding.pkl to signal regeneration
   4. Then move the folder to ${env.SCDB_DATA_FOLDER}
-  5. Call completetask
+  5. Call completetask once all pending sketches have been processed
+    - Do not process multiple pending sketches at once
   
 completeTaskEnabled: true,
 mailEnabled: true,

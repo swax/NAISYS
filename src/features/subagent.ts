@@ -5,14 +5,14 @@ import path from "path";
 import table from "text-table";
 import * as config from "../config.js";
 import { AgentConfig } from "../config.js";
+import * as pathService from "../services/pathService.js";
+import { NaisysPath } from "../services/pathService.js";
 import { agentNames } from "../utils/agentNames.js";
 import * as inputMode from "../utils/inputMode.js";
 import { InputMode } from "../utils/inputMode.js";
 import * as output from "../utils/output.js";
 import { OutputColor } from "../utils/output.js";
-import * as pathService from "../services/pathService.js";
-import { NaisysPath } from "../services/pathService.js";
-import { getTokenCount, shuffle, getCleanEnv } from "../utils/utilities.js";
+import { getCleanEnv, getTokenCount, shuffle } from "../utils/utilities.js";
 import * as llmail from "./llmail.js";
 
 interface Subagent {
@@ -74,9 +74,9 @@ export async function handleCommand(args: string): Promise<string> {
     case "help": {
       let helpOutput = `subagent <command>
   list: Lists all subagents
-  create "<agent title>" "<agent task and guidance>": Creates a new agent. Treat it like a new hire. Include as much detail and guidace as possible.
+  create "<agent title>" "<description>": Creates a new agent. Include as much detail in the description as possible.
   stop <id>: Stops the agent with the given task id
-  start <id>: Starts a stopped agent with the given task id`;
+  start <id> <description>: Starts an existing agent with the given task id and description of the task to perform`;
 
       if (inputMode.current == InputMode.Debug) {
         helpOutput += `\n  flush <id>: Debug only command to show the agent's context log`;
@@ -120,7 +120,9 @@ export async function handleCommand(args: string): Promise<string> {
     }
     case "start": {
       const subagentId = parseInt(argParams[1]);
-      return await _startAgent(subagentId);
+      const taskDescription = args.split('"')[1];
+
+      return await _startAgent(subagentId, taskDescription);
     }
     case "stop": {
       const subagentId = parseInt(argParams[1]);
@@ -187,11 +189,12 @@ async function _createAgent(title: string, taskDescription: string) {
     agentPrompt:
       `You are \${agent.username} a \${agent.title} with the job of helping out the \${agent.leadAgent} with what they want to do.\n` +
       `Task Description: \${agent.taskDescription}\n` +
-      `Perform the above task and/or wait for messages from \${agent.leadAgent} and respond to them.`,
+      `Perform the above task and/or wait for messages from \${agent.leadAgent} and respond to them.` +
+      `When completed use the 'completeTask' command to signal that you are done.`,
     wakeOnMessage: true,
     completeTaskEnabled: true,
     leadAgent: config.agent.username,
-    taskDescription, 
+    taskDescription,
   };
 
   if (config.mailEnabled) {
@@ -225,10 +228,14 @@ async function _createAgent(title: string, taskDescription: string) {
     tokensSpent: 0,
   });
 
-  return "Subagent Created\n" + await _startAgent(id);
+  return "Subagent Created\n" + (await _startAgent(id, taskDescription));
 }
 
-async function _startAgent(id: number) {
+async function _startAgent(id: number, taskDescription: string) {
+  if (!taskDescription) {
+    throw "Task description is required to start a subagent";
+  }
+
   const subagent = _subagents.find((p) => p.id === id);
   if (!subagent) {
     throw `Subagent ${id} not found`;
@@ -257,10 +264,13 @@ async function _startAgent(id: number) {
     },
   );
 
+  // Run async so that the process spawn handler is setup immediately otherwise it'll be missed
+  void llmail.newThread([subagent.agentName], "Your Task", taskDescription);
+
   // Wait 5 seconds for startup errors, then return success
   const startupPromise = new Promise<string>((resolve) => {
     let hasSpawned = false;
-    
+
     const timeout = setTimeout(() => {
       if (hasSpawned && subagent.status === "running") {
         let response = `Subagent ID: ${id} Started`;
@@ -338,9 +348,7 @@ function _debugFlushContext(subagentId: number) {
 }
 
 function _getSubagentDir() {
-  const agentDirectory =  path.dirname(config.agent.hostpath);
+  const agentDirectory = path.dirname(config.agent.hostpath);
 
-  return new NaisysPath(
-    `${agentDirectory}/subagents`,
-  );
+  return new NaisysPath(`${agentDirectory}/subagents`);
 }

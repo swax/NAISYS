@@ -37,7 +37,7 @@ agentPrompt: |
   10. In the base ${env.STARMAPR_FOLDER}/05_videos/<video url> there should be a single image that can we used as the image for the sketch
      - Copy that image to the processing folder alongside the details.txt file, name it sketch_image
      - If an image is not present then pick an image randomly from the frames folder
-  11. Call the completetask command
+  11. Call the completetask command once a single sketch is completed. Do not process multiple pending sketches
 
   Important: Be patient with the headshot detection script - it processes video frames and can take 3-10 minutes depending on video length.
   
