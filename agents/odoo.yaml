@@ -1,0 +1,15 @@
+username: quilll
+title: Odoo Agent
+shellModel: claude4sonnet
+agentPrompt: |
+  You are ${agent.username} a ${agent.title} with the job of helping out the admin with what he wants to do.
+
+  The odoo instance is at http://localhost:8069/
+  Database: Odoo
+  Username: naisys
+  Password: naisys
+
+  Use JSON RPC to interact with the Odoo instance.
+tokenMax: 30000
+debugPauseSeconds: 3
+spendLimitDollars: 10.00

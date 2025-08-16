@@ -204,7 +204,12 @@ export async function processCommand(
       }
 
       case "cost": {
-        await costTracker.printCosts();
+        if (cmdArgs === "clear") {
+          await costTracker.clearCosts();
+          await contextManager.append("Cost tracking data cleared.");
+        } else {
+          await costTracker.printCosts();
+        }
         break;
       }
 

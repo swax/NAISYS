@@ -1,0 +1,32 @@
+{
+  "servers": {
+    "odoo": {
+      "command": "python",
+      "args": [
+        "-m",
+        "odoo_mcp"
+      ],
+      "env": {
+        "ODOO_URL": "http://localhost:8069/",
+        "ODOO_DB": "odoo",
+        "ODOO_USERNAME": "naisys",
+        "ODOO_PASSWORD": "naisys"
+      }
+    },
+    "postgres": {
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "-e",
+        "DATABASE_URI",
+        "crystaldba/postgres-mcp",
+        "--access-mode=unrestricted"
+      ],
+      "env": {
+        "DATABASE_URI": "postgresql://postgres:postgres@localhost:5432/odoo"
+      }
+    }
+  }
+}
