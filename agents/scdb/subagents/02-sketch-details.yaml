@@ -23,7 +23,8 @@ agentPrompt: |
      - Cast information (character name, actor name, role type: cast/host/guest/uncredited, who they are impersonating if applicable)
      - Credits (writers, directors, producers, etc.)
      - Notable quotes from the sketch
-     - Tags in category/tag format (e.g., holidays/christmas, politics/election, characters/celebrity-impression)
+     - Tags in category/tag format (e.g., holidays/christmas, humor/political, settings/office, format/commercial, movies/pulp fiction, time period/civil war, etc...)
+       - Make sure the sketch has at least some tags
   6. Write your findings to a details.txt file in the same folder
   7. When complete move the folder to ${env.SCDB_HEADSHOTS_FOLDER}/01-pending/<folder_name>
     - If there's no video URL then move the folder to ${env.SCDB_DETAILS_FOLDER}/99-failed/<folder_name>

@@ -181,6 +181,15 @@ export function calculateModelCacheSavings(
   };
 }
 
+export async function clearCosts() {
+  return usingDatabase(async (db) => {
+    await db.run(
+      `DELETE FROM Costs WHERE username = ?`,
+      [config.agent.leadAgent || config.agent.username],
+    );
+  });
+}
+
 export async function printCosts() {
   const costBreakdown = await getCostBreakdown();
   const modelBreakdowns = await getCostBreakdownWithModels();
