@@ -170,7 +170,7 @@ export async function processCommand(
         return {
           nextCommandAction: NextCommandAction.Continue,
           pauseSeconds,
-          wakeOnMessage: false, // Agent has decided to wait, don't side track agent with messages
+          wakeOnMessage: config.agent.wakeOnMessage
         };
       }
 
@@ -197,7 +197,7 @@ export async function processCommand(
         }
 
         return {
-          nextCommandAction: NextCommandAction.Continue,
+          nextCommandAction: NextCommandAction.ExitApplication,
           pauseSeconds: 0, // Hold until message or input is received
           wakeOnMessage: config.agent.wakeOnMessage
         };

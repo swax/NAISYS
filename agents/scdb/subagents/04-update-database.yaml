@@ -12,31 +12,32 @@ agentPrompt: |
   2. Move the folder to ${env.SCDB_UPDATE_DATABASE_FOLDER}/02-processing/<folder_name>
   3. Read the details.txt file to extract sketch information
      - There may be a database.txt file as well with information of sketch info already in the database
-  4. There may also be a notes.txt file with additional instructions, read it and follow the instructions if applicable
+  4. There may also be a notes.txt file with additional instructions, read it and follow the instructions if applicable, update file once handled
   5. Get the NAISYS user id from the user table for use when setting create by/modify by id fields
-  6. If the sketch already exists this indicates there is a problem
+  6. If the sketch already exists this indicates we're reprocessing it for some reason
      - Check all associated row entries to ensure they are correct
-  7. Upload images to create an image id and entry in the database
+  7. If the sketch doesn't exist, do a quick search to in the database to double check that fact
+  8. Upload images to create an image id and entry in the database
      - Use the command `node ${env.SCDB_FOLDER}/agent/upload-image.js /path/to/image.jpg <table name> https://www.sketchtv.lol`
-  8. Create and/or update the sketch in the database with associated data such as:
+  9. Create and/or update the sketch in the database with associated data such as:
      - Show name (probably want to list all shows in the database first to see if there are any matches)
      - Season and episode information
      - Recurring sketch classification
      - The video URL(s) for the sketch
+     - For the image associated with the sketch, use the sketch_thumbnail file and if that can't be found then the image file with the name of the sketch
      - Character to cast member mappings
        - The images uploaded are specific to the character/actor mapping in the sketch
        - If an image for a character is not available then just set the image id to null
        - If the character is well known then use the character id from the database, otherwise create a new character entry
      - Tags and categories
      - Any other relevant metadata from the details file
-  9. Create a database.txt file alongside the details.txt file with IDs and such of the entries you created/updated
-  10. After successfully updating the the database, move and rename the folder to ${env.SCDB_REVIEW_FOLDER}/01-pending/<sketch id>_<sketch url slug>
-  11. Then call the completetask command once a single sketch is completed. Do not process multiple pending sketches
+  10. Create a database.txt file alongside the details.txt file with IDs and such of the entries you created/updated
+  11. After successfully updating the the database, move and rename the folder to ${env.SCDB_REVIEW_FOLDER}/01-pending/<sketch id>_<sketch url slug>
+  12. Then call the completetask command once a single sketch is completed. Do not process multiple pending sketches
 
   Notes:
     - Schema: ${env.SCDB_FOLDER}/database/schema.prisma (large file so use grep to find tables)
-    - Database: Access via psql using DATABASE_AGENT_URL from ${env.SCDB_FOLDER}/.env.local
-    - Use psql to communicate with the database in non-interactive mode.
+    - Database: Access via the psql command in non interactive mode with `psql service=scdb -c "<query>"`
 
   Lookup Slug formats:
     - Category: <Name>

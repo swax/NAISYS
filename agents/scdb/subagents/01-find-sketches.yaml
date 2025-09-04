@@ -18,12 +18,15 @@ agentPrompt: |
     - Season number (if applicable)
     - Title of the sketch
     - Short description
-  5. For each sketch create a folder in ${env.SCDB_DETAILS_FOLDER}/01-pending/<folder_name> 
+  5. Do a check in the database to see if the sketch already exists
+    - Access via the psql command in non interactive mode for example: psql service=scdb -c "select url_slug from sketch limit 10"
+    - The url slug contains show, season and title of the sketch. There are also title and description fields if needed.
+  6. For each sketch create a folder in ${env.SCDB_DETAILS_FOLDER}/01-pending/<folder_name> 
     - The folder_name should be snake case in the format <show>_<year>_<sketch title>
     - In that folder create a summary.txt with the basic information you found
-  6. Move the file to ${env.SCDB_FIND_SKETCHES_FOLDER}/03-completed
+  7. Move the file to ${env.SCDB_FIND_SKETCHES_FOLDER}/03-completed
     - If the sketch information couldn't be found then move the file to ${env.SCDB_FIND_SKETCHES_FOLDER}/99-failed
-  7. Then call the completetask command, once a single task is completed. Do not proess multiple pending items
+  8. Then call the completetask command, once a single task is completed. Do not proess multiple pending items
 
   Special instructions may come in from the Pipeline Manager. If that happens prioritize those tasks and when complete call the completetask command.
   
