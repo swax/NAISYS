@@ -23,7 +23,6 @@ interface Subagent {
   process?: ChildProcess;
   log: string;
   status: "running" | "stopped";
-  tokensSpent: number;
 }
 
 let _nextAgentId = 1;
@@ -55,8 +54,7 @@ function _init() {
       agentPath: new NaisysPath(agentHostPath),
       taskDescription: subagentConfig.taskDescription || "No task description",
       log: "",
-      status: "stopped",
-      tokensSpent: 0,
+      status: "stopped"
     });
   }
 }
@@ -93,13 +91,12 @@ export async function handleCommand(args: string): Promise<string> {
     case "list": {
       return table(
         [
-          ["ID", "Status", "Name", "Task", "Tokens Spent"],
+          ["ID", "Status", "Name", "Task"],
           ..._subagents.map((p) => [
             p.id,
             p.status,
             p.agentName,
-            p.taskDescription.substring(0, 70),
-            p.tokensSpent,
+            p.taskDescription.substring(0, 70)
           ]),
         ],
         { hsep: " | " },
@@ -224,8 +221,7 @@ async function _createAgent(title: string, taskDescription: string) {
     agentPath,
     taskDescription,
     log: "",
-    status: "stopped",
-    tokensSpent: 0,
+    status: "stopped"
   });
 
   return "Subagent Created\n" + (await _startAgent(id, taskDescription));
@@ -305,7 +301,6 @@ async function _startAgent(id: number, taskDescription: string) {
   subagent.process.stdout!.on("data", (data) => {
     const dataStr = data.toString();
     subagent.log += dataStr;
-    subagent.tokensSpent += getTokenCount(dataStr);
   });
 
   subagent.process.stderr!.on("data", (data) => {

@@ -14,15 +14,14 @@ agentPrompt: |
       - Reroute the sketch to the appropriate pending folder as specified
       - Prioritize starting that subagent next
   2. Check the contents of all */02-processing folders
-    - If there are any sketches in these folders and there are no known subagents working on them then start the appropriate subagent to process them
-    - Start the subagent with a note to clear the processing folder
+    - If there are any sketches in these folders and there are no known subagents working on them then start the appropriate subagent with a note to process them
   2. Start "approval processor" subagent if ${env.SCDB_APPROVAL_FOLDER}/01-pending has content
   3. Start "update database" subagent if ${env.SCDB_UPDATE_DATABASE_FOLDER}/01-pending has content
     - This subagent also handles image updates
   4. Start "get headshots" subagent if ${env.SCDB_HEADSHOTS_FOLDER}/01-pending has content
   5. Start "sketch details" subagent if ${env.SCDB_DETAILS_FOLDER}/01-pending has content  
   6. Start "find sketches" subagent if ${env.SCDB_FIND_SKETCHES_FOLDER}/01-pending has content
-    - If there is nothing pending, then move the random.txt file from ${env.SCDB_FIND_SKETCHES_FOLDER}/03-completed to ${env.SCDB_FIND_SKETCHES_FOLDER}/01-pending
+  7. After agents complete recheck pending folders. If there is nothing pending then pause for 10 minutes and check again after
 
   Try to get sketches one at a time fully through the pipeline so there is a constant flow of sketches ready for review.
   After starting a subagent use the 'llmail wait' command to wait for the subagent to finish, at which point you can stop the subagent. 
@@ -35,9 +34,10 @@ agentPrompt: |
     - In this case you may need to find a particular sketch folder and move it to the appropriate pending folder for the subagent to process
       - Make sure to communicate with the subagent if there is a special consideration they need to address
     - Sketches not currently active in the pipeline can be found in the ${env.SCDB_DATA_FOLDER} folder
+    - If the sketch can't be found anywhere, but you have the ID, give it to the database agent and ask them to rebuild the sketch details.txt file and directory from what's in the database
 
 
-subagentMax: 1
+subagentMax: 2
 mailEnabled: true,
 wakeOnMessage: true,
 tokenMax: 20000
