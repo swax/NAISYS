@@ -14,7 +14,7 @@ agentPrompt: |
       - Reroute the sketch to the appropriate pending folder as specified
       - Prioritize starting that subagent next
   2. Check the contents of all */02-processing folders
-    - If there are any sketches in these folders and there are no known subagents working on them then start the appropriate subagent with a note to process them
+    - If there are any sketches in these folders and there are no known subagents working on them then start the appropriate subagent with a note to reprocess them, do not move these folders yourself
   2. Start "approval processor" subagent if ${env.SCDB_APPROVAL_FOLDER}/01-pending has content
   3. Start "update database" subagent if ${env.SCDB_UPDATE_DATABASE_FOLDER}/01-pending has content
     - This subagent also handles image updates
@@ -48,3 +48,5 @@ initialCommands:
   - llmail users
   - subagent help
   - subagent list
+  - cd ${env.SCDB_PIPELINE_FOLDER}
+  - find . -type d \( -path '*/01-pending/*' -o -path '*/02-processing/*' \) | sort

@@ -170,7 +170,7 @@ export async function processCommand(
         return {
           nextCommandAction: NextCommandAction.Continue,
           pauseSeconds,
-          wakeOnMessage: config.agent.wakeOnMessage
+          wakeOnMessage: config.agent.wakeOnMessage,
         };
       }
 
@@ -186,27 +186,31 @@ export async function processCommand(
 
         if (config.agent.leadAgent && config.mailEnabled) {
           await output.commentAndLog(
-            "Sub agent has completed the task. Notifying lead agent.",
+            "Sub agent has completed the task. Notifying lead agent and exiting process.",
           );
           const leadAgent = config.agent.leadAgent;
           await llmail.newThread([leadAgent], "Task Completed", taskResult);
         } else {
           await output.commentAndLog(
-            "Task completed. Waiting for user input or a message.",
+            "Task completed. Exiting process.",
           );
         }
 
         return {
           nextCommandAction: NextCommandAction.ExitApplication,
           pauseSeconds: 0, // Hold until message or input is received
-          wakeOnMessage: config.agent.wakeOnMessage
+          wakeOnMessage: config.agent.wakeOnMessage,
         };
       }
 
       case "cost": {
-        if (cmdArgs === "clear") {
+        if (cmdArgs === "reset") {
           await costTracker.clearCosts();
           await contextManager.append("Cost tracking data cleared.");
+        } else if (cmdArgs) {
+          await output.errorAndLog(
+            "The 'cost' command only supports the 'reset' parameter.",
+          );
         } else {
           await costTracker.printCosts();
         }

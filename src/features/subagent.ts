@@ -28,6 +28,14 @@ interface Subagent {
 let _nextAgentId = 1;
 const _subagents: Subagent[] = [];
 
+// Track running subagents and termination events
+const _runningSubagentIds = new Set<number>();
+const _terminationEvents: Array<{
+  id: number;
+  agentName: string;
+  reason: string;
+}> = [];
+
 _init();
 
 function _init() {
@@ -54,7 +62,7 @@ function _init() {
       agentPath: new NaisysPath(agentHostPath),
       taskDescription: subagentConfig.taskDescription || "No task description",
       log: "",
-      status: "stopped"
+      status: "stopped",
     });
   }
 }
@@ -96,7 +104,7 @@ export async function handleCommand(args: string): Promise<string> {
             p.id,
             p.status,
             p.agentName,
-            p.taskDescription.substring(0, 70)
+            p.taskDescription.substring(0, 70),
           ]),
         ],
         { hsep: " | " },
@@ -148,16 +156,37 @@ export function getRunningSubagentNames() {
 export function unreadContextSummary() {
   const unreadAgents = _subagents.filter((p) => p.log.length > 0);
 
-  if (unreadAgents.length === 0) {
-    return "";
+  let summaryParts = [];
+
+  if (unreadAgents.length > 0) {
+    summaryParts.push(
+      "New Subagent Output: " +
+        unreadAgents
+          .map((p) => `${p.id}:${p.agentName}, ${getTokenCount(p.log)} tokens`)
+          .join(" | "),
+    );
   }
 
-  output.comment(
-    "New Subagent Output: " +
-      unreadAgents
-        .map((p) => `${p.id}:${p.agentName}, ${getTokenCount(p.log)} tokens`)
-        .join(" | "),
-  );
+  if (summaryParts.length > 0) {
+    output.comment(summaryParts.join(" | "));
+  }
+}
+
+/** Check for and clear termination events for wake notifications */
+export function getTerminationEvents(
+  action?: "clear",
+): Array<{ id: number; agentName: string; reason: string }> {
+  if (_terminationEvents.length === 0) {
+    return [];
+  }
+
+  const events = [..._terminationEvents];
+
+  if (action === "clear") {
+    _terminationEvents.length = 0;
+  }
+
+  return events;
 }
 
 async function _createAgent(title: string, taskDescription: string) {
@@ -191,6 +220,7 @@ async function _createAgent(title: string, taskDescription: string) {
     wakeOnMessage: true,
     completeTaskEnabled: true,
     leadAgent: config.agent.username,
+    mailEnabled: true, // Needed to communicate the task completion message
     taskDescription,
   };
 
@@ -221,7 +251,7 @@ async function _createAgent(title: string, taskDescription: string) {
     agentPath,
     taskDescription,
     log: "",
-    status: "stopped"
+    status: "stopped",
   });
 
   return "Subagent Created\n" + (await _startAgent(id, taskDescription));
@@ -261,7 +291,13 @@ async function _startAgent(id: number, taskDescription: string) {
   );
 
   // Run async so that the process spawn handler is setup immediately otherwise it'll be missed
-  void llmail.newThread([subagent.agentName], "Your Task", taskDescription);
+  void llmail
+    .newThread([subagent.agentName], "Your Task", taskDescription)
+    .catch(() => {
+      output.commentAndLog(
+        `Failed to send initial task email to subagent ${subagent.agentName}`,
+      );
+    });
 
   // Wait 5 seconds for startup errors, then return success
   const startupPromise = new Promise<string>((resolve) => {
@@ -283,6 +319,7 @@ async function _startAgent(id: number, taskDescription: string) {
       hasSpawned = true;
       subagent.status = "running";
       subagent.log += `SUBAGENT ${id} SPAWNED\n`;
+      _runningSubagentIds.add(id);
     });
 
     subagent.process!.on("error", (error) => {
@@ -307,9 +344,19 @@ async function _startAgent(id: number, taskDescription: string) {
     subagent.log += `\nSUBAGENT ${id} ERROR: ${data}`;
   });
 
-  subagent.process.on("close", () => {
+  subagent.process.on("close", (code) => {
     subagent.log += `\nSUBAGENT ${id} CLOSED`;
     subagent.status = "stopped";
+
+    // If this was still in the running list, it terminated unexpectedly
+    if (_runningSubagentIds.has(id)) {
+      _runningSubagentIds.delete(id);
+      _terminationEvents.push({
+        id,
+        agentName: subagent.agentName,
+        reason: code === 0 ? "completed" : `exited with code ${code}`,
+      });
+    }
   });
 
   return await startupPromise;
@@ -326,6 +373,9 @@ function _stopAgent(id: number) {
   }
 
   subagent.process?.kill();
+
+  // Remove from running list since this was a manual stop
+  _runningSubagentIds.delete(id);
 
   return `Subagent ${id} stopped`;
 }
