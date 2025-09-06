@@ -10,9 +10,9 @@ import * as dreamMaker from "../llm/dreamMaker.js";
 import { ContentSource, LlmRole } from "../llm/llmDtos.js";
 import * as llmService from "../llm/llmService.js";
 import { systemMessage } from "../llm/systemMessage.js";
+import * as logService from "../services/logService.js";
 import * as inputMode from "../utils/inputMode.js";
 import { InputMode } from "../utils/inputMode.js";
-import * as logService from "../services/logService.js";
 import * as output from "../utils/output.js";
 import { OutputColor } from "../utils/output.js";
 import * as utilities from "../utils/utilities.js";
@@ -107,6 +107,9 @@ export async function run() {
         try {
           if (config.mailEnabled) {
             await checkNewMailNotification();
+          }
+          if (config.agent.subagentMax) {
+            await checkSubagentsTerminated();
           }
           await checkContextLimitWarning();
           await workspaces.displayActive();
@@ -225,6 +228,16 @@ async function handleErrorAndSwitchToDebugMode(
     pauseSeconds,
     wakeOnMessage,
   };
+}
+
+async function checkSubagentsTerminated() {
+  const terminationEvents = subagent.getTerminationEvents("clear");
+  for (const event of terminationEvents) {
+    await contextManager.append(
+      `Subagent ${event.id} ${event.agentName} has terminated. Reason: ${event.reason}`,
+      ContentSource.Console,
+    );
+  }
 }
 
 let mailBlackoutCountdown = 0;

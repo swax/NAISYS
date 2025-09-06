@@ -3,6 +3,7 @@ import * as events from "events";
 import * as readline from "readline";
 import * as config from "../config.js";
 import * as llmail from "../features/llmail.js";
+import * as subagent from "../features/subagent.js";
 import * as contextManager from "../llm/contextManager.js";
 import * as inputMode from "../utils/inputMode.js";
 import { InputMode } from "../utils/inputMode.js";
@@ -170,6 +171,12 @@ export function getInput(
               firstError = false;
             }
           });
+
+        // Check for terminated subagents
+        const terminationEvents = subagent.getTerminationEvents();
+        if (terminationEvents.length) {
+          abortQuestion();
+        }
       }, 3000);
     }
   });
