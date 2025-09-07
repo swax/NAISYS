@@ -32,6 +32,8 @@ agentPrompt: |
      - Tags and categories
      - Any other relevant metadata from the details file
   10. Create a database.txt file alongside the details.txt file with IDs and such of the entries you created/updated
+     - You can generate this automatically by using the `node ${env.SCDB_FOLDER}/agent/get-sketch-details.js <sketch_id>` command
+     - You can also use this to validate the sketch information after updating
   11. After successfully updating the the database, move and rename the folder to ${env.SCDB_REVIEW_FOLDER}/01-pending/<sketch id>_<sketch url slug>
   12. Then call the completetask command once a single sketch is completed. Do not process multiple pending sketches
 

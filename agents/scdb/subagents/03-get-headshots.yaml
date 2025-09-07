@@ -18,7 +18,7 @@ agentPrompt: |
   5. Run the headshot detection script using this command:
      `cd ${env.STARMAPR_FOLDER} && python3 run_headshot_detection.py "VIDEO_URL" --show "SHOW_NAME" --actors "ACTOR_NAME"`
      - If the script fails on video download and the details has more video URLs then try the next video URL
-     - This script may take several minutes to complete
+     - This script may take 10 minutes or more to complete per sketch, be patient
      - Do one actor at a time
      - Ignore CUDA/GPU warnings, those are expected
      - Run 'endsession' after running the python3 command with a summary of what actors have been processed and not
@@ -42,7 +42,7 @@ agentPrompt: |
      - Copy the thumbnail to the processing folder alongside the details.txt file and give it the name sketch_thumbnail
   11. Call the completetask command once a single sketch is completed. Do not process multiple pending sketches
 
-  Important: Be patient with the headshot detection script - it processes video frames and can take 3-10 minutes depending on video length.
+  Important: Be patient with the headshot detection script - it processes video frames and can take 10 minutes or more depending on video length.
   
   Special instructions may come in from the Pipeline Manager. If that happens prioritize those tasks and when complete call the completetask command.
 

@@ -19,13 +19,15 @@ agentPrompt: |
   3. Start "update database" subagent if ${env.SCDB_UPDATE_DATABASE_FOLDER}/01-pending has content
     - This subagent also handles image updates
   4. Start "get headshots" subagent if ${env.SCDB_HEADSHOTS_FOLDER}/01-pending has content
+    - Headshots may take 10 minutes or longer to process per sketch so be patient
   5. Start "sketch details" subagent if ${env.SCDB_DETAILS_FOLDER}/01-pending has content  
   6. Start "find sketches" subagent if ${env.SCDB_FIND_SKETCHES_FOLDER}/01-pending has content
   7. After agents complete recheck pending folders. If there is nothing pending then pause for 10 minutes and check again after
 
   Try to get sketches one at a time fully through the pipeline so there is a constant flow of sketches ready for review.
+  Avoid starting agents to process multiple sketches, just process one at a time so that the pipeline can be run in full for a sketch before starting the next one.
   After starting a subagent use the 'llmail wait' command to wait for the subagent to finish, at which point you can stop the subagent. 
-  You can validate a subagent is running by using the 'subagent list' command.
+  You can validate a subagent is running or not by using the 'subagent list' command.
 
   Notify the Program Director when a new sketch is ready for review.
 
@@ -33,8 +35,9 @@ agentPrompt: |
     - Move folder around as needed, get things ready, and wait for running subagents to finish
     - In this case you may need to find a particular sketch folder and move it to the appropriate pending folder for the subagent to process
       - Make sure to communicate with the subagent if there is a special consideration they need to address
-    - Sketches not currently active in the pipeline can be found in the ${env.SCDB_DATA_FOLDER} folder
-    - If the sketch can't be found anywhere, but you have the ID, give it to the database agent and ask them to rebuild the sketch details.txt file and directory from what's in the database
+    - Sketches not currently active in the pipeline can be found in the ${env.SCDB_DATA_FOLDER} folder with folder names starting with the sketch id
+    - If the sketch can't be found anywhere, but you have the ID then run this command to generate the sketch folder
+      - `node ${env.SCDB_FOLDER}/agent/get-sketch-details.js <sketch_id --with-folder`
 
 
 subagentMax: 2
