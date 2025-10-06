@@ -7,6 +7,7 @@ const USE_LLM_REDUCTION = false;
 
 import { exec } from "child_process";
 import * as crypto from "crypto";
+import * as https from "https";
 import * as os from "os";
 import * as config from "../config.js";
 import { getLLModel } from "../llm/llModels.js";
@@ -58,13 +59,15 @@ export async function handleCommand(cmdArgs: string): Promise<string> {
   
 *llmynx does not support input. Use llmynx or curl to call APIs directly*`;
     case "search": {
-      const query = argParams.slice(1).join(" ");
+      // trim quotes
+      const query = argParams.slice(1).join(" ").replace(/^"|"$/g, "");
 
-      return await loadUrlContent(
+      return await callGoogleSearchApi(query);
+      /*return await loadUrlContent(
         "https://www.google.com/search?q=" + encodeURIComponent(query),
         true,
         true,
-      );
+      );*/
     }
     case "open": {
       const url = argParams[1];
@@ -540,4 +543,75 @@ function showMoreContent(): string {
   let result = `URL: ${_currentPagination.url} (Page ${_currentPagination.currentPage} of ${_currentPagination.pages.length})\n\n${pageContent}`;
   
   return storeMapSetLinks(result, "");
+}
+
+async function callGoogleSearchApi(query: string): Promise<string> {
+  if (!config.googleApiKey) {
+    throw "Error, googleApiKey is not defined";
+  }
+
+  if (!config.googleSearchEngineId) {
+    throw "Error, googleSearchEngineId is not defined";
+  }
+
+  return new Promise<string>((resolve, reject) => {
+    const queryParams = new URLSearchParams({
+      key: config.googleApiKey!,
+      cx: config.googleSearchEngineId!,
+      q: query,
+    }).toString();
+
+    const options = {
+      hostname: 'www.googleapis.com',
+      port: 443,
+      path: `/customsearch/v1?${queryParams}`,
+      method: 'GET'
+    };
+
+    const req = https.request(options, (res) => {
+      let data = '';
+
+      res.on('data', (chunk) => {
+        data += chunk;
+      });
+
+      res.on('end', () => {
+        try {
+          const response = JSON.parse(data);
+
+          if (res.statusCode === 200) {
+            // Format search results
+            let output = `Search results for: ${query}\n\n`;
+
+            if (response.items && response.items.length > 0) {
+              for (const item of response.items) {
+                const url = item.link;
+                const globalLinkNum = registerUrl(url);
+
+                output += `[${globalLinkNum}] ${item.title}\n`;
+                output += `${item.snippet}\n`;
+                output += `${url}\n\n`;
+              }
+
+              output += `\nUse 'llmynx follow <link number>' to open a result.`;
+            } else {
+              output += "No results found.";
+            }
+
+            resolve(output);
+          } else {
+            reject(`Search failed with status ${res.statusCode}: ${data}`);
+          }
+        } catch (error) {
+          reject(`Error parsing response: ${error}`);
+        }
+      });
+    });
+
+    req.on('error', (error) => {
+      reject(`Request error: ${error.message}`);
+    });
+
+    req.end();
+  });
 }

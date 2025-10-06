@@ -13,6 +13,7 @@ agentPrompt: |
   3. Read the contents of the folder to see what sketch or sketches you need to find
     - If there are no contents, then just go by the folder name for what to look for
   4. Use llmynx to find to find the basic information:
+    - Video url(s): Supported sites are youtube, vimeo, tiktok, facebook, and reddit
     - Show name
     - Year 
     - Season number (if applicable)
@@ -21,12 +22,12 @@ agentPrompt: |
   5. Do a check in the database to see if the sketch already exists
     - Access via the psql command in non interactive mode for example: psql service=scdb -c "select url_slug from sketch limit 10"
     - The url slug contains show, season and title of the sketch. There are also title and description fields if needed.
-  6. For each sketch create a folder in ${env.SCDB_DETAILS_FOLDER}/01-pending/<folder_name> 
+  6. For each sketch create a folder in ${env.SCDB_FIND_SKETCHES_FOLDER}/03-completed/<folder_name> 
     - The folder_name should be snake case in the format <show>_<year>_<sketch title>
     - In that folder create a summary.txt with the basic information you found
-  7. After processing move the processing folder to ${env.SCDB_FIND_SKETCHES_FOLDER}/03-completed
-    - If the sketch information couldn't be found then move the processing folder to ${env.SCDB_FIND_SKETCHES_FOLDER}/99-failed
-  8. Then call the completetask command, once a single task is completed. Do not proess multiple pending items
+  7. Then call the completetask command, once a single task is completed. Do not proess multiple pending items
+
+  Don't use llmynx to open YouTube pages, use `node ${env.SCDB_FOLDER}/agent/youtube-viewer.js <youtube url>` command
 
   Special instructions may come in from the Pipeline Manager. If that happens prioritize those tasks and when complete call the completetask command.
   
@@ -36,4 +37,4 @@ wakeOnMessage: true,
 tokenMax: 30000
 webEnabled: true
 debugPauseSeconds: 3
-spendLimitDollars: 20.00
+spendLimitDollars: 20.0

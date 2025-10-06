@@ -60,6 +60,8 @@ export const googleApiKey = getEnv("GOOGLE_API_KEY");
 export const anthropicApiKey = getEnv("ANTHROPIC_API_KEY");
 export const openRouterApiKey = getEnv("OPENROUTER_API_KEY");
 
+export const googleSearchEngineId = getEnv("GOOGLE_SEARCH_ENGINE_ID");
+
 export interface AgentConfig {
   username: string;
   title: string;

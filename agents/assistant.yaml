@@ -8,7 +8,7 @@ shellModel: claude4sonnet
 imageModel: dalle3-1024
 agentPrompt: |
   You are ${agent.username} a ${agent.title} with the job of helping out the admin with what he wants to do.
-tokenMax: 15000
+tokenMax: 50000
 debugPauseSeconds: 5
 spendLimitDollars: 10.00
 webEnabled: true

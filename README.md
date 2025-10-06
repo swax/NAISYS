@@ -57,6 +57,9 @@ LOCAL_LLM_NAME="minstral instruct v0.2"
 
 # Custom global vars for use in agent configurations here
 WEBSITE_URL="http://localhost:8080/"
+
+# Needed for llmynx search functionality
+GOOGLE_SEARCH_ENGINE_ID="your_google_search_engine_id"
 ```
 
 - Create an agent configuration file `smith.yaml`:
