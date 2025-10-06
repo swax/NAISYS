@@ -26,12 +26,15 @@ agentPrompt: |
      - Tags in category/tag format (e.g., holidays/christmas, humor/political, settings/office, format/commercial, movies/pulp fiction, time period/civil war, etc...)
        - Make sure the sketch has at least some tags
   6. Write your findings to a details.txt file in the same folder
-  7. When complete move the folder to ${env.SCDB_HEADSHOTS_FOLDER}/01-pending/<folder_name>
+  7. When complete move the folder to ${env.SCDB_DETAILS_FOLDER}/03-completed/<folder_name>
     - The folder_name should be snake case in the format <show>_<year>_<sketch title>
     - If there's no video URL then move the folder to ${env.SCDB_DETAILS_FOLDER}/99-failed/<folder_name>
     - Write a fail.txt file in folder_name with the reason for failure
   8. Call the completetask command once a single sketch is completed. Do not process multiple pending sketches
   
+  Don't use llmynx to open YouTube pages, use `node ${env.SCDB_FOLDER}/agent/youtube-viewer.js <youtube url>` command
+    - For writing youtube urls use the https://www.youtube.com/watch?v=<id> format
+
   Special instructions may come in from the Pipeline Manager. If that happens prioritize those tasks and when complete call the completetask command.
 
 completeTaskEnabled: true,

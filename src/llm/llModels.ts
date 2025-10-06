@@ -203,7 +203,7 @@ const llmModels: LlmModel[] = [
   },
   {
     key: "claude4sonnet",
-    name: "claude-sonnet-4-20250514",
+    name: "claude-sonnet-4-5-20250929",
     apiType: LlmApiType.Anthropic,
     maxTokens: 200_000,
     // Prices are per 1M tokens

@@ -3,7 +3,6 @@ import { MessageParam } from "@anthropic-ai/sdk/resources/messages.mjs";
 import { Content, GoogleGenerativeAI } from "@google/generative-ai";
 import OpenAI from "openai";
 import * as config from "../config.js";
-import { getTokenCount } from "../utils/utilities.js";
 import * as costTracker from "./costTracker.js";
 import { LlmApiType, getLLModel } from "./llModels.js";
 import { LlmMessage, LlmRole } from "./llmDtos.js";

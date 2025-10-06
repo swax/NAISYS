@@ -15,6 +15,10 @@ agentPrompt: |
       - Prioritize starting that subagent next
   2. Check the contents of all */02-processing folders
     - If there are any sketches in these folders and there are no known subagents working on them then start the appropriate subagent with a note to reprocess them, do not move these folders yourself
+  3. Check the contents of all */03-completed folders
+    - Move folders from 03-completed to 01-pending of the next stage in the pipeline
+    - If the folder is at the last stage then move it into the ${env.SCDB_DATA_FOLDER} 
+    - Under special circumstances like if headshots don't need to be regenerated then that stage may be skipped
   2. Start "approval processor" subagent if ${env.SCDB_APPROVAL_FOLDER}/01-pending has content
   3. Start "update database" subagent if ${env.SCDB_UPDATE_DATABASE_FOLDER}/01-pending has content
     - This subagent also handles image updates
@@ -37,7 +41,7 @@ agentPrompt: |
       - Make sure to communicate with the subagent if there is a special consideration they need to address
     - Sketches not currently active in the pipeline can be found in the ${env.SCDB_DATA_FOLDER} folder with folder names starting with the sketch id
     - If the sketch can't be found anywhere, but you have the ID then run this command to generate the sketch folder
-      - `node ${env.SCDB_FOLDER}/agent/get-sketch-details.js <sketch_id --with-folder`
+      - `(cd ${env.SCDB_FOLDER} && node agent/get-sketch-details.js <sketch_id> --with-folder)`
 
 
 subagentMax: 2
@@ -52,4 +56,4 @@ initialCommands:
   - subagent help
   - subagent list
   - cd ${env.SCDB_PIPELINE_FOLDER}
-  - find . -type d \( -path '*/01-pending/*' -o -path '*/02-processing/*' \) | sort
+  - find . -type d \( -path '*/01-pending/*' -o -path '*/02-processing/*' -o -path '*/03-completed/*' \) | sort
