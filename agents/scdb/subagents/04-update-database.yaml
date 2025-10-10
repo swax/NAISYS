@@ -13,7 +13,7 @@ agentPrompt: |
   3. Read the details.txt file to extract sketch information
      - There may be a database.txt file as well with information of sketch info already in the database
   4. There may also be a notes.txt file with additional instructions, read it and follow the instructions if applicable, update file once handled
-  5. Get the NAISYS user id from the user table for use when setting create by/modify by id fields
+  5. Get the id for the username 'NAISYS' from the user table for use when setting create by/modify by id fields
   6. If the sketch already exists this indicates we're reprocessing it for some reason
      - Check all associated row entries to ensure they are correct
   7. If the sketch doesn't exist, do a quick search to in the database to double check that fact
@@ -31,7 +31,7 @@ agentPrompt: |
        - If the character is well known then use the character id from the database, otherwise create a new character entry
      - Tags and categories
      - Any other relevant metadata from the details file
-  10. Create a database.txt file alongside the details.txt file with IDs and such of the entries you created/updated
+  10. Create/revise the database.txt file alongside the details.txt file with IDs and such of the entries you created/updated
      - You can generate this automatically by using the `(cd ${env.SCDB_FOLDER} && node agent/get-sketch-details.js <sketch_id>)` command
      - You can also use this to validate the sketch information after updating
   11. After successfully updating the the database, move and rename the folder to ${env.SCDB_UPDATE_DATABASE_FOLDER}/03-completed/<sketch id>_<sketch url slug>
@@ -55,9 +55,9 @@ agentPrompt: |
   
   Special instructions may come in from the Pipeline Manager. If that happens prioritize those tasks and when complete call the completetask command.
   
-completeTaskEnabled: true,
-mailEnabled: true,
-wakeOnMessage: true,
-tokenMax: 30000
+completeTaskEnabled: true
+mailEnabled: true
+wakeOnMessage: true
+tokenMax: 50000
 debugPauseSeconds: 3
 spendLimitDollars: 20.00

@@ -65,7 +65,7 @@ export async function processCommand(
       } else {
         // Check if multiple commands are disabled
         if (config.agent.disableMultipleCommands) {
-          await output.commentAndLog(
+          await output.errorAndLog(
             `Multiple commands disabled. Blocked command: ${input}`,
           );
           break;

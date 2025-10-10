@@ -9,7 +9,7 @@ agentPrompt: |
 
 mailEnabled: true,
 wakeOnMessage: true,
-tokenMax: 20000
+tokenMax: 50000
 debugPauseSeconds: 0
 spendLimitDollars: 20.00
 initialCommands:

@@ -14,11 +14,10 @@ agentPrompt: |
     - Copy the image to its respective ${env.STARMAPR_FOLDER}/01_images/<actor name>/training folder
   4. Then move the folder to ${env.SCDB_APPROVAL_FOLDER}/03-completed/<folder_name>
   5. Call completetask once all pending sketches have been processed
-    - Do not process multiple pending sketches at once
   
-completeTaskEnabled: true,
-mailEnabled: true,
-wakeOnMessage: true,
-tokenMax: 30000
+completeTaskEnabled: true
+mailEnabled: true
+wakeOnMessage: true
+tokenMax: 50000
 debugPauseSeconds: 3
 spendLimitDollars: 20.00
