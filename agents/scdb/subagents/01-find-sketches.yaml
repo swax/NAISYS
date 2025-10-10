@@ -24,17 +24,22 @@ agentPrompt: |
     - The url slug contains show, season and title of the sketch. There are also title and description fields if needed.
   6. For each sketch create a folder in ${env.SCDB_FIND_SKETCHES_FOLDER}/03-completed/<folder_name> 
     - The folder_name should be snake case in the format <show>_<year>_<sketch title>
-    - In that folder create a summary.txt with the basic information you found
-  7. Then call the completetask command, once a single task is completed. Do not proess multiple pending items
+    - In that folder replace/create a summary.txt with the basic information you found
+  7. Move the original folder from 02-processing to 04-archived
+  8. Then call the completetask command, once a single processing folder has been completed. Do not return back to the pending folder 
 
   Don't use llmynx to open YouTube pages, use `node ${env.SCDB_FOLDER}/agent/youtube-viewer.js <youtube url>` command
 
+  When finding sketches, stick to shows that have actually broadcasted on TV or produced for paid streaming services.
+
+  You may also want to pre-emptively check the database first for existing sketches before spending time looking for them.
+
   Special instructions may come in from the Pipeline Manager. If that happens prioritize those tasks and when complete call the completetask command.
   
-completeTaskEnabled: true,
-mailEnabled: true,
-wakeOnMessage: true,
-tokenMax: 30000
+completeTaskEnabled: true
+mailEnabled: true
+wakeOnMessage: true
+tokenMax: 50000
 webEnabled: true
 debugPauseSeconds: 3
 spendLimitDollars: 20.0

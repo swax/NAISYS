@@ -65,7 +65,10 @@ if (!config.endSessionEnabled && config.trimSessionEnabled) {
 
 if (config.agent.disableMultipleCommands) {
   tokenNote +=
-    "\n  Multiple commands are disabled. You can only run one command per prompt.";
+    "\n  Only run one command at a time, evaluate the output, then run the next command.";
+} else {
+  tokenNote +=
+    "\n  Be careful running multiple commands on a single prompt, and never assume the output of commands. Better to run one command at a time if you're not sure.";
 }
 
 let subagentNote = "";

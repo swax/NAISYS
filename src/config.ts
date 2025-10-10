@@ -136,6 +136,11 @@ function loadAgentConfig() {
     }
   }
 
+  // Disable by default, too many screw ups. Cached tokens means the effects of this isn't so bad.
+  if (config.disableMultipleCommands === undefined) {
+    config.disableMultipleCommands = true;
+  }
+
   // Sanitize input
   if (!config.initialCommands) {
     config.initialCommands = [];

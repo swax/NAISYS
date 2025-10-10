@@ -28,13 +28,13 @@ agentPrompt: |
      - Pick the best headshot for each actor with the primarily the highest match and secondarily a position closer to 5000
      - Copy best headshot images to the processing folder alongside the details.txt file
   7. Write a small summary of what headshots could and could not be found
-     - Name it headshots.txt and place it alongside the details.txt file
+     - Name it headshots.txt (replace it if it already exists) and place it alongside the details.txt file
   8. We also need to generate a thumbnail for the sketch itself after we get the headshots
      - Run `cd ${env.STARMAPR_FOLDER} && venv/bin/python3 extract_video_thumbnail.py <video folder>`
      - A file thumbnail1.jpg should be created in the ${env.STARMAPR_FOLDER}/05_videos/<video folder>
        - If no thumbnail file is found then use the webp file with the sketch name
        - If that doesn't exist then pick an image randomly from the frames folder
-     - Copy the thumbnail to the processing folder alongside the details.txt file and give it the name sketch_thumbnail
+     - Copy the thumbnail to the processing folder alongside the details.txt file and give it the name sketch_thumbnail, leave the extension the same
   9. If no headshots were found
      - Move the folder from processing to ${env.SCDB_HEADSHOTS_FOLDER}/99-failed/<folder_name>
      - Write a fail.txt file in folder_name with the reason for failure
@@ -46,9 +46,9 @@ agentPrompt: |
   
   Special instructions may come in from the Pipeline Manager. If that happens prioritize those tasks and when complete call the completetask command.
 
-completeTaskEnabled: true,
-mailEnabled: true,
-wakeOnMessage: true,
-tokenMax: 30000
+completeTaskEnabled: true
+mailEnabled: true
+wakeOnMessage: true
+tokenMax: 50000
 debugPauseSeconds: 3
 spendLimitDollars: 20.00

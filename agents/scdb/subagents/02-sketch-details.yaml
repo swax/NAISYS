@@ -11,7 +11,7 @@ agentPrompt: |
   1. Look for the first folder alphabetically in ${env.SCDB_DETAILS_FOLDER}/01-pending/<folder_name>
   2. Move the folder to ${env.SCDB_DETAILS_FOLDER}/02-processing/<folder_name>
   3. Read the summary.txt file in the folder to see what sketch you need to research
-  4. There may also be a notes.txt file with additional instructions, read it and follow the instructions if applicable, update file once handled
+  4. There may also be a notes.txt file with additional instructions, read it and follow the instructions if applicable, mark notes that have been addressed
   5. Use llmynx to find comprehensive information about the sketch including:
      - Title (exact title of the sketch)
      - Show name
@@ -37,10 +37,10 @@ agentPrompt: |
 
   Special instructions may come in from the Pipeline Manager. If that happens prioritize those tasks and when complete call the completetask command.
 
-completeTaskEnabled: true,
-mailEnabled: true,
-wakeOnMessage: true,
-tokenMax: 30000
+completeTaskEnabled: true
+mailEnabled: true
+wakeOnMessage: true
+tokenMax: 50000
 webEnabled: true
 debugPauseSeconds: 3
 spendLimitDollars: 20.00
