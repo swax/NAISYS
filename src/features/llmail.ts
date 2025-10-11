@@ -37,7 +37,7 @@ export async function handleCommand(
   send "<users>" "subject" "message": Send a message.${tokenMaxNote}
   wait <seconds>: Pause the session until a new mail message is received
   
-* Attachments are not supported, use file paths to refence files in emails as all users are on the same machine`;
+* Attachments are not supported, use file paths to refence files in emails as all users are usually on the same machine`;
       } else {
         content = `llmail <command>
   list: List all active threads
