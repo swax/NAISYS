@@ -28,7 +28,7 @@ agentPrompt: |
   7. Move the original folder from 02-processing to 04-archived
   8. Then call the completetask command, once a single processing folder has been completed. Do not return back to the pending folder 
 
-  Don't use llmynx to open YouTube pages, use `node ${env.SCDB_FOLDER}/agent/youtube-viewer.js <youtube url>` command
+  Don't use llmynx to open YouTube pages, use `node ${env.SCDB_FOLDER}/agent/youtube/video-summary.js <youtube url>` command
 
   When finding sketches, stick to shows that have actually broadcasted on TV or produced for paid streaming services.
 

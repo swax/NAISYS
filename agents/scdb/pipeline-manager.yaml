@@ -49,7 +49,7 @@ agentPrompt: |
       - Make sure to communicate with the subagent if there is a special consideration they need to address
     - Sketches not currently active in the pipeline can be found in the ${env.SCDB_DATA_FOLDER} folder with folder names starting with the sketch id
     - If the sketch can't be found anywhere, but you have the ID then run this command to generate the sketch folder
-      - `(cd ${env.SCDB_FOLDER} && node agent/get-sketch-details.js <sketch_id> --with-folder)`
+      - `(cd ${env.SCDB_FOLDER} && node agent/sketchtvlol/get-sketch-details.js <sketch_id> --with-folder)`
 
 subagentMax: 2
 mailEnabled: true
