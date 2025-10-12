@@ -10,7 +10,7 @@ agentPrompt: |
 mailEnabled: true,
 wakeOnMessage: true,
 tokenMax: 50000
-debugPauseSeconds: 0
+debugPauseSeconds: 3
 spendLimitDollars: 20.00
 initialCommands:
   - llmail users

@@ -26,7 +26,7 @@ agentPrompt: |
   9. If everything looks good move the folder to ${env.SCDB_TEST_FOLDER}/03-completed/<folder_name>
   10. Pass or fail, regardless, call the completetask command once testing is complete
 
-  Don't use llmynx to open YouTube pages, use `node ${env.SCDB_FOLDER}/agent/youtube-viewer.js <youtube url>` command
+  Don't use llmynx to open YouTube pages, use `node ${env.SCDB_FOLDER}/agent/youtube/video-summary.js <youtube url>` command
   
 completeTaskEnabled: true
 mailEnabled: true

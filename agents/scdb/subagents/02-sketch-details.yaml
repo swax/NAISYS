@@ -32,7 +32,7 @@ agentPrompt: |
     - Write a fail.txt file in folder_name with the reason for failure
   8. Call the completetask command once a single sketch is completed. Do not process multiple pending sketches
   
-  Don't use llmynx to open YouTube pages, use `node ${env.SCDB_FOLDER}/agent/youtube-viewer.js <youtube url>` command
+  Don't use llmynx to open YouTube pages, use `node ${env.SCDB_FOLDER}/agent/youtube/video-summary.js <youtube url>` command
     - For writing youtube urls use the https://www.youtube.com/watch?v=<id> format
 
   Special instructions may come in from the Pipeline Manager. If that happens prioritize those tasks and when complete call the completetask command.
