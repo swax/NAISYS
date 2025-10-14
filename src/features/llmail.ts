@@ -339,40 +339,17 @@ async function listUsers() {
     let userList: {
       username: string;
       title: string;
-      extra: string;
       leadUsername?: string;
       lastActive: string;
       active?: boolean;
     }[] = [];
 
-    // If this is a subagent, just allow it to communicate with its lead
-    if (config.agent.leadAgent) {
-      userList = await db.all(
-        "SELECT * FROM Users WHERE  username = ? OR username = ?",
-        [config.agent.username, config.agent.leadAgent],
-      );
-
-      userList = userList.map((u) => ({
-        ...u,
-        extra: u.username === config.agent.leadAgent ? "My Lead" : u.extra,
-      }));
-    }
-    // Else return all non-subagent users, except for the ones we are leading
-    else {
-      userList = await db.all(
-        "SELECT * FROM Users WHERE leadUsername IS NULL OR leadUsername = ?",
-        [config.agent.username],
-      );
-
-      userList = userList.map((u) => ({
-        ...u,
-        extra: u.leadUsername ? "My Subagent" : u.extra,
-      }));
-    }
+    userList = await db.all(
+      "SELECT * FROM Users",
+    );
 
     userList = userList.map((u) => ({
       ...u,
-      extra: u.username == config.agent.username ? "Me" : u.extra,
       active: u.lastActive
         ? new Date(u.lastActive).getTime() > Date.now() - 5 * 1000 // 5 seconds
         : false,
@@ -380,11 +357,11 @@ async function listUsers() {
 
     return table(
       [
-        ["Username", "Title", "Relation", "Status"],
+        ["Username", "Title", "Lead", "Status"],
         ...userList.map((ul) => [
           ul.username,
           ul.title,
-          ul.extra || "",
+          ul.leadUsername || "",
           ul.active ? "Online" : "Offline",
         ]),
       ],

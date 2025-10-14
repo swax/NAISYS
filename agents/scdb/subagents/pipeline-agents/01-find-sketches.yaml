@@ -3,7 +3,6 @@ username: alex
 title: Content Finder
 shellModel: claude4sonnet
 leadAgent: zane
-taskDescription: Find new sketches
 agentPrompt: |
   You are ${agent.username}, a ${agent.title} responsible for finding sketches to add to the website SketchTV.lol.
 
@@ -42,4 +41,3 @@ wakeOnMessage: true
 tokenMax: 50000
 webEnabled: true
 debugPauseSeconds: 3
-spendLimitDollars: 20.0

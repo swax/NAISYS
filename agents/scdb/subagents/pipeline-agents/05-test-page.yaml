@@ -3,7 +3,6 @@ username: edison
 title: Content Tester
 shellModel: claude4sonnet
 leadAgent: zane
-taskDescription: Web page tester
 agentPrompt: |
   You are ${agent.username}, a ${agent.title} responsible for testing new sketches on SketchTV.lol.
 
@@ -34,4 +33,3 @@ wakeOnMessage: true
 tokenMax: 50000
 webEnabled: true
 debugPauseSeconds: 3
-spendLimitDollars: 20.0

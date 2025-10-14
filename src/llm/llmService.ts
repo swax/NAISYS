@@ -13,10 +13,11 @@ export async function query(
   context: LlmMessage[],
   source: string,
 ): Promise<string> {
-  const currentTotalCost = await costTracker.getTotalCosts();
+  const currentTotalCost = await costTracker.getTotalCosts(config.agent.spendLimitDollars ? config.agent.username : undefined);
+  const spendLimit = config.agent.spendLimitDollars ? config.agent.spendLimitDollars : config.spendLimitDollars || -1;
 
-  if (config.agent.spendLimitDollars < currentTotalCost) {
-    throw `LLM Spend limit of $${config.agent.spendLimitDollars} reached`;
+  if (spendLimit < currentTotalCost) {
+    throw `LLM Spend limit of $${spendLimit} reached for ${config.agent.spendLimitDollars ? config.agent.username : 'all users'}, current total cost $${currentTotalCost.toFixed(2)}`;
   }
 
   const model = getLLModel(modelKey);

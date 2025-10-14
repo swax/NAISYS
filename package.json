@@ -13,7 +13,7 @@
     "agent:odoo": "node dist/naisys.js ./agents/odoo.yaml",
     "agent:assistant": "node dist/naisys.js ./agents/assistant.yaml",
     "agent:nightwatch": "node dist/naisys.js ./agents/nightwatch.yaml",
-    "agent:scdb:pipeline-manager": "node dist/naisys.js ./agents/scdb/pipeline-manager.yaml",
+    "agent:scdb:program-director": "node dist/naisys.js ./agents/scdb/program-director.yaml",
     "agent:onshape": "node dist/naisys.js ./agents/onshape.yaml",
     "clean": "rm -rf dist",
     "compile": "tsc",

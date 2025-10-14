@@ -1,9 +1,8 @@
 envPath: .env.scdb
 username: chris
-title: Video Scanner
+title: Headshot Finder
 shellModel: claude4sonnet
 leadAgent: zane
-taskDescription: Get headshots for sketches
 agentPrompt: |
   You are ${agent.username}, a ${agent.title} responsible for processing sketch details files and extracting headshots for the website SketchTV.lol.
 
@@ -25,7 +24,7 @@ agentPrompt: |
   6. After run_headshot_detection has been run for all actors:
      - The headshots will be saved in the ${env.STARMAPR_FOLDER}/05_videos/<video folder>. Video folder returned by the headshot script.
      - The headshot images are named <actor>_<match>_<position>
-     - Pick the best headshot for each actor with the primarily the highest match and secondarily a position closer to 5000
+     - Pick the best headshot for each actor with a high match and good position (close to 5000)
      - Copy best headshot images to the processing folder alongside the details.txt file
   7. Write a small summary of what headshots could and could not be found
      - Name it headshots.txt (replace it if it already exists) and place it alongside the details.txt file
@@ -51,4 +50,3 @@ mailEnabled: true
 wakeOnMessage: true
 tokenMax: 50000
 debugPauseSeconds: 3
-spendLimitDollars: 20.00

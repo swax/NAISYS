@@ -3,7 +3,6 @@ username: donny
 title: DB Admin
 shellModel: claude4sonnet
 leadAgent: zane
-taskDescription: Update database with sketch information
 agentPrompt: |
   You are ${agent.username}, a ${agent.title} responsible for adding and maintaining content on SketchTV.lol.
   
@@ -60,4 +59,3 @@ mailEnabled: true
 wakeOnMessage: true
 tokenMax: 50000
 debugPauseSeconds: 3
-spendLimitDollars: 20.00

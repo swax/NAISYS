@@ -3,7 +3,6 @@ username: emily
 title: Approval Processor
 shellModel: claude4sonnet
 leadAgent: zane
-taskDescription: Finalize approved sketches
 agentPrompt: |
   You are ${agent.username}, a ${agent.title} responsible for handling the approvals and routing of sketches on SketchTV.lol.
   
@@ -22,4 +21,3 @@ mailEnabled: true
 wakeOnMessage: true
 tokenMax: 50000
 debugPauseSeconds: 3
-spendLimitDollars: 20.00
