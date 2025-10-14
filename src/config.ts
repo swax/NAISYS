@@ -62,11 +62,21 @@ export const openRouterApiKey = getEnv("OPENROUTER_API_KEY");
 
 export const googleSearchEngineId = getEnv("GOOGLE_SEARCH_ENGINE_ID");
 
+/** Global spend limit across all agents using this .env file */
+export const spendLimitDollars = sanitizeSpendLimit(getEnv("SPEND_LIMIT_DOLLARS"));
+
+// Validate if spend limit is defined on the agent or .env`
+if (agent.spendLimitDollars === undefined && spendLimitDollars === undefined) {
+  throw `Agent config: Error, 'spendLimitDollars' needs to be defined in the .env file or agent config`;
+}
+
 export interface AgentConfig {
   username: string;
   title: string;
   agentPrompt: string;
-  spendLimitDollars: number;
+
+  /** Local spend limit for this agent */
+  spendLimitDollars?: number;
   tokenMax: number;
 
   shellModel: string;
@@ -91,6 +101,9 @@ export interface AgentConfig {
 
   /** The max number of subagents allowed to be started and managed. Costs by the subagent are applied to the spend limit. */
   subagentMax?: number;
+
+  /** The directory where subagents are stored, relative to the agent config file */
+  subagentDirectory?: string;
 
   /** Used to prevent the agent from constantly responding to mail and not getting any work done */
   mailBlackoutCycles?: number;
@@ -127,7 +140,6 @@ function loadAgentConfig() {
     "title",
     "shellModel",
     "agentPrompt",
-    "spendLimitDollars",
     "tokenMax",
     // other properties can be undefined
   ]) {
@@ -135,6 +147,8 @@ function loadAgentConfig() {
       throw `Agent config: Error, ${key} is not defined`;
     }
   }
+
+  config.spendLimitDollars = sanitizeSpendLimit(config.spendLimitDollars);
 
   // Disable by default, too many screw ups. Cached tokens means the effects of this isn't so bad.
   if (config.disableMultipleCommands === undefined) {
@@ -233,4 +247,13 @@ function getBinPath() {
   }
 
   return binPath;
+}
+
+function sanitizeSpendLimit(num: any) {
+  if (num === undefined) return undefined;
+  const n = Number(num);
+  if (isNaN(n) || n <= 0) {
+    return undefined
+  }
+  return n;
 }

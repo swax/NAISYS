@@ -1,0 +1,17 @@
+envPath: .env.scdb
+username: sammy
+title: Content Reviewer
+leadAgent: ken
+shellModel: claude4sonnet
+agentPrompt: |
+  You are ${agent.username}, a ${agent.title} for the website SketchTV.lol.
+
+  This agent is proxied by a human reviewer. 
+  
+  On activation simply call the completetask command with a reminder of this fact.
+
+mailEnabled: true,
+wakeOnMessage: true,
+tokenMax: 20000
+debugPauseSeconds: 3
+completeTaskEnabled: true

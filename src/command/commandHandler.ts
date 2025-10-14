@@ -205,8 +205,9 @@ export async function processCommand(
 
       case "cost": {
         if (cmdArgs === "reset") {
-          await costTracker.clearCosts();
-          await contextManager.append("Cost tracking data cleared.");
+          const username = config.agent.spendLimitDollars ? config.agent.username : undefined;
+          await costTracker.clearCosts(username);
+          await contextManager.append(`Cost tracking data cleared for ${username || "all users"}.`);
         } else if (cmdArgs) {
           await output.errorAndLog(
             "The 'cost' command only supports the 'reset' parameter.",

@@ -36,8 +36,8 @@ export async function recordTokens(
     await db.run(
       `INSERT INTO Costs (date, username, subagent, source, model, cost, input_tokens, output_tokens, cache_write_tokens, cache_read_tokens) VALUES (datetime('now'), ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
-        config.agent.leadAgent || config.agent.username,
-        config.agent.leadAgent ? config.agent.username : null,
+        config.agent.username,
+        null,
         source,
         modelKey,
         totalCost,
@@ -60,8 +60,8 @@ export async function recordCost(
     await db.run(
       `INSERT INTO Costs (date, username, subagent, source, model, cost, input_tokens, output_tokens, cache_write_tokens, cache_read_tokens) VALUES (datetime('now'), ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
-        config.agent.leadAgent || config.agent.username,
-        config.agent.leadAgent ? config.agent.username : null,
+        config.agent.username,
+        null,
         source,
         modelKey,
         cost,
@@ -84,26 +84,32 @@ export function calculateCostFromTokens(tokenUsage: TokenUsage, model: LlmModelC
   return inputCost + outputCost + cacheWriteCost + cacheReadCost;
 }
 
-export async function getTotalCosts() {
+export async function getTotalCosts(username?: string) {
   return usingDatabase(async (db) => {
+    const whereClause = username ? 'WHERE username = ?' : '';
+    const params = username ? [username] : [];
+    
     const result = await db.get(
       `SELECT sum(cost) as total 
         FROM Costs 
-        WHERE username = ?`,
-      [config.agent.leadAgent || config.agent.username],
+        ${whereClause}`,
+      params,
     );
 
     return result.total;
   });
 }
 
-export async function getCostBreakdown() {
+export async function getCostBreakdown(username?: string) {
   return usingDatabase(async (db) => {
+    const whereClause = username ? 'WHERE username = ?' : '';
+    const params = username ? [username] : [];
+    
     const result = await db.get(
       `SELECT sum(input_tokens) as input_tokens, sum(output_tokens) as output_tokens, sum(cache_write_tokens) as cache_write_tokens, sum(cache_read_tokens) as cache_read_tokens 
         FROM Costs 
-        WHERE username = ?`,
-      [config.agent.leadAgent || config.agent.username],
+        ${whereClause}`,
+      params,
     );
 
     const totalCacheTokens = (result.cache_write_tokens || 0) + (result.cache_read_tokens || 0);
@@ -120,15 +126,18 @@ export async function getCostBreakdown() {
   });
 }
 
-export async function getCostBreakdownWithModels() {
+export async function getCostBreakdownWithModels(username?: string) {
   return usingDatabase(async (db) => {
+    const whereClause = username ? 'WHERE username = ?' : '';
+    const params = username ? [username] : [];
+
     const result = await db.all(
       `SELECT model, sum(cost) as total_cost, sum(input_tokens) as input_tokens, sum(output_tokens) as output_tokens, sum(cache_write_tokens) as cache_write_tokens, sum(cache_read_tokens) as cache_read_tokens 
         FROM Costs 
-        WHERE username = ?
+        ${whereClause}
         GROUP BY model
         ORDER BY sum(cost) DESC`,
-      [config.agent.leadAgent || config.agent.username],
+      params,
     );
 
     return result;
@@ -181,18 +190,21 @@ export function calculateModelCacheSavings(
   };
 }
 
-export async function clearCosts() {
+export async function clearCosts(username?: string) {
   return usingDatabase(async (db) => {
+    const whereClause = username ? 'WHERE username = ?' : '';
+    const params = username ? [username] : [];
+
     await db.run(
-      `DELETE FROM Costs WHERE username = ?`,
-      [config.agent.leadAgent || config.agent.username],
+      `DELETE FROM Costs ${whereClause}`,
+      params,
     );
   });
 }
 
-export async function printCosts() {
-  const costBreakdown = await getCostBreakdown();
-  const modelBreakdowns = await getCostBreakdownWithModels();
+export async function printCosts(username?: string) {
+  const costBreakdown = await getCostBreakdown(username);
+  const modelBreakdowns = await getCostBreakdownWithModels(username);
   
   // Use stored total costs
   const totalStoredCost = modelBreakdowns.reduce((sum, model) => sum + (model.total_cost || 0), 0);
@@ -219,8 +231,10 @@ export async function printCosts() {
     }
   }
   
+  const spendLimit = username ? config.agent.spendLimitDollars : config.spendLimitDollars;
+  const userLabel = username ? `${username}` : 'all users';
   output.comment(
-    `Total cost so far $${totalStoredCost.toFixed(2)} of $${config.agent.spendLimitDollars} limit`,
+    `Total cost for ${userLabel} $${totalStoredCost.toFixed(2)} of $${spendLimit} limit`,
   );
 
   // Calculate and display cache savings if caching was used
@@ -285,14 +299,16 @@ export async function printCosts() {
     }
   }
 
-  // Costs by subagents
+  // Costs by individual users
+  if (username) {
+    return; // Skip subagent breakdown when showing specific user
+  }
+
   await usingDatabase(async (db) => {
     const result = await db.all(
-      `SELECT subagent, sum(cost) as total_cost
-        FROM Costs 
-        WHERE username = ? 
-        GROUP BY subagent`,
-      [config.agent.leadAgent || config.agent.username],
+      `SELECT username, sum(cost) as total_cost
+        FROM Costs
+        GROUP BY username`
     );
 
     if (result.length <= 1) {
@@ -300,8 +316,7 @@ export async function printCosts() {
     }
 
     for (const row of result) {
-      const label = row.subagent ? `Subagent ${row.subagent}` : "Lead agent";
-      output.comment(`  ${label} cost $${(row.total_cost || 0).toFixed(2)}`);
+      output.comment(`  ${row.username} cost $${(row.total_cost || 0).toFixed(2)}`);
     }
   });
 }

@@ -39,6 +39,10 @@ const _terminationEvents: Array<{
 _init();
 
 function _init() {
+  if (!config.agent.subagentDirectory) {
+    return;
+  }
+
   // Load subagents for user from file system
   const subagentDir = _getSubagentDir();
   const subagentHostDir = subagentDir.toHostPath();
@@ -47,7 +51,10 @@ function _init() {
     return;
   }
 
-  const subagentFiles = fs.readdirSync(subagentHostDir);
+  const subagentFiles = fs.readdirSync(subagentHostDir).filter(file => {
+    const filePath = path.join(subagentHostDir, file);
+    return fs.statSync(filePath).isFile();
+  });
 
   // Iterate files
   for (const subagentFile of subagentFiles) {
@@ -60,7 +67,7 @@ function _init() {
       id: _nextAgentId++,
       agentName: subagentConfig.username,
       agentPath: new NaisysPath(agentHostPath),
-      taskDescription: subagentConfig.taskDescription || "No task description",
+      taskDescription: subagentConfig.taskDescription || subagentConfig.title || "No task description",
       log: "",
       status: "stopped",
     });
@@ -273,7 +280,7 @@ async function _startAgent(id: number, taskDescription: string) {
 
   // Check that max sub agents aren't already started
   const runningSubagents = _subagents.filter((p) => p.status === "running");
-  if (runningSubagents.length >= (config.agent.subagentMax || 0)) {
+  if (runningSubagents.length >= (config.agent.subagentMax || 1)) {
     throw `Max subagents already running`;
   }
 
@@ -395,5 +402,5 @@ function _debugFlushContext(subagentId: number) {
 function _getSubagentDir() {
   const agentDirectory = path.dirname(config.agent.hostpath);
 
-  return new NaisysPath(`${agentDirectory}/subagents`);
+  return new NaisysPath(`${agentDirectory}/${config.agent.subagentDirectory}`);
 }

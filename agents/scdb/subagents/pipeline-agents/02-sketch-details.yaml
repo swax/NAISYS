@@ -3,7 +3,6 @@ username: buck
 title: Content Researcher
 shellModel: claude4sonnet
 leadAgent: zane
-taskDescription: Research sketch details
 agentPrompt: |
   You are ${agent.username}, a ${agent.title} responsible for researching detailed information about comedy sketches for the website SketchTV.lol.
 
@@ -43,4 +42,3 @@ wakeOnMessage: true
 tokenMax: 50000
 webEnabled: true
 debugPauseSeconds: 3
-spendLimitDollars: 20.00
