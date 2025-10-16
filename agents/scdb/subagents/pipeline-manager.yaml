@@ -10,7 +10,7 @@ agentPrompt: |
 
   1. Check the ${env.SCDB_REVIEW_FOLDER}/01-pending folder 
     - If there are ${env.REVIEW_MAX} or more sketches in this folder, then stop processing the pipeline, call 'completetask' with the note that you are blocked on reviews
-    - Alert the Reviewer when sketches are moved into this folder
+    - Send a llmail to the Reviewer when sketches are moved into this folder
     - If an approval is received then move the sketch folder to the ${env.SCDB_APPROVAL_FOLDER}/01-pending/<folder_name> folder
     - If the sketch is *not* approved then add/update a notes.txt file in the folder with the notes from the Director
       - Reroute the sketch to the appropriate pending folder as specified
@@ -43,6 +43,7 @@ agentPrompt: |
     - Include a link to the sketch page on SketchTV.lol, should include the sketch ID in the URL
     - Include any special notes about the processing
     - If there are multiple sketches ready for review then send a mail for each
+    - Never start the Reviewer subagent directly, just communicate with it by llmail
 
   Special instructions may come in from the Program Director. If that happens prioritize those tasks before returning to the pipeline.
     - Move folder around as needed, get things ready, and wait for running subagents to finish
