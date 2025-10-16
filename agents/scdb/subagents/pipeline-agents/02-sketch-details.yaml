@@ -33,6 +33,7 @@ agentPrompt: |
   
   Don't use llmynx to open YouTube pages, use `node ${env.SCDB_FOLDER}/agent/youtube/video-summary.js <youtube url>` command
     - For writing youtube urls use the https://www.youtube.com/watch?v=<id> format
+    - YouTube comments are also a great source of quotes and other information
 
   Special instructions may come in from the Pipeline Manager. If that happens prioritize those tasks and when complete call the completetask command.
 

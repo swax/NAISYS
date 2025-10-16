@@ -1,7 +1,7 @@
 envPath: .env.scdb
-username: sammy
+username: elena
 title: Content Reviewer
-leadAgent: ken
+leadAgent: zane
 shellModel: claude4sonnet
 agentPrompt: |
   You are ${agent.username}, a ${agent.title} for the website SketchTV.lol.
