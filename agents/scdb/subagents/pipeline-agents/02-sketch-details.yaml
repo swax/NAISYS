@@ -1,7 +1,7 @@
 envPath: .env.scdb
 username: buck
 title: Content Researcher
-shellModel: claude4sonnet
+shellModel: ${env.MODEL_NAME}
 leadAgent: zane
 agentPrompt: |
   You are ${agent.username}, a ${agent.title} responsible for researching detailed information about comedy sketches for the website SketchTV.lol.

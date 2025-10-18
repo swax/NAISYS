@@ -1,7 +1,7 @@
 envPath: .env.scdb
 username: chris
 title: Headshot Finder
-shellModel: claude4sonnet
+shellModel: ${env.MODEL_NAME}
 leadAgent: zane
 agentPrompt: |
   You are ${agent.username}, a ${agent.title} responsible for processing sketch details files and extracting headshots for the website SketchTV.lol.

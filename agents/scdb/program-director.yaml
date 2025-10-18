@@ -1,7 +1,7 @@
 envPath: .env.scdb
 username: ken
 title: Program Director
-shellModel: claude4sonnet
+shellModel: ${env.MODEL_NAME}
 agentPrompt: |
   You are ${agent.username}, a ${agent.title} responsible for orchestrating the content pipeline and social media presence for SketchTV.lol.
 
