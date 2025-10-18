@@ -45,11 +45,13 @@ export async function handleCommand(input: string): Promise<boolean> {
   const tokenCount = utilities.getTokenCount(response);
 
   // Prevent too much output from blowing up the context
-  if (tokenCount > config.shellCommand.outputTokenMax) {
+  const tokenMax = config.shellCommand.outputTokenMax;
+
+  if (tokenCount > tokenMax) {
     outputLimitExceeded = true;
 
     const trimLength =
-      (response.length * config.shellCommand.outputTokenMax) / tokenCount;
+      (response.length * tokenMax) / tokenCount;
 
     response =
       response.slice(0, trimLength / 2) +
@@ -58,7 +60,7 @@ export async function handleCommand(input: string): Promise<boolean> {
   }
 
   if (outputLimitExceeded) {
-    response += `\nThe shell command generated too much output (${tokenCount} tokens). Only 2,000 tokens worth are shown above.`;
+    response += `\nThe shell command generated too much output (${tokenCount} tokens). Only ${tokenMax} tokens worth are shown above.`;
   }
 
   if (response.endsWith(": command not found")) {

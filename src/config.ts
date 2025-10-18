@@ -16,7 +16,7 @@ export const hostname = "naisys";
 
 export const shellCommand = {
   /** Limits the size of files that can be read/wrote */
-  outputTokenMax: 5000,
+  outputTokenMax: 7500,
   /** The time NAISYS will wait for new shell output before giving up */
   timeoutSeconds: 10,
   maxTimeoutSeconds: 60 * 5, // 5 minutes
@@ -28,7 +28,7 @@ const envPath = agent.envPath || '.env';
 dotenv.config({ path: envPath });
 
 /** Web pages loaded with llmynx will be reduced down to around this number of tokens */
-export const webTokenMax = 3000;
+export const webTokenMax = 5000;
 
 /** Allows the LLM to end it's own session */
 export const endSessionEnabled = true;
@@ -69,6 +69,15 @@ export const spendLimitDollars = sanitizeSpendLimit(getEnv("SPEND_LIMIT_DOLLARS"
 if (agent.spendLimitDollars === undefined && spendLimitDollars === undefined) {
   throw `Agent config: Error, 'spendLimitDollars' needs to be defined in the .env file or agent config`;
 }
+
+// Pull model config from env if it's centrally defined there
+agent.shellModel = resolveConfigVars(agent.shellModel);
+agent.webModel = resolveConfigVars(agent.webModel);
+agent.dreamModel = resolveConfigVars(agent.dreamModel);
+if (agent.imageModel) {
+  agent.imageModel = resolveConfigVars(agent.imageModel);
+}
+
 
 export interface AgentConfig {
   username: string;
