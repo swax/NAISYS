@@ -1,7 +1,7 @@
 envPath: .env.scdb
 username: edison
 title: Content Tester
-shellModel: claude4sonnet
+shellModel: ${env.MODEL_NAME}
 leadAgent: zane
 agentPrompt: |
   You are ${agent.username}, a ${agent.title} responsible for testing new sketches on SketchTV.lol.

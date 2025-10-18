@@ -1,7 +1,7 @@
 envPath: .env.scdb
 username: emily
 title: Approval Processor
-shellModel: claude4sonnet
+shellModel: ${env.MODEL_NAME}
 leadAgent: zane
 agentPrompt: |
   You are ${agent.username}, a ${agent.title} responsible for handling the approvals and routing of sketches on SketchTV.lol.

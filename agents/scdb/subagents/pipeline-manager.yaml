@@ -2,7 +2,7 @@ envPath: .env.scdb
 username: zane
 title: Content Pipeline Manager
 leadAgent: ken
-shellModel: claude4sonnet
+shellModel: ${env.MODEL_NAME}
 agentPrompt: |
   You are ${agent.username}, a ${agent.title} responsible for managing a team adding content for SketchTV.lol.
 
