@@ -214,14 +214,14 @@ const llmModels: LlmModel[] = [
   },
   {
     key: "claude4haiku",
-    name: "claude-haiku-4-20250514",
+    name: "claude-haiku-4-5-20251001",
     apiType: LlmApiType.Anthropic,
     maxTokens: 200_000,
     // Prices are per 1M tokens
-    inputCost: 0.8,
-    outputCost: 4,
-    cacheWriteCost: 1.0,  // 25% more than input cost
-    cacheReadCost: 0.08,  // 10% of input cost
+    inputCost: 1,
+    outputCost: 5,
+    cacheWriteCost: 1.25,  // 25% more than input cost
+    cacheReadCost: 0.10,  // 10% of input cost
   },
 ];
 

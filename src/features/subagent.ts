@@ -89,7 +89,7 @@ export async function handleCommand(args: string): Promise<string> {
   list: Lists all subagents
   create "<agent title>" "<description>": Creates a new agent. Include as much detail in the description as possible.
   stop <id>: Stops the agent with the given task id
-  start <id> <description>: Starts an existing agent with the given task id and description of the task to perform`;
+  start <name> <description>: Starts an existing agent with the given name and description of the task to perform`;
 
       if (inputMode.current == InputMode.Debug) {
         helpOutput += `\n  flush <id>: Debug only command to show the agent's context log`;
@@ -131,10 +131,10 @@ export async function handleCommand(args: string): Promise<string> {
       return await _createAgent(title, task);
     }
     case "start": {
-      const subagentId = parseInt(argParams[1]);
+      const subagentName = argParams[1];
       const taskDescription = args.split('"')[1];
 
-      return await _startAgent(subagentId, taskDescription);
+      return await _startAgent(subagentName, taskDescription);
     }
     case "stop": {
       const subagentId = parseInt(argParams[1]);
@@ -261,22 +261,28 @@ async function _createAgent(title: string, taskDescription: string) {
     status: "stopped",
   });
 
-  return "Subagent Created\n" + (await _startAgent(id, taskDescription));
+  return "Subagent Created\n" + (await _startAgent(agentName, taskDescription));
 }
 
-async function _startAgent(id: number, taskDescription: string) {
+async function _startAgent(agentName: string, taskDescription: string) {
+  if (!agentName) {
+    throw "Subagent name is required to start a subagent";
+  }
+
   if (!taskDescription) {
     throw "Task description is required to start a subagent";
   }
 
-  const subagent = _subagents.find((p) => p.id === id);
+  const subagent = _subagents.find((p) => p.agentName === agentName);
   if (!subagent) {
-    throw `Subagent ${id} not found`;
+    throw `Subagent '${agentName}' not found`;
   }
 
   if (subagent.status === "running") {
-    throw `Subagent ${id} is already running`;
+    throw `Subagent '${agentName}' is already running`;
   }
+
+  const id = subagent.id;
 
   // Check that max sub agents aren't already started
   const runningSubagents = _subagents.filter((p) => p.status === "running");
@@ -297,6 +303,18 @@ async function _startAgent(id: number, taskDescription: string) {
     },
   );
 
+  // This handles if the host process dies, we want to kill child subagent processes too so they don't become orphans still running on the sysetm
+  process.on('exit', () => {
+    try {
+      // Negative PID kills the entire process group
+      if (subagent.process?.pid) {
+        process.kill(-subagent.process.pid);
+      }
+    } catch (e) {
+      // Process might already be dead
+    }
+  });
+
   // Run async so that the process spawn handler is setup immediately otherwise it'll be missed
   void llmail
     .newThread([subagent.agentName], "Your Task", taskDescription)
@@ -312,13 +330,13 @@ async function _startAgent(id: number, taskDescription: string) {
 
     const timeout = setTimeout(() => {
       if (hasSpawned && subagent.status === "running") {
-        let response = `Subagent ID: ${id} Started`;
+        let response = `Subagent '${agentName}' Started (ID: ${id})`;
         if (config.mailEnabled) {
           response += `\nUse llmail to communicate with the subagent '${subagent.agentName}'`;
         }
         resolve(response);
       } else {
-        resolve(`Subagent ${id} failed to start properly`);
+        resolve(`Subagent '${agentName}' failed to start properly`);
       }
     }, 5000);
 
@@ -331,13 +349,13 @@ async function _startAgent(id: number, taskDescription: string) {
 
     subagent.process!.on("error", (error) => {
       clearTimeout(timeout);
-      resolve(`Failed to start subagent ${id}: ${error}`);
+      resolve(`Failed to start subagent '${agentName}': ${error}`);
     });
 
     subagent.process!.on("close", (code) => {
       if (!hasSpawned || code !== 0) {
         clearTimeout(timeout);
-        resolve(`Subagent ${id} exited early with code ${code}`);
+        resolve(`Subagent '${agentName}' exited early with code ${code}`);
       }
     });
   });
