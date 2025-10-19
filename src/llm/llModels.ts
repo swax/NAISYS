@@ -44,86 +44,37 @@ const llmModels: LlmModel[] = [
   // OpenAI Models
   // https://openai.com/api/pricing/
   {
-    key: "gpt4.1",
-    name: "gpt-4.1",
+    key: "gpt5",
+    name: "gpt-5",
     apiType: LlmApiType.OpenAI,
-    maxTokens: 200_000,
+    maxTokens: 400_000,
     // Prices are per 1M tokens
-    inputCost: 2.0,
-    outputCost: 8.0,
-    cacheWriteCost: 0.5,  // Cached input cost
-    cacheReadCost: 0.5,   // Cached input cost
+    inputCost: 1.25,
+    outputCost: 10.0,
+    cacheWriteCost: 0.125,  // Cached input cost
+    cacheReadCost: 0.125,   // Cached input cost
   },
   {
-    key: "gpt4.1mini",
-    name: "gpt-4.1-mini",
+    key: "gpt5mini",
+    name: "gpt-5-mini",
     apiType: LlmApiType.OpenAI,
-    maxTokens: 200_000,
+    maxTokens: 400_000,
     // Prices are per 1M tokens
-    inputCost: 0.4,
-    outputCost: 1.6,
-    cacheWriteCost: 0.1,  // Cached input cost
-    cacheReadCost: 0.1,   // Cached input cost
+    inputCost: 0.25,
+    outputCost: 2.0,
+    cacheWriteCost: 0.025,  // Cached input cost
+    cacheReadCost: 0.025,   // Cached input cost
   },
   {
-    key: "gpt4.1nano",
-    name: "gpt-4.1-nano",
+    key: "gpt5nano",
+    name: "gpt-5-nano",
     apiType: LlmApiType.OpenAI,
-    maxTokens: 200_000,
+    maxTokens: 400_000,
     // Prices are per 1M tokens
-    inputCost: 0.1,
+    inputCost: 0.05,
     outputCost: 0.4,
-    cacheWriteCost: 0.025, // Cached input cost
-    cacheReadCost: 0.025,  // Cached input cost
-  },
-  {
-    key: "o3",
-    name: "o3",
-    apiType: LlmApiType.OpenAI,
-    maxTokens: 200_000,
-    // Prices are per 1M tokens
-    inputCost: 2.0,
-    outputCost: 8.0,
-    cacheWriteCost: 0.5,  // Cached input cost
-    cacheReadCost: 0.5,   // Cached input cost
-  },
-  {
-    key: "o4mini",
-    name: "o4-mini",
-    apiType: LlmApiType.OpenAI,
-    maxTokens: 200_000,
-    // Prices are per 1M tokens
-    inputCost: 1.1,
-    outputCost: 4.4,
-    cacheWriteCost: 0.275, // Cached input cost
-    cacheReadCost: 0.275,  // Cached input cost
-  },
-  {
-    key: "gpto3mini",
-    name: "o3-mini",
-    apiType: LlmApiType.OpenAI,
-    maxTokens: 200_000,
-    // Prices are per 1M tokens
-    inputCost: 1.1,
-    outputCost: 4.4,
-  },
-  {
-    key: "gpt4mini",
-    name: "gpt-4o-mini",
-    apiType: LlmApiType.OpenAI,
-    maxTokens: 128_000,
-    // Prices are per 1M tokens
-    inputCost: 0.15,
-    outputCost: 0.6,
-  },
-  {
-    key: "gpt4o",
-    name: "gpt-4o",
-    apiType: LlmApiType.OpenAI,
-    maxTokens: 128_000,
-    // Prices are per 1M tokens
-    inputCost: 2.5,
-    outputCost: 10,
+    cacheWriteCost: 0.005, // Cached input cost
+    cacheReadCost: 0.005,  // Cached input cost
   },
   // Google Models - Prices are per 1M tokens
   {

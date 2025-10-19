@@ -95,20 +95,22 @@ async function sendWithOpenAiCompatible(
   }
   // Record token usage
   if (chatResponse.usage) {
-    let cacheReadTokens = 0;
-    
-    // OpenAI's caching is automatic - check for cached tokens in the response
-    if (chatResponse.usage.prompt_tokens_details?.cached_tokens) {
-      cacheReadTokens = chatResponse.usage.prompt_tokens_details.cached_tokens;
-    }
-    
+    const cacheReadTokens =
+      chatResponse.usage.prompt_tokens_details?.cached_tokens || 0;
+
+    // Remove cached tokens so we only bill fresh tokens at the full input rate.
+    const nonCachedPromptTokens = Math.max(
+      0,
+      (chatResponse.usage.prompt_tokens || 0) - cacheReadTokens,
+    );
+
     await costTracker.recordTokens(
-      source, 
-      model.key, 
-      chatResponse.usage.prompt_tokens, 
-      chatResponse.usage.completion_tokens, 
+      source,
+      model.key,
+      nonCachedPromptTokens,
+      chatResponse.usage.completion_tokens,
       0, // OpenAI doesn't report cache write tokens separately - it's automatic
-      cacheReadTokens
+      cacheReadTokens,
     );
   } else {
     throw "Error, no usage data returned from OpenAI API.";
