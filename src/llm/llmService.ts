@@ -2,17 +2,21 @@ import Anthropic from "@anthropic-ai/sdk";
 import { MessageParam } from "@anthropic-ai/sdk/resources/messages.mjs";
 import { Content, GoogleGenerativeAI } from "@google/generative-ai";
 import OpenAI from "openai";
+import { ChatCompletionCreateParamsNonStreaming } from "openai/resources";
 import * as config from "../config.js";
 import * as costTracker from "./costTracker.js";
 import { LlmApiType, getLLModel } from "./llModels.js";
 import { LlmMessage, LlmRole } from "./llmDtos.js";
+import { consoleToolOpenAI, consoleToolAnthropic, getCommandsFromOpenAiToolUse, getCommandsFromAnthropicToolUse } from "./commandTool.js";
+
+type QuerySources = "console" | "write-protection" | "dream" | "llmynx";
 
 export async function query(
   modelKey: string,
   systemMessage: string,
   context: LlmMessage[],
-  source: string,
-): Promise<string> {
+  source: QuerySources,
+): Promise<string[]> {
   const currentTotalCost = await costTracker.getTotalCosts(config.agent.spendLimitDollars ? config.agent.username : undefined);
   const spendLimit = config.agent.spendLimitDollars ? config.agent.spendLimitDollars : config.spendLimitDollars || -1;
 
@@ -51,9 +55,9 @@ async function sendWithOpenAiCompatible(
   modelKey: string,
   systemMessage: string,
   context: LlmMessage[],
-  source: string,
+  source: QuerySources,
   apiKey?: string,
-): Promise<string> {
+): Promise<string[]> {
   const model = getLLModel(modelKey);
 
   if (model.key === "local") {
@@ -76,8 +80,9 @@ async function sendWithOpenAiCompatible(
     throw "Error, last message on context is not a user message";
   }
 
-  const chatResponse = await openAI.chat.completions.create({
+  const chatRequest: ChatCompletionCreateParamsNonStreaming = {
     model: model.name,
+    stream: false,
     messages: [
       {
         role: LlmRole.System, // LlmRole.User, //
@@ -88,7 +93,17 @@ async function sendWithOpenAiCompatible(
         role: m.role,
       })),
     ],
-  });
+  };
+
+  if (source === "console" && config.useToolsForLlmConsoleResponses) {
+    chatRequest.tools = [consoleToolOpenAI];
+    chatRequest.tool_choice = {
+      type: "function",
+      function: { name: consoleToolOpenAI.function.name },
+    };
+  }
+
+  const chatResponse = await openAI.chat.completions.create(chatRequest);
 
   if (!model.inputCost && !model.outputCost) {
     // Don't cost models with no costs
@@ -116,15 +131,23 @@ async function sendWithOpenAiCompatible(
     throw "Error, no usage data returned from OpenAI API.";
   }
 
-  return chatResponse.choices[0].message.content || "";
+  if (chatRequest.tools) {
+    const commandsFromTool = getCommandsFromOpenAiToolUse(chatResponse.choices[0]?.message?.tool_calls);
+
+    if (commandsFromTool) {
+      return commandsFromTool;
+    }
+  }
+
+  return [chatResponse.choices[0].message.content || ""];
 }
 
 async function sendWithGoogle(
   modelKey: string,
   systemMessage: string,
   context: LlmMessage[],
-  source: string,
-): Promise<string> {
+  source: QuerySources,
+): Promise<string[]> {
   if (!config.googleApiKey) {
     throw "Error, googleApiKey is not defined";
   }
@@ -203,15 +226,15 @@ async function sendWithGoogle(
     throw "Error, no usage metadata returned from Google API.";
   }
 
-  return responseText;
+  return [responseText];
 }
 
 async function sendWithAnthropic(
   modelKey: string,
   systemMessage: string,
   context: LlmMessage[],
-  source: string,
-): Promise<string> {
+  source: QuerySources,
+): Promise<string[]> {
   const model = getLLModel(modelKey);
 
   if (!config.anthropicApiKey) {
@@ -229,7 +252,7 @@ async function sendWithAnthropic(
     throw "Error, last message on context is not a user message";
   }
 
-  const msgResponse = await anthropic.messages.create({
+  const createParams: Anthropic.MessageCreateParams = {
     model: model.name,
     max_tokens: 4096, // Blows up on anything higher
     messages: [
@@ -265,13 +288,23 @@ async function sendWithAnthropic(
         },
       ),
     ],
-  });
+  };
+
+  if (source === "console" && config.useToolsForLlmConsoleResponses) {
+    createParams.tools = [consoleToolAnthropic];
+    createParams.tool_choice = {
+      type: "tool",
+      name: consoleToolAnthropic.name,
+    };
+  }
+
+  const msgResponse = await anthropic.messages.create(createParams);
 
   // Record token usage
   if (msgResponse.usage) {
     await costTracker.recordTokens(
-      source, 
-      model.key, 
+      source,
+      model.key,
       msgResponse.usage.input_tokens,
       msgResponse.usage.output_tokens,
       msgResponse.usage.cache_creation_input_tokens || 0,
@@ -281,5 +314,13 @@ async function sendWithAnthropic(
     throw "Error, no usage data returned from Anthropic API.";
   }
 
-  return msgResponse.content.find((c) => c.type == "text")?.text || "";
+  if (createParams.tools) {
+    const commandsFromTool = getCommandsFromAnthropicToolUse(msgResponse.content);
+
+    if (commandsFromTool) {
+      return commandsFromTool;
+    }
+  }
+
+  return [msgResponse.content.find((c) => c.type == "text")?.text || ""];
 }

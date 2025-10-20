@@ -409,12 +409,12 @@ Final Merged Content:
     content,
   };
 
-  return await llmService.query(
+  return (await llmService.query(
     config.agent.webModel,
     systemMessage,
     [context],
     "llmynx",
-  );
+  ))[0];
 }
 
 function outputInDebugMode(msg: string) {

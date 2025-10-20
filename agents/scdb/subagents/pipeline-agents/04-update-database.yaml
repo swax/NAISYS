@@ -30,6 +30,7 @@ agentPrompt: |
        - If the character is well known then use the character id from the database, otherwise create a new character entry
      - Tags and categories
      - Any other relevant metadata from the details file
+     - The review_status should be set to 'NeedsReview' so QA knows to check the webpage reflects the db updates
   10. Create/revise the database.txt file alongside the details.txt file with IDs and such of the entries you created/updated
      - You can generate this automatically by using the `(cd ${env.SCDB_FOLDER} && node agent/sketchtvlol/get-sketch-details.js <sketch_id>)` command
      - You can also use this to validate the sketch information after updating

@@ -31,26 +31,22 @@ interface NextCommandResponse {
 
 export async function processCommand(
   prompt: string,
-  consoleInput: string,
+  commandList: string[],
 ): Promise<NextCommandResponse> {
   // We process the lines one at a time so we can support multiple commands with line breaks
   let firstLine = true;
+  let firstCommand = true;
   let processNextLLMpromptBlock = true;
 
   let nextCommandAction = NextCommandAction.Continue;
 
-  consoleInput = consoleInput.trim();
+  while (processNextLLMpromptBlock && commandList.length) {
+    const { input, splitResult } = await popFirstCommand(commandList);
 
-  while (processNextLLMpromptBlock && consoleInput) {
-    const { input, nextInput, splitResult } =
-      await splitMultipleInputCommands(consoleInput);
-
-    consoleInput = nextInput;
-
-    if (splitResult == SplitResult.InputIsPrompt) {
+    if (splitResult == "inputInPrompt") {
       continue;
     } else if (
-      splitResult == SplitResult.InputPromptMismatch ||
+      splitResult == "inputPromptMismatch" ||
       !input.trim()
     ) {
       break;
@@ -64,14 +60,14 @@ export async function processCommand(
         output.write(prompt + chalk[OutputColor.llm](input));
       } else {
         // Check if multiple commands are disabled
-        if (config.agent.disableMultipleCommands) {
+        if (!firstCommand && config.agent.disableMultipleCommands) {
           await output.errorAndLog(
             `Multiple commands disabled. Blocked command: ${input}`,
           );
           break;
         }
         await output.commentAndLog(
-          "Continuing with next command from same LLM response...",
+          `Continuing with next command from same LLM response...`,
         );
         await contextManager.append(input, ContentSource.LLM);
       }
@@ -263,11 +259,15 @@ export async function processCommand(
           : NextCommandAction.Continue;
       }
     } // End switch
+
+    if (cmdParams[0] != "comment" && firstCommand) {
+      firstCommand = false;
+    }
   } // End loop processing LLM response
 
   // display unprocessed lines to aid in debugging
-  if (consoleInput.trim()) {
-    await output.errorAndLog(`Unprocessed LLM response:\n${consoleInput}`);
+  if (commandList.length) {
+    await output.errorAndLog(`Unprocessed LLM commands:\n${commandList.map((c, i) => `${i + 1}: ${c}`).join("\n")}`);
   }
 
   return {
@@ -277,12 +277,20 @@ export async function processCommand(
   };
 }
 
-enum SplitResult {
-  InputIsPrompt,
-  InputPromptMismatch,
-}
+type SplitResult =
+  "inputInPrompt" |
+  "inputPromptMismatch" |
+  "sliced" |
+  "popped";
+/**
+ * Pops the first command, but it some cases splits the first command, and pushes the rest back to the command list
+ * If the command starts with the command prompt itself, slice that off
+ * If the command starts with a NAISYS command, slice that off as welll as it needs to be processed internally by NAISYS and the the shell
+ */
+async function popFirstCommand(commandList: string[]) {
+  let nextInput = commandList.shift() || "";
+  nextInput = nextInput.trim();
 
-async function splitMultipleInputCommands(nextInput: string) {
   let input = "";
   let splitResult: SplitResult | undefined;
 
@@ -299,17 +307,12 @@ async function splitMultipleInputCommands(nextInput: string) {
       // Slice nextInput after $
       const endPrompt = nextInput.indexOf("$", pathPrompt.length);
       nextInput = nextInput.slice(endPrompt + 1).trim();
-      splitResult = SplitResult.InputIsPrompt;
+      splitResult = "inputInPrompt";
     }
     // Else prompt did not match, stop processing input
     else {
-      splitResult = SplitResult.InputPromptMismatch;
+      splitResult = "inputPromptMismatch";
     }
-  }
-  // We can't validate that the working directory in the prompt is good until the commands are processed
-  else if (nextPromptPos > 0) {
-    input = nextInput.slice(0, nextPromptPos);
-    nextInput = nextInput.slice(nextPromptPos).trim();
   }
   // Most custom NAISYS commands are single line, but comment in quotes can span multiple lines so we need to handle that
   // because often the LLM puts shell commands after the comment
@@ -349,6 +352,11 @@ async function splitMultipleInputCommands(nextInput: string) {
     input = nextInput.slice(0, newLinePos);
     nextInput = nextInput.slice(newLinePos).trim();
   }
+  // We can't validate that the working directory in the prompt is good until the commands are processed
+  else if (nextPromptPos > 0) {
+    input = nextInput.slice(0, nextPromptPos);
+    nextInput = nextInput.slice(nextPromptPos).trim();
+  }
 
   // Else process the entire input now
   else {
@@ -356,10 +364,17 @@ async function splitMultipleInputCommands(nextInput: string) {
     nextInput = "";
   }
 
-  return { input, nextInput, splitResult };
+  if (nextInput) {
+    commandList.unshift(nextInput);
+  }
+
+  if (!splitResult) {
+    splitResult = nextInput ? "sliced" : "popped";
+  }
+
+  return { input, splitResult };
 }
 
 export const exportedForTesting = {
-  splitMultipleInputCommands,
-  SplitResult,
+  popFirstCommand
 };

@@ -59,7 +59,7 @@ Reply with 'allow' to allow the command, otherwise you can give a reason for you
     "write-protection",
   );
 
-  const commandAllowed = response.toLocaleLowerCase().startsWith("allow");
+  const commandAllowed = response[0].toLocaleLowerCase().startsWith("allow");
 
   return {
     commandAllowed,
