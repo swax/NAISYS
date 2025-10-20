@@ -63,7 +63,7 @@ export async function run() {
       );
       await commandHandler.processCommand(
         prompt,
-        config.resolveConfigVars(initialCommand),
+        [config.resolveConfigVars(initialCommand)],
       );
     }
 
@@ -82,17 +82,20 @@ export async function run() {
       }
 
       let prompt = await promptBuilder.getPrompt(pauseSeconds, wakeOnMessage);
-      let consoleInput = "";
+      let commandList: string[] = [];
+      let blankDebugInput = false;
 
       // Debug command prompt
       if (inputMode.current === InputMode.Debug) {
         subagent.unreadContextSummary();
 
-        consoleInput = await promptBuilder.getInput(
+        commandList = [await promptBuilder.getInput(
           `${prompt}`,
           pauseSeconds,
           wakeOnMessage,
-        );
+        )];
+
+        blankDebugInput = commandList[0].trim().length == 0;
       }
       // LLM command prompt
       else if (inputMode.current === InputMode.LLM) {
@@ -122,7 +125,7 @@ export async function run() {
 
           process.stdout.write(workingMsg);
 
-          consoleInput = await llmService.query(
+          commandList = await llmService.query(
             config.agent.shellModel,
             systemMessage,
             contextManager.getCombinedMessages(),
@@ -146,7 +149,7 @@ export async function run() {
       // Run the command
       try {
         ({ nextCommandAction, pauseSeconds, wakeOnMessage } =
-          await commandHandler.processCommand(prompt, consoleInput));
+          await commandHandler.processCommand(prompt, commandList));
 
         if (inputMode.current == InputMode.LLM) {
           llmErrorCount = 0;
@@ -160,7 +163,7 @@ export async function run() {
       // If the user is in debug mode and they didn't enter anything, switch to LLM
       // If in LLM mode, auto switch back to debug
       if (
-        (inputMode.current == InputMode.Debug && !consoleInput) ||
+        (inputMode.current == InputMode.Debug && blankDebugInput) ||
         inputMode.current == InputMode.LLM
       ) {
         inputMode.toggle();

@@ -58,7 +58,7 @@ and how to do it.`;
     })
     .join("");
 
-  return await llmService.query(
+  return (await llmService.query(
     config.agent.dreamModel,
     systemMessage,
     [
@@ -77,7 +77,7 @@ and how to do it.`;
       },
     ],
     "dream",
-  );
+  ))[0];
 }
 
 async function storeDream(dream: string) {

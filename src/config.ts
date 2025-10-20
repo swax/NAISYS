@@ -78,6 +78,13 @@ if (agent.imageModel) {
   agent.imageModel = resolveConfigVars(agent.imageModel);
 }
 
+/**
+  * Provide a clear way for the LLM to specify what command(s) to run as well as the reasoning for those commands
+  * Decrease the chance of the LLM hallucinating output as there is no place to for that in the response
+  * The disableMultipleCommands config affects the schema by only allowing a single command to be issued
+  * Many commands often backfires as the LLM may issue commands before evaluating previous command output
+  */
+export const useToolsForLlmConsoleResponses = true;
 
 export interface AgentConfig {
   username: string;
@@ -120,7 +127,13 @@ export interface AgentConfig {
   /** Try to enfore smaller messages between agents to improve communication efficiency */
   mailMessageTokenMax?: number;
 
-  /** Disable multiple commands. Breaks the chain of LLMs hallucinating command output, the next prompt, and so on  */
+  /** 
+   * Disable multiple commands
+   * + Prevents LLMs from hallucinating it's own output
+   * + Prevents LLMs from issuing commands before evaluating previous command output
+   * - Slower going back and forth to the LLM
+   * - Costs more, but query caching reduces most of the impact
+   */
   disableMultipleCommands?: boolean;
 
   /** ONLY used by agent start process. Indicates that this is a subagent, and this is the lead agent */
@@ -159,7 +172,7 @@ function loadAgentConfig() {
 
   config.spendLimitDollars = sanitizeSpendLimit(config.spendLimitDollars);
 
-  // Disable by default, too many screw ups. Cached tokens means the effects of this isn't so bad.
+  // Disable by default, too many screw ups. Cached tokens helps reduce the negaive
   if (config.disableMultipleCommands === undefined) {
     config.disableMultipleCommands = true;
   }

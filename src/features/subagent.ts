@@ -89,7 +89,7 @@ export async function handleCommand(args: string): Promise<string> {
   list: Lists all subagents
   create "<agent title>" "<description>": Creates a new agent. Include as much detail in the description as possible.
   stop <id>: Stops the agent with the given task id
-  start <name> <description>: Starts an existing agent with the given name and description of the task to perform`;
+  start <username> <description>: Starts an existing agent with the given name and description of the task to perform`;
 
       if (inputMode.current == InputMode.Debug) {
         helpOutput += `\n  flush <id>: Debug only command to show the agent's context log`;

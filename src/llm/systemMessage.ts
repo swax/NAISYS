@@ -65,7 +65,7 @@ if (!config.endSessionEnabled && config.trimSessionEnabled) {
 
 if (config.agent.disableMultipleCommands) {
   tokenNote +=
-    "\n  Only run one command at a time, evaluate the output, then run the next command.";
+    "\n  Only run one command at a time, evaluate the output, then run the next command. Don't overload the same line with multiple commands either.";
 } else {
   tokenNote +=
     "\n  Be careful running multiple commands on a single prompt, and never assume the output of commands. Better to run one command at a time if you're not sure.";

@@ -25,21 +25,21 @@ jest.unstable_mockModule("../../features/subagent.js", () => ({
 // Load target module
 const commandHandler = await import("../../command/commandHandler.js");
 
-const { splitMultipleInputCommands, SplitResult } =
+const { popFirstCommand } =
   commandHandler.exportedForTesting;
 
-describe("splitMultipleInputCommands function", () => {
+describe("popFirstCommand function", () => {
   test("handles input with a prompt at beginning", async () => {
     // Arrange
     const nextInput = `${userHostPathPrompt}$ command1`;
     const expected = {
       input: "",
       nextInput: "command1",
-      splitResult: SplitResult.InputIsPrompt,
+      splitResult: "inputInPrompt",
     };
 
     // Act
-    const result = await splitMultipleInputCommands(nextInput);
+    const result = await popFirstCommand([nextInput]);
 
     // Assert
     expect(result).toEqual(expected);
@@ -52,11 +52,11 @@ describe("splitMultipleInputCommands function", () => {
     const expected = {
       input: "",
       nextInput,
-      splitResult: SplitResult.InputPromptMismatch,
+      splitResult: "inputPromptMismatch",
     };
 
     // Act
-    const result = await splitMultipleInputCommands(nextInput);
+    const result = await popFirstCommand([nextInput]);
 
     // Assert
     expect(result).toEqual(expected);
@@ -71,7 +71,7 @@ describe("splitMultipleInputCommands function", () => {
     };
 
     // Act
-    const result = await splitMultipleInputCommands(nextInput);
+    const result = await popFirstCommand([nextInput]);
 
     // Assert
     expect(result).toEqual(expected);
@@ -89,7 +89,7 @@ describe("splitMultipleInputCommands function", () => {
     };
 
     // Act
-    const result = await splitMultipleInputCommands(nextInput);
+    const result = await popFirstCommand([nextInput]);
 
     // Assert
     expect(result).toEqual(expected);
@@ -104,7 +104,7 @@ describe("splitMultipleInputCommands function", () => {
     };
 
     // Act
-    const result = await splitMultipleInputCommands(nextInput);
+    const result = await popFirstCommand([nextInput]);
 
     // Assert
     expect(result).toEqual(expected);
