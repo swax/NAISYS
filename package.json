@@ -9,7 +9,7 @@
     "naisys": "bin/naisys"
   },
   "scripts": {
-    "compile/run/attachable": "tsc && node --inspect dist/naisys.js ./agents/solo-websites/webdev-fansite.yaml",
+    "compile/run/attachable": "tsc && node --inspect dist/naisys.js ./agents/assistant.yaml",
     "agent:odoo": "node dist/naisys.js ./agents/odoo2.yaml",
     "agent:assistant": "node dist/naisys.js ./agents/assistant.yaml",
     "agent:nightwatch": "node dist/naisys.js ./agents/nightwatch.yaml",
@@ -58,7 +58,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "0.67.0",
-    "@google/generative-ai": "0.24.1",
+    "@google/genai": "1.25.0",
     "@xterm/headless": "5.5.0",
     "chalk": "5.6.2",
     "commander": "14.0.1",

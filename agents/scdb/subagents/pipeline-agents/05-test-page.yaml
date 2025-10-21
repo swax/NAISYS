@@ -12,8 +12,8 @@ agentPrompt: |
   4. The page can be located at https://www.sketchtv.lol/sketch/ID/URL_SLUG where ID and URL_SLUG should be in database.txt
     - Load the page, wait 5 seconds and load it again. The first load may be old cached content and trigger a cache refresh
   5. You can use the llmynx tool to help you explore the page
-  6. Curl can be used to find the urls of images to test
-    - Images will have the base URL https://static.sketchtv.lol/ 
+  6. Validate the images on the page work
+    - This command will get a list of image urls on the page: curl -s <page url> | grep -o 'https://static.sketchtv.lol/[^"]*'
     - The image urls on the page do not contain the database image ids or keys from the cdn 
   7. If any problems are detected revise the notes.txt file with details of the problems found
   8. A sketch with no working video link and/or no tags needs to be kicked back to the details stage

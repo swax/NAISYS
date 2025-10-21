@@ -1,13 +1,13 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { MessageParam } from "@anthropic-ai/sdk/resources/messages.mjs";
-import { Content, GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
 import OpenAI from "openai";
 import { ChatCompletionCreateParamsNonStreaming } from "openai/resources";
 import * as config from "../config.js";
 import * as costTracker from "./costTracker.js";
 import { LlmApiType, getLLModel } from "./llModels.js";
 import { LlmMessage, LlmRole } from "./llmDtos.js";
-import { consoleToolOpenAI, consoleToolAnthropic, getCommandsFromOpenAiToolUse, getCommandsFromAnthropicToolUse } from "./commandTool.js";
+import { consoleToolOpenAI, consoleToolAnthropic, consoleToolGoogle, getCommandsFromOpenAiToolUse, getCommandsFromAnthropicToolUse, getCommandsFromGoogleToolUse } from "./commandTool.js";
 
 type QuerySources = "console" | "write-protection" | "dream" | "llmynx";
 
@@ -18,7 +18,7 @@ export async function query(
   source: QuerySources,
 ): Promise<string[]> {
   const currentTotalCost = await costTracker.getTotalCosts(config.agent.spendLimitDollars ? config.agent.username : undefined);
-  const spendLimit = config.agent.spendLimitDollars ? config.agent.spendLimitDollars : config.spendLimitDollars || -1;
+  const spendLimit = config.agent.spendLimitDollars || config.spendLimitDollars || -1;
 
   if (spendLimit < currentTotalCost) {
     throw `LLM Spend limit of $${spendLimit} reached for ${config.agent.spendLimitDollars ? config.agent.username : 'all users'}, current total cost $${currentTotalCost.toFixed(2)}`;
@@ -153,9 +153,7 @@ async function sendWithGoogle(
   }
   const model = getLLModel(modelKey);
 
-  const googleAI = new GoogleGenerativeAI(config.googleApiKey);
-
-  const googleModel = googleAI.getGenerativeModel({ model: model.name });
+  const ai = new GoogleGenAI({});
 
   // Assert the last message on the context is a user message
   const lastMessage = context[context.length - 1];
@@ -164,61 +162,61 @@ async function sendWithGoogle(
     throw "Error, last message on context is not a user message";
   }
 
-  const contextHistory: Content[] = context
-    .filter((m) => m != lastMessage)
+  // Build history from context (excluding last message)
+  const history = context
+    .filter((m) => m !== lastMessage)
     .map((m) => ({
-      role: m.role == LlmRole.Assistant ? "model" : "user",
-      parts: [
-        {
-          text: m.content,
-        },
-      ],
+      role: m.role === LlmRole.Assistant ? "model" : "user",
+      parts: [{ text: m.content }],
     }));
 
-  const history: Content[] = [
-    {
-      role: LlmRole.User, // System role is not supported by Google API
-      parts: [
-        {
-          text: systemMessage,
-        },
-      ],
+  // Prepare config with system instruction
+  const chatConfig: any = {
+    model: model.name,
+    config: {
+      systemInstruction: systemMessage,
+      thinkingConfig: {
+        // thinkingBudget: 1024,
+        // Turn off thinking:
+        // thinkingBudget: 0
+        // Turn on dynamic thinking:
+        thinkingBudget: -1
+      },
     },
-    {
-      role: "model",
-      parts: [
-        {
-          text: "Understood",
-        },
-      ],
-    },
-    ...contextHistory,
-  ];
-
-  const chat = googleModel.startChat({
     history,
-    generationConfig: {},
-  });
+  };
 
-  const result = await chat.sendMessage(lastMessage.content);
+  // Add tool if console source and tools are enabled
+  if (source === "console" && config.useToolsForLlmConsoleResponses) {
+    chatConfig.config.tools = [{
+      functionDeclarations: [consoleToolGoogle]
+    }];
 
-  if (result.response.promptFeedback?.blockReason) {
-    throw `Google API Request Blocked, ${result.response.promptFeedback.blockReason}`;
+    chatConfig.config.toolConfig = {
+      functionCallingConfig: {
+        // Set the mode to "ANY" to force the model to use the tool response
+        mode: "ANY"
+      }
+    };
   }
 
-  const responseText = result.response.text();
+  const chat = ai.chats.create(chatConfig);
+
+  const result = await chat.sendMessage({
+    message: lastMessage.content,
+  });
 
   // Use actual token counts from Google API response
-  if (result.response.usageMetadata) {
-    const inputTokenCount = result.response.usageMetadata.promptTokenCount || 0;
-    const outputTokenCount = result.response.usageMetadata.candidatesTokenCount || 0;
-    const cachedTokenCount = result.response.usageMetadata.cachedContentTokenCount || 0;
+  if (result.usageMetadata) {
+    const inputTokenCount = result.usageMetadata.promptTokenCount || 0;
+    const outputTokenCount = result.usageMetadata.candidatesTokenCount || 0;
+    const cachedTokenCount = result.usageMetadata.cachedContentTokenCount || 0;
 
     await costTracker.recordTokens(
-      source, 
-      model.key, 
-      inputTokenCount, 
-      outputTokenCount, 
+      source,
+      model.key,
+      inputTokenCount - cachedTokenCount,
+      outputTokenCount,
       0, // Cache write tokens (not separately reported)
       cachedTokenCount // Cache read tokens
     );
@@ -226,7 +224,16 @@ async function sendWithGoogle(
     throw "Error, no usage metadata returned from Google API.";
   }
 
-  return [responseText];
+  // Check for function calls if tools were enabled
+  if (chatConfig.config.tools) {
+    const commandsFromTool = getCommandsFromGoogleToolUse(result.functionCalls);
+
+    if (commandsFromTool) {
+      return commandsFromTool;
+    }
+  }
+
+  return [result.text || ""];
 }
 
 async function sendWithAnthropic(

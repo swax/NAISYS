@@ -14,7 +14,7 @@
       "request": "launch",
       "runtimeArgs": ["--loader", "ts-node/esm"],
       "program": "${workspaceFolder}/src/naisys.ts",
-      "args": ["./agents/solo-websites/webdev-fansite.yaml"],
+      "args": ["./agents/assistant.yaml"],
       "cwd": "${workspaceFolder}",
       "console": "integratedTerminal",
       "internalConsoleOptions": "neverOpen",

@@ -84,7 +84,9 @@ const llmModels: LlmModel[] = [
     maxTokens: 2_000_000,
     // Prices are per 1M tokens
     inputCost: 1.25, // ≤200k tokens, 2.50 for >200k tokens
-    outputCost: 10.0, // ≤200k tokens, 15.0 for >200k tokens
+    outputCost: 10.0, // ≤200k tokens, 15.0 for >200k tokens,
+    cacheWriteCost: 0.125,  // Cached input cost
+    cacheReadCost: 0.125,   // Cached input cost
   },
   {
     key: "gemini2.5flash",
@@ -94,6 +96,8 @@ const llmModels: LlmModel[] = [
     // Prices are per 1M tokens
     inputCost: 0.30,
     outputCost: 2.50,
+    cacheWriteCost: 0.030,  // Cached input cost
+    cacheReadCost: 0.030,   // Cached input cost
   },
   {
     key: "gemini2.5flashlite",
@@ -103,42 +107,8 @@ const llmModels: LlmModel[] = [
     // Prices are per 1M tokens
     inputCost: 0.10,
     outputCost: 0.40,
-  },
-  {
-    key: "gemini1.5pro",
-    name: "gemini-1.5-pro",
-    apiType: LlmApiType.Google,
-    maxTokens: 2_000_000,
-    // Prices are per 1M tokens
-    inputCost: 1.25, // ≤128k tokens, 2.50 for >128k tokens
-    outputCost: 5.0,  // ≤128k tokens, 10.0 for >128k tokens
-  },
-  {
-    key: "gemini1.5flash",
-    name: "gemini-1.5-flash",
-    apiType: LlmApiType.Google,
-    maxTokens: 1_000_000,
-    // Prices are per 1M tokens
-    inputCost: 0.075, // ≤128k tokens, 0.15 for >128k tokens
-    outputCost: 0.30,  // ≤128k tokens, 0.60 for >128k tokens
-  },
-  {
-    key: "gemini1.5flash8b",
-    name: "gemini-1.5-flash-8b",
-    apiType: LlmApiType.Google,
-    maxTokens: 1_000_000,
-    // Prices are per 1M tokens
-    inputCost: 0.0375, // ≤128k tokens, 0.075 for >128k tokens
-    outputCost: 0.15,   // ≤128k tokens, 0.30 for >128k tokens
-  },
-  {
-    key: "gemini2.0flash",
-    name: "gemini-2.0-flash",
-    apiType: LlmApiType.Google,
-    maxTokens: 1_000_000,
-    // Prices are per 1M tokens
-    inputCost: 0.10, // text/image/video, 0.70 for audio
-    outputCost: 0.40,
+    cacheWriteCost: 0.010,  // Cached input cost
+    cacheReadCost: 0.010,   // Cached input cost
   },
   // Anthropic Models
   {
