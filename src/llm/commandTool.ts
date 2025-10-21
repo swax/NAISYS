@@ -1,32 +1,38 @@
 import * as config from "../config.js";
+import { Type } from "@google/genai";
 
 const escapedQuoteRegex = /"/g;
 const escapedBackslashRegex = /\\/g;
 
 const multipleCommandsDisabled = !!config.agent.disableMultipleCommands;
 
+// Common description strings
+const COMMENT_DESCRIPTION =
+  "High level commentary and/or reasoning. Use an empty string if no comment is required.";
+const SINGLE_COMMAND_DESCRIPTION = "Single Shell or NAISYS command to execute next.";
+const COMMAND_LIST_DESCRIPTION = "Ordered list of shell or NAISYS commands to execute next.";
+const TOOL_DESCRIPTION =
+  "Return the commands to run next along with an optional comment explaining the plan.";
+
 const commandProperties = multipleCommandsDisabled
   ? {
       comment: {
         type: "string",
-        description:
-          "High level commentary and/or resoning. Use an empty string if no comment is required.",
+        description: COMMENT_DESCRIPTION,
       },
       command: {
         type: "string",
-        description: "Single Shell or NAISYS command to execute next.",
+        description: SINGLE_COMMAND_DESCRIPTION,
       },
     }
   : {
       comment: {
         type: "string",
-        description:
-          "High level commentary and/or resoning. Use an empty string if no comment is required.",
+        description: COMMENT_DESCRIPTION,
       },
       commandList: {
         type: "array",
-        description:
-          "Ordered list of shell or NAISYS commands to execute next.",
+        description: COMMAND_LIST_DESCRIPTION,
         items: {
           type: "string",
         },
@@ -41,8 +47,7 @@ export const consoleToolOpenAI = {
   type: "function" as const,
   function: {
     name: "submit_commands",
-    description:
-      "Return the commands to run next along with an optional comment explaining the plan.",
+    description: TOOL_DESCRIPTION,
     parameters: {
       type: "object",
       properties: commandProperties,
@@ -54,11 +59,46 @@ export const consoleToolOpenAI = {
 // Anthropic-compatible tool definition
 export const consoleToolAnthropic = {
   name: "submit_commands",
-  description:
-    "Return the commands to run next along with an optional comment explaining the plan.",
+  description: TOOL_DESCRIPTION,
   input_schema: {
     type: "object" as const,
     properties: commandProperties,
+    required: requiredProperties,
+  },
+};
+
+// Google-compatible tool definition
+const googleCommandProperties = multipleCommandsDisabled
+  ? {
+      comment: {
+        type: Type.STRING,
+        description: COMMENT_DESCRIPTION,
+      },
+      command: {
+        type: Type.STRING,
+        description: SINGLE_COMMAND_DESCRIPTION,
+      },
+    }
+  : {
+      comment: {
+        type: Type.STRING,
+        description: COMMENT_DESCRIPTION,
+      },
+      commandList: {
+        type: Type.ARRAY,
+        description: COMMAND_LIST_DESCRIPTION,
+        items: {
+          type: Type.STRING,
+        },
+      },
+    };
+
+export const consoleToolGoogle = {
+  name: "submit_commands",
+  description: TOOL_DESCRIPTION,
+  parameters: {
+    type: Type.OBJECT,
+    properties: googleCommandProperties,
     required: requiredProperties,
   },
 };
@@ -171,6 +211,57 @@ export function getCommandsFromAnthropicToolUse(contentBlocks: unknown): string[
     const comment = (input as { comment?: unknown }).comment;
     const commandList = (input as { commandList?: unknown }).commandList;
     const command = (input as { command?: unknown }).command;
+
+    const commands: string[] = [];
+
+    if (typeof comment === "string" && comment.trim()) {
+      commands.push(buildCommentCommand(comment.trim()));
+    }
+
+    if (multipleCommandsDisabled) {
+      if (typeof command === "string" && command.trim()) {
+        commands.push(command.trim());
+      }
+    } else if (Array.isArray(commandList)) {
+      for (const command of commandList) {
+        if (typeof command === "string" && command.trim()) {
+          commands.push(command.trim());
+        }
+      }
+    }
+
+    if (commands.length) {
+      return commands;
+    }
+  }
+
+  return undefined;
+}
+
+export function getCommandsFromGoogleToolUse(functionCalls: unknown): string[] | undefined {
+  if (!Array.isArray(functionCalls) || functionCalls.length === 0) {
+    return undefined;
+  }
+
+  for (const functionCall of functionCalls) {
+    if (!functionCall || typeof functionCall !== "object") {
+      continue;
+    }
+
+    const name = (functionCall as { name?: string }).name;
+    const args = (functionCall as { args?: unknown }).args;
+
+    if (name !== consoleToolGoogle.name) {
+      continue;
+    }
+
+    if (!args || typeof args !== "object") {
+      continue;
+    }
+
+    const comment = (args as { comment?: unknown }).comment;
+    const commandList = (args as { commandList?: unknown }).commandList;
+    const command = (args as { command?: unknown }).command;
 
     const commands: string[] = [];
 

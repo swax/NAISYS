@@ -231,7 +231,7 @@ export async function printCosts(username?: string) {
     }
   }
   
-  const spendLimit = username ? config.agent.spendLimitDollars : config.spendLimitDollars;
+  const spendLimit = config.agent.spendLimitDollars || config.spendLimitDollars;
   const userLabel = username ? `${username}` : 'all users';
   output.comment(
     `Total cost for ${userLabel} $${totalStoredCost.toFixed(2)} of $${spendLimit} limit`,
