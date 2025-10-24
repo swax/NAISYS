@@ -58,7 +58,6 @@ export const localLlmName = getEnv("LOCAL_LLM_NAME");
 export const openaiApiKey = getEnv("OPENAI_API_KEY");
 export const googleApiKey = getEnv("GOOGLE_API_KEY");
 export const anthropicApiKey = getEnv("ANTHROPIC_API_KEY");
-export const openRouterApiKey = getEnv("OPENROUTER_API_KEY");
 
 export const googleSearchEngineId = getEnv("GOOGLE_SEARCH_ENGINE_ID");
 
@@ -229,7 +228,7 @@ async function getVersion() {
   }
 }
 
-function getEnv(key: string, required?: boolean) {
+export function getEnv(key: string, required?: boolean) {
   const value = process.env[key];
   if (!value && required) {
     throw `Config: Error, .env ${key} is not defined`;

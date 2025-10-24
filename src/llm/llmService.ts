@@ -30,14 +30,8 @@ export async function query(
     return sendWithGoogle(modelKey, systemMessage, context, source);
   } else if (model.apiType == LlmApiType.Anthropic) {
     return sendWithAnthropic(modelKey, systemMessage, context, source);
-  } else if (
-    model.apiType == LlmApiType.OpenAI ||
-    model.apiType == LlmApiType.OpenRouter
-  ) {
-    const apiKey =
-      model.apiType == LlmApiType.OpenAI
-        ? config.openaiApiKey
-        : config.openRouterApiKey;
+  } else if (model.apiType == LlmApiType.OpenAI) {
+    const apiKey = model.keyEnvVar ? config.getEnv(model.keyEnvVar) : config.openaiApiKey;
 
     return sendWithOpenAiCompatible(
       modelKey,
@@ -259,9 +253,11 @@ async function sendWithAnthropic(
     throw "Error, last message on context is not a user message";
   }
 
+  const useThinking = true;
+
   const createParams: Anthropic.MessageCreateParams = {
     model: model.name,
-    max_tokens: 4096, // Blows up on anything higher
+    max_tokens: 4096, // Blows up on anything higher  
     messages: [
       {
         role: "user",
@@ -297,12 +293,26 @@ async function sendWithAnthropic(
     ],
   };
 
+  if (useThinking) {
+    createParams.thinking = {
+      type: "enabled",
+      budget_tokens: createParams.max_tokens! / 2,
+    };
+  }
+
   if (source === "console" && config.useToolsForLlmConsoleResponses) {
     createParams.tools = [consoleToolAnthropic];
-    createParams.tool_choice = {
-      type: "tool",
-      name: consoleToolAnthropic.name,
-    };
+    if (useThinking) {
+      createParams.tool_choice = {
+        // With thinking enabled, only "auto" is supported
+        type: "auto",
+      };
+    } else {
+      createParams.tool_choice = {
+        type: "tool",
+        name: consoleToolAnthropic.name,
+      };
+    }
   }
 
   const msgResponse = await anthropic.messages.create(createParams);
