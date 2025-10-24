@@ -15,6 +15,7 @@ import { LlmMessage, LlmRole } from "../llm/llmDtos.js";
 import * as llmService from "../llm/llmService.js";
 import * as output from "../utils/output.js";
 import * as utilities from "../utils/utilities.js";
+import * as costTracker from "../llm/costTracker.js";
 
 let debugMode = false;
 
@@ -554,7 +555,7 @@ async function callGoogleSearchApi(query: string): Promise<string> {
     throw "Error, googleSearchEngineId is not defined";
   }
 
-  return new Promise<string>((resolve, reject) => {
+  const runSearchPromise = new Promise<string>((resolve, reject) => {
     const queryParams = new URLSearchParams({
       key: config.googleApiKey!,
       cx: config.googleSearchEngineId!,
@@ -614,4 +615,11 @@ async function callGoogleSearchApi(query: string): Promise<string> {
 
     req.end();
   });
+
+  const result = await runSearchPromise;
+
+  // https://developers.google.com/custom-search/v1/overview
+  await costTracker.recordCost(0.005, "llmynx", "search");
+
+  return result;
 }

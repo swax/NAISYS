@@ -4,7 +4,6 @@ export enum LlmApiType {
   OpenAI = "openai",
   Google = "google",
   Anthropic = "anthropic",
-  OpenRouter = "openrouter",
 }
 
 interface LlmModel {
@@ -12,6 +11,7 @@ interface LlmModel {
   name: string;
   baseUrl?: string;
   apiType: LlmApiType;
+  keyEnvVar?: string;
   maxTokens: number;
   inputCost: number;
   outputCost: number;
@@ -35,11 +35,39 @@ const llmModels: LlmModel[] = [
     key: "llama3-405b",
     name: "meta-llama/llama-3.1-405b-instruct",
     baseUrl: "https://openrouter.ai/api/v1",
-    apiType: LlmApiType.OpenRouter,
+    apiType: LlmApiType.OpenAI,
+    keyEnvVar: "OPENROUTER_API_KEY",
     maxTokens: 128_000,
     // Prices are per 1M tokens
     inputCost: 2.7,
     outputCost: 2.7,
+  },
+  // Grok
+  {
+    key: "grok4",
+    name: "grok-4",
+    baseUrl: "https://api.x.ai/v1",
+    apiType: LlmApiType.OpenAI,
+    keyEnvVar: "XAI_API_KEY",
+    maxTokens: 256_000,
+    // Prices are per 1M tokens
+    inputCost: 3,
+    outputCost: 15,
+    cacheWriteCost: 0.75,  // Cached input cost,
+    cacheReadCost: 0.75,  // Cached input cost
+  },
+  {
+    key: "grok4fast",
+    name: "grok-4-fast",
+    baseUrl: "https://api.x.ai/v1",
+    apiType: LlmApiType.OpenAI,
+    keyEnvVar: "XAI_API_KEY",
+    maxTokens: 2_000_000,
+    // Prices are per 1M tokens
+    inputCost: 0.20,
+    outputCost: 0.50,
+    cacheWriteCost: 0.05,  // Cached input cost,
+    cacheReadCost: 0.05,  // Cached input cost
   },
   // OpenAI Models
   // https://openai.com/api/pricing/
