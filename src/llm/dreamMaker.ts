@@ -3,10 +3,11 @@ import { usingDatabase } from "../services/dbService.js";
 import * as output from "../utils/output.js";
 import { createContextManager } from "./contextManager.js";
 import { ContentSource, LlmRole } from "./llmDtos.js";
-import * as llmService from "./llmService.js";
+import { createLLMService } from "./llmService.js";
 
 export function createDreamMaker(
   contextManager: ReturnType<typeof createContextManager>,
+  llmService: ReturnType<typeof createLLMService>,
 ) {
   let _lastDream = "";
 

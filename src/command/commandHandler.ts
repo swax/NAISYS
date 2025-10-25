@@ -5,7 +5,7 @@ import { createLLMail } from "../features/llmail.js";
 import { createLLMynx } from "../features/llmynx.js";
 import { createSubagentService } from "../features/subagent.js";
 import { createContextManager } from "../llm/contextManager.js";
-import * as costTracker from "../llm/costTracker.js";
+import { createCostTracker } from "../llm/costTracker.js";
 import { createDreamMaker } from "../llm/dreamMaker.js";
 import { ContentSource } from "../llm/llmDtos.js";
 import * as inputMode from "../utils/inputMode.js";
@@ -40,6 +40,7 @@ export function createCommandHandler(
   llmynx: ReturnType<typeof createLLMynx>,
   dreamMaker: ReturnType<typeof createDreamMaker>,
   contextManager: ReturnType<typeof createContextManager>,
+  costTracker: ReturnType<typeof createCostTracker>,
 ) {
   async function processCommand(
     prompt: string,

@@ -7,10 +7,10 @@ import * as output from "../utils/output.js";
 import { OutputColor } from "../utils/output.js";
 import * as utilities from "../utils/utilities.js";
 import { ContentSource, LlmMessage, LlmRole } from "./llmDtos.js";
-import { systemMessage } from "./systemMessage.js";
 
 export function createContextManager(
   workspaces: ReturnType<typeof createWorkspacesFeature>,
+  systemMessage: string,
 ) {
   let _messages: LlmMessage[] = [];
 
