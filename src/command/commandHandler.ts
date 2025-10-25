@@ -1,12 +1,12 @@
 import chalk from "chalk";
 import { loadConfigFromPath } from "../config.js";
-import * as genimg from "../features/genimg.js";
-import * as llmail from "../features/llmail.js";
-import * as llmynx from "../features/llmynx.js";
-import * as subagent from "../features/subagent.js";
-import * as contextManager from "../llm/contextManager.js";
+import { createGenImg } from "../features/genimg.js";
+import { createLLMail } from "../features/llmail.js";
+import { createLLMynx } from "../features/llmynx.js";
+import { createSubagentService } from "../features/subagent.js";
+import { createContextManager } from "../llm/contextManager.js";
 import * as costTracker from "../llm/costTracker.js";
-import * as dreamMaker from "../llm/dreamMaker.js";
+import { createDreamMaker } from "../llm/dreamMaker.js";
 import { ContentSource } from "../llm/llmDtos.js";
 import * as inputMode from "../utils/inputMode.js";
 import { InputMode } from "../utils/inputMode.js";
@@ -34,6 +34,12 @@ export function createCommandHandler(
   commandProtection: ReturnType<typeof createCommandProtection>,
   promptBuilder: ReturnType<typeof createPromptBuilder>,
   shellCommand: ReturnType<typeof createShellCommand>,
+  genimg: ReturnType<typeof createGenImg>,
+  subagent: ReturnType<typeof createSubagentService>,
+  llmail: ReturnType<typeof createLLMail>,
+  llmynx: ReturnType<typeof createLLMynx>,
+  dreamMaker: ReturnType<typeof createDreamMaker>,
+  contextManager: ReturnType<typeof createContextManager>,
 ) {
   async function processCommand(
     prompt: string,
