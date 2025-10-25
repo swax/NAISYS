@@ -1,5 +1,5 @@
 import * as config from "../config.js";
-import * as contextManager from "../llm/contextManager.js";
+import { createContextManager } from "../llm/contextManager.js";
 import * as inputMode from "../utils/inputMode.js";
 import { InputMode } from "../utils/inputMode.js";
 import * as utilities from "../utils/utilities.js";
@@ -7,6 +7,7 @@ import { createShellWrapper } from "./shellWrapper.js";
 
 export function createShellCommand(
   shellWrapper: ReturnType<typeof createShellWrapper>,
+  contextManager: ReturnType<typeof createContextManager>,
 ) {
   const isShellSuspended = () => shellWrapper.isShellSuspended();
   const getCommandElapsedTimeString = () =>

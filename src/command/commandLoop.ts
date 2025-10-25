@@ -1,12 +1,12 @@
 import chalk from "chalk";
 import * as readline from "readline";
 import { loadConfigFromPath } from "../config.js";
-import * as llmail from "../features/llmail.js";
-import * as llmynx from "../features/llmynx.js";
-import * as subagent from "../features/subagent.js";
-import * as workspaces from "../features/workspaces.js";
-import * as contextManager from "../llm/contextManager.js";
-import * as dreamMaker from "../llm/dreamMaker.js";
+import { createLLMail } from "../features/llmail.js";
+import { createLLMynx } from "../features/llmynx.js";
+import { createSubagentService } from "../features/subagent.js";
+import { createWorkspacesFeature } from "../features/workspaces.js";
+import { createContextManager } from "../llm/contextManager.js";
+import { createDreamMaker } from "../llm/dreamMaker.js";
 import { ContentSource, LlmRole } from "../llm/llmDtos.js";
 import * as llmService from "../llm/llmService.js";
 import { systemMessage } from "../llm/systemMessage.js";
@@ -25,6 +25,12 @@ export function createCommandLoop(
   commandHandler: ReturnType<typeof createCommandHandler>,
   promptBuilder: ReturnType<typeof createPromptBuilder>,
   shellCommand: ReturnType<typeof createShellCommand>,
+  subagent: ReturnType<typeof createSubagentService>,
+  llmail: ReturnType<typeof createLLMail>,
+  llmynx: ReturnType<typeof createLLMynx>,
+  dreamMaker: ReturnType<typeof createDreamMaker>,
+  contextManager: ReturnType<typeof createContextManager>,
+  workspaces: ReturnType<typeof createWorkspacesFeature>,
 ) {
   const maxErrorCount = 5;
 
