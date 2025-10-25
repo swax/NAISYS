@@ -3,84 +3,90 @@ import path from "path";
 import sharp from "sharp";
 import * as config from "../config.js";
 import * as costTracker from "../llm/costTracker.js";
-import * as output from "../utils/output.js";
 import * as pathService from "../services/pathService.js";
 import { NaisysPath } from "../services/pathService.js";
+import * as output from "../utils/output.js";
 
-/** genimg "<description>" <filepath>: Generate an image with the description and save it to the file path */
-export async function handleCommand(args: string): Promise<string> {
-  // genimg sholdn't even be presented as an available command unless it is defined in the config
-  if (!config.agent.imageModel) {
-    throw "Agent config: Error, 'imageModel' is not defined";
-  }
+export function createGenImg() {
+  /** genimg "<description>" <filepath>: Generate an image with the description and save it to the file path */
+  async function handleCommand(args: string): Promise<string> {
+    // genimg sholdn't even be presented as an available command unless it is defined in the config
+    if (!config.agent.imageModel) {
+      throw "Agent config: Error, 'imageModel' is not defined";
+    }
 
-  const newParams = args.split('"');
+    const newParams = args.split('"');
 
-  if (newParams.length < 3) {
-    throw "Invalid parameters: Description in quotes and fully qualified filepath with desired image extension are required";
-  }
+    if (newParams.length < 3) {
+      throw "Invalid parameters: Description in quotes and fully qualified filepath with desired image extension are required";
+    }
 
-  const description = newParams[1].trim();
-  const filepath = new NaisysPath(newParams[2].trim() || "");
+    const description = newParams[1].trim();
+    const filepath = new NaisysPath(newParams[2].trim() || "");
 
-  if (!description) {
-    throw "Error: Description is required";
-  }
+    if (!description) {
+      throw "Error: Description is required";
+    }
 
-  if (!filepath) {
-    throw "Error: Filepath is required";
-  }
+    if (!filepath) {
+      throw "Error: Filepath is required";
+    }
 
-  // Validate path is fully qualified
-  if (!filepath.getNaisysPath().startsWith("/")) {
-    throw "Error: Filepath must be fully qualified";
-  }
+    // Validate path is fully qualified
+    if (!filepath.getNaisysPath().startsWith("/")) {
+      throw "Error: Filepath must be fully qualified";
+    }
 
-  pathService.ensureFileDirExists(filepath);
+    pathService.ensureFileDirExists(filepath);
 
-  output.commentAndLog(`Generating image with ${config.agent.imageModel}...`);
+    output.commentAndLog(`Generating image with ${config.agent.imageModel}...`);
 
-  const openai = new OpenAI();
+    const openai = new OpenAI();
 
-  const model = getImageModel(config.agent.imageModel);
+    const model = getImageModel(config.agent.imageModel);
 
-  const response = await openai.images.generate({
-    prompt: description,
-    model: model.name,
-    size: model.size,
-    quality: model.quality,
-    response_format: "b64_json",
-  });
+    const response = await openai.images.generate({
+      prompt: description,
+      model: model.name,
+      size: model.size,
+      quality: model.quality,
+      response_format: "b64_json",
+    });
 
-  // save to filepath
-  if (!response.data || response.data.length === 0) {
-    throw 'Error: No image data returned from OpenAI';
-  }
+    // save to filepath
+    if (!response.data || response.data.length === 0) {
+      throw "Error: No image data returned from OpenAI";
+    }
 
-  const base64Image = response.data[0].b64_json;
+    const base64Image = response.data[0].b64_json;
 
-  if (!base64Image) {
-    throw 'Error: "b64_json" not found in response';
-  }
+    if (!base64Image) {
+      throw 'Error: "b64_json" not found in response';
+    }
 
-  // Convert the base64 string to a buffer
-  const imageBuffer = Buffer.from(base64Image, "base64");
+    // Convert the base64 string to a buffer
+    const imageBuffer = Buffer.from(base64Image, "base64");
 
-  // Use sharp to convert the buffer and save it as a JPG file
-  const hostPath = filepath.toHostPath();
-  const fileExtension = path.extname(hostPath).substring(1);
+    // Use sharp to convert the buffer and save it as a JPG file
+    const hostPath = filepath.toHostPath();
+    const fileExtension = path.extname(hostPath).substring(1);
 
-  await sharp(imageBuffer)
-    /*.resize(512, 512, {
+    await sharp(imageBuffer)
+      /*.resize(512, 512, {
       fit: "inside",
     })*/
-    .toFormat(<any>fileExtension)
-    .toFile(hostPath);
+      .toFormat(<any>fileExtension)
+      .toFile(hostPath);
 
-  // Record the cost
-  await costTracker.recordCost(model.cost, "genimg", model.key);
+    // Record the cost
+    await costTracker.recordCost(model.cost, "genimg", model.key);
 
-  return "1024x1024 Image generated and saved to " + filepath.getNaisysPath();
+    return "1024x1024 Image generated and saved to " + filepath.getNaisysPath();
+  }
+
+  return {
+    handleCommand,
+  };
 }
 
 interface ImageModel {
