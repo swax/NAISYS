@@ -10,8 +10,7 @@ import { createDreamMaker } from "../llm/dreamMaker.js";
 import { ContentSource } from "../llm/llmDtos.js";
 import * as inputMode from "../utils/inputMode.js";
 import { InputMode } from "../utils/inputMode.js";
-import * as output from "../utils/output.js";
-import { OutputColor } from "../utils/output.js";
+import { OutputColor, createOutputService } from "../utils/output.js";
 import * as utilities from "../utils/utilities.js";
 import { createCommandProtection } from "./commandProtection.js";
 import { createPromptBuilder } from "./promptBuilder.js";
@@ -41,6 +40,7 @@ export function createCommandHandler(
   dreamMaker: ReturnType<typeof createDreamMaker>,
   contextManager: ReturnType<typeof createContextManager>,
   costTracker: ReturnType<typeof createCostTracker>,
+  output: ReturnType<typeof createOutputService>,
 ) {
   async function processCommand(
     prompt: string,

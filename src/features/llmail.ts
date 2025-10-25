@@ -1,10 +1,13 @@
 import { Database } from "sqlite";
 import table from "text-table";
 import * as config from "../config.js";
-import { myUserId, usingDatabase } from "../services/dbService.js";
 import * as utilities from "../utils/utilities.js";
+import { createDatabaseService } from "../services/dbService.js";
 
-export function createLLMail() {
+export function createLLMail({
+  myUserId,
+  usingDatabase,
+}: Awaited<ReturnType<typeof createDatabaseService>>) {
   /** Threading is not currently used in `simpleMode` so this doesn't matter */
   const _threadTokenMax = config.agent.mailMessageTokenMax
     ? config.agent.mailMessageTokenMax * 5
