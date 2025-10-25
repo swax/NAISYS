@@ -7,7 +7,7 @@ import { createSubagentService } from "../features/subagent.js";
 import { createContextManager } from "../llm/contextManager.js";
 import * as inputMode from "../utils/inputMode.js";
 import { InputMode } from "../utils/inputMode.js";
-import * as output from "../utils/output.js";
+import { createOutputService } from "../utils/output.js";
 import { createShellWrapper } from "./shellWrapper.js";
 
 export function createPromptBuilder(
@@ -15,6 +15,7 @@ export function createPromptBuilder(
   subagent: ReturnType<typeof createSubagentService>,
   llmail: ReturnType<typeof createLLMail>,
   contextManager: ReturnType<typeof createContextManager>,
+  output: ReturnType<typeof createOutputService>,
 ) {
   /**
    * When actual output is entered by the user we want to cancel any auto-continue timers and/or wake on message

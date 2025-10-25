@@ -10,8 +10,7 @@ import { NaisysPath } from "../services/pathService.js";
 import { agentNames } from "../utils/agentNames.js";
 import * as inputMode from "../utils/inputMode.js";
 import { InputMode } from "../utils/inputMode.js";
-import * as output from "../utils/output.js";
-import { OutputColor } from "../utils/output.js";
+import { createOutputService, OutputColor } from "../utils/output.js";
 import { getCleanEnv, getTokenCount, shuffle } from "../utils/utilities.js";
 import { createLLMail } from "./llmail.js";
 
@@ -25,7 +24,10 @@ interface Subagent {
   status: "running" | "stopped";
 }
 
-export function createSubagentService(llmail: ReturnType<typeof createLLMail>) {
+export function createSubagentService(
+  llmail: ReturnType<typeof createLLMail>,
+  output: ReturnType<typeof createOutputService>,
+) {
   let _nextAgentId = 1;
   const _subagents: Subagent[] = [];
 

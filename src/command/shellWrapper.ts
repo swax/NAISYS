@@ -7,7 +7,7 @@ import treeKill from "tree-kill";
 import * as config from "../config.js";
 import * as pathService from "../services/pathService.js";
 import { NaisysPath } from "../services/pathService.js";
-import * as output from "../utils/output.js";
+import { createOutputService } from "../utils/output.js";
 import { getCleanEnv } from "../utils/utilities.js";
 
 enum ShellEvent {
@@ -16,7 +16,9 @@ enum ShellEvent {
   Exit = "exit",
 }
 
-export function createShellWrapper() {
+export function createShellWrapper(
+  output: ReturnType<typeof createOutputService>,
+) {
   let _process: ChildProcessWithoutNullStreams | undefined;
   let _currentProcessId: number | undefined;
   let _commandOutput = "";
