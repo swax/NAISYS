@@ -1,9 +1,12 @@
-import * as commandLoop from "./command/commandLoop.js";
+import { createAgentRuntime } from "./agentRuntime.js";
+import { tempAgentPath } from "./config.js";
 import * as output from "./utils/output.js";
+
+const agent = await createAgentRuntime(tempAgentPath);
 
 await output.commentAndLog(`NAISYS STARTED`);
 
-await commandLoop.run();
+await agent.commandLoop.run();
 
 await output.commentAndLog(`NAISYS TERMINATED`);
 
