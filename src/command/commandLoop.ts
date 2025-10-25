@@ -18,12 +18,13 @@ import { OutputColor } from "../utils/output.js";
 import * as utilities from "../utils/utilities.js";
 import { createCommandHandler, NextCommandAction } from "./commandHandler.js";
 import { createPromptBuilder } from "./promptBuilder.js";
-import * as shellCommand from "./shellCommand.js";
+import { createShellCommand } from "./shellCommand.js";
 
 export function createCommandLoop(
   config: Awaited<ReturnType<typeof loadConfigFromPath>>,
   commandHandler: ReturnType<typeof createCommandHandler>,
   promptBuilder: ReturnType<typeof createPromptBuilder>,
+  shellCommand: ReturnType<typeof createShellCommand>,
 ) {
   const maxErrorCount = 5;
 

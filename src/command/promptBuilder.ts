@@ -8,9 +8,11 @@ import * as contextManager from "../llm/contextManager.js";
 import * as inputMode from "../utils/inputMode.js";
 import { InputMode } from "../utils/inputMode.js";
 import * as output from "../utils/output.js";
-import * as shellWrapper from "./shellWrapper.js";
+import { createShellWrapper } from "./shellWrapper.js";
 
-export function createPromptBuilder() {
+export function createPromptBuilder(
+  shellWrapper: ReturnType<typeof createShellWrapper>,
+) {
   /**
    * When actual output is entered by the user we want to cancel any auto-continue timers and/or wake on message
    * We don't want to cancel if the user is entering a chords like ctrl+b then down arrow, when using tmux

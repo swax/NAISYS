@@ -15,7 +15,7 @@ import { OutputColor } from "../utils/output.js";
 import * as utilities from "../utils/utilities.js";
 import { createCommandProtection } from "./commandProtection.js";
 import { createPromptBuilder } from "./promptBuilder.js";
-import * as shellCommand from "./shellCommand.js";
+import { createShellCommand } from "./shellCommand.js";
 
 export enum NextCommandAction {
   Continue,
@@ -33,6 +33,7 @@ export function createCommandHandler(
   config: Awaited<ReturnType<typeof loadConfigFromPath>>,
   commandProtection: ReturnType<typeof createCommandProtection>,
   promptBuilder: ReturnType<typeof createPromptBuilder>,
+  shellCommand: ReturnType<typeof createShellCommand>,
 ) {
   async function processCommand(
     prompt: string,
