@@ -4,10 +4,10 @@ import * as output from "./utils/output.js";
 
 const agent = await createAgentRuntime(tempAgentPath);
 
-await output.commentAndLog(`NAISYS STARTED`);
+console.log(`NAISYS STARTED`);
 
 await agent.commandLoop.run();
 
-await output.commentAndLog(`NAISYS TERMINATED`);
+console.log(`NAISYS TERMINATED`);
 
 process.exit(0);

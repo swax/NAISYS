@@ -5,10 +5,11 @@ import * as config from "../config.js";
 import { createCostTracker } from "../llm/costTracker.js";
 import * as pathService from "../services/pathService.js";
 import { NaisysPath } from "../services/pathService.js";
-import * as output from "../utils/output.js";
+import { createOutputService } from "../utils/output.js";
 
 export function createGenImg(
   costTracker: ReturnType<typeof createCostTracker>,
+  output: ReturnType<typeof createOutputService>,
 ) {
   /** genimg "<description>" <filepath>: Generate an image with the description and save it to the file path */
   async function handleCommand(args: string): Promise<string> {

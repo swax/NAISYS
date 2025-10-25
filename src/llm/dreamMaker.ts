@@ -1,6 +1,6 @@
 import * as config from "../config.js";
-import { usingDatabase } from "../services/dbService.js";
-import * as output from "../utils/output.js";
+import { createDatabaseService } from "../services/dbService.js";
+import { createOutputService } from "../utils/output.js";
 import { createContextManager } from "./contextManager.js";
 import { ContentSource, LlmRole } from "./llmDtos.js";
 import { createLLMService } from "./llmService.js";
@@ -8,6 +8,8 @@ import { createLLMService } from "./llmService.js";
 export function createDreamMaker(
   contextManager: ReturnType<typeof createContextManager>,
   llmService: ReturnType<typeof createLLMService>,
+  { usingDatabase }: Awaited<ReturnType<typeof createDatabaseService>>,
+  output: ReturnType<typeof createOutputService>,
 ) {
   let _lastDream = "";
 

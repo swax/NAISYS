@@ -9,11 +9,10 @@ import { createContextManager } from "../llm/contextManager.js";
 import { createDreamMaker } from "../llm/dreamMaker.js";
 import { ContentSource, LlmRole } from "../llm/llmDtos.js";
 import { createLLMService } from "../llm/llmService.js";
-import * as logService from "../services/logService.js";
+import { createLogService } from "../services/logService.js";
 import * as inputMode from "../utils/inputMode.js";
 import { InputMode } from "../utils/inputMode.js";
-import * as output from "../utils/output.js";
-import { OutputColor } from "../utils/output.js";
+import { createOutputService, OutputColor } from "../utils/output.js";
 import * as utilities from "../utils/utilities.js";
 import { createCommandHandler, NextCommandAction } from "./commandHandler.js";
 import { createPromptBuilder } from "./promptBuilder.js";
@@ -32,10 +31,14 @@ export function createCommandLoop(
   workspaces: ReturnType<typeof createWorkspacesFeature>,
   llmService: ReturnType<typeof createLLMService>,
   systemMessage: string,
+  output: ReturnType<typeof createOutputService>,
+  logService: ReturnType<typeof createLogService>,
 ) {
   const maxErrorCount = 5;
 
   async function run() {
+    await output.commentAndLog(`AGENT STARTED`);
+
     // Show Agent Config exept the agent prompt
     await output.commentAndLog(
       `Agent configured to use ${config.agent.shellModel} model`,
@@ -190,6 +193,8 @@ export function createCommandLoop(
         nextPromptIndex = 0;
       }
     }
+
+    await output.commentAndLog(`AGENT TERMINATED`);
   }
 
   function clearPromptMessage(waitingMessage: string) {

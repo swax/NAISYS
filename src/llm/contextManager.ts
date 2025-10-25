@@ -1,16 +1,17 @@
 import * as config from "../config.js";
 import { createWorkspacesFeature } from "../features/workspaces.js";
-import * as logService from "../services/logService.js";
+import { createLogService } from "../services/logService.js";
 import * as inputMode from "../utils/inputMode.js";
 import { InputMode } from "../utils/inputMode.js";
-import * as output from "../utils/output.js";
-import { OutputColor } from "../utils/output.js";
+import { createOutputService, OutputColor } from "../utils/output.js";
 import * as utilities from "../utils/utilities.js";
 import { ContentSource, LlmMessage, LlmRole } from "./llmDtos.js";
 
 export function createContextManager(
   workspaces: ReturnType<typeof createWorkspacesFeature>,
   systemMessage: string,
+  output: ReturnType<typeof createOutputService>,
+  logService: ReturnType<typeof createLogService>,
 ) {
   let _messages: LlmMessage[] = [];
 

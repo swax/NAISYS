@@ -17,6 +17,9 @@ import { createDreamMaker } from "./llm/dreamMaker.js";
 import { createLLModels } from "./llm/llModels.js";
 import { createLLMService } from "./llm/llmService.js";
 import { createSystemMessage } from "./llm/systemMessage.js";
+import { createDatabaseService } from "./services/dbService.js";
+import { createLogService } from "./services/logService.js";
+import { createOutputService } from "./utils/output.js";
 
 export async function createAgentRuntime(_agentPath: string) {
   const config = await loadConfigFromPath(_agentPath);
@@ -27,33 +30,51 @@ export async function createAgentRuntime(_agentPath: string) {
    * We can also see from this why modern dependency injection frameworks exist
    */
 
-  const workspaces = createWorkspacesFeature();
+  const dbService = await createDatabaseService();
+  const logService = createLogService(dbService);
+  const output = createOutputService(logService);
+  const workspaces = createWorkspacesFeature(output);
 
   // LLM
   const systemMessage = createSystemMessage();
   const llModels = createLLModels();
   const tools = createCommandTools();
-  const costTracker = createCostTracker(llModels);
-  const contextManager = createContextManager(workspaces, systemMessage);
+  const costTracker = createCostTracker(llModels, dbService, output);
+  const contextManager = createContextManager(
+    workspaces,
+    systemMessage,
+    output,
+    logService,
+  );
   const llmService = createLLMService(costTracker, tools, llModels);
-  const dreamMaker = createDreamMaker(contextManager, llmService);
+  const dreamMaker = createDreamMaker(
+    contextManager,
+    llmService,
+    dbService,
+    output,
+  );
 
   // Features
-  const genimg = createGenImg(costTracker);
-  const llmail = createLLMail();
-  const subagentService = createSubagentService(llmail);
-  const llmynx = createLLMynx(llmService, costTracker, llModels);
+  const genimg = createGenImg(costTracker, output);
+  const llmail = createLLMail(dbService);
+  const subagentService = createSubagentService(llmail, output);
+  const llmynx = createLLMynx(llmService, costTracker, llModels, output);
 
   // Command components
-  const shellWrapper = createShellWrapper();
+  const shellWrapper = createShellWrapper(output);
   const promptBuilder = createPromptBuilder(
     shellWrapper,
     subagentService,
     llmail,
     contextManager,
+    output,
   );
   const shellCommand = createShellCommand(shellWrapper, contextManager);
-  const commandProtection = createCommandProtection(promptBuilder, llmService);
+  const commandProtection = createCommandProtection(
+    promptBuilder,
+    llmService,
+    output,
+  );
   const commandHandler = createCommandHandler(
     config,
     commandProtection,
@@ -66,6 +87,7 @@ export async function createAgentRuntime(_agentPath: string) {
     dreamMaker,
     contextManager,
     costTracker,
+    output,
   );
   const commandLoop = createCommandLoop(
     config,
@@ -80,6 +102,8 @@ export async function createAgentRuntime(_agentPath: string) {
     workspaces,
     llmService,
     systemMessage,
+    output,
+    logService,
   );
 
   return {

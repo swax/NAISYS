@@ -11,13 +11,14 @@ import { createCostTracker } from "../llm/costTracker.js";
 import { createLLModels } from "../llm/llModels.js";
 import { LlmMessage, LlmRole } from "../llm/llmDtos.js";
 import { createLLMService } from "../llm/llmService.js";
-import * as output from "../utils/output.js";
+import { createOutputService } from "../utils/output.js";
 import * as utilities from "../utils/utilities.js";
 
 export function createLLMynx(
   llmService: ReturnType<typeof createLLMService>,
   costTracker: ReturnType<typeof createCostTracker>,
   llModels: ReturnType<typeof createLLModels>,
+  output: ReturnType<typeof createOutputService>,
 ) {
   // Flag to control LLM-based content reduction - set to false for pagination instead
   const USE_LLM_REDUCTION = false;

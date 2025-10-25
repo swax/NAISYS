@@ -2,7 +2,7 @@ import * as config from "../config.js";
 import { LlmRole } from "../llm/llmDtos.js";
 import { createLLMService } from "../llm/llmService.js";
 import { CommandProtection } from "../utils/enums.js";
-import * as output from "../utils/output.js";
+import { createOutputService } from "../utils/output.js";
 import { createPromptBuilder } from "./promptBuilder.js";
 
 interface ValidateCommandResponse {
@@ -13,6 +13,7 @@ interface ValidateCommandResponse {
 export function createCommandProtection(
   promptBuilder: ReturnType<typeof createPromptBuilder>,
   llmService: ReturnType<typeof createLLMService>,
+  output: ReturnType<typeof createOutputService>,
 ) {
   async function validateCommand(
     command: string,
