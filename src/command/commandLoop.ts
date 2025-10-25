@@ -8,8 +8,7 @@ import { createWorkspacesFeature } from "../features/workspaces.js";
 import { createContextManager } from "../llm/contextManager.js";
 import { createDreamMaker } from "../llm/dreamMaker.js";
 import { ContentSource, LlmRole } from "../llm/llmDtos.js";
-import * as llmService from "../llm/llmService.js";
-import { systemMessage } from "../llm/systemMessage.js";
+import { createLLMService } from "../llm/llmService.js";
 import * as logService from "../services/logService.js";
 import * as inputMode from "../utils/inputMode.js";
 import { InputMode } from "../utils/inputMode.js";
@@ -31,6 +30,8 @@ export function createCommandLoop(
   dreamMaker: ReturnType<typeof createDreamMaker>,
   contextManager: ReturnType<typeof createContextManager>,
   workspaces: ReturnType<typeof createWorkspacesFeature>,
+  llmService: ReturnType<typeof createLLMService>,
+  systemMessage: string,
 ) {
   const maxErrorCount = 5;
 

@@ -2,12 +2,14 @@ import OpenAI from "openai";
 import path from "path";
 import sharp from "sharp";
 import * as config from "../config.js";
-import * as costTracker from "../llm/costTracker.js";
+import { createCostTracker } from "../llm/costTracker.js";
 import * as pathService from "../services/pathService.js";
 import { NaisysPath } from "../services/pathService.js";
 import * as output from "../utils/output.js";
 
-export function createGenImg() {
+export function createGenImg(
+  costTracker: ReturnType<typeof createCostTracker>,
+) {
   /** genimg "<description>" <filepath>: Generate an image with the description and save it to the file path */
   async function handleCommand(args: string): Promise<string> {
     // genimg sholdn't even be presented as an available command unless it is defined in the config
