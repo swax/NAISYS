@@ -7,14 +7,18 @@ import * as crypto from "crypto";
 import * as https from "https";
 import * as os from "os";
 import * as config from "../config.js";
-import * as costTracker from "../llm/costTracker.js";
-import { getLLModel } from "../llm/llModels.js";
+import { createCostTracker } from "../llm/costTracker.js";
+import { createLLModels } from "../llm/llModels.js";
 import { LlmMessage, LlmRole } from "../llm/llmDtos.js";
-import * as llmService from "../llm/llmService.js";
+import { createLLMService } from "../llm/llmService.js";
 import * as output from "../utils/output.js";
 import * as utilities from "../utils/utilities.js";
 
-export function createLLMynx() {
+export function createLLMynx(
+  llmService: ReturnType<typeof createLLMService>,
+  costTracker: ReturnType<typeof createCostTracker>,
+  llModels: ReturnType<typeof createLLModels>,
+) {
   // Flag to control LLM-based content reduction - set to false for pagination instead
   const USE_LLM_REDUCTION = false;
 
@@ -302,7 +306,7 @@ export function createLLMynx() {
     contentTokenSize: number,
     linkPageAsContent?: number,
   ) {
-    const model = getLLModel(config.agent.webModel);
+    const model = llModels.get(config.agent.webModel);
 
     // For example if context is 16k, and max tokens is 2k, 3k with 1.5x overrun
     // That would be 3k for the current compressed content, 10k for the chunk, and 3k for the output
