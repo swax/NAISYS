@@ -1,69 +1,58 @@
-import { describe, expect, jest, test } from "@jest/globals";
-import { createPromptBuilder } from "../../command/promptBuilder.js";
-import { createShellWrapper } from "../../command/shellWrapper.js";
+import { describe, expect, test } from "@jest/globals";
+import { createCommandHandler } from "../../command/commandHandler.js";
 import {
+  createMockCommandProtection,
   createMockConfig,
-  mockCommandProtection,
-  mockConfig,
-  mockDbService,
-  mockFs,
-  mockPathService,
-  mockSqlite,
-  mockSubagent,
+  createMockContextManager,
+  createMockCostTracker,
+  createMockDreamMaker,
+  createMockGenImg,
+  createMockLLMail,
+  createMockLLMynx,
+  createMockOutputService,
+  createMockPromptBuilder,
+  createMockShellCommand,
+  createMockSubagent,
 } from "../mocks.js";
-/*
-mockConfig();
-mockFs();
-mockSqlite();
-mockPathService();
-mockDbService();
-mockSubagent();
-mockCommandProtection();
 
-// Mock promptBuilder module (test-specific)
 const userHostPrompt = "bob@naisys";
 const userHostPathPrompt = "bob@naisys:/home/bob";
 
-const mockGetUserHostPrompt = jest.fn(() => userHostPrompt);
-const mockGetUserHostPathPrompt = jest.fn(() => userHostPathPrompt);
+function createPopFirstCommand() {
+  const promptBuilder = createMockPromptBuilder(
+    userHostPrompt,
+    userHostPathPrompt,
+  );
+  const shellCommand = createMockShellCommand();
 
-jest.unstable_mockModule("../../command/promptBuilder.js", () => ({
-  getUserHostPrompt: mockGetUserHostPrompt,
-  getUserHostPathPrompt: mockGetUserHostPathPrompt,
-}));
+  const commandHandler = createCommandHandler(
+    createMockConfig(),
+    createMockCommandProtection(),
+    promptBuilder,
+    shellCommand,
+    createMockGenImg(),
+    createMockSubagent(),
+    createMockLLMail(),
+    createMockLLMynx(),
+    createMockDreamMaker(),
+    createMockContextManager(),
+    createMockCostTracker(),
+    createMockOutputService(),
+  );
 
-// Load target modules
-const { createCommandHandler } = await import(
-  "../../command/commandHandler.js"
-);
-const { createCommandProtection } = await import(
-  "../../command/commandProtection.js"
-);
-
-// Create an instance to access testing methods
-const shellWrapperInstance = createShellWrapper();
-const promptBuilderInstance = createPromptBuilder(shellWrapperInstance);
-const commandProtectionInstance = createCommandProtection(
-  promptBuilderInstance,
-);
-const commandHandlerInstance = createCommandHandler(
-  createMockConfig(),
-  commandProtectionInstance,
-  promptBuilderInstance,
-  shellWrapperInstance,
-);
-const { popFirstCommand } = commandHandlerInstance.exportedForTesting;
+  return {
+    popFirstCommand: commandHandler.exportedForTesting.popFirstCommand,
+  };
+}
 
 describe("popFirstCommand function", () => {
   test("handles input with a prompt at beginning", async () => {
-    // Arrange
+    const { popFirstCommand } = createPopFirstCommand();
     const nextInput = `${userHostPathPrompt}$ command1`;
     const commandList = [nextInput];
 
-    // Act
     const result = await popFirstCommand(commandList);
 
-    // Assert
     expect(result).toEqual({
       input: "",
       splitResult: "inputInPrompt",
@@ -72,15 +61,13 @@ describe("popFirstCommand function", () => {
   });
 
   test("handles input with wrong prompt at beginning", async () => {
-    // Arrange
+    const { popFirstCommand } = createPopFirstCommand();
     const wrongPathPrompt = `${userHostPrompt}:/wrong`;
     const nextInput = `${wrongPathPrompt}$ command1`;
     const commandList = [nextInput];
 
-    // Act
     const result = await popFirstCommand(commandList);
 
-    // Assert
     expect(result).toEqual({
       input: "",
       splitResult: "inputPromptMismatch",
@@ -89,14 +76,12 @@ describe("popFirstCommand function", () => {
   });
 
   test("handle input with prompt in the middle", async () => {
-    // Arrange
+    const { popFirstCommand } = createPopFirstCommand();
     const nextInput = `command1\n${userHostPathPrompt}$ command2`;
     const commandList = [nextInput];
 
-    // Act
     const result = await popFirstCommand(commandList);
 
-    // Assert
     expect(result).toEqual({
       input: "command1\n",
       splitResult: "sliced",
@@ -105,17 +90,15 @@ describe("popFirstCommand function", () => {
   });
 
   test("handles comment command in quotes", async () => {
-    // Arrange
+    const { popFirstCommand } = createPopFirstCommand();
     const commentCommand = `comment "Today
         \\"is\\"
         Tuesday"`;
     const nextInput = `${commentCommand}\ncommand2`;
     const commandList = [nextInput];
 
-    // Act
     const result = await popFirstCommand(commandList);
 
-    // Assert
     expect(result).toEqual({
       input: commentCommand,
       splitResult: "sliced",
@@ -124,14 +107,12 @@ describe("popFirstCommand function", () => {
   });
 
   test("handles input with nothing special", async () => {
-    // Arrange
+    const { popFirstCommand } = createPopFirstCommand();
     const nextInput = "command1 --help\n";
     const commandList = [nextInput];
 
-    // Act
     const result = await popFirstCommand(commandList);
 
-    // Assert
     expect(result).toEqual({
       input: "command1 --help",
       splitResult: "popped",
@@ -139,4 +120,3 @@ describe("popFirstCommand function", () => {
     expect(commandList).toEqual([]);
   });
 });
-*/

@@ -1,29 +1,27 @@
-import { describe, expect, jest, test } from "@jest/globals";
+import { describe, expect, test } from "@jest/globals";
 import { ContentSource } from "../../llm/llmDtos.js";
 import * as inputMode from "../../utils/inputMode.js";
 import { InputMode } from "../../utils/inputMode.js";
-import { mockConfig } from "../mocks.js";
-/*
-mockConfig();
+import { createContextManager } from "../../llm/contextManager.js";
+import {
+  createMockConfig,
+  createMockLogService,
+  createMockOutputService,
+  createMockWorkspacesFeature,
+} from "../mocks.js";
 
-jest.unstable_mockModule("../../services/logService.js", () => ({
-  recordContext: jest.fn(),
-  roleToSource: jest.fn(),
-  write: jest.fn(),
-}));
-
-jest.unstable_mockModule("../../utils/output.js", () => ({
-  comment: jest.fn(),
-  log: jest.fn(),
-  write: jest.fn(),
-  OutputColor: { llm: "llm", console: "console" },
-}));
-
-// Load target module
-const contextManager = await import("../../llm/contextManager.js");
+const systemMessage = "system";
 
 describe("trim function", () => {
   test("happy path", async () => {
+    const contextManager = createContextManager(
+      createMockConfig(),
+      createMockWorkspacesFeature(),
+      systemMessage,
+      createMockOutputService(),
+      createMockLogService(),
+    );
+
     // Arrange
     inputMode.toggle(InputMode.LLM);
 
@@ -68,4 +66,4 @@ describe("trim function", () => {
       expect(getMsgIndexCount(index)).toBe(0);
     }
   });
-});*/
+});
