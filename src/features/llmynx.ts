@@ -6,7 +6,7 @@ import { exec } from "child_process";
 import * as crypto from "crypto";
 import * as https from "https";
 import * as os from "os";
-import * as config from "../config.js";
+import { createConfig } from "../config.js";
 import { createCostTracker } from "../llm/costTracker.js";
 import { createLLModels } from "../llm/llModels.js";
 import { LlmMessage, LlmRole } from "../llm/llmDtos.js";
@@ -15,6 +15,7 @@ import { createOutputService } from "../utils/output.js";
 import * as utilities from "../utils/utilities.js";
 
 export function createLLMynx(
+  config: Awaited<ReturnType<typeof createConfig>>,
   llmService: ReturnType<typeof createLLMService>,
   costTracker: ReturnType<typeof createCostTracker>,
   llModels: ReturnType<typeof createLLModels>,

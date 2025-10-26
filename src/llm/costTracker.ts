@@ -1,4 +1,4 @@
-import * as config from "../config.js";
+import { createConfig } from "../config.js";
 import { createDatabaseService } from "../services/dbService.js";
 import { createOutputService } from "../utils/output.js";
 import { createLLModels } from "./llModels.js";
@@ -19,6 +19,7 @@ interface TokenUsage {
 }
 
 export function createCostTracker(
+  config: Awaited<ReturnType<typeof createConfig>>,
   llModels: ReturnType<typeof createLLModels>,
   { usingDatabase }: Awaited<ReturnType<typeof createDatabaseService>>,
   output: ReturnType<typeof createOutputService>,

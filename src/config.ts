@@ -1,4 +1,3 @@
-import { program } from "commander";
 import dotenv from "dotenv";
 import * as fs from "fs";
 import { readFile } from "fs/promises";
@@ -72,46 +71,7 @@ export interface AgentConfig {
   persistAcrossRuns?: boolean;
 }
 
-
-// Get rid of all of this and do in the main function when all direct config imports are removed
-program.argument("<agent-path>", "Path to agent configuration file").parse();
-
-export const tempAgentPath = program.args[0];
-
-const tempConfig = await loadConfigFromPath(tempAgentPath);
-
-
-// export properties in tempConfig
-export const {
-  hostname,
-  shellCommand,
-  agent,
-  webTokenMax,
-  endSessionEnabled,
-  mailEnabled,
-  webEnabled,
-  completeTaskEnabled,
-  workspacesEnabled,
-  trimSessionEnabled,
-  naisysFolder,
-  websiteFolder,
-  dbFilePath,
-  localLlmUrl,
-  localLlmName,
-  openaiApiKey,
-  googleApiKey,
-  anthropicApiKey,
-  googleSearchEngineId,
-  spendLimitDollars,
-  useToolsForLlmConsoleResponses,
-  packageVersion,
-  binPath,
-  getEnv,
-  resolveConfigVars,
-} = tempConfig;
-
-
-export async function loadConfigFromPath(agentPath: string) {
+export async function createConfig(agentPath: string) {
   /** The system name that shows after the @ in the command prompt */
   const hostname = "naisys";
 

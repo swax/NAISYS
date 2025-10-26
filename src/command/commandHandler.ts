@@ -1,5 +1,5 @@
 import chalk from "chalk";
-import { loadConfigFromPath } from "../config.js";
+import { createConfig } from "../config.js";
 import { createGenImg } from "../features/genimg.js";
 import { createLLMail } from "../features/llmail.js";
 import { createLLMynx } from "../features/llmynx.js";
@@ -29,7 +29,7 @@ interface NextCommandResponse {
 }
 
 export function createCommandHandler(
-  config: Awaited<ReturnType<typeof loadConfigFromPath>>,
+  config: Awaited<ReturnType<typeof createConfig>>,
   commandProtection: ReturnType<typeof createCommandProtection>,
   promptBuilder: ReturnType<typeof createPromptBuilder>,
   shellCommand: ReturnType<typeof createShellCommand>,

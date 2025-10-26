@@ -1,14 +1,15 @@
 import escapeHtml from "escape-html";
 import * as fs from "fs";
-import * as config from "../config.js";
 import { LlmMessage, LlmRole } from "../llm/llmDtos.js";
 import { createDatabaseService } from "./dbService.js";
 import * as pathService from "./pathService.js";
 import { NaisysPath } from "./pathService.js";
+import { createConfig } from "../config.js";
 
-export function createLogService({
-  usingDatabase,
-}: Awaited<ReturnType<typeof createDatabaseService>>) {
+export function createLogService(
+  config: Awaited<ReturnType<typeof createConfig>>,
+  { usingDatabase }: Awaited<ReturnType<typeof createDatabaseService>>,
+) {
   const _combinedLogFilePath = new NaisysPath(
     `${config.websiteFolder || config.naisysFolder}/logs/combined-log.html`,
   );
