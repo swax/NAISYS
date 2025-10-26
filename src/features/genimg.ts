@@ -1,13 +1,14 @@
 import OpenAI from "openai";
 import path from "path";
 import sharp from "sharp";
-import * as config from "../config.js";
+import { createConfig } from "../config.js";
 import { createCostTracker } from "../llm/costTracker.js";
 import * as pathService from "../services/pathService.js";
 import { NaisysPath } from "../services/pathService.js";
 import { createOutputService } from "../utils/output.js";
 
 export function createGenImg(
+  config: Awaited<ReturnType<typeof createConfig>>,
   costTracker: ReturnType<typeof createCostTracker>,
   output: ReturnType<typeof createOutputService>,
 ) {

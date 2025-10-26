@@ -1,7 +1,7 @@
 import chalk from "chalk";
 import * as events from "events";
 import * as readline from "readline";
-import * as config from "../config.js";
+import { createConfig } from "../config.js";
 import { createLLMail } from "../features/llmail.js";
 import { createSubagentService } from "../features/subagent.js";
 import { createContextManager } from "../llm/contextManager.js";
@@ -11,6 +11,7 @@ import { createOutputService } from "../utils/output.js";
 import { createShellWrapper } from "./shellWrapper.js";
 
 export function createPromptBuilder(
+  config: Awaited<ReturnType<typeof createConfig>>,
   shellWrapper: ReturnType<typeof createShellWrapper>,
   subagent: ReturnType<typeof createSubagentService>,
   llmail: ReturnType<typeof createLLMail>,

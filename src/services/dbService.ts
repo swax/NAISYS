@@ -1,10 +1,12 @@
 import { Database, open } from "sqlite";
 import sqlite3 from "sqlite3";
-import * as config from "../config.js";
+import { createConfig } from "../config.js";
 import * as pathService from "./pathService.js";
 import { NaisysPath } from "./pathService.js";
 
-export async function createDatabaseService() {
+export async function createDatabaseService(
+  config: Awaited<ReturnType<typeof createConfig>>,
+) {
   let myUserId = -1;
 
   async function initDatabase(filepath: NaisysPath) {

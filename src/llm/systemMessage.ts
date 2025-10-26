@@ -10,9 +10,11 @@
  * Once exported the system message is essentially cached
  */
 
-import * as config from "../config.js";
+import { createConfig } from "../config.js";
 
-export function createSystemMessage() {
+export function createSystemMessage(
+  config: Awaited<ReturnType<typeof createConfig>>,
+) {
   let genImgCmd = "";
   if (config.agent.imageModel) {
     genImgCmd = `\n  genimg "<description>" <filepath>: Generate an image with the description and save it to the given fully qualified path`;

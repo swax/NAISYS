@@ -3,8 +3,7 @@ import * as fs from "fs";
 import yaml from "js-yaml";
 import path from "path";
 import table from "text-table";
-import * as config from "../config.js";
-import { AgentConfig } from "../config.js";
+import { AgentConfig, createConfig } from "../config.js";
 import * as pathService from "../services/pathService.js";
 import { NaisysPath } from "../services/pathService.js";
 import { agentNames } from "../utils/agentNames.js";
@@ -25,6 +24,7 @@ interface Subagent {
 }
 
 export function createSubagentService(
+  config: Awaited<ReturnType<typeof createConfig>>,
   llmail: ReturnType<typeof createLLMail>,
   output: ReturnType<typeof createOutputService>,
 ) {

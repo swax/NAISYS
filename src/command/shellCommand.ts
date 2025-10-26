@@ -1,4 +1,4 @@
-import * as config from "../config.js";
+import { createConfig } from "../config.js";
 import { createContextManager } from "../llm/contextManager.js";
 import * as inputMode from "../utils/inputMode.js";
 import { InputMode } from "../utils/inputMode.js";
@@ -6,6 +6,7 @@ import * as utilities from "../utils/utilities.js";
 import { createShellWrapper } from "./shellWrapper.js";
 
 export function createShellCommand(
+  config: Awaited<ReturnType<typeof createConfig>>,
   shellWrapper: ReturnType<typeof createShellWrapper>,
   contextManager: ReturnType<typeof createContextManager>,
 ) {
