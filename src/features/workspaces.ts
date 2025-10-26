@@ -1,12 +1,13 @@
 import * as fs from "fs";
 import path from "path";
-import * as config from "../config.js";
+import { createConfig } from "../config.js";
 import * as pathService from "../services/pathService.js";
 import { NaisysPath } from "../services/pathService.js";
 import { createOutputService } from "../utils/output.js";
 import * as utilities from "../utils/utilities.js";
 
 export function createWorkspacesFeature(
+  config: Awaited<ReturnType<typeof createConfig>>,
   output: ReturnType<typeof createOutputService>,
 ) {
   const _suffixHelp =

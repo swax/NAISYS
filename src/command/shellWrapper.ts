@@ -4,7 +4,7 @@ import * as fs from "fs";
 import * as os from "os";
 import stripAnsi from "strip-ansi";
 import treeKill from "tree-kill";
-import * as config from "../config.js";
+import { createConfig } from "../config.js";
 import * as pathService from "../services/pathService.js";
 import { NaisysPath } from "../services/pathService.js";
 import { createOutputService } from "../utils/output.js";
@@ -17,6 +17,7 @@ enum ShellEvent {
 }
 
 export function createShellWrapper(
+  config: Awaited<ReturnType<typeof createConfig>>,
   output: ReturnType<typeof createOutputService>,
 ) {
   let _process: ChildProcessWithoutNullStreams | undefined;

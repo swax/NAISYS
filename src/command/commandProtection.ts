@@ -1,4 +1,4 @@
-import * as config from "../config.js";
+import { createConfig } from "../config.js";
 import { LlmRole } from "../llm/llmDtos.js";
 import { createLLMService } from "../llm/llmService.js";
 import { CommandProtection } from "../utils/enums.js";
@@ -11,6 +11,7 @@ interface ValidateCommandResponse {
 }
 
 export function createCommandProtection(
+  config: Awaited<ReturnType<typeof createConfig>>,
   promptBuilder: ReturnType<typeof createPromptBuilder>,
   llmService: ReturnType<typeof createLLMService>,
   output: ReturnType<typeof createOutputService>,

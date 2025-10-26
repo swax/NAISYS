@@ -1,4 +1,4 @@
-import * as config from "../config.js";
+import { createConfig } from "../config.js";
 
 export enum LlmApiType {
   OpenAI = "openai",
@@ -19,7 +19,9 @@ interface LlmModel {
   cacheReadCost?: number;
 }
 
-export function createLLModels() {
+export function createLLModels(
+  config: Awaited<ReturnType<typeof createConfig>>,
+) {
   const llmModels: LlmModel[] = [
     {
       key: "local",

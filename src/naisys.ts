@@ -1,8 +1,10 @@
+import { program } from "commander";
 import { createAgentRuntime } from "./agentRuntime.js";
-import { tempAgentPath } from "./config.js";
-import * as output from "./utils/output.js";
 
-const agent = await createAgentRuntime(tempAgentPath);
+// Get rid of all of this and do in the main function when all direct config imports are removed
+program.argument("<agent-path>", "Path to agent configuration file").parse();
+
+const agent = await createAgentRuntime(program.args[0]);
 
 console.log(`NAISYS STARTED`);
 

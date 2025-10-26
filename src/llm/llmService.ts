@@ -3,7 +3,7 @@ import { MessageParam } from "@anthropic-ai/sdk/resources/messages.mjs";
 import { GoogleGenAI } from "@google/genai";
 import OpenAI from "openai";
 import { ChatCompletionCreateParamsNonStreaming } from "openai/resources";
-import * as config from "../config.js";
+import { createConfig } from "../config.js";
 import { createCommandTools } from "./commandTool.js";
 import { createCostTracker } from "./costTracker.js";
 import { createLLModels, LlmApiType } from "./llModels.js";
@@ -12,6 +12,7 @@ import { LlmMessage, LlmRole } from "./llmDtos.js";
 type QuerySources = "console" | "write-protection" | "dream" | "llmynx";
 
 export function createLLMService(
+  config: Awaited<ReturnType<typeof createConfig>>,
   costTracker: ReturnType<typeof createCostTracker>,
   tools: ReturnType<typeof createCommandTools>,
   llModels: ReturnType<typeof createLLModels>,

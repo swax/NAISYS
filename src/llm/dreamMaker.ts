@@ -1,4 +1,4 @@
-import * as config from "../config.js";
+import { createConfig } from "../config.js";
 import { createDatabaseService } from "../services/dbService.js";
 import { createOutputService } from "../utils/output.js";
 import { createContextManager } from "./contextManager.js";
@@ -6,6 +6,7 @@ import { ContentSource, LlmRole } from "./llmDtos.js";
 import { createLLMService } from "./llmService.js";
 
 export function createDreamMaker(
+  config: Awaited<ReturnType<typeof createConfig>>,
   contextManager: ReturnType<typeof createContextManager>,
   llmService: ReturnType<typeof createLLMService>,
   { usingDatabase }: Awaited<ReturnType<typeof createDatabaseService>>,

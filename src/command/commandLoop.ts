@@ -1,6 +1,6 @@
 import chalk from "chalk";
 import * as readline from "readline";
-import { loadConfigFromPath } from "../config.js";
+import { createConfig } from "../config.js";
 import { createLLMail } from "../features/llmail.js";
 import { createLLMynx } from "../features/llmynx.js";
 import { createSubagentService } from "../features/subagent.js";
@@ -19,7 +19,7 @@ import { createPromptBuilder } from "./promptBuilder.js";
 import { createShellCommand } from "./shellCommand.js";
 
 export function createCommandLoop(
-  config: Awaited<ReturnType<typeof loadConfigFromPath>>,
+  config: Awaited<ReturnType<typeof createConfig>>,
   commandHandler: ReturnType<typeof createCommandHandler>,
   promptBuilder: ReturnType<typeof createPromptBuilder>,
   shellCommand: ReturnType<typeof createShellCommand>,
