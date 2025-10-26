@@ -52,7 +52,10 @@ export function createShellWrapper(
 
     const spawnCmd = os.platform() === "win32" ? "wsl" : "bash";
 
-    _process = spawn(spawnCmd, [], { stdio: "pipe", env: getCleanEnv() });
+    _process = spawn(spawnCmd, [], {
+      stdio: "pipe",
+      env: getCleanEnv(config.envVars),
+    });
 
     const pid = _process.pid;
 

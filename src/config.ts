@@ -86,7 +86,8 @@ export async function createConfig(agentPath: string) {
   const agent = loadAgentConfig();
 
   const envPath = agent.envPath || ".env";
-  dotenv.config({ path: envPath });
+  const envFile = fs.readFileSync(envPath);
+  const envVars = dotenv.parse(envFile);
 
   /** Web pages loaded with llmynx will be reduced down to around this number of tokens */
   const webTokenMax = 5000;
@@ -230,7 +231,7 @@ export async function createConfig(agentPath: string) {
   }
 
   function getEnv(key: string, required?: boolean) {
-    const value = process.env[key];
+    const value = envVars[key];
     if (!value && required) {
       throw `Config: Error, .env ${key} is not defined`;
     }
@@ -240,7 +241,7 @@ export async function createConfig(agentPath: string) {
   function resolveConfigVars(templateString: string) {
     let resolvedString = templateString;
     resolvedString = resolveTemplateVars(resolvedString, "agent", agent);
-    resolvedString = resolveTemplateVars(resolvedString, "env", process.env);
+    resolvedString = resolveTemplateVars(resolvedString, "env", envVars);
     return resolvedString;
   }
 
@@ -304,6 +305,7 @@ export async function createConfig(agentPath: string) {
     useToolsForLlmConsoleResponses,
     packageVersion,
     binPath,
+    envVars,
     getEnv,
     resolveConfigVars,
   };

@@ -9,7 +9,6 @@ agentPrompt: |
   This is the priority order in which you should process the multi stage work queue of sketches: 
 
   1. Check the ${env.SCDB_REVIEW_FOLDER}/01-pending folder 
-    - If there are ${env.REVIEW_MAX} or more sketches in this folder, then stop processing the pipeline, call 'completetask' with the note that you are blocked on reviews
     - Send a llmail to the Reviewer when sketches are moved into this folder
     - If an approval is received then move the sketch folder to the ${env.SCDB_APPROVAL_FOLDER}/01-pending/<folder_name> folder
     - If the sketch is *not* approved then add/update a notes.txt file in the folder with the notes from the Director
