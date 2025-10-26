@@ -1,20 +1,17 @@
 import { describe, expect, it, jest } from "@jest/globals";
 import { LlmMessage, LlmRole } from "../../llm/llmDtos.js";
-import { mockConfig } from "../mocks.js";
-/*
-mockConfig();
+import { createOutputService } from "../../utils/output.js";
+import { createMockLogService } from "../mocks.js";
+
+const mockLogService = createMockLogService();
 
 // Mock logService module
-const mockLogServiceWrite = jest
-  .fn<(message: LlmMessage) => Promise<number | undefined>>()
+mockLogService.write = jest
+  .fn<(message: LlmMessage) => Promise<number>>()
   .mockResolvedValue(1);
 
-jest.unstable_mockModule("../../services/logService.js", () => ({
-  write: mockLogServiceWrite,
-}));
-
 // Load target module
-const output = await import("../../utils/output.js");
+const output = createOutputService(mockLogService);
 
 describe("commentAndLog function", () => {
   it("should call writeDbLog with the correct arguments", async () => {
@@ -22,10 +19,10 @@ describe("commentAndLog function", () => {
     await output.commentAndLog("Test message");
 
     // Verify the mock was called correctly
-    expect(mockLogServiceWrite).toHaveBeenCalledWith({
+    expect(mockLogService.write).toHaveBeenCalledWith({
       content: "Test message",
       role: LlmRole.User,
       type: "comment",
     });
   });
-});*/
+});

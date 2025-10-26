@@ -309,7 +309,7 @@ export function createSubagentService(
       [naisysJsPath, subagent.agentPath.toHostPath()],
       {
         stdio: "pipe",
-        env: getCleanEnv(),
+        env: getCleanEnv(config.envVars),
       },
     );
 
