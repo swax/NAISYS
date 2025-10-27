@@ -7,6 +7,7 @@ import {
   createMockCostTracker,
   createMockDreamMaker,
   createMockGenImg,
+  createMockInputMode,
   createMockLLMail,
   createMockLLMynx,
   createMockOutputService,
@@ -38,6 +39,7 @@ function createPopFirstCommand() {
     createMockContextManager(),
     createMockCostTracker(),
     createMockOutputService(),
+    createMockInputMode(),
   );
 
   return {

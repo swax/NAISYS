@@ -1,5 +1,4 @@
 import chalk from "chalk";
-import { createConfig } from "../config.js";
 import { LlmMessageType, LlmRole } from "../llm/llmDtos.js";
 import { createLogService } from "../services/logService.js";
 
@@ -14,31 +13,46 @@ export enum OutputColor {
 
 export function createOutputService(
   logService: ReturnType<typeof createLogService>,
-  config: Awaited<ReturnType<typeof createConfig>>,
 ) {
-  const consoleBufer: string[] = [];
+  const consoleBuffer: string[] = [];
+
+  /** Whether the output for this agent should be piped to the console */
+  let consoleEnabled = false;
+
+  function isConsoleEnabled() {
+    return consoleEnabled;
+  }
+
+  function setConsoleEnabled(enabled: boolean) {
+    const flush = enabled && !consoleEnabled;
+    consoleEnabled = enabled;
+
+    if (flush) {
+      flushBuffer();
+    }
+  }
 
   // color available on chalk
   function write(msg: string, color: OutputColor = OutputColor.console) {
-    if (config.consoleEnabled) {
+    if (consoleEnabled) {
       console.log(chalk[color](msg));
     } else {
-      consoleBufer.push(chalk[color](msg));
+      consoleBuffer.push(chalk[color](msg));
     }
   }
 
   function flushBuffer() {
-    if (!config.consoleEnabled) {
+    if (!consoleEnabled) {
       throw new Error("Console is not enabled"); // do nothing
     }
 
-    if (consoleBufer.length === 0) {
+    if (consoleBuffer.length === 0) {
       comment("No buffered output to this agent to flush.");
       return;
     }
 
-    consoleBufer.forEach((line) => console.log(line));
-    consoleBufer.length = 0;
+    consoleBuffer.forEach((line) => console.log(line));
+    consoleBuffer.length = 0;
   }
 
   /** Meant for non-content output we show in the console, but is not added to the context */
@@ -76,6 +90,8 @@ export function createOutputService(
     commentAndLog,
     error,
     errorAndLog,
-    flushBuffer,
+    consoleBuffer,
+    isConsoleEnabled,
+    setConsoleEnabled,
   };
 }
