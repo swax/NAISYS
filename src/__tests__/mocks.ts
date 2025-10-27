@@ -164,6 +164,7 @@ export function createMockOutputService() {
     commentAndLog: jest.fn(() => Promise.resolve()),
     error: jest.fn(),
     errorAndLog: jest.fn(() => Promise.resolve()),
+    flushBuffer: jest.fn(),
   };
 
   return output;

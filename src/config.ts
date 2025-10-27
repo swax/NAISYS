@@ -308,5 +308,7 @@ export async function createConfig(agentPath: string) {
     envVars,
     getEnv,
     resolveConfigVars,
+    /** Whether the output for this agent should be piped to the console */
+    consoleEnabled: false
   };
 }

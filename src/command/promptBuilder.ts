@@ -1,5 +1,4 @@
 import chalk from "chalk";
-import * as events from "events";
 import * as readline from "readline";
 import { createConfig } from "../config.js";
 import { createLLMail } from "../features/llmail.js";
@@ -8,6 +7,8 @@ import { createContextManager } from "../llm/contextManager.js";
 import * as inputMode from "../utils/inputMode.js";
 import { InputMode } from "../utils/inputMode.js";
 import { createOutputService } from "../utils/output.js";
+import { sharedReadline } from "../utils/sharedReadline.js";
+import { writeEventManager } from "../utils/writeEventManager.js";
 import { createShellWrapper } from "./shellWrapper.js";
 
 export function createPromptBuilder(
@@ -23,32 +24,10 @@ export function createPromptBuilder(
    * We don't want to cancel if the user is entering a chords like ctrl+b then down arrow, when using tmux
    * This is why we can't put the event listener on the standard process.stdin/keypress event.
    * There is no 'data entered' output event so this monkey patch does that
+   *
+   * Using a shared writeEventManager singleton to avoid conflicts when multiple agents are running
    */
-  const _writeEventEmitter = new events.EventEmitter();
-  const _writeEventName = "write";
-  const _originalWrite = process.stdout.write.bind(process.stdout);
-
-  process.stdout.write = (...args) => {
-    _writeEventEmitter.emit(_writeEventName, false, ...args);
-    return _originalWrite.apply(process.stdout, <any>args);
-  };
-
-  /**
-   * Tried to make this local and have it cleaned up with close() after using it, but
-   * due to the terminal settings below there are bugs with both terminal true and false
-   * pause() actually is nice in that it queues up the input, and doesn't allow the user
-   * to enter anything while the LLM is working
-   */
-  const readlineInterface = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout,
-    // With this set to ture, after an abort the second input will not be processed, see:
-    // https://gist.github.com/swax/964a2488494048c8e03d05493d9370f8
-    // With this set to false, the stdout.write event above will not be triggered
-    terminal: true,
-  });
-
-  readlineInterface.pause();
+  writeEventManager.hookStdout();
 
   async function getPrompt(pauseSeconds: number, wakeOnMessage: boolean) {
     const promptSuffix = inputMode.current == InputMode.Debug ? "#" : "$";
@@ -94,10 +73,14 @@ export function createPromptBuilder(
       let timeout: NodeJS.Timeout | undefined;
       let interval: NodeJS.Timeout | undefined;
       let timeoutCancelled = false;
+      let unsubscribeWrite: (() => void) | undefined;
 
       function clearTimers() {
         timeoutCancelled = true;
-        _writeEventEmitter.off(_writeEventName, cancelWaitingForUserInput);
+        if (unsubscribeWrite) {
+          unsubscribeWrite();
+          unsubscribeWrite = undefined;
+        }
 
         clearTimeout(timeout);
         clearInterval(interval);
@@ -135,23 +118,35 @@ export function createPromptBuilder(
         }
       };
 
-      readlineInterface.question(
-        chalk.greenBright(commandPrompt),
-        { signal: questionController.signal },
-        (answer) => {
-          clearTimers();
-          readlineInterface.pause();
-          resolve(answer);
-        },
-      );
+      /**
+       * Using a shared readline interface singleton to avoid conflicts when multiple agents are running.
+       * Only one agent should be active on the console at a time (controlled by config.consoleEnabled).
+       */
+      const readlineInterface = config.consoleEnabled
+        ? sharedReadline
+        : undefined;
 
-      // If user starts typing in prompt, cancel any auto timeouts or wake on msg
-      _writeEventEmitter.on(_writeEventName, cancelWaitingForUserInput);
+      if (readlineInterface) {
+        readlineInterface.question(
+          chalk.greenBright(commandPrompt),
+          { signal: questionController.signal },
+          (answer) => {
+            clearTimers();
+            readlineInterface.pause();
+            resolve(answer);
+          },
+        );
+
+        // If user starts typing in prompt, cancel any auto timeouts or wake on msg
+        unsubscribeWrite = writeEventManager.onWrite(cancelWaitingForUserInput);
+      } else {
+        output.comment(commandPrompt + "<console not enabled for agent>");
+      }
 
       function abortQuestion() {
         cancelWaitingForUserInput(true);
         questionController.abort();
-        readlineInterface.pause();
+        readlineInterface?.pause();
         resolve("");
       }
 
@@ -192,13 +187,20 @@ export function createPromptBuilder(
 
   function getCommandConfirmation() {
     return new Promise<string>((resolve) => {
-      readlineInterface.question(
-        chalk.greenBright("Allow command to run? [y/n] "),
-        (answer) => {
+      const prompt = "Allow command to run? [y/n] ";
+
+      if (!config.consoleEnabled) {
+        output.comment(prompt + "<denied because console disabled>");
+        resolve("n");
+        return;
+      } else {
+        const readlineInterface = sharedReadline;
+        
+        readlineInterface.question(chalk.greenBright(prompt), (answer) => {
           readlineInterface.pause();
           resolve(answer);
-        },
-      );
+        });
+      }
     });
   }
 

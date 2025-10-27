@@ -1,3 +1,4 @@
+import { AgentManager } from "./agentManager.js";
 import { createCommandHandler } from "./command/commandHandler.js";
 import { createCommandLoop } from "./command/commandLoop.js";
 import { createCommandProtection } from "./command/commandProtection.js";
@@ -21,8 +22,11 @@ import { createDatabaseService } from "./services/dbService.js";
 import { createLogService } from "./services/logService.js";
 import { createOutputService } from "./utils/output.js";
 
-export async function createAgentRuntime(_agentPath: string) {
-  const config = await createConfig(_agentPath);
+let runtimeId = 1;
+
+export async function createAgentRuntime(agentManger: AgentManager, agentPath: string) {
+  const config = await createConfig(agentPath);
+  const abortController = new AbortController();
 
   /*
    * Simple form of dependency injection
@@ -33,7 +37,7 @@ export async function createAgentRuntime(_agentPath: string) {
   // Base services
   const dbService = await createDatabaseService(config);
   const logService = createLogService(config, dbService);
-  const output = createOutputService(logService);
+  const output = createOutputService(logService, config);
   const workspaces = createWorkspacesFeature(config, output);
 
   // LLM
@@ -60,7 +64,7 @@ export async function createAgentRuntime(_agentPath: string) {
   // Features
   const genimg = createGenImg(config, costTracker, output);
   const llmail = createLLMail(config, dbService);
-  const subagentService = createSubagentService(config, llmail, output);
+  const subagentService = createSubagentService(config, llmail, output, agentManger);
   const llmynx = createLLMynx(
     config,
     llmService,
@@ -118,6 +122,18 @@ export async function createAgentRuntime(_agentPath: string) {
   );
 
   return {
-    commandLoop,
+    agentRuntimeId: runtimeId++,
+    config,
+    output,
+    commandLoop: {
+      run: () => commandLoop.run(abortController.signal),
+    },
+    shutdown: async () => {
+      abortController.abort();
+      // Wait a bit for graceful shutdown
+      await new Promise((resolve) => setTimeout(resolve, 5000));
+    },
   };
 }
+
+export type AgentRuntime = Awaited<ReturnType<typeof createAgentRuntime>>;

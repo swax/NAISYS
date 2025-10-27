@@ -36,7 +36,7 @@ export function createCommandLoop(
 ) {
   const maxErrorCount = 5;
 
-  async function run() {
+  async function run(abortSignal?: AbortSignal) {
     await output.commentAndLog(`AGENT STARTED`);
 
     // Show Agent Config exept the agent prompt
@@ -58,7 +58,10 @@ export function createCommandLoop(
     let llmErrorCount = 0;
     let nextPromptIndex = 0;
 
-    while (nextCommandAction != NextCommandAction.ExitApplication) {
+    while (
+      nextCommandAction != NextCommandAction.ExitApplication &&
+      !abortSignal?.aborted
+    ) {
       inputMode.toggle(InputMode.LLM);
 
       await output.commentAndLog("Starting Context:");
@@ -86,7 +89,10 @@ export function createCommandLoop(
       let pauseSeconds = config.agent.debugPauseSeconds;
       let wakeOnMessage = config.agent.wakeOnMessage;
 
-      while (nextCommandAction == NextCommandAction.Continue) {
+      while (
+        nextCommandAction == NextCommandAction.Continue &&
+        !abortSignal?.aborted
+      ) {
         if (shellCommand.isShellSuspended()) {
           const elapsedTime = shellCommand.getCommandElapsedTimeString();
           await contextManager.append(
@@ -139,7 +145,9 @@ export function createCommandLoop(
               nextPromptIndex,
             );
 
-            process.stdout.write(workingMsg);
+            if (config.consoleEnabled) {
+              process.stdout.write(workingMsg);
+            }
 
             commandList = await llmService.query(
               config.agent.shellModel,
@@ -194,13 +202,19 @@ export function createCommandLoop(
       }
     }
 
-    await output.commentAndLog(`AGENT TERMINATED`);
+    if (abortSignal?.aborted) {
+      await output.commentAndLog(`AGENT STOPPED (Abort requested)`);
+    } else {
+      await output.commentAndLog(`AGENT EXITED`);
+    }
   }
 
   function clearPromptMessage(waitingMessage: string) {
-    readline.moveCursor(process.stdout, -waitingMessage.length, 0);
-    process.stdout.write(" ".repeat(waitingMessage.length));
-    readline.moveCursor(process.stdout, -waitingMessage.length, 0);
+    if (config.consoleEnabled) {
+      readline.moveCursor(process.stdout, -waitingMessage.length, 0);
+      process.stdout.write(" ".repeat(waitingMessage.length));
+      readline.moveCursor(process.stdout, -waitingMessage.length, 0);
+    }
   }
 
   /** Name is comically long because of a prettier formatting issue when the name is too short */

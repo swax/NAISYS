@@ -3,6 +3,7 @@ import * as fs from "fs";
 import yaml from "js-yaml";
 import path from "path";
 import table from "text-table";
+import { AgentManager } from "../agentManager.js";
 import { AgentConfig, createConfig } from "../config.js";
 import * as pathService from "../services/pathService.js";
 import { NaisysPath } from "../services/pathService.js";
@@ -15,18 +16,20 @@ import { createLLMail } from "./llmail.js";
 
 interface Subagent {
   id: number;
+  runtimeId?: number;
   agentName: string;
   agentPath: NaisysPath;
   taskDescription: string;
   process?: ChildProcess;
   log: string;
-  status: "running" | "stopped";
+  status: "spawned" | "running" | "stopped";
 }
 
 export function createSubagentService(
   config: Awaited<ReturnType<typeof createConfig>>,
   llmail: ReturnType<typeof createLLMail>,
   output: ReturnType<typeof createOutputService>,
+  agentManager: AgentManager,
 ) {
   let _nextAgentId = 1;
   const _subagents: Subagent[] = [];
@@ -98,7 +101,8 @@ export function createSubagentService(
   start <username> <description>: Starts an existing agent with the given name and description of the task to perform`;
 
         if (inputMode.current == InputMode.Debug) {
-          helpOutput += `\n  flush <id>: Debug only command to show the agent's context log`;
+          helpOutput += `\n  switch <id>: Switch context to a started in-process agent (debug mode only)`;
+          helpOutput += `\n  flush <id>: Flush a spawned agent's output (debug mode only)`;
         }
 
         helpOutput += `\n\n* You can have up to ${config.agent.subagentMax} subagents running at a time.`;
@@ -142,6 +146,22 @@ export function createSubagentService(
 
         return await _startAgent(subagentName, taskDescription);
       }
+      case "spawn": {
+        const subagentName = argParams[1];
+        const taskDescription = args.split('"')[1];
+
+        return await _spawnAgent(subagentName, taskDescription);
+      }
+      case "switch": {
+        if (inputMode.current !== InputMode.Debug) {
+          errorText =
+            "The 'subagent switch' command is only available in debug mode.\n";
+          break;
+        }
+
+        const subagentId = parseInt(argParams[1]);
+        return _switchAgent(subagentId);
+      }
       case "stop": {
         const subagentId = parseInt(argParams[1]);
         return _stopAgent(subagentId);
@@ -161,7 +181,7 @@ export function createSubagentService(
 
   function getRunningSubagentNames() {
     return _subagents
-      .filter((p) => p.status === "running")
+      .filter((p) => p.status !== "stopped")
       .map((p) => p.agentName);
   }
 
@@ -270,11 +290,11 @@ export function createSubagentService(
     });
 
     return (
-      "Subagent Created\n" + (await _startAgent(agentName, taskDescription))
+      "Subagent Created\n" + (await _spawnAgent(agentName, taskDescription))
     );
   }
 
-  async function _startAgent(agentName: string, taskDescription: string) {
+  function validateAgent(agentName: string, taskDescription: string) {
     if (!agentName) {
       throw "Subagent name is required to start a subagent";
     }
@@ -288,17 +308,41 @@ export function createSubagentService(
       throw `Subagent '${agentName}' not found`;
     }
 
-    if (subagent.status === "running") {
+    if (subagent.status !== "stopped") {
       throw `Subagent '${agentName}' is already running`;
     }
 
-    const id = subagent.id;
-
     // Check that max sub agents aren't already started
-    const runningSubagents = _subagents.filter((p) => p.status === "running");
+    const runningSubagents = _subagents.filter((p) => p.status !== "stopped");
     if (runningSubagents.length >= (config.agent.subagentMax || 1)) {
       throw `Max subagents already running`;
     }
+
+    return subagent;
+  }
+
+  async function _startAgent(agentName: string, taskDescription: string) {
+    const subagent = validateAgent(agentName, taskDescription);
+
+    subagent.runtimeId = await agentManager.start(
+      subagent.agentPath.toHostPath(),
+      (stopReason) => handleAgentTermination(subagent, stopReason),
+    );
+
+    subagent.status = "running";
+    subagent.log += `SUBAGENT ${agentName} STARTED IN-PROCESS\n`;
+
+    await sendStartupMessage(subagent, taskDescription);
+
+    // subagent switch command, only visible to debug mode, finds and sets the active subagent through the subagent mangager (this service, no higher level injected service)
+
+    return `Subagent '${agentName}' Started (ID: ${subagent.id})`;
+  }
+
+  async function _spawnAgent(agentName: string, taskDescription: string) {
+    const subagent = validateAgent(agentName, taskDescription);
+
+    const id = subagent.id;
 
     // Start subagent
     const installPath = pathService.getInstallPath();
@@ -326,20 +370,14 @@ export function createSubagentService(
     });
 
     // Run async so that the process spawn handler is setup immediately otherwise it'll be missed
-    void llmail
-      .newThread([subagent.agentName], "Your Task", taskDescription)
-      .catch(() => {
-        output.commentAndLog(
-          `Failed to send initial task email to subagent ${subagent.agentName}`,
-        );
-      });
+    void sendStartupMessage(subagent, taskDescription);
 
     // Wait 5 seconds for startup errors, then return success
     const startupPromise = new Promise<string>((resolve) => {
       let hasSpawned = false;
 
       const timeout = setTimeout(() => {
-        if (hasSpawned && subagent.status === "running") {
+        if (hasSpawned && subagent.status === "spawned") {
           let response = `Subagent '${agentName}' Started (ID: ${id})`;
           if (config.mailEnabled) {
             response += `\nUse llmail to communicate with the subagent '${subagent.agentName}'`;
@@ -352,8 +390,8 @@ export function createSubagentService(
 
       subagent.process!.on("spawn", () => {
         hasSpawned = true;
-        subagent.status = "running";
-        subagent.log += `SUBAGENT ${id} SPAWNED\n`;
+        subagent.status = "spawned";
+        subagent.log += `SUBAGENT ${agentName} SPAWNED\n`;
         _runningSubagentIds.add(id);
       });
 
@@ -380,21 +418,27 @@ export function createSubagentService(
     });
 
     subagent.process.on("close", (code) => {
-      subagent.log += `\nSUBAGENT ${id} CLOSED`;
-      subagent.status = "stopped";
-
-      // If this was still in the running list, it terminated unexpectedly
-      if (_runningSubagentIds.has(id)) {
-        _runningSubagentIds.delete(id);
-        _terminationEvents.push({
-          id,
-          agentName: subagent.agentName,
-          reason: code === 0 ? "completed" : `exited with code ${code}`,
-        });
-      }
+      handleAgentTermination(
+        subagent,
+        code === 0 ? "terminated" : `exited with code ${code}`,
+      );
     });
 
     return await startupPromise;
+  }
+
+  async function sendStartupMessage(subagent: Subagent, taskDescription: string) {
+    if (!config.agent.mailEnabled) {
+      return;
+    }
+
+    return await llmail
+      .newThread([subagent.agentName], "Your Task", taskDescription)
+      .catch(() => {
+        output.commentAndLog(
+          `Failed to send initial task email to subagent ${subagent.agentName}`,
+        );
+      });
   }
 
   function _stopAgent(id: number) {
@@ -409,10 +453,52 @@ export function createSubagentService(
 
     subagent.process?.kill();
 
-    // Remove from running list since this was a manual stop
-    _runningSubagentIds.delete(id);
+    if (subagent.runtimeId) {
+      void agentManager.stop(subagent.runtimeId);
+    }
 
-    return `Subagent ${id} stopped`;
+    // Remove from running list since this was a manual stop
+    // wait for event?
+    // _runningSubagentIds.delete(id);
+
+    return `Subagent ${id} stop requested`;
+  }
+
+  function _switchAgent(id: number) {
+    const subagent = _subagents.find((p) => p.id === id);
+    if (!subagent) {
+      throw `Subagent ${id} not found`;
+    }
+
+    if (subagent.status === "stopped") {
+      throw `Subagent ${id} is not running`;
+    }
+
+    if (!subagent.runtimeId) {
+      throw `Subagent ${id} is not running in-process`;
+    }
+
+    agentManager.setActive(subagent.runtimeId);
+
+    return `Switched to subagent ${id} (${subagent.agentName})`;
+
+    // write all buffered output from agent to console
+  }
+
+  function handleAgentTermination(subagent: Subagent, reason: string) {
+    subagent.log += `\nSUBAGENT ${subagent.agentName} ENDED`;
+    subagent.status = "stopped";
+
+    const id = subagent.id;
+
+    if (_runningSubagentIds.has(id)) {
+      _runningSubagentIds.delete(id);
+      _terminationEvents.push({
+        id,
+        agentName: subagent.agentName,
+        reason,
+      });
+    }
   }
 
   /** Only used in debug mode, not by LLM */
@@ -420,6 +506,14 @@ export function createSubagentService(
     const subagent = _subagents.find((p) => p.id === subagentId);
     if (!subagent) {
       throw `Subagent ${subagentId} not found`;
+    }
+
+    if (subagent.runtimeId) {
+      output.write(
+        `Subagent ${subagentId} is running in-process, use the 'subagent switch' command to view its context.`,
+        OutputColor.subagent,
+      );
+      return;
     }
 
     output.write(subagent.log, OutputColor.subagent);
