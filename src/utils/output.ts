@@ -1,4 +1,5 @@
 import chalk from "chalk";
+import { createConfig } from "../config.js";
 import { LlmMessageType, LlmRole } from "../llm/llmDtos.js";
 import { createLogService } from "../services/logService.js";
 
@@ -13,10 +14,31 @@ export enum OutputColor {
 
 export function createOutputService(
   logService: ReturnType<typeof createLogService>,
+  config: Awaited<ReturnType<typeof createConfig>>,
 ) {
+  const consoleBufer: string[] = [];
+
   // color available on chalk
   function write(msg: string, color: OutputColor = OutputColor.console) {
-    console.log(chalk[color](msg));
+    if (config.consoleEnabled) {
+      console.log(chalk[color](msg));
+    } else {
+      consoleBufer.push(chalk[color](msg));
+    }
+  }
+
+  function flushBuffer() {
+    if (!config.consoleEnabled) {
+      throw new Error("Console is not enabled"); // do nothing
+    }
+
+    if (consoleBufer.length === 0) {
+      comment("No buffered output to this agent to flush.");
+      return;
+    }
+
+    consoleBufer.forEach((line) => console.log(line));
+    consoleBufer.length = 0;
   }
 
   /** Meant for non-content output we show in the console, but is not added to the context */
@@ -54,5 +76,6 @@ export function createOutputService(
     commentAndLog,
     error,
     errorAndLog,
+    flushBuffer,
   };
 }
