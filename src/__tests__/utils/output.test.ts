@@ -1,10 +1,9 @@
 import { describe, expect, it, jest } from "@jest/globals";
 import { LlmMessage, LlmRole } from "../../llm/llmDtos.js";
 import { createOutputService } from "../../utils/output.js";
-import { createMockLogService, createMockConfig } from "../mocks.js";
+import { createMockLogService } from "../mocks.js";
 
 const mockLogService = createMockLogService();
-const mockConfig = createMockConfig();
 
 // Mock logService module
 mockLogService.write = jest
@@ -12,7 +11,7 @@ mockLogService.write = jest
   .mockResolvedValue(1);
 
 // Load target module
-const output = createOutputService(mockLogService, mockConfig);
+const output = createOutputService(mockLogService);
 
 describe("commentAndLog function", () => {
   it("should call writeDbLog with the correct arguments", async () => {

@@ -1,7 +1,6 @@
 import { createConfig } from "../config.js";
 import { createContextManager } from "../llm/contextManager.js";
-import * as inputMode from "../utils/inputMode.js";
-import { InputMode } from "../utils/inputMode.js";
+import { createInputMode } from "../utils/inputMode.js";
 import * as utilities from "../utils/utilities.js";
 import { createShellWrapper } from "./shellWrapper.js";
 
@@ -9,6 +8,7 @@ export function createShellCommand(
   config: Awaited<ReturnType<typeof createConfig>>,
   shellWrapper: ReturnType<typeof createShellWrapper>,
   contextManager: ReturnType<typeof createContextManager>,
+  inputMode: ReturnType<typeof createInputMode>,
 ) {
   const isShellSuspended = () => shellWrapper.isShellSuspended();
   const getCommandElapsedTimeString = () =>
@@ -30,11 +30,11 @@ export function createShellCommand(
       }
 
       if (cmdParams[0] == "exit") {
-        if (inputMode.current == InputMode.LLM) {
+        if (inputMode.isLLM()) {
           throw "Use 'endsession' to end the session and clear the console log.";
         }
         // Only the debug user is allowed to exit the shell
-        else if (inputMode.current == InputMode.Debug) {
+        else if (inputMode.isDebug()) {
           await shellWrapper.terminate();
           return true;
         }

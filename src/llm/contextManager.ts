@@ -1,8 +1,7 @@
 import { createConfig } from "../config.js";
 import { createWorkspacesFeature } from "../features/workspaces.js";
 import { createLogService } from "../services/logService.js";
-import * as inputMode from "../utils/inputMode.js";
-import { InputMode } from "../utils/inputMode.js";
+import { createInputMode } from "../utils/inputMode.js";
 import { createOutputService, OutputColor } from "../utils/output.js";
 import * as utilities from "../utils/utilities.js";
 import { ContentSource, LlmMessage, LlmRole } from "./llmDtos.js";
@@ -13,6 +12,7 @@ export function createContextManager(
   systemMessage: string,
   output: ReturnType<typeof createOutputService>,
   logService: ReturnType<typeof createLogService>,
+  inputMode: ReturnType<typeof createInputMode>,
 ) {
   let _messages: LlmMessage[] = [];
 
@@ -29,8 +29,7 @@ export function createContextManager(
 
     if (
       promptIndex &&
-      (source != ContentSource.ConsolePrompt ||
-        inputMode.current === InputMode.Debug)
+      (source != ContentSource.ConsolePrompt || inputMode.isDebug())
     ) {
       throw new Error(
         "Prompt index can only be set for console prompts in LLM input mode",
@@ -39,7 +38,7 @@ export function createContextManager(
 
     // Debug runs in a shadow mode where their activity is not recorded in the context
     // Mark with a # to make it clear that it is not part of the context
-    if (inputMode.current === InputMode.Debug) {
+    if (inputMode.isDebug()) {
       output.comment(content);
       return;
     }

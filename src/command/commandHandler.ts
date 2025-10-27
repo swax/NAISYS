@@ -8,9 +8,8 @@ import { createContextManager } from "../llm/contextManager.js";
 import { createCostTracker } from "../llm/costTracker.js";
 import { createDreamMaker } from "../llm/dreamMaker.js";
 import { ContentSource } from "../llm/llmDtos.js";
-import * as inputMode from "../utils/inputMode.js";
-import { InputMode } from "../utils/inputMode.js";
-import { OutputColor, createOutputService } from "../utils/output.js";
+import { createInputMode } from "../utils/inputMode.js";
+import { createOutputService, OutputColor } from "../utils/output.js";
 import * as utilities from "../utils/utilities.js";
 import { createCommandProtection } from "./commandProtection.js";
 import { createPromptBuilder } from "./promptBuilder.js";
@@ -41,6 +40,7 @@ export function createCommandHandler(
   contextManager: ReturnType<typeof createContextManager>,
   costTracker: ReturnType<typeof createCostTracker>,
   output: ReturnType<typeof createOutputService>,
+  inputMode: ReturnType<typeof createInputMode>,
 ) {
   async function processCommand(
     prompt: string,
@@ -63,7 +63,7 @@ export function createCommandHandler(
       }
 
       // First line is special because we want to append the output to the context without a line break
-      if (inputMode.current == InputMode.LLM) {
+      if (inputMode.isLLM()) {
         if (firstLine) {
           firstLine = false;
           await contextManager.append(input, ContentSource.LlmPromptResponse);
@@ -149,14 +149,14 @@ export function createCommandHandler(
         case "talk": {
           const talkMsg = cmdArgs;
 
-          if (inputMode.current === InputMode.LLM) {
+          if (inputMode.isLLM()) {
             await contextManager.append("Message sent!");
-          } else if (inputMode.current === InputMode.Debug) {
-            inputMode.toggle(InputMode.LLM);
+          } else if (inputMode.isDebug()) {
+            inputMode.setLLM();
             await contextManager.append(
               `Message from admin@${config.hostname}: ${talkMsg}`,
             );
-            inputMode.toggle(InputMode.Debug);
+            inputMode.setDebug();
           }
 
           break;
@@ -166,7 +166,7 @@ export function createCommandHandler(
           const pauseSeconds = cmdArgs ? parseInt(cmdArgs) : 0;
 
           // Don't allow the LLM to hang itself
-          if (inputMode.current === InputMode.LLM && !pauseSeconds) {
+          if (inputMode.isLLM() && !pauseSeconds) {
             await contextManager.append(
               "Pause command requires a number of seconds to pause for",
             );

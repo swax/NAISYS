@@ -1,10 +1,9 @@
 import { describe, expect, test } from "@jest/globals";
-import { ContentSource } from "../../llm/llmDtos.js";
-import * as inputMode from "../../utils/inputMode.js";
-import { InputMode } from "../../utils/inputMode.js";
 import { createContextManager } from "../../llm/contextManager.js";
+import { ContentSource } from "../../llm/llmDtos.js";
 import {
   createMockConfig,
+  createMockInputMode,
   createMockLogService,
   createMockOutputService,
   createMockWorkspacesFeature,
@@ -14,17 +13,21 @@ const systemMessage = "system";
 
 describe("trim function", () => {
   test("happy path", async () => {
+
+    const mockInputMode = createMockInputMode();
+    mockInputMode.isDebug.mockReturnValue(false);
+    mockInputMode.isLLM.mockReturnValue(true);
+
     const contextManager = createContextManager(
       createMockConfig(),
       createMockWorkspacesFeature(),
       systemMessage,
       createMockOutputService(),
       createMockLogService(),
+      mockInputMode,
     );
 
     // Arrange
-    inputMode.toggle(InputMode.LLM);
-
     for (let i = 1; i <= 20; i++) {
       await contextManager.append(
         `${i}. prompt$`,

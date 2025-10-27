@@ -1,16 +1,40 @@
-export enum InputMode {
+enum InputMode {
   Debug = "debug",
   LLM = "llm",
 }
 
-export let current = InputMode.Debug;
+export function createInputMode() {
+  let inputMode = InputMode.Debug;
 
-export function toggle(forceMode?: InputMode) {
-  if (forceMode) {
-    current = forceMode;
-  } else if (current == InputMode.Debug) {
-    current = InputMode.LLM;
-  } else if (current == InputMode.LLM) {
-    current = InputMode.Debug;
+  function setLLM() {
+    inputMode = InputMode.LLM;
   }
+
+  function setDebug() {
+    inputMode = InputMode.Debug;
+  }
+
+  function toggle() {
+    if (inputMode == InputMode.Debug) {
+      inputMode = InputMode.LLM;
+    } else if (inputMode == InputMode.LLM) {
+      inputMode = InputMode.Debug;
+    }
+  }
+
+  function isLLM() {
+    return inputMode === InputMode.LLM;
+  }
+
+  function isDebug() {
+    return inputMode === InputMode.Debug;
+  }
+
+  return {
+    setLLM,
+    setDebug,
+    toggle,
+    isLLM,
+    isDebug,
+  };
 }

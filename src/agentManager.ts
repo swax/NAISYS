@@ -1,4 +1,5 @@
 import { AgentRuntime, createAgentRuntime } from "./agentRuntime.js";
+import { OutputColor } from "./utils/output.js";
 
 /** Handles the multiplexing of multiple concurrent agents in the process */
 export class AgentManager {
@@ -32,7 +33,7 @@ export class AgentManager {
         this.runningAgents = this.runningAgents.filter((a) => a !== agent);
 
         // If the stopped agent was active, set a new active agent
-        if (agent.config.consoleEnabled && this.runningAgents.length > 0) {
+        if (agent.output.isConsoleEnabled() && this.runningAgents.length > 0) {
           this.setActive(this.runningAgents[0].agentRuntimeId);
         }
       });
@@ -56,13 +57,52 @@ export class AgentManager {
     this.runningAgents = this.runningAgents.filter((a) => a !== agent);
   }
 
-  setActive(agentRuntimeId: number) {
-    this.runningAgents.forEach((a) => {
-      a.config.consoleEnabled = a.agentRuntimeId === agentRuntimeId;
-      if (a.config.consoleEnabled) {
-        a.output.flushBuffer();
+  setActive(id: number) {
+    const newActiveAgent = this.runningAgents.find(
+      (a) => a.agentRuntimeId === id,
+    );
+
+    if (!newActiveAgent) {
+      throw new Error(`Agent with runtime ID ${id} not found`);
+    }
+
+    if (newActiveAgent.output.isConsoleEnabled()) {
+      throw new Error(`Agent with runtime ID ${id} is already active`);
+    }
+
+    const prevActiveAgent = this.runningAgents.find((a) =>
+      a.output.isConsoleEnabled(),
+    );
+
+    if (prevActiveAgent) {
+      // Last output from the previously active agent
+      if (newActiveAgent.output.consoleBuffer.length) {
+        prevActiveAgent.output.write(
+          `Switching to agent ${newActiveAgent.config.agent.username} (ID: ${newActiveAgent.agentRuntimeId})`,
+          OutputColor.subagent,
+        );
       }
-    });
+      prevActiveAgent.output.setConsoleEnabled(false);
+    }
+
+    // This will show at the bottom of the flushed output for the newly active agent
+    newActiveAgent.output.write(
+      `Switched to agent ${newActiveAgent.config.agent.username} (ID: ${newActiveAgent.agentRuntimeId})`,
+      OutputColor.subagent,
+    );
+
+    // Enable console for the active agent, disable for others
+    newActiveAgent.output.setConsoleEnabled(true);
+  }
+
+  getBufferLines(id: number) {
+    const agent = this.runningAgents.find((a) => a.agentRuntimeId === id);
+
+    if (!agent) {
+      return 0;
+    }
+
+    return agent.output.consoleBuffer.length;
   }
 
   async waitForAllAgentsToComplete() {

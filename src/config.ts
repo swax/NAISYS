@@ -83,6 +83,9 @@ export async function createConfig(agentPath: string) {
     maxTimeoutSeconds: 60 * 5, // 5 minutes
   };
 
+  /** Number of lines to buffer for hidden in/out of process agents */
+  const bufferAgentLines = 5000;
+
   const agent = loadAgentConfig();
 
   const envPath = agent.envPath || ".env";
@@ -308,7 +311,5 @@ export async function createConfig(agentPath: string) {
     envVars,
     getEnv,
     resolveConfigVars,
-    /** Whether the output for this agent should be piped to the console */
-    consoleEnabled: false
   };
 }

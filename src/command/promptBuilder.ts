@@ -4,8 +4,7 @@ import { createConfig } from "../config.js";
 import { createLLMail } from "../features/llmail.js";
 import { createSubagentService } from "../features/subagent.js";
 import { createContextManager } from "../llm/contextManager.js";
-import * as inputMode from "../utils/inputMode.js";
-import { InputMode } from "../utils/inputMode.js";
+import { createInputMode } from "../utils/inputMode.js";
 import { createOutputService } from "../utils/output.js";
 import { sharedReadline } from "../utils/sharedReadline.js";
 import { writeEventManager } from "../utils/writeEventManager.js";
@@ -18,6 +17,7 @@ export function createPromptBuilder(
   llmail: ReturnType<typeof createLLMail>,
   contextManager: ReturnType<typeof createContextManager>,
   output: ReturnType<typeof createOutputService>,
+  inputMode: ReturnType<typeof createInputMode>,
 ) {
   /**
    * When actual output is entered by the user we want to cancel any auto-continue timers and/or wake on message
@@ -30,7 +30,7 @@ export function createPromptBuilder(
   writeEventManager.hookStdout();
 
   async function getPrompt(pauseSeconds: number, wakeOnMessage: boolean) {
-    const promptSuffix = inputMode.current == InputMode.Debug ? "#" : "$";
+    const promptSuffix = inputMode.isDebug() ? "#" : "$";
 
     const tokenMax = config.agent.tokenMax;
     const usedTokens = contextManager.getTokenCount();
@@ -38,7 +38,7 @@ export function createPromptBuilder(
 
     let pause = "";
 
-    if (inputMode.current == InputMode.Debug) {
+    if (inputMode.isDebug()) {
       if (pauseSeconds) {
         pause += ` [Paused: ${pauseSeconds}s]`;
       }
@@ -58,7 +58,7 @@ export function createPromptBuilder(
 
   function getUserHostPrompt() {
     const username =
-      inputMode.current == InputMode.Debug ? "debug" : config.agent.username;
+      inputMode.isDebug() ? "debug" : config.agent.username;
 
     return `${username}@${config.hostname}`;
   }
@@ -120,9 +120,9 @@ export function createPromptBuilder(
 
       /**
        * Using a shared readline interface singleton to avoid conflicts when multiple agents are running.
-       * Only one agent should be active on the console at a time (controlled by config.consoleEnabled).
+       * Only one agent should be active on the console at a time (controlled by output.isWriteEnabled).
        */
-      const readlineInterface = config.consoleEnabled
+      const readlineInterface = output.isConsoleEnabled()
         ? sharedReadline
         : undefined;
 
@@ -189,13 +189,13 @@ export function createPromptBuilder(
     return new Promise<string>((resolve) => {
       const prompt = "Allow command to run? [y/n] ";
 
-      if (!config.consoleEnabled) {
+      if (!output.isConsoleEnabled()) {
         output.comment(prompt + "<denied because console disabled>");
         resolve("n");
         return;
       } else {
         const readlineInterface = sharedReadline;
-        
+
         readlineInterface.question(chalk.greenBright(prompt), (answer) => {
           readlineInterface.pause();
           resolve(answer);

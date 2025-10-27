@@ -164,10 +164,22 @@ export function createMockOutputService() {
     commentAndLog: jest.fn(() => Promise.resolve()),
     error: jest.fn(),
     errorAndLog: jest.fn(() => Promise.resolve()),
-    flushBuffer: jest.fn(),
+    consoleBuffer: [],
+    isConsoleEnabled: jest.fn(() => false),
+    setConsoleEnabled: jest.fn(),
   };
 
   return output;
+}
+
+export function createMockInputMode() {
+  return {
+    setLLM: jest.fn(),
+    setDebug: jest.fn(),
+    toggle: jest.fn(),
+    isLLM:  jest.fn(() => false),
+    isDebug: jest.fn(() => true),
+  };
 }
 
 export function createMockCommandProtection() {

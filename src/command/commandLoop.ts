@@ -10,8 +10,7 @@ import { createDreamMaker } from "../llm/dreamMaker.js";
 import { ContentSource, LlmRole } from "../llm/llmDtos.js";
 import { createLLMService } from "../llm/llmService.js";
 import { createLogService } from "../services/logService.js";
-import * as inputMode from "../utils/inputMode.js";
-import { InputMode } from "../utils/inputMode.js";
+import { createInputMode } from "../utils/inputMode.js";
 import { createOutputService, OutputColor } from "../utils/output.js";
 import * as utilities from "../utils/utilities.js";
 import { createCommandHandler, NextCommandAction } from "./commandHandler.js";
@@ -33,6 +32,7 @@ export function createCommandLoop(
   systemMessage: string,
   output: ReturnType<typeof createOutputService>,
   logService: ReturnType<typeof createLogService>,
+  inputMode: ReturnType<typeof createInputMode>,
 ) {
   const maxErrorCount = 5;
 
@@ -62,7 +62,7 @@ export function createCommandLoop(
       nextCommandAction != NextCommandAction.ExitApplication &&
       !abortSignal?.aborted
     ) {
-      inputMode.toggle(InputMode.LLM);
+      inputMode.setLLM();
 
       await output.commentAndLog("Starting Context:");
 
@@ -84,7 +84,7 @@ export function createCommandLoop(
         ]);
       }
 
-      inputMode.toggle(InputMode.Debug);
+      inputMode.setDebug();
 
       let pauseSeconds = config.agent.debugPauseSeconds;
       let wakeOnMessage = config.agent.wakeOnMessage;
@@ -106,7 +106,7 @@ export function createCommandLoop(
         let blankDebugInput = false;
 
         // Debug command prompt
-        if (inputMode.current === InputMode.Debug) {
+        if (inputMode.isDebug()) {
           subagent.unreadContextSummary();
 
           commandList = [
@@ -120,7 +120,7 @@ export function createCommandLoop(
           blankDebugInput = commandList[0].trim().length == 0;
         }
         // LLM command prompt
-        else if (inputMode.current === InputMode.LLM) {
+        else if (inputMode.isLLM()) {
           prompt = setPromptIndex(prompt, ++nextPromptIndex);
 
           const workingMsg =
@@ -145,7 +145,7 @@ export function createCommandLoop(
               nextPromptIndex,
             );
 
-            if (config.consoleEnabled) {
+            if (output.isConsoleEnabled()) {
               process.stdout.write(workingMsg);
             }
 
@@ -167,7 +167,7 @@ export function createCommandLoop(
             continue;
           }
         } else {
-          throw `Invalid input mode: ${inputMode.current}`;
+          throw `Unreachable: Invalid input mode`;
         }
 
         // Run the command
@@ -175,7 +175,7 @@ export function createCommandLoop(
           ({ nextCommandAction, pauseSeconds, wakeOnMessage } =
             await commandHandler.processCommand(prompt, commandList));
 
-          if (inputMode.current == InputMode.LLM) {
+          if (inputMode.isLLM()) {
             llmErrorCount = 0;
           }
         } catch (e) {
@@ -186,10 +186,7 @@ export function createCommandLoop(
 
         // If the user is in debug mode and they didn't enter anything, switch to LLM
         // If in LLM mode, auto switch back to debug
-        if (
-          (inputMode.current == InputMode.Debug && blankDebugInput) ||
-          inputMode.current == InputMode.LLM
-        ) {
+        if ((inputMode.isDebug() && blankDebugInput) || inputMode.isLLM()) {
           inputMode.toggle();
         }
       }
@@ -210,7 +207,7 @@ export function createCommandLoop(
   }
 
   function clearPromptMessage(waitingMessage: string) {
-    if (config.consoleEnabled) {
+    if (output.isConsoleEnabled()) {
       readline.moveCursor(process.stdout, -waitingMessage.length, 0);
       process.stdout.write(" ".repeat(waitingMessage.length));
       readline.moveCursor(process.stdout, -waitingMessage.length, 0);
@@ -243,7 +240,7 @@ export function createCommandLoop(
     let pauseSeconds = config.agent.debugPauseSeconds;
     let wakeOnMessage = config.agent.wakeOnMessage;
 
-    if (inputMode.current == InputMode.LLM) {
+    if (inputMode.isLLM()) {
       llmErrorCount++;
 
       if (llmErrorCount >= maxErrorCount) {
@@ -258,7 +255,7 @@ export function createCommandLoop(
       }
     }
 
-    inputMode.toggle(InputMode.Debug);
+    inputMode.setDebug();
 
     return {
       llmErrorCount,

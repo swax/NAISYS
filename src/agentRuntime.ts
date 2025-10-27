@@ -20,14 +20,15 @@ import { createLLMService } from "./llm/llmService.js";
 import { createSystemMessage } from "./llm/systemMessage.js";
 import { createDatabaseService } from "./services/dbService.js";
 import { createLogService } from "./services/logService.js";
+import { createInputMode } from "./utils/inputMode.js";
 import { createOutputService } from "./utils/output.js";
 
 let runtimeId = 1;
 
-export async function createAgentRuntime(agentManger: AgentManager, agentPath: string) {
-  const config = await createConfig(agentPath);
-  const abortController = new AbortController();
-
+export async function createAgentRuntime(
+  agentManger: AgentManager,
+  agentPath: string,
+) {
   /*
    * Simple form of dependency injection
    * actually a bit better than the previous module system as this implicitly prevents cirucular dependencies
@@ -35,12 +36,14 @@ export async function createAgentRuntime(agentManger: AgentManager, agentPath: s
    */
 
   // Base services
+  const config = await createConfig(agentPath);
   const dbService = await createDatabaseService(config);
   const logService = createLogService(config, dbService);
-  const output = createOutputService(logService, config);
+  const output = createOutputService(logService);
   const workspaces = createWorkspacesFeature(config, output);
 
   // LLM
+  const inputMode = createInputMode();
   const systemMessage = createSystemMessage(config);
   const llModels = createLLModels(config);
   const tools = createCommandTools(config);
@@ -51,6 +54,7 @@ export async function createAgentRuntime(agentManger: AgentManager, agentPath: s
     systemMessage,
     output,
     logService,
+    inputMode,
   );
   const llmService = createLLMService(config, costTracker, tools, llModels);
   const dreamMaker = createDreamMaker(
@@ -64,7 +68,13 @@ export async function createAgentRuntime(agentManger: AgentManager, agentPath: s
   // Features
   const genimg = createGenImg(config, costTracker, output);
   const llmail = createLLMail(config, dbService);
-  const subagentService = createSubagentService(config, llmail, output, agentManger);
+  const subagentService = createSubagentService(
+    config,
+    llmail,
+    output,
+    agentManger,
+    inputMode,
+  );
   const llmynx = createLLMynx(
     config,
     llmService,
@@ -82,8 +92,14 @@ export async function createAgentRuntime(agentManger: AgentManager, agentPath: s
     llmail,
     contextManager,
     output,
+    inputMode,
   );
-  const shellCommand = createShellCommand(config, shellWrapper, contextManager);
+  const shellCommand = createShellCommand(
+    config,
+    shellWrapper,
+    contextManager,
+    inputMode,
+  );
   const commandProtection = createCommandProtection(
     config,
     promptBuilder,
@@ -103,6 +119,7 @@ export async function createAgentRuntime(agentManger: AgentManager, agentPath: s
     contextManager,
     costTracker,
     output,
+    inputMode,
   );
   const commandLoop = createCommandLoop(
     config,
@@ -119,7 +136,10 @@ export async function createAgentRuntime(agentManger: AgentManager, agentPath: s
     systemMessage,
     output,
     logService,
+    inputMode,
   );
+
+  const abortController = new AbortController();
 
   return {
     agentRuntimeId: runtimeId++,
