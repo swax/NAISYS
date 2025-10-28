@@ -34,8 +34,6 @@ export function createCommandLoop(
   logService: ReturnType<typeof createLogService>,
   inputMode: ReturnType<typeof createInputMode>,
 ) {
-  const maxErrorCount = 5;
-
   async function run(abortSignal?: AbortSignal) {
     await output.commentAndLog(`AGENT STARTED`);
 
@@ -128,13 +126,18 @@ export function createCommandLoop(
             );
 
           try {
-            if (config.mailEnabled) {
-              await checkNewMailNotification();
+            // In the cases that the input prompt is interrupted for a notification, return to the debug prompt
+            if (
+              subagent.switchEventTriggered("clear") ||
+              (await checkNewMailNotification()) ||
+              (await checkSubagentsTerminated())
+            ) {
+              inputMode.setDebug();
+              continue;
             }
-            if (config.agent.subagentMax) {
-              await checkSubagentsTerminated();
-            }
+
             await checkContextLimitWarning();
+
             await workspaces.displayActive();
 
             await contextManager.append(
@@ -241,15 +244,12 @@ export function createCommandLoop(
     if (inputMode.isLLM()) {
       llmErrorCount++;
 
-      if (llmErrorCount >= maxErrorCount) {
-        pauseSeconds = 0;
-        wakeOnMessage = false;
+      // Set the pause seconds to exponential backoff, up to retrySecondsMax
+      pauseSeconds = config.agent.debugPauseSeconds * 2 ** (llmErrorCount - 1);
 
-        if (llmErrorCount == maxErrorCount) {
-          await output.errorAndLog(
-            `Too many LLM errors. Holding in debug mode.`,
-          );
-        }
+      if (pauseSeconds > config.retrySecondsMax) {
+        pauseSeconds = config.retrySecondsMax;
+        llmErrorCount--; // Prevent overflowing the calculation above
       }
     }
 
@@ -263,6 +263,10 @@ export function createCommandLoop(
   }
 
   async function checkSubagentsTerminated() {
+    if (!config.agent.subagentMax) {
+      return false;
+    }
+
     const terminationEvents = subagent.getTerminationEvents("clear");
     for (const event of terminationEvents) {
       await contextManager.append(
@@ -270,11 +274,16 @@ export function createCommandLoop(
         ContentSource.Console,
       );
     }
+    return terminationEvents.length > 0;
   }
 
   let mailBlackoutCountdown = 0;
 
   async function checkNewMailNotification() {
+    if (!config.mailEnabled) {
+      return false;
+    }
+
     let supressMail = false;
     if (mailBlackoutCountdown > 0) {
       mailBlackoutCountdown--;
@@ -284,14 +293,14 @@ export function createCommandLoop(
     // Check for unread threads
     const unreadThreads = await llmail.getUnreadThreads();
     if (!unreadThreads.length) {
-      return;
+      return false;
     }
 
     if (supressMail) {
       await output.commentAndLog(
         `New mail notifications blackout in effect. ${mailBlackoutCountdown} cycles remaining.`,
       );
-      return;
+      return true;
     }
 
     // Get the new messages for each thread
@@ -340,6 +349,8 @@ export function createCommandLoop(
         ContentSource.Console,
       );
     }
+
+    return true;
   }
 
   async function checkContextLimitWarning() {
