@@ -6,7 +6,7 @@ export class AgentManager {
   runningAgents: AgentRuntime[] = [];
   runLoops: Promise<void>[] = [];
 
-  async start(agentPath: string, onStop?: (reason: string) => void) {
+  async startAgent(agentPath: string, onStop?: (reason: string) => void) {
     // Get rid of all of this and do in the main function when all direct config imports are removed
 
     const agent = await createAgentRuntime(this, agentPath);
@@ -14,7 +14,7 @@ export class AgentManager {
     this.runningAgents.push(agent);
 
     if (this.runningAgents.length === 1) {
-      this.setActive(agent.agentRuntimeId);
+      this.setActiveConsoleAgent(agent.agentRuntimeId);
     }
 
     let stopReason = "";
@@ -31,7 +31,7 @@ export class AgentManager {
         // Notify subagent manager that this agent has stopped
         onStop?.(stopReason);
 
-        this.stop(
+        this.stopAgent(
           agent.agentRuntimeId,
           "completeShutdown",
           `${agent.config.agent.username} shutdown`,
@@ -41,7 +41,7 @@ export class AgentManager {
     return agent.agentRuntimeId;
   }
 
-  async stop(
+  async stopAgent(
     agentRuntimeId: number,
     stage: "completeShutdown" | "requestShutdown",
     reason: string,
@@ -62,7 +62,7 @@ export class AgentManager {
       const switchToAgent = this.runningAgents.find((a) => a !== agent);
 
       if (switchToAgent) {
-        this.setActive(switchToAgent.agentRuntimeId);
+        this.setActiveConsoleAgent(switchToAgent.agentRuntimeId);
       }
     }
 
@@ -79,7 +79,7 @@ export class AgentManager {
     }
   }
 
-  setActive(id: number) {
+  setActiveConsoleAgent(id: number) {
     const newActiveAgent = this.runningAgents.find(
       (a) => a.agentRuntimeId === id,
     );
@@ -113,6 +113,11 @@ export class AgentManager {
 
     // Enable console for the active agent, disable for others
     newActiveAgent.output.setConsoleEnabled(true);
+
+    // This switch even is used to break the input prompt timeout of the newly active agent
+    if (prevActiveAgent) {
+      newActiveAgent.subagentService.raiseSwitchEvent();
+    }
   }
 
   getBufferLines(id: number) {

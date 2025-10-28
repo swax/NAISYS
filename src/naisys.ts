@@ -7,7 +7,7 @@ program.argument("<agent-path>", "Path to agent configuration file").parse();
 
 const agentMaganer = new AgentManager();
 
-await agentMaganer.start(program.args[0]);
+await agentMaganer.startAgent(program.args[0]);
 
 await agentMaganer.waitForAllAgentsToComplete();
 

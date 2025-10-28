@@ -259,6 +259,19 @@ export function createSubagentService(
     return events;
   }
 
+  let switchEventRaised = false;
+
+  function raiseSwitchEvent() {
+    switchEventRaised = true;
+  }
+  function switchEventTriggered(action?: "clear") {
+    const wasRaised = switchEventRaised;
+    if (action === "clear") {
+      switchEventRaised = false;
+    }
+    return wasRaised;
+  }
+
   async function _createAgent(title: string, taskDescription: string) {
     // Get available username
     const usernames = await llmail.getAllUserNames();
@@ -354,7 +367,7 @@ export function createSubagentService(
   async function _startAgent(agentName: string, taskDescription: string) {
     const subagent = validateAgentStart(agentName, taskDescription);
 
-    subagent.id = await agentManager.start(
+    subagent.id = await agentManager.startAgent(
       subagent.agentPath.toHostPath(),
       (stopReason) => handleAgentTermination(subagent, stopReason),
     );
@@ -496,7 +509,7 @@ export function createSubagentService(
 
     if (agentRuntime) {
       // Request shutdown of in-process agent, callback defined in start() will handle termination event
-      void agentManager.stop(id, "requestShutdown", reason);
+      void agentManager.stopAgent(id, "requestShutdown", reason);
     }
 
     if (subagent) {
@@ -521,7 +534,7 @@ export function createSubagentService(
 
   /** Only for in-process agents */
   function _switchAgent(id: number) {
-    agentManager.setActive(id);
+    agentManager.setActiveConsoleAgent(id);
 
     return "";
   }
@@ -566,5 +579,7 @@ export function createSubagentService(
     getRunningSubagentNames,
     getTerminationEvents,
     cleanup,
+    raiseSwitchEvent,
+    switchEventTriggered,
   };
 }
