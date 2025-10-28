@@ -19,8 +19,8 @@ export class AgentManager {
 
     let stopReason = "";
 
-    agent.commandLoop
-      .run()
+    agent
+      .runCommandLoop()
       .then(() => {
         stopReason = "completed";
       })
@@ -28,33 +28,55 @@ export class AgentManager {
         stopReason = `error: ${ex}`;
       })
       .finally(() => {
+        // Notify subagent manager that this agent has stopped
         onStop?.(stopReason);
 
-        this.runningAgents = this.runningAgents.filter((a) => a !== agent);
-
-        // If the stopped agent was active, set a new active agent
-        if (agent.output.isConsoleEnabled() && this.runningAgents.length > 0) {
-          this.setActive(this.runningAgents[0].agentRuntimeId);
-        }
+        this.stop(
+          agent.agentRuntimeId,
+          "completeShutdown",
+          `${agent.config.agent.username} shutdown`,
+        );
       });
 
     return agent.agentRuntimeId;
   }
 
-  async stop(agentRuntimeId: number) {
+  async stop(
+    agentRuntimeId: number,
+    stage: "completeShutdown" | "requestShutdown",
+    reason: string,
+  ) {
     const agent = this.runningAgents.find(
       (a) => a.agentRuntimeId === agentRuntimeId,
     );
 
     if (!agent) {
-      throw new Error(`Agent with runtime ID ${agentRuntimeId} not found`);
+      if (stage == "requestShutdown") {
+        throw new Error(`Agent with runtime ID ${agentRuntimeId} not found`);
+      }
+      // Else the function was probably falled from the finally block above triggered by the shutdown below
+      return;
     }
 
-    // Use abort controller to gracefully stop the agent
-    await agent.shutdown();
+    if (agent.output.isConsoleEnabled()) {
+      const switchToAgent = this.runningAgents.find((a) => a !== agent);
 
-    // Cleanup happens in the finally block of the start method
-    this.runningAgents = this.runningAgents.filter((a) => a !== agent);
+      if (switchToAgent) {
+        this.setActive(switchToAgent.agentRuntimeId);
+      }
+    }
+
+    if (stage == "requestShutdown") {
+      // Use abort controller to gracefully stop the agent, whcih should trigger the finally block above
+      await agent.requestShutdown(reason);
+    }
+
+    if (stage == "completeShutdown") {
+      const agentIndex = this.runningAgents.findIndex((a) => a === agent);
+      this.runningAgents.splice(agentIndex, 1);
+
+      agent.completeShutdown(reason);
+    }
   }
 
   setActive(id: number) {
@@ -76,20 +98,18 @@ export class AgentManager {
 
     if (prevActiveAgent) {
       // Last output from the previously active agent
-      if (newActiveAgent.output.consoleBuffer.length) {
-        prevActiveAgent.output.write(
-          `Switching to agent ${newActiveAgent.config.agent.username} (ID: ${newActiveAgent.agentRuntimeId})`,
-          OutputColor.subagent,
-        );
-      }
+      prevActiveAgent.output.write(
+        `Switching to agent ${newActiveAgent.config.agent.username} (ID: ${newActiveAgent.agentRuntimeId})`,
+        OutputColor.subagent,
+      );
       prevActiveAgent.output.setConsoleEnabled(false);
     }
 
     // This will show at the bottom of the flushed output for the newly active agent
-    newActiveAgent.output.write(
+    /*newActiveAgent.output.write(
       `Switched to agent ${newActiveAgent.config.agent.username} (ID: ${newActiveAgent.agentRuntimeId})`,
       OutputColor.subagent,
-    );
+    );*/
 
     // Enable console for the active agent, disable for others
     newActiveAgent.output.setConsoleEnabled(true);

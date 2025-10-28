@@ -3,10 +3,10 @@ import * as fs from "fs";
 import { readFile } from "fs/promises";
 import yaml from "js-yaml";
 import path from "path";
-import { CommandProtection } from "./utils/enums.js";
 import * as pathService from "./services/pathService.js";
-import { valueFromString } from "./utils/utilities.js";
 import { NaisysPath } from "./services/pathService.js";
+import { CommandProtection } from "./utils/enums.js";
+import { valueFromString } from "./utils/utilities.js";
 
 export interface AgentConfig {
   username: string;
@@ -71,7 +71,7 @@ export interface AgentConfig {
   persistAcrossRuns?: boolean;
 }
 
-export async function createConfig(agentPath: string) {
+export async function createConfig(agentPath: string, agentRuntimeId: number) {
   /** The system name that shows after the @ in the command prompt */
   const hostname = "naisys";
 
@@ -154,9 +154,7 @@ export async function createConfig(agentPath: string) {
   const useToolsForLlmConsoleResponses = true;
 
   function loadAgentConfig() {
-    const config = yaml.load(
-      fs.readFileSync(agentPath, "utf8"),
-    ) as AgentConfig;
+    const config = yaml.load(fs.readFileSync(agentPath, "utf8")) as AgentConfig;
 
     config.hostpath = path.resolve(agentPath);
 
@@ -285,6 +283,7 @@ export async function createConfig(agentPath: string) {
   }
 
   return {
+    agentRuntimeId,
     hostname,
     shellCommand,
     agent,

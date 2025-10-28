@@ -8,10 +8,10 @@ import { AgentConfig, createConfig } from "../config.js";
 import * as pathService from "../services/pathService.js";
 import { NaisysPath } from "../services/pathService.js";
 import { agentNames } from "../utils/agentNames.js";
+import { createInputMode } from "../utils/inputMode.js";
 import { createOutputService, OutputColor } from "../utils/output.js";
 import { getCleanEnv, shuffle } from "../utils/utilities.js";
 import { createLLMail } from "./llmail.js";
-import { createInputMode } from "../utils/inputMode.js";
 
 interface Subagent {
   id?: number;
@@ -150,7 +150,7 @@ export function createSubagentService(
       }
       case "stop": {
         const subagentId = parseInt(argParams[1]);
-        return _stopAgent(subagentId);
+        return _stopAgent(subagentId, "subagent stop");
       }
       case "flush": {
         const subagentId = parseInt(argParams[1]);
@@ -166,29 +166,51 @@ export function createSubagentService(
   }
 
   function buildAgentList() {
-    let agentList = table(
-      [
-        ["Name", "ID", "Status", "Task"],
-        ..._subagents.map((p) => [
-          p.agentName,
-          p.id || "",
-          p.status,
-          p.taskDescription.substring(0, 70),
-        ]),
-      ],
-      { hsep: " | " },
-    );
+    let agentList = "";
+
+    const subagentRows = _subagents.map((p) => [
+      p.agentName,
+      p.id || "",
+      p.status,
+      p.taskDescription.substring(0, 70),
+      inputMode.isDebug() && p.id
+        ? (p.log.length || agentManager.getBufferLines(p.id)).toString()
+        : "",
+    ]);
+
+    if (subagentRows.length === 0) {
+      agentList += "No subagents found.";
+    } else {
+      agentList += table(
+        [
+          [
+            "Name",
+            "ID",
+            "Status",
+            "Task",
+            inputMode.isDebug() ? "Unread Lines" : "",
+          ],
+          ...subagentRows,
+        ],
+        { hsep: " | " },
+      );
+    }
 
     if (inputMode.isDebug()) {
       // Find running in process agents that aren't already listed
       const otherAgents = agentManager.runningAgents
-        .filter((ra) => !_subagents.find((sa) => sa.id === ra.agentRuntimeId))
+        .filter(
+          (ra) =>
+            ra.agentRuntimeId != config.agentRuntimeId &&
+            !_subagents.find((sa) => sa.id === ra.agentRuntimeId),
+        )
         .map((ra) => {
           return {
             agentName: ra.config.agent.username,
             id: ra.agentRuntimeId,
             status: "started",
             taskDescription: ra.config.agent.taskDescription || "",
+            unreadLines: agentManager.getBufferLines(ra.agentRuntimeId),
           };
         });
 
@@ -197,12 +219,13 @@ export function createSubagentService(
 
         agentList += table(
           [
-            ["Name", "ID", "Status", "Task"],
+            ["Name", "ID", "Status", "Task", "Unread Lines"],
             ...otherAgents.map((p) => [
               p.agentName,
               p.id || "",
               p.status,
               p.taskDescription.substring(0, 70),
+              p.unreadLines.toString(),
             ]),
           ],
           { hsep: " | " },
@@ -217,34 +240,6 @@ export function createSubagentService(
     return _subagents
       .filter((p) => p.status !== "stopped")
       .map((p) => p.agentName);
-  }
-
-  /** Return list of subagents with unread context */
-  function unreadContextSummary() {
-    const unreadAgents: { agentName: string; unreadLines: number }[] = [];
-
-    _subagents.forEach((p) => {
-      let unreadLines = 0;
-
-      if (p.log.length > 0) {
-        unreadLines = p.log.length;
-      } else if (p.id && p.status == "started") {
-        unreadLines = agentManager.getBufferLines(p.id);
-      }
-
-      if (unreadLines > 0) {
-        unreadAgents.push({ agentName: p.agentName, unreadLines });
-      }
-    });
-
-    if (unreadAgents.length === 0) {
-      return;
-    }
-
-    output.comment(
-      "Unread lines: " +
-        unreadAgents.map((p) => `${p.agentName}: ${p.unreadLines}`).join(" | "),
-    );
   }
 
   /** Check for and clear termination events for wake notifications */
@@ -479,50 +474,67 @@ export function createSubagentService(
       });
   }
 
-  function _stopAgent(id: number) {
+  function _stopAgent(id: number, reason: string) {
+    // Get if the agent is running in process, debug user can stop agents other than the local subagent ones
+    const agentRuntime = agentManager.runningAgents.find(
+      (a) => a.agentRuntimeId === id,
+    );
+
+    // The local record of the subagent
     const subagent = _subagents.find((p) => p.id === id);
-    if (!subagent) {
+
+    if (!subagent && !agentRuntime) {
       throw `Subagent ${id} not found`;
     }
 
-    if (subagent.status === "stopped") {
+    if (subagent?.status === "stopped") {
       throw `Subagent ${id} is already stopped`;
     }
 
-    subagent.process?.kill();
+    // Process termination event will set status to stopped
+    subagent?.process?.kill();
 
-    if (subagent.id) {
-      void agentManager.stop(subagent.id);
+    if (agentRuntime) {
+      // Request shutdown of in-process agent, callback defined in start() will handle termination event
+      void agentManager.stop(id, "requestShutdown", reason);
     }
 
-    // Remove from running list since this was a manual stop
-    // wait for event?
-    // _runningSubagentIds.delete(id);
+    if (subagent) {
+      return `Subagent ${subagent.agentName} stop requested`;
+    } else if (agentRuntime) {
+      return `Agent ${agentRuntime.config.agent.username} stop requested`;
+    } else {
+      throw `Subagent ${id} not found`;
+    }
+  }
 
-    return `Subagent ${subagent.agentName} stop requested`;
+  /** Stop all agents with ids */
+  function cleanup(reason: string) {
+    _subagents.forEach((subagent) => {
+      if (subagent.id) {
+        try {
+          _stopAgent(subagent.id, reason);
+        } catch {}
+      }
+    });
   }
 
   /** Only for in-process agents */
   function _switchAgent(id: number) {
     agentManager.setActive(id);
 
-    return ""
+    return "";
   }
 
   function handleAgentTermination(subagent: Subagent, reason: string) {
-    subagent.status = "stopped";
-
-    _subagents.forEach((sa) => {
-      if (sa === subagent) {
-        _terminationEvents.push({
-          id: sa.id || -1,
-          agentName: subagent.agentName,
-          reason,
-        });
-
-        sa.id = undefined;
-      }
+    _terminationEvents.push({
+      id: subagent.id || -1,
+      agentName: subagent.agentName,
+      reason,
     });
+
+    subagent.status = "stopped";
+    subagent.id = undefined;
   }
 
   /** Only used in debug mode, not by LLM */
@@ -552,7 +564,7 @@ export function createSubagentService(
   return {
     handleCommand,
     getRunningSubagentNames,
-    unreadContextSummary,
     getTerminationEvents,
+    cleanup,
   };
 }

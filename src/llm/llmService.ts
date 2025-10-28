@@ -35,7 +35,13 @@ export function createLLMService(
 
     const model = llModels.get(modelKey);
 
-    if (model.apiType == LlmApiType.Google) {
+    if (model.apiType === LlmApiType.Dummy) {
+      // 1 second time out then dummy response
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      return [
+        `echo "Dummy response for ${config.agent.username} at $(date +"%T")"`,
+      ];
+    } else if (model.apiType == LlmApiType.Google) {
       return sendWithGoogle(modelKey, systemMessage, context, source);
     } else if (model.apiType == LlmApiType.Anthropic) {
       return sendWithAnthropic(modelKey, systemMessage, context, source);
