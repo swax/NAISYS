@@ -46,13 +46,10 @@ export function createOutputService(
       throw new Error("Console is not enabled"); // do nothing
     }
 
-    if (consoleBuffer.length === 0) {
-      comment("No buffered output to this agent to flush.");
-      return;
+    if (consoleBuffer.length) {
+      consoleBuffer.forEach((line) => console.log(line));
+      consoleBuffer.length = 0;
     }
-
-    consoleBuffer.forEach((line) => console.log(line));
-    consoleBuffer.length = 0;
   }
 
   /** Meant for non-content output we show in the console, but is not added to the context */

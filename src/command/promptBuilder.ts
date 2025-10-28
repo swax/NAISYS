@@ -140,7 +140,7 @@ export function createPromptBuilder(
         // If user starts typing in prompt, cancel any auto timeouts or wake on msg
         unsubscribeWrite = writeEventManager.onWrite(cancelWaitingForUserInput);
       } else {
-        output.comment(commandPrompt + "<console not enabled for agent>");
+        output.comment(commandPrompt + "<console not enabled>");
       }
 
       function abortQuestion() {

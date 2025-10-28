@@ -107,8 +107,6 @@ export function createCommandLoop(
 
         // Debug command prompt
         if (inputMode.isDebug()) {
-          subagent.unreadContextSummary();
-
           commandList = [
             await promptBuilder.getInput(
               `${prompt}`,
@@ -200,7 +198,7 @@ export function createCommandLoop(
     }
 
     if (abortSignal?.aborted) {
-      await output.commentAndLog(`AGENT STOPPED (Abort requested)`);
+      await output.commentAndLog(`AGENT STOPPED (${abortSignal.reason})`);
     } else {
       await output.commentAndLog(`AGENT EXITED`);
     }

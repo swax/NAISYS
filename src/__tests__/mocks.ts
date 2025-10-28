@@ -57,8 +57,8 @@ export function createMockSubagent() {
   const subagent: ReturnType<typeof createSubagentService> = {
     handleCommand: jest.fn(() => Promise.resolve("")),
     getRunningSubagentNames: jest.fn(() => []),
-    unreadContextSummary: jest.fn(() => undefined),
     getTerminationEvents: jest.fn(() => []),
+    cleanup: jest.fn(() => Promise.resolve()),
   };
 
   return subagent;
