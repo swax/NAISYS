@@ -86,6 +86,8 @@ export async function createConfig(agentPath: string, agentRuntimeId: number) {
   /** Number of lines to buffer for hidden in/out of process agents */
   const bufferAgentLines = 5000;
 
+  const retrySecondsMax = 30 * 60; // 30 minutes
+
   const agent = loadAgentConfig();
 
   const envPath = agent.envPath || ".env";
@@ -288,6 +290,7 @@ export async function createConfig(agentPath: string, agentRuntimeId: number) {
     shellCommand,
     agent,
     webTokenMax,
+    retrySecondsMax,
     endSessionEnabled,
     mailEnabled,
     webEnabled,

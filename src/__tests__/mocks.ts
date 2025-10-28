@@ -1,17 +1,17 @@
 import { jest, test } from "@jest/globals";
-import { LlmMessage, LlmRole } from "../llm/llmDtos.js";
-import { createLogService } from "../services/logService.js";
 import { createCommandProtection } from "../command/commandProtection.js";
 import { createPromptBuilder } from "../command/promptBuilder.js";
 import { createShellCommand } from "../command/shellCommand.js";
 import { createGenImg } from "../features/genimg.js";
-import { createSubagentService } from "../features/subagent.js";
-import { createWorkspacesFeature } from "../features/workspaces.js";
 import { createLLMail } from "../features/llmail.js";
 import { createLLMynx } from "../features/llmynx.js";
-import { createDreamMaker } from "../llm/dreamMaker.js";
+import { createSubagentService } from "../features/subagent.js";
+import { createWorkspacesFeature } from "../features/workspaces.js";
 import { createContextManager } from "../llm/contextManager.js";
 import { createCostTracker } from "../llm/costTracker.js";
+import { createDreamMaker } from "../llm/dreamMaker.js";
+import { LlmMessage, LlmRole } from "../llm/llmDtos.js";
+import { createLogService } from "../services/logService.js";
 import { createOutputService } from "../utils/output.js";
 
 export function createMockLogService() {
@@ -59,6 +59,8 @@ export function createMockSubagent() {
     getRunningSubagentNames: jest.fn(() => []),
     getTerminationEvents: jest.fn(() => []),
     cleanup: jest.fn(() => Promise.resolve()),
+    raiseSwitchEvent: jest.fn(),
+    switchEventTriggered: jest.fn(() => false),
   };
 
   return subagent;
@@ -177,7 +179,7 @@ export function createMockInputMode() {
     setLLM: jest.fn(),
     setDebug: jest.fn(),
     toggle: jest.fn(),
-    isLLM:  jest.fn(() => false),
+    isLLM: jest.fn(() => false),
     isDebug: jest.fn(() => true),
   };
 }

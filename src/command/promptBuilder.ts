@@ -57,8 +57,7 @@ export function createPromptBuilder(
   }
 
   function getUserHostPrompt() {
-    const username =
-      inputMode.isDebug() ? "debug" : config.agent.username;
+    const username = inputMode.isDebug() ? "debug" : config.agent.username;
 
     return `${username}@${config.hostname}`;
   }
@@ -71,7 +70,8 @@ export function createPromptBuilder(
     return new Promise<string>((resolve) => {
       const questionController = new AbortController();
       let timeout: NodeJS.Timeout | undefined;
-      let interval: NodeJS.Timeout | undefined;
+      let mailInterval: NodeJS.Timeout | undefined;
+      let subagentInterval: NodeJS.Timeout | undefined;
       let timeoutCancelled = false;
       let unsubscribeWrite: (() => void) | undefined;
 
@@ -83,7 +83,8 @@ export function createPromptBuilder(
         }
 
         clearTimeout(timeout);
-        clearInterval(interval);
+        clearInterval(mailInterval);
+        clearInterval(subagentInterval);
       }
 
       /** Cancels waiting for user input */
@@ -155,32 +156,27 @@ export function createPromptBuilder(
       }
 
       if (wakeOnMessage) {
-        // Break timeout if new message is received
-        let firstError = true;
-
-        interval = setInterval(() => {
+        mailInterval = setInterval(() => {
           // setInterval does not support async/await, but that's okay as this call easily runs within the 3s interval
-          llmail
-            .getUnreadThreads()
-            .then((unreadThreadIds) => {
-              if (unreadThreadIds.length) {
-                abortQuestion();
-              }
-            })
-            // Catch and log errors, but don't break the interval on hopefully an intermittent error
-            .catch((e) => {
-              if (firstError) {
-                output.errorAndLog(`Mail interval check error: ${e}`);
-                firstError = false;
-              }
-            });
+          llmail.getUnreadThreads().then((unreadThreadIds) => {
+            if (unreadThreadIds.length) {
+              abortQuestion();
+            }
+          });
+        }, 5000);
 
+        subagentInterval = setInterval(() => {
           // Check for terminated subagents
           const terminationEvents = subagent.getTerminationEvents();
           if (terminationEvents.length) {
             abortQuestion();
           }
-        }, 3000);
+
+          // If the active agent has been switched, abort input
+          if (subagent.switchEventTriggered()) {
+            abortQuestion();
+          }
+        }, 500);
       }
     });
   }
