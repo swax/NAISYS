@@ -8,6 +8,7 @@ export async function createDatabaseService(
   config: Awaited<ReturnType<typeof createConfig>>,
 ) {
   let myUserId = -1;
+  let updateInterval: NodeJS.Timeout | null = null;
 
   async function initDatabase(filepath: NaisysPath) {
     pathService.ensureFileDirExists(filepath);
@@ -74,7 +75,7 @@ export async function createDatabaseService(
 
     // Start the lastActive updater after user is initialized
     updateLastActive();
-    setInterval(updateLastActive, 2000);
+    updateInterval = setInterval(updateLastActive, 2000);
   }
 
   async function createDatabase(hostPath: string) {
@@ -258,8 +259,16 @@ export async function createDatabaseService(
 
   await initDatabase(config.dbFilePath);
 
+  function cleanup() {
+    if (updateInterval) {
+      clearInterval(updateInterval);
+      updateInterval = null;
+    }
+  }
+
   return {
     myUserId,
     usingDatabase,
+    cleanup,
   };
 }

@@ -35,8 +35,10 @@ export async function createAgentRuntime(
    * We can also see from this why modern dependency injection frameworks exist
    */
 
+  const agentRuntimeId = runtimeId++;
+
   // Base services
-  const config = await createConfig(agentPath);
+  const config = await createConfig(agentPath, agentRuntimeId);
   const dbService = await createDatabaseService(config);
   const logService = createLogService(config, dbService);
   const output = createOutputService(logService);
@@ -142,16 +144,20 @@ export async function createAgentRuntime(
   const abortController = new AbortController();
 
   return {
-    agentRuntimeId: runtimeId++,
+    agentRuntimeId,
     config,
     output,
-    commandLoop: {
-      run: () => commandLoop.run(abortController.signal),
-    },
-    shutdown: async () => {
-      abortController.abort();
+    runCommandLoop: () => commandLoop.run(abortController.signal),
+    requestShutdown: async (reason: string) => {
+      abortController.abort(reason);
+
       // Wait a bit for graceful shutdown
       await new Promise((resolve) => setTimeout(resolve, 5000));
+    },
+    completeShutdown: (reason: string) => {
+      // Cleanup database interval
+      dbService.cleanup();
+      subagentService.cleanup(reason);
     },
   };
 }
