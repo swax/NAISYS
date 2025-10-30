@@ -8,6 +8,7 @@ import { createWorkspacesFeature } from "../features/workspaces.js";
 import { createContextManager } from "../llm/contextManager.js";
 import { createDreamMaker } from "../llm/dreamMaker.js";
 import { ContentSource, LlmRole } from "../llm/llmDtos.js";
+import { LlmApiType } from "../llm/llModels.js";
 import { createLLMService } from "../llm/llmService.js";
 import { createLogService } from "../services/logService.js";
 import { createInputMode } from "../utils/inputMode.js";
@@ -99,6 +100,11 @@ export function createCommandLoop(
           );
         }
 
+        if (config.agent.shellModel === LlmApiType.None) {
+          pauseSeconds = 0;
+          wakeOnMessage = true;
+        }
+
         let prompt = await promptBuilder.getPrompt(pauseSeconds, wakeOnMessage);
         let commandList: string[] = [];
         let blankDebugInput = false;
@@ -130,7 +136,8 @@ export function createCommandLoop(
             if (
               subagent.switchEventTriggered("clear") ||
               (await checkNewMailNotification()) ||
-              (await checkSubagentsTerminated())
+              (await checkSubagentsTerminated()) ||
+              config.agent.shellModel === LlmApiType.None // Check this last so notications get processed/cleared
             ) {
               inputMode.setDebug();
               continue;

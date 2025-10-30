@@ -35,7 +35,9 @@ export function createLLMService(
 
     const model = llModels.get(modelKey);
 
-    if (model.apiType === LlmApiType.Dummy) {
+    if (model.apiType === LlmApiType.None) {
+      throw "This should be unreachable";
+    } else if (model.apiType === LlmApiType.Dummy) {
       // 1 second time out then dummy response
       await new Promise((resolve) => setTimeout(resolve, 1000));
       return [
