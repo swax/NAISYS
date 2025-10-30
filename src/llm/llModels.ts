@@ -5,6 +5,7 @@ export enum LlmApiType {
   Google = "google",
   Anthropic = "anthropic",
   Dummy = "dummy",
+  None = "none",
 }
 
 interface LlmModel {
@@ -24,10 +25,19 @@ export function createLLModels(
   config: Awaited<ReturnType<typeof createConfig>>,
 ) {
   const llmModels: LlmModel[] = [
+
+    {
+      key: LlmApiType.None,
+      name: LlmApiType.None,
+      apiType: LlmApiType.None,
+      maxTokens: 10_000,
+      inputCost: 0,
+      outputCost: 0,
+    },
     // Dummy model is good for testing agent concurrency without incurring costs
     {
-      key: "dummy",
-      name: "dummy",
+      key: LlmApiType.Dummy,
+      name: LlmApiType.Dummy,
       apiType: LlmApiType.Dummy,
       maxTokens: 10_000,
       inputCost: 0,
