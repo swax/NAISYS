@@ -4,7 +4,7 @@
 
 username: ryan
 title: Assistant
-shellModel: claude4sonnet
+shellModel: gemini2.5pro
 imageModel: dalle3-1024
 agentPrompt: |
   You are ${agent.username} a ${agent.title} with the job of helping out the admin with what he wants to do.

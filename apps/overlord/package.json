@@ -13,7 +13,7 @@
     "update:all": "npm update && npm update --workspace=server && npm update --workspace=client && npm update --workspace=shared"
   },
   "devDependencies": {
-    "concurrently": "^8.2.2",
+    "concurrently": "^9.2.1",
     "prettier": "^3.6.2"
   }
 }
