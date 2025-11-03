@@ -30,7 +30,7 @@ export default async function accessRoutes(
       lastAccessRequestTime = currentTime;
 
       const { accessKey } = request.body;
-      const expectedAccessKey = process.env.ACCESS_KEY;
+      const expectedAccessKey = process.env.OVERLORD_ACCESS_KEY;
 
       if (!expectedAccessKey) {
         reply.code(500);

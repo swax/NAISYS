@@ -44,8 +44,8 @@ export function shuffle<T>(array: T[]) {
  * Create clean env variables to pass to a spanwned process.
  * Clean of NAISYS specific vars that could also conflict with env vars in the spawned process.
  */
-export function getCleanEnv(envVars: { [name: string]: string }) {
-  const cleanEnv = { ...envVars };
+export function getCleanEnv() {
+  const cleanEnv = { ...process.env };
   delete cleanEnv.OPENAI_API_KEY;
   delete cleanEnv.GOOGLE_API_KEY;
   delete cleanEnv.ANTHROPIC_API_KEY;

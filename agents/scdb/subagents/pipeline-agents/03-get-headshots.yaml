@@ -1,4 +1,3 @@
-envPath: .env.scdb
 username: chris
 title: Headshot Finder
 shellModel: ${env.MODEL_NAME}

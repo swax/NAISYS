@@ -13,7 +13,7 @@
   ],
   "scripts": {
     "clean": "npm run clean --workspaces --if-present",
-    "compile": "npm run compile --workspaces --if-present",
+    "compile": "npm run build --workspace=apps/overlord/server && npm run compile --workspace=apps/naisys",
     "build": "npm run build --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
     "eslint": "npm run eslint --workspaces --if-present",

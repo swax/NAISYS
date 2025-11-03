@@ -207,9 +207,9 @@ export async function sendMessage(
 
     // 5. Handle attachments if any
     if (attachments && attachments.length > 0) {
-      const naisysFolderPath = process.env.NAISYS_FOLDER_PATH;
+      const naisysFolderPath = process.env.NAISYS_FOLDER;
       if (!naisysFolderPath) {
-        throw new Error("NAISYS_FOLDER_PATH environment variable not set");
+        throw new Error("NAISYS_FOLDER environment variable not set");
       }
 
       const attachmentsDir = path.join(naisysFolderPath, "attachments", messageId.toString());
@@ -247,9 +247,9 @@ export async function sendMessage(
 }
 
 async function saveAttachments(messageId: number, attachments: Array<{ filename: string; data: Buffer }>) {
-  const naisysFolderPath = process.env.NAISYS_FOLDER_PATH;
+  const naisysFolderPath = process.env.NAISYS_FOLDER;
   if (!naisysFolderPath) {
-    throw new Error("NAISYS_FOLDER_PATH environment variable not set");
+    throw new Error("NAISYS_FOLDER environment variable not set");
   }
 
   const attachmentsDir = path.join(naisysFolderPath, "attachments", messageId.toString());

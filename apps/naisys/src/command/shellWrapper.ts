@@ -54,7 +54,7 @@ export function createShellWrapper(
 
     _process = spawn(spawnCmd, [], {
       stdio: "pipe",
-      env: getCleanEnv(config.envVars),
+      env: getCleanEnv(),
     });
 
     const pid = _process.pid;

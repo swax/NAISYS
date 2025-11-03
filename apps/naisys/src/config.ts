@@ -34,9 +34,6 @@ export interface AgentConfig {
   commandProtection: CommandProtection;
   initialCommands: string[];
 
-  /** Custom or non-standard env path */
-  envPath?: string;
-
   /** The max number of subagents allowed to be started and managed. Costs by the subagent are applied to the spend limit. */
   subagentMax?: number;
 
@@ -90,9 +87,7 @@ export async function createConfig(agentPath: string, agentRuntimeId: number) {
 
   const agent = loadAgentConfig();
 
-  const envPath = agent.envPath || ".env";
-  const envFile = fs.readFileSync(envPath);
-  const envVars = dotenv.parse(envFile);
+  dotenv.config();
 
   /** Web pages loaded with llmynx will be reduced down to around this number of tokens */
   const webTokenMax = 5000;
@@ -234,7 +229,7 @@ export async function createConfig(agentPath: string, agentRuntimeId: number) {
   }
 
   function getEnv(key: string, required?: boolean) {
-    const value = envVars[key];
+    const value = process.env[key];
     if (!value && required) {
       throw `Config: Error, .env ${key} is not defined`;
     }
@@ -244,7 +239,7 @@ export async function createConfig(agentPath: string, agentRuntimeId: number) {
   function resolveConfigVars(templateString: string) {
     let resolvedString = templateString;
     resolvedString = resolveTemplateVars(resolvedString, "agent", agent);
-    resolvedString = resolveTemplateVars(resolvedString, "env", envVars);
+    resolvedString = resolveTemplateVars(resolvedString, "env", process.env);
     return resolvedString;
   }
 
@@ -310,7 +305,6 @@ export async function createConfig(agentPath: string, agentRuntimeId: number) {
     useToolsForLlmConsoleResponses,
     packageVersion,
     binPath,
-    envVars,
     getEnv,
     resolveConfigVars,
   };
