@@ -127,7 +127,8 @@ export function createSubagentService(
         return await _createAgent(title, task);
       }
       case "start": {
-        const subagentName = argParams[1];
+        // trim quotes
+        const subagentName = argParams[1].trim().replace(/^"(.*)"$/, "$1");
         const taskDescription = args.split('"')[1];
 
         return await _startAgent(subagentName, taskDescription);
