@@ -1,0 +1,6 @@
+client/dist/
+node_modules/
+server/dist/
+server/.env
+server/overlord.*
+shared/dist/

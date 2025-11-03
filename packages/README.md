@@ -1,0 +1,1 @@
+# Shared Packages\n\nThis directory will contain shared packages used across the NAISYS monorepo.\n\nPlanned packages:\n- `packages/shared` - Shared types and utilities\n- `packages/database` - Shared database utilities\n
