@@ -1,4 +1,3 @@
-envPath: .env.scdb
 username: emily
 title: Approval Processor
 shellModel: ${env.MODEL_NAME}

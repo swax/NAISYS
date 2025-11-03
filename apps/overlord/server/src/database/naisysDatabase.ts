@@ -4,11 +4,11 @@ import sqlite3 from "sqlite3";
 import { DatabaseConfig, runOnDb, selectFromDb } from "./databaseService.js";
 
 function getNaisysConfig(): DatabaseConfig {
-  if (!env.NAISYS_FOLDER_PATH) {
-    throw new Error("NAISYS_FOLDER_PATH environment variable is not set.");
+  if (!env.NAISYS_FOLDER) {
+    throw new Error("NAISYS_FOLDER environment variable is not set.");
   }
 
-  const dbPath = path.join(env.NAISYS_FOLDER_PATH, "database", "naisys.sqlite");
+  const dbPath = path.join(env.NAISYS_FOLDER, "database", "naisys.sqlite");
 
   return {
     dbPath,

@@ -1,3 +1,4 @@
+import path from "path";
 import sqlite3 from "sqlite3";
 import {
   DatabaseConfig,
@@ -25,7 +26,12 @@ const createSettingsTable = `
 `;
 
 function getOverlordConfig(): DatabaseConfig {
-  const dbPath = process.env.OVERLORD_DB_PATH || "./overlord.db";
+  if (!process.env.NAISYS_FOLDER) {
+    // include the path of the env file
+    throw new Error(`NAISYS_FOLDER is not set in environment variables`);
+  }
+
+  const dbPath = path.join(process.env.NAISYS_FOLDER, "/database/overlord.db");
 
   return {
     dbPath,
@@ -38,9 +44,13 @@ function getOverlordConfig(): DatabaseConfig {
   };
 }
 
-// Initialize the database on module load
-const config = getOverlordConfig();
-await initializeDatabase(config);
+let config: DatabaseConfig;
+
+export async function initOverlordDatabase() {
+  // Initialize the database on module load
+  config = getOverlordConfig();
+  await initializeDatabase(config);
+}
 
 export async function selectFromOverlordDb<T>(
   sql: string,

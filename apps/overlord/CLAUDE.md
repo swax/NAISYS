@@ -41,13 +41,13 @@ NAISYS Overlord is a management application that provides a monitoring interface
 The application uses two separate databases:
 
 1. **NAISYS Database** (Read-only)
-   - Location: `{NAISYS_FOLDER_PATH}/database/naisys.sqlite`
+   - Location: `{NAISYS_FOLDER}/database/naisys.sqlite`
    - Contains: Agent data, logs, mail/messaging system
    - Tables: `Users`, `ContextLog`, `ThreadMessages`, `Threads`, `ThreadMembers`
    - Accessed via: `server/src/database/naisysDatabase.ts`
 
 2. **Overlord Database** (Read/Write)
-   - Location: `{OVERLORD_DB_PATH}` or `./overlord.db`
+   - Location: `{NAISYS_FOLDER}/database/overlord.db`
    - Contains: Session management, settings, read status tracking
    - Tables: `sessions`, `settings`
    - Accessed via: `server/src/database/overlordDatabase.ts`
@@ -92,8 +92,7 @@ Routes are organized in `server/src/routes/`:
 
 ### Environment Variables
 
-- `NAISYS_FOLDER_PATH` - Path to NAISYS data folder (required)
-- `OVERLORD_DB_PATH` - Path to overlord database (optional, defaults to `./overlord.db`)
+- `NAISYS_FOLDER` - Path to NAISYS data folder (required)
 - `NODE_ENV` - Environment mode (development/production)
 - `PORT` - Server port (defaults to 3001)
 

@@ -32,8 +32,7 @@ The application provides a web interface to monitor NAISYS agents, view their lo
 3. Set up environment variables:
 
    ```bash
-   export NAISYS_FOLDER_PATH=/path/to/naisys/data
-   export OVERLORD_DB_PATH=/path/to/overlord.db  # Optional
+   export NAISYS_FOLDER=/path/to/naisys/data
    ```
 
 4. Start development servers:
@@ -80,8 +79,7 @@ The application uses a dual database system:
 
 ### Environment Variables
 
-- `NAISYS_FOLDER_PATH` - Path to NAISYS data folder (required)
-- `OVERLORD_DB_PATH` - Path to overlord database (optional)
+- `NAISYS_FOLDER` - Path to NAISYS data folder (required)
 - `NODE_ENV` - Environment mode (development/production)
 - `PORT` - Server port (defaults to 3001)
 

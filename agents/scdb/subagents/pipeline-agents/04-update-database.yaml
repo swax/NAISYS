@@ -1,4 +1,3 @@
-envPath: .env.scdb
 username: donny
 title: DB Admin
 shellModel: ${env.MODEL_NAME}
