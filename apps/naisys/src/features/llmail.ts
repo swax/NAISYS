@@ -152,11 +152,17 @@ export function createLLMail(
   }
   async function getUnreadThreads(): Promise<UnreadThread[]> {
     return await usingDatabase(async (prisma) => {
-      const updatedThreads = await prisma.$queryRaw<UnreadThread[]>(
-        Prisma.sql`SELECT threadId, newMsgId
-        FROM ThreadMembers
-        WHERE userId = ${myUserId} AND newMsgId >= 0 AND archived = 0`,
-      );
+      const updatedThreads = await prisma.threadMembers.findMany({
+        where: {
+          userId: myUserId,
+          newMsgId: { gte: 0 },
+          archived: 0,
+        },
+        select: {
+          threadId: true,
+          newMsgId: true,
+        },
+      });
 
       return updatedThreads;
     });
@@ -275,44 +281,53 @@ export function createLLMail(
     return await usingDatabase(async (prisma) => {
       const thread = await getThread(prisma, threadId);
 
-      const threadMembers = await prisma.$queryRaw<
-        Array<{ id: number; username: string }>
-      >(
-        Prisma.sql`SELECT u.id, u.username
-         FROM ThreadMembers tm
-         JOIN Users u ON tm.userId = u.id
-         WHERE tm.threadId = ${threadId}`,
-      );
+      const threadMembers = await prisma.threadMembers.findMany({
+        where: { threadId },
+        select: {
+          Users: {
+            select: {
+              id: true,
+              username: true,
+            },
+          },
+        },
+      });
+      // Flatten the nested user object
+      const flattenedMembers = threadMembers.map((tm) => tm.Users);
 
-      let unreadFilter = "";
-      if (newMsgId != undefined) {
-        unreadFilter = `AND tm.id >= ${newMsgId}`;
-      }
+      const messages = await prisma.threadMessages.findMany({
+        where: {
+          threadId,
+          ...(newMsgId !== undefined ? { id: { gte: newMsgId } } : {}),
+        },
+        include: {
+          Users: {
+            select: {
+              username: true,
+              title: true,
+            },
+          },
+        },
+        orderBy: {
+          date: "asc",
+        },
+      });
 
-      const messages = await prisma.$queryRaw<
-        Array<{
-          username: string;
-          title: string;
-          date: string;
-          message: string;
-        }>
-      >(
-        Prisma.sql([
-          `SELECT u.username, u.title, tm.date, tm.message
-         FROM ThreadMessages tm
-         JOIN Users u ON tm.userId = u.id
-         WHERE tm.threadId = ${threadId} ${unreadFilter}
-         ORDER BY tm.date`,
-        ]),
-      );
+      // Flatten the nested user object for messages
+      const flattenedMessages = messages.map((m) => ({
+        username: m.Users.username,
+        title: m.Users.title,
+        date: m.date,
+        message: m.message,
+      }));
 
       let threadMessages = "";
 
       // If simple mode just show subject/from/to
       // Buildings strings with \n here because otherwise this code is super hard to read
       if (simpleMode) {
-        for (const message of messages) {
-          const toMembers = threadMembers
+        for (const message of flattenedMessages) {
+          const toMembers = flattenedMembers
             .filter((m) => m.username !== message.username)
             .map((m) => m.username)
             .join(", ");
@@ -329,12 +344,12 @@ export function createLLMail(
       }
       // Else threaded version
       else {
-        const toMembers = threadMembers.map((m) => m.username).join(", ");
+        const toMembers = flattenedMembers.map((m) => m.username).join(", ");
         threadMessages =
           `Thread ${thread.id}: ${thread.subject}\n` +
           `Members: ${toMembers}\n`;
 
-        for (const message of messages) {
+        for (const message of flattenedMessages) {
           threadMessages +=
             `\n` +
             `From: ${message.username}\n` +
