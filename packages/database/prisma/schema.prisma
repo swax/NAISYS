@@ -1,0 +1,93 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:${env('NAISYS_FOLDER')}/database/naisys.sqlite"
+}
+
+model ContextLog {
+  id       Int    @id @default(autoincrement())
+  username String
+  role     String
+  source   String
+  type     String
+  message  String
+  date     String
+
+  @@index([id(sort: Desc)], map: "idx_contextlog_id_desc")
+}
+
+model Costs {
+  id                 Int     @id @default(autoincrement())
+  date               String
+  username           String
+  subagent           String?
+  source             String
+  model              String
+  cost               Float?  @default(0)
+  input_tokens       Int?    @default(0)
+  output_tokens      Int?    @default(0)
+  cache_write_tokens Int?    @default(0)
+  cache_read_tokens  Int?    @default(0)
+
+  @@index([id(sort: Desc)], map: "idx_costs_id_desc")
+}
+
+model DreamLog {
+  id       Int    @id @default(autoincrement())
+  username String
+  date     String
+  dream    String
+
+  @@index([id(sort: Desc)], map: "idx_dreamlog_id_desc")
+}
+
+model ThreadMembers {
+  id       Int     @id @default(autoincrement())
+  threadId Int
+  userId   Int
+  newMsgId Int     @default(-1)
+  archived Int     @default(0)
+  Users    Users   @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  Threads  Threads @relation(fields: [threadId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([threadId, userId], map: "sqlite_autoindex_ThreadMembers_1")
+  @@index([threadId], map: "idx_threadmembers_threadid")
+}
+
+model ThreadMessages {
+  id       Int     @id @default(autoincrement())
+  threadId Int
+  userId   Int
+  message  String
+  date     String
+  Users    Users   @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  Threads  Threads @relation(fields: [threadId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([threadId], map: "idx_threadmessages_threadid")
+  @@index([id(sort: Desc)], map: "idx_threadmessages_id_desc")
+}
+
+model Threads {
+  id             Int              @id @default(autoincrement())
+  subject        String
+  tokenCount     Int              @default(0)
+  ThreadMembers  ThreadMembers[]
+  ThreadMessages ThreadMessages[]
+
+  @@index([id(sort: Desc)], map: "idx_threads_id_desc")
+}
+
+model Users {
+  id             Int              @id @default(autoincrement())
+  username       String           @unique(map: "sqlite_autoindex_Users_1")
+  title          String
+  agentPath      String           @unique(map: "sqlite_autoindex_Users_2")
+  leadUsername   String?
+  lastActive     String?          @default("")
+  ThreadMembers  ThreadMembers[]
+  ThreadMessages ThreadMessages[]
+}
