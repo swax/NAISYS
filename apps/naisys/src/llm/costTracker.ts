@@ -2,7 +2,6 @@ import { createConfig } from "../config.js";
 import { createDatabaseService } from "../services/dbService.js";
 import { createOutputService } from "../utils/output.js";
 import { createLLModels } from "./llModels.js";
-import { Prisma } from "@naisys/database";
 
 // Keep only interfaces that are used as parameters or need explicit typing
 interface LlmModelCosts {
@@ -148,35 +147,31 @@ export function createCostTracker(
 
   async function getCostBreakdownWithModels(username?: string) {
     return usingDatabase(async (prisma) => {
-      const whereClause = username ? `WHERE username = '${username}'` : "";
-
-      const result = await prisma.$queryRaw<
-        Array<{
-          model: string;
-          total_cost: number | bigint;
-          input_tokens: number | bigint;
-          output_tokens: number | bigint;
-          cache_write_tokens: number | bigint;
-          cache_read_tokens: number | bigint;
-        }>
-      >(
-        Prisma.sql([
-          `SELECT model, sum(cost) as total_cost, sum(input_tokens) as input_tokens, sum(output_tokens) as output_tokens, sum(cache_write_tokens) as cache_write_tokens, sum(cache_read_tokens) as cache_read_tokens
-        FROM Costs
-        ${whereClause}
-        GROUP BY model
-        ORDER BY sum(cost) DESC`,
-        ]),
-      );
+      const result = await prisma.costs.groupBy({
+        by: ["model"],
+        ...(username ? { where: { username } } : {}),
+        _sum: {
+          cost: true,
+          input_tokens: true,
+          output_tokens: true,
+          cache_write_tokens: true,
+          cache_read_tokens: true,
+        },
+        orderBy: {
+          _sum: {
+            cost: "desc",
+          },
+        },
+      });
 
       // Convert BigInt values to Number for compatibility
-      return result.map(row => ({
+      return result.map((row) => ({
         model: row.model,
-        total_cost: Number(row.total_cost || 0),
-        input_tokens: Number(row.input_tokens || 0),
-        output_tokens: Number(row.output_tokens || 0),
-        cache_write_tokens: Number(row.cache_write_tokens || 0),
-        cache_read_tokens: Number(row.cache_read_tokens || 0),
+        total_cost: Number(row._sum.cost || 0),
+        input_tokens: Number(row._sum.input_tokens || 0),
+        output_tokens: Number(row._sum.output_tokens || 0),
+        cache_write_tokens: Number(row._sum.cache_write_tokens || 0),
+        cache_read_tokens: Number(row._sum.cache_read_tokens || 0),
       }));
     });
   }
@@ -389,13 +384,12 @@ export function createCostTracker(
     }
 
     await usingDatabase(async (prisma) => {
-      const result = await prisma.$queryRaw<
-        Array<{ username: string; total_cost: number | bigint }>
-      >(
-        Prisma.sql`SELECT username, sum(cost) as total_cost
-        FROM Costs
-        GROUP BY username`,
-      );
+      const result = await prisma.costs.groupBy({
+        by: ["username"],
+        _sum: {
+          cost: true,
+        },
+      });
 
       if (result.length <= 1) {
         return;
@@ -403,7 +397,7 @@ export function createCostTracker(
 
       for (const row of result) {
         output.comment(
-          `  ${row.username} cost $${Number(row.total_cost || 0).toFixed(2)}`,
+          `  ${row.username} cost $${Number(row._sum.cost || 0).toFixed(2)}`,
         );
       }
     });

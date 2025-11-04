@@ -1,33 +1,32 @@
 import path from "path";
 import { env } from "process";
-import sqlite3 from "sqlite3";
-import { DatabaseConfig, runOnDb, selectFromDb } from "./databaseService.js";
+import { createPrismaClient, PrismaClient } from "@naisys/database";
 
-function getNaisysConfig(): DatabaseConfig {
+function getNaisysDatabasePath(): string {
   if (!env.NAISYS_FOLDER) {
     throw new Error("NAISYS_FOLDER environment variable is not set.");
   }
 
-  const dbPath = path.join(env.NAISYS_FOLDER, "database", "naisys.sqlite");
-
-  return {
-    dbPath,
-    validatePath: true, // Naisys requires the DB to already exist
-  };
+  return path.join(env.NAISYS_FOLDER, "database", "naisys.sqlite");
 }
 
-export async function selectFromNaisysDb<T>(
-  sql: string,
-  params: any[] = [],
+// Create a singleton Prisma client for the Naisys database
+let prismaClient: PrismaClient | null = null;
+
+function getPrismaClient(): PrismaClient {
+  if (!prismaClient) {
+    const databasePath = getNaisysDatabasePath();
+    prismaClient = createPrismaClient(databasePath);
+  }
+  return prismaClient;
+}
+
+/**
+ * Execute a function with access to the Naisys Prisma client
+ */
+export async function usingNaisysDb<T>(
+  run: (prisma: PrismaClient) => Promise<T>,
 ): Promise<T> {
-  const config = getNaisysConfig();
-  return selectFromDb<T>(config, sql, params);
-}
-
-export async function runOnNaisysDb(
-  sql: string,
-  params: any[] = [],
-): Promise<sqlite3.RunResult> {
-  const config = getNaisysConfig();
-  return runOnDb(config, sql, params);
+  const prisma = getPrismaClient();
+  return await run(prisma);
 }
