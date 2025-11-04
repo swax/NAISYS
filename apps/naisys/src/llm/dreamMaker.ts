@@ -19,16 +19,14 @@ export function createDreamMaker(
       return _lastDream;
     }
 
-    return await usingDatabase(async (db) => {
-      const row = await db.get(
-        `SELECT dream 
-       FROM DreamLog 
-       WHERE username = ? 
-       ORDER BY date DESC LIMIT 1`,
-        config.agent.username,
-      );
+    return await usingDatabase(async (prisma) => {
+      const row = await prisma.dreamLog.findFirst({
+        where: { username: config.agent.username },
+        orderBy: { date: "desc" },
+        select: { dream: true },
+      });
 
-      return row?.dream;
+      return row?.dream || "";
     });
   }
 
@@ -89,13 +87,14 @@ and how to do it.`;
   }
 
   async function storeDream(dream: string) {
-    await usingDatabase(async (db) => {
-      await db.run(
-        `INSERT INTO DreamLog (username, date, dream) 
-       VALUES (?, datetime('now'), ?)`,
-        config.agent.username,
-        dream,
-      );
+    await usingDatabase(async (prisma) => {
+      await prisma.dreamLog.create({
+        data: {
+          username: config.agent.username,
+          date: new Date().toISOString(),
+          dream,
+        },
+      });
     });
   }
 
