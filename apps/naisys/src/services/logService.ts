@@ -55,18 +55,19 @@ export function createLogService(
   }
 
   async function write(message: LlmMessage) {
-    const insertedId = await usingDatabase(async (db) => {
-      const inserted = await db.run(
-        "INSERT INTO ContextLog (username, role, source, type, message, date) VALUES (?, ?, ?, ?, ?, ?)",
-        config.agent.username,
-        toSimpleRole(message.role),
-        message.source?.toString() || "",
-        message.type || "",
-        message.content,
-        new Date().toISOString(),
-      );
+    const insertedId = await usingDatabase(async (prisma) => {
+      const inserted = await prisma.contextLog.create({
+        data: {
+          username: config.agent.username,
+          role: toSimpleRole(message.role),
+          source: message.source?.toString() || "",
+          type: message.type || "",
+          message: message.content,
+          date: new Date().toISOString(),
+        },
+      });
 
-      return inserted.lastID;
+      return inserted.id;
     });
 
     appendToLogFile(_combinedLogFilePath, message);
