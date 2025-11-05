@@ -3,7 +3,7 @@ import {
   SendMailResponse,
   ThreadMember,
   ThreadMessage,
-} from "shared/src/mail-types.js";
+} from "shared";
 import { usingNaisysDb } from "../database/naisysDatabase.js";
 import { getAgents } from "./agentService.js";
 import { updateLatestMailIds } from "./readService.js";

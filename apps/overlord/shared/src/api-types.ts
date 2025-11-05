@@ -1,8 +1,14 @@
-export interface HelloResponse {
-  message: string;
-  timestamp: string;
-  success: boolean;
-}
+import { z } from "zod";
+
+// Zod schemas
+export const HelloResponseSchema = z.object({
+  message: z.string(),
+  timestamp: z.string(),
+  success: z.boolean(),
+});
+
+// Inferred types
+export type HelloResponse = z.infer<typeof HelloResponseSchema>;
 
 export * from "./session-types.js";
 export * from "./settings-types.js";

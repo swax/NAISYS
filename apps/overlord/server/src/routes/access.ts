@@ -1,12 +1,19 @@
 import { FastifyInstance, FastifyPluginOptions } from "fastify";
+import {
+  AccessKeyRequest,
+  AccessKeyRequestSchema,
+  AccessKeyResponse,
+  AccessKeyResponseSchema,
+  LogoutResponseSchema,
+  SessionResponseSchema,
+} from "shared";
 import { v4 as uuidv4 } from "uuid";
 import {
   createSession,
-  getSession,
-  deleteSession,
   deleteExpiredSessions,
+  deleteSession,
+  getSession,
 } from "../services/sessionService.js";
-import { AccessKeyRequest, AccessKeyResponse } from "shared";
 
 let lastAccessRequestTime = 0;
 
@@ -16,6 +23,19 @@ export default async function accessRoutes(
 ) {
   fastify.post<{ Body: AccessKeyRequest; Reply: AccessKeyResponse }>(
     "/access-key",
+    {
+      schema: {
+        description: "Validate access key and create session",
+        tags: ["Authentication"],
+        body: AccessKeyRequestSchema,
+        response: {
+          200: AccessKeyResponseSchema,
+          401: AccessKeyResponseSchema,
+          429: AccessKeyResponseSchema,
+          500: AccessKeyResponseSchema,
+        },
+      },
+    },
     async (request, reply) => {
       const currentTime = Date.now();
 
@@ -83,60 +103,88 @@ export default async function accessRoutes(
   );
 
   // Session validation endpoint
-  fastify.get("/session", async (request, reply) => {
-    const token = request.cookies.session_token;
+  fastify.get(
+    "/session",
+    {
+      schema: {
+        description: "Validate current session",
+        tags: ["Authentication"],
+        response: {
+          200: SessionResponseSchema,
+          401: SessionResponseSchema,
+          500: SessionResponseSchema,
+        },
+        security: [{ cookieAuth: [] }],
+      },
+    },
+    async (request, reply) => {
+      const token = request.cookies.session_token;
 
-    if (!token) {
-      reply.code(401);
-      return {
-        success: false,
-        message: "No session token",
-      };
-    }
-
-    try {
-      const session = await getSession(token);
-      if (session) {
-        return {
-          success: true,
-          startDate: session.startDate,
-          expireDate: session.expireDate,
-        };
-      } else {
+      if (!token) {
         reply.code(401);
         return {
           success: false,
-          message: "Invalid or expired session",
+          message: "No session token",
         };
       }
-    } catch (error) {
-      reply.code(500);
-      return {
-        success: false,
-        message: "Session validation error",
-      };
-    }
-  });
+
+      try {
+        const session = await getSession(token);
+        if (session) {
+          return {
+            success: true,
+            startDate: session.startDate,
+            expireDate: session.expireDate,
+          };
+        } else {
+          reply.code(401);
+          return {
+            success: false,
+            message: "Invalid or expired session",
+          };
+        }
+      } catch (error) {
+        reply.code(500);
+        return {
+          success: false,
+          message: "Session validation error",
+        };
+      }
+    },
+  );
 
   // Logout endpoint
-  fastify.post("/logout", async (request, reply) => {
-    const token = request.cookies.session_token;
+  fastify.post(
+    "/logout",
+    {
+      schema: {
+        description: "Logout and clear session",
+        tags: ["Authentication"],
+        response: {
+          200: LogoutResponseSchema,
+        },
+        security: [{ cookieAuth: [] }],
+      },
+    },
+    async (request, reply) => {
+      const token = request.cookies.session_token;
 
-    if (token) {
-      try {
-        await deleteSession(token);
-      } catch (error) {
-        // Log error but don't fail the logout
-        console.error("Error deleting session:", error);
+      if (token) {
+        try {
+          await deleteSession(token);
+        } catch (error) {
+          // Log error but don't fail the logout
+          console.error("Error deleting session:", error);
+        }
       }
-    }
 
-    reply.clearCookie("session_token", { path: "/" });
-    return {
-      success: true,
-      message: "Logged out successfully",
-    };
-  });
+      reply.clearCookie("session_token", { path: "/" });
+      return {
+        success: true,
+        message: "Logged out successfully",
+      };
+    },
+  );
 
   // Clean up expired sessions periodically
   setInterval(async () => {
@@ -153,7 +201,15 @@ export async function validateSession(
   request: any,
   reply: any,
 ): Promise<boolean> {
-  const token = request.cookies.session_token;
+  let token = request.cookies.session_token;
+
+  // if no token, try to pull session_token from the query params
+  if (!token) {
+    const sessionToken = request.query.session_token;
+    if (sessionToken && typeof sessionToken === "string") {
+      token = sessionToken;
+    }
+  }
 
   if (!token) {
     reply.code(401);
