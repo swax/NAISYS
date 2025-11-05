@@ -1,5 +1,5 @@
 import { FastifyInstance, FastifyPluginOptions } from "fastify";
-import { HelloResponse } from "shared";
+import { HelloResponse, HelloResponseSchema } from "shared";
 import accessRoutes from "./access.js";
 import settingsRoutes from "./settings.js";
 import dataRoutes from "./data.js";
@@ -9,13 +9,25 @@ export default async function apiRoutes(
   fastify: FastifyInstance,
   _options: FastifyPluginOptions,
 ) {
-  fastify.get<{ Reply: HelloResponse }>("/hello", async (_request, _reply) => {
-    return {
-      message: "Hello from Fastify with TypeScript!",
-      timestamp: new Date().toISOString(),
-      success: true,
-    };
-  });
+  fastify.get<{ Reply: HelloResponse }>(
+    "/hello",
+    {
+      schema: {
+        description: "Health check endpoint",
+        tags: ["General"],
+        response: {
+          200: HelloResponseSchema,
+        },
+      },
+    },
+    async (_request, _reply) => {
+      return {
+        message: "Hello from Fastify with TypeScript!",
+        timestamp: new Date().toISOString(),
+        success: true,
+      };
+    },
+  );
 
   // Register access routes
   await fastify.register(accessRoutes);

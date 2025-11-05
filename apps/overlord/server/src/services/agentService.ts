@@ -1,36 +1,32 @@
-import sqlite3 from "sqlite3";
 import { Agent } from "shared";
-import { selectFromNaisysDb } from "../database/naisysDatabase.js";
-
-sqlite3.verbose();
-
-interface NaisysUser {
-  id: number;
-  username: string;
-  title: string;
-  agentPath: string;
-  leadUsername: string | null;
-  lastActive: string;
-}
+import { usingNaisysDb } from "../database/naisysDatabase.js";
 
 export async function getAgents(): Promise<Agent[]> {
   const agents: Agent[] = [];
 
   try {
-    const users = await selectFromNaisysDb<NaisysUser[]>(
-      "SELECT id, username, title, agentPath, leadUsername, lastActive FROM Users",
-      [],
-    );
+    const users = await usingNaisysDb(async (prisma) => {
+      return await prisma.users.findMany({
+        select: {
+          id: true,
+          username: true,
+          title: true,
+          agent_path: true,
+          lead_username: true,
+          last_active: true,
+        },
+      });
+    });
 
     users.forEach((user) => {
       agents.push({
         id: user.id,
         name: user.username,
         title: user.title,
-        online: isAgentOnline(user.lastActive),
-        lastActive: user.lastActive,
-        agentPath: user.agentPath,
-        leadUsername: user.leadUsername || undefined,
+        online: isAgentOnline(user.last_active || ""),
+        lastActive: user.last_active || "",
+        agentPath: user.agent_path,
+        leadUsername: user.lead_username || undefined,
       });
     });
   } catch (error) {

@@ -3,91 +3,57 @@ import {
   SendMailResponse,
   ThreadMember,
   ThreadMessage,
-} from "shared/src/mail-types.js";
-import {
-  runOnNaisysDb,
-  selectFromNaisysDb,
-} from "../database/naisysDatabase.js";
+} from "shared";
+import { usingNaisysDb } from "../database/naisysDatabase.js";
 import { getAgents } from "./agentService.js";
 import { updateLatestMailIds } from "./readService.js";
 import fs from "fs/promises";
 import path from "path";
-
-interface NaisysThreadMessage {
-  id: number;
-  threadId: number;
-  userId: number;
-  username: string;
-  subject: string;
-  message: string;
-  date: string;
-}
-
-interface NaisysThreadMember {
-  threadId: number;
-  userId: number;
-  username: string;
-  newMsgId: number;
-  archived: number;
-}
 
 export async function getThreadMessages(
   after?: number,
   limit: number = 1000,
 ): Promise<ThreadMessage[]> {
   try {
-    let sql = `
-      SELECT 
-        tm.id, 
-        tm.threadId, 
-        tm.userId, 
-        u.username,
-        t.subject,
-        tm.message, 
-        tm.date
-      FROM ThreadMessages tm
-      JOIN Threads t ON tm.threadId = t.id
-      JOIN Users u ON tm.userId = u.id
-    `;
-    const params: any[] = [];
-
-    const conditions: string[] = [];
-
-    if (after !== undefined && after > 0) {
-      conditions.push("tm.id > ?");
-      params.push(after);
-    }
-
-    if (conditions.length > 0) {
-      sql += " WHERE " + conditions.join(" AND ");
-    }
-
-    sql += " ORDER BY tm.id DESC LIMIT ?";
-    params.push(limit);
-
-    const dbMessages = await selectFromNaisysDb<NaisysThreadMessage[]>(
-      sql,
-      params,
-    );
+    const dbMessages = await usingNaisysDb(async (prisma) => {
+      return await prisma.thread_messages.findMany({
+        where: after !== undefined && after > 0 ? { id: { gt: after } } : undefined,
+        orderBy: { id: 'desc' },
+        take: limit,
+        select: {
+          id: true,
+          thread_id: true,
+          user_id: true,
+          message: true,
+          date: true,
+          threads: {
+            select: { subject: true },
+          },
+          users: {
+            select: { username: true },
+          },
+        },
+      });
+    });
 
     // Resort ascending
     dbMessages.sort((a, b) => a.id - b.id);
 
     // Get unique thread IDs to fetch members
-    const threadIds = [...new Set(dbMessages.map((msg) => msg.threadId))];
+    const threadIds = [...new Set(dbMessages.map((msg) => msg.thread_id))];
 
     // Fetch members for all threads
     const membersMap = await getThreadMembersMap(threadIds);
 
     const messages = dbMessages.map((msg) => ({
       id: msg.id,
-      threadId: msg.threadId,
-      userId: msg.userId,
-      username: msg.username,
-      subject: msg.subject,
+      threadId: msg.thread_id,
+      userId: msg.user_id,
+      username: msg.users.username,
+      subject: msg.threads.subject,
       message: msg.message,
       date: msg.date,
-      members: membersMap[msg.threadId] || [],
+      members: membersMap[msg.thread_id] || [],
     }));
 
     // Used for tracking unread mails
@@ -109,35 +75,32 @@ async function getThreadMembersMap(
   if (threadIds.length === 0) return {};
 
   try {
-    const placeholders = threadIds.map(() => "?").join(",");
-    const sql = `
-      SELECT 
-        tm.threadId,
-        tm.userId,
-        u.username,
-        tm.newMsgId,
-        tm.archived
-      FROM ThreadMembers tm
-      JOIN Users u ON tm.userId = u.id
-      WHERE tm.threadId IN (${placeholders})
-    `;
-
-    const dbMembers = await selectFromNaisysDb<NaisysThreadMember[]>(
-      sql,
-      threadIds,
-    );
+    const dbMembers = await usingNaisysDb(async (prisma) => {
+      return await prisma.thread_members.findMany({
+        where: { thread_id: { in: threadIds } },
+        select: {
+          thread_id: true,
+          user_id: true,
+          new_msg_id: true,
+          archived: true,
+          users: {
+            select: { username: true },
+          },
+        },
+      });
+    });
 
     const membersMap: Record<number, ThreadMember[]> = {};
 
     dbMembers.forEach((member) => {
-      if (!membersMap[member.threadId]) {
-        membersMap[member.threadId] = [];
+      if (!membersMap[member.thread_id]) {
+        membersMap[member.thread_id] = [];
       }
 
-      membersMap[member.threadId].push({
-        userId: member.userId,
-        username: member.username,
-        newMsgId: member.newMsgId,
+      membersMap[member.thread_id].push({
+        userId: member.user_id,
+        username: member.users.username,
+        newMsgId: member.new_msg_id,
         archived: member.archived === 1,
       });
     });
@@ -183,27 +146,37 @@ export async function sendMessage(
       };
     }
 
-    // 3. Create new thread
-    const threadResult = await runOnNaisysDb(
-      "INSERT INTO Threads (subject, tokenCount) VALUES (?, ?)",
-      [subject, 0], // TODO
-    );
+    const messageId = await usingNaisysDb(async (prisma) => {
+      // 3. Create new thread
+      const thread = await prisma.threads.create({
+        data: {
+          subject,
+          token_count: 0, // TODO
+        },
+      });
 
-    const threadId = threadResult.lastID!;
+      const threadId = thread.id;
 
-    // Add both users to the thread
-    await runOnNaisysDb(
-      "INSERT INTO ThreadMembers (threadId, userId, newMsgId) VALUES (?, ?, ?), (?, ?, ?)",
-      [threadId, fromUser.id, -1, threadId, toUser.id, 0],
-    );
+      // Add both users to the thread
+      await prisma.thread_members.createMany({
+        data: [
+          { thread_id: threadId, user_id: fromUser.id, new_msg_id: -1 },
+          { thread_id: threadId, user_id: toUser.id, new_msg_id: 0 },
+        ],
+      });
 
-    // 4. Insert new message into ThreadMessages table
-    const messageResult = await runOnNaisysDb(
-      "INSERT INTO ThreadMessages (threadId, userId, message, date) VALUES (?, ?, ?, ?)",
-      [threadId, fromUser.id, cleanMessage, new Date().toISOString()],
-    );
+      // 4. Insert new message into thread_messages table
+      const threadMessage = await prisma.thread_messages.create({
+        data: {
+          thread_id: threadId,
+          user_id: fromUser.id,
+          message: cleanMessage,
+          date: new Date().toISOString(),
+        },
+      });
 
-    const messageId = messageResult.lastID!;
+      return threadMessage.id;
+    });
 
     // 5. Handle attachments if any
     if (attachments && attachments.length > 0) {
@@ -214,21 +187,23 @@ export async function sendMessage(
 
       const attachmentsDir = path.join(naisysFolderPath, "attachments", messageId.toString());
       await saveAttachments(messageId, attachments);
-      
+
       // Create detailed attachment info
       const attachmentDetails = attachments.map(att => {
         const sizeKB = (att.data.length / 1024).toFixed(1);
         return `${att.filename} (${sizeKB} KB)`;
       }).join(', ');
-      
+
       const attachmentCount = attachments.length;
       const updatedMessage = `${cleanMessage}\n\n${attachmentCount} attached file${attachmentCount > 1 ? 's' : ''}, located in ${attachmentsDir}\nFilenames: ${attachmentDetails}`;
-      
+
       // Update the message with attachment info
-      await runOnNaisysDb(
-        "UPDATE ThreadMessages SET message = ? WHERE id = ?",
-        [updatedMessage, messageId],
-      );
+      await usingNaisysDb(async (prisma) => {
+        await prisma.thread_messages.update({
+          where: { id: messageId },
+          data: { message: updatedMessage },
+        });
+      });
     }
 
     return {

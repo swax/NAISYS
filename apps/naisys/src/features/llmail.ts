@@ -1,8 +1,8 @@
-import { Database } from "sqlite";
 import table from "text-table";
 import { createConfig } from "../config.js";
 import { createDatabaseService } from "../services/dbService.js";
 import * as utilities from "../utils/utilities.js";
+import { Prisma, PrismaClient } from "@naisys/database";
 
 export function createLLMail(
   config: Awaited<ReturnType<typeof createConfig>>,
@@ -147,40 +147,52 @@ export function createLLMail(
   }
 
   interface UnreadThread {
-    threadId: number;
-    newMsgId: number;
+    thread_id: number;
+    new_msg_id: number;
   }
   async function getUnreadThreads(): Promise<UnreadThread[]> {
-    return await usingDatabase(async (db) => {
-      const updatedThreads = await db.all<UnreadThread[]>(
-        `SELECT tm.threadId, tm.newMsgId
-        FROM ThreadMembers tm
-        WHERE tm.userId = ? AND tm.newMsgId >= 0 AND tm.archived = 0`,
-        [myUserId],
-      );
+    return await usingDatabase(async (prisma) => {
+      const updatedThreads = await prisma.thread_members.findMany({
+        where: {
+          user_id: myUserId,
+          new_msg_id: { gte: 0 },
+          archived: 0,
+        },
+        select: {
+          thread_id: true,
+          new_msg_id: true,
+        },
+      });
 
       return updatedThreads;
     });
   }
 
   async function listThreads(): Promise<string> {
-    return await usingDatabase(async (db) => {
-      const threads = await db.all(
-        `SELECT t.id, t.subject, max(msg.date) as date, t.tokenCount, 
+    return await usingDatabase(async (prisma) => {
+      const threads = await prisma.$queryRaw<
+        Array<{
+          id: number;
+          subject: string;
+          date: string;
+          token_count: number;
+          members: string;
+        }>
+      >(
+        Prisma.sql`SELECT t.id, t.subject, max(msg.date) as date, t.token_count,
       (
-            SELECT GROUP_CONCAT(u.username, ', ') 
-            FROM ThreadMembers tm 
-            JOIN Users u ON tm.userId = u.id
-            WHERE tm.threadId = t.id
-            GROUP BY tm.threadId
+            SELECT GROUP_CONCAT(u.username, ', ')
+            FROM thread_members tm
+            JOIN users u ON tm.user_id = u.id
+            WHERE tm.thread_id = t.id
+            GROUP BY tm.thread_id
         ) AS members
-        FROM Threads t 
-        JOIN ThreadMessages msg ON t.id = msg.threadId
-        JOIN ThreadMembers member ON t.id = member.threadId
-        WHERE member.userId = ? AND member.archived = 0
+        FROM threads t
+        JOIN thread_messages msg ON t.id = msg.thread_id
+        JOIN thread_members member ON t.id = member.thread_id
+        WHERE member.user_id = ${myUserId} AND member.archived = 0
         GROUP BY t.id, t.subject
         ORDER BY max(msg.date)`,
-        [myUserId],
       );
 
       // Show threads as a table
@@ -192,7 +204,7 @@ export function createLLMail(
             t.subject,
             t.date,
             t.members,
-            `${t.tokenCount}/${_threadTokenMax ? _threadTokenMax : "∞"}`,
+            `${t.token_count}/${_threadTokenMax ? _threadTokenMax : "∞"}`,
           ]),
         ],
         { hsep: " | " },
@@ -214,43 +226,49 @@ export function createLLMail(
 
     const msgTokenCount = validateMsgTokenCount(message);
 
-    return await usingDatabase(async (db) => {
-      await db.run("BEGIN TRANSACTION");
+    return await usingDatabase(async (prisma) => {
+      return await prisma.$transaction(async (tx) => {
+        // Create thread
+        const thread = await tx.threads.create({
+          data: {
+            subject,
+            token_count: msgTokenCount,
+          },
+        });
 
-      // Create thread
-      const thread = await db.run(
-        "INSERT INTO Threads (subject, tokenCount) VALUES (?, ?)",
-        [subject, msgTokenCount],
-      );
+        // Add users
+        for (const username of usernames) {
+          const user = await tx.users.findUnique({
+            where: { username },
+          });
 
-      // Add users
-      for (const username of usernames) {
-        const user = await db.get("SELECT * FROM Users WHERE username = ?", [
-          username,
-        ]);
-
-        if (user) {
-          await db.run(
-            "INSERT INTO ThreadMembers (threadId, userId, newMsgId) VALUES (?, ?, ?)",
-            [thread.lastID, user.id, user.id === myUserId ? -1 : 0],
-          );
-        } else {
-          await db.run("ROLLBACK");
-          throw `Error: User ${username} not found`;
+          if (user) {
+            await tx.thread_members.create({
+              data: {
+                thread_id: thread.id,
+                user_id: user.id,
+                new_msg_id: user.id === myUserId ? -1 : 0,
+              },
+            });
+          } else {
+            throw `Error: User ${username} not found`;
+          }
         }
-      }
 
-      // Add message
-      await db.run(
-        "INSERT INTO ThreadMessages (threadId, userId, message, date) VALUES (?, ?, ?, ?)",
-        [thread.lastID, myUserId, message, new Date().toISOString()],
-      );
+        // Add message
+        await tx.thread_messages.create({
+          data: {
+            thread_id: thread.id,
+            user_id: myUserId,
+            message,
+            date: new Date().toISOString(),
+          },
+        });
 
-      await db.run("COMMIT");
-
-      return simpleMode
-        ? "Mail sent"
-        : `Thread created with id ${thread.lastID}`;
+        return simpleMode
+          ? "Mail sent"
+          : `Thread created with id ${thread.id}`;
+      });
     });
   }
 
@@ -260,38 +278,56 @@ export function createLLMail(
     /** For checking new messages and getting a token count, while not showing the user */
     peek?: boolean,
   ): Promise<string> {
-    return await usingDatabase(async (db) => {
-      const thread = await getThread(db, threadId);
+    return await usingDatabase(async (prisma) => {
+      const thread = await getThread(prisma, threadId);
 
-      const threadMembers = await db.all(
-        `SELECT u.id, u.username
-         FROM ThreadMembers tm
-         JOIN Users u ON tm.userId = u.id
-         WHERE tm.threadId = ?`,
-        [threadId],
-      );
+      const threadMembers = await prisma.thread_members.findMany({
+        where: { thread_id: threadId },
+        select: {
+          users: {
+            select: {
+              id: true,
+              username: true,
+            },
+          },
+        },
+      });
+      // Flatten the nested user object
+      const flattenedMembers = threadMembers.map((tm) => tm.users);
 
-      let unreadFilter = "";
-      if (newMsgId != undefined) {
-        unreadFilter = `AND tm.id >= ${newMsgId}`;
-      }
+      const messages = await prisma.thread_messages.findMany({
+        where: {
+          thread_id: threadId,
+          ...(newMsgId !== undefined ? { id: { gte: newMsgId } } : {}),
+        },
+        include: {
+          users: {
+            select: {
+              username: true,
+              title: true,
+            },
+          },
+        },
+        orderBy: {
+          date: "asc",
+        },
+      });
 
-      const messages = await db.all(
-        `SELECT u.username, u.title, tm.date, tm.message
-         FROM ThreadMessages tm
-         JOIN Users u ON tm.userId = u.id
-         WHERE tm.threadId = ? ${unreadFilter}
-         ORDER BY tm.date`,
-        [threadId],
-      );
+      // Flatten the nested user object for messages
+      const flattenedMessages = messages.map((m) => ({
+        username: m.users.username,
+        title: m.users.title,
+        date: m.date,
+        message: m.message,
+      }));
 
       let threadMessages = "";
 
       // If simple mode just show subject/from/to
       // Buildings strings with \n here because otherwise this code is super hard to read
       if (simpleMode) {
-        for (const message of messages) {
-          const toMembers = threadMembers
+        for (const message of flattenedMessages) {
+          const toMembers = flattenedMembers
             .filter((m) => m.username !== message.username)
             .map((m) => m.username)
             .join(", ");
@@ -308,12 +344,12 @@ export function createLLMail(
       }
       // Else threaded version
       else {
-        const toMembers = threadMembers.map((m) => m.username).join(", ");
+        const toMembers = flattenedMembers.map((m) => m.username).join(", ");
         threadMessages =
           `Thread ${thread.id}: ${thread.subject}\n` +
           `Members: ${toMembers}\n`;
 
-        for (const message of messages) {
+        for (const message of flattenedMessages) {
           threadMessages +=
             `\n` +
             `From: ${message.username}\n` +
@@ -334,42 +370,33 @@ export function createLLMail(
   }
 
   async function markAsRead(threadId: number) {
-    await usingDatabase(async (db) => {
-      await db.run(
-        `UPDATE ThreadMembers 
-        SET newMsgId = -1 
-        WHERE threadId = ? AND userId = ?`,
-        [threadId, myUserId],
+    await usingDatabase(async (prisma) => {
+      await prisma.$executeRaw(
+        Prisma.sql`UPDATE thread_members
+        SET new_msg_id = -1
+        WHERE thread_id = ${threadId} AND user_id = ${myUserId}`,
       );
     });
   }
 
   async function listUsers() {
-    return await usingDatabase(async (db) => {
-      let userList: {
-        username: string;
-        title: string;
-        leadUsername?: string;
-        lastActive: string;
-        active?: boolean;
-      }[] = [];
+    return await usingDatabase(async (prisma) => {
+      let userList = await prisma.users.findMany();
 
-      userList = await db.all("SELECT * FROM Users");
-
-      userList = userList.map((u) => ({
+      const enrichedUserList = userList.map((u) => ({
         ...u,
-        active: u.lastActive
-          ? new Date(u.lastActive).getTime() > Date.now() - 5 * 1000 // 5 seconds
+        active: u.last_active
+          ? new Date(u.last_active).getTime() > Date.now() - 5 * 1000 // 5 seconds
           : false,
       }));
 
       return table(
         [
           ["Username", "Title", "Lead", "Status"],
-          ...userList.map((ul) => [
+          ...enrichedUserList.map((ul) => [
             ul.username,
             ul.title,
-            ul.leadUsername || "",
+            ul.lead_username || "",
             ul.active ? "Online" : "Offline",
           ]),
         ],
@@ -379,8 +406,10 @@ export function createLLMail(
   }
 
   async function getAllUserNames() {
-    return await usingDatabase(async (db) => {
-      const usersList = await db.all("SELECT username FROM Users");
+    return await usingDatabase(async (prisma) => {
+      const usersList = await prisma.users.findMany({
+        select: { username: true },
+      });
 
       return usersList.map((ul) => ul.username);
     });
@@ -392,73 +421,80 @@ export function createLLMail(
     // Validate message does not exceed token limit
     const msgTokenCount = validateMsgTokenCount(message);
 
-    return await usingDatabase(async (db) => {
-      const thread = await getThread(db, threadId);
+    return await usingDatabase(async (prisma) => {
+      const thread = await getThread(prisma, threadId);
 
-      const newThreadTokenTotal = thread.tokenCount + msgTokenCount;
+      const newThreadTokenTotal = thread.token_count + msgTokenCount;
 
       if (_threadTokenMax && newThreadTokenTotal > _threadTokenMax) {
-        throw `Error: Reply is ${msgTokenCount} tokens and thread is ${thread.tokenCount} tokens. 
-Reply would cause thread to exceed total thread token limit of ${_threadTokenMax} tokens. 
+        throw `Error: Reply is ${msgTokenCount} tokens and thread is ${thread.token_count} tokens.
+Reply would cause thread to exceed total thread token limit of ${_threadTokenMax} tokens.
 Consider archiving this thread and starting a new one.`;
       }
 
-      const insertedMessage = await db.run(
-        "INSERT INTO ThreadMessages (threadId, userId, message, date) VALUES (?, ?, ?, ?)",
-        [thread.id, myUserId, message, new Date().toISOString()],
-      );
+      const insertedMessage = await prisma.thread_messages.create({
+        data: {
+          thread_id: thread.id,
+          user_id: myUserId,
+          message,
+          date: new Date().toISOString(),
+        },
+      });
 
       // Mark thread has new message only if it hasnt already been marked
-      await db.run(
-        `UPDATE ThreadMembers 
-        SET newMsgId = ?, archived = 0  
-        WHERE newMsgId = -1 AND threadId = ? AND userId != ?`,
-        [insertedMessage.lastID, thread.id, myUserId],
+      await prisma.$executeRaw(
+        Prisma.sql`UPDATE thread_members
+        SET new_msg_id = ${insertedMessage.id}, archived = 0
+        WHERE new_msg_id = -1 AND thread_id = ${thread.id} AND user_id != ${myUserId}`,
       );
 
       // Update token total
-      await db.run(
-        `UPDATE Threads 
-        SET tokenCount = ? 
-        WHERE id = ?`,
-        [newThreadTokenTotal, thread.id],
-      );
+      await prisma.threads.update({
+        where: { id: thread.id },
+        data: { token_count: newThreadTokenTotal },
+      });
 
       return `Message added to thread ${threadId}`;
     });
   }
 
   async function addUser(threadId: number, username: string) {
-    return await usingDatabase(async (db) => {
-      const thread = await getThread(db, threadId);
-      const user = await getUser(db, username);
+    return await usingDatabase(async (prisma) => {
+      const thread = await getThread(prisma, threadId);
+      const user = await getUser(prisma, username);
 
-      await db.run(
-        "INSERT INTO ThreadMembers (threadId, userId, newMsgId) VALUES (?, ?, 0)",
-        [thread.id, user.id],
-      );
+      await prisma.thread_members.create({
+        data: {
+          thread_id: thread.id,
+          user_id: user.id,
+          new_msg_id: 0,
+        },
+      });
 
       return `User ${username} added to thread ${threadId}`;
     });
   }
 
   async function archiveThreads(threadIds: number[]) {
-    return await usingDatabase(async (db) => {
-      await db.run(
-        `UPDATE ThreadMembers 
-        SET archived = 1 
-        WHERE threadId IN (${threadIds.join(",")}) AND userId = ?`,
-        [myUserId],
-      );
+    return await usingDatabase(async (prisma) => {
+      await prisma.thread_members.updateMany({
+        where: {
+          thread_id: { in: threadIds },
+          user_id: myUserId,
+        },
+        data: {
+          archived: 1,
+        },
+      });
 
       return `Threads ${threadIds.join(",")} archived`;
     });
   }
 
-  async function getThread(db: Database, threadId: number) {
-    const thread = await db.get(`SELECT * FROM Threads WHERE id = ?`, [
-      threadId,
-    ]);
+  async function getThread(prisma: PrismaClient, threadId: number) {
+    const thread = await prisma.threads.findUnique({
+      where: { id: threadId },
+    });
 
     if (!thread) {
       throw `Error: Thread ${threadId} not found`;
@@ -467,10 +503,10 @@ Consider archiving this thread and starting a new one.`;
     return thread;
   }
 
-  async function getUser(db: Database, username: string) {
-    const user = await db.get(`SELECT * FROM Users WHERE username = ?`, [
-      username,
-    ]);
+  async function getUser(prisma: PrismaClient, username: string) {
+    const user = await prisma.users.findUnique({
+      where: { username },
+    });
 
     if (!user) {
       throw `Error: User ${username} not found`;
@@ -491,10 +527,10 @@ Consider archiving this thread and starting a new one.`;
   }
 
   async function hasMultipleUsers(): Promise<boolean> {
-    return await usingDatabase(async (db) => {
-      const users = await db.all("SELECT * FROM Users");
+    return await usingDatabase(async (prisma) => {
+      const count = await prisma.users.count();
 
-      return users.length > 1;
+      return count > 1;
     });
   }
 

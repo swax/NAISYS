@@ -43,41 +43,41 @@ export function createCostTracker(
     };
     const totalCost = calculateCostFromTokens(tokenUsage, model);
 
-    await usingDatabase(async (db) => {
-      await db.run(
-        `INSERT INTO Costs (date, username, subagent, source, model, cost, input_tokens, output_tokens, cache_write_tokens, cache_read_tokens) VALUES (datetime('now'), ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
-          config.agent.username,
-          null,
+    await usingDatabase(async (prisma) => {
+      await prisma.costs.create({
+        data: {
+          date: new Date().toISOString(),
+          username: config.agent.username,
+          subagent: null,
           source,
-          modelKey,
-          totalCost,
-          inputTokens,
-          outputTokens,
-          cacheWriteTokens,
-          cacheReadTokens,
-        ],
-      );
+          model: modelKey,
+          cost: totalCost,
+          input_tokens: inputTokens,
+          output_tokens: outputTokens,
+          cache_write_tokens: cacheWriteTokens,
+          cache_read_tokens: cacheReadTokens,
+        },
+      });
     });
   }
 
   // Record fixed cost for non-token services like image generation
   async function recordCost(cost: number, source: string, modelKey: string) {
-    await usingDatabase(async (db) => {
-      await db.run(
-        `INSERT INTO Costs (date, username, subagent, source, model, cost, input_tokens, output_tokens, cache_write_tokens, cache_read_tokens) VALUES (datetime('now'), ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
-          config.agent.username,
-          null,
+    await usingDatabase(async (prisma) => {
+      await prisma.costs.create({
+        data: {
+          date: new Date().toISOString(),
+          username: config.agent.username,
+          subagent: null,
           source,
-          modelKey,
+          model: modelKey,
           cost,
-          0, // No tokens for fixed cost services
-          0,
-          0,
-          0,
-        ],
-      );
+          input_tokens: 0, // No tokens for fixed cost services
+          output_tokens: 0,
+          cache_write_tokens: 0,
+          cache_read_tokens: 0,
+        },
+      });
     });
   }
 
@@ -97,42 +97,48 @@ export function createCostTracker(
   }
 
   async function getTotalCosts(username?: string) {
-    return usingDatabase(async (db) => {
-      const whereClause = username ? "WHERE username = ?" : "";
-      const params = username ? [username] : [];
+    return usingDatabase(async (prisma) => {
+      const where = username ? { username } : {};
 
-      const result = await db.get(
-        `SELECT sum(cost) as total 
-        FROM Costs 
-        ${whereClause}`,
-        params,
-      );
+      const result = await prisma.costs.aggregate({
+        where,
+        _sum: {
+          cost: true,
+        },
+      });
 
-      return result.total;
+      return Number(result._sum.cost || 0);
     });
   }
 
   async function getCostBreakdown(username?: string) {
-    return usingDatabase(async (db) => {
-      const whereClause = username ? "WHERE username = ?" : "";
-      const params = username ? [username] : [];
+    return usingDatabase(async (prisma) => {
+      const where = username ? { username } : {};
 
-      const result = await db.get(
-        `SELECT sum(input_tokens) as input_tokens, sum(output_tokens) as output_tokens, sum(cache_write_tokens) as cache_write_tokens, sum(cache_read_tokens) as cache_read_tokens 
-        FROM Costs 
-        ${whereClause}`,
-        params,
-      );
+      const result = await prisma.costs.aggregate({
+        where,
+        _sum: {
+          input_tokens: true,
+          output_tokens: true,
+          cache_write_tokens: true,
+          cache_read_tokens: true,
+        },
+      });
 
-      const totalCacheTokens =
-        (result.cache_write_tokens || 0) + (result.cache_read_tokens || 0);
-      const totalInputTokens = (result.input_tokens || 0) + totalCacheTokens;
+      // Convert BigInt to Number for arithmetic operations
+      const inputTokens = Number(result._sum.input_tokens || 0);
+      const outputTokens = Number(result._sum.output_tokens || 0);
+      const cacheWriteTokens = Number(result._sum.cache_write_tokens || 0);
+      const cacheReadTokens = Number(result._sum.cache_read_tokens || 0);
+
+      const totalCacheTokens = cacheWriteTokens + cacheReadTokens;
+      const totalInputTokens = inputTokens + totalCacheTokens;
 
       return {
-        inputTokens: result.input_tokens || 0,
-        outputTokens: result.output_tokens || 0,
-        cacheWriteTokens: result.cache_write_tokens || 0,
-        cacheReadTokens: result.cache_read_tokens || 0,
+        inputTokens,
+        outputTokens,
+        cacheWriteTokens,
+        cacheReadTokens,
         totalInputTokens,
         totalCacheTokens,
       };
@@ -140,20 +146,33 @@ export function createCostTracker(
   }
 
   async function getCostBreakdownWithModels(username?: string) {
-    return usingDatabase(async (db) => {
-      const whereClause = username ? "WHERE username = ?" : "";
-      const params = username ? [username] : [];
+    return usingDatabase(async (prisma) => {
+      const result = await prisma.costs.groupBy({
+        by: ["model"],
+        ...(username ? { where: { username } } : {}),
+        _sum: {
+          cost: true,
+          input_tokens: true,
+          output_tokens: true,
+          cache_write_tokens: true,
+          cache_read_tokens: true,
+        },
+        orderBy: {
+          _sum: {
+            cost: "desc",
+          },
+        },
+      });
 
-      const result = await db.all(
-        `SELECT model, sum(cost) as total_cost, sum(input_tokens) as input_tokens, sum(output_tokens) as output_tokens, sum(cache_write_tokens) as cache_write_tokens, sum(cache_read_tokens) as cache_read_tokens 
-        FROM Costs 
-        ${whereClause}
-        GROUP BY model
-        ORDER BY sum(cost) DESC`,
-        params,
-      );
-
-      return result;
+      // Convert BigInt values to Number for compatibility
+      return result.map((row) => ({
+        model: row.model,
+        total_cost: Number(row._sum.cost || 0),
+        input_tokens: Number(row._sum.input_tokens || 0),
+        output_tokens: Number(row._sum.output_tokens || 0),
+        cache_write_tokens: Number(row._sum.cache_write_tokens || 0),
+        cache_read_tokens: Number(row._sum.cache_read_tokens || 0),
+      }));
     });
   }
 
@@ -222,11 +241,10 @@ export function createCostTracker(
   }
 
   async function clearCosts(username?: string) {
-    return usingDatabase(async (db) => {
-      const whereClause = username ? "WHERE username = ?" : "";
-      const params = username ? [username] : [];
+    return usingDatabase(async (prisma) => {
+      const where = username ? { username } : {};
 
-      await db.run(`DELETE FROM Costs ${whereClause}`, params);
+      await prisma.costs.deleteMany({ where });
     });
   }
 
@@ -365,12 +383,13 @@ export function createCostTracker(
       return; // Skip subagent breakdown when showing specific user
     }
 
-    await usingDatabase(async (db) => {
-      const result = await db.all(
-        `SELECT username, sum(cost) as total_cost
-        FROM Costs
-        GROUP BY username`,
-      );
+    await usingDatabase(async (prisma) => {
+      const result = await prisma.costs.groupBy({
+        by: ["username"],
+        _sum: {
+          cost: true,
+        },
+      });
 
       if (result.length <= 1) {
         return;
@@ -378,7 +397,7 @@ export function createCostTracker(
 
       for (const row of result) {
         output.comment(
-          `  ${row.username} cost $${(row.total_cost || 0).toFixed(2)}`,
+          `  ${row.username} cost $${Number(row._sum.cost || 0).toFixed(2)}`,
         );
       }
     });

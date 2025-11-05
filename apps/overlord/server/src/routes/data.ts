@@ -1,9 +1,13 @@
 import { FastifyInstance, FastifyPluginOptions } from "fastify";
 import {
   NaisysDataRequest,
+  NaisysDataRequestSchema,
   NaisysDataResponse,
+  NaisysDataResponseSchema,
   ReadStatusUpdateRequest,
-} from "shared/src/data-types.js";
+  ReadStatusUpdateRequestSchema,
+  ReadStatusUpdateResponseSchema,
+} from "shared";
 import { getNaisysData } from "../services/dataService.js";
 import {
   updateLastReadLogId,
@@ -18,7 +22,22 @@ export default async function dataRoutes(
   fastify.get<{
     Querystring: NaisysDataRequest;
     Reply: NaisysDataResponse;
-  }>("/data", {}, async (request, reply) => {
+  }>(
+    "/data",
+    {
+      schema: {
+        description:
+          "Get NAISYS data including agents, logs, and mail with pagination",
+        tags: ["Data"],
+        querystring: NaisysDataRequestSchema,
+        response: {
+          200: NaisysDataResponseSchema,
+          400: NaisysDataResponseSchema,
+          500: NaisysDataResponseSchema,
+        },
+      },
+    },
+    async (request, reply) => {
     try {
       const { logsAfter, logsLimit, mailAfter, mailLimit } = request.query;
 
@@ -90,6 +109,16 @@ export default async function dataRoutes(
   }>(
     "/read-status",
     {
+      schema: {
+        description: "Update read status for an agent's logs and mail",
+        tags: ["Data"],
+        body: ReadStatusUpdateRequestSchema,
+        response: {
+          200: ReadStatusUpdateResponseSchema,
+          500: ReadStatusUpdateResponseSchema,
+        },
+        security: [{ cookieAuth: [] }],
+      },
       preHandler: validateSession,
     },
     async (request, reply) => {

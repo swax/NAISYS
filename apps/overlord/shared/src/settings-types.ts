@@ -1,17 +1,21 @@
 import { z } from "zod";
 
+// Zod schemas
 export const SettingsSchema = z.object({
   naisysDataFolderPath: z.string(),
 });
 
+export const SettingsRequestSchema = z.object({
+  settings: SettingsSchema,
+});
+
+export const SettingsResponseSchema = z.object({
+  success: z.boolean(),
+  message: z.string(),
+  settings: SettingsSchema.optional(),
+});
+
+// Inferred types
 export type Settings = z.infer<typeof SettingsSchema>;
-
-export interface SettingsRequest {
-  settings: Settings;
-}
-
-export interface SettingsResponse {
-  success: boolean;
-  message: string;
-  settings?: Settings;
-}
+export type SettingsRequest = z.infer<typeof SettingsRequestSchema>;
+export type SettingsResponse = z.infer<typeof SettingsResponseSchema>;
