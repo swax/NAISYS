@@ -2,6 +2,12 @@ import { createPrismaClient } from "@naisys/database";
 import { createConfig } from "../config.js";
 import * as pathService from "./pathService.js";
 import { PrismaClient } from "@naisys/database";
+import { exec } from "child_process";
+import { promisify } from "util";
+import { fileURLToPath } from "url";
+import { dirname, join } from "path";
+
+const execAsync = promisify(exec);
 
 export async function createDatabaseService(
   config: Awaited<ReturnType<typeof createConfig>>,
@@ -18,6 +24,9 @@ export async function createDatabaseService(
   await initDatabase();
 
   async function initDatabase() {
+    // Run migrations to create database schema if it doesn't exist
+    await runMigrations();
+
     // If user is not in the db, add them
     const user = await prisma.users.findUnique({
       where: { username: config.agent.username },
@@ -70,6 +79,51 @@ export async function createDatabaseService(
     // Start the last_active updater after user is initialized
     updateLastActive();
     updateInterval = setInterval(updateLastActive, 2000);
+  }
+
+  async function runMigrations(): Promise<void> {
+    try {
+      // Check if database needs initialization by checking if users table exists
+      let needsInit = false;
+      try {
+        await prisma.$queryRaw`SELECT 1 FROM users LIMIT 1`;
+      } catch (error) {
+        // Table doesn't exist, need to run migrations
+        needsInit = true;
+      }
+
+      if (!needsInit) {
+        return; // Database already initialized
+      }
+
+      console.log("Initializing database...");
+
+      // Find the @naisys/database package location
+      const databasePackageUrl = import.meta.resolve("@naisys/database");
+      const databasePackagePath = fileURLToPath(databasePackageUrl);
+      const databasePackageDir = dirname(dirname(databasePackagePath));
+      const schemaPath = join(databasePackageDir, "prisma", "schema.prisma");
+
+      // Run Prisma migrations from the database package directory
+      const { stdout, stderr } = await execAsync(
+        `npx prisma migrate deploy --schema="${schemaPath}"`,
+        {
+          cwd: databasePackageDir,
+          env: {
+            ...process.env,
+            DATABASE_URL: `file:${databasePath}`,
+          },
+        },
+      );
+
+      if (stdout) console.log(stdout);
+      if (stderr && !stderr.includes("Loaded Prisma config")) {
+        console.error(stderr);
+      }
+    } catch (error) {
+      console.error("Error running migrations:", error);
+      throw error;
+    }
   }
 
   async function updateLastActive(): Promise<void> {

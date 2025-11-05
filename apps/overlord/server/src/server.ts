@@ -23,7 +23,12 @@ export const startServer = async (logType: "logToConsole" | "logToFile") => {
             transport: {
               target: "pino/file",
               options: {
-                destination: path.join(process.cwd(), "logs", "server.log"),
+                destination: path.join(
+                  process.env.NAISYS_FOLDER || "",
+                  "logs",
+                  "overlord",
+                  "server.log",
+                ),
                 mkdir: true,
               },
             },
@@ -85,6 +90,6 @@ export const startServer = async (logType: "logToConsole" | "logToFile") => {
 // Start server if this file is run directly
 if (import.meta.url === `file://${process.argv[1]}`) {
   dotenv.config();
-  
+
   startServer("logToConsole");
 }
