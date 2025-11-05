@@ -20,7 +20,7 @@ export function createDreamMaker(
     }
 
     return await usingDatabase(async (prisma) => {
-      const row = await prisma.dreamLog.findFirst({
+      const row = await prisma.dream_log.findFirst({
         where: { username: config.agent.username },
         orderBy: { date: "desc" },
         select: { dream: true },
@@ -88,7 +88,7 @@ and how to do it.`;
 
   async function storeDream(dream: string) {
     await usingDatabase(async (prisma) => {
-      await prisma.dreamLog.create({
+      await prisma.dream_log.create({
         data: {
           username: config.agent.username,
           date: new Date().toISOString(),

@@ -8,7 +8,7 @@ datasource db {
   url      = "file:${env('NAISYS_FOLDER')}/database/naisys.sqlite"
 }
 
-model ContextLog {
+model context_log {
   id       Int    @id @default(autoincrement())
   username String
   role     String
@@ -17,10 +17,10 @@ model ContextLog {
   message  String
   date     String
 
-  @@index([id(sort: Desc)], map: "idx_contextlog_id_desc")
+  @@index([id(sort: Desc)], map: "idx_context_log_id_desc")
 }
 
-model Costs {
+model costs {
   id                 Int     @id @default(autoincrement())
   date               String
   username           String
@@ -36,58 +36,58 @@ model Costs {
   @@index([id(sort: Desc)], map: "idx_costs_id_desc")
 }
 
-model DreamLog {
+model dream_log {
   id       Int    @id @default(autoincrement())
   username String
   date     String
   dream    String
 
-  @@index([id(sort: Desc)], map: "idx_dreamlog_id_desc")
+  @@index([id(sort: Desc)], map: "idx_dream_log_id_desc")
 }
 
-model ThreadMembers {
-  id       Int     @id @default(autoincrement())
-  threadId Int
-  userId   Int
-  newMsgId Int     @default(-1)
-  archived Int     @default(0)
-  Users    Users   @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  Threads  Threads @relation(fields: [threadId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+model thread_members {
+  id        Int     @id @default(autoincrement())
+  thread_id Int
+  user_id   Int
+  new_msg_id Int     @default(-1)
+  archived  Int     @default(0)
+  users     users   @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  threads   threads @relation(fields: [thread_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
-  @@unique([threadId, userId], map: "sqlite_autoindex_ThreadMembers_1")
-  @@index([threadId], map: "idx_threadmembers_threadid")
+  @@unique([thread_id, user_id], map: "unq_thread_members_thread_id_user_id")
+  @@index([thread_id], map: "idx_thread_members_thread_id")
 }
 
-model ThreadMessages {
-  id       Int     @id @default(autoincrement())
-  threadId Int
-  userId   Int
-  message  String
-  date     String
-  Users    Users   @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  Threads  Threads @relation(fields: [threadId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+model thread_messages {
+  id        Int     @id @default(autoincrement())
+  thread_id Int
+  user_id   Int
+  message   String
+  date      String
+  users     users   @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  threads   threads @relation(fields: [thread_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
-  @@index([threadId], map: "idx_threadmessages_threadid")
-  @@index([id(sort: Desc)], map: "idx_threadmessages_id_desc")
+  @@index([thread_id], map: "idx_thread_messages_thread_id")
+  @@index([id(sort: Desc)], map: "idx_thread_messages_id_desc")
 }
 
-model Threads {
-  id             Int              @id @default(autoincrement())
-  subject        String
-  tokenCount     Int              @default(0)
-  ThreadMembers  ThreadMembers[]
-  ThreadMessages ThreadMessages[]
+model threads {
+  id              Int               @id @default(autoincrement())
+  subject         String
+  token_count     Int               @default(0)
+  thread_members  thread_members[]
+  thread_messages thread_messages[]
 
   @@index([id(sort: Desc)], map: "idx_threads_id_desc")
 }
 
-model Users {
-  id             Int              @id @default(autoincrement())
-  username       String           @unique(map: "sqlite_autoindex_Users_1")
-  title          String
-  agentPath      String           @unique(map: "sqlite_autoindex_Users_2")
-  leadUsername   String?
-  lastActive     String?          @default("")
-  ThreadMembers  ThreadMembers[]
-  ThreadMessages ThreadMessages[]
+model users {
+  id              Int               @id @default(autoincrement())
+  username        String            @unique(map: "unq_users_username")
+  title           String
+  agent_path      String            @unique(map: "unq_users_agent_path")
+  lead_username   String?
+  last_active     String?           @default("")
+  thread_members  thread_members[]
+  thread_messages thread_messages[]
 }

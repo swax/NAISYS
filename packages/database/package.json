@@ -9,7 +9,6 @@
     "compile": "tsc",
     "prisma:generate": "prisma generate",
     "prisma:studio": "prisma studio",
-    "prisma:pull": "prisma db pull",
     "build": "npm run prisma:generate && npm run compile",
     "prepare": "npm run build"
   },

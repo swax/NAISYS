@@ -16,20 +16,20 @@ export async function getThreadMessages(
 ): Promise<ThreadMessage[]> {
   try {
     const dbMessages = await usingNaisysDb(async (prisma) => {
-      return await prisma.threadMessages.findMany({
+      return await prisma.thread_messages.findMany({
         where: after !== undefined && after > 0 ? { id: { gt: after } } : undefined,
         orderBy: { id: 'desc' },
         take: limit,
         select: {
           id: true,
-          threadId: true,
-          userId: true,
+          thread_id: true,
+          user_id: true,
           message: true,
           date: true,
-          Threads: {
+          threads: {
             select: { subject: true },
           },
-          Users: {
+          users: {
             select: { username: true },
           },
         },
@@ -40,20 +40,20 @@ export async function getThreadMessages(
     dbMessages.sort((a, b) => a.id - b.id);
 
     // Get unique thread IDs to fetch members
-    const threadIds = [...new Set(dbMessages.map((msg) => msg.threadId))];
+    const threadIds = [...new Set(dbMessages.map((msg) => msg.thread_id))];
 
     // Fetch members for all threads
     const membersMap = await getThreadMembersMap(threadIds);
 
     const messages = dbMessages.map((msg) => ({
       id: msg.id,
-      threadId: msg.threadId,
-      userId: msg.userId,
-      username: msg.Users.username,
-      subject: msg.Threads.subject,
+      threadId: msg.thread_id,
+      userId: msg.user_id,
+      username: msg.users.username,
+      subject: msg.threads.subject,
       message: msg.message,
       date: msg.date,
-      members: membersMap[msg.threadId] || [],
+      members: membersMap[msg.thread_id] || [],
     }));
 
     // Used for tracking unread mails
@@ -76,14 +76,14 @@ async function getThreadMembersMap(
 
   try {
     const dbMembers = await usingNaisysDb(async (prisma) => {
-      return await prisma.threadMembers.findMany({
-        where: { threadId: { in: threadIds } },
+      return await prisma.thread_members.findMany({
+        where: { thread_id: { in: threadIds } },
         select: {
-          threadId: true,
-          userId: true,
-          newMsgId: true,
+          thread_id: true,
+          user_id: true,
+          new_msg_id: true,
           archived: true,
-          Users: {
+          users: {
             select: { username: true },
           },
         },
@@ -93,14 +93,14 @@ async function getThreadMembersMap(
     const membersMap: Record<number, ThreadMember[]> = {};
 
     dbMembers.forEach((member) => {
-      if (!membersMap[member.threadId]) {
-        membersMap[member.threadId] = [];
+      if (!membersMap[member.thread_id]) {
+        membersMap[member.thread_id] = [];
       }
 
-      membersMap[member.threadId].push({
-        userId: member.userId,
-        username: member.Users.username,
-        newMsgId: member.newMsgId,
+      membersMap[member.thread_id].push({
+        userId: member.user_id,
+        username: member.users.username,
+        newMsgId: member.new_msg_id,
         archived: member.archived === 1,
       });
     });
@@ -151,25 +151,25 @@ export async function sendMessage(
       const thread = await prisma.threads.create({
         data: {
           subject,
-          tokenCount: 0, // TODO
+          token_count: 0, // TODO
         },
       });
 
       const threadId = thread.id;
 
       // Add both users to the thread
-      await prisma.threadMembers.createMany({
+      await prisma.thread_members.createMany({
         data: [
-          { threadId, userId: fromUser.id, newMsgId: -1 },
-          { threadId, userId: toUser.id, newMsgId: 0 },
+          { thread_id: threadId, user_id: fromUser.id, new_msg_id: -1 },
+          { thread_id: threadId, user_id: toUser.id, new_msg_id: 0 },
         ],
       });
 
-      // 4. Insert new message into ThreadMessages table
-      const threadMessage = await prisma.threadMessages.create({
+      // 4. Insert new message into thread_messages table
+      const threadMessage = await prisma.thread_messages.create({
         data: {
-          threadId,
-          userId: fromUser.id,
+          thread_id: threadId,
+          user_id: fromUser.id,
           message: cleanMessage,
           date: new Date().toISOString(),
         },
@@ -199,7 +199,7 @@ export async function sendMessage(
 
       // Update the message with attachment info
       await usingNaisysDb(async (prisma) => {
-        await prisma.threadMessages.update({
+        await prisma.thread_messages.update({
           where: { id: messageId },
           data: { message: updatedMessage },
         });

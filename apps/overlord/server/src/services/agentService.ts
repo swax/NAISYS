@@ -11,9 +11,9 @@ export async function getAgents(): Promise<Agent[]> {
           id: true,
           username: true,
           title: true,
-          agentPath: true,
-          leadUsername: true,
-          lastActive: true,
+          agent_path: true,
+          lead_username: true,
+          last_active: true,
         },
       });
     });
@@ -23,10 +23,10 @@ export async function getAgents(): Promise<Agent[]> {
         id: user.id,
         name: user.username,
         title: user.title,
-        online: isAgentOnline(user.lastActive || ""),
-        lastActive: user.lastActive || "",
-        agentPath: user.agentPath,
-        leadUsername: user.leadUsername || undefined,
+        online: isAgentOnline(user.last_active || ""),
+        lastActive: user.last_active || "",
+        agentPath: user.agent_path,
+        leadUsername: user.lead_username || undefined,
       });
     });
   } catch (error) {
