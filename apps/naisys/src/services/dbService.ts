@@ -30,8 +30,8 @@ export async function createDatabaseService(
           data: {
             username: config.agent.username,
             title: config.agent.title,
-            agentPath: config.agent.hostpath,
-            leadUsername: config.agent.leadAgent,
+            agent_path: config.agent.hostpath,
+            lead_username: config.agent.leadAgent,
           },
         });
 
@@ -47,15 +47,15 @@ export async function createDatabaseService(
     else {
       myUserId = user.id;
 
-      if (user.agentPath != config.agent.hostpath) {
-        throw `Error: User ${config.agent.username} already exists in the database with a different config path (${user.agentPath})`;
+      if (user.agent_path != config.agent.hostpath) {
+        throw `Error: User ${config.agent.username} already exists in the database with a different config path (${user.agent_path})`;
       }
 
       if (
         config.agent.leadAgent &&
-        config.agent.leadAgent != user.leadUsername
+        config.agent.leadAgent != user.lead_username
       ) {
-        throw `Error: User ${config.agent.username} already exists in the database with a different lead agent (${user.leadUsername})`;
+        throw `Error: User ${config.agent.username} already exists in the database with a different lead agent (${user.lead_username})`;
       }
 
       // Update user title in database
@@ -67,7 +67,7 @@ export async function createDatabaseService(
       }
     }
 
-    // Start the lastActive updater after user is initialized
+    // Start the last_active updater after user is initialized
     updateLastActive();
     updateInterval = setInterval(updateLastActive, 2000);
   }
@@ -78,10 +78,10 @@ export async function createDatabaseService(
     try {
       await prisma.users.update({
         where: { id: myUserId },
-        data: { lastActive: new Date().toISOString() },
+        data: { last_active: new Date().toISOString() },
       });
     } catch (error) {
-      console.error("Error updating lastActive:", error);
+      console.error("Error updating last_active:", error);
     }
   }
 

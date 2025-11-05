@@ -56,7 +56,7 @@ export function createLogService(
 
   async function write(message: LlmMessage) {
     const insertedId = await usingDatabase(async (prisma) => {
-      const inserted = await prisma.contextLog.create({
+      const inserted = await prisma.context_log.create({
         data: {
           username: config.agent.username,
           role: toSimpleRole(message.role),
