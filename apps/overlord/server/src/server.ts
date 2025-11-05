@@ -2,8 +2,16 @@ import cookie from "@fastify/cookie";
 import cors from "@fastify/cors";
 import multipart from "@fastify/multipart";
 import staticFiles from "@fastify/static";
+import swagger from "@fastify/swagger";
+import swaggerUi from "@fastify/swagger-ui";
 import dotenv from "dotenv";
 import Fastify from "fastify";
+import {
+  jsonSchemaTransform,
+  serializerCompiler,
+  validatorCompiler,
+  type ZodTypeProvider,
+} from "fastify-type-provider-zod";
 import path from "path";
 import { fileURLToPath } from "url";
 import { initOverlordDatabase } from "./database/overlordDatabase.js";
@@ -42,7 +50,11 @@ export const startServer = async (logType: "logToConsole" | "logToFile") => {
               },
             },
           },
-  });
+  }).withTypeProvider<ZodTypeProvider>();
+
+  // Set Zod validator and serializer compilers
+  fastify.setValidatorCompiler(validatorCompiler);
+  fastify.setSerializerCompiler(serializerCompiler);
 
   await fastify.register(cors, {
     origin:
@@ -52,6 +64,41 @@ export const startServer = async (logType: "logToConsole" | "logToFile") => {
   await fastify.register(cookie);
 
   await fastify.register(multipart);
+
+  // Register Swagger
+  await fastify.register(swagger, {
+    openapi: {
+      info: {
+        title: "NAISYS Overlord API",
+        description: "API documentation for NAISYS Overlord server",
+        version: "1.0.0",
+      },
+      servers: [
+        {
+          url: "http://localhost:3001",
+          description: "Development server",
+        },
+      ],
+      components: {
+        securitySchemes: {
+          cookieAuth: {
+            type: "apiKey",
+            in: "cookie",
+            name: "session_token",
+          },
+        },
+      },
+    },
+    transform: jsonSchemaTransform,
+  });
+
+  await fastify.register(swaggerUi, {
+    routePrefix: "/documentation",
+    uiConfig: {
+      docExpansion: "list",
+      deepLinking: false,
+    },
+  });
 
   fastify.register(apiRoutes, { prefix: "/api" });
 

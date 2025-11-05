@@ -1,5 +1,4 @@
-import { LogRole, LogSource, LogType } from "shared";
-import { LogEntry } from "shared/src/log-types.js";
+import { LogEntry, LogRole, LogSource, LogType } from "shared";
 import { usingNaisysDb } from "../database/naisysDatabase.js";
 import { updateLatestLogIds } from "./readService.js";
 

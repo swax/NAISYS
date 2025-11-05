@@ -1,7 +1,13 @@
 import { FastifyInstance, FastifyPluginOptions } from "fastify";
 import { getSettings, saveSettings } from "../services/settingsService.js";
 import { validateSession } from "./access.js";
-import { SettingsRequest, SettingsResponse, SettingsSchema } from "shared";
+import {
+  SettingsRequest,
+  SettingsRequestSchema,
+  SettingsResponse,
+  SettingsResponseSchema,
+  SettingsSchema,
+} from "shared";
 
 export default async function settingsRoutes(
   fastify: FastifyInstance,
@@ -10,6 +16,17 @@ export default async function settingsRoutes(
   // Get settings endpoint
   fastify.get<{ Reply: SettingsResponse }>(
     "/settings",
+    {
+      schema: {
+        description: "Get application settings",
+        tags: ["Settings"],
+        response: {
+          200: SettingsResponseSchema,
+          500: SettingsResponseSchema,
+        },
+        security: [{ cookieAuth: [] }],
+      },
+    },
     async (request, reply) => {
       if (!(await validateSession(request, reply))) {
         return {
@@ -50,6 +67,19 @@ export default async function settingsRoutes(
   // Save settings endpoint
   fastify.post<{ Body: SettingsRequest; Reply: SettingsResponse }>(
     "/settings",
+    {
+      schema: {
+        description: "Save application settings",
+        tags: ["Settings"],
+        body: SettingsRequestSchema,
+        response: {
+          200: SettingsResponseSchema,
+          400: SettingsResponseSchema,
+          500: SettingsResponseSchema,
+        },
+        security: [{ cookieAuth: [] }],
+      },
+    },
     async (request, reply) => {
       if (!(await validateSession(request, reply))) {
         return {
