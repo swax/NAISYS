@@ -1,5 +1,10 @@
 import { FastifyInstance, FastifyPluginOptions } from "fastify";
-import { SendMailRequest, SendMailResponse } from "shared";
+import {
+  SendMailRequest,
+  SendMailRequestSchema,
+  SendMailResponse,
+  SendMailResponseSchema,
+} from "shared";
 import { sendMessage } from "../services/mailService.js";
 import { validateSession } from "./access.js";
 import { MultipartFile } from "@fastify/multipart";
@@ -11,6 +16,18 @@ export default async function mailRoutes(
   fastify.post<{ Reply: SendMailResponse }>(
     "/send-mail",
     {
+      schema: {
+        description:
+          "Send email with optional attachments. Supports JSON and multipart/form-data",
+        tags: ["Mail"],
+        body: SendMailRequestSchema,
+        response: {
+          200: SendMailResponseSchema,
+          400: SendMailResponseSchema,
+          500: SendMailResponseSchema,
+        },
+        security: [{ cookieAuth: [] }],
+      },
       preHandler: validateSession,
     },
     async (request, reply) => {

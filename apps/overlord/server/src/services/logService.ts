@@ -1,44 +1,28 @@
-import { LogRole, LogSource, LogType } from "shared";
-import { LogEntry } from "shared/src/log-types.js";
-import { selectFromNaisysDb } from "../database/naisysDatabase.js";
+import { LogEntry, LogRole, LogSource, LogType } from "shared";
+import { usingNaisysDb } from "../database/naisysDatabase.js";
 import { updateLatestLogIds } from "./readService.js";
-
-interface NaisysLogEntry {
-  id: number;
-  username: string;
-  role: LogRole;
-  source: LogSource;
-  type: LogType;
-  message: string;
-  date: string;
-}
 
 export async function getLogs(
   after?: number,
   limit: number = 1000,
 ): Promise<LogEntry[]> {
   try {
-    let sql = `
-      SELECT id, username, role, source, type, message, date
-      FROM ContextLog
-    `;
-    const params: any[] = [];
-
-    const conditions: string[] = [];
-
-    if (after !== undefined && after > 0) {
-      conditions.push("id > ?");
-      params.push(after);
-    }
-
-    if (conditions.length > 0) {
-      sql += " WHERE " + conditions.join(" AND ");
-    }
-
-    sql += " ORDER BY id DESC LIMIT ?";
-    params.push(limit);
-
-    const dbLogs = await selectFromNaisysDb<NaisysLogEntry[]>(sql, params);
+    const dbLogs = await usingNaisysDb(async (prisma) => {
+      return await prisma.context_log.findMany({
+        where: after !== undefined && after > 0 ? { id: { gt: after } } : undefined,
+        orderBy: { id: 'desc' },
+        take: limit,
+        select: {
+          id: true,
+          username: true,
+          role: true,
+          source: true,
+          type: true,
+          message: true,
+          date: true,
+        },
+      });
+    });
 
     // Resort ascending
     dbLogs.sort((a, b) => a.id - b.id);
@@ -46,9 +30,9 @@ export async function getLogs(
     const logs = dbLogs.map((log) => ({
       id: log.id,
       username: log.username,
-      role: log.role,
-      source: log.source,
-      type: log.type,
+      role: log.role as LogRole,
+      source: log.source as LogSource,
+      type: log.type as LogType,
       message: log.message,
       date: log.date,
     }));

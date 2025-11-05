@@ -34,23 +34,25 @@ NAISYS Overlord is a management application that provides a monitoring interface
 - `shared/` - TypeScript types and utilities shared between client and server
 - `client/` - React frontend using Vite, Mantine UI, and React Query
 - `server/` - Fastify backend with TypeScript
-- `naisys-db-schema.ts` - Database schema definitions for NAISYS system
+- `packages/database/` - Shared database package using Prisma ORM
 
 ### Database Architecture (Dual Database System)
 
-The application uses two separate databases:
+The application uses two separate databases managed through Prisma ORM:
 
 1. **NAISYS Database** (Read-only)
    - Location: `{NAISYS_FOLDER}/database/naisys.sqlite`
    - Contains: Agent data, logs, mail/messaging system
-   - Tables: `Users`, `ContextLog`, `ThreadMessages`, `Threads`, `ThreadMembers`
-   - Accessed via: `server/src/database/naisysDatabase.ts`
+   - Tables: `users`, `context_log`, `thread_messages`, `threads`, `thread_members`, `costs`, `dream_log`
+   - Accessed via: Prisma Client from `packages/database`
 
 2. **Overlord Database** (Read/Write)
    - Location: `{NAISYS_FOLDER}/database/overlord.db`
    - Contains: Session management, settings, read status tracking
    - Tables: `sessions`, `settings`
-   - Accessed via: `server/src/database/overlordDatabase.ts`
+   - Accessed via: Prisma Client from `packages/database`
+
+Database schema is defined in `packages/database/prisma/schema.prisma`.
 
 ### Core Services Layer
 
@@ -98,7 +100,7 @@ Routes are organized in `server/src/routes/`:
 
 ### Important Code Patterns
 
-- All database operations use Promise-based wrappers with proper error handling
+- All database operations use Prisma Client with type-safe queries
 - Services return typed data structures defined in `shared/src/`
 - Read status updates are automatically triggered by data fetching operations
 - Agent online status is determined by activity within last 5 seconds
@@ -108,5 +110,5 @@ Routes are organized in `server/src/routes/`:
 
 - The application serves the React client from `/overlord/` prefix in production
 - CORS is configured for development (http://localhost:5173)
-- Database connections are opened/closed per query for simplicity
+- Database connections are managed by Prisma with connection pooling
 - Session cleanup happens automatically when expired sessions are accessed

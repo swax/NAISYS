@@ -1,6 +1,4 @@
-import { Agent, ReadStatus } from "shared";
-import { LogEntry } from "shared/src/log-types.js";
-import { ThreadMessage } from "shared/src/mail-types.js";
+import { Agent, LogEntry, ReadStatus, ThreadMessage } from "shared";
 import { getAgents } from "./agentService.js";
 import { getLogs } from "./logService.js";
 import { getThreadMessages } from "./mailService.js";

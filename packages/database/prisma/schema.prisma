@@ -1,0 +1,93 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:${env('NAISYS_FOLDER')}/database/naisys.sqlite"
+}
+
+model context_log {
+  id       Int    @id @default(autoincrement())
+  username String
+  role     String
+  source   String
+  type     String
+  message  String
+  date     String
+
+  @@index([id(sort: Desc)], map: "idx_context_log_id_desc")
+}
+
+model costs {
+  id                 Int     @id @default(autoincrement())
+  date               String
+  username           String
+  subagent           String?
+  source             String
+  model              String
+  cost               Float?  @default(0)
+  input_tokens       Int?    @default(0)
+  output_tokens      Int?    @default(0)
+  cache_write_tokens Int?    @default(0)
+  cache_read_tokens  Int?    @default(0)
+
+  @@index([id(sort: Desc)], map: "idx_costs_id_desc")
+}
+
+model dream_log {
+  id       Int    @id @default(autoincrement())
+  username String
+  date     String
+  dream    String
+
+  @@index([id(sort: Desc)], map: "idx_dream_log_id_desc")
+}
+
+model thread_members {
+  id        Int     @id @default(autoincrement())
+  thread_id Int
+  user_id   Int
+  new_msg_id Int     @default(-1)
+  archived  Int     @default(0)
+  users     users   @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  threads   threads @relation(fields: [thread_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([thread_id, user_id], map: "unq_thread_members_thread_id_user_id")
+  @@index([thread_id], map: "idx_thread_members_thread_id")
+}
+
+model thread_messages {
+  id        Int     @id @default(autoincrement())
+  thread_id Int
+  user_id   Int
+  message   String
+  date      String
+  users     users   @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  threads   threads @relation(fields: [thread_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([thread_id], map: "idx_thread_messages_thread_id")
+  @@index([id(sort: Desc)], map: "idx_thread_messages_id_desc")
+}
+
+model threads {
+  id              Int               @id @default(autoincrement())
+  subject         String
+  token_count     Int               @default(0)
+  thread_members  thread_members[]
+  thread_messages thread_messages[]
+
+  @@index([id(sort: Desc)], map: "idx_threads_id_desc")
+}
+
+model users {
+  id              Int               @id @default(autoincrement())
+  username        String            @unique(map: "unq_users_username")
+  title           String
+  agent_path      String            @unique(map: "unq_users_agent_path")
+  lead_username   String?
+  last_active     String?           @default("")
+  thread_members  thread_members[]
+  thread_messages thread_messages[]
+}

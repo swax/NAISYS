@@ -312,8 +312,8 @@ export function createCommandLoop(
 
     // Get the new messages for each thread
     const newMessages: string[] = [];
-    for (const { threadId, newMsgId } of unreadThreads) {
-      newMessages.push(await llmail.readThread(threadId, newMsgId, true));
+    for (const { thread_id, new_msg_id } of unreadThreads) {
+      newMessages.push(await llmail.readThread(thread_id, new_msg_id, true));
     }
 
     // Check that token max for session will not be exceeded
@@ -334,7 +334,7 @@ export function createCommandLoop(
       }
 
       for (const unreadThread of unreadThreads) {
-        await llmail.markAsRead(unreadThread.threadId);
+        await llmail.markAsRead(unreadThread.thread_id);
       }
 
       mailBlackoutCountdown = config.agent.mailBlackoutCycles || 0;
@@ -348,7 +348,7 @@ export function createCommandLoop(
     // LLM will in many cases end the session here, when the new session starts
     // this code will run again, and show a full preview of the messages
     else {
-      const threadIds = unreadThreads.map((t) => t.threadId).join(", ");
+      const threadIds = unreadThreads.map((t) => t.thread_id).join(", ");
 
       await contextManager.append(
         `New Messages on Thread ID ${threadIds}\n` +

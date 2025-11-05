@@ -1,0 +1,28 @@
+{
+  "name": "@naisys/database",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Shared database schema and Prisma client for NAISYS",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "prisma/schema.prisma",
+    "prisma/migrations"
+  ],
+  "scripts": {
+    "compile": "tsc",
+    "prisma:generate": "prisma generate",
+    "prisma:studio": "prisma studio",
+    "build": "npm run prisma:generate && npm run compile",
+    "prepare": "npm run build"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.18.0",
+    "dotenv": "^17.2.3",
+    "prisma": "^6.18.0"
+  }
+}

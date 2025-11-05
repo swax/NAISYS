@@ -46,10 +46,12 @@ The application will be available at `http://localhost:5173` (development) or `h
 
 ### Database Architecture
 
-The application uses a dual database system:
+The application uses a dual database system managed through Prisma ORM:
 
 - **NAISYS Database** (Read-only): Contains agent data, logs, and messaging
 - **Overlord Database** (Read/Write): Manages sessions, settings, and read status
+
+Database schema is defined in `packages/database/prisma/schema.prisma`.
 
 ### Core Features
 
@@ -73,8 +75,7 @@ The application uses a dual database system:
 ```
 ├── client/          # React frontend
 ├── server/          # Fastify backend
-├── shared/          # Shared TypeScript types
-└── naisys-db-schema.ts  # Database schema definitions
+└── shared/          # Shared TypeScript types
 ```
 
 ### Environment Variables
