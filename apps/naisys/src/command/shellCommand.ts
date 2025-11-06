@@ -1,14 +1,14 @@
-import { createConfig } from "../config.js";
-import { createContextManager } from "../llm/contextManager.js";
-import { createInputMode } from "../utils/inputMode.js";
+import { Config } from "../config.js";
+import { ContextManager } from "../llm/contextManager.js";
+import { InputModeService } from "../utils/inputMode.js";
 import * as utilities from "../utils/utilities.js";
-import { createShellWrapper } from "./shellWrapper.js";
+import { ShellWrapper } from "./shellWrapper.js";
 
 export function createShellCommand(
-  config: Awaited<ReturnType<typeof createConfig>>,
-  shellWrapper: ReturnType<typeof createShellWrapper>,
-  contextManager: ReturnType<typeof createContextManager>,
-  inputMode: ReturnType<typeof createInputMode>,
+  config: Config,
+  shellWrapper: ShellWrapper,
+  contextManager: ContextManager,
+  inputMode: InputModeService,
 ) {
   const isShellSuspended = () => shellWrapper.isShellSuspended();
   const getCommandElapsedTimeString = () =>
@@ -85,3 +85,5 @@ export function createShellCommand(
     handleCommand,
   };
 }
+
+export type ShellCommand = ReturnType<typeof createShellCommand>;

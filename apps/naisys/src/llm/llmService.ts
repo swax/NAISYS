@@ -3,21 +3,21 @@ import { MessageParam } from "@anthropic-ai/sdk/resources/messages.mjs";
 import { GoogleGenAI } from "@google/genai";
 import OpenAI from "openai";
 import { ChatCompletionCreateParamsNonStreaming } from "openai/resources";
-import { createConfig } from "../config.js";
-import { createDatabaseService } from "../services/dbService.js";
-import { createCommandTools } from "./commandTool.js";
-import { createCostTracker } from "./costTracker.js";
-import { createLLModels, LlmApiType } from "./llModels.js";
+import { Config } from "../config.js";
+import { DatabaseService } from "../services/dbService.js";
+import { CommandTools } from "./commandTool.js";
+import { CostTracker } from "./costTracker.js";
+import { LLModels, LlmApiType } from "./llModels.js";
 import { LlmMessage, LlmRole } from "./llmDtos.js";
 
 type QuerySources = "console" | "write-protection" | "dream" | "llmynx";
 
 export function createLLMService(
-  config: Awaited<ReturnType<typeof createConfig>>,
-  costTracker: ReturnType<typeof createCostTracker>,
-  tools: ReturnType<typeof createCommandTools>,
-  llModels: ReturnType<typeof createLLModels>,
-  { myUserId }: Awaited<ReturnType<typeof createDatabaseService>>,
+  config: Config,
+  costTracker: CostTracker,
+  tools: CommandTools,
+  llModels: LLModels,
+  { myUserId }: DatabaseService,
 ) {
   async function query(
     modelKey: string,
@@ -375,3 +375,5 @@ export function createLLMService(
     query,
   };
 }
+
+export type LLMService = ReturnType<typeof createLLMService>;

@@ -1,9 +1,9 @@
-import { createConfig } from "../config.js";
+import { Config } from "../config.js";
 import { LlmRole } from "../llm/llmDtos.js";
-import { createLLMService } from "../llm/llmService.js";
-import { CommandProtection } from "../utils/enums.js";
-import { createOutputService } from "../utils/output.js";
-import { createPromptBuilder } from "./promptBuilder.js";
+import { LLMService } from "../llm/llmService.js";
+import { CommandProtection as CommandProtectionEnum } from "../utils/enums.js";
+import { OutputService } from "../utils/output.js";
+import { PromptBuilder } from "./promptBuilder.js";
 
 interface ValidateCommandResponse {
   commandAllowed: boolean;
@@ -11,20 +11,20 @@ interface ValidateCommandResponse {
 }
 
 export function createCommandProtection(
-  config: Awaited<ReturnType<typeof createConfig>>,
-  promptBuilder: ReturnType<typeof createPromptBuilder>,
-  llmService: ReturnType<typeof createLLMService>,
-  output: ReturnType<typeof createOutputService>,
+  config: Config,
+  promptBuilder: PromptBuilder,
+  llmService: LLMService,
+  output: OutputService,
 ) {
   async function validateCommand(
     command: string,
   ): Promise<ValidateCommandResponse> {
     switch (config.agent.commandProtection) {
-      case CommandProtection.None:
+      case CommandProtectionEnum.None:
         return {
           commandAllowed: true,
         };
-      case CommandProtection.Manual: {
+      case CommandProtectionEnum.Manual: {
         const confirmation = await promptBuilder.getCommandConfirmation();
         const commandAllowed = confirmation.toLowerCase() === "y";
         return {
@@ -32,7 +32,7 @@ export function createCommandProtection(
           rejectReason: commandAllowed ? undefined : "Command denied by admin",
         };
       }
-      case CommandProtection.Auto:
+      case CommandProtectionEnum.Auto:
         return await autoValidateCommand(command);
       default:
         throw "Write protection not configured correctly";
@@ -78,3 +78,5 @@ Reply with 'allow' to allow the command, otherwise you can give a reason for you
     validateCommand,
   };
 }
+
+export type CommandProtection = ReturnType<typeof createCommandProtection>;

@@ -1,15 +1,15 @@
 import table from "text-table";
-import { createConfig } from "../config.js";
-import { createDatabaseService } from "../services/dbService.js";
+import { Config } from "../config.js";
+import { DatabaseService } from "../services/dbService.js";
 import * as utilities from "../utils/utilities.js";
 import { Prisma, PrismaClient } from "@naisys/database";
 
 export function createLLMail(
-  config: Awaited<ReturnType<typeof createConfig>>,
+  config: Config,
   {
     myUserId,
     usingDatabase,
-  }: Awaited<ReturnType<typeof createDatabaseService>>,
+  }: DatabaseService,
 ) {
   /** Threading is not currently used in `simpleMode` so this doesn't matter */
   const _threadTokenMax = config.agent.mailMessageTokenMax
@@ -545,3 +545,5 @@ Consider archiving this thread and starting a new one.`;
     hasMultipleUsers,
   };
 }
+
+export type LLMail = ReturnType<typeof createLLMail>;

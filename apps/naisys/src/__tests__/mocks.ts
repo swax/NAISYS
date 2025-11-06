@@ -1,25 +1,27 @@
 import { jest, test } from "@jest/globals";
-import { createCommandProtection } from "../command/commandProtection.js";
-import { createPromptBuilder } from "../command/promptBuilder.js";
-import { createShellCommand } from "../command/shellCommand.js";
-import { createGenImg } from "../features/genimg.js";
-import { createLLMail } from "../features/llmail.js";
-import { createLLMynx } from "../features/llmynx.js";
-import { createSubagentService } from "../features/subagent.js";
-import { createWorkspacesFeature } from "../features/workspaces.js";
-import { createContextManager } from "../llm/contextManager.js";
-import { createCostTracker } from "../llm/costTracker.js";
-import { createDreamMaker } from "../llm/dreamMaker.js";
-import { LlmMessage, LlmRole } from "../llm/llmDtos.js";
-import { createDatabaseService } from "../services/dbService.js";
-import { createLogService } from "../services/logService.js";
-import { createOutputService } from "../utils/output.js";
 import { PrismaClient } from "@naisys/database";
+import { CommandProtection } from "../command/commandProtection.js";
+import { PromptBuilder } from "../command/promptBuilder.js";
+import { ShellCommand } from "../command/shellCommand.js";
+import { GenImg } from "../features/genimg.js";
+import { LLMail } from "../features/llmail.js";
+import { LLMynx } from "../features/llmynx.js";
+import { SubagentService } from "../features/subagent.js";
+import { WorkspacesFeature } from "../features/workspaces.js";
+import { ContextManager } from "../llm/contextManager.js";
+import { CostTracker } from "../llm/costTracker.js";
+import { DreamMaker } from "../llm/dreamMaker.js";
+import { LlmMessage, LlmRole } from "../llm/llmDtos.js";
+import { DatabaseService } from "../services/dbService.js";
+import { LogService } from "../services/logService.js";
+import { OutputService } from "../utils/output.js";
 
-export function createMockDatabaseService(): Awaited<ReturnType<typeof createDatabaseService>> {
+export function createMockDatabaseService(): DatabaseService {
   return {
     myUserId: 1,
-    usingDatabase: async <T,>(run: (prisma: PrismaClient) => Promise<T>): Promise<T> => {
+    usingDatabase: async <T>(
+      run: (prisma: PrismaClient) => Promise<T>,
+    ): Promise<T> => {
       throw new Error("Mock database not implemented");
     },
     cleanup: () => {},
@@ -31,14 +33,14 @@ export function createMockLogService() {
     write: async (msg: LlmMessage) => 0,
     toSimpleRole: (role: LlmRole) => "LLM",
     recordContext: (contextLog: string) => {},
-  } satisfies ReturnType<typeof createLogService>;
+  } satisfies LogService;
 }
 
 export function createMockPromptBuilder(
   userHostPrompt: string,
   userHostPathPrompt: string,
 ) {
-  const promptBuilder: ReturnType<typeof createPromptBuilder> = {
+  const promptBuilder: PromptBuilder = {
     getPrompt: jest.fn(() => Promise.resolve(`${userHostPathPrompt}$ `)),
     getUserHostPrompt: jest.fn(() => userHostPrompt),
     getUserHostPathPrompt: jest.fn(() => Promise.resolve(userHostPathPrompt)),
@@ -50,7 +52,7 @@ export function createMockPromptBuilder(
 }
 
 export function createMockShellCommand() {
-  const shellCommand: ReturnType<typeof createShellCommand> = {
+  const shellCommand: ShellCommand = {
     handleCommand: jest.fn(() => Promise.resolve(false)),
     isShellSuspended: jest.fn(() => false),
     getCommandElapsedTimeString: jest.fn(() => ""),
@@ -62,11 +64,11 @@ export function createMockShellCommand() {
 export function createMockGenImg() {
   return {
     handleCommand: jest.fn(() => Promise.resolve("")),
-  } satisfies ReturnType<typeof createGenImg>;
+  } satisfies GenImg;
 }
 
 export function createMockSubagent() {
-  const subagent: ReturnType<typeof createSubagentService> = {
+  const subagent: SubagentService = {
     handleCommand: jest.fn(() => Promise.resolve("")),
     getRunningSubagentNames: jest.fn(() => []),
     getTerminationEvents: jest.fn(() => []),
@@ -79,7 +81,7 @@ export function createMockSubagent() {
 }
 
 export function createMockLLMail() {
-  const llmail: ReturnType<typeof createLLMail> = {
+  const llmail: LLMail = {
     simpleMode: false,
     handleCommand: jest.fn(() =>
       Promise.resolve({ content: "", pauseSeconds: 0 }),
@@ -96,7 +98,7 @@ export function createMockLLMail() {
 }
 
 export function createMockLLMynx() {
-  const llmynx: ReturnType<typeof createLLMynx> = {
+  const llmynx: LLMynx = {
     handleCommand: jest.fn(() => Promise.resolve("")),
     clear: jest.fn(),
   };
@@ -105,7 +107,7 @@ export function createMockLLMynx() {
 }
 
 export function createMockDreamMaker() {
-  const dreamMaker: ReturnType<typeof createDreamMaker> = {
+  const dreamMaker: DreamMaker = {
     goodmorning: jest.fn(() => Promise.resolve("")),
     goodnight: jest.fn(() => Promise.resolve("")),
   };
@@ -124,7 +126,7 @@ export function createMockContextManager() {
     getMessages: jest.fn((): LlmMessage[] => []),
   };
 
-  const contextManager: ReturnType<typeof createContextManager> = {
+  const contextManager: ContextManager = {
     append,
     clear,
     getTokenCount,
@@ -138,7 +140,7 @@ export function createMockContextManager() {
 }
 
 export function createMockWorkspacesFeature() {
-  const workspaces: ReturnType<typeof createWorkspacesFeature> = {
+  const workspaces: WorkspacesFeature = {
     getLatestContent: jest.fn(() => ""),
     displayActive: jest.fn(),
   };
@@ -147,7 +149,7 @@ export function createMockWorkspacesFeature() {
 }
 
 export function createMockCostTracker() {
-  const costTracker: ReturnType<typeof createCostTracker> = {
+  const costTracker: CostTracker = {
     recordTokens: jest.fn(() => Promise.resolve()),
     recordCost: jest.fn(() => Promise.resolve()),
     calculateCostFromTokens: jest.fn(() => 0),
@@ -172,7 +174,7 @@ export function createMockCostTracker() {
 }
 
 export function createMockOutputService() {
-  const output: ReturnType<typeof createOutputService> = {
+  const output: OutputService = {
     write: jest.fn(),
     comment: jest.fn(),
     commentAndLog: jest.fn(() => Promise.resolve()),
@@ -205,7 +207,7 @@ export function createMockCommandProtection() {
 
   return {
     validateCommand,
-  } satisfies ReturnType<typeof createCommandProtection>;
+  } satisfies CommandProtection;
 }
 
 export function createMockConfig() {

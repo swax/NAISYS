@@ -1,8 +1,8 @@
 import { Type } from "@google/genai";
-import { createConfig } from "../config.js";
+import { Config } from "../config.js";
 
 export function createCommandTools(
-  config: Awaited<ReturnType<typeof createConfig>>,
+  config: Config,
 ) {
   const escapedQuoteRegex = /"/g;
   const escapedBackslashRegex = /\\/g;
@@ -319,3 +319,5 @@ export function createCommandTools(
     getCommandsFromGoogleToolUse,
   };
 }
+
+export type CommandTools = ReturnType<typeof createCommandTools>;

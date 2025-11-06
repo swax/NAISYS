@@ -4,10 +4,10 @@ import * as fs from "fs";
 import * as os from "os";
 import stripAnsi from "strip-ansi";
 import treeKill from "tree-kill";
-import { createConfig } from "../config.js";
+import { Config } from "../config.js";
 import * as pathService from "../services/pathService.js";
 import { NaisysPath } from "../services/pathService.js";
-import { createOutputService } from "../utils/output.js";
+import { OutputService } from "../utils/output.js";
 import { getCleanEnv } from "../utils/utilities.js";
 
 enum ShellEvent {
@@ -17,8 +17,8 @@ enum ShellEvent {
 }
 
 export function createShellWrapper(
-  config: Awaited<ReturnType<typeof createConfig>>,
-  output: ReturnType<typeof createOutputService>,
+  config: Config,
+  output: OutputService,
 ) {
   let _process: ChildProcessWithoutNullStreams | undefined;
   let _currentProcessId: number | undefined;
@@ -527,3 +527,5 @@ ${command.trim()}`;
     getCommandElapsedTimeString,
   };
 }
+
+export type ShellWrapper = ReturnType<typeof createShellWrapper>;

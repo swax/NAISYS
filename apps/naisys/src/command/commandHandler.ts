@@ -1,20 +1,20 @@
 import chalk from "chalk";
-import { createConfig } from "../config.js";
-import { createGenImg } from "../features/genimg.js";
-import { createLLMail } from "../features/llmail.js";
-import { createLLMynx } from "../features/llmynx.js";
-import { createSubagentService } from "../features/subagent.js";
-import { createContextManager } from "../llm/contextManager.js";
-import { createCostTracker } from "../llm/costTracker.js";
-import { createDreamMaker } from "../llm/dreamMaker.js";
+import { Config } from "../config.js";
+import { GenImg } from "../features/genimg.js";
+import { LLMail } from "../features/llmail.js";
+import { LLMynx } from "../features/llmynx.js";
+import { SubagentService } from "../features/subagent.js";
+import { ContextManager } from "../llm/contextManager.js";
+import { CostTracker } from "../llm/costTracker.js";
+import { DreamMaker } from "../llm/dreamMaker.js";
 import { ContentSource } from "../llm/llmDtos.js";
-import { createDatabaseService } from "../services/dbService.js";
-import { createInputMode } from "../utils/inputMode.js";
-import { createOutputService, OutputColor } from "../utils/output.js";
+import { DatabaseService } from "../services/dbService.js";
+import { InputModeService } from "../utils/inputMode.js";
+import { OutputColor, OutputService } from "../utils/output.js";
 import * as utilities from "../utils/utilities.js";
-import { createCommandProtection } from "./commandProtection.js";
-import { createPromptBuilder } from "./promptBuilder.js";
-import { createShellCommand } from "./shellCommand.js";
+import { CommandProtection } from "./commandProtection.js";
+import { PromptBuilder } from "./promptBuilder.js";
+import { ShellCommand } from "./shellCommand.js";
 
 export enum NextCommandAction {
   Continue,
@@ -29,20 +29,20 @@ interface NextCommandResponse {
 }
 
 export function createCommandHandler(
-  config: Awaited<ReturnType<typeof createConfig>>,
-  commandProtection: ReturnType<typeof createCommandProtection>,
-  promptBuilder: ReturnType<typeof createPromptBuilder>,
-  shellCommand: ReturnType<typeof createShellCommand>,
-  genimg: ReturnType<typeof createGenImg>,
-  subagent: ReturnType<typeof createSubagentService>,
-  llmail: ReturnType<typeof createLLMail>,
-  llmynx: ReturnType<typeof createLLMynx>,
-  dreamMaker: ReturnType<typeof createDreamMaker>,
-  contextManager: ReturnType<typeof createContextManager>,
-  costTracker: ReturnType<typeof createCostTracker>,
-  { myUserId }: Awaited<ReturnType<typeof createDatabaseService>>,
-  output: ReturnType<typeof createOutputService>,
-  inputMode: ReturnType<typeof createInputMode>,
+  config: Config,
+  commandProtection: CommandProtection,
+  promptBuilder: PromptBuilder,
+  shellCommand: ShellCommand,
+  genimg: GenImg,
+  subagent: SubagentService,
+  llmail: LLMail,
+  llmynx: LLMynx,
+  dreamMaker: DreamMaker,
+  contextManager: ContextManager,
+  costTracker: CostTracker,
+  { myUserId }: DatabaseService,
+  output: OutputService,
+  inputMode: InputModeService,
 ) {
   async function processCommand(
     prompt: string,
@@ -398,3 +398,5 @@ export function createCommandHandler(
     },
   };
 }
+
+export type CommandHandler = ReturnType<typeof createCommandHandler>;

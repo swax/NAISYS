@@ -1,6 +1,6 @@
 import chalk from "chalk";
 import { LlmMessageType, LlmRole } from "../llm/llmDtos.js";
-import { createLogService } from "../services/logService.js";
+import { LogService } from "../services/logService.js";
 
 export enum OutputColor {
   comment = "greenBright",
@@ -12,7 +12,7 @@ export enum OutputColor {
 }
 
 export function createOutputService(
-  logService: ReturnType<typeof createLogService>,
+  logService: LogService,
 ) {
   const consoleBuffer: string[] = [];
 
@@ -92,3 +92,5 @@ export function createOutputService(
     setConsoleEnabled,
   };
 }
+
+export type OutputService = ReturnType<typeof createOutputService>;

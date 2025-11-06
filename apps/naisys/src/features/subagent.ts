@@ -4,14 +4,14 @@ import yaml from "js-yaml";
 import path from "path";
 import table from "text-table";
 import { AgentManager } from "../agentManager.js";
-import { AgentConfig, createConfig } from "../config.js";
+import { AgentConfig, Config } from "../config.js";
 import * as pathService from "../services/pathService.js";
 import { NaisysPath } from "../services/pathService.js";
 import { agentNames } from "../utils/agentNames.js";
-import { createInputMode } from "../utils/inputMode.js";
-import { createOutputService, OutputColor } from "../utils/output.js";
+import { InputModeService } from "../utils/inputMode.js";
+import { OutputService, OutputColor } from "../utils/output.js";
 import { getCleanEnv, shuffle } from "../utils/utilities.js";
-import { createLLMail } from "./llmail.js";
+import { LLMail } from "./llmail.js";
 
 interface Subagent {
   id?: number;
@@ -24,11 +24,11 @@ interface Subagent {
 }
 
 export function createSubagentService(
-  config: Awaited<ReturnType<typeof createConfig>>,
-  llmail: ReturnType<typeof createLLMail>,
-  output: ReturnType<typeof createOutputService>,
+  config: Config,
+  llmail: LLMail,
+  output: OutputService,
   agentManager: AgentManager,
-  inputMode: ReturnType<typeof createInputMode>,
+  inputMode: InputModeService,
 ) {
   const _subagents: Subagent[] = [];
 
@@ -584,3 +584,5 @@ export function createSubagentService(
     switchEventTriggered,
   };
 }
+
+export type SubagentService = ReturnType<typeof createSubagentService>;

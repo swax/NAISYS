@@ -1,39 +1,39 @@
 import chalk from "chalk";
 import * as readline from "readline";
-import { createConfig } from "../config.js";
-import { createLLMail } from "../features/llmail.js";
-import { createLLMynx } from "../features/llmynx.js";
-import { createSubagentService } from "../features/subagent.js";
-import { createWorkspacesFeature } from "../features/workspaces.js";
-import { createContextManager } from "../llm/contextManager.js";
-import { createDreamMaker } from "../llm/dreamMaker.js";
+import { Config } from "../config.js";
+import { LLMail } from "../features/llmail.js";
+import { LLMynx } from "../features/llmynx.js";
+import { SubagentService } from "../features/subagent.js";
+import { WorkspacesFeature } from "../features/workspaces.js";
+import { ContextManager } from "../llm/contextManager.js";
+import { DreamMaker } from "../llm/dreamMaker.js";
 import { ContentSource, LlmRole } from "../llm/llmDtos.js";
 import { LlmApiType } from "../llm/llModels.js";
-import { createLLMService } from "../llm/llmService.js";
-import { createLogService } from "../services/logService.js";
-import { createInputMode } from "../utils/inputMode.js";
-import { createOutputService, OutputColor } from "../utils/output.js";
+import { LLMService } from "../llm/llmService.js";
+import { LogService } from "../services/logService.js";
+import { InputModeService } from "../utils/inputMode.js";
+import { OutputColor, OutputService } from "../utils/output.js";
 import * as utilities from "../utils/utilities.js";
-import { createCommandHandler, NextCommandAction } from "./commandHandler.js";
-import { createPromptBuilder } from "./promptBuilder.js";
-import { createShellCommand } from "./shellCommand.js";
+import { CommandHandler, NextCommandAction } from "./commandHandler.js";
+import { PromptBuilder } from "./promptBuilder.js";
+import { ShellCommand } from "./shellCommand.js";
 
 export function createCommandLoop(
-  config: Awaited<ReturnType<typeof createConfig>>,
-  commandHandler: ReturnType<typeof createCommandHandler>,
-  promptBuilder: ReturnType<typeof createPromptBuilder>,
-  shellCommand: ReturnType<typeof createShellCommand>,
-  subagent: ReturnType<typeof createSubagentService>,
-  llmail: ReturnType<typeof createLLMail>,
-  llmynx: ReturnType<typeof createLLMynx>,
-  dreamMaker: ReturnType<typeof createDreamMaker>,
-  contextManager: ReturnType<typeof createContextManager>,
-  workspaces: ReturnType<typeof createWorkspacesFeature>,
-  llmService: ReturnType<typeof createLLMService>,
+  config: Config,
+  commandHandler: CommandHandler,
+  promptBuilder: PromptBuilder,
+  shellCommand: ShellCommand,
+  subagent: SubagentService,
+  llmail: LLMail,
+  llmynx: LLMynx,
+  dreamMaker: DreamMaker,
+  contextManager: ContextManager,
+  workspaces: WorkspacesFeature,
+  llmService: LLMService,
   systemMessage: string,
-  output: ReturnType<typeof createOutputService>,
-  logService: ReturnType<typeof createLogService>,
-  inputMode: ReturnType<typeof createInputMode>,
+  output: OutputService,
+  logService: LogService,
+  inputMode: InputModeService,
 ) {
   async function run(abortSignal?: AbortSignal) {
     await output.commentAndLog(`AGENT STARTED`);
@@ -430,3 +430,5 @@ export function createCommandLoop(
     run,
   };
 }
+
+export type CommandLoop = ReturnType<typeof createCommandLoop>;

@@ -309,3 +309,5 @@ export async function createConfig(agentPath: string, agentRuntimeId: number) {
     resolveConfigVars,
   };
 }
+
+export type Config = Awaited<ReturnType<typeof createConfig>>;

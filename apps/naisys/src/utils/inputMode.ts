@@ -38,3 +38,5 @@ export function createInputMode() {
     isDebug,
   };
 }
+
+export type InputModeService = ReturnType<typeof createInputMode>;

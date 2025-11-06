@@ -1,16 +1,16 @@
-import { createConfig } from "../config.js";
-import { createDatabaseService } from "../services/dbService.js";
-import { createOutputService } from "../utils/output.js";
-import { createContextManager } from "./contextManager.js";
+import { Config } from "../config.js";
+import { DatabaseService } from "../services/dbService.js";
+import { OutputService } from "../utils/output.js";
+import { ContextManager } from "./contextManager.js";
 import { ContentSource, LlmRole } from "./llmDtos.js";
-import { createLLMService } from "./llmService.js";
+import { LLMService } from "./llmService.js";
 
 export function createDreamMaker(
-  config: Awaited<ReturnType<typeof createConfig>>,
-  contextManager: ReturnType<typeof createContextManager>,
-  llmService: ReturnType<typeof createLLMService>,
-  { usingDatabase, myUserId }: Awaited<ReturnType<typeof createDatabaseService>>,
-  output: ReturnType<typeof createOutputService>,
+  config: Config,
+  contextManager: ContextManager,
+  llmService: LLMService,
+  { usingDatabase, myUserId }: DatabaseService,
+  output: OutputService,
 ) {
   let _lastDream = "";
 
@@ -103,3 +103,5 @@ and how to do it.`;
     goodnight,
   };
 }
+
+export type DreamMaker = ReturnType<typeof createDreamMaker>;
