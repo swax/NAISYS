@@ -1,19 +1,20 @@
 -- CreateTable
 CREATE TABLE "context_log" (
     "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-    "username" TEXT NOT NULL,
+    "user_id" INTEGER NOT NULL,
     "role" TEXT NOT NULL,
     "source" TEXT NOT NULL,
     "type" TEXT NOT NULL,
     "message" TEXT NOT NULL,
-    "date" TEXT NOT NULL
+    "date" TEXT NOT NULL,
+    CONSTRAINT "context_log_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION
 );
 
 -- CreateTable
 CREATE TABLE "costs" (
     "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     "date" TEXT NOT NULL,
-    "username" TEXT NOT NULL,
+    "user_id" INTEGER NOT NULL,
     "subagent" TEXT,
     "source" TEXT NOT NULL,
     "model" TEXT NOT NULL,
@@ -21,15 +22,17 @@ CREATE TABLE "costs" (
     "input_tokens" INTEGER DEFAULT 0,
     "output_tokens" INTEGER DEFAULT 0,
     "cache_write_tokens" INTEGER DEFAULT 0,
-    "cache_read_tokens" INTEGER DEFAULT 0
+    "cache_read_tokens" INTEGER DEFAULT 0,
+    CONSTRAINT "costs_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION
 );
 
 -- CreateTable
 CREATE TABLE "dream_log" (
     "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-    "username" TEXT NOT NULL,
+    "user_id" INTEGER NOT NULL,
     "date" TEXT NOT NULL,
-    "dream" TEXT NOT NULL
+    "dream" TEXT NOT NULL,
+    CONSTRAINT "dream_log_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION
 );
 
 -- CreateTable
@@ -71,14 +74,39 @@ CREATE TABLE "users" (
     "last_active" TEXT DEFAULT ''
 );
 
+-- CreateTable
+CREATE TABLE "run_session" (
+    "user_id" INTEGER NOT NULL,
+    "run_id" INTEGER NOT NULL,
+    "session_id" INTEGER NOT NULL,
+    "start_date" TEXT NOT NULL,
+    "end_date" TEXT,
+    "last_active" TEXT NOT NULL,
+    "model_name" TEXT NOT NULL,
+    "total_lines" INTEGER NOT NULL DEFAULT 0,
+    "total_cost" REAL NOT NULL DEFAULT 0,
+
+    PRIMARY KEY ("user_id", "run_id", "session_id"),
+    CONSTRAINT "run_session_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION
+);
+
 -- CreateIndex
 CREATE INDEX "idx_context_log_id_desc" ON "context_log"("id" DESC);
+
+-- CreateIndex
+CREATE INDEX "idx_context_log_user_id" ON "context_log"("user_id");
 
 -- CreateIndex
 CREATE INDEX "idx_costs_id_desc" ON "costs"("id" DESC);
 
 -- CreateIndex
+CREATE INDEX "idx_costs_user_id" ON "costs"("user_id");
+
+-- CreateIndex
 CREATE INDEX "idx_dream_log_id_desc" ON "dream_log"("id" DESC);
+
+-- CreateIndex
+CREATE INDEX "idx_dream_log_user_id" ON "dream_log"("user_id");
 
 -- CreateIndex
 CREATE INDEX "idx_thread_members_thread_id" ON "thread_members"("thread_id");
@@ -100,3 +128,9 @@ CREATE UNIQUE INDEX "unq_users_username" ON "users"("username");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "unq_users_agent_path" ON "users"("agent_path");
+
+-- CreateIndex
+CREATE INDEX "idx_runsession_user_id" ON "run_session"("user_id");
+
+-- CreateIndex
+CREATE INDEX "idx_runsession_last_active" ON "run_session"("last_active");

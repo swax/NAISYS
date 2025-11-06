@@ -58,7 +58,7 @@ export async function createAgentRuntime(
     logService,
     inputMode,
   );
-  const llmService = createLLMService(config, costTracker, tools, llModels);
+  const llmService = createLLMService(config, costTracker, tools, llModels, dbService);
   const dreamMaker = createDreamMaker(
     config,
     contextManager,
@@ -120,6 +120,7 @@ export async function createAgentRuntime(
     dreamMaker,
     contextManager,
     costTracker,
+    dbService,
     output,
     inputMode,
   );

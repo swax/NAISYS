@@ -9,7 +9,7 @@ export function createDreamMaker(
   config: Awaited<ReturnType<typeof createConfig>>,
   contextManager: ReturnType<typeof createContextManager>,
   llmService: ReturnType<typeof createLLMService>,
-  { usingDatabase }: Awaited<ReturnType<typeof createDatabaseService>>,
+  { usingDatabase, myUserId }: Awaited<ReturnType<typeof createDatabaseService>>,
   output: ReturnType<typeof createOutputService>,
 ) {
   let _lastDream = "";
@@ -21,7 +21,7 @@ export function createDreamMaker(
 
     return await usingDatabase(async (prisma) => {
       const row = await prisma.dream_log.findFirst({
-        where: { username: config.agent.username },
+        where: { user_id: myUserId },
         orderBy: { date: "desc" },
         select: { dream: true },
       });
@@ -90,7 +90,7 @@ and how to do it.`;
     await usingDatabase(async (prisma) => {
       await prisma.dream_log.create({
         data: {
-          username: config.agent.username,
+          user_id: myUserId,
           date: new Date().toISOString(),
           dream,
         },

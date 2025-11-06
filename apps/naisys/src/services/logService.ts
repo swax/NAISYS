@@ -8,7 +8,7 @@ import { createConfig } from "../config.js";
 
 export function createLogService(
   config: Awaited<ReturnType<typeof createConfig>>,
-  { usingDatabase }: Awaited<ReturnType<typeof createDatabaseService>>,
+  { usingDatabase, myUserId }: Awaited<ReturnType<typeof createDatabaseService>>,
 ) {
   const _combinedLogFilePath = new NaisysPath(
     `${config.websiteFolder || config.naisysFolder}/logs/combined-log.html`,
@@ -58,7 +58,7 @@ export function createLogService(
     const insertedId = await usingDatabase(async (prisma) => {
       const inserted = await prisma.context_log.create({
         data: {
-          username: config.agent.username,
+          user_id: myUserId,
           role: toSimpleRole(message.role),
           source: message.source?.toString() || "",
           type: message.type || "",
@@ -118,3 +118,5 @@ export function createLogService(
     recordContext,
   };
 }
+
+export type LogService = Awaited<ReturnType<typeof createLogService>>;

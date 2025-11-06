@@ -5,6 +5,7 @@ import {
   createMockConfig,
   createMockContextManager,
   createMockCostTracker,
+  createMockDatabaseService,
   createMockDreamMaker,
   createMockGenImg,
   createMockInputMode,
@@ -38,6 +39,7 @@ function createPopFirstCommand() {
     createMockDreamMaker(),
     createMockContextManager(),
     createMockCostTracker(),
+    createMockDatabaseService(),
     createMockOutputService(),
     createMockInputMode(),
   );

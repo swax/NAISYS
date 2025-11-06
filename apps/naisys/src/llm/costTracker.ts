@@ -21,7 +21,7 @@ interface TokenUsage {
 export function createCostTracker(
   config: Awaited<ReturnType<typeof createConfig>>,
   llModels: ReturnType<typeof createLLModels>,
-  { usingDatabase }: Awaited<ReturnType<typeof createDatabaseService>>,
+  { usingDatabase, myUserId }: Awaited<ReturnType<typeof createDatabaseService>>,
   output: ReturnType<typeof createOutputService>,
 ) {
   // Record token usage for LLM calls - calculate and store total cost
@@ -47,7 +47,7 @@ export function createCostTracker(
       await prisma.costs.create({
         data: {
           date: new Date().toISOString(),
-          username: config.agent.username,
+          user_id: myUserId,
           subagent: null,
           source,
           model: modelKey,
@@ -67,7 +67,7 @@ export function createCostTracker(
       await prisma.costs.create({
         data: {
           date: new Date().toISOString(),
-          username: config.agent.username,
+          user_id: myUserId,
           subagent: null,
           source,
           model: modelKey,
@@ -96,9 +96,9 @@ export function createCostTracker(
     return inputCost + outputCost + cacheWriteCost + cacheReadCost;
   }
 
-  async function getTotalCosts(username?: string) {
+  async function getTotalCosts(userId?: number) {
     return usingDatabase(async (prisma) => {
-      const where = username ? { username } : {};
+      const where = userId ? { user_id: userId } : {};
 
       const result = await prisma.costs.aggregate({
         where,
@@ -111,9 +111,9 @@ export function createCostTracker(
     });
   }
 
-  async function getCostBreakdown(username?: string) {
+  async function getCostBreakdown(userId?: number) {
     return usingDatabase(async (prisma) => {
-      const where = username ? { username } : {};
+      const where = userId ? { user_id: userId } : {};
 
       const result = await prisma.costs.aggregate({
         where,
@@ -145,11 +145,11 @@ export function createCostTracker(
     });
   }
 
-  async function getCostBreakdownWithModels(username?: string) {
+  async function getCostBreakdownWithModels(userId?: number) {
     return usingDatabase(async (prisma) => {
       const result = await prisma.costs.groupBy({
         by: ["model"],
-        ...(username ? { where: { username } } : {}),
+        ...(userId ? { where: { user_id: userId } } : {}),
         _sum: {
           cost: true,
           input_tokens: true,
@@ -240,17 +240,17 @@ export function createCostTracker(
     };
   }
 
-  async function clearCosts(username?: string) {
+  async function clearCosts(userId?: number) {
     return usingDatabase(async (prisma) => {
-      const where = username ? { username } : {};
+      const where = userId ? { user_id: userId } : {};
 
       await prisma.costs.deleteMany({ where });
     });
   }
 
-  async function printCosts(username?: string) {
-    const costBreakdown = await getCostBreakdown(username);
-    const modelBreakdowns = await getCostBreakdownWithModels(username);
+  async function printCosts(userId?: number) {
+    const costBreakdown = await getCostBreakdown(userId);
+    const modelBreakdowns = await getCostBreakdownWithModels(userId);
 
     // Use stored total costs
     const totalStoredCost = modelBreakdowns.reduce(
@@ -282,7 +282,7 @@ export function createCostTracker(
 
     const spendLimit =
       config.agent.spendLimitDollars || config.spendLimitDollars;
-    const userLabel = username ? `${username}` : "all users";
+    const userLabel = userId ? `user ${userId}` : "all users";
     output.comment(
       `Total cost for ${userLabel} $${totalStoredCost.toFixed(2)} of $${spendLimit} limit`,
     );
@@ -379,13 +379,13 @@ export function createCostTracker(
     }
 
     // Costs by individual users
-    if (username) {
-      return; // Skip subagent breakdown when showing specific user
+    if (userId) {
+      return; // Skip user breakdown when showing specific user
     }
 
     await usingDatabase(async (prisma) => {
       const result = await prisma.costs.groupBy({
-        by: ["username"],
+        by: ["user_id"],
         _sum: {
           cost: true,
         },
@@ -395,9 +395,18 @@ export function createCostTracker(
         return;
       }
 
+      // Get usernames for display
+      const userIds = result.map((r) => r.user_id);
+      const users = await prisma.users.findMany({
+        where: { id: { in: userIds } },
+        select: { id: true, username: true },
+      });
+      const userMap = new Map(users.map((u) => [u.id, u.username]));
+
       for (const row of result) {
+        const username = userMap.get(row.user_id) || `user ${row.user_id}`;
         output.comment(
-          `  ${row.username} cost $${Number(row._sum.cost || 0).toFixed(2)}`,
+          `  ${username} cost $${Number(row._sum.cost || 0).toFixed(2)}`,
         );
       }
     });
