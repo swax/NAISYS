@@ -4,6 +4,7 @@
   "description": "NAISYS Overlord - React frontend with Vite and TypeScript",
   "type": "module",
   "scripts": {
+    "clean": "rm -rf dist",
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",

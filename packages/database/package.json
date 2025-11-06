@@ -11,11 +11,11 @@
     "prisma/migrations"
   ],
   "scripts": {
-    "compile": "tsc",
+    "clean": "rm -rf dist",
     "prisma:migrate": "prisma migrate dev --create-only --name init",
     "prisma:generate": "prisma generate",
     "prisma:studio": "prisma studio",
-    "build": "npm run prisma:generate && npm run compile",
+    "build": "npm run prisma:generate && tsc",
     "prepare": "npm run build"
   },
   "devDependencies": {

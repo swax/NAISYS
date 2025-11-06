@@ -128,7 +128,6 @@ This opens a visual database browser at http://localhost:5555
 ## Scripts
 
 - `npm run build` - Generate Prisma Client and compile TypeScript
-- `npm run compile` - Compile TypeScript only
 - `npm run prisma:generate` - Generate Prisma Client
 - `npm run prisma:studio` - Open Prisma Studio
 - `npm run prisma:pull` - Pull schema from existing database

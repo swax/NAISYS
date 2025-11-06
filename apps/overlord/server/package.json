@@ -8,6 +8,7 @@
     ".": "./dist/server.js"
   },
   "scripts": {
+    "clean": "rm -rf dist",
     "dev": "tsx watch src/server.ts",
     "start": "node dist/server.js",
     "build": "tsc",
