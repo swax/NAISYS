@@ -5,26 +5,19 @@
   "private": true,
   "type": "module",
   "workspaces": [
-    "apps/*",
+    "packages/database",
+    "apps/overlord/shared",
     "apps/overlord/server",
     "apps/overlord/client",
-    "apps/overlord/shared",
-    "packages/*"
+    "apps/naisys"
   ],
   "scripts": {
+    "install": "npm install",
     "clean": "npm run clean --workspaces --if-present",
-    "compile": "npm run build --workspace=apps/overlord/server && npm run compile --workspace=apps/naisys",
     "build": "npm run build --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
     "eslint": "npm run eslint --workspaces --if-present",
     "prettier": "prettier --write .",
-    "agent:assistant": "npm run agent:assistant --workspace=apps/naisys",
-    "agent:scdb:program-director": "npm run agent:scdb:program-director --workspace=apps/naisys",
-    "naisys": "npm run --workspace=apps/naisys",
-    "overlord:dev": "npm run dev --workspace=apps/overlord",
-    "overlord:build": "npm run build --workspace=apps/overlord",
-    "overlord:start": "npm run start --workspace=apps/overlord",
-    "install:all": "npm install",
     "updates:check": "npm-check-updates && npm-check-updates --workspaces",
     "updates:apply": "npm-check-updates -u && npm-check-updates --workspaces -u && npm install"
   },

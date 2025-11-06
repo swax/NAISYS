@@ -54,7 +54,7 @@ npm run build
 
 **NAISYS:**
 ```bash
-npm run compile --workspace=apps/naisys
+npm run build --workspace=apps/naisys
 ```
 
 **Overlord (all components):**

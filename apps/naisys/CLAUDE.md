@@ -5,7 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Development Commands
 
 ### Building and Compilation
-- `npm run compile` - Compile TypeScript source to JavaScript in `dist/`
+- `npm run build` - Compile TypeScript source to JavaScript in `dist/`
 - `npm run clean` - Remove compiled output directory
 - `tsc` - Direct TypeScript compilation
 

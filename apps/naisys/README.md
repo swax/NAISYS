@@ -191,7 +191,7 @@ initialCommands:
 - Clone the NAISYS repository from Github
 - Run `npm install` to install dependencies
 - Create a `.env` from the example above
-- Run `npm run compile`
+- Run `npm run build`
 - Configure your agent using the examples in the `./agents` folder
 - Run `node dist/naisys.js <path to agent yaml file>`
 
