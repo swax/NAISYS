@@ -1,23 +1,23 @@
 import chalk from "chalk";
 import * as readline from "readline";
-import { createConfig } from "../config.js";
-import { createLLMail } from "../features/llmail.js";
-import { createSubagentService } from "../features/subagent.js";
-import { createContextManager } from "../llm/contextManager.js";
-import { createInputMode } from "../utils/inputMode.js";
-import { createOutputService } from "../utils/output.js";
+import { Config } from "../config.js";
+import { LLMail } from "../features/llmail.js";
+import { SubagentService } from "../features/subagent.js";
+import { ContextManager } from "../llm/contextManager.js";
+import { InputModeService } from "../utils/inputMode.js";
+import { OutputService } from "../utils/output.js";
 import { sharedReadline } from "../utils/sharedReadline.js";
 import { writeEventManager } from "../utils/writeEventManager.js";
-import { createShellWrapper } from "./shellWrapper.js";
+import { ShellWrapper } from "./shellWrapper.js";
 
 export function createPromptBuilder(
-  config: Awaited<ReturnType<typeof createConfig>>,
-  shellWrapper: ReturnType<typeof createShellWrapper>,
-  subagent: ReturnType<typeof createSubagentService>,
-  llmail: ReturnType<typeof createLLMail>,
-  contextManager: ReturnType<typeof createContextManager>,
-  output: ReturnType<typeof createOutputService>,
-  inputMode: ReturnType<typeof createInputMode>,
+  config: Config,
+  shellWrapper: ShellWrapper,
+  subagent: SubagentService,
+  llmail: LLMail,
+  contextManager: ContextManager,
+  output: OutputService,
+  inputMode: InputModeService,
 ) {
   /**
    * When actual output is entered by the user we want to cancel any auto-continue timers and/or wake on message
@@ -208,3 +208,5 @@ export function createPromptBuilder(
     getCommandConfirmation,
   };
 }
+
+export type PromptBuilder = ReturnType<typeof createPromptBuilder>;

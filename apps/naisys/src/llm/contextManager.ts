@@ -1,18 +1,18 @@
-import { createConfig } from "../config.js";
-import { createWorkspacesFeature } from "../features/workspaces.js";
+import { Config } from "../config.js";
+import { WorkspacesFeature } from "../features/workspaces.js";
 import { LogService } from "../services/logService.js";
-import { createInputMode } from "../utils/inputMode.js";
-import { createOutputService, OutputColor } from "../utils/output.js";
+import { InputModeService } from "../utils/inputMode.js";
+import { OutputService, OutputColor } from "../utils/output.js";
 import * as utilities from "../utils/utilities.js";
 import { ContentSource, LlmMessage, LlmRole } from "./llmDtos.js";
 
 export function createContextManager(
-  config: Awaited<ReturnType<typeof createConfig>>,
-  workspaces: ReturnType<typeof createWorkspacesFeature>,
+  config: Config,
+  workspaces: WorkspacesFeature,
   systemMessage: string,
-  output: ReturnType<typeof createOutputService>,
+  output: OutputService,
   logService: LogService,
-  inputMode: ReturnType<typeof createInputMode>,
+  inputMode: InputModeService,
 ) {
   let _messages: LlmMessage[] = [];
 
@@ -221,3 +221,5 @@ export function createContextManager(
     exportedForTesting,
   };
 }
+
+export type ContextManager = ReturnType<typeof createContextManager>;

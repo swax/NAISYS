@@ -1,14 +1,14 @@
 import * as fs from "fs";
 import path from "path";
-import { createConfig } from "../config.js";
+import { Config } from "../config.js";
 import * as pathService from "../services/pathService.js";
 import { NaisysPath } from "../services/pathService.js";
-import { createOutputService } from "../utils/output.js";
+import { OutputService } from "../utils/output.js";
 import * as utilities from "../utils/utilities.js";
 
 export function createWorkspacesFeature(
-  config: Awaited<ReturnType<typeof createConfig>>,
-  output: ReturnType<typeof createOutputService>,
+  config: Config,
+  output: OutputService,
 ) {
   const _suffixHelp =
     "Add and remove file soft links in the ~/workspaces/ folder to manage what files you see previews of before each prompt";
@@ -77,3 +77,5 @@ export function createWorkspacesFeature(
     displayActive,
   };
 }
+
+export type WorkspacesFeature = ReturnType<typeof createWorkspacesFeature>;

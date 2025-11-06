@@ -1,7 +1,7 @@
-import { createConfig } from "../config.js";
-import { createDatabaseService } from "../services/dbService.js";
-import { createOutputService } from "../utils/output.js";
-import { createLLModels } from "./llModels.js";
+import { Config } from "../config.js";
+import { DatabaseService } from "../services/dbService.js";
+import { OutputService } from "../utils/output.js";
+import { LLModels } from "./llModels.js";
 
 // Keep only interfaces that are used as parameters or need explicit typing
 interface LlmModelCosts {
@@ -19,10 +19,10 @@ interface TokenUsage {
 }
 
 export function createCostTracker(
-  config: Awaited<ReturnType<typeof createConfig>>,
-  llModels: ReturnType<typeof createLLModels>,
-  { usingDatabase, myUserId }: Awaited<ReturnType<typeof createDatabaseService>>,
-  output: ReturnType<typeof createOutputService>,
+  config: Config,
+  llModels: LLModels,
+  { usingDatabase, myUserId }: DatabaseService,
+  output: OutputService,
 ) {
   // Record token usage for LLM calls - calculate and store total cost
   async function recordTokens(
@@ -424,3 +424,5 @@ export function createCostTracker(
     printCosts,
   };
 }
+
+export type CostTracker = ReturnType<typeof createCostTracker>;

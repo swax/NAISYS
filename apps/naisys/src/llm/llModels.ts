@@ -1,4 +1,4 @@
-import { createConfig } from "../config.js";
+import { Config } from "../config.js";
 
 export enum LlmApiType {
   OpenAI = "openai",
@@ -22,7 +22,7 @@ interface LlmModel {
 }
 
 export function createLLModels(
-  config: Awaited<ReturnType<typeof createConfig>>,
+  config: Config,
 ) {
   const llmModels: LlmModel[] = [
 
@@ -217,3 +217,5 @@ export function createLLModels(
     get,
   };
 }
+
+export type LLModels = ReturnType<typeof createLLModels>;

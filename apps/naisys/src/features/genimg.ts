@@ -1,16 +1,16 @@
 import OpenAI from "openai";
 import path from "path";
 import sharp from "sharp";
-import { createConfig } from "../config.js";
-import { createCostTracker } from "../llm/costTracker.js";
+import { Config } from "../config.js";
+import { CostTracker } from "../llm/costTracker.js";
 import * as pathService from "../services/pathService.js";
 import { NaisysPath } from "../services/pathService.js";
-import { createOutputService } from "../utils/output.js";
+import { OutputService } from "../utils/output.js";
 
 export function createGenImg(
-  config: Awaited<ReturnType<typeof createConfig>>,
-  costTracker: ReturnType<typeof createCostTracker>,
-  output: ReturnType<typeof createOutputService>,
+  config: Config,
+  costTracker: CostTracker,
+  output: OutputService,
 ) {
   /** genimg "<description>" <filepath>: Generate an image with the description and save it to the file path */
   async function handleCommand(args: string): Promise<string> {
@@ -92,6 +92,8 @@ export function createGenImg(
     handleCommand,
   };
 }
+
+export type GenImg = ReturnType<typeof createGenImg>;
 
 interface ImageModel {
   key: string;

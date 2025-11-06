@@ -1,5 +1,5 @@
 import { createPrismaClient } from "@naisys/database";
-import { createConfig } from "../config.js";
+import { Config } from "../config.js";
 import * as pathService from "./pathService.js";
 import { PrismaClient } from "@naisys/database";
 import { exec } from "child_process";
@@ -10,7 +10,7 @@ import { dirname, join } from "path";
 const execAsync = promisify(exec);
 
 export async function createDatabaseService(
-  config: Awaited<ReturnType<typeof createConfig>>,
+  config: Config,
 ) {
   let myUserId = -1;
   let updateInterval: NodeJS.Timeout | null = null;
@@ -158,3 +158,5 @@ export async function createDatabaseService(
     cleanup,
   };
 }
+
+export type DatabaseService = Awaited<ReturnType<typeof createDatabaseService>>;
