@@ -11,9 +11,7 @@ export enum OutputColor {
   subagent = "cyan",
 }
 
-export function createOutputService(
-  logService: LogService,
-) {
+export function createOutputService(logService: LogService) {
   const consoleBuffer: string[] = [];
 
   /** Whether the output for this agent should be piped to the console */

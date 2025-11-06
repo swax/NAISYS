@@ -32,37 +32,40 @@ export default async function mailRoutes(
     },
     async (request, reply) => {
       try {
-        const contentType = request.headers['content-type'];
-        let from: string = '', to: string = '', subject: string = '', message: string = '';
+        const contentType = request.headers["content-type"];
+        let from: string = "",
+          to: string = "",
+          subject: string = "",
+          message: string = "";
         let attachments: Array<{ filename: string; data: Buffer }> = [];
 
-        if (contentType?.includes('multipart/form-data')) {
+        if (contentType?.includes("multipart/form-data")) {
           // Handle multipart form data
           const parts = request.parts();
-          
+
           for await (const part of parts) {
-            if (part.type === 'field') {
+            if (part.type === "field") {
               const field = part as any;
               switch (field.fieldname) {
-                case 'from':
+                case "from":
                   from = field.value;
                   break;
-                case 'to':
+                case "to":
                   to = field.value;
                   break;
-                case 'subject':
+                case "subject":
                   subject = field.value;
                   break;
-                case 'message':
+                case "message":
                   message = field.value;
                   break;
               }
-            } else if (part.type === 'file') {
+            } else if (part.type === "file") {
               const file = part as MultipartFile;
-              if (file.fieldname === 'attachments') {
+              if (file.fieldname === "attachments") {
                 const buffer = await file.toBuffer();
                 attachments.push({
-                  filename: file.filename || 'unnamed_file',
+                  filename: file.filename || "unnamed_file",
                   data: buffer,
                 });
               }

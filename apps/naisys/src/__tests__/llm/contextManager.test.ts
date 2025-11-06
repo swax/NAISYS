@@ -13,7 +13,6 @@ const systemMessage = "system";
 
 describe("trim function", () => {
   test("happy path", async () => {
-
     const mockInputMode = createMockInputMode();
     mockInputMode.isDebug.mockReturnValue(false);
     mockInputMode.isLLM.mockReturnValue(true);

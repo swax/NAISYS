@@ -163,11 +163,11 @@ export const sendMail = async (
     // If there are files, use FormData
     if (mailData.files && mailData.files.length > 0) {
       const formData = new FormData();
-      formData.append('from', mailData.from);
-      formData.append('to', mailData.to);
-      formData.append('subject', mailData.subject);
-      formData.append('message', mailData.message);
-      
+      formData.append("from", mailData.from);
+      formData.append("to", mailData.to);
+      formData.append("subject", mailData.subject);
+      formData.append("message", mailData.message);
+
       // Add files to FormData
       mailData.files.forEach((file) => {
         formData.append(`attachments`, file);
@@ -177,7 +177,7 @@ export const sendMail = async (
         method: "POST",
         body: formData,
       });
-      
+
       const result = await response.json();
       if (!response.ok) {
         throw new Error(result.message || `API Error: ${response.status}`);

@@ -29,7 +29,7 @@ export const SendMailRequestSchema = z.object({
       z.object({
         filename: z.string(),
         data: z.instanceof(Buffer),
-      })
+      }),
     )
     .optional(),
 });

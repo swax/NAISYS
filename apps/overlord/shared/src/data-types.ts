@@ -47,5 +47,9 @@ export const ReadStatusUpdateResponseSchema = z.object({
 export type ReadStatus = z.infer<typeof ReadStatusSchema>;
 export type NaisysDataRequest = z.infer<typeof NaisysDataRequestSchema>;
 export type NaisysDataResponse = z.infer<typeof NaisysDataResponseSchema>;
-export type ReadStatusUpdateRequest = z.infer<typeof ReadStatusUpdateRequestSchema>;
-export type ReadStatusUpdateResponse = z.infer<typeof ReadStatusUpdateResponseSchema>;
+export type ReadStatusUpdateRequest = z.infer<
+  typeof ReadStatusUpdateRequestSchema
+>;
+export type ReadStatusUpdateResponse = z.infer<
+  typeof ReadStatusUpdateResponseSchema
+>;

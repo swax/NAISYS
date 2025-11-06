@@ -5,6 +5,7 @@ Shared database schema and Prisma client for NAISYS monorepo.
 ## Overview
 
 This package provides:
+
 - Prisma schema definitions for the NAISYS database
 - Generated Prisma Client for type-safe database access
 - TypeScript types for all database models
@@ -86,7 +87,7 @@ import path from "path";
 const dbPath = path.join(
   process.env.NAISYS_FOLDER,
   "database",
-  "naisys.sqlite"
+  "naisys.sqlite",
 );
 
 const prisma = new PrismaClient({

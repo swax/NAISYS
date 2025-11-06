@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "NAISYS Overlord - Management interface for NAISYS agents",
   "private": true,
-    "workspaces": [
+  "workspaces": [
     "shared",
     "server",
     "client"

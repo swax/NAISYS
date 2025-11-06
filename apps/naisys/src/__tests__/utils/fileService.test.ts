@@ -54,7 +54,9 @@ describe("HostPath::toNaisysPath", () => {
       expect(hostToNaisysPath("c:\\")).toBe("c:\\");
       expect(hostToNaisysPath("c:\\Users\\")).toBe("c:\\Users\\");
       expect(hostToNaisysPath("d:\\")).toBe("d:\\");
-      expect(hostToNaisysPath("d:\\Program Files\\")).toBe("d:\\Program Files\\");
+      expect(hostToNaisysPath("d:\\Program Files\\")).toBe(
+        "d:\\Program Files\\",
+      );
     }
   });
 

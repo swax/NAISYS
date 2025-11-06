@@ -57,7 +57,9 @@ export const NewMessageModal: React.FC<NewMessageModalProps> = ({
   const [body, setBody] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [attachments, setAttachments] = useState<FileAttachment[]>([]);
-  const [expandedImageIndex, setExpandedImageIndex] = useState<number | null>(null);
+  const [expandedImageIndex, setExpandedImageIndex] = useState<number | null>(
+    null,
+  );
   const bodyTextareaRef = React.useRef<HTMLTextAreaElement>(null);
 
   // Update sender when currentAgentName changes
@@ -89,14 +91,14 @@ export const NewMessageModal: React.FC<NewMessageModalProps> = ({
   useEffect(() => {
     const handlePaste = (event: ClipboardEvent) => {
       if (!opened || isLoading) return;
-      
+
       const items = event.clipboardData?.items;
       if (!items) return;
 
       const files: File[] = [];
       for (let i = 0; i < items.length; i++) {
         const item = items[i];
-        if (item.type.startsWith('image/')) {
+        if (item.type.startsWith("image/")) {
           const file = item.getAsFile();
           if (file) {
             files.push(file);
@@ -111,11 +113,11 @@ export const NewMessageModal: React.FC<NewMessageModalProps> = ({
     };
 
     if (opened) {
-      document.addEventListener('paste', handlePaste);
+      document.addEventListener("paste", handlePaste);
     }
 
     return () => {
-      document.removeEventListener('paste', handlePaste);
+      document.removeEventListener("paste", handlePaste);
     };
   }, [opened, isLoading]);
 
@@ -132,25 +134,25 @@ export const NewMessageModal: React.FC<NewMessageModalProps> = ({
 
   const handleFilesAdd = async (files: File[]) => {
     const newAttachments: FileAttachment[] = [];
-    
+
     for (const file of files) {
       const attachment: FileAttachment = {
         file,
         name: file.name,
       };
-      
-      if (file.type.startsWith('image/')) {
+
+      if (file.type.startsWith("image/")) {
         attachment.previewUrl = URL.createObjectURL(file);
       }
-      
+
       newAttachments.push(attachment);
     }
-    
-    setAttachments(prev => [...prev, ...newAttachments]);
+
+    setAttachments((prev) => [...prev, ...newAttachments]);
   };
 
   const handleFileRemove = (index: number) => {
-    setAttachments(prev => {
+    setAttachments((prev) => {
       const updated = [...prev];
       const removed = updated.splice(index, 1)[0];
       if (removed.previewUrl) {
@@ -161,18 +163,21 @@ export const NewMessageModal: React.FC<NewMessageModalProps> = ({
   };
 
   const handleFileNameChange = (index: number, newName: string) => {
-    setAttachments(prev => prev.map((attachment, i) => {
-      if (i === index) {
-        const lastDotIndex = attachment.name.lastIndexOf('.');
-        const extension = lastDotIndex > 0 ? attachment.name.substring(lastDotIndex) : '';
-        return { ...attachment, name: newName + extension };
-      }
-      return attachment;
-    }));
+    setAttachments((prev) =>
+      prev.map((attachment, i) => {
+        if (i === index) {
+          const lastDotIndex = attachment.name.lastIndexOf(".");
+          const extension =
+            lastDotIndex > 0 ? attachment.name.substring(lastDotIndex) : "";
+          return { ...attachment, name: newName + extension };
+        }
+        return attachment;
+      }),
+    );
   };
 
   const getFileNameWithoutExtension = (filename: string) => {
-    const lastDotIndex = filename.lastIndexOf('.');
+    const lastDotIndex = filename.lastIndexOf(".");
     return lastDotIndex > 0 ? filename.substring(0, lastDotIndex) : filename;
   };
 
@@ -184,17 +189,25 @@ export const NewMessageModal: React.FC<NewMessageModalProps> = ({
     setIsLoading(true);
     try {
       // Create new File objects with updated names
-      const attachmentsWithUpdatedNames = attachments.map(attachment => ({
+      const attachmentsWithUpdatedNames = attachments.map((attachment) => ({
         ...attachment,
-        file: new File([attachment.file], attachment.name, { type: attachment.file.type })
+        file: new File([attachment.file], attachment.name, {
+          type: attachment.file.type,
+        }),
       }));
-      
-      await onSend(sender, recipient, subject, body, attachmentsWithUpdatedNames);
+
+      await onSend(
+        sender,
+        recipient,
+        subject,
+        body,
+        attachmentsWithUpdatedNames,
+      );
       setSender(currentAgentName);
       setRecipient("");
       setSubject("");
       setBody("");
-      attachments.forEach(attachment => {
+      attachments.forEach((attachment) => {
         if (attachment.previewUrl) {
           URL.revokeObjectURL(attachment.previewUrl);
         }
@@ -215,7 +228,7 @@ export const NewMessageModal: React.FC<NewMessageModalProps> = ({
       setRecipient("");
       setSubject("");
       setBody("");
-      attachments.forEach(attachment => {
+      attachments.forEach((attachment) => {
         if (attachment.previewUrl) {
           URL.revokeObjectURL(attachment.previewUrl);
         }
@@ -290,13 +303,13 @@ export const NewMessageModal: React.FC<NewMessageModalProps> = ({
             <Dropzone
               onDrop={handleFilesAdd}
               disabled={isLoading}
-              style={{ 
-                cursor: isLoading ? 'not-allowed' : 'pointer',
-                padding: '8px 12px',
-                minHeight: 'auto'
+              style={{
+                cursor: isLoading ? "not-allowed" : "pointer",
+                padding: "8px 12px",
+                minHeight: "auto",
               }}
             >
-              <Group gap="xs" style={{ pointerEvents: 'none' }}>
+              <Group gap="xs" style={{ pointerEvents: "none" }}>
                 <IconPaperclip size={16} stroke={1.5} />
                 <Text size="xs" c="dimmed">
                   Drag files here or click to select
@@ -309,7 +322,12 @@ export const NewMessageModal: React.FC<NewMessageModalProps> = ({
             <Stack gap="xs" mt="md">
               {attachments.map((attachment, index) => (
                 <Paper key={index} p="sm" withBorder>
-                  <Flex align={expandedImageIndex === index ? "flex-start" : "center"} gap="sm">
+                  <Flex
+                    align={
+                      expandedImageIndex === index ? "flex-start" : "center"
+                    }
+                    gap="sm"
+                  >
                     {attachment.previewUrl ? (
                       <Image
                         src={attachment.previewUrl}
@@ -318,23 +336,28 @@ export const NewMessageModal: React.FC<NewMessageModalProps> = ({
                         h={expandedImageIndex === index ? "auto" : 60}
                         fit={expandedImageIndex === index ? "contain" : "cover"}
                         radius="sm"
-                        style={{ 
-                          cursor: 'pointer',
-                          maxHeight: expandedImageIndex === index ? '400px' : '60px',
-                          transition: 'all 0.2s ease'
+                        style={{
+                          cursor: "pointer",
+                          maxHeight:
+                            expandedImageIndex === index ? "400px" : "60px",
+                          transition: "all 0.2s ease",
                         }}
-                        onClick={() => setExpandedImageIndex(expandedImageIndex === index ? null : index)}
+                        onClick={() =>
+                          setExpandedImageIndex(
+                            expandedImageIndex === index ? null : index,
+                          )
+                        }
                       />
                     ) : (
                       <Box
                         w={60}
                         h={60}
                         style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          backgroundColor: 'var(--mantine-color-gray-1)',
-                          borderRadius: 'var(--mantine-radius-sm)',
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          backgroundColor: "var(--mantine-color-gray-1)",
+                          borderRadius: "var(--mantine-radius-sm)",
                         }}
                       >
                         <IconFile size={24} />
@@ -342,14 +365,16 @@ export const NewMessageModal: React.FC<NewMessageModalProps> = ({
                     )}
                     <TextInput
                       value={getFileNameWithoutExtension(attachment.name)}
-                      onChange={(event) => 
+                      onChange={(event) =>
                         handleFileNameChange(index, event.currentTarget.value)
                       }
                       style={{ flex: 1 }}
                       disabled={isLoading}
                       rightSection={
                         <Text size="sm" c="dimmed">
-                          {attachment.name.substring(attachment.name.lastIndexOf('.')) || ''}
+                          {attachment.name.substring(
+                            attachment.name.lastIndexOf("."),
+                          ) || ""}
                         </Text>
                       }
                     />

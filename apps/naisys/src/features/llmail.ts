@@ -6,10 +6,7 @@ import { Prisma, PrismaClient } from "@naisys/database";
 
 export function createLLMail(
   config: Config,
-  {
-    myUserId,
-    usingDatabase,
-  }: DatabaseService,
+  { myUserId, usingDatabase }: DatabaseService,
 ) {
   /** Threading is not currently used in `simpleMode` so this doesn't matter */
   const _threadTokenMax = config.agent.mailMessageTokenMax
@@ -265,9 +262,7 @@ export function createLLMail(
           },
         });
 
-        return simpleMode
-          ? "Mail sent"
-          : `Thread created with id ${thread.id}`;
+        return simpleMode ? "Mail sent" : `Thread created with id ${thread.id}`;
       });
     });
   }

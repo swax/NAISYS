@@ -21,11 +21,8 @@ interface LlmModel {
   cacheReadCost?: number;
 }
 
-export function createLLModels(
-  config: Config,
-) {
+export function createLLModels(config: Config) {
   const llmModels: LlmModel[] = [
-
     {
       key: LlmApiType.None,
       name: LlmApiType.None,

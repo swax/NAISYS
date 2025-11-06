@@ -6,10 +6,7 @@ import { NaisysPath } from "../services/pathService.js";
 import { OutputService } from "../utils/output.js";
 import * as utilities from "../utils/utilities.js";
 
-export function createWorkspacesFeature(
-  config: Config,
-  output: OutputService,
-) {
+export function createWorkspacesFeature(config: Config, output: OutputService) {
   const _suffixHelp =
     "Add and remove file soft links in the ~/workspaces/ folder to manage what files you see previews of before each prompt";
 
