@@ -12,9 +12,7 @@
 
 import { Config } from "../config.js";
 
-export function createSystemMessage(
-  config: Config,
-) {
+export function createSystemMessage(config: Config) {
   let genImgCmd = "";
   if (config.agent.imageModel) {
     genImgCmd = `\n  genimg "<description>" <filepath>: Generate an image with the description and save it to the given fully qualified path`;

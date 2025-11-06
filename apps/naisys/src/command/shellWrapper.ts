@@ -16,10 +16,7 @@ enum ShellEvent {
   Exit = "exit",
 }
 
-export function createShellWrapper(
-  config: Config,
-  output: OutputService,
-) {
+export function createShellWrapper(config: Config, output: OutputService) {
   let _process: ChildProcessWithoutNullStreams | undefined;
   let _currentProcessId: number | undefined;
   let _commandOutput = "";

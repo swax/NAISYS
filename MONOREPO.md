@@ -22,6 +22,7 @@ NAISYS/
 The monorepo contains the following workspaces:
 
 ### Apps
+
 - **naisys** (`apps/naisys/`) - The core Node.js Autonomous Intelligence System
 - **naisys-overlord** (`apps/overlord/`) - Management interface for NAISYS agents
   - **@naisys-overlord/server** - Backend API server
@@ -29,6 +30,7 @@ The monorepo contains the following workspaces:
   - **@naisys-overlord/shared** - Shared TypeScript types
 
 ### Packages
+
 - `packages/` directory is ready for future shared packages like:
   - `packages/shared` - Common utilities and types
   - `packages/database` - Shared database utilities
@@ -46,6 +48,7 @@ This will install dependencies for all workspaces and hoist common dependencies 
 ## Building
 
 ### Build All Projects
+
 ```bash
 npm run build
 ```
@@ -53,11 +56,13 @@ npm run build
 ### Build Individual Projects
 
 **NAISYS:**
+
 ```bash
 npm run build --workspace=apps/naisys
 ```
 
 **Overlord (all components):**
+
 ```bash
 npm run build --workspace=@naisys-overlord/shared
 npm run build --workspace=@naisys-overlord/client
@@ -67,6 +72,7 @@ npm run build --workspace=@naisys-overlord/server
 ## Running
 
 ### NAISYS
+
 ```bash
 # Run an agent
 npm run agent:assistant
@@ -77,6 +83,7 @@ npm run agent:assistant --workspace=apps/naisys
 ```
 
 ### Overlord
+
 ```bash
 # Development mode (runs both client and server)
 npm run overlord:dev
@@ -91,21 +98,25 @@ npm run overlord:start
 ## Development
 
 ### Code Formatting
+
 ```bash
 npm run prettier
 ```
 
 ### Linting
+
 ```bash
 npm run eslint
 ```
 
 ### Testing
+
 ```bash
 npm test
 ```
 
 ### Checking for Updates
+
 ```bash
 npm run updates:check
 npm run updates:apply
@@ -147,6 +158,7 @@ Or use the package name if published:
 1. **Overlord Nested Workspaces**: The overlord app contains its own internal workspaces (server, client, shared). These are explicitly listed in the root `package.json` for proper dependency management.
 
 2. **Installing Dependencies**: Always run `npm install` from the root directory. If you add new workspaces, explicitly install them:
+
    ```bash
    npm install --workspace=@naisys-overlord/shared
    ```
@@ -158,6 +170,7 @@ Or use the package name if published:
 ## Troubleshooting
 
 ### Workspaces not recognized
+
 ```bash
 # Clean install
 rm -rf node_modules package-lock.json
@@ -165,6 +178,7 @@ npm install
 ```
 
 ### Build failures
+
 ```bash
 # Ensure all workspace dependencies are installed
 npm install --workspace=@naisys-overlord/shared
@@ -173,6 +187,7 @@ npm install --workspace=@naisys-overlord/server
 ```
 
 ### View all workspaces
+
 ```bash
 npm query ".workspace" | grep -E '"name":|"location":'
 ```

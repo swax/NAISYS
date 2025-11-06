@@ -11,7 +11,7 @@
   "scripts": {
     "build/run/attachable": "tsc && node --inspect dist/naisys.js ../../agents/assistant.yaml",
     "agent:odoo": "node dist/naisys.js ../../agents/odoo.yaml",
-    "agent:assistant": "node dist/naisys.js ../../agents/assistant.yaml",
+    "agent:assistant": "node dist/naisys.js ../../agents/assistant.yaml --overlord",
     "agent:nightwatch": "node dist/naisys.js ../../agents/nightwatch.yaml",
     "agent:scdb:program-director": "cd ../../agents/scdb && node ../../apps/naisys/dist/naisys.js program-director.yaml --overlord",
     "agent:onshape": "node dist/naisys.js ../../agents/onshape.yaml",

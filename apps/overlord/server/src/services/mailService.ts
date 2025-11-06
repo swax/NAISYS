@@ -17,8 +17,9 @@ export async function getThreadMessages(
   try {
     const dbMessages = await usingNaisysDb(async (prisma) => {
       return await prisma.thread_messages.findMany({
-        where: after !== undefined && after > 0 ? { id: { gt: after } } : undefined,
-        orderBy: { id: 'desc' },
+        where:
+          after !== undefined && after > 0 ? { id: { gt: after } } : undefined,
+        orderBy: { id: "desc" },
         take: limit,
         select: {
           id: true,
@@ -185,17 +186,23 @@ export async function sendMessage(
         throw new Error("NAISYS_FOLDER environment variable not set");
       }
 
-      const attachmentsDir = path.join(naisysFolderPath, "attachments", messageId.toString());
+      const attachmentsDir = path.join(
+        naisysFolderPath,
+        "attachments",
+        messageId.toString(),
+      );
       await saveAttachments(messageId, attachments);
 
       // Create detailed attachment info
-      const attachmentDetails = attachments.map(att => {
-        const sizeKB = (att.data.length / 1024).toFixed(1);
-        return `${att.filename} (${sizeKB} KB)`;
-      }).join(', ');
+      const attachmentDetails = attachments
+        .map((att) => {
+          const sizeKB = (att.data.length / 1024).toFixed(1);
+          return `${att.filename} (${sizeKB} KB)`;
+        })
+        .join(", ");
 
       const attachmentCount = attachments.length;
-      const updatedMessage = `${cleanMessage}\n\n${attachmentCount} attached file${attachmentCount > 1 ? 's' : ''}, located in ${attachmentsDir}\nFilenames: ${attachmentDetails}`;
+      const updatedMessage = `${cleanMessage}\n\n${attachmentCount} attached file${attachmentCount > 1 ? "s" : ""}, located in ${attachmentsDir}\nFilenames: ${attachmentDetails}`;
 
       // Update the message with attachment info
       await usingNaisysDb(async (prisma) => {
@@ -221,14 +228,21 @@ export async function sendMessage(
   }
 }
 
-async function saveAttachments(messageId: number, attachments: Array<{ filename: string; data: Buffer }>) {
+async function saveAttachments(
+  messageId: number,
+  attachments: Array<{ filename: string; data: Buffer }>,
+) {
   const naisysFolderPath = process.env.NAISYS_FOLDER;
   if (!naisysFolderPath) {
     throw new Error("NAISYS_FOLDER environment variable not set");
   }
 
-  const attachmentsDir = path.join(naisysFolderPath, "attachments", messageId.toString());
-  
+  const attachmentsDir = path.join(
+    naisysFolderPath,
+    "attachments",
+    messageId.toString(),
+  );
+
   // Create the directory
   await fs.mkdir(attachmentsDir, { recursive: true });
 

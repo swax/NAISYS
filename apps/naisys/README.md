@@ -213,6 +213,7 @@ initialCommands:
   - `brew install lynx`
 
 ## Changelog
+
 - 1.7: Prompt cachinging, llmynx pagination, complete task command
 - 1.6: Support for long running shell commands and full screen terminal output
 - 1.5: Allow agents to start their own parallel `subagents`

@@ -9,9 +9,7 @@ import { dirname, join } from "path";
 
 const execAsync = promisify(exec);
 
-export async function createDatabaseService(
-  config: Config,
-) {
+export async function createDatabaseService(config: Config) {
   let myUserId = -1;
   let updateInterval: NodeJS.Timeout | null = null;
 

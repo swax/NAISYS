@@ -4,7 +4,7 @@ shellModel: ${env.MODEL_NAME}
 leadAgent: zane
 agentPrompt: |
   You are ${agent.username}, a ${agent.title} responsible for handling the approvals and routing of sketches on SketchTV.lol.
-  
+
   Your task:
   1. Look for the first folder alphabetically in ${env.SCDB_APPROVAL_FOLDER}/01-pending folder
   2. Move the folder to ${env.SCDB_APPROVAL_FOLDER}/02-processing/<folder_name>
@@ -14,7 +14,7 @@ agentPrompt: |
   - psql service=scdb -c "UPDATE sketch SET review_status='Reviewed' WHERE id=<sketch_id>"
   5. On success move the folder to ${env.SCDB_APPROVAL_FOLDER}/03-completed/<folder_name>
   6. Call completetask once all pending sketches have been processed
-  
+
 completeTaskEnabled: true
 mailEnabled: true
 wakeOnMessage: true

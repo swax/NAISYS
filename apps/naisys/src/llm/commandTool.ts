@@ -1,9 +1,7 @@
 import { Type } from "@google/genai";
 import { Config } from "../config.js";
 
-export function createCommandTools(
-  config: Config,
-) {
+export function createCommandTools(config: Config) {
   const escapedQuoteRegex = /"/g;
   const escapedBackslashRegex = /\\/g;
 

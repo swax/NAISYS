@@ -9,8 +9,9 @@ export async function getLogs(
   try {
     const dbLogs = await usingNaisysDb(async (prisma) => {
       return await prisma.context_log.findMany({
-        where: after !== undefined && after > 0 ? { id: { gt: after } } : undefined,
-        orderBy: { id: 'desc' },
+        where:
+          after !== undefined && after > 0 ? { id: { gt: after } } : undefined,
+        orderBy: { id: "desc" },
         take: limit,
         select: {
           id: true,
