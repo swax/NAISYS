@@ -12,6 +12,7 @@
   ],
   "scripts": {
     "compile": "tsc",
+    "prisma:migrate": "prisma migrate dev --create-only --name init",
     "prisma:generate": "prisma generate",
     "prisma:studio": "prisma studio",
     "build": "npm run prisma:generate && npm run compile",

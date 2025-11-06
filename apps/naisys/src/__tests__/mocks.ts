@@ -11,8 +11,20 @@ import { createContextManager } from "../llm/contextManager.js";
 import { createCostTracker } from "../llm/costTracker.js";
 import { createDreamMaker } from "../llm/dreamMaker.js";
 import { LlmMessage, LlmRole } from "../llm/llmDtos.js";
+import { createDatabaseService } from "../services/dbService.js";
 import { createLogService } from "../services/logService.js";
 import { createOutputService } from "../utils/output.js";
+import { PrismaClient } from "@naisys/database";
+
+export function createMockDatabaseService(): Awaited<ReturnType<typeof createDatabaseService>> {
+  return {
+    myUserId: 1,
+    usingDatabase: async <T,>(run: (prisma: PrismaClient) => Promise<T>): Promise<T> => {
+      throw new Error("Mock database not implemented");
+    },
+    cleanup: () => {},
+  };
+}
 
 export function createMockLogService() {
   return {

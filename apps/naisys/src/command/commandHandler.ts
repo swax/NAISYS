@@ -8,6 +8,7 @@ import { createContextManager } from "../llm/contextManager.js";
 import { createCostTracker } from "../llm/costTracker.js";
 import { createDreamMaker } from "../llm/dreamMaker.js";
 import { ContentSource } from "../llm/llmDtos.js";
+import { createDatabaseService } from "../services/dbService.js";
 import { createInputMode } from "../utils/inputMode.js";
 import { createOutputService, OutputColor } from "../utils/output.js";
 import * as utilities from "../utils/utilities.js";
@@ -39,6 +40,7 @@ export function createCommandHandler(
   dreamMaker: ReturnType<typeof createDreamMaker>,
   contextManager: ReturnType<typeof createContextManager>,
   costTracker: ReturnType<typeof createCostTracker>,
+  { myUserId }: Awaited<ReturnType<typeof createDatabaseService>>,
   output: ReturnType<typeof createOutputService>,
   inputMode: ReturnType<typeof createInputMode>,
 ) {
@@ -209,12 +211,12 @@ export function createCommandHandler(
 
         case "cost": {
           if (cmdArgs === "reset") {
-            const username = config.agent.spendLimitDollars
-              ? config.agent.username
+            const userId = config.agent.spendLimitDollars
+              ? myUserId
               : undefined;
-            await costTracker.clearCosts(username);
+            await costTracker.clearCosts(userId);
             await contextManager.append(
-              `Cost tracking data cleared for ${username || "all users"}.`,
+              `Cost tracking data cleared for ${userId ? `${config.agent.username}` : "all users"}.`,
             );
           } else if (cmdArgs) {
             await output.errorAndLog(

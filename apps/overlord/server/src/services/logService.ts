@@ -14,12 +14,16 @@ export async function getLogs(
         take: limit,
         select: {
           id: true,
-          username: true,
           role: true,
           source: true,
           type: true,
           message: true,
           date: true,
+          users: {
+            select: {
+              username: true,
+            },
+          },
         },
       });
     });
@@ -29,7 +33,7 @@ export async function getLogs(
 
     const logs = dbLogs.map((log) => ({
       id: log.id,
-      username: log.username,
+      username: log.users.username,
       role: log.role as LogRole,
       source: log.source as LogSource,
       type: log.type as LogType,

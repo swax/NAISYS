@@ -4,6 +4,7 @@ import { GoogleGenAI } from "@google/genai";
 import OpenAI from "openai";
 import { ChatCompletionCreateParamsNonStreaming } from "openai/resources";
 import { createConfig } from "../config.js";
+import { createDatabaseService } from "../services/dbService.js";
 import { createCommandTools } from "./commandTool.js";
 import { createCostTracker } from "./costTracker.js";
 import { createLLModels, LlmApiType } from "./llModels.js";
@@ -16,6 +17,7 @@ export function createLLMService(
   costTracker: ReturnType<typeof createCostTracker>,
   tools: ReturnType<typeof createCommandTools>,
   llModels: ReturnType<typeof createLLModels>,
+  { myUserId }: Awaited<ReturnType<typeof createDatabaseService>>,
 ) {
   async function query(
     modelKey: string,
@@ -24,13 +26,13 @@ export function createLLMService(
     source: QuerySources,
   ): Promise<string[]> {
     const currentTotalCost = await costTracker.getTotalCosts(
-      config.agent.spendLimitDollars ? config.agent.username : undefined,
+      config.agent.spendLimitDollars ? myUserId : undefined,
     );
     const spendLimit =
       config.agent.spendLimitDollars || config.spendLimitDollars || -1;
 
     if (spendLimit < currentTotalCost) {
-      throw `LLM Spend limit of $${spendLimit} reached for ${config.agent.spendLimitDollars ? config.agent.username : "all users"}, current total cost $${currentTotalCost.toFixed(2)}`;
+      throw `LLM Spend limit of $${spendLimit} reached for ${config.agent.spendLimitDollars ? `${config.agent.username}` : "all users"}, current total cost $${currentTotalCost.toFixed(2)}`;
     }
 
     const model = llModels.get(modelKey);
