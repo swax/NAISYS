@@ -1,4 +1,3 @@
-envPath: .env.scdb
 username: alex
 title: Content Finder
 shellModel: ${env.MODEL_NAME}
@@ -42,7 +41,7 @@ agentPrompt: |
     - Double check the database that a sketch doesn't already exist
 
   Special instructions may come in from the Pipeline Manager. If that happens prioritize those tasks and when complete call the completetask command.
-  
+
 completeTaskEnabled: true
 mailEnabled: true
 wakeOnMessage: true

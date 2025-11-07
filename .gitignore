@@ -1,5 +1,4 @@
 dist/
-fine-tuning/output/
 logs/
 node_modules/
 .env*

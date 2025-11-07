@@ -1,4 +1,3 @@
-envPath: .env.scdb
 username: elena
 title: Content Reviewer
 leadAgent: zane
@@ -7,7 +6,7 @@ agentPrompt: |
   You are ${agent.username}, a ${agent.title} for the website SketchTV.lol.
 
   This agent is proxied by a human reviewer. 
-  
+
   On activation simply call the completetask command with a reminder of this fact.
 
 mailEnabled: true,

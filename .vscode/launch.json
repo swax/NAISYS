@@ -8,18 +8,18 @@
       "port": 9229,
       "skipFiles": ["<node_internals>/**"]
     },
+
     {
       "name": "Debug NAISYS",
       "type": "pwa-node",
       "request": "launch",
       "runtimeArgs": ["--loader", "ts-node/esm"],
-      "program": "${workspaceFolder}/src/naisys.ts",
-      "args": ["./agents/assistant.yaml"],
-      "cwd": "${workspaceFolder}",
+      "program": "${workspaceFolder}/apps/naisys/src/naisys.ts",
+      "args": ["../../agents/assistant.yaml", "--overlord"],
+      "cwd": "${workspaceFolder}/apps/naisys",
       "console": "integratedTerminal",
       "internalConsoleOptions": "neverOpen",
-      "skipFiles": ["<node_internals>/**"],
-      "preLaunchTask": "Compile NAISYS"
+      "skipFiles": ["<node_internals>/**"]
     }
   ]
 }

@@ -1,11 +1,10 @@
-envPath: .env.scdb
 username: donny
 title: DB Admin
 shellModel: ${env.MODEL_NAME}
 leadAgent: zane
 agentPrompt: |
   You are ${agent.username}, a ${agent.title} responsible for adding and maintaining content on SketchTV.lol.
-  
+
   Your task:
   1. Look for the first folder alphabetically in ${env.SCDB_UPDATE_DATABASE_FOLDER}/01-pending/<folder_name>
   2. Move the folder to ${env.SCDB_UPDATE_DATABASE_FOLDER}/02-processing/<folder_name>
@@ -52,9 +51,9 @@ agentPrompt: |
     - Sketch: <Show/Season/Episode slug> <Sketch title>
     - Recurring Sketch: <Show title>: <Recurring sketch title>
   The url slug is just the lookup slug made url friendly, lowercase, without any special characters, and dashes for spaces.
-  
+
   Special instructions may come in from the Pipeline Manager. If that happens prioritize those tasks and when complete call the completetask command.
-  
+
 completeTaskEnabled: true
 mailEnabled: true
 wakeOnMessage: true
@@ -62,20 +61,20 @@ tokenMax: 50000
 debugPauseSeconds: 3
 initialCommands:
   - psql service=scdb -c "
-    SELECT 
-      'TABLE ' || table_name || E'\n(\n' || 
-      string_agg('  ' || column_name || ' ' || data_type, E',\n') || 
-      E'\n);' AS ddl 
-    FROM information_schema.columns 
-    WHERE table_schema = 'public' AND table_name NOT IN('account', 'audit', 'user', 'verification_token') 
+    SELECT
+    'TABLE ' || table_name || E'\n(\n' ||
+    string_agg('  ' || column_name || ' ' || data_type, E',\n') ||
+    E'\n);' AS ddl
+    FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name NOT IN('account', 'audit', 'user', 'verification_token')
     GROUP BY table_name;"
   - psql service=scdb -c "
     SELECT
-      t.typname AS udt_name,
-      array_agg(e.enumlabel ORDER BY e.enumsortorder) AS enum_values
+    t.typname AS udt_name,
+    array_agg(e.enumlabel ORDER BY e.enumsortorder) AS enum_values
     FROM pg_type t
-      JOIN pg_namespace n ON n.oid = t.typnamespace
-      JOIN pg_enum e ON e.enumtypid = t.oid
+    JOIN pg_namespace n ON n.oid = t.typnamespace
+    JOIN pg_enum e ON e.enumtypid = t.oid
     WHERE n.nspname = 'public' AND t.typtype = 'e'
     GROUP BY t.typname
     ORDER BY t.typname"

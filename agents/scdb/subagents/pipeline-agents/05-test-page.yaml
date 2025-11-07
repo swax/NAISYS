@@ -1,4 +1,3 @@
-envPath: .env.scdb
 username: edison
 title: Content Tester
 shellModel: ${env.MODEL_NAME}
@@ -26,7 +25,7 @@ agentPrompt: |
   10. Pass or fail, regardless, call the completetask command once testing is complete
 
   Don't use llmynx to open YouTube pages, use `node ${env.SCDB_FOLDER}/agent/youtube/video-summary.js <youtube url>` command
-  
+
 completeTaskEnabled: true
 mailEnabled: true
 wakeOnMessage: true
