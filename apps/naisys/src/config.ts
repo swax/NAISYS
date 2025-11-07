@@ -111,7 +111,6 @@ export async function createConfig(agentPath: string, agentRuntimeId: number) {
 
   /* .env is used for global configs across naisys, while agent configs are for the specific agent */
   const naisysFolder = getEnv("NAISYS_FOLDER", true);
-  const websiteFolder = getEnv("WEBSITE_FOLDER");
   const dbFilePath = new NaisysPath(`${naisysFolder}/database/naisys.sqlite`);
 
   const localLlmUrl = getEnv("LOCAL_LLM_URL");
@@ -293,7 +292,6 @@ export async function createConfig(agentPath: string, agentRuntimeId: number) {
     workspacesEnabled,
     trimSessionEnabled,
     naisysFolder,
-    websiteFolder,
     dbFilePath,
     localLlmUrl,
     localLlmName,

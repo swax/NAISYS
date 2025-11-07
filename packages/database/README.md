@@ -1,5 +1,7 @@
 # @naisys/database
 
+[← Back to packages](../README.md) | [← Back to main README](../../README.md)
+
 Shared database schema and Prisma client for NAISYS monorepo.
 
 ## Overview
@@ -23,82 +25,6 @@ The NAISYS database contains the following tables:
 - **ThreadMembers** - Thread membership and participation
 - **ThreadMessages** - Individual messages in threads
 
-## Installation
-
-This package is used as a workspace dependency:
-
-```json
-{
-  "dependencies": {
-    "@naisys/database": "file:../../packages/database"
-  }
-}
-```
-
-Then run `npm install` at the monorepo root.
-
-## Usage
-
-### Basic Usage with PrismaClient
-
-```typescript
-import { PrismaClient } from "@naisys/database";
-
-const prisma = new PrismaClient({
-  datasources: {
-    db: {
-      url: `file:/path/to/naisys.sqlite`,
-    },
-  },
-});
-
-// Query users
-const users = await prisma.users.findMany();
-
-// Create a cost entry
-await prisma.costs.create({
-  data: {
-    date: new Date().toISOString(),
-    username: "agent1",
-    source: "api",
-    model: "claude-3",
-    cost: 0.05,
-    input_tokens: 1000,
-    output_tokens: 500,
-  },
-});
-
-// Get context logs with filtering
-const logs = await prisma.contextLog.findMany({
-  where: { username: "agent1" },
-  orderBy: { id: "desc" },
-  take: 100,
-});
-```
-
-### Dynamic Database Path
-
-The database path is typically constructed from the `NAISYS_FOLDER` environment variable:
-
-```typescript
-import { PrismaClient } from "@naisys/database";
-import path from "path";
-
-const dbPath = path.join(
-  process.env.NAISYS_FOLDER,
-  "database",
-  "naisys.sqlite",
-);
-
-const prisma = new PrismaClient({
-  datasources: {
-    db: {
-      url: `file:${dbPath}`,
-    },
-  },
-});
-```
-
 ## Development
 
 ### Updating the Schema
@@ -109,16 +35,9 @@ If you need to update the database schema:
 2. Generate the new client: `npm run prisma:generate`
 3. Build the package: `npm run build`
 
-### Pull Schema from Existing Database
-
-If the database schema was changed externally:
-
-```bash
-npm run prisma:pull
-npm run build
-```
-
 ### View Database with Prisma Studio
+
+The database url must be set to a hardcoded value in `prisma/schema.prisma` for Prisma Studio to work.
 
 ```bash
 npm run prisma:studio
@@ -151,3 +70,7 @@ import type { Users, Costs, ContextLog, Threads } from "@naisys/database";
 - All date fields use ISO string format
 - The Prisma Client is generated to `src/generated/prisma/`
 - Foreign key constraints are enabled at runtime
+
+## License
+
+MIT

@@ -11,11 +11,11 @@ export function createLogService(
   { usingDatabase, myUserId }: DatabaseService,
 ) {
   const _combinedLogFilePath = new NaisysPath(
-    `${config.websiteFolder || config.naisysFolder}/logs/combined-log.html`,
+    `${config.naisysFolder}/logs/combined-log.html`,
   );
 
   const _userLogFilePath = new NaisysPath(
-    `${config.websiteFolder || config.naisysFolder}/logs/${config.agent.username}-log.html`,
+    `${config.naisysFolder}/logs/${config.agent.username}-log.html`,
   );
 
   init();

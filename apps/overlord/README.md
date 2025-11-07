@@ -1,5 +1,7 @@
 # NAISYS Overlord
 
+[← Back to main README](../../README.md)
+
 A management application for NAISYS agents that provides a monitoring interface and communication capabilities. NAISYS Overlord sits above the NAISYS database to provide visibility into how agents are working and enables communication with the agents.
 
 ## Overview
@@ -94,4 +96,4 @@ Database schema is defined in `packages/database/prisma/schema.prisma`.
 
 ## License
 
-This project is open source. MIT license.
+MIT
