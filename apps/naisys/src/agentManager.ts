@@ -14,7 +14,7 @@ export class AgentManager {
     this.runningAgents.push(agent);
 
     if (this.runningAgents.length === 1) {
-      this.setActiveConsoleAgent(agent.agentRuntimeId);
+      this.setActiveConsoleAgent(agent.agentRunId);
     }
 
     let stopReason = "";
@@ -32,13 +32,13 @@ export class AgentManager {
         onStop?.(stopReason);
 
         this.stopAgent(
-          agent.agentRuntimeId,
+          agent.agentRunId,
           "completeShutdown",
           `${agent.config.agent.username} shutdown`,
         );
       });
 
-    return agent.agentRuntimeId;
+    return agent.agentRunId;
   }
 
   async stopAgent(
@@ -47,7 +47,7 @@ export class AgentManager {
     reason: string,
   ) {
     const agent = this.runningAgents.find(
-      (a) => a.agentRuntimeId === agentRuntimeId,
+      (a) => a.agentRunId === agentRuntimeId,
     );
 
     if (!agent) {
@@ -62,7 +62,7 @@ export class AgentManager {
       const switchToAgent = this.runningAgents.find((a) => a !== agent);
 
       if (switchToAgent) {
-        this.setActiveConsoleAgent(switchToAgent.agentRuntimeId);
+        this.setActiveConsoleAgent(switchToAgent.agentRunId);
       }
     }
 
@@ -81,7 +81,7 @@ export class AgentManager {
 
   setActiveConsoleAgent(id: number) {
     const newActiveAgent = this.runningAgents.find(
-      (a) => a.agentRuntimeId === id,
+      (a) => a.agentRunId === id,
     );
 
     if (!newActiveAgent) {
@@ -99,7 +99,7 @@ export class AgentManager {
     if (prevActiveAgent) {
       // Last output from the previously active agent
       prevActiveAgent.output.write(
-        `Switching to agent ${newActiveAgent.config.agent.username} (ID: ${newActiveAgent.agentRuntimeId})`,
+        `Switching to agent ${newActiveAgent.config.agent.username} (ID: ${newActiveAgent.agentRunId})`,
         OutputColor.subagent,
       );
       prevActiveAgent.output.setConsoleEnabled(false);
@@ -121,7 +121,7 @@ export class AgentManager {
   }
 
   getBufferLines(id: number) {
-    const agent = this.runningAgents.find((a) => a.agentRuntimeId === id);
+    const agent = this.runningAgents.find((a) => a.agentRunId === id);
 
     if (!agent) {
       return 0;

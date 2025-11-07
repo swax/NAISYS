@@ -68,7 +68,33 @@ export interface AgentConfig {
   persistAcrossRuns?: boolean;
 }
 
-export async function createConfig(agentPath: string, agentRuntimeId: number) {
+interface UserRunSession {
+  userId: number;
+  /** The run ID of an agent process (there could be multiple runs for the same user). Globally unique */
+  runId: number;
+  /** The session number, incremented when the agent calls endsession */
+  sessionId: number;
+}
+
+export async function createConfig(agentPath: string) {
+  let userRunSession: UserRunSession;
+
+  function updateUserRunSession(
+    userId: number,
+    runId: number,
+    sessionId: number,
+  ) {
+    userRunSession = {
+      userId,
+      runId,
+      sessionId,
+    };
+  }
+
+  function getUserRunSession() {
+    return structuredClone(userRunSession);
+  }
+
   /** The system name that shows after the @ in the command prompt */
   const hostname = "naisys";
 
@@ -279,7 +305,6 @@ export async function createConfig(agentPath: string, agentRuntimeId: number) {
   }
 
   return {
-    agentRuntimeId,
     hostname,
     shellCommand,
     agent,
@@ -305,6 +330,8 @@ export async function createConfig(agentPath: string, agentRuntimeId: number) {
     binPath,
     getEnv,
     resolveConfigVars,
+    updateUserRunSession,
+    getUserRunSession,
   };
 }
 

@@ -13,18 +13,27 @@ export async function getAgents(): Promise<Agent[]> {
           title: true,
           agent_path: true,
           lead_username: true,
-          last_active: true,
+          run_sessions: {
+            select: {
+              last_active: true,
+            },
+            orderBy: {
+              last_active: "desc",
+            },
+            take: 1,
+          },
         },
       });
     });
 
     users.forEach((user) => {
+      const lastActive = user.run_sessions[0]?.last_active || "";
       agents.push({
         id: user.id,
         name: user.username,
         title: user.title,
-        online: isAgentOnline(user.last_active || ""),
-        lastActive: user.last_active || "",
+        online: isAgentOnline(lastActive),
+        lastActive: lastActive,
         agentPath: user.agent_path,
         leadUsername: user.lead_username || undefined,
       });

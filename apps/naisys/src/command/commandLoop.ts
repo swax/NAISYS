@@ -10,6 +10,7 @@ import { DreamMaker } from "../llm/dreamMaker.js";
 import { ContentSource, LlmRole } from "../llm/llmDtos.js";
 import { LlmApiType } from "../llm/llModels.js";
 import { LLMService } from "../llm/llmService.js";
+import { DatabaseService } from "../services/dbService.js";
 import { LogService } from "../services/logService.js";
 import { InputModeService } from "../utils/inputMode.js";
 import { OutputColor, OutputService } from "../utils/output.js";
@@ -34,6 +35,7 @@ export function createCommandLoop(
   output: OutputService,
   logService: LogService,
   inputMode: InputModeService,
+  dbService: DatabaseService,
 ) {
   async function run(abortSignal?: AbortSignal) {
     await output.commentAndLog(`AGENT STARTED`);
@@ -202,6 +204,7 @@ export function createCommandLoop(
       if (nextCommandAction == NextCommandAction.EndSession) {
         llmynx.clear();
         contextManager.clear();
+        dbService.incrementSession();
         nextCommandAction = NextCommandAction.Continue;
         nextPromptIndex = 0;
       }

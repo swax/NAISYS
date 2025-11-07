@@ -1,11 +1,10 @@
-import { createPrismaClient } from "@naisys/database";
+import { createPrismaClient, PrismaClient } from "@naisys/database";
+import { exec } from "child_process";
+import { dirname, join } from "path";
+import { fileURLToPath } from "url";
+import { promisify } from "util";
 import { Config } from "../config.js";
 import * as pathService from "./pathService.js";
-import { PrismaClient } from "@naisys/database";
-import { exec } from "child_process";
-import { promisify } from "util";
-import { fileURLToPath } from "url";
-import { dirname, join } from "path";
 
 const execAsync = promisify(exec);
 
@@ -25,54 +24,9 @@ export async function createDatabaseService(config: Config) {
     // Run migrations to create database schema if it doesn't exist
     await runMigrations();
 
-    // If user is not in the db, add them
-    const user = await prisma.users.findUnique({
-      where: { username: config.agent.username },
-    });
+    await initUser();
 
-    // If user not in database, add them
-    if (!user) {
-      try {
-        const insertedUser = await prisma.users.create({
-          data: {
-            username: config.agent.username,
-            title: config.agent.title,
-            agent_path: config.agent.hostpath,
-            lead_username: config.agent.leadAgent,
-          },
-        });
-
-        myUserId = insertedUser.id;
-      } catch (e) {
-        throw (
-          `A user already exists in the database with the agent path (${config.agent.hostpath})\n` +
-          `Either create a new agent config file, or delete the ${config.naisysFolder} folder to reset the database.`
-        );
-      }
-    }
-    // Else already exists, validate it's config path is correct
-    else {
-      myUserId = user.id;
-
-      if (user.agent_path != config.agent.hostpath) {
-        throw `Error: User ${config.agent.username} already exists in the database with a different config path (${user.agent_path})`;
-      }
-
-      if (
-        config.agent.leadAgent &&
-        config.agent.leadAgent != user.lead_username
-      ) {
-        throw `Error: User ${config.agent.username} already exists in the database with a different lead agent (${user.lead_username})`;
-      }
-
-      // Update user title in database
-      if (user.title !== config.agent.title) {
-        await prisma.users.update({
-          where: { id: myUserId },
-          data: { title: config.agent.title },
-        });
-      }
-    }
+    await initRun();
 
     // Start the last_active updater after user is initialized
     updateLastActive();
@@ -124,12 +78,105 @@ export async function createDatabaseService(config: Config) {
     }
   }
 
+  async function initUser(): Promise<void> {
+    // If user is not in the db, add them
+    const user = await prisma.users.findUnique({
+      where: { username: config.agent.username },
+    });
+
+    // If user not in database, add them
+    if (!user) {
+      try {
+        const insertedUser = await prisma.users.create({
+          data: {
+            username: config.agent.username,
+            title: config.agent.title,
+            agent_path: config.agent.hostpath,
+            lead_username: config.agent.leadAgent,
+          },
+        });
+
+        myUserId = insertedUser.id;
+      } catch (e) {
+        throw (
+          `A user already exists in the database with the agent path (${config.agent.hostpath})\n` +
+          `Either create a new agent config file, or delete the ${config.naisysFolder} folder to reset the database.`
+        );
+      }
+    }
+    // Else already exists, validate it's config path is correct
+    else {
+      myUserId = user.id;
+
+      if (user.agent_path != config.agent.hostpath) {
+        throw `Error: User ${config.agent.username} already exists in the database with a different config path (${user.agent_path})`;
+      }
+
+      if (
+        config.agent.leadAgent &&
+        config.agent.leadAgent != user.lead_username
+      ) {
+        throw `Error: User ${config.agent.username} already exists in the database with a different lead agent (${user.lead_username})`;
+      }
+
+      // Update user title in database
+      if (user.title !== config.agent.title) {
+        await prisma.users.update({
+          where: { id: myUserId },
+          data: { title: config.agent.title },
+        });
+      }
+    }
+  }
+
+  async function initRun(): Promise<void> {
+    // increment the existing run id in the run_session table, run_id
+    const lastRun = await prisma.run_session.findFirst({
+      select: { run_id: true },
+      orderBy: { run_id: "desc" },
+    });
+
+    await createNewRunSession(lastRun ? lastRun.run_id + 1 : 1, 0);
+  }
+
+  async function incrementSession(): Promise<void> {
+    const { runId, sessionId } = config.getUserRunSession();
+
+    await updateLastActive();
+
+    await createNewRunSession(runId, sessionId + 1);
+  }
+
+  async function createNewRunSession(
+    runId: number,
+    sessionId: number,
+  ): Promise<void> {
+    await prisma.run_session.create({
+      data: {
+        user_id: myUserId,
+        run_id: runId,
+        session_id: sessionId,
+        model_name: config.agent.shellModel,
+        start_date: new Date().toISOString(),
+        last_active: new Date().toISOString(),
+      },
+    });
+
+    config.updateUserRunSession(myUserId, runId, sessionId);
+  }
+
   async function updateLastActive(): Promise<void> {
     if (myUserId === -1) return;
 
     try {
-      await prisma.users.update({
-        where: { id: myUserId },
+      const { userId, runId, sessionId } = config.getUserRunSession();
+
+      await prisma.run_session.updateMany({
+        where: {
+          user_id: userId,
+          run_id: runId,
+          session_id: sessionId,
+        },
         data: { last_active: new Date().toISOString() },
       });
     } catch (error) {
@@ -151,9 +198,9 @@ export async function createDatabaseService(config: Config) {
   }
 
   return {
-    myUserId,
     usingDatabase,
     cleanup,
+    incrementSession,
   };
 }
 

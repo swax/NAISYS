@@ -18,13 +18,13 @@ import { OutputService } from "../utils/output.js";
 
 export function createMockDatabaseService(): DatabaseService {
   return {
-    myUserId: 1,
     usingDatabase: async <T>(
       run: (prisma: PrismaClient) => Promise<T>,
     ): Promise<T> => {
       throw new Error("Mock database not implemented");
     },
     cleanup: () => {},
+    incrementSession: async () => {},
   };
 }
 
