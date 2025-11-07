@@ -10,19 +10,13 @@
   },
   "scripts": {
     "build/run/attachable": "tsc && node --inspect dist/naisys.js ../../agents/assistant.yaml",
-    "agent:odoo": "node dist/naisys.js ../../agents/odoo.yaml",
     "agent:assistant": "node dist/naisys.js ../../agents/assistant.yaml --overlord",
-    "agent:nightwatch": "node dist/naisys.js ../../agents/nightwatch.yaml",
     "agent:scdb:program-director": "cd ../../agents/scdb && node ../../apps/naisys/dist/naisys.js program-director.yaml --overlord",
-    "agent:onshape": "node dist/naisys.js ../../agents/onshape.yaml",
     "clean": "rm -rf dist",
     "build": "tsc",
     "eslint": "npx eslint src",
     "test": "tsc && node --experimental-vm-modules node_modules/jest/bin/jest.js --testPathPatterns=dist/__tests__",
-    "prettier": "npx prettier --write .",
-    "dependency-graph": "madge --image dependency-graph.png dist",
-    "detect-cycles": "madge --circular dist",
-    "npm:publish:dryrun": "npm run clean && npm ci && npm run build && npm publish --dry-run",
+    "npm:publish:dryrun": "npm run clean && npm run build && npm publish --dry-run",
     "postinstall": "node -e \"process.platform !== 'win32' && require('child_process').execSync('chmod +x ./bin/*')\""
   },
   "repository": {

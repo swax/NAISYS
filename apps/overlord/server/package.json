@@ -8,12 +8,17 @@
     ".": "./dist/server.js"
   },
   "scripts": {
-    "clean": "rm -rf dist",
+    "clean": "rm -rf dist client-dist",
     "dev": "tsx watch src/server.ts",
     "start": "node dist/server.js",
-    "build": "tsc",
-    "type-check": "tsc --noEmit"
+    "build": "tsc && cp -r ../client/dist client-dist",
+    "type-check": "tsc --noEmit",
+    "npm:publish:dryrun": "npm run clean && npm run build && npm publish --dry-run"
   },
+  "files": [
+    "dist",
+    "client-dist"
+  ],
   "dependencies": {
     "@fastify/cookie": "^11.0.2",
     "@fastify/cors": "^11.1.0",
