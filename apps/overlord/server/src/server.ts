@@ -103,7 +103,7 @@ export const startServer = async (logType: "logToConsole" | "logToFile") => {
   fastify.register(apiRoutes, { prefix: "/api" });
 
   if (process.env.NODE_ENV === "production") {
-    const clientDistPath = path.join(__dirname, "../../client/dist");
+    const clientDistPath = path.join(__dirname, "../client-dist");
 
     await fastify.register(staticFiles, {
       root: clientDistPath,

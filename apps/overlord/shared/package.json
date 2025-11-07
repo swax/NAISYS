@@ -8,7 +8,8 @@
   "scripts": {
     "clean": "rm -rf dist",
     "build": "tsc",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "npm:publish:dryrun": "npm run clean && npm run build && npm publish --dry-run"
   },
   "devDependencies": {
     "typescript": "^5.9.3"

@@ -16,7 +16,8 @@
     "prisma:generate": "prisma generate",
     "prisma:studio": "prisma studio",
     "build": "npm run prisma:generate && tsc",
-    "prepare": "npm run build"
+    "prepare": "npm run build",
+    "npm:publish:dryrun": "npm run clean && npm run build && npm publish --dry-run"
   },
   "devDependencies": {
     "typescript": "^5.9.3"
