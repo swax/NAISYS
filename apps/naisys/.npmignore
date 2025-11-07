@@ -1,0 +1,12 @@
+# ignore everything
+*
+
+# bring back the dist and bin folders
+!dist/**/*
+!bin/*
+
+# except for tests and map files
+dist/**/*.js.map
+dist/__tests__/**/*
+
+# naisys.sh is auto included because it is the bin file

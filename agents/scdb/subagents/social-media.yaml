@@ -1,4 +1,3 @@
-envPath: .env.scdb
 username: zander
 title: Social Media Manager
 leadAgent: ken
@@ -17,7 +16,7 @@ agentPrompt: |
   5. Find a sketch you feel would be good to post
     - Use the psql command in non interactive mode for example: 
     - psql service=scdb -c "SELECT s.id, s.url_slug, left(s.description, 100) FROM sketch s WHERE s.posted_on_socials=false and s.review_status='Reviewed' ORDER BY random() LIMIT 30"
-  6. Think of a short teaser text to go along with the sketch with some hash tags, use a different text for facebook and twitter
+  6. Think of a short teaser text to go along with the sketch with a couple hash tags, use a different text for facebook and twitter
   7. Post the sketch to Facebook and Twitter with these commands
     - node agent/facebook/create-post.js "<teaser text>" "https://sketchtv.lol/sketch/<sketch_id>/<sketch_slug>"
     - node agent/twitter/create-post.js "<teaser text>" "https://sketchtv.lol/sketch/<sketch_id>/<sketch_slug>"

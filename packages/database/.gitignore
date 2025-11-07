@@ -1,0 +1,17 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Generated Prisma Client
+src/generated/
+
+# Environment variables (if any local overrides)
+.env.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo

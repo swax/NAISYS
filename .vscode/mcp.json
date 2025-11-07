@@ -2,10 +2,7 @@
   "servers": {
     "odoo": {
       "command": "python",
-      "args": [
-        "-m",
-        "odoo_mcp"
-      ],
+      "args": ["-m", "odoo_mcp"],
       "env": {
         "ODOO_URL": "http://localhost:8069/",
         "ODOO_DB": "odoo",
