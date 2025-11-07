@@ -8,6 +8,5 @@
 # except for tests and map files
 dist/**/*.js.map
 dist/__tests__/**/*
-dist/__fine-tuning__/**/*
 
 # naisys.sh is auto included because it is the bin file

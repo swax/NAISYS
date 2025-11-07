@@ -1,7 +1,7 @@
 {
   "name": "naisys",
   "description": "Node.js Autonomous Intelligence System",
-  "version": "1.7.0",
+  "version": "2.1.0",
   "type": "module",
   "main": "dist/naisys.js",
   "preferGlobal": true,
@@ -22,7 +22,6 @@
     "prettier": "npx prettier --write .",
     "dependency-graph": "madge --image dependency-graph.png dist",
     "detect-cycles": "madge --circular dist",
-    "gen-tuning": "tsc && node dist/__fine-tuning__/gen-jsonl.js",
     "npm:publish:dryrun": "npm run clean && npm ci && npm run build && npm publish --dry-run",
     "postinstall": "node -e \"process.platform !== 'win32' && require('child_process').execSync('chmod +x ./bin/*')\""
   },

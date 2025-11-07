@@ -1,9 +1,11 @@
 ## NAISYS (Node.js Autonomous Intelligence System)
 
+[← Back to main README](../../README.md)
+
 NAISYS allows any LLM you want to operate a standard Linux shell given your instructions. You can control how much
 to spend, the maximum number of tokens to use per session, how long to wait between commands, etc.. Between each command
-NAISYS will wait a few seconds to accept any input you want to put in yourself in case you want to colllaborate with the
-LLM, give it hints, and/or diagnose the session. Once the LLM reaches the token max you specified for the sesssion it
+NAISYS will wait a few seconds to accept any input you want to put in yourself in case you want to collaborate with the
+LLM, give it hints, and/or diagnose the session. Once the LLM reaches the token max you specified for the session it
 will wrap things up, and start a fresh shell for the LLM to continue on its work.
 
 NAISYS tries to be a minimal wrapper, just helping the LLM operate in the shell 'better'. Making commands 'context friendly'. For instace if a command is long running, NAISYS will interrupt it, show the LLM the current output, and ask the LLM what it wants to
@@ -11,14 +13,8 @@ do next - wait, kill, or send input. The custom command prompt helps the LLM kee
 
 Some use cases are building websites, diagnosing a system for security concerns, mapping out the topology of the local
 network, learning and performing arbitrary tasks, or just plain exploring the limits of autonomy. NAISYS has a built-in
-system for inter-agent communiation. You can manually startup mulitple instances of NAISYS with different roles, or
+system for inter-agent communication. You can manually startup multiple instances of NAISYS with different roles, or
 you can allow agents to start their own sub-agents on demand with instructions defined by the LLM itself!
-
-[NPM](https://www.npmjs.com/package/naisys) | [Website](https://naisys.org) | [Discord](https://discord.gg/JBUPWSbaEt) | [Demo Video](https://www.youtube.com/watch?v=Ttya3ixjumo)
-
-```bash
-npm install -g naisys
-```
 
 #### Node.js is used to create a simple proxy shell environment for the LLM that
 
@@ -34,33 +30,7 @@ npm install -g naisys
 
 ## Getting Started
 
-- See notes for Windows users at the bottom of this file
-- Install Node.js, NAISYS has been tested with version 20
-- Install lynx using `apt install lynx`
-- Run `npm install -g naisys`
-- Create a `.env` file:
-
-```bash
-# Agent home files and NAISYS specific databases will be stored here
-NAISYS_FOLDER="/var/naisys"
-
-# The folder where the website and logs are served from (if not defined then logs put in the naisys folder)
-WEBSITE_FOLDER="/var/www"
-
-# Leave api keys/url blank if not using the service
-OPENAI_API_KEY="xxx"
-GOOGLE_API_KEY="yyy"
-ANTHROPIC_API_KEY="zzz"
-
-LOCAL_LLM_URL="http://localhost:1234/v1"
-LOCAL_LLM_NAME="minstral instruct v0.2"
-
-# Custom global vars for use in agent configurations here
-WEBSITE_URL="http://localhost:8080/"
-
-# Needed for llmynx search functionality
-GOOGLE_SEARCH_ENGINE_ID="your_google_search_engine_id"
-```
+- Create a `.env` file based off the `.env.example` file
 
 - Create an agent configuration file `smith.yaml`:
 
@@ -152,7 +122,6 @@ initialCommands:
   - Pause on the debug prompt for that many seconds
   - Pause indefinitely
   - Pause until a new message is received from another agent
-- Agents logs are written as html to `{WEBSITE_FOLDER or NAISYS_FOLDER}/logs`
 
 #### Console Colors Legend
 
@@ -183,37 +152,10 @@ initialCommands:
   - `genimg "<description>" <filepath>` - Generates an image with the given description, save at the specified fully qualified path
   - `subagent` - A way for LLMs to start/stop their own sub-agents. Communicating with each other with `llmail`. Set the `subagentMax` in the agent config to enable.
 
-## Running NAISYS from Source
-
-#### Getting started locally
-
-- Install Node.js, NAISYS has been tested with version 20
-- Clone the NAISYS repository from Github
-- Run `npm install` to install dependencies
-- Create a `.env` from the example above
-- Run `npm run build`
-- Configure your agent using the examples in the `./agents` folder
-- Run `node dist/naisys.js <path to agent yaml file>`
-
-#### Notes for Windows users
-
-- To use NAISYS on Windows you need to run it locally from source (or from within WSL)
-- Use the above instructions to install locally, and then continue with the instructions below
-- Install WSL (Windows Subsystem for Linux)
-- Install a Linux distribution, Ubuntu can easily be installed from the Microsoft Store
-- Make sure to the checked out code perserves the original line endings
-  - Files in the /bin folder should have LF endings only, not CRLF
-- The `NAISYS_FOLDER` and `WEBSITE_FOLDER` should be set to the WSL path
-  - So `C:\var\naisys` should be `/mnt/c/var/naisys` in the `.env` file
-
-#### Notes for MacOS users
-
-- The browser llmynx requires `timeout` and `lynx`. Run these commands to install them:
-  - `brew install coreutils`
-  - `brew install lynx`
-
 ## Changelog
 
+- 2.1: Monorepo architecture, allowing Overlord to run in-process
+- 2.0: Agent multiplexing in the same process
 - 1.7: Prompt cachinging, llmynx pagination, complete task command
 - 1.6: Support for long running shell commands and full screen terminal output
 - 1.5: Allow agents to start their own parallel `subagents`
@@ -222,3 +164,7 @@ initialCommands:
 - 1.2: Created stand-in shell commands for custom Naisys commands
 - 1.1: Added command protection settings to prevent unwanted writes
 - 1.0: Initial release
+
+## License
+
+MIT

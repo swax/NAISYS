@@ -49,7 +49,6 @@ export function getCleanEnv() {
   delete cleanEnv.OPENAI_API_KEY;
   delete cleanEnv.GOOGLE_API_KEY;
   delete cleanEnv.ANTHROPIC_API_KEY;
-  delete cleanEnv.WEBSITE_FOLDER;
   delete cleanEnv.WEBSITE_URL;
   return cleanEnv;
 }
