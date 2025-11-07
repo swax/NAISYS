@@ -21,7 +21,7 @@ interface TokenUsage {
 export function createCostTracker(
   config: Config,
   llModels: LLModels,
-  { usingDatabase, myUserId }: DatabaseService,
+  { usingDatabase }: DatabaseService,
   output: OutputService,
 ) {
   // Record token usage for LLM calls - calculate and store total cost
@@ -43,11 +43,15 @@ export function createCostTracker(
     };
     const totalCost = calculateCostFromTokens(tokenUsage, model);
 
+    const { userId, runId, sessionId } = config.getUserRunSession();
+
     await usingDatabase(async (prisma) => {
       await prisma.costs.create({
         data: {
           date: new Date().toISOString(),
-          user_id: myUserId,
+          user_id: userId,
+          run_id: runId,
+          session_id: sessionId,
           subagent: null,
           source,
           model: modelKey,
@@ -59,15 +63,21 @@ export function createCostTracker(
         },
       });
     });
+
+    await updateSessionCost(totalCost);
   }
 
   // Record fixed cost for non-token services like image generation
   async function recordCost(cost: number, source: string, modelKey: string) {
+    const { userId, runId, sessionId } = config.getUserRunSession();
+
     await usingDatabase(async (prisma) => {
       await prisma.costs.create({
         data: {
           date: new Date().toISOString(),
-          user_id: myUserId,
+          user_id: userId,
+          run_id: runId,
+          session_id: sessionId,
           subagent: null,
           source,
           model: modelKey,
@@ -76,6 +86,27 @@ export function createCostTracker(
           output_tokens: 0,
           cache_write_tokens: 0,
           cache_read_tokens: 0,
+        },
+      });
+    });
+
+    await updateSessionCost(cost);
+  }
+
+  async function updateSessionCost(cost: number) {
+    const { userId, runId, sessionId } = config.getUserRunSession();
+
+    await usingDatabase(async (prisma) => {
+      await prisma.run_session.updateMany({
+        where: {
+          user_id: userId,
+          run_id: runId,
+          session_id: sessionId,
+        },
+        data: {
+          total_cost: {
+            increment: cost,
+          },
         },
       });
     });

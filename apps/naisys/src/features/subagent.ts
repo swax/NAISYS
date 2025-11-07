@@ -9,7 +9,7 @@ import * as pathService from "../services/pathService.js";
 import { NaisysPath } from "../services/pathService.js";
 import { agentNames } from "../utils/agentNames.js";
 import { InputModeService } from "../utils/inputMode.js";
-import { OutputService, OutputColor } from "../utils/output.js";
+import { OutputColor, OutputService } from "../utils/output.js";
 import { getCleanEnv, shuffle } from "../utils/utilities.js";
 import { LLMail } from "./llmail.js";
 
@@ -199,19 +199,21 @@ export function createSubagentService(
 
     if (inputMode.isDebug()) {
       // Find running in process agents that aren't already listed
+      const myRunId = config.getUserRunSession().runId;
+      
       const otherAgents = agentManager.runningAgents
         .filter(
           (ra) =>
-            ra.agentRuntimeId != config.agentRuntimeId &&
-            !_subagents.find((sa) => sa.id === ra.agentRuntimeId),
+            ra.agentRunId != myRunId &&
+            !_subagents.find((sa) => sa.id === ra.agentRunId),
         )
         .map((ra) => {
           return {
             agentName: ra.config.agent.username,
-            id: ra.agentRuntimeId,
+            id: ra.agentRunId,
             status: "started",
             taskDescription: ra.config.agent.taskDescription || "",
-            unreadLines: agentManager.getBufferLines(ra.agentRuntimeId),
+            unreadLines: agentManager.getBufferLines(ra.agentRunId),
           };
         });
 
@@ -491,7 +493,7 @@ export function createSubagentService(
   function _stopAgent(id: number, reason: string) {
     // Get if the agent is running in process, debug user can stop agents other than the local subagent ones
     const agentRuntime = agentManager.runningAgents.find(
-      (a) => a.agentRuntimeId === id,
+      (a) => a.agentRunId === id,
     );
 
     // The local record of the subagent

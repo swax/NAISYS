@@ -35,10 +35,8 @@ export async function createAgentRuntime(
    * We can also see from this why modern dependency injection frameworks exist
    */
 
-  const agentRuntimeId = runtimeId++;
-
   // Base services
-  const config = await createConfig(agentPath, agentRuntimeId);
+  const config = await createConfig(agentPath);
   const dbService = await createDatabaseService(config);
   const logService = createLogService(config, dbService);
   const output = createOutputService(logService);
@@ -58,13 +56,7 @@ export async function createAgentRuntime(
     logService,
     inputMode,
   );
-  const llmService = createLLMService(
-    config,
-    costTracker,
-    tools,
-    llModels,
-    dbService,
-  );
+  const llmService = createLLMService(config, costTracker, tools, llModels);
   const dreamMaker = createDreamMaker(
     config,
     contextManager,
@@ -126,7 +118,6 @@ export async function createAgentRuntime(
     dreamMaker,
     contextManager,
     costTracker,
-    dbService,
     output,
     inputMode,
   );
@@ -146,12 +137,13 @@ export async function createAgentRuntime(
     output,
     logService,
     inputMode,
+    dbService,
   );
 
   const abortController = new AbortController();
 
   return {
-    agentRuntimeId,
+    agentRunId: config.getUserRunSession().runId,
     config,
     output,
     subagentService,

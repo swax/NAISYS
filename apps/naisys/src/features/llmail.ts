@@ -1,13 +1,15 @@
+import { Prisma, PrismaClient } from "@naisys/database";
 import table from "text-table";
 import { Config } from "../config.js";
 import { DatabaseService } from "../services/dbService.js";
 import * as utilities from "../utils/utilities.js";
-import { Prisma, PrismaClient } from "@naisys/database";
 
 export function createLLMail(
   config: Config,
-  { myUserId, usingDatabase }: DatabaseService,
+  { usingDatabase }: DatabaseService,
 ) {
+  const myUserId = config.getUserRunSession().userId;
+
   /** Threading is not currently used in `simpleMode` so this doesn't matter */
   const _threadTokenMax = config.agent.mailMessageTokenMax
     ? config.agent.mailMessageTokenMax * 5
@@ -376,14 +378,34 @@ export function createLLMail(
 
   async function listUsers() {
     return await usingDatabase(async (prisma) => {
-      let userList = await prisma.users.findMany();
+      let userList = await prisma.users.findMany({
+        select: {
+          username: true,
+          title: true,
+          lead_username: true,
+          run_sessions: {
+            select: {
+              last_active: true,
+            },
+            orderBy: {
+              last_active: "desc",
+            },
+            take: 1,
+          },
+        },
+      });
 
-      const enrichedUserList = userList.map((u) => ({
-        ...u,
-        active: u.last_active
-          ? new Date(u.last_active).getTime() > Date.now() - 5 * 1000 // 5 seconds
-          : false,
-      }));
+      const enrichedUserList = userList.map((u) => {
+        const lastActive = u.run_sessions[0]?.last_active;
+        return {
+          username: u.username,
+          title: u.title,
+          lead_username: u.lead_username,
+          active: lastActive
+            ? new Date(lastActive).getTime() > Date.now() - 5 * 1000 // 5 seconds
+            : false,
+        };
+      });
 
       return table(
         [

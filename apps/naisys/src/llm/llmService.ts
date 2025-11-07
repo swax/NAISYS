@@ -4,7 +4,6 @@ import { GoogleGenAI } from "@google/genai";
 import OpenAI from "openai";
 import { ChatCompletionCreateParamsNonStreaming } from "openai/resources";
 import { Config } from "../config.js";
-import { DatabaseService } from "../services/dbService.js";
 import { CommandTools } from "./commandTool.js";
 import { CostTracker } from "./costTracker.js";
 import { LLModels, LlmApiType } from "./llModels.js";
@@ -17,7 +16,6 @@ export function createLLMService(
   costTracker: CostTracker,
   tools: CommandTools,
   llModels: LLModels,
-  { myUserId }: DatabaseService,
 ) {
   async function query(
     modelKey: string,
@@ -26,7 +24,9 @@ export function createLLMService(
     source: QuerySources,
   ): Promise<string[]> {
     const currentTotalCost = await costTracker.getTotalCosts(
-      config.agent.spendLimitDollars ? myUserId : undefined,
+      config.agent.spendLimitDollars
+        ? config.getUserRunSession().userId
+        : undefined,
     );
     const spendLimit =
       config.agent.spendLimitDollars || config.spendLimitDollars || -1;

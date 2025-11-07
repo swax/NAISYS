@@ -1,14 +1,14 @@
 import escapeHtml from "escape-html";
 import * as fs from "fs";
+import { Config } from "../config.js";
 import { LlmMessage, LlmRole } from "../llm/llmDtos.js";
 import { DatabaseService } from "./dbService.js";
 import * as pathService from "./pathService.js";
 import { NaisysPath } from "./pathService.js";
-import { Config } from "../config.js";
 
 export function createLogService(
   config: Config,
-  { usingDatabase, myUserId }: DatabaseService,
+  { usingDatabase }: DatabaseService,
 ) {
   const _combinedLogFilePath = new NaisysPath(
     `${config.naisysFolder}/logs/combined-log.html`,
@@ -55,15 +55,32 @@ export function createLogService(
   }
 
   async function write(message: LlmMessage) {
+    const { userId, runId, sessionId } = config.getUserRunSession();
+
     const insertedId = await usingDatabase(async (prisma) => {
       const inserted = await prisma.context_log.create({
         data: {
-          user_id: myUserId,
+          user_id: userId,
+          run_id: runId,
+          session_id: sessionId,
           role: toSimpleRole(message.role),
           source: message.source?.toString() || "",
           type: message.type || "",
           message: message.content,
           date: new Date().toISOString(),
+        },
+      });
+
+      await prisma.run_session.updateMany({
+        where: {
+          user_id: userId,
+          run_id: runId,
+          session_id: sessionId,
+        },
+        data: {
+          total_lines: {
+            increment: message.content.split("\n").length,
+          },
         },
       });
 

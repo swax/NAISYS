@@ -8,7 +8,6 @@ import { ContextManager } from "../llm/contextManager.js";
 import { CostTracker } from "../llm/costTracker.js";
 import { DreamMaker } from "../llm/dreamMaker.js";
 import { ContentSource } from "../llm/llmDtos.js";
-import { DatabaseService } from "../services/dbService.js";
 import { InputModeService } from "../utils/inputMode.js";
 import { OutputColor, OutputService } from "../utils/output.js";
 import * as utilities from "../utils/utilities.js";
@@ -40,7 +39,6 @@ export function createCommandHandler(
   dreamMaker: DreamMaker,
   contextManager: ContextManager,
   costTracker: CostTracker,
-  { myUserId }: DatabaseService,
   output: OutputService,
   inputMode: InputModeService,
 ) {
@@ -212,7 +210,7 @@ export function createCommandHandler(
         case "cost": {
           if (cmdArgs === "reset") {
             const userId = config.agent.spendLimitDollars
-              ? myUserId
+              ? config.getUserRunSession().userId
               : undefined;
             await costTracker.clearCosts(userId);
             await contextManager.append(
