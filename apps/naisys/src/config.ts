@@ -113,7 +113,7 @@ export async function createConfig(agentPath: string) {
 
   const agent = loadAgentConfig();
 
-  dotenv.config();
+  dotenv.config({ quiet: true });
 
   /** Web pages loaded with llmynx will be reduced down to around this number of tokens */
   const webTokenMax = 5000;

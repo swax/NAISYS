@@ -136,7 +136,7 @@ export const startServer = async (logType: "logToConsole" | "logToFile") => {
 
 // Start server if this file is run directly
 if (import.meta.url === `file://${process.argv[1]}`) {
-  dotenv.config();
+  dotenv.config({ quiet: true });
 
   startServer("logToConsole");
 }

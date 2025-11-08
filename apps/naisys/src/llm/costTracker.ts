@@ -104,6 +104,7 @@ export function createCostTracker(
           session_id: sessionId,
         },
         data: {
+          last_active: new Date().toISOString(),
           total_cost: {
             increment: cost,
           },

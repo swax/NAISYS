@@ -1,9 +1,14 @@
-import { RunSession } from "shared";
+import { LogEntry, LogRole, LogSource, LogType, RunSession } from "shared";
 import { usingNaisysDb } from "../database/naisysDatabase.js";
 import { isAgentOnline } from "../utils/agentUtils.js";
 
 export interface RunsData {
   runs: RunSession[];
+  timestamp: string;
+}
+
+export interface ContextLogData {
+  logs: LogEntry[];
   timestamp: string;
 }
 
@@ -56,6 +61,69 @@ export async function getRunsData(
     // Return empty data on error
     return {
       runs: [],
+      timestamp: new Date().toISOString(),
+    };
+  }
+}
+
+export async function getContextLog(
+  userId: number,
+  runId: number,
+  sessionId: number,
+  logsAfter?: number,
+): Promise<ContextLogData> {
+  try {
+    const dbLogs = await usingNaisysDb(async (prisma) => {
+      const where: any = {
+        user_id: userId,
+        run_id: runId,
+        session_id: sessionId,
+      };
+
+      // If logsAfter is provided, only fetch logs after that ID
+      if (logsAfter !== undefined && logsAfter > 0) {
+        where.id = { gt: logsAfter };
+      }
+
+      return await prisma.context_log.findMany({
+        where,
+        orderBy: { id: "asc" },
+        select: {
+          id: true,
+          role: true,
+          source: true,
+          type: true,
+          message: true,
+          date: true,
+          users: {
+            select: {
+              username: true,
+            },
+          },
+        },
+      });
+    });
+
+    const logs: LogEntry[] = dbLogs.map((log) => ({
+      id: log.id,
+      username: log.users.username,
+      role: log.role as LogRole,
+      source: log.source as LogSource,
+      type: log.type as LogType,
+      message: log.message,
+      date: log.date,
+    }));
+
+    return {
+      logs,
+      timestamp: new Date().toISOString(),
+    };
+  } catch (error) {
+    console.error("Error fetching context log:", error);
+
+    // Return empty data on error
+    return {
+      logs: [],
       timestamp: new Date().toISOString(),
     };
   }

@@ -1,99 +1,17 @@
 import {
   Alert,
-  Card,
+  Badge,
   Group,
   Loader,
   Stack,
   Text,
-  Badge,
 } from "@mantine/core";
 import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
+import { RunSessionCard } from "../components/RunSessionCard";
 import { useNaisysDataContext } from "../contexts/NaisysDataContext";
 import { useRunsData } from "../hooks/useRunsData";
 import { RunSession } from "../lib/apiClient";
-
-const RunSessionCard: React.FC<{ run: RunSession }> = ({ run }) => {
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleString();
-  };
-
-  const formatCost = (cost: number) => {
-    return `$${cost.toFixed(4)}`;
-  };
-
-  const formatDuration = (startDate: string, lastActive: string) => {
-    const start = new Date(startDate);
-    const end = new Date(lastActive);
-    const durationMs = end.getTime() - start.getTime();
-
-    const seconds = Math.floor(durationMs / 1000);
-    const minutes = Math.floor(seconds / 60);
-    const hours = Math.floor(minutes / 60);
-    const days = Math.floor(hours / 24);
-
-    if (days > 0) {
-      const remainingHours = hours % 24;
-      return `${days}d ${remainingHours}h`;
-    } else if (hours > 0) {
-      const remainingMinutes = minutes % 60;
-      return `${hours}h ${remainingMinutes}m`;
-    } else if (minutes > 0) {
-      const remainingSeconds = seconds % 60;
-      return `${minutes}m ${remainingSeconds}s`;
-    } else {
-      return `${seconds}s`;
-    }
-  };
-
-  const getRunLabel = () => {
-    if (run.sessionId > 1) {
-      return `Run ${run.runId}-${run.sessionId}`;
-    }
-    return `Run ${run.runId}`;
-  };
-
-  return (
-    <Card padding="md" radius="md" withBorder style={{ marginBottom: "8px" }}>
-      <Stack gap="sm">
-        <Group justify="space-between" align="flex-start">
-          <Stack gap="xs" style={{ flex: 1 }}>
-            <Group gap="xs">
-              <Text size="sm" fw={600}>
-                {getRunLabel()}
-              </Text>
-              <Badge size="sm" variant="light" color="blue">
-                {run.modelName}
-              </Badge>
-              {run.isOnline && (
-                <Badge size="sm" variant="dot" color="green">
-                  Online
-                </Badge>
-              )}
-            </Group>
-            <Group gap="md">
-              <Text size="xs" c="dimmed">
-                Started: {formatDate(run.startDate)}
-              </Text>
-              <Text size="xs" c="dimmed">
-                Duration: {formatDuration(run.startDate, run.lastActive)}
-              </Text>
-            </Group>
-          </Stack>
-          <Stack gap="xs" align="flex-end">
-            <Text size="sm" fw={600} c="green">
-              {formatCost(run.totalCost)}
-            </Text>
-            <Text size="xs" c="dimmed">
-              {run.totalLines} lines
-            </Text>
-          </Stack>
-        </Group>
-      </Stack>
-    </Card>
-  );
-};
 
 export const Runs: React.FC = () => {
   const { agent: agentParam } = useParams<{ agent: string }>();
