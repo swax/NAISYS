@@ -10,7 +10,7 @@ program
 
 const agentMaganer = new AgentManager();
 
-// Inits the naisys db if it doesn't exist which is neede by overlord
+// Inits the naisys db if it doesn't exist which is needed by overlord
 await agentMaganer.startAgent(program.args[0]);
 
 // If --overlord flag is provided, start Overlord server

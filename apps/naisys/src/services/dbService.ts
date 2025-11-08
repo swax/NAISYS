@@ -136,7 +136,7 @@ export async function createDatabaseService(config: Config) {
       orderBy: { run_id: "desc" },
     });
 
-    await createNewRunSession(lastRun ? lastRun.run_id + 1 : 1, 0);
+    await createNewRunSession(lastRun ? lastRun.run_id + 1 : 1, 1);
   }
 
   async function incrementSession(): Promise<void> {

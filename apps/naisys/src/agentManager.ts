@@ -131,7 +131,7 @@ export class AgentManager {
   }
 
   async waitForAllAgentsToComplete() {
-    // poll every second to see if there are running agents
+    // Poll every second to see if there are running agents
     while (this.runningAgents.length > 0) {
       await new Promise((resolve) => setTimeout(resolve, 1000));
     }
