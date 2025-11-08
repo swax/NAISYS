@@ -15,6 +15,7 @@ import "@mantine/notifications/styles.css";
 import {
   IconDeviceGamepad2,
   IconFileText,
+  IconHistory,
   IconLock,
   IconLockOpen,
   IconMail,
@@ -41,6 +42,7 @@ import { Controls } from "./pages/Controls";
 import { Home } from "./pages/Home";
 import { Log } from "./pages/Log";
 import { Mail } from "./pages/Mail";
+import { Runs } from "./pages/Runs";
 
 const AppContent: React.FC = () => {
   const [opened, { toggle }] = useDisclosure();
@@ -182,6 +184,8 @@ const AppContent: React.FC = () => {
           <Route path="/" element={<Home />} />
           <Route path="/log" element={<Log />} />
           <Route path="/log/:agent" element={<Log />} />
+          <Route path="/runs" element={<Runs />} />
+          <Route path="/runs/:agent" element={<Runs />} />
           <Route path="/mail" element={<Mail />} />
           <Route path="/mail/:agent" element={<Mail />} />
           <Route path="/mail/:agent/:messageId" element={<Mail />} />
@@ -214,6 +218,30 @@ const AppContent: React.FC = () => {
             </ActionIcon>
             <Text size="xs" visibleFrom="sm">
               Log
+            </Text>
+          </Group>
+          <Group
+            gap="xs"
+            style={{ cursor: "pointer" }}
+            onClick={() => {
+              const pathParts = location.pathname.split("/");
+              const currentAgent = pathParts[2];
+              if (currentAgent) {
+                navigate(`/runs/${currentAgent}`);
+              } else {
+                navigate("/runs");
+              }
+            }}
+          >
+            <ActionIcon
+              variant={isActive("/runs") ? "filled" : "subtle"}
+              size="lg"
+              aria-label="Runs"
+            >
+              <IconHistory size="1.2rem" />
+            </ActionIcon>
+            <Text size="xs" visibleFrom="sm">
+              Runs
             </Text>
           </Group>
           <Group

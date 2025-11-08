@@ -5,8 +5,8 @@
   "private": true,
   "workspaces": [
     "shared",
-    "server",
-    "client"
+    "client",
+    "server"
   ],
   "scripts": {
     "install": "npm install",

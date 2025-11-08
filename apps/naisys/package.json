@@ -11,7 +11,7 @@
   "scripts": {
     "build/run/attachable": "tsc && node --inspect dist/naisys.js ../../agents/assistant.yaml",
     "agent:assistant": "node dist/naisys.js ../../agents/assistant.yaml --overlord",
-    "agent:scdb:program-director": "cd ../../agents/scdb && node ../../apps/naisys/dist/naisys.js program-director.yaml --overlord",
+    "agent:scdb:program-director": "cd ../../agents/scdb && node ../../apps/naisys/dist/naisys.js program-director.yaml",
     "clean": "rm -rf dist",
     "build": "tsc",
     "eslint": "npx eslint src",

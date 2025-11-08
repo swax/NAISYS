@@ -11,6 +11,8 @@ import type {
   ThreadMessage,
   SendMailRequest,
   SendMailResponse,
+  RunsDataResponse,
+  RunSession,
 } from "shared";
 
 const API_BASE = "/api";
@@ -41,6 +43,8 @@ export type {
   ThreadMessage,
   SendMailRequest,
   SendMailResponse,
+  RunsDataResponse,
+  RunSession,
 };
 
 export const api = {
@@ -76,6 +80,7 @@ export const apiEndpoints = {
   settings: "/settings",
   data: "/data",
   sendMail: "/send-mail",
+  runs: "/runs",
 };
 
 export const checkSession = async (): Promise<SessionResponse> => {
@@ -196,4 +201,22 @@ export const sendMail = async (
       message: error instanceof Error ? error.message : "Failed to send mail",
     };
   }
+};
+
+export interface RunsDataParams {
+  userId: number;
+  updatedSince?: string;
+}
+
+export const getRunsData = async (
+  params: RunsDataParams,
+): Promise<RunsDataResponse> => {
+  const queryParams = new URLSearchParams();
+  queryParams.append("userId", params.userId.toString());
+  if (params.updatedSince) {
+    queryParams.append("updatedSince", params.updatedSince);
+  }
+
+  const url = `${apiEndpoints.runs}?${queryParams.toString()}`;
+  return await api.get<RunsDataResponse>(url);
 };

@@ -1,5 +1,6 @@
 import { Agent } from "shared";
 import { usingNaisysDb } from "../database/naisysDatabase.js";
+import { isAgentOnline } from "../utils/agentUtils.js";
 
 export async function getAgents(): Promise<Agent[]> {
   const agents: Agent[] = [];
@@ -43,11 +44,4 @@ export async function getAgents(): Promise<Agent[]> {
   }
 
   return agents;
-}
-
-function isAgentOnline(lastActive: string): boolean {
-  const now = new Date();
-  const lastActiveDate = new Date(lastActive);
-  const diffInSeconds = (now.getTime() - lastActiveDate.getTime()) / 1000;
-  return 0 < diffInSeconds && diffInSeconds < 5;
 }
