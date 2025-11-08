@@ -78,6 +78,7 @@ export function createLogService(
           session_id: sessionId,
         },
         data: {
+          last_active: new Date().toISOString(),
           total_lines: {
             increment: message.content.split("\n").length,
           },

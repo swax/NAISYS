@@ -13,6 +13,7 @@ import type {
   SendMailResponse,
   RunsDataResponse,
   RunSession,
+  ContextLogResponse,
 } from "shared";
 
 const API_BASE = "/api";
@@ -45,6 +46,7 @@ export type {
   SendMailResponse,
   RunsDataResponse,
   RunSession,
+  ContextLogResponse,
 };
 
 export const api = {
@@ -81,6 +83,7 @@ export const apiEndpoints = {
   data: "/data",
   sendMail: "/send-mail",
   runs: "/runs",
+  contextLog: "/context-log",
 };
 
 export const checkSession = async (): Promise<SessionResponse> => {
@@ -219,4 +222,26 @@ export const getRunsData = async (
 
   const url = `${apiEndpoints.runs}?${queryParams.toString()}`;
   return await api.get<RunsDataResponse>(url);
+};
+
+export interface ContextLogParams {
+  userId: number;
+  runId: number;
+  sessionId: number;
+  logsAfter?: number;
+}
+
+export const getContextLog = async (
+  params: ContextLogParams,
+): Promise<ContextLogResponse> => {
+  const queryParams = new URLSearchParams();
+  queryParams.append("userId", params.userId.toString());
+  queryParams.append("runId", params.runId.toString());
+  queryParams.append("sessionId", params.sessionId.toString());
+  if (params.logsAfter !== undefined) {
+    queryParams.append("logsAfter", params.logsAfter.toString());
+  }
+
+  const url = `${apiEndpoints.contextLog}?${queryParams.toString()}`;
+  return await api.get<ContextLogResponse>(url);
 };
