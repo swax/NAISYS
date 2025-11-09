@@ -15,7 +15,7 @@
     "clean": "rm -rf dist",
     "build": "tsc",
     "eslint": "npx eslint src",
-    "test": "tsc && node --experimental-vm-modules node_modules/jest/bin/jest.js --testPathPatterns=dist/__tests__",
+    "test": "tsc && node --experimental-vm-modules ../../node_modules/jest/bin/jest.js --testPathPatterns=dist/__tests__",
     "npm:publish:dryrun": "npm run clean && npm run build && npm publish --dry-run",
     "postinstall": "node -e \"process.platform !== 'win32' && require('child_process').execSync('chmod +x ./bin/*')\""
   },
@@ -35,6 +35,7 @@
   "license": "MIT",
   "homepage": "https://naisys.org",
   "devDependencies": {
+    "@jest/globals": "^30.2.0",
     "@types/escape-html": "^1.0.4",
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^24.10.0",

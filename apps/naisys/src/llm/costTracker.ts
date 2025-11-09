@@ -128,9 +128,54 @@ export function createCostTracker(
     return inputCost + outputCost + cacheWriteCost + cacheReadCost;
   }
 
-  async function getTotalCosts(userId?: number) {
+  // Calculate the current period boundaries based on SPEND_LIMIT_HOURS
+  // Periods are fixed multiples of hours from midnight (server local time)
+  function calculatePeriodBoundaries(hours: number): {
+    periodStart: Date;
+    periodEnd: Date;
+  } {
+    const now = new Date();
+
+    // Get midnight of current day in local time
+    const midnight = new Date(now);
+    midnight.setHours(0, 0, 0, 0);
+
+    // Calculate milliseconds since midnight
+    const msSinceMidnight = now.getTime() - midnight.getTime();
+    const hoursSinceMidnight = msSinceMidnight / (1000 * 60 * 60);
+
+    // Calculate which period we're in (0, 1, 2, ...)
+    const periodIndex = Math.floor(hoursSinceMidnight / hours);
+
+    // Calculate period start and end
+    const periodStartHours = periodIndex * hours;
+    const periodEndHours = (periodIndex + 1) * hours;
+
+    const periodStart = new Date(
+      midnight.getTime() + periodStartHours * 60 * 60 * 1000,
+    );
+    const periodEnd = new Date(
+      midnight.getTime() + periodEndHours * 60 * 60 * 1000,
+    );
+
+    return { periodStart, periodEnd };
+  }
+
+  async function getTotalCosts(
+    userId?: number,
+    periodStart?: Date,
+    periodEnd?: Date,
+  ) {
     return usingDatabase(async (prisma) => {
-      const where = userId ? { user_id: userId } : {};
+      const where: any = userId ? { user_id: userId } : {};
+
+      // Add date range filtering if period is specified
+      if (periodStart && periodEnd) {
+        where.date = {
+          gte: periodStart.toISOString(),
+          lt: periodEnd.toISOString(),
+        };
+      }
 
       const result = await prisma.costs.aggregate({
         where,
@@ -141,6 +186,51 @@ export function createCostTracker(
 
       return Number(result._sum.cost || 0);
     });
+  }
+
+  // Check if the current spend limit has been reached and throw an error if so
+  async function checkSpendLimit() {
+    // Determine if we're using per-agent or global limits
+    const userId = config.agent.spendLimitDollars
+      ? config.getUserRunSession().userId
+      : undefined;
+
+    // Determine if we're using time-based limits
+    const spendLimitHours =
+      config.agent.spendLimitHours || config.spendLimitHours;
+    const spendLimit =
+      config.agent.spendLimitDollars || config.spendLimitDollars || -1;
+
+    let currentTotalCost: number;
+    let periodDescription: string;
+
+    if (spendLimitHours !== undefined) {
+      // Use time-based limit
+      const { periodStart, periodEnd } =
+        calculatePeriodBoundaries(spendLimitHours);
+      currentTotalCost = await getTotalCosts(userId, periodStart, periodEnd);
+
+      // Format period description
+      const formatTime = (date: Date) => {
+        return date.toLocaleTimeString("en-US", {
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: true,
+        });
+      };
+      periodDescription = `per ${spendLimitHours} hour${spendLimitHours !== 1 ? "s" : ""} (current period: ${formatTime(periodStart)} - ${formatTime(periodEnd)})`;
+    } else {
+      // Use all-time limit
+      currentTotalCost = await getTotalCosts(userId);
+      periodDescription = "total";
+    }
+
+    if (spendLimit < currentTotalCost) {
+      const userDescription = config.agent.spendLimitDollars
+        ? `${config.agent.username}`
+        : "all users";
+      throw `LLM Spend limit of $${spendLimit} ${periodDescription} reached for ${userDescription}, current cost $${currentTotalCost.toFixed(2)}`;
+    }
   }
 
   async function getCostBreakdown(userId?: number) {
@@ -314,9 +404,34 @@ export function createCostTracker(
 
     const spendLimit =
       config.agent.spendLimitDollars || config.spendLimitDollars;
+    const spendLimitHours =
+      config.agent.spendLimitHours || config.spendLimitHours;
     const userLabel = userId ? `user ${userId}` : "all users";
+
+    // Show period information if time-based limits are enabled
+    if (spendLimitHours !== undefined) {
+      const { periodStart, periodEnd } =
+        calculatePeriodBoundaries(spendLimitHours);
+      const formatTime = (date: Date) => {
+        return date.toLocaleTimeString("en-US", {
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: true,
+        });
+      };
+      output.comment(
+        `Current period: ${formatTime(periodStart)} - ${formatTime(periodEnd)} (${spendLimitHours} hour${spendLimitHours !== 1 ? "s" : ""})`,
+      );
+
+      // Show costs for the current period
+      const periodCost = await getTotalCosts(userId, periodStart, periodEnd);
+      output.comment(
+        `Period cost for ${userLabel}: $${periodCost.toFixed(2)} of $${spendLimit} limit`,
+      );
+    }
+
     output.comment(
-      `Total cost for ${userLabel} $${totalStoredCost.toFixed(2)} of $${spendLimit} limit`,
+      `All-time total cost for ${userLabel}: $${totalStoredCost.toFixed(2)}${spendLimitHours === undefined ? ` of $${spendLimit} limit` : ""}`,
     );
 
     // Calculate and display cache savings if caching was used
@@ -340,7 +455,10 @@ export function createCostTracker(
       try {
         model = llModels.get(modelData.model);
       } catch {
-        output.comment(`Unknown model: ${modelData.model}`);
+        output.comment(`  Non-model: ${modelData.model}`);
+        output.comment(
+          `    Total cost: $${(modelData.total_cost || 0).toFixed(4)}`,
+        );
         continue;
       }
 
@@ -415,6 +533,8 @@ export function createCostTracker(
       return; // Skip user breakdown when showing specific user
     }
 
+    output.comment(`User cost breakdown:`);
+
     await usingDatabase(async (prisma) => {
       const result = await prisma.costs.groupBy({
         by: ["user_id"],
@@ -448,7 +568,9 @@ export function createCostTracker(
     recordTokens,
     recordCost,
     calculateCostFromTokens,
+    calculatePeriodBoundaries,
     getTotalCosts,
+    checkSpendLimit,
     getCostBreakdown,
     getCostBreakdownWithModels,
     calculateModelCacheSavings,

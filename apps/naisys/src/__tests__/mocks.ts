@@ -153,7 +153,12 @@ export function createMockCostTracker() {
     recordTokens: jest.fn(() => Promise.resolve()),
     recordCost: jest.fn(() => Promise.resolve()),
     calculateCostFromTokens: jest.fn(() => 0),
+    calculatePeriodBoundaries: jest.fn(() => ({
+      periodStart: new Date(),
+      periodEnd: new Date(),
+    })),
     getTotalCosts: jest.fn(() => Promise.resolve(0)),
+    checkSpendLimit: jest.fn(() => Promise.resolve()),
     getCostBreakdown: jest.fn(() =>
       Promise.resolve({
         inputTokens: 0,

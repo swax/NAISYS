@@ -1,6 +1,168 @@
-import { describe, expect, test } from "@jest/globals";
+import { describe, expect, test, beforeEach, jest } from "@jest/globals";
 
 // Simple unit test for the calculation function without needing the full module
+describe("calculatePeriodBoundaries", () => {
+  // Copy of the function for testing
+  function calculatePeriodBoundaries(hours: number, now: Date = new Date()): {
+    periodStart: Date;
+    periodEnd: Date;
+  } {
+    // Get midnight of current day in local time
+    const midnight = new Date(now);
+    midnight.setHours(0, 0, 0, 0);
+
+    // Calculate milliseconds since midnight
+    const msSinceMidnight = now.getTime() - midnight.getTime();
+    const hoursSinceMidnight = msSinceMidnight / (1000 * 60 * 60);
+
+    // Calculate which period we're in (0, 1, 2, ...)
+    const periodIndex = Math.floor(hoursSinceMidnight / hours);
+
+    // Calculate period start and end
+    const periodStartHours = periodIndex * hours;
+    const periodEndHours = (periodIndex + 1) * hours;
+
+    const periodStart = new Date(midnight.getTime() + periodStartHours * 60 * 60 * 1000);
+    const periodEnd = new Date(midnight.getTime() + periodEndHours * 60 * 60 * 1000);
+
+    return { periodStart, periodEnd };
+  }
+
+  test("should calculate 1-hour periods correctly at 10:30 AM", () => {
+    const now = new Date("2025-11-09T10:30:00");
+    const result = calculatePeriodBoundaries(1, now);
+
+    expect(result.periodStart.getHours()).toBe(10);
+    expect(result.periodStart.getMinutes()).toBe(0);
+    expect(result.periodEnd.getHours()).toBe(11);
+    expect(result.periodEnd.getMinutes()).toBe(0);
+  });
+
+  test("should calculate 2-hour periods correctly at 3:30 PM", () => {
+    const now = new Date("2025-11-09T15:30:00");
+    const result = calculatePeriodBoundaries(2, now);
+
+    // 15:30 is in the 14:00-16:00 period (7th period of the day)
+    expect(result.periodStart.getHours()).toBe(14);
+    expect(result.periodStart.getMinutes()).toBe(0);
+    expect(result.periodEnd.getHours()).toBe(16);
+    expect(result.periodEnd.getMinutes()).toBe(0);
+  });
+
+  test("should calculate 2-hour periods at midnight boundary", () => {
+    const now = new Date("2025-11-09T00:30:00");
+    const result = calculatePeriodBoundaries(2, now);
+
+    // 00:30 is in the 00:00-02:00 period
+    expect(result.periodStart.getHours()).toBe(0);
+    expect(result.periodStart.getMinutes()).toBe(0);
+    expect(result.periodEnd.getHours()).toBe(2);
+    expect(result.periodEnd.getMinutes()).toBe(0);
+  });
+
+  test("should calculate 2-hour periods at 2:00 AM exactly", () => {
+    const now = new Date("2025-11-09T02:00:00");
+    const result = calculatePeriodBoundaries(2, now);
+
+    // 02:00 exactly is the start of the 02:00-04:00 period
+    expect(result.periodStart.getHours()).toBe(2);
+    expect(result.periodStart.getMinutes()).toBe(0);
+    expect(result.periodEnd.getHours()).toBe(4);
+    expect(result.periodEnd.getMinutes()).toBe(0);
+  });
+
+  test("should calculate 24-hour periods (daily)", () => {
+    const now = new Date("2025-11-09T15:30:00");
+    const result = calculatePeriodBoundaries(24, now);
+
+    // Should be entire day: 00:00-24:00 (next day 00:00)
+    expect(result.periodStart.getHours()).toBe(0);
+    expect(result.periodStart.getMinutes()).toBe(0);
+    expect(result.periodEnd.getHours()).toBe(0);
+    expect(result.periodEnd.getMinutes()).toBe(0);
+    expect(result.periodEnd.getDate()).toBe(10); // Next day
+  });
+
+  test("should calculate 0.25-hour periods (15 minutes) at 2:07 PM", () => {
+    const now = new Date("2025-11-09T14:07:00");
+    const result = calculatePeriodBoundaries(0.25, now);
+
+    // 14:07 is in the 14:00-14:15 period
+    expect(result.periodStart.getHours()).toBe(14);
+    expect(result.periodStart.getMinutes()).toBe(0);
+    expect(result.periodEnd.getHours()).toBe(14);
+    expect(result.periodEnd.getMinutes()).toBe(15);
+  });
+
+  test("should calculate 0.25-hour periods (15 minutes) at 2:17 PM", () => {
+    const now = new Date("2025-11-09T14:17:00");
+    const result = calculatePeriodBoundaries(0.25, now);
+
+    // 14:17 is in the 14:15-14:30 period
+    expect(result.periodStart.getHours()).toBe(14);
+    expect(result.periodStart.getMinutes()).toBe(15);
+    expect(result.periodEnd.getHours()).toBe(14);
+    expect(result.periodEnd.getMinutes()).toBe(30);
+  });
+
+  test("should calculate 0.5-hour periods (30 minutes) at 2:47 PM", () => {
+    const now = new Date("2025-11-09T14:47:00");
+    const result = calculatePeriodBoundaries(0.5, now);
+
+    // 14:47 is in the 14:30-15:00 period
+    expect(result.periodStart.getHours()).toBe(14);
+    expect(result.periodStart.getMinutes()).toBe(30);
+    expect(result.periodEnd.getHours()).toBe(15);
+    expect(result.periodEnd.getMinutes()).toBe(0);
+  });
+
+  test("should calculate 3-hour periods correctly", () => {
+    const now = new Date("2025-11-09T08:30:00");
+    const result = calculatePeriodBoundaries(3, now);
+
+    // 08:30 is in the 06:00-09:00 period (3rd period of the day)
+    expect(result.periodStart.getHours()).toBe(6);
+    expect(result.periodStart.getMinutes()).toBe(0);
+    expect(result.periodEnd.getHours()).toBe(9);
+    expect(result.periodEnd.getMinutes()).toBe(0);
+  });
+
+  test("should calculate 6-hour periods correctly", () => {
+    const now = new Date("2025-11-09T19:15:00");
+    const result = calculatePeriodBoundaries(6, now);
+
+    // 19:15 is in the 18:00-24:00 period (4th period of the day)
+    expect(result.periodStart.getHours()).toBe(18);
+    expect(result.periodStart.getMinutes()).toBe(0);
+    expect(result.periodEnd.getHours()).toBe(0);
+    expect(result.periodEnd.getMinutes()).toBe(0);
+    expect(result.periodEnd.getDate()).toBe(10); // Next day
+  });
+
+  test("should calculate period duration correctly", () => {
+    const now = new Date("2025-11-09T10:30:00");
+    const hours = 2;
+    const result = calculatePeriodBoundaries(hours, now);
+
+    const durationMs = result.periodEnd.getTime() - result.periodStart.getTime();
+    const durationHours = durationMs / (1000 * 60 * 60);
+
+    expect(durationHours).toBe(hours);
+  });
+
+  test("should handle late night periods correctly", () => {
+    const now = new Date("2025-11-09T23:30:00");
+    const result = calculatePeriodBoundaries(2, now);
+
+    // 23:30 is in the 22:00-00:00 period
+    expect(result.periodStart.getHours()).toBe(22);
+    expect(result.periodStart.getMinutes()).toBe(0);
+    expect(result.periodEnd.getHours()).toBe(0);
+    expect(result.periodEnd.getMinutes()).toBe(0);
+    expect(result.periodEnd.getDate()).toBe(10); // Next day
+  });
+});
+
 describe("calculateModelCacheSavings", () => {
   // Copy of the function for testing
   function calculateModelCacheSavings(modelData: any, model: any) {

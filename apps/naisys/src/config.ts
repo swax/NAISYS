@@ -15,6 +15,10 @@ export interface AgentConfig {
 
   /** Local spend limit for this agent */
   spendLimitDollars?: number;
+
+  /** Time period in hours for spend limit. If not set, spend limit applies to all time */
+  spendLimitHours?: number;
+
   tokenMax: number;
 
   shellModel: string;
@@ -151,6 +155,9 @@ export async function createConfig(agentPath: string) {
   /** Global spend limit across all agents using this .env file */
   const spendLimitDollars = sanitizeSpendLimit(getEnv("SPEND_LIMIT_DOLLARS"));
 
+  /** Global spend limit period in hours. If not set, limit applies to all time */
+  const spendLimitHours = sanitizeSpendLimit(getEnv("SPEND_LIMIT_HOURS"));
+
   // Validate if spend limit is defined on the agent or .env`
   if (
     agent.spendLimitDollars === undefined &&
@@ -195,6 +202,7 @@ export async function createConfig(agentPath: string) {
     }
 
     config.spendLimitDollars = sanitizeSpendLimit(config.spendLimitDollars);
+    config.spendLimitHours = sanitizeSpendLimit(config.spendLimitHours);
 
     // Disable by default, too many screw ups. Cached tokens helps reduce the negaive
     if (config.disableMultipleCommands === undefined) {
@@ -325,6 +333,7 @@ export async function createConfig(agentPath: string) {
     anthropicApiKey,
     googleSearchEngineId,
     spendLimitDollars,
+    spendLimitHours,
     useToolsForLlmConsoleResponses,
     packageVersion,
     binPath,
