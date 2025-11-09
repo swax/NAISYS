@@ -25,7 +25,7 @@ export const AgentSidebar: React.FC = () => {
     if (agent.name === "all") {
       if (
         currentSection &&
-        ["log", "mail", "controls"].includes(currentSection)
+        ["runs", "log", "mail", "controls"].includes(currentSection)
       ) {
         navigate(`/${currentSection}`);
       } else {
@@ -34,7 +34,7 @@ export const AgentSidebar: React.FC = () => {
     } else {
       if (
         currentSection &&
-        ["log", "mail", "controls"].includes(currentSection)
+        ["runs", "log", "mail", "controls"].includes(currentSection)
       ) {
         navigate(`/${currentSection}/${agent.name}`);
       } else {
@@ -176,7 +176,7 @@ export const AgentSidebar: React.FC = () => {
       <Stack gap="xs">
         {orderedAgents.map((agent, index) => (
           <Card
-            key={index}
+            key={agent.name}
             padding="sm"
             radius="md"
             withBorder
