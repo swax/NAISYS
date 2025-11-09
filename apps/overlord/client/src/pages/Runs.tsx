@@ -1,30 +1,38 @@
 import { Alert, Badge, Group, Loader, Stack, Text } from "@mantine/core";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { RunSessionCard } from "../components/RunSessionCard";
 import { useNaisysDataContext } from "../contexts/NaisysDataContext";
 import { useRunsData } from "../hooks/useRunsData";
 import { RunSession } from "../lib/apiClient";
 
+type RunSessionWithFlag = RunSession & { isLast?: boolean };
+
+/** Re-rendering triggered by agentParam */
 export const Runs: React.FC = () => {
-  const { agent: agentParam } = useParams<{ agent: string }>();
+  const { agent: agentName } = useParams<{ agent: string }>();
   const { agents } = useNaisysDataContext();
-  const [allRuns, setAllRuns] = useState<RunSession[]>([]);
+  const [allRuns, setAllRuns] = useState<RunSessionWithFlag[]>([]);
+  const [hasScrolledToBottom, setHasScrolledToBottom] = useState(false);
+  const [selectedRowKey, setSelectedRowKey] = useState<string | null>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
 
   // Find the agent and get their user ID
-  const agent = agents.find((a) => a.name === agentParam);
+  const agent = agents.find((a) => a.name === agentName);
   const userId = agent?.id || 0;
 
   const {
     data: runsResponse,
     isLoading: runsLoading,
     error: runsError,
-  } = useRunsData(userId, !!agent);
+  } = useRunsData(userId, Boolean(agentName));
 
   // Clear runs when agent changes
   useEffect(() => {
     setAllRuns([]);
-  }, [agent]);
+    setHasScrolledToBottom(false);
+    setSelectedRowKey(null);
+  }, [agentName]);
 
   // Update runs from polling responses
   useEffect(() => {
@@ -55,15 +63,30 @@ export const Runs: React.FC = () => {
         }
 
         // Convert back to array and sort by last active (oldest first, latest at bottom)
-        return newRuns.sort(
+        const sortedRuns: RunSessionWithFlag[] = newRuns.sort(
           (a, b) =>
             new Date(a.lastActive).getTime() - new Date(b.lastActive).getTime(),
         );
+
+        // Mark last run
+        if (sortedRuns.length > 0) {
+          sortedRuns[sortedRuns.length - 1].isLast = true;
+        }
+
+        return sortedRuns;
       });
     }
   }, [runsResponse]);
 
-  if (!agentParam) {
+  // Scroll to bottom on first load
+  useEffect(() => {
+    if (allRuns.length > 0 && !hasScrolledToBottom && bottomRef.current) {
+      bottomRef.current.scrollIntoView({ behavior: "instant", block: "end" });
+      setHasScrolledToBottom(true);
+    }
+  }, [allRuns, hasScrolledToBottom]);
+
+  if (!agentName) {
     return (
       <Stack gap="md" style={{ height: "100%" }}>
         <Group justify="space-between">
@@ -84,7 +107,7 @@ export const Runs: React.FC = () => {
   if (!agent) {
     return (
       <Alert color="yellow" title="Agent not found">
-        Agent "{agentParam}" not found
+        Agent "{agentName}" not found
       </Alert>
     );
   }
@@ -131,17 +154,24 @@ export const Runs: React.FC = () => {
       )}
 
       <Stack gap="xs">
-        {allRuns.map((run) => (
-          <RunSessionCard
-            key={`${run.userId}-${run.runId}-${run.sessionId}`}
-            run={run}
-          />
-        ))}
+        {allRuns.map((run) => {
+          const rowKey = `${run.userId}-${run.runId}-${run.sessionId}`;
+          return (
+            <RunSessionCard
+              key={rowKey}
+              run={run}
+              defaultExpanded={Boolean(run.isLast)}
+              isSelected={selectedRowKey === rowKey}
+              onSelect={() => setSelectedRowKey(rowKey)}
+            />
+          );
+        })}
         {allRuns.length === 0 && !runsLoading && (
           <Text c="dimmed" ta="center">
             No runs available for {agent.name}
           </Text>
         )}
+        <div ref={bottomRef} />
       </Stack>
     </Stack>
   );
