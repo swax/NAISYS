@@ -1,12 +1,5 @@
-import {
-  Alert,
-  Badge,
-  Group,
-  Loader,
-  Stack,
-  Text,
-} from "@mantine/core";
-import React, { useState, useEffect } from "react";
+import { Alert, Badge, Group, Loader, Stack, Text } from "@mantine/core";
+import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { RunSessionCard } from "../components/RunSessionCard";
 import { useNaisysDataContext } from "../contexts/NaisysDataContext";
@@ -28,32 +21,41 @@ export const Runs: React.FC = () => {
     error: runsError,
   } = useRunsData(userId, !!agent);
 
+  // Clear runs when agent changes
+  useEffect(() => {
+    setAllRuns([]);
+  }, [agent]);
+
   // Update runs from polling responses
   useEffect(() => {
     if (runsResponse?.success && runsResponse.data) {
-      const newRuns = runsResponse.data.runs;
+      const updatedRuns = runsResponse.data.runs;
 
       setAllRuns((prevRuns) => {
+        let newRuns: RunSession[] = [];
+
         // If this is the first fetch, just use the new runs
         if (prevRuns.length === 0) {
-          return newRuns;
+          newRuns = updatedRuns;
+        } else {
+          // Create a map of existing runs for quick lookup
+          const mergeRuns = new Map(
+            prevRuns.map((run) => [
+              `${run.userId}-${run.runId}-${run.sessionId}`,
+              run,
+            ]),
+          );
+
+          // Update existing runs and add new ones
+          updatedRuns.forEach((run) => {
+            mergeRuns.set(`${run.userId}-${run.runId}-${run.sessionId}`, run);
+          });
+
+          newRuns = Array.from(mergeRuns.values());
         }
 
-        // Create a map of existing runs for quick lookup
-        const runsMap = new Map(
-          prevRuns.map((run) => [
-            `${run.userId}-${run.runId}-${run.sessionId}`,
-            run,
-          ]),
-        );
-
-        // Update existing runs and add new ones
-        newRuns.forEach((run) => {
-          runsMap.set(`${run.userId}-${run.runId}-${run.sessionId}`, run);
-        });
-
         // Convert back to array and sort by last active (oldest first, latest at bottom)
-        return Array.from(runsMap.values()).sort(
+        return newRuns.sort(
           (a, b) =>
             new Date(a.lastActive).getTime() - new Date(b.lastActive).getTime(),
         );
@@ -88,7 +90,7 @@ export const Runs: React.FC = () => {
   }
 
   const formatCost = (cost: number) => {
-    return `$${cost.toFixed(4)}`;
+    return `$${cost.toFixed(2)}`;
   };
 
   const totalLines = allRuns.reduce((sum, run) => sum + run.totalLines, 0);
