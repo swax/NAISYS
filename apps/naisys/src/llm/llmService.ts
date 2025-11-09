@@ -23,17 +23,8 @@ export function createLLMService(
     context: LlmMessage[],
     source: QuerySources,
   ): Promise<string[]> {
-    const currentTotalCost = await costTracker.getTotalCosts(
-      config.agent.spendLimitDollars
-        ? config.getUserRunSession().userId
-        : undefined,
-    );
-    const spendLimit =
-      config.agent.spendLimitDollars || config.spendLimitDollars || -1;
-
-    if (spendLimit < currentTotalCost) {
-      throw `LLM Spend limit of $${spendLimit} reached for ${config.agent.spendLimitDollars ? `${config.agent.username}` : "all users"}, current total cost $${currentTotalCost.toFixed(2)}`;
-    }
+    // Check if spend limit has been reached (throws error if so)
+    await costTracker.checkSpendLimit();
 
     const model = llModels.get(modelKey);
 

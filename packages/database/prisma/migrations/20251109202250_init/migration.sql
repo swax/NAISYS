@@ -116,6 +116,9 @@ CREATE INDEX "idx_costs_user_id" ON "costs"("user_id");
 CREATE INDEX "idx_costs_run_session" ON "costs"("user_id", "run_id", "session_id");
 
 -- CreateIndex
+CREATE INDEX "idx_costs_date" ON "costs"("date");
+
+-- CreateIndex
 CREATE INDEX "idx_dream_log_id_desc" ON "dream_log"("id" DESC);
 
 -- CreateIndex
