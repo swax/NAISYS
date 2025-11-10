@@ -19,6 +19,7 @@ import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { NewMessageModal } from "../components/NewMessageModal";
 import { useNaisysDataContext } from "../contexts/NaisysDataContext";
+import { useMailData } from "../hooks/useMailData";
 import { ThreadMessage, sendMail } from "../lib/apiClient";
 
 const MailMessageComponent: React.FC<{
@@ -156,14 +157,20 @@ const MailMessageComponent: React.FC<{
 
 export const Mail: React.FC = () => {
   const { agent: agentParam } = useParams<{ agent: string }>();
+  const { agents, updateReadStatus } = useNaisysDataContext();
+
+  // Use the new useMailData hook
   const {
-    agents,
-    getMailForAgent,
+    mail: allMail,
     isLoading: mailLoading,
     error: mailError,
-    readStatus,
-    updateReadStatus,
-  } = useNaisysDataContext();
+  } = useMailData(agentParam || "", !!agentParam);
+
+  // Update read status when viewing mail
+  useEffect(() => {
+    const maxMailId = Math.max(...allMail.map((mail) => mail.id), -1);
+    updateReadStatus(agentParam || "", undefined, maxMailId);
+  }, [allMail]);
 
   const [showSent, setShowSent] = useState(false);
   const [showReceived, setShowReceived] = useState(false);
@@ -177,8 +184,6 @@ export const Mail: React.FC = () => {
     subject: string;
     body: string;
   } | null>(null);
-  // Get filtered mail for the current agent
-  const allMail = getMailForAgent(agentParam);
 
   // Filter mail based on sent/received status and sort by newest first
   const getFilteredMail = (): ThreadMessage[] => {
@@ -203,22 +208,6 @@ export const Mail: React.FC = () => {
   };
 
   const filteredMail = getFilteredMail();
-
-  // Update read status when viewing mail - only when latest mail ID changes
-  useEffect(() => {
-    if (!agentParam || !readStatus[agentParam]) return;
-
-    // Get read status for the current agent
-    const userReadStatus = readStatus[agentParam];
-
-    const latestMailId = userReadStatus.latestMailId;
-    if (
-      !userReadStatus.lastReadMailId ||
-      latestMailId > userReadStatus.lastReadMailId
-    ) {
-      updateReadStatus(agentParam, undefined, latestMailId);
-    }
-  }, [allMail, readStatus, updateReadStatus]);
 
   // Calculate sent and received counts
   const sentCount = allMail.filter((mail) => {
@@ -286,36 +275,11 @@ export const Mail: React.FC = () => {
           </Text>
         </Group>
 
-        {mailError && (
-          <Alert color="red" title="Error loading mail">
-            {mailError instanceof Error
-              ? mailError.message
-              : "Failed to load mail"}
-          </Alert>
-        )}
-
-        {mailLoading ? (
-          <Group justify="center">
-            <Loader size="md" />
-            <Text>Loading mail...</Text>
-          </Group>
-        ) : (
-          <Stack gap="lg" align="center">
-            <Card padding="xl" radius="md" withBorder>
-              <Stack gap="sm" align="center">
-                <Text size="xl" fw={700} c="blue">
-                  {allMail.length}
-                </Text>
-                <Text size="lg" c="dimmed">
-                  Total Messages
-                </Text>
-              </Stack>
-            </Card>
-            <Text c="dimmed" ta="center">
-              Select an agent from the sidebar to view their mail
-            </Text>
-          </Stack>
-        )}
+        <Stack gap="lg" align="center">
+          <Text c="dimmed" ta="center">
+            Select an agent from the sidebar to view their mail
+          </Text>
+        </Stack>
       </Stack>
     );
   }
@@ -363,9 +327,7 @@ export const Mail: React.FC = () => {
 
       {mailError && (
         <Alert color="red" title="Error loading mail">
-          {mailError instanceof Error
-            ? mailError.message
-            : "Failed to load mail"}
+          {String(mailError)}
         </Alert>
       )}
 

@@ -40,8 +40,26 @@ export const SendMailResponseSchema = z.object({
   messageId: z.number().optional(),
 });
 
+export const MailDataRequestSchema = z.object({
+  agentName: z.string(),
+  updatedSince: z.string().optional(),
+});
+
+export const MailDataResponseSchema = z.object({
+  success: z.boolean(),
+  message: z.string(),
+  data: z
+    .object({
+      mail: z.array(ThreadMessageSchema),
+      timestamp: z.string(),
+    })
+    .optional(),
+});
+
 // Inferred types
 export type ThreadMember = z.infer<typeof ThreadMemberSchema>;
 export type ThreadMessage = z.infer<typeof ThreadMessageSchema>;
 export type SendMailRequest = z.infer<typeof SendMailRequestSchema>;
 export type SendMailResponse = z.infer<typeof SendMailResponseSchema>;
+export type MailDataRequest = z.infer<typeof MailDataRequestSchema>;
+export type MailDataResponse = z.infer<typeof MailDataResponseSchema>;

@@ -15,28 +15,33 @@ import {
   IconMinimize,
 } from "@tabler/icons-react";
 import React, { useCallback, useEffect, useRef, useState } from "react";
+import { useParams } from "react-router-dom";
 import {
   GroupedLogComponent,
   groupPromptEntries,
 } from "../components/LogEntries";
+import { useNaisysDataContext } from "../contexts/NaisysDataContext";
 import { useContextLog } from "../hooks/useContextLog";
-import { LogEntry, RunSession } from "../lib/apiClient";
+import { RunSession } from "../lib/apiClient";
 
 export const RunSessionLog: React.FC<{
   run: RunSession;
   expanded: boolean;
   runSessionCardRef: React.RefObject<HTMLDivElement>;
 }> = ({ run, expanded, runSessionCardRef }) => {
+  const { agent: agentParam } = useParams<{ agent: string }>();
   const [fullscreen, setFullscreen] = useState(false);
-  const [allLogs, setAllLogs] = useState<LogEntry[]>([]);
   const logContainerRef = useRef<HTMLDivElement>(null);
   const [scrollPanelIntoView, setScrollPanelIntoView] = useState(false);
   const savedScrollPercentage = useRef<number>(0);
   const [needsSyncScrolling, setNeedsSyncScrolling] = useState(false);
+  const previousLogsLength = useRef<number>(0);
+
+  const { updateReadStatus } = useNaisysDataContext();
 
   // Fetch logs when expanded, but only continue polling if online
   const {
-    data: logsResponse,
+    logs,
     isLoading: logsLoading,
     error: logsError,
   } = useContextLog(
@@ -47,55 +52,41 @@ export const RunSessionLog: React.FC<{
     run.isOnline,
   );
 
+  // Update read status when viewing logs
+  useEffect(() => {
+    const maxLogId = Math.max(...logs.map((log) => log.id), -1);
+    updateReadStatus(agentParam || "", maxLogId, undefined);
+  }, [logs]);
+
   // Scroll to bottom when first expanded with logs
   useEffect(() => {
     if (expanded) {
       setTimeout(() => setScrollPanelIntoView(true), 100);
     }
-    // Wait for logs to load, and allLogs to update
-  }, [expanded]); // Scroll to bottom when expanded changes to true
+  }, [expanded]);
 
-  // Update logs from polling responses
+  // Auto-scroll to bottom when new logs arrive (if already at bottom or first load)
   useEffect(() => {
-    if (logsResponse?.success && logsResponse.data) {
-      const newLogs = logsResponse.data.logs;
+    if (!logContainerRef.current || logs.length === 0) return;
 
-      // Check if we're currently scrolled to the bottom before updating
-      const shouldAutoScroll = (() => {
-        if (!logContainerRef.current) return false;
-        const { scrollTop, scrollHeight, clientHeight } =
-          logContainerRef.current;
-        // Consider "at bottom" if within 10px of the bottom
-        return scrollTop + clientHeight >= scrollHeight - 10;
-      })();
+    const isFirstLoad = previousLogsLength.current === 0 && logs.length > 0;
 
-      setAllLogs((prevLogs) => {
-        // If this is the first fetch, just use the new logs
-        if (prevLogs.length === 0) {
-          return newLogs;
-        }
+    // Check if we're currently scrolled to the bottom before updating
+    const { scrollTop, scrollHeight, clientHeight } = logContainerRef.current;
+    const isAtBottom = scrollTop + clientHeight >= scrollHeight - 10;
 
-        // Create a map of existing logs for quick lookup
-        const logsMap = new Map(prevLogs.map((log) => [log.id, log]));
-
-        // Add new logs
-        newLogs.forEach((log) => {
-          logsMap.set(log.id, log);
-        });
-
-        // Convert back to array and sort by ID
-        return Array.from(logsMap.values()).sort((a, b) => a.id - b.id);
-      });
-
-      // Scroll to bottom after state update if we should auto-scroll or if this is the first load
+    // Scroll to bottom if this is the first load OR if we're already at the bottom
+    if (isFirstLoad || isAtBottom) {
       requestAnimationFrame(() => {
-        if (logContainerRef.current && shouldAutoScroll) {
+        if (logContainerRef.current) {
           logContainerRef.current.scrollTop =
             logContainerRef.current.scrollHeight;
         }
       });
     }
-  }, [logsResponse]);
+
+    previousLogsLength.current = logs.length;
+  }, [logs]);
 
   const toggleFullscreen = useCallback((value: boolean) => {
     // Save current scroll percentage before toggling
@@ -109,7 +100,7 @@ export const RunSessionLog: React.FC<{
   }, []);
 
   useEffect(() => {
-    if (expanded && scrollPanelIntoView && allLogs.length > 0) {
+    if (expanded && scrollPanelIntoView && logs.length > 0) {
       // If runSessionCardRef not in full view then scroll it into view
       if (runSessionCardRef.current) {
         const rect = runSessionCardRef.current.getBoundingClientRect();
@@ -126,7 +117,7 @@ export const RunSessionLog: React.FC<{
       }
       setScrollPanelIntoView(false);
     }
-  }, [allLogs, expanded, scrollPanelIntoView, runSessionCardRef]);
+  }, [logs, expanded, scrollPanelIntoView, runSessionCardRef]);
 
   // Handle ESC key to exit fullscreen
   useEffect(() => {
@@ -158,7 +149,7 @@ export const RunSessionLog: React.FC<{
     return () => clearTimeout(timer);
   }, [fullscreen, needsSyncScrolling]);
 
-  const groupedLogs = groupPromptEntries(allLogs);
+  const groupedLogs = groupPromptEntries(logs);
 
   const scrollToTop = () => {
     if (logContainerRef.current) {
@@ -265,7 +256,7 @@ export const RunSessionLog: React.FC<{
             item={item}
           />
         ))}
-        {allLogs.length === 0 && !logsLoading && (
+        {logs.length === 0 && !logsLoading && (
           <Text size="sm" c="dimmed" ta="center">
             No logs available for this run
           </Text>
@@ -285,7 +276,7 @@ export const RunSessionLog: React.FC<{
           </Alert>
         )}
 
-        {logsLoading && allLogs.length === 0 && (
+        {logsLoading && logs.length === 0 && (
           <Group justify="center">
             <Loader size="sm" />
             <Text size="sm">Loading logs...</Text>

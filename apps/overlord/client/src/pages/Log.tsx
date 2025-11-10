@@ -14,7 +14,6 @@ export const Log: React.FC = () => {
     getLogsForAgent,
     isLoading: logsLoading,
     error: logsError,
-    readStatus,
     updateReadStatus,
   } = useNaisysDataContext();
   const [autoScroll, setAutoScroll] = useState(true);
@@ -23,21 +22,11 @@ export const Log: React.FC = () => {
   const logs = getLogsForAgent(agentParam);
   const groupedLogs = groupPromptEntries(logs);
 
-  // Update read status when viewing logs - only when latest log ID changes
+  // Update read status when viewing logs
   useEffect(() => {
-    if (!agentParam || !readStatus[agentParam]) return;
-
-    // Get read status for the current agent
-    const userReadStatus = readStatus[agentParam];
-
-    const latestLogId = userReadStatus.latestLogId;
-    if (
-      !userReadStatus.lastReadLogId ||
-      latestLogId > userReadStatus.lastReadLogId
-    ) {
-      updateReadStatus(agentParam, latestLogId);
-    }
-  }, [logs, readStatus, updateReadStatus]);
+    const maxLogId = Math.max(...logs.map((log) => log.id), -1);
+    updateReadStatus(agentParam || "", maxLogId, undefined);
+  }, [logs]);
 
   // Auto-scroll to bottom when new logs arrive
   useEffect(() => {

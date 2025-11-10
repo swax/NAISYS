@@ -14,6 +14,7 @@ import type {
   RunsDataResponse,
   RunSession,
   ContextLogResponse,
+  MailDataResponse,
 } from "shared";
 
 const API_BASE = "/api";
@@ -47,6 +48,7 @@ export type {
   RunsDataResponse,
   RunSession,
   ContextLogResponse,
+  MailDataResponse,
 };
 
 export const api = {
@@ -84,6 +86,7 @@ export const apiEndpoints = {
   sendMail: "/send-mail",
   runs: "/runs",
   contextLog: "/context-log",
+  mail: "/mail",
 };
 
 export const checkSession = async (): Promise<SessionResponse> => {
@@ -244,4 +247,22 @@ export const getContextLog = async (
 
   const url = `${apiEndpoints.contextLog}?${queryParams.toString()}`;
   return await api.get<ContextLogResponse>(url);
+};
+
+export interface MailDataParams {
+  agentName: string;
+  updatedSince?: string;
+}
+
+export const getMailData = async (
+  params: MailDataParams,
+): Promise<MailDataResponse> => {
+  const queryParams = new URLSearchParams();
+  queryParams.append("agentName", params.agentName);
+  if (params.updatedSince) {
+    queryParams.append("updatedSince", params.updatedSince);
+  }
+
+  const url = `${apiEndpoints.mail}?${queryParams.toString()}`;
+  return await api.get<MailDataResponse>(url);
 };
