@@ -81,7 +81,32 @@ export const NaisysDataProvider: React.FC<{ children: React.ReactNode }> = ({
 
       // Update read status (not cached)
       if (responseData.readStatus) {
-        setReadStatus(responseData.readStatus);
+        setReadStatus((prevStatus) => {
+          const newStatus = { ...prevStatus };
+
+          // For each agent in the response
+          Object.entries(responseData.readStatus).forEach(([agentName, serverStatus]) => {
+            const existingStatus = prevStatus[agentName];
+
+            if (!existingStatus) {
+              // First load: initialize lastRead IDs to latest IDs
+              newStatus[agentName] = {
+                ...serverStatus,
+                lastReadLogId: serverStatus.latestLogId,
+                lastReadMailId: serverStatus.latestMailId,
+              };
+            } else {
+              // Already initialized: preserve local lastRead IDs, update latest IDs
+              newStatus[agentName] = {
+                ...serverStatus,
+                lastReadLogId: existingStatus.lastReadLogId,
+                lastReadMailId: existingStatus.lastReadMailId,
+              };
+            }
+          });
+
+          return newStatus;
+        });
       }
 
       // Update logs and save new ones to cache
@@ -180,49 +205,23 @@ export const NaisysDataProvider: React.FC<{ children: React.ReactNode }> = ({
     lastReadLogId?: number,
     lastReadMailId?: number,
   ): Promise<void> => {
-    try {
-      const body: any = { agentName };
-      if (lastReadLogId !== undefined) body.lastReadLogId = lastReadLogId;
-      if (lastReadMailId !== undefined) body.lastReadMailId = lastReadMailId;
+    setReadStatus((prevStatus) => {
+      const currentStatus = prevStatus[agentName] || {
+        lastReadLogId: -1,
+        latestLogId: -1,
+        lastReadMailId: -1,
+        latestMailId: -1,
+      };
 
-      const response = await fetch("/api/read-status", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+      return {
+        ...prevStatus,
+        [agentName]: {
+          ...currentStatus,
+          ...(lastReadLogId !== undefined && { lastReadLogId }),
+          ...(lastReadMailId !== undefined && { lastReadMailId }),
         },
-        body: JSON.stringify(body),
-      });
-
-      if (response.ok) {
-        const updateStatus = readStatus[agentName] || {
-          lastReadLogId: -1,
-          latestLogId: -1,
-          lastReadMailId: -1,
-          latestMailId: -1,
-        };
-
-        if (lastReadLogId !== undefined) {
-          updateStatus.lastReadLogId = Math.max(
-            updateStatus.lastReadLogId,
-            lastReadLogId,
-          );
-        }
-
-        if (lastReadMailId !== undefined) {
-          updateStatus.lastReadMailId = Math.max(
-            updateStatus.lastReadMailId,
-            lastReadMailId,
-          );
-        }
-
-        setReadStatus((prevStatus) => ({
-          ...prevStatus,
-          [agentName]: updateStatus,
-        }));
-      }
-    } catch (error) {
-      console.error("Failed to update read status:", error);
-    }
+      };
+    });
   };
 
   const value: NaisysDataContextType = {

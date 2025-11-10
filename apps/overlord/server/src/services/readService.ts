@@ -7,9 +7,7 @@ import { SettingsRecord } from "./settingsService.js";
 
 function createDefaultReadStatus(): ReadStatus {
   return {
-    lastReadLogId: -1,
     latestLogId: -1,
-    lastReadMailId: -1,
     latestMailId: -1,
   };
 }
@@ -17,7 +15,7 @@ function createDefaultReadStatus(): ReadStatus {
 export async function getReadStatus(): Promise<Record<string, ReadStatus>> {
   const settingsRecords = await selectFromOverlordDb<SettingsRecord[] | null>(`
     SELECT read_status_json
-    FROM settings 
+    FROM settings
     WHERE id = 1
   `);
 
@@ -25,7 +23,19 @@ export async function getReadStatus(): Promise<Record<string, ReadStatus>> {
     return {};
   }
 
-  return JSON.parse(settingsRecords[0].read_status_json || "{}");
+  const storedStatus = JSON.parse(settingsRecords[0].read_status_json || "{}");
+
+  // Strip out lastRead fields (client-side only now)
+  const cleanedStatus: Record<string, ReadStatus> = {};
+  for (const [agentName, status] of Object.entries(storedStatus)) {
+    const typedStatus = status as any;
+    cleanedStatus[agentName] = {
+      latestLogId: typedStatus.latestLogId ?? -1,
+      latestMailId: typedStatus.latestMailId ?? -1,
+    };
+  }
+
+  return cleanedStatus;
 }
 
 async function saveReadStatus(
@@ -33,31 +43,12 @@ async function saveReadStatus(
 ): Promise<void> {
   await runOnOverlordDb(
     `
-    UPDATE settings 
+    UPDATE settings
     SET read_status_json = ?, modify_date = ?
     WHERE id = 1
   `,
     [JSON.stringify(readStatusByAgent), new Date().toISOString()],
   );
-}
-
-export async function updateLastReadLogId(
-  agentName: string,
-  lastReadLogId: number,
-): Promise<void> {
-  let readStatusByAgent = await getReadStatus();
-
-  // Update the read status for this user and agent
-  if (!readStatusByAgent[agentName]) {
-    readStatusByAgent[agentName] = createDefaultReadStatus();
-  }
-
-  const readStatus = readStatusByAgent[agentName];
-
-  readStatus.lastReadLogId = Math.max(readStatus.lastReadLogId, lastReadLogId);
-
-  // Save back to database
-  return await saveReadStatus(readStatusByAgent);
 }
 
 export async function updateLatestLogIds(logs: LogEntry[]): Promise<void> {
@@ -75,28 +66,6 @@ export async function updateLatestLogIds(logs: LogEntry[]): Promise<void> {
 
     readStatus.latestLogId = Math.max(readStatus.latestLogId, log.id);
   });
-
-  // Save back to database
-  return await saveReadStatus(readStatusByAgent);
-}
-
-export async function updateLastReadMailId(
-  agentName: string,
-  lastReadMailId: number,
-): Promise<void> {
-  let readStatusByAgent = await getReadStatus();
-
-  // Update the read status for this user and agent
-  if (!readStatusByAgent[agentName]) {
-    readStatusByAgent[agentName] = createDefaultReadStatus();
-  }
-
-  const readStatus = readStatusByAgent[agentName];
-
-  readStatus.lastReadMailId = Math.max(
-    readStatus.lastReadMailId,
-    lastReadMailId,
-  );
 
   // Save back to database
   return await saveReadStatus(readStatusByAgent);

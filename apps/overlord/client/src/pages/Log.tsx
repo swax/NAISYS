@@ -2,8 +2,8 @@ import { Alert, Card, Group, Loader, Stack, Text } from "@mantine/core";
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import {
-  groupPromptEntries,
   GroupedLogComponent,
+  groupPromptEntries,
 } from "../components/LogEntries";
 import { useNaisysDataContext } from "../contexts/NaisysDataContext";
 
@@ -31,7 +31,10 @@ export const Log: React.FC = () => {
     const userReadStatus = readStatus[agentParam];
 
     const latestLogId = userReadStatus.latestLogId;
-    if (latestLogId > userReadStatus.lastReadLogId) {
+    if (
+      !userReadStatus.lastReadLogId ||
+      latestLogId > userReadStatus.lastReadLogId
+    ) {
       updateReadStatus(agentParam, latestLogId);
     }
   }, [logs, readStatus, updateReadStatus]);
