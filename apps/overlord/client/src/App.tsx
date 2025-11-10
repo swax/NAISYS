@@ -14,7 +14,6 @@ import { Notifications } from "@mantine/notifications";
 import "@mantine/notifications/styles.css";
 import {
   IconDeviceGamepad2,
-  IconFileText,
   IconHistory,
   IconLock,
   IconLockOpen,
@@ -40,7 +39,6 @@ import {
 import { queryClient } from "./lib/queryClient";
 import { Controls } from "./pages/Controls";
 import { Home } from "./pages/Home";
-import { Log } from "./pages/Log";
 import { Mail } from "./pages/Mail";
 import { Runs } from "./pages/Runs";
 
@@ -181,9 +179,7 @@ const AppContent: React.FC = () => {
 
       <AppShell.Main>
         <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/log" element={<Log />} />
-          <Route path="/log/:agent" element={<Log />} />
+          <Route path="/" element={<Home />} />``
           <Route path="/runs" element={<Runs />} />
           <Route path="/runs/:agent" element={<Runs />} />
           <Route path="/mail" element={<Mail />} />
@@ -196,30 +192,6 @@ const AppContent: React.FC = () => {
 
       <AppShell.Footer>
         <Flex h="100%" px="md" align="center" justify="space-evenly">
-          <Group
-            gap="xs"
-            style={{ cursor: "pointer" }}
-            onClick={() => {
-              const pathParts = location.pathname.split("/");
-              const currentAgent = pathParts[2];
-              if (currentAgent) {
-                navigate(`/log/${currentAgent}`);
-              } else {
-                navigate("/log");
-              }
-            }}
-          >
-            <ActionIcon
-              variant={isActive("/log") ? "filled" : "subtle"}
-              size="lg"
-              aria-label="Log"
-            >
-              <IconFileText size="1.2rem" />
-            </ActionIcon>
-            <Text size="xs" visibleFrom="sm">
-              Log
-            </Text>
-          </Group>
           <Group
             gap="xs"
             style={{ cursor: "pointer" }}

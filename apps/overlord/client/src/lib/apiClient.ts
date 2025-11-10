@@ -1,20 +1,20 @@
 import type {
-  HelloResponse,
   AccessKeyRequest,
   AccessKeyResponse,
-  SettingsRequest,
-  SettingsResponse,
-  LogEntry,
   Agent,
-  NaisysDataResponse,
+  ContextLogResponse,
+  HelloResponse,
+  LogEntry,
+  MailDataResponse,
   NaisysDataRequest,
-  ThreadMessage,
-  SendMailRequest,
-  SendMailResponse,
+  NaisysDataResponse,
   RunsDataResponse,
   RunSession,
-  ContextLogResponse,
-  MailDataResponse,
+  SendMailRequest,
+  SendMailResponse,
+  SettingsRequest,
+  SettingsResponse,
+  ThreadMessage,
 } from "shared";
 
 const API_BASE = "/api";
@@ -33,22 +33,22 @@ export interface LogoutResponse {
 }
 
 export type {
-  HelloResponse,
   AccessKeyRequest,
   AccessKeyResponse,
-  SettingsRequest,
-  SettingsResponse,
-  LogEntry,
   Agent,
-  NaisysDataResponse,
+  ContextLogResponse,
+  HelloResponse,
+  LogEntry,
+  MailDataResponse,
   NaisysDataRequest,
-  ThreadMessage,
-  SendMailRequest,
-  SendMailResponse,
+  NaisysDataResponse,
   RunsDataResponse,
   RunSession,
-  ContextLogResponse,
-  MailDataResponse,
+  SendMailRequest,
+  SendMailResponse,
+  SettingsRequest,
+  SettingsResponse,
+  ThreadMessage,
 };
 
 export const api = {
@@ -140,31 +140,8 @@ export const saveSettings = async (
   }
 };
 
-export interface NaisysDataParams {
-  logsAfter?: number;
-  logsLimit?: number;
-  mailAfter?: number;
-  mailLimit?: number;
-}
-
-export const getNaisysData = async (
-  params?: NaisysDataParams,
-): Promise<NaisysDataResponse> => {
-  const queryParams = new URLSearchParams();
-  if (params?.logsAfter !== undefined)
-    queryParams.append("logsAfter", params.logsAfter.toString());
-  if (params?.logsLimit)
-    queryParams.append("logsLimit", params.logsLimit.toString());
-  if (params?.mailAfter !== undefined)
-    queryParams.append("mailAfter", params.mailAfter.toString());
-  if (params?.mailLimit)
-    queryParams.append("mailLimit", params.mailLimit.toString());
-
-  const url = queryParams.toString()
-    ? `${apiEndpoints.data}?${queryParams.toString()}`
-    : apiEndpoints.data;
-
-  return await api.get<NaisysDataResponse>(url);
+export const getNaisysData = async (): Promise<NaisysDataResponse> => {
+  return await api.get<NaisysDataResponse>(apiEndpoints.data);
 };
 
 export const sendMail = async (
