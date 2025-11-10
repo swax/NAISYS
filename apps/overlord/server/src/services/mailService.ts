@@ -70,6 +70,100 @@ export async function getThreadMessages(
   }
 }
 
+/**
+ * Get mail data for a specific agent, optionally filtering by updatedSince
+ */
+export async function getMailData(
+  agentName: string,
+  updatedSince?: string,
+): Promise<{ mail: ThreadMessage[]; timestamp: string }> {
+  try {
+    // First, find the agent to get their userId
+    const agents = await getAgents();
+    const agent = agents.find((a) => a.name === agentName);
+
+    if (!agent) {
+      return {
+        mail: [],
+        timestamp: new Date().toISOString(),
+      };
+    }
+
+    const userId = agent.id;
+
+    // Build the where clause
+    const whereClause: any = {};
+
+    // If updatedSince is provided, filter by date
+    if (updatedSince) {
+      whereClause.date = { gte: updatedSince };
+    }
+
+    // Fetch messages where the user is a thread member
+    const dbMessages = await usingNaisysDb(async (prisma) => {
+      return await prisma.thread_messages.findMany({
+        where: {
+          ...whereClause,
+          threads: {
+            thread_members: {
+              some: {
+                user_id: userId,
+              },
+            },
+          },
+        },
+        orderBy: { id: "asc" },
+        select: {
+          id: true,
+          thread_id: true,
+          user_id: true,
+          message: true,
+          date: true,
+          threads: {
+            select: { subject: true },
+          },
+          users: {
+            select: { username: true },
+          },
+        },
+      });
+    });
+
+    // Get unique thread IDs to fetch members
+    const threadIds = [...new Set(dbMessages.map((msg) => msg.thread_id))];
+
+    // Fetch members for all threads
+    const membersMap = await getThreadMembersMap(threadIds);
+
+    const messages = dbMessages.map((msg) => ({
+      id: msg.id,
+      threadId: msg.thread_id,
+      userId: msg.user_id,
+      username: msg.users.username,
+      subject: msg.threads.subject,
+      message: msg.message,
+      date: msg.date,
+      members: membersMap[msg.thread_id] || [],
+    }));
+
+    // Update latest mail IDs for tracking
+    if (messages.length > 0) {
+      await updateLatestMailIds(messages);
+    }
+
+    return {
+      mail: messages,
+      timestamp: new Date().toISOString(),
+    };
+  } catch (error) {
+    console.error("Error fetching mail data:", error);
+    return {
+      mail: [],
+      timestamp: new Date().toISOString(),
+    };
+  }
+}
+
 async function getThreadMembersMap(
   threadIds: number[],
 ): Promise<Record<number, ThreadMember[]>> {

@@ -1,18 +1,67 @@
+import { MultipartFile } from "@fastify/multipart";
 import { FastifyInstance, FastifyPluginOptions } from "fastify";
 import {
+  MailDataRequest,
+  MailDataRequestSchema,
+  MailDataResponse,
+  MailDataResponseSchema,
   SendMailRequest,
   SendMailRequestSchema,
   SendMailResponse,
   SendMailResponseSchema,
 } from "shared";
-import { sendMessage } from "../services/mailService.js";
+import { getMailData, sendMessage } from "../services/mailService.js";
 import { validateSession } from "./access.js";
-import { MultipartFile } from "@fastify/multipart";
 
 export default async function mailRoutes(
   fastify: FastifyInstance,
   _options: FastifyPluginOptions,
 ) {
+  fastify.get<{
+    Querystring: MailDataRequest;
+    Reply: MailDataResponse;
+  }>(
+    "/mail",
+    {
+      schema: {
+        description: "Get mail data for a specific agent",
+        tags: ["Mail"],
+        querystring: MailDataRequestSchema,
+        response: {
+          200: MailDataResponseSchema,
+          400: MailDataResponseSchema,
+          500: MailDataResponseSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      try {
+        const { agentName, updatedSince } = request.query;
+
+        if (!agentName) {
+          return reply.status(400).send({
+            success: false,
+            message: "Missing 'agentName' parameter",
+          });
+        }
+
+        const data = await getMailData(agentName, updatedSince);
+
+        return {
+          success: true,
+          message: "Mail data retrieved successfully",
+          data,
+        };
+      } catch (error) {
+        console.error("Error in /mail route:", error);
+        return reply.status(500).send({
+          success: false,
+          message: "Internal server error while fetching mail data",
+        });
+      }
+    },
+  );
+
   fastify.post<{ Reply: SendMailResponse }>(
     "/send-mail",
     {

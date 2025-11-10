@@ -213,12 +213,20 @@ export const NaisysDataProvider: React.FC<{ children: React.ReactNode }> = ({
         latestMailId: -1,
       };
 
+      const newLogId = lastReadLogId !== undefined && lastReadLogId > (currentStatus.lastReadLogId ?? -1) ? lastReadLogId : currentStatus.lastReadLogId;
+      const newMailId = lastReadMailId !== undefined && lastReadMailId > (currentStatus.lastReadMailId ?? -1) ? lastReadMailId : currentStatus.lastReadMailId;
+
+      // Only update state if something actually changed
+      if (newLogId === currentStatus.lastReadLogId && newMailId === currentStatus.lastReadMailId) {
+        return prevStatus;
+      }
+
       return {
         ...prevStatus,
         [agentName]: {
           ...currentStatus,
-          ...(lastReadLogId !== undefined && { lastReadLogId }),
-          ...(lastReadMailId !== undefined && { lastReadMailId }),
+          lastReadLogId: newLogId,
+          lastReadMailId: newMailId,
         },
       };
     });

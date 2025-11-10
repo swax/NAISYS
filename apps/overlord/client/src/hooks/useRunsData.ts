@@ -5,12 +5,12 @@ import { getRunsData, RunsDataParams, RunSession } from "../lib/apiClient";
 type RunSessionWithFlag = RunSession & { isLast?: boolean };
 
 export const useRunsData = (userId: number, enabled: boolean = true) => {
-  // Store merged runs per userId
-  const runsCache = useRef<Map<number, RunSession[]>>(new Map());
+  // Store merged runs per userId (stored sorted with isLast flag)
+  const runsCache = useRef<Map<number, RunSessionWithFlag[]>>(new Map());
   // Store updatedSince per userId
   const updatedSinceCache = useRef<Map<number, string | undefined>>(new Map());
-  // Current runs for the given userId
-  const [currentRuns, setCurrentRuns] = useState<RunSessionWithFlag[]>([]);
+  // Version counter to trigger re-renders when cache updates
+  const [, setCacheVersion] = useState(0);
 
   const queryFn = useCallback(async ({ queryKey }: any) => {
     const [, userId] = queryKey;
@@ -34,13 +34,6 @@ export const useRunsData = (userId: number, enabled: boolean = true) => {
     retryDelay: 1000,
   });
 
-  // Reset current runs when userId changes
-  useEffect(() => {
-    const cached = runsCache.current.get(userId) || [];
-    const sortedRuns = sortAndMarkRuns(cached);
-    setCurrentRuns(sortedRuns);
-  }, [userId]);
-
   // Merge new data when it arrives
   useEffect(() => {
     if (query.data?.success && query.data.data) {
@@ -63,20 +56,25 @@ export const useRunsData = (userId: number, enabled: boolean = true) => {
 
       const mergedRuns = Array.from(mergeRuns.values());
 
-      // Update cache
-      runsCache.current.set(userId, mergedRuns);
+      // Sort and mark runs once when updating cache
+      const sortedRuns = sortAndMarkRuns(mergedRuns);
+
+      // Update cache with sorted runs
+      runsCache.current.set(userId, sortedRuns);
 
       // Update updatedSince with the current timestamp
       updatedSinceCache.current.set(userId, new Date().toISOString());
 
-      // Update state
-      const sortedRuns = sortAndMarkRuns(mergedRuns);
-      setCurrentRuns(sortedRuns);
+      // Trigger re-render
+      setCacheVersion((v) => v + 1);
     }
   }, [query.data, userId]);
 
+  // Get current runs from cache (already sorted and marked)
+  const runs = runsCache.current.get(userId) || [];
+
   return {
-    runs: currentRuns,
+    runs,
     isLoading: query.isLoading,
     error: query.error,
   };
