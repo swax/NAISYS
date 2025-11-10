@@ -10,66 +10,6 @@ import { updateLatestMailIds } from "./readService.js";
 import fs from "fs/promises";
 import path from "path";
 
-export async function getThreadMessages(
-  after?: number,
-  limit: number = 1000,
-): Promise<ThreadMessage[]> {
-  try {
-    const dbMessages = await usingNaisysDb(async (prisma) => {
-      return await prisma.thread_messages.findMany({
-        where:
-          after !== undefined && after > 0 ? { id: { gt: after } } : undefined,
-        orderBy: { id: "desc" },
-        take: limit,
-        select: {
-          id: true,
-          thread_id: true,
-          user_id: true,
-          message: true,
-          date: true,
-          threads: {
-            select: { subject: true },
-          },
-          users: {
-            select: { username: true },
-          },
-        },
-      });
-    });
-
-    // Resort ascending
-    dbMessages.sort((a, b) => a.id - b.id);
-
-    // Get unique thread IDs to fetch members
-    const threadIds = [...new Set(dbMessages.map((msg) => msg.thread_id))];
-
-    // Fetch members for all threads
-    const membersMap = await getThreadMembersMap(threadIds);
-
-    const messages = dbMessages.map((msg) => ({
-      id: msg.id,
-      threadId: msg.thread_id,
-      userId: msg.user_id,
-      username: msg.users.username,
-      subject: msg.threads.subject,
-      message: msg.message,
-      date: msg.date,
-      members: membersMap[msg.thread_id] || [],
-    }));
-
-    // Used for tracking unread mails
-    await updateLatestMailIds(messages);
-
-    return messages;
-  } catch (error) {
-    console.error(
-      "Error fetching thread messages from Naisys database:",
-      error,
-    );
-    return [];
-  }
-}
-
 /**
  * Get mail data for a specific agent, optionally filtering by updatedSince
  */

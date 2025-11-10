@@ -1,7 +1,5 @@
 import { z } from "zod";
 import { AgentSchema } from "./agents-types.js";
-import { LogEntrySchema } from "./log-types.js";
-import { ThreadMessageSchema } from "./mail-types.js";
 
 // Zod schemas
 export const ReadStatusSchema = z.object({
@@ -11,12 +9,7 @@ export const ReadStatusSchema = z.object({
   latestMailId: z.number(),
 });
 
-export const NaisysDataRequestSchema = z.object({
-  logsAfter: z.string().optional(),
-  logsLimit: z.string().optional(),
-  mailAfter: z.string().optional(),
-  mailLimit: z.string().optional(),
-});
+export const NaisysDataRequestSchema = z.object({});
 
 export const NaisysDataResponseSchema = z.object({
   success: z.boolean(),
@@ -24,8 +17,6 @@ export const NaisysDataResponseSchema = z.object({
   data: z
     .object({
       agents: z.array(AgentSchema),
-      logs: z.array(LogEntrySchema),
-      mail: z.array(ThreadMessageSchema),
       timestamp: z.string(),
       readStatus: z.record(z.string(), ReadStatusSchema),
     })
