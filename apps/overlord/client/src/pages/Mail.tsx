@@ -10,10 +10,10 @@ import {
   Text,
 } from "@mantine/core";
 import {
+  IconCornerUpLeft,
   IconMailbox,
   IconPlus,
   IconSend,
-  IconCornerUpLeft,
 } from "@tabler/icons-react";
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
@@ -212,7 +212,10 @@ export const Mail: React.FC = () => {
     const userReadStatus = readStatus[agentParam];
 
     const latestMailId = userReadStatus.latestMailId;
-    if (latestMailId > userReadStatus.lastReadMailId) {
+    if (
+      !userReadStatus.lastReadMailId ||
+      latestMailId > userReadStatus.lastReadMailId
+    ) {
       updateReadStatus(agentParam, undefined, latestMailId);
     }
   }, [allMail, readStatus, updateReadStatus]);

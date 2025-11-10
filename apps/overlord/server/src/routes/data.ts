@@ -4,16 +4,8 @@ import {
   NaisysDataRequestSchema,
   NaisysDataResponse,
   NaisysDataResponseSchema,
-  ReadStatusUpdateRequest,
-  ReadStatusUpdateRequestSchema,
-  ReadStatusUpdateResponseSchema,
 } from "shared";
 import { getNaisysData } from "../services/dataService.js";
-import {
-  updateLastReadLogId,
-  updateLastReadMailId,
-} from "../services/readService.js";
-import { validateSession } from "./access.js";
 
 export default async function dataRoutes(
   fastify: FastifyInstance,
@@ -99,49 +91,6 @@ export default async function dataRoutes(
         return reply.status(500).send({
           success: false,
           message: "Internal server error while fetching NAISYS data",
-        });
-      }
-    },
-  );
-
-  // Update read status endpoint
-  fastify.post<{
-    Body: ReadStatusUpdateRequest;
-  }>(
-    "/read-status",
-    {
-      schema: {
-        description: "Update read status for an agent's logs and mail",
-        tags: ["Data"],
-        body: ReadStatusUpdateRequestSchema,
-        response: {
-          200: ReadStatusUpdateResponseSchema,
-          500: ReadStatusUpdateResponseSchema,
-        },
-        security: [{ cookieAuth: [] }],
-      },
-      preHandler: validateSession,
-    },
-    async (request, reply) => {
-      try {
-        const { agentName, lastReadLogId, lastReadMailId } = request.body;
-
-        if (lastReadLogId !== undefined) {
-          await updateLastReadLogId(agentName, lastReadLogId);
-        }
-        if (lastReadMailId !== undefined) {
-          await updateLastReadMailId(agentName, lastReadMailId);
-        }
-
-        return {
-          success: true,
-          message: "Read status updated successfully",
-        };
-      } catch (error) {
-        console.error("Error updating read status:", error);
-        return reply.status(500).send({
-          success: false,
-          message: "Internal server error while updating read status",
         });
       }
     },

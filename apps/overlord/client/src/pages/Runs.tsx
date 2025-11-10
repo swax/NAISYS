@@ -4,15 +4,11 @@ import { useParams } from "react-router-dom";
 import { RunSessionCard } from "../components/RunSessionCard";
 import { useNaisysDataContext } from "../contexts/NaisysDataContext";
 import { useRunsData } from "../hooks/useRunsData";
-import { RunSession } from "../lib/apiClient";
-
-type RunSessionWithFlag = RunSession & { isLast?: boolean };
 
 /** Re-rendering triggered by agentParam */
 export const Runs: React.FC = () => {
   const { agent: agentName } = useParams<{ agent: string }>();
   const { agents } = useNaisysDataContext();
-  const [allRuns, setAllRuns] = useState<RunSessionWithFlag[]>([]);
   const [hasScrolledToBottom, setHasScrolledToBottom] = useState(false);
   const [selectedRowKey, setSelectedRowKey] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -22,61 +18,16 @@ export const Runs: React.FC = () => {
   const userId = agent?.id || 0;
 
   const {
-    data: runsResponse,
+    runs: allRuns,
     isLoading: runsLoading,
     error: runsError,
   } = useRunsData(userId, Boolean(agentName));
 
-  // Clear runs when agent changes
+  // Clear state when agent changes
   useEffect(() => {
-    setAllRuns([]);
     setHasScrolledToBottom(false);
     setSelectedRowKey(null);
   }, [agentName]);
-
-  // Update runs from polling responses
-  useEffect(() => {
-    if (runsResponse?.success && runsResponse.data) {
-      const updatedRuns = runsResponse.data.runs;
-
-      setAllRuns((prevRuns) => {
-        let newRuns: RunSession[] = [];
-
-        // If this is the first fetch, just use the new runs
-        if (prevRuns.length === 0) {
-          newRuns = updatedRuns;
-        } else {
-          // Create a map of existing runs for quick lookup
-          const mergeRuns = new Map(
-            prevRuns.map((run) => [
-              `${run.userId}-${run.runId}-${run.sessionId}`,
-              run,
-            ]),
-          );
-
-          // Update existing runs and add new ones
-          updatedRuns.forEach((run) => {
-            mergeRuns.set(`${run.userId}-${run.runId}-${run.sessionId}`, run);
-          });
-
-          newRuns = Array.from(mergeRuns.values());
-        }
-
-        // Convert back to array and sort by last active (oldest first, latest at bottom)
-        const sortedRuns: RunSessionWithFlag[] = newRuns.sort(
-          (a, b) =>
-            new Date(a.lastActive).getTime() - new Date(b.lastActive).getTime(),
-        );
-
-        // Mark last run
-        if (sortedRuns.length > 0) {
-          sortedRuns[sortedRuns.length - 1].isLast = true;
-        }
-
-        return sortedRuns;
-      });
-    }
-  }, [runsResponse]);
 
   // Scroll to bottom on first load
   useEffect(() => {

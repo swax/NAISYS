@@ -89,6 +89,7 @@ export function createLLMService(
     const chatRequest: ChatCompletionCreateParamsNonStreaming = {
       model: model.name,
       stream: false,
+      reasoning_effort: "high",  // should put behind a usethinking flag?
       messages: [
         {
           role: LlmRole.System, // LlmRole.User, //

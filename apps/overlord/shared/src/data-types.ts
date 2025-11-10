@@ -5,9 +5,9 @@ import { ThreadMessageSchema } from "./mail-types.js";
 
 // Zod schemas
 export const ReadStatusSchema = z.object({
-  lastReadLogId: z.number(),
+  lastReadLogId: z.number().optional(), // Client-side only
   latestLogId: z.number(),
-  lastReadMailId: z.number(),
+  lastReadMailId: z.number().optional(), // Client-side only
   latestMailId: z.number(),
 });
 
@@ -32,24 +32,7 @@ export const NaisysDataResponseSchema = z.object({
     .optional(),
 });
 
-export const ReadStatusUpdateRequestSchema = z.object({
-  agentName: z.string(),
-  lastReadLogId: z.number().optional(),
-  lastReadMailId: z.number().optional(),
-});
-
-export const ReadStatusUpdateResponseSchema = z.object({
-  success: z.boolean(),
-  message: z.string(),
-});
-
 // Inferred types
 export type ReadStatus = z.infer<typeof ReadStatusSchema>;
 export type NaisysDataRequest = z.infer<typeof NaisysDataRequestSchema>;
 export type NaisysDataResponse = z.infer<typeof NaisysDataResponseSchema>;
-export type ReadStatusUpdateRequest = z.infer<
-  typeof ReadStatusUpdateRequestSchema
->;
-export type ReadStatusUpdateResponse = z.infer<
-  typeof ReadStatusUpdateResponseSchema
->;

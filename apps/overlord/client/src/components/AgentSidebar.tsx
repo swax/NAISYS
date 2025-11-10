@@ -112,6 +112,7 @@ export const AgentSidebar: React.FC = () => {
     const agentReadStatus = readStatus[agent.name];
     if (
       !agentReadStatus ||
+      !agentReadStatus.lastReadLogId ||
       agentReadStatus.latestLogId <= agentReadStatus.lastReadLogId
     ) {
       return null;
@@ -141,6 +142,7 @@ export const AgentSidebar: React.FC = () => {
     const agentReadStatus = readStatus[agent.name];
     if (
       !agentReadStatus ||
+      !agentReadStatus.lastReadMailId ||
       agentReadStatus.latestMailId <= agentReadStatus.lastReadMailId
     ) {
       return null;
@@ -174,7 +176,7 @@ export const AgentSidebar: React.FC = () => {
         AGENTS
       </Text>
       <Stack gap="xs">
-        {orderedAgents.map((agent, index) => (
+        {orderedAgents.map((agent) => (
           <Card
             key={agent.name}
             padding="sm"
