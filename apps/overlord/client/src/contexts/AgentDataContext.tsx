@@ -4,7 +4,7 @@ import React, {
   useEffect,
   useState,
 } from "react";
-import { useNaisysData } from "../hooks/useNaisysData";
+import { useAgentData } from "../hooks/useAgentData";
 import { Agent } from "../lib/apiClient";
 
 export interface ClientReadStatus {
@@ -12,7 +12,7 @@ export interface ClientReadStatus {
   lastReadMailId: number;
 }
 
-interface NaisysDataContextType {
+interface AgentDataContextType {
   agents: Agent[];
   isLoading: boolean;
   error: Error | null;
@@ -24,11 +24,11 @@ interface NaisysDataContextType {
   ) => Promise<void>;
 }
 
-const NaisysDataContext = createContext<NaisysDataContextType | undefined>(
+const AgentDataContext = createContext<AgentDataContextType | undefined>(
   undefined,
 );
 
-export const NaisysDataProvider: React.FC<{ children: React.ReactNode }> = ({
+export const AgentDataProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const [agents, setAgents] = useState<Agent[]>([]);
@@ -36,12 +36,12 @@ export const NaisysDataProvider: React.FC<{ children: React.ReactNode }> = ({
     {},
   );
 
-  const { data: naisysResponse, isLoading, error } = useNaisysData();
+  const { data: agentResponse, isLoading, error } = useAgentData();
 
-  // Update data from NAISYS polling responses
+  // Update data from agent polling responses
   useEffect(() => {
-    if (naisysResponse?.success && naisysResponse.data) {
-      const responseData = naisysResponse.data;
+    if (agentResponse?.success && agentResponse.data) {
+      const responseData = agentResponse.data;
 
       // Update agents (not cached)
       if (responseData.agents) {
@@ -70,7 +70,7 @@ export const NaisysDataProvider: React.FC<{ children: React.ReactNode }> = ({
         });
       }
     }
-  }, [naisysResponse]);
+  }, [agentResponse]);
 
   const updateReadStatus = async (
     agentName: string,
@@ -111,7 +111,7 @@ export const NaisysDataProvider: React.FC<{ children: React.ReactNode }> = ({
     });
   };
 
-  const value: NaisysDataContextType = {
+  const value: AgentDataContextType = {
     agents,
     isLoading,
     error,
@@ -120,17 +120,17 @@ export const NaisysDataProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   return (
-    <NaisysDataContext.Provider value={value}>
+    <AgentDataContext.Provider value={value}>
       {children}
-    </NaisysDataContext.Provider>
+    </AgentDataContext.Provider>
   );
 };
 
-export const useNaisysDataContext = (): NaisysDataContextType => {
-  const context = useContext(NaisysDataContext);
+export const useAgentDataContext = (): AgentDataContextType => {
+  const context = useContext(AgentDataContext);
   if (context === undefined) {
     throw new Error(
-      "useNaisysDataContext must be used within a NaisysDataProvider",
+      "useAgentDataContext must be used within an AgentDataProvider",
     );
   }
   return context;

@@ -2,6 +2,11 @@ import { Agent } from "shared";
 import { usingNaisysDb } from "../database/naisysDatabase.js";
 import { isAgentOnline } from "../utils/agentUtils.js";
 
+export interface AgentData {
+  agents: Agent[];
+  timestamp: string;
+}
+
 export async function getAgents(): Promise<Agent[]> {
   const agents: Agent[] = [];
 
@@ -48,4 +53,24 @@ export async function getAgents(): Promise<Agent[]> {
   }
 
   return agents;
+}
+
+export async function getAgentData(): Promise<AgentData> {
+  try {
+    // Fetch agents
+    const agents = await getAgents();
+
+    return {
+      agents,
+      timestamp: new Date().toISOString(),
+    };
+  } catch (error) {
+    console.error("Error fetching agent data:", error);
+
+    // Return empty data on error
+    return {
+      agents: [],
+      timestamp: new Date().toISOString(),
+    };
+  }
 }

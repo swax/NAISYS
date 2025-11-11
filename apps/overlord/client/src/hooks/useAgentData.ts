@@ -1,14 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
 import { useCallback } from "react";
-import { getNaisysData } from "../lib/apiClient";
+import { getAgentData } from "../lib/apiClient";
 
-export const useNaisysData = () => {
+export const useAgentData = () => {
   const queryFn = useCallback(async () => {
-    return await getNaisysData();
+    return await getAgentData();
   }, []);
 
   return useQuery({
-    queryKey: ["naisys-data"],
+    queryKey: ["agent-data"],
     queryFn,
     enabled: true,
     refetchInterval: 5000, // Poll every 5 seconds

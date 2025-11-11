@@ -18,7 +18,7 @@ import {
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { NewMessageModal } from "../components/NewMessageModal";
-import { useNaisysDataContext } from "../contexts/NaisysDataContext";
+import { useAgentDataContext } from "../contexts/AgentDataContext";
 import { useMailData } from "../hooks/useMailData";
 import { ThreadMessage, sendMail } from "../lib/apiClient";
 
@@ -157,7 +157,7 @@ const MailMessageComponent: React.FC<{
 
 export const Mail: React.FC = () => {
   const { agent: agentParam } = useParams<{ agent: string }>();
-  const { agents, updateReadStatus } = useNaisysDataContext();
+  const { agents, updateReadStatus } = useAgentDataContext();
 
   // Use the new useMailData hook
   const {

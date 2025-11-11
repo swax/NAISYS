@@ -2,13 +2,13 @@ import { Alert, Badge, Group, Loader, Stack, Text } from "@mantine/core";
 import React, { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { RunSessionCard } from "../components/RunSessionCard";
-import { useNaisysDataContext } from "../contexts/NaisysDataContext";
+import { useAgentDataContext } from "../contexts/AgentDataContext";
 import { useRunsData } from "../hooks/useRunsData";
 
 /** Re-rendering triggered by agentParam */
 export const Runs: React.FC = () => {
   const { agent: agentName } = useParams<{ agent: string }>();
-  const { agents } = useNaisysDataContext();
+  const { agents } = useAgentDataContext();
   const [hasScrolledToBottom, setHasScrolledToBottom] = useState(false);
   const [selectedRowKey, setSelectedRowKey] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
