@@ -82,7 +82,7 @@ export const apiEndpoints = {
   session: "/session",
   logout: "/logout",
   settings: "/settings",
-  data: "/data",
+  agent: "/agent",
   sendMail: "/send-mail",
   runs: "/runs",
   contextLog: "/context-log",
@@ -140,8 +140,8 @@ export const saveSettings = async (
   }
 };
 
-export const getNaisysData = async (): Promise<NaisysDataResponse> => {
-  return await api.get<NaisysDataResponse>(apiEndpoints.data);
+export const getAgentData = async (): Promise<NaisysDataResponse> => {
+  return await api.get<NaisysDataResponse>(apiEndpoints.agent);
 };
 
 export const sendMail = async (

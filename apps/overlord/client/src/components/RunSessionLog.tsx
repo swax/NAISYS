@@ -20,7 +20,7 @@ import {
   GroupedLogComponent,
   groupPromptEntries,
 } from "../components/LogEntries";
-import { useNaisysDataContext } from "../contexts/NaisysDataContext";
+import { useAgentDataContext } from "../contexts/AgentDataContext";
 import { useContextLog } from "../hooks/useContextLog";
 import { RunSession } from "../lib/apiClient";
 
@@ -37,7 +37,7 @@ export const RunSessionLog: React.FC<{
   const [needsSyncScrolling, setNeedsSyncScrolling] = useState(false);
   const previousLogsLength = useRef<number>(0);
 
-  const { updateReadStatus } = useNaisysDataContext();
+  const { updateReadStatus } = useAgentDataContext();
 
   // Fetch logs when expanded, but only continue polling if online
   const {

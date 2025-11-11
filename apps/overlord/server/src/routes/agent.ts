@@ -5,9 +5,9 @@ import {
   NaisysDataResponse,
   NaisysDataResponseSchema,
 } from "shared";
-import { getNaisysData } from "../services/dataService.js";
+import { getAgentData } from "../services/agentService.js";
 
-export default async function dataRoutes(
+export default async function agentRoutes(
   fastify: FastifyInstance,
   _options: FastifyPluginOptions,
 ) {
@@ -15,12 +15,12 @@ export default async function dataRoutes(
     Querystring: NaisysDataRequest;
     Reply: NaisysDataResponse;
   }>(
-    "/data",
+    "/agent",
     {
       schema: {
         description:
-          "Get NAISYS data including agents, logs, and mail with pagination",
-        tags: ["Data"],
+          "Get agent data including agent status and metadata",
+        tags: ["Agent"],
         querystring: NaisysDataRequestSchema,
         response: {
           200: NaisysDataResponseSchema,
@@ -31,18 +31,18 @@ export default async function dataRoutes(
     },
     async (request, reply) => {
       try {
-        const data = await getNaisysData();
+        const data = await getAgentData();
 
         return {
           success: true,
-          message: "NAISYS data retrieved successfully",
+          message: "Agent data retrieved successfully",
           data,
         };
       } catch (error) {
-        console.error("Error in /data route:", error);
+        console.error("Error in /agent route:", error);
         return reply.status(500).send({
           success: false,
-          message: "Internal server error while fetching NAISYS data",
+          message: "Internal server error while fetching agent data",
         });
       }
     },

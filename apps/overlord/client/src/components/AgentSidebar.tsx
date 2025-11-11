@@ -3,12 +3,12 @@ import { IconFileText, IconMail, IconRobot } from "@tabler/icons-react";
 import React from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Agent } from "shared";
-import { useNaisysDataContext } from "../contexts/NaisysDataContext";
+import { useAgentDataContext } from "../contexts/AgentDataContext";
 
 export const AgentSidebar: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { agents, isLoading, readStatus } = useNaisysDataContext();
+  const { agents, isLoading, readStatus } = useAgentDataContext();
 
   const isAgentSelected = (agentName: string) => {
     const pathParts = location.pathname.split("/");

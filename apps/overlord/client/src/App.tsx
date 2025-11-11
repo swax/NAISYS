@@ -33,9 +33,9 @@ import {
 import { AccessDialog } from "./components/AccessDialog";
 import { AgentSidebar } from "./components/AgentSidebar";
 import {
-  NaisysDataProvider,
-  useNaisysDataContext,
-} from "./contexts/NaisysDataContext";
+  AgentDataProvider,
+  useAgentDataContext,
+} from "./contexts/AgentDataContext";
 import { queryClient } from "./lib/queryClient";
 import { Controls } from "./pages/Controls";
 import { Home } from "./pages/Home";
@@ -55,7 +55,7 @@ const AppContent: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = React.useState(false);
   const navigate = useNavigate();
   const location = useLocation();
-  const { isLoading, error } = useNaisysDataContext();
+  const { isLoading, error } = useAgentDataContext();
 
   const isActive = (path: string) => {
     const currentSection = location.pathname.split("/")[1];
@@ -287,11 +287,11 @@ const App: React.FC = () => {
     <QueryClientProvider client={queryClient}>
       <MantineProvider defaultColorScheme="dark">
         <Notifications />
-        <NaisysDataProvider>
+        <AgentDataProvider>
           <Router basename="/overlord">
             <AppContent />
           </Router>
-        </NaisysDataProvider>
+        </AgentDataProvider>
       </MantineProvider>
     </QueryClientProvider>
   );
