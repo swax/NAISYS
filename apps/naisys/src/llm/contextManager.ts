@@ -2,7 +2,7 @@ import { Config } from "../config.js";
 import { WorkspacesFeature } from "../features/workspaces.js";
 import { LogService } from "../services/logService.js";
 import { InputModeService } from "../utils/inputMode.js";
-import { OutputService, OutputColor } from "../utils/output.js";
+import { OutputColor, OutputService } from "../utils/output.js";
 import * as utilities from "../utils/utilities.js";
 import { ContentSource, LlmMessage, LlmRole } from "./llmDtos.js";
 
@@ -72,7 +72,6 @@ export function createContextManager(
 
     // Log the message
     llmMessage.logId = await logService.write(llmMessage);
-    logService.recordContext(printContext());
   }
 
   function clear() {

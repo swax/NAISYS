@@ -6,7 +6,6 @@ import {
 } from "shared";
 import { usingNaisysDb } from "../database/naisysDatabase.js";
 import { getAgents } from "./agentService.js";
-import { updateLatestMailIds } from "./readService.js";
 import fs from "fs/promises";
 import path from "path";
 
@@ -85,11 +84,6 @@ export async function getMailData(
       date: msg.date,
       members: membersMap[msg.thread_id] || [],
     }));
-
-    // Update latest mail IDs for tracking
-    if (messages.length > 0) {
-      await updateLatestMailIds(messages);
-    }
 
     return {
       mail: messages,

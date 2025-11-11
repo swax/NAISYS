@@ -264,6 +264,16 @@ export function createLLMail(
           },
         });
 
+        // Set latest_mail_id for users/members of the thread
+        tx.users.updateMany({
+          where: {
+            username: { in: usernames },
+          },
+          data: {
+            latest_mail_id: thread.id,
+          },
+        });
+
         return simpleMode ? "Mail sent" : `Thread created with id ${thread.id}`;
       });
     });
