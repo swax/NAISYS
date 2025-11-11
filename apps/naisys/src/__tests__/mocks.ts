@@ -32,7 +32,6 @@ export function createMockLogService() {
   return {
     write: async (msg: LlmMessage) => 0,
     toSimpleRole: (role: LlmRole) => "LLM",
-    recordContext: (contextLog: string) => {},
   } satisfies LogService;
 }
 

@@ -4,15 +4,19 @@ import React, {
   useEffect,
   useState,
 } from "react";
-import { ReadStatus } from "shared";
 import { useNaisysData } from "../hooks/useNaisysData";
 import { Agent } from "../lib/apiClient";
+
+export interface ClientReadStatus {
+  lastReadLogId: number;
+  lastReadMailId: number;
+}
 
 interface NaisysDataContextType {
   agents: Agent[];
   isLoading: boolean;
   error: Error | null;
-  readStatus: Record<string, ReadStatus>;
+  readStatus: Record<string, ClientReadStatus>;
   updateReadStatus: (
     agentName: string,
     lastReadLogId?: number,
@@ -28,11 +32,13 @@ export const NaisysDataProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const [agents, setAgents] = useState<Agent[]>([]);
-  const [readStatus, setReadStatus] = useState<Record<string, ReadStatus>>({});
+  const [readStatus, setReadStatus] = useState<Record<string, ClientReadStatus>>(
+    {},
+  );
 
   const { data: naisysResponse, isLoading, error } = useNaisysData();
 
-  // Update data from NAISYS polling` responses
+  // Update data from NAISYS polling responses
   useEffect(() => {
     if (naisysResponse?.success && naisysResponse.data) {
       const responseData = naisysResponse.data;
@@ -40,35 +46,25 @@ export const NaisysDataProvider: React.FC<{ children: React.ReactNode }> = ({
       // Update agents (not cached)
       if (responseData.agents) {
         setAgents(responseData.agents);
-      }
 
-      // Update read status (not cached)
-      if (responseData.readStatus) {
+        // Update read status from agents
         setReadStatus((prevStatus) => {
           const newStatus = { ...prevStatus };
 
           // For each agent in the response
-          Object.entries(responseData.readStatus).forEach(
-            ([agentName, serverStatus]) => {
-              const existingStatus = prevStatus[agentName];
+          responseData.agents.forEach((agent) => {
+            const existingStatus = prevStatus[agent.name];
 
-              if (!existingStatus) {
-                // First load: initialize lastRead IDs to latest IDs
-                newStatus[agentName] = {
-                  ...serverStatus,
-                  lastReadLogId: serverStatus.latestLogId,
-                  lastReadMailId: serverStatus.latestMailId,
-                };
-              } else {
-                // Already initialized: preserve local lastRead IDs, update latest IDs
-                newStatus[agentName] = {
-                  ...serverStatus,
-                  lastReadLogId: existingStatus.lastReadLogId,
-                  lastReadMailId: existingStatus.lastReadMailId,
-                };
-              }
-            },
-          );
+            if (!existingStatus) {
+              // First load: initialize lastRead IDs to latest IDs
+              newStatus[agent.name] = {
+                lastReadLogId: agent.latestLogId,
+                lastReadMailId: agent.latestMailId,
+              };
+            }
+            // If already initialized, preserve local lastRead IDs
+            // (they are updated separately via updateReadStatus)
+          });
 
           return newStatus;
         });
@@ -84,19 +80,16 @@ export const NaisysDataProvider: React.FC<{ children: React.ReactNode }> = ({
     setReadStatus((prevStatus) => {
       const currentStatus = prevStatus[agentName] || {
         lastReadLogId: -1,
-        latestLogId: -1,
         lastReadMailId: -1,
-        latestMailId: -1,
       };
 
       const newLogId =
-        lastReadLogId !== undefined &&
-        lastReadLogId > (currentStatus.lastReadLogId ?? -1)
+        lastReadLogId !== undefined && lastReadLogId > currentStatus.lastReadLogId
           ? lastReadLogId
           : currentStatus.lastReadLogId;
       const newMailId =
         lastReadMailId !== undefined &&
-        lastReadMailId > (currentStatus.lastReadMailId ?? -1)
+        lastReadMailId > currentStatus.lastReadMailId
           ? lastReadMailId
           : currentStatus.lastReadMailId;
 
@@ -111,7 +104,6 @@ export const NaisysDataProvider: React.FC<{ children: React.ReactNode }> = ({
       return {
         ...prevStatus,
         [agentName]: {
-          ...currentStatus,
           lastReadLogId: newLogId,
           lastReadMailId: newMailId,
         },

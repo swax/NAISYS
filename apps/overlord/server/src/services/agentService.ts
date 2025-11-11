@@ -14,6 +14,8 @@ export async function getAgents(): Promise<Agent[]> {
           title: true,
           agent_path: true,
           lead_username: true,
+          latest_log_id: true,
+          latest_mail_id: true,
           run_sessions: {
             select: {
               last_active: true,
@@ -37,6 +39,8 @@ export async function getAgents(): Promise<Agent[]> {
         lastActive: lastActive,
         agentPath: user.agent_path,
         leadUsername: user.lead_username || undefined,
+        latestLogId: user.latest_log_id ?? -1,
+        latestMailId: user.latest_mail_id ?? -1,
       });
     });
   } catch (error) {

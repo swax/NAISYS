@@ -112,15 +112,14 @@ export const AgentSidebar: React.FC = () => {
     const agentReadStatus = readStatus[agent.name];
     if (
       !agentReadStatus ||
-      !agentReadStatus.lastReadLogId ||
-      agentReadStatus.latestLogId <= agentReadStatus.lastReadLogId
+      agent.latestLogId <= agentReadStatus.lastReadLogId
     ) {
       return null;
     }
 
     return (
       <Tooltip
-        label={`Latest: ${agentReadStatus.latestLogId}\nLast read: ${agentReadStatus.lastReadLogId}`}
+        label={`Latest: ${agent.latestLogId}\nLast read: ${agentReadStatus.lastReadLogId}`}
       >
         <Badge
           size="xs"
@@ -142,15 +141,14 @@ export const AgentSidebar: React.FC = () => {
     const agentReadStatus = readStatus[agent.name];
     if (
       !agentReadStatus ||
-      !agentReadStatus.lastReadMailId ||
-      agentReadStatus.latestMailId <= agentReadStatus.lastReadMailId
+      agent.latestMailId <= agentReadStatus.lastReadMailId
     ) {
       return null;
     }
 
     return (
       <Tooltip
-        label={`Latest: ${agentReadStatus.latestMailId}\nLast read: ${agentReadStatus.lastReadMailId}`}
+        label={`Latest: ${agent.latestMailId}\nLast read: ${agentReadStatus.lastReadMailId}`}
       >
         <Badge
           size="xs"
