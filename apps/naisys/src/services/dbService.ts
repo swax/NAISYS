@@ -33,22 +33,26 @@ export async function createDatabaseService(config: Config) {
     updateInterval = setInterval(updateLastActive, 2000);
   }
 
+  /**
+   * How this works is that when the schema updates we increment the latestDbVersion in the config, signalling we need to run migrations.
+   * Then we check the schema_version table in the database to see what version the database is at.
+   * If the versions don't match then we run "prisma migrate deploy" to update the database schema.
+   * This is done to speed startup time by avoiding having to run "prisma migrate deploy" on every agent startup. 
+   */
   async function runMigrations(): Promise<void> {
     try {
-      // Check if database needs initialization by checking if users table exists
-      let needsInit = false;
-      try {
-        await prisma.$queryRaw`SELECT 1 FROM users LIMIT 1`;
-      } catch (error) {
-        // Table doesn't exist, need to run migrations
-        needsInit = true;
+      const dbVersion = await prisma.schema_version.findUnique({
+        where: { id: 1 },
+      });
+
+      if (dbVersion && dbVersion.version === config.latestDbVersion) {
+        return;
       }
 
-      if (!needsInit) {
-        return; // Database already initialized
-      }
-
-      console.log("Initializing database...");
+      // Run migration
+      console.log(
+        `Migrating database from version ${dbVersion?.version} to ${config.latestDbVersion}...`,
+      );
 
       // Find the @naisys/database package location
       const databasePackageUrl = import.meta.resolve("@naisys/database");
@@ -72,6 +76,22 @@ export async function createDatabaseService(config: Config) {
       if (stderr && !stderr.includes("Loaded Prisma config")) {
         console.error(stderr);
       }
+
+      // Update version
+      await prisma.schema_version.upsert({
+        where: { id: 1 },
+        update: {
+          version: config.latestDbVersion,
+          updated: new Date().toISOString(),
+        },
+        create: {
+          id: 1,
+          version: config.latestDbVersion,
+          updated: new Date().toISOString(),
+        },
+      });
+
+      console.log("Database migration completed.");
     } catch (error) {
       console.error("Error running migrations:", error);
       throw error;
