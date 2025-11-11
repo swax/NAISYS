@@ -106,6 +106,8 @@ model users {
   title           String
   agent_path      String            @unique(map: "unq_users_agent_path")
   lead_username   String?
+  latest_log_id   Int               @default(-1)
+  latest_mail_id  Int               @default(-1)
   thread_members  thread_members[]
   thread_messages thread_messages[]
   run_sessions    run_session[]
@@ -131,4 +133,10 @@ model run_session {
   @@id([user_id, run_id, session_id])
   @@index([user_id], map: "idx_run_session_user_id")
   @@index([last_active], map: "idx_run_session_last_active")
+}
+
+model schema_version {
+  id      Int    @id @default(1)
+  version Int    @unique(map: "unq_schema_version_version")
+  updated String
 }

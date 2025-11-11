@@ -99,6 +99,9 @@ export async function createConfig(agentPath: string) {
     return structuredClone(userRunSession);
   }
 
+  /** Should match version in schema_version table of latest migration script */
+  const latestDbVersion = 1;
+
   /** The system name that shows after the @ in the command prompt */
   const hostname = "naisys";
 
@@ -313,6 +316,7 @@ export async function createConfig(agentPath: string) {
   }
 
   return {
+    latestDbVersion,
     hostname,
     shellCommand,
     agent,

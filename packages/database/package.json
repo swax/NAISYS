@@ -12,7 +12,7 @@
   ],
   "scripts": {
     "clean": "rm -rf dist",
-    "prisma:migrate": "prisma migrate dev --create-only --name init",
+    "prisma:migrate": "prisma migrate dev --create-only",
     "prisma:generate": "prisma generate",
     "prisma:studio": "prisma studio",
     "build": "npm run prisma:generate && tsc",
