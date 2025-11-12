@@ -56,7 +56,7 @@ subagentMax: 2
 subagentDirectory: pipeline-agents
 mailEnabled: true
 wakeOnMessage: true
-tokenMax: 50000
+tokenMax: 20000
 debugPauseSeconds: 3
 completeTaskEnabled: true
 initialCommands:

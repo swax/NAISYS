@@ -18,9 +18,9 @@ import {
   useLocation,
 } from "react-router-dom";
 import { AccessDialog } from "./components/AccessDialog";
-import { AgentSidebar } from "./components/AgentSidebar";
-import { NavHeader } from "./components/NavHeader";
-import { ToolsHeader } from "./components/ToolsHeader";
+import { AgentSidebar } from "./headers/AgentSidebar";
+import { NavHeader } from "./headers/NavHeader";
+import { ToolsHeader } from "./headers/ToolsHeader";
 import { ROUTER_BASENAME } from "./constants";
 import {
   AgentDataProvider,
@@ -28,9 +28,9 @@ import {
 } from "./contexts/AgentDataContext";
 import { queryClient } from "./lib/queryClient";
 import { Controls } from "./pages/Controls";
-import { Home } from "./pages/Home";
-import { Mail } from "./pages/Mail";
-import { Runs } from "./pages/Runs";
+import { Home } from "./pages/home/Home";
+import { Mail } from "./pages/mail/Mail";
+import { Runs } from "./pages/runs/Runs";
 
 const AppContent: React.FC = () => {
   const [opened, { toggle }] = useDisclosure();

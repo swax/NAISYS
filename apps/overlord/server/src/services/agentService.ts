@@ -12,6 +12,27 @@ export async function getAgents(updatedSince?: string): Promise<Agent[]> {
 
   try {
     const users = await usingNaisysDb(async (prisma) => {
+      const lastActiveThreshold = new Date(
+        Date.now() - ONLINE_THRESHOLD_SECONDS * 2 * 1000,
+      );
+
+      // If updatedSince set then return agents with active sessions or modifications
+      // Else return all agents, fresh update
+      const agentFilter = updatedSince
+        ? {
+            OR: [
+              { modified_date: { gte: new Date(updatedSince) } },
+              {
+                run_sessions: {
+                  some: {
+                    last_active: { gte: lastActiveThreshold },
+                  },
+                },
+              },
+            ],
+          }
+        : undefined;
+
       return await prisma.users.findMany({
         select: {
           id: true,
@@ -21,6 +42,7 @@ export async function getAgents(updatedSince?: string): Promise<Agent[]> {
           lead_username: true,
           latest_mail_id: true,
           modified_date: true,
+          // Get active sessions only
           run_sessions: {
             select: {
               last_active: true,
@@ -28,25 +50,12 @@ export async function getAgents(updatedSince?: string): Promise<Agent[]> {
             },
             where: {
               last_active: {
-                gte: new Date(Date.now() - ONLINE_THRESHOLD_SECONDS * 2 * 1000),
+                gte: lastActiveThreshold,
               },
             },
           },
         },
-        where: updatedSince
-          ? {
-              OR: [
-                { modified_date: { gte: new Date(updatedSince) } },
-                {
-                  run_sessions: {
-                    some: {
-                      last_active: { gte: new Date(updatedSince) },
-                    },
-                  },
-                },
-              ],
-            }
-          : undefined,
+        where: agentFilter,
       });
     });
 
@@ -59,13 +68,13 @@ export async function getAgents(updatedSince?: string): Promise<Agent[]> {
           }
           return max;
         },
-        undefined
+        undefined,
       );
 
       // Get max latest_log_id across all sessions
       const latestLogId = user.run_sessions.reduce<number>(
         (max, session) => Math.max(max, session.latest_log_id),
-        -1
+        -1,
       );
 
       agents.push({

@@ -47,5 +47,5 @@ agentPrompt: |
 completeTaskEnabled: true
 mailEnabled: true
 wakeOnMessage: true
-tokenMax: 50000
+tokenMax: 20000
 debugPauseSeconds: 3

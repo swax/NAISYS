@@ -16,7 +16,7 @@ import {
 import { Dropzone } from "@mantine/dropzone";
 import { IconX, IconPaperclip, IconFile } from "@tabler/icons-react";
 import React, { useState, useEffect } from "react";
-import { Agent } from "../lib/apiClient";
+import { Agent } from "../../lib/apiClient";
 
 interface FileAttachment {
   file: File;

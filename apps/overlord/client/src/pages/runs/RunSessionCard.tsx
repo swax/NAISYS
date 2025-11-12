@@ -1,7 +1,7 @@
 import { ActionIcon, Badge, Card, Group, Stack, Text } from "@mantine/core";
 import { IconChevronDown, IconChevronRight } from "@tabler/icons-react";
 import React, { useRef, useState } from "react";
-import { RunSession } from "../types/runSession";
+import { RunSession } from "../../types/runSession";
 import { RunSessionLog } from "./RunSessionLog";
 
 export const RunSessionCard: React.FC<{

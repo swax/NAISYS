@@ -1,5 +1,5 @@
 import React from "react";
-import { useHello } from "../hooks/useHello";
+import { useHello } from "../../hooks/useHello";
 
 export const Hello: React.FC = () => {
   const { data, isLoading, error } = useHello();
