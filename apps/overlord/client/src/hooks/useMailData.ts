@@ -30,6 +30,7 @@ export const useMailData = (agentName: string, enabled: boolean = true) => {
     refetchOnWindowFocus: false,
     retry: 3,
     retryDelay: 1000,
+    refetchOnMount: 'always', // Always refetch when agentName changes
   });
 
   // Merge new data when it arrives

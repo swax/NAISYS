@@ -11,7 +11,6 @@ export const RunSessionSchema = z.object({
   modelName: z.string(),
   totalLines: z.number(),
   totalCost: z.number(),
-  isOnline: z.boolean(),
 });
 
 export const RunsDataRequestSchema = z.object({

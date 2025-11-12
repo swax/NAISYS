@@ -1,6 +1,6 @@
 import { Agent } from "shared";
 import { usingNaisysDb } from "../database/naisysDatabase.js";
-import { isAgentOnline, ONLINE_THRESHOLD_SECONDS } from "../utils/agentUtils.js";
+import { ONLINE_THRESHOLD_SECONDS } from "../utils/agentUtils.js";
 
 export interface AgentData {
   agents: Agent[];
@@ -72,7 +72,6 @@ export async function getAgents(updatedSince?: string): Promise<Agent[]> {
         id: user.id,
         name: user.username,
         title: user.title,
-        online: isAgentOnline(lastActive),
         lastActive: lastActive?.toISOString(),
         agentPath: user.agent_path,
         leadUsername: user.lead_username || undefined,

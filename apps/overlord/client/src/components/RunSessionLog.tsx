@@ -22,7 +22,7 @@ import {
 } from "../components/LogEntries";
 import { useAgentDataContext } from "../contexts/AgentDataContext";
 import { useContextLog } from "../hooks/useContextLog";
-import { RunSession } from "../lib/apiClient";
+import { RunSession } from "../types/runSession";
 
 export const RunSessionLog: React.FC<{
   run: RunSession;

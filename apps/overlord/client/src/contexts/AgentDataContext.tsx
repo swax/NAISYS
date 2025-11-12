@@ -5,7 +5,7 @@ import React, {
   useState,
 } from "react";
 import { useAgentData } from "../hooks/useAgentData";
-import { Agent } from "../lib/apiClient";
+import { Agent } from "../types/agent";
 
 export interface ClientReadStatus {
   lastReadLogId: number;

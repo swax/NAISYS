@@ -1,6 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useState } from "react";
-import { getAgentData, Agent } from "../lib/apiClient";
+import { getAgentData } from "../lib/apiClient";
+import { isAgentOnline } from "../lib/agentUtils";
+import { Agent } from "../types/agent";
+import { Agent as BaseAgent } from "shared";
 
 // Module-level caches (shared across all hook instances and persist across remounts)
 let agentCache: Agent[] = [];
@@ -34,20 +37,26 @@ export const useAgentData = () => {
 
       const existingAgents = agentCache;
 
-      // Create a map of existing agents for quick lookup
-      const mergeAgents = new Map(
+      // Create a map of existing agents for quick lookup (using BaseAgent to allow updates)
+      const mergeAgents = new Map<number, BaseAgent>(
         existingAgents.map((agent: Agent) => [agent.id, agent]),
       );
 
       // Update existing agents and add new ones
-      updatedAgents.forEach((agent) => {
+      updatedAgents.forEach((agent: BaseAgent) => {
         mergeAgents.set(agent.id, agent);
       });
 
       const mergedAgents = Array.from(mergeAgents.values());
 
+      // Recalculate online status for all agents after merging
+      const agentsWithOnline: Agent[] = mergedAgents.map((agent) => ({
+        ...agent,
+        online: isAgentOnline(agent.lastActive, query.dataUpdatedAt),
+      }));
+
       // Sort by name
-      const sortedAgents = mergedAgents.sort((a, b) =>
+      const sortedAgents = agentsWithOnline.sort((a, b) =>
         a.name.localeCompare(b.name),
       );
 

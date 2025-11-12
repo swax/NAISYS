@@ -1,6 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useState } from "react";
-import { getRunsData, RunsDataParams, RunSession } from "../lib/apiClient";
+import { getRunsData, RunsDataParams } from "../lib/apiClient";
+import { isAgentOnline } from "../lib/agentUtils";
+import { RunSession } from "../types/runSession";
+import { RunSession as BaseRunSession } from "shared";
 
 type RunSessionWithFlag = RunSession & { isFirst?: boolean };
 
@@ -30,6 +33,7 @@ export const useRunsData = (userId: number, enabled: boolean = true) => {
     refetchInterval: 5000, // Poll every 5 seconds
     refetchIntervalInBackground: true,
     refetchOnWindowFocus: false,
+    refetchOnMount: 'always', // Always refetch when userId changes
     retry: 3,
     retryDelay: 1000,
   });
@@ -41,8 +45,8 @@ export const useRunsData = (userId: number, enabled: boolean = true) => {
 
       const existingRuns = runsCache.get(userId) || [];
 
-      // Create a map of existing runs for quick lookup
-      const mergeRuns = new Map(
+      // Create a map of existing runs for quick lookup (using BaseRunSession to allow updates)
+      const mergeRuns = new Map<string, BaseRunSession>(
         existingRuns.map((run) => [
           `${run.userId}-${run.runId}-${run.sessionId}`,
           run,
@@ -50,14 +54,20 @@ export const useRunsData = (userId: number, enabled: boolean = true) => {
       );
 
       // Update existing runs and add new ones
-      updatedRuns.forEach((run) => {
+      updatedRuns.forEach((run: BaseRunSession) => {
         mergeRuns.set(`${run.userId}-${run.runId}-${run.sessionId}`, run);
       });
 
       const mergedRuns = Array.from(mergeRuns.values());
 
+      // Recalculate online status for all runs after merging
+      const runsWithOnline: RunSession[] = mergedRuns.map((run) => ({
+        ...run,
+        isOnline: isAgentOnline(run.lastActive, query.dataUpdatedAt),
+      }));
+
       // Sort and mark runs once when updating cache
-      const sortedRuns = sortAndMarkRuns(mergedRuns);
+      const sortedRuns = sortAndMarkRuns(runsWithOnline);
 
       // Update cache with sorted runs
       runsCache.set(userId, sortedRuns);
