@@ -1,5 +1,6 @@
 import { createPrismaClient, PrismaClient } from "@naisys/database";
 import { exec } from "child_process";
+import { existsSync } from "fs";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
 import { promisify } from "util";
@@ -37,22 +38,30 @@ export async function createDatabaseService(config: Config) {
    * How this works is that when the schema updates we increment the latestDbVersion in the config, signalling we need to run migrations.
    * Then we check the schema_version table in the database to see what version the database is at.
    * If the versions don't match then we run "prisma migrate deploy" to update the database schema.
-   * This is done to speed startup time by avoiding having to run "prisma migrate deploy" on every agent startup. 
+   * This is done to speed startup time by avoiding having to run "prisma migrate deploy" on every agent startup.
    */
   async function runMigrations(): Promise<void> {
     try {
-      const dbVersion = await prisma.schema_version.findUnique({
-        where: { id: 1 },
-      });
+      // Only check version if database file already exists
+      if (existsSync(databasePath)) {
+        const dbVersion = await prisma.schema_version.findUnique({
+          where: { id: 1 },
+        });
 
-      if (dbVersion && dbVersion.version === config.latestDbVersion) {
-        return;
+        if (dbVersion && dbVersion.version === config.latestDbVersion) {
+          return;
+        }
+
+        // Run migration
+        console.log(
+          `Migrating database from version ${dbVersion?.version} to ${config.latestDbVersion}...`,
+        );
+      } else {
+        // New database, run migration
+        console.log(
+          `Creating new database with schema version ${config.latestDbVersion}...`,
+        );
       }
-
-      // Run migration
-      console.log(
-        `Migrating database from version ${dbVersion?.version} to ${config.latestDbVersion}...`,
-      );
 
       // Find the @naisys/database package location
       const databasePackageUrl = import.meta.resolve("@naisys/database");

@@ -140,7 +140,7 @@ export function createLLMService(
 
     if (chatRequest.tools) {
       const commandsFromTool = tools.getCommandsFromOpenAiToolUse(
-        chatResponse.choices[0]?.message?.tool_calls,
+        chatResponse.choices.at(0)?.message?.tool_calls,
       );
 
       if (commandsFromTool) {

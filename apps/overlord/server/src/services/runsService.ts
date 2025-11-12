@@ -39,17 +39,19 @@ export async function getRunsData(
     });
 
     // Map database records to our API format
-    const runs: RunSession[] = runSessions.map((session) => ({
-      userId: session.user_id,
-      runId: session.run_id,
-      sessionId: session.session_id,
-      startDate: session.start_date,
-      lastActive: session.last_active,
-      modelName: session.model_name,
-      totalLines: session.total_lines,
-      totalCost: session.total_cost,
-      isOnline: isAgentOnline(session.last_active),
-    }));
+    const runs: RunSession[] = runSessions.map((session) => {
+      return {
+        userId: session.user_id,
+        runId: session.run_id,
+        sessionId: session.session_id,
+        startDate: session.start_date.toISOString(),
+        lastActive: session.last_active.toISOString(),
+        modelName: session.model_name,
+        totalLines: session.total_lines,
+        totalCost: session.total_cost,
+        isOnline: isAgentOnline(session.last_active),
+      };
+    });
 
     return {
       runs,
@@ -111,7 +113,7 @@ export async function getContextLog(
       source: log.source as LogSource,
       type: log.type as LogType,
       message: log.message,
-      date: log.date,
+      date: log.date.toISOString(),
     }));
 
     return {

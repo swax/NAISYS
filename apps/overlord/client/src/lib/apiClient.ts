@@ -140,7 +140,19 @@ export const saveSettings = async (
   }
 };
 
-export const getAgentData = async (): Promise<NaisysDataResponse> => {
+export interface AgentDataParams {
+  updatedSince?: string;
+}
+
+export const getAgentData = async (
+  params?: AgentDataParams,
+): Promise<NaisysDataResponse> => {
+  if (params?.updatedSince) {
+    const queryParams = new URLSearchParams();
+    queryParams.append("updatedSince", params.updatedSince);
+    const url = `${apiEndpoints.agent}?${queryParams.toString()}`;
+    return await api.get<NaisysDataResponse>(url);
+  }
   return await api.get<NaisysDataResponse>(apiEndpoints.agent);
 };
 

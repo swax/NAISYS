@@ -34,16 +34,7 @@ export default async function runsRoutes(
     },
     async (request, reply) => {
       try {
-        const { userId: userIdStr, updatedSince } = request.query;
-
-        const userId = parseInt(userIdStr, 10);
-
-        if (!userIdStr || isNaN(userId)) {
-          return reply.status(400).send({
-            success: false,
-            message: "Invalid 'userId' parameter. Must be a number.",
-          });
-        }
+        const { userId, updatedSince } = request.query;
 
         const data = await getRunsData(userId, updatedSince);
 
@@ -81,45 +72,7 @@ export default async function runsRoutes(
     },
     async (request, reply) => {
       try {
-        const {
-          userId: userIdStr,
-          runId: runIdStr,
-          sessionId: sessionIdStr,
-          logsAfter: logsAfterStr,
-        } = request.query;
-
-        const userId = parseInt(userIdStr, 10);
-        const runId = parseInt(runIdStr, 10);
-        const sessionId = parseInt(sessionIdStr, 10);
-        const logsAfter = logsAfterStr ? parseInt(logsAfterStr, 10) : undefined;
-
-        if (!userIdStr || isNaN(userId)) {
-          return reply.status(400).send({
-            success: false,
-            message: "Invalid 'userId' parameter. Must be a number.",
-          });
-        }
-
-        if (!runIdStr || isNaN(runId)) {
-          return reply.status(400).send({
-            success: false,
-            message: "Invalid 'runId' parameter. Must be a number.",
-          });
-        }
-
-        if (!sessionIdStr || isNaN(sessionId)) {
-          return reply.status(400).send({
-            success: false,
-            message: "Invalid 'sessionId' parameter. Must be a number.",
-          });
-        }
-
-        if (logsAfterStr && isNaN(logsAfter!)) {
-          return reply.status(400).send({
-            success: false,
-            message: "Invalid 'logsAfter' parameter. Must be a number.",
-          });
-        }
+        const { userId, runId, sessionId, logsAfter } = request.query;
 
         const data = await getContextLog(userId, runId, sessionId, logsAfter);
 

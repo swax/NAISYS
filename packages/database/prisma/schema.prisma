@@ -17,7 +17,7 @@ model context_log {
   source      String
   type        String
   message     String
-  date        String
+  date        DateTime
   users       users       @relation("context_log_user", fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   run_session run_session @relation(fields: [user_id, run_id, session_id], references: [user_id, run_id, session_id], onDelete: NoAction, onUpdate: NoAction)
 
@@ -28,7 +28,7 @@ model context_log {
 
 model costs {
   id                 Int         @id @default(autoincrement())
-  date               String
+  date               DateTime
   user_id            Int
   run_id             Int
   session_id         Int
@@ -54,7 +54,7 @@ model dream_log {
   user_id     Int
   run_id      Int
   session_id  Int
-  date        String
+  date        DateTime
   dream       String
   users       users       @relation("dream_log_user", fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   run_session run_session @relation(fields: [user_id, run_id, session_id], references: [user_id, run_id, session_id], onDelete: NoAction, onUpdate: NoAction)
@@ -78,13 +78,13 @@ model thread_members {
 }
 
 model thread_messages {
-  id        Int     @id @default(autoincrement())
+  id        Int      @id @default(autoincrement())
   thread_id Int
   user_id   Int
   message   String
-  date      String
-  users     users   @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  threads   threads @relation(fields: [thread_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  date      DateTime
+  users     users    @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  threads   threads  @relation(fields: [thread_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([thread_id], map: "idx_thread_messages_thread_id")
   @@index([id(sort: Desc)], map: "idx_thread_messages_id_desc")
@@ -106,8 +106,8 @@ model users {
   title           String
   agent_path      String            @unique(map: "unq_users_agent_path")
   lead_username   String?
-  latest_log_id   Int               @default(-1)
   latest_mail_id  Int               @default(-1)
+  modified_date   DateTime          @updatedAt
   thread_members  thread_members[]
   thread_messages thread_messages[]
   run_sessions    run_session[]
@@ -117,18 +117,19 @@ model users {
 }
 
 model run_session {
-  user_id      Int
-  run_id       Int
-  session_id   Int
-  start_date   String
-  last_active  String
-  model_name   String
-  total_lines  Int           @default(0)
-  total_cost   Float         @default(0)
-  users        users         @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  context_logs context_log[]
-  costs        costs[]
-  dream_logs   dream_log[]
+  user_id       Int
+  run_id        Int
+  session_id    Int
+  start_date    DateTime
+  last_active   DateTime
+  model_name    String
+  latest_log_id Int           @default(-1)
+  total_lines   Int           @default(0)
+  total_cost    Float         @default(0)
+  users         users         @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  context_logs  context_log[]
+  costs         costs[]
+  dream_logs    dream_log[]
 
   @@id([user_id, run_id, session_id])
   @@index([user_id], map: "idx_run_session_user_id")
@@ -136,7 +137,7 @@ model run_session {
 }
 
 model schema_version {
-  id      Int    @id @default(1)
-  version Int    @unique(map: "unq_schema_version_version")
-  updated String
+  id      Int      @id @default(1)
+  version Int      @unique(map: "unq_schema_version_version")
+  updated DateTime
 }

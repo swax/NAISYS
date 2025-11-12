@@ -31,7 +31,8 @@ export default async function agentRoutes(
     },
     async (request, reply) => {
       try {
-        const data = await getAgentData();
+        const { updatedSince } = request.query;
+        const data = await getAgentData(updatedSince);
 
         return {
           success: true,

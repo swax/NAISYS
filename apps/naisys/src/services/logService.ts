@@ -32,17 +32,10 @@ export function createLogService(
         },
         data: {
           last_active: new Date().toISOString(),
+          latest_log_id: inserted.id,
           total_lines: {
             increment: message.content.split("\n").length,
           },
-        },
-      });
-
-      // Update user table with latest log id
-      await prisma.users.update({
-        where: { id: userId },
-        data: {
-          latest_log_id: inserted.id,
         },
       });
 

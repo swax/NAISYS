@@ -15,7 +15,7 @@ export const RunSessionSchema = z.object({
 });
 
 export const RunsDataRequestSchema = z.object({
-  userId: z.string(),
+  userId: z.coerce.number(),
   updatedSince: z.string().optional(),
 });
 
@@ -31,10 +31,10 @@ export const RunsDataResponseSchema = z.object({
 });
 
 export const ContextLogRequestSchema = z.object({
-  userId: z.string(),
-  runId: z.string(),
-  sessionId: z.string(),
-  logsAfter: z.string().optional(),
+  userId: z.coerce.number(),
+  runId: z.coerce.number(),
+  sessionId: z.coerce.number(),
+  logsAfter: z.coerce.number().optional(),
 });
 
 export const ContextLogResponseSchema = z.object({
