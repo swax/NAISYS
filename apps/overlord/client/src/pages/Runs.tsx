@@ -1,4 +1,4 @@
-import { Alert, Badge, Group, Loader, Stack, Text } from "@mantine/core";
+import { Alert, Group, Loader, Stack, Text } from "@mantine/core";
 import React, { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { RunSessionCard } from "../components/RunSessionCard";
@@ -53,31 +53,8 @@ export const Runs: React.FC = () => {
     );
   }
 
-  const formatCost = (cost: number) => {
-    return `$${cost.toFixed(2)}`;
-  };
-
-  const totalLines = allRuns.reduce((sum, run) => sum + run.totalLines, 0);
-  const totalCost = allRuns.reduce((sum, run) => sum + run.totalCost, 0);
-
   return (
     <Stack gap="md" style={{ height: "100%" }}>
-      <Group justify="space-between">
-        <Text size="xl" fw={600}>
-        </Text>
-        <Group gap="md">
-          <Badge size="lg" variant="light" color="violet">
-            {totalLines.toLocaleString()} total lines
-          </Badge>
-          <Badge size="lg" variant="light" color="green">
-            {formatCost(totalCost)} total cost
-          </Badge>
-          <Badge size="lg" variant="light" color="blue">
-            {allRuns.length} runs
-          </Badge>
-        </Group>
-      </Group>
-
       {runsError && (
         <Alert color="red" title="Error loading runs">
           {runsError instanceof Error
@@ -100,7 +77,7 @@ export const Runs: React.FC = () => {
             <RunSessionCard
               key={rowKey}
               run={run}
-              defaultExpanded={false}//Boolean(run.isLast)}
+              defaultExpanded={Boolean(run.isFirst && run.isOnline)}
               isSelected={selectedRowKey === rowKey}
               onSelect={() => setSelectedRowKey(rowKey)}
             />

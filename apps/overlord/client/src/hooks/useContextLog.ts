@@ -1,6 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ContextLogParams, getContextLog, LogEntry } from "../lib/apiClient";
+
+// Module-level caches (shared across all hook instances and persist across remounts)
+const logsCache = new Map<string, LogEntry[]>();
+const logsAfterCache = new Map<string, number | undefined>();
 
 export const useContextLog = (
   userId: number,
@@ -11,11 +15,6 @@ export const useContextLog = (
 ) => {
   // Create a unique key for this session
   const sessionKey = `${userId}-${runId}-${sessionId}`;
-
-  // Store merged logs per session
-  const logsCache = useRef<Map<string, LogEntry[]>>(new Map());
-  // Store logsAfter per session
-  const logsAfterCache = useRef<Map<string, number | undefined>>(new Map());
   // Version counter to trigger re-renders when cache updates
   const [, setCacheVersion] = useState(0);
 
@@ -27,7 +26,7 @@ export const useContextLog = (
         userId,
         runId,
         sessionId,
-        logsAfter: logsAfterCache.current.get(sessionKey),
+        logsAfter: logsAfterCache.get(sessionKey),
       };
 
       return await getContextLog(params);
@@ -51,7 +50,7 @@ export const useContextLog = (
     if (query.data?.success && query.data.data) {
       const newLogs = query.data.data.logs;
 
-      const existingLogs = logsCache.current.get(sessionKey) || [];
+      const existingLogs = logsCache.get(sessionKey) || [];
 
       // Create a map of existing logs for quick lookup
       const logsMap = new Map(
@@ -69,12 +68,12 @@ export const useContextLog = (
       const sortedLogs = mergedLogs.sort((a, b) => a.id - b.id);
 
       // Update cache with sorted logs
-      logsCache.current.set(sessionKey, sortedLogs);
+      logsCache.set(sessionKey, sortedLogs);
 
       // Update logsAfter with the highest log ID we've seen
       if (sortedLogs.length > 0) {
         const maxLogId = Math.max(...sortedLogs.map((log) => log.id));
-        logsAfterCache.current.set(sessionKey, maxLogId);
+        logsAfterCache.set(sessionKey, maxLogId);
       }
 
       // Trigger re-render
@@ -83,7 +82,7 @@ export const useContextLog = (
   }, [query.data, sessionKey]);
 
   // Get current logs from cache (already sorted)
-  const logs = logsCache.current.get(sessionKey) || [];
+  const logs = logsCache.get(sessionKey) || [];
 
   return {
     logs,

@@ -1,14 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { getRunsData, RunsDataParams, RunSession } from "../lib/apiClient";
 
-type RunSessionWithFlag = RunSession & { isLast?: boolean };
+type RunSessionWithFlag = RunSession & { isFirst?: boolean };
+
+// Module-level caches (shared across all hook instances and persist across remounts)
+const runsCache = new Map<number, RunSessionWithFlag[]>();
+const updatedSinceCache = new Map<number, string | undefined>();
 
 export const useRunsData = (userId: number, enabled: boolean = true) => {
-  // Store merged runs per userId (stored sorted with isLast flag)
-  const runsCache = useRef<Map<number, RunSessionWithFlag[]>>(new Map());
-  // Store updatedSince per userId
-  const updatedSinceCache = useRef<Map<number, string | undefined>>(new Map());
   // Version counter to trigger re-renders when cache updates
   const [, setCacheVersion] = useState(0);
 
@@ -17,7 +17,7 @@ export const useRunsData = (userId: number, enabled: boolean = true) => {
 
     const params: RunsDataParams = {
       userId,
-      updatedSince: updatedSinceCache.current.get(userId),
+      updatedSince: updatedSinceCache.get(userId),
     };
 
     return await getRunsData(params);
@@ -39,7 +39,7 @@ export const useRunsData = (userId: number, enabled: boolean = true) => {
     if (query.data?.success && query.data.data) {
       const updatedRuns = query.data.data.runs;
 
-      const existingRuns = runsCache.current.get(userId) || [];
+      const existingRuns = runsCache.get(userId) || [];
 
       // Create a map of existing runs for quick lookup
       const mergeRuns = new Map(
@@ -60,10 +60,10 @@ export const useRunsData = (userId: number, enabled: boolean = true) => {
       const sortedRuns = sortAndMarkRuns(mergedRuns);
 
       // Update cache with sorted runs
-      runsCache.current.set(userId, sortedRuns);
+      runsCache.set(userId, sortedRuns);
 
       // Update updatedSince with the current timestamp
-      updatedSinceCache.current.set(userId, new Date().toISOString());
+      updatedSinceCache.set(userId, new Date().toISOString());
 
       // Trigger re-render
       setCacheVersion((v) => v + 1);
@@ -71,7 +71,7 @@ export const useRunsData = (userId: number, enabled: boolean = true) => {
   }, [query.data, userId]);
 
   // Get current runs from cache (already sorted and marked)
-  const runs = runsCache.current.get(userId) || [];
+  const runs = runsCache.get(userId) || [];
 
   return {
     runs,
@@ -87,9 +87,9 @@ function sortAndMarkRuns(runs: RunSession[]): RunSessionWithFlag[] {
       new Date(b.lastActive).getTime() - new Date(a.lastActive).getTime(),
   );
 
-  // Mark last run
+  // Mark first run
   if (sortedRuns.length > 0) {
-    sortedRuns[sortedRuns.length - 1].isLast = true;
+    sortedRuns[0].isFirst = true;
   }
 
   return sortedRuns;
