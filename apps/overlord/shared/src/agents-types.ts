@@ -11,6 +11,7 @@ export const AgentSchema = z.object({
   leadUsername: z.string().optional(),
   latestLogId: z.number(),
   latestMailId: z.number(),
+  modifiedDate: z.string(),
 });
 
 // Inferred types

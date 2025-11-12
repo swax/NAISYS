@@ -38,13 +38,6 @@ export default async function mailRoutes(
       try {
         const { agentName, updatedSince } = request.query;
 
-        if (!agentName) {
-          return reply.status(400).send({
-            success: false,
-            message: "Missing 'agentName' parameter",
-          });
-        }
-
         const data = await getMailData(agentName, updatedSince);
 
         return {

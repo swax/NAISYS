@@ -8,7 +8,7 @@ CREATE TABLE "context_log" (
     "source" TEXT NOT NULL,
     "type" TEXT NOT NULL,
     "message" TEXT NOT NULL,
-    "date" TEXT NOT NULL,
+    "date" DATETIME NOT NULL,
     CONSTRAINT "context_log_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION,
     CONSTRAINT "context_log_user_id_run_id_session_id_fkey" FOREIGN KEY ("user_id", "run_id", "session_id") REFERENCES "run_session" ("user_id", "run_id", "session_id") ON DELETE NO ACTION ON UPDATE NO ACTION
 );
@@ -16,7 +16,7 @@ CREATE TABLE "context_log" (
 -- CreateTable
 CREATE TABLE "costs" (
     "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-    "date" TEXT NOT NULL,
+    "date" DATETIME NOT NULL,
     "user_id" INTEGER NOT NULL,
     "run_id" INTEGER NOT NULL,
     "session_id" INTEGER NOT NULL,
@@ -38,7 +38,7 @@ CREATE TABLE "dream_log" (
     "user_id" INTEGER NOT NULL,
     "run_id" INTEGER NOT NULL,
     "session_id" INTEGER NOT NULL,
-    "date" TEXT NOT NULL,
+    "date" DATETIME NOT NULL,
     "dream" TEXT NOT NULL,
     CONSTRAINT "dream_log_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION,
     CONSTRAINT "dream_log_user_id_run_id_session_id_fkey" FOREIGN KEY ("user_id", "run_id", "session_id") REFERENCES "run_session" ("user_id", "run_id", "session_id") ON DELETE NO ACTION ON UPDATE NO ACTION
@@ -61,7 +61,7 @@ CREATE TABLE "thread_messages" (
     "thread_id" INTEGER NOT NULL,
     "user_id" INTEGER NOT NULL,
     "message" TEXT NOT NULL,
-    "date" TEXT NOT NULL,
+    "date" DATETIME NOT NULL,
     CONSTRAINT "thread_messages_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION,
     CONSTRAINT "thread_messages_thread_id_fkey" FOREIGN KEY ("thread_id") REFERENCES "threads" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION
 );
@@ -79,7 +79,9 @@ CREATE TABLE "users" (
     "username" TEXT NOT NULL,
     "title" TEXT NOT NULL,
     "agent_path" TEXT NOT NULL,
-    "lead_username" TEXT
+    "lead_username" TEXT,
+    "latest_mail_id" INTEGER NOT NULL DEFAULT -1,
+    "modified_date" DATETIME NOT NULL
 );
 
 -- CreateTable
@@ -87,14 +89,22 @@ CREATE TABLE "run_session" (
     "user_id" INTEGER NOT NULL,
     "run_id" INTEGER NOT NULL,
     "session_id" INTEGER NOT NULL,
-    "start_date" TEXT NOT NULL,
-    "last_active" TEXT NOT NULL,
+    "start_date" DATETIME NOT NULL,
+    "last_active" DATETIME NOT NULL,
     "model_name" TEXT NOT NULL,
+    "latest_log_id" INTEGER NOT NULL DEFAULT -1,
     "total_lines" INTEGER NOT NULL DEFAULT 0,
     "total_cost" REAL NOT NULL DEFAULT 0,
 
     PRIMARY KEY ("user_id", "run_id", "session_id"),
     CONSTRAINT "run_session_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION
+);
+
+-- CreateTable
+CREATE TABLE "schema_version" (
+    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT DEFAULT 1,
+    "version" INTEGER NOT NULL,
+    "updated" DATETIME NOT NULL
 );
 
 -- CreateIndex
@@ -153,3 +163,6 @@ CREATE INDEX "idx_run_session_user_id" ON "run_session"("user_id");
 
 -- CreateIndex
 CREATE INDEX "idx_run_session_last_active" ON "run_session"("last_active");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "unq_schema_version_version" ON "schema_version"("version");

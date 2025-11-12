@@ -2,7 +2,9 @@ import { z } from "zod";
 import { AgentSchema } from "./agents-types.js";
 
 // Zod schemas
-export const NaisysDataRequestSchema = z.object({});
+export const NaisysDataRequestSchema = z.object({
+  updatedSince: z.string().optional(),
+});
 
 export const NaisysDataResponseSchema = z.object({
   success: z.boolean(),

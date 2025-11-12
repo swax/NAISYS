@@ -36,41 +36,37 @@ export const AgentDataProvider: React.FC<{ children: React.ReactNode }> = ({
     {},
   );
 
-  const { data: agentResponse, isLoading, error } = useAgentData();
+  const { agents: cachedAgents, isLoading, error } = useAgentData();
 
   // Update data from agent polling responses
   useEffect(() => {
-    if (agentResponse?.success && agentResponse.data) {
-      const responseData = agentResponse.data;
+    if (cachedAgents && cachedAgents.length > 0) {
+      // Update agents with cached data
+      setAgents(cachedAgents);
 
-      // Update agents (not cached)
-      if (responseData.agents) {
-        setAgents(responseData.agents);
+      // Update read status from agents
+      setReadStatus((prevStatus) => {
+        const newStatus = { ...prevStatus };
 
-        // Update read status from agents
-        setReadStatus((prevStatus) => {
-          const newStatus = { ...prevStatus };
+        // For each agent in the response
+        cachedAgents.forEach((agent: Agent) => {
+          const existingStatus = prevStatus[agent.name];
 
-          // For each agent in the response
-          responseData.agents.forEach((agent) => {
-            const existingStatus = prevStatus[agent.name];
-
-            if (!existingStatus) {
-              // First load: initialize lastRead IDs to latest IDs
-              newStatus[agent.name] = {
-                lastReadLogId: agent.latestLogId,
-                lastReadMailId: agent.latestMailId,
-              };
-            }
-            // If already initialized, preserve local lastRead IDs
-            // (they are updated separately via updateReadStatus)
-          });
-
-          return newStatus;
+          if (!existingStatus) {
+            // First load: initialize lastRead IDs to latest IDs
+            newStatus[agent.name] = {
+              lastReadLogId: agent.latestLogId,
+              lastReadMailId: agent.latestMailId,
+            };
+          }
+          // If already initialized, preserve local lastRead IDs
+          // (they are updated separately via updateReadStatus)
         });
-      }
+
+        return newStatus;
+      });
     }
-  }, [agentResponse]);
+  }, [cachedAgents]);
 
   const updateReadStatus = async (
     agentName: string,

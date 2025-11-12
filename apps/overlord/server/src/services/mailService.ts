@@ -81,7 +81,7 @@ export async function getMailData(
       username: msg.users.username,
       subject: msg.threads.subject,
       message: msg.message,
-      date: msg.date,
+      date: msg.date.toISOString(),
       members: membersMap[msg.thread_id] || [],
     }));
 

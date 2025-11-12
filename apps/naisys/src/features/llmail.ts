@@ -271,6 +271,7 @@ export function createLLMail(
           },
           data: {
             latest_mail_id: thread.id,
+            modified_date: new Date().toISOString(),
           },
         });
 
@@ -406,7 +407,7 @@ export function createLLMail(
       });
 
       const enrichedUserList = userList.map((u) => {
-        const lastActive = u.run_sessions[0]?.last_active;
+        const lastActive = u.run_sessions.at(0)?.last_active;
         return {
           username: u.username,
           title: u.title,
