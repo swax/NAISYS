@@ -50,7 +50,7 @@ export default async function settingsRoutes(
             success: true,
             message: "Default settings returned",
             settings: {
-              naisysDataFolderPath: "",
+              example: "",
             },
           };
         }

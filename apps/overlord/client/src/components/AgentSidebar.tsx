@@ -3,6 +3,7 @@ import { IconFileText, IconMail, IconRobot } from "@tabler/icons-react";
 import React from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Agent } from "shared";
+import { ROUTER_BASENAME } from "../constants";
 import { useAgentDataContext } from "../contexts/AgentDataContext";
 
 export const AgentSidebar: React.FC = () => {
@@ -20,27 +21,35 @@ export const AgentSidebar: React.FC = () => {
 
   const getCurrentSection = () => location.pathname.split("/")[1];
 
-  const handleAgentClick = (agent: Agent) => {
+  const getAgentUrl = (agent: Agent) => {
     const currentSection = getCurrentSection();
-    if (agent.name === "all") {
-      if (
-        currentSection &&
-        ["runs", "log", "mail", "controls"].includes(currentSection)
-      ) {
-        navigate(`/${currentSection}`);
-      } else {
-        navigate("/controls");
-      }
+
+    const agentNameSuffix = agent.name === "all" ? "" : `/${agent.name}`;
+
+    if (
+      currentSection &&
+      ["runs", "log", "mail", "controls"].includes(currentSection)
+    ) {
+      return `/${currentSection}${agentNameSuffix}`;
     } else {
-      if (
-        currentSection &&
-        ["runs", "log", "mail", "controls"].includes(currentSection)
-      ) {
-        navigate(`/${currentSection}/${agent.name}`);
-      } else {
-        navigate(`/controls/${agent.name}`);
-      }
+      return `/unknown${agentNameSuffix}`;
     }
+  };
+
+  const getAbsoluteUrl = (agent: Agent) => {
+    // For actual href attributes, we need the full path including basename
+    return `${ROUTER_BASENAME}${getAgentUrl(agent)}`;
+  };
+
+  const handleAgentClick = (e: React.MouseEvent, agent: Agent) => {
+    // Allow default behavior for middle-click and ctrl/cmd+click
+    if (e.button === 1 || e.ctrlKey || e.metaKey) {
+      return;
+    }
+
+    // Prevent default for regular clicks and handle with navigate
+    e.preventDefault();
+    navigate(getAgentUrl(agent));
   };
 
   if (isLoading) {
@@ -188,32 +197,42 @@ export const AgentSidebar: React.FC = () => {
               opacity: agent.name === "All" ? 1 : agent.online ? 1 : 0.5,
               marginLeft: agent.depth ? `${agent.depth * 1.5}rem` : undefined,
             }}
-            onClick={() => handleAgentClick(agent)}
           >
-            <Group justify="space-between" align="center">
-              <div>
-                <Group gap="xs" align="center">
-                  <IconRobot size="1rem" />
-                  <Text size="sm" fw={500}>
-                    {agent.name}
+            <a
+              href={getAbsoluteUrl(agent)}
+              onClick={(e) => handleAgentClick(e, agent)}
+              style={{
+                textDecoration: "none",
+                color: "inherit",
+                display: "block",
+              }}
+            >
+              <Group justify="space-between" align="center" wrap="nowrap">
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <Group gap="xs" align="center" wrap="nowrap">
+                    <IconRobot size="1rem" style={{ flexShrink: 0 }} />
+                    <Text size="sm" fw={500} truncate="end">
+                      {agent.name}
+                    </Text>
+                    {getUnreadLogBadge(agent)}
+                    {getUnreadMailBadge(agent)}
+                  </Group>
+                  <Text size="xs" c="dimmed" truncate="end">
+                    {agent.title}
                   </Text>
-                  {getUnreadLogBadge(agent)}
-                  {getUnreadMailBadge(agent)}
-                </Group>
-                <Text size="xs" c="dimmed">
-                  {agent.title}
-                </Text>
-              </div>
-              {agent.name !== "All" && (
-                <Badge
-                  size="xs"
-                  variant="light"
-                  color={agent.online ? "green" : "gray"}
-                >
-                  {agent.online ? "online" : "offline"}
-                </Badge>
-              )}
-            </Group>
+                </div>
+                {agent.name !== "All" && (
+                  <Badge
+                    size="xs"
+                    variant="light"
+                    color={agent.online ? "green" : "gray"}
+                    style={{ flexShrink: 0 }}
+                  >
+                    {agent.online ? "online" : "offline"}
+                  </Badge>
+                )}
+              </Group>
+            </a>
           </Card>
         ))}
       </Stack>

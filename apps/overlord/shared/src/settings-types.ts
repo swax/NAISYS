@@ -2,7 +2,7 @@ import { z } from "zod";
 
 // Zod schemas
 export const SettingsSchema = z.object({
-  naisysDataFolderPath: z.string(),
+  example: z.string(),
 });
 
 export const SettingsRequestSchema = z.object({

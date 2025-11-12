@@ -84,7 +84,7 @@ function sortAndMarkRuns(runs: RunSession[]): RunSessionWithFlag[] {
   // Sort by last active (oldest first, latest at bottom)
   const sortedRuns: RunSessionWithFlag[] = [...runs].sort(
     (a, b) =>
-      new Date(a.lastActive).getTime() - new Date(b.lastActive).getTime(),
+      new Date(b.lastActive).getTime() - new Date(a.lastActive).getTime(),
   );
 
   // Mark last run

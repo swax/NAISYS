@@ -12,7 +12,7 @@ export interface SettingsRecord {
 }
 
 export async function saveSettings(settings: Settings): Promise<void> {
-  if (!settings || typeof settings.naisysDataFolderPath !== "string") {
+  if (!settings || typeof settings.example !== "string") {
     throw new Error("Invalid settings format");
   }
 
