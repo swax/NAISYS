@@ -31,7 +31,7 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
     try {
       const response = await getSettings();
       if (response.success && response.settings) {
-        setPath(response.settings.naisysDataFolderPath || "");
+        setPath(response.settings.example || "");
       } else {
         setSettingsErrorMessage(response.message || "Failed to load settings");
       }
@@ -49,7 +49,7 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
 
     try {
       const response = await saveSettings({
-        settings: { naisysDataFolderPath: path.trim() },
+        settings: { example: path.trim() },
       });
 
       if (response.success) {

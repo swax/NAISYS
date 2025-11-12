@@ -1,26 +1,14 @@
 import {
-  ActionIcon,
   AppShell,
   Burger,
-  Flex,
   Group,
   MantineProvider,
   Text,
-  Tooltip,
 } from "@mantine/core";
 import "@mantine/core/styles.css";
-import { useDisclosure } from "@mantine/hooks";
+import { useDisclosure, useMediaQuery } from "@mantine/hooks";
 import { Notifications } from "@mantine/notifications";
 import "@mantine/notifications/styles.css";
-import {
-  IconDeviceGamepad2,
-  IconHistory,
-  IconLock,
-  IconLockOpen,
-  IconMail,
-  IconPlugConnected,
-  IconPlugConnectedX,
-} from "@tabler/icons-react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import React from "react";
 import {
@@ -28,10 +16,12 @@ import {
   BrowserRouter as Router,
   Routes,
   useLocation,
-  useNavigate,
 } from "react-router-dom";
 import { AccessDialog } from "./components/AccessDialog";
 import { AgentSidebar } from "./components/AgentSidebar";
+import { NavHeader } from "./components/NavHeader";
+import { ToolsHeader } from "./components/ToolsHeader";
+import { ROUTER_BASENAME } from "./constants";
 import {
   AgentDataProvider,
   useAgentDataContext,
@@ -53,15 +43,17 @@ const AppContent: React.FC = () => {
     { open: openSettingsModal, close: closeSettingsModal },
   ] = useDisclosure(false);*/
   const [isAuthenticated, setIsAuthenticated] = React.useState(false);
-  const navigate = useNavigate();
   const location = useLocation();
   const { isLoading, error } = useAgentDataContext();
+  const isMobile = useMediaQuery("(max-width: 768px)"); // sm breakpoint
 
-  const isActive = (path: string) => {
-    const currentSection = location.pathname.split("/")[1];
-    const targetSection = path.replace("/", "");
-    return currentSection === targetSection;
-  };
+  const SIDEBAR_WIDTH = 300;
+
+  // Extract current agent name from URL
+  const currentAgentName = React.useMemo(() => {
+    const pathParts = location.pathname.split("/");
+    return pathParts[2] || null;
+  }, [location.pathname]);
 
   // Check for existing session on component mount
   React.useEffect(() => {
@@ -88,13 +80,12 @@ const AppContent: React.FC = () => {
 
   return (
     <AppShell
-      header={{ height: 60 }}
+      header={{ height: 48 }}
       navbar={{
-        width: 300,
+        width: SIDEBAR_WIDTH,
         breakpoint: "sm",
         collapsed: { mobile: !opened },
       }}
-      footer={{ height: 60 }}
       padding="md"
     >
       <AppShell.Header>
@@ -109,77 +100,35 @@ const AppContent: React.FC = () => {
             <img
               src="/overlord/apple-touch-icon.png"
               alt="NAISYS Overlord"
-              style={{ width: "48px", height: "48px" }}
+              style={{ width: "36px", height: "36px" }}
             />
-            <Text size="lg" fw={500}>
+            <Text size="lg" fw={500} visibleFrom="sm">
               NAISYS Overlord
             </Text>
+            <NavHeader
+              agentName={currentAgentName || undefined}
+              sidebarWidth={SIDEBAR_WIDTH}
+              sidebarCollapsed={isMobile}
+            />
           </Group>
-          <Group gap="xs">
-            <Group gap="xs">
-              <Tooltip
-                label={
-                  error
-                    ? "Disconnected"
-                    : isLoading
-                      ? "Connecting"
-                      : "Connected"
-                }
-              >
-                <ActionIcon
-                  variant={error ? "filled" : isLoading ? "outline" : "filled"}
-                  color={error ? "red" : isLoading ? "yellow" : "green"}
-                  size="lg"
-                >
-                  {error ? (
-                    <IconPlugConnectedX size="1.2rem" />
-                  ) : (
-                    <IconPlugConnected size="1.2rem" />
-                  )}
-                </ActionIcon>
-              </Tooltip>
-            </Group>
-            <Group
-              gap="xs"
-              style={{ cursor: "pointer" }}
-              onClick={handleLockIconClick}
-            >
-              <Tooltip label={isAuthenticated ? "Authenticated" : "Read Only"}>
-                <ActionIcon
-                  variant={isAuthenticated ? "filled" : "subtle"}
-                  color={isAuthenticated ? "green" : undefined}
-                  size="lg"
-                >
-                  {isAuthenticated ? (
-                    <IconLockOpen size="1.2rem" />
-                  ) : (
-                    <IconLock size="1.2rem" />
-                  )}
-                </ActionIcon>
-              </Tooltip>
-            </Group>
-            {/*<Group
-              gap="xs"
-              style={{ cursor: "pointer" }}
-              onClick={openSettingsModal}
-            >
-              <Tooltip label="Settings">
-                <ActionIcon variant="subtle" size="lg">
-                  <IconSettings size="1.2rem" />
-                </ActionIcon>
-              </Tooltip>
-            </Group>*/}
-          </Group>
+          <ToolsHeader
+            isLoading={isLoading}
+            error={error}
+            isAuthenticated={isAuthenticated}
+            isMobile={isMobile}
+            onAuthClick={handleLockIconClick}
+          />
         </Group>
       </AppShell.Header>
 
-      <AppShell.Navbar p="md">
+      <AppShell.Navbar p="md" style={{ overflowY: "auto" }}>
         <AgentSidebar />
       </AppShell.Navbar>
 
       <AppShell.Main>
         <Routes>
-          <Route path="/" element={<Home />} />``
+          <Route path="/" element={<Home />} />
+          ``
           <Route path="/runs" element={<Runs />} />
           <Route path="/runs/:agent" element={<Runs />} />
           <Route path="/mail" element={<Mail />} />
@@ -189,83 +138,6 @@ const AppContent: React.FC = () => {
           <Route path="/controls/:agent" element={<Controls />} />
         </Routes>
       </AppShell.Main>
-
-      <AppShell.Footer>
-        <Flex h="100%" px="md" align="center" justify="space-evenly">
-          <Group
-            gap="xs"
-            style={{ cursor: "pointer" }}
-            onClick={() => {
-              const pathParts = location.pathname.split("/");
-              const currentAgent = pathParts[2];
-              if (currentAgent) {
-                navigate(`/runs/${currentAgent}`);
-              } else {
-                navigate("/runs");
-              }
-            }}
-          >
-            <ActionIcon
-              variant={isActive("/runs") ? "filled" : "subtle"}
-              size="lg"
-              aria-label="Runs"
-            >
-              <IconHistory size="1.2rem" />
-            </ActionIcon>
-            <Text size="xs" visibleFrom="sm">
-              Runs
-            </Text>
-          </Group>
-          <Group
-            gap="xs"
-            style={{ cursor: "pointer" }}
-            onClick={() => {
-              const pathParts = location.pathname.split("/");
-              const currentAgent = pathParts[2];
-              if (currentAgent) {
-                navigate(`/mail/${currentAgent}`);
-              } else {
-                navigate("/mail");
-              }
-            }}
-          >
-            <ActionIcon
-              variant={isActive("/mail") ? "filled" : "subtle"}
-              size="lg"
-              aria-label="Mail"
-            >
-              <IconMail size="1.2rem" />
-            </ActionIcon>
-            <Text size="xs" visibleFrom="sm">
-              Mail
-            </Text>
-          </Group>
-          <Group
-            gap="xs"
-            style={{ cursor: "pointer" }}
-            onClick={() => {
-              const pathParts = location.pathname.split("/");
-              const currentAgent = pathParts[2];
-              if (currentAgent) {
-                navigate(`/controls/${currentAgent}`);
-              } else {
-                navigate("/controls");
-              }
-            }}
-          >
-            <ActionIcon
-              variant={isActive("/controls") ? "filled" : "subtle"}
-              size="lg"
-              aria-label="Controls"
-            >
-              <IconDeviceGamepad2 size="1.2rem" />
-            </ActionIcon>
-            <Text size="xs" visibleFrom="sm">
-              Controls
-            </Text>
-          </Group>
-        </Flex>
-      </AppShell.Footer>
 
       <AccessDialog
         opened={accessModalOpened}
@@ -288,7 +160,7 @@ const App: React.FC = () => {
       <MantineProvider defaultColorScheme="dark">
         <Notifications />
         <AgentDataProvider>
-          <Router basename="/overlord">
+          <Router basename={ROUTER_BASENAME}>
             <AppContent />
           </Router>
         </AgentDataProvider>

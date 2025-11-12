@@ -9,7 +9,6 @@ import { useRunsData } from "../hooks/useRunsData";
 export const Runs: React.FC = () => {
   const { agent: agentName } = useParams<{ agent: string }>();
   const { agents } = useAgentDataContext();
-  const [hasScrolledToBottom, setHasScrolledToBottom] = useState(false);
   const [selectedRowKey, setSelectedRowKey] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -25,17 +24,8 @@ export const Runs: React.FC = () => {
 
   // Clear state when agent changes
   useEffect(() => {
-    setHasScrolledToBottom(false);
     setSelectedRowKey(null);
   }, [agentName]);
-
-  // Scroll to bottom on first load
-  useEffect(() => {
-    if (allRuns.length > 0 && !hasScrolledToBottom && bottomRef.current) {
-      bottomRef.current.scrollIntoView({ behavior: "instant", block: "end" });
-      setHasScrolledToBottom(true);
-    }
-  }, [allRuns, hasScrolledToBottom]);
 
   if (!agentName) {
     return (
@@ -74,7 +64,6 @@ export const Runs: React.FC = () => {
     <Stack gap="md" style={{ height: "100%" }}>
       <Group justify="space-between">
         <Text size="xl" fw={600}>
-          Runs for {agent.name}
         </Text>
         <Group gap="md">
           <Badge size="lg" variant="light" color="violet">
@@ -111,7 +100,7 @@ export const Runs: React.FC = () => {
             <RunSessionCard
               key={rowKey}
               run={run}
-              defaultExpanded={Boolean(run.isLast)}
+              defaultExpanded={false}//Boolean(run.isLast)}
               isSelected={selectedRowKey === rowKey}
               onSelect={() => setSelectedRowKey(rowKey)}
             />
