@@ -1,12 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { getMailData, MailDataParams, ThreadMessage } from "../lib/apiClient";
 
+// Module-level caches (shared across all hook instances and persist across remounts)
+const mailCache = new Map<string, ThreadMessage[]>();
+const updatedSinceCache = new Map<string, string | undefined>();
+
 export const useMailData = (agentName: string, enabled: boolean = true) => {
-  // Store merged mail per agentName
-  const mailCache = useRef<Map<string, ThreadMessage[]>>(new Map());
-  // Store updatedSince per agentName
-  const updatedSinceCache = useRef<Map<string, string | undefined>>(new Map());
   // Version counter to trigger re-renders when cache updates
   const [, setCacheVersion] = useState(0);
 
@@ -15,7 +15,7 @@ export const useMailData = (agentName: string, enabled: boolean = true) => {
 
     const params: MailDataParams = {
       agentName,
-      updatedSince: updatedSinceCache.current.get(agentName),
+      updatedSince: updatedSinceCache.get(agentName),
     };
 
     return await getMailData(params);
@@ -37,7 +37,7 @@ export const useMailData = (agentName: string, enabled: boolean = true) => {
     if (query.data?.success && query.data.data) {
       const updatedMail = query.data.data.mail;
 
-      const existingMail = mailCache.current.get(agentName) || [];
+      const existingMail = mailCache.get(agentName) || [];
 
       // Create a map of existing mail for quick lookup
       const mergeMail = new Map(
@@ -57,10 +57,10 @@ export const useMailData = (agentName: string, enabled: boolean = true) => {
       );
 
       // Update cache with sorted mail
-      mailCache.current.set(agentName, sortedMail);
+      mailCache.set(agentName, sortedMail);
 
       // Update updatedSince with the current timestamp
-      updatedSinceCache.current.set(agentName, new Date().toISOString());
+      updatedSinceCache.set(agentName, new Date().toISOString());
 
       // Trigger re-render
       setCacheVersion((v) => v + 1);
@@ -68,7 +68,7 @@ export const useMailData = (agentName: string, enabled: boolean = true) => {
   }, [query.data, agentName]);
 
   // Get current mail from cache (already sorted)
-  const mail = mailCache.current.get(agentName) || [];
+  const mail = mailCache.get(agentName) || [];
 
   return {
     mail,

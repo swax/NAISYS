@@ -265,7 +265,7 @@ export function createLLMail(
         });
 
         // Set latest_mail_id for users/members of the thread
-        tx.users.updateMany({
+        await tx.users.updateMany({
           where: {
             username: { in: usernames },
           },

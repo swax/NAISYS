@@ -1,4 +1,4 @@
-import { Badge, Card, Group, Stack, Text, Tooltip } from "@mantine/core";
+import { Badge, Card, Group, Stack, Text } from "@mantine/core";
 import { IconFileText, IconMail, IconRobot } from "@tabler/icons-react";
 import React from "react";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -28,7 +28,7 @@ export const AgentSidebar: React.FC = () => {
 
     if (
       currentSection &&
-      ["runs", "log", "mail", "controls"].includes(currentSection)
+      ["runs", "mail", "controls"].includes(currentSection)
     ) {
       return `/${currentSection}${agentNameSuffix}`;
     } else {
@@ -126,23 +126,28 @@ export const AgentSidebar: React.FC = () => {
       return null;
     }
 
+    const handleLogClick = (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const agentNameSuffix = agent.name === "all" ? "" : `/${agent.name}`;
+      navigate(`/runs${agentNameSuffix}`);
+    };
+
     return (
-      <Tooltip
-        label={`Latest: ${agent.latestLogId}\nLast read: ${agentReadStatus.lastReadLogId}`}
+      <Badge
+        size="xs"
+        variant="filled"
+        color="purple"
+        p={0}
+        pl={1}
+        pt={3}
+        w={20}
+        h={20}
+        onClick={handleLogClick}
+        style={{ cursor: "pointer" }}
       >
-        <Badge
-          size="xs"
-          variant="filled"
-          color="purple"
-          p={0}
-          pl={1}
-          pt={3}
-          w={20}
-          h={20}
-        >
-          <IconFileText size="0.8rem" />
-        </Badge>
-      </Tooltip>
+        <IconFileText size="0.8rem" />
+      </Badge>
     );
   };
 
@@ -155,23 +160,28 @@ export const AgentSidebar: React.FC = () => {
       return null;
     }
 
+    const handleMailClick = (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const agentNameSuffix = agent.name === "all" ? "" : `/${agent.name}`;
+      navigate(`/mail${agentNameSuffix}`);
+    };
+
     return (
-      <Tooltip
-        label={`Latest: ${agent.latestMailId}\nLast read: ${agentReadStatus.lastReadMailId}`}
+      <Badge
+        size="xs"
+        variant="filled"
+        color="blue"
+        p={0}
+        pl={0}
+        pt={3}
+        w={20}
+        h={20}
+        onClick={handleMailClick}
+        style={{ cursor: "pointer" }}
       >
-        <Badge
-          size="xs"
-          variant="filled"
-          color="blue"
-          p={0}
-          pl={0}
-          pt={3}
-          w={20}
-          h={20}
-        >
-          <IconMail size="0.8rem" />
-        </Badge>
-      </Tooltip>
+        <IconMail size="0.8rem" />
+      </Badge>
     );
   };
 

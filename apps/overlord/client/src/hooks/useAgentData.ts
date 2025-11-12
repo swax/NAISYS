@@ -1,18 +1,18 @@
 import { useQuery } from "@tanstack/react-query";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { getAgentData, Agent } from "../lib/apiClient";
 
+// Module-level caches (shared across all hook instances and persist across remounts)
+let agentCache: Agent[] = [];
+let updatedSinceCache: string | undefined = undefined;
+
 export const useAgentData = () => {
-  // Store merged agents
-  const agentCache = useRef<Agent[]>([]);
-  // Store updatedSince timestamp
-  const updatedSinceCache = useRef<string | undefined>(undefined);
   // Version counter to trigger re-renders when cache updates
   const [, setCacheVersion] = useState(0);
 
   const queryFn = useCallback(async () => {
     return await getAgentData({
-      updatedSince: updatedSinceCache.current,
+      updatedSince: updatedSinceCache,
     });
   }, []);
 
@@ -32,7 +32,7 @@ export const useAgentData = () => {
     if (query.data?.success && query.data.data) {
       const updatedAgents = query.data.data.agents;
 
-      const existingAgents = agentCache.current;
+      const existingAgents = agentCache;
 
       // Create a map of existing agents for quick lookup
       const mergeAgents = new Map(
@@ -52,10 +52,10 @@ export const useAgentData = () => {
       );
 
       // Update cache with sorted agents
-      agentCache.current = sortedAgents;
+      agentCache = sortedAgents;
 
       // Update updatedSince with the current timestamp
-      updatedSinceCache.current = new Date().toISOString();
+      updatedSinceCache = new Date().toISOString();
 
       // Trigger re-render
       setCacheVersion((v) => v + 1);
@@ -63,7 +63,7 @@ export const useAgentData = () => {
   }, [query.data]);
 
   // Get current agents from cache (already sorted)
-  const agents = agentCache.current;
+  const agents = agentCache;
 
   return {
     agents,
