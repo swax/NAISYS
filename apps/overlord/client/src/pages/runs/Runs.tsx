@@ -1,9 +1,9 @@
 import { Alert, Group, Loader, Stack, Text } from "@mantine/core";
 import React, { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
-import { RunSessionCard } from "../components/RunSessionCard";
-import { useAgentDataContext } from "../contexts/AgentDataContext";
-import { useRunsData } from "../hooks/useRunsData";
+import { RunSessionCard } from "./RunSessionCard";
+import { useAgentDataContext } from "../../contexts/AgentDataContext";
+import { useRunsData } from "../../hooks/useRunsData";
 
 /** Re-rendering triggered by agentParam */
 export const Runs: React.FC = () => {

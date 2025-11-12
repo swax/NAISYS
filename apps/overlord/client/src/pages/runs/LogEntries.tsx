@@ -1,6 +1,6 @@
 import { Text } from "@mantine/core";
 import React from "react";
-import { LogEntry } from "../lib/apiClient";
+import { LogEntry } from "../../lib/apiClient";
 
 export const getLogColor = (log: LogEntry) => {
   if (log.type === "comment") return "green";

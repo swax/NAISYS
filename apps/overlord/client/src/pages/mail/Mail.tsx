@@ -17,10 +17,10 @@ import {
 } from "@tabler/icons-react";
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { NewMessageModal } from "../components/NewMessageModal";
-import { useAgentDataContext } from "../contexts/AgentDataContext";
-import { useMailData } from "../hooks/useMailData";
-import { ThreadMessage, sendMail } from "../lib/apiClient";
+import { NewMessageModal } from "./NewMessageModal";
+import { useAgentDataContext } from "../../contexts/AgentDataContext";
+import { useMailData } from "../../hooks/useMailData";
+import { ThreadMessage, sendMail } from "../../lib/apiClient";
 
 const MailMessageComponent: React.FC<{
   message: ThreadMessage;
