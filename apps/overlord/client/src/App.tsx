@@ -127,12 +127,12 @@ const AppContent: React.FC = () => {
 
       <AppShell.Main>
         <Routes>
+          {/* Define routes with keys to remount on agentName change which triggers refetching immediately preventing sessions to look on/offline when they really arent */}
           <Route path="/" element={<Home />} />
-          ``
           <Route path="/runs" element={<Runs />} />
-          <Route path="/runs/:agent" element={<Runs />} />
+          <Route path="/runs/:agent" element={<Runs key={currentAgentName || 'no-agent'} />} />
           <Route path="/mail" element={<Mail />} />
-          <Route path="/mail/:agent" element={<Mail />} />
+          <Route path="/mail/:agent" element={<Mail key={currentAgentName || 'no-agent'} />} />
           <Route path="/mail/:agent/:messageId" element={<Mail />} />
           <Route path="/controls" element={<Controls />} />
           <Route path="/controls/:agent" element={<Controls />} />

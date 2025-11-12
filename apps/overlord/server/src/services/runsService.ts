@@ -1,6 +1,5 @@
 import { LogEntry, LogRole, LogSource, LogType, RunSession } from "shared";
 import { usingNaisysDb } from "../database/naisysDatabase.js";
-import { isAgentOnline } from "../utils/agentUtils.js";
 
 export interface RunsData {
   runs: RunSession[];
@@ -49,7 +48,6 @@ export async function getRunsData(
         modelName: session.model_name,
         totalLines: session.total_lines,
         totalCost: session.total_cost,
-        isOnline: isAgentOnline(session.last_active),
       };
     });
 
