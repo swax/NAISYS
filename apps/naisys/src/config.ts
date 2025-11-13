@@ -100,7 +100,7 @@ export async function createConfig(agentPath: string) {
   }
 
   /** Should match version in schema_version table of latest migration script */
-  const latestDbVersion = 1;
+  const latestDbVersion = 3;
 
   /** The system name that shows after the @ in the command prompt */
   const hostname = "naisys";

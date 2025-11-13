@@ -101,19 +101,30 @@ model threads {
 }
 
 model users {
-  id              Int               @id @default(autoincrement())
-  username        String            @unique(map: "unq_users_username")
-  title           String
-  agent_path      String            @unique(map: "unq_users_agent_path")
-  lead_username   String?
-  latest_mail_id  Int               @default(-1)
-  modified_date   DateTime          @updatedAt
-  thread_members  thread_members[]
-  thread_messages thread_messages[]
-  run_sessions    run_session[]
-  context_logs    context_log[]     @relation("context_log_user")
-  costs           costs[]           @relation("costs_user")
-  dream_logs      dream_log[]       @relation("dream_log_user")
+  id                 Int                 @id @default(autoincrement())
+  username           String              @unique(map: "unq_users_username")
+  title              String
+  agent_path         String              @unique(map: "unq_users_agent_path")
+  lead_username      String?
+  thread_members     thread_members[]
+  thread_messages    thread_messages[]
+  run_sessions       run_session[]
+  context_logs       context_log[]       @relation("context_log_user")
+  costs              costs[]             @relation("costs_user")
+  dream_logs         dream_log[]         @relation("dream_log_user")
+  user_notifications user_notifications?
+}
+
+model user_notifications {
+  user_id        Int      @id
+  latest_mail_id Int      @default(-1)
+  latest_log_id  Int      @default(-1)
+  /**
+   * Not the same as modified date, for example an agent can receive mail while not being active
+   */
+  last_active    DateTime
+  modified_date  DateTime @updatedAt
+  users          users    @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 }
 
 model run_session {

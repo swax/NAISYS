@@ -1,6 +1,12 @@
 import { ActionIcon, Badge, Card, Group, Stack, Text } from "@mantine/core";
-import { IconChevronDown, IconChevronRight } from "@tabler/icons-react";
+import {
+  IconChevronDown,
+  IconChevronRight,
+  IconFileText,
+} from "@tabler/icons-react";
 import React, { useRef, useState } from "react";
+import { useParams } from "react-router-dom";
+import { useAgentDataContext } from "../../contexts/AgentDataContext";
 import { RunSession } from "../../types/runSession";
 import { RunSessionLog } from "./RunSessionLog";
 
@@ -12,6 +18,8 @@ export const RunSessionCard: React.FC<{
 }> = ({ run, defaultExpanded, isSelected, onSelect }) => {
   const [expanded, setExpanded] = useState(defaultExpanded);
   const runSessionCardRef = useRef<HTMLDivElement>(null);
+  const { agent: agentParam } = useParams<{ agent: string }>();
+  const { readStatus } = useAgentDataContext();
 
   const formatPrimaryTime = (dateString: string) => {
     const date = new Date(dateString);
@@ -69,6 +77,13 @@ export const RunSessionCard: React.FC<{
       return `Run ID #${run.runId}-${run.sessionId}`;
     }
     return `Run ID #${run.runId}`;
+  };
+
+  const hasUnreadLogs = () => {
+    if (!agentParam) return false;
+    const agentReadStatus = readStatus[agentParam];
+    if (!agentReadStatus) return false;
+    return run.latestLogId > agentReadStatus.lastReadLogId;
   };
 
   const handleHeaderClick = (e: React.MouseEvent) => {
@@ -132,6 +147,16 @@ export const RunSessionCard: React.FC<{
                     Online
                   </Badge>
                 )}
+                {hasUnreadLogs() && (
+                  <Badge
+                    size="sm"
+                    variant="light"
+                    color="pink"
+                    leftSection={<IconFileText size="0.8rem" />}
+                  >
+                    New logs
+                  </Badge>
+                )}
               </Group>
               <Group gap="md" ml={32}>
                 <Text size="xs" c="dimmed">
@@ -152,11 +177,9 @@ export const RunSessionCard: React.FC<{
             </Stack>
           </Group>
 
-          <RunSessionLog
-            run={run}
-            expanded={expanded}
-            runSessionCardRef={runSessionCardRef}
-          />
+          {expanded && (
+            <RunSessionLog run={run} runSessionCardRef={runSessionCardRef} />
+          )}
         </Stack>
       </Card>
     </>

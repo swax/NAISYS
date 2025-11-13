@@ -2,9 +2,9 @@ import { Badge, Card, Group, Stack, Text } from "@mantine/core";
 import { IconFileText, IconMail, IconRobot } from "@tabler/icons-react";
 import React from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Agent } from "../types/agent";
 import { ROUTER_BASENAME } from "../constants";
 import { useAgentDataContext } from "../contexts/AgentDataContext";
+import { Agent } from "../types/agent";
 
 export const AgentSidebar: React.FC = () => {
   const navigate = useNavigate();
@@ -119,10 +119,11 @@ export const AgentSidebar: React.FC = () => {
 
   const getUnreadLogBadge = (agent: Agent) => {
     const agentReadStatus = readStatus[agent.name];
-    if (
-      !agentReadStatus ||
-      agent.latestLogId <= agentReadStatus.lastReadLogId
-    ) {
+
+    const showBadge =
+      agentReadStatus && agent.latestLogId > agentReadStatus.lastReadLogId;
+
+    if (!showBadge) {
       return null;
     }
 
@@ -136,8 +137,8 @@ export const AgentSidebar: React.FC = () => {
     return (
       <Badge
         size="xs"
-        variant="filled"
-        color="purple"
+        variant="light"
+        color="pink"
         p={0}
         pl={1}
         pt={3}
@@ -170,7 +171,7 @@ export const AgentSidebar: React.FC = () => {
     return (
       <Badge
         size="xs"
-        variant="filled"
+        variant="light"
         color="blue"
         p={0}
         pl={0}

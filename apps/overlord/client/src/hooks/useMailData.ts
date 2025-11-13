@@ -28,9 +28,9 @@ export const useMailData = (agentName: string, enabled: boolean = true) => {
     refetchInterval: 5000, // Poll every 5 seconds
     refetchIntervalInBackground: true,
     refetchOnWindowFocus: false,
-    retry: 3,
-    retryDelay: 1000,
     refetchOnMount: 'always', // Always refetch when agentName changes
+    retry: 3,
+    retryDelay: 1000
   });
 
   // Merge new data when it arrives

@@ -265,9 +265,20 @@ export function createLLMail(
         });
 
         // Set latest_mail_id for users/members of the thread
-        await tx.users.updateMany({
+        // Get user IDs for the usernames
+        const threadUsers = await tx.users.findMany({
           where: {
             username: { in: usernames },
+          },
+          select: {
+            id: true,
+          },
+        });
+
+        // Update user_notifications for all thread members
+        await tx.user_notifications.updateMany({
+          where: {
+            user_id: { in: threadUsers.map((u) => u.id) },
           },
           data: {
             latest_mail_id: thread.id,

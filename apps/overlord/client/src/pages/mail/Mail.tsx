@@ -3,6 +3,7 @@ import {
   Alert,
   Button,
   Card,
+  Divider,
   Flex,
   Group,
   Loader,
@@ -157,7 +158,7 @@ const MailMessageComponent: React.FC<{
 
 export const Mail: React.FC = () => {
   const { agent: agentParam } = useParams<{ agent: string }>();
-  const { agents, updateReadStatus } = useAgentDataContext();
+  const { agents, updateReadStatus, readStatus } = useAgentDataContext();
 
   // Use the new useMailData hook
   const {
@@ -165,6 +166,21 @@ export const Mail: React.FC = () => {
     isLoading: mailLoading,
     error: mailError,
   } = useMailData(agentParam || "", !!agentParam);
+
+  // Save the initial lastReadMailId to determine where to show the divider
+  const [dividerMailId, setDividerMailId] = useState<number | null>(null);
+
+  // Initialize divider position on first load
+  useEffect(() => {
+    if (agentParam && readStatus[agentParam] && dividerMailId === null) {
+      setDividerMailId(readStatus[agentParam].lastReadMailId);
+    }
+  }, [agentParam, readStatus, dividerMailId]);
+
+  // Reset divider when agent changes
+  useEffect(() => {
+    setDividerMailId(null);
+  }, [agentParam]);
 
   // Update read status when viewing mail
   useEffect(() => {
@@ -350,15 +366,34 @@ export const Mail: React.FC = () => {
       )}
 
       <Stack gap="xs">
-        {filteredMail.map((message) => (
-          <MailMessageComponent
-            key={message.id}
-            message={message}
-            currentAgent={agentParam}
-            agents={agents}
-            onReply={handleReply}
-          />
-        ))}
+        {filteredMail.map((message, index) => {
+          // Check if we should show the divider after this message
+          // (divider goes between new mail and old mail)
+          const showDividerAfter =
+            dividerMailId !== null &&
+            message.id <= dividerMailId &&
+            (index === 0 ||
+              (index > 0 && filteredMail[index - 1].id > dividerMailId));
+
+          return (
+            <React.Fragment key={message.id}>
+              <MailMessageComponent
+                message={message}
+                currentAgent={agentParam}
+                agents={agents}
+                onReply={handleReply}
+              />
+              {showDividerAfter && (
+                <Divider
+                  my="md"
+                  label="New mail above"
+                  labelPosition="center"
+                  color="blue"
+                />
+              )}
+            </React.Fragment>
+          );
+        })}
         {filteredMail.length === 0 && !mailLoading && (
           <Text c="dimmed" ta="center">
             No mail messages available for {agent.name}

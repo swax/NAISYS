@@ -77,7 +77,7 @@ export const Runs: React.FC = () => {
             <RunSessionCard
               key={rowKey}
               run={run}
-              defaultExpanded={Boolean(run.isFirst && run.isOnline)}
+              defaultExpanded={false} //Boolean(run.isFirst && run.isOnline)}
               isSelected={selectedRowKey === rowKey}
               onSelect={() => setSelectedRowKey(rowKey)}
             />

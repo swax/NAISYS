@@ -1,4 +1,4 @@
-import { Group, Tabs } from "@mantine/core";
+import { Group, Tabs, Indicator } from "@mantine/core";
 import {
   IconDeviceGamepad2,
   IconHistory,
@@ -7,6 +7,7 @@ import {
 import React from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { ROUTER_BASENAME } from "../constants";
+import { useAgentDataContext } from "../contexts/AgentDataContext";
 
 interface NavHeaderProps {
   agentName?: string;
@@ -21,10 +22,23 @@ export const NavHeader: React.FC<NavHeaderProps> = ({
 }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { agents, readStatus } = useAgentDataContext();
 
   if (!agentName) {
     return null;
   }
+
+  // Find the current agent
+  const currentAgent = agents.find(agent => agent.name === agentName);
+
+  // Check for unread data
+  const hasUnreadLogs = currentAgent && readStatus[agentName]
+    ? currentAgent.latestLogId > readStatus[agentName].lastReadLogId
+    : false;
+
+  const hasUnreadMail = currentAgent && readStatus[agentName]
+    ? currentAgent.latestMailId > readStatus[agentName].lastReadMailId
+    : false;
 
   // Determine active tab from current location
   const currentSection = location.pathname.split("/")[1];
@@ -63,26 +77,30 @@ export const NavHeader: React.FC<NavHeaderProps> = ({
         style={{ flex: 1, height: "100%" }}
       >
         <Tabs.List>
-          <Tabs.Tab
-            value="runs"
-            leftSection={<IconHistory size="1rem" />}
-            component="a"
-            // @ts-expect-error - Mantine Tabs.Tab doesn't properly type component prop with href
-            href={getAbsoluteUrl("runs")}
-            onClick={(e: React.MouseEvent) => handleTabClick(e, "runs")}
-          >
-            Runs
-          </Tabs.Tab>
-          <Tabs.Tab
-            value="mail"
-            leftSection={<IconMail size="1rem" />}
-            component="a"
-            // @ts-expect-error - Mantine Tabs.Tab doesn't properly type component prop with href
-            href={getAbsoluteUrl("mail")}
-            onClick={(e: React.MouseEvent) => handleTabClick(e, "mail")}
-          >
-            Mail
-          </Tabs.Tab>
+          <Indicator disabled={!hasUnreadLogs} color="pink" size={8} offset={7} processing>
+            <Tabs.Tab
+              value="runs"
+              leftSection={<IconHistory size="1rem" />}
+              component="a"
+              // @ts-expect-error - Mantine Tabs.Tab doesn't properly type component prop with href
+              href={getAbsoluteUrl("runs")}
+              onClick={(e: React.MouseEvent) => handleTabClick(e, "runs")}
+            >
+              Runs
+            </Tabs.Tab>
+          </Indicator>
+          <Indicator disabled={!hasUnreadMail} color="blue" size={8} offset={7} processing>
+            <Tabs.Tab
+              value="mail"
+              leftSection={<IconMail size="1rem" />}
+              component="a"
+              // @ts-expect-error - Mantine Tabs.Tab doesn't properly type component prop with href
+              href={getAbsoluteUrl("mail")}
+              onClick={(e: React.MouseEvent) => handleTabClick(e, "mail")}
+            >
+              Mail
+            </Tabs.Tab>
+          </Indicator>
           <Tabs.Tab
             value="controls"
             leftSection={<IconDeviceGamepad2 size="1rem" />}

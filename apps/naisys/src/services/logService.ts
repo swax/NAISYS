@@ -23,6 +23,8 @@ export function createLogService(
         },
       });
 
+      const now = new Date().toISOString();
+
       // Update session table with total lines and last active
       await prisma.run_session.updateMany({
         where: {
@@ -31,11 +33,22 @@ export function createLogService(
           session_id: sessionId,
         },
         data: {
-          last_active: new Date().toISOString(),
+          last_active: now,
           latest_log_id: inserted.id,
           total_lines: {
             increment: message.content.split("\n").length,
           },
+        },
+      });
+
+      // Also update user_notifications with latest_log_id and last_active
+      await prisma.user_notifications.updateMany({
+        where: {
+          user_id: userId,
+        },
+        data: {
+          latest_log_id: inserted.id,
+          last_active: now,
         },
       });
 
