@@ -2,6 +2,7 @@ import {
   ActionIcon,
   Alert,
   Box,
+  Divider,
   Group,
   Loader,
   Portal,
@@ -16,19 +17,15 @@ import {
 } from "@tabler/icons-react";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
-import {
-  GroupedLogComponent,
-  groupPromptEntries,
-} from "./LogEntries";
 import { useAgentDataContext } from "../../contexts/AgentDataContext";
 import { useContextLog } from "../../hooks/useContextLog";
 import { RunSession } from "../../types/runSession";
+import { GroupedLogComponent, groupPromptEntries } from "./LogEntries";
 
 export const RunSessionLog: React.FC<{
   run: RunSession;
-  expanded: boolean;
   runSessionCardRef: React.RefObject<HTMLDivElement>;
-}> = ({ run, expanded, runSessionCardRef }) => {
+}> = ({ run, runSessionCardRef }) => {
   const { agent: agentParam } = useParams<{ agent: string }>();
   const [fullscreen, setFullscreen] = useState(false);
   const logContainerRef = useRef<HTMLDivElement>(null);
@@ -37,36 +34,31 @@ export const RunSessionLog: React.FC<{
   const [needsSyncScrolling, setNeedsSyncScrolling] = useState(false);
   const previousLogsLength = useRef<number>(0);
 
-  const { updateReadStatus } = useAgentDataContext();
+  const { updateReadStatus, readStatus } = useAgentDataContext();
+
+  // Save the initial lastReadLogId to determine where to show the divider
+  const [dividerLogId] = useState<number | undefined>(
+    agentParam ? readStatus[agentParam]?.lastReadLogId : undefined,
+  );
 
   // Fetch logs when expanded, but only continue polling if online
   const {
     logs,
     isLoading: logsLoading,
     error: logsError,
-  } = useContextLog(
-    run.userId,
-    run.runId,
-    run.sessionId,
-    expanded,
-    run.isOnline,
-  );
-
-  // Update read status when viewing logs
-  useEffect(() => {
-    const maxLogId = Math.max(...logs.map((log) => log.id), -1);
-    updateReadStatus(agentParam || "", maxLogId, undefined);
-  }, [logs]);
+  } = useContextLog(run.userId, run.runId, run.sessionId, true, run.isOnline);
 
   // Scroll to bottom when first expanded with logs
   useEffect(() => {
-    if (expanded) {
-      setTimeout(() => setScrollPanelIntoView(true), 100);
-    }
-  }, [expanded]);
+    setTimeout(() => setScrollPanelIntoView(true), 100);
+  }, []);
 
-  // Auto-scroll to bottom when new logs arrive (if already at bottom or first load)
   useEffect(() => {
+    // Update read status when viewing logs
+    const maxLogId = Math.max(...logs.map((log) => log.id), -1);
+    updateReadStatus(agentParam || "", maxLogId, undefined);
+
+    // Auto-scroll to bottom when new logs arrive (if already at bottom or first load)
     if (!logContainerRef.current || logs.length === 0) return;
 
     const isFirstLoad = previousLogsLength.current === 0 && logs.length > 0;
@@ -86,7 +78,7 @@ export const RunSessionLog: React.FC<{
     }
 
     previousLogsLength.current = logs.length;
-  }, [logs]);
+  }, [agentParam, logs]);
 
   const toggleFullscreen = useCallback((value: boolean) => {
     // Save current scroll percentage before toggling
@@ -100,7 +92,7 @@ export const RunSessionLog: React.FC<{
   }, []);
 
   useEffect(() => {
-    if (expanded && scrollPanelIntoView && logs.length > 0) {
+    if (scrollPanelIntoView && logs.length > 0) {
       // If runSessionCardRef not in full view then scroll it into view
       if (runSessionCardRef.current) {
         const rect = runSessionCardRef.current.getBoundingClientRect();
@@ -117,7 +109,7 @@ export const RunSessionLog: React.FC<{
       }
       setScrollPanelIntoView(false);
     }
-  }, [logs, expanded, scrollPanelIntoView, runSessionCardRef]);
+  }, [logs, scrollPanelIntoView, runSessionCardRef]);
 
   // Handle ESC key to exit fullscreen
   useEffect(() => {
@@ -166,14 +158,63 @@ export const RunSessionLog: React.FC<{
     }
   };
 
-  const renderLogView = (isFullscreen: boolean = false) => (
-    <Box style={{ position: "relative" }}>
-      {isFullscreen && (
-        <>
+  const renderLogView = (isFullscreen: boolean = false) => {
+    return (
+      <Box style={{ position: "relative" }}>
+        {isFullscreen && (
+          <>
+            <ActionIcon
+              variant="filled"
+              color="gray"
+              onClick={() => toggleFullscreen(false)}
+              size="lg"
+              style={{
+                position: "absolute",
+                top: "8px",
+                right: "24px",
+                zIndex: 10,
+              }}
+              data-action-icon
+            >
+              <IconMinimize size={20} />
+            </ActionIcon>
+            <ActionIcon
+              variant="filled"
+              color="gray"
+              onClick={scrollToTop}
+              size="lg"
+              style={{
+                position: "absolute",
+                top: "8px",
+                right: "68px",
+                zIndex: 10,
+              }}
+              data-action-icon
+            >
+              <IconArrowBarToUp size={20} />
+            </ActionIcon>
+            <ActionIcon
+              variant="filled"
+              color="gray"
+              onClick={scrollToBottom}
+              size="lg"
+              style={{
+                position: "absolute",
+                top: "8px",
+                right: "112px",
+                zIndex: 10,
+              }}
+              data-action-icon
+            >
+              <IconArrowBarToDown size={20} />
+            </ActionIcon>
+          </>
+        )}
+        {!isFullscreen && (
           <ActionIcon
             variant="filled"
             color="gray"
-            onClick={() => toggleFullscreen(false)}
+            onClick={() => toggleFullscreen(true)}
             size="lg"
             style={{
               position: "absolute",
@@ -183,91 +224,64 @@ export const RunSessionLog: React.FC<{
             }}
             data-action-icon
           >
-            <IconMinimize size={20} />
+            <IconMaximize size={20} />
           </ActionIcon>
-          <ActionIcon
-            variant="filled"
-            color="gray"
-            onClick={scrollToTop}
-            size="lg"
-            style={{
-              position: "absolute",
-              top: "8px",
-              right: "68px",
-              zIndex: 10,
-            }}
-            data-action-icon
-          >
-            <IconArrowBarToUp size={20} />
-          </ActionIcon>
-          <ActionIcon
-            variant="filled"
-            color="gray"
-            onClick={scrollToBottom}
-            size="lg"
-            style={{
-              position: "absolute",
-              top: "8px",
-              right: "112px",
-              zIndex: 10,
-            }}
-            data-action-icon
-          >
-            <IconArrowBarToDown size={20} />
-          </ActionIcon>
-        </>
-      )}
-      {!isFullscreen && expanded && (
-        <ActionIcon
-          variant="filled"
-          color="gray"
-          onClick={() => toggleFullscreen(true)}
-          size="lg"
-          style={{
-            position: "absolute",
-            top: "8px",
-            right: "24px",
-            zIndex: 10,
-          }}
-          data-action-icon
-        >
-          <IconMaximize size={20} />
-        </ActionIcon>
-      )}
-      <Stack
-        ref={fullscreen == isFullscreen ? logContainerRef : undefined}
-        gap={0}
-        style={{
-          backgroundColor: "#1a1a1a",
-          padding: "8px",
-          borderRadius: "4px",
-          maxHeight: isFullscreen ? "100vh" : "600px",
-          height: isFullscreen ? "100vh" : "auto",
-          overflowY: "auto",
-        }}
-      >
-        {groupedLogs.map((item) => (
-          <GroupedLogComponent
-            key={
-              Array.isArray(item)
-                ? item.map((log) => log.id).join("-")
-                : item.id
-            }
-            item={item}
-          />
-        ))}
-        {logs.length === 0 && !logsLoading && (
-          <Text size="sm" c="dimmed" ta="center">
-            No logs available for this run
-          </Text>
         )}
-      </Stack>
-    </Box>
-  );
+        <Stack
+          ref={fullscreen == isFullscreen ? logContainerRef : undefined}
+          gap={0}
+          style={{
+            backgroundColor: "#1a1a1a",
+            padding: "8px",
+            borderRadius: "4px",
+            maxHeight: isFullscreen ? "100vh" : "600px",
+            height: isFullscreen ? "100vh" : "auto",
+            overflowY: "auto",
+          }}
+        >
+          {groupedLogs.map((item) => {
+            const key = Array.isArray(item)
+              ? item.map((log) => log.id).join("-")
+              : item.id;
+
+            const lastItem = item === groupedLogs[groupedLogs.length - 1];
+
+            const showDivider =
+              !lastItem &&
+              (Array.isArray(item)
+                ? item.some((log) => log.id == dividerLogId)
+                : item.id == dividerLogId);
+
+            return (
+              <React.Fragment key={key}>
+                <GroupedLogComponent item={item} />
+                {showDivider && (
+                  <Divider
+                    my="md"
+                    label="New logs below"
+                    labelPosition="center"
+                    color="blue"
+                    style={{
+                      borderColor: "rgba(66, 153, 225, 0.5)",
+                    }}
+                  />
+                )}
+              </React.Fragment>
+            );
+          })}
+          {logs.length === 0 && !logsLoading && (
+            <Text size="sm" c="dimmed" ta="center">
+              No logs available for this run
+            </Text>
+          )}
+        </Stack>
+      </Box>
+    );
+  };
 
   return (
     <>
-      <div style={{ display: expanded ? "block" : "none" }}>
+      <div style={{ display: "block" }}>
         {logsError && (
           <Alert color="red" title="Error loading logs">
             {logsError instanceof Error

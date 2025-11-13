@@ -289,6 +289,10 @@ export function createCommandLoop(
 
   let mailBlackoutCountdown = 0;
 
+  /** 
+   * Return true if new mail was found and marked as shown, as that will let the user evaluate the prompt again. 
+   * Returning true otherwise will prevent the LLM from running 
+   */
   async function checkNewMailNotification() {
     if (!config.mailEnabled) {
       return false;
@@ -310,7 +314,7 @@ export function createCommandLoop(
       await output.commentAndLog(
         `New mail notifications blackout in effect. ${mailBlackoutCountdown} cycles remaining.`,
       );
-      return true;
+      return false;
     }
 
     // Get the new messages for each thread
@@ -341,6 +345,8 @@ export function createCommandLoop(
       }
 
       mailBlackoutCountdown = config.agent.mailBlackoutCycles || 0;
+
+      return true;
     } else if (llmail.simpleMode) {
       await contextManager.append(
         `You have new mail, but not enough context to read them.\n` +
@@ -360,7 +366,7 @@ export function createCommandLoop(
       );
     }
 
-    return true;
+    return false;
   }
 
   async function checkContextLimitWarning() {

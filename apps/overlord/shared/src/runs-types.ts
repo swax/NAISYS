@@ -9,6 +9,7 @@ export const RunSessionSchema = z.object({
   startDate: z.string(),
   lastActive: z.string(),
   modelName: z.string(),
+  latestLogId: z.number(),
   totalLines: z.number(),
   totalCost: z.number(),
 });

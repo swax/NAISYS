@@ -126,6 +126,16 @@ export async function createDatabaseService(config: Config) {
         });
 
         myUserId = insertedUser.id;
+
+        // Create user_notifications row for new user
+        await prisma.user_notifications.create({
+          data: {
+            user_id: myUserId,
+            latest_mail_id: -1,
+            latest_log_id: -1,
+            last_active: new Date().toISOString(),
+          },
+        });
       } catch (e) {
         throw (
           `A user already exists in the database with the agent path (${config.agent.hostpath})\n` +
@@ -199,6 +209,7 @@ export async function createDatabaseService(config: Config) {
 
     try {
       const { userId, runId, sessionId } = config.getUserRunSession();
+      const now = new Date().toISOString();
 
       await prisma.run_session.updateMany({
         where: {
@@ -206,7 +217,15 @@ export async function createDatabaseService(config: Config) {
           run_id: runId,
           session_id: sessionId,
         },
-        data: { last_active: new Date().toISOString() },
+        data: { last_active: now },
+      });
+
+      // Also update user_notifications.last_active
+      await prisma.user_notifications.updateMany({
+        where: {
+          user_id: userId,
+        },
+        data: { last_active: now },
       });
     } catch (error) {
       console.error("Error updating last_active:", error);

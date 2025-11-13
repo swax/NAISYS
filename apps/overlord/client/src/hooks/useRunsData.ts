@@ -35,7 +35,7 @@ export const useRunsData = (userId: number, enabled: boolean = true) => {
     refetchOnWindowFocus: false,
     refetchOnMount: 'always', // Always refetch when userId changes
     retry: 3,
-    retryDelay: 1000,
+    retryDelay: 1000
   });
 
   // Merge new data when it arrives

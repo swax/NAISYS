@@ -46,6 +46,7 @@ export async function getRunsData(
         startDate: session.start_date.toISOString(),
         lastActive: session.last_active.toISOString(),
         modelName: session.model_name,
+        latestLogId: session.latest_log_id,
         totalLines: session.total_lines,
         totalCost: session.total_cost,
       };

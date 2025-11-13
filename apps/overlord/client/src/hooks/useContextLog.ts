@@ -41,6 +41,7 @@ export const useContextLog = (
     refetchInterval: isOnline ? 5000 : false, // Only poll if online
     refetchIntervalInBackground: true,
     refetchOnWindowFocus: false,
+    refetchOnMount: "always", // Always refetch when userId changes
     retry: 3,
     retryDelay: 1000,
   });
