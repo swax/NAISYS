@@ -75,7 +75,7 @@ const MailMessageComponent: React.FC<{
               style={{ minWidth: "80px", flexShrink: 0 }}
             >
               <Text size="xs" c="dimmed" fw={400} style={{ flexShrink: 0 }}>
-                {isFromCurrentAgent ? "To:" : "From:"}
+                {isFromCurrentAgent ? "Sent To:" : "Received From:"}
               </Text>
               <Group gap="xs" align="baseline" style={{ flexWrap: "wrap" }}>
                 {fromToUsernames.map((username, index) => {
@@ -147,8 +147,9 @@ const MailMessageComponent: React.FC<{
             {message.subject}
           </Text>{" "}
           -{" "}
-          <Text component="span" c={isExpanded ? undefined : "dimmed"}>
-            {message.message}
+          <Text component="span" c={"dimmed"} size="sm">
+            {isExpanded ? message.message : message.message.split("\n")[0]} 
+            {message.message.split("\n").length > 1 && !isExpanded && "🔽"}
           </Text>
         </Text>
       </Stack>

@@ -7,6 +7,7 @@ import {
   SettingsResponse,
   SettingsResponseSchema,
   SettingsSchema,
+  ErrorResponseSchema,
 } from "shared";
 
 export default async function settingsRoutes(
@@ -22,7 +23,8 @@ export default async function settingsRoutes(
         tags: ["Settings"],
         response: {
           200: SettingsResponseSchema,
-          500: SettingsResponseSchema,
+          401: ErrorResponseSchema,
+          500: ErrorResponseSchema,
         },
         security: [{ cookieAuth: [] }],
       },
@@ -74,8 +76,9 @@ export default async function settingsRoutes(
         body: SettingsRequestSchema,
         response: {
           200: SettingsResponseSchema,
-          400: SettingsResponseSchema,
-          500: SettingsResponseSchema,
+          400: ErrorResponseSchema,
+          401: ErrorResponseSchema,
+          500: ErrorResponseSchema,
         },
         security: [{ cookieAuth: [] }],
       },

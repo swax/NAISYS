@@ -30,11 +30,11 @@ export function createLLMService(
 
     if (model.apiType === LlmApiType.None) {
       throw "This should be unreachable";
-    } else if (model.apiType === LlmApiType.Dummy) {
+    } else if (model.apiType === LlmApiType.Mock) {
       // 1 second time out then dummy response
       await new Promise((resolve) => setTimeout(resolve, 1000));
       return [
-        `echo "Dummy response for ${config.agent.username} at $(date +"%T")"`,
+        `echo "Mock LLM response for ${config.agent.username} at $(date +"%T")"`,
       ];
     } else if (model.apiType == LlmApiType.Google) {
       return sendWithGoogle(modelKey, systemMessage, context, source);

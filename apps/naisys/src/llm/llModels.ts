@@ -4,7 +4,7 @@ export enum LlmApiType {
   OpenAI = "openai",
   Google = "google",
   Anthropic = "anthropic",
-  Dummy = "dummy",
+  Mock = "mock",
   None = "none",
 }
 
@@ -33,9 +33,9 @@ export function createLLModels(config: Config) {
     },
     // Dummy model is good for testing agent concurrency without incurring costs
     {
-      key: LlmApiType.Dummy,
-      name: LlmApiType.Dummy,
-      apiType: LlmApiType.Dummy,
+      key: LlmApiType.Mock,
+      name: LlmApiType.Mock,
+      apiType: LlmApiType.Mock,
       maxTokens: 10_000,
       inputCost: 0,
       outputCost: 0,
