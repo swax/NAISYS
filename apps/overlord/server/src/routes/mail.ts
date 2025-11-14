@@ -9,6 +9,7 @@ import {
   SendMailRequestSchema,
   SendMailResponse,
   SendMailResponseSchema,
+  ErrorResponseSchema,
 } from "shared";
 import { getMailData, sendMessage } from "../services/mailService.js";
 import { validateSession } from "./access.js";
@@ -29,8 +30,7 @@ export default async function mailRoutes(
         querystring: MailDataRequestSchema,
         response: {
           200: MailDataResponseSchema,
-          400: MailDataResponseSchema,
-          500: MailDataResponseSchema,
+          500: ErrorResponseSchema,
         },
       },
     },
@@ -65,8 +65,8 @@ export default async function mailRoutes(
         body: SendMailRequestSchema,
         response: {
           200: SendMailResponseSchema,
-          400: SendMailResponseSchema,
-          500: SendMailResponseSchema,
+          400: ErrorResponseSchema,
+          500: ErrorResponseSchema,
         },
         security: [{ cookieAuth: [] }],
       },

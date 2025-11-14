@@ -4,6 +4,7 @@ import {
   NaisysDataRequestSchema,
   NaisysDataResponse,
   NaisysDataResponseSchema,
+  ErrorResponseSchema,
 } from "shared";
 import { getAgentData } from "../services/agentService.js";
 
@@ -24,8 +25,8 @@ export default async function agentRoutes(
         querystring: NaisysDataRequestSchema,
         response: {
           200: NaisysDataResponseSchema,
-          400: NaisysDataResponseSchema,
-          500: NaisysDataResponseSchema,
+          400: ErrorResponseSchema,
+          500: ErrorResponseSchema,
         },
       },
     },

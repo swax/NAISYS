@@ -4,8 +4,11 @@ import {
   AccessKeyRequestSchema,
   AccessKeyResponse,
   AccessKeyResponseSchema,
+  SessionResponse,
   LogoutResponseSchema,
   SessionResponseSchema,
+  ErrorResponse,
+  ErrorResponseSchema,
 } from "shared";
 import { v4 as uuidv4 } from "uuid";
 import {
@@ -21,7 +24,10 @@ export default async function accessRoutes(
   fastify: FastifyInstance,
   _options: FastifyPluginOptions,
 ) {
-  fastify.post<{ Body: AccessKeyRequest; Reply: AccessKeyResponse }>(
+  fastify.post<{
+    Body: AccessKeyRequest;
+    Reply: AccessKeyResponse | ErrorResponse;
+  }>(
     "/access-key",
     {
       schema: {
@@ -30,9 +36,9 @@ export default async function accessRoutes(
         body: AccessKeyRequestSchema,
         response: {
           200: AccessKeyResponseSchema,
-          401: AccessKeyResponseSchema,
-          429: AccessKeyResponseSchema,
-          500: AccessKeyResponseSchema,
+          401: ErrorResponseSchema,
+          429: ErrorResponseSchema,
+          500: ErrorResponseSchema,
         },
       },
     },
@@ -103,7 +109,7 @@ export default async function accessRoutes(
   );
 
   // Session validation endpoint
-  fastify.get(
+  fastify.get<{ Reply: SessionResponse | ErrorResponse }>(
     "/session",
     {
       schema: {
@@ -111,8 +117,8 @@ export default async function accessRoutes(
         tags: ["Authentication"],
         response: {
           200: SessionResponseSchema,
-          401: SessionResponseSchema,
-          500: SessionResponseSchema,
+          401: ErrorResponseSchema,
+          500: ErrorResponseSchema,
         },
         security: [{ cookieAuth: [] }],
       },
