@@ -1,9 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useState } from "react";
-import { getAgentData } from "../lib/apiClient";
-import { isAgentOnline } from "../lib/agentUtils";
-import { Agent } from "../types/agent";
 import { Agent as BaseAgent } from "shared";
+import { isAgentOnline } from "../lib/agentUtils";
+import { getAgentData } from "../lib/apiClient";
+import { Agent } from "../types/agent";
 
 // Module-level caches (shared across all hook instances and persist across remounts)
 let agentCache: Agent[] = [];

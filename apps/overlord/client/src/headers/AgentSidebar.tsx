@@ -131,7 +131,7 @@ export const AgentSidebar: React.FC = () => {
       e.preventDefault();
       e.stopPropagation();
       const agentNameSuffix = agent.name === "all" ? "" : `/${agent.name}`;
-      navigate(`/runs${agentNameSuffix}`);
+      navigate(`/runs${agentNameSuffix}?expand=new`);
     };
 
     return (
@@ -200,6 +200,9 @@ export const AgentSidebar: React.FC = () => {
             padding="sm"
             radius="md"
             withBorder
+            component="a"
+            href={getAbsoluteUrl(agent)}
+            onClick={(e) => handleAgentClick(e, agent)}
             style={{
               cursor: "pointer",
               backgroundColor: isAgentSelected(agent.name)
@@ -207,22 +210,16 @@ export const AgentSidebar: React.FC = () => {
                 : undefined,
               opacity: agent.name === "All" ? 1 : agent.online ? 1 : 0.5,
               marginLeft: agent.depth ? `${agent.depth * 1.5}rem` : undefined,
+              textDecoration: "none",
+              color: "inherit",
+              display: "block",
             }}
           >
-            <a
-              href={getAbsoluteUrl(agent)}
-              onClick={(e) => handleAgentClick(e, agent)}
-              style={{
-                textDecoration: "none",
-                color: "inherit",
-                display: "block",
-              }}
-            >
-              <Group justify="space-between" align="center" wrap="nowrap">
-                <div style={{ minWidth: 0, flex: 1 }}>
-                  <Group gap="xs" align="center" wrap="nowrap">
-                    <IconRobot size="1rem" style={{ flexShrink: 0 }} />
-                    <Text size="sm" fw={500} truncate="end">
+            <Group justify="space-between" align="center" wrap="nowrap">
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <Group gap="xs" align="center" wrap="nowrap">
+                  <IconRobot size="1rem" style={{ flexShrink: 0 }} />
+                  <Text size="sm" fw={500} truncate="end">
                       {agent.name}
                     </Text>
                     {getUnreadLogBadge(agent)}
@@ -237,14 +234,25 @@ export const AgentSidebar: React.FC = () => {
                     size="xs"
                     variant="light"
                     color={agent.online ? "green" : "gray"}
-                    style={{ flexShrink: 0 }}
+                    style={{
+                      flexShrink: 0,
+                      cursor: agent.online ? "pointer" : "default",
+                    }}
+                    onClick={(e) => {
+                      if (agent.online) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const agentNameSuffix =
+                          agent.name === "all" ? "" : `/${agent.name}`;
+                        navigate(`/runs${agentNameSuffix}?expand=online`);
+                      }
+                    }}
                   >
                     {agent.online ? "online" : "offline"}
                   </Badge>
                 )}
               </Group>
-            </a>
-          </Card>
+            </Card>
         ))}
       </Stack>
     </>

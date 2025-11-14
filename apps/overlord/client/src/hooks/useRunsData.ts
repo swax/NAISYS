@@ -1,9 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useState } from "react";
-import { getRunsData, RunsDataParams } from "../lib/apiClient";
-import { isAgentOnline } from "../lib/agentUtils";
-import { RunSession } from "../types/runSession";
 import { RunSession as BaseRunSession } from "shared";
+import { isAgentOnline } from "../lib/agentUtils";
+import { getRunsData, RunsDataParams } from "../lib/apiClient";
+import { RunSession } from "../types/runSession";
 
 type RunSessionWithFlag = RunSession & { isFirst?: boolean };
 
@@ -33,9 +33,9 @@ export const useRunsData = (userId: number, enabled: boolean = true) => {
     refetchInterval: 5000, // Poll every 5 seconds
     refetchIntervalInBackground: true,
     refetchOnWindowFocus: false,
-    refetchOnMount: 'always', // Always refetch when userId changes
+    refetchOnMount: "always", // Always refetch when userId changes
     retry: 3,
-    retryDelay: 1000
+    retryDelay: 1000,
   });
 
   // Merge new data when it arrives
@@ -87,6 +87,7 @@ export const useRunsData = (userId: number, enabled: boolean = true) => {
     runs,
     isLoading: query.isLoading,
     error: query.error,
+    isFetchedAfterMount: query.isFetchedAfterMount,
   };
 };
 

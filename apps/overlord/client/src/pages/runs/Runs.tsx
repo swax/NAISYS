@@ -1,9 +1,9 @@
 import { Alert, Group, Loader, Stack, Text } from "@mantine/core";
 import React, { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
-import { RunSessionCard } from "./RunSessionCard";
 import { useAgentDataContext } from "../../contexts/AgentDataContext";
 import { useRunsData } from "../../hooks/useRunsData";
+import { RunSessionCard } from "./RunSessionCard";
 
 /** Re-rendering triggered by agentParam */
 export const Runs: React.FC = () => {
@@ -11,6 +11,7 @@ export const Runs: React.FC = () => {
   const { agents } = useAgentDataContext();
   const [selectedRowKey, setSelectedRowKey] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const [freshData, setFreshData] = useState<'loading' | 'loaded'>('loading');
 
   // Find the agent and get their user ID
   const agent = agents.find((a) => a.name === agentName);
@@ -20,7 +21,22 @@ export const Runs: React.FC = () => {
     runs: allRuns,
     isLoading: runsLoading,
     error: runsError,
+    isFetchedAfterMount,
   } = useRunsData(userId, Boolean(agentName));
+
+  // There's a bug where even through isFetchedAfterMount is true, the latest log id of all runs is still old.
+  // And usually on the next render cycle this is updated.
+  // We need to have the latest data for auto-opening panels in RunSessionCard to work correctly.
+  useEffect(() => {
+    if (isFetchedAfterMount && freshData == 'loading') {
+      const runMaxLogId = Math.max(...allRuns.map((run) => run.latestLogId), -1);
+
+      // Once the run log id is at least the agent's latest log id, we know we have fresh data
+      if (agent?.latestLogId && runMaxLogId >= agent.latestLogId) {
+        setFreshData('loaded');
+      }
+    }
+  }, [freshData, isFetchedAfterMount, allRuns, agents]);
 
   // Clear state when agent changes
   useEffect(() => {
@@ -77,7 +93,7 @@ export const Runs: React.FC = () => {
             <RunSessionCard
               key={rowKey}
               run={run}
-              defaultExpanded={false} //Boolean(run.isFirst && run.isOnline)}
+              freshData={freshData == 'loaded'}
               isSelected={selectedRowKey === rowKey}
               onSelect={() => setSelectedRowKey(rowKey)}
             />
