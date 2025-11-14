@@ -1,10 +1,4 @@
-import {
-  AppShell,
-  Burger,
-  Group,
-  MantineProvider,
-  Text,
-} from "@mantine/core";
+import { AppShell, Burger, Group, MantineProvider, Text } from "@mantine/core";
 import "@mantine/core/styles.css";
 import { useDisclosure, useMediaQuery } from "@mantine/hooks";
 import { Notifications } from "@mantine/notifications";
@@ -16,16 +10,17 @@ import {
   BrowserRouter as Router,
   Routes,
   useLocation,
+  useSearchParams,
 } from "react-router-dom";
 import { AccessDialog } from "./components/AccessDialog";
-import { AgentSidebar } from "./headers/AgentSidebar";
-import { NavHeader } from "./headers/NavHeader";
-import { ToolsHeader } from "./headers/ToolsHeader";
 import { ROUTER_BASENAME } from "./constants";
 import {
   AgentDataProvider,
   useAgentDataContext,
 } from "./contexts/AgentDataContext";
+import { AgentSidebar } from "./headers/AgentSidebar";
+import { NavHeader } from "./headers/NavHeader";
+import { ToolsHeader } from "./headers/ToolsHeader";
 import { queryClient } from "./lib/queryClient";
 import { Controls } from "./pages/Controls";
 import { Home } from "./pages/home/Home";
@@ -46,6 +41,7 @@ const AppContent: React.FC = () => {
   const location = useLocation();
   const { isLoading, error } = useAgentDataContext();
   const isMobile = useMediaQuery("(max-width: 768px)"); // sm breakpoint
+  const [searchParams] = useSearchParams();
 
   const SIDEBAR_WIDTH = 300;
 
@@ -77,6 +73,11 @@ const AppContent: React.FC = () => {
   const handleLockIconClick = () => {
     openAccessModal();
   };
+
+  // Define routes with keys to remount on agentName change which triggers refetching immediately
+  // This prevents sessions looking on/offline when they really arent, as well as getting latest data immediately (sessions, logs, mail, etc)
+  const expandParam = searchParams.get("expand");
+  const key = `${currentAgentName || "no-agent"}-${expandParam || ""}`;
 
   return (
     <AppShell
@@ -127,12 +128,11 @@ const AppContent: React.FC = () => {
 
       <AppShell.Main>
         <Routes>
-          {/* Define routes with keys to remount on agentName change which triggers refetching immediately preventing sessions to look on/offline when they really arent */}
           <Route path="/" element={<Home />} />
           <Route path="/runs" element={<Runs />} />
-          <Route path="/runs/:agent" element={<Runs key={currentAgentName || 'no-agent'} />} />
+          <Route path="/runs/:agent" element={<Runs key={key} />} />
           <Route path="/mail" element={<Mail />} />
-          <Route path="/mail/:agent" element={<Mail key={currentAgentName || 'no-agent'} />} />
+          <Route path="/mail/:agent" element={<Mail key={key} />} />
           <Route path="/mail/:agent/:messageId" element={<Mail />} />
           <Route path="/controls" element={<Controls />} />
           <Route path="/controls/:agent" element={<Controls />} />

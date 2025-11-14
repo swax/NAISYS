@@ -4,22 +4,44 @@ import {
   IconChevronRight,
   IconFileText,
 } from "@tabler/icons-react";
-import React, { useRef, useState } from "react";
-import { useParams } from "react-router-dom";
+import React, { useEffect, useRef, useState } from "react";
+import { useParams, useSearchParams } from "react-router-dom";
 import { useAgentDataContext } from "../../contexts/AgentDataContext";
 import { RunSession } from "../../types/runSession";
 import { RunSessionLog } from "./RunSessionLog";
 
 export const RunSessionCard: React.FC<{
   run: RunSession;
-  defaultExpanded: boolean;
+  freshData: boolean;
   isSelected: boolean;
   onSelect: () => void;
-}> = ({ run, defaultExpanded, isSelected, onSelect }) => {
-  const [expanded, setExpanded] = useState(defaultExpanded);
+}> = ({ run, freshData, isSelected, onSelect }) => {
+  const [expanded, setExpanded] = useState(false);
   const runSessionCardRef = useRef<HTMLDivElement>(null);
   const { agent: agentParam } = useParams<{ agent: string }>();
   const { readStatus } = useAgentDataContext();
+  const [searchParams] = useSearchParams();
+  const [initialLoad, setInitialLoad] = useState(true);
+
+  // Default expanded is determined on a delay as the useRunsData in Runs.tsx gets the latest data
+  useEffect(() => {
+    if (freshData && initialLoad) {
+      setInitialLoad(false);
+
+      const expandParam = searchParams.get("expand");
+
+      // Expand if this card has unread logs
+      if (expandParam === "new") {
+        if (hasUnreadLogs()) {
+          setExpanded(true);
+        }
+      }
+      // Expand if this run is currently online
+      else if (expandParam === "online") {
+        setExpanded(run.isOnline);
+      }
+    }
+  }, [freshData]);
 
   const formatPrimaryTime = (dateString: string) => {
     const date = new Date(dateString);
@@ -80,10 +102,15 @@ export const RunSessionCard: React.FC<{
   };
 
   const hasUnreadLogs = () => {
-    if (!agentParam) return false;
+    if (!agentParam) {
+      return false;
+    }
     const agentReadStatus = readStatus[agentParam];
-    if (!agentReadStatus) return false;
-    return run.latestLogId > agentReadStatus.lastReadLogId;
+    if (!agentReadStatus) {
+      return false;
+    }
+
+    return !expanded && run.latestLogId > agentReadStatus.lastReadLogId;
   };
 
   const handleHeaderClick = (e: React.MouseEvent) => {
@@ -101,9 +128,11 @@ export const RunSessionCard: React.FC<{
         padding="md"
         radius="md"
         withBorder
+        onClick={handleHeaderClick}
         style={{
           marginBottom: "8px",
           scrollMarginBottom: "72px",
+          cursor: "pointer",
           ...(isSelected && {
             borderColor: "#145592ff",
             borderWidth: "1px",
@@ -112,12 +141,7 @@ export const RunSessionCard: React.FC<{
         ref={runSessionCardRef}
       >
         <Stack gap="sm">
-          <Group
-            justify="space-between"
-            align="flex-start"
-            onClick={handleHeaderClick}
-            style={{ cursor: "pointer" }}
-          >
+          <Group justify="space-between" align="flex-start">
             <Stack gap="xs" style={{ flex: 1 }}>
               <Group gap="xs">
                 <ActionIcon
@@ -178,7 +202,14 @@ export const RunSessionCard: React.FC<{
           </Group>
 
           {expanded && (
-            <RunSessionLog run={run} runSessionCardRef={runSessionCardRef} />
+            <div
+              style={{ cursor: "default" }}
+              onClick={(e) => {
+                e.stopPropagation();
+              }}
+            >
+              <RunSessionLog run={run} runSessionCardRef={runSessionCardRef} />
+            </div>
           )}
         </Stack>
       </Card>

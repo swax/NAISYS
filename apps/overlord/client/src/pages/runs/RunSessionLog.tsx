@@ -29,11 +29,11 @@ export const RunSessionLog: React.FC<{
   const { agent: agentParam } = useParams<{ agent: string }>();
   const [fullscreen, setFullscreen] = useState(false);
   const logContainerRef = useRef<HTMLDivElement>(null);
-  const [scrollPanelIntoView, setScrollPanelIntoView] = useState(false);
+  const [, setScrollPanelIntoView] = useState(true);
   const savedScrollPercentage = useRef<number>(0);
   const [needsSyncScrolling, setNeedsSyncScrolling] = useState(false);
   const previousLogsLength = useRef<number>(0);
-
+  const wasAtBottomRef = useRef<boolean>(true); // Track if we were at bottom before render
   const { updateReadStatus, readStatus } = useAgentDataContext();
 
   // Save the initial lastReadLogId to determine where to show the divider
@@ -50,49 +50,7 @@ export const RunSessionLog: React.FC<{
 
   // Scroll to bottom when first expanded with logs
   useEffect(() => {
-    setTimeout(() => setScrollPanelIntoView(true), 100);
-  }, []);
-
-  useEffect(() => {
-    // Update read status when viewing logs
-    const maxLogId = Math.max(...logs.map((log) => log.id), -1);
-    updateReadStatus(agentParam || "", maxLogId, undefined);
-
-    // Auto-scroll to bottom when new logs arrive (if already at bottom or first load)
-    if (!logContainerRef.current || logs.length === 0) return;
-
-    const isFirstLoad = previousLogsLength.current === 0 && logs.length > 0;
-
-    // Check if we're currently scrolled to the bottom before updating
-    const { scrollTop, scrollHeight, clientHeight } = logContainerRef.current;
-    const isAtBottom = scrollTop + clientHeight >= scrollHeight - 10;
-
-    // Scroll to bottom if this is the first load OR if we're already at the bottom
-    if (isFirstLoad || isAtBottom) {
-      requestAnimationFrame(() => {
-        if (logContainerRef.current) {
-          logContainerRef.current.scrollTop =
-            logContainerRef.current.scrollHeight;
-        }
-      });
-    }
-
-    previousLogsLength.current = logs.length;
-  }, [agentParam, logs]);
-
-  const toggleFullscreen = useCallback((value: boolean) => {
-    // Save current scroll percentage before toggling
-    if (logContainerRef.current) {
-      const { scrollTop, scrollHeight, clientHeight } = logContainerRef.current;
-      const maxScroll = scrollHeight - clientHeight;
-      savedScrollPercentage.current = maxScroll > 0 ? scrollTop / maxScroll : 0;
-      setNeedsSyncScrolling(true);
-    }
-    setFullscreen(value);
-  }, []);
-
-  useEffect(() => {
-    if (scrollPanelIntoView && logs.length > 0) {
+    if (logs.length > 0) {
       // If runSessionCardRef not in full view then scroll it into view
       if (runSessionCardRef.current) {
         const rect = runSessionCardRef.current.getBoundingClientRect();
@@ -109,7 +67,45 @@ export const RunSessionLog: React.FC<{
       }
       setScrollPanelIntoView(false);
     }
-  }, [logs, scrollPanelIntoView, runSessionCardRef]);
+  }, [logs, runSessionCardRef]);
+
+  // Track scroll position to know if we should auto-scroll when new content arrives
+  const handleScroll = useCallback(() => {
+    if (!logContainerRef.current) return;
+    const { scrollTop, scrollHeight, clientHeight } = logContainerRef.current;
+    const isAtBottom = scrollTop + clientHeight >= scrollHeight - 16;
+    wasAtBottomRef.current = isAtBottom;
+  }, []);
+
+  useEffect(() => {
+    // Update read status when viewing logs
+    const maxLogId = Math.max(...logs.map((log) => log.id), -1);
+    updateReadStatus(agentParam || "", maxLogId, undefined);
+
+    // Auto-scroll to bottom when new logs arrive (if already at bottom or first load)
+    if (!logContainerRef.current || logs.length === 0) return;
+
+    const isFirstLoad = previousLogsLength.current === 0 && logs.length > 0;
+
+    // Use the wasAtBottomRef that was set BEFORE this render
+    if (isFirstLoad || wasAtBottomRef.current) {
+      logContainerRef.current.scrollTop = logContainerRef.current.scrollHeight;
+      wasAtBottomRef.current = true;
+    }
+
+    previousLogsLength.current = logs.length;
+  }, [agentParam, logs, updateReadStatus]);
+
+  const toggleFullscreen = useCallback((value: boolean) => {
+    // Save current scroll percentage before toggling
+    if (logContainerRef.current) {
+      const { scrollTop, scrollHeight, clientHeight } = logContainerRef.current;
+      const maxScroll = scrollHeight - clientHeight;
+      savedScrollPercentage.current = maxScroll > 0 ? scrollTop / maxScroll : 0;
+      setNeedsSyncScrolling(true);
+    }
+    setFullscreen(value);
+  }, []);
 
   // Handle ESC key to exit fullscreen
   useEffect(() => {
@@ -230,6 +226,7 @@ export const RunSessionLog: React.FC<{
         <Stack
           ref={fullscreen == isFullscreen ? logContainerRef : undefined}
           gap={0}
+          onScroll={fullscreen == isFullscreen ? handleScroll : undefined}
           style={{
             backgroundColor: "#1a1a1a",
             padding: "8px",

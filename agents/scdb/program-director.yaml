@@ -28,7 +28,7 @@ subagentDirectory: subagents
 subagentMax: 2
 mailEnabled: true,
 wakeOnMessage: true,
-tokenMax: 50000
+tokenMax: 20000
 debugPauseSeconds: 3
 initialCommands:
   - llmail help
