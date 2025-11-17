@@ -17,7 +17,16 @@ import { fileURLToPath } from "url";
 import { initOverlordDatabase } from "./database/overlordDatabase.js";
 import apiRoutes from "./routes/api.js";
 
-export const startServer = async (logType: "logToConsole" | "logToFile") => {
+export const startServer = async (startupType: "standalone" | "hosted") => {
+  const isProd = process.env.NODE_ENV === "production";
+
+  if (startupType === "hosted" && !isProd) {
+    console.error(
+      "--overlord can only be used when .env NODE_ENV=production",
+    );
+    process.exit(1);
+  }
+
   initOverlordDatabase();
 
   const __filename = fileURLToPath(import.meta.url);
@@ -25,7 +34,8 @@ export const startServer = async (logType: "logToConsole" | "logToFile") => {
 
   const fastify = Fastify({
     logger:
-      logType === "logToFile"
+      // Log to file in hosted mode
+      startupType === "hosted"
         ? {
             level: "info",
             transport: {
@@ -41,7 +51,8 @@ export const startServer = async (logType: "logToConsole" | "logToFile") => {
               },
             },
           }
-        : {
+        : // Log to console in standalone mode
+          {
             level: "info",
             transport: {
               target: "pino-pretty",
@@ -57,8 +68,7 @@ export const startServer = async (logType: "logToConsole" | "logToFile") => {
   fastify.setSerializerCompiler(serializerCompiler);
 
   await fastify.register(cors, {
-    origin:
-      process.env.NODE_ENV === "production" ? false : ["http://localhost:5173"],
+    origin: isProd ? false : ["http://localhost:5173"],
   });
 
   await fastify.register(cookie);
@@ -102,7 +112,7 @@ export const startServer = async (logType: "logToConsole" | "logToFile") => {
 
   fastify.register(apiRoutes, { prefix: "/api" });
 
-  if (process.env.NODE_ENV === "production") {
+  if (isProd) {
     const clientDistPath = path.join(__dirname, "../client-dist");
 
     await fastify.register(staticFiles, {
@@ -122,13 +132,33 @@ export const startServer = async (logType: "logToConsole" | "logToFile") => {
   }
 
   try {
-    const port = Number(process.env.OVERLORD_PORT) || 3001;
-    const host =
-      process.env.NODE_ENV === "production" ? "0.0.0.0" : "localhost";
+    let port = Number(process.env.OVERLORD_PORT) || 3001;
+    const host = isProd ? "0.0.0.0" : "localhost";
+    const maxAttempts = 100;
+    let attempts = 0;
 
-    await fastify.listen({ port, host });
-    console.log(`Server running on http://${host}:${port}`);
+    while (attempts < maxAttempts) {
+      try {
+        await fastify.listen({ port, host });
+        console.log(`Overlord running on http://${host}:${port}/overlord`);
+        break;
+      } catch (err: any) {
+        if (err.code === "EADDRINUSE") {
+          console.log(`Port ${port} is in use, trying port ${port + 1}...`);
+          port++;
+          attempts++;
+          if (attempts >= maxAttempts) {
+            throw new Error(
+              `Unable to find available port after ${maxAttempts} attempts`,
+            );
+          }
+        } else {
+          throw err;
+        }
+      }
+    }
   } catch (err) {
+    console.error("Failed to start Overlord:", err);
     fastify.log.error(err);
     process.exit(1);
   }
@@ -138,5 +168,5 @@ export const startServer = async (logType: "logToConsole" | "logToFile") => {
 if (import.meta.url === `file://${process.argv[1]}`) {
   dotenv.config({ quiet: true });
 
-  startServer("logToConsole");
+  startServer("standalone");
 }
