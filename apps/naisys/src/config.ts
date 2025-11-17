@@ -1,4 +1,3 @@
-import dotenv from "dotenv";
 import * as fs from "fs";
 import { readFile } from "fs/promises";
 import yaml from "js-yaml";
@@ -119,9 +118,6 @@ export async function createConfig(agentPath: string) {
   const retrySecondsMax = 30 * 60; // 30 minutes
 
   const agent = loadAgentConfig();
-
-  dotenv.config({ quiet: true });
-
   /** Web pages loaded with llmynx will be reduced down to around this number of tokens */
   const webTokenMax = 5000;
 
