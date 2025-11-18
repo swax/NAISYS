@@ -8,20 +8,19 @@ import {
   Group,
   Button,
 } from "@mantine/core";
+import { useSession } from "../contexts/SessionContext";
+import { submitAccessKey, logout } from "../lib/apiClient";
 
 interface AccessDialogProps {
   opened: boolean;
   onClose: () => void;
-  isAuthenticated: boolean;
-  onAuthenticationChange: (authenticated: boolean) => void;
 }
 
 export const AccessDialog: React.FC<AccessDialogProps> = ({
   opened,
   onClose,
-  isAuthenticated,
-  onAuthenticationChange,
 }) => {
+  const { isAuthenticated, setIsAuthenticated } = useSession();
   const [accessKey, setAccessKey] = React.useState("");
   const [isLoading, setIsLoading] = React.useState(false);
   const [errorMessage, setErrorMessage] = React.useState("");
@@ -36,18 +35,10 @@ export const AccessDialog: React.FC<AccessDialogProps> = ({
     setErrorMessage("");
 
     try {
-      const response = await fetch("/api/access-key", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ accessKey }),
-      });
+      const result = await submitAccessKey(accessKey);
 
-      const result = await response.json();
-
-      if (response.ok && result.success) {
-        onAuthenticationChange(true);
+      if (result.success) {
+        setIsAuthenticated(true);
         onClose();
         setAccessKey("");
         setErrorMessage("");
@@ -66,19 +57,13 @@ export const AccessDialog: React.FC<AccessDialogProps> = ({
   const handleLogout = async () => {
     setIsLoading(true);
     try {
-      await fetch("/api/logout", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({}),
-      });
-      onAuthenticationChange(false);
+      await logout();
+      setIsAuthenticated(false);
       onClose();
     } catch (error) {
       console.error("Logout failed:", error);
       // Still clear authentication on client side even if server call fails
-      onAuthenticationChange(false);
+      setIsAuthenticated(false);
       onClose();
     } finally {
       setIsLoading(false);

@@ -32,7 +32,7 @@ export const AgentSidebar: React.FC = () => {
     ) {
       return `/${currentSection}${agentNameSuffix}`;
     } else {
-      return `/unknown${agentNameSuffix}`;
+      return `/controls${agentNameSuffix}`;
     }
   };
 

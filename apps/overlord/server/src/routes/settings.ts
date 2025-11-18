@@ -28,15 +28,9 @@ export default async function settingsRoutes(
         },
         security: [{ cookieAuth: [] }],
       },
+      preHandler: validateSession,
     },
     async (request, reply) => {
-      if (!(await validateSession(request, reply))) {
-        return {
-          success: false,
-          message: "Unauthorized",
-        };
-      }
-
       try {
         const settings = await getSettings();
 
@@ -82,15 +76,9 @@ export default async function settingsRoutes(
         },
         security: [{ cookieAuth: [] }],
       },
+      preHandler: validateSession,
     },
     async (request, reply) => {
-      if (!(await validateSession(request, reply))) {
-        return {
-          success: false,
-          message: "Unauthorized",
-        };
-      }
-
       try {
         // Validate the input with Zod
         const settings = SettingsSchema.safeParse(request.body.settings);
