@@ -206,7 +206,7 @@ export default async function accessRoutes(
 export async function validateSession(
   request: any,
   reply: any,
-): Promise<boolean> {
+): Promise<void> {
   let token = request.cookies.session_token;
 
   // if no token, try to pull session_token from the query params
@@ -218,19 +218,18 @@ export async function validateSession(
   }
 
   if (!token) {
-    reply.code(401);
-    return false;
+    reply.code(401).send({ success: false, message: "Unauthorized" });
+    return;
   }
 
   try {
     const session = await getSession(token);
     if (!session) {
-      reply.code(401);
-      return false;
+      reply.code(401).send({ success: false, message: "Unauthorized" });
+      return;
     }
-    return true;
   } catch (error) {
-    reply.code(500);
-    return false;
+    reply.code(500).send({ success: false, message: "Internal server error" });
+    return;
   }
 }

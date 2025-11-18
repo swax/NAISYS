@@ -20,6 +20,21 @@
       "console": "integratedTerminal",
       "internalConsoleOptions": "neverOpen",
       "skipFiles": ["<node_internals>/**"]
+    },
+
+    {
+      "name": "Debug Overlord Server",
+      "type": "pwa-node",
+      "request": "launch",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["tsx", "watch", "src/server.ts"],
+      "cwd": "${workspaceFolder}/apps/overlord/server",
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen",
+      "skipFiles": ["<node_internals>/**"],
+      "env": {
+        "NODE_ENV": "development"
+      }
     }
   ]
 }

@@ -97,6 +97,23 @@ export const checkSession = async (): Promise<SessionResponse> => {
   }
 };
 
+export const submitAccessKey = async (
+  accessKey: string,
+): Promise<AccessKeyResponse> => {
+  try {
+    return await api.post<AccessKeyRequest, AccessKeyResponse>(
+      apiEndpoints.accessKey,
+      { accessKey },
+    );
+  } catch (error) {
+    return {
+      success: false,
+      message:
+        error instanceof Error ? error.message : "Access key submission failed",
+    };
+  }
+};
+
 export const logout = async (): Promise<LogoutResponse> => {
   try {
     return await api.post<{}, LogoutResponse>(apiEndpoints.logout, {});

@@ -20,6 +20,7 @@ import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { NewMessageModal } from "./NewMessageModal";
 import { useAgentDataContext } from "../../contexts/AgentDataContext";
+import { useSession } from "../../contexts/SessionContext";
 import { useMailData } from "../../hooks/useMailData";
 import { ThreadMessage, sendMail } from "../../lib/apiClient";
 
@@ -160,6 +161,7 @@ const MailMessageComponent: React.FC<{
 export const Mail: React.FC = () => {
   const { agent: agentParam } = useParams<{ agent: string }>();
   const { agents, updateReadStatus, readStatus } = useAgentDataContext();
+  const { isAuthenticated } = useSession();
 
   // Use the new useMailData hook
   const {
@@ -319,6 +321,7 @@ export const Mail: React.FC = () => {
           size="xs"
           leftSection={<IconPlus size={16} />}
           onClick={() => setNewMessageModalOpened(true)}
+          disabled={!isAuthenticated}
         >
           New Message
         </Button>

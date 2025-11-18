@@ -93,7 +93,7 @@ export function createLLModels(config: Config) {
     // https://openai.com/api/pricing/
     {
       key: "gpt5",
-      name: "gpt-5",
+      name: "gpt-5.1",
       apiType: LlmApiType.OpenAI,
       maxTokens: 400_000,
       // Prices are per 1M tokens

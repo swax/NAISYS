@@ -6,22 +6,24 @@ import {
   IconPlugConnectedX,
 } from "@tabler/icons-react";
 import React from "react";
+import { useSession } from "../contexts/SessionContext";
+import { useDisclosure } from "@mantine/hooks";
+import { AccessDialog } from "../components/AccessDialog";
 
 interface ToolsHeaderProps {
   isLoading: boolean;
   error: Error | null;
-  isAuthenticated: boolean;
   isMobile: boolean;
-  onAuthClick: () => void;
 }
 
 export const ToolsHeader: React.FC<ToolsHeaderProps> = ({
   isLoading,
   error,
-  isAuthenticated,
   isMobile,
-  onAuthClick,
 }) => {
+  const { isAuthenticated } = useSession();
+  const [accessModalOpened, { open: openAccessModal, close: closeAccessModal }] =
+    useDisclosure(false);
   return (
     <Group gap="xs">
       <Tooltip
@@ -62,11 +64,11 @@ export const ToolsHeader: React.FC<ToolsHeaderProps> = ({
       </Tooltip>
       <Tooltip label={isAuthenticated ? "Authenticated" : "Read Only"}>
         <Badge
-          color={isAuthenticated ? "green" : "gray"}
+          color={isAuthenticated ? "cyan" : "gray"}
           variant="outline"
           size="lg"
           style={{ cursor: "pointer" }}
-          onClick={onAuthClick}
+          onClick={openAccessModal}
           {...(!isMobile && {
             leftSection: isAuthenticated ? (
               <IconLockOpen size="1rem" />
@@ -86,6 +88,7 @@ export const ToolsHeader: React.FC<ToolsHeaderProps> = ({
           )}
         </Badge>
       </Tooltip>
+      <AccessDialog opened={accessModalOpened} onClose={closeAccessModal} />
     </Group>
   );
 };
