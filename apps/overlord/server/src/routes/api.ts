@@ -1,10 +1,11 @@
 import { FastifyInstance, FastifyPluginOptions } from "fastify";
 import { HelloResponse, HelloResponseSchema } from "shared";
 import accessRoutes from "./access.js";
-import settingsRoutes from "./settings.js";
 import agentRoutes from "./agent.js";
+import controlsRoutes from "./controls.js";
 import mailRoutes from "./mail.js";
 import runsRoutes from "./runs.js";
+import settingsRoutes from "./settings.js";
 
 export default async function apiRoutes(
   fastify: FastifyInstance,
@@ -44,4 +45,7 @@ export default async function apiRoutes(
 
   // Register runs routes
   await fastify.register(runsRoutes);
+
+  // Register controls routes
+  await fastify.register(controlsRoutes);
 }
