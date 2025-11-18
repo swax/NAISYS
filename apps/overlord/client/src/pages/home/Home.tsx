@@ -1,5 +1,4 @@
 import React from "react";
-import { Hello } from "./Hello";
 
 export const Home: React.FC = () => {
   return (
@@ -9,7 +8,6 @@ export const Home: React.FC = () => {
         Welcome to your new Node.js/Fastify + React/Vite application with
         TypeScript!
       </p>
-      <Hello />
     </div>
   );
 };
