@@ -3,7 +3,6 @@ import type {
   AccessKeyResponse,
   Agent,
   ContextLogResponse,
-  HelloResponse,
   LogEntry,
   MailDataResponse,
   NaisysDataRequest,
@@ -37,7 +36,6 @@ export type {
   AccessKeyResponse,
   Agent,
   ContextLogResponse,
-  HelloResponse,
   LogEntry,
   MailDataResponse,
   NaisysDataRequest,
@@ -77,7 +75,6 @@ export const api = {
 };
 
 export const apiEndpoints = {
-  hello: "/hello",
   accessKey: "/access-key",
   session: "/session",
   logout: "/logout",
