@@ -4,6 +4,7 @@ import { usingNaisysDb } from "../database/naisysDatabase.js";
 export interface RunsData {
   runs: RunSession[];
   timestamp: string;
+  total?: number;
 }
 
 export interface ContextLogData {
@@ -14,9 +15,11 @@ export interface ContextLogData {
 export async function getRunsData(
   userId: number,
   updatedSince?: string,
+  page: number = 1,
+  count: number = 50,
 ): Promise<RunsData> {
   try {
-    const runSessions = await usingNaisysDb(async (prisma) => {
+    const result = await usingNaisysDb(async (prisma) => {
       // Build the where clause
       const where: any = {
         user_id: userId,
@@ -29,16 +32,26 @@ export async function getRunsData(
         };
       }
 
-      return await prisma.run_session.findMany({
+      // Only get total count on initial fetch (when updatedSince is not set)
+      const total = updatedSince
+        ? undefined
+        : await prisma.run_session.count({ where });
+
+      // Get paginated runs
+      const runSessions = await prisma.run_session.findMany({
         where,
         orderBy: {
           last_active: "desc",
         },
+        skip: (page - 1) * count,
+        take: count,
       });
+
+      return { runSessions, total };
     });
 
     // Map database records to our API format
-    const runs: RunSession[] = runSessions.map((session) => {
+    const runs: RunSession[] = result.runSessions.map((session) => {
       return {
         userId: session.user_id,
         runId: session.run_id,
@@ -55,6 +68,7 @@ export async function getRunsData(
     return {
       runs,
       timestamp: new Date().toISOString(),
+      total: result.total,
     };
   } catch (error) {
     console.error("Error fetching runs data:", error);
@@ -88,7 +102,7 @@ export async function getContextLog(
 
       return await prisma.context_log.findMany({
         where,
-        orderBy: { id: "asc" },
+        orderBy: { id: "desc" },
         select: {
           id: true,
           role: true,

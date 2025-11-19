@@ -36,9 +36,9 @@ export default async function mailRoutes(
     },
     async (request, reply) => {
       try {
-        const { agentName, updatedSince } = request.query;
+        const { agentName, updatedSince, page, count } = request.query;
 
-        const data = await getMailData(agentName, updatedSince);
+        const data = await getMailData(agentName, updatedSince, page, count);
 
         return {
           success: true,

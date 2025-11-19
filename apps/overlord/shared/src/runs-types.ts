@@ -17,6 +17,8 @@ export const RunSessionSchema = z.object({
 export const RunsDataRequestSchema = z.object({
   userId: z.coerce.number(),
   updatedSince: z.string().optional(),
+  page: z.coerce.number().optional().default(1),
+  count: z.coerce.number().optional().default(50),
 });
 
 export const RunsDataResponseSchema = z.object({
@@ -26,6 +28,7 @@ export const RunsDataResponseSchema = z.object({
     .object({
       runs: z.array(RunSessionSchema),
       timestamp: z.string(),
+      total: z.number().optional(),
     })
     .optional(),
 });

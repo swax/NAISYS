@@ -39,9 +39,9 @@ export const useContextLog = (
     queryFn,
     enabled: enabled && userId > 0,
     refetchInterval: isOnline ? 5000 : false, // Only poll if online
-    refetchIntervalInBackground: true,
-    refetchOnWindowFocus: false,
-    refetchOnMount: "always", // Always refetch when userId changes
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: true,
+    refetchOnMount: "always", // Immediate update when userId changes
     retry: 3,
     retryDelay: 1000,
   });
