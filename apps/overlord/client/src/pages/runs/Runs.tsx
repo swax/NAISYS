@@ -19,6 +19,7 @@ export const Runs: React.FC = () => {
 
   const {
     runs: allRuns,
+    total: totalRuns,
     isLoading: runsLoading,
     error: runsError,
     isFetchedAfterMount,
@@ -102,6 +103,11 @@ export const Runs: React.FC = () => {
         {allRuns.length === 0 && !runsLoading && (
           <Text c="dimmed" ta="center">
             No runs available for {agent.name}
+          </Text>
+        )}
+        {totalRuns > 0 && (
+          <Text c="dimmed" ta="center" size="sm" mt="md">
+            Showing {Math.min(50, totalRuns)} / {totalRuns} runs
           </Text>
         )}
         <div ref={bottomRef} />

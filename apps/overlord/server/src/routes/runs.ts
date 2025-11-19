@@ -34,9 +34,9 @@ export default async function runsRoutes(
     },
     async (request, reply) => {
       try {
-        const { userId, updatedSince } = request.query;
+        const { userId, updatedSince, page, count } = request.query;
 
-        const data = await getRunsData(userId, updatedSince);
+        const data = await getRunsData(userId, updatedSince, page, count);
 
         return {
           success: true,

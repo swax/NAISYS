@@ -24,8 +24,8 @@ export const useAgentData = () => {
     queryFn,
     enabled: true,
     refetchInterval: 5000, // Poll every 5 seconds
-    refetchIntervalInBackground: true,
-    refetchOnWindowFocus: false,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: true,
     retry: 3,
     retryDelay: 1000,
   });

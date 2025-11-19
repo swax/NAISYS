@@ -10,6 +10,7 @@ type RunSessionWithFlag = RunSession & { isFirst?: boolean };
 // Module-level caches (shared across all hook instances and persist across remounts)
 const runsCache = new Map<number, RunSessionWithFlag[]>();
 const updatedSinceCache = new Map<number, string | undefined>();
+const totalCache = new Map<number, number>();
 
 export const useRunsData = (userId: number, enabled: boolean = true) => {
   // Version counter to trigger re-renders when cache updates
@@ -21,6 +22,8 @@ export const useRunsData = (userId: number, enabled: boolean = true) => {
     const params: RunsDataParams = {
       userId,
       updatedSince: updatedSinceCache.get(userId),
+      page: 1,
+      count: 50,
     };
 
     return await getRunsData(params);
@@ -31,9 +34,9 @@ export const useRunsData = (userId: number, enabled: boolean = true) => {
     queryFn,
     enabled: enabled && userId > 0,
     refetchInterval: 5000, // Poll every 5 seconds
-    refetchIntervalInBackground: true,
-    refetchOnWindowFocus: false,
-    refetchOnMount: "always", // Always refetch when userId changes
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: true,
+    refetchOnMount: "always", // Immediate update when userId changes
     retry: 3,
     retryDelay: 1000,
   });
@@ -42,6 +45,7 @@ export const useRunsData = (userId: number, enabled: boolean = true) => {
   useEffect(() => {
     if (query.data?.success && query.data.data) {
       const updatedRuns = query.data.data.runs;
+      const total = query.data.data.total;
 
       const existingRuns = runsCache.get(userId) || [];
 
@@ -53,12 +57,16 @@ export const useRunsData = (userId: number, enabled: boolean = true) => {
         ]),
       );
 
+      // Count how many new runs we're adding
+      const existingCount = mergeRuns.size;
+
       // Update existing runs and add new ones
       updatedRuns.forEach((run: BaseRunSession) => {
         mergeRuns.set(`${run.userId}-${run.runId}-${run.sessionId}`, run);
       });
 
       const mergedRuns = Array.from(mergeRuns.values());
+      const newCount = mergedRuns.length - existingCount;
 
       // Recalculate online status for all runs after merging
       const runsWithOnline: RunSession[] = mergedRuns.map((run) => ({
@@ -72,6 +80,16 @@ export const useRunsData = (userId: number, enabled: boolean = true) => {
       // Update cache with sorted runs
       runsCache.set(userId, sortedRuns);
 
+      // Update total cache
+      if (total !== undefined) {
+        // Initial fetch with total count
+        totalCache.set(userId, total);
+      } else if (newCount > 0) {
+        // Incremental fetch - add new items to existing total
+        const currentTotal = totalCache.get(userId) || 0;
+        totalCache.set(userId, currentTotal + newCount);
+      }
+
       // Update updatedSince with the current timestamp
       updatedSinceCache.set(userId, new Date().toISOString());
 
@@ -82,9 +100,11 @@ export const useRunsData = (userId: number, enabled: boolean = true) => {
 
   // Get current runs from cache (already sorted and marked)
   const runs = runsCache.get(userId) || [];
+  const total = totalCache.get(userId) || 0;
 
   return {
     runs,
+    total,
     isLoading: query.isLoading,
     error: query.error,
     isFetchedAfterMount: query.isFetchedAfterMount,

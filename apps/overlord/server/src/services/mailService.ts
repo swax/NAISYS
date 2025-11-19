@@ -15,7 +15,9 @@ import path from "path";
 export async function getMailData(
   agentName: string,
   updatedSince?: string,
-): Promise<{ mail: ThreadMessage[]; timestamp: string }> {
+  page: number = 1,
+  count: number = 50,
+): Promise<{ mail: ThreadMessage[]; timestamp: string; total?: number }> {
   try {
     // First, find the agent to get their userId
     const agents = await getAgents();
@@ -39,19 +41,29 @@ export async function getMailData(
     }
 
     // Fetch messages where the user is a thread member
-    const dbMessages = await usingNaisysDb(async (prisma) => {
-      return await prisma.thread_messages.findMany({
-        where: {
-          ...whereClause,
-          threads: {
-            thread_members: {
-              some: {
-                user_id: userId,
-              },
+    const result = await usingNaisysDb(async (prisma) => {
+      const where = {
+        ...whereClause,
+        threads: {
+          thread_members: {
+            some: {
+              user_id: userId,
             },
           },
         },
-        orderBy: { id: "asc" },
+      };
+
+      // Only get total count on initial fetch (when updatedSince is not set)
+      const total = updatedSince
+        ? undefined
+        : await prisma.thread_messages.count({ where });
+
+      // Get paginated messages
+      const dbMessages = await prisma.thread_messages.findMany({
+        where,
+        orderBy: { id: "desc" },
+        skip: (page - 1) * count,
+        take: count,
         select: {
           id: true,
           thread_id: true,
@@ -66,15 +78,17 @@ export async function getMailData(
           },
         },
       });
+
+      return { dbMessages, total };
     });
 
     // Get unique thread IDs to fetch members
-    const threadIds = [...new Set(dbMessages.map((msg) => msg.thread_id))];
+    const threadIds = [...new Set(result.dbMessages.map((msg) => msg.thread_id))];
 
     // Fetch members for all threads
     const membersMap = await getThreadMembersMap(threadIds);
 
-    const messages = dbMessages.map((msg) => ({
+    const messages = result.dbMessages.map((msg) => ({
       id: msg.id,
       threadId: msg.thread_id,
       userId: msg.user_id,
@@ -88,6 +102,7 @@ export async function getMailData(
     return {
       mail: messages,
       timestamp: new Date().toISOString(),
+      total: result.total,
     };
   } catch (error) {
     console.error("Error fetching mail data:", error);

@@ -215,6 +215,8 @@ export const sendMail = async (
 export interface RunsDataParams {
   userId: number;
   updatedSince?: string;
+  page?: number;
+  count?: number;
 }
 
 export const getRunsData = async (
@@ -224,6 +226,12 @@ export const getRunsData = async (
   queryParams.append("userId", params.userId.toString());
   if (params.updatedSince) {
     queryParams.append("updatedSince", params.updatedSince);
+  }
+  if (params.page !== undefined) {
+    queryParams.append("page", params.page.toString());
+  }
+  if (params.count !== undefined) {
+    queryParams.append("count", params.count.toString());
   }
 
   const url = `${apiEndpoints.runs}?${queryParams.toString()}`;
@@ -255,6 +263,8 @@ export const getContextLog = async (
 export interface MailDataParams {
   agentName: string;
   updatedSince?: string;
+  page?: number;
+  count?: number;
 }
 
 export const getMailData = async (
@@ -264,6 +274,12 @@ export const getMailData = async (
   queryParams.append("agentName", params.agentName);
   if (params.updatedSince) {
     queryParams.append("updatedSince", params.updatedSince);
+  }
+  if (params.page !== undefined) {
+    queryParams.append("page", params.page.toString());
+  }
+  if (params.count !== undefined) {
+    queryParams.append("count", params.count.toString());
   }
 
   const url = `${apiEndpoints.mail}?${queryParams.toString()}`;
