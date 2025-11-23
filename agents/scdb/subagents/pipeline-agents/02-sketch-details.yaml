@@ -16,7 +16,8 @@ agentPrompt: |
      - Season and episode number
      - Whether it's a recurring sketch, and the name of the recurring sketch if applicable
      - Video URL(s): Very important to find a link(s) to where the user can see the sketch online: youtube, vimeo, tiktok, facebook, etc.. 
-     - Description of the sketch
+     - A short fun one sentence teaser
+     - Synopsis of the sketch
      - Any additional notes
      - Cast information (character name, actor name, role type: cast/host/guest/uncredited, who they are impersonating if applicable)
      - Credits (writers, directors, producers, etc.)

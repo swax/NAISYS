@@ -12,6 +12,7 @@ import {
   IconSend,
 } from "@tabler/icons-react";
 import React, { useState } from "react";
+import { useSession } from "../../contexts/SessionContext";
 import { ThreadMessage } from "../../lib/apiClient";
 
 interface MailMessageProps {
@@ -27,6 +28,7 @@ export const MailMessage: React.FC<MailMessageProps> = ({
   agents,
   onReply,
 }) => {
+  const { isAuthenticated } = useSession();
   const [isExpanded, setIsExpanded] = useState(false);
   const isFromCurrentAgent = currentAgent && message.username === currentAgent;
   const membersExcludingSender = message.members.filter(
@@ -102,6 +104,7 @@ export const MailMessage: React.FC<MailMessageProps> = ({
                   variant="subtle"
                   color="blue"
                   size="sm"
+                  disabled={!isAuthenticated}
                   onClick={(e) => {
                     e.stopPropagation();
                     const quotedBody = message.message
