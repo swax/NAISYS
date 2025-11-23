@@ -15,14 +15,14 @@ agentPrompt: |
     - This command will get a list of image urls on the page: curl -s <page url> | grep -o 'https://static.sketchtv.lol/[^"]*'
     - The image urls on the page do not contain the database image ids or keys from the cdn 
   7. If any problems are detected revise the notes.txt file with details of the problems found
-  8. A sketch with no working video link and/or no tags needs to be kicked back to the details stage
-  8. Replace/create a testing.txt file with a summary of what was tested and what problems were found
-  8. Depending on the issues kick the sketch back to one of the previous stages:
+  8. A sketch with no working video link and/or a missing teaser then it needs to be kicked back to the details stage
+  9. Replace/create a testing.txt file with a summary of what was tested and what problems were found
+  10. Depending on the issues kick the sketch back to one of the previous stages:
      - If the details are wrong or incomplete move to ${env.SCDB_DETAILS_FOLDER}/01-pending/<folder_name>
      - If headshots are broken or wrong move to ${env.SCDB_HEADSHOTS_FOLDER}/01-pending/<folder_name>
      - If there's content detected not on the page and the database just needs to be updated move to ${env.SCDB_UPDATE_DATABASE_FOLDER}/01-pending/<folder_name>
-  9. If everything looks good move the folder to ${env.SCDB_TEST_FOLDER}/03-completed/<folder_name>
-  10. Pass or fail, regardless, call the completetask command once testing is complete
+  11. If everything looks good move the folder to ${env.SCDB_TEST_FOLDER}/03-completed/<folder_name>
+  12. Pass or fail, regardless, call the completetask command once testing is complete
 
   Don't use llmynx to open YouTube pages, use `node ${env.SCDB_FOLDER}/agent/youtube/video-summary.js <youtube url>` command
 
