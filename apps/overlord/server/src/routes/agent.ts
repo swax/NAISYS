@@ -1,10 +1,10 @@
 import { FastifyInstance, FastifyPluginOptions } from "fastify";
 import {
+  ErrorResponseSchema,
   NaisysDataRequest,
   NaisysDataRequestSchema,
   NaisysDataResponse,
   NaisysDataResponseSchema,
-  ErrorResponseSchema,
 } from "shared";
 import { getAgentData } from "../services/agentService.js";
 
@@ -19,8 +19,7 @@ export default async function agentRoutes(
     "/agent",
     {
       schema: {
-        description:
-          "Get agent data including agent status and metadata",
+        description: "Get agent data including agent status and metadata",
         tags: ["Agent"],
         querystring: NaisysDataRequestSchema,
         response: {

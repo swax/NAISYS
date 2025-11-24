@@ -7,22 +7,31 @@ import {
   Loader,
   Stack,
   Text,
+  Textarea,
 } from "@mantine/core";
 import {
+  IconCheck,
   IconEdit,
   IconPlayerPause,
   IconPlayerPlay,
   IconPlayerStop,
+  IconX,
 } from "@tabler/icons-react";
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { GetAgentConfigResponse } from "shared";
+import { getAgentConfig, updateAgentConfig } from "../lib/apiClient";
+import { useSession } from "../contexts/SessionContext";
 
 export const Controls: React.FC = () => {
   const { agent } = useParams<{ agent: string }>();
+  const { isAuthenticated } = useSession();
   const [config, setConfig] = useState<string | null>(null);
+  const [editedConfig, setEditedConfig] = useState<string>("");
+  const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!agent) {
@@ -32,10 +41,7 @@ export const Controls: React.FC = () => {
 
     const fetchConfig = async () => {
       try {
-        const response = await fetch(
-          `/api/controls/agent-config?username=${encodeURIComponent(agent)}`,
-        );
-        const data: GetAgentConfigResponse = await response.json();
+        const data = await getAgentConfig(agent);
 
         if (data.success && data.config) {
           setConfig(data.config);
@@ -52,6 +58,44 @@ export const Controls: React.FC = () => {
 
     fetchConfig();
   }, [agent]);
+
+  const handleEdit = () => {
+    if (config) {
+      setEditedConfig(config);
+      setIsEditing(true);
+      setSaveError(null);
+    }
+  };
+
+  const handleDiscard = () => {
+    setIsEditing(false);
+    setEditedConfig("");
+    setSaveError(null);
+  };
+
+  const handleSave = async () => {
+    if (!agent) return;
+
+    setSaving(true);
+    setSaveError(null);
+
+    try {
+      const data = await updateAgentConfig(agent, editedConfig);
+
+      if (data.success) {
+        setConfig(editedConfig);
+        setIsEditing(false);
+        setEditedConfig("");
+      } else {
+        setSaveError(data.message || "Failed to save configuration");
+      }
+    } catch (err) {
+      console.error("Error saving agent config:", err);
+      setSaveError("An error occurred while saving the configuration");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   if (!agent) {
     return <Text size="xl">Controls</Text>;
@@ -99,12 +143,60 @@ export const Controls: React.FC = () => {
           Stop
         </Button>
         <Divider orientation="vertical" />
-        <Button color="blue" disabled leftSection={<IconEdit size={16} />}>
-          Edit Config
-        </Button>
+        {!isEditing ? (
+          <Button
+            color="blue"
+            disabled={!isAuthenticated}
+            leftSection={<IconEdit size={16} />}
+            onClick={handleEdit}
+          >
+            Edit Config
+          </Button>
+        ) : (
+          <>
+            <Button
+              color="green"
+              leftSection={<IconCheck size={16} />}
+              onClick={handleSave}
+              loading={saving}
+              disabled={saving}
+            >
+              Save
+            </Button>
+            <Button
+              color="gray"
+              leftSection={<IconX size={16} />}
+              onClick={handleDiscard}
+              disabled={saving}
+            >
+              Discard
+            </Button>
+          </>
+        )}
       </Group>
 
-      <Code block>{config}</Code>
+      {saveError && (
+        <Alert color="red" title="Error" onClose={() => setSaveError(null)} withCloseButton>
+          {saveError}
+        </Alert>
+      )}
+
+      {isEditing ? (
+        <Textarea
+          value={editedConfig}
+          onChange={(e) => setEditedConfig(e.target.value)}
+          minRows={20}
+          autosize
+          styles={{
+            input: {
+              fontFamily: "monospace",
+              fontSize: "0.875rem",
+            },
+          }}
+        />
+      ) : (
+        <Code block>{config}</Code>
+      )}
     </Stack>
   );
 };
