@@ -1,6 +1,6 @@
+export * from "./agent-config-types.js";
 export * from "./agents-types.js";
 export * from "./api-types.js";
-export * from "./controls-types.js";
 export * from "./error-types.js";
 export * from "./log-types.js";
 export * from "./mail-types.js";

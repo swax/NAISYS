@@ -3,6 +3,8 @@ import type {
   AccessKeyResponse,
   Agent,
   ContextLogResponse,
+  CreateAgentConfigResponse,
+  GetAgentConfigResponse,
   LogEntry,
   MailDataResponse,
   NaisysDataRequest,
@@ -14,6 +16,7 @@ import type {
   SettingsRequest,
   SettingsResponse,
   ThreadMessage,
+  UpdateAgentConfigResponse,
 } from "shared";
 
 const API_BASE = "/api";
@@ -36,6 +39,8 @@ export type {
   AccessKeyResponse,
   Agent,
   ContextLogResponse,
+  CreateAgentConfigResponse,
+  GetAgentConfigResponse,
   LogEntry,
   MailDataResponse,
   NaisysDataRequest,
@@ -47,6 +52,7 @@ export type {
   SettingsRequest,
   SettingsResponse,
   ThreadMessage,
+  UpdateAgentConfigResponse,
 };
 
 export const api = {
@@ -72,6 +78,21 @@ export const api = {
     }
     return result;
   },
+
+  async put<T, R>(endpoint: string, data: T): Promise<R> {
+    const response = await fetch(`${API_BASE}${endpoint}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+    });
+    const result = await response.json();
+    if (!response.ok) {
+      throw new Error(result.message || `API Error: ${response.status}`);
+    }
+    return result;
+  },
 };
 
 export const apiEndpoints = {
@@ -80,6 +101,7 @@ export const apiEndpoints = {
   logout: "/logout",
   settings: "/settings",
   agent: "/agent",
+  agentConfig: "/agent/config",
   sendMail: "/send-mail",
   runs: "/runs",
   contextLog: "/context-log",
@@ -284,4 +306,60 @@ export const getMailData = async (
 
   const url = `${apiEndpoints.mail}?${queryParams.toString()}`;
   return await api.get<MailDataResponse>(url);
+};
+
+export const getAgentConfig = async (
+  username: string,
+): Promise<GetAgentConfigResponse> => {
+  try {
+    const queryParams = new URLSearchParams();
+    queryParams.append("username", username);
+    const url = `${apiEndpoints.agentConfig}?${queryParams.toString()}`;
+    return await api.get<GetAgentConfigResponse>(url);
+  } catch (error) {
+    return {
+      success: false,
+      message:
+        error instanceof Error
+          ? error.message
+          : "Failed to load agent configuration",
+    };
+  }
+};
+
+export const updateAgentConfig = async (
+  username: string,
+  config: string,
+): Promise<UpdateAgentConfigResponse> => {
+  try {
+    return await api.put<
+      { username: string; config: string },
+      UpdateAgentConfigResponse
+    >(apiEndpoints.agentConfig, { username, config });
+  } catch (error) {
+    return {
+      success: false,
+      message:
+        error instanceof Error
+          ? error.message
+          : "Failed to save agent configuration",
+    };
+  }
+};
+
+export const createAgent = async (
+  name: string,
+): Promise<CreateAgentConfigResponse> => {
+  try {
+    return await api.post<{ name: string }, CreateAgentConfigResponse>(
+      apiEndpoints.agentConfig,
+      { name },
+    );
+  } catch (error) {
+    return {
+      success: false,
+      message:
+        error instanceof Error ? error.message : "Failed to create agent",
+    };
+  }
 };

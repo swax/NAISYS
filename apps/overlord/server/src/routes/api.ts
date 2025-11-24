@@ -1,6 +1,7 @@
 import { FastifyInstance, FastifyPluginOptions } from "fastify";
 import accessRoutes from "./access.js";
 import agentRoutes from "./agent.js";
+import agentConfigRoutes from "./agent-config.js";
 import controlsRoutes from "./controls.js";
 import mailRoutes from "./mail.js";
 import runsRoutes from "./runs.js";
@@ -18,6 +19,9 @@ export default async function apiRoutes(
 
   // Register agent data routes
   await fastify.register(agentRoutes);
+
+  // Register agent config routes
+  await fastify.register(agentConfigRoutes);
 
   // Register mail routes
   await fastify.register(mailRoutes);

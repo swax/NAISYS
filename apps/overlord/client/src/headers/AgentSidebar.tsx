@@ -1,15 +1,24 @@
-import { Badge, Card, Group, Stack, Text } from "@mantine/core";
-import { IconFileText, IconMail, IconRobot } from "@tabler/icons-react";
-import React from "react";
+import { ActionIcon, Badge, Card, Group, Stack, Text } from "@mantine/core";
+import {
+  IconFileText,
+  IconMail,
+  IconPlus,
+  IconRobot,
+} from "@tabler/icons-react";
+import React, { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { AddAgentDialog } from "../components/AddAgentDialog";
 import { ROUTER_BASENAME } from "../constants";
 import { useAgentDataContext } from "../contexts/AgentDataContext";
+import { useSession } from "../contexts/SessionContext";
 import { Agent } from "../types/agent";
 
 export const AgentSidebar: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { agents, isLoading, readStatus } = useAgentDataContext();
+  const { isAuthenticated } = useSession();
+  const [modalOpened, setModalOpened] = useState(false);
 
   const isAgentSelected = (agentName: string) => {
     const pathParts = location.pathname.split("/");
@@ -55,9 +64,20 @@ export const AgentSidebar: React.FC = () => {
   if (isLoading) {
     return (
       <>
-        <Text size="sm" fw={600} mb="md" c="dimmed">
-          AGENTS
-        </Text>
+        <Group justify="space-between" mb="md">
+          <Text size="sm" fw={600} c="dimmed">
+            AGENTS
+          </Text>
+          <ActionIcon
+            variant="subtle"
+            color="gray"
+            size="sm"
+            onClick={() => setModalOpened(true)}
+            disabled={!isAuthenticated}
+          >
+            <IconPlus size="1rem" />
+          </ActionIcon>
+        </Group>
         <Text size="sm" c="dimmed">
           Loading agents...
         </Text>
@@ -190,9 +210,20 @@ export const AgentSidebar: React.FC = () => {
 
   return (
     <>
-      <Text size="sm" fw={600} mb="md" c="dimmed">
-        AGENTS
-      </Text>
+      <Group justify="space-between" mb="md">
+        <Text size="sm" fw={600} c="dimmed">
+          AGENTS
+        </Text>
+        <ActionIcon
+          variant="subtle"
+          color="gray"
+          size="sm"
+          onClick={() => setModalOpened(true)}
+          disabled={!isAuthenticated}
+        >
+          <IconPlus size="1rem" />
+        </ActionIcon>
+      </Group>
       <Stack gap="xs">
         {orderedAgents.map((agent) => (
           <Card
@@ -220,41 +251,46 @@ export const AgentSidebar: React.FC = () => {
                 <Group gap="xs" align="center" wrap="nowrap">
                   <IconRobot size="1rem" style={{ flexShrink: 0 }} />
                   <Text size="sm" fw={500} truncate="end">
-                      {agent.name}
-                    </Text>
-                    {getUnreadLogBadge(agent)}
-                    {getUnreadMailBadge(agent)}
-                  </Group>
-                  <Text size="xs" c="dimmed" truncate="end">
-                    {agent.title}
+                    {agent.name}
                   </Text>
-                </div>
-                {agent.name !== "All" && (
-                  <Badge
-                    size="xs"
-                    variant="light"
-                    color={agent.online ? "green" : "gray"}
-                    style={{
-                      flexShrink: 0,
-                      cursor: agent.online ? "pointer" : "default",
-                    }}
-                    onClick={(e) => {
-                      if (agent.online) {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        const agentNameSuffix =
-                          agent.name === "all" ? "" : `/${agent.name}`;
-                        navigate(`/runs${agentNameSuffix}?expand=online`);
-                      }
-                    }}
-                  >
-                    {agent.online ? "online" : "offline"}
-                  </Badge>
-                )}
-              </Group>
-            </Card>
+                  {getUnreadLogBadge(agent)}
+                  {getUnreadMailBadge(agent)}
+                </Group>
+                <Text size="xs" c="dimmed" truncate="end">
+                  {agent.title}
+                </Text>
+              </div>
+              {agent.name !== "All" && (
+                <Badge
+                  size="xs"
+                  variant="light"
+                  color={agent.online ? "green" : "gray"}
+                  style={{
+                    flexShrink: 0,
+                    cursor: agent.online ? "pointer" : "default",
+                  }}
+                  onClick={(e) => {
+                    if (agent.online) {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      const agentNameSuffix =
+                        agent.name === "all" ? "" : `/${agent.name}`;
+                      navigate(`/runs${agentNameSuffix}?expand=online`);
+                    }
+                  }}
+                >
+                  {agent.online ? "online" : "offline"}
+                </Badge>
+              )}
+            </Group>
+          </Card>
         ))}
       </Stack>
+
+      <AddAgentDialog
+        opened={modalOpened}
+        onClose={() => setModalOpened(false)}
+      />
     </>
   );
 };
