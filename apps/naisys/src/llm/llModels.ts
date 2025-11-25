@@ -21,7 +21,7 @@ interface LlmModel {
   cacheReadCost?: number;
 }
 
-export function createLLModels(globalConfig: GlobalConfig) {
+export function createLLModels({ globalConfig }: GlobalConfig) {
   const llmModels: LlmModel[] = [
     {
       key: LlmApiType.None,
@@ -42,8 +42,8 @@ export function createLLModels(globalConfig: GlobalConfig) {
     },
     {
       key: "local",
-      name: globalConfig.localLlmName || "local",
-      baseUrl: globalConfig.localLlmUrl,
+      name: globalConfig().localLlmName || "local",
+      baseUrl: globalConfig().localLlmUrl,
       apiType: LlmApiType.OpenAI,
       maxTokens: 8_000,
       // Prices are per 1M tokens

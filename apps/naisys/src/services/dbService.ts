@@ -10,13 +10,13 @@ import { NaisysPath } from "./pathService.js";
 
 const execAsync = promisify(exec);
 
-export async function createDatabaseService(globalConfig: GlobalConfig) {
+export async function createDatabaseService({ globalConfig }: GlobalConfig) {
   /** Should match version in schema_version table of latest migration script */
   const latestDbVersion = 4;
 
   // Ensure database directory exists
   const dbFilePath = new NaisysPath(
-    `${globalConfig.naisysFolder}/database/naisys.sqlite`,
+    `${globalConfig().naisysFolder}/database/naisys.sqlite`,
   );
   pathService.ensureFileDirExists(dbFilePath);
 

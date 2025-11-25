@@ -17,7 +17,7 @@ enum ShellEvent {
   Exit = "exit",
 }
 
-export function createShellWrapper(globalConfig: GlobalConfig, agentConfig: AgentConfig, output: OutputService) {
+export function createShellWrapper({ globalConfig }: GlobalConfig, { agentConfig }: AgentConfig, output: OutputService) {
   let _process: ChildProcessWithoutNullStreams | undefined;
   let _currentProcessId: number | undefined;
   let _commandOutput = "";
@@ -81,12 +81,12 @@ export function createShellWrapper(globalConfig: GlobalConfig, agentConfig: Agen
 
       await errorIfNotEmpty(
         await executeCommand(
-          `mkdir -p ${globalConfig.naisysFolder}/home/` + agentConfig.username,
+          `mkdir -p ${globalConfig().naisysFolder}/home/` + agentConfig().username,
         ),
       );
       await errorIfNotEmpty(
         await executeCommand(
-          `cd ${globalConfig.naisysFolder}/home/` + agentConfig.username,
+          `cd ${globalConfig().naisysFolder}/home/` + agentConfig().username,
         ),
       );
     } else {
@@ -316,7 +316,7 @@ export function createShellWrapper(globalConfig: GlobalConfig, agentConfig: Agen
       _startCommandTime = new Date();
     }
 
-    let waitSeconds = globalConfig.shellCommand.timeoutSeconds;
+    let waitSeconds = globalConfig().shellCommand.timeoutSeconds;
 
     // Parse wait time parameter if provided
     if (waitParam) {
@@ -326,7 +326,7 @@ export function createShellWrapper(globalConfig: GlobalConfig, agentConfig: Agen
       }
     }
 
-    const maxTimeoutSeconds = globalConfig.shellCommand.maxTimeoutSeconds;
+    const maxTimeoutSeconds = globalConfig().shellCommand.maxTimeoutSeconds;
     if (waitSeconds > maxTimeoutSeconds) {
       waitSeconds = maxTimeoutSeconds;
     }
@@ -445,7 +445,7 @@ export function createShellWrapper(globalConfig: GlobalConfig, agentConfig: Agen
    * May also help with common escaping errors */
   function putMultilineCommandInAScript(command: string) {
     const scriptPath = new NaisysPath(
-      `${globalConfig.naisysFolder}/agent-data/${agentConfig.username}/multiline-command.sh`,
+      `${globalConfig().naisysFolder}/agent-data/${agentConfig().username}/multiline-command.sh`,
     );
 
     pathService.ensureFileDirExists(scriptPath);
@@ -462,7 +462,7 @@ ${command.trim()}`;
     // `Path` is set to the ./bin folder because custom NAISYS commands that follow shell commands will be handled by the shell, which will fail
     // so we need to remind the LLM that 'naisys commands cannot be used with other commands on the same prompt'
     // `source` will run the script in the current shell, so any change directories in the script will persist in the current shell
-    return `PATH=${globalConfig.binPath}:$PATH source ${scriptPath.getNaisysPath()}`;
+    return `PATH=${globalConfig().binPath}:$PATH source ${scriptPath.getNaisysPath()}`;
   }
 
   function _completeCommand(output: string) {

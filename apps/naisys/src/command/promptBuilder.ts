@@ -12,8 +12,8 @@ import { writeEventManager } from "../utils/writeEventManager.js";
 import { ShellWrapper } from "./shellWrapper.js";
 
 export function createPromptBuilder(
-  globalConfig: GlobalConfig,
-  agentConfig: AgentConfig,
+  { globalConfig }: GlobalConfig,
+  { agentConfig }: AgentConfig,
   shellWrapper: ShellWrapper,
   subagent: SubagentService,
   llmail: LLMail,
@@ -34,7 +34,7 @@ export function createPromptBuilder(
   async function getPrompt(pauseSeconds: number, wakeOnMessage: boolean) {
     const promptSuffix = inputMode.isDebug() ? "#" : "$";
 
-    const tokenMax = agentConfig.tokenMax;
+    const tokenMax = agentConfig().tokenMax;
     const usedTokens = contextManager.getTokenCount();
     const tokenSuffix = ` [Tokens: ${usedTokens}/${tokenMax}]`;
 
@@ -59,9 +59,9 @@ export function createPromptBuilder(
   }
 
   function getUserHostPrompt() {
-    const username = inputMode.isDebug() ? "debug" : agentConfig.username;
+    const username = inputMode.isDebug() ? "debug" : agentConfig().username;
 
-    return `${username}@${globalConfig.hostname}`;
+    return `${username}@${globalConfig().hostname}`;
   }
 
   function getInput(

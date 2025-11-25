@@ -43,7 +43,7 @@ export class AgentManager {
         await this.stopAgent(
           agent.agentRunId,
           "completeShutdown",
-          `${agent.agentConfig.username} shutdown`,
+          `${agent.agentUsername} shutdown`,
         );
       });
 
@@ -106,7 +106,7 @@ export class AgentManager {
     if (prevActiveAgent) {
       // Last output from the previously active agent
       prevActiveAgent.output.write(
-        `Switching to agent ${newActiveAgent.agentConfig.username} (ID: ${newActiveAgent.agentRunId})`,
+        `Switching to agent ${newActiveAgent.agentUsername} (ID: ${newActiveAgent.agentRunId})`,
         OutputColor.subagent,
       );
       prevActiveAgent.output.setConsoleEnabled(false);

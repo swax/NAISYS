@@ -8,14 +8,14 @@ import { NaisysPath } from "../services/pathService.js";
 import { OutputService } from "../utils/output.js";
 
 export function createGenImg(
-  agentConfig: AgentConfig,
+  { agentConfig }: AgentConfig,
   costTracker: CostTracker,
   output: OutputService,
 ) {
   /** genimg "<description>" <filepath>: Generate an image with the description and save it to the file path */
   async function handleCommand(args: string): Promise<string> {
     // genimg sholdn't even be presented as an available command unless it is defined in the config
-    if (!agentConfig.imageModel) {
+    if (!agentConfig().imageModel) {
       throw "Agent config: Error, 'imageModel' is not defined";
     }
 
@@ -43,11 +43,17 @@ export function createGenImg(
 
     pathService.ensureFileDirExists(filepath);
 
-    await output.commentAndLog(`Generating image with ${agentConfig.imageModel}...`);
+    const imageModelName = agentConfig().imageModel;
+
+    if (!imageModelName) {
+      throw "Error: imageModel is not defined in agent config";
+    }
+
+    await output.commentAndLog(`Generating image with ${imageModelName}...`);
 
     const openai = new OpenAI();
 
-    const model = getImageModel(agentConfig.imageModel);
+    const model = getImageModel(imageModelName);
 
     const response = await openai.images.generate({
       prompt: description,

@@ -89,7 +89,6 @@ export async function createAgentRuntime(
   const genimg = createGenImg(agentConfig, costTracker, output);
   const llmail = createLLMail(globalConfig, agentConfig, dbService, runService);
   const subagentService = createSubagentService(
-    globalConfig,
     agentConfig,
     llmail,
     output,
@@ -172,7 +171,8 @@ export async function createAgentRuntime(
 
   return {
     agentRunId: runService.getRunId(),
-    agentConfig,
+    agentUsername: agentConfig.agentConfig().username,
+    agentTaskDescription: agentConfig.agentConfig().taskDescription,
     output,
     subagentService,
     runCommandLoop: () => commandLoop.run(abortController.signal),

@@ -1,11 +1,11 @@
 import { Type } from "@google/genai";
 import { AgentConfig } from "../agentConfig.js";
 
-export function createCommandTools(agentConfig: AgentConfig) {
+export function createCommandTools({ agentConfig }: AgentConfig) {
   const escapedQuoteRegex = /"/g;
   const escapedBackslashRegex = /\\/g;
 
-  const multipleCommandsDisabled = !!agentConfig.disableMultipleCommands;
+  const multipleCommandsDisabled = !!agentConfig().disableMultipleCommands;
 
   // Common description strings
   const COMMENT_DESCRIPTION =

@@ -5,7 +5,7 @@ import * as utilities from "../utils/utilities.js";
 import { ShellWrapper } from "./shellWrapper.js";
 
 export function createShellCommand(
-  globalConfig: GlobalConfig,
+  { globalConfig }: GlobalConfig,
   shellWrapper: ShellWrapper,
   contextManager: ContextManager,
   inputMode: InputModeService,
@@ -51,7 +51,7 @@ export function createShellCommand(
     const tokenCount = utilities.getTokenCount(response);
 
     // Prevent too much output from blowing up the context
-    const tokenMax = globalConfig.shellCommand.outputTokenMax;
+    const tokenMax = globalConfig().shellCommand.outputTokenMax;
 
     if (tokenCount > tokenMax) {
       outputLimitExceeded = true;

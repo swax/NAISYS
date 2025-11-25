@@ -7,7 +7,7 @@ import { ContentSource, LlmRole } from "./llmDtos.js";
 import { LLMService } from "./llmService.js";
 
 export function createDreamMaker(
-  agentConfig: AgentConfig,
+  { agentConfig }: AgentConfig,
   contextManager: ContextManager,
   llmService: LLMService,
   { usingDatabase }: DatabaseService,
@@ -17,7 +17,7 @@ export function createDreamMaker(
   let _lastDream = "";
 
   async function goodmorning(): Promise<string> {
-    if (!agentConfig.persistAcrossRuns) {
+    if (!agentConfig().persistAcrossRuns) {
       return _lastDream;
     }
 
@@ -39,7 +39,7 @@ export function createDreamMaker(
 
     const dream = await runDreamSequence();
 
-    if (agentConfig.persistAcrossRuns) {
+    if (agentConfig().persistAcrossRuns) {
       await storeDream(dream);
     } else {
       _lastDream = dream;
@@ -49,7 +49,7 @@ export function createDreamMaker(
   }
 
   async function runDreamSequence(): Promise<string> {
-    const systemMessage = `${agentConfig.agentPrompt}
+    const systemMessage = `${agentConfig().agentPrompt}
 
 Below is the console log from this session. Please process this log and
 reduce it down to important things to remember - references, plans, project structure, schemas,
@@ -68,7 +68,7 @@ and how to do it.`;
 
     return (
       await llmService.query(
-        agentConfig.dreamModel,
+        agentConfig().dreamModel,
         systemMessage,
         [
           {

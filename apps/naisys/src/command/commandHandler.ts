@@ -1,10 +1,10 @@
 import chalk from "chalk";
-import { GlobalConfig } from "../globalConfig.js";
 import { AgentConfig } from "../agentConfig.js";
 import { GenImg } from "../features/genimg.js";
 import { LLMail } from "../features/llmail.js";
 import { LLMynx } from "../features/llmynx.js";
 import { SubagentService } from "../features/subagent.js";
+import { GlobalConfig } from "../globalConfig.js";
 import { ContextManager } from "../llm/contextManager.js";
 import { CostTracker } from "../llm/costTracker.js";
 import { DreamMaker } from "../llm/dreamMaker.js";
@@ -30,8 +30,8 @@ interface NextCommandResponse {
 }
 
 export function createCommandHandler(
-  globalConfig: GlobalConfig,
-  agentConfig: AgentConfig,
+  { globalConfig }: GlobalConfig,
+  { agentConfig }: AgentConfig,
   commandProtection: CommandProtection,
   promptBuilder: PromptBuilder,
   shellCommand: ShellCommand,
@@ -74,7 +74,7 @@ export function createCommandHandler(
           output.write(prompt + chalk[OutputColor.llm](input));
         } else {
           // Check if multiple commands are disabled
-          if (!firstCommand && agentConfig.disableMultipleCommands) {
+          if (!firstCommand && agentConfig().disableMultipleCommands) {
             await output.errorAndLog(
               `Multiple commands disabled. Blocked command: ${input}`,
             );
@@ -110,7 +110,7 @@ export function createCommandHandler(
           break;
         }
         case "trimsession": {
-          if (!globalConfig.trimSessionEnabled) {
+          if (!globalConfig().trimSessionEnabled) {
             throw 'The "trimsession" command is not enabled in this environment.';
           }
           const trimSummary = contextManager.trim(cmdArgs);
@@ -118,7 +118,7 @@ export function createCommandHandler(
           break;
         }
         case "endsession": {
-          if (!globalConfig.endSessionEnabled) {
+          if (!globalConfig().endSessionEnabled) {
             throw 'The "trimsession" command is not enabled in this environment.';
           }
 
@@ -158,7 +158,7 @@ export function createCommandHandler(
           } else if (inputMode.isDebug()) {
             inputMode.setLLM();
             await contextManager.append(
-              `Message from admin@${globalConfig.hostname}: ${talkMsg}`,
+              `Message from admin@${globalConfig().hostname}: ${talkMsg}`,
             );
             inputMode.setDebug();
           }
@@ -180,7 +180,7 @@ export function createCommandHandler(
           return {
             nextCommandAction: NextCommandAction.Continue,
             pauseSeconds,
-            wakeOnMessage: agentConfig.wakeOnMessage,
+            wakeOnMessage: agentConfig().wakeOnMessage,
           };
         }
 
@@ -194,11 +194,12 @@ export function createCommandHandler(
             break;
           }
 
-          if (agentConfig.leadAgent && agentConfig.mailEnabled) {
+          const leadAgent = agentConfig().leadAgent;
+
+          if (leadAgent && agentConfig().mailEnabled) {
             await output.commentAndLog(
               "Sub agent has completed the task. Notifying lead agent and exiting process.",
             );
-            const leadAgent = agentConfig.leadAgent;
             await llmail.newThread([leadAgent], "Task Completed", taskResult);
           } else {
             await output.commentAndLog("Task completed. Exiting process.");
@@ -207,18 +208,18 @@ export function createCommandHandler(
           return {
             nextCommandAction: NextCommandAction.ExitApplication,
             pauseSeconds: 0, // Hold until message or input is received
-            wakeOnMessage: agentConfig.wakeOnMessage,
+            wakeOnMessage: agentConfig().wakeOnMessage,
           };
         }
 
         case "cost": {
           if (cmdArgs === "reset") {
-            const userId = agentConfig.spendLimitDollars
+            const userId = agentConfig().spendLimitDollars
               ? runService.getUserId()
               : undefined;
             await costTracker.clearCosts(userId);
             await contextManager.append(
-              `Cost tracking data cleared for ${userId ? `${agentConfig.username}` : "all users"}.`,
+              `Cost tracking data cleared for ${userId ? `${agentConfig().username}` : "all users"}.`,
             );
           } else if (cmdArgs) {
             await output.errorAndLog(
@@ -290,8 +291,8 @@ export function createCommandHandler(
 
     return {
       nextCommandAction,
-      pauseSeconds: agentConfig.debugPauseSeconds,
-      wakeOnMessage: agentConfig.wakeOnMessage,
+      pauseSeconds: agentConfig().debugPauseSeconds,
+      wakeOnMessage: agentConfig().wakeOnMessage,
     };
   }
 

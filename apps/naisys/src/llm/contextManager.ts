@@ -7,7 +7,7 @@ import * as utilities from "../utils/utilities.js";
 import { ContentSource, LlmMessage, LlmRole } from "./llmDtos.js";
 
 export function createContextManager(
-  globalConfig: GlobalConfig,
+  { globalConfig }: GlobalConfig,
   workspaces: WorkspacesFeature,
   systemMessage: string,
   output: OutputService,
@@ -77,7 +77,7 @@ export function createContextManager(
   function clear() {
     _messages = [];
 
-    if (!globalConfig.workspacesEnabled) {
+    if (!globalConfig().workspacesEnabled) {
       return;
     }
 
@@ -197,7 +197,7 @@ export function createContextManager(
   };
 
   function updateWorkspaces() {
-    if (!globalConfig.workspacesEnabled) {
+    if (!globalConfig().workspacesEnabled) {
       return;
     }
 
