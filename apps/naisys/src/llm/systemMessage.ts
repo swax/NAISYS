@@ -10,61 +10,62 @@
  * Once exported the system message is essentially cached
  */
 
-import { Config } from "../config.js";
+import { GlobalConfig } from "../globalConfig.js";
+import { AgentConfig } from "../agentConfig.js";
 
-export function createSystemMessage(config: Config) {
+export function createSystemMessage(globalConfig: GlobalConfig, agentConfig: AgentConfig) {
   let genImgCmd = "";
-  if (config.agent.imageModel) {
+  if (agentConfig.imageModel) {
     genImgCmd = `\n  genimg "<description>" <filepath>: Generate an image with the description and save it to the given fully qualified path`;
   }
 
   let llmailCmd = "";
-  if (config.mailEnabled) {
+  if (agentConfig.mailEnabled) {
     llmailCmd = `\n  llmail: A local mail system for communicating with your team`;
   }
 
   let llmynxCmd = "";
-  if (config.webEnabled) {
+  if (agentConfig.webEnabled) {
     llmynxCmd = `\n  llmynx: A context optimized web browser. Enter 'llmynx help' to learn how to use it`;
   }
 
   let workspaces = "";
-  if (config.workspacesEnabled) {
+  if (globalConfig.workspacesEnabled) {
     workspaces = `\nWorkspaces:`;
     workspaces += `\n  Put file soft links into ~/workspace/ to see their latest contents live updated here.`;
   }
 
   let endSession = "";
-  if (config.endSessionEnabled) {
+  if (globalConfig.endSessionEnabled) {
     endSession = `\n  endsession "<note>": Ends this session, clears the console log and context.
-    The note should help you find your bearings in the next session. 
+    The note should help you find your bearings in the next session.
     The note should contain your next goal, and important things should you remember.`;
   }
 
   let trimSession = "";
-  if (config.trimSessionEnabled) {
+  if (globalConfig.trimSessionEnabled) {
     trimSession = `\n  trimsession <indexes>: Saves tokesn by removing the specified prompts and respective output with matching <indexes>. For example '1-5, 8, 11-13'`;
   }
 
   let completeTask = "";
-  if (config.completeTaskEnabled) {
+  if (agentConfig.completeTaskEnabled) {
     completeTask = `\n  completetask "<result>": Marks the current task as complete and saves the result.
     The result should contain any important information or output from the task.`;
   }
 
   let tokenNote = "";
 
-  if (config.endSessionEnabled) {
+  if (globalConfig.endSessionEnabled) {
     tokenNote =
       "\n  Make sure to call 'endsession' before the limit is hit so you can continue your work with a fresh console";
   }
 
-  if (!config.endSessionEnabled && config.trimSessionEnabled) {
+  if (!globalConfig.endSessionEnabled && globalConfig.trimSessionEnabled) {
     tokenNote =
       "\n  Make sure to call 'trimsession' before the limit is hit so you stay under the limit.\n  Use comments to remember important things from trimmed prompts.";
   }
 
-  if (config.agent.disableMultipleCommands) {
+  if (agentConfig.disableMultipleCommands) {
     tokenNote +=
       "\n  Only run one command at a time, evaluate the output, then run the next command. Don't overload the same line with multiple commands either.";
   } else {
@@ -73,20 +74,20 @@ export function createSystemMessage(config: Config) {
   }
 
   let subagentNote = "";
-  if ((config.agent.subagentMax || 0) > 0) {
-    subagentNote += `\n  subagent: You can create subagents to help you with your work. You can have up to ${config.agent.subagentMax} subagents.`;
+  if ((agentConfig.subagentMax || 0) > 0) {
+    subagentNote += `\n  subagent: You can create subagents to help you with your work. You can have up to ${agentConfig.subagentMax} subagents.`;
   }
 
   // Fill out the templates in the agent prompt and stick it to the front of the system message
   // A lot of the stipulations in here are to prevent common LLM mistakes
   // Like we can't jump between standard and special commands in a single prompt, which the LLM will try to do if not warned
-  let agentPrompt = config.agent.agentPrompt;
-  agentPrompt = config.resolveConfigVars(agentPrompt);
+  let agentPrompt = agentConfig.agentPrompt;
+  agentPrompt = agentConfig.resolveConfigVars(agentPrompt);
 
   // Build up the final system message
   const systemMessage = `${agentPrompt.trim()}
 
-This is a command line interface presenting you with the next command prompt. 
+This is a command line interface presenting you with the next command prompt.
 *** Your response will literally be piped into a command shell, so you must use valid commands.
 Make sure the read the command line rules in the MOTD carefully.
 Don't put commands in \`\`\` blocks.
@@ -96,11 +97,11 @@ The system will provide responses and next command prompt. Don't output your own
 Be careful when writing files through the command prompt with cat. Make sure to close and escape quotes properly.
 Don't blindly overwrite existing files without reading them first.
 
-NAISYS ${config.packageVersion} Shell
-Welcome back ${config.agent.username}!
+NAISYS ${globalConfig.packageVersion} Shell
+Welcome back ${agentConfig.username}!
 MOTD:
 Date: ${new Date().toLocaleString()}
-LINUX Commands: 
+LINUX Commands:
   Standard Linux commands are available
   vi and nano are not supported
   Read files with cat. Write files with \`cat > filename << 'EOF'\`

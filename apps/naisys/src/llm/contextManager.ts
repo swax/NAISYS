@@ -1,4 +1,4 @@
-import { Config } from "../config.js";
+import { GlobalConfig } from "../globalConfig.js";
 import { WorkspacesFeature } from "../features/workspaces.js";
 import { LogService } from "../services/logService.js";
 import { InputModeService } from "../utils/inputMode.js";
@@ -7,7 +7,7 @@ import * as utilities from "../utils/utilities.js";
 import { ContentSource, LlmMessage, LlmRole } from "./llmDtos.js";
 
 export function createContextManager(
-  config: Config,
+  globalConfig: GlobalConfig,
   workspaces: WorkspacesFeature,
   systemMessage: string,
   output: OutputService,
@@ -77,7 +77,7 @@ export function createContextManager(
   function clear() {
     _messages = [];
 
-    if (!config.workspacesEnabled) {
+    if (!globalConfig.workspacesEnabled) {
       return;
     }
 
@@ -197,7 +197,7 @@ export function createContextManager(
   };
 
   function updateWorkspaces() {
-    if (!config.workspacesEnabled) {
+    if (!globalConfig.workspacesEnabled) {
       return;
     }
 

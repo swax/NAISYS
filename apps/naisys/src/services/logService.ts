@@ -1,10 +1,8 @@
-import { Config } from "../config.js";
 import { LlmMessage, LlmRole } from "../llm/llmDtos.js";
 import { DatabaseService } from "./dbService.js";
 import { RunService } from "./runService.js";
 
 export function createLogService(
-  config: Config,
   { usingDatabase }: DatabaseService,
   runService: RunService,
 ) {

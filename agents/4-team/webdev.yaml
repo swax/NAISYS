@@ -21,3 +21,4 @@ agentPrompt: |
 spendLimitDollars: 2.00
 debugPauseSeconds: 10
 wakeOnMessage: false
+tokenMax: 20000

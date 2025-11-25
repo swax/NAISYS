@@ -1,21 +1,21 @@
 import OpenAI from "openai";
 import path from "path";
 import sharp from "sharp";
-import { Config } from "../config.js";
+import { AgentConfig } from "../agentConfig.js";
 import { CostTracker } from "../llm/costTracker.js";
 import * as pathService from "../services/pathService.js";
 import { NaisysPath } from "../services/pathService.js";
 import { OutputService } from "../utils/output.js";
 
 export function createGenImg(
-  config: Config,
+  agentConfig: AgentConfig,
   costTracker: CostTracker,
   output: OutputService,
 ) {
   /** genimg "<description>" <filepath>: Generate an image with the description and save it to the file path */
   async function handleCommand(args: string): Promise<string> {
     // genimg sholdn't even be presented as an available command unless it is defined in the config
-    if (!config.agent.imageModel) {
+    if (!agentConfig.imageModel) {
       throw "Agent config: Error, 'imageModel' is not defined";
     }
 
@@ -43,11 +43,11 @@ export function createGenImg(
 
     pathService.ensureFileDirExists(filepath);
 
-    await output.commentAndLog(`Generating image with ${config.agent.imageModel}...`);
+    await output.commentAndLog(`Generating image with ${agentConfig.imageModel}...`);
 
     const openai = new OpenAI();
 
-    const model = getImageModel(config.agent.imageModel);
+    const model = getImageModel(agentConfig.imageModel);
 
     const response = await openai.images.generate({
       prompt: description,

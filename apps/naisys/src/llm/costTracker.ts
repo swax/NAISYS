@@ -1,4 +1,5 @@
-import { Config } from "../config.js";
+import { GlobalConfig } from "../globalConfig.js";
+import { AgentConfig } from "../agentConfig.js";
 import { DatabaseService } from "../services/dbService.js";
 import { RunService } from "../services/runService.js";
 import { OutputService } from "../utils/output.js";
@@ -20,7 +21,8 @@ interface TokenUsage {
 }
 
 export function createCostTracker(
-  config: Config,
+  globalConfig: GlobalConfig,
+  agentConfig: AgentConfig,
   llModels: LLModels,
   { usingDatabase }: DatabaseService,
   runService: RunService,
@@ -193,15 +195,15 @@ export function createCostTracker(
   // Check if the current spend limit has been reached and throw an error if so
   async function checkSpendLimit() {
     // Determine if we're using per-agent or global limits
-    const userId = config.agent.spendLimitDollars
+    const userId = agentConfig.spendLimitDollars
       ? runService.getUserId()
       : undefined;
 
     // Determine if we're using time-based limits
     const spendLimitHours =
-      config.agent.spendLimitHours || config.spendLimitHours;
+      agentConfig.spendLimitHours || globalConfig.spendLimitHours;
     const spendLimit =
-      config.agent.spendLimitDollars || config.spendLimitDollars || -1;
+      agentConfig.spendLimitDollars || globalConfig.spendLimitDollars || -1;
 
     let currentTotalCost: number;
     let periodDescription: string;
@@ -228,8 +230,8 @@ export function createCostTracker(
     }
 
     if (spendLimit < currentTotalCost) {
-      const userDescription = config.agent.spendLimitDollars
-        ? `${config.agent.username}`
+      const userDescription = agentConfig.spendLimitDollars
+        ? `${agentConfig.username}`
         : "all users";
       throw `LLM Spend limit of $${spendLimit} ${periodDescription} reached for ${userDescription}, current cost $${currentTotalCost.toFixed(2)}`;
     }
@@ -405,9 +407,9 @@ export function createCostTracker(
     }
 
     const spendLimit =
-      config.agent.spendLimitDollars || config.spendLimitDollars;
+      agentConfig.spendLimitDollars || globalConfig.spendLimitDollars;
     const spendLimitHours =
-      config.agent.spendLimitHours || config.spendLimitHours;
+      agentConfig.spendLimitHours || globalConfig.spendLimitHours;
     const userLabel = userId ? `user ${userId}` : "all users";
 
     // Show period information if time-based limits are enabled

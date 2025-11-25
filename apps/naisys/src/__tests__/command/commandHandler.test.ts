@@ -1,12 +1,13 @@
 import { describe, expect, test } from "@jest/globals";
 import { createCommandHandler } from "../../command/commandHandler.js";
 import {
+  createMockAgentConfig,
   createMockCommandProtection,
-  createMockConfig,
   createMockContextManager,
   createMockCostTracker,
   createMockDreamMaker,
   createMockGenImg,
+  createMockGlobalConfig,
   createMockInputMode,
   createMockLLMail,
   createMockLLMynx,
@@ -28,7 +29,8 @@ function createPopFirstCommand() {
   const shellCommand = createMockShellCommand();
 
   const commandHandler = createCommandHandler(
-    createMockConfig(),
+    createMockGlobalConfig(),
+    createMockAgentConfig(),
     createMockCommandProtection(),
     promptBuilder,
     shellCommand,

@@ -1,15 +1,18 @@
 import { AgentRuntime, createAgentRuntime } from "./agentRuntime.js";
+import { GlobalConfig } from "./globalConfig.js";
 import { DatabaseService } from "./services/dbService.js";
 import { OutputColor } from "./utils/output.js";
 
 /** Handles the multiplexing of multiple concurrent agents in the process */
 export class AgentManager {
   dbService: DatabaseService;
+  globalConfig: GlobalConfig;
   runningAgents: AgentRuntime[] = [];
   runLoops: Promise<void>[] = [];
 
-  constructor(dbService: DatabaseService) {
+  constructor(dbService: DatabaseService, globalConfig: GlobalConfig) {
     this.dbService = dbService;
+    this.globalConfig = globalConfig;
   }
 
   async startAgent(agentPath: string, onStop?: (reason: string) => void) {
@@ -40,7 +43,7 @@ export class AgentManager {
         await this.stopAgent(
           agent.agentRunId,
           "completeShutdown",
-          `${agent.config.agent.username} shutdown`,
+          `${agent.agentConfig.username} shutdown`,
         );
       });
 
@@ -103,7 +106,7 @@ export class AgentManager {
     if (prevActiveAgent) {
       // Last output from the previously active agent
       prevActiveAgent.output.write(
-        `Switching to agent ${newActiveAgent.config.agent.username} (ID: ${newActiveAgent.agentRunId})`,
+        `Switching to agent ${newActiveAgent.agentConfig.username} (ID: ${newActiveAgent.agentRunId})`,
         OutputColor.subagent,
       );
       prevActiveAgent.output.setConsoleEnabled(false);

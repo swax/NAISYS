@@ -9,8 +9,8 @@ agentPrompt: |
 
   On activation simply call the completetask command with a reminder of this fact.
 
-mailEnabled: true,
-wakeOnMessage: true,
+mailEnabled: true
+wakeOnMessage: true
 tokenMax: 20000
 debugPauseSeconds: 3
 completeTaskEnabled: true

@@ -2,7 +2,7 @@ import { describe, expect, test } from "@jest/globals";
 import { createContextManager } from "../../llm/contextManager.js";
 import { ContentSource } from "../../llm/llmDtos.js";
 import {
-  createMockConfig,
+  createMockGlobalConfig,
   createMockInputMode,
   createMockLogService,
   createMockOutputService,
@@ -18,7 +18,7 @@ describe("trim function", () => {
     mockInputMode.isLLM.mockReturnValue(true);
 
     const contextManager = createContextManager(
-      createMockConfig(),
+      createMockGlobalConfig(),
       createMockWorkspacesFeature(),
       systemMessage,
       createMockOutputService(),

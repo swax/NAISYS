@@ -1,6 +1,7 @@
 import chalk from "chalk";
 import * as readline from "readline";
-import { Config } from "../config.js";
+import { GlobalConfig } from "../globalConfig.js";
+import { AgentConfig } from "../agentConfig.js";
 import { LLMail } from "../features/llmail.js";
 import { SubagentService } from "../features/subagent.js";
 import { ContextManager } from "../llm/contextManager.js";
@@ -11,7 +12,8 @@ import { writeEventManager } from "../utils/writeEventManager.js";
 import { ShellWrapper } from "./shellWrapper.js";
 
 export function createPromptBuilder(
-  config: Config,
+  globalConfig: GlobalConfig,
+  agentConfig: AgentConfig,
   shellWrapper: ShellWrapper,
   subagent: SubagentService,
   llmail: LLMail,
@@ -32,7 +34,7 @@ export function createPromptBuilder(
   async function getPrompt(pauseSeconds: number, wakeOnMessage: boolean) {
     const promptSuffix = inputMode.isDebug() ? "#" : "$";
 
-    const tokenMax = config.agent.tokenMax;
+    const tokenMax = agentConfig.tokenMax;
     const usedTokens = contextManager.getTokenCount();
     const tokenSuffix = ` [Tokens: ${usedTokens}/${tokenMax}]`;
 
@@ -57,9 +59,9 @@ export function createPromptBuilder(
   }
 
   function getUserHostPrompt() {
-    const username = inputMode.isDebug() ? "debug" : config.agent.username;
+    const username = inputMode.isDebug() ? "debug" : agentConfig.username;
 
-    return `${username}@${config.hostname}`;
+    return `${username}@${globalConfig.hostname}`;
   }
 
   function getInput(

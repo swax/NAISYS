@@ -4,18 +4,20 @@ import { existsSync } from "fs";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
 import { promisify } from "util";
+import { GlobalConfig } from "../globalConfig.js";
 import * as pathService from "./pathService.js";
 import { NaisysPath } from "./pathService.js";
 
 const execAsync = promisify(exec);
 
-export async function createDatabaseService() {
+export async function createDatabaseService(globalConfig: GlobalConfig) {
   /** Should match version in schema_version table of latest migration script */
   const latestDbVersion = 4;
 
   // Ensure database directory exists
-  const naisysFolder = process.env["NAISYS_FOLDER"];
-  const dbFilePath = new NaisysPath(`${naisysFolder}/database/naisys.sqlite`);
+  const dbFilePath = new NaisysPath(
+    `${globalConfig.naisysFolder}/database/naisys.sqlite`,
+  );
   pathService.ensureFileDirExists(dbFilePath);
 
   const databasePath = dbFilePath.toHostPath();

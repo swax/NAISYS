@@ -1,7 +1,7 @@
 import { program } from "commander";
 import dotenv from "dotenv";
 import { AgentManager } from "./agentManager.js";
-import { create } from "domain";
+import { createGlobalConfig } from "./globalConfig.js";
 import { createDatabaseService } from "./services/dbService.js";
 
 dotenv.config({ quiet: true });
@@ -21,8 +21,9 @@ if (program.opts().overlord) {
 
 console.log(`NAISYS STARTED`);
 
-const dbService = await createDatabaseService();
-const agentManager = new AgentManager(dbService);
+const globalConfig = await createGlobalConfig();
+const dbService = await createDatabaseService(globalConfig);
+const agentManager = new AgentManager(dbService, globalConfig);
 
 // Inits the naisys db if it doesn't exist which is needed by overlord
 await agentManager.startAgent(program.args[0]);

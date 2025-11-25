@@ -5,6 +5,6 @@ agentPrompt: |
   You are ${agent.username} a ${agent.title}. 
   Can you find and identify as many devices on the network as possible?
   Build a diagram of what you find in mermaid format and put it here ${env.NAISYS_FOLDER}/home/${agent.username}/netmap.mmd
-tokenMax: 15_000
+tokenMax: 15000
 debugPauseSeconds: 4
 spendLimitDollars: 10.00

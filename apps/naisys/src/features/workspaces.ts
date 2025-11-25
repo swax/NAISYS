@@ -1,17 +1,18 @@
 import * as fs from "fs";
 import path from "path";
-import { Config } from "../config.js";
+import { GlobalConfig } from "../globalConfig.js";
+import { AgentConfig } from "../agentConfig.js";
 import * as pathService from "../services/pathService.js";
 import { NaisysPath } from "../services/pathService.js";
 import { OutputService } from "../utils/output.js";
 import * as utilities from "../utils/utilities.js";
 
-export function createWorkspacesFeature(config: Config, output: OutputService) {
+export function createWorkspacesFeature(globalConfig: GlobalConfig, agentConfig: AgentConfig, output: OutputService) {
   const _suffixHelp =
     "Add and remove file soft links in the ~/workspaces/ folder to manage what files you see previews of before each prompt";
 
   function getLatestContent() {
-    if (!config.workspacesEnabled) {
+    if (!globalConfig.workspacesEnabled) {
       return "";
     }
 
@@ -47,7 +48,7 @@ export function createWorkspacesFeature(config: Config, output: OutputService) {
   }
 
   function displayActive() {
-    if (!config.workspacesEnabled) {
+    if (!globalConfig.workspacesEnabled) {
       return;
     }
 
@@ -65,7 +66,7 @@ export function createWorkspacesFeature(config: Config, output: OutputService) {
 
   function _getWorkspacesDir() {
     return new NaisysPath(
-      `${config.naisysFolder}/home/${config.agent.username}/workspaces/`,
+      `${globalConfig.naisysFolder}/home/${agentConfig.username}/workspaces/`,
     );
   }
 

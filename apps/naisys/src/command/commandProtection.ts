@@ -1,4 +1,5 @@
-import { Config } from "../config.js";
+import { GlobalConfig } from "../globalConfig.js";
+import { AgentConfig } from "../agentConfig.js";
 import { LlmRole } from "../llm/llmDtos.js";
 import { LLMService } from "../llm/llmService.js";
 import { CommandProtection as CommandProtectionEnum } from "../utils/enums.js";
@@ -11,7 +12,8 @@ interface ValidateCommandResponse {
 }
 
 export function createCommandProtection(
-  config: Config,
+  globalConfig: GlobalConfig,
+  agentConfig: AgentConfig,
   promptBuilder: PromptBuilder,
   llmService: LLMService,
   output: OutputService,
@@ -19,7 +21,7 @@ export function createCommandProtection(
   async function validateCommand(
     command: string,
   ): Promise<ValidateCommandResponse> {
-    switch (config.agent.commandProtection) {
+    switch (agentConfig.commandProtection) {
       case CommandProtectionEnum.None:
         return {
           commandAllowed: true,
@@ -48,13 +50,13 @@ export function createCommandProtection(
 The user is 'junior admin' allowed to move around the system, anywhere, and read anything, list anything.
 They are not allowed to execute programs that could modify the system.
 Programs that just give information responses are ok.
-The user is allowed to write to their home directory in ${config.naisysFolder}/home/${config.agent.username}
-In addition to the commands you know are ok, these additional commands are whitelisted: 
+The user is allowed to write to their home directory in ${globalConfig.naisysFolder}/home/${agentConfig.username}
+In addition to the commands you know are ok, these additional commands are whitelisted:
   llmail, llmynx, comment, endsession, and pause
 Reply with 'allow' to allow the command, otherwise you can give a reason for your rejection.`;
 
     const response = await llmService.query(
-      config.agent.shellModel,
+      agentConfig.shellModel,
       systemMessage,
       [
         {
