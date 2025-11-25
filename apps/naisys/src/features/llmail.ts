@@ -2,13 +2,17 @@ import { Prisma, PrismaClient } from "@naisys/database";
 import table from "text-table";
 import { Config } from "../config.js";
 import { DatabaseService } from "../services/dbService.js";
+import { RunService } from "../services/runService.js";
 import * as utilities from "../utils/utilities.js";
 
 export function createLLMail(
   config: Config,
   { usingDatabase }: DatabaseService,
+  runService: RunService,
 ) {
-  const myUserId = config.getUserRunSession().userId;
+  const myUserId = runService.getUserId();
+
+  console.log(`LLMail initialized for user ID ${myUserId}`);
 
   /** Threading is not currently used in `simpleMode` so this doesn't matter */
   const _threadTokenMax = config.agent.mailMessageTokenMax

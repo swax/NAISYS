@@ -12,6 +12,7 @@ import {
   createMockLLMynx,
   createMockOutputService,
   createMockPromptBuilder,
+  createMockRunService,
   createMockShellCommand,
   createMockSubagent,
 } from "../mocks.js";
@@ -40,6 +41,7 @@ function createPopFirstCommand() {
     createMockCostTracker(),
     createMockOutputService(),
     createMockInputMode(),
+    createMockRunService(),
   );
 
   return {

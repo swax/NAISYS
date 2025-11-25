@@ -18,8 +18,8 @@ import { createDreamMaker } from "./llm/dreamMaker.js";
 import { createLLModels } from "./llm/llModels.js";
 import { createLLMService } from "./llm/llmService.js";
 import { createSystemMessage } from "./llm/systemMessage.js";
-import { createDatabaseService } from "./services/dbService.js";
 import { createLogService } from "./services/logService.js";
+import { createRunService } from "./services/runService.js";
 import { createInputMode } from "./utils/inputMode.js";
 import { createOutputService } from "./utils/output.js";
 
@@ -29,16 +29,19 @@ export async function createAgentRuntime(
   agentManger: AgentManager,
   agentPath: string,
 ) {
+  const dbService = agentManger.dbService;
+
   /*
    * Simple form of dependency injection
    * actually a bit better than the previous module system as this implicitly prevents cirucular dependencies
    * We can also see from this why modern dependency injection frameworks exist
    */
 
+
   // Base services
   const config = await createConfig(agentPath);
-  const dbService = await createDatabaseService(config);
-  const logService = createLogService(config, dbService);
+  const runService = await createRunService(config, dbService);
+  const logService = createLogService(config, dbService, runService);
   const output = createOutputService(logService);
   const workspaces = createWorkspacesFeature(config, output);
 
@@ -47,7 +50,7 @@ export async function createAgentRuntime(
   const systemMessage = createSystemMessage(config);
   const llModels = createLLModels(config);
   const tools = createCommandTools(config);
-  const costTracker = createCostTracker(config, llModels, dbService, output);
+  const costTracker = createCostTracker(config, llModels, dbService, runService, output);
   const contextManager = createContextManager(
     config,
     workspaces,
@@ -62,18 +65,20 @@ export async function createAgentRuntime(
     contextManager,
     llmService,
     dbService,
+    runService,
     output,
   );
 
   // Features
   const genimg = createGenImg(config, costTracker, output);
-  const llmail = createLLMail(config, dbService);
+  const llmail = createLLMail(config, dbService, runService);
   const subagentService = createSubagentService(
     config,
     llmail,
     output,
     agentManger,
     inputMode,
+    runService,
   );
   const llmynx = createLLMynx(
     config,
@@ -120,6 +125,7 @@ export async function createAgentRuntime(
     costTracker,
     output,
     inputMode,
+    runService,
   );
   const commandLoop = createCommandLoop(
     config,
@@ -137,13 +143,13 @@ export async function createAgentRuntime(
     output,
     logService,
     inputMode,
-    dbService,
+    runService,
   );
 
   const abortController = new AbortController();
 
   return {
-    agentRunId: config.getUserRunSession().runId,
+    agentRunId: runService.getRunId(),
     config,
     output,
     subagentService,
@@ -156,7 +162,7 @@ export async function createAgentRuntime(
     },
     completeShutdown: (reason: string) => {
       // Cleanup database interval
-      dbService.cleanup();
+      runService.cleanup();
       subagentService.cleanup(reason);
     },
   };

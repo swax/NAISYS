@@ -1,5 +1,6 @@
 import { Config } from "../config.js";
 import { DatabaseService } from "../services/dbService.js";
+import { RunService } from "../services/runService.js";
 import { OutputService } from "../utils/output.js";
 import { ContextManager } from "./contextManager.js";
 import { ContentSource, LlmRole } from "./llmDtos.js";
@@ -10,6 +11,7 @@ export function createDreamMaker(
   contextManager: ContextManager,
   llmService: LLMService,
   { usingDatabase }: DatabaseService,
+  runService: RunService,
   output: OutputService,
 ) {
   let _lastDream = "";
@@ -19,7 +21,7 @@ export function createDreamMaker(
       return _lastDream;
     }
 
-    const { userId } = config.getUserRunSession();
+    const userId = runService.getUserId();
 
     return await usingDatabase(async (prisma) => {
       const row = await prisma.dream_log.findFirst({
@@ -33,7 +35,7 @@ export function createDreamMaker(
   }
 
   async function goodnight(): Promise<string> {
-    output.commentAndLog("Wrapping up the session...");
+    await output.commentAndLog("Wrapping up the session...");
 
     const dream = await runDreamSequence();
 
@@ -89,14 +91,14 @@ and how to do it.`;
   }
 
   async function storeDream(dream: string) {
-    const { userId, runId, sessionId } = config.getUserRunSession();
+    const { getUserId, getRunId, getSessionId } = runService;
 
     await usingDatabase(async (prisma) => {
       await prisma.dream_log.create({
         data: {
-          user_id: userId,
-          run_id: runId,
-          session_id: sessionId,
+          user_id: getUserId(),
+          run_id: getRunId(),
+          session_id: getSessionId(),
           date: new Date().toISOString(),
           dream,
         },

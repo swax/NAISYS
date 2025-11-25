@@ -1,10 +1,16 @@
 import { AgentRuntime, createAgentRuntime } from "./agentRuntime.js";
+import { DatabaseService } from "./services/dbService.js";
 import { OutputColor } from "./utils/output.js";
 
 /** Handles the multiplexing of multiple concurrent agents in the process */
 export class AgentManager {
+  dbService: DatabaseService;
   runningAgents: AgentRuntime[] = [];
   runLoops: Promise<void>[] = [];
+
+  constructor(dbService: DatabaseService) {
+    this.dbService = dbService;
+  }
 
   async startAgent(agentPath: string, onStop?: (reason: string) => void) {
     // Get rid of all of this and do in the main function when all direct config imports are removed
@@ -27,11 +33,11 @@ export class AgentManager {
       .catch((ex) => {
         stopReason = `error: ${ex}`;
       })
-      .finally(() => {
+      .finally(async () => {
         // Notify subagent manager that this agent has stopped
         onStop?.(stopReason);
 
-        this.stopAgent(
+        await this.stopAgent(
           agent.agentRunId,
           "completeShutdown",
           `${agent.config.agent.username} shutdown`,
@@ -80,9 +86,7 @@ export class AgentManager {
   }
 
   setActiveConsoleAgent(id: number) {
-    const newActiveAgent = this.runningAgents.find(
-      (a) => a.agentRunId === id,
-    );
+    const newActiveAgent = this.runningAgents.find((a) => a.agentRunId === id);
 
     if (!newActiveAgent) {
       throw new Error(`Agent with runtime ID ${id} not found`);

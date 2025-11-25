@@ -14,23 +14,32 @@ import { DreamMaker } from "../llm/dreamMaker.js";
 import { LlmMessage, LlmRole } from "../llm/llmDtos.js";
 import { DatabaseService } from "../services/dbService.js";
 import { LogService } from "../services/logService.js";
+import { RunService } from "../services/runService.js";
 import { OutputService } from "../utils/output.js";
 
 export function createMockDatabaseService(): DatabaseService {
   return {
-    usingDatabase: async <T>(
+    usingDatabase: <T>(
       run: (prisma: PrismaClient) => Promise<T>,
     ): Promise<T> => {
       throw new Error("Mock database not implemented");
     },
-    cleanup: () => {},
-    incrementSession: async () => {},
+  };
+}
+
+export function createMockRunService(): RunService {
+  return {
+    cleanup: jest.fn(),
+    incrementSession: jest.fn(() => Promise.resolve()),
+    getUserId: jest.fn(() => -1),
+    getRunId: jest.fn(() => -1),
+    getSessionId: jest.fn(() => -1),
   };
 }
 
 export function createMockLogService() {
   return {
-    write: async (msg: LlmMessage) => 0,
+    write: (msg: LlmMessage) => Promise.resolve(0),
     toSimpleRole: (role: LlmRole) => "LLM",
   } satisfies LogService;
 }
