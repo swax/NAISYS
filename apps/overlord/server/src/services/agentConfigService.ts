@@ -3,6 +3,36 @@ import path from "path";
 import { usingNaisysDb } from "../database/naisysDatabase.js";
 
 /**
+ * Update the modified date on the user_notifications table
+ */
+async function updateUserNotificationModifiedDate(
+  username: string,
+): Promise<void> {
+  await usingNaisysDb(async (prisma) => {
+    const user = await prisma.users.findUnique({
+      where: { username },
+      select: { id: true },
+    });
+
+    if (!user) {
+      throw new Error(`User '${username}' not found`);
+    }
+
+    // Upsert the user_notifications record to update modified_date
+    await prisma.user_notifications.upsert({
+      where: { user_id: user.id },
+      create: {
+        user_id: user.id,
+        modified_date: new Date(),
+      },
+      update: {
+        modified_date: new Date(),
+      },
+    });
+  });
+}
+
+/**
  * Get agent configuration YAML content for a specific user
  */
 export async function getAgentConfig(username: string): Promise<string> {
@@ -91,6 +121,9 @@ wakeOnMessage: true
       },
     });
   });
+
+  // Update user notification modified date
+  await updateUserNotificationModifiedDate(name);
 }
 
 /**
@@ -120,4 +153,7 @@ export async function updateAgentConfig(
       `Failed to write agent configuration file at ${user.agent_path}`,
     );
   }
+
+  // Update user notification modified date
+  await updateUserNotificationModifiedDate(username);
 }

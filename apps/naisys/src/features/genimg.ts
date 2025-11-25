@@ -43,7 +43,7 @@ export function createGenImg(
 
     pathService.ensureFileDirExists(filepath);
 
-    output.commentAndLog(`Generating image with ${config.agent.imageModel}...`);
+    await output.commentAndLog(`Generating image with ${config.agent.imageModel}...`);
 
     const openai = new OpenAI();
 

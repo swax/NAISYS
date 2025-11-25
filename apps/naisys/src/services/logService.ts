@@ -1,20 +1,22 @@
 import { Config } from "../config.js";
 import { LlmMessage, LlmRole } from "../llm/llmDtos.js";
 import { DatabaseService } from "./dbService.js";
+import { RunService } from "./runService.js";
 
 export function createLogService(
   config: Config,
   { usingDatabase }: DatabaseService,
+  runService: RunService,
 ) {
   async function write(message: LlmMessage) {
-    const { userId, runId, sessionId } = config.getUserRunSession();
+    const { getUserId, getRunId, getSessionId } = runService;
 
     const insertedId = await usingDatabase(async (prisma) => {
       const inserted = await prisma.context_log.create({
         data: {
-          user_id: userId,
-          run_id: runId,
-          session_id: sessionId,
+          user_id: getUserId(),
+          run_id: getRunId(),
+          session_id: getSessionId(),
           role: toSimpleRole(message.role),
           source: message.source?.toString() || "",
           type: message.type || "",
@@ -28,9 +30,9 @@ export function createLogService(
       // Update session table with total lines and last active
       await prisma.run_session.updateMany({
         where: {
-          user_id: userId,
-          run_id: runId,
-          session_id: sessionId,
+          user_id: getUserId(),
+          run_id: getRunId(),
+          session_id: getSessionId(),
         },
         data: {
           last_active: now,
@@ -44,7 +46,7 @@ export function createLogService(
       // Also update user_notifications with latest_log_id and last_active
       await prisma.user_notifications.updateMany({
         where: {
-          user_id: userId,
+          user_id: getUserId(),
         },
         data: {
           latest_log_id: inserted.id,

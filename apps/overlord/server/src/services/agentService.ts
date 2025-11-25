@@ -42,7 +42,7 @@ export async function getAgents(updatedSince?: string): Promise<Agent[]> {
         id: user.id,
         name: user.username,
         title: user.title,
-        lastActive: user.user_notifications?.last_active.toISOString(),
+        lastActive: user.user_notifications?.last_active?.toISOString(),
         agentPath: user.agent_path,
         leadUsername: user.lead_username || undefined,
         latestLogId: user.user_notifications?.latest_log_id ?? -1,

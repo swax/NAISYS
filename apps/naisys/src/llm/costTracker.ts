@@ -1,5 +1,6 @@
 import { Config } from "../config.js";
 import { DatabaseService } from "../services/dbService.js";
+import { RunService } from "../services/runService.js";
 import { OutputService } from "../utils/output.js";
 import { LLModels } from "./llModels.js";
 
@@ -22,6 +23,7 @@ export function createCostTracker(
   config: Config,
   llModels: LLModels,
   { usingDatabase }: DatabaseService,
+  runService: RunService,
   output: OutputService,
 ) {
   // Record token usage for LLM calls - calculate and store total cost
@@ -43,15 +45,15 @@ export function createCostTracker(
     };
     const totalCost = calculateCostFromTokens(tokenUsage, model);
 
-    const { userId, runId, sessionId } = config.getUserRunSession();
+    const { getUserId, getRunId, getSessionId } = runService;
 
     await usingDatabase(async (prisma) => {
       await prisma.costs.create({
         data: {
           date: new Date().toISOString(),
-          user_id: userId,
-          run_id: runId,
-          session_id: sessionId,
+          user_id: getUserId(),
+          run_id: getRunId(),
+          session_id: getSessionId(),
           subagent: null,
           source,
           model: modelKey,
@@ -69,15 +71,15 @@ export function createCostTracker(
 
   // Record fixed cost for non-token services like image generation
   async function recordCost(cost: number, source: string, modelKey: string) {
-    const { userId, runId, sessionId } = config.getUserRunSession();
+    const { getUserId, getRunId, getSessionId } = runService;
 
     await usingDatabase(async (prisma) => {
       await prisma.costs.create({
         data: {
           date: new Date().toISOString(),
-          user_id: userId,
-          run_id: runId,
-          session_id: sessionId,
+          user_id: getUserId(),
+          run_id: getRunId(),
+          session_id: getSessionId(),
           subagent: null,
           source,
           model: modelKey,
@@ -94,14 +96,14 @@ export function createCostTracker(
   }
 
   async function updateSessionCost(cost: number) {
-    const { userId, runId, sessionId } = config.getUserRunSession();
+    const { getUserId, getRunId, getSessionId } = runService;
 
     await usingDatabase(async (prisma) => {
       await prisma.run_session.updateMany({
         where: {
-          user_id: userId,
-          run_id: runId,
-          session_id: sessionId,
+          user_id: getUserId(),
+          run_id: getRunId(),
+          session_id: getSessionId(),
         },
         data: {
           last_active: new Date().toISOString(),
@@ -192,7 +194,7 @@ export function createCostTracker(
   async function checkSpendLimit() {
     // Determine if we're using per-agent or global limits
     const userId = config.agent.spendLimitDollars
-      ? config.getUserRunSession().userId
+      ? runService.getUserId()
       : undefined;
 
     // Determine if we're using time-based limits

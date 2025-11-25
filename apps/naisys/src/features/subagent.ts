@@ -7,6 +7,7 @@ import { AgentManager } from "../agentManager.js";
 import { AgentConfig, Config } from "../config.js";
 import * as pathService from "../services/pathService.js";
 import { NaisysPath } from "../services/pathService.js";
+import { RunService } from "../services/runService.js";
 import { agentNames } from "../utils/agentNames.js";
 import { InputModeService } from "../utils/inputMode.js";
 import { OutputColor, OutputService } from "../utils/output.js";
@@ -29,6 +30,7 @@ export function createSubagentService(
   output: OutputService,
   agentManager: AgentManager,
   inputMode: InputModeService,
+  runService: RunService,
 ) {
   const _subagents: Subagent[] = [];
 
@@ -199,8 +201,8 @@ export function createSubagentService(
 
     if (inputMode.isDebug()) {
       // Find running in process agents that aren't already listed
-      const myRunId = config.getUserRunSession().runId;
-      
+      const myRunId = runService.getRunId();
+
       const otherAgents = agentManager.runningAgents
         .filter(
           (ra) =>
@@ -483,8 +485,8 @@ export function createSubagentService(
 
     return await llmail
       .newThread([subagent.agentName], "Your Task", taskDescription)
-      .catch(() => {
-        output.commentAndLog(
+      .catch(async () => {
+        await output.commentAndLog(
           `Failed to send initial task email to subagent ${subagent.agentName}`,
         );
       });

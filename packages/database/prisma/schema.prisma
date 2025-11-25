@@ -122,7 +122,7 @@ model user_notifications {
   /**
    * Not the same as modified date, for example an agent can receive mail while not being active
    */
-  last_active    DateTime
+  last_active    DateTime?
   modified_date  DateTime @updatedAt
   users          users    @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 }

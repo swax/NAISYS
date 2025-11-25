@@ -76,22 +76,22 @@ export function createShellWrapper(config: Config, output: OutputService) {
 
     // Init users home dir on first run, on shell crash/rerun go back to the current path
     if (!_currentPath) {
-      output.commentAndLog("NEW SHELL OPENED. PID: " + pid);
+      await output.commentAndLog("NEW SHELL OPENED. PID: " + pid);
 
-      errorIfNotEmpty(
+      await errorIfNotEmpty(
         await executeCommand(
           `mkdir -p ${config.naisysFolder}/home/` + config.agent.username,
         ),
       );
-      errorIfNotEmpty(
+      await errorIfNotEmpty(
         await executeCommand(
           `cd ${config.naisysFolder}/home/` + config.agent.username,
         ),
       );
     } else {
-      output.commentAndLog("SHELL RESTORED. PID: " + pid);
+      await output.commentAndLog("SHELL RESTORED. PID: " + pid);
 
-      errorIfNotEmpty(await executeCommand("cd " + _currentPath));
+      await errorIfNotEmpty(await executeCommand("cd " + _currentPath));
     }
 
     // Stop running commands if one fails
@@ -101,9 +101,9 @@ export function createShellWrapper(config: Config, output: OutputService) {
   }
 
   /** Basically don't show anything in the console unless there is an error */
-  function errorIfNotEmpty(response: string) {
+  async function errorIfNotEmpty(response: string) {
     if (response) {
-      output.errorAndLog(response);
+      await output.errorAndLog(response);
     }
   }
 
@@ -120,14 +120,15 @@ export function createShellWrapper(config: Config, output: OutputService) {
     let dataStr = stripAnsi(rawDataStr.toString());
 
     if (pid != _currentProcessId) {
-      output.commentAndLog(
+      // This funcion cant be async, but the console write will still be synchronous, just the db write will have a small delay
+      void output.commentAndLog(
         `Ignoring '${eventType}' from old shell process ${pid}: ` + dataStr,
       );
       return;
     }
 
     if (!_resolveCurrentCommand) {
-      output.commentAndLog(
+      void output.commentAndLog(
         `Ignoring '${eventType}' from process ${pid} with no resolve handler: ` +
           dataStr,
       );
@@ -135,7 +136,7 @@ export function createShellWrapper(config: Config, output: OutputService) {
     }
 
     if (eventType === ShellEvent.Exit) {
-      output.errorAndLog(
+      void output.errorAndLog(
         `SHELL EXIT. PID: ${_process?.pid}, CODE: ${rawDataStr}`,
       );
 
@@ -174,7 +175,7 @@ export function createShellWrapper(config: Config, output: OutputService) {
 
       // If it does happen somehow, log it so I can figure out why/how and what to do about it
       if (_currentBufferType == "alternate") {
-        output.errorAndLog(
+        void output.errorAndLog(
           "UNEXPECTED END DELIMITER IN ALTERNATE BUFFER: " + dataStr,
         );
       }
@@ -252,7 +253,7 @@ export function createShellWrapper(config: Config, output: OutputService) {
       choice = "input";
     }
 
-    return new Promise<string>((resolve, reject) => {
+    return new Promise<string>(async (resolve, reject) => {
       _resolveCurrentCommand = resolve;
 
       // If new output from the shell was queued while waiting for the LLM to decide what to do
@@ -283,7 +284,7 @@ export function createShellWrapper(config: Config, output: OutputService) {
       else if (choice == "kill") {
         if (!_currentProcessId) {
           reject("No process to kill");
-        } else if (resetShell(_currentProcessId)) {
+        } else if (await resetShell(_currentProcessId)) {
           return; // Wait for exit event
         } else {
           reject("Unable to kill. Process not found");
@@ -363,14 +364,15 @@ export function createShellWrapper(config: Config, output: OutputService) {
     _completeCommand(outputWithInstruction);
   }
 
-  function resetShell(pid: number) {
+  async function resetShell(pid: number) {
     if (!_process || _process.pid != pid) {
-      output.commentAndLog("Ignoring timeout for old shell process " + pid);
+      await output.commentAndLog(
+        "Ignoring timeout for old shell process " + pid,
+      );
       return false;
     }
 
-    output.errorAndLog(`KILL-TREE SIGNAL SENT TO PID: ${_process.pid}`);
-
+    await output.errorAndLog(`KILL-TREE SIGNAL SENT TO PID: ${_process.pid}`);
     treeKill(pid, "SIGKILL");
 
     // Should trigger the process close event from here

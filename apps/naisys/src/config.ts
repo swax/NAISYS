@@ -71,35 +71,7 @@ export interface AgentConfig {
   persistAcrossRuns?: boolean;
 }
 
-interface UserRunSession {
-  userId: number;
-  /** The run ID of an agent process (there could be multiple runs for the same user). Globally unique */
-  runId: number;
-  /** The session number, incremented when the agent calls endsession */
-  sessionId: number;
-}
-
 export async function createConfig(agentPath: string) {
-  let userRunSession: UserRunSession;
-
-  function updateUserRunSession(
-    userId: number,
-    runId: number,
-    sessionId: number,
-  ) {
-    userRunSession = {
-      userId,
-      runId,
-      sessionId,
-    };
-  }
-
-  function getUserRunSession() {
-    return structuredClone(userRunSession);
-  }
-
-  /** Should match version in schema_version table of latest migration script */
-  const latestDbVersion = 3;
 
   /** The system name that shows after the @ in the command prompt */
   const hostname = "naisys";
@@ -140,7 +112,6 @@ export async function createConfig(agentPath: string) {
 
   /* .env is used for global configs across naisys, while agent configs are for the specific agent */
   const naisysFolder = getEnv("NAISYS_FOLDER", true);
-  const dbFilePath = new NaisysPath(`${naisysFolder}/database/naisys.sqlite`);
 
   const localLlmUrl = getEnv("LOCAL_LLM_URL");
   const localLlmName = getEnv("LOCAL_LLM_NAME");
@@ -312,7 +283,6 @@ export async function createConfig(agentPath: string) {
   }
 
   return {
-    latestDbVersion,
     hostname,
     shellCommand,
     agent,
@@ -325,7 +295,6 @@ export async function createConfig(agentPath: string) {
     workspacesEnabled,
     trimSessionEnabled,
     naisysFolder,
-    dbFilePath,
     localLlmUrl,
     localLlmName,
     openaiApiKey,
@@ -339,8 +308,6 @@ export async function createConfig(agentPath: string) {
     binPath,
     getEnv,
     resolveConfigVars,
-    updateUserRunSession,
-    getUserRunSession,
   };
 }
 
