@@ -72,77 +72,92 @@ export type AgentConfigFile = z.infer<typeof AgentConfigFileSchema>;
 
 export function createAgentConfig(
   agentPath: string,
-  globalConfig: GlobalConfig,
+  { globalConfig }: GlobalConfig,
 ) {
-  const rawConfig = yaml.load(fs.readFileSync(agentPath, "utf8"));
-  const config = AgentConfigFileSchema.parse(rawConfig);
+  let cachedConfig = loadConfig();
 
-  // Sanitize spend limits
-  const spendLimitDollars = sanitizeSpendLimit(config.spendLimitDollars);
-  const spendLimitHours = sanitizeSpendLimit(config.spendLimitHours);
+  function loadConfig() {
+    const rawConfig = yaml.load(fs.readFileSync(agentPath, "utf8"));
+    const config = AgentConfigFileSchema.parse(rawConfig);
 
-  // Validate if spend limit is defined on the agent or .env
-  if (
-    spendLimitDollars === undefined &&
-    globalConfig.spendLimitDollars === undefined
-  ) {
-    throw `Agent config: Error, 'spendLimitDollars' needs to be defined in the .env file or agent config`;
-  }
+    // Sanitize spend limits
+    const spendLimitDollars = sanitizeSpendLimit(config.spendLimitDollars);
+    const spendLimitHours = sanitizeSpendLimit(config.spendLimitHours);
 
-  // Resolve model configs
-  const shellModel = resolveConfigVars(config.shellModel);
-  const webModel = resolveConfigVars(config.webModel || config.shellModel);
-  const dreamModel = resolveConfigVars(config.dreamModel || config.shellModel);
-  const imageModel = config.imageModel
-    ? resolveConfigVars(config.imageModel)
-    : undefined;
+    // Validate if spend limit is defined on the agent or .env
+    if (
+      spendLimitDollars === undefined &&
+      globalConfig().spendLimitDollars === undefined
+    ) {
+      throw `Agent config: Error, 'spendLimitDollars' needs to be defined in the .env file or agent config`;
+    }
 
-  function resolveConfigVars(templateString: string) {
-    let resolvedString = templateString;
-    resolvedString = resolveTemplateVars(resolvedString, "agent", config);
-    resolvedString = resolveTemplateVars(resolvedString, "env", process.env);
-    return resolvedString;
-  }
+    // Resolve model configs
+    const shellModel = resolveConfigVars(config.shellModel);
+    const webModel = resolveConfigVars(config.webModel || config.shellModel);
+    const dreamModel = resolveConfigVars(
+      config.dreamModel || config.shellModel,
+    );
+    const imageModel = config.imageModel
+      ? resolveConfigVars(config.imageModel)
+      : undefined;
 
-  function resolveTemplateVars(
-    templateString: string,
-    allowedVarString: string,
-    mappedVar: any,
-  ) {
-    const pattern = new RegExp(`\\$\\{${allowedVarString}\\.([^}]+)\\}`, "g");
+    function resolveConfigVars(templateString: string) {
+      let resolvedString = templateString;
+      resolvedString = resolveTemplateVars(resolvedString, "agent", config);
+      resolvedString = resolveTemplateVars(resolvedString, "env", process.env);
+      return resolvedString;
+    }
 
-    return templateString.replace(pattern, (_match, key) => {
-      const value = valueFromString(mappedVar, key);
-      if (value === undefined) {
-        throw `Agent config: Error, ${key} is not defined`;
-      }
-      return value;
-    });
+    function resolveTemplateVars(
+      templateString: string,
+      allowedVarString: string,
+      mappedVar: any,
+    ) {
+      const pattern = new RegExp(`\\$\\{${allowedVarString}\\.([^}]+)\\}`, "g");
+
+      return templateString.replace(pattern, (_match, key) => {
+        const value = valueFromString(mappedVar, key);
+        if (value === undefined) {
+          throw `Agent config: Error, ${key} is not defined`;
+        }
+        return value;
+      });
+    }
+
+    return {
+      ...config,
+      hostpath: path.resolve(agentPath),
+      spendLimitDollars,
+      spendLimitHours,
+      shellModel,
+      webModel,
+      dreamModel,
+      imageModel,
+      resolveConfigVars,
+      mailEnabled: config.mailEnabled ?? false,
+      webEnabled: config.webEnabled ?? false,
+      completeTaskEnabled: config.completeTaskEnabled ?? false,
+      wakeOnMessage: config.wakeOnMessage ?? false,
+      initialCommands: config.initialCommands ?? [],
+      commandProtection: config.commandProtection ?? CommandProtection.None,
+      debugPauseSeconds:
+        config.debugPauseSeconds === undefined
+          ? 1000
+          : config.debugPauseSeconds,
+      disableMultipleCommands:
+        config.disableMultipleCommands === undefined
+          ? true
+          : config.disableMultipleCommands,
+    };
   }
 
   return {
-    ...config,
-    hostpath: path.resolve(agentPath),
-    spendLimitDollars,
-    spendLimitHours,
-    shellModel,
-    webModel,
-    dreamModel,
-    imageModel,
-    resolveConfigVars,
-    mailEnabled: config.mailEnabled ?? false,
-    webEnabled: config.webEnabled ?? false,
-    completeTaskEnabled: config.completeTaskEnabled ?? false,
-    wakeOnMessage: config.wakeOnMessage ?? false,
-    initialCommands: config.initialCommands ?? [],
-    commandProtection: config.commandProtection ?? CommandProtection.None,
-    debugPauseSeconds:
-      config.debugPauseSeconds === undefined ? 1000 : config.debugPauseSeconds,
-    disableMultipleCommands:
-      config.disableMultipleCommands === undefined
-        ? true
-        : config.disableMultipleCommands,
+    agentConfig: () => cachedConfig,
+    reloadAgentConfig: () => {
+      cachedConfig = loadConfig();
+    },
   };
 }
 
-export type AgentConfig = Awaited<ReturnType<typeof createAgentConfig>>;
+export type AgentConfig = ReturnType<typeof createAgentConfig>;

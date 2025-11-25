@@ -12,8 +12,8 @@ interface ValidateCommandResponse {
 }
 
 export function createCommandProtection(
-  globalConfig: GlobalConfig,
-  agentConfig: AgentConfig,
+  { globalConfig }: GlobalConfig,
+  { agentConfig }: AgentConfig,
   promptBuilder: PromptBuilder,
   llmService: LLMService,
   output: OutputService,
@@ -21,7 +21,7 @@ export function createCommandProtection(
   async function validateCommand(
     command: string,
   ): Promise<ValidateCommandResponse> {
-    switch (agentConfig.commandProtection) {
+    switch (agentConfig().commandProtection) {
       case CommandProtectionEnum.None:
         return {
           commandAllowed: true,
@@ -50,13 +50,13 @@ export function createCommandProtection(
 The user is 'junior admin' allowed to move around the system, anywhere, and read anything, list anything.
 They are not allowed to execute programs that could modify the system.
 Programs that just give information responses are ok.
-The user is allowed to write to their home directory in ${globalConfig.naisysFolder}/home/${agentConfig.username}
+The user is allowed to write to their home directory in ${globalConfig().naisysFolder}/home/${agentConfig().username}
 In addition to the commands you know are ok, these additional commands are whitelisted:
   llmail, llmynx, comment, endsession, and pause
 Reply with 'allow' to allow the command, otherwise you can give a reason for your rejection.`;
 
     const response = await llmService.query(
-      agentConfig.shellModel,
+      agentConfig().shellModel,
       systemMessage,
       [
         {

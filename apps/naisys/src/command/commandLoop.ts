@@ -21,8 +21,8 @@ import { PromptBuilder } from "./promptBuilder.js";
 import { ShellCommand } from "./shellCommand.js";
 
 export function createCommandLoop(
-  globalConfig: GlobalConfig,
-  agentConfig: AgentConfig,
+  { globalConfig }: GlobalConfig,
+  { agentConfig }: AgentConfig,
   commandHandler: CommandHandler,
   promptBuilder: PromptBuilder,
   shellCommand: ShellCommand,
@@ -44,7 +44,7 @@ export function createCommandLoop(
 
     // Show Agent Config exept the agent prompt
     await output.commentAndLog(
-      `Agent configured to use ${agentConfig.shellModel} model`,
+      `Agent configured to use ${agentConfig().shellModel} model`,
     );
 
     // Show System Message
@@ -74,7 +74,7 @@ export function createCommandLoop(
         await displayPreviousSessionNotes(latestDream, nextPromptIndex++);
       }
 
-      for (const initialCommand of agentConfig.initialCommands) {
+      for (const initialCommand of agentConfig().initialCommands) {
         let prompt = await promptBuilder.getPrompt(0, false);
         prompt = setPromptIndex(prompt, ++nextPromptIndex);
         await contextManager.append(
@@ -83,14 +83,14 @@ export function createCommandLoop(
           nextPromptIndex,
         );
         await commandHandler.processCommand(prompt, [
-          agentConfig.resolveConfigVars(initialCommand),
+          agentConfig().resolveConfigVars(initialCommand),
         ]);
       }
 
       inputMode.setDebug();
 
-      let pauseSeconds = agentConfig.debugPauseSeconds;
-      let wakeOnMessage = agentConfig.wakeOnMessage;
+      let pauseSeconds = agentConfig().debugPauseSeconds;
+      let wakeOnMessage = agentConfig().wakeOnMessage;
 
       while (
         nextCommandAction == NextCommandAction.Continue &&
@@ -104,7 +104,7 @@ export function createCommandLoop(
           );
         }
 
-        if (agentConfig.shellModel === LlmApiType.None) {
+        if (agentConfig().shellModel === LlmApiType.None) {
           pauseSeconds = 0;
           wakeOnMessage = true;
         }
@@ -132,7 +132,7 @@ export function createCommandLoop(
           const workingMsg =
             prompt +
             chalk[OutputColor.loading](
-              `LLM (${agentConfig.shellModel}) Working...`,
+              `LLM (${agentConfig().shellModel}) Working...`,
             );
 
           try {
@@ -141,7 +141,7 @@ export function createCommandLoop(
               subagent.switchEventTriggered("clear") ||
               (await checkNewMailNotification()) ||
               (await checkSubagentsTerminated()) ||
-              agentConfig.shellModel === LlmApiType.None // Check this last so notications get processed/cleared
+              agentConfig().shellModel === LlmApiType.None // Check this last so notications get processed/cleared
             ) {
               inputMode.setDebug();
               continue;
@@ -162,7 +162,7 @@ export function createCommandLoop(
             }
 
             commandList = await llmService.query(
-              agentConfig.shellModel,
+              agentConfig().shellModel,
               systemMessage,
               contextManager.getCombinedMessages(),
               "console",
@@ -250,17 +250,17 @@ export function createCommandLoop(
     }
 
     // If llm is in some error loop then hold in debug mode
-    let pauseSeconds = agentConfig.debugPauseSeconds;
-    let wakeOnMessage = agentConfig.wakeOnMessage;
+    let pauseSeconds = agentConfig().debugPauseSeconds;
+    let wakeOnMessage = agentConfig().wakeOnMessage;
 
     if (inputMode.isLLM()) {
       llmErrorCount++;
 
       // Set the pause seconds to exponential backoff, up to retrySecondsMax
-      pauseSeconds = agentConfig.debugPauseSeconds * 2 ** (llmErrorCount - 1);
+      pauseSeconds = agentConfig().debugPauseSeconds * 2 ** (llmErrorCount - 1);
 
-      if (pauseSeconds > globalConfig.retrySecondsMax) {
-        pauseSeconds = globalConfig.retrySecondsMax;
+      if (pauseSeconds > globalConfig().retrySecondsMax) {
+        pauseSeconds = globalConfig().retrySecondsMax;
         llmErrorCount--; // Prevent overflowing the calculation above
       }
     }
@@ -275,7 +275,7 @@ export function createCommandLoop(
   }
 
   async function checkSubagentsTerminated() {
-    if (!agentConfig.subagentMax) {
+    if (!agentConfig().subagentMax) {
       return false;
     }
 
@@ -296,7 +296,7 @@ export function createCommandLoop(
    * Returning true otherwise will prevent the LLM from running
    */
   async function checkNewMailNotification() {
-    if (!agentConfig.mailEnabled) {
+    if (!agentConfig().mailEnabled) {
       return false;
     }
 
@@ -332,7 +332,7 @@ export function createCommandLoop(
     );
 
     const sessionTokens = contextManager.getTokenCount();
-    const tokenMax = agentConfig.tokenMax;
+    const tokenMax = agentConfig().tokenMax;
 
     // Show full messages unless we are close to the token limit of the session
     // or in simple mode, which means non-threaded messages
@@ -346,7 +346,7 @@ export function createCommandLoop(
         await llmail.markAsRead(unreadThread.thread_id);
       }
 
-      mailBlackoutCountdown = agentConfig.mailBlackoutCycles || 0;
+      mailBlackoutCountdown = agentConfig().mailBlackoutCycles || 0;
 
       return true;
     } else if (llmail.simpleMode) {
@@ -373,18 +373,18 @@ export function createCommandLoop(
 
   async function checkContextLimitWarning() {
     const tokenCount = contextManager.getTokenCount();
-    const tokenMax = agentConfig.tokenMax;
+    const tokenMax = agentConfig().tokenMax;
 
     if (tokenCount > tokenMax) {
       let tokenNote = "";
 
-      if (globalConfig.endSessionEnabled) {
+      if (globalConfig().endSessionEnabled) {
         tokenNote += `\nUse 'endsession <note>' to clear the console and reset the session.
     The note should help you find your bearings in the next session.
     The note should contain your next goal, and important things should you remember.`;
       }
 
-      if (globalConfig.trimSessionEnabled) {
+      if (globalConfig().trimSessionEnabled) {
         tokenNote += `\nUse 'trimsession' to reduce the size of the session.
     Use comments to remember important things from trimmed prompts.`;
       }
@@ -400,7 +400,7 @@ export function createCommandLoop(
    * Insert at the end of the prompt so that 'prompt splitting' still works in the command handler
    */
   function setPromptIndex(prompt: string, index: number) {
-    if (!globalConfig.trimSessionEnabled) {
+    if (!globalConfig().trimSessionEnabled) {
       return prompt;
     }
 

@@ -13,8 +13,8 @@ import { LlmMessage, LlmRole } from "./llmDtos.js";
 type QuerySources = "console" | "write-protection" | "dream" | "llmynx";
 
 export function createLLMService(
-  globalConfig: GlobalConfig,
-  agentConfig: AgentConfig,
+  { globalConfig }: GlobalConfig,
+  { agentConfig }: AgentConfig,
   costTracker: CostTracker,
   tools: CommandTools,
   llModels: LLModels,
@@ -36,7 +36,7 @@ export function createLLMService(
       // 1 second time out then dummy response
       await new Promise((resolve) => setTimeout(resolve, 1000));
       return [
-        `echo "Mock LLM response for ${agentConfig.username} at $(date +"%T")"`,
+        `echo "Mock LLM response for ${agentConfig().username} at $(date +"%T")"`,
       ];
     } else if (model.apiType == LlmApiType.Google) {
       return sendWithGoogle(modelKey, systemMessage, context, source);
@@ -44,8 +44,8 @@ export function createLLMService(
       return sendWithAnthropic(modelKey, systemMessage, context, source);
     } else if (model.apiType == LlmApiType.OpenAI) {
       const apiKey = model.keyEnvVar
-        ? globalConfig.getEnv(model.keyEnvVar)
-        : globalConfig.openaiApiKey;
+        ? globalConfig().getEnv(model.keyEnvVar)
+        : globalConfig().openaiApiKey;
 
       return sendWithOpenAiCompatible(
         modelKey,
@@ -72,7 +72,7 @@ export function createLLMService(
       if (!model.baseUrl) {
         throw "Error, local model baseUrl is not defined";
       }
-    } else if (!globalConfig.openaiApiKey) {
+    } else if (!globalConfig().openaiApiKey) {
       throw "Error, openaiApiKey is not defined";
     }
 
@@ -104,7 +104,7 @@ export function createLLMService(
       ],
     };
 
-    if (source === "console" && globalConfig.useToolsForLlmConsoleResponses) {
+    if (source === "console" && globalConfig().useToolsForLlmConsoleResponses) {
       chatRequest.tools = [tools.consoleToolOpenAI];
       chatRequest.tool_choice = {
         type: "function",
@@ -159,7 +159,7 @@ export function createLLMService(
     context: LlmMessage[],
     source: QuerySources,
   ): Promise<string[]> {
-    if (!globalConfig.googleApiKey) {
+    if (!globalConfig().googleApiKey) {
       throw "Error, googleApiKey is not defined";
     }
     const model = llModels.get(modelKey);
@@ -198,7 +198,7 @@ export function createLLMService(
     };
 
     // Add tool if console source and tools are enabled
-    if (source === "console" && globalConfig.useToolsForLlmConsoleResponses) {
+    if (source === "console" && globalConfig().useToolsForLlmConsoleResponses) {
       chatConfig.config.tools = [
         {
           functionDeclarations: [tools.consoleToolGoogle],
@@ -260,12 +260,12 @@ export function createLLMService(
   ): Promise<string[]> {
     const model = llModels.get(modelKey);
 
-    if (!globalConfig.anthropicApiKey) {
+    if (!globalConfig().anthropicApiKey) {
       throw "Error, anthropicApiKey is not defined";
     }
 
     const anthropic = new Anthropic({
-      apiKey: globalConfig.anthropicApiKey,
+      apiKey: globalConfig().anthropicApiKey,
     });
 
     // Assert the last message on the context is a user message
@@ -321,7 +321,7 @@ export function createLLMService(
       };
     }
 
-    if (source === "console" && globalConfig.useToolsForLlmConsoleResponses) {
+    if (source === "console" && globalConfig().useToolsForLlmConsoleResponses) {
       createParams.tools = [tools.consoleToolAnthropic];
       if (useThinking) {
         createParams.tool_choice = {

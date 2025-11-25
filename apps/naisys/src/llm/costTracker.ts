@@ -21,8 +21,8 @@ interface TokenUsage {
 }
 
 export function createCostTracker(
-  globalConfig: GlobalConfig,
-  agentConfig: AgentConfig,
+  { globalConfig }: GlobalConfig,
+  { agentConfig }: AgentConfig,
   llModels: LLModels,
   { usingDatabase }: DatabaseService,
   runService: RunService,
@@ -195,15 +195,15 @@ export function createCostTracker(
   // Check if the current spend limit has been reached and throw an error if so
   async function checkSpendLimit() {
     // Determine if we're using per-agent or global limits
-    const userId = agentConfig.spendLimitDollars
+    const userId = agentConfig().spendLimitDollars
       ? runService.getUserId()
       : undefined;
 
     // Determine if we're using time-based limits
     const spendLimitHours =
-      agentConfig.spendLimitHours || globalConfig.spendLimitHours;
+      agentConfig().spendLimitHours || globalConfig().spendLimitHours;
     const spendLimit =
-      agentConfig.spendLimitDollars || globalConfig.spendLimitDollars || -1;
+      agentConfig().spendLimitDollars || globalConfig().spendLimitDollars || -1;
 
     let currentTotalCost: number;
     let periodDescription: string;
@@ -230,8 +230,8 @@ export function createCostTracker(
     }
 
     if (spendLimit < currentTotalCost) {
-      const userDescription = agentConfig.spendLimitDollars
-        ? `${agentConfig.username}`
+      const userDescription = agentConfig().spendLimitDollars
+        ? `${agentConfig().username}`
         : "all users";
       throw `LLM Spend limit of $${spendLimit} ${periodDescription} reached for ${userDescription}, current cost $${currentTotalCost.toFixed(2)}`;
     }
@@ -407,9 +407,9 @@ export function createCostTracker(
     }
 
     const spendLimit =
-      agentConfig.spendLimitDollars || globalConfig.spendLimitDollars;
+      agentConfig().spendLimitDollars || globalConfig().spendLimitDollars;
     const spendLimitHours =
-      agentConfig.spendLimitHours || globalConfig.spendLimitHours;
+      agentConfig().spendLimitHours || globalConfig().spendLimitHours;
     const userLabel = userId ? `user ${userId}` : "all users";
 
     // Show period information if time-based limits are enabled
