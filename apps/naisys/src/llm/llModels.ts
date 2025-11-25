@@ -1,4 +1,4 @@
-import { Config } from "../config.js";
+import { GlobalConfig } from "../globalConfig.js";
 
 export enum LlmApiType {
   OpenAI = "openai",
@@ -21,7 +21,7 @@ interface LlmModel {
   cacheReadCost?: number;
 }
 
-export function createLLModels(config: Config) {
+export function createLLModels(globalConfig: GlobalConfig) {
   const llmModels: LlmModel[] = [
     {
       key: LlmApiType.None,
@@ -42,8 +42,8 @@ export function createLLModels(config: Config) {
     },
     {
       key: "local",
-      name: config.localLlmName || "local",
-      baseUrl: config.localLlmUrl,
+      name: globalConfig.localLlmName || "local",
+      baseUrl: globalConfig.localLlmUrl,
       apiType: LlmApiType.OpenAI,
       maxTokens: 8_000,
       // Prices are per 1M tokens

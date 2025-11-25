@@ -1,11 +1,11 @@
-import { Config } from "../config.js";
+import { GlobalConfig } from "../globalConfig.js";
 import { ContextManager } from "../llm/contextManager.js";
 import { InputModeService } from "../utils/inputMode.js";
 import * as utilities from "../utils/utilities.js";
 import { ShellWrapper } from "./shellWrapper.js";
 
 export function createShellCommand(
-  config: Config,
+  globalConfig: GlobalConfig,
   shellWrapper: ShellWrapper,
   contextManager: ContextManager,
   inputMode: InputModeService,
@@ -51,7 +51,7 @@ export function createShellCommand(
     const tokenCount = utilities.getTokenCount(response);
 
     // Prevent too much output from blowing up the context
-    const tokenMax = config.shellCommand.outputTokenMax;
+    const tokenMax = globalConfig.shellCommand.outputTokenMax;
 
     if (tokenCount > tokenMax) {
       outputLimitExceeded = true;

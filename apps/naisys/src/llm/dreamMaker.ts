@@ -1,4 +1,4 @@
-import { Config } from "../config.js";
+import { AgentConfig } from "../agentConfig.js";
 import { DatabaseService } from "../services/dbService.js";
 import { RunService } from "../services/runService.js";
 import { OutputService } from "../utils/output.js";
@@ -7,7 +7,7 @@ import { ContentSource, LlmRole } from "./llmDtos.js";
 import { LLMService } from "./llmService.js";
 
 export function createDreamMaker(
-  config: Config,
+  agentConfig: AgentConfig,
   contextManager: ContextManager,
   llmService: LLMService,
   { usingDatabase }: DatabaseService,
@@ -17,7 +17,7 @@ export function createDreamMaker(
   let _lastDream = "";
 
   async function goodmorning(): Promise<string> {
-    if (!config.agent.persistAcrossRuns) {
+    if (!agentConfig.persistAcrossRuns) {
       return _lastDream;
     }
 
@@ -39,7 +39,7 @@ export function createDreamMaker(
 
     const dream = await runDreamSequence();
 
-    if (config.agent.persistAcrossRuns) {
+    if (agentConfig.persistAcrossRuns) {
       await storeDream(dream);
     } else {
       _lastDream = dream;
@@ -49,13 +49,13 @@ export function createDreamMaker(
   }
 
   async function runDreamSequence(): Promise<string> {
-    const systemMessage = `${config.agent.agentPrompt}
+    const systemMessage = `${agentConfig.agentPrompt}
 
-Below is the console log from this session. Please process this log and 
-reduce it down to important things to remember - references, plans, project structure, schemas, 
+Below is the console log from this session. Please process this log and
+reduce it down to important things to remember - references, plans, project structure, schemas,
 file locations, urls, and more. You don't need to summarize what happened, or plan what to do in the far future, just focus on the
 near term. Check the console log for inconsistencies, things to fix and/or check. Using this information the
-next session should be able to start with minimal scanning of existing files to figure out what to do 
+next session should be able to start with minimal scanning of existing files to figure out what to do
 and how to do it.`;
 
     const combinedContextLog = contextManager
@@ -68,7 +68,7 @@ and how to do it.`;
 
     return (
       await llmService.query(
-        config.agent.dreamModel,
+        agentConfig.dreamModel,
         systemMessage,
         [
           {

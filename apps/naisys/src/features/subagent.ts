@@ -4,7 +4,8 @@ import yaml from "js-yaml";
 import path from "path";
 import table from "text-table";
 import { AgentManager } from "../agentManager.js";
-import { AgentConfig, Config } from "../config.js";
+import { GlobalConfig } from "../globalConfig.js";
+import { AgentConfig } from "../agentConfig.js";
 import * as pathService from "../services/pathService.js";
 import { NaisysPath } from "../services/pathService.js";
 import { RunService } from "../services/runService.js";
@@ -25,7 +26,8 @@ interface Subagent {
 }
 
 export function createSubagentService(
-  config: Config,
+  globalConfig: GlobalConfig,
+  agentConfig: AgentConfig,
   llmail: LLMail,
   output: OutputService,
   agentManager: AgentManager,
@@ -44,7 +46,7 @@ export function createSubagentService(
   _init();
 
   function _init() {
-    if (!config.agent.subagentDirectory) {
+    if (!agentConfig.subagentDirectory) {
       return;
     }
 
@@ -104,9 +106,9 @@ export function createSubagentService(
           helpOutput += `\n  flush <id>: Flush a spawned agent's output (debug mode only)`;
         }
 
-        helpOutput += `\n\n* You can have up to ${config.agent.subagentMax} subagents running at a time.`;
+        helpOutput += `\n\n* You can have up to ${agentConfig.subagentMax} subagents running at a time.`;
 
-        if (config.agent.mailEnabled) {
+        if (agentConfig.mailEnabled) {
           helpOutput += ` Use llmail to communicate with subagents by name.`;
         }
 
@@ -211,10 +213,10 @@ export function createSubagentService(
         )
         .map((ra) => {
           return {
-            agentName: ra.config.agent.username,
+            agentName: ra.agentConfig.username,
             id: ra.agentRunId,
             status: "started",
-            taskDescription: ra.config.agent.taskDescription || "",
+            taskDescription: ra.agentConfig.taskDescription || "",
             unreadLines: agentManager.getBufferLines(ra.agentRunId),
           };
         });
@@ -296,8 +298,8 @@ export function createSubagentService(
     }
 
     // Generate agent yaml
-    const subagentConfig: AgentConfig = {
-      ...config.agent,
+    const subagentConfig: Partial<AgentConfig> = {
+      ...agentConfig,
       username: agentName,
       title,
       agentPrompt:
@@ -307,12 +309,12 @@ export function createSubagentService(
         `When completed use the 'completeTask' command to signal that you are done.`,
       wakeOnMessage: true,
       completeTaskEnabled: true,
-      leadAgent: config.agent.username,
+      leadAgent: agentConfig.username,
       mailEnabled: true, // Needed to communicate the task completion message
       taskDescription,
     };
 
-    if (config.mailEnabled) {
+    if (agentConfig.mailEnabled) {
       subagentConfig.mailEnabled = true;
       subagentConfig.initialCommands = ["llmail users", "llmail help"];
     }
@@ -362,7 +364,7 @@ export function createSubagentService(
 
     // Check that max sub agents aren't already started
     const runningSubagents = _subagents.filter((p) => p.status !== "stopped");
-    if (runningSubagents.length >= (config.agent.subagentMax || 1)) {
+    if (runningSubagents.length >= (agentConfig.subagentMax || 1)) {
       throw `Max subagents already running`;
     }
 
@@ -424,7 +426,7 @@ export function createSubagentService(
       const timeout = setTimeout(() => {
         if (hasSpawned && subagent.status === "spawned") {
           let response = `Subagent '${agentName}' Started (ID: ${subagent.id})`;
-          if (config.mailEnabled) {
+          if (agentConfig.mailEnabled) {
             response += `\nUse llmail to communicate with the subagent '${subagent.agentName}'`;
           }
           resolve(response);
@@ -479,7 +481,7 @@ export function createSubagentService(
     subagent: Subagent,
     taskDescription: string,
   ) {
-    if (!config.agent.mailEnabled) {
+    if (!agentConfig.mailEnabled) {
       return;
     }
 
@@ -520,7 +522,7 @@ export function createSubagentService(
     if (subagent) {
       return `Subagent ${subagent.agentName} stop requested`;
     } else if (agentRuntime) {
-      return `Agent ${agentRuntime.config.agent.username} stop requested`;
+      return `Agent ${agentRuntime.agentConfig.username} stop requested`;
     } else {
       throw `Subagent ${id} not found`;
     }
@@ -572,10 +574,10 @@ export function createSubagentService(
   }
 
   function _getSubagentDir() {
-    const agentDirectory = path.dirname(config.agent.hostpath);
+    const agentDirectory = path.dirname(agentConfig.hostpath);
 
     return new NaisysPath(
-      `${agentDirectory}/${config.agent.subagentDirectory}`,
+      `${agentDirectory}/${agentConfig.subagentDirectory}`,
     );
   }
 

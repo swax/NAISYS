@@ -1,12 +1,14 @@
 import { Prisma, PrismaClient } from "@naisys/database";
 import table from "text-table";
-import { Config } from "../config.js";
+import { GlobalConfig } from "../globalConfig.js";
+import { AgentConfig } from "../agentConfig.js";
 import { DatabaseService } from "../services/dbService.js";
 import { RunService } from "../services/runService.js";
 import * as utilities from "../utils/utilities.js";
 
 export function createLLMail(
-  config: Config,
+  globalConfig: GlobalConfig,
+  agentConfig: AgentConfig,
   { usingDatabase }: DatabaseService,
   runService: RunService,
 ) {
@@ -15,8 +17,8 @@ export function createLLMail(
   console.log(`LLMail initialized for user ID ${myUserId}`);
 
   /** Threading is not currently used in `simpleMode` so this doesn't matter */
-  const _threadTokenMax = config.agent.mailMessageTokenMax
-    ? config.agent.mailMessageTokenMax * 5
+  const _threadTokenMax = agentConfig.mailMessageTokenMax
+    ? agentConfig.mailMessageTokenMax * 5
     : undefined;
 
   /** The 'non-simple' version of this is a thread first mail system. Where agents can create threads, add users, and reply to threads, etc..
@@ -35,8 +37,8 @@ export function createLLMail(
       argParams[0] = "help";
     }
 
-    const tokenMaxNote = config.agent.mailMessageTokenMax
-      ? ` ${config.agent.mailMessageTokenMax} token max`
+    const tokenMaxNote = agentConfig.mailMessageTokenMax
+      ? ` ${agentConfig.mailMessageTokenMax} token max`
       : "";
 
     switch (argParams[0]) {
@@ -84,7 +86,7 @@ export function createLLMail(
       case "wait": {
         pauseSeconds = argParams[1]
           ? parseInt(argParams[1])
-          : config.shellCommand.maxTimeoutSeconds;
+          : globalConfig.shellCommand.maxTimeoutSeconds;
 
         content = `Waiting ${pauseSeconds} seconds for new mail messages...`;
         break;
@@ -221,8 +223,8 @@ export function createLLMail(
     message: string,
   ): Promise<string> {
     // Ensure user itself is in the list
-    if (!usernames.includes(config.agent.username)) {
-      usernames.push(config.agent.username);
+    if (!usernames.includes(agentConfig.username)) {
+      usernames.push(agentConfig.username);
     }
 
     message = message.replace(/\\n/g, "\n");
@@ -560,7 +562,7 @@ Consider archiving this thread and starting a new one.`;
 
   function validateMsgTokenCount(message: string) {
     const msgTokenCount = utilities.getTokenCount(message);
-    const msgTokenMax = config.agent.mailMessageTokenMax;
+    const msgTokenMax = agentConfig.mailMessageTokenMax;
 
     if (msgTokenMax && msgTokenCount > msgTokenMax) {
       throw `Error: Message is ${msgTokenCount} tokens, exceeding the limit of ${msgTokenMax} tokens`;

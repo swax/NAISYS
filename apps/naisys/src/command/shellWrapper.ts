@@ -4,7 +4,8 @@ import * as fs from "fs";
 import * as os from "os";
 import stripAnsi from "strip-ansi";
 import treeKill from "tree-kill";
-import { Config } from "../config.js";
+import { GlobalConfig } from "../globalConfig.js";
+import { AgentConfig } from "../agentConfig.js";
 import * as pathService from "../services/pathService.js";
 import { NaisysPath } from "../services/pathService.js";
 import { OutputService } from "../utils/output.js";
@@ -16,7 +17,7 @@ enum ShellEvent {
   Exit = "exit",
 }
 
-export function createShellWrapper(config: Config, output: OutputService) {
+export function createShellWrapper(globalConfig: GlobalConfig, agentConfig: AgentConfig, output: OutputService) {
   let _process: ChildProcessWithoutNullStreams | undefined;
   let _currentProcessId: number | undefined;
   let _commandOutput = "";
@@ -80,12 +81,12 @@ export function createShellWrapper(config: Config, output: OutputService) {
 
       await errorIfNotEmpty(
         await executeCommand(
-          `mkdir -p ${config.naisysFolder}/home/` + config.agent.username,
+          `mkdir -p ${globalConfig.naisysFolder}/home/` + agentConfig.username,
         ),
       );
       await errorIfNotEmpty(
         await executeCommand(
-          `cd ${config.naisysFolder}/home/` + config.agent.username,
+          `cd ${globalConfig.naisysFolder}/home/` + agentConfig.username,
         ),
       );
     } else {
@@ -315,7 +316,7 @@ export function createShellWrapper(config: Config, output: OutputService) {
       _startCommandTime = new Date();
     }
 
-    let waitSeconds = config.shellCommand.timeoutSeconds;
+    let waitSeconds = globalConfig.shellCommand.timeoutSeconds;
 
     // Parse wait time parameter if provided
     if (waitParam) {
@@ -325,7 +326,7 @@ export function createShellWrapper(config: Config, output: OutputService) {
       }
     }
 
-    const maxTimeoutSeconds = config.shellCommand.maxTimeoutSeconds;
+    const maxTimeoutSeconds = globalConfig.shellCommand.maxTimeoutSeconds;
     if (waitSeconds > maxTimeoutSeconds) {
       waitSeconds = maxTimeoutSeconds;
     }
@@ -444,7 +445,7 @@ export function createShellWrapper(config: Config, output: OutputService) {
    * May also help with common escaping errors */
   function putMultilineCommandInAScript(command: string) {
     const scriptPath = new NaisysPath(
-      `${config.naisysFolder}/agent-data/${config.agent.username}/multiline-command.sh`,
+      `${globalConfig.naisysFolder}/agent-data/${agentConfig.username}/multiline-command.sh`,
     );
 
     pathService.ensureFileDirExists(scriptPath);
@@ -461,7 +462,7 @@ ${command.trim()}`;
     // `Path` is set to the ./bin folder because custom NAISYS commands that follow shell commands will be handled by the shell, which will fail
     // so we need to remind the LLM that 'naisys commands cannot be used with other commands on the same prompt'
     // `source` will run the script in the current shell, so any change directories in the script will persist in the current shell
-    return `PATH=${config.binPath}:$PATH source ${scriptPath.getNaisysPath()}`;
+    return `PATH=${globalConfig.binPath}:$PATH source ${scriptPath.getNaisysPath()}`;
   }
 
   function _completeCommand(output: string) {

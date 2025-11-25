@@ -3,7 +3,7 @@
 username: nick
 title: Content Manager
 shellModel: gpt4turbo
-dreamMode: claude3opus
+dreamModel: claude3opus
 webModel: claude3haiku
 imageModel: dalle3-1024
 agentPrompt: |

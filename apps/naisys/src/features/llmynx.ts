@@ -6,7 +6,8 @@ import { exec } from "child_process";
 import * as crypto from "crypto";
 import * as https from "https";
 import * as os from "os";
-import { Config } from "../config.js";
+import { GlobalConfig } from "../globalConfig.js";
+import { AgentConfig } from "../agentConfig.js";
 import { CostTracker } from "../llm/costTracker.js";
 import { LLModels } from "../llm/llModels.js";
 import { LlmMessage, LlmRole } from "../llm/llmDtos.js";
@@ -15,7 +16,8 @@ import { OutputService } from "../utils/output.js";
 import * as utilities from "../utils/utilities.js";
 
 export function createLLMynx(
-  config: Config,
+  globalConfig: GlobalConfig,
+  agentConfig: AgentConfig,
   llmService: LLMService,
   costTracker: CostTracker,
   llModels: LLModels,
@@ -58,13 +60,13 @@ export function createLLMynx(
 
     switch (argParams[0]) {
       case "help":
-        return `llmynx <command> (results will be paginated to ${config.webTokenMax} tokens per page)
+        return `llmynx <command> (results will be paginated to ${globalConfig.webTokenMax} tokens per page)
   search <query>: Search google for the given query
   open <url>: Opens the given url. Links are represented as numbers in brackets which prefix the word they are linking like [123]
   follow <link number>: Opens the given link number. Link numbers work across all previous outputs
   links <url> <page>: Lists only the links for the given url. Use the page number to get more links
   more: Show the next page of content from the last URL opened
-  
+
 *llmynx does not support input. Use llmynx or curl to call APIs directly*`;
       case "search": {
         // trim quotes
@@ -149,7 +151,7 @@ export function createLLMynx(
     outputInDebugMode(`Links Token size: ${linksTokenSize}`);
 
     // Reduce content using LLM if it's over the token max
-    if (linksTokenSize > config.webTokenMax) {
+    if (linksTokenSize > globalConfig.webTokenMax) {
       content = await reduceContent(
         url,
         content,
@@ -158,7 +160,7 @@ export function createLLMynx(
       );
     } else {
       output.comment(
-        `No need to reduce, link Content is already under ${config.webTokenMax} tokens.`,
+        `No need to reduce, link Content is already under ${globalConfig.webTokenMax} tokens.`,
       );
 
       content = globalizeLinkList(content);
@@ -209,7 +211,7 @@ export function createLLMynx(
         output.comment(
           "No changes detected, using already cached reduced content",
         );
-      } else if (contentTokenSize > config.webTokenMax) {
+      } else if (contentTokenSize > globalConfig.webTokenMax) {
         content = await reduceContent(url, content, contentTokenSize);
 
         _reducedContentCache.set(url, {
@@ -218,13 +220,13 @@ export function createLLMynx(
         });
       } else {
         output.comment(
-          `No need to reduce, content is already under ${config.webTokenMax} tokens.`,
+          `No need to reduce, content is already under ${globalConfig.webTokenMax} tokens.`,
         );
       }
     } else {
       // New pagination logic
-      if (contentTokenSize > config.webTokenMax) {
-        const pages = breakContentIntoPages(content, config.webTokenMax);
+      if (contentTokenSize > globalConfig.webTokenMax) {
+        const pages = breakContentIntoPages(content, globalConfig.webTokenMax);
 
         // Set up pagination state
         _currentPagination = {
@@ -247,7 +249,7 @@ export function createLLMynx(
         );
       } else {
         output.comment(
-          `Content is already under ${config.webTokenMax} tokens.`,
+          `Content is already under ${globalConfig.webTokenMax} tokens.`,
         );
       }
     }
@@ -272,7 +274,7 @@ export function createLLMynx(
       const modeParams = "";
 
       const ifWindows = os.platform() === "win32" ? "wsl " : "";
-      const timeoutSecs = config.shellCommand.timeoutSeconds;
+      const timeoutSecs = globalConfig.shellCommand.timeoutSeconds;
 
       exec(
         `${ifWindows}timeout ${timeoutSecs}s lynx -dump ${modeParams} "${url}"`,
@@ -308,13 +310,13 @@ export function createLLMynx(
     contentTokenSize: number,
     linkPageAsContent?: number,
   ) {
-    const model = llModels.get(config.agent.webModel);
+    const model = llModels.get(agentConfig.webModel);
 
     // For example if context is 16k, and max tokens is 2k, 3k with 1.5x overrun
     // That would be 3k for the current compressed content, 10k for the chunk, and 3k for the output
-    let tokenChunkSize = model.maxTokens - config.webTokenMax * 2 * 1.5;
+    let tokenChunkSize = model.maxTokens - globalConfig.webTokenMax * 2 * 1.5;
     if (linkPageAsContent) {
-      tokenChunkSize = config.webTokenMax;
+      tokenChunkSize = globalConfig.webTokenMax;
     }
 
     outputInDebugMode(
@@ -338,7 +340,7 @@ export function createLLMynx(
 
       if (pieceCount == 1) {
         output.comment(
-          `Reducing content from ${contentTokenSize} tokens to under ${config.webTokenMax} tokens with ${model.key}...`,
+          `Reducing content from ${contentTokenSize} tokens to under ${globalConfig.webTokenMax} tokens with ${model.key}...`,
         );
       } else {
         output.comment(
@@ -386,25 +388,25 @@ export function createLLMynx(
     let content = "";
 
     if (pieceTotal === 1) {
-      systemMessage = `The web page "${url}" content that is currently ${contentTokenSize} tokens needs to be reduced down to around ${config.webTokenMax} tokens.
+      systemMessage = `The web page "${url}" content that is currently ${contentTokenSize} tokens needs to be reduced down to around ${globalConfig.webTokenMax} tokens.
 Links are represented as numbers in brackets, for example [4]. Keep links in the reduced output'
 Try to prioritize content of substance and primary navigation links over advertising content.`;
 
       content = `Web Page Content:
 ${pieceStr}
 
-Please reduce the content above to around ${config.webTokenMax} tokens while maintaining relevant links in brackets like [4].`;
+Please reduce the content above to around ${globalConfig.webTokenMax} tokens while maintaining relevant links in brackets like [4].`;
     } else {
       systemMessage = `You will be iteratively fed the web page "${url}" broken into ${pieceTotal} pieces.
 Each 'Web Page Piece' should be merged with the  in order 'Current Reduced Content' to maintain the meaning of the page while reducing verbosity and duplication.
-The final output should be around ${config.webTokenMax} tokens. 
+The final output should be around ${globalConfig.webTokenMax} tokens.
 Links are represented as numbers in brackets, for example [4]. Try not to remove them in the 'Final Merged Content'
 Try to prioritize content of substance over advertising content.`;
 
-      content = `Web Page Piece ${pieceNumber} of ${pieceTotal}: 
+      content = `Web Page Piece ${pieceNumber} of ${pieceTotal}:
 ${pieceStr}
 
-Please merge the 'Web Page Piece' above into the 'Current Reduced Content' below while keeping the result to around ${config.webTokenMax} tokens.
+Please merge the 'Web Page Piece' above into the 'Current Reduced Content' below while keeping the result to around ${globalConfig.webTokenMax} tokens.
 
 Current Reduced Content: 
 ${reducedOutput}
@@ -421,7 +423,7 @@ Final Merged Content:
 
     return (
       await llmService.query(
-        config.agent.webModel,
+        agentConfig.webModel,
         systemMessage,
         [context],
         "llmynx",
@@ -562,18 +564,18 @@ Final Merged Content:
   }
 
   async function callGoogleSearchApi(query: string): Promise<string> {
-    if (!config.googleApiKey) {
+    if (!globalConfig.googleApiKey) {
       throw "Error, googleApiKey is not defined";
     }
 
-    if (!config.googleSearchEngineId) {
+    if (!globalConfig.googleSearchEngineId) {
       throw "Error, googleSearchEngineId is not defined";
     }
 
     const runSearchPromise = new Promise<string>((resolve, reject) => {
       const queryParams = new URLSearchParams({
-        key: config.googleApiKey!,
-        cx: config.googleSearchEngineId!,
+        key: globalConfig.googleApiKey!,
+        cx: globalConfig.googleSearchEngineId!,
         q: query,
       }).toString();
 

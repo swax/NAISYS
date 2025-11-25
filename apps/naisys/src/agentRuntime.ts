@@ -1,3 +1,4 @@
+import { createAgentConfig } from "./agentConfig.js";
 import { AgentManager } from "./agentManager.js";
 import { createCommandHandler } from "./command/commandHandler.js";
 import { createCommandLoop } from "./command/commandLoop.js";
@@ -5,7 +6,6 @@ import { createCommandProtection } from "./command/commandProtection.js";
 import { createPromptBuilder } from "./command/promptBuilder.js";
 import { createShellCommand } from "./command/shellCommand.js";
 import { createShellWrapper } from "./command/shellWrapper.js";
-import { createConfig } from "./config.js";
 import { createGenImg } from "./features/genimg.js";
 import { createLLMail } from "./features/llmail.js";
 import { createLLMynx } from "./features/llmynx.js";
@@ -23,13 +23,12 @@ import { createRunService } from "./services/runService.js";
 import { createInputMode } from "./utils/inputMode.js";
 import { createOutputService } from "./utils/output.js";
 
-let runtimeId = 1;
-
 export async function createAgentRuntime(
   agentManger: AgentManager,
   agentPath: string,
 ) {
   const dbService = agentManger.dbService;
+  const globalConfig = agentManger.globalConfig;
 
   /*
    * Simple form of dependency injection
@@ -37,31 +36,48 @@ export async function createAgentRuntime(
    * We can also see from this why modern dependency injection frameworks exist
    */
 
-
   // Base services
-  const config = await createConfig(agentPath);
-  const runService = await createRunService(config, dbService);
-  const logService = createLogService(config, dbService, runService);
+  const agentConfig = createAgentConfig(agentPath, globalConfig);
+
+  const runService = await createRunService(
+    globalConfig,
+    agentConfig,
+    dbService,
+  );
+  const logService = createLogService(dbService, runService);
   const output = createOutputService(logService);
-  const workspaces = createWorkspacesFeature(config, output);
+  const workspaces = createWorkspacesFeature(globalConfig, agentConfig, output);
 
   // LLM
   const inputMode = createInputMode();
-  const systemMessage = createSystemMessage(config);
-  const llModels = createLLModels(config);
-  const tools = createCommandTools(config);
-  const costTracker = createCostTracker(config, llModels, dbService, runService, output);
+  const systemMessage = createSystemMessage(globalConfig, agentConfig);
+  const llModels = createLLModels(globalConfig);
+  const tools = createCommandTools(agentConfig);
+  const costTracker = createCostTracker(
+    globalConfig,
+    agentConfig,
+    llModels,
+    dbService,
+    runService,
+    output,
+  );
   const contextManager = createContextManager(
-    config,
+    globalConfig,
     workspaces,
     systemMessage,
     output,
     logService,
     inputMode,
   );
-  const llmService = createLLMService(config, costTracker, tools, llModels);
+  const llmService = createLLMService(
+    globalConfig,
+    agentConfig,
+    costTracker,
+    tools,
+    llModels,
+  );
   const dreamMaker = createDreamMaker(
-    config,
+    agentConfig,
     contextManager,
     llmService,
     dbService,
@@ -70,10 +86,11 @@ export async function createAgentRuntime(
   );
 
   // Features
-  const genimg = createGenImg(config, costTracker, output);
-  const llmail = createLLMail(config, dbService, runService);
+  const genimg = createGenImg(agentConfig, costTracker, output);
+  const llmail = createLLMail(globalConfig, agentConfig, dbService, runService);
   const subagentService = createSubagentService(
-    config,
+    globalConfig,
+    agentConfig,
     llmail,
     output,
     agentManger,
@@ -81,7 +98,8 @@ export async function createAgentRuntime(
     runService,
   );
   const llmynx = createLLMynx(
-    config,
+    globalConfig,
+    agentConfig,
     llmService,
     costTracker,
     llModels,
@@ -89,9 +107,10 @@ export async function createAgentRuntime(
   );
 
   // Command components
-  const shellWrapper = createShellWrapper(config, output);
+  const shellWrapper = createShellWrapper(globalConfig, agentConfig, output);
   const promptBuilder = createPromptBuilder(
-    config,
+    globalConfig,
+    agentConfig,
     shellWrapper,
     subagentService,
     llmail,
@@ -100,19 +119,21 @@ export async function createAgentRuntime(
     inputMode,
   );
   const shellCommand = createShellCommand(
-    config,
+    globalConfig,
     shellWrapper,
     contextManager,
     inputMode,
   );
   const commandProtection = createCommandProtection(
-    config,
+    globalConfig,
+    agentConfig,
     promptBuilder,
     llmService,
     output,
   );
   const commandHandler = createCommandHandler(
-    config,
+    globalConfig,
+    agentConfig,
     commandProtection,
     promptBuilder,
     shellCommand,
@@ -128,7 +149,8 @@ export async function createAgentRuntime(
     runService,
   );
   const commandLoop = createCommandLoop(
-    config,
+    globalConfig,
+    agentConfig,
     commandHandler,
     promptBuilder,
     shellCommand,
@@ -150,7 +172,7 @@ export async function createAgentRuntime(
 
   return {
     agentRunId: runService.getRunId(),
-    config,
+    agentConfig,
     output,
     subagentService,
     runCommandLoop: () => commandLoop.run(abortController.signal),

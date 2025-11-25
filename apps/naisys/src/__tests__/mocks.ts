@@ -1,5 +1,6 @@
 import { jest, test } from "@jest/globals";
 import { PrismaClient } from "@naisys/database";
+import { AgentConfig } from "../agentConfig.js";
 import { CommandProtection } from "../command/commandProtection.js";
 import { PromptBuilder } from "../command/promptBuilder.js";
 import { ShellCommand } from "../command/shellCommand.js";
@@ -8,6 +9,7 @@ import { LLMail } from "../features/llmail.js";
 import { LLMynx } from "../features/llmynx.js";
 import { SubagentService } from "../features/subagent.js";
 import { WorkspacesFeature } from "../features/workspaces.js";
+import { GlobalConfig } from "../globalConfig.js";
 import { ContextManager } from "../llm/contextManager.js";
 import { CostTracker } from "../llm/costTracker.js";
 import { DreamMaker } from "../llm/dreamMaker.js";
@@ -223,25 +225,65 @@ export function createMockCommandProtection() {
   } satisfies CommandProtection;
 }
 
-export function createMockConfig() {
+export function createMockGlobalConfig(): GlobalConfig {
   return {
     hostname: "test",
-    naisysFolder: "/naisys",
-    workspacesEnabled: false,
-    agent: {
-      username: "test",
-      debugPauseSeconds: 0,
-      wakeOnMessage: false,
-      disableMultipleCommands: false,
-      leadAgent: undefined,
-      spendLimitDollars: undefined,
-      tokenMax: 2000,
+    shellCommand: {
+      outputTokenMax: 7500,
+      timeoutSeconds: 10,
+      maxTimeoutSeconds: 300,
     },
-    mailEnabled: false,
-    trimSessionEnabled: false,
+    webTokenMax: 5000,
+    retrySecondsMax: 1800,
     endSessionEnabled: false,
+    workspacesEnabled: false,
+    trimSessionEnabled: false,
+    naisysFolder: "/naisys",
+    localLlmUrl: undefined,
+    localLlmName: undefined,
+    openaiApiKey: undefined,
+    googleApiKey: undefined,
+    anthropicApiKey: undefined,
+    googleSearchEngineId: undefined,
+    spendLimitDollars: undefined,
+    spendLimitHours: undefined,
+    useToolsForLlmConsoleResponses: true,
+    packageVersion: "1.0.0",
+    binPath: "/bin",
+    getEnv: jest.fn((key: string) => undefined),
+  } as GlobalConfig;
+}
+
+export function createMockAgentConfig(): AgentConfig {
+  return {
+    username: "test",
+    title: "Test Agent",
+    agentPrompt: "Test prompt",
+    spendLimitDollars: undefined,
+    spendLimitHours: undefined,
+    tokenMax: 2000,
+    shellModel: "gpt-4",
+    webModel: "gpt-4",
+    dreamModel: "gpt-4",
+    imageModel: undefined,
+    mailEnabled: false,
+    webEnabled: false,
+    completeTaskEnabled: false,
+    debugPauseSeconds: 0,
+    wakeOnMessage: false,
+    commandProtection: "none" as any,
+    initialCommands: [],
+    subagentMax: undefined,
+    subagentDirectory: undefined,
+    mailBlackoutCycles: undefined,
+    mailMessageTokenMax: undefined,
+    disableMultipleCommands: false,
+    leadAgent: undefined,
+    taskDescription: undefined,
+    persistAcrossRuns: undefined,
+    hostpath: "/path/to/agent.yaml",
     resolveConfigVars: (str: string) => str,
-  } as any;
+  } as AgentConfig;
 }
 
 export class MockNaisysPath {

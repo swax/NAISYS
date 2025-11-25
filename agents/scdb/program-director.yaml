@@ -26,8 +26,8 @@ agentPrompt: |
 
 subagentDirectory: subagents
 subagentMax: 2
-mailEnabled: true,
-wakeOnMessage: true,
+mailEnabled: true
+wakeOnMessage: true
 tokenMax: 20000
 debugPauseSeconds: 3
 initialCommands:
