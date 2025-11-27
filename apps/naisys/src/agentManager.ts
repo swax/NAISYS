@@ -1,3 +1,4 @@
+import { AgentRegistrar } from "./agentRegistrar.js";
 import { AgentRuntime, createAgentRuntime } from "./agentRuntime.js";
 import { GlobalConfig } from "./globalConfig.js";
 import { DatabaseService } from "./services/dbService.js";
@@ -7,12 +8,19 @@ import { OutputColor } from "./utils/output.js";
 export class AgentManager {
   dbService: DatabaseService;
   globalConfig: GlobalConfig;
+  agentRegistrar: AgentRegistrar;
+
   runningAgents: AgentRuntime[] = [];
   runLoops: Promise<void>[] = [];
 
-  constructor(dbService: DatabaseService, globalConfig: GlobalConfig) {
+  constructor(
+    dbService: DatabaseService,
+    globalConfig: GlobalConfig,
+    agentRegistrar: AgentRegistrar,
+  ) {
     this.dbService = dbService;
     this.globalConfig = globalConfig;
+    this.agentRegistrar = agentRegistrar;
   }
 
   async startAgent(agentPath: string, onStop?: (reason: string) => void) {

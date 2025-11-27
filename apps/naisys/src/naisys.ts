@@ -1,6 +1,7 @@
 import { program } from "commander";
 import dotenv from "dotenv";
 import { AgentManager } from "./agentManager.js";
+import { createAgentRegistrar } from "./agentRegistrar.js";
 import { createGlobalConfig } from "./globalConfig.js";
 import { createDatabaseService } from "./services/dbService.js";
 
@@ -11,7 +12,11 @@ program
   .option("--overlord", "Start Overlord server")
   .parse();
 
-// If --overlord flag is provided, start Overlord server
+/**
+ * --overlord flag is provided, start Overlord server
+ * There should be no dependency between overlord and naissys
+ * Sharing the same process space is to save 150 mb of node.js runtime memory on small servers
+ */
 if (program.opts().overlord) {
   console.log("Starting Overlord server...");
   // Don't import the whole fastify web server module tree unless needed
@@ -21,12 +26,19 @@ if (program.opts().overlord) {
 
 console.log(`NAISYS STARTED`);
 
+const agentPath = program.args[0];
+
 const globalConfig = await createGlobalConfig();
 const dbService = await createDatabaseService(globalConfig);
-const agentManager = new AgentManager(dbService, globalConfig);
+const agentRegistrar = await createAgentRegistrar(
+  globalConfig,
+  dbService,
+  agentPath,
+);
+const agentManager = new AgentManager(dbService, globalConfig, agentRegistrar);
 
 // Inits the naisys db if it doesn't exist which is needed by overlord
-await agentManager.startAgent(program.args[0]);
+await agentManager.startAgent(agentPath);
 
 await agentManager.waitForAllAgentsToComplete();
 

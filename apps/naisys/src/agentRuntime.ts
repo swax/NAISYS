@@ -95,6 +95,7 @@ export async function createAgentRuntime(
     agentManger,
     inputMode,
     runService,
+    dbService,
   );
   const llmynx = createLLMynx(
     globalConfig,
