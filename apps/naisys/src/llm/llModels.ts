@@ -126,6 +126,17 @@ export function createLLModels({ globalConfig }: GlobalConfig) {
     },
     // Google Models - Prices are per 1M tokens
     {
+      key: "gemini3pro",
+      name: "gemini-3-pro-image-preview",
+      apiType: LlmApiType.Google,
+      maxTokens: 2_000_000,
+      // Prices are per 1M tokens
+      inputCost: 2.0, // ≤200k tokens, 2.50 for >200k tokens
+      outputCost: 12.0, // ≤200k tokens, 15.0 for >200k tokens,
+      cacheWriteCost: 0.2, // Cached input cost
+      cacheReadCost: 0.2, // Cached input cost
+    },
+    {
       key: "gemini2.5pro",
       name: "gemini-2.5-pro",
       apiType: LlmApiType.Google,

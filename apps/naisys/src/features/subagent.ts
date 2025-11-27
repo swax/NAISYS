@@ -1,21 +1,13 @@
-import { ChildProcess, spawn } from "child_process";
-import * as fs from "fs";
-import yaml from "js-yaml";
+import { ChildProcess } from "child_process";
 import path from "path";
 import table from "text-table";
-import {
-  AgentConfig,
-  AgentConfigFile,
-  AgentConfigFileSchema,
-} from "../agentConfig.js";
+import { AgentConfig } from "../agentConfig.js";
 import { AgentManager } from "../agentManager.js";
-import * as pathService from "../services/pathService.js";
+import { DatabaseService } from "../services/dbService.js";
 import { NaisysPath } from "../services/pathService.js";
 import { RunService } from "../services/runService.js";
-import { agentNames } from "../utils/agentNames.js";
 import { InputModeService } from "../utils/inputMode.js";
 import { OutputColor, OutputService } from "../utils/output.js";
-import { getCleanEnv, shuffle } from "../utils/utilities.js";
 import { LLMail } from "./llmail.js";
 
 interface Subagent {
@@ -35,6 +27,7 @@ export function createSubagentService(
   agentManager: AgentManager,
   inputMode: InputModeService,
   runService: RunService,
+  { usingDatabase }: DatabaseService,
 ) {
   const _subagents: Subagent[] = [];
 
@@ -44,48 +37,6 @@ export function createSubagentService(
     agentName: string;
     reason: string;
   }> = [];
-
-  _init();
-
-  function _init() {
-    if (!agentConfig().subagentDirectory) {
-      return;
-    }
-
-    // Load subagents for user from file system
-    const subagentDir = _getSubagentDir();
-    const subagentHostDir = subagentDir.toHostPath();
-
-    if (!fs.existsSync(subagentHostDir)) {
-      return;
-    }
-
-    const subagentFiles = fs.readdirSync(subagentHostDir).filter((file) => {
-      const filePath = path.join(subagentHostDir, file);
-      return fs.statSync(filePath).isFile();
-    });
-
-    // Iterate files
-    for (const subagentFile of subagentFiles) {
-      const agentHostPath = path.join(subagentHostDir, subagentFile);
-      const subagentYaml = fs.readFileSync(agentHostPath, "utf8");
-      const subagentRawConfig = yaml.load(subagentYaml);
-
-      const subagentConfig = AgentConfigFileSchema.parse(subagentRawConfig);
-
-      // Add to subagents
-      _subagents.push({
-        agentName: subagentConfig.username,
-        agentPath: new NaisysPath(agentHostPath),
-        taskDescription:
-          subagentConfig.taskDescription ||
-          subagentConfig.title ||
-          "No task description",
-        log: [],
-        status: "stopped",
-      });
-    }
-  }
 
   async function handleCommand(args: string): Promise<string> {
     const argParams = args.split(" ");
@@ -100,10 +51,11 @@ export function createSubagentService(
       case "help": {
         let helpOutput = `subagent <command>
   list: Lists all subagents
-  create "<agent title>" "<description>": Creates a new agent. Include as much detail in the description as possible.
   stop <id>: Stops the agent with the given task id
-  start <username> <description>: Starts an existing agent with the given name and description of the task to perform
-  spawn <username> <description>: Spawns the agent as a separate isolated node process (generally use start instead)`;
+  start <username> <description>: Starts an existing agent with the given name and description of the task to perform`;
+
+        //  create "<agent title>" "<description>": Creates a new agent. Include as much detail in the description as possible.
+        //  spawn <username> <description>: Spawns the agent as a separate isolated node process (generally use start instead)
 
         if (inputMode.isDebug()) {
           helpOutput += `\n  switch <id>: Switch context to a started in-process agent (debug mode only)`;
@@ -119,9 +71,9 @@ export function createSubagentService(
         return helpOutput;
       }
       case "list": {
-        return buildAgentList();
+        return await buildAgentList();
       }
-      case "create": {
+      /*case "create": {
         const newParams = argParams.slice(1).join(" ").split('"');
         const title = newParams[1];
         const task = newParams[3];
@@ -133,7 +85,7 @@ export function createSubagentService(
         }
 
         return await _createAgent(title, task);
-      }
+      }*/
       case "start": {
         // trim quotes
         const subagentName = argParams[1].trim().replace(/^"(.*)"$/, "$1");
@@ -141,12 +93,12 @@ export function createSubagentService(
 
         return await _startAgent(subagentName, taskDescription);
       }
-      case "spawn": {
+      /*case "spawn": {
         const subagentName = argParams[1];
         const taskDescription = args.split('"')[1];
 
         return await _spawnAgent(subagentName, taskDescription);
-      }
+      }*/
       case "switch": {
         if (!inputMode.isDebug()) {
           errorText =
@@ -174,7 +126,30 @@ export function createSubagentService(
     return errorText + (await handleCommand("help"));
   }
 
-  function buildAgentList() {
+  async function refreshSubagents() {
+    await usingDatabase(async (prisma) => {
+      const agents = await prisma.users.findMany({
+        where: { lead_username: agentConfig().username },
+      });
+
+      agents.forEach((agent) => {
+        const existing = _subagents.find((p) => p.agentName === agent.username);
+        if (!existing) {
+          _subagents.push({
+            agentName: agent.username,
+            agentPath: new NaisysPath(agent.agent_path),
+            taskDescription: agent.title || "No task description",
+            log: [],
+            status: "stopped",
+          });
+        }
+      });
+    });
+  }
+
+  async function buildAgentList() {
+    await refreshSubagents();
+
     let agentList = "";
 
     const subagentRows = _subagents.map((p) => [
@@ -283,7 +258,13 @@ export function createSubagentService(
     return wasRaised;
   }
 
-  async function _createAgent(title: string, taskDescription: string) {
+  /**
+   * Not sure if we should have this, or tell the AI how to create a real agent file
+   * Or have a first class 'temp' agent that supports starting multiple instances with different tasks
+   * As we do support multiple concurrent runtime ids now for logs/costs
+   * Dont want to hose the user table to a ton of temp user names
+   */
+  /*async function _createAgent(title: string, taskDescription: string) {
     // Get available username
     const usernames = await llmail.getAllUserNames();
     let agentName = "";
@@ -346,7 +327,7 @@ export function createSubagentService(
     });
 
     return "Subagent Created. Ready to start or spawn";
-  }
+  }*/
 
   function validateAgentStart(agentName: string, taskDescription: string) {
     if (!agentName) {
@@ -383,6 +364,7 @@ export function createSubagentService(
       (stopReason) => handleAgentTermination(subagent, stopReason),
     );
 
+    subagent.taskDescription = taskDescription;
     subagent.status = "started";
 
     await sendStartupMessage(subagent, taskDescription);
@@ -392,7 +374,11 @@ export function createSubagentService(
     return `Subagent '${agentName}' Started (ID: ${subagent.id})`;
   }
 
-  async function _spawnAgent(agentName: string, taskDescription: string) {
+  /**
+   * Don't want to confuse the AI with spawn vs start
+   * Not sure if there's a good use case for spawning separate processes anymore
+   */
+  /*async function _spawnAgent(agentName: string, taskDescription: string) {
     const subagent = validateAgentStart(agentName, taskDescription);
 
     // Start subagent
@@ -479,7 +465,7 @@ export function createSubagentService(
     });
 
     return await startupPromise;
-  }
+  }*/
 
   async function sendStartupMessage(
     subagent: Subagent,

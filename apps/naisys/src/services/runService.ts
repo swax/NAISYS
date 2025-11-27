@@ -1,5 +1,5 @@
-import { GlobalConfig } from "../globalConfig.js";
 import { AgentConfig } from "../agentConfig.js";
+import { GlobalConfig } from "../globalConfig.js";
 import { DatabaseService } from "../services/dbService.js";
 
 export async function createRunService(
@@ -30,65 +30,18 @@ export async function createRunService(
   }
 
   async function initUser(): Promise<void> {
-    await usingDatabase(async (prisma) => {
+    userId = await usingDatabase(async (prisma) => {
       // If user is not in the db, add them
       const user = await prisma.users.findUnique({
         where: { username: agentConfig().username },
+        select: { id: true },
       });
 
-      // If user not in database, add them
       if (!user) {
-        try {
-          const insertedUser = await prisma.users.create({
-            data: {
-              username: agentConfig().username,
-              title: agentConfig().title,
-              agent_path: agentConfig().hostpath,
-              lead_username: agentConfig().leadAgent,
-            },
-          });
-
-          userId = insertedUser.id;
-
-          // Create user_notifications row for new user
-          await prisma.user_notifications.create({
-            data: {
-              user_id: userId,
-              latest_mail_id: -1,
-              latest_log_id: -1,
-              last_active: new Date().toISOString(),
-            },
-          });
-        } catch (e) {
-          throw (
-            `A user already exists in the database with the agent path (${agentConfig().hostpath})\n` +
-            `Either create a new agent config file, or delete the ${globalConfig().naisysFolder} folder to reset the database.`
-          );
-        }
+        throw new Error(`User ${agentConfig().username} not found in database`);
       }
-      // Else already exists, validate it's config path is correct
-      else {
-        userId = user.id;
 
-        if (user.agent_path != agentConfig().hostpath) {
-          throw `Error: User ${agentConfig().username} already exists in the database with a different config path (${user.agent_path})`;
-        }
-
-        if (
-          agentConfig().leadAgent &&
-          agentConfig().leadAgent != user.lead_username
-        ) {
-          throw `Error: User ${agentConfig().username} already exists in the database with a different lead agent (${user.lead_username})`;
-        }
-
-        // Update user title in database
-        if (user.title !== agentConfig().title) {
-          await prisma.users.update({
-            where: { id: userId },
-            data: { title: agentConfig().title },
-          });
-        }
-      }
+      return user.id;
     });
   }
 
