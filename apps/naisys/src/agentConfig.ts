@@ -22,7 +22,7 @@ export const AgentConfigFileSchema = z.object({
 
   shellModel: z.string(),
   webModel: z.string().optional(),
-  dreamModel: z.string().optional(),
+  compactModel: z.string().optional(),
   imageModel: z.string().optional(),
 
   mailEnabled: z.boolean().optional(),
@@ -63,9 +63,6 @@ export const AgentConfigFileSchema = z.object({
 
   /** ONLY used by agent start process. The task given to the subagent */
   taskDescription: z.string().optional(),
-
-  /** Currently just persists the agent's end session notes, but TODO persist the context to reload if the process is terminated */
-  persistAcrossRuns: z.boolean().optional(),
 });
 
 export type AgentConfigFile = z.infer<typeof AgentConfigFileSchema>;
@@ -95,8 +92,8 @@ export function createAgentConfig(
     // Resolve model configs
     const shellModel = resolveConfigVars(config.shellModel);
     const webModel = resolveConfigVars(config.webModel || config.shellModel);
-    const dreamModel = resolveConfigVars(
-      config.dreamModel || config.shellModel,
+    const compactModel = resolveConfigVars(
+      config.compactModel || config.shellModel,
     );
     const imageModel = config.imageModel
       ? resolveConfigVars(config.imageModel)
@@ -132,7 +129,7 @@ export function createAgentConfig(
       spendLimitHours,
       shellModel,
       webModel,
-      dreamModel,
+      compactModel,
       imageModel,
       resolveConfigVars,
       mailEnabled: config.mailEnabled ?? false,

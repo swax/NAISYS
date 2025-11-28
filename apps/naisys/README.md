@@ -47,7 +47,7 @@ shellModel: gpt4turbo
 
 # Only used between sessions to provide guidance for the next session (use a more powerful model for this)
 # defaults to the shellModel if omitted
-dreamModel: claude3opus
+compactModel: claude3opus
 
 # The model to use for llmynx, pre-processing websites to fit into a smaller context (use a cheaper model)
 # defaults to the shellModel if omitted
@@ -160,7 +160,7 @@ initialCommands:
 - 1.6: Support for long running shell commands and full screen terminal output
 - 1.5: Allow agents to start their own parallel `subagents`
 - 1.4: `genimg` command for generating images
-- 1.3: Post-session 'dreaming' as well as a mail 'blackout' period
+- 1.3: Post-session session compaction as well as a mail 'blackout' period
 - 1.2: Created stand-in shell commands for custom Naisys commands
 - 1.1: Added command protection settings to prevent unwanted writes
 - 1.0: Initial release

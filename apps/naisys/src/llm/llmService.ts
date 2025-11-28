@@ -10,7 +10,7 @@ import { CostTracker } from "./costTracker.js";
 import { LLModels, LlmApiType } from "./llModels.js";
 import { LlmMessage, LlmRole } from "./llmDtos.js";
 
-type QuerySources = "console" | "write-protection" | "dream" | "llmynx";
+type QuerySources = "console" | "write-protection" | "compact" | "llmynx";
 
 export function createLLMService(
   { globalConfig }: GlobalConfig,

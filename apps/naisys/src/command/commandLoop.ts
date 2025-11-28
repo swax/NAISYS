@@ -1,16 +1,16 @@
 import chalk from "chalk";
 import * as readline from "readline";
-import { GlobalConfig } from "../globalConfig.js";
 import { AgentConfig } from "../agentConfig.js";
 import { LLMail } from "../features/llmail.js";
 import { LLMynx } from "../features/llmynx.js";
 import { SubagentService } from "../features/subagent.js";
 import { WorkspacesFeature } from "../features/workspaces.js";
+import { GlobalConfig } from "../globalConfig.js";
 import { ContextManager } from "../llm/contextManager.js";
-import { DreamMaker } from "../llm/dreamMaker.js";
 import { ContentSource, LlmRole } from "../llm/llmDtos.js";
 import { LlmApiType } from "../llm/llModels.js";
 import { LLMService } from "../llm/llmService.js";
+import { SessionCompactor } from "../llm/sessionCompactor.js";
 import { LogService } from "../services/logService.js";
 import { RunService } from "../services/runService.js";
 import { InputModeService } from "../utils/inputMode.js";
@@ -29,7 +29,7 @@ export function createCommandLoop(
   subagent: SubagentService,
   llmail: LLMail,
   llmynx: LLMynx,
-  dreamMaker: DreamMaker,
+  sessionCompactor: SessionCompactor,
   contextManager: ContextManager,
   workspaces: WorkspacesFeature,
   llmService: LLMService,
@@ -69,9 +69,12 @@ export function createCommandLoop(
 
       await output.commentAndLog("Starting Context:");
 
-      const latestDream = await dreamMaker.goodmorning();
-      if (latestDream) {
-        await displayPreviousSessionNotes(latestDream, nextPromptIndex++);
+      const lastSessionSummary = await sessionCompactor.getLastSessionSummary();
+      if (lastSessionSummary) {
+        await displayPreviousSessionNotes(
+          lastSessionSummary,
+          nextPromptIndex++,
+        );
       }
 
       for (const initialCommand of agentConfig().initialCommands) {

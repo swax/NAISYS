@@ -12,7 +12,7 @@ import { WorkspacesFeature } from "../features/workspaces.js";
 import { GlobalConfig } from "../globalConfig.js";
 import { ContextManager } from "../llm/contextManager.js";
 import { CostTracker } from "../llm/costTracker.js";
-import { DreamMaker } from "../llm/dreamMaker.js";
+import { SessionCompactor } from "../llm/sessionCompactor.js";
 import { LlmMessage, LlmRole } from "../llm/llmDtos.js";
 import { DatabaseService } from "../services/dbService.js";
 import { LogService } from "../services/logService.js";
@@ -116,13 +116,13 @@ export function createMockLLMynx() {
   return llmynx;
 }
 
-export function createMockDreamMaker() {
-  const dreamMaker: DreamMaker = {
-    goodmorning: jest.fn(() => Promise.resolve("")),
-    goodnight: jest.fn(() => Promise.resolve("")),
+export function createMockSessionCompactor() {
+  const sessionCompactor: SessionCompactor = {
+    getLastSessionSummary: jest.fn(() => Promise.resolve("")),
+    run: jest.fn(() => Promise.resolve("")),
   };
 
-  return dreamMaker;
+  return sessionCompactor;
 }
 
 export function createMockContextManager() {
@@ -269,7 +269,7 @@ export function createMockAgentConfig(): AgentConfig {
       tokenMax: 2000,
       shellModel: "gpt-4",
       webModel: "gpt-4",
-      dreamModel: "gpt-4",
+      compactModel: "gpt-4",
       imageModel: undefined,
       mailEnabled: false,
       webEnabled: false,
@@ -285,7 +285,6 @@ export function createMockAgentConfig(): AgentConfig {
       disableMultipleCommands: false,
       leadAgent: undefined,
       taskDescription: undefined,
-      persistAcrossRuns: undefined,
       hostpath: "/path/to/agent.yaml",
       resolveConfigVars: (str: string) => str,
     }),

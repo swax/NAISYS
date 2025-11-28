@@ -7,7 +7,7 @@ import { SubagentService } from "../features/subagent.js";
 import { GlobalConfig } from "../globalConfig.js";
 import { ContextManager } from "../llm/contextManager.js";
 import { CostTracker } from "../llm/costTracker.js";
-import { DreamMaker } from "../llm/dreamMaker.js";
+import { SessionCompactor } from "../llm/sessionCompactor.js";
 import { ContentSource } from "../llm/llmDtos.js";
 import { RunService } from "../services/runService.js";
 import { InputModeService } from "../utils/inputMode.js";
@@ -39,7 +39,7 @@ export function createCommandHandler(
   subagent: SubagentService,
   llmail: LLMail,
   llmynx: LLMynx,
-  dreamMaker: DreamMaker,
+  sessionCompactor: SessionCompactor,
   contextManager: ContextManager,
   costTracker: CostTracker,
   output: OutputService,
@@ -139,7 +139,7 @@ export function createCommandHandler(
             break;
           }
 
-          await dreamMaker.goodnight();
+          await sessionCompactor.run();
 
           await output.commentAndLog(
             "------------------------------------------------------",

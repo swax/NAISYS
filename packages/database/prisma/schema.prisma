@@ -49,21 +49,6 @@ model costs {
   @@index([date], map: "idx_costs_date")
 }
 
-model dream_log {
-  id          Int         @id @default(autoincrement())
-  user_id     Int
-  run_id      Int
-  session_id  Int
-  date        DateTime
-  dream       String
-  users       users       @relation("dream_log_user", fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  run_session run_session @relation(fields: [user_id, run_id, session_id], references: [user_id, run_id, session_id], onDelete: NoAction, onUpdate: NoAction)
-
-  @@index([id(sort: Desc)], map: "idx_dream_log_id_desc")
-  @@index([user_id], map: "idx_dream_log_user_id")
-  @@index([user_id, run_id, session_id], map: "idx_dream_log_run_session")
-}
-
 model thread_members {
   id         Int     @id @default(autoincrement())
   thread_id  Int
@@ -111,7 +96,6 @@ model users {
   run_sessions       run_session[]
   context_logs       context_log[]       @relation("context_log_user")
   costs              costs[]             @relation("costs_user")
-  dream_logs         dream_log[]         @relation("dream_log_user")
   user_notifications user_notifications?
 }
 
@@ -140,7 +124,6 @@ model run_session {
   users         users         @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   context_logs  context_log[]
   costs         costs[]
-  dream_logs    dream_log[]
 
   @@id([user_id, run_id, session_id])
   @@index([user_id], map: "idx_run_session_user_id")
