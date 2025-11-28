@@ -14,7 +14,7 @@ import { createWorkspacesFeature } from "./features/workspaces.js";
 import { createCommandTools } from "./llm/commandTool.js";
 import { createContextManager } from "./llm/contextManager.js";
 import { createCostTracker } from "./llm/costTracker.js";
-import { createDreamMaker } from "./llm/dreamMaker.js";
+import { createSessionCompactor } from "./llm/sessionCompactor.js";
 import { createLLModels } from "./llm/llModels.js";
 import { createLLMService } from "./llm/llmService.js";
 import { createSystemMessage } from "./llm/systemMessage.js";
@@ -76,12 +76,10 @@ export async function createAgentRuntime(
     tools,
     llModels,
   );
-  const dreamMaker = createDreamMaker(
+  const sessionCompactor = createSessionCompactor(
     agentConfig,
     contextManager,
     llmService,
-    dbService,
-    runService,
     output,
   );
 
@@ -141,7 +139,7 @@ export async function createAgentRuntime(
     subagentService,
     llmail,
     llmynx,
-    dreamMaker,
+    sessionCompactor,
     contextManager,
     costTracker,
     output,
@@ -157,7 +155,7 @@ export async function createAgentRuntime(
     subagentService,
     llmail,
     llmynx,
-    dreamMaker,
+    sessionCompactor,
     contextManager,
     workspaces,
     llmService,

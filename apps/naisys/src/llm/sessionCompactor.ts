@@ -6,49 +6,27 @@ import { ContextManager } from "./contextManager.js";
 import { ContentSource, LlmRole } from "./llmDtos.js";
 import { LLMService } from "./llmService.js";
 
-export function createDreamMaker(
+export function createSessionCompactor(
   { agentConfig }: AgentConfig,
   contextManager: ContextManager,
   llmService: LLMService,
-  { usingDatabase }: DatabaseService,
-  runService: RunService,
   output: OutputService,
 ) {
-  let _lastDream = "";
+  let _lastSessionSummary = "";
 
-  async function goodmorning(): Promise<string> {
-    if (!agentConfig().persistAcrossRuns) {
-      return _lastDream;
-    }
-
-    const userId = runService.getUserId();
-
-    return await usingDatabase(async (prisma) => {
-      const row = await prisma.dream_log.findFirst({
-        where: { user_id: userId },
-        orderBy: { date: "desc" },
-        select: { dream: true },
-      });
-
-      return row?.dream || "";
-    });
+  async function getLastSessionSummary(): Promise<string> {
+    return _lastSessionSummary;
   }
 
-  async function goodnight(): Promise<string> {
-    await output.commentAndLog("Wrapping up the session...");
+  async function run(): Promise<string> {
+    await output.commentAndLog("Compacting session...");
 
-    const dream = await runDreamSequence();
+    _lastSessionSummary = await compact();
 
-    if (agentConfig().persistAcrossRuns) {
-      await storeDream(dream);
-    } else {
-      _lastDream = dream;
-    }
-
-    return dream;
+    return _lastSessionSummary;
   }
 
-  async function runDreamSequence(): Promise<string> {
+  async function compact(): Promise<string> {
     const systemMessage = `${agentConfig().agentPrompt}
 
 Below is the console log from this session. Please process this log and
@@ -68,7 +46,7 @@ and how to do it.`;
 
     return (
       await llmService.query(
-        agentConfig().dreamModel,
+        agentConfig().compactModel,
         systemMessage,
         [
           {
@@ -85,31 +63,15 @@ and how to do it.`;
             content: `Please show the results of the processing.`,
           },
         ],
-        "dream",
+        "compact",
       )
     )[0];
   }
 
-  async function storeDream(dream: string) {
-    const { getUserId, getRunId, getSessionId } = runService;
-
-    await usingDatabase(async (prisma) => {
-      await prisma.dream_log.create({
-        data: {
-          user_id: getUserId(),
-          run_id: getRunId(),
-          session_id: getSessionId(),
-          date: new Date().toISOString(),
-          dream,
-        },
-      });
-    });
-  }
-
   return {
-    goodmorning,
-    goodnight,
+    getLastSessionSummary,
+    run,
   };
 }
 
-export type DreamMaker = ReturnType<typeof createDreamMaker>;
+export type SessionCompactor = ReturnType<typeof createSessionCompactor>;

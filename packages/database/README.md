@@ -20,7 +20,6 @@ The NAISYS database contains the following tables:
 - **Users** - Agent users with authentication and profile info
 - **Costs** - API cost tracking with token usage
 - **ContextLog** - Agent conversation and activity logs
-- **DreamLog** - Inter-session memory for agents
 - **Threads** - Message thread management
 - **ThreadMembers** - Thread membership and participation
 - **ThreadMessages** - Individual messages in threads

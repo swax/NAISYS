@@ -3,7 +3,7 @@
 username: phillip
 title: Software Engineer
 shellModel: claude3opus
-dreamModel: claude3opus
+compactModel: claude3opus
 agentPrompt: |
   Create a map where I can select major airports in the US and see travel time between them.
 

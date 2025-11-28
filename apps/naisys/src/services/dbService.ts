@@ -12,7 +12,7 @@ const execAsync = promisify(exec);
 
 export async function createDatabaseService({ globalConfig }: GlobalConfig) {
   /** Should match version in schema_version table of latest migration script */
-  const latestDbVersion = 4;
+  const latestDbVersion = 5;
 
   // Ensure database directory exists
   const dbFilePath = new NaisysPath(
