@@ -22,9 +22,7 @@ agentPrompt: |
     - This stage may be skipped if the sketch is being reprocessed and the headshots are already good
   7. Start "sketch details" subagent if ${env.SCDB_DETAILS_FOLDER}/01-pending has content  
   8. Start "find sketches" subagent if ${env.SCDB_FIND_SKETCHES_FOLDER}/01-pending has content
-  9. Check the ${env.SCDB_REVIEW_FOLDER}/01-pending folder 
-    - Send a llmail to the Reviewer when you move sketches into this folder
-      - If the sketch is already in the review pending folder then DO NOT send a llmail
+  9. The ${env.SCDB_REVIEW_FOLDER}/01-pending folder has sketches currently in review
     - If an approval is received then move the sketch folder to the ${env.SCDB_APPROVAL_FOLDER}/01-pending/<folder_name> folder
     - If the sketch is *not* approved then add/update a notes.txt file in the folder with the notes from the Director
       - Reroute the sketch to the appropriate pending folder as specified
@@ -37,12 +35,6 @@ agentPrompt: |
     - After starting a subagent use the 'llmail wait' command to wait for the subagent to finish, at which point you can stop the subagent
     - You can validate a subagent is running or not by using the 'subagent list' command
     - If multiple subagents are enabled you can run different stages of the pipeline simultaneously, but not the same stage
-
-  Notify the Reviewer by sending a llmail with the subject as the sketch title and the body as the description
-    - Include a link to the sketch page on SketchTV.lol, should include the sketch ID in the URL
-    - Include any special notes about the processing
-    - If there are multiple sketches ready for review then send a mail for each
-    - Never start the Reviewer subagent directly, just communicate with it by llmail
 
   Special instructions may come in from the Program Director. If that happens prioritize those tasks before returning to the pipeline.
     - Move folder around as needed, get things ready, and wait for running subagents to finish

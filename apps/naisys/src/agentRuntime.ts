@@ -14,9 +14,9 @@ import { createWorkspacesFeature } from "./features/workspaces.js";
 import { createCommandTools } from "./llm/commandTool.js";
 import { createContextManager } from "./llm/contextManager.js";
 import { createCostTracker } from "./llm/costTracker.js";
-import { createSessionCompactor } from "./llm/sessionCompactor.js";
 import { createLLModels } from "./llm/llModels.js";
 import { createLLMService } from "./llm/llmService.js";
+import { createSessionCompactor } from "./llm/sessionCompactor.js";
 import { createSystemMessage } from "./llm/systemMessage.js";
 import { createLogService } from "./services/logService.js";
 import { createRunService } from "./services/runService.js";
@@ -168,10 +168,13 @@ export async function createAgentRuntime(
 
   const abortController = new AbortController();
 
+  const config = agentConfig.agentConfig();
+
   return {
     agentRunId: runService.getRunId(),
-    agentUsername: agentConfig.agentConfig().username,
-    agentTaskDescription: agentConfig.agentConfig().taskDescription,
+    agentUsername: config.username,
+    agentTitle: config.title,
+    agentTaskDescription: config.taskDescription,
     output,
     subagentService,
     runCommandLoop: () => commandLoop.run(abortController.signal),

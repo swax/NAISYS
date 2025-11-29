@@ -14,26 +14,89 @@ export async function createAgentRegistrar(
   await reloadAgents();
 
   async function reloadAgents() {
+    // Load all existing users from database into memory
+    const existingUsers = await usingDatabase(async (prisma) => {
+      return await prisma.users.findMany();
+    });
+
+    // Convert to a Map for easy lookup by username
+    const userMap = new Map(existingUsers.map((u) => [u.username, u]));
+
+    // Track which users were processed (created or updated) and their file paths
+    const processedUsernames = new Map<string, string>();
+
     // Track processed files to avoid duplicates
     const processedFiles = new Set<string>();
 
     // Load agent from startup path
     if (startupAgentPath) {
-      await processAgentConfig(startupAgentPath, processedFiles);
+      await processAgentConfig(
+        startupAgentPath,
+        processedFiles,
+        userMap,
+        processedUsernames,
+      );
     }
 
     // Load from naisys path/agents
     const naisysFolder = globalConfig().naisysFolder;
+    if (!naisysFolder) {
+      throw new Error("naisysFolder is not configured in globalConfig");
+    }
 
-    if (naisysFolder) {
-      const naisysAgentsDir = path.join(naisysFolder, "agents");
-      await processDirectory(naisysAgentsDir, processedFiles);
+    const naisysAgentsDir = path.join(naisysFolder, "agents");
+    await processDirectory(
+      naisysAgentsDir,
+      processedFiles,
+      userMap,
+      processedUsernames,
+    );
+
+    // Check for users that weren't created/updated
+    for (const [username, user] of userMap) {
+      if (!processedUsernames.has(username)) {
+        // Check if agent path exists
+        if (!fs.existsSync(user.agent_path)) {
+          // Create recovered agent file using original filename
+          const originalFilename = path.basename(user.agent_path);
+          const ext = path.extname(originalFilename);
+          const baseName = path.basename(originalFilename, ext);
+          const recoveredFilename = `${baseName}-recovered${ext}`;
+          const recoveredPath = path.join(
+            naisysFolder,
+            "agents",
+            recoveredFilename,
+          );
+
+          // Ensure the agents directory exists
+          const agentsDir = path.join(naisysFolder, "agents");
+          if (!fs.existsSync(agentsDir)) {
+            fs.mkdirSync(agentsDir, { recursive: true });
+          }
+
+          fs.writeFileSync(recoveredPath, user.config);
+
+          // Update database with new path
+          await usingDatabase(async (prisma) => {
+            await prisma.users.update({
+              where: { username },
+              data: { agent_path: recoveredPath },
+            });
+          });
+
+          console.log(
+            `Recovered missing agent ${username} to: ${recoveredPath}`,
+          );
+        }
+      }
     }
   }
 
   async function processAgentConfig(
     agentPath: string,
     processedFiles: Set<string>,
+    userMap: Map<string, any>,
+    processedUsernames: Map<string, string>,
   ) {
     try {
       // Get absolute path and check if already processed
@@ -46,42 +109,121 @@ export async function createAgentRegistrar(
       // Mark as processed
       processedFiles.add(absolutePath);
 
-      const rawConfig = yaml.load(fs.readFileSync(absolutePath, "utf8"));
+      const configYaml = fs.readFileSync(absolutePath, "utf8");
+      const configObj = yaml.load(configYaml);
+      const agentConfig = AgentConfigFileSchema.parse(configObj);
 
-      const agentConfig = AgentConfigFileSchema.parse(rawConfig);
+      // Check if username already processed from a different file
+      const previousPath = processedUsernames.get(agentConfig.username);
+      if (previousPath && previousPath !== absolutePath) {
+        throw new Error(
+          `Duplicate username "${agentConfig.username}" found in multiple files:\n  ${previousPath}\n  ${absolutePath}`,
+        );
+      }
+
+      // Mark username as processed
+      processedUsernames.set(agentConfig.username, absolutePath);
+
+      const existingUser = userMap.get(agentConfig.username);
+
+      let createdOrUpdatedUser = false;
 
       await usingDatabase(async (prisma) => {
-        // Upsert user: create if doesn't exist, update if it does
-        const user = await prisma.users.upsert({
-          where: { username: agentConfig.username },
-          create: {
-            username: agentConfig.username,
-            title: agentConfig.title,
-            agent_path: absolutePath,
-            lead_username: agentConfig.leadAgent,
-          },
-          update: {
-            title: agentConfig.title,
-            agent_path: absolutePath,
-            lead_username: agentConfig.leadAgent,
-          },
-        });
+        if (!existingUser) {
+          // User doesn't exist, create it
+          const user = await prisma.users.create({
+            data: {
+              username: agentConfig.username,
+              title: agentConfig.title,
+              agent_path: absolutePath,
+              lead_username: agentConfig.leadAgent ?? null,
+              config: configYaml,
+            },
+          });
 
-        // Ensure user_notifications exists (create only if it doesn't)
-        await prisma.user_notifications.upsert({
-          where: { user_id: user.id },
-          create: {
-            user_id: user.id,
-            latest_mail_id: -1,
-            latest_log_id: -1,
-          },
-          update: {},
-        });
+          console.log(
+            `Created user: ${agentConfig.username} from ${agentPath}`,
+          );
+
+          // Add to map for future lookups
+          userMap.set(agentConfig.username, user);
+
+          // Ensure user_notifications exists
+          await prisma.user_notifications.create({
+            data: {
+              user_id: user.id,
+              latest_mail_id: -1,
+              latest_log_id: -1,
+            },
+          });
+
+          createdOrUpdatedUser = true;
+        } else {
+          // User exists, compare fields
+          const changes: string[] = [];
+
+          if (existingUser.title !== agentConfig.title) {
+            changes.push(
+              `title: "${existingUser.title}" -> "${agentConfig.title}"`,
+            );
+          }
+          if (existingUser.agent_path !== absolutePath) {
+            changes.push(
+              `agent_path: "${existingUser.agent_path}" -> "${absolutePath}"`,
+            );
+          }
+          if (existingUser.lead_username !== (agentConfig.leadAgent ?? null)) {
+            changes.push(
+              `lead_username: "${existingUser.lead_username}" -> "${agentConfig.leadAgent ?? null}"`,
+            );
+          }
+          if (existingUser.config !== configYaml) {
+            changes.push(`config: updated`);
+          }
+
+          if (changes.length > 0) {
+            console.log(
+              `Updated user ${agentConfig.username}: ${changes.join(", ")} from ${agentPath}`,
+            );
+
+            await prisma.users.update({
+              where: { username: agentConfig.username },
+              data: {
+                title: agentConfig.title,
+                agent_path: absolutePath,
+                lead_username: agentConfig.leadAgent ?? null,
+                config: configYaml,
+              },
+            });
+
+            createdOrUpdatedUser = true;
+
+            // Update the userMap with new values
+            userMap.set(agentConfig.username, {
+              ...existingUser,
+              title: agentConfig.title,
+              agent_path: absolutePath,
+              lead_username: agentConfig.leadAgent ?? null,
+              config: configYaml,
+            });
+          }
+
+          // Ensure user_notifications exists (create only if it doesn't)
+          if (createdOrUpdatedUser) {
+            await prisma.user_notifications.upsert({
+              where: { user_id: existingUser.id },
+              create: {
+                user_id: existingUser.id,
+                latest_mail_id: -1,
+                latest_log_id: -1,
+              },
+              update: {
+                modified_date: new Date().toISOString(),
+              },
+            });
+          }
+        }
       });
-
-      console.log(
-        `Registered agent ${agentConfig.username} from config: ${absolutePath}`,
-      );
 
       // Process subagent directory recursively
       if (agentConfig.subagentDirectory) {
@@ -90,7 +232,12 @@ export async function createAgentRegistrar(
           agentDir,
           agentConfig.subagentDirectory,
         );
-        await processDirectory(subagentDir, processedFiles);
+        await processDirectory(
+          subagentDir,
+          processedFiles,
+          userMap,
+          processedUsernames,
+        );
       }
     } catch (e) {
       // Need to throw or runService startup will fail
@@ -101,6 +248,8 @@ export async function createAgentRegistrar(
   async function processDirectory(
     dirPath: string,
     processedFiles: Set<string>,
+    userMap: Map<string, any>,
+    processedUsernames: Map<string, string>,
   ) {
     try {
       if (!fs.existsSync(dirPath)) {
@@ -118,7 +267,12 @@ export async function createAgentRegistrar(
       for (const file of files) {
         if (file.endsWith(".yaml") || file.endsWith(".yml")) {
           const agentPath = path.join(dirPath, file);
-          await processAgentConfig(agentPath, processedFiles);
+          await processAgentConfig(
+            agentPath,
+            processedFiles,
+            userMap,
+            processedUsernames,
+          );
         }
       }
     } catch (e) {
