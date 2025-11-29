@@ -1,8 +1,8 @@
 import { ChildProcess } from "child_process";
 import path from "path";
+import stringArgv from "string-argv";
 import table from "text-table";
 import { AgentConfig } from "../agentConfig.js";
-import { AgentManager } from "../agentManager.js";
 import { DatabaseService } from "../services/dbService.js";
 import { NaisysPath } from "../services/pathService.js";
 import { RunService } from "../services/runService.js";
@@ -21,11 +21,32 @@ interface Subagent {
   status: "spawned" | "started" | "stopped";
 }
 
+/** Don't create a cyclic dependency on agent manager, or give this class access to all of the the agent manager's properties */
+type IAgentManager = {
+  startAgent: (
+    agentPath: string,
+    onStop?: (reason: string) => void,
+  ) => Promise<number>;
+  stopAgent: (
+    agentRuntimeId: number,
+    mode: "requestShutdown" | "completeShutdown",
+    reason: string,
+  ) => Promise<void>;
+  runningAgents: Array<{
+    agentRunId: number;
+    agentUsername: string;
+    agentTitle: string;
+    agentTaskDescription?: string;
+  }>;
+  getBufferLines: (agentRuntimeId: number) => number;
+  setActiveConsoleAgent: (agentRuntimeId: number) => void;
+};
+
 export function createSubagentService(
   { agentConfig }: AgentConfig,
   llmail: LLMail,
   output: OutputService,
-  agentManager: AgentManager,
+  agentManager: IAgentManager,
   inputMode: InputModeService,
   runService: RunService,
   { usingDatabase }: DatabaseService,
@@ -40,20 +61,20 @@ export function createSubagentService(
   }> = [];
 
   async function handleCommand(args: string): Promise<string> {
-    const argParams = args.split(" ");
+    const argv = stringArgv(args);
 
-    if (!argParams[0]) {
-      argParams[0] = "help";
+    if (!argv[0]) {
+      argv[0] = "help";
     }
 
     let errorText = "";
 
-    switch (argParams[0]) {
+    switch (argv[0]) {
       case "help": {
         let helpOutput = `subagent <command>
   list: Lists all subagents
   stop <id>: Stops the agent with the given task id
-  start <username> <description>: Starts an existing agent with the given name and description of the task to perform`;
+  start <username> "<description>": Starts an existing agent with the given name and description of the task to perform`;
 
         //  create "<agent title>" "<description>": Creates a new agent. Include as much detail in the description as possible.
         //  spawn <username> <description>: Spawns the agent as a separate isolated node process (generally use start instead)
@@ -75,9 +96,8 @@ export function createSubagentService(
         return await buildAgentList();
       }
       /*case "create": {
-        const newParams = argParams.slice(1).join(" ").split('"');
-        const title = newParams[1];
-        const task = newParams[3];
+        const title = argv[1];
+        const task = argv[2];
 
         // Validate title and task set
         if (!title || !task) {
@@ -88,15 +108,19 @@ export function createSubagentService(
         return await _createAgent(title, task);
       }*/
       case "start": {
-        // trim quotes
-        const subagentName = argParams[1].trim().replace(/^"(.*)"$/, "$1");
-        const taskDescription = args.split('"')[1];
+        const subagentName = argv[1];
+        const taskDescription = argv[2];
+
+        if (!subagentName || !taskDescription) {
+          errorText = "Missing required parameters. Expected: start <username> \"<description>\"\n";
+          break;
+        }
 
         return await _startAgent(subagentName, taskDescription);
       }
       /*case "spawn": {
-        const subagentName = argParams[1];
-        const taskDescription = args.split('"')[1];
+        const subagentName = argv[1];
+        const taskDescription = argv[2];
 
         return await _spawnAgent(subagentName, taskDescription);
       }*/
@@ -107,15 +131,15 @@ export function createSubagentService(
           break;
         }
 
-        const subagentId = parseInt(argParams[1]);
+        const subagentId = parseInt(argv[1]);
         return _switchAgent(subagentId);
       }
       case "stop": {
-        const subagentId = parseInt(argParams[1]);
+        const subagentId = parseInt(argv[1]);
         return _stopAgent(subagentId, "subagent stop");
       }
       case "flush": {
-        const subagentId = parseInt(argParams[1]);
+        const subagentId = parseInt(argv[1]);
         _debugFlushContext(subagentId);
         return "";
       }

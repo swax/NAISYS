@@ -40,7 +40,7 @@ export const AgentConfigFileSchema = z.object({
   /** The max number of subagents allowed to be started and managed. Costs by the subagent are applied to the spend limit. */
   subagentMax: z.number().optional(),
 
-  /** The directory where subagents are stored, relative to the agent config file */
+  /** A directory to scan for subagent files. The leadAgent setting in a config determines who can start the subagent. */
   subagentDirectory: z.string().optional(),
 
   /** Used to prevent the agent from constantly responding to mail and not getting any work done */

@@ -1,6 +1,7 @@
 import OpenAI from "openai";
 import path from "path";
 import sharp from "sharp";
+import stringArgv from "string-argv";
 import { AgentConfig } from "../agentConfig.js";
 import { CostTracker } from "../llm/costTracker.js";
 import * as pathService from "../services/pathService.js";
@@ -19,20 +20,17 @@ export function createGenImg(
       throw "Agent config: Error, 'imageModel' is not defined";
     }
 
-    const newParams = args.split('"');
+    const argv = stringArgv(args);
 
-    if (newParams.length < 3) {
+    // Expected: genimg "description" /path/to/file.png
+    const description = argv[1];
+    const filepath = new NaisysPath(argv[2] || "");
+
+    if (!description) {
       throw "Invalid parameters: Description in quotes and fully qualified filepath with desired image extension are required";
     }
 
-    const description = newParams[1].trim();
-    const filepath = new NaisysPath(newParams[2].trim() || "");
-
-    if (!description) {
-      throw "Error: Description is required";
-    }
-
-    if (!filepath) {
+    if (!filepath || !argv[2]) {
       throw "Error: Filepath is required";
     }
 
