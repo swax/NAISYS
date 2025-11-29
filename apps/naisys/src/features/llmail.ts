@@ -1,4 +1,5 @@
 import { Prisma, PrismaClient } from "@naisys/database";
+import stringArgv from "string-argv";
 import table from "text-table";
 import { AgentConfig } from "../agentConfig.js";
 import { GlobalConfig } from "../globalConfig.js";
@@ -29,19 +30,19 @@ export function createLLMail(
   async function handleCommand(
     args: string,
   ): Promise<{ content: string; pauseSeconds?: number }> {
-    const argParams = args.split(" ");
+    const argv = stringArgv(args);
     let content: string;
     let pauseSeconds: number | undefined;
 
-    if (!argParams[0]) {
-      argParams[0] = "help";
+    if (!argv[0]) {
+      argv[0] = "help";
     }
 
     const tokenMaxNote = agentConfig().mailMessageTokenMax
       ? ` ${agentConfig().mailMessageTokenMax} token max`
       : "";
 
-    switch (argParams[0]) {
+    switch (argv[0]) {
       case "help": {
         if (simpleMode) {
           content = `llmail <command>
@@ -69,30 +70,29 @@ export function createLLMail(
         break;
       }
       case "send": {
-        const newParams = argParams.slice(1).join(" ").split('"');
+        // Expected: llmail send "user1,user2" "subject" "message"
+        const usernames = argv[1]?.split(",").map((u) => u.trim());
+        const subject = argv[2];
+        const message = argv[3];
 
-        if (newParams.length < 6) {
+        if (!usernames || !subject || !message) {
           throw "Invalid parameters. There should be a username, subject and message. All contained in quotes.";
         }
-
-        const usernames = newParams[1].split(",").map((u) => u.trim());
-        const subject = newParams[3];
-        const message = newParams[5];
 
         content = await newThread(usernames, subject, message);
         break;
       }
 
       case "wait": {
-        pauseSeconds = argParams[1]
-          ? parseInt(argParams[1])
+        pauseSeconds = argv[1]
+          ? parseInt(argv[1])
           : globalConfig().shellCommand.maxTimeoutSeconds;
 
         content = `Waiting ${pauseSeconds} seconds for new mail messages...`;
         break;
       }
       case "read": {
-        const threadId = parseInt(argParams[1]);
+        const threadId = parseInt(argv[1]);
 
         content = await readThread(threadId);
         break;
@@ -104,28 +104,26 @@ export function createLLMail(
       }
 
       case "reply": {
-        const threadId = parseInt(argParams[1]);
-        const message = argParams.slice(2).join(" ");
+        const threadId = parseInt(argv[1]);
+        const message = argv.slice(2).join(" ");
 
         content = await replyThread(threadId, message);
         break;
       }
 
       case "adduser": {
-        const threadId = parseInt(argParams[1]);
-        const username = argParams[2];
+        const threadId = parseInt(argv[1]);
+        const username = argv[2];
         content = await addUser(threadId, username);
         break;
       }
 
       case "archive": {
-        const threadIds = argParams
-          .slice(1)
-          .join(" ")
-          .split(",")
+        const threadIds = argv[1]
+          ?.split(",")
           .map((id) => parseInt(id));
 
-        content = await archiveThreads(threadIds);
+        content = await archiveThreads(threadIds || []);
         break;
       }
 

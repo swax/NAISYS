@@ -6,6 +6,7 @@ import { exec } from "child_process";
 import * as crypto from "crypto";
 import * as https from "https";
 import * as os from "os";
+import stringArgv from "string-argv";
 import { GlobalConfig } from "../globalConfig.js";
 import { AgentConfig } from "../agentConfig.js";
 import { CostTracker } from "../llm/costTracker.js";
@@ -52,13 +53,13 @@ export function createLLMynx(
   async function handleCommand(cmdArgs: string): Promise<string> {
     outputInDebugMode("LLMYNX DEBUG MODE IS ON");
 
-    const argParams = cmdArgs.split(" ");
+    const argv = stringArgv(cmdArgs);
 
-    if (!argParams[0]) {
-      argParams[0] = "help";
+    if (!argv[0]) {
+      argv[0] = "help";
     }
 
-    switch (argParams[0]) {
+    switch (argv[0]) {
       case "help":
         return `llmynx <command> (results will be paginated to ${globalConfig().webTokenMax} tokens per page)
   search <query>: Search google for the given query
@@ -69,8 +70,7 @@ export function createLLMynx(
 
 *llmynx does not support input. Use llmynx or curl to call APIs directly*`;
       case "search": {
-        // trim quotes
-        const query = argParams.slice(1).join(" ").replace(/^"|"$/g, "");
+        const query = argv.slice(1).join(" ");
 
         return await callGoogleSearchApi(query);
         /*return await loadUrlContent(
@@ -80,11 +80,11 @@ export function createLLMynx(
       );*/
       }
       case "open": {
-        const url = argParams[1];
+        const url = argv[1];
         return await loadUrlContent(url, false, true);
       }
       case "follow": {
-        const linkNum = parseInt(argParams[1]);
+        const linkNum = parseInt(argv[1]);
 
         const linkUrl = _globalLinkMap.get(linkNum);
         if (!linkUrl) {
@@ -94,9 +94,9 @@ export function createLLMynx(
         return await loadUrlContent(linkUrl, true, false);
       }
       case "links": {
-        const url = argParams[1];
-        const isNumber = !isNaN(parseInt(argParams[2]));
-        const pageNumber = isNumber ? parseInt(argParams[2]) : 1;
+        const url = argv[1];
+        const isNumber = !isNaN(parseInt(argv[2]));
+        const pageNumber = isNumber ? parseInt(argv[2]) : 1;
         return await loadUrlLinks(url, pageNumber);
       }
       case "more": {

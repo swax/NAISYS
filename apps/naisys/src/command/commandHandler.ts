@@ -1,4 +1,5 @@
 import chalk from "chalk";
+import stringArgv from "string-argv";
 import { AgentConfig } from "../agentConfig.js";
 import { GenImg } from "../features/genimg.js";
 import { LLMail } from "../features/llmail.js";
@@ -7,8 +8,8 @@ import { SubagentService } from "../features/subagent.js";
 import { GlobalConfig } from "../globalConfig.js";
 import { ContextManager } from "../llm/contextManager.js";
 import { CostTracker } from "../llm/costTracker.js";
-import { SessionCompactor } from "../llm/sessionCompactor.js";
 import { ContentSource } from "../llm/llmDtos.js";
+import { SessionCompactor } from "../llm/sessionCompactor.js";
 import { RunService } from "../services/runService.js";
 import { InputModeService } from "../utils/inputMode.js";
 import { OutputColor, OutputService } from "../utils/output.js";
@@ -97,10 +98,12 @@ export function createCommandHandler(
         }
       }
 
-      const cmdParams = input.split(" ");
-      const cmdArgs = input.slice(cmdParams[0].length).trim();
+      const argv = stringArgv(input);
+      const command = argv[0];
+      // cmdArgs is everything after the command name
+      const cmdArgs = input.slice(command.length).trim();
 
-      switch (cmdParams[0]) {
+      switch (command) {
         case "comment": {
           // Important - Hint the LLM to turn their thoughts into accounts
           // ./bin/comment shell script has the same message
@@ -167,7 +170,7 @@ export function createCommandHandler(
         }
 
         case "pause": {
-          const pauseSeconds = cmdArgs ? parseInt(cmdArgs) : 0;
+          const pauseSeconds = argv[1] ? parseInt(argv[1]) : 0;
 
           // Don't allow the LLM to hang itself
           if (inputMode.isLLM() && !pauseSeconds) {
@@ -185,7 +188,7 @@ export function createCommandHandler(
         }
 
         case "completetask": {
-          const taskResult = cmdArgs?.trim();
+          const taskResult = utilities.trimChars(cmdArgs, '"');
 
           if (!taskResult) {
             await output.errorAndLog(
@@ -213,7 +216,7 @@ export function createCommandHandler(
         }
 
         case "cost": {
-          if (cmdArgs === "reset") {
+          if (argv[1] === "reset") {
             const userId = agentConfig().spendLimitDollars
               ? runService.getUserId()
               : undefined;
@@ -221,7 +224,7 @@ export function createCommandHandler(
             await contextManager.append(
               `Cost tracking data cleared for ${userId ? `${agentConfig().username}` : "all users"}.`,
             );
-          } else if (cmdArgs) {
+          } else if (argv[1]) {
             await output.errorAndLog(
               "The 'cost' command only supports the 'reset' parameter.",
             );
@@ -277,7 +280,7 @@ export function createCommandHandler(
         }
       } // End switch
 
-      if (cmdParams[0] != "comment" && firstCommand) {
+      if (command != "comment" && firstCommand) {
         firstCommand = false;
       }
     } // End loop processing LLM response

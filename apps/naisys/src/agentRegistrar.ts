@@ -265,10 +265,21 @@ export async function createAgentRegistrar(
       const files = fs.readdirSync(dirPath);
 
       for (const file of files) {
-        if (file.endsWith(".yaml") || file.endsWith(".yml")) {
-          const agentPath = path.join(dirPath, file);
+        const fullPath = path.join(dirPath, file);
+        const stat = fs.statSync(fullPath);
+
+        if (stat.isDirectory()) {
+          // Recursively process subdirectory
+          await processDirectory(
+            fullPath,
+            processedFiles,
+            userMap,
+            processedUsernames,
+          );
+        } else if (file.endsWith(".yaml") || file.endsWith(".yml")) {
+          // Process yaml file
           await processAgentConfig(
-            agentPath,
+            fullPath,
             processedFiles,
             userMap,
             processedUsernames,
