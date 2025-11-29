@@ -14,7 +14,8 @@ interface Subagent {
   id?: number;
   agentName: string;
   agentPath: NaisysPath;
-  taskDescription: string;
+  title: string;
+  taskDescription?: string;
   process?: ChildProcess;
   log: string[];
   status: "spawned" | "started" | "stopped";
@@ -138,7 +139,7 @@ export function createSubagentService(
           _subagents.push({
             agentName: agent.username,
             agentPath: new NaisysPath(agent.agent_path),
-            taskDescription: agent.title || "No task description",
+            title: agent.title,
             log: [],
             status: "stopped",
           });
@@ -156,7 +157,7 @@ export function createSubagentService(
       p.agentName,
       p.id || "",
       p.status,
-      p.taskDescription.substring(0, 70),
+      p.taskDescription?.substring(0, 70) || p.title,
       inputMode.isDebug() && p.id
         ? (p.log.length || agentManager.getBufferLines(p.id)).toString()
         : "",
@@ -195,7 +196,8 @@ export function createSubagentService(
             agentName: ra.agentUsername,
             id: ra.agentRunId,
             status: "started",
-            taskDescription: ra.agentTaskDescription || "",
+            title: ra.agentTitle,
+            taskDescription: ra.agentTaskDescription,
             unreadLines: agentManager.getBufferLines(ra.agentRunId),
           };
         });
@@ -210,7 +212,7 @@ export function createSubagentService(
               p.agentName,
               p.id || "",
               p.status,
-              p.taskDescription.substring(0, 70),
+              p.taskDescription?.substring(0, 70) || p.title,
               p.unreadLines.toString(),
             ]),
           ],
@@ -544,6 +546,7 @@ export function createSubagentService(
     });
 
     subagent.status = "stopped";
+    subagent.taskDescription = undefined;
     subagent.id = undefined;
   }
 
