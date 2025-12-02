@@ -35,7 +35,9 @@ async function updateUserNotificationModifiedDate(
 /**
  * Get agent configuration YAML content for a specific user
  */
-export async function getAgentConfig(username: string): Promise<string> {
+export async function getAgentConfig(
+  username: string,
+): Promise<{ config: string; path: string }> {
   // Look up the user in the database
   const user = await usingNaisysDb(async (prisma) => {
     return await prisma.users.findUnique({
@@ -51,7 +53,7 @@ export async function getAgentConfig(username: string): Promise<string> {
   // Read the agent config file
   try {
     const configContent = await fs.readFile(user.agent_path, "utf-8");
-    return configContent;
+    return { config: configContent, path: user.agent_path };
   } catch (error) {
     throw new Error(
       `Failed to read agent configuration file at ${user.agent_path}`,

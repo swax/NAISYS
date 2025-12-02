@@ -4,8 +4,8 @@ import * as fs from "fs";
 import * as os from "os";
 import stripAnsi from "strip-ansi";
 import treeKill from "tree-kill";
-import { GlobalConfig } from "../globalConfig.js";
 import { AgentConfig } from "../agentConfig.js";
+import { GlobalConfig } from "../globalConfig.js";
 import * as pathService from "../services/pathService.js";
 import { NaisysPath } from "../services/pathService.js";
 import { OutputService } from "../utils/output.js";
@@ -17,7 +17,11 @@ enum ShellEvent {
   Exit = "exit",
 }
 
-export function createShellWrapper({ globalConfig }: GlobalConfig, { agentConfig }: AgentConfig, output: OutputService) {
+export function createShellWrapper(
+  { globalConfig }: GlobalConfig,
+  { agentConfig }: AgentConfig,
+  output: OutputService,
+) {
   let _process: ChildProcessWithoutNullStreams | undefined;
   let _currentProcessId: number | undefined;
   let _commandOutput = "";
@@ -40,6 +44,11 @@ export function createShellWrapper({ globalConfig }: GlobalConfig, { agentConfig
     eventType: ShellEvent;
     pid: number;
   }[] = [];
+
+  // Flow control watermarks to prevent xterm buffer overflow
+  const HIGH_WATERMARK = 100000; // Pause input when buffer exceeds this (bytes)
+  const LOW_WATERMARK = 10000; // Resume input when buffer drops below this (bytes)
+  let _writeWatermark = 0;
 
   async function ensureOpen() {
     if (_process) {
@@ -81,7 +90,8 @@ export function createShellWrapper({ globalConfig }: GlobalConfig, { agentConfig
 
       await errorIfNotEmpty(
         await executeCommand(
-          `mkdir -p ${globalConfig().naisysFolder}/home/` + agentConfig().username,
+          `mkdir -p ${globalConfig().naisysFolder}/home/` +
+            agentConfig().username,
         ),
       );
       await errorIfNotEmpty(
@@ -190,7 +200,28 @@ export function createShellWrapper({ globalConfig }: GlobalConfig, { agentConfig
 
     // TODO: get token size of buffer, if too big, switch it front/middle/back
 
-    _terminal?.write(rawDataStr); // Not synchronous, second param takes a call back, don't need to handle it AFAIK
+    // Implement flow control to prevent xterm buffer overflow
+    _writeWatermark += rawDataStr.length;
+    _terminal?.write(rawDataStr, () => {
+      // Callback fires when xterm finishes processing this chunk
+      _writeWatermark = Math.max(_writeWatermark - rawDataStr.length, 0);
+
+      // Resume streams if watermark drops below threshold
+      if (_writeWatermark < LOW_WATERMARK) {
+        if (_process?.stdout.isPaused()) {
+          _process.stdout.resume();
+        }
+        if (_process?.stderr.isPaused()) {
+          _process.stderr.resume();
+        }
+      }
+    });
+
+    // Pause streams if watermark exceeds threshold to prevent buffer overflow
+    if (_writeWatermark > HIGH_WATERMARK) {
+      _process?.stdout.pause();
+      _process?.stderr.pause();
+    }
 
     if (endDelimiterHit) {
       const finalOutput = _commandOutput.trim();
@@ -212,7 +243,7 @@ export function createShellWrapper({ globalConfig }: GlobalConfig, { agentConfig
 
     if (_currentPath && command.split("\n").length > 1) {
       // } || command.includes("&&"))){
-      command = await putMultilineCommandInAScript(command);
+      command = putMultilineCommandInAScript(command);
     }
 
     return new Promise<string>((resolve, reject) => {
@@ -402,6 +433,7 @@ export function createShellWrapper({ globalConfig }: GlobalConfig, { agentConfig
 
   function resetCommand() {
     _commandOutput = "";
+    _writeWatermark = 0;
 
     resetTerminal();
 

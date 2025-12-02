@@ -9,6 +9,7 @@ export const GetAgentConfigResponseSchema = z.object({
   success: z.boolean(),
   message: z.string(),
   config: z.string().optional(),
+  path: z.string().optional(),
 });
 
 export const CreateAgentConfigRequestSchema = z.object({

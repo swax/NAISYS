@@ -46,12 +46,13 @@ export default async function agentConfigRoutes(
     async (request, reply) => {
       try {
         const { username } = request.query;
-        const config = await getAgentConfig(username);
+        const { config, path } = await getAgentConfig(username);
 
         return {
           success: true,
           message: "Agent configuration retrieved successfully",
           config,
+          path,
         };
       } catch (error) {
         console.error("Error in GET /agent/config route:", error);
