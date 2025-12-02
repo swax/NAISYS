@@ -160,8 +160,11 @@ export function createCommandHandler(
             await contextManager.append("Message sent!");
           } else if (inputMode.isDebug()) {
             inputMode.setLLM();
+            const respondCommand = agentConfig().mailEnabled
+              ? "llmail"
+              : "talk";
             await contextManager.append(
-              `Message from admin@${globalConfig().hostname}: ${talkMsg}`,
+              `Message from admin: ${talkMsg}. Respond via the ${respondCommand} command.`,
             );
             inputMode.setDebug();
           }

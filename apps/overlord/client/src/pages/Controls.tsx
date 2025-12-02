@@ -26,6 +26,7 @@ export const Controls: React.FC = () => {
   const { agent } = useParams<{ agent: string }>();
   const { isAuthenticated } = useSession();
   const [config, setConfig] = useState<string | null>(null);
+  const [configPath, setConfigPath] = useState<string | null>(null);
   const [editedConfig, setEditedConfig] = useState<string>("");
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -45,6 +46,7 @@ export const Controls: React.FC = () => {
 
         if (data.success && data.config) {
           setConfig(data.config);
+          setConfigPath(data.path || null);
         } else {
           setError(data.message || "Failed to load configuration");
         }
@@ -179,6 +181,12 @@ export const Controls: React.FC = () => {
         <Alert color="red" title="Error" onClose={() => setSaveError(null)} withCloseButton>
           {saveError}
         </Alert>
+      )}
+
+      {configPath && (
+        <Text size="sm" c="dimmed">
+          {configPath}
+        </Text>
       )}
 
       {isEditing ? (

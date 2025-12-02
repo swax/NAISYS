@@ -1,7 +1,7 @@
 import * as fs from "fs";
 import yaml from "js-yaml";
 import * as path from "path";
-import { AgentConfigFileSchema } from "./agentConfig.js";
+import { AgentConfigFile, AgentConfigFileSchema } from "./agentConfig.js";
 import { GlobalConfig } from "./globalConfig.js";
 import { DatabaseService } from "./services/dbService.js";
 
@@ -27,6 +27,8 @@ export async function createAgentRegistrar(
 
     // Track processed files to avoid duplicates
     const processedFiles = new Set<string>();
+
+    createAdminAgent();
 
     // Load agent from startup path
     if (startupAgentPath) {
@@ -90,6 +92,50 @@ export async function createAgentRegistrar(
         }
       }
     }
+  }
+
+  /**
+   * Admin agent is a human operated agent
+   * The talk command uses this agent name as the sender, so agents will llmail reply to it
+   * A quiet console environment to monitor agents, send/recv mail from them
+   * Allows restarting the an agent without ending the naisys process since the admin is still running
+   * (todo:) Allows other agents to run at full speed (0s timeout), and only slow down when in focus
+   */
+  function createAdminAgent() {
+    // Create an admin agent in the naisys folder if it doesn't exist
+    const naisysFolder = globalConfig().naisysFolder;
+    if (!naisysFolder) {
+      throw new Error("naisysFolder is not configured in globalConfig");
+    }
+
+    const adminAgentPath = path.join(
+      naisysFolder,
+      "agents",
+      "admin_agent.yaml",
+    );
+
+    if (fs.existsSync(adminAgentPath)) {
+      return;
+    }
+    const adminAgentConfig = {
+      username: "admin",
+      title: "Administrator",
+      shellModel: "none",
+      agentPrompt: "Admin agent for monitoring and control.",
+      tokenMax: 100_000,
+    } satisfies AgentConfigFile;
+
+    const yamlContent = yaml.dump(adminAgentConfig);
+
+    // Ensure the agents directory exists
+    const agentsDir = path.join(naisysFolder, "agents");
+    if (!fs.existsSync(agentsDir)) {
+      fs.mkdirSync(agentsDir, { recursive: true });
+    }
+
+    fs.writeFileSync(adminAgentPath, yamlContent);
+
+    console.log(`Created admin agent config at: ${adminAgentPath}`);
   }
 
   async function processAgentConfig(
