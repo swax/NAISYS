@@ -63,6 +63,8 @@ export const AgentConfigFileSchema = z.object({
 
   /** ONLY used by agent start process. The task given to the subagent */
   taskDescription: z.string().optional(),
+  
+  complexMail: z.boolean().optional(),
 });
 
 export type AgentConfigFile = z.infer<typeof AgentConfigFileSchema>;
