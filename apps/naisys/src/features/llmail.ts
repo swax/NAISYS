@@ -17,15 +17,13 @@ export function createLLMail(
 
   /** Threading is not currently used in `simpleMode` so this doesn't matter */
   const mailMessageTokenMax = agentConfig().mailMessageTokenMax;
-  
-  const _threadTokenMax = mailMessageTokenMax
-    ? mailMessageTokenMax * 5
-    : undefined;
+
+  const _threadTokenMax = mailMessageTokenMax ? mailMessageTokenMax * 5 : 15000; // Default 10k tokens per thread
 
   /** The 'non-simple' version of this is a thread first mail system. Where agents can create threads, add users, and reply to threads, etc..
    * The problem with this was the agents were too chatty with so many mail commands, wasting context replying, reading threads, etc..
    * Simple mode only has two commands. It still requires db persistance to support offline agents. */
-  const simpleMode = true;
+  const simpleMode = !agentConfig().complexMail;
 
   async function handleCommand(
     args: string,
@@ -119,9 +117,7 @@ export function createLLMail(
       }
 
       case "archive": {
-        const threadIds = argv[1]
-          ?.split(",")
-          .map((id) => parseInt(id));
+        const threadIds = argv[1]?.split(",").map((id) => parseInt(id));
 
         content = await archiveThreads(threadIds || []);
         break;
@@ -177,9 +173,9 @@ export function createLLMail(
         Array<{
           id: number;
           subject: string;
-          date: string;
+          date: bigint;
           token_count: number;
-          members: string;
+          members: string | null;
         }>
       >(
         Prisma.sql`SELECT t.id, t.subject, max(msg.date) as date, t.token_count,
@@ -195,23 +191,28 @@ export function createLLMail(
         JOIN thread_members member ON t.id = member.thread_id
         WHERE member.user_id = ${myUserId} AND member.archived = 0
         GROUP BY t.id, t.subject
-        ORDER BY max(msg.date)`,
+        ORDER BY max(msg.date) DESC
+        LIMIT 10`,
       );
 
-      // Show threads as a table
-      return table(
-        [
-          ["ID", "Subject", "Date", "Members", "Token Count"],
-          ...threads.map((t) => [
-            t.id,
-            t.subject,
-            t.date,
-            t.members,
-            `${t.token_count}/${_threadTokenMax ? _threadTokenMax : "∞"}`,
-          ]),
-        ],
-        { hsep: " | " },
-      );
+      try {
+        // Show threads as a table
+        return table(
+          [
+            ["ID", "Subject", "Date", "Members", "Token Count"],
+            ...threads.map((t) => [
+              t.id,
+              t.subject || "",
+              new Date(Number(t.date)).toLocaleString(),
+              t.members || "",
+              `${t.token_count.toString()}/${_threadTokenMax}`,
+            ]),
+          ],
+          { hsep: " | " },
+        );
+      } catch (err) {
+        return `Error displaying threads: ${err}`;
+      }
     });
   }
 
