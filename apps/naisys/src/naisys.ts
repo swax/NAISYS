@@ -12,6 +12,10 @@ program
   .option("--overlord", "Start Overlord server")
   .parse();
 
+// Todo: Move db service into db package, enabling naisys/overlord to independently initialize and upgrade the db
+const globalConfig = await createGlobalConfig();
+const dbService = await createDatabaseService(globalConfig);
+
 /**
  * --overlord flag is provided, start Overlord server
  * There should be no dependency between overlord and naissys
@@ -28,8 +32,7 @@ console.log(`NAISYS STARTED`);
 
 const agentPath = program.args[0];
 
-const globalConfig = await createGlobalConfig();
-const dbService = await createDatabaseService(globalConfig);
+
 const agentRegistrar = await createAgentRegistrar(
   globalConfig,
   dbService,

@@ -98,10 +98,46 @@ export async function createDatabaseService({ globalConfig }: GlobalConfig) {
     }
   }
 
+  /**
+   * Wrapper for database operations with retry logic and exponential backoff.
+   * Automatically retries on transient errors like lock timeouts and socket timeouts.
+   */
   async function usingDatabase<T>(
     run: (prisma: PrismaClient) => Promise<T>,
+    maxRetries: number = 5,
+    baseDelayMs: number = 100,
   ): Promise<T> {
-    return await run(prisma);
+    let lastError: any;
+
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        return await run(prisma);
+      } catch (error: any) {
+        lastError = error;
+
+        // Check if this is a retryable error
+        const isRetryable =
+          error?.code === "P1008" || // Socket timeout
+          error?.code === "P2034" || // Database is locked
+          error?.message?.includes("SQLITE_BUSY") ||
+          error?.message?.includes("database is locked") ||
+          error?.message?.includes("Socket timeout");
+
+        if (!isRetryable || attempt === maxRetries) {
+          throw error; // Not retryable or out of retries
+        }
+
+        // Exponential backoff: baseDelay * 2^attempt
+        const delayMs = baseDelayMs * Math.pow(2, attempt);
+        console.warn(
+          `Database operation failed (attempt ${attempt + 1}/${maxRetries + 1}), retrying in ${delayMs}ms: ${error?.code || error?.message}`,
+        );
+
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+      }
+    }
+
+    throw lastError; // Should never reach here, but satisfies TypeScript
   }
 
   return {

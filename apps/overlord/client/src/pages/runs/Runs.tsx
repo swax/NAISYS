@@ -3,6 +3,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useAgentDataContext } from "../../contexts/AgentDataContext";
 import { useRunsData } from "../../hooks/useRunsData";
+import { RunsCostChart } from "./RunsCostChart";
 import { RunSessionCard } from "./RunSessionCard";
 
 /** Re-rendering triggered by agentParam */
@@ -86,6 +87,8 @@ export const Runs: React.FC = () => {
           <Text>Loading runs...</Text>
         </Group>
       )}
+
+      <RunsCostChart runs={allRuns} />
 
       <Stack gap="xs">
         {allRuns.map((run) => {
