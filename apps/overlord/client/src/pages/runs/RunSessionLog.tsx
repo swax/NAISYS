@@ -24,7 +24,7 @@ import { GroupedLogComponent, groupPromptEntries } from "./LogEntries";
 
 export const RunSessionLog: React.FC<{
   run: RunSession;
-  runSessionCardRef: React.RefObject<HTMLDivElement>;
+  runSessionCardRef: React.RefObject<HTMLDivElement | null>;
 }> = ({ run, runSessionCardRef }) => {
   const { agent: agentParam } = useParams<{ agent: string }>();
   const [fullscreen, setFullscreen] = useState(false);
