@@ -5,7 +5,6 @@ generator client {
 
 datasource db {
   provider = "sqlite"
-  url      = "file:${env('NAISYS_FOLDER')}/database/naisys.sqlite" // Hardcode the db path here to use Prisma studio 
 }
 
 model context_log {

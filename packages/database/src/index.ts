@@ -4,6 +4,7 @@ export * from "./generated/prisma/client.js";
 
 // Import PrismaClient at the top level for the factory function
 import { PrismaClient } from "./generated/prisma/client.js";
+import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
 
 /**
  * Create a Prisma client with a dynamic database path
@@ -17,11 +18,8 @@ import { PrismaClient } from "./generated/prisma/client.js";
  * ```
  */
 export function createPrismaClient(databasePath: string) {
-  return new PrismaClient({
-    datasources: {
-      db: {
-        url: `file:${databasePath}`,
-      },
-    },
+  const adapter = new PrismaBetterSqlite3({
+    url: `file:${databasePath}`,
   });
+  return new PrismaClient({ adapter });
 }
