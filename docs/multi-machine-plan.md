@@ -30,30 +30,13 @@ Components can run together (same process) or separately:
 
 ---
 
-## Phase 1: ULID Migration, Table Renames & Schema Updates
+## Phase 1: ULID Migration & Schema Updates
 
-Convert all IDs from INTEGER AUTOINCREMENT to ULID strings. Rename mail-related tables for clarity. Add `updated_at` to tables that support updates.
-
-### Table Renames
-
-Rename mail-related tables to use clearer `mail_` prefix:
-
-| Old Name | New Name |
-|----------|----------|
-| `threads` | `mail_threads` |
-| `thread_messages` | `mail_thread_messages` |
-| `thread_members` | `mail_thread_members` |
-
-**Rationale:** The `mail_` prefix makes the purpose clearer and avoids confusion with other potential "thread" concepts (e.g., execution threads, conversation threads in other contexts).
+Convert all IDs from INTEGER AUTOINCREMENT to ULID strings. Add `updated_at` to tables that support updates.
 
 ### Schema Changes (`packages/database/prisma/schema.prisma`)
 
 ```prisma
-# Table renames:
-- threads → mail_threads
-- thread_messages → mail_thread_messages
-- thread_members → mail_thread_members
-
 # Tables requiring ID changes:
 - users.id: Int → String (ULID)
 - mail_threads.id: Int → String (ULID)
@@ -90,10 +73,10 @@ Note: Only active operations filter by deleted_at (starting agents, sending mail
 | `packages/database/src/index.ts` | Add `ulid` dependency, export ULID generator |
 | `apps/naisys/src/services/dbService.ts` | Generate ULIDs on insert |
 | `apps/naisys/src/agentRegistrar.ts` | Use ULID for new users |
-| `apps/naisys/src/features/llmail.ts` | Use ULID for threads/messages, update to use renamed tables (`mail_threads`, `mail_thread_messages`, `mail_thread_members`) |
+| `apps/naisys/src/features/llmail.ts` | Use ULID for threads/messages |
 | `apps/naisys/src/services/runService.ts` | Update ID handling |
-| `apps/overlord/server/src/services/*.ts` | Handle string IDs, update table references |
-| `apps/overlord/shared/src/*-types.ts` | Update type definitions (thread → mail_thread naming) |
+| `apps/overlord/server/src/services/*.ts` | Handle string IDs |
+| `apps/overlord/shared/src/*-types.ts` | Update type definitions for string IDs |
 
 ### Dependencies
 
@@ -504,7 +487,7 @@ DATABASE_URL=postgresql://user:pass@host:5432/naisys_hub
 
 | Path | Changes |
 |------|---------|
-| `packages/database/prisma/schema.prisma` | Table renames (threads→mail_threads, etc.), ULID IDs, hosts table, host_id FK on users, updated_at on updatable tables |
+| `packages/database/prisma/schema.prisma` | ULID IDs, hosts table, host_id FK on users, updated_at on updatable tables |
 | `packages/database/src/index.ts` | ULID exports |
 | `apps/naisys/src/services/dbService.ts` | ULID generation, upsert for forwarded data |
 | `apps/naisys/src/agentRegistrar.ts` | ULID for users, host_id filtering |
@@ -550,7 +533,7 @@ DATABASE_URL=file:../naisys/naisys.db      # Points to Runner DB (single-runner)
 
 ## Migration Path
 
-1. **Phase 1 (ULID)** - Breaking change, requires DB migration
+1. **Phase 1 (ULID + updated_at)** - Breaking change, requires DB migration
 2. **Phase 2 (Hosts)** - Additive, set host_id on existing users
 3. **Phase 3 (Hub Sync)** - New Hub package + runner sync client
 4. **Phase 4 (Forwarding)** - Requires Phase 3
@@ -563,9 +546,8 @@ Can ship Phases 1-2 first (single-machine with ULIDs + hosts), then 3-5 for mult
 
 ## Verification
 
-### Phase 1 (ULID + Table Renames + updated_at)
-- [ ] Table renames work (threads→mail_threads, thread_messages→mail_thread_messages, thread_members→mail_thread_members)
-- [ ] Existing tests pass with ULID IDs and new table names
+### Phase 1 (ULID + updated_at)
+- [ ] Existing tests pass with ULID IDs
 - [ ] New agents created with ULID
 - [ ] Mail works with ULID thread/message IDs
 - [ ] updated_at updates correctly on record changes

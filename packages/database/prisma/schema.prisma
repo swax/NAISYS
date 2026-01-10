@@ -47,55 +47,55 @@ model costs {
   @@index([user_id, run_id, session_id], map: "idx_costs_run_session")
 }
 
-model thread_members {
-  id         Int     @id @default(autoincrement())
-  thread_id  Int
-  user_id    Int
-  new_msg_id Int     @default(-1)
-  archived   Int     @default(0)
-  users      users   @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  threads    threads @relation(fields: [thread_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+model mail_thread_members {
+  id           Int          @id @default(autoincrement())
+  thread_id    Int
+  user_id      Int
+  new_msg_id   Int          @default(-1)
+  archived     Int          @default(0)
+  users        users        @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  mail_threads mail_threads @relation(fields: [thread_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
-  @@unique([thread_id, user_id], map: "unq_thread_members_thread_id_user_id")
-  @@index([thread_id], map: "idx_thread_members_thread_id")
+  @@unique([thread_id, user_id], map: "unq_mail_thread_members_thread_id_user_id")
+  @@index([thread_id], map: "idx_mail_thread_members_thread_id")
 }
 
-model thread_messages {
-  id        Int      @id @default(autoincrement())
-  thread_id Int
-  user_id   Int
-  message   String
-  date      DateTime
-  users     users    @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  threads   threads  @relation(fields: [thread_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+model mail_thread_messages {
+  id           Int          @id @default(autoincrement())
+  thread_id    Int
+  user_id      Int
+  message      String
+  date         DateTime
+  users        users        @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  mail_threads mail_threads @relation(fields: [thread_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
-  @@index([thread_id], map: "idx_thread_messages_thread_id")
-  @@index([id(sort: Desc)], map: "idx_thread_messages_id_desc")
+  @@index([thread_id], map: "idx_mail_thread_messages_thread_id")
+  @@index([id(sort: Desc)], map: "idx_mail_thread_messages_id_desc")
 }
 
-model threads {
-  id              Int               @id @default(autoincrement())
-  subject         String
-  token_count     Int               @default(0)
-  thread_members  thread_members[]
-  thread_messages thread_messages[]
+model mail_threads {
+  id                   Int                    @id @default(autoincrement())
+  subject              String
+  token_count          Int                    @default(0)
+  mail_thread_members  mail_thread_members[]
+  mail_thread_messages mail_thread_messages[]
 
-  @@index([id(sort: Desc)], map: "idx_threads_id_desc")
+  @@index([id(sort: Desc)], map: "idx_mail_threads_id_desc")
 }
 
 model users {
-  id                 Int                 @id @default(autoincrement())
-  username           String              @unique(map: "unq_users_username")
-  title              String
-  agent_path         String              @unique(map: "unq_users_agent_path")
-  lead_username      String?
-  config             String              @default("{}")
-  thread_members     thread_members[]
-  thread_messages    thread_messages[]
-  run_sessions       run_session[]
-  context_logs       context_log[]       @relation("context_log_user")
-  costs              costs[]             @relation("costs_user")
-  user_notifications user_notifications?
+  id                   Int                    @id @default(autoincrement())
+  username             String                 @unique(map: "unq_users_username")
+  title                String
+  agent_path           String                 @unique(map: "unq_users_agent_path")
+  lead_username        String?
+  config               String                 @default("{}")
+  mail_thread_members  mail_thread_members[]
+  mail_thread_messages mail_thread_messages[]
+  run_sessions         run_session[]
+  context_logs         context_log[]          @relation("context_log_user")
+  costs                costs[]                @relation("costs_user")
+  user_notifications   user_notifications?
 }
 
 model user_notifications {

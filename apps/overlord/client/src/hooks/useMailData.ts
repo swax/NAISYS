@@ -1,9 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useState } from "react";
-import { getMailData, MailDataParams, ThreadMessage } from "../lib/apiClient";
+import { getMailData, MailDataParams, MailThreadMessage } from "../lib/apiClient";
 
 // Module-level caches (shared across all hook instances and persist across remounts)
-const mailCache = new Map<string, ThreadMessage[]>();
+const mailCache = new Map<string, MailThreadMessage[]>();
 const updatedSinceCache = new Map<string, string | undefined>();
 const totalCache = new Map<string, number>();
 
@@ -46,7 +46,7 @@ export const useMailData = (agentName: string, enabled: boolean = true) => {
 
       // Create a map of existing mail for quick lookup
       const mergeMail = new Map(
-        existingMail.map((mail: ThreadMessage) => [mail.id, mail]),
+        existingMail.map((mail: MailThreadMessage) => [mail.id, mail]),
       );
 
       // Count how many new mail items we're adding

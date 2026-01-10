@@ -7,6 +7,7 @@ import type {
   GetAgentConfigResponse,
   LogEntry,
   MailDataResponse,
+  MailThreadMessage,
   NaisysDataRequest,
   NaisysDataResponse,
   RunsDataResponse,
@@ -15,7 +16,6 @@ import type {
   SendMailResponse,
   SettingsRequest,
   SettingsResponse,
-  ThreadMessage,
   UpdateAgentConfigResponse,
 } from "shared";
 
@@ -43,6 +43,7 @@ export type {
   GetAgentConfigResponse,
   LogEntry,
   MailDataResponse,
+  MailThreadMessage,
   NaisysDataRequest,
   NaisysDataResponse,
   RunsDataResponse,
@@ -51,7 +52,6 @@ export type {
   SendMailResponse,
   SettingsRequest,
   SettingsResponse,
-  ThreadMessage,
   UpdateAgentConfigResponse,
 };
 

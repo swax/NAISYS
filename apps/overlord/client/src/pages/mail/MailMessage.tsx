@@ -13,10 +13,10 @@ import {
 } from "@tabler/icons-react";
 import React, { useState } from "react";
 import { useSession } from "../../contexts/SessionContext";
-import { ThreadMessage } from "../../lib/apiClient";
+import { MailThreadMessage } from "../../lib/apiClient";
 
 interface MailMessageProps {
-  message: ThreadMessage;
+  message: MailThreadMessage;
   currentAgent?: string;
   agents: any[];
   onReply?: (recipient: string, subject: string, body: string) => void;

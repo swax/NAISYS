@@ -151,7 +151,7 @@ export function createLLMail(
   }
   async function getUnreadThreads(): Promise<UnreadThread[]> {
     return await usingDatabase(async (prisma) => {
-      const updatedThreads = await prisma.thread_members.findMany({
+      const updatedThreads = await prisma.mail_thread_members.findMany({
         where: {
           user_id: myUserId,
           new_msg_id: { gte: 0 },
@@ -181,14 +181,14 @@ export function createLLMail(
         Prisma.sql`SELECT t.id, t.subject, max(msg.date) as date, t.token_count,
       (
             SELECT GROUP_CONCAT(u.username, ', ')
-            FROM thread_members tm
+            FROM mail_thread_members tm
             JOIN users u ON tm.user_id = u.id
             WHERE tm.thread_id = t.id
             GROUP BY tm.thread_id
         ) AS members
-        FROM threads t
-        JOIN thread_messages msg ON t.id = msg.thread_id
-        JOIN thread_members member ON t.id = member.thread_id
+        FROM mail_threads t
+        JOIN mail_thread_messages msg ON t.id = msg.thread_id
+        JOIN mail_thread_members member ON t.id = member.thread_id
         WHERE member.user_id = ${myUserId} AND member.archived = 0
         GROUP BY t.id, t.subject
         ORDER BY max(msg.date) DESC
@@ -233,7 +233,7 @@ export function createLLMail(
     return await usingDatabase(async (prisma) => {
       return await prisma.$transaction(async (tx) => {
         // Create thread
-        const thread = await tx.threads.create({
+        const thread = await tx.mail_threads.create({
           data: {
             subject,
             token_count: msgTokenCount,
@@ -247,7 +247,7 @@ export function createLLMail(
           });
 
           if (user) {
-            await tx.thread_members.create({
+            await tx.mail_thread_members.create({
               data: {
                 thread_id: thread.id,
                 user_id: user.id,
@@ -260,7 +260,7 @@ export function createLLMail(
         }
 
         // Add message
-        await tx.thread_messages.create({
+        await tx.mail_thread_messages.create({
           data: {
             thread_id: thread.id,
             user_id: myUserId,
@@ -305,7 +305,7 @@ export function createLLMail(
     return await usingDatabase(async (prisma) => {
       const thread = await getThread(prisma, threadId);
 
-      const threadMembers = await prisma.thread_members.findMany({
+      const threadMembers = await prisma.mail_thread_members.findMany({
         where: { thread_id: threadId },
         select: {
           users: {
@@ -319,7 +319,7 @@ export function createLLMail(
       // Flatten the nested user object
       const flattenedMembers = threadMembers.map((tm) => tm.users);
 
-      const messages = await prisma.thread_messages.findMany({
+      const messages = await prisma.mail_thread_messages.findMany({
         where: {
           thread_id: threadId,
           ...(newMsgId !== undefined ? { id: { gte: newMsgId } } : {}),
@@ -396,7 +396,7 @@ export function createLLMail(
   async function markAsRead(threadId: number) {
     await usingDatabase(async (prisma) => {
       await prisma.$executeRaw(
-        Prisma.sql`UPDATE thread_members
+        Prisma.sql`UPDATE mail_thread_members
         SET new_msg_id = -1
         WHERE thread_id = ${threadId} AND user_id = ${myUserId}`,
       );
@@ -476,7 +476,7 @@ Reply would cause thread to exceed total thread token limit of ${_threadTokenMax
 Consider archiving this thread and starting a new one.`;
       }
 
-      const insertedMessage = await prisma.thread_messages.create({
+      const insertedMessage = await prisma.mail_thread_messages.create({
         data: {
           thread_id: thread.id,
           user_id: myUserId,
@@ -487,13 +487,13 @@ Consider archiving this thread and starting a new one.`;
 
       // Mark thread has new message only if it hasnt already been marked
       await prisma.$executeRaw(
-        Prisma.sql`UPDATE thread_members
+        Prisma.sql`UPDATE mail_thread_members
         SET new_msg_id = ${insertedMessage.id}, archived = 0
         WHERE new_msg_id = -1 AND thread_id = ${thread.id} AND user_id != ${myUserId}`,
       );
 
       // Update token total
-      await prisma.threads.update({
+      await prisma.mail_threads.update({
         where: { id: thread.id },
         data: { token_count: newThreadTokenTotal },
       });
@@ -507,7 +507,7 @@ Consider archiving this thread and starting a new one.`;
       const thread = await getThread(prisma, threadId);
       const user = await getUser(prisma, username);
 
-      await prisma.thread_members.create({
+      await prisma.mail_thread_members.create({
         data: {
           thread_id: thread.id,
           user_id: user.id,
@@ -521,7 +521,7 @@ Consider archiving this thread and starting a new one.`;
 
   async function archiveThreads(threadIds: number[]) {
     return await usingDatabase(async (prisma) => {
-      await prisma.thread_members.updateMany({
+      await prisma.mail_thread_members.updateMany({
         where: {
           thread_id: { in: threadIds },
           user_id: myUserId,
@@ -536,7 +536,7 @@ Consider archiving this thread and starting a new one.`;
   }
 
   async function getThread(prisma: PrismaClient, threadId: number) {
-    const thread = await prisma.threads.findUnique({
+    const thread = await prisma.mail_threads.findUnique({
       where: { id: threadId },
     });
 
