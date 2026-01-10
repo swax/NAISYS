@@ -13,7 +13,7 @@ import { useParams } from "react-router-dom";
 import { useAgentDataContext } from "../../contexts/AgentDataContext";
 import { useSession } from "../../contexts/SessionContext";
 import { useMailData } from "../../hooks/useMailData";
-import { ThreadMessage, sendMail } from "../../lib/apiClient";
+import { MailThreadMessage, sendMail } from "../../lib/apiClient";
 import { MailMessage } from "./MailMessage";
 import { NewMessageModal } from "./NewMessageModal";
 
@@ -59,7 +59,7 @@ export const Mail: React.FC = () => {
   } | null>(null);
 
   // Filter mail based on sent/received status and sort by newest first
-  const getFilteredMail = (): ThreadMessage[] => {
+  const getFilteredMail = (): MailThreadMessage[] => {
     // If neither button is selected, show all messages
     if (!showSent && !showReceived) {
       return allMail.sort(

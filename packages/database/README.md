@@ -17,12 +17,15 @@ This package provides:
 
 The NAISYS database contains the following tables:
 
-- **Users** - Agent users with authentication and profile info
-- **Costs** - API cost tracking with token usage
 - **ContextLog** - Agent conversation and activity logs
-- **Threads** - Message thread management
-- **ThreadMembers** - Thread membership and participation
-- **ThreadMessages** - Individual messages in threads
+- **Costs** - API cost tracking with token usage
+- **MailThreads** - Message thread management
+- **MailThreadMembers** - Thread membership and participation
+- **MailThreadMessages** - Individual messages in threads
+- **RunSession** - Agent run sessions with timing, model, and cost info
+- **SchemaVersion** - Database schema version tracking for migrations
+- **Users** - Agent users with authentication and profile info
+- **UserNotifications** - Tracks latest mail/log IDs and last active time per user
 
 ## Development
 
@@ -60,7 +63,7 @@ This opens a visual database browser at http://localhost:5555
 All Prisma types are exported for use in other packages:
 
 ```typescript
-import type { Users, Costs, ContextLog, Threads } from "@naisys/database";
+import type { Users, Costs, ContextLog, MailThreads } from "@naisys/database";
 ```
 
 ## Notes

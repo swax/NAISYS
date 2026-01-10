@@ -1,14 +1,14 @@
 import { z } from "zod";
 
 // Zod schemas
-export const ThreadMemberSchema = z.object({
+export const MailThreadMemberSchema = z.object({
   userId: z.number(),
   username: z.string(),
   newMsgId: z.number(),
   archived: z.boolean(),
 });
 
-export const ThreadMessageSchema = z.object({
+export const MailThreadMessageSchema = z.object({
   id: z.number(),
   threadId: z.number(),
   userId: z.number(),
@@ -16,7 +16,7 @@ export const ThreadMessageSchema = z.object({
   subject: z.string(),
   message: z.string(),
   date: z.string(),
-  members: z.array(ThreadMemberSchema),
+  members: z.array(MailThreadMemberSchema),
 });
 
 export const SendMailRequestSchema = z.object({
@@ -52,7 +52,7 @@ export const MailDataResponseSchema = z.object({
   message: z.string(),
   data: z
     .object({
-      mail: z.array(ThreadMessageSchema),
+      mail: z.array(MailThreadMessageSchema),
       timestamp: z.string(),
       total: z.number().optional(),
     })
@@ -60,8 +60,8 @@ export const MailDataResponseSchema = z.object({
 });
 
 // Inferred types
-export type ThreadMember = z.infer<typeof ThreadMemberSchema>;
-export type ThreadMessage = z.infer<typeof ThreadMessageSchema>;
+export type MailThreadMember = z.infer<typeof MailThreadMemberSchema>;
+export type MailThreadMessage = z.infer<typeof MailThreadMessageSchema>;
 export type SendMailRequest = z.infer<typeof SendMailRequestSchema>;
 export type SendMailResponse = z.infer<typeof SendMailResponseSchema>;
 export type MailDataRequest = z.infer<typeof MailDataRequestSchema>;

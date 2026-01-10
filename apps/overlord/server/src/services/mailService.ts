@@ -1,8 +1,8 @@
 import {
   SendMailRequest,
   SendMailResponse,
-  ThreadMember,
-  ThreadMessage,
+  MailThreadMember,
+  MailThreadMessage,
 } from "shared";
 import { usingNaisysDb } from "../database/naisysDatabase.js";
 import { getAgents } from "./agentService.js";
@@ -17,7 +17,7 @@ export async function getMailData(
   updatedSince?: string,
   page: number = 1,
   count: number = 50,
-): Promise<{ mail: ThreadMessage[]; timestamp: string; total?: number }> {
+): Promise<{ mail: MailThreadMessage[]; timestamp: string; total?: number }> {
   try {
     // First, find the agent to get their userId
     const agents = await getAgents();
@@ -44,8 +44,8 @@ export async function getMailData(
     const result = await usingNaisysDb(async (prisma) => {
       const where = {
         ...whereClause,
-        threads: {
-          thread_members: {
+        mail_threads: {
+          mail_thread_members: {
             some: {
               user_id: userId,
             },
@@ -56,10 +56,10 @@ export async function getMailData(
       // Only get total count on initial fetch (when updatedSince is not set)
       const total = updatedSince
         ? undefined
-        : await prisma.thread_messages.count({ where });
+        : await prisma.mail_thread_messages.count({ where });
 
       // Get paginated messages
-      const dbMessages = await prisma.thread_messages.findMany({
+      const dbMessages = await prisma.mail_thread_messages.findMany({
         where,
         orderBy: { id: "desc" },
         skip: (page - 1) * count,
@@ -70,7 +70,7 @@ export async function getMailData(
           user_id: true,
           message: true,
           date: true,
-          threads: {
+          mail_threads: {
             select: { subject: true },
           },
           users: {
@@ -93,7 +93,7 @@ export async function getMailData(
       threadId: msg.thread_id,
       userId: msg.user_id,
       username: msg.users.username,
-      subject: msg.threads.subject,
+      subject: msg.mail_threads.subject,
       message: msg.message,
       date: msg.date.toISOString(),
       members: membersMap[msg.thread_id] || [],
@@ -115,12 +115,12 @@ export async function getMailData(
 
 async function getThreadMembersMap(
   threadIds: number[],
-): Promise<Record<number, ThreadMember[]>> {
+): Promise<Record<number, MailThreadMember[]>> {
   if (threadIds.length === 0) return {};
 
   try {
     const dbMembers = await usingNaisysDb(async (prisma) => {
-      return await prisma.thread_members.findMany({
+      return await prisma.mail_thread_members.findMany({
         where: { thread_id: { in: threadIds } },
         select: {
           thread_id: true,
@@ -134,7 +134,7 @@ async function getThreadMembersMap(
       });
     });
 
-    const membersMap: Record<number, ThreadMember[]> = {};
+    const membersMap: Record<number, MailThreadMember[]> = {};
 
     dbMembers.forEach((member) => {
       if (!membersMap[member.thread_id]) {
@@ -192,7 +192,7 @@ export async function sendMessage(
 
     const messageId = await usingNaisysDb(async (prisma) => {
       // 3. Create new thread
-      const thread = await prisma.threads.create({
+      const thread = await prisma.mail_threads.create({
         data: {
           subject,
           token_count: 0, // TODO
@@ -202,15 +202,15 @@ export async function sendMessage(
       const threadId = thread.id;
 
       // Add both users to the thread
-      await prisma.thread_members.createMany({
+      await prisma.mail_thread_members.createMany({
         data: [
           { thread_id: threadId, user_id: fromUser.id, new_msg_id: -1 },
           { thread_id: threadId, user_id: toUser.id, new_msg_id: 0 },
         ],
       });
 
-      // 4. Insert new message into thread_messages table
-      const threadMessage = await prisma.thread_messages.create({
+      // 4. Insert new message into mail_thread_messages table
+      const threadMessage = await prisma.mail_thread_messages.create({
         data: {
           thread_id: threadId,
           user_id: fromUser.id,
@@ -249,7 +249,7 @@ export async function sendMessage(
 
       // Update the message with attachment info
       await usingNaisysDb(async (prisma) => {
-        await prisma.thread_messages.update({
+        await prisma.mail_thread_messages.update({
           where: { id: messageId },
           data: { message: updatedMessage },
         });
