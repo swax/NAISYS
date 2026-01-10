@@ -23,14 +23,14 @@ export async function getAgents(updatedSince?: string): Promise<Agent[]> {
               latest_mail_id: true,
               latest_log_id: true,
               last_active: true,
-              modified_date: true,
+              updated_at: true,
             },
           },
         },
         where: updatedSince
           ? {
               user_notifications: {
-                modified_date: { gte: new Date(updatedSince) },
+                updated_at: { gte: new Date(updatedSince) },
               },
             }
           : undefined,

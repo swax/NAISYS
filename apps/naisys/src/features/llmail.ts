@@ -287,7 +287,7 @@ export function createLLMail(
           },
           data: {
             latest_mail_id: thread.id,
-            modified_date: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
           },
         });
 

@@ -12,11 +12,11 @@ const execAsync = promisify(exec);
 
 export async function createDatabaseService({ globalConfig }: GlobalConfig) {
   /** Should match version in schema_version table of latest migration script */
-  const latestDbVersion = 6;
+  const latestDbVersion = 7;
 
   // Ensure database directory exists
   const dbFilePath = new NaisysPath(
-    `${globalConfig().naisysFolder}/database/naisys.sqlite`,
+    `${globalConfig().naisysFolder}/database/naisys.sqlite`
   );
   pathService.ensureFileDirExists(dbFilePath);
 
@@ -43,14 +43,22 @@ export async function createDatabaseService({ globalConfig }: GlobalConfig) {
           return;
         }
 
+        // Version 7 is a breaking change - costs table schema changed significantly
+        if (dbVersion && dbVersion.version < 7 && latestDbVersion >= 7) {
+          throw new Error(
+            `Database migration from version ${dbVersion.version} to ${latestDbVersion} is a breaking change adding multi-machine support.` +
+              `The existing db must be manually deleted to continue.`
+          );
+        }
+
         // Run migration
         console.log(
-          `Migrating database from version ${dbVersion?.version} to ${latestDbVersion}...`,
+          `Migrating database from version ${dbVersion?.version} to ${latestDbVersion}...`
         );
       } else {
         // New database, run migration
         console.log(
-          `Creating new database with schema version ${latestDbVersion}...`,
+          `Creating new database with schema version ${latestDbVersion}...`
         );
       }
 
@@ -69,7 +77,7 @@ export async function createDatabaseService({ globalConfig }: GlobalConfig) {
             ...process.env,
             DATABASE_URL: `file:${databasePath}`,
           },
-        },
+        }
       );
 
       if (stdout) console.log(stdout);
@@ -105,7 +113,7 @@ export async function createDatabaseService({ globalConfig }: GlobalConfig) {
   async function usingDatabase<T>(
     run: (prisma: PrismaClient) => Promise<T>,
     maxRetries: number = 5,
-    baseDelayMs: number = 100,
+    baseDelayMs: number = 100
   ): Promise<T> {
     let lastError: any;
 
@@ -130,7 +138,7 @@ export async function createDatabaseService({ globalConfig }: GlobalConfig) {
         // Exponential backoff: baseDelay * 2^attempt
         const delayMs = baseDelayMs * Math.pow(2, attempt);
         console.warn(
-          `Database operation failed (attempt ${attempt + 1}/${maxRetries + 1}), retrying in ${delayMs}ms: ${error?.code || error?.message}`,
+          `Database operation failed (attempt ${attempt + 1}/${maxRetries + 1}), retrying in ${delayMs}ms: ${error?.code || error?.message}`
         );
 
         await new Promise((resolve) => setTimeout(resolve, delayMs));
