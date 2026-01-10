@@ -6,7 +6,7 @@ Transform NAISYS from a single-machine agent runner to a distributed system with
 
 - **Runner** - Lightweight agent runner (npm install and go)
 - **Hub** - WebSocket sync server, forwards data between runners
-- **Supervisor** - Web UI for viewing agents, logs, mail, costs (formerly "Overlord")
+- **Supervisor** - Web UI for viewing agents, logs, mail, costs
 
 Components can run together (same process) or separately:
 
@@ -56,7 +56,7 @@ Convert all IDs from INTEGER AUTOINCREMENT to ULID strings. Add `updated_at` to 
 - costs: add updated_at DateTime @updatedAt (aggregated per session/source/model)
 
 # Add deleted_at for soft deletes:
-- hosts: add deleted_at DateTime? (decommissioned runners/overlords)
+- hosts: add deleted_at DateTime? (decommissioned runners/supervisors)
 - users: add deleted_at DateTime? (deactivated agents)
 
 Note: Only active operations filter by deleted_at (starting agents, sending mail). Historical queries still return deleted records.
@@ -75,8 +75,8 @@ Note: Only active operations filter by deleted_at (starting agents, sending mail
 | `apps/naisys/src/agentRegistrar.ts` | Use ULID for new users |
 | `apps/naisys/src/features/llmail.ts` | Use ULID for threads/messages |
 | `apps/naisys/src/services/runService.ts` | Update ID handling |
-| `apps/overlord/server/src/services/*.ts` | Handle string IDs |
-| `apps/overlord/shared/src/*-types.ts` | Update type definitions for string IDs |
+| `apps/supervisor/server/src/services/*.ts` | Handle string IDs |
+| `apps/supervisor/shared/src/*-types.ts` | Update type definitions for string IDs |
 
 ### Dependencies
 
@@ -88,15 +88,15 @@ npm install ulid --workspace=@naisys/database
 
 ## Phase 2: Hosts Table & Agent Ownership
 
-Create a hosts table to track runners and overlords as first-class entities.
+Create a hosts table to track runners and supervisors as first-class entities.
 
 ### Schema Addition
 
 ```prisma
 model hosts {
   id            String    @id      // ULID
-  name          String    @unique  // Runner: NAISYS_HOSTNAME, Overlord: URL
-  type          String             // "runner" or "overlord"
+  name          String    @unique  // Runner: NAISYS_HOSTNAME, Supervisor: URL
+  type          String             // "runner" or "supervisor"
   last_seen     DateTime?
   updated_at DateTime  @updatedAt
   deleted_at    DateTime?          // Soft delete for decommissioned hosts
@@ -133,7 +133,7 @@ Note: Multiple Hub URLs supported for high availability. Runner maintains WebSoc
 - Runner only starts agents where `users.host_id` matches its own host record
 - When creating new agents, `host_id` is set to runner's host ID
 - Agent mobility: update `users.host_id` to move an agent to a different host
-- Overlords are registered as hosts (type="overlord") when runners connect
+- Supervisors are registered as hosts (type="supervisor") when runners connect
 
 ### Code Changes
 
@@ -314,7 +314,7 @@ Hub pulls data from runners and forwards relevant rows to other runners. Mail de
 
 | Table | Forward To | Reason |
 |-------|------------|--------|
-| `hosts` | All runners | Know all runners/overlords in system |
+| `hosts` | All runners | Know all runners/supervisors in system |
 | `users` | All runners | Global user directory |
 | `user_notifications` | All runners | Online status for all agents |
 | `mail_threads` | Runners with members in thread | Thread metadata |
@@ -471,7 +471,7 @@ DATABASE_URL=postgresql://user:pass@host:5432/naisys_hub
 | Path | Purpose |
 |------|---------|
 | `apps/hub/` | New package for WebSocket sync hub |
-| `apps/supervisor/` | Renamed from `apps/overlord/` |
+| `apps/supervisor/` | Web UI for viewing agents, logs, mail, costs |
 
 ### New Files
 
@@ -495,7 +495,7 @@ DATABASE_URL=postgresql://user:pass@host:5432/naisys_hub
 | `apps/naisys/src/features/llmail.ts` | No changes needed (writes locally, sync handles routing) |
 | `apps/naisys/src/naisys.ts` | Hub WebSocket init, create/update host record on startup, --hub/--supervisor flags |
 | `apps/naisys/src/config.ts` | NAISYS_HOSTNAME, HUB_URLS config |
-| `apps/supervisor/server/src/index.ts` | Renamed from overlord, points to Hub or Runner DB |
+| `apps/supervisor/server/src/index.ts` | Points to Hub or Runner DB |
 | `apps/supervisor/client/src/pages/*` | Multi-host UI (filter by host) |
 
 ---
@@ -538,7 +538,6 @@ DATABASE_URL=file:../naisys/naisys.db      # Points to Runner DB (single-runner)
 3. **Phase 3 (Hub Sync)** - New Hub package + runner sync client
 4. **Phase 4 (Forwarding)** - Requires Phase 3
 5. **Phase 5 (Mobility)** - Requires Phases 2-4
-6. **Rename Overlord → Supervisor** - Can be done anytime
 
 Can ship Phases 1-2 first (single-machine with ULIDs + hosts), then 3-5 for multi-machine.
 

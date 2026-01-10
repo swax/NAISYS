@@ -4,7 +4,7 @@ This directory contains shared packages used across the NAISYS monorepo.
 
 ## Packages
 
-- **[@naisys/database](./database/README.md)** - Prisma schema, generated client, and database utilities for NAISYS and Overlord
+- **[@naisys/database](./database/README.md)** - Prisma schema, generated client, and database utilities for NAISYS and Supervisor
 
 ## Usage
 

@@ -16,11 +16,9 @@ CREATE TABLE "context_log" (
 -- CreateTable
 CREATE TABLE "costs" (
     "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-    "date" DATETIME NOT NULL,
     "user_id" INTEGER NOT NULL,
     "run_id" INTEGER NOT NULL,
     "session_id" INTEGER NOT NULL,
-    "subagent" TEXT,
     "source" TEXT NOT NULL,
     "model" TEXT NOT NULL,
     "cost" REAL DEFAULT 0,
@@ -28,46 +26,35 @@ CREATE TABLE "costs" (
     "output_tokens" INTEGER DEFAULT 0,
     "cache_write_tokens" INTEGER DEFAULT 0,
     "cache_read_tokens" INTEGER DEFAULT 0,
+    "updated_at" DATETIME NOT NULL,
     CONSTRAINT "costs_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION,
     CONSTRAINT "costs_user_id_run_id_session_id_fkey" FOREIGN KEY ("user_id", "run_id", "session_id") REFERENCES "run_session" ("user_id", "run_id", "session_id") ON DELETE NO ACTION ON UPDATE NO ACTION
 );
 
 -- CreateTable
-CREATE TABLE "dream_log" (
-    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-    "user_id" INTEGER NOT NULL,
-    "run_id" INTEGER NOT NULL,
-    "session_id" INTEGER NOT NULL,
-    "date" DATETIME NOT NULL,
-    "dream" TEXT NOT NULL,
-    CONSTRAINT "dream_log_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION,
-    CONSTRAINT "dream_log_user_id_run_id_session_id_fkey" FOREIGN KEY ("user_id", "run_id", "session_id") REFERENCES "run_session" ("user_id", "run_id", "session_id") ON DELETE NO ACTION ON UPDATE NO ACTION
-);
-
--- CreateTable
-CREATE TABLE "thread_members" (
+CREATE TABLE "mail_thread_members" (
     "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     "thread_id" INTEGER NOT NULL,
     "user_id" INTEGER NOT NULL,
     "new_msg_id" INTEGER NOT NULL DEFAULT -1,
     "archived" INTEGER NOT NULL DEFAULT 0,
-    CONSTRAINT "thread_members_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION,
-    CONSTRAINT "thread_members_thread_id_fkey" FOREIGN KEY ("thread_id") REFERENCES "threads" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION
+    CONSTRAINT "mail_thread_members_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION,
+    CONSTRAINT "mail_thread_members_thread_id_fkey" FOREIGN KEY ("thread_id") REFERENCES "mail_threads" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION
 );
 
 -- CreateTable
-CREATE TABLE "thread_messages" (
+CREATE TABLE "mail_thread_messages" (
     "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     "thread_id" INTEGER NOT NULL,
     "user_id" INTEGER NOT NULL,
     "message" TEXT NOT NULL,
     "date" DATETIME NOT NULL,
-    CONSTRAINT "thread_messages_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION,
-    CONSTRAINT "thread_messages_thread_id_fkey" FOREIGN KEY ("thread_id") REFERENCES "threads" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION
+    CONSTRAINT "mail_thread_messages_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION,
+    CONSTRAINT "mail_thread_messages_thread_id_fkey" FOREIGN KEY ("thread_id") REFERENCES "mail_threads" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION
 );
 
 -- CreateTable
-CREATE TABLE "threads" (
+CREATE TABLE "mail_threads" (
     "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     "subject" TEXT NOT NULL,
     "token_count" INTEGER NOT NULL DEFAULT 0
@@ -80,8 +67,17 @@ CREATE TABLE "users" (
     "title" TEXT NOT NULL,
     "agent_path" TEXT NOT NULL,
     "lead_username" TEXT,
+    "config" TEXT NOT NULL DEFAULT '{}'
+);
+
+-- CreateTable
+CREATE TABLE "user_notifications" (
+    "user_id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     "latest_mail_id" INTEGER NOT NULL DEFAULT -1,
-    "modified_date" DATETIME NOT NULL
+    "latest_log_id" INTEGER NOT NULL DEFAULT -1,
+    "last_active" DATETIME,
+    "updated_at" DATETIME NOT NULL,
+    CONSTRAINT "user_notifications_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION
 );
 
 -- CreateTable
@@ -126,31 +122,22 @@ CREATE INDEX "idx_costs_user_id" ON "costs"("user_id");
 CREATE INDEX "idx_costs_run_session" ON "costs"("user_id", "run_id", "session_id");
 
 -- CreateIndex
-CREATE INDEX "idx_costs_date" ON "costs"("date");
+CREATE UNIQUE INDEX "unq_costs_aggregation_key" ON "costs"("user_id", "run_id", "session_id", "source", "model");
 
 -- CreateIndex
-CREATE INDEX "idx_dream_log_id_desc" ON "dream_log"("id" DESC);
+CREATE INDEX "idx_mail_thread_members_thread_id" ON "mail_thread_members"("thread_id");
 
 -- CreateIndex
-CREATE INDEX "idx_dream_log_user_id" ON "dream_log"("user_id");
+CREATE UNIQUE INDEX "unq_mail_thread_members_thread_id_user_id" ON "mail_thread_members"("thread_id", "user_id");
 
 -- CreateIndex
-CREATE INDEX "idx_dream_log_run_session" ON "dream_log"("user_id", "run_id", "session_id");
+CREATE INDEX "idx_mail_thread_messages_thread_id" ON "mail_thread_messages"("thread_id");
 
 -- CreateIndex
-CREATE INDEX "idx_thread_members_thread_id" ON "thread_members"("thread_id");
+CREATE INDEX "idx_mail_thread_messages_id_desc" ON "mail_thread_messages"("id" DESC);
 
 -- CreateIndex
-CREATE UNIQUE INDEX "unq_thread_members_thread_id_user_id" ON "thread_members"("thread_id", "user_id");
-
--- CreateIndex
-CREATE INDEX "idx_thread_messages_thread_id" ON "thread_messages"("thread_id");
-
--- CreateIndex
-CREATE INDEX "idx_thread_messages_id_desc" ON "thread_messages"("id" DESC);
-
--- CreateIndex
-CREATE INDEX "idx_threads_id_desc" ON "threads"("id" DESC);
+CREATE INDEX "idx_mail_threads_id_desc" ON "mail_threads"("id" DESC);
 
 -- CreateIndex
 CREATE UNIQUE INDEX "unq_users_username" ON "users"("username");

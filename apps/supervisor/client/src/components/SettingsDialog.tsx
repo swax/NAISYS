@@ -84,7 +84,7 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
     <Modal
       opened={opened}
       onClose={handleClose}
-      title="NAISYS Overlord Settings"
+      title="NAISYS Supervisor Settings"
       size="lg"
       centered
     >
@@ -106,7 +106,7 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
             NAISYS_FOLDER
           </Text>
           <Text size="xs" c="dimmed" mb="sm">
-            Enter the folder path that will be monitored by Overlord.
+            Enter the folder path that will be monitored by Supervisor.
           </Text>
           <TextInput
             value={path}

@@ -1,7 +1,7 @@
 import {
-  selectFromOverlordDb,
-  runOnOverlordDb,
-} from "../database/overlordDatabase.js";
+  selectFromSupervisorDb,
+  runOnSupervisorDb,
+} from "../database/supervisorDatabase.js";
 
 export interface Session {
   token: string;
@@ -14,7 +14,7 @@ export async function createSession(
   startDate: Date,
   expireDate: Date,
 ): Promise<void> {
-  await runOnOverlordDb(
+  await runOnSupervisorDb(
     `
     INSERT INTO sessions (token, start_date, expire_date)
     VALUES (?, ?, ?)
@@ -24,7 +24,7 @@ export async function createSession(
 }
 
 export async function getSession(token: string): Promise<Session | null> {
-  const sessions = await selectFromOverlordDb<Session[] | null>(
+  const sessions = await selectFromSupervisorDb<Session[] | null>(
     `
     SELECT token, start_date as startDate, expire_date as expireDate
     FROM sessions
@@ -41,7 +41,7 @@ export async function getSession(token: string): Promise<Session | null> {
 }
 
 export async function deleteExpiredSessions(): Promise<void> {
-  await runOnOverlordDb(
+  await runOnSupervisorDb(
     `
     DELETE FROM sessions WHERE expire_date <= datetime('now')
   `,
@@ -49,7 +49,7 @@ export async function deleteExpiredSessions(): Promise<void> {
 }
 
 export async function deleteSession(token: string): Promise<void> {
-  await runOnOverlordDb(
+  await runOnSupervisorDb(
     `
     DELETE FROM sessions WHERE token = ?
   `,

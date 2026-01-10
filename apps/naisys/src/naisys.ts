@@ -9,22 +9,22 @@ dotenv.config({ quiet: true });
 
 program
   .argument("<agent-path>", "Path to agent configuration file")
-  .option("--overlord", "Start Overlord server")
+  .option("--supervisor", "Start Supervisor server")
   .parse();
 
-// Todo: Move db service into db package, enabling naisys/overlord to independently initialize and upgrade the db
+// Todo: Move db service into db package, enabling naisys/supervisor to independently initialize and upgrade the db
 const globalConfig = await createGlobalConfig();
 const dbService = await createDatabaseService(globalConfig);
 
 /**
- * --overlord flag is provided, start Overlord server
- * There should be no dependency between overlord and naissys
+ * --supervisor flag is provided, start Supervisor server
+ * There should be no dependency between supervisor and naissys
  * Sharing the same process space is to save 150 mb of node.js runtime memory on small servers
  */
-if (program.opts().overlord) {
-  console.log("Starting Overlord server...");
+if (program.opts().supervisor) {
+  console.log("Starting Supervisor server...");
   // Don't import the whole fastify web server module tree unless needed
-  const { startServer } = await import("@naisys-overlord/server");
+  const { startServer } = await import("@naisys-supervisor/server");
   await startServer("hosted");
 }
 
@@ -40,7 +40,7 @@ const agentRegistrar = await createAgentRegistrar(
 );
 const agentManager = new AgentManager(dbService, globalConfig, agentRegistrar);
 
-// Inits the naisys db if it doesn't exist which is needed by overlord
+// Inits the naisys db if it doesn't exist which is needed by supervisor
 await agentManager.startAgent(agentPath);
 
 await agentManager.waitForAllAgentsToComplete();

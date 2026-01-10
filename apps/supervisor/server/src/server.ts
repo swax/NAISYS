@@ -14,7 +14,7 @@ import {
 } from "fastify-type-provider-zod";
 import path from "path";
 import { fileURLToPath } from "url";
-import { initOverlordDatabase } from "./database/overlordDatabase.js";
+import { initSupervisorDatabase } from "./database/supervisorDatabase.js";
 import apiRoutes from "./routes/api.js";
 
 export const startServer = async (startupType: "standalone" | "hosted") => {
@@ -22,12 +22,12 @@ export const startServer = async (startupType: "standalone" | "hosted") => {
 
   if (startupType === "hosted" && !isProd) {
     console.error(
-      "--overlord can only be used when .env NODE_ENV=production",
+      "--supervisor can only be used when .env NODE_ENV=production",
     );
     process.exit(1);
   }
 
-  initOverlordDatabase();
+  initSupervisorDatabase();
 
   const __filename = fileURLToPath(import.meta.url);
   const __dirname = path.dirname(__filename);
@@ -44,7 +44,7 @@ export const startServer = async (startupType: "standalone" | "hosted") => {
                 destination: path.join(
                   process.env.NAISYS_FOLDER || "",
                   "logs",
-                  "overlord",
+                  "supervisor",
                   "server.log",
                 ),
                 mkdir: true,
@@ -79,8 +79,8 @@ export const startServer = async (startupType: "standalone" | "hosted") => {
   await fastify.register(swagger, {
     openapi: {
       info: {
-        title: "NAISYS Overlord API",
-        description: "API documentation for NAISYS Overlord server",
+        title: "NAISYS Supervisor API",
+        description: "API documentation for NAISYS Supervisor server",
         version: "1.0.0",
       },
       servers: [
@@ -117,13 +117,13 @@ export const startServer = async (startupType: "standalone" | "hosted") => {
 
     await fastify.register(staticFiles, {
       root: clientDistPath,
-      prefix: "/overlord/",
+      prefix: "/supervisor/",
     });
 
     fastify.setNotFoundHandler((request, reply) => {
       if (request.url.startsWith("/api")) {
         reply.code(404).send({ error: "API endpoint not found" });
-      } else if (request.url.startsWith("/overlord")) {
+      } else if (request.url.startsWith("/supervisor")) {
         reply.sendFile("index.html");
       } else {
         reply.sendFile("index.html");
@@ -132,7 +132,7 @@ export const startServer = async (startupType: "standalone" | "hosted") => {
   }
 
   try {
-    let port = Number(process.env.OVERLORD_PORT) || 3001;
+    let port = Number(process.env.SUPERVISOR_PORT) || 3001;
     const host = isProd ? "0.0.0.0" : "localhost";
     const maxAttempts = 100;
     let attempts = 0;
@@ -140,7 +140,7 @@ export const startServer = async (startupType: "standalone" | "hosted") => {
     while (attempts < maxAttempts) {
       try {
         await fastify.listen({ port, host });
-        console.log(`Overlord running on http://${host}:${port}/overlord`);
+        console.log(`Supervisor running on http://${host}:${port}/supervisor`);
         break;
       } catch (err: any) {
         if (err.code === "EADDRINUSE") {
@@ -158,7 +158,7 @@ export const startServer = async (startupType: "standalone" | "hosted") => {
       }
     }
   } catch (err) {
-    console.error("Failed to start Overlord:", err);
+    console.error("Failed to start Supervisor:", err);
     fastify.log.error(err);
     process.exit(1);
   }
