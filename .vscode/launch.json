@@ -15,7 +15,7 @@
       "request": "launch",
       "runtimeArgs": ["--loader", "ts-node/esm"],
       "program": "${workspaceFolder}/apps/naisys/src/naisys.ts",
-      "args": ["../../agents/assistant.yaml", "--overlord"],
+      "args": ["../../agents/assistant.yaml", "--supervisor"],
       "cwd": "${workspaceFolder}/apps/naisys",
       "console": "integratedTerminal",
       "internalConsoleOptions": "neverOpen",
@@ -23,12 +23,12 @@
     },
 
     {
-      "name": "Debug Overlord Server",
+      "name": "Debug Supervisor Server",
       "type": "pwa-node",
       "request": "launch",
       "runtimeExecutable": "npx",
       "runtimeArgs": ["tsx", "watch", "src/server.ts"],
-      "cwd": "${workspaceFolder}/apps/overlord/server",
+      "cwd": "${workspaceFolder}/apps/supervisor/server",
       "console": "integratedTerminal",
       "internalConsoleOptions": "neverOpen",
       "skipFiles": ["<node_internals>/**"],

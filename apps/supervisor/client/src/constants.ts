@@ -1,1 +1,1 @@
-export const ROUTER_BASENAME = "/overlord";
+export const ROUTER_BASENAME = "/supervisor";

@@ -79,12 +79,12 @@ const AppContent: React.FC = () => {
               }}
             >
               <img
-                src="/overlord/apple-touch-icon.png"
-                alt="NAISYS Overlord"
+                src="/supervisor/apple-touch-icon.png"
+                alt="NAISYS Supervisor"
                 style={{ width: "36px", height: "36px" }}
               />
               <Text size="lg" fw={500} visibleFrom="sm">
-                NAISYS Overlord
+                NAISYS Supervisor
               </Text>
             </Link>
             <NavHeader

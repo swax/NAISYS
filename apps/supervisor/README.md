@@ -1,12 +1,12 @@
-# NAISYS Overlord
+# NAISYS Supervisor
 
 [← Back to main README](../../README.md)
 
-A management application for NAISYS agents that provides a monitoring interface and communication capabilities. NAISYS Overlord sits above the NAISYS database to provide visibility into how agents are working and enables communication with the agents.
+A management application for NAISYS agents that provides a monitoring interface and communication capabilities. NAISYS Supervisor sits above the NAISYS database to provide visibility into how agents are working and enables communication with the agents.
 
 ## Overview
 
-NAISYS Overlord is a full-stack TypeScript application that consists of:
+NAISYS Supervisor is a full-stack TypeScript application that consists of:
 
 - **Frontend**: React application with Mantine UI components
 - **Backend**: Fastify server with SQLite databases
@@ -42,7 +42,7 @@ The application provides a web interface to monitor NAISYS agents, view their lo
    npm run dev
    ```
 
-The application will be available at `http://localhost:5173` (development) or `http://localhost:3001/overlord/` (production).
+The application will be available at `http://localhost:5173` (development) or `http://localhost:3001/supervisor/` (production).
 
 ## Architecture
 
@@ -51,7 +51,7 @@ The application will be available at `http://localhost:5173` (development) or `h
 The application uses a dual database system managed through Prisma ORM:
 
 - **NAISYS Database** (Read-only): Contains agent data, logs, and messaging
-- **Overlord Database** (Read/Write): Manages sessions, settings, and read status
+- **Supervisor Database** (Read/Write): Manages sessions, settings, and read status
 
 Database schema is defined in `packages/database/prisma/schema.prisma`.
 

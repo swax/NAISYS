@@ -25,17 +25,17 @@ const createSettingsTable = `
   )
 `;
 
-function getOverlordConfig(): DatabaseConfig {
+function getSupervisorConfig(): DatabaseConfig {
   if (!process.env.NAISYS_FOLDER) {
     // include the path of the env file
     throw new Error(`NAISYS_FOLDER is not set in environment variables`);
   }
 
-  const dbPath = path.join(process.env.NAISYS_FOLDER, "/database/overlord.db");
+  const dbPath = path.join(process.env.NAISYS_FOLDER, "/database/supervisor.db");
 
   return {
     dbPath,
-    validatePath: false, // Overlord creates the DB if it doesn't exist
+    validatePath: false, // Supervisor creates the DB if it doesn't exist
     initSql: [
       createSessionTable,
       createSettingsTable,
@@ -46,20 +46,20 @@ function getOverlordConfig(): DatabaseConfig {
 
 let config: DatabaseConfig;
 
-export async function initOverlordDatabase() {
+export async function initSupervisorDatabase() {
   // Initialize the database on module load
-  config = getOverlordConfig();
+  config = getSupervisorConfig();
   await initializeDatabase(config);
 }
 
-export async function selectFromOverlordDb<T>(
+export async function selectFromSupervisorDb<T>(
   sql: string,
   params: any[] = [],
 ): Promise<T> {
   return selectFromDb<T>(config, sql, params);
 }
 
-export async function runOnOverlordDb(
+export async function runOnSupervisorDb(
   sql: string,
   params: any[] = [],
 ): Promise<sqlite3.RunResult> {

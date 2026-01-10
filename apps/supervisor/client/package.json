@@ -1,7 +1,7 @@
 {
-  "name": "@naisys-overlord/client",
+  "name": "@naisys-supervisor/client",
   "version": "1.0.0",
-  "description": "NAISYS Overlord - React frontend with Vite and TypeScript",
+  "description": "NAISYS Supervisor - React frontend with Vite and TypeScript",
   "type": "module",
   "scripts": {
     "clean": "rm -rf dist",

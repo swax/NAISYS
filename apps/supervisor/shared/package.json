@@ -1,7 +1,7 @@
 {
-  "name": "@naisys-overlord/shared",
+  "name": "@naisys-supervisor/shared",
   "version": "1.0.0",
-  "description": "NAISYS Overlord - Shared types and utilities",
+  "description": "NAISYS Supervisor - Shared types and utilities",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

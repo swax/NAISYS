@@ -1,7 +1,7 @@
 {
-  "name": "naisys-overlord",
+  "name": "naisys-supervisor",
   "version": "1.0.0",
-  "description": "NAISYS Overlord - Management interface for NAISYS agents",
+  "description": "NAISYS Supervisor - Management interface for NAISYS agents",
   "private": true,
   "workspaces": [
     "shared",

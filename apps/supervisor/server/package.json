@@ -1,7 +1,7 @@
 {
-  "name": "@naisys-overlord/server",
+  "name": "@naisys-supervisor/server",
   "version": "1.0.0",
-  "description": "NAISYS Overlord - Fastify backend server",
+  "description": "NAISYS Supervisor - Fastify backend server",
   "type": "module",
   "main": "dist/server.js",
   "exports": {

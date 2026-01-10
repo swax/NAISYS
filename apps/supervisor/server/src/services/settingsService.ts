@@ -1,8 +1,8 @@
 import { Settings } from "shared";
 import {
-  selectFromOverlordDb,
-  runOnOverlordDb,
-} from "../database/overlordDatabase.js";
+  selectFromSupervisorDb,
+  runOnSupervisorDb,
+} from "../database/supervisorDatabase.js";
 
 export interface SettingsRecord {
   id: number;
@@ -16,7 +16,7 @@ export async function saveSettings(settings: Settings): Promise<void> {
     throw new Error("Invalid settings format");
   }
 
-  await runOnOverlordDb(
+  await runOnSupervisorDb(
     `
     INSERT OR REPLACE INTO settings (id, settings_json, modify_date)
     VALUES (1, ?, ?)
@@ -26,7 +26,7 @@ export async function saveSettings(settings: Settings): Promise<void> {
 }
 
 export async function getSettings(): Promise<Settings | null> {
-  const settingsRecords = await selectFromOverlordDb<SettingsRecord[] | null>(`
+  const settingsRecords = await selectFromSupervisorDb<SettingsRecord[] | null>(`
     SELECT id, settings_json, modify_date, read_status_json
     FROM settings 
     WHERE id = 1

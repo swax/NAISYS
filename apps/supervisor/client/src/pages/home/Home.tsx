@@ -47,7 +47,7 @@ export const Home: React.FC = () => {
             marginBottom: "0.5rem",
           }}
         >
-          NAISYS Overlord
+          NAISYS Supervisor
         </h1>
         <p
           style={{
@@ -74,10 +74,10 @@ export const Home: React.FC = () => {
       <section style={cardStyle}>
         <h2 style={headerStyle}>Overview</h2>
         <p style={{ lineHeight: "1.6", color: "#b8b8b8", margin: "0" }}>
-          NAISYS Overlord provides a centralized view of all agents in your
+          NAISYS Supervisor provides a centralized view of all agents in your
           organization. Agents in the same organization share a SQLite database
           to write console logs, record cost information, and send mail between
-          each other. Overlord watches this database and displays an overview,
+          each other. Supervisor watches this database and displays an overview,
           allowing you to see what all agents are doing without manually having
           to switch between sessions on the console.
         </p>
