@@ -29,6 +29,7 @@ export function createCostTracker(
   output: OutputService,
 ) {
   // Record token usage for LLM calls - calculate and store total cost
+  // Aggregates costs by user/run/session/source/model combination
   async function recordTokens(
     source: string,
     modelKey: string,
@@ -50,13 +51,20 @@ export function createCostTracker(
     const { getUserId, getRunId, getSessionId } = runService;
 
     await usingDatabase(async (prisma) => {
-      await prisma.costs.create({
-        data: {
-          date: new Date().toISOString(),
+      await prisma.costs.upsert({
+        where: {
+          user_id_run_id_session_id_source_model: {
+            user_id: getUserId(),
+            run_id: getRunId(),
+            session_id: getSessionId(),
+            source,
+            model: modelKey,
+          },
+        },
+        create: {
           user_id: getUserId(),
           run_id: getRunId(),
           session_id: getSessionId(),
-          subagent: null,
           source,
           model: modelKey,
           cost: totalCost,
@@ -65,6 +73,13 @@ export function createCostTracker(
           cache_write_tokens: cacheWriteTokens,
           cache_read_tokens: cacheReadTokens,
         },
+        update: {
+          cost: { increment: totalCost },
+          input_tokens: { increment: inputTokens },
+          output_tokens: { increment: outputTokens },
+          cache_write_tokens: { increment: cacheWriteTokens },
+          cache_read_tokens: { increment: cacheReadTokens },
+        },
       });
     });
 
@@ -72,24 +87,35 @@ export function createCostTracker(
   }
 
   // Record fixed cost for non-token services like image generation
+  // Aggregates costs by user/run/session/source/model combination
   async function recordCost(cost: number, source: string, modelKey: string) {
     const { getUserId, getRunId, getSessionId } = runService;
 
     await usingDatabase(async (prisma) => {
-      await prisma.costs.create({
-        data: {
-          date: new Date().toISOString(),
+      await prisma.costs.upsert({
+        where: {
+          user_id_run_id_session_id_source_model: {
+            user_id: getUserId(),
+            run_id: getRunId(),
+            session_id: getSessionId(),
+            source,
+            model: modelKey,
+          },
+        },
+        create: {
           user_id: getUserId(),
           run_id: getRunId(),
           session_id: getSessionId(),
-          subagent: null,
           source,
           model: modelKey,
           cost,
-          input_tokens: 0, // No tokens for fixed cost services
+          input_tokens: 0,
           output_tokens: 0,
           cache_write_tokens: 0,
           cache_read_tokens: 0,
+        },
+        update: {
+          cost: { increment: cost },
         },
       });
     });

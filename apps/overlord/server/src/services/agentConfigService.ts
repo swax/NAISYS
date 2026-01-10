@@ -18,15 +18,15 @@ async function updateUserNotificationModifiedDate(
       throw new Error(`User '${username}' not found`);
     }
 
-    // Upsert the user_notifications record to update modified_date
+    // Upsert the user_notifications record to update updated_at
     await prisma.user_notifications.upsert({
       where: { user_id: user.id },
       create: {
         user_id: user.id,
-        modified_date: new Date(),
+        updated_at: new Date(),
       },
       update: {
-        modified_date: new Date(),
+        updated_at: new Date(),
       },
     });
   });

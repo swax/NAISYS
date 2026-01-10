@@ -264,7 +264,7 @@ export async function createAgentRegistrar(
                 latest_log_id: -1,
               },
               update: {
-                modified_date: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
               },
             });
           }
