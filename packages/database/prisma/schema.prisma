@@ -41,10 +41,10 @@ model costs {
   users              users       @relation("costs_user", fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   run_session        run_session @relation(fields: [user_id, run_id, session_id], references: [user_id, run_id, session_id], onDelete: NoAction, onUpdate: NoAction)
 
-  @@unique([user_id, run_id, session_id, source, model], map: "unq_costs_aggregation_key")
   @@index([id(sort: Desc)], map: "idx_costs_id_desc")
   @@index([user_id], map: "idx_costs_user_id")
   @@index([user_id, run_id, session_id], map: "idx_costs_run_session")
+  @@index([user_id, run_id, session_id, source, model], map: "idx_costs_aggregation_key")
 }
 
 model mail_thread_members {

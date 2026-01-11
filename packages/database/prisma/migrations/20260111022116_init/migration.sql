@@ -135,7 +135,7 @@ CREATE INDEX "idx_costs_user_id" ON "costs"("user_id");
 CREATE INDEX "idx_costs_run_session" ON "costs"("user_id", "run_id", "session_id");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "unq_costs_aggregation_key" ON "costs"("user_id", "run_id", "session_id", "source", "model");
+CREATE INDEX "idx_costs_aggregation_key" ON "costs"("user_id", "run_id", "session_id", "source", "model");
 
 -- CreateIndex
 CREATE INDEX "idx_mail_thread_members_thread_id" ON "mail_thread_members"("thread_id");

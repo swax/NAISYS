@@ -3,7 +3,7 @@ export { PrismaClient } from "./generated/prisma/client.js";
 export * from "./generated/prisma/client.js";
 
 // Re-export ULID utilities
-export { ulid, monotonicFactory } from "ulid";
+export { ulid, monotonicFactory, decodeTime } from "ulid";
 
 // Import PrismaClient at the top level for the factory function
 import { PrismaClient } from "./generated/prisma/client.js";
