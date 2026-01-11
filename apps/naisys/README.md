@@ -154,6 +154,7 @@ initialCommands:
 
 ## Changelog
 
+- 2.2: NAISYS cross machine support enabled by a new hub process
 - 2.1: Monorepo architecture, allowing Overlord to run in-process
 - 2.0: Agent multiplexing in the same process
 - 1.7: Prompt cachinging, llmynx pagination, complete task command

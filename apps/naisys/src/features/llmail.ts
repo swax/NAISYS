@@ -201,7 +201,7 @@ export function createLLMail(
           [
             ["ID", "Subject", "Date", "Members", "Token Count"],
             ...threads.map((t) => [
-              t.id,
+              t.id.slice(-4),
               t.subject || "",
               new Date(Number(t.date)).toLocaleString(),
               t.members || "",
@@ -402,11 +402,15 @@ export function createLLMail(
 
   async function markAsRead(threadId: string) {
     await usingDatabase(async (prisma) => {
-      await prisma.$executeRaw(
-        Prisma.sql`UPDATE mail_thread_members
-        SET new_msg_id = ''
-        WHERE thread_id = ${threadId} AND user_id = ${myUserId}`,
-      );
+      await prisma.mail_thread_members.updateMany({
+        where: {
+          thread_id: threadId,
+          user_id: myUserId,
+        },
+        data: {
+          new_msg_id: "",
+        },
+      });
     });
   }
 
@@ -496,11 +500,17 @@ Consider archiving this thread and starting a new one.`;
       });
 
       // Mark thread has new message only if it hasnt already been marked (new_msg_id = '' means read)
-      await prisma.$executeRaw(
-        Prisma.sql`UPDATE mail_thread_members
-        SET new_msg_id = ${insertedMessage.id}, archived = 0
-        WHERE new_msg_id = '' AND thread_id = ${thread.id} AND user_id != ${myUserId}`,
-      );
+      await prisma.mail_thread_members.updateMany({
+        where: {
+          new_msg_id: "",
+          thread_id: thread.id,
+          user_id: { not: myUserId },
+        },
+        data: {
+          new_msg_id: insertedMessage.id,
+          archived: 0,
+        },
+      });
 
       // Update token total
       await prisma.mail_threads.update({
@@ -540,9 +550,16 @@ Consider archiving this thread and starting a new one.`;
 
   async function archiveThreads(threadIds: string[]) {
     return await usingDatabase(async (prisma) => {
+      // Resolve short IDs to full IDs
+      const fullIds: string[] = [];
+      for (const shortId of threadIds) {
+        const thread = await getThread(prisma, shortId);
+        fullIds.push(thread.id);
+      }
+
       await prisma.mail_thread_members.updateMany({
         where: {
-          thread_id: { in: threadIds },
+          thread_id: { in: fullIds },
           user_id: myUserId,
         },
         data: {
@@ -555,15 +572,19 @@ Consider archiving this thread and starting a new one.`;
   }
 
   async function getThread(prisma: PrismaClient, threadId: string) {
-    const thread = await prisma.mail_threads.findUnique({
-      where: { id: threadId },
+    const threads = await prisma.mail_threads.findMany({
+      where: { id: { endsWith: threadId } },
     });
 
-    if (!thread) {
+    if (threads.length === 0) {
       throw `Error: Thread ${threadId} not found`;
     }
 
-    return thread;
+    if (threads.length > 1) {
+      throw `Error: Multiple threads match '${threadId}'. Please use more characters.`;
+    }
+
+    return threads[0];
   }
 
   async function getUser(prisma: PrismaClient, username: string) {
