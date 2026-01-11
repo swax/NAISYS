@@ -4,6 +4,7 @@ import stringArgv from "string-argv";
 import table from "text-table";
 import { AgentConfig } from "../agentConfig.js";
 import { DatabaseService } from "../services/dbService.js";
+import { HostService } from "../services/hostService.js";
 import { NaisysPath } from "../services/pathService.js";
 import { RunService } from "../services/runService.js";
 import { InputModeService } from "../utils/inputMode.js";
@@ -50,6 +51,7 @@ export function createSubagentService(
   inputMode: InputModeService,
   runService: RunService,
   { usingDatabase }: DatabaseService,
+  { localHostId }: HostService,
 ) {
   const _subagents: Subagent[] = [];
 
@@ -154,7 +156,10 @@ export function createSubagentService(
   async function refreshSubagents() {
     await usingDatabase(async (prisma) => {
       const agents = await prisma.users.findMany({
-        where: { lead_username: agentConfig().username },
+        where: {
+          lead_username: agentConfig().username,
+          host_id: localHostId,
+        },
       });
 
       agents.forEach((agent) => {

@@ -53,6 +53,7 @@ model mail_thread_members {
   user_id      String
   new_msg_id   String       @default("")
   archived     Int          @default(0)
+  updated_at   DateTime     @updatedAt
   users        users        @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   mail_threads mail_threads @relation(fields: [thread_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
@@ -77,6 +78,7 @@ model mail_threads {
   id                   String                 @id // ULID
   subject              String
   token_count          Int                    @default(0)
+  updated_at           DateTime               @updatedAt
   mail_thread_members  mail_thread_members[]
   mail_thread_messages mail_thread_messages[]
 
@@ -90,12 +92,17 @@ model users {
   agent_path           String                 @unique(map: "unq_users_agent_path")
   lead_username        String?
   config               String                 @default("{}")
+  host_id              String?
+  updated_at           DateTime               @updatedAt
+  host                 hosts?                 @relation(fields: [host_id], references: [id])
   mail_thread_members  mail_thread_members[]
   mail_thread_messages mail_thread_messages[]
   run_sessions         run_session[]
   context_logs         context_log[]          @relation("context_log_user")
   costs                costs[]                @relation("costs_user")
   user_notifications   user_notifications?
+
+  @@index([host_id], map: "idx_users_host_id")
 }
 
 model user_notifications {
@@ -120,6 +127,7 @@ model run_session {
   latest_log_id String        @default("")
   total_lines   Int           @default(0)
   total_cost    Float         @default(0)
+  updated_at    DateTime      @updatedAt
   users         users         @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   context_logs  context_log[]
   costs         costs[]
@@ -133,4 +141,11 @@ model schema_version {
   id      Int      @id @default(1)
   version Int      @unique(map: "unq_schema_version_version")
   updated DateTime
+}
+
+model hosts {
+  id         String   @id // ULID
+  name       String   @unique(map: "unq_hosts_name") // NAISYS_HOSTNAME
+  updated_at DateTime @updatedAt
+  users      users[]
 }

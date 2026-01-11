@@ -1,4 +1,5 @@
 import { readFile } from "fs/promises";
+import os from "os";
 import path from "path";
 import * as pathService from "./services/pathService.js";
 import { sanitizeSpendLimit } from "./utils/utilities.js";
@@ -7,8 +8,11 @@ export async function createGlobalConfig() {
   let cachedConfig = await loadConfig();
 
   async function loadConfig() {
-    /** The system name that shows after the @ in the command prompt */
-    const hostname = "naisys";
+    /** Identifies this runner - shows after @ in prompt, used for multi-machine host identification */
+    const hostname = getEnv("NAISYS_HOSTNAME", true)!.replace(
+      "${machine_name}",
+      os.hostname()
+    );
 
     const shellCommand = {
       /** Limits the size of files that can be read/wrote */

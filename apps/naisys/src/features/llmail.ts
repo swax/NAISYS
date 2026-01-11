@@ -421,6 +421,11 @@ export function createLLMail(
           username: true,
           title: true,
           lead_username: true,
+          host: {
+            select: {
+              name: true,
+            },
+          },
           run_sessions: {
             select: {
               last_active: true,
@@ -439,6 +444,7 @@ export function createLLMail(
           username: u.username,
           title: u.title,
           lead_username: u.lead_username,
+          hostname: u.host?.name,
           active: lastActive
             ? new Date(lastActive).getTime() > Date.now() - 5 * 1000 // 5 seconds
             : false,
@@ -447,11 +453,12 @@ export function createLLMail(
 
       return table(
         [
-          ["Username", "Title", "Lead", "Status"],
+          ["Username", "Title", "Lead", "Host", "Status"],
           ...enrichedUserList.map((ul) => [
             ul.username,
             ul.title,
             ul.lead_username || "",
+            ul.hostname || "",
             ul.active ? "Online" : "Offline",
           ]),
         ],
