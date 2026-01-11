@@ -2,16 +2,16 @@ import { z } from "zod";
 
 // Zod schemas
 export const MailThreadMemberSchema = z.object({
-  userId: z.number(),
+  userId: z.string(),
   username: z.string(),
-  newMsgId: z.number(),
+  newMsgId: z.string(),
   archived: z.boolean(),
 });
 
 export const MailThreadMessageSchema = z.object({
-  id: z.number(),
-  threadId: z.number(),
-  userId: z.number(),
+  id: z.string(),
+  threadId: z.string(),
+  userId: z.string(),
   username: z.string(),
   subject: z.string(),
   message: z.string(),
@@ -37,7 +37,7 @@ export const SendMailRequestSchema = z.object({
 export const SendMailResponseSchema = z.object({
   success: z.boolean(),
   message: z.string().optional(),
-  messageId: z.number().optional(),
+  messageId: z.string().optional(),
 });
 
 export const MailDataRequestSchema = z.object({

@@ -4,10 +4,10 @@ import { ContextLogParams, getContextLog, LogEntry } from "../lib/apiClient";
 
 // Module-level caches (shared across all hook instances and persist across remounts)
 const logsCache = new Map<string, LogEntry[]>();
-const logsAfterCache = new Map<string, number | undefined>();
+const logsAfterCache = new Map<string, string | undefined>();
 
 export const useContextLog = (
-  userId: number,
+  userId: string,
   runId: number,
   sessionId: number,
   enabled: boolean = true,
@@ -37,7 +37,7 @@ export const useContextLog = (
   const query = useQuery({
     queryKey: ["context-log", sessionKey],
     queryFn,
-    enabled: enabled && userId > 0,
+    enabled: enabled && !!userId,
     refetchInterval: isOnline ? 5000 : false, // Only poll if online
     refetchIntervalInBackground: false,
     refetchOnWindowFocus: true,
@@ -66,14 +66,19 @@ export const useContextLog = (
       const mergedLogs = Array.from(logsMap.values());
 
       // Sort once when updating cache (ascending - oldest first)
-      const sortedLogs = mergedLogs.sort((a, b) => a.id - b.id);
+      // ULIDs are lexicographically sortable
+      const sortedLogs = mergedLogs.sort((a, b) => a.id.localeCompare(b.id));
 
       // Update cache with sorted logs
       logsCache.set(sessionKey, sortedLogs);
 
       // Update logsAfter with the highest log ID we've seen
       if (sortedLogs.length > 0) {
-        const maxLogId = Math.max(...sortedLogs.map((log) => log.id));
+        // Find max ULID using string comparison
+        const maxLogId = sortedLogs.reduce(
+          (max, log) => (log.id > max ? log.id : max),
+          sortedLogs[0].id,
+        );
         logsAfterCache.set(sessionKey, maxLogId);
       }
 

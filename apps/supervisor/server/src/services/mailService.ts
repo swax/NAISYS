@@ -1,3 +1,4 @@
+import { ulid } from "@naisys/database";
 import {
   SendMailRequest,
   SendMailResponse,
@@ -114,8 +115,8 @@ export async function getMailData(
 }
 
 async function getThreadMembersMap(
-  threadIds: number[],
-): Promise<Record<number, MailThreadMember[]>> {
+  threadIds: string[],
+): Promise<Record<string, MailThreadMember[]>> {
   if (threadIds.length === 0) return {};
 
   try {
@@ -134,7 +135,7 @@ async function getThreadMembersMap(
       });
     });
 
-    const membersMap: Record<number, MailThreadMember[]> = {};
+    const membersMap: Record<string, MailThreadMember[]> = {};
 
     dbMembers.forEach((member) => {
       if (!membersMap[member.thread_id]) {
@@ -194,6 +195,7 @@ export async function sendMessage(
       // 3. Create new thread
       const thread = await prisma.mail_threads.create({
         data: {
+          id: ulid(),
           subject,
           token_count: 0, // TODO
         },
@@ -201,17 +203,21 @@ export async function sendMessage(
 
       const threadId = thread.id;
 
+      // Generate message ID upfront so we can use it for new_msg_id
+      const msgId = ulid();
+
       // Add both users to the thread
       await prisma.mail_thread_members.createMany({
         data: [
-          { thread_id: threadId, user_id: fromUser.id, new_msg_id: -1 },
-          { thread_id: threadId, user_id: toUser.id, new_msg_id: 0 },
+          { id: ulid(), thread_id: threadId, user_id: fromUser.id, new_msg_id: "" },
+          { id: ulid(), thread_id: threadId, user_id: toUser.id, new_msg_id: msgId },
         ],
       });
 
       // 4. Insert new message into mail_thread_messages table
-      const threadMessage = await prisma.mail_thread_messages.create({
+      await prisma.mail_thread_messages.create({
         data: {
+          id: msgId,
           thread_id: threadId,
           user_id: fromUser.id,
           message: cleanMessage,
@@ -219,7 +225,7 @@ export async function sendMessage(
         },
       });
 
-      return threadMessage.id;
+      return msgId;
     });
 
     // 5. Handle attachments if any
@@ -232,7 +238,7 @@ export async function sendMessage(
       const attachmentsDir = path.join(
         naisysFolderPath,
         "attachments",
-        messageId.toString(),
+        messageId,
       );
       await saveAttachments(messageId, attachments);
 
@@ -272,7 +278,7 @@ export async function sendMessage(
 }
 
 async function saveAttachments(
-  messageId: number,
+  messageId: string,
   attachments: Array<{ filename: string; data: Buffer }>,
 ) {
   const naisysFolderPath = process.env.NAISYS_FOLDER;
@@ -283,7 +289,7 @@ async function saveAttachments(
   const attachmentsDir = path.join(
     naisysFolderPath,
     "attachments",
-    messageId.toString(),
+    messageId,
   );
 
   // Create the directory

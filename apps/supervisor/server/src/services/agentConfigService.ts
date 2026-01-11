@@ -1,3 +1,4 @@
+import { ulid } from "@naisys/database";
 import fs from "fs/promises";
 import path from "path";
 import { usingNaisysDb } from "../database/naisysDatabase.js";
@@ -117,6 +118,7 @@ wakeOnMessage: true
   await usingNaisysDb(async (prisma) => {
     await prisma.users.create({
       data: {
+        id: ulid(),
         username: name,
         title: "Assistant",
         agent_path: agentFilePath,

@@ -8,8 +8,8 @@ datasource db {
 }
 
 model context_log {
-  id          Int         @id @default(autoincrement())
-  user_id     Int
+  id          String      @id // ULID
+  user_id     String
   run_id      Int
   session_id  Int
   role        String
@@ -26,8 +26,8 @@ model context_log {
 }
 
 model costs {
-  id                 Int         @id @default(autoincrement())
-  user_id            Int
+  id                 String      @id // ULID
+  user_id            String
   run_id             Int
   session_id         Int
   source             String
@@ -48,10 +48,10 @@ model costs {
 }
 
 model mail_thread_members {
-  id           Int          @id @default(autoincrement())
-  thread_id    Int
-  user_id      Int
-  new_msg_id   Int          @default(-1)
+  id           String       @id // ULID
+  thread_id    String
+  user_id      String
+  new_msg_id   String       @default("")
   archived     Int          @default(0)
   users        users        @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   mail_threads mail_threads @relation(fields: [thread_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
@@ -61,9 +61,9 @@ model mail_thread_members {
 }
 
 model mail_thread_messages {
-  id           Int          @id @default(autoincrement())
-  thread_id    Int
-  user_id      Int
+  id           String       @id // ULID
+  thread_id    String
+  user_id      String
   message      String
   date         DateTime
   users        users        @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
@@ -74,7 +74,7 @@ model mail_thread_messages {
 }
 
 model mail_threads {
-  id                   Int                    @id @default(autoincrement())
+  id                   String                 @id // ULID
   subject              String
   token_count          Int                    @default(0)
   mail_thread_members  mail_thread_members[]
@@ -84,7 +84,7 @@ model mail_threads {
 }
 
 model users {
-  id                   Int                    @id @default(autoincrement())
+  id                   String                 @id // ULID
   username             String                 @unique(map: "unq_users_username")
   title                String
   agent_path           String                 @unique(map: "unq_users_agent_path")
@@ -99,9 +99,9 @@ model users {
 }
 
 model user_notifications {
-  user_id        Int       @id
-  latest_mail_id Int       @default(-1)
-  latest_log_id  Int       @default(-1)
+  user_id        String    @id
+  latest_mail_id String    @default("")
+  latest_log_id  String    @default("")
   /**
    * Not the same as modified date, for example an agent can receive mail while not being active
    */
@@ -111,13 +111,13 @@ model user_notifications {
 }
 
 model run_session {
-  user_id       Int
+  user_id       String
   run_id        Int
   session_id    Int
   start_date    DateTime
   last_active   DateTime
   model_name    String
-  latest_log_id Int           @default(-1)
+  latest_log_id String        @default("")
   total_lines   Int           @default(0)
   total_cost    Float         @default(0)
   users         users         @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)

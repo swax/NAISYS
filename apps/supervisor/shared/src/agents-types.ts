@@ -2,14 +2,14 @@ import { z } from "zod";
 
 // Zod schemas
 export const AgentSchema = z.object({
-  id: z.number(),
+  id: z.string(),
   name: z.string(),
   title: z.string(),
   lastActive: z.string().optional(),
   agentPath: z.string().optional(),
   leadUsername: z.string().optional(),
-  latestLogId: z.number(),
-  latestMailId: z.number(),
+  latestLogId: z.string(),
+  latestMailId: z.string(),
 });
 
 // Inferred types

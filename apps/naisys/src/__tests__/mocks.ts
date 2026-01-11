@@ -33,7 +33,7 @@ export function createMockRunService(): RunService {
   return {
     cleanup: jest.fn(),
     incrementSession: jest.fn(() => Promise.resolve()),
-    getUserId: jest.fn(() => -1),
+    getUserId: jest.fn(() => ""),
     getRunId: jest.fn(() => -1),
     getSessionId: jest.fn(() => -1),
   };
@@ -41,7 +41,7 @@ export function createMockRunService(): RunService {
 
 export function createMockLogService() {
   return {
-    write: (msg: LlmMessage) => Promise.resolve(0),
+    write: (msg: LlmMessage) => Promise.resolve(""),
     toSimpleRole: (role: LlmRole) => "LLM",
   } satisfies LogService;
 }

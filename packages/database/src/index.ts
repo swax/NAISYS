@@ -2,6 +2,9 @@
 export { PrismaClient } from "./generated/prisma/client.js";
 export * from "./generated/prisma/client.js";
 
+// Re-export ULID utilities
+export { ulid, monotonicFactory } from "ulid";
+
 // Import PrismaClient at the top level for the factory function
 import { PrismaClient } from "./generated/prisma/client.js";
 import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";

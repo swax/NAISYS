@@ -37,7 +37,7 @@ export const RunSessionLog: React.FC<{
   const { updateReadStatus, readStatus } = useAgentDataContext();
 
   // Save the initial lastReadLogId to determine where to show the divider
-  const [dividerLogId] = useState<number | undefined>(
+  const [dividerLogId] = useState<string | undefined>(
     agentParam ? readStatus[agentParam]?.lastReadLogId : undefined,
   );
 
@@ -79,7 +79,11 @@ export const RunSessionLog: React.FC<{
 
   useEffect(() => {
     // Update read status when viewing logs
-    const maxLogId = Math.max(...logs.map((log) => log.id), -1);
+    // Find max ULID using string comparison
+    const maxLogId = logs.reduce(
+      (max, log) => (log.id > max ? log.id : max),
+      "",
+    );
     updateReadStatus(agentParam || "", maxLogId, undefined);
 
     // Auto-scroll to bottom when new logs arrive (if already at bottom or first load)

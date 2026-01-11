@@ -8,11 +8,11 @@ import { RunSession } from "../types/runSession";
 type RunSessionWithFlag = RunSession & { isFirst?: boolean };
 
 // Module-level caches (shared across all hook instances and persist across remounts)
-const runsCache = new Map<number, RunSessionWithFlag[]>();
-const updatedSinceCache = new Map<number, string | undefined>();
-const totalCache = new Map<number, number>();
+const runsCache = new Map<string, RunSessionWithFlag[]>();
+const updatedSinceCache = new Map<string, string | undefined>();
+const totalCache = new Map<string, number>();
 
-export const useRunsData = (userId: number, enabled: boolean = true) => {
+export const useRunsData = (userId: string, enabled: boolean = true) => {
   // Version counter to trigger re-renders when cache updates
   const [, setCacheVersion] = useState(0);
 
@@ -32,7 +32,7 @@ export const useRunsData = (userId: number, enabled: boolean = true) => {
   const query = useQuery({
     queryKey: ["runs-data", userId],
     queryFn,
-    enabled: enabled && userId > 0,
+    enabled: enabled && !!userId,
     refetchInterval: 5000, // Poll every 5 seconds
     refetchIntervalInBackground: false,
     refetchOnWindowFocus: true,
