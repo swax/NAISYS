@@ -1,4 +1,5 @@
 import { ulid } from "@naisys/database";
+import { isUlidWithinWindow, minUlidForTime } from "../utils/ulidTools.js";
 import { GlobalConfig } from "../globalConfig.js";
 import { AgentConfig } from "../agentConfig.js";
 import { DatabaseService } from "../services/dbService.js";
@@ -21,6 +22,9 @@ interface TokenUsage {
   cacheReadTokens: number;
 }
 
+// Aggregate costs within this time window (in milliseconds)
+const COST_AGGREGATION_WINDOW_MS = 5 * 60 * 1000; // 5 minutes
+
 export function createCostTracker(
   { globalConfig }: GlobalConfig,
   { agentConfig }: AgentConfig,
@@ -30,7 +34,7 @@ export function createCostTracker(
   output: OutputService,
 ) {
   // Record token usage for LLM calls - calculate and store total cost
-  // Aggregates costs by user/run/session/source/model combination
+  // Aggregates costs within a time window by user/run/session/source/model combination
   async function recordTokens(
     source: string,
     modelKey: string,
@@ -52,75 +56,97 @@ export function createCostTracker(
     const { getUserId, getRunId, getSessionId } = runService;
 
     await usingDatabase(async (prisma) => {
-      await prisma.costs.upsert({
+      // Find the most recent cost record for this combination
+      const existingRecord = await prisma.costs.findFirst({
         where: {
-          user_id_run_id_session_id_source_model: {
-            user_id: getUserId(),
-            run_id: getRunId(),
-            session_id: getSessionId(),
-            source,
-            model: modelKey,
-          },
-        },
-        create: {
-          id: ulid(),
           user_id: getUserId(),
           run_id: getRunId(),
           session_id: getSessionId(),
           source,
           model: modelKey,
-          cost: totalCost,
-          input_tokens: inputTokens,
-          output_tokens: outputTokens,
-          cache_write_tokens: cacheWriteTokens,
-          cache_read_tokens: cacheReadTokens,
         },
-        update: {
-          cost: { increment: totalCost },
-          input_tokens: { increment: inputTokens },
-          output_tokens: { increment: outputTokens },
-          cache_write_tokens: { increment: cacheWriteTokens },
-          cache_read_tokens: { increment: cacheReadTokens },
-        },
+        orderBy: { id: "desc" },
+        select: { id: true },
       });
+
+      // Update existing record if within aggregation window, otherwise create new
+      if (existingRecord && isUlidWithinWindow(existingRecord.id, COST_AGGREGATION_WINDOW_MS)) {
+        await prisma.costs.update({
+          where: { id: existingRecord.id },
+          data: {
+            cost: { increment: totalCost },
+            input_tokens: { increment: inputTokens },
+            output_tokens: { increment: outputTokens },
+            cache_write_tokens: { increment: cacheWriteTokens },
+            cache_read_tokens: { increment: cacheReadTokens },
+          },
+        });
+      } else {
+        await prisma.costs.create({
+          data: {
+            id: ulid(),
+            user_id: getUserId(),
+            run_id: getRunId(),
+            session_id: getSessionId(),
+            source,
+            model: modelKey,
+            cost: totalCost,
+            input_tokens: inputTokens,
+            output_tokens: outputTokens,
+            cache_write_tokens: cacheWriteTokens,
+            cache_read_tokens: cacheReadTokens,
+          },
+        });
+      }
     });
 
     await updateSessionCost(totalCost);
   }
 
   // Record fixed cost for non-token services like image generation
-  // Aggregates costs by user/run/session/source/model combination
+  // Aggregates costs within a time window by user/run/session/source/model combination
   async function recordCost(cost: number, source: string, modelKey: string) {
     const { getUserId, getRunId, getSessionId } = runService;
 
     await usingDatabase(async (prisma) => {
-      await prisma.costs.upsert({
+      // Find the most recent cost record for this combination
+      const existingRecord = await prisma.costs.findFirst({
         where: {
-          user_id_run_id_session_id_source_model: {
-            user_id: getUserId(),
-            run_id: getRunId(),
-            session_id: getSessionId(),
-            source,
-            model: modelKey,
-          },
-        },
-        create: {
-          id: ulid(),
           user_id: getUserId(),
           run_id: getRunId(),
           session_id: getSessionId(),
           source,
           model: modelKey,
-          cost,
-          input_tokens: 0,
-          output_tokens: 0,
-          cache_write_tokens: 0,
-          cache_read_tokens: 0,
         },
-        update: {
-          cost: { increment: cost },
-        },
+        orderBy: { id: "desc" },
+        select: { id: true },
       });
+
+      // Update existing record if within aggregation window, otherwise create new
+      if (existingRecord && isUlidWithinWindow(existingRecord.id, COST_AGGREGATION_WINDOW_MS)) {
+        await prisma.costs.update({
+          where: { id: existingRecord.id },
+          data: {
+            cost: { increment: cost },
+          },
+        });
+      } else {
+        await prisma.costs.create({
+          data: {
+            id: ulid(),
+            user_id: getUserId(),
+            run_id: getRunId(),
+            session_id: getSessionId(),
+            source,
+            model: modelKey,
+            cost,
+            input_tokens: 0,
+            output_tokens: 0,
+            cache_write_tokens: 0,
+            cache_read_tokens: 0,
+          },
+        });
+      }
     });
 
     await updateSessionCost(cost);
@@ -202,11 +228,11 @@ export function createCostTracker(
     return usingDatabase(async (prisma) => {
       const where: any = userId ? { user_id: userId } : {};
 
-      // Add date range filtering if period is specified
+      // Filter by ULID timestamp range (ULIDs are lexicographically sortable by time)
       if (periodStart && periodEnd) {
-        where.date = {
-          gte: periodStart.toISOString(),
-          lt: periodEnd.toISOString(),
+        where.id = {
+          gte: minUlidForTime(periodStart),
+          lt: minUlidForTime(periodEnd),
         };
       }
 

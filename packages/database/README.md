@@ -47,6 +47,12 @@ npm run prisma:studio
 
 This opens a visual database browser at http://localhost:5555
 
+### Reiniting the db for a breaking change
+
+1. Delete the existing db files in NAISYS_FOLDER
+2. Delete migration files
+3. Run the standard migration script and enter name 'init' when it asks
+
 ## Scripts
 
 - `npm run build` - Generate Prisma Client and compile TypeScript
