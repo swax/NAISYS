@@ -64,6 +64,8 @@ Note: Only active operations filter by deleted_at (starting agents, sending mail
 # Append-only tables (no updated_at needed, sync by ULID):
 - context_log
 - mail_thread_messages
+
+Note: For context_log, use monotonic ULID generation to preserve strict ordering within a session. Track the previous insert's ID and if the timestamp portion matches, increment the random portion by 1. The `ulid` library's `monotonicFactory()` handles this, or implement manually: compare first 10 chars (timestamp), if equal, increment the ULID as a base32 number.
 ```
 
 ### Code Changes
@@ -227,7 +229,7 @@ Note: Uses existing `schema_version` table to check compatibility.
 | `costs` | `WHERE updated_at > :since` |
 | `run_session` | `WHERE updated_at > :since` |
 
-Note: `ulid_timestamp(id)` extracts the timestamp from a ULID. In practice, ULIDs can be compared lexicographically to a ULID generated from the `since` timestamp.
+Note: ULIDs are lexicographically sortable by time. To avoid table scans, convert the `since` timestamp to a ULID prefix (e.g., `ulid.encodeTime(sinceMs, 10) + '0'.repeat(16)`) and compare directly: `WHERE id > :since_ulid`. This uses the primary key index efficiently.
 
 ### Runner Behavior
 
@@ -546,9 +548,9 @@ Can ship Phases 1-2 first (single-machine with ULIDs + hosts), then 3-5 for mult
 ## Verification
 
 ### Phase 1 (ULID + updated_at)
-- [ ] Existing tests pass with ULID IDs
-- [ ] New agents created with ULID
-- [ ] Mail works with ULID thread/message IDs
+- [x] Existing tests pass with ULID IDs
+- [x] New agents created with ULID
+- [x] Mail works with ULID thread/message IDs
 - [ ] updated_at updates correctly on record changes
 - [ ] Supervisor displays agents/logs correctly
 

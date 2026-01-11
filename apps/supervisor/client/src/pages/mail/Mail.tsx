@@ -33,7 +33,7 @@ export const Mail: React.FC = () => {
   console.log(`Loaded mail for agent ${agentParam}`);
 
   // Save the initial lastReadMailId to determine where to show the divider
-  const [lastReadMailId] = useState<number | null>(
+  const [lastReadMailId] = useState<string | null>(
     agentParam && readStatus[agentParam]
       ? readStatus[agentParam].lastReadMailId
       : null,
@@ -41,7 +41,11 @@ export const Mail: React.FC = () => {
 
   // Update read status when viewing mail
   useEffect(() => {
-    const maxMailId = Math.max(...allMail.map((mail) => mail.id), -1);
+    // Find max ULID using string comparison
+    const maxMailId = allMail.reduce(
+      (max, mail) => (mail.id > max ? mail.id : max),
+      "",
+    );
     updateReadStatus(agentParam || "", undefined, maxMailId);
   }, [allMail]);
 

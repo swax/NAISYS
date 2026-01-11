@@ -16,7 +16,7 @@ export const Runs: React.FC = () => {
 
   // Find the agent and get their user ID
   const agent = agents.find((a) => a.name === agentName);
-  const userId = agent?.id || 0;
+  const userId = agent?.id || "";
 
   const {
     runs: allRuns,
@@ -31,9 +31,14 @@ export const Runs: React.FC = () => {
   // We need to have the latest data for auto-opening panels in RunSessionCard to work correctly.
   useEffect(() => {
     if (isFetchedAfterMount && freshData == 'loading') {
-      const runMaxLogId = Math.max(...allRuns.map((run) => run.latestLogId), -1);
+      // Find max ULID using string comparison
+      const runMaxLogId = allRuns.reduce(
+        (max, run) => (run.latestLogId > max ? run.latestLogId : max),
+        "",
+      );
 
       // Once the run log id is at least the agent's latest log id, we know we have fresh data
+      // ULIDs are lexicographically sortable
       if (agent?.latestLogId && runMaxLogId >= agent.latestLogId) {
         setFreshData('loaded');
       }

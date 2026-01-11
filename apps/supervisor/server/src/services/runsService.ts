@@ -13,7 +13,7 @@ export interface ContextLogData {
 }
 
 export async function getRunsData(
-  userId: number,
+  userId: string,
   updatedSince?: string,
   page: number = 1,
   count: number = 50,
@@ -82,10 +82,10 @@ export async function getRunsData(
 }
 
 export async function getContextLog(
-  userId: number,
+  userId: string,
   runId: number,
   sessionId: number,
-  logsAfter?: number,
+  logsAfter?: string,
 ): Promise<ContextLogData> {
   try {
     const dbLogs = await usingNaisysDb(async (prisma) => {
@@ -95,8 +95,8 @@ export async function getContextLog(
         session_id: sessionId,
       };
 
-      // If logsAfter is provided, only fetch logs after that ID
-      if (logsAfter !== undefined && logsAfter > 0) {
+      // If logsAfter is provided, only fetch logs after that ID (ULID string comparison)
+      if (logsAfter) {
         where.id = { gt: logsAfter };
       }
 

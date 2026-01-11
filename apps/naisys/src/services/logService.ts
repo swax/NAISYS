@@ -1,3 +1,4 @@
+import { monotonicFactory } from "@naisys/database";
 import { LlmMessage, LlmRole } from "../llm/llmDtos.js";
 import { DatabaseService } from "./dbService.js";
 import { RunService } from "./runService.js";
@@ -6,12 +7,16 @@ export function createLogService(
   { usingDatabase }: DatabaseService,
   runService: RunService,
 ) {
+  // Use monotonic ULID to preserve strict ordering within a session
+  const monotonicUlid = monotonicFactory();
+
   async function write(message: LlmMessage) {
     const { getUserId, getRunId, getSessionId } = runService;
 
     const insertedId = await usingDatabase(async (prisma) => {
       const inserted = await prisma.context_log.create({
         data: {
+          id: monotonicUlid(),
           user_id: getUserId(),
           run_id: getRunId(),
           session_id: getSessionId(),

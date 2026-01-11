@@ -1,3 +1,4 @@
+import { ulid } from "@naisys/database";
 import * as fs from "fs";
 import yaml from "js-yaml";
 import * as path from "path";
@@ -179,6 +180,7 @@ export async function createAgentRegistrar(
           // User doesn't exist, create it
           const user = await prisma.users.create({
             data: {
+              id: ulid(),
               username: agentConfig.username,
               title: agentConfig.title,
               agent_path: absolutePath,
@@ -198,8 +200,8 @@ export async function createAgentRegistrar(
           await prisma.user_notifications.create({
             data: {
               user_id: user.id,
-              latest_mail_id: -1,
-              latest_log_id: -1,
+              latest_mail_id: "",
+              latest_log_id: "",
             },
           });
 
@@ -260,8 +262,8 @@ export async function createAgentRegistrar(
               where: { user_id: existingUser.id },
               create: {
                 user_id: existingUser.id,
-                latest_mail_id: -1,
-                latest_log_id: -1,
+                latest_mail_id: "",
+                latest_log_id: "",
               },
               update: {
                 updated_at: new Date().toISOString(),

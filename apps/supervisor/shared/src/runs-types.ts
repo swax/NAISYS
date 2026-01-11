@@ -3,19 +3,19 @@ import { LogEntrySchema } from "./log-types.js";
 
 // Zod schemas
 export const RunSessionSchema = z.object({
-  userId: z.number(),
+  userId: z.string(),
   runId: z.number(),
   sessionId: z.number(),
   startDate: z.string(),
   lastActive: z.string(),
   modelName: z.string(),
-  latestLogId: z.number(),
+  latestLogId: z.string(),
   totalLines: z.number(),
   totalCost: z.number(),
 });
 
 export const RunsDataRequestSchema = z.object({
-  userId: z.coerce.number(),
+  userId: z.string(),
   updatedSince: z.string().optional(),
   page: z.coerce.number().optional().default(1),
   count: z.coerce.number().optional().default(50),
@@ -34,10 +34,10 @@ export const RunsDataResponseSchema = z.object({
 });
 
 export const ContextLogRequestSchema = z.object({
-  userId: z.coerce.number(),
+  userId: z.string(),
   runId: z.coerce.number(),
   sessionId: z.coerce.number(),
-  logsAfter: z.coerce.number().optional(),
+  logsAfter: z.string().optional(),
 });
 
 export const ContextLogResponseSchema = z.object({

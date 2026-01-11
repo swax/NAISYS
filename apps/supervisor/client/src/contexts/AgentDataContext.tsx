@@ -8,8 +8,8 @@ import { useAgentData } from "../hooks/useAgentData";
 import { Agent } from "../types/agent";
 
 export interface ClientReadStatus {
-  lastReadLogId: number;
-  lastReadMailId: number;
+  lastReadLogId: string;
+  lastReadMailId: string;
 }
 
 interface AgentDataContextType {
@@ -19,8 +19,8 @@ interface AgentDataContextType {
   readStatus: Record<string, ClientReadStatus>;
   updateReadStatus: (
     agentName: string,
-    lastReadLogId?: number,
-    lastReadMailId?: number,
+    lastReadLogId?: string,
+    lastReadMailId?: string,
   ) => Promise<void>;
 }
 
@@ -70,15 +70,16 @@ export const AgentDataProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const updateReadStatus = async (
     agentName: string,
-    lastReadLogId?: number,
-    lastReadMailId?: number,
+    lastReadLogId?: string,
+    lastReadMailId?: string,
   ): Promise<void> => {
     setReadStatus((prevStatus) => {
       const currentStatus = prevStatus[agentName] || {
-        lastReadLogId: -1,
-        lastReadMailId: -1,
+        lastReadLogId: "",
+        lastReadMailId: "",
       };
 
+      // ULIDs are lexicographically sortable, so string comparison works
       const newLogId =
         lastReadLogId !== undefined && lastReadLogId > currentStatus.lastReadLogId
           ? lastReadLogId

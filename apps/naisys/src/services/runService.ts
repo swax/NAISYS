@@ -7,7 +7,7 @@ export async function createRunService(
   { agentConfig }: AgentConfig,
   { usingDatabase }: DatabaseService,
 ) {
-  let userId = -1;
+  let userId = "";
 
   /** The run ID of an agent process (there could be multiple runs for the same user). Globally unique */
   let runId = -1;
@@ -85,7 +85,7 @@ export async function createRunService(
   }
 
   async function updateLastActive(): Promise<void> {
-    if (userId === -1) return;
+    if (!userId) return;
 
     await usingDatabase(async (prisma) => {
       const now = new Date().toISOString();

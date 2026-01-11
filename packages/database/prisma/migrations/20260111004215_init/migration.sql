@@ -1,7 +1,7 @@
 -- CreateTable
 CREATE TABLE "context_log" (
-    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-    "user_id" INTEGER NOT NULL,
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "user_id" TEXT NOT NULL,
     "run_id" INTEGER NOT NULL,
     "session_id" INTEGER NOT NULL,
     "role" TEXT NOT NULL,
@@ -15,8 +15,8 @@ CREATE TABLE "context_log" (
 
 -- CreateTable
 CREATE TABLE "costs" (
-    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-    "user_id" INTEGER NOT NULL,
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "user_id" TEXT NOT NULL,
     "run_id" INTEGER NOT NULL,
     "session_id" INTEGER NOT NULL,
     "source" TEXT NOT NULL,
@@ -33,10 +33,10 @@ CREATE TABLE "costs" (
 
 -- CreateTable
 CREATE TABLE "mail_thread_members" (
-    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-    "thread_id" INTEGER NOT NULL,
-    "user_id" INTEGER NOT NULL,
-    "new_msg_id" INTEGER NOT NULL DEFAULT -1,
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "thread_id" TEXT NOT NULL,
+    "user_id" TEXT NOT NULL,
+    "new_msg_id" TEXT NOT NULL DEFAULT '',
     "archived" INTEGER NOT NULL DEFAULT 0,
     CONSTRAINT "mail_thread_members_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION,
     CONSTRAINT "mail_thread_members_thread_id_fkey" FOREIGN KEY ("thread_id") REFERENCES "mail_threads" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION
@@ -44,9 +44,9 @@ CREATE TABLE "mail_thread_members" (
 
 -- CreateTable
 CREATE TABLE "mail_thread_messages" (
-    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-    "thread_id" INTEGER NOT NULL,
-    "user_id" INTEGER NOT NULL,
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "thread_id" TEXT NOT NULL,
+    "user_id" TEXT NOT NULL,
     "message" TEXT NOT NULL,
     "date" DATETIME NOT NULL,
     CONSTRAINT "mail_thread_messages_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION,
@@ -55,14 +55,14 @@ CREATE TABLE "mail_thread_messages" (
 
 -- CreateTable
 CREATE TABLE "mail_threads" (
-    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "id" TEXT NOT NULL PRIMARY KEY,
     "subject" TEXT NOT NULL,
     "token_count" INTEGER NOT NULL DEFAULT 0
 );
 
 -- CreateTable
 CREATE TABLE "users" (
-    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "id" TEXT NOT NULL PRIMARY KEY,
     "username" TEXT NOT NULL,
     "title" TEXT NOT NULL,
     "agent_path" TEXT NOT NULL,
@@ -72,9 +72,9 @@ CREATE TABLE "users" (
 
 -- CreateTable
 CREATE TABLE "user_notifications" (
-    "user_id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-    "latest_mail_id" INTEGER NOT NULL DEFAULT -1,
-    "latest_log_id" INTEGER NOT NULL DEFAULT -1,
+    "user_id" TEXT NOT NULL PRIMARY KEY,
+    "latest_mail_id" TEXT NOT NULL DEFAULT '',
+    "latest_log_id" TEXT NOT NULL DEFAULT '',
     "last_active" DATETIME,
     "updated_at" DATETIME NOT NULL,
     CONSTRAINT "user_notifications_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION
@@ -82,13 +82,13 @@ CREATE TABLE "user_notifications" (
 
 -- CreateTable
 CREATE TABLE "run_session" (
-    "user_id" INTEGER NOT NULL,
+    "user_id" TEXT NOT NULL,
     "run_id" INTEGER NOT NULL,
     "session_id" INTEGER NOT NULL,
     "start_date" DATETIME NOT NULL,
     "last_active" DATETIME NOT NULL,
     "model_name" TEXT NOT NULL,
-    "latest_log_id" INTEGER NOT NULL DEFAULT -1,
+    "latest_log_id" TEXT NOT NULL DEFAULT '',
     "total_lines" INTEGER NOT NULL DEFAULT 0,
     "total_cost" REAL NOT NULL DEFAULT 0,
 

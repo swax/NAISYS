@@ -1,3 +1,4 @@
+import { ulid } from "@naisys/database";
 import { GlobalConfig } from "../globalConfig.js";
 import { AgentConfig } from "../agentConfig.js";
 import { DatabaseService } from "../services/dbService.js";
@@ -62,6 +63,7 @@ export function createCostTracker(
           },
         },
         create: {
+          id: ulid(),
           user_id: getUserId(),
           run_id: getRunId(),
           session_id: getSessionId(),
@@ -103,6 +105,7 @@ export function createCostTracker(
           },
         },
         create: {
+          id: ulid(),
           user_id: getUserId(),
           run_id: getRunId(),
           session_id: getSessionId(),
@@ -192,7 +195,7 @@ export function createCostTracker(
   }
 
   async function getTotalCosts(
-    userId?: number,
+    userId?: string,
     periodStart?: Date,
     periodEnd?: Date,
   ) {
@@ -263,7 +266,7 @@ export function createCostTracker(
     }
   }
 
-  async function getCostBreakdown(userId?: number) {
+  async function getCostBreakdown(userId?: string) {
     return usingDatabase(async (prisma) => {
       const where = userId ? { user_id: userId } : {};
 
@@ -297,7 +300,7 @@ export function createCostTracker(
     });
   }
 
-  async function getCostBreakdownWithModels(userId?: number) {
+  async function getCostBreakdownWithModels(userId?: string) {
     return usingDatabase(async (prisma) => {
       const result = await prisma.costs.groupBy({
         by: ["model"],
@@ -392,7 +395,7 @@ export function createCostTracker(
     };
   }
 
-  async function clearCosts(userId?: number) {
+  async function clearCosts(userId?: string) {
     return usingDatabase(async (prisma) => {
       const where = userId ? { user_id: userId } : {};
 
@@ -400,7 +403,7 @@ export function createCostTracker(
     });
   }
 
-  async function printCosts(userId?: number) {
+  async function printCosts(userId?: string) {
     const costBreakdown = await getCostBreakdown(userId);
     const modelBreakdowns = await getCostBreakdownWithModels(userId);
 
