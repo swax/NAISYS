@@ -38,6 +38,7 @@ CREATE TABLE "mail_thread_members" (
     "user_id" TEXT NOT NULL,
     "new_msg_id" TEXT NOT NULL DEFAULT '',
     "archived" INTEGER NOT NULL DEFAULT 0,
+    "updated_at" DATETIME NOT NULL,
     CONSTRAINT "mail_thread_members_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION,
     CONSTRAINT "mail_thread_members_thread_id_fkey" FOREIGN KEY ("thread_id") REFERENCES "mail_threads" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION
 );
@@ -57,7 +58,8 @@ CREATE TABLE "mail_thread_messages" (
 CREATE TABLE "mail_threads" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "subject" TEXT NOT NULL,
-    "token_count" INTEGER NOT NULL DEFAULT 0
+    "token_count" INTEGER NOT NULL DEFAULT 0,
+    "updated_at" DATETIME NOT NULL
 );
 
 -- CreateTable
@@ -67,7 +69,10 @@ CREATE TABLE "users" (
     "title" TEXT NOT NULL,
     "agent_path" TEXT NOT NULL,
     "lead_username" TEXT,
-    "config" TEXT NOT NULL DEFAULT '{}'
+    "config" TEXT NOT NULL DEFAULT '{}',
+    "host_id" TEXT,
+    "updated_at" DATETIME NOT NULL,
+    CONSTRAINT "users_host_id_fkey" FOREIGN KEY ("host_id") REFERENCES "hosts" ("id") ON DELETE SET NULL ON UPDATE CASCADE
 );
 
 -- CreateTable
@@ -91,6 +96,7 @@ CREATE TABLE "run_session" (
     "latest_log_id" TEXT NOT NULL DEFAULT '',
     "total_lines" INTEGER NOT NULL DEFAULT 0,
     "total_cost" REAL NOT NULL DEFAULT 0,
+    "updated_at" DATETIME NOT NULL,
 
     PRIMARY KEY ("user_id", "run_id", "session_id"),
     CONSTRAINT "run_session_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION
@@ -101,6 +107,13 @@ CREATE TABLE "schema_version" (
     "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT DEFAULT 1,
     "version" INTEGER NOT NULL,
     "updated" DATETIME NOT NULL
+);
+
+-- CreateTable
+CREATE TABLE "hosts" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "name" TEXT NOT NULL,
+    "updated_at" DATETIME NOT NULL
 );
 
 -- CreateIndex
@@ -146,6 +159,9 @@ CREATE UNIQUE INDEX "unq_users_username" ON "users"("username");
 CREATE UNIQUE INDEX "unq_users_agent_path" ON "users"("agent_path");
 
 -- CreateIndex
+CREATE INDEX "idx_users_host_id" ON "users"("host_id");
+
+-- CreateIndex
 CREATE INDEX "idx_run_session_user_id" ON "run_session"("user_id");
 
 -- CreateIndex
@@ -153,3 +169,6 @@ CREATE INDEX "idx_run_session_last_active" ON "run_session"("last_active");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "unq_schema_version_version" ON "schema_version"("version");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "unq_hosts_name" ON "hosts"("name");

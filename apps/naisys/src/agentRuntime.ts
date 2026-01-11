@@ -29,6 +29,7 @@ export async function createAgentRuntime(
 ) {
   const dbService = agentManger.dbService;
   const globalConfig = agentManger.globalConfig;
+  const hostService = agentManger.hostService;
 
   /*
    * Simple form of dependency injection
@@ -94,6 +95,7 @@ export async function createAgentRuntime(
     inputMode,
     runService,
     dbService,
+    hostService,
   );
   const llmynx = createLLMynx(
     globalConfig,

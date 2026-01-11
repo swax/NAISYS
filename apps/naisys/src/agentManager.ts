@@ -2,12 +2,14 @@ import { AgentRegistrar } from "./agentRegistrar.js";
 import { AgentRuntime, createAgentRuntime } from "./agentRuntime.js";
 import { GlobalConfig } from "./globalConfig.js";
 import { DatabaseService } from "./services/dbService.js";
+import { HostService } from "./services/hostService.js";
 import { OutputColor } from "./utils/output.js";
 
 /** Handles the multiplexing of multiple concurrent agents in the process */
 export class AgentManager {
   dbService: DatabaseService;
   globalConfig: GlobalConfig;
+  hostService: HostService;
   agentRegistrar: AgentRegistrar;
 
   runningAgents: AgentRuntime[] = [];
@@ -16,10 +18,12 @@ export class AgentManager {
   constructor(
     dbService: DatabaseService,
     globalConfig: GlobalConfig,
+    hostService: HostService,
     agentRegistrar: AgentRegistrar,
   ) {
     this.dbService = dbService;
     this.globalConfig = globalConfig;
+    this.hostService = hostService;
     this.agentRegistrar = agentRegistrar;
   }
 

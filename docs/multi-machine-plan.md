@@ -56,7 +56,6 @@ Convert all IDs from INTEGER AUTOINCREMENT to ULID strings. Add `updated_at` to 
 - costs: add updated_at DateTime @updatedAt (aggregated per session/source/model)
 
 # Add deleted_at for soft deletes:
-- hosts: add deleted_at DateTime? (decommissioned runners/supervisors)
 - users: add deleted_at DateTime? (deactivated agents)
 
 Note: Only active operations filter by deleted_at (starting agents, sending mail). Historical queries still return deleted records.
@@ -90,21 +89,16 @@ npm install ulid --workspace=@naisys/database
 
 ## Phase 2: Hosts Table & Agent Ownership
 
-Create a hosts table to track runners and supervisors as first-class entities.
+Create a hosts table to track runners as first-class entities.
 
 ### Schema Addition
 
 ```prisma
 model hosts {
   id            String    @id      // ULID
-  name          String    @unique  // Runner: NAISYS_HOSTNAME, Supervisor: URL
-  type          String             // "runner" or "supervisor"
-  last_seen     DateTime?
-  updated_at DateTime  @updatedAt
-  deleted_at    DateTime?          // Soft delete for decommissioned hosts
-  users         users[]            // Agents on this host (runners only)
-
-  @@index([type])
+  name          String    @unique  // NAISYS_HOSTNAME
+  updated_at    DateTime  @updatedAt
+  users         users[]            // Agents on this host
 }
 
 model users {
@@ -131,11 +125,10 @@ Note: Multiple Hub URLs supported for high availability. Runner maintains WebSoc
 ### Behavior
 
 - On startup, runner reads `NAISYS_HOSTNAME` from .env
-- Runner creates/updates its own hosts record (type="runner")
+- Runner creates its own hosts record if it doesn't exist
 - Runner only starts agents where `users.host_id` matches its own host record
 - When creating new agents, `host_id` is set to runner's host ID
 - Agent mobility: update `users.host_id` to move an agent to a different host
-- Supervisors are registered as hosts (type="supervisor") when runners connect
 
 ### Code Changes
 
@@ -316,7 +309,7 @@ Hub pulls data from runners and forwards relevant rows to other runners. Mail de
 
 | Table | Forward To | Reason |
 |-------|------------|--------|
-| `hosts` | All runners | Know all runners/supervisors in system |
+| `hosts` | All runners | Know all runners in system |
 | `users` | All runners | Global user directory |
 | `user_notifications` | All runners | Online status for all agents |
 | `mail_threads` | Runners with members in thread | Thread metadata |
@@ -536,7 +529,7 @@ DATABASE_URL=file:../naisys/naisys.db      # Points to Runner DB (single-runner)
 ## Migration Path
 
 1. **Phase 1 (ULID + updated_at)** - Breaking change, requires DB migration
-2. **Phase 2 (Hosts)** - Additive, set host_id on existing users
+2. **Phase 2 (Hosts)** - Add new hosts table and associate with users
 3. **Phase 3 (Hub Sync)** - New Hub package + runner sync client
 4. **Phase 4 (Forwarding)** - Requires Phase 3
 5. **Phase 5 (Mobility)** - Requires Phases 2-4
@@ -551,16 +544,14 @@ Can ship Phases 1-2 first (single-machine with ULIDs + hosts), then 3-5 for mult
 - [x] Existing tests pass with ULID IDs
 - [x] New agents created with ULID
 - [x] Mail works with ULID thread/message IDs
-- [ ] updated_at updates correctly on record changes
-- [ ] Supervisor displays agents/logs correctly
+- [x] updated_at updates correctly on record changes
+- [x] Supervisor displays agents/logs correctly
 
 ### Phase 2 (Hosts Table)
-- [ ] Runner creates its own host record on startup
-- [ ] Runner only loads agents matching its host_id
-- [ ] New agents created with correct host_id
-- [ ] Agents without host_id still work (backward compat)
-- [ ] Hubs registered as hosts when runners connect
-- [ ] Soft-deleted users/hosts excluded from active queries
+- [x] Runner creates its own host record on startup
+- [x] Runner only loads agents matching its host_id
+- [x] New agents created with correct host_id
+- [ ] Soft-deleted users excluded from active queries
 - [ ] Soft-deleted records still sync (so all nodes know about deletion)
 
 ### Phase 3-4 (WebSocket Sync + Forwarding)

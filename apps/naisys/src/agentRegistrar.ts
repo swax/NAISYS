@@ -5,19 +5,24 @@ import * as path from "path";
 import { AgentConfigFile, AgentConfigFileSchema } from "./agentConfig.js";
 import { GlobalConfig } from "./globalConfig.js";
 import { DatabaseService } from "./services/dbService.js";
+import { HostService } from "./services/hostService.js";
 
 /** Pre-loads agents into the database without having to start each one up individually to make it available */
 export async function createAgentRegistrar(
   { globalConfig }: GlobalConfig,
   { usingDatabase }: DatabaseService,
+  hostService: HostService,
   startupAgentPath?: string,
 ) {
+  const { localHostId } = hostService;
   await reloadAgents();
 
   async function reloadAgents() {
-    // Load all existing users from database into memory
+    // Load all existing users from database into memory (filtered by host)
     const existingUsers = await usingDatabase(async (prisma) => {
-      return await prisma.users.findMany();
+      return await prisma.users.findMany({
+        where: { host_id: localHostId },
+      });
     });
 
     // Convert to a Map for easy lookup by username
@@ -186,6 +191,7 @@ export async function createAgentRegistrar(
               agent_path: absolutePath,
               lead_username: agentConfig.leadAgent ?? null,
               config: configYaml,
+              host_id: localHostId,
             },
           });
 

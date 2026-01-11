@@ -4,6 +4,7 @@ import { AgentManager } from "./agentManager.js";
 import { createAgentRegistrar } from "./agentRegistrar.js";
 import { createGlobalConfig } from "./globalConfig.js";
 import { createDatabaseService } from "./services/dbService.js";
+import { createHostService } from "./services/hostService.js";
 
 dotenv.config({ quiet: true });
 
@@ -15,6 +16,7 @@ program
 // Todo: Move db service into db package, enabling naisys/supervisor to independently initialize and upgrade the db
 const globalConfig = await createGlobalConfig();
 const dbService = await createDatabaseService(globalConfig);
+const hostService = await createHostService(globalConfig, dbService);
 
 /**
  * --supervisor flag is provided, start Supervisor server
@@ -36,9 +38,10 @@ const agentPath = program.args[0];
 const agentRegistrar = await createAgentRegistrar(
   globalConfig,
   dbService,
+  hostService,
   agentPath,
 );
-const agentManager = new AgentManager(dbService, globalConfig, agentRegistrar);
+const agentManager = new AgentManager(dbService, globalConfig, hostService, agentRegistrar);
 
 // Inits the naisys db if it doesn't exist which is needed by supervisor
 await agentManager.startAgent(agentPath);
