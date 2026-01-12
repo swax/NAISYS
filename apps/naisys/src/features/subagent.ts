@@ -3,7 +3,7 @@ import path from "path";
 import stringArgv from "string-argv";
 import table from "text-table";
 import { AgentConfig } from "../agent/agentConfig.js";
-import { DatabaseService } from "../services/dbService.js";
+import { DatabaseService } from "@naisys/database";
 import { HostService } from "../services/hostService.js";
 import { NaisysPath } from "../services/pathService.js";
 import { RunService } from "../services/runService.js";

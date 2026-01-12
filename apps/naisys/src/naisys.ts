@@ -1,9 +1,10 @@
+import { createDatabaseService } from "@naisys/database";
 import { program } from "commander";
 import dotenv from "dotenv";
 import { AgentManager } from "./agent/agentManager.js";
 import { createAgentRegistrar } from "./agent/agentRegistrar.js";
 import { createGlobalConfig } from "./globalConfig.js";
-import { createDatabaseService } from "./services/dbService.js";
+import { createHubManager } from "./hub/hubManager.js";
 import { createHostService } from "./services/hostService.js";
 
 dotenv.config({ quiet: true });
@@ -13,9 +14,8 @@ program
   .option("--supervisor", "Start Supervisor server")
   .parse();
 
-// Todo: Move db service into db package, enabling naisys/supervisor to independently initialize and upgrade the db
 const globalConfig = await createGlobalConfig();
-const dbService = await createDatabaseService(globalConfig);
+const dbService = await createDatabaseService(globalConfig.globalConfig().naisysFolder);
 const hostService = await createHostService(globalConfig, dbService);
 
 /**
@@ -42,6 +42,10 @@ const agentRegistrar = await createAgentRegistrar(
   agentPath,
 );
 const agentManager = new AgentManager(dbService, globalConfig, hostService, agentRegistrar);
+
+// Start hub connections for multi-machine sync
+const hubManager = createHubManager(globalConfig, hostService);
+await hubManager.start();
 
 // Inits the naisys db if it doesn't exist which is needed by supervisor
 await agentManager.startAgent(agentPath);

@@ -1,6 +1,6 @@
 import { AgentConfig } from "../agent/agentConfig.js";
 import { GlobalConfig } from "../globalConfig.js";
-import { DatabaseService } from "../services/dbService.js";
+import { DatabaseService } from "@naisys/database";
 
 export async function createRunService(
   { globalConfig }: GlobalConfig,

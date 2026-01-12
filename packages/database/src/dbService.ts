@@ -1,26 +1,24 @@
-import { createPrismaClient, PrismaClient } from "@naisys/database";
 import { exec } from "child_process";
-import { existsSync } from "fs";
+import { existsSync, mkdirSync } from "fs";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
 import { promisify } from "util";
-import { GlobalConfig } from "../globalConfig.js";
-import * as pathService from "./pathService.js";
-import { NaisysPath } from "./pathService.js";
+import { PrismaClient } from "./generated/prisma/client.js";
+import { createPrismaClient } from "./prismaClient.js";
 
 const execAsync = promisify(exec);
 
-export async function createDatabaseService({ globalConfig }: GlobalConfig) {
+export async function createDatabaseService(naisysFolder: string) {
   /** Should match version in schema_version table of latest migration script */
   const latestDbVersion = 7;
 
   // Ensure database directory exists
-  const dbFilePath = new NaisysPath(
-    `${globalConfig().naisysFolder}/database/naisys.sqlite`
-  );
-  pathService.ensureFileDirExists(dbFilePath);
+  const databasePath = join(naisysFolder, "database", "naisys.sqlite");
+  const databaseDir = dirname(databasePath);
+  if (!existsSync(databaseDir)) {
+    mkdirSync(databaseDir, { recursive: true });
+  }
 
-  const databasePath = dbFilePath.toHostPath();
   const prisma = createPrismaClient(databasePath);
 
   await runMigrations();
@@ -62,10 +60,9 @@ export async function createDatabaseService({ globalConfig }: GlobalConfig) {
         );
       }
 
-      // Find the @naisys/database package location
-      const databasePackageUrl = import.meta.resolve("@naisys/database");
-      const databasePackagePath = fileURLToPath(databasePackageUrl);
-      const databasePackageDir = dirname(dirname(databasePackagePath));
+      // Find the @naisys/database package location (this package)
+      const currentFilePath = fileURLToPath(import.meta.url);
+      const databasePackageDir = dirname(dirname(currentFilePath));
       const schemaPath = join(databasePackageDir, "prisma", "schema.prisma");
 
       // Run Prisma migrations from the database package directory
@@ -115,21 +112,23 @@ export async function createDatabaseService({ globalConfig }: GlobalConfig) {
     maxRetries: number = 5,
     baseDelayMs: number = 100
   ): Promise<T> {
-    let lastError: any;
+    let lastError: unknown;
 
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       try {
         return await run(prisma);
-      } catch (error: any) {
+      } catch (error: unknown) {
         lastError = error;
+
+        const errorObj = error as { code?: string; message?: string };
 
         // Check if this is a retryable error
         const isRetryable =
-          error?.code === "P1008" || // Socket timeout
-          error?.code === "P2034" || // Database is locked
-          error?.message?.includes("SQLITE_BUSY") ||
-          error?.message?.includes("database is locked") ||
-          error?.message?.includes("Socket timeout");
+          errorObj?.code === "P1008" || // Socket timeout
+          errorObj?.code === "P2034" || // Database is locked
+          errorObj?.message?.includes("SQLITE_BUSY") ||
+          errorObj?.message?.includes("database is locked") ||
+          errorObj?.message?.includes("Socket timeout");
 
         if (!isRetryable || attempt === maxRetries) {
           throw error; // Not retryable or out of retries
@@ -138,7 +137,7 @@ export async function createDatabaseService({ globalConfig }: GlobalConfig) {
         // Exponential backoff: baseDelay * 2^attempt
         const delayMs = baseDelayMs * Math.pow(2, attempt);
         console.warn(
-          `Database operation failed (attempt ${attempt + 1}/${maxRetries + 1}), retrying in ${delayMs}ms: ${error?.code || error?.message}`
+          `Database operation failed (attempt ${attempt + 1}/${maxRetries + 1}), retrying in ${delayMs}ms: ${errorObj?.code || errorObj?.message}`
         );
 
         await new Promise((resolve) => setTimeout(resolve, delayMs));

@@ -1,5 +1,5 @@
 import { AgentConfig } from "../agent/agentConfig.js";
-import { DatabaseService } from "../services/dbService.js";
+import { DatabaseService } from "@naisys/database";
 import { RunService } from "../services/runService.js";
 import { OutputService } from "../utils/output.js";
 import { ContextManager } from "./contextManager.js";

@@ -1,5 +1,5 @@
 import { ulid } from "@naisys/database";
-import { DatabaseService } from "./dbService.js";
+import { DatabaseService } from "@naisys/database";
 import { GlobalConfig } from "../globalConfig.js";
 
 export async function createHostService(

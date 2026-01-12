@@ -4,7 +4,7 @@ import yaml from "js-yaml";
 import * as path from "path";
 import { AgentConfigFile, AgentConfigFileSchema } from "./agentConfig.js";
 import { GlobalConfig } from "../globalConfig.js";
-import { DatabaseService } from "../services/dbService.js";
+import { DatabaseService } from "@naisys/database";
 import { HostService } from "../services/hostService.js";
 
 /** Pre-loads agents into the database without having to start each one up individually to make it available */

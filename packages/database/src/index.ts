@@ -5,24 +5,8 @@ export * from "./generated/prisma/client.js";
 // Re-export ULID utilities
 export { ulid, monotonicFactory, decodeTime } from "ulid";
 
-// Import PrismaClient at the top level for the factory function
-import { PrismaClient } from "./generated/prisma/client.js";
-import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
+// Re-export Prisma client factory
+export { createPrismaClient } from "./prismaClient.js";
 
-/**
- * Create a Prisma client with a dynamic database path
- * @param databasePath - Absolute path to the SQLite database file
- * @returns Configured PrismaClient instance
- *
- * @example
- * ```typescript
- * const prisma = createPrismaClient("/home/user/.naisys/database/naisys.sqlite");
- * const users = await prisma.users.findMany();
- * ```
- */
-export function createPrismaClient(databasePath: string) {
-  const adapter = new PrismaBetterSqlite3({
-    url: `file:${databasePath}`,
-  });
-  return new PrismaClient({ adapter });
-}
+// Re-export Database Service
+export { createDatabaseService, DatabaseService } from "./dbService.js";
