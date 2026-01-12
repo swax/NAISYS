@@ -1,0 +1,33 @@
+{
+  "name": "@naisys/hub",
+  "version": "1.0.0",
+  "description": "NAISYS Hub - Enables monitoring and communication of between multiple NAISYS agent managers",
+  "type": "module",
+  "main": "dist/naisysHub.js",
+  "exports": {
+    ".": "./dist/naisysHub.js"
+  },
+  "scripts": {
+    "clean": "rm -rf dist",
+    "dev": "tsx watch src/naisysHub.ts",
+    "start": "node dist/naisysHub.js",
+    "build": "tsc",
+    "type-check": "tsc --noEmit"
+  },
+  "files": [
+    "dist"
+  ],
+  "dependencies": {
+    "@naisys/database": "file:../../packages/database",
+    "dotenv": "^17.2.3",
+    "socket.io": "^4.8.3"
+  },
+  "devDependencies": {
+    "@types/node": "^25.0.3",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

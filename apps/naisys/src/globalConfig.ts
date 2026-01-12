@@ -58,7 +58,7 @@ export async function createGlobalConfig() {
       .filter((url) => url.length > 0) ?? [];
 
     /** API key for authenticating with Hub servers */
-    const hubApiKey = getEnv("HUB_API_KEY");
+    const hubAccessKey = getEnv("HUB_ACCESS_KEY");
 
     /** Global spend limit across all agents using this .env file */
     const spendLimitDollars = sanitizeSpendLimit(getEnv("SPEND_LIMIT_DOLLARS"));
@@ -136,7 +136,7 @@ export async function createGlobalConfig() {
       spendLimitDollars,
       spendLimitHours,
       hubUrls,
-      hubApiKey,
+      hubAccessKey,
       useToolsForLlmConsoleResponses,
       packageVersion,
       binPath,

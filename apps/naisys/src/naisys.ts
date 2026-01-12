@@ -11,7 +11,8 @@ dotenv.config({ quiet: true });
 
 program
   .argument("<agent-path>", "Path to agent configuration file")
-  .option("--supervisor", "Start Supervisor server")
+  .option("--hub", "Start Hub server for NAISYS instances running across machines")
+  .option("--supervisor", "Start Supervisor web server")
   .parse();
 
 const globalConfig = await createGlobalConfig();
@@ -19,8 +20,20 @@ const dbService = await createDatabaseService(globalConfig.globalConfig().naisys
 const hostService = await createHostService(globalConfig, dbService);
 
 /**
+ * --hub flag is provided, start Hub server for NAISYS instances running across machines
+ * There should be no dependency between hub and naisys
+ * Sharing the same process space is to save memory on small servers
+ */
+if (program.opts().hub) {
+  console.log("Starting Hub server...");
+  // Don't import the hub module tree unless needed
+  const { startHub } = await import("@naisys/hub");
+  await startHub("hosted");
+}
+
+/**
  * --supervisor flag is provided, start Supervisor server
- * There should be no dependency between supervisor and naissys
+ * There should be no dependency between supervisor and naisys
  * Sharing the same process space is to save 150 mb of node.js runtime memory on small servers
  */
 if (program.opts().supervisor) {
