@@ -1,7 +1,7 @@
 import { program } from "commander";
 import dotenv from "dotenv";
-import { AgentManager } from "./agentManager.js";
-import { createAgentRegistrar } from "./agentRegistrar.js";
+import { AgentManager } from "./agent/agentManager.js";
+import { createAgentRegistrar } from "./agent/agentRegistrar.js";
 import { createGlobalConfig } from "./globalConfig.js";
 import { createDatabaseService } from "./services/dbService.js";
 import { createHostService } from "./services/hostService.js";

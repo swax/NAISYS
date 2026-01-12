@@ -1,7 +1,7 @@
 import { Prisma, PrismaClient, ulid } from "@naisys/database";
 import stringArgv from "string-argv";
 import table from "text-table";
-import { AgentConfig } from "../agentConfig.js";
+import { AgentConfig } from "../agent/agentConfig.js";
 import { GlobalConfig } from "../globalConfig.js";
 import { DatabaseService } from "../services/dbService.js";
 import { RunService } from "../services/runService.js";

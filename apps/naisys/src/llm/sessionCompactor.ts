@@ -1,4 +1,4 @@
-import { AgentConfig } from "../agentConfig.js";
+import { AgentConfig } from "../agent/agentConfig.js";
 import { DatabaseService } from "../services/dbService.js";
 import { RunService } from "../services/runService.js";
 import { OutputService } from "../utils/output.js";

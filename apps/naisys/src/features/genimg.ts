@@ -2,7 +2,7 @@ import OpenAI from "openai";
 import path from "path";
 import sharp from "sharp";
 import stringArgv from "string-argv";
-import { AgentConfig } from "../agentConfig.js";
+import { AgentConfig } from "../agent/agentConfig.js";
 import { CostTracker } from "../llm/costTracker.js";
 import * as pathService from "../services/pathService.js";
 import { NaisysPath } from "../services/pathService.js";

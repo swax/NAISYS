@@ -1,6 +1,6 @@
 import { jest, test } from "@jest/globals";
 import { PrismaClient } from "@naisys/database";
-import { AgentConfig } from "../agentConfig.js";
+import { AgentConfig } from "../agent/agentConfig.js";
 import { CommandProtection } from "../command/commandProtection.js";
 import { PromptBuilder } from "../command/promptBuilder.js";
 import { ShellCommand } from "../command/shellCommand.js";

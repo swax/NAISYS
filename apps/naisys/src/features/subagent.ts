@@ -2,7 +2,7 @@ import { ChildProcess } from "child_process";
 import path from "path";
 import stringArgv from "string-argv";
 import table from "text-table";
-import { AgentConfig } from "../agentConfig.js";
+import { AgentConfig } from "../agent/agentConfig.js";
 import { DatabaseService } from "../services/dbService.js";
 import { HostService } from "../services/hostService.js";
 import { NaisysPath } from "../services/pathService.js";
