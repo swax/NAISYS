@@ -1,9 +1,9 @@
 import { AgentRegistrar } from "./agentRegistrar.js";
 import { AgentRuntime, createAgentRuntime } from "./agentRuntime.js";
-import { GlobalConfig } from "./globalConfig.js";
-import { DatabaseService } from "./services/dbService.js";
-import { HostService } from "./services/hostService.js";
-import { OutputColor } from "./utils/output.js";
+import { GlobalConfig } from "../globalConfig.js";
+import { DatabaseService } from "../services/dbService.js";
+import { HostService } from "../services/hostService.js";
+import { OutputColor } from "../utils/output.js";
 
 /** Handles the multiplexing of multiple concurrent agents in the process */
 export class AgentManager {
@@ -45,7 +45,7 @@ export class AgentManager {
       .then(() => {
         stopReason = "completed";
       })
-      .catch((ex) => {
+      .catch((ex: any) => {
         stopReason = `error: ${ex}`;
       })
       .finally(async () => {

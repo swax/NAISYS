@@ -2,9 +2,9 @@ import * as fs from "fs";
 import yaml from "js-yaml";
 import path from "path";
 import { z } from "zod";
-import { GlobalConfig } from "./globalConfig.js";
-import { CommandProtection } from "./utils/enums.js";
-import { sanitizeSpendLimit, valueFromString } from "./utils/utilities.js";
+import { GlobalConfig } from "../globalConfig.js";
+import { CommandProtection } from "../utils/enums.js";
+import { sanitizeSpendLimit, valueFromString } from "../utils/utilities.js";
 
 // Zod schema for validation
 export const AgentConfigFileSchema = z.object({

@@ -1,5 +1,5 @@
 import { Type } from "@google/genai";
-import { AgentConfig } from "../agentConfig.js";
+import { AgentConfig } from "../agent/agentConfig.js";
 
 export function createCommandTools({ agentConfig }: AgentConfig) {
   const escapedQuoteRegex = /"/g;
