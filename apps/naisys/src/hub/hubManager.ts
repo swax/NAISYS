@@ -20,7 +20,7 @@ export function createHubManager(
     for (const hubUrl of config.hubUrls) {
       const hubService = createHubService({
         hubUrl,
-        hubApiKey: config.hubApiKey,
+        hubAccessKey: config.hubAccessKey,
         hostId: hostService.localHostId,
         hostname: hostService.localHostname,
       });

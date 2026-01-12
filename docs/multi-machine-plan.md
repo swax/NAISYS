@@ -503,14 +503,14 @@ DATABASE_URL=postgresql://user:pass@host:5432/naisys_hub
 # apps/naisys/.env
 NAISYS_HOSTNAME=server-east-1              # Required - which host this runner represents
 HUB_URLS=https://hub1.example.com,https://hub2.example.com  # Optional - comma-separated
-HUB_API_KEY=secret                         # Required if HUB_URLS set
+HUB_ACCESS_KEY=secret                         # Required if HUB_URLS set
 ```
 
 ### Hub Config
 
 ```bash
 # apps/hub/.env (or combined process .env)
-HUB_API_KEY=secret                         # Runners authenticate with this
+HUB_ACCESS_KEY=secret                         # Runners authenticate with this
 DATABASE_PROVIDER=sqlite                   # or "postgresql" at scale
 DATABASE_URL=file:./hub.db                 # or PostgreSQL connection string
 ```
@@ -555,8 +555,8 @@ Can ship Phases 1-2 first (single-machine with ULIDs + hosts), then 3-5 for mult
 - [ ] Soft-deleted records still sync (so all nodes know about deletion)
 
 ### Phase 3-4 (WebSocket Sync + Forwarding)
-- [ ] Runner connects to Hub via WebSocket
-- [ ] Runner connects to multiple Hubs when configured
+- [x] Runner connects to Hub via WebSocket
+- [x] Runner connects to multiple Hubs when configured
 - [ ] Runner sends catch_up with lastReceived IDs on connect
 - [ ] Schema version mismatch returns error, blocks sync
 - [ ] Runner responds to sync requests with new/updated data

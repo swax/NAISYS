@@ -3,7 +3,7 @@ import { GlobalConfig } from "../globalConfig.js";
 
 export interface HubServiceConfig {
   hubUrl: string;
-  hubApiKey: string | undefined;
+  hubAccessKey: string | undefined;
   hostId: string;
   hostname: string;
 }
@@ -17,7 +17,7 @@ export function createHubService(config: HubServiceConfig) {
 
     socket = io(config.hubUrl, {
       auth: {
-        apiKey: config.hubApiKey,
+        accessKey: config.hubAccessKey,
         hostId: config.hostId,
         hostname: config.hostname,
       },
