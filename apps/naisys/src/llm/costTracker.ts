@@ -2,7 +2,7 @@ import { ulid } from "@naisys/database";
 import { isUlidWithinWindow, minUlidForTime } from "../utils/ulidTools.js";
 import { GlobalConfig } from "../globalConfig.js";
 import { AgentConfig } from "../agent/agentConfig.js";
-import { DatabaseService } from "../services/dbService.js";
+import { DatabaseService } from "@naisys/database";
 import { RunService } from "../services/runService.js";
 import { OutputService } from "../utils/output.js";
 import { LLModels } from "./llModels.js";

@@ -1,7 +1,7 @@
 import { AgentRegistrar } from "./agentRegistrar.js";
 import { AgentRuntime, createAgentRuntime } from "./agentRuntime.js";
 import { GlobalConfig } from "../globalConfig.js";
-import { DatabaseService } from "../services/dbService.js";
+import { DatabaseService } from "@naisys/database";
 import { HostService } from "../services/hostService.js";
 import { OutputColor } from "../utils/output.js";
 

@@ -14,7 +14,7 @@ import { ContextManager } from "../llm/contextManager.js";
 import { CostTracker } from "../llm/costTracker.js";
 import { SessionCompactor } from "../llm/sessionCompactor.js";
 import { LlmMessage, LlmRole } from "../llm/llmDtos.js";
-import { DatabaseService } from "../services/dbService.js";
+import { DatabaseService } from "@naisys/database";
 import { LogService } from "../services/logService.js";
 import { RunService } from "../services/runService.js";
 import { OutputService } from "../utils/output.js";
@@ -249,6 +249,8 @@ export function createMockGlobalConfig(): GlobalConfig {
       googleSearchEngineId: undefined,
       spendLimitDollars: undefined,
       spendLimitHours: undefined,
+      hubUrls: [],
+      hubApiKey: undefined,
       useToolsForLlmConsoleResponses: true,
       packageVersion: "1.0.0",
       binPath: "/bin",

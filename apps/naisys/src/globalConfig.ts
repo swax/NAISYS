@@ -40,7 +40,7 @@ export async function createGlobalConfig() {
     const trimSessionEnabled = false;
 
     /* .env is used for global configs across naisys, while agent configs are for the specific agent */
-    const naisysFolder = getEnv("NAISYS_FOLDER", true);
+    const naisysFolder = getEnv("NAISYS_FOLDER", true)!;
 
     const localLlmUrl = getEnv("LOCAL_LLM_URL");
     const localLlmName = getEnv("LOCAL_LLM_NAME");
@@ -50,6 +50,15 @@ export async function createGlobalConfig() {
     const anthropicApiKey = getEnv("ANTHROPIC_API_KEY");
 
     const googleSearchEngineId = getEnv("GOOGLE_SEARCH_ENGINE_ID");
+
+    /** Comma-separated list of Hub URLs for multi-machine sync */
+    const hubUrls = getEnv("HUB_URLS")
+      ?.split(",")
+      .map((url) => url.trim())
+      .filter((url) => url.length > 0) ?? [];
+
+    /** API key for authenticating with Hub servers */
+    const hubApiKey = getEnv("HUB_API_KEY");
 
     /** Global spend limit across all agents using this .env file */
     const spendLimitDollars = sanitizeSpendLimit(getEnv("SPEND_LIMIT_DOLLARS"));
@@ -126,6 +135,8 @@ export async function createGlobalConfig() {
       googleSearchEngineId,
       spendLimitDollars,
       spendLimitHours,
+      hubUrls,
+      hubApiKey,
       useToolsForLlmConsoleResponses,
       packageVersion,
       binPath,
