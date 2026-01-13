@@ -20,6 +20,7 @@
   "dependencies": {
     "@naisys/database": "file:../../packages/database",
     "dotenv": "^17.2.3",
+    "pino": "^9.6.0",
     "socket.io": "^4.8.3",
     "zod": "^3.24.0"
   },

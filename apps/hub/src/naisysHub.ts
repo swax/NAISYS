@@ -1,12 +1,13 @@
 import dotenv from "dotenv";
-import { createHubServer, HubServer } from "./services/hubServer.js";
-import { createSyncService, SyncService } from "./services/syncService.js";
-
-export { HubServer, SyncService };
+import {
+  createHubServerLog,
+  type HubServerLog,
+} from "./services/hubServerLog.js";
+import { createHubServer } from "./services/hubServer.js";
+import { createSyncService } from "./services/syncService.js";
 
 export interface HubInstance {
-  hubServer: HubServer;
-  syncService: SyncService;
+  logService: HubServerLog;
   shutdown: () => void;
 }
 
@@ -17,15 +18,24 @@ export interface HubInstance {
 export async function startHub(
   startupType: "standalone" | "hosted"
 ): Promise<HubInstance> {
-  console.log(`[Hub] Starting Hub server in ${startupType} mode...`);
+  // Create log service first
+  const logService = createHubServerLog(startupType);
+
+  logService.log(`[Hub] Starting Hub server in ${startupType} mode...`);
 
   const hubPort = Number(process.env.HUB_PORT) || 3002;
   const hubAccessKey = process.env.HUB_ACCESS_KEY;
   if (!hubAccessKey) {
-    console.error(
+    logService.error(
       "Error: HUB_ACCESS_KEY environment variable is required when using --hub"
     );
     process.exit(1);
+  }
+
+  if (startupType === "hosted") {
+    console.log(
+      `[Hub] Running on ws://localhost:${hubPort}, logs written to file`
+    );
   }
 
   // Schema version for sync protocol - should match runner
@@ -35,6 +45,7 @@ export async function startHub(
   const hubServer = await createHubServer({
     port: hubPort,
     accessKey: hubAccessKey,
+    logService,
   });
 
   // Create sync service - it will register its event handlers on start()
@@ -42,14 +53,14 @@ export async function startHub(
     schemaVersion,
     maxConcurrentRequests: 3,
     pollIntervalMs: 1000,
+    logService,
   });
 
   // Start the sync polling loop (also registers event handlers)
   syncService.start();
 
   return {
-    hubServer,
-    syncService,
+    logService,
     shutdown: () => {
       syncService.stop();
       hubServer.close();
@@ -62,8 +73,8 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   dotenv.config({ quiet: true });
 
   startHub("standalone")
-    .then(() => {
-      console.log("[Hub] Hub server started successfully");
+    .then(({ logService }) => {
+      logService.log("[Hub] Hub server started successfully");
     })
     .catch((err) => {
       console.error("[Hub] Failed to start hub server:", err);

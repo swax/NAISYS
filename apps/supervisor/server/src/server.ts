@@ -22,7 +22,7 @@ export const startServer = async (startupType: "standalone" | "hosted") => {
 
   if (startupType === "hosted" && !isProd) {
     console.error(
-      "--supervisor can only be used when .env NODE_ENV=production",
+      "--supervisor can only be used when .env NODE_ENV=production"
     );
     process.exit(1);
   }
@@ -44,8 +44,7 @@ export const startServer = async (startupType: "standalone" | "hosted") => {
                 destination: path.join(
                   process.env.NAISYS_FOLDER || "",
                   "logs",
-                  "supervisor",
-                  "server.log",
+                  "supervisor.log"
                 ),
                 mkdir: true,
               },
@@ -140,7 +139,9 @@ export const startServer = async (startupType: "standalone" | "hosted") => {
     while (attempts < maxAttempts) {
       try {
         await fastify.listen({ port, host });
-        console.log(`Supervisor running on http://${host}:${port}/supervisor`);
+        console.log(
+          `[Supervisor] Running on http://${host}:${port}/supervisor, logs written to file`
+        );
         break;
       } catch (err: any) {
         if (err.code === "EADDRINUSE") {
@@ -149,7 +150,7 @@ export const startServer = async (startupType: "standalone" | "hosted") => {
           attempts++;
           if (attempts >= maxAttempts) {
             throw new Error(
-              `Unable to find available port after ${maxAttempts} attempts`,
+              `Unable to find available port after ${maxAttempts} attempts`
             );
           }
         } else {

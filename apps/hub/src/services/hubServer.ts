@@ -1,14 +1,13 @@
 import http from "http";
 import { Server } from "socket.io";
 import { ZodSchema } from "zod";
-import {
-  createNaisysClientService,
-  NaisysClientService,
-} from "./naisysClientService.js";
+import { HubServerLog } from "./hubServerLog.js";
+import { createNaisysClient, NaisysClient } from "./naisysClient.js";
 
 export interface HubServerConfig {
   port: number;
   accessKey: string;
+  logService: HubServerLog;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -24,10 +23,10 @@ interface RegisteredHandler {
  * Creates and starts the Hub WebSocket server.
  */
 export async function createHubServer(config: HubServerConfig) {
-  const { port, accessKey } = config;
+  const { port, accessKey, logService } = config;
 
   // Track connected runners
-  const connectedClients = new Map<string, NaisysClientService>();
+  const connectedClients = new Map<string, NaisysClient>();
 
   // Generic event handlers registry - maps event name to set of registered handlers
   const eventHandlers = new Map<string, Set<RegisteredHandler>>();
@@ -66,9 +65,8 @@ export async function createHubServer(config: HubServerConfig) {
         if (schema && args.length > 0) {
           const result = schema.safeParse(args[0]);
           if (!result.success) {
-            console.error(
-              `[Hub] Schema validation failed for event '${event}' from ${hostId}:`,
-              result.error.issues
+            logService.error(
+              `[Hub] Schema validation failed for event '${event}' from ${hostId}: ${JSON.stringify(result.error.issues)}`
             );
             continue; // Skip this handler if validation fails
           }
@@ -121,14 +119,14 @@ export async function createHubServer(config: HubServerConfig) {
     } = socket.handshake.auth;
 
     if (!clientAccessKey || clientAccessKey !== accessKey) {
-      console.log(
+      logService.log(
         `[Hub] Connection rejected: invalid access key from ${socket.handshake.address}`
       );
       return next(new Error("Invalid access key"));
     }
 
     if (!hostId || !hostname) {
-      console.log(`[Hub] Connection rejected: missing hostId or hostname`);
+      logService.log(`[Hub] Connection rejected: missing hostId or hostname`);
       return next(new Error("Missing hostId or hostname"));
     }
 
@@ -146,7 +144,7 @@ export async function createHubServer(config: HubServerConfig) {
     // Check if this host is already connected
     const existingClient = connectedClients.get(hostId);
     if (existingClient) {
-      console.log(
+      logService.log(
         `[Hub] Host ${hostname} (${hostId}) reconnecting, replacing old connection`
       );
       connectedClients.delete(hostId);
@@ -154,32 +152,33 @@ export async function createHubServer(config: HubServerConfig) {
     }
 
     // Create client service for this connection, passing our emit function
-    const clientService = createNaisysClientService(
+    const clientService = createNaisysClient(
       socket,
       {
         hostId,
         hostname,
         connectedAt: new Date(),
       },
-      raiseEvent
+      raiseEvent,
+      logService
     );
 
     connectedClients.set(hostId, clientService);
     raiseEvent("client_connected", hostId, clientService);
 
-    console.log(`[Hub] Active connections: ${connectedClients.size}`);
+    logService.log(`[Hub] Active connections: ${connectedClients.size}`);
 
     // Clean up on disconnect
     socket.on("disconnect", () => {
       connectedClients.delete(hostId);
       raiseEvent("client_disconnected", hostId);
-      console.log(`[Hub] Active connections: ${connectedClients.size}`);
+      logService.log(`[Hub] Active connections: ${connectedClients.size}`);
     });
   });
 
   // Start listening
   httpServer.listen(port, () => {
-    console.log(`[Hub] Server listening on port ${port}`);
+    logService.log(`[Hub] Server listening on port ${port}`);
   });
 
   // Return control interface

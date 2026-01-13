@@ -25,7 +25,6 @@ const hostService = await createHostService(globalConfig, dbService);
  * Sharing the same process space is to save memory on small servers
  */
 if (program.opts().hub) {
-  console.log("Starting Hub server...");
   // Don't import the hub module tree unless needed
   const { startHub } = await import("@naisys/hub");
   await startHub("hosted");
@@ -37,7 +36,6 @@ if (program.opts().hub) {
  * Sharing the same process space is to save 150 mb of node.js runtime memory on small servers
  */
 if (program.opts().supervisor) {
-  console.log("Starting Supervisor server...");
   // Don't import the whole fastify web server module tree unless needed
   const { startServer } = await import("@naisys-supervisor/server");
   await startServer("hosted");

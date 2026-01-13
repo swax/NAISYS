@@ -1,28 +1,34 @@
 import { GlobalConfig } from "../globalConfig.js";
 import { HostService } from "../services/hostService.js";
+import { createHubClientLog } from "./hubClientLog.js";
 import { createHubService, HubService } from "./hubService.js";
 
 export function createHubManager(
   globalConfig: GlobalConfig,
-  hostService: HostService,
+  hostService: HostService
 ) {
   const config = globalConfig.globalConfig();
+  const logService = createHubClientLog();
   const hubServices: HubService[] = [];
 
   async function start() {
     if (config.hubUrls.length === 0) {
-      console.log("[HubManager] No HUB_URLS configured, running in standalone mode");
+      logService.log(
+        "[HubManager] No HUB_URLS configured, running in standalone mode"
+      );
       return;
     }
 
-    console.log(`[HubManager] Starting connections to ${config.hubUrls.length} hub(s)...`);
-
+    logService.log(
+      `[HubManager] Starting connections to ${config.hubUrls.length} hub(s)...`
+    );
     for (const hubUrl of config.hubUrls) {
       const hubService = createHubService({
         hubUrl,
         hubAccessKey: config.hubAccessKey,
         hostId: hostService.localHostId,
         hostname: hostService.localHostname,
+        logService,
       });
 
       hubServices.push(hubService);
@@ -31,7 +37,7 @@ export function createHubManager(
   }
 
   function stop() {
-    console.log("[HubManager] Stopping all hub connections...");
+    logService.log("[HubManager] Stopping all hub connections...");
     for (const hubService of hubServices) {
       hubService.disconnect();
     }
