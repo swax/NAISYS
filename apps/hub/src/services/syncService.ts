@@ -1,6 +1,7 @@
 import { z } from "zod";
+import { HubServerLog } from "./hubServerLog.js";
 import { HubServer } from "./hubServer.js";
-import { NaisysClientService } from "./naisysClientService.js";
+import { NaisysClient } from "./naisysClient.js";
 
 /** Zod schema for sync_response event data */
 const SyncResponseDataSchema = z.object({
@@ -28,6 +29,8 @@ export interface SyncServiceConfig {
   pollIntervalMs?: number;
   /** Schema version for sync protocol */
   schemaVersion: number;
+  /** Log service for output */
+  logService: HubServerLog;
 }
 
 const DEFAULT_CONFIG = {
@@ -47,6 +50,7 @@ export function createSyncService(
     maxConcurrentRequests = DEFAULT_CONFIG.maxConcurrentRequests,
     pollIntervalMs = DEFAULT_CONFIG.pollIntervalMs,
     schemaVersion,
+    logService,
   } = config;
 
   // Per-client sync state
@@ -123,7 +127,7 @@ export function createSyncService(
     state.lastSyncTime = Date.now();
     inFlightCount++;
 
-    console.log(
+    logService.log(
       `[SyncService] Sending sync_request to ${hostId} (since: ${state.since}, in-flight: ${inFlightCount})`
     );
 
@@ -138,9 +142,8 @@ export function createSyncService(
         // Validate response with schema
         const result = SyncResponseDataSchema.safeParse(rawResponse);
         if (!result.success) {
-          console.error(
-            `[SyncService] Invalid sync response from ${hostId}:`,
-            result.error.issues
+          logService.error(
+            `[SyncService] Invalid sync response from ${hostId}: ${JSON.stringify(result.error.issues)}`
           );
           clearInFlight(state);
           return;
@@ -153,7 +156,7 @@ export function createSyncService(
     if (!sent) {
       // Client disconnected before we could send
       clearInFlight(state);
-      console.log(
+      logService.log(
         `[SyncService] Client ${hostId} no longer connected, skipping sync`
       );
     }
@@ -165,7 +168,7 @@ export function createSyncService(
   function handleSyncResponse(hostId: string, data: SyncResponseData) {
     const state = clientStates.get(hostId);
     if (!state) {
-      console.log(
+      logService.log(
         `[SyncService] Received response from unknown client ${hostId}`
       );
       return;
@@ -179,7 +182,7 @@ export function createSyncService(
       0
     );
 
-    console.log(
+    logService.log(
       `[SyncService] Received ${rowCount} rows from ${hostId}, has_more: ${data.has_more}`
     );
 
@@ -190,7 +193,7 @@ export function createSyncService(
 
     // If there's more data, immediately request it
     if (data.has_more) {
-      console.log(
+      logService.log(
         `[SyncService] More data available, sending immediate follow-up`
       );
       sendSyncRequest(hostId);
@@ -200,12 +203,12 @@ export function createSyncService(
   /**
    * Handle client connection - initialize state
    */
-  function handleClientConnected(hostId: string, _client: NaisysClientService) {
+  function handleClientConnected(hostId: string, _client: NaisysClient) {
     const state = getOrCreateState(hostId);
     // Reset state for new connection - will be selected on next tick
     state.lastSyncTime = 0;
     state.inFlight = false;
-    console.log(`[SyncService] Client ${hostId} connected, ready to sync`);
+    logService.log(`[SyncService] Client ${hostId} connected, ready to sync`);
   }
 
   /**
@@ -217,7 +220,7 @@ export function createSyncService(
       clearInFlight(state);
     }
     clientStates.delete(hostId);
-    console.log(
+    logService.log(
       `[SyncService] Client ${hostId} disconnected, state cleaned up`
     );
   }
@@ -245,7 +248,7 @@ export function createSyncService(
    */
   function start() {
     if (intervalId) {
-      console.log(`[SyncService] Already running`);
+      logService.log(`[SyncService] Already running`);
       return;
     }
 
@@ -254,7 +257,7 @@ export function createSyncService(
     hubServer.registerEvent("client_connected", handleClientConnected);
     hubServer.registerEvent("client_disconnected", handleClientDisconnected);
 
-    console.log(
+    logService.log(
       `[SyncService] Starting sync polling (interval: ${pollIntervalMs}ms, max concurrent: ${maxConcurrentRequests})`
     );
     intervalId = setInterval(tick, pollIntervalMs);
@@ -271,7 +274,7 @@ export function createSyncService(
     if (intervalId) {
       clearInterval(intervalId);
       intervalId = null;
-      console.log(`[SyncService] Stopped sync polling`);
+      logService.log(`[SyncService] Stopped sync polling`);
     }
   }
 

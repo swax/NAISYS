@@ -1,4 +1,5 @@
 import { Socket } from "socket.io";
+import { HubServerLog } from "./hubServerLog.js";
 
 export interface NaisysClientInfo {
   hostId: string;
@@ -15,26 +16,27 @@ export type RaiseEventFn = (
 
 /**
  * Handles the lifecycle of a single NAISYS runner connection to the hub.
- * Each connected runner gets its own naisysClientService instance.
+ * Each connected runner gets its own NaisysClient instance.
  */
-export function createNaisysClientService(
+export function createNaisysClient(
   socket: Socket,
   clientInfo: NaisysClientInfo,
-  raiseEvent: RaiseEventFn
+  raiseEvent: RaiseEventFn,
+  logService: HubServerLog
 ) {
   const { hostId, hostname, connectedAt } = clientInfo;
 
-  console.log(`[NaisysClient] Runner connected: ${hostname} (${hostId})`);
+  logService.log(`[NaisysClient] Runner connected: ${hostname} (${hostId})`);
 
   // Forward all socket events to hub's emit function
   socket.onAny((eventName: string, data: unknown) => {
-    console.log(`[NaisysClient] Received ${eventName} from ${hostname}`);
+    logService.log(`[NaisysClient] Received ${eventName} from ${hostname}`);
     raiseEvent(eventName, hostId, data);
   });
 
   // Handle disconnect
   socket.on("disconnect", (reason) => {
-    console.log(
+    logService.log(
       `[NaisysClient] Runner disconnected: ${hostname} (${hostId}) - ${reason}`
     );
   });
@@ -67,4 +69,4 @@ export function createNaisysClientService(
   };
 }
 
-export type NaisysClientService = ReturnType<typeof createNaisysClientService>;
+export type NaisysClient = ReturnType<typeof createNaisysClient>;

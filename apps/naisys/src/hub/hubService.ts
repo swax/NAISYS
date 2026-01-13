@@ -1,19 +1,21 @@
 import { io, Socket } from "socket.io-client";
-import { GlobalConfig } from "../globalConfig.js";
+import { HubClientLog } from "./hubClientLog.js";
 
 export interface HubServiceConfig {
   hubUrl: string;
   hubAccessKey: string | undefined;
   hostId: string;
   hostname: string;
+  logService: HubClientLog;
 }
 
 export function createHubService(config: HubServiceConfig) {
+  const logService = config.logService;
   let socket: Socket | null = null;
   let connected = false;
 
   function connect() {
-    console.log(`[Hub] Connecting to ${config.hubUrl}...`);
+    logService.log(`[Hub] Connecting to ${config.hubUrl}...`);
 
     socket = io(config.hubUrl, {
       auth: {
@@ -29,7 +31,7 @@ export function createHubService(config: HubServiceConfig) {
 
     socket.on("connect", () => {
       connected = true;
-      console.log(`[Hub] Connected to ${config.hubUrl}`);
+      logService.log(`[Hub] Connected to ${config.hubUrl}`);
 
       // Send catch_up message on connect per the plan
       socket?.emit("catch_up", {
@@ -41,28 +43,42 @@ export function createHubService(config: HubServiceConfig) {
 
     socket.on("disconnect", (reason) => {
       connected = false;
-      console.log(`[Hub] Disconnected from ${config.hubUrl}: ${reason}`);
+      logService.log(`[Hub] Disconnected from ${config.hubUrl}: ${reason}`);
     });
 
     socket.on("connect_error", (error) => {
-      console.log(`[Hub] Connection error to ${config.hubUrl}: ${error.message}`);
+      logService.log(
+        `[Hub] Connection error to ${config.hubUrl}: ${error.message}`
+      );
     });
 
     // Hub requests sync data from runner
-    socket.on("sync_request", (data: { schema_version: number; since: string }) => {
-      console.log(`[Hub] Received sync_request from ${config.hubUrl}`, data);
-      // TODO: Implement sync response logic in Phase 3
-    });
+    socket.on(
+      "sync_request",
+      (data: { schema_version: number; since: string }) => {
+        logService.log(
+          `[Hub] Received sync_request from ${config.hubUrl} ${JSON.stringify(data)}`
+        );
+        // TODO: Implement sync response logic in Phase 3
+      }
+    );
 
     // Hub forwards data from other runners
-    socket.on("forward", (data: { has_more: boolean; tables: Record<string, unknown[]> }) => {
-      console.log(`[Hub] Received forward from ${config.hubUrl}`, Object.keys(data.tables));
-      // TODO: Implement upsert logic in Phase 4
-    });
+    socket.on(
+      "forward",
+      (data: { has_more: boolean; tables: Record<string, unknown[]> }) => {
+        logService.log(
+          `[Hub] Received forward from ${config.hubUrl} ${Object.keys(data.tables)}`
+        );
+        // TODO: Implement upsert logic in Phase 4
+      }
+    );
 
     // Schema version mismatch error
     socket.on("sync_error", (data: { error: string; message: string }) => {
-      console.error(`[Hub] Sync error from ${config.hubUrl}: ${data.message}`);
+      logService.error(
+        `[Hub] Sync error from ${config.hubUrl}: ${data.message}`
+      );
     });
   }
 
@@ -71,7 +87,7 @@ export function createHubService(config: HubServiceConfig) {
       socket.disconnect();
       socket = null;
       connected = false;
-      console.log(`[Hub] Disconnected from ${config.hubUrl}`);
+      logService.log(`[Hub] Disconnected from ${config.hubUrl}`);
     }
   }
 
