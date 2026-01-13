@@ -1,16 +1,22 @@
 import dotenv from "dotenv";
-import http from "http";
-import { Server } from "socket.io";
-import {
-  createNaisysClientService,
-  NaisysClientService,
-} from "./services/naisysClientService.js";
+import { createHubServer, HubServer } from "./services/hubServer.js";
+import { createSyncService, SyncService } from "./services/syncService.js";
+
+export { HubServer, SyncService };
+
+export interface HubInstance {
+  hubServer: HubServer;
+  syncService: SyncService;
+  shutdown: () => void;
+}
 
 /**
- * Starts the Hub server.
+ * Starts the Hub server with sync service.
  * Can be called standalone or inline from naisys with --hub flag.
  */
-export async function startHub(startupType: "standalone" | "hosted") {
+export async function startHub(
+  startupType: "standalone" | "hosted"
+): Promise<HubInstance> {
   console.log(`[Hub] Starting Hub server in ${startupType} mode...`);
 
   const hubPort = Number(process.env.HUB_PORT) || 3002;
@@ -22,91 +28,34 @@ export async function startHub(startupType: "standalone" | "hosted") {
     process.exit(1);
   }
 
-  // Track connected runners
-  const connectedClients = new Map<string, NaisysClientService>();
+  // Schema version for sync protocol - should match runner
+  const schemaVersion = 1; // TODO: Read from database schema_version table
 
-  // Create HTTP server for Socket.IO
-  const httpServer = http.createServer();
-
-  const io = new Server(httpServer, {
-    cors: {
-      origin: "*", // In production, restrict this
-      methods: ["GET", "POST"],
-    },
+  // Create hub server
+  const hubServer = await createHubServer({
+    port: hubPort,
+    accessKey: hubAccessKey,
   });
 
-  // Authentication middleware
-  io.use((socket, next) => {
-    const { accessKey, hostId, hostname } = socket.handshake.auth;
-
-    if (!accessKey || accessKey !== hubAccessKey) {
-      console.log(
-        `[Hub] Connection rejected: invalid access key from ${socket.handshake.address}`
-      );
-      return next(new Error("Invalid access key"));
-    }
-
-    if (!hostId || !hostname) {
-      console.log(`[Hub] Connection rejected: missing hostId or hostname`);
-      return next(new Error("Missing hostId or hostname"));
-    }
-
-    // Attach auth data to socket for use in connection handler
-    socket.data.hostId = hostId;
-    socket.data.hostname = hostname;
-
-    next();
+  // Create sync service - it will register its event handlers on start()
+  const syncService = createSyncService(hubServer, {
+    schemaVersion,
+    maxConcurrentRequests: 3,
+    pollIntervalMs: 1000,
   });
 
-  // Handle new connections
-  io.on("connection", (socket) => {
-    const { hostId, hostname } = socket.data;
+  // Start the sync polling loop (also registers event handlers)
+  syncService.start();
 
-    // Check if this host is already connected
-    const existingClient = connectedClients.get(hostId);
-    if (existingClient) {
-      console.log(
-        `[Hub] Host ${hostname} (${hostId}) reconnecting, replacing old connection`
-      );
-      connectedClients.delete(hostId);
-    }
-
-    // Create client service for this connection
-    const clientService = createNaisysClientService(socket, {
-      hostId,
-      hostname,
-      connectedAt: new Date(),
-    });
-
-    connectedClients.set(hostId, clientService);
-
-    console.log(`[Hub] Active connections: ${connectedClients.size}`);
-
-    // Clean up on disconnect
-    socket.on("disconnect", () => {
-      connectedClients.delete(hostId);
-      console.log(`[Hub] Active connections: ${connectedClients.size}`);
-    });
-  });
-
-  // Start listening
-  httpServer.listen(hubPort, () => {
-    console.log(`[Hub] Server listening on port ${hubPort}`);
-  });
-
-  // Return control interface
   return {
-    getConnectedClients: () => Array.from(connectedClients.values()),
-    getClientByHostId: (hostId: string) => connectedClients.get(hostId),
-    getClientCount: () => connectedClients.size,
-    close: () => {
-      io.close();
-      httpServer.close();
+    hubServer,
+    syncService,
+    shutdown: () => {
+      syncService.stop();
+      hubServer.close();
     },
   };
 }
-
-export type HubServer = Awaited<ReturnType<typeof startHub>>;
 
 // Start server if this file is run directly
 if (import.meta.url === `file://${process.argv[1]}`) {
