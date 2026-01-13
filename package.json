@@ -6,6 +6,7 @@
   "type": "module",
   "workspaces": [
     "packages/database",
+    "packages/hub-protocol",
     "apps/hub",
     "apps/supervisor/shared",
     "apps/supervisor/client",

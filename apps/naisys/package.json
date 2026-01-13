@@ -10,7 +10,7 @@
   },
   "scripts": {
     "build/run/attachable": "tsc && node --inspect dist/naisys.js ../../agents/assistant.yaml --supervisor",
-    "agent:assistant": "node dist/naisys.js ../../agents/assistant.yaml --supervisor",
+    "agent:assistant": "node dist/naisys.js ../../agents/assistant.yaml --supervisor --hub",
     "agent:scdb:program-director": "cd ../../agents/scdb && node ../../apps/naisys/dist/naisys.js program-director.yaml",
     "clean": "rm -rf dist",
     "build": "tsc",
@@ -55,6 +55,7 @@
     "@naisys-supervisor/server": "file:../supervisor/server",
     "@naisys/database": "file:../../packages/database",
     "@naisys/hub": "file:../hub",
+    "@naisys/hub-protocol": "file:../../packages/hub-protocol",
     "@xterm/headless": "^6.0.0",
     "chalk": "^5.6.2",
     "commander": "^14.0.2",
