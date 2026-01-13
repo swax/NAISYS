@@ -1,3 +1,9 @@
+import {
+  HubEvents,
+  type SyncRequest,
+  type ForwardData,
+  type SyncError,
+} from "@naisys/hub-protocol";
 import { io, Socket } from "socket.io-client";
 import { HubClientLog } from "./hubClientLog.js";
 
@@ -34,7 +40,7 @@ export function createHubService(config: HubServiceConfig) {
       logService.log(`[Hub] Connected to ${config.hubUrl}`);
 
       // Send catch_up message on connect per the plan
-      socket?.emit("catch_up", {
+      socket?.emit(HubEvents.CATCH_UP, {
         host_id: config.hostId,
         // TODO: Track lastReceived timestamp from forwarded data
         lastReceived: null,
@@ -53,29 +59,23 @@ export function createHubService(config: HubServiceConfig) {
     });
 
     // Hub requests sync data from runner
-    socket.on(
-      "sync_request",
-      (data: { schema_version: number; since: string }) => {
-        logService.log(
-          `[Hub] Received sync_request from ${config.hubUrl} ${JSON.stringify(data)}`
-        );
-        // TODO: Implement sync response logic in Phase 3
-      }
-    );
+    socket.on(HubEvents.SYNC_REQUEST, (data: SyncRequest) => {
+      logService.log(
+        `[Hub] Received sync_request from ${config.hubUrl} ${JSON.stringify(data)}`
+      );
+      // TODO: Implement sync response logic in Phase 3
+    });
 
     // Hub forwards data from other runners
-    socket.on(
-      "forward",
-      (data: { has_more: boolean; tables: Record<string, unknown[]> }) => {
-        logService.log(
-          `[Hub] Received forward from ${config.hubUrl} ${Object.keys(data.tables)}`
-        );
-        // TODO: Implement upsert logic in Phase 4
-      }
-    );
+    socket.on(HubEvents.FORWARD, (data: ForwardData) => {
+      logService.log(
+        `[Hub] Received forward from ${config.hubUrl} ${Object.keys(data.tables)}`
+      );
+      // TODO: Implement upsert logic in Phase 4
+    });
 
     // Schema version mismatch error
-    socket.on("sync_error", (data: { error: string; message: string }) => {
+    socket.on(HubEvents.SYNC_ERROR, (data: SyncError) => {
       logService.error(
         `[Hub] Sync error from ${config.hubUrl}: ${data.message}`
       );

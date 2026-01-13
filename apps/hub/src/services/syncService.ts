@@ -1,16 +1,11 @@
-import { z } from "zod";
+import {
+  SyncResponseSchema,
+  type SyncResponse,
+  HubEvents,
+} from "@naisys/hub-protocol";
 import { HubServerLog } from "./hubServerLog.js";
 import { HubServer } from "./hubServer.js";
 import { NaisysClient } from "./naisysClient.js";
-
-/** Zod schema for sync_response event data */
-const SyncResponseDataSchema = z.object({
-  host_id: z.string(),
-  has_more: z.boolean(),
-  tables: z.record(z.string(), z.array(z.unknown())),
-});
-
-type SyncResponseData = z.infer<typeof SyncResponseDataSchema>;
 
 /** Per-client sync state */
 interface ClientSyncState {
@@ -140,7 +135,7 @@ export function createSyncService(
       },
       (rawResponse: unknown) => {
         // Validate response with schema
-        const result = SyncResponseDataSchema.safeParse(rawResponse);
+        const result = SyncResponseSchema.safeParse(rawResponse);
         if (!result.success) {
           logService.error(
             `[SyncService] Invalid sync response from ${hostId}: ${JSON.stringify(result.error.issues)}`
@@ -165,7 +160,7 @@ export function createSyncService(
   /**
    * Handle sync response from a client
    */
-  function handleSyncResponse(hostId: string, data: SyncResponseData) {
+  function handleSyncResponse(hostId: string, data: SyncResponse) {
     const state = clientStates.get(hostId);
     if (!state) {
       logService.log(
@@ -254,8 +249,11 @@ export function createSyncService(
 
     // Register event handlers for connection lifecycle
     // Note: sync_response is handled via ack callback in sendSyncRequest
-    hubServer.registerEvent("client_connected", handleClientConnected);
-    hubServer.registerEvent("client_disconnected", handleClientDisconnected);
+    hubServer.registerEvent(HubEvents.CLIENT_CONNECTED, handleClientConnected);
+    hubServer.registerEvent(
+      HubEvents.CLIENT_DISCONNECTED,
+      handleClientDisconnected
+    );
 
     logService.log(
       `[SyncService] Starting sync polling (interval: ${pollIntervalMs}ms, max concurrent: ${maxConcurrentRequests})`
@@ -268,8 +266,11 @@ export function createSyncService(
    */
   function stop() {
     // Unregister event handlers
-    hubServer.unregisterEvent("client_connected", handleClientConnected);
-    hubServer.unregisterEvent("client_disconnected", handleClientDisconnected);
+    hubServer.unregisterEvent(HubEvents.CLIENT_CONNECTED, handleClientConnected);
+    hubServer.unregisterEvent(
+      HubEvents.CLIENT_DISCONNECTED,
+      handleClientDisconnected
+    );
 
     if (intervalId) {
       clearInterval(intervalId);
