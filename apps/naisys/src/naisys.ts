@@ -76,7 +76,7 @@ const hubManager = await createHubManager(
   hostService,
   hubClientLog
 );
-await createHubSyncClient(hubManager, hubClientLog, dbService);
+await createHubSyncClient(hubManager, hubClientLog, dbService, hostService);
 
 // Inits the naisys db if it doesn't exist which is needed by supervisor
 await agentManager.startAgent(agentPath);
