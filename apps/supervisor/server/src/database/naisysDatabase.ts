@@ -49,3 +49,12 @@ export async function usingNaisysDb<T>(
   const prisma = getPrismaClient();
   return await run(prisma);
 }
+
+export function getMonitorDbType(): MonitorDbType {
+  if (!configuredDbType) {
+    throw new Error(
+      "Database type not configured. Call initMonitorDatabase() first."
+    );
+  }
+  return configuredDbType;
+}
