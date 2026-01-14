@@ -32,10 +32,12 @@ const hostService = await createHostService(globalConfig, dbService);
  * There should be no dependency between hub and naisys
  * Sharing the same process space is to save memory on small servers
  */
+let hubStarted = false;
 if (program.opts().hub) {
   // Don't import the hub module tree unless needed
   const { startHub } = await import("@naisys/hub");
   await startHub("hosted");
+  hubStarted = true;
 }
 
 /**
@@ -46,7 +48,7 @@ if (program.opts().hub) {
 if (program.opts().supervisor) {
   // Don't import the whole fastify web server module tree unless needed
   const { startServer } = await import("@naisys-supervisor/server");
-  await startServer("hosted");
+  await startServer("hosted", hubStarted ? "monitor-hub" : "monitor-naisys");
 }
 
 console.log(`NAISYS STARTED`);

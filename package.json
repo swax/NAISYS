@@ -7,10 +7,10 @@
   "workspaces": [
     "packages/database",
     "packages/hub-protocol",
-    "apps/hub",
     "apps/supervisor/shared",
     "apps/supervisor/client",
     "apps/supervisor/server",
+    "apps/hub",
     "apps/naisys"
   ],
   "scripts": {
