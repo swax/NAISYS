@@ -14,10 +14,14 @@ import {
 } from "fastify-type-provider-zod";
 import path from "path";
 import { fileURLToPath } from "url";
+import { initMonitorDatabase } from "./database/naisysDatabase.js";
 import { initSupervisorDatabase } from "./database/supervisorDatabase.js";
 import apiRoutes from "./routes/api.js";
 
-export const startServer = async (startupType: "standalone" | "hosted") => {
+export const startServer = async (
+  startupType: "standalone" | "hosted",
+  monitorDb: "monitor-naisys" | "monitor-hub"
+) => {
   const isProd = process.env.NODE_ENV === "production";
 
   if (startupType === "hosted" && !isProd) {
@@ -27,6 +31,7 @@ export const startServer = async (startupType: "standalone" | "hosted") => {
     process.exit(1);
   }
 
+  initMonitorDatabase(monitorDb);
   initSupervisorDatabase();
 
   const __filename = fileURLToPath(import.meta.url);
@@ -169,5 +174,17 @@ export const startServer = async (startupType: "standalone" | "hosted") => {
 if (import.meta.url === `file://${process.argv[1]}`) {
   dotenv.config({ quiet: true });
 
-  startServer("standalone");
+  const monitorArg = process.argv.find((arg) => arg.startsWith("monitor="));
+  if (!monitorArg) {
+    console.error("Required argument: monitor=naisys or monitor=hub");
+    process.exit(1);
+  }
+
+  const monitorValue = monitorArg.split("=")[1];
+  if (monitorValue !== "naisys" && monitorValue !== "hub") {
+    console.error("Invalid monitor value. Must be 'naisys' or 'hub'");
+    process.exit(1);
+  }
+
+  startServer("standalone", `monitor-${monitorValue}`);
 }

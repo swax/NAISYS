@@ -1,4 +1,5 @@
 import { createDatabaseService } from "@naisys/database";
+import { program } from "commander";
 import dotenv from "dotenv";
 import { createHubServer } from "./services/hubServer.js";
 import {
@@ -66,6 +67,19 @@ export async function startHub(
 // Start server if this file is run directly
 if (import.meta.url === `file://${process.argv[1]}`) {
   dotenv.config({ quiet: true });
+
+  program.option("--supervisor", "Start Supervisor web server").parse();
+
+  /**
+   * --supervisor flag is provided, start Supervisor server
+   * There should be no dependency between supervisor and hub
+   * Sharing the same process space is to save 150 mb of node.js runtime memory on small servers
+   */
+  if (program.opts().supervisor) {
+    // Don't import the whole fastify web server module tree unless needed
+    const { startServer } = await import("@naisys-supervisor/server");
+    await startServer("hosted", "monitor-hub");
+  }
 
   startHub("standalone")
     .then(({ logService }) => {

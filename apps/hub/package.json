@@ -20,6 +20,8 @@
   "dependencies": {
     "@naisys/database": "file:../../packages/database",
     "@naisys/hub-protocol": "file:../../packages/hub-protocol",
+    "@naisys-supervisor/server": "file:../supervisor/server",
+    "commander": "^14.0.0",
     "dotenv": "^17.2.3",
     "pino": "^9.6.0",
     "socket.io": "^4.8.3",
