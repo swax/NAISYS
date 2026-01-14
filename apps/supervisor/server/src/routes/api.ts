@@ -6,6 +6,7 @@ import controlsRoutes from "./controls.js";
 import mailRoutes from "./mail.js";
 import runsRoutes from "./runs.js";
 import settingsRoutes from "./settings.js";
+import systemRoutes from "./system.js";
 
 export default async function apiRoutes(
   fastify: FastifyInstance,
@@ -31,4 +32,7 @@ export default async function apiRoutes(
 
   // Register controls routes
   await fastify.register(controlsRoutes);
+
+  // Register system routes
+  await fastify.register(systemRoutes);
 }

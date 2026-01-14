@@ -8,6 +8,7 @@ import type {
   LogEntry,
   MailDataResponse,
   MailThreadMessage,
+  MonitorModeResponse,
   NaisysDataRequest,
   NaisysDataResponse,
   RunsDataResponse,
@@ -44,6 +45,7 @@ export type {
   LogEntry,
   MailDataResponse,
   MailThreadMessage,
+  MonitorModeResponse,
   NaisysDataRequest,
   NaisysDataResponse,
   RunsDataResponse,
@@ -106,6 +108,7 @@ export const apiEndpoints = {
   runs: "/runs",
   contextLog: "/context-log",
   mail: "/mail",
+  monitorMode: "/system/monitor-mode",
 };
 
 export const checkSession = async (): Promise<SessionResponse> => {
@@ -361,5 +364,13 @@ export const createAgent = async (
       message:
         error instanceof Error ? error.message : "Failed to create agent",
     };
+  }
+};
+
+export const getMonitorMode = async (): Promise<MonitorModeResponse | null> => {
+  try {
+    return await api.get<MonitorModeResponse>(apiEndpoints.monitorMode);
+  } catch {
+    return null;
   }
 };
