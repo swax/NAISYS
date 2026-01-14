@@ -6,7 +6,7 @@ import {
   createHubServerLog,
   type HubServerLog,
 } from "./services/hubServerLog.js";
-import { createSyncServer } from "./services/syncServer.js";
+import { createHubSyncServer } from "./services/hubSyncServer.js";
 
 export interface HubInstance {
   logService: HubServerLog;
@@ -49,8 +49,8 @@ export async function startHub(
   // Create hub server
   const hubServer = await createHubServer(hubPort, hubAccessKey, logService);
 
-  // Create sync server - it will register its event handlers on start()
-  const syncServer = createSyncServer(hubServer, dbService, logService, {
+  // Create hub sync server - it will register its event handlers on start()
+  const hubSyncServer = createHubSyncServer(hubServer, dbService, logService, {
     maxConcurrentRequests: 3,
     pollIntervalMs: 1000,
   });
@@ -58,7 +58,7 @@ export async function startHub(
   return {
     logService,
     shutdown: () => {
-      syncServer.stop();
+      hubSyncServer.stop();
       hubServer.close();
     },
   };

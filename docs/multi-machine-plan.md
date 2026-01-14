@@ -558,7 +558,7 @@ Can ship Phases 1-2 first (single-machine with ULIDs + hosts), then 3-5 for mult
 - [x] Runner connects to Hub via WebSocket
 - [x] Runner connects to multiple Hubs when configured
 - [ ] Runner sends catch_up with lastReceived IDs on connect
-- [ ] Schema version mismatch returns error, blocks sync
+- [x] Schema version mismatch returns error, blocks sync
 - [ ] Runner responds to sync requests with new/updated data
 - [ ] Large sync responses paginated (has_more flag)
 - [ ] Large forwards paginated (has_more flag)
