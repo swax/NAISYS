@@ -22,7 +22,8 @@ program
 
 const globalConfig = await createGlobalConfig();
 const dbService = await createDatabaseService(
-  globalConfig.globalConfig().naisysFolder
+  globalConfig.globalConfig().naisysFolder,
+  "naisys"
 );
 const hostService = await createHostService(globalConfig, dbService);
 
@@ -68,7 +69,11 @@ const agentManager = new AgentManager(
 // Start hub connections for multi-machine sync
 
 const hubClientLog = createHubClientLog();
-const hubManager = await createHubManager(globalConfig, hostService, hubClientLog);
+const hubManager = await createHubManager(
+  globalConfig,
+  hostService,
+  hubClientLog
+);
 await createSyncClient(hubManager, hubClientLog, dbService);
 
 // Inits the naisys db if it doesn't exist which is needed by supervisor

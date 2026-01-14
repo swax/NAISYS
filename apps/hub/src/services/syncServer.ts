@@ -1,7 +1,8 @@
+import { DatabaseService } from "@naisys/database";
 import {
   HubEvents,
-  SyncResponseSchema,
   SyncResponseErrorSchema,
+  SyncResponseSchema,
   type SyncResponse,
   type SyncResponseError,
 } from "@naisys/hub-protocol";
@@ -28,10 +29,6 @@ export interface SyncServerConfig {
   maxConcurrentRequests?: number;
   /** Polling interval in ms (default: 1000) */
   pollIntervalMs?: number;
-  /** Schema version for sync protocol */
-  schemaVersion: number;
-  /** Log service for output */
-  logService: HubServerLog;
 }
 
 const DEFAULT_CONFIG = {
@@ -45,14 +42,16 @@ const DEFAULT_CONFIG = {
  */
 export function createSyncServer(
   hubServer: HubServer,
+  dbService: DatabaseService,
+  logService: HubServerLog,
   config: SyncServerConfig
 ) {
   const {
     maxConcurrentRequests = DEFAULT_CONFIG.maxConcurrentRequests,
     pollIntervalMs = DEFAULT_CONFIG.pollIntervalMs,
-    schemaVersion,
-    logService,
   } = config;
+
+  const schemaVersion = dbService.getSchemaVersion();
 
   // Per-client sync state
   const clientStates = new Map<string, ClientSyncState>();

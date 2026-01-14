@@ -1,3 +1,4 @@
+import { createDatabaseService } from "@naisys/database";
 import dotenv from "dotenv";
 import { createHubServer } from "./services/hubServer.js";
 import {
@@ -39,17 +40,18 @@ export async function startHub(
   }
 
   // Schema version for sync protocol - should match runner
-  const schemaVersion = 1; // TODO: Read from database schema_version table
+  const dbService = await createDatabaseService(
+    process.env.NAISYS_FOLDER || "",
+    "hub"
+  );
 
   // Create hub server
   const hubServer = await createHubServer(hubPort, hubAccessKey, logService);
 
   // Create sync server - it will register its event handlers on start()
-  const syncServer = createSyncServer(hubServer, {
-    schemaVersion,
+  const syncServer = createSyncServer(hubServer, dbService, logService, {
     maxConcurrentRequests: 3,
     pollIntervalMs: 1000,
-    logService,
   });
 
   return {
