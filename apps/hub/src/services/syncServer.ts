@@ -1,11 +1,15 @@
 import {
   HubEvents,
   SyncResponseSchema,
+  SyncResponseErrorSchema,
   type SyncResponse,
+  type SyncResponseError,
 } from "@naisys/hub-protocol";
 import { HubServer } from "./hubServer.js";
 import { HubServerLog } from "./hubServerLog.js";
-import { NaisysConnection } from "./naisysConnection.js";
+
+/** Sync error types */
+type SyncErrorType = "schema_mismatch" | "internal_error";
 
 /** Per-client sync state */
 interface ClientSyncState {
@@ -15,6 +19,8 @@ interface ClientSyncState {
   inFlight: boolean;
   /** Last sync timestamp to send in sync_request */
   since: string;
+  /** Sync error - if set, client won't be polled for sync updates */
+  syncError: { type: SyncErrorType; message: string } | null;
 }
 
 export interface SyncServerConfig {
@@ -79,6 +85,7 @@ export function createSyncServer(
         lastSyncTime: 0,
         inFlight: false,
         since: new Date(0).toISOString(),
+        syncError: null,
       };
       clientStates.set(hostId, state);
     }
@@ -88,7 +95,7 @@ export function createSyncServer(
   /**
    * Select the next client to sync.
    * Returns the hostId of the client that has gone longest without a sync,
-   * excluding clients that are in-flight.
+   * excluding clients that are in-flight or have sync errors.
    */
   function selectNextClient(): string | null {
     const clients = hubServer.getConnectedClients();
@@ -102,6 +109,9 @@ export function createSyncServer(
 
       // Skip if already has an in-flight request
       if (state.inFlight) continue;
+
+      // Skip clients with sync errors (e.g., schema mismatch)
+      if (state.syncError) continue;
 
       // Find the client with the oldest last sync time
       if (state.lastSyncTime < oldestSyncTime) {
@@ -136,7 +146,15 @@ export function createSyncServer(
         since: state.since,
       },
       (rawResponse: unknown) => {
-        // Validate response with schema
+        // First check if it's an error response
+        const errorResult = SyncResponseErrorSchema.safeParse(rawResponse);
+        if (errorResult.success) {
+          handleSyncError(hostId, errorResult.data);
+          clearInFlight(state);
+          return;
+        }
+
+        // Validate as success response
         const result = SyncResponseSchema.safeParse(rawResponse);
         if (!result.success) {
           logService.error(
@@ -157,6 +175,19 @@ export function createSyncServer(
         `[SyncServer] Client ${hostId} no longer connected, skipping sync`
       );
     }
+  }
+
+  /**
+   * Handle sync error response from a client
+   */
+  function handleSyncError(hostId: string, error: SyncResponseError) {
+    logService.error(
+      `[SyncServer] Sync error from ${hostId}: ${error.error} - ${error.message}`
+    );
+
+    // Mark the client state as having a sync error
+    const state = getOrCreateState(hostId);
+    state.syncError = { type: error.error, message: error.message };
   }
 
   /**
@@ -200,14 +231,12 @@ export function createSyncServer(
   /**
    * Handle client connection - initialize state
    */
-  function handleClientConnected(
-    hostId: string,
-    _connection: NaisysConnection
-  ) {
+  function handleClientConnected(hostId: string, _connection: unknown) {
     const state = getOrCreateState(hostId);
     // Reset state for new connection - will be selected on next tick
     state.lastSyncTime = 0;
     state.inFlight = false;
+    state.syncError = null; // Clear any previous sync error on reconnect
     logService.log(`[SyncServer] Client ${hostId} connected, ready to sync`);
   }
 

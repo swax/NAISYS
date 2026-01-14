@@ -4,9 +4,22 @@ import {
   SyncRequestSchema,
   type SyncRequest,
   type SyncResponse,
+  type SyncResponseError,
 } from "@naisys/hub-protocol";
 import { HubClientLog } from "./hubClientLog.js";
 import { HubManager } from "./hubManager.js";
+
+/** Status of sync client connection to a specific hub */
+export type SyncClientStatus =
+  | "connected"
+  | "schema_mismatch"
+  | "internal_error";
+
+/** Per-hub sync status */
+interface HubSyncState {
+  status: SyncClientStatus;
+  errorMessage?: string;
+}
 
 /**
  * Handles sync requests from connected Hub servers.
@@ -19,10 +32,25 @@ export async function createSyncClient(
 ) {
   const schemaVersion = dbService.getSchemaVersion();
 
+  /** Track sync status per hub URL */
+  const hubSyncStates = new Map<string, HubSyncState>();
+
   await init();
 
   async function init() {
     hubManager.registerEvent(HubEvents.SYNC_REQUEST, handleSyncRequest);
+  }
+
+  /**
+   * Get or create sync state for a hub
+   */
+  function getOrCreateState(hubUrl: string): HubSyncState {
+    let state = hubSyncStates.get(hubUrl);
+    if (!state) {
+      state = { status: "connected" };
+      hubSyncStates.set(hubUrl, state);
+    }
+    return state;
   }
 
   /**
@@ -31,8 +59,10 @@ export async function createSyncClient(
   function handleSyncRequest(
     hubUrl: string,
     rawData: unknown,
-    ack?: (response: SyncResponse) => void
+    ack?: (response: SyncResponse | SyncResponseError) => void
   ) {
+    const state = getOrCreateState(hubUrl);
+
     // Validate request with schema
     const result = SyncRequestSchema.safeParse(rawData);
     if (!result.success) {
@@ -46,12 +76,27 @@ export async function createSyncClient(
 
     // Check schema version
     if (data.schema_version !== schemaVersion) {
-      hubClientLog.error(
-        `[SyncClient] Schema version mismatch from ${hubUrl}: expected ${schemaVersion}, got ${data.schema_version}`
-      );
-      // Don't respond - hub will handle timeout
+      const errorMessage = `Schema version mismatch: expected ${schemaVersion}, got ${data.schema_version}`;
+      hubClientLog.error(`[SyncClient] ${errorMessage} from ${hubUrl}`);
+
+      // Update state to reflect the error
+      state.status = "schema_mismatch";
+      state.errorMessage = errorMessage;
+
+      // Send error response so hub knows we can't sync
+      if (ack) {
+        const errorResponse: SyncResponseError = {
+          error: "schema_mismatch",
+          message: errorMessage,
+        };
+        ack(errorResponse);
+      }
       return;
     }
+
+    // Connection is healthy - ensure state reflects this
+    state.status = "connected";
+    state.errorMessage = undefined;
 
     hubClientLog.write(
       `[SyncClient] Processing sync_request from ${hubUrl} (since: ${data.since})`
@@ -78,7 +123,16 @@ export async function createSyncClient(
     }
   }
 
-  return {};
+  return {
+    /** Get sync status for a specific hub */
+    getHubSyncStatus: (hubUrl: string): SyncClientStatus | undefined => {
+      return hubSyncStates.get(hubUrl)?.status;
+    },
+    /** Get all hub sync states */
+    getAllHubSyncStates: (): Map<string, HubSyncState> => {
+      return new Map(hubSyncStates);
+    },
+  };
 }
 
-export type SyncClient = ReturnType<typeof createSyncClient>;
+export type SyncClient = Awaited<ReturnType<typeof createSyncClient>>;

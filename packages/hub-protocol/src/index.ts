@@ -26,6 +26,13 @@ export const SyncResponseSchema = z.object({
 });
 export type SyncResponse = z.infer<typeof SyncResponseSchema>;
 
+/** Sent by client when sync cannot proceed (e.g., schema mismatch) */
+export const SyncResponseErrorSchema = z.object({
+  error: z.enum(["schema_mismatch", "internal_error"]),
+  message: z.string(),
+});
+export type SyncResponseError = z.infer<typeof SyncResponseErrorSchema>;
+
 // =============================================================================
 // Hub -> Client Messages
 // =============================================================================
