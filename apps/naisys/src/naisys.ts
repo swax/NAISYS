@@ -6,7 +6,7 @@ import { createAgentRegistrar } from "./agent/agentRegistrar.js";
 import { createGlobalConfig } from "./globalConfig.js";
 import { createHubClientLog } from "./hub/hubClientLog.js";
 import { createHubManager } from "./hub/hubManager.js";
-import { createSyncClient } from "./hub/syncClient.js";
+import { createHubSyncClient } from "./hub/hubSyncClient.js";
 import { createHostService } from "./services/hostService.js";
 
 dotenv.config({ quiet: true });
@@ -76,7 +76,7 @@ const hubManager = await createHubManager(
   hostService,
   hubClientLog
 );
-await createSyncClient(hubManager, hubClientLog, dbService);
+await createHubSyncClient(hubManager, hubClientLog, dbService);
 
 // Inits the naisys db if it doesn't exist which is needed by supervisor
 await agentManager.startAgent(agentPath);

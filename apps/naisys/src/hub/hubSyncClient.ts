@@ -9,15 +9,15 @@ import {
 import { HubClientLog } from "./hubClientLog.js";
 import { HubManager } from "./hubManager.js";
 
-/** Status of sync client connection to a specific hub */
-export type SyncClientStatus =
+/** Status of hub sync client connection to a specific hub */
+export type HubSyncClientStatus =
   | "connected"
   | "schema_mismatch"
   | "internal_error";
 
 /** Per-hub sync status */
 interface HubSyncState {
-  status: SyncClientStatus;
+  status: HubSyncClientStatus;
   errorMessage?: string;
 }
 
@@ -25,7 +25,7 @@ interface HubSyncState {
  * Handles sync requests from connected Hub servers.
  * Receives sync_request messages and responds with local data.
  */
-export async function createSyncClient(
+export async function createHubSyncClient(
   hubManager: HubManager,
   hubClientLog: HubClientLog,
   dbService: DatabaseService
@@ -125,7 +125,7 @@ export async function createSyncClient(
 
   return {
     /** Get sync status for a specific hub */
-    getHubSyncStatus: (hubUrl: string): SyncClientStatus | undefined => {
+    getHubSyncStatus: (hubUrl: string): HubSyncClientStatus | undefined => {
       return hubSyncStates.get(hubUrl)?.status;
     },
     /** Get all hub sync states */
@@ -135,4 +135,4 @@ export async function createSyncClient(
   };
 }
 
-export type SyncClient = Awaited<ReturnType<typeof createSyncClient>>;
+export type HubSyncClient = Awaited<ReturnType<typeof createHubSyncClient>>;

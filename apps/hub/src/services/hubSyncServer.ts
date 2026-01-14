@@ -24,7 +24,7 @@ interface ClientSyncState {
   syncError: { type: SyncErrorType; message: string } | null;
 }
 
-export interface SyncServerConfig {
+export interface HubSyncServerConfig {
   /** Maximum concurrent in-flight sync requests (default: 3) */
   maxConcurrentRequests?: number;
   /** Polling interval in ms (default: 1000) */
@@ -40,11 +40,11 @@ const DEFAULT_CONFIG = {
  * Manages sync polling to connected NAISYS runners.
  * Sends sync_request messages on a staggered schedule and handles responses.
  */
-export function createSyncServer(
+export function createHubSyncServer(
   hubServer: HubServer,
   dbService: DatabaseService,
   logService: HubServerLog,
-  config: SyncServerConfig
+  config: HubSyncServerConfig
 ) {
   const {
     maxConcurrentRequests = DEFAULT_CONFIG.maxConcurrentRequests,
@@ -324,4 +324,4 @@ export function createSyncServer(
   };
 }
 
-export type SyncServer = ReturnType<typeof createSyncServer>;
+export type HubSyncServer = ReturnType<typeof createHubSyncServer>;
