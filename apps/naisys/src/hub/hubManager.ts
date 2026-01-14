@@ -1,51 +1,76 @@
 import { GlobalConfig } from "../globalConfig.js";
 import { HostService } from "../services/hostService.js";
-import { createHubClientLog } from "./hubClientLog.js";
-import { createHubService, HubService } from "./hubService.js";
+import { HubClientLog } from "./hubClientLog.js";
+import { createHubConnection, HubConnection } from "./hubConnection.js";
 
-export function createHubManager(
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type EventHandler = (hubUrl: string, ...args: any[]) => void;
+
+export async function createHubManager(
   globalConfig: GlobalConfig,
-  hostService: HostService
+  hostService: HostService,
+  hubClientLog: HubClientLog
 ) {
   const config = globalConfig.globalConfig();
-  const logService = createHubClientLog();
-  const hubServices: HubService[] = [];
+  const hubConnections: HubConnection[] = [];
 
-  async function start() {
+  // Generic event handlers registry - maps event name to set of handlers
+  const eventHandlers = new Map<string, Set<EventHandler>>();
+
+  await init();
+
+  async function init() {
     if (config.hubUrls.length === 0) {
-      logService.log(
+      hubClientLog.write(
         "[HubManager] No HUB_URLS configured, running in standalone mode"
       );
       return;
     }
 
-    logService.log(
+    hubClientLog.write(
       `[HubManager] Starting connections to ${config.hubUrls.length} hub(s)...`
     );
     for (const hubUrl of config.hubUrls) {
-      const hubService = createHubService({
+      const hubConnection = createHubConnection(
         hubUrl,
-        hubAccessKey: config.hubAccessKey,
-        hostId: hostService.localHostId,
-        hostname: hostService.localHostname,
-        logService,
-      });
+        hubClientLog,
+        globalConfig,
+        hostService,
+        raiseEvent
+      );
 
-      hubServices.push(hubService);
-      hubService.connect();
+      hubConnections.push(hubConnection);
+      hubConnection.connect();
+    }
+  }
+  /** Register an event handler */
+  function registerEvent(event: string, handler: EventHandler) {
+    if (!eventHandlers.has(event)) {
+      eventHandlers.set(event, new Set());
+    }
+    eventHandlers.get(event)!.add(handler);
+  }
+
+  /** Unregister an event handler */
+  function unregisterEvent(event: string, handler: EventHandler) {
+    const handlers = eventHandlers.get(event);
+    if (handlers) {
+      handlers.delete(handler);
     }
   }
 
-  function stop() {
-    logService.log("[HubManager] Stopping all hub connections...");
-    for (const hubService of hubServices) {
-      hubService.disconnect();
+  /** Raise an event to all registered handlers */
+  function raiseEvent(event: string, hubUrl: string, ...args: unknown[]) {
+    const handlers = eventHandlers.get(event);
+    if (handlers) {
+      for (const handler of handlers) {
+        handler(hubUrl, ...args);
+      }
     }
-    hubServices.length = 0;
   }
 
   function getConnectedHubs() {
-    return hubServices.filter((s) => s.isConnected());
+    return hubConnections.filter((c) => c.isConnected());
   }
 
   function isMultiMachineMode() {
@@ -53,11 +78,11 @@ export function createHubManager(
   }
 
   return {
-    start,
-    stop,
     getConnectedHubs,
     isMultiMachineMode,
+    registerEvent,
+    unregisterEvent,
   };
 }
 
-export type HubManager = ReturnType<typeof createHubManager>;
+export type HubManager = Awaited<ReturnType<typeof createHubManager>>;

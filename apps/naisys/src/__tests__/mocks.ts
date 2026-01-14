@@ -1,5 +1,5 @@
 import { jest, test } from "@jest/globals";
-import { PrismaClient } from "@naisys/database";
+import { DatabaseService, PrismaClient } from "@naisys/database";
 import { AgentConfig } from "../agent/agentConfig.js";
 import { CommandProtection } from "../command/commandProtection.js";
 import { PromptBuilder } from "../command/promptBuilder.js";
@@ -12,9 +12,8 @@ import { WorkspacesFeature } from "../features/workspaces.js";
 import { GlobalConfig } from "../globalConfig.js";
 import { ContextManager } from "../llm/contextManager.js";
 import { CostTracker } from "../llm/costTracker.js";
-import { SessionCompactor } from "../llm/sessionCompactor.js";
 import { LlmMessage, LlmRole } from "../llm/llmDtos.js";
-import { DatabaseService } from "@naisys/database";
+import { SessionCompactor } from "../llm/sessionCompactor.js";
 import { LogService } from "../services/logService.js";
 import { RunService } from "../services/runService.js";
 import { OutputService } from "../utils/output.js";
@@ -22,10 +21,11 @@ import { OutputService } from "../utils/output.js";
 export function createMockDatabaseService(): DatabaseService {
   return {
     usingDatabase: <T>(
-      run: (prisma: PrismaClient) => Promise<T>,
+      run: (prisma: PrismaClient) => Promise<T>
     ): Promise<T> => {
       throw new Error("Mock database not implemented");
     },
+    getSchemaVersion: () => 1,
   };
 }
 
@@ -48,7 +48,7 @@ export function createMockLogService() {
 
 export function createMockPromptBuilder(
   userHostPrompt: string,
-  userHostPathPrompt: string,
+  userHostPathPrompt: string
 ) {
   const promptBuilder: PromptBuilder = {
     getPrompt: jest.fn(() => Promise.resolve(`${userHostPathPrompt}$ `)),
@@ -94,7 +94,7 @@ export function createMockLLMail() {
   const llmail: LLMail = {
     simpleMode: false,
     handleCommand: jest.fn(() =>
-      Promise.resolve({ content: "", pauseSeconds: 0 }),
+      Promise.resolve({ content: "", pauseSeconds: 0 })
     ),
     getUnreadThreads: jest.fn(() => Promise.resolve([])),
     newThread: jest.fn(() => Promise.resolve("")),
@@ -177,7 +177,7 @@ export function createMockCostTracker() {
         cacheReadTokens: 0,
         totalInputTokens: 0,
         totalCacheTokens: 0,
-      }),
+      })
     ),
     getCostBreakdownWithModels: jest.fn(() => Promise.resolve([])),
     calculateModelCacheSavings: jest.fn(() => null),
@@ -217,7 +217,7 @@ export function createMockCommandProtection() {
   const validateCommand = jest.fn(() =>
     Promise.resolve({
       commandAllowed: true,
-    }),
+    })
   );
 
   return {

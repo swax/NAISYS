@@ -4,7 +4,7 @@ import pino from "pino";
 export type LogFn = (message: string) => void;
 
 export interface HubClientLog {
-  log: LogFn;
+  write: LogFn;
   error: LogFn;
 }
 
@@ -27,7 +27,7 @@ export function createHubClientLog(): HubClientLog {
   });
 
   return {
-    log: (message: string) => logger.info(message),
+    write: (message: string) => logger.info(message),
     error: (message: string) => logger.error(message),
   };
 }

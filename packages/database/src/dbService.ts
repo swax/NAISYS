@@ -147,8 +147,13 @@ export async function createDatabaseService(naisysFolder: string) {
     throw lastError; // Should never reach here, but satisfies TypeScript
   }
 
+  function getSchemaVersion(): number {
+    return latestDbVersion;
+  }
+
   return {
     usingDatabase,
+    getSchemaVersion,
   };
 }
 

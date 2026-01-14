@@ -1,11 +1,11 @@
 import {
+  HubEvents,
   SyncResponseSchema,
   type SyncResponse,
-  HubEvents,
 } from "@naisys/hub-protocol";
-import { HubServerLog } from "./hubServerLog.js";
 import { HubServer } from "./hubServer.js";
-import { NaisysClient } from "./naisysClient.js";
+import { HubServerLog } from "./hubServerLog.js";
+import { NaisysConnection } from "./naisysConnection.js";
 
 /** Per-client sync state */
 interface ClientSyncState {
@@ -17,7 +17,7 @@ interface ClientSyncState {
   since: string;
 }
 
-export interface SyncServiceConfig {
+export interface SyncServerConfig {
   /** Maximum concurrent in-flight sync requests (default: 3) */
   maxConcurrentRequests?: number;
   /** Polling interval in ms (default: 1000) */
@@ -37,9 +37,9 @@ const DEFAULT_CONFIG = {
  * Manages sync polling to connected NAISYS runners.
  * Sends sync_request messages on a staggered schedule and handles responses.
  */
-export function createSyncService(
+export function createSyncServer(
   hubServer: HubServer,
-  config: SyncServiceConfig
+  config: SyncServerConfig
 ) {
   const {
     maxConcurrentRequests = DEFAULT_CONFIG.maxConcurrentRequests,
@@ -56,6 +56,8 @@ export function createSyncService(
 
   // Polling interval handle
   let intervalId: NodeJS.Timeout | null = null;
+
+  start();
 
   /**
    * Clear in-flight state for a client and decrement counter
@@ -123,7 +125,7 @@ export function createSyncService(
     inFlightCount++;
 
     logService.log(
-      `[SyncService] Sending sync_request to ${hostId} (since: ${state.since}, in-flight: ${inFlightCount})`
+      `[SyncServer] Sending sync_request to ${hostId} (since: ${state.since}, in-flight: ${inFlightCount})`
     );
 
     const sent = hubServer.sendMessage(
@@ -138,7 +140,7 @@ export function createSyncService(
         const result = SyncResponseSchema.safeParse(rawResponse);
         if (!result.success) {
           logService.error(
-            `[SyncService] Invalid sync response from ${hostId}: ${JSON.stringify(result.error.issues)}`
+            `[SyncServer] Invalid sync response from ${hostId}: ${JSON.stringify(result.error.issues)}`
           );
           clearInFlight(state);
           return;
@@ -152,7 +154,7 @@ export function createSyncService(
       // Client disconnected before we could send
       clearInFlight(state);
       logService.log(
-        `[SyncService] Client ${hostId} no longer connected, skipping sync`
+        `[SyncServer] Client ${hostId} no longer connected, skipping sync`
       );
     }
   }
@@ -164,7 +166,7 @@ export function createSyncService(
     const state = clientStates.get(hostId);
     if (!state) {
       logService.log(
-        `[SyncService] Received response from unknown client ${hostId}`
+        `[SyncServer] Received response from unknown client ${hostId}`
       );
       return;
     }
@@ -178,7 +180,7 @@ export function createSyncService(
     );
 
     logService.log(
-      `[SyncService] Received ${rowCount} rows from ${hostId}, has_more: ${data.has_more}`
+      `[SyncServer] Received ${rowCount} rows from ${hostId}, has_more: ${data.has_more}`
     );
 
     if (rowCount > 0) {
@@ -189,7 +191,7 @@ export function createSyncService(
     // If there's more data, immediately request it
     if (data.has_more) {
       logService.log(
-        `[SyncService] More data available, sending immediate follow-up`
+        `[SyncServer] More data available, sending immediate follow-up`
       );
       sendSyncRequest(hostId);
     }
@@ -198,12 +200,15 @@ export function createSyncService(
   /**
    * Handle client connection - initialize state
    */
-  function handleClientConnected(hostId: string, _client: NaisysClient) {
+  function handleClientConnected(
+    hostId: string,
+    _connection: NaisysConnection
+  ) {
     const state = getOrCreateState(hostId);
     // Reset state for new connection - will be selected on next tick
     state.lastSyncTime = 0;
     state.inFlight = false;
-    logService.log(`[SyncService] Client ${hostId} connected, ready to sync`);
+    logService.log(`[SyncServer] Client ${hostId} connected, ready to sync`);
   }
 
   /**
@@ -216,7 +221,7 @@ export function createSyncService(
     }
     clientStates.delete(hostId);
     logService.log(
-      `[SyncService] Client ${hostId} disconnected, state cleaned up`
+      `[SyncServer] Client ${hostId} disconnected, state cleaned up`
     );
   }
 
@@ -243,7 +248,7 @@ export function createSyncService(
    */
   function start() {
     if (intervalId) {
-      logService.log(`[SyncService] Already running`);
+      logService.log(`[SyncServer] Already running`);
       return;
     }
 
@@ -256,7 +261,7 @@ export function createSyncService(
     );
 
     logService.log(
-      `[SyncService] Starting sync polling (interval: ${pollIntervalMs}ms, max concurrent: ${maxConcurrentRequests})`
+      `[SyncServer] Starting sync polling (interval: ${pollIntervalMs}ms, max concurrent: ${maxConcurrentRequests})`
     );
     intervalId = setInterval(tick, pollIntervalMs);
   }
@@ -266,7 +271,10 @@ export function createSyncService(
    */
   function stop() {
     // Unregister event handlers
-    hubServer.unregisterEvent(HubEvents.CLIENT_CONNECTED, handleClientConnected);
+    hubServer.unregisterEvent(
+      HubEvents.CLIENT_CONNECTED,
+      handleClientConnected
+    );
     hubServer.unregisterEvent(
       HubEvents.CLIENT_DISCONNECTED,
       handleClientDisconnected
@@ -275,7 +283,7 @@ export function createSyncService(
     if (intervalId) {
       clearInterval(intervalId);
       intervalId = null;
-      logService.log(`[SyncService] Stopped sync polling`);
+      logService.log(`[SyncServer] Stopped sync polling`);
     }
   }
 
@@ -288,4 +296,4 @@ export function createSyncService(
   };
 }
 
-export type SyncService = ReturnType<typeof createSyncService>;
+export type SyncServer = ReturnType<typeof createSyncServer>;

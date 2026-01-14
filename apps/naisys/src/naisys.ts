@@ -4,19 +4,26 @@ import dotenv from "dotenv";
 import { AgentManager } from "./agent/agentManager.js";
 import { createAgentRegistrar } from "./agent/agentRegistrar.js";
 import { createGlobalConfig } from "./globalConfig.js";
+import { createHubClientLog } from "./hub/hubClientLog.js";
 import { createHubManager } from "./hub/hubManager.js";
+import { createSyncClient } from "./hub/syncClient.js";
 import { createHostService } from "./services/hostService.js";
 
 dotenv.config({ quiet: true });
 
 program
   .argument("<agent-path>", "Path to agent configuration file")
-  .option("--hub", "Start Hub server for NAISYS instances running across machines")
+  .option(
+    "--hub",
+    "Start Hub server for NAISYS instances running across machines"
+  )
   .option("--supervisor", "Start Supervisor web server")
   .parse();
 
 const globalConfig = await createGlobalConfig();
-const dbService = await createDatabaseService(globalConfig.globalConfig().naisysFolder);
+const dbService = await createDatabaseService(
+  globalConfig.globalConfig().naisysFolder
+);
 const hostService = await createHostService(globalConfig, dbService);
 
 /**
@@ -45,18 +52,24 @@ console.log(`NAISYS STARTED`);
 
 const agentPath = program.args[0];
 
-
 const agentRegistrar = await createAgentRegistrar(
   globalConfig,
   dbService,
   hostService,
-  agentPath,
+  agentPath
 );
-const agentManager = new AgentManager(dbService, globalConfig, hostService, agentRegistrar);
+const agentManager = new AgentManager(
+  dbService,
+  globalConfig,
+  hostService,
+  agentRegistrar
+);
 
 // Start hub connections for multi-machine sync
-const hubManager = createHubManager(globalConfig, hostService);
-await hubManager.start();
+
+const hubClientLog = createHubClientLog();
+const hubManager = await createHubManager(globalConfig, hostService, hubClientLog);
+await createSyncClient(hubManager, hubClientLog, dbService);
 
 // Inits the naisys db if it doesn't exist which is needed by supervisor
 await agentManager.startAgent(agentPath);

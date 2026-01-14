@@ -2,13 +2,10 @@ import http from "http";
 import { Server } from "socket.io";
 import { ZodSchema } from "zod";
 import { HubServerLog } from "./hubServerLog.js";
-import { createNaisysClient, NaisysClient } from "./naisysClient.js";
-
-export interface HubServerConfig {
-  port: number;
-  accessKey: string;
-  logService: HubServerLog;
-}
+import {
+  createNaisysConnection,
+  NaisysConnection,
+} from "./naisysConnection.js";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type EventHandler = (hostId: string, ...args: any[]) => void;
@@ -22,11 +19,13 @@ interface RegisteredHandler {
 /**
  * Creates and starts the Hub WebSocket server.
  */
-export async function createHubServer(config: HubServerConfig) {
-  const { port, accessKey, logService } = config;
-
+export async function createHubServer(
+  port: number,
+  accessKey: string,
+  logService: HubServerLog
+) {
   // Track connected runners
-  const connectedClients = new Map<string, NaisysClient>();
+  const naisysConnections = new Map<string, NaisysConnection>();
 
   // Generic event handlers registry - maps event name to set of registered handlers
   const eventHandlers = new Map<string, Set<RegisteredHandler>>();
@@ -92,11 +91,11 @@ export async function createHubServer(config: HubServerConfig) {
     payload: unknown,
     ack?: AckCallback<T>
   ): boolean {
-    const client = connectedClients.get(hostId);
-    if (!client) {
+    const connection = naisysConnections.get(hostId);
+    if (!connection) {
       return false;
     }
-    client.sendMessage(event, payload, ack);
+    connection.sendMessage(event, payload, ack);
     return true;
   }
 
@@ -142,17 +141,17 @@ export async function createHubServer(config: HubServerConfig) {
     const { hostId, hostname } = socket.data;
 
     // Check if this host is already connected
-    const existingClient = connectedClients.get(hostId);
-    if (existingClient) {
+    const existingConnection = naisysConnections.get(hostId);
+    if (existingConnection) {
       logService.log(
         `[Hub] Host ${hostname} (${hostId}) reconnecting, replacing old connection`
       );
-      connectedClients.delete(hostId);
+      naisysConnections.delete(hostId);
       raiseEvent("client_disconnected", hostId);
     }
 
-    // Create client service for this connection, passing our emit function
-    const clientService = createNaisysClient(
+    // Create connection handler for this socket, passing our emit function
+    const naisysConnection = createNaisysConnection(
       socket,
       {
         hostId,
@@ -163,16 +162,16 @@ export async function createHubServer(config: HubServerConfig) {
       logService
     );
 
-    connectedClients.set(hostId, clientService);
-    raiseEvent("client_connected", hostId, clientService);
+    naisysConnections.set(hostId, naisysConnection);
+    raiseEvent("client_connected", hostId, naisysConnection);
 
-    logService.log(`[Hub] Active connections: ${connectedClients.size}`);
+    logService.log(`[Hub] Active connections: ${naisysConnections.size}`);
 
     // Clean up on disconnect
     socket.on("disconnect", () => {
-      connectedClients.delete(hostId);
+      naisysConnections.delete(hostId);
       raiseEvent("client_disconnected", hostId);
-      logService.log(`[Hub] Active connections: ${connectedClients.size}`);
+      logService.log(`[Hub] Active connections: ${naisysConnections.size}`);
     });
   });
 
@@ -186,9 +185,9 @@ export async function createHubServer(config: HubServerConfig) {
     registerEvent,
     unregisterEvent,
     sendMessage,
-    getConnectedClients: () => Array.from(connectedClients.values()),
-    getClientByHostId: (hostId: string) => connectedClients.get(hostId),
-    getClientCount: () => connectedClients.size,
+    getConnectedClients: () => Array.from(naisysConnections.values()),
+    getConnectionByHostId: (hostId: string) => naisysConnections.get(hostId),
+    getConnectionCount: () => naisysConnections.size,
     close: () => {
       io.close();
       httpServer.close();
