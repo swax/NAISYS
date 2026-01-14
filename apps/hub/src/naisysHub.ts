@@ -1,10 +1,10 @@
 import dotenv from "dotenv";
+import { createHubServer } from "./services/hubServer.js";
 import {
   createHubServerLog,
   type HubServerLog,
 } from "./services/hubServerLog.js";
-import { createHubServer } from "./services/hubServer.js";
-import { createSyncService } from "./services/syncService.js";
+import { createSyncServer } from "./services/syncServer.js";
 
 export interface HubInstance {
   logService: HubServerLog;
@@ -42,27 +42,20 @@ export async function startHub(
   const schemaVersion = 1; // TODO: Read from database schema_version table
 
   // Create hub server
-  const hubServer = await createHubServer({
-    port: hubPort,
-    accessKey: hubAccessKey,
-    logService,
-  });
+  const hubServer = await createHubServer(hubPort, hubAccessKey, logService);
 
-  // Create sync service - it will register its event handlers on start()
-  const syncService = createSyncService(hubServer, {
+  // Create sync server - it will register its event handlers on start()
+  const syncServer = createSyncServer(hubServer, {
     schemaVersion,
     maxConcurrentRequests: 3,
     pollIntervalMs: 1000,
     logService,
   });
 
-  // Start the sync polling loop (also registers event handlers)
-  syncService.start();
-
   return {
     logService,
     shutdown: () => {
-      syncService.stop();
+      syncServer.stop();
       hubServer.close();
     },
   };
