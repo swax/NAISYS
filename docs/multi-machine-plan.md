@@ -559,19 +559,19 @@ Can ship Phases 1-2 first (single-machine with ULIDs + hosts), then 3-5 for mult
 - [x] Runner connects to multiple Hubs when configured
 - [ ] Runner sends catch_up with lastReceived IDs on connect
 - [x] Schema version mismatch returns error, blocks sync
-- [ ] Runner responds to sync requests with new/updated data
-- [ ] Large sync responses paginated (has_more flag)
+- [x] Runner responds to sync requests with new/updated data
+- [x] Large sync responses paginated (has_more flag)
 - [ ] Large forwards paginated (has_more flag)
-- [ ] Hub correctly tracks lastId/lastModified per runner (pull state)
+- [x] Hub correctly tracks lastId/lastModified per runner (pull state)
 - [ ] Hub forwards hosts table to all runners
 - [ ] Hub forwards users/user_notifications to all runners
 - [ ] Hub forwards mail thread data only to runners with members
 - [ ] Runner upserts forwarded data to local DB (dedupes across Hubs)
 - [ ] Cross-machine mail works (write locally → sync → forward → upsert)
 - [ ] Reconnecting runner catches up on missed data via catch_up
-- [ ] Fresh Hub DB repopulates when runners connect (paginated)
-- [ ] One Hub down, system continues via others
-- [ ] Supervisor shows all agents from all hosts
+- [x] Fresh Hub DB repopulates when runners connect (paginated)
+- [x] One Hub down, system continues via others
+- [x] Supervisor shows all agents from all hosts
 
 ### Phase 5 (Mobility)
 - [ ] Changing host_id moves agent to new runner
@@ -580,9 +580,9 @@ Can ship Phases 1-2 first (single-machine with ULIDs + hosts), then 3-5 for mult
 - [ ] New thread member receives AI summary of thread history
 
 ### Process Composition
-- [ ] `naisys.js` runs standalone
-- [ ] `naisys.js --supervisor` runs runner + supervisor (single-runner mode)
-- [ ] `naisys.js --hub --supervisor` runs all three together
-- [ ] `naisys_hub.js` runs hub standalone
-- [ ] `naisys_hub.js --supervisor` runs hub + supervisor
-- [ ] `naisys_supervisor.js` runs supervisor standalone
+- [x] `naisys.js` runs standalone
+- [x] `naisys.js --supervisor` runs runner + supervisor (single-runner mode)
+- [x] `naisys.js --hub --supervisor` runs all three together
+- [x] `naisys_hub.js` runs hub standalone
+- [x] `naisys_hub.js --supervisor` runs hub + supervisor
+- [x] `naisys_supervisor.js monitor=hub/naisys` runs supervisor standalone

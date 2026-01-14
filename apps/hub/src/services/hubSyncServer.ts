@@ -1,4 +1,10 @@
-import { DatabaseService } from "@naisys/database";
+import {
+  DatabaseService,
+  SYNCABLE_TABLE_CONFIG,
+  SYNCABLE_TABLES,
+  upsertRecords,
+  type SyncableTable,
+} from "@naisys/database";
 import {
   HubEvents,
   SyncResponseErrorSchema,
@@ -213,18 +219,79 @@ export function createHubSyncServer(
       `[SyncServer] Received ${rowCount} rows from ${hostId}, has_more: ${data.has_more}`
     );
 
-    if (rowCount > 0) {
-      // Update 'since' to the max timestamp from received data
-      // TODO: Extract max timestamp from tables and update state.since
+    // Process data asynchronously
+    processSyncData(hostId, state, data).then((success) => {
+      // If there's more data, immediately request it
+      if (success && data.has_more) {
+        logService.log(
+          `[SyncServer] More data available, sending immediate follow-up`
+        );
+        sendSyncRequest(hostId);
+      }
+    });
+  }
+
+  /**
+   * Process sync data - upsert to database and update since timestamp.
+   * Since schema versions match, we trust the data structure.
+   * Returns true if processing succeeded, false otherwise.
+   */
+  async function processSyncData(
+    hostId: string,
+    state: ClientSyncState,
+    data: SyncResponse
+  ): Promise<boolean> {
+    let maxTimestamp: Date | null = null;
+
+    // Process each syncable table present in the response
+    // IMPORTANT: SYNCABLE_TABLES order matters for foreign key dependencies
+    // (e.g., hosts must be synced before users)
+    for (const table of SYNCABLE_TABLES) {
+      const tableData = data.tables[table] as Record<string, unknown>[] | undefined;
+      if (!tableData || tableData.length === 0) continue;
+
+      try {
+        // Upsert records using generic utility
+        await dbService.usingDatabase((prisma) =>
+          upsertRecords(prisma, table as SyncableTable, tableData)
+        );
+
+        logService.log(
+          `[SyncServer] Upserted ${tableData.length} ${table} from ${hostId}`
+        );
+      } catch (error) {
+        // Log which table and first record's primary key for debugging
+        const pkCols = SYNCABLE_TABLE_CONFIG[table]?.primaryKey ?? ["id"];
+        const firstRecord = tableData[0];
+        const pkValues = pkCols
+          .map((col: string) => firstRecord?.[col] ?? "?")
+          .join(", ");
+        logService.error(
+          `[SyncServer] Error upserting ${table} (first pk: ${pkValues}) from ${hostId}: ${error}`
+        );
+        return false;
+      }
+
+      // Track max timestamp from updated_at field
+      for (const record of tableData) {
+        if (typeof record.updated_at === "string") {
+          const ts = new Date(record.updated_at);
+          if (!maxTimestamp || ts > maxTimestamp) {
+            maxTimestamp = ts;
+          }
+        }
+      }
     }
 
-    // If there's more data, immediately request it
-    if (data.has_more) {
+    // Update 'since' to the max timestamp from received data
+    if (maxTimestamp) {
+      state.since = maxTimestamp.toISOString();
       logService.log(
-        `[SyncServer] More data available, sending immediate follow-up`
+        `[SyncServer] Updated since timestamp for ${hostId} to ${state.since}`
       );
-      sendSyncRequest(hostId);
     }
+
+    return true;
   }
 
   /**

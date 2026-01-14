@@ -1,4 +1,10 @@
-import { DatabaseService } from "@naisys/database";
+import {
+  DatabaseService,
+  queryChangedRecords,
+  serializeRecords,
+  SYNCABLE_TABLES,
+  type SyncableTable,
+} from "@naisys/database";
 import {
   HubEvents,
   SyncRequestSchema,
@@ -6,8 +12,12 @@ import {
   type SyncResponse,
   type SyncResponseError,
 } from "@naisys/hub-protocol";
+import { HostService } from "../services/hostService.js";
 import { HubClientLog } from "./hubClientLog.js";
 import { HubManager } from "./hubManager.js";
+
+/** Maximum rows to return per table per sync request */
+const SYNC_BATCH_SIZE = 1000;
 
 /** Status of hub sync client connection to a specific hub */
 export type HubSyncClientStatus =
@@ -28,9 +38,11 @@ interface HubSyncState {
 export async function createHubSyncClient(
   hubManager: HubManager,
   hubClientLog: HubClientLog,
-  dbService: DatabaseService
+  dbService: DatabaseService,
+  hostService: HostService
 ) {
   const schemaVersion = dbService.getSchemaVersion();
+  const { localHostId } = hostService;
 
   /** Track sync status per hub URL */
   const hubSyncStates = new Map<string, HubSyncState>();
@@ -56,7 +68,7 @@ export async function createHubSyncClient(
   /**
    * Handle sync request from a hub
    */
-  function handleSyncRequest(
+  async function handleSyncRequest(
     hubUrl: string,
     rawData: unknown,
     ack?: (response: SyncResponse | SyncResponseError) => void
@@ -102,24 +114,65 @@ export async function createHubSyncClient(
       `[SyncClient] Processing sync_request from ${hubUrl} (since: ${data.since})`
     );
 
-    // TODO: Query local database for changes since data.since
-    // For now, respond with empty tables
-    const response: SyncResponse = {
-      host_id: "", // Will be filled by actual implementation
-      has_more: false,
-      tables: {},
-    };
+    try {
+      // Query local database for changes since data.since
+      const sinceDate = new Date(data.since);
 
-    // Send response via ack callback if provided
-    if (ack) {
-      hubClientLog.write(
-        `[SyncClient] Sending sync response to ${hubUrl} (tables: ${Object.keys(response.tables).length})`
-      );
-      ack(response);
-    } else {
+      // Query all syncable tables
+      const tables: Record<string, unknown[]> = {};
+      let hasMore = false;
+      let totalRows = 0;
+
+      await dbService.usingDatabase(async (prisma) => {
+        for (const table of SYNCABLE_TABLES) {
+          const result = await queryChangedRecords(
+            prisma,
+            table as SyncableTable,
+            sinceDate,
+            SYNC_BATCH_SIZE
+          );
+
+          if (result.records.length > 0) {
+            tables[table] = serializeRecords(result.records);
+            totalRows += result.records.length;
+          }
+
+          if (result.hasMore) {
+            hasMore = true;
+          }
+        }
+      });
+
+      // Build response
+      const response: SyncResponse = {
+        host_id: localHostId,
+        has_more: hasMore,
+        tables,
+      };
+
+      // Send response via ack callback if provided
+      if (ack) {
+        hubClientLog.write(
+          `[SyncClient] Sending sync response to ${hubUrl} (${totalRows} rows across ${Object.keys(tables).length} tables, has_more: ${hasMore})`
+        );
+        ack(response);
+      } else {
+        hubClientLog.error(
+          `[SyncClient] No ack callback provided for sync_request from ${hubUrl}`
+        );
+      }
+    } catch (error) {
       hubClientLog.error(
-        `[SyncClient] No ack callback provided for sync_request from ${hubUrl}`
+        `[SyncClient] Error processing sync request from ${hubUrl}: ${error}`
       );
+
+      if (ack) {
+        const errorResponse: SyncResponseError = {
+          error: "internal_error",
+          message: `Failed to query database: ${error}`,
+        };
+        ack(errorResponse);
+      }
     }
   }
 

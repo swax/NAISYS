@@ -10,3 +10,15 @@ export { createPrismaClient } from "./prismaClient.js";
 
 // Re-export Database Service
 export { createDatabaseService, DatabaseService } from "./dbService.js";
+
+// Re-export Sync Utilities
+export {
+  serializeRecord,
+  serializeRecords,
+  queryChangedRecords,
+  upsertRecord,
+  upsertRecords,
+  SYNCABLE_TABLES,
+  SYNCABLE_TABLE_CONFIG,
+  type SyncableTable,
+} from "./syncUtils.js";
