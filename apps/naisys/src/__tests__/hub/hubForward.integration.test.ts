@@ -122,6 +122,13 @@ describe("Hub Forward Service Integration Tests", () => {
       runnerBDb.dbService,
       hostServiceB
     );
+
+    // Trigger HUB_CONNECTED to complete catch-up and enable sync polling
+    mockHubManagerA._triggerHubConnected();
+    mockHubManagerB._triggerHubConnected();
+
+    // Wait for catch-up to complete
+    await new Promise((resolve) => setTimeout(resolve, 200));
   });
 
   afterEach(() => {
