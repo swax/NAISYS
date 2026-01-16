@@ -96,6 +96,12 @@ describe("Hub Sync Integration Tests", () => {
       runnerADb.dbService,
       hostServiceA
     );
+
+    // Trigger HUB_CONNECTED to complete catch-up and enable sync polling
+    mockHubManagerA._triggerHubConnected();
+
+    // Wait for catch-up to complete
+    await new Promise((resolve) => setTimeout(resolve, 200));
   });
 
   afterEach(() => {

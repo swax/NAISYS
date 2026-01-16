@@ -12,8 +12,13 @@ import {
   type SyncableTable,
 } from "@naisys/database";
 import {
+  CatchUpResponseErrorSchema,
+  CatchUpResponseSchema,
   HubEvents,
   SyncRequestSchema,
+  type CatchUpRequest,
+  type CatchUpResponse,
+  type CatchUpResponseError,
   type SyncRequest,
   type SyncResponse,
   type SyncResponseError,
@@ -59,6 +64,116 @@ export async function createHubSyncClient(
 
   async function init() {
     hubManager.registerEvent(HubEvents.SYNC_REQUEST, handleSyncRequest);
+    hubManager.registerEvent(HubEvents.HUB_CONNECTED, handleHubConnected);
+  }
+
+  /**
+   * Handle hub connection - load persisted state and send catch_up
+   */
+  async function handleHubConnected(hubUrl: string) {
+    hubClientLog.write(`[SyncClient] Hub ${hubUrl} connected, initiating catch_up`);
+
+    // Load persisted sync state first
+    await loadPersistedSyncState(hubUrl);
+
+    const state = getOrCreateState(hubUrl);
+
+    // Build catch_up request
+    const catchUpRequest: CatchUpRequest = {
+      host_id: localHostId,
+      schema_version: schemaVersion,
+      lastSyncedFromHub: state.lastSyncedFromHub,
+    };
+
+    hubClientLog.write(
+      `[SyncClient] Sending catch_up to ${hubUrl} (lastSyncedFromHub: ${state.lastSyncedFromHub})`
+    );
+
+    // Send catch_up with ack callback
+    const sent = hubManager.sendMessage<CatchUpResponse | CatchUpResponseError>(
+      hubUrl,
+      HubEvents.CATCH_UP,
+      catchUpRequest,
+      (response) => handleCatchUpResponse(hubUrl, response)
+    );
+
+    if (!sent) {
+      hubClientLog.error(
+        `[SyncClient] Failed to send catch_up to ${hubUrl} - not connected`
+      );
+    }
+  }
+
+  /**
+   * Handle catch_up response from hub
+   */
+  async function handleCatchUpResponse(
+    hubUrl: string,
+    rawResponse: CatchUpResponse | CatchUpResponseError
+  ) {
+    // First check if it's an error response
+    const errorResult = CatchUpResponseErrorSchema.safeParse(rawResponse);
+    if (errorResult.success) {
+      const error = errorResult.data;
+      hubClientLog.error(
+        `[SyncClient] Catch-up error from ${hubUrl}: ${error.error} - ${error.message}`
+      );
+
+      const state = getOrCreateState(hubUrl);
+      state.status = error.error === "schema_mismatch" ? "schema_mismatch" : "internal_error";
+      state.errorMessage = error.message;
+      return;
+    }
+
+    // Validate as success response
+    const result = CatchUpResponseSchema.safeParse(rawResponse);
+    if (!result.success) {
+      hubClientLog.error(
+        `[SyncClient] Invalid catch_up response from ${hubUrl}: ${JSON.stringify(result.error.issues)}`
+      );
+      return;
+    }
+
+    const response = result.data;
+    const recordCount = countRecordsInTables(response.tables);
+
+    hubClientLog.write(
+      `[SyncClient] Received catch_up response from ${hubUrl} (${recordCount} records, has_more: ${response.has_more})`
+    );
+
+    if (recordCount > 0) {
+      // Process the forwarded data (same as processForwards)
+      const success = await processForwards(hubUrl, response.tables);
+      if (!success) {
+        hubClientLog.error(
+          `[SyncClient] Failed to process catch_up data from ${hubUrl}`
+        );
+        return;
+      }
+    }
+
+    // If there's more data, request it
+    if (response.has_more) {
+      hubClientLog.write(
+        `[SyncClient] More catch_up data available from ${hubUrl}, sending follow-up request`
+      );
+
+      const state = getOrCreateState(hubUrl);
+      const catchUpRequest: CatchUpRequest = {
+        host_id: localHostId,
+        schema_version: schemaVersion,
+        lastSyncedFromHub: state.lastSyncedFromHub,
+      };
+
+      hubManager.sendMessage<CatchUpResponse | CatchUpResponseError>(
+        hubUrl,
+        HubEvents.CATCH_UP,
+        catchUpRequest,
+        (response) => handleCatchUpResponse(hubUrl, response)
+      );
+    } else {
+      hubClientLog.write(`[SyncClient] Catch-up complete for ${hubUrl}`);
+    }
   }
 
   /**

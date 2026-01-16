@@ -33,8 +33,17 @@ export interface MockHubManager {
   unregisterEvent: (event: string, handler: EventHandler) => void;
   getConnectedHubs: () => { hubUrl: string }[];
   isMultiMachineMode: () => boolean;
+  /** Send a message to a hub (for catch_up, etc.) */
+  sendMessage: <T = unknown>(
+    hubUrl: string,
+    event: string,
+    payload: unknown,
+    ack?: AckCallback<T>
+  ) => boolean;
   /** Internal: raise an event (called by the bridge) */
   _raiseEvent: (event: string, hubUrl: string, ...args: unknown[]) => void;
+  /** Internal: trigger HUB_CONNECTED event (simulates socket connect) */
+  _triggerHubConnected: () => void;
 }
 
 /**
@@ -217,6 +226,28 @@ export function createSyncEventBridge() {
 
       isMultiMachineMode: () => true,
 
+      sendMessage: <T = unknown>(
+        _hubUrl: string,
+        event: string,
+        payload: unknown,
+        ack?: AckCallback<T>
+      ): boolean => {
+        if (!hubServer) {
+          return false;
+        }
+
+        // Wrap ack to be async-safe
+        const wrappedAck = ack
+          ? (response: unknown) => {
+              setImmediate(() => ack(response as T));
+            }
+          : undefined;
+
+        // Deliver to hub's event handlers
+        hubServer._raiseEvent(event, hostId, payload, wrappedAck);
+        return true;
+      },
+
       _raiseEvent: (event: string, hubUrl: string, ...args: unknown[]) => {
         const handlers = eventHandlers.get(event);
         if (handlers) {
@@ -224,6 +255,11 @@ export function createSyncEventBridge() {
             handler(hubUrl, ...args);
           }
         }
+      },
+
+      _triggerHubConnected: () => {
+        // Raise the HUB_CONNECTED event to trigger catch_up flow
+        manager._raiseEvent("hub_connected", "mock-hub");
       },
     };
 

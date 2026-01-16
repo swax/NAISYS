@@ -3,6 +3,7 @@ import {
   DatabaseService,
   findMaxUpdatedAt,
   loadSyncState,
+  queryCatchUpRecords,
   saveSyncState,
   SYNCABLE_TABLE_CONFIG,
   SYNCABLE_TABLES,
@@ -10,9 +11,13 @@ import {
   type SyncableTable,
 } from "@naisys/database";
 import {
+  CatchUpRequestSchema,
   HubEvents,
   SyncResponseErrorSchema,
   SyncResponseSchema,
+  type CatchUpRequest,
+  type CatchUpResponse,
+  type CatchUpResponseError,
   type SyncResponse,
   type SyncResponseError,
 } from "@naisys/hub-protocol";
@@ -36,6 +41,8 @@ interface ClientSyncState {
   since: string;
   /** Sync error - if set, client won't be polled for sync updates */
   syncError: { type: SyncErrorType; message: string } | null;
+  /** True while client is catching up - don't include in sync polling until complete */
+  catchingUp: boolean;
 }
 
 export interface HubSyncServerConfig {
@@ -100,6 +107,7 @@ export function createHubSyncServer(
         inFlight: false,
         since: new Date(0).toISOString(),
         syncError: null,
+        catchingUp: true, // New clients start in catching-up mode
       };
       clientStates.set(hostId, state);
     }
@@ -146,7 +154,7 @@ export function createHubSyncServer(
   /**
    * Select the next client to sync.
    * Returns the hostId of the client that has gone longest without a sync,
-   * excluding clients that are in-flight or have sync errors.
+   * excluding clients that are in-flight, catching up, or have sync errors.
    */
   function selectNextClient(): string | null {
     const clients = hubServer.getConnectedClients();
@@ -163,6 +171,9 @@ export function createHubSyncServer(
 
       // Skip clients with sync errors (e.g., schema mismatch)
       if (state.syncError) continue;
+
+      // Skip clients still catching up (wait for catch_up to complete first)
+      if (state.catchingUp) continue;
 
       // Find the client with the oldest last sync time
       if (state.lastSyncTime < oldestSyncTime) {
@@ -373,14 +384,117 @@ export function createHubSyncServer(
   }
 
   /**
+   * Handle catch_up request from a reconnecting client.
+   * Queries all forwardable records (from other hosts) since the client's lastSyncedFromHub.
+   */
+  async function handleCatchUp(
+    hostId: string,
+    rawData: unknown,
+    ack?: (response: CatchUpResponse | CatchUpResponseError) => void
+  ) {
+    // Validate request with schema
+    const result = CatchUpRequestSchema.safeParse(rawData);
+    if (!result.success) {
+      logService.error(
+        `[SyncServer] Invalid catch_up request from ${hostId}: ${JSON.stringify(result.error.issues)}`
+      );
+      return;
+    }
+
+    const data: CatchUpRequest = result.data;
+
+    // Verify host_id matches
+    if (data.host_id !== hostId) {
+      logService.error(
+        `[SyncServer] Catch-up host_id mismatch from ${hostId}: claimed ${data.host_id}`
+      );
+      if (ack) {
+        const errorResponse: CatchUpResponseError = {
+          error: "internal_error",
+          message: `Host ID mismatch: connection ${hostId}, claimed ${data.host_id}`,
+        };
+        ack(errorResponse);
+      }
+      return;
+    }
+
+    // Check schema version
+    if (data.schema_version !== schemaVersion) {
+      const errorMessage = `Schema version mismatch: hub has ${schemaVersion}, client has ${data.schema_version}`;
+      logService.error(`[SyncServer] ${errorMessage} from ${hostId}`);
+
+      // Update client state to reflect the error
+      const state = getOrCreateState(hostId);
+      state.syncError = { type: "schema_mismatch", message: errorMessage };
+
+      if (ack) {
+        const errorResponse: CatchUpResponseError = {
+          error: "schema_mismatch",
+          message: errorMessage,
+        };
+        ack(errorResponse);
+      }
+      return;
+    }
+
+    logService.log(
+      `[SyncServer] Processing catch_up from ${hostId} (lastSyncedFromHub: ${data.lastSyncedFromHub})`
+    );
+
+    try {
+      // Query all forwardable records from other hosts since the client's lastSyncedFromHub
+      // Hub uses its own updated_at for catch-up queries (handles stale joiner problem)
+      const since = new Date(data.lastSyncedFromHub);
+      const { tables, hasMore } = await dbService.usingDatabase((prisma) =>
+        queryCatchUpRecords(prisma, since, hostId)
+      );
+
+      const recordCount = countRecordsInTables(tables);
+
+      logService.log(
+        `[SyncServer] Sending catch_up response to ${hostId} (${recordCount} records, has_more: ${hasMore})`
+      );
+
+      // If no more data, mark client as done catching up - ready for normal sync polling
+      if (!hasMore) {
+        const state = getOrCreateState(hostId);
+        state.catchingUp = false;
+        logService.log(
+          `[SyncServer] Client ${hostId} catch-up complete, ready for sync polling`
+        );
+      }
+
+      if (ack) {
+        const response: CatchUpResponse = {
+          has_more: hasMore,
+          tables,
+        };
+        ack(response);
+      }
+    } catch (error) {
+      logService.error(
+        `[SyncServer] Error processing catch_up from ${hostId}: ${error}`
+      );
+      if (ack) {
+        const errorResponse: CatchUpResponseError = {
+          error: "internal_error",
+          message: `Failed to query catch-up data: ${error}`,
+        };
+        ack(errorResponse);
+      }
+    }
+  }
+
+  /**
    * Handle client connection - initialize state and load persisted sync timestamp
    */
   function handleClientConnected(hostId: string, _connection: unknown) {
     const state = getOrCreateState(hostId);
-    // Reset state for new connection - will be selected on next tick
+    // Reset state for new connection
     state.lastSyncTime = 0;
     state.inFlight = false;
     state.syncError = null; // Clear any previous sync error on reconnect
+    state.catchingUp = true; // Wait for catch_up to complete before sync polling
 
     // Initialize forward queue for this client
     forwardService.initClient(hostId);
@@ -388,7 +502,7 @@ export function createHubSyncServer(
     // Load persisted sync state from database (async, but state will be updated before first sync)
     loadPersistedSyncState(hostId);
 
-    logService.log(`[SyncServer] Client ${hostId} connected, ready to sync`);
+    logService.log(`[SyncServer] Client ${hostId} connected, waiting for catch_up`);
   }
 
   /**
@@ -444,6 +558,9 @@ export function createHubSyncServer(
       handleClientDisconnected
     );
 
+    // Register handler for catch_up requests (reconnecting clients)
+    hubServer.registerEvent(HubEvents.CATCH_UP, handleCatchUp);
+
     logService.log(
       `[SyncServer] Starting sync polling (interval: ${pollIntervalMs}ms, max concurrent: ${maxConcurrentRequests})`
     );
@@ -463,6 +580,7 @@ export function createHubSyncServer(
       HubEvents.CLIENT_DISCONNECTED,
       handleClientDisconnected
     );
+    hubServer.unregisterEvent(HubEvents.CATCH_UP, handleCatchUp);
 
     if (intervalId) {
       clearInterval(intervalId);

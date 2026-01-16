@@ -245,6 +245,67 @@ export async function upsertRecords(
   }
 }
 
+/** Maximum rows to return per table per catch-up query */
+const CATCH_UP_BATCH_SIZE = 1000;
+
+/**
+ * Query forwardable records for catch-up when a runner reconnects.
+ * This is used by the Hub to send missed data to a reconnecting runner.
+ *
+ * Key insight from plan: Hub uses its own updated_at (set on upsert) for catch-up queries.
+ * This handles the "stale joiner" problem where a late-joining runner brings old data.
+ *
+ * NOTE: We always query by updated_at here, NOT by ULID for append-only tables.
+ * The append-only ULID optimization is only for runner-to-hub sync (where runner syncs
+ * its own records). For catch-up, we must use the hub's updated_at because:
+ * - Hub sets its own updated_at when storing records (overrideUpdatedAt: true)
+ * - A stale joiner might bring old records with old ULIDs
+ * - Hub stores those with current updated_at
+ * - Catching-up runners need records based on hub's updated_at, not original ULID
+ *
+ * @param prisma - Prisma client
+ * @param since - Timestamp to query from (runner's lastSyncedFromHub)
+ * @param excludeHostId - Host ID to exclude (the requesting runner's host)
+ * @returns Records grouped by table with hasMore flag
+ */
+export async function queryCatchUpRecords(
+  prisma: PrismaClient,
+  since: Date,
+  excludeHostId: string
+): Promise<{ tables: Record<string, Record<string, unknown>[]>; hasMore: boolean }> {
+  const tables: Record<string, Record<string, unknown>[]> = {};
+  let hasMore = false;
+
+  for (const table of FORWARDABLE_TABLES) {
+    // Use dynamic access with any - safe because table is from our whitelist
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const model = (prisma as any)[table];
+
+    // Always query by updated_at for catch-up (hub's timestamp, not client's ULID)
+    const records = (await model.findMany({
+      where: {
+        updated_at: { gt: since },
+        host_id: { not: excludeHostId }
+      },
+      orderBy: { updated_at: "asc" },
+      take: CATCH_UP_BATCH_SIZE + 1,
+    })) as Record<string, unknown>[];
+
+    const tableHasMore = records.length > CATCH_UP_BATCH_SIZE;
+    if (tableHasMore) {
+      hasMore = true;
+    }
+
+    if (records.length > 0) {
+      tables[table] = serializeRecords(
+        tableHasMore ? records.slice(0, CATCH_UP_BATCH_SIZE) : records
+      );
+    }
+  }
+
+  return { tables, hasMore };
+}
+
 /**
  * Load sync state timestamp from hub_sync_state table.
  * @param prisma - Prisma client

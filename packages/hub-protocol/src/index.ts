@@ -14,9 +14,27 @@ import { z } from "zod";
 /** Sent by client on connect to request missed data */
 export const CatchUpRequestSchema = z.object({
   host_id: z.string(),
-  lastReceived: z.string().nullable(),
+  schema_version: z.number(),
+  /** ISO timestamp - when client last received forwarded data from this hub */
+  lastSyncedFromHub: z.string(),
 });
 export type CatchUpRequest = z.infer<typeof CatchUpRequestSchema>;
+
+/** Sent by hub in response to catch_up with missed forwarded data */
+export const CatchUpResponseSchema = z.object({
+  /** Whether there's more data to send (for pagination) */
+  has_more: z.boolean(),
+  /** Forwarded tables with records */
+  tables: z.record(z.string(), z.array(z.unknown())),
+});
+export type CatchUpResponse = z.infer<typeof CatchUpResponseSchema>;
+
+/** Error response for catch_up when schema mismatch or other error */
+export const CatchUpResponseErrorSchema = z.object({
+  error: z.enum(["schema_mismatch", "internal_error"]),
+  message: z.string(),
+});
+export type CatchUpResponseError = z.infer<typeof CatchUpResponseErrorSchema>;
 
 /** Sent by client in response to sync_request */
 export const SyncResponseSchema = z.object({
@@ -77,6 +95,10 @@ export const HubEvents = {
   // Internal hub events (not sent over wire)
   CLIENT_CONNECTED: "client_connected",
   CLIENT_DISCONNECTED: "client_disconnected",
+
+  // Internal runner events (not sent over wire, local only)
+  /** Raised when runner connects to a hub (before catch_up is sent) */
+  HUB_CONNECTED: "hub_connected",
 } as const;
 
 export type HubEventName = (typeof HubEvents)[keyof typeof HubEvents];

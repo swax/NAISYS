@@ -77,11 +77,34 @@ export async function createHubManager(
     return config.hubUrls.length > 0;
   }
 
+  /**
+   * Send a message to a specific hub by URL.
+   * @param hubUrl - Hub URL to send to
+   * @param event - Event name
+   * @param payload - Message payload
+   * @param ack - Optional callback for acknowledgement
+   * @returns true if message was sent, false if hub not found or not connected
+   */
+  function sendMessage<T = unknown>(
+    hubUrl: string,
+    event: string,
+    payload: unknown,
+    ack?: (response: T) => void
+  ): boolean {
+    const connection = hubConnections.find((c) => c.getUrl() === hubUrl);
+    if (!connection) {
+      hubClientLog.write(`[HubManager] Hub ${hubUrl} not found for sendMessage`);
+      return false;
+    }
+    return connection.sendMessage(event, payload, ack);
+  }
+
   return {
     getConnectedHubs,
     isMultiMachineMode,
     registerEvent,
     unregisterEvent,
+    sendMessage,
   };
 }
 

@@ -21,6 +21,7 @@ export {
   serializeRecord,
   serializeRecords,
   queryChangedRecords,
+  queryCatchUpRecords,
   upsertRecord,
   upsertRecords,
   SYNCABLE_TABLES,

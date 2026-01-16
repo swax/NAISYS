@@ -1,4 +1,5 @@
 import { io, Socket } from "socket.io-client";
+import { HubEvents } from "@naisys/hub-protocol";
 import { GlobalConfig } from "../globalConfig.js";
 import { HostService } from "../services/hostService.js";
 import { HubClientLog } from "./hubClientLog.js";
@@ -9,6 +10,9 @@ export type RaiseEventFn = (
   hubUrl: string,
   ...args: unknown[]
 ) => void;
+
+/** Callback type for message acknowledgements */
+type AckCallback<T = unknown> = (response: T) => void;
 
 export function createHubConnection(
   hubUrl: string,
@@ -41,12 +45,8 @@ export function createHubConnection(
       connected = true;
       hubClientLog.write(`[Hub] Connected to ${hubUrl}`);
 
-      // Send catch_up message on connect per the plan
-      socket?.emit("catch_up", {
-        host_id: hostService.localHostId,
-        // TODO: Track lastReceived timestamp from forwarded data
-        lastReceived: null,
-      });
+      // Raise local event so hubSyncClient can send catch_up with proper timestamp
+      raiseEvent(HubEvents.HUB_CONNECTED, hubUrl);
     });
 
     socket.on("disconnect", (reason) => {
@@ -84,11 +84,35 @@ export function createHubConnection(
     return hubUrl;
   }
 
+  /**
+   * Send a message to the hub with optional acknowledgement callback.
+   * @param event - Event name
+   * @param payload - Message payload
+   * @param ack - Optional callback for acknowledgement
+   * @returns true if message was sent, false if not connected
+   */
+  function sendMessage<T = unknown>(
+    event: string,
+    payload: unknown,
+    ack?: AckCallback<T>
+  ): boolean {
+    if (!socket || !connected) {
+      return false;
+    }
+    if (ack) {
+      socket.emit(event, payload, ack);
+    } else {
+      socket.emit(event, payload);
+    }
+    return true;
+  }
+
   return {
     connect,
     disconnect,
     isConnected,
     getUrl,
+    sendMessage,
   };
 }
 
