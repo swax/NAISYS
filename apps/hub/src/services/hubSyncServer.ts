@@ -1,5 +1,9 @@
 import {
+  countRecordsInTables,
   DatabaseService,
+  findMaxUpdatedAt,
+  loadSyncState,
+  saveSyncState,
   SYNCABLE_TABLE_CONFIG,
   SYNCABLE_TABLES,
   upsertRecords,
@@ -86,7 +90,7 @@ export function createHubSyncServer(
   }
 
   /**
-   * Get or create sync state for a client
+   * Get or create sync state for a client (synchronous, uses in-memory cache)
    */
   function getOrCreateState(hostId: string): ClientSyncState {
     let state = clientStates.get(hostId);
@@ -100,6 +104,43 @@ export function createHubSyncServer(
       clientStates.set(hostId, state);
     }
     return state;
+  }
+
+  /**
+   * Load persisted sync state from database for a client
+   */
+  async function loadPersistedSyncState(hostId: string): Promise<void> {
+    const state = getOrCreateState(hostId);
+    try {
+      const since = await dbService.usingDatabase((prisma) =>
+        loadSyncState(prisma, hostId)
+      );
+      if (since) {
+        state.since = since;
+        logService.log(
+          `[SyncServer] Loaded persisted sync state for ${hostId}: since=${state.since}`
+        );
+      }
+    } catch (error) {
+      logService.error(
+        `[SyncServer] Error loading persisted sync state for ${hostId}: ${error}`
+      );
+    }
+  }
+
+  /**
+   * Persist sync state to database
+   */
+  async function persistSyncState(hostId: string, since: string): Promise<void> {
+    try {
+      await dbService.usingDatabase((prisma) =>
+        saveSyncState(prisma, hostId, since)
+      );
+    } catch (error) {
+      logService.error(
+        `[SyncServer] Error persisting sync state for ${hostId}: ${error}`
+      );
+    }
   }
 
   /**
@@ -219,10 +260,7 @@ export function createHubSyncServer(
     clearInFlight(state);
 
     // Count total rows received
-    const rowCount = Object.values(data.tables).reduce(
-      (sum, rows) => sum + rows.length,
-      0
-    );
+    const rowCount = countRecordsInTables(data.tables);
 
     logService.log(
       `[SyncServer] Received ${rowCount} rows from ${hostId}, has_more: ${data.has_more}`
@@ -307,13 +345,9 @@ export function createHubSyncServer(
       }
 
       // Track max timestamp from updated_at field
-      for (const record of tableData) {
-        if (typeof record.updated_at === "string") {
-          const ts = new Date(record.updated_at);
-          if (!maxTimestamp || ts > maxTimestamp) {
-            maxTimestamp = ts;
-          }
-        }
+      const tableMax = findMaxUpdatedAt(tableData);
+      if (tableMax && (!maxTimestamp || tableMax > maxTimestamp)) {
+        maxTimestamp = tableMax;
       }
     }
 
@@ -323,6 +357,9 @@ export function createHubSyncServer(
       logService.log(
         `[SyncServer] Updated since timestamp for ${hostId} to ${state.since}`
       );
+
+      // Persist sync state to database for restart recovery
+      await persistSyncState(hostId, state.since);
     }
 
     // Queue forwardable tables for other connected clients
@@ -336,7 +373,7 @@ export function createHubSyncServer(
   }
 
   /**
-   * Handle client connection - initialize state
+   * Handle client connection - initialize state and load persisted sync timestamp
    */
   function handleClientConnected(hostId: string, _connection: unknown) {
     const state = getOrCreateState(hostId);
@@ -347,6 +384,9 @@ export function createHubSyncServer(
 
     // Initialize forward queue for this client
     forwardService.initClient(hostId);
+
+    // Load persisted sync state from database (async, but state will be updated before first sync)
+    loadPersistedSyncState(hostId);
 
     logService.log(`[SyncServer] Client ${hostId} connected, ready to sync`);
   }

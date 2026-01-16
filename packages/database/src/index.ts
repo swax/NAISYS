@@ -13,6 +13,11 @@ export { createDatabaseService, DatabaseService } from "./dbService.js";
 
 // Re-export Sync Utilities
 export {
+  countRecordsInTables,
+  findMaxUpdatedAt,
+  findMaxUpdatedAtFromTables,
+  loadSyncState,
+  saveSyncState,
   serializeRecord,
   serializeRecords,
   queryChangedRecords,

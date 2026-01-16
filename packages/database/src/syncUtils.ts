@@ -2,6 +2,53 @@ import { encodeTime } from "ulid";
 import { PrismaClient } from "./generated/prisma/client.js";
 
 /**
+ * Count total records across all tables in a tables object.
+ */
+export function countRecordsInTables(
+  tables: Record<string, unknown[] | undefined>
+): number {
+  return Object.values(tables).reduce(
+    (sum, records) => sum + (records?.length ?? 0),
+    0
+  );
+}
+
+/**
+ * Find the maximum updated_at timestamp from an array of records.
+ * Returns null if no records have an updated_at field.
+ */
+export function findMaxUpdatedAt(records: Record<string, unknown>[]): Date | null {
+  let maxTimestamp: Date | null = null;
+  for (const record of records) {
+    if (typeof record.updated_at === "string") {
+      const ts = new Date(record.updated_at);
+      if (!maxTimestamp || ts > maxTimestamp) {
+        maxTimestamp = ts;
+      }
+    }
+  }
+  return maxTimestamp;
+}
+
+/**
+ * Find the maximum updated_at timestamp from a tables object (table name -> records).
+ * Returns null if no records have an updated_at field.
+ */
+export function findMaxUpdatedAtFromTables(
+  tables: Record<string, Record<string, unknown>[] | unknown[] | undefined>
+): Date | null {
+  let maxTimestamp: Date | null = null;
+  for (const tableData of Object.values(tables)) {
+    if (!tableData || !Array.isArray(tableData)) continue;
+    const tableMax = findMaxUpdatedAt(tableData as Record<string, unknown>[]);
+    if (tableMax && (!maxTimestamp || tableMax > maxTimestamp)) {
+      maxTimestamp = tableMax;
+    }
+  }
+  return maxTimestamp;
+}
+
+/**
  * Serialize a database record for sync transmission.
  * Converts Date objects to ISO strings.
  */
@@ -196,4 +243,43 @@ export async function upsertRecords(
   for (const record of records) {
     await upsertRecord(prisma, table, record, options);
   }
+}
+
+/**
+ * Load sync state timestamp from hub_sync_state table.
+ * @param prisma - Prisma client
+ * @param id - The sync state id (hostId for hub, hubUrl for runner)
+ * @returns The since_timestamp or null if not found
+ */
+export async function loadSyncState(
+  prisma: PrismaClient,
+  id: string
+): Promise<string | null> {
+  const record = await prisma.hub_sync_state.findUnique({
+    where: { id },
+  });
+  return record?.since_timestamp ?? null;
+}
+
+/**
+ * Save sync state timestamp to hub_sync_state table.
+ * @param prisma - Prisma client
+ * @param id - The sync state id (hostId for hub, hubUrl for runner)
+ * @param sinceTimestamp - ISO timestamp to save
+ */
+export async function saveSyncState(
+  prisma: PrismaClient,
+  id: string,
+  sinceTimestamp: string
+): Promise<void> {
+  await prisma.hub_sync_state.upsert({
+    where: { id },
+    create: {
+      id,
+      since_timestamp: sinceTimestamp,
+    },
+    update: {
+      since_timestamp: sinceTimestamp,
+    },
+  });
 }
