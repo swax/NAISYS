@@ -155,11 +155,18 @@ export async function sendMessage(
     const messageId = await usingNaisysDb(async (prisma) => {
       const msgId = ulid();
 
+      // Get sender's host_id for sync ownership
+      const sender = await prisma.users.findUnique({
+        where: { id: fromUser.id },
+        select: { host_id: true },
+      });
+
       // Create the message
       await prisma.mail_messages.create({
         data: {
           id: msgId,
           from_user_id: fromUser.id,
+          host_id: sender?.host_id,
           subject,
           body: cleanMessage,
           created_at: new Date(),
@@ -172,6 +179,7 @@ export async function sendMessage(
           id: ulid(),
           message_id: msgId,
           user_id: toUser.id,
+          host_id: sender?.host_id, // Sender's host
           type: "to",
           created_at: new Date(),
         },

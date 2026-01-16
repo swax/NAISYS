@@ -4,15 +4,18 @@ import table from "text-table";
 import { AgentConfig } from "../agent/agentConfig.js";
 import { GlobalConfig } from "../globalConfig.js";
 import { RunService } from "../services/runService.js";
+import { HostService } from "../services/hostService.js";
 import * as utilities from "../utils/utilities.js";
 
 export function createLLMail(
   { globalConfig }: GlobalConfig,
   { agentConfig }: AgentConfig,
   { usingDatabase }: DatabaseService,
-  runService: RunService
+  runService: RunService,
+  hostService: HostService,
 ) {
   const myUserId = runService.getUserId();
+  const { localHostId } = hostService;
 
   async function handleCommand(
     args: string
@@ -269,6 +272,7 @@ export function createLLMail(
           data: {
             id: messageId,
             from_user_id: myUserId,
+            host_id: localHostId,
             subject,
             body: message,
             created_at: new Date(),
@@ -282,6 +286,7 @@ export function createLLMail(
               id: ulid(),
               message_id: messageId,
               user_id: recipient.id,
+              host_id: localHostId, // Sender's host
               type: "to",
               created_at: new Date(),
             },
@@ -350,6 +355,7 @@ export function createLLMail(
             id: ulid(),
             message_id: message.id,
             user_id: myUserId,
+            host_id: localHostId, // Recipient's host
             read_at: new Date(),
             created_at: new Date(),
           },
@@ -407,6 +413,7 @@ export function createLLMail(
               id: ulid(),
               message_id: message.id,
               user_id: myUserId,
+              host_id: localHostId, // Recipient's host
               archived_at: new Date(),
               created_at: new Date(),
             },

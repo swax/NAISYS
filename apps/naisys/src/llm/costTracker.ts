@@ -6,6 +6,7 @@ import { DatabaseService } from "@naisys/database";
 import { RunService } from "../services/runService.js";
 import { OutputService } from "../utils/output.js";
 import { LLModels } from "./llModels.js";
+import { HostService } from "../services/hostService.js";
 
 // Keep only interfaces that are used as parameters or need explicit typing
 interface LlmModelCosts {
@@ -32,7 +33,9 @@ export function createCostTracker(
   { usingDatabase }: DatabaseService,
   runService: RunService,
   output: OutputService,
+  hostService: HostService,
 ) {
+  const { localHostId } = hostService;
   // Record token usage for LLM calls - calculate and store total cost
   // Aggregates costs within a time window by user/run/session/source/model combination
   async function recordTokens(
@@ -88,6 +91,7 @@ export function createCostTracker(
             user_id: getUserId(),
             run_id: getRunId(),
             session_id: getSessionId(),
+            host_id: localHostId,
             source,
             model: modelKey,
             cost: totalCost,
@@ -137,6 +141,7 @@ export function createCostTracker(
             user_id: getUserId(),
             run_id: getRunId(),
             session_id: getSessionId(),
+            host_id: localHostId,
             source,
             model: modelKey,
             cost,

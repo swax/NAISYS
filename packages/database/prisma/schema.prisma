@@ -12,6 +12,7 @@ model context_log {
   user_id     String
   run_id      Int
   session_id  Int
+  host_id     String? // Which host generated this log
   role        String
   source      String
   type        String
@@ -20,10 +21,12 @@ model context_log {
   updated_at  DateTime    @updatedAt
   users       users       @relation("context_log_user", fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   run_session run_session @relation(fields: [user_id, run_id, session_id], references: [user_id, run_id, session_id], onDelete: NoAction, onUpdate: NoAction)
+  host        hosts?      @relation(fields: [host_id], references: [id])
 
   @@index([id(sort: Desc)], map: "idx_context_log_id_desc")
   @@index([user_id], map: "idx_context_log_user_id")
   @@index([user_id, run_id, session_id], map: "idx_context_log_run_session")
+  @@index([host_id], map: "idx_context_log_host_id")
 }
 
 model costs {
@@ -31,6 +34,7 @@ model costs {
   user_id            String
   run_id             Int
   session_id         Int
+  host_id            String? // Which host incurred this cost
   source             String
   model              String
   cost               Float?      @default(0)
@@ -42,55 +46,66 @@ model costs {
   updated_at         DateTime    @updatedAt
   users              users       @relation("costs_user", fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   run_session        run_session @relation(fields: [user_id, run_id, session_id], references: [user_id, run_id, session_id], onDelete: NoAction, onUpdate: NoAction)
+  host               hosts?      @relation(fields: [host_id], references: [id])
 
   @@index([id(sort: Desc)], map: "idx_costs_id_desc")
   @@index([user_id], map: "idx_costs_user_id")
   @@index([user_id, run_id, session_id], map: "idx_costs_run_session")
   @@index([user_id, run_id, session_id, source, model], map: "idx_costs_aggregation_key")
+  @@index([host_id], map: "idx_costs_host_id")
 }
 
 model mail_messages {
   id           String            @id // ULID
   from_user_id String
+  host_id      String? // Sender's host
   subject      String
   body         String
   created_at   DateTime          @default(now())
   updated_at   DateTime          @updatedAt
   from_user    users             @relation("mail_messages_from_user", fields: [from_user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  host         hosts?            @relation(fields: [host_id], references: [id])
   recipients   mail_recipients[]
   status       mail_status[]
 
   @@index([id(sort: Desc)], map: "idx_mail_messages_id_desc")
   @@index([from_user_id], map: "idx_mail_messages_from_user_id")
+  @@index([host_id], map: "idx_mail_messages_host_id")
 }
 
 model mail_recipients {
   id         String        @id // ULID
   message_id String
   user_id    String
+  host_id    String? // Sender's host (same as message)
   type       String // "to", "cc", "bcc"
   created_at DateTime      @default(now())
   updated_at DateTime      @updatedAt
   message    mail_messages @relation(fields: [message_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   user       users         @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  host       hosts?        @relation(fields: [host_id], references: [id])
 
   @@index([message_id], map: "idx_mail_recipients_message_id")
   @@index([user_id], map: "idx_mail_recipients_user_id")
+  @@index([host_id], map: "idx_mail_recipients_host_id")
 }
 
 model mail_status {
   id          String        @id // ULID
   message_id  String
   user_id     String
+  host_id     String? // Recipient's host
   read_at     DateTime?
   archived_at DateTime?
   created_at  DateTime      @default(now())
   updated_at  DateTime      @updatedAt
   message     mail_messages @relation(fields: [message_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   user        users         @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  host        hosts?        @relation(fields: [host_id], references: [id])
 
   @@unique([message_id, user_id], map: "unq_mail_status_message_user")
   @@index([user_id], map: "idx_mail_status_user_id")
+  @@index([host_id], map: "idx_mail_status_host_id")
 }
 
 model users {
@@ -117,6 +132,7 @@ model users {
 
 model user_notifications {
   user_id        String    @id
+  host_id        String? // Same as user's host
   latest_mail_id String    @default("")
   latest_log_id  String    @default("")
   /**
@@ -125,12 +141,16 @@ model user_notifications {
   last_active    DateTime?
   updated_at     DateTime  @updatedAt
   users          users     @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  host           hosts?    @relation(fields: [host_id], references: [id])
+
+  @@index([host_id], map: "idx_user_notifications_host_id")
 }
 
 model run_session {
   user_id       String
   run_id        Int
   session_id    Int
+  host_id       String? // Which host ran this session
   last_active   DateTime
   model_name    String
   latest_log_id String        @default("")
@@ -139,12 +159,14 @@ model run_session {
   created_at    DateTime      @default(now())
   updated_at    DateTime      @updatedAt
   users         users         @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  host          hosts?        @relation(fields: [host_id], references: [id])
   context_logs  context_log[]
   costs         costs[]
 
   @@id([user_id, run_id, session_id])
   @@index([user_id], map: "idx_run_session_user_id")
   @@index([last_active], map: "idx_run_session_last_active")
+  @@index([host_id], map: "idx_run_session_host_id")
 }
 
 model schema_version {
@@ -154,9 +176,16 @@ model schema_version {
 }
 
 model hosts {
-  id         String   @id // ULID
-  name       String   @unique(map: "unq_hosts_name") // NAISYS_HOSTNAME
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
-  users      users[]
+  id                 String               @id // ULID
+  name               String               @unique(map: "unq_hosts_name") // NAISYS_HOSTNAME
+  created_at         DateTime             @default(now())
+  updated_at         DateTime             @updatedAt
+  users              users[]
+  user_notifications user_notifications[]
+  mail_messages      mail_messages[]
+  mail_recipients    mail_recipients[]
+  mail_status        mail_status[]
+  run_sessions       run_session[]
+  costs              costs[]
+  context_logs       context_log[]
 }

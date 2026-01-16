@@ -225,6 +225,7 @@ export async function createAgentRegistrar(
           await prisma.user_notifications.create({
             data: {
               user_id: user.id,
+              host_id: localHostId,
               latest_mail_id: "",
               latest_log_id: "",
             },
@@ -287,6 +288,7 @@ export async function createAgentRegistrar(
               where: { user_id: existingUser.id },
               create: {
                 user_id: existingUser.id,
+                host_id: localHostId,
                 latest_mail_id: "",
                 latest_log_id: "",
               },
