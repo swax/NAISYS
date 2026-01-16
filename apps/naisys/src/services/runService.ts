@@ -74,7 +74,7 @@ export async function createRunService(
           run_id: newRunId,
           session_id: newSessionId,
           model_name: agentConfig().shellModel,
-          start_date: new Date().toISOString(),
+          created_at: new Date().toISOString(),
           last_active: new Date().toISOString(),
         },
       });

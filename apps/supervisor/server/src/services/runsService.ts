@@ -56,7 +56,7 @@ export async function getRunsData(
         userId: session.user_id,
         runId: session.run_id,
         sessionId: session.session_id,
-        startDate: session.start_date.toISOString(),
+        createdAt: session.created_at.toISOString(),
         lastActive: session.last_active.toISOString(),
         modelName: session.model_name,
         latestLogId: session.latest_log_id,
@@ -109,7 +109,7 @@ export async function getContextLog(
           source: true,
           type: true,
           message: true,
-          date: true,
+          created_at: true,
           users: {
             select: {
               username: true,
@@ -126,7 +126,7 @@ export async function getContextLog(
       source: log.source as LogSource,
       type: log.type as LogType,
       message: log.message,
-      date: log.date.toISOString(),
+      createdAt: log.created_at.toISOString(),
     }));
 
     return {

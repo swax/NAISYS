@@ -24,7 +24,7 @@ export const LogEntrySchema = z.object({
   source: LogSourceSchema,
   type: LogTypeSchema,
   message: z.string(),
-  date: z.string(),
+  createdAt: z.string(),
 });
 
 // Inferred types

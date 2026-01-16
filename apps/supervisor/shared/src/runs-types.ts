@@ -6,7 +6,7 @@ export const RunSessionSchema = z.object({
   userId: z.string(),
   runId: z.number(),
   sessionId: z.number(),
-  startDate: z.string(),
+  createdAt: z.string(),
   lastActive: z.string(),
   modelName: z.string(),
   latestLogId: z.string(),
