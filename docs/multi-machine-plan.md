@@ -663,9 +663,9 @@ Can ship Phases 1-2 first (single-machine with ULIDs + hosts), then 3-5 for mult
 - [x] Hub excludes origin host when queuing forwards (don't queue for source)
 - [x] Runner handles forwards field in sync_request (upserts before responding)
 - [x] Runner upserts forwarded data to local DB (dedupes across Hubs)
-- [ ] Cross-machine mail works (write locally → sync → forward → upsert)
+- [x] Cross-machine mail works (write locally → sync → forward → upsert)
 - [ ] Reconnecting runner catches up on missed data via catch_up
-- [ ] All runners eventually consistent for shared tables
+- [x] All runners eventually consistent for shared tables
 - [x] Fresh Hub DB repopulates when runners connect (paginated)
 - [x] One Hub down, system continues via others
 - [x] Supervisor shows all agents from all hosts
