@@ -309,9 +309,9 @@ export function createCommandLoop(
       supressMail = true;
     }
 
-    // Check for unread threads
-    const unreadThreads = await llmail.getUnreadThreads();
-    if (!unreadThreads.length) {
+    // Check for unread messages
+    const unreadMessages = await llmail.getUnreadThreads();
+    if (!unreadMessages.length) {
       return false;
     }
 
@@ -322,14 +322,15 @@ export function createCommandLoop(
       return false;
     }
 
-    // Get the new messages for each thread
-    const newMessages: string[] = [];
-    for (const { thread_id, new_msg_id } of unreadThreads) {
-      newMessages.push(await llmail.readThread(thread_id, new_msg_id, true));
+    // Get the new messages
+    const newMessageContents: string[] = [];
+    for (const { message_id } of unreadMessages) {
+      // readMessage marks as read, so we read them all
+      newMessageContents.push(await llmail.readMessage(message_id));
     }
 
     // Check that token max for session will not be exceeded
-    const newMsgTokenCount = newMessages.reduce(
+    const newMsgTokenCount = newMessageContents.reduce(
       (acc, msg) => acc + utilities.getTokenCount(msg),
       0,
     );
@@ -338,35 +339,19 @@ export function createCommandLoop(
     const tokenMax = agentConfig().tokenMax;
 
     // Show full messages unless we are close to the token limit of the session
-    // or in simple mode, which means non-threaded messages
     if (sessionTokens + newMsgTokenCount < tokenMax * 0.75) {
-      for (const newMessage of newMessages) {
+      for (const newMessage of newMessageContents) {
         await contextManager.append("New Message:", ContentSource.Console);
         await contextManager.append(newMessage, ContentSource.Console);
-      }
-
-      for (const unreadThread of unreadThreads) {
-        await llmail.markAsRead(unreadThread.thread_id);
       }
 
       mailBlackoutCountdown = agentConfig().mailBlackoutCycles || 0;
 
       return true;
-    } else if (llmail.simpleMode) {
+    } else {
       await contextManager.append(
         `You have new mail, but not enough context to read them.\n` +
           `After you 'endsession' and the context resets, you will be able to read them.`,
-        ContentSource.Console,
-      );
-    }
-    // LLM will in many cases end the session here, when the new session starts
-    // this code will run again, and show a full preview of the messages
-    else {
-      const threadIds = unreadThreads.map((t) => t.thread_id).join(", ");
-
-      await contextManager.append(
-        `New Messages on Thread ID ${threadIds}\n` +
-          `Use llmail read <id>' to read the thread, but be mindful you are close to the token limit for the session.`,
         ContentSource.Console,
       );
     }

@@ -32,38 +32,37 @@ CREATE TABLE "costs" (
 );
 
 -- CreateTable
-CREATE TABLE "mail_thread_members" (
+CREATE TABLE "mail_messages" (
     "id" TEXT NOT NULL PRIMARY KEY,
-    "thread_id" TEXT NOT NULL,
-    "user_id" TEXT NOT NULL,
-    "new_msg_id" TEXT NOT NULL DEFAULT '',
-    "archived" INTEGER NOT NULL DEFAULT 0,
-    "updated_by" TEXT,
-    "updated_at" DATETIME NOT NULL,
-    CONSTRAINT "mail_thread_members_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION,
-    CONSTRAINT "mail_thread_members_updated_by_fkey" FOREIGN KEY ("updated_by") REFERENCES "users" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION,
-    CONSTRAINT "mail_thread_members_thread_id_fkey" FOREIGN KEY ("thread_id") REFERENCES "mail_threads" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION
-);
-
--- CreateTable
-CREATE TABLE "mail_thread_messages" (
-    "id" TEXT NOT NULL PRIMARY KEY,
-    "thread_id" TEXT NOT NULL,
-    "user_id" TEXT NOT NULL,
-    "message" TEXT NOT NULL,
-    "date" DATETIME NOT NULL,
-    CONSTRAINT "mail_thread_messages_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION,
-    CONSTRAINT "mail_thread_messages_thread_id_fkey" FOREIGN KEY ("thread_id") REFERENCES "mail_threads" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION
-);
-
--- CreateTable
-CREATE TABLE "mail_threads" (
-    "id" TEXT NOT NULL PRIMARY KEY,
+    "from_user_id" TEXT NOT NULL,
     "subject" TEXT NOT NULL,
-    "token_count" INTEGER NOT NULL DEFAULT 0,
-    "updated_by" TEXT,
+    "body" TEXT NOT NULL,
+    "created_at" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "mail_messages_from_user_id_fkey" FOREIGN KEY ("from_user_id") REFERENCES "users" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION
+);
+
+-- CreateTable
+CREATE TABLE "mail_recipients" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "message_id" TEXT NOT NULL,
+    "user_id" TEXT NOT NULL,
+    "type" TEXT NOT NULL,
+    "created_at" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "mail_recipients_message_id_fkey" FOREIGN KEY ("message_id") REFERENCES "mail_messages" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION,
+    CONSTRAINT "mail_recipients_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION
+);
+
+-- CreateTable
+CREATE TABLE "mail_status" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "message_id" TEXT NOT NULL,
+    "user_id" TEXT NOT NULL,
+    "read_at" DATETIME,
+    "archived_at" DATETIME,
+    "created_at" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" DATETIME NOT NULL,
-    CONSTRAINT "mail_threads_updated_by_fkey" FOREIGN KEY ("updated_by") REFERENCES "users" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION
+    CONSTRAINT "mail_status_message_id_fkey" FOREIGN KEY ("message_id") REFERENCES "mail_messages" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION,
+    CONSTRAINT "mail_status_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION
 );
 
 -- CreateTable
@@ -142,19 +141,22 @@ CREATE INDEX "idx_costs_run_session" ON "costs"("user_id", "run_id", "session_id
 CREATE INDEX "idx_costs_aggregation_key" ON "costs"("user_id", "run_id", "session_id", "source", "model");
 
 -- CreateIndex
-CREATE INDEX "idx_mail_thread_members_thread_id" ON "mail_thread_members"("thread_id");
+CREATE INDEX "idx_mail_messages_id_desc" ON "mail_messages"("id" DESC);
 
 -- CreateIndex
-CREATE UNIQUE INDEX "unq_mail_thread_members_thread_id_user_id" ON "mail_thread_members"("thread_id", "user_id");
+CREATE INDEX "idx_mail_messages_from_user_id" ON "mail_messages"("from_user_id");
 
 -- CreateIndex
-CREATE INDEX "idx_mail_thread_messages_thread_id" ON "mail_thread_messages"("thread_id");
+CREATE INDEX "idx_mail_recipients_message_id" ON "mail_recipients"("message_id");
 
 -- CreateIndex
-CREATE INDEX "idx_mail_thread_messages_id_desc" ON "mail_thread_messages"("id" DESC);
+CREATE INDEX "idx_mail_recipients_user_id" ON "mail_recipients"("user_id");
 
 -- CreateIndex
-CREATE INDEX "idx_mail_threads_id_desc" ON "mail_threads"("id" DESC);
+CREATE INDEX "idx_mail_status_user_id" ON "mail_status"("user_id");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "unq_mail_status_message_user" ON "mail_status"("message_id", "user_id");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "unq_users_username" ON "users"("username");

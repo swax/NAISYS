@@ -27,53 +27,59 @@ Components can run together (same process) or separately:
 4. **Agent Mobility** - Agents can move between machines
 5. **Centralized Data** - Hub receives all logs/costs for unified querying
 6. **Process Flexibility** - Components run together or separately for memory efficiency
+7. **Direct Ownership** - Every syncable row has `host_id` marking its owner (no joins needed)
+
+## Related Documents
+
+- [Revised LLMail Plan](./revised-llmail-plan.md) - Simplified mail schema for multi-machine sync
 
 ---
 
 ## Phase 1: ULID Migration & Schema Updates
 
-Convert all IDs from INTEGER AUTOINCREMENT to ULID strings. Add `updated_at` to tables that support updates.
+Convert all IDs from INTEGER AUTOINCREMENT to ULID strings. Add `host_id` and `updated_at` to all syncable tables.
 
 ### Schema Changes (`packages/database/prisma/schema.prisma`)
 
 ```prisma
 # Tables requiring ID changes:
 - users.id: Int → String (ULID)
-- mail_threads.id: Int → String (ULID)
-- mail_thread_messages.id: Int → String (ULID)
-- mail_thread_members.id: Int → String (ULID)
 - context_log.id: Int → String (ULID)
 - costs.id: Int → String (ULID)
 
 # run_session keeps composite key but references updated user_id
 
-# Add updated_at for sync (tables that can be updated):
-- hosts: add updated_at DateTime @updatedAt (new table, see Phase 2)
-- users: add updated_at DateTime @updatedAt
-- mail_threads: add updated_at DateTime @updatedAt
-- mail_thread_members: add updated_at DateTime @updatedAt
-- mail_thread_messages: add updated_at DateTime @updatedAt
-- run_session: add updated_at DateTime @updatedAt
-- costs: add updated_at DateTime @updatedAt (aggregated per session/source/model)
+# Add host_id to ALL syncable tables (direct ownership, no joins needed):
+- hosts: id is the host_id (self-referential)
+- users: host_id (which host owns this agent)
+- user_notifications: host_id (same as user's host)
+- mail_messages: host_id (sender's host)
+- mail_recipients: host_id (sender's host, same as message)
+- mail_status: host_id (recipient's host)
+- run_session: host_id (which host ran this session)
+- costs: host_id (which host incurred this cost)
+- context_log: host_id (which host generated this log)
 
-# Add updated_by for sync origin tracking (to prevent forwarding loops):
-- mail_threads: add updated_by String (user_id of creator/modifier)
-- mail_thread_members: add updated_by String (user_id who added the member)
-- mail_thread_messages: add updated_by String (user_id of sender)
-
-Note: Runners only sync records where updated_by user's host_id matches local host.
-This prevents forwarding loops: forwarded data has updated_by pointing to a user
-on a different host, so it won't be re-synced back to the hub.
+# Add updated_at for sync (all syncable tables):
+- hosts: updated_at DateTime @updatedAt
+- users: updated_at DateTime @updatedAt
+- user_notifications: updated_at DateTime @updatedAt
+- mail_messages: updated_at DateTime @updatedAt
+- mail_recipients: updated_at DateTime @updatedAt
+- mail_status: updated_at DateTime @updatedAt
+- run_session: updated_at DateTime @updatedAt
+- costs: updated_at DateTime @updatedAt
+- context_log: updated_at DateTime @updatedAt
 
 # Add deleted_at for soft deletes:
 - users: add deleted_at DateTime? (deactivated agents)
 
 Note: Only active operations filter by deleted_at (starting agents, sending mail). Historical queries still return deleted records.
 
-# Append-only tables (no updated_at needed, sync by ULID):
-- context_log
+# Sync query for ALL tables is now uniform:
+WHERE host_id = :localHostId AND updated_at > :since
 
-Note: For context_log, use monotonic ULID generation to preserve strict ordering within a session. Track the previous insert's ID and if the timestamp portion matches, increment the random portion by 1. The `ulid` library's `monotonicFactory()` handles this, or implement manually: compare first 10 chars (timestamp), if equal, increment the ULID as a base32 number.
+Note: For context_log, use monotonic ULID generation to preserve strict ordering within a session. Track the previous insert's ID and if the timestamp portion matches, increment the random portion by 1. The `ulid` library's `monotonicFactory()` handles this.
 ```
 
 ### Code Changes
@@ -81,10 +87,10 @@ Note: For context_log, use monotonic ULID generation to preserve strict ordering
 | File | Change |
 |------|--------|
 | `packages/database/src/index.ts` | Add `ulid` dependency, export ULID generator |
-| `apps/naisys/src/services/dbService.ts` | Generate ULIDs on insert |
+| `apps/naisys/src/services/dbService.ts` | Generate ULIDs on insert, set host_id on all inserts |
 | `apps/naisys/src/agentRegistrar.ts` | Use ULID for new users |
-| `apps/naisys/src/features/llmail.ts` | Use ULID for threads/messages |
-| `apps/naisys/src/services/runService.ts` | Update ID handling |
+| `apps/naisys/src/features/llmail.ts` | Use new mail schema (see revised-llmail-plan.md) |
+| `apps/naisys/src/services/runService.ts` | Update ID handling, set host_id |
 | `apps/supervisor/server/src/services/*.ts` | Handle string IDs |
 | `apps/supervisor/shared/src/*-types.ts` | Update type definitions for string IDs |
 
@@ -219,23 +225,21 @@ Note: Uses existing `schema_version` table to check compatibility.
 
 ### Sync Strategy by Table
 
-Runners only sync records they **originated** (created or modified locally). For mail tables, this is determined by joining through the `updated_by` user to check if `host_id` matches the local host.
+Runners only sync records they **own** (where `host_id` matches local host). All tables use the same simple query pattern.
 
-| Table | Sync Query | Notes |
-|-------|------------|-------|
-| `hosts` | `WHERE id = :localHostId AND updated_at > :since` | Only sync own host record |
-| `users` | `WHERE host_id = :localHostId AND updated_at > :since` | Only sync local users |
-| `user_notifications` | `WHERE user.host_id = :localHostId AND updated_at > :since` | Only sync local user notifications |
-| `mail_threads` | `WHERE updated_by_user.host_id = :localHostId AND updated_at > :since` | Join through updated_by |
-| `mail_thread_members` | `WHERE updated_by_user.host_id = :localHostId AND updated_at > :since` | Join through updated_by |
-| `mail_thread_messages` | `WHERE updated_by_user.host_id = :localHostId AND updated_at > :since` | Join through updated_by |
-| `context_log` | `WHERE id > :since_ulid` | Append-only, ULID-based |
-| `costs` | `WHERE updated_at > :since` | All local costs |
-| `run_session` | `WHERE updated_at > :since` | All local sessions |
+| Table | Sync Query |
+|-------|------------|
+| `hosts` | `WHERE id = :localHostId AND updated_at > :since` |
+| `users` | `WHERE host_id = :localHostId AND updated_at > :since` |
+| `user_notifications` | `WHERE host_id = :localHostId AND updated_at > :since` |
+| `mail_messages` | `WHERE host_id = :localHostId AND updated_at > :since` |
+| `mail_recipients` | `WHERE host_id = :localHostId AND updated_at > :since` |
+| `mail_status` | `WHERE host_id = :localHostId AND updated_at > :since` |
+| `context_log` | `WHERE host_id = :localHostId AND updated_at > :since` |
+| `costs` | `WHERE host_id = :localHostId AND updated_at > :since` |
+| `run_session` | `WHERE host_id = :localHostId AND updated_at > :since` |
 
-Note: ULIDs are lexicographically sortable by time. To avoid table scans, convert the `since` timestamp to a ULID prefix (e.g., `ulid.encodeTime(sinceMs, 10) + '0'.repeat(16)`) and compare directly: `WHERE id > :since_ulid`. This uses the primary key index efficiently.
-
-**Why this prevents forwarding loops:** When runner B receives forwarded data from runner A, the `updated_by` field points to a user on host A. When hub later pulls from runner B, the query filters by `updated_by_user.host_id = B`, so the forwarded records are excluded.
+**Why this prevents forwarding loops:** When runner B receives forwarded data from runner A, the `host_id` on those rows is A's host_id. When hub later pulls from runner B, the query filters by `host_id = B`, so the forwarded records are excluded. No joins needed.
 
 ### Runner Behavior
 
@@ -256,7 +260,7 @@ Multi-Machine Mode (HUB_URLS set):
 
 ### Catch-Up on Connect
 
-When runner connects (or reconnects), it tells Hub what forwarded data it already has:
+When runner connects (or reconnects), it tells Hub when it last synced:
 
 **Runner sends:**
 ```json
@@ -264,36 +268,37 @@ When runner connects (or reconnects), it tells Hub what forwarded data it alread
   "type": "catch_up",
   "host_id": "01HX...",
   "schema_version": 5,
-  "lastReceivedByHost": {
-    "01HY...": "2024-01-15T10:30:00Z",
-    "01HZ...": "2024-01-14T08:00:00Z"
-  }
+  "lastSyncedFromHub": "2024-01-15T10:30:00Z"
 }
 ```
 
-Runner queries its local `hub_sync_state` table to build this map. Each entry is keyed by the originating host's ID with the max `updated_at` from forwarded data from that host. Missing hosts = never seen, hub sends all their data.
+Runner stores a single timestamp: when it last received data from this hub.
 
 **Hub responds:**
 1. Validates schema_version matches
-2. For each host in hub's database (except the connecting runner):
-   - If host is in `lastReceivedByHost`: query rows with `updated_at > timestamp`
-   - If host is missing: query all rows from that host
+2. Queries all rows (from all hosts except the connecting runner) where hub's own `updated_at > lastSyncedFromHub`
 3. Forwards matching rows to the runner
 4. Begins normal sync polling
 
+**Key insight:** Hub uses its own `updated_at` (set on upsert) for catch-up queries, not the originating row's timestamp. This handles the "stale joiner" problem:
+- Runner A syncs, disconnects at hub time X
+- Runner B connects with old data (timestamps < X)
+- Hub stores B's data with hub's current `updated_at`
+- Runner A reconnects, asks for everything since X
+- Runner A gets B's data because hub's `updated_at` > X
+
 **Benefits:**
-- Runner is source of truth for what it has
-- Hub doesn't need to persist per-runner forward state
-- Works correctly even if Hub restarts
-- Per-host tracking handles edge cases (e.g., new host joins with old data)
+- Single timestamp per hub (not per-originating-host)
+- Simple catch-up query
+- Handles all edge cases including late-joining runners with old data
 
 ### Sync State Persistence
 
-Both hub and runners persist sync state using the same table schema:
+Hub and runners persist sync state:
 
 ```prisma
 model hub_sync_state {
-  host_id          String   @id       // Remote host ID
+  id               String   @id       // Hub: remote runner's host_id. Runner: hub URL hash
   since_timestamp  String              // ISO timestamp of last synced data
   updated_at       DateTime @updatedAt
 }
@@ -306,10 +311,10 @@ model hub_sync_state {
 - On startup, loads existing state to resume sync from where it left off
 
 **Runner side:**
-- Keyed by originating host's host_id (the host that created the data)
-- Stores "last timestamp I received (forwarded) FROM host X"
-- Updated as forwarded data arrives, tracking max `updated_at` per originating host
-- On catch_up, queries this table to build the `lastReceivedByHost` map
+- Keyed by hub URL (hashed to fit in id field)
+- Stores "last timestamp I received forwarded data from this hub"
+- Single entry per hub (not per-originating-host)
+- On catch_up, sends this timestamp as `lastSyncedFromHub`
 
 Other fields (`lastSyncTime`, `inFlight`, `syncError`) are transient and don't need persistence.
 
@@ -325,9 +330,8 @@ Other fields (`lastSyncTime`, `inFlight`, `syncError`) are transient and don't n
 
 | File | Purpose |
 |------|---------|
-| `apps/naisys/src/services/hubSync.ts` | WebSocket client, responds to sync requests, receives forwarded data |
-| `apps/hub/src/services/syncService.ts` | WebSocket server, manages sync state, forwards data |
-| `apps/hub/src/services/syncState.ts` | Tracks lastId/lastModified per runner per table |
+| `apps/naisys/src/hub/hubSyncClient.ts` | WebSocket client, responds to sync requests, receives forwarded data |
+| `apps/hub/src/services/hubSyncServer.ts` | WebSocket server, manages sync state, forwards data |
 
 ---
 
@@ -357,16 +361,16 @@ All shared tables are forwarded to **all runners** (except the origin). This mak
 | `hosts` | All runners (except origin) | Know all runners in system |
 | `users` | All runners (except origin) | Global user directory |
 | `user_notifications` | All runners (except origin) | Online status for all agents |
-| `mail_threads` | All runners (except origin) | Thread metadata |
-| `mail_thread_members` | All runners (except origin) | Membership info |
-| `mail_thread_messages` | All runners (except origin) | Full mail history everywhere |
+| `mail_messages` | All runners (except origin) | Full mail history everywhere |
+| `mail_recipients` | All runners (except origin) | Who messages were sent to |
+| `mail_status` | All runners (except origin) | Read/archive status |
 | `context_log` | None | Hub/Supervisor-only (viewing) |
 | `costs` | None | Hub/Supervisor-only (viewing) |
 | `run_session` | None | Hub/Supervisor-only (viewing) |
 
 **Benefits of forwarding all mail to all runners:**
 - Any runner can resurrect a user with full mail history
-- Simpler logic - no need to track thread membership for routing
+- Simpler logic - no routing decisions needed
 - All runners have complete view of all agents and mail
 - If a runner goes down permanently, another can take over its users
 
@@ -375,17 +379,19 @@ All shared tables are forwarded to **all runners** (except the origin). This mak
 ```
 Alice (host-1) sends mail to Bob (host-2):
 
-1. Alice's agent writes mail_thread_message to local DB (updated_by = alice.id)
-2. Hub pulls sync from host-1, receives new mail_thread_message
-   (included because alice.host_id = host-1)
-3. Hub stores mail_thread_message in its database
-4. Hub queues mail_thread_message in memory for ALL other runners (host-2, host-3, etc.)
+1. Alice's agent writes mail_messages row (host_id = host-1) + mail_recipients rows
+2. Hub pulls sync from host-1, receives new mail_messages and mail_recipients
+   (included because host_id = host-1)
+3. Hub stores rows in its database (hub's updated_at = now)
+4. Hub queues rows in memory for ALL other runners (host-2, host-3, etc.)
 5. On next sync_request to host-2, hub includes queued forwards
-6. host-2 upserts mail_thread_message to its local DB
-7. Bob's agent sees mail locally (normal llmail read)
+6. host-2 upserts rows to its local DB (preserving original host_id = host-1)
+7. Bob's agent sees mail locally (normal llmail list/read)
+8. Bob reads mail, creates mail_status row (host_id = host-2)
+9. Hub pulls mail_status from host-2, forwards to host-1
 
-Note: When hub later pulls from host-2, this message is NOT included
-because updated_by (alice) has host_id = host-1, not host-2.
+Note: When hub later pulls from host-2, the mail_messages/recipients are NOT included
+because their host_id = host-1, not host-2. Only Bob's mail_status is synced.
 ```
 
 ### Forwarding via Sync Request (Piggybacked)
@@ -400,7 +406,7 @@ Forwards are included in sync_request messages rather than sent separately. This
   "since": "2024-01-15T10:30:00Z",
   "forwards": {
     "users": [ { "id": "01HY...", "username": "charlie", "host_id": "01HZ...", ... } ],
-    "mail_thread_messages": [ { "id": "01HY...", "thread_id": "01HX...", "message": "...", ... } ]
+    "mail_messages": [ { "id": "01HY...", "from_user_id": "01HX...", "subject": "...", "host_id": "01HZ...", ... } ]
   }
 }
 ```
@@ -437,7 +443,7 @@ Reconnect  → catch_up from DB rebuilds state, then fresh queue
 ### Hub Forwarding Logic
 
 When hub receives sync data from runner A:
-1. Store all rows in hub database (preserving original updated_at/updated_by values)
+1. Store all rows in hub database (hub's updated_at = now, preserving original host_id)
 2. Filter to shared tables only (hosts, users, user_notifications, mail_*)
 3. For each OTHER connected runner (B, C, D...):
    - Append rows to their `outgoingForwards` queue
@@ -449,10 +455,11 @@ When hub sends sync_request to runner B:
 ### Runner Handles Forwards
 
 When runner receives sync_request with forwards:
-1. Upsert forwarded rows into local database (preserving original timestamps)
-2. Then respond with own sync data as usual
-3. Local agents see the forwarded data on next query
-4. These rows won't be synced back because updated_by points to a different host
+1. Upsert forwarded rows into local database (preserving original host_id)
+2. Update local `hub_sync_state` with current timestamp
+3. Then respond with own sync data as usual
+4. Local agents see the forwarded data on next query
+5. These rows won't be synced back because host_id points to a different host
 
 ### Offline Handling
 
@@ -572,12 +579,12 @@ DATABASE_URL=postgresql://user:pass@host:5432/naisys_hub
 
 | Path | Changes |
 |------|---------|
-| `packages/database/prisma/schema.prisma` | ULID IDs, hosts table, host_id FK on users, updated_at/updated_by on syncable tables |
+| `packages/database/prisma/schema.prisma` | ULID IDs, hosts table, host_id on ALL syncable tables, updated_at on all, new mail schema |
 | `packages/database/src/index.ts` | ULID exports |
-| `apps/naisys/src/services/dbService.ts` | ULID generation, upsert for forwarded data |
+| `apps/naisys/src/services/dbService.ts` | ULID generation, set host_id on inserts, upsert for forwarded data |
 | `apps/naisys/src/agentRegistrar.ts` | ULID for users, host_id filtering |
 | `apps/naisys/src/agentManager.ts` | Filter agents by host_id |
-| `apps/naisys/src/features/llmail.ts` | Set updated_by on mail writes (threads, members, messages) |
+| `apps/naisys/src/features/llmail.ts` | New mail schema (mail_messages, mail_recipients, mail_status), set host_id |
 | `apps/naisys/src/naisys.ts` | Hub WebSocket init, create/update host record on startup, --hub/--supervisor flags |
 | `apps/naisys/src/config.ts` | NAISYS_HOSTNAME, HUB_URLS config |
 | `apps/supervisor/server/src/index.ts` | Points to Hub or Runner DB |
@@ -630,11 +637,12 @@ Can ship Phases 1-2 first (single-machine with ULIDs + hosts), then 3-5 for mult
 
 ## Verification
 
-### Phase 1 (ULID + updated_at)
+### Phase 1 (ULID + host_id + updated_at)
 - [x] Existing tests pass with ULID IDs
 - [x] New agents created with ULID
-- [x] Mail works with ULID thread/message IDs
+- [ ] New mail schema implemented (mail_messages, mail_recipients, mail_status)
 - [x] updated_at updates correctly on record changes
+- [ ] host_id set correctly on all inserts
 - [x] Supervisor displays agents/logs correctly
 
 ### Phase 2 (Hosts Table)
@@ -647,14 +655,15 @@ Can ship Phases 1-2 first (single-machine with ULIDs + hosts), then 3-5 for mult
 ### Phase 3-4 (WebSocket Sync + Forwarding)
 - [x] Runner connects to Hub via WebSocket
 - [x] Runner connects to multiple Hubs when configured
-- [ ] Runner sends catch_up with lastReceived timestamp on connect
+- [ ] Runner sends catch_up with single lastSyncedFromHub timestamp on connect
 - [x] Schema version mismatch returns error, blocks sync
 - [x] Runner responds to sync requests with new/updated data
-- [x] Runner only syncs records where updated_by user's host_id = local host (prevents loops)
+- [x] Runner only syncs records where host_id = local host (prevents loops, no joins)
 - [x] Large sync responses paginated (has_more flag)
-- [x] Hub correctly tracks lastId/lastModified per runner (pull state)
+- [x] Hub correctly tracks since timestamp per runner (pull state)
 - [ ] Hub persists sync state (`since` timestamp per runner) to database for restart recovery
-- [ ] Runner persists sync state (`since` timestamp per originating host) for catch-up on reconnect
+- [ ] Runner persists sync state (single timestamp per hub) for catch-up on reconnect
+- [ ] Hub uses its own updated_at for catch-up queries (handles stale joiners)
 - [x] Hub maintains in-memory forward queues per connected runner
 - [x] Hub queues shared tables (hosts, users, mail_*) for other runners on sync receive
 - [x] Hub includes queued forwards in sync_request messages (piggybacked)

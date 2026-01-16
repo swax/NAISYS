@@ -1,22 +1,20 @@
 import { z } from "zod";
 
-// Zod schemas
-export const MailThreadMemberSchema = z.object({
+// Zod schemas for the new flat message model
+export const MailRecipientSchema = z.object({
   userId: z.string(),
   username: z.string(),
-  newMsgId: z.string(),
-  archived: z.boolean(),
+  type: z.string(), // "to", "cc", "bcc"
 });
 
-export const MailThreadMessageSchema = z.object({
+export const MailMessageSchema = z.object({
   id: z.string(),
-  threadId: z.string(),
-  userId: z.string(),
-  username: z.string(),
+  fromUserId: z.string(),
+  fromUsername: z.string(),
   subject: z.string(),
-  message: z.string(),
-  date: z.string(),
-  members: z.array(MailThreadMemberSchema),
+  body: z.string(),
+  createdAt: z.string(),
+  recipients: z.array(MailRecipientSchema),
 });
 
 export const SendMailRequestSchema = z.object({
@@ -52,7 +50,7 @@ export const MailDataResponseSchema = z.object({
   message: z.string(),
   data: z
     .object({
-      mail: z.array(MailThreadMessageSchema),
+      mail: z.array(MailMessageSchema),
       timestamp: z.string(),
       total: z.number().optional(),
     })
@@ -60,8 +58,8 @@ export const MailDataResponseSchema = z.object({
 });
 
 // Inferred types
-export type MailThreadMember = z.infer<typeof MailThreadMemberSchema>;
-export type MailThreadMessage = z.infer<typeof MailThreadMessageSchema>;
+export type MailRecipient = z.infer<typeof MailRecipientSchema>;
+export type MailMessage = z.infer<typeof MailMessageSchema>;
 export type SendMailRequest = z.infer<typeof SendMailRequestSchema>;
 export type SendMailResponse = z.infer<typeof SendMailResponseSchema>;
 export type MailDataRequest = z.infer<typeof MailDataRequestSchema>;

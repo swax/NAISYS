@@ -171,7 +171,7 @@ describe("Hub Forward Service Integration Tests", () => {
     expect(forwardCountForA).toBe(0);
   });
 
-  test("should sync mail thread from runner A to hub and forward to runner B", async () => {
+  test("should sync mail message from runner A to hub and forward to runner B", async () => {
     // Create user first (for FK constraint)
     // Need to seed hostA in runnerB since alice's host_id references hostAId
     const userAId = ulid();
@@ -182,28 +182,30 @@ describe("Hub Forward Service Integration Tests", () => {
       seedUser(runnerBDb.prisma, userAId, "alice", hostAId),
     ]);
 
-    const threadId = ulid();
-    await runnerADb.prisma.mail_threads.create({
+    const messageId = ulid();
+    await runnerADb.prisma.mail_messages.create({
       data: {
-        id: threadId,
-        subject: "Test Thread",
-        updated_by: userAId,
+        id: messageId,
+        from_user_id: userAId,
+        subject: "Test Message",
+        body: "Test body content",
+        created_at: new Date(),
       },
     });
 
     await waitForSync(1000);
 
-    const hubThread = await hubDb.prisma.mail_threads.findUnique({
-      where: { id: threadId },
+    const hubMessage = await hubDb.prisma.mail_messages.findUnique({
+      where: { id: messageId },
     });
-    expect(hubThread).not.toBeNull();
-    expect(hubThread?.subject).toBe("Test Thread");
+    expect(hubMessage).not.toBeNull();
+    expect(hubMessage?.subject).toBe("Test Message");
 
-    const runnerBThread = await runnerBDb.prisma.mail_threads.findUnique({
-      where: { id: threadId },
+    const runnerBMessage = await runnerBDb.prisma.mail_messages.findUnique({
+      where: { id: messageId },
     });
-    expect(runnerBThread).not.toBeNull();
-    expect(runnerBThread?.subject).toBe("Test Thread");
+    expect(runnerBMessage).not.toBeNull();
+    expect(runnerBMessage?.subject).toBe("Test Message");
   });
 
   test("should handle bidirectional sync - users from both runners", async () => {

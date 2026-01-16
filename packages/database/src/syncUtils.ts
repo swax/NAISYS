@@ -26,14 +26,16 @@ export function serializeRecords(records: Record<string, unknown>[]): Record<str
  * - "direct_id": Filter on id = localHostId (for hosts table)
  * - "direct_host_id": Filter on host_id = localHostId (for users table)
  * - "join_user": Join through users relation via user_id, check users.host_id
- * - "join_updated_by": Join through updated_user relation via updated_by, check updated_user.host_id
+ * - "join_from_user": Join through from_user relation via from_user_id, check from_user.host_id
+ * - "join_message_from_user": Join through message.from_user relation, check from_user.host_id
  */
 export type HostFilterType =
   | "none"
   | "direct_id"
   | "direct_host_id"
   | "join_user"
-  | "join_updated_by";
+  | "join_from_user"
+  | "join_message_from_user";
 
 interface SyncableTableConfig {
   primaryKey: string[];
@@ -51,13 +53,17 @@ export const SYNCABLE_TABLE_CONFIG: Record<string, SyncableTableConfig> = {
   hosts: { primaryKey: ["id"], hostFilter: "direct_id" },
   users: { primaryKey: ["id"], hostFilter: "direct_host_id" },
   user_notifications: { primaryKey: ["user_id"], hostFilter: "join_user" },
-  mail_threads: { primaryKey: ["id"], hostFilter: "join_updated_by" },
-  mail_thread_members: { primaryKey: ["id"], hostFilter: "join_updated_by" },
-  mail_thread_messages: {
+  mail_messages: {
     primaryKey: ["id"],
     appendOnly: true,
-    hostFilter: "join_user",
+    hostFilter: "join_from_user",
   },
+  mail_recipients: {
+    primaryKey: ["id"],
+    appendOnly: true,
+    hostFilter: "join_message_from_user",
+  },
+  mail_status: { primaryKey: ["id"], hostFilter: "join_user" },
   run_session: {
     primaryKey: ["user_id", "run_id", "session_id"],
     hostFilter: "none",
@@ -111,11 +117,17 @@ function buildHostFilter(
       // Filter on host_id = localHostId (for users table)
       return { host_id: localHostId };
     case "join_user":
-      // Join through users relation, check users.host_id
-      return { users: { host_id: localHostId } };
-    case "join_updated_by":
-      // Join through updated_user relation, check updated_user.host_id
-      return { updated_user: { host_id: localHostId } };
+      // Join through users relation via user_id, check users.host_id
+      // Works for: user_notifications, mail_status
+      return { user: { host_id: localHostId } };
+    case "join_from_user":
+      // Join through from_user relation via from_user_id, check from_user.host_id
+      // Works for: mail_messages
+      return { from_user: { host_id: localHostId } };
+    case "join_message_from_user":
+      // Join through message.from_user relation, check from_user.host_id
+      // Works for: mail_recipients (owned by sender)
+      return { message: { from_user: { host_id: localHostId } } };
     default:
       return {};
   }

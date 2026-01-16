@@ -92,14 +92,12 @@ export function createMockSubagent() {
 
 export function createMockLLMail() {
   const llmail: LLMail = {
-    simpleMode: false,
     handleCommand: jest.fn(() =>
       Promise.resolve({ content: "", pauseSeconds: 0 })
     ),
     getUnreadThreads: jest.fn(() => Promise.resolve([])),
-    newThread: jest.fn(() => Promise.resolve("")),
-    readThread: jest.fn(() => Promise.resolve("")),
-    markAsRead: jest.fn(() => Promise.resolve()),
+    sendMessage: jest.fn(() => Promise.resolve("")),
+    readMessage: jest.fn(() => Promise.resolve("")),
     getAllUserNames: jest.fn(() => Promise.resolve([])),
     hasMultipleUsers: jest.fn(() => Promise.resolve(false)),
   };
