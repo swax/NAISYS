@@ -155,7 +155,7 @@ describe("Hub Sync Integration Tests", () => {
         user_id: userId,
         run_id: 1,
         session_id: 1,
-        start_date: now,
+        created_at: now,
         last_active: now,
         model_name: "test-model",
       },
@@ -165,7 +165,7 @@ describe("Hub Sync Integration Tests", () => {
         user_id: userId,
         run_id: 1,
         session_id: 1,
-        start_date: now,
+        created_at: now,
         last_active: now,
         model_name: "test-model",
       },
@@ -182,7 +182,7 @@ describe("Hub Sync Integration Tests", () => {
         source: "user",
         type: "message",
         message: "Test log message",
-        date: now,
+        created_at: now,
       },
     });
 

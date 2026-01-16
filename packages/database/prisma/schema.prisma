@@ -16,7 +16,8 @@ model context_log {
   source      String
   type        String
   message     String
-  date        DateTime
+  created_at  DateTime    @default(now())
+  updated_at  DateTime    @updatedAt
   users       users       @relation("context_log_user", fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   run_session run_session @relation(fields: [user_id, run_id, session_id], references: [user_id, run_id, session_id], onDelete: NoAction, onUpdate: NoAction)
 
@@ -37,6 +38,7 @@ model costs {
   output_tokens      Int?        @default(0)
   cache_write_tokens Int?        @default(0)
   cache_read_tokens  Int?        @default(0)
+  created_at         DateTime    @default(now())
   updated_at         DateTime    @updatedAt
   users              users       @relation("costs_user", fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   run_session        run_session @relation(fields: [user_id, run_id, session_id], references: [user_id, run_id, session_id], onDelete: NoAction, onUpdate: NoAction)
@@ -53,6 +55,7 @@ model mail_messages {
   subject      String
   body         String
   created_at   DateTime          @default(now())
+  updated_at   DateTime          @updatedAt
   from_user    users             @relation("mail_messages_from_user", fields: [from_user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   recipients   mail_recipients[]
   status       mail_status[]
@@ -67,6 +70,7 @@ model mail_recipients {
   user_id    String
   type       String // "to", "cc", "bcc"
   created_at DateTime      @default(now())
+  updated_at DateTime      @updatedAt
   message    mail_messages @relation(fields: [message_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   user       users         @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
@@ -90,22 +94,23 @@ model mail_status {
 }
 
 model users {
-  id                           String                 @id // ULID
-  username                     String                 @unique(map: "unq_users_username")
-  title                        String
-  agent_path                   String                 @unique(map: "unq_users_agent_path")
-  lead_username                String?
-  config                       String                 @default("{}")
-  host_id                      String?
-  updated_at                   DateTime               @updatedAt
-  host                         hosts?                 @relation(fields: [host_id], references: [id])
-  mail_messages_sent           mail_messages[]        @relation("mail_messages_from_user")
-  mail_recipients              mail_recipients[]
-  mail_status                  mail_status[]
-  run_sessions                 run_session[]
-  context_logs                 context_log[]          @relation("context_log_user")
-  costs                        costs[]                @relation("costs_user")
-  user_notifications           user_notifications?
+  id                 String              @id // ULID
+  username           String              @unique(map: "unq_users_username")
+  title              String
+  agent_path         String              @unique(map: "unq_users_agent_path")
+  lead_username      String?
+  config             String              @default("{}")
+  host_id            String?
+  created_at         DateTime            @default(now())
+  updated_at         DateTime            @updatedAt
+  host               hosts?              @relation(fields: [host_id], references: [id])
+  mail_messages_sent mail_messages[]     @relation("mail_messages_from_user")
+  mail_recipients    mail_recipients[]
+  mail_status        mail_status[]
+  run_sessions       run_session[]
+  context_logs       context_log[]       @relation("context_log_user")
+  costs              costs[]             @relation("costs_user")
+  user_notifications user_notifications?
 
   @@index([host_id], map: "idx_users_host_id")
 }
@@ -126,12 +131,12 @@ model run_session {
   user_id       String
   run_id        Int
   session_id    Int
-  start_date    DateTime
   last_active   DateTime
   model_name    String
   latest_log_id String        @default("")
   total_lines   Int           @default(0)
   total_cost    Float         @default(0)
+  created_at    DateTime      @default(now())
   updated_at    DateTime      @updatedAt
   users         users         @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   context_logs  context_log[]
@@ -151,6 +156,7 @@ model schema_version {
 model hosts {
   id         String   @id // ULID
   name       String   @unique(map: "unq_hosts_name") // NAISYS_HOSTNAME
+  created_at DateTime @default(now())
   updated_at DateTime @updatedAt
   users      users[]
 }

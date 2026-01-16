@@ -9,15 +9,15 @@ interface RunsCostChartProps {
 
 export const RunsCostChart: React.FC<RunsCostChartProps> = ({ runs }) => {
   const chartData = useMemo(() => {
-    // Sort runs by startDate (oldest to newest)
+    // Sort runs by createdAt (oldest to newest)
     const sortedRuns = [...runs].sort(
       (a, b) =>
-        new Date(a.startDate).getTime() - new Date(b.startDate).getTime(),
+        new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
     );
 
     // Transform the data for the chart
     return sortedRuns.map((run) => ({
-      date: new Date(run.startDate).toLocaleDateString("en-US", {
+      date: new Date(run.createdAt).toLocaleDateString("en-US", {
         month: "short",
         day: "numeric",
       }),

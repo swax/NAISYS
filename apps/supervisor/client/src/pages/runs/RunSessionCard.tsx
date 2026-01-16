@@ -70,8 +70,8 @@ export const RunSessionCard: React.FC<{
     return `$${cost.toFixed(2)}`;
   };
 
-  const formatDuration = (startDate: string, lastActive: string) => {
-    const start = new Date(startDate);
+  const formatDuration = (createdAt: string, lastActive: string) => {
+    const start = new Date(createdAt);
     const end = new Date(lastActive);
     const durationMs = end.getTime() - start.getTime();
 
@@ -161,7 +161,7 @@ export const RunSessionCard: React.FC<{
                   )}
                 </ActionIcon>
                 <Text size="sm" fw={600}>
-                  {formatPrimaryTime(run.startDate)}
+                  {formatPrimaryTime(run.createdAt)}
                 </Text>
                 <Badge size="sm" variant="light" color="blue">
                   {run.modelName}
@@ -187,7 +187,7 @@ export const RunSessionCard: React.FC<{
                   {getRunIdLabel()}
                 </Text>
                 <Text size="xs" c="dimmed">
-                  Duration: {formatDuration(run.startDate, run.lastActive)}
+                  Duration: {formatDuration(run.createdAt, run.lastActive)}
                 </Text>
               </Group>
             </Stack>

@@ -11,7 +11,7 @@ export const getLogColor = (log: LogEntry) => {
 };
 
 export const formatLogTitle = (log: LogEntry) => {
-  const date = new Date(log.date).toLocaleString();
+  const date = new Date(log.createdAt).toLocaleString();
   return `ID: ${log.id}\nDate: ${date}\nType: ${log.type}\nSource: ${log.source}\nRole: ${log.role}`;
 };
 

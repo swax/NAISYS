@@ -24,7 +24,7 @@ export function createLogService(
           source: message.source?.toString() || "",
           type: message.type || "",
           message: message.content,
-          date: new Date().toISOString(),
+          created_at: new Date().toISOString(),
         },
       });
 
