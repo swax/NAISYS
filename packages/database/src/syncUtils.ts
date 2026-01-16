@@ -20,56 +20,27 @@ export function serializeRecords(records: Record<string, unknown>[]): Record<str
   return records.map(serializeRecord);
 }
 
-/**
- * Host filter types for sync queries:
- * - "none": No host filtering (table is already host-scoped or needs all records)
- * - "direct_id": Filter on id = localHostId (for hosts table)
- * - "direct_host_id": Filter on host_id = localHostId (for users table)
- * - "join_user": Join through users relation via user_id, check users.host_id
- * - "join_from_user": Join through from_user relation via from_user_id, check from_user.host_id
- * - "join_message_from_user": Join through message.from_user relation, check from_user.host_id
- */
-export type HostFilterType =
-  | "none"
-  | "direct_id"
-  | "direct_host_id"
-  | "join_user"
-  | "join_from_user"
-  | "join_message_from_user";
-
 interface SyncableTableConfig {
   primaryKey: string[];
   appendOnly?: boolean;
-  hostFilter: HostFilterType;
 }
 
 /**
  * Configuration for syncable tables.
  * Defines primary key column(s) for each table to support different PK structures.
  * Tables with appendOnly: true use ULID-based sync (id > since_ulid) instead of updated_at.
- * hostFilter determines how to filter records by the local host.
+ * All tables filter by host_id for sync (hosts table uses host_id as its PK).
  */
 export const SYNCABLE_TABLE_CONFIG: Record<string, SyncableTableConfig> = {
-  hosts: { primaryKey: ["id"], hostFilter: "direct_id" },
-  users: { primaryKey: ["id"], hostFilter: "direct_host_id" },
-  user_notifications: { primaryKey: ["user_id"], hostFilter: "join_user" },
-  mail_messages: {
-    primaryKey: ["id"],
-    appendOnly: true,
-    hostFilter: "join_from_user",
-  },
-  mail_recipients: {
-    primaryKey: ["id"],
-    appendOnly: true,
-    hostFilter: "join_message_from_user",
-  },
-  mail_status: { primaryKey: ["id"], hostFilter: "join_user" },
-  run_session: {
-    primaryKey: ["user_id", "run_id", "session_id"],
-    hostFilter: "none",
-  },
-  context_log: { primaryKey: ["id"], appendOnly: true, hostFilter: "none" },
-  costs: { primaryKey: ["id"], hostFilter: "none" },
+  hosts: { primaryKey: ["host_id"] },
+  users: { primaryKey: ["id"] },
+  user_notifications: { primaryKey: ["user_id"] },
+  mail_messages: { primaryKey: ["id"], appendOnly: true },
+  mail_recipients: { primaryKey: ["id"], appendOnly: true },
+  mail_status: { primaryKey: ["id"] },
+  run_session: { primaryKey: ["user_id", "run_id", "session_id"] },
+  context_log: { primaryKey: ["id"], appendOnly: true },
+  costs: { primaryKey: ["id"] },
 };
 
 /**
@@ -81,11 +52,15 @@ export const SYNCABLE_TABLES = Object.keys(SYNCABLE_TABLE_CONFIG) as SyncableTab
 /**
  * Tables that should be forwarded to other runners.
  * These are "shared" tables (hosts, users, mail) vs Hub-only tables (logs, costs, sessions).
- * A table is forwardable if it has host filtering (belongs to a specific host).
  */
-export const FORWARDABLE_TABLES = SYNCABLE_TABLES.filter(
-  (table) => SYNCABLE_TABLE_CONFIG[table].hostFilter !== "none"
-) as SyncableTable[];
+export const FORWARDABLE_TABLES: SyncableTable[] = [
+  "hosts",
+  "users",
+  "user_notifications",
+  "mail_messages",
+  "mail_recipients",
+  "mail_status",
+];
 
 export type SyncableTable = keyof typeof SYNCABLE_TABLE_CONFIG;
 
@@ -100,44 +75,10 @@ function timestampToUlidPrefix(timestamp: Date): string {
 }
 
 /**
- * Build the host filter clause for a Prisma where condition.
- * Returns an object to be merged into the where clause.
- */
-function buildHostFilter(
-  hostFilter: HostFilterType,
-  localHostId: string
-): Record<string, unknown> {
-  switch (hostFilter) {
-    case "none":
-      return {};
-    case "direct_id":
-      // Filter on id = localHostId (for hosts table)
-      return { id: localHostId };
-    case "direct_host_id":
-      // Filter on host_id = localHostId (for users table)
-      return { host_id: localHostId };
-    case "join_user":
-      // Join through users relation via user_id, check users.host_id
-      // Works for: user_notifications, mail_status
-      return { user: { host_id: localHostId } };
-    case "join_from_user":
-      // Join through from_user relation via from_user_id, check from_user.host_id
-      // Works for: mail_messages
-      return { from_user: { host_id: localHostId } };
-    case "join_message_from_user":
-      // Join through message.from_user relation, check from_user.host_id
-      // Works for: mail_recipients (owned by sender)
-      return { message: { from_user: { host_id: localHostId } } };
-    default:
-      return {};
-  }
-}
-
-/**
  * Query records from a table that have been updated/created since a given timestamp.
  * For append-only tables (appendOnly: true), uses ULID-based queries (id > since_ulid).
  * For other tables, uses updated_at timestamp queries.
- * Filters records by localHostId based on the table's hostFilter configuration.
+ * All tables filter by host_id = localHostId (hosts table uses host_id as its PK).
  * Returns records plus a hasMore flag for pagination.
  */
 export async function queryChangedRecords(
@@ -149,14 +90,10 @@ export async function queryChangedRecords(
 ): Promise<{ records: Record<string, unknown>[]; hasMore: boolean }> {
   const config = SYNCABLE_TABLE_CONFIG[table];
   const isAppendOnly = config?.appendOnly ?? false;
-  const hostFilter = config?.hostFilter ?? "none";
 
   // Use dynamic access with any - safe because table is from our whitelist
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const model = (prisma as any)[table];
-
-  // Build the host filter clause
-  const hostFilterClause = buildHostFilter(hostFilter, localHostId);
 
   let records: Record<string, unknown>[];
 
@@ -164,14 +101,14 @@ export async function queryChangedRecords(
     // Append-only tables: query by ULID (lexicographically sortable by time)
     const sinceUlid = timestampToUlidPrefix(since);
     records = (await model.findMany({
-      where: { id: { gt: sinceUlid }, ...hostFilterClause },
+      where: { id: { gt: sinceUlid }, host_id: localHostId },
       orderBy: { id: "asc" },
       take: limit + 1,
     })) as Record<string, unknown>[];
   } else {
     // Regular tables: query by updated_at
     records = (await model.findMany({
-      where: { updated_at: { gt: since }, ...hostFilterClause },
+      where: { updated_at: { gt: since }, host_id: localHostId },
       orderBy: { updated_at: "asc" },
       take: limit + 1,
     })) as Record<string, unknown>[];
@@ -184,6 +121,15 @@ export async function queryChangedRecords(
   };
 }
 
+/** Options for upsert operations */
+export interface UpsertOptions {
+  /**
+   * Override updated_at with current timestamp.
+   * Used by the Hub to set its own timestamp for catch-up queries.
+   */
+  overrideUpdatedAt?: boolean;
+}
+
 /**
  * Upsert a single record into a table using raw SQL.
  * Uses INSERT ... ON CONFLICT for atomic upsert.
@@ -191,17 +137,26 @@ export async function queryChangedRecords(
 export async function upsertRecord(
   prisma: PrismaClient,
   table: SyncableTable,
-  record: Record<string, unknown>
+  record: Record<string, unknown>,
+  options?: UpsertOptions
 ): Promise<void> {
   const config = SYNCABLE_TABLE_CONFIG[table];
   if (!config) {
     throw new Error(`Unknown syncable table: ${table}`);
   }
 
+  // Clone record to avoid mutating the original
+  const processedRecord = { ...record };
+
+  // Override updated_at with current timestamp if requested
+  if (options?.overrideUpdatedAt && "updated_at" in processedRecord) {
+    processedRecord.updated_at = new Date().toISOString();
+  }
+
   const primaryKeyColumns = config.primaryKey;
-  const columns = Object.keys(record);
+  const columns = Object.keys(processedRecord);
   const values = columns.map((col) => {
-    const val = record[col];
+    const val = processedRecord[col];
     // Convert ISO date strings back to proper format for SQLite
     if (typeof val === "string" && col.endsWith("_at")) {
       return val; // SQLite handles ISO strings fine
@@ -235,9 +190,10 @@ export async function upsertRecord(
 export async function upsertRecords(
   prisma: PrismaClient,
   table: SyncableTable,
-  records: Record<string, unknown>[]
+  records: Record<string, unknown>[],
+  options?: UpsertOptions
 ): Promise<void> {
   for (const record of records) {
-    await upsertRecord(prisma, table, record);
+    await upsertRecord(prisma, table, record, options);
   }
 }

@@ -81,13 +81,13 @@ export async function createTestDatabaseSet(): Promise<{
  */
 export async function seedHost(
   prisma: PrismaClient,
-  id: string,
+  hostId: string,
   name: string
 ): Promise<void> {
   await prisma.hosts.upsert({
-    where: { id },
+    where: { host_id: hostId },
     update: { name },
-    create: { id, name },
+    create: { host_id: hostId, name },
   });
 }
 

@@ -21,7 +21,7 @@ model context_log {
   updated_at  DateTime    @updatedAt
   users       users       @relation("context_log_user", fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   run_session run_session @relation(fields: [user_id, run_id, session_id], references: [user_id, run_id, session_id], onDelete: NoAction, onUpdate: NoAction)
-  host        hosts?      @relation(fields: [host_id], references: [id])
+  host        hosts?      @relation(fields: [host_id], references: [host_id])
 
   @@index([id(sort: Desc)], map: "idx_context_log_id_desc")
   @@index([user_id], map: "idx_context_log_user_id")
@@ -46,7 +46,7 @@ model costs {
   updated_at         DateTime    @updatedAt
   users              users       @relation("costs_user", fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   run_session        run_session @relation(fields: [user_id, run_id, session_id], references: [user_id, run_id, session_id], onDelete: NoAction, onUpdate: NoAction)
-  host               hosts?      @relation(fields: [host_id], references: [id])
+  host               hosts?      @relation(fields: [host_id], references: [host_id])
 
   @@index([id(sort: Desc)], map: "idx_costs_id_desc")
   @@index([user_id], map: "idx_costs_user_id")
@@ -64,7 +64,7 @@ model mail_messages {
   created_at   DateTime          @default(now())
   updated_at   DateTime          @updatedAt
   from_user    users             @relation("mail_messages_from_user", fields: [from_user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  host         hosts?            @relation(fields: [host_id], references: [id])
+  host         hosts?            @relation(fields: [host_id], references: [host_id])
   recipients   mail_recipients[]
   status       mail_status[]
 
@@ -83,7 +83,7 @@ model mail_recipients {
   updated_at DateTime      @updatedAt
   message    mail_messages @relation(fields: [message_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   user       users         @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  host       hosts?        @relation(fields: [host_id], references: [id])
+  host       hosts?        @relation(fields: [host_id], references: [host_id])
 
   @@index([message_id], map: "idx_mail_recipients_message_id")
   @@index([user_id], map: "idx_mail_recipients_user_id")
@@ -101,7 +101,7 @@ model mail_status {
   updated_at  DateTime      @updatedAt
   message     mail_messages @relation(fields: [message_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   user        users         @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  host        hosts?        @relation(fields: [host_id], references: [id])
+  host        hosts?        @relation(fields: [host_id], references: [host_id])
 
   @@unique([message_id, user_id], map: "unq_mail_status_message_user")
   @@index([user_id], map: "idx_mail_status_user_id")
@@ -118,7 +118,7 @@ model users {
   host_id            String?
   created_at         DateTime            @default(now())
   updated_at         DateTime            @updatedAt
-  host               hosts?              @relation(fields: [host_id], references: [id])
+  host               hosts?              @relation(fields: [host_id], references: [host_id])
   mail_messages_sent mail_messages[]     @relation("mail_messages_from_user")
   mail_recipients    mail_recipients[]
   mail_status        mail_status[]
@@ -141,7 +141,7 @@ model user_notifications {
   last_active    DateTime?
   updated_at     DateTime  @updatedAt
   users          users     @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  host           hosts?    @relation(fields: [host_id], references: [id])
+  host           hosts?    @relation(fields: [host_id], references: [host_id])
 
   @@index([host_id], map: "idx_user_notifications_host_id")
 }
@@ -159,7 +159,7 @@ model run_session {
   created_at    DateTime      @default(now())
   updated_at    DateTime      @updatedAt
   users         users         @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  host          hosts?        @relation(fields: [host_id], references: [id])
+  host          hosts?        @relation(fields: [host_id], references: [host_id])
   context_logs  context_log[]
   costs         costs[]
 
@@ -176,7 +176,7 @@ model schema_version {
 }
 
 model hosts {
-  id                 String               @id // ULID
+  host_id            String               @id @map("host_id") // ULID - same column name as FK in other tables
   name               String               @unique(map: "unq_hosts_name") // NAISYS_HOSTNAME
   created_at         DateTime             @default(now())
   updated_at         DateTime             @updatedAt
