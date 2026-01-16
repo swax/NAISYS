@@ -2,13 +2,16 @@ import { monotonicFactory } from "@naisys/database";
 import { LlmMessage, LlmRole } from "../llm/llmDtos.js";
 import { DatabaseService } from "@naisys/database";
 import { RunService } from "./runService.js";
+import { HostService } from "./hostService.js";
 
 export function createLogService(
   { usingDatabase }: DatabaseService,
   runService: RunService,
+  hostService: HostService,
 ) {
   // Use monotonic ULID to preserve strict ordering within a session
   const monotonicUlid = monotonicFactory();
+  const { localHostId } = hostService;
 
   async function write(message: LlmMessage) {
     const { getUserId, getRunId, getSessionId } = runService;
@@ -20,6 +23,7 @@ export function createLogService(
           user_id: getUserId(),
           run_id: getRunId(),
           session_id: getSessionId(),
+          host_id: localHostId,
           role: toSimpleRole(message.role),
           source: message.source?.toString() || "",
           type: message.type || "",

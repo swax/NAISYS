@@ -4,6 +4,7 @@ CREATE TABLE "context_log" (
     "user_id" TEXT NOT NULL,
     "run_id" INTEGER NOT NULL,
     "session_id" INTEGER NOT NULL,
+    "host_id" TEXT,
     "role" TEXT NOT NULL,
     "source" TEXT NOT NULL,
     "type" TEXT NOT NULL,
@@ -11,7 +12,8 @@ CREATE TABLE "context_log" (
     "created_at" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" DATETIME NOT NULL,
     CONSTRAINT "context_log_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION,
-    CONSTRAINT "context_log_user_id_run_id_session_id_fkey" FOREIGN KEY ("user_id", "run_id", "session_id") REFERENCES "run_session" ("user_id", "run_id", "session_id") ON DELETE NO ACTION ON UPDATE NO ACTION
+    CONSTRAINT "context_log_user_id_run_id_session_id_fkey" FOREIGN KEY ("user_id", "run_id", "session_id") REFERENCES "run_session" ("user_id", "run_id", "session_id") ON DELETE NO ACTION ON UPDATE NO ACTION,
+    CONSTRAINT "context_log_host_id_fkey" FOREIGN KEY ("host_id") REFERENCES "hosts" ("id") ON DELETE SET NULL ON UPDATE CASCADE
 );
 
 -- CreateTable
@@ -20,6 +22,7 @@ CREATE TABLE "costs" (
     "user_id" TEXT NOT NULL,
     "run_id" INTEGER NOT NULL,
     "session_id" INTEGER NOT NULL,
+    "host_id" TEXT,
     "source" TEXT NOT NULL,
     "model" TEXT NOT NULL,
     "cost" REAL DEFAULT 0,
@@ -30,18 +33,21 @@ CREATE TABLE "costs" (
     "created_at" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" DATETIME NOT NULL,
     CONSTRAINT "costs_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION,
-    CONSTRAINT "costs_user_id_run_id_session_id_fkey" FOREIGN KEY ("user_id", "run_id", "session_id") REFERENCES "run_session" ("user_id", "run_id", "session_id") ON DELETE NO ACTION ON UPDATE NO ACTION
+    CONSTRAINT "costs_user_id_run_id_session_id_fkey" FOREIGN KEY ("user_id", "run_id", "session_id") REFERENCES "run_session" ("user_id", "run_id", "session_id") ON DELETE NO ACTION ON UPDATE NO ACTION,
+    CONSTRAINT "costs_host_id_fkey" FOREIGN KEY ("host_id") REFERENCES "hosts" ("id") ON DELETE SET NULL ON UPDATE CASCADE
 );
 
 -- CreateTable
 CREATE TABLE "mail_messages" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "from_user_id" TEXT NOT NULL,
+    "host_id" TEXT,
     "subject" TEXT NOT NULL,
     "body" TEXT NOT NULL,
     "created_at" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" DATETIME NOT NULL,
-    CONSTRAINT "mail_messages_from_user_id_fkey" FOREIGN KEY ("from_user_id") REFERENCES "users" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION
+    CONSTRAINT "mail_messages_from_user_id_fkey" FOREIGN KEY ("from_user_id") REFERENCES "users" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION,
+    CONSTRAINT "mail_messages_host_id_fkey" FOREIGN KEY ("host_id") REFERENCES "hosts" ("id") ON DELETE SET NULL ON UPDATE CASCADE
 );
 
 -- CreateTable
@@ -49,11 +55,13 @@ CREATE TABLE "mail_recipients" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "message_id" TEXT NOT NULL,
     "user_id" TEXT NOT NULL,
+    "host_id" TEXT,
     "type" TEXT NOT NULL,
     "created_at" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" DATETIME NOT NULL,
     CONSTRAINT "mail_recipients_message_id_fkey" FOREIGN KEY ("message_id") REFERENCES "mail_messages" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION,
-    CONSTRAINT "mail_recipients_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION
+    CONSTRAINT "mail_recipients_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION,
+    CONSTRAINT "mail_recipients_host_id_fkey" FOREIGN KEY ("host_id") REFERENCES "hosts" ("id") ON DELETE SET NULL ON UPDATE CASCADE
 );
 
 -- CreateTable
@@ -61,12 +69,14 @@ CREATE TABLE "mail_status" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "message_id" TEXT NOT NULL,
     "user_id" TEXT NOT NULL,
+    "host_id" TEXT,
     "read_at" DATETIME,
     "archived_at" DATETIME,
     "created_at" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" DATETIME NOT NULL,
     CONSTRAINT "mail_status_message_id_fkey" FOREIGN KEY ("message_id") REFERENCES "mail_messages" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION,
-    CONSTRAINT "mail_status_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION
+    CONSTRAINT "mail_status_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION,
+    CONSTRAINT "mail_status_host_id_fkey" FOREIGN KEY ("host_id") REFERENCES "hosts" ("id") ON DELETE SET NULL ON UPDATE CASCADE
 );
 
 -- CreateTable
@@ -86,11 +96,13 @@ CREATE TABLE "users" (
 -- CreateTable
 CREATE TABLE "user_notifications" (
     "user_id" TEXT NOT NULL PRIMARY KEY,
+    "host_id" TEXT,
     "latest_mail_id" TEXT NOT NULL DEFAULT '',
     "latest_log_id" TEXT NOT NULL DEFAULT '',
     "last_active" DATETIME,
     "updated_at" DATETIME NOT NULL,
-    CONSTRAINT "user_notifications_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION
+    CONSTRAINT "user_notifications_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION,
+    CONSTRAINT "user_notifications_host_id_fkey" FOREIGN KEY ("host_id") REFERENCES "hosts" ("id") ON DELETE SET NULL ON UPDATE CASCADE
 );
 
 -- CreateTable
@@ -98,6 +110,7 @@ CREATE TABLE "run_session" (
     "user_id" TEXT NOT NULL,
     "run_id" INTEGER NOT NULL,
     "session_id" INTEGER NOT NULL,
+    "host_id" TEXT,
     "last_active" DATETIME NOT NULL,
     "model_name" TEXT NOT NULL,
     "latest_log_id" TEXT NOT NULL DEFAULT '',
@@ -107,7 +120,8 @@ CREATE TABLE "run_session" (
     "updated_at" DATETIME NOT NULL,
 
     PRIMARY KEY ("user_id", "run_id", "session_id"),
-    CONSTRAINT "run_session_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION
+    CONSTRAINT "run_session_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION,
+    CONSTRAINT "run_session_host_id_fkey" FOREIGN KEY ("host_id") REFERENCES "hosts" ("id") ON DELETE SET NULL ON UPDATE CASCADE
 );
 
 -- CreateTable
@@ -135,6 +149,9 @@ CREATE INDEX "idx_context_log_user_id" ON "context_log"("user_id");
 CREATE INDEX "idx_context_log_run_session" ON "context_log"("user_id", "run_id", "session_id");
 
 -- CreateIndex
+CREATE INDEX "idx_context_log_host_id" ON "context_log"("host_id");
+
+-- CreateIndex
 CREATE INDEX "idx_costs_id_desc" ON "costs"("id" DESC);
 
 -- CreateIndex
@@ -147,10 +164,16 @@ CREATE INDEX "idx_costs_run_session" ON "costs"("user_id", "run_id", "session_id
 CREATE INDEX "idx_costs_aggregation_key" ON "costs"("user_id", "run_id", "session_id", "source", "model");
 
 -- CreateIndex
+CREATE INDEX "idx_costs_host_id" ON "costs"("host_id");
+
+-- CreateIndex
 CREATE INDEX "idx_mail_messages_id_desc" ON "mail_messages"("id" DESC);
 
 -- CreateIndex
 CREATE INDEX "idx_mail_messages_from_user_id" ON "mail_messages"("from_user_id");
+
+-- CreateIndex
+CREATE INDEX "idx_mail_messages_host_id" ON "mail_messages"("host_id");
 
 -- CreateIndex
 CREATE INDEX "idx_mail_recipients_message_id" ON "mail_recipients"("message_id");
@@ -159,7 +182,13 @@ CREATE INDEX "idx_mail_recipients_message_id" ON "mail_recipients"("message_id")
 CREATE INDEX "idx_mail_recipients_user_id" ON "mail_recipients"("user_id");
 
 -- CreateIndex
+CREATE INDEX "idx_mail_recipients_host_id" ON "mail_recipients"("host_id");
+
+-- CreateIndex
 CREATE INDEX "idx_mail_status_user_id" ON "mail_status"("user_id");
+
+-- CreateIndex
+CREATE INDEX "idx_mail_status_host_id" ON "mail_status"("host_id");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "unq_mail_status_message_user" ON "mail_status"("message_id", "user_id");
@@ -174,10 +203,16 @@ CREATE UNIQUE INDEX "unq_users_agent_path" ON "users"("agent_path");
 CREATE INDEX "idx_users_host_id" ON "users"("host_id");
 
 -- CreateIndex
+CREATE INDEX "idx_user_notifications_host_id" ON "user_notifications"("host_id");
+
+-- CreateIndex
 CREATE INDEX "idx_run_session_user_id" ON "run_session"("user_id");
 
 -- CreateIndex
 CREATE INDEX "idx_run_session_last_active" ON "run_session"("last_active");
+
+-- CreateIndex
+CREATE INDEX "idx_run_session_host_id" ON "run_session"("host_id");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "unq_schema_version_version" ON "schema_version"("version");

@@ -1,12 +1,15 @@
 import { AgentConfig } from "../agent/agentConfig.js";
 import { GlobalConfig } from "../globalConfig.js";
 import { DatabaseService } from "@naisys/database";
+import { HostService } from "./hostService.js";
 
 export async function createRunService(
   { globalConfig }: GlobalConfig,
   { agentConfig }: AgentConfig,
   { usingDatabase }: DatabaseService,
+  hostService: HostService,
 ) {
+  const { localHostId } = hostService;
   let userId = "";
 
   /** The run ID of an agent process (there could be multiple runs for the same user). Globally unique */
@@ -73,6 +76,7 @@ export async function createRunService(
           user_id: userId,
           run_id: newRunId,
           session_id: newSessionId,
+          host_id: localHostId,
           model_name: agentConfig().shellModel,
           created_at: new Date().toISOString(),
           last_active: new Date().toISOString(),
