@@ -78,7 +78,9 @@ model mail_threads {
   id                   String                 @id // ULID
   subject              String
   token_count          Int                    @default(0)
+  updated_by           String?
   updated_at           DateTime               @updatedAt
+  updated_user         users?                 @relation("mail_threads_updated_by", fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
   mail_thread_members  mail_thread_members[]
   mail_thread_messages mail_thread_messages[]
 
@@ -97,6 +99,7 @@ model users {
   host                 hosts?                 @relation(fields: [host_id], references: [id])
   mail_thread_members  mail_thread_members[]
   mail_thread_messages mail_thread_messages[]
+  mail_threads_updated mail_threads[]         @relation("mail_threads_updated_by")
   run_sessions         run_session[]
   context_logs         context_log[]          @relation("context_log_user")
   costs                costs[]                @relation("costs_user")

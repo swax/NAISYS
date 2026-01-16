@@ -21,23 +21,49 @@ export function serializeRecords(records: Record<string, unknown>[]): Record<str
 }
 
 /**
+ * Host filter types for sync queries:
+ * - "none": No host filtering (table is already host-scoped or needs all records)
+ * - "direct_id": Filter on id = localHostId (for hosts table)
+ * - "direct_host_id": Filter on host_id = localHostId (for users table)
+ * - "join_user": Join through users relation via user_id, check users.host_id
+ * - "join_updated_by": Join through updated_user relation via updated_by, check updated_user.host_id
+ */
+export type HostFilterType =
+  | "none"
+  | "direct_id"
+  | "direct_host_id"
+  | "join_user"
+  | "join_updated_by";
+
+interface SyncableTableConfig {
+  primaryKey: string[];
+  appendOnly?: boolean;
+  hostFilter: HostFilterType;
+}
+
+/**
  * Configuration for syncable tables.
  * Defines primary key column(s) for each table to support different PK structures.
  * Tables with appendOnly: true use ULID-based sync (id > since_ulid) instead of updated_at.
+ * hostFilter determines how to filter records by the local host.
  */
-export const SYNCABLE_TABLE_CONFIG: Record<
-  string,
-  { primaryKey: string[]; appendOnly?: boolean }
-> = {
-  hosts: { primaryKey: ["id"] },
-  users: { primaryKey: ["id"] },
-  user_notifications: { primaryKey: ["user_id"] },
-  mail_threads: { primaryKey: ["id"] },
-  mail_thread_members: { primaryKey: ["id"] },
-  mail_thread_messages: { primaryKey: ["id"], appendOnly: true },
-  run_session: { primaryKey: ["user_id", "run_id", "session_id"] },
-  context_log: { primaryKey: ["id"], appendOnly: true },
-  costs: { primaryKey: ["id"] },
+export const SYNCABLE_TABLE_CONFIG: Record<string, SyncableTableConfig> = {
+  hosts: { primaryKey: ["id"], hostFilter: "direct_id" },
+  users: { primaryKey: ["id"], hostFilter: "direct_host_id" },
+  user_notifications: { primaryKey: ["user_id"], hostFilter: "join_user" },
+  mail_threads: { primaryKey: ["id"], hostFilter: "join_updated_by" },
+  mail_thread_members: { primaryKey: ["id"], hostFilter: "join_user" },
+  mail_thread_messages: {
+    primaryKey: ["id"],
+    appendOnly: true,
+    hostFilter: "join_user",
+  },
+  run_session: {
+    primaryKey: ["user_id", "run_id", "session_id"],
+    hostFilter: "none",
+  },
+  context_log: { primaryKey: ["id"], appendOnly: true, hostFilter: "none" },
+  costs: { primaryKey: ["id"], hostFilter: "none" },
 };
 
 /**
@@ -59,23 +85,57 @@ function timestampToUlidPrefix(timestamp: Date): string {
 }
 
 /**
+ * Build the host filter clause for a Prisma where condition.
+ * Returns an object to be merged into the where clause.
+ */
+function buildHostFilter(
+  hostFilter: HostFilterType,
+  localHostId: string
+): Record<string, unknown> {
+  switch (hostFilter) {
+    case "none":
+      return {};
+    case "direct_id":
+      // Filter on id = localHostId (for hosts table)
+      return { id: localHostId };
+    case "direct_host_id":
+      // Filter on host_id = localHostId (for users table)
+      return { host_id: localHostId };
+    case "join_user":
+      // Join through users relation, check users.host_id
+      return { users: { host_id: localHostId } };
+    case "join_updated_by":
+      // Join through updated_user relation, check updated_user.host_id
+      return { updated_user: { host_id: localHostId } };
+    default:
+      return {};
+  }
+}
+
+/**
  * Query records from a table that have been updated/created since a given timestamp.
  * For append-only tables (appendOnly: true), uses ULID-based queries (id > since_ulid).
  * For other tables, uses updated_at timestamp queries.
+ * Filters records by localHostId based on the table's hostFilter configuration.
  * Returns records plus a hasMore flag for pagination.
  */
 export async function queryChangedRecords(
   prisma: PrismaClient,
   table: SyncableTable,
   since: Date,
-  limit: number
+  limit: number,
+  localHostId: string
 ): Promise<{ records: Record<string, unknown>[]; hasMore: boolean }> {
   const config = SYNCABLE_TABLE_CONFIG[table];
   const isAppendOnly = config?.appendOnly ?? false;
+  const hostFilter = config?.hostFilter ?? "none";
 
   // Use dynamic access with any - safe because table is from our whitelist
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const model = (prisma as any)[table];
+
+  // Build the host filter clause
+  const hostFilterClause = buildHostFilter(hostFilter, localHostId);
 
   let records: Record<string, unknown>[];
 
@@ -83,14 +143,14 @@ export async function queryChangedRecords(
     // Append-only tables: query by ULID (lexicographically sortable by time)
     const sinceUlid = timestampToUlidPrefix(since);
     records = (await model.findMany({
-      where: { id: { gt: sinceUlid } },
+      where: { id: { gt: sinceUlid }, ...hostFilterClause },
       orderBy: { id: "asc" },
       take: limit + 1,
     })) as Record<string, unknown>[];
   } else {
     // Regular tables: query by updated_at
     records = (await model.findMany({
-      where: { updated_at: { gt: since } },
+      where: { updated_at: { gt: since }, ...hostFilterClause },
       orderBy: { updated_at: "asc" },
       take: limit + 1,
     })) as Record<string, unknown>[];
