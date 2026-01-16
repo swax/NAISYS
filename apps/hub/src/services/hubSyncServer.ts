@@ -438,7 +438,6 @@ export function createHubSyncServer(
     // Expose for testing/debugging
     getClientState: (hostId: string) => clientStates.get(hostId),
     getInFlightCount: () => inFlightCount,
-    getForwardService: () => forwardService,
   };
 }
 
