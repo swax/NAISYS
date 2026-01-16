@@ -1,7 +1,11 @@
 import {
+  countRecordsInTables,
   DatabaseService,
+  findMaxUpdatedAtFromTables,
   FORWARDABLE_TABLES,
+  loadSyncState,
   queryChangedRecords,
+  saveSyncState,
   serializeRecords,
   SYNCABLE_TABLES,
   upsertRecords,
@@ -31,6 +35,8 @@ export type HubSyncClientStatus =
 interface HubSyncState {
   status: HubSyncClientStatus;
   errorMessage?: string;
+  /** Last timestamp we received forwarded data from this hub (for catch_up on reconnect) */
+  lastSyncedFromHub: string;
 }
 
 /**
@@ -61,15 +67,59 @@ export async function createHubSyncClient(
   function getOrCreateState(hubUrl: string): HubSyncState {
     let state = hubSyncStates.get(hubUrl);
     if (!state) {
-      state = { status: "connected" };
+      state = {
+        status: "connected",
+        lastSyncedFromHub: new Date(0).toISOString(),
+      };
       hubSyncStates.set(hubUrl, state);
     }
     return state;
   }
 
   /**
+   * Load persisted sync state from database for a hub
+   */
+  async function loadPersistedSyncState(hubUrl: string): Promise<void> {
+    const state = getOrCreateState(hubUrl);
+    try {
+      const since = await dbService.usingDatabase((prisma) =>
+        loadSyncState(prisma, hubUrl)
+      );
+      if (since) {
+        state.lastSyncedFromHub = since;
+        hubClientLog.write(
+          `[SyncClient] Loaded persisted sync state for ${hubUrl}: lastSyncedFromHub=${state.lastSyncedFromHub}`
+        );
+      }
+    } catch (error) {
+      hubClientLog.error(
+        `[SyncClient] Error loading persisted sync state for ${hubUrl}: ${error}`
+      );
+    }
+  }
+
+  /**
+   * Persist sync state to database for a hub
+   */
+  async function persistSyncState(
+    hubUrl: string,
+    lastSyncedFromHub: string
+  ): Promise<void> {
+    try {
+      await dbService.usingDatabase((prisma) =>
+        saveSyncState(prisma, hubUrl, lastSyncedFromHub)
+      );
+    } catch (error) {
+      hubClientLog.error(
+        `[SyncClient] Error persisting sync state for ${hubUrl}: ${error}`
+      );
+    }
+  }
+
+  /**
    * Process forwarded data from a sync request.
    * Upserts records to local database, preserving original timestamps.
+   * Updates and persists lastSyncedFromHub timestamp on success.
    * Returns true if successful, false on error.
    */
   async function processForwards(
@@ -77,10 +127,7 @@ export async function createHubSyncClient(
     forwards: Record<string, unknown[]>
   ): Promise<boolean> {
     // Count total records
-    const totalRecords = Object.values(forwards).reduce(
-      (sum, records) => sum + records.length,
-      0
-    );
+    const totalRecords = countRecordsInTables(forwards);
 
     if (totalRecords === 0) {
       return true;
@@ -91,6 +138,9 @@ export async function createHubSyncClient(
     );
 
     try {
+      // Find max timestamp from forwarded records before processing
+      const maxTimestamp = findMaxUpdatedAtFromTables(forwards);
+
       await dbService.usingDatabase(async (prisma) => {
         // Process in FORWARDABLE_TABLES order for FK dependencies
         for (const table of FORWARDABLE_TABLES) {
@@ -104,6 +154,16 @@ export async function createHubSyncClient(
           );
         }
       });
+
+      // Update and persist lastSyncedFromHub timestamp
+      if (maxTimestamp) {
+        const state = getOrCreateState(hubUrl);
+        state.lastSyncedFromHub = maxTimestamp.toISOString();
+        await persistSyncState(hubUrl, state.lastSyncedFromHub);
+        hubClientLog.write(
+          `[SyncClient] Updated lastSyncedFromHub for ${hubUrl} to ${state.lastSyncedFromHub}`
+        );
+      }
 
       return true;
     } catch (error) {
@@ -122,7 +182,14 @@ export async function createHubSyncClient(
     rawData: unknown,
     ack?: (response: SyncResponse | SyncResponseError) => void
   ) {
+    // Check if this is a new hub we haven't seen before
+    const isNewHub = !hubSyncStates.has(hubUrl);
     const state = getOrCreateState(hubUrl);
+
+    // Load persisted state for new hubs (async but state will be used for catch_up later)
+    if (isNewHub) {
+      await loadPersistedSyncState(hubUrl);
+    }
 
     // Validate request with schema
     const result = SyncRequestSchema.safeParse(rawData);
@@ -241,6 +308,10 @@ export async function createHubSyncClient(
     /** Get sync status for a specific hub */
     getHubSyncStatus: (hubUrl: string): HubSyncClientStatus | undefined => {
       return hubSyncStates.get(hubUrl)?.status;
+    },
+    /** Get lastSyncedFromHub timestamp for a specific hub (for catch_up) */
+    getLastSyncedFromHub: (hubUrl: string): string | undefined => {
+      return hubSyncStates.get(hubUrl)?.lastSyncedFromHub;
     },
     /** Get all hub sync states */
     getAllHubSyncStates: (): Map<string, HubSyncState> => {

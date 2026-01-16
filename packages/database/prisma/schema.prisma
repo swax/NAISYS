@@ -189,3 +189,9 @@ model hosts {
   costs              costs[]
   context_logs       context_log[]
 }
+
+model hub_sync_state {
+  id              String   @id // Hub: remote runner's host_id. Runner: hub URL hash
+  since_timestamp String // ISO timestamp of last synced data
+  updated_at      DateTime @updatedAt
+}

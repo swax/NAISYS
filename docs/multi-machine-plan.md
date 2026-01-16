@@ -661,8 +661,8 @@ Can ship Phases 1-2 first (single-machine with ULIDs + hosts), then 3-5 for mult
 - [x] Runner only syncs records where host_id = local host (prevents loops, no joins)
 - [x] Large sync responses paginated (has_more flag)
 - [x] Hub correctly tracks since timestamp per runner (pull state)
-- [ ] Hub persists sync state (`since` timestamp per runner) to database for restart recovery
-- [ ] Runner persists sync state (single timestamp per hub) for catch-up on reconnect
+- [x] Hub persists sync state (`since` timestamp per runner) to database for restart recovery
+- [x] Runner persists sync state (single timestamp per hub) for catch-up on reconnect
 - [ ] Hub uses its own updated_at for catch-up queries (handles stale joiners)
 - [x] Hub maintains in-memory forward queues per connected runner
 - [x] Hub queues shared tables (hosts, users, mail_*) for other runners on sync receive
