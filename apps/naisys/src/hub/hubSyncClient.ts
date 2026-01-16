@@ -1,8 +1,10 @@
 import {
   DatabaseService,
+  FORWARDABLE_TABLES,
   queryChangedRecords,
   serializeRecords,
   SYNCABLE_TABLES,
+  upsertRecords,
   type SyncableTable,
 } from "@naisys/database";
 import {
@@ -66,6 +68,53 @@ export async function createHubSyncClient(
   }
 
   /**
+   * Process forwarded data from a sync request.
+   * Upserts records to local database, preserving original timestamps.
+   * Returns true if successful, false on error.
+   */
+  async function processForwards(
+    hubUrl: string,
+    forwards: Record<string, unknown[]>
+  ): Promise<boolean> {
+    // Count total records
+    const totalRecords = Object.values(forwards).reduce(
+      (sum, records) => sum + records.length,
+      0
+    );
+
+    if (totalRecords === 0) {
+      return true;
+    }
+
+    hubClientLog.write(
+      `[SyncClient] Processing ${totalRecords} forwarded records from ${hubUrl}`
+    );
+
+    try {
+      await dbService.usingDatabase(async (prisma) => {
+        // Process in FORWARDABLE_TABLES order for FK dependencies
+        for (const table of FORWARDABLE_TABLES) {
+          const tableData = forwards[table] as Record<string, unknown>[] | undefined;
+          if (!tableData || tableData.length === 0) continue;
+
+          await upsertRecords(prisma, table as SyncableTable, tableData);
+
+          hubClientLog.write(
+            `[SyncClient] Upserted ${tableData.length} forwarded ${table} records`
+          );
+        }
+      });
+
+      return true;
+    } catch (error) {
+      hubClientLog.error(
+        `[SyncClient] Error processing forwarded data from ${hubUrl}: ${error}`
+      );
+      return false;
+    }
+  }
+
+  /**
    * Handle sync request from a hub
    */
   async function handleSyncRequest(
@@ -109,6 +158,17 @@ export async function createHubSyncClient(
     // Connection is healthy - ensure state reflects this
     state.status = "connected";
     state.errorMessage = undefined;
+
+    // Process any forwarded data first (before responding with our own data)
+    if (data.forwards) {
+      const forwardSuccess = await processForwards(hubUrl, data.forwards);
+      if (!forwardSuccess) {
+        // Log error but continue with sync response - forwards are best-effort
+        hubClientLog.error(
+          `[SyncClient] Failed to process some forwarded data from ${hubUrl}, continuing with sync response`
+        );
+      }
+    }
 
     hubClientLog.write(
       `[SyncClient] Processing sync_request from ${hubUrl} (since: ${data.since})`

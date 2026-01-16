@@ -650,19 +650,19 @@ Can ship Phases 1-2 first (single-machine with ULIDs + hosts), then 3-5 for mult
 - [ ] Runner sends catch_up with lastReceived timestamp on connect
 - [x] Schema version mismatch returns error, blocks sync
 - [x] Runner responds to sync requests with new/updated data
-- [ ] Runner only syncs records where updated_by user's host_id = local host (prevents loops)
+- [x] Runner only syncs records where updated_by user's host_id = local host (prevents loops)
 - [x] Large sync responses paginated (has_more flag)
 - [x] Hub correctly tracks lastId/lastModified per runner (pull state)
 - [ ] Hub persists sync state (`since` timestamp per runner) to database for restart recovery
 - [ ] Runner persists sync state (`since` timestamp per originating host) for catch-up on reconnect
-- [ ] Hub maintains in-memory forward queues per connected runner
-- [ ] Hub queues shared tables (hosts, users, mail_*) for other runners on sync receive
-- [ ] Hub includes queued forwards in sync_request messages (piggybacked)
-- [ ] Hub clears forward queue after sending sync_request
-- [ ] Forward queue deleted on runner disconnect (no memory pressure)
-- [ ] Hub excludes origin host when queuing forwards (don't queue for source)
-- [ ] Runner handles forwards field in sync_request (upserts before responding)
-- [ ] Runner upserts forwarded data to local DB (dedupes across Hubs)
+- [x] Hub maintains in-memory forward queues per connected runner
+- [x] Hub queues shared tables (hosts, users, mail_*) for other runners on sync receive
+- [x] Hub includes queued forwards in sync_request messages (piggybacked)
+- [x] Hub clears forward queue after sending sync_request
+- [x] Forward queue deleted on runner disconnect (no memory pressure)
+- [x] Hub excludes origin host when queuing forwards (don't queue for source)
+- [x] Runner handles forwards field in sync_request (upserts before responding)
+- [x] Runner upserts forwarded data to local DB (dedupes across Hubs)
 - [ ] Cross-machine mail works (write locally → sync → forward → upsert)
 - [ ] Reconnecting runner catches up on missed data via catch_up
 - [ ] All runners eventually consistent for shared tables
