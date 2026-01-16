@@ -12,13 +12,16 @@ import {
   type SyncResponse,
   type SyncResponseError,
 } from "@naisys/hub-protocol";
-import { createHubForwardService } from "./hubForwardService.js";
+import { HubForwardService } from "./hubForwardService.js";
 import { HubServer } from "./hubServer.js";
 import { HubServerLog } from "./hubServerLog.js";
 import { validateSyncOwnership } from "./hubSyncValidation.js";
 
 /** Sync error types */
-type SyncErrorType = "schema_mismatch" | "internal_error" | "ownership_violation";
+type SyncErrorType =
+  | "schema_mismatch"
+  | "internal_error"
+  | "ownership_violation";
 
 /** Per-client sync state */
 interface ClientSyncState {
@@ -52,6 +55,7 @@ export function createHubSyncServer(
   hubServer: HubServer,
   dbService: DatabaseService,
   logService: HubServerLog,
+  forwardService: HubForwardService,
   config: HubSyncServerConfig
 ) {
   const {
@@ -60,9 +64,6 @@ export function createHubSyncServer(
   } = config;
 
   const schemaVersion = dbService.getSchemaVersion();
-
-  // Create forward service for managing forward queues
-  const forwardService = createHubForwardService(logService);
 
   // Per-client sync state
   const clientStates = new Map<string, ClientSyncState>();
@@ -279,7 +280,9 @@ export function createHubSyncServer(
     // IMPORTANT: SYNCABLE_TABLES order matters for foreign key dependencies
     // (e.g., hosts must be synced before users)
     for (const table of SYNCABLE_TABLES) {
-      const tableData = data.tables[table] as Record<string, unknown>[] | undefined;
+      const tableData = data.tables[table] as
+        | Record<string, unknown>[]
+        | undefined;
       if (!tableData || tableData.length === 0) continue;
 
       try {
@@ -325,7 +328,10 @@ export function createHubSyncServer(
 
     // Queue forwardable tables for other connected clients
     // The forward service filters to shared tables only
-    forwardService.enqueueForOtherClients(hostId, data.tables as Record<string, Record<string, unknown>[]>);
+    forwardService.enqueueForOtherClients(
+      hostId,
+      data.tables as Record<string, Record<string, unknown>[]>
+    );
 
     return true;
   }

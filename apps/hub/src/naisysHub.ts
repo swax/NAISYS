@@ -1,6 +1,7 @@
 import { createDatabaseService } from "@naisys/database";
 import { program } from "commander";
 import dotenv from "dotenv";
+import { createHubForwardService } from "./services/hubForwardService.js";
 import { createHubServer } from "./services/hubServer.js";
 import {
   createHubServerLog,
@@ -49,11 +50,20 @@ export async function startHub(
   // Create hub server
   const hubServer = await createHubServer(hubPort, hubAccessKey, logService);
 
+  // Create forward service for managing forward queues
+  const forwardService = createHubForwardService(logService);
+
   // Create hub sync server - it will register its event handlers on start()
-  const hubSyncServer = createHubSyncServer(hubServer, dbService, logService, {
-    maxConcurrentRequests: 3,
-    pollIntervalMs: 1000,
-  });
+  const hubSyncServer = createHubSyncServer(
+    hubServer,
+    dbService,
+    logService,
+    forwardService,
+    {
+      maxConcurrentRequests: 3,
+      pollIntervalMs: 1000,
+    }
+  );
 
   return {
     logService,
