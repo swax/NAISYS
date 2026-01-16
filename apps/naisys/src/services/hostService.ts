@@ -18,17 +18,17 @@ export async function createHostService(
     if (existingHost) {
       // Touch the host record to update updated_at
       await prisma.hosts.update({
-        where: { id: existingHost.id },
+        where: { host_id: existingHost.host_id },
         data: {}, // Empty update triggers @updatedAt
       });
-      return existingHost.id;
+      return existingHost.host_id;
     }
 
     // Create new host record
     const newHostId = ulid();
     await prisma.hosts.create({
       data: {
-        id: newHostId,
+        host_id: newHostId,
         name: localHostname,
       },
     });

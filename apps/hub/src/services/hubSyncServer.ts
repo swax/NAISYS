@@ -15,7 +15,6 @@ import {
 import { HubForwardService } from "./hubForwardService.js";
 import { HubServer } from "./hubServer.js";
 import { HubServerLog } from "./hubServerLog.js";
-import { validateSyncOwnership } from "./hubSyncValidation.js";
 
 /** Sync error types */
 type SyncErrorType =
@@ -251,27 +250,24 @@ export function createHubSyncServer(
     state: ClientSyncState,
     data: SyncResponse
   ): Promise<boolean> {
-    // Validate ownership before processing
-    const validationResult = await dbService.usingDatabase((prisma) =>
-      validateSyncOwnership(prisma, hostId, data.tables)
-    );
+    // Validate ownership - all records must have host_id matching the sender
+    for (const [tableName, records] of Object.entries(data.tables)) {
+      if (!SYNCABLE_TABLE_CONFIG[tableName]) continue;
+      for (const record of records as Record<string, unknown>[]) {
+        if (record.host_id !== hostId) {
+          const recordId = String(record.id ?? record.host_id ?? "unknown");
+          const errorMsg = `${tableName} record ${recordId} does not belong to host ${hostId}`;
+          logService.error(`[SyncServer] Ownership violation from ${hostId}: ${errorMsg}`);
 
-    if (!validationResult.valid) {
-      const errorMsg = validationResult.error ?? "Unknown ownership violation";
-      logService.error(
-        `[SyncServer] Ownership violation from ${hostId}: ${errorMsg}`
-      );
+          hubServer.sendMessage(hostId, HubEvents.SYNC_ERROR, {
+            error: "ownership_violation",
+            message: errorMsg,
+          });
 
-      // Send sync_error to the runner
-      hubServer.sendMessage(hostId, HubEvents.SYNC_ERROR, {
-        error: "ownership_violation",
-        message: errorMsg,
-      });
-
-      // Mark client as having a sync error to stop polling
-      state.syncError = { type: "ownership_violation", message: errorMsg };
-
-      return false;
+          state.syncError = { type: "ownership_violation", message: errorMsg };
+          return false;
+        }
+      }
     }
 
     let maxTimestamp: Date | null = null;
@@ -287,8 +283,11 @@ export function createHubSyncServer(
 
       try {
         // Upsert records using generic utility
+        // Hub sets its own updated_at for catch-up queries (stale joiner problem)
         await dbService.usingDatabase((prisma) =>
-          upsertRecords(prisma, table as SyncableTable, tableData)
+          upsertRecords(prisma, table as SyncableTable, tableData, {
+            overrideUpdatedAt: true,
+          })
         );
 
         logService.log(

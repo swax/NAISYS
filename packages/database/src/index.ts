@@ -22,4 +22,5 @@ export {
   SYNCABLE_TABLE_CONFIG,
   FORWARDABLE_TABLES,
   type SyncableTable,
+  type UpsertOptions,
 } from "./syncUtils.js";
