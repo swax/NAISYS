@@ -129,7 +129,8 @@ export async function createHubSyncClient(
             prisma,
             table as SyncableTable,
             sinceDate,
-            SYNC_BATCH_SIZE
+            SYNC_BATCH_SIZE,
+            localHostId
           );
 
           if (result.records.length > 0) {

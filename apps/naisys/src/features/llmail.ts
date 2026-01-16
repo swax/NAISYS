@@ -238,6 +238,7 @@ export function createLLMail(
             id: ulid(),
             subject,
             token_count: msgTokenCount,
+            updated_by: myUserId,
           },
         });
 
@@ -522,7 +523,7 @@ Consider archiving this thread and starting a new one.`;
       // Update token total
       await prisma.mail_threads.update({
         where: { id: thread.id },
-        data: { token_count: newThreadTokenTotal },
+        data: { token_count: newThreadTokenTotal, updated_by: myUserId },
       });
 
       return `Message added to thread ${threadId}`;
