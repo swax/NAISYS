@@ -13,7 +13,7 @@ import { useParams } from "react-router-dom";
 import { useAgentDataContext } from "../../contexts/AgentDataContext";
 import { useSession } from "../../contexts/SessionContext";
 import { useMailData } from "../../hooks/useMailData";
-import { MailThreadMessage, sendMail } from "../../lib/apiClient";
+import { MailMessage as MailMessageType, sendMail } from "../../lib/apiClient";
 import { MailMessage } from "./MailMessage";
 import { NewMessageModal } from "./NewMessageModal";
 
@@ -63,17 +63,17 @@ export const Mail: React.FC = () => {
   } | null>(null);
 
   // Filter mail based on sent/received status and sort by newest first
-  const getFilteredMail = (): MailThreadMessage[] => {
+  const getFilteredMail = (): MailMessageType[] => {
     // If neither button is selected, show all messages
     if (!showSent && !showReceived) {
       return allMail.sort(
-        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
       );
     }
 
     return allMail
       .filter((mail) => {
-        const messageFromCurrentAgent = mail.username === agentParam;
+        const messageFromCurrentAgent = mail.fromUsername === agentParam;
 
         if (showSent && showReceived) return true;
         if (showSent && messageFromCurrentAgent) return true;
@@ -81,18 +81,18 @@ export const Mail: React.FC = () => {
 
         return false;
       })
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   };
 
   const filteredMail = getFilteredMail();
 
   // Calculate sent and received counts
   const sentCount = allMail.filter((mail) => {
-    return mail.username === agentParam;
+    return mail.fromUsername === agentParam;
   }).length;
 
   const receivedCount = allMail.filter((mail) => {
-    return mail.username !== agentParam;
+    return mail.fromUsername !== agentParam;
   }).length;
 
   // Handle reply to a message

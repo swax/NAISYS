@@ -2,8 +2,7 @@ import { ulid } from "@naisys/database";
 import {
   SendMailRequest,
   SendMailResponse,
-  MailThreadMember,
-  MailThreadMessage,
+  MailMessage,
 } from "shared";
 import { usingNaisysDb } from "../database/naisysDatabase.js";
 import { getAgents } from "./agentService.js";
@@ -18,7 +17,7 @@ export async function getMailData(
   updatedSince?: string,
   page: number = 1,
   count: number = 50,
-): Promise<{ mail: MailThreadMessage[]; timestamp: string; total?: number }> {
+): Promise<{ mail: MailMessage[]; timestamp: string; total?: number }> {
   try {
     // First, find the agent to get their userId
     const agents = await getAgents();
@@ -38,44 +37,53 @@ export async function getMailData(
 
     // If updatedSince is provided, filter by date
     if (updatedSince) {
-      whereClause.date = { gte: updatedSince };
+      whereClause.created_at = { gte: updatedSince };
     }
 
-    // Fetch messages where the user is a thread member
+    // Fetch messages where the user is sender or recipient
     const result = await usingNaisysDb(async (prisma) => {
       const where = {
         ...whereClause,
-        mail_threads: {
-          mail_thread_members: {
-            some: {
-              user_id: userId,
+        OR: [
+          { from_user_id: userId },
+          {
+            recipients: {
+              some: {
+                user_id: userId,
+              },
             },
           },
-        },
+        ],
       };
 
       // Only get total count on initial fetch (when updatedSince is not set)
       const total = updatedSince
         ? undefined
-        : await prisma.mail_thread_messages.count({ where });
+        : await prisma.mail_messages.count({ where });
 
       // Get paginated messages
-      const dbMessages = await prisma.mail_thread_messages.findMany({
+      const dbMessages = await prisma.mail_messages.findMany({
         where,
         orderBy: { id: "desc" },
         skip: (page - 1) * count,
         take: count,
         select: {
           id: true,
-          thread_id: true,
-          user_id: true,
-          message: true,
-          date: true,
-          mail_threads: {
-            select: { subject: true },
-          },
-          users: {
+          from_user_id: true,
+          subject: true,
+          body: true,
+          created_at: true,
+          from_user: {
             select: { username: true },
+          },
+          recipients: {
+            select: {
+              user_id: true,
+              type: true,
+              user: {
+                select: { username: true },
+              },
+            },
           },
         },
       });
@@ -83,21 +91,18 @@ export async function getMailData(
       return { dbMessages, total };
     });
 
-    // Get unique thread IDs to fetch members
-    const threadIds = [...new Set(result.dbMessages.map((msg) => msg.thread_id))];
-
-    // Fetch members for all threads
-    const membersMap = await getThreadMembersMap(threadIds);
-
-    const messages = result.dbMessages.map((msg) => ({
+    const messages: MailMessage[] = result.dbMessages.map((msg) => ({
       id: msg.id,
-      threadId: msg.thread_id,
-      userId: msg.user_id,
-      username: msg.users.username,
-      subject: msg.mail_threads.subject,
-      message: msg.message,
-      date: msg.date.toISOString(),
-      members: membersMap[msg.thread_id] || [],
+      fromUserId: msg.from_user_id,
+      fromUsername: msg.from_user.username,
+      subject: msg.subject,
+      body: msg.body,
+      createdAt: msg.created_at.toISOString(),
+      recipients: msg.recipients.map((r) => ({
+        userId: r.user_id,
+        username: r.user.username,
+        type: r.type,
+      })),
     }));
 
     return {
@@ -114,52 +119,8 @@ export async function getMailData(
   }
 }
 
-async function getThreadMembersMap(
-  threadIds: string[],
-): Promise<Record<string, MailThreadMember[]>> {
-  if (threadIds.length === 0) return {};
-
-  try {
-    const dbMembers = await usingNaisysDb(async (prisma) => {
-      return await prisma.mail_thread_members.findMany({
-        where: { thread_id: { in: threadIds } },
-        select: {
-          thread_id: true,
-          user_id: true,
-          new_msg_id: true,
-          archived: true,
-          users: {
-            select: { username: true },
-          },
-        },
-      });
-    });
-
-    const membersMap: Record<string, MailThreadMember[]> = {};
-
-    dbMembers.forEach((member) => {
-      if (!membersMap[member.thread_id]) {
-        membersMap[member.thread_id] = [];
-      }
-
-      membersMap[member.thread_id].push({
-        userId: member.user_id,
-        username: member.users.username,
-        newMsgId: member.new_msg_id,
-        archived: member.archived === 1,
-      });
-    });
-
-    return membersMap;
-  } catch (error) {
-    console.error("Error fetching thread members from Naisys database:", error);
-    return {};
-  }
-}
-
 /**
- * Very similar to the llmail.ts newThread function in NAISYS
- * https://github.com/swax/NAISYS/blob/main/src/features/llmail.ts#L196
+ * Send a message using the new flat message model
  */
 export async function sendMessage(
   request: SendMailRequest,
@@ -192,36 +153,27 @@ export async function sendMessage(
     }
 
     const messageId = await usingNaisysDb(async (prisma) => {
-      // 3. Create new thread
-      const thread = await prisma.mail_threads.create({
+      const msgId = ulid();
+
+      // Create the message
+      await prisma.mail_messages.create({
         data: {
-          id: ulid(),
+          id: msgId,
+          from_user_id: fromUser.id,
           subject,
-          token_count: 0, // TODO
+          body: cleanMessage,
+          created_at: new Date(),
         },
       });
 
-      const threadId = thread.id;
-
-      // Generate message ID upfront so we can use it for new_msg_id
-      const msgId = ulid();
-
-      // Add both users to the thread
-      await prisma.mail_thread_members.createMany({
-        data: [
-          { id: ulid(), thread_id: threadId, user_id: fromUser.id, new_msg_id: "" },
-          { id: ulid(), thread_id: threadId, user_id: toUser.id, new_msg_id: msgId },
-        ],
-      });
-
-      // 4. Insert new message into mail_thread_messages table
-      await prisma.mail_thread_messages.create({
+      // Create recipient entry
+      await prisma.mail_recipients.create({
         data: {
-          id: msgId,
-          thread_id: threadId,
-          user_id: fromUser.id,
-          message: cleanMessage,
-          date: new Date().toISOString(),
+          id: ulid(),
+          message_id: msgId,
+          user_id: toUser.id,
+          type: "to",
+          created_at: new Date(),
         },
       });
 
@@ -255,9 +207,9 @@ export async function sendMessage(
 
       // Update the message with attachment info
       await usingNaisysDb(async (prisma) => {
-        await prisma.mail_thread_messages.update({
+        await prisma.mail_messages.update({
           where: { id: messageId },
-          data: { message: updatedMessage },
+          data: { body: updatedMessage },
         });
       });
     }

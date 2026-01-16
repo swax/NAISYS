@@ -2,7 +2,7 @@
 
 # Basically just use 'talk' command to ask the AI to do stuff for you
 
-username: ryan
+username: chuck
 title: Assistant
 shellModel: mock
 imageModel: dalle3-1024
@@ -14,5 +14,5 @@ spendLimitDollars: 10.00
 webEnabled: true
 mailEnabled: true
 subagentMax: 1
-subagentDirectory: subagents
+leadAgent: ryan
 wakeOnMessage: true

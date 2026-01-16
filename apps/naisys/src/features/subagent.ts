@@ -507,7 +507,7 @@ export function createSubagentService(
     }
 
     return await llmail
-      .newThread([subagent.agentName], "Your Task", taskDescription)
+      .sendMessage([subagent.agentName], "Your Task", taskDescription)
       .catch(async () => {
         await output.commentAndLog(
           `Failed to send initial task email to subagent ${subagent.agentName}`,

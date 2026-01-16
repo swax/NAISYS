@@ -1,9 +1,8 @@
-import { Prisma, PrismaClient, ulid } from "@naisys/database";
+import { DatabaseService, ulid } from "@naisys/database";
 import stringArgv from "string-argv";
 import table from "text-table";
 import { AgentConfig } from "../agent/agentConfig.js";
 import { GlobalConfig } from "../globalConfig.js";
-import { DatabaseService } from "@naisys/database";
 import { RunService } from "../services/runService.js";
 import * as utilities from "../utils/utilities.js";
 
@@ -11,22 +10,12 @@ export function createLLMail(
   { globalConfig }: GlobalConfig,
   { agentConfig }: AgentConfig,
   { usingDatabase }: DatabaseService,
-  runService: RunService,
+  runService: RunService
 ) {
   const myUserId = runService.getUserId();
 
-  /** Threading is not currently used in `simpleMode` so this doesn't matter */
-  const mailMessageTokenMax = agentConfig().mailMessageTokenMax;
-
-  const _threadTokenMax = mailMessageTokenMax ? mailMessageTokenMax * 5 : 15000; // Default 10k tokens per thread
-
-  /** The 'non-simple' version of this is a thread first mail system. Where agents can create threads, add users, and reply to threads, etc..
-   * The problem with this was the agents were too chatty with so many mail commands, wasting context replying, reading threads, etc..
-   * Simple mode only has two commands. It still requires db persistance to support offline agents. */
-  const simpleMode = !agentConfig().complexMail;
-
   async function handleCommand(
-    args: string,
+    args: string
   ): Promise<{ content: string; pauseSeconds?: number }> {
     const argv = stringArgv(args);
     let content: string;
@@ -42,31 +31,30 @@ export function createLLMail(
 
     switch (argv[0]) {
       case "help": {
-        if (simpleMode) {
-          content = `llmail <command>
-  users: Get list of users on the system
-  send "<users>" "subject" "message": Send a message.${tokenMaxNote}
-  wait <seconds>: Pause the session until a new mail message is received
-  
-* Attachments are not supported, use file paths to refence files in emails as all users are usually on the same machine`;
-        } else {
-          content = `llmail <command>
-  list: List all active threads
-  users: Get list of users on the system
-  send "<users>" "subject" "message": Send a new mail, starting a new thread
-  wait <seconds>: Pause the session until a new mail message is received
-  read <id>: Read a thread
-  reply <id> <message>: Reply to a thread
-  adduser <id> <username>: Add a user to thread with id
-  archive <ids>: Archives a comma separated list of threads`;
-        }
+        content = `llmail <command>
+  list [received|sent]               List recent messages (non-archived, * = unread)
+  read <id>                          Read a message (marks as read)
+  send "<users>" "<subject>" "<msg>" Send a message.${tokenMaxNote}
+  archive <ids>                      Archive messages (comma-separated)
+  search <terms> [-archived] [-subject] Search messages
+  users                              List all users
+  wait <seconds>                     Wait for new mail
+
+* Attachments are not supported, use file paths to reference files in emails as all users are usually on the same machine`;
         break;
       }
 
       case "list": {
-        content = await listThreads();
+        const filterArg = argv[1]?.toLowerCase();
+        if (filterArg && filterArg !== "received" && filterArg !== "sent") {
+          throw "Invalid parameter. Use 'received' or 'sent' to filter, or omit for all messages.";
+        }
+        content = await listMessages(
+          filterArg as "received" | "sent" | undefined
+        );
         break;
       }
+
       case "send": {
         // Expected: llmail send "user1,user2" "subject" "message"
         const usernames = argv[1]?.split(",").map((u) => u.trim());
@@ -77,7 +65,7 @@ export function createLLMail(
           throw "Invalid parameters. There should be a username, subject and message. All contained in quotes.";
         }
 
-        content = await newThread(usernames, subject, message);
+        content = await sendMessage(usernames, subject, message);
         break;
       }
 
@@ -89,10 +77,13 @@ export function createLLMail(
         content = `Waiting ${pauseSeconds} seconds for new mail messages...`;
         break;
       }
-      case "read": {
-        const threadId = argv[1];
 
-        content = await readThread(threadId);
+      case "read": {
+        const messageId = argv[1];
+        if (!messageId) {
+          throw "Invalid parameters. Please provide a message id.";
+        }
+        content = await readMessage(messageId);
         break;
       }
 
@@ -101,38 +92,43 @@ export function createLLMail(
         break;
       }
 
-      case "reply": {
-        const threadId = argv[1];
-        const message = argv.slice(2).join(" ");
-
-        content = await replyThread(threadId, message);
-        break;
-      }
-
-      case "adduser": {
-        const threadId = argv[1];
-        const username = argv[2];
-        content = await addUser(threadId, username);
-        break;
-      }
-
       case "archive": {
-        const threadIds = argv[1]?.split(",").map((id) => id.trim());
-
-        content = await archiveThreads(threadIds || []);
+        const messageIds = argv[1]?.split(",").map((id) => id.trim());
+        if (!messageIds || messageIds.length === 0) {
+          throw "Invalid parameters. Please provide comma-separated message ids.";
+        }
+        content = await archiveMessages(messageIds);
         break;
       }
 
-      // Debug level 'secret command'. Don't let the LLM know about this
-      /*case "reset": {
-      const hostPath = _dbFilePath.toHostPath();
-      if (fs.existsSync(hostPath)) {
-        fs.unlinkSync(hostPath);
+      case "search": {
+        // Parse flags and search term
+        const searchArgs = argv.slice(1);
+        let includeArchived = false;
+        let subjectOnly = false;
+        const terms: string[] = [];
+
+        for (const arg of searchArgs) {
+          if (arg === "-archived") {
+            includeArchived = true;
+          } else if (arg === "-subject") {
+            subjectOnly = true;
+          } else {
+            terms.push(arg);
+          }
+        }
+
+        if (terms.length === 0) {
+          throw "Invalid parameters. Please provide search terms.";
+        }
+
+        content = await searchMessages(
+          terms.join(" "),
+          includeArchived,
+          subjectOnly
+        );
+        break;
       }
-      await init();
-      content = "llmail database reset";
-      break;
-    }*/
 
       default:
         const helpResponse = await handleCommand("help");
@@ -145,326 +141,376 @@ export function createLLMail(
     return { content, pauseSeconds };
   }
 
-  interface UnreadThread {
-    thread_id: string;
-    new_msg_id: string;
+  interface UnreadMessage {
+    message_id: string;
   }
-  async function getUnreadThreads(): Promise<UnreadThread[]> {
+
+  async function getUnreadThreads(): Promise<UnreadMessage[]> {
     return await usingDatabase(async (prisma) => {
-      const updatedThreads = await prisma.mail_thread_members.findMany({
+      const messages = await prisma.mail_messages.findMany({
         where: {
-          user_id: myUserId,
-          new_msg_id: { not: "" },
-          archived: 0,
+          recipients: { some: { user_id: myUserId } },
+          AND: [
+            { status: { none: { user_id: myUserId, read_at: { not: null } } } },
+            {
+              status: {
+                none: { user_id: myUserId, archived_at: { not: null } },
+              },
+            },
+          ],
         },
-        select: {
-          thread_id: true,
-          new_msg_id: true,
-        },
+        select: { id: true },
       });
 
-      return updatedThreads;
+      return messages.map((m) => ({ message_id: m.id }));
     });
   }
 
-  async function listThreads(): Promise<string> {
+  async function listMessages(
+    filter?: "received" | "sent"
+  ): Promise<string> {
     return await usingDatabase(async (prisma) => {
-      const threads = await prisma.$queryRaw<
-        Array<{
-          id: string;
-          subject: string;
-          date: bigint;
-          token_count: number;
-          members: string | null;
-        }>
-      >(
-        Prisma.sql`SELECT t.id, t.subject, max(msg.date) as date, t.token_count,
-      (
-            SELECT GROUP_CONCAT(u.username, ', ')
-            FROM mail_thread_members tm
-            JOIN users u ON tm.user_id = u.id
-            WHERE tm.thread_id = t.id
-            GROUP BY tm.thread_id
-        ) AS members
-        FROM mail_threads t
-        JOIN mail_thread_messages msg ON t.id = msg.thread_id
-        JOIN mail_thread_members member ON t.id = member.thread_id
-        WHERE member.user_id = ${myUserId} AND member.archived = 0
-        GROUP BY t.id, t.subject
-        ORDER BY max(msg.date) DESC
-        LIMIT 10`,
-      );
+      // Build where clause based on filter
+      const ownershipCondition =
+        filter === "received"
+          ? { recipients: { some: { user_id: myUserId } } }
+          : filter === "sent"
+            ? { from_user_id: myUserId }
+            : {
+                OR: [
+                  { from_user_id: myUserId },
+                  { recipients: { some: { user_id: myUserId } } },
+                ],
+              };
 
-      try {
-        // Show threads as a table
-        return table(
-          [
-            ["ID", "Subject", "Date", "Members", "Token Count"],
-            ...threads.map((t) => [
-              t.id.slice(-4),
-              t.subject || "",
-              new Date(Number(t.date)).toLocaleString(),
-              t.members || "",
-              `${t.token_count.toString()}/${_threadTokenMax}`,
-            ]),
-          ],
-          { hsep: " | " },
-        );
-      } catch (err) {
-        return `Error displaying threads: ${err}`;
+      const messages = await prisma.mail_messages.findMany({
+        where: {
+          ...ownershipCondition,
+          status: {
+            none: { user_id: myUserId, archived_at: { not: null } },
+          },
+        },
+        include: {
+          from_user: { select: { username: true } },
+          recipients: {
+            include: { user: { select: { username: true } } },
+          },
+          status: { where: { user_id: myUserId }, select: { read_at: true } },
+        },
+        orderBy: { created_at: "desc" },
+        take: 20,
+      });
+
+      if (messages.length === 0) {
+        return "No messages found.";
       }
+
+      // Determine header and user column based on filter
+      const userHeader = filter === "sent" ? "To" : "From";
+
+      return table(
+        [
+          ["", "ID", userHeader, "Subject", "Date"],
+          ...messages.map((m) => {
+            const status = m.status[0];
+            const isUnread = m.from_user_id !== myUserId && !status?.read_at;
+
+            // Show recipients for sent, sender for received/all
+            const userColumn =
+              filter === "sent"
+                ? m.recipients.map((r) => r.user.username).join(", ")
+                : m.from_user.username;
+
+            return [
+              isUnread ? "*" : "",
+              m.id.slice(-4),
+              userColumn,
+              m.subject.length > 40
+                ? m.subject.slice(0, 37) + "..."
+                : m.subject,
+              new Date(m.created_at).toLocaleString(),
+            ];
+          }),
+        ],
+        { hsep: " | " }
+      );
     });
   }
 
-  async function newThread(
+  async function sendMessage(
     usernames: string[],
     subject: string,
-    message: string,
+    message: string
   ): Promise<string> {
-    // Ensure user itself is in the list
-    if (!usernames.includes(agentConfig().username)) {
-      usernames.push(agentConfig().username);
-    }
-
     message = message.replace(/\\n/g, "\n");
 
-    const msgTokenCount = validateMsgTokenCount(message);
+    validateMsgTokenCount(message);
 
     return await usingDatabase(async (prisma) => {
       return await prisma.$transaction(async (tx) => {
-        // Create thread
-        const thread = await tx.mail_threads.create({
-          data: {
-            id: ulid(),
-            subject,
-            token_count: msgTokenCount,
-            updated_by: myUserId,
-          },
+        // Validate all recipient usernames
+        const recipients = await tx.users.findMany({
+          where: { username: { in: usernames } },
+          select: { id: true, username: true },
         });
 
-        // Generate message ID upfront so we can use it for new_msg_id
-        const messageId = ulid();
+        const foundUsernames = recipients.map((r) => r.username);
+        const missingUsernames = usernames.filter(
+          (u) => !foundUsernames.includes(u)
+        );
 
-        // Add users
-        for (const username of usernames) {
-          const user = await tx.users.findUnique({
-            where: { username },
-          });
-
-          if (user) {
-            await tx.mail_thread_members.create({
-              data: {
-                id: ulid(),
-                thread_id: thread.id,
-                user_id: user.id,
-                // Empty string means "read", message ID means "unread starting from this message"
-                new_msg_id: user.id === myUserId ? "" : messageId,
-                updated_by: myUserId,
-              },
-            });
-          } else {
-            throw `Error: User ${username} not found`;
-          }
+        if (missingUsernames.length > 0) {
+          throw `Error: Users not found: ${missingUsernames.join(", ")}`;
         }
 
-        // Add message
-        await tx.mail_thread_messages.create({
+        // Create message
+        const messageId = ulid();
+        await tx.mail_messages.create({
           data: {
             id: messageId,
-            thread_id: thread.id,
-            user_id: myUserId,
-            message,
-            date: new Date().toISOString(),
+            from_user_id: myUserId,
+            subject,
+            body: message,
+            created_at: new Date(),
           },
         });
 
-        // Set latest_mail_id for users/members of the thread
-        // Get user IDs for the usernames
-        const threadUsers = await tx.users.findMany({
-          where: {
-            username: { in: usernames },
-          },
-          select: {
-            id: true,
-          },
-        });
+        // Create recipient entries
+        for (const recipient of recipients) {
+          await tx.mail_recipients.create({
+            data: {
+              id: ulid(),
+              message_id: messageId,
+              user_id: recipient.id,
+              type: "to",
+              created_at: new Date(),
+            },
+          });
+        }
 
-        // Update user_notifications for all thread members
+        // Update user_notifications.latest_mail_id for recipients
         await tx.user_notifications.updateMany({
           where: {
-            user_id: { in: threadUsers.map((u) => u.id) },
+            user_id: { in: recipients.map((r) => r.id) },
           },
           data: {
-            latest_mail_id: thread.id,
-            updated_at: new Date().toISOString(),
+            latest_mail_id: messageId,
+            updated_at: new Date(),
           },
         });
 
-        return simpleMode ? "Mail sent" : `Thread created with id ${thread.id}`;
+        return "Mail sent";
       });
     });
   }
 
-  async function readThread(
-    threadId: string,
-    newMsgId?: string,
-    /** For checking new messages and getting a token count, while not showing the user */
-    peek?: boolean,
+  async function readMessage(messageId: string): Promise<string> {
+    return await usingDatabase(async (prisma) => {
+      // Find the message (support short IDs)
+      const messages = await prisma.mail_messages.findMany({
+        where: { id: { endsWith: messageId } },
+        include: {
+          from_user: {
+            select: { username: true, title: true },
+          },
+          recipients: {
+            include: {
+              user: {
+                select: { username: true },
+              },
+            },
+          },
+        },
+      });
+
+      if (messages.length === 0) {
+        throw `Error: Message ${messageId} not found`;
+      }
+
+      if (messages.length > 1) {
+        throw `Error: Multiple messages match '${messageId}'. Please use more characters.`;
+      }
+
+      const message = messages[0];
+      const toUsers = message.recipients.map((r) => r.user.username).join(", ");
+
+      // Mark as read - upsert mail_status
+      const existingStatus = await prisma.mail_status.findUnique({
+        where: {
+          message_id_user_id: {
+            message_id: message.id,
+            user_id: myUserId,
+          },
+        },
+      });
+
+      if (!existingStatus) {
+        await prisma.mail_status.create({
+          data: {
+            id: ulid(),
+            message_id: message.id,
+            user_id: myUserId,
+            read_at: new Date(),
+            created_at: new Date(),
+          },
+        });
+      } else if (!existingStatus.read_at) {
+        await prisma.mail_status.update({
+          where: { id: existingStatus.id },
+          data: { read_at: new Date() },
+        });
+      }
+
+      return (
+        `Subject: ${message.subject}\n` +
+        `From: ${message.from_user.username}\n` +
+        `Title: ${message.from_user.title}\n` +
+        `To: ${toUsers}\n` +
+        `Date: ${new Date(message.created_at).toLocaleString()}\n` +
+        `Message:\n` +
+        `${message.body}`
+      );
+    });
+  }
+
+  async function archiveMessages(messageIds: string[]): Promise<string> {
+    return await usingDatabase(async (prisma) => {
+      for (const shortId of messageIds) {
+        // Find the message (support short IDs)
+        const messages = await prisma.mail_messages.findMany({
+          where: { id: { endsWith: shortId } },
+        });
+
+        if (messages.length === 0) {
+          throw `Error: Message ${shortId} not found`;
+        }
+
+        if (messages.length > 1) {
+          throw `Error: Multiple messages match '${shortId}'. Please use more characters.`;
+        }
+
+        const message = messages[0];
+
+        // Upsert mail_status with archived_at
+        const existingStatus = await prisma.mail_status.findUnique({
+          where: {
+            message_id_user_id: {
+              message_id: message.id,
+              user_id: myUserId,
+            },
+          },
+        });
+
+        if (!existingStatus) {
+          await prisma.mail_status.create({
+            data: {
+              id: ulid(),
+              message_id: message.id,
+              user_id: myUserId,
+              archived_at: new Date(),
+              created_at: new Date(),
+            },
+          });
+        } else {
+          await prisma.mail_status.update({
+            where: { id: existingStatus.id },
+            data: { archived_at: new Date() },
+          });
+        }
+      }
+
+      return `Messages ${messageIds.join(",")} archived`;
+    });
+  }
+
+  async function searchMessages(
+    searchTerm: string,
+    includeArchived: boolean,
+    subjectOnly: boolean
   ): Promise<string> {
     return await usingDatabase(async (prisma) => {
-      const thread = await getThread(prisma, threadId);
+      // Build search condition
+      const searchCondition = subjectOnly
+        ? { subject: { contains: searchTerm } }
+        : {
+            OR: [
+              { subject: { contains: searchTerm } },
+              { body: { contains: searchTerm } },
+            ],
+          };
 
-      const threadMembers = await prisma.mail_thread_members.findMany({
-        where: { thread_id: threadId },
-        select: {
-          users: {
-            select: {
-              id: true,
-              username: true,
-            },
-          },
-        },
-      });
-      // Flatten the nested user object
-      const flattenedMembers = threadMembers.map((tm) => tm.users);
+      // Build archive condition
+      const archiveCondition = includeArchived
+        ? {}
+        : {
+            status: { none: { user_id: myUserId, archived_at: { not: null } } },
+          };
 
-      const messages = await prisma.mail_thread_messages.findMany({
+      const messages = await prisma.mail_messages.findMany({
         where: {
-          thread_id: threadId,
-          ...(newMsgId ? { id: { gte: newMsgId } } : {}),
+          OR: [
+            { from_user_id: myUserId },
+            { recipients: { some: { user_id: myUserId } } },
+          ],
+          ...searchCondition,
+          ...archiveCondition,
         },
         include: {
-          users: {
-            select: {
-              username: true,
-              title: true,
-            },
-          },
+          from_user: { select: { username: true } },
         },
-        orderBy: {
-          date: "asc",
-        },
+        orderBy: { created_at: "desc" },
+        take: 50,
       });
 
-      // Flatten the nested user object for messages
-      const flattenedMessages = messages.map((m) => ({
-        username: m.users.username,
-        title: m.users.title,
-        date: m.date,
-        message: m.message,
-      }));
-
-      let threadMessages = "";
-
-      // If simple mode just show subject/from/to
-      // Buildings strings with \n here because otherwise this code is super hard to read
-      if (simpleMode) {
-        for (const message of flattenedMessages) {
-          const toMembers = flattenedMembers
-            .filter((m) => m.username !== message.username)
-            .map((m) => m.username)
-            .join(", ");
-
-          threadMessages +=
-            `Subject: ${thread.subject}\n` +
-            `From: ${message.username}\n` +
-            `Title: ${message.title}\n` +
-            `To: ${toMembers}\n` +
-            `Date: ${new Date(message.date).toLocaleString()}\n` +
-            `Message:\n` +
-            `${message.message}\n`;
-        }
-      }
-      // Else threaded version
-      else {
-        const toMembers = flattenedMembers.map((m) => m.username).join(", ");
-        threadMessages =
-          `Thread ${thread.id}: ${thread.subject}\n` +
-          `Members: ${toMembers}\n`;
-
-        for (const message of flattenedMessages) {
-          threadMessages +=
-            `\n` +
-            `From: ${message.username}\n` +
-            `Date: ${new Date(message.date).toLocaleString()}\n` +
-            `Message:\n` +
-            `${message.message}\n`;
-        }
-
-        threadMessages += `\nUse 'llmail reply ${threadId}' to reply.`;
+      if (messages.length === 0) {
+        return "No messages found matching search criteria.";
       }
 
-      if (!peek) {
-        await markAsRead(threadId);
-      }
-
-      return threadMessages;
-    });
-  }
-
-  async function markAsRead(threadId: string) {
-    await usingDatabase(async (prisma) => {
-      await prisma.mail_thread_members.updateMany({
-        where: {
-          thread_id: threadId,
-          user_id: myUserId,
-        },
-        data: {
-          new_msg_id: "",
-        },
-      });
+      return table(
+        [
+          ["ID", "Subject", "From", "Date"],
+          ...messages.map((m) => [
+            m.id.slice(-4),
+            m.subject.length > 40 ? m.subject.slice(0, 37) + "..." : m.subject,
+            m.from_user.username,
+            new Date(m.created_at).toLocaleString(),
+          ]),
+        ],
+        { hsep: " | " }
+      );
     });
   }
 
   async function listUsers() {
     return await usingDatabase(async (prisma) => {
-      let userList = await prisma.users.findMany({
+      const userList = await prisma.users.findMany({
         select: {
           username: true,
           title: true,
           lead_username: true,
-          host: {
-            select: {
-              name: true,
-            },
-          },
-          run_sessions: {
-            select: {
-              last_active: true,
-            },
-            orderBy: {
-              last_active: "desc",
-            },
-            take: 1,
-          },
+          host: { select: { name: true } },
+          user_notifications: { select: { last_active: true } },
         },
-      });
-
-      const enrichedUserList = userList.map((u) => {
-        const lastActive = u.run_sessions.at(0)?.last_active;
-        return {
-          username: u.username,
-          title: u.title,
-          lead_username: u.lead_username,
-          hostname: u.host?.name,
-          active: lastActive
-            ? new Date(lastActive).getTime() > Date.now() - 5 * 1000 // 5 seconds
-            : false,
-        };
       });
 
       return table(
         [
           ["Username", "Title", "Lead", "Host", "Status"],
-          ...enrichedUserList.map((ul) => [
-            ul.username,
-            ul.title,
-            ul.lead_username || "",
-            ul.hostname || "",
-            ul.active ? "Online" : "Offline",
-          ]),
+          ...userList.map((u) => {
+            const lastActive = u.user_notifications?.last_active;
+            const isActive = lastActive
+              ? new Date(lastActive).getTime() > Date.now() - 5 * 1000
+              : false;
+            return [
+              u.username,
+              u.title,
+              u.lead_username || "",
+              u.host?.name || "",
+              isActive ? "Online" : "Offline",
+            ];
+          }),
         ],
-        { hsep: " | " },
+        { hsep: " | " }
       );
     });
   }
@@ -477,136 +523,6 @@ export function createLLMail(
 
       return usersList.map((ul) => ul.username);
     });
-  }
-
-  async function replyThread(threadId: string, message: string) {
-    message = message.replace(/\\n/g, "\n");
-
-    // Validate message does not exceed token limit
-    const msgTokenCount = validateMsgTokenCount(message);
-
-    return await usingDatabase(async (prisma) => {
-      const thread = await getThread(prisma, threadId);
-
-      const newThreadTokenTotal = thread.token_count + msgTokenCount;
-
-      if (_threadTokenMax && newThreadTokenTotal > _threadTokenMax) {
-        throw `Error: Reply is ${msgTokenCount} tokens and thread is ${thread.token_count} tokens.
-Reply would cause thread to exceed total thread token limit of ${_threadTokenMax} tokens.
-Consider archiving this thread and starting a new one.`;
-      }
-
-      const messageId = ulid();
-
-      const insertedMessage = await prisma.mail_thread_messages.create({
-        data: {
-          id: messageId,
-          thread_id: thread.id,
-          user_id: myUserId,
-          message,
-          date: new Date().toISOString(),
-        },
-      });
-
-      // Mark thread has new message only if it hasnt already been marked (new_msg_id = '' means read)
-      await prisma.mail_thread_members.updateMany({
-        where: {
-          new_msg_id: "",
-          thread_id: thread.id,
-          user_id: { not: myUserId },
-        },
-        data: {
-          new_msg_id: insertedMessage.id,
-          archived: 0,
-        },
-      });
-
-      // Update token total
-      await prisma.mail_threads.update({
-        where: { id: thread.id },
-        data: { token_count: newThreadTokenTotal, updated_by: myUserId },
-      });
-
-      return `Message added to thread ${threadId}`;
-    });
-  }
-
-  async function addUser(threadId: string, username: string) {
-    return await usingDatabase(async (prisma) => {
-      const thread = await getThread(prisma, threadId);
-      const user = await getUser(prisma, username);
-
-      // Find the first message in the thread so new user sees all messages
-      const firstMessage = await prisma.mail_thread_messages.findFirst({
-        where: { thread_id: thread.id },
-        orderBy: { id: "asc" },
-        select: { id: true },
-      });
-
-      await prisma.mail_thread_members.create({
-        data: {
-          id: ulid(),
-          thread_id: thread.id,
-          user_id: user.id,
-          // Set to first message ID so user sees all messages, or empty if no messages
-          new_msg_id: firstMessage?.id ?? "",
-          updated_by: myUserId,
-        },
-      });
-
-      return `User ${username} added to thread ${threadId}`;
-    });
-  }
-
-  async function archiveThreads(threadIds: string[]) {
-    return await usingDatabase(async (prisma) => {
-      // Resolve short IDs to full IDs
-      const fullIds: string[] = [];
-      for (const shortId of threadIds) {
-        const thread = await getThread(prisma, shortId);
-        fullIds.push(thread.id);
-      }
-
-      await prisma.mail_thread_members.updateMany({
-        where: {
-          thread_id: { in: fullIds },
-          user_id: myUserId,
-        },
-        data: {
-          archived: 1,
-        },
-      });
-
-      return `Threads ${threadIds.join(",")} archived`;
-    });
-  }
-
-  async function getThread(prisma: PrismaClient, threadId: string) {
-    const threads = await prisma.mail_threads.findMany({
-      where: { id: { endsWith: threadId } },
-    });
-
-    if (threads.length === 0) {
-      throw `Error: Thread ${threadId} not found`;
-    }
-
-    if (threads.length > 1) {
-      throw `Error: Multiple threads match '${threadId}'. Please use more characters.`;
-    }
-
-    return threads[0];
-  }
-
-  async function getUser(prisma: PrismaClient, username: string) {
-    const user = await prisma.users.findUnique({
-      where: { username },
-    });
-
-    if (!user) {
-      throw `Error: User ${username} not found`;
-    }
-
-    return user;
   }
 
   function validateMsgTokenCount(message: string) {
@@ -629,12 +545,10 @@ Consider archiving this thread and starting a new one.`;
   }
 
   return {
-    simpleMode,
     handleCommand,
     getUnreadThreads,
-    newThread,
-    readThread,
-    markAsRead,
+    sendMessage,
+    readMessage,
     getAllUserNames,
     hasMultipleUsers,
   };

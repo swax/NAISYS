@@ -13,12 +13,12 @@ import {
 } from "@tabler/icons-react";
 import React, { useState } from "react";
 import { useSession } from "../../contexts/SessionContext";
-import { MailThreadMessage } from "../../lib/apiClient";
+import { MailMessage as MailMessageType } from "../../lib/apiClient";
 
 interface MailMessageProps {
-  message: MailThreadMessage;
+  message: MailMessageType;
   currentAgent?: string;
-  agents: any[];
+  agents: { name: string; title?: string }[];
   onReply?: (recipient: string, subject: string, body: string) => void;
 }
 
@@ -30,18 +30,16 @@ export const MailMessage: React.FC<MailMessageProps> = ({
 }) => {
   const { isAuthenticated } = useSession();
   const [isExpanded, setIsExpanded] = useState(false);
-  const isFromCurrentAgent = currentAgent && message.username === currentAgent;
-  const membersExcludingSender = message.members.filter(
-    (member) => member.username !== message.username,
-  );
+  const isFromCurrentAgent = currentAgent && message.fromUsername === currentAgent;
+  const recipientUsernames = message.recipients.map((r) => r.username);
 
-  const messageWithSubject = `${message.subject} - ${message.message}`;
+  const messageWithSubject = `${message.subject} - ${message.body}`;
   const hasMoreContent =
     messageWithSubject.includes("\n") || messageWithSubject.length > 100;
 
   const fromToUsernames = isFromCurrentAgent
-    ? membersExcludingSender.map((m) => m.username) || ["Unknown"]
-    : [message.username];
+    ? recipientUsernames.length > 0 ? recipientUsernames : ["Unknown"]
+    : [message.fromUsername];
 
   return (
     <Card
@@ -107,12 +105,12 @@ export const MailMessage: React.FC<MailMessageProps> = ({
                   disabled={!isAuthenticated}
                   onClick={(e) => {
                     e.stopPropagation();
-                    const quotedBody = message.message
+                    const quotedBody = message.body
                       .split("\n")
                       .map((line) => `> ${line}`)
                       .join("\n");
                     onReply(
-                      message.username,
+                      message.fromUsername,
                       `RE: ${message.subject}`,
                       `\n\n${quotedBody}`,
                     );
@@ -125,11 +123,11 @@ export const MailMessage: React.FC<MailMessageProps> = ({
             </Group>
           </Flex>
           <Text size="xs" c="dimmed" style={{ flexShrink: 0 }}>
-            {new Date(message.date).toLocaleDateString("en-US", {
+            {new Date(message.createdAt).toLocaleDateString("en-US", {
               month: "short",
               day: "numeric",
             })}{" "}
-            {new Date(message.date).toLocaleTimeString("en-US", {
+            {new Date(message.createdAt).toLocaleTimeString("en-US", {
               hour: "numeric",
               minute: "2-digit",
               hour12: true,
@@ -149,8 +147,8 @@ export const MailMessage: React.FC<MailMessageProps> = ({
           </Text>{" "}
           -{" "}
           <Text component="span" c={"dimmed"} size="sm">
-            {isExpanded ? message.message : message.message.split("\n")[0]}
-            {message.message.split("\n").length > 1 && !isExpanded && "🔽"}
+            {isExpanded ? message.body : message.body.split("\n")[0]}
+            {message.body.split("\n").length > 1 && !isExpanded && "🔽"}
           </Text>
         </Text>
       </Stack>

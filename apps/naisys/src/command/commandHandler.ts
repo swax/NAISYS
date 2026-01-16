@@ -206,7 +206,7 @@ export function createCommandHandler(
             await output.commentAndLog(
               "Sub agent has completed the task. Notifying lead agent and exiting process.",
             );
-            await llmail.newThread([leadAgent], "Task Completed", taskResult);
+            await llmail.sendMessage([leadAgent], "Task Completed", taskResult);
           } else {
             await output.commentAndLog("Task completed. Exiting process.");
           }

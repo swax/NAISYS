@@ -47,46 +47,46 @@ model costs {
   @@index([user_id, run_id, session_id, source, model], map: "idx_costs_aggregation_key")
 }
 
-model mail_thread_members {
-  id           String       @id // ULID
-  thread_id    String
-  user_id      String
-  new_msg_id   String       @default("")
-  archived     Int          @default(0)
-  updated_by   String?
-  updated_at   DateTime     @updatedAt
-  users        users        @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  updated_user users?       @relation("mail_thread_members_updated_by", fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  mail_threads mail_threads @relation(fields: [thread_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+model mail_messages {
+  id           String            @id // ULID
+  from_user_id String
+  subject      String
+  body         String
+  created_at   DateTime          @default(now())
+  from_user    users             @relation("mail_messages_from_user", fields: [from_user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  recipients   mail_recipients[]
+  status       mail_status[]
 
-  @@unique([thread_id, user_id], map: "unq_mail_thread_members_thread_id_user_id")
-  @@index([thread_id], map: "idx_mail_thread_members_thread_id")
+  @@index([id(sort: Desc)], map: "idx_mail_messages_id_desc")
+  @@index([from_user_id], map: "idx_mail_messages_from_user_id")
 }
 
-model mail_thread_messages {
-  id           String       @id // ULID
-  thread_id    String
-  user_id      String
-  message      String
-  date         DateTime
-  users        users        @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  mail_threads mail_threads @relation(fields: [thread_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+model mail_recipients {
+  id         String        @id // ULID
+  message_id String
+  user_id    String
+  type       String // "to", "cc", "bcc"
+  created_at DateTime      @default(now())
+  message    mail_messages @relation(fields: [message_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  user       users         @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
-  @@index([thread_id], map: "idx_mail_thread_messages_thread_id")
-  @@index([id(sort: Desc)], map: "idx_mail_thread_messages_id_desc")
+  @@index([message_id], map: "idx_mail_recipients_message_id")
+  @@index([user_id], map: "idx_mail_recipients_user_id")
 }
 
-model mail_threads {
-  id                   String                 @id // ULID
-  subject              String
-  token_count          Int                    @default(0)
-  updated_by           String?
-  updated_at           DateTime               @updatedAt
-  updated_user         users?                 @relation("mail_threads_updated_by", fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  mail_thread_members  mail_thread_members[]
-  mail_thread_messages mail_thread_messages[]
+model mail_status {
+  id          String        @id // ULID
+  message_id  String
+  user_id     String
+  read_at     DateTime?
+  archived_at DateTime?
+  created_at  DateTime      @default(now())
+  updated_at  DateTime      @updatedAt
+  message     mail_messages @relation(fields: [message_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  user        users         @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
-  @@index([id(sort: Desc)], map: "idx_mail_threads_id_desc")
+  @@unique([message_id, user_id], map: "unq_mail_status_message_user")
+  @@index([user_id], map: "idx_mail_status_user_id")
 }
 
 model users {
@@ -99,10 +99,9 @@ model users {
   host_id                      String?
   updated_at                   DateTime               @updatedAt
   host                         hosts?                 @relation(fields: [host_id], references: [id])
-  mail_thread_members          mail_thread_members[]
-  mail_thread_members_updated  mail_thread_members[]  @relation("mail_thread_members_updated_by")
-  mail_thread_messages         mail_thread_messages[]
-  mail_threads_updated         mail_threads[]         @relation("mail_threads_updated_by")
+  mail_messages_sent           mail_messages[]        @relation("mail_messages_from_user")
+  mail_recipients              mail_recipients[]
+  mail_status                  mail_status[]
   run_sessions                 run_session[]
   context_logs                 context_log[]          @relation("context_log_user")
   costs                        costs[]                @relation("costs_user")

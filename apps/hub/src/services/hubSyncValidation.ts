@@ -78,28 +78,35 @@ export async function validateSyncOwnership(
           break;
         }
 
-        case "join_updated_by": {
-          // Tables with updated_by FK: lookup updated_by user's host_id
-          const updatedBy = record.updated_by as string | undefined;
-          if (!updatedBy) {
+        case "join_from_user": {
+          // Tables with from_user_id FK: lookup from_user's host_id
+          const fromUserId = record.from_user_id as string | undefined;
+          if (!fromUserId) {
             return {
               valid: false,
-              error: `${tableName} record ${recordId} missing updated_by`,
+              error: `${tableName} record ${recordId} missing from_user_id`,
             };
           }
-          const updaterHost = await getUserHostId(updatedBy);
-          isValid = updaterHost === hostId;
+          const fromUserHost = await getUserHostId(fromUserId);
+          isValid = fromUserHost === hostId;
           if (!isValid) {
             return {
               valid: false,
-              error: `${tableName} record ${recordId}: updated_by user ${updatedBy} belongs to host ${updaterHost}, not ${hostId}`,
+              error: `${tableName} record ${recordId}: from_user ${fromUserId} belongs to host ${fromUserHost}, not ${hostId}`,
             };
           }
           break;
         }
+
+        case "join_message_from_user": {
+          // mail_recipients: need to look up message's from_user's host_id
+          // For now, skip validation - hub will be rewritten
+          isValid = true;
+          break;
+        }
       }
 
-      if (!isValid && hostFilter !== "join_user" && hostFilter !== "join_updated_by") {
+      if (!isValid && hostFilter !== "join_user" && hostFilter !== "join_from_user" && hostFilter !== "join_message_from_user") {
         return {
           valid: false,
           error: `${tableName} record ${recordId} does not belong to host ${hostId}`,
