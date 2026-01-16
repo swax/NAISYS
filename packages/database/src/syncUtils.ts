@@ -52,7 +52,7 @@ export const SYNCABLE_TABLE_CONFIG: Record<string, SyncableTableConfig> = {
   users: { primaryKey: ["id"], hostFilter: "direct_host_id" },
   user_notifications: { primaryKey: ["user_id"], hostFilter: "join_user" },
   mail_threads: { primaryKey: ["id"], hostFilter: "join_updated_by" },
-  mail_thread_members: { primaryKey: ["id"], hostFilter: "join_user" },
+  mail_thread_members: { primaryKey: ["id"], hostFilter: "join_updated_by" },
   mail_thread_messages: {
     primaryKey: ["id"],
     appendOnly: true,
@@ -71,6 +71,15 @@ export const SYNCABLE_TABLE_CONFIG: Record<string, SyncableTableConfig> = {
  * Order matters for foreign key dependencies (e.g., hosts before users).
  */
 export const SYNCABLE_TABLES = Object.keys(SYNCABLE_TABLE_CONFIG) as SyncableTable[];
+
+/**
+ * Tables that should be forwarded to other runners.
+ * These are "shared" tables (hosts, users, mail) vs Hub-only tables (logs, costs, sessions).
+ * A table is forwardable if it has host filtering (belongs to a specific host).
+ */
+export const FORWARDABLE_TABLES = SYNCABLE_TABLES.filter(
+  (table) => SYNCABLE_TABLE_CONFIG[table].hostFilter !== "none"
+) as SyncableTable[];
 
 export type SyncableTable = keyof typeof SYNCABLE_TABLE_CONFIG;
 

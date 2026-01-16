@@ -12,11 +12,13 @@ import {
   type SyncResponse,
   type SyncResponseError,
 } from "@naisys/hub-protocol";
+import { createHubForwardService } from "./hubForwardService.js";
 import { HubServer } from "./hubServer.js";
 import { HubServerLog } from "./hubServerLog.js";
+import { validateSyncOwnership } from "./hubSyncValidation.js";
 
 /** Sync error types */
-type SyncErrorType = "schema_mismatch" | "internal_error";
+type SyncErrorType = "schema_mismatch" | "internal_error" | "ownership_violation";
 
 /** Per-client sync state */
 interface ClientSyncState {
@@ -58,6 +60,9 @@ export function createHubSyncServer(
   } = config;
 
   const schemaVersion = dbService.getSchemaVersion();
+
+  // Create forward service for managing forward queues
+  const forwardService = createHubForwardService(logService);
 
   // Per-client sync state
   const clientStates = new Map<string, ClientSyncState>();
@@ -139,8 +144,11 @@ export function createHubSyncServer(
     state.lastSyncTime = Date.now();
     inFlightCount++;
 
+    // Dequeue any pending forwards for this client
+    const forwards = forwardService.dequeueForClient(hostId);
+
     logService.log(
-      `[SyncServer] Sending sync_request to ${hostId} (since: ${state.since}, in-flight: ${inFlightCount})`
+      `[SyncServer] Sending sync_request to ${hostId} (since: ${state.since}, forwards: ${forwards ? "yes" : "no"}, in-flight: ${inFlightCount})`
     );
 
     const sent = hubServer.sendMessage(
@@ -149,6 +157,7 @@ export function createHubSyncServer(
       {
         schema_version: schemaVersion,
         since: state.since,
+        ...(forwards && { forwards }),
       },
       (rawResponse: unknown) => {
         // First check if it's an error response
@@ -241,6 +250,29 @@ export function createHubSyncServer(
     state: ClientSyncState,
     data: SyncResponse
   ): Promise<boolean> {
+    // Validate ownership before processing
+    const validationResult = await dbService.usingDatabase((prisma) =>
+      validateSyncOwnership(prisma, hostId, data.tables)
+    );
+
+    if (!validationResult.valid) {
+      const errorMsg = validationResult.error ?? "Unknown ownership violation";
+      logService.error(
+        `[SyncServer] Ownership violation from ${hostId}: ${errorMsg}`
+      );
+
+      // Send sync_error to the runner
+      hubServer.sendMessage(hostId, HubEvents.SYNC_ERROR, {
+        error: "ownership_violation",
+        message: errorMsg,
+      });
+
+      // Mark client as having a sync error to stop polling
+      state.syncError = { type: "ownership_violation", message: errorMsg };
+
+      return false;
+    }
+
     let maxTimestamp: Date | null = null;
 
     // Process each syncable table present in the response
@@ -291,6 +323,10 @@ export function createHubSyncServer(
       );
     }
 
+    // Queue forwardable tables for other connected clients
+    // The forward service filters to shared tables only
+    forwardService.enqueueForOtherClients(hostId, data.tables as Record<string, Record<string, unknown>[]>);
+
     return true;
   }
 
@@ -303,6 +339,10 @@ export function createHubSyncServer(
     state.lastSyncTime = 0;
     state.inFlight = false;
     state.syncError = null; // Clear any previous sync error on reconnect
+
+    // Initialize forward queue for this client
+    forwardService.initClient(hostId);
+
     logService.log(`[SyncServer] Client ${hostId} connected, ready to sync`);
   }
 
@@ -315,6 +355,10 @@ export function createHubSyncServer(
       clearInFlight(state);
     }
     clientStates.delete(hostId);
+
+    // Remove forward queue for this client (no memory pressure from disconnected clients)
+    forwardService.removeClient(hostId);
+
     logService.log(
       `[SyncServer] Client ${hostId} disconnected, state cleaned up`
     );
@@ -388,6 +432,7 @@ export function createHubSyncServer(
     // Expose for testing/debugging
     getClientState: (hostId: string) => clientStates.get(hostId),
     getInFlightCount: () => inFlightCount,
+    getForwardService: () => forwardService,
   };
 }
 

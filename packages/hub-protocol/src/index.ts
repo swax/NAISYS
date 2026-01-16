@@ -41,6 +41,8 @@ export type SyncResponseError = z.infer<typeof SyncResponseErrorSchema>;
 export const SyncRequestSchema = z.object({
   schema_version: z.number(),
   since: z.string(),
+  /** Optional forwarded data from other runners (piggybacked on sync request) */
+  forwards: z.record(z.string(), z.array(z.unknown())).optional(),
 });
 export type SyncRequest = z.infer<typeof SyncRequestSchema>;
 

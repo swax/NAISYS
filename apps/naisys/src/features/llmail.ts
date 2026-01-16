@@ -259,6 +259,7 @@ export function createLLMail(
                 user_id: user.id,
                 // Empty string means "read", message ID means "unread starting from this message"
                 new_msg_id: user.id === myUserId ? "" : messageId,
+                updated_by: myUserId,
               },
             });
           } else {
@@ -549,6 +550,7 @@ Consider archiving this thread and starting a new one.`;
           user_id: user.id,
           // Set to first message ID so user sees all messages, or empty if no messages
           new_msg_id: firstMessage?.id ?? "",
+          updated_by: myUserId,
         },
       });
 

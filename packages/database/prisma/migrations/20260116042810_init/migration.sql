@@ -38,8 +38,10 @@ CREATE TABLE "mail_thread_members" (
     "user_id" TEXT NOT NULL,
     "new_msg_id" TEXT NOT NULL DEFAULT '',
     "archived" INTEGER NOT NULL DEFAULT 0,
+    "updated_by" TEXT,
     "updated_at" DATETIME NOT NULL,
     CONSTRAINT "mail_thread_members_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION,
+    CONSTRAINT "mail_thread_members_updated_by_fkey" FOREIGN KEY ("updated_by") REFERENCES "users" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION,
     CONSTRAINT "mail_thread_members_thread_id_fkey" FOREIGN KEY ("thread_id") REFERENCES "mail_threads" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION
 );
 
@@ -59,7 +61,9 @@ CREATE TABLE "mail_threads" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "subject" TEXT NOT NULL,
     "token_count" INTEGER NOT NULL DEFAULT 0,
-    "updated_at" DATETIME NOT NULL
+    "updated_by" TEXT,
+    "updated_at" DATETIME NOT NULL,
+    CONSTRAINT "mail_threads_updated_by_fkey" FOREIGN KEY ("updated_by") REFERENCES "users" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION
 );
 
 -- CreateTable

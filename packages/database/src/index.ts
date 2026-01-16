@@ -20,5 +20,6 @@ export {
   upsertRecords,
   SYNCABLE_TABLES,
   SYNCABLE_TABLE_CONFIG,
+  FORWARDABLE_TABLES,
   type SyncableTable,
 } from "./syncUtils.js";

@@ -53,8 +53,10 @@ model mail_thread_members {
   user_id      String
   new_msg_id   String       @default("")
   archived     Int          @default(0)
+  updated_by   String?
   updated_at   DateTime     @updatedAt
   users        users        @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  updated_user users?       @relation("mail_thread_members_updated_by", fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
   mail_threads mail_threads @relation(fields: [thread_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@unique([thread_id, user_id], map: "unq_mail_thread_members_thread_id_user_id")
@@ -88,22 +90,23 @@ model mail_threads {
 }
 
 model users {
-  id                   String                 @id // ULID
-  username             String                 @unique(map: "unq_users_username")
-  title                String
-  agent_path           String                 @unique(map: "unq_users_agent_path")
-  lead_username        String?
-  config               String                 @default("{}")
-  host_id              String?
-  updated_at           DateTime               @updatedAt
-  host                 hosts?                 @relation(fields: [host_id], references: [id])
-  mail_thread_members  mail_thread_members[]
-  mail_thread_messages mail_thread_messages[]
-  mail_threads_updated mail_threads[]         @relation("mail_threads_updated_by")
-  run_sessions         run_session[]
-  context_logs         context_log[]          @relation("context_log_user")
-  costs                costs[]                @relation("costs_user")
-  user_notifications   user_notifications?
+  id                           String                 @id // ULID
+  username                     String                 @unique(map: "unq_users_username")
+  title                        String
+  agent_path                   String                 @unique(map: "unq_users_agent_path")
+  lead_username                String?
+  config                       String                 @default("{}")
+  host_id                      String?
+  updated_at                   DateTime               @updatedAt
+  host                         hosts?                 @relation(fields: [host_id], references: [id])
+  mail_thread_members          mail_thread_members[]
+  mail_thread_members_updated  mail_thread_members[]  @relation("mail_thread_members_updated_by")
+  mail_thread_messages         mail_thread_messages[]
+  mail_threads_updated         mail_threads[]         @relation("mail_threads_updated_by")
+  run_sessions                 run_session[]
+  context_logs                 context_log[]          @relation("context_log_user")
+  costs                        costs[]                @relation("costs_user")
+  user_notifications           user_notifications?
 
   @@index([host_id], map: "idx_users_host_id")
 }
