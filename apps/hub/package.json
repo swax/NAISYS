@@ -5,7 +5,11 @@
   "type": "module",
   "main": "dist/naisysHub.js",
   "exports": {
-    ".": "./dist/naisysHub.js"
+    ".": "./dist/naisysHub.js",
+    "./services/hubSyncServer": "./dist/services/hubSyncServer.js",
+    "./services/hubForwardService": "./dist/services/hubForwardService.js",
+    "./services/hubServerLog": "./dist/services/hubServerLog.js",
+    "./services/hubServer": "./dist/services/hubServer.js"
   },
   "scripts": {
     "clean": "rm -rf dist",
