@@ -4,26 +4,42 @@ import path from "path";
 import { usingNaisysDb } from "../database/naisysDatabase.js";
 
 /**
- * Update the modified date on the user_notifications table
+ * Resolve a user by username and host name.
  */
-async function updateUserNotificationModifiedDate(
+async function resolveUser(
   username: string,
-): Promise<void> {
-  await usingNaisysDb(async (prisma) => {
-    const user = await prisma.users.findUnique({
-      where: { username },
-      select: { id: true },
+  host: string,
+): Promise<{ id: string; agent_path: string; host_id: string | null }> {
+  return await usingNaisysDb(async (prisma) => {
+    const user = await prisma.users.findFirst({
+      where: {
+        username,
+        host: { name: host },
+        deleted_at: null,
+      },
+      select: { id: true, agent_path: true, host_id: true },
     });
 
     if (!user) {
-      throw new Error(`User '${username}' not found`);
+      throw new Error(`User '${username}' not found on host '${host}'`);
     }
 
+    return user;
+  });
+}
+
+/**
+ * Update the modified date on the user_notifications table
+ */
+async function updateUserNotificationModifiedDate(
+  userId: string,
+): Promise<void> {
+  await usingNaisysDb(async (prisma) => {
     // Upsert the user_notifications record to update updated_at
     await prisma.user_notifications.upsert({
-      where: { user_id: user.id },
+      where: { user_id: userId },
       create: {
-        user_id: user.id,
+        user_id: userId,
         updated_at: new Date(),
       },
       update: {
@@ -38,18 +54,9 @@ async function updateUserNotificationModifiedDate(
  */
 export async function getAgentConfig(
   username: string,
+  host: string,
 ): Promise<{ config: string; path: string }> {
-  // Look up the user in the database
-  const user = await usingNaisysDb(async (prisma) => {
-    return await prisma.users.findUnique({
-      where: { username },
-      select: { agent_path: true },
-    });
-  });
-
-  if (!user) {
-    throw new Error(`User '${username}' not found`);
-  }
+  const user = await resolveUser(username, host);
 
   // Read the agent config file
   try {
@@ -65,7 +72,10 @@ export async function getAgentConfig(
 /**
  * Create a new agent with YAML config file and database entry
  */
-export async function createAgentConfig(name: string): Promise<void> {
+export async function createAgentConfig(
+  name: string,
+  host: string,
+): Promise<void> {
   const naisysFolder = process.env.NAISYS_FOLDER;
   if (!naisysFolder) {
     throw new Error("NAISYS_FOLDER environment variable is not set");
@@ -87,10 +97,26 @@ export async function createAgentConfig(name: string): Promise<void> {
     }
   }
 
-  // Check db if username already exists
+  // Resolve host to host_id
+  const hostRecord = await usingNaisysDb(async (prisma) => {
+    return await prisma.hosts.findUnique({
+      where: { name: host },
+      select: { host_id: true },
+    });
+  });
+
+  if (!hostRecord) {
+    throw new Error(`Host '${host}' not found`);
+  }
+  const hostId = hostRecord.host_id;
+
+  // Check db if username already exists on this host
   const existingAgent = await usingNaisysDb(async (prisma) => {
-    return await prisma.users.findUnique({
-      where: { username: name },
+    return await prisma.users.findFirst({
+      where: {
+        username: name,
+        host_id: hostId,
+      },
     });
   });
 
@@ -115,19 +141,21 @@ wakeOnMessage: true
   await fs.writeFile(agentFilePath, yamlContent, "utf-8");
 
   // Add agent to the database
+  const userId = ulid();
   await usingNaisysDb(async (prisma) => {
     await prisma.users.create({
       data: {
-        id: ulid(),
+        id: userId,
         username: name,
         title: "Assistant",
         agent_path: agentFilePath,
+        host_id: hostId,
       },
     });
   });
 
   // Update user notification modified date
-  await updateUserNotificationModifiedDate(name);
+  await updateUserNotificationModifiedDate(userId);
 }
 
 /**
@@ -136,18 +164,9 @@ wakeOnMessage: true
 export async function updateAgentConfig(
   username: string,
   config: string,
+  host: string,
 ): Promise<void> {
-  // Look up the user in the database
-  const user = await usingNaisysDb(async (prisma) => {
-    return await prisma.users.findUnique({
-      where: { username },
-      select: { agent_path: true },
-    });
-  });
-
-  if (!user) {
-    throw new Error(`User '${username}' not found`);
-  }
+  const user = await resolveUser(username, host);
 
   // Write the agent config file
   try {
@@ -159,5 +178,5 @@ export async function updateAgentConfig(
   }
 
   // Update user notification modified date
-  await updateUserNotificationModifiedDate(username);
+  await updateUserNotificationModifiedDate(user.id);
 }

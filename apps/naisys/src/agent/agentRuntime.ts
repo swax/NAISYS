@@ -8,6 +8,7 @@ import { createShellCommand } from "../command/shellCommand.js";
 import { createShellWrapper } from "../command/shellWrapper.js";
 import { createGenImg } from "../features/genimg.js";
 import { createLLMail } from "../features/llmail.js";
+import { createLLMailAddress } from "../features/llmailAddress.js";
 import { createLLMynx } from "../features/llmynx.js";
 import { createSubagentService } from "../features/subagent.js";
 import { createWorkspacesFeature } from "../features/workspaces.js";
@@ -88,7 +89,8 @@ export async function createAgentRuntime(
 
   // Features
   const genimg = createGenImg(agentConfig, costTracker, output);
-  const llmail = createLLMail(globalConfig, agentConfig, dbService, runService, hostService);
+  const llmailAddress = createLLMailAddress(dbService, hostService);
+  const llmail = createLLMail(globalConfig, agentConfig, dbService, runService, hostService, llmailAddress);
   const subagentService = createSubagentService(
     agentConfig,
     llmail,

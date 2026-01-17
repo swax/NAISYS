@@ -36,7 +36,7 @@ export async function createRunService(
     userId = await usingDatabase(async (prisma) => {
       // If user is not in the db, add them
       const user = await prisma.users.findUnique({
-        where: { username: agentConfig().username },
+        where: { username_host_id: { username: agentConfig().username, host_id: localHostId } },
         select: { id: true },
       });
 

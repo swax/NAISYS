@@ -12,14 +12,15 @@ export const AddAgentDialog: React.FC<AddAgentDialogProps> = ({
   onClose,
 }) => {
   const [newAgentName, setNewAgentName] = useState("");
+  const [hostName, setHostName] = useState("");
   const [isCreating, setIsCreating] = useState(false);
 
   const handleCreateAgent = async () => {
-    if (!newAgentName.trim()) return;
+    if (!newAgentName.trim() || !hostName.trim()) return;
 
     setIsCreating(true);
     try {
-      const result = await createAgent(newAgentName.trim());
+      const result = await createAgent(newAgentName.trim(), hostName.trim());
 
       if (!result.success) {
         throw new Error(result.message || "Failed to create agent");
@@ -40,6 +41,7 @@ export const AddAgentDialog: React.FC<AddAgentDialogProps> = ({
 
   const handleClose = () => {
     setNewAgentName("");
+    setHostName("");
     onClose();
   };
 
@@ -56,8 +58,15 @@ export const AddAgentDialog: React.FC<AddAgentDialogProps> = ({
           placeholder="Enter agent name"
           value={newAgentName}
           onChange={(e) => setNewAgentName(e.currentTarget.value)}
+          disabled={isCreating}
+        />
+        <TextInput
+          label="Host"
+          placeholder="Enter host name"
+          value={hostName}
+          onChange={(e) => setHostName(e.currentTarget.value)}
           onKeyDown={(e) => {
-            if (e.key === "Enter" && newAgentName.trim()) {
+            if (e.key === "Enter" && newAgentName.trim() && hostName.trim()) {
               handleCreateAgent();
             }
           }}
@@ -70,7 +79,7 @@ export const AddAgentDialog: React.FC<AddAgentDialogProps> = ({
           <Button
             onClick={handleCreateAgent}
             loading={isCreating}
-            disabled={!newAgentName.trim()}
+            disabled={!newAgentName.trim() || !hostName.trim()}
           >
             Create
           </Button>

@@ -21,10 +21,15 @@ import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { getAgentConfig, updateAgentConfig } from "../lib/apiClient";
 import { useSession } from "../contexts/SessionContext";
+import { useAgentDataContext } from "../contexts/AgentDataContext";
 
 export const Controls: React.FC = () => {
   const { agent } = useParams<{ agent: string }>();
   const { isAuthenticated } = useSession();
+  const { agents } = useAgentDataContext();
+
+  // Find the agent to get host info
+  const agentData = agents.find((a) => a.name === agent);
   const [config, setConfig] = useState<string | null>(null);
   const [configPath, setConfigPath] = useState<string | null>(null);
   const [editedConfig, setEditedConfig] = useState<string>("");
@@ -35,14 +40,14 @@ export const Controls: React.FC = () => {
   const [saveError, setSaveError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!agent) {
+    if (!agent || !agentData) {
       setLoading(false);
       return;
     }
 
     const fetchConfig = async () => {
       try {
-        const data = await getAgentConfig(agent);
+        const data = await getAgentConfig(agent, agentData.host);
 
         if (data.success && data.config) {
           setConfig(data.config);
@@ -59,7 +64,7 @@ export const Controls: React.FC = () => {
     };
 
     fetchConfig();
-  }, [agent]);
+  }, [agent, agentData]);
 
   const handleEdit = () => {
     if (config) {
@@ -76,13 +81,13 @@ export const Controls: React.FC = () => {
   };
 
   const handleSave = async () => {
-    if (!agent) return;
+    if (!agent || !agentData) return;
 
     setSaving(true);
     setSaveError(null);
 
     try {
-      const data = await updateAgentConfig(agent, editedConfig);
+      const data = await updateAgentConfig(agent, editedConfig, agentData.host);
 
       if (data.success) {
         setConfig(editedConfig);
