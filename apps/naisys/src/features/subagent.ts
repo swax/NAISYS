@@ -157,8 +157,12 @@ export function createSubagentService(
     await usingDatabase(async (prisma) => {
       const agents = await prisma.users.findMany({
         where: {
-          lead_username: agentConfig().username,
+          OR: [
+            { lead_username: agentConfig().username },
+            { lead_username: null }, // Include agents with no lead (available to all)
+          ],
           host_id: localHostId,
+          deleted_at: null, // Only show active subagents
         },
       });
 

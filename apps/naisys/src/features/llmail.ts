@@ -251,9 +251,9 @@ export function createLLMail(
 
     return await usingDatabase(async (prisma) => {
       return await prisma.$transaction(async (tx) => {
-        // Validate all recipient usernames
+        // Validate all recipient usernames (only active users)
         const recipients = await tx.users.findMany({
-          where: { username: { in: usernames } },
+          where: { username: { in: usernames }, deleted_at: null },
           select: { id: true, username: true },
         });
 
@@ -491,6 +491,9 @@ export function createLLMail(
   async function listUsers() {
     return await usingDatabase(async (prisma) => {
       const userList = await prisma.users.findMany({
+        where: {
+          deleted_at: null, // Only show active users
+        },
         select: {
           username: true,
           title: true,
