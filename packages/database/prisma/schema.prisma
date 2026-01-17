@@ -23,10 +23,9 @@ model context_log {
   run_session run_session @relation(fields: [user_id, run_id, session_id], references: [user_id, run_id, session_id], onDelete: NoAction, onUpdate: NoAction)
   host        hosts?      @relation(fields: [host_id], references: [host_id])
 
-  @@index([id(sort: Desc)], map: "idx_context_log_id_desc")
-  @@index([user_id], map: "idx_context_log_user_id")
-  @@index([user_id, run_id, session_id], map: "idx_context_log_run_session")
-  @@index([host_id], map: "idx_context_log_host_id")
+  @@index([id(sort: Desc)], map: "idx_context_log_id_desc") // ORDER BY id DESC in runsService.getContextLog
+  @@index([user_id, run_id, session_id], map: "idx_context_log_run_session") // WHERE user_id, run_id, session_id in runsService.getContextLog
+  @@index([host_id, id], map: "idx_context_log_sync") // Append-only sync: WHERE host_id = X AND id > Y ORDER BY id
 }
 
 model costs {
@@ -48,11 +47,10 @@ model costs {
   run_session        run_session @relation(fields: [user_id, run_id, session_id], references: [user_id, run_id, session_id], onDelete: NoAction, onUpdate: NoAction)
   host               hosts?      @relation(fields: [host_id], references: [host_id])
 
-  @@index([id(sort: Desc)], map: "idx_costs_id_desc")
-  @@index([user_id], map: "idx_costs_user_id")
-  @@index([user_id, run_id, session_id], map: "idx_costs_run_session")
-  @@index([user_id, run_id, session_id, source, model], map: "idx_costs_aggregation_key")
-  @@index([host_id], map: "idx_costs_host_id")
+  @@index([id(sort: Desc)], map: "idx_costs_id_desc") // ORDER BY id DESC in costTracker.findFirst for aggregation window check
+  @@index([user_id], map: "idx_costs_user_id") // Optional WHERE user_id filter in aggregate/groupBy queries
+  @@index([user_id, run_id, session_id, source, model], map: "idx_costs_aggregation_key") // Cost aggregation lookups in costTracker
+  @@index([host_id, updated_at], map: "idx_costs_sync") // Sync: WHERE host_id = X AND updated_at > Y ORDER BY updated_at
 }
 
 model mail_messages {
@@ -68,9 +66,11 @@ model mail_messages {
   recipients   mail_recipients[]
   status       mail_status[]
 
-  @@index([id(sort: Desc)], map: "idx_mail_messages_id_desc")
-  @@index([from_user_id], map: "idx_mail_messages_from_user_id")
-  @@index([host_id], map: "idx_mail_messages_host_id")
+  @@index([id(sort: Desc)], map: "idx_mail_messages_id_desc") // ORDER BY id DESC in supervisor mailService pagination
+  @@index([from_user_id], map: "idx_mail_messages_from_user_id") // WHERE from_user_id in sent messages filter
+  @@index([created_at(sort: Desc)], map: "idx_mail_messages_created_at") // ORDER BY created_at DESC in llmail.listMessages and searchMessages
+  @@index([host_id, id], map: "idx_mail_messages_sync") // Append-only sync: WHERE host_id = X AND id > Y ORDER BY id
+  @@index([updated_at], map: "idx_mail_messages_updated_at") // Catch-up: WHERE updated_at > Y AND host_id != X ORDER BY updated_at
 }
 
 model mail_recipients {
@@ -85,9 +85,10 @@ model mail_recipients {
   user       users         @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   host       hosts?        @relation(fields: [host_id], references: [host_id])
 
-  @@index([message_id], map: "idx_mail_recipients_message_id")
-  @@index([user_id], map: "idx_mail_recipients_user_id")
-  @@index([host_id], map: "idx_mail_recipients_host_id")
+  @@index([message_id], map: "idx_mail_recipients_message_id") // JOIN from mail_messages includes
+  @@index([user_id], map: "idx_mail_recipients_user_id") // Subquery: recipients.some({ user_id }) in mail queries
+  @@index([host_id, id], map: "idx_mail_recipients_sync") // Append-only sync: WHERE host_id = X AND id > Y ORDER BY id
+  @@index([updated_at], map: "idx_mail_recipients_updated_at") // Catch-up: WHERE updated_at > Y AND host_id != X ORDER BY updated_at
 }
 
 model mail_status {
@@ -103,9 +104,10 @@ model mail_status {
   user        users         @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   host        hosts?        @relation(fields: [host_id], references: [host_id])
 
-  @@unique([message_id, user_id], map: "unq_mail_status_message_user")
-  @@index([user_id], map: "idx_mail_status_user_id")
-  @@index([host_id], map: "idx_mail_status_host_id")
+  @@unique([message_id, user_id], map: "unq_mail_status_message_user") // findUnique by message+user, one status per user per message
+  @@index([user_id], map: "idx_mail_status_user_id") // Subquery: status.none({ user_id, read_at/archived_at }) in mail queries
+  @@index([host_id, updated_at], map: "idx_mail_status_sync") // Sync: WHERE host_id = X AND updated_at > Y ORDER BY updated_at
+  @@index([updated_at], map: "idx_mail_status_updated_at") // Catch-up: WHERE updated_at > Y AND host_id != X ORDER BY updated_at
 }
 
 model users {
@@ -118,6 +120,7 @@ model users {
   host_id            String?
   created_at         DateTime            @default(now())
   updated_at         DateTime            @updatedAt
+  deleted_at         DateTime?           // Soft delete for deactivated agents
   host               hosts?              @relation(fields: [host_id], references: [host_id])
   mail_messages_sent mail_messages[]     @relation("mail_messages_from_user")
   mail_recipients    mail_recipients[]
@@ -127,7 +130,9 @@ model users {
   costs              costs[]             @relation("costs_user")
   user_notifications user_notifications?
 
-  @@index([host_id], map: "idx_users_host_id")
+  @@index([host_id, updated_at], map: "idx_users_sync") // Sync: WHERE host_id = X AND updated_at > Y ORDER BY updated_at
+  @@index([updated_at], map: "idx_users_updated_at") // Catch-up: WHERE updated_at > Y AND host_id != X ORDER BY updated_at
+  @@index([lead_username, host_id], map: "idx_users_lead_lookup") // WHERE lead_username, host_id in subagent.getSubAgents
 }
 
 model user_notifications {
@@ -143,7 +148,8 @@ model user_notifications {
   users          users     @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   host           hosts?    @relation(fields: [host_id], references: [host_id])
 
-  @@index([host_id], map: "idx_user_notifications_host_id")
+  @@index([host_id, updated_at], map: "idx_user_notifications_sync") // Sync: WHERE host_id = X AND updated_at > Y ORDER BY updated_at
+  @@index([updated_at], map: "idx_user_notifications_updated_at") // Catch-up: WHERE updated_at > Y AND host_id != X ORDER BY updated_at
 }
 
 model run_session {
@@ -164,9 +170,8 @@ model run_session {
   costs         costs[]
 
   @@id([user_id, run_id, session_id])
-  @@index([user_id], map: "idx_run_session_user_id")
-  @@index([last_active], map: "idx_run_session_last_active")
-  @@index([host_id], map: "idx_run_session_host_id")
+  @@index([user_id, last_active(sort: Desc)], map: "idx_run_session_user_active") // WHERE user_id ORDER BY last_active DESC in supervisor runsService pagination
+  @@index([host_id, updated_at], map: "idx_run_session_sync") // Sync: WHERE host_id = X AND updated_at > Y ORDER BY updated_at
 }
 
 model schema_version {
@@ -188,6 +193,8 @@ model hosts {
   run_sessions       run_session[]
   costs              costs[]
   context_logs       context_log[]
+
+  @@index([updated_at], map: "idx_hosts_updated_at") // Catch-up: WHERE updated_at > Y AND host_id != X ORDER BY updated_at
 }
 
 model hub_sync_state {

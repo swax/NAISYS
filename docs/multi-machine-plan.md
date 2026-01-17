@@ -1,5 +1,7 @@
 # NAISYS Multi-Machine Architecture Plan
 
+**Status: Complete** - All phases implemented. This document serves as architecture reference.
+
 ## Overview
 
 Transform NAISYS from a single-machine agent runner to a distributed system with three components:
@@ -623,12 +625,12 @@ DATABASE_URL=file:../naisys/naisys.db      # Points to Runner DB (single-runner)
 
 ## Migration Path
 
-1. **Phase 1 (ULID + updated_at)** - Breaking change, requires DB migration
-2. **Phase 2 (Hosts)** - Add new hosts table and associate with users
-3. **Phase 3 (Hub Sync)** - New Hub package + runner sync client
-4. **Phase 4 (Forwarding)** - Requires Phase 3
+All phases completed:
 
-Can ship Phases 1-2 first (single-machine with ULIDs + hosts), then 3-4 for multi-machine.
+1. **Phase 1 (ULID + updated_at)** - ✅ ULID IDs, host_id, updated_at on all syncable tables
+2. **Phase 2 (Hosts)** - ✅ Hosts table, agent ownership, soft deletes
+3. **Phase 3 (Hub Sync)** - ✅ WebSocket sync with catch-up and state persistence
+4. **Phase 4 (Forwarding)** - ✅ Bidirectional sync with in-memory forward queues
 
 ---
 
@@ -646,8 +648,8 @@ Can ship Phases 1-2 first (single-machine with ULIDs + hosts), then 3-4 for mult
 - [x] Runner creates its own host record on startup
 - [x] Runner only loads agents matching its host_id
 - [x] New agents created with correct host_id
-- [ ] Soft-deleted users excluded from active queries
-- [ ] Soft-deleted records still sync (so all nodes know about deletion)
+- [x] Soft-deleted users excluded from active queries (llmail users, send recipients, subagent list)
+- [x] Soft-deleted records still sync (no filter on sync queries)
 
 ### Phase 3-4 (WebSocket Sync + Forwarding)
 - [x] Runner connects to Hub via WebSocket

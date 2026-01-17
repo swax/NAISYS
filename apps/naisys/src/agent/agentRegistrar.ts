@@ -182,25 +182,6 @@ export async function createAgentRegistrar(
 
       await usingDatabase(async (prisma) => {
         if (!existingUser) {
-          // Check if user actually does exists, but with a different host
-          const userOnAnotherHost = await prisma.users.findUnique({
-            where: { username: agentConfig.username },
-            select: {
-              host_id: true,
-              host: {
-                select: {
-                  name: true,
-                },
-              },
-            },
-          });
-
-          if (userOnAnotherHost) {
-            throw new Error(
-              `User "${agentConfig.username}" already exists in database from a different host (${userOnAnotherHost.host?.name}). Cannot create duplicate usernames across hosts.`
-            );
-          }
-
           // User doesn't exist, create it
           const user = await prisma.users.create({
             data: {

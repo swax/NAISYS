@@ -139,17 +139,21 @@ CREATE TABLE "hosts" (
     "updated_at" DATETIME NOT NULL
 );
 
--- CreateIndex
-CREATE INDEX "idx_context_log_id_desc" ON "context_log"("id" DESC);
+-- CreateTable
+CREATE TABLE "hub_sync_state" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "since_timestamp" TEXT NOT NULL,
+    "updated_at" DATETIME NOT NULL
+);
 
 -- CreateIndex
-CREATE INDEX "idx_context_log_user_id" ON "context_log"("user_id");
+CREATE INDEX "idx_context_log_id_desc" ON "context_log"("id" DESC);
 
 -- CreateIndex
 CREATE INDEX "idx_context_log_run_session" ON "context_log"("user_id", "run_id", "session_id");
 
 -- CreateIndex
-CREATE INDEX "idx_context_log_host_id" ON "context_log"("host_id");
+CREATE INDEX "idx_context_log_sync" ON "context_log"("host_id", "id");
 
 -- CreateIndex
 CREATE INDEX "idx_costs_id_desc" ON "costs"("id" DESC);
@@ -158,13 +162,10 @@ CREATE INDEX "idx_costs_id_desc" ON "costs"("id" DESC);
 CREATE INDEX "idx_costs_user_id" ON "costs"("user_id");
 
 -- CreateIndex
-CREATE INDEX "idx_costs_run_session" ON "costs"("user_id", "run_id", "session_id");
-
--- CreateIndex
 CREATE INDEX "idx_costs_aggregation_key" ON "costs"("user_id", "run_id", "session_id", "source", "model");
 
 -- CreateIndex
-CREATE INDEX "idx_costs_host_id" ON "costs"("host_id");
+CREATE INDEX "idx_costs_sync" ON "costs"("host_id", "updated_at");
 
 -- CreateIndex
 CREATE INDEX "idx_mail_messages_id_desc" ON "mail_messages"("id" DESC);
@@ -173,7 +174,13 @@ CREATE INDEX "idx_mail_messages_id_desc" ON "mail_messages"("id" DESC);
 CREATE INDEX "idx_mail_messages_from_user_id" ON "mail_messages"("from_user_id");
 
 -- CreateIndex
-CREATE INDEX "idx_mail_messages_host_id" ON "mail_messages"("host_id");
+CREATE INDEX "idx_mail_messages_created_at" ON "mail_messages"("created_at" DESC);
+
+-- CreateIndex
+CREATE INDEX "idx_mail_messages_sync" ON "mail_messages"("host_id", "id");
+
+-- CreateIndex
+CREATE INDEX "idx_mail_messages_updated_at" ON "mail_messages"("updated_at");
 
 -- CreateIndex
 CREATE INDEX "idx_mail_recipients_message_id" ON "mail_recipients"("message_id");
@@ -182,13 +189,19 @@ CREATE INDEX "idx_mail_recipients_message_id" ON "mail_recipients"("message_id")
 CREATE INDEX "idx_mail_recipients_user_id" ON "mail_recipients"("user_id");
 
 -- CreateIndex
-CREATE INDEX "idx_mail_recipients_host_id" ON "mail_recipients"("host_id");
+CREATE INDEX "idx_mail_recipients_sync" ON "mail_recipients"("host_id", "id");
+
+-- CreateIndex
+CREATE INDEX "idx_mail_recipients_updated_at" ON "mail_recipients"("updated_at");
 
 -- CreateIndex
 CREATE INDEX "idx_mail_status_user_id" ON "mail_status"("user_id");
 
 -- CreateIndex
-CREATE INDEX "idx_mail_status_host_id" ON "mail_status"("host_id");
+CREATE INDEX "idx_mail_status_sync" ON "mail_status"("host_id", "updated_at");
+
+-- CreateIndex
+CREATE INDEX "idx_mail_status_updated_at" ON "mail_status"("updated_at");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "unq_mail_status_message_user" ON "mail_status"("message_id", "user_id");
@@ -200,22 +213,31 @@ CREATE UNIQUE INDEX "unq_users_username" ON "users"("username");
 CREATE UNIQUE INDEX "unq_users_agent_path" ON "users"("agent_path");
 
 -- CreateIndex
-CREATE INDEX "idx_users_host_id" ON "users"("host_id");
+CREATE INDEX "idx_users_sync" ON "users"("host_id", "updated_at");
 
 -- CreateIndex
-CREATE INDEX "idx_user_notifications_host_id" ON "user_notifications"("host_id");
+CREATE INDEX "idx_users_updated_at" ON "users"("updated_at");
 
 -- CreateIndex
-CREATE INDEX "idx_run_session_user_id" ON "run_session"("user_id");
+CREATE INDEX "idx_users_lead_lookup" ON "users"("lead_username", "host_id");
 
 -- CreateIndex
-CREATE INDEX "idx_run_session_last_active" ON "run_session"("last_active");
+CREATE INDEX "idx_user_notifications_sync" ON "user_notifications"("host_id", "updated_at");
 
 -- CreateIndex
-CREATE INDEX "idx_run_session_host_id" ON "run_session"("host_id");
+CREATE INDEX "idx_user_notifications_updated_at" ON "user_notifications"("updated_at");
+
+-- CreateIndex
+CREATE INDEX "idx_run_session_user_active" ON "run_session"("user_id", "last_active" DESC);
+
+-- CreateIndex
+CREATE INDEX "idx_run_session_sync" ON "run_session"("host_id", "updated_at");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "unq_schema_version_version" ON "schema_version"("version");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "unq_hosts_name" ON "hosts"("name");
+
+-- CreateIndex
+CREATE INDEX "idx_hosts_updated_at" ON "hosts"("updated_at");
