@@ -4,7 +4,7 @@ import { GoogleGenAI } from "@google/genai";
 import OpenAI from "openai";
 import { ChatCompletionCreateParamsNonStreaming } from "openai/resources";
 import { GlobalConfig } from "../globalConfig.js";
-import { AgentConfig } from "../agentConfig.js";
+import { AgentConfig } from "../agent/agentConfig.js";
 import { CommandTools } from "./commandTool.js";
 import { CostTracker } from "./costTracker.js";
 import { LLModels, LlmApiType } from "./llModels.js";

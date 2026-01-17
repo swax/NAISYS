@@ -8,7 +8,7 @@ import * as https from "https";
 import * as os from "os";
 import stringArgv from "string-argv";
 import { GlobalConfig } from "../globalConfig.js";
-import { AgentConfig } from "../agentConfig.js";
+import { AgentConfig } from "../agent/agentConfig.js";
 import { CostTracker } from "../llm/costTracker.js";
 import { LLModels } from "../llm/llModels.js";
 import { LlmMessage, LlmRole } from "../llm/llmDtos.js";

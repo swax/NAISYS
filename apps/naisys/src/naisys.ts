@@ -1,46 +1,84 @@
+import { createDatabaseService } from "@naisys/database";
 import { program } from "commander";
 import dotenv from "dotenv";
-import { AgentManager } from "./agentManager.js";
-import { createAgentRegistrar } from "./agentRegistrar.js";
+import { AgentManager } from "./agent/agentManager.js";
+import { createAgentRegistrar } from "./agent/agentRegistrar.js";
 import { createGlobalConfig } from "./globalConfig.js";
-import { createDatabaseService } from "./services/dbService.js";
+import { createHubClientLog } from "./hub/hubClientLog.js";
+import { createHubManager } from "./hub/hubManager.js";
+import { createHubSyncClient } from "./hub/hubSyncClient.js";
+import { createHostService } from "./services/hostService.js";
 
 dotenv.config({ quiet: true });
 
 program
   .argument("<agent-path>", "Path to agent configuration file")
-  .option("--overlord", "Start Overlord server")
+  .option(
+    "--hub",
+    "Start Hub server for NAISYS instances running across machines"
+  )
+  .option("--supervisor", "Start Supervisor web server")
   .parse();
 
-// Todo: Move db service into db package, enabling naisys/overlord to independently initialize and upgrade the db
 const globalConfig = await createGlobalConfig();
-const dbService = await createDatabaseService(globalConfig);
+const dbService = await createDatabaseService(
+  globalConfig.globalConfig().naisysFolder,
+  "naisys"
+);
+const hostService = await createHostService(globalConfig, dbService);
 
 /**
- * --overlord flag is provided, start Overlord server
- * There should be no dependency between overlord and naissys
+ * --hub flag is provided, start Hub server for NAISYS instances running across machines
+ * There should be no dependency between hub and naisys
+ * Sharing the same process space is to save memory on small servers
+ */
+let hubStarted = false;
+if (program.opts().hub) {
+  // Don't import the hub module tree unless needed
+  const { startHub } = await import("@naisys/hub");
+  await startHub("hosted");
+  hubStarted = true;
+}
+
+/**
+ * --supervisor flag is provided, start Supervisor server
+ * There should be no dependency between supervisor and naisys
  * Sharing the same process space is to save 150 mb of node.js runtime memory on small servers
  */
-if (program.opts().overlord) {
-  console.log("Starting Overlord server...");
+if (program.opts().supervisor) {
   // Don't import the whole fastify web server module tree unless needed
-  const { startServer } = await import("@naisys-overlord/server");
-  await startServer("hosted");
+  const { startServer } = await import("@naisys-supervisor/server");
+  await startServer("hosted", hubStarted ? "monitor-hub" : "monitor-naisys");
 }
 
 console.log(`NAISYS STARTED`);
 
 const agentPath = program.args[0];
 
-
 const agentRegistrar = await createAgentRegistrar(
   globalConfig,
   dbService,
-  agentPath,
+  hostService,
+  agentPath
 );
-const agentManager = new AgentManager(dbService, globalConfig, agentRegistrar);
+const agentManager = new AgentManager(
+  dbService,
+  globalConfig,
+  hostService,
+  agentRegistrar
+);
 
-// Inits the naisys db if it doesn't exist which is needed by overlord
+// Start hub connections for multi-machine sync
+
+const hubClientLog = createHubClientLog();
+const hubManager = await createHubManager(
+  globalConfig,
+  hostService,
+  hubClientLog
+);
+await createHubSyncClient(hubManager, hubClientLog, dbService, hostService);
+
+// Inits the naisys db if it doesn't exist which is needed by supervisor
 await agentManager.startAgent(agentPath);
 
 await agentManager.waitForAllAgentsToComplete();

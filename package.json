@@ -6,9 +6,11 @@
   "type": "module",
   "workspaces": [
     "packages/database",
-    "apps/overlord/shared",
-    "apps/overlord/client",
-    "apps/overlord/server",
+    "packages/hub-protocol",
+    "apps/supervisor/shared",
+    "apps/supervisor/client",
+    "apps/supervisor/server",
+    "apps/hub",
     "apps/naisys"
   ],
   "scripts": {

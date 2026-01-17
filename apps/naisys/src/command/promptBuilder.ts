@@ -1,7 +1,7 @@
 import chalk from "chalk";
 import * as readline from "readline";
 import { GlobalConfig } from "../globalConfig.js";
-import { AgentConfig } from "../agentConfig.js";
+import { AgentConfig } from "../agent/agentConfig.js";
 import { LLMail } from "../features/llmail.js";
 import { SubagentService } from "../features/subagent.js";
 import { ContextManager } from "../llm/contextManager.js";

@@ -11,7 +11,7 @@
  */
 
 import { GlobalConfig } from "../globalConfig.js";
-import { AgentConfig } from "../agentConfig.js";
+import { AgentConfig } from "../agent/agentConfig.js";
 
 export function createSystemMessage({ globalConfig }: GlobalConfig, { agentConfig }: AgentConfig) {
   let genImgCmd = "";

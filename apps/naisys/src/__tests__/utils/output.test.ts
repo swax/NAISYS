@@ -7,8 +7,8 @@ const mockLogService = createMockLogService();
 
 // Mock logService module
 mockLogService.write = jest
-  .fn<(message: LlmMessage) => Promise<number>>()
-  .mockResolvedValue(1);
+  .fn<(message: LlmMessage) => Promise<string>>()
+  .mockResolvedValue("01TESTULID");
 
 // Load target module
 const output = createOutputService(mockLogService);

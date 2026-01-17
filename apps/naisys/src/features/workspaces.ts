@@ -1,7 +1,7 @@
 import * as fs from "fs";
 import path from "path";
 import { GlobalConfig } from "../globalConfig.js";
-import { AgentConfig } from "../agentConfig.js";
+import { AgentConfig } from "../agent/agentConfig.js";
 import * as pathService from "../services/pathService.js";
 import { NaisysPath } from "../services/pathService.js";
 import { OutputService } from "../utils/output.js";

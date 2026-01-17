@@ -2,24 +2,31 @@
 export { PrismaClient } from "./generated/prisma/client.js";
 export * from "./generated/prisma/client.js";
 
-// Import PrismaClient at the top level for the factory function
-import { PrismaClient } from "./generated/prisma/client.js";
-import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
+// Re-export ULID utilities
+export { ulid, monotonicFactory, decodeTime } from "ulid";
 
-/**
- * Create a Prisma client with a dynamic database path
- * @param databasePath - Absolute path to the SQLite database file
- * @returns Configured PrismaClient instance
- *
- * @example
- * ```typescript
- * const prisma = createPrismaClient("/home/user/.naisys/database/naisys.sqlite");
- * const users = await prisma.users.findMany();
- * ```
- */
-export function createPrismaClient(databasePath: string) {
-  const adapter = new PrismaBetterSqlite3({
-    url: `file:${databasePath}`,
-  });
-  return new PrismaClient({ adapter });
-}
+// Re-export Prisma client factory
+export { createPrismaClient } from "./prismaClient.js";
+
+// Re-export Database Service
+export { createDatabaseService, DatabaseService } from "./dbService.js";
+
+// Re-export Sync Utilities
+export {
+  countRecordsInTables,
+  findMaxUpdatedAt,
+  findMaxUpdatedAtFromTables,
+  loadSyncState,
+  saveSyncState,
+  serializeRecord,
+  serializeRecords,
+  queryChangedRecords,
+  queryCatchUpRecords,
+  upsertRecord,
+  upsertRecords,
+  SYNCABLE_TABLES,
+  SYNCABLE_TABLE_CONFIG,
+  FORWARDABLE_TABLES,
+  type SyncableTable,
+  type UpsertOptions,
+} from "./syncUtils.js";

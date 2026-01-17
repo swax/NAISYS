@@ -4,7 +4,7 @@ import * as fs from "fs";
 import * as os from "os";
 import stripAnsi from "strip-ansi";
 import treeKill from "tree-kill";
-import { AgentConfig } from "../agentConfig.js";
+import { AgentConfig } from "../agent/agentConfig.js";
 import { GlobalConfig } from "../globalConfig.js";
 import * as pathService from "../services/pathService.js";
 import { NaisysPath } from "../services/pathService.js";

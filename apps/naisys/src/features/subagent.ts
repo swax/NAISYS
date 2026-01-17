@@ -2,8 +2,9 @@ import { ChildProcess } from "child_process";
 import path from "path";
 import stringArgv from "string-argv";
 import table from "text-table";
-import { AgentConfig } from "../agentConfig.js";
-import { DatabaseService } from "../services/dbService.js";
+import { AgentConfig } from "../agent/agentConfig.js";
+import { DatabaseService } from "@naisys/database";
+import { HostService } from "../services/hostService.js";
 import { NaisysPath } from "../services/pathService.js";
 import { RunService } from "../services/runService.js";
 import { InputModeService } from "../utils/inputMode.js";
@@ -50,6 +51,7 @@ export function createSubagentService(
   inputMode: InputModeService,
   runService: RunService,
   { usingDatabase }: DatabaseService,
+  { localHostId }: HostService,
 ) {
   const _subagents: Subagent[] = [];
 
@@ -154,7 +156,14 @@ export function createSubagentService(
   async function refreshSubagents() {
     await usingDatabase(async (prisma) => {
       const agents = await prisma.users.findMany({
-        where: { lead_username: agentConfig().username },
+        where: {
+          OR: [
+            { lead_username: agentConfig().username },
+            { lead_username: null }, // Include agents with no lead (available to all)
+          ],
+          host_id: localHostId,
+          deleted_at: null, // Only show active subagents
+        },
       });
 
       agents.forEach((agent) => {
@@ -502,7 +511,7 @@ export function createSubagentService(
     }
 
     return await llmail
-      .newThread([subagent.agentName], "Your Task", taskDescription)
+      .sendMessage([subagent.agentName], "Your Task", taskDescription)
       .catch(async () => {
         await output.commentAndLog(
           `Failed to send initial task email to subagent ${subagent.agentName}`,

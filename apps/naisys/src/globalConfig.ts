@@ -1,4 +1,5 @@
 import { readFile } from "fs/promises";
+import os from "os";
 import path from "path";
 import * as pathService from "./services/pathService.js";
 import { sanitizeSpendLimit } from "./utils/utilities.js";
@@ -7,8 +8,11 @@ export async function createGlobalConfig() {
   let cachedConfig = await loadConfig();
 
   async function loadConfig() {
-    /** The system name that shows after the @ in the command prompt */
-    const hostname = "naisys";
+    /** Identifies this runner - shows after @ in prompt, used for multi-machine host identification */
+    const hostname = getEnv("NAISYS_HOSTNAME", true)!.replace(
+      "${machine_name}",
+      os.hostname()
+    );
 
     const shellCommand = {
       /** Limits the size of files that can be read/wrote */
@@ -36,7 +40,7 @@ export async function createGlobalConfig() {
     const trimSessionEnabled = false;
 
     /* .env is used for global configs across naisys, while agent configs are for the specific agent */
-    const naisysFolder = getEnv("NAISYS_FOLDER", true);
+    const naisysFolder = getEnv("NAISYS_FOLDER", true)!;
 
     const localLlmUrl = getEnv("LOCAL_LLM_URL");
     const localLlmName = getEnv("LOCAL_LLM_NAME");
@@ -46,6 +50,15 @@ export async function createGlobalConfig() {
     const anthropicApiKey = getEnv("ANTHROPIC_API_KEY");
 
     const googleSearchEngineId = getEnv("GOOGLE_SEARCH_ENGINE_ID");
+
+    /** Comma-separated list of Hub URLs for multi-machine sync */
+    const hubUrls = getEnv("HUB_URLS")
+      ?.split(",")
+      .map((url) => url.trim())
+      .filter((url) => url.length > 0) ?? [];
+
+    /** API key for authenticating with Hub servers */
+    const hubAccessKey = getEnv("HUB_ACCESS_KEY");
 
     /** Global spend limit across all agents using this .env file */
     const spendLimitDollars = sanitizeSpendLimit(getEnv("SPEND_LIMIT_DOLLARS"));
@@ -122,6 +135,8 @@ export async function createGlobalConfig() {
       googleSearchEngineId,
       spendLimitDollars,
       spendLimitHours,
+      hubUrls,
+      hubAccessKey,
       useToolsForLlmConsoleResponses,
       packageVersion,
       binPath,
