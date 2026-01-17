@@ -1,13 +1,16 @@
-import { AgentConfig } from "../agentConfig.js";
+import { AgentConfig } from "../agent/agentConfig.js";
 import { GlobalConfig } from "../globalConfig.js";
-import { DatabaseService } from "../services/dbService.js";
+import { DatabaseService } from "@naisys/database";
+import { HostService } from "./hostService.js";
 
 export async function createRunService(
   { globalConfig }: GlobalConfig,
   { agentConfig }: AgentConfig,
   { usingDatabase }: DatabaseService,
+  hostService: HostService,
 ) {
-  let userId = -1;
+  const { localHostId } = hostService;
+  let userId = "";
 
   /** The run ID of an agent process (there could be multiple runs for the same user). Globally unique */
   let runId = -1;
@@ -33,7 +36,7 @@ export async function createRunService(
     userId = await usingDatabase(async (prisma) => {
       // If user is not in the db, add them
       const user = await prisma.users.findUnique({
-        where: { username: agentConfig().username },
+        where: { username_host_id: { username: agentConfig().username, host_id: localHostId } },
         select: { id: true },
       });
 
@@ -73,8 +76,9 @@ export async function createRunService(
           user_id: userId,
           run_id: newRunId,
           session_id: newSessionId,
+          host_id: localHostId,
           model_name: agentConfig().shellModel,
-          start_date: new Date().toISOString(),
+          created_at: new Date().toISOString(),
           last_active: new Date().toISOString(),
         },
       });
@@ -85,7 +89,7 @@ export async function createRunService(
   }
 
   async function updateLastActive(): Promise<void> {
-    if (userId === -1) return;
+    if (!userId) return;
 
     await usingDatabase(async (prisma) => {
       const now = new Date().toISOString();

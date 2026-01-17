@@ -1,6 +1,6 @@
 import chalk from "chalk";
 import stringArgv from "string-argv";
-import { AgentConfig } from "../agentConfig.js";
+import { AgentConfig } from "../agent/agentConfig.js";
 import { GenImg } from "../features/genimg.js";
 import { LLMail } from "../features/llmail.js";
 import { LLMynx } from "../features/llmynx.js";
@@ -206,7 +206,7 @@ export function createCommandHandler(
             await output.commentAndLog(
               "Sub agent has completed the task. Notifying lead agent and exiting process.",
             );
-            await llmail.newThread([leadAgent], "Task Completed", taskResult);
+            await llmail.sendMessage([leadAgent], "Task Completed", taskResult);
           } else {
             await output.commentAndLog("Task completed. Exiting process.");
           }

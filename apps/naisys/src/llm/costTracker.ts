@@ -1,9 +1,12 @@
+import { ulid } from "@naisys/database";
+import { isUlidWithinWindow, minUlidForTime } from "../utils/ulidTools.js";
 import { GlobalConfig } from "../globalConfig.js";
-import { AgentConfig } from "../agentConfig.js";
-import { DatabaseService } from "../services/dbService.js";
+import { AgentConfig } from "../agent/agentConfig.js";
+import { DatabaseService } from "@naisys/database";
 import { RunService } from "../services/runService.js";
 import { OutputService } from "../utils/output.js";
 import { LLModels } from "./llModels.js";
+import { HostService } from "../services/hostService.js";
 
 // Keep only interfaces that are used as parameters or need explicit typing
 interface LlmModelCosts {
@@ -20,6 +23,9 @@ interface TokenUsage {
   cacheReadTokens: number;
 }
 
+// Aggregate costs within this time window (in milliseconds)
+const COST_AGGREGATION_WINDOW_MS = 5 * 60 * 1000; // 5 minutes
+
 export function createCostTracker(
   { globalConfig }: GlobalConfig,
   { agentConfig }: AgentConfig,
@@ -27,8 +33,11 @@ export function createCostTracker(
   { usingDatabase }: DatabaseService,
   runService: RunService,
   output: OutputService,
+  hostService: HostService,
 ) {
+  const { localHostId } = hostService;
   // Record token usage for LLM calls - calculate and store total cost
+  // Aggregates costs within a time window by user/run/session/source/model combination
   async function recordTokens(
     source: string,
     modelKey: string,
@@ -50,48 +59,99 @@ export function createCostTracker(
     const { getUserId, getRunId, getSessionId } = runService;
 
     await usingDatabase(async (prisma) => {
-      await prisma.costs.create({
-        data: {
-          date: new Date().toISOString(),
+      // Find the most recent cost record for this combination
+      const existingRecord = await prisma.costs.findFirst({
+        where: {
           user_id: getUserId(),
           run_id: getRunId(),
           session_id: getSessionId(),
-          subagent: null,
           source,
           model: modelKey,
-          cost: totalCost,
-          input_tokens: inputTokens,
-          output_tokens: outputTokens,
-          cache_write_tokens: cacheWriteTokens,
-          cache_read_tokens: cacheReadTokens,
         },
+        orderBy: { id: "desc" },
+        select: { id: true },
       });
+
+      // Update existing record if within aggregation window, otherwise create new
+      if (existingRecord && isUlidWithinWindow(existingRecord.id, COST_AGGREGATION_WINDOW_MS)) {
+        await prisma.costs.update({
+          where: { id: existingRecord.id },
+          data: {
+            cost: { increment: totalCost },
+            input_tokens: { increment: inputTokens },
+            output_tokens: { increment: outputTokens },
+            cache_write_tokens: { increment: cacheWriteTokens },
+            cache_read_tokens: { increment: cacheReadTokens },
+          },
+        });
+      } else {
+        await prisma.costs.create({
+          data: {
+            id: ulid(),
+            user_id: getUserId(),
+            run_id: getRunId(),
+            session_id: getSessionId(),
+            host_id: localHostId,
+            source,
+            model: modelKey,
+            cost: totalCost,
+            input_tokens: inputTokens,
+            output_tokens: outputTokens,
+            cache_write_tokens: cacheWriteTokens,
+            cache_read_tokens: cacheReadTokens,
+          },
+        });
+      }
     });
 
     await updateSessionCost(totalCost);
   }
 
   // Record fixed cost for non-token services like image generation
+  // Aggregates costs within a time window by user/run/session/source/model combination
   async function recordCost(cost: number, source: string, modelKey: string) {
     const { getUserId, getRunId, getSessionId } = runService;
 
     await usingDatabase(async (prisma) => {
-      await prisma.costs.create({
-        data: {
-          date: new Date().toISOString(),
+      // Find the most recent cost record for this combination
+      const existingRecord = await prisma.costs.findFirst({
+        where: {
           user_id: getUserId(),
           run_id: getRunId(),
           session_id: getSessionId(),
-          subagent: null,
           source,
           model: modelKey,
-          cost,
-          input_tokens: 0, // No tokens for fixed cost services
-          output_tokens: 0,
-          cache_write_tokens: 0,
-          cache_read_tokens: 0,
         },
+        orderBy: { id: "desc" },
+        select: { id: true },
       });
+
+      // Update existing record if within aggregation window, otherwise create new
+      if (existingRecord && isUlidWithinWindow(existingRecord.id, COST_AGGREGATION_WINDOW_MS)) {
+        await prisma.costs.update({
+          where: { id: existingRecord.id },
+          data: {
+            cost: { increment: cost },
+          },
+        });
+      } else {
+        await prisma.costs.create({
+          data: {
+            id: ulid(),
+            user_id: getUserId(),
+            run_id: getRunId(),
+            session_id: getSessionId(),
+            host_id: localHostId,
+            source,
+            model: modelKey,
+            cost,
+            input_tokens: 0,
+            output_tokens: 0,
+            cache_write_tokens: 0,
+            cache_read_tokens: 0,
+          },
+        });
+      }
     });
 
     await updateSessionCost(cost);
@@ -166,18 +226,18 @@ export function createCostTracker(
   }
 
   async function getTotalCosts(
-    userId?: number,
+    userId?: string,
     periodStart?: Date,
     periodEnd?: Date,
   ) {
     return usingDatabase(async (prisma) => {
       const where: any = userId ? { user_id: userId } : {};
 
-      // Add date range filtering if period is specified
+      // Filter by ULID timestamp range (ULIDs are lexicographically sortable by time)
       if (periodStart && periodEnd) {
-        where.date = {
-          gte: periodStart.toISOString(),
-          lt: periodEnd.toISOString(),
+        where.id = {
+          gte: minUlidForTime(periodStart),
+          lt: minUlidForTime(periodEnd),
         };
       }
 
@@ -237,7 +297,7 @@ export function createCostTracker(
     }
   }
 
-  async function getCostBreakdown(userId?: number) {
+  async function getCostBreakdown(userId?: string) {
     return usingDatabase(async (prisma) => {
       const where = userId ? { user_id: userId } : {};
 
@@ -271,7 +331,7 @@ export function createCostTracker(
     });
   }
 
-  async function getCostBreakdownWithModels(userId?: number) {
+  async function getCostBreakdownWithModels(userId?: string) {
     return usingDatabase(async (prisma) => {
       const result = await prisma.costs.groupBy({
         by: ["model"],
@@ -366,7 +426,7 @@ export function createCostTracker(
     };
   }
 
-  async function clearCosts(userId?: number) {
+  async function clearCosts(userId?: string) {
     return usingDatabase(async (prisma) => {
       const where = userId ? { user_id: userId } : {};
 
@@ -374,7 +434,7 @@ export function createCostTracker(
     });
   }
 
-  async function printCosts(userId?: number) {
+  async function printCosts(userId?: string) {
     const costBreakdown = await getCostBreakdown(userId);
     const modelBreakdowns = await getCostBreakdownWithModels(userId);
 

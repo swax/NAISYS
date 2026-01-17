@@ -1,0 +1,22 @@
+{
+  "name": "@naisys/hub-protocol",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Shared protocol types and schemas for NAISYS Hub communication",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "clean": "rm -rf dist",
+    "build": "tsc",
+    "prepare": "npm run build"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "zod": "^3.25.67"
+  }
+}

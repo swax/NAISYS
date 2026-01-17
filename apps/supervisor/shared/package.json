@@ -1,0 +1,20 @@
+{
+  "name": "@naisys-supervisor/shared",
+  "version": "1.0.0",
+  "description": "NAISYS Supervisor - Shared types and utilities",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "clean": "rm -rf dist",
+    "build": "tsc",
+    "type-check": "tsc --noEmit",
+    "npm:publish:dryrun": "npm run clean && npm run build && npm publish --dry-run"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "zod": "^4.3.5"
+  }
+}

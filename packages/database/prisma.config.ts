@@ -9,8 +9,8 @@ export default defineConfig({
   migrations: {
     path: "prisma/migrations",
   },
-  engine: "classic",
   datasource: {
-    url: `file:${naisysFolder}/database/naisys.sqlite`,
+    url:
+      process.env.DATABASE_URL || `file:${naisysFolder}/database/naisys.sqlite`,
   },
 });

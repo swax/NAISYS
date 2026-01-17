@@ -4,7 +4,7 @@
 
 username: ryan
 title: Assistant
-shellModel: claude4sonnet
+shellModel: mock
 imageModel: dalle3-1024
 agentPrompt: |
   You are ${agent.username} a ${agent.title} with the job of helping out the admin with what he wants to do.
@@ -14,4 +14,5 @@ spendLimitDollars: 10.00
 webEnabled: true
 mailEnabled: true
 subagentMax: 1
+subagentDirectory: subagents
 wakeOnMessage: true

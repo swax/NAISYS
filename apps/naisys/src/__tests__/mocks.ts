@@ -1,6 +1,6 @@
 import { jest, test } from "@jest/globals";
-import { PrismaClient } from "@naisys/database";
-import { AgentConfig } from "../agentConfig.js";
+import { DatabaseService, PrismaClient } from "@naisys/database";
+import { AgentConfig } from "../agent/agentConfig.js";
 import { CommandProtection } from "../command/commandProtection.js";
 import { PromptBuilder } from "../command/promptBuilder.js";
 import { ShellCommand } from "../command/shellCommand.js";
@@ -12,9 +12,8 @@ import { WorkspacesFeature } from "../features/workspaces.js";
 import { GlobalConfig } from "../globalConfig.js";
 import { ContextManager } from "../llm/contextManager.js";
 import { CostTracker } from "../llm/costTracker.js";
-import { SessionCompactor } from "../llm/sessionCompactor.js";
 import { LlmMessage, LlmRole } from "../llm/llmDtos.js";
-import { DatabaseService } from "../services/dbService.js";
+import { SessionCompactor } from "../llm/sessionCompactor.js";
 import { LogService } from "../services/logService.js";
 import { RunService } from "../services/runService.js";
 import { OutputService } from "../utils/output.js";
@@ -22,10 +21,11 @@ import { OutputService } from "../utils/output.js";
 export function createMockDatabaseService(): DatabaseService {
   return {
     usingDatabase: <T>(
-      run: (prisma: PrismaClient) => Promise<T>,
+      run: (prisma: PrismaClient) => Promise<T>
     ): Promise<T> => {
       throw new Error("Mock database not implemented");
     },
+    getSchemaVersion: () => 1,
   };
 }
 
@@ -33,7 +33,7 @@ export function createMockRunService(): RunService {
   return {
     cleanup: jest.fn(),
     incrementSession: jest.fn(() => Promise.resolve()),
-    getUserId: jest.fn(() => -1),
+    getUserId: jest.fn(() => ""),
     getRunId: jest.fn(() => -1),
     getSessionId: jest.fn(() => -1),
   };
@@ -41,14 +41,14 @@ export function createMockRunService(): RunService {
 
 export function createMockLogService() {
   return {
-    write: (msg: LlmMessage) => Promise.resolve(0),
+    write: (msg: LlmMessage) => Promise.resolve(""),
     toSimpleRole: (role: LlmRole) => "LLM",
   } satisfies LogService;
 }
 
 export function createMockPromptBuilder(
   userHostPrompt: string,
-  userHostPathPrompt: string,
+  userHostPathPrompt: string
 ) {
   const promptBuilder: PromptBuilder = {
     getPrompt: jest.fn(() => Promise.resolve(`${userHostPathPrompt}$ `)),
@@ -92,14 +92,12 @@ export function createMockSubagent() {
 
 export function createMockLLMail() {
   const llmail: LLMail = {
-    simpleMode: false,
     handleCommand: jest.fn(() =>
-      Promise.resolve({ content: "", pauseSeconds: 0 }),
+      Promise.resolve({ content: "", pauseSeconds: 0 })
     ),
     getUnreadThreads: jest.fn(() => Promise.resolve([])),
-    newThread: jest.fn(() => Promise.resolve("")),
-    readThread: jest.fn(() => Promise.resolve("")),
-    markAsRead: jest.fn(() => Promise.resolve()),
+    sendMessage: jest.fn(() => Promise.resolve("")),
+    readMessage: jest.fn(() => Promise.resolve("")),
     getAllUserNames: jest.fn(() => Promise.resolve([])),
     hasMultipleUsers: jest.fn(() => Promise.resolve(false)),
   };
@@ -177,7 +175,7 @@ export function createMockCostTracker() {
         cacheReadTokens: 0,
         totalInputTokens: 0,
         totalCacheTokens: 0,
-      }),
+      })
     ),
     getCostBreakdownWithModels: jest.fn(() => Promise.resolve([])),
     calculateModelCacheSavings: jest.fn(() => null),
@@ -217,7 +215,7 @@ export function createMockCommandProtection() {
   const validateCommand = jest.fn(() =>
     Promise.resolve({
       commandAllowed: true,
-    }),
+    })
   );
 
   return {
@@ -249,6 +247,8 @@ export function createMockGlobalConfig(): GlobalConfig {
       googleSearchEngineId: undefined,
       spendLimitDollars: undefined,
       spendLimitHours: undefined,
+      hubUrls: [],
+      hubAccessKey: undefined,
       useToolsForLlmConsoleResponses: true,
       packageVersion: "1.0.0",
       binPath: "/bin",
