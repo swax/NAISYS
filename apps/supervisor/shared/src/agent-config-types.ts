@@ -3,6 +3,7 @@ import { z } from "zod";
 // Zod schemas for agent config operations
 export const GetAgentConfigRequestSchema = z.object({
   username: z.string(),
+  host: z.string(),
 });
 
 export const GetAgentConfigResponseSchema = z.object({
@@ -14,6 +15,7 @@ export const GetAgentConfigResponseSchema = z.object({
 
 export const CreateAgentConfigRequestSchema = z.object({
   name: z.string().min(1).max(100),
+  host: z.string(),
 });
 
 export const CreateAgentConfigResponseSchema = z.object({
@@ -24,6 +26,7 @@ export const CreateAgentConfigResponseSchema = z.object({
 export const UpdateAgentConfigRequestSchema = z.object({
   username: z.string(),
   config: z.string(),
+  host: z.string(),
 });
 
 export const UpdateAgentConfigResponseSchema = z.object({

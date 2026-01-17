@@ -313,10 +313,12 @@ export const getMailData = async (
 
 export const getAgentConfig = async (
   username: string,
+  host: string,
 ): Promise<GetAgentConfigResponse> => {
   try {
     const queryParams = new URLSearchParams();
     queryParams.append("username", username);
+    queryParams.append("host", host);
     const url = `${apiEndpoints.agentConfig}?${queryParams.toString()}`;
     return await api.get<GetAgentConfigResponse>(url);
   } catch (error) {
@@ -333,12 +335,13 @@ export const getAgentConfig = async (
 export const updateAgentConfig = async (
   username: string,
   config: string,
+  host: string,
 ): Promise<UpdateAgentConfigResponse> => {
   try {
     return await api.put<
-      { username: string; config: string },
+      { username: string; config: string; host: string },
       UpdateAgentConfigResponse
-    >(apiEndpoints.agentConfig, { username, config });
+    >(apiEndpoints.agentConfig, { username, config, host });
   } catch (error) {
     return {
       success: false,
@@ -352,11 +355,12 @@ export const updateAgentConfig = async (
 
 export const createAgent = async (
   name: string,
+  host: string,
 ): Promise<CreateAgentConfigResponse> => {
   try {
-    return await api.post<{ name: string }, CreateAgentConfigResponse>(
+    return await api.post<{ name: string; host: string }, CreateAgentConfigResponse>(
       apiEndpoints.agentConfig,
-      { name },
+      { name, host },
     );
   } catch (error) {
     return {

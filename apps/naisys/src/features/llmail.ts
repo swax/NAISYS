@@ -5,6 +5,7 @@ import { AgentConfig } from "../agent/agentConfig.js";
 import { GlobalConfig } from "../globalConfig.js";
 import { RunService } from "../services/runService.js";
 import { HostService } from "../services/hostService.js";
+import { LLMailAddress } from "./llmailAddress.js";
 import * as utilities from "../utils/utilities.js";
 
 export function createLLMail(
@@ -13,9 +14,12 @@ export function createLLMail(
   { usingDatabase }: DatabaseService,
   runService: RunService,
   hostService: HostService,
+  llmailAddress: LLMailAddress,
 ) {
   const myUserId = runService.getUserId();
   const { localHostId } = hostService;
+  const { hasMultipleHosts, formatUserWithHost, resolveUserIdentifier } =
+    llmailAddress;
 
   async function handleCommand(
     args: string
@@ -172,6 +176,8 @@ export function createLLMail(
   async function listMessages(
     filter?: "received" | "sent"
   ): Promise<string> {
+    const isMultiHost = await hasMultipleHosts();
+
     return await usingDatabase(async (prisma) => {
       // Build where clause based on filter
       const ownershipCondition =
@@ -194,9 +200,9 @@ export function createLLMail(
           },
         },
         include: {
-          from_user: { select: { username: true } },
+          from_user: { select: { username: true, host: { select: { name: true } } } },
           recipients: {
-            include: { user: { select: { username: true } } },
+            include: { user: { select: { username: true, host: { select: { name: true } } } } },
           },
           status: { where: { user_id: myUserId }, select: { read_at: true } },
         },
@@ -221,8 +227,12 @@ export function createLLMail(
             // Show recipients for sent, sender for received/all
             const userColumn =
               filter === "sent"
-                ? m.recipients.map((r) => r.user.username).join(", ")
-                : m.from_user.username;
+                ? m.recipients
+                    .map((r) =>
+                      formatUserWithHost(r.user, isMultiHost)
+                    )
+                    .join(", ")
+                : formatUserWithHost(m.from_user, isMultiHost);
 
             return [
               isUnread ? "*" : "",
@@ -241,7 +251,7 @@ export function createLLMail(
   }
 
   async function sendMessage(
-    usernames: string[],
+    userIdentifiers: string[],
     subject: string,
     message: string
   ): Promise<string> {
@@ -251,19 +261,22 @@ export function createLLMail(
 
     return await usingDatabase(async (prisma) => {
       return await prisma.$transaction(async (tx) => {
-        // Validate all recipient usernames (only active users)
-        const recipients = await tx.users.findMany({
-          where: { username: { in: usernames }, deleted_at: null },
-          select: { id: true, username: true },
-        });
+        // Resolve each user identifier to a user ID
+        const resolvedRecipients: { id: string; username: string }[] = [];
+        const errors: string[] = [];
 
-        const foundUsernames = recipients.map((r) => r.username);
-        const missingUsernames = usernames.filter(
-          (u) => !foundUsernames.includes(u)
-        );
+        for (const identifier of userIdentifiers) {
+          try {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const resolved = await resolveUserIdentifier(identifier, tx as any);
+            resolvedRecipients.push(resolved);
+          } catch (error) {
+            errors.push(String(error));
+          }
+        }
 
-        if (missingUsernames.length > 0) {
-          throw `Error: Users not found: ${missingUsernames.join(", ")}`;
+        if (errors.length > 0) {
+          throw `Error: ${errors.join("; ")}`;
         }
 
         // Create message
@@ -280,7 +293,7 @@ export function createLLMail(
         });
 
         // Create recipient entries
-        for (const recipient of recipients) {
+        for (const recipient of resolvedRecipients) {
           await tx.mail_recipients.create({
             data: {
               id: ulid(),
@@ -296,7 +309,7 @@ export function createLLMail(
         // Update user_notifications.latest_mail_id for recipients
         await tx.user_notifications.updateMany({
           where: {
-            user_id: { in: recipients.map((r) => r.id) },
+            user_id: { in: resolvedRecipients.map((r) => r.id) },
           },
           data: {
             latest_mail_id: messageId,
@@ -310,18 +323,20 @@ export function createLLMail(
   }
 
   async function readMessage(messageId: string): Promise<string> {
+    const isMultiHost = await hasMultipleHosts();
+
     return await usingDatabase(async (prisma) => {
       // Find the message (support short IDs)
       const messages = await prisma.mail_messages.findMany({
         where: { id: { endsWith: messageId } },
         include: {
           from_user: {
-            select: { username: true, title: true },
+            select: { username: true, title: true, host: { select: { name: true } } },
           },
           recipients: {
             include: {
               user: {
-                select: { username: true },
+                select: { username: true, host: { select: { name: true } } },
               },
             },
           },
@@ -337,7 +352,10 @@ export function createLLMail(
       }
 
       const message = messages[0];
-      const toUsers = message.recipients.map((r) => r.user.username).join(", ");
+      const toUsers = message.recipients
+        .map((r) => formatUserWithHost(r.user, isMultiHost))
+        .join(", ");
+      const fromUser = formatUserWithHost(message.from_user, isMultiHost);
 
       // Mark as read - upsert mail_status
       const existingStatus = await prisma.mail_status.findUnique({
@@ -369,7 +387,7 @@ export function createLLMail(
 
       return (
         `Subject: ${message.subject}\n` +
-        `From: ${message.from_user.username}\n` +
+        `From: ${fromUser}\n` +
         `Title: ${message.from_user.title}\n` +
         `To: ${toUsers}\n` +
         `Date: ${new Date(message.created_at).toLocaleString()}\n` +
@@ -435,6 +453,8 @@ export function createLLMail(
     includeArchived: boolean,
     subjectOnly: boolean
   ): Promise<string> {
+    const isMultiHost = await hasMultipleHosts();
+
     return await usingDatabase(async (prisma) => {
       // Build search condition
       const searchCondition = subjectOnly
@@ -463,7 +483,7 @@ export function createLLMail(
           ...archiveCondition,
         },
         include: {
-          from_user: { select: { username: true } },
+          from_user: { select: { username: true, host: { select: { name: true } } } },
         },
         orderBy: { created_at: "desc" },
         take: 50,
@@ -479,7 +499,7 @@ export function createLLMail(
           ...messages.map((m) => [
             m.id.slice(-4),
             m.subject.length > 40 ? m.subject.slice(0, 37) + "..." : m.subject,
-            m.from_user.username,
+            formatUserWithHost(m.from_user, isMultiHost),
             new Date(m.created_at).toLocaleString(),
           ]),
         ],
@@ -489,6 +509,8 @@ export function createLLMail(
   }
 
   async function listUsers() {
+    const isMultiHost = await hasMultipleHosts();
+
     return await usingDatabase(async (prisma) => {
       const userList = await prisma.users.findMany({
         where: {
@@ -505,17 +527,16 @@ export function createLLMail(
 
       return table(
         [
-          ["Username", "Title", "Lead", "Host", "Status"],
+          ["Username", "Title", "Lead", "Status"],
           ...userList.map((u) => {
             const lastActive = u.user_notifications?.last_active;
             const isActive = lastActive
               ? new Date(lastActive).getTime() > Date.now() - 5 * 1000
               : false;
             return [
-              u.username,
+              formatUserWithHost(u, isMultiHost),
               u.title,
               u.lead_username || "",
-              u.host?.name || "",
               isActive ? "Online" : "Offline",
             ];
           }),

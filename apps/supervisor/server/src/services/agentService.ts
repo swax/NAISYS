@@ -18,6 +18,7 @@ export async function getAgents(updatedSince?: string): Promise<Agent[]> {
           title: true,
           agent_path: true,
           lead_username: true,
+          host: { select: { name: true } },
           user_notifications: {
             select: {
               latest_mail_id: true,
@@ -42,6 +43,7 @@ export async function getAgents(updatedSince?: string): Promise<Agent[]> {
         id: user.id,
         name: user.username,
         title: user.title,
+        host: user.host?.name ?? "",
         lastActive: user.user_notifications?.last_active?.toISOString(),
         agentPath: user.agent_path,
         leadUsername: user.lead_username || undefined,

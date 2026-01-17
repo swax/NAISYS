@@ -87,7 +87,7 @@ export async function createAgentRegistrar(
           // Update database with new path
           await usingDatabase(async (prisma) => {
             await prisma.users.update({
-              where: { username },
+              where: { username_host_id: { username, host_id: localHostId } },
               data: { agent_path: recoveredPath },
             });
           });
@@ -242,7 +242,7 @@ export async function createAgentRegistrar(
             );
 
             await prisma.users.update({
-              where: { username: agentConfig.username },
+              where: { username_host_id: { username: agentConfig.username, host_id: localHostId } },
               data: {
                 title: agentConfig.title,
                 agent_path: absolutePath,

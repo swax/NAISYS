@@ -90,6 +90,7 @@ CREATE TABLE "users" (
     "host_id" TEXT,
     "created_at" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" DATETIME NOT NULL,
+    "deleted_at" DATETIME,
     CONSTRAINT "users_host_id_fkey" FOREIGN KEY ("host_id") REFERENCES "hosts" ("host_id") ON DELETE SET NULL ON UPDATE CASCADE
 );
 
@@ -207,9 +208,6 @@ CREATE INDEX "idx_mail_status_updated_at" ON "mail_status"("updated_at");
 CREATE UNIQUE INDEX "unq_mail_status_message_user" ON "mail_status"("message_id", "user_id");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "unq_users_username" ON "users"("username");
-
--- CreateIndex
 CREATE UNIQUE INDEX "unq_users_agent_path" ON "users"("agent_path");
 
 -- CreateIndex
@@ -220,6 +218,9 @@ CREATE INDEX "idx_users_updated_at" ON "users"("updated_at");
 
 -- CreateIndex
 CREATE INDEX "idx_users_lead_lookup" ON "users"("lead_username", "host_id");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "unq_users_username_host" ON "users"("username", "host_id");
 
 -- CreateIndex
 CREATE INDEX "idx_user_notifications_sync" ON "user_notifications"("host_id", "updated_at");

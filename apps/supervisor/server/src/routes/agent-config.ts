@@ -45,8 +45,8 @@ export default async function agentConfigRoutes(
     },
     async (request, reply) => {
       try {
-        const { username } = request.query;
-        const { config, path } = await getAgentConfig(username);
+        const { username, host } = request.query;
+        const { config, path } = await getAgentConfig(username, host);
 
         return {
           success: true,
@@ -97,7 +97,7 @@ export default async function agentConfigRoutes(
     },
     async (request, reply) => {
       try {
-        const { name } = request.body;
+        const { name, host } = request.body;
 
         // Validate agent name (alphanumeric, hyphens, underscores only)
         if (!/^[a-zA-Z0-9_-]+$/.test(name)) {
@@ -108,7 +108,7 @@ export default async function agentConfigRoutes(
           });
         }
 
-        await createAgentConfig(name);
+        await createAgentConfig(name, host);
 
         return {
           success: true,
@@ -157,8 +157,8 @@ export default async function agentConfigRoutes(
     },
     async (request, reply) => {
       try {
-        const { username, config } = request.body;
-        await updateAgentConfig(username, config);
+        const { username, config, host } = request.body;
+        await updateAgentConfig(username, config, host);
 
         return {
           success: true,
