@@ -207,7 +207,6 @@ export async function createAgentRegistrar(
             data: {
               user_id: user.id,
               host_id: localHostId,
-              latest_mail_id: "",
               latest_log_id: "",
             },
           });
@@ -270,7 +269,6 @@ export async function createAgentRegistrar(
               create: {
                 user_id: existingUser.id,
                 host_id: localHostId,
-                latest_mail_id: "",
                 latest_log_id: "",
               },
               update: {

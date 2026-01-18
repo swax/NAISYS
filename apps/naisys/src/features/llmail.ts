@@ -306,17 +306,6 @@ export function createLLMail(
           });
         }
 
-        // Update user_notifications.latest_mail_id for recipients
-        await tx.user_notifications.updateMany({
-          where: {
-            user_id: { in: resolvedRecipients.map((r) => r.id) },
-          },
-          data: {
-            latest_mail_id: messageId,
-            updated_at: new Date(),
-          },
-        });
-
         return "Mail sent";
       });
     });

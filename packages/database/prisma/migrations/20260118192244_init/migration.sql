@@ -98,7 +98,6 @@ CREATE TABLE "users" (
 CREATE TABLE "user_notifications" (
     "user_id" TEXT NOT NULL PRIMARY KEY,
     "host_id" TEXT,
-    "latest_mail_id" TEXT NOT NULL DEFAULT '',
     "latest_log_id" TEXT NOT NULL DEFAULT '',
     "last_active" DATETIME,
     "updated_at" DATETIME NOT NULL,
@@ -187,7 +186,7 @@ CREATE INDEX "idx_mail_messages_updated_at" ON "mail_messages"("updated_at");
 CREATE INDEX "idx_mail_recipients_message_id" ON "mail_recipients"("message_id");
 
 -- CreateIndex
-CREATE INDEX "idx_mail_recipients_user_id" ON "mail_recipients"("user_id");
+CREATE INDEX "idx_mail_recipients_user_id" ON "mail_recipients"("user_id", "message_id" DESC);
 
 -- CreateIndex
 CREATE INDEX "idx_mail_recipients_sync" ON "mail_recipients"("host_id", "id");

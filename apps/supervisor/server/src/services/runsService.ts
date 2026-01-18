@@ -1,5 +1,6 @@
 import { LogEntry, LogRole, LogSource, LogType, RunSession } from "shared";
 import { usingNaisysDb } from "../database/naisysDatabase.js";
+import { cachedForSeconds } from "../utils/cache.js";
 
 export interface RunsData {
   runs: RunSession[];
@@ -12,12 +13,14 @@ export interface ContextLogData {
   timestamp: string;
 }
 
-export async function getRunsData(
-  userId: string,
-  updatedSince?: string,
-  page: number = 1,
-  count: number = 50,
-): Promise<RunsData> {
+export const getRunsData = cachedForSeconds(
+  1,
+  async (
+    userId: string,
+    updatedSince?: string,
+    page: number = 1,
+    count: number = 50,
+  ): Promise<RunsData> => {
   try {
     const result = await usingNaisysDb(async (prisma) => {
       // Build the where clause
@@ -79,14 +82,16 @@ export async function getRunsData(
       timestamp: new Date().toISOString(),
     };
   }
-}
+});
 
-export async function getContextLog(
-  userId: string,
-  runId: number,
-  sessionId: number,
-  logsAfter?: string,
-): Promise<ContextLogData> {
+export const getContextLog = cachedForSeconds(
+  1,
+  async (
+    userId: string,
+    runId: number,
+    sessionId: number,
+    logsAfter?: string,
+  ): Promise<ContextLogData> => {
   try {
     const dbLogs = await usingNaisysDb(async (prisma) => {
       const where: any = {
@@ -142,4 +147,4 @@ export async function getContextLog(
       timestamp: new Date().toISOString(),
     };
   }
-}
+});
