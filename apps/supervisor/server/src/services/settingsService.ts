@@ -3,6 +3,7 @@ import {
   selectFromSupervisorDb,
   runOnSupervisorDb,
 } from "../database/supervisorDatabase.js";
+import { cachedForSeconds } from "../utils/cache.js";
 
 export interface SettingsRecord {
   id: number;
@@ -25,16 +26,21 @@ export async function saveSettings(settings: Settings): Promise<void> {
   );
 }
 
-export async function getSettings(): Promise<Settings | null> {
-  const settingsRecords = await selectFromSupervisorDb<SettingsRecord[] | null>(`
+export const getSettings = cachedForSeconds(
+  1,
+  async (): Promise<Settings | null> => {
+    const settingsRecords = await selectFromSupervisorDb<
+      SettingsRecord[] | null
+    >(`
     SELECT id, settings_json, modify_date, read_status_json
-    FROM settings 
+    FROM settings
     WHERE id = 1
   `);
 
-  if (!settingsRecords?.length) {
-    return null;
-  }
+    if (!settingsRecords?.length) {
+      return null;
+    }
 
-  return JSON.parse(settingsRecords[0].settings_json) as Settings;
-}
+    return JSON.parse(settingsRecords[0].settings_json) as Settings;
+  },
+);

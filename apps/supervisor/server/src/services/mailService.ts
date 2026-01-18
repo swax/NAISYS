@@ -6,18 +6,21 @@ import {
 } from "shared";
 import { usingNaisysDb } from "../database/naisysDatabase.js";
 import { getAgents } from "./agentService.js";
+import { cachedForSeconds } from "../utils/cache.js";
 import fs from "fs/promises";
 import path from "path";
 
 /**
  * Get mail data for a specific agent, optionally filtering by updatedSince
  */
-export async function getMailData(
-  agentName: string,
-  updatedSince?: string,
-  page: number = 1,
-  count: number = 50,
-): Promise<{ mail: MailMessage[]; timestamp: string; total?: number }> {
+export const getMailData = cachedForSeconds(
+  1,
+  async (
+    agentName: string,
+    updatedSince?: string,
+    page: number = 1,
+    count: number = 50,
+  ): Promise<{ mail: MailMessage[]; timestamp: string; total?: number }> => {
   try {
     // First, find the agent to get their userId
     const agents = await getAgents();
@@ -117,7 +120,7 @@ export async function getMailData(
       timestamp: new Date().toISOString(),
     };
   }
-}
+});
 
 /**
  * Send a message using the new flat message model

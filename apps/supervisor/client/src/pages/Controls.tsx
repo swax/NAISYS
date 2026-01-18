@@ -190,7 +190,7 @@ export const Controls: React.FC = () => {
 
       {configPath && (
         <Text size="sm" c="dimmed">
-          {configPath}
+          {agent}@{agentData?.host}:{configPath}
         </Text>
       )}
 

@@ -2,6 +2,7 @@ import {
   selectFromSupervisorDb,
   runOnSupervisorDb,
 } from "../database/supervisorDatabase.js";
+import { cachedForSeconds } from "../utils/cache.js";
 
 export interface Session {
   token: string;
@@ -23,22 +24,25 @@ export async function createSession(
   );
 }
 
-export async function getSession(token: string): Promise<Session | null> {
-  const sessions = await selectFromSupervisorDb<Session[] | null>(
-    `
+export const getSession = cachedForSeconds(
+  1,
+  async (token: string): Promise<Session | null> => {
+    const sessions = await selectFromSupervisorDb<Session[] | null>(
+      `
     SELECT token, start_date as startDate, expire_date as expireDate
     FROM sessions
     WHERE token = ? AND expire_date > datetime('now')
   `,
-    [token],
-  );
+      [token],
+    );
 
-  if (sessions && sessions.length > 0) {
-    return sessions[0];
-  } else {
-    return null;
-  }
-}
+    if (sessions && sessions.length > 0) {
+      return sessions[0];
+    } else {
+      return null;
+    }
+  },
+);
 
 export async function deleteExpiredSessions(): Promise<void> {
   await runOnSupervisorDb(

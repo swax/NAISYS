@@ -1,3 +1,11 @@
+// Multi-Machine Sync Notes (see docs/multi-machine-plan.md):
+// - Each host should only insert/update rows where `host_id` matches its own host
+// - Sync queries filter by `host_id`, so cross-host writes won't propagate correctly
+// - `updated_at` fields are used to sync data between NAISYS runners and the hub
+// - When the hub receives records from runners, it resets `updated_at` to its own timestamp
+// - This ensures "stale" records from late-joining runners are properly synced to other machines
+// - Catch-up queries use the hub's `updated_at` (not the original timestamp) to find missed records
+
 generator client {
   provider = "prisma-client"
   output   = "../src/generated/prisma"
@@ -86,7 +94,7 @@ model mail_recipients {
   host       hosts?        @relation(fields: [host_id], references: [host_id])
 
   @@index([message_id], map: "idx_mail_recipients_message_id") // JOIN from mail_messages includes
-  @@index([user_id], map: "idx_mail_recipients_user_id") // Subquery: recipients.some({ user_id }) in mail queries
+  @@index([user_id, message_id(sort: Desc)], map: "idx_mail_recipients_user_id") // groupBy user_id + MAX(message_id) in supervisor agentService, also recipients.some({ user_id })
   @@index([host_id, id], map: "idx_mail_recipients_sync") // Append-only sync: WHERE host_id = X AND id > Y ORDER BY id
   @@index([updated_at], map: "idx_mail_recipients_updated_at") // Catch-up: WHERE updated_at > Y AND host_id != X ORDER BY updated_at
 }
@@ -137,10 +145,9 @@ model users {
 }
 
 model user_notifications {
-  user_id        String    @id
-  host_id        String? // Same as user's host
-  latest_mail_id String    @default("")
-  latest_log_id  String    @default("")
+  user_id       String    @id
+  host_id       String? // Same as user's host
+  latest_log_id String    @default("")
   /**
    * Not the same as modified date, for example an agent can receive mail while not being active
    */
