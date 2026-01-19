@@ -73,12 +73,14 @@ export function createMockShellCommand() {
 
 export function createMockGenImg() {
   return {
+    commandName: "ns-genimg",
     handleCommand: jest.fn(() => Promise.resolve("")),
   } satisfies GenImg;
 }
 
 export function createMockSubagent() {
   const subagent: SubagentService = {
+    commandName: "ns-agent",
     handleCommand: jest.fn(() => Promise.resolve("")),
     getRunningSubagentNames: jest.fn(() => []),
     getTerminationEvents: jest.fn(() => []),
@@ -92,6 +94,7 @@ export function createMockSubagent() {
 
 export function createMockLLMail() {
   const llmail: LLMail = {
+    commandName: "ns-mail",
     handleCommand: jest.fn(() =>
       Promise.resolve({ content: "", pauseSeconds: 0 })
     ),
@@ -107,6 +110,7 @@ export function createMockLLMail() {
 
 export function createMockLLMynx() {
   const llmynx: LLMynx = {
+    commandName: "ns-lynx",
     handleCommand: jest.fn(() => Promise.resolve("")),
     clear: jest.fn(),
   };

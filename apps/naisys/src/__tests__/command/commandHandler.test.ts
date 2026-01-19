@@ -1,5 +1,6 @@
 import { describe, expect, test } from "@jest/globals";
 import { createCommandHandler } from "../../command/commandHandler.js";
+import { createCommandRegistry } from "../../command/commandRegistry.js";
 import {
   createMockAgentConfig,
   createMockCommandProtection,
@@ -28,16 +29,22 @@ function createPopFirstCommand() {
   );
   const shellCommand = createMockShellCommand();
 
+  const llmail = createMockLLMail();
+  const commandRegistry = createCommandRegistry([
+    createMockLLMynx(),
+    createMockGenImg(),
+    createMockSubagent(),
+    llmail,
+  ]);
+
   const commandHandler = createCommandHandler(
     createMockGlobalConfig(),
     createMockAgentConfig(),
     createMockCommandProtection(),
     promptBuilder,
     shellCommand,
-    createMockGenImg(),
-    createMockSubagent(),
-    createMockLLMail(),
-    createMockLLMynx(),
+    commandRegistry,
+    llmail,
     createMockSessionCompactor(),
     createMockContextManager(),
     createMockCostTracker(),

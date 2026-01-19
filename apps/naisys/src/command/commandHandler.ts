@@ -1,10 +1,7 @@
 import chalk from "chalk";
 import stringArgv from "string-argv";
 import { AgentConfig } from "../agent/agentConfig.js";
-import { GenImg } from "../features/genimg.js";
 import { LLMail } from "../features/llmail.js";
-import { LLMynx } from "../features/llmynx.js";
-import { SubagentService } from "../features/subagent.js";
 import { GlobalConfig } from "../globalConfig.js";
 import { ContextManager } from "../llm/contextManager.js";
 import { CostTracker } from "../llm/costTracker.js";
@@ -15,6 +12,7 @@ import { InputModeService } from "../utils/inputMode.js";
 import { OutputColor, OutputService } from "../utils/output.js";
 import * as utilities from "../utils/utilities.js";
 import { CommandProtection } from "./commandProtection.js";
+import { CommandRegistry } from "./commandRegistry.js";
 import { PromptBuilder } from "./promptBuilder.js";
 import { ShellCommand } from "./shellCommand.js";
 
@@ -36,10 +34,8 @@ export function createCommandHandler(
   commandProtection: CommandProtection,
   promptBuilder: PromptBuilder,
   shellCommand: ShellCommand,
-  genimg: GenImg,
-  subagent: SubagentService,
+  commandRegistry: CommandRegistry,
   llmail: LLMail,
-  llmynx: LLMynx,
   sessionCompactor: SessionCompactor,
   contextManager: ContextManager,
   costTracker: CostTracker,
@@ -103,7 +99,27 @@ export function createCommandHandler(
       // cmdArgs is everything after the command name
       const cmdArgs = input.slice(command.length).trim();
 
-      switch (command) {
+      // Check command registry first
+      const registeredCommand = commandRegistry.get(command);
+      if (registeredCommand) {
+        const response = await registeredCommand.handleCommand(cmdArgs);
+
+        // Handle string or CommandResponse
+        if (typeof response === "string") {
+          await contextManager.append(response);
+        } else {
+          await contextManager.append(response.content);
+
+          // If command requests a pause, return early
+          if (response.pauseSeconds) {
+            return {
+              nextCommandAction: NextCommandAction.Continue,
+              pauseSeconds: response.pauseSeconds,
+              wakeOnMessage: response.wakeOnMessage ?? false,
+            };
+          }
+        }
+      } else switch (command) {
         case "ns-comment": {
           // Important - Hint the LLM to turn their thoughts into accounts
           // ./bin/ns-comment shell script has the same message
@@ -237,43 +253,12 @@ export function createCommandHandler(
           break;
         }
 
-        case "ns-lynx": {
-          const llmynxResponse = await llmynx.handleCommand(cmdArgs);
-          await contextManager.append(llmynxResponse);
-          break;
-        }
-
-        case "ns-mail": {
-          const mailResponse = await llmail.handleCommand(cmdArgs);
-          await contextManager.append(mailResponse.content);
-
-          if (mailResponse.pauseSeconds) {
-            return {
-              nextCommandAction: NextCommandAction.Continue,
-              pauseSeconds: mailResponse.pauseSeconds,
-              wakeOnMessage: true,
-            };
-          }
-          break;
-        }
-
-        case "ns-genimg": {
-          const genimgResponse = await genimg.handleCommand(cmdArgs);
-          await contextManager.append(genimgResponse);
-          break;
-        }
-
         case "context":
           output.comment("#####################");
           output.comment(contextManager.printContext());
           output.comment("#####################");
           break;
 
-        case "ns-agent": {
-          const subagentResponse = await subagent.handleCommand(cmdArgs);
-          await contextManager.append(subagentResponse);
-          break;
-        }
         default: {
           const exitApp = await shellCommand.handleCommand(input);
 
