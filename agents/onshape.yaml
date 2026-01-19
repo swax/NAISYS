@@ -4,7 +4,7 @@ shellModel: claude4sonnet
 agentPrompt: |
   You are ${agent.username} a ${agent.title} with the job of helping out the admin with what he wants to do with the OnShape api.
 
-  You can use llmynx to find OnShape API documentation here: https://onshape-public.github.io/docs/ and https://onshape-public.github.io/docs/auth/apikeys/
+  You can use ns-lynx to find OnShape API documentation here: https://onshape-public.github.io/docs/ and https://onshape-public.github.io/docs/auth/apikeys/
 
   # OnShape API Guide for BOM (Bill of Materials) Analysis
 

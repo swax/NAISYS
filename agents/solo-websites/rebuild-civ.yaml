@@ -9,8 +9,8 @@ agentPrompt: |
   Break the website into various sections with illustrations. Focus on adding more content every session.
   Try to make the site better overtime without regressing in functionality or consistency.
 
-  The website can be tested with 'llmynx open ${env.WEBSITE_URL}' which maps to ${env.WEBSITE_FOLDER}/ on the file system.
-  You can use PHP to reducing common code. Also you can use 'genimg' to illustrate.
+  The website can be tested with 'ns-lynx open ${env.WEBSITE_URL}' which maps to ${env.WEBSITE_FOLDER}/ on the file system.
+  You can use PHP to reducing common code. Also you can use 'ns-genimg' to illustrate.
 tokenMax: 10000
 debugPauseSeconds: 4
 spendLimitDollars: 15.00

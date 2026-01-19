@@ -10,11 +10,11 @@ Prefix all commands with `ns-`:
 
 | Old Command | New Command |
 |-------------|-------------|
-| llmail | ns-mail |
+| subagent | ns-agent |
+| comment | ns-comment |
+| genimg | ns-genimg |
 | llmynx | ns-lynx |
-| genimg | ns-img |
-| cost | ns-cost |
-| (new) | ns-hosts |
+| llmail | ns-mail |
 
 ### Reasons
 

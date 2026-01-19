@@ -27,7 +27,7 @@ export async function createGlobalConfig() {
 
     const retrySecondsMax = 30 * 60; // 30 minutes
 
-    /** Web pages loaded with llmynx will be reduced down to around this number of tokens */
+    /** Web pages loaded with ns-lynx will be reduced down to around this number of tokens */
     const webTokenMax = 5000;
 
     /** Allows the LLM to end it's own session */

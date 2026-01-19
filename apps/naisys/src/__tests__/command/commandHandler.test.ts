@@ -95,9 +95,9 @@ describe("popFirstCommand function", () => {
     expect(commandList).toEqual([`${userHostPathPrompt}$ command2`]);
   });
 
-  test("handles comment command in quotes", async () => {
+  test("handles ns-comment command in quotes", async () => {
     const { popFirstCommand } = createPopFirstCommand();
-    const commentCommand = `comment "Today
+    const commentCommand = `ns-comment "Today
         \\"is\\"
         Tuesday"`;
     const nextInput = `${commentCommand}\ncommand2`;

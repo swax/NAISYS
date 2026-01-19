@@ -104,9 +104,9 @@ export function createCommandHandler(
       const cmdArgs = input.slice(command.length).trim();
 
       switch (command) {
-        case "comment": {
+        case "ns-comment": {
           // Important - Hint the LLM to turn their thoughts into accounts
-          // ./bin/comment shell script has the same message
+          // ./bin/ns-comment shell script has the same message
           await contextManager.append(
             "Comment noted. Try running commands now to achieve your goal.",
           );
@@ -172,7 +172,7 @@ export function createCommandHandler(
           break;
         }
 
-        case "pause": {
+        case "ns-pause": {
           const pauseSeconds = argv[1] ? parseInt(argv[1]) : 0;
 
           // Don't allow the LLM to hang itself
@@ -237,7 +237,7 @@ export function createCommandHandler(
           break;
         }
 
-        case "llmynx": {
+        case "ns-lynx": {
           const llmynxResponse = await llmynx.handleCommand(cmdArgs);
           await contextManager.append(llmynxResponse);
           break;
@@ -257,7 +257,7 @@ export function createCommandHandler(
           break;
         }
 
-        case "genimg": {
+        case "ns-genimg": {
           const genimgResponse = await genimg.handleCommand(cmdArgs);
           await contextManager.append(genimgResponse);
           break;
@@ -269,7 +269,7 @@ export function createCommandHandler(
           output.comment("#####################");
           break;
 
-        case "subagent": {
+        case "ns-agent": {
           const subagentResponse = await subagent.handleCommand(cmdArgs);
           await contextManager.append(subagentResponse);
           break;
@@ -283,7 +283,7 @@ export function createCommandHandler(
         }
       } // End switch
 
-      if (command != "comment" && firstCommand) {
+      if (command != "ns-comment" && firstCommand) {
         firstCommand = false;
       }
     } // End loop processing LLM response
@@ -341,9 +341,9 @@ export function createCommandHandler(
     }
     // Most custom NAISYS commands are single line, but comment in quotes can span multiple lines so we need to handle that
     // because often the LLM puts shell commands after the comment
-    else if (nextInput.startsWith(`comment "`)) {
+    else if (nextInput.startsWith(`ns-comment "`)) {
       // Find next double quote in nextInput that isn't escaped
-      let endQuote = nextInput.indexOf(`"`, 9);
+      let endQuote = nextInput.indexOf(`"`, 12);
       while (endQuote > 0 && nextInput[endQuote - 1] === "\\") {
         endQuote = nextInput.indexOf(`"`, endQuote + 1);
       }
@@ -360,10 +360,10 @@ export function createCommandHandler(
     // Not something we want to use for multi-line commands like llmail and subagent
     else if (
       newLinePos > 0 &&
-      (nextInput.startsWith("comment ") ||
-        nextInput.startsWith("genimg ") ||
+      (nextInput.startsWith("ns-comment ") ||
+        nextInput.startsWith("ns-genimg ") ||
         nextInput.startsWith("trimsession ") ||
-        nextInput.startsWith("pause "))
+        nextInput.startsWith("ns-pause "))
     ) {
       input = nextInput.slice(0, newLinePos);
       nextInput = nextInput.slice(newLinePos).trim();

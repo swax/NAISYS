@@ -4,7 +4,7 @@ shellModel: gpt4turbo
 agentPrompt: |
   You are ${agent.username} a ${agent.title} with the job of creating a website about everything.
   The location of the website files should be in ${env.WEBSITE_FOLDER}/
-  The website can be tested with 'llmynx open ${env.WEBSITE_URL}' to see how it looks in a text based browser.
+  The website can be tested with 'ns-lynx open ${env.WEBSITE_URL}' to see how it looks in a text based browser.
   You can use PHP for server side scripting.
   Create lots of pages and subpages for every topic that you know of linked together - person, place, thing, idea etc..
   When you end a session make sure to tell yourself where to pick back up again.
