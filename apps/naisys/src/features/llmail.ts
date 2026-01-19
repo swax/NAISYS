@@ -2,6 +2,7 @@ import { DatabaseService, ulid } from "@naisys/database";
 import stringArgv from "string-argv";
 import table from "text-table";
 import { AgentConfig } from "../agent/agentConfig.js";
+import { CommandResponse, RegistrableCommand } from "../command/commandRegistry.js";
 import { GlobalConfig } from "../globalConfig.js";
 import { RunService } from "../services/runService.js";
 import { HostService } from "../services/hostService.js";
@@ -21,12 +22,11 @@ export function createLLMail(
   const { hasMultipleHosts, formatUserWithHost, resolveUserIdentifier } =
     llmailAddress;
 
-  async function handleCommand(
-    args: string
-  ): Promise<{ content: string; pauseSeconds?: number }> {
+  async function handleCommand(args: string): Promise<CommandResponse> {
     const argv = stringArgv(args);
     let content: string;
     let pauseSeconds: number | undefined;
+    let wakeOnMessage: boolean | undefined;
 
     if (!argv[0]) {
       argv[0] = "help";
@@ -80,6 +80,7 @@ export function createLLMail(
         pauseSeconds = argv[1]
           ? parseInt(argv[1])
           : globalConfig().shellCommand.maxTimeoutSeconds;
+        wakeOnMessage = true;
 
         content = `Waiting ${pauseSeconds} seconds for new mail messages...`;
         break;
@@ -145,7 +146,7 @@ export function createLLMail(
         break;
     }
 
-    return { content, pauseSeconds };
+    return { content, pauseSeconds, wakeOnMessage };
   }
 
   interface UnreadMessage {
@@ -564,8 +565,13 @@ export function createLLMail(
     });
   }
 
-  return {
+  const registrableCommand: RegistrableCommand = {
+    commandName: "ns-mail",
     handleCommand,
+  };
+
+  return {
+    ...registrableCommand,
     getUnreadThreads,
     sendMessage,
     readMessage,

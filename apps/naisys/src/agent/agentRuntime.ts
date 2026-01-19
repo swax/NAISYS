@@ -3,6 +3,7 @@ import { AgentManager } from "./agentManager.js";
 import { createCommandHandler } from "../command/commandHandler.js";
 import { createCommandLoop } from "../command/commandLoop.js";
 import { createCommandProtection } from "../command/commandProtection.js";
+import { createCommandRegistry } from "../command/commandRegistry.js";
 import { createPromptBuilder } from "../command/promptBuilder.js";
 import { createShellCommand } from "../command/shellCommand.js";
 import { createShellWrapper } from "../command/shellWrapper.js";
@@ -135,16 +136,20 @@ export async function createAgentRuntime(
     llmService,
     output,
   );
+  const commandRegistry = createCommandRegistry([
+    llmynx,
+    genimg,
+    subagentService,
+    llmail,
+  ]);
   const commandHandler = createCommandHandler(
     globalConfig,
     agentConfig,
     commandProtection,
     promptBuilder,
     shellCommand,
-    genimg,
-    subagentService,
+    commandRegistry,
     llmail,
-    llmynx,
     sessionCompactor,
     contextManager,
     costTracker,

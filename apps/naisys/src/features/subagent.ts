@@ -3,6 +3,7 @@ import path from "path";
 import stringArgv from "string-argv";
 import table from "text-table";
 import { AgentConfig } from "../agent/agentConfig.js";
+import { RegistrableCommand } from "../command/commandRegistry.js";
 import { DatabaseService } from "@naisys/database";
 import { HostService } from "../services/hostService.js";
 import { NaisysPath } from "../services/pathService.js";
@@ -607,8 +608,13 @@ export function createSubagentService(
     );
   }
 
-  return {
+  const registrableCommand: RegistrableCommand = {
+    commandName: "ns-agent",
     handleCommand,
+  };
+
+  return {
+    ...registrableCommand,
     getRunningSubagentNames,
     getTerminationEvents,
     cleanup,

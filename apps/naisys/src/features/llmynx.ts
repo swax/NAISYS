@@ -9,6 +9,7 @@ import * as os from "os";
 import stringArgv from "string-argv";
 import { GlobalConfig } from "../globalConfig.js";
 import { AgentConfig } from "../agent/agentConfig.js";
+import { RegistrableCommand } from "../command/commandRegistry.js";
 import { CostTracker } from "../llm/costTracker.js";
 import { LLModels } from "../llm/llModels.js";
 import { LlmMessage, LlmRole } from "../llm/llmDtos.js";
@@ -641,8 +642,13 @@ Final Merged Content:
     return result;
   }
 
-  return {
+  const registrableCommand: RegistrableCommand = {
+    commandName: "ns-lynx",
     handleCommand,
+  };
+
+  return {
+    ...registrableCommand,
     clear,
   };
 }
