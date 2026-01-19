@@ -15,6 +15,9 @@ Prefix all commands with `ns-`:
 | genimg | ns-genimg |
 | llmynx | ns-lynx |
 | llmail | ns-mail |
+| cost | ns-cost |
+| talk | ns-talk |
+| context | ns-context |
 
 ### Reasons
 

@@ -4,10 +4,8 @@ import { AgentConfig } from "../agent/agentConfig.js";
 import { LLMail } from "../features/llmail.js";
 import { GlobalConfig } from "../globalConfig.js";
 import { ContextManager } from "../llm/contextManager.js";
-import { CostTracker } from "../llm/costTracker.js";
 import { ContentSource } from "../llm/llmDtos.js";
 import { SessionCompactor } from "../llm/sessionCompactor.js";
-import { RunService } from "../services/runService.js";
 import { InputModeService } from "../utils/inputMode.js";
 import { OutputColor, OutputService } from "../utils/output.js";
 import * as utilities from "../utils/utilities.js";
@@ -38,10 +36,8 @@ export function createCommandHandler(
   llmail: LLMail,
   sessionCompactor: SessionCompactor,
   contextManager: ContextManager,
-  costTracker: CostTracker,
   output: OutputService,
   inputMode: InputModeService,
-  runService: RunService,
 ) {
   async function processCommand(
     prompt: string,
@@ -169,7 +165,7 @@ export function createCommandHandler(
         }
 
         // Hidden for now as the LLM will use this instead of llmail
-        case "talk": {
+        case "ns-talk": {
           const talkMsg = cmdArgs;
 
           if (inputMode.isLLM()) {
@@ -178,7 +174,7 @@ export function createCommandHandler(
             inputMode.setLLM();
             const respondCommand = agentConfig().mailEnabled
               ? "ns-mail"
-              : "talk";
+              : "ns-talk";
             await contextManager.append(
               `Message from admin: ${talkMsg}. Respond via the ${respondCommand} command.`,
             );
@@ -234,26 +230,7 @@ export function createCommandHandler(
           };
         }
 
-        case "cost": {
-          if (argv[1] === "reset") {
-            const userId = agentConfig().spendLimitDollars
-              ? runService.getUserId()
-              : undefined;
-            await costTracker.clearCosts(userId);
-            await contextManager.append(
-              `Cost tracking data cleared for ${userId ? `${agentConfig().username}` : "all users"}.`,
-            );
-          } else if (argv[1]) {
-            await output.errorAndLog(
-              "The 'cost' command only supports the 'reset' parameter.",
-            );
-          } else {
-            await costTracker.printCosts();
-          }
-          break;
-        }
-
-        case "context":
+        case "ns-context":
           output.comment("#####################");
           output.comment(contextManager.printContext());
           output.comment("#####################");
