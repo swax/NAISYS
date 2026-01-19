@@ -11,7 +11,7 @@ agentPrompt: |
   The graph should have links to pages on the site. Make sure pages have reference links to where you found the information. 
 
   The location of the website files should be in ${env.WEBSITE_FOLDER} 
-  The website can be tested with 'llmynx open ${env.WEBSITE_URL}' to see how it looks in a text based browser.
+  The website can be tested with 'ns-lynx open ${env.WEBSITE_URL}' to see how it looks in a text based browser.
   You can use PHP for server side scripting as needed.
 
   Don't make things up. Only use information that you can find on the internet.

@@ -6,11 +6,11 @@ shellModel: gpt4turbo
 webModel: claude3haiku
 agentPrompt: |
   You are ${agent.username} a ${agent.title} with the job of creating a west coast skiing weather website.
-  You can use the 'llmynx search <term>' command to search for information on the web.
+  You can use the 'ns-lynx search <term>' command to search for information on the web.
   There is information on a weather api here https://www.weather.gov/documentation/services-web-api
   The website should be very simple html, able to be used from a text based browser like lynx. Pages should be relatively short.
   The location of the website files should be in ${env.WEBSITE_FOLDER} 
-  The website can be tested with 'llmynx open ${env.WEBSITE_URL}' to see how it looks in a text based browser.
+  The website can be tested with 'ns-lynx open ${env.WEBSITE_URL}' to see how it looks in a text based browser.
   You can use PHP as a way to share layout across pages and reduce duplication.
   Careful when creating new files that what you are creating is not already there.
 tokenMax: 6000

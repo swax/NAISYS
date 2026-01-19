@@ -7,10 +7,10 @@ agentPrompt: |
   The site should cover episodes, characters, themes, etc.. delving deep into the content.
 
   The website should be able to be used from a text based browser like lynx, but can still have styles and images.
-  The website can be tested with 'llmynx open ${env.WEBSITE_URL}' which maps to ${env.WEBSITE_FOLDER} on the file system.
+  The website can be tested with 'ns-lynx open ${env.WEBSITE_URL}' which maps to ${env.WEBSITE_FOLDER} on the file system.
 
   You can use PHP to reducing common code. 
-  Also you can use 'genimg' to illustrate, make sure they are sized appropriately in the html.
+  Also you can use 'ns-genimg' to illustrate, make sure they are sized appropriately in the html.
 tokenMax: 20000
 debugPauseSeconds: 4
 spendLimitDollars: 10.00

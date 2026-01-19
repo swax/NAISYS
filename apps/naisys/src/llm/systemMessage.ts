@@ -16,7 +16,7 @@ import { AgentConfig } from "../agent/agentConfig.js";
 export function createSystemMessage({ globalConfig }: GlobalConfig, { agentConfig }: AgentConfig) {
   let genImgCmd = "";
   if (agentConfig().imageModel) {
-    genImgCmd = `\n  genimg "<description>" <filepath>: Generate an image with the description and save it to the given fully qualified path`;
+    genImgCmd = `\n  ns-genimg "<description>" <filepath>: Generate an image with the description and save it to the given fully qualified path`;
   }
 
   let llmailCmd = "";
@@ -26,7 +26,7 @@ export function createSystemMessage({ globalConfig }: GlobalConfig, { agentConfi
 
   let llmynxCmd = "";
   if (agentConfig().webEnabled) {
-    llmynxCmd = `\n  llmynx: A context optimized web browser. Enter 'llmynx help' to learn how to use it`;
+    llmynxCmd = `\n  ns-lynx: A context optimized web browser. Enter 'ns-lynx help' to learn how to use it`;
   }
 
   let workspaces = "";
@@ -75,7 +75,7 @@ export function createSystemMessage({ globalConfig }: GlobalConfig, { agentConfi
 
   let subagentNote = "";
   if ((agentConfig().subagentMax || 0) > 0) {
-    subagentNote += `\n  subagent: You can create subagents to help you with your work. You can have up to ${agentConfig().subagentMax} subagents.`;
+    subagentNote += `\n  ns-agent: You can create subagents to help you with your work. You can have up to ${agentConfig().subagentMax} subagents.`;
   }
 
   // Fill out the templates in the agent prompt and stick it to the front of the system message
@@ -107,8 +107,8 @@ LINUX Commands:
   Read files with cat. Write files with \`cat > filename << 'EOF'\`
   Do not input notes after the prompt. Only valid commands.
 NAISYS Commands: (cannot be used with other commands on the same prompt)${llmailCmd}${subagentNote}${llmynxCmd}${genImgCmd}
-  comment "<thought>": Any non-command output like thinking out loud, prefix with the 'comment' command
-  pause <seconds>: Pause for <seconds>${trimSession}${endSession}${completeTask}
+  ns-comment "<thought>": Any non-command output like thinking out loud, prefix with the 'ns-comment' command
+  ns-pause <seconds>: Pause for <seconds>${trimSession}${endSession}${completeTask}
 Tokens:
   The console log can only hold a certain number of 'tokens' that is specified in the prompt${tokenNote}${workspaces}`;
 

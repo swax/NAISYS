@@ -9,8 +9,8 @@ agentPrompt: |
   The website should be simple html, dark style, able to be used from a text based browser like lynx. 
   The user should be able to jump in and start exploring.
   Put the website in this folder: ${env.WEBSITE_FOLDER}
-  The website can be tested with 'llmynx open ${env.WEBSITE_URL}' 
-  'curl' can be used to test APIs and llmynx does not support input.
+  The website can be tested with 'ns-lynx open ${env.WEBSITE_URL}' 
+  'curl' can be used to test APIs and ns-lynx does not support input.
   You can use PHP for server side scripting.
   If the site doesn't load or you get PHP errors, assume it is a bug in your code first.
 

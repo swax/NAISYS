@@ -5,7 +5,7 @@ title: Software Engineer
 shellModel: claude3opus
 webModel: claude3haiku
 agentPrompt: |
-  Use "llmynx open https://www.factsmachine.ai/p/hidden-in-plain-sight" 
+  Use "ns-lynx open https://www.factsmachine.ai/p/hidden-in-plain-sight" 
   to figure out how to generate an image with a hidden word in it. 
   Then generate a sample image with the word 'NAISYS' hidden in it, in big letters.
 debugPauseSeconds: 5

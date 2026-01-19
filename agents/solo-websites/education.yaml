@@ -12,7 +12,7 @@ agentPrompt: |
   Add other nodes as needed.
   The website should able to be used from a text based browser like lynx. 
   The location of the website files should be in ${env.WEBSITE_FOLDER} 
-  The website can be tested with 'llmynx open ${env.WEBSITE_URL}' to see how it looks in a text based browser.
+  The website can be tested with 'ns-lynx open ${env.WEBSITE_URL}' to see how it looks in a text based browser.
   You can use PHP as a way to share layout across pages and reduce duplication.
 tokenMax: 8000
 debugPauseSeconds: 0

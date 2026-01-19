@@ -45,7 +45,7 @@ export function createLLMynx(
     }
   >();
 
-  /** Links numbers are unique in the context so that `llmynx follow <linknum>` can be called on all previous output */
+  /** Links numbers are unique in the context so that `ns-lynx follow <linknum>` can be called on all previous output */
   const _globalLinkMap = new Map<number, string>();
   const _globalUrlMap = new Map<string, number>();
   let _nextGlobalLinkNum = 1;
@@ -61,14 +61,14 @@ export function createLLMynx(
 
     switch (argv[0]) {
       case "help":
-        return `llmynx <command> (results will be paginated to ${globalConfig().webTokenMax} tokens per page)
+        return `ns-lynx <command> (results will be paginated to ${globalConfig().webTokenMax} tokens per page)
   search <query>: Search google for the given query
   open <url>: Opens the given url. Links are represented as numbers in brackets which prefix the word they are linking like [123]
   follow <link number>: Opens the given link number. Link numbers work across all previous outputs
   links <url> <page>: Lists only the links for the given url. Use the page number to get more links
   more: Show the next page of content from the last URL opened
 
-*llmynx does not support input. Use llmynx or curl to call APIs directly*`;
+*ns-lynx does not support input. Use ns-lynx or curl to call APIs directly*`;
       case "search": {
         const query = argv.slice(1).join(" ");
 
@@ -241,11 +241,11 @@ export function createLLMynx(
 
         // Add pagination info if there are more pages
         if (pages.length > 1) {
-          content += `\n\n--- More content available. Use 'llmynx more' to view page 2 of ${pages.length} ---`;
+          content += `\n\n--- More content available. Use 'ns-lynx more' to view page 2 of ${pages.length} ---`;
         }
 
         output.comment(
-          `Content is ${contentTokenSize} tokens. Showing page 1 of ${pages.length}. Use 'llmynx more' for next page.`,
+          `Content is ${contentTokenSize} tokens. Showing page 1 of ${pages.length}. Use 'ns-lynx more' for next page.`,
         );
       } else {
         output.comment(
@@ -261,7 +261,7 @@ export function createLLMynx(
 
     if (showFollowHint) {
       content +=
-        "\n\nLinks are in brackets. Use `llmynx follow <link number>` to follow a link.";
+        "\n\nLinks are in brackets. Use `ns-lynx follow <link number>` to follow a link.";
     }
 
     return storeMapSetLinks(content, links);
@@ -540,7 +540,7 @@ Final Merged Content:
 
   function showMoreContent(): string {
     if (!_currentPagination) {
-      return "No paginated content available. Open a URL first with 'llmynx open <url>'.";
+      return "No paginated content available. Open a URL first with 'ns-lynx open <url>'.";
     }
 
     if (_currentPagination.currentPage >= _currentPagination.pages.length) {
@@ -555,7 +555,7 @@ Final Merged Content:
 
     // Add pagination info
     if (_currentPagination.currentPage < _currentPagination.pages.length) {
-      pageContent += `\n\n--- More content available. Use 'llmynx more' to view page ${_currentPagination.currentPage + 1} of ${_currentPagination.pages.length} ---`;
+      pageContent += `\n\n--- More content available. Use 'ns-lynx more' to view page ${_currentPagination.currentPage + 1} of ${_currentPagination.pages.length} ---`;
     }
 
     let result = `URL: ${_currentPagination.url} (Page ${_currentPagination.currentPage} of ${_currentPagination.pages.length})\n\n${pageContent}`;
@@ -611,7 +611,7 @@ Final Merged Content:
                   output += `${url}\n\n`;
                 }
 
-                output += `\nUse 'llmynx follow <link number>' to open a result.`;
+                output += `\nUse 'ns-lynx follow <link number>' to open a result.`;
               } else {
                 output += "No results found.";
               }

@@ -5,7 +5,7 @@ agentPrompt: |
   You are ${agent.username} a ${agent.title} with the job of creating a Sketch Comedy Database site like IMDB.
   The website should be simple html, able to be used from a text based browser like lynx. 
   The location of the website files should be in ${env.WEBSITE_FOLDER}
-  The website can be tested with 'llmynx open ${env.WEBSITE_URL}'.
+  The website can be tested with 'ns-lynx open ${env.WEBSITE_URL}'.
   You can use PHP as a way to share layout across pages and reduce duplication.
   Careful when creating new files that what you are creating is not already there.
 

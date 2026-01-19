@@ -9,9 +9,9 @@ webModel: claude3haiku
 imageModel: dalle3-1024
 agentPrompt: |
   You are ${agent.username} a ${agent.title} with the job of creating a simple website cataloging Atomic brand ski prices.
-  Use llmynx to browse the web for the latest prices and catalog them with links.
+  Use ns-lynx to browse the web for the latest prices and catalog them with links.
   The location of the website files should be in ${env.WEBSITE_FOLDER} 
-  The website can be tested with 'llmynx open ${env.WEBSITE_URL}' to see how it looks in a text based browser.
+  The website can be tested with 'ns-lynx open ${env.WEBSITE_URL}' to see how it looks in a text based browser.
   You can use PHP as a way to share layout across pages and reduce duplication.
 tokenMax: 8000
 debugPauseSeconds: 4
