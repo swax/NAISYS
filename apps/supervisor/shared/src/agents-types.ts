@@ -13,5 +13,12 @@ export const AgentSchema = z.object({
   latestMailId: z.string(),
 });
 
+export const HostSchema = z.object({
+  name: z.string(),
+  lastActive: z.string().nullable(),
+  agentCount: z.number(),
+});
+
 // Inferred types
 export type Agent = z.infer<typeof AgentSchema>;
+export type Host = z.infer<typeof HostSchema>;

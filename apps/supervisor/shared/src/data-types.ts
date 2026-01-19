@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { AgentSchema } from "./agents-types.js";
+import { AgentSchema, HostSchema } from "./agents-types.js";
 
 // Zod schemas
 export const NaisysDataRequestSchema = z.object({
@@ -12,6 +12,7 @@ export const NaisysDataResponseSchema = z.object({
   data: z
     .object({
       agents: z.array(AgentSchema),
+      hosts: z.array(HostSchema),
       timestamp: z.string(),
     })
     .optional(),

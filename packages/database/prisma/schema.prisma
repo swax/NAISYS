@@ -191,6 +191,7 @@ model schema_version {
 model hosts {
   host_id            String               @id @map("host_id") // ULID - same column name as FK in other tables
   name               String               @unique(map: "unq_hosts_name") // NAISYS_HOSTNAME
+  last_active        DateTime?
   created_at         DateTime             @default(now())
   updated_at         DateTime             @updatedAt
   users              users[]

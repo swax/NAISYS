@@ -5,7 +5,7 @@ import React, {
   useState,
 } from "react";
 import { useAgentData } from "../hooks/useAgentData";
-import { Agent } from "../types/agent";
+import { Agent, Host } from "../types/agent";
 
 export interface ClientReadStatus {
   lastReadLogId: string;
@@ -14,6 +14,7 @@ export interface ClientReadStatus {
 
 interface AgentDataContextType {
   agents: Agent[];
+  hosts: Host[];
   isLoading: boolean;
   error: Error | null;
   readStatus: Record<string, ClientReadStatus>;
@@ -32,11 +33,12 @@ export const AgentDataProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const [agents, setAgents] = useState<Agent[]>([]);
+  const [hosts, setHosts] = useState<Host[]>([]);
   const [readStatus, setReadStatus] = useState<Record<string, ClientReadStatus>>(
     {},
   );
 
-  const { agents: cachedAgents, isLoading, error } = useAgentData();
+  const { agents: cachedAgents, hosts: cachedHosts, isLoading, error } = useAgentData();
 
   // Update data from agent polling responses
   useEffect(() => {
@@ -67,6 +69,13 @@ export const AgentDataProvider: React.FC<{ children: React.ReactNode }> = ({
       });
     }
   }, [cachedAgents]);
+
+  // Update hosts from polling responses
+  useEffect(() => {
+    if (cachedHosts) {
+      setHosts(cachedHosts);
+    }
+  }, [cachedHosts]);
 
   const updateReadStatus = async (
     agentName: string,
@@ -110,6 +119,7 @@ export const AgentDataProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const value: AgentDataContextType = {
     agents,
+    hosts,
     isLoading,
     error,
     readStatus,
