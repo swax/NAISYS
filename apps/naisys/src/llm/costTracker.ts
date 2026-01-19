@@ -1,4 +1,5 @@
 import { ulid } from "@naisys/database";
+import stringArgv from "string-argv";
 import { isUlidWithinWindow, minUlidForTime } from "../utils/ulidTools.js";
 import { GlobalConfig } from "../globalConfig.js";
 import { AgentConfig } from "../agent/agentConfig.js";
@@ -7,6 +8,7 @@ import { RunService } from "../services/runService.js";
 import { OutputService } from "../utils/output.js";
 import { LLModels } from "./llModels.js";
 import { HostService } from "../services/hostService.js";
+import { RegistrableCommand } from "../command/commandRegistry.js";
 
 // Keep only interfaces that are used as parameters or need explicit typing
 interface LlmModelCosts {
@@ -628,7 +630,32 @@ export function createCostTracker(
     });
   }
 
+  /** ns-cost [reset]: Show cost breakdown or reset cost tracking data */
+  async function handleCommand(cmdArgs: string): Promise<string> {
+    const argv = stringArgv(cmdArgs);
+    const subcommand = argv[0];
+
+    if (subcommand === "reset") {
+      const userId = agentConfig().spendLimitDollars
+        ? runService.getUserId()
+        : undefined;
+      await clearCosts(userId);
+      return `Cost tracking data cleared for ${userId ? `${agentConfig().username}` : "all users"}.`;
+    } else if (subcommand) {
+      return "The 'ns-cost' command only supports the 'reset' parameter.";
+    } else {
+      await printCosts();
+      return "";
+    }
+  }
+
+  const registrableCommand: RegistrableCommand = {
+    commandName: "ns-cost",
+    handleCommand,
+  };
+
   return {
+    ...registrableCommand,
     recordTokens,
     recordCost,
     calculateCostFromTokens,

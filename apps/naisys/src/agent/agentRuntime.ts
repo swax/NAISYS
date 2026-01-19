@@ -141,6 +141,7 @@ export async function createAgentRuntime(
     genimg,
     subagentService,
     llmail,
+    costTracker,
   ]);
   const commandHandler = createCommandHandler(
     globalConfig,
@@ -152,10 +153,8 @@ export async function createAgentRuntime(
     llmail,
     sessionCompactor,
     contextManager,
-    costTracker,
     output,
     inputMode,
-    runService,
   );
   const commandLoop = createCommandLoop(
     globalConfig,

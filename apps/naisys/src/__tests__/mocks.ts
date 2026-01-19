@@ -162,6 +162,8 @@ export function createMockWorkspacesFeature() {
 
 export function createMockCostTracker() {
   const costTracker: CostTracker = {
+    commandName: "ns-cost",
+    handleCommand: jest.fn(() => Promise.resolve("")),
     recordTokens: jest.fn(() => Promise.resolve()),
     recordCost: jest.fn(() => Promise.resolve()),
     calculateCostFromTokens: jest.fn(() => 0),

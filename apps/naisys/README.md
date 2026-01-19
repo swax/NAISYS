@@ -134,10 +134,10 @@ initialCommands:
 
 - NAISYS tries to be light, acting as a helpful proxy between the LLM and a real shell, most commands should pass right though to the shell
 - Debug Commands
-  - `cost` - Prints the current total LLM cost
-  - `context` - Prints the current context
-  - `exit` - Exits NAISYS. If the LLM tries to use `exit`, it is directed to use `endsession` instead
-  - `talk` - Communicate with the local agent to give hints or ask questions (the agent itself does not know about talk and is directed to use `ns-comment` or `ns-mail` for communication)
+  - `ns-cost` - Prints the current total LLM cost
+  - `ns=context` - Prints the current context
+  - `ns-talk` - Communicate with the local agent to give hints or ask questions (the agent itself does not know about talk and is directed to use `ns-comment` or `ns-mail` for communication)
+  - `exit` - Exits NAISYS in debug mode. If the LLM tries to use `exit`, it is directed to use `endsession` instead
 - Special Commands usable by the LLM as well as by the debug prompt
   - `ns-comment "<note>"` - The LLM is directed to use this for 'thinking out loud' which avoids 'invalid command' errors
   - `endsession "<note>"` - Clear the context and start a new session.

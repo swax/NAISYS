@@ -102,7 +102,7 @@ export async function createAgentRegistrar(
 
   /**
    * Admin agent is a human operated agent
-   * The talk command uses this agent name as the sender, so agents will llmail reply to it
+   * The ns-talk command uses this agent name as the sender, so agents will llmail reply to it
    * A quiet console environment to monitor agents, send/recv mail from them
    * Allows restarting the an agent without ending the naisys process since the admin is still running
    * (todo:) Allows other agents to run at full speed (0s timeout), and only slow down when in focus

@@ -5,7 +5,6 @@ import {
   createMockAgentConfig,
   createMockCommandProtection,
   createMockContextManager,
-  createMockCostTracker,
   createMockSessionCompactor,
   createMockGenImg,
   createMockGlobalConfig,
@@ -14,7 +13,6 @@ import {
   createMockLLMynx,
   createMockOutputService,
   createMockPromptBuilder,
-  createMockRunService,
   createMockShellCommand,
   createMockSubagent,
 } from "../mocks.js";
@@ -47,10 +45,8 @@ function createPopFirstCommand() {
     llmail,
     createMockSessionCompactor(),
     createMockContextManager(),
-    createMockCostTracker(),
     createMockOutputService(),
     createMockInputMode(),
-    createMockRunService(),
   );
 
   return {
