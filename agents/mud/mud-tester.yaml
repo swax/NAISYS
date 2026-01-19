@@ -10,5 +10,5 @@ tokenMax: 10000
 debugPauseSeconds: 5
 spendLimitDollars: 7.00
 initialCommands:
-  - llmail users
-  - llmail help
+  - ns-mail users
+  - ns-mail help

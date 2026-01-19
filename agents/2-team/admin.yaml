@@ -17,5 +17,5 @@ spendLimitDollars: 2.00
 
 # Familiarize LLM with how to contact other users on the system
 initialCommands:
-  - llmail help
-  - llmail users
+  - ns-mail help
+  - ns-mail users

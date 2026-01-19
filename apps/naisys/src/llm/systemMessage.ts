@@ -21,7 +21,7 @@ export function createSystemMessage({ globalConfig }: GlobalConfig, { agentConfi
 
   let llmailCmd = "";
   if (agentConfig().mailEnabled) {
-    llmailCmd = `\n  llmail: A local mail system for communicating with your team`;
+    llmailCmd = `\n  ns-mail: A local mail system for communicating with your team`;
   }
 
   let llmynxCmd = "";

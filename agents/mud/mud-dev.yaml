@@ -31,8 +31,8 @@ spendLimitDollars: 7.00
 # Somehow agents seem to just break the websites they create the longer they run
 # So just show everything so the agent can get off to a good start
 initialCommands:
-  - llmail users
-  - llmail help
+  - ns-mail users
+  - ns-mail help
   - comment "Let's take a look at the current files in the www folder"
   - ${agent.directory}/cat-www.sh ${env.WEBSITE_FOLDER}
   - comment "Let's take a look at the current database schema"

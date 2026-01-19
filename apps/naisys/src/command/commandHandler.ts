@@ -161,7 +161,7 @@ export function createCommandHandler(
           } else if (inputMode.isDebug()) {
             inputMode.setLLM();
             const respondCommand = agentConfig().mailEnabled
-              ? "llmail"
+              ? "ns-mail"
               : "talk";
             await contextManager.append(
               `Message from admin: ${talkMsg}. Respond via the ${respondCommand} command.`,
@@ -243,7 +243,7 @@ export function createCommandHandler(
           break;
         }
 
-        case "llmail": {
+        case "ns-mail": {
           const mailResponse = await llmail.handleCommand(cmdArgs);
           await contextManager.append(mailResponse.content);
 

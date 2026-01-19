@@ -20,6 +20,6 @@ debugPauseSeconds: 4
 spendLimitDollars: 8.00
 subagentMax: 2
 initialCommands:
-  - llmail users
-  - llmail help
+  - ns-mail users
+  - ns-mail help
   - subagent

@@ -89,7 +89,7 @@ export function createSubagentService(
         helpOutput += `\n\n* You can have up to ${agentConfig().subagentMax} subagents running at a time.`;
 
         if (agentConfig().mailEnabled) {
-          helpOutput += ` Use llmail to communicate with subagents by name.`;
+          helpOutput += ` Use ns-mail to communicate with subagents by name.`;
         }
 
         return helpOutput;
@@ -336,7 +336,7 @@ export function createSubagentService(
 
     if (agentConfig().mailEnabled) {
       subagentConfig.mailEnabled = true;
-      subagentConfig.initialCommands = ["llmail users", "llmail help"];
+      subagentConfig.initialCommands = ["ns-mail users", "ns-mail help"];
     }
 
     const agentYaml = yaml.dump(subagentConfig);
@@ -452,7 +452,7 @@ export function createSubagentService(
         if (hasSpawned && subagent.status === "spawned") {
           let response = `Subagent '${agentName}' Started (ID: ${subagent.id})`;
           if (agentConfig().mailEnabled) {
-            response += `\nUse llmail to communicate with the subagent '${subagent.agentName}'`;
+            response += `\nUse ns-mail to communicate with the subagent '${subagent.agentName}'`;
           }
           resolve(response);
         } else {
