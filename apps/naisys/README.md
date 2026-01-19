@@ -101,8 +101,8 @@ completeTaskEnabled: true
 
 # Run these commands on session start, in the example below the agent will see how to use mail and a list of other agents
 initialCommands:
-  - llmail users
-  - llmail help
+  - ns-mail users
+  - ns-mail help
   - cat ${env.NAISYS_FOLDER}/home/${agent.username}/PLAN.md
 # Additional custom variables can be defined here and/or in the agent config to be loaded into the agent prompt
 ```
@@ -137,7 +137,7 @@ initialCommands:
   - `cost` - Prints the current total LLM cost
   - `context` - Prints the current context
   - `exit` - Exits NAISYS. If the LLM tries to use `exit`, it is directed to use `endsession` instead
-  - `talk` - Communicate with the local agent to give hints or ask questions (the agent itself does not know about talk and is directed to use `comment` or `llmail` for communication)
+  - `talk` - Communicate with the local agent to give hints or ask questions (the agent itself does not know about talk and is directed to use `comment` or `ns-mail` for communication)
 - Special Commands usable by the LLM as well as by the debug prompt
   - `comment "<note>"` - The LLM is directed to use this for 'thinking out loud' which avoids 'invalid command' errors
   - `endsession "<note>"` - Clear the context and start a new session.
@@ -147,10 +147,10 @@ initialCommands:
     - For sub-agents: exits the application and returns control to the lead agent
     - For main agents: pauses execution and waits for user input or messages
 - NAISYS apps
-  - `llmail` - A context friendly 'mail system' used for agent to agent communication
+  - `ns-mail` - A context friendly 'mail system' used for agent to agent communication
   - `llmynx` - A context friendly wrapping on the lynx browser that can use a separate LLM to reduce the size of a large webpage into something that can fit into the LLM's context
   - `genimg "<description>" <filepath>` - Generates an image with the given description, save at the specified fully qualified path
-  - `subagent` - A way for LLMs to start/stop their own sub-agents. Communicating with each other with `llmail`. Set the `subagentMax` in the agent config to enable.
+  - `subagent` - A way for LLMs to start/stop their own sub-agents. Communicating with each other with `ns-mail`. Set the `subagentMax` in the agent config to enable.
 
 ## Changelog
 

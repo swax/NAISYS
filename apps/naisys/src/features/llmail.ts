@@ -38,7 +38,7 @@ export function createLLMail(
 
     switch (argv[0]) {
       case "help": {
-        content = `llmail <command>
+        content = `ns-mail <command>
   list [received|sent]               List recent messages (non-archived, * = unread)
   read <id>                          Read a message (marks as read)
   send "<users>" "<subject>" "<msg>" Send a message.${tokenMaxNote}
@@ -63,7 +63,7 @@ export function createLLMail(
       }
 
       case "send": {
-        // Expected: llmail send "user1,user2" "subject" "message"
+        // Expected: ns-mail send "user1,user2" "subject" "message"
         const usernames = argv[1]?.split(",").map((u) => u.trim());
         const subject = argv[2];
         const message = argv[3];
