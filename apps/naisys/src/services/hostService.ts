@@ -8,6 +8,8 @@ export async function createHostService(
 ) {
   const localHostname = globalConfig().hostname;
 
+  let updateInterval: NodeJS.Timeout | null = null;
+
   // Create or get the host record
   const localHostId = await dbService.usingDatabase(async (prisma) => {
     // Try to find existing host by name
@@ -16,10 +18,10 @@ export async function createHostService(
     });
 
     if (existingHost) {
-      // Touch the host record to update updated_at
+      // Update last_active timestamp
       await prisma.hosts.update({
         where: { host_id: existingHost.host_id },
-        data: {}, // Empty update triggers @updatedAt
+        data: { last_active: new Date().toISOString() },
       });
       return existingHost.host_id;
     }
@@ -30,6 +32,7 @@ export async function createHostService(
       data: {
         host_id: newHostId,
         name: localHostname,
+        last_active: new Date().toISOString(),
       },
     });
 
@@ -37,7 +40,27 @@ export async function createHostService(
     return newHostId;
   });
 
+  async function updateLastActive(): Promise<void> {
+    await dbService.usingDatabase(async (prisma) => {
+      await prisma.hosts.update({
+        where: { host_id: localHostId },
+        data: { last_active: new Date().toISOString() },
+      });
+    });
+  }
+
+  // Start periodic last_active updates
+  updateInterval = setInterval(updateLastActive, 2000);
+
+  function cleanup() {
+    if (updateInterval) {
+      clearInterval(updateInterval);
+      updateInterval = null;
+    }
+  }
+
   return {
+    cleanup,
     localHostId,
     localHostname,
   };

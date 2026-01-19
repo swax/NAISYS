@@ -114,6 +114,7 @@ describe("Hub Catch-Up Integration Tests", () => {
     mockHubManagerA = bridge.createMockHubManager(hostAId, hostAName);
 
     const hostServiceA: HostService = {
+      cleanup: () => {},
       localHostId: hostAId,
       localHostname: hostAName,
     };
@@ -133,6 +134,7 @@ describe("Hub Catch-Up Integration Tests", () => {
     mockHubManagerB = bridge.createMockHubManager(hostBId, hostBName);
 
     const hostServiceB: HostService = {
+      cleanup: () => {},
       localHostId: hostBId,
       localHostname: hostBName,
     };
@@ -236,6 +238,7 @@ describe("Hub Catch-Up Integration Tests", () => {
     mockHubManagerB = bridge.createMockHubManager(hostBId, hostBName);
 
     const hostServiceB: HostService = {
+      cleanup: () => {},
       localHostId: hostBId,
       localHostname: hostBName,
     };

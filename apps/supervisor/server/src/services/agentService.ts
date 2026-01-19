@@ -1,9 +1,10 @@
-import { Agent } from "shared";
+import { Agent, Host } from "shared";
 import { usingNaisysDb } from "../database/naisysDatabase.js";
 import { cachedForSeconds } from "../utils/cache.js";
 
 export interface AgentData {
   agents: Agent[];
+  hosts: Host[];
   timestamp: string;
 }
 
@@ -74,13 +75,42 @@ export const getAgents = cachedForSeconds(1, async (updatedSince?: string): Prom
   return agents;
 });
 
+export const getHosts = cachedForSeconds(1, async (): Promise<Host[]> => {
+  try {
+    const hosts = await usingNaisysDb(async (prisma) => {
+      return prisma.hosts.findMany({
+        select: {
+          name: true,
+          last_active: true,
+          _count: {
+            select: { users: true },
+          },
+        },
+      });
+    });
+
+    return hosts.map((host) => ({
+      name: host.name,
+      lastActive: host.last_active?.toISOString() ?? null,
+      agentCount: host._count.users,
+    }));
+  } catch (error) {
+    console.error("Error fetching hosts from Naisys database:", error);
+    return [];
+  }
+});
+
 export async function getAgentData(updatedSince?: string): Promise<AgentData> {
   try {
-    // Fetch agents
-    const agents = await getAgents(updatedSince);
+    // Fetch agents and hosts in parallel
+    const [agents, hosts] = await Promise.all([
+      getAgents(updatedSince),
+      getHosts(),
+    ]);
 
     return {
       agents,
+      hosts,
       timestamp: new Date().toISOString(),
     };
   } catch (error) {
@@ -89,6 +119,7 @@ export async function getAgentData(updatedSince?: string): Promise<AgentData> {
     // Return empty data on error
     return {
       agents: [],
+      hosts: [],
       timestamp: new Date().toISOString(),
     };
   }

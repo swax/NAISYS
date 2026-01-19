@@ -86,6 +86,7 @@ describe("Hub Sync Integration Tests", () => {
     mockHubManagerA = bridge.createMockHubManager(hostAId, hostAName);
 
     const hostServiceA: HostService = {
+      cleanup: () => {},
       localHostId: hostAId,
       localHostname: hostAName,
     };

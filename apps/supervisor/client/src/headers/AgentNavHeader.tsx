@@ -5,13 +5,13 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { ROUTER_BASENAME } from "../constants";
 import { useAgentDataContext } from "../contexts/AgentDataContext";
 
-interface NavHeaderProps {
+interface AgentNavHeaderProps {
   agentName?: string;
   sidebarWidth: number;
   sidebarCollapsed: boolean;
 }
 
-export const NavHeader: React.FC<NavHeaderProps> = ({
+export const AgentNavHeader: React.FC<AgentNavHeaderProps> = ({
   agentName,
   sidebarWidth,
   sidebarCollapsed,

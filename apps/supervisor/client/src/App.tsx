@@ -20,11 +20,12 @@ import {
 } from "./contexts/AgentDataContext";
 import { SessionProvider } from "./contexts/SessionContext";
 import { AgentSidebar } from "./headers/AgentSidebar";
-import { NavHeader } from "./headers/NavHeader";
+import { AgentNavHeader } from "./headers/AgentNavHeader";
 import { ToolsHeader } from "./headers/ToolsHeader";
 import { queryClient } from "./lib/queryClient";
 import { Controls } from "./pages/Controls";
 import { Home } from "./pages/home/Home";
+import { HostPage } from "./pages/HostPage";
 import { Mail } from "./pages/mail/Mail";
 import { Runs } from "./pages/runs/Runs";
 
@@ -40,8 +41,15 @@ const AppContent: React.FC = () => {
   // Extract current agent name from URL
   const currentAgentName = React.useMemo(() => {
     const pathParts = location.pathname.split("/");
+    // Don't return agent name if on host page
+    if (pathParts[1] === "host") {
+      return null;
+    }
     return pathParts[2] || null;
   }, [location.pathname]);
+
+  // Check if on host page (hide agent nav header)
+  const isHostPage = location.pathname.startsWith("/host/");
 
   // Define routes with keys to remount on agentName change which triggers refetching immediately
   // This prevents sessions looking on/offline when they really arent, as well as getting latest data immediately (sessions, logs, mail, etc)
@@ -87,11 +95,13 @@ const AppContent: React.FC = () => {
                 NAISYS Supervisor
               </Text>
             </Link>
-            <NavHeader
-              agentName={currentAgentName || undefined}
-              sidebarWidth={SIDEBAR_WIDTH}
-              sidebarCollapsed={isMobile}
-            />
+            {!isHostPage && (
+              <AgentNavHeader
+                agentName={currentAgentName || undefined}
+                sidebarWidth={SIDEBAR_WIDTH}
+                sidebarCollapsed={isMobile}
+              />
+            )}
           </Group>
           <ToolsHeader
             isLoading={isLoading}
@@ -115,6 +125,7 @@ const AppContent: React.FC = () => {
           <Route path="/mail/:agent/:messageId" element={<Mail />} />
           <Route path="/controls" element={<Controls />} />
           <Route path="/controls/:agent" element={<Controls />} />
+          <Route path="/host/:hostName" element={<HostPage />} />
         </Routes>
       </AppShell.Main>
     </AppShell>

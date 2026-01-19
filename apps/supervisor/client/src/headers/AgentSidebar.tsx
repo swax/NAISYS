@@ -1,9 +1,10 @@
-import { ActionIcon, Badge, Card, Group, Stack, Text } from "@mantine/core";
+import { ActionIcon, Badge, Card, Divider, Group, Stack, Text } from "@mantine/core";
 import {
   IconFileText,
   IconMail,
   IconPlus,
   IconRobot,
+  IconServer,
 } from "@tabler/icons-react";
 import React, { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -11,12 +12,12 @@ import { AddAgentDialog } from "../components/AddAgentDialog";
 import { ROUTER_BASENAME } from "../constants";
 import { useAgentDataContext } from "../contexts/AgentDataContext";
 import { useSession } from "../contexts/SessionContext";
-import { Agent } from "../types/agent";
+import { Agent, Host } from "../types/agent";
 
 export const AgentSidebar: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { agents, isLoading, readStatus } = useAgentDataContext();
+  const { agents, hosts, isLoading, readStatus } = useAgentDataContext();
   const { isAuthenticated } = useSession();
   const [modalOpened, setModalOpened] = useState(false);
 
@@ -26,6 +27,11 @@ export const AgentSidebar: React.FC = () => {
       return !pathParts[2];
     }
     return pathParts[2] === agentName;
+  };
+
+  const isHostSelected = (hostName: string) => {
+    const pathParts = location.pathname.split("/");
+    return pathParts[1] === "host" && pathParts[2] === hostName;
   };
 
   const getCurrentSection = () => location.pathname.split("/")[1];
@@ -59,6 +65,22 @@ export const AgentSidebar: React.FC = () => {
     // Prevent default for regular clicks and handle with navigate
     e.preventDefault();
     navigate(getAgentUrl(agent));
+  };
+
+  const getHostUrl = (host: Host) => `/host/${host.name}`;
+
+  const getHostAbsoluteUrl = (host: Host) =>
+    `${ROUTER_BASENAME}${getHostUrl(host)}`;
+
+  const handleHostClick = (e: React.MouseEvent, host: Host) => {
+    // Allow default behavior for middle-click and ctrl/cmd+click
+    if (e.button === 1 || e.ctrlKey || e.metaKey) {
+      return;
+    }
+
+    // Prevent default for regular clicks and handle with navigate
+    e.preventDefault();
+    navigate(getHostUrl(host));
   };
 
   if (isLoading) {
@@ -291,6 +313,59 @@ export const AgentSidebar: React.FC = () => {
         opened={modalOpened}
         onClose={() => setModalOpened(false)}
       />
+
+      {hosts.length > 0 && (
+        <>
+          <Divider my="md" />
+          <Text size="sm" fw={600} c="dimmed" mb="md">
+            HOSTS
+          </Text>
+          <Stack gap="xs">
+            {hosts.map((host) => (
+              <Card
+                key={host.name}
+                padding="sm"
+                radius="md"
+                withBorder
+                component="a"
+                href={getHostAbsoluteUrl(host)}
+                onClick={(e) => handleHostClick(e, host)}
+                style={{
+                  cursor: "pointer",
+                  backgroundColor: isHostSelected(host.name)
+                    ? "var(--mantine-color-blue-9)"
+                    : undefined,
+                  textDecoration: "none",
+                  color: "inherit",
+                  display: "block",
+                }}
+              >
+                <Group justify="space-between" align="center" wrap="nowrap">
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <Group gap="xs" align="center" wrap="nowrap">
+                      <IconServer size="1rem" style={{ flexShrink: 0 }} />
+                      <Text size="sm" fw={500} truncate="end">
+                        {host.name}
+                      </Text>
+                    </Group>
+                    <Text size="xs" c="dimmed">
+                      {host.agentCount} agent{host.agentCount !== 1 ? "s" : ""}
+                    </Text>
+                  </div>
+                  <Badge
+                    size="xs"
+                    variant="light"
+                    color={host.online ? "green" : "gray"}
+                    style={{ flexShrink: 0 }}
+                  >
+                    {host.online ? "online" : "offline"}
+                  </Badge>
+                </Group>
+              </Card>
+            ))}
+          </Stack>
+        </>
+      )}
     </>
   );
 };

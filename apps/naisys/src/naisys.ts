@@ -83,6 +83,8 @@ await agentManager.startAgent(agentPath);
 
 await agentManager.waitForAllAgentsToComplete();
 
+hostService.cleanup();
+
 console.log(`NAISYS EXITED`);
 
 process.exit(0);

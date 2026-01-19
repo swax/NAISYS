@@ -102,10 +102,12 @@ describe("Hub Forward Service Integration Tests", () => {
     mockHubManagerB = bridge.createMockHubManager(hostBId, hostBName);
 
     const hostServiceA: HostService = {
+      cleanup: () => {},
       localHostId: hostAId,
       localHostname: hostAName,
     };
     const hostServiceB: HostService = {
+      cleanup: () => {},
       localHostId: hostBId,
       localHostname: hostBName,
     };
