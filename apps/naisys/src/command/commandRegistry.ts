@@ -3,6 +3,18 @@
  * Each service exports its command metadata and handler function.
  */
 
+export enum NextCommandAction {
+  Continue,
+  CompactSession,
+  ExitApplication,
+}
+
+export interface NextCommandResponse {
+  nextCommandAction: NextCommandAction;
+  pauseSeconds: number;
+  wakeOnMessage: boolean;
+}
+
 /**
  * Response from a command handler.
  * Can be a simple string or an object with additional control flow info.
@@ -10,10 +22,8 @@
 export interface CommandResponse {
   /** Content to append to context */
   content: string;
-  /** Optional pause duration in seconds (e.g., for mail wait) */
-  pauseSeconds?: number;
-  /** Whether to wake on incoming message during pause */
-  wakeOnMessage?: boolean;
+  /** If set, the command handler will return this response directly */
+  nextCommandResponse?: NextCommandResponse;
 }
 
 /**

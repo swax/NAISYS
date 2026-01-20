@@ -11,6 +11,7 @@ import { createGenImg } from "../features/genimg.js";
 import { createLLMail } from "../features/llmail.js";
 import { createLLMailAddress } from "../features/llmailAddress.js";
 import { createLLMynx } from "../features/llmynx.js";
+import { createSessionService } from "../features/session.js";
 import { createSubagentService } from "../features/subagent.js";
 import { createWorkspacesFeature } from "../features/workspaces.js";
 import { createCommandTools } from "../llm/commandTool.js";
@@ -129,6 +130,15 @@ export async function createAgentRuntime(
     contextManager,
     inputMode,
   );
+  const sessionService = createSessionService(
+    globalConfig,
+    agentConfig,
+    contextManager,
+    sessionCompactor,
+    shellCommand,
+    llmail,
+    output,
+  );
   const commandProtection = createCommandProtection(
     globalConfig,
     agentConfig,
@@ -142,6 +152,7 @@ export async function createAgentRuntime(
     subagentService,
     llmail,
     costTracker,
+    sessionService,
   ]);
   const commandHandler = createCommandHandler(
     globalConfig,
@@ -150,8 +161,6 @@ export async function createAgentRuntime(
     promptBuilder,
     shellCommand,
     commandRegistry,
-    llmail,
-    sessionCompactor,
     contextManager,
     output,
     inputMode,

@@ -19,7 +19,7 @@ export interface HubInstance {
  * Can be called standalone or inline from naisys with --hub flag.
  */
 export async function startHub(
-  startupType: "standalone" | "hosted"
+  startupType: "standalone" | "hosted",
 ): Promise<HubInstance> {
   // Create log service first
   const logService = createHubServerLog(startupType);
@@ -29,22 +29,23 @@ export async function startHub(
   const hubPort = Number(process.env.HUB_PORT) || 3002;
   const hubAccessKey = process.env.HUB_ACCESS_KEY;
   if (!hubAccessKey) {
-    logService.error(
-      "Error: HUB_ACCESS_KEY environment variable is required when using --hub"
-    );
+    const errorStr =
+      "Error: HUB_ACCESS_KEY environment variable is required when using --hub";
+    console.log(errorStr);
+    logService.error(errorStr);
     process.exit(1);
   }
 
   if (startupType === "hosted") {
     console.log(
-      `[Hub] Running on ws://localhost:${hubPort}, logs written to file`
+      `[Hub] Running on ws://localhost:${hubPort}, logs written to file`,
     );
   }
 
   // Schema version for sync protocol - should match runner
   const dbService = await createDatabaseService(
     process.env.NAISYS_FOLDER || "",
-    "hub"
+    "hub",
   );
 
   // Create hub server
@@ -62,7 +63,7 @@ export async function startHub(
     {
       maxConcurrentRequests: 3,
       pollIntervalMs: 1000,
-    }
+    },
   );
 
   return {
