@@ -17,7 +17,7 @@
     "clean": "npm run clean --workspaces --if-present",
     "build": "npm run build --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
-    "eslint": "npm run eslint --workspaces --if-present",
+    "lint": "eslint .",
     "prettier": "prettier --write .",
     "publish:dryrun": "npm run clean && npm run build && npm run npm:publish:dryrun --workspaces --if-present",
     "updates:check": "npm-check-updates && npm-check-updates --workspaces",

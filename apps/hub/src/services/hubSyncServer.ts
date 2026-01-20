@@ -278,15 +278,19 @@ export function createHubSyncServer(
     );
 
     // Process data asynchronously
-    processSyncData(hostId, state, data).then((success) => {
-      // If there's more data, immediately request it
-      if (success && data.has_more) {
-        logService.log(
-          `[SyncServer] More data available, sending immediate follow-up`
-        );
-        sendSyncRequest(hostId);
-      }
-    });
+    processSyncData(hostId, state, data)
+      .then((success) => {
+        // If there's more data, immediately request it
+        if (success && data.has_more) {
+          logService.log(
+            `[SyncServer] More data available, sending immediate follow-up`
+          );
+          sendSyncRequest(hostId);
+        }
+      })
+      .catch((error) => {
+        logService.error(`[SyncServer] Error processing sync data: ${error}`);
+      });
   }
 
   /**
@@ -500,7 +504,7 @@ export function createHubSyncServer(
     forwardService.initClient(hostId);
 
     // Load persisted sync state from database (async, but state will be updated before first sync)
-    loadPersistedSyncState(hostId);
+    void loadPersistedSyncState(hostId);
 
     logService.log(`[SyncServer] Client ${hostId} connected, waiting for catch_up`);
   }

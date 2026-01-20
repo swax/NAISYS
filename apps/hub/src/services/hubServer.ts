@@ -7,7 +7,7 @@ import {
   NaisysConnection,
 } from "./naisysConnection.js";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 type EventHandler = (hostId: string, ...args: any[]) => void;
 
 /** Registered handler with optional schema for validation */
@@ -175,9 +175,14 @@ export async function createHubServer(
     });
   });
 
-  // Start listening
-  httpServer.listen(port, () => {
-    logService.log(`[Hub] Server listening on port ${port}`);
+  // Start listening - await to ensure errors are thrown before returning
+  await new Promise<void>((resolve, reject) => {
+    httpServer.once("error", reject);
+    httpServer.listen(port, () => {
+      httpServer.removeListener("error", reject);
+      logService.log(`[Hub] Server listening on port ${port}`);
+      resolve();
+    });
   });
 
   // Return control interface
@@ -189,7 +194,7 @@ export async function createHubServer(
     getConnectionByHostId: (hostId: string) => naisysConnections.get(hostId),
     getConnectionCount: () => naisysConnections.size,
     close: () => {
-      io.close();
+      void io.close();
       httpServer.close();
     },
   };

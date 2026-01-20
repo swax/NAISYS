@@ -51,8 +51,7 @@ export function createSessionService(
   }
 
   function getHelpText(): string {
-    let helpText = `ns-session <subcommand>
-  help                    Show this help message`;
+    let helpText = `ns-session <subcommand>`;
 
     if (globalConfig().trimSessionEnabled) {
       helpText += `

@@ -139,7 +139,7 @@ export async function queryChangedRecords(
   const isAppendOnly = config?.appendOnly ?? false;
 
   // Use dynamic access with any - safe because table is from our whitelist
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   const model = (prisma as any)[table];
 
   let records: Record<string, unknown>[];
@@ -278,7 +278,7 @@ export async function queryCatchUpRecords(
 
   for (const table of FORWARDABLE_TABLES) {
     // Use dynamic access with any - safe because table is from our whitelist
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     const model = (prisma as any)[table];
 
     // Always query by updated_at for catch-up (hub's timestamp, not client's ULID)
