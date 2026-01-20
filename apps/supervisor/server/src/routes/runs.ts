@@ -8,7 +8,7 @@ import {
   RunsDataRequestSchema,
   RunsDataResponse,
   RunsDataResponseSchema,
-} from "shared";
+} from "@naisys-supervisor/shared";
 import { getContextLog, getRunsData } from "../services/runsService.js";
 
 export default async function runsRoutes(

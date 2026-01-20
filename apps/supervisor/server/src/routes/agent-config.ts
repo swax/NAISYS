@@ -13,7 +13,7 @@ import {
   UpdateAgentConfigRequestSchema,
   UpdateAgentConfigResponse,
   UpdateAgentConfigResponseSchema,
-} from "shared";
+} from "@naisys-supervisor/shared";
 import {
   createAgentConfig,
   getAgentConfig,

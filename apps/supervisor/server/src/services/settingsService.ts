@@ -1,4 +1,4 @@
-import { Settings } from "shared";
+import { Settings } from "@naisys-supervisor/shared";
 import {
   selectFromSupervisorDb,
   runOnSupervisorDb,

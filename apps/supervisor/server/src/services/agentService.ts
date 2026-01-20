@@ -1,4 +1,4 @@
-import { Agent, Host } from "shared";
+import { Agent, Host } from "@naisys-supervisor/shared";
 import { usingNaisysDb } from "../database/naisysDatabase.js";
 import { cachedForSeconds } from "../utils/cache.js";
 
