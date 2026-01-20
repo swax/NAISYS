@@ -3,10 +3,16 @@ import { HostService } from "../services/hostService.js";
 import { HubClientLog } from "./hubClientLog.js";
 import { createHubConnection, HubConnection } from "./hubConnection.js";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+/** Hub connection status info */
+export interface HubConnectionInfo {
+  url: string;
+  connected: boolean;
+}
+
+ 
 type EventHandler = (hubUrl: string, ...args: any[]) => void;
 
-export async function createHubManager(
+export function createHubManager(
   globalConfig: GlobalConfig,
   hostService: HostService,
   hubClientLog: HubClientLog
@@ -17,9 +23,9 @@ export async function createHubManager(
   // Generic event handlers registry - maps event name to set of handlers
   const eventHandlers = new Map<string, Set<EventHandler>>();
 
-  await init();
+  init();
 
-  async function init() {
+  function init() {
     if (config.hubUrls.length === 0) {
       hubClientLog.write(
         "[HubManager] No HUB_URLS configured, running in standalone mode"
@@ -99,7 +105,15 @@ export async function createHubManager(
     return connection.sendMessage(event, payload, ack);
   }
 
+  function getAllHubs(): HubConnectionInfo[] {
+    return hubConnections.map((c) => ({
+      url: c.getUrl(),
+      connected: c.isConnected(),
+    }));
+  }
+
   return {
+    getAllHubs,
     getConnectedHubs,
     isMultiMachineMode,
     registerEvent,
@@ -108,4 +122,4 @@ export async function createHubManager(
   };
 }
 
-export type HubManager = Awaited<ReturnType<typeof createHubManager>>;
+export type HubManager = ReturnType<typeof createHubManager>;

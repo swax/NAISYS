@@ -55,7 +55,7 @@ export function createLLMailAddress(
   // Type for Prisma client or transaction client (both have users.findMany)
   interface PrismaLike {
     users: {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+       
       findMany: (args: any) => Promise<MatchedUser[]>;
     };
   }

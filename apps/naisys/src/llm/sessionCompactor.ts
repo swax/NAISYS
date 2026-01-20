@@ -14,7 +14,7 @@ export function createSessionCompactor(
 ) {
   let _lastSessionSummary = "";
 
-  async function getLastSessionSummary(): Promise<string> {
+  function getLastSessionSummary(): string {
     return _lastSessionSummary;
   }
 

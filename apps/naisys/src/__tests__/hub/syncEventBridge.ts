@@ -6,7 +6,7 @@ import { ZodSchema } from "zod";
  * without actual WebSocket connections.
  */
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 type EventHandler = (...args: any[]) => void;
 type AckCallback<T = unknown> = (response: T) => void;
 

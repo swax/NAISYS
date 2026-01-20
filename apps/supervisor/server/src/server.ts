@@ -186,5 +186,5 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     process.exit(1);
   }
 
-  startServer("standalone", `monitor-${monitorValue}`);
+  void startServer("standalone", `monitor-${monitorValue}`);
 }

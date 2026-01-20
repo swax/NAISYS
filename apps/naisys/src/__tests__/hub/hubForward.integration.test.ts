@@ -105,20 +105,24 @@ describe("Hub Forward Service Integration Tests", () => {
       cleanup: () => {},
       localHostId: hostAId,
       localHostname: hostAName,
+      commandName: "ns-hosts",
+      handleCommand: () => Promise.resolve(""),
     };
     const hostServiceB: HostService = {
       cleanup: () => {},
       localHostId: hostBId,
       localHostname: hostBName,
+      commandName: "ns-hosts",
+      handleCommand: () => Promise.resolve(""),
     };
 
-    _syncClientA = await createHubSyncClient(
+    _syncClientA = createHubSyncClient(
       mockHubManagerA as unknown as HubManager,
       mockClientLogA,
       runnerADb.dbService,
       hostServiceA
     );
-    _syncClientB = await createHubSyncClient(
+    _syncClientB = createHubSyncClient(
       mockHubManagerB as unknown as HubManager,
       mockClientLogB,
       runnerBDb.dbService,

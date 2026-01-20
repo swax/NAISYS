@@ -89,9 +89,11 @@ describe("Hub Sync Integration Tests", () => {
       cleanup: () => {},
       localHostId: hostAId,
       localHostname: hostAName,
+      commandName: "ns-hosts",
+      handleCommand: () => Promise.resolve(""),
     };
 
-    _syncClientA = await createHubSyncClient(
+    _syncClientA = createHubSyncClient(
       mockHubManagerA as unknown as HubManager,
       mockClientLogA,
       runnerADb.dbService,

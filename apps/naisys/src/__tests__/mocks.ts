@@ -119,7 +119,7 @@ export function createMockLLMynx() {
 
 export function createMockSessionCompactor() {
   const sessionCompactor: SessionCompactor = {
-    getLastSessionSummary: jest.fn(() => Promise.resolve("")),
+    getLastSessionSummary: jest.fn(() => ""),
     run: jest.fn(() => Promise.resolve("")),
   };
 
