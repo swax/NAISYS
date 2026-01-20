@@ -17,11 +17,14 @@ export class HostPath {
 
   /** Basically unix path */
   toNaisysPath() {
-    const match = this._value.match(/^([a-zA-Z]):\\(.*)/);
+    // Handle both C:\ and C:/ style Windows paths
+    const backslashMatch = this._value.match(/^([a-zA-Z]):\\(.*)/);
+    const forwardSlashMatch = this._value.match(/^([a-zA-Z]):\/(.*)/);
+    const match = backslashMatch || forwardSlashMatch;
     let naisysPath = this._value; // Return the original path if it doesn't match the pattern
 
     if (os.platform() === "win32" && match) {
-      // Replace 'C:\' with '/mnt/c/' and convert backslashes to forward slashes
+      // Replace 'C:\' or 'C:/' with '/mnt/c/' and convert backslashes to forward slashes
       naisysPath = `/mnt/${match[1].toLowerCase()}/${match[2].replace(/\\/g, "/")}`;
     }
 

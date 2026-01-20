@@ -149,7 +149,11 @@ export function createPromptBuilder(
       function abortQuestion() {
         cancelWaitingForUserInput(true);
         questionController.abort();
-        readlineInterface?.pause();
+        try {
+          readlineInterface?.pause();
+        } catch {
+          // On Windows, the readline interface may already be closed after abort
+        }
         resolve("");
       }
 
