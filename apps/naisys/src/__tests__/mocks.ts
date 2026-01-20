@@ -14,6 +14,7 @@ import { ContextManager } from "../llm/contextManager.js";
 import { CostTracker } from "../llm/costTracker.js";
 import { LlmMessage, LlmRole } from "../llm/llmDtos.js";
 import { SessionCompactor } from "../llm/sessionCompactor.js";
+import { SessionService } from "../features/session.js";
 import { LogService } from "../services/logService.js";
 import { RunService } from "../services/runService.js";
 import { OutputService } from "../utils/output.js";
@@ -95,9 +96,7 @@ export function createMockSubagent() {
 export function createMockLLMail() {
   const llmail: LLMail = {
     commandName: "ns-mail",
-    handleCommand: jest.fn(() =>
-      Promise.resolve({ content: "", pauseSeconds: 0 })
-    ),
+    handleCommand: jest.fn(() => Promise.resolve("")),
     getUnreadThreads: jest.fn(() => Promise.resolve([])),
     sendMessage: jest.fn(() => Promise.resolve("")),
     readMessage: jest.fn(() => Promise.resolve("")),
@@ -125,6 +124,15 @@ export function createMockSessionCompactor() {
   };
 
   return sessionCompactor;
+}
+
+export function createMockSessionService() {
+  const sessionService: SessionService = {
+    commandName: "ns-session",
+    handleCommand: jest.fn(() => Promise.resolve("")),
+  };
+
+  return sessionService;
 }
 
 export function createMockContextManager() {
@@ -241,7 +249,7 @@ export function createMockGlobalConfig(): GlobalConfig {
       },
       webTokenMax: 5000,
       retrySecondsMax: 1800,
-      endSessionEnabled: false,
+      compactSessionEnabled: false,
       workspacesEnabled: false,
       trimSessionEnabled: false,
       naisysFolder: "/naisys",

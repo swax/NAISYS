@@ -35,34 +35,35 @@ export function createSystemMessage({ globalConfig }: GlobalConfig, { agentConfi
     workspaces += `\n  Put file soft links into ~/workspace/ to see their latest contents live updated here.`;
   }
 
-  let endSession = "";
-  if (globalConfig().endSessionEnabled) {
-    endSession = `\n  endsession "<note>": Ends this session, clears the console log and context.
-    The note should help you find your bearings in the next session.
-    The note should contain your next goal, and important things should you remember.`;
-  }
+  // Build ns-session command help based on enabled features
+  let sessionCmd = "";
+  const sessionSubcommands: string[] = [];
 
-  let trimSession = "";
   if (globalConfig().trimSessionEnabled) {
-    trimSession = `\n  trimsession <indexes>: Saves tokesn by removing the specified prompts and respective output with matching <indexes>. For example '1-5, 8, 11-13'`;
+    sessionSubcommands.push(`trim <indexes> - Remove prompts to save tokens (e.g., "1-5, 8")`);
+  }
+  if (globalConfig().compactSessionEnabled) {
+    sessionSubcommands.push(`compact "<note>" - Compact the session which will reset the token count. The note should contain your next goal, and important things you should remember.`);
+  }
+  if (agentConfig().completeTaskEnabled) {
+    sessionSubcommands.push(`complete "<result>" - Mark task complete and exit. The result should contain any important information or output from the task.`);
   }
 
-  let completeTask = "";
-  if (agentConfig().completeTaskEnabled) {
-    completeTask = `\n  completetask "<result>": Marks the current task as complete and saves the result.
-    The result should contain any important information or output from the task.`;
+  if (sessionSubcommands.length > 0) {
+    sessionCmd = `\n  ns-session: Session management. Subcommands:
+    ${sessionSubcommands.join("\n    ")}`;
   }
 
   let tokenNote = "";
 
-  if (globalConfig().endSessionEnabled) {
+  if (globalConfig().compactSessionEnabled) {
     tokenNote =
-      "\n  Make sure to call 'endsession' before the limit is hit so you can continue your work with a fresh console";
+      "\n  Make sure to call 'ns-session compact' before the token limit is hit so you can continue your work without interruption.";
   }
 
-  if (!globalConfig().endSessionEnabled && globalConfig().trimSessionEnabled) {
+  if (!globalConfig().compactSessionEnabled && globalConfig().trimSessionEnabled) {
     tokenNote =
-      "\n  Make sure to call 'trimsession' before the limit is hit so you stay under the limit.\n  Use comments to remember important things from trimmed prompts.";
+      "\n  Make sure to call 'ns-session trim' before the limit is hit so you stay under the limit.\n  Use comments to remember important things from trimmed prompts.";
   }
 
   if (agentConfig().disableMultipleCommands) {
@@ -108,7 +109,7 @@ LINUX Commands:
   Do not input notes after the prompt. Only valid commands.
 NAISYS Commands: (cannot be used with other commands on the same prompt)${llmailCmd}${subagentNote}${llmynxCmd}${genImgCmd}
   ns-comment "<thought>": Any non-command output like thinking out loud, prefix with the 'ns-comment' command
-  ns-pause <seconds>: Pause for <seconds>${trimSession}${endSession}${completeTask}
+  ns-pause <seconds>: Pause for <seconds>${sessionCmd}
 Tokens:
   The console log can only hold a certain number of 'tokens' that is specified in the prompt${tokenNote}${workspaces}`;
 

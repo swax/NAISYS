@@ -16,7 +16,8 @@ import { RunService } from "../services/runService.js";
 import { InputModeService } from "../utils/inputMode.js";
 import { OutputColor, OutputService } from "../utils/output.js";
 import * as utilities from "../utils/utilities.js";
-import { CommandHandler, NextCommandAction } from "./commandHandler.js";
+import { CommandHandler } from "./commandHandler.js";
+import { NextCommandAction } from "./commandRegistry.js";
 import { PromptBuilder } from "./promptBuilder.js";
 import { ShellCommand } from "./shellCommand.js";
 
@@ -206,7 +207,7 @@ export function createCommandLoop(
         }
       }
 
-      if (nextCommandAction == NextCommandAction.EndSession) {
+      if (nextCommandAction == NextCommandAction.CompactSession) {
         llmynx.clear();
         contextManager.clear();
         await runService.incrementSession();
@@ -351,7 +352,7 @@ export function createCommandLoop(
     } else {
       await contextManager.append(
         `You have new mail, but not enough context to read them.\n` +
-          `After you 'endsession' and the context resets, you will be able to read them.`,
+          `After you run 'ns-session compact' you will be able to read them.`,
         ContentSource.Console,
       );
     }
@@ -366,14 +367,14 @@ export function createCommandLoop(
     if (tokenCount > tokenMax) {
       let tokenNote = "";
 
-      if (globalConfig().endSessionEnabled) {
-        tokenNote += `\nUse 'endsession <note>' to clear the console and reset the session.
+      if (globalConfig().compactSessionEnabled) {
+        tokenNote += `\nUse 'ns-session compact "<note>"' to clear the console and reset the session.
     The note should help you find your bearings in the next session.
     The note should contain your next goal, and important things should you remember.`;
       }
 
       if (globalConfig().trimSessionEnabled) {
-        tokenNote += `\nUse 'trimsession' to reduce the size of the session.
+        tokenNote += `\nUse 'ns-session trim' to reduce the size of the session.
     Use comments to remember important things from trimmed prompts.`;
       }
 

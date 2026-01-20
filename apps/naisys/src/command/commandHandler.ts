@@ -1,40 +1,27 @@
 import chalk from "chalk";
 import stringArgv from "string-argv";
 import { AgentConfig } from "../agent/agentConfig.js";
-import { LLMail } from "../features/llmail.js";
 import { GlobalConfig } from "../globalConfig.js";
 import { ContextManager } from "../llm/contextManager.js";
 import { ContentSource } from "../llm/llmDtos.js";
-import { SessionCompactor } from "../llm/sessionCompactor.js";
 import { InputModeService } from "../utils/inputMode.js";
 import { OutputColor, OutputService } from "../utils/output.js";
-import * as utilities from "../utils/utilities.js";
 import { CommandProtection } from "./commandProtection.js";
-import { CommandRegistry } from "./commandRegistry.js";
+import {
+  CommandRegistry,
+  NextCommandAction,
+  NextCommandResponse,
+} from "./commandRegistry.js";
 import { PromptBuilder } from "./promptBuilder.js";
 import { ShellCommand } from "./shellCommand.js";
 
-export enum NextCommandAction {
-  Continue,
-  EndSession,
-  ExitApplication,
-}
-
-interface NextCommandResponse {
-  nextCommandAction: NextCommandAction;
-  pauseSeconds: number;
-  wakeOnMessage: boolean;
-}
-
 export function createCommandHandler(
-  { globalConfig }: GlobalConfig,
+  _globalConfig: GlobalConfig,
   { agentConfig }: AgentConfig,
   commandProtection: CommandProtection,
   promptBuilder: PromptBuilder,
   shellCommand: ShellCommand,
   commandRegistry: CommandRegistry,
-  llmail: LLMail,
-  sessionCompactor: SessionCompactor,
   contextManager: ContextManager,
   output: OutputService,
   inputMode: InputModeService,
@@ -106,13 +93,9 @@ export function createCommandHandler(
         } else {
           await contextManager.append(response.content);
 
-          // If command requests a pause, return early
-          if (response.pauseSeconds) {
-            return {
-              nextCommandAction: NextCommandAction.Continue,
-              pauseSeconds: response.pauseSeconds,
-              wakeOnMessage: response.wakeOnMessage ?? false,
-            };
+          // If command provides a next command response, return it directly
+          if (response.nextCommandResponse) {
+            return response.nextCommandResponse;
           }
         }
       } else switch (command) {
@@ -124,46 +107,6 @@ export function createCommandHandler(
           );
           break;
         }
-        case "trimsession": {
-          if (!globalConfig().trimSessionEnabled) {
-            throw 'The "trimsession" command is not enabled in this environment.';
-          }
-          const trimSummary = contextManager.trim(cmdArgs);
-          await contextManager.append(trimSummary);
-          break;
-        }
-        case "endsession": {
-          if (!globalConfig().endSessionEnabled) {
-            throw 'The "trimsession" command is not enabled in this environment.';
-          }
-
-          if (shellCommand.isShellSuspended()) {
-            await contextManager.append(
-              "Session cannot be ended while a shell command is active.",
-            );
-            break;
-          }
-
-          // Don't need to check end line as this is the last command in the context, just read to the end
-          const endSessionNotes = utilities.trimChars(cmdArgs, '"');
-
-          if (!endSessionNotes) {
-            await contextManager.append(
-              `End session notes are required. Use endsession "<notes>"`,
-            );
-            break;
-          }
-
-          await sessionCompactor.run();
-
-          await output.commentAndLog(
-            "------------------------------------------------------",
-          );
-          nextCommandAction = NextCommandAction.EndSession;
-          processNextLLMpromptBlock = false;
-          break;
-        }
-
         // Hidden for now as the LLM will use this instead of llmail
         case "ns-talk": {
           const talkMsg = cmdArgs;
@@ -198,34 +141,6 @@ export function createCommandHandler(
           return {
             nextCommandAction: NextCommandAction.Continue,
             pauseSeconds,
-            wakeOnMessage: agentConfig().wakeOnMessage,
-          };
-        }
-
-        case "completetask": {
-          const taskResult = utilities.trimChars(cmdArgs, '"');
-
-          if (!taskResult) {
-            await output.errorAndLog(
-              "The 'completetask' command requires a result parameter",
-            );
-            break;
-          }
-
-          const leadAgent = agentConfig().leadAgent;
-
-          if (leadAgent && agentConfig().mailEnabled) {
-            await output.commentAndLog(
-              "Sub agent has completed the task. Notifying lead agent and exiting process.",
-            );
-            await llmail.sendMessage([leadAgent], "Task Completed", taskResult);
-          } else {
-            await output.commentAndLog("Task completed. Exiting process.");
-          }
-
-          return {
-            nextCommandAction: NextCommandAction.ExitApplication,
-            pauseSeconds: 0, // Hold until message or input is received
             wakeOnMessage: agentConfig().wakeOnMessage,
           };
         }
@@ -324,7 +239,7 @@ export function createCommandHandler(
       newLinePos > 0 &&
       (nextInput.startsWith("ns-comment ") ||
         nextInput.startsWith("ns-genimg ") ||
-        nextInput.startsWith("trimsession ") ||
+        nextInput.startsWith("ns-session ") ||
         nextInput.startsWith("ns-pause "))
     ) {
       input = nextInput.slice(0, newLinePos);

@@ -30,8 +30,8 @@ export async function createGlobalConfig() {
     /** Web pages loaded with ns-lynx will be reduced down to around this number of tokens */
     const webTokenMax = 5000;
 
-    /** Allows the LLM to end it's own session */
-    const endSessionEnabled = true;
+    /** Allows the LLM to compact and restart its session */
+    const compactSessionEnabled = true;
 
     /** Experimental, live updating spot in the context for the LLM to put files, to avoid having to continually cat */
     const workspacesEnabled = false;
@@ -123,7 +123,7 @@ export async function createGlobalConfig() {
       shellCommand,
       webTokenMax,
       retrySecondsMax,
-      endSessionEnabled,
+      compactSessionEnabled,
       workspacesEnabled,
       trimSessionEnabled,
       naisysFolder,

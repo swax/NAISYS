@@ -15,7 +15,7 @@ export async function createRunService(
   /** The run ID of an agent process (there could be multiple runs for the same user). Globally unique */
   let runId = -1;
 
-  /** The session number, incremented when the agent calls endsession */
+  /** The session number, incremented when the agent calls ns-session compact */
   let sessionId = -1;
 
   let updateInterval: NodeJS.Timeout | null = null;

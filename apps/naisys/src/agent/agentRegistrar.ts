@@ -154,7 +154,7 @@ export async function createAgentRegistrar(
       // Get absolute path and check if already processed
       const absolutePath = path.resolve(agentPath);
       if (processedFiles.has(absolutePath)) {
-        console.log(`Skipping already processed agent config: ${absolutePath}`);
+        // console.log(`Skipping already processed agent config: ${absolutePath}`);
         return;
       }
 

@@ -5,7 +5,6 @@ import {
   createMockAgentConfig,
   createMockCommandProtection,
   createMockContextManager,
-  createMockSessionCompactor,
   createMockGenImg,
   createMockGlobalConfig,
   createMockInputMode,
@@ -13,6 +12,7 @@ import {
   createMockLLMynx,
   createMockOutputService,
   createMockPromptBuilder,
+  createMockSessionService,
   createMockShellCommand,
   createMockSubagent,
 } from "../mocks.js";
@@ -27,12 +27,12 @@ function createPopFirstCommand() {
   );
   const shellCommand = createMockShellCommand();
 
-  const llmail = createMockLLMail();
   const commandRegistry = createCommandRegistry([
     createMockLLMynx(),
     createMockGenImg(),
     createMockSubagent(),
-    llmail,
+    createMockLLMail(),
+    createMockSessionService(),
   ]);
 
   const commandHandler = createCommandHandler(
@@ -42,8 +42,6 @@ function createPopFirstCommand() {
     promptBuilder,
     shellCommand,
     commandRegistry,
-    llmail,
-    createMockSessionCompactor(),
     createMockContextManager(),
     createMockOutputService(),
     createMockInputMode(),

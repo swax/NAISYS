@@ -2,7 +2,11 @@ import { DatabaseService, ulid } from "@naisys/database";
 import stringArgv from "string-argv";
 import table from "text-table";
 import { AgentConfig } from "../agent/agentConfig.js";
-import { CommandResponse, RegistrableCommand } from "../command/commandRegistry.js";
+import {
+  CommandResponse,
+  NextCommandAction,
+  RegistrableCommand,
+} from "../command/commandRegistry.js";
 import { GlobalConfig } from "../globalConfig.js";
 import { RunService } from "../services/runService.js";
 import { HostService } from "../services/hostService.js";
@@ -22,11 +26,10 @@ export function createLLMail(
   const { hasMultipleHosts, formatUserWithHost, resolveUserIdentifier } =
     llmailAddress;
 
-  async function handleCommand(args: string): Promise<CommandResponse> {
+  async function handleCommand(
+    args: string,
+  ): Promise<string | CommandResponse> {
     const argv = stringArgv(args);
-    let content: string;
-    let pauseSeconds: number | undefined;
-    let wakeOnMessage: boolean | undefined;
 
     if (!argv[0]) {
       argv[0] = "help";
@@ -37,8 +40,8 @@ export function createLLMail(
       : "";
 
     switch (argv[0]) {
-      case "help": {
-        content = `ns-mail <command>
+      case "help":
+        return `ns-mail <command>
   list [received|sent]               List recent messages (non-archived, * = unread)
   read <id>                          Read a message (marks as read)
   send "<users>" "<subject>" "<msg>" Send a message.${tokenMaxNote}
@@ -48,18 +51,13 @@ export function createLLMail(
   wait <seconds>                     Wait for new mail
 
 * Attachments are not supported, use file paths to reference files in emails as all users are usually on the same machine`;
-        break;
-      }
 
       case "list": {
         const filterArg = argv[1]?.toLowerCase();
         if (filterArg && filterArg !== "received" && filterArg !== "sent") {
           throw "Invalid parameter. Use 'received' or 'sent' to filter, or omit for all messages.";
         }
-        content = await listMessages(
-          filterArg as "received" | "sent" | undefined
-        );
-        break;
+        return listMessages(filterArg as "received" | "sent" | undefined);
       }
 
       case "send": {
@@ -72,18 +70,22 @@ export function createLLMail(
           throw "Invalid parameters. There should be a username, subject and message. All contained in quotes.";
         }
 
-        content = await sendMessage(usernames, subject, message);
-        break;
+        return sendMessage(usernames, subject, message);
       }
 
       case "wait": {
-        pauseSeconds = argv[1]
+        const pauseSeconds = argv[1]
           ? parseInt(argv[1])
           : globalConfig().shellCommand.maxTimeoutSeconds;
-        wakeOnMessage = true;
 
-        content = `Waiting ${pauseSeconds} seconds for new mail messages...`;
-        break;
+        return {
+          content: `Waiting ${pauseSeconds} seconds for new mail messages...`,
+          nextCommandResponse: {
+            nextCommandAction: NextCommandAction.Continue,
+            pauseSeconds,
+            wakeOnMessage: true,
+          },
+        };
       }
 
       case "read": {
@@ -91,22 +93,18 @@ export function createLLMail(
         if (!messageId) {
           throw "Invalid parameters. Please provide a message id.";
         }
-        content = await readMessage(messageId);
-        break;
+        return readMessage(messageId);
       }
 
-      case "users": {
-        content = await listUsers();
-        break;
-      }
+      case "users":
+        return listUsers();
 
       case "archive": {
         const messageIds = argv[1]?.split(",").map((id) => id.trim());
         if (!messageIds || messageIds.length === 0) {
           throw "Invalid parameters. Please provide comma-separated message ids.";
         }
-        content = await archiveMessages(messageIds);
-        break;
+        return archiveMessages(messageIds);
       }
 
       case "search": {
@@ -130,23 +128,16 @@ export function createLLMail(
           throw "Invalid parameters. Please provide search terms.";
         }
 
-        content = await searchMessages(
-          terms.join(" "),
-          includeArchived,
-          subjectOnly
-        );
-        break;
+        return searchMessages(terms.join(" "), includeArchived, subjectOnly);
       }
 
-      default:
+      default: {
         const helpResponse = await handleCommand("help");
-        content =
-          "Error, unknown command. See valid commands below:\n" +
-          helpResponse.content;
-        break;
+        const helpContent =
+          typeof helpResponse === "string" ? helpResponse : helpResponse.content;
+        return "Error, unknown command. See valid commands below:\n" + helpContent;
+      }
     }
-
-    return { content, pauseSeconds, wakeOnMessage };
   }
 
   interface UnreadMessage {

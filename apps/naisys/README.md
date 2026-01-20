@@ -135,17 +135,16 @@ initialCommands:
 - NAISYS tries to be light, acting as a helpful proxy between the LLM and a real shell, most commands should pass right though to the shell
 - Debug Commands
   - `ns-cost` - Prints the current total LLM cost
-  - `ns=context` - Prints the current context
+  - `ns-context` - Prints the current context
   - `ns-talk` - Communicate with the local agent to give hints or ask questions (the agent itself does not know about talk and is directed to use `ns-comment` or `ns-mail` for communication)
-  - `exit` - Exits NAISYS in debug mode. If the LLM tries to use `exit`, it is directed to use `endsession` instead
+  - `exit` - Exits NAISYS in debug mode. If the LLM tries to use `exit`, it is directed to use `ns-session compact/complete` instead
 - Special Commands usable by the LLM as well as by the debug prompt
   - `ns-comment "<note>"` - The LLM is directed to use this for 'thinking out loud' which avoids 'invalid command' errors
-  - `endsession "<note>"` - Clear the context and start a new session.
-    - The LLM is directed to track it's context size and to end the session with a note before running over the context limit
   - `ns-pause <seconds>` - Can be used by the debug agent or the LLM to pause execution for a set number of seconds
-  - `completetask "<result>"` - Signals that the agent has completed its assigned task
-    - For sub-agents: exits the application and returns control to the lead agent
-    - For main agents: pauses execution and waits for user input or messages
+  - `ns-session` - Session management commands:
+    - `ns-session trim <indexes>` - Remove prompts by index to save tokens (e.g., "1-5, 8")
+    - `ns-session compact "<note>"` - End session and start fresh with a note for the next session
+    - `ns-session complete "<result>"` - Mark task as complete and exit (for sub-agents: notifies lead agent)
 - NAISYS apps
   - `ns-mail` - A context friendly 'mail system' used for agent to agent communication
   - `ns-lynx` - A context friendly wrapping on the lynx browser that can use a separate LLM to reduce the size of a large webpage into something that can fit into the LLM's context
@@ -155,7 +154,7 @@ initialCommands:
 ## Changelog
 
 - 2.2: NAISYS cross machine support enabled by a new hub process
-- 2.1: Monorepo architecture, allowing Overlord to run in-process
+- 2.1: Monorepo architecture, allowing Supervisor to run in-process
 - 2.0: Agent multiplexing in the same process
 - 1.7: Prompt caching, ns-lynx pagination, complete task command
 - 1.6: Support for long running shell commands and full screen terminal output

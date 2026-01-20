@@ -31,7 +31,7 @@ export function createShellCommand(
 
       if (cmdParams[0] == "exit") {
         if (inputMode.isLLM()) {
-          throw "Use 'endsession' to end the session and clear the console log.";
+          throw "Use 'ns-session compact/complete' to end the session";
         }
         // Only the debug user is allowed to exit the shell
         else if (inputMode.isDebug()) {
