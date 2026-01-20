@@ -7,7 +7,7 @@ import treeKill from "tree-kill";
 import { AgentConfig } from "../agent/agentConfig.js";
 import { GlobalConfig } from "../globalConfig.js";
 import * as pathService from "../services/pathService.js";
-import { NaisysPath } from "../services/pathService.js";
+import { HostPath, NaisysPath } from "../services/pathService.js";
 import { OutputService } from "../utils/output.js";
 import { getCleanEnv } from "../utils/utilities.js";
 
@@ -88,15 +88,19 @@ export function createShellWrapper(
     if (!_currentPath) {
       await output.commentAndLog("NEW SHELL OPENED. PID: " + pid);
 
+      // Convert naisysFolder to NAISYS/WSL path format for shell commands
+      const naisysFolderPath = new HostPath(
+        globalConfig().naisysFolder,
+      ).toNaisysPath();
+
       await errorIfNotEmpty(
         await executeCommand(
-          `mkdir -p ${globalConfig().naisysFolder}/home/` +
-            agentConfig().username,
+          `mkdir -p ${naisysFolderPath}/home/` + agentConfig().username,
         ),
       );
       await errorIfNotEmpty(
         await executeCommand(
-          `cd ${globalConfig().naisysFolder}/home/` + agentConfig().username,
+          `cd ${naisysFolderPath}/home/` + agentConfig().username,
         ),
       );
     } else {
@@ -476,8 +480,12 @@ export function createShellWrapper(
   /** Wraps multi line commands in a script to make it easier to diagnose the source of errors based on line number
    * May also help with common escaping errors */
   function putMultilineCommandInAScript(command: string) {
+    // Convert naisysFolder to NAISYS/WSL path format for shell commands
+    const naisysFolderPath = new HostPath(
+      globalConfig().naisysFolder,
+    ).toNaisysPath();
     const scriptPath = new NaisysPath(
-      `${globalConfig().naisysFolder}/agent-data/${agentConfig().username}/multiline-command.sh`,
+      `${naisysFolderPath}/agent-data/${agentConfig().username}/multiline-command.sh`,
     );
 
     pathService.ensureFileDirExists(scriptPath);
