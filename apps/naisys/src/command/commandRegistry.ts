@@ -45,6 +45,16 @@ export interface RegistrableCommand {
 export function createCommandRegistry(commands: RegistrableCommand[]) {
   const registry = new Map<string, RegistrableCommand>();
 
+  // Add built-in ns-help command
+  const helpCommand: RegistrableCommand = {
+    commandName: "ns-help",
+    handleCommand: () => {
+      const commandNames = Array.from(registry.keys()).sort();
+      return Promise.resolve("Available NAISYS commands:\n" + commandNames.map((name) => `  ${name}`).join("\n"));
+    },
+  };
+  registry.set(helpCommand.commandName, helpCommand);
+
   for (const command of commands) {
     if (registry.has(command.commandName)) {
       throw new Error(

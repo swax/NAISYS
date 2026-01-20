@@ -15,7 +15,7 @@ program
   .argument("<agent-path>", "Path to agent configuration file")
   .option(
     "--hub",
-    "Start Hub server for NAISYS instances running across machines"
+    "Start Hub server for NAISYS instances running across machines",
   )
   .option("--supervisor", "Start Supervisor web server")
   .parse();
@@ -23,7 +23,7 @@ program
 const globalConfig = await createGlobalConfig();
 const dbService = await createDatabaseService(
   globalConfig.globalConfig().naisysFolder,
-  "naisys"
+  "naisys",
 );
 const hostService = await createHostService(globalConfig, dbService);
 
@@ -51,6 +51,15 @@ if (program.opts().supervisor) {
   await startServer("hosted", hubStarted ? "monitor-hub" : "monitor-naisys");
 }
 
+// Start hub client manager used for cross-machine communication
+const hubClientLog = createHubClientLog();
+const hubManager = createHubManager(
+  globalConfig,
+  hostService,
+  hubClientLog,
+);
+const hubSyncClient = createHubSyncClient(hubManager, hubClientLog, dbService, hostService);
+
 console.log(`NAISYS STARTED`);
 
 const agentPath = program.args[0];
@@ -59,24 +68,17 @@ const agentRegistrar = await createAgentRegistrar(
   globalConfig,
   dbService,
   hostService,
-  agentPath
+  agentPath,
 );
 const agentManager = new AgentManager(
   dbService,
   globalConfig,
   hostService,
-  agentRegistrar
+  agentRegistrar,
+  hubSyncClient,
 );
 
-// Start hub connections for multi-machine sync
 
-const hubClientLog = createHubClientLog();
-const hubManager = await createHubManager(
-  globalConfig,
-  hostService,
-  hubClientLog
-);
-await createHubSyncClient(hubManager, hubClientLog, dbService, hostService);
 
 // Inits the naisys db if it doesn't exist which is needed by supervisor
 await agentManager.startAgent(agentPath);

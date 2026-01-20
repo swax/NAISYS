@@ -23,6 +23,8 @@ import {
   type SyncResponse,
   type SyncResponseError,
 } from "@naisys/hub-protocol";
+import table from "text-table";
+import { RegistrableCommand } from "../command/commandRegistry.js";
 import { HostService } from "../services/hostService.js";
 import { HubClientLog } from "./hubClientLog.js";
 import { HubManager } from "./hubManager.js";
@@ -48,7 +50,7 @@ interface HubSyncState {
  * Handles sync requests from connected Hub servers.
  * Receives sync_request messages and responds with local data.
  */
-export async function createHubSyncClient(
+export function createHubSyncClient(
   hubManager: HubManager,
   hubClientLog: HubClientLog,
   dbService: DatabaseService,
@@ -60,9 +62,9 @@ export async function createHubSyncClient(
   /** Track sync status per hub URL */
   const hubSyncStates = new Map<string, HubSyncState>();
 
-  await init();
+  init();
 
-  async function init() {
+  function init() {
     hubManager.registerEvent(HubEvents.SYNC_REQUEST, handleSyncRequest);
     hubManager.registerEvent(HubEvents.HUB_CONNECTED, handleHubConnected);
   }
@@ -419,7 +421,40 @@ export async function createHubSyncClient(
     }
   }
 
+  function handleCommand(): Promise<string> {
+    const hubs = hubManager.getAllHubs();
+
+    if (hubs.length === 0) {
+      return Promise.resolve("No hubs configured. Running in standalone mode.");
+    }
+
+    const rows: string[][] = [["URL", "Connected", "Sync Status", "Last Synced"]];
+
+    for (const hub of hubs) {
+      const connected = hub.connected ? "Yes" : "No";
+      const state = hubSyncStates.get(hub.url);
+      const syncStatus = state?.status ?? "pending";
+
+      let lastSynced = "N/A";
+      if (state?.lastSyncedFromHub) {
+        const date = new Date(state.lastSyncedFromHub);
+        // Show "never" for epoch time (no sync yet)
+        lastSynced = date.getTime() === 0 ? "never" : date.toLocaleString();
+      }
+
+      rows.push([hub.url, connected, syncStatus, lastSynced]);
+    }
+
+    return Promise.resolve(table(rows, { hsep: " | " }));
+  }
+
+  const registrableCommand: RegistrableCommand = {
+    commandName: "ns-hubs",
+    handleCommand,
+  };
+
   return {
+    ...registrableCommand,
     /** Get sync status for a specific hub */
     getHubSyncStatus: (hubUrl: string): HubSyncClientStatus | undefined => {
       return hubSyncStates.get(hubUrl)?.status;
@@ -435,4 +470,4 @@ export async function createHubSyncClient(
   };
 }
 
-export type HubSyncClient = Awaited<ReturnType<typeof createHubSyncClient>>;
+export type HubSyncClient = ReturnType<typeof createHubSyncClient>;

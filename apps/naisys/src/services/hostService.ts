@@ -1,5 +1,7 @@
 import { ulid } from "@naisys/database";
 import { DatabaseService } from "@naisys/database";
+import table from "text-table";
+import { RegistrableCommand } from "../command/commandRegistry.js";
 import { GlobalConfig } from "../globalConfig.js";
 
 export async function createHostService(
@@ -59,7 +61,51 @@ export async function createHostService(
     }
   }
 
+  async function handleCommand(): Promise<string> {
+    return await dbService.usingDatabase(async (prisma) => {
+      const hosts = await prisma.hosts.findMany({
+        include: {
+          _count: {
+            select: { users: { where: { deleted_at: null } } },
+          },
+        },
+        orderBy: { name: "asc" },
+      });
+
+      if (hosts.length === 0) {
+        return "No hosts found.";
+      }
+
+      const now = Date.now();
+      const onlineThresholdMs = 10 * 1000; // 5 worst case, x2 margin
+
+      return table(
+        [
+          ["ID", "Name", "Status", "Agents"],
+          ...hosts.map((h) => {
+            const isOnline = h.last_active
+              ? new Date(h.last_active).getTime() > now - onlineThresholdMs
+              : false;
+            return [
+              h.host_id.slice(-4),
+              h.name,
+              isOnline ? "Online" : "Offline",
+              h._count.users.toString(),
+            ];
+          }),
+        ],
+        { hsep: " | " }
+      );
+    });
+  }
+
+  const registrableCommand: RegistrableCommand = {
+    commandName: "ns-hosts",
+    handleCommand,
+  };
+
   return {
+    ...registrableCommand,
     cleanup,
     localHostId,
     localHostname,

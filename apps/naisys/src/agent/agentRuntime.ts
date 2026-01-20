@@ -33,6 +33,7 @@ export async function createAgentRuntime(
   const dbService = agentManger.dbService;
   const globalConfig = agentManger.globalConfig;
   const hostService = agentManger.hostService;
+  const hubSyncClient = agentManger.hubSyncClient;
 
   /*
    * Simple form of dependency injection
@@ -153,6 +154,8 @@ export async function createAgentRuntime(
     llmail,
     costTracker,
     sessionService,
+    hostService,
+    hubSyncClient,
   ]);
   const commandHandler = createCommandHandler(
     globalConfig,

@@ -110,16 +110,18 @@ describe("Hub Catch-Up Integration Tests", () => {
     await new Promise((resolve) => setTimeout(resolve, ms));
   }
 
-  async function connectRunnerA(): Promise<void> {
+  function connectRunnerA(): void {
     mockHubManagerA = bridge.createMockHubManager(hostAId, hostAName);
 
     const hostServiceA: HostService = {
       cleanup: () => {},
       localHostId: hostAId,
       localHostname: hostAName,
+      commandName: "ns-hosts",
+      handleCommand: () => Promise.resolve(""),
     };
 
-    syncClientA = await createHubSyncClient(
+    syncClientA = createHubSyncClient(
       mockHubManagerA as unknown as HubManager,
       mockClientLogA,
       runnerADb.dbService,
@@ -130,16 +132,18 @@ describe("Hub Catch-Up Integration Tests", () => {
     mockHubManagerA._triggerHubConnected();
   }
 
-  async function connectRunnerB(): Promise<void> {
+  function connectRunnerB(): void {
     mockHubManagerB = bridge.createMockHubManager(hostBId, hostBName);
 
     const hostServiceB: HostService = {
       cleanup: () => {},
       localHostId: hostBId,
       localHostname: hostBName,
+      commandName: "ns-hosts",
+      handleCommand: () => Promise.resolve(""),
     };
 
-    syncClientB = await createHubSyncClient(
+    syncClientB = createHubSyncClient(
       mockHubManagerB as unknown as HubManager,
       mockClientLogB,
       runnerBDb.dbService,
@@ -152,7 +156,7 @@ describe("Hub Catch-Up Integration Tests", () => {
 
   test("should catch up runner B with data from runner A via hub", async () => {
     // Step 1: Connect runner A and create a user
-    await connectRunnerA();
+    connectRunnerA();
 
     const userIdA = ulid();
     const usernameA = "alice-from-runner-a";
@@ -169,7 +173,7 @@ describe("Hub Catch-Up Integration Tests", () => {
     expect(hubUserBeforeCatchUp?.username).toBe(usernameA);
 
     // Step 2: Connect runner B (should receive catch_up with runner A's data)
-    await connectRunnerB();
+    connectRunnerB();
 
     // Wait for catch_up to complete
     await waitForSync(500);
@@ -185,7 +189,7 @@ describe("Hub Catch-Up Integration Tests", () => {
 
   test("should not include runner's own data in catch_up response", async () => {
     // Step 1: Connect runner A and create users
-    await connectRunnerA();
+    connectRunnerA();
 
     const userIdA = ulid();
     await seedUser(runnerADb.prisma, userIdA, "alice", hostAId);
@@ -200,7 +204,7 @@ describe("Hub Catch-Up Integration Tests", () => {
     await seedUser(hubDb.prisma, userIdB, "bob", hostBId);
 
     // Step 3: Connect runner B
-    await connectRunnerB();
+    connectRunnerB();
 
     // Wait for catch_up
     await waitForSync(500);
@@ -222,7 +226,7 @@ describe("Hub Catch-Up Integration Tests", () => {
 
   test("should exclude client from sync polling while catching up", async () => {
     // Connect runner A and create data
-    await connectRunnerA();
+    connectRunnerA();
 
     const userIdA = ulid();
     await seedUser(runnerADb.prisma, userIdA, "alice", hostAId);
@@ -241,9 +245,11 @@ describe("Hub Catch-Up Integration Tests", () => {
       cleanup: () => {},
       localHostId: hostBId,
       localHostname: hostBName,
+      commandName: "ns-hosts",
+      handleCommand: () => Promise.resolve(""),
     };
 
-    syncClientB = await createHubSyncClient(
+    syncClientB = createHubSyncClient(
       mockHubManagerB as unknown as HubManager,
       mockClientLogB,
       runnerBDb.dbService,
@@ -269,7 +275,7 @@ describe("Hub Catch-Up Integration Tests", () => {
 
   test("should handle catch_up with multiple tables", async () => {
     // Connect runner A
-    await connectRunnerA();
+    connectRunnerA();
 
     // Create user and host data on runner A
     const userIdA = ulid();
@@ -279,7 +285,7 @@ describe("Hub Catch-Up Integration Tests", () => {
     await waitForSync(500);
 
     // Connect runner B
-    await connectRunnerB();
+    connectRunnerB();
 
     // Wait for catch_up
     await waitForSync(500);
@@ -296,7 +302,7 @@ describe("Hub Catch-Up Integration Tests", () => {
 
   test("should handle empty catch_up when no data to send", async () => {
     // Connect runner A (no data created yet)
-    await connectRunnerA();
+    connectRunnerA();
 
     // Wait for catch_up to complete (should be empty but not error)
     await waitForSync(300);
@@ -309,7 +315,7 @@ describe("Hub Catch-Up Integration Tests", () => {
 
   test("should catch up with data created after initial sync", async () => {
     // Connect runner A
-    await connectRunnerA();
+    connectRunnerA();
 
     // Create initial user
     const userId1 = ulid();
@@ -318,7 +324,7 @@ describe("Hub Catch-Up Integration Tests", () => {
     await waitForSync(500);
 
     // Connect runner B
-    await connectRunnerB();
+    connectRunnerB();
 
     await waitForSync(500);
 

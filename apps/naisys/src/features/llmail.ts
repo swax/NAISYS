@@ -259,7 +259,7 @@ export function createLLMail(
 
         for (const identifier of userIdentifiers) {
           try {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+             
             const resolved = await resolveUserIdentifier(identifier, tx as any);
             resolvedRecipients.push(resolved);
           } catch (error) {

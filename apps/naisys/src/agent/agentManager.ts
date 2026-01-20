@@ -3,6 +3,7 @@ import { AgentRuntime, createAgentRuntime } from "./agentRuntime.js";
 import { GlobalConfig } from "../globalConfig.js";
 import { DatabaseService } from "@naisys/database";
 import { HostService } from "../services/hostService.js";
+import { HubSyncClient } from "../hub/hubSyncClient.js";
 import { OutputColor } from "../utils/output.js";
 
 /** Handles the multiplexing of multiple concurrent agents in the process */
@@ -11,6 +12,7 @@ export class AgentManager {
   globalConfig: GlobalConfig;
   hostService: HostService;
   agentRegistrar: AgentRegistrar;
+  hubSyncClient: HubSyncClient;
 
   runningAgents: AgentRuntime[] = [];
   runLoops: Promise<void>[] = [];
@@ -20,11 +22,13 @@ export class AgentManager {
     globalConfig: GlobalConfig,
     hostService: HostService,
     agentRegistrar: AgentRegistrar,
+    hubSyncClient: HubSyncClient,
   ) {
     this.dbService = dbService;
     this.globalConfig = globalConfig;
     this.hostService = hostService;
     this.agentRegistrar = agentRegistrar;
+    this.hubSyncClient = hubSyncClient;
   }
 
   async startAgent(agentPath: string, onStop?: (reason: string) => void) {
