@@ -10,7 +10,7 @@ import {
   SendMailResponse,
   SendMailResponseSchema,
   ErrorResponseSchema,
-} from "shared";
+} from "@naisys-supervisor/shared";
 import { getMailData, sendMessage } from "../services/mailService.js";
 import { validateSession } from "./access.js";
 

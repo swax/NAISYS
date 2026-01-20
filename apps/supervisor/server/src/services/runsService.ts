@@ -1,4 +1,4 @@
-import { LogEntry, LogRole, LogSource, LogType, RunSession } from "shared";
+import { LogEntry, LogRole, LogSource, LogType, RunSession } from "@naisys-supervisor/shared";
 import { usingNaisysDb } from "../database/naisysDatabase.js";
 import { cachedForSeconds } from "../utils/cache.js";
 

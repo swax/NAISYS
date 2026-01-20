@@ -9,7 +9,7 @@ import {
   SessionResponseSchema,
   ErrorResponse,
   ErrorResponseSchema,
-} from "shared";
+} from "@naisys-supervisor/shared";
 import { v4 as uuidv4 } from "uuid";
 import {
   createSession,

@@ -8,7 +8,7 @@ import {
   SettingsResponseSchema,
   SettingsSchema,
   ErrorResponseSchema,
-} from "shared";
+} from "@naisys-supervisor/shared";
 
 export default async function settingsRoutes(
   fastify: FastifyInstance,

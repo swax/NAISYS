@@ -3,7 +3,7 @@ import {
   SendMailRequest,
   SendMailResponse,
   MailMessage,
-} from "shared";
+} from "@naisys-supervisor/shared";
 import { usingNaisysDb } from "../database/naisysDatabase.js";
 import { getAgents } from "./agentService.js";
 import { cachedForSeconds } from "../utils/cache.js";

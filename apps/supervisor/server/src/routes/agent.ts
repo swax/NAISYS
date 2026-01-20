@@ -5,7 +5,7 @@ import {
   NaisysDataRequestSchema,
   NaisysDataResponse,
   NaisysDataResponseSchema,
-} from "shared";
+} from "@naisys-supervisor/shared";
 import { getAgentData } from "../services/agentService.js";
 
 export default async function agentRoutes(
