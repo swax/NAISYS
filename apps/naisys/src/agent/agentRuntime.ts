@@ -23,6 +23,7 @@ import { createSessionCompactor } from "../llm/sessionCompactor.js";
 import { createSystemMessage } from "../llm/systemMessage.js";
 import { createLogService } from "../services/logService.js";
 import { createRunService } from "../services/runService.js";
+import { getPlatformConfig } from "../services/shellPlatform.js";
 import { createInputMode } from "../utils/inputMode.js";
 import { createOutputService } from "../utils/output.js";
 
@@ -115,6 +116,7 @@ export async function createAgentRuntime(
 
   // Command components
   const shellWrapper = createShellWrapper(globalConfig, agentConfig, output);
+  const platformConfig = getPlatformConfig();
   const promptBuilder = createPromptBuilder(
     globalConfig,
     agentConfig,
@@ -124,6 +126,7 @@ export async function createAgentRuntime(
     contextManager,
     output,
     inputMode,
+    platformConfig,
   );
   const shellCommand = createShellCommand(
     globalConfig,
