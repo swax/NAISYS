@@ -5,6 +5,7 @@ import OpenAI from "openai";
 import { ChatCompletionCreateParamsNonStreaming } from "openai/resources";
 import { GlobalConfig } from "../globalConfig.js";
 import { AgentConfig } from "../agent/agentConfig.js";
+import { getPlatformConfig } from "../services/shellPlatform.js";
 import { CommandTools } from "./commandTool.js";
 import { CostTracker } from "./costTracker.js";
 import { LLModels, LlmApiType } from "./llModels.js";
@@ -35,9 +36,12 @@ export function createLLMService(
     } else if (model.apiType === LlmApiType.Mock) {
       // 1 second time out then dummy response
       await new Promise((resolve) => setTimeout(resolve, 1000));
-      return [
-        `echo "Mock LLM response for ${agentConfig().username} at $(date +"%T")"`,
-      ];
+      const platform = getPlatformConfig();
+      const mockResponse =
+        platform.platform === "windows"
+          ? `Write-Host "Mock LLM response for ${agentConfig().username} at $(Get-Date -Format 'HH:mm:ss')"`
+          : `echo "Mock LLM response for ${agentConfig().username} at $(date +"%T")"`;
+      return [mockResponse];
     } else if (model.apiType == LlmApiType.Google) {
       return sendWithGoogle(modelKey, systemMessage, context, source);
     } else if (model.apiType == LlmApiType.Anthropic) {

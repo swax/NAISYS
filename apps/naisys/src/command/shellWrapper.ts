@@ -1,13 +1,13 @@
 import xterm from "@xterm/headless";
 import { ChildProcessWithoutNullStreams, spawn } from "child_process";
 import * as fs from "fs";
-import * as os from "os";
+import path from "path";
 import stripAnsi from "strip-ansi";
 import treeKill from "tree-kill";
 import { AgentConfig } from "../agent/agentConfig.js";
 import { GlobalConfig } from "../globalConfig.js";
 import * as pathService from "../services/pathService.js";
-import { NaisysPath } from "../services/pathService.js";
+import { getPlatformConfig } from "../services/shellPlatform.js";
 import { OutputService } from "../utils/output.js";
 import { getCleanEnv } from "../utils/utilities.js";
 
@@ -33,6 +33,7 @@ export function createShellWrapper(
 
   let _resolveCurrentCommand: ((value: string) => void) | undefined;
   let _currentCommandTimeout: NodeJS.Timeout | undefined;
+  let _currentCommandText: string | undefined;
 
   /** How we know the command has completed when running the command inside a shell like bash or wsl */
   const _commandDelimiter = "__COMMAND_END_X7YUTT__";
@@ -50,6 +51,8 @@ export function createShellWrapper(
   const LOW_WATERMARK = 10000; // Resume input when buffer drops below this (bytes)
   let _writeWatermark = 0;
 
+  const platformConfig = getPlatformConfig();
+
   async function ensureOpen() {
     if (_process) {
       return;
@@ -57,11 +60,10 @@ export function createShellWrapper(
 
     resetCommand();
 
-    const spawnCmd = os.platform() === "win32" ? "wsl" : "bash";
-
-    _process = spawn(spawnCmd, [], {
+    _process = spawn(platformConfig.shellCommand, platformConfig.shellArgs, {
       stdio: "pipe",
       env: getCleanEnv(),
+      shell: false,
     });
 
     const pid = _process.pid;
@@ -86,23 +88,30 @@ export function createShellWrapper(
 
     // Init users home dir on first run, on shell crash/rerun go back to the current path
     if (!_currentPath) {
-      await output.commentAndLog("NEW SHELL OPENED. PID: " + pid);
+      await output.commentAndLog(
+        `NEW ${platformConfig.shellName.toUpperCase()} SHELL OPENED. PID: ${pid}`,
+      );
+
+      const homePath = path.join(
+        globalConfig().naisysFolder,
+        "home",
+        agentConfig().username,
+      );
 
       await errorIfNotEmpty(
-        await executeCommand(
-          `mkdir -p ${globalConfig().naisysFolder}/home/` +
-            agentConfig().username,
-        ),
+        await executeCommand(platformConfig.mkdirCommand(homePath)),
       );
       await errorIfNotEmpty(
-        await executeCommand(
-          `cd ${globalConfig().naisysFolder}/home/` + agentConfig().username,
-        ),
+        await executeCommand(platformConfig.cdCommand(homePath)),
       );
     } else {
-      await output.commentAndLog("SHELL RESTORED. PID: " + pid);
+      await output.commentAndLog(
+        `${platformConfig.shellName.toUpperCase()} SHELL RESTORED. PID: ${pid}`,
+      );
 
-      await errorIfNotEmpty(await executeCommand("cd " + _currentPath));
+      await errorIfNotEmpty(
+        await executeCommand(platformConfig.cdCommand(_currentPath)),
+      );
     }
 
     // Stop running commands if one fails
@@ -116,6 +125,40 @@ export function createShellWrapper(
     if (response) {
       await output.errorAndLog(response);
     }
+  }
+
+  /** Filter out PowerShell noise from output */
+  function filterPowerShellNoise(str: string): string {
+    if (platformConfig.platform !== "windows") {
+      return str;
+    }
+    // Get command lines to filter (the echoed command)
+    const commandLines = _currentCommandText
+      ? _currentCommandText.split("\n").map((l) => l.trim())
+      : [];
+
+    return str
+      .split("\n")
+      .filter((line) => {
+        const trimmed = line.trim();
+        // Filter out PS prompts (PS C:\...>)
+        if (/^PS [A-Za-z]:\\.*>/.test(trimmed)) return false;
+        // Filter out the delimiter echo
+        if (trimmed.includes("Write-Host") && trimmed.includes(_commandDelimiter))
+          return false;
+        // Filter out PSReadline warnings
+        if (trimmed.includes("Cannot load PSReadline module")) return false;
+        if (trimmed.includes("Console is running without PSReadline"))
+          return false;
+        // Filter out our setup commands being echoed
+        if (trimmed.startsWith("New-Item -ItemType Directory")) return false;
+        if (trimmed.startsWith("Set-Location ")) return false;
+        if (trimmed === "(Get-Location).Path") return false;
+        // Filter out the echoed command itself
+        if (commandLines.includes(trimmed)) return false;
+        return true;
+      })
+      .join("\n");
   }
 
   function processOutput(
@@ -139,10 +182,14 @@ export function createShellWrapper(
     }
 
     if (!_resolveCurrentCommand) {
-      void output.commentAndLog(
-        `Ignoring '${eventType}' from process ${pid} with no resolve handler: ` +
-          dataStr,
-      );
+      // Don't log if it's just empty noise (like a filtered PowerShell prompt)
+      const filteredStr = filterPowerShellNoise(dataStr).trim();
+      if (filteredStr) {
+        void output.commentAndLog(
+          `Ignoring '${eventType}' from process ${pid} with no resolve handler: ` +
+            filteredStr,
+        );
+      }
       return;
     }
 
@@ -154,13 +201,14 @@ export function createShellWrapper(
       let finalOutput =
         _currentBufferType == "alternate"
           ? _getTerminalActiveBuffer()
-          : _commandOutput.trim();
+          : filterPowerShellNoise(_commandOutput).trim();
 
       if (
-        finalOutput.endsWith("command not found") ||
-        finalOutput.includes("unexpected EOF")
+        finalOutput.endsWith(platformConfig.commandNotFoundSuffix) ||
+        finalOutput.includes("unexpected EOF") ||
+        finalOutput.includes("is not recognized")
       ) {
-        finalOutput += `\nNAISYS: Make sure that you are using valid linux commands, and that any non-commands are prefixed with the 'commment' command.`;
+        finalOutput += `\nNAISYS: Make sure that you are using valid ${platformConfig.shellName} commands, and that any non-commands are prefixed with the 'ns-comment' command.`;
       }
 
       finalOutput += `\nNAISYS: Command killed.`;
@@ -173,7 +221,8 @@ export function createShellWrapper(
 
     // Should only happen back in normal mode, so we don't need to modify the rawDataStr
     let endDelimiterHit = false;
-    const endDelimiterPos = dataStr.indexOf(_commandDelimiter);
+    // Use lastIndexOf to find the actual delimiter output, not an echoed command containing it
+    const endDelimiterPos = dataStr.lastIndexOf(_commandDelimiter);
 
     if (
       endDelimiterPos != -1 &&
@@ -224,7 +273,8 @@ export function createShellWrapper(
     }
 
     if (endDelimiterHit) {
-      const finalOutput = _commandOutput.trim();
+      // Filter PowerShell noise from complete output (not during streaming due to chunking)
+      const finalOutput = filterPowerShellNoise(_commandOutput).trim();
 
       resetCommand();
 
@@ -238,6 +288,7 @@ export function createShellWrapper(
     }
 
     command = command.trim();
+    _currentCommandText = command;
 
     await ensureOpen();
 
@@ -254,7 +305,7 @@ export function createShellWrapper(
         return;
       }
 
-      const commandWithDelimiter = `${command}\necho "${_commandDelimiter}"\n`;
+      const commandWithDelimiter = `${command}\n${platformConfig.echoDelimiter(_commandDelimiter)}\n`;
       _process.stdin.write(commandWithDelimiter);
 
       // Set timeout to wait for response from command
@@ -371,11 +422,11 @@ export function createShellWrapper(
     _wrapperSuspended = true;
     _queuedOutput.length = 0;
 
-    // Flush the output to the consol, and give the LLM instructions of how it might continue
+    // Flush the output to the console, and give the LLM instructions of how it might continue
     let outputWithInstruction =
       _currentBufferType == "alternate"
         ? _getTerminalActiveBuffer()
-        : _commandOutput.trim();
+        : filterPowerShellNoise(_commandOutput).trim();
 
     _commandOutput = "";
 
@@ -419,7 +470,7 @@ export function createShellWrapper(
 
     await ensureOpen();
 
-    _currentPath = await executeCommand("pwd");
+    _currentPath = await executeCommand(platformConfig.pwdCommand);
 
     return _currentPath;
   }
@@ -434,6 +485,7 @@ export function createShellWrapper(
   function resetCommand() {
     _commandOutput = "";
     _writeWatermark = 0;
+    _currentCommandText = undefined;
 
     resetTerminal();
 
@@ -476,25 +528,37 @@ export function createShellWrapper(
   /** Wraps multi line commands in a script to make it easier to diagnose the source of errors based on line number
    * May also help with common escaping errors */
   function putMultilineCommandInAScript(command: string) {
-    const scriptPath = new NaisysPath(
-      `${globalConfig().naisysFolder}/agent-data/${agentConfig().username}/multiline-command.sh`,
+    const scriptPath = path.join(
+      globalConfig().naisysFolder,
+      "agent-data",
+      agentConfig().username,
+      `multiline-command${platformConfig.scriptExtension}`,
     );
 
     pathService.ensureFileDirExists(scriptPath);
 
-    // set -e causes the script to exit on the first error
-    const scriptContent = `#!/bin/bash
-set -e
-cd ${_currentPath}
+    // Build platform-specific script content
+    let scriptContent: string;
+    if (platformConfig.platform === "windows") {
+      // PowerShell script
+      scriptContent = `${platformConfig.scriptHeader}
+${platformConfig.scriptSetError}
+Set-Location "${_currentPath}"
 ${command.trim()}`;
+    } else {
+      // Bash script
+      scriptContent = `${platformConfig.scriptHeader}
+${platformConfig.scriptSetError}
+cd "${_currentPath}"
+${command.trim()}`;
+    }
 
     // create/write file
-    fs.writeFileSync(scriptPath.toHostPath(), scriptContent);
+    fs.writeFileSync(scriptPath, scriptContent);
 
     // `Path` is set to the ./bin folder because custom NAISYS commands that follow shell commands will be handled by the shell, which will fail
     // so we need to remind the LLM that 'naisys commands cannot be used with other commands on the same prompt'
-    // `source` will run the script in the current shell, so any change directories in the script will persist in the current shell
-    return `PATH=${globalConfig().binPath}:$PATH source ${scriptPath.getNaisysPath()}`;
+    return platformConfig.sourceScript(globalConfig().binPath, scriptPath);
   }
 
   function _completeCommand(output: string) {
