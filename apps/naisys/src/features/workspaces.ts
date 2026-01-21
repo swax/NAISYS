@@ -3,7 +3,6 @@ import path from "path";
 import { GlobalConfig } from "../globalConfig.js";
 import { AgentConfig } from "../agent/agentConfig.js";
 import * as pathService from "../services/pathService.js";
-import { NaisysPath } from "../services/pathService.js";
 import { OutputService } from "../utils/output.js";
 import * as utilities from "../utils/utilities.js";
 
@@ -17,13 +16,12 @@ export function createWorkspacesFeature({ globalConfig }: GlobalConfig, { agentC
     }
 
     const workspacesDir = _getWorkspacesDir();
-    const workspacesHostDir = workspacesDir.toHostPath();
 
     pathService.ensureDirExists(workspacesDir);
 
     let response = `Current Workspaces:`;
 
-    const files = fs.readdirSync(workspacesHostDir);
+    const files = fs.readdirSync(workspacesDir);
 
     if (!files.length) {
       response += `\n  None\n${_suffixHelp}`;
@@ -32,14 +30,13 @@ export function createWorkspacesFeature({ globalConfig }: GlobalConfig, { agentC
 
     // Iterate files in workspacesDir
     for (const file of files) {
-      const filePath = path.join(workspacesHostDir, file);
+      const filePath = path.join(workspacesDir, file);
       const fileContents = fs.readFileSync(filePath, "utf8");
 
       // get the path of what this file is soft linked to
-      const realHostPath = fs.realpathSync(filePath);
-      const realNaisysPath = new NaisysPath(realHostPath);
+      const realPath = fs.realpathSync(filePath);
 
-      response += `\n${realNaisysPath} (${utilities.getTokenCount(fileContents)} tokens):`;
+      response += `\n${realPath} (${utilities.getTokenCount(fileContents)} tokens):`;
       response += `\n${fileContents}`;
       response += `\nEOF\n`;
     }
@@ -52,9 +49,9 @@ export function createWorkspacesFeature({ globalConfig }: GlobalConfig, { agentC
       return;
     }
 
-    const workspacesHostDir = _getWorkspacesDir().toHostPath();
+    const workspacesDir = _getWorkspacesDir();
 
-    const files = fs.readdirSync(workspacesHostDir);
+    const files = fs.readdirSync(workspacesDir);
 
     if (!files.length) {
       return;
@@ -65,8 +62,11 @@ export function createWorkspacesFeature({ globalConfig }: GlobalConfig, { agentC
   }
 
   function _getWorkspacesDir() {
-    return new NaisysPath(
-      `${globalConfig().naisysFolder}/home/${agentConfig().username}/workspaces/`,
+    return path.join(
+      globalConfig().naisysFolder,
+      "home",
+      agentConfig().username,
+      "workspaces",
     );
   }
 

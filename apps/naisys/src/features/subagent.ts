@@ -6,7 +6,7 @@ import { AgentConfig } from "../agent/agentConfig.js";
 import { RegistrableCommand } from "../command/commandRegistry.js";
 import { DatabaseService } from "@naisys/database";
 import { HostService } from "../services/hostService.js";
-import { NaisysPath } from "../services/pathService.js";
+import * as pathService from "../services/pathService.js";
 import { RunService } from "../services/runService.js";
 import { InputModeService } from "../utils/inputMode.js";
 import { OutputColor, OutputService } from "../utils/output.js";
@@ -15,7 +15,7 @@ import { LLMail } from "./llmail.js";
 interface Subagent {
   id?: number;
   agentName: string;
-  agentPath: NaisysPath;
+  agentPath: string;
   title: string;
   taskDescription?: string;
   process?: ChildProcess;
@@ -172,7 +172,7 @@ export function createSubagentService(
         if (!existing) {
           _subagents.push({
             agentName: agent.username,
-            agentPath: new NaisysPath(agent.agent_path),
+            agentPath: agent.agent_path,
             title: agent.title,
             log: [],
             status: "stopped",
@@ -396,7 +396,7 @@ export function createSubagentService(
     const subagent = validateAgentStart(agentName, taskDescription);
 
     subagent.id = await agentManager.startAgent(
-      subagent.agentPath.toHostPath(),
+      subagent.agentPath,
       (stopReason) => handleAgentTermination(subagent, stopReason),
     );
 
@@ -602,10 +602,7 @@ export function createSubagentService(
 
   function _getSubagentDir() {
     const agentDirectory = path.dirname(agentConfig().hostpath);
-
-    return new NaisysPath(
-      `${agentDirectory}/${agentConfig().subagentDirectory}`,
-    );
+    return path.join(agentDirectory, agentConfig().subagentDirectory || "subagents");
   }
 
   const registrableCommand: RegistrableCommand = {

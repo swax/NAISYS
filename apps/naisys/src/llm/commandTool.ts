@@ -305,7 +305,7 @@ export function createCommandTools({ agentConfig }: AgentConfig) {
       .replace(escapedBackslashRegex, "\\\\")
       .replace(escapedQuoteRegex, '\\"');
 
-    return `comment "${escaped}"`;
+    return `ns-comment "${escaped}"`;
   }
 
   return {

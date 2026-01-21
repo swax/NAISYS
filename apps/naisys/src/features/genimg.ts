@@ -6,7 +6,6 @@ import { AgentConfig } from "../agent/agentConfig.js";
 import { RegistrableCommand } from "../command/commandRegistry.js";
 import { CostTracker } from "../llm/costTracker.js";
 import * as pathService from "../services/pathService.js";
-import { NaisysPath } from "../services/pathService.js";
 import { OutputService } from "../utils/output.js";
 
 export function createGenImg(
@@ -25,18 +24,18 @@ export function createGenImg(
 
     // Expected: genimg "description" /path/to/file.png
     const description = argv[1];
-    const filepath = new NaisysPath(argv[2] || "");
+    const filepath = argv[2] || "";
 
     if (!description) {
       throw "Invalid parameters: Description in quotes and fully qualified filepath with desired image extension are required";
     }
 
-    if (!filepath || !argv[2]) {
+    if (!filepath) {
       throw "Error: Filepath is required";
     }
 
-    // Validate path is fully qualified
-    if (!filepath.getNaisysPath().startsWith("/")) {
+    // Validate path is fully qualified (Unix or Windows)
+    if (!path.isAbsolute(filepath)) {
       throw "Error: Filepath must be fully qualified";
     }
 
@@ -77,20 +76,19 @@ export function createGenImg(
     const imageBuffer = Buffer.from(base64Image, "base64");
 
     // Use sharp to convert the buffer and save it as a JPG file
-    const hostPath = filepath.toHostPath();
-    const fileExtension = path.extname(hostPath).substring(1);
+    const fileExtension = path.extname(filepath).substring(1);
 
     await sharp(imageBuffer)
       /*.resize(512, 512, {
       fit: "inside",
     })*/
       .toFormat(<any>fileExtension)
-      .toFile(hostPath);
+      .toFile(filepath);
 
     // Record the cost
     await costTracker.recordCost(model.cost, "genimg", model.key);
 
-    return "1024x1024 Image generated and saved to " + filepath.getNaisysPath();
+    return "1024x1024 Image generated and saved to " + filepath;
   }
 
   const registrableCommand: RegistrableCommand = {

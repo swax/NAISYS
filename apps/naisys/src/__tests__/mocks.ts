@@ -305,13 +305,6 @@ export function createMockAgentConfig(): AgentConfig {
   };
 }
 
-export class MockNaisysPath {
-  constructor(public path: string) {}
-  toHostPath() {
-    return this.path;
-  }
-}
-
 export function mockCommandProtection() {
   const instance = createMockCommandProtection();
 
