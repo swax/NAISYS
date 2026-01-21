@@ -13,6 +13,7 @@ import { LLMService } from "../llm/llmService.js";
 import { SessionCompactor } from "../llm/sessionCompactor.js";
 import { LogService } from "../services/logService.js";
 import { RunService } from "../services/runService.js";
+import { createEscKeyListener } from "../utils/escKeyListener.js";
 import { InputModeService } from "../utils/inputMode.js";
 import { OutputColor, OutputService } from "../utils/output.js";
 import * as utilities from "../utils/utilities.js";
@@ -165,12 +166,40 @@ export function createCommandLoop(
               process.stdout.write(workingMsg);
             }
 
-            commandList = await llmService.query(
-              agentConfig().shellModel,
-              systemMessage,
-              contextManager.getCombinedMessages(),
-              "console",
-            );
+            // Set up ESC key cancellation for LLM query
+            const queryController = new AbortController();
+            const escListener = createEscKeyListener();
+            const stopEscListener = escListener.start(() => {
+              queryController.abort();
+            });
+
+            let queryCancelled = false;
+            try {
+              commandList = await llmService.query(
+                agentConfig().shellModel,
+                systemMessage,
+                contextManager.getCombinedMessages(),
+                "console",
+                queryController.signal,
+              );
+            } catch (queryError) {
+              // Check if this was an ESC cancellation
+              if (queryController.signal.aborted) {
+                queryCancelled = true;
+              } else {
+                throw queryError; // Re-throw non-abort errors
+              }
+            } finally {
+              stopEscListener();
+            }
+
+            // Handle ESC cancellation
+            if (queryCancelled) {
+              clearPromptMessage(workingMsg);
+              await output.commentAndLog("LLM query cancelled by ESC");
+              inputMode.setDebug();
+              continue;
+            }
 
             clearPromptMessage(workingMsg);
           } catch (e) {

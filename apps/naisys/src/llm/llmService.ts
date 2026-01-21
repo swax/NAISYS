@@ -25,6 +25,7 @@ export function createLLMService(
     systemMessage: string,
     context: LlmMessage[],
     source: QuerySources,
+    abortSignal?: AbortSignal,
   ): Promise<string[]> {
     // Check if spend limit has been reached (throws error if so)
     await costTracker.checkSpendLimit();
@@ -43,9 +44,9 @@ export function createLLMService(
           : `echo "Mock LLM response for ${agentConfig().username} at $(date +"%T")"`;
       return [mockResponse];
     } else if (model.apiType == LlmApiType.Google) {
-      return sendWithGoogle(modelKey, systemMessage, context, source);
+      return sendWithGoogle(modelKey, systemMessage, context, source, abortSignal);
     } else if (model.apiType == LlmApiType.Anthropic) {
-      return sendWithAnthropic(modelKey, systemMessage, context, source);
+      return sendWithAnthropic(modelKey, systemMessage, context, source, abortSignal);
     } else if (model.apiType == LlmApiType.OpenAI) {
       const apiKey = model.keyEnvVar
         ? globalConfig().getEnv(model.keyEnvVar)
@@ -57,6 +58,7 @@ export function createLLMService(
         context,
         source,
         apiKey,
+        abortSignal,
       );
     } else {
       throw `Error, unknown LLM API type ${model.apiType}`;
@@ -69,6 +71,7 @@ export function createLLMService(
     context: LlmMessage[],
     source: QuerySources,
     apiKey?: string,
+    abortSignal?: AbortSignal,
   ): Promise<string[]> {
     const model = llModels.get(modelKey);
 
@@ -116,7 +119,9 @@ export function createLLMService(
       };
     }
 
-    const chatResponse = await openAI.chat.completions.create(chatRequest);
+    const chatResponse = await openAI.chat.completions.create(chatRequest, {
+      signal: abortSignal,
+    });
 
     if (!model.inputCost && !model.outputCost) {
       // Don't cost models with no costs
@@ -162,6 +167,7 @@ export function createLLMService(
     systemMessage: string,
     context: LlmMessage[],
     source: QuerySources,
+    abortSignal?: AbortSignal,
   ): Promise<string[]> {
     if (!globalConfig().googleApiKey) {
       throw "Error, googleApiKey is not defined";
@@ -221,6 +227,7 @@ export function createLLMService(
 
     const result = await chat.sendMessage({
       message: lastMessage.content,
+      config: abortSignal ? { abortSignal } : undefined,
     });
 
     // Use actual token counts from Google API response
@@ -261,6 +268,7 @@ export function createLLMService(
     systemMessage: string,
     context: LlmMessage[],
     source: QuerySources,
+    abortSignal?: AbortSignal,
   ): Promise<string[]> {
     const model = llModels.get(modelKey);
 
@@ -340,7 +348,9 @@ export function createLLMService(
       }
     }
 
-    const msgResponse = await anthropic.messages.create(createParams);
+    const msgResponse = await anthropic.messages.create(createParams, {
+      signal: abortSignal,
+    });
 
     // Record token usage
     if (msgResponse.usage) {

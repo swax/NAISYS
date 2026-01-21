@@ -1,10 +1,11 @@
 import chalk from "chalk";
 import * as readline from "readline";
-import { GlobalConfig } from "../globalConfig.js";
 import { AgentConfig } from "../agent/agentConfig.js";
 import { LLMail } from "../features/llmail.js";
 import { SubagentService } from "../features/subagent.js";
+import { GlobalConfig } from "../globalConfig.js";
 import { ContextManager } from "../llm/contextManager.js";
+import { isElevated, PlatformConfig } from "../services/shellPlatform.js";
 import { InputModeService } from "../utils/inputMode.js";
 import { OutputService } from "../utils/output.js";
 import { sharedReadline } from "../utils/sharedReadline.js";
@@ -20,6 +21,7 @@ export function createPromptBuilder(
   contextManager: ContextManager,
   output: OutputService,
   inputMode: InputModeService,
+  platformConfig: PlatformConfig,
 ) {
   /**
    * When actual output is entered by the user we want to cancel any auto-continue timers and/or wake on message
@@ -32,7 +34,9 @@ export function createPromptBuilder(
   writeEventManager.hookStdout();
 
   async function getPrompt(pauseSeconds: number, wakeOnMessage: boolean) {
-    const promptSuffix = inputMode.isDebug() ? "#" : "$";
+    const promptSuffix = isElevated()
+      ? platformConfig.adminPromptSuffix
+      : platformConfig.promptSuffix;
 
     const tokenMax = agentConfig().tokenMax;
     const usedTokens = contextManager.getTokenCount();
@@ -55,7 +59,7 @@ export function createPromptBuilder(
   async function getUserHostPathPrompt() {
     const currentPath = await shellWrapper.getCurrentPath();
 
-    return `${getUserHostPrompt()}:${currentPath}`;
+    return `${getUserHostPrompt()}${platformConfig.promptDivider}${currentPath}`;
   }
 
   function getUserHostPrompt() {

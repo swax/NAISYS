@@ -3,6 +3,7 @@
  * Encapsulates platform-specific shell behavior for Windows (PowerShell) and Linux (bash)
  */
 
+import { execSync } from "child_process";
 import * as os from "os";
 
 export type ShellPlatform = "windows" | "linux";
@@ -39,6 +40,12 @@ export interface PlatformConfig {
   commandNotFoundSuffix: string;
   /** Error message for invalid commands */
   invalidCommandMessage: string;
+  /** Prompt suffix for normal user (> on Windows, $ on Linux) */
+  promptSuffix: string;
+  /** Divider between user@host and current path in prompt */
+  promptDivider: string;
+  /** Prompt suffix for admin/root user */
+  adminPromptSuffix: string;
 }
 
 function getWindowsConfig(): PlatformConfig {
@@ -62,6 +69,9 @@ function getWindowsConfig(): PlatformConfig {
     commandNotFoundSuffix: "is not recognized",
     invalidCommandMessage:
       "Please enter a valid PowerShell or NAISYS command after the prompt. Use the 'ns-comment' command for thoughts.",
+    promptSuffix: ">",
+    promptDivider: " ",
+    adminPromptSuffix: "#",
   };
 }
 
@@ -85,6 +95,9 @@ function getLinuxConfig(): PlatformConfig {
     commandNotFoundSuffix: "command not found",
     invalidCommandMessage:
       "Please enter a valid Linux or NAISYS command after the prompt. Use the 'ns-comment' command for thoughts.",
+    promptSuffix: "$",
+    promptDivider: ":",
+    adminPromptSuffix: "#",
   };
 }
 
@@ -108,4 +121,27 @@ export function getPlatformConfigFor(platform: ShellPlatform): PlatformConfig {
     return getWindowsConfig();
   }
   return getLinuxConfig();
+}
+
+/** Cached result of elevation check (doesn't change during process lifetime) */
+let elevatedCache: boolean | undefined;
+
+/** Check if the process is running as root (Linux) or admin (Windows) */
+export function isElevated(): boolean {
+  if (elevatedCache !== undefined) {
+    return elevatedCache;
+  }
+
+  if (os.platform() === "win32") {
+    try {
+      execSync("net session", { stdio: "ignore" });
+      elevatedCache = true;
+    } catch {
+      elevatedCache = false;
+    }
+  } else {
+    elevatedCache = process.getuid?.() === 0;
+  }
+
+  return elevatedCache;
 }
