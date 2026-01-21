@@ -12,8 +12,11 @@
 
 import { GlobalConfig } from "../globalConfig.js";
 import { AgentConfig } from "../agent/agentConfig.js";
+import { getPlatformConfig } from "../services/shellPlatform.js";
 
 export function createSystemMessage({ globalConfig }: GlobalConfig, { agentConfig }: AgentConfig) {
+  const platformConfig = getPlatformConfig();
+
   let genImgCmd = "";
   if (agentConfig().imageModel) {
     genImgCmd = `\n  ns-genimg "<description>" <filepath>: Generate an image with the description and save it to the given fully qualified path`;
@@ -102,10 +105,12 @@ NAISYS ${globalConfig().packageVersion} Shell
 Welcome back ${agentConfig().username}!
 MOTD:
 Date: ${new Date().toLocaleString()}
-LINUX Commands:
-  Standard Linux commands are available
+${platformConfig.displayName} Commands:
+  Standard ${platformConfig.shellName} commands are available${platformConfig.platform === "windows" ? `
+  PowerShell has aliases for common commands: ls, cat, pwd, cd, mkdir, rm, cp, mv
+  Read files with Get-Content. Write files with Set-Content -Path "file" -Value "content"` : `
   vi and nano are not supported
-  Read files with cat. Write files with \`cat > filename << 'EOF'\`
+  Read files with cat. Write files with \`cat > filename << 'EOF'\``}
   Do not input notes after the prompt. Only valid commands.
 NAISYS Commands: (cannot be used with other commands on the same prompt)${llmailCmd}${subagentNote}${llmynxCmd}${genImgCmd}
   ns-comment "<thought>": Any non-command output like thinking out loud, prefix with the 'ns-comment' command

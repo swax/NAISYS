@@ -1,5 +1,6 @@
 import { GlobalConfig } from "../globalConfig.js";
 import { ContextManager } from "../llm/contextManager.js";
+import { getPlatformConfig } from "../services/shellPlatform.js";
 import { InputModeService } from "../utils/inputMode.js";
 import * as utilities from "../utils/utilities.js";
 import { ShellWrapper } from "./shellWrapper.js";
@@ -10,6 +11,7 @@ export function createShellCommand(
   contextManager: ContextManager,
   inputMode: InputModeService,
 ) {
+  const platformConfig = getPlatformConfig();
   const isShellSuspended = () => shellWrapper.isShellSuspended();
   const getCommandElapsedTimeString = () =>
     shellWrapper.getCommandElapsedTimeString();
@@ -68,9 +70,11 @@ export function createShellCommand(
       response += `\nThe shell command generated too much output (${tokenCount} tokens). Only ${tokenMax} tokens worth are shown above.`;
     }
 
-    if (response.endsWith(": command not found")) {
-      response +=
-        "\nPlease enter a valid Linux or NAISYS command after the prompt. Use the 'comment' command for thoughts.";
+    if (
+      response.endsWith(": command not found") ||
+      response.includes("is not recognized")
+    ) {
+      response += "\n" + platformConfig.invalidCommandMessage;
     }
 
     // TODO: move this into the command handler to remove the context manager dependency
