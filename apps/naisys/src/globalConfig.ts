@@ -2,6 +2,7 @@ import { readFile } from "fs/promises";
 import os from "os";
 import path from "path";
 import * as pathService from "./services/pathService.js";
+import { useNativeWindows } from "./services/shellPlatform.js";
 import { sanitizeSpendLimit } from "./utils/utilities.js";
 
 export async function createGlobalConfig() {
@@ -11,7 +12,7 @@ export async function createGlobalConfig() {
     /** Identifies this runner - shows after @ in prompt, used for multi-machine host identification */
     const hostname = getEnv("NAISYS_HOSTNAME", true)!.replace(
       "${machine_name}",
-      os.hostname()
+      os.hostname(),
     );
 
     const shellCommand = {
@@ -52,10 +53,11 @@ export async function createGlobalConfig() {
     const googleSearchEngineId = getEnv("GOOGLE_SEARCH_ENGINE_ID");
 
     /** Comma-separated list of Hub URLs for multi-machine sync */
-    const hubUrls = getEnv("HUB_URLS")
-      ?.split(",")
-      .map((url) => url.trim())
-      .filter((url) => url.length > 0) ?? [];
+    const hubUrls =
+      getEnv("HUB_URLS")
+        ?.split(",")
+        .map((url) => url.trim())
+        .filter((url) => url.length > 0) ?? [];
 
     /** API key for authenticating with Hub servers */
     const hubAccessKey = getEnv("HUB_ACCESS_KEY");
@@ -88,10 +90,7 @@ export async function createGlobalConfig() {
       });*/
 
         const installPath = pathService.getInstallPath();
-        const packageJsonPath = path.join(
-          installPath.getHostPath(),
-          "package.json",
-        );
+        const packageJsonPath = path.join(installPath, "package.json");
         const packageJson = JSON.parse(await readFile(packageJsonPath, "utf8"));
         return packageJson.version;
       } catch (e) {
@@ -108,11 +107,17 @@ export async function createGlobalConfig() {
     }
 
     function getBinPath() {
-      // C:/git/naisys/dist/config.js
-      let binPath = new URL("../bin", import.meta.url).pathname;
+      // Get the bin path relative to this file
+      const binUrl = new URL("../bin", import.meta.url);
+      let binPath = binUrl.pathname;
 
-      if (binPath.startsWith("/C:")) {
-        binPath = "/mnt/c" + binPath.substring(3);
+      // On Windows, pathname starts with /C: which needs fixing
+      if (useNativeWindows() && binPath.startsWith("/")) {
+        // Remove leading slash: /C:/git/naisys/bin -> C:/git/naisys/bin
+        binPath = binPath.substring(1);
+
+        // For native Windows (PowerShell), use Windows-style path
+        binPath = binPath.replace(/\//g, "\\");
       }
 
       return binPath;
