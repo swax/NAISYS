@@ -133,6 +133,9 @@ export function createPromptBuilder(
         ? sharedReadline
         : undefined;
 
+      // Track if this agent is in focus (has console access)
+      const isInFocus = !!readlineInterface;
+
       if (readlineInterface) {
         readlineInterface.question(
           chalk.greenBright(commandPrompt),
@@ -147,6 +150,8 @@ export function createPromptBuilder(
         // If user starts typing in prompt, cancel any auto timeouts or wake on msg
         unsubscribeWrite = writeEventManager.onWrite(cancelWaitingForUserInput);
       } else {
+        // Agent not in focus - just output to buffer and wait for events
+        // Don't actively cycle with timeouts as stdout writes interfere with readline
         output.comment(commandPrompt + "<agent not in focus>");
       }
 
@@ -161,7 +166,9 @@ export function createPromptBuilder(
         resolve("");
       }
 
-      if (pauseSeconds) {
+      // Only set up pause timeout for agents that are in focus
+      // Non-focus agents cycling with timeouts causes stdout writes that interfere with readline
+      if (pauseSeconds && isInFocus) {
         timeout = setTimeout(abortQuestion, pauseSeconds * 1000);
       }
 
