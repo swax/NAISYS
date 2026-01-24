@@ -2,6 +2,7 @@ import { createDatabaseService } from "@naisys/database";
 import { program } from "commander";
 import dotenv from "dotenv";
 import { createHubForwardService } from "./services/hubForwardService.js";
+import { createRemoteAgentRouter } from "./services/remoteAgentRouter.js";
 import { createHubServer } from "./services/hubServer.js";
 import { createHubServerLog } from "./services/hubServerLog.js";
 import { createHubSyncServer } from "./services/hubSyncServer.js";
@@ -52,6 +53,9 @@ export async function startHub(
         pollIntervalMs: 1000,
       },
     );
+
+    // Create remote agent router for agent start/stop/log across machines
+    createRemoteAgentRouter(hubServer, logService);
 
     console.log(
       `[Hub] Running on ws://localhost:${hubPort}, logs written to file`,

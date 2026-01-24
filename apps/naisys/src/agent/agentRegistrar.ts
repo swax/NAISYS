@@ -345,8 +345,28 @@ export async function createAgentRegistrar(
     }
   }
 
+  async function resolveUserIdFromPath(agentPath: string): Promise<string> {
+    const absolutePath = path.resolve(agentPath);
+
+    const user = await usingDatabase(async (prisma) => {
+      return await prisma.users.findFirst({
+        where: {
+          agent_path: absolutePath,
+          host_id: localHostId,
+        },
+      });
+    });
+
+    if (!user) {
+      throw new Error(`No user found for agent path: ${absolutePath}`);
+    }
+
+    return user.id;
+  }
+
   return {
     reloadAgents,
+    resolveUserIdFromPath,
   };
 }
 

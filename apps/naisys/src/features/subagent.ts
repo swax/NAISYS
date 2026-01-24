@@ -5,6 +5,7 @@ import table from "text-table";
 import { AgentConfig } from "../agent/agentConfig.js";
 import { RegistrableCommand } from "../command/commandRegistry.js";
 import { DatabaseService } from "@naisys/database";
+import { RemoteAgentRequester } from "../hub/remoteAgentRequester.js";
 import { HostService } from "../services/hostService.js";
 import * as pathService from "../services/pathService.js";
 import { RunService } from "../services/runService.js";
@@ -13,9 +14,8 @@ import { OutputColor, OutputService } from "../utils/output.js";
 import { LLMail } from "./llmail.js";
 
 interface Subagent {
-  id?: number;
+  userId: string;
   agentName: string;
-  agentPath: string;
   title: string;
   taskDescription?: string;
   process?: ChildProcess;
@@ -26,22 +26,22 @@ interface Subagent {
 /** Don't create a cyclic dependency on agent manager, or give this class access to all of the the agent manager's properties */
 type IAgentManager = {
   startAgent: (
-    agentPath: string,
+    userId: string,
     onStop?: (reason: string) => void,
-  ) => Promise<number>;
+  ) => Promise<string>;
   stopAgent: (
-    agentRuntimeId: number,
+    agentUserId: string,
     mode: "requestShutdown" | "completeShutdown",
     reason: string,
   ) => Promise<void>;
   runningAgents: Array<{
-    agentRunId: number;
+    agentUserId: string;
     agentUsername: string;
     agentTitle: string;
     agentTaskDescription?: string;
   }>;
-  getBufferLines: (agentRuntimeId: number) => number;
-  setActiveConsoleAgent: (agentRuntimeId: number) => void;
+  getBufferLines: (agentUserId: string) => number;
+  setActiveConsoleAgent: (agentUserId: string) => void;
 };
 
 export function createSubagentService(
@@ -53,12 +53,13 @@ export function createSubagentService(
   runService: RunService,
   { usingDatabase }: DatabaseService,
   { localHostId }: HostService,
+  remoteAgentRequester: RemoteAgentRequester,
 ) {
   const _subagents: Subagent[] = [];
 
   // Track running subagents and termination events
   const _terminationEvents: Array<{
-    id: number;
+    userId: string;
     agentName: string;
     reason: string;
   }> = [];
@@ -76,15 +77,15 @@ export function createSubagentService(
       case "help": {
         let helpOutput = `subagent <command>
   list: Lists all subagents
-  stop <id>: Stops the agent with the given task id
-  start <username> "<description>": Starts an existing agent with the given name and description of the task to perform`;
+  stop <name>: Stops the agent with the given name
+  start <name> "<description>": Starts an existing agent with the given name and description of the task to perform`;
 
         //  create "<agent title>" "<description>": Creates a new agent. Include as much detail in the description as possible.
         //  spawn <username> <description>: Spawns the agent as a separate isolated node process (generally use start instead)
 
         if (inputMode.isDebug()) {
-          helpOutput += `\n  switch <id>: Switch context to a started in-process agent (debug mode only)`;
-          helpOutput += `\n  flush <id>: Flush a spawned agent's output (debug mode only)`;
+          helpOutput += `\n  switch <name>: Switch context to a started in-process agent (debug mode only)`;
+          helpOutput += `\n  flush <name>: Flush a spawned agent's output (debug mode only)`;
         }
 
         helpOutput += `\n\n* You can have up to ${agentConfig().subagentMax} subagents running at a time.`;
@@ -134,16 +135,16 @@ export function createSubagentService(
           break;
         }
 
-        const subagentId = parseInt(argv[1]);
-        return _switchAgent(subagentId);
+        const switchName = argv[1];
+        return _switchAgent(switchName);
       }
       case "stop": {
-        const subagentId = parseInt(argv[1]);
-        return _stopAgent(subagentId, "subagent stop");
+        const stopName = argv[1];
+        return _stopAgent(stopName, "subagent stop");
       }
       case "flush": {
-        const subagentId = parseInt(argv[1]);
-        _debugFlushContext(subagentId);
+        const flushName = argv[1];
+        _debugFlushContext(flushName);
         return "";
       }
       default: {
@@ -171,8 +172,8 @@ export function createSubagentService(
         const existing = _subagents.find((p) => p.agentName === agent.username);
         if (!existing) {
           _subagents.push({
+            userId: agent.id,
             agentName: agent.username,
-            agentPath: agent.agent_path,
             title: agent.title,
             log: [],
             status: "stopped",
@@ -187,13 +188,14 @@ export function createSubagentService(
 
     let agentList = "";
 
+    const isRunning = (p: Subagent) => p.status === "started";
+
     const subagentRows = _subagents.map((p) => [
       p.agentName,
-      p.id || "",
       p.status,
       p.taskDescription?.substring(0, 70) || p.title,
-      inputMode.isDebug() && p.id
-        ? (p.log.length || agentManager.getBufferLines(p.id)).toString()
+      inputMode.isDebug() && isRunning(p)
+        ? (p.log.length || agentManager.getBufferLines(p.userId)).toString()
         : "",
     ]);
 
@@ -204,7 +206,6 @@ export function createSubagentService(
         [
           [
             "Name",
-            "ID",
             "Status",
             "Task",
             inputMode.isDebug() ? "Unread Lines" : "",
@@ -217,22 +218,21 @@ export function createSubagentService(
 
     if (inputMode.isDebug()) {
       // Find running in process agents that aren't already listed
-      const myRunId = runService.getRunId();
+      const myUserId = runService.getUserId();
 
       const otherAgents = agentManager.runningAgents
         .filter(
           (ra) =>
-            ra.agentRunId != myRunId &&
-            !_subagents.find((sa) => sa.id === ra.agentRunId),
+            ra.agentUserId !== myUserId &&
+            !_subagents.find((sa) => sa.userId === ra.agentUserId),
         )
         .map((ra) => {
           return {
             agentName: ra.agentUsername,
-            id: ra.agentRunId,
             status: "started",
             title: ra.agentTitle,
             taskDescription: ra.agentTaskDescription,
-            unreadLines: agentManager.getBufferLines(ra.agentRunId),
+            unreadLines: agentManager.getBufferLines(ra.agentUserId),
           };
         });
 
@@ -241,10 +241,9 @@ export function createSubagentService(
 
         agentList += table(
           [
-            ["Name", "ID", "Status", "Task", "Unread Lines"],
+            ["Name", "Status", "Task", "Unread Lines"],
             ...otherAgents.map((p) => [
               p.agentName,
-              p.id || "",
               p.status,
               p.taskDescription?.substring(0, 70) || p.title,
               p.unreadLines.toString(),
@@ -267,7 +266,7 @@ export function createSubagentService(
   /** Check for and clear termination events for wake notifications */
   function getTerminationEvents(
     action?: "clear",
-  ): Array<{ id: number; agentName: string; reason: string }> {
+  ): Array<{ userId: string; agentName: string; reason: string }> {
     if (_terminationEvents.length === 0) {
       return [];
     }
@@ -365,7 +364,59 @@ export function createSubagentService(
     return "Subagent Created. Ready to start or spawn";
   }*/
 
-  function validateAgentStart(agentName: string, taskDescription: string) {
+  /** Look up user by username, returning host and agent info */
+  async function lookupUser(identifier: string) {
+    // Parse username@host format
+    const atIndex = identifier.lastIndexOf("@");
+    let username: string;
+    let hostName: string | null = null;
+
+    if (atIndex > 0) {
+      username = identifier.slice(0, atIndex);
+      hostName = identifier.slice(atIndex + 1);
+    } else {
+      username = identifier;
+    }
+
+    return await usingDatabase(async (prisma) => {
+      const matchingUsers = await prisma.users.findMany({
+        where: {
+          username,
+          deleted_at: null,
+          ...(hostName ? { host: { name: hostName } } : {}),
+        },
+        select: {
+          id: true,
+          username: true,
+          host_id: true,
+          agent_path: true,
+          host: { select: { name: true } },
+        },
+      });
+
+      if (matchingUsers.length === 0) {
+        return null;
+      }
+
+      if (matchingUsers.length === 1) {
+        return matchingUsers[0];
+      }
+
+      // Multiple users with same username - try to find one on localhost
+      const localUser = matchingUsers.find((u) => u.host_id === localHostId);
+      if (localUser) {
+        return localUser;
+      }
+
+      // No local user and multiple matches - require username@host
+      const hostOptions = matchingUsers
+        .map((u) => `${u.username}@${u.host?.name || "unknown"}`)
+        .join(", ");
+      throw `Multiple users named '${username}' exist. Use one of: ${hostOptions}`;
+    });
+  }
+
+  function validateLocalAgentStart(agentName: string, taskDescription: string) {
     if (!agentName) {
       throw "Subagent name is required to start a subagent";
     }
@@ -376,7 +427,7 @@ export function createSubagentService(
 
     const subagent = _subagents.find((p) => p.agentName === agentName);
     if (!subagent) {
-      throw `Subagent '${agentName}' not found`;
+      return null; // Not found locally, may be remote
     }
 
     if (subagent.status !== "stopped") {
@@ -393,21 +444,65 @@ export function createSubagentService(
   }
 
   async function _startAgent(agentName: string, taskDescription: string) {
-    const subagent = validateAgentStart(agentName, taskDescription);
+    if (!agentName) {
+      throw "Subagent name is required to start a subagent";
+    }
+    if (!taskDescription) {
+      throw "Task description is required to start a subagent";
+    }
 
-    subagent.id = await agentManager.startAgent(
-      subagent.agentPath,
-      (stopReason) => handleAgentTermination(subagent, stopReason),
+    // First refresh the local subagents list
+    await refreshSubagents();
+
+    // Try to validate as a local agent start
+    const localSubagent = validateLocalAgentStart(agentName, taskDescription);
+
+    if (localSubagent) {
+      // Local agent - start the agent
+      await agentManager.startAgent(
+        localSubagent.userId,
+        (stopReason) => handleAgentTermination(localSubagent, stopReason),
+      );
+
+      localSubagent.taskDescription = taskDescription;
+      localSubagent.status = "started";
+
+      await sendStartupMessage(localSubagent, taskDescription);
+
+      return `Subagent '${agentName}' started`;
+    }
+
+    // Not found locally - look up in database (might be remote)
+    const user = await lookupUser(agentName);
+    if (!user) {
+      throw `Agent '${agentName}' not found`;
+    }
+
+    // Check if this is a local agent that wasn't in our subagents list
+    if (user.host_id === localHostId) {
+      throw `Agent '${agentName}' exists locally but is not a subagent of ${agentConfig().username}`;
+    }
+
+    // Remote agent - send start request through hub
+    return await _startRemoteAgent(user, taskDescription);
+  }
+
+  async function _startRemoteAgent(
+    user: { id: string; username: string; host_id: string | null; host: { name: string } | null },
+    taskDescription: string,
+  ): Promise<string> {
+    if (!user.host_id) {
+      throw `Agent '${user.username}' has no host assigned`;
+    }
+
+    return await remoteAgentRequester.startAgent(
+      user.id,
+      user.host_id,
+      runService.getUserId(),
+      taskDescription,
+      user.username,
+      user.host?.name || null,
     );
-
-    subagent.taskDescription = taskDescription;
-    subagent.status = "started";
-
-    await sendStartupMessage(subagent, taskDescription);
-
-    // subagent switch command, only visible to debug mode, finds and sets the active subagent through the subagent mangager (this service, no higher level injected service)
-
-    return `Subagent '${agentName}' Started (ID: ${subagent.id})`;
   }
 
   /**
@@ -520,21 +615,21 @@ export function createSubagentService(
       });
   }
 
-  function _stopAgent(id: number, reason: string) {
-    // Get if the agent is running in process, debug user can stop agents other than the local subagent ones
+  function _stopAgent(agentName: string, reason: string) {
+    // Find by name in local subagents
+    const subagent = _subagents.find((p) => p.agentName === agentName);
+
+    // Also check if running in agentManager (debug user can stop agents other than local subagents)
     const agentRuntime = agentManager.runningAgents.find(
-      (a) => a.agentRunId === id,
+      (a) => a.agentUsername === agentName,
     );
 
-    // The local record of the subagent
-    const subagent = _subagents.find((p) => p.id === id);
-
     if (!subagent && !agentRuntime) {
-      throw `Subagent ${id} not found`;
+      throw `Agent '${agentName}' not found`;
     }
 
     if (subagent?.status === "stopped") {
-      throw `Subagent ${id} is already stopped`;
+      throw `Agent '${agentName}' is already stopped`;
     }
 
     // Process termination event will set status to stopped
@@ -542,67 +637,63 @@ export function createSubagentService(
 
     if (agentRuntime) {
       // Request shutdown of in-process agent, callback defined in start() will handle termination event
-      void agentManager.stopAgent(id, "requestShutdown", reason);
+      void agentManager.stopAgent(agentRuntime.agentUserId, "requestShutdown", reason);
     }
 
-    if (subagent) {
-      return `Subagent ${subagent.agentName} stop requested`;
-    } else if (agentRuntime) {
-      return `Agent ${agentRuntime.agentUsername} stop requested`;
-    } else {
-      throw `Subagent ${id} not found`;
-    }
+    return `Agent '${agentName}' stop requested`;
   }
 
-  /** Stop all agents with ids */
+  /** Stop all running subagents */
   function cleanup(reason: string) {
     _subagents.forEach((subagent) => {
-      if (subagent.id) {
+      if (subagent.status === "started") {
         try {
-          _stopAgent(subagent.id, reason);
+          _stopAgent(subagent.agentName, reason);
         } catch {}
       }
     });
   }
 
   /** Only for in-process agents */
-  function _switchAgent(id: number) {
-    agentManager.setActiveConsoleAgent(id);
+  function _switchAgent(agentName: string) {
+    const agentRuntime = agentManager.runningAgents.find(
+      (a) => a.agentUsername === agentName,
+    );
+
+    if (!agentRuntime) {
+      throw `Agent '${agentName}' is not running`;
+    }
+
+    agentManager.setActiveConsoleAgent(agentRuntime.agentUserId);
 
     return "";
   }
 
   function handleAgentTermination(subagent: Subagent, reason: string) {
     _terminationEvents.push({
-      id: subagent.id || -1,
+      userId: subagent.userId,
       agentName: subagent.agentName,
       reason,
     });
 
     subagent.status = "stopped";
     subagent.taskDescription = undefined;
-    subagent.id = undefined;
   }
 
   /** Only used in debug mode, not by LLM */
-  function _debugFlushContext(subagentId: number) {
-    const subagent = _subagents.find((p) => p.id === subagentId);
+  function _debugFlushContext(agentName: string) {
+    const subagent = _subagents.find((p) => p.agentName === agentName);
     if (!subagent) {
-      throw `Subagent ${subagentId} not found`;
+      throw `Agent '${agentName}' not found`;
     }
 
     if (subagent.status == "started") {
-      throw `Subagent ${subagentId} is not a spawned subagent, use the switch command to see output.`;
+      throw `Agent '${agentName}' is not a spawned subagent, use the switch command to see output.`;
     }
 
     subagent.log.forEach((line) => output.write(line, OutputColor.subagent));
 
     subagent.log.length = 0;
-  }
-
-  function _getSubagentDir() {
-    const agentDirectory = path.dirname(agentConfig().hostpath);
-    return path.join(agentDirectory, agentConfig().subagentDirectory || "subagents");
   }
 
   const registrableCommand: RegistrableCommand = {

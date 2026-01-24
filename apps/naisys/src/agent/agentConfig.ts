@@ -1,6 +1,5 @@
-import * as fs from "fs";
+import { DatabaseService } from "@naisys/database";
 import yaml from "js-yaml";
-import path from "path";
 import { z } from "zod";
 import { GlobalConfig } from "../globalConfig.js";
 import { CommandProtection } from "../utils/enums.js";
@@ -69,14 +68,30 @@ export const AgentConfigFileSchema = z.object({
 
 export type AgentConfigFile = z.infer<typeof AgentConfigFileSchema>;
 
-export function createAgentConfig(
-  agentPath: string,
+export async function createAgentConfig(
+  userId: string,
+  { usingDatabase }: DatabaseService,
   { globalConfig }: GlobalConfig,
 ) {
-  let cachedConfig = loadConfig();
+  let cachedConfig = await loadConfigFromDb();
 
-  function loadConfig() {
-    const rawConfig = yaml.load(fs.readFileSync(agentPath, "utf8"));
+  async function loadConfigFromDb() {
+    const user = await usingDatabase(async (prisma) => {
+      return await prisma.users.findUnique({
+        where: { id: userId },
+        select: { config: true },
+      });
+    });
+
+    if (!user) {
+      throw new Error(`User with ID ${userId} not found`);
+    }
+
+    return parseConfig(user.config);
+  }
+
+  function parseConfig(yamlContent: string) {
+    const rawConfig = yaml.load(yamlContent);
     const config = AgentConfigFileSchema.parse(rawConfig);
 
     // Sanitize spend limits
@@ -126,7 +141,6 @@ export function createAgentConfig(
 
     return {
       ...config,
-      hostpath: path.resolve(agentPath),
       spendLimitDollars,
       spendLimitHours,
       shellModel,
@@ -153,10 +167,10 @@ export function createAgentConfig(
 
   return {
     agentConfig: () => cachedConfig,
-    reloadAgentConfig: () => {
-      cachedConfig = loadConfig();
+    reloadAgentConfig: async () => {
+      cachedConfig = await loadConfigFromDb();
     },
   };
 }
 
-export type AgentConfig = ReturnType<typeof createAgentConfig>;
+export type AgentConfig = Awaited<ReturnType<typeof createAgentConfig>>;

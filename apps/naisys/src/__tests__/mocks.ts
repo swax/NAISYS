@@ -273,7 +273,7 @@ export function createMockGlobalConfig(): GlobalConfig {
 
 export function createMockAgentConfig(): AgentConfig {
   return {
-    reloadAgentConfig: jest.fn(() => Promise.resolve()),
+    reloadAgentConfig: jest.fn(async () => {}),
     agentConfig: () => ({
       username: "test",
       title: "Test Agent",
@@ -299,7 +299,6 @@ export function createMockAgentConfig(): AgentConfig {
       disableMultipleCommands: false,
       leadAgent: undefined,
       taskDescription: undefined,
-      hostpath: "/path/to/agent.yaml",
       resolveConfigVars: (str: string) => str,
     }),
   };

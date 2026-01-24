@@ -7,7 +7,6 @@ export const AgentSchema = z.object({
   title: z.string(),
   host: z.string(),
   lastActive: z.string().optional(),
-  agentPath: z.string().optional(),
   leadUsername: z.string().optional(),
   latestLogId: z.string(),
   latestMailId: z.string(),

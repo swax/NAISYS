@@ -6,6 +6,8 @@ import { createAgentRegistrar } from "./agent/agentRegistrar.js";
 import { createGlobalConfig } from "./globalConfig.js";
 import { createHubClientLog } from "./hub/hubClientLog.js";
 import { createHubManager } from "./hub/hubManager.js";
+import { createRemoteAgentHandler } from "./hub/remoteAgentHandler.js";
+import { createRemoteAgentRequester } from "./hub/remoteAgentRequester.js";
 import { createHubSyncClient } from "./hub/hubSyncClient.js";
 import { createHostService } from "./services/hostService.js";
 
@@ -59,6 +61,7 @@ const hubManager = createHubManager(
   hubClientLog,
 );
 const hubSyncClient = createHubSyncClient(hubManager, hubClientLog, dbService, hostService);
+const remoteAgentRequester = createRemoteAgentRequester(hubManager);
 
 console.log(`NAISYS STARTED`);
 
@@ -74,14 +77,19 @@ const agentManager = new AgentManager(
   dbService,
   globalConfig,
   hostService,
+  remoteAgentRequester,
   agentRegistrar,
   hubSyncClient,
 );
 
+// Create handler for incoming remote agent control requests
+createRemoteAgentHandler(hubManager, hubClientLog, dbService, hostService, agentManager);
 
 
-// Inits the naisys db if it doesn't exist which is needed by supervisor
-await agentManager.startAgent(agentPath);
+
+// Resolve the agent path to a user ID and start the agent
+const userId = await agentRegistrar.resolveUserIdFromPath(agentPath);
+await agentManager.startAgent(userId);
 
 await agentManager.waitForAllAgentsToComplete();
 

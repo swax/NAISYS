@@ -315,7 +315,7 @@ export function createCommandLoop(
     const terminationEvents = subagent.getTerminationEvents("clear");
     for (const event of terminationEvents) {
       await contextManager.append(
-        `Subagent ${event.id} ${event.agentName} has terminated. Reason: ${event.reason}`,
+        `Subagent '${event.agentName}' has terminated. Reason: ${event.reason}`,
         ContentSource.Console,
       );
     }

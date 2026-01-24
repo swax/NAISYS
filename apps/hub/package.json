@@ -9,7 +9,8 @@
     "./services/hubSyncServer": "./dist/services/hubSyncServer.js",
     "./services/hubForwardService": "./dist/services/hubForwardService.js",
     "./services/hubServerLog": "./dist/services/hubServerLog.js",
-    "./services/hubServer": "./dist/services/hubServer.js"
+    "./services/hubServer": "./dist/services/hubServer.js",
+    "./services/remoteAgentRouter": "./dist/services/remoteAgentRouter.js"
   },
   "scripts": {
     "clean": "npx rimraf dist",
