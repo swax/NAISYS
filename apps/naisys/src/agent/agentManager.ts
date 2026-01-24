@@ -3,6 +3,7 @@ import { AgentRuntime, createAgentRuntime } from "./agentRuntime.js";
 import { GlobalConfig } from "../globalConfig.js";
 import { DatabaseService } from "@naisys/database";
 import { HostService } from "../services/hostService.js";
+import { RemoteAgentRequester } from "../hub/remoteAgentRequester.js";
 import { HubSyncClient } from "../hub/hubSyncClient.js";
 import { OutputColor } from "../utils/output.js";
 
@@ -11,6 +12,7 @@ export class AgentManager {
   dbService: DatabaseService;
   globalConfig: GlobalConfig;
   hostService: HostService;
+  remoteAgentRequester: RemoteAgentRequester;
   agentRegistrar: AgentRegistrar;
   hubSyncClient: HubSyncClient;
 
@@ -21,25 +23,33 @@ export class AgentManager {
     dbService: DatabaseService,
     globalConfig: GlobalConfig,
     hostService: HostService,
+    remoteAgentRequester: RemoteAgentRequester,
     agentRegistrar: AgentRegistrar,
     hubSyncClient: HubSyncClient,
   ) {
     this.dbService = dbService;
     this.globalConfig = globalConfig;
     this.hostService = hostService;
+    this.remoteAgentRequester = remoteAgentRequester;
     this.agentRegistrar = agentRegistrar;
     this.hubSyncClient = hubSyncClient;
   }
 
-  async startAgent(agentPath: string, onStop?: (reason: string) => void) {
-    // Get rid of all of this and do in the main function when all direct config imports are removed
+  async startAgent(userId: string, onStop?: (reason: string) => void) {
+    // Check if agent is already running
+    const existing = this.runningAgents.find(
+      (a) => a.agentUserId === userId,
+    );
+    if (existing) {
+      throw new Error(`Agent '${existing.agentUsername}' is already running`);
+    }
 
-    const agent = await createAgentRuntime(this, agentPath);
+    const agent = await createAgentRuntime(this, userId);
 
     this.runningAgents.push(agent);
 
     if (this.runningAgents.length === 1) {
-      this.setActiveConsoleAgent(agent.agentRunId);
+      this.setActiveConsoleAgent(agent.agentUserId);
     }
 
     let stopReason = "";
@@ -57,29 +67,29 @@ export class AgentManager {
         onStop?.(stopReason);
 
         await this.stopAgent(
-          agent.agentRunId,
+          agent.agentUserId,
           "completeShutdown",
           `${agent.agentUsername} shutdown`,
         );
       });
 
-    return agent.agentRunId;
+    return agent.agentUserId;
   }
 
   async stopAgent(
-    agentRuntimeId: number,
+    agentUserId: string,
     stage: "completeShutdown" | "requestShutdown",
     reason: string,
   ) {
     const agent = this.runningAgents.find(
-      (a) => a.agentRunId === agentRuntimeId,
+      (a) => a.agentUserId === agentUserId,
     );
 
     if (!agent) {
       if (stage == "requestShutdown") {
-        throw new Error(`Agent with runtime ID ${agentRuntimeId} not found`);
+        throw new Error(`Agent with user ID ${agentUserId} not found`);
       }
-      // Else the function was probably falled from the finally block above triggered by the shutdown below
+      // Else the function was probably called from the finally block above triggered by the shutdown below
       return;
     }
 
@@ -87,7 +97,7 @@ export class AgentManager {
       const switchToAgent = this.runningAgents.find((a) => a !== agent);
 
       if (switchToAgent) {
-        this.setActiveConsoleAgent(switchToAgent.agentRunId);
+        this.setActiveConsoleAgent(switchToAgent.agentUserId);
       }
     }
 
@@ -104,15 +114,27 @@ export class AgentManager {
     }
   }
 
-  setActiveConsoleAgent(id: number) {
-    const newActiveAgent = this.runningAgents.find((a) => a.agentRunId === id);
+  async stopAgentByUserId(userId: string, reason: string) {
+    // Find the running agent by userId
+    const agent = this.runningAgents.find(
+      (a) => a.agentUserId === userId,
+    );
+    if (!agent) {
+      throw new Error(`Agent with user ID '${userId}' is not running`);
+    }
+
+    await this.stopAgent(agent.agentUserId, "requestShutdown", reason);
+  }
+
+  setActiveConsoleAgent(userId: string) {
+    const newActiveAgent = this.runningAgents.find((a) => a.agentUserId === userId);
 
     if (!newActiveAgent) {
-      throw new Error(`Agent with runtime ID ${id} not found`);
+      throw new Error(`Agent with user ID ${userId} not found`);
     }
 
     if (newActiveAgent.output.isConsoleEnabled()) {
-      throw new Error(`Agent with runtime ID ${id} is already active`);
+      throw new Error(`Agent with user ID ${userId} is already active`);
     }
 
     const prevActiveAgent = this.runningAgents.find((a) =>
@@ -122,29 +144,23 @@ export class AgentManager {
     if (prevActiveAgent) {
       // Last output from the previously active agent
       prevActiveAgent.output.write(
-        `Switching to agent ${newActiveAgent.agentUsername} (ID: ${newActiveAgent.agentRunId})`,
+        `Switching to agent ${newActiveAgent.agentUsername}`,
         OutputColor.subagent,
       );
       prevActiveAgent.output.setConsoleEnabled(false);
     }
 
-    // This will show at the bottom of the flushed output for the newly active agent
-    /*newActiveAgent.output.write(
-      `Switched to agent ${newActiveAgent.config.agent.username} (ID: ${newActiveAgent.agentRuntimeId})`,
-      OutputColor.subagent,
-    );*/
-
     // Enable console for the active agent, disable for others
     newActiveAgent.output.setConsoleEnabled(true);
 
-    // This switch even is used to break the input prompt timeout of the newly active agent
+    // This switch event is used to break the input prompt timeout of the newly active agent
     if (prevActiveAgent) {
       newActiveAgent.subagentService.raiseSwitchEvent();
     }
   }
 
-  getBufferLines(id: number) {
-    const agent = this.runningAgents.find((a) => a.agentRunId === id);
+  getBufferLines(userId: string) {
+    const agent = this.runningAgents.find((a) => a.agentUserId === userId);
 
     if (!agent) {
       return 0;

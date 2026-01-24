@@ -181,14 +181,14 @@ interface AgentLogResponse {
 **Implementation Components**:
 
 1. **Hub Side** (`apps/hub/src/services/`):
-   - New `hubRemoteControlService.ts`
+   - `remoteAgentRouter.ts`
    - Routes requests to target host
    - Validates permissions (only lead agents can stop their subagents)
    - Returns response to requester
 
 2. **Runner Side** (`apps/naisys/src/hub/`):
-   - New `hubRemoteControlClient.ts`
-   - Registers handlers for `agent_stop_request` and `agent_log_request`
+   - `remoteAgentHandler.ts` - Handles incoming requests from hub
+   - `remoteAgentRequester.ts` - Sends outgoing requests through hub
    - Executes local operations via `AgentManager`
    - Sends response back through hub
 
@@ -312,7 +312,7 @@ private async checkAndStartPendingAgents() {
 }
 ```
 
-### Remote Control Message Flow
+### Remote Agent Message Flow
 
 ```
 ┌─────────────────┐     ┌─────────┐     ┌─────────────────┐
@@ -412,16 +412,17 @@ interface LlmModel {
 - [x] Update `hostService.ts` to use `@naisys/common`
 - [x] Update supervisor client to use `@naisys/common`
 
-#### Remote Control Protocol
-- [ ] Define TypeScript interfaces for request/response messages
-- [ ] Create `hubRemoteControlService.ts` on hub side
-- [ ] Create `hubRemoteControlClient.ts` on runner side
-- [ ] Implement `agent_stop` request handler (response via callback)
-- [ ] Implement `agent_log` request handler (response via callback)
-- [ ] Implement `agent_start` request handler (response via callback)
+#### Remote Agent Protocol
+- [x] Define TypeScript interfaces for request/response messages (in `@naisys/hub-protocol`)
+- [x] Create `remoteAgentRouter.ts` on hub side
+- [x] Create `remoteAgentHandler.ts` on runner side (handles incoming requests)
+- [x] Create `remoteAgentRequester.ts` on runner side (sends outgoing requests)
+- [x] Implement `agent_start` request handler (response via callback)
+- [x] Implement `agent_stop` request handler (response via callback)
+- [x] Implement `agent_log` request handler (response via callback)
+- [x] Add error handling and logging
 - [ ] Add permission validation for stop (lead or higher only)
-- [ ] Add timeout handling for requests
-- [ ] Add error handling and logging
+- [x] Add timeout handling for requests (30 second timeout in requester)
 
 #### New `ns-users` Command
 - [ ] Create `users.ts` feature file
@@ -434,8 +435,8 @@ interface LlmModel {
 
 #### Updated `ns-agent` Command
 - [ ] Refactor `subagent.ts` for new command structure
-- [ ] Use `resolveUserIdentifier()` from `llmailAddress.ts` for username resolution
-- [ ] Update `ns-agent start` to work remotely (task added to context, not mail)
+- [x] Add user lookup with host resolution (similar to `resolveUserIdentifier()`)
+- [x] Update `ns-agent start` to work remotely (via `hubRemoteAgentRequester`)
 - [ ] Update `ns-agent stop` to support remote agents (lead+ permission required)
 - [ ] Implement `ns-agent log` subcommand (local + remote, default 50 lines, no permission check)
 - [ ] Keep `ns-agent switch` for local debug mode only

@@ -18,7 +18,6 @@ export const getAgents = cachedForSeconds(1, async (updatedSince?: string): Prom
           id: true,
           username: true,
           title: true,
-          agent_path: true,
           lead_username: true,
           host: { select: { name: true } },
           user_notifications: {
@@ -62,7 +61,6 @@ export const getAgents = cachedForSeconds(1, async (updatedSince?: string): Prom
         title: user.title,
         host: user.host?.name ?? "",
         lastActive: user.user_notifications?.last_active?.toISOString(),
-        agentPath: user.agent_path,
         leadUsername: user.lead_username || undefined,
         latestLogId: user.user_notifications?.latest_log_id ?? "",
         latestMailId: latestMailMap.get(user.id) ?? "",

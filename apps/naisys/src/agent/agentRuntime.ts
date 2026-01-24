@@ -29,11 +29,12 @@ import { createOutputService } from "../utils/output.js";
 
 export async function createAgentRuntime(
   agentManger: AgentManager,
-  agentPath: string,
+  userId: string,
 ) {
   const dbService = agentManger.dbService;
   const globalConfig = agentManger.globalConfig;
   const hostService = agentManger.hostService;
+  const remoteAgentRequester = agentManger.remoteAgentRequester;
   const hubSyncClient = agentManger.hubSyncClient;
 
   /*
@@ -43,7 +44,7 @@ export async function createAgentRuntime(
    */
 
   // Base services
-  const agentConfig = createAgentConfig(agentPath, globalConfig);
+  const agentConfig = await createAgentConfig(userId, dbService, globalConfig);
 
   const runService = await createRunService(
     globalConfig,
@@ -104,6 +105,7 @@ export async function createAgentRuntime(
     runService,
     dbService,
     hostService,
+    remoteAgentRequester,
   );
   const llmynx = createLLMynx(
     globalConfig,
@@ -196,7 +198,7 @@ export async function createAgentRuntime(
   const config = agentConfig.agentConfig();
 
   return {
-    agentRunId: runService.getRunId(),
+    agentUserId: userId,
     agentUsername: config.username,
     agentTitle: config.title,
     agentTaskDescription: config.taskDescription,

@@ -79,6 +79,58 @@ export const SyncErrorSchema = z.object({
 export type SyncError = z.infer<typeof SyncErrorSchema>;
 
 // =============================================================================
+// Remote Agent Control Messages
+// =============================================================================
+
+/** Request to start an agent on a remote host */
+export const AgentStartRequestSchema = z.object({
+  targetUserId: z.string(),   // user_id to start
+  targetHostId: z.string(),   // resolved from user's host_id
+  requesterId: z.string(),    // user_id of requester
+  task: z.string(),           // task description added to context
+});
+export type AgentStartRequest = z.infer<typeof AgentStartRequestSchema>;
+
+/** Response to agent start request */
+export const AgentStartResponseSchema = z.object({
+  success: z.boolean(),
+  error: z.string().optional(),
+});
+export type AgentStartResponse = z.infer<typeof AgentStartResponseSchema>;
+
+/** Request to stop an agent on a remote host */
+export const AgentStopRequestSchema = z.object({
+  targetUserId: z.string(),   // user_id to stop
+  targetHostId: z.string(),   // resolved from user's host_id
+  requesterId: z.string(),    // user_id of requester (must be lead or higher)
+  reason: z.string(),
+});
+export type AgentStopRequest = z.infer<typeof AgentStopRequestSchema>;
+
+/** Response to agent stop request */
+export const AgentStopResponseSchema = z.object({
+  success: z.boolean(),
+  error: z.string().optional(),
+});
+export type AgentStopResponse = z.infer<typeof AgentStopResponseSchema>;
+
+/** Request to get agent logs from a remote host */
+export const AgentLogRequestSchema = z.object({
+  targetUserId: z.string(),   // user_id to get logs for
+  targetHostId: z.string(),   // resolved from user's host_id
+  lines: z.number().default(50), // How many lines to return
+});
+export type AgentLogRequest = z.infer<typeof AgentLogRequestSchema>;
+
+/** Response to agent log request */
+export const AgentLogResponseSchema = z.object({
+  success: z.boolean(),
+  lines: z.array(z.string()).optional(),
+  error: z.string().optional(),
+});
+export type AgentLogResponse = z.infer<typeof AgentLogResponseSchema>;
+
+// =============================================================================
 // Event Names (for type-safe event handling)
 // =============================================================================
 
@@ -99,6 +151,11 @@ export const HubEvents = {
   // Internal runner events (not sent over wire, local only)
   /** Raised when runner connects to a hub (before catch_up is sent) */
   HUB_CONNECTED: "hub_connected",
+
+  // Remote agent control events (bidirectional via hub)
+  AGENT_START: "agent_start",
+  AGENT_STOP: "agent_stop",
+  AGENT_LOG: "agent_log",
 } as const;
 
 export type HubEventName = (typeof HubEvents)[keyof typeof HubEvents];
