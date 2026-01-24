@@ -11,7 +11,7 @@
     "prisma/migrations"
   ],
   "scripts": {
-    "clean": "rm -rf dist",
+    "clean": "npx rimraf dist",
     "prisma:migrate": "prisma migrate dev --create-only",
     "prisma:generate": "prisma generate",
     "prisma:studio": "prisma studio",

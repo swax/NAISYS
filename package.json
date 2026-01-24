@@ -5,6 +5,7 @@
   "private": true,
   "type": "module",
   "workspaces": [
+    "packages/common",
     "packages/database",
     "packages/hub-protocol",
     "apps/supervisor/shared",

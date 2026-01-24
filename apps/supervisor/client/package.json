@@ -4,13 +4,14 @@
   "description": "NAISYS Supervisor - React frontend with Vite and TypeScript",
   "type": "module",
   "scripts": {
-    "clean": "rm -rf dist",
+    "clean": "npx rimraf dist",
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
+    "@naisys/common": "file:../../../packages/common",
     "@mantine/charts": "^8.3.11",
     "@mantine/core": "^8.3.11",
     "@mantine/dropzone": "^8.3.11",
