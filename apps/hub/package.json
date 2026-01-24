@@ -12,7 +12,7 @@
     "./services/hubServer": "./dist/services/hubServer.js"
   },
   "scripts": {
-    "clean": "rm -rf dist",
+    "clean": "npx rimraf dist",
     "dev": "tsx watch src/naisysHub.ts",
     "start": "node dist/naisysHub.js",
     "build": "tsc",

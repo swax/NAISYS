@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useState } from "react";
+import { isAgentOnline } from "@naisys/common";
 import { Agent as BaseAgent, Host as BaseHost } from "shared";
-import { isAgentOnline } from "../lib/agentUtils";
 import { getAgentData } from "../lib/apiClient";
 import { Agent, Host } from "../types/agent";
 

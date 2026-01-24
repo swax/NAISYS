@@ -1,3 +1,4 @@
+import { isHostOnline } from "@naisys/common";
 import { ulid } from "@naisys/database";
 import { DatabaseService } from "@naisys/database";
 import table from "text-table";
@@ -76,23 +77,15 @@ export async function createHostService(
         return "No hosts found.";
       }
 
-      const now = Date.now();
-      const onlineThresholdMs = 10 * 1000; // 5 worst case, x2 margin
-
       return table(
         [
           ["ID", "Name", "Status", "Agents"],
-          ...hosts.map((h) => {
-            const isOnline = h.last_active
-              ? new Date(h.last_active).getTime() > now - onlineThresholdMs
-              : false;
-            return [
-              h.host_id.slice(-4),
-              h.name,
-              isOnline ? "Online" : "Offline",
-              h._count.users.toString(),
-            ];
-          }),
+          ...hosts.map((h) => [
+            h.host_id.slice(-4),
+            h.name,
+            isHostOnline(h.last_active ?? undefined) ? "Online" : "Offline",
+            h._count.users.toString(),
+          ]),
         ],
         { hsep: " | " }
       );

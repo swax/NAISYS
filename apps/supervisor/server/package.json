@@ -8,10 +8,10 @@
     ".": "./dist/server.js"
   },
   "scripts": {
-    "clean": "rm -rf dist client-dist",
+    "clean": "npx rimraf dist client-dist",
     "dev": "tsx watch src/server.ts monitor=naisys",
     "start": "node dist/server.js monitor=naisys",
-    "build": "tsc && cp -r ../client/dist client-dist",
+    "build": "tsc && npx shx cp -r ../client/dist client-dist",
     "type-check": "tsc --noEmit",
     "npm:publish:dryrun": "npm run clean && npm run build && npm publish --dry-run"
   },
