@@ -47,12 +47,12 @@ export async function createAgentRuntime(
   const agentConfig = await createAgentConfig(userId, dbService, globalConfig);
 
   const runService = await createRunService(
-    globalConfig,
     agentConfig,
     dbService,
     hostService,
+    userId,
   );
-  const logService = createLogService(dbService, runService, hostService);
+  const logService = createLogService(dbService, runService, hostService, userId);
   const output = createOutputService(logService);
   const workspaces = createWorkspacesFeature(globalConfig, agentConfig, output);
 
@@ -69,6 +69,7 @@ export async function createAgentRuntime(
     runService,
     output,
     hostService,
+    userId,
   );
   const contextManager = createContextManager(
     globalConfig,
@@ -95,17 +96,17 @@ export async function createAgentRuntime(
   // Features
   const genimg = createGenImg(agentConfig, costTracker, output);
   const llmailAddress = createLLMailAddress(dbService, hostService);
-  const llmail = createLLMail(globalConfig, agentConfig, dbService, runService, hostService, llmailAddress);
+  const llmail = createLLMail(globalConfig, agentConfig, dbService, hostService, llmailAddress, userId);
   const subagentService = createSubagentService(
     agentConfig,
     llmail,
     output,
     agentManger,
     inputMode,
-    runService,
     dbService,
     hostService,
     remoteAgentRequester,
+    userId,
   );
   const llmynx = createLLMynx(
     globalConfig,

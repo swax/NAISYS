@@ -123,13 +123,15 @@ model users {
   username           String
   title              String
   agent_path         String              @unique(map: "unq_users_agent_path")
-  lead_username      String?
+  lead_user_id       String?
   config             String              @default("{}")
   host_id            String?
   created_at         DateTime            @default(now())
   updated_at         DateTime            @updatedAt
   deleted_at         DateTime?           // Soft delete for deactivated agents
   host               hosts?              @relation(fields: [host_id], references: [host_id])
+  lead_user          users?              @relation("lead_to_subagents", fields: [lead_user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  subagents          users[]             @relation("lead_to_subagents")
   mail_messages_sent mail_messages[]     @relation("mail_messages_from_user")
   mail_recipients    mail_recipients[]
   mail_status        mail_status[]
@@ -141,7 +143,7 @@ model users {
   @@unique([username, host_id], map: "unq_users_username_host") // Same username can exist on different hosts
   @@index([host_id, updated_at], map: "idx_users_sync") // Sync: WHERE host_id = X AND updated_at > Y ORDER BY updated_at
   @@index([updated_at], map: "idx_users_updated_at") // Catch-up: WHERE updated_at > Y AND host_id != X ORDER BY updated_at
-  @@index([lead_username, host_id], map: "idx_users_lead_lookup") // WHERE lead_username, host_id in subagent.getSubAgents
+  @@index([lead_user_id, host_id], map: "idx_users_lead_lookup") // WHERE lead_user_id, host_id in subagent.getSubAgents
 }
 
 model user_notifications {

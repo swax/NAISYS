@@ -8,7 +8,6 @@ import {
   RegistrableCommand,
 } from "../command/commandRegistry.js";
 import { GlobalConfig } from "../globalConfig.js";
-import { RunService } from "../services/runService.js";
 import { HostService } from "../services/hostService.js";
 import { LLMailAddress } from "./llmailAddress.js";
 import * as utilities from "../utils/utilities.js";
@@ -17,11 +16,11 @@ export function createLLMail(
   { globalConfig }: GlobalConfig,
   { agentConfig }: AgentConfig,
   { usingDatabase }: DatabaseService,
-  runService: RunService,
   hostService: HostService,
   llmailAddress: LLMailAddress,
+  userId: string,
 ) {
-  const myUserId = runService.getUserId();
+  const myUserId = userId;
   const { localHostId } = hostService;
   const { hasMultipleHosts, formatUserWithHost, resolveUserIdentifier } =
     llmailAddress;
@@ -500,7 +499,7 @@ export function createLLMail(
         select: {
           username: true,
           title: true,
-          lead_username: true,
+          lead_user: { select: { username: true } },
           host: { select: { name: true } },
           user_notifications: { select: { last_active: true } },
         },
@@ -517,7 +516,7 @@ export function createLLMail(
             return [
               formatUserWithHost(u, isMultiHost),
               u.title,
-              u.lead_username || "",
+              u.lead_user?.username || "",
               isActive ? "Online" : "Offline",
             ];
           }),

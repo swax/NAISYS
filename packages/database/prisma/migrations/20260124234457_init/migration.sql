@@ -85,13 +85,14 @@ CREATE TABLE "users" (
     "username" TEXT NOT NULL,
     "title" TEXT NOT NULL,
     "agent_path" TEXT NOT NULL,
-    "lead_username" TEXT,
+    "lead_user_id" TEXT,
     "config" TEXT NOT NULL DEFAULT '{}',
     "host_id" TEXT,
     "created_at" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" DATETIME NOT NULL,
     "deleted_at" DATETIME,
-    CONSTRAINT "users_host_id_fkey" FOREIGN KEY ("host_id") REFERENCES "hosts" ("host_id") ON DELETE SET NULL ON UPDATE CASCADE
+    CONSTRAINT "users_host_id_fkey" FOREIGN KEY ("host_id") REFERENCES "hosts" ("host_id") ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT "users_lead_user_id_fkey" FOREIGN KEY ("lead_user_id") REFERENCES "users" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION
 );
 
 -- CreateTable
@@ -217,7 +218,7 @@ CREATE INDEX "idx_users_sync" ON "users"("host_id", "updated_at");
 CREATE INDEX "idx_users_updated_at" ON "users"("updated_at");
 
 -- CreateIndex
-CREATE INDEX "idx_users_lead_lookup" ON "users"("lead_username", "host_id");
+CREATE INDEX "idx_users_lead_lookup" ON "users"("lead_user_id", "host_id");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "unq_users_username_host" ON "users"("username", "host_id");

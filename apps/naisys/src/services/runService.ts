@@ -1,16 +1,14 @@
 import { AgentConfig } from "../agent/agentConfig.js";
-import { GlobalConfig } from "../globalConfig.js";
 import { DatabaseService } from "@naisys/database";
 import { HostService } from "./hostService.js";
 
 export async function createRunService(
-  { globalConfig }: GlobalConfig,
   { agentConfig }: AgentConfig,
   { usingDatabase }: DatabaseService,
   hostService: HostService,
+  userId: string,
 ) {
   const { localHostId } = hostService;
-  let userId = "";
 
   /** The run ID of an agent process (there could be multiple runs for the same user). Globally unique */
   let runId = -1;
@@ -23,29 +21,11 @@ export async function createRunService(
   await init();
 
   async function init() {
-    await initUser();
-
     await initRun();
 
     // Start the last_active updater after user is initialized
     await updateLastActive();
     updateInterval = setInterval(updateLastActive, 2000);
-  }
-
-  async function initUser(): Promise<void> {
-    userId = await usingDatabase(async (prisma) => {
-      // If user is not in the db, add them
-      const user = await prisma.users.findUnique({
-        where: { username_host_id: { username: agentConfig().username, host_id: localHostId } },
-        select: { id: true },
-      });
-
-      if (!user) {
-        throw new Error(`User ${agentConfig().username} not found in database`);
-      }
-
-      return user.id;
-    });
   }
 
   async function initRun(): Promise<void> {
@@ -123,7 +103,6 @@ export async function createRunService(
   return {
     cleanup,
     incrementSession,
-    getUserId: () => userId,
     getRunId: () => runId,
     getSessionId: () => sessionId,
   };
