@@ -114,7 +114,8 @@ ${platformConfig.displayName} Commands:
   Do not input notes after the prompt. Only valid commands.
 NAISYS Commands: (cannot be used with other commands on the same prompt)${llmailCmd}${subagentNote}${llmynxCmd}${genImgCmd}
   ns-comment "<thought>": Any non-command output like thinking out loud, prefix with the 'ns-comment' command
-  ns-pause <seconds>: Pause for <seconds>${sessionCmd}
+  ns-pause <seconds>: Pause for <seconds>
+  ns-users: A list of users in the system${sessionCmd}
 Tokens:
   The console log can only hold a certain number of 'tokens' that is specified in the prompt${tokenNote}${workspaces}`;
 

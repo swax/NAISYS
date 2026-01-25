@@ -1,5 +1,3 @@
-import { createAgentConfig } from "./agentConfig.js";
-import { AgentManager } from "./agentManager.js";
 import { createCommandHandler } from "../command/commandHandler.js";
 import { createCommandLoop } from "../command/commandLoop.js";
 import { createCommandProtection } from "../command/commandProtection.js";
@@ -13,6 +11,7 @@ import { createLLMailAddress } from "../features/llmailAddress.js";
 import { createLLMynx } from "../features/llmynx.js";
 import { createSessionService } from "../features/session.js";
 import { createSubagentService } from "../features/subagent.js";
+import { createUsersService } from "../features/users.js";
 import { createWorkspacesFeature } from "../features/workspaces.js";
 import { createCommandTools } from "../llm/commandTool.js";
 import { createContextManager } from "../llm/contextManager.js";
@@ -26,6 +25,8 @@ import { createRunService } from "../services/runService.js";
 import { getPlatformConfig } from "../services/shellPlatform.js";
 import { createInputMode } from "../utils/inputMode.js";
 import { createOutputService } from "../utils/output.js";
+import { createAgentConfig } from "./agentConfig.js";
+import { AgentManager } from "./agentManager.js";
 
 export async function createAgentRuntime(
   agentManger: AgentManager,
@@ -116,6 +117,7 @@ export async function createAgentRuntime(
     llModels,
     output,
   );
+  const usersService = createUsersService(dbService);
 
   // Command components
   const shellWrapper = createShellWrapper(globalConfig, agentConfig, output);
@@ -162,6 +164,7 @@ export async function createAgentRuntime(
     sessionService,
     hostService,
     hubSyncClient,
+    usersService,
   ]);
   const commandHandler = createCommandHandler(
     globalConfig,

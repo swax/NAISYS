@@ -425,13 +425,13 @@ interface LlmModel {
 - [x] Add timeout handling for requests (30 second timeout in requester)
 
 #### New `ns-users` Command
-- [ ] Create `users.ts` feature file
-- [ ] Query entire table and do hierarchy in memory
-- [ ] Format output as tree with indentation
-- [ ] Show host information for multi-host mode
-- [ ] Show running/available/offline status based on `last_active`
-- [ ] Register command in `commandRegistry`
-- [ ] Add help text
+- [x] Create `users.ts` feature file
+- [x] Query entire table and do hierarchy in memory
+- [x] Format output as tree with indentation
+- [x] Show host information for multi-host mode
+- [x] Show running/available/offline status based on `last_active`
+- [x] Register command in `commandRegistry`
+- [x] Add help text
 
 #### Updated `ns-agent` Command
 - [ ] Refactor `subagent.ts` for new command structure

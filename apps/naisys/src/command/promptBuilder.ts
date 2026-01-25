@@ -63,9 +63,7 @@ export function createPromptBuilder(
   }
 
   function getUserHostPrompt() {
-    const username = inputMode.isDebug() ? "debug" : agentConfig().username;
-
-    return `${username}@${globalConfig().hostname}`;
+    return `${agentConfig().username}@${globalConfig().hostname}`;
   }
 
   function getInput(
