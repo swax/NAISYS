@@ -36,6 +36,7 @@ export function createCostTracker(
   runService: RunService,
   output: OutputService,
   hostService: HostService,
+  userId: string,
 ) {
   const { localHostId } = hostService;
   // Record token usage for LLM calls - calculate and store total cost
@@ -58,13 +59,13 @@ export function createCostTracker(
     };
     const totalCost = calculateCostFromTokens(tokenUsage, model);
 
-    const { getUserId, getRunId, getSessionId } = runService;
+    const { getRunId, getSessionId } = runService;
 
     await usingDatabase(async (prisma) => {
       // Find the most recent cost record for this combination
       const existingRecord = await prisma.costs.findFirst({
         where: {
-          user_id: getUserId(),
+          user_id: userId,
           run_id: getRunId(),
           session_id: getSessionId(),
           source,
@@ -90,7 +91,7 @@ export function createCostTracker(
         await prisma.costs.create({
           data: {
             id: ulid(),
-            user_id: getUserId(),
+            user_id: userId,
             run_id: getRunId(),
             session_id: getSessionId(),
             host_id: localHostId,
@@ -112,13 +113,13 @@ export function createCostTracker(
   // Record fixed cost for non-token services like image generation
   // Aggregates costs within a time window by user/run/session/source/model combination
   async function recordCost(cost: number, source: string, modelKey: string) {
-    const { getUserId, getRunId, getSessionId } = runService;
+    const { getRunId, getSessionId } = runService;
 
     await usingDatabase(async (prisma) => {
       // Find the most recent cost record for this combination
       const existingRecord = await prisma.costs.findFirst({
         where: {
-          user_id: getUserId(),
+          user_id: userId,
           run_id: getRunId(),
           session_id: getSessionId(),
           source,
@@ -140,7 +141,7 @@ export function createCostTracker(
         await prisma.costs.create({
           data: {
             id: ulid(),
-            user_id: getUserId(),
+            user_id: userId,
             run_id: getRunId(),
             session_id: getSessionId(),
             host_id: localHostId,
@@ -160,12 +161,12 @@ export function createCostTracker(
   }
 
   async function updateSessionCost(cost: number) {
-    const { getUserId, getRunId, getSessionId } = runService;
+    const { getRunId, getSessionId } = runService;
 
     await usingDatabase(async (prisma) => {
       await prisma.run_session.updateMany({
         where: {
-          user_id: getUserId(),
+          user_id: userId,
           run_id: getRunId(),
           session_id: getSessionId(),
         },
@@ -257,8 +258,8 @@ export function createCostTracker(
   // Check if the current spend limit has been reached and throw an error if so
   async function checkSpendLimit() {
     // Determine if we're using per-agent or global limits
-    const userId = agentConfig().spendLimitDollars
-      ? runService.getUserId()
+    const limitUserId = agentConfig().spendLimitDollars
+      ? userId
       : undefined;
 
     // Determine if we're using time-based limits
@@ -274,7 +275,7 @@ export function createCostTracker(
       // Use time-based limit
       const { periodStart, periodEnd } =
         calculatePeriodBoundaries(spendLimitHours);
-      currentTotalCost = await getTotalCosts(userId, periodStart, periodEnd);
+      currentTotalCost = await getTotalCosts(limitUserId, periodStart, periodEnd);
 
       // Format period description
       const formatTime = (date: Date) => {
@@ -287,7 +288,7 @@ export function createCostTracker(
       periodDescription = `per ${spendLimitHours} hour${spendLimitHours !== 1 ? "s" : ""} (current period: ${formatTime(periodStart)} - ${formatTime(periodEnd)})`;
     } else {
       // Use all-time limit
-      currentTotalCost = await getTotalCosts(userId);
+      currentTotalCost = await getTotalCosts(limitUserId);
       periodDescription = "total";
     }
 
@@ -636,11 +637,11 @@ export function createCostTracker(
     const subcommand = argv[0];
 
     if (subcommand === "reset") {
-      const userId = agentConfig().spendLimitDollars
-        ? runService.getUserId()
+      const resetUserId = agentConfig().spendLimitDollars
+        ? userId
         : undefined;
-      await clearCosts(userId);
-      return `Cost tracking data cleared for ${userId ? `${agentConfig().username}` : "all users"}.`;
+      await clearCosts(resetUserId);
+      return `Cost tracking data cleared for ${resetUserId ? `${agentConfig().username}` : "all users"}.`;
     } else if (subcommand) {
       return "The 'ns-cost' command only supports the 'reset' parameter.";
     } else {

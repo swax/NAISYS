@@ -181,6 +181,19 @@ export async function createAgentRegistrar(
       let createdOrUpdatedUser = false;
 
       await usingDatabase(async (prisma) => {
+        // Resolve lead agent username to user ID if specified
+        let leadUserId: string | null = null;
+        if (agentConfig.leadAgent) {
+          const leadUser = await prisma.users.findFirst({
+            where: {
+              username: agentConfig.leadAgent,
+              host_id: localHostId,
+            },
+            select: { id: true },
+          });
+          leadUserId = leadUser?.id ?? null;
+        }
+
         if (!existingUser) {
           // User doesn't exist, create it
           const user = await prisma.users.create({
@@ -189,7 +202,7 @@ export async function createAgentRegistrar(
               username: agentConfig.username,
               title: agentConfig.title,
               agent_path: absolutePath,
-              lead_username: agentConfig.leadAgent ?? null,
+              lead_user_id: leadUserId,
               config: configYaml,
               host_id: localHostId,
             },
@@ -226,9 +239,9 @@ export async function createAgentRegistrar(
               `agent_path: "${existingUser.agent_path}" -> "${absolutePath}"`,
             );
           }
-          if (existingUser.lead_username !== (agentConfig.leadAgent ?? null)) {
+          if (existingUser.lead_user_id !== leadUserId) {
             changes.push(
-              `lead_username: "${existingUser.lead_username}" -> "${agentConfig.leadAgent ?? null}"`,
+              `lead_user_id: "${existingUser.lead_user_id}" -> "${leadUserId}"`,
             );
           }
           if (existingUser.config !== configYaml) {
@@ -245,7 +258,7 @@ export async function createAgentRegistrar(
               data: {
                 title: agentConfig.title,
                 agent_path: absolutePath,
-                lead_username: agentConfig.leadAgent ?? null,
+                lead_user_id: leadUserId,
                 config: configYaml,
               },
             });
@@ -257,7 +270,7 @@ export async function createAgentRegistrar(
               ...existingUser,
               title: agentConfig.title,
               agent_path: absolutePath,
-              lead_username: agentConfig.leadAgent ?? null,
+              lead_user_id: leadUserId,
               config: configYaml,
             });
           }

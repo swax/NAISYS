@@ -1,5 +1,4 @@
 import { ChildProcess } from "child_process";
-import path from "path";
 import stringArgv from "string-argv";
 import table from "text-table";
 import { AgentConfig } from "../agent/agentConfig.js";
@@ -7,8 +6,6 @@ import { RegistrableCommand } from "../command/commandRegistry.js";
 import { DatabaseService } from "@naisys/database";
 import { RemoteAgentRequester } from "../hub/remoteAgentRequester.js";
 import { HostService } from "../services/hostService.js";
-import * as pathService from "../services/pathService.js";
-import { RunService } from "../services/runService.js";
 import { InputModeService } from "../utils/inputMode.js";
 import { OutputColor, OutputService } from "../utils/output.js";
 import { LLMail } from "./llmail.js";
@@ -50,10 +47,10 @@ export function createSubagentService(
   output: OutputService,
   agentManager: IAgentManager,
   inputMode: InputModeService,
-  runService: RunService,
   { usingDatabase }: DatabaseService,
   { localHostId }: HostService,
   remoteAgentRequester: RemoteAgentRequester,
+  userId: string,
 ) {
   const _subagents: Subagent[] = [];
 
@@ -160,11 +157,12 @@ export function createSubagentService(
       const agents = await prisma.users.findMany({
         where: {
           OR: [
-            { lead_username: agentConfig().username },
-            { lead_username: null }, // Include agents with no lead (available to all)
+            { lead_user_id: userId },
+            { lead_user_id: null }, // Include agents with no lead (available to all)
           ],
           host_id: localHostId,
           deleted_at: null, // Only show active subagents
+          id: { not: userId }, // Exclude self from subagent list
         },
       });
 
@@ -218,12 +216,10 @@ export function createSubagentService(
 
     if (inputMode.isDebug()) {
       // Find running in process agents that aren't already listed
-      const myUserId = runService.getUserId();
-
       const otherAgents = agentManager.runningAgents
         .filter(
           (ra) =>
-            ra.agentUserId !== myUserId &&
+            ra.agentUserId !== userId &&
             !_subagents.find((sa) => sa.userId === ra.agentUserId),
         )
         .map((ra) => {
@@ -498,7 +494,7 @@ export function createSubagentService(
     return await remoteAgentRequester.startAgent(
       user.id,
       user.host_id,
-      runService.getUserId(),
+      userId,
       taskDescription,
       user.username,
       user.host?.name || null,
