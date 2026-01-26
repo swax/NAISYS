@@ -90,11 +90,6 @@ spendLimitDollars: 2.00
 #   Auto: All commands are run through the separate LLM instace that will check to see if the command is safe
 commandProtection: "none"
 
-# The max number of subagents allowed to be started and managed. Leave out to disable.
-# Costs by the subagent are applied to the host agent's spend limit
-# Careful: Sub-agents can be chatty, slowing down progress.
-subagentMax: 0
-
 # Enable the completetask command for this agent (default: false)
 # When enabled, the agent can use completetask to signal task completion, hanging or aborting execution
 completeTaskEnabled: true
@@ -149,7 +144,7 @@ initialCommands:
   - `ns-mail` - A context friendly 'mail system' used for agent to agent communication
   - `ns-lynx` - A context friendly wrapping on the lynx browser that can use a separate LLM to reduce the size of a large webpage into something that can fit into the LLM's context
   - `ns-genimg "<description>" <filepath>` - Generates an image with the given description, save at the specified fully qualified path
-  - `ns-agent` - A way for LLMs to start/stop their own sub-agents. Communicating with each other with `ns-mail`. Set the `subagentMax` in the agent config to enable.
+  - `ns-agent` - A way for LLMs to start/stop their own sub-agents. Communicating with each other with `ns-mail`.
 
 ## Changelog
 

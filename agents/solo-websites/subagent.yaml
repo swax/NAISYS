@@ -13,7 +13,6 @@ agentPrompt: |
 tokenMax: 6000
 debugPauseSeconds: 4
 spendLimitDollars: 5.00
-subagentMax: 2
 initialCommands:
   - ns-mail users
   - ns-mail help

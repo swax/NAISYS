@@ -476,6 +476,6 @@ interface LlmModel {
 
 ### Phase 3: Full Transition
 
-- [ ] Remove `subagentMax` from agent config (no longer needed - no concurrency limit)
+- [x] Remove `subagentMax` from agent config (no longer needed - no concurrency limit)
 - [ ] Update existing agent configs if needed
 - [ ] Update any scripts/tools that use old commands

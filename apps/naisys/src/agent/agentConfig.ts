@@ -36,9 +36,6 @@ export const AgentConfigFileSchema = z.object({
   commandProtection: z.enum(CommandProtection).optional(),
   initialCommands: z.array(z.string()).optional(),
 
-  /** The max number of subagents allowed to be started and managed. Costs by the subagent are applied to the spend limit. */
-  subagentMax: z.number().optional(),
-
   /** A directory to scan for subagent files. The leadAgent setting in a config determines who can start the subagent. */
   subagentDirectory: z.string().optional(),
 

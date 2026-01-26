@@ -13,6 +13,5 @@ debugPauseSeconds: 5
 spendLimitDollars: 10.00
 webEnabled: true
 mailEnabled: true
-subagentMax: 1
 subagentDirectory: subagents
 wakeOnMessage: true

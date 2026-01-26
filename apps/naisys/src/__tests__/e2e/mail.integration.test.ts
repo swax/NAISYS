@@ -41,14 +41,13 @@ describe("NAISYS Mail E2E", () => {
     // Create .env file
     createEnvFile(testDir);
 
-    // Create admin agent with subagentMax: 2 to allow starting both alex and bob
+    // Create admin agent
     createAgentYamlInDir(testDir, "agents", "admin_agent.yaml", {
       username: "admin",
       title: "Administrator",
       agentPrompt: "Admin agent for monitoring and control.",
       tokenMax: 100000,
       mailEnabled: true,
-      subagentMax: 2,  // Allow running 2 subagents at once
     });
 
     // Create agent yaml files in agents/ subdirectory
