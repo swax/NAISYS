@@ -117,12 +117,14 @@ describe("Remote Agent Integration Tests", () => {
       getConnectedHubs: () => mockHubManagerA.getConnectedHubs().map(h => ({
         connect: () => {},
         disconnect: () => {},
+        disableReconnection: () => {},
         isConnected: () => true,
         getUrl: () => h.hubUrl,
         sendMessage: () => false,
       } as HubConnection)),
       isMultiMachineMode: mockHubManagerA.isMultiMachineMode,
       getAllHubs: () => [],
+      disableReconnection: () => false,
     };
 
     remoteAgentRequesterA = createRemoteAgentRequester(hubManagerAWithUrl);

@@ -48,25 +48,23 @@ describe("NAISYS Startup E2E", () => {
     });
 
     // Spawn naisys process
-    naisys = spawnNaisys(testDir, ["assistant.yaml"]);
+    naisys = spawnNaisys(testDir, { args: ["assistant.yaml"] });
 
     // Wait for naisys to start and show the prompt
     await naisys.waitForOutput("AGENT STARTED", 30000);
-
-    // Wait for the prompt to be ready
-    await naisys.waitForPrompt(1);
+    await naisys.waitForPrompt();
 
     // Send ns-users command
+    naisys.flushOutput();
     naisys.sendCommand("ns-users");
 
     // Wait for ns-users output showing both users
     await naisys.waitForOutput("admin", 10000);
     await naisys.waitForOutput("ryan", 10000);
-
-    // Wait for the next prompt to appear before sending exit
-    await naisys.waitForPrompt(2);
+    await naisys.waitForPrompt();
 
     // Send exit command
+    naisys.flushOutput();
     naisys.sendCommand("exit");
 
     // Wait for clean exit
