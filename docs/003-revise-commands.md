@@ -18,8 +18,7 @@ Prefix all commands with `ns-`:
 | cost | ns-cost |
 | talk | ns-talk |
 | context | ns-context |
-| pause | ns-pause |
-| completetask, endsession, trimsession | ns-session (consolidated) |
+| pause, completetask, endsession, trimsession | ns-session (consolidated) |
 
 ### Reasons
 
@@ -29,8 +28,9 @@ Prefix all commands with `ns-`:
 
 ### Session Command Consolidation
 
-The `ns-session` command consolidates three separate bin scripts into a single command with subcommands:
+The `ns-session` command consolidates separate bin scripts into a single command with subcommands:
 
+- `ns-session pause <seconds>` - Pause execution for a set number of seconds (replaces `pause`)
 - `ns-session trim <indexes>` - Remove prompts by index to save tokens (replaces `trimsession`)
 - `ns-session compact "<note>"` - End session and start fresh with a note (replaces `endsession`)
 - `ns-session complete "<result>"` - Mark task as complete and exit (replaces `completetask`)
@@ -61,5 +61,4 @@ The following commands remain in the command handler switch statement:
 
 - `ns-comment` - LLM thinking out loud
 - `ns-talk` - Debug communication with agent
-- `ns-pause` - Pause execution
 - `ns-context` - Print current context (debug only)

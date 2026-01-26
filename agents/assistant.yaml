@@ -5,7 +5,7 @@
 username: ryan
 title: Assistant
 shellModel: mock
-imageModel: dalle3-1024
+#imageModel: dalle3-1024
 agentPrompt: |
   You are ${agent.username} a ${agent.title} with the job of helping out the admin with what he wants to do.
 tokenMax: 50000

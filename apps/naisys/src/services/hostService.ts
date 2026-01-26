@@ -94,6 +94,7 @@ export async function createHostService(
 
   const registrableCommand: RegistrableCommand = {
     commandName: "ns-hosts",
+    helpText: "List all known hosts and their status",
     handleCommand,
   };
 

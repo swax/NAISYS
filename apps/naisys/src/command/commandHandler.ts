@@ -107,49 +107,6 @@ export function createCommandHandler(
           );
           break;
         }
-        // Hidden for now as the LLM will use this instead of llmail
-        case "ns-talk": {
-          const talkMsg = cmdArgs;
-
-          if (inputMode.isLLM()) {
-            await contextManager.append("Message sent!");
-          } else if (inputMode.isDebug()) {
-            inputMode.setLLM();
-            const respondCommand = agentConfig().mailEnabled
-              ? "ns-mail"
-              : "ns-talk";
-            await contextManager.append(
-              `Message from admin: ${talkMsg}. Respond via the ${respondCommand} command.`,
-            );
-            inputMode.setDebug();
-          }
-
-          break;
-        }
-
-        case "ns-pause": {
-          const pauseSeconds = argv[1] ? parseInt(argv[1]) : 0;
-
-          // Don't allow the LLM to hang itself
-          if (inputMode.isLLM() && !pauseSeconds) {
-            await contextManager.append(
-              "Pause command requires a number of seconds to pause for",
-            );
-            break;
-          }
-
-          return {
-            nextCommandAction: NextCommandAction.Continue,
-            pauseSeconds,
-            wakeOnMessage: agentConfig().wakeOnMessage,
-          };
-        }
-
-        case "ns-context":
-          output.comment("#####################");
-          output.comment(contextManager.printContext());
-          output.comment("#####################");
-          break;
 
         default: {
           const exitApp = await shellCommand.handleCommand(input);
@@ -239,8 +196,7 @@ export function createCommandHandler(
       newLinePos > 0 &&
       (nextInput.startsWith("ns-comment ") ||
         nextInput.startsWith("ns-genimg ") ||
-        nextInput.startsWith("ns-session ") ||
-        nextInput.startsWith("ns-pause "))
+        nextInput.startsWith("ns-session "))
     ) {
       input = nextInput.slice(0, newLinePos);
       nextInput = nextInput.slice(newLinePos).trim();

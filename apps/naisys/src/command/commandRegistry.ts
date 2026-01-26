@@ -34,6 +34,12 @@ export interface RegistrableCommand {
   /** The command name, e.g., "ns-lynx" */
   commandName: string;
 
+  /** Brief description shown in ns-help */
+  helpText?: string;
+
+  /** If true, command is shown in debug section of ns-help */
+  isDebug?: boolean;
+
   /** Handler function that processes the command and returns a response */
   handleCommand: (cmdArgs: string) => Promise<string | CommandResponse>;
 }
@@ -48,9 +54,29 @@ export function createCommandRegistry(commands: RegistrableCommand[]) {
   // Add built-in ns-help command
   const helpCommand: RegistrableCommand = {
     commandName: "ns-help",
+    helpText: "Show available commands",
     handleCommand: () => {
-      const commandNames = Array.from(registry.keys()).sort();
-      return Promise.resolve("Available NAISYS commands:\n" + commandNames.map((name) => `  ${name}`).join("\n"));
+      const allCommands = Array.from(registry.values()).sort((a, b) =>
+        a.commandName.localeCompare(b.commandName)
+      );
+
+      const mainCommands = allCommands.filter((c) => !c.isDebug);
+      const debugCommands = allCommands.filter((c) => c.isDebug);
+
+      const formatTable = (cmds: RegistrableCommand[]) => {
+        const rows = [
+          ...cmds.map((c) => [c.commandName, c.helpText || ""]),
+        ];
+        const colWidths = rows[0].map((_, i) => Math.max(...rows.map((r) => r[i].length)));
+        return rows.map((row) => row.map((cell, i) => cell.padEnd(colWidths[i])).join("  ")).join("\n");
+      };
+
+      let output = "Commands:\n" + formatTable(mainCommands);
+      if (debugCommands.length > 0) {
+        output += "\n\nDebug commands:\n" + formatTable(debugCommands);
+      }
+
+      return Promise.resolve(output);
     },
   };
   registry.set(helpCommand.commandName, helpCommand);

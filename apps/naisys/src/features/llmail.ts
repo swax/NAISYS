@@ -1,6 +1,5 @@
 import { DatabaseService, ulid } from "@naisys/database";
 import stringArgv from "string-argv";
-import table from "text-table";
 import { AgentConfig } from "../agent/agentConfig.js";
 import {
   CommandResponse,
@@ -10,6 +9,7 @@ import {
 import { GlobalConfig } from "../globalConfig.js";
 import { HostService } from "../services/hostService.js";
 import { LLMailAddress } from "./llmailAddress.js";
+import { MailDisplayService } from "./mailDisplayService.js";
 import * as utilities from "../utils/utilities.js";
 
 export function createLLMail(
@@ -18,12 +18,12 @@ export function createLLMail(
   { usingDatabase }: DatabaseService,
   hostService: HostService,
   llmailAddress: LLMailAddress,
+  mailDisplayService: MailDisplayService,
   userId: string,
 ) {
   const myUserId = userId;
   const { localHostId } = hostService;
-  const { hasMultipleHosts, formatUserWithHost, resolveUserIdentifier } =
-    llmailAddress;
+  const { resolveUserIdentifier } = llmailAddress;
 
   async function handleCommand(
     args: string,
@@ -56,7 +56,7 @@ export function createLLMail(
         if (filterArg && filterArg !== "received" && filterArg !== "sent") {
           throw "Invalid parameter. Use 'received' or 'sent' to filter, or omit for all messages.";
         }
-        return listMessages(filterArg as "received" | "sent" | undefined);
+        return mailDisplayService.listMessages(filterArg as "received" | "sent" | undefined);
       }
 
       case "send": {
@@ -96,7 +96,7 @@ export function createLLMail(
       }
 
       case "users":
-        return listUsers();
+        return mailDisplayService.listUsers();
 
       case "archive": {
         const messageIds = argv[1]?.split(",").map((id) => id.trim());
@@ -127,7 +127,7 @@ export function createLLMail(
           throw "Invalid parameters. Please provide search terms.";
         }
 
-        return searchMessages(terms.join(" "), includeArchived, subjectOnly);
+        return mailDisplayService.searchMessages(terms.join(" "), includeArchived, subjectOnly);
       }
 
       default: {
@@ -137,108 +137,6 @@ export function createLLMail(
         return "Error, unknown command. See valid commands below:\n" + helpContent;
       }
     }
-  }
-
-  interface UnreadMessage {
-    message_id: string;
-  }
-
-  async function getUnreadThreads(): Promise<UnreadMessage[]> {
-    return await usingDatabase(async (prisma) => {
-      const messages = await prisma.mail_messages.findMany({
-        where: {
-          recipients: { some: { user_id: myUserId } },
-          AND: [
-            { status: { none: { user_id: myUserId, read_at: { not: null } } } },
-            {
-              status: {
-                none: { user_id: myUserId, archived_at: { not: null } },
-              },
-            },
-          ],
-        },
-        select: { id: true },
-      });
-
-      return messages.map((m) => ({ message_id: m.id }));
-    });
-  }
-
-  async function listMessages(
-    filter?: "received" | "sent"
-  ): Promise<string> {
-    const isMultiHost = await hasMultipleHosts();
-
-    return await usingDatabase(async (prisma) => {
-      // Build where clause based on filter
-      const ownershipCondition =
-        filter === "received"
-          ? { recipients: { some: { user_id: myUserId } } }
-          : filter === "sent"
-            ? { from_user_id: myUserId }
-            : {
-                OR: [
-                  { from_user_id: myUserId },
-                  { recipients: { some: { user_id: myUserId } } },
-                ],
-              };
-
-      const messages = await prisma.mail_messages.findMany({
-        where: {
-          ...ownershipCondition,
-          status: {
-            none: { user_id: myUserId, archived_at: { not: null } },
-          },
-        },
-        include: {
-          from_user: { select: { username: true, host: { select: { name: true } } } },
-          recipients: {
-            include: { user: { select: { username: true, host: { select: { name: true } } } } },
-          },
-          status: { where: { user_id: myUserId }, select: { read_at: true } },
-        },
-        orderBy: { created_at: "desc" },
-        take: 20,
-      });
-
-      if (messages.length === 0) {
-        return "No messages found.";
-      }
-
-      // Determine header and user column based on filter
-      const userHeader = filter === "sent" ? "To" : "From";
-
-      return table(
-        [
-          ["", "ID", userHeader, "Subject", "Date"],
-          ...messages.map((m) => {
-            const status = m.status[0];
-            const isUnread = m.from_user_id !== myUserId && !status?.read_at;
-
-            // Show recipients for sent, sender for received/all
-            const userColumn =
-              filter === "sent"
-                ? m.recipients
-                    .map((r) =>
-                      formatUserWithHost(r.user, isMultiHost)
-                    )
-                    .join(", ")
-                : formatUserWithHost(m.from_user, isMultiHost);
-
-            return [
-              isUnread ? "*" : "",
-              m.id.slice(-4),
-              userColumn,
-              m.subject.length > 40
-                ? m.subject.slice(0, 37) + "..."
-                : m.subject,
-              new Date(m.created_at).toLocaleString(),
-            ];
-          }),
-        ],
-        { hsep: " | " }
-      );
-    });
   }
 
   async function sendMessage(
@@ -258,7 +156,7 @@ export function createLLMail(
 
         for (const identifier of userIdentifiers) {
           try {
-             
+
             const resolved = await resolveUserIdentifier(identifier, tx as any);
             resolvedRecipients.push(resolved);
           } catch (error) {
@@ -303,45 +201,21 @@ export function createLLMail(
   }
 
   async function readMessage(messageId: string): Promise<string> {
-    const isMultiHost = await hasMultipleHosts();
+    // Get the message display from the display service
+    const { fullMessageId, display } = await mailDisplayService.readMessage(messageId);
 
-    return await usingDatabase(async (prisma) => {
-      // Find the message (support short IDs)
-      const messages = await prisma.mail_messages.findMany({
-        where: { id: { endsWith: messageId } },
-        include: {
-          from_user: {
-            select: { username: true, title: true, host: { select: { name: true } } },
-          },
-          recipients: {
-            include: {
-              user: {
-                select: { username: true, host: { select: { name: true } } },
-              },
-            },
-          },
-        },
-      });
+    // Mark the message as read
+    await markMessageAsRead(fullMessageId);
 
-      if (messages.length === 0) {
-        throw `Error: Message ${messageId} not found`;
-      }
+    return display;
+  }
 
-      if (messages.length > 1) {
-        throw `Error: Multiple messages match '${messageId}'. Please use more characters.`;
-      }
-
-      const message = messages[0];
-      const toUsers = message.recipients
-        .map((r) => formatUserWithHost(r.user, isMultiHost))
-        .join(", ");
-      const fromUser = formatUserWithHost(message.from_user, isMultiHost);
-
-      // Mark as read - upsert mail_status
+  async function markMessageAsRead(messageId: string): Promise<void> {
+    await usingDatabase(async (prisma) => {
       const existingStatus = await prisma.mail_status.findUnique({
         where: {
           message_id_user_id: {
-            message_id: message.id,
+            message_id: messageId,
             user_id: myUserId,
           },
         },
@@ -351,9 +225,9 @@ export function createLLMail(
         await prisma.mail_status.create({
           data: {
             id: ulid(),
-            message_id: message.id,
+            message_id: messageId,
             user_id: myUserId,
-            host_id: localHostId, // Recipient's host
+            host_id: localHostId,
             read_at: new Date(),
             created_at: new Date(),
           },
@@ -364,16 +238,6 @@ export function createLLMail(
           data: { read_at: new Date() },
         });
       }
-
-      return (
-        `Subject: ${message.subject}\n` +
-        `From: ${fromUser}\n` +
-        `Title: ${message.from_user.title}\n` +
-        `To: ${toUsers}\n` +
-        `Date: ${new Date(message.created_at).toLocaleString()}\n` +
-        `Message:\n` +
-        `${message.body}`
-      );
     });
   }
 
@@ -411,7 +275,7 @@ export function createLLMail(
               id: ulid(),
               message_id: message.id,
               user_id: myUserId,
-              host_id: localHostId, // Recipient's host
+              host_id: localHostId,
               archived_at: new Date(),
               created_at: new Date(),
             },
@@ -425,104 +289,6 @@ export function createLLMail(
       }
 
       return `Messages ${messageIds.join(",")} archived`;
-    });
-  }
-
-  async function searchMessages(
-    searchTerm: string,
-    includeArchived: boolean,
-    subjectOnly: boolean
-  ): Promise<string> {
-    const isMultiHost = await hasMultipleHosts();
-
-    return await usingDatabase(async (prisma) => {
-      // Build search condition
-      const searchCondition = subjectOnly
-        ? { subject: { contains: searchTerm } }
-        : {
-            OR: [
-              { subject: { contains: searchTerm } },
-              { body: { contains: searchTerm } },
-            ],
-          };
-
-      // Build archive condition
-      const archiveCondition = includeArchived
-        ? {}
-        : {
-            status: { none: { user_id: myUserId, archived_at: { not: null } } },
-          };
-
-      const messages = await prisma.mail_messages.findMany({
-        where: {
-          OR: [
-            { from_user_id: myUserId },
-            { recipients: { some: { user_id: myUserId } } },
-          ],
-          ...searchCondition,
-          ...archiveCondition,
-        },
-        include: {
-          from_user: { select: { username: true, host: { select: { name: true } } } },
-        },
-        orderBy: { created_at: "desc" },
-        take: 50,
-      });
-
-      if (messages.length === 0) {
-        return "No messages found matching search criteria.";
-      }
-
-      return table(
-        [
-          ["ID", "Subject", "From", "Date"],
-          ...messages.map((m) => [
-            m.id.slice(-4),
-            m.subject.length > 40 ? m.subject.slice(0, 37) + "..." : m.subject,
-            formatUserWithHost(m.from_user, isMultiHost),
-            new Date(m.created_at).toLocaleString(),
-          ]),
-        ],
-        { hsep: " | " }
-      );
-    });
-  }
-
-  async function listUsers() {
-    const isMultiHost = await hasMultipleHosts();
-
-    return await usingDatabase(async (prisma) => {
-      const userList = await prisma.users.findMany({
-        where: {
-          deleted_at: null, // Only show active users
-        },
-        select: {
-          username: true,
-          title: true,
-          lead_user: { select: { username: true } },
-          host: { select: { name: true } },
-          user_notifications: { select: { last_active: true } },
-        },
-      });
-
-      return table(
-        [
-          ["Username", "Title", "Lead", "Status"],
-          ...userList.map((u) => {
-            const lastActive = u.user_notifications?.last_active;
-            const isActive = lastActive
-              ? new Date(lastActive).getTime() > Date.now() - 5 * 1000
-              : false;
-            return [
-              formatUserWithHost(u, isMultiHost),
-              u.title,
-              u.lead_user?.username || "",
-              isActive ? "Online" : "Offline",
-            ];
-          }),
-        ],
-        { hsep: " | " }
-      );
     });
   }
 
@@ -557,12 +323,13 @@ export function createLLMail(
 
   const registrableCommand: RegistrableCommand = {
     commandName: "ns-mail",
+    helpText: "Send and receive messages",
     handleCommand,
   };
 
   return {
     ...registrableCommand,
-    getUnreadThreads,
+    getUnreadThreads: mailDisplayService.getUnreadThreads,
     sendMessage,
     readMessage,
     getAllUserNames,

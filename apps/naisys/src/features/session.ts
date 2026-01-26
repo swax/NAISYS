@@ -10,6 +10,7 @@ import { LLMail } from "./llmail.js";
 import { GlobalConfig } from "../globalConfig.js";
 import { ContextManager } from "../llm/contextManager.js";
 import { SessionCompactor } from "../llm/sessionCompactor.js";
+import { InputModeService } from "../utils/inputMode.js";
 import { OutputService } from "../utils/output.js";
 import * as utilities from "../utils/utilities.js";
 
@@ -21,6 +22,7 @@ export function createSessionService(
   shellCommand: ShellCommand,
   llmail: LLMail,
   output: OutputService,
+  inputMode: InputModeService,
 ) {
   async function handleCommand(
     args: string,
@@ -35,6 +37,9 @@ export function createSessionService(
     switch (subcommand) {
       case "help":
         return getHelpText();
+
+      case "pause":
+        return handlePause(argv[1]);
 
       case "trim":
         return handleTrim(args.slice(subcommand.length).trim());
@@ -51,7 +56,8 @@ export function createSessionService(
   }
 
   function getHelpText(): string {
-    let helpText = `ns-session <subcommand>`;
+    let helpText = `ns-session <subcommand>
+  pause <seconds>         Pause for a number of seconds`;
 
     if (globalConfig().trimSessionEnabled) {
       helpText += `
@@ -71,6 +77,24 @@ export function createSessionService(
     }
 
     return helpText;
+  }
+
+  function handlePause(secondsArg: string | undefined): string | CommandResponse {
+    const pauseSeconds = secondsArg ? parseInt(secondsArg) : 0;
+
+    // Don't allow the LLM to hang itself
+    if (inputMode.isLLM() && !pauseSeconds) {
+      return "Pause command requires a number of seconds to pause for";
+    }
+
+    return {
+      content: "",
+      nextCommandResponse: {
+        nextCommandAction: NextCommandAction.Continue,
+        pauseSeconds,
+        wakeOnMessage: agentConfig().wakeOnMessage,
+      },
+    };
   }
 
   function handleTrim(args: string): string {
@@ -154,6 +178,7 @@ export function createSessionService(
 
   const registrableCommand: RegistrableCommand = {
     commandName: "ns-session",
+    helpText: "Manage session (compact, pause, or end)",
     handleCommand,
   };
 

@@ -150,7 +150,7 @@ export async function createAgentConfig(
       resolveConfigVars,
       mailEnabled: config.mailEnabled ?? false,
       webEnabled: config.webEnabled ?? false,
-      completeTaskEnabled: config.completeTaskEnabled ?? false,
+      completeTaskEnabled: config.completeTaskEnabled ?? true,
       wakeOnMessage: config.wakeOnMessage ?? false,
       initialCommands: config.initialCommands ?? [],
       commandProtection: config.commandProtection ?? CommandProtection.None,

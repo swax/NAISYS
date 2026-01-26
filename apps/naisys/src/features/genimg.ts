@@ -93,6 +93,7 @@ export function createGenImg(
 
   const registrableCommand: RegistrableCommand = {
     commandName: "ns-genimg",
+    helpText: "Generate an image from a prompt",
     handleCommand,
   };
 
