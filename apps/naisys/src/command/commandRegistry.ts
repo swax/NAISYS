@@ -11,8 +11,8 @@ export enum NextCommandAction {
 
 export interface NextCommandResponse {
   nextCommandAction: NextCommandAction;
-  pauseSeconds: number;
-  wakeOnMessage: boolean;
+  pauseSeconds?: number;
+  wakeOnMessage?: boolean;
 }
 
 /**

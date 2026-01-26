@@ -119,3 +119,21 @@ export async function seedUser(
     },
   });
 }
+
+/**
+ * Reset all tables in a database (delete all data but keep schema).
+ * Useful for resetting state between tests without recreating the database.
+ */
+export async function resetDatabase(prisma: PrismaClient): Promise<void> {
+  // Delete in order to respect foreign key constraints
+  await prisma.context_log.deleteMany();
+  await prisma.run_session.deleteMany();
+  await prisma.costs.deleteMany();
+  await prisma.mail_status.deleteMany();
+  await prisma.mail_recipients.deleteMany();
+  await prisma.mail_messages.deleteMany();
+  await prisma.user_notifications.deleteMany();
+  await prisma.hub_sync_state.deleteMany();
+  await prisma.users.deleteMany();
+  await prisma.hosts.deleteMany();
+}

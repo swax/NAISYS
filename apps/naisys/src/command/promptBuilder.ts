@@ -164,9 +164,10 @@ export function createPromptBuilder(
         resolve("");
       }
 
-      // Only set up pause timeout for agents that are in focus
-      // Non-focus agents cycling with timeouts causes stdout writes that interfere with readline
-      if (pauseSeconds && isInFocus) {
+      // This pauses the app for a specified time before the next llm call
+      // This is how `llmail wait` and `ns-session pause` are implemented
+      // It also allows the user to wake the debug prompt on incoming mail or switching the in focus agent
+      if (pauseSeconds) {
         timeout = setTimeout(abortQuestion, pauseSeconds * 1000);
       }
 

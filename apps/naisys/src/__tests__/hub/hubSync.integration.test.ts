@@ -1,4 +1,4 @@
-import { describe, test, expect, beforeEach, afterEach, jest } from "@jest/globals";
+import { describe, test, expect, beforeAll, afterAll, beforeEach, afterEach, jest } from "@jest/globals";
 import { ulid } from "@naisys/database";
 import type { HubServerLog } from "@naisys/hub/services/hubServerLog";
 import type { HubServer } from "@naisys/hub/services/hubServer";
@@ -14,7 +14,7 @@ import { createHubSyncClient, type HubSyncClient } from "../../hub/hubSyncClient
 import type { HubClientLog } from "../../hub/hubClientLog.js";
 import type { HubManager } from "../../hub/hubManager.js";
 import type { HostService } from "../../services/hostService.js";
-import { createTestDatabase, seedHost, seedUser, type TestDatabase } from "./testDbHelper.js";
+import { createTestDatabase, seedHost, seedUser, resetDatabase, type TestDatabase } from "./testDbHelper.js";
 import { createSyncEventBridge, type MockHubServer, type MockHubManager } from "./syncEventBridge.js";
 
 /**
@@ -56,12 +56,27 @@ describe("Hub Sync Integration Tests", () => {
     error: (msg) => logs.push(`[RUNNER-A ERROR] ${msg}`),
   };
 
-  beforeEach(async () => {
-    logs.length = 0;
-
+  // Create databases once for all tests (migrations are slow)
+  beforeAll(async () => {
     [runnerADb, hubDb] = await Promise.all([
       createTestDatabase("runner-a", "naisys"),
       createTestDatabase("hub", "hub"),
+    ]);
+  });
+
+  afterAll(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    try { await runnerADb.cleanup(); } catch { /* ignore */ }
+    try { await hubDb.cleanup(); } catch { /* ignore */ }
+  });
+
+  beforeEach(async () => {
+    logs.length = 0;
+
+    // Reset database data (fast, no migrations)
+    await Promise.all([
+      resetDatabase(runnerADb.prisma),
+      resetDatabase(hubDb.prisma),
     ]);
 
     hostAId = ulid();
@@ -109,8 +124,6 @@ describe("Hub Sync Integration Tests", () => {
 
   afterEach(async () => {
     hubSyncServer.stop();
-    await runnerADb.cleanup();
-    await hubDb.cleanup();
     bridge.reset();
   });
 
