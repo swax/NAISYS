@@ -1,17 +1,39 @@
-import { describe, test, expect, beforeAll, afterAll, beforeEach, afterEach, jest } from "@jest/globals";
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  jest,
+  test,
+} from "@jest/globals";
 import { ulid } from "@naisys/database";
-import type { HubServerLog } from "@naisys/hub/services/hubServerLog";
 import type { HubServer } from "@naisys/hub/services/hubServer";
+import type { HubServerLog } from "@naisys/hub/services/hubServerLog";
 import { createRemoteAgentRouter } from "@naisys/hub/services/remoteAgentRouter";
-import { createRemoteAgentHandler } from "../../hub/remoteAgentHandler.js";
-import { createRemoteAgentRequester, type RemoteAgentRequester } from "../../hub/remoteAgentRequester.js";
-import type { HubClientLog } from "../../hub/hubClientLog.js";
-import type { HubManager } from "../../hub/hubManager.js";
-import type { HubConnection } from "../../hub/hubConnection.js";
-import type { HostService } from "../../services/hostService.js";
 import type { AgentManager } from "../../agent/agentManager.js";
-import { createTestDatabase, seedHost, seedUser, resetDatabase, type TestDatabase } from "./testDbHelper.js";
-import { createSyncEventBridge, type MockHubServer, type MockHubManager } from "./syncEventBridge.js";
+import type { HubClientLog } from "../../hub/hubClientLog.js";
+import type { HubConnection } from "../../hub/hubConnection.js";
+import type { HubManager } from "../../hub/hubManager.js";
+import { createRemoteAgentHandler } from "../../hub/remoteAgentHandler.js";
+import {
+  createRemoteAgentRequester,
+  type RemoteAgentRequester,
+} from "../../hub/remoteAgentRequester.js";
+import type { HostService } from "../../services/hostService.js";
+import {
+  createSyncEventBridge,
+  type MockHubManager,
+  type MockHubServer,
+} from "./syncEventBridge.js";
+import {
+  createTestDatabase,
+  resetDatabase,
+  seedHost,
+  seedUser,
+  type TestDatabase,
+} from "./testDbHelper.js";
 
 /**
  * Integration tests for remote agent control functionality.
@@ -81,9 +103,21 @@ describe("Remote Agent Integration Tests", () => {
     // Wait a bit for connections to close before cleaning up databases
     await new Promise((resolve) => setTimeout(resolve, 100));
     // Cleanup may fail on Windows due to SQLite file locking - ignore errors
-    try { await runnerADb.cleanup(); } catch { /* ignore */ }
-    try { await runnerBDb.cleanup(); } catch { /* ignore */ }
-    try { await hubDb.cleanup(); } catch { /* ignore */ }
+    try {
+      await runnerADb.cleanup();
+    } catch {
+      /* ignore */
+    }
+    try {
+      await runnerBDb.cleanup();
+    } catch {
+      /* ignore */
+    }
+    try {
+      await hubDb.cleanup();
+    } catch {
+      /* ignore */
+    }
   });
 
   beforeEach(async () => {
@@ -121,7 +155,7 @@ describe("Remote Agent Integration Tests", () => {
     // Register remote agent router on hub
     createRemoteAgentRouter(
       mockHubServer as unknown as HubServer,
-      mockHubServerLog
+      mockHubServerLog,
     );
 
     // Create Runner A (requester)
@@ -132,14 +166,18 @@ describe("Remote Agent Integration Tests", () => {
       registerEvent: mockHubManagerA.registerEvent,
       unregisterEvent: mockHubManagerA.unregisterEvent,
       sendMessage: mockHubManagerA.sendMessage,
-      getConnectedHubs: () => mockHubManagerA.getConnectedHubs().map(h => ({
-        connect: () => {},
-        disconnect: () => {},
-        disableReconnection: () => {},
-        isConnected: () => true,
-        getUrl: () => h.hubUrl,
-        sendMessage: () => false,
-      } as HubConnection)),
+      getConnectedHubs: () =>
+        mockHubManagerA.getConnectedHubs().map(
+          (h) =>
+            ({
+              connect: () => {},
+              disconnect: () => {},
+              disableReconnection: () => {},
+              isConnected: () => true,
+              getUrl: () => h.hubUrl,
+              sendMessage: () => false,
+            }) as HubConnection,
+        ),
       isMultiMachineMode: mockHubManagerA.isMultiMachineMode,
       getAllHubs: () => [],
       disableReconnection: () => false,
@@ -170,7 +208,7 @@ describe("Remote Agent Integration Tests", () => {
       mockClientLogB,
       runnerBDb.dbService,
       hostServiceB,
-      mockAgentManagerB
+      mockAgentManagerB,
     );
 
     // Trigger connections
@@ -200,7 +238,7 @@ describe("Remote Agent Integration Tests", () => {
         requesterId,
         task,
         userBUsername,
-        hostBName
+        hostBName,
       );
 
       expect(result).toContain("started");
@@ -221,8 +259,8 @@ describe("Remote Agent Integration Tests", () => {
           requesterId,
           "task",
           userBUsername,
-          "unknown-host"
-        )
+          "unknown-host",
+        ),
       ).rejects.toThrow(/not connected/);
     });
 
@@ -237,8 +275,8 @@ describe("Remote Agent Integration Tests", () => {
           requesterId,
           "task",
           "unknown-user",
-          hostBName
-        )
+          hostBName,
+        ),
       ).rejects.toThrow(/not found/);
     });
 
@@ -249,12 +287,12 @@ describe("Remote Agent Integration Tests", () => {
       await expect(
         remoteAgentRequesterA.startAgent(
           userBId,
-          hostAId,  // Same as source
+          hostAId, // Same as source
           requesterId,
           "task",
           userBUsername,
-          hostAName
-        )
+          hostAName,
+        ),
       ).rejects.toThrow(/handle locally/);
     });
 
@@ -262,7 +300,10 @@ describe("Remote Agent Integration Tests", () => {
       const requesterId = ulid();
 
       // Make startAgent throw an error
-      const mockStartAgent = mockAgentManagerB.startAgent as jest.MockedFunction<typeof mockAgentManagerB.startAgent>;
+      const mockStartAgent =
+        mockAgentManagerB.startAgent as jest.MockedFunction<
+          typeof mockAgentManagerB.startAgent
+        >;
       mockStartAgent.mockRejectedValueOnce(new Error("Agent already running"));
 
       await expect(
@@ -272,8 +313,8 @@ describe("Remote Agent Integration Tests", () => {
           requesterId,
           "task",
           userBUsername,
-          hostBName
-        )
+          hostBName,
+        ),
       ).rejects.toThrow(/Agent already running/);
     });
   });
@@ -289,7 +330,7 @@ describe("Remote Agent Integration Tests", () => {
         requesterId,
         reason,
         userBUsername,
-        hostBName
+        hostBName,
       );
 
       expect(result).toContain("stop requested");
@@ -298,7 +339,7 @@ describe("Remote Agent Integration Tests", () => {
       // Verify agentManager.stopAgentByUserId was called on Runner B
       expect(mockAgentManagerB.stopAgentByUserId).toHaveBeenCalledWith(
         userBId,
-        reason
+        reason,
       );
     });
 
@@ -313,8 +354,8 @@ describe("Remote Agent Integration Tests", () => {
           requesterId,
           "reason",
           userBUsername,
-          "unknown-host"
-        )
+          "unknown-host",
+        ),
       ).rejects.toThrow(/not connected/);
     });
 
@@ -329,8 +370,8 @@ describe("Remote Agent Integration Tests", () => {
           requesterId,
           "reason",
           "unknown-user",
-          hostBName
-        )
+          hostBName,
+        ),
       ).rejects.toThrow(/not found/);
     });
   });
@@ -384,7 +425,7 @@ describe("Remote Agent Integration Tests", () => {
         userBId,
         hostBId,
         50,
-        userBUsername
+        userBUsername,
       );
 
       expect(lines).toHaveLength(2);
@@ -397,7 +438,7 @@ describe("Remote Agent Integration Tests", () => {
         userBId,
         hostBId,
         50,
-        userBUsername
+        userBUsername,
       );
 
       expect(lines).toHaveLength(0);
@@ -438,7 +479,7 @@ describe("Remote Agent Integration Tests", () => {
         userBId,
         hostBId,
         2,
-        userBUsername
+        userBUsername,
       );
 
       expect(lines).toHaveLength(2);
@@ -455,8 +496,8 @@ describe("Remote Agent Integration Tests", () => {
           unknownUserId,
           hostBId,
           50,
-          "unknown-user"
-        )
+          "unknown-user",
+        ),
       ).rejects.toThrow(/not found/);
     });
   });
@@ -477,7 +518,8 @@ describe("Remote Agent Integration Tests", () => {
         getAllHubs: () => [],
       } as unknown as HubManager;
 
-      const disconnectedRequester = createRemoteAgentRequester(disconnectedManager);
+      const disconnectedRequester =
+        createRemoteAgentRequester(disconnectedManager);
 
       expect(disconnectedRequester.isAvailable()).toBe(false);
 
@@ -488,8 +530,8 @@ describe("Remote Agent Integration Tests", () => {
           ulid(),
           "task",
           userBUsername,
-          hostBName
-        )
+          hostBName,
+        ),
       ).rejects.toThrow(/no hub connection/);
     });
   });
@@ -508,8 +550,8 @@ describe("Remote Agent Integration Tests", () => {
           requesterId,
           "task",
           userBUsername,
-          hostBName
-        )
+          hostBName,
+        ),
       ).rejects.toThrow(/not connected/);
     });
   });

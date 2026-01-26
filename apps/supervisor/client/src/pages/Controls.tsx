@@ -19,9 +19,9 @@ import {
 } from "@tabler/icons-react";
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { getAgentConfig, updateAgentConfig } from "../lib/apiClient";
-import { useSession } from "../contexts/SessionContext";
 import { useAgentDataContext } from "../contexts/AgentDataContext";
+import { useSession } from "../contexts/SessionContext";
+import { getAgentConfig, updateAgentConfig } from "../lib/apiClient";
 
 export const Controls: React.FC = () => {
   const { agent } = useParams<{ agent: string }>();
@@ -183,7 +183,12 @@ export const Controls: React.FC = () => {
       </Group>
 
       {saveError && (
-        <Alert color="red" title="Error" onClose={() => setSaveError(null)} withCloseButton>
+        <Alert
+          color="red"
+          title="Error"
+          onClose={() => setSaveError(null)}
+          withCloseButton
+        >
           {saveError}
         </Alert>
       )}

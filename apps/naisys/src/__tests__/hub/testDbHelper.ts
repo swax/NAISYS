@@ -1,12 +1,12 @@
-import { mkdtempSync, rmSync, existsSync } from "fs";
-import { tmpdir } from "os";
-import { join } from "path";
 import {
   createDatabaseService,
   createPrismaClient,
   PrismaClient,
   type DatabaseService,
 } from "@naisys/database";
+import { existsSync, mkdtempSync, rmSync } from "fs";
+import { tmpdir } from "os";
+import { join } from "path";
 
 /**
  * Test database helper for creating isolated SQLite databases for integration tests.
@@ -28,7 +28,7 @@ export interface TestDatabase {
  */
 export async function createTestDatabase(
   name: string,
-  dbType: "naisys" | "hub" = "naisys"
+  dbType: "naisys" | "hub" = "naisys",
 ): Promise<TestDatabase> {
   // Create a unique temp directory for this test database
   const folder = mkdtempSync(join(tmpdir(), `naisys-test-${name}-`));
@@ -73,11 +73,7 @@ export async function createTestDatabaseSet(): Promise<{
   ]);
 
   const cleanupAll = async () => {
-    await Promise.all([
-      runnerA.cleanup(),
-      runnerB.cleanup(),
-      hub.cleanup(),
-    ]);
+    await Promise.all([runnerA.cleanup(), runnerB.cleanup(), hub.cleanup()]);
   };
 
   return { runnerA, runnerB, hub, cleanupAll };
@@ -89,7 +85,7 @@ export async function createTestDatabaseSet(): Promise<{
 export async function seedHost(
   prisma: PrismaClient,
   hostId: string,
-  name: string
+  name: string,
 ): Promise<void> {
   await prisma.hosts.upsert({
     where: { host_id: hostId },
@@ -105,7 +101,7 @@ export async function seedUser(
   prisma: PrismaClient,
   id: string,
   username: string,
-  hostId: string
+  hostId: string,
 ): Promise<void> {
   await prisma.users.upsert({
     where: { id },

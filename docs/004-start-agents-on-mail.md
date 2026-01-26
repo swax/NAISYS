@@ -7,12 +7,14 @@ This document outlines a significant architectural change to simplify agent life
 ## Current State
 
 ### Agent Startup Flow
+
 1. Lead agent runs `ns-agent start <username> "<task description>"`
 2. Subagent service validates the agent exists and isn't already running
 3. AgentManager creates AgentRuntime and starts command loop
 4. Startup message is sent via `llmail.sendMessage()` to the new agent
 
 ### Cross-Machine Architecture
+
 - Agents are registered per-host via `AgentRegistrar` (scans YAML files)
 - Each host runs its own `AgentManager` with local agents only
 - `HubSyncClient` syncs data (including mail) to/from central hub
@@ -20,6 +22,7 @@ This document outlines a significant architectural change to simplify agent life
 - Recipients tracked in `mail_recipients` table with status in `mail_status`
 
 ### Current Commands
+
 - `ns-agent list` - Shows subagents of current agent with status
 - `ns-agent start <username> "<description>"` - Starts a subagent
 - `ns-agent stop <id>` - Stops a running subagent
@@ -28,6 +31,7 @@ This document outlines a significant architectural change to simplify agent life
 - `ns-mail wait <seconds>` - Waits for new mail
 
 ### Wake on Message
+
 - Agents can be configured with `wakeOnMessage: true`
 - `promptBuilder.ts:getInput()` polls `llmail.getUnreadThreads()` every 5 seconds
 - If unread mail found, aborts the current pause/wait
@@ -44,6 +48,7 @@ This document outlines a significant architectural change to simplify agent life
 **Implementation Location**: `AgentManager` class in `apps/naisys/src/agent/agentManager.ts`
 
 **New Behavior**:
+
 1. AgentManager runs a polling loop (configurable interval, e.g., 5-10 seconds)
 2. Query for unread mail where recipient is a local agent (by `host_id`) that isn't running
 3. For each such agent, automatically start it
@@ -51,16 +56,19 @@ This document outlines a significant architectural change to simplify agent life
 5. Agent can complete via `ns-session complete <username> "<result>"` or continue running
 
 **Key Considerations**:
+
 - Shutdown behavior is unified: agents call `ns-session complete <username> "<result>"` to send result to specified user
 - No limit on concurrent agents - allows natural agent-to-agent communication without bottlenecks
 - LLM usage is throttled by existing `SPEND_LIMIT_DOLLARS` env var (spend limit per hour)
 - 5 second polling interval serves as natural rate limiting for startup checks
 
 **Configuration**:
+
 - `.env` var `START_AGENT_ON_MAIL` (default: `true`) - global toggle for the feature
 - `LlmModel.startOnMailDisabled` in `llModels.ts` - set to `true` for mock/none models to prevent auto-start
 
 **Why No Agent Limit**:
+
 - Prioritizing which agent to start when multiple have pending messages is complex and error-prone
 - Agents often need to communicate with each other - limiting concurrency creates artificial bottlenecks
 - The `SPEND_LIMIT_DOLLARS` env var already provides cost control by throttling LLM API calls per hour
@@ -73,6 +81,7 @@ This document outlines a significant architectural change to simplify agent life
 **Location**: Enhanced in `apps/naisys/src/features/llmail.ts` (replaced standalone `ns-users` command)
 
 **Output Format**:
+
 ```
 Username      | Title                  | Host     | Lead     | Status
 ---------------------------------------------------------------------------
@@ -84,39 +93,44 @@ alice         | Project Manager        | server-1 | (none)   | Running
 ```
 
 **Features**:
+
 - Tree-style hierarchy based on `lead_username`
 - Shows hostname for multi-host environments
 - Status: Running, Available (not running, host online), Offline (host offline)
 
 **Status Determination**:
+
 - Check `user_notifications.last_active` (updated every 2s by running agents)
 - Running: last_active > now - `USER_ONLINE_THRESHOLD_MS` (16 seconds)
 - Available: agent not active but host is online
 - Offline: `hosts.last_active` < now - `HOST_ONLINE_THRESHOLD_MS` (10 seconds)
 
 **Note**: Threshold constants are defined in `@naisys/common` package:
-- `HOST_ONLINE_THRESHOLD_MS` = 10 seconds (10 * 1000)
-- `USER_ONLINE_THRESHOLD_MS` = 16 seconds (8 * 2 * 1000) - accounts for propagation delays
+
+- `HOST_ONLINE_THRESHOLD_MS` = 10 seconds (10 \* 1000)
+- `USER_ONLINE_THRESHOLD_MS` = 16 seconds (8 _ 2 _ 1000) - accounts for propagation delays
 - Utility functions: `isHostOnline()`, `isAgentOnline()`
 
 ### 3. Simplified `ns-agent` Command
 
 **New Subcommands**:
 
-| Command | Description | Scope |
-|---------|-------------|-------|
-| `ns-agent help` | Show help | - |
-| `ns-agent start <username> "<task>"` | Manually start an agent with task | Local + Remote |
-| `ns-agent stop <username>` | Force stop an agent | Local + Remote |
-| `ns-agent switch <username>` | Switch console focus | Local only (debug) |
-| `ns-agent log <username> [lines]` | View recent log output (default: 50 lines) | Local + Remote |
+| Command                              | Description                                | Scope              |
+| ------------------------------------ | ------------------------------------------ | ------------------ |
+| `ns-agent help`                      | Show help                                  | -                  |
+| `ns-agent start <username> "<task>"` | Manually start an agent with task          | Local + Remote     |
+| `ns-agent stop <username>`           | Force stop an agent                        | Local + Remote     |
+| `ns-agent switch <username>`         | Switch console focus                       | Local only (debug) |
+| `ns-agent log <username> [lines]`    | View recent log output (default: 50 lines) | Local + Remote     |
 
 **Username Resolution**:
+
 - Commands use `<username>` (e.g., `ns-agent stop bob`)
 - If username is ambiguous (exists on multiple hosts), use `<username@host>` format (e.g., `ns-agent stop bob@server-2`)
 - Reuse `resolveUserIdentifier()` from `llmailAddress.ts` for consistent address resolution
 
 **Removed Commands**:
+
 - `ns-agent list` - Replaced by `ns-users` (which shows all agents, not just subagents)
 
 ### 4. Remote Agent Control Protocol
@@ -128,13 +142,14 @@ alice         | Project Manager        | server-1 | (none)   | Running
 **New Hub Events**:
 
 #### Start Agent Request
+
 ```typescript
 // Runner → Hub → Target Runner
 interface AgentStartRequest {
-  targetUserId: string;   // user_id to start
-  targetHostId: string;   // resolved from user's host_id
-  requesterId: string;    // user_id of requester
-  task: string;           // task description added to context
+  targetUserId: string; // user_id to start
+  targetHostId: string; // resolved from user's host_id
+  requesterId: string; // user_id of requester
+  task: string; // task description added to context
 }
 
 // Target Runner → Hub → Requester
@@ -145,12 +160,13 @@ interface AgentStartResponse {
 ```
 
 #### Stop Agent Request
+
 ```typescript
 // Runner → Hub → Target Runner
 interface AgentStopRequest {
-  targetUserId: string;   // user_id to stop
-  targetHostId: string;   // resolved from user's host_id
-  requesterId: string;    // user_id of requester (must be lead or higher)
+  targetUserId: string; // user_id to stop
+  targetHostId: string; // resolved from user's host_id
+  requesterId: string; // user_id of requester (must be lead or higher)
   reason: string;
 }
 
@@ -162,12 +178,13 @@ interface AgentStopResponse {
 ```
 
 #### Log Request
+
 ```typescript
 // Runner → Hub → Target Runner
 interface AgentLogRequest {
-  targetUserId: string;   // user_id to get logs for
-  targetHostId: string;   // resolved from user's host_id
-  lines: number;          // How many lines to return (default: 50)
+  targetUserId: string; // user_id to get logs for
+  targetHostId: string; // resolved from user's host_id
+  lines: number; // How many lines to return (default: 50)
 }
 
 // Target Runner → Hub → Requester
@@ -193,6 +210,7 @@ interface AgentLogResponse {
    - Sends response back through hub
 
 **Security Considerations**:
+
 - `ns-agent stop`: Requester must be lead agent or higher in hierarchy (validates `lead_username` chain)
 - `ns-agent log`: No permission check - any agent can view logs
 - `ns-agent start`: No permission check - any agent can start another agent
@@ -204,6 +222,7 @@ interface AgentLogResponse {
 **Purpose**: When sending mail to an agent on an offline host, inform sender that delivery is pending.
 
 **Implementation**:
+
 ```typescript
 // In llmail.sendMessage()
 async function sendMessage(userIdentifiers, subject, message) {
@@ -213,7 +232,7 @@ async function sendMessage(userIdentifiers, subject, message) {
   const offlineHosts = await checkRecipientHostStatus(recipients);
 
   if (offlineHosts.length > 0) {
-    return `Mail sent. Note: ${offlineHosts.join(', ')} currently offline - delivery pending.`;
+    return `Mail sent. Note: ${offlineHosts.join(", ")} currently offline - delivery pending.`;
   }
 
   return "Mail sent";
@@ -221,6 +240,7 @@ async function sendMessage(userIdentifiers, subject, message) {
 ```
 
 **Host Status Check**:
+
 - Query `hosts.last_active` for each recipient's `host_id`
 - Offline if `last_active < now - HOST_ONLINE_THRESHOLD_MS` (same threshold used by `ns-users`)
 
@@ -339,20 +359,23 @@ private async checkAndStartPendingAgents() {
 ## Configuration Changes
 
 ### Environment Variables
+
 ```bash
 START_AGENT_ON_MAIL=true      # Enable auto-start on pending mail (default: true)
 # SPEND_LIMIT_DOLLARS already exists - throttles LLM usage per hour (no agent concurrency limit)
 ```
 
 ### LlmModel Addition (`llModels.ts`)
+
 ```typescript
 interface LlmModel {
   // ... existing fields ...
-  startOnMailDisabled?: boolean;  // Set to true for mock/none models
+  startOnMailDisabled?: boolean; // Set to true for mock/none models
 }
 ```
 
 ### Hardcoded Settings
+
 - Poll interval: 5000ms (5 seconds) - serves as natural rate limiting
 
 ---
@@ -404,6 +427,7 @@ interface LlmModel {
 ### Phase 1: Add Infrastructure
 
 #### @naisys/common Package & Threshold Constants
+
 - [x] Create `@naisys/common` package in `packages/common`
 - [x] Add `HOST_ONLINE_THRESHOLD_MS` = 10 seconds
 - [x] Add `USER_ONLINE_THRESHOLD_MS` = 16 seconds (accounts for propagation delays)
@@ -413,6 +437,7 @@ interface LlmModel {
 - [x] Update supervisor client to use `@naisys/common`
 
 #### Remote Agent Protocol
+
 - [x] Define TypeScript interfaces for request/response messages (in `@naisys/hub-protocol`)
 - [x] Create `remoteAgentRouter.ts` on hub side
 - [x] Create `remoteAgentHandler.ts` on runner side (handles incoming requests)
@@ -425,6 +450,7 @@ interface LlmModel {
 - [x] Add timeout handling for requests (30 second timeout in requester)
 
 #### Enhanced `ns-mail users` Command
+
 - [x] Enhance `llmail.ts` with hierarchical user listing (removed standalone `ns-users` command)
 - [x] Query entire table and do hierarchy in memory
 - [x] Format output as tree with indentation
@@ -433,6 +459,7 @@ interface LlmModel {
 - [x] Command accessible via existing `ns-mail users`
 
 #### Updated `ns-agent` Command
+
 - [ ] Refactor `subagent.ts` for new command structure
 - [x] Add user lookup with host resolution (similar to `resolveUserIdentifier()`)
 - [x] Update `ns-agent start` to work remotely (via `hubRemoteAgentRequester`)
@@ -449,6 +476,7 @@ interface LlmModel {
 ### Phase 2: Enable Auto-Start
 
 #### Auto-Start Feature
+
 - [ ] Add `START_AGENT_ON_MAIL` env var to global config (default: `true`)
 - [ ] Add `startOnMailDisabled` to `LlmModel` interface in `llModels.ts`
 - [ ] Set `startOnMailDisabled: true` for mock/none models
@@ -459,16 +487,19 @@ interface LlmModel {
 - [ ] Implement `startAgentByUserId()` (agent config in users table)
 
 #### Update `ns-session complete` Command
+
 - [ ] Update syntax to `ns-session complete <username> "<result>"`
 - [ ] Username specifies who receives the completion message
 - [ ] Update help text in `session.ts`
 - [ ] Remove dependency on `leadAgent` config for completion message target
 
 #### Mail Delivery Feedback
+
 - [ ] Add host status check to `llmail.sendMessage()`
 - [ ] Return appropriate message when recipients' hosts are offline
 
 #### Testing
+
 - [ ] Write unit tests for auto-start logic
 - [ ] Write integration tests for remote control
 - [ ] Test multi-host scenarios

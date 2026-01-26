@@ -1,9 +1,9 @@
-import { expect, test, describe } from "@jest/globals";
+import { describe, expect, test } from "@jest/globals";
 import { ulid } from "@naisys/database";
 import {
-  minUlidForTime,
   getUlidTimestamp,
   isUlidWithinWindow,
+  minUlidForTime,
 } from "../../utils/ulidTools.js";
 
 describe("ulidTools", () => {

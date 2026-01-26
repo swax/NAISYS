@@ -110,18 +110,16 @@ export function createCommandLoop(
           );
         }
 
-        
         if (pauseSeconds === undefined) {
           // When llm model is set to none then we should hold indefinitely
           if (agentConfig().shellModel === LlmApiType.None) {
             pauseSeconds = 0;
-          } 
+          }
           // Debug prompt handles the pause/wait commands when agent is not in focus so only skip when pauseSeconds is undefined
           else if (!output.isConsoleEnabled() && inputMode.isDebug()) {
             inputMode.setLLM();
             pauseSeconds = -1;
-          } 
-          else {
+          } else {
             pauseSeconds = agentConfig().debugPauseSeconds;
           }
         }

@@ -20,7 +20,7 @@ function getNaisysDatabasePath(): string {
 
   if (!configuredDbType) {
     throw new Error(
-      "Database type not configured. Call initMonitorDatabase() first."
+      "Database type not configured. Call initMonitorDatabase() first.",
     );
   }
 
@@ -44,7 +44,7 @@ function getPrismaClient(): PrismaClient {
  * Execute a function with access to the Naisys Prisma client
  */
 export async function usingNaisysDb<T>(
-  run: (prisma: PrismaClient) => Promise<T>
+  run: (prisma: PrismaClient) => Promise<T>,
 ): Promise<T> {
   const prisma = getPrismaClient();
   return await run(prisma);
@@ -53,7 +53,7 @@ export async function usingNaisysDb<T>(
 export function getMonitorDbType(): MonitorDbType {
   if (!configuredDbType) {
     throw new Error(
-      "Database type not configured. Call initMonitorDatabase() first."
+      "Database type not configured. Call initMonitorDatabase() first.",
     );
   }
   return configuredDbType;

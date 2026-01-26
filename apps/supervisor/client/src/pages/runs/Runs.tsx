@@ -12,7 +12,7 @@ export const Runs: React.FC = () => {
   const { agents } = useAgentDataContext();
   const [selectedRowKey, setSelectedRowKey] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
-  const [freshData, setFreshData] = useState<'loading' | 'loaded'>('loading');
+  const [freshData, setFreshData] = useState<"loading" | "loaded">("loading");
 
   // Find the agent and get their user ID
   const agent = agents.find((a) => a.name === agentName);
@@ -30,7 +30,7 @@ export const Runs: React.FC = () => {
   // And usually on the next render cycle this is updated.
   // We need to have the latest data for auto-opening panels in RunSessionCard to work correctly.
   useEffect(() => {
-    if (isFetchedAfterMount && freshData == 'loading') {
+    if (isFetchedAfterMount && freshData == "loading") {
       // Find max ULID using string comparison
       const runMaxLogId = allRuns.reduce(
         (max, run) => (run.latestLogId > max ? run.latestLogId : max),
@@ -40,7 +40,7 @@ export const Runs: React.FC = () => {
       // Once the run log id is at least the agent's latest log id, we know we have fresh data
       // ULIDs are lexicographically sortable
       if (agent?.latestLogId && runMaxLogId >= agent.latestLogId) {
-        setFreshData('loaded');
+        setFreshData("loaded");
       }
     }
   }, [freshData, isFetchedAfterMount, allRuns, agents]);
@@ -102,7 +102,7 @@ export const Runs: React.FC = () => {
             <RunSessionCard
               key={rowKey}
               run={run}
-              freshData={freshData == 'loaded'}
+              freshData={freshData == "loaded"}
               isSelected={selectedRowKey === rowKey}
               onSelect={() => setSelectedRowKey(rowKey)}
             />

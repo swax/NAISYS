@@ -57,18 +57,22 @@ export function createCommandRegistry(commands: RegistrableCommand[]) {
     helpText: "Show available commands",
     handleCommand: () => {
       const allCommands = Array.from(registry.values()).sort((a, b) =>
-        a.commandName.localeCompare(b.commandName)
+        a.commandName.localeCompare(b.commandName),
       );
 
       const mainCommands = allCommands.filter((c) => !c.isDebug);
       const debugCommands = allCommands.filter((c) => c.isDebug);
 
       const formatTable = (cmds: RegistrableCommand[]) => {
-        const rows = [
-          ...cmds.map((c) => [c.commandName, c.helpText || ""]),
-        ];
-        const colWidths = rows[0].map((_, i) => Math.max(...rows.map((r) => r[i].length)));
-        return rows.map((row) => row.map((cell, i) => cell.padEnd(colWidths[i])).join("  ")).join("\n");
+        const rows = [...cmds.map((c) => [c.commandName, c.helpText || ""])];
+        const colWidths = rows[0].map((_, i) =>
+          Math.max(...rows.map((r) => r[i].length)),
+        );
+        return rows
+          .map((row) =>
+            row.map((cell, i) => cell.padEnd(colWidths[i])).join("  "),
+          )
+          .join("\n");
       };
 
       let output = "Commands:\n" + formatTable(mainCommands);
@@ -83,9 +87,7 @@ export function createCommandRegistry(commands: RegistrableCommand[]) {
 
   for (const command of commands) {
     if (registry.has(command.commandName)) {
-      throw new Error(
-        `Duplicate command registration: ${command.commandName}`,
-      );
+      throw new Error(`Duplicate command registration: ${command.commandName}`);
     }
     registry.set(command.commandName, command);
   }

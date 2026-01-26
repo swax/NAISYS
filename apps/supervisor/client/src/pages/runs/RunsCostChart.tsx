@@ -39,7 +39,7 @@ export const RunsCostChart: React.FC<RunsCostChartProps> = ({ runs }) => {
         curveType="linear"
         withTooltip
         tooltipProps={{
-          position: { y: -160}
+          position: { y: -160 },
         }}
         withDots
         gridAxis="none"

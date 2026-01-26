@@ -31,7 +31,10 @@ function getSupervisorConfig(): DatabaseConfig {
     throw new Error(`NAISYS_FOLDER is not set in environment variables`);
   }
 
-  const dbPath = path.join(process.env.NAISYS_FOLDER, "/database/supervisor.db");
+  const dbPath = path.join(
+    process.env.NAISYS_FOLDER,
+    "/database/supervisor.db",
+  );
 
   return {
     dbPath,

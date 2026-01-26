@@ -4,7 +4,7 @@
  */
 export function cachedForSeconds<TArgs extends unknown[], TResult>(
   seconds: number,
-  fn: (...args: TArgs) => Promise<TResult>
+  fn: (...args: TArgs) => Promise<TResult>,
 ): (...args: TArgs) => Promise<TResult> {
   const cache = new Map<string, { result: TResult; expiresAt: number }>();
 

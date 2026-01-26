@@ -1,15 +1,15 @@
-import { FastifyInstance, FastifyPluginOptions } from "fastify";
 import {
   AccessKeyRequest,
   AccessKeyRequestSchema,
   AccessKeyResponse,
   AccessKeyResponseSchema,
-  SessionResponse,
-  LogoutResponseSchema,
-  SessionResponseSchema,
   ErrorResponse,
   ErrorResponseSchema,
+  LogoutResponseSchema,
+  SessionResponse,
+  SessionResponseSchema,
 } from "@naisys-supervisor/shared";
+import { FastifyInstance, FastifyPluginOptions } from "fastify";
 import { v4 as uuidv4 } from "uuid";
 import {
   createSession,
@@ -203,10 +203,7 @@ export default async function accessRoutes(
 }
 
 // Helper function to validate session
-export async function validateSession(
-  request: any,
-  reply: any,
-): Promise<void> {
+export async function validateSession(request: any, reply: any): Promise<void> {
   let token = request.cookies.session_token;
 
   // if no token, try to pull session_token from the query params

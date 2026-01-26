@@ -7,12 +7,12 @@ import * as crypto from "crypto";
 import * as https from "https";
 import * as os from "os";
 import stringArgv from "string-argv";
-import { GlobalConfig } from "../globalConfig.js";
 import { AgentConfig } from "../agent/agentConfig.js";
 import { RegistrableCommand } from "../command/commandRegistry.js";
+import { GlobalConfig } from "../globalConfig.js";
 import { CostTracker } from "../llm/costTracker.js";
-import { LLModels } from "../llm/llModels.js";
 import { LlmMessage, LlmRole } from "../llm/llmDtos.js";
+import { LLModels } from "../llm/llModels.js";
 import { LLMService } from "../llm/llmService.js";
 import { OutputService } from "../utils/output.js";
 import * as utilities from "../utils/utilities.js";
@@ -227,7 +227,10 @@ export function createLLMynx(
     } else {
       // New pagination logic
       if (contentTokenSize > globalConfig().webTokenMax) {
-        const pages = breakContentIntoPages(content, globalConfig().webTokenMax);
+        const pages = breakContentIntoPages(
+          content,
+          globalConfig().webTokenMax,
+        );
 
         // Set up pagination state
         _currentPagination = {

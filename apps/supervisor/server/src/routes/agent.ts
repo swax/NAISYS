@@ -1,4 +1,3 @@
-import { FastifyInstance, FastifyPluginOptions } from "fastify";
 import {
   ErrorResponseSchema,
   NaisysDataRequest,
@@ -6,6 +5,7 @@ import {
   NaisysDataResponse,
   NaisysDataResponseSchema,
 } from "@naisys-supervisor/shared";
+import { FastifyInstance, FastifyPluginOptions } from "fastify";
 import { getAgentData } from "../services/agentService.js";
 
 export default async function agentRoutes(

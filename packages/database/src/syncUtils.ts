@@ -5,11 +5,11 @@ import { PrismaClient } from "./generated/prisma/client.js";
  * Count total records across all tables in a tables object.
  */
 export function countRecordsInTables(
-  tables: Record<string, unknown[] | undefined>
+  tables: Record<string, unknown[] | undefined>,
 ): number {
   return Object.values(tables).reduce(
     (sum, records) => sum + (records?.length ?? 0),
-    0
+    0,
   );
 }
 
@@ -17,7 +17,9 @@ export function countRecordsInTables(
  * Find the maximum updated_at timestamp from an array of records.
  * Returns null if no records have an updated_at field.
  */
-export function findMaxUpdatedAt(records: Record<string, unknown>[]): Date | null {
+export function findMaxUpdatedAt(
+  records: Record<string, unknown>[],
+): Date | null {
   let maxTimestamp: Date | null = null;
   for (const record of records) {
     if (typeof record.updated_at === "string") {
@@ -35,7 +37,7 @@ export function findMaxUpdatedAt(records: Record<string, unknown>[]): Date | nul
  * Returns null if no records have an updated_at field.
  */
 export function findMaxUpdatedAtFromTables(
-  tables: Record<string, Record<string, unknown>[] | unknown[] | undefined>
+  tables: Record<string, Record<string, unknown>[] | unknown[] | undefined>,
 ): Date | null {
   let maxTimestamp: Date | null = null;
   for (const tableData of Object.values(tables)) {
@@ -52,7 +54,9 @@ export function findMaxUpdatedAtFromTables(
  * Serialize a database record for sync transmission.
  * Converts Date objects to ISO strings.
  */
-export function serializeRecord(record: Record<string, unknown>): Record<string, unknown> {
+export function serializeRecord(
+  record: Record<string, unknown>,
+): Record<string, unknown> {
   const serialized: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(record)) {
     serialized[key] = value instanceof Date ? value.toISOString() : value;
@@ -63,7 +67,9 @@ export function serializeRecord(record: Record<string, unknown>): Record<string,
 /**
  * Serialize an array of database records for sync transmission.
  */
-export function serializeRecords(records: Record<string, unknown>[]): Record<string, unknown>[] {
+export function serializeRecords(
+  records: Record<string, unknown>[],
+): Record<string, unknown>[] {
   return records.map(serializeRecord);
 }
 
@@ -94,7 +100,9 @@ export const SYNCABLE_TABLE_CONFIG: Record<string, SyncableTableConfig> = {
  * Tables that support sync.
  * Order matters for foreign key dependencies (e.g., hosts before users).
  */
-export const SYNCABLE_TABLES = Object.keys(SYNCABLE_TABLE_CONFIG) as SyncableTable[];
+export const SYNCABLE_TABLES = Object.keys(
+  SYNCABLE_TABLE_CONFIG,
+) as SyncableTable[];
 
 /**
  * Tables that should be forwarded to other runners.
@@ -133,13 +141,13 @@ export async function queryChangedRecords(
   table: SyncableTable,
   since: Date,
   limit: number,
-  localHostId: string
+  localHostId: string,
 ): Promise<{ records: Record<string, unknown>[]; hasMore: boolean }> {
   const config = SYNCABLE_TABLE_CONFIG[table];
   const isAppendOnly = config?.appendOnly ?? false;
 
   // Use dynamic access with any - safe because table is from our whitelist
-   
+
   const model = (prisma as any)[table];
 
   let records: Record<string, unknown>[];
@@ -185,7 +193,7 @@ export async function upsertRecord(
   prisma: PrismaClient,
   table: SyncableTable,
   record: Record<string, unknown>,
-  options?: UpsertOptions
+  options?: UpsertOptions,
 ): Promise<void> {
   const config = SYNCABLE_TABLE_CONFIG[table];
   if (!config) {
@@ -217,7 +225,9 @@ export async function upsertRecord(
 
   // Build UPDATE clause (exclude primary key columns from updates)
   const updateColumns = columns.filter((c) => !primaryKeyColumns.includes(c));
-  const updateClause = updateColumns.map((c) => `${c} = excluded.${c}`).join(", ");
+  const updateClause = updateColumns
+    .map((c) => `${c} = excluded.${c}`)
+    .join(", ");
 
   // Build ON CONFLICT clause with the correct primary key column(s)
   const conflictColumns = primaryKeyColumns.join(", ");
@@ -238,7 +248,7 @@ export async function upsertRecords(
   prisma: PrismaClient,
   table: SyncableTable,
   records: Record<string, unknown>[],
-  options?: UpsertOptions
+  options?: UpsertOptions,
 ): Promise<void> {
   for (const record of records) {
     await upsertRecord(prisma, table, record, options);
@@ -271,21 +281,24 @@ const CATCH_UP_BATCH_SIZE = 1000;
 export async function queryCatchUpRecords(
   prisma: PrismaClient,
   since: Date,
-  excludeHostId: string
-): Promise<{ tables: Record<string, Record<string, unknown>[]>; hasMore: boolean }> {
+  excludeHostId: string,
+): Promise<{
+  tables: Record<string, Record<string, unknown>[]>;
+  hasMore: boolean;
+}> {
   const tables: Record<string, Record<string, unknown>[]> = {};
   let hasMore = false;
 
   for (const table of FORWARDABLE_TABLES) {
     // Use dynamic access with any - safe because table is from our whitelist
-     
+
     const model = (prisma as any)[table];
 
     // Always query by updated_at for catch-up (hub's timestamp, not client's ULID)
     const records = (await model.findMany({
       where: {
         updated_at: { gt: since },
-        host_id: { not: excludeHostId }
+        host_id: { not: excludeHostId },
       },
       orderBy: { updated_at: "asc" },
       take: CATCH_UP_BATCH_SIZE + 1,
@@ -298,7 +311,7 @@ export async function queryCatchUpRecords(
 
     if (records.length > 0) {
       tables[table] = serializeRecords(
-        tableHasMore ? records.slice(0, CATCH_UP_BATCH_SIZE) : records
+        tableHasMore ? records.slice(0, CATCH_UP_BATCH_SIZE) : records,
       );
     }
   }
@@ -314,7 +327,7 @@ export async function queryCatchUpRecords(
  */
 export async function loadSyncState(
   prisma: PrismaClient,
-  id: string
+  id: string,
 ): Promise<string | null> {
   const record = await prisma.hub_sync_state.findUnique({
     where: { id },
@@ -331,7 +344,7 @@ export async function loadSyncState(
 export async function saveSyncState(
   prisma: PrismaClient,
   id: string,
-  sinceTimestamp: string
+  sinceTimestamp: string,
 ): Promise<void> {
   await prisma.hub_sync_state.upsert({
     where: { id },

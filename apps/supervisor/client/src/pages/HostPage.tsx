@@ -25,11 +25,7 @@ export const HostPage: React.FC = () => {
     <Stack gap="md">
       <Title order={2}>
         {hostName} is{" "}
-        <Text
-          component="span"
-          c={host?.online ? "green" : "gray"}
-          inherit
-        >
+        <Text component="span" c={host?.online ? "green" : "gray"} inherit>
           {host?.online ? "online" : "offline"}
         </Text>
       </Title>

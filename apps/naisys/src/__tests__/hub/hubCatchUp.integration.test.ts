@@ -1,21 +1,43 @@
-import { describe, test, expect, beforeAll, afterAll, beforeEach, afterEach, jest } from "@jest/globals";
-import { ulid } from "@naisys/database";
-import type { HubServerLog } from "@naisys/hub/services/hubServerLog";
-import type { HubServer } from "@naisys/hub/services/hubServer";
 import {
-  createHubSyncServer,
-  type HubSyncServer,
-} from "@naisys/hub/services/hubSyncServer";
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  jest,
+  test,
+} from "@jest/globals";
+import { ulid } from "@naisys/database";
 import {
   createHubForwardService,
   type HubForwardService,
 } from "@naisys/hub/services/hubForwardService";
-import { createHubSyncClient, type HubSyncClient } from "../../hub/hubSyncClient.js";
+import type { HubServer } from "@naisys/hub/services/hubServer";
+import type { HubServerLog } from "@naisys/hub/services/hubServerLog";
+import {
+  createHubSyncServer,
+  type HubSyncServer,
+} from "@naisys/hub/services/hubSyncServer";
 import type { HubClientLog } from "../../hub/hubClientLog.js";
 import type { HubManager } from "../../hub/hubManager.js";
+import {
+  createHubSyncClient,
+  type HubSyncClient,
+} from "../../hub/hubSyncClient.js";
 import type { HostService } from "../../services/hostService.js";
-import { createTestDatabase, seedHost, seedUser, resetDatabase, type TestDatabase } from "./testDbHelper.js";
-import { createSyncEventBridge, type MockHubServer, type MockHubManager } from "./syncEventBridge.js";
+import {
+  createSyncEventBridge,
+  type MockHubManager,
+  type MockHubServer,
+} from "./syncEventBridge.js";
+import {
+  createTestDatabase,
+  resetDatabase,
+  seedHost,
+  seedUser,
+  type TestDatabase,
+} from "./testDbHelper.js";
 
 /**
  * Integration tests for hub catch-up functionality.
@@ -76,9 +98,21 @@ describe("Hub Catch-Up Integration Tests", () => {
 
   afterAll(async () => {
     await new Promise((resolve) => setTimeout(resolve, 100));
-    try { await runnerADb.cleanup(); } catch { /* ignore */ }
-    try { await runnerBDb.cleanup(); } catch { /* ignore */ }
-    try { await hubDb.cleanup(); } catch { /* ignore */ }
+    try {
+      await runnerADb.cleanup();
+    } catch {
+      /* ignore */
+    }
+    try {
+      await runnerBDb.cleanup();
+    } catch {
+      /* ignore */
+    }
+    try {
+      await hubDb.cleanup();
+    } catch {
+      /* ignore */
+    }
   });
 
   beforeEach(async () => {
@@ -111,7 +145,7 @@ describe("Hub Catch-Up Integration Tests", () => {
       hubDb.dbService,
       mockHubServerLog,
       hubForwardService,
-      { pollIntervalMs: 100, maxConcurrentRequests: 2 }
+      { pollIntervalMs: 100, maxConcurrentRequests: 2 },
     );
   });
 
@@ -139,7 +173,7 @@ describe("Hub Catch-Up Integration Tests", () => {
       mockHubManagerA as unknown as HubManager,
       mockClientLogA,
       runnerADb.dbService,
-      hostServiceA
+      hostServiceA,
     );
 
     // Trigger the HUB_CONNECTED event to initiate catch_up
@@ -161,7 +195,7 @@ describe("Hub Catch-Up Integration Tests", () => {
       mockHubManagerB as unknown as HubManager,
       mockClientLogB,
       runnerBDb.dbService,
-      hostServiceB
+      hostServiceB,
     );
 
     // Trigger the HUB_CONNECTED event to initiate catch_up
@@ -267,7 +301,7 @@ describe("Hub Catch-Up Integration Tests", () => {
       mockHubManagerB as unknown as HubManager,
       mockClientLogB,
       runnerBDb.dbService,
-      hostServiceB
+      hostServiceB,
     );
 
     // Before triggering HUB_CONNECTED, runner B should be in catchingUp state

@@ -47,13 +47,13 @@ export function createHubForwardService(logService: HubServerLog) {
    */
   function enqueueForOtherClients(
     sourceHostId: string,
-    tables: Record<string, Record<string, unknown>[]>
+    tables: Record<string, Record<string, unknown>[]>,
   ): void {
     // Filter to forwardable tables and non-empty arrays
     const forwardableTables = Object.entries(tables).filter(
       ([table, records]) =>
         FORWARDABLE_TABLES.includes(table as SyncableTable) &&
-        records.length > 0
+        records.length > 0,
     );
 
     if (forwardableTables.length === 0) {
@@ -63,23 +63,23 @@ export function createHubForwardService(logService: HubServerLog) {
     // Count total records being forwarded
     const totalRecords = forwardableTables.reduce(
       (sum, [, records]) => sum + records.length,
-      0
+      0,
     );
 
     // Get all other connected clients
     const targetClients = Array.from(clientQueues.keys()).filter(
-      (hostId) => hostId !== sourceHostId
+      (hostId) => hostId !== sourceHostId,
     );
 
     if (targetClients.length === 0) {
       logService.log(
-        `[ForwardService] No other clients to forward ${totalRecords} records to`
+        `[ForwardService] No other clients to forward ${totalRecords} records to`,
       );
       return;
     }
 
     logService.log(
-      `[ForwardService] Queuing ${totalRecords} records from ${sourceHostId} for ${targetClients.length} clients`
+      `[ForwardService] Queuing ${totalRecords} records from ${sourceHostId} for ${targetClients.length} clients`,
     );
 
     // Enqueue for each target client
@@ -103,7 +103,7 @@ export function createHubForwardService(logService: HubServerLog) {
    * @returns Object with table name → records, or undefined if empty
    */
   function dequeueForClient(
-    hostId: string
+    hostId: string,
   ): Record<string, Record<string, unknown>[]> | undefined {
     const queue = clientQueues.get(hostId);
     if (!queue || queue.size === 0) {
@@ -129,7 +129,7 @@ export function createHubForwardService(logService: HubServerLog) {
     queue.clear();
 
     logService.log(
-      `[ForwardService] Dequeued ${totalRecords} records for ${hostId}`
+      `[ForwardService] Dequeued ${totalRecords} records for ${hostId}`,
     );
 
     return forwards;

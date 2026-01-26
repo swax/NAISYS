@@ -1,14 +1,14 @@
-import { ulid } from "@naisys/database";
 import {
+  MailMessage,
   SendMailRequest,
   SendMailResponse,
-  MailMessage,
 } from "@naisys-supervisor/shared";
-import { usingNaisysDb } from "../database/naisysDatabase.js";
-import { getAgents } from "./agentService.js";
-import { cachedForSeconds } from "../utils/cache.js";
+import { ulid } from "@naisys/database";
 import fs from "fs/promises";
 import path from "path";
+import { usingNaisysDb } from "../database/naisysDatabase.js";
+import { cachedForSeconds } from "../utils/cache.js";
+import { getAgents } from "./agentService.js";
 
 /**
  * Get mail data for a specific agent, optionally filtering by updatedSince
@@ -21,106 +21,107 @@ export const getMailData = cachedForSeconds(
     page: number = 1,
     count: number = 50,
   ): Promise<{ mail: MailMessage[]; timestamp: string; total?: number }> => {
-  try {
-    // First, find the agent to get their userId
-    const agents = await getAgents();
-    const agent = agents.find((a) => a.name === agentName);
+    try {
+      // First, find the agent to get their userId
+      const agents = await getAgents();
+      const agent = agents.find((a) => a.name === agentName);
 
-    if (!agent) {
+      if (!agent) {
+        return {
+          mail: [],
+          timestamp: new Date().toISOString(),
+        };
+      }
+
+      const userId = agent.id;
+
+      // Build the where clause
+      const whereClause: any = {};
+
+      // If updatedSince is provided, filter by date
+      if (updatedSince) {
+        whereClause.created_at = { gte: updatedSince };
+      }
+
+      // Fetch messages where the user is sender or recipient
+      const result = await usingNaisysDb(async (prisma) => {
+        const where = {
+          ...whereClause,
+          OR: [
+            { from_user_id: userId },
+            {
+              recipients: {
+                some: {
+                  user_id: userId,
+                },
+              },
+            },
+          ],
+        };
+
+        // Only get total count on initial fetch (when updatedSince is not set)
+        const total = updatedSince
+          ? undefined
+          : await prisma.mail_messages.count({ where });
+
+        // Get paginated messages
+        const dbMessages = await prisma.mail_messages.findMany({
+          where,
+          orderBy: { id: "desc" },
+          skip: (page - 1) * count,
+          take: count,
+          select: {
+            id: true,
+            from_user_id: true,
+            subject: true,
+            body: true,
+            created_at: true,
+            from_user: {
+              select: { username: true },
+            },
+            recipients: {
+              select: {
+                user_id: true,
+                type: true,
+                user: {
+                  select: { username: true },
+                },
+              },
+            },
+          },
+        });
+
+        return { dbMessages, total };
+      });
+
+      const messages: MailMessage[] = result.dbMessages.map((msg) => ({
+        id: msg.id,
+        fromUserId: msg.from_user_id,
+        fromUsername: msg.from_user.username,
+        subject: msg.subject,
+        body: msg.body,
+        createdAt: msg.created_at.toISOString(),
+        recipients: msg.recipients.map((r) => ({
+          userId: r.user_id,
+          username: r.user.username,
+          type: r.type,
+        })),
+      }));
+
+      return {
+        mail: messages,
+        timestamp: new Date().toISOString(),
+        total: result.total,
+      };
+    } catch (error) {
+      console.error("Error fetching mail data:", error);
       return {
         mail: [],
         timestamp: new Date().toISOString(),
       };
     }
-
-    const userId = agent.id;
-
-    // Build the where clause
-    const whereClause: any = {};
-
-    // If updatedSince is provided, filter by date
-    if (updatedSince) {
-      whereClause.created_at = { gte: updatedSince };
-    }
-
-    // Fetch messages where the user is sender or recipient
-    const result = await usingNaisysDb(async (prisma) => {
-      const where = {
-        ...whereClause,
-        OR: [
-          { from_user_id: userId },
-          {
-            recipients: {
-              some: {
-                user_id: userId,
-              },
-            },
-          },
-        ],
-      };
-
-      // Only get total count on initial fetch (when updatedSince is not set)
-      const total = updatedSince
-        ? undefined
-        : await prisma.mail_messages.count({ where });
-
-      // Get paginated messages
-      const dbMessages = await prisma.mail_messages.findMany({
-        where,
-        orderBy: { id: "desc" },
-        skip: (page - 1) * count,
-        take: count,
-        select: {
-          id: true,
-          from_user_id: true,
-          subject: true,
-          body: true,
-          created_at: true,
-          from_user: {
-            select: { username: true },
-          },
-          recipients: {
-            select: {
-              user_id: true,
-              type: true,
-              user: {
-                select: { username: true },
-              },
-            },
-          },
-        },
-      });
-
-      return { dbMessages, total };
-    });
-
-    const messages: MailMessage[] = result.dbMessages.map((msg) => ({
-      id: msg.id,
-      fromUserId: msg.from_user_id,
-      fromUsername: msg.from_user.username,
-      subject: msg.subject,
-      body: msg.body,
-      createdAt: msg.created_at.toISOString(),
-      recipients: msg.recipients.map((r) => ({
-        userId: r.user_id,
-        username: r.user.username,
-        type: r.type,
-      })),
-    }));
-
-    return {
-      mail: messages,
-      timestamp: new Date().toISOString(),
-      total: result.total,
-    };
-  } catch (error) {
-    console.error("Error fetching mail data:", error);
-    return {
-      mail: [],
-      timestamp: new Date().toISOString(),
-    };
-  }
-});
+  },
+);
 
 /**
  * Send a message using the new flat message model
@@ -249,11 +250,7 @@ async function saveAttachments(
     throw new Error("NAISYS_FOLDER environment variable not set");
   }
 
-  const attachmentsDir = path.join(
-    naisysFolderPath,
-    "attachments",
-    messageId,
-  );
+  const attachmentsDir = path.join(naisysFolderPath, "attachments", messageId);
 
   // Create the directory
   await fs.mkdir(attachmentsDir, { recursive: true });

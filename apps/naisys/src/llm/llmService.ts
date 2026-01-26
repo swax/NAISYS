@@ -1,14 +1,14 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { MessageParam } from "@anthropic-ai/sdk/resources/messages.mjs";
+import { MessageParam } from "@anthropic-ai/sdk/resources";
 import { GoogleGenAI } from "@google/genai";
 import OpenAI from "openai";
 import { ChatCompletionCreateParamsNonStreaming } from "openai/resources";
-import { GlobalConfig } from "../globalConfig.js";
 import { AgentConfig } from "../agent/agentConfig.js";
+import { GlobalConfig } from "../globalConfig.js";
 import { CommandTools } from "./commandTool.js";
 import { CostTracker } from "./costTracker.js";
-import { LLModels, LlmApiType } from "./llModels.js";
 import { LlmMessage, LlmRole } from "./llmDtos.js";
+import { LlmApiType, LLModels } from "./llModels.js";
 
 type QuerySources = "console" | "write-protection" | "compact" | "llmynx";
 
@@ -36,9 +36,21 @@ export function createLLMService(
     } else if (model.apiType === LlmApiType.Mock) {
       return sendWithMock(abortSignal);
     } else if (model.apiType == LlmApiType.Google) {
-      return sendWithGoogle(modelKey, systemMessage, context, source, abortSignal);
+      return sendWithGoogle(
+        modelKey,
+        systemMessage,
+        context,
+        source,
+        abortSignal,
+      );
     } else if (model.apiType == LlmApiType.Anthropic) {
-      return sendWithAnthropic(modelKey, systemMessage, context, source, abortSignal);
+      return sendWithAnthropic(
+        modelKey,
+        systemMessage,
+        context,
+        source,
+        abortSignal,
+      );
     } else if (model.apiType == LlmApiType.OpenAI) {
       const apiKey = model.keyEnvVar
         ? globalConfig().getEnv(model.keyEnvVar)
@@ -85,7 +97,7 @@ export function createLLMService(
 
     return [
       `ns-comment "Mock LLM ran at ${new Date().toISOString()}"`,
-      `ns-session pause 5`
+      `ns-session pause 5`,
     ];
   }
 
@@ -122,7 +134,7 @@ export function createLLMService(
     const chatRequest: ChatCompletionCreateParamsNonStreaming = {
       model: model.name,
       stream: false,
-      reasoning_effort: "high",  // should put behind a usethinking flag?
+      reasoning_effort: "high", // should put behind a usethinking flag?
       messages: [
         {
           role: LlmRole.System, // LlmRole.User, //

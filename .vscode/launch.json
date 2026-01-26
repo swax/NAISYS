@@ -14,7 +14,12 @@
       "type": "pwa-node",
       "request": "launch",
       "runtimeExecutable": "npx",
-      "runtimeArgs": ["tsx", "${workspaceFolder}/apps/naisys/src/naisys.ts", "../../agents/assistant.yaml", "--supervisor"],
+      "runtimeArgs": [
+        "tsx",
+        "${workspaceFolder}/apps/naisys/src/naisys.ts",
+        "../../agents/assistant.yaml",
+        "--supervisor"
+      ],
       "cwd": "${workspaceFolder}/apps/naisys",
       "console": "integratedTerminal",
       "internalConsoleOptions": "neverOpen",

@@ -7,7 +7,6 @@ import {
   NaisysConnection,
 } from "./naisysConnection.js";
 
- 
 type EventHandler = (hostId: string, ...args: any[]) => void;
 
 /** Registered handler with optional schema for validation */
@@ -22,7 +21,7 @@ interface RegisteredHandler {
 export async function createHubServer(
   port: number,
   accessKey: string,
-  logService: HubServerLog
+  logService: HubServerLog,
 ) {
   // Track connected runners
   const naisysConnections = new Map<string, NaisysConnection>();
@@ -34,7 +33,7 @@ export async function createHubServer(
   function registerEvent(
     event: string,
     handler: EventHandler,
-    schema?: ZodSchema
+    schema?: ZodSchema,
   ) {
     if (!eventHandlers.has(event)) {
       eventHandlers.set(event, new Set());
@@ -65,7 +64,7 @@ export async function createHubServer(
           const result = schema.safeParse(args[0]);
           if (!result.success) {
             logService.error(
-              `[Hub] Schema validation failed for event '${event}' from ${hostId}: ${JSON.stringify(result.error.issues)}`
+              `[Hub] Schema validation failed for event '${event}' from ${hostId}: ${JSON.stringify(result.error.issues)}`,
             );
             continue; // Skip this handler if validation fails
           }
@@ -89,7 +88,7 @@ export async function createHubServer(
     hostId: string,
     event: string,
     payload: unknown,
-    ack?: AckCallback<T>
+    ack?: AckCallback<T>,
   ): boolean {
     const connection = naisysConnections.get(hostId);
     if (!connection) {
@@ -119,7 +118,7 @@ export async function createHubServer(
 
     if (!clientAccessKey || clientAccessKey !== accessKey) {
       logService.log(
-        `[Hub] Connection rejected: invalid access key from ${socket.handshake.address}`
+        `[Hub] Connection rejected: invalid access key from ${socket.handshake.address}`,
       );
       return next(new Error("Invalid access key"));
     }
@@ -144,7 +143,7 @@ export async function createHubServer(
     const existingConnection = naisysConnections.get(hostId);
     if (existingConnection) {
       logService.log(
-        `[Hub] Host ${hostname} (${hostId}) reconnecting, replacing old connection`
+        `[Hub] Host ${hostname} (${hostId}) reconnecting, replacing old connection`,
       );
       naisysConnections.delete(hostId);
       raiseEvent("client_disconnected", hostId);
@@ -159,7 +158,7 @@ export async function createHubServer(
         connectedAt: new Date(),
       },
       raiseEvent,
-      logService
+      logService,
     );
 
     naisysConnections.set(hostId, naisysConnection);

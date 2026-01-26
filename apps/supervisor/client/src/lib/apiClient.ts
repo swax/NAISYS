@@ -358,10 +358,10 @@ export const createAgent = async (
   host: string,
 ): Promise<CreateAgentConfigResponse> => {
   try {
-    return await api.post<{ name: string; host: string }, CreateAgentConfigResponse>(
-      apiEndpoints.agentConfig,
-      { name, host },
-    );
+    return await api.post<
+      { name: string; host: string },
+      CreateAgentConfigResponse
+    >(apiEndpoints.agentConfig, { name, host });
   } catch (error) {
     return {
       success: false,

@@ -5,8 +5,8 @@ import {
   loadSyncState,
   queryCatchUpRecords,
   saveSyncState,
-  SYNCABLE_TABLE_CONFIG,
   SYNCABLE_TABLES,
+  SYNCABLE_TABLE_CONFIG,
   upsertRecords,
   type SyncableTable,
 } from "@naisys/database";
@@ -66,7 +66,7 @@ export function createHubSyncServer(
   dbService: DatabaseService,
   logService: HubServerLog,
   forwardService: HubForwardService,
-  config: HubSyncServerConfig
+  config: HubSyncServerConfig,
 ) {
   const {
     maxConcurrentRequests = DEFAULT_CONFIG.maxConcurrentRequests,
@@ -121,17 +121,17 @@ export function createHubSyncServer(
     const state = getOrCreateState(hostId);
     try {
       const since = await dbService.usingDatabase((prisma) =>
-        loadSyncState(prisma, hostId)
+        loadSyncState(prisma, hostId),
       );
       if (since) {
         state.since = since;
         logService.log(
-          `[SyncServer] Loaded persisted sync state for ${hostId}: since=${state.since}`
+          `[SyncServer] Loaded persisted sync state for ${hostId}: since=${state.since}`,
         );
       }
     } catch (error) {
       logService.error(
-        `[SyncServer] Error loading persisted sync state for ${hostId}: ${error}`
+        `[SyncServer] Error loading persisted sync state for ${hostId}: ${error}`,
       );
     }
   }
@@ -139,14 +139,17 @@ export function createHubSyncServer(
   /**
    * Persist sync state to database
    */
-  async function persistSyncState(hostId: string, since: string): Promise<void> {
+  async function persistSyncState(
+    hostId: string,
+    since: string,
+  ): Promise<void> {
     try {
       await dbService.usingDatabase((prisma) =>
-        saveSyncState(prisma, hostId, since)
+        saveSyncState(prisma, hostId, since),
       );
     } catch (error) {
       logService.error(
-        `[SyncServer] Error persisting sync state for ${hostId}: ${error}`
+        `[SyncServer] Error persisting sync state for ${hostId}: ${error}`,
       );
     }
   }
@@ -200,7 +203,7 @@ export function createHubSyncServer(
     const forwards = forwardService.dequeueForClient(hostId);
 
     logService.log(
-      `[SyncServer] Sending sync_request to ${hostId} (since: ${state.since}, forwards: ${forwards ? "yes" : "no"}, in-flight: ${inFlightCount})`
+      `[SyncServer] Sending sync_request to ${hostId} (since: ${state.since}, forwards: ${forwards ? "yes" : "no"}, in-flight: ${inFlightCount})`,
     );
 
     const sent = hubServer.sendMessage(
@@ -224,21 +227,21 @@ export function createHubSyncServer(
         const result = SyncResponseSchema.safeParse(rawResponse);
         if (!result.success) {
           logService.error(
-            `[SyncServer] Invalid sync response from ${hostId}: ${JSON.stringify(result.error.issues)}`
+            `[SyncServer] Invalid sync response from ${hostId}: ${JSON.stringify(result.error.issues)}`,
           );
           clearInFlight(state);
           return;
         }
 
         handleSyncResponse(hostId, result.data);
-      }
+      },
     );
 
     if (!sent) {
       // Client disconnected before we could send
       clearInFlight(state);
       logService.log(
-        `[SyncServer] Client ${hostId} no longer connected, skipping sync`
+        `[SyncServer] Client ${hostId} no longer connected, skipping sync`,
       );
     }
   }
@@ -248,7 +251,7 @@ export function createHubSyncServer(
    */
   function handleSyncError(hostId: string, error: SyncResponseError) {
     logService.error(
-      `[SyncServer] Sync error from ${hostId}: ${error.error} - ${error.message}`
+      `[SyncServer] Sync error from ${hostId}: ${error.error} - ${error.message}`,
     );
 
     // Mark the client state as having a sync error
@@ -263,7 +266,7 @@ export function createHubSyncServer(
     const state = clientStates.get(hostId);
     if (!state) {
       logService.log(
-        `[SyncServer] Received response from unknown client ${hostId}`
+        `[SyncServer] Received response from unknown client ${hostId}`,
       );
       return;
     }
@@ -274,7 +277,7 @@ export function createHubSyncServer(
     const rowCount = countRecordsInTables(data.tables);
 
     logService.log(
-      `[SyncServer] Received ${rowCount} rows from ${hostId}, has_more: ${data.has_more}`
+      `[SyncServer] Received ${rowCount} rows from ${hostId}, has_more: ${data.has_more}`,
     );
 
     // Process data asynchronously
@@ -283,7 +286,7 @@ export function createHubSyncServer(
         // If there's more data, immediately request it
         if (success && data.has_more) {
           logService.log(
-            `[SyncServer] More data available, sending immediate follow-up`
+            `[SyncServer] More data available, sending immediate follow-up`,
           );
           sendSyncRequest(hostId);
         }
@@ -301,7 +304,7 @@ export function createHubSyncServer(
   async function processSyncData(
     hostId: string,
     state: ClientSyncState,
-    data: SyncResponse
+    data: SyncResponse,
   ): Promise<boolean> {
     // Validate ownership - all records must have host_id matching the sender
     for (const [tableName, records] of Object.entries(data.tables)) {
@@ -310,7 +313,9 @@ export function createHubSyncServer(
         if (record.host_id !== hostId) {
           const recordId = String(record.id ?? record.host_id ?? "unknown");
           const errorMsg = `${tableName} record ${recordId} does not belong to host ${hostId}`;
-          logService.error(`[SyncServer] Ownership violation from ${hostId}: ${errorMsg}`);
+          logService.error(
+            `[SyncServer] Ownership violation from ${hostId}: ${errorMsg}`,
+          );
 
           hubServer.sendMessage(hostId, HubEvents.SYNC_ERROR, {
             error: "ownership_violation",
@@ -340,11 +345,11 @@ export function createHubSyncServer(
         await dbService.usingDatabase((prisma) =>
           upsertRecords(prisma, table as SyncableTable, tableData, {
             overrideUpdatedAt: true,
-          })
+          }),
         );
 
         logService.log(
-          `[SyncServer] Upserted ${tableData.length} ${table} from ${hostId}`
+          `[SyncServer] Upserted ${tableData.length} ${table} from ${hostId}`,
         );
       } catch (error) {
         // Log which table and first record's primary key for debugging
@@ -378,7 +383,7 @@ export function createHubSyncServer(
     if (maxTimestamp) {
       state.since = maxTimestamp.toISOString();
       logService.log(
-        `[SyncServer] Updated since timestamp for ${hostId} to ${state.since}`
+        `[SyncServer] Updated since timestamp for ${hostId} to ${state.since}`,
       );
 
       // Persist sync state to database for restart recovery
@@ -389,7 +394,7 @@ export function createHubSyncServer(
     // The forward service filters to shared tables only
     forwardService.enqueueForOtherClients(
       hostId,
-      data.tables as Record<string, Record<string, unknown>[]>
+      data.tables as Record<string, Record<string, unknown>[]>,
     );
 
     return true;
@@ -402,13 +407,13 @@ export function createHubSyncServer(
   async function handleCatchUp(
     hostId: string,
     rawData: unknown,
-    ack?: (response: CatchUpResponse | CatchUpResponseError) => void
+    ack?: (response: CatchUpResponse | CatchUpResponseError) => void,
   ) {
     // Validate request with schema
     const result = CatchUpRequestSchema.safeParse(rawData);
     if (!result.success) {
       logService.error(
-        `[SyncServer] Invalid catch_up request from ${hostId}: ${JSON.stringify(result.error.issues)}`
+        `[SyncServer] Invalid catch_up request from ${hostId}: ${JSON.stringify(result.error.issues)}`,
       );
       return;
     }
@@ -418,7 +423,7 @@ export function createHubSyncServer(
     // Verify host_id matches
     if (data.host_id !== hostId) {
       logService.error(
-        `[SyncServer] Catch-up host_id mismatch from ${hostId}: claimed ${data.host_id}`
+        `[SyncServer] Catch-up host_id mismatch from ${hostId}: claimed ${data.host_id}`,
       );
       if (ack) {
         const errorResponse: CatchUpResponseError = {
@@ -450,7 +455,7 @@ export function createHubSyncServer(
     }
 
     logService.log(
-      `[SyncServer] Processing catch_up from ${hostId} (lastSyncedFromHub: ${data.lastSyncedFromHub})`
+      `[SyncServer] Processing catch_up from ${hostId} (lastSyncedFromHub: ${data.lastSyncedFromHub})`,
     );
 
     try {
@@ -458,13 +463,13 @@ export function createHubSyncServer(
       // Hub uses its own updated_at for catch-up queries (handles stale joiner problem)
       const since = new Date(data.lastSyncedFromHub);
       const { tables, hasMore } = await dbService.usingDatabase((prisma) =>
-        queryCatchUpRecords(prisma, since, hostId)
+        queryCatchUpRecords(prisma, since, hostId),
       );
 
       const recordCount = countRecordsInTables(tables);
 
       logService.log(
-        `[SyncServer] Sending catch_up response to ${hostId} (${recordCount} records, has_more: ${hasMore})`
+        `[SyncServer] Sending catch_up response to ${hostId} (${recordCount} records, has_more: ${hasMore})`,
       );
 
       // If no more data, mark client as done catching up - ready for normal sync polling
@@ -472,7 +477,7 @@ export function createHubSyncServer(
         const state = getOrCreateState(hostId);
         state.catchingUp = false;
         logService.log(
-          `[SyncServer] Client ${hostId} catch-up complete, ready for sync polling`
+          `[SyncServer] Client ${hostId} catch-up complete, ready for sync polling`,
         );
       }
 
@@ -485,7 +490,7 @@ export function createHubSyncServer(
       }
     } catch (error) {
       logService.error(
-        `[SyncServer] Error processing catch_up from ${hostId}: ${error}`
+        `[SyncServer] Error processing catch_up from ${hostId}: ${error}`,
       );
       if (ack) {
         const errorResponse: CatchUpResponseError = {
@@ -514,7 +519,9 @@ export function createHubSyncServer(
     // Load persisted sync state from database (async, but state will be updated before first sync)
     void loadPersistedSyncState(hostId);
 
-    logService.log(`[SyncServer] Client ${hostId} connected, waiting for catch_up`);
+    logService.log(
+      `[SyncServer] Client ${hostId} connected, waiting for catch_up`,
+    );
   }
 
   /**
@@ -531,7 +538,7 @@ export function createHubSyncServer(
     forwardService.removeClient(hostId);
 
     logService.log(
-      `[SyncServer] Client ${hostId} disconnected, state cleaned up`
+      `[SyncServer] Client ${hostId} disconnected, state cleaned up`,
     );
   }
 
@@ -567,14 +574,14 @@ export function createHubSyncServer(
     hubServer.registerEvent(HubEvents.CLIENT_CONNECTED, handleClientConnected);
     hubServer.registerEvent(
       HubEvents.CLIENT_DISCONNECTED,
-      handleClientDisconnected
+      handleClientDisconnected,
     );
 
     // Register handler for catch_up requests (reconnecting clients)
     hubServer.registerEvent(HubEvents.CATCH_UP, handleCatchUp);
 
     logService.log(
-      `[SyncServer] Starting sync polling (interval: ${pollIntervalMs}ms, max concurrent: ${maxConcurrentRequests})`
+      `[SyncServer] Starting sync polling (interval: ${pollIntervalMs}ms, max concurrent: ${maxConcurrentRequests})`,
     );
     intervalId = setInterval(tick, pollIntervalMs);
   }
@@ -586,11 +593,11 @@ export function createHubSyncServer(
     // Unregister event handlers
     hubServer.unregisterEvent(
       HubEvents.CLIENT_CONNECTED,
-      handleClientConnected
+      handleClientConnected,
     );
     hubServer.unregisterEvent(
       HubEvents.CLIENT_DISCONNECTED,
-      handleClientDisconnected
+      handleClientDisconnected,
     );
     hubServer.unregisterEvent(HubEvents.CATCH_UP, handleCatchUp);
 

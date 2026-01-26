@@ -61,7 +61,7 @@ export const AgentConfigFileSchema = z.object({
 
   /** ONLY used by agent start process. The task given to the subagent */
   taskDescription: z.string().optional(),
-  
+
   complexMail: z.boolean().optional(),
 });
 
@@ -184,7 +184,8 @@ export async function createAgentConfig(
     let typedValue: unknown = value;
     if (value === "true") typedValue = true;
     else if (value === "false") typedValue = false;
-    else if (!isNaN(Number(value)) && value.trim() !== "") typedValue = Number(value);
+    else if (!isNaN(Number(value)) && value.trim() !== "")
+      typedValue = Number(value);
 
     rawConfig[field] = typedValue;
 
@@ -211,7 +212,8 @@ export async function createAgentConfig(
       const rows = Object.entries(config)
         .filter(([, value]) => typeof value !== "function")
         .map(([key, value]) => {
-          const displayValue = typeof value === "object" ? JSON.stringify(value) : String(value);
+          const displayValue =
+            typeof value === "object" ? JSON.stringify(value) : String(value);
           return [key, displayValue];
         });
       return table([["Name", "Value"], ...rows], { hsep: " | " });
@@ -225,7 +227,9 @@ export async function createAgentConfig(
       if (typeof value === "function") {
         return `Config field '${name}' is a function and cannot be displayed`;
       }
-      return typeof value === "object" ? JSON.stringify(value, null, 2) : String(value);
+      return typeof value === "object"
+        ? JSON.stringify(value, null, 2)
+        : String(value);
     } else {
       // Update config value
       const name = args[0];

@@ -6,7 +6,6 @@ import { ZodSchema } from "zod";
  * without actual WebSocket connections.
  */
 
- 
 type EventHandler = (...args: any[]) => void;
 type AckCallback<T = unknown> = (response: T) => void;
 
@@ -38,7 +37,7 @@ export interface MockHubManager {
     hubUrl: string,
     event: string,
     payload: unknown,
-    ack?: AckCallback<T>
+    ack?: AckCallback<T>,
   ) => boolean;
   /** Internal: raise an event (called by the bridge) */
   _raiseEvent: (event: string, hubUrl: string, ...args: unknown[]) => void;
@@ -54,14 +53,14 @@ export interface MockHubServer {
   registerEvent: (
     event: string,
     handler: EventHandler,
-    schema?: ZodSchema
+    schema?: ZodSchema,
   ) => void;
   unregisterEvent: (event: string, handler: EventHandler) => void;
   sendMessage: <T = unknown>(
     hostId: string,
     event: string,
     payload: unknown,
-    ack?: AckCallback<T>
+    ack?: AckCallback<T>,
   ) => boolean;
   getConnectedClients: () => MockClientConnection[];
   getConnectionByHostId: (hostId: string) => MockClientConnection | undefined;
@@ -103,7 +102,7 @@ export function createSyncEventBridge() {
       registerEvent: (
         event: string,
         handler: EventHandler,
-        schema?: ZodSchema
+        schema?: ZodSchema,
       ) => {
         if (!hubEventHandlers.has(event)) {
           hubEventHandlers.set(event, new Set());
@@ -127,7 +126,7 @@ export function createSyncEventBridge() {
         hostId: string,
         event: string,
         payload: unknown,
-        ack?: AckCallback<T>
+        ack?: AckCallback<T>,
       ): boolean => {
         const runner = runners.get(hostId);
         if (!runner) {
@@ -155,7 +154,7 @@ export function createSyncEventBridge() {
       },
 
       getConnectionByHostId: (
-        hostId: string
+        hostId: string,
       ): MockClientConnection | undefined => {
         const runner = runners.get(hostId);
         if (!runner) return undefined;
@@ -196,7 +195,7 @@ export function createSyncEventBridge() {
    */
   function createMockHubManager(
     hostId: string,
-    hostname: string
+    hostname: string,
   ): MockHubManager {
     if (runners.has(hostId)) {
       throw new Error(`Runner ${hostId} already exists`);
@@ -230,7 +229,7 @@ export function createSyncEventBridge() {
         _hubUrl: string,
         event: string,
         payload: unknown,
-        ack?: AckCallback<T>
+        ack?: AckCallback<T>,
       ): boolean => {
         if (!hubServer) {
           return false;

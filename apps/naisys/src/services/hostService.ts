@@ -1,13 +1,12 @@
 import { isHostOnline } from "@naisys/common";
-import { ulid } from "@naisys/database";
-import { DatabaseService } from "@naisys/database";
+import { DatabaseService, ulid } from "@naisys/database";
 import table from "text-table";
 import { RegistrableCommand } from "../command/commandRegistry.js";
 import { GlobalConfig } from "../globalConfig.js";
 
 export async function createHostService(
   { globalConfig }: GlobalConfig,
-  dbService: DatabaseService
+  dbService: DatabaseService,
 ) {
   const localHostname = globalConfig().hostname;
 
@@ -87,7 +86,7 @@ export async function createHostService(
             h._count.users.toString(),
           ]),
         ],
-        { hsep: " | " }
+        { hsep: " | " },
       );
     });
   }

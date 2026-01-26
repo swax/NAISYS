@@ -1,4 +1,3 @@
-import { FastifyInstance, FastifyPluginOptions } from "fastify";
 import {
   CreateAgentConfigRequest,
   CreateAgentConfigRequestSchema,
@@ -14,6 +13,7 @@ import {
   UpdateAgentConfigResponse,
   UpdateAgentConfigResponseSchema,
 } from "@naisys-supervisor/shared";
+import { FastifyInstance, FastifyPluginOptions } from "fastify";
 import {
   createAgentConfig,
   getAgentConfig,

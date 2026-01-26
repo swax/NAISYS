@@ -1,15 +1,15 @@
-import React from "react";
 import {
+  Alert,
+  Button,
+  Group,
   Modal,
   Stack,
-  Alert,
   Text,
   TextInput,
-  Group,
-  Button,
 } from "@mantine/core";
+import React from "react";
 import { useSession } from "../contexts/SessionContext";
-import { submitAccessKey, logout } from "../lib/apiClient";
+import { logout, submitAccessKey } from "../lib/apiClient";
 
 interface AccessDialogProps {
   opened: boolean;

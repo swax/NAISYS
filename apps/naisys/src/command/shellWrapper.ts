@@ -144,7 +144,10 @@ export function createShellWrapper(
         // Filter out PS prompts (PS C:\...>)
         if (/^PS [A-Za-z]:\\.*>/.test(trimmed)) return false;
         // Filter out the delimiter echo
-        if (trimmed.includes("Write-Host") && trimmed.includes(_commandDelimiter))
+        if (
+          trimmed.includes("Write-Host") &&
+          trimmed.includes(_commandDelimiter)
+        )
           return false;
         // Filter out PSReadline warnings
         if (trimmed.includes("Cannot load PSReadline module")) return false;

@@ -1,11 +1,10 @@
-import { ulid } from "@naisys/database";
+import { DatabaseService, ulid } from "@naisys/database";
 import * as fs from "fs";
 import yaml from "js-yaml";
 import * as path from "path";
-import { AgentConfigFile, AgentConfigFileSchema } from "./agentConfig.js";
 import { GlobalConfig } from "../globalConfig.js";
-import { DatabaseService } from "@naisys/database";
 import { HostService } from "../services/hostService.js";
+import { AgentConfigFile, AgentConfigFileSchema } from "./agentConfig.js";
 
 /** Pre-loads agents into the database without having to start each one up individually to make it available */
 export async function createAgentRegistrar(
@@ -321,7 +320,12 @@ export async function createAgentRegistrar(
             );
 
             await prisma.users.update({
-              where: { username_host_id: { username: agentConfig.username, host_id: localHostId } },
+              where: {
+                username_host_id: {
+                  username: agentConfig.username,
+                  host_id: localHostId,
+                },
+              },
               data: {
                 title: agentConfig.title,
                 agent_path: absolutePath,

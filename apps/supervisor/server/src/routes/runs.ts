@@ -1,4 +1,3 @@
-import { FastifyInstance, FastifyPluginOptions } from "fastify";
 import {
   ContextLogRequest,
   ContextLogRequestSchema,
@@ -9,6 +8,7 @@ import {
   RunsDataResponse,
   RunsDataResponseSchema,
 } from "@naisys-supervisor/shared";
+import { FastifyInstance, FastifyPluginOptions } from "fastify";
 import { getContextLog, getRunsData } from "../services/runsService.js";
 
 export default async function runsRoutes(

@@ -36,9 +36,7 @@ export function createMailDisplayService(
     });
   }
 
-  async function listMessages(
-    filter?: "received" | "sent"
-  ): Promise<string> {
+  async function listMessages(filter?: "received" | "sent"): Promise<string> {
     const isMultiHost = await hasMultipleHosts();
 
     return await usingDatabase(async (prisma) => {
@@ -63,9 +61,15 @@ export function createMailDisplayService(
           },
         },
         include: {
-          from_user: { select: { username: true, host: { select: { name: true } } } },
+          from_user: {
+            select: { username: true, host: { select: { name: true } } },
+          },
           recipients: {
-            include: { user: { select: { username: true, host: { select: { name: true } } } } },
+            include: {
+              user: {
+                select: { username: true, host: { select: { name: true } } },
+              },
+            },
           },
           status: { where: { user_id: myUserId }, select: { read_at: true } },
         },
@@ -91,9 +95,7 @@ export function createMailDisplayService(
             const userColumn =
               filter === "sent"
                 ? m.recipients
-                    .map((r) =>
-                      formatUserWithHost(r.user, isMultiHost)
-                    )
+                    .map((r) => formatUserWithHost(r.user, isMultiHost))
                     .join(", ")
                 : formatUserWithHost(m.from_user, isMultiHost);
 
@@ -108,12 +110,14 @@ export function createMailDisplayService(
             ];
           }),
         ],
-        { hsep: " | " }
+        { hsep: " | " },
       );
     });
   }
 
-  async function readMessage(messageId: string): Promise<{ fullMessageId: string; display: string }> {
+  async function readMessage(
+    messageId: string,
+  ): Promise<{ fullMessageId: string; display: string }> {
     const isMultiHost = await hasMultipleHosts();
 
     return await usingDatabase(async (prisma) => {
@@ -122,7 +126,11 @@ export function createMailDisplayService(
         where: { id: { endsWith: messageId } },
         include: {
           from_user: {
-            select: { username: true, title: true, host: { select: { name: true } } },
+            select: {
+              username: true,
+              title: true,
+              host: { select: { name: true } },
+            },
           },
           recipients: {
             include: {
@@ -164,7 +172,7 @@ export function createMailDisplayService(
   async function searchMessages(
     searchTerm: string,
     includeArchived: boolean,
-    subjectOnly: boolean
+    subjectOnly: boolean,
   ): Promise<string> {
     const isMultiHost = await hasMultipleHosts();
 
@@ -196,7 +204,9 @@ export function createMailDisplayService(
           ...archiveCondition,
         },
         include: {
-          from_user: { select: { username: true, host: { select: { name: true } } } },
+          from_user: {
+            select: { username: true, host: { select: { name: true } } },
+          },
         },
         orderBy: { created_at: "desc" },
         take: 50,
@@ -216,7 +226,7 @@ export function createMailDisplayService(
             new Date(m.created_at).toLocaleString(),
           ]),
         ],
-        { hsep: " | " }
+        { hsep: " | " },
       );
     });
   }
@@ -238,7 +248,7 @@ export function createMailDisplayService(
 
   function determineStatus(
     userLastActive: Date | null | undefined,
-    hostLastActive: Date | null | undefined
+    hostLastActive: Date | null | undefined,
   ): UserStatus {
     // Running: agent was active within USER_ONLINE_THRESHOLD_MS
     if (isAgentOnline(userLastActive ?? undefined)) {
@@ -279,13 +289,13 @@ export function createMailDisplayService(
 
   function flattenHierarchy(
     nodes: UserNode[],
-    depth: number = 0
+    depth: number = 0,
   ): { user: UserNode; depth: number }[] {
     const result: { user: UserNode; depth: number }[] = [];
 
     // Sort nodes alphabetically by username at each level
     const sortedNodes = [...nodes].sort((a, b) =>
-      a.username.localeCompare(b.username)
+      a.username.localeCompare(b.username),
     );
 
     for (const node of sortedNodes) {
@@ -341,7 +351,7 @@ export function createMailDisplayService(
           : "(none)";
         const status = determineStatus(
           user.user_notifications?.last_active,
-          user.host?.last_active
+          user.host?.last_active,
         );
 
         if (isMultiHost) {

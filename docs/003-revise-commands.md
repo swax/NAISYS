@@ -8,16 +8,16 @@ Rename all NAISYS-specific commands to use the `ns-` prefix and refactor the com
 
 Prefix all commands with `ns-`:
 
-| Old Command | New Command |
-|-------------|-------------|
-| subagent | ns-agent |
-| comment | ns-comment |
-| genimg | ns-genimg |
-| llmynx | ns-lynx |
-| llmail | ns-mail |
-| cost | ns-cost |
-| talk | ns-talk |
-| context | ns-context |
+| Old Command                                  | New Command               |
+| -------------------------------------------- | ------------------------- |
+| subagent                                     | ns-agent                  |
+| comment                                      | ns-comment                |
+| genimg                                       | ns-genimg                 |
+| llmynx                                       | ns-lynx                   |
+| llmail                                       | ns-mail                   |
+| cost                                         | ns-cost                   |
+| talk                                         | ns-talk                   |
+| context                                      | ns-context                |
 | pause, completetask, endsession, trimsession | ns-session (consolidated) |
 
 ### Reasons

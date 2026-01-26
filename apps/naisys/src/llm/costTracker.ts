@@ -1,14 +1,13 @@
-import { ulid } from "@naisys/database";
+import { DatabaseService, ulid } from "@naisys/database";
 import stringArgv from "string-argv";
-import { isUlidWithinWindow, minUlidForTime } from "../utils/ulidTools.js";
-import { GlobalConfig } from "../globalConfig.js";
 import { AgentConfig } from "../agent/agentConfig.js";
-import { DatabaseService } from "@naisys/database";
+import { RegistrableCommand } from "../command/commandRegistry.js";
+import { GlobalConfig } from "../globalConfig.js";
+import { HostService } from "../services/hostService.js";
 import { RunService } from "../services/runService.js";
 import { OutputService } from "../utils/output.js";
+import { isUlidWithinWindow, minUlidForTime } from "../utils/ulidTools.js";
 import { LLModels } from "./llModels.js";
-import { HostService } from "../services/hostService.js";
-import { RegistrableCommand } from "../command/commandRegistry.js";
 
 // Keep only interfaces that are used as parameters or need explicit typing
 interface LlmModelCosts {
@@ -76,7 +75,10 @@ export function createCostTracker(
       });
 
       // Update existing record if within aggregation window, otherwise create new
-      if (existingRecord && isUlidWithinWindow(existingRecord.id, COST_AGGREGATION_WINDOW_MS)) {
+      if (
+        existingRecord &&
+        isUlidWithinWindow(existingRecord.id, COST_AGGREGATION_WINDOW_MS)
+      ) {
         await prisma.costs.update({
           where: { id: existingRecord.id },
           data: {
@@ -130,7 +132,10 @@ export function createCostTracker(
       });
 
       // Update existing record if within aggregation window, otherwise create new
-      if (existingRecord && isUlidWithinWindow(existingRecord.id, COST_AGGREGATION_WINDOW_MS)) {
+      if (
+        existingRecord &&
+        isUlidWithinWindow(existingRecord.id, COST_AGGREGATION_WINDOW_MS)
+      ) {
         await prisma.costs.update({
           where: { id: existingRecord.id },
           data: {
@@ -258,9 +263,7 @@ export function createCostTracker(
   // Check if the current spend limit has been reached and throw an error if so
   async function checkSpendLimit() {
     // Determine if we're using per-agent or global limits
-    const limitUserId = agentConfig().spendLimitDollars
-      ? userId
-      : undefined;
+    const limitUserId = agentConfig().spendLimitDollars ? userId : undefined;
 
     // Determine if we're using time-based limits
     const spendLimitHours =
@@ -275,7 +278,11 @@ export function createCostTracker(
       // Use time-based limit
       const { periodStart, periodEnd } =
         calculatePeriodBoundaries(spendLimitHours);
-      currentTotalCost = await getTotalCosts(limitUserId, periodStart, periodEnd);
+      currentTotalCost = await getTotalCosts(
+        limitUserId,
+        periodStart,
+        periodEnd,
+      );
 
       // Format period description
       const formatTime = (date: Date) => {
@@ -637,9 +644,7 @@ export function createCostTracker(
     const subcommand = argv[0];
 
     if (subcommand === "reset") {
-      const resetUserId = agentConfig().spendLimitDollars
-        ? userId
-        : undefined;
+      const resetUserId = agentConfig().spendLimitDollars ? userId : undefined;
       await clearCosts(resetUserId);
       return `Cost tracking data cleared for ${resetUserId ? `${agentConfig().username}` : "all users"}.`;
     } else if (subcommand) {

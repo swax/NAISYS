@@ -20,13 +20,13 @@ import apiRoutes from "./routes/api.js";
 
 export const startServer = async (
   startupType: "standalone" | "hosted",
-  monitorDb: "monitor-naisys" | "monitor-hub"
+  monitorDb: "monitor-naisys" | "monitor-hub",
 ) => {
   const isProd = process.env.NODE_ENV === "production";
 
   if (startupType === "hosted" && !isProd) {
     console.error(
-      "--supervisor can only be used when .env NODE_ENV=production"
+      "--supervisor can only be used when .env NODE_ENV=production",
     );
     process.exit(1);
   }
@@ -49,7 +49,7 @@ export const startServer = async (
                 destination: path.join(
                   process.env.NAISYS_FOLDER || "",
                   "logs",
-                  "supervisor.log"
+                  "supervisor.log",
                 ),
                 mkdir: true,
               },
@@ -145,7 +145,7 @@ export const startServer = async (
       try {
         await fastify.listen({ port, host });
         console.log(
-          `[Supervisor] Running on http://${host}:${port}/supervisor, logs written to file`
+          `[Supervisor] Running on http://${host}:${port}/supervisor, logs written to file`,
         );
         break;
       } catch (err: any) {
@@ -155,7 +155,7 @@ export const startServer = async (
           attempts++;
           if (attempts >= maxAttempts) {
             throw new Error(
-              `Unable to find available port after ${maxAttempts} attempts`
+              `Unable to find available port after ${maxAttempts} attempts`,
             );
           }
         } else {

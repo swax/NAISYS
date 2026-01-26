@@ -1,16 +1,5 @@
-import {
-  ActionIcon,
-  Card,
-  Flex,
-  Group,
-  Stack,
-  Text,
-} from "@mantine/core";
-import {
-  IconCornerUpLeft,
-  IconMailbox,
-  IconSend,
-} from "@tabler/icons-react";
+import { ActionIcon, Card, Flex, Group, Stack, Text } from "@mantine/core";
+import { IconCornerUpLeft, IconMailbox, IconSend } from "@tabler/icons-react";
 import React, { useState } from "react";
 import { useSession } from "../../contexts/SessionContext";
 import { MailMessage as MailMessageType } from "../../lib/apiClient";
@@ -30,7 +19,8 @@ export const MailMessage: React.FC<MailMessageProps> = ({
 }) => {
   const { isAuthenticated } = useSession();
   const [isExpanded, setIsExpanded] = useState(false);
-  const isFromCurrentAgent = currentAgent && message.fromUsername === currentAgent;
+  const isFromCurrentAgent =
+    currentAgent && message.fromUsername === currentAgent;
   const recipientUsernames = message.recipients.map((r) => r.username);
 
   const messageWithSubject = `${message.subject} - ${message.body}`;
@@ -38,7 +28,9 @@ export const MailMessage: React.FC<MailMessageProps> = ({
     messageWithSubject.includes("\n") || messageWithSubject.length > 100;
 
   const fromToUsernames = isFromCurrentAgent
-    ? recipientUsernames.length > 0 ? recipientUsernames : ["Unknown"]
+    ? recipientUsernames.length > 0
+      ? recipientUsernames
+      : ["Unknown"]
     : [message.fromUsername];
 
   return (

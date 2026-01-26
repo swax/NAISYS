@@ -1,9 +1,12 @@
-import { describe, expect, test, beforeEach, jest } from "@jest/globals";
+import { describe, expect, test } from "@jest/globals";
 
 // Simple unit test for the calculation function without needing the full module
 describe("calculatePeriodBoundaries", () => {
   // Copy of the function for testing
-  function calculatePeriodBoundaries(hours: number, now: Date = new Date()): {
+  function calculatePeriodBoundaries(
+    hours: number,
+    now: Date = new Date(),
+  ): {
     periodStart: Date;
     periodEnd: Date;
   } {
@@ -22,8 +25,12 @@ describe("calculatePeriodBoundaries", () => {
     const periodStartHours = periodIndex * hours;
     const periodEndHours = (periodIndex + 1) * hours;
 
-    const periodStart = new Date(midnight.getTime() + periodStartHours * 60 * 60 * 1000);
-    const periodEnd = new Date(midnight.getTime() + periodEndHours * 60 * 60 * 1000);
+    const periodStart = new Date(
+      midnight.getTime() + periodStartHours * 60 * 60 * 1000,
+    );
+    const periodEnd = new Date(
+      midnight.getTime() + periodEndHours * 60 * 60 * 1000,
+    );
 
     return { periodStart, periodEnd };
   }
@@ -144,7 +151,8 @@ describe("calculatePeriodBoundaries", () => {
     const hours = 2;
     const result = calculatePeriodBoundaries(hours, now);
 
-    const durationMs = result.periodEnd.getTime() - result.periodStart.getTime();
+    const durationMs =
+      result.periodEnd.getTime() - result.periodStart.getTime();
     const durationHours = durationMs / (1000 * 60 * 60);
 
     expect(durationHours).toBe(hours);

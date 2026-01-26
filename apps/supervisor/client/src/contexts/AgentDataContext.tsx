@@ -1,9 +1,4 @@
-import React, {
-  createContext,
-  useContext,
-  useEffect,
-  useState,
-} from "react";
+import React, { createContext, useContext, useEffect, useState } from "react";
 import { useAgentData } from "../hooks/useAgentData";
 import { Agent, Host } from "../types/agent";
 
@@ -34,11 +29,16 @@ export const AgentDataProvider: React.FC<{ children: React.ReactNode }> = ({
 }) => {
   const [agents, setAgents] = useState<Agent[]>([]);
   const [hosts, setHosts] = useState<Host[]>([]);
-  const [readStatus, setReadStatus] = useState<Record<string, ClientReadStatus>>(
-    {},
-  );
+  const [readStatus, setReadStatus] = useState<
+    Record<string, ClientReadStatus>
+  >({});
 
-  const { agents: cachedAgents, hosts: cachedHosts, isLoading, error } = useAgentData();
+  const {
+    agents: cachedAgents,
+    hosts: cachedHosts,
+    isLoading,
+    error,
+  } = useAgentData();
 
   // Update data from agent polling responses
   useEffect(() => {
@@ -90,7 +90,8 @@ export const AgentDataProvider: React.FC<{ children: React.ReactNode }> = ({
 
       // ULIDs are lexicographically sortable, so string comparison works
       const newLogId =
-        lastReadLogId !== undefined && lastReadLogId > currentStatus.lastReadLogId
+        lastReadLogId !== undefined &&
+        lastReadLogId > currentStatus.lastReadLogId
           ? lastReadLogId
           : currentStatus.lastReadLogId;
       const newMailId =

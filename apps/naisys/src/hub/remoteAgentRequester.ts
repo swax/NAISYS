@@ -36,7 +36,7 @@ export function createRemoteAgentRequester(hubManager: HubManager) {
     const connectedHubs = hubManager.getConnectedHubs();
     if (connectedHubs.length === 0) {
       throw new Error(
-        `Cannot ${operation} remote agent '${targetUsername}' - no hub connection available`
+        `Cannot ${operation} remote agent '${targetUsername}' - no hub connection available`,
       );
     }
 
@@ -44,21 +44,37 @@ export function createRemoteAgentRequester(hubManager: HubManager) {
 
     return new Promise<TResult>((resolve, reject) => {
       const timeout = setTimeout(() => {
-        reject(new Error(`Timeout: ${operation} remote agent '${targetUsername}'`));
+        reject(
+          new Error(`Timeout: ${operation} remote agent '${targetUsername}'`),
+        );
       }, REMOTE_OPERATION_TIMEOUT_MS);
 
-      const sent = hubManager.sendMessage<TRes>(hubUrl, event, request, (response) => {
-        clearTimeout(timeout);
-        if (response.success) {
-          resolve(onSuccess(response));
-        } else {
-          reject(new Error(response.error || `Failed to ${operation} remote agent '${targetUsername}'`));
-        }
-      });
+      const sent = hubManager.sendMessage<TRes>(
+        hubUrl,
+        event,
+        request,
+        (response) => {
+          clearTimeout(timeout);
+          if (response.success) {
+            resolve(onSuccess(response));
+          } else {
+            reject(
+              new Error(
+                response.error ||
+                  `Failed to ${operation} remote agent '${targetUsername}'`,
+              ),
+            );
+          }
+        },
+      );
 
       if (!sent) {
         clearTimeout(timeout);
-        reject(new Error(`Failed to send ${operation} request for remote agent '${targetUsername}'`));
+        reject(
+          new Error(
+            `Failed to send ${operation} request for remote agent '${targetUsername}'`,
+          ),
+        );
       }
     });
   }

@@ -1,6 +1,6 @@
 import { MultipartFile } from "@fastify/multipart";
-import { FastifyInstance, FastifyPluginOptions } from "fastify";
 import {
+  ErrorResponseSchema,
   MailDataRequest,
   MailDataRequestSchema,
   MailDataResponse,
@@ -9,8 +9,8 @@ import {
   SendMailRequestSchema,
   SendMailResponse,
   SendMailResponseSchema,
-  ErrorResponseSchema,
 } from "@naisys-supervisor/shared";
+import { FastifyInstance, FastifyPluginOptions } from "fastify";
 import { getMailData, sendMessage } from "../services/mailService.js";
 import { validateSession } from "./access.js";
 

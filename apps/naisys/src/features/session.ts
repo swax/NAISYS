@@ -6,13 +6,13 @@ import {
   RegistrableCommand,
 } from "../command/commandRegistry.js";
 import { ShellCommand } from "../command/shellCommand.js";
-import { LLMail } from "./llmail.js";
 import { GlobalConfig } from "../globalConfig.js";
 import { ContextManager } from "../llm/contextManager.js";
 import { SessionCompactor } from "../llm/sessionCompactor.js";
 import { InputModeService } from "../utils/inputMode.js";
 import { OutputService } from "../utils/output.js";
 import * as utilities from "../utils/utilities.js";
+import { LLMail } from "./llmail.js";
 
 export function createSessionService(
   { globalConfig }: GlobalConfig,
@@ -79,7 +79,9 @@ export function createSessionService(
     return helpText;
   }
 
-  function handlePause(secondsArg: string | undefined): string | CommandResponse {
+  function handlePause(
+    secondsArg: string | undefined,
+  ): string | CommandResponse {
     const pauseSeconds = secondsArg ? parseInt(secondsArg) : 0;
 
     // Don't allow the LLM to hang itself

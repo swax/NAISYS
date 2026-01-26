@@ -10,10 +10,10 @@ import {
   type AgentStopRequest,
   type AgentStopResponse,
 } from "@naisys/hub-protocol";
+import { AgentManager } from "../agent/agentManager.js";
 import { HostService } from "../services/hostService.js";
 import { HubClientLog } from "./hubClientLog.js";
 import { HubManager } from "./hubManager.js";
-import { AgentManager } from "../agent/agentManager.js";
 
 /** Base request type with target host info */
 interface RemoteRequest {
@@ -43,7 +43,7 @@ export function createRemoteAgentHandler(
   hubClientLog: HubClientLog,
   dbService: DatabaseService,
   hostService: HostService,
-  agentManager: AgentManager
+  agentManager: AgentManager,
 ) {
   const { localHostId } = hostService;
 
@@ -63,7 +63,13 @@ export function createRemoteAgentHandler(
   async function validateAndLookupUser<TRes extends RemoteResponse>(
     operation: string,
     rawData: unknown,
-    schema: { safeParse: (data: unknown) => { success: boolean; data?: RemoteRequest; error?: { issues: unknown } } },
+    schema: {
+      safeParse: (data: unknown) => {
+        success: boolean;
+        data?: RemoteRequest;
+        error?: { issues: unknown };
+      };
+    },
     ack: ((response: TRes) => void) | undefined,
   ): Promise<{ data: RemoteRequest; user: UserInfo } | null> {
     const errorResponse = { success: false } as TRes;
@@ -71,17 +77,23 @@ export function createRemoteAgentHandler(
     // Validate request schema
     const result = schema.safeParse(rawData);
     if (!result.success) {
-      hubClientLog.error(`[RemoteAgentHandler] Invalid agent ${operation} request: ${JSON.stringify(result.error?.issues)}`);
+      hubClientLog.error(
+        `[RemoteAgentHandler] Invalid agent ${operation} request: ${JSON.stringify(result.error?.issues)}`,
+      );
       ack?.({ ...errorResponse, error: "Invalid request format" });
       return null;
     }
 
     const data = result.data!;
-    hubClientLog.write(`[RemoteAgentHandler] Received agent ${operation} request for user ${data.targetUserId}`);
+    hubClientLog.write(
+      `[RemoteAgentHandler] Received agent ${operation} request for user ${data.targetUserId}`,
+    );
 
     // Verify this request is for our host
     if (data.targetHostId !== localHostId) {
-      hubClientLog.error(`[RemoteAgentHandler] Request for different host: ${data.targetHostId} (we are ${localHostId})`);
+      hubClientLog.error(
+        `[RemoteAgentHandler] Request for different host: ${data.targetHostId} (we are ${localHostId})`,
+      );
       ack?.({ ...errorResponse, error: "Request received by wrong host" });
       return null;
     }
@@ -95,15 +107,22 @@ export function createRemoteAgentHandler(
     });
 
     if (!user) {
-      hubClientLog.error(`[RemoteAgentHandler] User ${data.targetUserId} not found`);
+      hubClientLog.error(
+        `[RemoteAgentHandler] User ${data.targetUserId} not found`,
+      );
       ack?.({ ...errorResponse, error: `User ${data.targetUserId} not found` });
       return null;
     }
 
     // Verify user belongs to this host
     if (user.host_id !== localHostId) {
-      hubClientLog.error(`[RemoteAgentHandler] User ${user.username} belongs to host ${user.host_id}, not ${localHostId}`);
-      ack?.({ ...errorResponse, error: `User ${user.username} is not on this host` });
+      hubClientLog.error(
+        `[RemoteAgentHandler] User ${user.username} belongs to host ${user.host_id}, not ${localHostId}`,
+      );
+      ack?.({
+        ...errorResponse,
+        error: `User ${user.username} is not on this host`,
+      });
       return null;
     }
 
@@ -113,10 +132,13 @@ export function createRemoteAgentHandler(
   async function handleAgentStartRequest(
     hubUrl: string,
     rawData: unknown,
-    ack?: (response: AgentStartResponse) => void
+    ack?: (response: AgentStartResponse) => void,
   ) {
     const validated = await validateAndLookupUser<AgentStartResponse>(
-      "start", rawData, AgentStartRequestSchema, ack
+      "start",
+      rawData,
+      AgentStartRequestSchema,
+      ack,
     );
     if (!validated) return;
 
@@ -125,7 +147,9 @@ export function createRemoteAgentHandler(
     try {
       // Start the agent (agentManager.startAgent checks if already running)
       const agentRunId = await agentManager.startAgent(user.id);
-      hubClientLog.write(`[RemoteAgentHandler] Started agent ${user.username} (ID: ${agentRunId})`);
+      hubClientLog.write(
+        `[RemoteAgentHandler] Started agent ${user.username} (ID: ${agentRunId})`,
+      );
       ack?.({ success: true });
     } catch (error) {
       hubClientLog.error(`[RemoteAgentHandler] Error starting agent: ${error}`);
@@ -136,10 +160,13 @@ export function createRemoteAgentHandler(
   async function handleAgentStopRequest(
     hubUrl: string,
     rawData: unknown,
-    ack?: (response: AgentStopResponse) => void
+    ack?: (response: AgentStopResponse) => void,
   ) {
     const validated = await validateAndLookupUser<AgentStopResponse>(
-      "stop", rawData, AgentStopRequestSchema, ack
+      "stop",
+      rawData,
+      AgentStopRequestSchema,
+      ack,
     );
     if (!validated) return;
 
@@ -160,10 +187,13 @@ export function createRemoteAgentHandler(
   async function handleAgentLogRequest(
     hubUrl: string,
     rawData: unknown,
-    ack?: (response: AgentLogResponse) => void
+    ack?: (response: AgentLogResponse) => void,
   ) {
     const validated = await validateAndLookupUser<AgentLogResponse>(
-      "log", rawData, AgentLogRequestSchema, ack
+      "log",
+      rawData,
+      AgentLogRequestSchema,
+      ack,
     );
     if (!validated) return;
 
@@ -181,10 +211,14 @@ export function createRemoteAgentHandler(
       });
 
       const lines = logs.reverse().map((log) => log.message);
-      hubClientLog.write(`[RemoteAgentHandler] Returning ${lines.length} log lines for ${user.username}`);
+      hubClientLog.write(
+        `[RemoteAgentHandler] Returning ${lines.length} log lines for ${user.username}`,
+      );
       ack?.({ success: true, lines });
     } catch (error) {
-      hubClientLog.error(`[RemoteAgentHandler] Error getting agent logs: ${error}`);
+      hubClientLog.error(
+        `[RemoteAgentHandler] Error getting agent logs: ${error}`,
+      );
       ack?.({ success: false, error: String(error) });
     }
   }

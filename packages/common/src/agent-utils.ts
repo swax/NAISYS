@@ -11,7 +11,7 @@ import {
  */
 export function isAgentOnline(
   lastActive?: string | Date,
-  referenceTime?: number
+  referenceTime?: number,
 ): boolean {
   if (!lastActive) {
     return false;
@@ -33,7 +33,7 @@ export function isAgentOnline(
  */
 export function isHostOnline(
   lastActive?: string | Date,
-  referenceTime?: number
+  referenceTime?: number,
 ): boolean {
   if (!lastActive) {
     return false;

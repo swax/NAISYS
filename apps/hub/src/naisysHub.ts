@@ -3,10 +3,10 @@ import { program } from "commander";
 import dotenv from "dotenv";
 import { fileURLToPath } from "url";
 import { createHubForwardService } from "./services/hubForwardService.js";
-import { createRemoteAgentRouter } from "./services/remoteAgentRouter.js";
 import { createHubServer } from "./services/hubServer.js";
 import { createHubServerLog } from "./services/hubServerLog.js";
 import { createHubSyncServer } from "./services/hubSyncServer.js";
+import { createRemoteAgentRouter } from "./services/remoteAgentRouter.js";
 
 /**
  * Starts the Hub server with sync service.
