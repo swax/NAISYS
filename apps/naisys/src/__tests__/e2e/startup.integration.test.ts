@@ -14,7 +14,7 @@ import {
  * E2E integration test for naisys startup flow.
  *
  * Creates a fresh environment with .env and agent.yaml,
- * spawns naisys, runs ns-users command, validates output,
+ * spawns naisys, runs ns-mail users command, validates output,
  * and exits cleanly.
  */
 
@@ -37,7 +37,7 @@ describe("NAISYS Startup E2E", () => {
     cleanupTestDir(testDir);
   });
 
-  test("should start naisys, run ns-users, show admin/ryan, and exit", async () => {
+  test("should start naisys, run ns-mail users, show admin/ryan, and exit", async () => {
     // Create .env file
     createEnvFile(testDir);
 
@@ -54,11 +54,11 @@ describe("NAISYS Startup E2E", () => {
     await naisys.waitForOutput("AGENT STARTED", 30000);
     await naisys.waitForPrompt();
 
-    // Send ns-users command
+    // Send ns-mail users command
     naisys.flushOutput();
-    naisys.sendCommand("ns-users");
+    naisys.sendCommand("ns-mail users");
 
-    // Wait for ns-users output showing both users
+    // Wait for ns-mail users output showing both users
     await naisys.waitForOutput("admin", 10000);
     await naisys.waitForOutput("ryan", 10000);
     await naisys.waitForPrompt();

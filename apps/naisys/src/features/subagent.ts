@@ -694,6 +694,7 @@ export function createSubagentService(
 
   const registrableCommand: RegistrableCommand = {
     commandName: "ns-agent",
+    helpText: "Spawn and manage subagents",
     handleCommand,
   };
 

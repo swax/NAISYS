@@ -69,6 +69,7 @@ export function createCommandLoop(
     ) {
       inputMode.setLLM();
 
+      await output.commentAndLog("Use ns-help to see all available commands");
       await output.commentAndLog("Starting Context:");
 
       const lastSessionSummary = await sessionCompactor.getLastSessionSummary();

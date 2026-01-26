@@ -66,11 +66,11 @@ This document outlines a significant architectural change to simplify agent life
 - The `SPEND_LIMIT_DOLLARS` env var already provides cost control by throttling LLM API calls per hour
 - Let all agents run; the spend limit naturally gates overall system activity
 
-### 2. New `ns-users` Command
+### 2. Enhanced `ns-mail users` Command
 
 **Purpose**: Unified view of all users/agents in the organization hierarchy
 
-**Location**: New file `apps/naisys/src/features/users.ts` or integrate into existing service
+**Location**: Enhanced in `apps/naisys/src/features/llmail.ts` (replaced standalone `ns-users` command)
 
 **Output Format**:
 ```
@@ -424,14 +424,13 @@ interface LlmModel {
 - [ ] Add permission validation for stop (lead or higher only)
 - [x] Add timeout handling for requests (30 second timeout in requester)
 
-#### New `ns-users` Command
-- [x] Create `users.ts` feature file
+#### Enhanced `ns-mail users` Command
+- [x] Enhance `llmail.ts` with hierarchical user listing (removed standalone `ns-users` command)
 - [x] Query entire table and do hierarchy in memory
 - [x] Format output as tree with indentation
 - [x] Show host information for multi-host mode
 - [x] Show running/available/offline status based on `last_active`
-- [x] Register command in `commandRegistry`
-- [x] Add help text
+- [x] Command accessible via existing `ns-mail users`
 
 #### Updated `ns-agent` Command
 - [ ] Refactor `subagent.ts` for new command structure
@@ -444,8 +443,8 @@ interface LlmModel {
 
 #### Remove Old Commands
 
-- [ ] Remove `ns-mail users` (replaced by `ns-users`)
-- [ ] Remove `ns-agent list` (replaced by `ns-users`)
+- [x] Remove `ns-users` command (enhanced `ns-mail users` instead)
+- [ ] Remove `ns-agent list` (replaced by enhanced `ns-mail users`)
 
 ### Phase 2: Enable Auto-Start
 

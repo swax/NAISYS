@@ -140,8 +140,8 @@ initialCommands:
   - `exit` - Exits NAISYS in debug mode. If the LLM tries to use `exit`, it is directed to use `ns-session compact/complete` instead
 - Special Commands usable by the LLM as well as by the debug prompt
   - `ns-comment "<note>"` - The LLM is directed to use this for 'thinking out loud' which avoids 'invalid command' errors
-  - `ns-pause <seconds>` - Can be used by the debug agent or the LLM to pause execution for a set number of seconds
   - `ns-session` - Session management commands:
+    - `ns-session pause <seconds>` - Pause execution for a set number of seconds
     - `ns-session trim <indexes>` - Remove prompts by index to save tokens (e.g., "1-5, 8")
     - `ns-session compact "<note>"` - End session and start fresh with a note for the next session
     - `ns-session complete "<result>"` - Mark task as complete and exit (for sub-agents: notifies lead agent)

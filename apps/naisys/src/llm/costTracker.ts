@@ -652,6 +652,8 @@ export function createCostTracker(
 
   const registrableCommand: RegistrableCommand = {
     commandName: "ns-cost",
+    helpText: "Show token usage and cost tracking",
+    isDebug: true,
     handleCommand,
   };
 

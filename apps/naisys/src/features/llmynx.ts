@@ -644,6 +644,7 @@ Final Merged Content:
 
   const registrableCommand: RegistrableCommand = {
     commandName: "ns-lynx",
+    helpText: "Browse the web",
     handleCommand,
   };
 

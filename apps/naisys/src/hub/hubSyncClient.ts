@@ -491,6 +491,7 @@ export function createHubSyncClient(
 
   const registrableCommand: RegistrableCommand = {
     commandName: "ns-hubs",
+    helpText: "Show hub connection and sync status",
     handleCommand,
   };
 

@@ -25,7 +25,7 @@ import {
  *
  * Tests that:
  * 1. Both agents connect to the hub
- * 2. Users sync across machines (alex and bob visible via ns-users)
+ * 2. Users sync across machines (alex and bob visible via ns-mail users)
  * 3. Alex can send mail to bob through the hub
  * 4. Bob receives the mail
  */
@@ -149,9 +149,9 @@ describe("Cross-Machine Mail E2E", () => {
     // The hub needs time to sync user data between runners
     await new Promise((resolve) => setTimeout(resolve, 3000));
 
-    // --- Verify both users are visible via ns-users on Alex ---
+    // --- Verify both users are visible via ns-mail users on Alex ---
     alex.flushOutput();
-    alex.sendCommand("ns-users");
+    alex.sendCommand("ns-mail users");
     await alex.waitForOutput("alex", 10000);
     await alex.waitForPrompt();
 
@@ -162,7 +162,7 @@ describe("Cross-Machine Mail E2E", () => {
     if (!alexOutput.includes("bob")) {
       await new Promise((resolve) => setTimeout(resolve, 3000));
       alex.flushOutput();
-      alex.sendCommand("ns-users");
+      alex.sendCommand("ns-mail users");
       await alex.waitForOutput("bob", 15000);
       await alex.waitForPrompt();
       alexOutput = alex.flushOutput();
@@ -171,9 +171,9 @@ describe("Cross-Machine Mail E2E", () => {
     expect(alexOutput).toContain("alex");
     expect(alexOutput).toContain("bob");
 
-    // --- Verify both users are visible via ns-users on Bob ---
+    // --- Verify both users are visible via ns-mail users on Bob ---
     bob.flushOutput();
-    bob.sendCommand("ns-users");
+    bob.sendCommand("ns-mail users");
     await bob.waitForOutput("bob", 10000);
     await bob.waitForPrompt();
 
@@ -183,7 +183,7 @@ describe("Cross-Machine Mail E2E", () => {
     if (!bobOutput.includes("alex")) {
       await new Promise((resolve) => setTimeout(resolve, 3000));
       bob.flushOutput();
-      bob.sendCommand("ns-users");
+      bob.sendCommand("ns-mail users");
       await bob.waitForOutput("alex", 15000);
       await bob.waitForPrompt();
       bobOutput = bob.flushOutput();
