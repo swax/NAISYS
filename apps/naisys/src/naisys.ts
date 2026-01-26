@@ -14,7 +14,7 @@ import { createHostService } from "./services/hostService.js";
 dotenv.config({ quiet: true });
 
 program
-  .argument("<agent-path>", "Path to agent configuration file")
+  .argument("[agent-path]", "Path to agent configuration file (optional, defaults to admin agent)")
   .option(
     "--hub",
     "Start Hub server for NAISYS instances running across machines",
@@ -87,8 +87,8 @@ createRemoteAgentHandler(hubManager, hubClientLog, dbService, hostService, agent
 
 
 
-// Resolve the agent path to a user ID and start the agent
-const userId = await agentRegistrar.resolveUserIdFromPath(agentPath);
+// Resolve the agent path to a user ID (or admin if no path) and start the agent
+const userId = await agentRegistrar.getStartupUserId(agentPath);
 await agentManager.startAgent(userId);
 
 await agentManager.waitForAllAgentsToComplete();

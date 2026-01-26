@@ -137,11 +137,11 @@ describe("Hub Forward Service Integration Tests", () => {
     await new Promise((resolve) => setTimeout(resolve, 200));
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     hubSyncServer.stop();
-    runnerADb.cleanup();
-    runnerBDb.cleanup();
-    hubDb.cleanup();
+    await runnerADb.cleanup();
+    await runnerBDb.cleanup();
+    await hubDb.cleanup();
     bridge.reset();
   });
 

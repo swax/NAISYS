@@ -358,20 +358,33 @@ export async function createAgentRegistrar(
     }
   }
 
-  async function resolveUserIdFromPath(agentPath: string): Promise<string> {
-    const absolutePath = path.resolve(agentPath);
-
+  async function getStartupUserId(agentPath?: string): Promise<string> {
     const user = await usingDatabase(async (prisma) => {
-      return await prisma.users.findFirst({
-        where: {
-          agent_path: absolutePath,
-          host_id: localHostId,
-        },
-      });
+      if (agentPath) {
+        const absolutePath = path.resolve(agentPath);
+        return await prisma.users.findFirst({
+          where: {
+            agent_path: absolutePath,
+            host_id: localHostId,
+          },
+        });
+      } else {
+        // No path provided, return admin user
+        return await prisma.users.findFirst({
+          where: {
+            username: "admin",
+            host_id: localHostId,
+          },
+        });
+      }
     });
 
     if (!user) {
-      throw new Error(`No user found for agent path: ${absolutePath}`);
+      throw new Error(
+        agentPath
+          ? `No user found for agent path: ${path.resolve(agentPath)}`
+          : `Admin user not found`,
+      );
     }
 
     return user.id;
@@ -379,7 +392,7 @@ export async function createAgentRegistrar(
 
   return {
     reloadAgents,
-    resolveUserIdFromPath,
+    getStartupUserId,
   };
 }
 

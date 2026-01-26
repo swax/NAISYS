@@ -107,10 +107,10 @@ describe("Hub Sync Integration Tests", () => {
     await new Promise((resolve) => setTimeout(resolve, 200));
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     hubSyncServer.stop();
-    runnerADb.cleanup();
-    hubDb.cleanup();
+    await runnerADb.cleanup();
+    await hubDb.cleanup();
     bridge.reset();
   });
 

@@ -171,7 +171,7 @@ export const startServer = async (
 };
 
 // Start server if this file is run directly
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
   dotenv.config({ quiet: true });
 
   const monitorArg = process.argv.find((arg) => arg.startsWith("monitor="));

@@ -17,7 +17,7 @@ export interface TestDatabase {
   dbService: DatabaseService;
   prisma: PrismaClient;
   folder: string;
-  cleanup: () => void;
+  cleanup: () => Promise<void>;
 }
 
 /**
@@ -40,9 +40,14 @@ export async function createTestDatabase(
   const dbPath = join(folder, "database", `${dbType}.sqlite`);
   const prisma = createPrismaClient(dbPath);
 
-  const cleanup = () => {
-    // Close Prisma connection and remove temp directory
-    prisma.$disconnect().catch(() => {});
+  const cleanup = async () => {
+    // Close both Prisma connections and remove temp directory
+    await Promise.all([
+      dbService.disconnect().catch(() => {}),
+      prisma.$disconnect().catch(() => {}),
+    ]);
+    // Small delay for Windows to release file handles
+    await new Promise((resolve) => setTimeout(resolve, 100));
     if (existsSync(folder)) {
       rmSync(folder, { recursive: true, force: true });
     }
@@ -59,7 +64,7 @@ export async function createTestDatabaseSet(): Promise<{
   runnerA: TestDatabase;
   runnerB: TestDatabase;
   hub: TestDatabase;
-  cleanupAll: () => void;
+  cleanupAll: () => Promise<void>;
 }> {
   const [runnerA, runnerB, hub] = await Promise.all([
     createTestDatabase("runner-a", "naisys"),
@@ -67,10 +72,12 @@ export async function createTestDatabaseSet(): Promise<{
     createTestDatabase("hub", "hub"),
   ]);
 
-  const cleanupAll = () => {
-    runnerA.cleanup();
-    runnerB.cleanup();
-    hub.cleanup();
+  const cleanupAll = async () => {
+    await Promise.all([
+      runnerA.cleanup(),
+      runnerB.cleanup(),
+      hub.cleanup(),
+    ]);
   };
 
   return { runnerA, runnerB, hub, cleanupAll };

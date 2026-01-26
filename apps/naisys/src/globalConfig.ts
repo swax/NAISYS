@@ -41,7 +41,8 @@ export async function createGlobalConfig() {
     const trimSessionEnabled = false;
 
     /* .env is used for global configs across naisys, while agent configs are for the specific agent */
-    const naisysFolder = getEnv("NAISYS_FOLDER", true)!;
+    const naisysFolderEnv = getEnv("NAISYS_FOLDER", true)!;
+    const naisysFolder = path.resolve(naisysFolderEnv || process.cwd());
 
     const localLlmUrl = getEnv("LOCAL_LLM_URL");
     const localLlmName = getEnv("LOCAL_LLM_NAME");
@@ -100,7 +101,7 @@ export async function createGlobalConfig() {
 
     function getEnv(key: string, required?: boolean) {
       const value = process.env[key];
-      if (!value && required) {
+      if (value === undefined && required) {
         throw `Config: Error, .env ${key} is not defined`;
       }
       return value;

@@ -179,20 +179,20 @@ export function createPromptBuilder(
             }
           });
         }, 5000);
-
-        subagentInterval = setInterval(() => {
-          // Check for terminated subagents
-          const terminationEvents = subagent.getTerminationEvents();
-          if (terminationEvents.length) {
-            abortQuestion();
-          }
-
-          // If the active agent has been switched, abort input
-          if (subagent.switchEventTriggered()) {
-            abortQuestion();
-          }
-        }, 500);
       }
+
+      subagentInterval = setInterval(() => {
+        // Check for terminated subagents
+        const terminationEvents = subagent.getTerminationEvents();
+        if (terminationEvents.length) {
+          abortQuestion();
+        }
+
+        // If the active agent has been switched, abort input
+        if (subagent.switchEventTriggered()) {
+          abortQuestion();
+        }
+      }, 500);
     });
   }
 

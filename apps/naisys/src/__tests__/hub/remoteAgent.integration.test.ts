@@ -166,9 +166,9 @@ describe("Remote Agent Integration Tests", () => {
     // Wait a bit for connections to close before cleaning up databases
     await new Promise((resolve) => setTimeout(resolve, 100));
     // Cleanup may fail on Windows due to SQLite file locking - ignore errors
-    try { runnerADb.cleanup(); } catch { /* ignore */ }
-    try { runnerBDb.cleanup(); } catch { /* ignore */ }
-    try { hubDb.cleanup(); } catch { /* ignore */ }
+    try { await runnerADb.cleanup(); } catch { /* ignore */ }
+    try { await runnerBDb.cleanup(); } catch { /* ignore */ }
+    try { await hubDb.cleanup(); } catch { /* ignore */ }
   });
 
   async function waitForAsync(ms: number = 200): Promise<void> {
