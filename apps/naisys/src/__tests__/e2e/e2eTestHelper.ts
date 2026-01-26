@@ -13,10 +13,17 @@ export interface NaisysTestProcess {
   stderr: string[];
   sendCommand: (command: string) => void;
   sendNewLine: () => void;
+  /** Wait for text to appear in output since last flush */
   waitForOutput: (text: string, timeoutMs?: number) => Promise<void>;
+  /** Wait for text to appear N times in output since last flush */
   waitForOutputCount: (text: string, count: number, timeoutMs?: number) => Promise<void>;
-  waitForPrompt: (promptCount?: number, timeoutMs?: number) => Promise<void>;
+  /** Wait for one prompt to appear since last flush */
+  waitForPrompt: (timeoutMs?: number) => Promise<void>;
   getFullOutput: () => string;
+  /** Returns output since last flush and resets the flush position */
+  flushOutput: () => string;
+  /** Log the full output to console for debugging */
+  dumpOutput: () => void;
   cleanup: () => Promise<void>;
 }
 
@@ -124,9 +131,151 @@ export function getNaisysPath(): string {
 }
 
 /**
+ * Get the path to naisysHub.js
+ */
+export function getHubPath(): string {
+  return resolve(__dirname, "../../../../hub/dist/naisysHub.js");
+}
+
+/**
+ * Create a hub .env file for testing
+ */
+export function createHubEnvFile(
+  testDir: string,
+  options: { port: number; accessKey: string }
+): void {
+  const envContent = `
+NAISYS_FOLDER=""
+HUB_PORT=${options.port}
+HUB_ACCESS_KEY=${options.accessKey}
+`.trim();
+  writeFileSync(join(testDir, ".env"), envContent);
+}
+
+/**
+ * Create a naisys .env file with hub connection for testing
+ */
+export function createEnvFileWithHub(
+  testDir: string,
+  options: {
+    hostname: string;
+    hubUrl: string;
+    hubAccessKey: string;
+  }
+): void {
+  const envContent = `
+NAISYS_FOLDER=""
+NAISYS_HOSTNAME="${options.hostname}"
+SPEND_LIMIT_DOLLARS=10
+HUB_URLS="${options.hubUrl}"
+HUB_ACCESS_KEY=${options.hubAccessKey}
+`.trim();
+  writeFileSync(join(testDir, ".env"), envContent);
+}
+
+export interface HubTestProcess {
+  process: ChildProcess;
+  stdout: string[];
+  stderr: string[];
+  /** Wait for text to appear in output */
+  waitForOutput: (text: string, timeoutMs?: number) => Promise<void>;
+  getFullOutput: () => string;
+  cleanup: () => Promise<void>;
+}
+
+/**
+ * Spawn a hub server process for testing
+ */
+export function spawnHub(testDir: string, debug = false): HubTestProcess {
+  const hubPath = getHubPath();
+
+  const proc = spawn("node", [hubPath], {
+    cwd: testDir,
+    env: {
+      ...process.env,
+      FORCE_COLOR: "0",
+    },
+    stdio: ["pipe", "pipe", "pipe"],
+  });
+
+  const stdout: string[] = [];
+  const stderr: string[] = [];
+
+  proc.stdout?.on("data", (data) => {
+    const str = data.toString();
+    stdout.push(str);
+    if (debug) {
+      process.stdout.write(`[HUB] ${str}`);
+    }
+  });
+
+  proc.stderr?.on("data", (data) => {
+    const str = data.toString();
+    stderr.push(str);
+    if (debug) {
+      process.stderr.write(`[HUB ERR] ${str}`);
+    }
+  });
+
+  const waitForOutput = async (text: string, timeoutMs = 10000): Promise<void> => {
+    const startTime = Date.now();
+
+    while (Date.now() - startTime < timeoutMs) {
+      if (stdout.join("").includes(text)) {
+        return;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+
+    throw new Error(
+      `Timeout waiting for "${text}" in hub output. Got:\n${stdout.join("")}`
+    );
+  };
+
+  const getFullOutput = () => stdout.join("");
+
+  const cleanup = async (): Promise<void> => {
+    proc.stdin?.end();
+    proc.stdin?.removeAllListeners();
+    proc.stdout?.removeAllListeners();
+    proc.stderr?.removeAllListeners();
+    proc.removeAllListeners();
+
+    if (!proc.killed) {
+      proc.kill("SIGTERM");
+    }
+
+    await new Promise<void>((resolve) => {
+      if (proc.exitCode !== null) {
+        resolve();
+      } else {
+        proc.on("exit", () => resolve());
+        setTimeout(resolve, 2000);
+      }
+    });
+  };
+
+  return {
+    process: proc,
+    stdout,
+    stderr,
+    waitForOutput,
+    getFullOutput,
+    cleanup,
+  };
+}
+
+export interface SpawnNaisysOptions {
+  args?: string[];
+  /** Enable debug output - logs all stdout to console in real-time */
+  debug?: boolean;
+}
+
+/**
  * Spawn a naisys process for testing
  */
-export function spawnNaisys(testDir: string, args: string[] = []): NaisysTestProcess {
+export function spawnNaisys(testDir: string, options: SpawnNaisysOptions = {}): NaisysTestProcess {
+  const { args = [], debug = false } = options;
   const naisysPath = getNaisysPath();
 
   const proc = spawn("node", [naisysPath, ...args], {
@@ -140,9 +289,14 @@ export function spawnNaisys(testDir: string, args: string[] = []): NaisysTestPro
 
   const stdout: string[] = [];
   const stderr: string[] = [];
+  let flushIndex = 0;
 
   proc.stdout?.on("data", (data) => {
-    stdout.push(data.toString());
+    const str = data.toString();
+    stdout.push(str);
+    if (debug) {
+      process.stdout.write(str);
+    }
   });
 
   proc.stderr?.on("data", (data) => {
@@ -157,19 +311,20 @@ export function spawnNaisys(testDir: string, args: string[] = []): NaisysTestPro
     proc.stdin?.write("\n");
   };
 
+  const getOutputSinceFlush = () => stdout.slice(flushIndex).join("");
+
   const waitForOutput = async (text: string, timeoutMs = 10000): Promise<void> => {
     const startTime = Date.now();
 
     while (Date.now() - startTime < timeoutMs) {
-      const fullOutput = stdout.join("");
-      if (fullOutput.includes(text)) {
+      if (getOutputSinceFlush().includes(text)) {
         return;
       }
       await new Promise((resolve) => setTimeout(resolve, 100));
     }
 
     throw new Error(
-      `Timeout waiting for "${text}" in output. Got:\n${stdout.join("")}`
+      `Timeout waiting for "${text}" in output since flush. Got:\n${getOutputSinceFlush()}`
     );
   };
 
@@ -177,8 +332,8 @@ export function spawnNaisys(testDir: string, args: string[] = []): NaisysTestPro
     const startTime = Date.now();
 
     while (Date.now() - startTime < timeoutMs) {
-      const fullOutput = stdout.join("");
-      const matches = fullOutput.split(text).length - 1;
+      const output = getOutputSinceFlush();
+      const matches = output.split(text).length - 1;
       if (matches >= count) {
         return;
       }
@@ -186,18 +341,34 @@ export function spawnNaisys(testDir: string, args: string[] = []): NaisysTestPro
     }
 
     throw new Error(
-      `Timeout waiting for "${text}" to appear ${count} times in output. Got:\n${stdout.join("")}`
+      `Timeout waiting for "${text}" to appear ${count} times since flush. Got:\n${getOutputSinceFlush()}`
     );
   };
 
-  const waitForPrompt = async (promptCount = 1, timeoutMs = 10000): Promise<void> => {
-    // [Tokens: X/Y] appears in every prompt line
-    await waitForOutputCount("[Tokens:", promptCount, timeoutMs);
+  const waitForPrompt = async (timeoutMs = 10000): Promise<void> => {
+    // [Tokens: X/Y] appears in every prompt line - wait for one since last flush
+    await waitForOutputCount("[Tokens:", 1, timeoutMs);
     // Small delay to ensure prompt is fully ready
     await new Promise((resolve) => setTimeout(resolve, 300));
   };
 
   const getFullOutput = () => stdout.join("");
+
+  const flushOutput = () => {
+    const output = stdout.slice(flushIndex).join("");
+    flushIndex = stdout.length;
+    return output;
+  };
+
+  const dumpOutput = () => {
+    console.log("=== NAISYS OUTPUT START ===");
+    console.log(stdout.join(""));
+    console.log("=== NAISYS OUTPUT END ===");
+    if (stderr.length > 0) {
+      console.log("=== STDERR ===");
+      console.log(stderr.join(""));
+    }
+  };
 
   const cleanup = async (): Promise<void> => {
     // Close stdin first
@@ -234,6 +405,8 @@ export function spawnNaisys(testDir: string, args: string[] = []): NaisysTestPro
     waitForOutputCount,
     waitForPrompt,
     getFullOutput,
+    flushOutput,
+    dumpOutput,
     cleanup,
   };
 }

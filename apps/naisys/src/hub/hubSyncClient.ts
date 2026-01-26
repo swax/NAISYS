@@ -15,6 +15,7 @@ import {
   CatchUpResponseErrorSchema,
   CatchUpResponseSchema,
   HubEvents,
+  SyncErrorSchema,
   SyncRequestSchema,
   type CatchUpRequest,
   type CatchUpResponse,
@@ -36,7 +37,8 @@ const SYNC_BATCH_SIZE = 1000;
 export type HubSyncClientStatus =
   | "connected"
   | "schema_mismatch"
-  | "internal_error";
+  | "internal_error"
+  | "disabled";
 
 /** Per-hub sync status */
 interface HubSyncState {
@@ -67,6 +69,33 @@ export function createHubSyncClient(
   function init() {
     hubManager.registerEvent(HubEvents.SYNC_REQUEST, handleSyncRequest);
     hubManager.registerEvent(HubEvents.HUB_CONNECTED, handleHubConnected);
+    hubManager.registerEvent(HubEvents.SYNC_ERROR, handleSyncError);
+  }
+
+  /**
+   * Handle sync error from hub - disable reconnection and set error state
+   */
+  function handleSyncError(hubUrl: string, rawData: unknown) {
+    const result = SyncErrorSchema.safeParse(rawData);
+    if (!result.success) {
+      hubClientLog.error(
+        `[SyncClient] Invalid sync_error from ${hubUrl}: ${JSON.stringify(result.error.issues)}`
+      );
+      return;
+    }
+
+    const { error, message } = result.data;
+    hubClientLog.error(
+      `[SyncClient] Sync error from ${hubUrl}: ${error} - ${message}`
+    );
+
+    // Update state to reflect the fatal error
+    const state = getOrCreateState(hubUrl);
+    state.status = "disabled";
+    state.errorMessage = `${error}: ${message}`;
+
+    // Disable reconnection for this hub
+    hubManager.disableReconnection(hubUrl, message);
   }
 
   /**
@@ -429,11 +458,17 @@ export function createHubSyncClient(
     }
 
     const rows: string[][] = [["URL", "Connected", "Sync Status", "Last Synced"]];
+    const errors: string[] = [];
 
     for (const hub of hubs) {
       const connected = hub.connected ? "Yes" : "No";
       const state = hubSyncStates.get(hub.url);
       const syncStatus = state?.status ?? "pending";
+
+      // Collect error messages to show separately
+      if (state?.status === "disabled" && state.errorMessage) {
+        errors.push(`${hub.url}: ${state.errorMessage}`);
+      }
 
       let lastSynced = "N/A";
       if (state?.lastSyncedFromHub) {
@@ -445,7 +480,13 @@ export function createHubSyncClient(
       rows.push([hub.url, connected, syncStatus, lastSynced]);
     }
 
-    return Promise.resolve(table(rows, { hsep: " | " }));
+    let output = table(rows, { hsep: " | " });
+
+    if (errors.length > 0) {
+      output += "\n\nErrors:\n" + errors.join("\n");
+    }
+
+    return Promise.resolve(output);
   }
 
   const registrableCommand: RegistrableCommand = {

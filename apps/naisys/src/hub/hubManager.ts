@@ -112,6 +112,18 @@ export function createHubManager(
     }));
   }
 
+  /**
+   * Disable reconnection for a specific hub. Used for fatal sync errors.
+   */
+  function disableReconnection(hubUrl: string, reason: string): boolean {
+    const connection = hubConnections.find((c) => c.getUrl() === hubUrl);
+    if (!connection) {
+      return false;
+    }
+    connection.disableReconnection(reason);
+    return true;
+  }
+
   return {
     getAllHubs,
     getConnectedHubs,
@@ -119,6 +131,7 @@ export function createHubManager(
     registerEvent,
     unregisterEvent,
     sendMessage,
+    disableReconnection,
   };
 }
 

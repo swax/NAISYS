@@ -76,6 +76,18 @@ export function createHubConnection(
     }
   }
 
+  /**
+   * Disable reconnection and disconnect. Used for fatal sync errors.
+   */
+  function disableReconnection(reason: string) {
+    if (socket) {
+      socket.io.opts.reconnection = false;
+      socket.disconnect();
+      connected = false;
+      hubClientLog.write(`[Hub] Disabled reconnection to ${hubUrl}: ${reason}`);
+    }
+  }
+
   function isConnected() {
     return connected;
   }
@@ -110,6 +122,7 @@ export function createHubConnection(
   return {
     connect,
     disconnect,
+    disableReconnection,
     isConnected,
     getUrl,
     sendMessage,

@@ -353,9 +353,17 @@ export function createHubSyncServer(
         const pkValues = pkCols
           .map((col: string) => firstRecord?.[col] ?? "?")
           .join(", ");
-        logService.error(
-          `[SyncServer] Error upserting ${table} (first pk: ${pkValues}) from ${hostId}: ${error}`
-        );
+
+        const errorMsg = `Error upserting ${table} (pk: ${pkValues}): ${error}`;
+        logService.error(`[SyncServer] ${errorMsg}`);
+
+        // Send SYNC_ERROR to client and mark as failed
+        hubServer.sendMessage(hostId, HubEvents.SYNC_ERROR, {
+          error: "upsert_error",
+          message: errorMsg,
+        });
+
+        state.syncError = { type: "internal_error", message: errorMsg };
         return false;
       }
 
