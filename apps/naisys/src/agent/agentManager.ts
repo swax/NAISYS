@@ -1,11 +1,11 @@
+import { DatabaseService } from "@naisys/database";
+import { GlobalConfig } from "../globalConfig.js";
+import { HubSyncClient } from "../hub/hubSyncClient.js";
+import { RemoteAgentRequester } from "../hub/remoteAgentRequester.js";
+import { HostService } from "../services/hostService.js";
+import { OutputColor } from "../utils/output.js";
 import { AgentRegistrar } from "./agentRegistrar.js";
 import { AgentRuntime, createAgentRuntime } from "./agentRuntime.js";
-import { GlobalConfig } from "../globalConfig.js";
-import { DatabaseService } from "@naisys/database";
-import { HostService } from "../services/hostService.js";
-import { RemoteAgentRequester } from "../hub/remoteAgentRequester.js";
-import { HubSyncClient } from "../hub/hubSyncClient.js";
-import { OutputColor } from "../utils/output.js";
 
 /** Handles the multiplexing of multiple concurrent agents in the process */
 export class AgentManager {
@@ -37,9 +37,7 @@ export class AgentManager {
 
   async startAgent(userId: string, onStop?: (reason: string) => void) {
     // Check if agent is already running
-    const existing = this.runningAgents.find(
-      (a) => a.agentUserId === userId,
-    );
+    const existing = this.runningAgents.find((a) => a.agentUserId === userId);
     if (existing) {
       throw new Error(`Agent '${existing.agentUsername}' is already running`);
     }
@@ -81,9 +79,7 @@ export class AgentManager {
     stage: "completeShutdown" | "requestShutdown",
     reason: string,
   ) {
-    const agent = this.runningAgents.find(
-      (a) => a.agentUserId === agentUserId,
-    );
+    const agent = this.runningAgents.find((a) => a.agentUserId === agentUserId);
 
     if (!agent) {
       if (stage == "requestShutdown") {
@@ -116,9 +112,7 @@ export class AgentManager {
 
   async stopAgentByUserId(userId: string, reason: string) {
     // Find the running agent by userId
-    const agent = this.runningAgents.find(
-      (a) => a.agentUserId === userId,
-    );
+    const agent = this.runningAgents.find((a) => a.agentUserId === userId);
     if (!agent) {
       throw new Error(`Agent with user ID '${userId}' is not running`);
     }
@@ -127,7 +121,9 @@ export class AgentManager {
   }
 
   setActiveConsoleAgent(userId: string) {
-    const newActiveAgent = this.runningAgents.find((a) => a.agentUserId === userId);
+    const newActiveAgent = this.runningAgents.find(
+      (a) => a.agentUserId === userId,
+    );
 
     if (!newActiveAgent) {
       throw new Error(`Agent with user ID ${userId} not found`);

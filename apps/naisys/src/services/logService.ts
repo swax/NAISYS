@@ -1,8 +1,7 @@
-import { monotonicFactory } from "@naisys/database";
+import { DatabaseService, monotonicFactory } from "@naisys/database";
 import { LlmMessage, LlmRole } from "../llm/llmDtos.js";
-import { DatabaseService } from "@naisys/database";
-import { RunService } from "./runService.js";
 import { HostService } from "./hostService.js";
+import { RunService } from "./runService.js";
 
 export function createLogService(
   { usingDatabase }: DatabaseService,

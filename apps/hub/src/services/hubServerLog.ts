@@ -14,13 +14,13 @@ export interface HubServerLog {
  * In standalone mode, uses console.log.
  */
 export function createHubServerLog(
-  startupType: "standalone" | "hosted"
+  startupType: "standalone" | "hosted",
 ): HubServerLog {
   if (startupType === "hosted") {
     const logPath = path.join(
       process.env.NAISYS_FOLDER || "",
       "logs",
-      "hub-server.log"
+      "hub-server.log",
     );
 
     const logger = pino({

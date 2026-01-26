@@ -1,5 +1,5 @@
-import { io, Socket } from "socket.io-client";
 import { HubEvents } from "@naisys/hub-protocol";
+import { io, Socket } from "socket.io-client";
 import { GlobalConfig } from "../globalConfig.js";
 import { HostService } from "../services/hostService.js";
 import { HubClientLog } from "./hubClientLog.js";
@@ -19,10 +19,10 @@ export function createHubConnection(
   hubClientLog: HubClientLog,
   globalConfig: GlobalConfig,
   hostService: HostService,
-  raiseEvent: RaiseEventFn
+  raiseEvent: RaiseEventFn,
 ) {
   const config = globalConfig.globalConfig();
-  
+
   let socket: Socket | null = null;
   let connected = false;
 
@@ -56,7 +56,7 @@ export function createHubConnection(
 
     socket.on("connect_error", (error) => {
       hubClientLog.write(
-        `[Hub] Connection error to ${hubUrl}: ${error.message}`
+        `[Hub] Connection error to ${hubUrl}: ${error.message}`,
       );
     });
 
@@ -106,7 +106,7 @@ export function createHubConnection(
   function sendMessage<T = unknown>(
     event: string,
     payload: unknown,
-    ack?: AckCallback<T>
+    ack?: AckCallback<T>,
   ): boolean {
     if (!socket || !connected) {
       return false;

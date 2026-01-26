@@ -1,15 +1,18 @@
 import { createCommandHandler } from "../command/commandHandler.js";
 import { createCommandLoop } from "../command/commandLoop.js";
 import { createCommandProtection } from "../command/commandProtection.js";
-import { createCommandRegistry, RegistrableCommand } from "../command/commandRegistry.js";
+import {
+  createCommandRegistry,
+  RegistrableCommand,
+} from "../command/commandRegistry.js";
 import { createPromptBuilder } from "../command/promptBuilder.js";
 import { createShellCommand } from "../command/shellCommand.js";
 import { createShellWrapper } from "../command/shellWrapper.js";
 import { createGenImg } from "../features/genimg.js";
 import { createLLMail } from "../features/llmail.js";
 import { createLLMailAddress } from "../features/llmailAddress.js";
-import { createMailDisplayService } from "../features/mailDisplayService.js";
 import { createLLMynx } from "../features/llmynx.js";
+import { createMailDisplayService } from "../features/mailDisplayService.js";
 import { createSessionService } from "../features/session.js";
 import { createSubagentService } from "../features/subagent.js";
 import { createWorkspacesFeature } from "../features/workspaces.js";
@@ -53,7 +56,12 @@ export async function createAgentRuntime(
     hostService,
     userId,
   );
-  const logService = createLogService(dbService, runService, hostService, userId);
+  const logService = createLogService(
+    dbService,
+    runService,
+    hostService,
+    userId,
+  );
   const output = createOutputService(logService);
   const workspaces = createWorkspacesFeature(globalConfig, agentConfig, output);
 
@@ -97,8 +105,20 @@ export async function createAgentRuntime(
   // Features
   const genimg = createGenImg(agentConfig, costTracker, output);
   const llmailAddress = createLLMailAddress(dbService, hostService);
-  const mailDisplayService = createMailDisplayService(dbService, llmailAddress, userId);
-  const llmail = createLLMail(globalConfig, agentConfig, dbService, hostService, llmailAddress, mailDisplayService, userId);
+  const mailDisplayService = createMailDisplayService(
+    dbService,
+    llmailAddress,
+    userId,
+  );
+  const llmail = createLLMail(
+    globalConfig,
+    agentConfig,
+    dbService,
+    hostService,
+    llmailAddress,
+    mailDisplayService,
+    userId,
+  );
   const subagentService = createSubagentService(
     agentConfig,
     llmail,
@@ -176,8 +196,12 @@ export async function createAgentRuntime(
         return "Message sent!";
       } else if (inputMode.isDebug()) {
         inputMode.setLLM();
-        const respondCommand = agentConfig.agentConfig().mailEnabled ? "ns-mail" : "ns-talk";
-        await contextManager.append(`Message from admin: ${cmdArgs}. Respond via the ${respondCommand} command.`);
+        const respondCommand = agentConfig.agentConfig().mailEnabled
+          ? "ns-mail"
+          : "ns-talk";
+        await contextManager.append(
+          `Message from admin: ${cmdArgs}. Respond via the ${respondCommand} command.`,
+        );
         inputMode.setDebug();
         return "";
       }

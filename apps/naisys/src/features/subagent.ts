@@ -1,9 +1,9 @@
+import { DatabaseService } from "@naisys/database";
 import { ChildProcess } from "child_process";
 import stringArgv from "string-argv";
 import table from "text-table";
 import { AgentConfig } from "../agent/agentConfig.js";
 import { RegistrableCommand } from "../command/commandRegistry.js";
-import { DatabaseService } from "@naisys/database";
 import { RemoteAgentRequester } from "../hub/remoteAgentRequester.js";
 import { HostService } from "../services/hostService.js";
 import { InputModeService } from "../utils/inputMode.js";
@@ -111,7 +111,8 @@ export function createSubagentService(
         const taskDescription = argv[2];
 
         if (!subagentName || !taskDescription) {
-          errorText = "Missing required parameters. Expected: start <username> \"<description>\"\n";
+          errorText =
+            'Missing required parameters. Expected: start <username> "<description>"\n';
           break;
         }
 
@@ -200,12 +201,7 @@ export function createSubagentService(
     } else {
       agentList += table(
         [
-          [
-            "Name",
-            "Status",
-            "Task",
-            inputMode.isDebug() ? "Unread Lines" : "",
-          ],
+          ["Name", "Status", "Task", inputMode.isDebug() ? "Unread Lines" : ""],
           ...subagentRows,
         ],
         { hsep: " | " },
@@ -447,9 +443,8 @@ export function createSubagentService(
 
     if (localSubagent) {
       // Local agent - start the agent
-      await agentManager.startAgent(
-        localSubagent.userId,
-        (stopReason) => handleAgentTermination(localSubagent, stopReason),
+      await agentManager.startAgent(localSubagent.userId, (stopReason) =>
+        handleAgentTermination(localSubagent, stopReason),
       );
 
       localSubagent.taskDescription = taskDescription;
@@ -476,7 +471,12 @@ export function createSubagentService(
   }
 
   async function _startRemoteAgent(
-    user: { id: string; username: string; host_id: string | null; host: { name: string } | null },
+    user: {
+      id: string;
+      username: string;
+      host_id: string | null;
+      host: { name: string } | null;
+    },
     taskDescription: string,
   ): Promise<string> {
     if (!user.host_id) {
@@ -625,7 +625,11 @@ export function createSubagentService(
 
     if (agentRuntime) {
       // Request shutdown of in-process agent, callback defined in start() will handle termination event
-      void agentManager.stopAgent(agentRuntime.agentUserId, "requestShutdown", reason);
+      void agentManager.stopAgent(
+        agentRuntime.agentUserId,
+        "requestShutdown",
+        reason,
+      );
     }
 
     return `Agent '${agentName}' stop requested`;

@@ -9,13 +9,12 @@ export interface HubConnectionInfo {
   connected: boolean;
 }
 
- 
 type EventHandler = (hubUrl: string, ...args: any[]) => void;
 
 export function createHubManager(
   globalConfig: GlobalConfig,
   hostService: HostService,
-  hubClientLog: HubClientLog
+  hubClientLog: HubClientLog,
 ) {
   const config = globalConfig.globalConfig();
   const hubConnections: HubConnection[] = [];
@@ -28,13 +27,13 @@ export function createHubManager(
   function init() {
     if (config.hubUrls.length === 0) {
       hubClientLog.write(
-        "[HubManager] No HUB_URLS configured, running in standalone mode"
+        "[HubManager] No HUB_URLS configured, running in standalone mode",
       );
       return;
     }
 
     hubClientLog.write(
-      `[HubManager] Starting connections to ${config.hubUrls.length} hub(s)...`
+      `[HubManager] Starting connections to ${config.hubUrls.length} hub(s)...`,
     );
     for (const hubUrl of config.hubUrls) {
       const hubConnection = createHubConnection(
@@ -42,7 +41,7 @@ export function createHubManager(
         hubClientLog,
         globalConfig,
         hostService,
-        raiseEvent
+        raiseEvent,
       );
 
       hubConnections.push(hubConnection);
@@ -95,11 +94,13 @@ export function createHubManager(
     hubUrl: string,
     event: string,
     payload: unknown,
-    ack?: (response: T) => void
+    ack?: (response: T) => void,
   ): boolean {
     const connection = hubConnections.find((c) => c.getUrl() === hubUrl);
     if (!connection) {
-      hubClientLog.write(`[HubManager] Hub ${hubUrl} not found for sendMessage`);
+      hubClientLog.write(
+        `[HubManager] Hub ${hubUrl} not found for sendMessage`,
+      );
       return false;
     }
     return connection.sendMessage(event, payload, ack);

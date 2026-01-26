@@ -42,11 +42,11 @@ mail_status (owned by recipient)
 
 ## Ownership Rules
 
-| Table | Owner | Sync Rule |
-|-------|-------|-----------|
-| `mail_messages` | Sender's host | Sync where `from_user.host_id = local_host` |
-| `mail_recipients` | Sender's host | Sync where `message.from_user.host_id = local_host` |
-| `mail_status` | Recipient's host | Sync where `user.host_id = local_host` |
+| Table             | Owner            | Sync Rule                                           |
+| ----------------- | ---------------- | --------------------------------------------------- |
+| `mail_messages`   | Sender's host    | Sync where `from_user.host_id = local_host`         |
+| `mail_recipients` | Sender's host    | Sync where `message.from_user.host_id = local_host` |
+| `mail_status`     | Recipient's host | Sync where `user.host_id = local_host`              |
 
 Messages and recipients are append-only (ULID sync). Status is updatable (timestamp sync) but only by the owning host.
 
@@ -113,6 +113,7 @@ LIMIT 20
 ### `llmail search <terms> [-archived] [-subject]`
 
 Search messages by text. Flags:
+
 - `-archived` - include archived messages (default: exclude)
 - `-subject` - search only in subject (default: search subject + body)
 

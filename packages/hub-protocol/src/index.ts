@@ -84,10 +84,10 @@ export type SyncError = z.infer<typeof SyncErrorSchema>;
 
 /** Request to start an agent on a remote host */
 export const AgentStartRequestSchema = z.object({
-  targetUserId: z.string(),   // user_id to start
-  targetHostId: z.string(),   // resolved from user's host_id
-  requesterId: z.string(),    // user_id of requester
-  task: z.string(),           // task description added to context
+  targetUserId: z.string(), // user_id to start
+  targetHostId: z.string(), // resolved from user's host_id
+  requesterId: z.string(), // user_id of requester
+  task: z.string(), // task description added to context
 });
 export type AgentStartRequest = z.infer<typeof AgentStartRequestSchema>;
 
@@ -100,9 +100,9 @@ export type AgentStartResponse = z.infer<typeof AgentStartResponseSchema>;
 
 /** Request to stop an agent on a remote host */
 export const AgentStopRequestSchema = z.object({
-  targetUserId: z.string(),   // user_id to stop
-  targetHostId: z.string(),   // resolved from user's host_id
-  requesterId: z.string(),    // user_id of requester (must be lead or higher)
+  targetUserId: z.string(), // user_id to stop
+  targetHostId: z.string(), // resolved from user's host_id
+  requesterId: z.string(), // user_id of requester (must be lead or higher)
   reason: z.string(),
 });
 export type AgentStopRequest = z.infer<typeof AgentStopRequestSchema>;
@@ -116,8 +116,8 @@ export type AgentStopResponse = z.infer<typeof AgentStopResponseSchema>;
 
 /** Request to get agent logs from a remote host */
 export const AgentLogRequestSchema = z.object({
-  targetUserId: z.string(),   // user_id to get logs for
-  targetHostId: z.string(),   // resolved from user's host_id
+  targetUserId: z.string(), // user_id to get logs for
+  targetHostId: z.string(), // resolved from user's host_id
   lines: z.number().default(50), // How many lines to return
 });
 export type AgentLogRequest = z.infer<typeof AgentLogRequestSchema>;

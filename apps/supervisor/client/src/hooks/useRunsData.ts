@@ -1,6 +1,6 @@
+import { isAgentOnline } from "@naisys/common";
 import { useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useState } from "react";
-import { isAgentOnline } from "@naisys/common";
 import { RunSession as BaseRunSession } from "shared";
 import { getRunsData, RunsDataParams } from "../lib/apiClient";
 import { RunSession } from "../types/runSession";

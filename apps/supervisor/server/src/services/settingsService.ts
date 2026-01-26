@@ -1,7 +1,7 @@
 import { Settings } from "@naisys-supervisor/shared";
 import {
-  selectFromSupervisorDb,
   runOnSupervisorDb,
+  selectFromSupervisorDb,
 } from "../database/supervisorDatabase.js";
 import { cachedForSeconds } from "../utils/cache.js";
 

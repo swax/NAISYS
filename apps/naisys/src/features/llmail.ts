@@ -8,9 +8,9 @@ import {
 } from "../command/commandRegistry.js";
 import { GlobalConfig } from "../globalConfig.js";
 import { HostService } from "../services/hostService.js";
+import * as utilities from "../utils/utilities.js";
 import { LLMailAddress } from "./llmailAddress.js";
 import { MailDisplayService } from "./mailDisplayService.js";
-import * as utilities from "../utils/utilities.js";
 
 export function createLLMail(
   { globalConfig }: GlobalConfig,
@@ -56,7 +56,9 @@ export function createLLMail(
         if (filterArg && filterArg !== "received" && filterArg !== "sent") {
           throw "Invalid parameter. Use 'received' or 'sent' to filter, or omit for all messages.";
         }
-        return mailDisplayService.listMessages(filterArg as "received" | "sent" | undefined);
+        return mailDisplayService.listMessages(
+          filterArg as "received" | "sent" | undefined,
+        );
       }
 
       case "send": {
@@ -127,14 +129,22 @@ export function createLLMail(
           throw "Invalid parameters. Please provide search terms.";
         }
 
-        return mailDisplayService.searchMessages(terms.join(" "), includeArchived, subjectOnly);
+        return mailDisplayService.searchMessages(
+          terms.join(" "),
+          includeArchived,
+          subjectOnly,
+        );
       }
 
       default: {
         const helpResponse = await handleCommand("help");
         const helpContent =
-          typeof helpResponse === "string" ? helpResponse : helpResponse.content;
-        return "Error, unknown command. See valid commands below:\n" + helpContent;
+          typeof helpResponse === "string"
+            ? helpResponse
+            : helpResponse.content;
+        return (
+          "Error, unknown command. See valid commands below:\n" + helpContent
+        );
       }
     }
   }
@@ -142,7 +152,7 @@ export function createLLMail(
   async function sendMessage(
     userIdentifiers: string[],
     subject: string,
-    message: string
+    message: string,
   ): Promise<string> {
     message = message.replace(/\\n/g, "\n");
 
@@ -156,7 +166,6 @@ export function createLLMail(
 
         for (const identifier of userIdentifiers) {
           try {
-
             const resolved = await resolveUserIdentifier(identifier, tx as any);
             resolvedRecipients.push(resolved);
           } catch (error) {
@@ -202,7 +211,8 @@ export function createLLMail(
 
   async function readMessage(messageId: string): Promise<string> {
     // Get the message display from the display service
-    const { fullMessageId, display } = await mailDisplayService.readMessage(messageId);
+    const { fullMessageId, display } =
+      await mailDisplayService.readMessage(messageId);
 
     // Mark the message as read
     await markMessageAsRead(fullMessageId);

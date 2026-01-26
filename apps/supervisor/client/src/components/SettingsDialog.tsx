@@ -1,13 +1,13 @@
-import React from "react";
 import {
+  Alert,
+  Button,
+  Group,
   Modal,
   Stack,
-  Alert,
   Text,
   TextInput,
-  Group,
-  Button,
 } from "@mantine/core";
+import React from "react";
 import { getSettings, saveSettings } from "../lib/apiClient";
 
 interface SettingsDialogProps {

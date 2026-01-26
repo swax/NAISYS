@@ -1,14 +1,14 @@
-import { FastifyInstance, FastifyPluginOptions } from "fastify";
-import { getSettings, saveSettings } from "../services/settingsService.js";
-import { validateSession } from "./access.js";
 import {
+  ErrorResponseSchema,
   SettingsRequest,
   SettingsRequestSchema,
   SettingsResponse,
   SettingsResponseSchema,
   SettingsSchema,
-  ErrorResponseSchema,
 } from "@naisys-supervisor/shared";
+import { FastifyInstance, FastifyPluginOptions } from "fastify";
+import { getSettings, saveSettings } from "../services/settingsService.js";
+import { validateSession } from "./access.js";
 
 export default async function settingsRoutes(
   fastify: FastifyInstance,

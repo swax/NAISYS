@@ -1,21 +1,21 @@
 import {
+  ActionIcon,
+  Box,
   Button,
+  Flex,
   Group,
+  Image,
   Modal,
+  Paper,
   Select,
   Stack,
   Text,
-  TextInput,
   Textarea,
-  Paper,
-  Image,
-  ActionIcon,
-  Box,
-  Flex,
+  TextInput,
 } from "@mantine/core";
 import { Dropzone } from "@mantine/dropzone";
-import { IconX, IconPaperclip, IconFile } from "@tabler/icons-react";
-import React, { useState, useEffect } from "react";
+import { IconFile, IconPaperclip, IconX } from "@tabler/icons-react";
+import React, { useEffect, useState } from "react";
 import { Agent } from "../../lib/apiClient";
 
 interface FileAttachment {

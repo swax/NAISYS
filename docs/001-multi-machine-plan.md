@@ -12,14 +12,14 @@ Transform NAISYS from a single-machine agent runner to a distributed system with
 
 Components can run together (same process) or separately:
 
-| Command | Components | Use Case |
-|---------|------------|----------|
-| `naisys.js` | Runner only | Standalone agent runner |
-| `naisys.js --supervisor` | Runner + Supervisor | Single-runner with UI |
+| Command                        | Components                | Use Case                |
+| ------------------------------ | ------------------------- | ----------------------- |
+| `naisys.js`                    | Runner only               | Standalone agent runner |
+| `naisys.js --supervisor`       | Runner + Supervisor       | Single-runner with UI   |
 | `naisys.js --hub --supervisor` | Runner + Hub + Supervisor | All-in-one on small VPS |
-| `naisys_hub.js` | Hub only | Dedicated sync server |
-| `naisys_hub.js --supervisor` | Hub + Supervisor | Central management |
-| `naisys_supervisor.js` | Supervisor only | UI pointing at any DB |
+| `naisys_hub.js`                | Hub only                  | Dedicated sync server   |
+| `naisys_hub.js --supervisor`   | Hub + Supervisor          | Central management      |
+| `naisys_supervisor.js`         | Supervisor only           | UI pointing at any DB   |
 
 ## Design Principles
 
@@ -85,15 +85,15 @@ Note: For context_log, use monotonic ULID generation to preserve strict ordering
 
 ### Code Changes
 
-| File | Change |
-|------|--------|
-| `packages/database/src/index.ts` | Add `ulid` dependency, export ULID generator |
-| `apps/naisys/src/services/dbService.ts` | Generate ULIDs on insert, set host_id on all inserts |
-| `apps/naisys/src/agentRegistrar.ts` | Use ULID for new users |
-| `apps/naisys/src/features/llmail.ts` | Use new mail schema (see revised-llmail-plan.md) |
-| `apps/naisys/src/services/runService.ts` | Update ID handling, set host_id |
-| `apps/supervisor/server/src/services/*.ts` | Handle string IDs |
-| `apps/supervisor/shared/src/*-types.ts` | Update type definitions for string IDs |
+| File                                       | Change                                               |
+| ------------------------------------------ | ---------------------------------------------------- |
+| `packages/database/src/index.ts`           | Add `ulid` dependency, export ULID generator         |
+| `apps/naisys/src/services/dbService.ts`    | Generate ULIDs on insert, set host_id on all inserts |
+| `apps/naisys/src/agentRegistrar.ts`        | Use ULID for new users                               |
+| `apps/naisys/src/features/llmail.ts`       | Use new mail schema (see revised-llmail-plan.md)     |
+| `apps/naisys/src/services/runService.ts`   | Update ID handling, set host_id                      |
+| `apps/supervisor/server/src/services/*.ts` | Handle string IDs                                    |
+| `apps/supervisor/shared/src/*-types.ts`    | Update type definitions for string IDs               |
 
 ### Dependencies
 
@@ -147,11 +147,11 @@ Note: Multiple Hub URLs supported for high availability. Runner maintains WebSoc
 
 ### Code Changes
 
-| File | Change |
-|------|--------|
-| `apps/naisys/src/config.ts` | Add `NAISYS_HOSTNAME` config |
+| File                                | Change                                            |
+| ----------------------------------- | ------------------------------------------------- |
+| `apps/naisys/src/config.ts`         | Add `NAISYS_HOSTNAME` config                      |
 | `apps/naisys/src/agentRegistrar.ts` | Filter agents by hostname, set hostname on create |
-| `apps/naisys/src/agentManager.ts` | Only load agents matching hostname |
+| `apps/naisys/src/agentManager.ts`   | Only load agents matching hostname                |
 
 ---
 
@@ -184,6 +184,7 @@ Runner opens a persistent WebSocket connection to Hub. Hub controls sync rate by
 ### Sync Protocol
 
 **Hub sends sync request:**
+
 ```json
 {
   "type": "sync_request",
@@ -195,6 +196,7 @@ Runner opens a persistent WebSocket connection to Hub. Hub controls sync rate by
 Hub tracks a single `since` timestamp per runner - the MAX timestamp from the last sync response.
 
 **Runner responds with new/updated rows:**
+
 ```json
 {
   "type": "sync_response",
@@ -211,6 +213,7 @@ Hub tracks a single `since` timestamp per runner - the MAX timestamp from the la
 **Pagination:** Each response returns max N rows per table (e.g., 1000). If `has_more: true`, Hub sends another sync_request using the last received IDs. Continues until `has_more: false`.
 
 **Runner responds with schema mismatch error:**
+
 ```json
 {
   "type": "sync_error",
@@ -227,17 +230,17 @@ Note: Uses existing `schema_version` table to check compatibility.
 
 Runners only sync records they **own** (where `host_id` matches local host). All tables use the same simple query pattern.
 
-| Table | Sync Query |
-|-------|------------|
-| `hosts` | `WHERE id = :localHostId AND updated_at > :since` |
-| `users` | `WHERE host_id = :localHostId AND updated_at > :since` |
+| Table                | Sync Query                                             |
+| -------------------- | ------------------------------------------------------ |
+| `hosts`              | `WHERE id = :localHostId AND updated_at > :since`      |
+| `users`              | `WHERE host_id = :localHostId AND updated_at > :since` |
 | `user_notifications` | `WHERE host_id = :localHostId AND updated_at > :since` |
-| `mail_messages` | `WHERE host_id = :localHostId AND updated_at > :since` |
-| `mail_recipients` | `WHERE host_id = :localHostId AND updated_at > :since` |
-| `mail_status` | `WHERE host_id = :localHostId AND updated_at > :since` |
-| `context_log` | `WHERE host_id = :localHostId AND updated_at > :since` |
-| `costs` | `WHERE host_id = :localHostId AND updated_at > :since` |
-| `run_session` | `WHERE host_id = :localHostId AND updated_at > :since` |
+| `mail_messages`      | `WHERE host_id = :localHostId AND updated_at > :since` |
+| `mail_recipients`    | `WHERE host_id = :localHostId AND updated_at > :since` |
+| `mail_status`        | `WHERE host_id = :localHostId AND updated_at > :since` |
+| `context_log`        | `WHERE host_id = :localHostId AND updated_at > :since` |
+| `costs`              | `WHERE host_id = :localHostId AND updated_at > :since` |
+| `run_session`        | `WHERE host_id = :localHostId AND updated_at > :since` |
 
 **Why this prevents forwarding loops:** When runner B receives forwarded data from runner A, the `host_id` on those rows is A's host_id. When hub later pulls from runner B, the query filters by `host_id = B`, so the forwarded records are excluded. No joins needed.
 
@@ -263,6 +266,7 @@ Multi-Machine Mode (HUB_URLS set):
 When runner connects (or reconnects), it tells Hub when it last synced:
 
 **Runner sends:**
+
 ```json
 {
   "type": "catch_up",
@@ -275,6 +279,7 @@ When runner connects (or reconnects), it tells Hub when it last synced:
 Runner stores a single timestamp: when it last received data from this hub.
 
 **Hub responds:**
+
 ```json
 {
   "type": "catch_up_response",
@@ -296,6 +301,7 @@ Runner stores a single timestamp: when it last received data from this hub.
 **Important: No sync polling during catch-up.** The hub maintains a `catchingUp` flag per client. While true, the client is excluded from `selectNextClient()`. This prevents race conditions where the client receives data from both catch_up responses and sync_request forwards simultaneously. Only after catch-up completes (`has_more: false`) does normal sync polling begin.
 
 **Key insight:** Hub uses its own `updated_at` (set on upsert) for catch-up queries, not the originating row's timestamp. This handles the "stale joiner" problem:
+
 - Runner A syncs, disconnects at hub time X
 - Runner B connects with old data (timestamps < X)
 - Hub stores B's data with hub's current `updated_at`
@@ -303,12 +309,14 @@ Runner stores a single timestamp: when it last received data from this hub.
 - Runner A gets B's data because hub's `updated_at` > X
 
 **Important: Catch-up always queries by `updated_at`, not ULID.** Even for append-only tables (mail_messages, mail_recipients, context_log) that use ULID-based queries for runner→hub sync, catch-up must use `updated_at`. This is because:
+
 - The ULID is generated by the originating runner (client timestamp)
 - The hub sets its own `updated_at` when storing records
 - A stale joiner might bring old records with old ULIDs
 - Catch-up needs records based on hub's `updated_at`, not original ULID
 
 **Benefits:**
+
 - Single timestamp per hub (not per-originating-host)
 - Simple catch-up query
 - Handles all edge cases including late-joining runners with old data
@@ -327,12 +335,14 @@ model hub_sync_state {
 ```
 
 **Hub side:**
+
 - Keyed by runner's host_id
 - Stores "last timestamp I pulled FROM runner X"
 - Updated after each successful sync pull
 - On startup, loads existing state to resume sync from where it left off
 
 **Runner side:**
+
 - Keyed by hub URL (hashed to fit in id field)
 - Stores "last timestamp I received forwarded data from this hub"
 - Single entry per hub (not per-originating-host)
@@ -350,10 +360,10 @@ Other fields (`lastSyncTime`, `inFlight`, `syncError`) are transient and don't n
 
 ### New Files
 
-| File | Purpose |
-|------|---------|
-| `apps/naisys/src/hub/hubSyncClient.ts` | WebSocket client, responds to sync requests, receives forwarded data |
-| `apps/hub/src/services/hubSyncServer.ts` | WebSocket server, manages sync state, forwards data |
+| File                                     | Purpose                                                              |
+| ---------------------------------------- | -------------------------------------------------------------------- |
+| `apps/naisys/src/hub/hubSyncClient.ts`   | WebSocket client, responds to sync requests, receives forwarded data |
+| `apps/hub/src/services/hubSyncServer.ts` | WebSocket server, manages sync state, forwards data                  |
 
 ---
 
@@ -378,19 +388,20 @@ Hub pulls data from runners and forwards to all other runners. All runners becom
 
 All shared tables are forwarded to **all runners** (except the origin). This makes runners eventually consistent and enables agent resurrection on any runner with full mail history.
 
-| Table | Forward To | Reason |
-|-------|------------|--------|
-| `hosts` | All runners (except origin) | Know all runners in system |
-| `users` | All runners (except origin) | Global user directory |
-| `user_notifications` | All runners (except origin) | Online status for all agents |
-| `mail_messages` | All runners (except origin) | Full mail history everywhere |
-| `mail_recipients` | All runners (except origin) | Who messages were sent to |
-| `mail_status` | All runners (except origin) | Read/archive status |
-| `context_log` | None | Hub/Supervisor-only (viewing) |
-| `costs` | None | Hub/Supervisor-only (viewing) |
-| `run_session` | None | Hub/Supervisor-only (viewing) |
+| Table                | Forward To                  | Reason                        |
+| -------------------- | --------------------------- | ----------------------------- |
+| `hosts`              | All runners (except origin) | Know all runners in system    |
+| `users`              | All runners (except origin) | Global user directory         |
+| `user_notifications` | All runners (except origin) | Online status for all agents  |
+| `mail_messages`      | All runners (except origin) | Full mail history everywhere  |
+| `mail_recipients`    | All runners (except origin) | Who messages were sent to     |
+| `mail_status`        | All runners (except origin) | Read/archive status           |
+| `context_log`        | None                        | Hub/Supervisor-only (viewing) |
+| `costs`              | None                        | Hub/Supervisor-only (viewing) |
+| `run_session`        | None                        | Hub/Supervisor-only (viewing) |
 
 **Benefits of forwarding all mail to all runners:**
+
 - Any runner can resurrect a user with full mail history
 - Simpler logic - no routing decisions needed
 - All runners have complete view of all agents and mail
@@ -421,6 +432,7 @@ because their host_id = host-1, not host-2. Only Bob's mail_status is synced.
 Forwards are included in sync_request messages rather than sent separately. This batches forwards naturally and reduces message volume.
 
 **Extended sync_request (Hub → Runner):**
+
 ```json
 {
   "type": "sync_request",
@@ -440,6 +452,7 @@ Note: `forwards` field is optional - omitted when queue is empty.
 Hub maintains per-runner queues for pending forwards. These are ephemeral and tied to connection lifecycle.
 
 **Per-client state:**
+
 ```typescript
 interface ClientSyncState {
   // Existing pull state
@@ -456,6 +469,7 @@ interface ClientSyncState {
 ```
 
 **Queue lifecycle:**
+
 ```
 Connect    → create empty queue, set catchingUp = true
 Catch-up   → hub sends missed data, runner upserts (no sync polling yet)
@@ -469,18 +483,21 @@ Reconnect  → catch_up from DB rebuilds state, then fresh queue
 ### Hub Forwarding Logic
 
 When hub receives sync data from runner A:
+
 1. Store all rows in hub database (hub's updated_at = now, preserving original host_id)
-2. Filter to shared tables only (hosts, users, user_notifications, mail_*)
+2. Filter to shared tables only (hosts, users, user*notifications, mail*\*)
 3. For each OTHER connected runner (B, C, D...):
    - Append rows to their `outgoingForwards` queue
 
 When hub sends sync_request to runner B:
+
 1. Include contents of runner B's `outgoingForwards` in the request
 2. Clear the queue after sending
 
 ### Runner Handles Forwards
 
 When runner receives sync_request with forwards:
+
 1. Upsert forwarded rows into local database (preserving original host_id)
 2. Update local `hub_sync_state` with current timestamp
 3. Then respond with own sync data as usual
@@ -490,6 +507,7 @@ When runner receives sync_request with forwards:
 ### Offline Handling
 
 If target runner is disconnected:
+
 - Hub continues to receive and store data from other runners
 - Queue doesn't exist for disconnected runner (no memory pressure)
 - When runner reconnects, it sends `catch_up` with lastReceived timestamps
@@ -546,11 +564,13 @@ DATABASE_URL=postgresql://user:pass@host:5432/naisys_hub
 ```
 
 **Implementation Notes:**
+
 - Hub's Prisma schema supports both SQLite and PostgreSQL
 - Add `provider` field to datasource or use environment-based switching
 - Migration path: export SQLite → import PostgreSQL
 
 **When to switch:**
+
 - Multiple runners pushing logs/costs continuously
 - Noticeable write latency or lock contention
 - Estimated threshold: ~100 runners or ~10K log writes/hour
@@ -561,34 +581,34 @@ DATABASE_URL=postgresql://user:pass@host:5432/naisys_hub
 
 ### New Packages
 
-| Path | Purpose |
-|------|---------|
-| `apps/hub/` | New package for WebSocket sync hub |
+| Path               | Purpose                                      |
+| ------------------ | -------------------------------------------- |
+| `apps/hub/`        | New package for WebSocket sync hub           |
 | `apps/supervisor/` | Web UI for viewing agents, logs, mail, costs |
 
 ### New Files
 
-| Path | Purpose |
-|------|---------|
-| `apps/naisys/src/hub/hubSyncClient.ts` | Responds to sync requests, filters by updated_by host |
+| Path                                     | Purpose                                                        |
+| ---------------------------------------- | -------------------------------------------------------------- |
+| `apps/naisys/src/hub/hubSyncClient.ts`   | Responds to sync requests, filters by updated_by host          |
 | `apps/hub/src/services/hubSyncServer.ts` | Pulls from runners, stores data, forwards to all other runners |
-| `apps/hub/src/services/hubServer.ts` | WebSocket server, manages connections |
-| `apps/hub/src/naisysHub.ts` | Hub entry point |
+| `apps/hub/src/services/hubServer.ts`     | WebSocket server, manages connections                          |
+| `apps/hub/src/naisysHub.ts`              | Hub entry point                                                |
 
 ### Modified Files
 
-| Path | Changes |
-|------|---------|
+| Path                                     | Changes                                                                                   |
+| ---------------------------------------- | ----------------------------------------------------------------------------------------- |
 | `packages/database/prisma/schema.prisma` | ULID IDs, hosts table, host_id on ALL syncable tables, updated_at on all, new mail schema |
-| `packages/database/src/index.ts` | ULID exports |
-| `apps/naisys/src/services/dbService.ts` | ULID generation, set host_id on inserts, upsert for forwarded data |
-| `apps/naisys/src/agentRegistrar.ts` | ULID for users, host_id filtering |
-| `apps/naisys/src/agentManager.ts` | Filter agents by host_id |
-| `apps/naisys/src/features/llmail.ts` | New mail schema (mail_messages, mail_recipients, mail_status), set host_id |
-| `apps/naisys/src/naisys.ts` | Hub WebSocket init, create/update host record on startup, --hub/--supervisor flags |
-| `apps/naisys/src/config.ts` | NAISYS_HOSTNAME, HUB_URLS config |
-| `apps/supervisor/server/src/index.ts` | Points to Hub or Runner DB |
-| `apps/supervisor/client/src/pages/*` | Multi-host UI (filter by host) |
+| `packages/database/src/index.ts`         | ULID exports                                                                              |
+| `apps/naisys/src/services/dbService.ts`  | ULID generation, set host_id on inserts, upsert for forwarded data                        |
+| `apps/naisys/src/agentRegistrar.ts`      | ULID for users, host_id filtering                                                         |
+| `apps/naisys/src/agentManager.ts`        | Filter agents by host_id                                                                  |
+| `apps/naisys/src/features/llmail.ts`     | New mail schema (mail_messages, mail_recipients, mail_status), set host_id                |
+| `apps/naisys/src/naisys.ts`              | Hub WebSocket init, create/update host record on startup, --hub/--supervisor flags        |
+| `apps/naisys/src/config.ts`              | NAISYS_HOSTNAME, HUB_URLS config                                                          |
+| `apps/supervisor/server/src/index.ts`    | Points to Hub or Runner DB                                                                |
+| `apps/supervisor/client/src/pages/*`     | Multi-host UI (filter by host)                                                            |
 
 ---
 
@@ -637,6 +657,7 @@ All phases completed:
 ## Verification
 
 ### Phase 1 (ULID + host_id + updated_at)
+
 - [x] Existing tests pass with ULID IDs
 - [x] New agents created with ULID
 - [x] New mail schema implemented (mail_messages, mail_recipients, mail_status)
@@ -645,6 +666,7 @@ All phases completed:
 - [x] Supervisor displays agents/logs correctly
 
 ### Phase 2 (Hosts Table)
+
 - [x] Runner creates its own host record on startup
 - [x] Runner only loads agents matching its host_id
 - [x] New agents created with correct host_id
@@ -652,6 +674,7 @@ All phases completed:
 - [x] Soft-deleted records still sync (no filter on sync queries)
 
 ### Phase 3-4 (WebSocket Sync + Forwarding)
+
 - [x] Runner connects to Hub via WebSocket
 - [x] Runner connects to multiple Hubs when configured
 - [x] Runner sends catch_up with single lastSyncedFromHub timestamp on connect
@@ -666,7 +689,7 @@ All phases completed:
 - [x] Hub catch-up always queries by updated_at, not ULID (even for append-only tables)
 - [x] Hub excludes client from sync polling while catching up (catchingUp flag)
 - [x] Hub maintains in-memory forward queues per connected runner
-- [x] Hub queues shared tables (hosts, users, mail_*) for other runners on sync receive
+- [x] Hub queues shared tables (hosts, users, mail\_\*) for other runners on sync receive
 - [x] Hub includes queued forwards in sync_request messages (piggybacked)
 - [x] Hub clears forward queue after sending sync_request
 - [x] Forward queue deleted on runner disconnect (no memory pressure)
@@ -681,6 +704,7 @@ All phases completed:
 - [x] Supervisor shows all agents from all hosts
 
 ### Process Composition
+
 - [x] `naisys.js` runs standalone
 - [x] `naisys.js --supervisor` runs runner + supervisor (single-runner mode)
 - [x] `naisys.js --hub --supervisor` runs all three together

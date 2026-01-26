@@ -1,4 +1,5 @@
 import { Badge, Group, Tooltip } from "@mantine/core";
+import { useDisclosure } from "@mantine/hooks";
 import {
   IconLock,
   IconLockOpen,
@@ -7,11 +8,10 @@ import {
   IconTopologyStar3,
 } from "@tabler/icons-react";
 import React, { useEffect, useState } from "react";
-import { useSession } from "../contexts/SessionContext";
-import { useDisclosure } from "@mantine/hooks";
-import { AccessDialog } from "../components/AccessDialog";
-import { getMonitorMode } from "../lib/apiClient";
 import type { MonitorMode } from "shared";
+import { AccessDialog } from "../components/AccessDialog";
+import { useSession } from "../contexts/SessionContext";
+import { getMonitorMode } from "../lib/apiClient";
 
 interface ToolsHeaderProps {
   isLoading: boolean;
@@ -25,8 +25,10 @@ export const ToolsHeader: React.FC<ToolsHeaderProps> = ({
   isMobile,
 }) => {
   const { isAuthenticated } = useSession();
-  const [accessModalOpened, { open: openAccessModal, close: closeAccessModal }] =
-    useDisclosure(false);
+  const [
+    accessModalOpened,
+    { open: openAccessModal, close: closeAccessModal },
+  ] = useDisclosure(false);
   const [monitorMode, setMonitorMode] = useState<MonitorMode | null>(null);
 
   useEffect(() => {
@@ -40,13 +42,7 @@ export const ToolsHeader: React.FC<ToolsHeaderProps> = ({
   return (
     <Group gap="xs">
       <Tooltip
-        label={
-          error
-            ? "Disconnected"
-            : isLoading
-              ? "Connecting"
-              : "Connected"
-        }
+        label={error ? "Disconnected" : isLoading ? "Connecting" : "Connected"}
       >
         <Badge
           color={error ? "red" : isLoading ? "yellow" : "green"}
@@ -57,7 +53,7 @@ export const ToolsHeader: React.FC<ToolsHeaderProps> = ({
               <IconPlugConnectedX size="1rem" />
             ) : (
               <IconPlugConnected size="1rem" />
-            )
+            ),
           })}
         >
           {isMobile ? (
@@ -66,12 +62,12 @@ export const ToolsHeader: React.FC<ToolsHeaderProps> = ({
             ) : (
               <IconPlugConnected size="1rem" />
             )
+          ) : error ? (
+            "Disconnected"
+          ) : isLoading ? (
+            "Connecting"
           ) : (
-            error
-              ? "Disconnected"
-              : isLoading
-                ? "Connecting"
-                : "Connected"
+            "Connected"
           )}
         </Badge>
       </Tooltip>
@@ -101,7 +97,7 @@ export const ToolsHeader: React.FC<ToolsHeaderProps> = ({
               <IconLockOpen size="1rem" />
             ) : (
               <IconLock size="1rem" />
-            )
+            ),
           })}
         >
           {isMobile ? (
@@ -110,8 +106,10 @@ export const ToolsHeader: React.FC<ToolsHeaderProps> = ({
             ) : (
               <IconLock size="1rem" />
             )
+          ) : isAuthenticated ? (
+            "Authenticated"
           ) : (
-            isAuthenticated ? "Authenticated" : "Read Only"
+            "Read Only"
           )}
         </Badge>
       </Tooltip>

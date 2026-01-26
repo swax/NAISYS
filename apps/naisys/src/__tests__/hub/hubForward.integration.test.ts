@@ -1,21 +1,43 @@
-import { describe, test, expect, beforeAll, afterAll, beforeEach, afterEach, jest } from "@jest/globals";
-import { ulid } from "@naisys/database";
-import type { HubServerLog } from "@naisys/hub/services/hubServerLog";
-import type { HubServer } from "@naisys/hub/services/hubServer";
 import {
-  createHubSyncServer,
-  type HubSyncServer,
-} from "@naisys/hub/services/hubSyncServer";
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  jest,
+  test,
+} from "@jest/globals";
+import { ulid } from "@naisys/database";
 import {
   createHubForwardService,
   type HubForwardService,
 } from "@naisys/hub/services/hubForwardService";
-import { createHubSyncClient, type HubSyncClient } from "../../hub/hubSyncClient.js";
+import type { HubServer } from "@naisys/hub/services/hubServer";
+import type { HubServerLog } from "@naisys/hub/services/hubServerLog";
+import {
+  createHubSyncServer,
+  type HubSyncServer,
+} from "@naisys/hub/services/hubSyncServer";
 import type { HubClientLog } from "../../hub/hubClientLog.js";
 import type { HubManager } from "../../hub/hubManager.js";
+import {
+  createHubSyncClient,
+  type HubSyncClient,
+} from "../../hub/hubSyncClient.js";
 import type { HostService } from "../../services/hostService.js";
-import { createTestDatabase, seedHost, seedUser, resetDatabase, type TestDatabase } from "./testDbHelper.js";
-import { createSyncEventBridge, type MockHubServer, type MockHubManager } from "./syncEventBridge.js";
+import {
+  createSyncEventBridge,
+  type MockHubManager,
+  type MockHubServer,
+} from "./syncEventBridge.js";
+import {
+  createTestDatabase,
+  resetDatabase,
+  seedHost,
+  seedUser,
+  type TestDatabase,
+} from "./testDbHelper.js";
 
 /**
  * Integration tests for hub forward service functionality.
@@ -78,9 +100,21 @@ describe("Hub Forward Service Integration Tests", () => {
 
   afterAll(async () => {
     await new Promise((resolve) => setTimeout(resolve, 100));
-    try { await runnerADb.cleanup(); } catch { /* ignore */ }
-    try { await runnerBDb.cleanup(); } catch { /* ignore */ }
-    try { await hubDb.cleanup(); } catch { /* ignore */ }
+    try {
+      await runnerADb.cleanup();
+    } catch {
+      /* ignore */
+    }
+    try {
+      await runnerBDb.cleanup();
+    } catch {
+      /* ignore */
+    }
+    try {
+      await hubDb.cleanup();
+    } catch {
+      /* ignore */
+    }
   });
 
   beforeEach(async () => {
@@ -112,7 +146,7 @@ describe("Hub Forward Service Integration Tests", () => {
       hubDb.dbService,
       mockHubServerLog,
       hubForwardService,
-      { pollIntervalMs: 100, maxConcurrentRequests: 2 }
+      { pollIntervalMs: 100, maxConcurrentRequests: 2 },
     );
 
     mockHubManagerA = bridge.createMockHubManager(hostAId, hostAName);
@@ -137,13 +171,13 @@ describe("Hub Forward Service Integration Tests", () => {
       mockHubManagerA as unknown as HubManager,
       mockClientLogA,
       runnerADb.dbService,
-      hostServiceA
+      hostServiceA,
     );
     _syncClientB = createHubSyncClient(
       mockHubManagerB as unknown as HubManager,
       mockClientLogB,
       runnerBDb.dbService,
-      hostServiceB
+      hostServiceB,
     );
 
     // Trigger HUB_CONNECTED to complete catch-up and enable sync polling
@@ -246,18 +280,26 @@ describe("Hub Forward Service Integration Tests", () => {
     await waitForSync(1500);
 
     // Both users should be in hub
-    const hubUserA = await hubDb.prisma.users.findUnique({ where: { id: userAId } });
-    const hubUserB = await hubDb.prisma.users.findUnique({ where: { id: userBId } });
+    const hubUserA = await hubDb.prisma.users.findUnique({
+      where: { id: userAId },
+    });
+    const hubUserB = await hubDb.prisma.users.findUnique({
+      where: { id: userBId },
+    });
     expect(hubUserA?.username).toBe("from-runner-a");
     expect(hubUserB?.username).toBe("from-runner-b");
 
     // Runner A should have user from runner B (forwarded)
-    const runnerAUserB = await runnerADb.prisma.users.findUnique({ where: { id: userBId } });
+    const runnerAUserB = await runnerADb.prisma.users.findUnique({
+      where: { id: userBId },
+    });
     expect(runnerAUserB).not.toBeNull();
     expect(runnerAUserB?.username).toBe("from-runner-b");
 
     // Runner B should have user from runner A (forwarded)
-    const runnerBUserA = await runnerBDb.prisma.users.findUnique({ where: { id: userAId } });
+    const runnerBUserA = await runnerBDb.prisma.users.findUnique({
+      where: { id: userAId },
+    });
     expect(runnerBUserA).not.toBeNull();
     expect(runnerBUserA?.username).toBe("from-runner-a");
   });

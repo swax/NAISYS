@@ -12,7 +12,7 @@ export function createHubClientLog(): HubClientLog {
   const logPath = path.join(
     process.env.NAISYS_FOLDER || "",
     "logs",
-    "hub-client.log"
+    "hub-client.log",
   );
 
   const logger = pino({

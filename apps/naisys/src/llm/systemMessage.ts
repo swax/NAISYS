@@ -10,11 +10,14 @@
  * Once exported the system message is essentially cached
  */
 
-import { GlobalConfig } from "../globalConfig.js";
 import { AgentConfig } from "../agent/agentConfig.js";
+import { GlobalConfig } from "../globalConfig.js";
 import { getPlatformConfig } from "../services/shellPlatform.js";
 
-export function createSystemMessage({ globalConfig }: GlobalConfig, { agentConfig }: AgentConfig) {
+export function createSystemMessage(
+  { globalConfig }: GlobalConfig,
+  { agentConfig }: AgentConfig,
+) {
   const platformConfig = getPlatformConfig();
 
   let genImgCmd = "";
@@ -44,13 +47,19 @@ export function createSystemMessage({ globalConfig }: GlobalConfig, { agentConfi
 
   sessionSubcommands.push(`pause <seconds> - Pause for <seconds>`);
   if (globalConfig().trimSessionEnabled) {
-    sessionSubcommands.push(`trim <indexes> - Remove prompts to save tokens (e.g., "1-5, 8")`);
+    sessionSubcommands.push(
+      `trim <indexes> - Remove prompts to save tokens (e.g., "1-5, 8")`,
+    );
   }
   if (globalConfig().compactSessionEnabled) {
-    sessionSubcommands.push(`compact "<note>" - Compact the session which will reset the token count. The note should contain your next goal, and important things you should remember.`);
+    sessionSubcommands.push(
+      `compact "<note>" - Compact the session which will reset the token count. The note should contain your next goal, and important things you should remember.`,
+    );
   }
   if (agentConfig().completeTaskEnabled) {
-    sessionSubcommands.push(`complete "<result>" - Mark task complete and exit. The result should contain any important information or output from the task.`);
+    sessionSubcommands.push(
+      `complete "<result>" - Mark task complete and exit. The result should contain any important information or output from the task.`,
+    );
   }
 
   if (sessionSubcommands.length > 0) {
@@ -65,7 +74,10 @@ export function createSystemMessage({ globalConfig }: GlobalConfig, { agentConfi
       "\n  Make sure to call 'ns-session compact' before the token limit is hit so you can continue your work without interruption.";
   }
 
-  if (!globalConfig().compactSessionEnabled && globalConfig().trimSessionEnabled) {
+  if (
+    !globalConfig().compactSessionEnabled &&
+    globalConfig().trimSessionEnabled
+  ) {
     tokenNote =
       "\n  Make sure to call 'ns-session trim' before the limit is hit so you stay under the limit.\n  Use comments to remember important things from trimmed prompts.";
   }
@@ -104,11 +116,15 @@ Welcome back ${agentConfig().username}!
 MOTD:
 Date: ${new Date().toLocaleString()}
 ${platformConfig.displayName} Commands:
-  Standard ${platformConfig.shellName} commands are available${platformConfig.platform === "windows" ? `
+  Standard ${platformConfig.shellName} commands are available${
+    platformConfig.platform === "windows"
+      ? `
   PowerShell has aliases for common commands: ls, cat, pwd, cd, mkdir, rm, cp, mv
-  Read files with Get-Content. Write files with Set-Content -Path "file" -Value "content"` : `
+  Read files with Get-Content. Write files with Set-Content -Path "file" -Value "content"`
+      : `
   vi and nano are not supported
-  Read files with cat. Write files with \`cat > filename << 'EOF'\``}
+  Read files with cat. Write files with \`cat > filename << 'EOF'\``
+  }
   Do not input notes after the prompt. Only valid commands.
 NAISYS Commands: (cannot be used with other commands on the same prompt)${llmailCmd}${subagentNote}${llmynxCmd}${genImgCmd}
   ns-comment "<thought>": Any non-command output like thinking out loud, prefix with the 'ns-comment' command${sessionCmd}

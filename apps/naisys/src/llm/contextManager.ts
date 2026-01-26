@@ -1,5 +1,5 @@
-import { GlobalConfig } from "../globalConfig.js";
 import { WorkspacesFeature } from "../features/workspaces.js";
+import { GlobalConfig } from "../globalConfig.js";
 import { LogService } from "../services/logService.js";
 import { InputModeService } from "../utils/inputMode.js";
 import { OutputColor, OutputService } from "../utils/output.js";

@@ -56,7 +56,7 @@ export function createHubSyncClient(
   hubManager: HubManager,
   hubClientLog: HubClientLog,
   dbService: DatabaseService,
-  hostService: HostService
+  hostService: HostService,
 ) {
   const schemaVersion = dbService.getSchemaVersion();
   const { localHostId } = hostService;
@@ -79,14 +79,14 @@ export function createHubSyncClient(
     const result = SyncErrorSchema.safeParse(rawData);
     if (!result.success) {
       hubClientLog.error(
-        `[SyncClient] Invalid sync_error from ${hubUrl}: ${JSON.stringify(result.error.issues)}`
+        `[SyncClient] Invalid sync_error from ${hubUrl}: ${JSON.stringify(result.error.issues)}`,
       );
       return;
     }
 
     const { error, message } = result.data;
     hubClientLog.error(
-      `[SyncClient] Sync error from ${hubUrl}: ${error} - ${message}`
+      `[SyncClient] Sync error from ${hubUrl}: ${error} - ${message}`,
     );
 
     // Update state to reflect the fatal error
@@ -102,7 +102,9 @@ export function createHubSyncClient(
    * Handle hub connection - load persisted state and send catch_up
    */
   async function handleHubConnected(hubUrl: string) {
-    hubClientLog.write(`[SyncClient] Hub ${hubUrl} connected, initiating catch_up`);
+    hubClientLog.write(
+      `[SyncClient] Hub ${hubUrl} connected, initiating catch_up`,
+    );
 
     // Load persisted sync state first
     await loadPersistedSyncState(hubUrl);
@@ -117,7 +119,7 @@ export function createHubSyncClient(
     };
 
     hubClientLog.write(
-      `[SyncClient] Sending catch_up to ${hubUrl} (lastSyncedFromHub: ${state.lastSyncedFromHub})`
+      `[SyncClient] Sending catch_up to ${hubUrl} (lastSyncedFromHub: ${state.lastSyncedFromHub})`,
     );
 
     // Send catch_up with ack callback
@@ -125,12 +127,12 @@ export function createHubSyncClient(
       hubUrl,
       HubEvents.CATCH_UP,
       catchUpRequest,
-      (response) => handleCatchUpResponse(hubUrl, response)
+      (response) => handleCatchUpResponse(hubUrl, response),
     );
 
     if (!sent) {
       hubClientLog.error(
-        `[SyncClient] Failed to send catch_up to ${hubUrl} - not connected`
+        `[SyncClient] Failed to send catch_up to ${hubUrl} - not connected`,
       );
     }
   }
@@ -140,18 +142,21 @@ export function createHubSyncClient(
    */
   async function handleCatchUpResponse(
     hubUrl: string,
-    rawResponse: CatchUpResponse | CatchUpResponseError
+    rawResponse: CatchUpResponse | CatchUpResponseError,
   ) {
     // First check if it's an error response
     const errorResult = CatchUpResponseErrorSchema.safeParse(rawResponse);
     if (errorResult.success) {
       const error = errorResult.data;
       hubClientLog.error(
-        `[SyncClient] Catch-up error from ${hubUrl}: ${error.error} - ${error.message}`
+        `[SyncClient] Catch-up error from ${hubUrl}: ${error.error} - ${error.message}`,
       );
 
       const state = getOrCreateState(hubUrl);
-      state.status = error.error === "schema_mismatch" ? "schema_mismatch" : "internal_error";
+      state.status =
+        error.error === "schema_mismatch"
+          ? "schema_mismatch"
+          : "internal_error";
       state.errorMessage = error.message;
       return;
     }
@@ -160,7 +165,7 @@ export function createHubSyncClient(
     const result = CatchUpResponseSchema.safeParse(rawResponse);
     if (!result.success) {
       hubClientLog.error(
-        `[SyncClient] Invalid catch_up response from ${hubUrl}: ${JSON.stringify(result.error.issues)}`
+        `[SyncClient] Invalid catch_up response from ${hubUrl}: ${JSON.stringify(result.error.issues)}`,
       );
       return;
     }
@@ -169,7 +174,7 @@ export function createHubSyncClient(
     const recordCount = countRecordsInTables(response.tables);
 
     hubClientLog.write(
-      `[SyncClient] Received catch_up response from ${hubUrl} (${recordCount} records, has_more: ${response.has_more})`
+      `[SyncClient] Received catch_up response from ${hubUrl} (${recordCount} records, has_more: ${response.has_more})`,
     );
 
     if (recordCount > 0) {
@@ -177,7 +182,7 @@ export function createHubSyncClient(
       const success = await processForwards(hubUrl, response.tables);
       if (!success) {
         hubClientLog.error(
-          `[SyncClient] Failed to process catch_up data from ${hubUrl}`
+          `[SyncClient] Failed to process catch_up data from ${hubUrl}`,
         );
         return;
       }
@@ -186,7 +191,7 @@ export function createHubSyncClient(
     // If there's more data, request it
     if (response.has_more) {
       hubClientLog.write(
-        `[SyncClient] More catch_up data available from ${hubUrl}, sending follow-up request`
+        `[SyncClient] More catch_up data available from ${hubUrl}, sending follow-up request`,
       );
 
       const state = getOrCreateState(hubUrl);
@@ -200,7 +205,7 @@ export function createHubSyncClient(
         hubUrl,
         HubEvents.CATCH_UP,
         catchUpRequest,
-        (response) => handleCatchUpResponse(hubUrl, response)
+        (response) => handleCatchUpResponse(hubUrl, response),
       );
     } else {
       hubClientLog.write(`[SyncClient] Catch-up complete for ${hubUrl}`);
@@ -229,17 +234,17 @@ export function createHubSyncClient(
     const state = getOrCreateState(hubUrl);
     try {
       const since = await dbService.usingDatabase((prisma) =>
-        loadSyncState(prisma, hubUrl)
+        loadSyncState(prisma, hubUrl),
       );
       if (since) {
         state.lastSyncedFromHub = since;
         hubClientLog.write(
-          `[SyncClient] Loaded persisted sync state for ${hubUrl}: lastSyncedFromHub=${state.lastSyncedFromHub}`
+          `[SyncClient] Loaded persisted sync state for ${hubUrl}: lastSyncedFromHub=${state.lastSyncedFromHub}`,
         );
       }
     } catch (error) {
       hubClientLog.error(
-        `[SyncClient] Error loading persisted sync state for ${hubUrl}: ${error}`
+        `[SyncClient] Error loading persisted sync state for ${hubUrl}: ${error}`,
       );
     }
   }
@@ -249,15 +254,15 @@ export function createHubSyncClient(
    */
   async function persistSyncState(
     hubUrl: string,
-    lastSyncedFromHub: string
+    lastSyncedFromHub: string,
   ): Promise<void> {
     try {
       await dbService.usingDatabase((prisma) =>
-        saveSyncState(prisma, hubUrl, lastSyncedFromHub)
+        saveSyncState(prisma, hubUrl, lastSyncedFromHub),
       );
     } catch (error) {
       hubClientLog.error(
-        `[SyncClient] Error persisting sync state for ${hubUrl}: ${error}`
+        `[SyncClient] Error persisting sync state for ${hubUrl}: ${error}`,
       );
     }
   }
@@ -270,7 +275,7 @@ export function createHubSyncClient(
    */
   async function processForwards(
     hubUrl: string,
-    forwards: Record<string, unknown[]>
+    forwards: Record<string, unknown[]>,
   ): Promise<boolean> {
     // Count total records
     const totalRecords = countRecordsInTables(forwards);
@@ -280,7 +285,7 @@ export function createHubSyncClient(
     }
 
     hubClientLog.write(
-      `[SyncClient] Processing ${totalRecords} forwarded records from ${hubUrl}`
+      `[SyncClient] Processing ${totalRecords} forwarded records from ${hubUrl}`,
     );
 
     try {
@@ -290,13 +295,15 @@ export function createHubSyncClient(
       await dbService.usingDatabase(async (prisma) => {
         // Process in FORWARDABLE_TABLES order for FK dependencies
         for (const table of FORWARDABLE_TABLES) {
-          const tableData = forwards[table] as Record<string, unknown>[] | undefined;
+          const tableData = forwards[table] as
+            | Record<string, unknown>[]
+            | undefined;
           if (!tableData || tableData.length === 0) continue;
 
           await upsertRecords(prisma, table as SyncableTable, tableData);
 
           hubClientLog.write(
-            `[SyncClient] Upserted ${tableData.length} forwarded ${table} records`
+            `[SyncClient] Upserted ${tableData.length} forwarded ${table} records`,
           );
         }
       });
@@ -307,14 +314,14 @@ export function createHubSyncClient(
         state.lastSyncedFromHub = maxTimestamp.toISOString();
         await persistSyncState(hubUrl, state.lastSyncedFromHub);
         hubClientLog.write(
-          `[SyncClient] Updated lastSyncedFromHub for ${hubUrl} to ${state.lastSyncedFromHub}`
+          `[SyncClient] Updated lastSyncedFromHub for ${hubUrl} to ${state.lastSyncedFromHub}`,
         );
       }
 
       return true;
     } catch (error) {
       hubClientLog.error(
-        `[SyncClient] Error processing forwarded data from ${hubUrl}: ${error}`
+        `[SyncClient] Error processing forwarded data from ${hubUrl}: ${error}`,
       );
       return false;
     }
@@ -326,7 +333,7 @@ export function createHubSyncClient(
   async function handleSyncRequest(
     hubUrl: string,
     rawData: unknown,
-    ack?: (response: SyncResponse | SyncResponseError) => void
+    ack?: (response: SyncResponse | SyncResponseError) => void,
   ) {
     // Check if this is a new hub we haven't seen before
     const isNewHub = !hubSyncStates.has(hubUrl);
@@ -341,7 +348,7 @@ export function createHubSyncClient(
     const result = SyncRequestSchema.safeParse(rawData);
     if (!result.success) {
       hubClientLog.error(
-        `[SyncClient] Invalid sync request from ${hubUrl}: ${JSON.stringify(result.error.issues)}`
+        `[SyncClient] Invalid sync request from ${hubUrl}: ${JSON.stringify(result.error.issues)}`,
       );
       return;
     }
@@ -378,13 +385,13 @@ export function createHubSyncClient(
       if (!forwardSuccess) {
         // Log error but continue with sync response - forwards are best-effort
         hubClientLog.error(
-          `[SyncClient] Failed to process some forwarded data from ${hubUrl}, continuing with sync response`
+          `[SyncClient] Failed to process some forwarded data from ${hubUrl}, continuing with sync response`,
         );
       }
     }
 
     hubClientLog.write(
-      `[SyncClient] Processing sync_request from ${hubUrl} (since: ${data.since})`
+      `[SyncClient] Processing sync_request from ${hubUrl} (since: ${data.since})`,
     );
 
     try {
@@ -403,7 +410,7 @@ export function createHubSyncClient(
             table as SyncableTable,
             sinceDate,
             SYNC_BATCH_SIZE,
-            localHostId
+            localHostId,
           );
 
           if (result.records.length > 0) {
@@ -427,17 +434,17 @@ export function createHubSyncClient(
       // Send response via ack callback if provided
       if (ack) {
         hubClientLog.write(
-          `[SyncClient] Sending sync response to ${hubUrl} (${totalRows} rows across ${Object.keys(tables).length} tables, has_more: ${hasMore})`
+          `[SyncClient] Sending sync response to ${hubUrl} (${totalRows} rows across ${Object.keys(tables).length} tables, has_more: ${hasMore})`,
         );
         ack(response);
       } else {
         hubClientLog.error(
-          `[SyncClient] No ack callback provided for sync_request from ${hubUrl}`
+          `[SyncClient] No ack callback provided for sync_request from ${hubUrl}`,
         );
       }
     } catch (error) {
       hubClientLog.error(
-        `[SyncClient] Error processing sync request from ${hubUrl}: ${error}`
+        `[SyncClient] Error processing sync request from ${hubUrl}: ${error}`,
       );
 
       if (ack) {
@@ -457,7 +464,9 @@ export function createHubSyncClient(
       return Promise.resolve("No hubs configured. Running in standalone mode.");
     }
 
-    const rows: string[][] = [["URL", "Connected", "Sync Status", "Last Synced"]];
+    const rows: string[][] = [
+      ["URL", "Connected", "Sync Status", "Last Synced"],
+    ];
     const errors: string[] = [];
 
     for (const hub of hubs) {

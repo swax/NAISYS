@@ -98,24 +98,25 @@ export function createCommandHandler(
             return response.nextCommandResponse;
           }
         }
-      } else switch (command) {
-        case "ns-comment": {
-          // Important - Hint the LLM to turn their thoughts into accounts
-          // ./bin/ns-comment shell script has the same message
-          await contextManager.append(
-            "Comment noted. Try running commands now to achieve your goal.",
-          );
-          break;
-        }
+      } else
+        switch (command) {
+          case "ns-comment": {
+            // Important - Hint the LLM to turn their thoughts into accounts
+            // ./bin/ns-comment shell script has the same message
+            await contextManager.append(
+              "Comment noted. Try running commands now to achieve your goal.",
+            );
+            break;
+          }
 
-        default: {
-          const exitApp = await shellCommand.handleCommand(input);
+          default: {
+            const exitApp = await shellCommand.handleCommand(input);
 
-          nextCommandAction = exitApp
-            ? NextCommandAction.ExitApplication
-            : NextCommandAction.Continue;
-        }
-      } // End switch
+            nextCommandAction = exitApp
+              ? NextCommandAction.ExitApplication
+              : NextCommandAction.Continue;
+          }
+        } // End switch
 
       if (command != "ns-comment" && firstCommand) {
         firstCommand = false;

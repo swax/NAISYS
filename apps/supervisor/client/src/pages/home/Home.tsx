@@ -35,7 +35,8 @@ export const Home: React.FC = () => {
         maxWidth: "900px",
         margin: "0 auto",
         padding: "2rem",
-        fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+        fontFamily:
+          "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
       }}
     >
       <div style={{ marginBottom: "3rem", textAlign: "center" }}>
@@ -104,7 +105,9 @@ export const Home: React.FC = () => {
 
       <section style={cardStyle}>
         <h2 style={headerStyle}>Agent Details</h2>
-        <p style={{ lineHeight: "1.6", color: "#b8b8b8", marginBottom: "1rem" }}>
+        <p
+          style={{ lineHeight: "1.6", color: "#b8b8b8", marginBottom: "1rem" }}
+        >
           When you select an agent, you can:
         </p>
         <div>

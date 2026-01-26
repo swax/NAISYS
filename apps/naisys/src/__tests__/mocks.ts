@@ -7,6 +7,7 @@ import { ShellCommand } from "../command/shellCommand.js";
 import { GenImg } from "../features/genimg.js";
 import { LLMail } from "../features/llmail.js";
 import { LLMynx } from "../features/llmynx.js";
+import { SessionService } from "../features/session.js";
 import { SubagentService } from "../features/subagent.js";
 import { WorkspacesFeature } from "../features/workspaces.js";
 import { GlobalConfig } from "../globalConfig.js";
@@ -14,7 +15,6 @@ import { ContextManager } from "../llm/contextManager.js";
 import { CostTracker } from "../llm/costTracker.js";
 import { LlmMessage, LlmRole } from "../llm/llmDtos.js";
 import { SessionCompactor } from "../llm/sessionCompactor.js";
-import { SessionService } from "../features/session.js";
 import { LogService } from "../services/logService.js";
 import { RunService } from "../services/runService.js";
 import { OutputService } from "../utils/output.js";
@@ -22,7 +22,7 @@ import { OutputService } from "../utils/output.js";
 export function createMockDatabaseService(): DatabaseService {
   return {
     usingDatabase: <T>(
-      run: (prisma: PrismaClient) => Promise<T>
+      run: (prisma: PrismaClient) => Promise<T>,
     ): Promise<T> => {
       throw new Error("Mock database not implemented");
     },
@@ -49,7 +49,7 @@ export function createMockLogService() {
 
 export function createMockPromptBuilder(
   userHostPrompt: string,
-  userHostPathPrompt: string
+  userHostPathPrompt: string,
 ) {
   const promptBuilder: PromptBuilder = {
     getPrompt: jest.fn(() => Promise.resolve(`${userHostPathPrompt}$ `)),
@@ -189,7 +189,7 @@ export function createMockCostTracker() {
         cacheReadTokens: 0,
         totalInputTokens: 0,
         totalCacheTokens: 0,
-      })
+      }),
     ),
     getCostBreakdownWithModels: jest.fn(() => Promise.resolve([])),
     calculateModelCacheSavings: jest.fn(() => null),
@@ -229,7 +229,7 @@ export function createMockCommandProtection() {
   const validateCommand = jest.fn(() =>
     Promise.resolve({
       commandAllowed: true,
-    })
+    }),
   );
 
   return {

@@ -1,10 +1,13 @@
+import {
+  MonitorModeResponse,
+  MonitorModeResponseSchema,
+} from "@naisys-supervisor/shared";
 import { FastifyInstance, FastifyPluginOptions } from "fastify";
 import { getMonitorDbType } from "../database/naisysDatabase.js";
-import { MonitorModeResponse, MonitorModeResponseSchema } from "@naisys-supervisor/shared";
 
 export default async function systemRoutes(
   fastify: FastifyInstance,
-  _options: FastifyPluginOptions
+  _options: FastifyPluginOptions,
 ) {
   fastify.get<{ Reply: MonitorModeResponse }>(
     "/system/monitor-mode",
@@ -22,6 +25,6 @@ export default async function systemRoutes(
         success: true,
         monitorMode: getMonitorDbType(),
       };
-    }
+    },
   );
 }

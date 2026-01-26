@@ -3,7 +3,7 @@ import { HostService } from "../services/hostService.js";
 
 export function createLLMailAddress(
   { usingDatabase }: DatabaseService,
-  hostService: HostService
+  hostService: HostService,
 ) {
   const { localHostId } = hostService;
 
@@ -30,7 +30,7 @@ export function createLLMailAddress(
   // Format username with host when multiple hosts exist
   function formatUserWithHost(
     user: UserWithHost,
-    isMultiHost: boolean
+    isMultiHost: boolean,
   ): string {
     if (!isMultiHost) {
       return user.username;
@@ -55,14 +55,13 @@ export function createLLMailAddress(
   // Type for Prisma client or transaction client (both have users.findMany)
   interface PrismaLike {
     users: {
-       
       findMany: (args: any) => Promise<MatchedUser[]>;
     };
   }
 
   async function resolveUserIdentifier(
     identifier: string,
-    tx: PrismaLike
+    tx: PrismaLike,
   ): Promise<ResolvedUser> {
     // Parse username@host format
     const atIndex = identifier.lastIndexOf("@");

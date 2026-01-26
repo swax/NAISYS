@@ -1,7 +1,7 @@
-import { spawn, ChildProcess } from "child_process";
-import { mkdirSync, writeFileSync, rmSync, existsSync } from "fs";
+import { ChildProcess, spawn } from "child_process";
+import { existsSync, mkdirSync, rmSync, writeFileSync } from "fs";
 import { tmpdir } from "os";
-import { join, resolve, dirname } from "path";
+import { dirname, join, resolve } from "path";
 import { fileURLToPath } from "url";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -16,7 +16,11 @@ export interface NaisysTestProcess {
   /** Wait for text to appear in output since last flush */
   waitForOutput: (text: string, timeoutMs?: number) => Promise<void>;
   /** Wait for text to appear N times in output since last flush */
-  waitForOutputCount: (text: string, count: number, timeoutMs?: number) => Promise<void>;
+  waitForOutputCount: (
+    text: string,
+    count: number,
+    timeoutMs?: number,
+  ) => Promise<void>;
   /** Wait for one prompt to appear since last flush */
   waitForPrompt: (timeoutMs?: number) => Promise<void>;
   getFullOutput: () => string;
@@ -76,7 +80,10 @@ export function cleanupTestDir(testDir: string): void {
 /**
  * Create a .env file for testing
  */
-export function createEnvFile(testDir: string, options?: { naisysFolder?: string; hostname?: string }): void {
+export function createEnvFile(
+  testDir: string,
+  options?: { naisysFolder?: string; hostname?: string },
+): void {
   const envContent = `
 NAISYS_FOLDER="${options?.naisysFolder ?? ""}"
 NAISYS_HOSTNAME="${options?.hostname ?? "TEST-HOST"}"
@@ -88,7 +95,11 @@ SPEND_LIMIT_DOLLARS=10
 /**
  * Create an agent YAML file
  */
-export function createAgentYaml(testDir: string, filename: string, config: AgentYamlConfig): void {
+export function createAgentYaml(
+  testDir: string,
+  filename: string,
+  config: AgentYamlConfig,
+): void {
   let yamlContent = `
 username: ${config.username}
 title: ${config.title}
@@ -109,7 +120,12 @@ wakeOnMessage: ${config.wakeOnMessage ?? false}
 /**
  * Create an agent YAML file in a subdirectory (e.g., agents/)
  */
-export function createAgentYamlInDir(testDir: string, subdir: string, filename: string, config: AgentYamlConfig): void {
+export function createAgentYamlInDir(
+  testDir: string,
+  subdir: string,
+  filename: string,
+  config: AgentYamlConfig,
+): void {
   const agentsDir = join(testDir, subdir);
   if (!existsSync(agentsDir)) {
     mkdirSync(agentsDir, { recursive: true });
@@ -136,7 +152,7 @@ export function getHubPath(): string {
  */
 export function createHubEnvFile(
   testDir: string,
-  options: { port: number; accessKey: string }
+  options: { port: number; accessKey: string },
 ): void {
   const envContent = `
 NAISYS_FOLDER=""
@@ -155,7 +171,7 @@ export function createEnvFileWithHub(
     hostname: string;
     hubUrl: string;
     hubAccessKey: string;
-  }
+  },
 ): void {
   const envContent = `
 NAISYS_FOLDER=""
@@ -211,7 +227,10 @@ export function spawnHub(testDir: string, debug = false): HubTestProcess {
     }
   });
 
-  const waitForOutput = async (text: string, timeoutMs = 10000): Promise<void> => {
+  const waitForOutput = async (
+    text: string,
+    timeoutMs = 10000,
+  ): Promise<void> => {
     const startTime = Date.now();
 
     while (Date.now() - startTime < timeoutMs) {
@@ -222,7 +241,7 @@ export function spawnHub(testDir: string, debug = false): HubTestProcess {
     }
 
     throw new Error(
-      `Timeout waiting for "${text}" in hub output. Got:\n${stdout.join("")}`
+      `Timeout waiting for "${text}" in hub output. Got:\n${stdout.join("")}`,
     );
   };
 
@@ -268,7 +287,10 @@ export interface SpawnNaisysOptions {
 /**
  * Spawn a naisys process for testing
  */
-export function spawnNaisys(testDir: string, options: SpawnNaisysOptions = {}): NaisysTestProcess {
+export function spawnNaisys(
+  testDir: string,
+  options: SpawnNaisysOptions = {},
+): NaisysTestProcess {
   const { args = [], debug = false } = options;
   const naisysPath = getNaisysPath();
 
@@ -307,7 +329,10 @@ export function spawnNaisys(testDir: string, options: SpawnNaisysOptions = {}): 
 
   const getOutputSinceFlush = () => stdout.slice(flushIndex).join("");
 
-  const waitForOutput = async (text: string, timeoutMs = 10000): Promise<void> => {
+  const waitForOutput = async (
+    text: string,
+    timeoutMs = 10000,
+  ): Promise<void> => {
     const startTime = Date.now();
 
     while (Date.now() - startTime < timeoutMs) {
@@ -318,11 +343,15 @@ export function spawnNaisys(testDir: string, options: SpawnNaisysOptions = {}): 
     }
 
     throw new Error(
-      `Timeout waiting for "${text}" in output since flush. Got:\n${getOutputSinceFlush()}`
+      `Timeout waiting for "${text}" in output since flush. Got:\n${getOutputSinceFlush()}`,
     );
   };
 
-  const waitForOutputCount = async (text: string, count: number, timeoutMs = 10000): Promise<void> => {
+  const waitForOutputCount = async (
+    text: string,
+    count: number,
+    timeoutMs = 10000,
+  ): Promise<void> => {
     const startTime = Date.now();
 
     while (Date.now() - startTime < timeoutMs) {
@@ -335,7 +364,7 @@ export function spawnNaisys(testDir: string, options: SpawnNaisysOptions = {}): 
     }
 
     throw new Error(
-      `Timeout waiting for "${text}" to appear ${count} times since flush. Got:\n${getOutputSinceFlush()}`
+      `Timeout waiting for "${text}" to appear ${count} times since flush. Got:\n${getOutputSinceFlush()}`,
     );
   };
 
@@ -408,7 +437,10 @@ export function spawnNaisys(testDir: string, options: SpawnNaisysOptions = {}): 
 /**
  * Wait for process to exit and return the exit code
  */
-export async function waitForExit(proc: ChildProcess, timeoutMs = 5000): Promise<number | null> {
+export async function waitForExit(
+  proc: ChildProcess,
+  timeoutMs = 5000,
+): Promise<number | null> {
   return new Promise<number | null>((resolve) => {
     if (proc.exitCode !== null) {
       resolve(proc.exitCode);

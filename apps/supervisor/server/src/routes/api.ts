@@ -1,7 +1,7 @@
 import { FastifyInstance, FastifyPluginOptions } from "fastify";
 import accessRoutes from "./access.js";
-import agentRoutes from "./agent.js";
 import agentConfigRoutes from "./agent-config.js";
+import agentRoutes from "./agent.js";
 import controlsRoutes from "./controls.js";
 import mailRoutes from "./mail.js";
 import runsRoutes from "./runs.js";

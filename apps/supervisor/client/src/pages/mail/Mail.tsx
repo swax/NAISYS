@@ -67,7 +67,8 @@ export const Mail: React.FC = () => {
     // If neither button is selected, show all messages
     if (!showSent && !showReceived) {
       return allMail.sort(
-        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+        (a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
       );
     }
 
@@ -81,7 +82,10 @@ export const Mail: React.FC = () => {
 
         return false;
       })
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      .sort(
+        (a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+      );
   };
 
   const filteredMail = getFilteredMail();

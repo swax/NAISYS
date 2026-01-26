@@ -1,12 +1,16 @@
 import * as fs from "fs";
 import path from "path";
-import { GlobalConfig } from "../globalConfig.js";
 import { AgentConfig } from "../agent/agentConfig.js";
+import { GlobalConfig } from "../globalConfig.js";
 import * as pathService from "../services/pathService.js";
 import { OutputService } from "../utils/output.js";
 import * as utilities from "../utils/utilities.js";
 
-export function createWorkspacesFeature({ globalConfig }: GlobalConfig, { agentConfig }: AgentConfig, output: OutputService) {
+export function createWorkspacesFeature(
+  { globalConfig }: GlobalConfig,
+  { agentConfig }: AgentConfig,
+  output: OutputService,
+) {
   const _suffixHelp =
     "Add and remove file soft links in the ~/workspaces/ folder to manage what files you see previews of before each prompt";
 

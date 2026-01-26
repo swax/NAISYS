@@ -1,6 +1,6 @@
+import { isAgentOnline } from "@naisys/common";
 import { useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useState } from "react";
-import { isAgentOnline } from "@naisys/common";
 import { Agent as BaseAgent, Host as BaseHost } from "shared";
 import { getAgentData } from "../lib/apiClient";
 import { Agent, Host } from "../types/agent";
@@ -68,7 +68,10 @@ export const useAgentData = () => {
       // Process hosts - always replace (no merge needed since hosts don't have updatedSince filtering)
       const hostsWithOnline: Host[] = updatedHosts.map((host: BaseHost) => ({
         ...host,
-        online: isAgentOnline(host.lastActive ?? undefined, query.dataUpdatedAt),
+        online: isAgentOnline(
+          host.lastActive ?? undefined,
+          query.dataUpdatedAt,
+        ),
       }));
 
       // Sort by name

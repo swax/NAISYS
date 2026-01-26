@@ -6,9 +6,9 @@ import "@mantine/notifications/styles.css";
 import { QueryClientProvider } from "@tanstack/react-query";
 import React from "react";
 import {
+  BrowserRouter as Router,
   Link,
   Route,
-  BrowserRouter as Router,
   Routes,
   useLocation,
   useSearchParams,
@@ -19,8 +19,8 @@ import {
   useAgentDataContext,
 } from "./contexts/AgentDataContext";
 import { SessionProvider } from "./contexts/SessionContext";
-import { AgentSidebar } from "./headers/AgentSidebar";
 import { AgentNavHeader } from "./headers/AgentNavHeader";
+import { AgentSidebar } from "./headers/AgentSidebar";
 import { ToolsHeader } from "./headers/ToolsHeader";
 import { queryClient } from "./lib/queryClient";
 import { Controls } from "./pages/Controls";
