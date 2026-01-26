@@ -27,6 +27,7 @@ export function createMockDatabaseService(): DatabaseService {
       throw new Error("Mock database not implemented");
     },
     getSchemaVersion: () => 1,
+    disconnect: () => Promise.resolve(),
   };
 }
 

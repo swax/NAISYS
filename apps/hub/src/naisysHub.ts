@@ -1,6 +1,7 @@
 import { createDatabaseService } from "@naisys/database";
 import { program } from "commander";
 import dotenv from "dotenv";
+import { fileURLToPath } from "url";
 import { createHubForwardService } from "./services/hubForwardService.js";
 import { createRemoteAgentRouter } from "./services/remoteAgentRouter.js";
 import { createHubServer } from "./services/hubServer.js";
@@ -67,7 +68,7 @@ export async function startHub(
 }
 
 // Start server if this file is run directly
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
   dotenv.config({ quiet: true });
 
   program.option("--supervisor", "Start Supervisor web server").parse();

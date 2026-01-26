@@ -1,6 +1,6 @@
 import { exec } from "child_process";
 import { existsSync, mkdirSync } from "fs";
-import { dirname, join } from "path";
+import { dirname, join, resolve } from "path";
 import { fileURLToPath } from "url";
 import { promisify } from "util";
 import { PrismaClient } from "./generated/prisma/client.js";
@@ -36,9 +36,20 @@ export async function createDatabaseService(
     try {
       // Only check version if database file already exists
       if (existsSync(databasePath)) {
-        const dbVersion = await prisma.schema_version.findUnique({
-          where: { id: 1 },
-        });
+        let dbVersion: { version: number } | null = null;
+        try {
+          dbVersion = await prisma.schema_version.findUnique({
+            where: { id: 1 },
+          });
+        } catch (error) {
+          // Table doesn't exist yet - treat as new database needing migration
+          const errorObj = error as { code?: string };
+          if (errorObj?.code === "P2021") {
+            // P2021 = table does not exist, proceed with migration
+          } else {
+            throw error;
+          }
+        }
 
         if (dbVersion && dbVersion.version === latestDbVersion) {
           return;
@@ -69,13 +80,15 @@ export async function createDatabaseService(
       const schemaPath = join(databasePackageDir, "prisma", "schema.prisma");
 
       // Run Prisma migrations from the database package directory
+      // Ensure absolute path and use forward slashes for file: URL (required on Windows)
+      const absoluteDbPath = resolve(databasePath).replace(/\\/g, "/");
       const { stdout, stderr } = await execAsync(
         `npx prisma migrate deploy --schema="${schemaPath}"`,
         {
           cwd: databasePackageDir,
           env: {
             ...process.env,
-            DATABASE_URL: `file:${databasePath}`,
+            DATABASE_URL: `file:${absoluteDbPath}`,
           },
         }
       );
@@ -154,9 +167,14 @@ export async function createDatabaseService(
     return latestDbVersion;
   }
 
+  async function disconnect(): Promise<void> {
+    await prisma.$disconnect();
+  }
+
   return {
     usingDatabase,
     getSchemaVersion,
+    disconnect,
   };
 }
 

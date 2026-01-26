@@ -98,11 +98,11 @@ describe("Hub Catch-Up Integration Tests", () => {
     );
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     hubSyncServer.stop();
-    runnerADb.cleanup();
-    runnerBDb.cleanup();
-    hubDb.cleanup();
+    await runnerADb.cleanup();
+    await runnerBDb.cleanup();
+    await hubDb.cleanup();
     bridge.reset();
   });
 
