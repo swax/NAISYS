@@ -36,14 +36,12 @@ export async function createAgentRegistrar(
 
     createAdminAgent();
 
+    // Collect all agent config paths to process
+    const agentQueue: { path: string; retryCount: number }[] = [];
+
     // Load agent from startup path
     if (startupAgentPath) {
-      await processAgentConfig(
-        startupAgentPath,
-        processedFiles,
-        userMap,
-        processedUsernames,
-      );
+      agentQueue.push({ path: startupAgentPath, retryCount: 0 });
     }
 
     // Load from naisys path/agents
@@ -53,12 +51,30 @@ export async function createAgentRegistrar(
     }
 
     const naisysAgentsDir = path.join(naisysFolder, "agents");
-    await processDirectory(
-      naisysAgentsDir,
-      processedFiles,
-      userMap,
-      processedUsernames,
-    );
+    collectAgentPaths(naisysAgentsDir, agentQueue);
+
+    // Process the queue with retry logic for agents with missing lead agents
+    while (agentQueue.length > 0) {
+      const item = agentQueue.shift()!;
+      const result = await processAgentConfig(
+        item.path,
+        processedFiles,
+        userMap,
+        processedUsernames,
+        agentQueue,
+      );
+
+      if (result === "lead_not_found") {
+        if (item.retryCount >= 1) {
+          throw new Error(
+            `Failed to process agent config at ${item.path}: lead agent not found after retry. ` +
+              `Check that the leadAgent username exists and is spelled correctly.`,
+          );
+        }
+        // Put back in queue with incremented retry count
+        agentQueue.push({ path: item.path, retryCount: item.retryCount + 1 });
+      }
+    }
 
     // Check for users that weren't created/updated
     for (const [username, user] of userMap) {
@@ -144,26 +160,77 @@ export async function createAgentRegistrar(
     console.log(`Created admin agent config at: ${adminAgentPath}`);
   }
 
+  function collectAgentPaths(
+    dirPath: string,
+    queue: { path: string; retryCount: number }[],
+  ) {
+    if (!fs.existsSync(dirPath)) {
+      console.log(`Directory not found, skipping: ${dirPath}`);
+      return;
+    }
+
+    if (!fs.statSync(dirPath).isDirectory()) {
+      console.warn(`Not a directory, skipping: ${dirPath}`);
+      return;
+    }
+
+    const files = fs.readdirSync(dirPath);
+
+    for (const file of files) {
+      const fullPath = path.join(dirPath, file);
+      const stat = fs.statSync(fullPath);
+
+      if (stat.isDirectory()) {
+        // Recursively collect from subdirectory
+        collectAgentPaths(fullPath, queue);
+      } else if (file.endsWith(".yaml") || file.endsWith(".yml")) {
+        queue.push({ path: fullPath, retryCount: 0 });
+      }
+    }
+  }
+
   async function processAgentConfig(
     agentPath: string,
     processedFiles: Set<string>,
     userMap: Map<string, any>,
     processedUsernames: Map<string, string>,
-  ) {
+    agentQueue: { path: string; retryCount: number }[],
+  ): Promise<"success" | "skipped" | "lead_not_found"> {
     try {
       // Get absolute path and check if already processed
       const absolutePath = path.resolve(agentPath);
       if (processedFiles.has(absolutePath)) {
         // console.log(`Skipping already processed agent config: ${absolutePath}`);
-        return;
+        return "skipped";
       }
-
-      // Mark as processed
-      processedFiles.add(absolutePath);
 
       const configYaml = fs.readFileSync(absolutePath, "utf8");
       const configObj = yaml.load(configYaml);
       const agentConfig = AgentConfigFileSchema.parse(configObj);
+
+      // Check if lead agent exists before processing
+      if (agentConfig.leadAgent) {
+        // Check both userMap (already processed) and database (pre-existing)
+        const leadInMap = userMap.has(agentConfig.leadAgent);
+        if (!leadInMap) {
+          const leadInDb = await usingDatabase(async (prisma) => {
+            return await prisma.users.findFirst({
+              where: {
+                username: agentConfig.leadAgent,
+                host_id: localHostId,
+              },
+              select: { id: true },
+            });
+          });
+          if (!leadInDb) {
+            // Lead agent not found, defer processing
+            return "lead_not_found";
+          }
+        }
+      }
+
+      // Mark as processed (only after we know we can proceed)
+      processedFiles.add(absolutePath);
 
       // Check if username already processed from a different file
       const previousPath = processedUsernames.get(agentConfig.username);
@@ -292,69 +359,20 @@ export async function createAgentRegistrar(
         }
       });
 
-      // Process subagent directory recursively
+      // Collect subagent directory paths to process later
       if (agentConfig.subagentDirectory) {
         const agentDir = path.dirname(absolutePath);
         const subagentDir = path.resolve(
           agentDir,
           agentConfig.subagentDirectory,
         );
-        await processDirectory(
-          subagentDir,
-          processedFiles,
-          userMap,
-          processedUsernames,
-        );
+        collectAgentPaths(subagentDir, agentQueue);
       }
+
+      return "success";
     } catch (e) {
       // Need to throw or runService startup will fail
       throw new Error(`Failed to process agent config at ${agentPath}: ${e}`);
-    }
-  }
-
-  async function processDirectory(
-    dirPath: string,
-    processedFiles: Set<string>,
-    userMap: Map<string, any>,
-    processedUsernames: Map<string, string>,
-  ) {
-    try {
-      if (!fs.existsSync(dirPath)) {
-        console.log(`Directory not found, skipping: ${dirPath}`);
-        return;
-      }
-
-      if (!fs.statSync(dirPath).isDirectory()) {
-        console.warn(`Not a directory, skipping: ${dirPath}`);
-        return;
-      }
-
-      const files = fs.readdirSync(dirPath);
-
-      for (const file of files) {
-        const fullPath = path.join(dirPath, file);
-        const stat = fs.statSync(fullPath);
-
-        if (stat.isDirectory()) {
-          // Recursively process subdirectory
-          await processDirectory(
-            fullPath,
-            processedFiles,
-            userMap,
-            processedUsernames,
-          );
-        } else if (file.endsWith(".yaml") || file.endsWith(".yml")) {
-          // Process yaml file
-          await processAgentConfig(
-            fullPath,
-            processedFiles,
-            userMap,
-            processedUsernames,
-          );
-        }
-      }
-    } catch (e) {
-      throw new Error(`Failed to process directory ${dirPath}: ${e}`);
     }
   }
 
