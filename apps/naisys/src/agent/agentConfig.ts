@@ -1,6 +1,8 @@
 import { DatabaseService } from "@naisys/database";
 import yaml from "js-yaml";
+import table from "text-table";
 import { z } from "zod";
+import { RegistrableCommand } from "../command/commandRegistry.js";
 import { GlobalConfig } from "../globalConfig.js";
 import { CommandProtection } from "../utils/enums.js";
 import { sanitizeSpendLimit, valueFromString } from "../utils/utilities.js";
@@ -162,11 +164,95 @@ export async function createAgentConfig(
     };
   }
 
+  async function updateConfigField(field: string, value: string) {
+    // Load current raw config from database
+    const user = await usingDatabase(async (prisma) => {
+      return await prisma.users.findUnique({
+        where: { id: userId },
+        select: { config: true },
+      });
+    });
+
+    if (!user) {
+      throw new Error(`User with ID ${userId} not found`);
+    }
+
+    // Parse, update, and serialize
+    const rawConfig = yaml.load(user.config) as Record<string, unknown>;
+
+    // Convert value to appropriate type
+    let typedValue: unknown = value;
+    if (value === "true") typedValue = true;
+    else if (value === "false") typedValue = false;
+    else if (!isNaN(Number(value)) && value.trim() !== "") typedValue = Number(value);
+
+    rawConfig[field] = typedValue;
+
+    const updatedYaml = yaml.dump(rawConfig);
+
+    // Save to database
+    await usingDatabase(async (prisma) => {
+      await prisma.users.update({
+        where: { id: userId },
+        data: { config: updatedYaml },
+      });
+    });
+
+    // Reload cached config
+    cachedConfig = await loadConfigFromDb();
+  }
+
+  async function handleCommand(cmdArgs: string): Promise<string> {
+    const args = cmdArgs.trim().split(/\s+/).filter(Boolean);
+    const config = cachedConfig;
+
+    if (args.length === 0) {
+      // Show all config values as a table
+      const rows = Object.entries(config)
+        .filter(([, value]) => typeof value !== "function")
+        .map(([key, value]) => {
+          const displayValue = typeof value === "object" ? JSON.stringify(value) : String(value);
+          return [key, displayValue];
+        });
+      return table([["Name", "Value"], ...rows], { hsep: " | " });
+    } else if (args.length === 1) {
+      // Show specific config value
+      const name = args[0];
+      const value = (config as Record<string, unknown>)[name];
+      if (value === undefined) {
+        return `Config field '${name}' not found`;
+      }
+      if (typeof value === "function") {
+        return `Config field '${name}' is a function and cannot be displayed`;
+      }
+      return typeof value === "object" ? JSON.stringify(value, null, 2) : String(value);
+    } else {
+      // Update config value
+      const name = args[0];
+      const value = args.slice(1).join(" ");
+      try {
+        await updateConfigField(name, value);
+        return `Config field '${name}' updated to '${value}' and reloaded`;
+      } catch (error) {
+        return `Failed to update config: ${error instanceof Error ? error.message : String(error)}`;
+      }
+    }
+  }
+
+  const registrableCommand: RegistrableCommand = {
+    commandName: "ns-agent-config",
+    helpText: "View or update agent config: ns-agent-config [name] [value]",
+    isDebug: true,
+    handleCommand,
+  };
+
   return {
+    ...registrableCommand,
     agentConfig: () => cachedConfig,
     reloadAgentConfig: async () => {
       cachedConfig = await loadConfigFromDb();
     },
+    updateConfigField,
   };
 }
 
