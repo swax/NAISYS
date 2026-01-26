@@ -13,5 +13,4 @@ agentPrompt: |
   do and then do it. The admin will use the results to build a better AI model for the command console.
 tokenMax: 8000
 debugPauseSeconds: 0
-subagentMax: 0
 spendLimitDollars: 3.00

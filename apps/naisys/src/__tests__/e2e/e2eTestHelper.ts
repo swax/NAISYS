@@ -38,7 +38,6 @@ export interface AgentYamlConfig {
   webEnabled?: boolean;
   mailEnabled?: boolean;
   wakeOnMessage?: boolean;
-  subagentMax?: number;
 }
 
 /**
@@ -103,11 +102,6 @@ webEnabled: ${config.webEnabled ?? false}
 mailEnabled: ${config.mailEnabled ?? true}
 wakeOnMessage: ${config.wakeOnMessage ?? false}
 `.trim();
-
-  // Add optional properties
-  if (config.subagentMax !== undefined) {
-    yamlContent += `\nsubagentMax: ${config.subagentMax}`;
-  }
 
   writeFileSync(join(testDir, filename), yamlContent);
 }

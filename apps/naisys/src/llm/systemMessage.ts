@@ -78,10 +78,7 @@ export function createSystemMessage({ globalConfig }: GlobalConfig, { agentConfi
       "\n  Be careful running multiple commands on a single prompt, and never assume the output of commands. Better to run one command at a time if you're not sure.";
   }
 
-  let subagentNote = "";
-  if ((agentConfig().subagentMax || 0) > 0) {
-    subagentNote += `\n  ns-agent: You can create subagents to help you with your work. You can have up to ${agentConfig().subagentMax} subagents.`;
-  }
+  const subagentNote = `\n  ns-agent: You can create subagents to help you with your work.`;
 
   // Fill out the templates in the agent prompt and stick it to the front of the system message
   // A lot of the stipulations in here are to prevent common LLM mistakes

@@ -292,7 +292,6 @@ export function createMockAgentConfig(): AgentConfig {
       wakeOnMessage: false,
       commandProtection: "none" as any,
       initialCommands: [],
-      subagentMax: undefined,
       subagentDirectory: undefined,
       mailBlackoutCycles: undefined,
       mailMessageTokenMax: undefined,

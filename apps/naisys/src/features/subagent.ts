@@ -85,10 +85,8 @@ export function createSubagentService(
           helpOutput += `\n  flush <name>: Flush a spawned agent's output (debug mode only)`;
         }
 
-        helpOutput += `\n\n* You can have up to ${agentConfig().subagentMax} subagents running at a time.`;
-
         if (agentConfig().mailEnabled) {
-          helpOutput += ` Use ns-mail to communicate with subagents by name.`;
+          helpOutput += `\n\n* Use ns-mail to communicate with subagents by name.`;
         }
 
         return helpOutput;
@@ -428,12 +426,6 @@ export function createSubagentService(
 
     if (subagent.status !== "stopped") {
       throw `Subagent '${agentName}' is already running`;
-    }
-
-    // Check that max sub agents aren't already started
-    const runningSubagents = _subagents.filter((p) => p.status !== "stopped");
-    if (runningSubagents.length >= (agentConfig().subagentMax || 1)) {
-      throw `Max subagents already running`;
     }
 
     return subagent;
