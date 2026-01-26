@@ -5,7 +5,6 @@ import OpenAI from "openai";
 import { ChatCompletionCreateParamsNonStreaming } from "openai/resources";
 import { GlobalConfig } from "../globalConfig.js";
 import { AgentConfig } from "../agent/agentConfig.js";
-import { getPlatformConfig } from "../services/shellPlatform.js";
 import { CommandTools } from "./commandTool.js";
 import { CostTracker } from "./costTracker.js";
 import { LLModels, LlmApiType } from "./llModels.js";
@@ -35,14 +34,7 @@ export function createLLMService(
     if (model.apiType === LlmApiType.None) {
       throw "This should be unreachable";
     } else if (model.apiType === LlmApiType.Mock) {
-      // 1 second time out then dummy response
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      const platform = getPlatformConfig();
-      const mockResponse =
-        platform.platform === "windows"
-          ? `Write-Host "Mock LLM response for ${agentConfig().username} at $(Get-Date -Format 'HH:mm:ss')"`
-          : `echo "Mock LLM response for ${agentConfig().username} at $(date +"%T")"`;
-      return [mockResponse];
+      return sendWithMock(abortSignal);
     } else if (model.apiType == LlmApiType.Google) {
       return sendWithGoogle(modelKey, systemMessage, context, source, abortSignal);
     } else if (model.apiType == LlmApiType.Anthropic) {
@@ -63,6 +55,38 @@ export function createLLMService(
     } else {
       throw `Error, unknown LLM API type ${model.apiType}`;
     }
+  }
+
+  /**
+   * @param abortSignal 5 second mock delay, to simulate network latency and test ESC command
+   * @returns Return with a 5 second pause so we can test out of focus agents still waiting before next mock request
+   */
+  async function sendWithMock(abortSignal?: AbortSignal): Promise<string[]> {
+    await new Promise<void>((resolve, reject) => {
+      const timeoutId = setTimeout(resolve, 5000);
+
+      if (abortSignal) {
+        if (abortSignal.aborted) {
+          clearTimeout(timeoutId);
+          reject(abortSignal.reason);
+          return;
+        }
+
+        abortSignal.addEventListener(
+          "abort",
+          () => {
+            clearTimeout(timeoutId);
+            reject(abortSignal.reason);
+          },
+          { once: true },
+        );
+      }
+    });
+
+    return [
+      `ns-comment "Mock LLM ran at ${new Date().toISOString()}"`,
+      `ns-session pause 5`
+    ];
   }
 
   async function sendWithOpenAiCompatible(

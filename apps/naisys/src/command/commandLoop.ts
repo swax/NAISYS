@@ -95,8 +95,8 @@ export function createCommandLoop(
 
       inputMode.setDebug();
 
-      let pauseSeconds = agentConfig().debugPauseSeconds;
-      let wakeOnMessage = agentConfig().wakeOnMessage;
+      let pauseSeconds: number | undefined = undefined;
+      let wakeOnMessage: boolean | undefined = undefined;
 
       while (
         nextCommandAction == NextCommandAction.Continue &&
@@ -110,9 +110,22 @@ export function createCommandLoop(
           );
         }
 
-        if (agentConfig().shellModel === LlmApiType.None) {
-          pauseSeconds = 0;
-          wakeOnMessage = true;
+        
+        if (pauseSeconds === undefined) {
+          // Debug prompt handles the pause/wait commands when agent is not in focus so only skip when pauseSeconds is undefined
+          if (!output.isConsoleEnabled() && inputMode.isDebug()) {
+            inputMode.setLLM();
+            pauseSeconds = -1;
+          } 
+          // When llm model is set to none then we should hold indefinitely
+          else if (agentConfig().shellModel === LlmApiType.None) {
+            pauseSeconds = 0;
+          } else {
+            pauseSeconds = agentConfig().debugPauseSeconds;
+          }
+        }
+        if (wakeOnMessage === undefined) {
+          wakeOnMessage = agentConfig().wakeOnMessage;
         }
 
         let prompt = await promptBuilder.getPrompt(pauseSeconds, wakeOnMessage);
@@ -133,6 +146,10 @@ export function createCommandLoop(
         }
         // LLM command prompt
         else if (inputMode.isLLM()) {
+          // Clear pause/wait settings after use
+          pauseSeconds = undefined;
+          wakeOnMessage = undefined;
+
           prompt = setPromptIndex(prompt, ++nextPromptIndex);
 
           const workingMsg =
@@ -169,10 +186,15 @@ export function createCommandLoop(
 
             // Set up ESC key cancellation for LLM query
             const queryController = new AbortController();
-            const escListener = createEscKeyListener();
-            const stopEscListener = escListener.start(() => {
-              queryController.abort();
-            });
+            let stopEscListener = () => {};
+
+            // Only set up ESC listener if agent is in focus to avoid interfering with readline
+            if (output.isConsoleEnabled()) {
+              const escListener = createEscKeyListener();
+              stopEscListener = escListener.start(() => {
+                queryController.abort();
+              });
+            }
 
             let queryCancelled = false;
             try {

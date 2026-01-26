@@ -131,8 +131,6 @@ export function createCommandHandler(
 
     return {
       nextCommandAction,
-      pauseSeconds: agentConfig().debugPauseSeconds,
-      wakeOnMessage: agentConfig().wakeOnMessage,
     };
   }
 
