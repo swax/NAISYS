@@ -196,6 +196,7 @@ export async function createAgentRuntime(
     hubSyncClient,
     nsContext,
     nsTalk,
+    agentConfig,
   ]);
   const commandHandler = createCommandHandler(
     globalConfig,

@@ -273,7 +273,12 @@ export function createMockGlobalConfig(): GlobalConfig {
 
 export function createMockAgentConfig(): AgentConfig {
   return {
+    commandName: "ns-agent-config",
+    helpText: "View or update agent config: ns-agent-config [name] [value]",
+    isDebug: true,
+    handleCommand: jest.fn(async () => ""),
     reloadAgentConfig: jest.fn(async () => {}),
+    updateConfigField: jest.fn(async () => {}),
     agentConfig: () => ({
       username: "test",
       title: "Test Agent",
