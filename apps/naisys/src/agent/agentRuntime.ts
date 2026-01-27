@@ -1,10 +1,8 @@
 import { createCommandHandler } from "../command/commandHandler.js";
 import { createCommandLoop } from "../command/commandLoop.js";
 import { createCommandProtection } from "../command/commandProtection.js";
-import {
-  createCommandRegistry,
-  RegistrableCommand,
-} from "../command/commandRegistry.js";
+import { createCommandRegistry } from "../command/commandRegistry.js";
+import { createDebugCommands } from "../command/debugCommand.js";
 import { createPromptBuilder } from "../command/promptBuilder.js";
 import { createShellCommand } from "../command/shellCommand.js";
 import { createShellWrapper } from "../command/shellWrapper.js";
@@ -176,38 +174,12 @@ export async function createAgentRuntime(
     output,
   );
   // Debug commands
-  const nsContext: RegistrableCommand = {
-    commandName: "ns-context",
-    helpText: "Print the current LLM context",
-    isDebug: true,
-    handleCommand: () => {
-      output.comment("#####################");
-      output.comment(contextManager.printContext());
-      output.comment("#####################");
-      return Promise.resolve("");
-    },
-  };
-  const nsTalk: RegistrableCommand = {
-    commandName: "ns-talk",
-    helpText: "Send a message to the agent",
-    isDebug: true,
-    handleCommand: async (cmdArgs) => {
-      if (inputMode.isLLM()) {
-        return "Message sent!";
-      } else if (inputMode.isDebug()) {
-        inputMode.setLLM();
-        const respondCommand = agentConfig.agentConfig().mailEnabled
-          ? "ns-mail"
-          : "ns-talk";
-        await contextManager.append(
-          `Message from admin: ${cmdArgs}. Respond via the ${respondCommand} command.`,
-        );
-        inputMode.setDebug();
-        return "";
-      }
-      return "";
-    },
-  };
+  const debugCommands = createDebugCommands(
+    agentConfig,
+    contextManager,
+    output,
+    inputMode,
+  );
 
   const commandRegistry = createCommandRegistry([
     llmynx,
@@ -218,8 +190,7 @@ export async function createAgentRuntime(
     sessionService,
     hostService,
     hubSyncClient,
-    nsContext,
-    nsTalk,
+    ...debugCommands,
     agentConfig,
   ]);
   const commandHandler = createCommandHandler(

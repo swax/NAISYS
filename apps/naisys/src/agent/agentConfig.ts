@@ -40,13 +40,7 @@ export const AgentConfigFileSchema = z.object({
 
   /** A directory to scan for subagent files. The leadAgent setting in a config determines who can start the subagent. */
   subagentDirectory: z.string().optional(),
-
-  /** Used to prevent the agent from constantly responding to mail and not getting any work done */
-  mailBlackoutCycles: z.number().optional(),
-
-  /** Try to enfore smaller messages between agents to improve communication efficiency */
-  mailMessageTokenMax: z.number().optional(),
-
+  
   /**
    * Disable multiple commands
    * + Prevents LLMs from hallucinating it's own output

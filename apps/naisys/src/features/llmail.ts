@@ -34,16 +34,12 @@ export function createLLMail(
       argv[0] = "help";
     }
 
-    const tokenMaxNote = agentConfig().mailMessageTokenMax
-      ? ` ${agentConfig().mailMessageTokenMax} token max`
-      : "";
-
     switch (argv[0]) {
       case "help":
         return `ns-mail <command>
   list [received|sent]               List recent messages (non-archived, * = unread)
   read <id>                          Read a message (marks as read)
-  send "<users>" "<subject>" "<msg>" Send a message.${tokenMaxNote}
+  send "<users>" "<subject>" "<msg>" Send a message.
   archive <ids>                      Archive messages (comma-separated)
   search <terms> [-archived] [-subject] Search messages
   users                              List all users
@@ -155,8 +151,6 @@ export function createLLMail(
     message: string,
   ): Promise<string> {
     message = message.replace(/\\n/g, "\n");
-
-    validateMsgTokenCount(message);
 
     return await usingDatabase(async (prisma) => {
       return await prisma.$transaction(async (tx) => {
@@ -310,17 +304,6 @@ export function createLLMail(
 
       return usersList.map((ul) => ul.username);
     });
-  }
-
-  function validateMsgTokenCount(message: string) {
-    const msgTokenCount = utilities.getTokenCount(message);
-    const msgTokenMax = agentConfig().mailMessageTokenMax;
-
-    if (msgTokenMax && msgTokenCount > msgTokenMax) {
-      throw `Error: Message is ${msgTokenCount} tokens, exceeding the limit of ${msgTokenMax} tokens`;
-    }
-
-    return msgTokenCount;
   }
 
   async function hasMultipleUsers(): Promise<boolean> {

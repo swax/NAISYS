@@ -16,7 +16,6 @@ import { RunService } from "../services/runService.js";
 import { createEscKeyListener } from "../utils/escKeyListener.js";
 import { InputModeService } from "../utils/inputMode.js";
 import { OutputColor, OutputService } from "../utils/output.js";
-import * as utilities from "../utils/utilities.js";
 import { CommandHandler } from "./commandHandler.js";
 import { NextCommandAction } from "./commandRegistry.js";
 import { PromptBuilder } from "./promptBuilder.js";
@@ -340,8 +339,6 @@ export function createCommandLoop(
     return terminationEvents.length > 0;
   }
 
-  let mailBlackoutCountdown = 0;
-
   /**
    * Return true if new mail was found and marked as shown, as that will let the user evaluate the prompt again.
    * Returning true otherwise will prevent the LLM from running
@@ -351,22 +348,9 @@ export function createCommandLoop(
       return false;
     }
 
-    let supressMail = false;
-    if (mailBlackoutCountdown > 0) {
-      mailBlackoutCountdown--;
-      supressMail = true;
-    }
-
     // Check for unread messages
     const unreadMessages = await llmail.getUnreadThreads();
     if (!unreadMessages.length) {
-      return false;
-    }
-
-    if (supressMail) {
-      await output.commentAndLog(
-        `New mail notifications blackout in effect. ${mailBlackoutCountdown} cycles remaining.`,
-      );
       return false;
     }
 
@@ -377,34 +361,12 @@ export function createCommandLoop(
       newMessageContents.push(await llmail.readMessage(message_id));
     }
 
-    // Check that token max for session will not be exceeded
-    const newMsgTokenCount = newMessageContents.reduce(
-      (acc, msg) => acc + utilities.getTokenCount(msg),
-      0,
-    );
-
-    const sessionTokens = contextManager.getTokenCount();
-    const tokenMax = agentConfig().tokenMax;
-
-    // Show full messages unless we are close to the token limit of the session
-    if (sessionTokens + newMsgTokenCount < tokenMax * 0.75) {
-      for (const newMessage of newMessageContents) {
-        await contextManager.append("New Message:", ContentSource.Console);
-        await contextManager.append(newMessage, ContentSource.Console);
-      }
-
-      mailBlackoutCountdown = agentConfig().mailBlackoutCycles || 0;
-
-      return true;
-    } else {
-      await contextManager.append(
-        `You have new mail, but not enough context to read them.\n` +
-          `After you run 'ns-session compact' you will be able to read them.`,
-        ContentSource.Console,
-      );
+    for (const newMessage of newMessageContents) {
+      await contextManager.append("New Message:", ContentSource.Console);
+      await contextManager.append(newMessage, ContentSource.Console);
     }
 
-    return false;
+    return true;
   }
 
   async function checkContextLimitWarning() {
