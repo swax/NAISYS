@@ -4,36 +4,20 @@ import { HubSyncClient } from "../hub/hubSyncClient.js";
 import { RemoteAgentRequester } from "../hub/remoteAgentRequester.js";
 import { HostService } from "../services/hostService.js";
 import { OutputColor } from "../utils/output.js";
-import { AgentRegistrar } from "./agentRegistrar.js";
 import { AgentRuntime, createAgentRuntime } from "./agentRuntime.js";
 
 /** Handles the multiplexing of multiple concurrent agents in the process */
 export class AgentManager {
-  dbService: DatabaseService;
-  globalConfig: GlobalConfig;
-  hostService: HostService;
-  remoteAgentRequester: RemoteAgentRequester;
-  agentRegistrar: AgentRegistrar;
-  hubSyncClient: HubSyncClient;
-
   runningAgents: AgentRuntime[] = [];
   runLoops: Promise<void>[] = [];
 
   constructor(
-    dbService: DatabaseService,
-    globalConfig: GlobalConfig,
-    hostService: HostService,
-    remoteAgentRequester: RemoteAgentRequester,
-    agentRegistrar: AgentRegistrar,
-    hubSyncClient: HubSyncClient,
-  ) {
-    this.dbService = dbService;
-    this.globalConfig = globalConfig;
-    this.hostService = hostService;
-    this.remoteAgentRequester = remoteAgentRequester;
-    this.agentRegistrar = agentRegistrar;
-    this.hubSyncClient = hubSyncClient;
-  }
+    private dbService: DatabaseService,
+    private globalConfig: GlobalConfig,
+    private hostService: HostService,
+    private remoteAgentRequester: RemoteAgentRequester,
+    private hubSyncClient: HubSyncClient,
+  ) {}
 
   async startAgent(userId: string, onStop?: (reason: string) => void) {
     // Check if agent is already running
@@ -42,7 +26,15 @@ export class AgentManager {
       throw new Error(`Agent '${existing.agentUsername}' is already running`);
     }
 
-    const agent = await createAgentRuntime(this, userId);
+    const agent = await createAgentRuntime(
+      this,
+      userId,
+      this.dbService,
+      this.globalConfig,
+      this.hostService,
+      this.remoteAgentRequester,
+      this.hubSyncClient,
+    );
 
     this.runningAgents.push(agent);
 

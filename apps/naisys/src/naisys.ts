@@ -82,7 +82,6 @@ const agentManager = new AgentManager(
   globalConfig,
   hostService,
   remoteAgentRequester,
-  agentRegistrar,
   hubSyncClient,
 );
 

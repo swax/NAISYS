@@ -1,13 +1,12 @@
 import chalk from "chalk";
 import * as readline from "readline";
 import { AgentConfig } from "../agent/agentConfig.js";
-import { LLMail } from "../features/llmail.js";
-import { SubagentService } from "../features/subagent.js";
 import { GlobalConfig } from "../globalConfig.js";
 import { ContextManager } from "../llm/contextManager.js";
 import { isElevated, PlatformConfig } from "../services/shellPlatform.js";
 import { InputModeService } from "../utils/inputMode.js";
 import { OutputService } from "../utils/output.js";
+import { PromptNotificationService } from "../utils/promptNotificationService.js";
 import { sharedReadline } from "../utils/sharedReadline.js";
 import { writeEventManager } from "../utils/writeEventManager.js";
 import { ShellWrapper } from "./shellWrapper.js";
@@ -16,12 +15,11 @@ export function createPromptBuilder(
   { globalConfig }: GlobalConfig,
   { agentConfig }: AgentConfig,
   shellWrapper: ShellWrapper,
-  subagent: SubagentService,
-  llmail: LLMail,
   contextManager: ContextManager,
   output: OutputService,
   inputMode: InputModeService,
   platformConfig: PlatformConfig,
+  promptNotification: PromptNotificationService,
 ) {
   /**
    * When actual output is entered by the user we want to cancel any auto-continue timers and/or wake on message
@@ -74,8 +72,7 @@ export function createPromptBuilder(
     return new Promise<string>((resolve) => {
       const questionController = new AbortController();
       let timeout: NodeJS.Timeout | undefined;
-      let mailInterval: NodeJS.Timeout | undefined;
-      let subagentInterval: NodeJS.Timeout | undefined;
+      let notificationInterval: NodeJS.Timeout | undefined;
       let timeoutCancelled = false;
       let unsubscribeWrite: (() => void) | undefined;
 
@@ -87,8 +84,7 @@ export function createPromptBuilder(
         }
 
         clearTimeout(timeout);
-        clearInterval(mailInterval);
-        clearInterval(subagentInterval);
+        clearInterval(notificationInterval);
       }
 
       /** Cancels waiting for user input */
@@ -168,29 +164,12 @@ export function createPromptBuilder(
         timeout = setTimeout(abortQuestion, pauseSeconds * 1000);
       }
 
-      if (wakeOnMessage) {
-        mailInterval = setInterval(() => {
-          // setInterval does not support async/await, but that's okay as this call easily runs within the 3s interval
-          void llmail.getUnreadThreads().then((unreadThreadIds) => {
-            if (unreadThreadIds.length) {
-              abortQuestion();
-            }
-          });
-        }, 5000);
-      }
-
-      subagentInterval = setInterval(() => {
-        // Check for terminated subagents
-        const terminationEvents = subagent.getTerminationEvents();
-        if (terminationEvents.length) {
+      // Poll for prompt notifications that should wake/interrupt
+      notificationInterval = setInterval(() => {
+        if (promptNotification.hasPending("wake")) {
           abortQuestion();
         }
-
-        // If the active agent has been switched, abort input
-        if (subagent.switchEventTriggered()) {
-          abortQuestion();
-        }
-      }, 500);
+      }, 250);
     });
   }
 

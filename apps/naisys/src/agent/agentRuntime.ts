@@ -1,3 +1,4 @@
+import { DatabaseService } from "@naisys/database";
 import { createCommandHandler } from "../command/commandHandler.js";
 import { createCommandLoop } from "../command/commandLoop.js";
 import { createCommandProtection } from "../command/commandProtection.js";
@@ -14,6 +15,9 @@ import { createMailDisplayService } from "../features/mailDisplayService.js";
 import { createSessionService } from "../features/session.js";
 import { createSubagentService } from "../features/subagent.js";
 import { createWorkspacesFeature } from "../features/workspaces.js";
+import { GlobalConfig } from "../globalConfig.js";
+import { HubSyncClient } from "../hub/hubSyncClient.js";
+import { RemoteAgentRequester } from "../hub/remoteAgentRequester.js";
 import { createCommandTools } from "../llm/commandTool.js";
 import { createContextManager } from "../llm/contextManager.js";
 import { createCostTracker } from "../llm/costTracker.js";
@@ -21,24 +25,25 @@ import { createLLModels } from "../llm/llModels.js";
 import { createLLMService } from "../llm/llmService.js";
 import { createSessionCompactor } from "../llm/sessionCompactor.js";
 import { createSystemMessage } from "../llm/systemMessage.js";
+import { HostService } from "../services/hostService.js";
 import { createLogService } from "../services/logService.js";
 import { createRunService } from "../services/runService.js";
 import { getPlatformConfig } from "../services/shellPlatform.js";
 import { createInputMode } from "../utils/inputMode.js";
 import { createOutputService } from "../utils/output.js";
+import { createPromptNotificationService } from "../utils/promptNotificationService.js";
 import { createAgentConfig } from "./agentConfig.js";
-import { AgentManager } from "./agentManager.js";
+import { IAgentManager } from "./agentManagerInterface.js";
 
 export async function createAgentRuntime(
-  agentManger: AgentManager,
+  agentManager: IAgentManager,
   userId: string,
+  dbService: DatabaseService,
+  globalConfig: GlobalConfig,
+  hostService: HostService,
+  remoteAgentRequester: RemoteAgentRequester,
+  hubSyncClient: HubSyncClient,
 ) {
-  const dbService = agentManger.dbService;
-  const globalConfig = agentManger.globalConfig;
-  const hostService = agentManger.hostService;
-  const remoteAgentRequester = agentManger.remoteAgentRequester;
-  const hubSyncClient = agentManger.hubSyncClient;
-
   /*
    * Simple form of dependency injection
    * actually a bit better than the previous module system as this implicitly prevents cirucular dependencies
@@ -108,6 +113,7 @@ export async function createAgentRuntime(
     llmailAddress,
     userId,
   );
+  const promptNotification = createPromptNotificationService();
   const llmail = createLLMail(
     globalConfig,
     agentConfig,
@@ -116,17 +122,21 @@ export async function createAgentRuntime(
     llmailAddress,
     mailDisplayService,
     userId,
+    promptNotification,
+    contextManager,
   );
   const subagentService = createSubagentService(
     agentConfig,
     llmail,
     output,
-    agentManger,
+    agentManager,
     inputMode,
     dbService,
     hostService,
     remoteAgentRequester,
     userId,
+    promptNotification,
+    contextManager,
   );
   const llmynx = createLLMynx(
     globalConfig,
@@ -143,12 +153,11 @@ export async function createAgentRuntime(
     globalConfig,
     agentConfig,
     shellWrapper,
-    subagentService,
-    llmail,
     contextManager,
     output,
     inputMode,
     platformConfig,
+    promptNotification,
   );
   const shellCommand = createShellCommand(
     globalConfig,
@@ -211,7 +220,6 @@ export async function createAgentRuntime(
     promptBuilder,
     shellCommand,
     subagentService,
-    llmail,
     llmynx,
     sessionCompactor,
     contextManager,
@@ -222,6 +230,7 @@ export async function createAgentRuntime(
     logService,
     inputMode,
     runService,
+    promptNotification,
   );
 
   const abortController = new AbortController();
@@ -243,9 +252,10 @@ export async function createAgentRuntime(
       await new Promise((resolve) => setTimeout(resolve, 5000));
     },
     completeShutdown: (reason: string) => {
-      // Cleanup database interval
+      // Cleanup intervals
       runService.cleanup();
       subagentService.cleanup(reason);
+      llmail.cleanup();
     },
   };
 }
