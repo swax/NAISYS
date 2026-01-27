@@ -131,9 +131,6 @@ export function createPromptBuilder(
         ? sharedReadline
         : undefined;
 
-      // Track if this agent is in focus (has console access)
-      const isInFocus = !!readlineInterface;
-
       if (readlineInterface) {
         readlineInterface.question(
           chalk.greenBright(commandPrompt),

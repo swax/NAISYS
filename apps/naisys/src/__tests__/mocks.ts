@@ -298,8 +298,6 @@ export function createMockAgentConfig(): AgentConfig {
       commandProtection: "none" as any,
       initialCommands: [],
       subagentDirectory: undefined,
-      mailBlackoutCycles: undefined,
-      mailMessageTokenMax: undefined,
       disableMultipleCommands: false,
       leadAgent: undefined,
       taskDescription: undefined,
