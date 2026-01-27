@@ -7,9 +7,12 @@ import {
   RegistrableCommand,
 } from "../command/commandRegistry.js";
 import { GlobalConfig } from "../globalConfig.js";
+import { ContextManager } from "../llm/contextManager.js";
+import { ContentSource } from "../llm/llmDtos.js";
 import { HostService } from "../services/hostService.js";
-import * as utilities from "../utils/utilities.js";
+import { PromptNotificationService } from "../utils/promptNotificationService.js";
 import { LLMailAddress } from "./llmailAddress.js";
+import { emitMailSent, onMailReceived } from "./mailEventBus.js";
 import { MailDisplayService } from "./mailDisplayService.js";
 
 export function createLLMail(
@@ -20,6 +23,8 @@ export function createLLMail(
   llmailAddress: LLMailAddress,
   mailDisplayService: MailDisplayService,
   userId: string,
+  promptNotification: PromptNotificationService,
+  contextManager: ContextManager,
 ) {
   const myUserId = userId;
   const { localHostId } = hostService;
@@ -152,7 +157,7 @@ export function createLLMail(
   ): Promise<string> {
     message = message.replace(/\\n/g, "\n");
 
-    return await usingDatabase(async (prisma) => {
+    const recipientIds = await usingDatabase(async (prisma) => {
       return await prisma.$transaction(async (tx) => {
         // Resolve each user identifier to a user ID
         const resolvedRecipients: { id: string; username: string }[] = [];
@@ -198,9 +203,14 @@ export function createLLMail(
           });
         }
 
-        return "Mail sent";
+        return resolvedRecipients.map((r) => r.id);
       });
     });
+
+    // Notify same-process agents immediately via event bus
+    emitMailSent(recipientIds);
+
+    return "Mail sent";
   }
 
   async function readMessage(messageId: string): Promise<string> {
@@ -314,6 +324,66 @@ export function createLLMail(
     });
   }
 
+  // Track message IDs that have been notified but not yet processed
+  const notifiedMessageIds = new Set<string>();
+
+  /**
+   * Check for new mail and create a notification if there are unread messages.
+   * Tracks notified message IDs to avoid duplicate notifications.
+   */
+  async function checkAndNotify(): Promise<void> {
+    if (!agentConfig().mailEnabled) {
+      return;
+    }
+
+    const unreadMessages = await mailDisplayService.getUnreadThreads();
+    if (!unreadMessages.length) {
+      return;
+    }
+
+    // Filter out messages we've already notified about
+    const newMessages = unreadMessages.filter(
+      (m) => !notifiedMessageIds.has(m.message_id),
+    );
+    if (!newMessages.length) {
+      return;
+    }
+
+    // Track these message IDs as notified
+    const messageIds = newMessages.map((m) => m.message_id);
+    messageIds.forEach((id) => notifiedMessageIds.add(id));
+
+    promptNotification.notify({
+      type: "mail",
+      wake: agentConfig().wakeOnMessage,
+      process: async () => {
+        // Read and display each message
+        for (const messageId of messageIds) {
+          const content = await readMessage(messageId);
+          await contextManager.append("New Message:", ContentSource.Console);
+          await contextManager.append(content, ContentSource.Console);
+          // Remove from notified set since it's now been processed
+          notifiedMessageIds.delete(messageId);
+        }
+      },
+    });
+  }
+
+  // Listen for same-process mail notifications (instant)
+  const unsubscribeMailEvents = onMailReceived(myUserId, () => {
+    void checkAndNotify();
+  });
+
+  // Poll for cross-machine mail (fallback)
+  const mailCheckInterval = setInterval(() => {
+    void checkAndNotify();
+  }, 5000);
+
+  function cleanup() {
+    unsubscribeMailEvents();
+    clearInterval(mailCheckInterval);
+  }
+
   const registrableCommand: RegistrableCommand = {
     commandName: "ns-mail",
     helpText: "Send and receive messages",
@@ -327,6 +397,8 @@ export function createLLMail(
     readMessage,
     getAllUserNames,
     hasMultipleUsers,
+    checkAndNotify,
+    cleanup,
   };
 }
 

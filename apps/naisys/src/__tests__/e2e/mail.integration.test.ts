@@ -114,18 +114,15 @@ describe("NAISYS Mail E2E", () => {
     let output = naisys.flushOutput();
     expect(output).toContain("Mail sent");
 
-    // Switch to bob - give time for switch event detection (500ms interval)
+    // Switch to bob - mail notification is processed during switch
+    // (event bus provides instant same-process notifications)
+    naisys.flushOutput();
     naisys.sendCommand("ns-agent switch bob");
     await new Promise((resolve) => setTimeout(resolve, 1000));
     await naisys.waitForOutput("bob@", 15000);
     await naisys.waitForPrompt();
 
-    // Send a new line to trigger mail notification
-    naisys.flushOutput();
-    naisys.sendNewLine();
-    await naisys.waitForPrompt();
-
-    // Verify bob received new message notification
+    // Verify bob received new message notification (output during switch)
     output = naisys.flushOutput();
     expect(output).toContain("Hello Bob, this is a test message from Alex!");
 

@@ -5,10 +5,14 @@ import table from "text-table";
 import { AgentConfig } from "../agent/agentConfig.js";
 import { RegistrableCommand } from "../command/commandRegistry.js";
 import { RemoteAgentRequester } from "../hub/remoteAgentRequester.js";
+import { ContextManager } from "../llm/contextManager.js";
+import { ContentSource } from "../llm/llmDtos.js";
 import { HostService } from "../services/hostService.js";
 import { InputModeService } from "../utils/inputMode.js";
 import { OutputColor, OutputService } from "../utils/output.js";
+import { PromptNotificationService } from "../utils/promptNotificationService.js";
 import { LLMail } from "./llmail.js";
+import { IAgentManager } from "../agent/agentManagerInterface.js";
 
 interface Subagent {
   userId: string;
@@ -20,27 +24,6 @@ interface Subagent {
   status: "spawned" | "started" | "stopped";
 }
 
-/** Don't create a cyclic dependency on agent manager, or give this class access to all of the the agent manager's properties */
-type IAgentManager = {
-  startAgent: (
-    userId: string,
-    onStop?: (reason: string) => void,
-  ) => Promise<string>;
-  stopAgent: (
-    agentUserId: string,
-    mode: "requestShutdown" | "completeShutdown",
-    reason: string,
-  ) => Promise<void>;
-  runningAgents: Array<{
-    agentUserId: string;
-    agentUsername: string;
-    agentTitle: string;
-    agentTaskDescription?: string;
-  }>;
-  getBufferLines: (agentUserId: string) => number;
-  setActiveConsoleAgent: (agentUserId: string) => void;
-};
-
 export function createSubagentService(
   { agentConfig }: AgentConfig,
   llmail: LLMail,
@@ -51,15 +34,10 @@ export function createSubagentService(
   { localHostId }: HostService,
   remoteAgentRequester: RemoteAgentRequester,
   userId: string,
+  promptNotification: PromptNotificationService,
+  contextManager: ContextManager,
 ) {
   const _subagents: Subagent[] = [];
-
-  // Track running subagents and termination events
-  const _terminationEvents: Array<{
-    userId: string;
-    agentName: string;
-    reason: string;
-  }> = [];
 
   async function handleCommand(args: string): Promise<string> {
     const argv = stringArgv(args);
@@ -253,34 +231,11 @@ export function createSubagentService(
       .map((p) => p.agentName);
   }
 
-  /** Check for and clear termination events for wake notifications */
-  function getTerminationEvents(
-    action?: "clear",
-  ): Array<{ userId: string; agentName: string; reason: string }> {
-    if (_terminationEvents.length === 0) {
-      return [];
-    }
-
-    const events = [..._terminationEvents];
-
-    if (action === "clear") {
-      _terminationEvents.length = 0;
-    }
-
-    return events;
-  }
-
-  let switchEventRaised = false;
-
   function raiseSwitchEvent() {
-    switchEventRaised = true;
-  }
-  function switchEventTriggered(action?: "clear") {
-    const wasRaised = switchEventRaised;
-    if (action === "clear") {
-      switchEventRaised = false;
-    }
-    return wasRaised;
+    promptNotification.notify({
+      type: "switch",
+      wake: true,
+    });
   }
 
   /**
@@ -662,14 +617,19 @@ export function createSubagentService(
   }
 
   function handleAgentTermination(subagent: Subagent, reason: string) {
-    _terminationEvents.push({
-      userId: subagent.userId,
-      agentName: subagent.agentName,
-      reason,
-    });
-
     subagent.status = "stopped";
     subagent.taskDescription = undefined;
+
+    promptNotification.notify({
+      type: "subagent-terminated",
+      wake: agentConfig().wakeOnMessage,
+      process: async () => {
+        await contextManager.append(
+          `Subagent '${subagent.agentName}' has terminated. Reason: ${reason}`,
+          ContentSource.Console,
+        );
+      },
+    });
   }
 
   /** Only used in debug mode, not by LLM */
@@ -697,10 +657,8 @@ export function createSubagentService(
   return {
     ...registrableCommand,
     getRunningSubagentNames,
-    getTerminationEvents,
     cleanup,
     raiseSwitchEvent,
-    switchEventTriggered,
   };
 }
 

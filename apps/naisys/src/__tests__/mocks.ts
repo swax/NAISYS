@@ -84,10 +84,8 @@ export function createMockSubagent() {
     commandName: "ns-agent",
     handleCommand: jest.fn(() => Promise.resolve("")),
     getRunningSubagentNames: jest.fn(() => []),
-    getTerminationEvents: jest.fn(() => []),
     cleanup: jest.fn(() => Promise.resolve()),
     raiseSwitchEvent: jest.fn(),
-    switchEventTriggered: jest.fn(() => false),
   };
 
   return subagent;
@@ -102,6 +100,8 @@ export function createMockLLMail() {
     readMessage: jest.fn(() => Promise.resolve("")),
     getAllUserNames: jest.fn(() => Promise.resolve([])),
     hasMultipleUsers: jest.fn(() => Promise.resolve(false)),
+    checkAndNotify: jest.fn(() => Promise.resolve()),
+    cleanup: jest.fn(),
   };
 
   return llmail;

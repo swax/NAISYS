@@ -1,7 +1,6 @@
 import chalk from "chalk";
 import * as readline from "readline";
 import { AgentConfig } from "../agent/agentConfig.js";
-import { LLMail } from "../features/llmail.js";
 import { LLMynx } from "../features/llmynx.js";
 import { SubagentService } from "../features/subagent.js";
 import { WorkspacesFeature } from "../features/workspaces.js";
@@ -16,6 +15,7 @@ import { RunService } from "../services/runService.js";
 import { createEscKeyListener } from "../utils/escKeyListener.js";
 import { InputModeService } from "../utils/inputMode.js";
 import { OutputColor, OutputService } from "../utils/output.js";
+import { PromptNotificationService } from "../utils/promptNotificationService.js";
 import { CommandHandler } from "./commandHandler.js";
 import { NextCommandAction } from "./commandRegistry.js";
 import { PromptBuilder } from "./promptBuilder.js";
@@ -28,7 +28,6 @@ export function createCommandLoop(
   promptBuilder: PromptBuilder,
   shellCommand: ShellCommand,
   subagent: SubagentService,
-  llmail: LLMail,
   llmynx: LLMynx,
   sessionCompactor: SessionCompactor,
   contextManager: ContextManager,
@@ -39,6 +38,7 @@ export function createCommandLoop(
   logService: LogService,
   inputMode: InputModeService,
   runService: RunService,
+  promptNotification: PromptNotificationService,
 ) {
   async function run(abortSignal?: AbortSignal) {
     await output.commentAndLog(`AGENT STARTED`);
@@ -159,18 +159,17 @@ export function createCommandLoop(
           try {
             // In the cases that the input prompt is interrupted for a notification, return to the debug prompt
             if (
-              subagent.switchEventTriggered("clear") ||
-              (await checkNewMailNotification()) ||
-              (await checkSubagentsTerminated()) ||
-              agentConfig().shellModel === LlmApiType.None // Check this last so notications get processed/cleared
+              promptNotification.hasPending() ||
+              agentConfig().shellModel === LlmApiType.None // Check this last so notifications get processed/cleared
             ) {
+              await promptNotification.processPending();
               inputMode.setDebug();
               continue;
             }
 
             await checkContextLimitWarning();
 
-            await workspaces.displayActive();
+            workspaces.displayActive();
 
             await contextManager.append(
               prompt,
@@ -326,47 +325,6 @@ export function createCommandLoop(
       pauseSeconds,
       wakeOnMessage,
     };
-  }
-
-  async function checkSubagentsTerminated() {
-    const terminationEvents = subagent.getTerminationEvents("clear");
-    for (const event of terminationEvents) {
-      await contextManager.append(
-        `Subagent '${event.agentName}' has terminated. Reason: ${event.reason}`,
-        ContentSource.Console,
-      );
-    }
-    return terminationEvents.length > 0;
-  }
-
-  /**
-   * Return true if new mail was found and marked as shown, as that will let the user evaluate the prompt again.
-   * Returning true otherwise will prevent the LLM from running
-   */
-  async function checkNewMailNotification() {
-    if (!agentConfig().mailEnabled) {
-      return false;
-    }
-
-    // Check for unread messages
-    const unreadMessages = await llmail.getUnreadThreads();
-    if (!unreadMessages.length) {
-      return false;
-    }
-
-    // Get the new messages
-    const newMessageContents: string[] = [];
-    for (const { message_id } of unreadMessages) {
-      // readMessage marks as read, so we read them all
-      newMessageContents.push(await llmail.readMessage(message_id));
-    }
-
-    for (const newMessage of newMessageContents) {
-      await contextManager.append("New Message:", ContentSource.Console);
-      await contextManager.append(newMessage, ContentSource.Console);
-    }
-
-    return true;
   }
 
   async function checkContextLimitWarning() {
