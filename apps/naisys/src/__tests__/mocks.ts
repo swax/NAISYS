@@ -141,7 +141,6 @@ export function createMockContextManager() {
   const getTokenCount = jest.fn(() => 0);
   const printContext = jest.fn(() => "");
   const getCombinedMessages = jest.fn((): LlmMessage[] => []);
-  const trim = jest.fn(() => "");
   const exportedForTesting = {
     getMessages: jest.fn((): LlmMessage[] => []),
   };
@@ -152,7 +151,6 @@ export function createMockContextManager() {
     getTokenCount,
     printContext,
     getCombinedMessages,
-    trim,
     exportedForTesting,
   };
 
@@ -251,7 +249,6 @@ export function createMockGlobalConfig(): GlobalConfig {
       retrySecondsMax: 1800,
       compactSessionEnabled: false,
       workspacesEnabled: false,
-      trimSessionEnabled: false,
       naisysFolder: "/naisys",
       localLlmUrl: undefined,
       localLlmName: undefined,

@@ -41,9 +41,6 @@ export function createSessionService(
       case "pause":
         return handlePause(argv[1]);
 
-      case "trim":
-        return handleTrim(args.slice(subcommand.length).trim());
-
       case "compact":
         return handleCompact(args.slice(subcommand.length).trim());
 
@@ -58,11 +55,6 @@ export function createSessionService(
   function getHelpText(): string {
     let helpText = `ns-session <subcommand>
   pause <seconds>         Pause for a number of seconds`;
-
-    if (globalConfig().trimSessionEnabled) {
-      helpText += `
-  trim <indexes>          Remove prompts by index to save tokens (e.g., "1-5, 8, 11-13")`;
-    }
 
     if (globalConfig().compactSessionEnabled) {
       helpText += `
@@ -97,18 +89,6 @@ export function createSessionService(
         wakeOnMessage: agentConfig().wakeOnMessage,
       },
     };
-  }
-
-  function handleTrim(args: string): string {
-    if (!globalConfig().trimSessionEnabled) {
-      return 'The "ns-session trim" command is not enabled in this environment.';
-    }
-
-    if (!args) {
-      return 'Usage: ns-session trim <indexes>\nExample: ns-session trim "1-5, 8, 11-13"';
-    }
-
-    return contextManager.trim(args);
   }
 
   async function handleCompact(

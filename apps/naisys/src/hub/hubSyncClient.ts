@@ -64,12 +64,40 @@ export function createHubSyncClient(
   /** Track sync status per hub URL */
   const hubSyncStates = new Map<string, HubSyncState>();
 
+  /** Handlers for fatal hub errors */
+  type FatalErrorHandler = (
+    hubUrl: string,
+    error: string,
+    message: string,
+  ) => void;
+  const fatalErrorHandlers = new Set<FatalErrorHandler>();
+
   init();
 
   function init() {
     hubManager.registerEvent(HubEvents.SYNC_REQUEST, handleSyncRequest);
     hubManager.registerEvent(HubEvents.HUB_CONNECTED, handleHubConnected);
     hubManager.registerEvent(HubEvents.SYNC_ERROR, handleSyncError);
+  }
+
+  /**
+   * Handle fatal hub error - disable reconnection and set error state
+   */
+  function handleFatalHubError(hubUrl: string, error: string, message: string) {
+    hubClientLog.error(
+      `[SyncClient] Fatal error from ${hubUrl}: ${error} - ${message}`,
+    );
+
+    const state = getOrCreateState(hubUrl);
+    state.status = "disabled";
+    state.errorMessage = `${error}: ${message}`;
+
+    hubManager.disableReconnection(hubUrl, message);
+
+    // Notify registered handlers
+    for (const handler of fatalErrorHandlers) {
+      handler(hubUrl, error, message);
+    }
   }
 
   /**
@@ -85,17 +113,7 @@ export function createHubSyncClient(
     }
 
     const { error, message } = result.data;
-    hubClientLog.error(
-      `[SyncClient] Sync error from ${hubUrl}: ${error} - ${message}`,
-    );
-
-    // Update state to reflect the fatal error
-    const state = getOrCreateState(hubUrl);
-    state.status = "disabled";
-    state.errorMessage = `${error}: ${message}`;
-
-    // Disable reconnection for this hub
-    hubManager.disableReconnection(hubUrl, message);
+    handleFatalHubError(hubUrl, error, message);
   }
 
   /**
@@ -147,17 +165,8 @@ export function createHubSyncClient(
     // First check if it's an error response
     const errorResult = CatchUpResponseErrorSchema.safeParse(rawResponse);
     if (errorResult.success) {
-      const error = errorResult.data;
-      hubClientLog.error(
-        `[SyncClient] Catch-up error from ${hubUrl}: ${error.error} - ${error.message}`,
-      );
-
-      const state = getOrCreateState(hubUrl);
-      state.status =
-        error.error === "schema_mismatch"
-          ? "schema_mismatch"
-          : "internal_error";
-      state.errorMessage = error.message;
+      const { error, message } = errorResult.data;
+      handleFatalHubError(hubUrl, error, message);
       return;
     }
 
@@ -517,6 +526,10 @@ export function createHubSyncClient(
     /** Get all hub sync states */
     getAllHubSyncStates: (): Map<string, HubSyncState> => {
       return new Map(hubSyncStates);
+    },
+    /** Register a handler for fatal hub errors */
+    onFatalError: (handler: FatalErrorHandler) => {
+      fatalErrorHandlers.add(handler);
     },
   };
 }

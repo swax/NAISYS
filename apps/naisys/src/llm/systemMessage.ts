@@ -46,11 +46,6 @@ export function createSystemMessage(
   const sessionSubcommands: string[] = [];
 
   sessionSubcommands.push(`pause <seconds> - Pause for <seconds>`);
-  if (globalConfig().trimSessionEnabled) {
-    sessionSubcommands.push(
-      `trim <indexes> - Remove prompts to save tokens (e.g., "1-5, 8")`,
-    );
-  }
   if (globalConfig().compactSessionEnabled) {
     sessionSubcommands.push(
       `compact "<note>" - Compact the session which will reset the token count. The note should contain your next goal, and important things you should remember.`,
@@ -72,14 +67,6 @@ export function createSystemMessage(
   if (globalConfig().compactSessionEnabled) {
     tokenNote =
       "\n  Make sure to call 'ns-session compact' before the token limit is hit so you can continue your work without interruption.";
-  }
-
-  if (
-    !globalConfig().compactSessionEnabled &&
-    globalConfig().trimSessionEnabled
-  ) {
-    tokenNote =
-      "\n  Make sure to call 'ns-session trim' before the limit is hit so you stay under the limit.\n  Use comments to remember important things from trimmed prompts.";
   }
 
   if (agentConfig().disableMultipleCommands) {

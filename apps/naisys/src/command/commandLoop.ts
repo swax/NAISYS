@@ -60,7 +60,6 @@ export function createCommandLoop(
     let nextCommandAction = NextCommandAction.Continue;
 
     let llmErrorCount = 0;
-    let nextPromptIndex = 0;
 
     while (
       nextCommandAction != NextCommandAction.ExitApplication &&
@@ -73,20 +72,12 @@ export function createCommandLoop(
 
       const lastSessionSummary = await sessionCompactor.getLastSessionSummary();
       if (lastSessionSummary) {
-        await displayPreviousSessionNotes(
-          lastSessionSummary,
-          nextPromptIndex++,
-        );
+        await displayPreviousSessionNotes(lastSessionSummary);
       }
 
       for (const initialCommand of agentConfig().initialCommands) {
-        let prompt = await promptBuilder.getPrompt(0, false);
-        prompt = setPromptIndex(prompt, ++nextPromptIndex);
-        await contextManager.append(
-          prompt,
-          ContentSource.ConsolePrompt,
-          nextPromptIndex,
-        );
+        const prompt = await promptBuilder.getPrompt(0, false);
+        await contextManager.append(prompt, ContentSource.ConsolePrompt);
         await commandHandler.processCommand(prompt, [
           agentConfig().resolveConfigVars(initialCommand),
         ]);
@@ -148,8 +139,6 @@ export function createCommandLoop(
           pauseSeconds = undefined;
           wakeOnMessage = undefined;
 
-          prompt = setPromptIndex(prompt, ++nextPromptIndex);
-
           const workingMsg =
             prompt +
             chalk[OutputColor.loading](
@@ -171,11 +160,7 @@ export function createCommandLoop(
 
             workspaces.displayActive();
 
-            await contextManager.append(
-              prompt,
-              ContentSource.ConsolePrompt,
-              nextPromptIndex,
-            );
+            await contextManager.append(prompt, ContentSource.ConsolePrompt);
 
             if (output.isConsoleEnabled()) {
               process.stdout.write(workingMsg);
@@ -261,7 +246,6 @@ export function createCommandLoop(
         contextManager.clear();
         await runService.incrementSession();
         nextCommandAction = NextCommandAction.Continue;
-        nextPromptIndex = 0;
       }
     }
 
@@ -340,11 +324,6 @@ export function createCommandLoop(
     The note should contain your next goal, and important things should you remember.`;
       }
 
-      if (globalConfig().trimSessionEnabled) {
-        tokenNote += `\nUse 'ns-session trim' to reduce the size of the session.
-    Use comments to remember important things from trimmed prompts.`;
-      }
-
       await contextManager.append(
         `The token limit for this session has been exceeded.${tokenNote}`,
         ContentSource.Console,
@@ -352,38 +331,9 @@ export function createCommandLoop(
     }
   }
 
-  /** Insert prompt index [Index: 1] before the $.
-   * Insert at the end of the prompt so that 'prompt splitting' still works in the command handler
-   */
-  function setPromptIndex(prompt: string, index: number) {
-    if (!globalConfig().trimSessionEnabled) {
-      return prompt;
-    }
-
-    let newPrompt = prompt;
-
-    const endPromptPos = prompt.lastIndexOf("$");
-    if (endPromptPos != -1) {
-      newPrompt =
-        prompt.slice(0, endPromptPos) +
-        ` [Index: ${index}]` +
-        prompt.slice(endPromptPos);
-    }
-
-    return newPrompt;
-  }
-
-  async function displayPreviousSessionNotes(
-    prevSessionNotes: string,
-    nextPromptIndex: number,
-  ) {
-    let prompt = await promptBuilder.getPrompt(0, false);
-    prompt = setPromptIndex(prompt, ++nextPromptIndex);
-    await contextManager.append(
-      prompt,
-      ContentSource.ConsolePrompt,
-      nextPromptIndex,
-    );
+  async function displayPreviousSessionNotes(prevSessionNotes: string) {
+    const prompt = await promptBuilder.getPrompt(0, false);
+    await contextManager.append(prompt, ContentSource.ConsolePrompt);
     const prevSessionNotesCommand = "cat ~/prev_session_notes";
     await contextManager.append(
       prevSessionNotesCommand,
