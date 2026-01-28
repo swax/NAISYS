@@ -244,6 +244,7 @@ export async function createAgentRuntime(
     agentTaskDescription: config.taskDescription,
     output,
     subagentService,
+    promptNotification,
     runCommandLoop: () => commandLoop.run(abortController.signal),
     requestShutdown: async (reason: string) => {
       abortController.abort(reason);

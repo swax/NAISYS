@@ -21,19 +21,9 @@ export function createContextManager(
   async function append(
     content: string,
     source: ContentSource = ContentSource.Console,
-    promptIndex?: number,
   ) {
     if (!content) {
       return;
-    }
-
-    if (
-      promptIndex &&
-      (source != ContentSource.ConsolePrompt || inputMode.isDebug())
-    ) {
-      throw new Error(
-        "Prompt index can only be set for console prompts in LLM input mode",
-      );
     }
 
     // Debug runs in a shadow mode where their activity is not recorded in the context
@@ -67,7 +57,7 @@ export function createContextManager(
       );
     }
 
-    const llmMessage = <LlmMessage>{ source, role, content, promptIndex };
+    const llmMessage = <LlmMessage>{ source, role, content };
     _messages.push(llmMessage);
 
     // Log the message
@@ -132,66 +122,6 @@ export function createContextManager(
     return combinedMessages;
   }
 
-  function trim(
-    /** Example: 1-5, 8, 11-13 */
-    args: string,
-  ): string {
-    args = utilities.trimChars(args, " \"'");
-
-    const indexGroups = args.split(",");
-
-    let tokensReduced = 0;
-
-    for (const indexGroup of indexGroups) {
-      const indexRange = indexGroup.split("-");
-
-      let trimStart = 0;
-      let trimEnd = 0;
-
-      if (indexRange.length == 1) {
-        trimStart = trimEnd = parseInt(indexRange[0]);
-      } else if (indexRange.length == 2) {
-        trimStart = parseInt(indexRange[0]);
-        trimEnd = parseInt(indexRange[1]);
-      } else {
-        throw "Invalid index range: " + indexGroup;
-      }
-
-      if (trimEnd < trimStart) {
-        throw "End index must be greater than start index";
-      }
-
-      const trimmedMessages = [];
-      let trimming = false;
-
-      for (let i = 0; i < _messages.length; i++) {
-        const m = _messages[i];
-
-        // Trim until the next console prompt is hit
-        if (m.source == ContentSource.ConsolePrompt && trimming) {
-          trimming = false;
-        }
-
-        if (
-          trimming ||
-          (m.promptIndex &&
-            m.promptIndex >= trimStart &&
-            m.promptIndex <= trimEnd)
-        ) {
-          output.comment(`Trimmed: ${m.content}`);
-          tokensReduced += utilities.getTokenCount(m.content);
-          trimming = true;
-        } else {
-          trimmedMessages.push(m);
-        }
-      }
-
-      _messages = trimmedMessages;
-    }
-
-    return `Trimmed session by ${tokensReduced} tokens`;
-  }
-
   const exportedForTesting = {
     getMessages: () => _messages,
   };
@@ -216,7 +146,6 @@ export function createContextManager(
     getTokenCount,
     printContext,
     getCombinedMessages,
-    trim,
     exportedForTesting,
   };
 }

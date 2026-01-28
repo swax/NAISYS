@@ -37,9 +37,6 @@ export async function createGlobalConfig() {
     /** Experimental, live updating spot in the context for the LLM to put files, to avoid having to continually cat */
     const workspacesEnabled = false;
 
-    /** Experimental, allow LLM to trim it's own session context to avoid having to restart the session */
-    const trimSessionEnabled = false;
-
     /* .env is used for global configs across naisys, while agent configs are for the specific agent */
     const naisysFolderEnv = getEnv("NAISYS_FOLDER", true)!;
     const naisysFolder = path.resolve(naisysFolderEnv || process.cwd());
@@ -131,7 +128,6 @@ export async function createGlobalConfig() {
       retrySecondsMax,
       compactSessionEnabled,
       workspacesEnabled,
-      trimSessionEnabled,
       naisysFolder,
       localLlmUrl,
       localLlmName,

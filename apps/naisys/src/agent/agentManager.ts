@@ -17,7 +17,22 @@ export class AgentManager {
     private hostService: HostService,
     private remoteAgentRequester: RemoteAgentRequester,
     private hubSyncClient: HubSyncClient,
-  ) {}
+  ) {
+    // Register for hub fatal errors to notify all agents
+    this.hubSyncClient.onFatalError((hubUrl, error, message) => {
+      this.runningAgents.forEach((agent) => {
+        agent.promptNotification.notify({
+          type: "hub_fatal_error",
+          wake: true,
+          process: async () => {
+            agent.output.errorAndLog(
+              `Hub connection to ${hubUrl} failed: ${error} - ${message}`,
+            );
+          },
+        });
+      });
+    });
+  }
 
   async startAgent(userId: string, onStop?: (reason: string) => void) {
     // Check if agent is already running
