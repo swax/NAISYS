@@ -17,7 +17,7 @@ import { LLMService } from "../llm/llmService.js";
 import { OutputService } from "../utils/output.js";
 import * as utilities from "../utils/utilities.js";
 
-export function createLLMynx(
+export function createLynxService(
   { globalConfig }: GlobalConfig,
   { agentConfig }: AgentConfig,
   llmService: LLMService,
@@ -52,7 +52,7 @@ export function createLLMynx(
   let _nextGlobalLinkNum = 1;
 
   async function handleCommand(cmdArgs: string): Promise<string> {
-    outputInDebugMode("LLMYNX DEBUG MODE IS ON");
+    outputInDebugMode("LYNX DEBUG MODE IS ON");
 
     const argv = stringArgv(cmdArgs);
 
@@ -430,7 +430,7 @@ Final Merged Content:
         agentConfig().webModel,
         systemMessage,
         [context],
-        "llmynx",
+        "lynx",
       )
     )[0];
   }
@@ -640,7 +640,7 @@ Final Merged Content:
     const result = await runSearchPromise;
 
     // https://developers.google.com/custom-search/v1/overview
-    await costTracker.recordCost(0.005, "llmynx", "search");
+    await costTracker.recordCost(0.005, "lynx", "search");
 
     return result;
   }
@@ -657,4 +657,4 @@ Final Merged Content:
   };
 }
 
-export type LLMynx = ReturnType<typeof createLLMynx>;
+export type LynxService = ReturnType<typeof createLynxService>;

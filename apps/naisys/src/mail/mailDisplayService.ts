@@ -1,40 +1,14 @@
 import { isAgentOnline, isHostOnline } from "@naisys/common";
 import { DatabaseService } from "@naisys/database";
 import table from "text-table";
-import { LLMailAddress } from "./llmailAddress.js";
+import { MailAddress } from "./mailAddress.js";
 
 export function createMailDisplayService(
   { usingDatabase }: DatabaseService,
-  llmailAddress: LLMailAddress,
-  userId: string,
+  mailAddress: MailAddress,
+  localUserId: string,
 ) {
-  const myUserId = userId;
-  const { hasMultipleHosts, formatUserWithHost } = llmailAddress;
-
-  interface UnreadMessage {
-    message_id: string;
-  }
-
-  async function getUnreadThreads(): Promise<UnreadMessage[]> {
-    return await usingDatabase(async (prisma) => {
-      const messages = await prisma.mail_messages.findMany({
-        where: {
-          recipients: { some: { user_id: myUserId } },
-          AND: [
-            { status: { none: { user_id: myUserId, read_at: { not: null } } } },
-            {
-              status: {
-                none: { user_id: myUserId, archived_at: { not: null } },
-              },
-            },
-          ],
-        },
-        select: { id: true },
-      });
-
-      return messages.map((m) => ({ message_id: m.id }));
-    });
-  }
+  const { hasMultipleHosts, formatUserWithHost } = mailAddress;
 
   async function listMessages(filter?: "received" | "sent"): Promise<string> {
     const isMultiHost = await hasMultipleHosts();
@@ -43,13 +17,13 @@ export function createMailDisplayService(
       // Build where clause based on filter
       const ownershipCondition =
         filter === "received"
-          ? { recipients: { some: { user_id: myUserId } } }
+          ? { recipients: { some: { user_id: localUserId } } }
           : filter === "sent"
-            ? { from_user_id: myUserId }
+            ? { from_user_id: localUserId }
             : {
                 OR: [
-                  { from_user_id: myUserId },
-                  { recipients: { some: { user_id: myUserId } } },
+                  { from_user_id: localUserId },
+                  { recipients: { some: { user_id: localUserId } } },
                 ],
               };
 
@@ -57,7 +31,7 @@ export function createMailDisplayService(
         where: {
           ...ownershipCondition,
           status: {
-            none: { user_id: myUserId, archived_at: { not: null } },
+            none: { user_id: localUserId, archived_at: { not: null } },
           },
         },
         include: {
@@ -71,7 +45,7 @@ export function createMailDisplayService(
               },
             },
           },
-          status: { where: { user_id: myUserId }, select: { read_at: true } },
+          status: { where: { user_id: localUserId }, select: { read_at: true } },
         },
         orderBy: { created_at: "desc" },
         take: 20,
@@ -89,7 +63,7 @@ export function createMailDisplayService(
           ["", "ID", userHeader, "Subject", "Date"],
           ...messages.map((m) => {
             const status = m.status[0];
-            const isUnread = m.from_user_id !== myUserId && !status?.read_at;
+            const isUnread = m.from_user_id !== localUserId && !status?.read_at;
 
             // Show recipients for sent, sender for received/all
             const userColumn =
@@ -191,14 +165,14 @@ export function createMailDisplayService(
       const archiveCondition = includeArchived
         ? {}
         : {
-            status: { none: { user_id: myUserId, archived_at: { not: null } } },
+            status: { none: { user_id: localUserId, archived_at: { not: null } } },
           };
 
       const messages = await prisma.mail_messages.findMany({
         where: {
           OR: [
-            { from_user_id: myUserId },
-            { recipients: { some: { user_id: myUserId } } },
+            { from_user_id: localUserId },
+            { recipients: { some: { user_id: localUserId } } },
           ],
           ...searchCondition,
           ...archiveCondition,
@@ -372,7 +346,6 @@ export function createMailDisplayService(
   }
 
   return {
-    getUnreadThreads,
     listMessages,
     readMessage,
     searchMessages,

@@ -7,7 +7,7 @@ export function createLogService(
   { usingDatabase }: DatabaseService,
   runService: RunService,
   hostService: HostService,
-  userId: string,
+  localUserId: string,
 ) {
   // Use monotonic ULID to preserve strict ordering within a session
   const monotonicUlid = monotonicFactory();
@@ -20,7 +20,7 @@ export function createLogService(
       const inserted = await prisma.context_log.create({
         data: {
           id: monotonicUlid(),
-          user_id: userId,
+          user_id: localUserId,
           run_id: getRunId(),
           session_id: getSessionId(),
           host_id: localHostId,
@@ -37,7 +37,7 @@ export function createLogService(
       // Update session table with total lines and last active
       await prisma.run_session.updateMany({
         where: {
-          user_id: userId,
+          user_id: localUserId,
           run_id: getRunId(),
           session_id: getSessionId(),
         },
@@ -53,7 +53,7 @@ export function createLogService(
       // Also update user_notifications with latest_log_id and last_active
       await prisma.user_notifications.updateMany({
         where: {
-          user_id: userId,
+          user_id: localUserId,
         },
         data: {
           latest_log_id: inserted.id,

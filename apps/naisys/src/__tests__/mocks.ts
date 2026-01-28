@@ -4,9 +4,9 @@ import { AgentConfig } from "../agent/agentConfig.js";
 import { CommandProtection } from "../command/commandProtection.js";
 import { PromptBuilder } from "../command/promptBuilder.js";
 import { ShellCommand } from "../command/shellCommand.js";
-import { GenImg } from "../features/genimg.js";
-import { LLMail } from "../features/llmail.js";
-import { LLMynx } from "../features/llmynx.js";
+import { GenImg } from "../features/genImg.js";
+import { MailService } from "../mail/mail.js";
+import { LynxService } from "../features/lynx.js";
 import { SessionService } from "../features/session.js";
 import { SubagentService } from "../features/subagent.js";
 import { WorkspacesFeature } from "../features/workspaces.js";
@@ -91,8 +91,8 @@ export function createMockSubagent() {
   return subagent;
 }
 
-export function createMockLLMail() {
-  const llmail: LLMail = {
+export function createMockMailService() {
+  const mailService: MailService = {
     commandName: "ns-mail",
     handleCommand: jest.fn(() => Promise.resolve("")),
     getUnreadThreads: jest.fn(() => Promise.resolve([])),
@@ -104,17 +104,17 @@ export function createMockLLMail() {
     cleanup: jest.fn(),
   };
 
-  return llmail;
+  return mailService;
 }
 
-export function createMockLLMynx() {
-  const llmynx: LLMynx = {
+export function createMockLynxService() {
+  const lynxService: LynxService = {
     commandName: "ns-lynx",
     handleCommand: jest.fn(() => Promise.resolve("")),
     clear: jest.fn(),
   };
 
-  return llmynx;
+  return lynxService;
 }
 
 export function createMockSessionCompactor() {

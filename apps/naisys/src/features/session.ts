@@ -8,17 +8,17 @@ import {
 import { ShellCommand } from "../command/shellCommand.js";
 import { GlobalConfig } from "../globalConfig.js";
 import { SessionCompactor } from "../llm/sessionCompactor.js";
+import { MailService } from "../mail/mail.js";
 import { InputModeService } from "../utils/inputMode.js";
 import { OutputService } from "../utils/output.js";
 import * as utilities from "../utils/utilities.js";
-import { LLMail } from "./llmail.js";
 
 export function createSessionService(
   { globalConfig }: GlobalConfig,
   { agentConfig }: AgentConfig,
   sessionCompactor: SessionCompactor,
   shellCommand: ShellCommand,
-  llmail: LLMail,
+  mailService: MailService,
   output: OutputService,
   inputMode: InputModeService,
 ) {
@@ -141,7 +141,7 @@ export function createSessionService(
       await output.commentAndLog(
         "Sub agent has completed the task. Notifying lead agent and exiting process.",
       );
-      await llmail.sendMessage([leadAgent], "Task Completed", taskResult);
+      await mailService.sendMessage([leadAgent], "Task Completed", taskResult);
     } else {
       await output.commentAndLog("Task completed. Exiting process.");
     }

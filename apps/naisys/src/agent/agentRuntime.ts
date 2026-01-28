@@ -7,11 +7,8 @@ import { createDebugCommands } from "../command/debugCommand.js";
 import { createPromptBuilder } from "../command/promptBuilder.js";
 import { createShellCommand } from "../command/shellCommand.js";
 import { createShellWrapper } from "../command/shellWrapper.js";
-import { createGenImg } from "../features/genimg.js";
-import { createLLMail } from "../features/llmail.js";
-import { createLLMailAddress } from "../features/llmailAddress.js";
-import { createLLMynx } from "../features/llmynx.js";
-import { createMailDisplayService } from "../features/mailDisplayService.js";
+import { createGenImg } from "../features/genImg.js";
+import { createLynxService } from "../features/lynx.js";
 import { createSessionService } from "../features/session.js";
 import { createSubagentService } from "../features/subagent.js";
 import { createWorkspacesFeature } from "../features/workspaces.js";
@@ -25,6 +22,9 @@ import { createLLModels } from "../llm/llModels.js";
 import { createLLMService } from "../llm/llmService.js";
 import { createSessionCompactor } from "../llm/sessionCompactor.js";
 import { createSystemMessage } from "../llm/systemMessage.js";
+import { createMailService } from "../mail/mail.js";
+import { createMailAddress } from "../mail/mailAddress.js";
+import { createMailDisplayService } from "../mail/mailDisplayService.js";
 import { HostService } from "../services/hostService.js";
 import { createLogService } from "../services/logService.js";
 import { createRunService } from "../services/runService.js";
@@ -37,7 +37,7 @@ import { IAgentManager } from "./agentManagerInterface.js";
 
 export async function createAgentRuntime(
   agentManager: IAgentManager,
-  userId: string,
+  localUserId: string,
   dbService: DatabaseService,
   globalConfig: GlobalConfig,
   hostService: HostService,
@@ -51,19 +51,19 @@ export async function createAgentRuntime(
    */
 
   // Base services
-  const agentConfig = await createAgentConfig(userId, dbService, globalConfig);
+  const agentConfig = await createAgentConfig(localUserId, dbService, globalConfig);
 
   const runService = await createRunService(
     agentConfig,
     dbService,
     hostService,
-    userId,
+    localUserId,
   );
   const logService = createLogService(
     dbService,
     runService,
     hostService,
-    userId,
+    localUserId,
   );
   const output = createOutputService(logService);
 
@@ -84,7 +84,7 @@ export async function createAgentRuntime(
     runService,
     output,
     hostService,
-    userId,
+    localUserId,
   );
   const contextManager = createContextManager(
     agentConfig,
@@ -110,38 +110,38 @@ export async function createAgentRuntime(
 
   // Features
   const genimg = createGenImg(agentConfig, costTracker, output);
-  const llmailAddress = createLLMailAddress(dbService, hostService);
+  const mailAddress = createMailAddress(dbService, hostService);
   const mailDisplayService = createMailDisplayService(
     dbService,
-    llmailAddress,
-    userId,
+    mailAddress,
+    localUserId,
   );
   const promptNotification = createPromptNotificationService();
-  const llmail = createLLMail(
+  const mailService = createMailService(
     globalConfig,
     agentConfig,
     dbService,
     hostService,
-    llmailAddress,
+    mailAddress,
     mailDisplayService,
-    userId,
+    localUserId,
     promptNotification,
     contextManager,
   );
   const subagentService = createSubagentService(
     agentConfig,
-    llmail,
+    mailService,
     output,
     agentManager,
     inputMode,
     dbService,
     hostService,
     remoteAgentRequester,
-    userId,
+    localUserId,
     promptNotification,
     contextManager,
   );
-  const llmynx = createLLMynx(
+  const lynxService = createLynxService(
     globalConfig,
     agentConfig,
     llmService,
@@ -172,7 +172,7 @@ export async function createAgentRuntime(
     agentConfig,
     sessionCompactor,
     shellCommand,
-    llmail,
+    mailService,
     output,
     inputMode,
   );
@@ -193,10 +193,10 @@ export async function createAgentRuntime(
   );
 
   const commandRegistry = createCommandRegistry([
-    llmynx,
+    lynxService,
     genimg,
     subagentService,
-    llmail,
+    mailService,
     costTracker,
     sessionService,
     hostService,
@@ -222,7 +222,7 @@ export async function createAgentRuntime(
     commandHandler,
     promptBuilder,
     shellCommand,
-    llmynx,
+    lynxService,
     sessionCompactor,
     contextManager,
     workspaces,
@@ -240,7 +240,7 @@ export async function createAgentRuntime(
   const config = agentConfig.agentConfig();
 
   return {
-    agentUserId: userId,
+    agentUserId: localUserId,
     agentUsername: config.username,
     agentTitle: config.title,
     agentTaskDescription: config.taskDescription,
@@ -258,7 +258,7 @@ export async function createAgentRuntime(
       // Cleanup intervals
       runService.cleanup();
       subagentService.cleanup(reason);
-      llmail.cleanup();
+      mailService.cleanup();
     },
   };
 }
