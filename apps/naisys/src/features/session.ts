@@ -7,7 +7,6 @@ import {
 } from "../command/commandRegistry.js";
 import { ShellCommand } from "../command/shellCommand.js";
 import { GlobalConfig } from "../globalConfig.js";
-import { ContextManager } from "../llm/contextManager.js";
 import { SessionCompactor } from "../llm/sessionCompactor.js";
 import { InputModeService } from "../utils/inputMode.js";
 import { OutputService } from "../utils/output.js";
@@ -17,7 +16,6 @@ import { LLMail } from "./llmail.js";
 export function createSessionService(
   { globalConfig }: GlobalConfig,
   { agentConfig }: AgentConfig,
-  contextManager: ContextManager,
   sessionCompactor: SessionCompactor,
   shellCommand: ShellCommand,
   llmail: LLMail,

@@ -66,7 +66,10 @@ export async function createAgentRuntime(
     userId,
   );
   const output = createOutputService(logService);
-  const workspaces = createWorkspacesFeature(globalConfig, agentConfig, output);
+
+  // Shell and workspaces (needed by contextManager)
+  const shellWrapper = createShellWrapper(globalConfig, agentConfig, output);
+  const workspaces = createWorkspacesFeature(shellWrapper);
 
   // LLM
   const inputMode = createInputMode();
@@ -84,7 +87,7 @@ export async function createAgentRuntime(
     userId,
   );
   const contextManager = createContextManager(
-    globalConfig,
+    agentConfig,
     workspaces,
     systemMessage,
     output,
@@ -147,7 +150,6 @@ export async function createAgentRuntime(
     output,
   );
   // Command components
-  const shellWrapper = createShellWrapper(globalConfig, agentConfig, output);
   const platformConfig = getPlatformConfig();
   const promptBuilder = createPromptBuilder(
     globalConfig,
@@ -168,7 +170,6 @@ export async function createAgentRuntime(
   const sessionService = createSessionService(
     globalConfig,
     agentConfig,
-    contextManager,
     sessionCompactor,
     shellCommand,
     llmail,
@@ -188,6 +189,7 @@ export async function createAgentRuntime(
     contextManager,
     output,
     inputMode,
+    systemMessage,
   );
 
   const commandRegistry = createCommandRegistry([
@@ -199,6 +201,7 @@ export async function createAgentRuntime(
     sessionService,
     hostService,
     hubSyncClient,
+    workspaces,
     ...debugCommands,
     agentConfig,
   ]);
@@ -219,7 +222,6 @@ export async function createAgentRuntime(
     commandHandler,
     promptBuilder,
     shellCommand,
-    subagentService,
     llmynx,
     sessionCompactor,
     contextManager,

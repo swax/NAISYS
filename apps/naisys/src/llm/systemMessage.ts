@@ -35,10 +35,9 @@ export function createSystemMessage(
     llmynxCmd = `\n  ns-lynx: A context optimized web browser. Enter 'ns-lynx help' to learn how to use it`;
   }
 
-  let workspaces = "";
-  if (globalConfig().workspacesEnabled) {
-    workspaces = `\nWorkspaces:`;
-    workspaces += `\n  Put file soft links into ~/workspace/ to see their latest contents live updated here.`;
+  let workspaceCmd = "";
+  if (agentConfig().workspacesEnabled) {
+    workspaceCmd = `\n  ns-workspace: Use to pin files to the session so the you always sees the latest file contents`;
   }
 
   // Build ns-session command help based on enabled features
@@ -113,10 +112,10 @@ ${platformConfig.displayName} Commands:
   Read files with cat. Write files with \`cat > filename << 'EOF'\``
   }
   Do not input notes after the prompt. Only valid commands.
-NAISYS Commands: (cannot be used with other commands on the same prompt)${llmailCmd}${subagentNote}${llmynxCmd}${genImgCmd}
+NAISYS Commands: (cannot be used with other commands on the same prompt)${llmailCmd}${subagentNote}${llmynxCmd}${genImgCmd}${workspaceCmd}
   ns-comment "<thought>": Any non-command output like thinking out loud, prefix with the 'ns-comment' command${sessionCmd}
 Tokens:
-  The console log can only hold a certain number of 'tokens' that is specified in the prompt${tokenNote}${workspaces}`;
+  The console log can only hold a certain number of 'tokens' that is specified in the prompt${tokenNote}`;
 
   return systemMessage;
 }
