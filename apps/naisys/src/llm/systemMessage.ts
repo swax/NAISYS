@@ -30,9 +30,9 @@ export function createSystemMessage(
     llmailCmd = `\n  ns-mail: A local mail system for communicating with your team`;
   }
 
-  let llmynxCmd = "";
+  let lynxCmd = "";
   if (agentConfig().webEnabled) {
-    llmynxCmd = `\n  ns-lynx: A context optimized web browser. Enter 'ns-lynx help' to learn how to use it`;
+    lynxCmd = `\n  ns-lynx: A context optimized web browser. Enter 'ns-lynx help' to learn how to use it`;
   }
 
   let workspaceCmd = "";
@@ -112,7 +112,7 @@ ${platformConfig.displayName} Commands:
   Read files with cat. Write files with \`cat > filename << 'EOF'\``
   }
   Do not input notes after the prompt. Only valid commands.
-NAISYS Commands: (cannot be used with other commands on the same prompt)${llmailCmd}${subagentNote}${llmynxCmd}${genImgCmd}${workspaceCmd}
+NAISYS Commands: (cannot be used with other commands on the same prompt)${llmailCmd}${subagentNote}${lynxCmd}${genImgCmd}${workspaceCmd}
   ns-comment "<thought>": Any non-command output like thinking out loud, prefix with the 'ns-comment' command${sessionCmd}
 Tokens:
   The console log can only hold a certain number of 'tokens' that is specified in the prompt${tokenNote}`;

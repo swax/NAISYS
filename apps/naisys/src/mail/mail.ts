@@ -11,24 +11,27 @@ import { ContextManager } from "../llm/contextManager.js";
 import { ContentSource } from "../llm/llmDtos.js";
 import { HostService } from "../services/hostService.js";
 import { PromptNotificationService } from "../utils/promptNotificationService.js";
-import { LLMailAddress } from "./llmailAddress.js";
+import { MailAddress } from "./mailAddress.js";
 import { emitMailSent, onMailReceived } from "./mailEventBus.js";
 import { MailDisplayService } from "./mailDisplayService.js";
 
-export function createLLMail(
+interface UnreadMessage {
+  message_id: string;
+}
+
+export function createMailService(
   { globalConfig }: GlobalConfig,
   { agentConfig }: AgentConfig,
   { usingDatabase }: DatabaseService,
   hostService: HostService,
-  llmailAddress: LLMailAddress,
+  mailAddress: MailAddress,
   mailDisplayService: MailDisplayService,
-  userId: string,
+  localUserId: string,
   promptNotification: PromptNotificationService,
   contextManager: ContextManager,
 ) {
-  const myUserId = userId;
   const { localHostId } = hostService;
-  const { resolveUserIdentifier } = llmailAddress;
+  const { resolveUserIdentifier } = mailAddress;
 
   async function handleCommand(
     args: string,
@@ -181,7 +184,7 @@ export function createLLMail(
         await tx.mail_messages.create({
           data: {
             id: messageId,
-            from_user_id: myUserId,
+            from_user_id: localUserId,
             host_id: localHostId,
             subject,
             body: message,
@@ -230,7 +233,7 @@ export function createLLMail(
         where: {
           message_id_user_id: {
             message_id: messageId,
-            user_id: myUserId,
+            user_id: localUserId,
           },
         },
       });
@@ -240,7 +243,7 @@ export function createLLMail(
           data: {
             id: ulid(),
             message_id: messageId,
-            user_id: myUserId,
+            user_id: localUserId,
             host_id: localHostId,
             read_at: new Date(),
             created_at: new Date(),
@@ -278,7 +281,7 @@ export function createLLMail(
           where: {
             message_id_user_id: {
               message_id: message.id,
-              user_id: myUserId,
+              user_id: localUserId,
             },
           },
         });
@@ -288,7 +291,7 @@ export function createLLMail(
             data: {
               id: ulid(),
               message_id: message.id,
-              user_id: myUserId,
+              user_id: localUserId,
               host_id: localHostId,
               archived_at: new Date(),
               created_at: new Date(),
@@ -316,6 +319,20 @@ export function createLLMail(
     });
   }
 
+  async function getUnreadThreads(): Promise<UnreadMessage[]> {
+    return await usingDatabase(async (prisma) => {
+      const messages = await prisma.mail_messages.findMany({
+        where: {
+          recipients: { some: { user_id: localUserId } },
+          status: { none: { user_id: localUserId, read_at: { not: null } } },
+        },
+        select: { id: true },
+      });
+
+      return messages.map((m) => ({ message_id: m.id }));
+    });
+  }
+
   async function hasMultipleUsers(): Promise<boolean> {
     return await usingDatabase(async (prisma) => {
       const count = await prisma.users.count();
@@ -336,7 +353,7 @@ export function createLLMail(
       return;
     }
 
-    const unreadMessages = await mailDisplayService.getUnreadThreads();
+    const unreadMessages = await getUnreadThreads();
     if (!unreadMessages.length) {
       return;
     }
@@ -370,7 +387,7 @@ export function createLLMail(
   }
 
   // Listen for same-process mail notifications (instant)
-  const unsubscribeMailEvents = onMailReceived(myUserId, () => {
+  const unsubscribeMailEvents = onMailReceived(localUserId, () => {
     void checkAndNotify();
   });
 
@@ -392,7 +409,7 @@ export function createLLMail(
 
   return {
     ...registrableCommand,
-    getUnreadThreads: mailDisplayService.getUnreadThreads,
+    getUnreadThreads,
     sendMessage,
     readMessage,
     getAllUserNames,
@@ -402,4 +419,4 @@ export function createLLMail(
   };
 }
 
-export type LLMail = ReturnType<typeof createLLMail>;
+export type MailService = ReturnType<typeof createMailService>;

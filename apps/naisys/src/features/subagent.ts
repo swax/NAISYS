@@ -3,16 +3,16 @@ import { ChildProcess } from "child_process";
 import stringArgv from "string-argv";
 import table from "text-table";
 import { AgentConfig } from "../agent/agentConfig.js";
+import { IAgentManager } from "../agent/agentManagerInterface.js";
 import { RegistrableCommand } from "../command/commandRegistry.js";
 import { RemoteAgentRequester } from "../hub/remoteAgentRequester.js";
 import { ContextManager } from "../llm/contextManager.js";
 import { ContentSource } from "../llm/llmDtos.js";
+import { MailService } from "../mail/mail.js";
 import { HostService } from "../services/hostService.js";
 import { InputModeService } from "../utils/inputMode.js";
 import { OutputColor, OutputService } from "../utils/output.js";
 import { PromptNotificationService } from "../utils/promptNotificationService.js";
-import { LLMail } from "./llmail.js";
-import { IAgentManager } from "../agent/agentManagerInterface.js";
 
 interface Subagent {
   userId: string;
@@ -26,14 +26,14 @@ interface Subagent {
 
 export function createSubagentService(
   { agentConfig }: AgentConfig,
-  llmail: LLMail,
+  mailService: MailService,
   output: OutputService,
   agentManager: IAgentManager,
   inputMode: InputModeService,
   { usingDatabase }: DatabaseService,
   { localHostId }: HostService,
   remoteAgentRequester: RemoteAgentRequester,
-  userId: string,
+  localUserId: string,
   promptNotification: PromptNotificationService,
   contextManager: ContextManager,
 ) {
@@ -134,12 +134,12 @@ export function createSubagentService(
       const agents = await prisma.users.findMany({
         where: {
           OR: [
-            { lead_user_id: userId },
+            { lead_user_id: localUserId },
             { lead_user_id: null }, // Include agents with no lead (available to all)
           ],
           host_id: localHostId,
           deleted_at: null, // Only show active subagents
-          id: { not: userId }, // Exclude self from subagent list
+          id: { not: localUserId }, // Exclude self from subagent list
         },
       });
 
@@ -191,7 +191,7 @@ export function createSubagentService(
       const otherAgents = agentManager.runningAgents
         .filter(
           (ra) =>
-            ra.agentUserId !== userId &&
+            ra.agentUserId !== localUserId &&
             !_subagents.find((sa) => sa.userId === ra.agentUserId),
         )
         .map((ra) => {
@@ -246,7 +246,7 @@ export function createSubagentService(
    */
   /*async function _createAgent(title: string, taskDescription: string) {
     // Get available username
-    const usernames = await llmail.getAllUserNames();
+    const usernames = await mailService.getAllUserNames();
     let agentName = "";
 
     const shuffledNames = shuffle(agentNames);
@@ -441,7 +441,7 @@ export function createSubagentService(
     return await remoteAgentRequester.startAgent(
       user.id,
       user.host_id,
-      userId,
+      localUserId,
       taskDescription,
       user.username,
       user.host?.name || null,
@@ -549,7 +549,7 @@ export function createSubagentService(
       return;
     }
 
-    return await llmail
+    return await mailService
       .sendMessage([subagent.agentName], "Your Task", taskDescription)
       .catch(async () => {
         await output.commentAndLog(

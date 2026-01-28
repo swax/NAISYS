@@ -1,7 +1,7 @@
 import { DatabaseService } from "@naisys/database";
 import { HostService } from "../services/hostService.js";
 
-export function createLLMailAddress(
+export function createMailAddress(
   { usingDatabase }: DatabaseService,
   hostService: HostService,
 ) {
@@ -127,4 +127,4 @@ export function createLLMailAddress(
   };
 }
 
-export type LLMailAddress = ReturnType<typeof createLLMailAddress>;
+export type MailAddress = ReturnType<typeof createMailAddress>;

@@ -1,7 +1,7 @@
 import chalk from "chalk";
 import * as readline from "readline";
 import { AgentConfig } from "../agent/agentConfig.js";
-import { LLMynx } from "../features/llmynx.js";
+import { LynxService } from "../features/lynx.js";
 import { WorkspacesFeature } from "../features/workspaces.js";
 import { GlobalConfig } from "../globalConfig.js";
 import { ContextManager } from "../llm/contextManager.js";
@@ -26,7 +26,7 @@ export function createCommandLoop(
   commandHandler: CommandHandler,
   promptBuilder: PromptBuilder,
   shellCommand: ShellCommand,
-  llmynx: LLMynx,
+  lynxService: LynxService,
   sessionCompactor: SessionCompactor,
   contextManager: ContextManager,
   workspaces: WorkspacesFeature,
@@ -241,7 +241,7 @@ export function createCommandLoop(
       }
 
       if (nextCommandAction == NextCommandAction.CompactSession) {
-        llmynx.clear();
+        lynxService.clear();
         contextManager.clear();
         await runService.incrementSession();
         nextCommandAction = NextCommandAction.Continue;

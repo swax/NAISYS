@@ -35,7 +35,7 @@ export function createCostTracker(
   runService: RunService,
   output: OutputService,
   hostService: HostService,
-  userId: string,
+  localUserId: string,
 ) {
   const { localHostId } = hostService;
   // Record token usage for LLM calls - calculate and store total cost
@@ -64,7 +64,7 @@ export function createCostTracker(
       // Find the most recent cost record for this combination
       const existingRecord = await prisma.costs.findFirst({
         where: {
-          user_id: userId,
+          user_id: localUserId,
           run_id: getRunId(),
           session_id: getSessionId(),
           source,
@@ -93,7 +93,7 @@ export function createCostTracker(
         await prisma.costs.create({
           data: {
             id: ulid(),
-            user_id: userId,
+            user_id: localUserId,
             run_id: getRunId(),
             session_id: getSessionId(),
             host_id: localHostId,
@@ -121,7 +121,7 @@ export function createCostTracker(
       // Find the most recent cost record for this combination
       const existingRecord = await prisma.costs.findFirst({
         where: {
-          user_id: userId,
+          user_id: localUserId,
           run_id: getRunId(),
           session_id: getSessionId(),
           source,
@@ -146,7 +146,7 @@ export function createCostTracker(
         await prisma.costs.create({
           data: {
             id: ulid(),
-            user_id: userId,
+            user_id: localUserId,
             run_id: getRunId(),
             session_id: getSessionId(),
             host_id: localHostId,
@@ -171,7 +171,7 @@ export function createCostTracker(
     await usingDatabase(async (prisma) => {
       await prisma.run_session.updateMany({
         where: {
-          user_id: userId,
+          user_id: localUserId,
           run_id: getRunId(),
           session_id: getSessionId(),
         },
@@ -263,7 +263,7 @@ export function createCostTracker(
   // Check if the current spend limit has been reached and throw an error if so
   async function checkSpendLimit() {
     // Determine if we're using per-agent or global limits
-    const limitUserId = agentConfig().spendLimitDollars ? userId : undefined;
+    const limitUserId = agentConfig().spendLimitDollars ? localUserId : undefined;
 
     // Determine if we're using time-based limits
     const spendLimitHours =
@@ -644,7 +644,7 @@ export function createCostTracker(
     const subcommand = argv[0];
 
     if (subcommand === "reset") {
-      const resetUserId = agentConfig().spendLimitDollars ? userId : undefined;
+      const resetUserId = agentConfig().spendLimitDollars ? localUserId : undefined;
       await clearCosts(resetUserId);
       return `Cost tracking data cleared for ${resetUserId ? `${agentConfig().username}` : "all users"}.`;
     } else if (subcommand) {

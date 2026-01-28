@@ -6,7 +6,7 @@ export async function createRunService(
   { agentConfig }: AgentConfig,
   { usingDatabase }: DatabaseService,
   hostService: HostService,
-  userId: string,
+  localUserId: string,
 ) {
   const { localHostId } = hostService;
 
@@ -53,7 +53,7 @@ export async function createRunService(
     await usingDatabase(async (prisma) => {
       await prisma.run_session.create({
         data: {
-          user_id: userId,
+          user_id: localUserId,
           run_id: newRunId,
           session_id: newSessionId,
           host_id: localHostId,
@@ -69,14 +69,14 @@ export async function createRunService(
   }
 
   async function updateLastActive(): Promise<void> {
-    if (!userId) return;
+    if (!localUserId) return;
 
     await usingDatabase(async (prisma) => {
       const now = new Date().toISOString();
 
       await prisma.run_session.updateMany({
         where: {
-          user_id: userId,
+          user_id: localUserId,
           run_id: runId,
           session_id: sessionId,
         },
@@ -86,7 +86,7 @@ export async function createRunService(
       // Also update user_notifications.last_active
       await prisma.user_notifications.updateMany({
         where: {
-          user_id: userId,
+          user_id: localUserId,
         },
         data: { last_active: now },
       });
