@@ -23,4 +23,5 @@ export interface LlmMessage {
   type?: LlmMessageType;
   logId?: string;
   source?: ContentSource;
+  cachePoint?: boolean;
 }

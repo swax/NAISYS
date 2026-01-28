@@ -149,7 +149,6 @@ export function createMockContextManager() {
     append,
     clear,
     getTokenCount,
-    printContext,
     getCombinedMessages,
     exportedForTesting,
   };
@@ -159,8 +158,11 @@ export function createMockContextManager() {
 
 export function createMockWorkspacesFeature() {
   const workspaces: WorkspacesFeature = {
-    getLatestContent: jest.fn(() => ""),
-    displayActive: jest.fn(),
+    commandName: "ns-workspace",
+    handleCommand: jest.fn(() => Promise.resolve("")),
+    getContext: jest.fn(() => ""),
+    listFiles: jest.fn(() => ""),
+    hasFiles: jest.fn(() => false),
   };
 
   return workspaces;
@@ -248,7 +250,6 @@ export function createMockGlobalConfig(): GlobalConfig {
       webTokenMax: 5000,
       retrySecondsMax: 1800,
       compactSessionEnabled: false,
-      workspacesEnabled: false,
       naisysFolder: "/naisys",
       localLlmUrl: undefined,
       localLlmName: undefined,
@@ -298,6 +299,7 @@ export function createMockAgentConfig(): AgentConfig {
       disableMultipleCommands: false,
       leadAgent: undefined,
       taskDescription: undefined,
+      workspacesEnabled: false,
       resolveConfigVars: (str: string) => str,
     }),
   };

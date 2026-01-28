@@ -23,9 +23,6 @@ export async function createGlobalConfig() {
       maxTimeoutSeconds: 60 * 5, // 5 minutes
     };
 
-    /** Number of lines to buffer for hidden in/out of process agents */
-    const bufferAgentLines = 5000;
-
     const retrySecondsMax = 30 * 60; // 30 minutes
 
     /** Web pages loaded with ns-lynx will be reduced down to around this number of tokens */
@@ -33,9 +30,6 @@ export async function createGlobalConfig() {
 
     /** Allows the LLM to compact and restart its session */
     const compactSessionEnabled = true;
-
-    /** Experimental, live updating spot in the context for the LLM to put files, to avoid having to continually cat */
-    const workspacesEnabled = false;
 
     /* .env is used for global configs across naisys, while agent configs are for the specific agent */
     const naisysFolderEnv = getEnv("NAISYS_FOLDER", true)!;
@@ -127,7 +121,6 @@ export async function createGlobalConfig() {
       webTokenMax,
       retrySecondsMax,
       compactSessionEnabled,
-      workspacesEnabled,
       naisysFolder,
       localLlmUrl,
       localLlmName,

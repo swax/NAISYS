@@ -31,6 +31,16 @@ export function createLLMService(
 
     const model = llModels.get(modelKey);
 
+    // Workspaces feature only works with Anthropic models due to cache_control support
+    if (
+      agentConfig().workspacesEnabled &&
+      model.apiType !== LlmApiType.Anthropic
+    ) {
+      throw new Error(
+        `Workspaces feature requires an Anthropic model. Current model '${modelKey}' uses ${model.apiType} API.`,
+      );
+    }
+
     if (model.apiType === LlmApiType.None) {
       throw "This should be unreachable";
     } else if (model.apiType === LlmApiType.Mock) {
@@ -331,32 +341,33 @@ export function createLLMService(
       messages: [
         {
           role: "user",
-          content: [
-            {
-              type: "text",
-              text: systemMessage,
-              cache_control: { type: "ephemeral" },
-            },
-          ],
+          content: systemMessage,
         },
         {
           role: "assistant",
-          content: "Understood",
+          content:
+            context.length === 0
+              ? [
+                  {
+                    type: "text",
+                    text: "Understood",
+                    cache_control: { type: "ephemeral" },
+                  },
+                ]
+              : "Understood",
         },
-        ...context.map((msg, index) => {
-          const isLastMessage = index === context.length - 1;
+        ...context.map((msg) => {
           return {
             role: msg.role == LlmRole.Assistant ? "assistant" : "user",
-            content:
-              isLastMessage && msg.role === LlmRole.User
-                ? [
-                    {
-                      type: "text",
-                      text: msg.content,
-                      cache_control: { type: "ephemeral" },
-                    },
-                  ]
-                : msg.content,
+            content: msg.cachePoint
+              ? [
+                  {
+                    type: "text",
+                    text: msg.content,
+                    cache_control: { type: "ephemeral" },
+                  },
+                ]
+              : msg.content,
           } satisfies MessageParam;
         }),
       ],

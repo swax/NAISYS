@@ -2,7 +2,6 @@ import chalk from "chalk";
 import * as readline from "readline";
 import { AgentConfig } from "../agent/agentConfig.js";
 import { LLMynx } from "../features/llmynx.js";
-import { SubagentService } from "../features/subagent.js";
 import { WorkspacesFeature } from "../features/workspaces.js";
 import { GlobalConfig } from "../globalConfig.js";
 import { ContextManager } from "../llm/contextManager.js";
@@ -27,7 +26,6 @@ export function createCommandLoop(
   commandHandler: CommandHandler,
   promptBuilder: PromptBuilder,
   shellCommand: ShellCommand,
-  subagent: SubagentService,
   llmynx: LLMynx,
   sessionCompactor: SessionCompactor,
   contextManager: ContextManager,
@@ -127,7 +125,6 @@ export function createCommandLoop(
             await promptBuilder.getInput(
               `${prompt}`,
               pauseSeconds,
-              wakeOnMessage,
             ),
           ];
 
@@ -158,7 +155,9 @@ export function createCommandLoop(
 
             await checkContextLimitWarning();
 
-            workspaces.displayActive();
+            if (agentConfig().workspacesEnabled && workspaces.hasFiles()) {
+              await output.comment(workspaces.listFiles());
+            }
 
             await contextManager.append(prompt, ContentSource.ConsolePrompt);
 

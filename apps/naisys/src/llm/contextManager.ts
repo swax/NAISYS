@@ -1,5 +1,5 @@
+import { AgentConfig } from "../agent/agentConfig.js";
 import { WorkspacesFeature } from "../features/workspaces.js";
-import { GlobalConfig } from "../globalConfig.js";
 import { LogService } from "../services/logService.js";
 import { InputModeService } from "../utils/inputMode.js";
 import { OutputColor, OutputService } from "../utils/output.js";
@@ -7,7 +7,7 @@ import * as utilities from "../utils/utilities.js";
 import { ContentSource, LlmMessage, LlmRole } from "./llmDtos.js";
 
 export function createContextManager(
-  { globalConfig }: GlobalConfig,
+  { agentConfig }: AgentConfig,
   workspaces: WorkspacesFeature,
   systemMessage: string,
   output: OutputService,
@@ -66,46 +66,19 @@ export function createContextManager(
 
   function clear() {
     _messages = [];
-
-    if (!globalConfig().workspacesEnabled) {
-      return;
-    }
-
-    // Append workspace
-    _messages.push({
-      source: ContentSource.Console,
-      role: LlmRole.User,
-      content: "",
-      type: "workspace",
-    });
   }
 
   function getTokenCount() {
     const sytemMessageTokens = utilities.getTokenCount(systemMessage);
-
-    updateWorkspaces();
+    const workspaceTokens = utilities.getTokenCount(getWorkspaceContent());
 
     return _messages.reduce((acc, message) => {
       return acc + utilities.getTokenCount(message.content);
-    }, sytemMessageTokens);
-  }
-
-  function printContext() {
-    let content = `------ System ------`;
-    content += `\n${systemMessage}`;
-
-    getCombinedMessages().forEach((message) => {
-      content += `\n\n------ ${logService.toSimpleRole(message.role)} ------`;
-      content += `\n${message.content}`;
-    });
-
-    return content;
+    }, sytemMessageTokens + workspaceTokens);
   }
 
   /** Combine message list with adjacent messages of the same role role combined */
   function getCombinedMessages() {
-    updateWorkspaces();
-
     const combinedMessages: LlmMessage[] = [];
     let lastMessage: LlmMessage | undefined;
 
@@ -119,6 +92,37 @@ export function createContextManager(
       }
     }
 
+    // Append workspace content at the end (for prompt cache stability)
+    const workspaceContent = getWorkspaceContent();
+    if (workspaceContent) {
+      if (lastMessage && lastMessage.role == LlmRole.User) {
+        // Combine with the last user message
+        lastMessage.content = `${workspaceContent}\n${lastMessage.content}`;
+      } else {
+        // Add as a new user message
+        combinedMessages.push({
+          source: ContentSource.Console,
+          role: LlmRole.User,
+          content: workspaceContent,
+        });
+      }
+    }
+
+    // Add cache points, role checks are sanity checks
+    const beforeWorkspaceMsg = combinedMessages[combinedMessages.length - 2];
+    if (
+      agentConfig().workspacesEnabled &&
+      beforeWorkspaceMsg &&
+      beforeWorkspaceMsg.role === LlmRole.Assistant
+    ) {
+      beforeWorkspaceMsg.cachePoint = true;
+    }
+
+    const latestPromptMsg = combinedMessages[combinedMessages.length - 1];
+    if (latestPromptMsg && latestPromptMsg.role === LlmRole.User) {
+      latestPromptMsg.cachePoint = true;
+    }
+
     return combinedMessages;
   }
 
@@ -126,25 +130,18 @@ export function createContextManager(
     getMessages: () => _messages,
   };
 
-  function updateWorkspaces() {
-    if (!globalConfig().workspacesEnabled) {
-      return;
+  function getWorkspaceContent() {
+    if (agentConfig().workspacesEnabled) {
+      return workspaces.getContext();
+    } else {
+      return "";
     }
-
-    // Find the workspaces type message
-    const workspaceMessage = _messages.find((m) => m.type == "workspace");
-    if (!workspaceMessage) {
-      throw "Workspace message not found in context";
-    }
-
-    workspaceMessage.content = workspaces.getLatestContent();
   }
 
   return {
     append,
     clear,
     getTokenCount,
-    printContext,
     getCombinedMessages,
     exportedForTesting,
   };

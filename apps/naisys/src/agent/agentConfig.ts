@@ -57,6 +57,9 @@ export const AgentConfigFileSchema = z.object({
   taskDescription: z.string().optional(),
 
   complexMail: z.boolean().optional(),
+
+  /** Experimental, live updating spot in the context for the LLM to put files, to avoid having to continually cat */
+  workspacesEnabled: z.boolean().optional(),
 });
 
 export type AgentConfigFile = z.infer<typeof AgentConfigFileSchema>;
@@ -155,6 +158,7 @@ export async function createAgentConfig(
         config.disableMultipleCommands === undefined
           ? true
           : config.disableMultipleCommands,
+      workspacesEnabled: config.workspacesEnabled ?? false,
     };
   }
 

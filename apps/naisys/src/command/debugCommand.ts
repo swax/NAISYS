@@ -1,5 +1,6 @@
 import { AgentConfig } from "../agent/agentConfig.js";
 import { ContextManager } from "../llm/contextManager.js";
+import { LlmRole } from "../llm/llmDtos.js";
 import { InputModeService } from "../utils/inputMode.js";
 import { OutputService } from "../utils/output.js";
 import { RegistrableCommand } from "./commandRegistry.js";
@@ -9,14 +10,43 @@ export function createDebugCommands(
   contextManager: ContextManager,
   output: OutputService,
   inputMode: InputModeService,
+  systemMessage: string,
 ): RegistrableCommand[] {
+  function roleToString(role: LlmRole) {
+    switch (role) {
+      case LlmRole.Assistant:
+        return "LLM/Assistant";
+      case LlmRole.User:
+        return "NAISYS/User";
+      case LlmRole.System:
+        return "NAISYS/System";
+      default:
+        return "Unknown";
+    }
+  }
+
+  function printContext() {
+    let content = `------ System ------`;
+    content += `\n${systemMessage}`;
+
+    contextManager.getCombinedMessages().forEach((message) => {
+      content += `\n\n------ ${roleToString(message.role)} ------`;
+      if (message.cachePoint) {
+        content += `\n[-- CACHE POINT --]`;
+      }
+      content += `\n${message.content}`;
+    });
+
+    return content;
+  }
+
   const nsContext: RegistrableCommand = {
     commandName: "ns-context",
     helpText: "Print the current LLM context",
     isDebug: true,
     handleCommand: () => {
       output.comment("#####################");
-      output.comment(contextManager.printContext());
+      output.comment(printContext());
       output.comment("#####################");
       return Promise.resolve("");
     },

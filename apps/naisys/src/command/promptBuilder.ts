@@ -67,7 +67,6 @@ export function createPromptBuilder(
   function getInput(
     commandPrompt: string,
     pauseSeconds: number,
-    wakeOnMessage: boolean,
   ) {
     return new Promise<string>((resolve) => {
       const questionController = new AbortController();
