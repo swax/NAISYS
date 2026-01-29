@@ -260,6 +260,7 @@ export function createMockGlobalConfig(): GlobalConfig {
       spendLimitDollars: undefined,
       spendLimitHours: undefined,
       hubUrls: [],
+      isHubMode: false,
       hubAccessKey: undefined,
       useToolsForLlmConsoleResponses: true,
       packageVersion: "1.0.0",

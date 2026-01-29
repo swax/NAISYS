@@ -1,27 +1,27 @@
 import { HubEvents } from "@naisys/hub-protocol";
 import { io, Socket } from "socket.io-client";
-import { GlobalConfig } from "../globalConfig.js";
+import { HubConfig } from "../hubConfig.js";
 import { HostService } from "../services/hostService.js";
 import { HubClientLog } from "./hubClientLog.js";
 
-/** Generic raise event function type */
-export type RaiseEventFn = (event: string, ...args: unknown[]) => void;
+/** Generic raise event function type - hubUrl as first arg */
+export type RaiseEventFn = (
+  event: string,
+  hubUrl: string,
+  ...args: unknown[]
+) => void;
 
 /** Callback type for message acknowledgements */
 type AckCallback<T = unknown> = (response: T) => void;
 
-/** Number of reconnection attempts before giving up on current URL */
-const RECONNECTION_ATTEMPTS = 5;
-
 export function createHubConnection(
   hubUrl: string,
   hubClientLog: HubClientLog,
-  globalConfig: GlobalConfig,
+  hubConfig: HubConfig,
   hostService: HostService,
   raiseEvent: RaiseEventFn,
-  onReconnectFailed: () => void,
 ) {
-  const config = globalConfig.globalConfig();
+  const config = hubConfig.hubConfig();
 
   let socket: Socket | null = null;
   let connected = false;
@@ -31,21 +31,21 @@ export function createHubConnection(
 
     socket = io(hubUrl, {
       auth: {
-        accessKey: config.hubAccessKey,
+        accessKey: config.interhubAccessKey,
         hostId: hostService.localHostId,
         hostname: hostService.localHostname,
       },
       reconnection: true,
       reconnectionDelay: 1000,
       reconnectionDelayMax: 30000,
-      reconnectionAttempts: RECONNECTION_ATTEMPTS,
+      reconnectionAttempts: Infinity,
     });
 
     socket.on("connect", () => {
       connected = true;
       hubClientLog.write(`[Hub] Connected to ${hubUrl}`);
 
-      raiseEvent(HubEvents.HUB_CONNECTED);
+      raiseEvent(HubEvents.HUB_CONNECTED, hubUrl);
     });
 
     socket.on("disconnect", (reason) => {
@@ -59,18 +59,10 @@ export function createHubConnection(
       );
     });
 
-    // Notify manager when all reconnection attempts exhausted
-    socket.io.on("reconnect_failed", () => {
-      hubClientLog.write(
-        `[Hub] Reconnection to ${hubUrl} failed after ${RECONNECTION_ATTEMPTS} attempts`,
-      );
-      onReconnectFailed();
-    });
-
     // Forward all socket events to hubManager's event handlers
     socket.onAny((eventName: string, ...args: unknown[]) => {
       hubClientLog.write(`[Hub] Received ${eventName} from ${hubUrl}`);
-      raiseEvent(eventName, ...args);
+      raiseEvent(eventName, hubUrl, ...args);
     });
   }
 
@@ -80,6 +72,18 @@ export function createHubConnection(
       socket = null;
       connected = false;
       hubClientLog.write(`[Hub] Disconnected from ${hubUrl}`);
+    }
+  }
+
+  /**
+   * Disable reconnection and disconnect. Used for fatal sync errors.
+   */
+  function disableReconnection(reason: string) {
+    if (socket) {
+      socket.io.opts.reconnection = false;
+      socket.disconnect();
+      connected = false;
+      hubClientLog.write(`[Hub] Disabled reconnection to ${hubUrl}: ${reason}`);
     }
   }
 
@@ -117,6 +121,7 @@ export function createHubConnection(
   return {
     connect,
     disconnect,
+    disableReconnection,
     isConnected,
     getUrl,
     sendMessage,

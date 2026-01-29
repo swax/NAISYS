@@ -130,7 +130,6 @@ export function createRemoteAgentHandler(
   }
 
   async function handleAgentStartRequest(
-    hubUrl: string,
     rawData: unknown,
     ack?: (response: AgentStartResponse) => void,
   ) {
@@ -158,7 +157,6 @@ export function createRemoteAgentHandler(
   }
 
   async function handleAgentStopRequest(
-    hubUrl: string,
     rawData: unknown,
     ack?: (response: AgentStopResponse) => void,
   ) {
@@ -185,7 +183,6 @@ export function createRemoteAgentHandler(
   }
 
   async function handleAgentLogRequest(
-    hubUrl: string,
     rawData: unknown,
     ack?: (response: AgentLogResponse) => void,
   ) {

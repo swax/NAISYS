@@ -6,8 +6,6 @@
   "main": "dist/naisysHub.js",
   "exports": {
     ".": "./dist/naisysHub.js",
-    "./services/hubSyncServer": "./dist/services/hubSyncServer.js",
-    "./services/hubForwardService": "./dist/services/hubForwardService.js",
     "./services/hubServerLog": "./dist/services/hubServerLog.js",
     "./services/hubServer": "./dist/services/hubServer.js",
     "./services/remoteAgentRouter": "./dist/services/remoteAgentRouter.js"
@@ -23,6 +21,7 @@
     "dist"
   ],
   "dependencies": {
+    "@naisys/common": "file:../../packages/common",
     "@naisys/database": "file:../../packages/database",
     "@naisys/hub-protocol": "file:../../packages/hub-protocol",
     "@naisys-supervisor/server": "file:../supervisor/server",
@@ -30,10 +29,13 @@
     "dotenv": "^17.2.3",
     "pino": "^10.2.0",
     "socket.io": "^4.8.3",
+    "socket.io-client": "^4.8.3",
+    "text-table": "^0.2.0",
     "zod": "^4.3.5"
   },
   "devDependencies": {
     "@types/node": "^25.0.3",
+    "@types/text-table": "^0.2.5",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3"
   },

@@ -9,7 +9,10 @@ export interface HubConnectionInfo {
   connected: boolean;
 }
 
-type EventHandler = (hubUrl: string, ...args: any[]) => void;
+type EventHandler = (...args: any[]) => void;
+
+/** Delay before rotating to the next fallback URL */
+const ROTATION_DELAY_MS = 2000;
 
 export function createHubManager(
   globalConfig: GlobalConfig,
@@ -17,7 +20,10 @@ export function createHubManager(
   hubClientLog: HubClientLog,
 ) {
   const config = globalConfig.globalConfig();
-  const hubConnections: HubConnection[] = [];
+  const hubUrls = config.hubUrls;
+  let currentUrlIndex = 0;
+  let activeConnection: HubConnection | null = null;
+  let reconnectionDisabled = false;
 
   // Generic event handlers registry - maps event name to set of handlers
   const eventHandlers = new Map<string, Set<EventHandler>>();
@@ -25,29 +31,54 @@ export function createHubManager(
   init();
 
   function init() {
-    if (config.hubUrls.length === 0) {
+    if (hubUrls.length === 0) {
       hubClientLog.write(
         "[HubManager] No HUB_URLS configured, running in standalone mode",
       );
       return;
     }
 
-    hubClientLog.write(
-      `[HubManager] Starting connections to ${config.hubUrls.length} hub(s)...`,
-    );
-    for (const hubUrl of config.hubUrls) {
-      const hubConnection = createHubConnection(
-        hubUrl,
-        hubClientLog,
-        globalConfig,
-        hostService,
-        raiseEvent,
+    if (hubUrls.length === 1) {
+      hubClientLog.write(`[HubManager] Connecting to hub: ${hubUrls[0]}`);
+    } else {
+      hubClientLog.write(
+        `[HubManager] Connecting to hub with ${hubUrls.length} fallback URL(s)...`,
       );
-
-      hubConnections.push(hubConnection);
-      hubConnection.connect();
     }
+
+    connectToUrl(hubUrls[currentUrlIndex]);
   }
+
+  function connectToUrl(url: string) {
+    activeConnection = createHubConnection(
+      url,
+      hubClientLog,
+      globalConfig,
+      hostService,
+      raiseEvent,
+      handleReconnectFailed,
+    );
+    activeConnection.connect();
+  }
+
+  function handleReconnectFailed() {
+    if (reconnectionDisabled) return;
+
+    // Disconnect old connection cleanly
+    activeConnection?.disconnect();
+
+    // Rotate to next URL (round-robin)
+    currentUrlIndex = (currentUrlIndex + 1) % hubUrls.length;
+    const nextUrl = hubUrls[currentUrlIndex];
+    hubClientLog.write(`[HubManager] Rotating to hub URL: ${nextUrl}`);
+
+    setTimeout(() => {
+      if (!reconnectionDisabled) {
+        connectToUrl(nextUrl);
+      }
+    }, ROTATION_DELAY_MS);
+  }
+
   /** Register an event handler */
   function registerEvent(event: string, handler: EventHandler) {
     if (!eventHandlers.has(event)) {
@@ -65,74 +96,52 @@ export function createHubManager(
   }
 
   /** Raise an event to all registered handlers */
-  function raiseEvent(event: string, hubUrl: string, ...args: unknown[]) {
+  function raiseEvent(event: string, ...args: unknown[]) {
     const handlers = eventHandlers.get(event);
     if (handlers) {
       for (const handler of handlers) {
-        handler(hubUrl, ...args);
+        handler(...args);
       }
     }
   }
 
-  function getConnectedHubs() {
-    return hubConnections.filter((c) => c.isConnected());
-  }
-
-  function isMultiMachineMode() {
-    return config.hubUrls.length > 0;
+  function isConnected() {
+    return activeConnection?.isConnected() ?? false;
   }
 
   /**
-   * Send a message to a specific hub by URL.
-   * @param hubUrl - Hub URL to send to
+   * Send a message to the active hub connection.
    * @param event - Event name
    * @param payload - Message payload
    * @param ack - Optional callback for acknowledgement
-   * @returns true if message was sent, false if hub not found or not connected
+   * @returns true if message was sent, false if not connected
    */
   function sendMessage<T = unknown>(
-    hubUrl: string,
     event: string,
     payload: unknown,
     ack?: (response: T) => void,
   ): boolean {
-    const connection = hubConnections.find((c) => c.getUrl() === hubUrl);
-    if (!connection) {
-      hubClientLog.write(
-        `[HubManager] Hub ${hubUrl} not found for sendMessage`,
-      );
+    if (!activeConnection) {
+      hubClientLog.write("[HubManager] No active connection for sendMessage");
       return false;
     }
-    return connection.sendMessage(event, payload, ack);
+    return activeConnection.sendMessage(event, payload, ack);
   }
 
-  function getAllHubs(): HubConnectionInfo[] {
-    return hubConnections.map((c) => ({
-      url: c.getUrl(),
-      connected: c.isConnected(),
-    }));
-  }
-
-  /**
-   * Disable reconnection for a specific hub. Used for fatal sync errors.
-   */
-  function disableReconnection(hubUrl: string, reason: string): boolean {
-    const connection = hubConnections.find((c) => c.getUrl() === hubUrl);
-    if (!connection) {
-      return false;
-    }
-    connection.disableReconnection(reason);
-    return true;
+  function getConnectionInfo(): HubConnectionInfo | null {
+    if (!activeConnection) return null;
+    return {
+      url: activeConnection.getUrl(),
+      connected: activeConnection.isConnected(),
+    };
   }
 
   return {
-    getAllHubs,
-    getConnectedHubs,
-    isMultiMachineMode,
+    getConnectionInfo,
+    isConnected,
     registerEvent,
     unregisterEvent,
     sendMessage,
-    disableReconnection,
   };
 }
 

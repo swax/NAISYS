@@ -6,7 +6,6 @@ import { createAgentRegistrar } from "./agent/agentRegistrar.js";
 import { createGlobalConfig } from "./globalConfig.js";
 import { createHubClientLog } from "./hub/hubClientLog.js";
 import { createHubManager } from "./hub/hubManager.js";
-import { createHubSyncClient } from "./hub/hubSyncClient.js";
 import { createRemoteAgentHandler } from "./hub/remoteAgentHandler.js";
 import { createRemoteAgentRequester } from "./hub/remoteAgentRequester.js";
 import { createHostService } from "./services/hostService.js";
@@ -59,12 +58,6 @@ if (program.opts().supervisor) {
 // Start hub client manager used for cross-machine communication
 const hubClientLog = createHubClientLog();
 const hubManager = createHubManager(globalConfig, hostService, hubClientLog);
-const hubSyncClient = createHubSyncClient(
-  hubManager,
-  hubClientLog,
-  dbService,
-  hostService,
-);
 const remoteAgentRequester = createRemoteAgentRequester(hubManager);
 
 console.log(`NAISYS STARTED`);
@@ -82,7 +75,6 @@ const agentManager = new AgentManager(
   globalConfig,
   hostService,
   remoteAgentRequester,
-  hubSyncClient,
 );
 
 // Create handler for incoming remote agent control requests

@@ -14,7 +14,6 @@ import type { HubServerLog } from "@naisys/hub/services/hubServerLog";
 import { createRemoteAgentRouter } from "@naisys/hub/services/remoteAgentRouter";
 import type { AgentManager } from "../../agent/agentManager.js";
 import type { HubClientLog } from "../../hub/hubClientLog.js";
-import type { HubConnection } from "../../hub/hubConnection.js";
 import type { HubManager } from "../../hub/hubManager.js";
 import { createRemoteAgentHandler } from "../../hub/remoteAgentHandler.js";
 import {
@@ -161,29 +160,9 @@ describe("Remote Agent Integration Tests", () => {
     // Create Runner A (requester)
     mockHubManagerA = bridge.createMockHubManager(hostAId, hostAName);
 
-    // Wrap mockHubManagerA to provide HubConnection-compatible objects
-    const hubManagerAWithUrl: HubManager = {
-      registerEvent: mockHubManagerA.registerEvent,
-      unregisterEvent: mockHubManagerA.unregisterEvent,
-      sendMessage: mockHubManagerA.sendMessage,
-      getConnectedHubs: () =>
-        mockHubManagerA.getConnectedHubs().map(
-          (h) =>
-            ({
-              connect: () => {},
-              disconnect: () => {},
-              disableReconnection: () => {},
-              isConnected: () => true,
-              getUrl: () => h.hubUrl,
-              sendMessage: () => false,
-            }) as HubConnection,
-        ),
-      isMultiMachineMode: mockHubManagerA.isMultiMachineMode,
-      getAllHubs: () => [],
-      disableReconnection: () => false,
-    };
-
-    remoteAgentRequesterA = createRemoteAgentRequester(hubManagerAWithUrl);
+    remoteAgentRequesterA = createRemoteAgentRequester(
+      mockHubManagerA as unknown as HubManager,
+    );
 
     // Create Runner B (handler)
     mockHubManagerB = bridge.createMockHubManager(hostBId, hostBName);
@@ -513,9 +492,9 @@ describe("Remote Agent Integration Tests", () => {
         registerEvent: jest.fn(),
         unregisterEvent: jest.fn(),
         sendMessage: jest.fn(() => false),
-        getConnectedHubs: () => [] as HubConnection[],
-        isMultiMachineMode: () => false,
-        getAllHubs: () => [],
+        isConnected: () => false,
+        getConnectionInfo: () => null,
+        disableReconnection: jest.fn(),
       } as unknown as HubManager;
 
       const disconnectedRequester =
