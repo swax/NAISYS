@@ -5,6 +5,7 @@ import { fileURLToPath } from "url";
 import { createHubConfig } from "./hubConfig.js";
 import { createHubClientLog } from "./interhub/hubClientLog.js";
 import { createInterhubManager } from "./interhub/interhubManager.js";
+import { createAgentRegistrar } from "./services/agentRegistrar.js";
 import { createHostService } from "./services/hostService.js";
 import { createHubServer } from "./services/hubServer.js";
 import { createHubServerLog } from "./services/hubServerLog.js";
@@ -16,6 +17,8 @@ import { createRemoteAgentRouter } from "./services/remoteAgentRouter.js";
  */
 export async function startHub(
   startupType: "standalone" | "hosted",
+  startSupervisor?: any,
+  startupAgentPath?: string,
 ): Promise<void> {
   try {
     // Create log service first
@@ -43,6 +46,9 @@ export async function startHub(
     const hubConfig = createHubConfig();
     const hostService = await createHostService(hubConfig, dbService);
 
+    // Seed database with agent configs from yaml files
+    await createAgentRegistrar(hubConfig, dbService, hostService, startupAgentPath);
+
     // Create hub server
     const hubServer = await createHubServer(hubPort, hubAccessKey, logService);
 
@@ -51,11 +57,25 @@ export async function startHub(
 
     // Start interhub client for hub-to-hub federation
     const hubClientLog = createHubClientLog();
-    const interhubManager = createInterhubManager(hubConfig, hostService, hubClientLog);
+    const interhubManager = createInterhubManager(
+      hubConfig,
+      hostService,
+      hubClientLog,
+    );
 
     console.log(
       `[Hub] Running on ws://localhost:${hubPort}, logs written to file`,
     );
+
+    /**
+     * There should be no dependency between supervisor and hub
+     * Sharing the same process space is to save 150 mb of node.js runtime memory on small servers
+     */
+    if (startSupervisor) {
+      // Don't import the whole fastify web server module tree unless needed
+      const { startServer } = await import("@naisys-supervisor/server");
+      await startServer("hosted", "monitor-hub");
+    }
   } catch (err) {
     console.error("[Hub] Failed to start hub server:", err);
     process.exit(1);
@@ -66,18 +86,13 @@ export async function startHub(
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   dotenv.config({ quiet: true });
 
-  program.option("--supervisor", "Start Supervisor web server").parse();
+  program
+    .argument(
+      "[agent-path]",
+      "Path to agent configuration file to seed the database (optional)",
+    )
+    .option("--supervisor", "Start Supervisor web server")
+    .parse();
 
-  /**
-   * --supervisor flag is provided, start Supervisor server
-   * There should be no dependency between supervisor and hub
-   * Sharing the same process space is to save 150 mb of node.js runtime memory on small servers
-   */
-  if (program.opts().supervisor) {
-    // Don't import the whole fastify web server module tree unless needed
-    const { startServer } = await import("@naisys-supervisor/server");
-    await startServer("hosted", "monitor-hub");
-  }
-
-  void startHub("standalone");
+  void startHub("standalone", program.opts().supervisor, program.args[0]);
 }

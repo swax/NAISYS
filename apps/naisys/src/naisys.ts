@@ -2,7 +2,7 @@ import { createDatabaseService } from "@naisys/database";
 import { program } from "commander";
 import dotenv from "dotenv";
 import { AgentManager } from "./agent/agentManager.js";
-import { createAgentRegistrar } from "./agent/agentRegistrar.js";
+import { createUserService } from "./agent/userService.js";
 import { createGlobalConfig } from "./globalConfig.js";
 import { createHubClientLog } from "./hub/hubClientLog.js";
 import { createHubManager } from "./hub/hubManager.js";
@@ -21,8 +21,10 @@ program
     "--hub",
     "Start Hub server for NAISYS instances running across machines",
   )
-  .option("--supervisor", "Start Supervisor web server")
+  .option("--supervisor", "Start Supervisor web server (hub required)")
   .parse();
+
+const agentPath = program.args[0];
 
 const globalConfig = await createGlobalConfig();
 const dbService = await createDatabaseService(
@@ -40,19 +42,8 @@ let hubStarted = false;
 if (program.opts().hub) {
   // Don't import the hub module tree unless needed
   const { startHub } = await import("@naisys/hub");
-  await startHub("hosted");
+  await startHub("hosted", program.opts().supervisor, agentPath);
   hubStarted = true;
-}
-
-/**
- * --supervisor flag is provided, start Supervisor server
- * There should be no dependency between supervisor and naisys
- * Sharing the same process space is to save 150 mb of node.js runtime memory on small servers
- */
-if (program.opts().supervisor) {
-  // Don't import the whole fastify web server module tree unless needed
-  const { startServer } = await import("@naisys-supervisor/server");
-  await startServer("hosted", hubStarted ? "monitor-hub" : "monitor-naisys");
 }
 
 // Start hub client manager used for cross-machine communication
@@ -62,14 +53,7 @@ const remoteAgentRequester = createRemoteAgentRequester(hubManager);
 
 console.log(`NAISYS STARTED`);
 
-const agentPath = program.args[0];
-
-const agentRegistrar = await createAgentRegistrar(
-  globalConfig,
-  dbService,
-  hostService,
-  agentPath,
-);
+const userService = createUserService(globalConfig, agentPath);
 const agentManager = new AgentManager(
   dbService,
   globalConfig,
@@ -86,9 +70,9 @@ createRemoteAgentHandler(
   agentManager,
 );
 
-// Resolve the agent path to a user ID (or admin if no path) and start the agent
-const userId = await agentRegistrar.getStartupUserId(agentPath);
-await agentManager.startAgent(userId);
+// Resolve the agent path to a username (or admin if no path) and start the agent
+const startupUsername = userService.getStartupUsername(agentPath);
+await agentManager.startAgent(startupUsername);
 
 await agentManager.waitForAllAgentsToComplete();
 
