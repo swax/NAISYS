@@ -33,14 +33,11 @@ export function createRemoteAgentRequester(hubManager: HubManager) {
     operation: string,
     onSuccess: (response: TRes) => TResult,
   ): Promise<TResult> {
-    const connectedHubs = hubManager.getConnectedHubs();
-    if (connectedHubs.length === 0) {
+    if (!hubManager.isConnected()) {
       throw new Error(
         `Cannot ${operation} remote agent '${targetUsername}' - no hub connection available`,
       );
     }
-
-    const hubUrl = connectedHubs[0].getUrl();
 
     return new Promise<TResult>((resolve, reject) => {
       const timeout = setTimeout(() => {
@@ -50,7 +47,6 @@ export function createRemoteAgentRequester(hubManager: HubManager) {
       }, REMOTE_OPERATION_TIMEOUT_MS);
 
       const sent = hubManager.sendMessage<TRes>(
-        hubUrl,
         event,
         request,
         (response) => {
@@ -163,7 +159,7 @@ export function createRemoteAgentRequester(hubManager: HubManager) {
    * Check if hub connections are available for remote operations.
    */
   function isAvailable(): boolean {
-    return hubManager.getConnectedHubs().length > 0;
+    return hubManager.isConnected();
   }
 
   return {

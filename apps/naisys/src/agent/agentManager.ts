@@ -1,6 +1,5 @@
 import { DatabaseService } from "@naisys/database";
 import { GlobalConfig } from "../globalConfig.js";
-import { HubSyncClient } from "../hub/hubSyncClient.js";
 import { RemoteAgentRequester } from "../hub/remoteAgentRequester.js";
 import { HostService } from "../services/hostService.js";
 import { OutputColor } from "../utils/output.js";
@@ -16,23 +15,7 @@ export class AgentManager {
     private globalConfig: GlobalConfig,
     private hostService: HostService,
     private remoteAgentRequester: RemoteAgentRequester,
-    private hubSyncClient: HubSyncClient,
-  ) {
-    // Register for hub fatal errors to notify all agents
-    this.hubSyncClient.onFatalError((hubUrl, error, message) => {
-      this.runningAgents.forEach((agent) => {
-        agent.promptNotification.notify({
-          type: "hub_fatal_error",
-          wake: true,
-          process: async () => {
-            agent.output.errorAndLog(
-              `Hub connection to ${hubUrl} failed: ${error} - ${message}`,
-            );
-          },
-        });
-      });
-    });
-  }
+  ) {}
 
   async startAgent(userId: string, onStop?: (reason: string) => void) {
     // Check if agent is already running
@@ -48,7 +31,6 @@ export class AgentManager {
       this.globalConfig,
       this.hostService,
       this.remoteAgentRequester,
-      this.hubSyncClient,
     );
 
     this.runningAgents.push(agent);

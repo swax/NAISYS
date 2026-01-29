@@ -30,17 +30,15 @@ export interface MockClientConnection {
 export interface MockHubManager {
   registerEvent: (event: string, handler: EventHandler) => void;
   unregisterEvent: (event: string, handler: EventHandler) => void;
-  getConnectedHubs: () => { hubUrl: string }[];
-  isMultiMachineMode: () => boolean;
-  /** Send a message to a hub (for catch_up, etc.) */
+  isConnected: () => boolean;
+  /** Send a message to the hub */
   sendMessage: <T = unknown>(
-    hubUrl: string,
     event: string,
     payload: unknown,
     ack?: AckCallback<T>,
   ) => boolean;
   /** Internal: raise an event (called by the bridge) */
-  _raiseEvent: (event: string, hubUrl: string, ...args: unknown[]) => void;
+  _raiseEvent: (event: string, ...args: unknown[]) => void;
   /** Internal: trigger HUB_CONNECTED event (simulates socket connect) */
   _triggerHubConnected: () => void;
 }
@@ -142,7 +140,7 @@ export function createSyncEventBridge() {
           : undefined;
 
         // Deliver to runner's HubManager
-        runner.hubManager._raiseEvent(event, "mock-hub", payload, wrappedAck);
+        runner.hubManager._raiseEvent(event, payload, wrappedAck);
         return true;
       },
 
@@ -219,14 +217,11 @@ export function createSyncEventBridge() {
         }
       },
 
-      getConnectedHubs: () => {
-        return hubServer ? [{ hubUrl: "mock-hub" }] : [];
+      isConnected: () => {
+        return hubServer !== null;
       },
 
-      isMultiMachineMode: () => true,
-
       sendMessage: <T = unknown>(
-        _hubUrl: string,
         event: string,
         payload: unknown,
         ack?: AckCallback<T>,
@@ -247,18 +242,18 @@ export function createSyncEventBridge() {
         return true;
       },
 
-      _raiseEvent: (event: string, hubUrl: string, ...args: unknown[]) => {
+      _raiseEvent: (event: string, ...args: unknown[]) => {
         const handlers = eventHandlers.get(event);
         if (handlers) {
           for (const handler of handlers) {
-            handler(hubUrl, ...args);
+            handler(...args);
           }
         }
       },
 
       _triggerHubConnected: () => {
         // Raise the HUB_CONNECTED event to trigger catch_up flow
-        manager._raiseEvent("hub_connected", "mock-hub");
+        manager._raiseEvent("hub_connected");
       },
     };
 

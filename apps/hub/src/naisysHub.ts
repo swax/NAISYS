@@ -2,10 +2,12 @@ import { createDatabaseService } from "@naisys/database";
 import { program } from "commander";
 import dotenv from "dotenv";
 import { fileURLToPath } from "url";
-import { createHubForwardService } from "./services/hubForwardService.js";
+import { createHubConfig } from "./hubConfig.js";
+import { createHubClientLog } from "./interhub/hubClientLog.js";
+import { createInterhubManager } from "./interhub/interhubManager.js";
+import { createHostService } from "./services/hostService.js";
 import { createHubServer } from "./services/hubServer.js";
 import { createHubServerLog } from "./services/hubServerLog.js";
-import { createHubSyncServer } from "./services/hubSyncServer.js";
 import { createRemoteAgentRouter } from "./services/remoteAgentRouter.js";
 
 /**
@@ -37,26 +39,19 @@ export async function startHub(
       "hub",
     );
 
+    // Create hub config and host service (hub owns its host identity)
+    const hubConfig = createHubConfig();
+    const hostService = await createHostService(hubConfig, dbService);
+
     // Create hub server
     const hubServer = await createHubServer(hubPort, hubAccessKey, logService);
 
-    // Create forward service for managing forward queues
-    const forwardService = createHubForwardService(logService);
-
-    // Create hub sync server - it will register its event handlers on start()
-    const hubSyncServer = createHubSyncServer(
-      hubServer,
-      dbService,
-      logService,
-      forwardService,
-      {
-        maxConcurrentRequests: 3,
-        pollIntervalMs: 1000,
-      },
-    );
-
     // Create remote agent router for agent start/stop/log across machines
     createRemoteAgentRouter(hubServer, logService);
+
+    // Start interhub client for hub-to-hub federation
+    const hubClientLog = createHubClientLog();
+    const interhubManager = createInterhubManager(hubConfig, hostService, hubClientLog);
 
     console.log(
       `[Hub] Running on ws://localhost:${hubPort}, logs written to file`,

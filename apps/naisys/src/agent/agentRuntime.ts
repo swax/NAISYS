@@ -13,7 +13,6 @@ import { createSessionService } from "../features/session.js";
 import { createSubagentService } from "../features/subagent.js";
 import { createWorkspacesFeature } from "../features/workspaces.js";
 import { GlobalConfig } from "../globalConfig.js";
-import { HubSyncClient } from "../hub/hubSyncClient.js";
 import { RemoteAgentRequester } from "../hub/remoteAgentRequester.js";
 import { createCommandTools } from "../llm/commandTool.js";
 import { createContextManager } from "../llm/contextManager.js";
@@ -42,7 +41,6 @@ export async function createAgentRuntime(
   globalConfig: GlobalConfig,
   hostService: HostService,
   remoteAgentRequester: RemoteAgentRequester,
-  hubSyncClient: HubSyncClient,
 ) {
   /*
    * Simple form of dependency injection
@@ -200,7 +198,6 @@ export async function createAgentRuntime(
     costTracker,
     sessionService,
     hostService,
-    hubSyncClient,
     workspaces,
     ...debugCommands,
     agentConfig,

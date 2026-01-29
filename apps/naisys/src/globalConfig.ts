@@ -115,6 +115,9 @@ export async function createGlobalConfig() {
       return binPath;
     }
 
+    /** Whether this instance is connected to a hub for multi-machine coordination */
+    const isHubMode = hubUrls.length > 0;
+
     return {
       hostname,
       shellCommand,
@@ -132,6 +135,7 @@ export async function createGlobalConfig() {
       spendLimitHours,
       hubUrls,
       hubAccessKey,
+      isHubMode,
       useToolsForLlmConsoleResponses,
       packageVersion,
       binPath,
