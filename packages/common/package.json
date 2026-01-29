@@ -13,7 +13,12 @@
     "build": "tsc",
     "prepare": "npm run build"
   },
+  "dependencies": {
+    "js-yaml": "^4.1.1",
+    "zod": "^4.3.5"
+  },
   "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
     "typescript": "^5.9.3"
   }
 }
