@@ -158,12 +158,12 @@ export const HubEvents = {
   // Client -> Hub
   CATCH_UP: "catch_up",
   SYNC_RESPONSE: "sync_response",
-  USER_LIST: "user_list",
 
   // Hub -> Client
   SYNC_REQUEST: "sync_request",
   FORWARD: "forward",
   SYNC_ERROR: "sync_error",
+  USER_LIST: "user_list",
 
   // Internal hub events (not sent over wire)
   CLIENT_CONNECTED: "client_connected",

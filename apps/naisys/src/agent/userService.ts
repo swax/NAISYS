@@ -4,7 +4,11 @@ import {
   defaultAdminConfig,
 } from "@naisys/common";
 import { loadAgentConfigs } from "@naisys/common/dist/agentConfigLoader.js";
-import { HubEvents, UserListResponse } from "@naisys/hub-protocol";
+import {
+  HubEvents,
+  UserListResponse,
+  UserListResponseSchema,
+} from "@naisys/hub-protocol";
 import yaml from "js-yaml";
 import * as path from "path";
 import { GlobalConfig } from "../globalConfig.js";
@@ -12,8 +16,8 @@ import { HubClient } from "../hub/hubClient.js";
 
 export { UserEntry };
 
-/** Loads agent configs from yaml files or requests them from the hub */
-export async function createUserService(
+/** Loads agent configs from yaml files or receives them pushed from the hub */
+export function createUserService(
   { globalConfig }: GlobalConfig,
   hubClient: HubClient,
   startupAgentPath?: string,
@@ -22,26 +26,48 @@ export async function createUserService(
 
   let users: Map<string, UserEntry>;
 
+  let usersReadyPromise: Promise<void>;
+
   if (isHubMode) {
-    users = await requestUsersFromHub(hubClient);
+    // Register handler for pushed user list from hub
+    let resolveUsers: () => void;
+    let rejectUsers: (error: Error) => void;
+
+    usersReadyPromise = new Promise<void>((resolve, reject) => {
+      resolveUsers = resolve;
+      rejectUsers = reject;
+    });
+
+    hubClient.registerEvent(HubEvents.USER_LIST, (data: unknown) => {
+      try {
+        const response = UserListResponseSchema.parse(data);
+        if (!response.success) {
+          rejectUsers(
+            new Error(response.error || "Failed to get user list from hub"),
+          );
+          return;
+        }
+
+        users = parseUserList(response);
+        resolveUsers();
+      } catch (error) {
+        rejectUsers(
+          error instanceof Error ? error : new Error(String(error)),
+        );
+      }
+    });
   } else {
     const naisysFolder = globalConfig().naisysFolder;
     if (!naisysFolder) {
       throw new Error("naisysFolder is not configured in globalConfig");
     }
     users = loadAgentConfigs(naisysFolder, startupAgentPath);
+    usersReadyPromise = Promise.resolve();
   }
 
-  async function reloadAgents() {
-    if (isHubMode) {
-      users = await requestUsersFromHub(hubClient);
-      return;
-    }
-    const naisysFolder = globalConfig().naisysFolder;
-    if (!naisysFolder) {
-      throw new Error("naisysFolder is not configured in globalConfig");
-    }
-    users = loadAgentConfigs(naisysFolder, startupAgentPath);
+  /** Wait for the user list to be received (resolves immediately in standalone mode) */
+  function waitForUsers(): Promise<void> {
+    return usersReadyPromise;
   }
 
   function getUsers(): Map<string, UserEntry> {
@@ -72,26 +98,15 @@ export async function createUserService(
   return {
     getUsers,
     getUserById,
-    reloadAgents,
+    waitForUsers,
     getStartupUserId,
   };
 }
 
-export type UserService = Awaited<ReturnType<typeof createUserService>>;
+export type UserService = ReturnType<typeof createUserService>;
 
-/** Request the user list from the hub and parse configs into UserEntry map */
-async function requestUsersFromHub(
-  hubClient: HubClient,
-): Promise<Map<string, UserEntry>> {
-  const response = await hubClient.sendRequest<UserListResponse>(
-    HubEvents.USER_LIST,
-    {},
-  );
-
-  if (!response.success) {
-    throw new Error(response.error || "Failed to get user list from hub");
-  }
-
+/** Parse a UserListResponse into a UserEntry map */
+function parseUserList(response: UserListResponse): Map<string, UserEntry> {
   const users = new Map<string, UserEntry>();
 
   for (const user of response.users ?? []) {

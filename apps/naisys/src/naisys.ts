@@ -50,10 +50,12 @@ if (program.opts().hub) {
 const hubClientLog = createHubClientLog();
 const hubClient = createHubClient(globalConfig, hubClientLog);
 const remoteAgentRequester = createRemoteAgentRequester(hubClient);
+const userService = createUserService(globalConfig, hubClient, agentPath);
 
 if (globalConfig.globalConfig().isHubMode) {
   try {
     await hubClient.waitForConnection();
+    await userService.waitForUsers();
   } catch (error) {
     console.error(`Failed to connect to hub: ${error}`);
     process.exit(1);
@@ -61,8 +63,6 @@ if (globalConfig.globalConfig().isHubMode) {
 }
 
 console.log(`NAISYS STARTED`);
-
-const userService = await createUserService(globalConfig, hubClient, agentPath);
 const agentRunner = new AgentRunner(
   dbService,
   globalConfig,
