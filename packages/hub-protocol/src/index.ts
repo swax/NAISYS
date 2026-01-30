@@ -131,6 +131,26 @@ export const AgentLogResponseSchema = z.object({
 export type AgentLogResponse = z.infer<typeof AgentLogResponseSchema>;
 
 // =============================================================================
+// Runner -> Hub Request/Response Messages
+// =============================================================================
+
+/** Response to user_list request - returns all users registered on the hub */
+export const UserListResponseSchema = z.object({
+  success: z.boolean(),
+  error: z.string().optional(),
+  users: z
+    .array(
+      z.object({
+        username: z.string(),
+        configYaml: z.string(),
+        agentPath: z.string(),
+      }),
+    )
+    .optional(),
+});
+export type UserListResponse = z.infer<typeof UserListResponseSchema>;
+
+// =============================================================================
 // Event Names (for type-safe event handling)
 // =============================================================================
 
@@ -138,6 +158,7 @@ export const HubEvents = {
   // Client -> Hub
   CATCH_UP: "catch_up",
   SYNC_RESPONSE: "sync_response",
+  USER_LIST: "user_list",
 
   // Hub -> Client
   SYNC_REQUEST: "sync_request",

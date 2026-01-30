@@ -11,6 +11,7 @@ import { createInterhubServer } from "./interhub/interhubServer.js";
 import { createAgentRegistrar } from "./services/agentRegistrar.js";
 import { createHostService } from "./services/hostService.js";
 import { createHubServerLog } from "./services/hubServerLog.js";
+import { createHubUserService } from "./services/hubUserService.js";
 import { createRunnerRegistrar } from "./services/runnerRegistrar.js";
 import { createRunnerServer } from "./services/runnerServer.js";
 
@@ -76,6 +77,9 @@ export async function startHub(
       logService,
       runnerRegistrar,
     );
+
+    // Register hub user service for user_list requests from runners
+    createHubUserService(runnerServer, dbService, hostService, logService);
 
     // Create interhub server on /interhub namespace
     const interhubServer = createInterhubServer(

@@ -62,7 +62,7 @@ if (globalConfig.globalConfig().isHubMode) {
 
 console.log(`NAISYS STARTED`);
 
-const userService = createUserService(globalConfig, agentPath);
+const userService = await createUserService(globalConfig, hubClient, agentPath);
 const agentRunner = new AgentRunner(
   dbService,
   globalConfig,
