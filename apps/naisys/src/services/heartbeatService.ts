@@ -26,9 +26,7 @@ export function createHeartbeatService(
 
   // Start periodic heartbeat
   const interval = setInterval(() => {
-    const activeUserIds = agentRunner.runningAgents.map(
-      (a) => a.agentUserId,
-    );
+    const activeUserIds = agentRunner.runningAgents.map((a) => a.agentUserId);
 
     if (isHubMode) {
       hubClient.sendMessage(HubEvents.HEARTBEAT, { activeUserIds });

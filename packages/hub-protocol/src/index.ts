@@ -148,9 +148,7 @@ export const SessionCreateResponseSchema = z.object({
   sessionId: z.number().optional(),
   error: z.string().optional(),
 });
-export type SessionCreateResponse = z.infer<
-  typeof SessionCreateResponseSchema
->;
+export type SessionCreateResponse = z.infer<typeof SessionCreateResponseSchema>;
 
 /** Request to increment session for an existing run */
 export const SessionIncrementRequestSchema = z.object({
@@ -172,11 +170,37 @@ export type SessionIncrementResponse = z.infer<
 >;
 
 // =============================================================================
+// Log Messages (Runner -> Hub, fire-and-forget)
+// =============================================================================
+
+/** A single log entry sent from runner to hub */
+export const LogWriteEntrySchema = z.object({
+  userId: z.string(),
+  runId: z.number(),
+  sessionId: z.number(),
+  role: z.string(),
+  source: z.string(),
+  type: z.string(),
+  message: z.string(),
+  createdAt: z.string(),
+});
+export type LogWriteEntry = z.infer<typeof LogWriteEntrySchema>;
+
+/** Batch of log entries sent from runner to hub */
+export const LogWriteRequestSchema = z.object({
+  entries: z.array(LogWriteEntrySchema),
+});
+export type LogWriteRequest = z.infer<typeof LogWriteRequestSchema>;
+
+// =============================================================================
 // Heartbeat Messages
 // =============================================================================
 
 /** How often runners send heartbeats to the hub (ms) */
 export const HEARTBEAT_INTERVAL_MS = 2000;
+
+/** How often runners flush buffered log entries to the hub (ms) */
+export const LOG_FLUSH_INTERVAL_MS = 1000;
 
 /** Sent by runner to hub with active user IDs (fire-and-forget) */
 export const HeartbeatSchema = z.object({
@@ -236,6 +260,9 @@ export const HubEvents = {
   // Session events (runner -> hub request/response)
   SESSION_CREATE: "session_create",
   SESSION_INCREMENT: "session_increment",
+
+  // Log events (runner -> hub, fire-and-forget)
+  LOG_WRITE: "log_write",
 
   // Heartbeat events
   HEARTBEAT: "heartbeat",

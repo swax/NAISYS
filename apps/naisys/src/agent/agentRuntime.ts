@@ -53,11 +53,7 @@ export async function createAgentRuntime(
    */
 
   // Base services
-  const agentConfig = createAgentConfig(
-    localUserId,
-    globalConfig,
-    userService,
-  );
+  const agentConfig = createAgentConfig(localUserId, globalConfig, userService);
 
   const runService = await createRunService(
     agentConfig,
@@ -66,9 +62,9 @@ export async function createAgentRuntime(
     localUserId,
   );
   const logService = createLogService(
-    dbService,
+    globalConfig,
+    hubClient,
     runService,
-    hostService,
     localUserId,
   );
   const output = createOutputService(logService);
@@ -260,6 +256,7 @@ export async function createAgentRuntime(
       await new Promise((resolve) => setTimeout(resolve, 5000));
     },
     completeShutdown: (reason: string) => {
+      logService.cleanup();
       subagentService.cleanup(reason);
       mailService.cleanup();
     },

@@ -193,7 +193,8 @@ Uses Socket.IO's native event + acknowledgement pattern over the existing WebSoc
 // Runner side: hubClient.sendRequest<T>(event, payload) returns Promise<T>
 // Uses Socket.IO's built-in acknowledgement callbacks for correlation
 const response = await hubClient.sendRequest<UserListResponse>(
-  HubEvents.USER_LIST, {}
+  HubEvents.USER_LIST,
+  {},
 );
 ```
 
@@ -227,27 +228,27 @@ High-frequency writes that don't need confirmation. Runner buffers and sends per
 
 #### Request-Response (must wait for reply)
 
-| Method              | Params                                      | Returns            | Notes                                                                                                                                                                               |
-| ------------------- | ------------------------------------------- | ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Registration**    |                                             |                    |                                                                                                                                                                                     |
-| `runner.register`   | runnerName, accessKey                       | runnerId           | On connect (handled during Socket.IO auth handshake). Hub validates accessKey, auto-creates runner if name is new. ✅ Done |
+| Method              | Params                                      | Returns            | Notes                                                                                                                                                                |
+| ------------------- | ------------------------------------------- | ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Registration**    |                                             |                    |                                                                                                                                                                      |
+| `runner.register`   | runnerName, accessKey                       | runnerId           | On connect (handled during Socket.IO auth handshake). Hub validates accessKey, auto-creates runner if name is new. ✅ Done                                           |
 | `user.list`         | -                                           | users[]            | Returns all users assigned to this runner with full configs (username, configYaml, agentPath). Separate from registration to allow reload without reconnect. ✅ Done |
-| **Session**         |                                             |                    |                                                                                                                                                                                     |
-| `session.create`    | userId, modelName                           | runId, sessionId   | On agent start                                                                                                                                                                      |
-| `session.increment` | userId, runId                               | sessionId          | On session compact                                                                                                                                                                  |
-| **Mail**            |                                             |                    |                                                                                                                                                                                     |
-| `mail.send`         | fromUserId, toUsernames[], subject, body    | success/error      | Hub resolves usernames, creates records, notifies target runners                                                                                                                    |
-| `mail.list`         | userId, filter?                             | raw message data   | Hub queries, returns raw data. Runner formats for display                                                                                                                           |
-| `mail.read`         | userId, messageId                           | raw message data   | Hub marks as read, returns raw content                                                                                                                                              |
-| `mail.archive`      | userId, messageIds[]                        | success/error      |                                                                                                                                                                                     |
-| `mail.search`       | userId, terms, flags                        | raw results        |                                                                                                                                                                                     |
-| `mail.users`        | -                                           | raw user data      | Runner formats into table/hierarchy                                                                                                                                                 |
-| `mail.unread`       | userId                                      | unread message IDs | For notification checking                                                                                                                                                           |
-| **Cost**            |                                             |                    |                                                                                                                                                                                     |
-| `cost.report`       | userId, args                                | raw cost data      | For ns-cost command. Runner formats                                                                                                                                                 |
-| **Subagent**        |                                             |                    |                                                                                                                                                                                     |
-| `agent.subagents`   | userId                                      | agent list         | For ns-agent list                                                                                                                                                                   |
-| `agent.start`       | fromUserId, targetUsername, taskDescription | success/error      | Hub resolves user, finds assigned runner via user_runners, pushes agent.start to target runner                                                                                      |
+| **Session**         |                                             |                    |                                                                                                                                                                      |
+| `session.create`    | userId, modelName                           | runId, sessionId   | On agent start                                                                                                                                                       |
+| `session.increment` | userId, runId                               | sessionId          | On session compact                                                                                                                                                   |
+| **Mail**            |                                             |                    |                                                                                                                                                                      |
+| `mail.send`         | fromUserId, toUsernames[], subject, body    | success/error      | Hub resolves usernames, creates records, notifies target runners                                                                                                     |
+| `mail.list`         | userId, filter?                             | raw message data   | Hub queries, returns raw data. Runner formats for display                                                                                                            |
+| `mail.read`         | userId, messageId                           | raw message data   | Hub marks as read, returns raw content                                                                                                                               |
+| `mail.archive`      | userId, messageIds[]                        | success/error      |                                                                                                                                                                      |
+| `mail.search`       | userId, terms, flags                        | raw results        |                                                                                                                                                                      |
+| `mail.users`        | -                                           | raw user data      | Runner formats into table/hierarchy                                                                                                                                  |
+| `mail.unread`       | userId                                      | unread message IDs | For notification checking                                                                                                                                            |
+| **Cost**            |                                             |                    |                                                                                                                                                                      |
+| `cost.report`       | userId, args                                | raw cost data      | For ns-cost command. Runner formats                                                                                                                                  |
+| **Subagent**        |                                             |                    |                                                                                                                                                                      |
+| `agent.subagents`   | userId                                      | agent list         | For ns-agent list                                                                                                                                                    |
+| `agent.start`       | fromUserId, targetUsername, taskDescription | success/error      | Hub resolves user, finds assigned runner via user_runners, pushes agent.start to target runner                                                                       |
 
 ### Hub-Pushed Events
 
@@ -431,40 +432,40 @@ Final cleanup pass after all services are migrated.
 
 ## What Gets Removed (from runner)
 
-| Component                     | Before                                            | After                                                                | Status |
-| ----------------------------- | ------------------------------------------------- | -------------------------------------------------------------------- | ------ |
-| `hubSyncClient.ts`            | Responds to sync requests, processes forwards     | Removed (deleted, not moved -- will rewrite for hub-to-hub if needed)| ✅     |
-| `syncUtils.ts` (runner usage) | Query/upsert sync records                         | Removed from runner                                                  | ✅     |
-| `hubForwardService.ts`        | Forward queues for sync                           | Removed                                                              | ✅     |
-| `remoteAgentRouter.ts`        | Hub-side routing of remote agent commands         | Removed (replaced by `runnerServer` event handlers)                  | ✅     |
-| `agentRegistrar.ts` (runner)  | Runner-side agent config scanning and DB sync     | Removed from runner, rebuilt on hub as `agentRegistrar.ts`           | ✅     |
-| Multi-hub connection          | Runner connects to multiple hubs                  | Runner connects to one hub (multiple URLs are fallback)              | ✅     |
-| Schema version matching       | Runner/hub must match DB version                  | Not needed (API versioning)                                          | ✅     |
-| Forward handling              | Runner upserts forwarded data                     | Not needed (hub is source of truth)                                  | ✅     |
-| `@naisys/database` dependency | Runner imports Prisma, SQLite                     | Removed entirely                                                     |        |
-| Database file                 | Runner has naisys.db                              | No local DB at all                                                   |        |
-| Periodic mail polling         | 5-second interval checking for cross-machine mail | Hub pushes `mail.received` events                                    |        |
-| Dual last_active updates      | hostService + runService both update every 2s     | Single heartbeat every 5-10s                                         |        |
-| Host concept on runner        | Runner registers as a host, tracks host_id        | Removed. Replaced by `runners` table on hub                          |        |
-| `hostService.ts`              | Create/update host record, list hosts             | Removed. `runner.register` + heartbeat replaces it                   |        |
-| `remoteAgentRequester.ts`     | Runner asks hub to route agent commands           | Removed. `agent.start` request to hub, hub routes via `user_runners` |        |
-| `remoteAgentHandler.ts`       | Runner handles incoming agent commands            | Replaced by hub push events (`agent.start`, `agent.stop`)            |        |
-| `mailAddress.ts` (DB queries) | Resolve usernames via local DB                    | Hub resolves usernames                                               |        |
+| Component                     | Before                                            | After                                                                 | Status |
+| ----------------------------- | ------------------------------------------------- | --------------------------------------------------------------------- | ------ |
+| `hubSyncClient.ts`            | Responds to sync requests, processes forwards     | Removed (deleted, not moved -- will rewrite for hub-to-hub if needed) | ✅     |
+| `syncUtils.ts` (runner usage) | Query/upsert sync records                         | Removed from runner                                                   | ✅     |
+| `hubForwardService.ts`        | Forward queues for sync                           | Removed                                                               | ✅     |
+| `remoteAgentRouter.ts`        | Hub-side routing of remote agent commands         | Removed (replaced by `runnerServer` event handlers)                   | ✅     |
+| `agentRegistrar.ts` (runner)  | Runner-side agent config scanning and DB sync     | Removed from runner, rebuilt on hub as `agentRegistrar.ts`            | ✅     |
+| Multi-hub connection          | Runner connects to multiple hubs                  | Runner connects to one hub (multiple URLs are fallback)               | ✅     |
+| Schema version matching       | Runner/hub must match DB version                  | Not needed (API versioning)                                           | ✅     |
+| Forward handling              | Runner upserts forwarded data                     | Not needed (hub is source of truth)                                   | ✅     |
+| `@naisys/database` dependency | Runner imports Prisma, SQLite                     | Removed entirely                                                      |        |
+| Database file                 | Runner has naisys.db                              | No local DB at all                                                    |        |
+| Periodic mail polling         | 5-second interval checking for cross-machine mail | Hub pushes `mail.received` events                                     |        |
+| Dual last_active updates      | hostService + runService both update every 2s     | Single heartbeat every 5-10s                                          |        |
+| Host concept on runner        | Runner registers as a host, tracks host_id        | Removed. Replaced by `runners` table on hub                           |        |
+| `hostService.ts`              | Create/update host record, list hosts             | Removed. `runner.register` + heartbeat replaces it                    |        |
+| `remoteAgentRequester.ts`     | Runner asks hub to route agent commands           | Removed. `agent.start` request to hub, hub routes via `user_runners`  |        |
+| `remoteAgentHandler.ts`       | Runner handles incoming agent commands            | Replaced by hub push events (`agent.start`, `agent.stop`)             |        |
+| `mailAddress.ts` (DB queries) | Resolve usernames via local DB                    | Hub resolves usernames                                                |        |
 
 ## What Stays
 
-| Component                    | Notes                                                              |
-| ---------------------------- | ------------------------------------------------------------------ |
-| Agent runtime / command loop | Core agent execution unchanged                                     |
-| LLM providers                | Direct API calls to LLM, no hub involvement                        |
-| Shell command execution      | Local process, no hub involvement                                  |
-| Mail event bus               | Still used for same-process notifications in local mode            |
-| Agent yaml config format     | Same config files (local mode reads them, hub imports from them)   |
-| Hub database + Prisma        | Hub keeps `@naisys/database`, gains API handlers                   |
-| Supervisor                   | Points at hub DB, minimal changes                                  |
-| `hub-protocol` package       | Extended with API message schemas (e.g., `UserListResponse`)       |
-| `@naisys/common` package     | New shared package for agent config schemas and loader             |
-| WebSocket connection         | Same Socket.IO transport, event + ack pattern for API              |
+| Component                    | Notes                                                            |
+| ---------------------------- | ---------------------------------------------------------------- |
+| Agent runtime / command loop | Core agent execution unchanged                                   |
+| LLM providers                | Direct API calls to LLM, no hub involvement                      |
+| Shell command execution      | Local process, no hub involvement                                |
+| Mail event bus               | Still used for same-process notifications in local mode          |
+| Agent yaml config format     | Same config files (local mode reads them, hub imports from them) |
+| Hub database + Prisma        | Hub keeps `@naisys/database`, gains API handlers                 |
+| Supervisor                   | Points at hub DB, minimal changes                                |
+| `hub-protocol` package       | Extended with API message schemas (e.g., `UserListResponse`)     |
+| `@naisys/common` package     | New shared package for agent config schemas and loader           |
+| WebSocket connection         | Same Socket.IO transport, event + ack pattern for API            |
 
 ---
 

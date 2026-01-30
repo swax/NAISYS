@@ -31,9 +31,7 @@ export async function createRunService(
       );
 
       if (!response.success) {
-        throw new Error(
-          `Failed to create session via hub: ${response.error}`,
-        );
+        throw new Error(`Failed to create session via hub: ${response.error}`);
       }
 
       runId = response.runId!;
@@ -46,11 +44,10 @@ export async function createRunService(
 
   async function incrementSession(): Promise<void> {
     if (isHubMode) {
-      const response =
-        await hubClient.sendRequest<SessionIncrementResponse>(
-          HubEvents.SESSION_INCREMENT,
-          { userId: localUserId, runId },
-        );
+      const response = await hubClient.sendRequest<SessionIncrementResponse>(
+        HubEvents.SESSION_INCREMENT,
+        { userId: localUserId, runId },
+      );
 
       if (!response.success) {
         throw new Error(

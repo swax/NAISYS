@@ -166,7 +166,8 @@ export function createAgentConfig(
 
   const registrableCommand: RegistrableCommand = {
     commandName: "ns-agent-config",
-    helpText: "View or update agent config: ns-agent-config [name] [value] (update only lasts for current session)",
+    helpText:
+      "View or update agent config: ns-agent-config [name] [value] (update only lasts for current session)",
     isDebug: true,
     handleCommand,
   };

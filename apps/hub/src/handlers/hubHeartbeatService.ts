@@ -4,8 +4,8 @@ import {
   HeartbeatSchema,
   HubEvents,
 } from "@naisys/hub-protocol";
-import { HubServerLog } from "./hubServerLog.js";
-import { RunnerServer } from "./runnerServer.js";
+import { HubServerLog } from "../services/hubServerLog.js";
+import { RunnerServer } from "../services/runnerServer.js";
 
 const HUB_HEARTBEAT_INTERVAL_MS = HEARTBEAT_INTERVAL_MS * 2;
 
