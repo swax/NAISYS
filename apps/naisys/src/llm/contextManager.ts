@@ -61,7 +61,7 @@ export function createContextManager(
     _messages.push(llmMessage);
 
     // Log the message
-    llmMessage.logId = await logService.write(llmMessage);
+    logService.write(llmMessage);
   }
 
   function clear() {

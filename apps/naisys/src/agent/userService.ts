@@ -51,9 +51,7 @@ export function createUserService(
         users = parseUserList(response);
         resolveUsers();
       } catch (error) {
-        rejectUsers(
-          error instanceof Error ? error : new Error(String(error)),
-        );
+        rejectUsers(error instanceof Error ? error : new Error(String(error)));
       }
     });
   } else {

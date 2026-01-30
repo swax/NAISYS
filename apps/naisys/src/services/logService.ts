@@ -1,70 +1,63 @@
-import { DatabaseService, monotonicFactory } from "@naisys/database";
+import {
+  HubEvents,
+  LOG_FLUSH_INTERVAL_MS,
+  LogWriteEntry,
+} from "@naisys/hub-protocol";
+import { GlobalConfig } from "../globalConfig.js";
+import { HubClient } from "../hub/hubClient.js";
 import { LlmMessage, LlmRole } from "../llm/llmDtos.js";
-import { HostService } from "./hostService.js";
 import { RunService } from "./runService.js";
 
 export function createLogService(
-  { usingDatabase }: DatabaseService,
+  globalConfig: GlobalConfig,
+  hubClient: HubClient,
   runService: RunService,
-  hostService: HostService,
   localUserId: string,
 ) {
-  // Use monotonic ULID to preserve strict ordering within a session
-  const monotonicUlid = monotonicFactory();
-  const { localHostId } = hostService;
+  const isHubMode = globalConfig.globalConfig().isHubMode;
 
-  async function write(message: LlmMessage) {
+  // In-memory buffer for hub mode
+  const buffer: LogWriteEntry[] = [];
+
+  // Start flush interval in hub mode
+  let flushInterval: NodeJS.Timeout | null = null;
+  if (isHubMode) {
+    flushInterval = setInterval(flush, LOG_FLUSH_INTERVAL_MS);
+  }
+
+  function write(message: LlmMessage) {
     const { getRunId, getSessionId } = runService;
 
-    const insertedId = await usingDatabase(async (prisma) => {
-      const inserted = await prisma.context_log.create({
-        data: {
-          id: monotonicUlid(),
-          user_id: localUserId,
-          run_id: getRunId(),
-          session_id: getSessionId(),
-          host_id: localHostId,
-          role: toSimpleRole(message.role),
-          source: message.source?.toString() || "",
-          type: message.type || "",
-          message: message.content,
-          created_at: new Date().toISOString(),
-        },
+    if (isHubMode) {
+      buffer.push({
+        userId: localUserId,
+        runId: getRunId(),
+        sessionId: getSessionId(),
+        role: toSimpleRole(message.role),
+        source: message.source?.toString() || "",
+        type: message.type || "",
+        message: message.content,
+        createdAt: new Date().toISOString(),
       });
+    }
+  }
 
-      const now = new Date().toISOString();
+  function flush() {
+    if (buffer.length === 0) return;
 
-      // Update session table with total lines and last active
-      await prisma.run_session.updateMany({
-        where: {
-          user_id: localUserId,
-          run_id: getRunId(),
-          session_id: getSessionId(),
-        },
-        data: {
-          last_active: now,
-          latest_log_id: inserted.id,
-          total_lines: {
-            increment: message.content.split("\n").length,
-          },
-        },
-      });
+    const entries = buffer.splice(0, buffer.length);
+    hubClient.sendMessage(HubEvents.LOG_WRITE, { entries });
+  }
 
-      // Also update user_notifications with latest_log_id and last_active
-      await prisma.user_notifications.updateMany({
-        where: {
-          user_id: localUserId,
-        },
-        data: {
-          latest_log_id: inserted.id,
-          last_active: now,
-        },
-      });
-
-      return inserted.id;
-    });
-
-    return insertedId;
+  function cleanup() {
+    if (flushInterval) {
+      clearInterval(flushInterval);
+      flushInterval = null;
+    }
+    // Final flush
+    if (isHubMode) {
+      flush();
+    }
   }
 
   function toSimpleRole(role: LlmRole) {
@@ -80,8 +73,8 @@ export function createLogService(
 
   return {
     write,
-    toSimpleRole,
+    cleanup,
   };
 }
 
-export type LogService = Awaited<ReturnType<typeof createLogService>>;
+export type LogService = ReturnType<typeof createLogService>;

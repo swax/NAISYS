@@ -4,9 +4,9 @@ import {
   SessionCreateRequestSchema,
   SessionIncrementRequestSchema,
 } from "@naisys/hub-protocol";
-import { HostService } from "./hostService.js";
-import { HubServerLog } from "./hubServerLog.js";
-import { RunnerServer } from "./runnerServer.js";
+import { HostService } from "../services/hostService.js";
+import { HubServerLog } from "../services/hubServerLog.js";
+import { RunnerServer } from "../services/runnerServer.js";
 
 /** Handles session_create and session_increment requests from runners */
 export function createHubRunService(
@@ -87,9 +87,7 @@ export function createHubRunService(
             orderBy: { session_id: "desc" },
           });
 
-          const newSessionId = lastSession
-            ? lastSession.session_id + 1
-            : 1;
+          const newSessionId = lastSession ? lastSession.session_id + 1 : 1;
 
           await prisma.run_session.create({
             data: {

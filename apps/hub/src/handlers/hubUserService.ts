@@ -1,8 +1,8 @@
 import { DatabaseService } from "@naisys/database";
 import { HubEvents } from "@naisys/hub-protocol";
-import { HostService } from "./hostService.js";
-import { HubServerLog } from "./hubServerLog.js";
-import { RunnerServer } from "./runnerServer.js";
+import { HostService } from "../services/hostService.js";
+import { HubServerLog } from "../services/hubServerLog.js";
+import { RunnerServer } from "../services/runnerServer.js";
 
 /** Pushes the user list to runners when they connect */
 export function createHubUserService(

@@ -13,7 +13,7 @@ import { WorkspacesFeature } from "../features/workspaces.js";
 import { GlobalConfig } from "../globalConfig.js";
 import { ContextManager } from "../llm/contextManager.js";
 import { CostTracker } from "../llm/costTracker.js";
-import { LlmMessage, LlmRole } from "../llm/llmDtos.js";
+import { LlmMessage } from "../llm/llmDtos.js";
 import { SessionCompactor } from "../llm/sessionCompactor.js";
 import { LogService } from "../services/logService.js";
 import { RunService } from "../services/runService.js";
@@ -41,8 +41,8 @@ export function createMockRunService(): RunService {
 
 export function createMockLogService() {
   return {
-    write: (msg: LlmMessage) => Promise.resolve(""),
-    toSimpleRole: (role: LlmRole) => "LLM",
+    write: (msg: LlmMessage) => {},
+    cleanup: () => {},
   } satisfies LogService;
 }
 

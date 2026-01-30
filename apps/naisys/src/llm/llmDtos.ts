@@ -21,7 +21,6 @@ export interface LlmMessage {
   content: string;
   /** this is like a sub-type on the source/role, like the type of model, or the type of output like an error */
   type?: LlmMessageType;
-  logId?: string;
   source?: ContentSource;
   cachePoint?: boolean;
 }
