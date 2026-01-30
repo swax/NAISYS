@@ -62,3 +62,9 @@ export const AgentConfigFileSchema = z.object({
 });
 
 export type AgentConfigFile = z.infer<typeof AgentConfigFileSchema>;
+
+export interface UserEntry {
+  config: AgentConfigFile;
+  agentPath: string;
+  configYaml: string;
+}

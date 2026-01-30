@@ -31,7 +31,7 @@ export function createHubConnection(
 
     socket = io(hubUrl, {
       auth: {
-        accessKey: config.interhubAccessKey,
+        accessKey: config.hubAccessKey,
         hostId: hostService.localHostId,
         hostname: hostService.localHostname,
       },

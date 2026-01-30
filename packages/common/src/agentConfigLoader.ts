@@ -1,13 +1,11 @@
 import * as fs from "fs";
 import yaml from "js-yaml";
 import * as path from "path";
-import { AgentConfigFile, AgentConfigFileSchema } from "./agentConfigFile.js";
-
-export interface UserEntry {
-  config: AgentConfigFile;
-  agentPath: string;
-  configYaml: string;
-}
+import {
+  AgentConfigFile,
+  AgentConfigFileSchema,
+  UserEntry,
+} from "./agentConfigFile.js";
 
 /** Scans agent yaml files from a naisys folder and optional startup path, returns a map of username → UserEntry */
 export function loadAgentConfigs(

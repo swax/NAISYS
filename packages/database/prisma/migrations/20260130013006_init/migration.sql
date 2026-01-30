@@ -142,6 +142,17 @@ CREATE TABLE "hosts" (
 );
 
 -- CreateTable
+CREATE TABLE "runners" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "name" TEXT NOT NULL,
+    "host_id" TEXT NOT NULL,
+    "last_active" DATETIME,
+    "created_at" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" DATETIME NOT NULL,
+    CONSTRAINT "runners_host_id_fkey" FOREIGN KEY ("host_id") REFERENCES "hosts" ("host_id") ON DELETE RESTRICT ON UPDATE CASCADE
+);
+
+-- CreateTable
 CREATE TABLE "hub_sync_state" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "since_timestamp" TEXT NOT NULL,
@@ -243,3 +254,6 @@ CREATE UNIQUE INDEX "unq_hosts_name" ON "hosts"("name");
 
 -- CreateIndex
 CREATE INDEX "idx_hosts_updated_at" ON "hosts"("updated_at");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "unq_runners_name" ON "runners"("name");

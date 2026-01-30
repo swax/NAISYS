@@ -32,10 +32,10 @@ import { createInputMode } from "../utils/inputMode.js";
 import { createOutputService } from "../utils/output.js";
 import { createPromptNotificationService } from "../utils/promptNotificationService.js";
 import { createAgentConfig } from "./agentConfig.js";
-import { IAgentManager } from "./agentManagerInterface.js";
+import { IAgentRunner } from "./agentRunnerInterface.js";
 
 export async function createAgentRuntime(
-  agentManager: IAgentManager,
+  agentRunner: IAgentRunner,
   localUserId: string,
   dbService: DatabaseService,
   globalConfig: GlobalConfig,
@@ -130,7 +130,7 @@ export async function createAgentRuntime(
     agentConfig,
     mailService,
     output,
-    agentManager,
+    agentRunner,
     inputMode,
     dbService,
     hostService,

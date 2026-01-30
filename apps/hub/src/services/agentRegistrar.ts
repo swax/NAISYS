@@ -1,4 +1,5 @@
-import { loadAgentConfigs, UserEntry } from "@naisys/common";
+import { UserEntry } from "@naisys/common";
+import { loadAgentConfigs } from "@naisys/common/dist/agentConfigLoader.js";
 import { DatabaseService, ulid } from "@naisys/database";
 import { HubConfig } from "../hubConfig.js";
 import { HostService } from "./hostService.js";

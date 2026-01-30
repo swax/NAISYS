@@ -1,5 +1,4 @@
 import { GlobalConfig } from "../globalConfig.js";
-import { HostService } from "../services/hostService.js";
 import { HubClientLog } from "./hubClientLog.js";
 import { createHubConnection, HubConnection } from "./hubConnection.js";
 
@@ -16,7 +15,6 @@ const ROTATION_DELAY_MS = 2000;
 
 export function createHubManager(
   globalConfig: GlobalConfig,
-  hostService: HostService,
   hubClientLog: HubClientLog,
 ) {
   const config = globalConfig.globalConfig();
@@ -54,7 +52,6 @@ export function createHubManager(
       url,
       hubClientLog,
       globalConfig,
-      hostService,
       raiseEvent,
       handleReconnectFailed,
     );
