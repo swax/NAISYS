@@ -2,9 +2,9 @@ import * as fs from "fs";
 import yaml from "js-yaml";
 import * as path from "path";
 import {
-  AgentConfigFile,
   AgentConfigFileSchema,
   UserEntry,
+  defaultAdminConfig,
 } from "./agentConfigFile.js";
 
 /** Scans agent yaml files from a naisys folder and optional startup path, returns a map of username → UserEntry */
@@ -69,15 +69,7 @@ function ensureAdminAgent(naisysFolder: string) {
     return;
   }
 
-  const adminAgentConfig = {
-    username: "admin",
-    title: "Administrator",
-    shellModel: "none",
-    agentPrompt: "Admin agent for monitoring and control.",
-    tokenMax: 100_000,
-  } satisfies AgentConfigFile;
-
-  const yamlContent = yaml.dump(adminAgentConfig);
+  const yamlContent = yaml.dump(defaultAdminConfig);
 
   const agentsDir = path.join(naisysFolder, "agents");
   if (!fs.existsSync(agentsDir)) {

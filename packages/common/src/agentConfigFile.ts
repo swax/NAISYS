@@ -63,6 +63,14 @@ export const AgentConfigFileSchema = z.object({
 
 export type AgentConfigFile = z.infer<typeof AgentConfigFileSchema>;
 
+export const defaultAdminConfig = {
+  username: "admin",
+  title: "Administrator",
+  shellModel: "none",
+  agentPrompt: "Admin agent for monitoring and control.",
+  tokenMax: 100_000,
+} satisfies AgentConfigFile;
+
 export interface UserEntry {
   config: AgentConfigFile;
   agentPath: string;

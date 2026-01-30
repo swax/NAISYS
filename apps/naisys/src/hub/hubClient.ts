@@ -118,23 +118,37 @@ export function createHubClient(
     return activeConnection?.isConnected() ?? false;
   }
 
-  /**
-   * Send a message to the active hub connection.
-   * @param event - Event name
-   * @param payload - Message payload
-   * @param ack - Optional callback for acknowledgement
-   * @returns true if message was sent, false if not connected
-   */
-  function sendMessage<T = unknown>(
-    event: string,
-    payload: unknown,
-    ack?: (response: T) => void,
-  ): boolean {
+  /** Send a fire-and-forget message to the hub */
+  function sendMessage(event: string, payload: unknown): boolean {
     if (!activeConnection) {
       hubClientLog.write("[HubClient] No active connection for sendMessage");
       return false;
     }
-    return activeConnection.sendMessage(event, payload, ack);
+    activeConnection.sendMessage(event, payload);
+    return true;
+  }
+
+  /** Send a message to the hub and await a response via ack */
+  function sendRequest<T = unknown>(
+    event: string,
+    payload: unknown,
+  ): Promise<T> {
+    if (!activeConnection) {
+      hubClientLog.write("[HubClient] No active connection for sendRequest");
+      return Promise.reject(new Error("No active hub connection"));
+    }
+
+    return new Promise<T>((resolve, reject) => {
+      const sent = activeConnection!.sendMessage<T>(
+        event,
+        payload,
+        (response: T) => resolve(response),
+      );
+
+      if (!sent) {
+        reject(new Error("Failed to send request - not connected"));
+      }
+    });
   }
 
   /** Auth error messages from the hub that won't be fixed by retrying */
@@ -186,6 +200,7 @@ export function createHubClient(
     registerEvent,
     unregisterEvent,
     sendMessage,
+    sendRequest,
   };
 }
 

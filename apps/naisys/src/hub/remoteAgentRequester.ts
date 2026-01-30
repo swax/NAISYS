@@ -9,9 +9,6 @@ import {
 } from "@naisys/hub-protocol";
 import { HubClient } from "./hubClient.js";
 
-/** Timeout for remote agent operations (30 seconds) */
-const REMOTE_OPERATION_TIMEOUT_MS = 30000;
-
 /** Base response type for remote operations */
 interface RemoteResponse {
   success: boolean;
@@ -39,36 +36,16 @@ export function createRemoteAgentRequester(hubClient: HubClient) {
       );
     }
 
-    return new Promise<TResult>((resolve, reject) => {
-      const timeout = setTimeout(() => {
-        reject(
-          new Error(`Timeout: ${operation} remote agent '${targetUsername}'`),
-        );
-      }, REMOTE_OPERATION_TIMEOUT_MS);
+    const response = await hubClient.sendRequest<TRes>(event, request);
 
-      const sent = hubClient.sendMessage<TRes>(event, request, (response) => {
-        clearTimeout(timeout);
-        if (response.success) {
-          resolve(onSuccess(response));
-        } else {
-          reject(
-            new Error(
-              response.error ||
-                `Failed to ${operation} remote agent '${targetUsername}'`,
-            ),
-          );
-        }
-      });
-
-      if (!sent) {
-        clearTimeout(timeout);
-        reject(
-          new Error(
-            `Failed to send ${operation} request for remote agent '${targetUsername}'`,
-          ),
-        );
-      }
-    });
+    if (response.success) {
+      return onSuccess(response);
+    } else {
+      throw new Error(
+        response.error ||
+          `Failed to ${operation} remote agent '${targetUsername}'`,
+      );
+    }
   }
 
   /**
