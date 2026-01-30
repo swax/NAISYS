@@ -1,6 +1,6 @@
 # NAISYS Multi-Machine Redux
 
-**Status: Planning**
+**Status: In Progress**
 
 ## Problem Statement
 
@@ -8,7 +8,7 @@ The current multi-machine architecture (doc 001) works but is too complicated to
 
 ### Complexity
 
-- **Multi-master database sync** - Hubs and runners each have their own database. Databases are synced through the hub, essentially multi-master replication. The generic sync logic (timestamp tracking, catch-up, forward queues, stale joiner handling) is the most complex code in the system. Too clever by half, look at the syncUtils.ts file for an example of how complex the system was - not maintainable.
+- **Multi-master database sync** - Hubs and runners each have their own database. Databases are synced through the hub, essentially multi-master replication. The generic sync logic (timestamp tracking, catch-up, forward queues, stale joiner handling) was the most complex code in the system. Too clever by half, look at the old syncUtils.ts file for an example of how complex the system was - not maintainable. **Removed** - ~2,800 lines of sync infrastructure deleted.
 - **Schema version coupling** - Database versions must match across all instances. Updating the cluster means updating all runners and hubs simultaneously and ensuring DB versions match before sync resumes.
 - **Indirect data flow** - Online status is done by updating the local database and then syncing that around the network. Mail messages aren't sent like a message bus but also go through the sync mechanism. Everything is sync.
 
@@ -87,9 +87,9 @@ LOCAL MODE:                          HUB-CONTROLLED MODE:
   Runners A           Runners B
 ```
 
-Federation moves to the hub level. Each hub is authoritative for its runners. Hubs sync with each other, reusing the existing sync/catch-up protocol that currently operates between runners and hubs. This is cleaner than the old model where runners synced through hubs.
+Federation moves to the hub level. Each hub is authoritative for its runners. Hubs would sync with each other using a purpose-built protocol. The old runner-to-hub sync code was deleted rather than relocated (see Decision 10).
 
-**Not in scope for initial migration.** The sync code moves from runner to hub level, preserved for future hub-to-hub use.
+**Not in scope for initial migration.** Interhub Socket.IO namespaces and connection scaffolding have been created (`interhubServer.ts`, `interhubClient.ts`, `interhubConnection.ts`), but no sync protocol is implemented yet.
 
 ---
 
@@ -185,42 +185,33 @@ In local mode, `ns-agent start` just starts the agent directly in-process. No hu
 
 ### Hub API Protocol
 
-Extend the existing WebSocket connection with a JSON-RPC style request/response pattern:
+Uses Socket.IO's native event + acknowledgement pattern over the existing WebSocket connection. Each API method is a named Socket.IO event. No custom JSON-RPC framing needed -- Socket.IO handles correlation and callbacks natively.
+
+**Request-response** (runner → hub, awaits ack):
 
 ```typescript
-// Request (runner -> hub)
-{
-  type: "api_request",
-  id: "correlation-id",
-  method: "mail.list",
-  params: { userId: "01HX...", filter: "received" }
-}
-
-// Success response (hub -> runner)
-{
-  type: "api_response",
-  id: "correlation-id",
-  result: { messages: [...] }
-}
-
-// Error response (hub -> runner)
-{
-  type: "api_response",
-  id: "correlation-id",
-  error: { code: "NOT_FOUND", message: "Message not found" }
-}
+// Runner side: hubClient.sendRequest<T>(event, payload) returns Promise<T>
+// Uses Socket.IO's built-in acknowledgement callbacks for correlation
+const response = await hubClient.sendRequest<UserListResponse>(
+  HubEvents.USER_LIST, {}
+);
 ```
 
-For fire-and-forget writes (no response needed):
+**Fire-and-forget** (runner → hub, no ack):
 
 ```typescript
-// Data push (runner -> hub, no ack expected)
-{
-  type: "data_push",
-  method: "log.write",
-  data: [{ id: "01HY...", user_id: "...", message: "...", ... }, ...]
-}
+// Runner side: hubClient.sendMessage(event, payload)
+hubClient.sendMessage("log.write", { entries: [...] });
 ```
+
+**Hub-pushed events** (hub → runner):
+
+```typescript
+// Hub side: runnerConnection.emit(event, data)
+// Runner side: hubClient.registerEvent(event, handler)
+```
+
+Hub handlers are registered on `runnerServer` as named event handlers with Zod schema validation. Each handler receives `(runnerId, data, ack?)` and calls `ack(response)` for request-response or omits it for push events.
 
 ### API Methods
 
@@ -239,7 +230,8 @@ High-frequency writes that don't need confirmation. Runner buffers and sends per
 | Method              | Params                                      | Returns            | Notes                                                                                                                                                                               |
 | ------------------- | ------------------------------------------- | ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Registration**    |                                             |                    |                                                                                                                                                                                     |
-| `runner.register`   | runnerName, accessKey                       | runnerId, agents[] | On connect. Hub validates accessKey matches its own HUB_ACCESS_KEY, auto-creates runner if name is new. Returns users assigned to this runner (from user_runners) with full configs |
+| `runner.register`   | runnerName, accessKey                       | runnerId           | On connect (handled during Socket.IO auth handshake). Hub validates accessKey, auto-creates runner if name is new. ✅ Done |
+| `user.list`         | -                                           | users[]            | Returns all users assigned to this runner with full configs (username, configYaml, agentPath). Separate from registration to allow reload without reconnect. ✅ Done |
 | **Session**         |                                             |                    |                                                                                                                                                                                     |
 | `session.create`    | userId, modelName                           | runId, sessionId   | On agent start                                                                                                                                                                      |
 | `session.increment` | userId, runId                               | sessionId          | On session compact                                                                                                                                                                  |
@@ -310,23 +302,30 @@ No separate `cost.check` call. No network round-trip on the LLM hot path.
 
 ### Hub-Side Implementation
 
-Hub adds API handlers. DB query logic moves from runner services to hub handlers:
+Hub API handlers are registered as Socket.IO event handlers on `runnerServer`. Each handler is a service that registers its events during hub startup. DB query logic moves from runner services to hub services.
 
 ```
 apps/hub/src/
   services/
-    hubServer.ts             # WebSocket server (existing)
-    hubSyncServer.ts         # Sync protocol (kept for hub-to-hub, not runner-facing)
-    hubApiServer.ts          # NEW: API request router
-    hubForwardService.ts     # Forward queues (kept for hub-to-hub)
-  handlers/
-    mailHandlers.ts          # NEW: mail.send, mail.list, mail.read, etc.
-    sessionHandlers.ts       # NEW: session.create, session.increment
-    costHandlers.ts          # NEW: cost.write processing, cost.status push
-    agentHandlers.ts         # NEW: runner.register, agent.subagents, agent.lookup
+    runnerServer.ts          # Socket.IO server for runner connections (/runners namespace) ✅
+    runnerConnection.ts      # Per-runner connection handler ✅
+    runnerRegistrar.ts       # Tracks connected runners in DB ✅
+    hubUserService.ts        # Handles user_list requests from runners ✅
+    agentRegistrar.ts        # Seeds DB with agent configs from yaml ✅
+    hostService.ts           # Hub host identity and DB record ✅
+    hubServerLog.ts          # Logging ✅
+    hubMailService.ts        # mail.send, mail.list, mail.read, etc. (TODO)
+    hubSessionService.ts     # session.create, session.increment (TODO)
+    hubCostService.ts        # cost.write processing, cost.status push (TODO)
+    hubAgentService.ts       # agent.subagents, agent.start routing (TODO)
+  interhub/
+    interhubServer.ts        # Socket.IO server for hub-to-hub (/interhub namespace) ✅
+    interhubClient.ts        # Client for connecting to peer hubs ✅
+    interhubConnection.ts    # Single hub-to-hub connection handler ✅
+    interhubClientLog.ts     # Logging ✅
 ```
 
-Hub handlers use Prisma queries - essentially the same queries currently in runner services. The logic moves; the queries stay the same.
+Hub handlers use Prisma queries - essentially the same queries currently in runner services. The logic moves; the queries stay the same. No separate `hubApiServer.ts` router needed -- Socket.IO event registration handles routing natively.
 
 ### Connection Lifecycle
 
@@ -368,63 +367,47 @@ Note: Since agents pause on hub disconnect, the buffer mostly holds data written
 
 ## Migration Plan
 
-### Phase 1: Hub API Layer
+### Phase 1: Foundation ✅ Done
 
-Add the API protocol to the hub without changing the runner. Existing sync continues to work in parallel.
+Establish the new architecture: remove sync, set up hub/runner separation, create shared infrastructure.
 
-**Goal:** Hub can serve API requests while existing sync still operates.
+**What was done:**
 
-1. Extend `hub-protocol` with API message types (`api_request`, `api_response`, `data_push`)
-2. Add `hubApiServer.ts` to hub - routes API requests to handlers
-3. Implement hub handlers for each API method, reusing existing Prisma queries from runner code
-4. Hub pushes `mail.received` event when it processes a `mail.send` API call
+1. ✅ Removed multi-master sync infrastructure (~2,800 lines): `hubSyncServer.ts`, `hubSyncClient.ts`, `syncUtils.ts`, `hubForwardService.ts`, 3 integration tests
+2. ✅ Replaced `isMultiMachineMode` with `isHubMode`
+3. ✅ Renamed `agentManager` → `agentRunner`, `naisysConnection` → `runnerConnection`, `hubServer` → `runnerServer`
+4. ✅ Created `@naisys/common` package with shared agent config schemas and loader
+5. ✅ Split hub into `/runners` and `/interhub` Socket.IO namespaces
+6. ✅ Created `runnerServer.ts`, `runnerConnection.ts`, `runnerRegistrar.ts` on hub
+7. ✅ Added `runners` table to database
+8. ✅ Created `agentRegistrar.ts` on hub (seeds DB from yaml)
+9. ✅ Hub startup requires `HUB_ACCESS_KEY`, runner authenticates with it
+10. ✅ Runner connects to single hub on startup (multiple URLs are fallback, not multi-hub)
+11. ✅ Added `sendRequest<T>()` to `hubClient` for Promise-based request/response
+12. ✅ Scaffolded interhub client/server/connection for future hub-to-hub federation
 
-**New files:**
+**Deviation from original plan:** The original plan had separate phases for "Hub API Layer" and "Runner Hub API Client." In practice, these were done together incrementally. Socket.IO's native event + ack pattern replaced the planned JSON-RPC protocol, eliminating the need for a separate `hubApiServer.ts` router or `hubApiClient.ts`. The existing `hubClient.sendRequest()` and `runnerServer.registerEvent()` serve these roles.
 
-- `packages/hub-protocol/src/index.ts` - Add API message schemas
-- `apps/hub/src/services/hubApiServer.ts` - API router
-- `apps/hub/src/handlers/mailHandlers.ts` - Mail operations
-- `apps/hub/src/handlers/sessionHandlers.ts` - Session operations
-- `apps/hub/src/handlers/costHandlers.ts` - Cost operations + cost.status push
-- `apps/hub/src/handlers/agentHandlers.ts` - Registration, agent lookup
+### Phase 2: Remove DB Dependencies from Runner (In Progress)
 
-### Phase 2: Runner Hub API Client
+Replace each runner service's DB usage with hub API calls (in hub mode) or in-memory equivalents (in local mode). Use `isHubMode` branching in each service. Do this one service at a time.
 
-Create the runner-side client that calls hub API methods over WebSocket.
+**Goal:** Runner operates without a local database.
 
-**Goal:** Runner can make API calls to hub (coexists with old DB code initially).
-
-1. Create `hubApiClient.ts` in the runner - sends requests, correlates responses, buffers fire-and-forget data
-2. Request/response correlation: send with unique ID, return Promise, resolve on matching response
-3. Data push buffering with periodic flush
-4. Wire up hub-pushed events (`mail.received`, `agent.start`, `agent.stop`, `cost.status`)
-
-**New files:**
-
-- `apps/naisys/src/hub/hubApiClient.ts` - API client with buffering
-
-**Modified:**
-
-- `apps/naisys/src/hub/hubManager.ts` - Add API event routing alongside existing sync routing
-
-### Phase 3: Remove DB Dependencies from Runner (Systematic)
-
-Replace each runner service's DB usage with hub API calls. Do this one service at a time, testing each switch individually.
-
-**Goal:** Runner operates without a local database in hub mode.
+**Approach:** Each service uses `isHubMode` to branch between hub API calls and local in-memory/yaml-based behavior. The `userService` is the template for this pattern.
 
 Order of migration (roughly least to most complex):
 
-1. **hostService** -> Remove entirely. Runner has no host concept. `runner.register` replaces host registration. Heartbeat replaces last_active updates.
-2. **runService** -> `session.create` + `session.increment`. Heartbeat covers last_active. Remove DB dependency.
-3. **logService** -> `log.write` (fire-and-forget batch). Remove DB dependency.
-4. **costTracker** -> `cost.write` (fire-and-forget batch) + listen for `cost.status` push. Cost report via `cost.report` API. Remove DB dependency.
-5. **agentConfig** -> Config received from hub on agent start (via `runner.register` or `agent.start` push). Cached in memory. Remove DB dependency.
-6. **agentRegistrar** -> In hub mode, hub assigns agents (no yaml scanning). `runner.register` returns agent list. Remove DB dependency for hub mode.
-7. **mailAddress** -> Username resolution moves to hub (part of `mail.send`). Remove DB dependency.
-8. **mailDisplayService** -> All queries become API calls (`mail.list`, `mail.read`, `mail.search`, `mail.users`). Hub returns raw data, runner still formats. Remove DB dependency.
-9. **mail** -> `mail.send`, `mail.read` (mark as read), `mail.archive`, `mail.unread`. `mail.received` push replaces polling. Remove DB dependency.
-10. **subagent** -> `agent.subagents` for listing. `agent.start` request to hub for starting (hub routes to correct runner). Remove DB dependency.
+1. ✅ **userService** -> In hub mode: request user list from hub via `user.list` event. In local mode: load from yaml files. Both cache in `Map<string, UserEntry>`.
+2. **hostService** -> Remove entirely. Runner has no host concept. `runner.register` replaces host registration. Heartbeat replaces last_active updates. Note: `localHostId` is used by many services -- replace with `runnerId` (from hub registration) or generated transient ID (local mode).
+3. **runService** -> `session.create` + `session.increment`. Heartbeat covers last_active. In local mode: in-memory counters.
+4. **logService** -> `log.write` (fire-and-forget batch). In local mode: no-op or console output.
+5. **costTracker** -> `cost.write` (fire-and-forget batch) + listen for `agent.pause`/`agent.resume` push. Cost report via `cost.report` API. In local mode: in-memory running total.
+6. **agentConfig** -> Config received from hub on agent start (via `user.list` or `agent.start` push). Cached in memory. In local mode: loaded from yaml.
+7. **mailAddress** -> Username resolution moves to hub (part of `mail.send`). In local mode: resolve from in-memory user list.
+8. **mailDisplayService** -> All queries become API calls (`mail.list`, `mail.read`, `mail.search`, `mail.users`). Hub returns raw data, runner formats. In local mode: not available (no data to query).
+9. **mail** -> `mail.send`, `mail.read` (mark as read), `mail.archive`, `mail.unread`. `mail.received` push replaces polling. In local mode: send-only, direct in-process delivery via event bus.
+10. **subagent** -> `agent.subagents` for listing. `agent.start` request to hub for starting (hub routes to correct runner). In local mode: in-memory agent list from userService.
 
 After all services migrated:
 
@@ -433,75 +416,40 @@ After all services migrated:
 - Remove database initialization from `naisys.ts`
 - The `@naisys/database` package becomes hub-only
 
-### Phase 4: Local Ephemeral Mode
+### Phase 3: Cleanup & Renames
 
-Build the no-database local mode.
-
-**Goal:** `naisys` (no --hub) runs with pure in-memory state, no Prisma/SQLite dependency.
-
-1. Create in-memory service implementations for local mode:
-   - `localMailService` - send-only, routes to in-process agent via event bus
-   - `localCostTracker` - in-memory running total, no persistence
-   - `localRunService` - in-memory counters
-   - `localLogService` - no-op or console output
-   - `localAgentRegistrar` - scan yaml folder, build in-memory list
-2. Mode selection in `naisys.ts`: if `--hub` flag, create hub API services; otherwise, create local in-memory services
-3. Agent runtime accepts either set of services (same interfaces, different implementations)
-
-### Phase 5: Move Sync Code to Hub Level
-
-Preserve the sync/catch-up protocol for future hub-to-hub federation by relocating it from runner to hub.
-
-**Goal:** Sync code lives in the hub, ready for hub-to-hub use later.
-
-1. Move `hubSyncClient.ts` logic to hub (becomes hub-to-hub sync client)
-2. Move `syncUtils.ts` fully into the hub/database package
-3. Remove all sync-related code from naisys runner
-4. Remove `hub_sync_state` table from runner (hub keeps its own)
-5. Clean up `hub-protocol` - separate API messages (runner-facing) from sync messages (hub-to-hub)
-
-**Deleted from runner:**
-
-- `apps/naisys/src/hub/hubSyncClient.ts`
-- Any sync-related event handlers in `hubManager.ts`
-
-**Moved to hub:**
-
-- Sync client logic -> `apps/hub/src/services/hubSyncClient.ts` (for hub-to-hub)
-
-### Phase 6: Cleanup & Renames
-
-Final cleanup pass.
+Final cleanup pass after all services are migrated.
 
 1. Remove unused database types/imports from naisys
 2. Remove `remoteAgentRequester.ts` from runner if remote agent control is now hub-mediated
 3. Remove `remoteAgentHandler.ts` if agent start/stop is now via hub push events
-4. Update `hub-protocol` to remove runner-sync message types
+4. Update `hub-protocol` to remove runner-sync message types (catch_up, sync_request, sync_response, forward)
 5. Verify `@naisys/database` is not in naisys dependency tree
 6. Update supervisor if needed (should mostly just work since it reads hub DB)
-7. Rename `agentManager` -> `agentRunner` (better reflects its role as the thing that runs agents, aligns with runner terminology)
 
 ---
 
 ## What Gets Removed (from runner)
 
-| Component                     | Current                                           | After                                                                |
-| ----------------------------- | ------------------------------------------------- | -------------------------------------------------------------------- |
-| `@naisys/database` dependency | Runner imports Prisma, SQLite                     | Removed entirely                                                     |
-| `hubSyncClient.ts`            | Responds to sync requests, processes forwards     | Removed (moved to hub for hub-to-hub)                                |
-| `syncUtils.ts` (runner usage) | Query/upsert sync records                         | Removed from runner                                                  |
-| `hub_sync_state` table        | Track sync timestamps                             | Not needed                                                           |
-| Schema version matching       | Runner/hub must match DB version                  | Not needed (API versioning)                                          |
-| Forward handling              | Runner upserts forwarded data                     | Not needed (hub is source of truth)                                  |
-| Multi-hub connection          | Runner connects to multiple hubs                  | Runner connects to one hub                                           |
-| Database file                 | Runner has naisys.db                              | No local DB at all                                                   |
-| Periodic mail polling         | 5-second interval checking for cross-machine mail | Hub pushes `mail.received` events                                    |
-| Dual last_active updates      | hostService + runService both update every 2s     | Single heartbeat every 5-10s                                         |
-| Host concept on runner        | Runner registers as a host, tracks host_id        | Removed. Replaced by `runners` table on hub                          |
-| `hostService.ts`              | Create/update host record, list hosts             | Removed. `runner.register` + heartbeat replaces it                   |
-| `remoteAgentRequester.ts`     | Runner asks hub to route agent commands           | Removed. `agent.start` request to hub, hub routes via `user_runners` |
-| `remoteAgentHandler.ts`       | Runner handles incoming agent commands            | Replaced by hub push events (`agent.start`, `agent.stop`)            |
-| `mailAddress.ts` (DB queries) | Resolve usernames via local DB                    | Hub resolves usernames                                               |
+| Component                     | Before                                            | After                                                                | Status |
+| ----------------------------- | ------------------------------------------------- | -------------------------------------------------------------------- | ------ |
+| `hubSyncClient.ts`            | Responds to sync requests, processes forwards     | Removed (deleted, not moved -- will rewrite for hub-to-hub if needed)| ✅     |
+| `syncUtils.ts` (runner usage) | Query/upsert sync records                         | Removed from runner                                                  | ✅     |
+| `hubForwardService.ts`        | Forward queues for sync                           | Removed                                                              | ✅     |
+| `remoteAgentRouter.ts`        | Hub-side routing of remote agent commands         | Removed (replaced by `runnerServer` event handlers)                  | ✅     |
+| `agentRegistrar.ts` (runner)  | Runner-side agent config scanning and DB sync     | Removed from runner, rebuilt on hub as `agentRegistrar.ts`           | ✅     |
+| Multi-hub connection          | Runner connects to multiple hubs                  | Runner connects to one hub (multiple URLs are fallback)              | ✅     |
+| Schema version matching       | Runner/hub must match DB version                  | Not needed (API versioning)                                          | ✅     |
+| Forward handling              | Runner upserts forwarded data                     | Not needed (hub is source of truth)                                  | ✅     |
+| `@naisys/database` dependency | Runner imports Prisma, SQLite                     | Removed entirely                                                     |        |
+| Database file                 | Runner has naisys.db                              | No local DB at all                                                   |        |
+| Periodic mail polling         | 5-second interval checking for cross-machine mail | Hub pushes `mail.received` events                                    |        |
+| Dual last_active updates      | hostService + runService both update every 2s     | Single heartbeat every 5-10s                                         |        |
+| Host concept on runner        | Runner registers as a host, tracks host_id        | Removed. Replaced by `runners` table on hub                          |        |
+| `hostService.ts`              | Create/update host record, list hosts             | Removed. `runner.register` + heartbeat replaces it                   |        |
+| `remoteAgentRequester.ts`     | Runner asks hub to route agent commands           | Removed. `agent.start` request to hub, hub routes via `user_runners` |        |
+| `remoteAgentHandler.ts`       | Runner handles incoming agent commands            | Replaced by hub push events (`agent.start`, `agent.stop`)            |        |
+| `mailAddress.ts` (DB queries) | Resolve usernames via local DB                    | Hub resolves usernames                                               |        |
 
 ## What Stays
 
@@ -514,8 +462,9 @@ Final cleanup pass.
 | Agent yaml config format     | Same config files (local mode reads them, hub imports from them)   |
 | Hub database + Prisma        | Hub keeps `@naisys/database`, gains API handlers                   |
 | Supervisor                   | Points at hub DB, minimal changes                                  |
-| `hub-protocol` package       | Extended with API messages. Sync messages preserved for hub-to-hub |
-| WebSocket connection         | Same transport, new protocol on top                                |
+| `hub-protocol` package       | Extended with API message schemas (e.g., `UserListResponse`)       |
+| `@naisys/common` package     | New shared package for agent config schemas and loader             |
+| WebSocket connection         | Same Socket.IO transport, event + ack pattern for API              |
 
 ---
 
@@ -523,10 +472,10 @@ Final cleanup pass.
 
 ### Hub Mode
 
-- [ ] Runner self-registers on first connection (hub auto-creates runner entry)
-- [ ] Runner connects to hub, authenticates with matching HUB_ACCESS_KEY
-- [ ] Runner with wrong HUB_ACCESS_KEY is rejected and disconnected
-- [ ] Runner receives assigned agents with full configs from runner.register
+- [x] Runner self-registers on first connection (hub auto-creates runner entry)
+- [x] Runner connects to hub, authenticates with matching HUB_ACCESS_KEY
+- [x] Runner with wrong HUB_ACCESS_KEY is rejected and disconnected
+- [x] Runner receives assigned agents with full configs via user.list
 - [ ] Runner starts assigned agents
 - [ ] Agent logs and costs flow to hub (visible in supervisor)
 - [ ] ns-mail send/list/read/archive/search work across runners
@@ -580,9 +529,15 @@ Answers to design questions resolved during planning:
 
 9. **Display formatting: runner-side** - Hub returns raw data for mail and cost queries. Runner formats into tables/hierarchies. Standard API pattern, allows runner-side logic on the data.
 
-10. **Sync code: moved to hub** - Existing sync/catch-up code moves from runner to hub level, preserved for future hub-to-hub federation. Not deleted, relocated.
+10. **Sync code: deleted** - Sync infrastructure was deleted from the runner (~2,800 lines) rather than relocated to the hub. If hub-to-hub federation needs sync later, it will be rewritten purpose-built for that use case rather than adapting the old runner-to-hub protocol.
 
 11. **Database package: hub-only** - `@naisys/database` is removed from naisys runner dependency. Hub is the sole consumer.
+
+12. **Socket.IO events, not JSON-RPC** - Instead of a custom JSON-RPC protocol with correlation IDs, the hub API uses Socket.IO's native event + acknowledgement pattern. `hubClient.sendRequest<T>()` wraps acks in Promises for request-response. `hubClient.sendMessage()` is used for fire-and-forget. No custom framing or routing layer needed.
+
+13. **User list separate from registration** - Rather than bundling the user list into the `runner.register` response, a separate `user.list` event allows reloading user configs without reconnecting. Registration is handled during Socket.IO auth handshake.
+
+14. **Hub services, not handlers directory** - Hub API handlers live in `apps/hub/src/services/` alongside other hub services (e.g., `hubUserService.ts`), not in a separate `handlers/` directory. Each service registers its events on `runnerServer` during hub startup.
 
 ---
 

@@ -4,6 +4,7 @@ import { RemoteAgentRequester } from "../hub/remoteAgentRequester.js";
 import { HostService } from "../services/hostService.js";
 import { OutputColor } from "../utils/output.js";
 import { AgentRuntime, createAgentRuntime } from "./agentRuntime.js";
+import { UserService } from "./userService.js";
 
 /** Handles the multiplexing of multiple concurrent agents in the process */
 export class AgentRunner {
@@ -15,6 +16,7 @@ export class AgentRunner {
     private globalConfig: GlobalConfig,
     private hostService: HostService,
     private remoteAgentRequester: RemoteAgentRequester,
+    private userService: UserService,
   ) {}
 
   async startAgent(userId: string, onStop?: (reason: string) => void) {
@@ -31,6 +33,7 @@ export class AgentRunner {
       this.globalConfig,
       this.hostService,
       this.remoteAgentRequester,
+      this.userService,
     );
 
     this.runningAgents.push(agent);
