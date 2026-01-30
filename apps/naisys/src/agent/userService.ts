@@ -95,11 +95,24 @@ export function createUserService(
     return "admin";
   }
 
+  // Active user tracking (driven by heartbeatService)
+  let activeUserIds = new Set<string>();
+
+  function setActiveUserIds(ids: string[]) {
+    activeUserIds = new Set(ids);
+  }
+
+  function isUserActive(userId: string): boolean {
+    return activeUserIds.has(userId);
+  }
+
   return {
     getUsers,
     getUserById,
     waitForUsers,
     getStartupUserId,
+    setActiveUserIds,
+    isUserActive,
   };
 }
 

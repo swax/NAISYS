@@ -13,6 +13,7 @@ import { createSessionService } from "../features/session.js";
 import { createSubagentService } from "../features/subagent.js";
 import { createWorkspacesFeature } from "../features/workspaces.js";
 import { GlobalConfig } from "../globalConfig.js";
+import { HubClient } from "../hub/hubClient.js";
 import { RemoteAgentRequester } from "../hub/remoteAgentRequester.js";
 import { createCommandTools } from "../llm/commandTool.js";
 import { createContextManager } from "../llm/contextManager.js";
@@ -41,6 +42,7 @@ export async function createAgentRuntime(
   dbService: DatabaseService,
   globalConfig: GlobalConfig,
   hostService: HostService,
+  hubClient: HubClient,
   remoteAgentRequester: RemoteAgentRequester,
   userService: UserService,
 ) {
@@ -59,8 +61,8 @@ export async function createAgentRuntime(
 
   const runService = await createRunService(
     agentConfig,
-    dbService,
-    hostService,
+    globalConfig,
+    hubClient,
     localUserId,
   );
   const logService = createLogService(
@@ -258,8 +260,6 @@ export async function createAgentRuntime(
       await new Promise((resolve) => setTimeout(resolve, 5000));
     },
     completeShutdown: (reason: string) => {
-      // Cleanup intervals
-      runService.cleanup();
       subagentService.cleanup(reason);
       mailService.cleanup();
     },

@@ -10,6 +10,8 @@ import { createInterhubClientLog } from "./interhub/interhubClientLog.js";
 import { createInterhubServer } from "./interhub/interhubServer.js";
 import { createAgentRegistrar } from "./services/agentRegistrar.js";
 import { createHostService } from "./services/hostService.js";
+import { createHubHeartbeatService } from "./services/hubHeartbeatService.js";
+import { createHubRunService } from "./services/hubRunService.js";
 import { createHubServerLog } from "./services/hubServerLog.js";
 import { createHubUserService } from "./services/hubUserService.js";
 import { createRunnerRegistrar } from "./services/runnerRegistrar.js";
@@ -80,6 +82,12 @@ export async function startHub(
 
     // Register hub user service for user_list requests from runners
     createHubUserService(runnerServer, dbService, hostService, logService);
+
+    // Register hub run service for session_create/session_increment requests
+    createHubRunService(runnerServer, dbService, hostService, logService);
+
+    // Register hub heartbeat service for runner heartbeat tracking
+    createHubHeartbeatService(runnerServer, dbService, logService);
 
     // Create interhub server on /interhub namespace
     const interhubServer = createInterhubServer(

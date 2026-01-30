@@ -33,7 +33,6 @@ export function createMockDatabaseService(): DatabaseService {
 
 export function createMockRunService(): RunService {
   return {
-    cleanup: jest.fn(),
     incrementSession: jest.fn(() => Promise.resolve()),
     getRunId: jest.fn(() => -1),
     getSessionId: jest.fn(() => -1),
