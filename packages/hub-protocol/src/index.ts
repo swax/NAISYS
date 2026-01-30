@@ -131,6 +131,66 @@ export const AgentLogResponseSchema = z.object({
 export type AgentLogResponse = z.infer<typeof AgentLogResponseSchema>;
 
 // =============================================================================
+// Session Messages (Runner -> Hub request/response)
+// =============================================================================
+
+/** Request to create a new run session */
+export const SessionCreateRequestSchema = z.object({
+  userId: z.string(),
+  modelName: z.string(),
+});
+export type SessionCreateRequest = z.infer<typeof SessionCreateRequestSchema>;
+
+/** Response to session create request */
+export const SessionCreateResponseSchema = z.object({
+  success: z.boolean(),
+  runId: z.number().optional(),
+  sessionId: z.number().optional(),
+  error: z.string().optional(),
+});
+export type SessionCreateResponse = z.infer<
+  typeof SessionCreateResponseSchema
+>;
+
+/** Request to increment session for an existing run */
+export const SessionIncrementRequestSchema = z.object({
+  userId: z.string(),
+  runId: z.number(),
+});
+export type SessionIncrementRequest = z.infer<
+  typeof SessionIncrementRequestSchema
+>;
+
+/** Response to session increment request */
+export const SessionIncrementResponseSchema = z.object({
+  success: z.boolean(),
+  sessionId: z.number().optional(),
+  error: z.string().optional(),
+});
+export type SessionIncrementResponse = z.infer<
+  typeof SessionIncrementResponseSchema
+>;
+
+// =============================================================================
+// Heartbeat Messages
+// =============================================================================
+
+/** How often runners send heartbeats to the hub (ms) */
+export const HEARTBEAT_INTERVAL_MS = 2000;
+
+/** Sent by runner to hub with active user IDs (fire-and-forget) */
+export const HeartbeatSchema = z.object({
+  activeUserIds: z.array(z.string()),
+});
+export type Heartbeat = z.infer<typeof HeartbeatSchema>;
+
+/** Sent by hub to runners with aggregate active user IDs */
+export const HeartbeatStatusSchema = z.object({
+  activeUserIds: z.array(z.string()),
+});
+export type HeartbeatStatus = z.infer<typeof HeartbeatStatusSchema>;
+
+// =============================================================================
 // Runner -> Hub Request/Response Messages
 // =============================================================================
 
@@ -172,6 +232,14 @@ export const HubEvents = {
   // Internal runner events (not sent over wire, local only)
   /** Raised when runner connects to a hub (before catch_up is sent) */
   HUB_CONNECTED: "hub_connected",
+
+  // Session events (runner -> hub request/response)
+  SESSION_CREATE: "session_create",
+  SESSION_INCREMENT: "session_increment",
+
+  // Heartbeat events
+  HEARTBEAT: "heartbeat",
+  HEARTBEAT_STATUS: "heartbeat_status",
 
   // Remote agent control events (bidirectional via hub)
   AGENT_START: "agent_start",

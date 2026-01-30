@@ -1,14 +1,19 @@
-import { DatabaseService } from "@naisys/database";
+import {
+  HubEvents,
+  SessionCreateResponse,
+  SessionIncrementResponse,
+} from "@naisys/hub-protocol";
 import { AgentConfig } from "../agent/agentConfig.js";
-import { HostService } from "./hostService.js";
+import { GlobalConfig } from "../globalConfig.js";
+import { HubClient } from "../hub/hubClient.js";
 
 export async function createRunService(
   { agentConfig }: AgentConfig,
-  { usingDatabase }: DatabaseService,
-  hostService: HostService,
+  { globalConfig }: GlobalConfig,
+  hubClient: HubClient,
   localUserId: string,
 ) {
-  const { localHostId } = hostService;
+  const isHubMode = globalConfig().isHubMode;
 
   /** The run ID of an agent process (there could be multiple runs for the same user). Globally unique */
   let runId = -1;
@@ -16,92 +21,50 @@ export async function createRunService(
   /** The session number, incremented when the agent calls ns-session compact */
   let sessionId = -1;
 
-  let updateInterval: NodeJS.Timeout | null = null;
-
   await init();
 
   async function init() {
-    await initRun();
+    if (isHubMode) {
+      const response = await hubClient.sendRequest<SessionCreateResponse>(
+        HubEvents.SESSION_CREATE,
+        { userId: localUserId, modelName: agentConfig().shellModel },
+      );
 
-    // Start the last_active updater after user is initialized
-    await updateLastActive();
-    updateInterval = setInterval(updateLastActive, 2000);
-  }
+      if (!response.success) {
+        throw new Error(
+          `Failed to create session via hub: ${response.error}`,
+        );
+      }
 
-  async function initRun(): Promise<void> {
-    await usingDatabase(async (prisma) => {
-      // increment the existing run id in the run_session table, run_id
-      const lastRun = await prisma.run_session.findFirst({
-        select: { run_id: true },
-        orderBy: { run_id: "desc" },
-      });
-
-      await createNewRunSession(lastRun ? lastRun.run_id + 1 : 1, 1);
-    });
+      runId = response.runId!;
+      sessionId = response.sessionId!;
+    } else {
+      runId = 1;
+      sessionId = 1;
+    }
   }
 
   async function incrementSession(): Promise<void> {
-    await updateLastActive();
+    if (isHubMode) {
+      const response =
+        await hubClient.sendRequest<SessionIncrementResponse>(
+          HubEvents.SESSION_INCREMENT,
+          { userId: localUserId, runId },
+        );
 
-    await createNewRunSession(runId, sessionId + 1);
-  }
+      if (!response.success) {
+        throw new Error(
+          `Failed to increment session via hub: ${response.error}`,
+        );
+      }
 
-  async function createNewRunSession(
-    newRunId: number,
-    newSessionId: number,
-  ): Promise<void> {
-    await usingDatabase(async (prisma) => {
-      await prisma.run_session.create({
-        data: {
-          user_id: localUserId,
-          run_id: newRunId,
-          session_id: newSessionId,
-          host_id: localHostId,
-          model_name: agentConfig().shellModel,
-          created_at: new Date().toISOString(),
-          last_active: new Date().toISOString(),
-        },
-      });
-
-      runId = newRunId;
-      sessionId = newSessionId;
-    });
-  }
-
-  async function updateLastActive(): Promise<void> {
-    if (!localUserId) return;
-
-    await usingDatabase(async (prisma) => {
-      const now = new Date().toISOString();
-
-      await prisma.run_session.updateMany({
-        where: {
-          user_id: localUserId,
-          run_id: runId,
-          session_id: sessionId,
-        },
-        data: { last_active: now },
-      });
-
-      // Also update user_notifications.last_active
-      await prisma.user_notifications.updateMany({
-        where: {
-          user_id: localUserId,
-        },
-        data: { last_active: now },
-      });
-    });
-  }
-
-  function cleanup() {
-    if (updateInterval) {
-      clearInterval(updateInterval);
-      updateInterval = null;
+      sessionId = response.sessionId!;
+    } else {
+      sessionId++;
     }
   }
 
   return {
-    cleanup,
     incrementSession,
     getRunId: () => runId,
     getSessionId: () => sessionId,

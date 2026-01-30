@@ -8,6 +8,7 @@ import { createHubClientLog } from "./hub/hubClientLog.js";
 import { createHubClient } from "./hub/hubClient.js";
 import { createRemoteAgentHandler } from "./hub/remoteAgentHandler.js";
 import { createRemoteAgentRequester } from "./hub/remoteAgentRequester.js";
+import { createHeartbeatService } from "./services/heartbeatService.js";
 import { createHostService } from "./services/hostService.js";
 
 dotenv.config({ quiet: true });
@@ -67,7 +68,16 @@ const agentRunner = new AgentRunner(
   dbService,
   globalConfig,
   hostService,
+  hubClient,
   remoteAgentRequester,
+  userService,
+);
+
+// Create heartbeat service for runner-side heartbeat reporting
+const heartbeatService = createHeartbeatService(
+  globalConfig,
+  hubClient,
+  agentRunner,
   userService,
 );
 
@@ -86,6 +96,7 @@ await agentRunner.startAgent(startupUsername);
 
 await agentRunner.waitForAllAgentsToComplete();
 
+heartbeatService.cleanup();
 hostService.cleanup();
 
 console.log(`NAISYS EXITED`);
