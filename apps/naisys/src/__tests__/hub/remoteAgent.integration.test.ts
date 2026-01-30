@@ -12,7 +12,7 @@ import { ulid } from "@naisys/database";
 import type { HubServerLog } from "@naisys/hub/services/hubServerLog";
 import type { AgentRunner } from "../../agent/agentRunner.js";
 import type { HubClientLog } from "../../hub/hubClientLog.js";
-import type { HubManager } from "../../hub/hubManager.js";
+import type { HubClient } from "../../hub/hubClient.js";
 import { createRemoteAgentHandler } from "../../hub/remoteAgentHandler.js";
 import {
   createRemoteAgentRequester,
@@ -21,7 +21,7 @@ import {
 import type { HostService } from "../../services/hostService.js";
 import {
   createSyncEventBridge,
-  type MockHubManager,
+  type MockHubClient,
   type MockHubServer,
 } from "./syncEventBridge.js";
 import {
@@ -67,8 +67,8 @@ describe("Remote Agent Integration Tests", () => {
   // Bridge and mocks
   let bridge: ReturnType<typeof createSyncEventBridge>;
   let mockHubServer: MockHubServer;
-  let mockHubManagerA: MockHubManager;
-  let mockHubManagerB: MockHubManager;
+  let mockHubClientA: MockHubClient;
+  let mockHubClientB: MockHubClient;
 
   // Services
   let remoteAgentRequesterA: RemoteAgentRequester;
@@ -158,14 +158,14 @@ describe("Remote Agent Integration Tests", () => {
     mockHubServer = bridge.createMockHubServer();
 
     // Create Runner A (requester)
-    mockHubManagerA = bridge.createMockHubManager(runnerAId, runnerAName);
+    mockHubClientA = bridge.createMockHubClient(runnerAId, runnerAName);
 
     remoteAgentRequesterA = createRemoteAgentRequester(
-      mockHubManagerA as unknown as HubManager,
+      mockHubClientA as unknown as HubClient,
     );
 
     // Create Runner B (handler)
-    mockHubManagerB = bridge.createMockHubManager(runnerBId, runnerBName);
+    mockHubClientB = bridge.createMockHubClient(runnerBId, runnerBName);
 
     const hostServiceB: HostService = {
       cleanup: () => {},
@@ -183,7 +183,7 @@ describe("Remote Agent Integration Tests", () => {
 
     // Register remote agent handler on Runner B
     createRemoteAgentHandler(
-      mockHubManagerB as unknown as HubManager,
+      mockHubClientB as unknown as HubClient,
       mockClientLogB,
       runnerBDb.dbService,
       hostServiceB,
@@ -191,8 +191,8 @@ describe("Remote Agent Integration Tests", () => {
     );
 
     // Trigger connections
-    mockHubManagerA._triggerHubConnected();
-    mockHubManagerB._triggerHubConnected();
+    mockHubClientA._triggerHubConnected();
+    mockHubClientB._triggerHubConnected();
 
     // Wait for connections to establish
     await new Promise((resolve) => setTimeout(resolve, 100));
@@ -279,10 +279,9 @@ describe("Remote Agent Integration Tests", () => {
       const requesterId = ulid();
 
       // Make startAgent throw an error
-      const mockStartAgent =
-        mockAgentRunnerB.startAgent as jest.MockedFunction<
-          typeof mockAgentRunnerB.startAgent
-        >;
+      const mockStartAgent = mockAgentRunnerB.startAgent as jest.MockedFunction<
+        typeof mockAgentRunnerB.startAgent
+      >;
       mockStartAgent.mockRejectedValueOnce(new Error("Agent already running"));
 
       await expect(
@@ -495,7 +494,7 @@ describe("Remote Agent Integration Tests", () => {
         isConnected: () => false,
         getConnectionInfo: () => null,
         disableReconnection: jest.fn(),
-      } as unknown as HubManager;
+      } as unknown as HubClient;
 
       const disconnectedRequester =
         createRemoteAgentRequester(disconnectedManager);

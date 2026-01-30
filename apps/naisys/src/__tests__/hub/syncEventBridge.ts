@@ -2,7 +2,7 @@ import { ZodSchema } from "zod";
 
 /**
  * Mock transport layer for integration testing the sync system.
- * Routes messages between mock HubManager (runner side) and mock HubServer (hub side)
+ * Routes messages between mock HubClient (runner side) and mock HubServer (hub side)
  * without actual WebSocket connections.
  */
 
@@ -24,10 +24,10 @@ export interface MockClientConnection {
 }
 
 /**
- * Mock HubManager interface (runner side)
+ * Mock HubClient interface (runner side)
  * Receives events from the hub and allows registering handlers.
  */
-export interface MockHubManager {
+export interface MockHubClient {
   registerEvent: (event: string, handler: EventHandler) => void;
   unregisterEvent: (event: string, handler: EventHandler) => void;
   isConnected: () => boolean;
@@ -61,7 +61,9 @@ export interface MockHubServer {
     ack?: AckCallback<T>,
   ) => boolean;
   getConnectedClients: () => MockClientConnection[];
-  getConnectionByRunnerId: (runnerId: string) => MockClientConnection | undefined;
+  getConnectionByRunnerId: (
+    runnerId: string,
+  ) => MockClientConnection | undefined;
   getConnectionCount: () => number;
   close: () => void;
   /** Internal: raise an event (called by the bridge) */
@@ -74,11 +76,11 @@ export interface MockHubServer {
 export interface RunnerEndpoint {
   runnerId: string;
   runnerName: string;
-  hubManager: MockHubManager;
+  hubClient: MockHubClient;
 }
 
 /**
- * SyncEventBridge connects mock HubManagers and a mock HubServer.
+ * SyncEventBridge connects mock HubClients and a mock HubServer.
  * Allows testing the full sync flow without actual network.
  */
 export function createSyncEventBridge() {
@@ -139,8 +141,8 @@ export function createSyncEventBridge() {
             }
           : undefined;
 
-        // Deliver to runner's HubManager
-        runner.hubManager._raiseEvent(event, payload, wrappedAck);
+        // Deliver to runner's HubClient
+        runner.hubClient._raiseEvent(event, payload, wrappedAck);
         return true;
       },
 
@@ -189,12 +191,12 @@ export function createSyncEventBridge() {
   }
 
   /**
-   * Create a mock HubManager for a runner.
+   * Create a mock HubClient for a runner.
    */
-  function createMockHubManager(
+  function createMockHubClient(
     runnerId: string,
     runnerName: string,
-  ): MockHubManager {
+  ): MockHubClient {
     if (runners.has(runnerId)) {
       throw new Error(`Runner ${runnerId} already exists`);
     }
@@ -202,7 +204,7 @@ export function createSyncEventBridge() {
     // Runner's event handlers registry
     const eventHandlers = new Map<string, Set<EventHandler>>();
 
-    const manager: MockHubManager = {
+    const client: MockHubClient = {
       registerEvent: (event: string, handler: EventHandler) => {
         if (!eventHandlers.has(event)) {
           eventHandlers.set(event, new Set());
@@ -253,11 +255,15 @@ export function createSyncEventBridge() {
 
       _triggerHubConnected: () => {
         // Raise the HUB_CONNECTED event to trigger catch_up flow
-        manager._raiseEvent("hub_connected");
+        client._raiseEvent("hub_connected");
       },
     };
 
-    const endpoint: RunnerEndpoint = { runnerId, runnerName, hubManager: manager };
+    const endpoint: RunnerEndpoint = {
+      runnerId,
+      runnerName,
+      hubClient: client,
+    };
     runners.set(runnerId, endpoint);
 
     // Notify hub of connection
@@ -268,7 +274,7 @@ export function createSyncEventBridge() {
       });
     }
 
-    return manager;
+    return client;
   }
 
   /**
@@ -306,7 +312,7 @@ export function createSyncEventBridge() {
 
   return {
     createMockHubServer,
-    createMockHubManager,
+    createMockHubClient,
     disconnectRunner,
     getConnectedRunners,
     reset,

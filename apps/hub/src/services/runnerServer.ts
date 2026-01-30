@@ -1,5 +1,4 @@
-import http from "http";
-import { Server } from "socket.io";
+import { Namespace } from "socket.io";
 import { ZodSchema } from "zod";
 import { HubServerLog } from "./hubServerLog.js";
 import {
@@ -17,10 +16,10 @@ interface RegisteredHandler {
 }
 
 /**
- * Creates and starts the Hub WebSocket server.
+ * Creates the runner namespace server that accepts runner connections.
  */
-export async function createHubServer(
-  port: number,
+export function createRunnerServer(
+  nsp: Namespace,
   accessKey: string,
   logService: HubServerLog,
   runnerRegistrar: RunnerRegistrar,
@@ -100,22 +99,9 @@ export async function createHubServer(
     return true;
   }
 
-  // Create HTTP server for Socket.IO
-  const httpServer = http.createServer();
-
-  const io = new Server(httpServer, {
-    cors: {
-      origin: "*", // In production, restrict this
-      methods: ["GET", "POST"],
-    },
-  });
-
   // Authentication middleware
-  io.use(async (socket, next) => {
-    const {
-      accessKey: clientAccessKey,
-      runnerName,
-    } = socket.handshake.auth;
+  nsp.use(async (socket, next) => {
+    const { accessKey: clientAccessKey, runnerName } = socket.handshake.auth;
 
     if (!clientAccessKey || clientAccessKey !== accessKey) {
       logService.log(
@@ -143,7 +129,7 @@ export async function createHubServer(
   });
 
   // Handle new connections
-  io.on("connection", (socket) => {
+  nsp.on("connection", (socket) => {
     const { runnerId, runnerName } = socket.data;
 
     // Check if this runner is already connected
@@ -181,29 +167,16 @@ export async function createHubServer(
     });
   });
 
-  // Start listening - await to ensure errors are thrown before returning
-  await new Promise<void>((resolve, reject) => {
-    httpServer.once("error", reject);
-    httpServer.listen(port, () => {
-      httpServer.removeListener("error", reject);
-      logService.log(`[Hub] Server listening on port ${port}`);
-      resolve();
-    });
-  });
-
   // Return control interface
   return {
     registerEvent,
     unregisterEvent,
     sendMessage,
     getConnectedClients: () => Array.from(runnerConnections.values()),
-    getConnectionByRunnerId: (runnerId: string) => runnerConnections.get(runnerId),
+    getConnectionByRunnerId: (runnerId: string) =>
+      runnerConnections.get(runnerId),
     getConnectionCount: () => runnerConnections.size,
-    close: () => {
-      void io.close();
-      httpServer.close();
-    },
   };
 }
 
-export type HubServer = Awaited<ReturnType<typeof createHubServer>>;
+export type RunnerServer = ReturnType<typeof createRunnerServer>;

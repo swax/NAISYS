@@ -33,7 +33,9 @@ export function createRunnerConnection(
   // Forward all socket events to hub's emit function
   // Note: Socket.IO passes (eventName, ...args) where last arg may be an ack callback
   socket.onAny((eventName: string, ...args: unknown[]) => {
-    logService.log(`[RunnerConnection] Received ${eventName} from ${runnerName}`);
+    logService.log(
+      `[RunnerConnection] Received ${eventName} from ${runnerName}`,
+    );
     // Pass all args including any ack callback (usually data and optional ack)
     raiseEvent(eventName, runnerId, ...args);
   });

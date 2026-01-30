@@ -45,7 +45,10 @@ export function createMailDisplayService(
               },
             },
           },
-          status: { where: { user_id: localUserId }, select: { read_at: true } },
+          status: {
+            where: { user_id: localUserId },
+            select: { read_at: true },
+          },
         },
         orderBy: { created_at: "desc" },
         take: 20,
@@ -165,7 +168,9 @@ export function createMailDisplayService(
       const archiveCondition = includeArchived
         ? {}
         : {
-            status: { none: { user_id: localUserId, archived_at: { not: null } } },
+            status: {
+              none: { user_id: localUserId, archived_at: { not: null } },
+            },
           };
 
       const messages = await prisma.mail_messages.findMany({

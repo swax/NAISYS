@@ -7,7 +7,7 @@ import {
   AgentStopResponse,
   HubEvents,
 } from "@naisys/hub-protocol";
-import { HubManager } from "./hubManager.js";
+import { HubClient } from "./hubClient.js";
 
 /** Timeout for remote agent operations (30 seconds) */
 const REMOTE_OPERATION_TIMEOUT_MS = 30000;
@@ -22,7 +22,7 @@ interface RemoteResponse {
  * Sends remote agent control requests through the hub.
  * This service handles the request side of remote agent operations.
  */
-export function createRemoteAgentRequester(hubManager: HubManager) {
+export function createRemoteAgentRequester(hubClient: HubClient) {
   /**
    * Generic helper to send a request through the hub and await response.
    */
@@ -33,7 +33,7 @@ export function createRemoteAgentRequester(hubManager: HubManager) {
     operation: string,
     onSuccess: (response: TRes) => TResult,
   ): Promise<TResult> {
-    if (!hubManager.isConnected()) {
+    if (!hubClient.isConnected()) {
       throw new Error(
         `Cannot ${operation} remote agent '${targetUsername}' - no hub connection available`,
       );
@@ -46,23 +46,19 @@ export function createRemoteAgentRequester(hubManager: HubManager) {
         );
       }, REMOTE_OPERATION_TIMEOUT_MS);
 
-      const sent = hubManager.sendMessage<TRes>(
-        event,
-        request,
-        (response) => {
-          clearTimeout(timeout);
-          if (response.success) {
-            resolve(onSuccess(response));
-          } else {
-            reject(
-              new Error(
-                response.error ||
-                  `Failed to ${operation} remote agent '${targetUsername}'`,
-              ),
-            );
-          }
-        },
-      );
+      const sent = hubClient.sendMessage<TRes>(event, request, (response) => {
+        clearTimeout(timeout);
+        if (response.success) {
+          resolve(onSuccess(response));
+        } else {
+          reject(
+            new Error(
+              response.error ||
+                `Failed to ${operation} remote agent '${targetUsername}'`,
+            ),
+          );
+        }
+      });
 
       if (!sent) {
         clearTimeout(timeout);
@@ -159,7 +155,7 @@ export function createRemoteAgentRequester(hubManager: HubManager) {
    * Check if hub connections are available for remote operations.
    */
   function isAvailable(): boolean {
-    return hubManager.isConnected();
+    return hubClient.isConnected();
   }
 
   return {

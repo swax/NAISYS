@@ -13,7 +13,7 @@ type EventHandler = (...args: any[]) => void;
 /** Delay before rotating to the next fallback URL */
 const ROTATION_DELAY_MS = 2000;
 
-export function createHubManager(
+export function createHubClient(
   globalConfig: GlobalConfig,
   hubClientLog: HubClientLog,
 ) {
@@ -22,6 +22,8 @@ export function createHubManager(
   let currentUrlIndex = 0;
   let activeConnection: HubConnection | null = null;
   let reconnectionDisabled = false;
+  let connectedHandler: (() => void) | null = null;
+  let connectErrorHandler: ((message: string) => void) | null = null;
 
   // Generic event handlers registry - maps event name to set of handlers
   const eventHandlers = new Map<string, Set<EventHandler>>();
@@ -31,16 +33,16 @@ export function createHubManager(
   function init() {
     if (hubUrls.length === 0) {
       hubClientLog.write(
-        "[HubManager] No HUB_URLS configured, running in standalone mode",
+        "[HubClient] No HUB_URLS configured, running in standalone mode",
       );
       return;
     }
 
     if (hubUrls.length === 1) {
-      hubClientLog.write(`[HubManager] Connecting to hub: ${hubUrls[0]}`);
+      hubClientLog.write(`[HubClient] Connecting to hub: ${hubUrls[0]}`);
     } else {
       hubClientLog.write(
-        `[HubManager] Connecting to hub with ${hubUrls.length} fallback URL(s)...`,
+        `[HubClient] Connecting to hub with ${hubUrls.length} fallback URL(s)...`,
       );
     }
 
@@ -53,9 +55,19 @@ export function createHubManager(
       hubClientLog,
       globalConfig,
       raiseEvent,
+      handleConnected,
       handleReconnectFailed,
+      handleConnectError,
     );
     activeConnection.connect();
+  }
+
+  function handleConnected() {
+    connectedHandler?.();
+  }
+
+  function handleConnectError(message: string) {
+    connectErrorHandler?.(message);
   }
 
   function handleReconnectFailed() {
@@ -67,7 +79,7 @@ export function createHubManager(
     // Rotate to next URL (round-robin)
     currentUrlIndex = (currentUrlIndex + 1) % hubUrls.length;
     const nextUrl = hubUrls[currentUrlIndex];
-    hubClientLog.write(`[HubManager] Rotating to hub URL: ${nextUrl}`);
+    hubClientLog.write(`[HubClient] Rotating to hub URL: ${nextUrl}`);
 
     setTimeout(() => {
       if (!reconnectionDisabled) {
@@ -119,10 +131,44 @@ export function createHubManager(
     ack?: (response: T) => void,
   ): boolean {
     if (!activeConnection) {
-      hubClientLog.write("[HubManager] No active connection for sendMessage");
+      hubClientLog.write("[HubClient] No active connection for sendMessage");
       return false;
     }
     return activeConnection.sendMessage(event, payload, ack);
+  }
+
+  /** Auth error messages from the hub that won't be fixed by retrying */
+  const AUTH_ERRORS = ["Invalid access key", "Missing runnerName"];
+
+  /** Returns a promise that resolves once a hub connection is established,
+   *  or rejects if connection fails due to an auth/config error */
+  function waitForConnection(): Promise<void> {
+    if (hubUrls.length === 0) {
+      return Promise.resolve();
+    }
+    if (isConnected()) {
+      return Promise.resolve();
+    }
+    return new Promise<void>((resolve, reject) => {
+      function cleanup() {
+        connectedHandler = null;
+        connectErrorHandler = null;
+      }
+
+      connectedHandler = () => {
+        cleanup();
+        resolve();
+      };
+
+      connectErrorHandler = (message: string) => {
+        if (AUTH_ERRORS.some((err) => message.includes(err))) {
+          cleanup();
+          reconnectionDisabled = true;
+          activeConnection?.disconnect();
+          reject(new Error(`Hub connection rejected: ${message}`));
+        }
+      };
+    });
   }
 
   function getConnectionInfo(): HubConnectionInfo | null {
@@ -136,10 +182,11 @@ export function createHubManager(
   return {
     getConnectionInfo,
     isConnected,
+    waitForConnection,
     registerEvent,
     unregisterEvent,
     sendMessage,
   };
 }
 
-export type HubManager = ReturnType<typeof createHubManager>;
+export type HubClient = ReturnType<typeof createHubClient>;

@@ -122,10 +122,7 @@ export function createCommandLoop(
         // Debug command prompt
         if (inputMode.isDebug()) {
           commandList = [
-            await promptBuilder.getInput(
-              `${prompt}`,
-              pauseSeconds,
-            ),
+            await promptBuilder.getInput(`${prompt}`, pauseSeconds),
           ];
 
           blankDebugInput = commandList[0].trim().length == 0;

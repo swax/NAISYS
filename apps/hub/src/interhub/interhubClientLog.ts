@@ -3,12 +3,12 @@ import pino from "pino";
 
 export type LogFn = (message: string) => void;
 
-export interface HubClientLog {
+export interface InterhubClientLog {
   write: LogFn;
   error: LogFn;
 }
 
-export function createHubClientLog(): HubClientLog {
+export function createInterhubClientLog(): InterhubClientLog {
   const logPath = path.join(
     process.env.NAISYS_FOLDER || "",
     "logs",

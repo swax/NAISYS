@@ -1,23 +1,26 @@
 import { HubConfig } from "../hubConfig.js";
 import { HostService } from "../services/hostService.js";
-import { HubClientLog } from "./hubClientLog.js";
-import { createHubConnection, HubConnection } from "./hubConnection.js";
+import { InterhubClientLog } from "./interhubClientLog.js";
+import {
+  createInterhubConnection,
+  InterhubConnection,
+} from "./interhubConnection.js";
 
 /** Hub connection status info */
-export interface HubConnectionInfo {
+export interface InterhubConnectionInfo {
   url: string;
   connected: boolean;
 }
 
 type EventHandler = (hubUrl: string, ...args: any[]) => void;
 
-export function createInterhubManager(
+export function createInterhubClient(
   hubConfig: HubConfig,
   hostService: HostService,
-  hubClientLog: HubClientLog,
+  hubClientLog: InterhubClientLog,
 ) {
   const config = hubConfig.hubConfig();
-  const hubConnections: HubConnection[] = [];
+  const hubConnections: InterhubConnection[] = [];
 
   // Generic event handlers registry - maps event name to set of handlers
   const eventHandlers = new Map<string, Set<EventHandler>>();
@@ -27,16 +30,16 @@ export function createInterhubManager(
   function init() {
     if (config.interhubUrls.length === 0) {
       hubClientLog.write(
-        "[HubManager] No INTERHUB_URLS configured, running without hub-to-hub federation",
+        "[InterhubClient] No INTERHUB_URLS configured, running without hub-to-hub federation",
       );
       return;
     }
 
     hubClientLog.write(
-      `[HubManager] Starting connections to ${config.interhubUrls.length} hub(s)...`,
+      `[InterhubClient] Starting connections to ${config.interhubUrls.length} hub(s)...`,
     );
     for (const hubUrl of config.interhubUrls) {
-      const hubConnection = createHubConnection(
+      const hubConnection = createInterhubConnection(
         hubUrl,
         hubClientLog,
         hubConfig,
@@ -99,14 +102,14 @@ export function createInterhubManager(
     const connection = hubConnections.find((c) => c.getUrl() === hubUrl);
     if (!connection) {
       hubClientLog.write(
-        `[HubManager] Hub ${hubUrl} not found for sendMessage`,
+        `[InterhubClient] Hub ${hubUrl} not found for sendMessage`,
       );
       return false;
     }
     return connection.sendMessage(event, payload, ack);
   }
 
-  function getAllHubs(): HubConnectionInfo[] {
+  function getAllHubs(): InterhubConnectionInfo[] {
     return hubConnections.map((c) => ({
       url: c.getUrl(),
       connected: c.isConnected(),
@@ -136,4 +139,4 @@ export function createInterhubManager(
   };
 }
 
-export type InterhubManager = ReturnType<typeof createInterhubManager>;
+export type InterhubClient = ReturnType<typeof createInterhubClient>;

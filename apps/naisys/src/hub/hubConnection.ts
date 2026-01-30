@@ -1,4 +1,3 @@
-import { HubEvents } from "@naisys/hub-protocol";
 import { io, Socket } from "socket.io-client";
 import { GlobalConfig } from "../globalConfig.js";
 import { HubClientLog } from "./hubClientLog.js";
@@ -17,7 +16,9 @@ export function createHubConnection(
   hubClientLog: HubClientLog,
   globalConfig: GlobalConfig,
   raiseEvent: RaiseEventFn,
+  onConnected: () => void,
   onReconnectFailed: () => void,
+  onConnectError: (message: string) => void,
 ) {
   const config = globalConfig.globalConfig();
 
@@ -27,7 +28,7 @@ export function createHubConnection(
   function connect() {
     hubClientLog.write(`[Hub] Connecting to ${hubUrl}...`);
 
-    socket = io(hubUrl, {
+    socket = io(hubUrl + "/runners", {
       auth: {
         accessKey: config.hubAccessKey,
         runnerName: config.hostname,
@@ -41,8 +42,7 @@ export function createHubConnection(
     socket.on("connect", () => {
       connected = true;
       hubClientLog.write(`[Hub] Connected to ${hubUrl}`);
-
-      raiseEvent(HubEvents.HUB_CONNECTED);
+      onConnected();
     });
 
     socket.on("disconnect", (reason) => {
@@ -54,6 +54,7 @@ export function createHubConnection(
       hubClientLog.write(
         `[Hub] Connection error to ${hubUrl}: ${error.message}`,
       );
+      onConnectError(error.message);
     });
 
     // Notify manager when all reconnection attempts exhausted
@@ -64,7 +65,7 @@ export function createHubConnection(
       onReconnectFailed();
     });
 
-    // Forward all socket events to hubManager's event handlers
+    // Forward all socket events to hubClient's event handlers
     socket.onAny((eventName: string, ...args: unknown[]) => {
       hubClientLog.write(`[Hub] Received ${eventName} from ${hubUrl}`);
       raiseEvent(eventName, ...args);
