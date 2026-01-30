@@ -1,10 +1,10 @@
 import { DatabaseService } from "@naisys/database";
-import { HubEvents, UserListResponse } from "@naisys/hub-protocol";
+import { HubEvents } from "@naisys/hub-protocol";
 import { HostService } from "./hostService.js";
 import { HubServerLog } from "./hubServerLog.js";
 import { RunnerServer } from "./runnerServer.js";
 
-/** Handles user_list requests from runners by querying the hub's database */
+/** Pushes the user list to runners when they connect */
 export function createHubUserService(
   runnerServer: RunnerServer,
   dbService: DatabaseService,
@@ -14,12 +14,8 @@ export function createHubUserService(
   const { localHostId } = hostService;
 
   runnerServer.registerEvent(
-    HubEvents.USER_LIST,
-    async (
-      runnerId: string,
-      _data: unknown,
-      ack?: (response: UserListResponse) => void,
-    ) => {
+    HubEvents.CLIENT_CONNECTED,
+    async (runnerId: string) => {
       try {
         const dbUsers = await dbService.usingDatabase(async (prisma) => {
           return await prisma.users.findMany({
@@ -35,15 +31,21 @@ export function createHubUserService(
         }));
 
         logService.log(
-          `[HubUserService] Returning ${users.length} users to runner ${runnerId}`,
+          `[HubUserService] Pushing ${users.length} users to runner ${runnerId}`,
         );
 
-        ack?.({ success: true, users });
+        runnerServer.sendMessage(runnerId, HubEvents.USER_LIST, {
+          success: true,
+          users,
+        });
       } catch (error) {
         logService.error(
           `[HubUserService] Error querying users for runner ${runnerId}: ${error}`,
         );
-        ack?.({ success: false, error: String(error) });
+        runnerServer.sendMessage(runnerId, HubEvents.USER_LIST, {
+          success: false,
+          error: String(error),
+        });
       }
     },
   );
