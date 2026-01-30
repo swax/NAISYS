@@ -7,7 +7,7 @@
   "exports": {
     ".": "./dist/naisysHub.js",
     "./services/hubServerLog": "./dist/services/hubServerLog.js",
-    "./services/hubServer": "./dist/services/hubServer.js"
+    "./services/runnerServer": "./dist/services/runnerServer.js"
   },
   "scripts": {
     "clean": "npx rimraf dist",

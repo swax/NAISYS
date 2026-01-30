@@ -263,7 +263,9 @@ export function createCostTracker(
   // Check if the current spend limit has been reached and throw an error if so
   async function checkSpendLimit() {
     // Determine if we're using per-agent or global limits
-    const limitUserId = agentConfig().spendLimitDollars ? localUserId : undefined;
+    const limitUserId = agentConfig().spendLimitDollars
+      ? localUserId
+      : undefined;
 
     // Determine if we're using time-based limits
     const spendLimitHours =
@@ -644,7 +646,9 @@ export function createCostTracker(
     const subcommand = argv[0];
 
     if (subcommand === "reset") {
-      const resetUserId = agentConfig().spendLimitDollars ? localUserId : undefined;
+      const resetUserId = agentConfig().spendLimitDollars
+        ? localUserId
+        : undefined;
       await clearCosts(resetUserId);
       return `Cost tracking data cleared for ${resetUserId ? `${agentConfig().username}` : "all users"}.`;
     } else if (subcommand) {

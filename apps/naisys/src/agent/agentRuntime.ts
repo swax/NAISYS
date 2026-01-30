@@ -49,7 +49,11 @@ export async function createAgentRuntime(
    */
 
   // Base services
-  const agentConfig = await createAgentConfig(localUserId, dbService, globalConfig);
+  const agentConfig = await createAgentConfig(
+    localUserId,
+    dbService,
+    globalConfig,
+  );
 
   const runService = await createRunService(
     agentConfig,

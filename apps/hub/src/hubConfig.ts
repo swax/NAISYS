@@ -11,8 +11,7 @@ export function createHubConfig() {
 
   /** Comma-separated list of other Hub URLs for hub-to-hub federation */
   const interhubUrls =
-    process.env.INTERHUB_URLS
-      ?.split(",")
+    process.env.INTERHUB_URLS?.split(",")
       .map((url) => url.trim())
       .filter((url) => url.length > 0) ?? [];
 

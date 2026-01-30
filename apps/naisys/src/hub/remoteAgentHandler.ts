@@ -13,7 +13,7 @@ import {
 import { AgentRunner } from "../agent/agentRunner.js";
 import { HostService } from "../services/hostService.js";
 import { HubClientLog } from "./hubClientLog.js";
-import { HubManager } from "./hubManager.js";
+import { HubClient } from "./hubClient.js";
 
 /** Base request type with target host info */
 interface RemoteRequest {
@@ -39,7 +39,7 @@ interface UserInfo {
  * Receives start/stop/log requests from the hub and executes them locally.
  */
 export function createRemoteAgentHandler(
-  hubManager: HubManager,
+  hubClient: HubClient,
   hubClientLog: HubClientLog,
   dbService: DatabaseService,
   hostService: HostService,
@@ -50,9 +50,9 @@ export function createRemoteAgentHandler(
   init();
 
   function init() {
-    hubManager.registerEvent(HubEvents.AGENT_START, handleAgentStartRequest);
-    hubManager.registerEvent(HubEvents.AGENT_STOP, handleAgentStopRequest);
-    hubManager.registerEvent(HubEvents.AGENT_LOG, handleAgentLogRequest);
+    hubClient.registerEvent(HubEvents.AGENT_START, handleAgentStartRequest);
+    hubClient.registerEvent(HubEvents.AGENT_STOP, handleAgentStopRequest);
+    hubClient.registerEvent(HubEvents.AGENT_LOG, handleAgentLogRequest);
 
     hubClientLog.write("[RemoteAgentHandler] Initialized");
   }

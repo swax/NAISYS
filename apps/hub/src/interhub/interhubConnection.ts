@@ -2,10 +2,10 @@ import { HubEvents } from "@naisys/hub-protocol";
 import { io, Socket } from "socket.io-client";
 import { HubConfig } from "../hubConfig.js";
 import { HostService } from "../services/hostService.js";
-import { HubClientLog } from "./hubClientLog.js";
+import { InterhubClientLog } from "./interhubClientLog.js";
 
 /** Generic raise event function type - hubUrl as first arg */
-export type RaiseEventFn = (
+export type InterhubRaiseEventFn = (
   event: string,
   hubUrl: string,
   ...args: unknown[]
@@ -14,12 +14,12 @@ export type RaiseEventFn = (
 /** Callback type for message acknowledgements */
 type AckCallback<T = unknown> = (response: T) => void;
 
-export function createHubConnection(
+export function createInterhubConnection(
   hubUrl: string,
-  hubClientLog: HubClientLog,
+  hubClientLog: InterhubClientLog,
   hubConfig: HubConfig,
   hostService: HostService,
-  raiseEvent: RaiseEventFn,
+  raiseEvent: InterhubRaiseEventFn,
 ) {
   const config = hubConfig.hubConfig();
 
@@ -27,9 +27,9 @@ export function createHubConnection(
   let connected = false;
 
   function connect() {
-    hubClientLog.write(`[Hub] Connecting to ${hubUrl}...`);
+    hubClientLog.write(`[Interhub] Connecting to ${hubUrl}...`);
 
-    socket = io(hubUrl, {
+    socket = io(hubUrl + "/interhub", {
       auth: {
         accessKey: config.hubAccessKey,
         hostId: hostService.localHostId,
@@ -43,25 +43,25 @@ export function createHubConnection(
 
     socket.on("connect", () => {
       connected = true;
-      hubClientLog.write(`[Hub] Connected to ${hubUrl}`);
+      hubClientLog.write(`[Interhub] Connected to ${hubUrl}`);
 
       raiseEvent(HubEvents.HUB_CONNECTED, hubUrl);
     });
 
     socket.on("disconnect", (reason) => {
       connected = false;
-      hubClientLog.write(`[Hub] Disconnected from ${hubUrl}: ${reason}`);
+      hubClientLog.write(`[Interhub] Disconnected from ${hubUrl}: ${reason}`);
     });
 
     socket.on("connect_error", (error) => {
       hubClientLog.write(
-        `[Hub] Connection error to ${hubUrl}: ${error.message}`,
+        `[Interhub] Connection error to ${hubUrl}: ${error.message}`,
       );
     });
 
     // Forward all socket events to hubManager's event handlers
     socket.onAny((eventName: string, ...args: unknown[]) => {
-      hubClientLog.write(`[Hub] Received ${eventName} from ${hubUrl}`);
+      hubClientLog.write(`[Interhub] Received ${eventName} from ${hubUrl}`);
       raiseEvent(eventName, hubUrl, ...args);
     });
   }
@@ -71,7 +71,7 @@ export function createHubConnection(
       socket.disconnect();
       socket = null;
       connected = false;
-      hubClientLog.write(`[Hub] Disconnected from ${hubUrl}`);
+      hubClientLog.write(`[Interhub] Disconnected from ${hubUrl}`);
     }
   }
 
@@ -83,7 +83,9 @@ export function createHubConnection(
       socket.io.opts.reconnection = false;
       socket.disconnect();
       connected = false;
-      hubClientLog.write(`[Hub] Disabled reconnection to ${hubUrl}: ${reason}`);
+      hubClientLog.write(
+        `[Interhub] Disabled reconnection to ${hubUrl}: ${reason}`,
+      );
     }
   }
 
@@ -128,4 +130,4 @@ export function createHubConnection(
   };
 }
 
-export type HubConnection = ReturnType<typeof createHubConnection>;
+export type InterhubConnection = ReturnType<typeof createInterhubConnection>;

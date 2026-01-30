@@ -1,15 +1,18 @@
 import { createDatabaseService } from "@naisys/database";
 import { program } from "commander";
 import dotenv from "dotenv";
+import http from "http";
+import { Server } from "socket.io";
 import { fileURLToPath } from "url";
 import { createHubConfig } from "./hubConfig.js";
-import { createHubClientLog } from "./interhub/hubClientLog.js";
-import { createInterhubManager } from "./interhub/interhubManager.js";
+import { createInterhubClient } from "./interhub/interhubClient.js";
+import { createInterhubClientLog } from "./interhub/interhubClientLog.js";
+import { createInterhubServer } from "./interhub/interhubServer.js";
 import { createAgentRegistrar } from "./services/agentRegistrar.js";
 import { createHostService } from "./services/hostService.js";
-import { createHubServer } from "./services/hubServer.js";
 import { createHubServerLog } from "./services/hubServerLog.js";
 import { createRunnerRegistrar } from "./services/runnerRegistrar.js";
+import { createRunnerServer } from "./services/runnerServer.js";
 
 /**
  * Starts the Hub server with sync service.
@@ -47,17 +50,53 @@ export async function startHub(
     const hostService = await createHostService(hubConfig, dbService);
 
     // Seed database with agent configs from yaml files
-    await createAgentRegistrar(hubConfig, dbService, hostService, startupAgentPath);
+    await createAgentRegistrar(
+      hubConfig,
+      dbService,
+      hostService,
+      startupAgentPath,
+    );
 
     // Create runner registrar for tracking runner connections
     const runnerRegistrar = createRunnerRegistrar(dbService, hostService);
 
-    // Create hub server
-    const hubServer = await createHubServer(hubPort, hubAccessKey, logService, runnerRegistrar);
+    // Create shared HTTP server and Socket.IO instance
+    const httpServer = http.createServer();
+    const io = new Server(httpServer, {
+      cors: {
+        origin: "*", // In production, restrict this
+        methods: ["GET", "POST"],
+      },
+    });
+
+    // Create runner server on /runners namespace
+    const runnerServer = createRunnerServer(
+      io.of("/runners"),
+      hubAccessKey,
+      logService,
+      runnerRegistrar,
+    );
+
+    // Create interhub server on /interhub namespace
+    const interhubServer = createInterhubServer(
+      io.of("/interhub"),
+      hubAccessKey,
+      logService,
+    );
+
+    // Start listening
+    await new Promise<void>((resolve, reject) => {
+      httpServer.once("error", reject);
+      httpServer.listen(hubPort, () => {
+        httpServer.removeListener("error", reject);
+        logService.log(`[Hub] Server listening on port ${hubPort}`);
+        resolve();
+      });
+    });
 
     // Start interhub client for hub-to-hub federation
-    const hubClientLog = createHubClientLog();
-    const interhubManager = createInterhubManager(
+    const hubClientLog = createInterhubClientLog();
+    const interhubClient = createInterhubClient(
       hubConfig,
       hostService,
       hubClientLog,

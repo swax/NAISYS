@@ -64,10 +64,7 @@ export function createPromptBuilder(
     return `${agentConfig().username}@${globalConfig().hostname}`;
   }
 
-  function getInput(
-    commandPrompt: string,
-    pauseSeconds: number,
-  ) {
+  function getInput(commandPrompt: string, pauseSeconds: number) {
     return new Promise<string>((resolve) => {
       const questionController = new AbortController();
       let timeout: NodeJS.Timeout | undefined;
