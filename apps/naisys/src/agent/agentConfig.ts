@@ -1,31 +1,26 @@
 import { AgentConfigFileSchema, CommandProtection } from "@naisys/common";
-import { DatabaseService } from "@naisys/database";
 import yaml from "js-yaml";
 import table from "text-table";
 import { RegistrableCommand } from "../command/commandRegistry.js";
 import { GlobalConfig } from "../globalConfig.js";
 import { sanitizeSpendLimit, valueFromString } from "../utils/utilities.js";
+import { UserService } from "./userService.js";
 
-export async function createAgentConfig(
-  userId: string,
-  { usingDatabase }: DatabaseService,
+export function createAgentConfig(
+  localUserId: string,
   { globalConfig }: GlobalConfig,
+  userService: UserService,
 ) {
-  let cachedConfig = await loadConfigFromDb();
+  let cachedConfig = loadConfig();
 
-  async function loadConfigFromDb() {
-    const user = await usingDatabase(async (prisma) => {
-      return await prisma.users.findUnique({
-        where: { id: userId },
-        select: { config: true },
-      });
-    });
+  function loadConfig() {
+    const user = userService.getUserById(localUserId);
 
     if (!user) {
-      throw new Error(`User with ID ${userId} not found`);
+      throw new Error(`User with ID ${localUserId} not found`);
     }
 
-    return parseConfig(user.config);
+    return parseConfig(user.configYaml);
   }
 
   function parseConfig(yamlContent: string) {
@@ -104,21 +99,15 @@ export async function createAgentConfig(
     };
   }
 
-  async function updateConfigField(field: string, value: string) {
-    // Load current raw config from database
-    const user = await usingDatabase(async (prisma) => {
-      return await prisma.users.findUnique({
-        where: { id: userId },
-        select: { config: true },
-      });
-    });
+  function updateConfigField(field: string, value: string) {
+    const user = userService.getUserById(localUserId);
 
     if (!user) {
-      throw new Error(`User with ID ${userId} not found`);
+      throw new Error(`User with ID ${localUserId} not found`);
     }
 
-    // Parse, update, and serialize
-    const rawConfig = yaml.load(user.config) as Record<string, unknown>;
+    // Parse current config, update field, re-serialize
+    const rawConfig = yaml.load(user.configYaml) as Record<string, unknown>;
 
     // Convert value to appropriate type
     let typedValue: unknown = value;
@@ -131,16 +120,8 @@ export async function createAgentConfig(
 
     const updatedYaml = yaml.dump(rawConfig);
 
-    // Save to database
-    await usingDatabase(async (prisma) => {
-      await prisma.users.update({
-        where: { id: userId },
-        data: { config: updatedYaml },
-      });
-    });
-
-    // Reload cached config
-    cachedConfig = await loadConfigFromDb();
+    // Update in-memory only (not persisted)
+    cachedConfig = parseConfig(updatedYaml);
   }
 
   async function handleCommand(cmdArgs: string): Promise<string> {
@@ -171,12 +152,12 @@ export async function createAgentConfig(
         ? JSON.stringify(value, null, 2)
         : String(value);
     } else {
-      // Update config value
+      // Update config value (session-only, not persisted)
       const name = args[0];
       const value = args.slice(1).join(" ");
       try {
-        await updateConfigField(name, value);
-        return `Config field '${name}' updated to '${value}' and reloaded`;
+        updateConfigField(name, value);
+        return `Config field '${name}' updated to '${value}' (session only, not persisted)`;
       } catch (error) {
         return `Failed to update config: ${error instanceof Error ? error.message : String(error)}`;
       }
@@ -185,7 +166,7 @@ export async function createAgentConfig(
 
   const registrableCommand: RegistrableCommand = {
     commandName: "ns-agent-config",
-    helpText: "View or update agent config: ns-agent-config [name] [value]",
+    helpText: "View or update agent config: ns-agent-config [name] [value] (update only lasts for current session)",
     isDebug: true,
     handleCommand,
   };
@@ -193,8 +174,8 @@ export async function createAgentConfig(
   return {
     ...registrableCommand,
     agentConfig: () => cachedConfig,
-    reloadAgentConfig: async () => {
-      cachedConfig = await loadConfigFromDb();
+    reloadAgentConfig: () => {
+      cachedConfig = loadConfig();
     },
     updateConfigField,
   };

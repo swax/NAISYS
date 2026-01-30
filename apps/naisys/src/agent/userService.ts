@@ -48,7 +48,11 @@ export async function createUserService(
     return users;
   }
 
-  function getStartupUsername(agentPath?: string): string {
+  function getUserById(id: string): UserEntry | undefined {
+    return users.get(id);
+  }
+
+  function getStartupUserId(agentPath?: string): string {
     if (agentPath) {
       const absolutePath = path.resolve(agentPath);
       for (const [username, entry] of users) {
@@ -67,8 +71,9 @@ export async function createUserService(
 
   return {
     getUsers,
+    getUserById,
     reloadAgents,
-    getStartupUsername,
+    getStartupUserId,
   };
 }
 

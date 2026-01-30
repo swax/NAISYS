@@ -68,6 +68,7 @@ const agentRunner = new AgentRunner(
   globalConfig,
   hostService,
   remoteAgentRequester,
+  userService,
 );
 
 // Create handler for incoming remote agent control requests
@@ -80,7 +81,7 @@ createRemoteAgentHandler(
 );
 
 // Resolve the agent path to a username (or admin if no path) and start the agent
-const startupUsername = userService.getStartupUsername(agentPath);
+const startupUsername = userService.getStartupUserId(agentPath);
 await agentRunner.startAgent(startupUsername);
 
 await agentRunner.waitForAllAgentsToComplete();

@@ -33,6 +33,7 @@ import { createOutputService } from "../utils/output.js";
 import { createPromptNotificationService } from "../utils/promptNotificationService.js";
 import { createAgentConfig } from "./agentConfig.js";
 import { IAgentRunner } from "./agentRunnerInterface.js";
+import { UserService } from "./userService.js";
 
 export async function createAgentRuntime(
   agentRunner: IAgentRunner,
@@ -41,6 +42,7 @@ export async function createAgentRuntime(
   globalConfig: GlobalConfig,
   hostService: HostService,
   remoteAgentRequester: RemoteAgentRequester,
+  userService: UserService,
 ) {
   /*
    * Simple form of dependency injection
@@ -49,10 +51,10 @@ export async function createAgentRuntime(
    */
 
   // Base services
-  const agentConfig = await createAgentConfig(
+  const agentConfig = createAgentConfig(
     localUserId,
-    dbService,
     globalConfig,
+    userService,
   );
 
   const runService = await createRunService(
