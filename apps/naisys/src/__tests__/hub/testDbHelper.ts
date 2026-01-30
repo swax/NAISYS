@@ -130,6 +130,7 @@ export async function resetDatabase(prisma: PrismaClient): Promise<void> {
   await prisma.mail_messages.deleteMany();
   await prisma.user_notifications.deleteMany();
   await prisma.hub_sync_state.deleteMany();
+  await prisma.runners.deleteMany();
   await prisma.users.deleteMany();
   await prisma.hosts.deleteMany();
 }

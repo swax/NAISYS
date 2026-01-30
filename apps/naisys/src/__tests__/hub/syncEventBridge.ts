@@ -19,8 +19,8 @@ interface RegisteredHandler {
  * Mock client connection info (used by HubServer)
  */
 export interface MockClientConnection {
-  getHostId: () => string;
-  getHostname: () => string;
+  getRunnerId: () => string;
+  getRunnerName: () => string;
 }
 
 /**
@@ -55,25 +55,25 @@ export interface MockHubServer {
   ) => void;
   unregisterEvent: (event: string, handler: EventHandler) => void;
   sendMessage: <T = unknown>(
-    hostId: string,
+    runnerId: string,
     event: string,
     payload: unknown,
     ack?: AckCallback<T>,
   ) => boolean;
   getConnectedClients: () => MockClientConnection[];
-  getConnectionByHostId: (hostId: string) => MockClientConnection | undefined;
+  getConnectionByRunnerId: (runnerId: string) => MockClientConnection | undefined;
   getConnectionCount: () => number;
   close: () => void;
   /** Internal: raise an event (called by the bridge) */
-  _raiseEvent: (event: string, hostId: string, ...args: unknown[]) => void;
+  _raiseEvent: (event: string, runnerId: string, ...args: unknown[]) => void;
 }
 
 /**
  * A runner endpoint in the sync bridge.
  */
 export interface RunnerEndpoint {
-  hostId: string;
-  hostname: string;
+  runnerId: string;
+  runnerName: string;
   hubManager: MockHubManager;
 }
 
@@ -121,12 +121,12 @@ export function createSyncEventBridge() {
       },
 
       sendMessage: <T = unknown>(
-        hostId: string,
+        runnerId: string,
         event: string,
         payload: unknown,
         ack?: AckCallback<T>,
       ): boolean => {
-        const runner = runners.get(hostId);
+        const runner = runners.get(runnerId);
         if (!runner) {
           return false;
         }
@@ -146,19 +146,19 @@ export function createSyncEventBridge() {
 
       getConnectedClients: (): MockClientConnection[] => {
         return Array.from(runners.values()).map((r) => ({
-          getHostId: () => r.hostId,
-          getHostname: () => r.hostname,
+          getRunnerId: () => r.runnerId,
+          getRunnerName: () => r.runnerName,
         }));
       },
 
-      getConnectionByHostId: (
-        hostId: string,
+      getConnectionByRunnerId: (
+        runnerId: string,
       ): MockClientConnection | undefined => {
-        const runner = runners.get(hostId);
+        const runner = runners.get(runnerId);
         if (!runner) return undefined;
         return {
-          getHostId: () => runner.hostId,
-          getHostname: () => runner.hostname,
+          getRunnerId: () => runner.runnerId,
+          getRunnerName: () => runner.runnerName,
         };
       },
 
@@ -168,16 +168,16 @@ export function createSyncEventBridge() {
         hubEventHandlers.clear();
       },
 
-      _raiseEvent: (event: string, hostId: string, ...args: unknown[]) => {
+      _raiseEvent: (event: string, runnerId: string, ...args: unknown[]) => {
         const handlers = hubEventHandlers.get(event);
         if (handlers) {
           for (const { handler, schema } of handlers) {
             if (schema && args.length > 0) {
               const result = schema.safeParse(args[0]);
               if (!result.success) continue;
-              handler(hostId, result.data, ...args.slice(1));
+              handler(runnerId, result.data, ...args.slice(1));
             } else {
-              handler(hostId, ...args);
+              handler(runnerId, ...args);
             }
           }
         }
@@ -192,11 +192,11 @@ export function createSyncEventBridge() {
    * Create a mock HubManager for a runner.
    */
   function createMockHubManager(
-    hostId: string,
-    hostname: string,
+    runnerId: string,
+    runnerName: string,
   ): MockHubManager {
-    if (runners.has(hostId)) {
-      throw new Error(`Runner ${hostId} already exists`);
+    if (runners.has(runnerId)) {
+      throw new Error(`Runner ${runnerId} already exists`);
     }
 
     // Runner's event handlers registry
@@ -238,7 +238,7 @@ export function createSyncEventBridge() {
           : undefined;
 
         // Deliver to hub's event handlers
-        hubServer._raiseEvent(event, hostId, payload, wrappedAck);
+        hubServer._raiseEvent(event, runnerId, payload, wrappedAck);
         return true;
       },
 
@@ -257,14 +257,14 @@ export function createSyncEventBridge() {
       },
     };
 
-    const endpoint: RunnerEndpoint = { hostId, hostname, hubManager: manager };
-    runners.set(hostId, endpoint);
+    const endpoint: RunnerEndpoint = { runnerId, runnerName, hubManager: manager };
+    runners.set(runnerId, endpoint);
 
     // Notify hub of connection
     if (hubServer) {
-      hubServer._raiseEvent("client_connected", hostId, {
-        getHostId: () => hostId,
-        getHostname: () => hostname,
+      hubServer._raiseEvent("client_connected", runnerId, {
+        getRunnerId: () => runnerId,
+        getRunnerName: () => runnerName,
       });
     }
 
@@ -274,19 +274,19 @@ export function createSyncEventBridge() {
   /**
    * Disconnect a runner from the bridge.
    */
-  function disconnectRunner(hostId: string): void {
-    if (!runners.has(hostId)) return;
+  function disconnectRunner(runnerId: string): void {
+    if (!runners.has(runnerId)) return;
 
-    runners.delete(hostId);
+    runners.delete(runnerId);
 
     // Notify hub of disconnection
     if (hubServer) {
-      hubServer._raiseEvent("client_disconnected", hostId);
+      hubServer._raiseEvent("client_disconnected", runnerId);
     }
   }
 
   /**
-   * Get all connected runner host IDs.
+   * Get all connected runner IDs.
    */
   function getConnectedRunners(): string[] {
     return Array.from(runners.keys());
@@ -296,8 +296,8 @@ export function createSyncEventBridge() {
    * Reset the bridge - disconnect all runners and clear hub.
    */
   function reset(): void {
-    for (const hostId of runners.keys()) {
-      disconnectRunner(hostId);
+    for (const runnerId of runners.keys()) {
+      disconnectRunner(runnerId);
     }
     runners.clear();
     hubEventHandlers.clear();

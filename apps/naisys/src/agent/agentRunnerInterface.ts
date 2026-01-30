@@ -1,5 +1,5 @@
-/** Don't create a cyclic dependency on agent manager, or give this class access to all of the the agent manager's properties */
-export interface IAgentManager {
+/** Don't create a cyclic dependency on agent runner, or give this class access to all of the the agent runner's properties */
+export interface IAgentRunner {
   startAgent: (
     userId: string,
     onStop?: (reason: string) => void,

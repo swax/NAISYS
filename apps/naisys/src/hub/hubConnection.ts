@@ -1,7 +1,6 @@
 import { HubEvents } from "@naisys/hub-protocol";
 import { io, Socket } from "socket.io-client";
 import { GlobalConfig } from "../globalConfig.js";
-import { HostService } from "../services/hostService.js";
 import { HubClientLog } from "./hubClientLog.js";
 
 /** Generic raise event function type */
@@ -17,7 +16,6 @@ export function createHubConnection(
   hubUrl: string,
   hubClientLog: HubClientLog,
   globalConfig: GlobalConfig,
-  hostService: HostService,
   raiseEvent: RaiseEventFn,
   onReconnectFailed: () => void,
 ) {
@@ -32,8 +30,7 @@ export function createHubConnection(
     socket = io(hubUrl, {
       auth: {
         accessKey: config.hubAccessKey,
-        hostId: hostService.localHostId,
-        hostname: hostService.localHostname,
+        runnerName: config.hostname,
       },
       reconnection: true,
       reconnectionDelay: 1000,

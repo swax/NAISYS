@@ -1,7 +1,7 @@
 import { createDatabaseService } from "@naisys/database";
 import { program } from "commander";
 import dotenv from "dotenv";
-import { AgentManager } from "./agent/agentManager.js";
+import { AgentRunner } from "./agent/agentRunner.js";
 import { createUserService } from "./agent/userService.js";
 import { createGlobalConfig } from "./globalConfig.js";
 import { createHubClientLog } from "./hub/hubClientLog.js";
@@ -48,13 +48,13 @@ if (program.opts().hub) {
 
 // Start hub client manager used for cross-machine communication
 const hubClientLog = createHubClientLog();
-const hubManager = createHubManager(globalConfig, hostService, hubClientLog);
+const hubManager = createHubManager(globalConfig, hubClientLog);
 const remoteAgentRequester = createRemoteAgentRequester(hubManager);
 
 console.log(`NAISYS STARTED`);
 
 const userService = createUserService(globalConfig, agentPath);
-const agentManager = new AgentManager(
+const agentRunner = new AgentRunner(
   dbService,
   globalConfig,
   hostService,
@@ -67,14 +67,14 @@ createRemoteAgentHandler(
   hubClientLog,
   dbService,
   hostService,
-  agentManager,
+  agentRunner,
 );
 
 // Resolve the agent path to a username (or admin if no path) and start the agent
 const startupUsername = userService.getStartupUsername(agentPath);
-await agentManager.startAgent(startupUsername);
+await agentRunner.startAgent(startupUsername);
 
-await agentManager.waitForAllAgentsToComplete();
+await agentRunner.waitForAllAgentsToComplete();
 
 hostService.cleanup();
 

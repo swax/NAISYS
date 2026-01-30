@@ -3,11 +3,12 @@ import { Server } from "socket.io";
 import { ZodSchema } from "zod";
 import { HubServerLog } from "./hubServerLog.js";
 import {
-  createNaisysConnection,
-  NaisysConnection,
-} from "./naisysConnection.js";
+  createRunnerConnection,
+  RunnerConnection,
+} from "./runnerConnection.js";
+import { RunnerRegistrar } from "./runnerRegistrar.js";
 
-type EventHandler = (hostId: string, ...args: any[]) => void;
+type EventHandler = (runnerId: string, ...args: any[]) => void;
 
 /** Registered handler with optional schema for validation */
 interface RegisteredHandler {
@@ -22,9 +23,10 @@ export async function createHubServer(
   port: number,
   accessKey: string,
   logService: HubServerLog,
+  runnerRegistrar: RunnerRegistrar,
 ) {
   // Track connected runners
-  const naisysConnections = new Map<string, NaisysConnection>();
+  const runnerConnections = new Map<string, RunnerConnection>();
 
   // Generic event handlers registry - maps event name to set of registered handlers
   const eventHandlers = new Map<string, Set<RegisteredHandler>>();
@@ -55,7 +57,7 @@ export async function createHubServer(
   }
 
   // Emit an event to all registered handlers, validating data if schema provided
-  function raiseEvent(event: string, hostId: string, ...args: unknown[]) {
+  function raiseEvent(event: string, runnerId: string, ...args: unknown[]) {
     const handlers = eventHandlers.get(event);
     if (handlers) {
       for (const { handler, schema } of handlers) {
@@ -64,14 +66,14 @@ export async function createHubServer(
           const result = schema.safeParse(args[0]);
           if (!result.success) {
             logService.error(
-              `[Hub] Schema validation failed for event '${event}' from ${hostId}: ${JSON.stringify(result.error.issues)}`,
+              `[Hub] Schema validation failed for event '${event}' from ${runnerId}: ${JSON.stringify(result.error.issues)}`,
             );
             continue; // Skip this handler if validation fails
           }
           // Call handler with validated data
-          handler(hostId, result.data, ...args.slice(1));
+          handler(runnerId, result.data, ...args.slice(1));
         } else {
-          handler(hostId, ...args);
+          handler(runnerId, ...args);
         }
       }
     }
@@ -81,16 +83,16 @@ export async function createHubServer(
   type AckCallback<T = unknown> = (response: T) => void;
 
   /**
-   * Send an event to a specific client by hostId.
+   * Send an event to a specific client by runnerId.
    * If ack callback is provided, waits for client acknowledgement.
    */
   function sendMessage<T = unknown>(
-    hostId: string,
+    runnerId: string,
     event: string,
     payload: unknown,
     ack?: AckCallback<T>,
   ): boolean {
-    const connection = naisysConnections.get(hostId);
+    const connection = runnerConnections.get(runnerId);
     if (!connection) {
       return false;
     }
@@ -109,11 +111,10 @@ export async function createHubServer(
   });
 
   // Authentication middleware
-  io.use((socket, next) => {
+  io.use(async (socket, next) => {
     const {
       accessKey: clientAccessKey,
-      hostId,
-      hostname,
+      runnerName,
     } = socket.handshake.auth;
 
     if (!clientAccessKey || clientAccessKey !== accessKey) {
@@ -123,54 +124,60 @@ export async function createHubServer(
       return next(new Error("Invalid access key"));
     }
 
-    if (!hostId || !hostname) {
-      logService.log(`[Hub] Connection rejected: missing hostId or hostname`);
-      return next(new Error("Missing hostId or hostname"));
+    if (!runnerName) {
+      logService.log(`[Hub] Connection rejected: missing runnerName`);
+      return next(new Error("Missing runnerName"));
     }
 
-    // Attach auth data to socket for use in connection handler
-    socket.data.hostId = hostId;
-    socket.data.hostname = hostname;
-
-    next();
+    try {
+      const runnerId = await runnerRegistrar.registerRunner(runnerName);
+      socket.data.runnerId = runnerId;
+      socket.data.runnerName = runnerName;
+      next();
+    } catch (err) {
+      logService.error(
+        `[Hub] Connection rejected: failed to register runner ${runnerName}: ${err}`,
+      );
+      return next(new Error("Runner registration failed"));
+    }
   });
 
   // Handle new connections
   io.on("connection", (socket) => {
-    const { hostId, hostname } = socket.data;
+    const { runnerId, runnerName } = socket.data;
 
-    // Check if this host is already connected
-    const existingConnection = naisysConnections.get(hostId);
+    // Check if this runner is already connected
+    const existingConnection = runnerConnections.get(runnerId);
     if (existingConnection) {
       logService.log(
-        `[Hub] Host ${hostname} (${hostId}) reconnecting, replacing old connection`,
+        `[Hub] Runner ${runnerName} (${runnerId}) reconnecting, replacing old connection`,
       );
-      naisysConnections.delete(hostId);
-      raiseEvent("client_disconnected", hostId);
+      runnerConnections.delete(runnerId);
+      raiseEvent("client_disconnected", runnerId);
     }
 
     // Create connection handler for this socket, passing our emit function
-    const naisysConnection = createNaisysConnection(
+    const runnerConnection = createRunnerConnection(
       socket,
       {
-        hostId,
-        hostname,
+        runnerId,
+        runnerName,
         connectedAt: new Date(),
       },
       raiseEvent,
       logService,
     );
 
-    naisysConnections.set(hostId, naisysConnection);
-    raiseEvent("client_connected", hostId, naisysConnection);
+    runnerConnections.set(runnerId, runnerConnection);
+    raiseEvent("client_connected", runnerId, runnerConnection);
 
-    logService.log(`[Hub] Active connections: ${naisysConnections.size}`);
+    logService.log(`[Hub] Active connections: ${runnerConnections.size}`);
 
     // Clean up on disconnect
     socket.on("disconnect", () => {
-      naisysConnections.delete(hostId);
-      raiseEvent("client_disconnected", hostId);
-      logService.log(`[Hub] Active connections: ${naisysConnections.size}`);
+      runnerConnections.delete(runnerId);
+      raiseEvent("client_disconnected", runnerId);
+      logService.log(`[Hub] Active connections: ${runnerConnections.size}`);
     });
   });
 
@@ -189,9 +196,9 @@ export async function createHubServer(
     registerEvent,
     unregisterEvent,
     sendMessage,
-    getConnectedClients: () => Array.from(naisysConnections.values()),
-    getConnectionByHostId: (hostId: string) => naisysConnections.get(hostId),
-    getConnectionCount: () => naisysConnections.size,
+    getConnectedClients: () => Array.from(runnerConnections.values()),
+    getConnectionByRunnerId: (runnerId: string) => runnerConnections.get(runnerId),
+    getConnectionCount: () => runnerConnections.size,
     close: () => {
       void io.close();
       httpServer.close();

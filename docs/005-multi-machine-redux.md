@@ -8,7 +8,7 @@ The current multi-machine architecture (doc 001) works but is too complicated to
 
 ### Complexity
 
-- **Multi-master database sync** - Hubs and runners each have their own database. Databases are synced through the hub, essentially multi-master replication. The generic sync logic (timestamp tracking, catch-up, forward queues, stale joiner handling) is the most complex code in the system.
+- **Multi-master database sync** - Hubs and runners each have their own database. Databases are synced through the hub, essentially multi-master replication. The generic sync logic (timestamp tracking, catch-up, forward queues, stale joiner handling) is the most complex code in the system. Too clever by half, look at the syncUtils.ts file for an example of how complex the system was - not maintainable. 
 - **Schema version coupling** - Database versions must match across all instances. Updating the cluster means updating all runners and hubs simultaneously and ensuring DB versions match before sync resumes.
 - **Indirect data flow** - Online status is done by updating the local database and then syncing that around the network. Mail messages aren't sent like a message bus but also go through the sync mechanism. Everything is sync.
 
@@ -35,7 +35,7 @@ The current multi-machine architecture (doc 001) works but is too complicated to
 3. **No shared DB schema** - The `@naisys/database` package is hub-only. Runner has no database dependency whatsoever. Runner talks to hub via WebSocket API.
 4. **No multi-mastering** - One source of truth per deployment. Hub DB for multi-machine, in-memory for local.
 5. **Explicit control model** - Either "local controlled" (standalone, ephemeral) or "hub controlled" (persistent, managed).
-6. **Runners table replaces hosts** - Hub has a `runners` table with pre-registered name/key pairs for authentication. A `user_runners` table maps which users (agents) can run on which runners. A runner is a naisys process instance - typically one per machine, but multiple instances on the same machine are supported.
+6. **Runners table replaces hosts** - Hub has a `runners` table that runners self-register into on first connection. A `user_runners` table maps which users (agents) can run on which runners. A runner is a naisys process instance - typically one per machine, but multiple instances on the same machine are supported.
 7. **Hub routes agent starts** - In hub mode, `ns-agent start` sends a request to the hub. Hub picks the first available runner the user is assigned to and pushes `agent.start` to that runner. The target may be the requesting runner or a different one.
 
 ### Deployment Modes
@@ -152,7 +152,6 @@ The hub database has two tables for runner management:
 runners
   id          String  @id       // ULID
   name        String  @unique   // e.g., "runner-east-1"
-  access_key  String            // Hashed key for authentication
   last_active DateTime?         // Updated from heartbeat
   updated_at  DateTime @updatedAt
 
@@ -162,9 +161,10 @@ user_runners
   @@id([user_id, runner_id])    // Composite PK
 ```
 
-- Hub is pre-configured with runner name/key pairs
+- Both hub and runner have `HUB_ACCESS_KEY` in their `.env` files. If they match, the connection is accepted
+- Runners are not pre-registered. On first `runner.register`, hub creates the runner entry automatically
 - Users (agents) are assigned to one or more runners via `user_runners`
-- On `runner.register`, hub authenticates by name + key, returns the configs for users assigned to that runner
+- On `runner.register`, hub validates the access key, auto-creates the runner if new, and returns the configs for users assigned to that runner
 - A user assigned to multiple runners can be started on any of them (hub picks first available)
 
 ### Agent Start Flow (Hub Mode)
@@ -239,7 +239,7 @@ High-frequency writes that don't need confirmation. Runner buffers and sends per
 | Method | Params | Returns | Notes |
 | --- | --- | --- | --- |
 | **Registration** | | | |
-| `runner.register` | runnerName, accessKey | runnerId, agents[] | On connect. Hub authenticates via runners table, returns users assigned to this runner (from user_runners) with full configs |
+| `runner.register` | runnerName, accessKey | runnerId, agents[] | On connect. Hub validates accessKey matches its own HUB_ACCESS_KEY, auto-creates runner if name is new. Returns users assigned to this runner (from user_runners) with full configs |
 | **Session** | | | |
 | `session.create` | userId, modelName | runId, sessionId | On agent start |
 | `session.increment` | userId, runId | sessionId | On session compact |
@@ -334,7 +334,9 @@ Hub handlers use Prisma queries - essentially the same queries currently in runn
 Runner startup (hub mode):
   1. Connect to hub WebSocket
   2. Send runner.register { runnerName, accessKey }
-     -> hub authenticates against runners table
+     -> hub validates accessKey matches its own HUB_ACCESS_KEY
+     -> if invalid: error + disconnect, runner startup fails
+     -> if runner name is new: hub creates runner entry
      -> hub returns runnerId + list of assigned agents with full configs
   3. For each agent: call session.create -> receive runId, sessionId
   4. Start agents, begin heartbeat interval
@@ -514,8 +516,9 @@ Final cleanup pass.
 
 ### Hub Mode
 
-- [ ] Hub pre-configured with runners table (name/key pairs) and user_runners assignments
-- [ ] Runner connects to hub, authenticates with runner name + key
+- [ ] Runner self-registers on first connection (hub auto-creates runner entry)
+- [ ] Runner connects to hub, authenticates with matching HUB_ACCESS_KEY
+- [ ] Runner with wrong HUB_ACCESS_KEY is rejected and disconnected
 - [ ] Runner receives assigned agents with full configs from runner.register
 - [ ] Runner starts assigned agents
 - [ ] Agent logs and costs flow to hub (visible in supervisor)
@@ -564,7 +567,7 @@ Answers to design questions resolved during planning:
 
 6. **Cost tracking: hub-pushed** - No separate spend-check call. Hub monitors costs from `cost.write` batches and pushes `agent.pause` / `agent.resume` when limits change.
 
-7. **Runners table replaces hosts** - Hub has a `runners` table (pre-registered name/key pairs) and a `user_runners` table (which agents can run on which runners). Runner authenticates with name + key. The old `hosts` table is replaced; `hosts` may still exist for hub identity in hub-to-hub federation. A runner is a naisys process instance - typically one per machine, but multiple on the same machine is supported.
+7. **Runners table replaces hosts** - Hub has a `runners` table (self-registered on first connection) and a `user_runners` table (which agents can run on which runners). Both hub and runner have `HUB_ACCESS_KEY` in `.env`; if they match, the connection is accepted. The old `hosts` table is replaced; `hosts` may still exist for hub identity in hub-to-hub federation. A runner is a naisys process instance - typically one per machine, but multiple on the same machine is supported.
 
 8. **Hub routes agent starts** - In hub mode, `ns-agent start` sends a request to the hub. Hub looks up `user_runners`, picks the first available connected runner for that user, and pushes `agent.start` to it. In local mode, `ns-agent start` just starts the agent directly in-process.
 

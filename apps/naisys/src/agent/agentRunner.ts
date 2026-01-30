@@ -6,7 +6,7 @@ import { OutputColor } from "../utils/output.js";
 import { AgentRuntime, createAgentRuntime } from "./agentRuntime.js";
 
 /** Handles the multiplexing of multiple concurrent agents in the process */
-export class AgentManager {
+export class AgentRunner {
   runningAgents: AgentRuntime[] = [];
   runLoops: Promise<void>[] = [];
 

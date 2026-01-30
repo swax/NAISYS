@@ -204,8 +204,19 @@ model hosts {
   run_sessions       run_session[]
   costs              costs[]
   context_logs       context_log[]
+  runners            runners[]
 
   @@index([updated_at], map: "idx_hosts_updated_at") // Catch-up: WHERE updated_at > Y AND host_id != X ORDER BY updated_at
+}
+
+model runners {
+  id          String    @id // ULID
+  name        String    @unique(map: "unq_runners_name")
+  host_id     String // FK to hosts - which hub owns this runner
+  last_active DateTime?
+  created_at  DateTime  @default(now())
+  updated_at  DateTime  @updatedAt
+  host        hosts     @relation(fields: [host_id], references: [host_id])
 }
 
 model hub_sync_state {

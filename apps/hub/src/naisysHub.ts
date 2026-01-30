@@ -9,7 +9,7 @@ import { createAgentRegistrar } from "./services/agentRegistrar.js";
 import { createHostService } from "./services/hostService.js";
 import { createHubServer } from "./services/hubServer.js";
 import { createHubServerLog } from "./services/hubServerLog.js";
-import { createRemoteAgentRouter } from "./services/remoteAgentRouter.js";
+import { createRunnerRegistrar } from "./services/runnerRegistrar.js";
 
 /**
  * Starts the Hub server with sync service.
@@ -49,11 +49,11 @@ export async function startHub(
     // Seed database with agent configs from yaml files
     await createAgentRegistrar(hubConfig, dbService, hostService, startupAgentPath);
 
-    // Create hub server
-    const hubServer = await createHubServer(hubPort, hubAccessKey, logService);
+    // Create runner registrar for tracking runner connections
+    const runnerRegistrar = createRunnerRegistrar(dbService, hostService);
 
-    // Create remote agent router for agent start/stop/log across machines
-    createRemoteAgentRouter(hubServer, logService);
+    // Create hub server
+    const hubServer = await createHubServer(hubPort, hubAccessKey, logService, runnerRegistrar);
 
     // Start interhub client for hub-to-hub federation
     const hubClientLog = createHubClientLog();

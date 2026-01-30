@@ -17,13 +17,13 @@ export function createHubConfig() {
       .filter((url) => url.length > 0) ?? [];
 
   /** API key for authenticating with other Hub servers */
-  const interhubAccessKey = process.env.INTERHUB_ACCESS_KEY;
+  const hubAccessKey = process.env.HUB_ACCESS_KEY;
 
   const config = {
     hostname,
     naisysFolder,
     interhubUrls,
-    interhubAccessKey,
+    hubAccessKey,
   };
 
   return {

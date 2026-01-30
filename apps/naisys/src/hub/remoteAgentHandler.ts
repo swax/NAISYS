@@ -10,7 +10,7 @@ import {
   type AgentStopRequest,
   type AgentStopResponse,
 } from "@naisys/hub-protocol";
-import { AgentManager } from "../agent/agentManager.js";
+import { AgentRunner } from "../agent/agentRunner.js";
 import { HostService } from "../services/hostService.js";
 import { HubClientLog } from "./hubClientLog.js";
 import { HubManager } from "./hubManager.js";
@@ -43,7 +43,7 @@ export function createRemoteAgentHandler(
   hubClientLog: HubClientLog,
   dbService: DatabaseService,
   hostService: HostService,
-  agentManager: AgentManager,
+  agentRunner: AgentRunner,
 ) {
   const { localHostId } = hostService;
 
@@ -144,8 +144,8 @@ export function createRemoteAgentHandler(
     const { user } = validated;
 
     try {
-      // Start the agent (agentManager.startAgent checks if already running)
-      const agentRunId = await agentManager.startAgent(user.id);
+      // Start the agent (agentRunner.startAgent checks if already running)
+      const agentRunId = await agentRunner.startAgent(user.id);
       hubClientLog.write(
         `[RemoteAgentHandler] Started agent ${user.username} (ID: ${agentRunId})`,
       );
@@ -172,8 +172,8 @@ export function createRemoteAgentHandler(
     const data = rawData as AgentStopRequest; // Already validated
 
     try {
-      // Stop the agent (agentManager.stopAgentByUserId checks if running)
-      await agentManager.stopAgentByUserId(user.id, data.reason);
+      // Stop the agent (agentRunner.stopAgentByUserId checks if running)
+      await agentRunner.stopAgentByUserId(user.id, data.reason);
       hubClientLog.write(`[RemoteAgentHandler] Stopped agent ${user.username}`);
       ack?.({ success: true });
     } catch (error) {

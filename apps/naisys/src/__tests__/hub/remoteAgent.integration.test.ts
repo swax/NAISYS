@@ -9,10 +9,8 @@ import {
   test,
 } from "@jest/globals";
 import { ulid } from "@naisys/database";
-import type { HubServer } from "@naisys/hub/services/hubServer";
 import type { HubServerLog } from "@naisys/hub/services/hubServerLog";
-import { createRemoteAgentRouter } from "@naisys/hub/services/remoteAgentRouter";
-import type { AgentManager } from "../../agent/agentManager.js";
+import type { AgentRunner } from "../../agent/agentRunner.js";
 import type { HubClientLog } from "../../hub/hubClientLog.js";
 import type { HubManager } from "../../hub/hubManager.js";
 import { createRemoteAgentHandler } from "../../hub/remoteAgentHandler.js";
@@ -54,11 +52,17 @@ describe("Remote Agent Integration Tests", () => {
   let runnerBDb: TestDatabase;
   let hubDb: TestDatabase;
 
-  // Host identifiers
+  // Host identifiers (for DB seeding - hosts table)
   let hostAId: string;
   let hostBId: string;
   const hostAName = "runner-a-host";
   const hostBName = "runner-b-host";
+
+  // Runner identifiers (for hub connections)
+  let runnerAId: string;
+  let runnerBId: string;
+  const runnerAName = "runner-a";
+  const runnerBName = "runner-b";
 
   // Bridge and mocks
   let bridge: ReturnType<typeof createSyncEventBridge>;
@@ -68,7 +72,7 @@ describe("Remote Agent Integration Tests", () => {
 
   // Services
   let remoteAgentRequesterA: RemoteAgentRequester;
-  let mockAgentManagerB: AgentManager;
+  let mockAgentRunnerB: AgentRunner;
 
   // Test user on Runner B
   let userBId: string;
@@ -129,9 +133,11 @@ describe("Remote Agent Integration Tests", () => {
       resetDatabase(hubDb.prisma),
     ]);
 
-    // Generate unique host IDs
+    // Generate unique IDs
     hostAId = ulid();
     hostBId = ulid();
+    runnerAId = ulid();
+    runnerBId = ulid();
     userBId = ulid();
 
     // Seed hosts in all databases
@@ -151,21 +157,15 @@ describe("Remote Agent Integration Tests", () => {
     bridge = createSyncEventBridge();
     mockHubServer = bridge.createMockHubServer();
 
-    // Register remote agent router on hub
-    createRemoteAgentRouter(
-      mockHubServer as unknown as HubServer,
-      mockHubServerLog,
-    );
-
     // Create Runner A (requester)
-    mockHubManagerA = bridge.createMockHubManager(hostAId, hostAName);
+    mockHubManagerA = bridge.createMockHubManager(runnerAId, runnerAName);
 
     remoteAgentRequesterA = createRemoteAgentRequester(
       mockHubManagerA as unknown as HubManager,
     );
 
     // Create Runner B (handler)
-    mockHubManagerB = bridge.createMockHubManager(hostBId, hostBName);
+    mockHubManagerB = bridge.createMockHubManager(runnerBId, runnerBName);
 
     const hostServiceB: HostService = {
       cleanup: () => {},
@@ -175,11 +175,11 @@ describe("Remote Agent Integration Tests", () => {
       handleCommand: () => Promise.resolve(""),
     };
 
-    // Create mock AgentManager for Runner B
-    mockAgentManagerB = {
+    // Create mock AgentRunner for Runner B
+    mockAgentRunnerB = {
       startAgent: jest.fn(() => Promise.resolve(ulid())),
       stopAgentByUserId: jest.fn(() => Promise.resolve()),
-    } as unknown as AgentManager;
+    } as unknown as AgentRunner;
 
     // Register remote agent handler on Runner B
     createRemoteAgentHandler(
@@ -187,7 +187,7 @@ describe("Remote Agent Integration Tests", () => {
       mockClientLogB,
       runnerBDb.dbService,
       hostServiceB,
-      mockAgentManagerB,
+      mockAgentRunnerB,
     );
 
     // Trigger connections
@@ -213,32 +213,32 @@ describe("Remote Agent Integration Tests", () => {
 
       const result = await remoteAgentRequesterA.startAgent(
         userBId,
-        hostBId,
+        runnerBId,
         requesterId,
         task,
         userBUsername,
-        hostBName,
+        runnerBName,
       );
 
       expect(result).toContain("started");
       expect(result).toContain(userBUsername);
 
-      // Verify agentManager.startAgent was called on Runner B
-      expect(mockAgentManagerB.startAgent).toHaveBeenCalledWith(userBId);
+      // Verify agentRunner.startAgent was called on Runner B
+      expect(mockAgentRunnerB.startAgent).toHaveBeenCalledWith(userBId);
     });
 
     test("should fail when target host is not connected", async () => {
       const requesterId = ulid();
-      const unknownHostId = ulid();
+      const unknownRunnerId = ulid();
 
       await expect(
         remoteAgentRequesterA.startAgent(
           userBId,
-          unknownHostId,
+          unknownRunnerId,
           requesterId,
           "task",
           userBUsername,
-          "unknown-host",
+          "unknown-runner",
         ),
       ).rejects.toThrow(/not connected/);
     });
@@ -250,11 +250,11 @@ describe("Remote Agent Integration Tests", () => {
       await expect(
         remoteAgentRequesterA.startAgent(
           unknownUserId,
-          hostBId,
+          runnerBId,
           requesterId,
           "task",
           "unknown-user",
-          hostBName,
+          runnerBName,
         ),
       ).rejects.toThrow(/not found/);
     });
@@ -262,37 +262,37 @@ describe("Remote Agent Integration Tests", () => {
     test("should fail when target host is same as source host", async () => {
       const requesterId = ulid();
 
-      // Try to start an agent on hostA from hostA (should be handled locally)
+      // Try to start an agent on runnerA from runnerA (should be handled locally)
       await expect(
         remoteAgentRequesterA.startAgent(
           userBId,
-          hostAId, // Same as source
+          runnerAId, // Same as source
           requesterId,
           "task",
           userBUsername,
-          hostAName,
+          runnerAName,
         ),
       ).rejects.toThrow(/handle locally/);
     });
 
-    test("should fail when agentManager.startAgent throws", async () => {
+    test("should fail when agentRunner.startAgent throws", async () => {
       const requesterId = ulid();
 
       // Make startAgent throw an error
       const mockStartAgent =
-        mockAgentManagerB.startAgent as jest.MockedFunction<
-          typeof mockAgentManagerB.startAgent
+        mockAgentRunnerB.startAgent as jest.MockedFunction<
+          typeof mockAgentRunnerB.startAgent
         >;
       mockStartAgent.mockRejectedValueOnce(new Error("Agent already running"));
 
       await expect(
         remoteAgentRequesterA.startAgent(
           userBId,
-          hostBId,
+          runnerBId,
           requesterId,
           "task",
           userBUsername,
-          hostBName,
+          runnerBName,
         ),
       ).rejects.toThrow(/Agent already running/);
     });
@@ -305,18 +305,18 @@ describe("Remote Agent Integration Tests", () => {
 
       const result = await remoteAgentRequesterA.stopAgent(
         userBId,
-        hostBId,
+        runnerBId,
         requesterId,
         reason,
         userBUsername,
-        hostBName,
+        runnerBName,
       );
 
       expect(result).toContain("stop requested");
       expect(result).toContain(userBUsername);
 
-      // Verify agentManager.stopAgentByUserId was called on Runner B
-      expect(mockAgentManagerB.stopAgentByUserId).toHaveBeenCalledWith(
+      // Verify agentRunner.stopAgentByUserId was called on Runner B
+      expect(mockAgentRunnerB.stopAgentByUserId).toHaveBeenCalledWith(
         userBId,
         reason,
       );
@@ -324,16 +324,16 @@ describe("Remote Agent Integration Tests", () => {
 
     test("should fail when target host is not connected", async () => {
       const requesterId = ulid();
-      const unknownHostId = ulid();
+      const unknownRunnerId = ulid();
 
       await expect(
         remoteAgentRequesterA.stopAgent(
           userBId,
-          unknownHostId,
+          unknownRunnerId,
           requesterId,
           "reason",
           userBUsername,
-          "unknown-host",
+          "unknown-runner",
         ),
       ).rejects.toThrow(/not connected/);
     });
@@ -345,11 +345,11 @@ describe("Remote Agent Integration Tests", () => {
       await expect(
         remoteAgentRequesterA.stopAgent(
           unknownUserId,
-          hostBId,
+          runnerBId,
           requesterId,
           "reason",
           "unknown-user",
-          hostBName,
+          runnerBName,
         ),
       ).rejects.toThrow(/not found/);
     });
@@ -402,7 +402,7 @@ describe("Remote Agent Integration Tests", () => {
 
       const lines = await remoteAgentRequesterA.getAgentLog(
         userBId,
-        hostBId,
+        runnerBId,
         50,
         userBUsername,
       );
@@ -415,7 +415,7 @@ describe("Remote Agent Integration Tests", () => {
     test("should return empty array when no logs exist", async () => {
       const lines = await remoteAgentRequesterA.getAgentLog(
         userBId,
-        hostBId,
+        runnerBId,
         50,
         userBUsername,
       );
@@ -456,7 +456,7 @@ describe("Remote Agent Integration Tests", () => {
       // Request only 2 lines
       const lines = await remoteAgentRequesterA.getAgentLog(
         userBId,
-        hostBId,
+        runnerBId,
         2,
         userBUsername,
       );
@@ -473,7 +473,7 @@ describe("Remote Agent Integration Tests", () => {
       await expect(
         remoteAgentRequesterA.getAgentLog(
           unknownUserId,
-          hostBId,
+          runnerBId,
           50,
           "unknown-user",
         ),
@@ -505,11 +505,11 @@ describe("Remote Agent Integration Tests", () => {
       await expect(
         disconnectedRequester.startAgent(
           userBId,
-          hostBId,
+          runnerBId,
           ulid(),
           "task",
           userBUsername,
-          hostBName,
+          runnerBName,
         ),
       ).rejects.toThrow(/no hub connection/);
     });
@@ -520,16 +520,16 @@ describe("Remote Agent Integration Tests", () => {
       const requesterId = ulid();
 
       // Disconnect Runner B before the request can complete
-      bridge.disconnectRunner(hostBId);
+      bridge.disconnectRunner(runnerBId);
 
       await expect(
         remoteAgentRequesterA.startAgent(
           userBId,
-          hostBId,
+          runnerBId,
           requesterId,
           "task",
           userBUsername,
-          hostBName,
+          runnerBName,
         ),
       ).rejects.toThrow(/not connected/);
     });

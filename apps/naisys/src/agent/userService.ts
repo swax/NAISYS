@@ -1,4 +1,5 @@
-import { loadAgentConfigs, UserEntry } from "@naisys/common";
+import { UserEntry } from "@naisys/common";
+import { loadAgentConfigs } from "@naisys/common/dist/agentConfigLoader.js";
 import * as path from "path";
 import { GlobalConfig } from "../globalConfig.js";
 
