@@ -1,7 +1,6 @@
 import { DatabaseService } from "@naisys/database";
 import { GlobalConfig } from "../globalConfig.js";
 import { HubClient } from "../hub/hubClient.js";
-import { RemoteAgentRequester } from "../hub/remoteAgentRequester.js";
 import { HostService } from "../services/hostService.js";
 import { OutputColor } from "../utils/output.js";
 import { AgentRuntime, createAgentRuntime } from "./agentRuntime.js";
@@ -17,7 +16,6 @@ export class AgentRunner {
     private globalConfig: GlobalConfig,
     private hostService: HostService,
     private hubClient: HubClient,
-    private remoteAgentRequester: RemoteAgentRequester,
     private userService: UserService,
   ) {}
 
@@ -35,7 +33,6 @@ export class AgentRunner {
       this.globalConfig,
       this.hostService,
       this.hubClient,
-      this.remoteAgentRequester,
       this.userService,
     );
 

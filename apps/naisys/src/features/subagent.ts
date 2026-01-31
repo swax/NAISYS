@@ -1,11 +1,9 @@
 import { DatabaseService } from "@naisys/database";
-import { ChildProcess } from "child_process";
 import stringArgv from "string-argv";
 import table from "text-table";
 import { AgentConfig } from "../agent/agentConfig.js";
 import { IAgentRunner } from "../agent/agentRunnerInterface.js";
 import { RegistrableCommand } from "../command/commandRegistry.js";
-import { RemoteAgentRequester } from "../hub/remoteAgentRequester.js";
 import { ContextManager } from "../llm/contextManager.js";
 import { ContentSource } from "../llm/llmDtos.js";
 import { MailService } from "../mail/mail.js";
@@ -19,9 +17,8 @@ interface Subagent {
   agentName: string;
   title: string;
   taskDescription?: string;
-  process?: ChildProcess;
   log: string[];
-  status: "spawned" | "started" | "stopped";
+  status: "started" | "stopped";
 }
 
 export function createSubagentService(
@@ -32,7 +29,6 @@ export function createSubagentService(
   inputMode: InputModeService,
   { usingDatabase }: DatabaseService,
   { localHostId }: HostService,
-  remoteAgentRequester: RemoteAgentRequester,
   localUserId: string,
   promptNotification: PromptNotificationService,
   contextManager: ContextManager,
@@ -55,9 +51,6 @@ export function createSubagentService(
   stop <name>: Stops the agent with the given name
   start <name> "<description>": Starts an existing agent with the given name and description of the task to perform`;
 
-        //  create "<agent title>" "<description>": Creates a new agent. Include as much detail in the description as possible.
-        //  spawn <username> <description>: Spawns the agent as a separate isolated node process (generally use start instead)
-
         if (inputMode.isDebug()) {
           helpOutput += `\n  switch <name>: Switch context to a started in-process agent (debug mode only)`;
           helpOutput += `\n  flush <name>: Flush a spawned agent's output (debug mode only)`;
@@ -72,18 +65,8 @@ export function createSubagentService(
       case "list": {
         return await buildAgentList();
       }
-      /*case "create": {
-        const title = argv[1];
-        const task = argv[2];
-
-        // Validate title and task set
-        if (!title || !task) {
-          errorText = "See valid 'create' syntax below:\n";
-          break;
-        }
-
-        return await _createAgent(title, task);
-      }*/
+      // "create" command removed - generated agent yaml configs from a template and wrote them to disk. See git history.
+      // "spawn" command removed - launched agents as separate child node processes. See git history.
       case "start": {
         const subagentName = argv[1];
         const taskDescription = argv[2];
@@ -96,12 +79,6 @@ export function createSubagentService(
 
         return await _startAgent(subagentName, taskDescription);
       }
-      /*case "spawn": {
-        const subagentName = argv[1];
-        const taskDescription = argv[2];
-
-        return await _spawnAgent(subagentName, taskDescription);
-      }*/
       case "switch": {
         if (!inputMode.isDebug()) {
           errorText =
@@ -238,77 +215,6 @@ export function createSubagentService(
     });
   }
 
-  /**
-   * Not sure if we should have this, or tell the AI how to create a real agent file
-   * Or have a first class 'temp' agent that supports starting multiple instances with different tasks
-   * As we do support multiple concurrent runtime ids now for logs/costs
-   * Dont want to hose the user table to a ton of temp user names
-   */
-  /*async function _createAgent(title: string, taskDescription: string) {
-    // Get available username
-    const usernames = await mailService.getAllUserNames();
-    let agentName = "";
-
-    const shuffledNames = shuffle(agentNames);
-
-    for (const name of shuffledNames) {
-      if (!usernames.includes(name)) {
-        agentName = name;
-        break;
-      }
-    }
-
-    if (!agentName) {
-      throw "No available usernames for subagents";
-    }
-
-    // Generate agent yaml
-    const subagentConfig: Partial<AgentConfigFile> = {
-      ...agentConfig,
-      username: agentName,
-      title,
-      agentPrompt:
-        `You are \${agent.username} a \${agent.title} with the job of helping out the \${agent.leadAgent} with what they want to do.\n` +
-        `Task Description: \${agent.taskDescription}\n` +
-        `Perform the above task and/or wait for messages from \${agent.leadAgent} and respond to them.` +
-        `When completed use the 'completeTask' command to signal that you are done.`,
-      wakeOnMessage: true,
-      completeTaskEnabled: true,
-      leadAgent: agentConfig().username,
-      mailEnabled: true, // Needed to communicate the task completion message
-      taskDescription,
-    };
-
-    if (agentConfig().mailEnabled) {
-      subagentConfig.mailEnabled = true;
-      subagentConfig.initialCommands = ["ns-mail users", "ns-mail help"];
-    }
-
-    const agentYaml = yaml.dump(subagentConfig);
-
-    // write agent yaml to file
-    const subagentDir = _getSubagentDir();
-    const agentHostPath = path.join(
-      subagentDir.toHostPath(),
-      `${agentName}.yaml`,
-    );
-    const agentPath = new NaisysPath(agentHostPath);
-
-    pathService.ensureFileDirExists(agentPath);
-
-    fs.writeFileSync(agentHostPath, agentYaml);
-
-    _subagents.push({
-      agentName,
-      agentPath,
-      taskDescription,
-      log: [],
-      status: "stopped",
-    });
-
-    return "Subagent Created. Ready to start or spawn";
-  }*/
-
   /** Look up user by username, returning host and agent info */
   async function lookupUser(identifier: string) {
     // Parse username@host format
@@ -421,125 +327,9 @@ export function createSubagentService(
       throw `Agent '${agentName}' exists locally but is not a subagent of ${agentConfig().username}`;
     }
 
-    // Remote agent - send start request through hub
-    return await _startRemoteAgent(user, taskDescription);
+    // Remote agent - not supported without remote agent requester
+    throw `Remote agent '${user.username}' cannot be started - remote agent support not configured`;
   }
-
-  async function _startRemoteAgent(
-    user: {
-      id: string;
-      username: string;
-      host_id: string | null;
-      host: { name: string } | null;
-    },
-    taskDescription: string,
-  ): Promise<string> {
-    if (!user.host_id) {
-      throw `Agent '${user.username}' has no host assigned`;
-    }
-
-    return await remoteAgentRequester.startAgent(
-      user.id,
-      user.host_id,
-      localUserId,
-      taskDescription,
-      user.username,
-      user.host?.name || null,
-    );
-  }
-
-  /**
-   * Don't want to confuse the AI with spawn vs start
-   * Not sure if there's a good use case for spawning separate processes anymore
-   */
-  /*async function _spawnAgent(agentName: string, taskDescription: string) {
-    const subagent = validateAgentStart(agentName, taskDescription);
-
-    // Start subagent
-    const installPath = pathService.getInstallPath();
-    const naisysJsPath = path.join(installPath.getHostPath(), "dist/naisys.js");
-
-    subagent.process = spawn(
-      "node",
-      [naisysJsPath, subagent.agentPath.toHostPath()],
-      {
-        stdio: "pipe",
-        env: getCleanEnv(),
-      },
-    );
-
-    // This handles if the host process dies, we want to kill child subagent processes too so they don't become orphans still running on the sysetm
-    process.on("exit", () => {
-      try {
-        // Negative PID kills the entire process group
-        if (subagent.process?.pid) {
-          process.kill(-subagent.process.pid);
-        }
-      } catch (e) {
-        // Process might already be dead
-      }
-    });
-
-    // Run async so that the process spawn handler is setup immediately otherwise it'll be missed
-    void sendStartupMessage(subagent, taskDescription);
-
-    // Wait 5 seconds for startup errors, then return success
-    const startupPromise = new Promise<string>((resolve) => {
-      let hasSpawned = false;
-
-      const timeout = setTimeout(() => {
-        if (hasSpawned && subagent.status === "spawned") {
-          let response = `Subagent '${agentName}' Started (ID: ${subagent.id})`;
-          if (agentConfig().mailEnabled) {
-            response += `\nUse ns-mail to communicate with the subagent '${subagent.agentName}'`;
-          }
-          resolve(response);
-        } else {
-          resolve(`Subagent '${agentName}' failed to start properly`);
-        }
-      }, 5000);
-
-      subagent.process!.on("spawn", () => {
-        hasSpawned = true;
-        subagent.status = "spawned";
-        subagent.id = subagent.process?.pid || -1;
-        subagent.log.push(`SUBAGENT ${agentName} SPAWNED\n`);
-      });
-
-      subagent.process!.on("error", (error) => {
-        clearTimeout(timeout);
-        resolve(`Failed to start subagent '${agentName}': ${error}`);
-      });
-
-      subagent.process!.on("close", (code) => {
-        if (!hasSpawned || code !== 0) {
-          clearTimeout(timeout);
-          resolve(`Subagent '${agentName}' exited early with code ${code}`);
-        }
-      });
-    });
-
-    subagent.process.stdout!.on("data", (data) => {
-      const dataLines = <string[]>data.toString().split("\n");
-      dataLines.forEach((line) => subagent.log.push(line));
-    });
-
-    subagent.process.stderr!.on("data", (data) => {
-      subagent.log.push(`\nSUBAGENT ${agentName} ERROR: ${data}`);
-    });
-
-    subagent.process.on("close", (code) => {
-      subagent.log.push(
-        `\nSUBAGENT ${subagent.agentName} TERMINATED with code ${code}\n`,
-      );
-      handleAgentTermination(
-        subagent,
-        code === 0 ? "terminated" : `exited with code ${code}`,
-      );
-    });
-
-    return await startupPromise;
-  }*/
 
   async function sendStartupMessage(
     subagent: Subagent,
@@ -574,9 +364,6 @@ export function createSubagentService(
     if (subagent?.status === "stopped") {
       throw `Agent '${agentName}' is already stopped`;
     }
-
-    // Process termination event will set status to stopped
-    subagent?.process?.kill();
 
     if (agentRuntime) {
       // Request shutdown of in-process agent, callback defined in start() will handle termination event
