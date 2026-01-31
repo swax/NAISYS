@@ -6,8 +6,6 @@ import { createUserService } from "./agent/userService.js";
 import { createGlobalConfig } from "./globalConfig.js";
 import { createHubClientLog } from "./hub/hubClientLog.js";
 import { createHubClient } from "./hub/hubClient.js";
-import { createRemoteAgentHandler } from "./hub/remoteAgentHandler.js";
-import { createRemoteAgentRequester } from "./hub/remoteAgentRequester.js";
 import { createHeartbeatService } from "./services/heartbeatService.js";
 import { createHostService } from "./services/hostService.js";
 
@@ -50,7 +48,6 @@ if (program.opts().hub) {
 // Start hub client manager used for cross-machine communication
 const hubClientLog = createHubClientLog();
 const hubClient = createHubClient(globalConfig, hubClientLog);
-const remoteAgentRequester = createRemoteAgentRequester(hubClient);
 const userService = createUserService(globalConfig, hubClient, agentPath);
 
 if (globalConfig.globalConfig().isHubMode) {
@@ -69,7 +66,6 @@ const agentRunner = new AgentRunner(
   globalConfig,
   hostService,
   hubClient,
-  remoteAgentRequester,
   userService,
 );
 
@@ -79,15 +75,6 @@ const heartbeatService = createHeartbeatService(
   hubClient,
   agentRunner,
   userService,
-);
-
-// Create handler for incoming remote agent control requests
-createRemoteAgentHandler(
-  hubClient,
-  hubClientLog,
-  dbService,
-  hostService,
-  agentRunner,
 );
 
 // Resolve the agent path to a username (or admin if no path) and start the agent

@@ -14,7 +14,6 @@ import { createSubagentService } from "../features/subagent.js";
 import { createWorkspacesFeature } from "../features/workspaces.js";
 import { GlobalConfig } from "../globalConfig.js";
 import { HubClient } from "../hub/hubClient.js";
-import { RemoteAgentRequester } from "../hub/remoteAgentRequester.js";
 import { createCommandTools } from "../llm/commandTool.js";
 import { createContextManager } from "../llm/contextManager.js";
 import { createCostTracker } from "../llm/costTracker.js";
@@ -43,7 +42,6 @@ export async function createAgentRuntime(
   globalConfig: GlobalConfig,
   hostService: HostService,
   hubClient: HubClient,
-  remoteAgentRequester: RemoteAgentRequester,
   userService: UserService,
 ) {
   /*
@@ -138,7 +136,6 @@ export async function createAgentRuntime(
     inputMode,
     dbService,
     hostService,
-    remoteAgentRequester,
     localUserId,
     promptNotification,
     contextManager,
