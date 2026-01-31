@@ -32,11 +32,11 @@ import { createInputMode } from "../utils/inputMode.js";
 import { createOutputService } from "../utils/output.js";
 import { createPromptNotificationService } from "../utils/promptNotificationService.js";
 import { createAgentConfig } from "./agentConfig.js";
-import { IAgentRunner } from "./agentRunnerInterface.js";
+import { IAgentManager } from "./agentManagerInterface.js";
 import { UserService } from "./userService.js";
 
 export async function createAgentRuntime(
-  agentRunner: IAgentRunner,
+  agentManager: IAgentManager,
   localUserId: string,
   dbService: DatabaseService,
   globalConfig: GlobalConfig,
@@ -110,7 +110,7 @@ export async function createAgentRuntime(
 
   // Features
   const genimg = createGenImg(agentConfig, costTracker, output);
-  const mailAddress = createMailAddress(dbService, hostService);
+  const mailAddress = createMailAddress(dbService);
   const mailDisplayService = createMailDisplayService(
     dbService,
     mailAddress,
@@ -132,7 +132,7 @@ export async function createAgentRuntime(
     agentConfig,
     mailService,
     output,
-    agentRunner,
+    agentManager,
     inputMode,
     userService,
     localUserId,

@@ -21,12 +21,12 @@ export const getAgents = cachedForSeconds(
             username: true,
             title: true,
             lead_user: { select: { username: true } },
-            host: { select: { name: true } },
             user_notifications: {
               select: {
                 latest_log_id: true,
                 last_active: true,
                 updated_at: true,
+                host: { select: { name: true } },
               },
             },
           },
@@ -61,7 +61,7 @@ export const getAgents = cachedForSeconds(
           id: user.id,
           name: user.username,
           title: user.title,
-          host: user.host?.name ?? "",
+          host: user.user_notifications?.host?.name ?? "",
           lastActive: user.user_notifications?.last_active?.toISOString(),
           leadUsername: user.lead_user?.username || undefined,
           latestLogId: user.user_notifications?.latest_log_id ?? "",
@@ -84,7 +84,7 @@ export const getHosts = cachedForSeconds(1, async (): Promise<Host[]> => {
           name: true,
           last_active: true,
           _count: {
-            select: { users: true },
+            select: { user_hosts: true },
           },
         },
       });
@@ -93,7 +93,7 @@ export const getHosts = cachedForSeconds(1, async (): Promise<Host[]> => {
     return hosts.map((host) => ({
       name: host.name,
       lastActive: host.last_active?.toISOString() ?? null,
-      agentCount: host._count.users,
+      agentCount: host._count.user_hosts,
     }));
   } catch (error) {
     console.error("Error fetching hosts from Naisys database:", error);

@@ -7,7 +7,7 @@ import { AgentRuntime, createAgentRuntime } from "./agentRuntime.js";
 import { UserService } from "./userService.js";
 
 /** Handles the multiplexing of multiple concurrent agents in the process */
-export class AgentRunner {
+export class AgentManager {
   runningAgents: AgentRuntime[] = [];
   runLoops: Promise<void>[] = [];
 

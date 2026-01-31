@@ -152,7 +152,7 @@ export function createHubClient(
   }
 
   /** Auth error messages from the hub that won't be fixed by retrying */
-  const AUTH_ERRORS = ["Invalid access key", "Missing runnerName"];
+  const AUTH_ERRORS = ["Invalid access key", "Missing hostName"];
 
   /** Returns a promise that resolves once a hub connection is established,
    *  or rejects if connection fails due to an auth/config error */

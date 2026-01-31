@@ -1,12 +1,6 @@
 import { DatabaseService } from "@naisys/database";
-import { HostService } from "../services/hostService.js";
 
-export function createMailAddress(
-  { usingDatabase }: DatabaseService,
-  hostService: HostService,
-) {
-  const { localHostId } = hostService;
-
+export function createMailAddress({ usingDatabase }: DatabaseService) {
   // Cache for multi-host check (reset per session)
   let multiHostCache: boolean | null = null;
 
@@ -48,8 +42,6 @@ export function createMailAddress(
   interface MatchedUser {
     id: string;
     username: string;
-    host_id: string | null;
-    host: { name: string } | null;
   }
 
   // Type for Prisma client or transaction client (both have users.findMany)
@@ -63,37 +55,24 @@ export function createMailAddress(
     identifier: string,
     tx: PrismaLike,
   ): Promise<ResolvedUser> {
-    // Parse username@host format
+    // Strip @host part if present (no longer needed for disambiguation)
     const atIndex = identifier.lastIndexOf("@");
-    let username: string;
-    let hostName: string | null = null;
-
-    if (atIndex > 0) {
-      username = identifier.slice(0, atIndex);
-      hostName = identifier.slice(atIndex + 1);
-    } else {
-      username = identifier;
-    }
+    const username = atIndex > 0 ? identifier.slice(0, atIndex) : identifier;
 
     // Find matching users
     const matchingUsers = await tx.users.findMany({
       where: {
         username,
         deleted_at: null,
-        ...(hostName ? { host: { name: hostName } } : {}),
       },
       select: {
         id: true,
         username: true,
-        host_id: true,
-        host: { select: { name: true } },
       },
     });
 
     if (matchingUsers.length === 0) {
-      throw hostName
-        ? `${username}@${hostName} not found`
-        : `${username} not found`;
+      throw `${username} not found`;
     }
 
     if (matchingUsers.length === 1) {
@@ -103,21 +82,7 @@ export function createMailAddress(
       };
     }
 
-    // Multiple users with same username - try to find one on localhost
-    const localUser = matchingUsers.find((u) => u.host_id === localHostId);
-
-    if (localUser) {
-      return {
-        id: localUser.id,
-        username: localUser.username,
-      };
-    }
-
-    // No local user and multiple matches - require username@host
-    const hostOptions = matchingUsers
-      .map((u) => `${u.username}@${u.host?.name || "unknown"}`)
-      .join(", ");
-    throw `Multiple users named '${username}' exist. Use one of: ${hostOptions}`;
+    throw `Multiple users named '${username}' exist.`;
   }
 
   return {

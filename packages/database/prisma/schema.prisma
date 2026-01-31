@@ -1,11 +1,3 @@
-// Multi-Machine Sync Notes (see docs/multi-machine-plan.md):
-// - Each host should only insert/update rows where `host_id` matches its own host
-// - Sync queries filter by `host_id`, so cross-host writes won't propagate correctly
-// - `updated_at` fields are used to sync data between NAISYS runners and the hub
-// - When the hub receives records from runners, it resets `updated_at` to its own timestamp
-// - This ensures "stale" records from late-joining runners are properly synced to other machines
-// - Catch-up queries use the hub's `updated_at` (not the original timestamp) to find missed records
-
 generator client {
   provider = "prisma-client"
   output   = "../src/generated/prisma"
@@ -29,11 +21,10 @@ model context_log {
   updated_at  DateTime    @updatedAt
   users       users       @relation("context_log_user", fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   run_session run_session @relation(fields: [user_id, run_id, session_id], references: [user_id, run_id, session_id], onDelete: NoAction, onUpdate: NoAction)
-  host        hosts?      @relation(fields: [host_id], references: [host_id])
+  host        hosts?      @relation(fields: [host_id], references: [id])
 
   @@index([id(sort: Desc)], map: "idx_context_log_id_desc") // ORDER BY id DESC in runsService.getContextLog
   @@index([user_id, run_id, session_id], map: "idx_context_log_run_session") // WHERE user_id, run_id, session_id in runsService.getContextLog
-  @@index([host_id, id], map: "idx_context_log_sync") // Append-only sync: WHERE host_id = X AND id > Y ORDER BY id
 }
 
 model costs {
@@ -53,69 +44,45 @@ model costs {
   updated_at         DateTime    @updatedAt
   users              users       @relation("costs_user", fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   run_session        run_session @relation(fields: [user_id, run_id, session_id], references: [user_id, run_id, session_id], onDelete: NoAction, onUpdate: NoAction)
-  host               hosts?      @relation(fields: [host_id], references: [host_id])
+  host               hosts?      @relation(fields: [host_id], references: [id])
 
   @@index([id(sort: Desc)], map: "idx_costs_id_desc") // ORDER BY id DESC in costTracker.findFirst for aggregation window check
   @@index([user_id], map: "idx_costs_user_id") // Optional WHERE user_id filter in aggregate/groupBy queries
   @@index([user_id, run_id, session_id, source, model], map: "idx_costs_aggregation_key") // Cost aggregation lookups in costTracker
-  @@index([host_id, updated_at], map: "idx_costs_sync") // Sync: WHERE host_id = X AND updated_at > Y ORDER BY updated_at
 }
 
 model mail_messages {
-  id           String            @id // ULID
-  from_user_id String
-  host_id      String? // Sender's host
-  subject      String
-  body         String
-  created_at   DateTime          @default(now())
-  updated_at   DateTime          @updatedAt
-  from_user    users             @relation("mail_messages_from_user", fields: [from_user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  host         hosts?            @relation(fields: [host_id], references: [host_id])
-  recipients   mail_recipients[]
-  status       mail_status[]
+  id                 String               @id // ULID
+  from_user_id       String
+  host_id            String? // Sender's host
+  subject            String
+  body               String
+  created_at         DateTime             @default(now())
+  updated_at         DateTime             @updatedAt
+  from_user          users                @relation("mail_messages_from_user", fields: [from_user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  host               hosts?               @relation(fields: [host_id], references: [id])
+  recipients         mail_recipients[]
+  user_notifications user_notifications[]
 
   @@index([id(sort: Desc)], map: "idx_mail_messages_id_desc") // ORDER BY id DESC in supervisor mailService pagination
   @@index([from_user_id], map: "idx_mail_messages_from_user_id") // WHERE from_user_id in sent messages filter
-  @@index([created_at(sort: Desc)], map: "idx_mail_messages_created_at") // ORDER BY created_at DESC in llmail.listMessages and searchMessages
-  @@index([host_id, id], map: "idx_mail_messages_sync") // Append-only sync: WHERE host_id = X AND id > Y ORDER BY id
-  @@index([updated_at], map: "idx_mail_messages_updated_at") // Catch-up: WHERE updated_at > Y AND host_id != X ORDER BY updated_at
+  @@index([created_at(sort: Desc)], map: "idx_mail_messages_created_at") // ORDER BY created_at DESC in listMessages and searchMessages
 }
 
 model mail_recipients {
-  id         String        @id // ULID
-  message_id String
-  user_id    String
-  host_id    String? // Sender's host (same as message)
-  type       String // "to", "cc", "bcc"
-  created_at DateTime      @default(now())
-  updated_at DateTime      @updatedAt
-  message    mail_messages @relation(fields: [message_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  user       users         @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  host       hosts?        @relation(fields: [host_id], references: [host_id])
-
-  @@index([message_id], map: "idx_mail_recipients_message_id") // JOIN from mail_messages includes
-  @@index([user_id, message_id(sort: Desc)], map: "idx_mail_recipients_user_id") // groupBy user_id + MAX(message_id) in supervisor agentService, also recipients.some({ user_id })
-  @@index([host_id, id], map: "idx_mail_recipients_sync") // Append-only sync: WHERE host_id = X AND id > Y ORDER BY id
-  @@index([updated_at], map: "idx_mail_recipients_updated_at") // Catch-up: WHERE updated_at > Y AND host_id != X ORDER BY updated_at
-}
-
-model mail_status {
   id          String        @id // ULID
   message_id  String
   user_id     String
-  host_id     String? // Recipient's host
+  type        String // "to", "cc", "bcc"
   read_at     DateTime?
   archived_at DateTime?
   created_at  DateTime      @default(now())
   updated_at  DateTime      @updatedAt
   message     mail_messages @relation(fields: [message_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   user        users         @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  host        hosts?        @relation(fields: [host_id], references: [host_id])
 
-  @@unique([message_id, user_id], map: "unq_mail_status_message_user") // findUnique by message+user, one status per user per message
-  @@index([user_id], map: "idx_mail_status_user_id") // Subquery: status.none({ user_id, read_at/archived_at }) in mail queries
-  @@index([host_id, updated_at], map: "idx_mail_status_sync") // Sync: WHERE host_id = X AND updated_at > Y ORDER BY updated_at
-  @@index([updated_at], map: "idx_mail_status_updated_at") // Catch-up: WHERE updated_at > Y AND host_id != X ORDER BY updated_at
+  @@index([message_id], map: "idx_mail_recipients_message_id") // JOIN from mail_messages includes
+  @@index([user_id, message_id(sort: Desc)], map: "idx_mail_recipients_user_id") // groupBy user_id + MAX(message_id) in supervisor agentService, also recipients.some({ user_id })
 }
 
 model users {
@@ -125,41 +92,38 @@ model users {
   agent_path         String              @unique(map: "unq_users_agent_path")
   lead_user_id       String?
   config             String              @default("{}")
-  host_id            String?
   created_at         DateTime            @default(now())
   updated_at         DateTime            @updatedAt
-  deleted_at         DateTime?           // Soft delete for deactivated agents
-  host               hosts?              @relation(fields: [host_id], references: [host_id])
+  deleted_at         DateTime? // Soft delete for deactivated agents
   lead_user          users?              @relation("lead_to_subagents", fields: [lead_user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   subagents          users[]             @relation("lead_to_subagents")
   mail_messages_sent mail_messages[]     @relation("mail_messages_from_user")
   mail_recipients    mail_recipients[]
-  mail_status        mail_status[]
   run_sessions       run_session[]
   context_logs       context_log[]       @relation("context_log_user")
   costs              costs[]             @relation("costs_user")
   user_notifications user_notifications?
-
-  @@unique([username, host_id], map: "unq_users_username_host") // Same username can exist on different hosts
-  @@index([host_id, updated_at], map: "idx_users_sync") // Sync: WHERE host_id = X AND updated_at > Y ORDER BY updated_at
-  @@index([updated_at], map: "idx_users_updated_at") // Catch-up: WHERE updated_at > Y AND host_id != X ORDER BY updated_at
-  @@index([lead_user_id, host_id], map: "idx_users_lead_lookup") // WHERE lead_user_id, host_id in subagent.getSubAgents
+  user_hosts         user_hosts[]
 }
 
 model user_notifications {
-  user_id       String    @id
-  host_id       String? // Same as user's host
-  latest_log_id String    @default("")
-  /**
-   * Not the same as modified date, for example an agent can receive mail while not being active
-   */
+  user_id        String         @id
+  latest_host_id String?
+  latest_log_id  String         @default("")
+  latest_mail_id String         @default("")
   last_active    DateTime?
-  updated_at     DateTime  @updatedAt
-  users          users     @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  host           hosts?    @relation(fields: [host_id], references: [host_id])
+  updated_at     DateTime       @updatedAt
+  users          users          @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  host           hosts?         @relation(fields: [latest_host_id], references: [id])
+  mail           mail_messages? @relation(fields: [latest_mail_id], references: [id])
+}
 
-  @@index([host_id, updated_at], map: "idx_user_notifications_sync") // Sync: WHERE host_id = X AND updated_at > Y ORDER BY updated_at
-  @@index([updated_at], map: "idx_user_notifications_updated_at") // Catch-up: WHERE updated_at > Y AND host_id != X ORDER BY updated_at
+model user_hosts {
+  user_id    String   @id
+  host_id    String
+  created_at DateTime @default(now())
+  users      users    @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  host       hosts    @relation(fields: [host_id], references: [id])
 }
 
 model run_session {
@@ -175,13 +139,12 @@ model run_session {
   created_at    DateTime      @default(now())
   updated_at    DateTime      @updatedAt
   users         users         @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  host          hosts?        @relation(fields: [host_id], references: [host_id])
+  host          hosts?        @relation(fields: [host_id], references: [id])
   context_logs  context_log[]
   costs         costs[]
 
   @@id([user_id, run_id, session_id])
   @@index([user_id, last_active(sort: Desc)], map: "idx_run_session_user_active") // WHERE user_id ORDER BY last_active DESC in supervisor runsService pagination
-  @@index([host_id, updated_at], map: "idx_run_session_sync") // Sync: WHERE host_id = X AND updated_at > Y ORDER BY updated_at
 }
 
 model schema_version {
@@ -191,36 +154,14 @@ model schema_version {
 }
 
 model hosts {
-  host_id            String               @id @map("host_id") // ULID - same column name as FK in other tables
+  id                 String               @id
   name               String               @unique(map: "unq_hosts_name") // NAISYS_HOSTNAME
   last_active        DateTime?
   created_at         DateTime             @default(now())
-  updated_at         DateTime             @updatedAt
-  users              users[]
   user_notifications user_notifications[]
   mail_messages      mail_messages[]
-  mail_recipients    mail_recipients[]
-  mail_status        mail_status[]
   run_sessions       run_session[]
   costs              costs[]
   context_logs       context_log[]
-  runners            runners[]
-
-  @@index([updated_at], map: "idx_hosts_updated_at") // Catch-up: WHERE updated_at > Y AND host_id != X ORDER BY updated_at
-}
-
-model runners {
-  id          String    @id // ULID
-  name        String    @unique(map: "unq_runners_name")
-  host_id     String // FK to hosts - which hub owns this runner
-  last_active DateTime?
-  created_at  DateTime  @default(now())
-  updated_at  DateTime  @updatedAt
-  host        hosts     @relation(fields: [host_id], references: [host_id])
-}
-
-model hub_sync_state {
-  id              String   @id // Hub: remote runner's host_id. Runner: hub URL hash
-  since_timestamp String // ISO timestamp of last synced data
-  updated_at      DateTime @updatedAt
+  user_hosts         user_hosts[]
 }

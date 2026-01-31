@@ -24,7 +24,7 @@ export interface TestDatabase {
  * Create an isolated test database with migrations applied.
  * Returns the database service and a cleanup function.
  *
- * @param name - Name prefix for the database (e.g., "runner-a", "hub")
+ * @param name - Name prefix for the database (e.g., "naisys-a", "hub")
  */
 export async function createTestDatabase(
   name: string,
@@ -58,25 +58,25 @@ export async function createTestDatabase(
 
 /**
  * Create a set of test databases for a full E2E test scenario.
- * Returns databases for two runners and one hub.
+ * Returns databases for two NAISYS instances and one hub.
  */
 export async function createTestDatabaseSet(): Promise<{
-  runnerA: TestDatabase;
-  runnerB: TestDatabase;
+  naisysA: TestDatabase;
+  naisysB: TestDatabase;
   hub: TestDatabase;
   cleanupAll: () => Promise<void>;
 }> {
-  const [runnerA, runnerB, hub] = await Promise.all([
-    createTestDatabase("runner-a", "naisys"),
-    createTestDatabase("runner-b", "naisys"),
+  const [naisysA, naisysB, hub] = await Promise.all([
+    createTestDatabase("naisys-a", "naisys"),
+    createTestDatabase("naisys-b", "naisys"),
     createTestDatabase("hub", "hub"),
   ]);
 
   const cleanupAll = async () => {
-    await Promise.all([runnerA.cleanup(), runnerB.cleanup(), hub.cleanup()]);
+    await Promise.all([naisysA.cleanup(), naisysB.cleanup(), hub.cleanup()]);
   };
 
-  return { runnerA, runnerB, hub, cleanupAll };
+  return { naisysA, naisysB, hub, cleanupAll };
 }
 
 /**
@@ -88,9 +88,9 @@ export async function seedHost(
   name: string,
 ): Promise<void> {
   await prisma.hosts.upsert({
-    where: { host_id: hostId },
+    where: { id: hostId },
     update: { name },
-    create: { host_id: hostId, name },
+    create: { id: hostId, name },
   });
 }
 
@@ -101,17 +101,15 @@ export async function seedUser(
   prisma: PrismaClient,
   id: string,
   username: string,
-  hostId: string,
 ): Promise<void> {
   await prisma.users.upsert({
     where: { id },
-    update: { username, host_id: hostId },
+    update: { username },
     create: {
       id,
       username,
       title: "Test User",
       agent_path: `/agents/${username}.yaml`,
-      host_id: hostId,
     },
   });
 }
@@ -125,12 +123,10 @@ export async function resetDatabase(prisma: PrismaClient): Promise<void> {
   await prisma.context_log.deleteMany();
   await prisma.run_session.deleteMany();
   await prisma.costs.deleteMany();
-  await prisma.mail_status.deleteMany();
   await prisma.mail_recipients.deleteMany();
   await prisma.mail_messages.deleteMany();
   await prisma.user_notifications.deleteMany();
-  await prisma.hub_sync_state.deleteMany();
-  await prisma.runners.deleteMany();
+  await prisma.user_hosts.deleteMany();
   await prisma.users.deleteMany();
   await prisma.hosts.deleteMany();
 }

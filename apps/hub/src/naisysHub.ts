@@ -9,14 +9,11 @@ import { createHubLogService } from "./handlers/hubLogService.js";
 import { createHubRunService } from "./handlers/hubRunService.js";
 import { createHubUserService } from "./handlers/hubUserService.js";
 import { createHubConfig } from "./hubConfig.js";
-import { createInterhubClient } from "./interhub/interhubClient.js";
-import { createInterhubClientLog } from "./interhub/interhubClientLog.js";
-import { createInterhubServer } from "./interhub/interhubServer.js";
 import { createAgentRegistrar } from "./services/agentRegistrar.js";
 import { createHostService } from "./services/hostService.js";
 import { createHubServerLog } from "./services/hubServerLog.js";
-import { createRunnerRegistrar } from "./services/runnerRegistrar.js";
-import { createRunnerServer } from "./services/runnerServer.js";
+import { createHostRegistrar } from "./services/hostRegistrar.js";
+import { createNaisysServer } from "./services/naisysServer.js";
 
 /**
  * Starts the Hub server with sync service.
@@ -43,7 +40,7 @@ export async function startHub(
       process.exit(1);
     }
 
-    // Schema version for sync protocol - should match runner
+    // Schema version for sync protocol - should match NAISYS instance
     const dbService = await createDatabaseService(
       process.env.NAISYS_FOLDER || "",
       "hub",
@@ -51,18 +48,17 @@ export async function startHub(
 
     // Create hub config and host service (hub owns its host identity)
     const hubConfig = createHubConfig();
-    const hostService = await createHostService(hubConfig, dbService);
+    const hostService = await createHostService(dbService);
 
     // Seed database with agent configs from yaml files
     await createAgentRegistrar(
       hubConfig,
       dbService,
-      hostService,
       startupAgentPath,
     );
 
-    // Create runner registrar for tracking runner connections
-    const runnerRegistrar = createRunnerRegistrar(dbService, hostService);
+    // Create host registrar for tracking NAISYS instance connections
+    const hostRegistrar = createHostRegistrar(dbService);
 
     // Create shared HTTP server and Socket.IO instance
     const httpServer = http.createServer();
@@ -73,32 +69,25 @@ export async function startHub(
       },
     });
 
-    // Create runner server on /runners namespace
-    const runnerServer = createRunnerServer(
-      io.of("/runners"),
+    // Create NAISYS server on /naisys namespace
+    const naisysServer = createNaisysServer(
+      io.of("/naisys"),
       hubAccessKey,
       logService,
-      runnerRegistrar,
+      hostRegistrar,
     );
 
-    // Register hub user service for user_list requests from runners
-    createHubUserService(runnerServer, dbService, hostService, logService);
+    // Register hub user service for user_list requests from NAISYS instances
+    createHubUserService(naisysServer, dbService, logService);
 
     // Register hub run service for session_create/session_increment requests
-    createHubRunService(runnerServer, dbService, hostService, logService);
+    createHubRunService(naisysServer, dbService, logService);
 
-    // Register hub log service for log_write events from runners
-    createHubLogService(runnerServer, dbService, hostService, logService);
+    // Register hub log service for log_write events from NAISYS instances
+    createHubLogService(naisysServer, dbService, logService);
 
-    // Register hub heartbeat service for runner heartbeat tracking
-    createHubHeartbeatService(runnerServer, dbService, logService);
-
-    // Create interhub server on /interhub namespace
-    const interhubServer = createInterhubServer(
-      io.of("/interhub"),
-      hubAccessKey,
-      logService,
-    );
+    // Register hub heartbeat service for NAISYS instance heartbeat tracking
+    createHubHeartbeatService(naisysServer, dbService, logService);
 
     // Start listening
     await new Promise<void>((resolve, reject) => {
@@ -109,14 +98,6 @@ export async function startHub(
         resolve();
       });
     });
-
-    // Start interhub client for hub-to-hub federation
-    const hubClientLog = createInterhubClientLog();
-    const interhubClient = createInterhubClient(
-      hubConfig,
-      hostService,
-      hubClientLog,
-    );
 
     console.log(
       `[Hub] Running on ws://localhost:${hubPort}, logs written to file`,

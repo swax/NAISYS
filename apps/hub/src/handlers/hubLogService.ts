@@ -2,23 +2,20 @@ import { DatabaseService, monotonicFactory } from "@naisys/database";
 import { HubEvents, LogWriteRequestSchema } from "@naisys/hub-protocol";
 import { HostService } from "../services/hostService.js";
 import { HubServerLog } from "../services/hubServerLog.js";
-import { RunnerServer } from "../services/runnerServer.js";
+import { NaisysServer } from "../services/naisysServer.js";
 
-/** Handles log_write events from runners (fire-and-forget) */
+/** Handles log_write events from NAISYS instances (fire-and-forget) */
 export function createHubLogService(
-  runnerServer: RunnerServer,
+  naisysServer: NaisysServer,
   dbService: DatabaseService,
-  hostService: HostService,
   logService: HubServerLog,
 ) {
-  const { localHostId } = hostService;
-
   // Use monotonic ULID to preserve strict ordering within a batch
   const monotonicUlid = monotonicFactory();
 
-  runnerServer.registerEvent(
+  naisysServer.registerEvent(
     HubEvents.LOG_WRITE,
-    async (runnerId: string, data: unknown) => {
+    async (hostId: string, data: unknown) => {
       try {
         const parsed = LogWriteRequestSchema.parse(data);
 
@@ -33,7 +30,7 @@ export function createHubLogService(
                 user_id: entry.userId,
                 run_id: entry.runId,
                 session_id: entry.sessionId,
-                host_id: localHostId,
+                host_id: hostId,
                 role: entry.role,
                 source: entry.source,
                 type: entry.type,
@@ -72,7 +69,7 @@ export function createHubLogService(
         });
       } catch (error) {
         logService.error(
-          `[HubLogService] Error processing log_write from runner ${runnerId}: ${error}`,
+          `[HubLogService] Error processing log_write from host ${hostId}: ${error}`,
         );
       }
     },

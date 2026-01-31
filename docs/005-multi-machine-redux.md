@@ -28,15 +28,25 @@ The current multi-machine architecture (doc 001) works but is too complicated to
 
 ## New Architecture
 
+### Nomenclature
+
+| Term              | Meaning                                                                                    |
+| ----------------- | ------------------------------------------------------------------------------------------ |
+| **Hub**           | Central server (`naisys-hub`). Owns the database, controls what runs where                 |
+| **NAISYS instance** | A `naisys` process that connects to the hub as a client. Runs multiple agents via its agent manager. No local database |
+| **Client**        | Synonym for NAISYS instance when emphasizing the hub connection                            |
+| **Host**          | Database concept: a registered NAISYS instance in the `hosts` table                        |
+| **Agent manager** | Component within a NAISYS instance that manages running agents (`AgentManager`)            |
+
 ### Core Principles
 
-1. **Hub is the authority** - In multi-machine mode, the hub owns the database and controls what runs on runners. Runners are lightweight execution environments.
-2. **Local mode is ephemeral** - A standalone runner has no database, no Prisma, no SQLite. Config-file-driven, in-memory data structures, simple and fast.
-3. **No shared DB schema** - The `@naisys/database` package is hub-only. Runner has no database dependency whatsoever. Runner talks to hub via WebSocket API.
+1. **Hub is the authority** - In multi-machine mode, the hub owns the database and controls what runs on NAISYS instances. Instances are lightweight execution environments.
+2. **Local mode is ephemeral** - A standalone NAISYS instance has no database, no Prisma, no SQLite. Config-file-driven, in-memory data structures, simple and fast.
+3. **No shared DB schema** - The `@naisys/database` package is hub-only. NAISYS has no database dependency whatsoever. It talks to hub via WebSocket API.
 4. **No multi-mastering** - One source of truth per deployment. Hub DB for multi-machine, in-memory for local.
 5. **Explicit control model** - Either "local controlled" (standalone, ephemeral) or "hub controlled" (persistent, managed).
-6. **Runners table replaces hosts** - Hub has a `runners` table that runners self-register into on first connection. A `user_runners` table maps which users (agents) can run on which runners. A runner is a naisys process instance - typically one per machine, but multiple instances on the same machine are supported.
-7. **Hub routes agent starts** - In hub mode, `ns-agent start` sends a request to the hub. Hub picks the first available runner the user is assigned to and pushes `agent.start` to that runner. The target may be the requesting runner or a different one.
+6. **Hosts identify NAISYS instances** - Each NAISYS instance is assigned a hostname and self-registers into the existing `hosts` table on first connection. A `user_hosts` table maps which users (agents) can run on which hosts. If a user has no `user_hosts` entries, they can run on any host. A host is a naisys process instance - typically one per machine, but multiple instances on the same machine are supported.
+7. **Hub routes agent starts** - In hub mode, `ns-agent start` sends a request to the hub. Hub picks the first available host the user is assigned to (or any host if unassigned) and pushes `agent.start` to that host. The target may be the requesting instance or a different one.
 
 ### Deployment Modes
 
@@ -66,30 +76,14 @@ LOCAL MODE:                          HUB-CONTROLLED MODE:
 │  No persistence      │              │  └─────┬─────┘                 │
 │  No database         │              └────────┼───────────────────────┘
 │  No Prisma/SQLite    │                       │
-└─────────────────────┘                 ┌──────┼──────┐
-                                        │      │      │
-                                   ┌────┴──┐ ┌─┴───┐ ┌┴──────┐
-                                   │Runner │ │Run- │ │Runner │
-                                   │(thin) │ │ner  │ │(thin) │
-                                   │no DB  │ │     │ │no DB  │
-                                   └───────┘ └─────┘ └───────┘
+└─────────────────────┘               ┌────────┼────────┐
+                                      │        │        │
+                                 ┌────┴────┐ ┌─┴─────┐ ┌┴────────┐
+                                 │ naisys  │ │naisys │ │ naisys  │
+                                 │(client) │ │(cli-  │ │(client) │
+                                 │ no DB   │ │ ent)  │ │ no DB   │
+                                 └─────────┘ └───────┘ └─────────┘
 ```
-
-### Future: Hub-to-Hub Federation
-
-```
-┌─────────┐         ┌─────────┐
-│  Hub A  │◄───────►│  Hub B  │    Hubs sync databases with each other
-│ (team1) │         │ (team2) │    Each hub is authoritative for its runners
-│  + DB   │         │  + DB   │    Supervisor per hub shows its own network
-└────┬────┘         └────┬────┘    Reuses existing sync/catchup protocol
-     │                   │         (moved from runner→hub to hub→hub)
-  Runners A           Runners B
-```
-
-Federation moves to the hub level. Each hub is authoritative for its runners. Hubs would sync with each other using a purpose-built protocol. The old runner-to-hub sync code was deleted rather than relocated (see Decision 10).
-
-**Not in scope for initial migration.** Interhub Socket.IO namespaces and connection scaffolding have been created (`interhubServer.ts`, `interhubClient.ts`, `interhubConnection.ts`), but no sync protocol is implemented yet.
 
 ---
 
@@ -97,7 +91,7 @@ Federation moves to the hub level. Each hub is authoritative for its runners. Hu
 
 ### Design
 
-Local mode has **no database, no Prisma, no SQLite**. The naisys runner drops the `@naisys/database` dependency entirely. All state is in-memory data structures that exist only for the lifetime of the process.
+Local mode has **no database, no Prisma, no SQLite**. NAISYS drops the `@naisys/database` dependency entirely. All state is in-memory data structures that exist only for the lifetime of the process.
 
 - Agent configs loaded from yaml files
 - Multiple agents run in the same process
@@ -142,43 +136,42 @@ In local mode, services that depend on the database either don't exist or are re
 
 ### Design
 
-Runner connects to hub via WebSocket. All data operations go through the hub API. Runner has no local database. The hub owns the database, manages all persistent state, and controls which agents run on which runners.
+NAISYS instance connects to hub via WebSocket as a client. All data operations go through the hub API. The instance has no local database. The hub owns the database, manages all persistent state, and controls which agents run on which instances.
 
-### Hub Database: Runners & Assignment
+### Hub Database: Hosts & Assignment
 
-The hub database has two tables for runner management:
+The hub database uses the existing `hosts` table for NAISYS instance tracking, plus a `user_hosts` mapping table:
 
 ```
-runners
-  id          String  @id       // ULID
-  name        String  @unique   // e.g., "runner-east-1"
-  last_active DateTime?         // Updated from heartbeat
-  updated_at  DateTime @updatedAt
+hosts
+  id          String    @id       // ULID
+  name        String    @unique   // NAISYS_HOSTNAME
+  last_active DateTime?           // Updated from heartbeat
+  created_at  DateTime  @default(now())
 
-user_runners
-  user_id     String            // FK to users
-  runner_id   String            // FK to runners
-  @@id([user_id, runner_id])    // Composite PK
+user_hosts
+  user_id     String    @id       // FK to users
+  host_id     String              // FK to hosts
+  created_at  DateTime  @default(now())
 ```
 
-- Both hub and runner have `HUB_ACCESS_KEY` in their `.env` files. If they match, the connection is accepted
-- Runners are not pre-registered. On first `runner.register`, hub creates the runner entry automatically
-- Users (agents) are assigned to one or more runners via `user_runners`
-- On `runner.register`, hub validates the access key, auto-creates the runner if new, and returns the configs for users assigned to that runner
-- A user assigned to multiple runners can be started on any of them (hub picks first available)
+- Both hub and NAISYS instance have `HUB_ACCESS_KEY` in their `.env` files. If they match, the connection is accepted
+- Hosts are not pre-registered. On first connection, hub creates the host entry automatically using the instance's hostname
+- Users (agents) can be assigned to specific hosts via `user_hosts`. If a user has no `user_hosts` entries, they can run on any host
+- On connection, hub validates the access key, auto-creates the host if new, and returns the configs for users assigned to (or allowed on) that host
 
 ### Agent Start Flow (Hub Mode)
 
 When an agent calls `ns-agent start <username>`:
 
 ```
-1. Runner sends agent.start request to hub
+1. NAISYS instance sends agent.start request to hub
 2. Hub looks up the user
-3. Hub queries user_runners for assigned runners
-4. Hub picks the first connected runner that has capacity
-   (could be the same runner or a different one)
-5. Hub pushes agent.start { userId, config, taskDescription } to target runner
-6. Target runner starts the agent locally
+3. Hub queries user_hosts for assigned hosts (if none, all hosts are eligible)
+4. Hub picks the first connected eligible host that has capacity
+   (could be the same instance or a different one)
+5. Hub pushes agent.start { userId, config, taskDescription } to target instance
+6. Target instance starts the agent locally via its agent manager
 ```
 
 In local mode, `ns-agent start` just starts the agent directly in-process. No hub involved.
@@ -187,10 +180,10 @@ In local mode, `ns-agent start` just starts the agent directly in-process. No hu
 
 Uses Socket.IO's native event + acknowledgement pattern over the existing WebSocket connection. Each API method is a named Socket.IO event. No custom JSON-RPC framing needed -- Socket.IO handles correlation and callbacks natively.
 
-**Request-response** (runner → hub, awaits ack):
+**Request-response** (client → hub, awaits ack):
 
 ```typescript
-// Runner side: hubClient.sendRequest<T>(event, payload) returns Promise<T>
+// Client side: hubClient.sendRequest<T>(event, payload) returns Promise<T>
 // Uses Socket.IO's built-in acknowledgement callbacks for correlation
 const response = await hubClient.sendRequest<UserListResponse>(
   HubEvents.USER_LIST,
@@ -198,86 +191,86 @@ const response = await hubClient.sendRequest<UserListResponse>(
 );
 ```
 
-**Fire-and-forget** (runner → hub, no ack):
+**Fire-and-forget** (client → hub, no ack):
 
 ```typescript
-// Runner side: hubClient.sendMessage(event, payload)
+// Client side: hubClient.sendMessage(event, payload)
 hubClient.sendMessage("log.write", { entries: [...] });
 ```
 
-**Hub-pushed events** (hub → runner):
+**Hub-pushed events** (hub → client):
 
 ```typescript
-// Hub side: runnerConnection.emit(event, data)
-// Runner side: hubClient.registerEvent(event, handler)
+// Hub side: naisysConnection.emit(event, data)
+// Client side: hubClient.registerEvent(event, handler)
 ```
 
-Hub handlers are registered on `runnerServer` as named event handlers with Zod schema validation. Each handler receives `(runnerId, data, ack?)` and calls `ack(response)` for request-response or omits it for push events.
+Hub handlers are registered on `naisysServer` as named event handlers with Zod schema validation. Each handler receives `(hostId, data, ack?)` and calls `ack(response)` for request-response or omits it for push events.
 
 ### API Methods
 
 #### Fire-and-Forget (buffered, batched)
 
-High-frequency writes that don't need confirmation. Runner buffers and sends periodically (e.g., every 1-2 seconds or when buffer is full).
+High-frequency writes that don't need confirmation. Client buffers and sends periodically (e.g., every 1-2 seconds or when buffer is full).
 
 | Method       | Data                               | Notes                                                                |
 | ------------ | ---------------------------------- | -------------------------------------------------------------------- |
 | `log.write`  | context_log rows                   | Buffered, sent in batches                                            |
 | `cost.write` | costs rows                         | Buffered, sent in batches                                            |
-| `heartbeat`  | runnerId, userId, runId, sessionId | Single call replaces both host and run last_active. Send every 5-10s |
+| `heartbeat`  | hostId, userId, runId, sessionId   | Single call replaces both host and run last_active. Send every 5-10s |
 
 #### Request-Response (must wait for reply)
 
 | Method              | Params                                      | Returns            | Notes                                                                                                                                                                |
 | ------------------- | ------------------------------------------- | ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Registration**    |                                             |                    |                                                                                                                                                                      |
-| `runner.register`   | runnerName, accessKey                       | runnerId           | On connect (handled during Socket.IO auth handshake). Hub validates accessKey, auto-creates runner if name is new. ✅ Done                                           |
-| `user.list`         | -                                           | users[]            | Returns all users assigned to this runner with full configs (username, configYaml, agentPath). Separate from registration to allow reload without reconnect. ✅ Done |
+| (auth handshake)    | hostname, accessKey                         | hostId             | Handled during Socket.IO auth middleware. Hub validates accessKey, auto-creates host if name is new. ✅ Done                                                         |
+| `user.list`         | -                                           | users[]            | Returns all users assigned to (or allowed on) this host with full configs (username, configYaml, agentPath). Separate from registration to allow reload without reconnect. ✅ Done |
 | **Session**         |                                             |                    |                                                                                                                                                                      |
 | `session.create`    | userId, modelName                           | runId, sessionId   | On agent start                                                                                                                                                       |
 | `session.increment` | userId, runId                               | sessionId          | On session compact                                                                                                                                                   |
 | **Mail**            |                                             |                    |                                                                                                                                                                      |
-| `mail.send`         | fromUserId, toUsernames[], subject, body    | success/error      | Hub resolves usernames, creates records, notifies target runners                                                                                                     |
-| `mail.list`         | userId, filter?                             | raw message data   | Hub queries, returns raw data. Runner formats for display                                                                                                            |
+| `mail.send`         | fromUserId, toUsernames[], subject, body    | success/error      | Hub resolves usernames, creates records, notifies target instances                                                                                                   |
+| `mail.list`         | userId, filter?                             | raw message data   | Hub queries, returns raw data. Client formats for display                                                                                                            |
 | `mail.read`         | userId, messageId                           | raw message data   | Hub marks as read, returns raw content                                                                                                                               |
 | `mail.archive`      | userId, messageIds[]                        | success/error      |                                                                                                                                                                      |
 | `mail.search`       | userId, terms, flags                        | raw results        |                                                                                                                                                                      |
-| `mail.users`        | -                                           | raw user data      | Runner formats into table/hierarchy                                                                                                                                  |
+| `mail.users`        | -                                           | raw user data      | Client formats into table/hierarchy                                                                                                                                  |
 | `mail.unread`       | userId                                      | unread message IDs | For notification checking                                                                                                                                            |
 | **Cost**            |                                             |                    |                                                                                                                                                                      |
-| `cost.report`       | userId, args                                | raw cost data      | For ns-cost command. Runner formats                                                                                                                                  |
+| `cost.report`       | userId, args                                | raw cost data      | For ns-cost command. Client formats                                                                                                                                  |
 | **Subagent**        |                                             |                    |                                                                                                                                                                      |
 | `agent.subagents`   | userId                                      | agent list         | For ns-agent list                                                                                                                                                    |
-| `agent.start`       | fromUserId, targetUsername, taskDescription | success/error      | Hub resolves user, finds assigned runner via user_runners, pushes agent.start to target runner                                                                       |
+| `agent.start`       | fromUserId, targetUsername, taskDescription | success/error      | Hub resolves user, finds eligible host via user_hosts (or any host if unassigned), pushes agent.start to target instance                                             |
 
 ### Hub-Pushed Events
 
-Hub pushes events to runners over the WebSocket (no polling needed):
+Hub pushes events to NAISYS instances over the WebSocket (no polling needed):
 
-| Event            | Data                            | Trigger                                                             |
-| ---------------- | ------------------------------- | ------------------------------------------------------------------- |
-| `mail.received`  | recipientUserIds[]              | Hub processes a mail.send from any runner                           |
-| `agent.start`    | userId, config, taskDescription | Hub or supervisor requests agent start                              |
-| `agent.stop`     | userId, reason                  | Hub or supervisor requests agent stop                               |
-| `agent.pause`    | userId?, reason                 | Pause agent(s). userId omitted = pause all. See Agent Pausing below |
-| `agent.resume`   | userId?, reason                 | Resume agent(s). userId omitted = resume all                        |
-| `config.updated` | userId, newConfig               | Agent config changed via supervisor                                 |
+| Event            | Data                            | Trigger                                                                |
+| ---------------- | ------------------------------- | ---------------------------------------------------------------------- |
+| `mail.received`  | recipientUserIds[]              | Hub processes a mail.send from any instance                            |
+| `agent.start`    | userId, config, taskDescription | Hub or supervisor requests agent start                                 |
+| `agent.stop`     | userId, reason                  | Hub or supervisor requests agent stop                                  |
+| `agent.pause`    | userId?, reason                 | Pause agent(s). userId omitted = pause all. See Agent Pausing below    |
+| `agent.resume`   | userId?, reason                 | Resume agent(s). userId omitted = resume all                           |
+| `config.updated` | userId, newConfig               | Agent config changed via supervisor                                    |
 
 ### Agent Pausing
 
-Pausing is a first-class feature of the runner. An agent can be paused by multiple independent triggers. The agent resumes only when all pause reasons are cleared.
+Pausing is a first-class feature of the NAISYS instance. An agent can be paused by multiple independent triggers. The agent resumes only when all pause reasons are cleared.
 
 **Pause triggers:**
 
-| Trigger            | Who pauses                                            | Who resumes                                                         |
-| ------------------ | ----------------------------------------------------- | ------------------------------------------------------------------- |
-| **Cost overrun**   | Hub pushes `agent.pause` when cost limit exceeded     | Hub pushes `agent.resume` when limit clears (new day, limit raised) |
-| **Hub disconnect** | Runner self-pauses all agents on WebSocket disconnect | Runner self-resumes on reconnect                                    |
-| **Hub command**    | Hub pushes `agent.pause` (manual via supervisor)      | Hub pushes `agent.resume` (manual via supervisor)                   |
+| Trigger            | Who pauses                                                   | Who resumes                                                         |
+| ------------------ | ------------------------------------------------------------ | ------------------------------------------------------------------- |
+| **Cost overrun**   | Hub pushes `agent.pause` when cost limit exceeded            | Hub pushes `agent.resume` when limit clears (new day, limit raised) |
+| **Hub disconnect** | Instance self-pauses all agents on WebSocket disconnect      | Instance self-resumes on reconnect                                  |
+| **Hub command**    | Hub pushes `agent.pause` (manual via supervisor)             | Hub pushes `agent.resume` (manual via supervisor)                   |
 
-**Runner-side behavior:**
+**Instance-side behavior:**
 
-- Runner tracks a set of active pause reasons per agent (e.g., `{ "cost_overrun", "hub_disconnect" }`)
+- Instance tracks a set of active pause reasons per agent (e.g., `{ "cost_overrun", "hub_disconnect" }`)
 - Agent is paused if the set is non-empty
 - Adding a reason pauses; removing a reason only resumes if no other reasons remain
 - When paused, the agent's command loop sleeps (no LLM calls, no commands)
@@ -285,7 +278,7 @@ Pausing is a first-class feature of the runner. An agent can be paused by multip
 
 **Cost tracking flow:**
 
-1. Runner sends `cost.write` batches to hub (fire-and-forget)
+1. Instance sends `cost.write` batches to hub (fire-and-forget)
 2. Hub processes writes, updates DB, checks limits
 3. If limit exceeded: hub pushes `agent.pause { reason: "cost_overrun" }`
 4. When limit clears: hub pushes `agent.resume { reason: "cost_overrun" }`
@@ -294,62 +287,61 @@ No separate `cost.check` call. No network round-trip on the LLM hot path.
 
 **Hub disconnect flow:**
 
-1. Runner detects WebSocket disconnect
-2. Runner adds `"hub_disconnect"` pause reason to all agents
+1. Instance detects WebSocket disconnect
+2. Instance adds `"hub_disconnect"` pause reason to all agents
 3. All agents pause (no LLM calls while disconnected)
 4. Fire-and-forget data continues to buffer
-5. On reconnect: runner re-registers, flushes buffer, removes `"hub_disconnect"` reason
+5. On reconnect: instance re-registers, flushes buffer, removes `"hub_disconnect"` reason
 6. Agents resume (unless other pause reasons exist, e.g., cost overrun)
 
 ### Hub-Side Implementation
 
-Hub API handlers are registered as Socket.IO event handlers on `runnerServer`. Each handler is a service that registers its events during hub startup. DB query logic moves from runner services to hub services.
+Hub API handlers are registered as Socket.IO event handlers on `naisysServer`. Each handler is a service that registers its events during hub startup. DB query logic moves from NAISYS services to hub services.
 
 ```
 apps/hub/src/
   services/
-    runnerServer.ts          # Socket.IO server for runner connections (/runners namespace) ✅
-    runnerConnection.ts      # Per-runner connection handler ✅
-    runnerRegistrar.ts       # Tracks connected runners in DB ✅
-    hubUserService.ts        # Handles user_list requests from runners ✅
+    naisysServer.ts          # Socket.IO server for NAISYS connections (/naisys namespace) ✅
+    naisysConnection.ts      # Per-instance connection handler ✅
+    hostRegistrar.ts         # Tracks connected instances in DB (hosts table) ✅
     agentRegistrar.ts        # Seeds DB with agent configs from yaml ✅
     hostService.ts           # Hub host identity and DB record ✅
     hubServerLog.ts          # Logging ✅
+  handlers/
+    hubUserService.ts        # Handles user_list requests from instances ✅
+    hubHeartbeatService.ts   # Processes heartbeat events ✅
+    hubRunService.ts         # session.create, session.increment ✅
+    hubLogService.ts         # log.write processing ✅
     hubMailService.ts        # mail.send, mail.list, mail.read, etc. (TODO)
-    hubSessionService.ts     # session.create, session.increment (TODO)
     hubCostService.ts        # cost.write processing, cost.status push (TODO)
     hubAgentService.ts       # agent.subagents, agent.start routing (TODO)
-  interhub/
-    interhubServer.ts        # Socket.IO server for hub-to-hub (/interhub namespace) ✅
-    interhubClient.ts        # Client for connecting to peer hubs ✅
-    interhubConnection.ts    # Single hub-to-hub connection handler ✅
-    interhubClientLog.ts     # Logging ✅
 ```
 
-Hub handlers use Prisma queries - essentially the same queries currently in runner services. The logic moves; the queries stay the same. No separate `hubApiServer.ts` router needed -- Socket.IO event registration handles routing natively.
+Hub services use Prisma queries - essentially the same queries currently in NAISYS services. The logic moves; the queries stay the same. No separate `hubApiServer.ts` router needed -- Socket.IO event registration handles routing natively.
 
 ### Connection Lifecycle
 
 ```
-Runner startup (hub mode):
-  1. Connect to hub WebSocket
-  2. Send runner.register { runnerName, accessKey }
+NAISYS startup (hub mode):
+  1. Connect to hub WebSocket (/naisys namespace)
+  2. Auth handshake: { hostname, accessKey }
      -> hub validates accessKey matches its own HUB_ACCESS_KEY
-     -> if invalid: error + disconnect, runner startup fails
-     -> if runner name is new: hub creates runner entry
-     -> hub returns runnerId + list of assigned agents with full configs
-  3. For each agent: call session.create -> receive runId, sessionId
-  4. Start agents, begin heartbeat interval
-  5. Agents run normally, all data operations go through hub API
-  6. Hub may push additional agent.start / agent.stop at any time
+     -> if invalid: error + disconnect, NAISYS startup fails
+     -> if hostname is new: hub creates host entry in hosts table
+     -> hub returns hostId
+  3. Request user.list -> receive assigned/eligible agents with full configs
+  4. For each agent: call session.create -> receive runId, sessionId
+  5. Start agents via agent manager, begin heartbeat interval
+  6. Agents run normally, all data operations go through hub API
+  7. Hub may push additional agent.start / agent.stop at any time
 
 Hub disconnect:
-  1. Runner pauses all agents (adds "hub_disconnect" pause reason)
+  1. Instance pauses all agents (adds "hub_disconnect" pause reason)
   2. Fire-and-forget writes continue to buffer in memory (bounded)
   3. Reconnect with exponential backoff
   4. On reconnect: re-register (idempotent), flush buffer, remove "hub_disconnect" pause
   5. Agents resume (unless other pause reasons exist)
-  6. No catch-up needed - hub is the source of truth, runner has no state to sync
+  6. No catch-up needed - hub is the source of truth, instance has no state to sync
 ```
 
 ### Buffering & Resilience
@@ -370,45 +362,44 @@ Note: Since agents pause on hub disconnect, the buffer mostly holds data written
 
 ### Phase 1: Foundation ✅ Done
 
-Establish the new architecture: remove sync, set up hub/runner separation, create shared infrastructure.
+Establish the new architecture: remove sync, set up hub/client separation, create shared infrastructure.
 
 **What was done:**
 
 1. ✅ Removed multi-master sync infrastructure (~2,800 lines): `hubSyncServer.ts`, `hubSyncClient.ts`, `syncUtils.ts`, `hubForwardService.ts`, 3 integration tests
 2. ✅ Replaced `isMultiMachineMode` with `isHubMode`
-3. ✅ Renamed `agentManager` → `agentRunner`, `naisysConnection` → `runnerConnection`, `hubServer` → `runnerServer`
+3. ✅ Renamed `agentRunner` → `agentManager`, `naisysRegistrar` → `hostRegistrar`
 4. ✅ Created `@naisys/common` package with shared agent config schemas and loader
-5. ✅ Split hub into `/runners` and `/interhub` Socket.IO namespaces
-6. ✅ Created `runnerServer.ts`, `runnerConnection.ts`, `runnerRegistrar.ts` on hub
-7. ✅ Added `runners` table to database
-8. ✅ Created `agentRegistrar.ts` on hub (seeds DB from yaml)
-9. ✅ Hub startup requires `HUB_ACCESS_KEY`, runner authenticates with it
-10. ✅ Runner connects to single hub on startup (multiple URLs are fallback, not multi-hub)
-11. ✅ Added `sendRequest<T>()` to `hubClient` for Promise-based request/response
-12. ✅ Scaffolded interhub client/server/connection for future hub-to-hub federation
+5. ✅ Created `naisysServer.ts`, `naisysConnection.ts`, `hostRegistrar.ts` on hub
+6. ✅ NAISYS instances register as hosts in the existing `hosts` table; added `user_hosts` mapping table
+7. ✅ Created `agentRegistrar.ts` on hub (seeds DB from yaml)
+8. ✅ Hub startup requires `HUB_ACCESS_KEY`, NAISYS instance authenticates with it
+9. ✅ NAISYS connects to single hub on startup (multiple URLs are fallback, not multi-hub)
+10. ✅ Added `sendRequest<T>()` to `hubClient` for Promise-based request/response
+11. ✅ Removed interhub scaffolding (`interhubServer.ts`, `interhubClient.ts`, `interhubConnection.ts`, `interhubClientLog.ts`) - hub-to-hub federation is out of scope
 
-**Deviation from original plan:** The original plan had separate phases for "Hub API Layer" and "Runner Hub API Client." In practice, these were done together incrementally. Socket.IO's native event + ack pattern replaced the planned JSON-RPC protocol, eliminating the need for a separate `hubApiServer.ts` router or `hubApiClient.ts`. The existing `hubClient.sendRequest()` and `runnerServer.registerEvent()` serve these roles.
+**Deviation from original plan:** The original plan had separate phases for "Hub API Layer" and "Runner Hub API Client." In practice, these were done together incrementally. Socket.IO's native event + ack pattern replaced the planned JSON-RPC protocol, eliminating the need for a separate `hubApiServer.ts` router or `hubApiClient.ts`. The existing `hubClient.sendRequest()` and `naisysServer.registerEvent()` serve these roles.
 
-### Phase 2: Remove DB Dependencies from Runner (In Progress)
+### Phase 2: Remove DB Dependencies from NAISYS (In Progress)
 
-Replace each runner service's DB usage with hub API calls (in hub mode) or in-memory equivalents (in local mode). Use `isHubMode` branching in each service. Do this one service at a time.
+Replace each NAISYS service's DB usage with hub API calls (in hub mode) or in-memory equivalents (in local mode). Use `isHubMode` branching in each service. Do this one service at a time.
 
-**Goal:** Runner operates without a local database.
+**Goal:** NAISYS operates without a local database.
 
 **Approach:** Each service uses `isHubMode` to branch between hub API calls and local in-memory/yaml-based behavior. The `userService` is the template for this pattern.
 
 Order of migration (roughly least to most complex):
 
 1. ✅ **userService** -> In hub mode: request user list from hub via `user.list` event. In local mode: load from yaml files. Both cache in `Map<string, UserEntry>`.
-2. **hostService** -> Remove entirely. Runner has no host concept. `runner.register` replaces host registration. Heartbeat replaces last_active updates. Note: `localHostId` is used by many services -- replace with `runnerId` (from hub registration) or generated transient ID (local mode).
+2. **hostService** -> Remove from NAISYS. Instance has no local host concept. Auth handshake registers the instance's hostname in the hub's `hosts` table. Heartbeat replaces last_active updates. Note: `localHostId` is used by many services -- replace with `hostId` (from hub registration) or generated transient ID (local mode).
 3. **runService** -> `session.create` + `session.increment`. Heartbeat covers last_active. In local mode: in-memory counters.
 4. **logService** -> `log.write` (fire-and-forget batch). In local mode: no-op or console output.
 5. **costTracker** -> `cost.write` (fire-and-forget batch) + listen for `agent.pause`/`agent.resume` push. Cost report via `cost.report` API. In local mode: in-memory running total.
 6. **agentConfig** -> Config received from hub on agent start (via `user.list` or `agent.start` push). Cached in memory. In local mode: loaded from yaml.
 7. **mailAddress** -> Username resolution moves to hub (part of `mail.send`). In local mode: resolve from in-memory user list.
-8. **mailDisplayService** -> All queries become API calls (`mail.list`, `mail.read`, `mail.search`, `mail.users`). Hub returns raw data, runner formats. In local mode: not available (no data to query).
+8. **mailDisplayService** -> All queries become API calls (`mail.list`, `mail.read`, `mail.search`, `mail.users`). Hub returns raw data, client formats. In local mode: not available (no data to query).
 9. **mail** -> `mail.send`, `mail.read` (mark as read), `mail.archive`, `mail.unread`. `mail.received` push replaces polling. In local mode: send-only, direct in-process delivery via event bus.
-10. **subagent** -> `agent.subagents` for listing. `agent.start` request to hub for starting (hub routes to correct runner). In local mode: in-memory agent list from userService.
+10. **subagent** -> `agent.subagents` for listing. `agent.start` request to hub for starting (hub routes to eligible host via `user_hosts`). In local mode: in-memory agent list from userService.
 
 After all services migrated:
 
@@ -422,34 +413,35 @@ After all services migrated:
 Final cleanup pass after all services are migrated.
 
 1. Remove unused database types/imports from naisys
-2. Remove `remoteAgentRequester.ts` from runner if remote agent control is now hub-mediated
+2. Remove `remoteAgentRequester.ts` if remote agent control is now hub-mediated
 3. Remove `remoteAgentHandler.ts` if agent start/stop is now via hub push events
-4. Update `hub-protocol` to remove runner-sync message types (catch_up, sync_request, sync_response, forward)
+4. Update `hub-protocol` to remove old sync message types (catch_up, sync_request, sync_response, forward)
 5. Verify `@naisys/database` is not in naisys dependency tree
 6. Update supervisor if needed (should mostly just work since it reads hub DB)
 
 ---
 
-## What Gets Removed (from runner)
+## What Gets Removed (from NAISYS)
 
 | Component                     | Before                                            | After                                                                 | Status |
 | ----------------------------- | ------------------------------------------------- | --------------------------------------------------------------------- | ------ |
-| `hubSyncClient.ts`            | Responds to sync requests, processes forwards     | Removed (deleted, not moved -- will rewrite for hub-to-hub if needed) | ✅     |
-| `syncUtils.ts` (runner usage) | Query/upsert sync records                         | Removed from runner                                                   | ✅     |
+| `hubSyncClient.ts`            | Responds to sync requests, processes forwards     | Removed                                                               | ✅     |
+| `interhub/` directory         | Hub-to-hub federation scaffolding                 | Removed (interhubServer, interhubClient, interhubConnection, log)     | ✅     |
+| `syncUtils.ts` (NAISYS usage) | Query/upsert sync records                         | Removed from NAISYS                                                   | ✅     |
 | `hubForwardService.ts`        | Forward queues for sync                           | Removed                                                               | ✅     |
-| `remoteAgentRouter.ts`        | Hub-side routing of remote agent commands         | Removed (replaced by `runnerServer` event handlers)                   | ✅     |
-| `agentRegistrar.ts` (runner)  | Runner-side agent config scanning and DB sync     | Removed from runner, rebuilt on hub as `agentRegistrar.ts`            | ✅     |
-| Multi-hub connection          | Runner connects to multiple hubs                  | Runner connects to one hub (multiple URLs are fallback)               | ✅     |
-| Schema version matching       | Runner/hub must match DB version                  | Not needed (API versioning)                                           | ✅     |
-| Forward handling              | Runner upserts forwarded data                     | Not needed (hub is source of truth)                                   | ✅     |
-| `@naisys/database` dependency | Runner imports Prisma, SQLite                     | Removed entirely                                                      |        |
-| Database file                 | Runner has naisys.db                              | No local DB at all                                                    |        |
+| `remoteAgentRouter.ts`        | Hub-side routing of remote agent commands         | Removed (replaced by `naisysServer` event handlers)                   | ✅     |
+| `agentRegistrar.ts` (NAISYS)  | NAISYS-side agent config scanning and DB sync     | Removed from NAISYS, rebuilt on hub as `agentRegistrar.ts`            | ✅     |
+| Multi-hub connection          | NAISYS connects to multiple hubs                  | NAISYS connects to one hub (multiple URLs are fallback)               | ✅     |
+| Schema version matching       | NAISYS/hub must match DB version                  | Not needed (API versioning)                                           | ✅     |
+| Forward handling              | NAISYS upserts forwarded data                     | Not needed (hub is source of truth)                                   | ✅     |
+| `@naisys/database` dependency | NAISYS imports Prisma, SQLite                     | Removed entirely                                                      |        |
+| Database file                 | NAISYS has naisys.db                              | No local DB at all                                                    |        |
 | Periodic mail polling         | 5-second interval checking for cross-machine mail | Hub pushes `mail.received` events                                     |        |
 | Dual last_active updates      | hostService + runService both update every 2s     | Single heartbeat every 5-10s                                          |        |
-| Host concept on runner        | Runner registers as a host, tracks host_id        | Removed. Replaced by `runners` table on hub                           |        |
-| `hostService.ts`              | Create/update host record, list hosts             | Removed. `runner.register` + heartbeat replaces it                    |        |
-| `remoteAgentRequester.ts`     | Runner asks hub to route agent commands           | Removed. `agent.start` request to hub, hub routes via `user_runners`  |        |
-| `remoteAgentHandler.ts`       | Runner handles incoming agent commands            | Replaced by hub push events (`agent.start`, `agent.stop`)             |        |
+| Host concept on NAISYS        | NAISYS registers as a host, tracks host_id        | Removed from NAISYS. Hub tracks hosts in `hosts` table                |        |
+| `hostService.ts`              | Create/update host record, list hosts             | Removed from NAISYS. Auth handshake + heartbeat replaces it           |        |
+| `remoteAgentRequester.ts`     | NAISYS asks hub to route agent commands           | Removed. `agent.start` request to hub, hub routes via `user_hosts`    |        |
+| `remoteAgentHandler.ts`       | NAISYS handles incoming agent commands            | Replaced by hub push events (`agent.start`, `agent.stop`)             |        |
 | `mailAddress.ts` (DB queries) | Resolve usernames via local DB                    | Hub resolves usernames                                                |        |
 
 ## What Stays
@@ -473,24 +465,25 @@ Final cleanup pass after all services are migrated.
 
 ### Hub Mode
 
-- [x] Runner self-registers on first connection (hub auto-creates runner entry)
-- [x] Runner connects to hub, authenticates with matching HUB_ACCESS_KEY
-- [x] Runner with wrong HUB_ACCESS_KEY is rejected and disconnected
-- [x] Runner receives assigned agents with full configs via user.list
-- [ ] Runner starts assigned agents
+- [x] NAISYS instance self-registers on first connection (hub auto-creates host entry)
+- [x] NAISYS instance connects to hub, authenticates with matching HUB_ACCESS_KEY
+- [x] NAISYS instance with wrong HUB_ACCESS_KEY is rejected and disconnected
+- [x] NAISYS instance receives assigned agents with full configs via user.list
+- [ ] NAISYS instance starts assigned agents
 - [ ] Agent logs and costs flow to hub (visible in supervisor)
-- [ ] ns-mail send/list/read/archive/search work across runners
-- [ ] ns-mail users shows all users from all runners
+- [ ] ns-mail send/list/read/archive/search work across instances
+- [ ] ns-mail users shows all users from all instances
 - [ ] Subagent start/stop works (local and remote via hub)
 - [ ] Cost spend limits enforced via hub push (`cost.status`)
 - [ ] ns-session compact works (new session created on hub)
-- [ ] Runner reconnects after hub restart, resumes operation
+- [ ] NAISYS instance reconnects after hub restart, resumes operation
 - [ ] Buffered data (logs/costs) flushed after reconnect
 - [ ] Hub pushes `mail.received` notifications (no polling)
-- [ ] Supervisor shows live data from all runners
-- [ ] Hub can start/stop agents on runner via push events
-- [ ] ns-agent start in hub mode routes through hub to correct runner via user_runners
-- [ ] Agent assigned to multiple runners starts on first available connected runner
+- [ ] Supervisor shows live data from all instances
+- [ ] Hub can start/stop agents on instance via push events
+- [ ] ns-agent start in hub mode routes through hub to correct host via user_hosts
+- [ ] Agent with no user_hosts entries can start on any connected host
+- [ ] Agent assigned to specific hosts starts on first available connected host
 
 ### Local Ephemeral Mode
 
@@ -512,33 +505,35 @@ Final cleanup pass after all services are migrated.
 
 Answers to design questions resolved during planning:
 
-1. **Local mode: no SQLite** - Break the SQLite/Prisma dependency from naisys entirely. In-memory data structures only. No shared schema between hub and runner.
+1. **Local mode: no SQLite** - Break the SQLite/Prisma dependency from NAISYS entirely. In-memory data structures only. No shared schema between hub and NAISYS.
 
 2. **Mail in local mode: send only** - `ns-mail send` routes directly to the target agent in-process. No list/read/search/archive. Sufficient for local dev/test.
 
-3. **Pausing is first-class** - Agent pausing is a general mechanism with multiple triggers: cost overrun (hub pushes pause), hub disconnect (runner self-pauses), manual hub command. Runner tracks a set of pause reasons per agent and only resumes when all reasons are cleared.
+3. **Pausing is first-class** - Agent pausing is a general mechanism with multiple triggers: cost overrun (hub pushes pause), hub disconnect (instance self-pauses), manual hub command. Instance tracks a set of pause reasons per agent and only resumes when all reasons are cleared.
 
-4. **Hub disconnect: pause agents** - Runner pauses all agents on hub disconnect. Agents are not useful without the hub (no mail, no cost tracking, no session management). Fire-and-forget data buffers until reconnect. On reconnect, flush buffer and resume.
+4. **Hub disconnect: pause agents** - Instance pauses all agents on hub disconnect. Agents are not useful without the hub (no mail, no cost tracking, no session management). Fire-and-forget data buffers until reconnect. On reconnect, flush buffer and resume.
 
-5. **Agent config in hub mode: hub-pushed** - Hub owns agent configs in its database. Configs pushed to runner when starting an agent. No yaml files on runner in hub mode. Yaml files can be imported/exported to the hub.
+5. **Agent config in hub mode: hub-pushed** - Hub owns agent configs in its database. Configs pushed to instance when starting an agent. No yaml files on instance in hub mode. Yaml files can be imported/exported to the hub.
 
 6. **Cost tracking: hub-pushed** - No separate spend-check call. Hub monitors costs from `cost.write` batches and pushes `agent.pause` / `agent.resume` when limits change.
 
-7. **Runners table replaces hosts** - Hub has a `runners` table (self-registered on first connection) and a `user_runners` table (which agents can run on which runners). Both hub and runner have `HUB_ACCESS_KEY` in `.env`; if they match, the connection is accepted. The old `hosts` table is replaced; `hosts` may still exist for hub identity in hub-to-hub federation. A runner is a naisys process instance - typically one per machine, but multiple on the same machine is supported.
+7. **Hosts identify NAISYS instances** - Instances self-register into the existing `hosts` table on first connection. A `user_hosts` table maps which agents can run on which hosts. If a user has no `user_hosts` entries, they can run on any host. Both hub and instance have `HUB_ACCESS_KEY` in `.env`; if they match, the connection is accepted. A host is a naisys process instance - typically one per machine, but multiple on the same machine are supported.
 
-8. **Hub routes agent starts** - In hub mode, `ns-agent start` sends a request to the hub. Hub looks up `user_runners`, picks the first available connected runner for that user, and pushes `agent.start` to it. In local mode, `ns-agent start` just starts the agent directly in-process.
+8. **Hub routes agent starts** - In hub mode, `ns-agent start` sends a request to the hub. Hub looks up `user_hosts` (or considers all hosts if no entries), picks the first available connected host for that user, and pushes `agent.start` to it. In local mode, `ns-agent start` just starts the agent directly in-process.
 
-9. **Display formatting: runner-side** - Hub returns raw data for mail and cost queries. Runner formats into tables/hierarchies. Standard API pattern, allows runner-side logic on the data.
+9. **Display formatting: client-side** - Hub returns raw data for mail and cost queries. Client formats into tables/hierarchies. Standard API pattern, allows client-side logic on the data.
 
-10. **Sync code: deleted** - Sync infrastructure was deleted from the runner (~2,800 lines) rather than relocated to the hub. If hub-to-hub federation needs sync later, it will be rewritten purpose-built for that use case rather than adapting the old runner-to-hub protocol.
+10. **Sync code: deleted** - Sync infrastructure was deleted (~2,800 lines). All sync-related indexes removed from the schema.
 
-11. **Database package: hub-only** - `@naisys/database` is removed from naisys runner dependency. Hub is the sole consumer.
+11. **No hub-to-hub federation** - Interhub scaffolding (`interhubServer.ts`, `interhubClient.ts`, `interhubConnection.ts`, `interhubClientLog.ts`) has been removed. Single hub architecture only. Federation is out of scope.
 
-12. **Socket.IO events, not JSON-RPC** - Instead of a custom JSON-RPC protocol with correlation IDs, the hub API uses Socket.IO's native event + acknowledgement pattern. `hubClient.sendRequest<T>()` wraps acks in Promises for request-response. `hubClient.sendMessage()` is used for fire-and-forget. No custom framing or routing layer needed.
+12. **Database package: hub-only** - `@naisys/database` is removed from NAISYS dependency. Hub is the sole consumer.
 
-13. **User list separate from registration** - Rather than bundling the user list into the `runner.register` response, a separate `user.list` event allows reloading user configs without reconnecting. Registration is handled during Socket.IO auth handshake.
+13. **Socket.IO events, not JSON-RPC** - Instead of a custom JSON-RPC protocol with correlation IDs, the hub API uses Socket.IO's native event + acknowledgement pattern. `hubClient.sendRequest<T>()` wraps acks in Promises for request-response. `hubClient.sendMessage()` is used for fire-and-forget. No custom framing or routing layer needed.
 
-14. **Hub services, not handlers directory** - Hub API handlers live in `apps/hub/src/services/` alongside other hub services (e.g., `hubUserService.ts`), not in a separate `handlers/` directory. Each service registers its events on `runnerServer` during hub startup.
+14. **User list separate from registration** - Rather than bundling the user list into the auth handshake response, a separate `user.list` event allows reloading user configs without reconnecting. Registration is handled during Socket.IO auth handshake.
+
+15. **Hub services + handlers directories** - Hub infrastructure lives in `apps/hub/src/services/` (e.g., `naisysServer.ts`, `naisysConnection.ts`, `hostRegistrar.ts`). Hub API event handlers live in `apps/hub/src/handlers/` (e.g., `hubUserService.ts`, `hubRunService.ts`). Each handler registers its events on `naisysServer` during hub startup.
 
 ---
 
@@ -550,4 +545,4 @@ Answers to design questions resolved during planning:
 
 3. **Local mode pausing** - Should local mode support pausing (e.g., for in-memory cost limits), or is pausing hub-mode only?
 
-4. **Runner capacity** - When hub routes an `agent.start` to a runner, how does it determine "first available"? Simple round-robin? Track running agent count per runner? Max agents per runner config?
+4. **Host capacity** - When hub routes an `agent.start` to a host, how does it determine "first available"? Simple round-robin? Track running agent count per host? Max agents per host config?

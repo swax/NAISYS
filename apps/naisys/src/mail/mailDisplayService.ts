@@ -30,24 +30,22 @@ export function createMailDisplayService(
       const messages = await prisma.mail_messages.findMany({
         where: {
           ...ownershipCondition,
-          status: {
-            none: { user_id: localUserId, archived_at: { not: null } },
+          NOT: {
+            recipients: {
+              some: { user_id: localUserId, archived_at: { not: null } },
+            },
           },
         },
         include: {
           from_user: {
-            select: { username: true, host: { select: { name: true } } },
+            select: { username: true },
           },
           recipients: {
             include: {
               user: {
-                select: { username: true, host: { select: { name: true } } },
+                select: { username: true },
               },
             },
-          },
-          status: {
-            where: { user_id: localUserId },
-            select: { read_at: true },
           },
         },
         orderBy: { created_at: "desc" },
@@ -65,8 +63,11 @@ export function createMailDisplayService(
         [
           ["", "ID", userHeader, "Subject", "Date"],
           ...messages.map((m) => {
-            const status = m.status[0];
-            const isUnread = m.from_user_id !== localUserId && !status?.read_at;
+            const myRecipient = m.recipients.find(
+              (r) => r.user_id === localUserId,
+            );
+            const isUnread =
+              m.from_user_id !== localUserId && !myRecipient?.read_at;
 
             // Show recipients for sent, sender for received/all
             const userColumn =
@@ -106,13 +107,12 @@ export function createMailDisplayService(
             select: {
               username: true,
               title: true,
-              host: { select: { name: true } },
             },
           },
           recipients: {
             include: {
               user: {
-                select: { username: true, host: { select: { name: true } } },
+                select: { username: true },
               },
             },
           },
@@ -168,8 +168,10 @@ export function createMailDisplayService(
       const archiveCondition = includeArchived
         ? {}
         : {
-            status: {
-              none: { user_id: localUserId, archived_at: { not: null } },
+            NOT: {
+              recipients: {
+                some: { user_id: localUserId, archived_at: { not: null } },
+              },
             },
           };
 
@@ -184,7 +186,7 @@ export function createMailDisplayService(
         },
         include: {
           from_user: {
-            select: { username: true, host: { select: { name: true } } },
+            select: { username: true },
           },
         },
         orderBy: { created_at: "desc" },
@@ -215,8 +217,10 @@ export function createMailDisplayService(
     username: string;
     title: string;
     lead_user_id: string | null;
-    host: { name: string; last_active: Date | null } | null;
-    user_notifications: { last_active: Date | null } | null;
+    user_notifications: {
+      last_active: Date | null;
+      host: { name: string; last_active: Date | null } | null;
+    } | null;
   }
 
   interface UserNode extends UserRow {
@@ -297,8 +301,12 @@ export function createMailDisplayService(
           username: true,
           title: true,
           lead_user_id: true,
-          host: { select: { name: true, last_active: true } },
-          user_notifications: { select: { last_active: true } },
+          user_notifications: {
+            select: {
+              last_active: true,
+              host: { select: { name: true, last_active: true } },
+            },
+          },
         },
         orderBy: { username: "asc" },
       });
@@ -330,14 +338,14 @@ export function createMailDisplayService(
           : "(none)";
         const status = determineStatus(
           user.user_notifications?.last_active,
-          user.host?.last_active,
+          user.user_notifications?.host?.last_active,
         );
 
         if (isMultiHost) {
           return [
             displayName,
             user.title,
-            user.host?.name || "(unknown)",
+            user.user_notifications?.host?.name || "(unknown)",
             leadUsername,
             status,
           ];
