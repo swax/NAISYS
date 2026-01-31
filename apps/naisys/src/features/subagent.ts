@@ -1,13 +1,12 @@
-import { DatabaseService } from "@naisys/database";
 import stringArgv from "string-argv";
 import table from "text-table";
 import { AgentConfig } from "../agent/agentConfig.js";
 import { IAgentRunner } from "../agent/agentRunnerInterface.js";
+import { UserService } from "../agent/userService.js";
 import { RegistrableCommand } from "../command/commandRegistry.js";
 import { ContextManager } from "../llm/contextManager.js";
 import { ContentSource } from "../llm/llmDtos.js";
 import { MailService } from "../mail/mail.js";
-import { HostService } from "../services/hostService.js";
 import { InputModeService } from "../utils/inputMode.js";
 import { OutputColor, OutputService } from "../utils/output.js";
 import { PromptNotificationService } from "../utils/promptNotificationService.js";
@@ -27,8 +26,7 @@ export function createSubagentService(
   output: OutputService,
   agentRunner: IAgentRunner,
   inputMode: InputModeService,
-  { usingDatabase }: DatabaseService,
-  { localHostId }: HostService,
+  userService: UserService,
   localUserId: string,
   promptNotification: PromptNotificationService,
   contextManager: ContextManager,
@@ -47,9 +45,9 @@ export function createSubagentService(
     switch (argv[0]) {
       case "help": {
         let helpOutput = `subagent <command>
-  list: Lists all subagents
-  stop <name>: Stops the agent with the given name
-  start <name> "<description>": Starts an existing agent with the given name and description of the task to perform`;
+  list: Lists all startable and started agents
+  start <name> "<task>": Starts agent by name with a description of the task to perform
+  stop <name>: Stops an agent by name`;
 
         if (inputMode.isDebug()) {
           helpOutput += `\n  switch <name>: Switch context to a started in-process agent (debug mode only)`;
@@ -57,13 +55,13 @@ export function createSubagentService(
         }
 
         if (agentConfig().mailEnabled) {
-          helpOutput += `\n\n* Use ns-mail to communicate with subagents by name.`;
+          helpOutput += `\n\n* Use ns-mail to communicate with subagents once started`;
         }
 
         return helpOutput;
       }
       case "list": {
-        return await buildAgentList();
+        return buildAgentList();
       }
       // "create" command removed - generated agent yaml configs from a template and wrote them to disk. See git history.
       // "spawn" command removed - launched agents as separate child node processes. See git history.
@@ -106,37 +104,32 @@ export function createSubagentService(
     return errorText + (await handleCommand("help"));
   }
 
-  async function refreshSubagents() {
-    await usingDatabase(async (prisma) => {
-      const agents = await prisma.users.findMany({
-        where: {
-          OR: [
-            { lead_user_id: localUserId },
-            { lead_user_id: null }, // Include agents with no lead (available to all)
-          ],
-          host_id: localHostId,
-          deleted_at: null, // Only show active subagents
-          id: { not: localUserId }, // Exclude self from subagent list
-        },
-      });
+  function refreshSubagents() {
+    const allUsers = userService.getUsers();
+    const currentUsername = agentConfig().username;
 
-      agents.forEach((agent) => {
-        const existing = _subagents.find((p) => p.agentName === agent.username);
-        if (!existing) {
-          _subagents.push({
-            userId: agent.id,
-            agentName: agent.username,
-            title: agent.title,
-            log: [],
-            status: "stopped",
-          });
-        }
-      });
-    });
+    for (const [username, entry] of allUsers) {
+      if (username === localUserId) continue; // Exclude self
+
+      // Only include agents led by this user, or agents with no lead (available to all)
+      const leadAgent = entry.config.leadAgent;
+      if (leadAgent !== undefined && leadAgent !== currentUsername) continue;
+
+      const existing = _subagents.find((p) => p.agentName === username);
+      if (!existing) {
+        _subagents.push({
+          userId: username,
+          agentName: username,
+          title: entry.config.title,
+          log: [],
+          status: "stopped",
+        });
+      }
+    }
   }
 
-  async function buildAgentList() {
-    await refreshSubagents();
+  function buildAgentList() {
+    refreshSubagents();
 
     let agentList = "";
 
@@ -215,56 +208,13 @@ export function createSubagentService(
     });
   }
 
-  /** Look up user by username, returning host and agent info */
-  async function lookupUser(identifier: string) {
-    // Parse username@host format
+  /** Look up user by username in the user service */
+  function lookupUser(identifier: string) {
+    // Parse username@host format (host part ignored - no host concept on runner)
     const atIndex = identifier.lastIndexOf("@");
-    let username: string;
-    let hostName: string | null = null;
+    const username = atIndex > 0 ? identifier.slice(0, atIndex) : identifier;
 
-    if (atIndex > 0) {
-      username = identifier.slice(0, atIndex);
-      hostName = identifier.slice(atIndex + 1);
-    } else {
-      username = identifier;
-    }
-
-    return await usingDatabase(async (prisma) => {
-      const matchingUsers = await prisma.users.findMany({
-        where: {
-          username,
-          deleted_at: null,
-          ...(hostName ? { host: { name: hostName } } : {}),
-        },
-        select: {
-          id: true,
-          username: true,
-          host_id: true,
-          agent_path: true,
-          host: { select: { name: true } },
-        },
-      });
-
-      if (matchingUsers.length === 0) {
-        return null;
-      }
-
-      if (matchingUsers.length === 1) {
-        return matchingUsers[0];
-      }
-
-      // Multiple users with same username - try to find one on localhost
-      const localUser = matchingUsers.find((u) => u.host_id === localHostId);
-      if (localUser) {
-        return localUser;
-      }
-
-      // No local user and multiple matches - require username@host
-      const hostOptions = matchingUsers
-        .map((u) => `${u.username}@${u.host?.name || "unknown"}`)
-        .join(", ");
-      throw `Multiple users named '${username}' exist. Use one of: ${hostOptions}`;
-    });
+    return userService.getUserById(username) ?? null;
   }
 
   function validateLocalAgentStart(agentName: string, taskDescription: string) {
@@ -296,14 +246,14 @@ export function createSubagentService(
       throw "Task description is required to start a subagent";
     }
 
-    // First refresh the local subagents list
-    await refreshSubagents();
+    // First refresh the subagents list
+    refreshSubagents();
 
     // Try to validate as a local agent start
     const localSubagent = validateLocalAgentStart(agentName, taskDescription);
 
     if (localSubagent) {
-      // Local agent - start the agent
+      // Start the agent
       await agentRunner.startAgent(localSubagent.userId, (stopReason) =>
         handleAgentTermination(localSubagent, stopReason),
       );
@@ -316,19 +266,14 @@ export function createSubagentService(
       return `Subagent '${agentName}' started`;
     }
 
-    // Not found locally - look up in database (might be remote)
-    const user = await lookupUser(agentName);
+    // Not in subagents list - check if the user exists at all
+    const user = lookupUser(agentName);
     if (!user) {
       throw `Agent '${agentName}' not found`;
     }
 
-    // Check if this is a local agent that wasn't in our subagents list
-    if (user.host_id === localHostId) {
-      throw `Agent '${agentName}' exists locally but is not a subagent of ${agentConfig().username}`;
-    }
-
-    // Remote agent - not supported without remote agent requester
-    throw `Remote agent '${user.username}' cannot be started - remote agent support not configured`;
+    // User exists but is not a subagent of this agent
+    throw `Agent '${agentName}' exists but is not a subagent of ${agentConfig().username}`;
   }
 
   async function sendStartupMessage(
