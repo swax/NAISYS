@@ -2,16 +2,13 @@ import { UserEntry } from "@naisys/common";
 import { loadAgentConfigs } from "@naisys/common/dist/agentConfigLoader.js";
 import { DatabaseService, ulid } from "@naisys/database";
 import { HubConfig } from "../hubConfig.js";
-import { HostService } from "./hostService.js";
 
 /** Loads agent configs from yaml files, then syncs them to the database */
 export async function createAgentRegistrar(
   hubConfig: HubConfig,
   dbService: DatabaseService,
-  hostService: HostService,
   startupAgentPath?: string,
 ) {
-  const { localHostId } = hostService;
   await reloadAgents();
 
   async function reloadAgents() {
@@ -28,9 +25,7 @@ export async function createAgentRegistrar(
   async function syncUsersToDatabase(users: Map<string, UserEntry>) {
     // Load all existing users from database (filtered by host)
     const existingUsers = await dbService.usingDatabase(async (prisma) => {
-      return await prisma.users.findMany({
-        where: { host_id: localHostId },
-      });
+      return await prisma.users.findMany({});
     });
 
     const userMap = new Map(existingUsers.map((u) => [u.username, u]));
@@ -45,7 +40,6 @@ export async function createAgentRegistrar(
           const leadUser = await prisma.users.findFirst({
             where: {
               username: entry.config.leadAgent,
-              host_id: localHostId,
             },
             select: { id: true },
           });
@@ -61,7 +55,6 @@ export async function createAgentRegistrar(
               agent_path: entry.agentPath,
               lead_user_id: leadUserId,
               config: entry.configYaml,
-              host_id: localHostId,
             },
           });
 
@@ -70,7 +63,7 @@ export async function createAgentRegistrar(
           await prisma.user_notifications.create({
             data: {
               user_id: user.id,
-              host_id: localHostId,
+              latest_host_id: "",
               latest_log_id: "",
             },
           });
@@ -103,10 +96,7 @@ export async function createAgentRegistrar(
 
             await prisma.users.update({
               where: {
-                username_host_id: {
-                  username,
-                  host_id: localHostId,
-                },
+                agent_path: entry.agentPath,
               },
               data: {
                 title: entry.config.title,
@@ -120,7 +110,7 @@ export async function createAgentRegistrar(
               where: { user_id: existingUser.id },
               create: {
                 user_id: existingUser.id,
-                host_id: localHostId,
+                latest_host_id: "",
                 latest_log_id: "",
               },
               update: {

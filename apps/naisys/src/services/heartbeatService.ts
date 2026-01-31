@@ -3,7 +3,7 @@ import {
   HeartbeatStatusSchema,
   HubEvents,
 } from "@naisys/hub-protocol";
-import { IAgentRunner } from "../agent/agentRunnerInterface.js";
+import { IAgentManager } from "../agent/agentManagerInterface.js";
 import { UserService } from "../agent/userService.js";
 import { GlobalConfig } from "../globalConfig.js";
 import { HubClient } from "../hub/hubClient.js";
@@ -11,7 +11,7 @@ import { HubClient } from "../hub/hubClient.js";
 export function createHeartbeatService(
   { globalConfig }: GlobalConfig,
   hubClient: HubClient,
-  agentRunner: IAgentRunner,
+  agentManager: IAgentManager,
   userService: UserService,
 ) {
   const isHubMode = globalConfig().isHubMode;
@@ -26,7 +26,7 @@ export function createHeartbeatService(
 
   // Start periodic heartbeat
   const interval = setInterval(() => {
-    const activeUserIds = agentRunner.runningAgents.map((a) => a.agentUserId);
+    const activeUserIds = agentManager.runningAgents.map((a) => a.agentUserId);
 
     if (isHubMode) {
       hubClient.sendMessage(HubEvents.HEARTBEAT, { activeUserIds });

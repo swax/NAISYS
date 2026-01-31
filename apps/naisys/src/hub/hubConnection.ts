@@ -28,10 +28,10 @@ export function createHubConnection(
   function connect() {
     hubClientLog.write(`[Hub] Connecting to ${hubUrl}...`);
 
-    socket = io(hubUrl + "/runners", {
+    socket = io(hubUrl + "/naisys", {
       auth: {
         accessKey: config.hubAccessKey,
-        runnerName: config.hostname,
+        hostName: config.hostname,
       },
       reconnection: true,
       reconnectionDelay: 1000,

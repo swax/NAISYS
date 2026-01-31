@@ -5,29 +5,29 @@ import {
   HubEvents,
 } from "@naisys/hub-protocol";
 import { HubServerLog } from "../services/hubServerLog.js";
-import { RunnerServer } from "../services/runnerServer.js";
+import { NaisysServer } from "../services/naisysServer.js";
 
 const HUB_HEARTBEAT_INTERVAL_MS = HEARTBEAT_INTERVAL_MS * 2;
 
-/** Tracks runner heartbeats and pushes aggregate active user status to all runners */
+/** Tracks NAISYS instance heartbeats and pushes aggregate active user status to all instances */
 export function createHubHeartbeatService(
-  runnerServer: RunnerServer,
+  naisysServer: NaisysServer,
   dbService: DatabaseService,
   logService: HubServerLog,
 ) {
-  // Handle heartbeat from runners
-  runnerServer.registerEvent(
+  // Handle heartbeat from NAISYS instances
+  naisysServer.registerEvent(
     HubEvents.HEARTBEAT,
-    async (runnerId: string, data: unknown) => {
+    async (hostId: string, data: unknown) => {
       const parsed = HeartbeatSchema.parse(data);
 
       try {
         await dbService.usingDatabase(async (prisma) => {
           const now = new Date().toISOString();
 
-          // Update runner last_active
-          await prisma.runners.updateMany({
-            where: { id: runnerId },
+          // Update host last_active
+          await prisma.hosts.updateMany({
+            where: { id: hostId },
             data: { last_active: now },
           });
 
@@ -41,13 +41,13 @@ export function createHubHeartbeatService(
         });
       } catch (error) {
         logService.error(
-          `[HubHeartbeatService] Error updating heartbeat for runner ${runnerId}: ${error}`,
+          `[HubHeartbeatService] Error updating heartbeat for host ${hostId}: ${error}`,
         );
       }
     },
   );
 
-  // Periodically query DB for active users and push status to all runners
+  // Periodically query DB for active users and push status to all NAISYS instances
   const pushInterval = setInterval(async () => {
     try {
       const activeUserIds = await dbService.usingDatabase(async (prisma) => {
@@ -61,9 +61,9 @@ export function createHubHeartbeatService(
 
       const payload = { activeUserIds };
 
-      for (const connection of runnerServer.getConnectedClients()) {
-        runnerServer.sendMessage(
-          connection.getRunnerId(),
+      for (const connection of naisysServer.getConnectedClients()) {
+        naisysServer.sendMessage(
+          connection.getHostId(),
           HubEvents.HEARTBEAT_STATUS,
           payload,
         );

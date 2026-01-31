@@ -6,21 +6,18 @@ import {
 } from "@naisys/hub-protocol";
 import { HostService } from "../services/hostService.js";
 import { HubServerLog } from "../services/hubServerLog.js";
-import { RunnerServer } from "../services/runnerServer.js";
+import { NaisysServer } from "../services/naisysServer.js";
 
-/** Handles session_create and session_increment requests from runners */
+/** Handles session_create and session_increment requests from NAISYS instances */
 export function createHubRunService(
-  runnerServer: RunnerServer,
+  naisysServer: NaisysServer,
   dbService: DatabaseService,
-  hostService: HostService,
   logService: HubServerLog,
 ) {
-  const { localHostId } = hostService;
-
-  runnerServer.registerEvent(
+  naisysServer.registerEvent(
     HubEvents.SESSION_CREATE,
     async (
-      runnerId: string,
+      hostId: string,
       data: unknown,
       ack: (response: unknown) => void,
     ) => {
@@ -42,7 +39,7 @@ export function createHubRunService(
               user_id: parsed.userId,
               run_id: newRunId,
               session_id: newSessionId,
-              host_id: localHostId,
+              host_id: hostId,
               model_name: parsed.modelName,
               created_at: new Date().toISOString(),
               last_active: new Date().toISOString(),
@@ -59,17 +56,17 @@ export function createHubRunService(
         });
       } catch (error) {
         logService.error(
-          `[HubRunService] session_create error for runner ${runnerId}: ${error}`,
+          `[HubRunService] session_create error for host ${hostId}: ${error}`,
         );
         ack({ success: false, error: String(error) });
       }
     },
   );
 
-  runnerServer.registerEvent(
+  naisysServer.registerEvent(
     HubEvents.SESSION_INCREMENT,
     async (
-      runnerId: string,
+      hostId: string,
       data: unknown,
       ack: (response: unknown) => void,
     ) => {
@@ -94,7 +91,7 @@ export function createHubRunService(
               user_id: parsed.userId,
               run_id: parsed.runId,
               session_id: newSessionId,
-              host_id: localHostId,
+              host_id: hostId,
               model_name: "",
               created_at: new Date().toISOString(),
               last_active: new Date().toISOString(),
@@ -107,7 +104,7 @@ export function createHubRunService(
         ack({ success: true, sessionId: result.sessionId });
       } catch (error) {
         logService.error(
-          `[HubRunService] session_increment error for runner ${runnerId}: ${error}`,
+          `[HubRunService] session_increment error for host ${hostId}: ${error}`,
         );
         ack({ success: false, error: String(error) });
       }

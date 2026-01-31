@@ -22,17 +22,17 @@ export async function createHostService(
     if (existingHost) {
       // Update last_active timestamp
       await prisma.hosts.update({
-        where: { host_id: existingHost.host_id },
+        where: { id: existingHost.id },
         data: { last_active: new Date().toISOString() },
       });
-      return existingHost.host_id;
+      return existingHost.id;
     }
 
     // Create new host record
     const newHostId = ulid();
     await prisma.hosts.create({
       data: {
-        host_id: newHostId,
+        id: newHostId,
         name: localHostname,
         last_active: new Date().toISOString(),
       },
@@ -45,7 +45,7 @@ export async function createHostService(
   async function updateLastActive(): Promise<void> {
     await dbService.usingDatabase(async (prisma) => {
       await prisma.hosts.update({
-        where: { host_id: localHostId },
+        where: { id: localHostId },
         data: { last_active: new Date().toISOString() },
       });
     });
@@ -66,7 +66,7 @@ export async function createHostService(
       const hosts = await prisma.hosts.findMany({
         include: {
           _count: {
-            select: { users: { where: { deleted_at: null } } },
+            select: { user_hosts: true },
           },
         },
         orderBy: { name: "asc" },
@@ -80,10 +80,10 @@ export async function createHostService(
         [
           ["ID", "Name", "Status", "Agents"],
           ...hosts.map((h) => [
-            h.host_id.slice(-4),
+            h.id.slice(-4),
             h.name,
             isHostOnline(h.last_active ?? undefined) ? "Online" : "Offline",
-            h._count.users.toString(),
+            h._count.user_hosts.toString(),
           ]),
         ],
         { hsep: " | " },

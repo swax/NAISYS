@@ -9,15 +9,14 @@ import { usingNaisysDb } from "../database/naisysDatabase.js";
 async function resolveUser(
   username: string,
   host: string,
-): Promise<{ id: string; agent_path: string; host_id: string | null }> {
+): Promise<{ id: string; agent_path: string }> {
   return await usingNaisysDb(async (prisma) => {
     const user = await prisma.users.findFirst({
       where: {
         username,
-        host: { name: host },
         deleted_at: null,
       },
-      select: { id: true, agent_path: true, host_id: true },
+      select: { id: true, agent_path: true },
     });
 
     if (!user) {
@@ -97,25 +96,11 @@ export async function createAgentConfig(
     }
   }
 
-  // Resolve host to host_id
-  const hostRecord = await usingNaisysDb(async (prisma) => {
-    return await prisma.hosts.findUnique({
-      where: { name: host },
-      select: { host_id: true },
-    });
-  });
-
-  if (!hostRecord) {
-    throw new Error(`Host '${host}' not found`);
-  }
-  const hostId = hostRecord.host_id;
-
-  // Check db if username already exists on this host
+  // Check db if username already exists
   const existingAgent = await usingNaisysDb(async (prisma) => {
     return await prisma.users.findFirst({
       where: {
         username: name,
-        host_id: hostId,
       },
     });
   });
@@ -149,7 +134,6 @@ wakeOnMessage: true
         username: name,
         title: "Assistant",
         agent_path: agentFilePath,
-        host_id: hostId,
       },
     });
   });

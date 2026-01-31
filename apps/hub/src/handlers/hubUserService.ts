@@ -1,25 +1,21 @@
 import { DatabaseService } from "@naisys/database";
 import { HubEvents } from "@naisys/hub-protocol";
-import { HostService } from "../services/hostService.js";
 import { HubServerLog } from "../services/hubServerLog.js";
-import { RunnerServer } from "../services/runnerServer.js";
+import { NaisysServer } from "../services/naisysServer.js";
 
-/** Pushes the user list to runners when they connect */
+/** Pushes the user list to NAISYS instances when they connect */
 export function createHubUserService(
-  runnerServer: RunnerServer,
+  naisysServer: NaisysServer,
   dbService: DatabaseService,
-  hostService: HostService,
   logService: HubServerLog,
 ) {
-  const { localHostId } = hostService;
-
-  runnerServer.registerEvent(
+  naisysServer.registerEvent(
     HubEvents.CLIENT_CONNECTED,
-    async (runnerId: string) => {
+    async (hostId: string) => {
       try {
         const dbUsers = await dbService.usingDatabase(async (prisma) => {
           return await prisma.users.findMany({
-            where: { host_id: localHostId, deleted_at: null },
+            where: { deleted_at: null },
             select: { username: true, config: true, agent_path: true },
           });
         });
@@ -31,18 +27,18 @@ export function createHubUserService(
         }));
 
         logService.log(
-          `[HubUserService] Pushing ${users.length} users to runner ${runnerId}`,
+          `[HubUserService] Pushing ${users.length} users to naisys instance ${hostId}`,
         );
 
-        runnerServer.sendMessage(runnerId, HubEvents.USER_LIST, {
+        naisysServer.sendMessage(hostId, HubEvents.USER_LIST, {
           success: true,
           users,
         });
       } catch (error) {
         logService.error(
-          `[HubUserService] Error querying users for runner ${runnerId}: ${error}`,
+          `[HubUserService] Error querying users for naisys instance ${hostId}: ${error}`,
         );
-        runnerServer.sendMessage(runnerId, HubEvents.USER_LIST, {
+        naisysServer.sendMessage(hostId, HubEvents.USER_LIST, {
           success: false,
           error: String(error),
         });

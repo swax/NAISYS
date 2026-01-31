@@ -1,7 +1,7 @@
 import { createDatabaseService } from "@naisys/database";
 import { program } from "commander";
 import dotenv from "dotenv";
-import { AgentRunner } from "./agent/agentRunner.js";
+import { AgentManager } from "./agent/agentManager.js";
 import { createUserService } from "./agent/userService.js";
 import { createGlobalConfig } from "./globalConfig.js";
 import { createHubClientLog } from "./hub/hubClientLog.js";
@@ -61,7 +61,7 @@ if (globalConfig.globalConfig().isHubMode) {
 }
 
 console.log(`NAISYS STARTED`);
-const agentRunner = new AgentRunner(
+const agentManager = new AgentManager(
   dbService,
   globalConfig,
   hostService,
@@ -73,15 +73,15 @@ const agentRunner = new AgentRunner(
 const heartbeatService = createHeartbeatService(
   globalConfig,
   hubClient,
-  agentRunner,
+  agentManager,
   userService,
 );
 
 // Resolve the agent path to a username (or admin if no path) and start the agent
 const startupUsername = userService.getStartupUserId(agentPath);
-await agentRunner.startAgent(startupUsername);
+await agentManager.startAgent(startupUsername);
 
-await agentRunner.waitForAllAgentsToComplete();
+await agentManager.waitForAllAgentsToComplete();
 
 heartbeatService.cleanup();
 hostService.cleanup();

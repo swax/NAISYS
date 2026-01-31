@@ -1,7 +1,7 @@
 import stringArgv from "string-argv";
 import table from "text-table";
 import { AgentConfig } from "../agent/agentConfig.js";
-import { IAgentRunner } from "../agent/agentRunnerInterface.js";
+import { IAgentManager } from "../agent/agentManagerInterface.js";
 import { UserService } from "../agent/userService.js";
 import { RegistrableCommand } from "../command/commandRegistry.js";
 import { ContextManager } from "../llm/contextManager.js";
@@ -24,7 +24,7 @@ export function createSubagentService(
   { agentConfig }: AgentConfig,
   mailService: MailService,
   output: OutputService,
-  agentRunner: IAgentRunner,
+  agentManager: IAgentManager,
   inputMode: InputModeService,
   userService: UserService,
   localUserId: string,
@@ -140,7 +140,7 @@ export function createSubagentService(
       p.status,
       p.taskDescription?.substring(0, 70) || p.title,
       inputMode.isDebug() && isRunning(p)
-        ? (p.log.length || agentRunner.getBufferLines(p.userId)).toString()
+        ? (p.log.length || agentManager.getBufferLines(p.userId)).toString()
         : "",
     ]);
 
@@ -158,7 +158,7 @@ export function createSubagentService(
 
     if (inputMode.isDebug()) {
       // Find running in process agents that aren't already listed
-      const otherAgents = agentRunner.runningAgents
+      const otherAgents = agentManager.runningAgents
         .filter(
           (ra) =>
             ra.agentUserId !== localUserId &&
@@ -170,7 +170,7 @@ export function createSubagentService(
             status: "started",
             title: ra.agentTitle,
             taskDescription: ra.agentTaskDescription,
-            unreadLines: agentRunner.getBufferLines(ra.agentUserId),
+            unreadLines: agentManager.getBufferLines(ra.agentUserId),
           };
         });
 
@@ -254,7 +254,7 @@ export function createSubagentService(
 
     if (localSubagent) {
       // Start the agent
-      await agentRunner.startAgent(localSubagent.userId, (stopReason) =>
+      await agentManager.startAgent(localSubagent.userId, (stopReason) =>
         handleAgentTermination(localSubagent, stopReason),
       );
 
@@ -297,8 +297,8 @@ export function createSubagentService(
     // Find by name in local subagents
     const subagent = _subagents.find((p) => p.agentName === agentName);
 
-    // Also check if running in agentRunner (debug user can stop agents other than local subagents)
-    const agentRuntime = agentRunner.runningAgents.find(
+    // Also check if running in agentManager (debug user can stop agents other than local subagents)
+    const agentRuntime = agentManager.runningAgents.find(
       (a) => a.agentUsername === agentName,
     );
 
@@ -312,7 +312,7 @@ export function createSubagentService(
 
     if (agentRuntime) {
       // Request shutdown of in-process agent, callback defined in start() will handle termination event
-      void agentRunner.stopAgent(
+      void agentManager.stopAgent(
         agentRuntime.agentUserId,
         "requestShutdown",
         reason,
@@ -335,7 +335,7 @@ export function createSubagentService(
 
   /** Only for in-process agents */
   function _switchAgent(agentName: string) {
-    const agentRuntime = agentRunner.runningAgents.find(
+    const agentRuntime = agentManager.runningAgents.find(
       (a) => a.agentUsername === agentName,
     );
 
@@ -343,7 +343,7 @@ export function createSubagentService(
       throw `Agent '${agentName}' is not running`;
     }
 
-    agentRunner.setActiveConsoleAgent(agentRuntime.agentUserId);
+    agentManager.setActiveConsoleAgent(agentRuntime.agentUserId);
 
     return "";
   }

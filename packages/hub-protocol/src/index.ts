@@ -3,12 +3,12 @@ import { z } from "zod";
 /**
  * Hub Protocol Message Schemas
  *
- * This package defines the shared message types between NAISYS runners (clients)
+ * This package defines the shared message types between NAISYS instances (clients)
  * and the Hub server for multi-machine synchronization.
  */
 
 // =============================================================================
-// Session Messages (Runner -> Hub request/response)
+// Session Messages (NAISYS -> Hub request/response)
 // =============================================================================
 
 /** Request to create a new run session */
@@ -47,10 +47,10 @@ export type SessionIncrementResponse = z.infer<
 >;
 
 // =============================================================================
-// Log Messages (Runner -> Hub, fire-and-forget)
+// Log Messages (NAISYS -> Hub, fire-and-forget)
 // =============================================================================
 
-/** A single log entry sent from runner to hub */
+/** A single log entry sent from NAISYS instance to hub */
 export const LogWriteEntrySchema = z.object({
   userId: z.string(),
   runId: z.number(),
@@ -63,7 +63,7 @@ export const LogWriteEntrySchema = z.object({
 });
 export type LogWriteEntry = z.infer<typeof LogWriteEntrySchema>;
 
-/** Batch of log entries sent from runner to hub */
+/** Batch of log entries sent from NAISYS instance to hub */
 export const LogWriteRequestSchema = z.object({
   entries: z.array(LogWriteEntrySchema),
 });
@@ -73,26 +73,26 @@ export type LogWriteRequest = z.infer<typeof LogWriteRequestSchema>;
 // Heartbeat Messages
 // =============================================================================
 
-/** How often runners send heartbeats to the hub (ms) */
+/** How often NAISYS instances send heartbeats to the hub (ms) */
 export const HEARTBEAT_INTERVAL_MS = 2000;
 
-/** How often runners flush buffered log entries to the hub (ms) */
+/** How often NAISYS instances flush buffered log entries to the hub (ms) */
 export const LOG_FLUSH_INTERVAL_MS = 1000;
 
-/** Sent by runner to hub with active user IDs (fire-and-forget) */
+/** Sent by NAISYS instance to hub with active user IDs (fire-and-forget) */
 export const HeartbeatSchema = z.object({
   activeUserIds: z.array(z.string()),
 });
 export type Heartbeat = z.infer<typeof HeartbeatSchema>;
 
-/** Sent by hub to runners with aggregate active user IDs */
+/** Sent by hub to NAISYS instances with aggregate active user IDs */
 export const HeartbeatStatusSchema = z.object({
   activeUserIds: z.array(z.string()),
 });
 export type HeartbeatStatus = z.infer<typeof HeartbeatStatusSchema>;
 
 // =============================================================================
-// Runner -> Hub Request/Response Messages
+// NAISYS -> Hub Request/Response Messages
 // =============================================================================
 
 /** Response to user_list request - returns all users registered on the hub */
@@ -123,15 +123,15 @@ export const HubEvents = {
   CLIENT_CONNECTED: "client_connected",
   CLIENT_DISCONNECTED: "client_disconnected",
 
-  // Internal runner events (not sent over wire, local only)
-  /** Raised when runner connects to a hub (before catch_up is sent) */
+  // Internal NAISYS events (not sent over wire, local only)
+  /** Raised when NAISYS instance connects to a hub (before catch_up is sent) */
   HUB_CONNECTED: "hub_connected",
 
-  // Session events (runner -> hub request/response)
+  // Session events (NAISYS -> hub request/response)
   SESSION_CREATE: "session_create",
   SESSION_INCREMENT: "session_increment",
 
-  // Log events (runner -> hub, fire-and-forget)
+  // Log events (NAISYS -> hub, fire-and-forget)
   LOG_WRITE: "log_write",
 
   // Heartbeat events

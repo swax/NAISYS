@@ -199,7 +199,6 @@ export function createMailService(
               id: ulid(),
               message_id: messageId,
               user_id: recipient.id,
-              host_id: localHostId, // Sender's host
               type: "to",
               created_at: new Date(),
             },
@@ -229,32 +228,10 @@ export function createMailService(
 
   async function markMessageAsRead(messageId: string): Promise<void> {
     await usingDatabase(async (prisma) => {
-      const existingStatus = await prisma.mail_status.findUnique({
-        where: {
-          message_id_user_id: {
-            message_id: messageId,
-            user_id: localUserId,
-          },
-        },
+      await prisma.mail_recipients.updateMany({
+        where: { message_id: messageId, user_id: localUserId, read_at: null },
+        data: { read_at: new Date() },
       });
-
-      if (!existingStatus) {
-        await prisma.mail_status.create({
-          data: {
-            id: ulid(),
-            message_id: messageId,
-            user_id: localUserId,
-            host_id: localHostId,
-            read_at: new Date(),
-            created_at: new Date(),
-          },
-        });
-      } else if (!existingStatus.read_at) {
-        await prisma.mail_status.update({
-          where: { id: existingStatus.id },
-          data: { read_at: new Date() },
-        });
-      }
     });
   }
 
@@ -276,33 +253,10 @@ export function createMailService(
 
         const message = messages[0];
 
-        // Upsert mail_status with archived_at
-        const existingStatus = await prisma.mail_status.findUnique({
-          where: {
-            message_id_user_id: {
-              message_id: message.id,
-              user_id: localUserId,
-            },
-          },
+        await prisma.mail_recipients.updateMany({
+          where: { message_id: message.id, user_id: localUserId },
+          data: { archived_at: new Date() },
         });
-
-        if (!existingStatus) {
-          await prisma.mail_status.create({
-            data: {
-              id: ulid(),
-              message_id: message.id,
-              user_id: localUserId,
-              host_id: localHostId,
-              archived_at: new Date(),
-              created_at: new Date(),
-            },
-          });
-        } else {
-          await prisma.mail_status.update({
-            where: { id: existingStatus.id },
-            data: { archived_at: new Date() },
-          });
-        }
       }
 
       return `Messages ${messageIds.join(",")} archived`;
@@ -323,8 +277,7 @@ export function createMailService(
     return await usingDatabase(async (prisma) => {
       const messages = await prisma.mail_messages.findMany({
         where: {
-          recipients: { some: { user_id: localUserId } },
-          status: { none: { user_id: localUserId, read_at: { not: null } } },
+          recipients: { some: { user_id: localUserId, read_at: null } },
         },
         select: { id: true },
       });

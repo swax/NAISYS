@@ -1,49 +1,49 @@
 import { Socket } from "socket.io";
 import { HubServerLog } from "./hubServerLog.js";
 
-export interface RunnerConnectionInfo {
-  runnerId: string;
-  runnerName: string;
+export interface HostConnectionInfo {
+  hostId: string;
+  hostName: string;
   connectedAt: Date;
 }
 
-/** Generic raise event function type - all events have runnerId as first arg */
+/** Generic raise event function type - all events have hostId as first arg */
 export type RaiseEventFn = (
   event: string,
-  runnerId: string,
+  hostId: string,
   ...args: unknown[]
 ) => void;
 
 /**
- * Handles the lifecycle of a single NAISYS runner connection to the hub.
- * Each connected runner gets its own RunnerConnection instance.
+ * Handles the lifecycle of a single NAISYS instance connection to the hub.
+ * Each connected NAISYS instance gets its own NaisysConnection instance.
  */
-export function createRunnerConnection(
+export function createNaisysConnection(
   socket: Socket,
-  connectionInfo: RunnerConnectionInfo,
+  connectionInfo: HostConnectionInfo,
   raiseEvent: RaiseEventFn,
   logService: HubServerLog,
 ) {
-  const { runnerId, runnerName, connectedAt } = connectionInfo;
+  const { hostId, hostName, connectedAt } = connectionInfo;
 
   logService.log(
-    `[RunnerConnection] Runner connected: ${runnerName} (${runnerId})`,
+    `[NaisysConnection] NAISYS instance connected: ${hostName} (${hostId})`,
   );
 
   // Forward all socket events to hub's emit function
   // Note: Socket.IO passes (eventName, ...args) where last arg may be an ack callback
   socket.onAny((eventName: string, ...args: unknown[]) => {
     logService.log(
-      `[RunnerConnection] Received ${eventName} from ${runnerName}`,
+      `[NaisysConnection] Received ${eventName} from ${hostName}`,
     );
     // Pass all args including any ack callback (usually data and optional ack)
-    raiseEvent(eventName, runnerId, ...args);
+    raiseEvent(eventName, hostId, ...args);
   });
 
   // Handle disconnect
   socket.on("disconnect", (reason) => {
     logService.log(
-      `[RunnerConnection] Runner disconnected: ${runnerName} (${runnerId}) - ${reason}`,
+      `[NaisysConnection] NAISYS instance disconnected: ${hostName} (${hostId}) - ${reason}`,
     );
   });
 
@@ -68,11 +68,11 @@ export function createRunnerConnection(
 
   return {
     sendMessage,
-    getRunnerId: () => runnerId,
-    getRunnerName: () => runnerName,
+    getHostId: () => hostId,
+    getHostName: () => hostName,
     getConnectedAt: () => connectedAt,
     getSocketId: () => socket.id,
   };
 }
 
-export type RunnerConnection = ReturnType<typeof createRunnerConnection>;
+export type NaisysConnection = ReturnType<typeof createNaisysConnection>;

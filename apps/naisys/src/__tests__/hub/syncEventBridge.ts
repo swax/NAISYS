@@ -2,7 +2,7 @@ import { ZodSchema } from "zod";
 
 /**
  * Mock transport layer for integration testing the sync system.
- * Routes messages between mock HubClient (runner side) and mock HubServer (hub side)
+ * Routes messages between mock HubClient (NAISYS instance side) and mock HubServer (hub side)
  * without actual WebSocket connections.
  */
 
@@ -19,12 +19,12 @@ interface RegisteredHandler {
  * Mock client connection info (used by HubServer)
  */
 export interface MockClientConnection {
-  getRunnerId: () => string;
-  getRunnerName: () => string;
+  getHostId: () => string;
+  getHostName: () => string;
 }
 
 /**
- * Mock HubClient interface (runner side)
+ * Mock HubClient interface (NAISYS instance side)
  * Receives events from the hub and allows registering handlers.
  */
 export interface MockHubClient {
@@ -55,27 +55,27 @@ export interface MockHubServer {
   ) => void;
   unregisterEvent: (event: string, handler: EventHandler) => void;
   sendMessage: <T = unknown>(
-    runnerId: string,
+    hostId: string,
     event: string,
     payload: unknown,
     ack?: AckCallback<T>,
   ) => boolean;
   getConnectedClients: () => MockClientConnection[];
-  getConnectionByRunnerId: (
-    runnerId: string,
+  getConnectionByHostId: (
+    hostId: string,
   ) => MockClientConnection | undefined;
   getConnectionCount: () => number;
   close: () => void;
   /** Internal: raise an event (called by the bridge) */
-  _raiseEvent: (event: string, runnerId: string, ...args: unknown[]) => void;
+  _raiseEvent: (event: string, hostId: string, ...args: unknown[]) => void;
 }
 
 /**
- * A runner endpoint in the sync bridge.
+ * A NAISYS instance endpoint in the sync bridge.
  */
-export interface RunnerEndpoint {
-  runnerId: string;
-  runnerName: string;
+export interface NaisysEndpoint {
+  hostId: string;
+  hostName: string;
   hubClient: MockHubClient;
 }
 
@@ -84,7 +84,7 @@ export interface RunnerEndpoint {
  * Allows testing the full sync flow without actual network.
  */
 export function createSyncEventBridge() {
-  const runners = new Map<string, RunnerEndpoint>();
+  const naisysInstances = new Map<string, NaisysEndpoint>();
   let hubServer: MockHubServer | null = null;
 
   // Hub event handlers registry
@@ -123,13 +123,13 @@ export function createSyncEventBridge() {
       },
 
       sendMessage: <T = unknown>(
-        runnerId: string,
+        hostId: string,
         event: string,
         payload: unknown,
         ack?: AckCallback<T>,
       ): boolean => {
-        const runner = runners.get(runnerId);
-        if (!runner) {
+        const naisysInstance = naisysInstances.get(hostId);
+        if (!naisysInstance) {
           return false;
         }
 
@@ -141,45 +141,45 @@ export function createSyncEventBridge() {
             }
           : undefined;
 
-        // Deliver to runner's HubClient
-        runner.hubClient._raiseEvent(event, payload, wrappedAck);
+        // Deliver to NAISYS instance's HubClient
+        naisysInstance.hubClient._raiseEvent(event, payload, wrappedAck);
         return true;
       },
 
       getConnectedClients: (): MockClientConnection[] => {
-        return Array.from(runners.values()).map((r) => ({
-          getRunnerId: () => r.runnerId,
-          getRunnerName: () => r.runnerName,
+        return Array.from(naisysInstances.values()).map((r) => ({
+          getHostId: () => r.hostId,
+          getHostName: () => r.hostName,
         }));
       },
 
-      getConnectionByRunnerId: (
-        runnerId: string,
+      getConnectionByHostId: (
+        hostId: string,
       ): MockClientConnection | undefined => {
-        const runner = runners.get(runnerId);
-        if (!runner) return undefined;
+        const naisysInstance = naisysInstances.get(hostId);
+        if (!naisysInstance) return undefined;
         return {
-          getRunnerId: () => runner.runnerId,
-          getRunnerName: () => runner.runnerName,
+          getHostId: () => naisysInstance.hostId,
+          getHostName: () => naisysInstance.hostName,
         };
       },
 
-      getConnectionCount: (): number => runners.size,
+      getConnectionCount: (): number => naisysInstances.size,
 
       close: () => {
         hubEventHandlers.clear();
       },
 
-      _raiseEvent: (event: string, runnerId: string, ...args: unknown[]) => {
+      _raiseEvent: (event: string, hostId: string, ...args: unknown[]) => {
         const handlers = hubEventHandlers.get(event);
         if (handlers) {
           for (const { handler, schema } of handlers) {
             if (schema && args.length > 0) {
               const result = schema.safeParse(args[0]);
               if (!result.success) continue;
-              handler(runnerId, result.data, ...args.slice(1));
+              handler(hostId, result.data, ...args.slice(1));
             } else {
-              handler(runnerId, ...args);
+              handler(hostId, ...args);
             }
           }
         }
@@ -191,17 +191,17 @@ export function createSyncEventBridge() {
   }
 
   /**
-   * Create a mock HubClient for a runner.
+   * Create a mock HubClient for a NAISYS instance.
    */
   function createMockHubClient(
-    runnerId: string,
-    runnerName: string,
+    hostId: string,
+    hostName: string,
   ): MockHubClient {
-    if (runners.has(runnerId)) {
-      throw new Error(`Runner ${runnerId} already exists`);
+    if (naisysInstances.has(hostId)) {
+      throw new Error(`NAISYS instance ${hostId} already exists`);
     }
 
-    // Runner's event handlers registry
+    // NAISYS instance's event handlers registry
     const eventHandlers = new Map<string, Set<EventHandler>>();
 
     const client: MockHubClient = {
@@ -240,7 +240,7 @@ export function createSyncEventBridge() {
           : undefined;
 
         // Deliver to hub's event handlers
-        hubServer._raiseEvent(event, runnerId, payload, wrappedAck);
+        hubServer._raiseEvent(event, hostId, payload, wrappedAck);
         return true;
       },
 
@@ -259,18 +259,18 @@ export function createSyncEventBridge() {
       },
     };
 
-    const endpoint: RunnerEndpoint = {
-      runnerId,
-      runnerName,
+    const endpoint: NaisysEndpoint = {
+      hostId,
+      hostName,
       hubClient: client,
     };
-    runners.set(runnerId, endpoint);
+    naisysInstances.set(hostId, endpoint);
 
     // Notify hub of connection
     if (hubServer) {
-      hubServer._raiseEvent("client_connected", runnerId, {
-        getRunnerId: () => runnerId,
-        getRunnerName: () => runnerName,
+      hubServer._raiseEvent("client_connected", hostId, {
+        getHostId: () => hostId,
+        getHostName: () => hostName,
       });
     }
 
@@ -278,34 +278,34 @@ export function createSyncEventBridge() {
   }
 
   /**
-   * Disconnect a runner from the bridge.
+   * Disconnect a NAISYS instance from the bridge.
    */
-  function disconnectRunner(runnerId: string): void {
-    if (!runners.has(runnerId)) return;
+  function disconnectNaisysInstance(hostId: string): void {
+    if (!naisysInstances.has(hostId)) return;
 
-    runners.delete(runnerId);
+    naisysInstances.delete(hostId);
 
     // Notify hub of disconnection
     if (hubServer) {
-      hubServer._raiseEvent("client_disconnected", runnerId);
+      hubServer._raiseEvent("client_disconnected", hostId);
     }
   }
 
   /**
-   * Get all connected runner IDs.
+   * Get all connected NAISYS instance IDs.
    */
-  function getConnectedRunners(): string[] {
-    return Array.from(runners.keys());
+  function getConnectedNaisysInstances(): string[] {
+    return Array.from(naisysInstances.keys());
   }
 
   /**
-   * Reset the bridge - disconnect all runners and clear hub.
+   * Reset the bridge - disconnect all NAISYS instances and clear hub.
    */
   function reset(): void {
-    for (const runnerId of runners.keys()) {
-      disconnectRunner(runnerId);
+    for (const hostId of naisysInstances.keys()) {
+      disconnectNaisysInstance(hostId);
     }
-    runners.clear();
+    naisysInstances.clear();
     hubEventHandlers.clear();
     hubServer = null;
   }
@@ -313,8 +313,8 @@ export function createSyncEventBridge() {
   return {
     createMockHubServer,
     createMockHubClient,
-    disconnectRunner,
-    getConnectedRunners,
+    disconnectNaisysInstance,
+    getConnectedNaisysInstances,
     reset,
   };
 }
