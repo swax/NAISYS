@@ -1,4 +1,3 @@
-import { DatabaseService } from "@naisys/database";
 import { createCommandHandler } from "../command/commandHandler.js";
 import { createCommandLoop } from "../command/commandLoop.js";
 import { createCommandProtection } from "../command/commandProtection.js";
@@ -23,7 +22,6 @@ import { createLLMService } from "../llm/llmService.js";
 import { createSessionCompactor } from "../llm/sessionCompactor.js";
 import { createSystemMessage } from "../llm/systemMessage.js";
 import { createMailService } from "../mail/mail.js";
-import { createMailAddress } from "../mail/mailAddress.js";
 import { createMailDisplayService } from "../mail/mailDisplayService.js";
 import { HostService } from "../services/hostService.js";
 import { createLogService } from "../services/logService.js";
@@ -34,12 +32,12 @@ import { createOutputService } from "../utils/output.js";
 import { createPromptNotificationService } from "../utils/promptNotificationService.js";
 import { createAgentConfig } from "./agentConfig.js";
 import { IAgentManager } from "./agentManagerInterface.js";
+import { createUserDisplayService } from "./userDisplayService.js";
 import { UserService } from "./userService.js";
 
 export async function createAgentRuntime(
   agentManager: IAgentManager,
   localUserId: string,
-  dbService: DatabaseService,
   globalConfig: GlobalConfig,
   hostService: HostService,
   hubClient: HubClient,
@@ -50,6 +48,8 @@ export async function createAgentRuntime(
    * actually a bit better than the previous module system as this implicitly prevents cirucular dependencies
    * We can also see from this why modern dependency injection frameworks exist
    */
+
+  const isHubMode = globalConfig.globalConfig().isHubMode;
 
   // Base services
   const agentConfig = createAgentConfig(localUserId, globalConfig, userService);
@@ -116,19 +116,16 @@ export async function createAgentRuntime(
 
   // Features
   const genimg = createGenImg(agentConfig, costTracker, output);
-  const mailAddress = createMailAddress(dbService);
-  const mailDisplayService = createMailDisplayService(
-    dbService,
-    mailAddress,
-    localUserId,
-  );
+  const userDisplayService = createUserDisplayService(userService);
+  const mailDisplayService = isHubMode
+    ? createMailDisplayService(hubClient, localUserId)
+    : null;
   const promptNotification = createPromptNotificationService();
   const mailService = createMailService(
     globalConfig,
     agentConfig,
-    dbService,
-    hostService,
-    mailAddress,
+    hubClient,
+    userService,
     mailDisplayService,
     localUserId,
     promptNotification,
@@ -207,6 +204,7 @@ export async function createAgentRuntime(
     sessionService,
     hostService,
     workspaces,
+    userDisplayService,
     ...debugCommands,
     agentConfig,
   ]);

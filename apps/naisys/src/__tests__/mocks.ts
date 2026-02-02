@@ -95,9 +95,8 @@ export function createMockMailService() {
     handleCommand: jest.fn(() => Promise.resolve("")),
     getUnreadThreads: jest.fn(() => Promise.resolve([])),
     sendMessage: jest.fn(() => Promise.resolve("")),
-    readMessage: jest.fn(() => Promise.resolve("")),
-    getAllUserNames: jest.fn(() => Promise.resolve([])),
-    hasMultipleUsers: jest.fn(() => Promise.resolve(false)),
+    getAllUserNames: jest.fn(() => []),
+    hasMultipleUsers: jest.fn(() => false),
     checkAndNotify: jest.fn(() => Promise.resolve()),
     cleanup: jest.fn(),
   };
