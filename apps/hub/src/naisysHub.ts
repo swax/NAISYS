@@ -5,6 +5,7 @@ import http from "http";
 import { Server } from "socket.io";
 import { fileURLToPath } from "url";
 import { createHubAgentService } from "./handlers/hubAgentService.js";
+import { createHubCostService } from "./handlers/hubCostService.js";
 import { createHubHeartbeatService } from "./handlers/hubHeartbeatService.js";
 import { createHubLogService } from "./handlers/hubLogService.js";
 import { createHubRunService } from "./handlers/hubRunService.js";
@@ -92,6 +93,9 @@ export async function startHub(
 
     // Register hub agent service for agent_start requests routed to target hosts
     createHubAgentService(naisysServer, dbService, logService, heartbeatService);
+
+    // Register hub cost service for cost_write events from NAISYS instances
+    createHubCostService(naisysServer, dbService, logService, heartbeatService, hubConfig);
 
     // Start listening
     await new Promise<void>((resolve, reject) => {

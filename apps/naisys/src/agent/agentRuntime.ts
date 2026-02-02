@@ -16,6 +16,7 @@ import { GlobalConfig } from "../globalConfig.js";
 import { HubClient } from "../hub/hubClient.js";
 import { createCommandTools } from "../llm/commandTool.js";
 import { createContextManager } from "../llm/contextManager.js";
+import { createCostDisplayService } from "../llm/costDisplayService.js";
 import { createCostTracker } from "../llm/costTracker.js";
 import { createLLModels } from "../llm/llModels.js";
 import { createLLMService } from "../llm/llmService.js";
@@ -80,11 +81,16 @@ export async function createAgentRuntime(
     globalConfig,
     agentConfig,
     llModels,
-    dbService,
     runService,
-    output,
-    hostService,
+    hubClient,
     localUserId,
+  );
+  const costDisplayService = createCostDisplayService(
+    globalConfig,
+    agentConfig,
+    costTracker,
+    llModels,
+    output,
   );
   const contextManager = createContextManager(
     agentConfig,
@@ -197,7 +203,7 @@ export async function createAgentRuntime(
     genimg,
     subagentService,
     mailService,
-    costTracker,
+    costDisplayService,
     sessionService,
     hostService,
     workspaces,
@@ -253,6 +259,7 @@ export async function createAgentRuntime(
       await new Promise((resolve) => setTimeout(resolve, 5000));
     },
     completeShutdown: (reason: string) => {
+      costTracker.cleanup();
       logService.cleanup();
       subagentService.cleanup(reason);
       mailService.cleanup();

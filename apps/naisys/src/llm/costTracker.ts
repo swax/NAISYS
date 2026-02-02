@@ -1,16 +1,17 @@
-import { DatabaseService, ulid } from "@naisys/database";
-import stringArgv from "string-argv";
+import { calculatePeriodBoundaries } from "@naisys/common";
+import {
+  COST_FLUSH_INTERVAL_MS,
+  CostControlSchema,
+  CostWriteEntry,
+  HubEvents,
+} from "@naisys/hub-protocol";
 import { AgentConfig } from "../agent/agentConfig.js";
-import { RegistrableCommand } from "../command/commandRegistry.js";
 import { GlobalConfig } from "../globalConfig.js";
-import { HostService } from "../services/hostService.js";
+import { HubClient } from "../hub/hubClient.js";
 import { RunService } from "../services/runService.js";
-import { OutputService } from "../utils/output.js";
-import { isUlidWithinWindow, minUlidForTime } from "../utils/ulidTools.js";
 import { LLModels } from "./llModels.js";
 
-// Keep only interfaces that are used as parameters or need explicit typing
-interface LlmModelCosts {
+export interface LlmModelCosts {
   inputCost: number;
   outputCost: number;
   cacheWriteCost?: number;
@@ -24,23 +25,120 @@ interface TokenUsage {
   cacheReadTokens: number;
 }
 
-// Aggregate costs within this time window (in milliseconds)
-const COST_AGGREGATION_WINDOW_MS = 5 * 60 * 1000; // 5 minutes
+export interface ModelCostData {
+  cost: number;
+  inputTokens: number;
+  outputTokens: number;
+  cacheWriteTokens: number;
+  cacheReadTokens: number;
+}
+
+export interface PeriodInfo {
+  periodCost: number;
+  periodStart: Date;
+  periodEnd: Date;
+}
 
 export function createCostTracker(
   { globalConfig }: GlobalConfig,
   { agentConfig }: AgentConfig,
   llModels: LLModels,
-  { usingDatabase }: DatabaseService,
   runService: RunService,
-  output: OutputService,
-  hostService: HostService,
+  hubClient: HubClient,
   localUserId: string,
 ) {
-  const { localHostId } = hostService;
-  // Record token usage for LLM calls - calculate and store total cost
-  // Aggregates costs within a time window by user/run/session/source/model combination
-  async function recordTokens(
+  const isHubMode = globalConfig().isHubMode;
+
+  // In-memory per-model aggregated costs (always maintained, both modes)
+  const modelCosts = new Map<string, ModelCostData>();
+
+  // Running total cost for this agent
+  let totalCost = 0;
+
+  // Period tracking for local mode spend limits
+  let periodCost = 0;
+  let currentPeriodEnd = 0;
+
+  // Hub mode: buffer for batched cost writes
+  const buffer: CostWriteEntry[] = [];
+
+  let flushInterval: NodeJS.Timeout | null = null;
+  if (isHubMode) {
+    flushInterval = setInterval(flush, COST_FLUSH_INTERVAL_MS);
+  }
+
+  // Hub mode: receive cost control messages from hub
+  let hubCostControlReason: string | undefined;
+
+  if (isHubMode) {
+    hubClient.registerEvent(HubEvents.COST_CONTROL, (data: unknown) => {
+      const parsed = CostControlSchema.parse(data);
+      if (parsed.userId !== localUserId) return;
+
+      if (parsed.enabled) {
+        hubCostControlReason = undefined;
+      } else {
+        hubCostControlReason = parsed.reason;
+      }
+    });
+  }
+
+  function updateInMemory(
+    modelKey: string,
+    cost: number,
+    inputTokens: number,
+    outputTokens: number,
+    cacheWriteTokens: number,
+    cacheReadTokens: number,
+  ) {
+    const existing = modelCosts.get(modelKey);
+    if (existing) {
+      existing.cost += cost;
+      existing.inputTokens += inputTokens;
+      existing.outputTokens += outputTokens;
+      existing.cacheWriteTokens += cacheWriteTokens;
+      existing.cacheReadTokens += cacheReadTokens;
+    } else {
+      modelCosts.set(modelKey, {
+        cost,
+        inputTokens,
+        outputTokens,
+        cacheWriteTokens,
+        cacheReadTokens,
+      });
+    }
+
+    totalCost += cost;
+    addCostToPeriod(cost);
+  }
+
+  function pushToBuffer(
+    source: string,
+    modelKey: string,
+    cost: number,
+    inputTokens: number,
+    outputTokens: number,
+    cacheWriteTokens: number,
+    cacheReadTokens: number,
+  ) {
+    const { getRunId, getSessionId } = runService;
+
+    buffer.push({
+      userId: localUserId,
+      runId: getRunId(),
+      sessionId: getSessionId(),
+      source,
+      model: modelKey,
+      cost,
+      inputTokens,
+      outputTokens,
+      cacheWriteTokens,
+      cacheReadTokens,
+    });
+  }
+
+  // Record token usage for LLM calls
+  function recordTokens(
     source: string,
     modelKey: string,
     inputTokens: number = 0,
@@ -48,7 +146,6 @@ export function createCostTracker(
     cacheWriteTokens: number = 0,
     cacheReadTokens: number = 0,
   ) {
-    // Calculate total cost from tokens - will throw if model not found
     const model = llModels.get(modelKey);
     const tokenUsage: TokenUsage = {
       inputTokens,
@@ -56,133 +153,37 @@ export function createCostTracker(
       cacheWriteTokens,
       cacheReadTokens,
     };
-    const totalCost = calculateCostFromTokens(tokenUsage, model);
+    const cost = calculateCostFromTokens(tokenUsage, model);
 
-    const { getRunId, getSessionId } = runService;
+    updateInMemory(
+      modelKey,
+      cost,
+      inputTokens,
+      outputTokens,
+      cacheWriteTokens,
+      cacheReadTokens,
+    );
 
-    await usingDatabase(async (prisma) => {
-      // Find the most recent cost record for this combination
-      const existingRecord = await prisma.costs.findFirst({
-        where: {
-          user_id: localUserId,
-          run_id: getRunId(),
-          session_id: getSessionId(),
-          source,
-          model: modelKey,
-        },
-        orderBy: { id: "desc" },
-        select: { id: true },
-      });
-
-      // Update existing record if within aggregation window, otherwise create new
-      if (
-        existingRecord &&
-        isUlidWithinWindow(existingRecord.id, COST_AGGREGATION_WINDOW_MS)
-      ) {
-        await prisma.costs.update({
-          where: { id: existingRecord.id },
-          data: {
-            cost: { increment: totalCost },
-            input_tokens: { increment: inputTokens },
-            output_tokens: { increment: outputTokens },
-            cache_write_tokens: { increment: cacheWriteTokens },
-            cache_read_tokens: { increment: cacheReadTokens },
-          },
-        });
-      } else {
-        await prisma.costs.create({
-          data: {
-            id: ulid(),
-            user_id: localUserId,
-            run_id: getRunId(),
-            session_id: getSessionId(),
-            host_id: localHostId,
-            source,
-            model: modelKey,
-            cost: totalCost,
-            input_tokens: inputTokens,
-            output_tokens: outputTokens,
-            cache_write_tokens: cacheWriteTokens,
-            cache_read_tokens: cacheReadTokens,
-          },
-        });
-      }
-    });
-
-    await updateSessionCost(totalCost);
+    if (isHubMode) {
+      pushToBuffer(
+        source,
+        modelKey,
+        cost,
+        inputTokens,
+        outputTokens,
+        cacheWriteTokens,
+        cacheReadTokens,
+      );
+    }
   }
 
   // Record fixed cost for non-token services like image generation
-  // Aggregates costs within a time window by user/run/session/source/model combination
-  async function recordCost(cost: number, source: string, modelKey: string) {
-    const { getRunId, getSessionId } = runService;
+  function recordCost(cost: number, source: string, modelKey: string) {
+    updateInMemory(modelKey, cost, 0, 0, 0, 0);
 
-    await usingDatabase(async (prisma) => {
-      // Find the most recent cost record for this combination
-      const existingRecord = await prisma.costs.findFirst({
-        where: {
-          user_id: localUserId,
-          run_id: getRunId(),
-          session_id: getSessionId(),
-          source,
-          model: modelKey,
-        },
-        orderBy: { id: "desc" },
-        select: { id: true },
-      });
-
-      // Update existing record if within aggregation window, otherwise create new
-      if (
-        existingRecord &&
-        isUlidWithinWindow(existingRecord.id, COST_AGGREGATION_WINDOW_MS)
-      ) {
-        await prisma.costs.update({
-          where: { id: existingRecord.id },
-          data: {
-            cost: { increment: cost },
-          },
-        });
-      } else {
-        await prisma.costs.create({
-          data: {
-            id: ulid(),
-            user_id: localUserId,
-            run_id: getRunId(),
-            session_id: getSessionId(),
-            host_id: localHostId,
-            source,
-            model: modelKey,
-            cost,
-            input_tokens: 0,
-            output_tokens: 0,
-            cache_write_tokens: 0,
-            cache_read_tokens: 0,
-          },
-        });
-      }
-    });
-
-    await updateSessionCost(cost);
-  }
-
-  async function updateSessionCost(cost: number) {
-    const { getRunId, getSessionId } = runService;
-
-    await usingDatabase(async (prisma) => {
-      await prisma.run_session.updateMany({
-        where: {
-          user_id: localUserId,
-          run_id: getRunId(),
-          session_id: getSessionId(),
-        },
-        data: {
-          last_active: new Date().toISOString(),
-          total_cost: {
-            increment: cost,
-          },
-        },
-      });
-    });
+    if (isHubMode) {
+      pushToBuffer(source, modelKey, cost, 0, 0, 0, 0);
+    }
   }
 
   // Common function to calculate cost from token usage
@@ -200,93 +201,52 @@ export function createCostTracker(
     return inputCost + outputCost + cacheWriteCost + cacheReadCost;
   }
 
-  // Calculate the current period boundaries based on SPEND_LIMIT_HOURS
-  // Periods are fixed multiples of hours from midnight (server local time)
-  function calculatePeriodBoundaries(hours: number): {
-    periodStart: Date;
-    periodEnd: Date;
-  } {
-    const now = new Date();
-
-    // Get midnight of current day in local time
-    const midnight = new Date(now);
-    midnight.setHours(0, 0, 0, 0);
-
-    // Calculate milliseconds since midnight
-    const msSinceMidnight = now.getTime() - midnight.getTime();
-    const hoursSinceMidnight = msSinceMidnight / (1000 * 60 * 60);
-
-    // Calculate which period we're in (0, 1, 2, ...)
-    const periodIndex = Math.floor(hoursSinceMidnight / hours);
-
-    // Calculate period start and end
-    const periodStartHours = periodIndex * hours;
-    const periodEndHours = (periodIndex + 1) * hours;
-
-    const periodStart = new Date(
-      midnight.getTime() + periodStartHours * 60 * 60 * 1000,
-    );
-    const periodEnd = new Date(
-      midnight.getTime() + periodEndHours * 60 * 60 * 1000,
-    );
-
-    return { periodStart, periodEnd };
-  }
-
-  async function getTotalCosts(
-    userId?: string,
-    periodStart?: Date,
-    periodEnd?: Date,
-  ) {
-    return usingDatabase(async (prisma) => {
-      const where: any = userId ? { user_id: userId } : {};
-
-      // Filter by ULID timestamp range (ULIDs are lexicographically sortable by time)
-      if (periodStart && periodEnd) {
-        where.id = {
-          gte: minUlidForTime(periodStart),
-          lt: minUlidForTime(periodEnd),
-        };
+  function addCostToPeriod(cost: number) {
+    const now = Date.now();
+    if (now >= currentPeriodEnd) {
+      // Period rolled over, reset
+      const spendLimitHours =
+        agentConfig().spendLimitHours || globalConfig().spendLimitHours;
+      if (spendLimitHours !== undefined) {
+        const { periodEnd } = calculatePeriodBoundaries(spendLimitHours);
+        currentPeriodEnd = periodEnd.getTime();
       }
-
-      const result = await prisma.costs.aggregate({
-        where,
-        _sum: {
-          cost: true,
-        },
-      });
-
-      return Number(result._sum.cost || 0);
-    });
+      periodCost = 0;
+    }
+    periodCost += cost;
   }
 
   // Check if the current spend limit has been reached and throw an error if so
-  async function checkSpendLimit() {
-    // Determine if we're using per-agent or global limits
-    const limitUserId = agentConfig().spendLimitDollars
-      ? localUserId
-      : undefined;
+  // In hub mode, checks the cost control state received from the hub
+  function checkSpendLimit() {
+    if (isHubMode) {
+      if (hubCostControlReason) {
+        throw `LLM ${hubCostControlReason}`;
+      }
+      return;
+    }
 
-    // Determine if we're using time-based limits
     const spendLimitHours =
       agentConfig().spendLimitHours || globalConfig().spendLimitHours;
     const spendLimit =
       agentConfig().spendLimitDollars || globalConfig().spendLimitDollars || -1;
 
-    let currentTotalCost: number;
+    let currentCost: number;
     let periodDescription: string;
 
     if (spendLimitHours !== undefined) {
-      // Use time-based limit
       const { periodStart, periodEnd } =
         calculatePeriodBoundaries(spendLimitHours);
-      currentTotalCost = await getTotalCosts(
-        limitUserId,
-        periodStart,
-        periodEnd,
-      );
 
-      // Format period description
+      // Ensure period is current
+      const now = Date.now();
+      if (now >= currentPeriodEnd) {
+        currentPeriodEnd = periodEnd.getTime();
+        periodCost = 0;
+      }
+
+      currentCost = periodCost;
+
       const formatTime = (date: Date) => {
         return date.toLocaleTimeString("en-US", {
           hour: "2-digit",
@@ -296,389 +256,71 @@ export function createCostTracker(
       };
       periodDescription = `per ${spendLimitHours} hour${spendLimitHours !== 1 ? "s" : ""} (current period: ${formatTime(periodStart)} - ${formatTime(periodEnd)})`;
     } else {
-      // Use all-time limit
-      currentTotalCost = await getTotalCosts(limitUserId);
+      currentCost = totalCost;
       periodDescription = "total";
     }
 
-    if (spendLimit < currentTotalCost) {
+    if (spendLimit < currentCost) {
       const userDescription = agentConfig().spendLimitDollars
         ? `${agentConfig().username}`
         : "all users";
-      throw `LLM Spend limit of $${spendLimit} ${periodDescription} reached for ${userDescription}, current cost $${currentTotalCost.toFixed(2)}`;
+      throw `LLM Spend limit of $${spendLimit} ${periodDescription} reached for ${userDescription}, current cost $${currentCost.toFixed(2)}`;
     }
   }
 
-  async function getCostBreakdown(userId?: string) {
-    return usingDatabase(async (prisma) => {
-      const where = userId ? { user_id: userId } : {};
+  // Hub buffer flush
+  function flush() {
+    if (buffer.length === 0) return;
 
-      const result = await prisma.costs.aggregate({
-        where,
-        _sum: {
-          input_tokens: true,
-          output_tokens: true,
-          cache_write_tokens: true,
-          cache_read_tokens: true,
-        },
-      });
-
-      // Convert BigInt to Number for arithmetic operations
-      const inputTokens = Number(result._sum.input_tokens || 0);
-      const outputTokens = Number(result._sum.output_tokens || 0);
-      const cacheWriteTokens = Number(result._sum.cache_write_tokens || 0);
-      const cacheReadTokens = Number(result._sum.cache_read_tokens || 0);
-
-      const totalCacheTokens = cacheWriteTokens + cacheReadTokens;
-      const totalInputTokens = inputTokens + totalCacheTokens;
-
-      return {
-        inputTokens,
-        outputTokens,
-        cacheWriteTokens,
-        cacheReadTokens,
-        totalInputTokens,
-        totalCacheTokens,
-      };
-    });
+    const entries = buffer.splice(0, buffer.length);
+    hubClient.sendMessage(HubEvents.COST_WRITE, { entries });
   }
 
-  async function getCostBreakdownWithModels(userId?: string) {
-    return usingDatabase(async (prisma) => {
-      const result = await prisma.costs.groupBy({
-        by: ["model"],
-        ...(userId ? { where: { user_id: userId } } : {}),
-        _sum: {
-          cost: true,
-          input_tokens: true,
-          output_tokens: true,
-          cache_write_tokens: true,
-          cache_read_tokens: true,
-        },
-        orderBy: {
-          _sum: {
-            cost: "desc",
-          },
-        },
-      });
-
-      // Convert BigInt values to Number for compatibility
-      return result.map((row) => ({
-        model: row.model,
-        total_cost: Number(row._sum.cost || 0),
-        input_tokens: Number(row._sum.input_tokens || 0),
-        output_tokens: Number(row._sum.output_tokens || 0),
-        cache_write_tokens: Number(row._sum.cache_write_tokens || 0),
-        cache_read_tokens: Number(row._sum.cache_read_tokens || 0),
-      }));
-    });
-  }
-
-  function formatCostDetail(
-    label: string,
-    cost: number,
-    tokens: number,
-    rate: number,
-  ): string {
-    return `    ${label}: $${cost.toFixed(4)} for ${tokens.toLocaleString()} tokens at $${rate}/MTokens`;
-  }
-
-  function calculateModelCacheSavings(
-    modelData: {
-      model: string;
-      input_tokens: number;
-      output_tokens: number;
-      cache_write_tokens: number;
-      cache_read_tokens: number;
-    },
-    model: LlmModelCosts,
-  ) {
-    const cacheWriteTokens = modelData.cache_write_tokens || 0;
-    const cacheReadTokens = modelData.cache_read_tokens || 0;
-    const totalCacheTokens = cacheWriteTokens + cacheReadTokens;
-
-    if (totalCacheTokens === 0 || !model.inputCost) {
-      return null;
+  function cleanup() {
+    if (flushInterval) {
+      clearInterval(flushInterval);
+      flushInterval = null;
     }
-
-    // Calculate what these cache tokens would have cost at regular input rate
-    const cacheSavingsAmount =
-      (cacheWriteTokens * (model.inputCost - (model.cacheWriteCost || 0))) /
-        1_000_000 +
-      (cacheReadTokens * (model.inputCost - (model.cacheReadCost || 0))) /
-        1_000_000;
-
-    // Calculate actual cache cost from tokens
-    const actualCacheSpend =
-      (cacheWriteTokens * (model.cacheWriteCost || 0)) / 1_000_000 +
-      (cacheReadTokens * (model.cacheReadCost || 0)) / 1_000_000;
-
-    // Calculate total cost for this model from tokens
-    const inputTokens = modelData.input_tokens || 0;
-    const outputTokens = modelData.output_tokens || 0;
-    const inputCost = (inputTokens * model.inputCost) / 1_000_000;
-    const outputCost = (outputTokens * model.outputCost) / 1_000_000;
-    const totalCost = inputCost + outputCost + actualCacheSpend;
-
-    const costWithoutCaching = totalCost + cacheSavingsAmount;
-    const savingsPercent =
-      cacheSavingsAmount > 0
-        ? (cacheSavingsAmount / costWithoutCaching) * 100
-        : 0;
-
-    return {
-      savingsAmount: cacheSavingsAmount,
-      costWithoutCaching,
-      savingsPercent,
-      totalCacheTokens,
-      totalCost,
-      inputCost,
-      outputCost,
-      actualCacheSpend,
-    };
-  }
-
-  async function clearCosts(userId?: string) {
-    return usingDatabase(async (prisma) => {
-      const where = userId ? { user_id: userId } : {};
-
-      await prisma.costs.deleteMany({ where });
-    });
-  }
-
-  async function printCosts(userId?: string) {
-    const costBreakdown = await getCostBreakdown(userId);
-    const modelBreakdowns = await getCostBreakdownWithModels(userId);
-
-    // Use stored total costs
-    const totalStoredCost = modelBreakdowns.reduce(
-      (sum, model) => sum + (model.total_cost || 0),
-      0,
-    );
-
-    // Calculate cache savings for display
-    let totalCacheSavingsAmount = 0;
-    let totalCostWithoutCaching = 0;
-
-    for (const modelData of modelBreakdowns) {
-      try {
-        const model = llModels.get(modelData.model);
-
-        // Calculate cache savings for display
-        const cacheSavings = calculateModelCacheSavings(modelData, model);
-        if (cacheSavings) {
-          totalCacheSavingsAmount += cacheSavings.savingsAmount;
-          totalCostWithoutCaching += cacheSavings.costWithoutCaching;
-        } else {
-          totalCostWithoutCaching += modelData.total_cost || 0;
-        }
-      } catch {
-        // Use stored cost for unknown models
-        totalCostWithoutCaching += modelData.total_cost || 0;
-      }
+    if (isHubMode) {
+      flush();
     }
+  }
 
-    const spendLimit =
-      agentConfig().spendLimitDollars || globalConfig().spendLimitDollars;
+  // Exposed for costDisplayService
+  function getModelCosts(): Map<string, ModelCostData> {
+    return modelCosts;
+  }
+
+  function getTotalCost(): number {
+    return totalCost;
+  }
+
+  function getPeriodInfo(): PeriodInfo | null {
     const spendLimitHours =
       agentConfig().spendLimitHours || globalConfig().spendLimitHours;
-    const userLabel = userId ? `user ${userId}` : "all users";
+    if (spendLimitHours === undefined) return null;
 
-    // Show period information if time-based limits are enabled
-    if (spendLimitHours !== undefined) {
-      const { periodStart, periodEnd } =
-        calculatePeriodBoundaries(spendLimitHours);
-      const formatTime = (date: Date) => {
-        return date.toLocaleTimeString("en-US", {
-          hour: "2-digit",
-          minute: "2-digit",
-          hour12: true,
-        });
-      };
-      output.comment(
-        `Current period: ${formatTime(periodStart)} - ${formatTime(periodEnd)} (${spendLimitHours} hour${spendLimitHours !== 1 ? "s" : ""})`,
-      );
-
-      // Show costs for the current period
-      const periodCost = await getTotalCosts(userId, periodStart, periodEnd);
-      output.comment(
-        `Period cost for ${userLabel}: $${periodCost.toFixed(2)} of $${spendLimit} limit`,
-      );
-    }
-
-    output.comment(
-      `All-time total cost for ${userLabel}: $${totalStoredCost.toFixed(2)}${spendLimitHours === undefined ? ` of $${spendLimit} limit` : ""}`,
-    );
-
-    // Calculate and display cache savings if caching was used
-    if (costBreakdown.totalCacheTokens > 0) {
-      const savingsPercent =
-        totalCostWithoutCaching > 0
-          ? (totalCacheSavingsAmount / totalCostWithoutCaching) * 100
-          : 0;
-
-      output.comment(
-        `Cache savings: $${totalCacheSavingsAmount.toFixed(4)} (${savingsPercent.toFixed(1)}% saved vs $${totalCostWithoutCaching.toFixed(4)} without caching)`,
-      );
-      output.comment(
-        `Cache usage: ${costBreakdown.totalCacheTokens.toLocaleString()} tokens (${costBreakdown.cacheWriteTokens.toLocaleString()} write, ${costBreakdown.cacheReadTokens.toLocaleString()} read)`,
-      );
-    }
-
-    // Show detailed breakdown by model
-    for (const modelData of modelBreakdowns) {
-      let model;
-      try {
-        model = llModels.get(modelData.model);
-      } catch {
-        output.comment(`  Non-model: ${modelData.model}`);
-        output.comment(
-          `    Total cost: $${(modelData.total_cost || 0).toFixed(4)}`,
-        );
-        continue;
-      }
-
-      // Show all models, even with zero usage
-      output.comment(
-        `  ${model.name}: $${(modelData.total_cost || 0).toFixed(4)} total`,
-      );
-
-      // Show token breakdown
-      const inputTokens = modelData.input_tokens || 0;
-      const outputTokens = modelData.output_tokens || 0;
-      const cacheWriteTokens = modelData.cache_write_tokens || 0;
-      const cacheReadTokens = modelData.cache_read_tokens || 0;
-
-      if (inputTokens > 0) {
-        const inputCost = (inputTokens * model.inputCost) / 1_000_000;
-        const inputDetail = formatCostDetail(
-          "Input",
-          inputCost,
-          inputTokens,
-          model.inputCost,
-        );
-        output.comment(inputDetail);
-      }
-
-      if (outputTokens > 0) {
-        const outputCost = (outputTokens * model.outputCost) / 1_000_000;
-        const outputDetail = formatCostDetail(
-          "Output",
-          outputCost,
-          outputTokens,
-          model.outputCost,
-        );
-        output.comment(outputDetail);
-      }
-
-      if (model.cacheWriteCost && cacheWriteTokens > 0) {
-        const cacheWriteCost =
-          (cacheWriteTokens * model.cacheWriteCost) / 1_000_000;
-        const cacheWriteDetail = formatCostDetail(
-          "Cache write",
-          cacheWriteCost,
-          cacheWriteTokens,
-          model.cacheWriteCost,
-        );
-        output.comment(cacheWriteDetail);
-      }
-
-      if (model.cacheReadCost && cacheReadTokens > 0) {
-        const cacheReadCost =
-          (cacheReadTokens * model.cacheReadCost) / 1_000_000;
-        const cacheReadDetail = formatCostDetail(
-          "Cache read",
-          cacheReadCost,
-          cacheReadTokens,
-          model.cacheReadCost,
-        );
-        output.comment(cacheReadDetail);
-      }
-
-      // Show cache savings for this model
-      const cacheSavings = calculateModelCacheSavings(modelData, model);
-      if (cacheSavings) {
-        output.comment(
-          `    Cache savings: $${cacheSavings.savingsAmount.toFixed(4)} (${cacheSavings.savingsPercent.toFixed(1)}% saved vs $${cacheSavings.costWithoutCaching.toFixed(4)} without caching)`,
-        );
-      }
-    }
-
-    // Costs by individual users
-    if (userId) {
-      return; // Skip user breakdown when showing specific user
-    }
-
-    output.comment(`User cost breakdown:`);
-
-    await usingDatabase(async (prisma) => {
-      const result = await prisma.costs.groupBy({
-        by: ["user_id"],
-        _sum: {
-          cost: true,
-        },
-      });
-
-      if (result.length <= 1) {
-        return;
-      }
-
-      // Get usernames for display
-      const userIds = result.map((r) => r.user_id);
-      const users = await prisma.users.findMany({
-        where: { id: { in: userIds } },
-        select: { id: true, username: true },
-      });
-      const userMap = new Map(users.map((u) => [u.id, u.username]));
-
-      for (const row of result) {
-        const username = userMap.get(row.user_id) || `user ${row.user_id}`;
-        output.comment(
-          `  ${username} cost $${Number(row._sum.cost || 0).toFixed(2)}`,
-        );
-      }
-    });
+    const { periodStart, periodEnd } =
+      calculatePeriodBoundaries(spendLimitHours);
+    return { periodCost, periodStart, periodEnd };
   }
 
-  /** ns-cost [reset]: Show cost breakdown or reset cost tracking data */
-  async function handleCommand(cmdArgs: string): Promise<string> {
-    const argv = stringArgv(cmdArgs);
-    const subcommand = argv[0];
-
-    if (subcommand === "reset") {
-      const resetUserId = agentConfig().spendLimitDollars
-        ? localUserId
-        : undefined;
-      await clearCosts(resetUserId);
-      return `Cost tracking data cleared for ${resetUserId ? `${agentConfig().username}` : "all users"}.`;
-    } else if (subcommand) {
-      return "The 'ns-cost' command only supports the 'reset' parameter.";
-    } else {
-      await printCosts();
-      return "";
-    }
+  function resetCosts() {
+    modelCosts.clear();
+    totalCost = 0;
+    periodCost = 0;
   }
-
-  const registrableCommand: RegistrableCommand = {
-    commandName: "ns-cost",
-    helpText: "Show token usage and cost tracking",
-    isDebug: true,
-    handleCommand,
-  };
 
   return {
-    ...registrableCommand,
     recordTokens,
     recordCost,
     calculateCostFromTokens,
-    calculatePeriodBoundaries,
-    getTotalCosts,
     checkSpendLimit,
-    getCostBreakdown,
-    getCostBreakdownWithModels,
-    calculateModelCacheSavings,
-    clearCosts,
-    printCosts,
+    cleanup,
+    getModelCosts,
+    getTotalCost,
+    getPeriodInfo,
+    resetCosts,
   };
 }
 
