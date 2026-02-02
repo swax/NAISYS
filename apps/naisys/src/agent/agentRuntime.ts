@@ -138,6 +138,8 @@ export async function createAgentRuntime(
     localUserId,
     promptNotification,
     contextManager,
+    hubClient,
+    globalConfig,
   );
   const lynxService = createLynxService(
     globalConfig,

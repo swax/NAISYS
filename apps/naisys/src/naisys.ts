@@ -3,6 +3,7 @@ import { program } from "commander";
 import dotenv from "dotenv";
 import { AgentManager } from "./agent/agentManager.js";
 import { createUserService } from "./agent/userService.js";
+import { registerHubAgentHandlers } from "./features/subagent.js";
 import { createGlobalConfig } from "./globalConfig.js";
 import { createHubClientLog } from "./hub/hubClientLog.js";
 import { createHubClient } from "./hub/hubClient.js";
@@ -68,6 +69,11 @@ const agentManager = new AgentManager(
   hubClient,
   userService,
 );
+
+// In hub mode, listen for incoming agent start/stop requests from the hub
+if (globalConfig.globalConfig().isHubMode) {
+  registerHubAgentHandlers(hubClient, agentManager);
+}
 
 // Create heartbeat service for runner-side heartbeat reporting
 const heartbeatService = createHeartbeatService(
