@@ -43,7 +43,7 @@ export function createSessionService(
         return handleCompact(args.slice(subcommand.length).trim());
 
       case "complete":
-        return handleComplete(args.slice(subcommand.length).trim());
+        return handleComplete(argv[1], argv[2]);
 
       default:
         return `Unknown subcommand: ${subcommand}\n\n${getHelpText()}`;
@@ -60,10 +60,11 @@ export function createSessionService(
                           Note should contain your next goal and important things to remember`;
     }
 
-    if (agentConfig().completeTaskEnabled) {
+    if (agentConfig().completeSessionEnabled) {
       helpText += `
-  complete "<result>"     Mark task as complete and exit
-                          Result should contain important output from the task`;
+  complete [<notify_user>] ["<result>"]
+                          End the session
+                          Optionally notify a user with important information or output`;
     }
 
     return helpText;
@@ -123,27 +124,24 @@ export function createSessionService(
   }
 
   async function handleComplete(
-    args: string,
+    notifyUser: string | undefined,
+    taskResult: string | undefined,
   ): Promise<string | CommandResponse> {
-    if (!agentConfig().completeTaskEnabled) {
+    if (!agentConfig().completeSessionEnabled) {
       return 'The "ns-session complete" command is not enabled for this agent.';
     }
 
-    const taskResult = utilities.trimChars(args, '"');
-
-    if (!taskResult) {
-      return 'Task result is required. Use ns-session complete "<result>"';
-    }
-
-    const leadAgent = agentConfig().leadAgent;
-
-    if (leadAgent && agentConfig().mailEnabled) {
+    if (notifyUser) {
       await output.commentAndLog(
-        "Sub agent has completed the task. Notifying lead agent and exiting process.",
+        `Session completed. Notifying ${notifyUser} and exiting process.`,
       );
-      await mailService.sendMessage([leadAgent], "Task Completed", taskResult);
+      await mailService.sendMessage(
+        [notifyUser],
+        "Session Completed",
+        taskResult || "Session completed",
+      );
     } else {
-      await output.commentAndLog("Task completed. Exiting process.");
+      await output.commentAndLog("Session completed. Exiting process.");
     }
 
     return {

@@ -1,7 +1,7 @@
 import {
   AgentConfigFileSchema,
   UserEntry,
-  defaultAdminConfig,
+  debugAgentConfig,
 } from "@naisys/common";
 import { loadAgentConfigs } from "@naisys/common/dist/agentConfigLoader.js";
 import {
@@ -24,43 +24,59 @@ export function createUserService(
 ) {
   const isHubMode = globalConfig().isHubMode;
 
-  let users: Map<string, UserEntry>;
+  let userMap: Map<string, UserEntry>;
 
   let usersReadyPromise: Promise<void>;
 
-  if (isHubMode) {
-    // Register handler for pushed user list from hub
-    let resolveUsers: () => void;
-    let rejectUsers: (error: Error) => void;
+  init();
 
-    usersReadyPromise = new Promise<void>((resolve, reject) => {
-      resolveUsers = resolve;
-      rejectUsers = reject;
-    });
+  function init() {
+    if (isHubMode) {
+      // Register handler for pushed user list from hub
+      let resolveUsers: () => void;
+      let rejectUsers: (error: Error) => void;
 
-    hubClient.registerEvent(HubEvents.USER_LIST, (data: unknown) => {
-      try {
-        const response = UserListResponseSchema.parse(data);
-        if (!response.success) {
+      usersReadyPromise = new Promise<void>((resolve, reject) => {
+        resolveUsers = resolve;
+        rejectUsers = reject;
+      });
+
+      hubClient.registerEvent(HubEvents.USER_LIST, (data: unknown) => {
+        try {
+          const response = UserListResponseSchema.parse(data);
+          if (!response.success) {
+            rejectUsers(
+              new Error(response.error || "Failed to get user list from hub"),
+            );
+            return;
+          }
+
+          userMap = parseUserList(response);
+          addDebugUser();
+          resolveUsers();
+        } catch (error) {
           rejectUsers(
-            new Error(response.error || "Failed to get user list from hub"),
+            error instanceof Error ? error : new Error(String(error)),
           );
-          return;
         }
-
-        users = parseUserList(response);
-        resolveUsers();
-      } catch (error) {
-        rejectUsers(error instanceof Error ? error : new Error(String(error)));
+      });
+    } else {
+      const naisysFolder = globalConfig().naisysFolder;
+      if (!naisysFolder) {
+        throw new Error("naisysFolder is not configured in globalConfig");
       }
-    });
-  } else {
-    const naisysFolder = globalConfig().naisysFolder;
-    if (!naisysFolder) {
-      throw new Error("naisysFolder is not configured in globalConfig");
+      userMap = loadAgentConfigs(startupAgentPath || "");
+      addDebugUser();
+      usersReadyPromise = Promise.resolve();
     }
-    users = loadAgentConfigs(naisysFolder, startupAgentPath);
-    usersReadyPromise = Promise.resolve();
+  }
+
+  function addDebugUser() {
+    userMap.set(debugAgentConfig.username, {
+      userId: "0",
+      config: debugAgentConfig,
+      agentPath: "",
+    });
   }
 
   /** Wait for the user list to be received (resolves immediately in standalone mode) */
@@ -68,29 +84,29 @@ export function createUserService(
     return usersReadyPromise;
   }
 
-  function getUsers(): Map<string, UserEntry> {
-    return users;
+  function getUsers(): UserEntry[] {
+    return Array.from(userMap.values());
   }
 
   function getUserById(id: string): UserEntry | undefined {
-    return users.get(id);
+    return userMap.get(id);
   }
 
   function getStartupUserId(agentPath?: string): string {
     if (agentPath) {
       const absolutePath = path.resolve(agentPath);
-      for (const [username, entry] of users) {
+      for (const [userId, entry] of userMap) {
         if (entry.agentPath === absolutePath) {
-          return username;
+          return userId;
         }
       }
       throw new Error(`No user found for agent path: ${absolutePath}`);
     }
 
-    if (!users.has("admin")) {
-      throw new Error("Admin user not found");
+    if (!userMap.has(debugAgentConfig.username)) {
+      throw new Error("Debug user not found");
     }
-    return "admin";
+    return debugAgentConfig.username;
   }
 
   // Active user tracking (driven by heartbeatService)
@@ -104,6 +120,32 @@ export function createUserService(
     return activeUserIds.has(userId);
   }
 
+  /** Parse a UserListResponse into a userId → UserEntry map */
+  function parseUserList(response: UserListResponse): Map<string, UserEntry> {
+    const map = new Map<string, UserEntry>();
+    for (const user of response.users ?? []) {
+      const configObj = yaml.load(user.configYaml);
+      const config = AgentConfigFileSchema.parse(configObj);
+
+      map.set(user.userId, {
+        userId: user.userId,
+        leadUserId: user.leadUserId,
+        config,
+        agentPath: user.agentPath,
+      });
+    }
+    return map;
+  }
+
+  function getUserByName(username: string): UserEntry | undefined {
+    for (const user of userMap.values()) {
+      if (user.config.username === username) {
+        return user;
+      }
+    }
+    return undefined;
+  }
+
   return {
     getUsers,
     getUserById,
@@ -111,33 +153,8 @@ export function createUserService(
     getStartupUserId,
     setActiveUserIds,
     isUserActive,
+    getUserByName,
   };
 }
 
 export type UserService = ReturnType<typeof createUserService>;
-
-/** Parse a UserListResponse into a UserEntry map */
-function parseUserList(response: UserListResponse): Map<string, UserEntry> {
-  const users = new Map<string, UserEntry>();
-
-  for (const user of response.users ?? []) {
-    const configObj = yaml.load(user.configYaml);
-    const config = AgentConfigFileSchema.parse(configObj);
-    users.set(config.username, {
-      config,
-      agentPath: user.agentPath,
-      configYaml: user.configYaml,
-    });
-  }
-
-  // Ensure admin user is always present
-  if (!users.has("admin")) {
-    users.set("admin", {
-      config: defaultAdminConfig,
-      agentPath: "",
-      configYaml: yaml.dump(defaultAdminConfig),
-    });
-  }
-
-  return users;
-}

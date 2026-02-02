@@ -50,9 +50,9 @@ export function createSystemMessage(
       `compact "<note>" - Compact the session which will reset the token count. The note should contain your next goal, and important things you should remember.`,
     );
   }
-  if (agentConfig().completeTaskEnabled) {
+  if (agentConfig().completeSessionEnabled) {
     sessionSubcommands.push(
-      `complete "<result>" - Mark task complete and exit. The result should contain any important information or output from the task.`,
+      `complete [<notify_user>] ["<result>"] - End the session. Optionally notify a user with any important information or output from your session.`,
     );
   }
 

@@ -13,8 +13,7 @@ export interface IAgentManager {
     agentUserId: string;
     agentUsername: string;
     agentTitle: string;
-    agentTaskDescription?: string;
   }>;
-  getBufferLines: (agentUserId: string) => number;
+  getBufferLineCount: (agentUserId: string) => number;
   setActiveConsoleAgent: (agentUserId: string) => void;
 }

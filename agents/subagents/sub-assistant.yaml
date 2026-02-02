@@ -12,6 +12,4 @@ tokenMax: 50000
 debugPauseSeconds: 5
 spendLimitDollars: 10.00
 webEnabled: true
-mailEnabled: true
-leadAgent: ryan
 wakeOnMessage: true

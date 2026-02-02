@@ -90,9 +90,9 @@ spendLimitDollars: 2.00
 #   Auto: All commands are run through the separate LLM instace that will check to see if the command is safe
 commandProtection: "none"
 
-# Enable the completetask command for this agent (default: false)
-# When enabled, the agent can use completetask to signal task completion, hanging or aborting execution
-completeTaskEnabled: true
+# Enable the `ns-session complete` command for this agent (default: false)
+# When enabled, the agent can use `ns-session complete` to signal task completion, helping to avoid hanging waiting agents
+completeSessionEnabled: true
 
 # Run these commands on session start, in the example below the agent will see how to use mail and a list of other agents
 initialCommands:

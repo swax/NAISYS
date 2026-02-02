@@ -78,8 +78,8 @@ const heartbeatService = createHeartbeatService(
 );
 
 // Resolve the agent path to a username (or admin if no path) and start the agent
-const startupUsername = userService.getStartupUserId(agentPath);
-await agentManager.startAgent(startupUsername);
+const startupUserId = userService.getStartupUserId(agentPath);
+await agentManager.startAgent(startupUserId);
 
 await agentManager.waitForAllAgentsToComplete();
 

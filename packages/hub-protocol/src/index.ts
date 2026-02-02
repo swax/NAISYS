@@ -102,7 +102,9 @@ export const UserListResponseSchema = z.object({
   users: z
     .array(
       z.object({
+        userId: z.string(),
         username: z.string(),
+        leadUserId: z.string().optional(),
         configYaml: z.string(),
         agentPath: z.string(),
       }),

@@ -66,7 +66,7 @@ describe("NAISYS Startup E2E", () => {
     naisys.sendCommand("ns-mail users");
 
     // Wait for ns-mail users output showing both users
-    await naisys.waitForOutput("admin", 10000);
+    await naisys.waitForOutput("debug", 10000);
     await naisys.waitForOutput("ryan", 10000);
     await naisys.waitForPrompt();
 
@@ -85,7 +85,7 @@ describe("NAISYS Startup E2E", () => {
 
     expect(fullOutput).toContain("NAISYS");
     expect(fullOutput).toContain("AGENT STARTED");
-    expect(fullOutput).toContain("admin");
+    expect(fullOutput).toContain("debug");
     expect(fullOutput).toContain("ryan");
     expect(fullOutput).toContain("AGENT EXITED");
 

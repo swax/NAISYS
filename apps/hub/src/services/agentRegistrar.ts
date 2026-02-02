@@ -1,7 +1,8 @@
 import { UserEntry } from "@naisys/common";
 import { loadAgentConfigs } from "@naisys/common/dist/agentConfigLoader.js";
-import { DatabaseService, ulid } from "@naisys/database";
+import { DatabaseService } from "@naisys/database";
 import { HubConfig } from "../hubConfig.js";
+import yaml from "js-yaml";
 
 /** Loads agent configs from yaml files, then syncs them to the database */
 export async function createAgentRegistrar(
@@ -17,108 +18,41 @@ export async function createAgentRegistrar(
       throw new Error("naisysFolder is not configured (NAISYS_FOLDER env var)");
     }
 
-    const users = loadAgentConfigs(naisysFolder, startupAgentPath);
+    const users = loadAgentConfigs(startupAgentPath || naisysFolder);
 
     await syncUsersToDatabase(users);
   }
 
   async function syncUsersToDatabase(users: Map<string, UserEntry>) {
-    // Load all existing users from database (filtered by host)
-    const existingUsers = await dbService.usingDatabase(async (prisma) => {
-      return await prisma.users.findMany({});
-    });
-
-    const userMap = new Map(existingUsers.map((u) => [u.username, u]));
-
-    for (const [username, entry] of users) {
-      const existingUser = userMap.get(username);
-
+    for (const user of users.values()) {
       await dbService.usingDatabase(async (prisma) => {
-        // Resolve lead agent username to user ID if specified
-        let leadUserId: string | null = null;
-        if (entry.config.leadAgent) {
-          const leadUser = await prisma.users.findFirst({
-            where: {
-              username: entry.config.leadAgent,
-            },
-            select: { id: true },
-          });
-          leadUserId = leadUser?.id ?? null;
-        }
+        await prisma.users.upsert({
+          where: { id: user.userId },
+          create: {
+            id: user.userId,
+            username: user.config.username,
+            title: user.config.title,
+            agent_path: user.agentPath,
+            lead_user_id: user.leadUserId,
+            config: yaml.dump(user.config),
+          },
+          update: {
+            title: user.config.title,
+            agent_path: user.agentPath,
+            lead_user_id: user.leadUserId,
+            config: yaml.dump(user.config),
+          },
+        });
 
-        if (!existingUser) {
-          const user = await prisma.users.create({
-            data: {
-              id: ulid(),
-              username,
-              title: entry.config.title,
-              agent_path: entry.agentPath,
-              lead_user_id: leadUserId,
-              config: entry.configYaml,
-            },
-          });
-
-          console.log(`Created user: ${username} from ${entry.agentPath}`);
-
-          await prisma.user_notifications.create({
-            data: {
-              user_id: user.id,
-              latest_host_id: "",
-              latest_log_id: "",
-            },
-          });
-        } else {
-          const changes: string[] = [];
-
-          if (existingUser.title !== entry.config.title) {
-            changes.push(
-              `title: "${existingUser.title}" -> "${entry.config.title}"`,
-            );
-          }
-          if (existingUser.agent_path !== entry.agentPath) {
-            changes.push(
-              `agent_path: "${existingUser.agent_path}" -> "${entry.agentPath}"`,
-            );
-          }
-          if (existingUser.lead_user_id !== leadUserId) {
-            changes.push(
-              `lead_user_id: "${existingUser.lead_user_id}" -> "${leadUserId}"`,
-            );
-          }
-          if (existingUser.config !== entry.configYaml) {
-            changes.push(`config: updated`);
-          }
-
-          if (changes.length > 0) {
-            console.log(
-              `Updated user ${username}: ${changes.join(", ")} from ${entry.agentPath}`,
-            );
-
-            await prisma.users.update({
-              where: {
-                agent_path: entry.agentPath,
-              },
-              data: {
-                title: entry.config.title,
-                agent_path: entry.agentPath,
-                lead_user_id: leadUserId,
-                config: entry.configYaml,
-              },
-            });
-
-            await prisma.user_notifications.upsert({
-              where: { user_id: existingUser.id },
-              create: {
-                user_id: existingUser.id,
-                latest_host_id: "",
-                latest_log_id: "",
-              },
-              update: {
-                updated_at: new Date().toISOString(),
-              },
-            });
-          }
-        }
+        await prisma.user_notifications.upsert({
+          where: { user_id: user.userId },
+          create: {
+            user_id: user.userId,
+            latest_host_id: "",
+            latest_log_id: "",
+          },
+          update: {},
+        });
       });
     }
   }

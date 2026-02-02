@@ -147,7 +147,7 @@ export class AgentManager {
     }
   }
 
-  getBufferLines(userId: string) {
+  getBufferLineCount(userId: string) {
     const agent = this.runningAgents.find((a) => a.agentUserId === userId);
 
     if (!agent) {
