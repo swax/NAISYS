@@ -8,6 +8,7 @@ import { createHubAgentService } from "./handlers/hubAgentService.js";
 import { createHubCostService } from "./handlers/hubCostService.js";
 import { createHubHeartbeatService } from "./handlers/hubHeartbeatService.js";
 import { createHubLogService } from "./handlers/hubLogService.js";
+import { createHubMailService } from "./handlers/hubMailService.js";
 import { createHubRunService } from "./handlers/hubRunService.js";
 import { createHubUserService } from "./handlers/hubUserService.js";
 import { createHubConfig } from "./hubConfig.js";
@@ -93,6 +94,9 @@ export async function startHub(
 
     // Register hub agent service for agent_start requests routed to target hosts
     createHubAgentService(naisysServer, dbService, logService, heartbeatService);
+
+    // Register hub mail service for mail events from NAISYS instances
+    createHubMailService(naisysServer, dbService, logService, heartbeatService);
 
     // Register hub cost service for cost_write events from NAISYS instances
     createHubCostService(naisysServer, dbService, logService, heartbeatService, hubConfig);

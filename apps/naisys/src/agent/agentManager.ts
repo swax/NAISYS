@@ -1,4 +1,3 @@
-import { DatabaseService } from "@naisys/database";
 import { GlobalConfig } from "../globalConfig.js";
 import { HubClient } from "../hub/hubClient.js";
 import { HostService } from "../services/hostService.js";
@@ -12,7 +11,6 @@ export class AgentManager {
   runLoops: Promise<void>[] = [];
 
   constructor(
-    private dbService: DatabaseService,
     private globalConfig: GlobalConfig,
     private hostService: HostService,
     private hubClient: HubClient,
@@ -29,7 +27,6 @@ export class AgentManager {
     const agent = await createAgentRuntime(
       this,
       userId,
-      this.dbService,
       this.globalConfig,
       this.hostService,
       this.hubClient,

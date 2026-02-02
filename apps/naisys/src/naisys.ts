@@ -64,7 +64,6 @@ if (isHubMode) {
 
 console.log(`NAISYS STARTED`);
 const agentManager = new AgentManager(
-  dbService,
   globalConfig,
   hostService,
   hubClient,

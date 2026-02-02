@@ -186,6 +186,140 @@ export const UserListResponseSchema = z.object({
 export type UserListResponse = z.infer<typeof UserListResponseSchema>;
 
 // =============================================================================
+// Mail Messages (NAISYS -> Hub request/response)
+// =============================================================================
+
+/** Request to send a mail message */
+export const MailSendRequestSchema = z.object({
+  fromUserId: z.string(),
+  toUsernames: z.array(z.string()),
+  subject: z.string(),
+  body: z.string(),
+});
+export type MailSendRequest = z.infer<typeof MailSendRequestSchema>;
+
+/** Response to mail send request */
+export const MailSendResponseSchema = z.object({
+  success: z.boolean(),
+  error: z.string().optional(),
+});
+export type MailSendResponse = z.infer<typeof MailSendResponseSchema>;
+
+/** Request to list mail messages */
+export const MailListRequestSchema = z.object({
+  userId: z.string(),
+  filter: z.enum(["received", "sent"]).optional(),
+});
+export type MailListRequest = z.infer<typeof MailListRequestSchema>;
+
+/** A single message in a mail list response */
+export const MailListMessageDataSchema = z.object({
+  id: z.string(),
+  fromUsername: z.string(),
+  recipientUsernames: z.array(z.string()),
+  subject: z.string(),
+  createdAt: z.string(),
+  isUnread: z.boolean(),
+});
+export type MailListMessageData = z.infer<typeof MailListMessageDataSchema>;
+
+/** Response to mail list request */
+export const MailListResponseSchema = z.object({
+  success: z.boolean(),
+  messages: z.array(MailListMessageDataSchema).optional(),
+  error: z.string().optional(),
+});
+export type MailListResponse = z.infer<typeof MailListResponseSchema>;
+
+/** Request to read a specific mail message */
+export const MailReadRequestSchema = z.object({
+  userId: z.string(),
+  messageId: z.string(),
+});
+export type MailReadRequest = z.infer<typeof MailReadRequestSchema>;
+
+/** Full message data returned when reading a message */
+export const MailReadMessageDataSchema = z.object({
+  id: z.string(),
+  subject: z.string(),
+  fromUsername: z.string(),
+  fromTitle: z.string(),
+  recipientUsernames: z.array(z.string()),
+  createdAt: z.string(),
+  body: z.string(),
+});
+export type MailReadMessageData = z.infer<typeof MailReadMessageDataSchema>;
+
+/** Response to mail read request */
+export const MailReadResponseSchema = z.object({
+  success: z.boolean(),
+  message: MailReadMessageDataSchema.optional(),
+  error: z.string().optional(),
+});
+export type MailReadResponse = z.infer<typeof MailReadResponseSchema>;
+
+/** Request to archive mail messages */
+export const MailArchiveRequestSchema = z.object({
+  userId: z.string(),
+  messageIds: z.array(z.string()),
+});
+export type MailArchiveRequest = z.infer<typeof MailArchiveRequestSchema>;
+
+/** Response to mail archive request */
+export const MailArchiveResponseSchema = z.object({
+  success: z.boolean(),
+  archivedIds: z.array(z.string()).optional(),
+  error: z.string().optional(),
+});
+export type MailArchiveResponse = z.infer<typeof MailArchiveResponseSchema>;
+
+/** Request to search mail messages */
+export const MailSearchRequestSchema = z.object({
+  userId: z.string(),
+  terms: z.string(),
+  includeArchived: z.boolean().optional(),
+  subjectOnly: z.boolean().optional(),
+});
+export type MailSearchRequest = z.infer<typeof MailSearchRequestSchema>;
+
+/** A single message in a mail search response */
+export const MailSearchMessageDataSchema = z.object({
+  id: z.string(),
+  subject: z.string(),
+  fromUsername: z.string(),
+  createdAt: z.string(),
+});
+export type MailSearchMessageData = z.infer<typeof MailSearchMessageDataSchema>;
+
+/** Response to mail search request */
+export const MailSearchResponseSchema = z.object({
+  success: z.boolean(),
+  messages: z.array(MailSearchMessageDataSchema).optional(),
+  error: z.string().optional(),
+});
+export type MailSearchResponse = z.infer<typeof MailSearchResponseSchema>;
+
+/** Request to get unread message IDs */
+export const MailUnreadRequestSchema = z.object({
+  userId: z.string(),
+});
+export type MailUnreadRequest = z.infer<typeof MailUnreadRequestSchema>;
+
+/** Response to unread message request */
+export const MailUnreadResponseSchema = z.object({
+  success: z.boolean(),
+  messageIds: z.array(z.string()).optional(),
+  error: z.string().optional(),
+});
+export type MailUnreadResponse = z.infer<typeof MailUnreadResponseSchema>;
+
+/** Push notification from hub to NAISYS when mail is received */
+export const MailReceivedPushSchema = z.object({
+  recipientUserIds: z.array(z.string()),
+});
+export type MailReceivedPush = z.infer<typeof MailReceivedPushSchema>;
+
+// =============================================================================
 // Event Names (for type-safe event handling)
 // =============================================================================
 
@@ -221,6 +355,17 @@ export const HubEvents = {
   // Heartbeat events
   HEARTBEAT: "heartbeat",
   HEARTBEAT_STATUS: "heartbeat_status",
+
+  // Mail events (NAISYS -> Hub request/response)
+  MAIL_SEND: "mail_send",
+  MAIL_LIST: "mail_list",
+  MAIL_READ: "mail_read",
+  MAIL_ARCHIVE: "mail_archive",
+  MAIL_SEARCH: "mail_search",
+  MAIL_UNREAD: "mail_unread",
+
+  // Mail events (Hub -> NAISYS, push)
+  MAIL_RECEIVED: "mail_received",
 } as const;
 
 export type HubEventName = (typeof HubEvents)[keyof typeof HubEvents];

@@ -11,6 +11,7 @@ The current multi-machine architecture (doc 001) works but is too complicated to
 - **Multi-master database sync** - Hubs and runners each have their own database. Databases are synced through the hub, essentially multi-master replication. The generic sync logic (timestamp tracking, catch-up, forward queues, stale joiner handling) was the most complex code in the system. Too clever by half, look at the old syncUtils.ts file for an example of how complex the system was - not maintainable. **Removed** - ~2,800 lines of sync infrastructure deleted.
 - **Schema version coupling** - Database versions must match across all instances. Updating the cluster means updating all runners and hubs simultaneously and ensuring DB versions match before sync resumes.
 - **Indirect data flow** - Online status is done by updating the local database and then syncing that around the network. Mail messages aren't sent like a message bus but also go through the sync mechanism. Everything is sync.
+- **Host management** - Each naisys instance was a host, and agents are fixed to hosts. Changing the host of a user is a complex process. Mail has to be sent to user@host. Ideally hosts don't matter the hub trackers users and we can flex assign them to any host. The hub controls the configuration, single source of truth. Mail is sent to a user and can be received on any host that it is currently running on.
 
 ### Unclear Ownership
 
