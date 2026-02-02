@@ -5,8 +5,8 @@ import { AgentManager } from "./agent/agentManager.js";
 import { createUserService } from "./agent/userService.js";
 import { registerHubAgentHandlers } from "./features/subagent.js";
 import { createGlobalConfig } from "./globalConfig.js";
-import { createHubClientLog } from "./hub/hubClientLog.js";
 import { createHubClient } from "./hub/hubClient.js";
+import { createHubClientLog } from "./hub/hubClientLog.js";
 import { createHeartbeatService } from "./services/heartbeatService.js";
 import { createHostService } from "./services/hostService.js";
 
@@ -47,11 +47,12 @@ if (program.opts().hub) {
 }
 
 // Start hub client manager used for cross-machine communication
+const isHubMode = globalConfig.globalConfig().isHubMode;
 const hubClientLog = createHubClientLog();
 const hubClient = createHubClient(globalConfig, hubClientLog);
 const userService = createUserService(globalConfig, hubClient, agentPath);
 
-if (globalConfig.globalConfig().isHubMode) {
+if (isHubMode) {
   try {
     await hubClient.waitForConnection();
     await userService.waitForUsers();
@@ -70,12 +71,8 @@ const agentManager = new AgentManager(
   userService,
 );
 
-// In hub mode, listen for incoming agent start/stop requests from the hub
-if (globalConfig.globalConfig().isHubMode) {
-  registerHubAgentHandlers(hubClient, agentManager);
-}
+registerHubAgentHandlers(hubClient, agentManager);
 
-// Create heartbeat service for runner-side heartbeat reporting
 const heartbeatService = createHeartbeatService(
   globalConfig,
   hubClient,

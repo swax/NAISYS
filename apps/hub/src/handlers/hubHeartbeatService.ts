@@ -138,8 +138,20 @@ export function createHubHeartbeatService(
     clearInterval(pushInterval);
   }
 
+  /** Get all active user IDs across all connected hosts */
+  function getActiveUserIds(): Set<string> {
+    const allActiveUserIds = new Set<string>();
+    for (const userIds of hostActiveAgents.values()) {
+      for (const id of userIds) {
+        allActiveUserIds.add(id);
+      }
+    }
+    return allActiveUserIds;
+  }
+
   return {
     cleanup,
+    getActiveUserIds,
     getHostActiveAgentCount,
     findHostForAgent,
     addStartedAgent,

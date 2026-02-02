@@ -168,31 +168,15 @@ export function createMockWorkspacesFeature() {
 
 export function createMockCostTracker() {
   const costTracker: CostTracker = {
-    commandName: "ns-cost",
-    handleCommand: jest.fn(() => Promise.resolve("")),
-    recordTokens: jest.fn(() => Promise.resolve()),
-    recordCost: jest.fn(() => Promise.resolve()),
+    recordTokens: jest.fn(),
+    recordCost: jest.fn(),
     calculateCostFromTokens: jest.fn(() => 0),
-    calculatePeriodBoundaries: jest.fn(() => ({
-      periodStart: new Date(),
-      periodEnd: new Date(),
-    })),
-    getTotalCosts: jest.fn(() => Promise.resolve(0)),
-    checkSpendLimit: jest.fn(() => Promise.resolve()),
-    getCostBreakdown: jest.fn(() =>
-      Promise.resolve({
-        inputTokens: 0,
-        outputTokens: 0,
-        cacheWriteTokens: 0,
-        cacheReadTokens: 0,
-        totalInputTokens: 0,
-        totalCacheTokens: 0,
-      }),
-    ),
-    getCostBreakdownWithModels: jest.fn(() => Promise.resolve([])),
-    calculateModelCacheSavings: jest.fn(() => null),
-    clearCosts: jest.fn(() => Promise.resolve()),
-    printCosts: jest.fn(() => Promise.resolve()),
+    checkSpendLimit: jest.fn(),
+    cleanup: jest.fn(),
+    getModelCosts: jest.fn(() => new Map()),
+    getTotalCost: jest.fn(() => 0),
+    getPeriodInfo: jest.fn(() => null),
+    resetCosts: jest.fn(),
   };
 
   return costTracker;
