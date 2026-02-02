@@ -15,11 +15,17 @@ export function createHubHeartbeatService(
   dbService: DatabaseService,
   logService: HubServerLog,
 ) {
+  // Track active agent user IDs per host from heartbeat data
+  const hostActiveAgents = new Map<string, string[]>();
+
   // Handle heartbeat from NAISYS instances
   naisysServer.registerEvent(
     HubEvents.HEARTBEAT,
     async (hostId: string, data: unknown) => {
       const parsed = HeartbeatSchema.parse(data);
+
+      // Update in-memory per-host active agent IDs
+      hostActiveAgents.set(hostId, parsed.activeUserIds);
 
       try {
         await dbService.usingDatabase(async (prisma) => {
@@ -47,37 +53,98 @@ export function createHubHeartbeatService(
     },
   );
 
-  // Periodically query DB for active users and push status to all NAISYS instances
-  const pushInterval = setInterval(async () => {
-    try {
-      const activeUserIds = await dbService.usingDatabase(async (prisma) => {
-        const cutoff = new Date(Date.now() - HUB_HEARTBEAT_INTERVAL_MS);
-        const activeUsers = await prisma.user_notifications.findMany({
-          where: { last_active: { gte: cutoff } },
-          select: { user_id: true },
-        });
-        return activeUsers.map((u) => u.user_id);
-      });
+  // Clean up tracking when a host disconnects
+  naisysServer.registerEvent(
+    HubEvents.CLIENT_DISCONNECTED,
+    (hostId: string) => {
+      hostActiveAgents.delete(hostId);
+    },
+  );
 
-      const payload = { activeUserIds };
-
-      for (const connection of naisysServer.getConnectedClients()) {
-        naisysServer.sendMessage(
-          connection.getHostId(),
-          HubEvents.HEARTBEAT_STATUS,
-          payload,
-        );
+  /** Push aggregate active user status to all connected NAISYS instances */
+  function pushHeartbeatStatus() {
+    const allActiveUserIds = new Set<string>();
+    for (const userIds of hostActiveAgents.values()) {
+      for (const id of userIds) {
+        allActiveUserIds.add(id);
       }
-    } catch (error) {
-      logService.error(
-        `[HubHeartbeatService] Error querying active users: ${error}`,
+    }
+
+    const payload = { activeUserIds: Array.from(allActiveUserIds) };
+
+    for (const connection of naisysServer.getConnectedClients()) {
+      naisysServer.sendMessage(
+        connection.getHostId(),
+        HubEvents.HEARTBEAT_STATUS,
+        payload,
       );
     }
-  }, HUB_HEARTBEAT_INTERVAL_MS);
+  }
+
+  /** Throttled push for agent start/stop changes — at most once per 500ms */
+  let throttleTimer: ReturnType<typeof setTimeout> | null = null;
+
+  function throttledPushHeartbeatStatus() {
+    if (throttleTimer) return;
+    pushHeartbeatStatus();
+    throttleTimer = setTimeout(() => {
+      throttleTimer = null;
+    }, 500);
+  }
+
+  // Periodically push aggregate active user status to all NAISYS instances
+  const pushInterval = setInterval(pushHeartbeatStatus, HUB_HEARTBEAT_INTERVAL_MS);
+
+  function getHostActiveAgentCount(hostId: string): number {
+    return hostActiveAgents.get(hostId)?.length ?? 0;
+  }
+
+  /** Find which host a given agent is currently running on */
+  function findHostForAgent(userId: string): string | undefined {
+    for (const [hostId, userIds] of hostActiveAgents) {
+      if (userIds.includes(userId)) {
+        return hostId;
+      }
+    }
+    return undefined;
+  }
+
+  /** Add a userId to a host's active list after a successful start */
+  function addStartedAgent(hostId: string, userId: string) {
+    const userIds = hostActiveAgents.get(hostId);
+    if (userIds) {
+      if (!userIds.includes(userId)) {
+        userIds.push(userId);
+      }
+    } else {
+      hostActiveAgents.set(hostId, [userId]);
+    }
+    throttledPushHeartbeatStatus();
+  }
+
+  /** Remove a userId from a host's active list after a successful stop */
+  function removeStoppedAgent(hostId: string, userId: string) {
+    const userIds = hostActiveAgents.get(hostId);
+    if (userIds) {
+      const index = userIds.indexOf(userId);
+      if (index !== -1) {
+        userIds.splice(index, 1);
+      }
+    }
+    throttledPushHeartbeatStatus();
+  }
 
   function cleanup() {
     clearInterval(pushInterval);
   }
 
-  return { cleanup };
+  return {
+    cleanup,
+    getHostActiveAgentCount,
+    findHostForAgent,
+    addStartedAgent,
+    removeStoppedAgent,
+  };
 }
+
+export type HubHeartbeatService = ReturnType<typeof createHubHeartbeatService>;

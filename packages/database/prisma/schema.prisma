@@ -18,7 +18,6 @@ model context_log {
   type        String
   message     String
   created_at  DateTime    @default(now())
-  updated_at  DateTime    @updatedAt
   users       users       @relation("context_log_user", fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   run_session run_session @relation(fields: [user_id, run_id, session_id], references: [user_id, run_id, session_id], onDelete: NoAction, onUpdate: NoAction)
   host        hosts?      @relation(fields: [host_id], references: [id])
@@ -41,7 +40,6 @@ model costs {
   cache_write_tokens Int?        @default(0)
   cache_read_tokens  Int?        @default(0)
   created_at         DateTime    @default(now())
-  updated_at         DateTime    @updatedAt
   users              users       @relation("costs_user", fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   run_session        run_session @relation(fields: [user_id, run_id, session_id], references: [user_id, run_id, session_id], onDelete: NoAction, onUpdate: NoAction)
   host               hosts?      @relation(fields: [host_id], references: [id])
@@ -58,7 +56,6 @@ model mail_messages {
   subject            String
   body               String
   created_at         DateTime             @default(now())
-  updated_at         DateTime             @updatedAt
   from_user          users                @relation("mail_messages_from_user", fields: [from_user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   host               hosts?               @relation(fields: [host_id], references: [id])
   recipients         mail_recipients[]
@@ -77,7 +74,6 @@ model mail_recipients {
   read_at     DateTime?
   archived_at DateTime?
   created_at  DateTime      @default(now())
-  updated_at  DateTime      @updatedAt
   message     mail_messages @relation(fields: [message_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   user        users         @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
@@ -119,11 +115,13 @@ model user_notifications {
 }
 
 model user_hosts {
-  user_id    String   @id
+  user_id    String
   host_id    String
   created_at DateTime @default(now())
   users      users    @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   host       hosts    @relation(fields: [host_id], references: [id])
+
+  @@id([user_id, host_id])
 }
 
 model run_session {

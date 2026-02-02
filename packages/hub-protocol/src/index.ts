@@ -92,6 +92,38 @@ export const HeartbeatStatusSchema = z.object({
 export type HeartbeatStatus = z.infer<typeof HeartbeatStatusSchema>;
 
 // =============================================================================
+// Agent Start Messages (NAISYS -> Hub -> target NAISYS, request/response)
+// =============================================================================
+
+/** Request to start an agent on its assigned host */
+export const AgentStartRequestSchema = z.object({
+  userId: z.string(),
+  taskDescription: z.string(),
+});
+export type AgentStartRequest = z.infer<typeof AgentStartRequestSchema>;
+
+/** Response to agent start request */
+export const AgentStartResponseSchema = z.object({
+  success: z.boolean(),
+  error: z.string().optional(),
+});
+export type AgentStartResponse = z.infer<typeof AgentStartResponseSchema>;
+
+/** Request to stop an agent on its current host */
+export const AgentStopRequestSchema = z.object({
+  userId: z.string(),
+  reason: z.string(),
+});
+export type AgentStopRequest = z.infer<typeof AgentStopRequestSchema>;
+
+/** Response to agent stop request */
+export const AgentStopResponseSchema = z.object({
+  success: z.boolean(),
+  error: z.string().optional(),
+});
+export type AgentStopResponse = z.infer<typeof AgentStopResponseSchema>;
+
+// =============================================================================
 // NAISYS -> Hub Request/Response Messages
 // =============================================================================
 
@@ -132,6 +164,10 @@ export const HubEvents = {
   // Session events (NAISYS -> hub request/response)
   SESSION_CREATE: "session_create",
   SESSION_INCREMENT: "session_increment",
+
+  // Agent management events (NAISYS -> hub -> target NAISYS, request/response)
+  AGENT_START: "agent_start",
+  AGENT_STOP: "agent_stop",
 
   // Log events (NAISYS -> hub, fire-and-forget)
   LOG_WRITE: "log_write",

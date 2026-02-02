@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 import http from "http";
 import { Server } from "socket.io";
 import { fileURLToPath } from "url";
+import { createHubAgentService } from "./handlers/hubAgentService.js";
 import { createHubHeartbeatService } from "./handlers/hubHeartbeatService.js";
 import { createHubLogService } from "./handlers/hubLogService.js";
 import { createHubRunService } from "./handlers/hubRunService.js";
@@ -87,7 +88,10 @@ export async function startHub(
     createHubLogService(naisysServer, dbService, logService);
 
     // Register hub heartbeat service for NAISYS instance heartbeat tracking
-    createHubHeartbeatService(naisysServer, dbService, logService);
+    const heartbeatService = createHubHeartbeatService(naisysServer, dbService, logService);
+
+    // Register hub agent service for agent_start requests routed to target hosts
+    createHubAgentService(naisysServer, dbService, logService, heartbeatService);
 
     // Start listening
     await new Promise<void>((resolve, reject) => {

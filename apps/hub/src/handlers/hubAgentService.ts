@@ -1,0 +1,152 @@
+import { DatabaseService } from "@naisys/database";
+import {
+  AgentStartRequestSchema,
+  AgentStartResponse,
+  AgentStopRequestSchema,
+  AgentStopResponse,
+  HubEvents,
+} from "@naisys/hub-protocol";
+import { HubServerLog } from "../services/hubServerLog.js";
+import { NaisysServer } from "../services/naisysServer.js";
+import { HubHeartbeatService } from "./hubHeartbeatService.js";
+
+/** Handles agent_start requests by routing them to the least-loaded eligible host */
+export function createHubAgentService(
+  naisysServer: NaisysServer,
+  dbService: DatabaseService,
+  logService: HubServerLog,
+  heartbeatService: HubHeartbeatService,
+) {
+  naisysServer.registerEvent(
+    HubEvents.AGENT_START,
+    async (
+      hostId: string,
+      data: unknown,
+      ack: (response: AgentStartResponse) => void,
+    ) => {
+      try {
+        const parsed = AgentStartRequestSchema.parse(data);
+
+        // Look up which hosts this user is assigned to
+        const assignedHostIds = await dbService.usingDatabase(
+          async (prisma) => {
+            const userHosts = await prisma.user_hosts.findMany({
+              where: { user_id: parsed.userId },
+              select: { host_id: true },
+            });
+            return userHosts.map((uh) => uh.host_id);
+          },
+        );
+
+        // Determine eligible hosts: assigned hosts, or all connected if unassigned
+        let eligibleHostIds: string[];
+        if (assignedHostIds.length > 0) {
+          eligibleHostIds = assignedHostIds;
+        } else {
+          eligibleHostIds = naisysServer
+            .getConnectedClients()
+            .map((c) => c.getHostId());
+        }
+
+        // Filter to connected hosts only
+        const connectedEligible = eligibleHostIds.filter((hid) =>
+          naisysServer.getConnectionByHostId(hid),
+        );
+
+        if (connectedEligible.length === 0) {
+          ack({
+            success: false,
+            error: `No eligible hosts are online for user ${parsed.userId}`,
+          });
+          return;
+        }
+
+        // Pick the host with the fewest active agents
+        let bestHostId = connectedEligible[0];
+        let bestCount = heartbeatService.getHostActiveAgentCount(bestHostId);
+
+        for (const hid of connectedEligible.slice(1)) {
+          const count = heartbeatService.getHostActiveAgentCount(hid);
+          if (count < bestCount) {
+            bestHostId = hid;
+            bestCount = count;
+          }
+        }
+
+        // Forward the start request to the selected host
+        const sent = naisysServer.sendMessage<AgentStartResponse>(
+          bestHostId,
+          HubEvents.AGENT_START,
+          { userId: parsed.userId, taskDescription: parsed.taskDescription },
+          (response) => {
+            if (response.success) {
+              heartbeatService.addStartedAgent(bestHostId, parsed.userId);
+            }
+            ack(response);
+          },
+        );
+
+        if (!sent) {
+          ack({
+            success: false,
+            error: `Failed to send to host ${bestHostId}`,
+          });
+        }
+      } catch (error) {
+        logService.error(
+          `[HubAgentService] agent_start error from host ${hostId}: ${error}`,
+        );
+        ack({ success: false, error: String(error) });
+      }
+    },
+  );
+
+  naisysServer.registerEvent(
+    HubEvents.AGENT_STOP,
+    async (
+      hostId: string,
+      data: unknown,
+      ack: (response: AgentStopResponse) => void,
+    ) => {
+      try {
+        const parsed = AgentStopRequestSchema.parse(data);
+
+        // Find which host the agent is currently running on
+        const targetHostId = heartbeatService.findHostForAgent(parsed.userId);
+
+        if (!targetHostId) {
+          ack({
+            success: false,
+            error: `Agent ${parsed.userId} is not running on any known host`,
+          });
+          return;
+        }
+
+        // Forward the stop request to the target host
+        const sent = naisysServer.sendMessage<AgentStopResponse>(
+          targetHostId,
+          HubEvents.AGENT_STOP,
+          { userId: parsed.userId, reason: parsed.reason },
+          (response) => {
+            if (response.success) {
+              heartbeatService.removeStoppedAgent(targetHostId, parsed.userId);
+            }
+            ack(response);
+          },
+        );
+
+        if (!sent) {
+          ack({
+            success: false,
+            error: `Target host ${targetHostId} is not connected`,
+          });
+        }
+      } catch (error) {
+        logService.error(
+          `[HubAgentService] agent_stop error from host ${hostId}: ${error}`,
+        );
+        ack({ success: false, error: String(error) });
+      }
+    },
+  );
+}

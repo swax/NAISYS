@@ -1,9 +1,18 @@
+import {
+  AgentStartRequestSchema,
+  AgentStartResponse,
+  AgentStopRequestSchema,
+  AgentStopResponse,
+  HubEvents,
+} from "@naisys/hub-protocol";
 import stringArgv from "string-argv";
 import table from "text-table";
 import { AgentConfig } from "../agent/agentConfig.js";
 import { IAgentManager } from "../agent/agentManagerInterface.js";
 import { UserService } from "../agent/userService.js";
 import { RegistrableCommand } from "../command/commandRegistry.js";
+import { GlobalConfig } from "../globalConfig.js";
+import { HubClient } from "../hub/hubClient.js";
 import { ContextManager } from "../llm/contextManager.js";
 import { ContentSource } from "../llm/llmDtos.js";
 import { MailService } from "../mail/mail.js";
@@ -28,6 +37,8 @@ export function createSubagentService(
   localUserId: string,
   promptNotification: PromptNotificationService,
   contextManager: ContextManager,
+  hubClient: HubClient,
+  globalConfig: GlobalConfig,
 ) {
   const mySubagentsMap = new Map<string, Subagent>();
 
@@ -85,7 +96,7 @@ export function createSubagentService(
       }
       case "stop": {
         const stopName = argv[1];
-        return stopAgent(stopName, "subagent stop");
+        return await stopAgent(stopName, "subagent stop");
       }
       default: {
         errorText = "Error, unknown command. See valid commands below:\n";
@@ -115,10 +126,21 @@ export function createSubagentService(
     }
   }
 
+  /** Returns IDs of running agents. In hub mode, includes remote agents via heartbeat status. */
   function getRunningAgentsIds() {
     const runningAgentIds = new Set(
       agentManager.runningAgents.map((a) => a.agentUserId),
     );
+
+    // In hub mode, also include agents reported active by the hub heartbeat
+    if (globalConfig.globalConfig().isHubMode) {
+      for (const subagent of mySubagentsMap.values()) {
+        if (userService.isUserActive(subagent.userId)) {
+          runningAgentIds.add(subagent.userId);
+        }
+      }
+    }
+
     return runningAgentIds;
   }
 
@@ -195,7 +217,7 @@ export function createSubagentService(
       wake: true,
     });
   }
-  ``;
+
   function validateUser(agentName: string) {
     const user = userService.getUserByName(agentName);
     if (!user) {
@@ -247,10 +269,22 @@ export function createSubagentService(
       mySubagentsMap.set(subagent.userId, subagent);
     }
 
-    // Start the agent
-    await agentManager.startAgent(subagent.userId, (stopReason) =>
-      handleAgentTermination(subagent, stopReason),
-    );
+    if (globalConfig.globalConfig().isHubMode) {
+      // Hub mode: send start request through hub, which routes to the target host
+      const response = await hubClient.sendRequest<AgentStartResponse>(
+        HubEvents.AGENT_START,
+        { userId: subagent.userId, taskDescription },
+      );
+
+      if (!response.success) {
+        throw `Failed to start agent via hub: ${response.error}`;
+      }
+    } else {
+      // Non-hub mode: start agent locally
+      await agentManager.startAgent(subagent.userId, (stopReason) =>
+        handleAgentTermination(subagent, stopReason),
+      );
+    }
 
     subagent.taskDescription = taskDescription;
 
@@ -283,7 +317,7 @@ export function createSubagentService(
     return userId;
   }
 
-  function stopAgent(agentName: string, reason: string) {
+  async function stopAgent(agentName: string, reason: string) {
     // Also check if running in agentManager (debug user can stop agents other than local subagents)
     const userId = validateAgentRunning(agentName);
 
@@ -291,8 +325,20 @@ export function createSubagentService(
       throw `You're not authorized to stop agent '${agentName}' directly`;
     }
 
-    // Request shutdown of in-process agent, callback defined in start() will handle termination event
-    void agentManager.stopAgent(userId, "requestShutdown", reason);
+    if (globalConfig.globalConfig().isHubMode) {
+      // Hub mode: send stop request through hub, which routes to the agent's host
+      const response = await hubClient.sendRequest<AgentStopResponse>(
+        HubEvents.AGENT_STOP,
+        { userId, reason },
+      );
+
+      if (!response.success) {
+        throw `Failed to stop agent via hub: ${response.error}`;
+      }
+    } else {
+      // Non-hub mode: stop agent locally
+      void agentManager.stopAgent(userId, "requestShutdown", reason);
+    }
 
     return `Agent '${agentName}' stop requested`;
   }
@@ -302,9 +348,7 @@ export function createSubagentService(
     const runningAgentIds = getRunningAgentsIds();
     mySubagentsMap.forEach((subagent) => {
       if (runningAgentIds.has(subagent.userId)) {
-        try {
-          stopAgent(subagent.agentName, reason);
-        } catch {}
+        void stopAgent(subagent.agentName, reason).catch(() => {});
       }
     });
   }
@@ -347,3 +391,43 @@ export function createSubagentService(
 }
 
 export type SubagentService = ReturnType<typeof createSubagentService>;
+
+/** Register handlers for incoming AGENT_START/AGENT_STOP requests from the hub (one per NAISYS instance) */
+export function registerHubAgentHandlers(
+  hubClient: HubClient,
+  agentManager: IAgentManager,
+) {
+  hubClient.registerEvent(
+    HubEvents.AGENT_START,
+    async (data: unknown, ack: (response: AgentStartResponse) => void) => {
+      try {
+        const parsed = AgentStartRequestSchema.parse(data);
+
+        await agentManager.startAgent(parsed.userId);
+
+        ack({ success: true });
+      } catch (error) {
+        ack({ success: false, error: String(error) });
+      }
+    },
+  );
+
+  hubClient.registerEvent(
+    HubEvents.AGENT_STOP,
+    async (data: unknown, ack: (response: AgentStopResponse) => void) => {
+      try {
+        const parsed = AgentStopRequestSchema.parse(data);
+
+        await agentManager.stopAgent(
+          parsed.userId,
+          "requestShutdown",
+          parsed.reason,
+        );
+
+        ack({ success: true });
+      } catch (error) {
+        ack({ success: false, error: String(error) });
+      }
+    },
+  );
+}

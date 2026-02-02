@@ -13,7 +13,7 @@ export async function createDatabaseService(
   dbName: "naisys" | "hub",
 ) {
   /** Should match version in schema_version table of latest migration script */
-  const latestDbVersion = 7;
+  const latestDbVersion = 8;
 
   // Ensure database directory exists
   const databasePath = join(naisysFolder, "database", `${dbName}.sqlite`);
