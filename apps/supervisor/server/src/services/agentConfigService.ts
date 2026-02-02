@@ -118,8 +118,6 @@ agentPrompt: |
 tokenMax: 20000
 debugPauseSeconds: 5
 webEnabled: true
-mailEnabled: true
-wakeOnMessage: true
 `;
 
   // Write the YAML file

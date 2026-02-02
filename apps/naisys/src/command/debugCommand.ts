@@ -61,11 +61,8 @@ export function createDebugCommands(
         return "Message sent!";
       } else if (inputMode.isDebug()) {
         inputMode.setLLM();
-        const respondCommand = agentConfig.agentConfig().mailEnabled
-          ? "ns-mail"
-          : "ns-talk";
         await contextManager.append(
-          `Message from admin: ${cmdArgs}. Respond via the ${respondCommand} command.`,
+          `Message from admin: ${cmdArgs}. Respond via the ns-mail command.`,
         );
         inputMode.setDebug();
         return "";

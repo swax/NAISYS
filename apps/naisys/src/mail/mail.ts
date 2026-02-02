@@ -302,10 +302,6 @@ export function createMailService(
    * Tracks notified message IDs to avoid duplicate notifications.
    */
   async function checkAndNotify(): Promise<void> {
-    if (!agentConfig().mailEnabled) {
-      return;
-    }
-
     const unreadMessages = await getUnreadThreads();
     if (!unreadMessages.length) {
       return;

@@ -1,5 +1,4 @@
-import { AgentConfigFileSchema, CommandProtection } from "@naisys/common";
-import yaml from "js-yaml";
+import { AgentConfigFile, CommandProtection } from "@naisys/common";
 import table from "text-table";
 import { RegistrableCommand } from "../command/commandRegistry.js";
 import { GlobalConfig } from "../globalConfig.js";
@@ -11,7 +10,7 @@ export function createAgentConfig(
   { globalConfig }: GlobalConfig,
   userService: UserService,
 ) {
-  let cachedConfig = loadConfig();
+  let fullAgentConfig = loadConfig();
 
   function loadConfig() {
     const user = userService.getUserById(localUserId);
@@ -20,13 +19,10 @@ export function createAgentConfig(
       throw new Error(`User with ID ${localUserId} not found`);
     }
 
-    return parseConfig(user.configYaml);
+    return buildFullAgentConfig(user.config);
   }
 
-  function parseConfig(yamlContent: string) {
-    const rawConfig = yaml.load(yamlContent);
-    const config = AgentConfigFileSchema.parse(rawConfig);
-
+  function buildFullAgentConfig(config: AgentConfigFile) {
     // Sanitize spend limits
     const spendLimitDollars = sanitizeSpendLimit(config.spendLimitDollars);
     const spendLimitHours = sanitizeSpendLimit(config.spendLimitHours);
@@ -81,10 +77,10 @@ export function createAgentConfig(
       compactModel,
       imageModel,
       resolveConfigVars,
-      mailEnabled: config.mailEnabled ?? false,
+      mailEnabled: config.mailEnabled ?? true,
       webEnabled: config.webEnabled ?? false,
-      completeTaskEnabled: config.completeTaskEnabled ?? true,
-      wakeOnMessage: config.wakeOnMessage ?? false,
+      completeSessionEnabled: config.completeSessionEnabled ?? true,
+      wakeOnMessage: config.wakeOnMessage ?? true,
       initialCommands: config.initialCommands ?? [],
       commandProtection: config.commandProtection ?? CommandProtection.None,
       debugPauseSeconds:
@@ -106,9 +102,6 @@ export function createAgentConfig(
       throw new Error(`User with ID ${localUserId} not found`);
     }
 
-    // Parse current config, update field, re-serialize
-    const rawConfig = yaml.load(user.configYaml) as Record<string, unknown>;
-
     // Convert value to appropriate type
     let typedValue: unknown = value;
     if (value === "true") typedValue = true;
@@ -116,17 +109,20 @@ export function createAgentConfig(
     else if (!isNaN(Number(value)) && value.trim() !== "")
       typedValue = Number(value);
 
-    rawConfig[field] = typedValue;
+    if (!(field in user.config)) {
+      throw new Error(`Config field '${field}' does not exist`);
+    }
 
-    const updatedYaml = yaml.dump(rawConfig);
+    // set field
+    (user.config as any)[field] = typedValue;
 
     // Update in-memory only (not persisted)
-    cachedConfig = parseConfig(updatedYaml);
+    fullAgentConfig = buildFullAgentConfig(user.config);
   }
 
   async function handleCommand(cmdArgs: string): Promise<string> {
     const args = cmdArgs.trim().split(/\s+/).filter(Boolean);
-    const config = cachedConfig;
+    const config = fullAgentConfig;
 
     if (args.length === 0) {
       // Show all config values as a table
@@ -174,9 +170,9 @@ export function createAgentConfig(
 
   return {
     ...registrableCommand,
-    agentConfig: () => cachedConfig,
+    agentConfig: () => fullAgentConfig,
     reloadAgentConfig: () => {
-      cachedConfig = loadConfig();
+      fullAgentConfig = loadConfig();
     },
     updateConfigField,
   };

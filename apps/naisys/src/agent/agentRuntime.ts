@@ -240,7 +240,6 @@ export async function createAgentRuntime(
     agentUserId: localUserId,
     agentUsername: config.username,
     agentTitle: config.title,
-    agentTaskDescription: config.taskDescription,
     output,
     subagentService,
     promptNotification,

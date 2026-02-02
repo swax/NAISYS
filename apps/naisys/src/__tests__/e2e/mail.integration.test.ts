@@ -48,26 +48,15 @@ describe("NAISYS Mail E2E", () => {
     // Create .env file
     createEnvFile(testDir);
 
-    // Create admin agent
-    createAgentYamlInDir(testDir, "agents", "admin_agent.yaml", {
-      username: "admin",
-      title: "Administrator",
-      agentPrompt: "Admin agent for monitoring and control.",
-      tokenMax: 100000,
-      mailEnabled: true,
-    });
-
     // Create agent yaml files in agents/ subdirectory
     createAgentYamlInDir(testDir, "agents", "alex.yaml", {
       username: "alex",
       title: "Test Agent Alex",
-      mailEnabled: true,
     });
 
     createAgentYamlInDir(testDir, "agents", "bob.yaml", {
       username: "bob",
       title: "Test Agent Bob",
-      mailEnabled: true,
     });
 
     // Spawn naisys without args - this auto-loads agents and drops into admin shell

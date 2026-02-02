@@ -108,7 +108,6 @@ describe("Cross-Machine Mail E2E", () => {
     createAgentYaml(alexDir, "alex.yaml", {
       username: "alex",
       title: "Test Agent Alex",
-      mailEnabled: true,
     });
 
     // --- Setup Bob on HOST-B ---
@@ -121,7 +120,6 @@ describe("Cross-Machine Mail E2E", () => {
     createAgentYaml(bobDir, "bob.yaml", {
       username: "bob",
       title: "Test Agent Bob",
-      mailEnabled: true,
     });
 
     // --- Start Alex ---

@@ -40,7 +40,6 @@ export interface AgentYamlConfig {
   debugPauseSeconds?: number;
   spendLimitDollars?: number;
   webEnabled?: boolean;
-  mailEnabled?: boolean;
   wakeOnMessage?: boolean;
 }
 
@@ -110,7 +109,6 @@ tokenMax: ${config.tokenMax ?? 50000}
 debugPauseSeconds: ${config.debugPauseSeconds ?? 0}
 spendLimitDollars: ${config.spendLimitDollars ?? 10.0}
 webEnabled: ${config.webEnabled ?? false}
-mailEnabled: ${config.mailEnabled ?? true}
 wakeOnMessage: ${config.wakeOnMessage ?? false}
 `.trim();
 
