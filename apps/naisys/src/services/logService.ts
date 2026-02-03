@@ -3,13 +3,11 @@ import {
   LOG_FLUSH_INTERVAL_MS,
   LogWriteEntry,
 } from "@naisys/hub-protocol";
-import { GlobalConfig } from "../globalConfig.js";
 import { HubClient } from "../hub/hubClient.js";
 import { LlmMessage, LlmRole } from "../llm/llmDtos.js";
 import { RunService } from "./runService.js";
 
 export function createLogService(
-  globalConfig: GlobalConfig,
   hubClient: HubClient | undefined,
   runService: RunService,
   localUserId: string,

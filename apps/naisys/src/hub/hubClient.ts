@@ -54,7 +54,6 @@ export function createHubClient(
 
     if (hasConnectedOnce) {
       promptNotification.notify({
-        type: "hub-reconnected",
         wake: true,
         commentOutput: ["Hub connection re-established"],
       });

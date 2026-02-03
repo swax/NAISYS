@@ -9,7 +9,6 @@ import { AgentConfig } from "../agent/agentConfig.js";
 import { IAgentManager } from "../agent/agentManagerInterface.js";
 import { UserService } from "../agent/userService.js";
 import { RegistrableCommand } from "../command/commandRegistry.js";
-import { GlobalConfig } from "../globalConfig.js";
 import { HubClient } from "../hub/hubClient.js";
 import { MailService } from "../mail/mail.js";
 import { InputModeService } from "../utils/inputMode.js";
@@ -33,7 +32,6 @@ export function createSubagentService(
   localUserId: string,
   promptNotification: PromptNotificationService,
   hubClient: HubClient | undefined,
-  { globalConfig }: GlobalConfig,
 ) {
   const mySubagentsMap = new Map<string, Subagent>();
 
@@ -209,7 +207,6 @@ export function createSubagentService(
   function raiseSwitchEvent() {
     promptNotification.notify({
       userId: localUserId,
-      type: "switch",
       wake: true,
     });
   }
@@ -363,7 +360,6 @@ export function createSubagentService(
 
     promptNotification.notify({
       userId: localUserId,
-      type: "subagent-terminated",
       wake: !!agentConfig().wakeOnMessage,
       contextOutput: [
         `Subagent '${subagent.agentName}' has terminated. Reason: ${reason}`,

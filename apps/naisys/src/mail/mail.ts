@@ -231,7 +231,6 @@ export function createMailService(
     for (const recipient of resolvedRecipients) {
       promptNotification.notify({
         userId: recipient.id,
-        type: "mail",
         wake: true,
         contextOutput: ["New Message:", display],
       });
@@ -315,7 +314,6 @@ export function createMailService(
 
     promptNotification.notify({
       userId: localUserId,
-      type: "mail",
       wake: agentConfig().wakeOnMessage,
       contextOutput,
       processed: () => {

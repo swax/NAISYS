@@ -1,3 +1,4 @@
+import { debugUserId } from "@naisys/common";
 import {
   AgentStartRequestSchema,
   AgentStartResponse,
@@ -30,6 +31,8 @@ export class AgentManager {
           try {
             const parsed = AgentStartRequestSchema.parse(data);
 
+            this.notifyHubRequest("start", parsed.userId);
+
             await this.startAgent(parsed.userId);
 
             ack({ success: true });
@@ -45,6 +48,8 @@ export class AgentManager {
           try {
             const parsed = AgentStopRequestSchema.parse(data);
 
+            this.notifyHubRequest("stop", parsed.userId);
+
             await this.stopAgent(
               parsed.userId,
               "requestShutdown",
@@ -58,6 +63,18 @@ export class AgentManager {
         },
       );
     }
+  }
+
+  /** A client started in hub mode is hanging on the debug user, so this shows a notification of agent activity */
+  notifyHubRequest(type: "start" | "stop", userId: string) {
+    const username =
+      this.userService.getUserById(userId)?.config.username || userId;
+
+    this.promptNotification.notify({
+      wake: true,
+      userId: debugUserId,
+      commentOutput: [`Received request from hub to ${type} ${username}`],
+    });
   }
 
   async startAgent(userId: string, onStop?: (reason: string) => void) {

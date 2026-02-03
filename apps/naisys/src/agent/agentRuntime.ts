@@ -53,16 +53,10 @@ export async function createAgentRuntime(
 
   const runService = await createRunService(
     agentConfig,
-    globalConfig,
     hubClient,
     localUserId,
   );
-  const logService = createLogService(
-    globalConfig,
-    hubClient,
-    runService,
-    localUserId,
-  );
+  const logService = createLogService(hubClient, runService, localUserId);
   const output = createOutputService(logService);
 
   // Shell and workspaces (needed by contextManager)
@@ -136,7 +130,6 @@ export async function createAgentRuntime(
     localUserId,
     promptNotification,
     hubClient,
-    globalConfig,
   );
   const lynxService = createLynxService(
     globalConfig,
