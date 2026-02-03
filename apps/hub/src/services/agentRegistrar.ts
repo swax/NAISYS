@@ -1,8 +1,8 @@
 import { UserEntry } from "@naisys/common";
 import { loadAgentConfigs } from "@naisys/common/dist/agentConfigLoader.js";
 import { DatabaseService } from "@naisys/database";
-import { HubConfig } from "../hubConfig.js";
 import yaml from "js-yaml";
+import { HubConfig } from "../hubConfig.js";
 
 /** Loads agent configs from yaml files, then syncs them to the database */
 export async function createAgentRegistrar(
@@ -20,6 +20,10 @@ export async function createAgentRegistrar(
 
   async function syncUsersToDatabase(users: Map<string, UserEntry>) {
     for (const user of users.values()) {
+      if (!user.agentPath) {
+        throw new Error(`User ${user.config.username} is missing agentPath`);
+      }
+
       await dbService.usingDatabase(async (prisma) => {
         await prisma.users.upsert({
           where: { id: user.userId },
@@ -27,7 +31,7 @@ export async function createAgentRegistrar(
             id: user.userId,
             username: user.config.username,
             title: user.config.title,
-            agent_path: user.agentPath,
+            agent_path: user.agentPath!,
             lead_user_id: user.leadUserId,
             config: yaml.dump(user.config),
           },

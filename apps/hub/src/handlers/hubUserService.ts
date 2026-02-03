@@ -25,7 +25,6 @@ export function createHubUserService(
           username: u.username,
           leadUserId: u.lead_user_id || undefined,
           configYaml: u.config,
-          agentPath: u.agent_path,
         }));
 
         logService.log(

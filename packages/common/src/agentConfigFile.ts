@@ -66,6 +66,6 @@ export const debugAgentConfig = {
 export interface UserEntry {
   userId: string;
   leadUserId?: string;
-  agentPath: string;
+  agentPath?: string;
   config: AgentConfigFile;
 }

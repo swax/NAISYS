@@ -68,7 +68,6 @@ export function createUserService(
     userMap.set(debugAgentConfig.username, {
       userId: "0",
       config: debugAgentConfig,
-      agentPath: "",
     });
   }
 
@@ -124,7 +123,6 @@ export function createUserService(
         userId: user.userId,
         leadUserId: user.leadUserId,
         config,
-        agentPath: user.agentPath,
       });
     }
     return map;

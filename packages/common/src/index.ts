@@ -4,3 +4,4 @@ export * from "./configUtils.js";
 export * from "./costUtils.js";
 export * from "./globalConfigLoader.js";
 export * from "./thresholds.js";
+export { decodeTime } from "ulid";
