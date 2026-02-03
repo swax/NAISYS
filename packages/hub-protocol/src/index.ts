@@ -320,12 +320,45 @@ export const MailReceivedPushSchema = z.object({
 export type MailReceivedPush = z.infer<typeof MailReceivedPushSchema>;
 
 // =============================================================================
+// Config Messages (Hub -> NAISYS, push on connect)
+// =============================================================================
+
+/** Pushed from hub to NAISYS instances on connect with global config */
+export const ConfigResponseSchema = z.object({
+  success: z.boolean(),
+  error: z.string().optional(),
+  config: z
+    .object({
+      shellCommand: z.object({
+        outputTokenMax: z.number(),
+        timeoutSeconds: z.number(),
+        maxTimeoutSeconds: z.number(),
+      }),
+      retrySecondsMax: z.number(),
+      webTokenMax: z.number(),
+      compactSessionEnabled: z.boolean(),
+      localLlmUrl: z.string().optional(),
+      localLlmName: z.string().optional(),
+      openaiApiKey: z.string().optional(),
+      googleApiKey: z.string().optional(),
+      anthropicApiKey: z.string().optional(),
+      googleSearchEngineId: z.string().optional(),
+      spendLimitDollars: z.number().optional(),
+      spendLimitHours: z.number().optional(),
+      useToolsForLlmConsoleResponses: z.boolean(),
+    })
+    .optional(),
+});
+export type ConfigResponse = z.infer<typeof ConfigResponseSchema>;
+
+// =============================================================================
 // Event Names (for type-safe event handling)
 // =============================================================================
 
 export const HubEvents = {
   // Hub -> Client
   USER_LIST: "user_list",
+  CONFIG: "config",
 
   // Internal hub events (not sent over wire)
   CLIENT_CONNECTED: "client_connected",

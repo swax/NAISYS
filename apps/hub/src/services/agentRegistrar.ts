@@ -13,12 +13,7 @@ export async function createAgentRegistrar(
   await reloadAgents();
 
   async function reloadAgents() {
-    const naisysFolder = hubConfig.hubConfig().naisysFolder;
-    if (!naisysFolder) {
-      throw new Error("naisysFolder is not configured (NAISYS_FOLDER env var)");
-    }
-
-    const users = loadAgentConfigs(startupAgentPath || naisysFolder);
+    const users = loadAgentConfigs(startupAgentPath || "");
 
     await syncUsersToDatabase(users);
   }

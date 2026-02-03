@@ -1,5 +1,4 @@
-import table from "text-table";
-import { GlobalConfig } from "../globalConfig.js";
+import { HubClientConfig } from "./hubClientConfig.js";
 import { HubClientLog } from "./hubClientLog.js";
 import { createHubConnection, HubConnection } from "./hubConnection.js";
 
@@ -9,33 +8,19 @@ export interface HubConnectionInfo {
   connected: boolean;
 }
 
-/** Per-URL status for the ns-hubs debug command */
-export interface HubUrlStatus {
-  url: string;
-  active: boolean;
-  connected: boolean;
-  lastError?: string;
-}
-
 type EventHandler = (...args: any[]) => void;
 
-/** Delay before rotating to the next fallback URL */
-const ROTATION_DELAY_MS = 2000;
+const RECONNECT_DELAY_MS = 2000;
 
 export function createHubClient(
-  globalConfig: GlobalConfig,
+  hubClientConfig: HubClientConfig,
   hubClientLog: HubClientLog,
 ) {
-  const config = globalConfig.globalConfig();
-  const hubUrls = config.hubUrls;
-  let currentUrlIndex = 0;
+  const hubUrl = hubClientConfig.hubUrl;
   let activeConnection: HubConnection | null = null;
   let reconnectionDisabled = false;
   let connectedHandler: (() => void) | null = null;
   let connectErrorHandler: ((message: string) => void) | null = null;
-
-  // Track last error per URL index for status reporting
-  const urlErrors = new Map<number, string>();
 
   // Generic event handlers registry - maps event name to set of handlers
   const eventHandlers = new Map<string, Set<EventHandler>>();
@@ -43,29 +28,14 @@ export function createHubClient(
   init();
 
   function init() {
-    if (hubUrls.length === 0) {
-      hubClientLog.write(
-        "[HubClient] No HUB_URLS configured, running in standalone mode",
-      );
-      return;
-    }
-
-    if (hubUrls.length === 1) {
-      hubClientLog.write(`[HubClient] Connecting to hub: ${hubUrls[0]}`);
-    } else {
-      hubClientLog.write(
-        `[HubClient] Connecting to hub with ${hubUrls.length} fallback URL(s)...`,
-      );
-    }
-
-    connectToUrl(hubUrls[currentUrlIndex]);
+    hubClientLog.write(`[HubClient] Connecting to hub: ${hubUrl}`);
+    connect();
   }
 
-  function connectToUrl(url: string) {
+  function connect() {
     activeConnection = createHubConnection(
-      url,
+      hubClientConfig,
       hubClientLog,
-      globalConfig,
       raiseEvent,
       handleConnected,
       handleReconnectFailed,
@@ -76,31 +46,25 @@ export function createHubClient(
 
   function handleConnected() {
     hubClientLog.disableConsole();
-    urlErrors.delete(currentUrlIndex);
     connectedHandler?.();
   }
 
   function handleConnectError(message: string) {
-    urlErrors.set(currentUrlIndex, message);
     connectErrorHandler?.(message);
   }
 
   function handleReconnectFailed() {
     if (reconnectionDisabled) return;
 
-    // Disconnect old connection cleanly
     activeConnection?.disconnect();
 
-    // Rotate to next URL (round-robin)
-    currentUrlIndex = (currentUrlIndex + 1) % hubUrls.length;
-    const nextUrl = hubUrls[currentUrlIndex];
-    hubClientLog.write(`[HubClient] Rotating to hub URL: ${nextUrl}`);
+    hubClientLog.write(`[HubClient] Reconnecting to hub: ${hubUrl}`);
 
     setTimeout(() => {
       if (!reconnectionDisabled) {
-        connectToUrl(nextUrl);
+        connect();
       }
-    }, ROTATION_DELAY_MS);
+    }, RECONNECT_DELAY_MS);
   }
 
   /** Register an event handler */
@@ -172,9 +136,6 @@ export function createHubClient(
   /** Returns a promise that resolves once a hub connection is established,
    *  or rejects if connection fails due to an auth/config error */
   function waitForConnection(): Promise<void> {
-    if (hubUrls.length === 0) {
-      return Promise.resolve();
-    }
     if (isConnected()) {
       return Promise.resolve();
     }
@@ -208,40 +169,16 @@ export function createHubClient(
     };
   }
 
-  function getHubsStatus(): HubUrlStatus[] {
-    return hubUrls.map((url, index) => ({
-      url,
-      active: index === currentUrlIndex,
-      connected: index === currentUrlIndex && isConnected(),
-      lastError: urlErrors.get(index),
-    }));
-  }
-
   return {
     // RegistrableCommand
-    commandName: "ns-hubs",
+    commandName: "ns-hub",
     helpText: "Show hub connection status",
     isDebug: true,
-    handleCommand: async () => {
-      const statuses = getHubsStatus();
-      if (statuses.length === 0) {
-        return "No hub URLs configured.";
-      }
-
-      const headers = ["URL", "Active", "Connected", "Last Error"];
-      const rows = statuses.map((s) => [
-        s.url,
-        s.active ? "*" : "",
-        s.connected ? "Yes" : "No",
-        s.lastError || "",
-      ]);
-
-      return table([headers, ...rows], { hsep: " | " });
-    },
+    handleCommand: async () =>
+      `${hubUrl} - ${isConnected() ? "Connected" : "Disconnected"}`,
 
     // HubClient API
     getConnectionInfo,
-    getHubsStatus,
     isConnected,
     waitForConnection,
     registerEvent,

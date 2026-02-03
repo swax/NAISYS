@@ -375,7 +375,7 @@ Establish the new architecture: remove sync, set up hub/client separation, creat
 6. ✅ NAISYS instances register as hosts in the existing `hosts` table; added `user_hosts` mapping table
 7. ✅ Created `agentRegistrar.ts` on hub (seeds DB from yaml)
 8. ✅ Hub startup requires `HUB_ACCESS_KEY`, NAISYS instance authenticates with it
-9. ✅ NAISYS connects to single hub on startup (multiple URLs are fallback, not multi-hub)
+9. ✅ NAISYS connects to a single hub URL on startup
 10. ✅ Added `sendRequest<T>()` to `hubClient` for Promise-based request/response
 11. ✅ Removed interhub scaffolding (`interhubServer.ts`, `interhubClient.ts`, `interhubConnection.ts`, `interhubClientLog.ts`) - hub-to-hub federation is out of scope
 
@@ -432,7 +432,7 @@ Final cleanup pass after all services are migrated.
 | `hubForwardService.ts`        | Forward queues for sync                           | Removed                                                               | ✅     |
 | `remoteAgentRouter.ts`        | Hub-side routing of remote agent commands         | Removed (replaced by `naisysServer` event handlers)                   | ✅     |
 | `agentRegistrar.ts` (NAISYS)  | NAISYS-side agent config scanning and DB sync     | Removed from NAISYS, rebuilt on hub as `agentRegistrar.ts`            | ✅     |
-| Multi-hub connection          | NAISYS connects to multiple hubs                  | NAISYS connects to one hub (multiple URLs are fallback)               | ✅     |
+| Multi-hub connection          | NAISYS connects to multiple hubs                  | NAISYS connects to a single hub URL                                   | ✅     |
 | Schema version matching       | NAISYS/hub must match DB version                  | Not needed (API versioning)                                           | ✅     |
 | Forward handling              | NAISYS upserts forwarded data                     | Not needed (hub is source of truth)                                   | ✅     |
 | `@naisys/database` dependency | NAISYS imports Prisma, SQLite                     | Removed entirely                                                      |        |
