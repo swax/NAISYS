@@ -11,14 +11,12 @@ import {
 } from "@naisys/hub-protocol";
 import yaml from "js-yaml";
 import * as path from "path";
-import { GlobalConfig } from "../globalConfig.js";
 import { HubClient } from "../hub/hubClient.js";
 
 export { UserEntry };
 
 /** Loads agent configs from yaml files or receives them pushed from the hub */
 export function createUserService(
-  { globalConfig }: GlobalConfig,
   hubClient: HubClient | undefined,
   startupAgentPath?: string,
 ) {
@@ -60,10 +58,6 @@ export function createUserService(
         }
       });
     } else {
-      const naisysFolder = globalConfig().naisysFolder;
-      if (!naisysFolder) {
-        throw new Error("naisysFolder is not configured in globalConfig");
-      }
       userMap = loadAgentConfigs(startupAgentPath || "");
       addDebugUser();
       usersReadyPromise = Promise.resolve();

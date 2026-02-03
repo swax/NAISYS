@@ -12,7 +12,7 @@ model context_log {
   user_id     String
   run_id      Int
   session_id  Int
-  host_id     String? // Which host generated this log
+  host_id     String
   role        String
   source      String
   type        String
@@ -20,7 +20,7 @@ model context_log {
   created_at  DateTime    @default(now())
   users       users       @relation("context_log_user", fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   run_session run_session @relation(fields: [user_id, run_id, session_id], references: [user_id, run_id, session_id], onDelete: NoAction, onUpdate: NoAction)
-  host        hosts?      @relation(fields: [host_id], references: [id])
+  host        hosts       @relation(fields: [host_id], references: [id])
 
   @@index([id(sort: Desc)], map: "idx_context_log_id_desc") // ORDER BY id DESC in runsService.getContextLog
   @@index([user_id, run_id, session_id], map: "idx_context_log_run_session") // WHERE user_id, run_id, session_id in runsService.getContextLog
@@ -31,7 +31,7 @@ model costs {
   user_id            String
   run_id             Int
   session_id         Int
-  host_id            String? // Which host incurred this cost
+  host_id            String
   source             String
   model              String
   cost               Float?      @default(0)
@@ -42,7 +42,7 @@ model costs {
   created_at         DateTime    @default(now())
   users              users       @relation("costs_user", fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   run_session        run_session @relation(fields: [user_id, run_id, session_id], references: [user_id, run_id, session_id], onDelete: NoAction, onUpdate: NoAction)
-  host               hosts?      @relation(fields: [host_id], references: [id])
+  host               hosts       @relation(fields: [host_id], references: [id])
 
   @@index([id(sort: Desc)], map: "idx_costs_id_desc") // ORDER BY id DESC in costTracker.findFirst for aggregation window check
   @@index([user_id], map: "idx_costs_user_id") // Optional WHERE user_id filter in aggregate/groupBy queries
@@ -50,15 +50,15 @@ model costs {
 }
 
 model mail_messages {
-  id                 String               @id // ULID
-  from_user_id       String
-  host_id            String? // Sender's host
-  subject            String
-  body               String
-  created_at         DateTime             @default(now())
-  from_user          users                @relation("mail_messages_from_user", fields: [from_user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  host               hosts?               @relation(fields: [host_id], references: [id])
-  recipients         mail_recipients[]
+  id           String            @id // ULID
+  from_user_id String
+  host_id      String? // Sender's host
+  subject      String
+  body         String
+  created_at   DateTime          @default(now())
+  from_user    users             @relation("mail_messages_from_user", fields: [from_user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  host         hosts?            @relation(fields: [host_id], references: [id])
+  recipients   mail_recipients[]
 
   @@index([id(sort: Desc)], map: "idx_mail_messages_id_desc") // ORDER BY id DESC in supervisor mailService pagination
   @@index([from_user_id], map: "idx_mail_messages_from_user_id") // WHERE from_user_id in sent messages filter
@@ -102,14 +102,14 @@ model users {
 }
 
 model user_notifications {
-  user_id        String         @id
+  user_id        String    @id
   latest_host_id String?
-  latest_log_id  String         @default("")
-  latest_mail_id String         @default("")
+  latest_log_id  String    @default("")
+  latest_mail_id String    @default("")
   last_active    DateTime?
-  updated_at     DateTime       @updatedAt
-  users          users          @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  host           hosts?         @relation(fields: [latest_host_id], references: [id])
+  updated_at     DateTime  @updatedAt
+  users          users     @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  host           hosts?    @relation(fields: [latest_host_id], references: [id])
 }
 
 model user_hosts {
@@ -126,7 +126,7 @@ model run_session {
   user_id       String
   run_id        Int
   session_id    Int
-  host_id       String? // Which host ran this session
+  host_id       String
   last_active   DateTime
   model_name    String
   latest_log_id String        @default("")
@@ -135,7 +135,7 @@ model run_session {
   created_at    DateTime      @default(now())
   updated_at    DateTime      @updatedAt
   users         users         @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  host          hosts?        @relation(fields: [host_id], references: [id])
+  host          hosts         @relation(fields: [host_id], references: [id])
   context_logs  context_log[]
   costs         costs[]
 

@@ -1,7 +1,5 @@
 import {
-  AgentStartRequestSchema,
   AgentStartResponse,
-  AgentStopRequestSchema,
   AgentStopResponse,
   HubEvents,
 } from "@naisys/hub-protocol";
@@ -391,43 +389,3 @@ export function createSubagentService(
 }
 
 export type SubagentService = ReturnType<typeof createSubagentService>;
-
-/** Register handlers for incoming AGENT_START/AGENT_STOP requests from the hub (one per NAISYS instance) */
-export function registerHubAgentHandlers(
-  hubClient: HubClient,
-  agentManager: IAgentManager,
-) {
-  hubClient.registerEvent(
-    HubEvents.AGENT_START,
-    async (data: unknown, ack: (response: AgentStartResponse) => void) => {
-      try {
-        const parsed = AgentStartRequestSchema.parse(data);
-
-        await agentManager.startAgent(parsed.userId);
-
-        ack({ success: true });
-      } catch (error) {
-        ack({ success: false, error: String(error) });
-      }
-    },
-  );
-
-  hubClient.registerEvent(
-    HubEvents.AGENT_STOP,
-    async (data: unknown, ack: (response: AgentStopResponse) => void) => {
-      try {
-        const parsed = AgentStopRequestSchema.parse(data);
-
-        await agentManager.stopAgent(
-          parsed.userId,
-          "requestShutdown",
-          parsed.reason,
-        );
-
-        ack({ success: true });
-      } catch (error) {
-        ack({ success: false, error: String(error) });
-      }
-    },
-  );
-}

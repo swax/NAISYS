@@ -41,7 +41,7 @@ export function createHubHeartbeatService(
           if (parsed.activeUserIds.length > 0) {
             await prisma.user_notifications.updateMany({
               where: { user_id: { in: parsed.activeUserIds } },
-              data: { last_active: now },
+              data: { last_active: now, latest_host_id: hostId },
             });
           }
         });
@@ -58,6 +58,7 @@ export function createHubHeartbeatService(
     HubEvents.CLIENT_DISCONNECTED,
     (hostId: string) => {
       hostActiveAgents.delete(hostId);
+      throttledPushHeartbeatStatus();
     },
   );
 
@@ -93,7 +94,10 @@ export function createHubHeartbeatService(
   }
 
   // Periodically push aggregate active user status to all NAISYS instances
-  const pushInterval = setInterval(pushHeartbeatStatus, HUB_HEARTBEAT_INTERVAL_MS);
+  const pushInterval = setInterval(
+    pushHeartbeatStatus,
+    HUB_HEARTBEAT_INTERVAL_MS,
+  );
 
   function getHostActiveAgentCount(hostId: string): number {
     return hostActiveAgents.get(hostId)?.length ?? 0;

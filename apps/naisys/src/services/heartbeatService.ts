@@ -5,11 +5,9 @@ import {
 } from "@naisys/hub-protocol";
 import { IAgentManager } from "../agent/agentManagerInterface.js";
 import { UserService } from "../agent/userService.js";
-import { GlobalConfig } from "../globalConfig.js";
 import { HubClient } from "../hub/hubClient.js";
 
 export function createHeartbeatService(
-  { globalConfig }: GlobalConfig,
   hubClient: HubClient | undefined,
   agentManager: IAgentManager,
   userService: UserService,
