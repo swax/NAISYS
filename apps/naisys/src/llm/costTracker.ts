@@ -47,7 +47,6 @@ export function createCostTracker(
   hubClient: HubClient | undefined,
   localUserId: string,
 ) {
-
   // In-memory per-model aggregated costs (always maintained, both modes)
   const modelCosts = new Map<string, ModelCostData>();
 
@@ -219,12 +218,15 @@ export function createCostTracker(
   // In hub mode, checks the cost control state received from the hub
   function checkSpendLimit() {
     if (hubClient) {
-      if (hubCostControlReason) {
+      if (!hubClient.isConnected()) {
+        throw "LLM Spend limit check failed: not connected to hub";
+      } else if (hubCostControlReason) {
         throw `LLM ${hubCostControlReason}`;
       }
       return;
     }
 
+    // Else we check local in-memory spend limits
     const spendLimitHours =
       agentConfig().spendLimitHours || globalConfig().spendLimitHours;
     const spendLimit =

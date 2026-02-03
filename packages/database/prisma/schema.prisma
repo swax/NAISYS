@@ -23,7 +23,7 @@ model context_log {
   host        hosts       @relation(fields: [host_id], references: [id])
 
   @@index([id(sort: Desc)], map: "idx_context_log_id_desc") // ORDER BY id DESC in runsService.getContextLog
-  @@index([user_id, run_id, session_id], map: "idx_context_log_run_session") // WHERE user_id, run_id, session_id in runsService.getContextLog
+  @@index([user_id, run_id, session_id], map: "idx_context_log_user_run_session") // WHERE user_id, run_id, session_id in runsService.getContextLog
 }
 
 model costs {
@@ -44,9 +44,9 @@ model costs {
   run_session        run_session @relation(fields: [user_id, run_id, session_id], references: [user_id, run_id, session_id], onDelete: NoAction, onUpdate: NoAction)
   host               hosts       @relation(fields: [host_id], references: [id])
 
-  @@index([id(sort: Desc)], map: "idx_costs_id_desc") // ORDER BY id DESC in costTracker.findFirst for aggregation window check
-  @@index([user_id], map: "idx_costs_user_id") // Optional WHERE user_id filter in aggregate/groupBy queries
-  @@index([user_id, run_id, session_id, source, model], map: "idx_costs_aggregation_key") // Cost aggregation lookups in costTracker
+  @@index([id(sort: Desc)], map: "idx_costs_id_desc") // ORDER BY id DESC in hubCostService findFirst, WHERE id >= in aggregate ULID range filtering
+  @@index([user_id], map: "idx_costs_user_id") // Optional WHERE user_id filter in aggregate spend limit queries
+  @@index([user_id, run_id, session_id, source, model], map: "idx_costs_user_run_session_source_model") // WHERE user_id, run_id, session_id, source, model in hubCostService findFirst
 }
 
 model mail_messages {
@@ -62,7 +62,7 @@ model mail_messages {
 
   @@index([id(sort: Desc)], map: "idx_mail_messages_id_desc") // ORDER BY id DESC in supervisor mailService pagination
   @@index([from_user_id], map: "idx_mail_messages_from_user_id") // WHERE from_user_id in sent messages filter
-  @@index([created_at(sort: Desc)], map: "idx_mail_messages_created_at") // ORDER BY created_at DESC in listMessages and searchMessages
+  @@index([created_at(sort: Desc)], map: "idx_mail_messages_created_at_desc") // ORDER BY created_at DESC in listMessages and searchMessages
 }
 
 model mail_recipients {
@@ -76,8 +76,8 @@ model mail_recipients {
   message     mail_messages @relation(fields: [message_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   user        users         @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
-  @@index([message_id], map: "idx_mail_recipients_message_id") // JOIN from mail_messages includes
-  @@index([user_id, message_id(sort: Desc)], map: "idx_mail_recipients_user_id") // groupBy user_id + MAX(message_id) in supervisor agentService, also recipients.some({ user_id })
+  @@index([message_id, user_id], map: "idx_mail_recipients_message_user") // JOIN from mail_messages includes, WHERE message_id + user_id in read/archive updateMany
+  @@index([user_id, message_id(sort: Desc)], map: "idx_mail_recipients_user_message_desc") // recipients.some({ user_id }) in mail list/search/unread filtering
 }
 
 model users {
@@ -99,6 +99,8 @@ model users {
   costs              costs[]             @relation("costs_user")
   user_notifications user_notifications?
   user_hosts         user_hosts[]
+
+  @@index([username], map: "idx_users_username") // WHERE username in hubMailService recipient resolution, agentConfigService user lookup
 }
 
 model user_notifications {
@@ -140,7 +142,8 @@ model run_session {
   costs         costs[]
 
   @@id([user_id, run_id, session_id])
-  @@index([user_id, last_active(sort: Desc)], map: "idx_run_session_user_active") // WHERE user_id ORDER BY last_active DESC in supervisor runsService pagination
+  @@index([run_id(sort: Desc)], map: "idx_run_session_run_id_desc") // ORDER BY run_id DESC in hubRunService to find max run_id for new runs
+  @@index([user_id, last_active(sort: Desc)], map: "idx_run_session_user_last_active_desc") // WHERE user_id ORDER BY last_active DESC in supervisor runsService pagination
 }
 
 model schema_version {

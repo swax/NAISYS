@@ -1,4 +1,4 @@
-import { decodeTime } from "@naisys/database";
+import { decodeTime } from "@naisys/common";
 
 // Crockford's Base32 alphabet used by ULID
 const ULID_ENCODING = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";

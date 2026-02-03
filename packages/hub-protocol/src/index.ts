@@ -178,7 +178,6 @@ export const UserListResponseSchema = z.object({
         username: z.string(),
         leadUserId: z.string().optional(),
         configYaml: z.string(),
-        agentPath: z.string(),
       }),
     )
     .optional(),
@@ -365,7 +364,7 @@ export const HubEvents = {
   CLIENT_DISCONNECTED: "client_disconnected",
 
   // Internal NAISYS events (not sent over wire, local only)
-  /** Raised when NAISYS instance connects to a hub (before catch_up is sent) */
+  /** Raised when NAISYS instance connects to a hub */
   HUB_CONNECTED: "hub_connected",
 
   // Session events (NAISYS -> hub request/response)

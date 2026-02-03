@@ -45,6 +45,7 @@ export function createHubClient(
   }
 
   function handleConnected() {
+    // Output to the console on startup that we're connecting, suppress further logs, we'll use the prompt service for that
     hubClientLog.disableConsole();
     connectedHandler?.();
   }
