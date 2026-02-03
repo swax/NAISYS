@@ -2,6 +2,7 @@ import {
   AgentConfigFileSchema,
   UserEntry,
   debugAgentConfig,
+  debugUserId,
 } from "@naisys/common";
 import { loadAgentConfigs } from "@naisys/common/dist/agentConfigLoader.js";
 import {
@@ -10,14 +11,15 @@ import {
   UserListResponseSchema,
 } from "@naisys/hub-protocol";
 import yaml from "js-yaml";
-import * as path from "path";
 import { HubClient } from "../hub/hubClient.js";
+import { PromptNotificationService } from "../utils/promptNotificationService.js";
 
 export { UserEntry };
 
 /** Loads agent configs from yaml files or receives them pushed from the hub */
 export function createUserService(
   hubClient: HubClient | undefined,
+  promptNotificationService: PromptNotificationService,
   startupAgentPath?: string,
 ) {
   let userMap: Map<string, UserEntry>;
@@ -48,7 +50,6 @@ export function createUserService(
           }
 
           userMap = parseUserList(response);
-          addDebugUser();
           resolveUsers();
         } catch (error) {
           rejectUsers(
@@ -58,14 +59,13 @@ export function createUserService(
       });
     } else {
       userMap = loadAgentConfigs(startupAgentPath || "");
-      addDebugUser();
       usersReadyPromise = Promise.resolve();
     }
   }
 
   function addDebugUser() {
-    userMap.set(debugAgentConfig.username, {
-      userId: "0",
+    userMap.set(debugAgentConfig._id, {
+      userId: debugAgentConfig._id,
       config: debugAgentConfig,
     });
   }
@@ -83,21 +83,35 @@ export function createUserService(
     return userMap.get(id);
   }
 
-  function getStartupUserId(agentPath?: string): string {
-    if (agentPath) {
-      const absolutePath = path.resolve(agentPath);
-      for (const [userId, entry] of userMap) {
-        if (entry.agentPath === absolutePath) {
-          return userId;
-        }
-      }
-      throw new Error(`No user found for agent path: ${absolutePath}`);
+  /** In non integrated hub mode, we just start the debug user, otherwise we start all lead agents */
+  function getStartupUserIds(integratedHub: boolean): string[] {
+    if (hubClient && !integratedHub) {
+      promptNotificationService.notify({
+        wake: true,
+        userId: debugUserId,
+        commentOutput: [`No agents running. Hub will start agents on demand.`],
+      });
+      return [debugUserId];
     }
 
-    if (!userMap.has(debugAgentConfig.username)) {
-      throw new Error("Debug user not found");
+    const leadAgents = Array.from(userMap.values()).filter(
+      (u) => !u.leadUserId,
+    );
+
+    if (leadAgents.length === 0) {
+      throw new Error("No lead agents found to start");
     }
-    return debugAgentConfig.username;
+
+    if (leadAgents.length > 0) {
+      promptNotificationService.notify({
+        wake: true,
+        commentOutput: [
+          `Starting lead agents: ${leadAgents.map((u) => u.config.username).join(", ")}`,
+        ],
+      });
+    }
+
+    return leadAgents.map((u) => u.userId);
   }
 
   // Active user tracking (driven by heartbeatService)
@@ -140,7 +154,7 @@ export function createUserService(
     getUsers,
     getUserById,
     waitForUsers,
-    getStartupUserId,
+    getStartupUserIds,
     setActiveUserIds,
     isUserActive,
     getUserByName,

@@ -33,7 +33,9 @@ program
 const agentPath = program.args[0];
 
 let hubUrl: string | undefined = program.opts().hub;
-if (program.opts().integratedHub) {
+const integratedHub = Boolean(program.opts().integratedHub);
+
+if (integratedHub) {
   // Don't import the hub module tree unless needed, sharing the same process space is to save memory on small servers
   const { startHub } = await import("@naisys/hub");
   const hubPort = await startHub(
@@ -58,7 +60,7 @@ if (hubUrl) {
 }
 
 const globalConfig = createGlobalConfig(hubClient);
-const userService = createUserService(hubClient, agentPath);
+const userService = createUserService(hubClient, promptNotification, agentPath);
 
 if (hubClient) {
   try {
@@ -87,8 +89,10 @@ const heartbeatService = createHeartbeatService(
 );
 
 // Resolve the agent path to a username (or admin if no path) and start the agent
-const startupUserId = userService.getStartupUserId(agentPath);
-await agentManager.startAgent(startupUserId);
+const startupUserIds = userService.getStartupUserIds(integratedHub);
+for (const userId of startupUserIds) {
+  await agentManager.startAgent(userId);
+}
 
 await agentManager.waitForAllAgentsToComplete();
 

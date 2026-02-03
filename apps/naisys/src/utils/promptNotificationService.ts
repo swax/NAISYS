@@ -1,5 +1,4 @@
 export interface PromptNotification {
-  type: string;
   wake: boolean;
   userId?: string;
   contextOutput?: string[];

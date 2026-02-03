@@ -55,12 +55,16 @@ export const AgentConfigFileSchema = z.object({
 
 export type AgentConfigFile = z.infer<typeof AgentConfigFileSchema>;
 
+export const debugUserId = "debug-user-id";
+
 export const debugAgentConfig = {
+  _id: debugUserId,
   username: "debug",
   title: "",
   shellModel: "none",
   agentPrompt: "Debug agent for monitoring and control.",
   tokenMax: 100_000,
+  spendLimitDollars: 1, // Required on all agents
 } satisfies AgentConfigFile;
 
 export interface UserEntry {
