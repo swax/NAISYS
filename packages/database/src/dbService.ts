@@ -8,15 +8,12 @@ import { createPrismaClient } from "./prismaClient.js";
 
 const execAsync = promisify(exec);
 
-export async function createDatabaseService(
-  naisysFolder: string,
-  dbName: "naisys" | "hub",
-) {
+export async function createDatabaseService(naisysFolder: string) {
   /** Should match version in schema_version table of latest migration script */
   const latestDbVersion = 8;
 
   // Ensure database directory exists
-  const databasePath = join(naisysFolder, "database", `${dbName}.sqlite`);
+  const databasePath = join(naisysFolder, "database", `naisys_hub.sqlite`);
   const databaseDir = dirname(databasePath);
   if (!existsSync(databaseDir)) {
     mkdirSync(databaseDir, { recursive: true });

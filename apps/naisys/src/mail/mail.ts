@@ -29,14 +29,13 @@ import {
 export function createMailService(
   { globalConfig }: GlobalConfig,
   { agentConfig }: AgentConfig,
-  hubClient: HubClient,
+  hubClient: HubClient | undefined,
   userService: UserService,
   mailDisplayService: MailDisplayService | null,
   localUserId: string,
   promptNotification: PromptNotificationService,
   contextManager: ContextManager,
 ) {
-  const isHubMode = globalConfig().isHubMode;
   const localUser = userService.getUserById(localUserId);
   const localUsername = localUser?.config.username || "unknown";
   const localTitle = localUser?.config.title || "";
@@ -54,7 +53,7 @@ export function createMailService(
       case "help": {
         const lines = [`ns-mail <command>`];
         lines.push(`  send "<users>" "<subject>" "<msg>" Send a message.`);
-        if (isHubMode) {
+        if (hubClient) {
           lines.push(
             `  list [received|sent]               List recent messages (non-archived, * = unread)`,
             `  read <id>                          Read a message (marks as read)`,
@@ -71,7 +70,7 @@ export function createMailService(
       }
 
       case "list": {
-        if (!isHubMode || !mailDisplayService) {
+        if (!hubClient || !mailDisplayService) {
           throw "Not available in local mode.";
         }
         const filterArg = argv[1]?.toLowerCase();
@@ -112,7 +111,7 @@ export function createMailService(
       }
 
       case "read": {
-        if (!isHubMode || !mailDisplayService) {
+        if (!hubClient || !mailDisplayService) {
           throw "Not available in local mode.";
         }
         const messageId = argv[1];
@@ -124,7 +123,7 @@ export function createMailService(
       }
 
       case "archive": {
-        if (!isHubMode) {
+        if (!hubClient) {
           throw "Not available in local mode.";
         }
         const messageIds = argv[1]?.split(",").map((id) => id.trim());
@@ -135,7 +134,7 @@ export function createMailService(
       }
 
       case "search": {
-        if (!isHubMode || !mailDisplayService) {
+        if (!hubClient || !mailDisplayService) {
           throw "Not available in local mode.";
         }
         // Parse flags and search term
@@ -185,7 +184,7 @@ export function createMailService(
   ): Promise<string> {
     message = message.replace(/\\n/g, "\n");
 
-    if (isHubMode) {
+    if (hubClient) {
       const response = await hubClient.sendRequest<MailSendResponse>(
         HubEvents.MAIL_SEND,
         {
@@ -238,6 +237,7 @@ export function createMailService(
   }
 
   async function archiveMessages(messageIds: string[]): Promise<string> {
+    if (!hubClient) throw "Not available in local mode.";
     const response = await hubClient.sendRequest<MailArchiveResponse>(
       HubEvents.MAIL_ARCHIVE,
       { userId: localUserId, messageIds },
@@ -259,7 +259,7 @@ export function createMailService(
   }
 
   async function getUnreadThreads(): Promise<{ message_id: string }[]> {
-    if (!isHubMode) {
+    if (!hubClient) {
       return [];
     }
 
@@ -284,7 +284,7 @@ export function createMailService(
    * (Hub mode only)
    */
   async function checkAndNotify(): Promise<void> {
-    if (!isHubMode || !mailDisplayService) return;
+    if (!hubClient || !mailDisplayService) return;
 
     const unreadMessages = await getUnreadThreads();
     if (!unreadMessages.length) {
@@ -320,7 +320,7 @@ export function createMailService(
   // Set up notification listeners based on mode
   let cleanupFn: () => void;
 
-  if (isHubMode) {
+  if (hubClient) {
     // Hub mode: listen for MAIL_RECEIVED push from hub
     const mailReceivedHandler = (data: unknown) => {
       const push = data as MailReceivedPush;

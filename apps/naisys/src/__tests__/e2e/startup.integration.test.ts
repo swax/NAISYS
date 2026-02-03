@@ -44,7 +44,7 @@ describe("NAISYS Startup E2E", () => {
     cleanupTestDir(testDir);
   });
 
-  test("should start naisys, run ns-mail users, show admin/ryan, and exit", async () => {
+  test("should start naisys, run ns-users, show ryan, and exit", async () => {
     // Create .env file
     createEnvFile(testDir);
 
@@ -61,12 +61,11 @@ describe("NAISYS Startup E2E", () => {
     await naisys.waitForOutput("AGENT STARTED", 30000);
     await naisys.waitForPrompt();
 
-    // Send ns-mail users command
+    // Send ns-users command
     naisys.flushOutput();
-    naisys.sendCommand("ns-mail users");
+    naisys.sendCommand("ns-users");
 
-    // Wait for ns-mail users output showing both users
-    await naisys.waitForOutput("debug", 10000);
+    // Wait for ns-users output showing the agent user
     await naisys.waitForOutput("ryan", 10000);
     await naisys.waitForPrompt();
 
@@ -85,8 +84,8 @@ describe("NAISYS Startup E2E", () => {
 
     expect(fullOutput).toContain("NAISYS");
     expect(fullOutput).toContain("AGENT STARTED");
-    expect(fullOutput).toContain("debug");
     expect(fullOutput).toContain("ryan");
+    expect(fullOutput).toContain("Assistant");
     expect(fullOutput).toContain("AGENT EXITED");
 
     // Check exit code (0 = success)

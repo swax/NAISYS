@@ -1,6 +1,5 @@
 import { GlobalConfig } from "../globalConfig.js";
 import { HubClient } from "../hub/hubClient.js";
-import { HostService } from "../services/hostService.js";
 import { OutputColor } from "../utils/output.js";
 import { AgentRuntime, createAgentRuntime } from "./agentRuntime.js";
 import { UserService } from "./userService.js";
@@ -12,8 +11,7 @@ export class AgentManager {
 
   constructor(
     private globalConfig: GlobalConfig,
-    private hostService: HostService,
-    private hubClient: HubClient,
+    private hubClient: HubClient | undefined,
     private userService: UserService,
   ) {}
 
@@ -28,7 +26,6 @@ export class AgentManager {
       this,
       userId,
       this.globalConfig,
-      this.hostService,
       this.hubClient,
       this.userService,
     );

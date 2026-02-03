@@ -19,10 +19,9 @@ export { UserEntry };
 /** Loads agent configs from yaml files or receives them pushed from the hub */
 export function createUserService(
   { globalConfig }: GlobalConfig,
-  hubClient: HubClient,
+  hubClient: HubClient | undefined,
   startupAgentPath?: string,
 ) {
-  const isHubMode = globalConfig().isHubMode;
 
   let userMap: Map<string, UserEntry>;
 
@@ -31,7 +30,7 @@ export function createUserService(
   init();
 
   function init() {
-    if (isHubMode) {
+    if (hubClient) {
       // Register handler for pushed user list from hub
       let resolveUsers: () => void;
       let rejectUsers: (error: Error) => void;

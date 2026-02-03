@@ -80,8 +80,14 @@ export function createHubMailService(
             })),
           });
 
-          // Push MAIL_RECEIVED only to hosts that have active recipients
+          // Update latest_mail_id on user_notifications for all recipients
           const recipientUserIds = resolvedUsers.map((u) => u.id);
+          await prisma.user_notifications.updateMany({
+            where: { user_id: { in: recipientUserIds } },
+            data: { latest_mail_id: messageId },
+          });
+
+          // Push MAIL_RECEIVED only to hosts that have active recipients
           const targetHostIds = new Set<string>();
 
           for (const userId of recipientUserIds) {

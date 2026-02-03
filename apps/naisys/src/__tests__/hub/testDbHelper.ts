@@ -28,16 +28,16 @@ export interface TestDatabase {
  */
 export async function createTestDatabase(
   name: string,
-  dbType: "naisys" | "hub" = "naisys",
+  dbType: string,
 ): Promise<TestDatabase> {
   // Create a unique temp directory for this test database
   const folder = mkdtempSync(join(tmpdir(), `naisys-test-${name}-`));
 
   // Create database service (runs migrations)
-  const dbService = await createDatabaseService(folder, dbType);
+  const dbService = await createDatabaseService(folder);
 
   // Create a direct Prisma client for assertions
-  const dbPath = join(folder, "database", `${dbType}.sqlite`);
+  const dbPath = join(folder, "database", `naisys_hub.sqlite`);
   const prisma = createPrismaClient(dbPath);
 
   const cleanup = async () => {

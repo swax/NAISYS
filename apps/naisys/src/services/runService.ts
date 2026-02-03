@@ -10,10 +10,9 @@ import { HubClient } from "../hub/hubClient.js";
 export async function createRunService(
   { agentConfig }: AgentConfig,
   { globalConfig }: GlobalConfig,
-  hubClient: HubClient,
+  hubClient: HubClient | undefined,
   localUserId: string,
 ) {
-  const isHubMode = globalConfig().isHubMode;
 
   /** The run ID of an agent process (there could be multiple runs for the same user). Globally unique */
   let runId = -1;
@@ -24,7 +23,7 @@ export async function createRunService(
   await init();
 
   async function init() {
-    if (isHubMode) {
+    if (hubClient) {
       const response = await hubClient.sendRequest<SessionCreateResponse>(
         HubEvents.SESSION_CREATE,
         { userId: localUserId, modelName: agentConfig().shellModel },
@@ -43,7 +42,7 @@ export async function createRunService(
   }
 
   async function incrementSession(): Promise<void> {
-    if (isHubMode) {
+    if (hubClient) {
       const response = await hubClient.sendRequest<SessionIncrementResponse>(
         HubEvents.SESSION_INCREMENT,
         { userId: localUserId, runId },

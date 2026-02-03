@@ -7,7 +7,7 @@ import { isElevated, PlatformConfig } from "../services/shellPlatform.js";
 import { InputModeService } from "../utils/inputMode.js";
 import { OutputService } from "../utils/output.js";
 import { PromptNotificationService } from "../utils/promptNotificationService.js";
-import { sharedReadline } from "../utils/sharedReadline.js";
+import { getSharedReadline } from "../utils/sharedReadline.js";
 import { writeEventManager } from "../utils/writeEventManager.js";
 import { ShellWrapper } from "./shellWrapper.js";
 
@@ -120,7 +120,7 @@ export function createPromptBuilder(
        * Only one agent should be active on the console at a time (controlled by output.isWriteEnabled).
        */
       const readlineInterface = output.isConsoleEnabled()
-        ? sharedReadline
+        ? getSharedReadline()
         : undefined;
 
       if (readlineInterface) {
@@ -178,7 +178,7 @@ export function createPromptBuilder(
         resolve("n");
         return;
       } else {
-        const readlineInterface = sharedReadline;
+        const readlineInterface = getSharedReadline();
 
         readlineInterface.question(chalk.greenBright(prompt), (answer) => {
           readlineInterface.pause();

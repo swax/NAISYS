@@ -27,6 +27,7 @@ export function createSystemMessage(
 
   let llmailCmd = "";
   if (agentConfig().mailEnabled) {
+    llmailCmd = `\n  ns-users: Display a list of users in the organization`;
     llmailCmd = `\n  ns-mail: A local mail system for communicating with your team`;
   }
 

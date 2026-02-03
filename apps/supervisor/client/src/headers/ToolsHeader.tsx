@@ -4,14 +4,11 @@ import {
   IconLock,
   IconLockOpen,
   IconPlugConnected,
-  IconPlugConnectedX,
-  IconTopologyStar3,
+  IconPlugConnectedX
 } from "@tabler/icons-react";
-import React, { useEffect, useState } from "react";
-import type { MonitorMode } from "shared";
+import React from "react";
 import { AccessDialog } from "../components/AccessDialog";
 import { useSession } from "../contexts/SessionContext";
-import { getMonitorMode } from "../lib/apiClient";
 
 interface ToolsHeaderProps {
   isLoading: boolean;
@@ -29,15 +26,6 @@ export const ToolsHeader: React.FC<ToolsHeaderProps> = ({
     accessModalOpened,
     { open: openAccessModal, close: closeAccessModal },
   ] = useDisclosure(false);
-  const [monitorMode, setMonitorMode] = useState<MonitorMode | null>(null);
-
-  useEffect(() => {
-    getMonitorMode().then((response) => {
-      if (response?.success) {
-        setMonitorMode(response.monitorMode);
-      }
-    });
-  }, []);
 
   return (
     <Group gap="xs">
@@ -71,20 +59,6 @@ export const ToolsHeader: React.FC<ToolsHeaderProps> = ({
           )}
         </Badge>
       </Tooltip>
-      {monitorMode === "monitor-hub" && (
-        <Tooltip label="Hub Mode">
-          <Badge
-            color="yellow"
-            variant="outline"
-            size="lg"
-            {...(!isMobile && {
-              leftSection: <IconTopologyStar3 size="1rem" />,
-            })}
-          >
-            {isMobile ? <IconTopologyStar3 size="1rem" /> : "Hub"}
-          </Badge>
-        </Tooltip>
-      )}
       <Tooltip label={isAuthenticated ? "Authenticated" : "Read Only"}>
         <Badge
           color={isAuthenticated ? "cyan" : "gray"}

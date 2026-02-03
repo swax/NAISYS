@@ -37,10 +37,9 @@ export function createSubagentService(
   localUserId: string,
   promptNotification: PromptNotificationService,
   contextManager: ContextManager,
-  hubClient: HubClient,
+  hubClient: HubClient | undefined,
   { globalConfig }: GlobalConfig,
 ) {
-  const isHubMode = globalConfig().isHubMode;
   const mySubagentsMap = new Map<string, Subagent>();
 
   async function handleCommand(args: string): Promise<string> {
@@ -134,7 +133,7 @@ export function createSubagentService(
     );
 
     // In hub mode, also include agents reported active by the hub heartbeat
-    if (isHubMode) {
+    if (hubClient) {
       for (const subagent of mySubagentsMap.values()) {
         if (userService.isUserActive(subagent.userId)) {
           runningAgentIds.add(subagent.userId);
@@ -270,7 +269,7 @@ export function createSubagentService(
       mySubagentsMap.set(subagent.userId, subagent);
     }
 
-    if (isHubMode) {
+    if (hubClient) {
       // Hub mode: send start request through hub, which routes to the target host
       const response = await hubClient.sendRequest<AgentStartResponse>(
         HubEvents.AGENT_START,
@@ -326,7 +325,7 @@ export function createSubagentService(
       throw `You're not authorized to stop agent '${agentName}' directly`;
     }
 
-    if (isHubMode) {
+    if (hubClient) {
       // Hub mode: send stop request through hub, which routes to the agent's host
       const response = await hubClient.sendRequest<AgentStopResponse>(
         HubEvents.AGENT_STOP,

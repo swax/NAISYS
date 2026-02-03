@@ -59,7 +59,6 @@ model mail_messages {
   from_user          users                @relation("mail_messages_from_user", fields: [from_user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   host               hosts?               @relation(fields: [host_id], references: [id])
   recipients         mail_recipients[]
-  user_notifications user_notifications[]
 
   @@index([id(sort: Desc)], map: "idx_mail_messages_id_desc") // ORDER BY id DESC in supervisor mailService pagination
   @@index([from_user_id], map: "idx_mail_messages_from_user_id") // WHERE from_user_id in sent messages filter
@@ -111,7 +110,6 @@ model user_notifications {
   updated_at     DateTime       @updatedAt
   users          users          @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   host           hosts?         @relation(fields: [latest_host_id], references: [id])
-  mail           mail_messages? @relation(fields: [latest_mail_id], references: [id])
 }
 
 model user_hosts {

@@ -23,7 +23,6 @@ import { createSessionCompactor } from "../llm/sessionCompactor.js";
 import { createSystemMessage } from "../llm/systemMessage.js";
 import { createMailService } from "../mail/mail.js";
 import { createMailDisplayService } from "../mail/mailDisplayService.js";
-import { HostService } from "../services/hostService.js";
 import { createLogService } from "../services/logService.js";
 import { createRunService } from "../services/runService.js";
 import { getPlatformConfig } from "../services/shellPlatform.js";
@@ -39,8 +38,7 @@ export async function createAgentRuntime(
   agentManager: IAgentManager,
   localUserId: string,
   globalConfig: GlobalConfig,
-  hostService: HostService,
-  hubClient: HubClient,
+  hubClient: HubClient | undefined,
   userService: UserService,
 ) {
   /*
@@ -49,7 +47,6 @@ export async function createAgentRuntime(
    * We can also see from this why modern dependency injection frameworks exist
    */
 
-  const isHubMode = globalConfig.globalConfig().isHubMode;
 
   // Base services
   const agentConfig = createAgentConfig(localUserId, globalConfig, userService);
@@ -117,7 +114,7 @@ export async function createAgentRuntime(
   // Features
   const genimg = createGenImg(agentConfig, costTracker, output);
   const userDisplayService = createUserDisplayService(userService);
-  const mailDisplayService = isHubMode
+  const mailDisplayService = hubClient
     ? createMailDisplayService(hubClient, localUserId)
     : null;
   const promptNotification = createPromptNotificationService();
@@ -202,11 +199,11 @@ export async function createAgentRuntime(
     mailService,
     costDisplayService,
     sessionService,
-    hostService,
     workspaces,
     userDisplayService,
     ...debugCommands,
     agentConfig,
+    ...(hubClient ? [hubClient] : []),
   ]);
   const commandHandler = createCommandHandler(
     globalConfig,

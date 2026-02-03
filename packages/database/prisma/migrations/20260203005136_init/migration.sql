@@ -83,8 +83,7 @@ CREATE TABLE "user_notifications" (
     "last_active" DATETIME,
     "updated_at" DATETIME NOT NULL,
     CONSTRAINT "user_notifications_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION,
-    CONSTRAINT "user_notifications_latest_host_id_fkey" FOREIGN KEY ("latest_host_id") REFERENCES "hosts" ("id") ON DELETE SET NULL ON UPDATE CASCADE,
-    CONSTRAINT "user_notifications_latest_mail_id_fkey" FOREIGN KEY ("latest_mail_id") REFERENCES "mail_messages" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
+    CONSTRAINT "user_notifications_latest_host_id_fkey" FOREIGN KEY ("latest_host_id") REFERENCES "hosts" ("id") ON DELETE SET NULL ON UPDATE CASCADE
 );
 
 -- CreateTable

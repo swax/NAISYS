@@ -13,7 +13,6 @@ import { createHubRunService } from "./handlers/hubRunService.js";
 import { createHubUserService } from "./handlers/hubUserService.js";
 import { createHubConfig } from "./hubConfig.js";
 import { createAgentRegistrar } from "./services/agentRegistrar.js";
-import { createHostService } from "./services/hostService.js";
 import { createHubServerLog } from "./services/hubServerLog.js";
 import { createHostRegistrar } from "./services/hostRegistrar.js";
 import { createNaisysServer } from "./services/naisysServer.js";
@@ -46,19 +45,13 @@ export async function startHub(
     // Schema version for sync protocol - should match NAISYS instance
     const dbService = await createDatabaseService(
       process.env.NAISYS_FOLDER || "",
-      "hub",
     );
 
     // Create hub config and host service (hub owns its host identity)
     const hubConfig = createHubConfig();
-    const hostService = await createHostService(dbService);
 
     // Seed database with agent configs from yaml files
-    await createAgentRegistrar(
-      hubConfig,
-      dbService,
-      startupAgentPath,
-    );
+    await createAgentRegistrar(hubConfig, dbService, startupAgentPath);
 
     // Create host registrar for tracking NAISYS instance connections
     const hostRegistrar = createHostRegistrar(dbService);
@@ -90,16 +83,31 @@ export async function startHub(
     createHubLogService(naisysServer, dbService, logService);
 
     // Register hub heartbeat service for NAISYS instance heartbeat tracking
-    const heartbeatService = createHubHeartbeatService(naisysServer, dbService, logService);
+    const heartbeatService = createHubHeartbeatService(
+      naisysServer,
+      dbService,
+      logService,
+    );
 
     // Register hub agent service for agent_start requests routed to target hosts
-    createHubAgentService(naisysServer, dbService, logService, heartbeatService);
+    createHubAgentService(
+      naisysServer,
+      dbService,
+      logService,
+      heartbeatService,
+    );
 
     // Register hub mail service for mail events from NAISYS instances
     createHubMailService(naisysServer, dbService, logService, heartbeatService);
 
     // Register hub cost service for cost_write events from NAISYS instances
-    createHubCostService(naisysServer, dbService, logService, heartbeatService, hubConfig);
+    createHubCostService(
+      naisysServer,
+      dbService,
+      logService,
+      heartbeatService,
+      hubConfig,
+    );
 
     // Start listening
     await new Promise<void>((resolve, reject) => {

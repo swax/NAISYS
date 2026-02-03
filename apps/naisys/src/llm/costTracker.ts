@@ -44,10 +44,9 @@ export function createCostTracker(
   { agentConfig }: AgentConfig,
   llModels: LLModels,
   runService: RunService,
-  hubClient: HubClient,
+  hubClient: HubClient | undefined,
   localUserId: string,
 ) {
-  const isHubMode = globalConfig().isHubMode;
 
   // In-memory per-model aggregated costs (always maintained, both modes)
   const modelCosts = new Map<string, ModelCostData>();
@@ -63,14 +62,14 @@ export function createCostTracker(
   const buffer: CostWriteEntry[] = [];
 
   let flushInterval: NodeJS.Timeout | null = null;
-  if (isHubMode) {
+  if (hubClient) {
     flushInterval = setInterval(flush, COST_FLUSH_INTERVAL_MS);
   }
 
   // Hub mode: receive cost control messages from hub
   let hubCostControlReason: string | undefined;
 
-  if (isHubMode) {
+  if (hubClient) {
     hubClient.registerEvent(HubEvents.COST_CONTROL, (data: unknown) => {
       const parsed = CostControlSchema.parse(data);
       if (parsed.userId !== localUserId) return;
@@ -164,7 +163,7 @@ export function createCostTracker(
       cacheReadTokens,
     );
 
-    if (isHubMode) {
+    if (hubClient) {
       pushToBuffer(
         source,
         modelKey,
@@ -181,7 +180,7 @@ export function createCostTracker(
   function recordCost(cost: number, source: string, modelKey: string) {
     updateInMemory(modelKey, cost, 0, 0, 0, 0);
 
-    if (isHubMode) {
+    if (hubClient) {
       pushToBuffer(source, modelKey, cost, 0, 0, 0, 0);
     }
   }
@@ -219,7 +218,7 @@ export function createCostTracker(
   // Check if the current spend limit has been reached and throw an error if so
   // In hub mode, checks the cost control state received from the hub
   function checkSpendLimit() {
-    if (isHubMode) {
+    if (hubClient) {
       if (hubCostControlReason) {
         throw `LLM ${hubCostControlReason}`;
       }
@@ -270,6 +269,7 @@ export function createCostTracker(
 
   // Hub buffer flush
   function flush() {
+    if (!hubClient) return;
     if (buffer.length === 0) return;
 
     const entries = buffer.splice(0, buffer.length);
@@ -281,7 +281,7 @@ export function createCostTracker(
       clearInterval(flushInterval);
       flushInterval = null;
     }
-    if (isHubMode) {
+    if (hubClient) {
       flush();
     }
   }
