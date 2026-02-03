@@ -1,8 +1,8 @@
-import { AgentConfigFile, CommandProtection } from "@naisys/common";
+import { AgentConfigFile, CommandProtection, sanitizeSpendLimit } from "@naisys/common";
 import table from "text-table";
 import { RegistrableCommand } from "../command/commandRegistry.js";
 import { GlobalConfig } from "../globalConfig.js";
-import { sanitizeSpendLimit, valueFromString } from "../utils/utilities.js";
+import { valueFromString } from "../utils/utilities.js";
 import { UserService } from "./userService.js";
 
 export function createAgentConfig(

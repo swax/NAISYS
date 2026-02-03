@@ -73,7 +73,6 @@ export async function getAgentConfig(
  */
 export async function createAgentConfig(
   name: string,
-  host: string,
 ): Promise<void> {
   const naisysFolder = process.env.NAISYS_FOLDER;
   if (!naisysFolder) {

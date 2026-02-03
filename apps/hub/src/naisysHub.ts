@@ -5,6 +5,7 @@ import http from "http";
 import { Server } from "socket.io";
 import { fileURLToPath } from "url";
 import { createHubAgentService } from "./handlers/hubAgentService.js";
+import { createHubConfigService } from "./handlers/hubConfigService.js";
 import { createHubCostService } from "./handlers/hubCostService.js";
 import { createHubHeartbeatService } from "./handlers/hubHeartbeatService.js";
 import { createHubLogService } from "./handlers/hubLogService.js";
@@ -25,7 +26,7 @@ export async function startHub(
   startupType: "standalone" | "hosted",
   startSupervisor?: any,
   startupAgentPath?: string,
-): Promise<void> {
+): Promise<number> {
   try {
     // Create log service first
     const logService = createHubServerLog(startupType);
@@ -72,6 +73,9 @@ export async function startHub(
       logService,
       hostRegistrar,
     );
+
+    // Register hub config service for config_get requests from NAISYS instances
+    createHubConfigService(naisysServer, logService);
 
     // Register hub user service for user_list requests from NAISYS instances
     createHubUserService(naisysServer, dbService, logService);
@@ -132,6 +136,8 @@ export async function startHub(
       const { startServer } = await import("@naisys-supervisor/server");
       await startServer("hosted", "monitor-hub");
     }
+
+    return hubPort;
   } catch (err) {
     console.error("[Hub] Failed to start hub server:", err);
     process.exit(1);

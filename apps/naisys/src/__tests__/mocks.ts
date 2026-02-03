@@ -220,7 +220,7 @@ export function createMockCommandProtection() {
 
 export function createMockGlobalConfig(): GlobalConfig {
   return {
-    reloadGlobalConfig: jest.fn(() => Promise.resolve()),
+    waitForConfig: jest.fn(() => Promise.resolve()),
     globalConfig: () => ({
       hostname: "test",
       shellCommand: {
@@ -240,9 +240,6 @@ export function createMockGlobalConfig(): GlobalConfig {
       googleSearchEngineId: undefined,
       spendLimitDollars: undefined,
       spendLimitHours: undefined,
-      hubUrls: [],
-      isHubMode: false,
-      hubAccessKey: undefined,
       useToolsForLlmConsoleResponses: true,
       packageVersion: "1.0.0",
       binPath: "/bin",

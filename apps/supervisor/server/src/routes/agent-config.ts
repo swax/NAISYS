@@ -108,7 +108,7 @@ export default async function agentConfigRoutes(
           });
         }
 
-        await createAgentConfig(name, host);
+        await createAgentConfig(name);
 
         return {
           success: true,

@@ -1,5 +1,5 @@
 import { io, Socket } from "socket.io-client";
-import { GlobalConfig } from "../globalConfig.js";
+import { HubClientConfig } from "./hubClientConfig.js";
 import { HubClientLog } from "./hubClientLog.js";
 
 /** Generic raise event function type */
@@ -12,15 +12,14 @@ type AckCallback<T = unknown> = (response: T) => void;
 const RECONNECTION_ATTEMPTS = 5;
 
 export function createHubConnection(
-  hubUrl: string,
+  hubClientConfig: HubClientConfig,
   hubClientLog: HubClientLog,
-  globalConfig: GlobalConfig,
   raiseEvent: RaiseEventFn,
   onConnected: () => void,
   onReconnectFailed: () => void,
   onConnectError: (message: string) => void,
 ) {
-  const config = globalConfig.globalConfig();
+  const hubUrl = hubClientConfig.hubUrl;
 
   let socket: Socket | null = null;
   let connected = false;
@@ -30,8 +29,8 @@ export function createHubConnection(
 
     socket = io(hubUrl + "/naisys", {
       auth: {
-        accessKey: config.hubAccessKey,
-        hostName: config.hostname,
+        accessKey: hubClientConfig.hubAccessKey,
+        hostName: hubClientConfig.hostname,
       },
       reconnection: true,
       reconnectionDelay: 1000,

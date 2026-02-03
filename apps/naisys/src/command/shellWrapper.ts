@@ -1,6 +1,7 @@
 import xterm from "@xterm/headless";
 import { ChildProcessWithoutNullStreams, spawn } from "child_process";
 import * as fs from "fs";
+import os from "os";
 import path from "path";
 import stripAnsi from "strip-ansi";
 import treeKill from "tree-kill";
@@ -92,18 +93,7 @@ export function createShellWrapper(
         `NEW ${platformConfig.shellName.toUpperCase()} SHELL OPENED. PID: ${pid}`,
       );
 
-      const homePath = path.join(
-        globalConfig().naisysFolder,
-        "home",
-        agentConfig().username,
-      );
-
-      await errorIfNotEmpty(
-        await executeCommand(platformConfig.mkdirCommand(homePath)),
-      );
-      await errorIfNotEmpty(
-        await executeCommand(platformConfig.cdCommand(homePath)),
-      );
+      // If we want to give agent a home folder, we can add mkir/cd ${username} folder in the initCommands of the agent
     } else {
       await output.commentAndLog(
         `${platformConfig.shellName.toUpperCase()} SHELL RESTORED. PID: ${pid}`,
@@ -532,7 +522,8 @@ export function createShellWrapper(
    * May also help with common escaping errors */
   function putMultilineCommandInAScript(command: string) {
     const scriptPath = path.join(
-      globalConfig().naisysFolder,
+      os.homedir(),
+      ".naisys",
       "agent-data",
       agentConfig().username,
       `multiline-command${platformConfig.scriptExtension}`,
