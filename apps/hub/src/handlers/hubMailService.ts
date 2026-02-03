@@ -44,9 +44,7 @@ export function createHubMailService(
           });
 
           const foundNames = new Set(resolvedUsers.map((u) => u.username));
-          const missing = parsed.toUsernames.filter(
-            (n) => !foundNames.has(n),
-          );
+          const missing = parsed.toUsernames.filter((n) => !foundNames.has(n));
           if (missing.length > 0) {
             ack({
               success: false,

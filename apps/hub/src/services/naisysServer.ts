@@ -173,8 +173,7 @@ export function createNaisysServer(
     unregisterEvent,
     sendMessage,
     getConnectedClients: () => Array.from(naisysConnections.values()),
-    getConnectionByHostId: (hostId: string) =>
-      naisysConnections.get(hostId),
+    getConnectionByHostId: (hostId: string) => naisysConnections.get(hostId),
     getConnectionCount: () => naisysConnections.size,
   };
 }

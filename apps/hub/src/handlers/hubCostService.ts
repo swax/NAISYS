@@ -168,9 +168,7 @@ export function createHubCostService(
         }
       });
     } catch (error) {
-      logService.error(
-        `[HubCostService] Error in spend limit check: ${error}`,
-      );
+      logService.error(`[HubCostService] Error in spend limit check: ${error}`);
     }
   }
 
@@ -251,16 +249,12 @@ export function createHubCostService(
 
     if (isOverLimit && !wasSuspended) {
       const reason = `Spend limit of $${spendLimit} reached (current: $${periodCost.toFixed(2)})`;
-      logService.log(
-        `[HubCostService] Suspending user ${userId}: ${reason}`,
-      );
+      logService.log(`[HubCostService] Suspending user ${userId}: ${reason}`);
       sendCostControl(userId, false, reason);
       suspendedByAgent.add(userId);
     } else if (!isOverLimit && wasSuspended) {
       const reason = `Spend limit period reset (current: $${periodCost.toFixed(2)}, limit: $${spendLimit})`;
-      logService.log(
-        `[HubCostService] Resuming user ${userId}: ${reason}`,
-      );
+      logService.log(`[HubCostService] Resuming user ${userId}: ${reason}`);
       sendCostControl(userId, true, reason);
       suspendedByAgent.delete(userId);
     }

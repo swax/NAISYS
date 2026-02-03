@@ -11,8 +11,6 @@ import { UserService } from "../agent/userService.js";
 import { RegistrableCommand } from "../command/commandRegistry.js";
 import { GlobalConfig } from "../globalConfig.js";
 import { HubClient } from "../hub/hubClient.js";
-import { ContextManager } from "../llm/contextManager.js";
-import { ContentSource } from "../llm/llmDtos.js";
 import { MailService } from "../mail/mail.js";
 import { InputModeService } from "../utils/inputMode.js";
 import { OutputService } from "../utils/output.js";
@@ -34,7 +32,6 @@ export function createSubagentService(
   userService: UserService,
   localUserId: string,
   promptNotification: PromptNotificationService,
-  contextManager: ContextManager,
   hubClient: HubClient | undefined,
   { globalConfig }: GlobalConfig,
 ) {
@@ -211,6 +208,7 @@ export function createSubagentService(
 
   function raiseSwitchEvent() {
     promptNotification.notify({
+      userId: localUserId,
       type: "switch",
       wake: true,
     });
@@ -364,14 +362,12 @@ export function createSubagentService(
     subagent.taskDescription = undefined;
 
     promptNotification.notify({
+      userId: localUserId,
       type: "subagent-terminated",
       wake: !!agentConfig().wakeOnMessage,
-      process: async () => {
-        await contextManager.append(
-          `Subagent '${subagent.agentName}' has terminated. Reason: ${reason}`,
-          ContentSource.Console,
-        );
-      },
+      contextOutput: [
+        `Subagent '${subagent.agentName}' has terminated. Reason: ${reason}`,
+      ],
     });
   }
 

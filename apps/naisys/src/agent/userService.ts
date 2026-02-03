@@ -20,7 +20,6 @@ export function createUserService(
   hubClient: HubClient | undefined,
   startupAgentPath?: string,
 ) {
-
   let userMap: Map<string, UserEntry>;
 
   let usersReadyPromise: Promise<void>;

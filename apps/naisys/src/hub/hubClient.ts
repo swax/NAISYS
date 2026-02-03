@@ -1,3 +1,4 @@
+import { PromptNotificationService } from "../utils/promptNotificationService.js";
 import { HubClientConfig } from "./hubClientConfig.js";
 import { HubClientLog } from "./hubClientLog.js";
 import { createHubConnection, HubConnection } from "./hubConnection.js";
@@ -15,10 +16,12 @@ const RECONNECT_DELAY_MS = 2000;
 export function createHubClient(
   hubClientConfig: HubClientConfig,
   hubClientLog: HubClientLog,
+  promptNotification: PromptNotificationService,
 ) {
   const hubUrl = hubClientConfig.hubUrl;
   let activeConnection: HubConnection | null = null;
   let reconnectionDisabled = false;
+  let hasConnectedOnce = false;
   let connectedHandler: (() => void) | null = null;
   let connectErrorHandler: ((message: string) => void) | null = null;
 
@@ -48,6 +51,15 @@ export function createHubClient(
     // Output to the console on startup that we're connecting, suppress further logs, we'll use the prompt service for that
     hubClientLog.disableConsole();
     connectedHandler?.();
+
+    if (hasConnectedOnce) {
+      promptNotification.notify({
+        type: "hub-reconnected",
+        wake: true,
+        commentOutput: ["Hub connection re-established"],
+      });
+    }
+    hasConnectedOnce = true;
   }
 
   function handleConnectError(message: string) {

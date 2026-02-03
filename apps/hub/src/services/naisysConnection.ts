@@ -33,9 +33,7 @@ export function createNaisysConnection(
   // Forward all socket events to hub's emit function
   // Note: Socket.IO passes (eventName, ...args) where last arg may be an ack callback
   socket.onAny((eventName: string, ...args: unknown[]) => {
-    logService.log(
-      `[NaisysConnection] Received ${eventName} from ${hostName}`,
-    );
+    logService.log(`[NaisysConnection] Received ${eventName} from ${hostName}`);
     // Pass all args including any ack callback (usually data and optional ack)
     raiseEvent(eventName, hostId, ...args);
   });

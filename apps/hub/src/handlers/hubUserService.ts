@@ -16,7 +16,13 @@ export function createHubUserService(
         const dbUsers = await dbService.usingDatabase(async (prisma) => {
           return await prisma.users.findMany({
             where: { deleted_at: null },
-            select: { id: true, username: true, config: true, agent_path: true, lead_user_id: true },
+            select: {
+              id: true,
+              username: true,
+              config: true,
+              agent_path: true,
+              lead_user_id: true,
+            },
           });
         });
 

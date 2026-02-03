@@ -71,9 +71,7 @@ export async function getAgentConfig(
 /**
  * Create a new agent with YAML config file and database entry
  */
-export async function createAgentConfig(
-  name: string,
-): Promise<void> {
+export async function createAgentConfig(name: string): Promise<void> {
   const naisysFolder = process.env.NAISYS_FOLDER;
   if (!naisysFolder) {
     throw new Error("NAISYS_FOLDER environment variable is not set");

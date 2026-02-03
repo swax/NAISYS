@@ -13,7 +13,6 @@ export async function createRunService(
   hubClient: HubClient | undefined,
   localUserId: string,
 ) {
-
   /** The run ID of an agent process (there could be multiple runs for the same user). Globally unique */
   let runId = -1;
 
