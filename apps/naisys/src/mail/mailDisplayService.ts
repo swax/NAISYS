@@ -6,7 +6,29 @@ import {
 } from "@naisys/hub-protocol";
 import table from "text-table";
 import { HubClient } from "../hub/hubClient.js";
-import { formatMessageDisplay } from "./mailEventBus.js";
+
+/** Content carried with mail delivery */
+export interface MailContent {
+  fromUsername: string;
+  fromTitle: string;
+  recipientUsernames: string[];
+  subject: string;
+  body: string;
+  createdAt: string;
+}
+
+/** Standard display format for a mail message */
+export function formatMessageDisplay(content: MailContent): string {
+  return (
+    `Subject: ${content.subject}\n` +
+    `From: ${content.fromUsername}\n` +
+    `Title: ${content.fromTitle}\n` +
+    `To: ${content.recipientUsernames.join(", ")}\n` +
+    `Date: ${new Date(content.createdAt).toLocaleString()}\n` +
+    `Message:\n` +
+    `${content.body}`
+  );
+}
 
 export function createMailDisplayService(
   hubClient: HubClient,
@@ -42,9 +64,7 @@ export function createMailDisplayService(
             m.isUnread ? "*" : "",
             m.id.slice(-4),
             userColumn,
-            m.subject.length > 40
-              ? m.subject.slice(0, 37) + "..."
-              : m.subject,
+            m.subject.length > 40 ? m.subject.slice(0, 37) + "..." : m.subject,
             new Date(m.createdAt).toLocaleString(),
           ];
         }),

@@ -4,7 +4,7 @@ import {
   IconLock,
   IconLockOpen,
   IconPlugConnected,
-  IconPlugConnectedX
+  IconPlugConnectedX,
 } from "@tabler/icons-react";
 import React from "react";
 import { AccessDialog } from "../components/AccessDialog";

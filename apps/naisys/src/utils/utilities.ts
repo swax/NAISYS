@@ -52,4 +52,3 @@ export function getCleanEnv() {
   delete cleanEnv.WEBSITE_URL;
   return cleanEnv;
 }
-

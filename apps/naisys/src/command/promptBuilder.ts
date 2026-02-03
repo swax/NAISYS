@@ -20,6 +20,7 @@ export function createPromptBuilder(
   inputMode: InputModeService,
   platformConfig: PlatformConfig,
   promptNotification: PromptNotificationService,
+  localUserId: string,
 ) {
   /**
    * When actual output is entered by the user we want to cancel any auto-continue timers and/or wake on message
@@ -162,7 +163,7 @@ export function createPromptBuilder(
 
       // Poll for prompt notifications that should wake/interrupt
       notificationInterval = setInterval(() => {
-        if (promptNotification.hasPending("wake")) {
+        if (promptNotification.hasPending(localUserId, "wake")) {
           abortQuestion();
         }
       }, 250);

@@ -37,6 +37,7 @@ export function createCommandLoop(
   inputMode: InputModeService,
   runService: RunService,
   promptNotification: PromptNotificationService,
+  localUserId: string,
 ) {
   async function run(abortSignal?: AbortSignal) {
     await output.commentAndLog(`AGENT STARTED`);
@@ -142,10 +143,18 @@ export function createCommandLoop(
           try {
             // In the cases that the input prompt is interrupted for a notification, return to the debug prompt
             if (
-              promptNotification.hasPending() ||
+              promptNotification.hasPending(localUserId) ||
               agentConfig().shellModel === LlmApiType.None // Check this last so notifications get processed/cleared
             ) {
-              await promptNotification.processPending();
+              const pendingOutput =
+                await promptNotification.processPending(localUserId);
+              for (const item of pendingOutput) {
+                if (item.type === "context") {
+                  await contextManager.append(item.text, ContentSource.Console);
+                } else {
+                  await output.commentAndLog(item.text);
+                }
+              }
               inputMode.setDebug();
               continue;
             }

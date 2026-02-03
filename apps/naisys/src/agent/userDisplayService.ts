@@ -11,7 +11,12 @@ interface UserNode {
 }
 
 function buildHierarchy(
-  users: { userId: string; username: string; title: string; leadUserId?: string }[],
+  users: {
+    userId: string;
+    username: string;
+    title: string;
+    leadUserId?: string;
+  }[],
 ): UserNode[] {
   const nodeMap = new Map<string, UserNode>();
   const roots: UserNode[] = [];

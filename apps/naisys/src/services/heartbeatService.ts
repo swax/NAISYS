@@ -12,7 +12,6 @@ export function createHeartbeatService(
   agentManager: IAgentManager,
   userService: UserService,
 ) {
-
   // In hub mode, listen for heartbeat status pushes from the hub
   if (hubClient) {
     hubClient.registerEvent(HubEvents.HEARTBEAT_STATUS, (data: unknown) => {

@@ -7,6 +7,7 @@ import { HubClient, createHubClient } from "./hub/hubClient.js";
 import { createHubClientConfig } from "./hub/hubClientConfig.js";
 import { createHubClientLog } from "./hub/hubClientLog.js";
 import { createHeartbeatService } from "./services/heartbeatService.js";
+import { createPromptNotificationService } from "./utils/promptNotificationService.js";
 
 dotenv.config({ quiet: true });
 
@@ -23,7 +24,10 @@ program
     "--integrated-hub",
     "Start a hub in the same process space as this NAISYS instance (saves memory)",
   )
-  .option("--supervisor", "Start integrated Supervisor website (integrated hub required)")
+  .option(
+    "--supervisor",
+    "Start integrated Supervisor website (integrated hub required)",
+  )
   .parse();
 
 const agentPath = program.args[0];
@@ -32,15 +36,25 @@ let hubUrl: string | undefined = program.opts().hub;
 if (program.opts().integratedHub) {
   // Don't import the hub module tree unless needed, sharing the same process space is to save memory on small servers
   const { startHub } = await import("@naisys/hub");
-  const hubPort = await startHub("hosted", program.opts().supervisor, agentPath);
+  const hubPort = await startHub(
+    "hosted",
+    program.opts().supervisor,
+    agentPath,
+  );
   hubUrl = `http://localhost:${hubPort}`;
 }
+
+const promptNotification = createPromptNotificationService();
 
 let hubClient: HubClient | undefined;
 if (hubUrl) {
   const hubClientConfig = createHubClientConfig(hubUrl);
   const hubClientLog = createHubClientLog();
-  hubClient = createHubClient(hubClientConfig, hubClientLog);
+  hubClient = createHubClient(
+    hubClientConfig,
+    hubClientLog,
+    promptNotification,
+  );
 }
 
 const globalConfig = createGlobalConfig(hubClient);
@@ -59,7 +73,12 @@ if (hubClient) {
 await globalConfig.waitForConfig();
 
 console.log(`NAISYS STARTED`);
-const agentManager = new AgentManager(globalConfig, hubClient, userService);
+const agentManager = new AgentManager(
+  globalConfig,
+  hubClient,
+  userService,
+  promptNotification,
+);
 
 const heartbeatService = createHeartbeatService(
   hubClient,

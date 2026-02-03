@@ -30,7 +30,12 @@ function processDirectory(
 
   for (const file of files) {
     if (file.endsWith(".yaml") || file.endsWith(".yml")) {
-      processFile(path.join(dirPath, file), leadUserId, userMap, usernameToPath);
+      processFile(
+        path.join(dirPath, file),
+        leadUserId,
+        userMap,
+        usernameToPath,
+      );
     }
   }
 }

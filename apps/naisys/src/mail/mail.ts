@@ -15,16 +15,12 @@ import {
 } from "../command/commandRegistry.js";
 import { GlobalConfig } from "../globalConfig.js";
 import { HubClient } from "../hub/hubClient.js";
-import { ContextManager } from "../llm/contextManager.js";
-import { ContentSource } from "../llm/llmDtos.js";
 import { PromptNotificationService } from "../utils/promptNotificationService.js";
-import { MailDisplayService } from "./mailDisplayService.js";
 import {
   MailContent,
-  emitMailDelivered,
+  MailDisplayService,
   formatMessageDisplay,
-  onMailDelivered,
-} from "./mailEventBus.js";
+} from "./mailDisplayService.js";
 
 export function createMailService(
   { globalConfig }: GlobalConfig,
@@ -34,7 +30,6 @@ export function createMailService(
   mailDisplayService: MailDisplayService | null,
   localUserId: string,
   promptNotification: PromptNotificationService,
-  contextManager: ContextManager,
 ) {
   const localUser = userService.getUserById(localUserId);
   const localUsername = localUser?.config.username || "unknown";
@@ -222,16 +217,25 @@ export function createMailService(
       throw `Error: ${errors.join("; ")}`;
     }
 
-    const recipientIds = resolvedRecipients.map((r) => r.id);
-
-    emitMailDelivered(recipientIds, {
+    const mailContent: MailContent = {
       fromUsername: localUsername,
       fromTitle: localTitle,
       recipientUsernames: resolvedRecipients.map((r) => r.username),
       subject,
       body: message,
       createdAt: new Date().toISOString(),
-    });
+    };
+
+    const display = formatMessageDisplay(mailContent);
+
+    for (const recipient of resolvedRecipients) {
+      promptNotification.notify({
+        userId: recipient.id,
+        type: "mail",
+        wake: true,
+        contextOutput: ["New Message:", display],
+      });
+    }
 
     return "Mail sent";
   }
@@ -303,16 +307,19 @@ export function createMailService(
     const messageIds = newMessages.map((m) => m.message_id);
     messageIds.forEach((id) => notifiedMessageIds.add(id));
 
+    const contextOutput: string[] = [];
+    for (const messageId of messageIds) {
+      const { display } = await mailDisplayService.readMessage(messageId);
+      contextOutput.push("New Message:", display);
+    }
+
     promptNotification.notify({
+      userId: localUserId,
       type: "mail",
       wake: agentConfig().wakeOnMessage,
-      process: async () => {
-        for (const messageId of messageIds) {
-          const { display } = await mailDisplayService.readMessage(messageId);
-          await contextManager.append("New Message:", ContentSource.Console);
-          await contextManager.append(display, ContentSource.Console);
-          notifiedMessageIds.delete(messageId);
-        }
+      contextOutput,
+      processed: () => {
+        messageIds.forEach((id) => notifiedMessageIds.delete(id));
       },
     });
   }
@@ -337,20 +344,8 @@ export function createMailService(
       hubClient.unregisterEvent(HubEvents.MAIL_RECEIVED, mailReceivedHandler);
     };
   } else {
-    // Local mode: listen for mail delivery via event bus
-    const unsubscribe = onMailDelivered(localUserId, (content: MailContent) => {
-      promptNotification.notify({
-        type: "mail",
-        wake: agentConfig().wakeOnMessage,
-        process: async () => {
-          const display = formatMessageDisplay(content);
-          await contextManager.append("New Message:", ContentSource.Console);
-          await contextManager.append(display, ContentSource.Console);
-        },
-      });
-    });
-
-    cleanupFn = unsubscribe;
+    // Local mode: notifications carry contextOutput directly, no setup needed
+    cleanupFn = () => {};
   }
 
   function cleanup() {

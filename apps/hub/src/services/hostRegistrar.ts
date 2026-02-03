@@ -1,8 +1,6 @@
 import { DatabaseService, ulid } from "@naisys/database";
 
-export function createHostRegistrar(
-  dbService: DatabaseService,
-) {
+export function createHostRegistrar(dbService: DatabaseService) {
   /**
    * Register a NAISYS instance by name. Creates a new record if not found,
    * updates last_active on every call.

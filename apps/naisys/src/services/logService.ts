@@ -14,7 +14,6 @@ export function createLogService(
   runService: RunService,
   localUserId: string,
 ) {
-
   // In-memory buffer for hub mode
   const buffer: LogWriteEntry[] = [];
 

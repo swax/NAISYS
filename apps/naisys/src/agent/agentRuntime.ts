@@ -28,7 +28,7 @@ import { createRunService } from "../services/runService.js";
 import { getPlatformConfig } from "../services/shellPlatform.js";
 import { createInputMode } from "../utils/inputMode.js";
 import { createOutputService } from "../utils/output.js";
-import { createPromptNotificationService } from "../utils/promptNotificationService.js";
+import { PromptNotificationService } from "../utils/promptNotificationService.js";
 import { createAgentConfig } from "./agentConfig.js";
 import { IAgentManager } from "./agentManagerInterface.js";
 import { createUserDisplayService } from "./userDisplayService.js";
@@ -40,13 +40,13 @@ export async function createAgentRuntime(
   globalConfig: GlobalConfig,
   hubClient: HubClient | undefined,
   userService: UserService,
+  promptNotification: PromptNotificationService,
 ) {
   /*
    * Simple form of dependency injection
    * actually a bit better than the previous module system as this implicitly prevents cirucular dependencies
    * We can also see from this why modern dependency injection frameworks exist
    */
-
 
   // Base services
   const agentConfig = createAgentConfig(localUserId, globalConfig, userService);
@@ -117,7 +117,6 @@ export async function createAgentRuntime(
   const mailDisplayService = hubClient
     ? createMailDisplayService(hubClient, localUserId)
     : null;
-  const promptNotification = createPromptNotificationService();
   const mailService = createMailService(
     globalConfig,
     agentConfig,
@@ -126,7 +125,6 @@ export async function createAgentRuntime(
     mailDisplayService,
     localUserId,
     promptNotification,
-    contextManager,
   );
   const subagentService = createSubagentService(
     agentConfig,
@@ -137,7 +135,6 @@ export async function createAgentRuntime(
     userService,
     localUserId,
     promptNotification,
-    contextManager,
     hubClient,
     globalConfig,
   );
@@ -160,6 +157,7 @@ export async function createAgentRuntime(
     inputMode,
     platformConfig,
     promptNotification,
+    localUserId,
   );
   const shellCommand = createShellCommand(
     globalConfig,
@@ -232,6 +230,7 @@ export async function createAgentRuntime(
     inputMode,
     runService,
     promptNotification,
+    localUserId,
   );
 
   const abortController = new AbortController();
@@ -244,7 +243,6 @@ export async function createAgentRuntime(
     agentTitle: config.title,
     output,
     subagentService,
-    promptNotification,
     runCommandLoop: () => commandLoop.run(abortController.signal),
     requestShutdown: async (reason: string) => {
       abortController.abort(reason);

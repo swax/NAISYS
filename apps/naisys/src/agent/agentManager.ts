@@ -8,6 +8,7 @@ import {
 import { GlobalConfig } from "../globalConfig.js";
 import { HubClient } from "../hub/hubClient.js";
 import { OutputColor } from "../utils/output.js";
+import { PromptNotificationService } from "../utils/promptNotificationService.js";
 import { AgentRuntime, createAgentRuntime } from "./agentRuntime.js";
 import { UserService } from "./userService.js";
 
@@ -20,6 +21,7 @@ export class AgentManager {
     private globalConfig: GlobalConfig,
     private hubClient: HubClient | undefined,
     private userService: UserService,
+    private promptNotification: PromptNotificationService,
   ) {
     if (hubClient) {
       hubClient.registerEvent(
@@ -71,6 +73,7 @@ export class AgentManager {
       this.globalConfig,
       this.hubClient,
       this.userService,
+      this.promptNotification,
     );
 
     this.runningAgents.push(agent);
