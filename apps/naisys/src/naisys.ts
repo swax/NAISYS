@@ -2,7 +2,6 @@ import { program } from "commander";
 import dotenv from "dotenv";
 import { AgentManager } from "./agent/agentManager.js";
 import { createUserService } from "./agent/userService.js";
-import { registerHubAgentHandlers } from "./features/subagent.js";
 import { createGlobalConfig } from "./globalConfig.js";
 import { HubClient, createHubClient } from "./hub/hubClient.js";
 import { createHubClientLog } from "./hub/hubClientLog.js";
@@ -44,7 +43,7 @@ if (globalConfig.globalConfig().isHubMode) {
   hubClient = createHubClient(globalConfig, hubClientLog);
 }
 
-const userService = createUserService(globalConfig, hubClient, agentPath);
+const userService = createUserService(hubClient, agentPath);
 
 if (hubClient) {
   try {
@@ -59,12 +58,7 @@ if (hubClient) {
 console.log(`NAISYS STARTED`);
 const agentManager = new AgentManager(globalConfig, hubClient, userService);
 
-if (hubClient) {
-  registerHubAgentHandlers(hubClient, agentManager);
-}
-
 const heartbeatService = createHeartbeatService(
-  globalConfig,
   hubClient,
   agentManager,
   userService,

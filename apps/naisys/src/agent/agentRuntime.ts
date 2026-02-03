@@ -177,7 +177,6 @@ export async function createAgentRuntime(
     inputMode,
   );
   const commandProtection = createCommandProtection(
-    globalConfig,
     agentConfig,
     promptBuilder,
     llmService,

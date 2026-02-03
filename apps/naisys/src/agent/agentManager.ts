@@ -1,3 +1,10 @@
+import {
+  AgentStartRequestSchema,
+  AgentStartResponse,
+  AgentStopRequestSchema,
+  AgentStopResponse,
+  HubEvents,
+} from "@naisys/hub-protocol";
 import { GlobalConfig } from "../globalConfig.js";
 import { HubClient } from "../hub/hubClient.js";
 import { OutputColor } from "../utils/output.js";
@@ -13,7 +20,43 @@ export class AgentManager {
     private globalConfig: GlobalConfig,
     private hubClient: HubClient | undefined,
     private userService: UserService,
-  ) {}
+  ) {
+    if (hubClient) {
+      hubClient.registerEvent(
+        HubEvents.AGENT_START,
+        async (data: unknown, ack: (response: AgentStartResponse) => void) => {
+          try {
+            const parsed = AgentStartRequestSchema.parse(data);
+
+            await this.startAgent(parsed.userId);
+
+            ack({ success: true });
+          } catch (error) {
+            ack({ success: false, error: String(error) });
+          }
+        },
+      );
+
+      hubClient.registerEvent(
+        HubEvents.AGENT_STOP,
+        async (data: unknown, ack: (response: AgentStopResponse) => void) => {
+          try {
+            const parsed = AgentStopRequestSchema.parse(data);
+
+            await this.stopAgent(
+              parsed.userId,
+              "requestShutdown",
+              parsed.reason,
+            );
+
+            ack({ success: true });
+          } catch (error) {
+            ack({ success: false, error: String(error) });
+          }
+        },
+      );
+    }
+  }
 
   async startAgent(userId: string, onStop?: (reason: string) => void) {
     // Check if agent is already running
