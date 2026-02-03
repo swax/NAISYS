@@ -67,8 +67,7 @@ export class AgentManager {
 
   /** A client started in hub mode is hanging on the debug user, so this shows a notification of agent activity */
   notifyHubRequest(type: "start" | "stop", userId: string) {
-    const username =
-      this.userService.getUserById(userId)?.config.username || userId;
+    const username = this.userService.getUserById(userId)?.username || userId;
 
     this.promptNotification.notify({
       wake: true,

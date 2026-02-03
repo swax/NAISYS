@@ -68,7 +68,7 @@ export function createUserDisplayService(userService: UserService) {
 
     const userItems = users.map((u) => ({
       userId: u.userId,
-      username: u.config.username,
+      username: u.username,
       title: u.config.title,
       leadUserId: u.leadUserId,
     }));

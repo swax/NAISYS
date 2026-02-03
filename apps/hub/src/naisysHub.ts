@@ -52,7 +52,7 @@ export async function startHub(
     const hubConfig = createHubConfig();
 
     // Seed database with agent configs from yaml files
-    await createAgentRegistrar(hubConfig, dbService, startupAgentPath);
+    await createAgentRegistrar(dbService, startupAgentPath);
 
     // Create host registrar for tracking NAISYS instance connections
     const hostRegistrar = createHostRegistrar(dbService);

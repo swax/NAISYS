@@ -52,6 +52,7 @@ function processFile(
     const configYaml = fs.readFileSync(absolutePath, "utf8");
     const configObj = yaml.load(configYaml);
     const agentConfig = AgentConfigFileSchema.parse(configObj);
+    const username = agentConfig.username;
 
     // Generate and persist _id if not set
     if (!agentConfig._id) {
@@ -64,13 +65,13 @@ function processFile(
     }
 
     // Check for duplicate usernames from different files
-    const existingPath = usernameToPath.get(agentConfig.username);
+    const existingPath = usernameToPath.get(username);
     if (existingPath && existingPath !== absolutePath) {
       throw new Error(
-        `Duplicate username "${agentConfig.username}" found in multiple files:\n  ${existingPath}\n  ${absolutePath}`,
+        `Duplicate username "${username}" found in multiple files:\n  ${existingPath}\n  ${absolutePath}`,
       );
     }
-    usernameToPath.set(agentConfig.username, absolutePath);
+    usernameToPath.set(username, absolutePath);
 
     if (userMap.has(agentConfig._id)) {
       throw new Error(
@@ -82,12 +83,13 @@ function processFile(
 
     userMap.set(agentConfig._id, {
       userId: agentConfig._id,
+      username,
       config: agentConfig,
       leadUserId,
       agentPath: absolutePath,
     });
 
-    console.log(`Loaded user: ${agentConfig.username} from ${filePath}`);
+    console.log(`Loaded user: ${username} from ${filePath}`);
 
     // Check for a subdirectory matching the filename (without extension)
     const ext = path.extname(absolutePath);

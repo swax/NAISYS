@@ -32,7 +32,7 @@ export function createMailService(
   promptNotification: PromptNotificationService,
 ) {
   const localUser = userService.getUserById(localUserId);
-  const localUsername = localUser?.config.username || "unknown";
+  const localUsername = localUser?.username || "unknown";
   const localTitle = localUser?.config.title || "";
 
   async function handleCommand(
@@ -208,7 +208,7 @@ export function createMailService(
       } else {
         resolvedRecipients.push({
           id: user.userId,
-          username: user.config.username,
+          username: user.username,
         });
       }
     }
@@ -254,7 +254,7 @@ export function createMailService(
   }
 
   function getAllUserNames(): string[] {
-    return userService.getUsers().map((u) => u.config.username);
+    return userService.getUsers().map((u) => u.username);
   }
 
   function hasMultipleUsers(): boolean {

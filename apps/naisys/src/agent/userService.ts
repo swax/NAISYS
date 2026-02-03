@@ -65,6 +65,7 @@ export function createUserService(
 
   function addDebugUser() {
     userMap.set(debugAgentConfig._id, {
+      username: debugAgentConfig.username,
       userId: debugAgentConfig._id,
       config: debugAgentConfig,
     });
@@ -91,6 +92,7 @@ export function createUserService(
         userId: debugUserId,
         commentOutput: [`No agents running. Hub will start agents on demand.`],
       });
+      addDebugUser();
       return [debugUserId];
     }
 
@@ -106,7 +108,7 @@ export function createUserService(
       promptNotificationService.notify({
         wake: true,
         commentOutput: [
-          `Starting lead agents: ${leadAgents.map((u) => u.config.username).join(", ")}`,
+          `Starting lead agents: ${leadAgents.map((u) => u.username).join(", ")}`,
         ],
       });
     }
@@ -134,6 +136,7 @@ export function createUserService(
 
       map.set(user.userId, {
         userId: user.userId,
+        username: user.username,
         leadUserId: user.leadUserId,
         config,
       });
@@ -143,7 +146,7 @@ export function createUserService(
 
   function getUserByName(username: string): UserEntry | undefined {
     for (const user of userMap.values()) {
-      if (user.config.username === username) {
+      if (user.username === username) {
         return user;
       }
     }
