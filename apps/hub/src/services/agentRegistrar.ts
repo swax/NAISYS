@@ -6,7 +6,6 @@ import { HubConfig } from "../hubConfig.js";
 
 /** Loads agent configs from yaml files, then syncs them to the database */
 export async function createAgentRegistrar(
-  hubConfig: HubConfig,
   dbService: DatabaseService,
   startupAgentPath?: string,
 ) {
@@ -21,7 +20,7 @@ export async function createAgentRegistrar(
   async function syncUsersToDatabase(users: Map<string, UserEntry>) {
     for (const user of users.values()) {
       if (!user.agentPath) {
-        throw new Error(`User ${user.config.username} is missing agentPath`);
+        throw new Error(`User ${user.username} is missing agentPath`);
       }
 
       await dbService.usingDatabase(async (prisma) => {
@@ -29,7 +28,7 @@ export async function createAgentRegistrar(
           where: { id: user.userId },
           create: {
             id: user.userId,
-            username: user.config.username,
+            username: user.username,
             title: user.config.title,
             agent_path: user.agentPath!,
             lead_user_id: user.leadUserId,

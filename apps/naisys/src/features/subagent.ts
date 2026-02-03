@@ -112,7 +112,7 @@ export function createSubagentService(
       if (!existing) {
         mySubagentsMap.set(user.userId, {
           userId: user.userId,
-          agentName: user.config.username,
+          agentName: user.username,
           title: user.config.title,
         });
       }
@@ -255,7 +255,7 @@ export function createSubagentService(
     if (!subagent) {
       subagent = {
         userId: user.userId,
-        agentName: user.config.username,
+        agentName: user.username,
         title: user.config.title,
         taskDescription,
       };
