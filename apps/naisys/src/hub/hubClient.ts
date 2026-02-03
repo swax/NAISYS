@@ -1,3 +1,4 @@
+import table from "text-table";
 import { GlobalConfig } from "../globalConfig.js";
 import { HubClientLog } from "./hubClientLog.js";
 import { createHubConnection, HubConnection } from "./hubConnection.js";
@@ -6,6 +7,14 @@ import { createHubConnection, HubConnection } from "./hubConnection.js";
 export interface HubConnectionInfo {
   url: string;
   connected: boolean;
+}
+
+/** Per-URL status for the ns-hubs debug command */
+export interface HubUrlStatus {
+  url: string;
+  active: boolean;
+  connected: boolean;
+  lastError?: string;
 }
 
 type EventHandler = (...args: any[]) => void;
@@ -24,6 +33,9 @@ export function createHubClient(
   let reconnectionDisabled = false;
   let connectedHandler: (() => void) | null = null;
   let connectErrorHandler: ((message: string) => void) | null = null;
+
+  // Track last error per URL index for status reporting
+  const urlErrors = new Map<number, string>();
 
   // Generic event handlers registry - maps event name to set of handlers
   const eventHandlers = new Map<string, Set<EventHandler>>();
@@ -63,10 +75,13 @@ export function createHubClient(
   }
 
   function handleConnected() {
+    hubClientLog.disableConsole();
+    urlErrors.delete(currentUrlIndex);
     connectedHandler?.();
   }
 
   function handleConnectError(message: string) {
+    urlErrors.set(currentUrlIndex, message);
     connectErrorHandler?.(message);
   }
 
@@ -193,8 +208,40 @@ export function createHubClient(
     };
   }
 
+  function getHubsStatus(): HubUrlStatus[] {
+    return hubUrls.map((url, index) => ({
+      url,
+      active: index === currentUrlIndex,
+      connected: index === currentUrlIndex && isConnected(),
+      lastError: urlErrors.get(index),
+    }));
+  }
+
   return {
+    // RegistrableCommand
+    commandName: "ns-hubs",
+    helpText: "Show hub connection status",
+    isDebug: true,
+    handleCommand: async () => {
+      const statuses = getHubsStatus();
+      if (statuses.length === 0) {
+        return "No hub URLs configured.";
+      }
+
+      const headers = ["URL", "Active", "Connected", "Last Error"];
+      const rows = statuses.map((s) => [
+        s.url,
+        s.active ? "*" : "",
+        s.connected ? "Yes" : "No",
+        s.lastError || "",
+      ]);
+
+      return table([headers, ...rows], { hsep: " | " });
+    },
+
+    // HubClient API
     getConnectionInfo,
+    getHubsStatus,
     isConnected,
     waitForConnection,
     registerEvent,

@@ -10,14 +10,13 @@ import { HubClient } from "../hub/hubClient.js";
 
 export function createHeartbeatService(
   { globalConfig }: GlobalConfig,
-  hubClient: HubClient,
+  hubClient: HubClient | undefined,
   agentManager: IAgentManager,
   userService: UserService,
 ) {
-  const isHubMode = globalConfig().isHubMode;
 
   // In hub mode, listen for heartbeat status pushes from the hub
-  if (isHubMode) {
+  if (hubClient) {
     hubClient.registerEvent(HubEvents.HEARTBEAT_STATUS, (data: unknown) => {
       const parsed = HeartbeatStatusSchema.parse(data);
       userService.setActiveUserIds(parsed.activeUserIds);
@@ -28,7 +27,7 @@ export function createHeartbeatService(
   const interval = setInterval(() => {
     const activeUserIds = agentManager.runningAgents.map((a) => a.agentUserId);
 
-    if (isHubMode) {
+    if (hubClient) {
       hubClient.sendMessage(HubEvents.HEARTBEAT, { activeUserIds });
     } else {
       userService.setActiveUserIds(activeUserIds);

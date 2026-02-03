@@ -48,8 +48,6 @@ export async function createAgentRegistrar(
           where: { user_id: user.userId },
           create: {
             user_id: user.userId,
-            latest_host_id: "",
-            latest_log_id: "",
           },
           update: {},
         });

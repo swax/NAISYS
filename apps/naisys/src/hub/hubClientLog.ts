@@ -6,6 +6,7 @@ export type LogFn = (message: string) => void;
 export interface HubClientLog {
   write: LogFn;
   error: LogFn;
+  disableConsole: () => void;
 }
 
 export function createHubClientLog(): HubClientLog {
@@ -26,8 +27,23 @@ export function createHubClientLog(): HubClientLog {
     },
   });
 
+  let consoleEnabled = true;
+
   return {
-    write: (message: string) => logger.info(message),
-    error: (message: string) => logger.error(message),
+    write: (message: string) => {
+      logger.info(message);
+      if (consoleEnabled) {
+        console.log(message);
+      }
+    },
+    error: (message: string) => {
+      logger.error(message);
+      if (consoleEnabled) {
+        console.error(message);
+      }
+    },
+    disableConsole: () => {
+      consoleEnabled = false;
+    },
   };
 }

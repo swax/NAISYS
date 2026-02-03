@@ -10,25 +10,24 @@ import { RunService } from "./runService.js";
 
 export function createLogService(
   globalConfig: GlobalConfig,
-  hubClient: HubClient,
+  hubClient: HubClient | undefined,
   runService: RunService,
   localUserId: string,
 ) {
-  const isHubMode = globalConfig.globalConfig().isHubMode;
 
   // In-memory buffer for hub mode
   const buffer: LogWriteEntry[] = [];
 
   // Start flush interval in hub mode
   let flushInterval: NodeJS.Timeout | null = null;
-  if (isHubMode) {
+  if (hubClient) {
     flushInterval = setInterval(flush, LOG_FLUSH_INTERVAL_MS);
   }
 
   function write(message: LlmMessage) {
     const { getRunId, getSessionId } = runService;
 
-    if (isHubMode) {
+    if (hubClient) {
       buffer.push({
         userId: localUserId,
         runId: getRunId(),
@@ -43,6 +42,7 @@ export function createLogService(
   }
 
   function flush() {
+    if (!hubClient) return;
     if (buffer.length === 0) return;
 
     const entries = buffer.splice(0, buffer.length);
@@ -55,7 +55,7 @@ export function createLogService(
       flushInterval = null;
     }
     // Final flush
-    if (isHubMode) {
+    if (hubClient) {
       flush();
     }
   }

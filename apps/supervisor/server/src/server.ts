@@ -14,7 +14,6 @@ import {
 } from "fastify-type-provider-zod";
 import path from "path";
 import { fileURLToPath } from "url";
-import { initMonitorDatabase } from "./database/naisysDatabase.js";
 import { initSupervisorDatabase } from "./database/supervisorDatabase.js";
 import apiRoutes from "./routes/api.js";
 
@@ -31,7 +30,6 @@ export const startServer = async (
     process.exit(1);
   }
 
-  initMonitorDatabase(monitorDb);
   initSupervisorDatabase();
 
   const __filename = fileURLToPath(import.meta.url);

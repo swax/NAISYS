@@ -1,6 +1,5 @@
 import { DatabaseService, monotonicFactory } from "@naisys/database";
 import { HubEvents, LogWriteRequestSchema } from "@naisys/hub-protocol";
-import { HostService } from "../services/hostService.js";
 import { HubServerLog } from "../services/hubServerLog.js";
 import { NaisysServer } from "../services/naisysServer.js";
 
