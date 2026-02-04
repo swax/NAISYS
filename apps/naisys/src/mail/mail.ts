@@ -59,7 +59,7 @@ export function createMailService(
         lines.push(
           `  wait <seconds>                     Wait for new mail`,
           ``,
-          `* Attachments are not supported, use file paths to reference files in emails as all users are usually on the same machine`,
+          `* Attachments are not supported`,
         );
         return lines.join("\n");
       }

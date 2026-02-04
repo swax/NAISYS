@@ -1,0 +1,13 @@
+# Run individual agent ephemeral
+node ../../apps/naisys/dist/naisys.js alex.yaml
+
+# Run agents local ephemeral
+node ../../apps/naisys/dist/naisys.js
+
+# Run agents with integrated hub
+node ../../apps/naisys/dist/naisys.js --integrated-hub
+
+# Run agents each on their own instance and communicating through a hub
+node ../../apps/hub/dist/naisysHub.js
+NAISYS_HOSTNAME=HOST_A node ../../apps/naisys/dist/naisys.js --hub=http://localhost:12345
+NAISYS_HOSTNAME=HOST_B node ../../apps/naisys/dist/naisys.js --hub=http://localhost:12345

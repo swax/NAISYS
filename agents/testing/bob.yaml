@@ -1,0 +1,9 @@
+_id: 140681b6-34e7-4c13-b79e-4eb4a9c000d9
+username: bob
+title: Assistant
+shellModel: mock
+agentPrompt: |
+  You are ${agent.username} a ${agent.title} with the job of helping out the admin with what he wants to do.
+tokenMax: 50000
+debugPauseSeconds: 5
+spendLimitDollars: 10.00

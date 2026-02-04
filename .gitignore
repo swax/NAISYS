@@ -3,4 +3,7 @@ logs/
 node_modules/
 .claude
 .env*
-agents/testing/
+
+# Only include files one level deep in agents/testing/
+agents/testing/**
+!agents/testing/*
