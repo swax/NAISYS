@@ -117,6 +117,17 @@ export function createNaisysServer(
 
     try {
       const hostId = await hostRegistrar.registerHost(hostName);
+
+      // Reject if this host already has an active connection
+      if (naisysConnections.has(hostId)) {
+        logService.log(
+          `[Hub] Connection rejected: host '${hostName}' is already connected`,
+        );
+        return next(
+          new Error(`Host '${hostName}' already has an active connection`),
+        );
+      }
+
       socket.data.hostId = hostId;
       socket.data.hostName = hostName;
       next();
@@ -131,16 +142,6 @@ export function createNaisysServer(
   // Handle new connections
   nsp.on("connection", (socket) => {
     const { hostId, hostName } = socket.data;
-
-    // Check if this NAISYS instance is already connected
-    const existingConnection = naisysConnections.get(hostId);
-    if (existingConnection) {
-      logService.log(
-        `[Hub] NAISYS instance ${hostName} (${hostId}) reconnecting, replacing old connection`,
-      );
-      naisysConnections.delete(hostId);
-      raiseEvent("client_disconnected", hostId);
-    }
 
     // Create connection handler for this socket, passing our emit function
     const naisysConnection = createNaisysConnection(

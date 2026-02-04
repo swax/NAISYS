@@ -17,6 +17,7 @@ import { UserService } from "./userService.js";
 export class AgentManager {
   runningAgents: AgentRuntime[] = [];
   runLoops: Promise<void>[] = [];
+  onHeartbeatNeeded?: () => void;
 
   constructor(
     private globalConfig: GlobalConfig,
@@ -93,6 +94,7 @@ export class AgentManager {
     );
 
     this.runningAgents.push(agent);
+    this.onHeartbeatNeeded?.();
 
     if (this.runningAgents.length === 1) {
       this.setActiveConsoleAgent(agent.agentUserId);
@@ -153,6 +155,7 @@ export class AgentManager {
     if (stage == "completeShutdown") {
       const agentIndex = this.runningAgents.findIndex((a) => a === agent);
       this.runningAgents.splice(agentIndex, 1);
+      this.onHeartbeatNeeded?.();
 
       agent.completeShutdown(reason);
     }

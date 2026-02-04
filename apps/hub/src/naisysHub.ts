@@ -20,7 +20,7 @@ import { createNaisysServer } from "./services/naisysServer.js";
 
 /**
  * Starts the Hub server with sync service.
- * Can be called standalone or inline from naisys with --hub flag.
+ * Can be called standalone or inline from naisys with --integrated-hub flag.
  */
 export async function startHub(
   startupType: "standalone" | "hosted",
@@ -37,7 +37,7 @@ export async function startHub(
     const hubAccessKey = process.env.HUB_ACCESS_KEY;
     if (!hubAccessKey) {
       const errorStr =
-        "Error: HUB_ACCESS_KEY environment variable is required when using --hub";
+        "Error: HUB_ACCESS_KEY environment variable is required";
       console.log(errorStr);
       logService.error(errorStr);
       process.exit(1);

@@ -55,6 +55,7 @@ The current multi-machine architecture (doc 001) works but is too complicated to
 | ------------------------------ | ---------------- | ----------------------------------------------------------- |
 | `naisys`                       | Local            | Standalone, ephemeral, yaml-driven, no database, no network |
 | `naisys --hub=hub.example.com` | Hub-controlled   | Connects to hub, hub manages agents and all data            |
+| `naisys --integrated-hub`      | Hub-controlled   | Creates both a NAISYS instance and hub and connects them    |
 | `naisys-hub`                   | Hub              | WebSocket API server with database                          |
 | `naisys-hub --supervisor`      | Hub + Supervisor | Hub with web UI                                             |
 
@@ -458,7 +459,7 @@ Final cleanup and verification.
 - [ ] ns-session compact works (new session created on hub)
 - [ ] NAISYS instance reconnects after hub restart, resumes operation
 - [ ] Buffered data (logs/costs) flushed after reconnect
-- [ ] Hub pushes `mail.received` notifications (no polling)
+- [x] Hub pushes `mail.received` notifications (no polling) — `basic-mail.e2e.test.ts` integrated-hub test
 - [ ] Supervisor shows live data from all instances
 - [ ] Hub can start/stop agents on instance via push events
 - [ ] ns-agent start in hub mode routes through hub to correct host via user_hosts
@@ -467,12 +468,12 @@ Final cleanup and verification.
 
 ### Local Ephemeral Mode
 
-- [ ] `naisys` starts without any hub config
-- [ ] No database file created, no Prisma/SQLite loaded
-- [ ] Multiple agents run in same process
-- [ ] `ns-mail send` delivers message directly to target agent
-- [ ] Agent configs loaded from yaml files
-- [ ] Clean restart - no leftover state
+- [x] `naisys` starts without any hub config — `basic-mail.e2e.test.ts` standalone test
+- [x] No database file created, no Prisma/SQLite loaded — `basic-mail.e2e.test.ts` standalone test
+- [x] Multiple agents run in same process — `basic-mail.e2e.test.ts` standalone test
+- [x] `ns-mail send` delivers message directly to target agent — `basic-mail.e2e.test.ts` standalone test
+- [x] Agent configs loaded from yaml files — `basic-mail.e2e.test.ts` standalone test
+- [x] Clean restart - no leftover state — `basic-mail.e2e.test.ts` standalone test (fresh temp dir per run)
 
 ### scdb Regression
 

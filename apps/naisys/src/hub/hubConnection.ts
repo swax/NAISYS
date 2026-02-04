@@ -8,15 +8,12 @@ export type RaiseEventFn = (event: string, ...args: unknown[]) => void;
 /** Callback type for message acknowledgements */
 type AckCallback<T = unknown> = (response: T) => void;
 
-/** Number of reconnection attempts before giving up on current URL */
-const RECONNECTION_ATTEMPTS = 5;
-
 export function createHubConnection(
   hubClientConfig: HubClientConfig,
   hubClientLog: HubClientLog,
   raiseEvent: RaiseEventFn,
   onConnected: () => void,
-  onReconnectFailed: () => void,
+  onDisconnected: () => void,
   onConnectError: (message: string) => void,
 ) {
   const hubUrl = hubClientConfig.hubUrl;
@@ -35,7 +32,6 @@ export function createHubConnection(
       reconnection: true,
       reconnectionDelay: 1000,
       reconnectionDelayMax: 30000,
-      reconnectionAttempts: RECONNECTION_ATTEMPTS,
     });
 
     socket.on("connect", () => {
@@ -47,6 +43,7 @@ export function createHubConnection(
     socket.on("disconnect", (reason) => {
       connected = false;
       hubClientLog.write(`[Hub] Disconnected from ${hubUrl}: ${reason}`);
+      onDisconnected();
     });
 
     socket.on("connect_error", (error) => {
@@ -54,14 +51,6 @@ export function createHubConnection(
         `[Hub] Connection error to ${hubUrl}: ${error.message}`,
       );
       onConnectError(error.message);
-    });
-
-    // Notify manager when all reconnection attempts exhausted
-    socket.io.on("reconnect_failed", () => {
-      hubClientLog.write(
-        `[Hub] Reconnection to ${hubUrl} failed after ${RECONNECTION_ATTEMPTS} attempts`,
-      );
-      onReconnectFailed();
     });
 
     // Forward all socket events to hubClient's event handlers

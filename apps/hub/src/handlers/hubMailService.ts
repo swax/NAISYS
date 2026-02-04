@@ -1,3 +1,4 @@
+import { debugUserId } from "@naisys/common";
 import { DatabaseService, ulid } from "@naisys/database";
 import {
   HubEvents,
@@ -35,6 +36,14 @@ export function createHubMailService(
     ) => {
       try {
         const parsed = MailSendRequestSchema.parse(data);
+
+        if (parsed.fromUserId == debugUserId) {
+          ack({
+            success: false,
+            error: "Cannot send mail from debug user",
+          });
+          return;
+        }
 
         await dbService.usingDatabase(async (prisma) => {
           // Resolve usernames to user IDs

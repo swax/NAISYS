@@ -18,10 +18,11 @@ export function createHeartbeatService(
       const parsed = HeartbeatStatusSchema.parse(data);
       userService.setActiveUserIds(parsed.activeUserIds);
     });
+
+    agentManager.onHeartbeatNeeded = sendHeartbeat;
   }
 
-  // Start periodic heartbeat
-  const interval = setInterval(() => {
+  function sendHeartbeat() {
     const activeUserIds = agentManager.runningAgents.map((a) => a.agentUserId);
 
     if (hubClient) {
@@ -29,7 +30,10 @@ export function createHeartbeatService(
     } else {
       userService.setActiveUserIds(activeUserIds);
     }
-  }, HEARTBEAT_INTERVAL_MS);
+  }
+
+  // Start periodic heartbeat
+  const interval = setInterval(sendHeartbeat, HEARTBEAT_INTERVAL_MS);
 
   function cleanup() {
     clearInterval(interval);
