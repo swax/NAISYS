@@ -52,12 +52,13 @@ export function createSessionService(
 
   function getHelpText(): string {
     let helpText = `ns-session <subcommand>
-  pause <seconds>         Pause for a number of seconds`;
+  pause <seconds>         Pause session for the given number of seconds. 
+                          Session will wake on new mail`;
 
     if (globalConfig().compactSessionEnabled) {
       helpText += `
-  compact "<note>"        End session, compact context, and start fresh
-                          Note should contain your next goal and important things to remember`;
+  compact "<note>"        Compact context and reset the session
+                          The note should contain your next goal and important things to remember`;
     }
 
     if (agentConfig().completeSessionEnabled) {

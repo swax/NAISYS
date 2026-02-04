@@ -29,6 +29,8 @@ export class AgentManager {
       hubClient.registerEvent(
         HubEvents.AGENT_START,
         async (data: unknown, ack: (response: AgentStartResponse) => void) => {
+          const hostname = this.globalConfig.globalConfig().hostname;
+
           try {
             const parsed = AgentStartRequestSchema.parse(data);
 
@@ -36,9 +38,16 @@ export class AgentManager {
 
             await this.startAgent(parsed.userId);
 
-            ack({ success: true });
+            ack({
+              success: true,
+              hostname,
+            });
           } catch (error) {
-            ack({ success: false, error: String(error) });
+            ack({
+              success: false,
+              error: String(error),
+              hostname,
+            });
           }
         },
       );

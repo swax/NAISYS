@@ -250,6 +250,8 @@ export function createSubagentService(
 
     const user = validateSubagentStart(agentName, taskDescription);
 
+    let resultMessage = "";
+
     let subagent = mySubagentsMap.get(user.userId);
 
     if (!subagent) {
@@ -272,18 +274,22 @@ export function createSubagentService(
       if (!response.success) {
         throw `Failed to start agent via hub: ${response.error}`;
       }
-    } else {
-      // Non-hub mode: start agent locally
+
+      resultMessage = `Subagent '${agentName}' started on host '${response.hostname}'`;
+    }
+    // Non-hub mode: start agent locally
+    else {
       await agentManager.startAgent(subagent.userId, (stopReason) =>
         handleAgentTermination(subagent, stopReason),
       );
+      resultMessage = `Subagent '${agentName}' started`;
     }
 
     subagent.taskDescription = taskDescription;
 
     await sendStartupMessage(subagent, taskDescription);
 
-    return `Subagent '${agentName}' started`;
+    return resultMessage;
   }
 
   async function sendStartupMessage(

@@ -146,6 +146,7 @@ export type AgentStartRequest = z.infer<typeof AgentStartRequestSchema>;
 export const AgentStartResponseSchema = z.object({
   success: z.boolean(),
   error: z.string().optional(),
+  hostname: z.string().optional(),
 });
 export type AgentStartResponse = z.infer<typeof AgentStartResponseSchema>;
 
