@@ -1,3 +1,4 @@
+import { debugUserId } from "@naisys/common";
 import { PromptNotificationService } from "../utils/promptNotificationService.js";
 import { HubClientConfig } from "./hubClientConfig.js";
 import { HubClientLog } from "./hubClientLog.js";
@@ -11,8 +12,6 @@ export interface HubConnectionInfo {
 
 type EventHandler = (...args: any[]) => void;
 
-const RECONNECT_DELAY_MS = 2000;
-
 export function createHubClient(
   hubClientConfig: HubClientConfig,
   hubClientLog: HubClientLog,
@@ -20,8 +19,8 @@ export function createHubClient(
 ) {
   const hubUrl = hubClientConfig.hubUrl;
   let activeConnection: HubConnection | null = null;
-  let reconnectionDisabled = false;
   let hasConnectedOnce = false;
+  let disconnectNotified = false;
   let connectedHandler: (() => void) | null = null;
   let connectErrorHandler: ((message: string) => void) | null = null;
 
@@ -41,7 +40,7 @@ export function createHubClient(
       hubClientLog,
       raiseEvent,
       handleConnected,
-      handleReconnectFailed,
+      handleDisconnected,
       handleConnectError,
     );
     activeConnection.connect();
@@ -59,24 +58,21 @@ export function createHubClient(
       });
     }
     hasConnectedOnce = true;
+    disconnectNotified = false;
   }
 
   function handleConnectError(message: string) {
     connectErrorHandler?.(message);
   }
 
-  function handleReconnectFailed() {
-    if (reconnectionDisabled) return;
-
-    activeConnection?.disconnect();
-
-    hubClientLog.write(`[HubClient] Reconnecting to hub: ${hubUrl}`);
-
-    setTimeout(() => {
-      if (!reconnectionDisabled) {
-        connect();
-      }
-    }, RECONNECT_DELAY_MS);
+  function handleDisconnected() {
+    if (hasConnectedOnce && !disconnectNotified) {
+      disconnectNotified = true;
+      promptNotification.notify({
+        wake: true,
+        commentOutput: ["Hub connection lost"],
+      });
+    }
   }
 
   /** Register an event handler */
@@ -165,7 +161,6 @@ export function createHubClient(
       connectErrorHandler = (message: string) => {
         if (AUTH_ERRORS.some((err) => message.includes(err))) {
           cleanup();
-          reconnectionDisabled = true;
           activeConnection?.disconnect();
           reject(new Error(`Hub connection rejected: ${message}`));
         }
