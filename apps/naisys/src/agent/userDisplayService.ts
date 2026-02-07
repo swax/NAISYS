@@ -89,21 +89,34 @@ export function createUserDisplayService(
       userIdToUsername.set(u.userId, u.username);
     }
 
-    const headers = ["Username", "Title", "Lead", "Status"];
+    const isDebug = inputMode.isDebug();
+    const headers = isDebug
+      ? ["Username", "Title", "Lead", "*Status", "*Host"]
+      : ["Username", "Title", "Lead"];
+
     const rows = flattened.map(({ node, depth }) => {
       const indent = "  ".repeat(depth);
       const displayName = `${indent}${node.username}`;
       const leadUsername = node.leadUserId
         ? userIdToUsername.get(node.leadUserId) || "(unknown)"
         : "(none)";
-      const status = userService.isUserActive(node.userId)
-        ? "Running"
-        : "Offline";
 
-      return [displayName, node.title, leadUsername, status];
+      const row = [displayName, node.title, leadUsername];
+      if (isDebug) {
+        const status = userService.isUserActive(node.userId)
+          ? "Running"
+          : "Offline";
+        row.push(status);
+        row.push(userService.getUserHostNames(node.userId).join(", ") || "");
+      }
+      return row;
     });
 
-    return table([headers, ...rows], { hsep: " | " });
+    let output = table([headers, ...rows], { hsep: " | " });
+    if (isDebug) {
+      output += "\n* Only visible in debug mode";
+    }
+    return output;
   }
 
   const registrableCommand: RegistrableCommand = {

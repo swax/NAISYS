@@ -7,6 +7,7 @@ import { HubClient, createHubClient } from "./hub/hubClient.js";
 import { createHubClientConfig } from "./hub/hubClientConfig.js";
 import { createHubClientLog } from "./hub/hubClientLog.js";
 import { createHeartbeatService } from "./services/heartbeatService.js";
+import { createHostService } from "./services/hostService.js";
 import { createPromptNotificationService } from "./utils/promptNotificationService.js";
 
 dotenv.config({ quiet: true });
@@ -60,7 +61,8 @@ if (hubUrl) {
 }
 
 const globalConfig = createGlobalConfig(hubClient);
-const userService = createUserService(hubClient, promptNotification, agentPath);
+const hostService = createHostService(hubClient);
+const userService = createUserService(hubClient, promptNotification, hostService, agentPath);
 
 if (hubClient) {
   try {

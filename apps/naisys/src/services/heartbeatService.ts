@@ -16,7 +16,7 @@ export function createHeartbeatService(
   if (hubClient) {
     hubClient.registerEvent(HubEvents.HEARTBEAT_STATUS, (data: unknown) => {
       const parsed = HeartbeatStatusSchema.parse(data);
-      userService.setActiveUserIds(parsed.activeUserIds);
+      userService.setActiveUsers(parsed.hostActiveAgents);
     });
 
     agentManager.onHeartbeatNeeded = sendHeartbeat;
@@ -28,7 +28,7 @@ export function createHeartbeatService(
     if (hubClient) {
       hubClient.sendMessage(HubEvents.HEARTBEAT, { activeUserIds });
     } else {
-      userService.setActiveUserIds(activeUserIds);
+      userService.setActiveUsers({ "": activeUserIds });
     }
   }
 

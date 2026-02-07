@@ -111,10 +111,10 @@ export function createHubAgentService(
       try {
         const parsed = AgentStopRequestSchema.parse(data);
 
-        // Find which host the agent is currently running on
-        const targetHostId = heartbeatService.findHostForAgent(parsed.userId);
+        // Find which hosts the agent is currently running on
+        const targetHostIds = heartbeatService.findHostsForAgent(parsed.userId);
 
-        if (!targetHostId) {
+        if (targetHostIds.length === 0) {
           ack({
             success: false,
             error: `Agent ${parsed.userId} is not running on any known host`,
@@ -122,23 +122,39 @@ export function createHubAgentService(
           return;
         }
 
-        // Forward the stop request to the target host
-        const sent = naisysServer.sendMessage<AgentStopResponse>(
-          targetHostId,
-          HubEvents.AGENT_STOP,
-          { userId: parsed.userId, reason: parsed.reason },
-          (response) => {
-            if (response.success) {
-              heartbeatService.removeStoppedAgent(targetHostId, parsed.userId);
-            }
-            ack(response);
-          },
-        );
+        // Forward the stop request to all hosts running this agent
+        let acked = false;
+        let sendFailures = 0;
 
-        if (!sent) {
+        for (const targetHostId of targetHostIds) {
+          const sent = naisysServer.sendMessage<AgentStopResponse>(
+            targetHostId,
+            HubEvents.AGENT_STOP,
+            { userId: parsed.userId, reason: parsed.reason },
+            (response) => {
+              if (response.success) {
+                heartbeatService.removeStoppedAgent(
+                  targetHostId,
+                  parsed.userId,
+                );
+              }
+              // Ack with the first response
+              if (!acked) {
+                acked = true;
+                ack(response);
+              }
+            },
+          );
+
+          if (!sent) {
+            sendFailures++;
+          }
+        }
+
+        if (sendFailures === targetHostIds.length && !acked) {
           ack({
             success: false,
-            error: `Target host ${targetHostId} is not connected`,
+            error: `No target hosts are connected`,
           });
         }
       } catch (error) {
