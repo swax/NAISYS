@@ -1,9 +1,4 @@
-import {
-  AgentConfigFileSchema,
-  UserEntry,
-  debugAgentConfig,
-  debugUserId,
-} from "@naisys/common";
+import { AgentConfigFileSchema, UserEntry, adminUserId } from "@naisys/common";
 import { loadAgentConfigs } from "@naisys/common/dist/agentConfigLoader.js";
 import {
   HubEvents,
@@ -65,14 +60,6 @@ export function createUserService(
     }
   }
 
-  function addDebugUser() {
-    userMap.set(debugAgentConfig._id, {
-      username: debugAgentConfig.username,
-      userId: debugAgentConfig._id,
-      config: debugAgentConfig,
-    });
-  }
-
   /** Wait for the user list to be received (resolves immediately in standalone mode) */
   function waitForUsers(): Promise<void> {
     return usersReadyPromise;
@@ -91,15 +78,16 @@ export function createUserService(
     if (hubClient && !integratedHub) {
       promptNotificationService.notify({
         wake: true,
-        userId: debugUserId,
-        commentOutput: [`No agents running. Hub will start agents on demand.`],
+        userId: adminUserId,
+        commentOutput: [
+          `No agents running yet. Hub will start agents on demand.`,
+        ],
       });
-      addDebugUser();
-      return [debugUserId];
+      return [adminUserId];
     }
 
     const leadAgents = Array.from(userMap.values()).filter(
-      (u) => !u.leadUserId,
+      (u) => !u.leadUserId && u.leadUserId !== adminUserId,
     );
 
     if (leadAgents.length === 0) {

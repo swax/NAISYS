@@ -137,10 +137,12 @@ export type HeartbeatStatus = z.infer<typeof HeartbeatStatusSchema>;
 
 /** Pushed from hub to all NAISYS instances when the set of connected hosts changes */
 export const HostListSchema = z.object({
-  hosts: z.array(z.object({
-    hostId: z.string(),
-    hostName: z.string(),
-  })),
+  hosts: z.array(
+    z.object({
+      hostId: z.string(),
+      hostName: z.string(),
+    }),
+  ),
 });
 export type HostList = z.infer<typeof HostListSchema>;
 
@@ -152,6 +154,7 @@ export type HostList = z.infer<typeof HostListSchema>;
 export const AgentStartRequestSchema = z.object({
   userId: z.string(),
   taskDescription: z.string(),
+  sourceHostId: z.string().optional(),
 });
 export type AgentStartRequest = z.infer<typeof AgentStartRequestSchema>;
 
@@ -167,6 +170,7 @@ export type AgentStartResponse = z.infer<typeof AgentStartResponseSchema>;
 export const AgentStopRequestSchema = z.object({
   userId: z.string(),
   reason: z.string(),
+  sourceHostId: z.string().optional(),
 });
 export type AgentStopRequest = z.infer<typeof AgentStopRequestSchema>;
 

@@ -1,4 +1,3 @@
-import { debugUserId } from "@naisys/common";
 import table from "text-table";
 import { RegistrableCommand } from "../command/commandRegistry.js";
 import { InputModeService } from "../utils/inputMode.js";
@@ -64,16 +63,11 @@ export function createUserDisplayService(
   async function handleCommand(): Promise<string> {
     const allUsers = userService.getUsers();
 
-    // Filter out debug user
-    const users = allUsers.filter(
-      (u) => u.userId !== debugUserId || inputMode.isDebug(),
-    );
-
-    if (users.length === 0) {
+    if (allUsers.length === 0) {
       return "No users found.";
     }
 
-    const userItems = users.map((u) => ({
+    const userItems = allUsers.map((u) => ({
       userId: u.userId,
       username: u.username,
       title: u.config.title,

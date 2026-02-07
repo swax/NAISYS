@@ -1,4 +1,4 @@
-import { debugUserId } from "@naisys/common";
+import { adminUserId } from "@naisys/common";
 import {
   AgentStartRequestSchema,
   AgentStartResponse,
@@ -8,6 +8,7 @@ import {
 } from "@naisys/hub-protocol";
 import { GlobalConfig } from "../globalConfig.js";
 import { HubClient } from "../hub/hubClient.js";
+import { HostService } from "../services/hostService.js";
 import { OutputColor } from "../utils/output.js";
 import { PromptNotificationService } from "../utils/promptNotificationService.js";
 import { AgentRuntime, createAgentRuntime } from "./agentRuntime.js";
@@ -22,6 +23,7 @@ export class AgentManager {
   constructor(
     private globalConfig: GlobalConfig,
     private hubClient: HubClient | undefined,
+    private hostService: HostService,
     private userService: UserService,
     private promptNotification: PromptNotificationService,
   ) {
@@ -34,7 +36,9 @@ export class AgentManager {
           try {
             const parsed = AgentStartRequestSchema.parse(data);
 
-            this.notifyHubRequest("start", parsed.userId);
+            if (parsed.sourceHostId !== this.hostService.getLocalHostId()) {
+              this.notifyHubRequest("start", parsed.userId);
+            }
 
             await this.startAgent(parsed.userId);
 
@@ -58,7 +62,9 @@ export class AgentManager {
           try {
             const parsed = AgentStopRequestSchema.parse(data);
 
-            this.notifyHubRequest("stop", parsed.userId);
+            if (parsed.sourceHostId !== this.hostService.getLocalHostId()) {
+              this.notifyHubRequest("stop", parsed.userId);
+            }
 
             await this.stopAgent(
               parsed.userId,
@@ -81,7 +87,7 @@ export class AgentManager {
 
     this.promptNotification.notify({
       wake: true,
-      userId: debugUserId,
+      userId: adminUserId,
       commentOutput: [`Received request from hub to ${type} ${username}`],
     });
   }

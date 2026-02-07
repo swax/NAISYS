@@ -98,7 +98,7 @@ completeSessionEnabled: true
 initialCommands:
   - ns-users
   - ns-mail help
-  
+
 # Additional custom variables can be defined here and/or in the agent config to be loaded into the agent prompt
 ```
 

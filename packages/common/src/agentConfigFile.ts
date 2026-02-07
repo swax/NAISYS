@@ -55,14 +55,25 @@ export const AgentConfigFileSchema = z.object({
 
 export type AgentConfigFile = z.infer<typeof AgentConfigFileSchema>;
 
-export const debugUserId = "debug-user-id";
+/**
+ * Thoughts on the admin user:
+ * 1. We need an admin user as a placeholder when no agents are running
+ *    Especially when a hub client starts up and the hub has assigned no agents to the host
+ * 2. We want to be able to start agents and send mail from the placeholder so it needs to be an official user
+ *    It is registered in the hub db as well so we don't need tons of special case code everywhere like `if (userId === adminUserId)` ...
+ * 3. The admin is also a source of ns-talk commands, gives the LLM someone to reply to
+ * 4. Calling it a debug user would be confusing with debug input mode, also considered calling it operator, but admin seems more intuitive
+ * 5. The hub supports agents running simultaneously across hosts, so each client can run an admin fine
+ * 6. Having it as an official user means mail will be logged by the hub as well which is helpful for debugging and monitoring
+ */
+export const adminUserId = "admin-user-id";
 
-export const debugAgentConfig = {
-  _id: debugUserId,
-  username: "debug",
+export const adminAgentConfig = {
+  _id: adminUserId,
+  username: "admin",
   title: "",
   shellModel: "none",
-  agentPrompt: "Debug agent for monitoring and control.",
+  agentPrompt: "Human admin for monitoring and control.",
   tokenMax: 100_000,
   spendLimitDollars: 1, // Required on all agents
 } satisfies AgentConfigFile;

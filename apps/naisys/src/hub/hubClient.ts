@@ -1,4 +1,3 @@
-import { debugUserId } from "@naisys/common";
 import { PromptNotificationService } from "../utils/promptNotificationService.js";
 import { HubClientConfig } from "./hubClientConfig.js";
 import { HubClientLog } from "./hubClientLog.js";

@@ -1,4 +1,3 @@
-import { debugUserId } from "@naisys/common";
 import {
   HubEvents,
   SessionCreateResponse,
@@ -21,7 +20,7 @@ export async function createRunService(
   await init();
 
   async function init() {
-    if (hubClient && localUserId != debugUserId) {
+    if (hubClient) {
       const response = await hubClient.sendRequest<SessionCreateResponse>(
         HubEvents.SESSION_CREATE,
         { userId: localUserId, modelName: agentConfig().shellModel },
@@ -40,7 +39,7 @@ export async function createRunService(
   }
 
   async function incrementSession(): Promise<void> {
-    if (hubClient && localUserId != debugUserId) {
+    if (hubClient) {
       const response = await hubClient.sendRequest<SessionIncrementResponse>(
         HubEvents.SESSION_INCREMENT,
         { userId: localUserId, runId },

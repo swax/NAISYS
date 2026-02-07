@@ -61,25 +61,30 @@ if (hubUrl) {
 }
 
 const globalConfig = createGlobalConfig(hubClient);
-const hostService = createHostService(hubClient);
-const userService = createUserService(hubClient, promptNotification, hostService, agentPath);
+const hostService = createHostService(hubClient, globalConfig);
+const userService = createUserService(
+  hubClient,
+  promptNotification,
+  hostService,
+  agentPath,
+);
 
 if (hubClient) {
   try {
     await hubClient.waitForConnection();
     await userService.waitForUsers();
+    await globalConfig.waitForConfig();
   } catch (error) {
     console.error(`Failed to connect to hub: ${error}`);
     process.exit(1);
   }
 }
 
-await globalConfig.waitForConfig();
-
 console.log(`NAISYS STARTED`);
 const agentManager = new AgentManager(
   globalConfig,
   hubClient,
+  hostService,
   userService,
   promptNotification,
 );

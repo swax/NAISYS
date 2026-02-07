@@ -2,7 +2,11 @@ import * as crypto from "crypto";
 import * as fs from "fs";
 import yaml from "js-yaml";
 import * as path from "path";
-import { AgentConfigFileSchema, UserEntry } from "./agentConfigFile.js";
+import {
+  adminAgentConfig,
+  AgentConfigFileSchema,
+  UserEntry,
+} from "./agentConfigFile.js";
 
 /** Loads agent yaml configs from a file or directory path, returns a map of userId → UserEntry */
 export function loadAgentConfigs(startupPath: string): Map<string, UserEntry> {
@@ -16,6 +20,12 @@ export function loadAgentConfigs(startupPath: string): Map<string, UserEntry> {
   } else {
     processFile(resolvedPath, undefined, userMap, usernameToPath);
   }
+
+  userMap.set(adminAgentConfig._id, {
+    username: adminAgentConfig.username,
+    userId: adminAgentConfig._id,
+    config: adminAgentConfig,
+  });
 
   return userMap;
 }
