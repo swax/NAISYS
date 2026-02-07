@@ -77,7 +77,11 @@ export function createHubAgentService(
         const sent = naisysServer.sendMessage<AgentStartResponse>(
           bestHostId,
           HubEvents.AGENT_START,
-          { userId: parsed.userId, taskDescription: parsed.taskDescription },
+          {
+            userId: parsed.userId,
+            taskDescription: parsed.taskDescription,
+            sourceHostId: hostId,
+          },
           (response) => {
             if (response.success) {
               heartbeatService.addStartedAgent(bestHostId, parsed.userId);
@@ -130,7 +134,11 @@ export function createHubAgentService(
           const sent = naisysServer.sendMessage<AgentStopResponse>(
             targetHostId,
             HubEvents.AGENT_STOP,
-            { userId: parsed.userId, reason: parsed.reason },
+            {
+              userId: parsed.userId,
+              reason: parsed.reason,
+              sourceHostId: hostId,
+            },
             (response) => {
               if (response.success) {
                 heartbeatService.removeStoppedAgent(

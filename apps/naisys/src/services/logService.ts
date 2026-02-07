@@ -1,4 +1,3 @@
-import { debugUserId } from "@naisys/common";
 import {
   HubEvents,
   LOG_FLUSH_INTERVAL_MS,
@@ -25,7 +24,7 @@ export function createLogService(
   function write(message: LlmMessage) {
     const { getRunId, getSessionId } = runService;
 
-    if (hubClient && localUserId != debugUserId) {
+    if (hubClient) {
       buffer.push({
         userId: localUserId,
         runId: getRunId(),

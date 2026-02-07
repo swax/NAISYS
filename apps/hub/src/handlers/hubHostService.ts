@@ -37,10 +37,7 @@ export function createHubHostService(
     }
   }
 
-  naisysServer.registerEvent(
-    HubEvents.CLIENT_CONNECTED,
-    (_hostId: string) => {
-      pushHostListIfChanged();
-    },
-  );
+  naisysServer.registerEvent(HubEvents.CLIENT_CONNECTED, (_hostId: string) => {
+    pushHostListIfChanged();
+  });
 }

@@ -37,8 +37,7 @@ export async function startHub(
     const hubPort = Number(process.env.HUB_PORT) || 3002;
     const hubAccessKey = process.env.HUB_ACCESS_KEY;
     if (!hubAccessKey) {
-      const errorStr =
-        "Error: HUB_ACCESS_KEY environment variable is required";
+      const errorStr = "Error: HUB_ACCESS_KEY environment variable is required";
       console.log(errorStr);
       logService.error(errorStr);
       process.exit(1);

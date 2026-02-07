@@ -1,4 +1,4 @@
-import { debugUserId } from "@naisys/common";
+import { adminUserId } from "@naisys/common";
 import {
   AgentStartResponse,
   AgentStopResponse,
@@ -148,7 +148,8 @@ export function createSubagentService(
     const debugMode = inputMode.isDebug();
 
     const subagentRows = Array.from(mySubagentsMap.values())
-      .filter((p) => p.userId !== debugUserId || debugMode)
+      // Don't show admin user as a start/stoppable subagent
+      .filter((p) => p.userId !== adminUserId)
       .map((p) => {
         const row = [
           p.agentName,
@@ -187,7 +188,8 @@ export function createSubagentService(
             title: ra.agentTitle,
             taskDescription: "",
             unreadLines: agentManager.getBufferLineCount(ra.agentUserId),
-            hostName: userService.getUserHostNames(ra.agentUserId).join(", ") || "",
+            hostName:
+              userService.getUserHostNames(ra.agentUserId).join(", ") || "",
           };
         });
 
