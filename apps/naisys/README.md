@@ -96,9 +96,9 @@ completeSessionEnabled: true
 
 # Run these commands on session start, in the example below the agent will see how to use mail and a list of other agents
 initialCommands:
-  - ns-mail users
+  - ns-users
   - ns-mail help
-  - cat ${env.NAISYS_FOLDER}/home/${agent.username}/PLAN.md
+  
 # Additional custom variables can be defined here and/or in the agent config to be loaded into the agent prompt
 ```
 

@@ -107,7 +107,7 @@ export async function createAgentRuntime(
 
   // Features
   const genimg = createGenImg(agentConfig, costTracker, output);
-  const userDisplayService = createUserDisplayService(userService);
+  const userDisplayService = createUserDisplayService(userService, inputMode);
   const mailDisplayService = hubClient
     ? createMailDisplayService(hubClient, localUserId)
     : null;
@@ -173,16 +173,15 @@ export async function createAgentRuntime(
     llmService,
     output,
   );
-  // Debug commands
+
   const debugCommands = createDebugCommands(
-    agentConfig,
     contextManager,
     output,
     inputMode,
     systemMessage,
   );
 
-  const commandRegistry = createCommandRegistry([
+  const commandRegistry = createCommandRegistry(inputMode, [
     lynxService,
     genimg,
     subagentService,

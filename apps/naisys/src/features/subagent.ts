@@ -1,3 +1,4 @@
+import { debugUserId } from "@naisys/common";
 import {
   AgentStartResponse,
   AgentStopResponse,
@@ -52,11 +53,12 @@ export function createSubagentService(
   stop <name>: Stops an agent by name`;
 
         if (inputMode.isDebug()) {
-          helpOutput += `\n  switch <name>: Switch context to a started in-process agent (debug mode only)`;
-          helpOutput += `\n  flush <name>: Flush a spawned agent's output (debug mode only)`;
+          helpOutput += `\n  !switch <name>: Switch context to a started in-process agent`;
+          helpOutput += `\n  !flush <name>: Flush a spawned agent's output`;
         }
 
         helpOutput += `\n\n* Use ns-mail to communicate with subagents once started`;
+        helpOutput += `\n! Debug mode only`;
 
         return helpOutput;
       }
@@ -143,36 +145,35 @@ export function createSubagentService(
     let agentList = "";
 
     const runningAgentIds = getRunningAgentsIds();
+    const debugMode = inputMode.isDebug();
 
-    const subagentRows = Array.from(mySubagentsMap.values()).map((p) => [
-      p.agentName,
-      runningAgentIds.has(p.userId) ? "started" : "stopped",
-      p.taskDescription?.substring(0, 70) || p.title,
-      inputMode.isDebug() && runningAgentIds.has(p.userId)
-        ? agentManager.getBufferLineCount(p.userId).toString()
-        : "",
-    ]);
+    const subagentRows = Array.from(mySubagentsMap.values())
+      .filter((p) => p.userId !== debugUserId || debugMode)
+      .map((p) => [
+        p.agentName,
+        runningAgentIds.has(p.userId) ? "started" : "stopped",
+        p.taskDescription?.substring(0, 70) || p.title,
+        debugMode && runningAgentIds.has(p.userId)
+          ? agentManager.getBufferLineCount(p.userId).toString()
+          : "",
+      ]);
 
     if (subagentRows.length === 0) {
       agentList += "No subagents found.";
     } else {
       agentList += table(
         [
-          ["Name", "Status", "Task", inputMode.isDebug() ? "Unread Lines" : ""],
+          ["Name", "Status", "Task", debugMode ? "Unread Lines" : ""],
           ...subagentRows,
         ],
         { hsep: " | " },
       );
     }
 
-    if (inputMode.isDebug()) {
+    if (debugMode) {
       // Find running in process agents that aren't already listed
       const otherAgents = agentManager.runningAgents
-        .filter(
-          (ra) =>
-            ra.agentUserId !== localUserId &&
-            !mySubagentsMap.has(ra.agentUserId),
-        )
+        .filter((ra) => !mySubagentsMap.has(ra.agentUserId))
         .map((ra) => {
           return {
             agentName: ra.agentUsername,
@@ -184,7 +185,7 @@ export function createSubagentService(
         });
 
       if (otherAgents.length > 0) {
-        agentList += "\n\nOther In-Process Running Agents:\n";
+        agentList += "\n\nOther In-Process Running Agents: (debug only)\n";
 
         agentList += table(
           [

@@ -1,5 +1,7 @@
+import { debugUserId } from "@naisys/common";
 import table from "text-table";
 import { RegistrableCommand } from "../command/commandRegistry.js";
+import { InputModeService } from "../utils/inputMode.js";
 import { UserService } from "./userService.js";
 
 interface UserNode {
@@ -55,12 +57,17 @@ function flattenHierarchy(
   return result;
 }
 
-export function createUserDisplayService(userService: UserService) {
+export function createUserDisplayService(
+  userService: UserService,
+  inputMode: InputModeService,
+) {
   async function handleCommand(): Promise<string> {
     const allUsers = userService.getUsers();
 
     // Filter out debug user
-    const users = allUsers.filter((u) => u.userId !== "0");
+    const users = allUsers.filter(
+      (u) => u.userId !== debugUserId || inputMode.isDebug(),
+    );
 
     if (users.length === 0) {
       return "No users found.";
