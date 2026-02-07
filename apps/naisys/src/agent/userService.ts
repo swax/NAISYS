@@ -12,6 +12,7 @@ import {
 } from "@naisys/hub-protocol";
 import yaml from "js-yaml";
 import { HubClient } from "../hub/hubClient.js";
+import { HostService } from "../services/hostService.js";
 import { PromptNotificationService } from "../utils/promptNotificationService.js";
 
 export { UserEntry };
@@ -20,6 +21,7 @@ export { UserEntry };
 export function createUserService(
   hubClient: HubClient | undefined,
   promptNotificationService: PromptNotificationService,
+  hostService: HostService,
   startupAgentPath?: string,
 ) {
   let userMap: Map<string, UserEntry>;
@@ -118,13 +120,43 @@ export function createUserService(
 
   // Active user tracking (driven by heartbeatService)
   let activeUserIds = new Set<string>();
+  let userHostIds = new Map<string, string[]>();
 
-  function setActiveUserIds(ids: string[]) {
-    activeUserIds = new Set(ids);
+  function setActiveUsers(hostActiveAgents: Record<string, string[]>) {
+    const newActiveUserIds = new Set<string>();
+    const newUserHostIds = new Map<string, string[]>();
+
+    for (const [hostId, userIds] of Object.entries(hostActiveAgents)) {
+      for (const userId of userIds) {
+        newActiveUserIds.add(userId);
+        if (hostId) {
+          const existing = newUserHostIds.get(userId);
+          if (existing) {
+            existing.push(hostId);
+          } else {
+            newUserHostIds.set(userId, [hostId]);
+          }
+        }
+      }
+    }
+
+    activeUserIds = newActiveUserIds;
+    userHostIds = newUserHostIds;
   }
 
   function isUserActive(userId: string): boolean {
     return activeUserIds.has(userId);
+  }
+
+  function getUserHostIds(userId: string): string[] {
+    return userHostIds.get(userId) ?? [];
+  }
+
+  function getUserHostNames(userId: string): string[] {
+    const hostIds = userHostIds.get(userId) ?? [];
+    return hostIds
+      .map((id) => hostService.getHostName(id))
+      .filter((name): name is string => !!name);
   }
 
   /** Parse a UserListResponse into a userId → UserEntry map */
@@ -158,8 +190,10 @@ export function createUserService(
     getUserById,
     waitForUsers,
     getStartupUserIds,
-    setActiveUserIds,
+    setActiveUsers,
     isUserActive,
+    getUserHostIds,
+    getUserHostNames,
     getUserByName,
   };
 }

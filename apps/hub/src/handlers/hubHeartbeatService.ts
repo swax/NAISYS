@@ -64,14 +64,9 @@ export function createHubHeartbeatService(
 
   /** Push aggregate active user status to all connected NAISYS instances */
   function pushHeartbeatStatus() {
-    const allActiveUserIds = new Set<string>();
-    for (const userIds of hostActiveAgents.values()) {
-      for (const id of userIds) {
-        allActiveUserIds.add(id);
-      }
-    }
-
-    const payload = { activeUserIds: Array.from(allActiveUserIds) };
+    const payload = {
+      hostActiveAgents: Object.fromEntries(hostActiveAgents),
+    };
 
     for (const connection of naisysServer.getConnectedClients()) {
       naisysServer.sendMessage(
@@ -103,14 +98,15 @@ export function createHubHeartbeatService(
     return hostActiveAgents.get(hostId)?.length ?? 0;
   }
 
-  /** Find which host a given agent is currently running on */
-  function findHostForAgent(userId: string): string | undefined {
+  /** Find which hosts a given agent is currently running on */
+  function findHostsForAgent(userId: string): string[] {
+    const hostIds: string[] = [];
     for (const [hostId, userIds] of hostActiveAgents) {
       if (userIds.includes(userId)) {
-        return hostId;
+        hostIds.push(hostId);
       }
     }
-    return undefined;
+    return hostIds;
   }
 
   /** Add a userId to a host's active list after a successful start */
@@ -157,7 +153,7 @@ export function createHubHeartbeatService(
     cleanup,
     getActiveUserIds,
     getHostActiveAgentCount,
-    findHostForAgent,
+    findHostsForAgent,
     addStartedAgent,
     removeStoppedAgent,
   };

@@ -127,9 +127,22 @@ export type Heartbeat = z.infer<typeof HeartbeatSchema>;
 
 /** Sent by hub to NAISYS instances with aggregate active user IDs */
 export const HeartbeatStatusSchema = z.object({
-  activeUserIds: z.array(z.string()),
+  hostActiveAgents: z.record(z.string(), z.array(z.string())),
 });
 export type HeartbeatStatus = z.infer<typeof HeartbeatStatusSchema>;
+
+// =============================================================================
+// Host List Messages (Hub -> NAISYS, push on connect/disconnect changes)
+// =============================================================================
+
+/** Pushed from hub to all NAISYS instances when the set of connected hosts changes */
+export const HostListSchema = z.object({
+  hosts: z.array(z.object({
+    hostId: z.string(),
+    hostName: z.string(),
+  })),
+});
+export type HostList = z.infer<typeof HostListSchema>;
 
 // =============================================================================
 // Agent Start Messages (NAISYS -> Hub -> target NAISYS, request/response)
@@ -358,6 +371,7 @@ export type ConfigResponse = z.infer<typeof ConfigResponseSchema>;
 export const HubEvents = {
   // Hub -> Client
   USER_LIST: "user_list",
+  HOST_LIST: "host_list",
   CONFIG: "config",
 
   // Internal hub events (not sent over wire)

@@ -149,25 +149,31 @@ export function createSubagentService(
 
     const subagentRows = Array.from(mySubagentsMap.values())
       .filter((p) => p.userId !== debugUserId || debugMode)
-      .map((p) => [
-        p.agentName,
-        runningAgentIds.has(p.userId) ? "started" : "stopped",
-        p.taskDescription?.substring(0, 70) || p.title,
-        debugMode && runningAgentIds.has(p.userId)
-          ? agentManager.getBufferLineCount(p.userId).toString()
-          : "",
-      ]);
+      .map((p) => {
+        const row = [
+          p.agentName,
+          runningAgentIds.has(p.userId) ? "started" : "stopped",
+          p.taskDescription?.substring(0, 70) || p.title,
+        ];
+        if (debugMode) {
+          row.push(
+            runningAgentIds.has(p.userId)
+              ? agentManager.getBufferLineCount(p.userId).toString()
+              : "",
+          );
+          row.push(userService.getUserHostNames(p.userId).join(", ") || "");
+        }
+        return row;
+      });
 
     if (subagentRows.length === 0) {
       agentList += "No subagents found.";
     } else {
-      agentList += table(
-        [
-          ["Name", "Status", "Task", debugMode ? "Unread Lines" : ""],
-          ...subagentRows,
-        ],
-        { hsep: " | " },
-      );
+      const headers = ["Name", "Status", "Task"];
+      if (debugMode) {
+        headers.push("*Unread Lines", "*Host");
+      }
+      agentList += table([headers, ...subagentRows], { hsep: " | " });
     }
 
     if (debugMode) {
@@ -181,6 +187,7 @@ export function createSubagentService(
             title: ra.agentTitle,
             taskDescription: "",
             unreadLines: agentManager.getBufferLineCount(ra.agentUserId),
+            hostName: userService.getUserHostNames(ra.agentUserId).join(", ") || "",
           };
         });
 
@@ -189,17 +196,22 @@ export function createSubagentService(
 
         agentList += table(
           [
-            ["Name", "Status", "Task", "Unread Lines"],
+            ["Name", "Status", "Task", "*Unread Lines", "*Host"],
             ...otherAgents.map((p) => [
               p.agentName,
               p.status,
               p.taskDescription?.substring(0, 70) || p.title,
               p.unreadLines.toString(),
+              p.hostName,
             ]),
           ],
           { hsep: " | " },
         );
       }
+    }
+
+    if (debugMode) {
+      agentList += "\n* Only visible in debug mode";
     }
 
     return agentList;

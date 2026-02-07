@@ -98,8 +98,7 @@ export function createHubMailService(
           const targetHostIds = new Set<string>();
 
           for (const userId of recipientUserIds) {
-            const hostId = heartbeatService.findHostForAgent(userId);
-            if (hostId) {
+            for (const hostId of heartbeatService.findHostsForAgent(userId)) {
               targetHostIds.add(hostId);
             }
           }

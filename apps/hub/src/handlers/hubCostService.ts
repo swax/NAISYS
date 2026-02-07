@@ -195,14 +195,15 @@ export function createHubCostService(
   }
 
   function sendCostControl(userId: string, enabled: boolean, reason: string) {
-    const hostId = heartbeatService.findHostForAgent(userId);
-    if (!hostId) return;
+    const hostIds = heartbeatService.findHostsForAgent(userId);
 
-    naisysServer.sendMessage(hostId, HubEvents.COST_CONTROL, {
-      userId,
-      enabled,
-      reason,
-    } satisfies CostControl);
+    for (const hostId of hostIds) {
+      naisysServer.sendMessage(hostId, HubEvents.COST_CONTROL, {
+        userId,
+        enabled,
+        reason,
+      } satisfies CostControl);
+    }
   }
 
   /** Check the global spend limit across all agents */
