@@ -3,6 +3,8 @@
  * Each service exports its command metadata and handler function.
  */
 
+import { InputModeService } from "../utils/inputMode.js";
+
 export enum NextCommandAction {
   Continue,
   CompactSession,
@@ -48,7 +50,10 @@ export interface RegistrableCommand {
  * Creates a command registry from an array of registrable commands.
  * The registry provides O(1) lookup by command name.
  */
-export function createCommandRegistry(commands: RegistrableCommand[]) {
+export function createCommandRegistry(
+  inputMode: InputModeService,
+  commands: RegistrableCommand[],
+) {
   const registry = new Map<string, RegistrableCommand>();
 
   // Add built-in ns-help command
@@ -76,7 +81,7 @@ export function createCommandRegistry(commands: RegistrableCommand[]) {
       };
 
       let output = "Commands:\n" + formatTable(mainCommands);
-      if (debugCommands.length > 0) {
+      if (inputMode.isDebug() && debugCommands.length > 0) {
         output += "\n\nDebug commands:\n" + formatTable(debugCommands);
       }
 

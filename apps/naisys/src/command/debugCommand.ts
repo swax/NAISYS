@@ -6,7 +6,6 @@ import { OutputService } from "../utils/output.js";
 import { RegistrableCommand } from "./commandRegistry.js";
 
 export function createDebugCommands(
-  agentConfig: AgentConfig,
   contextManager: ContextManager,
   output: OutputService,
   inputMode: InputModeService,

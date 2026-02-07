@@ -77,11 +77,7 @@ export async function createAgentConfig(name: string): Promise<void> {
     throw new Error("NAISYS_FOLDER environment variable is not set");
   }
 
-  const agentsFolder = path.join(naisysFolder, "agents");
-  const agentFilePath = path.join(agentsFolder, `${name}.yaml`);
-
-  // Create agents folder if it doesn't exist
-  await fs.mkdir(agentsFolder, { recursive: true });
+  const agentFilePath = path.join(naisysFolder, `${name}.yaml`);
 
   // Check if agent file already exists
   try {

@@ -8,8 +8,8 @@ import {
   createMockGenImg,
   createMockGlobalConfig,
   createMockInputMode,
-  createMockMailService,
   createMockLynxService,
+  createMockMailService,
   createMockOutputService,
   createMockPromptBuilder,
   createMockSessionService,
@@ -27,7 +27,9 @@ function createPopFirstCommand() {
   );
   const shellCommand = createMockShellCommand();
 
-  const commandRegistry = createCommandRegistry([
+  const inputMode = createMockInputMode();
+
+  const commandRegistry = createCommandRegistry(inputMode, [
     createMockLynxService(),
     createMockGenImg(),
     createMockSubagent(),
@@ -44,7 +46,7 @@ function createPopFirstCommand() {
     commandRegistry,
     createMockContextManager(),
     createMockOutputService(),
-    createMockInputMode(),
+    inputMode,
   );
 
   return {
