@@ -21,11 +21,14 @@ export function loadAgentConfigs(startupPath: string): Map<string, UserEntry> {
     processFile(resolvedPath, undefined, userMap, usernameToPath);
   }
 
-  userMap.set(adminAgentConfig._id, {
-    username: adminAgentConfig.username,
-    userId: adminAgentConfig._id,
-    config: adminAgentConfig,
-  });
+  if (!userMap.has(adminAgentConfig._id)) {
+    userMap.set(adminAgentConfig._id, {
+      username: adminAgentConfig.username,
+      userId: adminAgentConfig._id,
+      config: adminAgentConfig,
+      agentPath: "admin.yaml", // Allows the admin config to be overridden by an actual file if desired
+    });
+  }
 
   return userMap;
 }

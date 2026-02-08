@@ -22,6 +22,9 @@ export function createHubUserService(
               config: true,
               agent_path: true,
               lead_user_id: true,
+              user_hosts: {
+                select: { host_id: true },
+              },
             },
           });
         });
@@ -31,6 +34,10 @@ export function createHubUserService(
           username: u.username,
           leadUserId: u.lead_user_id || undefined,
           configYaml: u.config,
+          assignedHostIds:
+            u.user_hosts.length > 0
+              ? u.user_hosts.map((uh) => uh.host_id)
+              : undefined,
         }));
 
         logService.log(

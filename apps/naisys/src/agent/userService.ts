@@ -86,24 +86,24 @@ export function createUserService(
       return [adminUserId];
     }
 
-    const leadAgents = Array.from(userMap.values()).filter(
-      (u) => !u.leadUserId && u.leadUserId !== adminUserId,
+    const rootAgents = Array.from(userMap.values()).filter(
+      (u) => !u.leadUserId,
     );
 
-    if (leadAgents.length === 0) {
-      throw new Error("No lead agents found to start");
+    if (rootAgents.length <= 1) {
+      return [adminUserId];
     }
 
-    if (leadAgents.length > 0) {
+    if (rootAgents.length > 1) {
       promptNotificationService.notify({
         wake: true,
         commentOutput: [
-          `Starting lead agents: ${leadAgents.map((u) => u.username).join(", ")}`,
+          `Starting root agents: ${rootAgents.map((u) => u.username).join(", ")}`,
         ],
       });
     }
 
-    return leadAgents.map((u) => u.userId);
+    return rootAgents.map((u) => u.userId);
   }
 
   // Active user tracking (driven by heartbeatService)
@@ -147,6 +147,31 @@ export function createUserService(
       .filter((name): name is string => !!name);
   }
 
+  function getUserHostDisplayNames(userId: string): string[] {
+    const hostIds = userHostIds.get(userId) ?? [];
+    const localHostId = hostService.getLocalHostId();
+    return hostIds
+      .map((id) =>
+        id === localHostId ? "(local)" : hostService.getHostName(id),
+      )
+      .filter((name): name is string => !!name);
+  }
+
+  function getUserStatus(userId: string): "Active" | "Available" | "Offline" {
+    if (isUserActive(userId)) return "Active";
+    if (!hubClient) return "Available";
+
+    const user = userMap.get(userId);
+    if (!user?.assignedHostIds || user.assignedHostIds.length === 0)
+      return "Available";
+
+    for (const hostId of user.assignedHostIds) {
+      if (hostService.isHostActive(hostId)) return "Available";
+    }
+
+    return "Offline";
+  }
+
   /** Parse a UserListResponse into a userId → UserEntry map */
   function parseUserList(response: UserListResponse): Map<string, UserEntry> {
     const map = new Map<string, UserEntry>();
@@ -158,6 +183,7 @@ export function createUserService(
         userId: user.userId,
         username: user.username,
         leadUserId: user.leadUserId,
+        assignedHostIds: user.assignedHostIds,
         config,
       });
     }
@@ -182,6 +208,8 @@ export function createUserService(
     isUserActive,
     getUserHostIds,
     getUserHostNames,
+    getUserHostDisplayNames,
+    getUserStatus,
     getUserByName,
   };
 }

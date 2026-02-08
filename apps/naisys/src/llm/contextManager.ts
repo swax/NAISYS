@@ -18,7 +18,7 @@ export function createContextManager(
 
   clear();
 
-  async function append(
+  function append(
     content: string,
     source: ContentSource = ContentSource.Console,
   ) {

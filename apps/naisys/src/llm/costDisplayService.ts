@@ -238,7 +238,7 @@ export function createCostDisplayService(
   }
 
   /** ns-cost [reset]: Show cost breakdown or reset cost tracking data */
-  async function handleCommand(cmdArgs: string): Promise<string> {
+  function handleCommand(cmdArgs: string): string {
     const argv = stringArgv(cmdArgs);
     const subcommand = argv[0];
 

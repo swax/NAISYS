@@ -135,12 +135,13 @@ export type HeartbeatStatus = z.infer<typeof HeartbeatStatusSchema>;
 // Host List Messages (Hub -> NAISYS, push on connect/disconnect changes)
 // =============================================================================
 
-/** Pushed from hub to all NAISYS instances when the set of connected hosts changes */
+/** Pushed from hub to all NAISYS instances when the set of known hosts changes */
 export const HostListSchema = z.object({
   hosts: z.array(
     z.object({
       hostId: z.string(),
       hostName: z.string(),
+      online: z.boolean(),
     }),
   ),
 });
@@ -196,6 +197,7 @@ export const UserListResponseSchema = z.object({
         username: z.string(),
         leadUserId: z.string().optional(),
         configYaml: z.string(),
+        assignedHostIds: z.array(z.string()).optional(),
       }),
     )
     .optional(),

@@ -107,7 +107,7 @@ export function createHubAgentService(
 
   naisysServer.registerEvent(
     HubEvents.AGENT_STOP,
-    async (
+    (
       hostId: string,
       data: unknown,
       ack: (response: AgentStopResponse) => void,

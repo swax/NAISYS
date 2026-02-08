@@ -124,7 +124,7 @@ export function createAgentConfig(
     fullAgentConfig = buildFullAgentConfig(user.config);
   }
 
-  async function handleCommand(cmdArgs: string): Promise<string> {
+  function handleCommand(cmdArgs: string): string {
     const args = cmdArgs.trim().split(/\s+/).filter(Boolean);
     const config = fullAgentConfig;
 

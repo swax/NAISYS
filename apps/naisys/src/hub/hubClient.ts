@@ -180,7 +180,7 @@ export function createHubClient(
     commandName: "ns-hub",
     helpText: "Show hub connection status",
     isDebug: true,
-    handleCommand: async () =>
+    handleCommand: () =>
       `${hubUrl} - ${isConnected() ? "Connected" : "Disconnected"}`,
 
     // HubClient API

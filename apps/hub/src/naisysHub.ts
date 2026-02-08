@@ -55,7 +55,7 @@ export async function startHub(
     await createAgentRegistrar(dbService, startupAgentPath);
 
     // Create host registrar for tracking NAISYS instance connections
-    const hostRegistrar = createHostRegistrar(dbService);
+    const hostRegistrar = await createHostRegistrar(dbService);
 
     // Create shared HTTP server and Socket.IO instance
     const httpServer = http.createServer();
@@ -81,7 +81,7 @@ export async function startHub(
     createHubUserService(naisysServer, dbService, logService);
 
     // Register hub host service for broadcasting connected host list
-    createHubHostService(naisysServer, logService);
+    createHubHostService(naisysServer, hostRegistrar, logService);
 
     // Register hub run service for session_create/session_increment requests
     createHubRunService(naisysServer, dbService, logService);

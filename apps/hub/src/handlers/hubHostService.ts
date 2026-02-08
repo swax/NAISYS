@@ -1,43 +1,49 @@
 import { HostList, HubEvents } from "@naisys/hub-protocol";
+import { HostRegistrar } from "../services/hostRegistrar.js";
 import { HubServerLog } from "../services/hubServerLog.js";
 import { NaisysServer } from "../services/naisysServer.js";
 
 /** Pushes the host list to all NAISYS instances when connected hosts change */
 export function createHubHostService(
   naisysServer: NaisysServer,
+  hostRegistrar: HostRegistrar,
   logService: HubServerLog,
 ) {
   let cachedHostListJson = "";
 
-  function pushHostListIfChanged() {
-    const hosts = naisysServer.getConnectedClients().map((c) => ({
-      hostId: c.getHostId(),
-      hostName: c.getHostName(),
+  naisysServer.registerEvent(HubEvents.CLIENT_CONNECTED, (hostId: string) => {
+    const connectedHostIds = new Set(
+      naisysServer.getConnectedClients().map((c) => c.getHostId()),
+    );
+
+    const hosts = hostRegistrar.getAllHosts().map((h) => ({
+      ...h,
+      online: connectedHostIds.has(h.hostId),
     }));
 
     const payload: HostList = { hosts };
     const json = JSON.stringify(payload);
 
-    if (json === cachedHostListJson) {
-      return;
-    }
+    // Always send to the newly connecting client
+    naisysServer.sendMessage(hostId, HubEvents.HOST_LIST, payload);
 
-    cachedHostListJson = json;
+    // Broadcast to other existing connections only if the list changed
+    if (json !== cachedHostListJson) {
+      cachedHostListJson = json;
 
-    logService.log(
-      `[HubHostService] Broadcasting host list (${hosts.length} hosts)`,
-    );
-
-    for (const connection of naisysServer.getConnectedClients()) {
-      naisysServer.sendMessage(
-        connection.getHostId(),
-        HubEvents.HOST_LIST,
-        payload,
+      logService.log(
+        `[HubHostService] Broadcasting host list (${hosts.length} hosts)`,
       );
-    }
-  }
 
-  naisysServer.registerEvent(HubEvents.CLIENT_CONNECTED, (_hostId: string) => {
-    pushHostListIfChanged();
+      for (const connection of naisysServer.getConnectedClients()) {
+        if (connection.getHostId() !== hostId) {
+          naisysServer.sendMessage(
+            connection.getHostId(),
+            HubEvents.HOST_LIST,
+            payload,
+          );
+        }
+      }
+    }
   });
 }

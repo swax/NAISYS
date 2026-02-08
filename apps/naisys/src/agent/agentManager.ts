@@ -104,6 +104,7 @@ export class AgentManager {
       userId,
       this.globalConfig,
       this.hubClient,
+      this.hostService,
       this.userService,
       this.promptNotification,
     );

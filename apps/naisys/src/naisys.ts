@@ -73,12 +73,13 @@ if (hubClient) {
   try {
     await hubClient.waitForConnection();
     await userService.waitForUsers();
-    await globalConfig.waitForConfig();
   } catch (error) {
     console.error(`Failed to connect to hub: ${error}`);
     process.exit(1);
   }
 }
+
+await globalConfig.waitForConfig();
 
 console.log(`NAISYS STARTED`);
 const agentManager = new AgentManager(
