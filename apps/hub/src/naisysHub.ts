@@ -137,7 +137,7 @@ export async function startHub(
     if (startSupervisor) {
       // Don't import the whole fastify web server module tree unless needed
       const { startServer } = await import("@naisys-supervisor/server");
-      await startServer("hosted", "monitor-hub");
+      await startServer("hosted");
     }
 
     return hubPort;
