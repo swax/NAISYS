@@ -7,7 +7,7 @@ export function createHubConfig() {
   const hubAccessKey = process.env.HUB_ACCESS_KEY;
 
   const config = {
-    naisysFolder: process.env.NAISYS_FOLDER,
+    naisysFolder: process.env.NAISYS_FOLDER || "",
     hubAccessKey,
     spendLimitDollars: hubLoadable.spendLimitDollars,
     spendLimitHours: hubLoadable.spendLimitHours,

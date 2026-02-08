@@ -19,7 +19,6 @@ import apiRoutes from "./routes/api.js";
 
 export const startServer = async (
   startupType: "standalone" | "hosted",
-  monitorDb: "monitor-naisys" | "monitor-hub",
 ) => {
   const isProd = process.env.NODE_ENV === "production";
 
@@ -172,17 +171,5 @@ export const startServer = async (
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   dotenv.config({ quiet: true });
 
-  const monitorArg = process.argv.find((arg) => arg.startsWith("monitor="));
-  if (!monitorArg) {
-    console.error("Required argument: monitor=naisys or monitor=hub");
-    process.exit(1);
-  }
-
-  const monitorValue = monitorArg.split("=")[1];
-  if (monitorValue !== "naisys" && monitorValue !== "hub") {
-    console.error("Invalid monitor value. Must be 'naisys' or 'hub'");
-    process.exit(1);
-  }
-
-  void startServer("standalone", `monitor-${monitorValue}`);
+  void startServer("standalone");
 }
