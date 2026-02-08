@@ -116,22 +116,6 @@ wakeOnMessage: ${config.wakeOnMessage ?? false}
 }
 
 /**
- * Create an agent YAML file in a subdirectory (e.g., agents/)
- */
-export function createAgentYamlInDir(
-  testDir: string,
-  subdir: string,
-  filename: string,
-  config: AgentYamlConfig,
-): void {
-  const agentsDir = join(testDir, subdir);
-  if (!existsSync(agentsDir)) {
-    mkdirSync(agentsDir, { recursive: true });
-  }
-  createAgentYaml(agentsDir, filename, config);
-}
-
-/**
  * Get the path to naisys.js
  */
 export function getNaisysPath(): string {
@@ -156,27 +140,6 @@ export function createHubEnvFile(
 NAISYS_FOLDER=""
 HUB_PORT=${options.port}
 HUB_ACCESS_KEY=${options.accessKey}
-`.trim();
-  writeFileSync(join(testDir, ".env"), envContent);
-}
-
-/**
- * Create a naisys .env file with hub connection for testing
- */
-export function createEnvFileWithHub(
-  testDir: string,
-  options: {
-    hostname: string;
-    hubUrl: string;
-    hubAccessKey: string;
-  },
-): void {
-  const envContent = `
-NAISYS_FOLDER=""
-NAISYS_HOSTNAME="${options.hostname}"
-SPEND_LIMIT_DOLLARS=10
-HUB_URLS="${options.hubUrl}"
-HUB_ACCESS_KEY=${options.hubAccessKey}
 `.trim();
   writeFileSync(join(testDir, ".env"), envContent);
 }

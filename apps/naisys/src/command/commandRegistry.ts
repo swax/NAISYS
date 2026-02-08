@@ -43,7 +43,9 @@ export interface RegistrableCommand {
   isDebug?: boolean;
 
   /** Handler function that processes the command and returns a response */
-  handleCommand: (cmdArgs: string) => Promise<string | CommandResponse>;
+  handleCommand: (
+    cmdArgs: string,
+  ) => string | CommandResponse | Promise<string | CommandResponse>;
 }
 
 /**
@@ -85,7 +87,7 @@ export function createCommandRegistry(
         output += "\n\nDebug commands:\n" + formatTable(debugCommands);
       }
 
-      return Promise.resolve(output);
+      return output;
     },
   };
   registry.set(helpCommand.commandName, helpCommand);

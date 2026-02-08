@@ -74,14 +74,14 @@ export function createMockShellCommand() {
 export function createMockGenImg() {
   return {
     commandName: "ns-genimg",
-    handleCommand: jest.fn(() => Promise.resolve("")),
+    handleCommand: jest.fn(() => ""),
   } satisfies GenImg;
 }
 
 export function createMockSubagent() {
   const subagent: SubagentService = {
     commandName: "ns-agent",
-    handleCommand: jest.fn(() => Promise.resolve("")),
+    handleCommand: jest.fn(() => ""),
     cleanup: jest.fn(() => Promise.resolve()),
     raiseSwitchEvent: jest.fn(),
   };
@@ -92,7 +92,7 @@ export function createMockSubagent() {
 export function createMockMailService() {
   const mailService: MailService = {
     commandName: "ns-mail",
-    handleCommand: jest.fn(() => Promise.resolve("")),
+    handleCommand: jest.fn(() => ""),
     getUnreadThreads: jest.fn(() => Promise.resolve([])),
     sendMessage: jest.fn(() => Promise.resolve("")),
     getAllUserNames: jest.fn(() => []),
@@ -107,7 +107,7 @@ export function createMockMailService() {
 export function createMockLynxService() {
   const lynxService: LynxService = {
     commandName: "ns-lynx",
-    handleCommand: jest.fn(() => Promise.resolve("")),
+    handleCommand: jest.fn(() => ""),
     clear: jest.fn(),
   };
 
@@ -126,7 +126,7 @@ export function createMockSessionCompactor() {
 export function createMockSessionService() {
   const sessionService: SessionService = {
     commandName: "ns-session",
-    handleCommand: jest.fn(() => Promise.resolve("")),
+    handleCommand: jest.fn(() => ""),
   };
 
   return sessionService;
@@ -156,7 +156,7 @@ export function createMockContextManager() {
 export function createMockWorkspacesFeature() {
   const workspaces: WorkspacesFeature = {
     commandName: "ns-workspace",
-    handleCommand: jest.fn(() => Promise.resolve("")),
+    handleCommand: jest.fn(() => ""),
     getContext: jest.fn(() => ""),
     listFiles: jest.fn(() => ""),
     hasFiles: jest.fn(() => false),
@@ -253,7 +253,7 @@ export function createMockAgentConfig(): AgentConfig {
     commandName: "ns-agent-config",
     helpText: "View or update agent config: ns-agent-config [name] [value]",
     isDebug: true,
-    handleCommand: jest.fn(async () => ""),
+    handleCommand: jest.fn(() => ""),
     reloadAgentConfig: jest.fn(async () => {}),
     updateConfigField: jest.fn(async () => {}),
     agentConfig: () => ({

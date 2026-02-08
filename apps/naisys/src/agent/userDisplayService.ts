@@ -60,7 +60,7 @@ export function createUserDisplayService(
   userService: UserService,
   inputMode: InputModeService,
 ) {
-  async function handleCommand(): Promise<string> {
+  function handleCommand(): string {
     const allUsers = userService.getUsers();
 
     if (allUsers.length === 0) {
@@ -84,9 +84,10 @@ export function createUserDisplayService(
     }
 
     const isDebug = inputMode.isDebug();
-    const headers = isDebug
-      ? ["Username", "Title", "Lead", "*Status", "*Host"]
-      : ["Username", "Title", "Lead"];
+    const headers = ["Username", "Title", "Lead", "Status"];
+    if (isDebug) {
+      headers.push("*Host");
+    }
 
     const rows = flattened.map(({ node, depth }) => {
       const indent = "  ".repeat(depth);
@@ -95,13 +96,16 @@ export function createUserDisplayService(
         ? userIdToUsername.get(node.leadUserId) || "(unknown)"
         : "(none)";
 
-      const row = [displayName, node.title, leadUsername];
+      const row = [
+        displayName,
+        node.title,
+        leadUsername,
+        userService.getUserStatus(node.userId),
+      ];
       if (isDebug) {
-        const status = userService.isUserActive(node.userId)
-          ? "Running"
-          : "Offline";
-        row.push(status);
-        row.push(userService.getUserHostNames(node.userId).join(", ") || "");
+        row.push(
+          userService.getUserHostDisplayNames(node.userId).join(", ") || "",
+        );
       }
       return row;
     });

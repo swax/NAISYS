@@ -23,6 +23,7 @@ import { createSessionCompactor } from "../llm/sessionCompactor.js";
 import { createSystemMessage } from "../llm/systemMessage.js";
 import { createMailService } from "../mail/mail.js";
 import { createMailDisplayService } from "../mail/mailDisplayService.js";
+import { HostService } from "../services/hostService.js";
 import { createLogService } from "../services/logService.js";
 import { createRunService } from "../services/runService.js";
 import { getPlatformConfig } from "../services/shellPlatform.js";
@@ -39,6 +40,7 @@ export async function createAgentRuntime(
   localUserId: string,
   globalConfig: GlobalConfig,
   hubClient: HubClient | undefined,
+  hostService: HostService,
   userService: UserService,
   promptNotification: PromptNotificationService,
 ) {
@@ -192,7 +194,7 @@ export async function createAgentRuntime(
     userDisplayService,
     ...debugCommands,
     agentConfig,
-    ...(hubClient ? [hubClient] : []),
+    ...(hubClient ? [hubClient, hostService] : []),
   ]);
   const commandHandler = createCommandHandler(
     globalConfig,

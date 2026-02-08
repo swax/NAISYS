@@ -1,4 +1,3 @@
-import { adminUserId } from "@naisys/common";
 import {
   AgentStartResponse,
   AgentStopResponse,
@@ -48,11 +47,11 @@ export function createSubagentService(
     switch (argv[0]) {
       case "help": {
         let helpOutput = `subagent <command>
-  list: Lists all startable and started agents
   start <name> "<task>": Starts agent by name with a description of the task to perform
   stop <name>: Stops an agent by name`;
 
         if (inputMode.isDebug()) {
+          helpOutput += `\n  !list: Lists all running agents`;
           helpOutput += `\n  !switch <name>: Switch context to a started in-process agent`;
           helpOutput += `\n  !flush <name>: Flush a spawned agent's output`;
         }
@@ -63,6 +62,12 @@ export function createSubagentService(
         return helpOutput;
       }
       case "list": {
+        if (!inputMode.isDebug()) {
+          errorText =
+            "The 'subagent list' command is only available in debug mode.\n";
+          break;
+        }
+
         return listSubagents();
       }
       // "create" command removed - generated agent yaml configs from a template and wrote them to disk. See git history.
@@ -140,83 +145,35 @@ export function createSubagentService(
   }
 
   function listSubagents() {
-    refreshMySubagents();
+    const allUsers = userService.getUsers();
+    const activeUsers = allUsers.filter((u) =>
+      userService.isUserActive(u.userId),
+    );
 
-    let agentList = "";
-
-    const runningAgentIds = getRunningAgentsIds();
-    const debugMode = inputMode.isDebug();
-
-    const subagentRows = Array.from(mySubagentsMap.values())
-      // Don't show admin user as a start/stoppable subagent
-      .filter((p) => p.userId !== adminUserId)
-      .map((p) => {
-        const row = [
-          p.agentName,
-          runningAgentIds.has(p.userId) ? "started" : "stopped",
-          p.taskDescription?.substring(0, 70) || p.title,
-        ];
-        if (debugMode) {
-          row.push(
-            runningAgentIds.has(p.userId)
-              ? agentManager.getBufferLineCount(p.userId).toString()
-              : "",
-          );
-          row.push(userService.getUserHostNames(p.userId).join(", ") || "");
-        }
-        return row;
-      });
-
-    if (subagentRows.length === 0) {
-      agentList += "No subagents found.";
-    } else {
-      const headers = ["Name", "Status", "Task"];
-      if (debugMode) {
-        headers.push("*Unread Lines", "*Host");
-      }
-      agentList += table([headers, ...subagentRows], { hsep: " | " });
+    if (activeUsers.length === 0) {
+      return "No active agents.";
     }
 
-    if (debugMode) {
-      // Find running in process agents that aren't already listed
-      const otherAgents = agentManager.runningAgents
-        .filter((ra) => !mySubagentsMap.has(ra.agentUserId))
-        .map((ra) => {
-          return {
-            agentName: ra.agentUsername,
-            status: "started",
-            title: ra.agentTitle,
-            taskDescription: "",
-            unreadLines: agentManager.getBufferLineCount(ra.agentUserId),
-            hostName:
-              userService.getUserHostNames(ra.agentUserId).join(", ") || "",
-          };
-        });
+    const runningAgentIds = new Set(
+      agentManager.runningAgents.map((a) => a.agentUserId),
+    );
 
-      if (otherAgents.length > 0) {
-        agentList += "\n\nOther In-Process Running Agents: (debug only)\n";
+    const rows = activeUsers.map((u) => {
+      const subagent = mySubagentsMap.get(u.userId);
+      const unreadLines = runningAgentIds.has(u.userId)
+        ? agentManager.getBufferLineCount(u.userId).toString()
+        : "";
+      return [
+        u.username,
+        subagent?.taskDescription?.substring(0, 70) || u.config.title,
+        userService.getUserHostDisplayNames(u.userId).join(", ") || "",
+        unreadLines,
+      ];
+    });
 
-        agentList += table(
-          [
-            ["Name", "Status", "Task", "*Unread Lines", "*Host"],
-            ...otherAgents.map((p) => [
-              p.agentName,
-              p.status,
-              p.taskDescription?.substring(0, 70) || p.title,
-              p.unreadLines.toString(),
-              p.hostName,
-            ]),
-          ],
-          { hsep: " | " },
-        );
-      }
-    }
-
-    if (debugMode) {
-      agentList += "\n* Only visible in debug mode";
-    }
-
-    return agentList;
+    return table([["Name", "Task", "Host", "Unread Lines"], ...rows], {
+      hsep: " | ",
+    });
   }
 
   function raiseSwitchEvent() {
@@ -325,7 +282,11 @@ export function createSubagentService(
     const userId = user.userId;
 
     if (!getRunningAgentsIds().has(userId)) {
-      throw `Agent '${agentName}' is not running`;
+      if (userService.isUserActive(userId)) {
+        throw `Agent '${agentName}' is active, but not on this host`;
+      } else {
+        throw `Agent '${agentName}' is not running`;
+      }
     }
 
     return userId;

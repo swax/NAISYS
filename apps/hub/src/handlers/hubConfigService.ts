@@ -10,27 +10,24 @@ export function createHubConfigService(
 ) {
   const hubConfig = loadHubConfig();
 
-  naisysServer.registerEvent(
-    HubEvents.CLIENT_CONNECTED,
-    async (hostId: string) => {
-      try {
-        logService.log(
-          `[HubConfigService] Pushing config to naisys instance ${hostId}`,
-        );
+  naisysServer.registerEvent(HubEvents.CLIENT_CONNECTED, (hostId: string) => {
+    try {
+      logService.log(
+        `[HubConfigService] Pushing config to naisys instance ${hostId}`,
+      );
 
-        naisysServer.sendMessage(hostId, HubEvents.CONFIG, {
-          success: true,
-          config: hubConfig,
-        } satisfies ConfigResponse);
-      } catch (error) {
-        logService.error(
-          `[HubConfigService] Error sending config to naisys instance ${hostId}: ${error}`,
-        );
-        naisysServer.sendMessage(hostId, HubEvents.CONFIG, {
-          success: false,
-          error: String(error),
-        });
-      }
-    },
-  );
+      naisysServer.sendMessage(hostId, HubEvents.CONFIG, {
+        success: true,
+        config: hubConfig,
+      } satisfies ConfigResponse);
+    } catch (error) {
+      logService.error(
+        `[HubConfigService] Error sending config to naisys instance ${hostId}: ${error}`,
+      );
+      naisysServer.sendMessage(hostId, HubEvents.CONFIG, {
+        success: false,
+        error: String(error),
+      });
+    }
+  });
 }
