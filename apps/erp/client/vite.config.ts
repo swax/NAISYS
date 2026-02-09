@@ -3,11 +3,11 @@ import react from "@vitejs/plugin-react";
 
 export default defineConfig({
   plugins: [react()],
-  base: "/supervisor/",
+  base: "/erp/",
   server: {
     proxy: {
-      "/api/supervisor": {
-        target: "http://localhost:3001",
+      "/api/erp": {
+        target: "http://localhost:3002",
         changeOrigin: true,
       },
     },

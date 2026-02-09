@@ -29,6 +29,7 @@ program
     "--supervisor",
     "Start integrated Supervisor website (integrated hub required)",
   )
+  .option("--erp", "Start ERP web app (requires --supervisor)")
   .parse();
 
 const agentPath = program.args[0];
@@ -39,9 +40,12 @@ const integratedHub = Boolean(program.opts().integratedHub);
 if (integratedHub) {
   // Don't import the hub module tree unless needed, sharing the same process space is to save memory on small servers
   const { startHub } = await import("@naisys/hub");
+  const plugins: ("erp")[] = [];
+  if (program.opts().erp) plugins.push("erp");
   const hubPort = await startHub(
     "hosted",
     program.opts().supervisor,
+    plugins,
     agentPath,
   );
   hubUrl = `http://localhost:${hubPort}`;

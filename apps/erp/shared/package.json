@@ -1,0 +1,19 @@
+{
+  "name": "@naisys-erp/shared",
+  "version": "1.0.0",
+  "description": "NAISYS ERP - Shared types and utilities",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "clean": "npx rimraf dist",
+    "build": "tsc",
+    "type-check": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "zod": "^4.3.5"
+  }
+}

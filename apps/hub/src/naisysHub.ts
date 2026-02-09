@@ -26,6 +26,7 @@ import { createNaisysServer } from "./services/naisysServer.js";
 export async function startHub(
   startupType: "standalone" | "hosted",
   startSupervisor?: any,
+  plugins?: ("erp")[],
   startupAgentPath?: string,
 ): Promise<number> {
   try {
@@ -137,7 +138,7 @@ export async function startHub(
     if (startSupervisor) {
       // Don't import the whole fastify web server module tree unless needed
       const { startServer } = await import("@naisys-supervisor/server");
-      await startServer("hosted");
+      await startServer("hosted", plugins);
     }
 
     return hubPort;
@@ -157,7 +158,11 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
       "Path to agent configuration file to seed the database (optional)",
     )
     .option("--supervisor", "Start Supervisor web server")
+    .option("--erp", "Start ERP web app (requires --supervisor)")
     .parse();
 
-  void startHub("standalone", program.opts().supervisor, program.args[0]);
+  const plugins: ("erp")[] = [];
+  if (program.opts().erp) plugins.push("erp");
+
+  void startHub("standalone", program.opts().supervisor, plugins, program.args[0]);
 }

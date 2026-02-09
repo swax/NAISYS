@@ -1,0 +1,21 @@
+{
+  "name": "naisys-erp",
+  "version": "1.0.0",
+  "description": "NAISYS ERP - Enterprise resource planning interface",
+  "private": true,
+  "workspaces": [
+    "shared",
+    "client",
+    "server"
+  ],
+  "scripts": {
+    "clean": "npm run clean --workspaces --if-present",
+    "build": "npm run build --workspaces --if-present",
+    "dev": "concurrently \"npm run dev --workspace=server\" \"npm run dev --workspace=client\"",
+    "start": "NODE_ENV=production npm start --workspace=server"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1",
+    "prettier": "^3.6.2"
+  }
+}
