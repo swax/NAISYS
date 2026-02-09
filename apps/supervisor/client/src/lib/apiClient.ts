@@ -19,7 +19,7 @@ import type {
   UpdateAgentConfigResponse,
 } from "shared";
 
-const API_BASE = "/api";
+const API_BASE = "/api/supervisor";
 
 export interface SessionResponse {
   success: boolean;

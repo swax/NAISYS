@@ -1,0 +1,39 @@
+{
+  "name": "@naisys-erp/server",
+  "version": "1.0.0",
+  "description": "NAISYS ERP - Fastify backend server",
+  "type": "module",
+  "main": "dist/server.js",
+  "exports": {
+    ".": "./dist/server.js"
+  },
+  "scripts": {
+    "clean": "npx rimraf dist client-dist",
+    "dev": "tsx watch src/server.ts",
+    "start": "node dist/server.js",
+    "build": "tsc && npx shx cp -r ../client/dist client-dist",
+    "type-check": "tsc --noEmit"
+  },
+  "files": [
+    "dist",
+    "client-dist"
+  ],
+  "dependencies": {
+    "@fastify/cors": "^11.2.0",
+    "@fastify/static": "^9.0.0",
+    "dotenv": "^17.2.3",
+    "fastify": "^5.6.2",
+    "fastify-plugin": "^5.0.1",
+    "fastify-type-provider-zod": "^6.1.0",
+    "@naisys-erp/shared": "file:../shared",
+    "zod": "^4.3.5"
+  },
+  "devDependencies": {
+    "@types/node": "^25.0.3",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

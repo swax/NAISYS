@@ -19,6 +19,7 @@ import apiRoutes from "./routes/api.js";
 
 export const startServer = async (
   startupType: "standalone" | "hosted",
+  plugins: ("erp")[] = [],
 ) => {
   const isProd = process.env.NODE_ENV === "production";
 
@@ -111,7 +112,14 @@ export const startServer = async (
     },
   });
 
-  fastify.register(apiRoutes, { prefix: "/api" });
+  fastify.register(apiRoutes, { prefix: "/api/supervisor" });
+
+  // Conditionally load ERP plugin
+  if (plugins.includes("erp")) {
+    const { erpPlugin } = await import("@naisys-erp/server");
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await fastify.register(erpPlugin as any);
+  }
 
   if (isProd) {
     const clientDistPath = path.join(__dirname, "../client-dist");
@@ -122,7 +130,7 @@ export const startServer = async (
     });
 
     fastify.setNotFoundHandler((request, reply) => {
-      if (request.url.startsWith("/api")) {
+      if (request.url.startsWith("/api/")) {
         reply.code(404).send({ error: "API endpoint not found" });
       } else if (request.url.startsWith("/supervisor")) {
         reply.sendFile("index.html");
