@@ -245,10 +245,10 @@ Each action includes a `schema` URL (e.g., `/api/erp/schemas/UpdatePlanningOrder
 
 ### Schemas
 
-| Method | Path                          | Description                     |
-| ------ | ----------------------------- | ------------------------------- |
-| GET    | `/api/erp/schemas/`           | List all available schema names |
-| GET    | `/api/erp/schemas/:schemaName` | Get a single JSON Schema       |
+| Method | Path                           | Description                     |
+| ------ | ------------------------------ | ------------------------------- |
+| GET    | `/api/erp/schemas/`            | List all available schema names |
+| GET    | `/api/erp/schemas/:schemaName` | Get a single JSON Schema        |
 
 Available schemas: `CreatePlanningOrder`, `UpdatePlanningOrder`, `CreatePlanningOrderRevision`, `UpdatePlanningOrderRevision`, `CreateExecutionOrder`, `UpdateExecutionOrder`.
 

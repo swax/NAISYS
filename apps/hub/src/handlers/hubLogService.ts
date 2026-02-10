@@ -1,4 +1,4 @@
-import { DatabaseService, monotonicFactory } from "@naisys/database";
+import { DatabaseService } from "@naisys/database";
 import { HubEvents, LogWriteRequestSchema } from "@naisys/hub-protocol";
 import { HubServerLog } from "../services/hubServerLog.js";
 import { NaisysServer } from "../services/naisysServer.js";
@@ -9,23 +9,18 @@ export function createHubLogService(
   dbService: DatabaseService,
   logService: HubServerLog,
 ) {
-  // Use monotonic ULID to preserve strict ordering within a batch
-  const monotonicUlid = monotonicFactory();
-
   naisysServer.registerEvent(
     HubEvents.LOG_WRITE,
-    async (hostId: string, data: unknown) => {
+    async (hostId: number, data: unknown) => {
       try {
         const parsed = LogWriteRequestSchema.parse(data);
 
         await dbService.usingDatabase(async (prisma) => {
           for (const entry of parsed.entries) {
-            const id = monotonicUlid();
             const now = new Date().toISOString();
 
-            await prisma.context_log.create({
+            const log = await prisma.context_log.create({
               data: {
-                id,
                 user_id: entry.userId,
                 run_id: entry.runId,
                 session_id: entry.sessionId,
@@ -47,7 +42,7 @@ export function createHubLogService(
               },
               data: {
                 last_active: now,
-                latest_log_id: id,
+                latest_log_id: log.id,
                 total_lines: {
                   increment: entry.message.split("\n").length,
                 },
@@ -60,7 +55,7 @@ export function createHubLogService(
                 user_id: entry.userId,
               },
               data: {
-                latest_log_id: id,
+                latest_log_id: log.id,
                 last_active: now,
               },
             });

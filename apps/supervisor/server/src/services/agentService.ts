@@ -49,8 +49,8 @@ export const getAgents = cachedForSeconds(
           host: user.user_notifications?.host?.name ?? "",
           lastActive: user.user_notifications?.last_active?.toISOString(),
           leadUsername: user.lead_user?.username || undefined,
-          latestLogId: user.user_notifications?.latest_log_id ?? "",
-          latestMailId: user.user_notifications?.latest_mail_id ?? "",
+          latestLogId: user.user_notifications?.latest_log_id ?? 0,
+          latestMailId: user.user_notifications?.latest_mail_id ?? 0,
         });
       });
     } catch (error) {

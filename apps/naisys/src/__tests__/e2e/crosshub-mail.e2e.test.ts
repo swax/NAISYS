@@ -175,9 +175,9 @@ HUB_ACCESS_KEY=${HUB_ACCESS_KEY}
     expect(bobOutput).toContain("alex");
     expect(bobOutput).toContain(testSubject);
 
-    // Extract message ID from list output (last 4 chars of ULID in ID column)
-    // Format: "* | XXXX | alex | Cross Hub Test | <date>"
-    const idMatch = bobOutput.match(/\|\s*([A-Z0-9]{4})\s*\|\s*alex/i);
+    // Extract message ID from list output (integer ID column)
+    // Format: "* | 123 | alex | Cross Hub Test | <date>"
+    const idMatch = bobOutput.match(/\|\s*(\d+)\s*\|\s*alex/i);
     expect(idMatch).not.toBeNull();
     const messageId = idMatch![1];
 

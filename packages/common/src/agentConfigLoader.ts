@@ -4,30 +4,85 @@ import yaml from "js-yaml";
 import * as path from "path";
 import {
   adminAgentConfig,
+  AgentConfigFile,
   AgentConfigFileSchema,
   UserEntry,
 } from "./agentConfigFile.js";
 
+interface ConfigEntry {
+  configId: string;
+  username: string;
+  agentPath: string;
+  leadConfigId?: string;
+  config: AgentConfigFile;
+}
+
 /** Loads agent yaml configs from a file or directory path, returns a map of userId → UserEntry */
-export function loadAgentConfigs(startupPath: string): Map<string, UserEntry> {
-  const userMap = new Map<string, UserEntry>();
+export function loadAgentConfigs(startupPath: string): Map<number, UserEntry> {
+  const configEntries: ConfigEntry[] = [];
   const usernameToPath = new Map<string, string>();
+  const configIdSet = new Set<string>();
 
   const resolvedPath = path.resolve(startupPath);
 
   if (fs.statSync(resolvedPath).isDirectory()) {
-    processDirectory(resolvedPath, undefined, userMap, usernameToPath);
+    processDirectory(
+      resolvedPath,
+      undefined,
+      configEntries,
+      usernameToPath,
+      configIdSet,
+    );
   } else {
-    processFile(resolvedPath, undefined, userMap, usernameToPath);
+    processFile(
+      resolvedPath,
+      undefined,
+      configEntries,
+      usernameToPath,
+      configIdSet,
+    );
   }
 
-  if (!userMap.has(adminAgentConfig._id)) {
-    userMap.set(adminAgentConfig._id, {
+  // Add admin if not present
+  const hasAdmin = configEntries.some(
+    (e) => e.username === adminAgentConfig.username,
+  );
+  if (!hasAdmin) {
+    configEntries.push({
+      configId: adminAgentConfig._id!,
       username: adminAgentConfig.username,
-      userId: adminAgentConfig._id,
+      agentPath: "admin.yaml",
       config: adminAgentConfig,
-      agentPath: "admin.yaml", // Allows the admin config to be overridden by an actual file if desired
     });
+  }
+
+  // First pass: assign sequential IDs and build configId → userId mapping
+  const configIdToUserId = new Map<string, number>();
+  const userMap = new Map<number, UserEntry>();
+  let nextId = 1;
+
+  for (const entry of configEntries) {
+    const userId = nextId++;
+    configIdToUserId.set(entry.configId, userId);
+
+    userMap.set(userId, {
+      userId,
+      username: entry.username,
+      configId: entry.configId,
+      config: entry.config,
+      agentPath: entry.agentPath,
+    });
+  }
+
+  // Second pass: resolve lead relationships by configId → userId
+  for (const entry of configEntries) {
+    if (entry.leadConfigId) {
+      const userId = configIdToUserId.get(entry.configId)!;
+      const leadUserId = configIdToUserId.get(entry.leadConfigId);
+      if (leadUserId !== undefined) {
+        userMap.get(userId)!.leadUserId = leadUserId;
+      }
+    }
   }
 
   return userMap;
@@ -35,9 +90,10 @@ export function loadAgentConfigs(startupPath: string): Map<string, UserEntry> {
 
 function processDirectory(
   dirPath: string,
-  leadUserId: string | undefined,
-  userMap: Map<string, UserEntry>,
+  leadConfigId: string | undefined,
+  configEntries: ConfigEntry[],
   usernameToPath: Map<string, string>,
+  configIdSet: Set<string>,
 ) {
   const files = fs.readdirSync(dirPath);
 
@@ -45,9 +101,10 @@ function processDirectory(
     if (file.endsWith(".yaml") || file.endsWith(".yml")) {
       processFile(
         path.join(dirPath, file),
-        leadUserId,
-        userMap,
+        leadConfigId,
+        configEntries,
         usernameToPath,
+        configIdSet,
       );
     }
   }
@@ -55,9 +112,10 @@ function processDirectory(
 
 function processFile(
   filePath: string,
-  leadUserId: string | undefined,
-  userMap: Map<string, UserEntry>,
+  leadConfigId: string | undefined,
+  configEntries: ConfigEntry[],
   usernameToPath: Map<string, string>,
+  configIdSet: Set<string>,
 ) {
   const absolutePath = path.resolve(filePath);
 
@@ -86,20 +144,19 @@ function processFile(
     }
     usernameToPath.set(username, absolutePath);
 
-    if (userMap.has(agentConfig._id)) {
+    if (configIdSet.has(agentConfig._id)) {
       throw new Error(
-        `Duplicate user ID "${agentConfig._id}" found in multiple files:\n  ${
-          userMap.get(agentConfig._id)!.agentPath
-        }\n  ${absolutePath}`,
+        `Duplicate config ID "${agentConfig._id}" found in multiple files`,
       );
     }
+    configIdSet.add(agentConfig._id);
 
-    userMap.set(agentConfig._id, {
-      userId: agentConfig._id,
+    configEntries.push({
+      configId: agentConfig._id,
       username,
-      config: agentConfig,
-      leadUserId,
       agentPath: absolutePath,
+      leadConfigId,
+      config: agentConfig,
     });
 
     console.log(`Loaded user: ${username} from ${filePath}`);
@@ -110,7 +167,13 @@ function processFile(
     const subDir = path.join(path.dirname(absolutePath), baseName);
 
     if (fs.existsSync(subDir) && fs.statSync(subDir).isDirectory()) {
-      processDirectory(subDir, agentConfig._id, userMap, usernameToPath);
+      processDirectory(
+        subDir,
+        agentConfig._id,
+        configEntries,
+        usernameToPath,
+        configIdSet,
+      );
     }
   } catch (e) {
     throw new Error(`Failed to process agent config at ${filePath}: ${e}`);

@@ -2,14 +2,14 @@ import { z } from "zod";
 
 // Zod schemas for the new flat message model
 export const MailRecipientSchema = z.object({
-  userId: z.string(),
+  userId: z.number(),
   username: z.string(),
   type: z.string(), // "to", "cc", "bcc"
 });
 
 export const MailMessageSchema = z.object({
-  id: z.string(),
-  fromUserId: z.string(),
+  id: z.number(),
+  fromUserId: z.number(),
   fromUsername: z.string(),
   subject: z.string(),
   body: z.string(),
@@ -35,7 +35,7 @@ export const SendMailRequestSchema = z.object({
 export const SendMailResponseSchema = z.object({
   success: z.boolean(),
   message: z.string().optional(),
-  messageId: z.string().optional(),
+  messageId: z.number().optional(),
 });
 
 export const MailDataRequestSchema = z.object({

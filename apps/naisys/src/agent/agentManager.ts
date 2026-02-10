@@ -1,4 +1,3 @@
-import { adminUserId } from "@naisys/common";
 import {
   AgentStartRequestSchema,
   AgentStartResponse,
@@ -82,8 +81,10 @@ export class AgentManager {
   }
 
   /** A client started in hub mode is hanging on the debug user, so this shows a notification of agent activity */
-  notifyHubRequest(type: "start" | "stop", userId: string) {
-    const username = this.userService.getUserById(userId)?.username || userId;
+  notifyHubRequest(type: "start" | "stop", userId: number) {
+    const username =
+      this.userService.getUserById(userId)?.username || String(userId);
+    const adminUserId = this.userService.getUserByName("admin")?.userId ?? 0;
 
     this.promptNotification.notify({
       wake: true,
@@ -92,7 +93,7 @@ export class AgentManager {
     });
   }
 
-  async startAgent(userId: string, onStop?: (reason: string) => void) {
+  async startAgent(userId: number, onStop?: (reason: string) => void) {
     // Check if agent is already running
     const existing = this.runningAgents.find((a) => a.agentUserId === userId);
     if (existing) {
@@ -141,7 +142,7 @@ export class AgentManager {
   }
 
   async stopAgent(
-    agentUserId: string,
+    agentUserId: number,
     stage: "completeShutdown" | "requestShutdown",
     reason: string,
   ) {
@@ -177,7 +178,7 @@ export class AgentManager {
     }
   }
 
-  async stopAgentByUserId(userId: string, reason: string) {
+  async stopAgentByUserId(userId: number, reason: string) {
     // Find the running agent by userId
     const agent = this.runningAgents.find((a) => a.agentUserId === userId);
     if (!agent) {
@@ -187,7 +188,7 @@ export class AgentManager {
     await this.stopAgent(agent.agentUserId, "requestShutdown", reason);
   }
 
-  setActiveConsoleAgent(userId: string) {
+  setActiveConsoleAgent(userId: number) {
     const newActiveAgent = this.runningAgents.find(
       (a) => a.agentUserId === userId,
     );
@@ -222,7 +223,7 @@ export class AgentManager {
     }
   }
 
-  getBufferLineCount(userId: string) {
+  getBufferLineCount(userId: number) {
     const agent = this.runningAgents.find((a) => a.agentUserId === userId);
 
     if (!agent) {

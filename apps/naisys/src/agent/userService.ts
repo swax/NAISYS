@@ -1,4 +1,4 @@
-import { AgentConfigFileSchema, UserEntry, adminUserId } from "@naisys/common";
+import { AgentConfigFileSchema, UserEntry } from "@naisys/common";
 import { loadAgentConfigs } from "@naisys/common/dist/agentConfigLoader.js";
 import {
   HubEvents,
@@ -19,7 +19,7 @@ export function createUserService(
   hostService: HostService,
   startupAgentPath?: string,
 ) {
-  let userMap: Map<string, UserEntry>;
+  let userMap: Map<number, UserEntry>;
 
   let usersReadyPromise: Promise<void>;
 
@@ -69,55 +69,69 @@ export function createUserService(
     return Array.from(userMap.values());
   }
 
-  function getUserById(id: string): UserEntry | undefined {
+  function getUserById(id: number): UserEntry | undefined {
     return userMap.get(id);
   }
 
   /** In non integrated hub mode, we just start the debug user, otherwise we start all lead agents */
-  function getStartupUserIds(integratedHub: boolean): string[] {
-    if (hubClient && !integratedHub) {
+  function getStartupUserIds(integratedHub: boolean): number[] {
+    const adminUser = getUserByName("admin");
+    const adminId = adminUser?.userId ?? 0;
+
+    const notify = (userId: number, message: string) => {
       promptNotificationService.notify({
         wake: true,
-        userId: adminUserId,
-        commentOutput: [
-          `No agents running yet. Hub will start agents on demand.`,
-        ],
+        userId,
+        commentOutput: [message],
       });
-      return [adminUserId];
+    };
+
+    if (hubClient && !integratedHub) {
+      notify(
+        adminId,
+        `No agents running yet. Hub will start agents on demand.`,
+      );
+      return [adminId];
     }
 
-    const rootAgents = Array.from(userMap.values()).filter(
-      (u) => !u.leadUserId,
+    const leadAgents = Array.from(userMap.values()).filter(
+      (u) => !u.leadUserId && u.userId !== adminId,
     );
 
-    if (rootAgents.length <= 1) {
-      return [adminUserId];
+    if (leadAgents.length === 0) {
+      notify(adminId, `No agents found to start`);
+      return [adminId];
     }
-
-    if (rootAgents.length > 1) {
-      promptNotificationService.notify({
-        wake: true,
-        commentOutput: [
-          `Starting root agents: ${rootAgents.map((u) => u.username).join(", ")}`,
-        ],
-      });
+    // In this case the admin agent still exists as a source of ns-talk command,
+    // but we don't start it as if we did that the user would need to exit twice to get out of naisys
+    // It would also prevent ns-session complete from ending the app
+    else if (leadAgents.length === 1) {
+      return [leadAgents[0].userId];
     }
+    // Starting multiple local lead agents
+    else {
+      const agentList = leadAgents.map((u) => u.username).join(", ");
 
-    return rootAgents.map((u) => u.userId);
+      leadAgents.forEach((agent) =>
+        notify(agent.userId, `Multiple agents started: ${agentList}`),
+      );
+      return leadAgents.map((u) => u.userId);
+    }
   }
 
   // Active user tracking (driven by heartbeatService)
-  let activeUserIds = new Set<string>();
-  let userHostIds = new Map<string, string[]>();
+  let activeUserIds = new Set<number>();
+  let userHostIds = new Map<number, number[]>();
 
-  function setActiveUsers(hostActiveAgents: Record<string, string[]>) {
-    const newActiveUserIds = new Set<string>();
-    const newUserHostIds = new Map<string, string[]>();
+  function setActiveUsers(hostActiveAgents: Record<string, number[]>) {
+    const newActiveUserIds = new Set<number>();
+    const newUserHostIds = new Map<number, number[]>();
 
-    for (const [hostId, userIds] of Object.entries(hostActiveAgents)) {
+    for (const [hostIdStr, userIds] of Object.entries(hostActiveAgents)) {
+      const hostId = Number(hostIdStr);
       for (const userId of userIds) {
         newActiveUserIds.add(userId);
-        if (hostId) {
+        if (hostIdStr) {
           const existing = newUserHostIds.get(userId);
           if (existing) {
             existing.push(hostId);
@@ -132,22 +146,22 @@ export function createUserService(
     userHostIds = newUserHostIds;
   }
 
-  function isUserActive(userId: string): boolean {
+  function isUserActive(userId: number): boolean {
     return activeUserIds.has(userId);
   }
 
-  function getUserHostIds(userId: string): string[] {
+  function getUserHostIds(userId: number): number[] {
     return userHostIds.get(userId) ?? [];
   }
 
-  function getUserHostNames(userId: string): string[] {
+  function getUserHostNames(userId: number): string[] {
     const hostIds = userHostIds.get(userId) ?? [];
     return hostIds
       .map((id) => hostService.getHostName(id))
       .filter((name): name is string => !!name);
   }
 
-  function getUserHostDisplayNames(userId: string): string[] {
+  function getUserHostDisplayNames(userId: number): string[] {
     const hostIds = userHostIds.get(userId) ?? [];
     const localHostId = hostService.getLocalHostId();
     return hostIds
@@ -157,7 +171,7 @@ export function createUserService(
       .filter((name): name is string => !!name);
   }
 
-  function getUserStatus(userId: string): "Active" | "Available" | "Offline" {
+  function getUserStatus(userId: number): "Active" | "Available" | "Offline" {
     if (isUserActive(userId)) return "Active";
     if (!hubClient) return "Available";
 
@@ -173,8 +187,8 @@ export function createUserService(
   }
 
   /** Parse a UserListResponse into a userId → UserEntry map */
-  function parseUserList(response: UserListResponse): Map<string, UserEntry> {
-    const map = new Map<string, UserEntry>();
+  function parseUserList(response: UserListResponse): Map<number, UserEntry> {
+    const map = new Map<number, UserEntry>();
     for (const user of response.users ?? []) {
       const configObj = yaml.load(user.configYaml);
       const config = AgentConfigFileSchema.parse(configObj);
@@ -182,6 +196,7 @@ export function createUserService(
       map.set(user.userId, {
         userId: user.userId,
         username: user.username,
+        configId: "",
         leadUserId: user.leadUserId,
         assignedHostIds: user.assignedHostIds,
         config,

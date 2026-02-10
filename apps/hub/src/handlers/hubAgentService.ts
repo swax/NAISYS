@@ -20,7 +20,7 @@ export function createHubAgentService(
   naisysServer.registerEvent(
     HubEvents.AGENT_START,
     async (
-      hostId: string,
+      hostId: number,
       data: unknown,
       ack: (response: AgentStartResponse) => void,
     ) => {
@@ -39,7 +39,7 @@ export function createHubAgentService(
         );
 
         // Determine eligible hosts: assigned hosts, or all connected if unassigned
-        let eligibleHostIds: string[];
+        let eligibleHostIds: number[];
         if (assignedHostIds.length > 0) {
           eligibleHostIds = assignedHostIds;
         } else {
@@ -108,7 +108,7 @@ export function createHubAgentService(
   naisysServer.registerEvent(
     HubEvents.AGENT_STOP,
     (
-      hostId: string,
+      hostId: number,
       data: unknown,
       ack: (response: AgentStopResponse) => void,
     ) => {

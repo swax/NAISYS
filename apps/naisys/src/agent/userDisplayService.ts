@@ -4,22 +4,22 @@ import { InputModeService } from "../utils/inputMode.js";
 import { UserService } from "./userService.js";
 
 interface UserNode {
-  userId: string;
+  userId: number;
   username: string;
   title: string;
-  leadUserId?: string;
+  leadUserId?: number;
   children: UserNode[];
 }
 
 function buildHierarchy(
   users: {
-    userId: string;
+    userId: number;
     username: string;
     title: string;
-    leadUserId?: string;
+    leadUserId?: number;
   }[],
 ): UserNode[] {
-  const nodeMap = new Map<string, UserNode>();
+  const nodeMap = new Map<number, UserNode>();
   const roots: UserNode[] = [];
 
   for (const user of users) {
@@ -78,7 +78,7 @@ export function createUserDisplayService(
     const flattened = flattenHierarchy(hierarchy);
 
     // Build userId → username lookup for lead display
-    const userIdToUsername = new Map<string, string>();
+    const userIdToUsername = new Map<number, string>();
     for (const u of userItems) {
       userIdToUsername.set(u.userId, u.username);
     }

@@ -7,7 +7,7 @@ import {
 } from "./naisysConnection.js";
 import { HostRegistrar } from "./hostRegistrar.js";
 
-type EventHandler = (hostId: string, ...args: any[]) => void;
+type EventHandler = (hostId: number, ...args: any[]) => void;
 
 /** Registered handler with optional schema for validation */
 interface RegisteredHandler {
@@ -25,7 +25,7 @@ export function createNaisysServer(
   hostRegistrar: HostRegistrar,
 ) {
   // Track connected NAISYS instances
-  const naisysConnections = new Map<string, NaisysConnection>();
+  const naisysConnections = new Map<number, NaisysConnection>();
 
   // Generic event handlers registry - maps event name to set of registered handlers
   const eventHandlers = new Map<string, Set<RegisteredHandler>>();
@@ -56,7 +56,7 @@ export function createNaisysServer(
   }
 
   // Emit an event to all registered handlers, validating data if schema provided
-  function raiseEvent(event: string, hostId: string, ...args: unknown[]) {
+  function raiseEvent(event: string, hostId: number, ...args: unknown[]) {
     const handlers = eventHandlers.get(event);
     if (handlers) {
       for (const { handler, schema } of handlers) {
@@ -86,7 +86,7 @@ export function createNaisysServer(
    * If ack callback is provided, waits for client acknowledgement.
    */
   function sendMessage<T = unknown>(
-    hostId: string,
+    hostId: number,
     event: string,
     payload: unknown,
     ack?: AckCallback<T>,
@@ -174,7 +174,7 @@ export function createNaisysServer(
     unregisterEvent,
     sendMessage,
     getConnectedClients: () => Array.from(naisysConnections.values()),
-    getConnectionByHostId: (hostId: string) => naisysConnections.get(hostId),
+    getConnectionByHostId: (hostId: number) => naisysConnections.get(hostId),
     getConnectionCount: () => naisysConnections.size,
   };
 }

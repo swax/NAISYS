@@ -9,7 +9,7 @@ import { HubClient } from "../hub/hubClient.js";
 export async function createRunService(
   { agentConfig }: AgentConfig,
   hubClient: HubClient | undefined,
-  localUserId: string,
+  localUserId: number,
 ) {
   /** The run ID of an agent process (there could be multiple runs for the same user). Globally unique */
   let runId = -1;

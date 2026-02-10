@@ -20,7 +20,7 @@ export function createPromptBuilder(
   inputMode: InputModeService,
   platformConfig: PlatformConfig,
   promptNotification: PromptNotificationService,
-  localUserId: string,
+  localUserId: number,
 ) {
   /**
    * When actual output is entered by the user we want to cancel any auto-continue timers and/or wake on message

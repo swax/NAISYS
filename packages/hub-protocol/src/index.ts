@@ -13,7 +13,7 @@ import { z } from "zod";
 
 /** Request to create a new run session */
 export const SessionCreateRequestSchema = z.object({
-  userId: z.string(),
+  userId: z.number(),
   modelName: z.string(),
 });
 export type SessionCreateRequest = z.infer<typeof SessionCreateRequestSchema>;
@@ -29,7 +29,7 @@ export type SessionCreateResponse = z.infer<typeof SessionCreateResponseSchema>;
 
 /** Request to increment session for an existing run */
 export const SessionIncrementRequestSchema = z.object({
-  userId: z.string(),
+  userId: z.number(),
   runId: z.number(),
 });
 export type SessionIncrementRequest = z.infer<
@@ -52,7 +52,7 @@ export type SessionIncrementResponse = z.infer<
 
 /** A single log entry sent from NAISYS instance to hub */
 export const LogWriteEntrySchema = z.object({
-  userId: z.string(),
+  userId: z.number(),
   runId: z.number(),
   sessionId: z.number(),
   role: z.string(),
@@ -78,7 +78,7 @@ export const COST_FLUSH_INTERVAL_MS = 2000;
 
 /** A single cost entry sent from NAISYS instance to hub */
 export const CostWriteEntrySchema = z.object({
-  userId: z.string(),
+  userId: z.number(),
   runId: z.number(),
   sessionId: z.number(),
   source: z.string(),
@@ -103,7 +103,7 @@ export type CostWriteRequest = z.infer<typeof CostWriteRequestSchema>;
 
 /** Pushed from hub to NAISYS when an agent's cost-based spending status changes */
 export const CostControlSchema = z.object({
-  userId: z.string(),
+  userId: z.number(),
   enabled: z.boolean(),
   reason: z.string(),
 });
@@ -121,13 +121,13 @@ export const LOG_FLUSH_INTERVAL_MS = 1000;
 
 /** Sent by NAISYS instance to hub with active user IDs (fire-and-forget) */
 export const HeartbeatSchema = z.object({
-  activeUserIds: z.array(z.string()),
+  activeUserIds: z.array(z.number()),
 });
 export type Heartbeat = z.infer<typeof HeartbeatSchema>;
 
 /** Sent by hub to NAISYS instances with aggregate active user IDs */
 export const HeartbeatStatusSchema = z.object({
-  hostActiveAgents: z.record(z.string(), z.array(z.string())),
+  hostActiveAgents: z.record(z.string(), z.array(z.number())),
 });
 export type HeartbeatStatus = z.infer<typeof HeartbeatStatusSchema>;
 
@@ -139,7 +139,7 @@ export type HeartbeatStatus = z.infer<typeof HeartbeatStatusSchema>;
 export const HostListSchema = z.object({
   hosts: z.array(
     z.object({
-      hostId: z.string(),
+      hostId: z.number(),
       hostName: z.string(),
       online: z.boolean(),
     }),
@@ -153,9 +153,9 @@ export type HostList = z.infer<typeof HostListSchema>;
 
 /** Request to start an agent on its assigned host */
 export const AgentStartRequestSchema = z.object({
-  userId: z.string(),
+  userId: z.number(),
   taskDescription: z.string(),
-  sourceHostId: z.string().optional(),
+  sourceHostId: z.number().optional(),
 });
 export type AgentStartRequest = z.infer<typeof AgentStartRequestSchema>;
 
@@ -169,9 +169,9 @@ export type AgentStartResponse = z.infer<typeof AgentStartResponseSchema>;
 
 /** Request to stop an agent on its current host */
 export const AgentStopRequestSchema = z.object({
-  userId: z.string(),
+  userId: z.number(),
   reason: z.string(),
-  sourceHostId: z.string().optional(),
+  sourceHostId: z.number().optional(),
 });
 export type AgentStopRequest = z.infer<typeof AgentStopRequestSchema>;
 
@@ -193,11 +193,11 @@ export const UserListResponseSchema = z.object({
   users: z
     .array(
       z.object({
-        userId: z.string(),
+        userId: z.number(),
         username: z.string(),
-        leadUserId: z.string().optional(),
+        leadUserId: z.number().optional(),
         configYaml: z.string(),
-        assignedHostIds: z.array(z.string()).optional(),
+        assignedHostIds: z.array(z.number()).optional(),
       }),
     )
     .optional(),
@@ -210,7 +210,7 @@ export type UserListResponse = z.infer<typeof UserListResponseSchema>;
 
 /** Request to send a mail message */
 export const MailSendRequestSchema = z.object({
-  fromUserId: z.string(),
+  fromUserId: z.number(),
   toUsernames: z.array(z.string()),
   subject: z.string(),
   body: z.string(),
@@ -226,14 +226,14 @@ export type MailSendResponse = z.infer<typeof MailSendResponseSchema>;
 
 /** Request to list mail messages */
 export const MailListRequestSchema = z.object({
-  userId: z.string(),
+  userId: z.number(),
   filter: z.enum(["received", "sent"]).optional(),
 });
 export type MailListRequest = z.infer<typeof MailListRequestSchema>;
 
 /** A single message in a mail list response */
 export const MailListMessageDataSchema = z.object({
-  id: z.string(),
+  id: z.number(),
   fromUsername: z.string(),
   recipientUsernames: z.array(z.string()),
   subject: z.string(),
@@ -252,14 +252,14 @@ export type MailListResponse = z.infer<typeof MailListResponseSchema>;
 
 /** Request to read a specific mail message */
 export const MailReadRequestSchema = z.object({
-  userId: z.string(),
-  messageId: z.string(),
+  userId: z.number(),
+  messageId: z.number(),
 });
 export type MailReadRequest = z.infer<typeof MailReadRequestSchema>;
 
 /** Full message data returned when reading a message */
 export const MailReadMessageDataSchema = z.object({
-  id: z.string(),
+  id: z.number(),
   subject: z.string(),
   fromUsername: z.string(),
   fromTitle: z.string(),
@@ -279,22 +279,22 @@ export type MailReadResponse = z.infer<typeof MailReadResponseSchema>;
 
 /** Request to archive mail messages */
 export const MailArchiveRequestSchema = z.object({
-  userId: z.string(),
-  messageIds: z.array(z.string()),
+  userId: z.number(),
+  messageIds: z.array(z.number()),
 });
 export type MailArchiveRequest = z.infer<typeof MailArchiveRequestSchema>;
 
 /** Response to mail archive request */
 export const MailArchiveResponseSchema = z.object({
   success: z.boolean(),
-  archivedIds: z.array(z.string()).optional(),
+  archivedIds: z.array(z.number()).optional(),
   error: z.string().optional(),
 });
 export type MailArchiveResponse = z.infer<typeof MailArchiveResponseSchema>;
 
 /** Request to search mail messages */
 export const MailSearchRequestSchema = z.object({
-  userId: z.string(),
+  userId: z.number(),
   terms: z.string(),
   includeArchived: z.boolean().optional(),
   subjectOnly: z.boolean().optional(),
@@ -303,7 +303,7 @@ export type MailSearchRequest = z.infer<typeof MailSearchRequestSchema>;
 
 /** A single message in a mail search response */
 export const MailSearchMessageDataSchema = z.object({
-  id: z.string(),
+  id: z.number(),
   subject: z.string(),
   fromUsername: z.string(),
   createdAt: z.string(),
@@ -320,21 +320,21 @@ export type MailSearchResponse = z.infer<typeof MailSearchResponseSchema>;
 
 /** Request to get unread message IDs */
 export const MailUnreadRequestSchema = z.object({
-  userId: z.string(),
+  userId: z.number(),
 });
 export type MailUnreadRequest = z.infer<typeof MailUnreadRequestSchema>;
 
 /** Response to unread message request */
 export const MailUnreadResponseSchema = z.object({
   success: z.boolean(),
-  messageIds: z.array(z.string()).optional(),
+  messageIds: z.array(z.number()).optional(),
   error: z.string().optional(),
 });
 export type MailUnreadResponse = z.infer<typeof MailUnreadResponseSchema>;
 
 /** Push notification from hub to NAISYS when mail is received */
 export const MailReceivedPushSchema = z.object({
-  recipientUserIds: z.array(z.string()),
+  recipientUserIds: z.array(z.number()),
 });
 export type MailReceivedPush = z.infer<typeof MailReceivedPushSchema>;
 

@@ -1,4 +1,3 @@
-import { ulid } from "@naisys/database";
 import fs from "fs/promises";
 import path from "path";
 import { usingNaisysDb } from "../database/naisysDatabase.js";
@@ -9,7 +8,7 @@ import { usingNaisysDb } from "../database/naisysDatabase.js";
 async function resolveUser(
   username: string,
   host: string,
-): Promise<{ id: string; agent_path: string }> {
+): Promise<{ id: number; agent_path: string }> {
   return await usingNaisysDb(async (prisma) => {
     const user = await prisma.users.findFirst({
       where: {
@@ -31,7 +30,7 @@ async function resolveUser(
  * Update the modified date on the user_notifications table
  */
 async function updateUserNotificationModifiedDate(
-  userId: string,
+  userId: number,
 ): Promise<void> {
   await usingNaisysDb(async (prisma) => {
     // Upsert the user_notifications record to update updated_at
@@ -116,12 +115,11 @@ webEnabled: true
   // Write the YAML file
   await fs.writeFile(agentFilePath, yamlContent, "utf-8");
 
-  // Add agent to the database
-  const userId = ulid();
-  await usingNaisysDb(async (prisma) => {
-    await prisma.users.create({
+  // Add agent to the database, let DB autoincrement
+  const user = await usingNaisysDb(async (prisma) => {
+    return await prisma.users.create({
       data: {
-        id: userId,
+        uuid: crypto.randomUUID(),
         username: name,
         title: "Assistant",
         agent_path: agentFilePath,
@@ -130,7 +128,7 @@ webEnabled: true
   });
 
   // Update user notification modified date
-  await updateUserNotificationModifiedDate(userId);
+  await updateUserNotificationModifiedDate(user.id);
 }
 
 /**

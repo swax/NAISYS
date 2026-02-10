@@ -235,7 +235,7 @@ export const sendMail = async (
 };
 
 export interface RunsDataParams {
-  userId: string;
+  userId: number;
   updatedSince?: string;
   page?: number;
   count?: number;
@@ -245,7 +245,7 @@ export const getRunsData = async (
   params: RunsDataParams,
 ): Promise<RunsDataResponse> => {
   const queryParams = new URLSearchParams();
-  queryParams.append("userId", params.userId);
+  queryParams.append("userId", String(params.userId));
   if (params.updatedSince) {
     queryParams.append("updatedSince", params.updatedSince);
   }
@@ -261,21 +261,21 @@ export const getRunsData = async (
 };
 
 export interface ContextLogParams {
-  userId: string;
+  userId: number;
   runId: number;
   sessionId: number;
-  logsAfter?: string;
+  logsAfter?: number;
 }
 
 export const getContextLog = async (
   params: ContextLogParams,
 ): Promise<ContextLogResponse> => {
   const queryParams = new URLSearchParams();
-  queryParams.append("userId", params.userId);
+  queryParams.append("userId", String(params.userId));
   queryParams.append("runId", params.runId.toString());
   queryParams.append("sessionId", params.sessionId.toString());
-  if (params.logsAfter) {
-    queryParams.append("logsAfter", params.logsAfter);
+  if (params.logsAfter !== undefined) {
+    queryParams.append("logsAfter", String(params.logsAfter));
   }
 
   const url = `${apiEndpoints.contextLog}?${queryParams.toString()}`;

@@ -8,11 +8,11 @@ datasource db {
 }
 
 model context_log {
-  id          String      @id // ULID
-  user_id     String
+  id          Int         @id @default(autoincrement())
+  user_id     Int
   run_id      Int
   session_id  Int
-  host_id     String
+  host_id     Int
   role        String
   source      String
   type        String
@@ -22,16 +22,15 @@ model context_log {
   run_session run_session @relation(fields: [user_id, run_id, session_id], references: [user_id, run_id, session_id], onDelete: NoAction, onUpdate: NoAction)
   host        hosts       @relation(fields: [host_id], references: [id])
 
-  @@index([id(sort: Desc)], map: "idx_context_log_id_desc") // ORDER BY id DESC in runsService.getContextLog
   @@index([user_id, run_id, session_id], map: "idx_context_log_user_run_session") // WHERE user_id, run_id, session_id in runsService.getContextLog
 }
 
 model costs {
-  id                 String      @id // ULID
-  user_id            String
+  id                 Int         @id @default(autoincrement())
+  user_id            Int
   run_id             Int
   session_id         Int
-  host_id            String
+  host_id            Int
   source             String
   model              String
   cost               Float?      @default(0)
@@ -44,15 +43,15 @@ model costs {
   run_session        run_session @relation(fields: [user_id, run_id, session_id], references: [user_id, run_id, session_id], onDelete: NoAction, onUpdate: NoAction)
   host               hosts       @relation(fields: [host_id], references: [id])
 
-  @@index([id(sort: Desc)], map: "idx_costs_id_desc") // ORDER BY id DESC in hubCostService findFirst, WHERE id >= in aggregate ULID range filtering
+  @@index([created_at], map: "idx_costs_created_at") // ORDER BY created_at DESC, WHERE created_at >= in aggregate time range filtering
   @@index([user_id], map: "idx_costs_user_id") // Optional WHERE user_id filter in aggregate spend limit queries
   @@index([user_id, run_id, session_id, source, model], map: "idx_costs_user_run_session_source_model") // WHERE user_id, run_id, session_id, source, model in hubCostService findFirst
 }
 
 model mail_messages {
-  id           String            @id // ULID
-  from_user_id String
-  host_id      String? // Sender's host
+  id           Int               @id @default(autoincrement())
+  from_user_id Int
+  host_id      Int? // Sender's host
   subject      String
   body         String
   created_at   DateTime          @default(now())
@@ -60,15 +59,14 @@ model mail_messages {
   host         hosts?            @relation(fields: [host_id], references: [id])
   recipients   mail_recipients[]
 
-  @@index([id(sort: Desc)], map: "idx_mail_messages_id_desc") // ORDER BY id DESC in supervisor mailService pagination
   @@index([from_user_id], map: "idx_mail_messages_from_user_id") // WHERE from_user_id in sent messages filter
   @@index([created_at(sort: Desc)], map: "idx_mail_messages_created_at_desc") // ORDER BY created_at DESC in listMessages and searchMessages
 }
 
 model mail_recipients {
-  id          String        @id // ULID
-  message_id  String
-  user_id     String
+  id          Int           @id @default(autoincrement())
+  message_id  Int
+  user_id     Int
   type        String // "to", "cc", "bcc"
   read_at     DateTime?
   archived_at DateTime?
@@ -81,11 +79,12 @@ model mail_recipients {
 }
 
 model users {
-  id                 String              @id // ULID
+  id                 Int                 @id @default(autoincrement())
+  uuid               String              @unique
   username           String
   title              String
   agent_path         String              @unique(map: "unq_users_agent_path")
-  lead_user_id       String?
+  lead_user_id       Int?
   config             String              @default("{}")
   created_at         DateTime            @default(now())
   updated_at         DateTime            @updatedAt
@@ -104,10 +103,10 @@ model users {
 }
 
 model user_notifications {
-  user_id        String    @id
-  latest_host_id String?
-  latest_log_id  String    @default("")
-  latest_mail_id String    @default("")
+  user_id        Int       @id
+  latest_host_id Int?
+  latest_log_id  Int       @default(0)
+  latest_mail_id Int       @default(0)
   last_active    DateTime?
   updated_at     DateTime  @updatedAt
   users          users     @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
@@ -115,8 +114,8 @@ model user_notifications {
 }
 
 model user_hosts {
-  user_id    String
-  host_id    String
+  user_id    Int
+  host_id    Int
   created_at DateTime @default(now())
   users      users    @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   host       hosts    @relation(fields: [host_id], references: [id])
@@ -125,13 +124,13 @@ model user_hosts {
 }
 
 model run_session {
-  user_id       String
+  user_id       Int
   run_id        Int
   session_id    Int
-  host_id       String
+  host_id       Int
   last_active   DateTime
   model_name    String
-  latest_log_id String        @default("")
+  latest_log_id Int           @default(0)
   total_lines   Int           @default(0)
   total_cost    Float         @default(0)
   created_at    DateTime      @default(now())
@@ -153,7 +152,7 @@ model schema_version {
 }
 
 model hosts {
-  id                 String               @id
+  id                 Int                  @id @default(autoincrement())
   name               String               @unique(map: "unq_hosts_name") // NAISYS_HOSTNAME
   last_active        DateTime?
   created_at         DateTime             @default(now())

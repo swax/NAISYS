@@ -1,6 +1,6 @@
 export interface PromptNotification {
   wake: boolean;
-  userId?: string;
+  userId?: number;
   contextOutput?: string[];
   commentOutput?: string[];
   processed?: () => void | Promise<void>;
@@ -13,13 +13,13 @@ export interface ProcessedOutput {
 
 export function createPromptNotificationService() {
   /** Per-user notification queues keyed by userId */
-  const pending = new Map<string, PromptNotification[]>();
+  const pending = new Map<number, PromptNotification[]>();
 
   /** Single global notification — new one overwrites old */
   let globalNotification: PromptNotification | null = null;
 
   /** Tracks which userIds have seen the current global notification */
-  const globalNotifiedUserIds = new Set<string>();
+  const globalNotifiedUserIds = new Set<number>();
 
   function notify(notification: PromptNotification) {
     if (!notification.userId) {
@@ -37,7 +37,7 @@ export function createPromptNotificationService() {
     pending.get(userId)!.push(notification);
   }
 
-  function hasPending(userId: string, filter?: "wake"): boolean {
+  function hasPending(userId: number, filter?: "wake"): boolean {
     const userQueue = pending.get(userId) || [];
 
     // Check user's own queue
@@ -73,7 +73,7 @@ export function createPromptNotificationService() {
     }
   }
 
-  async function processPending(userId: string): Promise<ProcessedOutput[]> {
+  async function processPending(userId: number): Promise<ProcessedOutput[]> {
     const output: ProcessedOutput[] = [];
 
     // Process user-specific notifications

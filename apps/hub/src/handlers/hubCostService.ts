@@ -3,7 +3,7 @@ import {
   calculatePeriodBoundaries,
   COST_AGGREGATION_WINDOW_MS,
 } from "@naisys/common";
-import { DatabaseService, PrismaClient, ulid } from "@naisys/database";
+import { DatabaseService, PrismaClient } from "@naisys/database";
 import {
   CostControl,
   CostWriteRequestSchema,
@@ -13,7 +13,6 @@ import yaml from "js-yaml";
 import { HubConfig } from "../hubConfig.js";
 import { HubServerLog } from "../services/hubServerLog.js";
 import { NaisysServer } from "../services/naisysServer.js";
-import { isUlidWithinWindow, minUlidForTime } from "../utils/ulidTools.js";
 import { HubHeartbeatService } from "./hubHeartbeatService.js";
 
 const SPEND_LIMIT_CHECK_INTERVAL_MS = 10_000;
@@ -27,12 +26,12 @@ export function createHubCostService(
   { hubConfig }: HubConfig,
 ) {
   // Track which users have been suspended due to spend limit overrun
-  const suspendedByGlobal = new Set<string>();
-  const suspendedByAgent = new Set<string>();
+  const suspendedByGlobal = new Set<number>();
+  const suspendedByAgent = new Set<number>();
 
   naisysServer.registerEvent(
     HubEvents.COST_WRITE,
-    async (hostId: string, data: unknown) => {
+    async (hostId: number, data: unknown) => {
       try {
         const parsed = CostWriteRequestSchema.parse(data);
 
@@ -50,14 +49,15 @@ export function createHubCostService(
                 source: entry.source,
                 model: entry.model,
               },
-              orderBy: { id: "desc" },
-              select: { id: true },
+              orderBy: { created_at: "desc" },
+              select: { id: true, created_at: true },
             });
 
             // Update existing record if within aggregation window, otherwise create new
             if (
               existingRecord &&
-              isUlidWithinWindow(existingRecord.id, COST_AGGREGATION_WINDOW_MS)
+              Date.now() - existingRecord.created_at.getTime() <
+                COST_AGGREGATION_WINDOW_MS
             ) {
               await prisma.costs.update({
                 where: { id: existingRecord.id },
@@ -72,7 +72,6 @@ export function createHubCostService(
             } else {
               await prisma.costs.create({
                 data: {
-                  id: ulid(),
                   user_id: entry.userId,
                   run_id: entry.runId,
                   session_id: entry.sessionId,
@@ -175,7 +174,7 @@ export function createHubCostService(
   async function queryCostSum(
     prisma: PrismaClient,
     spendLimitHours: number | undefined,
-    userIdFilter?: string,
+    userIdFilter?: number,
   ): Promise<number> {
     const where: Record<string, unknown> = {};
     if (userIdFilter) {
@@ -184,7 +183,7 @@ export function createHubCostService(
 
     if (spendLimitHours !== undefined) {
       const { periodStart } = calculatePeriodBoundaries(spendLimitHours);
-      where.id = { gte: minUlidForTime(periodStart) };
+      where.created_at = { gte: periodStart };
     }
 
     const result = await prisma.costs.aggregate({
@@ -194,7 +193,7 @@ export function createHubCostService(
     return result._sum.cost ?? 0;
   }
 
-  function sendCostControl(userId: string, enabled: boolean, reason: string) {
+  function sendCostControl(userId: number, enabled: boolean, reason: string) {
     const hostIds = heartbeatService.findHostsForAgent(userId);
 
     for (const hostId of hostIds) {
@@ -209,7 +208,7 @@ export function createHubCostService(
   /** Check the global spend limit across all agents */
   async function checkGlobalSpendLimit(
     prisma: PrismaClient,
-    activeUserIds: Set<string>,
+    activeUserIds: Set<number>,
     spendLimit: number,
     spendLimitHours: number | undefined,
   ) {
@@ -240,7 +239,7 @@ export function createHubCostService(
   /** Check a per-agent spend limit */
   async function checkAgentSpendLimit(
     prisma: PrismaClient,
-    userId: string,
+    userId: number,
     spendLimit: number,
     spendLimitHours: number | undefined,
   ) {

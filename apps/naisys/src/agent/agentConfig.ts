@@ -10,7 +10,7 @@ import { valueFromString } from "../utils/utilities.js";
 import { UserService } from "./userService.js";
 
 export function createAgentConfig(
-  localUserId: string,
+  localUserId: number,
   { globalConfig }: GlobalConfig,
   userService: UserService,
 ) {

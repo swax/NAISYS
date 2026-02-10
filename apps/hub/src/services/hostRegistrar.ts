@@ -1,8 +1,8 @@
-import { DatabaseService, ulid } from "@naisys/database";
+import { DatabaseService } from "@naisys/database";
 
 export async function createHostRegistrar(dbService: DatabaseService) {
   /** Cache of all known hosts keyed by id */
-  const hostsById = new Map<string, string>();
+  const hostsById = new Map<number, string>();
 
   // Seed the cache from the database
   await dbService.usingDatabase(async (prisma) => {
@@ -17,9 +17,9 @@ export async function createHostRegistrar(dbService: DatabaseService) {
   /**
    * Register a NAISYS instance by name. Creates a new record if not found,
    * updates last_active on every call.
-   * @returns The host's ULID id
+   * @returns The host's autoincrement id
    */
-  async function registerHost(hostName: string): Promise<string> {
+  async function registerHost(hostName: string): Promise<number> {
     return await dbService.usingDatabase(async (prisma) => {
       const existing = await prisma.hosts.findUnique({
         where: { name: hostName },
@@ -33,23 +33,21 @@ export async function createHostRegistrar(dbService: DatabaseService) {
         return existing.id;
       }
 
-      const newId = ulid();
-      await prisma.hosts.create({
+      const created = await prisma.hosts.create({
         data: {
-          id: newId,
           name: hostName,
           last_active: new Date().toISOString(),
         },
       });
 
-      hostsById.set(newId, hostName);
+      hostsById.set(created.id, hostName);
 
-      return newId;
+      return created.id;
     });
   }
 
   /** Returns all known hosts (from DB + any newly registered) */
-  function getAllHosts(): { hostId: string; hostName: string }[] {
+  function getAllHosts(): { hostId: number; hostName: string }[] {
     return Array.from(hostsById, ([hostId, hostName]) => ({
       hostId,
       hostName,
