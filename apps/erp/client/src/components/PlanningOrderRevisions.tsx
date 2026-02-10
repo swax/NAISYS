@@ -129,12 +129,13 @@ export const PlanningOrderRevisions: React.FC<Props> = ({ orderId }) => {
             </Table.Thead>
             <Table.Tbody>
               {data.items.map((rev) => (
-                <Table.Tr key={rev.id}>
+                <Table.Tr key={rev.id} data-testid={`revision-row-${rev.revNo}`}>
                   <Table.Td>{rev.revNo}</Table.Td>
                   <Table.Td>
                     <Badge
                       color={STATUS_COLORS[rev.status] ?? "gray"}
                       variant="light"
+                      data-testid={`revision-status-${rev.revNo}`}
                     >
                       {rev.status}
                     </Badge>
@@ -158,6 +159,7 @@ export const PlanningOrderRevisions: React.FC<Props> = ({ orderId }) => {
                             variant="light"
                             color="green"
                             onClick={() => handleApprove(rev)}
+                            data-testid={`revision-approve-${rev.revNo}`}
                           >
                             Approve
                           </Button>
@@ -182,6 +184,7 @@ export const PlanningOrderRevisions: React.FC<Props> = ({ orderId }) => {
                                 `/execution/orders/new?planOrderId=${orderId}&planOrderRevId=${rev.id}`,
                               )
                             }
+                            data-testid={`revision-cut-order-${rev.revNo}`}
                           >
                             Cut Order
                           </Button>

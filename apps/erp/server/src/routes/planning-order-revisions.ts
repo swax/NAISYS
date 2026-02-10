@@ -13,6 +13,7 @@ import {
   revisionPaginationLinks,
   selfLink,
 } from "../hateoas.js";
+import type { PlanningOrderRevisionModel } from "../generated/prisma/models/PlanningOrderRevision.js";
 
 const PARENT_RESOURCE = "planning/orders";
 
@@ -27,26 +28,17 @@ const RevisionIdParamsSchema = z.object({
 
 function formatItem(
   orderId: number,
-  item: {
-    id: number;
-    plan_order_id: number;
-    rev_no: number;
-    status: string;
-    notes: string | null;
-    change_summary: string | null;
-    created_at: Date;
-    approved_at: Date | null;
-  },
+  item: PlanningOrderRevisionModel,
 ) {
   return {
     id: item.id,
-    planOrderId: item.plan_order_id,
-    revNo: item.rev_no,
+    planOrderId: item.planOrderId,
+    revNo: item.revNo,
     status: item.status,
     notes: item.notes,
-    changeSummary: item.change_summary,
-    createdAt: item.created_at.toISOString(),
-    approvedAt: item.approved_at?.toISOString() ?? null,
+    changeSummary: item.changeSummary,
+    createdAt: item.createdAt.toISOString(),
+    approvedAt: item.approvedAt?.toISOString() ?? null,
     _links: revisionItemLinks(PARENT_RESOURCE, orderId, item.id),
     _actions: revisionItemActions(
       PARENT_RESOURCE,
@@ -59,7 +51,7 @@ function formatItem(
 
 function formatListItem(
   orderId: number,
-  item: Parameters<typeof formatItem>[1],
+  item: PlanningOrderRevisionModel,
 ) {
   return {
     ...formatItem(orderId, item),
@@ -110,7 +102,7 @@ export default async function planningOrderRevisionRoutes(
         };
       }
 
-      const where: Record<string, unknown> = { plan_order_id: orderId };
+      const where: Record<string, unknown> = { planOrderId: orderId };
       if (status) where.status = status;
 
       const [items, total] = await Promise.all([
@@ -118,7 +110,7 @@ export default async function planningOrderRevisionRoutes(
           where,
           skip: (page - 1) * pageSize,
           take: pageSize,
-          orderBy: { rev_no: "desc" },
+          orderBy: { revNo: "desc" },
         }),
         prisma.planningOrderRevision.count({ where }),
       ]);
@@ -161,21 +153,21 @@ export default async function planningOrderRevisionRoutes(
         };
       }
 
-      // Auto-increment rev_no inside a transaction to prevent race conditions
+      // Auto-increment revNo inside a transaction to prevent race conditions
       const item = await prisma.$transaction(async (tx) => {
         const maxRev = await tx.planningOrderRevision.findFirst({
-          where: { plan_order_id: orderId },
-          orderBy: { rev_no: "desc" },
-          select: { rev_no: true },
+          where: { planOrderId: orderId },
+          orderBy: { revNo: "desc" },
+          select: { revNo: true },
         });
-        const nextRevNo = (maxRev?.rev_no ?? 0) + 1;
+        const nextRevNo = (maxRev?.revNo ?? 0) + 1;
 
         return tx.planningOrderRevision.create({
           data: {
-            plan_order_id: orderId,
-            rev_no: nextRevNo,
+            planOrderId: orderId,
+            revNo: nextRevNo,
             notes: notes ?? null,
-            change_summary: changeSummary ?? null,
+            changeSummary: changeSummary ?? null,
           },
         });
       });
@@ -196,7 +188,7 @@ export default async function planningOrderRevisionRoutes(
       const { orderId, revisionId } = request.params;
 
       const item = await prisma.planningOrderRevision.findFirst({
-        where: { id: revisionId, plan_order_id: orderId },
+        where: { id: revisionId, planOrderId: orderId },
       });
       if (!item) {
         reply.status(404);
@@ -223,7 +215,7 @@ export default async function planningOrderRevisionRoutes(
       const { notes, changeSummary } = request.body;
 
       const existing = await prisma.planningOrderRevision.findFirst({
-        where: { id: revisionId, plan_order_id: orderId },
+        where: { id: revisionId, planOrderId: orderId },
       });
       if (!existing) {
         reply.status(404);
@@ -245,7 +237,7 @@ export default async function planningOrderRevisionRoutes(
         where: { id: revisionId },
         data: {
           ...(notes !== undefined ? { notes } : {}),
-          ...(changeSummary !== undefined ? { change_summary: changeSummary } : {}),
+          ...(changeSummary !== undefined ? { changeSummary } : {}),
         },
       });
 
@@ -264,7 +256,7 @@ export default async function planningOrderRevisionRoutes(
       const { orderId, revisionId } = request.params;
 
       const existing = await prisma.planningOrderRevision.findFirst({
-        where: { id: revisionId, plan_order_id: orderId },
+        where: { id: revisionId, planOrderId: orderId },
       });
       if (!existing) {
         reply.status(404);
@@ -283,7 +275,7 @@ export default async function planningOrderRevisionRoutes(
       }
 
       const execOrderCount = await prisma.execOrder.count({
-        where: { plan_order_rev_id: revisionId },
+        where: { planOrderRevId: revisionId },
       });
       if (execOrderCount > 0) {
         reply.status(409);
@@ -310,7 +302,7 @@ export default async function planningOrderRevisionRoutes(
       const { orderId, revisionId } = request.params;
 
       const existing = await prisma.planningOrderRevision.findFirst({
-        where: { id: revisionId, plan_order_id: orderId },
+        where: { id: revisionId, planOrderId: orderId },
       });
       if (!existing) {
         reply.status(404);
@@ -332,7 +324,7 @@ export default async function planningOrderRevisionRoutes(
         where: { id: revisionId },
         data: {
           status: "approved",
-          approved_at: new Date(),
+          approvedAt: new Date(),
         },
       });
 
@@ -351,7 +343,7 @@ export default async function planningOrderRevisionRoutes(
       const { orderId, revisionId } = request.params;
 
       const existing = await prisma.planningOrderRevision.findFirst({
-        where: { id: revisionId, plan_order_id: orderId },
+        where: { id: revisionId, planOrderId: orderId },
       });
       if (!existing) {
         reply.status(404);

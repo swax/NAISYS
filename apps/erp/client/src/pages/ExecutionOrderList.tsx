@@ -157,6 +157,7 @@ export const ExecutionOrderList: React.FC = () => {
                   onClick={() =>
                     navigate(`/execution/orders/${item.id}`)
                   }
+                  data-testid={`exec-order-row-${item.orderNo}`}
                 >
                   <Table.Td>
                     <Text size="sm" ff="monospace">
