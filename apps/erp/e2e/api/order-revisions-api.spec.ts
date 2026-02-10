@@ -12,7 +12,7 @@ test.describe("Planning Order Revisions - API happy path", () => {
         key: `e2e-rev-test-${Date.now()}`,
         name: "E2E Revision Test Order",
         description: "Order created for revision e2e testing",
-        createdBy: "e2e-test",
+        createdBy: 1,
       },
     });
     expect(res.status()).toBe(201);
@@ -44,6 +44,7 @@ test.describe("Planning Order Revisions - API happy path", () => {
         data: {
           notes: "Initial draft",
           changeSummary: "First version of the order",
+          createdBy: 1,
         },
       },
     );
@@ -72,6 +73,7 @@ test.describe("Planning Order Revisions - API happy path", () => {
         data: {
           notes: "Updated draft notes",
           changeSummary: "Updated summary",
+          updatedBy: 1,
         },
       },
     );
@@ -104,7 +106,7 @@ test.describe("Planning Order Revisions - API happy path", () => {
   test("cannot update approved revision (409)", async ({ request }) => {
     const res = await request.put(
       `${API}/planning/orders/${orderId}/revisions/${revisionId}`,
-      { data: { notes: "should fail" } },
+      { data: { notes: "should fail", updatedBy: 1 } },
     );
     expect(res.status()).toBe(409);
     const body = await res.json();
@@ -145,6 +147,7 @@ test.describe("Planning Order Revisions - API happy path", () => {
         data: {
           notes: "Second revision",
           changeSummary: "Improvements based on feedback",
+          createdBy: 1,
         },
       },
     );

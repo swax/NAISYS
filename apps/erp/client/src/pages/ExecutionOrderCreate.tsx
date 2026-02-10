@@ -21,7 +21,7 @@ export const ExecutionOrderCreate: React.FC = () => {
       dueAt: data.dueAt || undefined,
       assignedTo: data.assignedTo || undefined,
       notes: data.notes || undefined,
-      createdBy: "admin",
+      createdBy: 1,
     });
     navigate("/execution/orders");
   };

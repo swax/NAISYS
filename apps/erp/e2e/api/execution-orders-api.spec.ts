@@ -17,7 +17,7 @@ test.describe("Execution Orders - API happy path", () => {
         key: `e2e-exec-test-${Date.now()}`,
         name: "E2E Exec Test Order",
         description: "Order for execution order e2e testing",
-        createdBy: "e2e-test",
+        createdBy: 1,
       },
     });
     expect(orderRes.status()).toBe(201);
@@ -31,6 +31,7 @@ test.describe("Execution Orders - API happy path", () => {
         data: {
           notes: "Test revision",
           changeSummary: "Initial",
+          createdBy: 1,
         },
       },
     );
@@ -47,7 +48,7 @@ test.describe("Execution Orders - API happy path", () => {
         priority: "high",
         assignedTo: "test-user",
         notes: "First execution order",
-        createdBy: "e2e-test",
+        createdBy: 1,
       },
     });
     expect(res.status()).toBe(201);
@@ -107,7 +108,7 @@ test.describe("Execution Orders - API happy path", () => {
       data: {
         priority: "critical",
         notes: "Updated notes",
-        updatedBy: "e2e-test",
+        updatedBy: 1,
       },
     });
     expect(res.status()).toBe(200);
@@ -193,7 +194,7 @@ test.describe("Execution Orders - API happy path", () => {
         planOrderId,
         planOrderRevId,
         priority: "low",
-        createdBy: "e2e-test",
+        createdBy: 1,
       },
     });
     expect(createRes.status()).toBe(201);
@@ -250,7 +251,7 @@ test.describe("Execution Orders - API happy path", () => {
     // Create a new draft revision, then create an exec order against it
     const revRes = await request.post(
       `${API}/planning/orders/${planOrderId}/revisions`,
-      { data: { notes: "Draft with exec orders" } },
+      { data: { notes: "Draft with exec orders", createdBy: 1 } },
     );
     expect(revRes.status()).toBe(201);
     const rev = await revRes.json();
@@ -260,7 +261,7 @@ test.describe("Execution Orders - API happy path", () => {
         planOrderId,
         planOrderRevId: rev.id,
         priority: "low",
-        createdBy: "e2e-test",
+        createdBy: 1,
       },
     });
     expect(execRes.status()).toBe(201);

@@ -33,9 +33,9 @@ export const ExecutionOrderSchema = z.object({
   assignedTo: z.string().nullable(),
   notes: z.string().nullable(),
   createdAt: z.iso.datetime(),
-  createdBy: z.string(),
+  createdBy: z.number(),
   updatedAt: z.iso.datetime(),
-  updatedBy: z.string(),
+  updatedBy: z.number(),
   _links: z.array(HateoasLinkSchema),
   _actions: z.array(HateoasActionSchema).optional(),
 });
@@ -51,7 +51,7 @@ export const CreateExecutionOrderSchema = z.object({
   dueAt: z.iso.datetime().optional(),
   assignedTo: z.string().max(200).optional(),
   notes: z.string().max(2000).optional(),
-  createdBy: z.string().min(1),
+  createdBy: z.number().int(),
 });
 
 export type CreateExecutionOrder = z.infer<typeof CreateExecutionOrderSchema>;
@@ -63,7 +63,7 @@ export const UpdateExecutionOrderSchema = z.object({
   dueAt: z.iso.datetime().nullable().optional(),
   assignedTo: z.string().max(200).nullable().optional(),
   notes: z.string().max(2000).nullable().optional(),
-  updatedBy: z.string().min(1),
+  updatedBy: z.number().int(),
 });
 
 export type UpdateExecutionOrder = z.infer<typeof UpdateExecutionOrderSchema>;

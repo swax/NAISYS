@@ -3,8 +3,8 @@ node_modules/
 server/client-dist/
 server/dist/
 server/src/generated/
-server/prisma/erp.db
-server/prisma/erp.db-journal
+server/prisma/*.db
+server/prisma/*.db-journal
 server/prisma/migrations/
 server/.env
 shared/dist/

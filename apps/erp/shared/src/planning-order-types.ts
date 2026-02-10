@@ -8,9 +8,9 @@ export const PlanningOrderSchema = z.object({
   name: z.string(),
   description: z.string(),
   status: z.string(),
-  createdBy: z.string(),
+  createdBy: z.number(),
   createdAt: z.iso.datetime(),
-  updatedBy: z.string(),
+  updatedBy: z.number(),
   updatedAt: z.iso.datetime(),
   _links: z.array(HateoasLinkSchema),
   _actions: z.array(HateoasActionSchema).optional(),
@@ -27,7 +27,7 @@ export const CreatePlanningOrderSchema = z.object({
     .regex(/^[a-z0-9-]+$/, "Key must be lowercase alphanumeric with hyphens"),
   name: z.string().min(1).max(200),
   description: z.string().max(2000).optional().default(""),
-  createdBy: z.string().min(1),
+  createdBy: z.number().int(),
 });
 
 export type CreatePlanningOrder = z.infer<typeof CreatePlanningOrderSchema>;
@@ -37,7 +37,7 @@ export const UpdatePlanningOrderSchema = z.object({
   name: z.string().min(1).max(200).optional(),
   description: z.string().max(2000).optional(),
   status: z.enum(["active", "archived"]).optional(),
-  updatedBy: z.string().min(1),
+  updatedBy: z.number().int(),
 });
 
 export type UpdatePlanningOrder = z.infer<typeof UpdatePlanningOrderSchema>;
