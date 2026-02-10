@@ -1,0 +1,68 @@
+datasource db {
+  provider = "sqlite"
+}
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+model PlanningOrder {
+  id          Int      @id @default(autoincrement())
+  key         String   @unique
+  name        String
+  description String   @default("")
+  status      String   @default("active") // "active" | "archived"
+  created_by  String
+  created_at  DateTime @default(now())
+  updated_by  String
+  updated_at  DateTime @updatedAt
+
+  revisions  PlanningOrderRevision[]
+  execOrders ExecOrder[]
+
+  @@map("plan_orders")
+}
+
+model PlanningOrderRevision {
+  id              Int       @id @default(autoincrement())
+  plan_order_id   Int
+  rev_no          Int
+  status          String    @default("draft") // "draft" | "approved" | "obsolete"
+  notes           String?
+  change_summary  String?
+  created_at      DateTime  @default(now())
+  approved_at     DateTime?
+
+  order      PlanningOrder @relation(fields: [plan_order_id], references: [id], onDelete: Cascade)
+  execOrders ExecOrder[]
+
+  @@unique([plan_order_id, rev_no])
+  @@map("plan_order_revs")
+}
+
+model ExecOrder {
+  id                 Int       @id @default(autoincrement())
+  order_no           Int
+  plan_order_id      Int
+  plan_order_rev_id  Int
+  status             String    @default("released")
+  priority           String    @default("medium")
+  scheduled_start_at DateTime?
+  due_at             DateTime?
+  released_at        DateTime  @default(now())
+  started_at         DateTime?
+  closed_at          DateTime?
+  assigned_to        String?
+  notes              String?
+  created_at         DateTime  @default(now())
+  created_by         String
+  updated_at         DateTime  @updatedAt
+  updated_by         String
+
+  planOrder    PlanningOrder         @relation(fields: [plan_order_id], references: [id], onDelete: Cascade)
+  planOrderRev PlanningOrderRevision @relation(fields: [plan_order_rev_id], references: [id], onDelete: Cascade)
+
+  @@unique([plan_order_id, order_no])
+  @@map("exec_orders")
+}

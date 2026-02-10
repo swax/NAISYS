@@ -11,8 +11,11 @@
     "clean": "npx rimraf dist client-dist",
     "dev": "tsx watch src/server.ts",
     "start": "node dist/server.js",
-    "build": "tsc && npx shx cp -r ../client/dist client-dist",
-    "type-check": "tsc --noEmit"
+    "build": "prisma generate && tsc && npx shx rm -rf client-dist && npx shx cp -r ../client/dist client-dist",
+    "type-check": "tsc --noEmit",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:push": "prisma db push"
   },
   "files": [
     "dist",
@@ -21,15 +24,20 @@
   "dependencies": {
     "@fastify/cors": "^11.2.0",
     "@fastify/static": "^9.0.0",
+    "@fastify/swagger": "^9.7.0",
+    "@naisys-erp/shared": "file:../shared",
+    "@prisma/adapter-better-sqlite3": "^7.3.0",
+    "@prisma/client": "^7.3.0",
+    "@scalar/fastify-api-reference": "^1.44.15",
     "dotenv": "^17.2.3",
     "fastify": "^5.6.2",
     "fastify-plugin": "^5.0.1",
     "fastify-type-provider-zod": "^6.1.0",
-    "@naisys-erp/shared": "file:../shared",
     "zod": "^4.3.5"
   },
   "devDependencies": {
     "@types/node": "^25.0.3",
+    "prisma": "^7.3.0",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3"
   },
