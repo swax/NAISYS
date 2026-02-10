@@ -12,8 +12,8 @@ export const PlanningOrderRevisionSchema = z.object({
   status: RevisionStatusEnum,
   notes: z.string().nullable(),
   changeSummary: z.string().nullable(),
-  createdAt: z.string(),
-  approvedAt: z.string().nullable(),
+  createdAt: z.iso.datetime(),
+  approvedAt: z.iso.datetime().nullable(),
   _links: z.array(HateoasLinkSchema),
   _actions: z.array(HateoasActionSchema).optional(),
 });

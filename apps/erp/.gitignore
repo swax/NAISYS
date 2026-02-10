@@ -8,3 +8,4 @@ server/prisma/erp.db-journal
 server/prisma/migrations/
 server/.env
 shared/dist/
+test-results/
