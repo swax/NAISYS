@@ -3,8 +3,13 @@ import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod/v4";
 import {
   CreateExecutionOrderSchema,
+  ErrorResponseSchema,
   ExecutionOrderListQuerySchema,
+  ExecutionOrderListResponseSchema,
+  ExecutionOrderSchema,
   UpdateExecutionOrderSchema,
+  type ExecutionOrderPriority,
+  type ExecutionOrderStatus,
 } from "@naisys-erp/shared";
 import prisma from "../db.js";
 import { sendError } from "../error-handler.js";
@@ -32,8 +37,8 @@ function formatItem(item: ExecOrderModel) {
     orderNo: item.orderNo,
     planOrderId: item.planOrderId,
     planOrderRevId: item.planOrderRevId,
-    status: item.status,
-    priority: item.priority,
+    status: item.status as ExecutionOrderStatus,
+    priority: item.priority as ExecutionOrderPriority,
     scheduledStartAt: formatDate(item.scheduledStartAt),
     dueAt: formatDate(item.dueAt),
     releasedAt: item.releasedAt.toISOString(),
@@ -51,8 +56,9 @@ function formatItem(item: ExecOrderModel) {
 }
 
 function formatListItem(item: ExecOrderModel) {
+  const { _actions, ...rest } = formatItem(item);
   return {
-    ...formatItem(item),
+    ...rest,
     _links: [selfLink(`/${RESOURCE}/${item.id}`)],
   };
 }
@@ -66,6 +72,9 @@ export default async function executionOrderRoutes(fastify: FastifyInstance) {
       description: "List execution orders with pagination and filtering",
       tags: ["Execution Orders"],
       querystring: ExecutionOrderListQuerySchema,
+      response: {
+        200: ExecutionOrderListResponseSchema,
+      },
     },
     handler: async (request) => {
       const { page, pageSize, status, priority, search } = request.query;
@@ -117,6 +126,10 @@ export default async function executionOrderRoutes(fastify: FastifyInstance) {
       description: "Create a new execution order",
       tags: ["Execution Orders"],
       body: CreateExecutionOrderSchema,
+      response: {
+        201: ExecutionOrderSchema,
+        404: ErrorResponseSchema,
+      },
     },
     handler: async (request, reply) => {
       const {
@@ -194,6 +207,10 @@ export default async function executionOrderRoutes(fastify: FastifyInstance) {
       description: "Get a single execution order by ID",
       tags: ["Execution Orders"],
       params: IdParamsSchema,
+      response: {
+        200: ExecutionOrderSchema,
+        404: ErrorResponseSchema,
+      },
     },
     handler: async (request, reply) => {
       const { id } = request.params;
@@ -220,6 +237,11 @@ export default async function executionOrderRoutes(fastify: FastifyInstance) {
       tags: ["Execution Orders"],
       params: IdParamsSchema,
       body: UpdateExecutionOrderSchema,
+      response: {
+        200: ExecutionOrderSchema,
+        404: ErrorResponseSchema,
+        409: ErrorResponseSchema,
+      },
     },
     handler: async (request, reply) => {
       const { id } = request.params;
@@ -273,6 +295,11 @@ export default async function executionOrderRoutes(fastify: FastifyInstance) {
       description: "Delete an execution order (released status only)",
       tags: ["Execution Orders"],
       params: IdParamsSchema,
+      response: {
+        204: z.void(),
+        404: ErrorResponseSchema,
+        409: ErrorResponseSchema,
+      },
     },
     handler: async (request, reply) => {
       const { id } = request.params;
@@ -307,6 +334,11 @@ export default async function executionOrderRoutes(fastify: FastifyInstance) {
       description: "Start an execution order (released → started)",
       tags: ["Execution Orders"],
       params: IdParamsSchema,
+      response: {
+        200: ExecutionOrderSchema,
+        404: ErrorResponseSchema,
+        409: ErrorResponseSchema,
+      },
     },
     handler: async (request, reply) => {
       const { id } = request.params;
@@ -348,6 +380,11 @@ export default async function executionOrderRoutes(fastify: FastifyInstance) {
       description: "Close an execution order (started → closed)",
       tags: ["Execution Orders"],
       params: IdParamsSchema,
+      response: {
+        200: ExecutionOrderSchema,
+        404: ErrorResponseSchema,
+        409: ErrorResponseSchema,
+      },
     },
     handler: async (request, reply) => {
       const { id } = request.params;
@@ -389,6 +426,11 @@ export default async function executionOrderRoutes(fastify: FastifyInstance) {
       description: "Cancel an execution order (released/started → cancelled)",
       tags: ["Execution Orders"],
       params: IdParamsSchema,
+      response: {
+        200: ExecutionOrderSchema,
+        404: ErrorResponseSchema,
+        409: ErrorResponseSchema,
+      },
     },
     handler: async (request, reply) => {
       const { id } = request.params;

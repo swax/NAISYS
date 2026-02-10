@@ -94,40 +94,40 @@ function buildQuery(
 }
 
 export function paginationLinks(
-  resource: string,
+  basePath: string,
   page: number,
   pageSize: number,
   total: number,
   filters?: Record<string, string | undefined>,
 ): HateoasLink[] {
-  const basePath = `${API_PREFIX}/${resource}`;
+  const fullPath = `${API_PREFIX}/${basePath}`;
   const totalPages = Math.ceil(total / pageSize);
   const links: HateoasLink[] = [
     {
       rel: "self",
-      href: `${basePath}?${buildQuery(page, pageSize, filters)}`,
+      href: `${fullPath}?${buildQuery(page, pageSize, filters)}`,
     },
     {
       rel: "first",
-      href: `${basePath}?${buildQuery(1, pageSize, filters)}`,
+      href: `${fullPath}?${buildQuery(1, pageSize, filters)}`,
     },
     {
       rel: "last",
-      href: `${basePath}?${buildQuery(Math.max(1, totalPages), pageSize, filters)}`,
+      href: `${fullPath}?${buildQuery(Math.max(1, totalPages), pageSize, filters)}`,
     },
   ];
 
   if (page > 1) {
     links.push({
       rel: "prev",
-      href: `${basePath}?${buildQuery(page - 1, pageSize, filters)}`,
+      href: `${fullPath}?${buildQuery(page - 1, pageSize, filters)}`,
     });
   }
 
   if (page < totalPages) {
     links.push({
       rel: "next",
-      href: `${basePath}?${buildQuery(page + 1, pageSize, filters)}`,
+      href: `${fullPath}?${buildQuery(page + 1, pageSize, filters)}`,
     });
   }
 
@@ -211,48 +211,6 @@ export function revisionItemActions(
   // obsolete: no actions
 
   return actions;
-}
-
-export function revisionPaginationLinks(
-  parentResource: string,
-  parentId: number,
-  page: number,
-  pageSize: number,
-  total: number,
-  filters?: Record<string, string | undefined>,
-): HateoasLink[] {
-  const basePath = `${API_PREFIX}/${parentResource}/${parentId}/revisions`;
-  const totalPages = Math.ceil(total / pageSize);
-  const links: HateoasLink[] = [
-    {
-      rel: "self",
-      href: `${basePath}?${buildQuery(page, pageSize, filters)}`,
-    },
-    {
-      rel: "first",
-      href: `${basePath}?${buildQuery(1, pageSize, filters)}`,
-    },
-    {
-      rel: "last",
-      href: `${basePath}?${buildQuery(Math.max(1, totalPages), pageSize, filters)}`,
-    },
-  ];
-
-  if (page > 1) {
-    links.push({
-      rel: "prev",
-      href: `${basePath}?${buildQuery(page - 1, pageSize, filters)}`,
-    });
-  }
-
-  if (page < totalPages) {
-    links.push({
-      rel: "next",
-      href: `${basePath}?${buildQuery(page + 1, pageSize, filters)}`,
-    });
-  }
-
-  return links;
 }
 
 // --- Execution Order HATEOAS helpers ---

@@ -3,15 +3,19 @@ import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod/v4";
 import {
   CreatePlanningOrderRevisionSchema,
+  ErrorResponseSchema,
   PlanningOrderRevisionListQuerySchema,
+  PlanningOrderRevisionListResponseSchema,
+  PlanningOrderRevisionSchema,
   UpdatePlanningOrderRevisionSchema,
+  type RevisionStatus,
 } from "@naisys-erp/shared";
 import prisma from "../db.js";
 import { sendError } from "../error-handler.js";
 import {
   revisionItemLinks,
   revisionItemActions,
-  revisionPaginationLinks,
+  paginationLinks,
   selfLink,
 } from "../hateoas.js";
 import type { PlanningOrderRevisionModel } from "../generated/prisma/models/PlanningOrderRevision.js";
@@ -32,7 +36,7 @@ function formatItem(orderId: number, item: PlanningOrderRevisionModel) {
     id: item.id,
     planOrderId: item.planOrderId,
     revNo: item.revNo,
-    status: item.status,
+    status: item.status as RevisionStatus,
     notes: item.notes,
     changeSummary: item.changeSummary,
     createdAt: item.createdAt.toISOString(),
@@ -48,15 +52,10 @@ function formatItem(orderId: number, item: PlanningOrderRevisionModel) {
 }
 
 function formatListItem(orderId: number, item: PlanningOrderRevisionModel) {
+  const { _actions, ...rest } = formatItem(orderId, item);
   return {
-    ...formatItem(orderId, item),
+    ...rest,
     _links: [selfLink(`/${PARENT_RESOURCE}/${orderId}/revisions/${item.id}`)],
-    _actions: revisionItemActions(
-      PARENT_RESOURCE,
-      orderId,
-      item.id,
-      item.status,
-    ),
   };
 }
 
@@ -79,6 +78,10 @@ export default async function planningOrderRevisionRoutes(
       tags: ["Planning Order Revisions"],
       params: OrderIdParamsSchema,
       querystring: PlanningOrderRevisionListQuerySchema,
+      response: {
+        200: PlanningOrderRevisionListResponseSchema,
+        404: ErrorResponseSchema,
+      },
     },
     handler: async (request, reply) => {
       const { orderId } = request.params;
@@ -112,9 +115,8 @@ export default async function planningOrderRevisionRoutes(
         total,
         page,
         pageSize,
-        _links: revisionPaginationLinks(
-          PARENT_RESOURCE,
-          orderId,
+        _links: paginationLinks(
+          `${PARENT_RESOURCE}/${orderId}/revisions`,
           page,
           pageSize,
           total,
@@ -131,6 +133,10 @@ export default async function planningOrderRevisionRoutes(
       tags: ["Planning Order Revisions"],
       params: OrderIdParamsSchema,
       body: CreatePlanningOrderRevisionSchema,
+      response: {
+        201: PlanningOrderRevisionSchema,
+        404: ErrorResponseSchema,
+      },
     },
     handler: async (request, reply) => {
       const { orderId } = request.params;
@@ -176,6 +182,10 @@ export default async function planningOrderRevisionRoutes(
       description: "Get a single revision by ID",
       tags: ["Planning Order Revisions"],
       params: RevisionIdParamsSchema,
+      response: {
+        200: PlanningOrderRevisionSchema,
+        404: ErrorResponseSchema,
+      },
     },
     handler: async (request, reply) => {
       const { orderId, revisionId } = request.params;
@@ -203,6 +213,11 @@ export default async function planningOrderRevisionRoutes(
       tags: ["Planning Order Revisions"],
       params: RevisionIdParamsSchema,
       body: UpdatePlanningOrderRevisionSchema,
+      response: {
+        200: PlanningOrderRevisionSchema,
+        404: ErrorResponseSchema,
+        409: ErrorResponseSchema,
+      },
     },
     handler: async (request, reply) => {
       const { orderId, revisionId } = request.params;
@@ -247,6 +262,11 @@ export default async function planningOrderRevisionRoutes(
       description: "Delete a revision (draft status only)",
       tags: ["Planning Order Revisions"],
       params: RevisionIdParamsSchema,
+      response: {
+        204: z.void(),
+        404: ErrorResponseSchema,
+        409: ErrorResponseSchema,
+      },
     },
     handler: async (request, reply) => {
       const { orderId, revisionId } = request.params;
@@ -295,6 +315,11 @@ export default async function planningOrderRevisionRoutes(
       description: "Approve a draft revision",
       tags: ["Planning Order Revisions"],
       params: RevisionIdParamsSchema,
+      response: {
+        200: PlanningOrderRevisionSchema,
+        404: ErrorResponseSchema,
+        409: ErrorResponseSchema,
+      },
     },
     handler: async (request, reply) => {
       const { orderId, revisionId } = request.params;
@@ -338,6 +363,11 @@ export default async function planningOrderRevisionRoutes(
       description: "Mark an approved revision as obsolete",
       tags: ["Planning Order Revisions"],
       params: RevisionIdParamsSchema,
+      response: {
+        200: PlanningOrderRevisionSchema,
+        404: ErrorResponseSchema,
+        409: ErrorResponseSchema,
+      },
     },
     handler: async (request, reply) => {
       const { orderId, revisionId } = request.params;
