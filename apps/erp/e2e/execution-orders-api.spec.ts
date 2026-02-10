@@ -236,14 +236,44 @@ test.describe("Execution Orders - API happy path", () => {
     }
   });
 
-  test("cleanup - delete execution orders and planning order", async ({
+  test("cannot delete planning order with revisions (409)", async ({
     request,
   }) => {
-    // The closed and cancelled orders can't be deleted via API,
-    // so we just delete the planning order (which will cascade)
     const res = await request.delete(
       `${API}/planning/orders/${planOrderId}`,
     );
-    expect(res.status()).toBe(204);
+    expect(res.status()).toBe(409);
+    const body = await res.json();
+    expect(body.message).toContain("existing revisions");
+  });
+
+  test("cannot delete draft revision with exec orders (409)", async ({
+    request,
+  }) => {
+    // Create a new draft revision, then create an exec order against it
+    const revRes = await request.post(
+      `${API}/planning/orders/${planOrderId}/revisions`,
+      { data: { notes: "Draft with exec orders" } },
+    );
+    expect(revRes.status()).toBe(201);
+    const rev = await revRes.json();
+
+    const execRes = await request.post(`${API}/execution/orders`, {
+      data: {
+        planOrderId,
+        planOrderRevId: rev.id,
+        priority: "low",
+        createdBy: "e2e-test",
+      },
+    });
+    expect(execRes.status()).toBe(201);
+
+    // Try to delete the draft revision — should be blocked by exec orders
+    const delRes = await request.delete(
+      `${API}/planning/orders/${planOrderId}/revisions/${rev.id}`,
+    );
+    expect(delRes.status()).toBe(409);
+    const body = await delRes.json();
+    expect(body.message).toContain("existing execution orders");
   });
 });

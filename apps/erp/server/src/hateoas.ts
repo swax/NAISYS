@@ -21,12 +21,11 @@ export function schemaLink(schemaName: string): HateoasLink {
   };
 }
 
-export function itemLinks(resource: string, id: number): HateoasLink[] {
+export function itemLinks(resource: string, id: number, schemaName: string): HateoasLink[] {
   return [
     selfLink(`/${resource}/${id}`),
     collectionLink(resource),
-    schemaLink("PlanningOrder"),
-    revisionCollectionLink(resource, id),
+    schemaLink(schemaName),
   ];
 }
 
@@ -74,40 +73,57 @@ export function itemActions(
   return actions;
 }
 
+function buildQuery(
+  page: number,
+  pageSize: number,
+  filters?: Record<string, string | undefined>,
+): string {
+  const params = new URLSearchParams();
+  params.set("page", String(page));
+  params.set("pageSize", String(pageSize));
+  if (filters) {
+    for (const [key, value] of Object.entries(filters)) {
+      if (value !== undefined) params.set(key, value);
+    }
+  }
+  return params.toString();
+}
+
 export function paginationLinks(
   resource: string,
   page: number,
   pageSize: number,
   total: number,
+  filters?: Record<string, string | undefined>,
 ): HateoasLink[] {
   const basePath = `${API_PREFIX}/${resource}`;
   const totalPages = Math.ceil(total / pageSize);
   const links: HateoasLink[] = [
     {
       rel: "self",
-      href: `${basePath}?page=${page}&pageSize=${pageSize}`,
+      href: `${basePath}?${buildQuery(page, pageSize, filters)}`,
     },
     {
       rel: "first",
-      href: `${basePath}?page=1&pageSize=${pageSize}`,
+      href: `${basePath}?${buildQuery(1, pageSize, filters)}`,
     },
     {
       rel: "last",
-      href: `${basePath}?page=${Math.max(1, totalPages)}&pageSize=${pageSize}`,
+      href: `${basePath}?${buildQuery(Math.max(1, totalPages), pageSize, filters)}`,
     },
   ];
 
   if (page > 1) {
     links.push({
       rel: "prev",
-      href: `${basePath}?page=${page - 1}&pageSize=${pageSize}`,
+      href: `${basePath}?${buildQuery(page - 1, pageSize, filters)}`,
     });
   }
 
   if (page < totalPages) {
     links.push({
       rel: "next",
-      href: `${basePath}?page=${page + 1}&pageSize=${pageSize}`,
+      href: `${basePath}?${buildQuery(page + 1, pageSize, filters)}`,
     });
   }
 
@@ -199,35 +215,36 @@ export function revisionPaginationLinks(
   page: number,
   pageSize: number,
   total: number,
+  filters?: Record<string, string | undefined>,
 ): HateoasLink[] {
   const basePath = `${API_PREFIX}/${parentResource}/${parentId}/revisions`;
   const totalPages = Math.ceil(total / pageSize);
   const links: HateoasLink[] = [
     {
       rel: "self",
-      href: `${basePath}?page=${page}&pageSize=${pageSize}`,
+      href: `${basePath}?${buildQuery(page, pageSize, filters)}`,
     },
     {
       rel: "first",
-      href: `${basePath}?page=1&pageSize=${pageSize}`,
+      href: `${basePath}?${buildQuery(1, pageSize, filters)}`,
     },
     {
       rel: "last",
-      href: `${basePath}?page=${Math.max(1, totalPages)}&pageSize=${pageSize}`,
+      href: `${basePath}?${buildQuery(Math.max(1, totalPages), pageSize, filters)}`,
     },
   ];
 
   if (page > 1) {
     links.push({
       rel: "prev",
-      href: `${basePath}?page=${page - 1}&pageSize=${pageSize}`,
+      href: `${basePath}?${buildQuery(page - 1, pageSize, filters)}`,
     });
   }
 
   if (page < totalPages) {
     links.push({
       rel: "next",
-      href: `${basePath}?page=${page + 1}&pageSize=${pageSize}`,
+      href: `${basePath}?${buildQuery(page + 1, pageSize, filters)}`,
     });
   }
 

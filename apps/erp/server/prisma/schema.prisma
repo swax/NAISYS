@@ -21,6 +21,8 @@ model PlanningOrder {
   revisions  PlanningOrderRevision[]
   execOrders ExecOrder[]
 
+  @@index([status]) // LIST filter in planning-orders.ts
+  @@index([created_at]) // LIST orderBy in planning-orders.ts
   @@map("plan_orders")
 }
 
@@ -34,7 +36,7 @@ model PlanningOrderRevision {
   created_at      DateTime  @default(now())
   approved_at     DateTime?
 
-  order      PlanningOrder @relation(fields: [plan_order_id], references: [id], onDelete: Cascade)
+  order      PlanningOrder @relation(fields: [plan_order_id], references: [id], onDelete: Restrict)
   execOrders ExecOrder[]
 
   @@unique([plan_order_id, rev_no])
@@ -60,9 +62,13 @@ model ExecOrder {
   updated_at         DateTime  @updatedAt
   updated_by         String
 
-  planOrder    PlanningOrder         @relation(fields: [plan_order_id], references: [id], onDelete: Cascade)
-  planOrderRev PlanningOrderRevision @relation(fields: [plan_order_rev_id], references: [id], onDelete: Cascade)
+  planOrder    PlanningOrder         @relation(fields: [plan_order_id], references: [id], onDelete: Restrict)
+  planOrderRev PlanningOrderRevision @relation(fields: [plan_order_rev_id], references: [id], onDelete: Restrict)
 
   @@unique([plan_order_id, order_no])
+  @@index([status]) // LIST filter in execution-orders.ts
+  @@index([priority]) // LIST filter in execution-orders.ts
+  @@index([created_at]) // LIST orderBy in execution-orders.ts
+  @@index([plan_order_rev_id]) // FK lookup for planOrderRev relation
   @@map("exec_orders")
 }

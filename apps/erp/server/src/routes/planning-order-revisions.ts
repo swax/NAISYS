@@ -134,6 +134,7 @@ export default async function planningOrderRevisionRoutes(
           page,
           pageSize,
           total,
+          { status },
         ),
       };
     },
@@ -160,21 +161,23 @@ export default async function planningOrderRevisionRoutes(
         };
       }
 
-      // Auto-increment rev_no
-      const maxRev = await prisma.planningOrderRevision.findFirst({
-        where: { plan_order_id: orderId },
-        orderBy: { rev_no: "desc" },
-        select: { rev_no: true },
-      });
-      const nextRevNo = (maxRev?.rev_no ?? 0) + 1;
+      // Auto-increment rev_no inside a transaction to prevent race conditions
+      const item = await prisma.$transaction(async (tx) => {
+        const maxRev = await tx.planningOrderRevision.findFirst({
+          where: { plan_order_id: orderId },
+          orderBy: { rev_no: "desc" },
+          select: { rev_no: true },
+        });
+        const nextRevNo = (maxRev?.rev_no ?? 0) + 1;
 
-      const item = await prisma.planningOrderRevision.create({
-        data: {
-          plan_order_id: orderId,
-          rev_no: nextRevNo,
-          notes: notes ?? null,
-          change_summary: changeSummary ?? null,
-        },
+        return tx.planningOrderRevision.create({
+          data: {
+            plan_order_id: orderId,
+            rev_no: nextRevNo,
+            notes: notes ?? null,
+            change_summary: changeSummary ?? null,
+          },
+        });
       });
 
       reply.status(201);
@@ -276,6 +279,18 @@ export default async function planningOrderRevisionRoutes(
         return {
           error: "Conflict",
           message: `Cannot delete revision in ${existing.status} status`,
+        };
+      }
+
+      const execOrderCount = await prisma.execOrder.count({
+        where: { plan_order_rev_id: revisionId },
+      });
+      if (execOrderCount > 0) {
+        reply.status(409);
+        return {
+          error: "Conflict",
+          message:
+            "Cannot delete revision with existing execution orders.",
         };
       }
 

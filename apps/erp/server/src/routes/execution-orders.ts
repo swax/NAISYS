@@ -114,7 +114,7 @@ export default async function executionOrderRoutes(
         page,
         pageSize,
         _links: [
-          ...paginationLinks(RESOURCE, page, pageSize, total),
+          ...paginationLinks(RESOURCE, page, pageSize, total, { status, priority, search }),
           {
             rel: "create",
             href: `/api/erp/${RESOURCE}`,
@@ -168,29 +168,31 @@ export default async function executionOrderRoutes(
         };
       }
 
-      // Auto-increment order_no
-      const maxOrder = await prisma.execOrder.findFirst({
-        where: { plan_order_id: planOrderId },
-        orderBy: { order_no: "desc" },
-        select: { order_no: true },
-      });
-      const nextOrderNo = (maxOrder?.order_no ?? 0) + 1;
+      // Auto-increment order_no inside a transaction to prevent race conditions
+      const item = await prisma.$transaction(async (tx) => {
+        const maxOrder = await tx.execOrder.findFirst({
+          where: { plan_order_id: planOrderId },
+          orderBy: { order_no: "desc" },
+          select: { order_no: true },
+        });
+        const nextOrderNo = (maxOrder?.order_no ?? 0) + 1;
 
-      const item = await prisma.execOrder.create({
-        data: {
-          order_no: nextOrderNo,
-          plan_order_id: planOrderId,
-          plan_order_rev_id: planOrderRevId,
-          priority,
-          scheduled_start_at: scheduledStartAt
-            ? new Date(scheduledStartAt)
-            : null,
-          due_at: dueAt ? new Date(dueAt) : null,
-          assigned_to: assignedTo ?? null,
-          notes: notes ?? null,
-          created_by: createdBy,
-          updated_by: createdBy,
-        },
+        return tx.execOrder.create({
+          data: {
+            order_no: nextOrderNo,
+            plan_order_id: planOrderId,
+            plan_order_rev_id: planOrderRevId,
+            priority,
+            scheduled_start_at: scheduledStartAt
+              ? new Date(scheduledStartAt)
+              : null,
+            due_at: dueAt ? new Date(dueAt) : null,
+            assigned_to: assignedTo ?? null,
+            notes: notes ?? null,
+            created_by: createdBy,
+            updated_by: createdBy,
+          },
+        });
       });
 
       reply.status(201);

@@ -219,10 +219,15 @@ test.describe("Planning Order Revisions - API happy path", () => {
     expect(after.total).toBe(1);
   });
 
-  test("cleanup - delete the order", async ({ request }) => {
+  test("cannot delete planning order with revisions (409)", async ({
+    request,
+  }) => {
+    // There's still 1 obsolete revision, so delete should be blocked
     const res = await request.delete(
       `${API}/planning/orders/${orderId}`,
     );
-    expect(res.status()).toBe(204);
+    expect(res.status()).toBe(409);
+    const body = await res.json();
+    expect(body.message).toContain("existing revisions");
   });
 });

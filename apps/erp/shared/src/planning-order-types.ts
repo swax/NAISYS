@@ -9,9 +9,9 @@ export const PlanningOrderSchema = z.object({
   description: z.string(),
   status: z.string(),
   createdBy: z.string(),
-  createdAt: z.string(),
+  createdAt: z.iso.datetime(),
   updatedBy: z.string(),
-  updatedAt: z.string(),
+  updatedAt: z.iso.datetime(),
   _links: z.array(HateoasLinkSchema),
   _actions: z.array(HateoasActionSchema).optional(),
 });

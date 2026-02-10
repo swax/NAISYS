@@ -11,6 +11,7 @@ import {
   itemLinks,
   itemActions,
   paginationLinks,
+  revisionCollectionLink,
   selfLink,
 } from "../hateoas.js";
 
@@ -41,7 +42,7 @@ function formatItem(item: {
     createdAt: item.created_at.toISOString(),
     updatedBy: item.updated_by,
     updatedAt: item.updated_at.toISOString(),
-    _links: itemLinks(RESOURCE, item.id),
+    _links: [...itemLinks(RESOURCE, item.id, "PlanningOrder"), revisionCollectionLink(RESOURCE, item.id)],
     _actions: itemActions(RESOURCE, item.id, item.status),
   };
 }
@@ -94,7 +95,7 @@ export default async function planningOrderRoutes(
         page,
         pageSize,
         _links: [
-          ...paginationLinks(RESOURCE, page, pageSize, total),
+          ...paginationLinks(RESOURCE, page, pageSize, total, { status, search }),
           {
             rel: "create",
             href: `/api/erp/${RESOURCE}`,
@@ -203,6 +204,18 @@ export default async function planningOrderRoutes(
         return {
           error: "Not found",
           message: `Planning order ${id} not found`,
+        };
+      }
+
+      const revisionCount = await prisma.planningOrderRevision.count({
+        where: { plan_order_id: id },
+      });
+      if (revisionCount > 0) {
+        reply.status(409);
+        return {
+          error: "Conflict",
+          message:
+            "Cannot delete planning order with existing revisions. Archive it instead.",
         };
       }
 
