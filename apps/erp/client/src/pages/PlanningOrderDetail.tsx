@@ -47,7 +47,7 @@ export const PlanningOrderDetail: React.FC = () => {
     if (!id) return;
     await api.put(`planning/orders/${id}`, {
       ...data,
-      updatedBy: "admin",
+      updatedBy: 1,
     });
     setEditing(false);
     await fetchItem();

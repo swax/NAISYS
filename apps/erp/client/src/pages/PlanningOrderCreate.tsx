@@ -12,7 +12,7 @@ export const PlanningOrderCreate: React.FC = () => {
   const handleCreate = async (data: PlanningOrderFormData) => {
     await api.post("planning/orders", {
       ...data,
-      createdBy: "admin",
+      createdBy: 1,
     });
     navigate("/planning/orders");
   };

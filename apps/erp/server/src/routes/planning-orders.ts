@@ -33,9 +33,9 @@ function formatItem(item: PlanningOrderModel) {
     name: item.name,
     description: item.description,
     status: item.status,
-    createdBy: item.createdBy,
+    createdBy: item.createdById,
     createdAt: item.createdAt.toISOString(),
-    updatedBy: item.updatedBy,
+    updatedBy: item.updatedById,
     updatedAt: item.updatedAt.toISOString(),
     _links: [
       ...itemLinks(RESOURCE, item.id, "PlanningOrder"),
@@ -127,8 +127,8 @@ export default async function planningOrderRoutes(fastify: FastifyInstance) {
           key,
           name,
           description,
-          createdBy,
-          updatedBy: createdBy,
+          createdById: createdBy,
+          updatedById: createdBy,
         },
       });
 
@@ -195,7 +195,7 @@ export default async function planningOrderRoutes(fastify: FastifyInstance) {
 
       const item = await prisma.planningOrder.update({
         where: { id },
-        data: { ...data, updatedBy },
+        data: { ...data, updatedById: updatedBy },
       });
 
       return formatItem(item);

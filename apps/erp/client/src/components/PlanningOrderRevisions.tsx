@@ -70,6 +70,7 @@ export const PlanningOrderRevisions: React.FC<Props> = ({ orderId }) => {
       await api.post(basePath, {
         notes: notes || undefined,
         changeSummary: changeSummary || undefined,
+        createdBy: 1,
       });
       setModalOpen(false);
       setNotes("");

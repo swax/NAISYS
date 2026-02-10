@@ -40,6 +40,9 @@ function formatItem(orderId: number, item: PlanningOrderRevisionModel) {
     notes: item.notes,
     changeSummary: item.changeSummary,
     createdAt: item.createdAt.toISOString(),
+    createdBy: item.createdById,
+    updatedAt: item.updatedAt.toISOString(),
+    updatedBy: item.updatedById,
     approvedAt: item.approvedAt?.toISOString() ?? null,
     _links: revisionItemLinks(PARENT_RESOURCE, orderId, item.id),
     _actions: revisionItemActions(
@@ -140,7 +143,7 @@ export default async function planningOrderRevisionRoutes(
     },
     handler: async (request, reply) => {
       const { orderId } = request.params;
-      const { notes, changeSummary } = request.body;
+      const { notes, changeSummary, createdBy } = request.body;
 
       const order = await ensureOrderExists(orderId);
       if (!order) {
@@ -167,6 +170,8 @@ export default async function planningOrderRevisionRoutes(
             revNo: nextRevNo,
             notes: notes ?? null,
             changeSummary: changeSummary ?? null,
+            createdById: createdBy,
+            updatedById: createdBy,
           },
         });
       });
@@ -221,7 +226,7 @@ export default async function planningOrderRevisionRoutes(
     },
     handler: async (request, reply) => {
       const { orderId, revisionId } = request.params;
-      const { notes, changeSummary } = request.body;
+      const { notes, changeSummary, updatedBy } = request.body;
 
       const existing = await prisma.planningOrderRevision.findFirst({
         where: { id: revisionId, planOrderId: orderId },
@@ -249,6 +254,7 @@ export default async function planningOrderRevisionRoutes(
         data: {
           ...(notes !== undefined ? { notes } : {}),
           ...(changeSummary !== undefined ? { changeSummary } : {}),
+          updatedById: updatedBy,
         },
       });
 

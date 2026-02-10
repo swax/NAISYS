@@ -47,9 +47,9 @@ function formatItem(item: ExecOrderModel) {
     assignedTo: item.assignedTo,
     notes: item.notes,
     createdAt: item.createdAt.toISOString(),
-    createdBy: item.createdBy,
+    createdBy: item.createdById,
     updatedAt: item.updatedAt.toISOString(),
-    updatedBy: item.updatedBy,
+    updatedBy: item.updatedById,
     _links: execOrderItemLinks(item.id, item.planOrderId),
     _actions: execOrderItemActions(item.id, item.status),
   };
@@ -190,8 +190,8 @@ export default async function executionOrderRoutes(fastify: FastifyInstance) {
             dueAt: dueAt ? new Date(dueAt) : null,
             assignedTo: assignedTo ?? null,
             notes: notes ?? null,
-            createdBy,
-            updatedBy: createdBy,
+            createdById: createdBy,
+            updatedById: createdBy,
           },
         });
       });
@@ -266,7 +266,7 @@ export default async function executionOrderRoutes(fastify: FastifyInstance) {
         );
       }
 
-      const updateData: Record<string, unknown> = { updatedBy };
+      const updateData: Record<string, unknown> = { updatedById: updatedBy };
       if (data.priority !== undefined) updateData.priority = data.priority;
       if (data.assignedTo !== undefined)
         updateData.assignedTo = data.assignedTo;

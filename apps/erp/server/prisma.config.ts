@@ -1,9 +1,8 @@
 import "dotenv/config";
-import path from "path";
 import { defineConfig } from "prisma/config";
-import { fileURLToPath } from "url";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+// Use placeholder during generation, actual path provided at runtime
+const naisysFolder = process.env.NAISYS_FOLDER || "";
 
 export default defineConfig({
   schema: "prisma/schema.prisma",
@@ -13,6 +12,6 @@ export default defineConfig({
   datasource: {
     url:
       process.env.ERP_DATABASE_URL ||
-      `file:${path.join(__dirname, "prisma", "erp.db")}`,
+      `file:${naisysFolder}/database/naisys_erp.sqlite`,
   },
 });

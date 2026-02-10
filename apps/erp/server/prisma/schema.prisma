@@ -13,11 +13,13 @@ model PlanningOrder {
   name        String
   description String   @default("")
   status      String   @default("active") // "active" | "archived"
-  createdBy   String   @map("created_by")
+  createdById Int      @map("created_by")
   createdAt   DateTime @default(now()) @map("created_at")
-  updatedBy   String   @map("updated_by")
+  updatedById Int      @map("updated_by")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
+  createdBy  User                    @relation("planOrderCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy  User                    @relation("planOrderUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
   revisions  PlanningOrderRevision[]
   execOrders ExecOrder[]
 
@@ -34,8 +36,13 @@ model PlanningOrderRevision {
   notes         String?
   changeSummary String?   @map("change_summary")
   createdAt     DateTime  @default(now()) @map("created_at")
+  createdById   Int       @map("created_by")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  updatedById   Int       @map("updated_by")
   approvedAt    DateTime? @map("approved_at")
 
+  createdBy  User          @relation("planOrderRevCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy  User          @relation("planOrderRevUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
   order      PlanningOrder @relation(fields: [planOrderId], references: [id], onDelete: Restrict)
   execOrders ExecOrder[]
 
@@ -44,24 +51,26 @@ model PlanningOrderRevision {
 }
 
 model ExecOrder {
-  id              Int       @id @default(autoincrement())
-  orderNo         Int       @map("order_no")
-  planOrderId     Int       @map("plan_order_id")
-  planOrderRevId  Int       @map("plan_order_rev_id")
-  status          String    @default("released")
-  priority        String    @default("medium")
+  id               Int       @id @default(autoincrement())
+  orderNo          Int       @map("order_no")
+  planOrderId      Int       @map("plan_order_id")
+  planOrderRevId   Int       @map("plan_order_rev_id")
+  status           String    @default("released")
+  priority         String    @default("medium")
   scheduledStartAt DateTime? @map("scheduled_start_at")
-  dueAt           DateTime? @map("due_at")
-  releasedAt      DateTime  @default(now()) @map("released_at")
-  startedAt       DateTime? @map("started_at")
-  closedAt        DateTime? @map("closed_at")
-  assignedTo      String?   @map("assigned_to")
-  notes           String?
-  createdAt       DateTime  @default(now()) @map("created_at")
-  createdBy       String    @map("created_by")
-  updatedAt       DateTime  @updatedAt @map("updated_at")
-  updatedBy       String    @map("updated_by")
+  dueAt            DateTime? @map("due_at")
+  releasedAt       DateTime  @default(now()) @map("released_at")
+  startedAt        DateTime? @map("started_at")
+  closedAt         DateTime? @map("closed_at")
+  assignedTo       String?   @map("assigned_to")
+  notes            String?
+  createdAt        DateTime  @default(now()) @map("created_at")
+  createdById      Int       @map("created_by")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+  updatedById      Int       @map("updated_by")
 
+  createdBy    User                  @relation("execOrderCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy    User                  @relation("execOrderUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
   planOrder    PlanningOrder         @relation(fields: [planOrderId], references: [id], onDelete: Restrict)
   planOrderRev PlanningOrderRevision @relation(fields: [planOrderRevId], references: [id], onDelete: Restrict)
 
@@ -71,4 +80,28 @@ model ExecOrder {
   @@index([createdAt]) // LIST orderBy in execution-orders.ts
   @@index([planOrderRevId]) // FK lookup for planOrderRev relation
   @@map("exec_orders")
+}
+
+model User {
+  id           Int       @id @default(autoincrement())
+  uuid         String    @unique
+  username     String    @unique
+  passwordHash String    @map("password_hash")
+  title        String    @default("")
+  leadUserId   Int?      @map("lead_user_id")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  deletedAt    DateTime? @map("deleted_at")
+
+  leadUser  User?  @relation("lead_to_subagents", fields: [leadUserId], references: [id], onDelete: NoAction)
+  subagents User[] @relation("lead_to_subagents")
+
+  planOrdersCreated    PlanningOrder[]         @relation("planOrderCreatedBy")
+  planOrdersUpdated    PlanningOrder[]         @relation("planOrderUpdatedBy")
+  planOrderRevsCreated PlanningOrderRevision[] @relation("planOrderRevCreatedBy")
+  planOrderRevsUpdated PlanningOrderRevision[] @relation("planOrderRevUpdatedBy")
+  execOrdersCreated    ExecOrder[]             @relation("execOrderCreatedBy")
+  execOrdersUpdated    ExecOrder[]             @relation("execOrderUpdatedBy")
+
+  @@map("users")
 }
