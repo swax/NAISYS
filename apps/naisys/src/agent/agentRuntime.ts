@@ -37,7 +37,7 @@ import { UserService } from "./userService.js";
 
 export async function createAgentRuntime(
   agentManager: IAgentManager,
-  localUserId: string,
+  localUserId: number,
   globalConfig: GlobalConfig,
   hubClient: HubClient | undefined,
   hostService: HostService,

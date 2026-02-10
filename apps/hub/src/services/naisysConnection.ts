@@ -2,7 +2,7 @@ import { Socket } from "socket.io";
 import { HubServerLog } from "./hubServerLog.js";
 
 export interface HostConnectionInfo {
-  hostId: string;
+  hostId: number;
   hostName: string;
   connectedAt: Date;
 }
@@ -10,7 +10,7 @@ export interface HostConnectionInfo {
 /** Generic raise event function type - all events have hostId as first arg */
 export type RaiseEventFn = (
   event: string,
-  hostId: string,
+  hostId: number,
   ...args: unknown[]
 ) => void;
 

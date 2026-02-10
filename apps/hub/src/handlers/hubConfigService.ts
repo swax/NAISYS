@@ -10,7 +10,7 @@ export function createHubConfigService(
 ) {
   const hubConfig = loadHubConfig();
 
-  naisysServer.registerEvent(HubEvents.CLIENT_CONNECTED, (hostId: string) => {
+  naisysServer.registerEvent(HubEvents.CLIENT_CONNECTED, (hostId: number) => {
     try {
       logService.log(
         `[HubConfigService] Pushing config to naisys instance ${hostId}`,

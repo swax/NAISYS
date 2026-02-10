@@ -45,7 +45,7 @@ export function createCostTracker(
   llModels: LLModels,
   runService: RunService,
   hubClient: HubClient | undefined,
-  localUserId: string,
+  localUserId: number,
 ) {
   // In-memory per-model aggregated costs (always maintained, both modes)
   const modelCosts = new Map<string, ModelCostData>();

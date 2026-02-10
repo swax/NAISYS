@@ -16,12 +16,12 @@ export function createHubHeartbeatService(
   logService: HubServerLog,
 ) {
   // Track active agent user IDs per host from heartbeat data
-  const hostActiveAgents = new Map<string, string[]>();
+  const hostActiveAgents = new Map<number, number[]>();
 
   // Handle heartbeat from NAISYS instances
   naisysServer.registerEvent(
     HubEvents.HEARTBEAT,
-    async (hostId: string, data: unknown) => {
+    async (hostId: number, data: unknown) => {
       const parsed = HeartbeatSchema.parse(data);
 
       // Update in-memory per-host active agent IDs
@@ -56,7 +56,7 @@ export function createHubHeartbeatService(
   // Clean up tracking when a host disconnects
   naisysServer.registerEvent(
     HubEvents.CLIENT_DISCONNECTED,
-    (hostId: string) => {
+    (hostId: number) => {
       hostActiveAgents.delete(hostId);
       throttledPushHeartbeatStatus();
     },
@@ -94,13 +94,13 @@ export function createHubHeartbeatService(
     HUB_HEARTBEAT_INTERVAL_MS,
   );
 
-  function getHostActiveAgentCount(hostId: string): number {
+  function getHostActiveAgentCount(hostId: number): number {
     return hostActiveAgents.get(hostId)?.length ?? 0;
   }
 
   /** Find which hosts a given agent is currently running on */
-  function findHostsForAgent(userId: string): string[] {
-    const hostIds: string[] = [];
+  function findHostsForAgent(userId: number): number[] {
+    const hostIds: number[] = [];
     for (const [hostId, userIds] of hostActiveAgents) {
       if (userIds.includes(userId)) {
         hostIds.push(hostId);
@@ -110,7 +110,7 @@ export function createHubHeartbeatService(
   }
 
   /** Add a userId to a host's active list after a successful start */
-  function addStartedAgent(hostId: string, userId: string) {
+  function addStartedAgent(hostId: number, userId: number) {
     const userIds = hostActiveAgents.get(hostId);
     if (userIds) {
       if (!userIds.includes(userId)) {
@@ -123,7 +123,7 @@ export function createHubHeartbeatService(
   }
 
   /** Remove a userId from a host's active list after a successful stop */
-  function removeStoppedAgent(hostId: string, userId: string) {
+  function removeStoppedAgent(hostId: number, userId: number) {
     const userIds = hostActiveAgents.get(hostId);
     if (userIds) {
       const index = userIds.indexOf(userId);
@@ -139,8 +139,8 @@ export function createHubHeartbeatService(
   }
 
   /** Get all active user IDs across all connected hosts */
-  function getActiveUserIds(): Set<string> {
-    const allActiveUserIds = new Set<string>();
+  function getActiveUserIds(): Set<number> {
+    const allActiveUserIds = new Set<number>();
     for (const userIds of hostActiveAgents.values()) {
       for (const id of userIds) {
         allActiveUserIds.add(id);

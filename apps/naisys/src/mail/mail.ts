@@ -28,7 +28,7 @@ export function createMailService(
   hubClient: HubClient | undefined,
   userService: UserService,
   mailDisplayService: MailDisplayService | null,
-  localUserId: string,
+  localUserId: number,
   promptNotification: PromptNotificationService,
 ) {
   const localUser = userService.getUserById(localUserId);
@@ -109,8 +109,8 @@ export function createMailService(
         if (!hubClient || !mailDisplayService) {
           throw "Not available in local mode.";
         }
-        const messageId = argv[1];
-        if (!messageId) {
+        const messageId = parseInt(argv[1]);
+        if (isNaN(messageId)) {
           throw "Invalid parameters. Please provide a message id.";
         }
         const { display } = await mailDisplayService.readMessage(messageId);
@@ -121,8 +121,8 @@ export function createMailService(
         if (!hubClient) {
           throw "Not available in local mode.";
         }
-        const messageIds = argv[1]?.split(",").map((id) => id.trim());
-        if (!messageIds || messageIds.length === 0) {
+        const messageIds = argv[1]?.split(",").map((id) => parseInt(id.trim()));
+        if (!messageIds || messageIds.length === 0 || messageIds.some(isNaN)) {
           throw "Invalid parameters. Please provide comma-separated message ids.";
         }
         return archiveMessages(messageIds);
@@ -198,7 +198,7 @@ export function createMailService(
     }
 
     // Local mode: resolve users via userService and emit to event bus
-    const resolvedRecipients: { id: string; username: string }[] = [];
+    const resolvedRecipients: { id: number; username: string }[] = [];
     const errors: string[] = [];
 
     for (const username of usernames) {
@@ -239,7 +239,7 @@ export function createMailService(
     return "Mail sent";
   }
 
-  async function archiveMessages(messageIds: string[]): Promise<string> {
+  async function archiveMessages(messageIds: number[]): Promise<string> {
     if (!hubClient) throw "Not available in local mode.";
     const response = await hubClient.sendRequest<MailArchiveResponse>(
       HubEvents.MAIL_ARCHIVE,
@@ -261,7 +261,7 @@ export function createMailService(
     return userService.getUsers().length > 1;
   }
 
-  async function getUnreadThreads(): Promise<{ message_id: string }[]> {
+  async function getUnreadThreads(): Promise<{ message_id: number }[]> {
     if (!hubClient) {
       return [];
     }
@@ -279,7 +279,7 @@ export function createMailService(
   }
 
   // Track message IDs that have been notified but not yet processed
-  const notifiedMessageIds = new Set<string>();
+  const notifiedMessageIds = new Set<number>();
 
   /**
    * Check for new mail and create a notification if there are unread messages.

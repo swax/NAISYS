@@ -2,14 +2,14 @@ import { z } from "zod";
 
 // Zod schemas
 export const AgentSchema = z.object({
-  id: z.string(),
+  id: z.number(),
   name: z.string(),
   title: z.string(),
   host: z.string(),
   lastActive: z.string().optional(),
   leadUsername: z.string().optional(),
-  latestLogId: z.string(),
-  latestMailId: z.string(),
+  latestLogId: z.number(),
+  latestMailId: z.number(),
 });
 
 export const HostSchema = z.object({

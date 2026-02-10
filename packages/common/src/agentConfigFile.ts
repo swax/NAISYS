@@ -66,10 +66,8 @@ export type AgentConfigFile = z.infer<typeof AgentConfigFileSchema>;
  * 5. The hub supports agents running simultaneously across hosts, so each client can run an admin fine
  * 6. Having it as an official user means mail will be logged by the hub as well which is helpful for debugging and monitoring
  */
-export const adminUserId = "admin-user-id";
-
 export const adminAgentConfig = {
-  _id: adminUserId,
+  _id: "admin-user-id",
   username: "admin",
   title: "",
   shellModel: "none",
@@ -79,10 +77,11 @@ export const adminAgentConfig = {
 } satisfies AgentConfigFile;
 
 export interface UserEntry {
-  userId: string;
+  userId: number;
   username: string;
-  leadUserId?: string;
+  configId: string;
+  leadUserId?: number;
   agentPath?: string;
-  assignedHostIds?: string[];
+  assignedHostIds?: number[];
   config: AgentConfigFile;
 }

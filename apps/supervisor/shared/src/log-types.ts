@@ -18,7 +18,7 @@ export const LogTypeSchema = z.enum([
 export const LogRoleSchema = z.enum(["NAISYS", "LLM"]);
 
 export const LogEntrySchema = z.object({
-  id: z.string(),
+  id: z.number(),
   username: z.string(),
   role: LogRoleSchema,
   source: LogSourceSchema,

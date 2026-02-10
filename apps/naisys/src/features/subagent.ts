@@ -16,7 +16,7 @@ import { OutputService } from "../utils/output.js";
 import { PromptNotificationService } from "../utils/promptNotificationService.js";
 
 interface Subagent {
-  userId: string;
+  userId: number;
   agentName: string;
   title: string;
   taskDescription?: string;
@@ -29,11 +29,11 @@ export function createSubagentService(
   agentManager: IAgentManager,
   inputMode: InputModeService,
   userService: UserService,
-  localUserId: string,
+  localUserId: number,
   promptNotification: PromptNotificationService,
   hubClient: HubClient | undefined,
 ) {
-  const mySubagentsMap = new Map<string, Subagent>();
+  const mySubagentsMap = new Map<number, Subagent>();
 
   async function handleCommand(args: string): Promise<string> {
     const argv = stringArgv(args);

@@ -10,7 +10,7 @@ import { RunService } from "./runService.js";
 export function createLogService(
   hubClient: HubClient | undefined,
   runService: RunService,
-  localUserId: string,
+  localUserId: number,
 ) {
   // In-memory buffer for hub mode
   const buffer: LogWriteEntry[] = [];

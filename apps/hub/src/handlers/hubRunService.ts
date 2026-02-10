@@ -15,7 +15,7 @@ export function createHubRunService(
 ) {
   naisysServer.registerEvent(
     HubEvents.SESSION_CREATE,
-    async (hostId: string, data: unknown, ack: (response: unknown) => void) => {
+    async (hostId: number, data: unknown, ack: (response: unknown) => void) => {
       try {
         const parsed = SessionCreateRequestSchema.parse(data);
 
@@ -60,7 +60,7 @@ export function createHubRunService(
 
   naisysServer.registerEvent(
     HubEvents.SESSION_INCREMENT,
-    async (hostId: string, data: unknown, ack: (response: unknown) => void) => {
+    async (hostId: number, data: unknown, ack: (response: unknown) => void) => {
       try {
         const parsed = SessionIncrementRequestSchema.parse(data);
 

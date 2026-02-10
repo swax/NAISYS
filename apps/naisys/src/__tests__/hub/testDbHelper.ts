@@ -84,14 +84,12 @@ export async function createTestDatabaseSet(): Promise<{
  */
 export async function seedHost(
   prisma: PrismaClient,
-  hostId: string,
   name: string,
-): Promise<void> {
-  await prisma.hosts.upsert({
-    where: { id: hostId },
-    update: { name },
-    create: { id: hostId, name },
+): Promise<number> {
+  const host = await prisma.hosts.create({
+    data: { name },
   });
+  return host.id;
 }
 
 /**
@@ -99,19 +97,18 @@ export async function seedHost(
  */
 export async function seedUser(
   prisma: PrismaClient,
-  id: string,
   username: string,
-): Promise<void> {
-  await prisma.users.upsert({
-    where: { id },
-    update: { username },
-    create: {
-      id,
+  uuid: string,
+): Promise<number> {
+  const user = await prisma.users.create({
+    data: {
       username,
+      uuid,
       title: "Test User",
       agent_path: `/agents/${username}.yaml`,
     },
   });
+  return user.id;
 }
 
 /**

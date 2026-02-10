@@ -3,7 +3,6 @@ import {
   SendMailRequest,
   SendMailResponse,
 } from "@naisys-supervisor/shared";
-import { ulid } from "@naisys/database";
 import fs from "fs/promises";
 import path from "path";
 import { usingNaisysDb } from "../database/naisysDatabase.js";
@@ -157,12 +156,9 @@ export async function sendMessage(
     }
 
     const messageId = await usingNaisysDb(async (prisma) => {
-      const msgId = ulid();
-
       // Create the message
-      await prisma.mail_messages.create({
+      const msg = await prisma.mail_messages.create({
         data: {
-          id: msgId,
           from_user_id: fromUser.id,
           subject,
           body: cleanMessage,
@@ -173,15 +169,14 @@ export async function sendMessage(
       // Create recipient entry
       await prisma.mail_recipients.create({
         data: {
-          id: ulid(),
-          message_id: msgId,
+          message_id: msg.id,
           user_id: toUser.id,
           type: "to",
           created_at: new Date(),
         },
       });
 
-      return msgId;
+      return msg.id;
     });
 
     // 5. Handle attachments if any
@@ -194,7 +189,7 @@ export async function sendMessage(
       const attachmentsDir = path.join(
         naisysFolderPath,
         "attachments",
-        messageId,
+        String(messageId),
       );
       await saveAttachments(messageId, attachments);
 
@@ -234,7 +229,7 @@ export async function sendMessage(
 }
 
 async function saveAttachments(
-  messageId: string,
+  messageId: number,
   attachments: Array<{ filename: string; data: Buffer }>,
 ) {
   const naisysFolderPath = process.env.NAISYS_FOLDER;
@@ -242,7 +237,11 @@ async function saveAttachments(
     throw new Error("NAISYS_FOLDER environment variable not set");
   }
 
-  const attachmentsDir = path.join(naisysFolderPath, "attachments", messageId);
+  const attachmentsDir = path.join(
+    naisysFolderPath,
+    "attachments",
+    String(messageId),
+  );
 
   // Create the directory
   await fs.mkdir(attachmentsDir, { recursive: true });

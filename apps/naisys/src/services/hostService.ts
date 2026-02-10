@@ -13,7 +13,7 @@ export function createHostService(
   hubClient: HubClient | undefined,
   globalConfig: GlobalConfig,
 ) {
-  const hostMap = new Map<string, HostEntry>();
+  const hostMap = new Map<number, HostEntry>();
 
   if (hubClient) {
     hubClient.registerEvent(HubEvents.HOST_LIST, (data: unknown) => {
@@ -30,12 +30,12 @@ export function createHostService(
     });
   }
 
-  function getHostName(hostId: string): string | undefined {
+  function getHostName(hostId: number): string | undefined {
     return hostMap.get(hostId)?.hostName;
   }
 
   /** Resolve lazily — HOST_LIST may arrive before CONFIG */
-  function getLocalHostId(): string | undefined {
+  function getLocalHostId(): number | undefined {
     const localHostName = globalConfig.globalConfig()?.hostname;
     if (!localHostName) return undefined;
 
@@ -45,7 +45,7 @@ export function createHostService(
     return undefined;
   }
 
-  function isHostActive(hostId: string): boolean {
+  function isHostActive(hostId: number): boolean {
     return hostMap.get(hostId)?.online ?? false;
   }
 

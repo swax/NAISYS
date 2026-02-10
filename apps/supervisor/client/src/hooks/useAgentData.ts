@@ -40,7 +40,7 @@ export const useAgentData = () => {
       const existingAgents = agentCache;
 
       // Create a map of existing agents for quick lookup (using BaseAgent to allow updates)
-      const mergeAgents = new Map<string, BaseAgent>(
+      const mergeAgents = new Map<number, BaseAgent>(
         existingAgents.map((agent: Agent) => [agent.id, agent]),
       );
 

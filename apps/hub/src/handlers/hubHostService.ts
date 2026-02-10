@@ -11,7 +11,7 @@ export function createHubHostService(
 ) {
   let cachedHostListJson = "";
 
-  naisysServer.registerEvent(HubEvents.CLIENT_CONNECTED, (hostId: string) => {
+  naisysServer.registerEvent(HubEvents.CLIENT_CONNECTED, (hostId: number) => {
     const connectedHostIds = new Set(
       naisysServer.getConnectedClients().map((c) => c.getHostId()),
     );

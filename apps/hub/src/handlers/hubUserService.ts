@@ -11,7 +11,7 @@ export function createHubUserService(
 ) {
   naisysServer.registerEvent(
     HubEvents.CLIENT_CONNECTED,
-    async (hostId: string) => {
+    async (hostId: number) => {
       try {
         const dbUsers = await dbService.usingDatabase(async (prisma) => {
           return await prisma.users.findMany({

@@ -37,7 +37,7 @@ export function createCommandLoop(
   inputMode: InputModeService,
   runService: RunService,
   promptNotification: PromptNotificationService,
-  localUserId: string,
+  localUserId: number,
 ) {
   async function run(abortSignal?: AbortSignal) {
     await output.commentAndLog(`AGENT STARTED`);

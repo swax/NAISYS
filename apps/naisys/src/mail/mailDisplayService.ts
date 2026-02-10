@@ -32,7 +32,7 @@ export function formatMessageDisplay(content: MailContent): string {
 
 export function createMailDisplayService(
   hubClient: HubClient,
-  localUserId: string,
+  localUserId: number,
 ) {
   async function listMessages(filter?: "received" | "sent"): Promise<string> {
     const response = await hubClient.sendRequest<MailListResponse>(
@@ -62,7 +62,7 @@ export function createMailDisplayService(
 
           return [
             m.isUnread ? "*" : "",
-            m.id.slice(-4),
+            String(m.id),
             userColumn,
             m.subject.length > 40 ? m.subject.slice(0, 37) + "..." : m.subject,
             new Date(m.createdAt).toLocaleString(),
@@ -74,8 +74,8 @@ export function createMailDisplayService(
   }
 
   async function readMessage(
-    messageId: string,
-  ): Promise<{ fullMessageId: string; display: string }> {
+    messageId: number,
+  ): Promise<{ fullMessageId: number; display: string }> {
     const response = await hubClient.sendRequest<MailReadResponse>(
       HubEvents.MAIL_READ,
       { userId: localUserId, messageId },
@@ -127,7 +127,7 @@ export function createMailDisplayService(
       [
         ["ID", "Subject", "From", "Date"],
         ...messages.map((m) => [
-          m.id.slice(-4),
+          String(m.id),
           m.subject.length > 40 ? m.subject.slice(0, 37) + "..." : m.subject,
           m.fromUsername,
           new Date(m.createdAt).toLocaleString(),

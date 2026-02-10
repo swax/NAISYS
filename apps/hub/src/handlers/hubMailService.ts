@@ -1,4 +1,4 @@
-import { DatabaseService, ulid } from "@naisys/database";
+import { DatabaseService } from "@naisys/database";
 import {
   HubEvents,
   MailArchiveRequestSchema,
@@ -29,7 +29,7 @@ export function createHubMailService(
   naisysServer.registerEvent(
     HubEvents.MAIL_SEND,
     async (
-      hostId: string,
+      hostId: number,
       data: unknown,
       ack: (response: MailSendResponse) => void,
     ) => {
@@ -54,10 +54,8 @@ export function createHubMailService(
           }
 
           // Create message
-          const messageId = ulid();
-          await prisma.mail_messages.create({
+          const message = await prisma.mail_messages.create({
             data: {
-              id: messageId,
               from_user_id: parsed.fromUserId,
               host_id: hostId,
               subject: parsed.subject,
@@ -70,8 +68,7 @@ export function createHubMailService(
           const now = new Date();
           await prisma.mail_recipients.createMany({
             data: resolvedUsers.map((user) => ({
-              id: ulid(),
-              message_id: messageId,
+              message_id: message.id,
               user_id: user.id,
               type: "to",
               created_at: now,
@@ -82,15 +79,15 @@ export function createHubMailService(
           const recipientUserIds = resolvedUsers.map((u) => u.id);
           await prisma.user_notifications.updateMany({
             where: { user_id: { in: recipientUserIds } },
-            data: { latest_mail_id: messageId },
+            data: { latest_mail_id: message.id },
           });
 
           // Push MAIL_RECEIVED only to hosts that have active recipients
-          const targetHostIds = new Set<string>();
+          const targetHostIds = new Set<number>();
 
           for (const userId of recipientUserIds) {
-            for (const hostId of heartbeatService.findHostsForAgent(userId)) {
-              targetHostIds.add(hostId);
+            for (const hId of heartbeatService.findHostsForAgent(userId)) {
+              targetHostIds.add(hId);
             }
           }
 
@@ -120,7 +117,7 @@ export function createHubMailService(
   naisysServer.registerEvent(
     HubEvents.MAIL_LIST,
     async (
-      hostId: string,
+      hostId: number,
       data: unknown,
       ack: (response: MailListResponse) => void,
     ) => {
@@ -195,7 +192,7 @@ export function createHubMailService(
   naisysServer.registerEvent(
     HubEvents.MAIL_READ,
     async (
-      hostId: string,
+      hostId: number,
       data: unknown,
       ack: (response: MailReadResponse) => void,
     ) => {
@@ -203,9 +200,8 @@ export function createHubMailService(
         const parsed = MailReadRequestSchema.parse(data);
 
         await dbService.usingDatabase(async (prisma) => {
-          // Find message by short ID (endsWith)
-          const messages = await prisma.mail_messages.findMany({
-            where: { id: { endsWith: parsed.messageId } },
+          const message = await prisma.mail_messages.findUnique({
+            where: { id: parsed.messageId },
             include: {
               from_user: { select: { username: true, title: true } },
               recipients: {
@@ -214,23 +210,13 @@ export function createHubMailService(
             },
           });
 
-          if (messages.length === 0) {
+          if (!message) {
             ack({
               success: false,
               error: `Message ${parsed.messageId} not found`,
             });
             return;
           }
-
-          if (messages.length > 1) {
-            ack({
-              success: false,
-              error: `Multiple messages match '${parsed.messageId}'. Please use more characters.`,
-            });
-            return;
-          }
-
-          const message = messages[0];
 
           // Mark as read
           await prisma.mail_recipients.updateMany({
@@ -270,7 +256,7 @@ export function createHubMailService(
   naisysServer.registerEvent(
     HubEvents.MAIL_ARCHIVE,
     async (
-      hostId: string,
+      hostId: number,
       data: unknown,
       ack: (response: MailArchiveResponse) => void,
     ) => {
@@ -278,36 +264,27 @@ export function createHubMailService(
         const parsed = MailArchiveRequestSchema.parse(data);
 
         await dbService.usingDatabase(async (prisma) => {
-          const archivedIds: string[] = [];
+          const archivedIds: number[] = [];
 
-          for (const shortId of parsed.messageIds) {
-            const messages = await prisma.mail_messages.findMany({
-              where: { id: { endsWith: shortId } },
+          for (const messageId of parsed.messageIds) {
+            const message = await prisma.mail_messages.findUnique({
+              where: { id: messageId },
             });
 
-            if (messages.length === 0) {
+            if (!message) {
               ack({
                 success: false,
-                error: `Message ${shortId} not found`,
+                error: `Message ${messageId} not found`,
               });
               return;
             }
 
-            if (messages.length > 1) {
-              ack({
-                success: false,
-                error: `Multiple messages match '${shortId}'. Please use more characters.`,
-              });
-              return;
-            }
-
-            const message = messages[0];
             await prisma.mail_recipients.updateMany({
               where: { message_id: message.id, user_id: parsed.userId },
               data: { archived_at: new Date() },
             });
 
-            archivedIds.push(shortId);
+            archivedIds.push(messageId);
           }
 
           ack({ success: true, archivedIds });
@@ -325,7 +302,7 @@ export function createHubMailService(
   naisysServer.registerEvent(
     HubEvents.MAIL_SEARCH,
     async (
-      hostId: string,
+      hostId: number,
       data: unknown,
       ack: (response: MailSearchResponse) => void,
     ) => {
@@ -393,7 +370,7 @@ export function createHubMailService(
   naisysServer.registerEvent(
     HubEvents.MAIL_UNREAD,
     async (
-      hostId: string,
+      hostId: number,
       data: unknown,
       ack: (response: MailUnreadResponse) => void,
     ) => {
