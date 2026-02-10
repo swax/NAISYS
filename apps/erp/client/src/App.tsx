@@ -3,6 +3,7 @@ import "@mantine/core/styles.css";
 import { Notifications } from "@mantine/notifications";
 import "@mantine/notifications/styles.css";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router";
+import { AppLayout } from "./components/AppLayout";
 import { PlanningOrderList } from "./pages/PlanningOrderList";
 import { PlanningOrderDetail } from "./pages/PlanningOrderDetail";
 import { PlanningOrderCreate } from "./pages/PlanningOrderCreate";
@@ -16,28 +17,36 @@ const App: React.FC = () => {
       <Notifications position="top-right" />
       <BrowserRouter basename="/erp">
         <Routes>
-          <Route
-            path="/"
-            element={<Navigate to="/planning/orders" replace />}
-          />
-          <Route path="/planning/orders" element={<PlanningOrderList />} />
-          <Route
-            path="/planning/orders/new"
-            element={<PlanningOrderCreate />}
-          />
-          <Route
-            path="/planning/orders/:id"
-            element={<PlanningOrderDetail />}
-          />
-          <Route path="/execution/orders" element={<ExecutionOrderList />} />
-          <Route
-            path="/execution/orders/new"
-            element={<ExecutionOrderCreate />}
-          />
-          <Route
-            path="/execution/orders/:id"
-            element={<ExecutionOrderDetail />}
-          />
+          <Route element={<AppLayout />}>
+            <Route
+              path="/"
+              element={<Navigate to="/planning/orders" replace />}
+            />
+            <Route
+              path="/planning/orders"
+              element={<PlanningOrderList />}
+            />
+            <Route
+              path="/planning/orders/new"
+              element={<PlanningOrderCreate />}
+            />
+            <Route
+              path="/planning/orders/:id"
+              element={<PlanningOrderDetail />}
+            />
+            <Route
+              path="/execution/orders"
+              element={<ExecutionOrderList />}
+            />
+            <Route
+              path="/execution/orders/new"
+              element={<ExecutionOrderCreate />}
+            />
+            <Route
+              path="/execution/orders/:id"
+              element={<ExecutionOrderDetail />}
+            />
+          </Route>
         </Routes>
       </BrowserRouter>
     </MantineProvider>
