@@ -29,14 +29,14 @@
     "@prisma/adapter-better-sqlite3": "^7.3.0",
     "@prisma/client": "^7.3.0",
     "@scalar/fastify-api-reference": "^1.44.15",
-    "dotenv": "^17.2.3",
-    "fastify": "^5.6.2",
-    "fastify-plugin": "^5.0.1",
+    "dotenv": "^17.2.4",
+    "fastify": "^5.7.4",
+    "fastify-plugin": "^5.1.0",
     "fastify-type-provider-zod": "^6.1.0",
-    "zod": "^4.3.5"
+    "zod": "^4.3.6"
   },
   "devDependencies": {
-    "@types/node": "^25.0.3",
+    "@types/node": "^25.2.3",
     "prisma": "^7.3.0",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3"
