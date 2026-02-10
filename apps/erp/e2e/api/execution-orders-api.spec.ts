@@ -156,6 +156,10 @@ test.describe("Execution Orders - API happy path", () => {
       `${API}/execution/orders/${execOrderId}`,
     );
     expect(res.status()).toBe(409);
+    const body = await res.json();
+    expect(body.statusCode).toBe(409);
+    expect(body.error).toBe("Conflict");
+    expect(body.message).toBeTruthy();
   });
 
   test("close order (started → closed)", async ({ request }) => {
@@ -176,6 +180,10 @@ test.describe("Execution Orders - API happy path", () => {
       `${API}/execution/orders/${execOrderId}/start`,
     );
     expect(res.status()).toBe(409);
+    const body = await res.json();
+    expect(body.statusCode).toBe(409);
+    expect(body.error).toBe("Conflict");
+    expect(body.message).toBeTruthy();
   });
 
   test("cannot cancel closed order (409)", async ({ request }) => {
@@ -183,6 +191,10 @@ test.describe("Execution Orders - API happy path", () => {
       `${API}/execution/orders/${execOrderId}/cancel`,
     );
     expect(res.status()).toBe(409);
+    const body = await res.json();
+    expect(body.statusCode).toBe(409);
+    expect(body.error).toBe("Conflict");
+    expect(body.message).toBeTruthy();
   });
 
   test("create and cancel an order", async ({ request }) => {
@@ -244,6 +256,8 @@ test.describe("Execution Orders - API happy path", () => {
     );
     expect(res.status()).toBe(409);
     const body = await res.json();
+    expect(body.statusCode).toBe(409);
+    expect(body.error).toBe("Conflict");
     expect(body.message).toContain("existing revisions");
   });
 
@@ -274,6 +288,8 @@ test.describe("Execution Orders - API happy path", () => {
     );
     expect(delRes.status()).toBe(409);
     const body = await delRes.json();
+    expect(body.statusCode).toBe(409);
+    expect(body.error).toBe("Conflict");
     expect(body.message).toContain("existing execution orders");
   });
 });

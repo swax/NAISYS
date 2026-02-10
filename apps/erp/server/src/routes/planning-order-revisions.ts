@@ -7,6 +7,7 @@ import {
   UpdatePlanningOrderRevisionSchema,
 } from "@naisys-erp/shared";
 import prisma from "../db.js";
+import { sendError } from "../error-handler.js";
 import {
   revisionItemLinks,
   revisionItemActions,
@@ -95,11 +96,7 @@ export default async function planningOrderRevisionRoutes(
 
       const order = await ensureOrderExists(orderId);
       if (!order) {
-        reply.status(404);
-        return {
-          error: "Not found",
-          message: `Planning order ${orderId} not found`,
-        };
+        return sendError(reply, 404, "Not Found", `Planning order ${orderId} not found`);
       }
 
       const where: Record<string, unknown> = { planOrderId: orderId };
@@ -146,11 +143,7 @@ export default async function planningOrderRevisionRoutes(
 
       const order = await ensureOrderExists(orderId);
       if (!order) {
-        reply.status(404);
-        return {
-          error: "Not found",
-          message: `Planning order ${orderId} not found`,
-        };
+        return sendError(reply, 404, "Not Found", `Planning order ${orderId} not found`);
       }
 
       // Auto-increment revNo inside a transaction to prevent race conditions
@@ -191,11 +184,7 @@ export default async function planningOrderRevisionRoutes(
         where: { id: revisionId, planOrderId: orderId },
       });
       if (!item) {
-        reply.status(404);
-        return {
-          error: "Not found",
-          message: `Revision ${revisionId} not found for order ${orderId}`,
-        };
+        return sendError(reply, 404, "Not Found", `Revision ${revisionId} not found for order ${orderId}`);
       }
 
       return formatItem(orderId, item);
@@ -218,19 +207,11 @@ export default async function planningOrderRevisionRoutes(
         where: { id: revisionId, planOrderId: orderId },
       });
       if (!existing) {
-        reply.status(404);
-        return {
-          error: "Not found",
-          message: `Revision ${revisionId} not found for order ${orderId}`,
-        };
+        return sendError(reply, 404, "Not Found", `Revision ${revisionId} not found for order ${orderId}`);
       }
 
       if (existing.status !== "draft") {
-        reply.status(409);
-        return {
-          error: "Conflict",
-          message: `Cannot update revision in ${existing.status} status`,
-        };
+        return sendError(reply, 409, "Conflict", `Cannot update revision in ${existing.status} status`);
       }
 
       const item = await prisma.planningOrderRevision.update({
@@ -259,31 +240,18 @@ export default async function planningOrderRevisionRoutes(
         where: { id: revisionId, planOrderId: orderId },
       });
       if (!existing) {
-        reply.status(404);
-        return {
-          error: "Not found",
-          message: `Revision ${revisionId} not found for order ${orderId}`,
-        };
+        return sendError(reply, 404, "Not Found", `Revision ${revisionId} not found for order ${orderId}`);
       }
 
       if (existing.status !== "draft") {
-        reply.status(409);
-        return {
-          error: "Conflict",
-          message: `Cannot delete revision in ${existing.status} status`,
-        };
+        return sendError(reply, 409, "Conflict", `Cannot delete revision in ${existing.status} status`);
       }
 
       const execOrderCount = await prisma.execOrder.count({
         where: { planOrderRevId: revisionId },
       });
       if (execOrderCount > 0) {
-        reply.status(409);
-        return {
-          error: "Conflict",
-          message:
-            "Cannot delete revision with existing execution orders.",
-        };
+        return sendError(reply, 409, "Conflict", "Cannot delete revision with existing execution orders.");
       }
 
       await prisma.planningOrderRevision.delete({ where: { id: revisionId } });
@@ -305,19 +273,11 @@ export default async function planningOrderRevisionRoutes(
         where: { id: revisionId, planOrderId: orderId },
       });
       if (!existing) {
-        reply.status(404);
-        return {
-          error: "Not found",
-          message: `Revision ${revisionId} not found for order ${orderId}`,
-        };
+        return sendError(reply, 404, "Not Found", `Revision ${revisionId} not found for order ${orderId}`);
       }
 
       if (existing.status !== "draft") {
-        reply.status(409);
-        return {
-          error: "Conflict",
-          message: `Cannot approve revision in ${existing.status} status`,
-        };
+        return sendError(reply, 409, "Conflict", `Cannot approve revision in ${existing.status} status`);
       }
 
       const item = await prisma.planningOrderRevision.update({
@@ -346,19 +306,11 @@ export default async function planningOrderRevisionRoutes(
         where: { id: revisionId, planOrderId: orderId },
       });
       if (!existing) {
-        reply.status(404);
-        return {
-          error: "Not found",
-          message: `Revision ${revisionId} not found for order ${orderId}`,
-        };
+        return sendError(reply, 404, "Not Found", `Revision ${revisionId} not found for order ${orderId}`);
       }
 
       if (existing.status !== "approved") {
-        reply.status(409);
-        return {
-          error: "Conflict",
-          message: `Cannot mark revision as obsolete from ${existing.status} status`,
-        };
+        return sendError(reply, 409, "Conflict", `Cannot mark revision as obsolete from ${existing.status} status`);
       }
 
       const item = await prisma.planningOrderRevision.update({

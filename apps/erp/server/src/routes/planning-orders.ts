@@ -7,6 +7,7 @@ import {
   UpdatePlanningOrderSchema,
 } from "@naisys-erp/shared";
 import prisma from "../db.js";
+import { sendError } from "../error-handler.js";
 import {
   itemLinks,
   itemActions,
@@ -134,11 +135,7 @@ export default async function planningOrderRoutes(
 
       const item = await prisma.planningOrder.findUnique({ where: { id } });
       if (!item) {
-        reply.status(404);
-        return {
-          error: "Not found",
-          message: `Planning order ${id} not found`,
-        };
+        return sendError(reply, 404, "Not Found", `Planning order ${id} not found`);
       }
 
       return formatItem(item);
@@ -161,11 +158,7 @@ export default async function planningOrderRoutes(
         where: { id },
       });
       if (!existing) {
-        reply.status(404);
-        return {
-          error: "Not found",
-          message: `Planning order ${id} not found`,
-        };
+        return sendError(reply, 404, "Not Found", `Planning order ${id} not found`);
       }
 
       const item = await prisma.planningOrder.update({
@@ -191,23 +184,14 @@ export default async function planningOrderRoutes(
         where: { id },
       });
       if (!existing) {
-        reply.status(404);
-        return {
-          error: "Not found",
-          message: `Planning order ${id} not found`,
-        };
+        return sendError(reply, 404, "Not Found", `Planning order ${id} not found`);
       }
 
       const revisionCount = await prisma.planningOrderRevision.count({
         where: { planOrderId: id },
       });
       if (revisionCount > 0) {
-        reply.status(409);
-        return {
-          error: "Conflict",
-          message:
-            "Cannot delete planning order with existing revisions. Archive it instead.",
-        };
+        return sendError(reply, 409, "Conflict", "Cannot delete planning order with existing revisions. Archive it instead.");
       }
 
       await prisma.planningOrder.delete({ where: { id } });

@@ -7,6 +7,7 @@ import {
   UpdateExecutionOrderSchema,
 } from "@naisys-erp/shared";
 import prisma from "../db.js";
+import { sendError } from "../error-handler.js";
 import {
   execOrderItemLinks,
   execOrderItemActions,
@@ -132,11 +133,7 @@ export default async function executionOrderRoutes(
         where: { id: planOrderId },
       });
       if (!planOrder) {
-        reply.status(404);
-        return {
-          error: "Not found",
-          message: `Planning order ${planOrderId} not found`,
-        };
+        return sendError(reply, 404, "Not Found", `Planning order ${planOrderId} not found`);
       }
 
       // Validate revision exists and belongs to the planning order
@@ -144,11 +141,7 @@ export default async function executionOrderRoutes(
         where: { id: planOrderRevId, planOrderId },
       });
       if (!planOrderRev) {
-        reply.status(404);
-        return {
-          error: "Not found",
-          message: `Planning order revision ${planOrderRevId} not found for order ${planOrderId}`,
-        };
+        return sendError(reply, 404, "Not Found", `Planning order revision ${planOrderRevId} not found for order ${planOrderId}`);
       }
 
       // Auto-increment orderNo inside a transaction to prevent race conditions
@@ -195,11 +188,7 @@ export default async function executionOrderRoutes(
 
       const item = await prisma.execOrder.findUnique({ where: { id } });
       if (!item) {
-        reply.status(404);
-        return {
-          error: "Not found",
-          message: `Execution order ${id} not found`,
-        };
+        return sendError(reply, 404, "Not Found", `Execution order ${id} not found`);
       }
 
       return formatItem(item);
@@ -220,19 +209,11 @@ export default async function executionOrderRoutes(
 
       const existing = await prisma.execOrder.findUnique({ where: { id } });
       if (!existing) {
-        reply.status(404);
-        return {
-          error: "Not found",
-          message: `Execution order ${id} not found`,
-        };
+        return sendError(reply, 404, "Not Found", `Execution order ${id} not found`);
       }
 
       if (existing.status !== "released" && existing.status !== "started") {
-        reply.status(409);
-        return {
-          error: "Conflict",
-          message: `Cannot update execution order in ${existing.status} status`,
-        };
+        return sendError(reply, 409, "Conflict", `Cannot update execution order in ${existing.status} status`);
       }
 
       const updateData: Record<string, unknown> = { updatedBy };
@@ -269,19 +250,11 @@ export default async function executionOrderRoutes(
 
       const existing = await prisma.execOrder.findUnique({ where: { id } });
       if (!existing) {
-        reply.status(404);
-        return {
-          error: "Not found",
-          message: `Execution order ${id} not found`,
-        };
+        return sendError(reply, 404, "Not Found", `Execution order ${id} not found`);
       }
 
       if (existing.status !== "released") {
-        reply.status(409);
-        return {
-          error: "Conflict",
-          message: `Cannot delete execution order in ${existing.status} status`,
-        };
+        return sendError(reply, 409, "Conflict", `Cannot delete execution order in ${existing.status} status`);
       }
 
       await prisma.execOrder.delete({ where: { id } });
@@ -301,19 +274,11 @@ export default async function executionOrderRoutes(
 
       const existing = await prisma.execOrder.findUnique({ where: { id } });
       if (!existing) {
-        reply.status(404);
-        return {
-          error: "Not found",
-          message: `Execution order ${id} not found`,
-        };
+        return sendError(reply, 404, "Not Found", `Execution order ${id} not found`);
       }
 
       if (existing.status !== "released") {
-        reply.status(409);
-        return {
-          error: "Conflict",
-          message: `Cannot start execution order in ${existing.status} status`,
-        };
+        return sendError(reply, 409, "Conflict", `Cannot start execution order in ${existing.status} status`);
       }
 
       const item = await prisma.execOrder.update({
@@ -340,19 +305,11 @@ export default async function executionOrderRoutes(
 
       const existing = await prisma.execOrder.findUnique({ where: { id } });
       if (!existing) {
-        reply.status(404);
-        return {
-          error: "Not found",
-          message: `Execution order ${id} not found`,
-        };
+        return sendError(reply, 404, "Not Found", `Execution order ${id} not found`);
       }
 
       if (existing.status !== "started") {
-        reply.status(409);
-        return {
-          error: "Conflict",
-          message: `Cannot close execution order in ${existing.status} status`,
-        };
+        return sendError(reply, 409, "Conflict", `Cannot close execution order in ${existing.status} status`);
       }
 
       const item = await prisma.execOrder.update({
@@ -379,19 +336,11 @@ export default async function executionOrderRoutes(
 
       const existing = await prisma.execOrder.findUnique({ where: { id } });
       if (!existing) {
-        reply.status(404);
-        return {
-          error: "Not found",
-          message: `Execution order ${id} not found`,
-        };
+        return sendError(reply, 404, "Not Found", `Execution order ${id} not found`);
       }
 
       if (existing.status !== "released" && existing.status !== "started") {
-        reply.status(409);
-        return {
-          error: "Conflict",
-          message: `Cannot cancel execution order in ${existing.status} status`,
-        };
+        return sendError(reply, 409, "Conflict", `Cannot cancel execution order in ${existing.status} status`);
       }
 
       const item = await prisma.execOrder.update({

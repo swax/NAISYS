@@ -1,4 +1,29 @@
+import { notifications } from "@mantine/notifications";
+
 const API_BASE = "/api/erp";
+
+export class ApiError extends Error {
+  statusCode: number;
+  error: string;
+
+  constructor(statusCode: number, error: string, message: string) {
+    super(message);
+    this.name = "ApiError";
+    this.statusCode = statusCode;
+    this.error = error;
+  }
+}
+
+export function showErrorNotification(err: unknown) {
+  const message =
+    err instanceof Error ? err.message : "An unexpected error occurred";
+  notifications.show({
+    title: "Error",
+    message,
+    color: "red",
+    autoClose: 5000,
+  });
+}
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const url = path.startsWith("/") ? path : `${API_BASE}/${path}`;
@@ -14,7 +39,11 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 
   const data = await res.json();
   if (!res.ok) {
-    throw new Error(data.message || `Request failed: ${res.status}`);
+    throw new ApiError(
+      data.statusCode ?? res.status,
+      data.error ?? "Error",
+      data.message || `Request failed: ${res.status}`,
+    );
   }
   return data as T;
 }

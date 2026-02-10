@@ -15,7 +15,7 @@ import {
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import type { PlanningOrderListResponse } from "shared";
-import { api } from "../lib/api";
+import { api, showErrorNotification } from "../lib/api";
 
 export const PlanningOrderList: React.FC = () => {
   const navigate = useNavigate();
@@ -41,6 +41,8 @@ export const PlanningOrderList: React.FC = () => {
         `planning/orders?${params}`,
       );
       setData(result);
+    } catch (err) {
+      showErrorNotification(err);
     } finally {
       setLoading(false);
     }

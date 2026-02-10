@@ -113,6 +113,10 @@ test.describe("Planning Order Revisions - API happy path", () => {
       { data: { notes: "should fail" } },
     );
     expect(res.status()).toBe(409);
+    const body = await res.json();
+    expect(body.statusCode).toBe(409);
+    expect(body.error).toBe("Conflict");
+    expect(body.message).toBeTruthy();
   });
 
   test("cannot delete approved revision (409)", async ({ request }) => {
@@ -120,6 +124,10 @@ test.describe("Planning Order Revisions - API happy path", () => {
       `${API}/planning/orders/${orderId}/revisions/${revisionId}`,
     );
     expect(res.status()).toBe(409);
+    const body = await res.json();
+    expect(body.statusCode).toBe(409);
+    expect(body.error).toBe("Conflict");
+    expect(body.message).toBeTruthy();
   });
 
   test("mark approved revision as obsolete", async ({ request }) => {
@@ -228,6 +236,8 @@ test.describe("Planning Order Revisions - API happy path", () => {
     );
     expect(res.status()).toBe(409);
     const body = await res.json();
+    expect(body.statusCode).toBe(409);
+    expect(body.error).toBe("Conflict");
     expect(body.message).toContain("existing revisions");
   });
 });
