@@ -32,13 +32,14 @@ An agent workflow becomes: fetch resource, read `_actions`, pick the appropriate
 
 ### Schema Discovery
 
-API schemas are discoverable through two complementary mechanisms:
+API schemas are discoverable through three complementary mechanisms:
 
-1. **OpenAPI spec** at `/api/erp/openapi.json` - Full machine-readable API contract auto-generated from Zod schemas
-2. **Per-resource schema links** - Each response's `_links` includes a `schema` rel pointing to the relevant `#/components/schemas/...` definition
-3. **Interactive API reference** at `/erp/api-reference` - Scalar UI for human exploration and testing
+1. **Per-schema endpoint** at `/api/erp/schemas/:name` - Returns a single JSON Schema for a named schema (e.g., `CreatePlanningOrder`). This is what HATEOAS `_actions` and `_links` point to, so an agent can fetch only the schema it needs for a specific action without downloading the entire API spec.
+2. **Schema catalog** at `/api/erp/schemas/` - Lists all available schema names, useful for agent discovery.
+3. **OpenAPI spec** at `/api/erp/openapi.json` - Full machine-readable API contract auto-generated from Zod schemas, with `components/schemas` populated. Useful for tools like Scalar UI or for caching the complete API surface.
+4. **Interactive API reference** at `/erp/api-reference` - Scalar UI for human exploration and testing.
 
-An agent can fetch the OpenAPI spec once, cache it, and use the schema references from HATEOAS responses to look up validation rules, required fields, and enum values for any operation it wants to perform.
+The per-schema endpoint is the primary mechanism for agents. When an agent sees an action like `{ "rel": "update", "schema": "/api/erp/schemas/UpdatePlanningOrder" }`, it fetches that URL to get the exact JSON Schema for the request body — field names, types, constraints, enums — without the overhead of the full OpenAPI spec.
 
 ## Architecture
 
@@ -79,14 +80,17 @@ GET /api/erp/
   "description": "AI-first ERP system",
   "_links": [
     { "rel": "self", "href": "/api/erp/" },
-    { "rel": "openapi-spec", "href": "/api/erp/openapi.json" },
-    { "rel": "api-reference", "href": "/erp/api-reference" },
     { "rel": "planning-orders", "href": "/api/erp/planning/orders" },
-    { "rel": "execution-orders", "href": "/api/erp/execution/orders" }
+    { "rel": "execution-orders", "href": "/api/erp/execution/orders" },
+    { "rel": "schemas", "href": "/api/erp/schemas/" },
+    { "rel": "openapi-spec", "href": "/api/erp/openapi.json" },
+    { "rel": "api-reference", "href": "/erp/api-reference" }
   ],
   "_actions": [
-    { "rel": "create-planning-order", "href": "/api/erp/planning/orders", "method": "POST", ... },
-    { "rel": "create-execution-order", "href": "/api/erp/execution/orders", "method": "POST", ... }
+    { "rel": "create-planning-order", "href": "/api/erp/planning/orders", "method": "POST",
+      "schema": "/api/erp/schemas/CreatePlanningOrder" },
+    { "rel": "create-execution-order", "href": "/api/erp/execution/orders", "method": "POST",
+      "schema": "/api/erp/schemas/CreateExecutionOrder" }
   ]
 }
 ```
@@ -151,9 +155,13 @@ Concrete work items created from an approved revision. Track the actual executio
 
 **Unique constraint**: `(plan_order_id, order_no)` - order numbers are sequential per planning order.
 
-### Cascading Deletes
+### Referential Integrity
 
-Deleting a Planning Order cascades to all its Revisions and Execution Orders. This prevents orphaned data and simplifies cleanup in multi-agent scenarios.
+Deletes are guarded to prevent orphaned data:
+
+- A **Planning Order** cannot be deleted if it has any revisions (409 Conflict). Archive it instead.
+- A **Revision** can only be deleted while in `draft` status, and only if it has no execution orders referencing it (409 Conflict).
+- An **Execution Order** can only be deleted while in `released` status.
 
 ## State Machines
 
@@ -196,7 +204,7 @@ The `_actions` array in each response is **state-dependent**. The server evaluat
 | ExecOrder | closed    | (none)                        |
 | ExecOrder | cancelled | (none)                        |
 
-Each action includes a `schema` reference so the agent can look up what fields to send. Some actions include a `body` template with required fields pre-filled (e.g., a status transition action that requires `{ status: "started" }`).
+Each action includes a `schema` URL (e.g., `/api/erp/schemas/UpdatePlanningOrder`) that the agent can fetch to get the JSON Schema for the request body. Some actions include a `body` template with required fields pre-filled (e.g., a status transition action that requires `{ status: "archived" }`).
 
 ## API Endpoints
 
@@ -208,7 +216,7 @@ Each action includes a `schema` reference so the agent can look up what fields t
 | POST   | `/api/erp/planning/orders`     | Create                       |
 | GET    | `/api/erp/planning/orders/:id` | Get single                   |
 | PUT    | `/api/erp/planning/orders/:id` | Update                       |
-| DELETE | `/api/erp/planning/orders/:id` | Delete (cascades)            |
+| DELETE | `/api/erp/planning/orders/:id` | Delete (if no revisions)     |
 
 ### Planning Order Revisions
 
@@ -235,6 +243,15 @@ Each action includes a `schema` reference so the agent can look up what fields t
 | POST   | `/api/erp/execution/orders/:id/close`  | Started -> Closed         |
 | POST   | `/api/erp/execution/orders/:id/cancel` | -> Cancelled              |
 
+### Schemas
+
+| Method | Path                          | Description                     |
+| ------ | ----------------------------- | ------------------------------- |
+| GET    | `/api/erp/schemas/`           | List all available schema names |
+| GET    | `/api/erp/schemas/:schemaName` | Get a single JSON Schema       |
+
+Available schemas: `CreatePlanningOrder`, `UpdatePlanningOrder`, `CreatePlanningOrderRevision`, `UpdatePlanningOrderRevision`, `CreateExecutionOrder`, `UpdateExecutionOrder`.
+
 ### Query Parameters
 
 All list endpoints support `page` (default 1) and `pageSize` (default 20, max 100). Additional filters:
@@ -249,13 +266,15 @@ This illustrates how an agent with zero prior knowledge can operate the system:
 
 ```
 1. GET /api/erp/
-   -> Learn about available resources, get links
+   -> Learn about available resources, get links and actions
 
-2. GET /api/erp/openapi.json
-   -> Cache the full API spec for schema lookups
+2. Read the "create-planning-order" action from _actions
+   -> { href: "/api/erp/planning/orders", method: "POST",
+        schema: "/api/erp/schemas/CreatePlanningOrder" }
 
-3. Follow "planning-orders" link -> GET /api/erp/planning/orders
-   -> See existing orders, or use "create-planning-order" action from root
+3. GET /api/erp/schemas/CreatePlanningOrder
+   -> JSON Schema with required fields, types, constraints
+      (lightweight ~200 bytes, not the full OpenAPI spec)
 
 4. POST /api/erp/planning/orders { key: "widget-assembly", name: "Widget Assembly", ... }
    -> Response includes _links (self, revisions) and _actions (update, delete, archive)
@@ -269,17 +288,20 @@ This illustrates how an agent with zero prior knowledge can operate the system:
 7. POST .../revisions/1/approve  (from _actions)
    -> Response: "approved" status, _actions: [obsolete]
 
-8. POST /api/erp/execution/orders { planOrderId: 1, planOrderRevId: 1, priority: "high", ... }
+8. GET /api/erp/schemas/CreateExecutionOrder  (from root _actions schema ref)
+   -> Learn required fields: planOrderId, planOrderRevId, createdBy, etc.
+
+9. POST /api/erp/execution/orders { planOrderId: 1, planOrderRevId: 1, priority: "high", ... }
    -> Response: execution order in "released" status, _actions: [update, start, cancel, delete]
 
-9. POST /api/erp/execution/orders/1/start  (from _actions)
-   -> Response: "started" status, _actions: [update, close, cancel]
+10. POST /api/erp/execution/orders/1/start  (from _actions)
+    -> Response: "started" status, _actions: [update, close, cancel]
 
-10. POST /api/erp/execution/orders/1/close  (from _actions)
+11. POST /api/erp/execution/orders/1/close  (from _actions)
     -> Response: "closed" status, _actions: []  (terminal state)
 ```
 
-At no point did the agent need to know URL patterns, valid status transitions, or which fields are required. Everything was discovered from server responses.
+At no point did the agent need to know URL patterns, valid status transitions, or which fields are required. Everything was discovered from server responses. The agent only fetched the specific schemas it needed, not the full OpenAPI spec.
 
 ## Web UI
 
@@ -299,8 +321,8 @@ The UI conditionally renders action buttons based on the `_actions` array from t
 Playwright E2E tests cover the API happy paths:
 
 - **Planning Orders**: CRUD operations, status transitions
-- **Planning Order Revisions**: Full lifecycle (draft -> approved -> obsolete), auto-incrementing rev_no, status filtering, cascading deletes
-- **Execution Orders**: Full lifecycle (released -> started -> closed, released -> cancelled), priority filtering, state transition validation (409 on invalid transitions)
+- **Planning Order Revisions**: Full lifecycle (draft -> approved -> obsolete), auto-incrementing rev_no, status filtering, referential integrity (409 on delete with children)
+- **Execution Orders**: Full lifecycle (released -> started -> closed, released -> cancelled), priority filtering, state transition validation (409 on invalid transitions), referential integrity guards
 
 ## Future Considerations
 
