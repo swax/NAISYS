@@ -88,9 +88,7 @@ test.describe("Execution Orders - API happy path", () => {
   });
 
   test("get execution order by id", async ({ request }) => {
-    const res = await request.get(
-      `${API}/execution/orders/${execOrderId}`,
-    );
+    const res = await request.get(`${API}/execution/orders/${execOrderId}`);
     expect(res.status()).toBe(200);
 
     const body = await res.json();
@@ -105,16 +103,13 @@ test.describe("Execution Orders - API happy path", () => {
   });
 
   test("update released order", async ({ request }) => {
-    const res = await request.put(
-      `${API}/execution/orders/${execOrderId}`,
-      {
-        data: {
-          priority: "critical",
-          notes: "Updated notes",
-          updatedBy: "e2e-test",
-        },
+    const res = await request.put(`${API}/execution/orders/${execOrderId}`, {
+      data: {
+        priority: "critical",
+        notes: "Updated notes",
+        updatedBy: "e2e-test",
       },
-    );
+    });
     expect(res.status()).toBe(200);
 
     const body = await res.json();
@@ -140,21 +135,15 @@ test.describe("Execution Orders - API happy path", () => {
     );
     // Should NOT have start or delete actions
     expect(body._actions).not.toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ rel: "start" }),
-      ]),
+      expect.arrayContaining([expect.objectContaining({ rel: "start" })]),
     );
     expect(body._actions).not.toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ rel: "delete" }),
-      ]),
+      expect.arrayContaining([expect.objectContaining({ rel: "delete" })]),
     );
   });
 
   test("cannot delete started order (409)", async ({ request }) => {
-    const res = await request.delete(
-      `${API}/execution/orders/${execOrderId}`,
-    );
+    const res = await request.delete(`${API}/execution/orders/${execOrderId}`);
     expect(res.status()).toBe(409);
     const body = await res.json();
     expect(body.statusCode).toBe(409);
@@ -225,9 +214,7 @@ test.describe("Execution Orders - API happy path", () => {
   });
 
   test("filter by status", async ({ request }) => {
-    const res = await request.get(
-      `${API}/execution/orders?status=closed`,
-    );
+    const res = await request.get(`${API}/execution/orders?status=closed`);
     expect(res.status()).toBe(200);
 
     const body = await res.json();
@@ -237,9 +224,7 @@ test.describe("Execution Orders - API happy path", () => {
   });
 
   test("filter by priority", async ({ request }) => {
-    const res = await request.get(
-      `${API}/execution/orders?priority=critical`,
-    );
+    const res = await request.get(`${API}/execution/orders?priority=critical`);
     expect(res.status()).toBe(200);
 
     const body = await res.json();
@@ -251,9 +236,7 @@ test.describe("Execution Orders - API happy path", () => {
   test("cannot delete planning order with revisions (409)", async ({
     request,
   }) => {
-    const res = await request.delete(
-      `${API}/planning/orders/${planOrderId}`,
-    );
+    const res = await request.delete(`${API}/planning/orders/${planOrderId}`);
     expect(res.status()).toBe(409);
     const body = await res.json();
     expect(body.statusCode).toBe(409);

@@ -21,9 +21,7 @@ test.describe("Planning Order Revisions - API happy path", () => {
     expect(body.id).toBeDefined();
     expect(body.status).toBe("active");
     expect(body._links).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ rel: "revisions" }),
-      ]),
+      expect.arrayContaining([expect.objectContaining({ rel: "revisions" })]),
     );
     orderId = body.id;
   });
@@ -95,15 +93,11 @@ test.describe("Planning Order Revisions - API happy path", () => {
     expect(body.status).toBe("approved");
     expect(body.approvedAt).toBeTruthy();
     expect(body._actions).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ rel: "obsolete" }),
-      ]),
+      expect.arrayContaining([expect.objectContaining({ rel: "obsolete" })]),
     );
     // Should NOT have update or delete actions
     expect(body._actions).not.toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ rel: "update" }),
-      ]),
+      expect.arrayContaining([expect.objectContaining({ rel: "update" })]),
     );
   });
 
@@ -231,9 +225,7 @@ test.describe("Planning Order Revisions - API happy path", () => {
     request,
   }) => {
     // There's still 1 obsolete revision, so delete should be blocked
-    const res = await request.delete(
-      `${API}/planning/orders/${orderId}`,
-    );
+    const res = await request.delete(`${API}/planning/orders/${orderId}`);
     expect(res.status()).toBe(409);
     const body = await res.json();
     expect(body.statusCode).toBe(409);

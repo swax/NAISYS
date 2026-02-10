@@ -145,7 +145,10 @@ export const PlanningOrderRevisions: React.FC<Props> = ({ orderId }) => {
             </Table.Thead>
             <Table.Tbody>
               {data.items.map((rev) => (
-                <Table.Tr key={rev.id} data-testid={`revision-row-${rev.revNo}`}>
+                <Table.Tr
+                  key={rev.id}
+                  data-testid={`revision-row-${rev.revNo}`}
+                >
                   <Table.Td>{rev.revNo}</Table.Td>
                   <Table.Td>
                     <Badge
@@ -223,11 +226,7 @@ export const PlanningOrderRevisions: React.FC<Props> = ({ orderId }) => {
 
           {totalPages > 1 && (
             <Group justify="center" mt="md">
-              <Pagination
-                total={totalPages}
-                value={page}
-                onChange={setPage}
-              />
+              <Pagination total={totalPages} value={page} onChange={setPage} />
             </Group>
           )}
         </>

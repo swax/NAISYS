@@ -34,7 +34,10 @@ function formatItem(item: PlanningOrderModel) {
     createdAt: item.createdAt.toISOString(),
     updatedBy: item.updatedBy,
     updatedAt: item.updatedAt.toISOString(),
-    _links: [...itemLinks(RESOURCE, item.id, "PlanningOrder"), revisionCollectionLink(RESOURCE, item.id)],
+    _links: [
+      ...itemLinks(RESOURCE, item.id, "PlanningOrder"),
+      revisionCollectionLink(RESOURCE, item.id),
+    ],
     _actions: itemActions(RESOURCE, item.id, item.status),
   };
 }
@@ -46,9 +49,7 @@ function formatListItem(item: PlanningOrderModel) {
   };
 }
 
-export default async function planningOrderRoutes(
-  fastify: FastifyInstance,
-) {
+export default async function planningOrderRoutes(fastify: FastifyInstance) {
   const app = fastify.withTypeProvider<ZodTypeProvider>();
 
   // LIST
@@ -87,7 +88,10 @@ export default async function planningOrderRoutes(
         page,
         pageSize,
         _links: [
-          ...paginationLinks(RESOURCE, page, pageSize, total, { status, search }),
+          ...paginationLinks(RESOURCE, page, pageSize, total, {
+            status,
+            search,
+          }),
           {
             rel: "create",
             href: `/api/erp/${RESOURCE}`,
@@ -135,7 +139,12 @@ export default async function planningOrderRoutes(
 
       const item = await prisma.planningOrder.findUnique({ where: { id } });
       if (!item) {
-        return sendError(reply, 404, "Not Found", `Planning order ${id} not found`);
+        return sendError(
+          reply,
+          404,
+          "Not Found",
+          `Planning order ${id} not found`,
+        );
       }
 
       return formatItem(item);
@@ -158,7 +167,12 @@ export default async function planningOrderRoutes(
         where: { id },
       });
       if (!existing) {
-        return sendError(reply, 404, "Not Found", `Planning order ${id} not found`);
+        return sendError(
+          reply,
+          404,
+          "Not Found",
+          `Planning order ${id} not found`,
+        );
       }
 
       const item = await prisma.planningOrder.update({
@@ -184,14 +198,24 @@ export default async function planningOrderRoutes(
         where: { id },
       });
       if (!existing) {
-        return sendError(reply, 404, "Not Found", `Planning order ${id} not found`);
+        return sendError(
+          reply,
+          404,
+          "Not Found",
+          `Planning order ${id} not found`,
+        );
       }
 
       const revisionCount = await prisma.planningOrderRevision.count({
         where: { planOrderId: id },
       });
       if (revisionCount > 0) {
-        return sendError(reply, 409, "Conflict", "Cannot delete planning order with existing revisions. Archive it instead.");
+        return sendError(
+          reply,
+          409,
+          "Conflict",
+          "Cannot delete planning order with existing revisions. Archive it instead.",
+        );
       }
 
       await prisma.planningOrder.delete({ where: { id } });

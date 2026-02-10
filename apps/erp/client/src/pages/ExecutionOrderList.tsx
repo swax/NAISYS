@@ -156,9 +156,7 @@ export const ExecutionOrderList: React.FC = () => {
                 <Table.Tr
                   key={item.id}
                   style={{ cursor: "pointer" }}
-                  onClick={() =>
-                    navigate(`/execution/orders/${item.id}`)
-                  }
+                  onClick={() => navigate(`/execution/orders/${item.id}`)}
                   data-testid={`exec-order-row-${item.orderNo}`}
                 >
                   <Table.Td>

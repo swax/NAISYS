@@ -57,9 +57,7 @@ function formatListItem(item: ExecOrderModel) {
   };
 }
 
-export default async function executionOrderRoutes(
-  fastify: FastifyInstance,
-) {
+export default async function executionOrderRoutes(fastify: FastifyInstance) {
   const app = fastify.withTypeProvider<ZodTypeProvider>();
 
   // LIST
@@ -98,7 +96,11 @@ export default async function executionOrderRoutes(
         page,
         pageSize,
         _links: [
-          ...paginationLinks(RESOURCE, page, pageSize, total, { status, priority, search }),
+          ...paginationLinks(RESOURCE, page, pageSize, total, {
+            status,
+            priority,
+            search,
+          }),
           {
             rel: "create",
             href: `/api/erp/${RESOURCE}`,
@@ -133,7 +135,12 @@ export default async function executionOrderRoutes(
         where: { id: planOrderId },
       });
       if (!planOrder) {
-        return sendError(reply, 404, "Not Found", `Planning order ${planOrderId} not found`);
+        return sendError(
+          reply,
+          404,
+          "Not Found",
+          `Planning order ${planOrderId} not found`,
+        );
       }
 
       // Validate revision exists and belongs to the planning order
@@ -141,7 +148,12 @@ export default async function executionOrderRoutes(
         where: { id: planOrderRevId, planOrderId },
       });
       if (!planOrderRev) {
-        return sendError(reply, 404, "Not Found", `Planning order revision ${planOrderRevId} not found for order ${planOrderId}`);
+        return sendError(
+          reply,
+          404,
+          "Not Found",
+          `Planning order revision ${planOrderRevId} not found for order ${planOrderId}`,
+        );
       }
 
       // Auto-increment orderNo inside a transaction to prevent race conditions
@@ -188,7 +200,12 @@ export default async function executionOrderRoutes(
 
       const item = await prisma.execOrder.findUnique({ where: { id } });
       if (!item) {
-        return sendError(reply, 404, "Not Found", `Execution order ${id} not found`);
+        return sendError(
+          reply,
+          404,
+          "Not Found",
+          `Execution order ${id} not found`,
+        );
       }
 
       return formatItem(item);
@@ -198,7 +215,8 @@ export default async function executionOrderRoutes(
   // UPDATE (released/started only)
   app.put("/:id", {
     schema: {
-      description: "Update an execution order (released or started status only)",
+      description:
+        "Update an execution order (released or started status only)",
       tags: ["Execution Orders"],
       params: IdParamsSchema,
       body: UpdateExecutionOrderSchema,
@@ -209,16 +227,27 @@ export default async function executionOrderRoutes(
 
       const existing = await prisma.execOrder.findUnique({ where: { id } });
       if (!existing) {
-        return sendError(reply, 404, "Not Found", `Execution order ${id} not found`);
+        return sendError(
+          reply,
+          404,
+          "Not Found",
+          `Execution order ${id} not found`,
+        );
       }
 
       if (existing.status !== "released" && existing.status !== "started") {
-        return sendError(reply, 409, "Conflict", `Cannot update execution order in ${existing.status} status`);
+        return sendError(
+          reply,
+          409,
+          "Conflict",
+          `Cannot update execution order in ${existing.status} status`,
+        );
       }
 
       const updateData: Record<string, unknown> = { updatedBy };
       if (data.priority !== undefined) updateData.priority = data.priority;
-      if (data.assignedTo !== undefined) updateData.assignedTo = data.assignedTo;
+      if (data.assignedTo !== undefined)
+        updateData.assignedTo = data.assignedTo;
       if (data.notes !== undefined) updateData.notes = data.notes;
       if (data.scheduledStartAt !== undefined) {
         updateData.scheduledStartAt = data.scheduledStartAt
@@ -250,11 +279,21 @@ export default async function executionOrderRoutes(
 
       const existing = await prisma.execOrder.findUnique({ where: { id } });
       if (!existing) {
-        return sendError(reply, 404, "Not Found", `Execution order ${id} not found`);
+        return sendError(
+          reply,
+          404,
+          "Not Found",
+          `Execution order ${id} not found`,
+        );
       }
 
       if (existing.status !== "released") {
-        return sendError(reply, 409, "Conflict", `Cannot delete execution order in ${existing.status} status`);
+        return sendError(
+          reply,
+          409,
+          "Conflict",
+          `Cannot delete execution order in ${existing.status} status`,
+        );
       }
 
       await prisma.execOrder.delete({ where: { id } });
@@ -274,11 +313,21 @@ export default async function executionOrderRoutes(
 
       const existing = await prisma.execOrder.findUnique({ where: { id } });
       if (!existing) {
-        return sendError(reply, 404, "Not Found", `Execution order ${id} not found`);
+        return sendError(
+          reply,
+          404,
+          "Not Found",
+          `Execution order ${id} not found`,
+        );
       }
 
       if (existing.status !== "released") {
-        return sendError(reply, 409, "Conflict", `Cannot start execution order in ${existing.status} status`);
+        return sendError(
+          reply,
+          409,
+          "Conflict",
+          `Cannot start execution order in ${existing.status} status`,
+        );
       }
 
       const item = await prisma.execOrder.update({
@@ -305,11 +354,21 @@ export default async function executionOrderRoutes(
 
       const existing = await prisma.execOrder.findUnique({ where: { id } });
       if (!existing) {
-        return sendError(reply, 404, "Not Found", `Execution order ${id} not found`);
+        return sendError(
+          reply,
+          404,
+          "Not Found",
+          `Execution order ${id} not found`,
+        );
       }
 
       if (existing.status !== "started") {
-        return sendError(reply, 409, "Conflict", `Cannot close execution order in ${existing.status} status`);
+        return sendError(
+          reply,
+          409,
+          "Conflict",
+          `Cannot close execution order in ${existing.status} status`,
+        );
       }
 
       const item = await prisma.execOrder.update({
@@ -336,11 +395,21 @@ export default async function executionOrderRoutes(
 
       const existing = await prisma.execOrder.findUnique({ where: { id } });
       if (!existing) {
-        return sendError(reply, 404, "Not Found", `Execution order ${id} not found`);
+        return sendError(
+          reply,
+          404,
+          "Not Found",
+          `Execution order ${id} not found`,
+        );
       }
 
       if (existing.status !== "released" && existing.status !== "started") {
-        return sendError(reply, 409, "Conflict", `Cannot cancel execution order in ${existing.status} status`);
+        return sendError(
+          reply,
+          409,
+          "Conflict",
+          `Cannot cancel execution order in ${existing.status} status`,
+        );
       }
 
       const item = await prisma.execOrder.update({

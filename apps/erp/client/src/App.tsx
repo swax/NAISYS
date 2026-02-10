@@ -20,10 +20,7 @@ const App: React.FC = () => {
             path="/"
             element={<Navigate to="/planning/orders" replace />}
           />
-          <Route
-            path="/planning/orders"
-            element={<PlanningOrderList />}
-          />
+          <Route path="/planning/orders" element={<PlanningOrderList />} />
           <Route
             path="/planning/orders/new"
             element={<PlanningOrderCreate />}
@@ -32,10 +29,7 @@ const App: React.FC = () => {
             path="/planning/orders/:id"
             element={<PlanningOrderDetail />}
           />
-          <Route
-            path="/execution/orders"
-            element={<ExecutionOrderList />}
-          />
+          <Route path="/execution/orders" element={<ExecutionOrderList />} />
           <Route
             path="/execution/orders/new"
             element={<ExecutionOrderCreate />}

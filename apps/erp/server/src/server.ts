@@ -111,7 +111,10 @@ async function startServer() {
       ...spec,
       "x-tagGroups": [
         { name: "General", tags: ["Discovery"] },
-        { name: "Planning", tags: ["Planning Orders", "Planning Order Revisions"] },
+        {
+          name: "Planning",
+          tags: ["Planning Orders", "Planning Order Revisions"],
+        },
         { name: "Execution", tags: ["Execution Orders"] },
       ],
     };

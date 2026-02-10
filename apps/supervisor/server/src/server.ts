@@ -19,7 +19,7 @@ import apiRoutes from "./routes/api.js";
 
 export const startServer = async (
   startupType: "standalone" | "hosted",
-  plugins: ("erp")[] = [],
+  plugins: "erp"[] = [],
 ) => {
   const isProd = process.env.NODE_ENV === "production";
 

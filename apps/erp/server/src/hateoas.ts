@@ -21,7 +21,11 @@ export function schemaLink(schemaName: string): HateoasLink {
   };
 }
 
-export function itemLinks(resource: string, id: number, schemaName: string): HateoasLink[] {
+export function itemLinks(
+  resource: string,
+  id: number,
+  schemaName: string,
+): HateoasLink[] {
   return [
     selfLink(`/${resource}/${id}`),
     collectionLink(resource),

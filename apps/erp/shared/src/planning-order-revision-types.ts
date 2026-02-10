@@ -18,9 +18,7 @@ export const PlanningOrderRevisionSchema = z.object({
   _actions: z.array(HateoasActionSchema).optional(),
 });
 
-export type PlanningOrderRevision = z.infer<
-  typeof PlanningOrderRevisionSchema
->;
+export type PlanningOrderRevision = z.infer<typeof PlanningOrderRevisionSchema>;
 
 // Input for creating a revision
 export const CreatePlanningOrderRevisionSchema = z.object({
