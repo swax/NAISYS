@@ -3,7 +3,10 @@ import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod/v4";
 import {
   CreatePlanningOrderSchema,
+  ErrorResponseSchema,
   PlanningOrderListQuerySchema,
+  PlanningOrderListResponseSchema,
+  PlanningOrderSchema,
   UpdatePlanningOrderSchema,
 } from "@naisys-erp/shared";
 import prisma from "../db.js";
@@ -43,8 +46,9 @@ function formatItem(item: PlanningOrderModel) {
 }
 
 function formatListItem(item: PlanningOrderModel) {
+  const { _actions, ...rest } = formatItem(item);
   return {
-    ...formatItem(item),
+    ...rest,
     _links: [selfLink(`/${RESOURCE}/${item.id}`)],
   };
 }
@@ -58,6 +62,9 @@ export default async function planningOrderRoutes(fastify: FastifyInstance) {
       description: "List planning orders with pagination and filtering",
       tags: ["Planning Orders"],
       querystring: PlanningOrderListQuerySchema,
+      response: {
+        200: PlanningOrderListResponseSchema,
+      },
     },
     handler: async (request) => {
       const { page, pageSize, status, search } = request.query;
@@ -108,6 +115,9 @@ export default async function planningOrderRoutes(fastify: FastifyInstance) {
       description: "Create a new planning order",
       tags: ["Planning Orders"],
       body: CreatePlanningOrderSchema,
+      response: {
+        201: PlanningOrderSchema,
+      },
     },
     handler: async (request, reply) => {
       const { key, name, description, createdBy } = request.body;
@@ -133,6 +143,10 @@ export default async function planningOrderRoutes(fastify: FastifyInstance) {
       description: "Get a single planning order by ID",
       tags: ["Planning Orders"],
       params: IdParamsSchema,
+      response: {
+        200: PlanningOrderSchema,
+        404: ErrorResponseSchema,
+      },
     },
     handler: async (request, reply) => {
       const { id } = request.params;
@@ -158,6 +172,10 @@ export default async function planningOrderRoutes(fastify: FastifyInstance) {
       tags: ["Planning Orders"],
       params: IdParamsSchema,
       body: UpdatePlanningOrderSchema,
+      response: {
+        200: PlanningOrderSchema,
+        404: ErrorResponseSchema,
+      },
     },
     handler: async (request, reply) => {
       const { id } = request.params;
@@ -190,6 +208,11 @@ export default async function planningOrderRoutes(fastify: FastifyInstance) {
       description: "Delete a planning order",
       tags: ["Planning Orders"],
       params: IdParamsSchema,
+      response: {
+        204: z.void(),
+        404: ErrorResponseSchema,
+        409: ErrorResponseSchema,
+      },
     },
     handler: async (request, reply) => {
       const { id } = request.params;
