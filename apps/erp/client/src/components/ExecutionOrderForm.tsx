@@ -32,9 +32,7 @@ export const ExecutionOrderForm: React.FC<Props> = ({
   onSubmit,
   onCancel,
 }) => {
-  const [planOrderId, setPlanOrderId] = useState(
-    initialData?.planOrderId ?? 0,
-  );
+  const [planOrderId, setPlanOrderId] = useState(initialData?.planOrderId ?? 0);
   const [planOrderRevId, setPlanOrderRevId] = useState(
     initialData?.planOrderRevId ?? 0,
   );
@@ -43,9 +41,7 @@ export const ExecutionOrderForm: React.FC<Props> = ({
     initialData?.scheduledStartAt ?? "",
   );
   const [dueAt, setDueAt] = useState(initialData?.dueAt ?? "");
-  const [assignedTo, setAssignedTo] = useState(
-    initialData?.assignedTo ?? "",
-  );
+  const [assignedTo, setAssignedTo] = useState(initialData?.assignedTo ?? "");
   const [notes, setNotes] = useState(initialData?.notes ?? "");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

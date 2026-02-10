@@ -40,7 +40,7 @@ const integratedHub = Boolean(program.opts().integratedHub);
 if (integratedHub) {
   // Don't import the hub module tree unless needed, sharing the same process space is to save memory on small servers
   const { startHub } = await import("@naisys/hub");
-  const plugins: ("erp")[] = [];
+  const plugins: "erp"[] = [];
   if (program.opts().erp) plugins.push("erp");
   const hubPort = await startHub(
     "hosted",

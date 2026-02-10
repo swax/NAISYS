@@ -11,6 +11,7 @@ export default defineConfig({
   },
   datasource: {
     url:
-      process.env.DATABASE_URL || `file:${naisysFolder}/database/naisys_hub.sqlite`,
+      process.env.DATABASE_URL ||
+      `file:${naisysFolder}/database/naisys_hub.sqlite`,
   },
 });

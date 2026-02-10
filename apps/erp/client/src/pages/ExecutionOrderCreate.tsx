@@ -10,8 +10,7 @@ export const ExecutionOrderCreate: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const prefillPlanOrderId = Number(searchParams.get("planOrderId")) || 0;
-  const prefillPlanOrderRevId =
-    Number(searchParams.get("planOrderRevId")) || 0;
+  const prefillPlanOrderRevId = Number(searchParams.get("planOrderRevId")) || 0;
 
   const handleCreate = async (data: ExecutionOrderFormData) => {
     await api.post("execution/orders", {

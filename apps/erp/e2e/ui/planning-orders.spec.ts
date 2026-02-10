@@ -6,7 +6,9 @@ test("planning orders page renders with title and create button", async ({
   await page.goto("/erp/planning/orders");
 
   // Verify the page title renders
-  await expect(page.getByRole("heading", { name: "Planning Orders" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Planning Orders" }),
+  ).toBeVisible();
 
   // Verify the "Create New" button exists
   await expect(page.getByRole("button", { name: "Create New" })).toBeVisible();

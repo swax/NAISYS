@@ -43,9 +43,7 @@ export const ExecutionOrderDetail: React.FC = () => {
     if (!id) return;
     setLoading(true);
     try {
-      const result = await api.get<ExecutionOrder>(
-        `execution/orders/${id}`,
-      );
+      const result = await api.get<ExecutionOrder>(`execution/orders/${id}`);
       setItem(result);
     } catch (err) {
       showErrorNotification(err);
@@ -184,12 +182,14 @@ export const ExecutionOrderDetail: React.FC = () => {
           >
             Back
           </Button>
-          {canEdit && (
-            <Button onClick={() => setEditing(true)}>Edit</Button>
-          )}
+          {canEdit && <Button onClick={() => setEditing(true)}>Edit</Button>}
           {item.status === "released" && (
             <>
-              <Button color="green" onClick={handleStart} data-testid="exec-order-start">
+              <Button
+                color="green"
+                onClick={handleStart}
+                data-testid="exec-order-start"
+              >
                 Start
               </Button>
               <Button color="red" variant="outline" onClick={handleDelete}>
@@ -198,7 +198,11 @@ export const ExecutionOrderDetail: React.FC = () => {
             </>
           )}
           {item.status === "started" && (
-            <Button color="green" onClick={handleClose} data-testid="exec-order-close">
+            <Button
+              color="green"
+              onClick={handleClose}
+              data-testid="exec-order-close"
+            >
               Close
             </Button>
           )}
@@ -219,9 +223,7 @@ export const ExecutionOrderDetail: React.FC = () => {
             <Text
               ff="monospace"
               style={{ cursor: "pointer", textDecoration: "underline" }}
-              onClick={() =>
-                navigate(`/planning/orders/${item.planOrderId}`)
-              }
+              onClick={() => navigate(`/planning/orders/${item.planOrderId}`)}
             >
               {item.planOrderId}
             </Text>

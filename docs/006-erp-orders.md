@@ -59,14 +59,14 @@ The ERP is built as a **Fastify plugin** (`erpPlugin`) that can be:
 
 ### Tech Stack
 
-| Layer     | Technology                         |
-| --------- | ---------------------------------- |
-| API       | Fastify with ZodTypeProvider       |
-| Database  | SQLite via Prisma (BetterSqlite3)  |
-| Schemas   | Zod (shared validation + OpenAPI)  |
-| API Docs  | @fastify/swagger + Scalar UI      |
-| Frontend  | React 19 + Vite + React Router v7 |
-| Testing   | Playwright (API + E2E)            |
+| Layer    | Technology                        |
+| -------- | --------------------------------- |
+| API      | Fastify with ZodTypeProvider      |
+| Database | SQLite via Prisma (BetterSqlite3) |
+| Schemas  | Zod (shared validation + OpenAPI) |
+| API Docs | @fastify/swagger + Scalar UI      |
+| Frontend | React 19 + Vite + React Router v7 |
+| Testing  | Playwright (API + E2E)            |
 
 ### API Root Discovery
 
@@ -117,16 +117,16 @@ The top-level entity representing a type of work to be done.
 
 Versioned snapshots of a planning order that go through an approval workflow.
 
-| Field          | Type     | Notes                                  |
-| -------------- | -------- | -------------------------------------- |
-| id             | int (PK) | Auto-increment                         |
-| plan_order_id  | int (FK) | Parent planning order                  |
-| rev_no         | int      | Auto-incremented per order             |
-| status         | enum     | `draft` / `approved` / `obsolete`      |
-| notes          | string?  | Revision details                       |
-| change_summary | string?  | What changed from previous revision    |
-| created_at     | datetime | When created                           |
-| approved_at    | datetime?| When approved (null if draft/obsolete) |
+| Field          | Type      | Notes                                  |
+| -------------- | --------- | -------------------------------------- |
+| id             | int (PK)  | Auto-increment                         |
+| plan_order_id  | int (FK)  | Parent planning order                  |
+| rev_no         | int       | Auto-incremented per order             |
+| status         | enum      | `draft` / `approved` / `obsolete`      |
+| notes          | string?   | Revision details                       |
+| change_summary | string?   | What changed from previous revision    |
+| created_at     | datetime  | When created                           |
+| approved_at    | datetime? | When approved (null if draft/obsolete) |
 
 **Unique constraint**: `(plan_order_id, rev_no)` - revision numbers are sequential per order.
 
@@ -134,20 +134,20 @@ Versioned snapshots of a planning order that go through an approval workflow.
 
 Concrete work items created from an approved revision. Track the actual execution of planned work.
 
-| Field              | Type     | Notes                                        |
-| ------------------ | -------- | -------------------------------------------- |
-| id                 | int (PK) | Auto-increment                               |
-| order_no           | int      | Auto-incremented per planning order          |
-| plan_order_id      | int (FK) | Source planning order                        |
-| plan_order_rev_id  | int (FK) | Source revision                              |
-| status             | enum     | `released` / `started` / `closed` / `cancelled` |
-| priority           | enum     | `low` / `medium` / `high` / `critical`       |
-| scheduled_start_at | datetime?| When work should begin                       |
-| due_at             | datetime?| Deadline                                     |
-| assigned_to        | string?  | Agent or person responsible                  |
-| notes              | string?  | Additional context                           |
-| created_by/at      | string/datetime | Audit trail                           |
-| updated_by/at      | string/datetime | Audit trail                           |
+| Field              | Type            | Notes                                           |
+| ------------------ | --------------- | ----------------------------------------------- |
+| id                 | int (PK)        | Auto-increment                                  |
+| order_no           | int             | Auto-incremented per planning order             |
+| plan_order_id      | int (FK)        | Source planning order                           |
+| plan_order_rev_id  | int (FK)        | Source revision                                 |
+| status             | enum            | `released` / `started` / `closed` / `cancelled` |
+| priority           | enum            | `low` / `medium` / `high` / `critical`          |
+| scheduled_start_at | datetime?       | When work should begin                          |
+| due_at             | datetime?       | Deadline                                        |
+| assigned_to        | string?         | Agent or person responsible                     |
+| notes              | string?         | Additional context                              |
+| created_by/at      | string/datetime | Audit trail                                     |
+| updated_by/at      | string/datetime | Audit trail                                     |
 
 **Unique constraint**: `(plan_order_id, order_no)` - order numbers are sequential per planning order.
 
@@ -184,17 +184,17 @@ released ──[start]──> started ──[close]──> closed
 
 The `_actions` array in each response is **state-dependent**. The server evaluates the current resource state and only includes actions that are valid right now.
 
-| Resource  | State    | Available Actions                |
-| --------- | -------- | -------------------------------- |
-| PlanOrder | active   | update, delete, archive          |
-| PlanOrder | archived | update, delete, activate         |
-| Revision  | draft    | update, approve, delete          |
-| Revision  | approved | obsolete                         |
-| Revision  | obsolete | (none)                           |
-| ExecOrder | released | update, start, cancel, delete    |
-| ExecOrder | started  | update, close, cancel            |
-| ExecOrder | closed   | (none)                           |
-| ExecOrder | cancelled| (none)                           |
+| Resource  | State     | Available Actions             |
+| --------- | --------- | ----------------------------- |
+| PlanOrder | active    | update, delete, archive       |
+| PlanOrder | archived  | update, delete, activate      |
+| Revision  | draft     | update, approve, delete       |
+| Revision  | approved  | obsolete                      |
+| Revision  | obsolete  | (none)                        |
+| ExecOrder | released  | update, start, cancel, delete |
+| ExecOrder | started   | update, close, cancel         |
+| ExecOrder | closed    | (none)                        |
+| ExecOrder | cancelled | (none)                        |
 
 Each action includes a `schema` reference so the agent can look up what fields to send. Some actions include a `body` template with required fields pre-filled (e.g., a status transition action that requires `{ status: "started" }`).
 
@@ -202,38 +202,38 @@ Each action includes a `schema` reference so the agent can look up what fields t
 
 ### Planning Orders
 
-| Method | Path                                              | Description                    |
-| ------ | ------------------------------------------------- | ------------------------------ |
-| GET    | `/api/erp/planning/orders`                        | List (paginated, filterable)   |
-| POST   | `/api/erp/planning/orders`                        | Create                         |
-| GET    | `/api/erp/planning/orders/:id`                    | Get single                     |
-| PUT    | `/api/erp/planning/orders/:id`                    | Update                         |
-| DELETE | `/api/erp/planning/orders/:id`                    | Delete (cascades)              |
+| Method | Path                           | Description                  |
+| ------ | ------------------------------ | ---------------------------- |
+| GET    | `/api/erp/planning/orders`     | List (paginated, filterable) |
+| POST   | `/api/erp/planning/orders`     | Create                       |
+| GET    | `/api/erp/planning/orders/:id` | Get single                   |
+| PUT    | `/api/erp/planning/orders/:id` | Update                       |
+| DELETE | `/api/erp/planning/orders/:id` | Delete (cascades)            |
 
 ### Planning Order Revisions
 
-| Method | Path                                                           | Description         |
-| ------ | -------------------------------------------------------------- | ------------------- |
-| GET    | `/api/erp/planning/orders/:orderId/revisions`                  | List                |
-| POST   | `/api/erp/planning/orders/:orderId/revisions`                  | Create              |
-| GET    | `/api/erp/planning/orders/:orderId/revisions/:revisionId`      | Get single          |
-| PUT    | `/api/erp/planning/orders/:orderId/revisions/:revisionId`      | Update (draft only) |
-| DELETE | `/api/erp/planning/orders/:orderId/revisions/:revisionId`      | Delete (draft only) |
-| POST   | `.../revisions/:revisionId/approve`                            | Draft -> Approved   |
-| POST   | `.../revisions/:revisionId/obsolete`                           | Approved -> Obsolete|
+| Method | Path                                                      | Description          |
+| ------ | --------------------------------------------------------- | -------------------- |
+| GET    | `/api/erp/planning/orders/:orderId/revisions`             | List                 |
+| POST   | `/api/erp/planning/orders/:orderId/revisions`             | Create               |
+| GET    | `/api/erp/planning/orders/:orderId/revisions/:revisionId` | Get single           |
+| PUT    | `/api/erp/planning/orders/:orderId/revisions/:revisionId` | Update (draft only)  |
+| DELETE | `/api/erp/planning/orders/:orderId/revisions/:revisionId` | Delete (draft only)  |
+| POST   | `.../revisions/:revisionId/approve`                       | Draft -> Approved    |
+| POST   | `.../revisions/:revisionId/obsolete`                      | Approved -> Obsolete |
 
 ### Execution Orders
 
-| Method | Path                                      | Description              |
-| ------ | ----------------------------------------- | ------------------------ |
-| GET    | `/api/erp/execution/orders`               | List (paginated)         |
-| POST   | `/api/erp/execution/orders`               | Create                   |
-| GET    | `/api/erp/execution/orders/:id`           | Get single               |
-| PUT    | `/api/erp/execution/orders/:id`           | Update (released/started)|
-| DELETE | `/api/erp/execution/orders/:id`           | Delete (released only)   |
-| POST   | `/api/erp/execution/orders/:id/start`     | Released -> Started      |
-| POST   | `/api/erp/execution/orders/:id/close`     | Started -> Closed        |
-| POST   | `/api/erp/execution/orders/:id/cancel`    | -> Cancelled             |
+| Method | Path                                   | Description               |
+| ------ | -------------------------------------- | ------------------------- |
+| GET    | `/api/erp/execution/orders`            | List (paginated)          |
+| POST   | `/api/erp/execution/orders`            | Create                    |
+| GET    | `/api/erp/execution/orders/:id`        | Get single                |
+| PUT    | `/api/erp/execution/orders/:id`        | Update (released/started) |
+| DELETE | `/api/erp/execution/orders/:id`        | Delete (released only)    |
+| POST   | `/api/erp/execution/orders/:id/start`  | Released -> Started       |
+| POST   | `/api/erp/execution/orders/:id/close`  | Started -> Closed         |
+| POST   | `/api/erp/execution/orders/:id/cancel` | -> Cancelled              |
 
 ### Query Parameters
 

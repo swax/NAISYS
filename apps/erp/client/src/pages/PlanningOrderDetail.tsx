@@ -30,9 +30,7 @@ export const PlanningOrderDetail: React.FC = () => {
     if (!id) return;
     setLoading(true);
     try {
-      const result = await api.get<PlanningOrder>(
-        `planning/orders/${id}`,
-      );
+      const result = await api.get<PlanningOrder>(`planning/orders/${id}`);
       setItem(result);
     } catch (err) {
       showErrorNotification(err);

@@ -26,7 +26,7 @@ import { createNaisysServer } from "./services/naisysServer.js";
 export async function startHub(
   startupType: "standalone" | "hosted",
   startSupervisor?: any,
-  plugins?: ("erp")[],
+  plugins?: "erp"[],
   startupAgentPath?: string,
 ): Promise<number> {
   try {
@@ -161,8 +161,13 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     .option("--erp", "Start ERP web app (requires --supervisor)")
     .parse();
 
-  const plugins: ("erp")[] = [];
+  const plugins: "erp"[] = [];
   if (program.opts().erp) plugins.push("erp");
 
-  void startHub("standalone", program.opts().supervisor, plugins, program.args[0]);
+  void startHub(
+    "standalone",
+    program.opts().supervisor,
+    plugins,
+    program.args[0],
+  );
 }
