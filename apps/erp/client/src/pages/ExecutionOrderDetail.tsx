@@ -16,7 +16,7 @@ import {
   ExecutionOrderForm,
   type ExecutionOrderFormData,
 } from "../components/ExecutionOrderForm";
-import { api } from "../lib/api";
+import { api, showErrorNotification } from "../lib/api";
 
 const STATUS_COLORS: Record<string, string> = {
   released: "blue",
@@ -47,6 +47,8 @@ export const ExecutionOrderDetail: React.FC = () => {
         `execution/orders/${id}`,
       );
       setItem(result);
+    } catch (err) {
+      showErrorNotification(err);
     } finally {
       setLoading(false);
     }
@@ -72,26 +74,42 @@ export const ExecutionOrderDetail: React.FC = () => {
 
   const handleDelete = async () => {
     if (!id || !confirm("Delete this execution order?")) return;
-    await api.delete(`execution/orders/${id}`);
-    navigate("/execution/orders");
+    try {
+      await api.delete(`execution/orders/${id}`);
+      navigate("/execution/orders");
+    } catch (err) {
+      showErrorNotification(err);
+    }
   };
 
   const handleStart = async () => {
     if (!id) return;
-    await api.post(`execution/orders/${id}/start`, {});
-    await fetchItem();
+    try {
+      await api.post(`execution/orders/${id}/start`, {});
+      await fetchItem();
+    } catch (err) {
+      showErrorNotification(err);
+    }
   };
 
   const handleClose = async () => {
     if (!id) return;
-    await api.post(`execution/orders/${id}/close`, {});
-    await fetchItem();
+    try {
+      await api.post(`execution/orders/${id}/close`, {});
+      await fetchItem();
+    } catch (err) {
+      showErrorNotification(err);
+    }
   };
 
   const handleCancel = async () => {
     if (!id || !confirm("Cancel this execution order?")) return;
-    await api.post(`execution/orders/${id}/cancel`, {});
-    await fetchItem();
+    try {
+      await api.post(`execution/orders/${id}/cancel`, {});
+      await fetchItem();
+    } catch (err) {
+      showErrorNotification(err);
+    }
   };
 
   if (loading) {

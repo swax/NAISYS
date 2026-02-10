@@ -15,7 +15,7 @@ import {
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import type { ExecutionOrderListResponse } from "shared";
-import { api } from "../lib/api";
+import { api, showErrorNotification } from "../lib/api";
 
 const STATUS_COLORS: Record<string, string> = {
   released: "blue",
@@ -57,6 +57,8 @@ export const ExecutionOrderList: React.FC = () => {
         `execution/orders?${params}`,
       );
       setData(result);
+    } catch (err) {
+      showErrorNotification(err);
     } finally {
       setLoading(false);
     }

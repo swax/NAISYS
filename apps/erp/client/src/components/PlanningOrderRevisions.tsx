@@ -18,7 +18,7 @@ import type {
   PlanningOrderRevision,
   PlanningOrderRevisionListResponse,
 } from "shared";
-import { api } from "../lib/api";
+import { api, showErrorNotification } from "../lib/api";
 
 const STATUS_COLORS: Record<string, string> = {
   draft: "blue",
@@ -53,6 +53,8 @@ export const PlanningOrderRevisions: React.FC<Props> = ({ orderId }) => {
         `${basePath}?page=${page}&pageSize=${PAGE_SIZE}`,
       );
       setData(result);
+    } catch (err) {
+      showErrorNotification(err);
     } finally {
       setLoading(false);
     }
@@ -73,6 +75,8 @@ export const PlanningOrderRevisions: React.FC<Props> = ({ orderId }) => {
       setNotes("");
       setChangeSummary("");
       await fetchRevisions();
+    } catch (err) {
+      showErrorNotification(err);
     } finally {
       setSubmitting(false);
     }
@@ -80,20 +84,32 @@ export const PlanningOrderRevisions: React.FC<Props> = ({ orderId }) => {
 
   const handleApprove = async (rev: PlanningOrderRevision) => {
     if (!confirm(`Approve revision #${rev.revNo}?`)) return;
-    await api.post(`${basePath}/${rev.id}/approve`, {});
-    await fetchRevisions();
+    try {
+      await api.post(`${basePath}/${rev.id}/approve`, {});
+      await fetchRevisions();
+    } catch (err) {
+      showErrorNotification(err);
+    }
   };
 
   const handleObsolete = async (rev: PlanningOrderRevision) => {
     if (!confirm(`Mark revision #${rev.revNo} as obsolete?`)) return;
-    await api.post(`${basePath}/${rev.id}/obsolete`, {});
-    await fetchRevisions();
+    try {
+      await api.post(`${basePath}/${rev.id}/obsolete`, {});
+      await fetchRevisions();
+    } catch (err) {
+      showErrorNotification(err);
+    }
   };
 
   const handleDelete = async (rev: PlanningOrderRevision) => {
     if (!confirm(`Delete revision #${rev.revNo}?`)) return;
-    await api.delete(`${basePath}/${rev.id}`);
-    await fetchRevisions();
+    try {
+      await api.delete(`${basePath}/${rev.id}`);
+      await fetchRevisions();
+    } catch (err) {
+      showErrorNotification(err);
+    }
   };
 
   const totalPages = data ? Math.ceil(data.total / PAGE_SIZE) : 0;

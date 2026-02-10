@@ -17,7 +17,7 @@ import {
   type PlanningOrderFormData,
 } from "../components/PlanningOrderForm";
 import { PlanningOrderRevisions } from "../components/PlanningOrderRevisions";
-import { api } from "../lib/api";
+import { api, showErrorNotification } from "../lib/api";
 
 export const PlanningOrderDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -34,6 +34,8 @@ export const PlanningOrderDetail: React.FC = () => {
         `planning/orders/${id}`,
       );
       setItem(result);
+    } catch (err) {
+      showErrorNotification(err);
     } finally {
       setLoading(false);
     }
@@ -55,8 +57,12 @@ export const PlanningOrderDetail: React.FC = () => {
 
   const handleDelete = async () => {
     if (!id || !confirm("Delete this planning order?")) return;
-    await api.delete(`planning/orders/${id}`);
-    navigate("/planning/orders");
+    try {
+      await api.delete(`planning/orders/${id}`);
+      navigate("/planning/orders");
+    } catch (err) {
+      showErrorNotification(err);
+    }
   };
 
   if (loading) {

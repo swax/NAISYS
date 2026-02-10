@@ -13,6 +13,7 @@ import {
 import fp from "fastify-plugin";
 import path from "path";
 import { fileURLToPath } from "url";
+import { registerErrorHandler } from "./error-handler.js";
 import planningOrderRoutes from "./routes/planning-orders.js";
 import planningOrderRevisionRoutes from "./routes/planning-order-revisions.js";
 import executionOrderRoutes from "./routes/execution-orders.js";
@@ -27,6 +28,8 @@ const __dirname = path.dirname(__filename);
  */
 export const erpPlugin = fp(async (fastify) => {
   const isProd = process.env.NODE_ENV === "production";
+
+  registerErrorHandler(fastify);
 
   // API routes under /api/erp prefix
   fastify.register(rootRoute, { prefix: "/api/erp" });

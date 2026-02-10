@@ -1,5 +1,7 @@
 import { MantineProvider } from "@mantine/core";
 import "@mantine/core/styles.css";
+import { Notifications } from "@mantine/notifications";
+import "@mantine/notifications/styles.css";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router";
 import { PlanningOrderList } from "./pages/PlanningOrderList";
 import { PlanningOrderDetail } from "./pages/PlanningOrderDetail";
@@ -11,6 +13,7 @@ import { ExecutionOrderCreate } from "./pages/ExecutionOrderCreate";
 const App: React.FC = () => {
   return (
     <MantineProvider defaultColorScheme="dark">
+      <Notifications position="top-right" />
       <BrowserRouter basename="/erp">
         <Routes>
           <Route
