@@ -1,10 +1,18 @@
 import { defineConfig } from "@playwright/test";
 
 export default defineConfig({
-  testDir: "./e2e",
-  use: {
-    baseURL: "http://localhost:5173",
-    headless: true,
-  },
-  // Don't auto-start servers - we'll manage them manually
+  projects: [
+    {
+      name: "api",
+      testDir: "./e2e/api",
+    },
+    {
+      name: "ui",
+      testDir: "./e2e/ui",
+      use: {
+        baseURL: "http://localhost:5173",
+        headless: true,
+      },
+    },
+  ],
 });

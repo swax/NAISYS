@@ -13,62 +13,62 @@ model PlanningOrder {
   name        String
   description String   @default("")
   status      String   @default("active") // "active" | "archived"
-  created_by  String
-  created_at  DateTime @default(now())
-  updated_by  String
-  updated_at  DateTime @updatedAt
+  createdBy   String   @map("created_by")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedBy   String   @map("updated_by")
+  updatedAt   DateTime @updatedAt @map("updated_at")
 
   revisions  PlanningOrderRevision[]
   execOrders ExecOrder[]
 
   @@index([status]) // LIST filter in planning-orders.ts
-  @@index([created_at]) // LIST orderBy in planning-orders.ts
+  @@index([createdAt]) // LIST orderBy in planning-orders.ts
   @@map("plan_orders")
 }
 
 model PlanningOrderRevision {
-  id              Int       @id @default(autoincrement())
-  plan_order_id   Int
-  rev_no          Int
-  status          String    @default("draft") // "draft" | "approved" | "obsolete"
-  notes           String?
-  change_summary  String?
-  created_at      DateTime  @default(now())
-  approved_at     DateTime?
+  id            Int       @id @default(autoincrement())
+  planOrderId   Int       @map("plan_order_id")
+  revNo         Int       @map("rev_no")
+  status        String    @default("draft") // "draft" | "approved" | "obsolete"
+  notes         String?
+  changeSummary String?   @map("change_summary")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  approvedAt    DateTime? @map("approved_at")
 
-  order      PlanningOrder @relation(fields: [plan_order_id], references: [id], onDelete: Restrict)
+  order      PlanningOrder @relation(fields: [planOrderId], references: [id], onDelete: Restrict)
   execOrders ExecOrder[]
 
-  @@unique([plan_order_id, rev_no])
+  @@unique([planOrderId, revNo])
   @@map("plan_order_revs")
 }
 
 model ExecOrder {
-  id                 Int       @id @default(autoincrement())
-  order_no           Int
-  plan_order_id      Int
-  plan_order_rev_id  Int
-  status             String    @default("released")
-  priority           String    @default("medium")
-  scheduled_start_at DateTime?
-  due_at             DateTime?
-  released_at        DateTime  @default(now())
-  started_at         DateTime?
-  closed_at          DateTime?
-  assigned_to        String?
-  notes              String?
-  created_at         DateTime  @default(now())
-  created_by         String
-  updated_at         DateTime  @updatedAt
-  updated_by         String
+  id              Int       @id @default(autoincrement())
+  orderNo         Int       @map("order_no")
+  planOrderId     Int       @map("plan_order_id")
+  planOrderRevId  Int       @map("plan_order_rev_id")
+  status          String    @default("released")
+  priority        String    @default("medium")
+  scheduledStartAt DateTime? @map("scheduled_start_at")
+  dueAt           DateTime? @map("due_at")
+  releasedAt      DateTime  @default(now()) @map("released_at")
+  startedAt       DateTime? @map("started_at")
+  closedAt        DateTime? @map("closed_at")
+  assignedTo      String?   @map("assigned_to")
+  notes           String?
+  createdAt       DateTime  @default(now()) @map("created_at")
+  createdBy       String    @map("created_by")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+  updatedBy       String    @map("updated_by")
 
-  planOrder    PlanningOrder         @relation(fields: [plan_order_id], references: [id], onDelete: Restrict)
-  planOrderRev PlanningOrderRevision @relation(fields: [plan_order_rev_id], references: [id], onDelete: Restrict)
+  planOrder    PlanningOrder         @relation(fields: [planOrderId], references: [id], onDelete: Restrict)
+  planOrderRev PlanningOrderRevision @relation(fields: [planOrderRevId], references: [id], onDelete: Restrict)
 
-  @@unique([plan_order_id, order_no])
+  @@unique([planOrderId, orderNo])
   @@index([status]) // LIST filter in execution-orders.ts
   @@index([priority]) // LIST filter in execution-orders.ts
-  @@index([created_at]) // LIST orderBy in execution-orders.ts
-  @@index([plan_order_rev_id]) // FK lookup for planOrderRev relation
+  @@index([createdAt]) // LIST orderBy in execution-orders.ts
+  @@index([planOrderRevId]) // FK lookup for planOrderRev relation
   @@map("exec_orders")
 }

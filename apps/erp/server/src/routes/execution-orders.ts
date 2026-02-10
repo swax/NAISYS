@@ -13,6 +13,7 @@ import {
   paginationLinks,
   selfLink,
 } from "../hateoas.js";
+import type { ExecOrderModel } from "../generated/prisma/models/ExecOrder.js";
 
 const RESOURCE = "execution/orders";
 
@@ -24,49 +25,31 @@ function formatDate(d: Date | null): string | null {
   return d ? d.toISOString() : null;
 }
 
-function formatItem(item: {
-  id: number;
-  order_no: number;
-  plan_order_id: number;
-  plan_order_rev_id: number;
-  status: string;
-  priority: string;
-  scheduled_start_at: Date | null;
-  due_at: Date | null;
-  released_at: Date;
-  started_at: Date | null;
-  closed_at: Date | null;
-  assigned_to: string | null;
-  notes: string | null;
-  created_at: Date;
-  created_by: string;
-  updated_at: Date;
-  updated_by: string;
-}) {
+function formatItem(item: ExecOrderModel) {
   return {
     id: item.id,
-    orderNo: item.order_no,
-    planOrderId: item.plan_order_id,
-    planOrderRevId: item.plan_order_rev_id,
+    orderNo: item.orderNo,
+    planOrderId: item.planOrderId,
+    planOrderRevId: item.planOrderRevId,
     status: item.status,
     priority: item.priority,
-    scheduledStartAt: formatDate(item.scheduled_start_at),
-    dueAt: formatDate(item.due_at),
-    releasedAt: item.released_at.toISOString(),
-    startedAt: formatDate(item.started_at),
-    closedAt: formatDate(item.closed_at),
-    assignedTo: item.assigned_to,
+    scheduledStartAt: formatDate(item.scheduledStartAt),
+    dueAt: formatDate(item.dueAt),
+    releasedAt: item.releasedAt.toISOString(),
+    startedAt: formatDate(item.startedAt),
+    closedAt: formatDate(item.closedAt),
+    assignedTo: item.assignedTo,
     notes: item.notes,
-    createdAt: item.created_at.toISOString(),
-    createdBy: item.created_by,
-    updatedAt: item.updated_at.toISOString(),
-    updatedBy: item.updated_by,
-    _links: execOrderItemLinks(item.id, item.plan_order_id),
+    createdAt: item.createdAt.toISOString(),
+    createdBy: item.createdBy,
+    updatedAt: item.updatedAt.toISOString(),
+    updatedBy: item.updatedBy,
+    _links: execOrderItemLinks(item.id, item.planOrderId),
     _actions: execOrderItemActions(item.id, item.status),
   };
 }
 
-function formatListItem(item: Parameters<typeof formatItem>[0]) {
+function formatListItem(item: ExecOrderModel) {
   return {
     ...formatItem(item),
     _links: [selfLink(`/${RESOURCE}/${item.id}`)],
@@ -93,7 +76,7 @@ export default async function executionOrderRoutes(
       if (priority) where.priority = priority;
       if (search) {
         where.OR = [
-          { assigned_to: { contains: search } },
+          { assignedTo: { contains: search } },
           { notes: { contains: search } },
         ];
       }
@@ -103,7 +86,7 @@ export default async function executionOrderRoutes(
           where,
           skip: (page - 1) * pageSize,
           take: pageSize,
-          orderBy: { created_at: "desc" },
+          orderBy: { createdAt: "desc" },
         }),
         prisma.execOrder.count({ where }),
       ]);
@@ -158,7 +141,7 @@ export default async function executionOrderRoutes(
 
       // Validate revision exists and belongs to the planning order
       const planOrderRev = await prisma.planningOrderRevision.findFirst({
-        where: { id: planOrderRevId, plan_order_id: planOrderId },
+        where: { id: planOrderRevId, planOrderId },
       });
       if (!planOrderRev) {
         reply.status(404);
@@ -168,29 +151,29 @@ export default async function executionOrderRoutes(
         };
       }
 
-      // Auto-increment order_no inside a transaction to prevent race conditions
+      // Auto-increment orderNo inside a transaction to prevent race conditions
       const item = await prisma.$transaction(async (tx) => {
         const maxOrder = await tx.execOrder.findFirst({
-          where: { plan_order_id: planOrderId },
-          orderBy: { order_no: "desc" },
-          select: { order_no: true },
+          where: { planOrderId },
+          orderBy: { orderNo: "desc" },
+          select: { orderNo: true },
         });
-        const nextOrderNo = (maxOrder?.order_no ?? 0) + 1;
+        const nextOrderNo = (maxOrder?.orderNo ?? 0) + 1;
 
         return tx.execOrder.create({
           data: {
-            order_no: nextOrderNo,
-            plan_order_id: planOrderId,
-            plan_order_rev_id: planOrderRevId,
+            orderNo: nextOrderNo,
+            planOrderId,
+            planOrderRevId,
             priority,
-            scheduled_start_at: scheduledStartAt
+            scheduledStartAt: scheduledStartAt
               ? new Date(scheduledStartAt)
               : null,
-            due_at: dueAt ? new Date(dueAt) : null,
-            assigned_to: assignedTo ?? null,
+            dueAt: dueAt ? new Date(dueAt) : null,
+            assignedTo: assignedTo ?? null,
             notes: notes ?? null,
-            created_by: createdBy,
-            updated_by: createdBy,
+            createdBy,
+            updatedBy: createdBy,
           },
         });
       });
@@ -252,17 +235,17 @@ export default async function executionOrderRoutes(
         };
       }
 
-      const updateData: Record<string, unknown> = { updated_by: updatedBy };
+      const updateData: Record<string, unknown> = { updatedBy };
       if (data.priority !== undefined) updateData.priority = data.priority;
-      if (data.assignedTo !== undefined) updateData.assigned_to = data.assignedTo;
+      if (data.assignedTo !== undefined) updateData.assignedTo = data.assignedTo;
       if (data.notes !== undefined) updateData.notes = data.notes;
       if (data.scheduledStartAt !== undefined) {
-        updateData.scheduled_start_at = data.scheduledStartAt
+        updateData.scheduledStartAt = data.scheduledStartAt
           ? new Date(data.scheduledStartAt)
           : null;
       }
       if (data.dueAt !== undefined) {
-        updateData.due_at = data.dueAt ? new Date(data.dueAt) : null;
+        updateData.dueAt = data.dueAt ? new Date(data.dueAt) : null;
       }
 
       const item = await prisma.execOrder.update({
@@ -337,7 +320,7 @@ export default async function executionOrderRoutes(
         where: { id },
         data: {
           status: "started",
-          started_at: new Date(),
+          startedAt: new Date(),
         },
       });
 
@@ -376,7 +359,7 @@ export default async function executionOrderRoutes(
         where: { id },
         data: {
           status: "closed",
-          closed_at: new Date(),
+          closedAt: new Date(),
         },
       });
 

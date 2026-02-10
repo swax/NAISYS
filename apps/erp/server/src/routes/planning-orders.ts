@@ -14,6 +14,7 @@ import {
   revisionCollectionLink,
   selfLink,
 } from "../hateoas.js";
+import type { PlanningOrderModel } from "../generated/prisma/models/PlanningOrder.js";
 
 const RESOURCE = "planning/orders";
 
@@ -21,33 +22,23 @@ const IdParamsSchema = z.object({
   id: z.coerce.number().int(),
 });
 
-function formatItem(item: {
-  id: number;
-  key: string;
-  name: string;
-  description: string;
-  status: string;
-  created_by: string;
-  created_at: Date;
-  updated_by: string;
-  updated_at: Date;
-}) {
+function formatItem(item: PlanningOrderModel) {
   return {
     id: item.id,
     key: item.key,
     name: item.name,
     description: item.description,
     status: item.status,
-    createdBy: item.created_by,
-    createdAt: item.created_at.toISOString(),
-    updatedBy: item.updated_by,
-    updatedAt: item.updated_at.toISOString(),
+    createdBy: item.createdBy,
+    createdAt: item.createdAt.toISOString(),
+    updatedBy: item.updatedBy,
+    updatedAt: item.updatedAt.toISOString(),
     _links: [...itemLinks(RESOURCE, item.id, "PlanningOrder"), revisionCollectionLink(RESOURCE, item.id)],
     _actions: itemActions(RESOURCE, item.id, item.status),
   };
 }
 
-function formatListItem(item: Parameters<typeof formatItem>[0]) {
+function formatListItem(item: PlanningOrderModel) {
   return {
     ...formatItem(item),
     _links: [selfLink(`/${RESOURCE}/${item.id}`)],
@@ -84,7 +75,7 @@ export default async function planningOrderRoutes(
           where,
           skip: (page - 1) * pageSize,
           take: pageSize,
-          orderBy: { created_at: "desc" },
+          orderBy: { createdAt: "desc" },
         }),
         prisma.planningOrder.count({ where }),
       ]);
@@ -121,8 +112,8 @@ export default async function planningOrderRoutes(
           key,
           name,
           description,
-          created_by: createdBy,
-          updated_by: createdBy,
+          createdBy,
+          updatedBy: createdBy,
         },
       });
 
@@ -179,7 +170,7 @@ export default async function planningOrderRoutes(
 
       const item = await prisma.planningOrder.update({
         where: { id },
-        data: { ...data, updated_by: updatedBy },
+        data: { ...data, updatedBy },
       });
 
       return formatItem(item);
@@ -208,7 +199,7 @@ export default async function planningOrderRoutes(
       }
 
       const revisionCount = await prisma.planningOrderRevision.count({
-        where: { plan_order_id: id },
+        where: { planOrderId: id },
       });
       if (revisionCount > 0) {
         reply.status(409);

@@ -147,6 +147,7 @@ export const ExecutionOrderDetail: React.FC = () => {
             color={STATUS_COLORS[item.status] ?? "gray"}
             variant="light"
             size="lg"
+            data-testid="exec-order-status"
           >
             {item.status}
           </Badge>
@@ -170,7 +171,7 @@ export const ExecutionOrderDetail: React.FC = () => {
           )}
           {item.status === "released" && (
             <>
-              <Button color="green" onClick={handleStart}>
+              <Button color="green" onClick={handleStart} data-testid="exec-order-start">
                 Start
               </Button>
               <Button color="red" variant="outline" onClick={handleDelete}>
@@ -179,7 +180,7 @@ export const ExecutionOrderDetail: React.FC = () => {
             </>
           )}
           {item.status === "started" && (
-            <Button color="green" onClick={handleClose}>
+            <Button color="green" onClick={handleClose} data-testid="exec-order-close">
               Close
             </Button>
           )}
