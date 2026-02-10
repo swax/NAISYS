@@ -5,7 +5,7 @@ _id: fa6a5318-af9e-46fc-b81b-9748edea7535
 
 username: ryan
 title: Assistant
-shellModel: mock
+shellModel: claude4sonnet
 #imageModel: dalle3-1024
 agentPrompt: |
   You are ${agent.username} a ${agent.title} with the job of helping out the admin with what he wants to do.

@@ -1,8 +1,11 @@
 import cors from "@fastify/cors";
 import staticFiles from "@fastify/static";
+import swagger from "@fastify/swagger";
+import scalarReference from "@scalar/fastify-api-reference";
 import dotenv from "dotenv";
 import Fastify from "fastify";
 import {
+  jsonSchemaTransform,
   serializerCompiler,
   validatorCompiler,
   type ZodTypeProvider,
@@ -10,7 +13,10 @@ import {
 import fp from "fastify-plugin";
 import path from "path";
 import { fileURLToPath } from "url";
-import apiRoutes from "./routes/api.js";
+import planningOrderRoutes from "./routes/planning-orders.js";
+import planningOrderRevisionRoutes from "./routes/planning-order-revisions.js";
+import executionOrderRoutes from "./routes/execution-orders.js";
+import rootRoute from "./routes/root.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -23,20 +29,35 @@ export const erpPlugin = fp(async (fastify) => {
   const isProd = process.env.NODE_ENV === "production";
 
   // API routes under /api/erp prefix
-  fastify.register(apiRoutes, { prefix: "/api/erp" });
+  fastify.register(rootRoute, { prefix: "/api/erp" });
+  fastify.register(planningOrderRoutes, {
+    prefix: "/api/erp/planning/orders",
+  });
+  fastify.register(planningOrderRevisionRoutes, {
+    prefix: "/api/erp/planning/orders/:orderId/revisions",
+  });
+  fastify.register(executionOrderRoutes, {
+    prefix: "/api/erp/execution/orders",
+  });
 
   // In production, serve the client build
   if (isProd) {
     const clientDistPath = path.join(__dirname, "../client-dist");
-    await fastify.register(staticFiles, {
-      root: clientDistPath,
-      prefix: "/erp/",
-      decorateReply: false,
-    });
+    // Serve static assets and SPA fallback in an encapsulated context
+    // to avoid decorator conflicts with the supervisor's @fastify/static
+    fastify.register(async (scope) => {
+      await scope.register(staticFiles, {
+        root: clientDistPath,
+        prefix: "/erp/",
+        wildcard: false,
+      });
 
-    // SPA fallback for /erp/* routes
-    fastify.get("/erp/*", (_request, reply) => {
-      reply.sendFile("index.html", clientDistPath);
+      // SPA fallback for /erp/* routes (but not /erp/api-reference)
+      scope.get("/erp/*", (_request, reply) => {
+        const url = _request.url;
+        if (url.startsWith("/erp/api-reference")) return reply.callNotFound();
+        reply.sendFile("index.html", clientDistPath);
+      });
     });
   }
 });
@@ -60,6 +81,39 @@ async function startServer() {
     origin: isProd ? false : ["http://localhost:5173"],
   });
 
+  // Swagger + Scalar for standalone mode
+  await fastify.register(swagger, {
+    openapi: {
+      info: {
+        title: "NAISYS ERP API",
+        description: "AI-first ERP system - Order management and definitions",
+        version: "1.0.0",
+      },
+    },
+    transform: jsonSchemaTransform,
+  });
+
+  await fastify.register(scalarReference, {
+    routePrefix: "/erp/api-reference",
+    configuration: {
+      spec: { url: "/api/erp/openapi.json" },
+      theme: "kepler",
+    },
+  });
+
+  // Serve the OpenAPI spec at /api/erp/openapi.json
+  fastify.get("/api/erp/openapi.json", async () => {
+    const spec = fastify.swagger();
+    return {
+      ...spec,
+      "x-tagGroups": [
+        { name: "General", tags: ["Discovery"] },
+        { name: "Planning", tags: ["Planning Orders", "Planning Order Revisions"] },
+        { name: "Execution", tags: ["Execution Orders"] },
+      ],
+    };
+  });
+
   await fastify.register(erpPlugin);
 
   const port = Number(process.env.ERP_PORT) || 3002;
@@ -68,6 +122,9 @@ async function startServer() {
   try {
     await fastify.listen({ port, host });
     console.log(`[ERP] Running on http://${host}:${port}/erp`);
+    console.log(
+      `[ERP] API Reference: http://${host}:${port}/erp/api-reference`,
+    );
   } catch (err) {
     console.error("Failed to start ERP server:", err);
     process.exit(1);

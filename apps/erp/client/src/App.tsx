@@ -1,13 +1,48 @@
-import { MantineProvider, Container, Title, Text } from "@mantine/core";
+import { MantineProvider } from "@mantine/core";
 import "@mantine/core/styles.css";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router";
+import { PlanningOrderList } from "./pages/PlanningOrderList";
+import { PlanningOrderDetail } from "./pages/PlanningOrderDetail";
+import { PlanningOrderCreate } from "./pages/PlanningOrderCreate";
+import { ExecutionOrderList } from "./pages/ExecutionOrderList";
+import { ExecutionOrderDetail } from "./pages/ExecutionOrderDetail";
+import { ExecutionOrderCreate } from "./pages/ExecutionOrderCreate";
 
 const App: React.FC = () => {
   return (
     <MantineProvider defaultColorScheme="dark">
-      <Container size="sm" py="xl">
-        <Title order={1}>NAISYS ERP</Title>
-        <Text mt="md">Hello World</Text>
-      </Container>
+      <BrowserRouter basename="/erp">
+        <Routes>
+          <Route
+            path="/"
+            element={<Navigate to="/planning/orders" replace />}
+          />
+          <Route
+            path="/planning/orders"
+            element={<PlanningOrderList />}
+          />
+          <Route
+            path="/planning/orders/new"
+            element={<PlanningOrderCreate />}
+          />
+          <Route
+            path="/planning/orders/:id"
+            element={<PlanningOrderDetail />}
+          />
+          <Route
+            path="/execution/orders"
+            element={<ExecutionOrderList />}
+          />
+          <Route
+            path="/execution/orders/new"
+            element={<ExecutionOrderCreate />}
+          />
+          <Route
+            path="/execution/orders/:id"
+            element={<ExecutionOrderDetail />}
+          />
+        </Routes>
+      </BrowserRouter>
     </MantineProvider>
   );
 };
