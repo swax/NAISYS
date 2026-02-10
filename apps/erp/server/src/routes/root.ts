@@ -31,10 +31,16 @@ export default async function rootRoute(fastify: FastifyInstance) {
             method: "GET",
           },
           {
-            rel: "openapi-spec",
-            href: "/api/erp/openapi.json",
-            title: "OpenAPI Specification",
+            rel: "schemas",
+            href: "/api/erp/schemas/",
+            title: "Schema Catalog",
           },
+          // Don't expose openapi-spec link — fetching it would blow out an AI agent's context
+          // {
+          //   rel: "openapi-spec",
+          //   href: "/api/erp/openapi.json",
+          //   title: "OpenAPI Specification",
+          // },
           {
             rel: "api-reference",
             href: "/erp/api-reference",
@@ -47,16 +53,14 @@ export default async function rootRoute(fastify: FastifyInstance) {
             href: "/api/erp/planning/orders",
             method: "POST",
             title: "Create Planning Order",
-            schema:
-              "/api/erp/openapi.json#/components/schemas/CreatePlanningOrder",
+            schema: "/api/erp/schemas/CreatePlanningOrder",
           },
           {
             rel: "create-execution-order",
             href: "/api/erp/execution/orders",
             method: "POST",
             title: "Create Execution Order",
-            schema:
-              "/api/erp/openapi.json#/components/schemas/CreateExecutionOrder",
+            schema: "/api/erp/schemas/CreateExecutionOrder",
           },
         ],
       };

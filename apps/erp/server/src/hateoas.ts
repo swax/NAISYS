@@ -17,7 +17,7 @@ export function collectionLink(resource: string): HateoasLink {
 export function schemaLink(schemaName: string): HateoasLink {
   return {
     rel: "schema",
-    href: `${API_PREFIX}/openapi.json#/components/schemas/${schemaName}`,
+    href: `${API_PREFIX}/schemas/${schemaName}`,
   };
 }
 
@@ -45,7 +45,7 @@ export function itemActions(
       href,
       method: "PUT",
       title: "Update",
-      schema: `${API_PREFIX}/openapi.json#/components/schemas/UpdatePlanningOrder`,
+      schema: `${API_PREFIX}/schemas/UpdatePlanningOrder`,
     },
   ];
 
@@ -185,7 +185,7 @@ export function revisionItemActions(
         href,
         method: "PUT",
         title: "Update",
-        schema: `${API_PREFIX}/openapi.json#/components/schemas/UpdatePlanningOrderRevision`,
+        schema: `${API_PREFIX}/schemas/UpdatePlanningOrderRevision`,
       },
       {
         rel: "approve",
@@ -247,7 +247,7 @@ export function execOrderItemActions(
         href,
         method: "PUT",
         title: "Update",
-        schema: `${API_PREFIX}/openapi.json#/components/schemas/UpdateExecutionOrder`,
+        schema: `${API_PREFIX}/schemas/UpdateExecutionOrder`,
       },
       {
         rel: "start",
@@ -275,7 +275,7 @@ export function execOrderItemActions(
         href,
         method: "PUT",
         title: "Update",
-        schema: `${API_PREFIX}/openapi.json#/components/schemas/UpdateExecutionOrder`,
+        schema: `${API_PREFIX}/schemas/UpdateExecutionOrder`,
       },
       {
         rel: "close",

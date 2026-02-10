@@ -6,6 +6,7 @@ import dotenv from "dotenv";
 import Fastify from "fastify";
 import {
   jsonSchemaTransform,
+  jsonSchemaTransformObject,
   serializerCompiler,
   validatorCompiler,
   type ZodTypeProvider,
@@ -18,6 +19,8 @@ import planningOrderRoutes from "./routes/planning-orders.js";
 import planningOrderRevisionRoutes from "./routes/planning-order-revisions.js";
 import executionOrderRoutes from "./routes/execution-orders.js";
 import rootRoute from "./routes/root.js";
+import schemaRoutes from "./routes/schemas.js";
+import "./schema-registry.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -42,6 +45,7 @@ export const erpPlugin = fp(async (fastify) => {
   fastify.register(executionOrderRoutes, {
     prefix: "/api/erp/execution/orders",
   });
+  fastify.register(schemaRoutes, { prefix: "/api/erp/schemas" });
 
   // In production, serve the client build
   if (isProd) {
@@ -94,6 +98,7 @@ async function startServer() {
       },
     },
     transform: jsonSchemaTransform,
+    transformObject: jsonSchemaTransformObject,
   });
 
   await fastify.register(scalarReference, {
