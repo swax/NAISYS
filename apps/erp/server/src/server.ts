@@ -5,7 +5,6 @@ import cors from "@fastify/cors";
 import rateLimit from "@fastify/rate-limit";
 import staticFiles from "@fastify/static";
 import swagger from "@fastify/swagger";
-import scalarReference from "@scalar/fastify-api-reference";
 import Fastify from "fastify";
 import fp from "fastify-plugin";
 import {
@@ -17,6 +16,7 @@ import {
 } from "fastify-type-provider-zod";
 import path from "path";
 import { fileURLToPath } from "url";
+import { registerApiReference } from "./api-reference.js";
 import { registerAuthMiddleware } from "./auth-middleware.js";
 import { registerErrorHandler } from "./error-handler.js";
 import auditRoutes from "./routes/audit.js";
@@ -68,6 +68,8 @@ export const erpPlugin = fp(async (fastify) => {
   });
   fastify.register(schemaRoutes, { prefix: "/api/erp/schemas" });
 
+  registerApiReference(fastify);
+
   // In production, serve the client build
   if (isProd) {
     const clientDistPath = path.join(__dirname, "../client-dist");
@@ -110,7 +112,7 @@ async function startServer() {
     credentials: true,
   });
 
-  // Swagger + Scalar for standalone mode
+  // Swagger (schema collection); Scalar API reference is served by erpPlugin
   await fastify.register(swagger, {
     openapi: {
       info: {
@@ -123,28 +125,8 @@ async function startServer() {
     transformObject: jsonSchemaTransformObject,
   });
 
-  await fastify.register(scalarReference, {
-    routePrefix: "/erp/api-reference",
-    configuration: {
-      spec: { url: "/api/erp/openapi.json" },
-      theme: "kepler",
-    },
-  });
-
-  // Serve the OpenAPI spec at /api/erp/openapi.json
-  fastify.get("/api/erp/openapi.json", async () => {
-    const spec = fastify.swagger();
-    return {
-      ...spec,
-      "x-tagGroups": [
-        { name: "General", tags: ["Discovery", "Auth"] },
-        {
-          name: "Planning",
-          tags: ["Planning Orders", "Planning Order Revisions"],
-        },
-        { name: "Execution", tags: ["Execution Orders"] },
-      ],
-    };
+  fastify.get("/", { schema: { hide: true } }, async (_request, reply) => {
+    return reply.redirect("/erp/");
   });
 
   await fastify.register(erpPlugin);

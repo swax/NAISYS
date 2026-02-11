@@ -3,11 +3,12 @@ import cors from "@fastify/cors";
 import multipart from "@fastify/multipart";
 import staticFiles from "@fastify/static";
 import swagger from "@fastify/swagger";
-import swaggerUi from "@fastify/swagger-ui";
+import scalarReference from "@scalar/fastify-api-reference";
 import dotenv from "dotenv";
 import Fastify from "fastify";
 import {
   jsonSchemaTransform,
+  jsonSchemaTransformObject,
   serializerCompiler,
   validatorCompiler,
   type ZodTypeProvider,
@@ -77,7 +78,7 @@ export const startServer = async (
 
   await fastify.register(multipart);
 
-  // Register Swagger
+  // Register Swagger + Scalar
   await fastify.register(swagger, {
     openapi: {
       info: {
@@ -85,12 +86,6 @@ export const startServer = async (
         description: "API documentation for NAISYS Supervisor server",
         version: "1.0.0",
       },
-      servers: [
-        {
-          url: "http://localhost:3001",
-          description: "Development server",
-        },
-      ],
       components: {
         securitySchemes: {
           cookieAuth: {
@@ -102,14 +97,40 @@ export const startServer = async (
       },
     },
     transform: jsonSchemaTransform,
+    transformObject: jsonSchemaTransformObject,
   });
 
-  await fastify.register(swaggerUi, {
-    routePrefix: "/documentation",
-    uiConfig: {
-      docExpansion: "list",
-      deepLinking: false,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await fastify.register(scalarReference as any, {
+    routePrefix: "/supervisor/api-reference",
+    configuration: {
+      spec: { url: "/api/supervisor/openapi.json" },
+      theme: "kepler",
     },
+  });
+
+  // Serve the OpenAPI spec with tag groups (filtered to supervisor paths only)
+  fastify.get("/api/supervisor/openapi.json", async () => {
+    const spec = fastify.swagger();
+    const filteredPaths: Record<string, unknown> = {};
+    for (const [path, value] of Object.entries(spec.paths || {})) {
+      if (path.startsWith("/api/supervisor/")) {
+        filteredPaths[path] = value;
+      }
+    }
+    return {
+      ...spec,
+      paths: filteredPaths,
+      "x-tagGroups": [
+        { name: "General", tags: ["Authentication", "Settings"] },
+        { name: "Agents", tags: ["Agent", "Agent Config"] },
+        { name: "Operations", tags: ["Mail", "Runs"] },
+      ],
+    };
+  });
+
+  fastify.get("/", { schema: { hide: true } }, async (_request, reply) => {
+    return reply.redirect("/supervisor/");
   });
 
   fastify.register(apiRoutes, { prefix: "/api/supervisor" });
