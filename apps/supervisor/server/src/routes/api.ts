@@ -1,7 +1,8 @@
 import { FastifyInstance, FastifyPluginOptions } from "fastify";
-import accessRoutes from "./access.js";
+import { registerAuthMiddleware } from "../auth-middleware.js";
 import agentConfigRoutes from "./agent-config.js";
 import agentRoutes from "./agent.js";
+import authRoutes from "./auth.js";
 import controlsRoutes from "./controls.js";
 import mailRoutes from "./mail.js";
 import runsRoutes from "./runs.js";
@@ -11,8 +12,11 @@ export default async function apiRoutes(
   fastify: FastifyInstance,
   _options: FastifyPluginOptions,
 ) {
-  // Register access routes
-  await fastify.register(accessRoutes);
+  // Register auth middleware for all routes in this scope
+  registerAuthMiddleware(fastify);
+
+  // Register auth routes
+  await fastify.register(authRoutes);
 
   // Register settings routes
   await fastify.register(settingsRoutes);

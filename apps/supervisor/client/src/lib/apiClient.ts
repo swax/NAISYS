@@ -1,11 +1,12 @@
 import type {
-  AccessKeyRequest,
-  AccessKeyResponse,
   Agent,
+  AuthUser,
   ContextLogResponse,
   CreateAgentConfigResponse,
   GetAgentConfigResponse,
   LogEntry,
+  LoginResponse,
+  LogoutResponse,
   MailDataResponse,
   MailMessage,
   NaisysDataRequest,
@@ -21,27 +22,15 @@ import type {
 
 const API_BASE = "/api/supervisor";
 
-export interface SessionResponse {
-  success: boolean;
-  username?: string;
-  startDate?: string;
-  expireDate?: string;
-  message?: string;
-}
-
-export interface LogoutResponse {
-  success: boolean;
-  message: string;
-}
-
 export type {
-  AccessKeyRequest,
-  AccessKeyResponse,
   Agent,
+  AuthUser,
   ContextLogResponse,
   CreateAgentConfigResponse,
   GetAgentConfigResponse,
   LogEntry,
+  LoginResponse,
+  LogoutResponse,
   MailDataResponse,
   MailMessage,
   NaisysDataRequest,
@@ -96,9 +85,9 @@ export const api = {
 };
 
 export const apiEndpoints = {
-  accessKey: "/access-key",
-  session: "/session",
-  logout: "/logout",
+  login: "/auth/login",
+  logout: "/auth/logout",
+  me: "/auth/me",
   settings: "/settings",
   agent: "/agent",
   agentConfig: "/agent/config",
@@ -108,43 +97,22 @@ export const apiEndpoints = {
   mail: "/mail",
 };
 
-export const checkSession = async (): Promise<SessionResponse> => {
-  try {
-    return await api.get<SessionResponse>(apiEndpoints.session);
-  } catch (error) {
-    return {
-      success: false,
-      message: error instanceof Error ? error.message : "Session check failed",
-    };
-  }
+export const getMe = async (): Promise<AuthUser> => {
+  return await api.get<AuthUser>(apiEndpoints.me);
 };
 
-export const submitAccessKey = async (
-  accessKey: string,
-): Promise<AccessKeyResponse> => {
-  try {
-    return await api.post<AccessKeyRequest, AccessKeyResponse>(
-      apiEndpoints.accessKey,
-      { accessKey },
-    );
-  } catch (error) {
-    return {
-      success: false,
-      message:
-        error instanceof Error ? error.message : "Access key submission failed",
-    };
-  }
+export const login = async (
+  username: string,
+  password: string,
+): Promise<LoginResponse> => {
+  return await api.post<{ username: string; password: string }, LoginResponse>(
+    apiEndpoints.login,
+    { username, password },
+  );
 };
 
 export const logout = async (): Promise<LogoutResponse> => {
-  try {
-    return await api.post<{}, LogoutResponse>(apiEndpoints.logout, {});
-  } catch (error) {
-    return {
-      success: false,
-      message: error instanceof Error ? error.message : "Logout failed",
-    };
-  }
+  return await api.post<{}, LogoutResponse>(apiEndpoints.logout, {});
 };
 
 export const getSettings = async (): Promise<SettingsResponse> => {

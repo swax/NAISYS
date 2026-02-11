@@ -7,7 +7,7 @@ import {
   IconPlugConnectedX,
 } from "@tabler/icons-react";
 import React from "react";
-import { AccessDialog } from "../components/AccessDialog";
+import { LoginDialog } from "../components/LoginDialog";
 import { useSession } from "../contexts/SessionContext";
 
 interface ToolsHeaderProps {
@@ -87,7 +87,7 @@ export const ToolsHeader: React.FC<ToolsHeaderProps> = ({
           )}
         </Badge>
       </Tooltip>
-      <AccessDialog opened={accessModalOpened} onClose={closeAccessModal} />
+      <LoginDialog opened={accessModalOpened} onClose={closeAccessModal} />
     </Group>
   );
 };

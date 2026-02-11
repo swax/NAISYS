@@ -1,10 +1,17 @@
+import type { AuthUser } from "@naisys-supervisor/shared";
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { checkSession } from "../lib/apiClient";
+import {
+  getMe,
+  login as apiLogin,
+  logout as apiLogout,
+} from "../lib/apiClient";
 
 interface SessionContextType {
+  user: AuthUser | null;
   isAuthenticated: boolean;
-  setIsAuthenticated: (value: boolean) => void;
   isCheckingSession: boolean;
+  login: (username: string, password: string) => Promise<void>;
+  logout: () => Promise<void>;
 }
 
 const SessionContext = createContext<SessionContextType | undefined>(undefined);
@@ -12,19 +19,16 @@ const SessionContext = createContext<SessionContextType | undefined>(undefined);
 export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [isCheckingSession, setIsCheckingSession] = useState(true);
 
-  // Check for existing session on component mount
   useEffect(() => {
     const checkExistingSession = async () => {
       try {
-        const result = await checkSession();
-        if (result.success) {
-          setIsAuthenticated(true);
-        }
-      } catch (error) {
-        console.error("Session check failed:", error);
+        const authUser = await getMe();
+        setUser(authUser);
+      } catch {
+        // Not authenticated
       } finally {
         setIsCheckingSession(false);
       }
@@ -33,9 +37,28 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({
     checkExistingSession();
   }, []);
 
+  const login = async (username: string, password: string) => {
+    const result = await apiLogin(username, password);
+    setUser(result.user);
+  };
+
+  const logout = async () => {
+    try {
+      await apiLogout();
+    } finally {
+      setUser(null);
+    }
+  };
+
   return (
     <SessionContext.Provider
-      value={{ isAuthenticated, setIsAuthenticated, isCheckingSession }}
+      value={{
+        user,
+        isAuthenticated: user !== null,
+        isCheckingSession,
+        login,
+        logout,
+      }}
     >
       {children}
     </SessionContext.Provider>

@@ -9,25 +9,25 @@ import {
 } from "@mantine/core";
 import React from "react";
 import { useSession } from "../contexts/SessionContext";
-import { logout, submitAccessKey } from "../lib/apiClient";
 
-interface AccessDialogProps {
+interface LoginDialogProps {
   opened: boolean;
   onClose: () => void;
 }
 
-export const AccessDialog: React.FC<AccessDialogProps> = ({
+export const LoginDialog: React.FC<LoginDialogProps> = ({
   opened,
   onClose,
 }) => {
-  const { isAuthenticated, setIsAuthenticated } = useSession();
-  const [accessKey, setAccessKey] = React.useState("");
+  const { isAuthenticated, login, logout } = useSession();
+  const [username, setUsername] = React.useState("");
+  const [password, setPassword] = React.useState("");
   const [isLoading, setIsLoading] = React.useState(false);
   const [errorMessage, setErrorMessage] = React.useState("");
 
-  const handleSubmitAccessKey = async () => {
-    if (!accessKey.trim()) {
-      setErrorMessage("Please enter an access key");
+  const handleLogin = async () => {
+    if (!username.trim() || !password.trim()) {
+      setErrorMessage("Please enter both username and password");
       return;
     }
 
@@ -35,16 +35,11 @@ export const AccessDialog: React.FC<AccessDialogProps> = ({
     setErrorMessage("");
 
     try {
-      const result = await submitAccessKey(accessKey);
-
-      if (result.success) {
-        setIsAuthenticated(true);
-        onClose();
-        setAccessKey("");
-        setErrorMessage("");
-      } else {
-        setErrorMessage(result.message || "Access key incorrect");
-      }
+      await login(username, password);
+      onClose();
+      setUsername("");
+      setPassword("");
+      setErrorMessage("");
     } catch (error) {
       setErrorMessage(
         error instanceof Error ? error.message : "An error occurred",
@@ -58,12 +53,9 @@ export const AccessDialog: React.FC<AccessDialogProps> = ({
     setIsLoading(true);
     try {
       await logout();
-      setIsAuthenticated(false);
       onClose();
     } catch (error) {
       console.error("Logout failed:", error);
-      // Still clear authentication on client side even if server call fails
-      setIsAuthenticated(false);
       onClose();
     } finally {
       setIsLoading(false);
@@ -73,7 +65,14 @@ export const AccessDialog: React.FC<AccessDialogProps> = ({
   const handleClose = () => {
     onClose();
     setErrorMessage("");
-    setAccessKey("");
+    setUsername("");
+    setPassword("");
+  };
+
+  const handleKeyDown = (event: React.KeyboardEvent) => {
+    if (event.key === "Enter") {
+      handleLogin();
+    }
   };
 
   if (isAuthenticated) {
@@ -102,12 +101,7 @@ export const AccessDialog: React.FC<AccessDialogProps> = ({
   }
 
   return (
-    <Modal
-      opened={opened}
-      onClose={handleClose}
-      title="Enter Access Key"
-      centered
-    >
+    <Modal opened={opened} onClose={handleClose} title="Login" centered>
       <Stack gap="md">
         {errorMessage && (
           <Alert color="red" variant="light">
@@ -115,16 +109,21 @@ export const AccessDialog: React.FC<AccessDialogProps> = ({
           </Alert>
         )}
         <TextInput
-          label="Access Key"
-          placeholder="Enter your access key"
-          value={accessKey}
-          onChange={(event) => setAccessKey(event.currentTarget.value)}
-          onKeyDown={(event) => {
-            if (event.key === "Enter") {
-              handleSubmitAccessKey();
-            }
-          }}
+          label="Username"
+          placeholder="Enter your username"
+          value={username}
+          onChange={(event) => setUsername(event.currentTarget.value)}
+          onKeyDown={handleKeyDown}
           data-autofocus
+          disabled={isLoading}
+        />
+        <TextInput
+          label="Password"
+          type="password"
+          placeholder="Enter your password"
+          value={password}
+          onChange={(event) => setPassword(event.currentTarget.value)}
+          onKeyDown={handleKeyDown}
           disabled={isLoading}
         />
         <Group justify="flex-end" gap="xs">
@@ -132,11 +131,11 @@ export const AccessDialog: React.FC<AccessDialogProps> = ({
             Cancel
           </Button>
           <Button
-            onClick={handleSubmitAccessKey}
+            onClick={handleLogin}
             loading={isLoading}
-            disabled={!accessKey.trim()}
+            disabled={!username.trim() || !password.trim()}
           >
-            Submit
+            Login
           </Button>
         </Group>
       </Stack>

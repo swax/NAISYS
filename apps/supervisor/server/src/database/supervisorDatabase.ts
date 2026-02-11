@@ -7,11 +7,15 @@ import {
   selectFromDb,
 } from "./databaseService.js";
 
-const createSessionTable = `
-  CREATE TABLE IF NOT EXISTS sessions (
-    token TEXT PRIMARY KEY,
-    start_date TEXT NOT NULL,
-    expire_date TEXT NOT NULL
+const createUsersTable = `
+  CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT NOT NULL UNIQUE,
+    password_hash TEXT NOT NULL,
+    session_token_hash TEXT,
+    session_expires_at TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
   )
 `;
 
@@ -40,7 +44,7 @@ function getSupervisorConfig(): DatabaseConfig {
     dbPath,
     validatePath: false, // Supervisor creates the DB if it doesn't exist
     initSql: [
-      createSessionTable,
+      createUsersTable,
       createSettingsTable,
       "PRAGMA journal_mode = WAL",
     ],

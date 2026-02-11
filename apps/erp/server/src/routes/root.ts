@@ -8,7 +8,7 @@ export default async function rootRoute(fastify: FastifyInstance) {
       tags: ["Discovery"],
     },
     handler: async (request) => {
-      const publicRead = process.env.ERP_PUBLIC_READ === "true";
+      const publicRead = process.env.PUBLIC_READ === "true";
 
       const base = {
         name: "NAISYS ERP API",

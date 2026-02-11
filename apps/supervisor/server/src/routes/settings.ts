@@ -8,7 +8,6 @@ import {
 } from "@naisys-supervisor/shared";
 import { FastifyInstance, FastifyPluginOptions } from "fastify";
 import { getSettings, saveSettings } from "../services/settingsService.js";
-import { validateSession } from "./access.js";
 
 export default async function settingsRoutes(
   fastify: FastifyInstance,
@@ -28,7 +27,6 @@ export default async function settingsRoutes(
         },
         security: [{ cookieAuth: [] }],
       },
-      preHandler: validateSession,
     },
     async (request, reply) => {
       try {
@@ -76,7 +74,6 @@ export default async function settingsRoutes(
         },
         security: [{ cookieAuth: [] }],
       },
-      preHandler: validateSession,
     },
     async (request, reply) => {
       try {
