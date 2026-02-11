@@ -12,11 +12,12 @@ import {
 } from "@mantine/core";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
-import type { AuditListResponse, ExecutionOrder } from "shared";
-import {
-  ExecutionOrderForm,
-  type ExecutionOrderFormData,
-} from "../components/ExecutionOrderForm";
+import type {
+  AuditListResponse,
+  ExecutionOrder,
+  UpdateExecutionOrder,
+} from "shared";
+import { ExecutionOrderForm } from "../components/ExecutionOrderForm";
 import { api, showErrorNotification } from "../lib/api";
 import { hasAction } from "../lib/hateoas";
 
@@ -65,15 +66,9 @@ export const ExecutionOrderDetail: React.FC = () => {
     fetchItem();
   }, [fetchItem]);
 
-  const handleUpdate = async (data: ExecutionOrderFormData) => {
+  const handleUpdate = async (data: UpdateExecutionOrder) => {
     if (!id) return;
-    await api.put(`execution/orders/${id}`, {
-      priority: data.priority,
-      scheduledStartAt: data.scheduledStartAt || null,
-      dueAt: data.dueAt || null,
-      assignedTo: data.assignedTo || null,
-      notes: data.notes || null,
-    });
+    await api.put(`execution/orders/${id}`, data);
     setEditing(false);
     await fetchItem();
   };
@@ -142,7 +137,7 @@ export const ExecutionOrderDetail: React.FC = () => {
         <Title order={2} mb="lg">
           Edit Execution Order
         </Title>
-        <ExecutionOrderForm
+        <ExecutionOrderForm<true>
           initialData={{
             priority: item.priority,
             scheduledStartAt: item.scheduledStartAt

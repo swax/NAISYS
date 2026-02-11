@@ -11,11 +11,8 @@ import {
 } from "@mantine/core";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
-import type { PlanningOrder } from "shared";
-import {
-  PlanningOrderForm,
-  type PlanningOrderFormData,
-} from "../components/PlanningOrderForm";
+import type { PlanningOrder, UpdatePlanningOrder } from "shared";
+import { PlanningOrderForm } from "../components/PlanningOrderForm";
 import { PlanningOrderRevisions } from "../components/PlanningOrderRevisions";
 import { api, showErrorNotification } from "../lib/api";
 import { hasAction } from "../lib/hateoas";
@@ -44,7 +41,7 @@ export const PlanningOrderDetail: React.FC = () => {
     fetchItem();
   }, [fetchItem]);
 
-  const handleUpdate = async (data: PlanningOrderFormData) => {
+  const handleUpdate = async (data: UpdatePlanningOrder) => {
     if (!id) return;
     await api.put(`planning/orders/${id}`, data);
     setEditing(false);
@@ -85,9 +82,8 @@ export const PlanningOrderDetail: React.FC = () => {
         <Title order={2} mb="lg">
           Edit Planning Order
         </Title>
-        <PlanningOrderForm
+        <PlanningOrderForm<true>
           initialData={{
-            key: item.key,
             name: item.name,
             description: item.description,
             status: item.status,
