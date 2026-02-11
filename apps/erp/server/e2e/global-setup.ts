@@ -1,8 +1,10 @@
 import { execSync } from "child_process";
 import path from "path";
+import { fileURLToPath } from "url";
 import Database from "better-sqlite3";
 
-const serverDir = path.join(__dirname, "../server");
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const serverDir = path.join(__dirname, "..");
 const testDbPath = path.join(serverDir, "prisma/test.db");
 
 // Pre-computed bcrypt hash of "testpass123"

@@ -1,7 +1,9 @@
 import { defineConfig } from "@playwright/test";
 import path from "path";
+import { fileURLToPath } from "url";
 
-const testDbPath = path.join(__dirname, "server/prisma/test.db");
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const testDbPath = path.join(__dirname, "prisma/test.db");
 const testDbUrl = `file:${testDbPath}`;
 
 export default defineConfig({
@@ -22,13 +24,13 @@ export default defineConfig({
   ],
   webServer: [
     {
-      command: "npm run dev --workspace=server",
+      command: "npm run dev",
       port: 3002,
       env: { ERP_DATABASE_URL: testDbUrl },
       reuseExistingServer: !process.env.CI,
     },
     {
-      command: "npm run dev --workspace=client",
+      command: "npm run dev --prefix ../client",
       port: 5173,
       reuseExistingServer: !process.env.CI,
     },

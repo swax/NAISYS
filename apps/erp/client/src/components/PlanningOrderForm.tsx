@@ -33,9 +33,7 @@ export const PlanningOrderForm = <TEdit extends boolean = false>({
   onSubmit,
   onCancel,
 }: Props<TEdit>) => {
-  const schema = isEdit
-    ? UpdatePlanningOrderSchema
-    : CreatePlanningOrderSchema;
+  const schema = isEdit ? UpdatePlanningOrderSchema : CreatePlanningOrderSchema;
 
   const form = useForm({
     initialValues: {
@@ -54,8 +52,16 @@ export const PlanningOrderForm = <TEdit extends boolean = false>({
     setError(null);
     try {
       const input: Record<string, unknown> = isEdit
-        ? { name: values.name, description: values.description, status: values.status }
-        : { key: values.key, name: values.name, description: values.description };
+        ? {
+            name: values.name,
+            description: values.description,
+            status: values.status,
+          }
+        : {
+            key: values.key,
+            name: values.name,
+            description: values.description,
+          };
       const parsed = schema.parse(input);
       await onSubmit(parsed as FormData<TEdit>);
     } catch (err) {
