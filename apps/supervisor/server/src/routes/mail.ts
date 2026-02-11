@@ -12,7 +12,6 @@ import {
 } from "@naisys-supervisor/shared";
 import { FastifyInstance, FastifyPluginOptions } from "fastify";
 import { getMailData, sendMessage } from "../services/mailService.js";
-import { validateSession } from "./access.js";
 
 export default async function mailRoutes(
   fastify: FastifyInstance,
@@ -70,7 +69,6 @@ export default async function mailRoutes(
         },
         security: [{ cookieAuth: [] }],
       },
-      preHandler: validateSession,
     },
     async (request, reply) => {
       try {

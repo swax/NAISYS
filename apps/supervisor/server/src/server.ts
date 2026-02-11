@@ -89,7 +89,7 @@ export const startServer: StartServer = async (startupType, plugins = []) => {
           cookieAuth: {
             type: "apiKey",
             in: "cookie",
-            name: "session_token",
+            name: "supervisor_session",
           },
         },
       },

@@ -19,7 +19,6 @@ import {
   getAgentConfig,
   updateAgentConfig,
 } from "../services/agentConfigService.js";
-import { validateSession } from "./access.js";
 
 export default async function agentConfigRoutes(
   fastify: FastifyInstance,
@@ -93,7 +92,6 @@ export default async function agentConfigRoutes(
         },
         security: [{ cookieAuth: [] }],
       },
-      preHandler: validateSession,
     },
     async (request, reply) => {
       try {
@@ -153,7 +151,6 @@ export default async function agentConfigRoutes(
         },
         security: [{ cookieAuth: [] }],
       },
-      preHandler: validateSession,
     },
     async (request, reply) => {
       try {

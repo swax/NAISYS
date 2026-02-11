@@ -86,7 +86,6 @@ export default async function authRoutes(fastify: FastifyInstance) {
         user: {
           id: user.id,
           username: user.username,
-          title: user.title,
         },
       };
     },

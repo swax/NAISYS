@@ -19,9 +19,8 @@
     "apps/naisys"
   ],
   "scripts": {
-    "clean": "turbo clean",
+    "clean": "turbo clean && rm -rf .turbo",
     "build": "turbo build",
-    "rebuild": "turbo clean && turbo build --force",
     "test": "turbo test",
     "lint": "eslint .",
     "prettier": "prettier --write .",

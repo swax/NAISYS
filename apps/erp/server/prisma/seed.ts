@@ -35,7 +35,7 @@ if (existing) {
   console.log("Updated admin password.");
 } else {
   db.prepare(
-    "INSERT INTO users (uuid, username, password_hash, title, created_at, updated_at) VALUES (?, 'admin', ?, 'Admin User', datetime('now'), datetime('now'))",
+    "INSERT INTO users (uuid, username, password_hash, created_at, updated_at) VALUES (?, 'admin', ?, datetime('now'), datetime('now'))",
   ).run(randomUUID(), hash);
   console.log("Created admin user.");
 }

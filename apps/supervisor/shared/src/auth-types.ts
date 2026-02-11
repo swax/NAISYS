@@ -1,4 +1,4 @@
-import { z } from "zod/v4";
+import { z } from "zod";
 
 export const LoginRequestSchema = z.object({
   username: z.string().min(1),
@@ -19,3 +19,10 @@ export const LoginResponseSchema = z.object({
 });
 
 export type LoginResponse = z.infer<typeof LoginResponseSchema>;
+
+export const LogoutResponseSchema = z.object({
+  success: z.boolean(),
+  message: z.string(),
+});
+
+export type LogoutResponse = z.infer<typeof LogoutResponseSchema>;

@@ -1,71 +1,55 @@
-import { createHash } from "crypto";
 import type { FastifyInstance } from "fastify";
-import prisma from "./db.js";
+import { getUserByTokenHash, hashToken } from "./services/userService.js";
 
-export interface ErpUser {
+export interface SupervisorUser {
   id: number;
   username: string;
 }
 
 declare module "fastify" {
   interface FastifyRequest {
-    erpUser?: ErpUser;
+    supervisorUser?: SupervisorUser;
   }
 }
 
-const COOKIE_NAME = "erp_session";
+const COOKIE_NAME = "supervisor_session";
 
-const PUBLIC_PREFIXES = ["/api/erp/auth/login"];
+const PUBLIC_PREFIXES = ["/api/supervisor/auth/login"];
 
 function isPublicRoute(url: string): boolean {
-  // Exact match: API root
-  if (url === "/api/erp/" || url === "/api/erp") return true;
+  if (url === "/api/supervisor/" || url === "/api/supervisor") return true;
 
-  // Prefix matches
   for (const prefix of PUBLIC_PREFIXES) {
     if (url.startsWith(prefix)) return true;
   }
 
-  // Schema routes
-  if (url.startsWith("/api/erp/schemas")) return true;
-
-  // Non-ERP-API paths (static files, supervisor routes, etc.)
-  if (!url.startsWith("/api/erp")) return true;
+  // Non-supervisor-API paths (static files, ERP routes, etc.)
+  if (!url.startsWith("/api/supervisor")) return true;
 
   return false;
-}
-
-function hashToken(token: string): string {
-  return createHash("sha256").update(token).digest("hex");
 }
 
 export function registerAuthMiddleware(fastify: FastifyInstance) {
   const publicRead = process.env.PUBLIC_READ === "true";
 
-  fastify.decorateRequest("erpUser", undefined);
+  fastify.decorateRequest("supervisorUser", undefined);
 
   fastify.addHook("onRequest", async (request, reply) => {
     const token = request.cookies?.[COOKIE_NAME];
 
     if (token) {
       const tokenHash = hashToken(token);
-      const user = await prisma.user.findFirst({
-        where: {
-          sessionTokenHash: tokenHash,
-          sessionExpiresAt: { gt: new Date() },
-        },
-      });
+      const user = await getUserByTokenHash(tokenHash);
 
       if (user) {
-        request.erpUser = {
+        request.supervisorUser = {
           id: user.id,
           username: user.username,
         };
       }
     }
 
-    // Check if auth is required
-    if (request.erpUser) return; // Authenticated, always allowed
+    if (request.supervisorUser) return; // Authenticated
 
     if (isPublicRoute(request.url)) return; // Public route
 
