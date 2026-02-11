@@ -39,8 +39,6 @@ model PlanningOrderRevision {
   createdById   Int       @map("created_by")
   updatedAt     DateTime  @updatedAt @map("updated_at")
   updatedById   Int       @map("updated_by")
-  approvedAt    DateTime? @map("approved_at")
-
   createdBy  User          @relation("planOrderRevCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
   updatedBy  User          @relation("planOrderRevUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
   order      PlanningOrder @relation(fields: [planOrderId], references: [id], onDelete: Restrict)
@@ -60,8 +58,6 @@ model ExecOrder {
   scheduledStartAt DateTime? @map("scheduled_start_at")
   dueAt            DateTime? @map("due_at")
   releasedAt       DateTime  @default(now()) @map("released_at")
-  startedAt        DateTime? @map("started_at")
-  closedAt         DateTime? @map("closed_at")
   assignedTo       String?   @map("assigned_to")
   notes            String?
   createdAt        DateTime  @default(now()) @map("created_at")
@@ -105,6 +101,24 @@ model User {
   planOrderRevsUpdated PlanningOrderRevision[] @relation("planOrderRevUpdatedBy")
   execOrdersCreated    ExecOrder[]             @relation("execOrderCreatedBy")
   execOrdersUpdated    ExecOrder[]             @relation("execOrderUpdatedBy")
+  auditLogs            AuditLog[]
 
   @@map("users")
+}
+
+model AuditLog {
+  id         Int      @id @default(autoincrement())
+  entityType String   @map("entity_type")
+  entityId   Int      @map("entity_id")
+  action     String
+  field      String
+  oldValue   String?  @map("old_value")
+  newValue   String?  @map("new_value")
+  userId     Int      @map("user_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([entityType, entityId])
+  @@map("audit_log")
 }

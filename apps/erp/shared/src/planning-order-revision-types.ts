@@ -16,7 +16,6 @@ export const PlanningOrderRevisionSchema = z.object({
   createdBy: z.number(),
   updatedAt: z.iso.datetime(),
   updatedBy: z.number(),
-  approvedAt: z.iso.datetime().nullable(),
   _links: z.array(HateoasLinkSchema),
   _actions: z.array(HateoasActionSchema).optional(),
 });

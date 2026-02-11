@@ -8,10 +8,11 @@ import {
   Stack,
   Badge,
   Card,
+  Table,
 } from "@mantine/core";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
-import type { ExecutionOrder } from "shared";
+import type { AuditListResponse, ExecutionOrder } from "shared";
 import {
   ExecutionOrderForm,
   type ExecutionOrderFormData,
@@ -36,6 +37,9 @@ export const ExecutionOrderDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [item, setItem] = useState<ExecutionOrder | null>(null);
+  const [auditEntries, setAuditEntries] = useState<AuditListResponse["items"]>(
+    [],
+  );
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
 
@@ -43,8 +47,12 @@ export const ExecutionOrderDetail: React.FC = () => {
     if (!id) return;
     setLoading(true);
     try {
-      const result = await api.get<ExecutionOrder>(`execution/orders/${id}`);
+      const [result, audit] = await Promise.all([
+        api.get<ExecutionOrder>(`execution/orders/${id}`),
+        api.get<AuditListResponse>(`audit?entityType=ExecOrder&entityId=${id}`),
+      ]);
       setItem(result);
+      setAuditEntries(audit.items);
     } catch (err) {
       showErrorNotification(err);
     } finally {
@@ -263,22 +271,6 @@ export const ExecutionOrderDetail: React.FC = () => {
             </Text>
             <Text>{new Date(item.releasedAt).toLocaleString()}</Text>
           </Group>
-          {item.startedAt && (
-            <Group>
-              <Text fw={600} w={140}>
-                Started at:
-              </Text>
-              <Text>{new Date(item.startedAt).toLocaleString()}</Text>
-            </Group>
-          )}
-          {item.closedAt && (
-            <Group>
-              <Text fw={600} w={140}>
-                Closed at:
-              </Text>
-              <Text>{new Date(item.closedAt).toLocaleString()}</Text>
-            </Group>
-          )}
           <Group>
             <Text fw={600} w={140}>
               Notes:
@@ -311,6 +303,38 @@ export const ExecutionOrderDetail: React.FC = () => {
           </Group>
         </Stack>
       </Card>
+
+      {auditEntries.length > 0 && (
+        <Card withBorder p="lg" mt="lg">
+          <Title order={4} mb="md">
+            Status History
+          </Title>
+          <Table striped highlightOnHover>
+            <Table.Thead>
+              <Table.Tr>
+                <Table.Th>Action</Table.Th>
+                <Table.Th>From</Table.Th>
+                <Table.Th>To</Table.Th>
+                <Table.Th>User</Table.Th>
+                <Table.Th>When</Table.Th>
+              </Table.Tr>
+            </Table.Thead>
+            <Table.Tbody>
+              {auditEntries.map((entry) => (
+                <Table.Tr key={entry.id}>
+                  <Table.Td>{entry.action}</Table.Td>
+                  <Table.Td>{entry.oldValue ?? "—"}</Table.Td>
+                  <Table.Td>{entry.newValue ?? "—"}</Table.Td>
+                  <Table.Td>{entry.userId}</Table.Td>
+                  <Table.Td>
+                    {new Date(entry.createdAt).toLocaleString()}
+                  </Table.Td>
+                </Table.Tr>
+              ))}
+            </Table.Tbody>
+          </Table>
+        </Card>
+      )}
     </Container>
   );
 };

@@ -18,6 +18,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { registerAuthMiddleware } from "./auth-middleware.js";
 import { registerErrorHandler } from "./error-handler.js";
+import auditRoutes from "./routes/audit.js";
 import authRoutes from "./routes/auth.js";
 import executionOrderRoutes from "./routes/execution-orders.js";
 import planningOrderRevisionRoutes from "./routes/planning-order-revisions.js";
@@ -45,6 +46,7 @@ export const erpPlugin = fp(async (fastify) => {
   registerAuthMiddleware(fastify);
 
   // API routes under /api/erp prefix
+  fastify.register(auditRoutes, { prefix: "/api/erp/audit" });
   fastify.register(authRoutes, { prefix: "/api/erp/auth" });
   fastify.register(rootRoute, { prefix: "/api/erp" });
   fastify.register(planningOrderRoutes, {

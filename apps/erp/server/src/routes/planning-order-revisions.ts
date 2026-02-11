@@ -10,6 +10,7 @@ import {
   UpdatePlanningOrderRevisionSchema,
   type RevisionStatus,
 } from "@naisys-erp/shared";
+import { writeAuditEntry } from "../audit.js";
 import prisma from "../db.js";
 import { sendError } from "../error-handler.js";
 import {
@@ -43,7 +44,6 @@ function formatItem(orderId: number, item: PlanningOrderRevisionModel) {
     createdBy: item.createdById,
     updatedAt: item.updatedAt.toISOString(),
     updatedBy: item.updatedById,
-    approvedAt: item.approvedAt?.toISOString() ?? null,
     _links: revisionItemLinks(PARENT_RESOURCE, orderId, item.id),
     _actions: revisionItemActions(
       PARENT_RESOURCE,
@@ -353,13 +353,23 @@ export default async function planningOrderRevisionRoutes(
         );
       }
 
-      const item = await prisma.planningOrderRevision.update({
-        where: { id: revisionId },
-        data: {
-          status: "approved",
-          approvedAt: new Date(),
-          updatedById: request.erpUser!.id,
-        },
+      const userId = request.erpUser!.id;
+      const item = await prisma.$transaction(async (tx) => {
+        const updated = await tx.planningOrderRevision.update({
+          where: { id: revisionId },
+          data: { status: "approved", updatedById: userId },
+        });
+        await writeAuditEntry(
+          tx,
+          "PlanningOrderRevision",
+          revisionId,
+          "approve",
+          "status",
+          "draft",
+          "approved",
+          userId,
+        );
+        return updated;
       });
 
       return formatItem(orderId, item);
@@ -402,9 +412,23 @@ export default async function planningOrderRevisionRoutes(
         );
       }
 
-      const item = await prisma.planningOrderRevision.update({
-        where: { id: revisionId },
-        data: { status: "obsolete", updatedById: request.erpUser!.id },
+      const userId = request.erpUser!.id;
+      const item = await prisma.$transaction(async (tx) => {
+        const updated = await tx.planningOrderRevision.update({
+          where: { id: revisionId },
+          data: { status: "obsolete", updatedById: userId },
+        });
+        await writeAuditEntry(
+          tx,
+          "PlanningOrderRevision",
+          revisionId,
+          "obsolete",
+          "status",
+          "approved",
+          "obsolete",
+          userId,
+        );
+        return updated;
       });
 
       return formatItem(orderId, item);
