@@ -45,10 +45,7 @@ export const PlanningOrderDetail: React.FC = () => {
 
   const handleUpdate = async (data: PlanningOrderFormData) => {
     if (!id) return;
-    await api.put(`planning/orders/${id}`, {
-      ...data,
-      updatedBy: 1,
-    });
+    await api.put(`planning/orders/${id}`, data);
     setEditing(false);
     await fetchItem();
   };

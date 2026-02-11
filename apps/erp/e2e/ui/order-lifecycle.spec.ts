@@ -1,4 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
+import { getTestCredentials } from "../auth-helper";
 
 test.describe.serial("Full order lifecycle (UI)", () => {
   const uniqueKey = `e2e-lifecycle-${Date.now()}`;
@@ -9,6 +10,14 @@ test.describe.serial("Full order lifecycle (UI)", () => {
 
   test.beforeAll(async ({ browser }) => {
     page = await browser.newPage();
+
+    // Login via API to set session cookie
+    const creds = getTestCredentials(test.info().workerIndex);
+    const res = await page.request.post(
+      "http://localhost:3002/api/erp/auth/login",
+      { data: creds },
+    );
+    expect(res.status()).toBe(200);
   });
 
   test.afterAll(async () => {

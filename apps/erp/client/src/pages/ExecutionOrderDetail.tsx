@@ -64,7 +64,6 @@ export const ExecutionOrderDetail: React.FC = () => {
       dueAt: data.dueAt || null,
       assignedTo: data.assignedTo || null,
       notes: data.notes || null,
-      updatedBy: 1,
     });
     setEditing(false);
     await fetchItem();

@@ -27,7 +27,6 @@ export type PlanningOrderRevision = z.infer<typeof PlanningOrderRevisionSchema>;
 export const CreatePlanningOrderRevisionSchema = z.object({
   notes: z.string().max(2000).optional(),
   changeSummary: z.string().max(2000).optional(),
-  createdBy: z.number().int(),
 });
 
 export type CreatePlanningOrderRevision = z.infer<
@@ -38,7 +37,6 @@ export type CreatePlanningOrderRevision = z.infer<
 export const UpdatePlanningOrderRevisionSchema = z.object({
   notes: z.string().max(2000).optional(),
   changeSummary: z.string().max(2000).optional(),
-  updatedBy: z.number().int(),
 });
 
 export type UpdatePlanningOrderRevision = z.infer<

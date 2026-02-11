@@ -7,7 +7,7 @@ function getNaisysDatabasePath(): string {
     throw new Error("NAISYS_FOLDER environment variable is not set.");
   }
 
-  const dbFilename = "naisys_hub.sqlite";
+  const dbFilename = "naisys_hub.db";
   return path.join(env.NAISYS_FOLDER, "database", dbFilename);
 }
 

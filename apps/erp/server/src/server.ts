@@ -1,9 +1,12 @@
+import "dotenv/config";
+// Important to load dotenv before any other imports, to ensure environment variables are available
+import cookie from "@fastify/cookie";
 import cors from "@fastify/cors";
 import staticFiles from "@fastify/static";
 import swagger from "@fastify/swagger";
 import scalarReference from "@scalar/fastify-api-reference";
-import dotenv from "dotenv";
 import Fastify from "fastify";
+import fp from "fastify-plugin";
 import {
   jsonSchemaTransform,
   jsonSchemaTransformObject,
@@ -11,13 +14,14 @@ import {
   validatorCompiler,
   type ZodTypeProvider,
 } from "fastify-type-provider-zod";
-import fp from "fastify-plugin";
 import path from "path";
 import { fileURLToPath } from "url";
+import { registerAuthMiddleware } from "./auth-middleware.js";
 import { registerErrorHandler } from "./error-handler.js";
-import planningOrderRoutes from "./routes/planning-orders.js";
-import planningOrderRevisionRoutes from "./routes/planning-order-revisions.js";
+import authRoutes from "./routes/auth.js";
 import executionOrderRoutes from "./routes/execution-orders.js";
+import planningOrderRevisionRoutes from "./routes/planning-order-revisions.js";
+import planningOrderRoutes from "./routes/planning-orders.js";
 import rootRoute from "./routes/root.js";
 import schemaRoutes from "./routes/schemas.js";
 import "./schema-registry.js";
@@ -32,9 +36,16 @@ const __dirname = path.dirname(__filename);
 export const erpPlugin = fp(async (fastify) => {
   const isProd = process.env.NODE_ENV === "production";
 
+  // Cookie plugin (guard for supervisor embedding)
+  if (!fastify.hasDecorator("parseCookie")) {
+    await fastify.register(cookie);
+  }
+
   registerErrorHandler(fastify);
+  registerAuthMiddleware(fastify);
 
   // API routes under /api/erp prefix
+  fastify.register(authRoutes, { prefix: "/api/erp/auth" });
   fastify.register(rootRoute, { prefix: "/api/erp" });
   fastify.register(planningOrderRoutes, {
     prefix: "/api/erp/planning/orders",
@@ -86,6 +97,7 @@ async function startServer() {
 
   await fastify.register(cors, {
     origin: isProd ? false : ["http://localhost:5173"],
+    credentials: true,
   });
 
   // Swagger + Scalar for standalone mode
@@ -115,7 +127,7 @@ async function startServer() {
     return {
       ...spec,
       "x-tagGroups": [
-        { name: "General", tags: ["Discovery"] },
+        { name: "General", tags: ["Discovery", "Auth"] },
         {
           name: "Planning",
           tags: ["Planning Orders", "Planning Order Revisions"],
@@ -144,6 +156,5 @@ async function startServer() {
 
 // Start server if this file is run directly
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  dotenv.config({ quiet: true });
   void startServer();
 }

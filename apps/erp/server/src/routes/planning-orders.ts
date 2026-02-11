@@ -120,15 +120,16 @@ export default async function planningOrderRoutes(fastify: FastifyInstance) {
       },
     },
     handler: async (request, reply) => {
-      const { key, name, description, createdBy } = request.body;
+      const { key, name, description } = request.body;
+      const userId = request.erpUser!.id;
 
       const item = await prisma.planningOrder.create({
         data: {
           key,
           name,
           description,
-          createdById: createdBy,
-          updatedById: createdBy,
+          createdById: userId,
+          updatedById: userId,
         },
       });
 
@@ -179,7 +180,8 @@ export default async function planningOrderRoutes(fastify: FastifyInstance) {
     },
     handler: async (request, reply) => {
       const { id } = request.params;
-      const { updatedBy, ...data } = request.body;
+      const data = request.body;
+      const userId = request.erpUser!.id;
 
       const existing = await prisma.planningOrder.findUnique({
         where: { id },
@@ -195,7 +197,7 @@ export default async function planningOrderRoutes(fastify: FastifyInstance) {
 
       const item = await prisma.planningOrder.update({
         where: { id },
-        data: { ...data, updatedById: updatedBy },
+        data: { ...data, updatedById: userId },
       });
 
       return formatItem(item);
