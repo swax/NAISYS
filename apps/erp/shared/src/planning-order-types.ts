@@ -24,7 +24,10 @@ export const CreatePlanningOrderSchema = z.object({
     .string()
     .min(1)
     .max(100)
-    .regex(/^[a-z0-9]+(-[a-z0-9]+)*$/, "Key must be lowercase alphanumeric with hyphens"),
+    .regex(
+      /^[a-z0-9]+(-[a-z0-9]+)*$/,
+      "Key must be lowercase alphanumeric with hyphens",
+    ),
   name: z.string().min(1).max(200),
   description: z.string().max(2000).optional().default(""),
 });

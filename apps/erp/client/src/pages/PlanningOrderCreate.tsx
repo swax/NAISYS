@@ -1,15 +1,13 @@
 import { Container, Title } from "@mantine/core";
 import { useNavigate } from "react-router";
-import {
-  PlanningOrderForm,
-  type PlanningOrderFormData,
-} from "../components/PlanningOrderForm";
+import type { CreatePlanningOrder } from "shared";
+import { PlanningOrderForm } from "../components/PlanningOrderForm";
 import { api } from "../lib/api";
 
 export const PlanningOrderCreate: React.FC = () => {
   const navigate = useNavigate();
 
-  const handleCreate = async (data: PlanningOrderFormData) => {
+  const handleCreate = async (data: CreatePlanningOrder) => {
     await api.post("planning/orders", data);
     navigate("/planning/orders");
   };
@@ -19,7 +17,7 @@ export const PlanningOrderCreate: React.FC = () => {
       <Title order={2} mb="lg">
         Create Planning Order
       </Title>
-      <PlanningOrderForm
+      <PlanningOrderForm<false>
         onSubmit={handleCreate}
         onCancel={() => navigate("/planning/orders")}
       />

@@ -12,14 +12,17 @@ import {
   Textarea,
   Title,
 } from "@mantine/core";
+import { useForm } from "@mantine/form";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import type {
   PlanningOrderRevision,
   PlanningOrderRevisionListResponse,
 } from "shared";
+import { CreatePlanningOrderRevisionSchema } from "shared";
 import { api, showErrorNotification } from "../lib/api";
 import { hasAction } from "../lib/hateoas";
+import { zodResolver } from "../lib/zod-resolver";
 
 const STATUS_COLORS: Record<string, string> = {
   draft: "blue",
@@ -41,9 +44,15 @@ export const PlanningOrderRevisions: React.FC<Props> = ({ orderId }) => {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [modalOpen, setModalOpen] = useState(false);
-  const [notes, setNotes] = useState("");
-  const [changeSummary, setChangeSummary] = useState("");
   const [submitting, setSubmitting] = useState(false);
+
+  const form = useForm({
+    initialValues: {
+      notes: "",
+      changeSummary: "",
+    },
+    validate: zodResolver(CreatePlanningOrderRevisionSchema),
+  });
 
   const basePath = `planning/orders/${orderId}/revisions`;
 
@@ -65,22 +74,26 @@ export const PlanningOrderRevisions: React.FC<Props> = ({ orderId }) => {
     fetchRevisions();
   }, [fetchRevisions]);
 
-  const handleCreate = async () => {
+  const handleCreate = async (values: typeof form.values) => {
     setSubmitting(true);
     try {
       await api.post(basePath, {
-        notes: notes || undefined,
-        changeSummary: changeSummary || undefined,
+        notes: values.notes || undefined,
+        changeSummary: values.changeSummary || undefined,
       });
       setModalOpen(false);
-      setNotes("");
-      setChangeSummary("");
+      form.reset();
       await fetchRevisions();
     } catch (err) {
       showErrorNotification(err);
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleCloseModal = () => {
+    setModalOpen(false);
+    form.reset();
   };
 
   const handleApprove = async (rev: PlanningOrderRevision) => {
@@ -227,35 +240,31 @@ export const PlanningOrderRevisions: React.FC<Props> = ({ orderId }) => {
         </>
       )}
 
-      <Modal
-        opened={modalOpen}
-        onClose={() => setModalOpen(false)}
-        title="New Revision"
-      >
-        <Stack gap="md">
-          <Textarea
-            label="Notes"
-            placeholder="Optional notes for this revision..."
-            value={notes}
-            onChange={(e) => setNotes(e.currentTarget.value)}
-            minRows={2}
-          />
-          <Textarea
-            label="Change Summary"
-            placeholder="What changed in this revision..."
-            value={changeSummary}
-            onChange={(e) => setChangeSummary(e.currentTarget.value)}
-            minRows={2}
-          />
-          <Group justify="flex-end">
-            <Button variant="subtle" onClick={() => setModalOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleCreate} loading={submitting}>
-              Create
-            </Button>
-          </Group>
-        </Stack>
+      <Modal opened={modalOpen} onClose={handleCloseModal} title="New Revision">
+        <form onSubmit={form.onSubmit(handleCreate)}>
+          <Stack gap="md">
+            <Textarea
+              label="Notes"
+              placeholder="Optional notes for this revision..."
+              {...form.getInputProps("notes")}
+              minRows={2}
+            />
+            <Textarea
+              label="Change Summary"
+              placeholder="What changed in this revision..."
+              {...form.getInputProps("changeSummary")}
+              minRows={2}
+            />
+            <Group justify="flex-end">
+              <Button variant="subtle" onClick={handleCloseModal}>
+                Cancel
+              </Button>
+              <Button type="submit" loading={submitting}>
+                Create
+              </Button>
+            </Group>
+          </Stack>
+        </form>
       </Modal>
     </Card>
   );

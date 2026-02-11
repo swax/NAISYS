@@ -1,7 +1,10 @@
 import { Button, Group, Modal, Stack, TextInput } from "@mantine/core";
+import { useForm } from "@mantine/form";
 import { useState } from "react";
+import { LoginRequestSchema } from "shared";
 import { showErrorNotification } from "../lib/api";
 import { useAuth } from "../lib/AuthContext";
+import { zodResolver } from "../lib/zod-resolver";
 
 interface Props {
   opened: boolean;
@@ -10,16 +13,26 @@ interface Props {
 
 export const LoginModal: React.FC<Props> = ({ opened, onClose }) => {
   const { login } = useAuth();
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = async () => {
+  const form = useForm({
+    initialValues: {
+      username: "",
+      password: "",
+    },
+    validate: zodResolver(LoginRequestSchema),
+  });
+
+  const handleClose = () => {
+    form.reset();
+    onClose();
+  };
+
+  const handleSubmit = async (values: typeof form.values) => {
     setSubmitting(true);
     try {
-      await login(username, password);
-      setUsername("");
-      setPassword("");
+      await login(values.username, values.password);
+      form.reset();
       onClose();
     } catch (err) {
       showErrorNotification(err);
@@ -29,30 +42,21 @@ export const LoginModal: React.FC<Props> = ({ opened, onClose }) => {
   };
 
   return (
-    <Modal opened={opened} onClose={onClose} title="Login">
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          handleSubmit();
-        }}
-      >
+    <Modal opened={opened} onClose={handleClose} title="Login">
+      <form onSubmit={form.onSubmit(handleSubmit)}>
         <Stack gap="md">
           <TextInput
             label="Username"
-            value={username}
-            onChange={(e) => setUsername(e.currentTarget.value)}
-            required
+            {...form.getInputProps("username")}
             data-autofocus
           />
           <TextInput
             label="Password"
             type="password"
-            value={password}
-            onChange={(e) => setPassword(e.currentTarget.value)}
-            required
+            {...form.getInputProps("password")}
           />
           <Group justify="flex-end">
-            <Button variant="subtle" onClick={onClose}>
+            <Button variant="subtle" onClick={handleClose}>
               Cancel
             </Button>
             <Button type="submit" loading={submitting}>

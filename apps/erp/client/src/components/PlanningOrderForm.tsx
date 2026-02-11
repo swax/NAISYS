@@ -6,46 +6,58 @@ import {
   Group,
   Stack,
 } from "@mantine/core";
+import { useForm } from "@mantine/form";
 import { useState } from "react";
+import type { CreatePlanningOrder, UpdatePlanningOrder } from "shared";
+import { CreatePlanningOrderSchema, UpdatePlanningOrderSchema } from "shared";
+import { zodResolver } from "../lib/zod-resolver";
 
-export interface PlanningOrderFormData {
-  key?: string;
-  name: string;
-  description: string;
-  status?: string;
-}
+type FormData<TEdit extends boolean> = TEdit extends true
+  ? UpdatePlanningOrder
+  : CreatePlanningOrder;
 
-interface Props {
-  initialData?: PlanningOrderFormData;
-  isEdit?: boolean;
-  onSubmit: (data: PlanningOrderFormData) => Promise<void>;
+interface Props<TEdit extends boolean = boolean> {
+  initialData?: {
+    name?: string;
+    description?: string;
+    status?: string;
+  };
+  isEdit?: TEdit;
+  onSubmit: (data: FormData<TEdit>) => Promise<void>;
   onCancel: () => void;
 }
 
-export const PlanningOrderForm: React.FC<Props> = ({
+export const PlanningOrderForm = <TEdit extends boolean = false>({
   initialData,
   isEdit,
   onSubmit,
   onCancel,
-}) => {
-  const [key, setKey] = useState(initialData?.key ?? "");
-  const [name, setName] = useState(initialData?.name ?? "");
-  const [description, setDescription] = useState(
-    initialData?.description ?? "",
-  );
-  const [status, setStatus] = useState(initialData?.status ?? "active");
+}: Props<TEdit>) => {
+  const schema = isEdit
+    ? UpdatePlanningOrderSchema
+    : CreatePlanningOrderSchema;
+
+  const form = useForm({
+    initialValues: {
+      key: "",
+      name: initialData?.name ?? "",
+      description: initialData?.description ?? "",
+      status: initialData?.status ?? "active",
+    },
+    validate: zodResolver(schema),
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (values: typeof form.values) => {
     setLoading(true);
     setError(null);
     try {
-      const data: PlanningOrderFormData = { name, description };
-      if (!isEdit) data.key = key;
-      if (isEdit) data.status = status;
-      await onSubmit(data);
+      const input: Record<string, unknown> = isEdit
+        ? { name: values.name, description: values.description, status: values.status }
+        : { key: values.key, name: values.name, description: values.description };
+      const parsed = schema.parse(input);
+      await onSubmit(parsed as FormData<TEdit>);
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
@@ -54,31 +66,25 @@ export const PlanningOrderForm: React.FC<Props> = ({
   };
 
   return (
-    <form onSubmit={handleSubmit}>
+    <form onSubmit={form.onSubmit(handleSubmit)}>
       <Stack gap="md">
         {!isEdit && (
           <TextInput
             label="Key"
             description="Unique identifier (lowercase, hyphens allowed)"
             placeholder="standard-order"
-            required
-            value={key}
-            onChange={(e) => setKey(e.currentTarget.value)}
-            pattern="^[a-z0-9]+(-[a-z0-9]+)*$"
+            {...form.getInputProps("key")}
           />
         )}
         <TextInput
           label="Name"
           placeholder="Standard Order"
-          required
-          value={name}
-          onChange={(e) => setName(e.currentTarget.value)}
+          {...form.getInputProps("name")}
         />
         <Textarea
           label="Description"
           placeholder="Describe this planning order..."
-          value={description}
-          onChange={(e) => setDescription(e.currentTarget.value)}
+          {...form.getInputProps("description")}
           minRows={3}
         />
         {isEdit && (
@@ -88,8 +94,7 @@ export const PlanningOrderForm: React.FC<Props> = ({
               { value: "active", label: "Active" },
               { value: "archived", label: "Archived" },
             ]}
-            value={status}
-            onChange={(val) => setStatus(val ?? "active")}
+            {...form.getInputProps("status")}
           />
         )}
         {error && (

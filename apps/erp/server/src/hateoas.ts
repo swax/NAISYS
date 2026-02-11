@@ -207,6 +207,7 @@ export function revisionItemActions(
         href: `${API_PREFIX}/execution/orders`,
         method: "POST",
         title: "Cut Order",
+        schema: `${API_PREFIX}/schemas/CreateExecutionOrder`,
       },
       {
         rel: "obsolete",

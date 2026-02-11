@@ -7,62 +7,105 @@ import {
   Stack,
   NumberInput,
 } from "@mantine/core";
+import { useForm } from "@mantine/form";
 import { useState } from "react";
+import type { CreateExecutionOrder, UpdateExecutionOrder } from "shared";
+import { CreateExecutionOrderSchema, UpdateExecutionOrderSchema } from "shared";
+import { zodResolver } from "../lib/zod-resolver";
 
-export interface ExecutionOrderFormData {
-  planOrderId?: number;
-  planOrderRevId?: number;
-  priority: string;
-  scheduledStartAt: string;
-  dueAt: string;
-  assignedTo: string;
-  notes: string;
-}
+type FormData<TEdit extends boolean> = TEdit extends true
+  ? UpdateExecutionOrder
+  : CreateExecutionOrder;
 
-interface Props {
-  initialData?: Partial<ExecutionOrderFormData>;
-  isEdit?: boolean;
-  onSubmit: (data: ExecutionOrderFormData) => Promise<void>;
+interface Props<TEdit extends boolean = boolean> {
+  initialData?: Partial<{
+    planOrderId: number;
+    planOrderRevId: number;
+    priority: string;
+    scheduledStartAt: string;
+    dueAt: string;
+    assignedTo: string;
+    notes: string;
+  }>;
+  isEdit?: TEdit;
+  onSubmit: (data: FormData<TEdit>) => Promise<void>;
   onCancel: () => void;
 }
 
-export const ExecutionOrderForm: React.FC<Props> = ({
+function toISOOrEmpty(datetimeLocal: string): string | undefined {
+  if (!datetimeLocal) return undefined;
+  return new Date(datetimeLocal).toISOString();
+}
+
+function transformFormValues(
+  values: {
+    planOrderId: number | string;
+    planOrderRevId: number | string;
+    priority: string;
+    scheduledStartAt: string;
+    dueAt: string;
+    assignedTo: string;
+    notes: string;
+  },
+  isEdit?: boolean,
+): Record<string, unknown> {
+  const result: Record<string, unknown> = {
+    priority: values.priority || undefined,
+    scheduledStartAt: toISOOrEmpty(values.scheduledStartAt),
+    dueAt: toISOOrEmpty(values.dueAt),
+    assignedTo: values.assignedTo || undefined,
+    notes: values.notes || undefined,
+  };
+  if (isEdit) {
+    // For updates, convert empty optional fields to null (to clear them)
+    if (!values.scheduledStartAt) result.scheduledStartAt = null;
+    if (!values.dueAt) result.dueAt = null;
+    if (!values.assignedTo) result.assignedTo = null;
+    if (!values.notes) result.notes = null;
+  } else {
+    result.planOrderId =
+      typeof values.planOrderId === "number" ? values.planOrderId : undefined;
+    result.planOrderRevId =
+      typeof values.planOrderRevId === "number"
+        ? values.planOrderRevId
+        : undefined;
+  }
+  return result;
+}
+
+export const ExecutionOrderForm = <TEdit extends boolean = false>({
   initialData,
   isEdit,
   onSubmit,
   onCancel,
-}) => {
-  const [planOrderId, setPlanOrderId] = useState(initialData?.planOrderId ?? 0);
-  const [planOrderRevId, setPlanOrderRevId] = useState(
-    initialData?.planOrderRevId ?? 0,
-  );
-  const [priority, setPriority] = useState(initialData?.priority ?? "medium");
-  const [scheduledStartAt, setScheduledStartAt] = useState(
-    initialData?.scheduledStartAt ?? "",
-  );
-  const [dueAt, setDueAt] = useState(initialData?.dueAt ?? "");
-  const [assignedTo, setAssignedTo] = useState(initialData?.assignedTo ?? "");
-  const [notes, setNotes] = useState(initialData?.notes ?? "");
+}: Props<TEdit>) => {
+  const schema = isEdit
+    ? UpdateExecutionOrderSchema
+    : CreateExecutionOrderSchema;
+
+  const form = useForm({
+    initialValues: {
+      planOrderId: (initialData?.planOrderId ?? "") as number | string,
+      planOrderRevId: (initialData?.planOrderRevId ?? "") as number | string,
+      priority: initialData?.priority ?? "medium",
+      scheduledStartAt: initialData?.scheduledStartAt ?? "",
+      dueAt: initialData?.dueAt ?? "",
+      assignedTo: initialData?.assignedTo ?? "",
+      notes: initialData?.notes ?? "",
+    },
+    validate: (values) =>
+      zodResolver(schema)(transformFormValues(values, isEdit)),
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (values: typeof form.values) => {
     setLoading(true);
     setError(null);
     try {
-      const data: ExecutionOrderFormData = {
-        priority,
-        scheduledStartAt,
-        dueAt,
-        assignedTo,
-        notes,
-      };
-      if (!isEdit) {
-        data.planOrderId = planOrderId;
-        data.planOrderRevId = planOrderRevId;
-      }
-      await onSubmit(data);
+      const transformed = transformFormValues(values, isEdit);
+      const parsed = schema.parse(transformed);
+      await onSubmit(parsed as FormData<TEdit>);
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
@@ -71,23 +114,19 @@ export const ExecutionOrderForm: React.FC<Props> = ({
   };
 
   return (
-    <form onSubmit={handleSubmit}>
+    <form onSubmit={form.onSubmit(handleSubmit)}>
       <Stack gap="md">
         {!isEdit && (
           <>
             <NumberInput
               label="Planning Order ID"
-              required
               min={1}
-              value={planOrderId || ""}
-              onChange={(val) => setPlanOrderId(Number(val) || 0)}
+              {...form.getInputProps("planOrderId")}
             />
             <NumberInput
               label="Planning Order Revision ID"
-              required
               min={1}
-              value={planOrderRevId || ""}
-              onChange={(val) => setPlanOrderRevId(Number(val) || 0)}
+              {...form.getInputProps("planOrderRevId")}
             />
           </>
         )}
@@ -99,32 +138,27 @@ export const ExecutionOrderForm: React.FC<Props> = ({
             { value: "high", label: "High" },
             { value: "critical", label: "Critical" },
           ]}
-          value={priority}
-          onChange={(val) => setPriority(val ?? "medium")}
+          {...form.getInputProps("priority")}
         />
         <TextInput
           label="Scheduled Start"
           type="datetime-local"
-          value={scheduledStartAt}
-          onChange={(e) => setScheduledStartAt(e.currentTarget.value)}
+          {...form.getInputProps("scheduledStartAt")}
         />
         <TextInput
           label="Due Date"
           type="datetime-local"
-          value={dueAt}
-          onChange={(e) => setDueAt(e.currentTarget.value)}
+          {...form.getInputProps("dueAt")}
         />
         <TextInput
           label="Assigned To"
           placeholder="Person or team"
-          value={assignedTo}
-          onChange={(e) => setAssignedTo(e.currentTarget.value)}
+          {...form.getInputProps("assignedTo")}
         />
         <Textarea
           label="Notes"
           placeholder="Additional notes..."
-          value={notes}
-          onChange={(e) => setNotes(e.currentTarget.value)}
+          {...form.getInputProps("notes")}
           minRows={3}
         />
         {error && (
