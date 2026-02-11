@@ -59,7 +59,6 @@ test.describe("Planning Order Revisions - API happy path", () => {
     expect(body.status).toBe("draft");
     expect(body.notes).toBe("Initial draft");
     expect(body.changeSummary).toBe("First version of the order");
-    expect(body.approvedAt).toBeNull();
     expect(body._actions).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ rel: "approve" }),
@@ -96,7 +95,23 @@ test.describe("Planning Order Revisions - API happy path", () => {
 
     const body = await res.json();
     expect(body.status).toBe("approved");
-    expect(body.approvedAt).toBeTruthy();
+
+    // Verify audit entry was created
+    const auditRes = await api.get(
+      `${API}/audit?entityType=PlanningOrderRevision&entityId=${revisionId}`,
+    );
+    const audit = await auditRes.json();
+    expect(audit.items).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          action: "approve",
+          field: "status",
+          oldValue: "draft",
+          newValue: "approved",
+        }),
+      ]),
+    );
+
     expect(body._actions).toEqual(
       expect.arrayContaining([expect.objectContaining({ rel: "obsolete" })]),
     );

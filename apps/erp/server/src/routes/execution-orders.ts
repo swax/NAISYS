@@ -11,6 +11,7 @@ import {
   type ExecutionOrderPriority,
   type ExecutionOrderStatus,
 } from "@naisys-erp/shared";
+import { writeAuditEntry } from "../audit.js";
 import prisma from "../db.js";
 import { sendError } from "../error-handler.js";
 import {
@@ -42,8 +43,6 @@ function formatItem(item: ExecOrderModel) {
     scheduledStartAt: formatDate(item.scheduledStartAt),
     dueAt: formatDate(item.dueAt),
     releasedAt: item.releasedAt.toISOString(),
-    startedAt: formatDate(item.startedAt),
-    closedAt: formatDate(item.closedAt),
     assignedTo: item.assignedTo,
     notes: item.notes,
     createdAt: item.createdAt.toISOString(),
@@ -363,13 +362,23 @@ export default async function executionOrderRoutes(fastify: FastifyInstance) {
         );
       }
 
-      const item = await prisma.execOrder.update({
-        where: { id },
-        data: {
-          status: "started",
-          startedAt: new Date(),
-          updatedById: request.erpUser!.id,
-        },
+      const userId = request.erpUser!.id;
+      const item = await prisma.$transaction(async (tx) => {
+        const updated = await tx.execOrder.update({
+          where: { id },
+          data: { status: "started", updatedById: userId },
+        });
+        await writeAuditEntry(
+          tx,
+          "ExecOrder",
+          id,
+          "start",
+          "status",
+          "released",
+          "started",
+          userId,
+        );
+        return updated;
       });
 
       return formatItem(item);
@@ -410,13 +419,23 @@ export default async function executionOrderRoutes(fastify: FastifyInstance) {
         );
       }
 
-      const item = await prisma.execOrder.update({
-        where: { id },
-        data: {
-          status: "closed",
-          closedAt: new Date(),
-          updatedById: request.erpUser!.id,
-        },
+      const userId = request.erpUser!.id;
+      const item = await prisma.$transaction(async (tx) => {
+        const updated = await tx.execOrder.update({
+          where: { id },
+          data: { status: "closed", updatedById: userId },
+        });
+        await writeAuditEntry(
+          tx,
+          "ExecOrder",
+          id,
+          "close",
+          "status",
+          "started",
+          "closed",
+          userId,
+        );
+        return updated;
       });
 
       return formatItem(item);
@@ -457,9 +476,23 @@ export default async function executionOrderRoutes(fastify: FastifyInstance) {
         );
       }
 
-      const item = await prisma.execOrder.update({
-        where: { id },
-        data: { status: "cancelled", updatedById: request.erpUser!.id },
+      const userId = request.erpUser!.id;
+      const item = await prisma.$transaction(async (tx) => {
+        const updated = await tx.execOrder.update({
+          where: { id },
+          data: { status: "cancelled", updatedById: userId },
+        });
+        await writeAuditEntry(
+          tx,
+          "ExecOrder",
+          id,
+          "cancel",
+          "status",
+          existing.status,
+          "cancelled",
+          userId,
+        );
+        return updated;
       });
 
       return formatItem(item);

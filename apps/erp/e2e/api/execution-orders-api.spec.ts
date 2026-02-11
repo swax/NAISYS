@@ -67,8 +67,6 @@ test.describe("Execution Orders - API happy path", () => {
     expect(body.planOrderId).toBe(planOrderId);
     expect(body.planOrderRevId).toBe(planOrderRevId);
     expect(body.releasedAt).toBeTruthy();
-    expect(body.startedAt).toBeNull();
-    expect(body.closedAt).toBeNull();
     expect(body._actions).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ rel: "start" }),
@@ -129,7 +127,23 @@ test.describe("Execution Orders - API happy path", () => {
 
     const body = await res.json();
     expect(body.status).toBe("started");
-    expect(body.startedAt).toBeTruthy();
+
+    // Verify audit entry was created
+    const auditRes = await api.get(
+      `${API}/audit?entityType=ExecOrder&entityId=${execOrderId}`,
+    );
+    const audit = await auditRes.json();
+    expect(audit.items).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          action: "start",
+          field: "status",
+          oldValue: "released",
+          newValue: "started",
+        }),
+      ]),
+    );
+
     expect(body._actions).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ rel: "close" }),
@@ -161,7 +175,23 @@ test.describe("Execution Orders - API happy path", () => {
 
     const body = await res.json();
     expect(body.status).toBe("closed");
-    expect(body.closedAt).toBeTruthy();
+
+    // Verify audit entry was created
+    const auditRes = await api.get(
+      `${API}/audit?entityType=ExecOrder&entityId=${execOrderId}`,
+    );
+    const audit = await auditRes.json();
+    expect(audit.items).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          action: "close",
+          field: "status",
+          oldValue: "started",
+          newValue: "closed",
+        }),
+      ]),
+    );
+
     // closed: no actions
     expect(body._actions).toHaveLength(0);
   });

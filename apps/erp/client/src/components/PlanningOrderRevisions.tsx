@@ -139,7 +139,6 @@ export const PlanningOrderRevisions: React.FC<Props> = ({ orderId }) => {
                 <Table.Th>Notes</Table.Th>
                 <Table.Th>Change Summary</Table.Th>
                 <Table.Th>Created</Table.Th>
-                <Table.Th>Approved</Table.Th>
                 <Table.Th>Actions</Table.Th>
               </Table.Tr>
             </Table.Thead>
@@ -163,11 +162,6 @@ export const PlanningOrderRevisions: React.FC<Props> = ({ orderId }) => {
                   <Table.Td>{rev.changeSummary ?? "—"}</Table.Td>
                   <Table.Td>
                     {new Date(rev.createdAt).toLocaleString()}
-                  </Table.Td>
-                  <Table.Td>
-                    {rev.approvedAt
-                      ? new Date(rev.approvedAt).toLocaleString()
-                      : "—"}
                   </Table.Td>
                   <Table.Td>
                     <Group gap="xs">
