@@ -9,8 +9,14 @@ import {
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { useState } from "react";
-import type { CreateExecutionOrder, UpdateExecutionOrder } from "shared";
-import { CreateExecutionOrderSchema, UpdateExecutionOrderSchema } from "shared";
+import type {
+  CreateExecutionOrder,
+  UpdateExecutionOrder,
+} from "@naisys-erp/shared";
+import {
+  CreateExecutionOrderSchema,
+  UpdateExecutionOrderSchema,
+} from "@naisys-erp/shared";
 import { zodResolver } from "../lib/zod-resolver";
 
 type FormData<TEdit extends boolean> = TEdit extends true

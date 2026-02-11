@@ -1,6 +1,6 @@
 import { Container, Title } from "@mantine/core";
 import { useNavigate } from "react-router";
-import type { CreatePlanningOrder } from "shared";
+import type { CreatePlanningOrder } from "@naisys-erp/shared";
 import { PlanningOrderForm } from "../components/PlanningOrderForm";
 import { api } from "../lib/api";
 

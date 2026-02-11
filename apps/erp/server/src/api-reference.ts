@@ -71,8 +71,7 @@ export function registerApiReference(fastify: FastifyInstance) {
     "/erp/api-reference/",
     { schema: { hide: true } },
     async (_request, reply) => {
-      return reply
-        .header("Content-Type", "text/html; charset=utf-8")
+      return reply.header("Content-Type", "text/html; charset=utf-8")
         .send(`<!doctype html>
 <html>
   <head>

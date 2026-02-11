@@ -16,7 +16,7 @@ import type {
   AuditListResponse,
   ExecutionOrder,
   UpdateExecutionOrder,
-} from "shared";
+} from "@naisys-erp/shared";
 import { ExecutionOrderForm } from "../components/ExecutionOrderForm";
 import { api, showErrorNotification } from "../lib/api";
 import { hasAction } from "../lib/hateoas";

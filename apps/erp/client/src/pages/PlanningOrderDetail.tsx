@@ -11,7 +11,7 @@ import {
 } from "@mantine/core";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
-import type { PlanningOrder, UpdatePlanningOrder } from "shared";
+import type { PlanningOrder, UpdatePlanningOrder } from "@naisys-erp/shared";
 import { PlanningOrderForm } from "../components/PlanningOrderForm";
 import { PlanningOrderRevisions } from "../components/PlanningOrderRevisions";
 import { api, showErrorNotification } from "../lib/api";

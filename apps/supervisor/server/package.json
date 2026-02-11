@@ -8,7 +8,7 @@
     ".": "./dist/server.js"
   },
   "scripts": {
-    "clean": "npx rimraf dist client-dist",
+    "clean": "rimraf dist client-dist",
     "dev": "tsx watch src/server.ts monitor=naisys",
     "start": "node dist/server.js monitor=naisys",
     "build": "tsc && npx shx cp -r ../client/dist client-dist",
@@ -19,13 +19,17 @@
     "dist",
     "client-dist"
   ],
+  "peerDependencies": {
+    "@naisys-erp/server": "file:../../erp/server"
+  },
   "dependencies": {
     "@fastify/cookie": "^11.0.2",
     "@fastify/cors": "^11.2.0",
     "@fastify/multipart": "^9.4.0",
     "@fastify/static": "^9.0.0",
     "@fastify/swagger": "^9.7.0",
-    "@naisys-erp/server": "file:../../erp/server",
+    "@naisys/common": "file:../../../packages/common",
+    "@naisys-supervisor/client": "file:../client",
     "@naisys-supervisor/shared": "file:../shared",
     "@naisys/database": "file:../../../packages/database",
     "@scalar/fastify-api-reference": "^1.44.16",

@@ -21,6 +21,7 @@
   "scripts": {
     "clean": "turbo clean",
     "build": "turbo build",
+    "rebuild": "turbo clean && turbo build --force",
     "test": "turbo test",
     "lint": "eslint .",
     "prettier": "prettier --write .",
@@ -48,6 +49,7 @@
     "eslint": "^9.39.2",
     "npm-check-updates": "^19.3.2",
     "prettier": "^3.8.1",
+    "rimraf": "6.1.2",
     "turbo": "^2.8.5",
     "typescript": "^5.9.3"
   }

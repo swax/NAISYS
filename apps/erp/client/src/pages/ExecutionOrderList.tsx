@@ -14,7 +14,7 @@ import {
 } from "@mantine/core";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
-import type { ExecutionOrderListResponse } from "shared";
+import type { ExecutionOrderListResponse } from "@naisys-erp/shared";
 import { api, showErrorNotification } from "../lib/api";
 
 const STATUS_COLORS: Record<string, string> = {

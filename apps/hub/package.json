@@ -10,7 +10,7 @@
     "./services/runnerServer": "./dist/services/runnerServer.js"
   },
   "scripts": {
-    "clean": "npx rimraf dist",
+    "clean": "rimraf dist",
     "dev": "tsx watch src/naisysHub.ts",
     "start": "node dist/naisysHub.js",
     "build": "tsc",
@@ -19,11 +19,13 @@
   "files": [
     "dist"
   ],
+  "peerDependencies": {
+    "@naisys-supervisor/server": "file:../supervisor/server"
+  },
   "dependencies": {
     "@naisys/common": "file:../../packages/common",
     "@naisys/database": "file:../../packages/database",
     "@naisys/hub-protocol": "file:../../packages/hub-protocol",
-    "@naisys-supervisor/server": "file:../supervisor/server",
     "commander": "^14.0.3",
     "dotenv": "^17.2.4",
     "js-yaml": "^4.1.1",
