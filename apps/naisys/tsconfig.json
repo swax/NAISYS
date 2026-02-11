@@ -6,6 +6,7 @@
     "rootDir": "src",
     "outDir": "dist",
     "strict": true,
+    "skipLibCheck": true,
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
     "sourceMap": true
