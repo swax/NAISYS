@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "NAISYS monorepo containing NAISYS core and related applications",
   "private": true,
+  "packageManager": "npm@11.7.0",
   "type": "module",
   "workspaces": [
     "packages/common",
@@ -18,9 +19,9 @@
     "apps/naisys"
   ],
   "scripts": {
-    "clean": "npm run clean --workspaces --if-present",
-    "build": "npm run build --workspaces --if-present",
-    "test": "npm run test --workspaces --if-present",
+    "clean": "turbo clean",
+    "build": "turbo build",
+    "test": "turbo test",
     "lint": "eslint .",
     "prettier": "prettier --write .",
     "publish:dryrun": "npm run clean && npm run build && npm run npm:publish:dryrun --workspaces --if-present",
@@ -45,8 +46,9 @@
     "@typescript-eslint/eslint-plugin": "^8.55.0",
     "@typescript-eslint/parser": "^8.55.0",
     "eslint": "^9.39.2",
+    "npm-check-updates": "^19.3.2",
     "prettier": "^3.8.1",
-    "typescript": "^5.9.3",
-    "npm-check-updates": "^19.3.2"
+    "turbo": "^2.8.5",
+    "typescript": "^5.9.3"
   }
 }

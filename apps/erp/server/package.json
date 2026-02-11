@@ -16,7 +16,8 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",
-    "db:seed": "tsx prisma/seed.ts"
+    "db:seed": "tsx prisma/seed.ts",
+    "test": "npx playwright test"
   },
   "files": [
     "dist",
@@ -40,7 +41,10 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@naisys-erp/client": "file:../client",
+    "@playwright/test": "^1.58.2",
     "@types/bcrypt": "^6.0.0",
+    "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^25.2.3",
     "prisma": "^7.3.0",
     "tsx": "^4.21.0",

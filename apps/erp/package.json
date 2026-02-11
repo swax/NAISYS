@@ -13,11 +13,9 @@
     "build": "npm run build --workspaces --if-present",
     "dev": "concurrently \"npm run dev --workspace=server\" \"npm run dev --workspace=client\"",
     "start": "NODE_ENV=production npm start --workspace=server",
-    "test": "npx playwright test"
+    "test": "npm test --workspace=server"
   },
   "devDependencies": {
-    "@playwright/test": "^1.58.2",
-    "@types/better-sqlite3": "^7.6.13",
     "concurrently": "^9.2.1",
     "prettier": "^3.6.2"
   }

@@ -3,6 +3,7 @@ logs/
 node_modules/
 .claude
 .env*
+.turbo
 
 # Only include files one level deep in agents/testing/
 agents/testing/**
