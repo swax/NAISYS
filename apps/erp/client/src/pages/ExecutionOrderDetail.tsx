@@ -18,6 +18,7 @@ import {
   type ExecutionOrderFormData,
 } from "../components/ExecutionOrderForm";
 import { api, showErrorNotification } from "../lib/api";
+import { hasAction } from "../lib/hateoas";
 
 const STATUS_COLORS: Record<string, string> = {
   released: "blue",
@@ -159,7 +160,7 @@ export const ExecutionOrderDetail: React.FC = () => {
     );
   }
 
-  const canEdit = item.status === "released" || item.status === "started";
+  const canEdit = !!hasAction(item._actions, "update");
 
   return (
     <Container size="md" py="xl">
@@ -190,21 +191,21 @@ export const ExecutionOrderDetail: React.FC = () => {
             Back
           </Button>
           {canEdit && <Button onClick={() => setEditing(true)}>Edit</Button>}
-          {item.status === "released" && (
-            <>
-              <Button
-                color="green"
-                onClick={handleStart}
-                data-testid="exec-order-start"
-              >
-                Start
-              </Button>
-              <Button color="red" variant="outline" onClick={handleDelete}>
-                Delete
-              </Button>
-            </>
+          {hasAction(item._actions, "start") && (
+            <Button
+              color="green"
+              onClick={handleStart}
+              data-testid="exec-order-start"
+            >
+              Start
+            </Button>
           )}
-          {item.status === "started" && (
+          {hasAction(item._actions, "delete") && (
+            <Button color="red" variant="outline" onClick={handleDelete}>
+              Delete
+            </Button>
+          )}
+          {hasAction(item._actions, "close") && (
             <Button
               color="green"
               onClick={handleClose}
@@ -213,7 +214,7 @@ export const ExecutionOrderDetail: React.FC = () => {
               Close
             </Button>
           )}
-          {canEdit && (
+          {hasAction(item._actions, "cancel") && (
             <Button color="orange" variant="outline" onClick={handleCancel}>
               Cancel
             </Button>

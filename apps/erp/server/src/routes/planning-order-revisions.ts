@@ -55,9 +55,8 @@ function formatItem(orderId: number, item: PlanningOrderRevisionModel) {
 }
 
 function formatListItem(orderId: number, item: PlanningOrderRevisionModel) {
-  const { _actions, ...rest } = formatItem(orderId, item);
   return {
-    ...rest,
+    ...formatItem(orderId, item),
     _links: [selfLink(`/${PARENT_RESOURCE}/${orderId}/revisions/${item.id}`)],
   };
 }

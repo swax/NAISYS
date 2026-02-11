@@ -2,6 +2,7 @@ import "dotenv/config";
 // Important to load dotenv before any other imports, to ensure environment variables are available
 import cookie from "@fastify/cookie";
 import cors from "@fastify/cors";
+import rateLimit from "@fastify/rate-limit";
 import staticFiles from "@fastify/static";
 import swagger from "@fastify/swagger";
 import scalarReference from "@scalar/fastify-api-reference";
@@ -41,6 +42,13 @@ export const erpPlugin = fp(async (fastify) => {
   if (!fastify.hasDecorator("parseCookie")) {
     await fastify.register(cookie);
   }
+
+  // Rate limiting — moderate global default, strict overrides on sensitive routes
+  await fastify.register(rateLimit, {
+    max: 100,
+    timeWindow: "1 minute",
+    allowList: (request) => !request.url.startsWith("/api/"),
+  });
 
   registerErrorHandler(fastify);
   registerAuthMiddleware(fastify);
