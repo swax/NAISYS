@@ -64,7 +64,7 @@ export const PlanningOrderForm: React.FC<Props> = ({
             required
             value={key}
             onChange={(e) => setKey(e.currentTarget.value)}
-            pattern="^[a-z0-9-]+$"
+            pattern="^[a-z0-9]+(-[a-z0-9]+)*$"
           />
         )}
         <TextInput

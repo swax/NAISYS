@@ -19,6 +19,7 @@ import type {
   PlanningOrderRevisionListResponse,
 } from "shared";
 import { api, showErrorNotification } from "../lib/api";
+import { hasAction } from "../lib/hateoas";
 
 const STATUS_COLORS: Record<string, string> = {
   draft: "blue",
@@ -165,51 +166,51 @@ export const PlanningOrderRevisions: React.FC<Props> = ({ orderId }) => {
                   </Table.Td>
                   <Table.Td>
                     <Group gap="xs">
-                      {rev.status === "draft" && (
-                        <>
-                          <Button
-                            size="xs"
-                            variant="light"
-                            color="green"
-                            onClick={() => handleApprove(rev)}
-                            data-testid={`revision-approve-${rev.revNo}`}
-                          >
-                            Approve
-                          </Button>
-                          <Button
-                            size="xs"
-                            variant="light"
-                            color="red"
-                            onClick={() => handleDelete(rev)}
-                          >
-                            Delete
-                          </Button>
-                        </>
+                      {hasAction(rev._actions, "approve") && (
+                        <Button
+                          size="xs"
+                          variant="light"
+                          color="green"
+                          onClick={() => handleApprove(rev)}
+                          data-testid={`revision-approve-${rev.revNo}`}
+                        >
+                          Approve
+                        </Button>
                       )}
-                      {rev.status === "approved" && (
-                        <>
-                          <Button
-                            size="xs"
-                            variant="light"
-                            color="teal"
-                            onClick={() =>
-                              navigate(
-                                `/execution/orders/new?planOrderId=${orderId}&planOrderRevId=${rev.id}`,
-                              )
-                            }
-                            data-testid={`revision-cut-order-${rev.revNo}`}
-                          >
-                            Cut Order
-                          </Button>
-                          <Button
-                            size="xs"
-                            variant="light"
-                            color="gray"
-                            onClick={() => handleObsolete(rev)}
-                          >
-                            Mark Obsolete
-                          </Button>
-                        </>
+                      {hasAction(rev._actions, "delete") && (
+                        <Button
+                          size="xs"
+                          variant="light"
+                          color="red"
+                          onClick={() => handleDelete(rev)}
+                        >
+                          Delete
+                        </Button>
+                      )}
+                      {hasAction(rev._actions, "cut-order") && (
+                        <Button
+                          size="xs"
+                          variant="light"
+                          color="teal"
+                          onClick={() =>
+                            navigate(
+                              `/execution/orders/new?planOrderId=${orderId}&planOrderRevId=${rev.id}`,
+                            )
+                          }
+                          data-testid={`revision-cut-order-${rev.revNo}`}
+                        >
+                          Cut Order
+                        </Button>
+                      )}
+                      {hasAction(rev._actions, "obsolete") && (
+                        <Button
+                          size="xs"
+                          variant="light"
+                          color="gray"
+                          onClick={() => handleObsolete(rev)}
+                        >
+                          Mark Obsolete
+                        </Button>
                       )}
                     </Group>
                   </Table.Td>

@@ -23,6 +23,12 @@ export default async function authRoutes(fastify: FastifyInstance) {
 
   // LOGIN
   app.post("/login", {
+    config: {
+      rateLimit: {
+        max: 5,
+        timeWindow: "1 minute",
+      },
+    },
     schema: {
       description: "Authenticate with username and password",
       tags: ["Auth"],
@@ -30,6 +36,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
       response: {
         200: LoginResponseSchema,
         401: ErrorResponseSchema,
+        429: ErrorResponseSchema,
       },
     },
     handler: async (request, reply) => {
@@ -71,6 +78,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
         path: "/",
         httpOnly: true,
         sameSite: "lax",
+        secure: process.env.NODE_ENV === "production",
         maxAge: SESSION_DURATION_MS / 1000,
       });
 

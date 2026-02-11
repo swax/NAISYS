@@ -201,12 +201,20 @@ export function revisionItemActions(
       },
     );
   } else if (status === "approved") {
-    actions.push({
-      rel: "obsolete",
-      href: `${href}/obsolete`,
-      method: "POST",
-      title: "Mark Obsolete",
-    });
+    actions.push(
+      {
+        rel: "cut-order",
+        href: `${API_PREFIX}/execution/orders`,
+        method: "POST",
+        title: "Cut Order",
+      },
+      {
+        rel: "obsolete",
+        href: `${href}/obsolete`,
+        method: "POST",
+        title: "Mark Obsolete",
+      },
+    );
   }
   // obsolete: no actions
 

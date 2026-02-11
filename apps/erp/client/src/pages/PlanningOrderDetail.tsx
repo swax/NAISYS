@@ -18,6 +18,7 @@ import {
 } from "../components/PlanningOrderForm";
 import { PlanningOrderRevisions } from "../components/PlanningOrderRevisions";
 import { api, showErrorNotification } from "../lib/api";
+import { hasAction } from "../lib/hateoas";
 
 export const PlanningOrderDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -116,10 +117,14 @@ export const PlanningOrderDetail: React.FC = () => {
           <Button variant="subtle" onClick={() => navigate("/planning/orders")}>
             Back
           </Button>
-          <Button onClick={() => setEditing(true)}>Edit</Button>
-          <Button color="red" variant="outline" onClick={handleDelete}>
-            Delete
-          </Button>
+          {hasAction(item._actions, "update") && (
+            <Button onClick={() => setEditing(true)}>Edit</Button>
+          )}
+          {hasAction(item._actions, "delete") && (
+            <Button color="red" variant="outline" onClick={handleDelete}>
+              Delete
+            </Button>
+          )}
         </Group>
       </Group>
 
