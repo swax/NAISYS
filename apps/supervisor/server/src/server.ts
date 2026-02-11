@@ -1,3 +1,4 @@
+import type { StartServer } from "@naisys/common";
 import cookie from "@fastify/cookie";
 import cors from "@fastify/cors";
 import multipart from "@fastify/multipart";
@@ -18,10 +19,7 @@ import { fileURLToPath } from "url";
 import { initSupervisorDatabase } from "./database/supervisorDatabase.js";
 import apiRoutes from "./routes/api.js";
 
-export const startServer = async (
-  startupType: "standalone" | "hosted",
-  plugins: "erp"[] = [],
-) => {
+export const startServer: StartServer = async (startupType, plugins = []) => {
   const isProd = process.env.NODE_ENV === "production";
 
   if (startupType === "hosted" && !isProd) {
@@ -137,9 +135,11 @@ export const startServer = async (
 
   // Conditionally load ERP plugin
   if (plugins.includes("erp")) {
-    const { erpPlugin } = await import("@naisys-erp/server");
+    // Use variable to avoid compile-time type dependency on @naisys-erp/server (allows parallel builds)
+    const erpModule = "@naisys-erp/server";
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await fastify.register(erpPlugin as any);
+    const { erpPlugin } = (await import(erpModule)) as { erpPlugin: any };
+    await fastify.register(erpPlugin);
   }
 
   if (isProd) {

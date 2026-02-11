@@ -9,7 +9,7 @@
     "dist"
   ],
   "scripts": {
-    "clean": "npx rimraf dist",
+    "clean": "rimraf dist",
     "build": "tsc",
     "prepare": "npm run build"
   },

@@ -1,4 +1,4 @@
-import type { HateoasAction } from "shared";
+import type { HateoasAction } from "@naisys-erp/shared";
 
 export function hasAction(
   actions: HateoasAction[] | undefined,

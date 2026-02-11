@@ -1,3 +1,4 @@
+import type { StartHub, StartServer } from "@naisys/common";
 import { createDatabaseService } from "@naisys/database";
 import { program } from "commander";
 import dotenv from "dotenv";
@@ -23,12 +24,12 @@ import { createNaisysServer } from "./services/naisysServer.js";
  * Starts the Hub server with sync service.
  * Can be called standalone or inline from naisys with --integrated-hub flag.
  */
-export async function startHub(
-  startupType: "standalone" | "hosted",
-  startSupervisor?: any,
-  plugins?: "erp"[],
-  startupAgentPath?: string,
-): Promise<number> {
+export const startHub: StartHub = async (
+  startupType,
+  startSupervisor,
+  plugins,
+  startupAgentPath,
+) => {
   try {
     // Create log service first
     const logService = createHubServerLog(startupType);
@@ -137,7 +138,11 @@ export async function startHub(
      */
     if (startSupervisor) {
       // Don't import the whole fastify web server module tree unless needed
-      const { startServer } = await import("@naisys-supervisor/server");
+      // Use variable to avoid compile-time type dependency on @naisys-supervisor/server (allows parallel builds)
+      const supervisorModule = "@naisys-supervisor/server";
+      const { startServer } = (await import(supervisorModule)) as {
+        startServer: StartServer;
+      };
       await startServer("hosted", plugins);
     }
 
@@ -146,7 +151,7 @@ export async function startHub(
     console.error("[Hub] Failed to start hub server:", err);
     process.exit(1);
   }
-}
+};
 
 // Start server if this file is run directly
 if (process.argv[1] === fileURLToPath(import.meta.url)) {

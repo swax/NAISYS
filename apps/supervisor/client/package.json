@@ -4,7 +4,7 @@
   "description": "NAISYS Supervisor - React frontend with Vite and TypeScript",
   "type": "module",
   "scripts": {
-    "clean": "npx rimraf dist",
+    "clean": "rimraf dist",
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
@@ -23,7 +23,7 @@
     "react-dom": "^19.2.4",
     "react-router-dom": "^7.13.0",
     "recharts": "^3.7.0",
-    "shared": "file:../shared"
+    "@naisys-supervisor/shared": "file:../shared"
   },
   "devDependencies": {
     "@types/react": "^19.2.13",

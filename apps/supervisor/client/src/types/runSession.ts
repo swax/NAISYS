@@ -1,4 +1,4 @@
-import { RunSession as BaseRunSession } from "shared";
+import { RunSession as BaseRunSession } from "@naisys-supervisor/shared";
 
 /**
  * Client-side RunSession type with computed properties

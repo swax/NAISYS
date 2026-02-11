@@ -14,7 +14,7 @@ import {
 } from "@mantine/core";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
-import type { PlanningOrderListResponse } from "shared";
+import type { PlanningOrderListResponse } from "@naisys-erp/shared";
 import { api, showErrorNotification } from "../lib/api";
 
 export const PlanningOrderList: React.FC = () => {

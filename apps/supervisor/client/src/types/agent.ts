@@ -1,4 +1,7 @@
-import { Agent as BaseAgent, Host as BaseHost } from "shared";
+import {
+  Agent as BaseAgent,
+  Host as BaseHost,
+} from "@naisys-supervisor/shared";
 
 /**
  * Client-side Agent type with computed properties

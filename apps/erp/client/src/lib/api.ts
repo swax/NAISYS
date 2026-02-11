@@ -1,5 +1,5 @@
 import { notifications } from "@mantine/notifications";
-import type { AuthUser, LoginResponse } from "shared";
+import type { AuthUser, LoginResponse } from "@naisys-erp/shared";
 
 const API_BASE = "/api/erp";
 

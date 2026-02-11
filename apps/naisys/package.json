@@ -12,7 +12,7 @@
     "build/run/attachable": "tsc && node --inspect dist/naisys.js ../../agents/assistant.yaml --supervisor",
     "agent:assistant": "node dist/naisys.js ../../agents/assistant.yaml --integrated-hub --supervisor --erp",
     "agent:scdb:program-director": "cd ../../agents/scdb && node ../../apps/naisys/dist/naisys.js program-director.yaml",
-    "clean": "npx rimraf dist",
+    "clean": "rimraf dist",
     "build": "tsc",
     "eslint": "npx eslint src",
     "test": "tsc && node --experimental-vm-modules ../../node_modules/jest/bin/jest.js --testPathPatterns=dist/__tests__",
@@ -36,6 +36,7 @@
   "homepage": "https://naisys.org",
   "devDependencies": {
     "@jest/globals": "^30.2.0",
+    "@naisys/database": "file:../../packages/database",
     "@types/escape-html": "^1.0.4",
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^25.2.3",
@@ -48,13 +49,14 @@
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3"
   },
+  "peerDependencies": {
+    "@naisys/hub": "file:../hub"
+  },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.74.0",
     "@google/genai": "^1.40.0",
     "@modelcontextprotocol/sdk": "^1.26.0",
-    "@naisys-supervisor/server": "file:../supervisor/server",
     "@naisys/common": "file:../../packages/common",
-    "@naisys/hub": "file:../hub",
     "@naisys/hub-protocol": "file:../../packages/hub-protocol",
     "@xterm/headless": "^6.0.0",
     "chalk": "^5.6.2",

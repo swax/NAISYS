@@ -18,8 +18,8 @@ import { useNavigate } from "react-router";
 import type {
   PlanningOrderRevision,
   PlanningOrderRevisionListResponse,
-} from "shared";
-import { CreatePlanningOrderRevisionSchema } from "shared";
+} from "@naisys-erp/shared";
+import { CreatePlanningOrderRevisionSchema } from "@naisys-erp/shared";
 import { api, showErrorNotification } from "../lib/api";
 import { hasAction } from "../lib/hateoas";
 import { zodResolver } from "../lib/zod-resolver";

@@ -17,7 +17,7 @@ import type {
   SettingsRequest,
   SettingsResponse,
   UpdateAgentConfigResponse,
-} from "shared";
+} from "@naisys-supervisor/shared";
 
 const API_BASE = "/api/supervisor";
 

@@ -4,7 +4,7 @@
   "description": "NAISYS ERP - React frontend with Vite and TypeScript",
   "type": "module",
   "scripts": {
-    "clean": "npx rimraf dist",
+    "clean": "rimraf dist",
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
@@ -15,10 +15,10 @@
     "@mantine/form": "^8.3.14",
     "@mantine/hooks": "^8.3.14",
     "@mantine/notifications": "^8.3.14",
+    "@naisys-erp/shared": "file:../shared",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
-    "react-router": "^7.13.0",
-    "shared": "file:../shared"
+    "react-router": "^7.13.0"
   },
   "devDependencies": {
     "@types/react": "^19.2.13",
