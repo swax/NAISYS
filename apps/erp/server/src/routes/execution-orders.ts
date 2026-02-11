@@ -140,8 +140,8 @@ export default async function executionOrderRoutes(fastify: FastifyInstance) {
         dueAt,
         assignedTo,
         notes,
-        createdBy,
       } = request.body;
+      const userId = request.erpUser!.id;
 
       // Validate planning order exists
       const planOrder = await prisma.planningOrder.findUnique({
@@ -190,8 +190,8 @@ export default async function executionOrderRoutes(fastify: FastifyInstance) {
             dueAt: dueAt ? new Date(dueAt) : null,
             assignedTo: assignedTo ?? null,
             notes: notes ?? null,
-            createdById: createdBy,
-            updatedById: createdBy,
+            createdById: userId,
+            updatedById: userId,
           },
         });
       });
@@ -245,7 +245,8 @@ export default async function executionOrderRoutes(fastify: FastifyInstance) {
     },
     handler: async (request, reply) => {
       const { id } = request.params;
-      const { updatedBy, ...data } = request.body;
+      const data = request.body;
+      const userId = request.erpUser!.id;
 
       const existing = await prisma.execOrder.findUnique({ where: { id } });
       if (!existing) {
@@ -266,7 +267,7 @@ export default async function executionOrderRoutes(fastify: FastifyInstance) {
         );
       }
 
-      const updateData: Record<string, unknown> = { updatedById: updatedBy };
+      const updateData: Record<string, unknown> = { updatedById: userId };
       if (data.priority !== undefined) updateData.priority = data.priority;
       if (data.assignedTo !== undefined)
         updateData.assignedTo = data.assignedTo;
@@ -367,6 +368,7 @@ export default async function executionOrderRoutes(fastify: FastifyInstance) {
         data: {
           status: "started",
           startedAt: new Date(),
+          updatedById: request.erpUser!.id,
         },
       });
 
@@ -413,6 +415,7 @@ export default async function executionOrderRoutes(fastify: FastifyInstance) {
         data: {
           status: "closed",
           closedAt: new Date(),
+          updatedById: request.erpUser!.id,
         },
       });
 
@@ -456,7 +459,7 @@ export default async function executionOrderRoutes(fastify: FastifyInstance) {
 
       const item = await prisma.execOrder.update({
         where: { id },
-        data: { status: "cancelled" },
+        data: { status: "cancelled", updatedById: request.erpUser!.id },
       });
 
       return formatItem(item);

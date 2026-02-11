@@ -143,7 +143,8 @@ export default async function planningOrderRevisionRoutes(
     },
     handler: async (request, reply) => {
       const { orderId } = request.params;
-      const { notes, changeSummary, createdBy } = request.body;
+      const { notes, changeSummary } = request.body;
+      const userId = request.erpUser!.id;
 
       const order = await ensureOrderExists(orderId);
       if (!order) {
@@ -170,8 +171,8 @@ export default async function planningOrderRevisionRoutes(
             revNo: nextRevNo,
             notes: notes ?? null,
             changeSummary: changeSummary ?? null,
-            createdById: createdBy,
-            updatedById: createdBy,
+            createdById: userId,
+            updatedById: userId,
           },
         });
       });
@@ -226,7 +227,8 @@ export default async function planningOrderRevisionRoutes(
     },
     handler: async (request, reply) => {
       const { orderId, revisionId } = request.params;
-      const { notes, changeSummary, updatedBy } = request.body;
+      const { notes, changeSummary } = request.body;
+      const userId = request.erpUser!.id;
 
       const existing = await prisma.planningOrderRevision.findFirst({
         where: { id: revisionId, planOrderId: orderId },
@@ -254,7 +256,7 @@ export default async function planningOrderRevisionRoutes(
         data: {
           ...(notes !== undefined ? { notes } : {}),
           ...(changeSummary !== undefined ? { changeSummary } : {}),
-          updatedById: updatedBy,
+          updatedById: userId,
         },
       });
 
@@ -356,6 +358,7 @@ export default async function planningOrderRevisionRoutes(
         data: {
           status: "approved",
           approvedAt: new Date(),
+          updatedById: request.erpUser!.id,
         },
       });
 
@@ -401,7 +404,7 @@ export default async function planningOrderRevisionRoutes(
 
       const item = await prisma.planningOrderRevision.update({
         where: { id: revisionId },
-        data: { status: "obsolete" },
+        data: { status: "obsolete", updatedById: request.erpUser!.id },
       });
 
       return formatItem(orderId, item);

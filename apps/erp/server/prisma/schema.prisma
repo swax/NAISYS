@@ -93,6 +93,9 @@ model User {
   updatedAt    DateTime  @updatedAt @map("updated_at")
   deletedAt    DateTime? @map("deleted_at")
 
+  sessionTokenHash String?   @map("session_token_hash")
+  sessionExpiresAt DateTime? @map("session_expires_at")
+
   leadUser  User?  @relation("lead_to_subagents", fields: [leadUserId], references: [id], onDelete: NoAction)
   subagents User[] @relation("lead_to_subagents")
 

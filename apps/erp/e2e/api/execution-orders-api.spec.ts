@@ -1,4 +1,5 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type APIRequestContext } from "@playwright/test";
+import { loginAsTestUser } from "../auth-helper";
 
 const API = "http://localhost:3002/api/erp";
 
@@ -7,17 +8,24 @@ test.describe("Execution Orders - API happy path", () => {
   let planOrderRevId: number;
   let execOrderId: number;
   let execOrderId2: number;
+  let api: APIRequestContext;
 
-  test("create a planning order + revision for testing", async ({
-    request,
-  }) => {
+  test.beforeAll(async ({ playwright }) => {
+    api = await playwright.request.newContext();
+    await loginAsTestUser(api, test.info().workerIndex);
+  });
+
+  test.afterAll(async () => {
+    await api.dispose();
+  });
+
+  test("create a planning order + revision for testing", async () => {
     // Create planning order
-    const orderRes = await request.post(`${API}/planning/orders`, {
+    const orderRes = await api.post(`${API}/planning/orders`, {
       data: {
         key: `e2e-exec-test-${Date.now()}`,
         name: "E2E Exec Test Order",
         description: "Order for execution order e2e testing",
-        createdBy: 1,
       },
     });
     expect(orderRes.status()).toBe(201);
@@ -25,13 +33,12 @@ test.describe("Execution Orders - API happy path", () => {
     planOrderId = order.id;
 
     // Create revision
-    const revRes = await request.post(
+    const revRes = await api.post(
       `${API}/planning/orders/${planOrderId}/revisions`,
       {
         data: {
           notes: "Test revision",
           changeSummary: "Initial",
-          createdBy: 1,
         },
       },
     );
@@ -40,15 +47,14 @@ test.describe("Execution Orders - API happy path", () => {
     planOrderRevId = rev.id;
   });
 
-  test("create execution order", async ({ request }) => {
-    const res = await request.post(`${API}/execution/orders`, {
+  test("create execution order", async () => {
+    const res = await api.post(`${API}/execution/orders`, {
       data: {
         planOrderId,
         planOrderRevId,
         priority: "high",
         assignedTo: "test-user",
         notes: "First execution order",
-        createdBy: 1,
       },
     });
     expect(res.status()).toBe(201);
@@ -79,8 +85,8 @@ test.describe("Execution Orders - API happy path", () => {
     execOrderId = body.id;
   });
 
-  test("list execution orders", async ({ request }) => {
-    const res = await request.get(`${API}/execution/orders`);
+  test("list execution orders", async () => {
+    const res = await api.get(`${API}/execution/orders`);
     expect(res.status()).toBe(200);
 
     const body = await res.json();
@@ -88,8 +94,8 @@ test.describe("Execution Orders - API happy path", () => {
     expect(body.items.length).toBeGreaterThanOrEqual(1);
   });
 
-  test("get execution order by id", async ({ request }) => {
-    const res = await request.get(`${API}/execution/orders/${execOrderId}`);
+  test("get execution order by id", async () => {
+    const res = await api.get(`${API}/execution/orders/${execOrderId}`);
     expect(res.status()).toBe(200);
 
     const body = await res.json();
@@ -103,12 +109,11 @@ test.describe("Execution Orders - API happy path", () => {
     );
   });
 
-  test("update released order", async ({ request }) => {
-    const res = await request.put(`${API}/execution/orders/${execOrderId}`, {
+  test("update released order", async () => {
+    const res = await api.put(`${API}/execution/orders/${execOrderId}`, {
       data: {
         priority: "critical",
         notes: "Updated notes",
-        updatedBy: 1,
       },
     });
     expect(res.status()).toBe(200);
@@ -118,10 +123,8 @@ test.describe("Execution Orders - API happy path", () => {
     expect(body.notes).toBe("Updated notes");
   });
 
-  test("start order (released → started)", async ({ request }) => {
-    const res = await request.post(
-      `${API}/execution/orders/${execOrderId}/start`,
-    );
+  test("start order (released → started)", async () => {
+    const res = await api.post(`${API}/execution/orders/${execOrderId}/start`);
     expect(res.status()).toBe(200);
 
     const body = await res.json();
@@ -143,8 +146,8 @@ test.describe("Execution Orders - API happy path", () => {
     );
   });
 
-  test("cannot delete started order (409)", async ({ request }) => {
-    const res = await request.delete(`${API}/execution/orders/${execOrderId}`);
+  test("cannot delete started order (409)", async () => {
+    const res = await api.delete(`${API}/execution/orders/${execOrderId}`);
     expect(res.status()).toBe(409);
     const body = await res.json();
     expect(body.statusCode).toBe(409);
@@ -152,10 +155,8 @@ test.describe("Execution Orders - API happy path", () => {
     expect(body.message).toBeTruthy();
   });
 
-  test("close order (started → closed)", async ({ request }) => {
-    const res = await request.post(
-      `${API}/execution/orders/${execOrderId}/close`,
-    );
+  test("close order (started → closed)", async () => {
+    const res = await api.post(`${API}/execution/orders/${execOrderId}/close`);
     expect(res.status()).toBe(200);
 
     const body = await res.json();
@@ -165,10 +166,8 @@ test.describe("Execution Orders - API happy path", () => {
     expect(body._actions).toHaveLength(0);
   });
 
-  test("cannot start closed order (409)", async ({ request }) => {
-    const res = await request.post(
-      `${API}/execution/orders/${execOrderId}/start`,
-    );
+  test("cannot start closed order (409)", async () => {
+    const res = await api.post(`${API}/execution/orders/${execOrderId}/start`);
     expect(res.status()).toBe(409);
     const body = await res.json();
     expect(body.statusCode).toBe(409);
@@ -176,10 +175,8 @@ test.describe("Execution Orders - API happy path", () => {
     expect(body.message).toBeTruthy();
   });
 
-  test("cannot cancel closed order (409)", async ({ request }) => {
-    const res = await request.post(
-      `${API}/execution/orders/${execOrderId}/cancel`,
-    );
+  test("cannot cancel closed order (409)", async () => {
+    const res = await api.post(`${API}/execution/orders/${execOrderId}/cancel`);
     expect(res.status()).toBe(409);
     const body = await res.json();
     expect(body.statusCode).toBe(409);
@@ -187,14 +184,13 @@ test.describe("Execution Orders - API happy path", () => {
     expect(body.message).toBeTruthy();
   });
 
-  test("create and cancel an order", async ({ request }) => {
+  test("create and cancel an order", async () => {
     // Create second order
-    const createRes = await request.post(`${API}/execution/orders`, {
+    const createRes = await api.post(`${API}/execution/orders`, {
       data: {
         planOrderId,
         planOrderRevId,
         priority: "low",
-        createdBy: 1,
       },
     });
     expect(createRes.status()).toBe(201);
@@ -203,7 +199,7 @@ test.describe("Execution Orders - API happy path", () => {
     execOrderId2 = created.id;
 
     // Cancel it
-    const cancelRes = await request.post(
+    const cancelRes = await api.post(
       `${API}/execution/orders/${execOrderId2}/cancel`,
     );
     expect(cancelRes.status()).toBe(200);
@@ -214,8 +210,8 @@ test.describe("Execution Orders - API happy path", () => {
     expect(body._actions).toHaveLength(0);
   });
 
-  test("filter by status", async ({ request }) => {
-    const res = await request.get(`${API}/execution/orders?status=closed`);
+  test("filter by status", async () => {
+    const res = await api.get(`${API}/execution/orders?status=closed`);
     expect(res.status()).toBe(200);
 
     const body = await res.json();
@@ -224,8 +220,8 @@ test.describe("Execution Orders - API happy path", () => {
     }
   });
 
-  test("filter by priority", async ({ request }) => {
-    const res = await request.get(`${API}/execution/orders?priority=critical`);
+  test("filter by priority", async () => {
+    const res = await api.get(`${API}/execution/orders?priority=critical`);
     expect(res.status()).toBe(200);
 
     const body = await res.json();
@@ -234,10 +230,8 @@ test.describe("Execution Orders - API happy path", () => {
     }
   });
 
-  test("cannot delete planning order with revisions (409)", async ({
-    request,
-  }) => {
-    const res = await request.delete(`${API}/planning/orders/${planOrderId}`);
+  test("cannot delete planning order with revisions (409)", async () => {
+    const res = await api.delete(`${API}/planning/orders/${planOrderId}`);
     expect(res.status()).toBe(409);
     const body = await res.json();
     expect(body.statusCode).toBe(409);
@@ -245,29 +239,26 @@ test.describe("Execution Orders - API happy path", () => {
     expect(body.message).toContain("existing revisions");
   });
 
-  test("cannot delete draft revision with exec orders (409)", async ({
-    request,
-  }) => {
+  test("cannot delete draft revision with exec orders (409)", async () => {
     // Create a new draft revision, then create an exec order against it
-    const revRes = await request.post(
+    const revRes = await api.post(
       `${API}/planning/orders/${planOrderId}/revisions`,
-      { data: { notes: "Draft with exec orders", createdBy: 1 } },
+      { data: { notes: "Draft with exec orders" } },
     );
     expect(revRes.status()).toBe(201);
     const rev = await revRes.json();
 
-    const execRes = await request.post(`${API}/execution/orders`, {
+    const execRes = await api.post(`${API}/execution/orders`, {
       data: {
         planOrderId,
         planOrderRevId: rev.id,
         priority: "low",
-        createdBy: 1,
       },
     });
     expect(execRes.status()).toBe(201);
 
     // Try to delete the draft revision — should be blocked by exec orders
-    const delRes = await request.delete(
+    const delRes = await api.delete(
       `${API}/planning/orders/${planOrderId}/revisions/${rev.id}`,
     );
     expect(delRes.status()).toBe(409);

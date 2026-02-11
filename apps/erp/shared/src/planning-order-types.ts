@@ -27,7 +27,6 @@ export const CreatePlanningOrderSchema = z.object({
     .regex(/^[a-z0-9-]+$/, "Key must be lowercase alphanumeric with hyphens"),
   name: z.string().min(1).max(200),
   description: z.string().max(2000).optional().default(""),
-  createdBy: z.number().int(),
 });
 
 export type CreatePlanningOrder = z.infer<typeof CreatePlanningOrderSchema>;
@@ -37,7 +36,6 @@ export const UpdatePlanningOrderSchema = z.object({
   name: z.string().min(1).max(200).optional(),
   description: z.string().max(2000).optional(),
   status: z.enum(["active", "archived"]).optional(),
-  updatedBy: z.number().int(),
 });
 
 export type UpdatePlanningOrder = z.infer<typeof UpdatePlanningOrderSchema>;

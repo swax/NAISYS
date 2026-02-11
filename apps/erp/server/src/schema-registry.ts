@@ -7,6 +7,7 @@ import {
   UpdatePlanningOrderRevisionSchema,
   CreateExecutionOrderSchema,
   UpdateExecutionOrderSchema,
+  LoginRequestSchema,
 } from "@naisys-erp/shared";
 
 export const schemaRegistry: Record<string, $ZodType> = {
@@ -16,6 +17,7 @@ export const schemaRegistry: Record<string, $ZodType> = {
   UpdatePlanningOrderRevision: UpdatePlanningOrderRevisionSchema,
   CreateExecutionOrder: CreateExecutionOrderSchema,
   UpdateExecutionOrder: UpdateExecutionOrderSchema,
+  LoginRequest: LoginRequestSchema,
 };
 
 // Register schemas with Zod global registry for OpenAPI components/schemas population

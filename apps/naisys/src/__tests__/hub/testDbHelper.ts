@@ -37,7 +37,7 @@ export async function createTestDatabase(
   const dbService = await createDatabaseService(folder);
 
   // Create a direct Prisma client for assertions
-  const dbPath = join(folder, "database", `naisys_hub.sqlite`);
+  const dbPath = join(folder, "database", `naisys_hub.db`);
   const prisma = createPrismaClient(dbPath);
 
   const cleanup = async () => {

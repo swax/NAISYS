@@ -10,10 +10,7 @@ export const PlanningOrderCreate: React.FC = () => {
   const navigate = useNavigate();
 
   const handleCreate = async (data: PlanningOrderFormData) => {
-    await api.post("planning/orders", {
-      ...data,
-      createdBy: 1,
-    });
+    await api.post("planning/orders", data);
     navigate("/planning/orders");
   };
 

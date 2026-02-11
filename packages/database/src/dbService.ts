@@ -13,7 +13,7 @@ export async function createDatabaseService(naisysFolder: string) {
   const latestDbVersion = 8;
 
   // Ensure database directory exists
-  const databasePath = join(naisysFolder, "database", `naisys_hub.sqlite`);
+  const databasePath = join(naisysFolder, "database", `naisys_hub.db`);
   const databaseDir = dirname(databasePath);
   if (!existsSync(databaseDir)) {
     mkdirSync(databaseDir, { recursive: true });

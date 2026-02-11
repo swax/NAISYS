@@ -1,4 +1,5 @@
 import "dotenv/config";
+import { join } from "path";
 import { defineConfig } from "prisma/config";
 
 // Use placeholder during generation, actual path provided at runtime
@@ -12,6 +13,6 @@ export default defineConfig({
   datasource: {
     url:
       process.env.DATABASE_URL ||
-      `file:${naisysFolder}/database/naisys_hub.sqlite`,
+      `file:` + join(naisysFolder, "database", `naisys_hub.db`),
   },
 });
