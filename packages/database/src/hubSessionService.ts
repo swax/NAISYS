@@ -170,7 +170,7 @@ export async function ensureAdminUser(
   await createHubUser("admin", hash, uuid);
 
   console.log(`\n  Admin user created. Password: ${password}`);
-  console.log(`  Change it via the web UI or by re-running db:seed.\n`);
+  console.log(`  Change it via the web UI\n`);
 }
 
 /**

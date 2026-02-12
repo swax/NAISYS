@@ -92,7 +92,7 @@ export default async function authRoutes(
       }
 
       if (!passwordVerified) {
-        const valid = await bcrypt.compare(password, user.password_hash);
+        const valid = await bcrypt.compare(password, user.passwordHash);
         if (!valid) {
           reply.code(401);
           return {
@@ -111,7 +111,7 @@ export default async function authRoutes(
         await createHubSession(
           tokenHash,
           user.username,
-          user.password_hash,
+          user.passwordHash,
           user.uuid,
           "supervisor",
           expiresAt,

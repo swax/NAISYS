@@ -1,0 +1,38 @@
+datasource db {
+  provider = "sqlite"
+}
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+model User {
+  id               Int       @id @default(autoincrement())
+  username         String    @unique
+  passwordHash     String    @map("password_hash")
+  uuid             String    @default("")
+  sessionTokenHash String?   @map("session_token_hash")
+  sessionExpiresAt DateTime? @map("session_expires_at")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  @@map("users")
+}
+
+model Setting {
+  id             Int    @id @default(1)
+  settingsJson   String @map("settings_json")
+  modifyDate     String @map("modify_date")
+  readStatusJson String @default("{}") @map("read_status_json")
+
+  @@map("settings")
+}
+
+model SchemaVersion {
+  id      Int    @id @default(1)
+  version Int
+  updated String
+
+  @@map("schema_version")
+}
