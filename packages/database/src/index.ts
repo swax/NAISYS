@@ -1,5 +1,7 @@
 // Re-export Database Service
 export { createDatabaseService, DatabaseService } from "./dbService.js";
+// Re-export Migration Helper
+export { deployPrismaMigrations } from "./migrationHelper.js";
 // Re-export Hub Session Service
 export {
   initHubSessions,
