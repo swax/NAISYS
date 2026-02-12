@@ -16,7 +16,6 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",
-    "db:seed": "tsx prisma/seed.ts",
     "test": "npx playwright test"
   },
   "files": [
@@ -29,6 +28,7 @@
     "@fastify/rate-limit": "^10.3.0",
     "@fastify/static": "^9.0.0",
     "@fastify/swagger": "^9.7.0",
+    "@naisys/database": "file:../../../packages/database",
     "@naisys-erp/shared": "file:../shared",
     "@prisma/adapter-better-sqlite3": "^7.3.0",
     "@prisma/client": "^7.3.0",
@@ -49,9 +49,6 @@
     "prisma": "^7.3.0",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3"
-  },
-  "prisma": {
-    "seed": "tsx prisma/seed.ts"
   },
   "engines": {
     "node": ">=18.0.0"

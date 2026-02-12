@@ -16,8 +16,13 @@ import {
 } from "fastify-type-provider-zod";
 import path from "path";
 import { fileURLToPath } from "url";
-import { initSupervisorDatabase } from "./database/supervisorDatabase.js";
+import { initHubSessions, ensureAdminUser } from "@naisys/database";
+import {
+  initSupervisorDatabase,
+  selectFromSupervisorDb,
+} from "./database/supervisorDatabase.js";
 import apiRoutes from "./routes/api.js";
+import { createUser } from "./services/userService.js";
 
 export const startServer: StartServer = async (startupType, plugins = []) => {
   const isProd = process.env.NODE_ENV === "production";
@@ -29,7 +34,19 @@ export const startServer: StartServer = async (startupType, plugins = []) => {
     process.exit(1);
   }
 
-  initSupervisorDatabase();
+  await initSupervisorDatabase();
+  initHubSessions();
+  await ensureAdminUser(
+    async () => {
+      const rows = await selectFromSupervisorDb<{ id: number }[]>(
+        "SELECT id FROM users LIMIT 1",
+      );
+      return rows?.length ?? 0;
+    },
+    async (username, passwordHash, uuid) => {
+      await createUser(username, passwordHash, uuid);
+    },
+  );
 
   const __filename = fileURLToPath(import.meta.url);
   const __dirname = path.dirname(__filename);
@@ -89,7 +106,7 @@ export const startServer: StartServer = async (startupType, plugins = []) => {
           cookieAuth: {
             type: "apiKey",
             in: "cookie",
-            name: "supervisor_session",
+            name: "naisys_session",
           },
         },
       },

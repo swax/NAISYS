@@ -12,7 +12,7 @@ export default defineConfig({
   },
   datasource: {
     url:
-      process.env.DATABASE_URL ||
+      process.env.HUB_DATABASE_URL ||
       `file:` + join(naisysFolder, "database", `naisys_hub.db`),
   },
 });

@@ -10,7 +10,7 @@ const execAsync = promisify(exec);
 
 export async function createDatabaseService(naisysFolder: string) {
   /** Should match version in schema_version table of latest migration script */
-  const latestDbVersion = 8;
+  const latestDbVersion = 10;
 
   // Ensure database directory exists
   const databasePath = join(naisysFolder, "database", `naisys_hub.db`);
@@ -85,7 +85,7 @@ export async function createDatabaseService(naisysFolder: string) {
           cwd: databasePackageDir,
           env: {
             ...process.env,
-            DATABASE_URL: `file:${absoluteDbPath}`,
+            HUB_DATABASE_URL: `file:${absoluteDbPath}`,
           },
         },
       );

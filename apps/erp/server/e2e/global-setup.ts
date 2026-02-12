@@ -30,12 +30,12 @@ export default function globalSetup() {
   // Seed test users (one per worker) with real bcrypt password hash
   const db = new Database(testDbPath);
   const insert = db.prepare(
-    `INSERT INTO users (uuid, username, password_hash, title, created_at, updated_at)
-     VALUES (?, ?, ?, ?, datetime('now'), datetime('now'))`,
+    `INSERT INTO users (uuid, username, password_hash, created_at, updated_at)
+     VALUES (?, ?, ?, datetime('now'), datetime('now'))`,
   );
   for (let i = 0; i < TEST_USER_COUNT; i++) {
     const uuid = `00000000-0000-0000-0000-${String(i).padStart(12, "0")}`;
-    insert.run(uuid, `e2e-test-${i}`, TEST_PASSWORD_HASH, `E2E Test User ${i}`);
+    insert.run(uuid, `e2e-test-${i}`, TEST_PASSWORD_HASH);
   }
   db.close();
 }

@@ -12,6 +12,7 @@ const createUsersTable = `
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     username TEXT NOT NULL UNIQUE,
     password_hash TEXT NOT NULL,
+    uuid TEXT NOT NULL DEFAULT '',
     session_token_hash TEXT,
     session_expires_at TEXT,
     created_at TEXT NOT NULL DEFAULT (datetime('now')),

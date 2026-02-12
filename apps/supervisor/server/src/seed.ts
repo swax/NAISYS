@@ -1,4 +1,5 @@
 import bcrypt from "bcrypt";
+import { randomUUID } from "crypto";
 import dotenv from "dotenv";
 import { createInterface } from "readline/promises";
 import {
@@ -37,8 +38,8 @@ if (existing && existing.length > 0) {
   console.log("Updated admin password.");
 } else {
   await runOnSupervisorDb(
-    "INSERT INTO users (username, password_hash) VALUES ('admin', ?)",
-    [hash],
+    "INSERT INTO users (username, password_hash, uuid) VALUES ('admin', ?, ?)",
+    [hash, randomUUID()],
   );
   console.log("Created admin user.");
 }

@@ -13,8 +13,7 @@
     "start": "node dist/server.js monitor=naisys",
     "build": "tsc && npx shx cp -r ../client/dist client-dist",
     "type-check": "tsc --noEmit",
-    "npm:publish:dryrun": "npm run clean && npm run build && npm publish --dry-run",
-    "db:seed": "tsx src/seed.ts"
+    "npm:publish:dryrun": "npm run clean && npm run build && npm publish --dry-run"
   },
   "files": [
     "dist",
