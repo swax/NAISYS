@@ -10,6 +10,7 @@ import {
 } from "@naisys-erp/shared";
 import prisma from "../db.js";
 import { sendError } from "../error-handler.js";
+import { authCache } from "../auth-middleware.js";
 import {
   createHubSession,
   deleteHubSession,
@@ -152,9 +153,10 @@ export default async function authRoutes(fastify: FastifyInstance) {
         });
       }
 
-      // Also clear from hub
+      // Also clear from hub and auth cache
       if (token) {
         const tokenHash = hashToken(token);
+        authCache.invalidate(`cookie:${tokenHash}`);
         await deleteHubSession(tokenHash);
       }
 

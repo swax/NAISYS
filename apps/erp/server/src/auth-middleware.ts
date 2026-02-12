@@ -1,5 +1,6 @@
 import { createHash } from "crypto";
 import type { FastifyInstance } from "fastify";
+import { AuthCache } from "@naisys/common";
 import prisma from "./db.js";
 import {
   findAgentByApiKey,
@@ -21,6 +22,8 @@ declare module "fastify" {
 const COOKIE_NAME = "naisys_session";
 
 const PUBLIC_PREFIXES = ["/api/erp/auth/login"];
+
+export const authCache = new AuthCache<ErpUser>();
 
 function isPublicRoute(url: string): boolean {
   // Exact match: API root
@@ -54,8 +57,13 @@ export function registerAuthMiddleware(fastify: FastifyInstance) {
 
     if (token) {
       const tokenHash = hashToken(token);
+      const cacheKey = `cookie:${tokenHash}`;
+      const cached = authCache.get(cacheKey);
 
-      if (isHubAvailable()) {
+      if (cached !== undefined) {
+        // Cache hit (valid or negative)
+        if (cached) request.erpUser = cached;
+      } else if (isHubAvailable()) {
         // SSO mode: hub is source of truth
         const hubSession = await findHubSession(tokenHash);
         if (hubSession) {
@@ -71,10 +79,11 @@ export function registerAuthMiddleware(fastify: FastifyInstance) {
               },
             });
           }
-          request.erpUser = {
-            id: localUser.id,
-            username: localUser.username,
-          };
+          const erpUser = { id: localUser.id, username: localUser.username };
+          authCache.set(cacheKey, erpUser);
+          request.erpUser = erpUser;
+        } else {
+          authCache.set(cacheKey, null);
         }
       } else {
         // Standalone mode: local session only
@@ -85,10 +94,11 @@ export function registerAuthMiddleware(fastify: FastifyInstance) {
           },
         });
         if (user) {
-          request.erpUser = {
-            id: user.id,
-            username: user.username,
-          };
+          const erpUser = { id: user.id, username: user.username };
+          authCache.set(cacheKey, erpUser);
+          request.erpUser = erpUser;
+        } else {
+          authCache.set(cacheKey, null);
         }
       }
     }
@@ -97,25 +107,34 @@ export function registerAuthMiddleware(fastify: FastifyInstance) {
     if (!request.erpUser) {
       const apiKey = request.headers["x-api-key"] as string | undefined;
       if (apiKey) {
-        const agent = await findAgentByApiKey(apiKey);
-        if (agent) {
-          let localUser = await prisma.user.findUnique({
-            where: { uuid: agent.uuid },
-          });
-          if (!localUser) {
-            localUser = await prisma.user.create({
-              data: {
-                uuid: agent.uuid,
-                username: agent.username,
-                passwordHash: "!api-key-only",
-                authType: "api_key",
-              },
+        const apiKeyHash = hashToken(apiKey);
+        const cacheKey = `apikey:${apiKeyHash}`;
+        const cached = authCache.get(cacheKey);
+
+        if (cached !== undefined) {
+          if (cached) request.erpUser = cached;
+        } else {
+          const agent = await findAgentByApiKey(apiKey);
+          if (agent) {
+            let localUser = await prisma.user.findUnique({
+              where: { uuid: agent.uuid },
             });
+            if (!localUser) {
+              localUser = await prisma.user.create({
+                data: {
+                  uuid: agent.uuid,
+                  username: agent.username,
+                  passwordHash: "!api-key-only",
+                  authType: "api_key",
+                },
+              });
+            }
+            const erpUser = { id: localUser.id, username: localUser.username };
+            authCache.set(cacheKey, erpUser);
+            request.erpUser = erpUser;
+          } else {
+            authCache.set(cacheKey, null);
           }
-          request.erpUser = {
-            id: localUser.id,
-            username: localUser.username,
-          };
         }
       }
     }
