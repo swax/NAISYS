@@ -45,7 +45,7 @@ export default async function mailRoutes(
           data,
         };
       } catch (error) {
-        console.error("Error in /mail route:", error);
+        request.log.error(error, "Error in /mail route");
         return reply.status(500).send({
           success: false,
           message: "Internal server error while fetching mail data",
@@ -143,7 +143,7 @@ export default async function mailRoutes(
           return reply.code(500).send(result);
         }
       } catch (error) {
-        console.error("Error in send-mail route:", error);
+        request.log.error(error, "Error in send-mail route");
         return reply.code(500).send({
           success: false,
           message:

@@ -23,6 +23,7 @@ import {
 } from "@naisys/database";
 import { supervisorDbPath } from "./dbConfig.js";
 import prisma from "./db.js";
+import { initLogger } from "./logger.js";
 import apiRoutes from "./routes/api.js";
 import { createUser } from "./services/userService.js";
 
@@ -85,6 +86,8 @@ export const startServer: StartServer = async (startupType, plugins = []) => {
             },
           },
   }).withTypeProvider<ZodTypeProvider>();
+
+  initLogger(fastify.log);
 
   // Set Zod validator and serializer compilers
   fastify.setValidatorCompiler(validatorCompiler);

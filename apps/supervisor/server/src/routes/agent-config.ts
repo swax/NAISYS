@@ -54,7 +54,7 @@ export default async function agentConfigRoutes(
           path,
         };
       } catch (error) {
-        console.error("Error in GET /agent/config route:", error);
+        request.log.error(error, "Error in GET /agent/config route");
         const errorMessage =
           error instanceof Error ? error.message : "Unknown error";
 
@@ -113,7 +113,7 @@ export default async function agentConfigRoutes(
           message: `Agent '${name}' created successfully`,
         };
       } catch (error) {
-        console.error("Error in POST /agent/config route:", error);
+        request.log.error(error, "Error in POST /agent/config route");
         const errorMessage =
           error instanceof Error ? error.message : "Unknown error";
 
@@ -162,7 +162,7 @@ export default async function agentConfigRoutes(
           message: "Agent configuration updated successfully",
         };
       } catch (error) {
-        console.error("Error in PUT /agent/config route:", error);
+        request.log.error(error, "Error in PUT /agent/config route");
         const errorMessage =
           error instanceof Error ? error.message : "Unknown error";
 

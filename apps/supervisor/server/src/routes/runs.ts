@@ -44,7 +44,7 @@ export default async function runsRoutes(
           data,
         };
       } catch (error) {
-        console.error("Error in /runs route:", error);
+        request.log.error(error, "Error in /runs route");
         return reply.status(500).send({
           success: false,
           message: "Internal server error while fetching runs data",
@@ -82,7 +82,7 @@ export default async function runsRoutes(
           data,
         };
       } catch (error) {
-        console.error("Error in /context-log route:", error);
+        request.log.error(error, "Error in /context-log route");
         return reply.status(500).send({
           success: false,
           message: "Internal server error while fetching context log",
