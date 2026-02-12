@@ -62,7 +62,13 @@ export async function createAgentRuntime(
   const output = createOutputService(logService);
 
   // Shell and workspaces (needed by contextManager)
-  const shellWrapper = createShellWrapper(globalConfig, agentConfig, output);
+  const shellWrapper = createShellWrapper(
+    globalConfig,
+    agentConfig,
+    output,
+    userService,
+    localUserId,
+  );
   const workspaces = createWorkspacesFeature(shellWrapper);
 
   // LLM

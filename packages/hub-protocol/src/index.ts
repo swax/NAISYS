@@ -198,6 +198,7 @@ export const UserListResponseSchema = z.object({
         leadUserId: z.number().optional(),
         configYaml: z.string(),
         assignedHostIds: z.array(z.number()).optional(),
+        apiKey: z.string().optional(),
       }),
     )
     .optional(),

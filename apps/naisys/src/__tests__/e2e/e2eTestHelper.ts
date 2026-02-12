@@ -243,6 +243,8 @@ export interface SpawnNaisysOptions {
   args?: string[];
   /** Enable debug output - logs all stdout to console in real-time */
   debug?: boolean;
+  /** Extra environment variables to set (overrides process.env) */
+  env?: Record<string, string>;
 }
 
 /**
@@ -252,7 +254,7 @@ export function spawnNaisys(
   testDir: string,
   options: SpawnNaisysOptions = {},
 ): NaisysTestProcess {
-  const { args = [], debug = false } = options;
+  const { args = [], debug = false, env: extraEnv = {} } = options;
   const naisysPath = getNaisysPath();
 
   const proc = spawn("node", [naisysPath, ...args], {
@@ -260,6 +262,7 @@ export function spawnNaisys(
     env: {
       ...process.env,
       FORCE_COLOR: "0",
+      ...extraEnv,
     },
     stdio: ["pipe", "pipe", "pipe"],
   });

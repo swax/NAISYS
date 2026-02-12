@@ -33,6 +33,8 @@ describe("Basic Mail E2E", () => {
   let testDir: string;
   let naisys: NaisysTestProcess | null = null;
 
+  const HUB_PORT = 5031;
+
   beforeEach(() => {
     testDir = getTestDir("basic_mail");
     setupTestDir(testDir);
@@ -102,7 +104,10 @@ describe("Basic Mail E2E", () => {
 
   test("integrated-hub: send mail from alex to bob", async () => {
     createEnvFile(testDir);
-    appendFileSync(join(testDir, ".env"), "\nHUB_ACCESS_KEY=TESTKEY123");
+    appendFileSync(
+      join(testDir, ".env"),
+      `\nHUB_ACCESS_KEY=TESTKEY123\nHUB_PORT=${HUB_PORT}`,
+    );
     await runMailTest(["--integrated-hub"]);
   });
 });

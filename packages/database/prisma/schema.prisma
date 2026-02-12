@@ -83,6 +83,7 @@ model users {
   uuid               String              @unique
   username           String
   title              String
+  api_key            String?             @unique
   agent_path         String              @unique(map: "unq_users_agent_path")
   lead_user_id       Int?
   config             String              @default("{}")

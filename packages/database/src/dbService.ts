@@ -7,7 +7,7 @@ import { createPrismaClient } from "./prismaClient.js";
 
 export async function createDatabaseService(naisysFolder: string) {
   /** Should match version in schema_version table of latest migration script */
-  const latestDbVersion = 10;
+  const latestDbVersion = 11;
 
   // Ensure database directory exists
   const databasePath = join(naisysFolder, "database", `naisys_hub.db`);

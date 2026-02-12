@@ -1,7 +1,11 @@
 import { createHash } from "crypto";
 import type { FastifyInstance } from "fastify";
 import prisma from "./db.js";
-import { findHubSession, isHubAvailable } from "@naisys/database";
+import {
+  findAgentByApiKey,
+  findHubSession,
+  isHubAvailable,
+} from "@naisys/database";
 
 export interface ErpUser {
   id: number;
@@ -84,6 +88,33 @@ export function registerAuthMiddleware(fastify: FastifyInstance) {
           request.erpUser = {
             id: user.id,
             username: user.username,
+          };
+        }
+      }
+    }
+
+    // API key auth (for agents / machine-to-machine)
+    if (!request.erpUser) {
+      const apiKey = request.headers["x-api-key"] as string | undefined;
+      if (apiKey) {
+        const agent = await findAgentByApiKey(apiKey);
+        if (agent) {
+          let localUser = await prisma.user.findUnique({
+            where: { uuid: agent.uuid },
+          });
+          if (!localUser) {
+            localUser = await prisma.user.create({
+              data: {
+                uuid: agent.uuid,
+                username: agent.username,
+                passwordHash: "!api-key-only",
+                authType: "api_key",
+              },
+            });
+          }
+          request.erpUser = {
+            id: localUser.id,
+            username: localUser.username,
           };
         }
       }
