@@ -11,7 +11,7 @@
     "clean": "rimraf dist client-dist",
     "dev": "tsx watch src/server.ts monitor=naisys",
     "start": "node dist/server.js monitor=naisys",
-    "build": "prisma generate && tsc && npx shx cp -r ../client/dist client-dist",
+    "build": "prisma generate && tsc && npx shx rm -rf client-dist && npx shx cp -r ../client/dist client-dist",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",

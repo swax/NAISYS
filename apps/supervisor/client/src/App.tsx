@@ -1,8 +1,18 @@
-import { AppShell, Burger, Group, MantineProvider, Text } from "@mantine/core";
+import {
+  ActionIcon,
+  AppShell,
+  Burger,
+  Button,
+  Group,
+  MantineProvider,
+  Text,
+  Tooltip,
+} from "@mantine/core";
 import "@mantine/core/styles.css";
 import { useDisclosure, useMediaQuery } from "@mantine/hooks";
 import { Notifications } from "@mantine/notifications";
 import "@mantine/notifications/styles.css";
+import { IconApi } from "@tabler/icons-react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import React from "react";
 import {
@@ -18,10 +28,12 @@ import {
   AgentDataProvider,
   useAgentDataContext,
 } from "./contexts/AgentDataContext";
-import { SessionProvider } from "./contexts/SessionContext";
+import { LoginDialog } from "./components/LoginDialog";
+import { SessionProvider, useSession } from "./contexts/SessionContext";
 import { AgentNavHeader } from "./headers/AgentNavHeader";
 import { AgentSidebar } from "./headers/AgentSidebar";
 import { ToolsHeader } from "./headers/ToolsHeader";
+import naisysLogo from "@naisys/common/assets/naisys-logo.webp";
 import { queryClient } from "./lib/queryClient";
 import { Controls } from "./pages/Controls";
 import { Home } from "./pages/home/Home";
@@ -31,12 +43,25 @@ import { Runs } from "./pages/runs/Runs";
 
 const AppContent: React.FC = () => {
   const [opened, { toggle }] = useDisclosure();
+  const [loginOpen, { open: openLogin, close: closeLogin }] = useDisclosure();
   const location = useLocation();
   const { isLoading, error } = useAgentDataContext();
+  const { user, isAuthenticated, logout } = useSession();
   const isMobile = useMediaQuery("(max-width: 768px)"); // sm breakpoint
   const [searchParams] = useSearchParams();
+  const [plugins, setPlugins] = React.useState<string[]>([]);
 
   const SIDEBAR_WIDTH = 300;
+
+  // Fetch enabled plugins on mount
+  React.useEffect(() => {
+    fetch("/api/supervisor/plugins")
+      .then((r) => r.json())
+      .then((d) => setPlugins(d.plugins))
+      .catch(() => {});
+  }, []);
+
+  const hasErp = plugins.includes("erp");
 
   // Extract current agent name from URL
   const currentAgentName = React.useMemo(() => {
@@ -82,19 +107,41 @@ const AppContent: React.FC = () => {
                 color: "inherit",
                 display: "flex",
                 alignItems: "center",
-                gap: "0.75rem",
+                gap: "0.5rem",
                 cursor: "pointer",
               }}
             >
               <img
-                src="/supervisor/apple-touch-icon.png"
-                alt="NAISYS Supervisor"
+                src={naisysLogo}
+                alt="NAISYS"
                 style={{ width: "36px", height: "36px" }}
               />
               <Text size="lg" fw={500} visibleFrom="sm">
-                NAISYS Supervisor
+                NAISYS
               </Text>
             </Link>
+            <Group gap={6} visibleFrom="sm">
+              <Text size="sm" fw={700}>
+                Supervisor
+              </Text>
+              {hasErp && (
+                <>
+                  <Text size="sm" c="dimmed">
+                    |
+                  </Text>
+                  <Text
+                    size="sm"
+                    c="dimmed"
+                    style={{ cursor: "pointer" }}
+                    onClick={() => {
+                      window.location.href = "/erp/";
+                    }}
+                  >
+                    ERP
+                  </Text>
+                </>
+              )}
+            </Group>
             {!isHostPage && (
               <AgentNavHeader
                 agentName={currentAgentName || undefined}
@@ -103,15 +150,48 @@ const AppContent: React.FC = () => {
               />
             )}
           </Group>
-          <ToolsHeader
-            isLoading={isLoading}
-            error={error}
-            isMobile={isMobile}
-          />
+          <Group gap="xs">
+            <Tooltip label="API Reference">
+              <ActionIcon
+                variant="subtle"
+                color="gray"
+                component="a"
+                href="/supervisor/api-reference/"
+              >
+                <IconApi size="1.2rem" />
+              </ActionIcon>
+            </Tooltip>
+            <ToolsHeader isLoading={isLoading} error={error} />
+            {isAuthenticated ? (
+              <>
+                <Text size="sm">{user?.username}</Text>
+                <Button size="xs" variant="subtle" onClick={() => logout()}>
+                  Logout
+                </Button>
+              </>
+            ) : (
+              <Button size="xs" variant="subtle" onClick={openLogin}>
+                Login
+              </Button>
+            )}
+          </Group>
         </Group>
       </AppShell.Header>
 
       <AppShell.Navbar p="md" style={{ overflowY: "auto" }}>
+        {hasErp && (
+          <Text
+            size="sm"
+            c="dimmed"
+            mb="md"
+            style={{ cursor: "pointer" }}
+            onClick={() => {
+              window.location.href = "/erp/";
+            }}
+          >
+            ERP
+          </Text>
+        )}
         <AgentSidebar />
       </AppShell.Navbar>
 
@@ -128,6 +208,7 @@ const AppContent: React.FC = () => {
           <Route path="/host/:hostName" element={<HostPage />} />
         </Routes>
       </AppShell.Main>
+      <LoginDialog opened={loginOpen} onClose={closeLogin} />
     </AppShell>
   );
 };
