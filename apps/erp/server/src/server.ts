@@ -63,7 +63,7 @@ export const erpPlugin = fp(async (fastify) => {
   await deployPrismaMigrations({
     packageDir: erpServerDir,
     databasePath: erpDbPath,
-    expectedVersion: 1,
+    expectedVersion: 2,
     envOverrides: { ERP_DATABASE_URL: `file:${absoluteErpDbPath}` },
   });
 

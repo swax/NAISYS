@@ -199,6 +199,7 @@ export function createUserService(
         configId: "",
         leadUserId: user.leadUserId,
         assignedHostIds: user.assignedHostIds,
+        apiKey: user.apiKey,
         config,
       });
     }

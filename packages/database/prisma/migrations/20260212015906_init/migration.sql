@@ -66,6 +66,7 @@ CREATE TABLE "users" (
     "uuid" TEXT NOT NULL,
     "username" TEXT NOT NULL,
     "title" TEXT NOT NULL,
+    "api_key" TEXT,
     "agent_path" TEXT NOT NULL,
     "lead_user_id" INTEGER,
     "config" TEXT NOT NULL DEFAULT '{}',
@@ -170,6 +171,9 @@ CREATE INDEX "idx_mail_recipients_user_message_desc" ON "mail_recipients"("user_
 
 -- CreateIndex
 CREATE UNIQUE INDEX "users_uuid_key" ON "users"("uuid");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "users_api_key_key" ON "users"("api_key");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "unq_users_agent_path" ON "users"("agent_path");

@@ -1,6 +1,7 @@
 import { UserEntry } from "@naisys/common";
 import { loadAgentConfigs } from "@naisys/common/dist/agentConfigLoader.js";
 import { DatabaseService } from "@naisys/database";
+import { randomBytes } from "crypto";
 import yaml from "js-yaml";
 import { HubConfig } from "../hubConfig.js";
 
@@ -35,6 +36,7 @@ export async function createAgentRegistrar(
             title: user.config.title,
             agent_path: user.agentPath!,
             config: yaml.dump(user.config),
+            api_key: randomBytes(32).toString("hex"),
           },
           update: {
             title: user.config.title,

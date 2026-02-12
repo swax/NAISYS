@@ -174,6 +174,22 @@ export async function ensureAdminUser(
 }
 
 /**
+ * Find an agent (from the hub `users` table) by API key.
+ */
+export async function findAgentByApiKey(
+  apiKey: string,
+): Promise<{ uuid: string; username: string } | null> {
+  if (!prisma) return null;
+
+  const user = await prisma.users.findUnique({
+    where: { api_key: apiKey },
+    select: { uuid: true, username: true },
+  });
+
+  return user;
+}
+
+/**
  * Clear session token for a hub user by token hash.
  */
 export async function deleteHubSession(tokenHash: string): Promise<void> {

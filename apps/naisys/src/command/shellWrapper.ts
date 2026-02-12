@@ -6,11 +6,11 @@ import path from "path";
 import stripAnsi from "strip-ansi";
 import treeKill from "tree-kill";
 import { AgentConfig } from "../agent/agentConfig.js";
+import { UserService } from "../agent/userService.js";
 import { GlobalConfig } from "../globalConfig.js";
 import * as pathService from "../services/pathService.js";
 import { getPlatformConfig } from "../services/shellPlatform.js";
 import { OutputService } from "../utils/output.js";
-import { getCleanEnv } from "../utils/utilities.js";
 
 enum ShellEvent {
   Ouptput = "stdout",
@@ -18,11 +18,31 @@ enum ShellEvent {
   Exit = "exit",
 }
 
+/**
+ * Create clean env variables to pass to a spawned process.
+ * Clean of NAISYS specific vars that could also conflict with env vars in the spawned process.
+ */
+function getCleanEnv(apiKey?: string) {
+  const cleanEnv = { ...process.env };
+  delete cleanEnv.OPENAI_API_KEY;
+  delete cleanEnv.GOOGLE_API_KEY;
+  delete cleanEnv.ANTHROPIC_API_KEY;
+  delete cleanEnv.WEBSITE_URL;
+  if (apiKey) {
+    cleanEnv.NAISYS_API_KEY = apiKey;
+  }
+  return cleanEnv;
+}
+
 export function createShellWrapper(
   { globalConfig }: GlobalConfig,
   { agentConfig }: AgentConfig,
   output: OutputService,
+  userService: UserService,
+  localUserId: number,
 ) {
+  const _apiKey = userService.getUserById(localUserId)?.apiKey;
+
   let _process: ChildProcessWithoutNullStreams | undefined;
   let _currentProcessId: number | undefined;
   let _commandOutput = "";
@@ -63,7 +83,7 @@ export function createShellWrapper(
 
     _process = spawn(platformConfig.shellCommand, platformConfig.shellArgs, {
       stdio: "pipe",
-      env: getCleanEnv(),
+      env: getCleanEnv(_apiKey),
       shell: false,
     });
 

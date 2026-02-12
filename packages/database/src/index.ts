@@ -9,6 +9,7 @@ export {
   countHubUsers,
   createHubUser,
   ensureAdminUser,
+  findAgentByApiKey,
   findHubSession,
   findHubUserByUsername,
   createHubSession,

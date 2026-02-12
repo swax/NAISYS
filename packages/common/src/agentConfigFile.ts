@@ -83,5 +83,6 @@ export interface UserEntry {
   leadUserId?: number;
   agentPath?: string;
   assignedHostIds?: number[];
+  apiKey?: string;
   config: AgentConfigFile;
 }
