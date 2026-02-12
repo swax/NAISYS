@@ -158,6 +158,13 @@ export const startServer: StartServer = async (startupType, plugins = []) => {
 
   fastify.register(apiRoutes, { prefix: "/api/supervisor" });
 
+  // Public endpoint to expose enabled plugins to the client
+  fastify.get(
+    "/api/supervisor/plugins",
+    { schema: { hide: true } },
+    async () => ({ plugins }),
+  );
+
   // Conditionally load ERP plugin
   if (plugins.includes("erp")) {
     // Use variable to avoid compile-time type dependency on @naisys-erp/server (allows parallel builds)

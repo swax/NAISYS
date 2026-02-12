@@ -1,6 +1,6 @@
 {
   "name": "naisys",
-  "description": "Node.js Autonomous Intelligence System",
+  "description": "Networked Autonomous Intelligence System",
   "version": "2.3.0",
   "type": "module",
   "main": "dist/naisys.js",

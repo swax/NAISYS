@@ -1,12 +1,16 @@
 import {
+  ActionIcon,
   AppShell,
   Burger,
   Button,
   Group,
   Text,
+  Tooltip,
   UnstyledButton,
 } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
+import { IconApi } from "@tabler/icons-react";
+import naisysLogo from "@naisys/common/assets/naisys-logo.webp";
 import { useLocation, useNavigate, Outlet } from "react-router";
 import { useAuth } from "../lib/AuthContext";
 import { LoginModal } from "./LoginModal";
@@ -14,8 +18,6 @@ import { LoginModal } from "./LoginModal";
 const navLinks = [
   { label: "Planning", path: "/planning/orders" },
   { label: "Execution", path: "/execution/orders" },
-  { label: "API Reference", path: "/erp/api-reference/", external: true },
-  { label: "Supervisor", path: "/supervisor", external: true },
 ];
 
 export const AppLayout: React.FC = () => {
@@ -27,12 +29,8 @@ export const AppLayout: React.FC = () => {
 
   const isActive = (path: string) => location.pathname.startsWith(path);
 
-  const handleNav = (path: string, external?: boolean) => {
-    if (external) {
-      window.location.href = path;
-    } else {
-      navigate(path);
-    }
+  const handleNav = (path: string) => {
+    navigate(path);
     close();
   };
 
@@ -59,14 +57,37 @@ export const AppLayout: React.FC = () => {
               hiddenFrom="sm"
               size="sm"
             />
-            <Text fw={700} size="lg">
-              NAISYS ERP
+            <img
+              src={naisysLogo}
+              alt="NAISYS"
+              style={{ width: "36px", height: "36px" }}
+            />
+            <Text size="lg" fw={500}>
+              NAISYS
             </Text>
-            <Group ml="xl" gap="xs" visibleFrom="sm">
+            <Group gap={6} visibleFrom="sm">
+              <Text
+                size="sm"
+                c="dimmed"
+                style={{ cursor: "pointer" }}
+                onClick={() => {
+                  window.location.href = "/supervisor/";
+                }}
+              >
+                Supervisor
+              </Text>
+              <Text size="sm" c="dimmed">
+                |
+              </Text>
+              <Text size="sm" fw={700}>
+                ERP
+              </Text>
+            </Group>
+            <Group gap="xs" visibleFrom="sm">
               {navLinks.map((link) => (
                 <UnstyledButton
                   key={link.path}
-                  onClick={() => handleNav(link.path, link.external)}
+                  onClick={() => handleNav(link.path)}
                   px="sm"
                   py={4}
                   style={(theme) => ({
@@ -87,7 +108,17 @@ export const AppLayout: React.FC = () => {
               ))}
             </Group>
           </Group>
-          <Group gap="sm">
+          <Group gap="xs">
+            <Tooltip label="API Reference">
+              <ActionIcon
+                variant="subtle"
+                color="gray"
+                component="a"
+                href="/erp/api-reference/"
+              >
+                <IconApi size="1.2rem" />
+              </ActionIcon>
+            </Tooltip>
             {user ? (
               <>
                 <Text size="sm">{user.username}</Text>
@@ -105,10 +136,24 @@ export const AppLayout: React.FC = () => {
       </AppShell.Header>
 
       <AppShell.Navbar p="md">
+        <UnstyledButton
+          onClick={() => {
+            window.location.href = "/supervisor/";
+          }}
+          p="sm"
+          mb={4}
+          style={(theme) => ({
+            borderRadius: theme.radius.sm,
+          })}
+        >
+          <Text size="sm" c="dimmed">
+            Supervisor
+          </Text>
+        </UnstyledButton>
         {navLinks.map((link) => (
           <UnstyledButton
             key={link.path}
-            onClick={() => handleNav(link.path, link.external)}
+            onClick={() => handleNav(link.path)}
             p="sm"
             mb={4}
             style={(theme) => ({

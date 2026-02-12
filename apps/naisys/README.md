@@ -1,4 +1,4 @@
-## NAISYS (Node.js Autonomous Intelligence System)
+## NAISYS (Networked Autonomous Intelligence System)
 
 [← Back to main README](../../README.md)
 

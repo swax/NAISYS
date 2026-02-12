@@ -10,7 +10,7 @@ SCRIPT_DIR=$(dirname "$SCRIPT")/..
 if [ $# -eq 0 ]; then
   # get version from package.json
   VERSION=$(node -e "console.log(require('${SCRIPT_DIR}/package.json').version)")
-  echo "NAISYS: Node.js Autonomous Intelligence System"
+  echo "NAISYS: Networked Autonomous Intelligence System"
   echo "  Version: $VERSION"
   echo "  Usage: naisys <path to agent config yaml, or directory>"
   echo "  Note: If a folder is passed then all agents will be started in a tmux session"
