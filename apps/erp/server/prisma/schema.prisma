@@ -101,6 +101,14 @@ model User {
   @@map("users")
 }
 
+model SchemaVersion {
+  id      Int    @id @default(1)
+  version Int
+  updated String
+
+  @@map("schema_version")
+}
+
 model AuditLog {
   id         Int      @id @default(autoincrement())
   entityType String   @map("entity_type")

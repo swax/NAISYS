@@ -19,7 +19,11 @@ import { fileURLToPath } from "url";
 import { registerApiReference } from "./api-reference.js";
 import { registerAuthMiddleware } from "./auth-middleware.js";
 import { registerErrorHandler } from "./error-handler.js";
-import { initHubSessions, ensureAdminUser } from "@naisys/database";
+import {
+  initHubSessions,
+  ensureAdminUser,
+  deployPrismaMigrations,
+} from "@naisys/database";
 import auditRoutes from "./routes/audit.js";
 import authRoutes from "./routes/auth.js";
 import executionOrderRoutes from "./routes/execution-orders.js";
@@ -49,6 +53,18 @@ export const erpPlugin = fp(async (fastify) => {
     max: 100,
     timeWindow: "1 minute",
     allowList: (request) => !request.url.startsWith("/api/"),
+  });
+
+  // Auto-migrate ERP database
+  const erpServerDir = path.join(__dirname, "..");
+  const naisysFolder = process.env.NAISYS_FOLDER || "";
+  const erpDbPath = path.join(naisysFolder, "database", "naisys_erp.db");
+  const absoluteErpDbPath = path.resolve(erpDbPath).replace(/\\/g, "/");
+  await deployPrismaMigrations({
+    packageDir: erpServerDir,
+    databasePath: erpDbPath,
+    expectedVersion: 1,
+    envOverrides: { ERP_DATABASE_URL: `file:${absoluteErpDbPath}` },
   });
 
   initHubSessions();
