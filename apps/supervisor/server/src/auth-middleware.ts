@@ -1,5 +1,11 @@
 import type { FastifyInstance } from "fastify";
-import { getUserByTokenHash, hashToken } from "./services/userService.js";
+import { findHubSession, isHubAvailable } from "@naisys/database";
+import {
+  createUser,
+  getUserByTokenHash,
+  getUserByUuid,
+  hashToken,
+} from "./services/userService.js";
 
 export interface SupervisorUser {
   id: number;
@@ -12,7 +18,7 @@ declare module "fastify" {
   }
 }
 
-const COOKIE_NAME = "supervisor_session";
+const COOKIE_NAME = "naisys_session";
 
 const PUBLIC_PREFIXES = ["/api/supervisor/auth/login"];
 
@@ -39,13 +45,33 @@ export function registerAuthMiddleware(fastify: FastifyInstance) {
 
     if (token) {
       const tokenHash = hashToken(token);
-      const user = await getUserByTokenHash(tokenHash);
 
-      if (user) {
-        request.supervisorUser = {
-          id: user.id,
-          username: user.username,
-        };
+      if (isHubAvailable()) {
+        // SSO mode: hub is source of truth
+        const hubSession = await findHubSession(tokenHash);
+        if (hubSession) {
+          let localUser = await getUserByUuid(hubSession.uuid);
+          if (!localUser) {
+            localUser = await createUser(
+              hubSession.username,
+              hubSession.password_hash,
+              hubSession.uuid,
+            );
+          }
+          request.supervisorUser = {
+            id: localUser.id,
+            username: localUser.username,
+          };
+        }
+      } else {
+        // Standalone mode: local session only
+        const user = await getUserByTokenHash(tokenHash);
+        if (user) {
+          request.supervisorUser = {
+            id: user.id,
+            username: user.username,
+          };
+        }
       }
     }
 

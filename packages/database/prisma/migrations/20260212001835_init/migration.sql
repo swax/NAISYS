@@ -132,6 +132,18 @@ CREATE TABLE "hosts" (
     "created_at" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+-- CreateTable
+CREATE TABLE "web_users" (
+    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "uuid" TEXT NOT NULL,
+    "username" TEXT NOT NULL,
+    "password_hash" TEXT NOT NULL,
+    "session_token_hash" TEXT,
+    "session_expires_at" DATETIME,
+    "created_at" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" DATETIME NOT NULL
+);
+
 -- CreateIndex
 CREATE INDEX "idx_context_log_user_run_session" ON "context_log"("user_id", "run_id", "session_id");
 
@@ -176,3 +188,9 @@ CREATE UNIQUE INDEX "unq_schema_version_version" ON "schema_version"("version");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "unq_hosts_name" ON "hosts"("name");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "web_users_uuid_key" ON "web_users"("uuid");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "web_users_username_key" ON "web_users"("username");

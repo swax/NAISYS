@@ -10,13 +10,20 @@ import {
 import { FastifyInstance, FastifyPluginOptions } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import {
+  createHubSession,
+  deleteHubSession,
+  findHubUserByUsername,
+  isHubAvailable,
+} from "@naisys/database";
+import {
   clearSessionOnUser,
+  createUser,
   getUserByUsername,
   hashToken,
   setSessionOnUser,
 } from "../services/userService.js";
 
-const COOKIE_NAME = "supervisor_session";
+const COOKIE_NAME = "naisys_session";
 const SESSION_DURATION_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
 let lastLoginRequestTime = 0;
@@ -57,7 +64,25 @@ export default async function authRoutes(
 
       const { username, password } = request.body;
 
-      const user = await getUserByUsername(username);
+      let user = await getUserByUsername(username);
+      let passwordVerified = false;
+
+      // If not found locally, check hub for credentials and auto-provision
+      if (!user && isHubAvailable()) {
+        const hubUser = await findHubUserByUsername(username);
+        if (hubUser) {
+          const valid = await bcrypt.compare(password, hubUser.password_hash);
+          if (valid) {
+            user = await createUser(
+              hubUser.username,
+              hubUser.password_hash,
+              hubUser.uuid,
+            );
+            passwordVerified = true;
+          }
+        }
+      }
+
       if (!user) {
         reply.code(401);
         return {
@@ -66,20 +91,36 @@ export default async function authRoutes(
         };
       }
 
-      const valid = await bcrypt.compare(password, user.password_hash);
-      if (!valid) {
-        reply.code(401);
-        return {
-          success: false as const,
-          message: "Invalid username or password",
-        };
+      if (!passwordVerified) {
+        const valid = await bcrypt.compare(password, user.password_hash);
+        if (!valid) {
+          reply.code(401);
+          return {
+            success: false as const,
+            message: "Invalid username or password",
+          };
+        }
       }
 
       const token = randomUUID();
       const tokenHash = hashToken(token);
       const expiresAt = new Date(Date.now() + SESSION_DURATION_MS);
 
-      await setSessionOnUser(user.id, tokenHash, expiresAt);
+      if (isHubAvailable()) {
+        // SSO mode: hub is source of truth for sessions
+        await createHubSession(
+          tokenHash,
+          user.username,
+          user.password_hash,
+          user.uuid,
+          "supervisor",
+          expiresAt,
+        );
+        await setSessionOnUser(user.id, "!sso", expiresAt);
+      } else {
+        // Standalone mode: local session only
+        await setSessionOnUser(user.id, tokenHash, expiresAt);
+      }
 
       reply.setCookie(COOKIE_NAME, token, {
         path: "/",
@@ -112,8 +153,16 @@ export default async function authRoutes(
       },
     },
     async (request, reply) => {
+      const token = request.cookies?.[COOKIE_NAME];
+
       if (request.supervisorUser) {
         await clearSessionOnUser(request.supervisorUser.id);
+      }
+
+      // Also clear from hub
+      if (token) {
+        const tokenHash = hashToken(token);
+        await deleteHubSession(tokenHash);
       }
 
       reply.clearCookie(COOKIE_NAME, { path: "/" });

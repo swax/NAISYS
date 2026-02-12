@@ -10,8 +10,14 @@ import {
 } from "@naisys-erp/shared";
 import prisma from "../db.js";
 import { sendError } from "../error-handler.js";
+import {
+  createHubSession,
+  deleteHubSession,
+  findHubUserByUsername,
+  isHubAvailable,
+} from "@naisys/database";
 
-const COOKIE_NAME = "erp_session";
+const COOKIE_NAME = "naisys_session";
 const SESSION_DURATION_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
 function hashToken(token: string): string {
@@ -42,7 +48,27 @@ export default async function authRoutes(fastify: FastifyInstance) {
     handler: async (request, reply) => {
       const { username, password } = request.body;
 
-      const user = await prisma.user.findUnique({ where: { username } });
+      let user = await prisma.user.findUnique({ where: { username } });
+      let passwordVerified = false;
+
+      // If not found locally, check hub for credentials and auto-provision
+      if (!user && isHubAvailable()) {
+        const hubUser = await findHubUserByUsername(username);
+        if (hubUser) {
+          const valid = await bcrypt.compare(password, hubUser.password_hash);
+          if (valid) {
+            user = await prisma.user.create({
+              data: {
+                uuid: hubUser.uuid,
+                username: hubUser.username,
+                passwordHash: hubUser.password_hash,
+              },
+            });
+            passwordVerified = true;
+          }
+        }
+      }
+
       if (!user) {
         return sendError(
           reply,
@@ -52,27 +78,43 @@ export default async function authRoutes(fastify: FastifyInstance) {
         );
       }
 
-      const valid = await bcrypt.compare(password, user.passwordHash);
-      if (!valid) {
-        return sendError(
-          reply,
-          401,
-          "Unauthorized",
-          "Invalid username or password",
-        );
+      if (!passwordVerified) {
+        const valid = await bcrypt.compare(password, user.passwordHash);
+        if (!valid) {
+          return sendError(
+            reply,
+            401,
+            "Unauthorized",
+            "Invalid username or password",
+          );
+        }
       }
 
       const token = randomUUID();
       const tokenHash = hashToken(token);
       const expiresAt = new Date(Date.now() + SESSION_DURATION_MS);
 
-      await prisma.user.update({
-        where: { id: user.id },
-        data: {
-          sessionTokenHash: tokenHash,
-          sessionExpiresAt: expiresAt,
-        },
-      });
+      if (isHubAvailable()) {
+        // SSO mode: hub is source of truth for sessions
+        await createHubSession(
+          tokenHash,
+          user.username,
+          user.passwordHash,
+          user.uuid,
+          "erp",
+          expiresAt,
+        );
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { sessionTokenHash: "!sso", sessionExpiresAt: expiresAt },
+        });
+      } else {
+        // Standalone mode: local session only
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { sessionTokenHash: tokenHash, sessionExpiresAt: expiresAt },
+        });
+      }
 
       reply.setCookie(COOKIE_NAME, token, {
         path: "/",
@@ -98,6 +140,8 @@ export default async function authRoutes(fastify: FastifyInstance) {
       tags: ["Auth"],
     },
     handler: async (request, reply) => {
+      const token = request.cookies?.[COOKIE_NAME];
+
       if (request.erpUser) {
         await prisma.user.update({
           where: { id: request.erpUser.id },
@@ -106,6 +150,12 @@ export default async function authRoutes(fastify: FastifyInstance) {
             sessionExpiresAt: null,
           },
         });
+      }
+
+      // Also clear from hub
+      if (token) {
+        const tokenHash = hashToken(token);
+        await deleteHubSession(tokenHash);
       }
 
       reply.clearCookie(COOKIE_NAME, { path: "/" });

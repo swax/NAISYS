@@ -19,6 +19,7 @@ import { fileURLToPath } from "url";
 import { registerApiReference } from "./api-reference.js";
 import { registerAuthMiddleware } from "./auth-middleware.js";
 import { registerErrorHandler } from "./error-handler.js";
+import { initHubSessions, ensureAdminUser } from "@naisys/database";
 import auditRoutes from "./routes/audit.js";
 import authRoutes from "./routes/auth.js";
 import executionOrderRoutes from "./routes/execution-orders.js";
@@ -49,6 +50,8 @@ export const erpPlugin = fp(async (fastify) => {
     timeWindow: "1 minute",
     allowList: (request) => !request.url.startsWith("/api/"),
   });
+
+  initHubSessions();
 
   registerErrorHandler(fastify);
   registerAuthMiddleware(fastify);
@@ -130,6 +133,16 @@ async function startServer() {
   });
 
   await fastify.register(erpPlugin);
+
+  const { default: prisma } = await import("./db.js");
+  await ensureAdminUser(
+    () => prisma.user.count(),
+    async (username, passwordHash, uuid) => {
+      await prisma.user.create({
+        data: { uuid, username, passwordHash },
+      });
+    },
+  );
 
   const port = Number(process.env.ERP_PORT) || 3002;
   const host = isProd ? "0.0.0.0" : "localhost";

@@ -8,6 +8,7 @@ export interface SupervisorUserRow {
   id: number;
   username: string;
   password_hash: string;
+  uuid: string;
   session_token_hash: string | null;
   session_expires_at: string | null;
 }
@@ -20,8 +21,18 @@ export async function getUserByUsername(
   username: string,
 ): Promise<SupervisorUserRow | null> {
   const rows = await selectFromSupervisorDb<SupervisorUserRow[]>(
-    "SELECT id, username, password_hash, session_token_hash, session_expires_at FROM users WHERE username = ?",
+    "SELECT id, username, password_hash, uuid, session_token_hash, session_expires_at FROM users WHERE username = ?",
     [username],
+  );
+  return rows && rows.length > 0 ? rows[0] : null;
+}
+
+export async function getUserByUuid(
+  uuid: string,
+): Promise<SupervisorUserRow | null> {
+  const rows = await selectFromSupervisorDb<SupervisorUserRow[]>(
+    "SELECT id, username, password_hash, uuid, session_token_hash, session_expires_at FROM users WHERE uuid = ?",
+    [uuid],
   );
   return rows && rows.length > 0 ? rows[0] : null;
 }
@@ -30,10 +41,24 @@ export async function getUserByTokenHash(
   tokenHash: string,
 ): Promise<SupervisorUserRow | null> {
   const rows = await selectFromSupervisorDb<SupervisorUserRow[]>(
-    "SELECT id, username, password_hash, session_token_hash, session_expires_at FROM users WHERE session_token_hash = ? AND session_expires_at > datetime('now')",
+    "SELECT id, username, password_hash, uuid, session_token_hash, session_expires_at FROM users WHERE session_token_hash = ? AND session_expires_at > datetime('now')",
     [tokenHash],
   );
   return rows && rows.length > 0 ? rows[0] : null;
+}
+
+export async function createUser(
+  username: string,
+  passwordHash: string,
+  uuid: string,
+): Promise<SupervisorUserRow> {
+  await runOnSupervisorDb(
+    "INSERT INTO users (username, password_hash, uuid) VALUES (?, ?, ?)",
+    [username, passwordHash, uuid],
+  );
+  const user = await getUserByUsername(username);
+  if (!user) throw new Error(`Failed to create user: ${username}`);
+  return user;
 }
 
 export async function setSessionOnUser(
