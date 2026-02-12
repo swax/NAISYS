@@ -1,7 +1,7 @@
 import bcrypt from "bcrypt";
 import { randomUUID } from "crypto";
 import { existsSync } from "fs";
-import { join } from "path";
+import { hubDbPath } from "./dbConfig.js";
 import { PrismaClient } from "./generated/prisma/client.js";
 import { createPrismaClient } from "./prismaClient.js";
 
@@ -24,9 +24,6 @@ export function isHubAvailable(): boolean {
  */
 export function initHubSessions(): void {
   if (prisma) return;
-
-  const naisysFolder = process.env.NAISYS_FOLDER || "";
-  const hubDbPath = join(naisysFolder, "database", "naisys_hub.db");
 
   if (!existsSync(hubDbPath)) return;
 

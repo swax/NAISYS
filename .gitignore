@@ -3,6 +3,7 @@ logs/
 node_modules/
 .claude
 .env*
+.test-naisys
 .turbo
 
 # Only include files one level deep in agents/testing/

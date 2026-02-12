@@ -11,8 +11,8 @@ export default defineConfig({
     path: "prisma/migrations",
   },
   datasource: {
-    url:
-      process.env.HUB_DATABASE_URL ||
-      `file:` + join(naisysFolder, "database", `naisys_hub.db`),
+    // Used in dev when we run migrate manually to generate migration scripts
+    // Used in prod when self-migrating an existing database
+    url: `file:` + join(naisysFolder, "database", `naisys_hub.db`),
   },
 });

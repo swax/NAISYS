@@ -21,6 +21,7 @@ import {
   ensureAdminUser,
   deployPrismaMigrations,
 } from "@naisys/database";
+import { supervisorDbPath } from "./dbConfig.js";
 import prisma from "./db.js";
 import apiRoutes from "./routes/api.js";
 import { createUser } from "./services/userService.js";
@@ -38,18 +39,10 @@ export const startServer: StartServer = async (startupType, plugins = []) => {
   // Auto-migrate supervisor database
   const __filename_startup = fileURLToPath(import.meta.url);
   const supervisorServerDir = path.join(path.dirname(__filename_startup), "..");
-  const naisysFolder = process.env.NAISYS_FOLDER || "";
-  const supervisorDbPath = path.join(naisysFolder, "database", "supervisor.db");
-  const absoluteSupervisorDbPath = path
-    .resolve(supervisorDbPath)
-    .replace(/\\/g, "/");
   await deployPrismaMigrations({
     packageDir: supervisorServerDir,
     databasePath: supervisorDbPath,
     expectedVersion: 1,
-    envOverrides: {
-      SUPERVISOR_DATABASE_URL: `file:${absoluteSupervisorDbPath}`,
-    },
   });
 
   initHubSessions();

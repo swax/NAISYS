@@ -3,8 +3,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const testDbPath = path.join(__dirname, "prisma/test.db");
-const testDbUrl = `file:${testDbPath}`;
+const testNaisysFolder = path.join(__dirname, ".test-naisys");
 
 export default defineConfig({
   globalSetup: "./e2e/global-setup.ts",
@@ -26,7 +25,7 @@ export default defineConfig({
     {
       command: "npm run dev",
       port: 3002,
-      env: { ERP_DATABASE_URL: testDbUrl },
+      env: { NAISYS_FOLDER: testNaisysFolder },
       reuseExistingServer: !process.env.CI,
     },
     {

@@ -17,7 +17,7 @@ export async function deployPrismaMigrations(options: {
   databasePath: string;
   /** Skip migrations if DB already at this version */
   expectedVersion: number;
-  /** Extra env vars (e.g. HUB_DATABASE_URL) forwarded to `prisma migrate deploy` */
+  /** Extra env vars forwarded to `prisma migrate deploy` */
   envOverrides?: Record<string, string>;
 }): Promise<void> {
   const { packageDir, databasePath, expectedVersion, envOverrides } = options;
@@ -68,6 +68,9 @@ export async function deployPrismaMigrations(options: {
       cwd: packageDir,
       env: {
         ...process.env,
+        // Resolve to absolute so prisma.config.ts gets a correct path
+        // regardless of this subprocess's cwd (which is packageDir)
+        NAISYS_FOLDER: resolve(process.env.NAISYS_FOLDER || ""),
         ...envOverrides,
       },
     },
