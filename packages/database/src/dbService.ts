@@ -1,56 +1,33 @@
 import { existsSync, mkdirSync } from "fs";
-import { dirname, join, resolve } from "path";
+import { dirname } from "path";
 import { fileURLToPath } from "url";
+import { hubDbPath } from "./dbConfig.js";
 import { PrismaClient } from "./generated/prisma/client.js";
 import { deployPrismaMigrations } from "./migrationHelper.js";
 import { createPrismaClient } from "./prismaClient.js";
 
-export async function createDatabaseService(naisysFolder: string) {
+export async function createDatabaseService() {
   /** Should match version in schema_version table of latest migration script */
   const latestDbVersion = 11;
 
   // Ensure database directory exists
-  const databasePath = join(naisysFolder, "database", `naisys_hub.db`);
-  const databaseDir = dirname(databasePath);
+  const databaseDir = dirname(hubDbPath);
   if (!existsSync(databaseDir)) {
     mkdirSync(databaseDir, { recursive: true });
   }
 
-  const prisma = createPrismaClient(databasePath);
+  const prisma = createPrismaClient(hubDbPath);
 
   await runMigrations();
 
   async function runMigrations(): Promise<void> {
-    // Hub-specific: Version 7 is a breaking change — check before migrating
-    if (existsSync(databasePath)) {
-      try {
-        const row = await prisma.schema_version.findUnique({
-          where: { id: 1 },
-        });
-        if (row && row.version < 7 && latestDbVersion >= 7) {
-          throw new Error(
-            `Database migration from version ${row.version} to ${latestDbVersion} is a breaking change adding multi-machine support. ` +
-              `The existing db must be manually deleted to continue.`,
-          );
-        }
-      } catch (error) {
-        const errorObj = error as { code?: string };
-        if (errorObj?.code !== "P2021") {
-          // P2021 = table does not exist — ignore; anything else re-throw
-          throw error;
-        }
-      }
-    }
-
     const currentFilePath = fileURLToPath(import.meta.url);
     const databasePackageDir = dirname(dirname(currentFilePath));
-    const absoluteDbPath = resolve(databasePath).replace(/\\/g, "/");
 
     await deployPrismaMigrations({
       packageDir: databasePackageDir,
-      databasePath,
+      databasePath: hubDbPath,
       expectedVersion: latestDbVersion,
-      envOverrides: { HUB_DATABASE_URL: `file:${absoluteDbPath}` },
     });
   }
 

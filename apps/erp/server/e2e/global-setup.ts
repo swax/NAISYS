@@ -1,11 +1,13 @@
 import { execSync } from "child_process";
+import { mkdirSync } from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import Database from "better-sqlite3";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const serverDir = path.join(__dirname, "..");
-const testDbPath = path.join(serverDir, "prisma/test.db");
+const testNaisysFolder = path.join(serverDir, ".test-naisys");
+const testDbPath = path.join(testNaisysFolder, "database", "naisys_erp.db");
 
 // Pre-computed bcrypt hash of "testpass123"
 const TEST_PASSWORD_HASH =
@@ -15,13 +17,16 @@ const TEST_PASSWORD_HASH =
 const TEST_USER_COUNT = 10;
 
 export default function globalSetup() {
+  // Ensure the database directory exists
+  mkdirSync(path.dirname(testDbPath), { recursive: true });
+
   // Push schema to create/reset tables (--force-reset handles the reset
   // without deleting the file, so a reused server's open connection stays valid)
   execSync("npx prisma db push --force-reset --accept-data-loss", {
     cwd: serverDir,
     env: {
       ...process.env,
-      ERP_DATABASE_URL: `file:${testDbPath}`,
+      NAISYS_FOLDER: testNaisysFolder,
       PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION: "sure",
     },
     stdio: "inherit",

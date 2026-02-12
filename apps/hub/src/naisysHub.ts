@@ -46,9 +46,7 @@ export const startHub: StartHub = async (
     }
 
     // Schema version for sync protocol - should match NAISYS instance
-    const dbService = await createDatabaseService(
-      process.env.NAISYS_FOLDER || "",
-    );
+    const dbService = await createDatabaseService();
 
     // Create hub config and host service (hub owns its host identity)
     const hubConfig = createHubConfig();
