@@ -40,7 +40,7 @@ export default async function agentRoutes(
           data,
         };
       } catch (error) {
-        console.error("Error in /agent route:", error);
+        request.log.error(error, "Error in /agent route");
         return reply.status(500).send({
           success: false,
           message: "Internal server error while fetching agent data",

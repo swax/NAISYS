@@ -6,6 +6,7 @@ import {
   RunSession,
 } from "@naisys-supervisor/shared";
 import { usingNaisysDb } from "../database/naisysDatabase.js";
+import { getLogger } from "../logger.js";
 import { cachedForSeconds } from "../utils/cache.js";
 
 export interface RunsData {
@@ -80,7 +81,7 @@ export const getRunsData = cachedForSeconds(
         total: result.total,
       };
     } catch (error) {
-      console.error("Error fetching runs data:", error);
+      getLogger().error(error, "Error fetching runs data");
 
       // Return empty data on error
       return {
@@ -146,7 +147,7 @@ export const getContextLog = cachedForSeconds(
         timestamp: new Date().toISOString(),
       };
     } catch (error) {
-      console.error("Error fetching context log:", error);
+      getLogger().error(error, "Error fetching context log");
 
       // Return empty data on error
       return {

@@ -6,6 +6,7 @@ import {
 import fs from "fs/promises";
 import path from "path";
 import { usingNaisysDb } from "../database/naisysDatabase.js";
+import { getLogger } from "../logger.js";
 import { cachedForSeconds } from "../utils/cache.js";
 import { getAgents } from "./agentService.js";
 
@@ -113,7 +114,7 @@ export const getMailData = cachedForSeconds(
         total: result.total,
       };
     } catch (error) {
-      console.error("Error fetching mail data:", error);
+      getLogger().error(error, "Error fetching mail data");
       return {
         mail: [],
         timestamp: new Date().toISOString(),
@@ -219,7 +220,7 @@ export async function sendMessage(
       messageId,
     };
   } catch (error) {
-    console.error("Error sending message:", error);
+    getLogger().error(error, "Error sending message");
     return {
       success: false,
       message:

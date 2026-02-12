@@ -1,5 +1,6 @@
 import { Agent, Host } from "@naisys-supervisor/shared";
 import { usingNaisysDb } from "../database/naisysDatabase.js";
+import { getLogger } from "../logger.js";
 import { cachedForSeconds } from "../utils/cache.js";
 
 export interface AgentData {
@@ -54,7 +55,7 @@ export const getAgents = cachedForSeconds(
         });
       });
     } catch (error) {
-      console.error("Error fetching users from Naisys database:", error);
+      getLogger().error(error, "Error fetching users from Naisys database");
     }
 
     return agents;
@@ -81,7 +82,7 @@ export const getHosts = cachedForSeconds(1, async (): Promise<Host[]> => {
       agentCount: host._count.user_hosts,
     }));
   } catch (error) {
-    console.error("Error fetching hosts from Naisys database:", error);
+    getLogger().error(error, "Error fetching hosts from Naisys database");
     return [];
   }
 });
@@ -100,7 +101,7 @@ export async function getAgentData(updatedSince?: string): Promise<AgentData> {
       timestamp: new Date().toISOString(),
     };
   } catch (error) {
-    console.error("Error fetching agent data:", error);
+    getLogger().error(error, "Error fetching agent data");
 
     // Return empty data on error
     return {
