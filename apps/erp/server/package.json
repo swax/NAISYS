@@ -28,6 +28,7 @@
     "@fastify/rate-limit": "^10.3.0",
     "@fastify/static": "^9.0.0",
     "@fastify/swagger": "^9.7.0",
+    "@naisys/common": "file:../../../packages/common",
     "@naisys/database": "file:../../../packages/database",
     "@naisys-erp/shared": "file:../shared",
     "@prisma/adapter-better-sqlite3": "^7.3.0",

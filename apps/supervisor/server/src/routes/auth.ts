@@ -22,6 +22,7 @@ import {
   hashToken,
   setSessionOnUser,
 } from "../services/userService.js";
+import { authCache } from "../auth-middleware.js";
 
 const COOKIE_NAME = "naisys_session";
 const SESSION_DURATION_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
@@ -159,9 +160,10 @@ export default async function authRoutes(
         await clearSessionOnUser(request.supervisorUser.id);
       }
 
-      // Also clear from hub
+      // Also clear from hub and auth cache
       if (token) {
         const tokenHash = hashToken(token);
+        authCache.invalidate(`cookie:${tokenHash}`);
         await deleteHubSession(tokenHash);
       }
 

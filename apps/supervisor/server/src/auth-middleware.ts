@@ -1,4 +1,5 @@
 import type { FastifyInstance } from "fastify";
+import { AuthCache } from "@naisys/common";
 import { findHubSession, isHubAvailable } from "@naisys/database";
 import {
   createUser,
@@ -21,6 +22,8 @@ declare module "fastify" {
 const COOKIE_NAME = "naisys_session";
 
 const PUBLIC_PREFIXES = ["/api/supervisor/auth/login"];
+
+export const authCache = new AuthCache<SupervisorUser>();
 
 function isPublicRoute(url: string): boolean {
   if (url === "/api/supervisor/" || url === "/api/supervisor") return true;
@@ -45,8 +48,13 @@ export function registerAuthMiddleware(fastify: FastifyInstance) {
 
     if (token) {
       const tokenHash = hashToken(token);
+      const cacheKey = `cookie:${tokenHash}`;
+      const cached = authCache.get(cacheKey);
 
-      if (isHubAvailable()) {
+      if (cached !== undefined) {
+        // Cache hit (valid or negative)
+        if (cached) request.supervisorUser = cached;
+      } else if (isHubAvailable()) {
         // SSO mode: hub is source of truth
         const hubSession = await findHubSession(tokenHash);
         if (hubSession) {
@@ -58,19 +66,21 @@ export function registerAuthMiddleware(fastify: FastifyInstance) {
               hubSession.uuid,
             );
           }
-          request.supervisorUser = {
-            id: localUser.id,
-            username: localUser.username,
-          };
+          const user = { id: localUser.id, username: localUser.username };
+          authCache.set(cacheKey, user);
+          request.supervisorUser = user;
+        } else {
+          authCache.set(cacheKey, null);
         }
       } else {
         // Standalone mode: local session only
         const user = await getUserByTokenHash(tokenHash);
         if (user) {
-          request.supervisorUser = {
-            id: user.id,
-            username: user.username,
-          };
+          const supervisorUser = { id: user.id, username: user.username };
+          authCache.set(cacheKey, supervisorUser);
+          request.supervisorUser = supervisorUser;
+        } else {
+          authCache.set(cacheKey, null);
         }
       }
     }
