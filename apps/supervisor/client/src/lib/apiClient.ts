@@ -82,6 +82,17 @@ export const api = {
     }
     return result;
   },
+
+  async delete<R>(endpoint: string): Promise<R> {
+    const response = await fetch(`${API_BASE}${endpoint}`, {
+      method: "DELETE",
+    });
+    const result = await response.json();
+    if (!response.ok) {
+      throw new Error(result.message || `API Error: ${response.status}`);
+    }
+    return result;
+  },
 };
 
 export const apiEndpoints = {
@@ -334,4 +345,58 @@ export const createAgent = async (
         error instanceof Error ? error.message : "Failed to create agent",
     };
   }
+};
+
+// --- Users API ---
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
+export const getUsers = async (params: {
+  page?: number;
+  pageSize?: number;
+  search?: string;
+}): Promise<any> => {
+  const queryParams = new URLSearchParams();
+  if (params.page !== undefined) queryParams.set("page", String(params.page));
+  if (params.pageSize !== undefined)
+    queryParams.set("pageSize", String(params.pageSize));
+  if (params.search) queryParams.set("search", params.search);
+  return api.get(`/users?${queryParams}`);
+};
+
+export const getUser = async (id: number): Promise<any> => {
+  return api.get(`/users/${id}`);
+};
+
+export const createUser = async (data: {
+  username: string;
+  password: string;
+  authType?: string;
+}): Promise<any> => {
+  return api.post("/users", data);
+};
+
+export const updateUser = async (
+  id: number,
+  data: { username?: string; password?: string },
+): Promise<any> => {
+  return api.put(`/users/${id}`, data);
+};
+
+export const deleteUser = async (id: number): Promise<any> => {
+  return api.delete(`/users/${id}`);
+};
+
+export const grantPermission = async (
+  userId: number,
+  permission: string,
+): Promise<any> => {
+  return api.post(`/users/${userId}/permissions`, { permission });
+};
+
+export const revokePermission = async (
+  userId: number,
+  permission: string,
+): Promise<any> => {
+  return api.delete(`/users/${userId}/permissions/${permission}`);
 };

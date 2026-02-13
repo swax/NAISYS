@@ -7,17 +7,43 @@ generator client {
   output   = "../src/generated/prisma"
 }
 
+enum AuthType {
+  password
+  api_key
+}
+
+enum Permission {
+  supervisor_admin
+  manage_agents
+}
+
 model User {
-  id               Int       @id @default(autoincrement())
-  username         String    @unique
-  passwordHash     String    @map("password_hash")
-  uuid             String    @default("")
-  sessionTokenHash String?   @map("session_token_hash")
-  sessionExpiresAt DateTime? @map("session_expires_at")
-  createdAt        DateTime  @default(now()) @map("created_at")
-  updatedAt        DateTime  @updatedAt @map("updated_at")
+  id               Int              @id @default(autoincrement())
+  username         String           @unique
+  passwordHash     String           @map("password_hash")
+  uuid             String           @default("")
+  authType         AuthType         @default(password) @map("auth_type")
+  sessionTokenHash String?          @map("session_token_hash")
+  sessionExpiresAt DateTime?        @map("session_expires_at")
+  createdAt        DateTime         @default(now()) @map("created_at")
+  updatedAt        DateTime         @updatedAt @map("updated_at")
+  permissions      UserPermission[] @relation("UserPermissions")
+  grantedPermissions UserPermission[] @relation("GrantedByPermissions")
 
   @@map("users")
+}
+
+model UserPermission {
+  id         Int        @id @default(autoincrement())
+  userId     Int        @map("user_id")
+  permission Permission
+  grantedAt  DateTime   @default(now()) @map("granted_at")
+  grantedBy  Int?       @map("granted_by")
+  user       User       @relation("UserPermissions", fields: [userId], references: [id], onDelete: Cascade)
+  grantedByUser User?   @relation("GrantedByPermissions", fields: [grantedBy], references: [id])
+
+  @@unique([userId, permission])
+  @@map("user_permissions")
 }
 
 model Setting {

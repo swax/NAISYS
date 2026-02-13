@@ -40,13 +40,15 @@ import { Home } from "./pages/home/Home";
 import { HostPage } from "./pages/HostPage";
 import { Mail } from "./pages/mail/Mail";
 import { Runs } from "./pages/runs/Runs";
+import { UserList } from "./pages/users/UserList";
+import { UserDetail } from "./pages/users/UserDetail";
 
 const AppContent: React.FC = () => {
   const [opened, { toggle }] = useDisclosure();
   const [loginOpen, { open: openLogin, close: closeLogin }] = useDisclosure();
   const location = useLocation();
   const { isLoading, error } = useAgentDataContext();
-  const { user, isAuthenticated, logout } = useSession();
+  const { user, isAuthenticated, hasPermission, logout } = useSession();
   const isMobile = useMediaQuery("(max-width: 768px)"); // sm breakpoint
   const [searchParams] = useSearchParams();
   const [plugins, setPlugins] = React.useState<string[]>([]);
@@ -62,12 +64,14 @@ const AppContent: React.FC = () => {
   }, []);
 
   const hasErp = plugins.includes("erp");
+  const isUsersPage = location.pathname.startsWith("/users");
+  const showUsersTab = hasPermission("supervisor_admin");
 
   // Extract current agent name from URL
   const currentAgentName = React.useMemo(() => {
     const pathParts = location.pathname.split("/");
-    // Don't return agent name if on host page
-    if (pathParts[1] === "host") {
+    // Don't return agent name if on host page or users page
+    if (pathParts[1] === "host" || pathParts[1] === "users") {
       return null;
     }
     return pathParts[2] || null;
@@ -84,22 +88,28 @@ const AppContent: React.FC = () => {
   return (
     <AppShell
       header={{ height: 48 }}
-      navbar={{
-        width: SIDEBAR_WIDTH,
-        breakpoint: "sm",
-        collapsed: { mobile: !opened },
-      }}
+      navbar={
+        isUsersPage
+          ? undefined
+          : {
+              width: SIDEBAR_WIDTH,
+              breakpoint: "sm",
+              collapsed: { mobile: !opened },
+            }
+      }
       padding="md"
     >
       <AppShell.Header>
         <Group h="100%" px="md" justify="space-between">
           <Group>
-            <Burger
-              opened={opened}
-              onClick={toggle}
-              hiddenFrom="sm"
-              size="sm"
-            />
+            {!isUsersPage && (
+              <Burger
+                opened={opened}
+                onClick={toggle}
+                hiddenFrom="sm"
+                size="sm"
+              />
+            )}
             <Link
               to="/"
               style={{
@@ -121,9 +131,39 @@ const AppContent: React.FC = () => {
               </Text>
             </Link>
             <Group gap={6} visibleFrom="sm">
-              <Text size="sm" fw={700}>
-                Supervisor
-              </Text>
+              <Link
+                to="/"
+                style={{ textDecoration: "none" }}
+              >
+                <Text
+                  size="sm"
+                  fw={!isUsersPage ? 700 : undefined}
+                  c={isUsersPage ? "dimmed" : undefined}
+                  style={{ cursor: "pointer" }}
+                >
+                  Supervisor
+                </Text>
+              </Link>
+              {showUsersTab && (
+                <>
+                  <Text size="sm" c="dimmed">
+                    |
+                  </Text>
+                  <Link
+                    to="/users"
+                    style={{ textDecoration: "none" }}
+                  >
+                    <Text
+                      size="sm"
+                      fw={isUsersPage ? 700 : undefined}
+                      c={!isUsersPage ? "dimmed" : undefined}
+                      style={{ cursor: "pointer" }}
+                    >
+                      Users
+                    </Text>
+                  </Link>
+                </>
+              )}
               {hasErp && (
                 <>
                   <Text size="sm" c="dimmed">
@@ -142,7 +182,7 @@ const AppContent: React.FC = () => {
                 </>
               )}
             </Group>
-            {!isHostPage && (
+            {!isHostPage && !isUsersPage && (
               <AgentNavHeader
                 agentName={currentAgentName || undefined}
                 sidebarWidth={SIDEBAR_WIDTH}
@@ -178,22 +218,24 @@ const AppContent: React.FC = () => {
         </Group>
       </AppShell.Header>
 
-      <AppShell.Navbar p="md" style={{ overflowY: "auto" }}>
-        {hasErp && (
-          <Text
-            size="sm"
-            c="dimmed"
-            mb="md"
-            style={{ cursor: "pointer" }}
-            onClick={() => {
-              window.location.href = "/erp/";
-            }}
-          >
-            ERP
-          </Text>
-        )}
-        <AgentSidebar />
-      </AppShell.Navbar>
+      {!isUsersPage && (
+        <AppShell.Navbar p="md" style={{ overflowY: "auto" }}>
+          {hasErp && (
+            <Text
+              size="sm"
+              c="dimmed"
+              mb="md"
+              style={{ cursor: "pointer" }}
+              onClick={() => {
+                window.location.href = "/erp/";
+              }}
+            >
+              ERP
+            </Text>
+          )}
+          <AgentSidebar />
+        </AppShell.Navbar>
+      )}
 
       <AppShell.Main>
         <Routes>
@@ -206,6 +248,8 @@ const AppContent: React.FC = () => {
           <Route path="/controls" element={<Controls />} />
           <Route path="/controls/:agent" element={<Controls />} />
           <Route path="/host/:hostName" element={<HostPage />} />
+          <Route path="/users" element={<UserList />} />
+          <Route path="/users/:id" element={<UserDetail />} />
         </Routes>
       </AppShell.Main>
       <LoginDialog opened={loginOpen} onClose={closeLogin} />

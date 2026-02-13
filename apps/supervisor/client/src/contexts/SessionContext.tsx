@@ -10,6 +10,7 @@ interface SessionContextType {
   user: AuthUser | null;
   isAuthenticated: boolean;
   isCheckingSession: boolean;
+  hasPermission: (permission: string) => boolean;
   login: (username: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
 }
@@ -50,12 +51,17 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
+  const hasPermission = (permission: string): boolean => {
+    return user?.permissions?.includes(permission) ?? false;
+  };
+
   return (
     <SessionContext.Provider
       value={{
         user,
         isAuthenticated: user !== null,
         isCheckingSession,
+        hasPermission,
         login,
         logout,
       }}

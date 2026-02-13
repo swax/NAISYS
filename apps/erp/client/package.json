@@ -15,6 +15,7 @@
     "@mantine/form": "^8.3.14",
     "@mantine/hooks": "^8.3.14",
     "@mantine/notifications": "^8.3.14",
+    "@naisys/common": "file:../../../packages/common",
     "@naisys-erp/shared": "file:../shared",
     "@tabler/icons-react": "^3.36.1",
     "react": "^19.2.4",

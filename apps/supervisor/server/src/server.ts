@@ -26,6 +26,8 @@ import prisma from "./db.js";
 import { initLogger } from "./logger.js";
 import apiRoutes from "./routes/api.js";
 import { createUser } from "./services/userService.js";
+import { grantInitialAdminPermissions } from "./services/userService.js";
+import "./schema-registry.js";
 
 export const startServer: StartServer = async (startupType, plugins = []) => {
   const isProd = process.env.NODE_ENV === "production";
@@ -43,14 +45,15 @@ export const startServer: StartServer = async (startupType, plugins = []) => {
   await deployPrismaMigrations({
     packageDir: supervisorServerDir,
     databasePath: supervisorDbPath,
-    expectedVersion: 1,
+    expectedVersion: 2,
   });
 
   initHubSessions();
   await ensureAdminUser(
     () => prisma.user.count(),
     async (username, passwordHash, uuid) => {
-      await createUser(username, passwordHash, uuid);
+      const user = await createUser(username, passwordHash, uuid);
+      await grantInitialAdminPermissions(user.id);
     },
   );
 
@@ -146,6 +149,8 @@ export const startServer: StartServer = async (startupType, plugins = []) => {
       paths: filteredPaths,
       "x-tagGroups": [
         { name: "General", tags: ["Authentication", "Settings"] },
+        { name: "Users", tags: ["Users"] },
+        { name: "Discovery", tags: ["Discovery"] },
         { name: "Agents", tags: ["Agent", "Agent Config"] },
         { name: "Operations", tags: ["Mail", "Runs"] },
       ],
