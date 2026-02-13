@@ -17,6 +17,7 @@ import { useDisclosure } from "@mantine/hooks";
 import { hasAction } from "@naisys/common";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { useSession } from "../../contexts/SessionContext";
 import {
   getUser,
   updateUser,
@@ -30,6 +31,7 @@ const ALL_PERMISSIONS = ["supervisor_admin", "manage_agents"];
 export const UserDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { hasPermission } = useSession();
   /* eslint-disable @typescript-eslint/no-explicit-any */
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -95,9 +97,7 @@ export const UserDetail: React.FC = () => {
       setGrantPerm(null);
       fetchUser();
     } catch (err) {
-      alert(
-        err instanceof Error ? err.message : "Failed to grant permission",
-      );
+      alert(err instanceof Error ? err.message : "Failed to grant permission");
     }
   };
 
@@ -107,9 +107,7 @@ export const UserDetail: React.FC = () => {
       await revokePermission(Number(id), permission);
       fetchUser();
     } catch (err) {
-      alert(
-        err instanceof Error ? err.message : "Failed to revoke permission",
-      );
+      alert(err instanceof Error ? err.message : "Failed to revoke permission");
     }
   };
 
@@ -140,7 +138,12 @@ export const UserDetail: React.FC = () => {
       <Group justify="space-between" mb="lg">
         <Title order={2}>{user.username}</Title>
         <Group>
-          <Button variant="subtle" onClick={() => navigate("/users")}>
+          <Button
+            variant="subtle"
+            onClick={() =>
+              navigate(hasPermission("supervisor_admin") ? "/users" : "/agents")
+            }
+          >
             Back
           </Button>
           {hasAction(user._actions, "update") && (
@@ -211,9 +214,7 @@ export const UserDetail: React.FC = () => {
                 <Table.Td>
                   <Text ff="monospace">{p.permission}</Text>
                 </Table.Td>
-                <Table.Td>
-                  {new Date(p.grantedAt).toLocaleString()}
-                </Table.Td>
+                <Table.Td>{new Date(p.grantedAt).toLocaleString()}</Table.Td>
                 <Table.Td>
                   {hasAction(p._actions, "revoke") && (
                     <Button
@@ -254,15 +255,21 @@ export const UserDetail: React.FC = () => {
           </Group>
         )}
 
-      <Modal opened={editOpened} onClose={closeEdit} title="Edit User">
+      <Modal
+        opened={editOpened}
+        onClose={closeEdit}
+        title={hasPermission("supervisor_admin") ? "Edit User" : "Change Password"}
+      >
         <Stack>
-          <TextInput
-            label="Username"
-            value={editUsername}
-            onChange={(e) => setEditUsername(e.currentTarget.value)}
-          />
+          {hasPermission("supervisor_admin") && (
+            <TextInput
+              label="Username"
+              value={editUsername}
+              onChange={(e) => setEditUsername(e.currentTarget.value)}
+            />
+          )}
           <PasswordInput
-            label="New Password (leave blank to keep)"
+            label={hasPermission("supervisor_admin") ? "New Password (leave blank to keep)" : "New Password"}
             value={editPassword}
             onChange={(e) => setEditPassword(e.currentTarget.value)}
           />

@@ -1,6 +1,7 @@
 import bcrypt from "bcrypt";
 import { randomUUID } from "crypto";
 import { existsSync } from "fs";
+import readline from "readline/promises";
 import { hubDbPath } from "./dbConfig.js";
 import { PrismaClient } from "./generated/prisma/client.js";
 import { createPrismaClient } from "./prismaClient.js";
@@ -140,6 +141,36 @@ export async function createHubUser(
 }
 
 /**
+ * Update (or create) a hub user's password hash by username.
+ * Uses the provided uuid so the hub record matches the local user's identity.
+ * No-op if hub unavailable.
+ */
+export async function updateHubUserPassword(
+  username: string,
+  passwordHash: string,
+  uuid: string,
+): Promise<void> {
+  if (!prisma) return;
+
+  const existing = await prisma.web_users.findUnique({ where: { username } });
+
+  if (existing) {
+    await prisma.web_users.update({
+      where: { username },
+      data: { password_hash: passwordHash },
+    });
+  } else {
+    await prisma.web_users.create({
+      data: {
+        uuid,
+        username,
+        password_hash: passwordHash,
+      },
+    });
+  }
+}
+
+/**
  * Ensure an admin user exists. Checks hub users, then local users via the
  * provided callback. If neither exist, auto-creates an admin with a random
  * password and prints it to the console.
@@ -199,4 +230,43 @@ export async function deleteHubSession(tokenHash: string): Promise<void> {
       session_expires_at: null,
     },
   });
+}
+
+/**
+ * Interactive CLI to reset a user's password. Updates both local DB (via
+ * callbacks) and the hub DB.
+ */
+export async function resetPassword(
+  findLocalUser: (
+    username: string,
+  ) => Promise<{ id: number; username: string; uuid: string } | null>,
+  updateLocalPassword: (userId: number, passwordHash: string) => Promise<void>,
+): Promise<void> {
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  });
+
+  try {
+    const username = await rl.question("Username: ");
+    const user = await findLocalUser(username);
+    if (!user) {
+      console.error(`User '${username}' not found.`);
+      process.exit(1);
+    }
+
+    const password = await rl.question("New password: ");
+    if (password.length < 6) {
+      console.error("Password must be at least 6 characters.");
+      process.exit(1);
+    }
+
+    const hash = await bcrypt.hash(password, 10);
+    await updateLocalPassword(user.id, hash);
+    await updateHubUserPassword(username, hash, user.uuid);
+
+    console.log(`Password reset for '${username}'.`);
+  } finally {
+    rl.close();
+  }
 }

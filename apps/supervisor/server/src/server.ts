@@ -19,14 +19,19 @@ import { fileURLToPath } from "url";
 import {
   initHubSessions,
   ensureAdminUser,
+  resetPassword,
   deployPrismaMigrations,
 } from "@naisys/database";
 import { supervisorDbPath } from "./dbConfig.js";
 import prisma from "./db.js";
 import { initLogger } from "./logger.js";
 import apiRoutes from "./routes/api.js";
-import { createUser } from "./services/userService.js";
-import { grantInitialAdminPermissions } from "./services/userService.js";
+import {
+  createUser,
+  grantInitialAdminPermissions,
+  updateLocalPasswordHash,
+  getUserByUsername,
+} from "./services/userService.js";
 import "./schema-registry.js";
 
 export const startServer: StartServer = async (startupType, plugins = []) => {
@@ -233,9 +238,33 @@ export const startServer: StartServer = async (startupType, plugins = []) => {
   }
 };
 
+async function handleResetPassword() {
+  const __filename_reset = fileURLToPath(import.meta.url);
+  const serverDir = path.join(path.dirname(__filename_reset), "..");
+  await deployPrismaMigrations({
+    packageDir: serverDir,
+    databasePath: supervisorDbPath,
+    expectedVersion: 2,
+  });
+
+  initHubSessions();
+
+  await resetPassword(
+    async (username) => {
+      const user = await getUserByUsername(username);
+      return user ? { id: user.id, username: user.username, uuid: user.uuid } : null;
+    },
+    updateLocalPasswordHash,
+  );
+}
+
 // Start server if this file is run directly
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   dotenv.config({ quiet: true });
 
-  void startServer("standalone");
+  if (process.argv.includes("--reset-password")) {
+    void handleResetPassword();
+  } else {
+    void startServer("standalone");
+  }
 }

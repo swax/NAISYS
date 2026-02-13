@@ -36,10 +36,10 @@ enum Permission {
 }
 ```
 
-| Permission         | Description                                                |
-| ------------------ | ---------------------------------------------------------- |
-| `supervisor_admin` | Full access to the Users page (user and permission CRUD)  |
-| `manage_agents`    | Ability to create, configure, and control agents           |
+| Permission         | Description                                              |
+| ------------------ | -------------------------------------------------------- |
+| `supervisor_admin` | Full access to the Users page (user and permission CRUD) |
+| `manage_agents`    | Ability to create, configure, and control agents         |
 
 New permissions can be added to the enum as the system grows (e.g., `view_logs`, `send_mail`).
 
@@ -140,9 +140,7 @@ Response:
       "authType": "password",
       "createdAt": "2025-01-01T00:00:00.000Z",
       "updatedAt": "2025-01-01T00:00:00.000Z",
-      "_links": [
-        { "rel": "self", "href": "/api/supervisor/users/1" }
-      ]
+      "_links": [{ "rel": "self", "href": "/api/supervisor/users/1" }]
     }
   ],
   "total": 1,
@@ -418,7 +416,7 @@ function formatUser(user, permissions, requestingUserId) {
     authType: user.authType,
     createdAt: user.createdAt.toISOString(),
     updatedAt: user.updatedAt.toISOString(),
-    permissions: permissions.map(p => ({
+    permissions: permissions.map((p) => ({
       permission: p.permission,
       grantedAt: p.grantedAt.toISOString(),
       grantedBy: p.grantor.username,
@@ -449,11 +447,11 @@ Route: `/users`
 
 A paginated table showing all users:
 
-| Column     | Description                      |
-| ---------- | -------------------------------- |
-| Username   | User's login name                |
-| Auth Type  | `password` or `api_key`          |
-| Created    | Account creation date            |
+| Column    | Description             |
+| --------- | ----------------------- |
+| Username  | User's login name       |
+| Auth Type | `password` or `api_key` |
+| Created   | Account creation date   |
 
 Clicking a row navigates to `/users/:id`.
 
@@ -500,34 +498,34 @@ revokePermission(userId, perm)  → DELETE /users/:userId/permissions/:perm
 
 ### New Files
 
-| File | Description |
-| ---- | ----------- |
-| `apps/supervisor/server/src/routes/users.ts` | Users API routes (users + permissions CRUD) |
-| `apps/supervisor/server/src/routes/schemas.ts` | Schema discovery endpoints (top-level, serves all supervisor schemas) |
-| `apps/supervisor/server/src/services/userService.ts` | User + permission business logic |
-| `apps/supervisor/server/src/hateoas.ts` | HATEOAS helper functions |
-| `apps/supervisor/shared/src/user-types.ts` | Zod schemas and types for users API |
-| `apps/supervisor/client/src/pages/users/UserList.tsx` | User list page |
-| `apps/supervisor/client/src/pages/users/UserDetail.tsx` | User detail page |
-| `packages/common/src/hateoas-types.ts` | Shared HATEOAS Zod schemas and types |
-| `packages/common/src/hateoas.ts` | Shared client-side `hasAction` utility |
+| File                                                    | Description                                                           |
+| ------------------------------------------------------- | --------------------------------------------------------------------- |
+| `apps/supervisor/server/src/routes/users.ts`            | Users API routes (users + permissions CRUD)                           |
+| `apps/supervisor/server/src/routes/schemas.ts`          | Schema discovery endpoints (top-level, serves all supervisor schemas) |
+| `apps/supervisor/server/src/services/userService.ts`    | User + permission business logic                                      |
+| `apps/supervisor/server/src/hateoas.ts`                 | HATEOAS helper functions                                              |
+| `apps/supervisor/shared/src/user-types.ts`              | Zod schemas and types for users API                                   |
+| `apps/supervisor/client/src/pages/users/UserList.tsx`   | User list page                                                        |
+| `apps/supervisor/client/src/pages/users/UserDetail.tsx` | User detail page                                                      |
+| `packages/common/src/hateoas-types.ts`                  | Shared HATEOAS Zod schemas and types                                  |
+| `packages/common/src/hateoas.ts`                        | Shared client-side `hasAction` utility                                |
 
 ### Modified Files
 
-| File | Change |
-| ---- | ------ |
-| `apps/supervisor/server/prisma/schema.prisma` | Add `Permission` enum, `UserPermission` model, relations on `User` |
-| `apps/supervisor/server/src/routes/api.ts` | Register user routes |
-| `apps/supervisor/server/src/auth-middleware.ts` | Extend `SupervisorUser` with permissions, load permissions in auth flow |
-| `apps/supervisor/server/src/server.ts` | Add "Access" to swagger tag groups, grant admin permissions in bootstrap |
-| `apps/supervisor/shared/src/auth-types.ts` | Add `permissions` to `AuthUserSchema` |
-| `apps/supervisor/client/src/App.tsx` | Add Users routes, update header with Main/Users navigation |
-| `apps/supervisor/client/src/contexts/SessionContext.tsx` | Expose permissions from auth state |
-| `apps/supervisor/client/src/lib/apiClient.ts` | Add users API functions |
-| `apps/erp/shared/src/hateoas-types.ts` | Re-export from `@naisys/common` (or update imports) |
-| `apps/erp/server/src/hateoas.ts` | Update imports to use common package |
-| `apps/erp/client/src/lib/hateoas.ts` | Update imports to use common package |
-| `packages/database/src/hubSessionService.ts` | Update `ensureAdminUser` to accept permission grant callback |
+| File                                                     | Change                                                                   |
+| -------------------------------------------------------- | ------------------------------------------------------------------------ |
+| `apps/supervisor/server/prisma/schema.prisma`            | Add `Permission` enum, `UserPermission` model, relations on `User`       |
+| `apps/supervisor/server/src/routes/api.ts`               | Register user routes                                                     |
+| `apps/supervisor/server/src/auth-middleware.ts`          | Extend `SupervisorUser` with permissions, load permissions in auth flow  |
+| `apps/supervisor/server/src/server.ts`                   | Add "Access" to swagger tag groups, grant admin permissions in bootstrap |
+| `apps/supervisor/shared/src/auth-types.ts`               | Add `permissions` to `AuthUserSchema`                                    |
+| `apps/supervisor/client/src/App.tsx`                     | Add Users routes, update header with Main/Users navigation               |
+| `apps/supervisor/client/src/contexts/SessionContext.tsx` | Expose permissions from auth state                                       |
+| `apps/supervisor/client/src/lib/apiClient.ts`            | Add users API functions                                                  |
+| `apps/erp/shared/src/hateoas-types.ts`                   | Re-export from `@naisys/common` (or update imports)                      |
+| `apps/erp/server/src/hateoas.ts`                         | Update imports to use common package                                     |
+| `apps/erp/client/src/lib/hateoas.ts`                     | Update imports to use common package                                     |
+| `packages/database/src/hubSessionService.ts`             | Update `ensureAdminUser` to accept permission grant callback             |
 
 ## Database Schema
 
@@ -542,17 +540,17 @@ The Prisma schema adds:
 
 ## API Endpoints Summary
 
-| Method | Path | Description | Permission |
-| ------ | ---- | ----------- | ---------- |
-| GET | `/api/supervisor/users` | List users (paginated) | `supervisor_admin` |
-| POST | `/api/supervisor/users` | Create user | `supervisor_admin` |
-| GET | `/api/supervisor/users/:id` | Get user detail | `supervisor_admin` |
-| PUT | `/api/supervisor/users/:id` | Update user | `supervisor_admin` |
-| DELETE | `/api/supervisor/users/:id` | Delete user | `supervisor_admin` |
-| POST | `/api/supervisor/users/:id/permissions` | Grant permission | `supervisor_admin` |
-| DELETE | `/api/supervisor/users/:id/permissions/:perm` | Revoke permission | `supervisor_admin` |
-| GET | `/api/supervisor/schemas/` | List all supervisor schema names | (authenticated) |
-| GET | `/api/supervisor/schemas/:name` | Get a single JSON Schema | (authenticated) |
+| Method | Path                                          | Description                      | Permission         |
+| ------ | --------------------------------------------- | -------------------------------- | ------------------ |
+| GET    | `/api/supervisor/users`                       | List users (paginated)           | `supervisor_admin` |
+| POST   | `/api/supervisor/users`                       | Create user                      | `supervisor_admin` |
+| GET    | `/api/supervisor/users/:id`                   | Get user detail                  | `supervisor_admin` |
+| PUT    | `/api/supervisor/users/:id`                   | Update user                      | `supervisor_admin` |
+| DELETE | `/api/supervisor/users/:id`                   | Delete user                      | `supervisor_admin` |
+| POST   | `/api/supervisor/users/:id/permissions`       | Grant permission                 | `supervisor_admin` |
+| DELETE | `/api/supervisor/users/:id/permissions/:perm` | Revoke permission                | `supervisor_admin` |
+| GET    | `/api/supervisor/schemas/`                    | List all supervisor schema names | (authenticated)    |
+| GET    | `/api/supervisor/schemas/:name`               | Get a single JSON Schema         | (authenticated)    |
 
 ## Example AI Agent Workflow
 

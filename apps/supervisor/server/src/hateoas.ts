@@ -32,32 +32,39 @@ export function userItemLinks(userId: number): HateoasLink[] {
 export function userActions(
   userId: number,
   isSelf: boolean,
+  isAdmin: boolean,
 ): HateoasAction[] {
   const href = `${API_PREFIX}/users/${userId}`;
-  const actions: HateoasAction[] = [
-    {
+  const actions: HateoasAction[] = [];
+
+  // Admins can update any user; non-admins can update themselves (password only)
+  if (isAdmin || isSelf) {
+    actions.push({
       rel: "update",
       href,
       method: "PUT",
-      title: "Update",
+      title: isSelf && !isAdmin ? "Change Password" : "Update",
       schema: `${API_PREFIX}/schemas/UpdateUser`,
-    },
-    {
+    });
+  }
+
+  if (isAdmin) {
+    actions.push({
       rel: "grant-permission",
       href: `${href}/permissions`,
       method: "POST",
       title: "Grant Permission",
       schema: `${API_PREFIX}/schemas/GrantPermission`,
-    },
-  ];
-
-  if (!isSelf) {
-    actions.push({
-      rel: "delete",
-      href,
-      method: "DELETE",
-      title: "Delete",
     });
+
+    if (!isSelf) {
+      actions.push({
+        rel: "delete",
+        href,
+        method: "DELETE",
+        title: "Delete",
+      });
+    }
   }
 
   return actions;
@@ -67,7 +74,10 @@ export function permissionActions(
   userId: number,
   permission: string,
   isSelf: boolean,
+  isAdmin: boolean,
 ): HateoasAction[] {
+  if (!isAdmin) return [];
+
   const actions: HateoasAction[] = [];
 
   // Cannot revoke own supervisor_admin

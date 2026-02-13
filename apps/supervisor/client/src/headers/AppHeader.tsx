@@ -165,7 +165,15 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         <ToolsHeader isLoading={isLoading} error={error} />
         {isAuthenticated ? (
           <>
-            <Text size="sm">{user?.username}</Text>
+            <Text
+              size="sm"
+              component={Link}
+              to={`/users/${user?.id}`}
+              c="inherit"
+              style={{ textDecoration: "none" }}
+            >
+              {user?.username}
+            </Text>
             <Button size="xs" variant="subtle" onClick={() => logout()}>
               Logout
             </Button>
