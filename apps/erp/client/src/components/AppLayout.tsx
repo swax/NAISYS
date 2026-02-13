@@ -11,7 +11,7 @@ import {
 import { useDisclosure } from "@mantine/hooks";
 import { IconApi } from "@tabler/icons-react";
 import naisysLogo from "@naisys/common/assets/naisys-logo.webp";
-import { useLocation, useNavigate, Outlet } from "react-router";
+import { Link, useLocation, useNavigate, Outlet } from "react-router";
 import { useAuth } from "../lib/AuthContext";
 import { LoginModal } from "./LoginModal";
 
@@ -57,14 +57,26 @@ export const AppLayout: React.FC = () => {
               hiddenFrom="sm"
               size="sm"
             />
-            <img
-              src={naisysLogo}
-              alt="NAISYS"
-              style={{ width: "36px", height: "36px" }}
-            />
-            <Text size="lg" fw={500}>
-              NAISYS
-            </Text>
+            <Link
+              to="/planning/orders"
+              style={{
+                textDecoration: "none",
+                color: "inherit",
+                display: "flex",
+                alignItems: "center",
+                gap: "0.5rem",
+                cursor: "pointer",
+              }}
+            >
+              <img
+                src={naisysLogo}
+                alt="NAISYS"
+                style={{ width: "36px", height: "36px" }}
+              />
+              <Text size="lg" fw={500} visibleFrom="sm">
+                NAISYS
+              </Text>
+            </Link>
             <Group gap={6} visibleFrom="sm">
               <Text
                 size="sm"

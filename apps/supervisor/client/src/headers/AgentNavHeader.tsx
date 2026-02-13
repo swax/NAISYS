@@ -7,14 +7,10 @@ import { useAgentDataContext } from "../contexts/AgentDataContext";
 
 interface AgentNavHeaderProps {
   agentName?: string;
-  sidebarWidth: number;
-  sidebarCollapsed: boolean;
 }
 
 export const AgentNavHeader: React.FC<AgentNavHeaderProps> = ({
   agentName,
-  sidebarWidth,
-  sidebarCollapsed,
 }) => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -39,10 +35,11 @@ export const AgentNavHeader: React.FC<AgentNavHeaderProps> = ({
       : false;
 
   // Determine active tab from current location
-  const currentSection = location.pathname.split("/")[1];
+  // Path: /agents/controls/agentName → split("/")[2] = "controls"
+  const currentSection = location.pathname.split("/")[2];
 
   const getTabUrl = (section: string) => {
-    return `/${section}/${agentName}`;
+    return `/agents/${section}/${agentName}`;
   };
 
   const getAbsoluteUrl = (section: string) => {
@@ -61,15 +58,7 @@ export const AgentNavHeader: React.FC<AgentNavHeaderProps> = ({
   };
 
   return (
-    <Group
-      gap="md"
-      align="center"
-      style={{
-        position: "fixed",
-        top: "10px",
-        left: sidebarCollapsed ? "100px" : `${sidebarWidth}px`,
-      }}
-    >
+    <Group gap="md" align="center">
       <Tabs value={currentSection} style={{ flex: 1, height: "100%" }}>
         <Tabs.List>
           <Tabs.Tab

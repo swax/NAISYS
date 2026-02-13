@@ -63,7 +63,7 @@ export default async function userRoutes(
 
   // LIST USERS
   app.get(
-    "/users",
+    "/",
     {
       preHandler: adminPreHandler,
       schema: {
@@ -94,7 +94,7 @@ export default async function userRoutes(
 
   // CREATE USER
   app.post(
-    "/users",
+    "/",
     {
       preHandler: adminPreHandler,
       schema: {
@@ -124,7 +124,7 @@ export default async function userRoutes(
 
   // GET USER
   app.get(
-    "/users/:id",
+    "/:id",
     {
       preHandler: adminPreHandler,
       schema: {
@@ -146,7 +146,7 @@ export default async function userRoutes(
 
   // UPDATE USER
   app.put(
-    "/users/:id",
+    "/:id",
     {
       preHandler: adminPreHandler,
       schema: {
@@ -180,7 +180,7 @@ export default async function userRoutes(
 
   // DELETE USER
   app.delete(
-    "/users/:id",
+    "/:id",
     {
       preHandler: adminPreHandler,
       schema: {
@@ -203,7 +203,7 @@ export default async function userRoutes(
 
   // GRANT PERMISSION
   app.post(
-    "/users/:id/permissions",
+    "/:id/permissions",
     {
       preHandler: adminPreHandler,
       schema: {
@@ -242,7 +242,7 @@ export default async function userRoutes(
 
   // REVOKE PERMISSION
   app.delete(
-    "/users/:id/permissions/:permission",
+    "/:id/permissions/:permission",
     {
       preHandler: adminPreHandler,
       schema: {
