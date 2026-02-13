@@ -1,5 +1,10 @@
 import { z } from "zod/v4";
-import { FastifyInstance, FastifyPluginOptions } from "fastify";
+import {
+  FastifyInstance,
+  FastifyPluginOptions,
+  FastifyRequest,
+  FastifyReply,
+} from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import {
   CreateUserSchema,
@@ -21,9 +26,11 @@ import {
 function formatUser(
   user: Awaited<ReturnType<typeof userService.getUserById>>,
   currentUserId: number,
+  currentUserPermissions: string[],
 ) {
   if (!user) return null;
   const isSelf = user.id === currentUserId;
+  const isAdmin = currentUserPermissions.includes("supervisor_admin");
   return {
     id: user.id,
     username: user.username,
@@ -34,10 +41,10 @@ function formatUser(
       permission: p.permission,
       grantedAt: p.grantedAt.toISOString(),
       grantedBy: p.grantedBy,
-      _actions: permissionActions(user.id, p.permission, isSelf),
+      _actions: permissionActions(user.id, p.permission, isSelf, isAdmin),
     })),
     _links: userItemLinks(user.id),
-    _actions: userActions(user.id, isSelf),
+    _actions: userActions(user.id, isSelf, isAdmin),
   };
 }
 
@@ -60,6 +67,31 @@ export default async function userRoutes(
 ) {
   const app = fastify.withTypeProvider<ZodTypeProvider>();
   const adminPreHandler = [requirePermission("supervisor_admin")];
+
+  const requireAdminOrSelf = async (
+    request: FastifyRequest<{ Params: { id: number } }>,
+    reply: FastifyReply,
+  ) => {
+    if (!request.supervisorUser) {
+      reply.status(401).send({
+        statusCode: 401,
+        error: "Unauthorized",
+        message: "Authentication required",
+      });
+      return;
+    }
+    const isAdmin =
+      request.supervisorUser.permissions.includes("supervisor_admin");
+    const isSelf = request.params.id === request.supervisorUser.id;
+    if (!isAdmin && !isSelf) {
+      reply.status(403).send({
+        statusCode: 403,
+        error: "Forbidden",
+        message: "Permission 'supervisor_admin' required",
+      });
+      return;
+    }
+  };
 
   // LIST USERS
   app.get(
@@ -108,12 +140,13 @@ export default async function userRoutes(
       try {
         const user = await userService.createUserWithPassword(request.body);
         reply.code(201);
-        return formatUser(user, request.supervisorUser!.id);
+        return formatUser(
+          user,
+          request.supervisorUser!.id,
+          request.supervisorUser!.permissions,
+        );
       } catch (err: unknown) {
-        if (
-          err instanceof Error &&
-          err.message.includes("Unique constraint")
-        ) {
+        if (err instanceof Error && err.message.includes("Unique constraint")) {
           reply.code(409);
           return { success: false, message: "Username already exists" };
         }
@@ -122,11 +155,11 @@ export default async function userRoutes(
     },
   );
 
-  // GET USER
+  // GET USER (admin or self)
   app.get(
     "/:id",
     {
-      preHandler: adminPreHandler,
+      preHandler: [requireAdminOrSelf],
       schema: {
         description: "Get user details",
         tags: ["Users"],
@@ -140,15 +173,19 @@ export default async function userRoutes(
         reply.code(404);
         return { success: false, message: "User not found" };
       }
-      return formatUser(user, request.supervisorUser!.id);
+      return formatUser(
+        user,
+        request.supervisorUser!.id,
+        request.supervisorUser!.permissions,
+      );
     },
   );
 
-  // UPDATE USER
+  // UPDATE USER (admin can update any field; non-admin can only change own password)
   app.put(
     "/:id",
     {
-      preHandler: adminPreHandler,
+      preHandler: [requireAdminOrSelf],
       schema: {
         description: "Update a user",
         tags: ["Users"],
@@ -158,18 +195,24 @@ export default async function userRoutes(
       },
     },
     async (request, reply) => {
+      const isAdmin =
+        request.supervisorUser!.permissions.includes("supervisor_admin");
+
+      // Non-admins can only change their own password
+      const body = isAdmin
+        ? request.body
+        : { password: request.body.password };
+
       try {
-        const user = await userService.updateUser(
-          request.params.id,
-          request.body,
-        );
+        const user = await userService.updateUser(request.params.id, body);
         authCache.clear();
-        return formatUser(user, request.supervisorUser!.id);
+        return formatUser(
+          user,
+          request.supervisorUser!.id,
+          request.supervisorUser!.permissions,
+        );
       } catch (err: unknown) {
-        if (
-          err instanceof Error &&
-          err.message.includes("Unique constraint")
-        ) {
+        if (err instanceof Error && err.message.includes("Unique constraint")) {
           reply.code(409);
           return { success: false, message: "Username already exists" };
         }
@@ -223,12 +266,13 @@ export default async function userRoutes(
         );
         authCache.clear();
         const user = await userService.getUserById(request.params.id);
-        return formatUser(user, request.supervisorUser!.id);
+        return formatUser(
+          user,
+          request.supervisorUser!.id,
+          request.supervisorUser!.permissions,
+        );
       } catch (err: unknown) {
-        if (
-          err instanceof Error &&
-          err.message.includes("Unique constraint")
-        ) {
+        if (err instanceof Error && err.message.includes("Unique constraint")) {
           reply.code(409);
           return {
             success: false,
@@ -273,7 +317,11 @@ export default async function userRoutes(
       await userService.revokePermission(id, permission as Permission);
       authCache.clear();
       const user = await userService.getUserById(id);
-      return formatUser(user, request.supervisorUser!.id);
+      return formatUser(
+        user,
+        request.supervisorUser!.id,
+        request.supervisorUser!.permissions,
+      );
     },
   );
 }

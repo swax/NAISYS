@@ -1,5 +1,6 @@
 import { createHash } from "crypto";
 import bcrypt from "bcrypt";
+import { updateHubUserPassword } from "@naisys/database";
 import prisma from "../db.js";
 import type { Permission } from "../generated/prisma/client.js";
 
@@ -38,6 +39,16 @@ export async function createUser(
   });
 }
 
+export async function updateLocalPasswordHash(
+  userId: number,
+  passwordHash: string,
+): Promise<void> {
+  await prisma.user.update({
+    where: { id: userId },
+    data: { passwordHash },
+  });
+}
+
 export async function setSessionOnUser(
   userId: number,
   tokenHash: string,
@@ -70,9 +81,7 @@ export async function listUsers(options: {
   search?: string;
 }) {
   const { page, pageSize, search } = options;
-  const where = search
-    ? { username: { contains: search } }
-    : {};
+  const where = search ? { username: { contains: search } } : {};
 
   const [items, total] = await Promise.all([
     prisma.user.findMany({
@@ -117,15 +126,24 @@ export async function updateUser(
 ) {
   const updateData: Record<string, unknown> = {};
   if (data.username !== undefined) updateData.username = data.username;
+
+  let newHash: string | undefined;
   if (data.password !== undefined) {
-    updateData.passwordHash = await bcrypt.hash(data.password, SALT_ROUNDS);
+    newHash = await bcrypt.hash(data.password, SALT_ROUNDS);
+    updateData.passwordHash = newHash;
   }
 
-  return prisma.user.update({
+  const updated = await prisma.user.update({
     where: { id },
     data: updateData,
     include: { permissions: true },
   });
+
+  if (newHash) {
+    await updateHubUserPassword(updated.username, newHash, updated.uuid);
+  }
+
+  return updated;
 }
 
 export async function deleteUser(id: number) {

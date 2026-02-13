@@ -23,6 +23,7 @@ import { registerErrorHandler } from "./error-handler.js";
 import {
   initHubSessions,
   ensureAdminUser,
+  resetPassword,
   deployPrismaMigrations,
 } from "@naisys/database";
 import auditRoutes from "./routes/audit.js";
@@ -172,7 +173,37 @@ async function startServer() {
   }
 }
 
+async function handleResetPassword() {
+  const erpServerDir = path.join(__dirname, "..");
+  await deployPrismaMigrations({
+    packageDir: erpServerDir,
+    databasePath: (await import("./dbConfig.js")).erpDbPath,
+    expectedVersion: 2,
+  });
+
+  initHubSessions();
+
+  const prisma = (await import("./db.js")).default;
+
+  await resetPassword(
+    async (username) => {
+      const user = await prisma.user.findUnique({ where: { username } });
+      return user ? { id: user.id, username: user.username, uuid: user.uuid } : null;
+    },
+    async (userId, passwordHash) => {
+      await prisma.user.update({
+        where: { id: userId },
+        data: { passwordHash },
+      });
+    },
+  );
+}
+
 // Start server if this file is run directly
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  void startServer();
+  if (process.argv.includes("--reset-password")) {
+    void handleResetPassword();
+  } else {
+    void startServer();
+  }
 }

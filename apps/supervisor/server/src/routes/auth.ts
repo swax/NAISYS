@@ -21,6 +21,7 @@ import {
   getUserByUsername,
   hashToken,
   setSessionOnUser,
+  updateLocalPasswordHash,
 } from "../services/userService.js";
 import { getUserPermissions } from "../services/userService.js";
 import { authCache } from "../auth-middleware.js";
@@ -69,17 +70,24 @@ export default async function authRoutes(
       let user = await getUserByUsername(username);
       let passwordVerified = false;
 
-      // If not found locally, check hub for credentials and auto-provision
-      if (!user && isHubAvailable()) {
+      // Hub-first password check
+      if (isHubAvailable()) {
         const hubUser = await findHubUserByUsername(username);
         if (hubUser) {
           const valid = await bcrypt.compare(password, hubUser.password_hash);
           if (valid) {
-            user = await createUser(
-              hubUser.username,
-              hubUser.password_hash,
-              hubUser.uuid,
-            );
+            if (!user) {
+              // Auto-provision local user from hub
+              user = await createUser(
+                hubUser.username,
+                hubUser.password_hash,
+                hubUser.uuid,
+              );
+            } else if (user.passwordHash !== hubUser.password_hash) {
+              // Sync hub hash down to local
+              await updateLocalPasswordHash(user.id, hubUser.password_hash);
+              user = { ...user, passwordHash: hubUser.password_hash };
+            }
             passwordVerified = true;
           }
         }
@@ -93,6 +101,7 @@ export default async function authRoutes(
         };
       }
 
+      // Fall back to local hash check (standalone mode or user not in hub)
       if (!passwordVerified) {
         const valid = await bcrypt.compare(password, user.passwordHash);
         if (!valid) {

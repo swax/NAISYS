@@ -52,19 +52,28 @@ export default async function authRoutes(fastify: FastifyInstance) {
       let user = await prisma.user.findUnique({ where: { username } });
       let passwordVerified = false;
 
-      // If not found locally, check hub for credentials and auto-provision
-      if (!user && isHubAvailable()) {
+      // Hub-first password check
+      if (isHubAvailable()) {
         const hubUser = await findHubUserByUsername(username);
         if (hubUser) {
           const valid = await bcrypt.compare(password, hubUser.password_hash);
           if (valid) {
-            user = await prisma.user.create({
-              data: {
-                uuid: hubUser.uuid,
-                username: hubUser.username,
-                passwordHash: hubUser.password_hash,
-              },
-            });
+            if (!user) {
+              // Auto-provision local user from hub
+              user = await prisma.user.create({
+                data: {
+                  uuid: hubUser.uuid,
+                  username: hubUser.username,
+                  passwordHash: hubUser.password_hash,
+                },
+              });
+            } else if (user.passwordHash !== hubUser.password_hash) {
+              // Sync hub hash down to local
+              user = await prisma.user.update({
+                where: { id: user.id },
+                data: { passwordHash: hubUser.password_hash },
+              });
+            }
             passwordVerified = true;
           }
         }
@@ -79,6 +88,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
         );
       }
 
+      // Fall back to local hash check (standalone mode or user not in hub)
       if (!passwordVerified) {
         const valid = await bcrypt.compare(password, user.passwordHash);
         if (!valid) {

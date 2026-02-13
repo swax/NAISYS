@@ -18,7 +18,11 @@ export default async function rootRoutes(
     async (request) => {
       const links: HateoasLink[] = [
         { rel: "self", href: `${API_PREFIX}/` },
-        { rel: "auth-me", href: `${API_PREFIX}/auth/me`, title: "Current User" },
+        {
+          rel: "auth-me",
+          href: `${API_PREFIX}/auth/me`,
+          title: "Current User",
+        },
         { rel: "schemas", href: `${API_PREFIX}/schemas/`, title: "Schemas" },
       ];
 
