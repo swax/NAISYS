@@ -1,8 +1,7 @@
 import {
-  ActionIcon,
   Badge,
+  Button,
   Card,
-  Divider,
   Group,
   Stack,
   Text,
@@ -12,7 +11,6 @@ import {
   IconMail,
   IconPlus,
   IconRobot,
-  IconServer,
 } from "@tabler/icons-react";
 import React, { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -20,29 +18,25 @@ import { AddAgentDialog } from "../components/AddAgentDialog";
 import { ROUTER_BASENAME } from "../constants";
 import { useAgentDataContext } from "../contexts/AgentDataContext";
 import { useSession } from "../contexts/SessionContext";
-import { Agent, Host } from "../types/agent";
+import { Agent } from "../types/agent";
 
 export const AgentSidebar: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { agents, hosts, isLoading, readStatus } = useAgentDataContext();
+  const { agents, isLoading, readStatus } = useAgentDataContext();
   const { isAuthenticated } = useSession();
   const [modalOpened, setModalOpened] = useState(false);
 
   const isAgentSelected = (agentName: string) => {
     const pathParts = location.pathname.split("/");
+    // Path: /agents/controls/agentName → pathParts[3] = agentName
     if (agentName === "all") {
-      return !pathParts[2];
+      return !pathParts[3];
     }
-    return pathParts[2] === agentName;
+    return pathParts[3] === agentName;
   };
 
-  const isHostSelected = (hostName: string) => {
-    const pathParts = location.pathname.split("/");
-    return pathParts[1] === "host" && pathParts[2] === hostName;
-  };
-
-  const getCurrentSection = () => location.pathname.split("/")[1];
+  const getCurrentSection = () => location.pathname.split("/")[2];
 
   const getAgentUrl = (agent: Agent) => {
     const currentSection = getCurrentSection();
@@ -53,9 +47,9 @@ export const AgentSidebar: React.FC = () => {
       currentSection &&
       ["runs", "mail", "controls"].includes(currentSection)
     ) {
-      return `/${currentSection}${agentNameSuffix}`;
+      return `/agents/${currentSection}${agentNameSuffix}`;
     } else {
-      return `/controls${agentNameSuffix}`;
+      return `/agents/controls${agentNameSuffix}`;
     }
   };
 
@@ -75,43 +69,11 @@ export const AgentSidebar: React.FC = () => {
     navigate(getAgentUrl(agent));
   };
 
-  const getHostUrl = (host: Host) => `/host/${host.name}`;
-
-  const getHostAbsoluteUrl = (host: Host) =>
-    `${ROUTER_BASENAME}${getHostUrl(host)}`;
-
-  const handleHostClick = (e: React.MouseEvent, host: Host) => {
-    // Allow default behavior for middle-click and ctrl/cmd+click
-    if (e.button === 1 || e.ctrlKey || e.metaKey) {
-      return;
-    }
-
-    // Prevent default for regular clicks and handle with navigate
-    e.preventDefault();
-    navigate(getHostUrl(host));
-  };
-
   if (isLoading) {
     return (
-      <>
-        <Group justify="space-between" mb="md">
-          <Text size="sm" fw={600} c="dimmed">
-            AGENTS
-          </Text>
-          <ActionIcon
-            variant="subtle"
-            color="gray"
-            size="sm"
-            onClick={() => setModalOpened(true)}
-            disabled={!isAuthenticated}
-          >
-            <IconPlus size="1rem" />
-          </ActionIcon>
-        </Group>
-        <Text size="sm" c="dimmed">
-          Loading agents...
-        </Text>
-      </>
+      <Text size="sm" c="dimmed">
+        Loading agents...
+      </Text>
     );
   }
 
@@ -181,7 +143,7 @@ export const AgentSidebar: React.FC = () => {
       e.preventDefault();
       e.stopPropagation();
       const agentNameSuffix = agent.name === "all" ? "" : `/${agent.name}`;
-      navigate(`/runs${agentNameSuffix}?expand=new`);
+      navigate(`/agents/runs${agentNameSuffix}?expand=new`);
     };
 
     return (
@@ -215,7 +177,7 @@ export const AgentSidebar: React.FC = () => {
       e.preventDefault();
       e.stopPropagation();
       const agentNameSuffix = agent.name === "all" ? "" : `/${agent.name}`;
-      navigate(`/mail${agentNameSuffix}`);
+      navigate(`/agents/mail${agentNameSuffix}`);
     };
 
     return (
@@ -240,20 +202,6 @@ export const AgentSidebar: React.FC = () => {
 
   return (
     <>
-      <Group justify="space-between" mb="md">
-        <Text size="sm" fw={600} c="dimmed">
-          AGENTS
-        </Text>
-        <ActionIcon
-          variant="subtle"
-          color="gray"
-          size="sm"
-          onClick={() => setModalOpened(true)}
-          disabled={!isAuthenticated}
-        >
-          <IconPlus size="1rem" />
-        </ActionIcon>
-      </Group>
       <Stack gap="xs">
         {orderedAgents.map((agent) => (
           <Card
@@ -305,7 +253,7 @@ export const AgentSidebar: React.FC = () => {
                       e.stopPropagation();
                       const agentNameSuffix =
                         agent.name === "all" ? "" : `/${agent.name}`;
-                      navigate(`/runs${agentNameSuffix}?expand=online`);
+                      navigate(`/agents/runs${agentNameSuffix}?expand=online`);
                     }
                   }}
                 >
@@ -315,65 +263,23 @@ export const AgentSidebar: React.FC = () => {
             </Group>
           </Card>
         ))}
+        <Button
+          variant="subtle"
+          color="gray"
+          size="compact-sm"
+          leftSection={<IconPlus size="0.9rem" />}
+          onClick={() => setModalOpened(true)}
+          disabled={!isAuthenticated}
+          fullWidth
+        >
+          Add Agent
+        </Button>
       </Stack>
 
       <AddAgentDialog
         opened={modalOpened}
         onClose={() => setModalOpened(false)}
       />
-
-      {hosts.length > 0 && (
-        <>
-          <Divider my="md" />
-          <Text size="sm" fw={600} c="dimmed" mb="md">
-            HOSTS
-          </Text>
-          <Stack gap="xs">
-            {hosts.map((host) => (
-              <Card
-                key={host.name}
-                padding="sm"
-                radius="md"
-                withBorder
-                component="a"
-                href={getHostAbsoluteUrl(host)}
-                onClick={(e) => handleHostClick(e, host)}
-                style={{
-                  cursor: "pointer",
-                  backgroundColor: isHostSelected(host.name)
-                    ? "var(--mantine-color-blue-9)"
-                    : undefined,
-                  textDecoration: "none",
-                  color: "inherit",
-                  display: "block",
-                }}
-              >
-                <Group justify="space-between" align="center" wrap="nowrap">
-                  <div style={{ minWidth: 0, flex: 1 }}>
-                    <Group gap="xs" align="center" wrap="nowrap">
-                      <IconServer size="1rem" style={{ flexShrink: 0 }} />
-                      <Text size="sm" fw={500} truncate="end">
-                        {host.name}
-                      </Text>
-                    </Group>
-                    <Text size="xs" c="dimmed">
-                      {host.agentCount} agent{host.agentCount !== 1 ? "s" : ""}
-                    </Text>
-                  </div>
-                  <Badge
-                    size="xs"
-                    variant="light"
-                    color={host.online ? "green" : "gray"}
-                    style={{ flexShrink: 0 }}
-                  >
-                    {host.online ? "online" : "offline"}
-                  </Badge>
-                </Group>
-              </Card>
-            ))}
-          </Stack>
-        </>
-      )}
     </>
   );
 };

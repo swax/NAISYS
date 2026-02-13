@@ -46,7 +46,7 @@ export const HostPage: React.FC = () => {
               <Table.Tr
                 key={agent.id}
                 style={{ cursor: "pointer" }}
-                onClick={() => navigate(`/controls/${agent.name}`)}
+                onClick={() => navigate(`/agents/controls/${agent.name}`)}
               >
                 <Table.Td>{agent.name}</Table.Td>
                 <Table.Td>{agent.title}</Table.Td>
