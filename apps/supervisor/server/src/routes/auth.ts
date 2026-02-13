@@ -22,6 +22,7 @@ import {
   hashToken,
   setSessionOnUser,
 } from "../services/userService.js";
+import { getUserPermissions } from "../services/userService.js";
 import { authCache } from "../auth-middleware.js";
 
 const COOKIE_NAME = "naisys_session";
@@ -131,10 +132,13 @@ export default async function authRoutes(
         maxAge: SESSION_DURATION_MS / 1000,
       });
 
+      const permissions = await getUserPermissions(user.id);
+
       return {
         user: {
           id: user.id,
           username: user.username,
+          permissions,
         },
       };
     },

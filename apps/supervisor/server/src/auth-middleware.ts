@@ -1,4 +1,4 @@
-import type { FastifyInstance } from "fastify";
+import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { AuthCache } from "@naisys/common";
 import { findHubSession, isHubAvailable } from "@naisys/database";
 import {
@@ -7,10 +7,12 @@ import {
   getUserByUuid,
   hashToken,
 } from "./services/userService.js";
+import { getUserPermissions } from "./services/userService.js";
 
 export interface SupervisorUser {
   id: number;
   username: string;
+  permissions: string[];
 }
 
 declare module "fastify" {
@@ -36,6 +38,14 @@ function isPublicRoute(url: string): boolean {
   if (!url.startsWith("/api/supervisor")) return true;
 
   return false;
+}
+
+async function buildSupervisorUser(
+  id: number,
+  username: string,
+): Promise<SupervisorUser> {
+  const permissions = await getUserPermissions(id);
+  return { id, username, permissions };
 }
 
 export function registerAuthMiddleware(fastify: FastifyInstance) {
@@ -66,7 +76,10 @@ export function registerAuthMiddleware(fastify: FastifyInstance) {
               hubSession.uuid,
             );
           }
-          const user = { id: localUser.id, username: localUser.username };
+          const user = await buildSupervisorUser(
+            localUser.id,
+            localUser.username,
+          );
           authCache.set(cacheKey, user);
           request.supervisorUser = user;
         } else {
@@ -76,7 +89,10 @@ export function registerAuthMiddleware(fastify: FastifyInstance) {
         // Standalone mode: local session only
         const user = await getUserByTokenHash(tokenHash);
         if (user) {
-          const supervisorUser = { id: user.id, username: user.username };
+          const supervisorUser = await buildSupervisorUser(
+            user.id,
+            user.username,
+          );
           authCache.set(cacheKey, supervisorUser);
           request.supervisorUser = supervisorUser;
         } else {
@@ -97,4 +113,26 @@ export function registerAuthMiddleware(fastify: FastifyInstance) {
       message: "Authentication required",
     });
   });
+}
+
+export function requirePermission(permission: string) {
+  return async (request: FastifyRequest, reply: FastifyReply) => {
+    if (!request.supervisorUser) {
+      reply.status(401).send({
+        statusCode: 401,
+        error: "Unauthorized",
+        message: "Authentication required",
+      });
+      return;
+    }
+
+    if (!request.supervisorUser.permissions.includes(permission)) {
+      reply.status(403).send({
+        statusCode: 403,
+        error: "Forbidden",
+        message: `Permission '${permission}' required`,
+      });
+      return;
+    }
+  };
 }

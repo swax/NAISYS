@@ -10,6 +10,7 @@ export type LoginRequest = z.infer<typeof LoginRequestSchema>;
 export const AuthUserSchema = z.object({
   id: z.number(),
   username: z.string(),
+  permissions: z.array(z.string()),
 });
 
 export type AuthUser = z.infer<typeof AuthUserSchema>;

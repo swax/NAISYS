@@ -1,4 +1,4 @@
-import type { HateoasAction, HateoasLink } from "@naisys-erp/shared";
+import type { HateoasAction, HateoasLink } from "@naisys/common";
 
 const API_PREFIX = "/api/erp";
 
