@@ -7,6 +7,7 @@ import {
   SendMailResponseSchema,
 } from "@naisys-supervisor/shared";
 import { FastifyInstance, FastifyPluginOptions } from "fastify";
+import { requirePermission } from "../auth-middleware.js";
 import { sendMessage } from "../services/mailService.js";
 
 export default async function mailRoutes(
@@ -16,6 +17,7 @@ export default async function mailRoutes(
   fastify.post<{ Reply: SendMailResponse }>(
     "/send-mail",
     {
+      preHandler: [requirePermission("manage_agents")],
       schema: {
         description:
           "Send email with optional attachments. Supports JSON and multipart/form-data",

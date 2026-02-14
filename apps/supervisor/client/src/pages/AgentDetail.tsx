@@ -23,7 +23,7 @@ import { useAgentDataContext } from "../contexts/AgentDataContext";
 import { useSession } from "../contexts/SessionContext";
 import { getAgentDetail, updateAgentConfig } from "../lib/apiClient";
 
-export const Controls: React.FC = () => {
+export const AgentDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { isAuthenticated } = useSession();
   const { agents } = useAgentDataContext();
@@ -101,7 +101,7 @@ export const Controls: React.FC = () => {
   };
 
   if (!agentId) {
-    return <Text size="xl">Controls</Text>;
+    return <Text size="xl">Agent Detail</Text>;
   }
 
   if (loading) {
@@ -116,7 +116,7 @@ export const Controls: React.FC = () => {
   if (error) {
     return (
       <Stack p="md">
-        <Text size="xl">Controls for {agentData?.name || `Agent ${agentId}`}</Text>
+        <Text size="xl">{agentData?.name || `Agent ${agentId}`}</Text>
         <Alert color="red" title="Error">
           {error}
         </Alert>

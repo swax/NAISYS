@@ -16,11 +16,10 @@ export const useHostData = () => {
     queryKey: ["host-data"],
     queryFn: getHostData,
     enabled: true,
-    refetchInterval: 5000, // Poll every 5 seconds
+    refetchInterval: 5000,
     refetchIntervalInBackground: false,
     refetchOnWindowFocus: true,
-    retry: 3,
-    retryDelay: 1000,
+    retry: false,
   });
 
   // Update cache when data arrives

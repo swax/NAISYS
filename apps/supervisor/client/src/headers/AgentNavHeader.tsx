@@ -1,5 +1,5 @@
 import { Group, Indicator, Tabs } from "@mantine/core";
-import { IconDeviceGamepad2, IconHistory, IconMail } from "@tabler/icons-react";
+import { IconHistory, IconInfoCircle, IconMail } from "@tabler/icons-react";
 import React from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { ROUTER_BASENAME } from "../constants";
@@ -38,10 +38,10 @@ export const AgentNavHeader: React.FC<AgentNavHeaderProps> = ({
   // Determine active tab from current location
   // Path: /agents/:id/runs → split("/")[3] = "runs"
   const pathParts = location.pathname.split("/");
-  const currentSection = pathParts.length >= 4 ? pathParts[3] : "controls";
+  const currentSection = pathParts.length >= 4 ? pathParts[3] : "detail";
 
   const getTabUrl = (section: string) => {
-    if (section === "controls") {
+    if (section === "detail") {
       return `/agents/${agentId}`;
     }
     return `/agents/${agentId}/${section}`;
@@ -64,17 +64,17 @@ export const AgentNavHeader: React.FC<AgentNavHeaderProps> = ({
 
   return (
     <Group gap="md" align="center">
-      <Tabs value={currentSection || "controls"} style={{ flex: 1, height: "100%" }}>
+      <Tabs value={currentSection || "detail"} style={{ flex: 1, height: "100%" }}>
         <Tabs.List>
           <Tabs.Tab
-            value="controls"
-            leftSection={<IconDeviceGamepad2 size="1rem" />}
+            value="detail"
+            leftSection={<IconInfoCircle size="1rem" />}
             component="a"
             // @ts-expect-error - Mantine Tabs.Tab doesn't properly type component prop with href
-            href={getAbsoluteUrl("controls")}
-            onClick={(e: React.MouseEvent) => handleTabClick(e, "controls")}
+            href={getAbsoluteUrl("detail")}
+            onClick={(e: React.MouseEvent) => handleTabClick(e, "detail")}
           >
-            Controls
+            Detail
           </Tabs.Tab>
           <Indicator
             disabled={!hasUnreadLogs}

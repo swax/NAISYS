@@ -162,8 +162,8 @@ export const startServer: StartServer = async (startupType, plugins = []) => {
         { name: "General", tags: ["Authentication", "Settings"] },
         { name: "Users", tags: ["Users"] },
         { name: "Discovery", tags: ["Discovery"] },
-        { name: "Agents", tags: ["Agent", "Agent Config"] },
-        { name: "Operations", tags: ["Mail", "Runs"] },
+        { name: "Agents", tags: ["Agents", "Runs", "Mail"] },
+        { name: "Hosts", tags: ["Hosts"] },
       ],
     };
   });
