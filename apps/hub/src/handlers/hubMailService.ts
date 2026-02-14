@@ -82,6 +82,16 @@ export function createHubMailService(
             data: { latest_mail_id: message.id },
           });
 
+          // Push notification ID updates via heartbeat
+          for (const userId of recipientUserIds) {
+            heartbeatService.updateAgentNotification(
+              userId,
+              "latestMailId",
+              message.id,
+            );
+          }
+          heartbeatService.throttledPushHeartbeatStatus();
+
           // Push MAIL_RECEIVED only to hosts that have active recipients
           const targetHostIds = new Set<number>();
 

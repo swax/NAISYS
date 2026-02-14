@@ -1,8 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useState } from "react";
-import { Agent as BaseAgent } from "@naisys-supervisor/shared";
+import { Agent as BaseAgent, AgentStatusEvent } from "@naisys-supervisor/shared";
 import { getAgentData } from "../lib/apiClient";
 import { Agent } from "../types/agent";
+import { useAgentStatusStream } from "./useAgentStatusStream";
 
 // Module-level caches (shared across all hook instances and persist across remounts)
 let agentCache: Agent[] = [];
@@ -22,7 +23,7 @@ export const useAgentData = () => {
     queryKey: ["agent-data"],
     queryFn,
     enabled: true,
-    refetchInterval: 5000,
+    refetchInterval: 15_000,
     refetchIntervalInBackground: false,
     refetchOnWindowFocus: true,
     retry: false,
@@ -67,6 +68,40 @@ export const useAgentData = () => {
       setCacheVersion((v) => v + 1);
     }
   }, [query.data]);
+
+  // Handle SSE updates for fast-changing fields (online, latestLogId, latestMailId)
+  const handleSSEUpdate = useCallback(
+    (event: AgentStatusEvent) => {
+      let changed = false;
+
+      for (const agent of agentCache) {
+        const update = event.agents[String(agent.id)];
+        if (!update) continue;
+
+        const newOnline = update.online;
+        const newLogId = update.latestLogId;
+        const newMailId = update.latestMailId;
+
+        if (
+          agent.online !== newOnline ||
+          agent.latestLogId !== newLogId ||
+          agent.latestMailId !== newMailId
+        ) {
+          agent.online = newOnline;
+          agent.latestLogId = newLogId;
+          agent.latestMailId = newMailId;
+          changed = true;
+        }
+      }
+
+      if (changed) {
+        setCacheVersion((v) => v + 1);
+      }
+    },
+    [], // eslint-disable-line react-hooks/exhaustive-deps -- accesses module-level agentCache
+  );
+
+  useAgentStatusStream(handleSSEUpdate, agentCache.length > 0);
 
   // Get current agents from cache (already sorted)
   const agents = agentCache;

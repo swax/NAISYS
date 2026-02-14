@@ -1,3 +1,4 @@
+import { EventEmitter } from "node:events";
 import { io, Socket } from "socket.io-client";
 import {
   AgentStartResponse,
@@ -5,10 +6,18 @@ import {
   HeartbeatStatusSchema,
   HubEvents,
 } from "@naisys/hub-protocol";
+import type { AgentStatusEvent } from "@naisys-supervisor/shared";
 
 let socket: Socket | null = null;
 let connected = false;
 const activeAgentIds = new Set<number>();
+const connectedHostIds = new Set<number>();
+const agentNotifications = new Map<
+  number,
+  { latestLogId: number; latestMailId: number }
+>();
+
+const statusEmitter = new EventEmitter();
 
 export function initHubConnection(hubUrl: string) {
   const accessKey = process.env.HUB_ACCESS_KEY;
@@ -52,11 +61,27 @@ export function initHubConnection(hubUrl: string) {
     }
 
     activeAgentIds.clear();
-    for (const userIds of Object.values(parsed.data.hostActiveAgents)) {
+    connectedHostIds.clear();
+    for (const [hostId, userIds] of Object.entries(
+      parsed.data.hostActiveAgents,
+    )) {
+      connectedHostIds.add(Number(hostId));
       for (const id of userIds) {
         activeAgentIds.add(id);
       }
     }
+
+    // Update agentNotifications from heartbeat data
+    if (parsed.data.agentNotifications) {
+      for (const [key, value] of Object.entries(
+        parsed.data.agentNotifications,
+      )) {
+        agentNotifications.set(Number(key), value);
+      }
+    }
+
+    // Emit status update for SSE listeners
+    statusEmitter.emit("agentStatusUpdate", getAgentStatusSnapshot());
   });
 }
 
@@ -66,6 +91,10 @@ export function isHubConnected(): boolean {
 
 export function isAgentActive(userId: number): boolean {
   return activeAgentIds.has(userId);
+}
+
+export function isHostConnected(hostId: number): boolean {
+  return connectedHostIds.has(hostId);
 }
 
 export function sendAgentStart(
@@ -86,6 +115,43 @@ export function sendAgentStart(
       },
     );
   });
+}
+
+/** Build a snapshot of all agent statuses from current state */
+export function getAgentStatusSnapshot(): AgentStatusEvent {
+  const agents: AgentStatusEvent["agents"] = {};
+
+  // Include all agents we know about from notifications
+  for (const [userId, notif] of agentNotifications) {
+    agents[String(userId)] = {
+      online: activeAgentIds.has(userId),
+      latestLogId: notif.latestLogId,
+      latestMailId: notif.latestMailId,
+    };
+  }
+
+  // Include active agents that may not have notifications yet
+  for (const userId of activeAgentIds) {
+    if (!agents[String(userId)]) {
+      agents[String(userId)] = {
+        online: true,
+        latestLogId: 0,
+        latestMailId: 0,
+      };
+    }
+  }
+
+  return { agents };
+}
+
+/** Subscribe to agent status updates. Returns an unsubscribe function. */
+export function onAgentStatusUpdate(
+  listener: (event: AgentStatusEvent) => void,
+): () => void {
+  statusEmitter.on("agentStatusUpdate", listener);
+  return () => {
+    statusEmitter.off("agentStatusUpdate", listener);
+  };
 }
 
 export function sendAgentStop(

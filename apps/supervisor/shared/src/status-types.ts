@@ -5,3 +5,16 @@ export const StatusResponseSchema = z.object({
 });
 
 export type StatusResponse = z.infer<typeof StatusResponseSchema>;
+
+export const AgentStatusEventSchema = z.object({
+  agents: z.record(
+    z.string(),
+    z.object({
+      online: z.boolean(),
+      latestLogId: z.number(),
+      latestMailId: z.number(),
+    }),
+  ),
+});
+
+export type AgentStatusEvent = z.infer<typeof AgentStatusEventSchema>;
