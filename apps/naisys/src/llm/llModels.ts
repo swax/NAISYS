@@ -1,3 +1,4 @@
+import { LlmModelKey } from "@naisys/common";
 import { GlobalConfig } from "../globalConfig.js";
 
 export enum LlmApiType {
@@ -9,7 +10,7 @@ export enum LlmApiType {
 }
 
 interface LlmModel {
-  key: string;
+  key: LlmModelKey;
   name: string;
   baseUrl?: string;
   apiType: LlmApiType;

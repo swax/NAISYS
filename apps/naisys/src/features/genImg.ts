@@ -1,3 +1,4 @@
+import { ImageModelKey } from "@naisys/common";
 import OpenAI from "openai";
 import path from "path";
 import sharp from "sharp";
@@ -105,7 +106,7 @@ export function createGenImg(
 export type GenImg = ReturnType<typeof createGenImg>;
 
 interface ImageModel {
-  key: string;
+  key: ImageModelKey;
   name: "dall-e-2" | "dall-e-3";
   size: "1024x1024" | "512x512" | "256x256";
   quality?: "standard" | "hd";
