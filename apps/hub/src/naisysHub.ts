@@ -141,7 +141,7 @@ export const startHub: StartHub = async (
       const { startServer } = (await import(supervisorModule)) as {
         startServer: StartServer;
       };
-      await startServer("hosted", plugins);
+      await startServer("hosted", plugins, hubPort);
     }
 
     return hubPort;

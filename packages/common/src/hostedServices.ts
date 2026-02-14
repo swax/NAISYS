@@ -18,4 +18,5 @@ export type StartHub = (
 export type StartServer = (
   startupType: "standalone" | "hosted",
   plugins?: "erp"[],
+  hubPort?: number,
 ) => Promise<void>;

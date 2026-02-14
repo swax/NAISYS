@@ -8,6 +8,7 @@ import mailRoutes from "./mail.js";
 import rootRoutes from "./root.js";
 import schemaRoutes from "./schemas.js";
 import settingsRoutes from "./settings.js";
+import statusRoutes from "./status.js";
 
 export default async function apiRoutes(
   fastify: FastifyInstance,
@@ -30,6 +31,9 @@ export default async function apiRoutes(
 
   // Register settings routes
   await fastify.register(settingsRoutes);
+
+  // Register status routes
+  await fastify.register(statusRoutes);
 
   // Register agents routes (includes config, runs, mail sub-routes)
   await fastify.register(agentsRoutes, { prefix: "/agents" });

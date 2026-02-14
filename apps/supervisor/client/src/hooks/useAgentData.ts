@@ -1,4 +1,3 @@
-import { isAgentOnline } from "@naisys/common";
 import { useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useState } from "react";
 import { Agent as BaseAgent } from "@naisys-supervisor/shared";
@@ -48,10 +47,9 @@ export const useAgentData = () => {
 
       const mergedAgents = Array.from(mergeAgents.values());
 
-      // Recalculate online status for all agents after merging
       const agentsWithOnline: Agent[] = mergedAgents.map((agent) => ({
         ...agent,
-        online: isAgentOnline(agent.lastActive, query.dataUpdatedAt),
+        online: agent.online ?? false,
       }));
 
       // Sort by name

@@ -1,3 +1,4 @@
+import { HateoasActionSchema } from "@naisys/common";
 import { z } from "zod";
 
 const LinkSchema = z.object({
@@ -16,6 +17,7 @@ export const AgentSchema = z.object({
   leadUsername: z.string().optional(),
   latestLogId: z.number(),
   latestMailId: z.number(),
+  online: z.boolean().optional(),
   _links: z.array(LinkSchema).optional(),
 });
 
@@ -54,9 +56,11 @@ export const AgentDetailResponseSchema = z.object({
   leadUsername: z.string().optional(),
   latestLogId: z.number(),
   latestMailId: z.number(),
+  online: z.boolean().optional(),
   config: z.string(),
   configPath: z.string(),
   _links: z.array(LinkSchema),
+  _actions: z.array(HateoasActionSchema).optional(),
 });
 
 export const HostListResponseSchema = z.object({
@@ -73,3 +77,16 @@ export type AgentIdParams = z.infer<typeof AgentIdParamsSchema>;
 export type AgentDetailResponse = z.infer<typeof AgentDetailResponseSchema>;
 export type HostIdParams = z.infer<typeof HostIdParamsSchema>;
 export type HostListResponse = z.infer<typeof HostListResponseSchema>;
+
+export const AgentStartResultSchema = z.object({
+  success: z.boolean(),
+  message: z.string(),
+  hostname: z.string().optional(),
+});
+export type AgentStartResult = z.infer<typeof AgentStartResultSchema>;
+
+export const AgentStopResultSchema = z.object({
+  success: z.boolean(),
+  message: z.string(),
+});
+export type AgentStopResult = z.infer<typeof AgentStopResultSchema>;
