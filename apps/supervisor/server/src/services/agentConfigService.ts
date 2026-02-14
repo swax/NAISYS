@@ -3,6 +3,7 @@ import fs from "fs/promises";
 import yaml from "js-yaml";
 import path from "path";
 import { usingNaisysDb } from "../database/naisysDatabase.js";
+import { sendUserListChanged } from "./hubConnectionService.js";
 
 /**
  * Resolve a user by username and host name.
@@ -133,6 +134,9 @@ webEnabled: true
 
   // Update user notification modified date
   await updateUserNotificationModifiedDate(user.id);
+
+  // Notify hub to broadcast updated user list to all NAISYS clients
+  sendUserListChanged();
 }
 
 /**
@@ -240,6 +244,9 @@ export async function updateAgentConfigById(
 
   // Update user notification modified date
   await updateUserNotificationModifiedDate(user.id);
+
+  // Notify hub to broadcast updated user list to all NAISYS clients
+  sendUserListChanged();
 }
 
 /**
@@ -271,4 +278,7 @@ export async function updateAgentConfig(
 
   // Update user notification modified date
   await updateUserNotificationModifiedDate(user.id);
+
+  // Notify hub to broadcast updated user list to all NAISYS clients
+  sendUserListChanged();
 }

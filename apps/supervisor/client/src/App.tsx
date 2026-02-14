@@ -18,6 +18,7 @@ import { LoginDialog } from "./components/LoginDialog";
 import { SessionProvider } from "./contexts/SessionContext";
 import { AppHeader } from "./headers/AppHeader";
 import { AppNavbar } from "./headers/AppNavbar";
+import { DisconnectedBanner } from "./headers/DisconnectedBanner";
 import { queryClient } from "./lib/queryClient";
 import { AgentConfig } from "./pages/AgentConfig";
 import { AgentDetail } from "./pages/AgentDetail";
@@ -70,6 +71,7 @@ const AppContent: React.FC = () => {
       </AppShell.Navbar>
 
       <AppShell.Main>
+        <DisconnectedBanner />
         <Routes>
           <Route path="/agents" element={<AgentsLayout />}>
             <Route index element={<AgentIndex />} />

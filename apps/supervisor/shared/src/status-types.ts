@@ -15,6 +15,14 @@ export const AgentStatusEventSchema = z.object({
       latestMailId: z.number(),
     }),
   ),
+  hosts: z
+    .record(
+      z.string(),
+      z.object({
+        online: z.boolean(),
+      }),
+    )
+    .optional(),
 });
 
 export type AgentStatusEvent = z.infer<typeof AgentStatusEventSchema>;

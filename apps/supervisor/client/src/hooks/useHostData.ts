@@ -1,8 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
-import { Host as BaseHost } from "@naisys-supervisor/shared";
+import { useCallback, useEffect, useState } from "react";
+import { AgentStatusEvent, Host as BaseHost } from "@naisys-supervisor/shared";
 import { getHostData } from "../lib/apiClient";
 import { Host } from "../types/agent";
+import { useAgentStatusStream } from "./useAgentStatusStream";
 
 // Module-level cache (shared across all hook instances and persists across remounts)
 let hostCache: Host[] = [];
@@ -15,7 +16,7 @@ export const useHostData = () => {
     queryKey: ["host-data"],
     queryFn: getHostData,
     enabled: true,
-    refetchInterval: 5000,
+    refetchInterval: 15_000,
     refetchIntervalInBackground: false,
     refetchOnWindowFocus: true,
     retry: false,
@@ -42,6 +43,32 @@ export const useHostData = () => {
       setCacheVersion((v) => v + 1);
     }
   }, [query.data]);
+
+  // Handle SSE updates for host online status
+  const handleSSEUpdate = useCallback(
+    (event: AgentStatusEvent) => {
+      if (!event.hosts) return;
+
+      let changed = false;
+
+      for (const host of hostCache) {
+        const update = event.hosts[String(host.id)];
+        if (!update) continue;
+
+        if (host.online !== update.online) {
+          host.online = update.online;
+          changed = true;
+        }
+      }
+
+      if (changed) {
+        setCacheVersion((v) => v + 1);
+      }
+    },
+    [], // eslint-disable-line react-hooks/exhaustive-deps -- accesses module-level hostCache
+  );
+
+  useAgentStatusStream(handleSSEUpdate, hostCache.length > 0);
 
   const hosts = hostCache;
 
