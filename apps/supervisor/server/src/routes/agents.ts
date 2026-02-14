@@ -20,6 +20,8 @@ import {
   CreateAgentConfigResponseSchema,
   ErrorResponse,
   ErrorResponseSchema,
+  GetAgentConfigResponse,
+  GetAgentConfigResponseSchema,
   MailDataRequest,
   MailDataRequestSchema,
   MailDataResponse,
@@ -42,6 +44,7 @@ import { requirePermission } from "../auth-middleware.js";
 import { collectionLink, selfLink } from "../hateoas.js";
 import {
   createAgentConfig,
+  getAgentConfigById,
   updateAgentConfigById,
 } from "../services/agentConfigService.js";
 import { getAgent, getAgents } from "../services/agentService.js";
@@ -205,6 +208,50 @@ export default async function agentsRoutes(
     },
   );
 
+  // GET /:id/config — Get parsed agent config
+  fastify.get<{
+    Params: AgentIdParams;
+    Reply: GetAgentConfigResponse | ErrorResponse;
+  }>(
+    "/:id/config",
+    {
+      schema: {
+        description: "Get parsed agent configuration",
+        tags: ["Agents"],
+        params: AgentIdParamsSchema,
+        response: {
+          200: GetAgentConfigResponseSchema,
+          404: ErrorResponseSchema,
+          500: ErrorResponseSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      try {
+        const { id } = request.params;
+        const config = await getAgentConfigById(id);
+
+        return { config };
+      } catch (error) {
+        request.log.error(error, "Error in GET /agents/:id/config route");
+        const errorMessage =
+          error instanceof Error ? error.message : "Unknown error";
+
+        if (errorMessage.includes("not found")) {
+          return reply.status(404).send({
+            success: false,
+            message: errorMessage,
+          });
+        }
+
+        return reply.status(500).send({
+          success: false,
+          message: "Internal server error while fetching agent configuration",
+        });
+      }
+    },
+  );
+
   // PUT /:id/config — Update agent config
   fastify.put<{
     Params: AgentIdParams;
@@ -215,7 +262,7 @@ export default async function agentsRoutes(
     {
       preHandler: [requirePermission("manage_agents")],
       schema: {
-        description: "Update agent configuration YAML",
+        description: "Update agent configuration",
         tags: ["Agents"],
         params: AgentIdParamsSchema,
         body: UpdateAgentConfigRequestSchema,

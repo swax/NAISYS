@@ -8,49 +8,90 @@ export enum CommandProtection {
 
 // Zod schema for validation
 export const AgentConfigFileSchema = z.object({
-  _id: z.string().optional(),
-  username: z.string(),
-  title: z.string(),
-  agentPrompt: z.string(),
+  _id: z.string().optional().describe("Unique config identifier"),
+  username: z
+    .string()
+    .min(1, "Username is required")
+    .describe("Agent username, must be unique"),
+  title: z
+    .string()
+    .describe("Agent role/title"),
+  agentPrompt: z
+    .string()
+    .min(1, "Agent prompt is required")
+    .describe("System prompt sent to the LLM. Supports ${agent.*} template variables"),
 
-  /** Local spend limit for this agent */
-  spendLimitDollars: z.number().optional(),
+  spendLimitDollars: z
+    .number()
+    .min(0, "Must be non-negative")
+    .optional()
+    .describe("Local spend limit in dollars for this agent"),
+  spendLimitHours: z
+    .number()
+    .min(0, "Must be non-negative")
+    .optional()
+    .describe("Rolling time window in hours for spend limit. If unset, limit applies to all time"),
 
-  /** Time period in hours for spend limit. If not set, spend limit applies to all time */
-  spendLimitHours: z.number().optional(),
+  tokenMax: z
+    .number()
+    .int("Must be a whole number")
+    .min(1, "Must be at least 1")
+    .describe("Maximum context window tokens before compaction"),
 
-  tokenMax: z.number(),
+  shellModel: z
+    .string()
+    .min(1, "Shell model is required")
+    .describe("Primary LLM model used for shell interactions"),
+  webModel: z.string().optional().describe("Model used for web browsing tasks"),
+  compactModel: z
+    .string()
+    .optional()
+    .describe("Model used for context compaction"),
+  imageModel: z
+    .string()
+    .optional()
+    .describe("Model used for image generation"),
 
-  shellModel: z.string(),
-  webModel: z.string().optional(),
-  compactModel: z.string().optional(),
-  imageModel: z.string().optional(),
+  mailEnabled: z
+    .boolean()
+    .optional()
+    .describe("Show mail commands to agent. Sub-agent mail still works behind the scenes when disabled"),
+  webEnabled: z
+    .boolean()
+    .optional()
+    .describe("Allow agent to browse the web"),
+  completeSessionEnabled: z
+    .boolean()
+    .optional()
+    .describe("Allow agent to end its own session. In sub-agent mode the app exits"),
 
-  /** Mail is integral to sub-agents and all that, disabling just hides knowledge of it. Subagents starting/completing still send mail behind the scene to communicate */
-  mailEnabled: z.boolean().optional(),
+  debugPauseSeconds: z
+    .number()
+    .int("Must be a whole number")
+    .min(0, "Must be non-negative")
+    .optional()
+    .describe("Seconds to pause at debug prompt before auto-continuing. 0 or unset = wait indefinitely"),
+  wakeOnMessage: z
+    .boolean()
+    .optional()
+    .describe("Start agent automatically when it receives mail"),
+  commandProtection: z
+    .enum(CommandProtection)
+    .optional()
+    .describe("Guard destructive commands: none, manual approval, or auto-check"),
+  initialCommands: z
+    .array(z.string())
+    .optional()
+    .describe("Shell commands to run at session start before the LLM prompt"),
 
-  webEnabled: z.boolean().optional(),
-
-  /** Allows agent a way to stop running completely. In subagent mode the app is exited */
-  completeSessionEnabled: z.boolean().optional(),
-
-  /** Seconds to pause on the debug prompt before continuing LLM. No value or zero implies indefinite wait (debug driven) */
-  debugPauseSeconds: z.number().optional(),
-  wakeOnMessage: z.boolean().optional(),
-  commandProtection: z.enum(CommandProtection).optional(),
-  initialCommands: z.array(z.string()).optional(),
-
-  /**
-   * Disable multiple commands
-   * + Prevents LLMs from hallucinating it's own output
-   * + Prevents LLMs from issuing commands before evaluating previous command output
-   * - Slower going back and forth to the LLM
-   * - Costs more, but query caching reduces most of the impact
-   */
-  disableMultipleCommands: z.boolean().optional(),
-
-  /** Experimental, live updating spot in the context for the LLM to put files, to avoid having to continually cat */
-  workspacesEnabled: z.boolean().optional(),
+  disableMultipleCommands: z
+    .boolean()
+    .optional()
+    .describe("Force one command per turn. Slower but prevents hallucinated output"),
+  workspacesEnabled: z
+    .boolean()
+    .optional()
+    .describe("Experimental: live-updating context area for files, avoids repeated cat calls"),
 });
 
 export type AgentConfigFile = z.infer<typeof AgentConfigFileSchema>;
@@ -69,7 +110,7 @@ export type AgentConfigFile = z.infer<typeof AgentConfigFileSchema>;
 export const adminAgentConfig = {
   _id: "admin-user-id",
   username: "admin",
-  title: "",
+  title: "Admin",
   shellModel: "none",
   agentPrompt: "Human admin for monitoring and control.",
   tokenMax: 100_000,

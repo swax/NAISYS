@@ -19,6 +19,7 @@ import { SessionProvider } from "./contexts/SessionContext";
 import { AppHeader } from "./headers/AppHeader";
 import { AppNavbar } from "./headers/AppNavbar";
 import { queryClient } from "./lib/queryClient";
+import { AgentConfig } from "./pages/AgentConfig";
 import { AgentDetail } from "./pages/AgentDetail";
 import { AgentIndex } from "./pages/agents/AgentIndex";
 import { HostPage } from "./pages/HostPage";
@@ -73,6 +74,7 @@ const AppContent: React.FC = () => {
           <Route path="/agents" element={<AgentsLayout />}>
             <Route index element={<AgentIndex />} />
             <Route path=":id" element={<AgentDetail />} />
+            <Route path=":id/config" element={<AgentConfig />} />
             <Route path=":id/runs" element={<Runs />} />
             <Route path=":id/mail" element={<Mail />} />
             <Route path=":id/mail/:messageId" element={<Mail />} />

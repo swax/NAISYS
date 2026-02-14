@@ -14,6 +14,7 @@
     "@naisys/common": "file:../../../packages/common",
     "@mantine/charts": "^8.3.14",
     "@mantine/core": "^8.3.14",
+    "@mantine/form": "^8.3.14",
     "@mantine/dropzone": "^8.3.14",
     "@mantine/hooks": "^8.3.14",
     "@mantine/notifications": "^8.3.14",

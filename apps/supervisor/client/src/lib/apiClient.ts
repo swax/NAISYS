@@ -1,3 +1,4 @@
+import type { AgentConfigFile } from "@naisys/common";
 import type {
   Agent,
   AgentDetailResponse,
@@ -5,6 +6,7 @@ import type {
   AuthUser,
   ContextLogResponse,
   CreateAgentConfigResponse,
+  GetAgentConfigResponse,
   HostListResponse,
   LogEntry,
   LoginResponse,
@@ -24,11 +26,13 @@ const API_BASE = "/api/supervisor";
 
 export type {
   Agent,
+  AgentConfigFile,
   AgentDetailResponse,
   AgentListResponse,
   AuthUser,
   ContextLogResponse,
   CreateAgentConfigResponse,
+  GetAgentConfigResponse,
   HostListResponse,
   LogEntry,
   LoginResponse,
@@ -184,6 +188,12 @@ export const getAgentDetail = async (
   return await api.get<AgentDetailResponse>(apiEndpoints.agentDetail(id));
 };
 
+export const getAgentConfig = async (
+  id: number,
+): Promise<GetAgentConfigResponse> => {
+  return await api.get<GetAgentConfigResponse>(apiEndpoints.agentConfig(id));
+};
+
 export const sendMail = async (
   mailData: SendMailRequest & { files?: File[] },
 ): Promise<SendMailResponse> => {
@@ -300,10 +310,10 @@ export const getMailData = async (
 
 export const updateAgentConfig = async (
   agentId: number,
-  config: string,
+  config: AgentConfigFile,
 ): Promise<UpdateAgentConfigResponse> => {
   try {
-    return await api.put<{ config: string }, UpdateAgentConfigResponse>(
+    return await api.put<{ config: AgentConfigFile }, UpdateAgentConfigResponse>(
       apiEndpoints.agentConfig(agentId),
       { config },
     );

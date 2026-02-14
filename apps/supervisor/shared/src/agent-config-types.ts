@@ -1,3 +1,4 @@
+import { AgentConfigFileSchema } from "@naisys/common";
 import { z } from "zod";
 
 // Zod schemas for agent config operations
@@ -12,12 +13,16 @@ export const CreateAgentConfigResponseSchema = z.object({
 });
 
 export const UpdateAgentConfigRequestSchema = z.object({
-  config: z.string(),
+  config: AgentConfigFileSchema,
 });
 
 export const UpdateAgentConfigResponseSchema = z.object({
   success: z.boolean(),
   message: z.string(),
+});
+
+export const GetAgentConfigResponseSchema = z.object({
+  config: AgentConfigFileSchema,
 });
 
 // Inferred types
@@ -32,4 +37,7 @@ export type UpdateAgentConfigRequest = z.infer<
 >;
 export type UpdateAgentConfigResponse = z.infer<
   typeof UpdateAgentConfigResponseSchema
+>;
+export type GetAgentConfigResponse = z.infer<
+  typeof GetAgentConfigResponseSchema
 >;

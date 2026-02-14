@@ -1,4 +1,6 @@
+import { AgentConfigFile, AgentConfigFileSchema } from "@naisys/common";
 import fs from "fs/promises";
+import yaml from "js-yaml";
 import path from "path";
 import { usingNaisysDb } from "../database/naisysDatabase.js";
 
@@ -154,17 +156,74 @@ async function resolveUserById(
 }
 
 /**
- * Update agent configuration YAML content by user ID
+ * Get parsed agent configuration by user ID.
+ */
+export async function getAgentConfigById(
+  id: number,
+): Promise<AgentConfigFile> {
+  const user = await resolveUserById(id);
+
+  const yamlStr = await fs.readFile(user.agent_path, "utf-8");
+  const parsed = yaml.load(yamlStr);
+  return AgentConfigFileSchema.parse(parsed);
+}
+
+/**
+ * Build config object in canonical field order for readable YAML output.
+ */
+function canonicalConfigOrder(config: AgentConfigFile): Record<string, unknown> {
+  const ordered: Record<string, unknown> = {};
+
+  // Identity
+  if (config._id !== undefined) ordered._id = config._id;
+  ordered.username = config.username;
+  ordered.title = config.title;
+
+  // Prompt
+  ordered.agentPrompt = config.agentPrompt;
+
+  // Models
+  ordered.shellModel = config.shellModel;
+  if (config.webModel !== undefined) ordered.webModel = config.webModel;
+  if (config.compactModel !== undefined) ordered.compactModel = config.compactModel;
+  if (config.imageModel !== undefined) ordered.imageModel = config.imageModel;
+
+  // Limits
+  ordered.tokenMax = config.tokenMax;
+  if (config.spendLimitDollars !== undefined) ordered.spendLimitDollars = config.spendLimitDollars;
+  if (config.spendLimitHours !== undefined) ordered.spendLimitHours = config.spendLimitHours;
+
+  // Features
+  if (config.mailEnabled !== undefined) ordered.mailEnabled = config.mailEnabled;
+  if (config.webEnabled !== undefined) ordered.webEnabled = config.webEnabled;
+  if (config.completeSessionEnabled !== undefined) ordered.completeSessionEnabled = config.completeSessionEnabled;
+  if (config.wakeOnMessage !== undefined) ordered.wakeOnMessage = config.wakeOnMessage;
+  if (config.workspacesEnabled !== undefined) ordered.workspacesEnabled = config.workspacesEnabled;
+  if (config.disableMultipleCommands !== undefined) ordered.disableMultipleCommands = config.disableMultipleCommands;
+
+  // Advanced
+  if (config.commandProtection !== undefined) ordered.commandProtection = config.commandProtection;
+  if (config.debugPauseSeconds !== undefined) ordered.debugPauseSeconds = config.debugPauseSeconds;
+  if (config.initialCommands !== undefined) ordered.initialCommands = config.initialCommands;
+
+  return ordered;
+}
+
+/**
+ * Update agent configuration by user ID. Accepts a JSON config object,
+ * serializes to YAML for file storage.
  */
 export async function updateAgentConfigById(
   id: number,
-  config: string,
+  config: AgentConfigFile,
 ): Promise<void> {
   const user = await resolveUserById(id);
+  const ordered = canonicalConfigOrder(config);
+  const yamlStr = yaml.dump(ordered, { lineWidth: -1, noRefs: true });
 
   // Write the agent config file
   try {
-    await fs.writeFile(user.agent_path, config, "utf-8");
+    await fs.writeFile(user.agent_path, yamlStr, "utf-8");
   } catch (error) {
     throw new Error(
       `Failed to write agent configuration file at ${user.agent_path}`,
@@ -175,7 +234,7 @@ export async function updateAgentConfigById(
   await usingNaisysDb(async (prisma) => {
     await prisma.users.update({
       where: { id: user.id },
-      data: { config },
+      data: { config: yamlStr },
     });
   });
 
