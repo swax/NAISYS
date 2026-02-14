@@ -26,7 +26,9 @@ export function initHubConnection(hubUrl: string) {
   const accessKey = process.env.HUB_ACCESS_KEY;
 
   if (!accessKey) {
-    console.warn("[HubConnection] HUB_ACCESS_KEY not set, skipping hub connection");
+    console.warn(
+      "[HubConnection] HUB_ACCESS_KEY not set, skipping hub connection",
+    );
     return;
   }
 
@@ -206,7 +208,9 @@ export function sendMailViaHub(
 
 export function sendUserListChanged(): void {
   if (!socket || !connected) {
-    console.warn("[HubConnection] Not connected to hub, cannot send user list changed");
+    console.warn(
+      "[HubConnection] Not connected to hub, cannot send user list changed",
+    );
     return;
   }
 

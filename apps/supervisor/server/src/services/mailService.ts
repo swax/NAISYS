@@ -23,7 +23,6 @@ export const getMailDataByUserId = cachedForSeconds(
     count: number = 50,
   ): Promise<{ mail: MailMessage[]; timestamp: string; total?: number }> => {
     try {
-
       // Build the where clause
       const whereClause: any = {};
 

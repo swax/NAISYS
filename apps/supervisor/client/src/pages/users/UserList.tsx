@@ -15,7 +15,7 @@ import {
 import { useDisclosure } from "@mantine/hooks";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { getUsers, createUser } from "../../lib/apiClient";
+import { getUsers, createUser } from "../../lib/apiUsers";
 
 export const UserList: React.FC = () => {
   const navigate = useNavigate();

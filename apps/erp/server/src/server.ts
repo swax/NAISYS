@@ -188,7 +188,9 @@ async function handleResetPassword() {
   await resetPassword(
     async (username) => {
       const user = await prisma.user.findUnique({ where: { username } });
-      return user ? { id: user.id, username: user.username, uuid: user.uuid } : null;
+      return user
+        ? { id: user.id, username: user.username, uuid: user.uuid }
+        : null;
     },
     async (userId, passwordHash) => {
       await prisma.user.update({

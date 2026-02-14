@@ -162,9 +162,7 @@ async function resolveUserById(
 /**
  * Get parsed agent configuration by user ID.
  */
-export async function getAgentConfigById(
-  id: number,
-): Promise<AgentConfigFile> {
+export async function getAgentConfigById(id: number): Promise<AgentConfigFile> {
   const user = await resolveUserById(id);
 
   const yamlStr = await fs.readFile(user.agent_path, "utf-8");
@@ -175,7 +173,9 @@ export async function getAgentConfigById(
 /**
  * Build config object in canonical field order for readable YAML output.
  */
-function canonicalConfigOrder(config: AgentConfigFile): Record<string, unknown> {
+function canonicalConfigOrder(
+  config: AgentConfigFile,
+): Record<string, unknown> {
   const ordered: Record<string, unknown> = {};
 
   // Identity
@@ -189,26 +189,37 @@ function canonicalConfigOrder(config: AgentConfigFile): Record<string, unknown> 
   // Models
   ordered.shellModel = config.shellModel;
   if (config.webModel !== undefined) ordered.webModel = config.webModel;
-  if (config.compactModel !== undefined) ordered.compactModel = config.compactModel;
+  if (config.compactModel !== undefined)
+    ordered.compactModel = config.compactModel;
   if (config.imageModel !== undefined) ordered.imageModel = config.imageModel;
 
   // Limits
   ordered.tokenMax = config.tokenMax;
-  if (config.spendLimitDollars !== undefined) ordered.spendLimitDollars = config.spendLimitDollars;
-  if (config.spendLimitHours !== undefined) ordered.spendLimitHours = config.spendLimitHours;
+  if (config.spendLimitDollars !== undefined)
+    ordered.spendLimitDollars = config.spendLimitDollars;
+  if (config.spendLimitHours !== undefined)
+    ordered.spendLimitHours = config.spendLimitHours;
 
   // Features
-  if (config.mailEnabled !== undefined) ordered.mailEnabled = config.mailEnabled;
+  if (config.mailEnabled !== undefined)
+    ordered.mailEnabled = config.mailEnabled;
   if (config.webEnabled !== undefined) ordered.webEnabled = config.webEnabled;
-  if (config.completeSessionEnabled !== undefined) ordered.completeSessionEnabled = config.completeSessionEnabled;
-  if (config.wakeOnMessage !== undefined) ordered.wakeOnMessage = config.wakeOnMessage;
-  if (config.workspacesEnabled !== undefined) ordered.workspacesEnabled = config.workspacesEnabled;
-  if (config.disableMultipleCommands !== undefined) ordered.disableMultipleCommands = config.disableMultipleCommands;
+  if (config.completeSessionEnabled !== undefined)
+    ordered.completeSessionEnabled = config.completeSessionEnabled;
+  if (config.wakeOnMessage !== undefined)
+    ordered.wakeOnMessage = config.wakeOnMessage;
+  if (config.workspacesEnabled !== undefined)
+    ordered.workspacesEnabled = config.workspacesEnabled;
+  if (config.disableMultipleCommands !== undefined)
+    ordered.disableMultipleCommands = config.disableMultipleCommands;
 
   // Advanced
-  if (config.commandProtection !== undefined) ordered.commandProtection = config.commandProtection;
-  if (config.debugPauseSeconds !== undefined) ordered.debugPauseSeconds = config.debugPauseSeconds;
-  if (config.initialCommands !== undefined) ordered.initialCommands = config.initialCommands;
+  if (config.commandProtection !== undefined)
+    ordered.commandProtection = config.commandProtection;
+  if (config.debugPauseSeconds !== undefined)
+    ordered.debugPauseSeconds = config.debugPauseSeconds;
+  if (config.initialCommands !== undefined)
+    ordered.initialCommands = config.initialCommands;
 
   return ordered;
 }

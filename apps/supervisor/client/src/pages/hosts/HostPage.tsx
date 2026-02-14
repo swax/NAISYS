@@ -1,8 +1,8 @@
 import { Badge, Stack, Table, Text, Title } from "@mantine/core";
 import React from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { useAgentDataContext } from "../contexts/AgentDataContext";
-import { useHostDataContext } from "../contexts/HostDataContext";
+import { useAgentDataContext } from "../../contexts/AgentDataContext";
+import { useHostDataContext } from "../../contexts/HostDataContext";
 
 export const HostPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();

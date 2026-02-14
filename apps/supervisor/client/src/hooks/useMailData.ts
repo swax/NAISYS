@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useState } from "react";
-import { getMailData, MailDataParams, MailMessage } from "../lib/apiClient";
+import { getMailData, MailDataParams } from "../lib/apiMail";
+import { MailMessage } from "../lib/apiClient";
 
 // Module-level caches (shared across all hook instances and persist across remounts)
 const mailCache = new Map<number, MailMessage[]>();

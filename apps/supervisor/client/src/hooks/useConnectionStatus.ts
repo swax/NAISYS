@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { getStatus } from "../lib/apiClient";
+import { getStatus } from "../lib/apiAuth";
 
 export type ConnectionState = "connected" | "degraded" | "disconnected";
 

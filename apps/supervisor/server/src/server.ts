@@ -35,7 +35,11 @@ import {
 import { initHubConnection } from "./services/hubConnectionService.js";
 import "./schema-registry.js";
 
-export const startServer: StartServer = async (startupType, plugins = [], hubPort?) => {
+export const startServer: StartServer = async (
+  startupType,
+  plugins = [],
+  hubPort?,
+) => {
   const isProd = process.env.NODE_ENV === "production";
 
   if (startupType === "hosted" && !isProd) {
@@ -57,15 +61,15 @@ export const startServer: StartServer = async (startupType, plugins = [], hubPor
   initHubSessions();
 
   // Connect to hub via Socket.IO for agent management
-  const hubUrl = hubPort
-    ? `http://localhost:${hubPort}`
-    : process.env.HUB_URL;
+  const hubUrl = hubPort ? `http://localhost:${hubPort}` : process.env.HUB_URL;
   if (hubUrl) {
     initHubConnection(hubUrl);
   }
 
   if (!isHubAvailable()) {
-    console.error("[Supervisor] Hub database not found. Cannot start without it.");
+    console.error(
+      "[Supervisor] Hub database not found. Cannot start without it.",
+    );
     process.exit(1);
   }
 
@@ -272,7 +276,9 @@ async function handleResetPassword() {
   await resetPassword(
     async (username) => {
       const user = await getUserByUsername(username);
-      return user ? { id: user.id, username: user.username, uuid: user.uuid } : null;
+      return user
+        ? { id: user.id, username: user.username, uuid: user.uuid }
+        : null;
     },
     async () => {}, // Password is stored in hub only
   );

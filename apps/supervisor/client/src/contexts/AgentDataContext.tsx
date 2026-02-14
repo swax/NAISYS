@@ -31,11 +31,7 @@ export const AgentDataProvider: React.FC<{ children: React.ReactNode }> = ({
     Record<string, ClientReadStatus>
   >({});
 
-  const {
-    agents: cachedAgents,
-    isLoading,
-    error,
-  } = useAgentData();
+  const { agents: cachedAgents, isLoading, error } = useAgentData();
 
   // Update data from agent polling responses
   useEffect(() => {

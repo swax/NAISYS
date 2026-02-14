@@ -1,5 +1,10 @@
 import { Group, Indicator, Tabs } from "@mantine/core";
-import { IconHistory, IconInfoCircle, IconMail, IconSettings } from "@tabler/icons-react";
+import {
+  IconHistory,
+  IconInfoCircle,
+  IconMail,
+  IconSettings,
+} from "@tabler/icons-react";
 import React from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { ROUTER_BASENAME } from "../constants";
@@ -9,9 +14,7 @@ interface AgentNavHeaderProps {
   agentId?: number;
 }
 
-export const AgentNavHeader: React.FC<AgentNavHeaderProps> = ({
-  agentId,
-}) => {
+export const AgentNavHeader: React.FC<AgentNavHeaderProps> = ({ agentId }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { agents, readStatus } = useAgentDataContext();
@@ -64,7 +67,10 @@ export const AgentNavHeader: React.FC<AgentNavHeaderProps> = ({
 
   return (
     <Group gap="md" align="center">
-      <Tabs value={currentSection || "detail"} style={{ flex: 1, height: "100%" }}>
+      <Tabs
+        value={currentSection || "detail"}
+        style={{ flex: 1, height: "100%" }}
+      >
         <Tabs.List>
           <Tabs.Tab
             value="detail"

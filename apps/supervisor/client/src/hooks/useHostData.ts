@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useState } from "react";
 import { AgentStatusEvent, Host as BaseHost } from "@naisys-supervisor/shared";
-import { getHostData } from "../lib/apiClient";
+import { getHostData } from "../lib/apiAgents";
 import { Host } from "../types/agent";
 import { useAgentStatusStream } from "./useAgentStatusStream";
 

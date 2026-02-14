@@ -1,7 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useState } from "react";
-import { Agent as BaseAgent, AgentStatusEvent } from "@naisys-supervisor/shared";
-import { getAgentData } from "../lib/apiClient";
+import {
+  Agent as BaseAgent,
+  AgentStatusEvent,
+} from "@naisys-supervisor/shared";
+import { getAgentData } from "../lib/apiAgents";
 import { Agent } from "../types/agent";
 import { useAgentStatusStream } from "./useAgentStatusStream";
 
