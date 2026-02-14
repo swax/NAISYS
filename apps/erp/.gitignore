@@ -3,7 +3,6 @@ node_modules/
 server/client-dist/
 server/dist/
 server/src/generated/
-server/prisma/migrations/
 server/.env
 shared/dist/
 test-results/

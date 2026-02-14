@@ -1,6 +1,6 @@
-import { createHash } from "crypto";
+import { createHash, randomUUID } from "crypto";
 import bcrypt from "bcrypt";
-import { updateHubUserPassword } from "@naisys/database";
+import { createHubUser, updateHubUserPassword } from "@naisys/database";
 import prisma from "../db.js";
 import type { Permission } from "../generated/prisma/client.js";
 
@@ -20,60 +20,13 @@ export async function getUserByUuid(uuid: string) {
   return prisma.user.findFirst({ where: { uuid } });
 }
 
-export async function getUserByTokenHash(tokenHash: string) {
-  return prisma.user.findFirst({
-    where: {
-      sessionTokenHash: tokenHash,
-      sessionExpiresAt: { gt: new Date() },
-    },
-  });
-}
-
-export async function createUser(
-  username: string,
-  passwordHash: string,
-  uuid: string,
-) {
+export async function createUser(username: string, uuid: string) {
   return prisma.user.create({
-    data: { username, passwordHash, uuid },
+    data: { username, uuid },
   });
 }
 
-export async function updateLocalPasswordHash(
-  userId: number,
-  passwordHash: string,
-): Promise<void> {
-  await prisma.user.update({
-    where: { id: userId },
-    data: { passwordHash },
-  });
-}
-
-export async function setSessionOnUser(
-  userId: number,
-  tokenHash: string,
-  expiresAt: Date,
-): Promise<void> {
-  await prisma.user.update({
-    where: { id: userId },
-    data: {
-      sessionTokenHash: tokenHash,
-      sessionExpiresAt: expiresAt,
-    },
-  });
-}
-
-export async function clearSessionOnUser(userId: number): Promise<void> {
-  await prisma.user.update({
-    where: { id: userId },
-    data: {
-      sessionTokenHash: null,
-      sessionExpiresAt: null,
-    },
-  });
-}
-
-// --- User CRUD (formerly accessService) ---
+// --- User CRUD ---
 
 export async function listUsers(options: {
   page: number;
@@ -110,14 +63,17 @@ export async function createUserWithPassword(data: {
   authType?: string;
 }) {
   const passwordHash = await bcrypt.hash(data.password, SALT_ROUNDS);
-  return prisma.user.create({
+  const uuid = randomUUID();
+  const user = await prisma.user.create({
     data: {
       username: data.username,
-      passwordHash,
+      uuid,
       authType: (data.authType as "password" | "api_key") || "password",
     },
     include: { permissions: true },
   });
+  await createHubUser(data.username, passwordHash, uuid);
+  return user;
 }
 
 export async function updateUser(
@@ -127,19 +83,14 @@ export async function updateUser(
   const updateData: Record<string, unknown> = {};
   if (data.username !== undefined) updateData.username = data.username;
 
-  let newHash: string | undefined;
-  if (data.password !== undefined) {
-    newHash = await bcrypt.hash(data.password, SALT_ROUNDS);
-    updateData.passwordHash = newHash;
-  }
-
   const updated = await prisma.user.update({
     where: { id },
     data: updateData,
     include: { permissions: true },
   });
 
-  if (newHash) {
+  if (data.password !== undefined) {
+    const newHash = await bcrypt.hash(data.password, SALT_ROUNDS);
     await updateHubUserPassword(updated.username, newHash, updated.uuid);
   }
 

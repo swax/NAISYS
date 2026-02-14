@@ -13,15 +13,11 @@ import {
   createHubSession,
   deleteHubSession,
   findHubUserByUsername,
-  isHubAvailable,
 } from "@naisys/database";
 import {
-  clearSessionOnUser,
   createUser,
   getUserByUsername,
   hashToken,
-  setSessionOnUser,
-  updateLocalPasswordHash,
 } from "../services/userService.js";
 import { getUserPermissions } from "../services/userService.js";
 import { authCache } from "../auth-middleware.js";
@@ -67,33 +63,9 @@ export default async function authRoutes(
 
       const { username, password } = request.body;
 
-      let user = await getUserByUsername(username);
-      let passwordVerified = false;
-
-      // Hub-first password check
-      if (isHubAvailable()) {
-        const hubUser = await findHubUserByUsername(username);
-        if (hubUser) {
-          const valid = await bcrypt.compare(password, hubUser.password_hash);
-          if (valid) {
-            if (!user) {
-              // Auto-provision local user from hub
-              user = await createUser(
-                hubUser.username,
-                hubUser.password_hash,
-                hubUser.uuid,
-              );
-            } else if (user.passwordHash !== hubUser.password_hash) {
-              // Sync hub hash down to local
-              await updateLocalPasswordHash(user.id, hubUser.password_hash);
-              user = { ...user, passwordHash: hubUser.password_hash };
-            }
-            passwordVerified = true;
-          }
-        }
-      }
-
-      if (!user) {
+      // Verify password against hub
+      const hubUser = await findHubUserByUsername(username);
+      if (!hubUser) {
         reply.code(401);
         return {
           success: false as const,
@@ -101,37 +73,34 @@ export default async function authRoutes(
         };
       }
 
-      // Fall back to local hash check (standalone mode or user not in hub)
-      if (!passwordVerified) {
-        const valid = await bcrypt.compare(password, user.passwordHash);
-        if (!valid) {
-          reply.code(401);
-          return {
-            success: false as const,
-            message: "Invalid username or password",
-          };
-        }
+      const valid = await bcrypt.compare(password, hubUser.password_hash);
+      if (!valid) {
+        reply.code(401);
+        return {
+          success: false as const,
+          message: "Invalid username or password",
+        };
       }
 
+      // Auto-provision local user if needed
+      let user = await getUserByUsername(username);
+      if (!user) {
+        user = await createUser(hubUser.username, hubUser.uuid);
+      }
+
+      // Create session in hub
       const token = randomUUID();
       const tokenHash = hashToken(token);
       const expiresAt = new Date(Date.now() + SESSION_DURATION_MS);
 
-      if (isHubAvailable()) {
-        // SSO mode: hub is source of truth for sessions
-        await createHubSession(
-          tokenHash,
-          user.username,
-          user.passwordHash,
-          user.uuid,
-          "supervisor",
-          expiresAt,
-        );
-        await setSessionOnUser(user.id, "!sso", expiresAt);
-      } else {
-        // Standalone mode: local session only
-        await setSessionOnUser(user.id, tokenHash, expiresAt);
-      }
+      await createHubSession(
+        tokenHash,
+        hubUser.username,
+        hubUser.password_hash,
+        hubUser.uuid,
+        "supervisor",
+        expiresAt,
+      );
 
       reply.setCookie(COOKIE_NAME, token, {
         path: "/",
@@ -169,11 +138,7 @@ export default async function authRoutes(
     async (request, reply) => {
       const token = request.cookies?.[COOKIE_NAME];
 
-      if (request.supervisorUser) {
-        await clearSessionOnUser(request.supervisorUser.id);
-      }
-
-      // Also clear from hub and auth cache
+      // Clear from hub and auth cache
       if (token) {
         const tokenHash = hashToken(token);
         authCache.invalidate(`cookie:${tokenHash}`);

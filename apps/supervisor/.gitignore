@@ -4,5 +4,4 @@ server/client-dist/
 server/dist/
 server/.env
 server/src/generated/
-server/prisma/migrations/
 shared/dist/

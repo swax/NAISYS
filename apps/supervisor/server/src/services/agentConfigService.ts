@@ -107,6 +107,7 @@ title: Assistant
 shellModel: none
 agentPrompt: |
   You are \${name} a \${title} with the job of helping out the admin with what he wants to do.
+spendLimitDollars: 1
 tokenMax: 20000
 debugPauseSeconds: 5
 webEnabled: true
@@ -123,6 +124,7 @@ webEnabled: true
         username: name,
         title: "Assistant",
         agent_path: agentFilePath,
+        config: yamlContent,
       },
     });
   });
@@ -149,6 +151,14 @@ export async function updateAgentConfig(
       `Failed to write agent configuration file at ${user.agent_path}`,
     );
   }
+
+  // Update the config in the database
+  await usingNaisysDb(async (prisma) => {
+    await prisma.users.update({
+      where: { id: user.id },
+      data: { config },
+    });
+  });
 
   // Update user notification modified date
   await updateUserNotificationModifiedDate(user.id);
