@@ -4,6 +4,7 @@ import {
   AgentStartResponse,
   AgentStopResponse,
   HeartbeatStatusSchema,
+  HostListSchema,
   HubEvents,
   MailSendResponse,
 } from "@naisys/hub-protocol";
@@ -17,6 +18,7 @@ const agentNotifications = new Map<
   number,
   { latestLogId: number; latestMailId: number }
 >();
+const hostOnlineStatus = new Map<number, boolean>();
 
 const statusEmitter = new EventEmitter();
 
@@ -84,6 +86,26 @@ export function initHubConnection(hubUrl: string) {
     // Emit status update for SSE listeners
     statusEmitter.emit("agentStatusUpdate", getAgentStatusSnapshot());
   });
+
+  socket.on(HubEvents.HOST_LIST, (data: unknown) => {
+    const parsed = HostListSchema.safeParse(data);
+    if (!parsed.success) {
+      console.warn("[HubConnection] Invalid host list:", parsed.error);
+      return;
+    }
+
+    hostOnlineStatus.clear();
+    connectedHostIds.clear();
+    for (const host of parsed.data.hosts) {
+      hostOnlineStatus.set(host.hostId, host.online);
+      if (host.online) {
+        connectedHostIds.add(host.hostId);
+      }
+    }
+
+    // Emit status update for SSE listeners
+    statusEmitter.emit("agentStatusUpdate", getAgentStatusSnapshot());
+  });
 }
 
 export function isHubConnected(): boolean {
@@ -142,7 +164,12 @@ export function getAgentStatusSnapshot(): AgentStatusEvent {
     }
   }
 
-  return { agents };
+  const hosts: NonNullable<AgentStatusEvent["hosts"]> = {};
+  for (const [hostId, online] of hostOnlineStatus) {
+    hosts[String(hostId)] = { online };
+  }
+
+  return { agents, hosts };
 }
 
 /** Subscribe to agent status updates. Returns an unsubscribe function. */
@@ -175,6 +202,15 @@ export function sendMailViaHub(
       },
     );
   });
+}
+
+export function sendUserListChanged(): void {
+  if (!socket || !connected) {
+    console.warn("[HubConnection] Not connected to hub, cannot send user list changed");
+    return;
+  }
+
+  socket.emit(HubEvents.USER_LIST_CHANGED);
 }
 
 export function sendAgentStop(

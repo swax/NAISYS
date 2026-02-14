@@ -405,6 +405,9 @@ export const HubEvents = {
   AGENT_START: "agent_start",
   AGENT_STOP: "agent_stop",
 
+  // User list changed (supervisor -> hub, fire-and-forget, triggers broadcast)
+  USER_LIST_CHANGED: "user_list_changed",
+
   // Log events (NAISYS -> hub, fire-and-forget)
   LOG_WRITE: "log_write",
 

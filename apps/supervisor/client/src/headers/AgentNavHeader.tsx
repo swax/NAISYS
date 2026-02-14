@@ -76,16 +76,6 @@ export const AgentNavHeader: React.FC<AgentNavHeaderProps> = ({
           >
             Detail
           </Tabs.Tab>
-          <Tabs.Tab
-            value="config"
-            leftSection={<IconSettings size="1rem" />}
-            component="a"
-            // @ts-expect-error - Mantine Tabs.Tab doesn't properly type component prop with href
-            href={getAbsoluteUrl("config")}
-            onClick={(e: React.MouseEvent) => handleTabClick(e, "config")}
-          >
-            Config
-          </Tabs.Tab>
           <Indicator
             disabled={!hasUnreadLogs}
             color="pink"
@@ -122,6 +112,16 @@ export const AgentNavHeader: React.FC<AgentNavHeaderProps> = ({
               Mail
             </Tabs.Tab>
           </Indicator>
+          <Tabs.Tab
+            value="config"
+            leftSection={<IconSettings size="1rem" />}
+            component="a"
+            // @ts-expect-error - Mantine Tabs.Tab doesn't properly type component prop with href
+            href={getAbsoluteUrl("config")}
+            onClick={(e: React.MouseEvent) => handleTabClick(e, "config")}
+          >
+            Config
+          </Tabs.Tab>
         </Tabs.List>
       </Tabs>
     </Group>

@@ -31,24 +31,25 @@ export const AgentDetail: React.FC = () => {
   const [starting, setStarting] = useState(false);
   const [stopping, setStopping] = useState(false);
 
+  const fetchDetail = async () => {
+    if (!agentId) return;
+    try {
+      const data = await getAgentDetail(agentId);
+      setConfig(data.config);
+      setConfigPath(data.configPath || null);
+      setActions(data._actions);
+    } catch (err) {
+      console.error("Error fetching agent detail:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (!agentId) {
       setLoading(false);
       return;
     }
-
-    const fetchDetail = async () => {
-      try {
-        const data = await getAgentDetail(agentId);
-        setConfig(data.config);
-        setConfigPath(data.configPath || null);
-        setActions(data._actions);
-      } catch (err) {
-        console.error("Error fetching agent detail:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
 
     fetchDetail();
   }, [agentId]);
@@ -66,6 +67,7 @@ export const AgentDetail: React.FC = () => {
             : "Agent started",
           color: "green",
         });
+        await fetchDetail();
       } else {
         notifications.show({
           title: "Start Failed",
@@ -95,6 +97,7 @@ export const AgentDetail: React.FC = () => {
           message: result.message,
           color: "green",
         });
+        await fetchDetail();
       } else {
         notifications.show({
           title: "Stop Failed",
