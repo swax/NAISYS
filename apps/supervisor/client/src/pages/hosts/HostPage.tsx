@@ -2,6 +2,7 @@ import { Badge, Stack, Table, Text, Title } from "@mantine/core";
 import React from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAgentDataContext } from "../../contexts/AgentDataContext";
+import { useConnectionStatus } from "../../hooks/useConnectionStatus";
 import { useHostDataContext } from "../../contexts/HostDataContext";
 
 export const HostPage: React.FC = () => {
@@ -9,6 +10,7 @@ export const HostPage: React.FC = () => {
   const navigate = useNavigate();
   const { agents } = useAgentDataContext();
   const { hosts } = useHostDataContext();
+  const { status: connectionStatus } = useConnectionStatus();
 
   const hostId = id ? Number(id) : null;
   const host = hosts.find((h) => h.id === hostId);
@@ -27,10 +29,19 @@ export const HostPage: React.FC = () => {
   return (
     <Stack gap="md">
       <Title order={2}>
-        {host?.name ?? `Host ${hostId}`} is{" "}
-        <Text component="span" c={host?.online ? "green" : "gray"} inherit>
-          {host?.online ? "online" : "offline"}
-        </Text>
+        {host?.name ?? `Host ${hostId}`}
+        {connectionStatus === "connected" && (
+          <>
+            {" is "}
+            <Text
+              component="span"
+              c={host?.online ? "green" : "gray"}
+              inherit
+            >
+              {host?.online ? "online" : "offline"}
+            </Text>
+          </>
+        )}
       </Title>
 
       {hostAgents.length === 0 ? (
@@ -54,13 +65,15 @@ export const HostPage: React.FC = () => {
                 <Table.Td>{agent.name}</Table.Td>
                 <Table.Td>{agent.title}</Table.Td>
                 <Table.Td>
-                  <Badge
-                    size="sm"
-                    variant="light"
-                    color={agent.online ? "green" : "gray"}
-                  >
-                    {agent.online ? "online" : "offline"}
-                  </Badge>
+                  {connectionStatus === "connected" && (
+                    <Badge
+                      size="sm"
+                      variant="light"
+                      color={agent.online ? "green" : "gray"}
+                    >
+                      {agent.online ? "online" : "offline"}
+                    </Badge>
+                  )}
                 </Table.Td>
               </Table.Tr>
             ))}

@@ -102,21 +102,20 @@ export function createUserService(
       notify(adminId, `No agents found to start`);
       return [adminId];
     }
-    // In this case the admin agent still exists as a source of ns-talk command,
-    // but we don't start it as if we did that the user would need to exit twice to get out of naisys
-    // It would also prevent ns-session complete from ending the app
-    else if (leadAgents.length === 1) {
+
+    // In standalone mode with a single agent, don't start admin as it would
+    // require the user to exit twice and prevent ns-session complete from ending the app
+    if (leadAgents.length === 1 && !integratedHub) {
       return [leadAgents[0].userId];
     }
-    // Starting multiple local lead agents
-    else {
-      const agentList = leadAgents.map((u) => u.username).join(", ");
 
-      leadAgents.forEach((agent) =>
-        notify(agent.userId, `Multiple agents started: ${agentList}`),
-      );
-      return leadAgents.map((u) => u.userId);
-    }
+    // Integrated hub mode or multiple agents: always include admin so that all agents can be turned off without ending process
+    const agentList = leadAgents.map((u) => u.username).join(", ");
+    leadAgents.forEach((agent) =>
+      notify(agent.userId, `Multiple agents started: ${agentList}`),
+    );
+
+    return [...leadAgents.map((u) => u.userId), adminId];
   }
 
   // Active user tracking (driven by heartbeatService)
