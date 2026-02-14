@@ -38,10 +38,20 @@ import {
   UpdateAgentConfigRequestSchema,
   UpdateAgentConfigResponse,
   UpdateAgentConfigResponseSchema,
+  AgentStartResult,
+  AgentStartResultSchema,
+  AgentStopResult,
+  AgentStopResultSchema,
 } from "@naisys-supervisor/shared";
 import { FastifyInstance, FastifyPluginOptions } from "fastify";
 import { requirePermission } from "../auth-middleware.js";
-import { collectionLink, selfLink } from "../hateoas.js";
+import { agentActions, collectionLink, selfLink } from "../hateoas.js";
+import {
+  isAgentActive,
+  isHubConnected,
+  sendAgentStart,
+  sendAgentStop,
+} from "../services/hubConnectionService.js";
 import {
   createAgentConfig,
   getAgentConfigById,
@@ -88,6 +98,7 @@ export default async function agentsRoutes(
 
         const items = agents.map((agent) => ({
           ...agent,
+          online: isAgentActive(agent.id),
           _links: agentLinks(agent.id),
         }));
 
@@ -194,15 +205,135 @@ export default async function agentsRoutes(
           });
         }
 
+        const hasManagePermission =
+          request.supervisorUser?.permissions.includes("manage_agents") ?? false;
+
         return {
           ...agent,
+          online: isAgentActive(id),
           _links: agentLinks(id),
+          _actions: agentActions(id, hasManagePermission),
         };
       } catch (error) {
         request.log.error(error, "Error in GET /agents/:id route");
         return reply.status(500).send({
           success: false,
           message: "Internal server error while fetching agent detail",
+        });
+      }
+    },
+  );
+
+  // POST /:id/start — Start agent via hub
+  fastify.post<{
+    Params: AgentIdParams;
+    Reply: AgentStartResult | ErrorResponse;
+  }>(
+    "/:id/start",
+    {
+      preHandler: [requirePermission("manage_agents")],
+      schema: {
+        description: "Start an agent via the hub",
+        tags: ["Agents"],
+        params: AgentIdParamsSchema,
+        response: {
+          200: AgentStartResultSchema,
+          503: ErrorResponseSchema,
+          500: ErrorResponseSchema,
+        },
+        security: [{ cookieAuth: [] }],
+      },
+    },
+    async (request, reply) => {
+      try {
+        const { id } = request.params;
+
+        if (!isHubConnected()) {
+          return reply.status(503).send({
+            success: false,
+            message: "Hub is not connected",
+          });
+        }
+
+        const response = await sendAgentStart(id, "Started from supervisor");
+
+        if (response.success) {
+          return {
+            success: true,
+            message: "Agent started",
+            hostname: response.hostname,
+          };
+        } else {
+          return reply.status(500).send({
+            success: false,
+            message: response.error || "Failed to start agent",
+          });
+        }
+      } catch (error) {
+        request.log.error(error, "Error in POST /agents/:id/start route");
+        return reply.status(500).send({
+          success: false,
+          message:
+            error instanceof Error
+              ? error.message
+              : "Internal server error while starting agent",
+        });
+      }
+    },
+  );
+
+  // POST /:id/stop — Stop agent via hub
+  fastify.post<{
+    Params: AgentIdParams;
+    Reply: AgentStopResult | ErrorResponse;
+  }>(
+    "/:id/stop",
+    {
+      preHandler: [requirePermission("manage_agents")],
+      schema: {
+        description: "Stop an agent via the hub",
+        tags: ["Agents"],
+        params: AgentIdParamsSchema,
+        response: {
+          200: AgentStopResultSchema,
+          503: ErrorResponseSchema,
+          500: ErrorResponseSchema,
+        },
+        security: [{ cookieAuth: [] }],
+      },
+    },
+    async (request, reply) => {
+      try {
+        const { id } = request.params;
+
+        if (!isHubConnected()) {
+          return reply.status(503).send({
+            success: false,
+            message: "Hub is not connected",
+          });
+        }
+
+        const response = await sendAgentStop(id, "Stopped from supervisor");
+
+        if (response.success) {
+          return {
+            success: true,
+            message: "Agent stopped",
+          };
+        } else {
+          return reply.status(500).send({
+            success: false,
+            message: response.error || "Failed to stop agent",
+          });
+        }
+      } catch (error) {
+        request.log.error(error, "Error in POST /agents/:id/stop route");
+        return reply.status(500).send({
+          success: false,
+          message:
+            error instanceof Error
+              ? error.message
+              : "Internal server error while stopping agent",
         });
       }
     },

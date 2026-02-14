@@ -10,9 +10,8 @@ import {
 import { IconApi } from "@tabler/icons-react";
 import React from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { useAgentDataContext } from "../contexts/AgentDataContext";
 import { useSession } from "../contexts/SessionContext";
-import { ToolsHeader } from "./ToolsHeader";
+import { ConnectionStatus } from "./ConnectionStatus";
 import naisysLogo from "@naisys/common/assets/naisys-logo.webp";
 
 interface AppHeaderProps {
@@ -30,7 +29,6 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
 }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { isLoading, error } = useAgentDataContext();
   const { user, isAuthenticated, hasPermission, logout } = useSession();
 
   const isAgentsPage = location.pathname.startsWith("/agents");
@@ -162,7 +160,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
             <IconApi size="1.2rem" />
           </ActionIcon>
         </Tooltip>
-        <ToolsHeader isLoading={isLoading} error={error} />
+        <ConnectionStatus />
         {isAuthenticated ? (
           <>
             <Text

@@ -3,6 +3,8 @@ import type {
   Agent,
   AgentDetailResponse,
   AgentListResponse,
+  AgentStartResult,
+  AgentStopResult,
   AuthUser,
   ContextLogResponse,
   CreateAgentConfigResponse,
@@ -19,6 +21,7 @@ import type {
   SendMailResponse,
   SettingsRequest,
   SettingsResponse,
+  StatusResponse,
   UpdateAgentConfigResponse,
 } from "@naisys-supervisor/shared";
 
@@ -29,6 +32,8 @@ export type {
   AgentConfigFile,
   AgentDetailResponse,
   AgentListResponse,
+  AgentStartResult,
+  AgentStopResult,
   AuthUser,
   ContextLogResponse,
   CreateAgentConfigResponse,
@@ -45,6 +50,7 @@ export type {
   SendMailResponse,
   SettingsRequest,
   SettingsResponse,
+  StatusResponse,
   UpdateAgentConfigResponse,
 };
 
@@ -104,6 +110,7 @@ export const apiEndpoints = {
   logout: "/auth/logout",
   me: "/auth/me",
   settings: "/settings",
+  status: "/status",
   agents: "/agents",
   hosts: "/hosts",
   agentDetail: (id: number) => `/agents/${id}`,
@@ -112,6 +119,8 @@ export const apiEndpoints = {
   agentMail: (id: number) => `/agents/${id}/mail`,
   agentContextLog: (id: number, runId: number, sessionId: number) =>
     `/agents/${id}/runs/${runId}/sessions/${sessionId}/logs`,
+  agentStart: (id: number) => `/agents/${id}/start`,
+  agentStop: (id: number) => `/agents/${id}/stop`,
   sendMail: "/send-mail",
 };
 
@@ -160,6 +169,10 @@ export const saveSettings = async (
         error instanceof Error ? error.message : "Failed to save settings",
     };
   }
+};
+
+export const getStatus = async (): Promise<StatusResponse> => {
+  return await api.get<StatusResponse>(apiEndpoints.status);
 };
 
 export interface AgentDataParams {
@@ -343,6 +356,14 @@ export const createAgent = async (
         error instanceof Error ? error.message : "Failed to create agent",
     };
   }
+};
+
+export const startAgent = async (id: number): Promise<AgentStartResult> => {
+  return await api.post<{}, AgentStartResult>(apiEndpoints.agentStart(id), {});
+};
+
+export const stopAgent = async (id: number): Promise<AgentStopResult> => {
+  return await api.post<{}, AgentStopResult>(apiEndpoints.agentStop(id), {});
 };
 
 // --- Users API ---

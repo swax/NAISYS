@@ -1,4 +1,5 @@
 import type { HateoasAction, HateoasLink } from "@naisys/common";
+import { isAgentActive } from "./services/hubConnectionService.js";
 
 const API_PREFIX = "/api/supervisor";
 
@@ -90,6 +91,30 @@ export function permissionActions(
     });
   }
 
+  return actions;
+}
+
+export function agentActions(
+  agentId: number,
+  hasManagePermission: boolean,
+): HateoasAction[] {
+  const actions: HateoasAction[] = [];
+  if (hasManagePermission && !isAgentActive(agentId)) {
+    actions.push({
+      rel: "start",
+      href: `${API_PREFIX}/agents/${agentId}/start`,
+      method: "POST",
+      title: "Start Agent",
+    });
+  }
+  if (hasManagePermission && isAgentActive(agentId)) {
+    actions.push({
+      rel: "stop",
+      href: `${API_PREFIX}/agents/${agentId}/stop`,
+      method: "POST",
+      title: "Stop Agent",
+    });
+  }
   return actions;
 }
 

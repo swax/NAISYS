@@ -32,9 +32,10 @@ import {
   grantInitialAdminPermissions,
   getUserByUsername,
 } from "./services/userService.js";
+import { initHubConnection } from "./services/hubConnectionService.js";
 import "./schema-registry.js";
 
-export const startServer: StartServer = async (startupType, plugins = []) => {
+export const startServer: StartServer = async (startupType, plugins = [], hubPort?) => {
   const isProd = process.env.NODE_ENV === "production";
 
   if (startupType === "hosted" && !isProd) {
@@ -54,6 +55,14 @@ export const startServer: StartServer = async (startupType, plugins = []) => {
   });
 
   initHubSessions();
+
+  // Connect to hub via Socket.IO for agent management
+  const hubUrl = hubPort
+    ? `http://localhost:${hubPort}`
+    : process.env.HUB_URL;
+  if (hubUrl) {
+    initHubConnection(hubUrl);
+  }
 
   if (!isHubAvailable()) {
     console.error("[Supervisor] Hub database not found. Cannot start without it.");
