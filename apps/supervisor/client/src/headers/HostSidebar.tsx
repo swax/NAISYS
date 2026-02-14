@@ -3,6 +3,7 @@ import { IconServer } from "@tabler/icons-react";
 import React from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { ROUTER_BASENAME } from "../constants";
+import { useConnectionStatus } from "../hooks/useConnectionStatus";
 import { useHostDataContext } from "../contexts/HostDataContext";
 import { Host } from "../types/agent";
 
@@ -10,6 +11,7 @@ export const HostSidebar: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { hosts, isLoading } = useHostDataContext();
+  const { status: connectionStatus } = useConnectionStatus();
 
   const isHostSelected = (hostId: number) => {
     const pathParts = location.pathname.split("/");
@@ -72,14 +74,16 @@ export const HostSidebar: React.FC = () => {
                   {host.agentCount} agent{host.agentCount !== 1 ? "s" : ""}
                 </Text>
               </div>
-              <Badge
-                size="xs"
-                variant="light"
-                color={host.online ? "green" : "gray"}
-                style={{ flexShrink: 0 }}
-              >
-                {host.online ? "online" : "offline"}
-              </Badge>
+              {connectionStatus === "connected" && (
+                <Badge
+                  size="xs"
+                  variant="light"
+                  color={host.online ? "green" : "gray"}
+                  style={{ flexShrink: 0 }}
+                >
+                  {host.online ? "online" : "offline"}
+                </Badge>
+              )}
             </Group>
           </Card>
         ))}

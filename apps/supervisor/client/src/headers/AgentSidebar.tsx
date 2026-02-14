@@ -10,6 +10,7 @@ import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { AddAgentDialog } from "../components/AddAgentDialog";
 import { ROUTER_BASENAME } from "../constants";
 import { useAgentDataContext } from "../contexts/AgentDataContext";
+import { useConnectionStatus } from "../hooks/useConnectionStatus";
 import { useSession } from "../contexts/SessionContext";
 import { Agent } from "../types/agent";
 
@@ -19,6 +20,7 @@ export const AgentSidebar: React.FC = () => {
   const { id: currentId } = useParams<{ id: string }>();
   const { agents, isLoading, readStatus } = useAgentDataContext();
   const { isAuthenticated } = useSession();
+  const { status: connectionStatus } = useConnectionStatus();
   const [modalOpened, setModalOpened] = useState(false);
 
   const isAgentSelected = (agent: Agent) => {
@@ -235,26 +237,27 @@ export const AgentSidebar: React.FC = () => {
                   {agent.title}
                 </Text>
               </div>
-              {agent.name !== "All" && (
-                <Badge
-                  size="xs"
-                  variant="light"
-                  color={agent.online ? "green" : "gray"}
-                  style={{
-                    flexShrink: 0,
-                    cursor: agent.online ? "pointer" : "default",
-                  }}
-                  onClick={(e) => {
-                    if (agent.online) {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      navigate(`/agents/${agent.id}/runs?expand=online`);
-                    }
-                  }}
-                >
-                  {agent.online ? "online" : "offline"}
-                </Badge>
-              )}
+              {agent.name !== "All" &&
+                connectionStatus === "connected" && (
+                  <Badge
+                    size="xs"
+                    variant="light"
+                    color={agent.online ? "green" : "gray"}
+                    style={{
+                      flexShrink: 0,
+                      cursor: agent.online ? "pointer" : "default",
+                    }}
+                    onClick={(e) => {
+                      if (agent.online) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        navigate(`/agents/${agent.id}/runs?expand=online`);
+                      }
+                    }}
+                  >
+                    {agent.online ? "online" : "offline"}
+                  </Badge>
+                )}
             </Group>
           </Card>
         ))}
