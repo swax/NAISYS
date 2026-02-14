@@ -15,7 +15,6 @@ import {
   Text,
   TextInput,
   Textarea,
-
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { IconCheck, IconX } from "@tabler/icons-react";
@@ -55,7 +54,10 @@ function transformFormValues(values: FormValues): Record<string, unknown> {
   if (values.workspacesEnabled) result.workspacesEnabled = true;
   if (values.disableMultipleCommands) result.disableMultipleCommands = true;
 
-  if (values.commandProtection && values.commandProtection !== CommandProtection.None)
+  if (
+    values.commandProtection &&
+    values.commandProtection !== CommandProtection.None
+  )
     result.commandProtection = values.commandProtection;
   if (typeof values.debugPauseSeconds === "number")
     result.debugPauseSeconds = values.debugPauseSeconds;
@@ -89,12 +91,13 @@ interface FormValues {
 }
 
 /** Extract .describe() text from schema shape, keyed by field name. */
-const fieldDescriptions: Record<string, string | undefined> = Object.fromEntries(
-  Object.entries(AgentConfigFileSchema.shape).map(([key, zodType]) => [
-    key,
-    (zodType as { description?: string }).description,
-  ]),
-);
+const fieldDescriptions: Record<string, string | undefined> =
+  Object.fromEntries(
+    Object.entries(AgentConfigFileSchema.shape).map(([key, zodType]) => [
+      key,
+      (zodType as { description?: string }).description,
+    ]),
+  );
 
 function desc(field: string): string | undefined {
   return fieldDescriptions[field];

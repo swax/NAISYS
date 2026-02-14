@@ -13,7 +13,8 @@ import { useParams } from "react-router-dom";
 import { useAgentDataContext } from "../../contexts/AgentDataContext";
 import { useSession } from "../../contexts/SessionContext";
 import { useMailData } from "../../hooks/useMailData";
-import { MailMessage as MailMessageType, sendMail } from "../../lib/apiClient";
+import { MailMessage as MailMessageType } from "../../lib/apiClient";
+import { sendMail } from "../../lib/apiMail";
 import { MailMessage } from "./MailMessage";
 import { NewMessageModal } from "./NewMessageModal";
 

@@ -2,7 +2,12 @@ import { ActionIcon, Box, Drawer, Group } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import { IconRobot } from "@tabler/icons-react";
 import React from "react";
-import { Outlet, useLocation, useParams, useSearchParams } from "react-router-dom";
+import {
+  Outlet,
+  useLocation,
+  useParams,
+  useSearchParams,
+} from "react-router-dom";
 import { AgentNavHeader } from "../../headers/AgentNavHeader";
 import { AgentSidebar } from "../../headers/AgentSidebar";
 

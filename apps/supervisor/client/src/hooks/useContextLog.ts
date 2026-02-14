@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useState } from "react";
-import { ContextLogParams, getContextLog, LogEntry } from "../lib/apiClient";
+import { ContextLogParams, getContextLog } from "../lib/apiRuns";
+import { LogEntry } from "../lib/apiClient";
 
 // Module-level caches (shared across all hook instances and persist across remounts)
 const logsCache = new Map<string, LogEntry[]>();

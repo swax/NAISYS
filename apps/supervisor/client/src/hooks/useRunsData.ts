@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useState } from "react";
 import { RunSession as BaseRunSession } from "@naisys-supervisor/shared";
-import { getRunsData, RunsDataParams } from "../lib/apiClient";
+import { getRunsData, RunsDataParams } from "../lib/apiRuns";
 import { RunSession } from "../types/runSession";
 
 type RunSessionWithFlag = RunSession & { isFirst?: boolean };

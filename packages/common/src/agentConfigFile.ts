@@ -49,13 +49,13 @@ export const AgentConfigFileSchema = z.object({
     .string()
     .min(1, "Username is required")
     .describe("Agent username, must be unique"),
-  title: z
-    .string()
-    .describe("Agent role/title"),
+  title: z.string().describe("Agent role/title"),
   agentPrompt: z
     .string()
     .min(1, "Agent prompt is required")
-    .describe("System prompt sent to the LLM. Supports ${agent.*} template variables"),
+    .describe(
+      "System prompt sent to the LLM. Supports ${agent.*} template variables",
+    ),
 
   spendLimitDollars: z
     .number()
@@ -66,7 +66,9 @@ export const AgentConfigFileSchema = z.object({
     .number()
     .min(0, "Must be non-negative")
     .optional()
-    .describe("Rolling time window in hours for spend limit. If unset, limit applies to all time"),
+    .describe(
+      "Rolling time window in hours for spend limit. If unset, limit applies to all time",
+    ),
 
   tokenMax: z
     .number()
@@ -83,30 +85,30 @@ export const AgentConfigFileSchema = z.object({
     .string()
     .optional()
     .describe("Model used for context compaction"),
-  imageModel: z
-    .string()
-    .optional()
-    .describe("Model used for image generation"),
+  imageModel: z.string().optional().describe("Model used for image generation"),
 
   mailEnabled: z
     .boolean()
     .optional()
-    .describe("Show mail commands to agent. Sub-agent mail still works behind the scenes when disabled"),
-  webEnabled: z
-    .boolean()
-    .optional()
-    .describe("Allow agent to browse the web"),
+    .describe(
+      "Show mail commands to agent. Sub-agent mail still works behind the scenes when disabled",
+    ),
+  webEnabled: z.boolean().optional().describe("Allow agent to browse the web"),
   completeSessionEnabled: z
     .boolean()
     .optional()
-    .describe("Allow agent to end its own session. In sub-agent mode the app exits"),
+    .describe(
+      "Allow agent to end its own session. In sub-agent mode the app exits",
+    ),
 
   debugPauseSeconds: z
     .number()
     .int("Must be a whole number")
     .min(0, "Must be non-negative")
     .optional()
-    .describe("Seconds to pause at debug prompt before auto-continuing. 0 or unset = wait indefinitely"),
+    .describe(
+      "Seconds to pause at debug prompt before auto-continuing. 0 or unset = wait indefinitely",
+    ),
   wakeOnMessage: z
     .boolean()
     .optional()
@@ -114,7 +116,9 @@ export const AgentConfigFileSchema = z.object({
   commandProtection: z
     .enum(CommandProtection)
     .optional()
-    .describe("Guard destructive commands: none, manual approval, or auto-check"),
+    .describe(
+      "Guard destructive commands: none, manual approval, or auto-check",
+    ),
   initialCommands: z
     .array(z.string())
     .optional()
@@ -123,11 +127,15 @@ export const AgentConfigFileSchema = z.object({
   disableMultipleCommands: z
     .boolean()
     .optional()
-    .describe("Force one command per turn. Slower but prevents hallucinated output"),
+    .describe(
+      "Force one command per turn. Slower but prevents hallucinated output",
+    ),
   workspacesEnabled: z
     .boolean()
     .optional()
-    .describe("Experimental: live-updating context area for files, avoids repeated cat calls"),
+    .describe(
+      "Experimental: live-updating context area for files, avoids repeated cat calls",
+    ),
 });
 
 export type AgentConfigFile = z.infer<typeof AgentConfigFileSchema>;

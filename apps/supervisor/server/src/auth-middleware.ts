@@ -69,10 +69,7 @@ export function registerAuthMiddleware(fastify: FastifyInstance) {
         if (hubSession) {
           let localUser = await getUserByUuid(hubSession.uuid);
           if (!localUser) {
-            localUser = await createUser(
-              hubSession.username,
-              hubSession.uuid,
-            );
+            localUser = await createUser(hubSession.username, hubSession.uuid);
           }
           const user = await buildSupervisorUser(
             localUser.id,

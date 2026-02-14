@@ -8,7 +8,7 @@ import {
   TextInput,
 } from "@mantine/core";
 import React from "react";
-import { getSettings, saveSettings } from "../lib/apiClient";
+import { getSettings, saveSettings } from "../lib/apiAuth";
 
 interface SettingsDialogProps {
   opened: boolean;

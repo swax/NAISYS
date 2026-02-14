@@ -206,7 +206,8 @@ export default async function agentsRoutes(
         }
 
         const hasManagePermission =
-          request.supervisorUser?.permissions.includes("manage_agents") ?? false;
+          request.supervisorUser?.permissions.includes("manage_agents") ??
+          false;
 
         return {
           ...agent,

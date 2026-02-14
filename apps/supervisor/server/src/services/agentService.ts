@@ -141,4 +141,3 @@ export const getHosts = cachedForSeconds(1, async (): Promise<Host[]> => {
     return [];
   }
 });
-

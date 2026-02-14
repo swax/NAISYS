@@ -1,11 +1,4 @@
-import {
-  Button,
-  Code,
-  Group,
-  Loader,
-  Stack,
-  Text,
-} from "@mantine/core";
+import { Button, Code, Group, Loader, Stack, Text } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { hasAction, type HateoasAction } from "@naisys/common";
 import {
@@ -15,8 +8,8 @@ import {
 } from "@tabler/icons-react";
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { useAgentDataContext } from "../contexts/AgentDataContext";
-import { getAgentDetail, startAgent, stopAgent } from "../lib/apiClient";
+import { useAgentDataContext } from "../../contexts/AgentDataContext";
+import { getAgentDetail, startAgent, stopAgent } from "../../lib/apiAgents";
 
 export const AgentDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();

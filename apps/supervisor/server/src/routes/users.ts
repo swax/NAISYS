@@ -199,9 +199,7 @@ export default async function userRoutes(
         request.supervisorUser!.permissions.includes("supervisor_admin");
 
       // Non-admins can only change their own password
-      const body = isAdmin
-        ? request.body
-        : { password: request.body.password };
+      const body = isAdmin ? request.body : { password: request.body.password };
 
       try {
         const user = await userService.updateUser(request.params.id, body);

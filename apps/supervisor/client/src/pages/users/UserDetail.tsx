@@ -24,7 +24,7 @@ import {
   deleteUser,
   grantPermission,
   revokePermission,
-} from "../../lib/apiClient";
+} from "../../lib/apiUsers";
 
 const ALL_PERMISSIONS = ["supervisor_admin", "manage_agents"];
 
@@ -258,7 +258,9 @@ export const UserDetail: React.FC = () => {
       <Modal
         opened={editOpened}
         onClose={closeEdit}
-        title={hasPermission("supervisor_admin") ? "Edit User" : "Change Password"}
+        title={
+          hasPermission("supervisor_admin") ? "Edit User" : "Change Password"
+        }
       >
         <Stack>
           {hasPermission("supervisor_admin") && (
@@ -269,7 +271,11 @@ export const UserDetail: React.FC = () => {
             />
           )}
           <PasswordInput
-            label={hasPermission("supervisor_admin") ? "New Password (leave blank to keep)" : "New Password"}
+            label={
+              hasPermission("supervisor_admin")
+                ? "New Password (leave blank to keep)"
+                : "New Password"
+            }
             value={editPassword}
             onChange={(e) => setEditPassword(e.currentTarget.value)}
           />

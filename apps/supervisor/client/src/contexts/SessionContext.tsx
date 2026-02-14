@@ -1,10 +1,6 @@
 import type { AuthUser } from "@naisys-supervisor/shared";
 import React, { createContext, useContext, useEffect, useState } from "react";
-import {
-  getMe,
-  login as apiLogin,
-  logout as apiLogout,
-} from "../lib/apiClient";
+import { getMe, login as apiLogin, logout as apiLogout } from "../lib/apiAuth";
 
 interface SessionContextType {
   user: AuthUser | null;

@@ -3,10 +3,10 @@ import { Alert, Button, Group, Loader, Stack, Text } from "@mantine/core";
 import { IconEdit } from "@tabler/icons-react";
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { AgentConfigForm } from "../components/AgentConfigForm";
-import { useAgentDataContext } from "../contexts/AgentDataContext";
-import { useSession } from "../contexts/SessionContext";
-import { getAgentConfig, updateAgentConfig } from "../lib/apiClient";
+import { AgentConfigForm } from "../../components/AgentConfigForm";
+import { useAgentDataContext } from "../../contexts/AgentDataContext";
+import { useSession } from "../../contexts/SessionContext";
+import { getAgentConfig, updateAgentConfig } from "../../lib/apiAgents";
 
 export const AgentConfig: React.FC = () => {
   const { id } = useParams<{ id: string }>();
