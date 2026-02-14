@@ -7,14 +7,14 @@ const logsCache = new Map<string, LogEntry[]>();
 const logsAfterCache = new Map<string, number | undefined>();
 
 export const useContextLog = (
-  userId: number,
+  agentId: number,
   runId: number,
   sessionId: number,
   enabled: boolean = true,
   isOnline: boolean = false,
 ) => {
   // Create a unique key for this session
-  const sessionKey = `${userId}-${runId}-${sessionId}`;
+  const sessionKey = `${agentId}-${runId}-${sessionId}`;
   // Version counter to trigger re-renders when cache updates
   const [, setCacheVersion] = useState(0);
 
@@ -23,7 +23,7 @@ export const useContextLog = (
       const [, sessionKey] = queryKey;
 
       const params: ContextLogParams = {
-        userId,
+        agentId,
         runId,
         sessionId,
         logsAfter: logsAfterCache.get(sessionKey),
@@ -31,17 +31,17 @@ export const useContextLog = (
 
       return await getContextLog(params);
     },
-    [userId, runId, sessionId],
+    [agentId, runId, sessionId],
   );
 
   const query = useQuery({
     queryKey: ["context-log", sessionKey],
     queryFn,
-    enabled: enabled && !!userId,
+    enabled: enabled && !!agentId,
     refetchInterval: isOnline ? 5000 : false, // Only poll if online
     refetchIntervalInBackground: false,
     refetchOnWindowFocus: true,
-    refetchOnMount: "always", // Immediate update when userId changes
+    refetchOnMount: "always", // Immediate update when agentId changes
     retry: 3,
     retryDelay: 1000,
   });

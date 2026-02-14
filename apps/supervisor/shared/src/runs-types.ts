@@ -15,7 +15,6 @@ export const RunSessionSchema = z.object({
 });
 
 export const RunsDataRequestSchema = z.object({
-  userId: z.coerce.number(),
   updatedSince: z.string().optional(),
   page: z.coerce.number().optional().default(1),
   count: z.coerce.number().optional().default(50),
@@ -33,10 +32,13 @@ export const RunsDataResponseSchema = z.object({
     .optional(),
 });
 
-export const ContextLogRequestSchema = z.object({
-  userId: z.coerce.number(),
+export const ContextLogParamsSchema = z.object({
+  id: z.coerce.number(),
   runId: z.coerce.number(),
   sessionId: z.coerce.number(),
+});
+
+export const ContextLogRequestSchema = z.object({
   logsAfter: z.coerce.number().optional(),
 });
 
@@ -55,5 +57,6 @@ export const ContextLogResponseSchema = z.object({
 export type RunSession = z.infer<typeof RunSessionSchema>;
 export type RunsDataRequest = z.infer<typeof RunsDataRequestSchema>;
 export type RunsDataResponse = z.infer<typeof RunsDataResponseSchema>;
+export type ContextLogParams = z.infer<typeof ContextLogParamsSchema>;
 export type ContextLogRequest = z.infer<typeof ContextLogRequestSchema>;
 export type ContextLogResponse = z.infer<typeof ContextLogResponseSchema>;

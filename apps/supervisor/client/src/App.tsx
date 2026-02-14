@@ -72,13 +72,10 @@ const AppContent: React.FC = () => {
         <Routes>
           <Route path="/agents" element={<AgentsLayout />}>
             <Route index element={<AgentIndex />} />
-            <Route path="runs" element={<Runs />} />
-            <Route path="runs/:agent" element={<Runs />} />
-            <Route path="mail" element={<Mail />} />
-            <Route path="mail/:agent" element={<Mail />} />
-            <Route path="mail/:agent/:messageId" element={<Mail />} />
-            <Route path="controls" element={<Controls />} />
-            <Route path="controls/:agent" element={<Controls />} />
+            <Route path=":id" element={<Controls />} />
+            <Route path=":id/runs" element={<Runs />} />
+            <Route path=":id/mail" element={<Mail />} />
+            <Route path=":id/mail/:messageId" element={<Mail />} />
           </Route>
           <Route path="/hosts" element={<HostsLayout />}>
             <Route index element={<HostIndex />} />

@@ -1,10 +1,10 @@
 import type {
   Agent,
+  AgentDetailResponse,
   AgentListResponse,
   AuthUser,
   ContextLogResponse,
   CreateAgentConfigResponse,
-  GetAgentConfigResponse,
   HostListResponse,
   LogEntry,
   LoginResponse,
@@ -24,11 +24,11 @@ const API_BASE = "/api/supervisor";
 
 export type {
   Agent,
+  AgentDetailResponse,
   AgentListResponse,
   AuthUser,
   ContextLogResponse,
   CreateAgentConfigResponse,
-  GetAgentConfigResponse,
   HostListResponse,
   LogEntry,
   LoginResponse,
@@ -102,11 +102,13 @@ export const apiEndpoints = {
   settings: "/settings",
   agents: "/agents",
   hosts: "/hosts",
-  agentConfig: "/agents/config",
+  agentDetail: (id: number) => `/agents/${id}`,
+  agentConfig: (id: number) => `/agents/${id}/config`,
+  agentRuns: (id: number) => `/agents/${id}/runs`,
+  agentMail: (id: number) => `/agents/${id}/mail`,
+  agentContextLog: (id: number, runId: number, sessionId: number) =>
+    `/agents/${id}/runs/${runId}/sessions/${sessionId}/logs`,
   sendMail: "/send-mail",
-  runs: "/runs",
-  contextLog: "/context-log",
-  mail: "/mail",
 };
 
 export const getMe = async (): Promise<AuthUser> => {
@@ -176,6 +178,12 @@ export const getHostData = async (): Promise<HostListResponse> => {
   return await api.get<HostListResponse>(apiEndpoints.hosts);
 };
 
+export const getAgentDetail = async (
+  id: number,
+): Promise<AgentDetailResponse> => {
+  return await api.get<AgentDetailResponse>(apiEndpoints.agentDetail(id));
+};
+
 export const sendMail = async (
   mailData: SendMailRequest & { files?: File[] },
 ): Promise<SendMailResponse> => {
@@ -219,7 +227,7 @@ export const sendMail = async (
 };
 
 export interface RunsDataParams {
-  userId: number;
+  agentId: number;
   updatedSince?: string;
   page?: number;
   count?: number;
@@ -229,7 +237,6 @@ export const getRunsData = async (
   params: RunsDataParams,
 ): Promise<RunsDataResponse> => {
   const queryParams = new URLSearchParams();
-  queryParams.append("userId", String(params.userId));
   if (params.updatedSince) {
     queryParams.append("updatedSince", params.updatedSince);
   }
@@ -240,12 +247,13 @@ export const getRunsData = async (
     queryParams.append("count", params.count.toString());
   }
 
-  const url = `${apiEndpoints.runs}?${queryParams.toString()}`;
+  const query = queryParams.toString();
+  const url = `${apiEndpoints.agentRuns(params.agentId)}${query ? `?${query}` : ""}`;
   return await api.get<RunsDataResponse>(url);
 };
 
 export interface ContextLogParams {
-  userId: number;
+  agentId: number;
   runId: number;
   sessionId: number;
   logsAfter?: number;
@@ -255,19 +263,17 @@ export const getContextLog = async (
   params: ContextLogParams,
 ): Promise<ContextLogResponse> => {
   const queryParams = new URLSearchParams();
-  queryParams.append("userId", String(params.userId));
-  queryParams.append("runId", params.runId.toString());
-  queryParams.append("sessionId", params.sessionId.toString());
   if (params.logsAfter !== undefined) {
     queryParams.append("logsAfter", String(params.logsAfter));
   }
 
-  const url = `${apiEndpoints.contextLog}?${queryParams.toString()}`;
+  const query = queryParams.toString();
+  const url = `${apiEndpoints.agentContextLog(params.agentId, params.runId, params.sessionId)}${query ? `?${query}` : ""}`;
   return await api.get<ContextLogResponse>(url);
 };
 
 export interface MailDataParams {
-  agentName: string;
+  agentId: number;
   updatedSince?: string;
   page?: number;
   count?: number;
@@ -277,7 +283,6 @@ export const getMailData = async (
   params: MailDataParams,
 ): Promise<MailDataResponse> => {
   const queryParams = new URLSearchParams();
-  queryParams.append("agentName", params.agentName);
   if (params.updatedSince) {
     queryParams.append("updatedSince", params.updatedSince);
   }
@@ -288,41 +293,20 @@ export const getMailData = async (
     queryParams.append("count", params.count.toString());
   }
 
-  const url = `${apiEndpoints.mail}?${queryParams.toString()}`;
+  const query = queryParams.toString();
+  const url = `${apiEndpoints.agentMail(params.agentId)}${query ? `?${query}` : ""}`;
   return await api.get<MailDataResponse>(url);
 };
 
-export const getAgentConfig = async (
-  username: string,
-  host: string,
-): Promise<GetAgentConfigResponse> => {
-  try {
-    const queryParams = new URLSearchParams();
-    queryParams.append("username", username);
-    queryParams.append("host", host);
-    const url = `${apiEndpoints.agentConfig}?${queryParams.toString()}`;
-    return await api.get<GetAgentConfigResponse>(url);
-  } catch (error) {
-    return {
-      success: false,
-      message:
-        error instanceof Error
-          ? error.message
-          : "Failed to load agent configuration",
-    };
-  }
-};
-
 export const updateAgentConfig = async (
-  username: string,
+  agentId: number,
   config: string,
-  host: string,
 ): Promise<UpdateAgentConfigResponse> => {
   try {
-    return await api.put<
-      { username: string; config: string; host: string },
-      UpdateAgentConfigResponse
-    >(apiEndpoints.agentConfig, { username, config, host });
+    return await api.put<{ config: string }, UpdateAgentConfigResponse>(
+      apiEndpoints.agentConfig(agentId),
+      { config },
+    );
   } catch (error) {
     return {
       success: false,
@@ -336,13 +320,12 @@ export const updateAgentConfig = async (
 
 export const createAgent = async (
   name: string,
-  host: string,
 ): Promise<CreateAgentConfigResponse> => {
   try {
-    return await api.post<
-      { name: string; host: string },
-      CreateAgentConfigResponse
-    >(apiEndpoints.agentConfig, { name, host });
+    return await api.post<{ name: string }, CreateAgentConfigResponse>(
+      apiEndpoints.agents,
+      { name },
+    );
   } catch (error) {
     return {
       success: false,

@@ -6,40 +6,45 @@ import { ROUTER_BASENAME } from "../constants";
 import { useAgentDataContext } from "../contexts/AgentDataContext";
 
 interface AgentNavHeaderProps {
-  agentName?: string;
+  agentId?: number;
 }
 
 export const AgentNavHeader: React.FC<AgentNavHeaderProps> = ({
-  agentName,
+  agentId,
 }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { agents, readStatus } = useAgentDataContext();
 
-  if (!agentName) {
+  if (!agentId) {
     return null;
   }
 
   // Find the current agent
-  const currentAgent = agents.find((agent) => agent.name === agentName);
+  const currentAgent = agents.find((agent) => agent.id === agentId);
+  const agentName = currentAgent?.name;
 
   // Check for unread data
   const hasUnreadLogs =
-    currentAgent && readStatus[agentName]
+    currentAgent && agentName && readStatus[agentName]
       ? currentAgent.latestLogId > readStatus[agentName].lastReadLogId
       : false;
 
   const hasUnreadMail =
-    currentAgent && readStatus[agentName]
+    currentAgent && agentName && readStatus[agentName]
       ? currentAgent.latestMailId > readStatus[agentName].lastReadMailId
       : false;
 
   // Determine active tab from current location
-  // Path: /agents/controls/agentName → split("/")[2] = "controls"
-  const currentSection = location.pathname.split("/")[2];
+  // Path: /agents/:id/runs → split("/")[3] = "runs"
+  const pathParts = location.pathname.split("/");
+  const currentSection = pathParts.length >= 4 ? pathParts[3] : "controls";
 
   const getTabUrl = (section: string) => {
-    return `/agents/${section}/${agentName}`;
+    if (section === "controls") {
+      return `/agents/${agentId}`;
+    }
+    return `/agents/${agentId}/${section}`;
   };
 
   const getAbsoluteUrl = (section: string) => {
@@ -59,7 +64,7 @@ export const AgentNavHeader: React.FC<AgentNavHeaderProps> = ({
 
   return (
     <Group gap="md" align="center">
-      <Tabs value={currentSection} style={{ flex: 1, height: "100%" }}>
+      <Tabs value={currentSection || "controls"} style={{ flex: 1, height: "100%" }}>
         <Tabs.List>
           <Tabs.Tab
             value="controls"

@@ -36,6 +36,24 @@ export const AgentListResponseSchema = z.object({
   _links: z.array(LinkSchema),
 });
 
+export const AgentIdParamsSchema = z.object({
+  id: z.coerce.number(),
+});
+
+export const AgentDetailResponseSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  title: z.string(),
+  host: z.string(),
+  lastActive: z.string().optional(),
+  leadUsername: z.string().optional(),
+  latestLogId: z.number(),
+  latestMailId: z.number(),
+  config: z.string(),
+  configPath: z.string(),
+  _links: z.array(LinkSchema),
+});
+
 export const HostListResponseSchema = z.object({
   items: z.array(HostSchema),
   _links: z.array(LinkSchema),
@@ -46,4 +64,6 @@ export type Agent = z.infer<typeof AgentSchema>;
 export type Host = z.infer<typeof HostSchema>;
 export type AgentListRequest = z.infer<typeof AgentListRequestSchema>;
 export type AgentListResponse = z.infer<typeof AgentListResponseSchema>;
+export type AgentIdParams = z.infer<typeof AgentIdParamsSchema>;
+export type AgentDetailResponse = z.infer<typeof AgentDetailResponseSchema>;
 export type HostListResponse = z.infer<typeof HostListResponseSchema>;

@@ -6,7 +6,7 @@ import {
   IconRobot,
 } from "@tabler/icons-react";
 import React, { useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { AddAgentDialog } from "../components/AddAgentDialog";
 import { ROUTER_BASENAME } from "../constants";
 import { useAgentDataContext } from "../contexts/AgentDataContext";
@@ -16,33 +16,39 @@ import { Agent } from "../types/agent";
 export const AgentSidebar: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { id: currentId } = useParams<{ id: string }>();
   const { agents, isLoading, readStatus } = useAgentDataContext();
   const { isAuthenticated } = useSession();
   const [modalOpened, setModalOpened] = useState(false);
 
-  const isAgentSelected = (agentName: string) => {
-    const pathParts = location.pathname.split("/");
-    // Path: /agents/controls/agentName → pathParts[3] = agentName
-    if (agentName === "all") {
-      return !pathParts[3];
+  const isAgentSelected = (agent: Agent) => {
+    if (agent.name === "all") {
+      return !currentId;
     }
-    return pathParts[3] === agentName;
+    return currentId === String(agent.id);
   };
 
-  const getCurrentSection = () => location.pathname.split("/")[2];
+  const getCurrentSection = () => {
+    // Path: /agents/:id/runs → extract section after the ID
+    const pathParts = location.pathname.split("/");
+    // pathParts: ["", "agents", ":id", "section"]
+    if (currentId && pathParts.length >= 4) {
+      return pathParts[3];
+    }
+    return null;
+  };
 
   const getAgentUrl = (agent: Agent) => {
     const currentSection = getCurrentSection();
 
-    const agentNameSuffix = agent.name === "all" ? "" : `/${agent.name}`;
+    if (agent.name === "all") {
+      return "/agents";
+    }
 
-    if (
-      currentSection &&
-      ["runs", "mail", "controls"].includes(currentSection)
-    ) {
-      return `/agents/${currentSection}${agentNameSuffix}`;
+    if (currentSection && ["runs", "mail"].includes(currentSection)) {
+      return `/agents/${agent.id}/${currentSection}`;
     } else {
-      return `/agents/controls${agentNameSuffix}`;
+      return `/agents/${agent.id}`;
     }
   };
 
@@ -135,8 +141,7 @@ export const AgentSidebar: React.FC = () => {
     const handleLogClick = (e: React.MouseEvent) => {
       e.preventDefault();
       e.stopPropagation();
-      const agentNameSuffix = agent.name === "all" ? "" : `/${agent.name}`;
-      navigate(`/agents/runs${agentNameSuffix}?expand=new`);
+      navigate(`/agents/${agent.id}/runs?expand=new`);
     };
 
     return (
@@ -169,8 +174,7 @@ export const AgentSidebar: React.FC = () => {
     const handleMailClick = (e: React.MouseEvent) => {
       e.preventDefault();
       e.stopPropagation();
-      const agentNameSuffix = agent.name === "all" ? "" : `/${agent.name}`;
-      navigate(`/agents/mail${agentNameSuffix}`);
+      navigate(`/agents/${agent.id}/mail`);
     };
 
     return (
@@ -207,7 +211,7 @@ export const AgentSidebar: React.FC = () => {
             onClick={(e) => handleAgentClick(e, agent)}
             style={{
               cursor: "pointer",
-              backgroundColor: isAgentSelected(agent.name)
+              backgroundColor: isAgentSelected(agent)
                 ? "var(--mantine-color-blue-9)"
                 : undefined,
               opacity: agent.name === "All" ? 1 : agent.online ? 1 : 0.5,
@@ -244,9 +248,7 @@ export const AgentSidebar: React.FC = () => {
                     if (agent.online) {
                       e.preventDefault();
                       e.stopPropagation();
-                      const agentNameSuffix =
-                        agent.name === "all" ? "" : `/${agent.name}`;
-                      navigate(`/agents/runs${agentNameSuffix}?expand=online`);
+                      navigate(`/agents/${agent.id}/runs?expand=online`);
                     }
                   }}
                 >

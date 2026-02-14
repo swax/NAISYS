@@ -11,29 +11,17 @@ import { cachedForSeconds } from "../utils/cache.js";
 import { getAgents } from "./agentService.js";
 
 /**
- * Get mail data for a specific agent, optionally filtering by updatedSince
+ * Get mail data for a specific agent by userId, optionally filtering by updatedSince
  */
-export const getMailData = cachedForSeconds(
+export const getMailDataByUserId = cachedForSeconds(
   1,
   async (
-    agentName: string,
+    userId: number,
     updatedSince?: string,
     page: number = 1,
     count: number = 50,
   ): Promise<{ mail: MailMessage[]; timestamp: string; total?: number }> => {
     try {
-      // First, find the agent to get their userId
-      const agents = await getAgents();
-      const agent = agents.find((a) => a.name === agentName);
-
-      if (!agent) {
-        return {
-          mail: [],
-          timestamp: new Date().toISOString(),
-        };
-      }
-
-      const userId = agent.id;
 
       // Build the where clause
       const whereClause: any = {};

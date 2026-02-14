@@ -26,7 +26,9 @@ export const RunSessionLog: React.FC<{
   run: RunSession;
   runSessionCardRef: React.RefObject<HTMLDivElement | null>;
 }> = ({ run, runSessionCardRef }) => {
-  const { agent: agentParam } = useParams<{ agent: string }>();
+  const { id: agentIdParam } = useParams<{ id: string }>();
+  const { agents, updateReadStatus, readStatus } = useAgentDataContext();
+  const agentName = agents.find((a) => a.id === Number(agentIdParam))?.name;
   const [fullscreen, setFullscreen] = useState(false);
   const logContainerRef = useRef<HTMLDivElement>(null);
   const [, setScrollPanelIntoView] = useState(true);
@@ -34,11 +36,10 @@ export const RunSessionLog: React.FC<{
   const [needsSyncScrolling, setNeedsSyncScrolling] = useState(false);
   const previousLogsLength = useRef<number>(0);
   const wasAtBottomRef = useRef<boolean>(true); // Track if we were at bottom before render
-  const { updateReadStatus, readStatus } = useAgentDataContext();
 
   // Save the initial lastReadLogId to determine where to show the divider
   const [dividerLogId] = useState<number | undefined>(
-    agentParam ? readStatus[agentParam]?.lastReadLogId : undefined,
+    agentName ? readStatus[agentName]?.lastReadLogId : undefined,
   );
 
   // Fetch logs when expanded, but only continue polling if online
@@ -83,7 +84,7 @@ export const RunSessionLog: React.FC<{
       (max, log) => (log.id > max ? log.id : max),
       0,
     );
-    updateReadStatus(agentParam || "", maxLogId, undefined);
+    updateReadStatus(agentName || "", maxLogId, undefined);
 
     // Auto-scroll to bottom when new logs arrive (if already at bottom or first load)
     if (!logContainerRef.current || logs.length === 0) return;
@@ -97,7 +98,7 @@ export const RunSessionLog: React.FC<{
     }
 
     previousLogsLength.current = logs.length;
-  }, [agentParam, logs, updateReadStatus]);
+  }, [agentName, logs, updateReadStatus]);
 
   const toggleFullscreen = useCallback((value: boolean) => {
     // Save current scroll percentage before toggling

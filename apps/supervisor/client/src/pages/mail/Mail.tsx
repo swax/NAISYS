@@ -18,9 +18,13 @@ import { MailMessage } from "./MailMessage";
 import { NewMessageModal } from "./NewMessageModal";
 
 export const Mail: React.FC = () => {
-  const { agent: agentParam } = useParams<{ agent: string }>();
+  const { id } = useParams<{ id: string }>();
   const { agents, updateReadStatus, readStatus } = useAgentDataContext();
   const { isAuthenticated } = useSession();
+
+  const agentId = id ? Number(id) : 0;
+  const agent = agents.find((a) => a.id === agentId);
+  const agentName = agent?.name || "";
 
   // Use the new useMailData hook
   const {
@@ -28,14 +32,14 @@ export const Mail: React.FC = () => {
     total: totalMail,
     isLoading: mailLoading,
     error: mailError,
-  } = useMailData(agentParam || "", Boolean(agentParam));
+  } = useMailData(agentId, Boolean(id));
 
-  console.log(`Loaded mail for agent ${agentParam}`);
+  console.log(`Loaded mail for agent ${agentName}`);
 
   // Save the initial lastReadMailId to determine where to show the divider
   const [lastReadMailId] = useState<number | null>(
-    agentParam && readStatus[agentParam]
-      ? readStatus[agentParam].lastReadMailId
+    agentName && readStatus[agentName]
+      ? readStatus[agentName].lastReadMailId
       : null,
   );
 
@@ -45,7 +49,7 @@ export const Mail: React.FC = () => {
       (max, mail) => (mail.id > max ? mail.id : max),
       0,
     );
-    updateReadStatus(agentParam || "", undefined, maxMailId);
+    updateReadStatus(agentName, undefined, maxMailId);
   }, [allMail]);
 
   const [showSent, setShowSent] = useState(false);
@@ -73,7 +77,7 @@ export const Mail: React.FC = () => {
 
     return allMail
       .filter((mail) => {
-        const messageFromCurrentAgent = mail.fromUsername === agentParam;
+        const messageFromCurrentAgent = mail.fromUsername === agentName;
 
         if (showSent && showReceived) return true;
         if (showSent && messageFromCurrentAgent) return true;
@@ -91,11 +95,11 @@ export const Mail: React.FC = () => {
 
   // Calculate sent and received counts
   const sentCount = allMail.filter((mail) => {
-    return mail.fromUsername === agentParam;
+    return mail.fromUsername === agentName;
   }).length;
 
   const receivedCount = allMail.filter((mail) => {
-    return mail.fromUsername !== agentParam;
+    return mail.fromUsername !== agentName;
   }).length;
 
   // Handle reply to a message
@@ -126,7 +130,6 @@ export const Mail: React.FC = () => {
           type: "success",
           message: "Message sent successfully!",
         });
-        // TODO: Optionally refresh data to show the sent message
       } else {
         setSendStatus({
           type: "error",
@@ -146,7 +149,7 @@ export const Mail: React.FC = () => {
     return <Loader size="lg" />;
   }
 
-  if (!agentParam) {
+  if (!id) {
     return (
       <Stack gap="md" style={{ height: "100%" }}>
         <Group justify="space-between">
@@ -164,12 +167,10 @@ export const Mail: React.FC = () => {
     );
   }
 
-  const agent = agents.find((a) => a.name === agentParam);
-
   if (!agent) {
     return (
       <Alert color="yellow" title="Agent not found">
-        Agent "{agentParam}" not found
+        Agent with ID {id} not found
       </Alert>
     );
   }
@@ -244,7 +245,7 @@ export const Mail: React.FC = () => {
               )}
               <MailMessage
                 message={message}
-                currentAgent={agentParam}
+                currentAgent={agentName}
                 agents={agents}
                 onReply={handleReply}
               />
@@ -270,7 +271,7 @@ export const Mail: React.FC = () => {
           setReplyData(null);
         }}
         agents={agents}
-        currentAgentName={agentParam}
+        currentAgentName={agentName}
         onSend={handleSendMessage}
         initialRecipient={replyData?.recipient}
         initialSubject={replyData?.subject}
