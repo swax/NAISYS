@@ -13,6 +13,7 @@ import {
 } from "react-router-dom";
 import { ROUTER_BASENAME } from "./constants";
 import { AgentDataProvider } from "./contexts/AgentDataContext";
+import { HostDataProvider } from "./contexts/HostDataContext";
 import { LoginDialog } from "./components/LoginDialog";
 import { SessionProvider } from "./contexts/SessionContext";
 import { AppHeader } from "./headers/AppHeader";
@@ -100,9 +101,11 @@ const App: React.FC = () => {
         <Notifications />
         <SessionProvider>
           <AgentDataProvider>
-            <Router basename={ROUTER_BASENAME}>
-              <AppContent />
-            </Router>
+            <HostDataProvider>
+              <Router basename={ROUTER_BASENAME}>
+                <AppContent />
+              </Router>
+            </HostDataProvider>
           </AgentDataProvider>
         </SessionProvider>
       </MantineProvider>

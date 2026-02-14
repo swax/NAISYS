@@ -1,16 +1,12 @@
 import { isAgentOnline } from "@naisys/common";
 import { useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useState } from "react";
-import {
-  Agent as BaseAgent,
-  Host as BaseHost,
-} from "@naisys-supervisor/shared";
+import { Agent as BaseAgent } from "@naisys-supervisor/shared";
 import { getAgentData } from "../lib/apiClient";
-import { Agent, Host } from "../types/agent";
+import { Agent } from "../types/agent";
 
 // Module-level caches (shared across all hook instances and persist across remounts)
 let agentCache: Agent[] = [];
-let hostCache: Host[] = [];
 let updatedSinceCache: string | undefined = undefined;
 
 export const useAgentData = () => {
@@ -36,9 +32,8 @@ export const useAgentData = () => {
 
   // Merge new data when it arrives
   useEffect(() => {
-    if (query.data?.success && query.data.data) {
-      const updatedAgents = query.data.data.agents;
-      const updatedHosts = query.data.data.hosts;
+    if (query.data?.items) {
+      const updatedAgents = query.data.items;
 
       const existingAgents = agentCache;
 
@@ -68,22 +63,6 @@ export const useAgentData = () => {
       // Update cache with sorted agents
       agentCache = sortedAgents;
 
-      // Process hosts - always replace (no merge needed since hosts don't have updatedSince filtering)
-      const hostsWithOnline: Host[] = updatedHosts.map((host: BaseHost) => ({
-        ...host,
-        online: isAgentOnline(
-          host.lastActive ?? undefined,
-          query.dataUpdatedAt,
-        ),
-      }));
-
-      // Sort by name
-      const sortedHosts = hostsWithOnline.sort((a, b) =>
-        a.name.localeCompare(b.name),
-      );
-
-      hostCache = sortedHosts;
-
       // Update updatedSince with the current timestamp
       updatedSinceCache = new Date().toISOString();
 
@@ -92,13 +71,11 @@ export const useAgentData = () => {
     }
   }, [query.data]);
 
-  // Get current agents and hosts from cache (already sorted)
+  // Get current agents from cache (already sorted)
   const agents = agentCache;
-  const hosts = hostCache;
 
   return {
     agents,
-    hosts,
     isLoading: query.isLoading,
     error: query.error,
   };

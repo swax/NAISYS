@@ -3,12 +3,6 @@ import { usingNaisysDb } from "../database/naisysDatabase.js";
 import { getLogger } from "../logger.js";
 import { cachedForSeconds } from "../utils/cache.js";
 
-export interface AgentData {
-  agents: Agent[];
-  hosts: Host[];
-  timestamp: string;
-}
-
 export const getAgents = cachedForSeconds(
   1,
   async (updatedSince?: string): Promise<Agent[]> => {
@@ -87,27 +81,3 @@ export const getHosts = cachedForSeconds(1, async (): Promise<Host[]> => {
   }
 });
 
-export async function getAgentData(updatedSince?: string): Promise<AgentData> {
-  try {
-    // Fetch agents and hosts in parallel
-    const [agents, hosts] = await Promise.all([
-      getAgents(updatedSince),
-      getHosts(),
-    ]);
-
-    return {
-      agents,
-      hosts,
-      timestamp: new Date().toISOString(),
-    };
-  } catch (error) {
-    getLogger().error(error, "Error fetching agent data");
-
-    // Return empty data on error
-    return {
-      agents: [],
-      hosts: [],
-      timestamp: new Date().toISOString(),
-    };
-  }
-}

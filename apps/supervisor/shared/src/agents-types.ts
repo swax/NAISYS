@@ -1,5 +1,11 @@
 import { z } from "zod";
 
+const LinkSchema = z.object({
+  rel: z.string(),
+  href: z.string(),
+  title: z.string().optional(),
+});
+
 // Zod schemas
 export const AgentSchema = z.object({
   id: z.number(),
@@ -10,14 +16,34 @@ export const AgentSchema = z.object({
   leadUsername: z.string().optional(),
   latestLogId: z.number(),
   latestMailId: z.number(),
+  _links: z.array(LinkSchema).optional(),
 });
 
 export const HostSchema = z.object({
   name: z.string(),
   lastActive: z.string().nullable(),
   agentCount: z.number(),
+  _links: z.array(LinkSchema).optional(),
+});
+
+export const AgentListRequestSchema = z.object({
+  updatedSince: z.string().optional(),
+});
+
+export const AgentListResponseSchema = z.object({
+  items: z.array(AgentSchema),
+  timestamp: z.string(),
+  _links: z.array(LinkSchema),
+});
+
+export const HostListResponseSchema = z.object({
+  items: z.array(HostSchema),
+  _links: z.array(LinkSchema),
 });
 
 // Inferred types
 export type Agent = z.infer<typeof AgentSchema>;
 export type Host = z.infer<typeof HostSchema>;
+export type AgentListRequest = z.infer<typeof AgentListRequestSchema>;
+export type AgentListResponse = z.infer<typeof AgentListResponseSchema>;
+export type HostListResponse = z.infer<typeof HostListResponseSchema>;

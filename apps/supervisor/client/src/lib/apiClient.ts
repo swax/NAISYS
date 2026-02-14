@@ -1,16 +1,16 @@
 import type {
   Agent,
+  AgentListResponse,
   AuthUser,
   ContextLogResponse,
   CreateAgentConfigResponse,
   GetAgentConfigResponse,
+  HostListResponse,
   LogEntry,
   LoginResponse,
   LogoutResponse,
   MailDataResponse,
   MailMessage,
-  NaisysDataRequest,
-  NaisysDataResponse,
   RunsDataResponse,
   RunSession,
   SendMailRequest,
@@ -24,17 +24,17 @@ const API_BASE = "/api/supervisor";
 
 export type {
   Agent,
+  AgentListResponse,
   AuthUser,
   ContextLogResponse,
   CreateAgentConfigResponse,
   GetAgentConfigResponse,
+  HostListResponse,
   LogEntry,
   LoginResponse,
   LogoutResponse,
   MailDataResponse,
   MailMessage,
-  NaisysDataRequest,
-  NaisysDataResponse,
   RunsDataResponse,
   RunSession,
   SendMailRequest,
@@ -100,8 +100,9 @@ export const apiEndpoints = {
   logout: "/auth/logout",
   me: "/auth/me",
   settings: "/settings",
-  agent: "/agent",
-  agentConfig: "/agent/config",
+  agents: "/agents",
+  hosts: "/hosts",
+  agentConfig: "/agents/config",
   sendMail: "/send-mail",
   runs: "/runs",
   contextLog: "/context-log",
@@ -161,14 +162,18 @@ export interface AgentDataParams {
 
 export const getAgentData = async (
   params?: AgentDataParams,
-): Promise<NaisysDataResponse> => {
+): Promise<AgentListResponse> => {
   if (params?.updatedSince) {
     const queryParams = new URLSearchParams();
     queryParams.append("updatedSince", params.updatedSince);
-    const url = `${apiEndpoints.agent}?${queryParams.toString()}`;
-    return await api.get<NaisysDataResponse>(url);
+    const url = `${apiEndpoints.agents}?${queryParams.toString()}`;
+    return await api.get<AgentListResponse>(url);
   }
-  return await api.get<NaisysDataResponse>(apiEndpoints.agent);
+  return await api.get<AgentListResponse>(apiEndpoints.agents);
+};
+
+export const getHostData = async (): Promise<HostListResponse> => {
+  return await api.get<HostListResponse>(apiEndpoints.hosts);
 };
 
 export const sendMail = async (
