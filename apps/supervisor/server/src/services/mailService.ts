@@ -9,6 +9,7 @@ import { usingNaisysDb } from "../database/naisysDatabase.js";
 import { getLogger } from "../logger.js";
 import { cachedForSeconds } from "../utils/cache.js";
 import { getAgents } from "./agentService.js";
+import { sendMailViaHub } from "./hubConnectionService.js";
 
 /**
  * Get mail data for a specific agent by userId, optionally filtering by updatedSince
@@ -112,7 +113,7 @@ export const getMailDataByUserId = cachedForSeconds(
 );
 
 /**
- * Send a message using the new flat message model
+ * Send a message via the hub
  */
 export async function sendMessage(
   request: SendMailRequest,
@@ -123,10 +124,8 @@ export async function sendMessage(
     // Clean message (handle escaped newlines)
     let cleanMessage = message.replace(/\\n/g, "\n");
 
-    // Get all agents to validate users
+    // Get all agents to validate the 'from' user exists
     const agents = await getAgents();
-
-    // 1. Validate the 'from' user exists
     const fromUser = agents.find((agent) => agent.name === from);
     if (!fromUser) {
       return {
@@ -135,54 +134,22 @@ export async function sendMessage(
       };
     }
 
-    // 2. Validate the 'to' user exists
-    const toUser = agents.find((agent) => agent.name === to);
-    if (!toUser) {
-      return {
-        success: false,
-        message: `Error: User ${to} not found`,
-      };
-    }
-
-    const messageId = await usingNaisysDb(async (prisma) => {
-      // Create the message
-      const msg = await prisma.mail_messages.create({
-        data: {
-          from_user_id: fromUser.id,
-          subject,
-          body: cleanMessage,
-          created_at: new Date(),
-        },
-      });
-
-      // Create recipient entry
-      await prisma.mail_recipients.create({
-        data: {
-          message_id: msg.id,
-          user_id: toUser.id,
-          type: "to",
-          created_at: new Date(),
-        },
-      });
-
-      return msg.id;
-    });
-
-    // 5. Handle attachments if any
+    // Save attachments and append info to message body
     if (attachments && attachments.length > 0) {
       const naisysFolderPath = process.env.NAISYS_FOLDER;
       if (!naisysFolderPath) {
         throw new Error("NAISYS_FOLDER environment variable not set");
       }
 
+      // Use a timestamp-based folder since we don't have a message ID yet
+      const attachmentId = Date.now();
       const attachmentsDir = path.join(
         naisysFolderPath,
         "attachments",
-        String(messageId),
+        String(attachmentId),
       );
-      await saveAttachments(messageId, attachments);
+      await saveAttachments(attachmentsDir, attachments);
 
-      // Create detailed attachment info
       const attachmentDetails = attachments
         .map((att) => {
           const sizeKB = (att.data.length / 1024).toFixed(1);
@@ -191,22 +158,27 @@ export async function sendMessage(
         .join(", ");
 
       const attachmentCount = attachments.length;
-      const updatedMessage = `${cleanMessage}\n\n${attachmentCount} attached file${attachmentCount > 1 ? "s" : ""}, located in ${attachmentsDir}\nFilenames: ${attachmentDetails}`;
-
-      // Update the message with attachment info
-      await usingNaisysDb(async (prisma) => {
-        await prisma.mail_messages.update({
-          where: { id: messageId },
-          data: { body: updatedMessage },
-        });
-      });
+      cleanMessage = `${cleanMessage}\n\n${attachmentCount} attached file${attachmentCount > 1 ? "s" : ""}, located in ${attachmentsDir}\nFilenames: ${attachmentDetails}`;
     }
 
-    return {
-      success: true,
-      message: "Message sent successfully",
-      messageId,
-    };
+    const response = await sendMailViaHub(
+      fromUser.id,
+      [to],
+      subject,
+      cleanMessage,
+    );
+
+    if (response.success) {
+      return {
+        success: true,
+        message: "Message sent successfully",
+      };
+    } else {
+      return {
+        success: false,
+        message: response.error || "Failed to send message",
+      };
+    }
   } catch (error) {
     getLogger().error(error, "Error sending message");
     return {
@@ -218,24 +190,11 @@ export async function sendMessage(
 }
 
 async function saveAttachments(
-  messageId: number,
+  attachmentsDir: string,
   attachments: Array<{ filename: string; data: Buffer }>,
 ) {
-  const naisysFolderPath = process.env.NAISYS_FOLDER;
-  if (!naisysFolderPath) {
-    throw new Error("NAISYS_FOLDER environment variable not set");
-  }
-
-  const attachmentsDir = path.join(
-    naisysFolderPath,
-    "attachments",
-    String(messageId),
-  );
-
-  // Create the directory
   await fs.mkdir(attachmentsDir, { recursive: true });
 
-  // Save each attachment
   for (const attachment of attachments) {
     const filePath = path.join(attachmentsDir, attachment.filename);
     await fs.writeFile(filePath, attachment.data);

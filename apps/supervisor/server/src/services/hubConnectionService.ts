@@ -5,6 +5,7 @@ import {
   AgentStopResponse,
   HeartbeatStatusSchema,
   HubEvents,
+  MailSendResponse,
 } from "@naisys/hub-protocol";
 import type { AgentStatusEvent } from "@naisys-supervisor/shared";
 
@@ -152,6 +153,28 @@ export function onAgentStatusUpdate(
   return () => {
     statusEmitter.off("agentStatusUpdate", listener);
   };
+}
+
+export function sendMailViaHub(
+  fromUserId: number,
+  toUsernames: string[],
+  subject: string,
+  body: string,
+): Promise<MailSendResponse> {
+  return new Promise((resolve, reject) => {
+    if (!socket || !connected) {
+      reject(new Error("Not connected to hub"));
+      return;
+    }
+
+    socket.emit(
+      HubEvents.MAIL_SEND,
+      { fromUserId, toUsernames, subject, body },
+      (response: MailSendResponse) => {
+        resolve(response);
+      },
+    );
+  });
 }
 
 export function sendAgentStop(

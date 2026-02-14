@@ -19,7 +19,7 @@ export default async function statusRoutes(
     {
       schema: {
         description: "Get server status including hub connection",
-        tags: ["General"],
+        tags: ["Status"],
         response: {
           200: StatusResponseSchema,
           401: ErrorResponseSchema,

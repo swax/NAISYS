@@ -73,7 +73,7 @@ export default async function mailRoutes(
             }
           }
         } else {
-          // Handle JSON request (backward compatibility)
+          // Handle JSON request
           const body = request.body as SendMailRequest;
           from = body.from;
           to = body.to;

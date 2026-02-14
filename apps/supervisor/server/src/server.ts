@@ -168,11 +168,11 @@ export const startServer: StartServer = async (startupType, plugins = [], hubPor
       ...spec,
       paths: filteredPaths,
       "x-tagGroups": [
-        { name: "General", tags: ["Authentication", "Settings"] },
-        { name: "Users", tags: ["Users"] },
-        { name: "Discovery", tags: ["Discovery"] },
-        { name: "Agents", tags: ["Agents", "Runs", "Mail"] },
-        { name: "Hosts", tags: ["Hosts"] },
+        {
+          name: "General",
+          tags: ["Discovery", "Authentication", "Users", "Settings", "Status"],
+        },
+        { name: "Agents", tags: ["Agents", "Runs", "Mail", "Hosts"] },
       ],
     };
   });
