@@ -11,13 +11,13 @@ export const HostSidebar: React.FC = () => {
   const location = useLocation();
   const { hosts, isLoading } = useHostDataContext();
 
-  const isHostSelected = (hostName: string) => {
+  const isHostSelected = (hostId: number) => {
     const pathParts = location.pathname.split("/");
-    // Path: /hosts/:hostName
-    return pathParts[2] === hostName;
+    // Path: /hosts/:id
+    return pathParts[2] === String(hostId);
   };
 
-  const getHostUrl = (host: Host) => `/hosts/${host.name}`;
+  const getHostUrl = (host: Host) => `/hosts/${host.id}`;
 
   const getHostAbsoluteUrl = (host: Host) =>
     `${ROUTER_BASENAME}${getHostUrl(host)}`;
@@ -52,7 +52,7 @@ export const HostSidebar: React.FC = () => {
             onClick={(e) => handleHostClick(e, host)}
             style={{
               cursor: "pointer",
-              backgroundColor: isHostSelected(host.name)
+              backgroundColor: isHostSelected(host.id)
                 ? "var(--mantine-color-blue-9)"
                 : undefined,
               textDecoration: "none",

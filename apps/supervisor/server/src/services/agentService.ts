@@ -120,6 +120,7 @@ export const getHosts = cachedForSeconds(1, async (): Promise<Host[]> => {
     const hosts = await usingNaisysDb(async (prisma) => {
       return prisma.hosts.findMany({
         select: {
+          id: true,
           name: true,
           last_active: true,
           _count: {
@@ -130,6 +131,7 @@ export const getHosts = cachedForSeconds(1, async (): Promise<Host[]> => {
     });
 
     return hosts.map((host) => ({
+      id: host.id,
       name: host.name,
       lastActive: host.last_active?.toISOString() ?? null,
       agentCount: host._count.user_hosts,

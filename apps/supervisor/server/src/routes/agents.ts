@@ -38,6 +38,7 @@ import {
   UpdateAgentConfigResponseSchema,
 } from "@naisys-supervisor/shared";
 import { FastifyInstance, FastifyPluginOptions } from "fastify";
+import { requirePermission } from "../auth-middleware.js";
 import { collectionLink, selfLink } from "../hateoas.js";
 import {
   createAgentConfig,
@@ -109,6 +110,7 @@ export default async function agentsRoutes(
   }>(
     "/",
     {
+      preHandler: [requirePermission("manage_agents")],
       schema: {
         description: "Create a new agent with YAML configuration file",
         tags: ["Agents"],
@@ -211,6 +213,7 @@ export default async function agentsRoutes(
   }>(
     "/:id/config",
     {
+      preHandler: [requirePermission("manage_agents")],
       schema: {
         description: "Update agent configuration YAML",
         tags: ["Agents"],
@@ -388,6 +391,7 @@ export default async function agentsRoutes(
   }>(
     "/:id/mail",
     {
+      preHandler: [requirePermission("manage_agents")],
       schema: {
         description:
           "Send email as agent with optional attachments. Supports JSON and multipart/form-data",

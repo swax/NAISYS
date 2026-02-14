@@ -20,10 +20,15 @@ export const AgentSchema = z.object({
 });
 
 export const HostSchema = z.object({
+  id: z.number(),
   name: z.string(),
   lastActive: z.string().nullable(),
   agentCount: z.number(),
   _links: z.array(LinkSchema).optional(),
+});
+
+export const HostIdParamsSchema = z.object({
+  id: z.coerce.number(),
 });
 
 export const AgentListRequestSchema = z.object({
@@ -66,4 +71,5 @@ export type AgentListRequest = z.infer<typeof AgentListRequestSchema>;
 export type AgentListResponse = z.infer<typeof AgentListResponseSchema>;
 export type AgentIdParams = z.infer<typeof AgentIdParamsSchema>;
 export type AgentDetailResponse = z.infer<typeof AgentDetailResponseSchema>;
+export type HostIdParams = z.infer<typeof HostIdParamsSchema>;
 export type HostListResponse = z.infer<typeof HostListResponseSchema>;

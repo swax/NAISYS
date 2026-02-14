@@ -5,15 +5,16 @@ import { useAgentDataContext } from "../contexts/AgentDataContext";
 import { useHostDataContext } from "../contexts/HostDataContext";
 
 export const HostPage: React.FC = () => {
-  const { hostName } = useParams<{ hostName: string }>();
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { agents } = useAgentDataContext();
   const { hosts } = useHostDataContext();
 
-  const host = hosts.find((h) => h.name === hostName);
-  const hostAgents = agents.filter((a) => a.host === hostName);
+  const hostId = id ? Number(id) : null;
+  const host = hosts.find((h) => h.id === hostId);
+  const hostAgents = agents.filter((a) => a.host === host?.name);
 
-  if (!hostName) {
+  if (!hostId) {
     return (
       <Stack gap="md">
         <Text c="dimmed" ta="center">
@@ -26,7 +27,7 @@ export const HostPage: React.FC = () => {
   return (
     <Stack gap="md">
       <Title order={2}>
-        {hostName} is{" "}
+        {host?.name ?? `Host ${hostId}`} is{" "}
         <Text component="span" c={host?.online ? "green" : "gray"} inherit>
           {host?.online ? "online" : "offline"}
         </Text>

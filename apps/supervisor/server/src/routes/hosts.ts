@@ -32,7 +32,7 @@ export default async function hostsRoutes(
 
         const items = hosts.map((host) => ({
           ...host,
-          _links: [selfLink(`/hosts/${host.name}`)],
+          _links: [selfLink(`/hosts/${host.id}`)],
         }));
 
         return {

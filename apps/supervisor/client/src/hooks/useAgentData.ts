@@ -23,11 +23,10 @@ export const useAgentData = () => {
     queryKey: ["agent-data"],
     queryFn,
     enabled: true,
-    refetchInterval: 5000, // Poll every 5 seconds
+    refetchInterval: 5000,
     refetchIntervalInBackground: false,
     refetchOnWindowFocus: true,
-    retry: 3,
-    retryDelay: 1000,
+    retry: false,
   });
 
   // Merge new data when it arrives
