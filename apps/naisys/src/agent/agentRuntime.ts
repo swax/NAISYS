@@ -244,11 +244,8 @@ export async function createAgentRuntime(
     output,
     subagentService,
     runCommandLoop: () => commandLoop.run(abortController.signal),
-    requestShutdown: async (reason: string) => {
+    requestShutdown: (reason: string) => {
       abortController.abort(reason);
-
-      // Wait a bit for graceful shutdown
-      await new Promise((resolve) => setTimeout(resolve, 5000));
     },
     completeShutdown: (reason: string) => {
       costTracker.cleanup();

@@ -4,11 +4,7 @@ export interface IAgentManager {
     userId: number,
     onStop?: (reason: string) => void,
   ) => Promise<number>;
-  stopAgent: (
-    agentUserId: number,
-    mode: "requestShutdown" | "completeShutdown",
-    reason: string,
-  ) => Promise<void>;
+  stopAgent: (agentUserId: number, reason: string) => Promise<void>;
   runningAgents: Array<{
     agentUserId: number;
     agentUsername: string;

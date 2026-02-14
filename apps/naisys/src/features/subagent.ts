@@ -312,7 +312,7 @@ export function createSubagentService(
       }
     } else {
       // Non-hub mode: stop agent locally
-      void agentManager.stopAgent(userId, "requestShutdown", reason);
+      void agentManager.stopAgent(userId, reason);
     }
 
     return `Agent '${agentName}' stop requested`;

@@ -16,7 +16,7 @@ import { UserService } from "./userService.js";
 /** Handles the multiplexing of multiple concurrent agents in the process */
 export class AgentManager {
   runningAgents: AgentRuntime[] = [];
-  runLoops: Promise<void>[] = [];
+  private runPromises = new Map<number, Promise<void>>();
   onHeartbeatNeeded?: () => void;
 
   constructor(
@@ -65,11 +65,7 @@ export class AgentManager {
               this.notifyHubRequest("stop", parsed.userId);
             }
 
-            await this.stopAgent(
-              parsed.userId,
-              "requestShutdown",
-              parsed.reason,
-            );
+            await this.stopAgent(parsed.userId, parsed.reason);
 
             ack({ success: true });
           } catch (error) {
@@ -117,45 +113,45 @@ export class AgentManager {
       this.setActiveConsoleAgent(agent.agentUserId);
     }
 
-    let stopReason = "";
-
-    agent
+    const runPromise = agent
       .runCommandLoop()
-      .then(() => {
-        stopReason = "completed";
-      })
-      .catch((ex: any) => {
-        stopReason = `error: ${ex}`;
-      })
-      .finally(async () => {
-        // Notify subagent manager that this agent has stopped
+      .then(() => "completed")
+      .catch((ex: any) => `error: ${ex}`)
+      .then((stopReason) => {
         onStop?.(stopReason);
-
-        await this.stopAgent(
-          agent.agentUserId,
-          "completeShutdown",
-          `${agent.agentUsername} shutdown`,
-        );
+        this.cleanupAgent(agent, stopReason);
       });
+
+    this.runPromises.set(userId, runPromise);
 
     return agent.agentUserId;
   }
 
-  async stopAgent(
-    agentUserId: number,
-    stage: "completeShutdown" | "requestShutdown",
-    reason: string,
-  ) {
+  async stopAgent(agentUserId: number, reason: string) {
     const agent = this.runningAgents.find((a) => a.agentUserId === agentUserId);
 
     if (!agent) {
-      if (stage == "requestShutdown") {
-        throw new Error(`Agent with user ID ${agentUserId} not found`);
-      }
-      // Else the function was probably called from the finally block above triggered by the shutdown below
-      return;
+      throw new Error(`Agent with user ID ${agentUserId} not found`);
     }
 
+    // Signal the command loop to exit
+    agent.requestShutdown(reason);
+
+    // Wake the agent if it's blocked waiting for input (debug prompt timeout, etc.)
+    this.promptNotification.notify({
+      wake: true,
+      userId: agentUserId,
+      commentOutput: [],
+    });
+
+    // Wait for the command loop to actually finish and cleanup to complete
+    const runPromise = this.runPromises.get(agentUserId);
+    if (runPromise) {
+      await runPromise;
+    }
+  }
+
+  private cleanupAgent(agent: AgentRuntime, reason: string) {
     if (agent.output.isConsoleEnabled()) {
       const switchToAgent = this.runningAgents.find((a) => a !== agent);
 
@@ -164,28 +160,14 @@ export class AgentManager {
       }
     }
 
-    if (stage == "requestShutdown") {
-      // Use abort controller to gracefully stop the agent, whcih should trigger the finally block above
-      await agent.requestShutdown(reason);
-    }
-
-    if (stage == "completeShutdown") {
-      const agentIndex = this.runningAgents.findIndex((a) => a === agent);
+    const agentIndex = this.runningAgents.findIndex((a) => a === agent);
+    if (agentIndex >= 0) {
       this.runningAgents.splice(agentIndex, 1);
-      this.onHeartbeatNeeded?.();
-
-      agent.completeShutdown(reason);
-    }
-  }
-
-  async stopAgentByUserId(userId: number, reason: string) {
-    // Find the running agent by userId
-    const agent = this.runningAgents.find((a) => a.agentUserId === userId);
-    if (!agent) {
-      throw new Error(`Agent with user ID '${userId}' is not running`);
     }
 
-    await this.stopAgent(agent.agentUserId, "requestShutdown", reason);
+    this.onHeartbeatNeeded?.();
+    agent.completeShutdown(reason);
+    this.runPromises.delete(agent.agentUserId);
   }
 
   setActiveConsoleAgent(userId: number) {
