@@ -134,6 +134,56 @@ webEnabled: true
 }
 
 /**
+ * Resolve a user by ID.
+ */
+async function resolveUserById(
+  id: number,
+): Promise<{ id: number; agent_path: string }> {
+  return await usingNaisysDb(async (prisma) => {
+    const user = await prisma.users.findUnique({
+      where: { id },
+      select: { id: true, agent_path: true },
+    });
+
+    if (!user) {
+      throw new Error(`User with ID ${id} not found`);
+    }
+
+    return user;
+  });
+}
+
+/**
+ * Update agent configuration YAML content by user ID
+ */
+export async function updateAgentConfigById(
+  id: number,
+  config: string,
+): Promise<void> {
+  const user = await resolveUserById(id);
+
+  // Write the agent config file
+  try {
+    await fs.writeFile(user.agent_path, config, "utf-8");
+  } catch (error) {
+    throw new Error(
+      `Failed to write agent configuration file at ${user.agent_path}`,
+    );
+  }
+
+  // Update the config in the database
+  await usingNaisysDb(async (prisma) => {
+    await prisma.users.update({
+      where: { id: user.id },
+      data: { config },
+    });
+  });
+
+  // Update user notification modified date
+  await updateUserNotificationModifiedDate(user.id);
+}
+
+/**
  * Update agent configuration YAML content for a specific user
  */
 export async function updateAgentConfig(

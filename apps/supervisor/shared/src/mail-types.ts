@@ -39,7 +39,6 @@ export const SendMailResponseSchema = z.object({
 });
 
 export const MailDataRequestSchema = z.object({
-  agentName: z.string(),
   updatedSince: z.string().optional(),
   page: z.coerce.number().optional().default(1),
   count: z.coerce.number().optional().default(50),

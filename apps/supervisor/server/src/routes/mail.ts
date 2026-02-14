@@ -1,59 +1,18 @@
 import { MultipartFile } from "@fastify/multipart";
 import {
   ErrorResponseSchema,
-  MailDataRequest,
-  MailDataRequestSchema,
-  MailDataResponse,
-  MailDataResponseSchema,
   SendMailRequest,
   SendMailRequestSchema,
   SendMailResponse,
   SendMailResponseSchema,
 } from "@naisys-supervisor/shared";
 import { FastifyInstance, FastifyPluginOptions } from "fastify";
-import { getMailData, sendMessage } from "../services/mailService.js";
+import { sendMessage } from "../services/mailService.js";
 
 export default async function mailRoutes(
   fastify: FastifyInstance,
   _options: FastifyPluginOptions,
 ) {
-  fastify.get<{
-    Querystring: MailDataRequest;
-    Reply: MailDataResponse;
-  }>(
-    "/mail",
-    {
-      schema: {
-        description: "Get mail data for a specific agent",
-        tags: ["Mail"],
-        querystring: MailDataRequestSchema,
-        response: {
-          200: MailDataResponseSchema,
-          500: ErrorResponseSchema,
-        },
-      },
-    },
-    async (request, reply) => {
-      try {
-        const { agentName, updatedSince, page, count } = request.query;
-
-        const data = await getMailData(agentName, updatedSince, page, count);
-
-        return {
-          success: true,
-          message: "Mail data retrieved successfully",
-          data,
-        };
-      } catch (error) {
-        request.log.error(error, "Error in /mail route");
-        return reply.status(500).send({
-          success: false,
-          message: "Internal server error while fetching mail data",
-        });
-      }
-    },
-  );
-
   fastify.post<{ Reply: SendMailResponse }>(
     "/send-mail",
     {

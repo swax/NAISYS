@@ -21,15 +21,15 @@ import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useAgentDataContext } from "../contexts/AgentDataContext";
 import { useSession } from "../contexts/SessionContext";
-import { getAgentConfig, updateAgentConfig } from "../lib/apiClient";
+import { getAgentDetail, updateAgentConfig } from "../lib/apiClient";
 
 export const Controls: React.FC = () => {
-  const { agent } = useParams<{ agent: string }>();
+  const { id } = useParams<{ id: string }>();
   const { isAuthenticated } = useSession();
   const { agents } = useAgentDataContext();
 
-  // Find the agent to get host info
-  const agentData = agents.find((a) => a.name === agent);
+  const agentId = id ? Number(id) : null;
+  const agentData = agents.find((a) => a.id === agentId);
   const [config, setConfig] = useState<string | null>(null);
   const [configPath, setConfigPath] = useState<string | null>(null);
   const [editedConfig, setEditedConfig] = useState<string>("");
@@ -40,21 +40,17 @@ export const Controls: React.FC = () => {
   const [saveError, setSaveError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!agent || !agentData) {
+    if (!agentId) {
       setLoading(false);
       return;
     }
 
     const fetchConfig = async () => {
       try {
-        const data = await getAgentConfig(agent, agentData.host);
+        const data = await getAgentDetail(agentId);
 
-        if (data.success && data.config) {
-          setConfig(data.config);
-          setConfigPath(data.path || null);
-        } else {
-          setError(data.message || "Failed to load configuration");
-        }
+        setConfig(data.config);
+        setConfigPath(data.configPath || null);
       } catch (err) {
         console.error("Error fetching agent config:", err);
         setError("An error occurred while loading the configuration");
@@ -64,7 +60,7 @@ export const Controls: React.FC = () => {
     };
 
     fetchConfig();
-  }, [agent, agentData]);
+  }, [agentId]);
 
   const handleEdit = () => {
     if (config) {
@@ -81,13 +77,13 @@ export const Controls: React.FC = () => {
   };
 
   const handleSave = async () => {
-    if (!agent || !agentData) return;
+    if (!agentId) return;
 
     setSaving(true);
     setSaveError(null);
 
     try {
-      const data = await updateAgentConfig(agent, editedConfig, agentData.host);
+      const data = await updateAgentConfig(agentId, editedConfig);
 
       if (data.success) {
         setConfig(editedConfig);
@@ -104,7 +100,7 @@ export const Controls: React.FC = () => {
     }
   };
 
-  if (!agent) {
+  if (!agentId) {
     return <Text size="xl">Controls</Text>;
   }
 
@@ -120,7 +116,7 @@ export const Controls: React.FC = () => {
   if (error) {
     return (
       <Stack p="md">
-        <Text size="xl">Controls for {agent}</Text>
+        <Text size="xl">Controls for {agentData?.name || `Agent ${agentId}`}</Text>
         <Alert color="red" title="Error">
           {error}
         </Alert>
@@ -195,7 +191,7 @@ export const Controls: React.FC = () => {
 
       {configPath && (
         <Text size="sm" c="dimmed">
-          {agent}@{agentData?.host}:{configPath}
+          {agentData?.name}@{agentData?.host}:{configPath}
         </Text>
       )}
 

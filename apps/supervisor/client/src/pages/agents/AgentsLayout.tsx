@@ -2,7 +2,7 @@ import { ActionIcon, Box, Drawer, Group } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import { IconRobot } from "@tabler/icons-react";
 import React from "react";
-import { Outlet, useLocation, useSearchParams } from "react-router-dom";
+import { Outlet, useLocation, useParams, useSearchParams } from "react-router-dom";
 import { AgentNavHeader } from "../../headers/AgentNavHeader";
 import { AgentSidebar } from "../../headers/AgentSidebar";
 
@@ -13,22 +13,18 @@ export const AgentsLayout: React.FC = () => {
     useDisclosure();
   const location = useLocation();
   const [searchParams] = useSearchParams();
+  const { id } = useParams<{ id: string }>();
 
   // Close drawer on navigation
   React.useEffect(() => {
     closeDrawer();
   }, [location.pathname]);
 
-  // Extract current agent name from URL
-  // Path is /agents/controls/agentName
-  const currentAgentName = React.useMemo(() => {
-    const pathParts = location.pathname.split("/");
-    return pathParts[3] || null;
-  }, [location.pathname]);
+  const agentId = id ? Number(id) : null;
 
   // Key for remounting on agent/expand change
   const expandParam = searchParams.get("expand");
-  const key = `${currentAgentName || "no-agent"}-${expandParam || ""}`;
+  const key = `${agentId || "no-agent"}-${expandParam || ""}`;
 
   return (
     <div
@@ -69,7 +65,7 @@ export const AgentsLayout: React.FC = () => {
           >
             <IconRobot size="1.2rem" />
           </ActionIcon>
-          <AgentNavHeader agentName={currentAgentName || undefined} />
+          <AgentNavHeader agentId={agentId || undefined} />
         </Group>
 
         {/* Route content */}

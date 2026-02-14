@@ -18,8 +18,9 @@ export const RunSessionCard: React.FC<{
 }> = ({ run, freshData, isSelected, onSelect }) => {
   const [expanded, setExpanded] = useState(false);
   const runSessionCardRef = useRef<HTMLDivElement>(null);
-  const { agent: agentParam } = useParams<{ agent: string }>();
-  const { readStatus } = useAgentDataContext();
+  const { id: agentIdParam } = useParams<{ id: string }>();
+  const { agents, readStatus } = useAgentDataContext();
+  const agentName = agents.find((a) => a.id === Number(agentIdParam))?.name;
   const [searchParams] = useSearchParams();
   const [initialLoad, setInitialLoad] = useState(true);
 
@@ -102,10 +103,10 @@ export const RunSessionCard: React.FC<{
   };
 
   const hasUnreadLogs = () => {
-    if (!agentParam) {
+    if (!agentName) {
       return false;
     }
-    const agentReadStatus = readStatus[agentParam];
+    const agentReadStatus = readStatus[agentName];
     if (!agentReadStatus) {
       return false;
     }
