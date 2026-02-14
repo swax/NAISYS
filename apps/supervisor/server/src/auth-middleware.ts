@@ -1,9 +1,8 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { AuthCache } from "@naisys/common";
-import { findHubSession, isHubAvailable } from "@naisys/database";
+import { findHubSession } from "@naisys/database";
 import {
   createUser,
-  getUserByTokenHash,
   getUserByUuid,
   hashToken,
 } from "./services/userService.js";
@@ -64,15 +63,14 @@ export function registerAuthMiddleware(fastify: FastifyInstance) {
       if (cached !== undefined) {
         // Cache hit (valid or negative)
         if (cached) request.supervisorUser = cached;
-      } else if (isHubAvailable()) {
-        // SSO mode: hub is source of truth
+      } else {
+        // Hub is source of truth for sessions
         const hubSession = await findHubSession(tokenHash);
         if (hubSession) {
           let localUser = await getUserByUuid(hubSession.uuid);
           if (!localUser) {
             localUser = await createUser(
               hubSession.username,
-              hubSession.password_hash,
               hubSession.uuid,
             );
           }
@@ -82,19 +80,6 @@ export function registerAuthMiddleware(fastify: FastifyInstance) {
           );
           authCache.set(cacheKey, user);
           request.supervisorUser = user;
-        } else {
-          authCache.set(cacheKey, null);
-        }
-      } else {
-        // Standalone mode: local session only
-        const user = await getUserByTokenHash(tokenHash);
-        if (user) {
-          const supervisorUser = await buildSupervisorUser(
-            user.id,
-            user.username,
-          );
-          authCache.set(cacheKey, supervisorUser);
-          request.supervisorUser = supervisorUser;
         } else {
           authCache.set(cacheKey, null);
         }

@@ -18,6 +18,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import {
   initHubSessions,
+  isHubAvailable,
   ensureAdminUser,
   resetPassword,
   deployPrismaMigrations,
@@ -29,7 +30,6 @@ import apiRoutes from "./routes/api.js";
 import {
   createUser,
   grantInitialAdminPermissions,
-  updateLocalPasswordHash,
   getUserByUsername,
 } from "./services/userService.js";
 import "./schema-registry.js";
@@ -54,10 +54,16 @@ export const startServer: StartServer = async (startupType, plugins = []) => {
   });
 
   initHubSessions();
+
+  if (!isHubAvailable()) {
+    console.error("[Supervisor] Hub database not found. Cannot start without it.");
+    process.exit(1);
+  }
+
   await ensureAdminUser(
     () => prisma.user.count(),
-    async (username, passwordHash, uuid) => {
-      const user = await createUser(username, passwordHash, uuid);
+    async (username, _passwordHash, uuid) => {
+      const user = await createUser(username, uuid);
       await grantInitialAdminPermissions(user.id);
     },
   );
@@ -249,12 +255,17 @@ async function handleResetPassword() {
 
   initHubSessions();
 
+  if (!isHubAvailable()) {
+    console.error("[Supervisor] Hub database not found.");
+    process.exit(1);
+  }
+
   await resetPassword(
     async (username) => {
       const user = await getUserByUsername(username);
       return user ? { id: user.id, username: user.username, uuid: user.uuid } : null;
     },
-    updateLocalPasswordHash,
+    async () => {}, // Password is stored in hub only
   );
 }
 

@@ -20,11 +20,8 @@ enum Permission {
 model User {
   id               Int              @id @default(autoincrement())
   username         String           @unique
-  passwordHash     String           @map("password_hash")
   uuid             String           @default("")
   authType         AuthType         @default(password) @map("auth_type")
-  sessionTokenHash String?          @map("session_token_hash")
-  sessionExpiresAt DateTime?        @map("session_expires_at")
   createdAt        DateTime         @default(now()) @map("created_at")
   updatedAt        DateTime         @updatedAt @map("updated_at")
   permissions      UserPermission[] @relation("UserPermissions")
