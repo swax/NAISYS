@@ -1,5 +1,5 @@
 import { Group, Indicator, Tabs } from "@mantine/core";
-import { IconHistory, IconInfoCircle, IconMail } from "@tabler/icons-react";
+import { IconHistory, IconInfoCircle, IconMail, IconSettings } from "@tabler/icons-react";
 import React from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { ROUTER_BASENAME } from "../constants";
@@ -75,6 +75,16 @@ export const AgentNavHeader: React.FC<AgentNavHeaderProps> = ({
             onClick={(e: React.MouseEvent) => handleTabClick(e, "detail")}
           >
             Detail
+          </Tabs.Tab>
+          <Tabs.Tab
+            value="config"
+            leftSection={<IconSettings size="1rem" />}
+            component="a"
+            // @ts-expect-error - Mantine Tabs.Tab doesn't properly type component prop with href
+            href={getAbsoluteUrl("config")}
+            onClick={(e: React.MouseEvent) => handleTabClick(e, "config")}
+          >
+            Config
           </Tabs.Tab>
           <Indicator
             disabled={!hasUnreadLogs}
