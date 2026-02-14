@@ -3,13 +3,13 @@ import { IconServer } from "@tabler/icons-react";
 import React from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { ROUTER_BASENAME } from "../constants";
-import { useAgentDataContext } from "../contexts/AgentDataContext";
+import { useHostDataContext } from "../contexts/HostDataContext";
 import { Host } from "../types/agent";
 
 export const HostSidebar: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { hosts, isLoading } = useAgentDataContext();
+  const { hosts, isLoading } = useHostDataContext();
 
   const isHostSelected = (hostName: string) => {
     const pathParts = location.pathname.split("/");

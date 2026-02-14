@@ -24,12 +24,12 @@ export default async function agentConfigRoutes(
   fastify: FastifyInstance,
   _options: FastifyPluginOptions,
 ) {
-  // GET /agent/config - Get agent configuration
+  // GET /config - Get agent configuration
   fastify.get<{
     Querystring: GetAgentConfigRequest;
     Reply: GetAgentConfigResponse;
   }>(
-    "/agent/config",
+    "/config",
     {
       schema: {
         description: "Get agent configuration YAML for a specific user",
@@ -73,12 +73,12 @@ export default async function agentConfigRoutes(
     },
   );
 
-  // POST /agent/config - Create new agent configuration
+  // POST /config - Create new agent configuration
   fastify.post<{
     Body: CreateAgentConfigRequest;
     Reply: CreateAgentConfigResponse;
   }>(
-    "/agent/config",
+    "/config",
     {
       schema: {
         description: "Create a new agent with YAML configuration file",
@@ -132,12 +132,12 @@ export default async function agentConfigRoutes(
     },
   );
 
-  // PUT /agent/config - Update agent configuration
+  // PUT /config - Update agent configuration
   fastify.put<{
     Body: UpdateAgentConfigRequest;
     Reply: UpdateAgentConfigResponse;
   }>(
-    "/agent/config",
+    "/config",
     {
       schema: {
         description: "Update agent configuration YAML for a specific user",

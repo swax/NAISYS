@@ -2,11 +2,13 @@ import { Badge, Stack, Table, Text, Title } from "@mantine/core";
 import React from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAgentDataContext } from "../contexts/AgentDataContext";
+import { useHostDataContext } from "../contexts/HostDataContext";
 
 export const HostPage: React.FC = () => {
   const { hostName } = useParams<{ hostName: string }>();
   const navigate = useNavigate();
-  const { agents, hosts } = useAgentDataContext();
+  const { agents } = useAgentDataContext();
+  const { hosts } = useHostDataContext();
 
   const host = hosts.find((h) => h.name === hostName);
   const hostAgents = agents.filter((a) => a.host === hostName);
