@@ -1,4 +1,3 @@
-import { isAgentOnline } from "@naisys/common";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { Host as BaseHost } from "@naisys-supervisor/shared";
@@ -28,10 +27,7 @@ export const useHostData = () => {
       const hostsWithOnline: Host[] = query.data.items.map(
         (host: BaseHost) => ({
           ...host,
-          online: isAgentOnline(
-            host.lastActive ?? undefined,
-            query.dataUpdatedAt,
-          ),
+          online: host.online ?? false,
         }),
       );
 

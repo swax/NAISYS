@@ -26,6 +26,7 @@ export const HostSchema = z.object({
   name: z.string(),
   lastActive: z.string().nullable(),
   agentCount: z.number(),
+  online: z.boolean().optional(),
   _links: z.array(LinkSchema).optional(),
 });
 

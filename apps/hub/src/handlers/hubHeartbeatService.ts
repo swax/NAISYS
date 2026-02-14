@@ -18,6 +18,26 @@ export function createHubHeartbeatService(
   // Track active agent user IDs per host from heartbeat data
   const hostActiveAgents = new Map<number, number[]>();
 
+  // Track per-agent notification IDs (latestLogId, latestMailId)
+  const agentNotifications = new Map<
+    number,
+    { latestLogId: number; latestMailId: number }
+  >();
+
+  /** Update a single notification field for an agent */
+  function updateAgentNotification(
+    userId: number,
+    field: "latestLogId" | "latestMailId",
+    value: number,
+  ) {
+    let entry = agentNotifications.get(userId);
+    if (!entry) {
+      entry = { latestLogId: 0, latestMailId: 0 };
+      agentNotifications.set(userId, entry);
+    }
+    entry[field] = value;
+  }
+
   // Handle heartbeat from NAISYS instances
   naisysServer.registerEvent(
     HubEvents.HEARTBEAT,
@@ -66,6 +86,7 @@ export function createHubHeartbeatService(
   function pushHeartbeatStatus() {
     const payload = {
       hostActiveAgents: Object.fromEntries(hostActiveAgents),
+      agentNotifications: Object.fromEntries(agentNotifications),
     };
 
     for (const connection of naisysServer.getConnectedClients()) {
@@ -156,6 +177,8 @@ export function createHubHeartbeatService(
     findHostsForAgent,
     addStartedAgent,
     removeStoppedAgent,
+    updateAgentNotification,
+    throttledPushHeartbeatStatus,
   };
 }
 

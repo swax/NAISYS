@@ -2,12 +2,14 @@ import { DatabaseService } from "@naisys/database";
 import { HubEvents, LogWriteRequestSchema } from "@naisys/hub-protocol";
 import { HubServerLog } from "../services/hubServerLog.js";
 import { NaisysServer } from "../services/naisysServer.js";
+import { HubHeartbeatService } from "./hubHeartbeatService.js";
 
 /** Handles log_write events from NAISYS instances (fire-and-forget) */
 export function createHubLogService(
   naisysServer: NaisysServer,
   dbService: DatabaseService,
   logService: HubServerLog,
+  heartbeatService: HubHeartbeatService,
 ) {
   naisysServer.registerEvent(
     HubEvents.LOG_WRITE,
@@ -59,8 +61,18 @@ export function createHubLogService(
                 last_active: now,
               },
             });
+
+            // Push notification ID update via heartbeat
+            heartbeatService.updateAgentNotification(
+              entry.userId,
+              "latestLogId",
+              log.id,
+            );
           }
         });
+
+        // Trigger throttled push after all entries processed
+        heartbeatService.throttledPushHeartbeatStatus();
       } catch (error) {
         logService.error(
           `[HubLogService] Error processing log_write from host ${hostId}: ${error}`,

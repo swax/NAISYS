@@ -105,12 +105,15 @@ export const api = {
   },
 };
 
+export const SSE_STREAM_URL = `${API_BASE}/status/stream`;
+
 export const apiEndpoints = {
   login: "/auth/login",
   logout: "/auth/logout",
   me: "/auth/me",
   settings: "/settings",
   status: "/status",
+  statusStream: "/status/stream",
   agents: "/agents",
   hosts: "/hosts",
   agentDetail: (id: number) => `/agents/${id}`,

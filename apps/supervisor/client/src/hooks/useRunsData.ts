@@ -1,4 +1,3 @@
-import { isAgentOnline } from "@naisys/common";
 import { useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useState } from "react";
 import { RunSession as BaseRunSession } from "@naisys-supervisor/shared";
@@ -71,7 +70,7 @@ export const useRunsData = (agentId: number, enabled: boolean = true) => {
       // Recalculate online status for all runs after merging
       const runsWithOnline: RunSession[] = mergedRuns.map((run) => ({
         ...run,
-        isOnline: isAgentOnline(run.lastActive, query.dataUpdatedAt),
+        isOnline: isRunActive(run.lastActive, query.dataUpdatedAt),
       }));
 
       // Sort and mark runs once when updating cache
@@ -110,6 +109,16 @@ export const useRunsData = (agentId: number, enabled: boolean = true) => {
     isFetchedAfterMount: query.isFetchedAfterMount,
   };
 };
+
+/** A run session is considered active if updated within the last 16 seconds */
+const RUN_ACTIVE_THRESHOLD_MS = 16_000;
+
+function isRunActive(lastActive?: string, referenceTime?: number): boolean {
+  if (!lastActive) return false;
+  const now = referenceTime ?? Date.now();
+  const diffInMs = now - new Date(lastActive).getTime();
+  return 0 < diffInMs && diffInMs < RUN_ACTIVE_THRESHOLD_MS;
+}
 
 function sortAndMarkRuns(runs: RunSession[]): RunSessionWithFlag[] {
   // Sort by last active (oldest first, latest at bottom)

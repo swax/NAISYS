@@ -7,6 +7,7 @@ import {
 import { FastifyInstance, FastifyPluginOptions } from "fastify";
 import { selfLink } from "../hateoas.js";
 import { getHosts } from "../services/agentService.js";
+import { isHostConnected } from "../services/hubConnectionService.js";
 
 export default async function hostsRoutes(
   fastify: FastifyInstance,
@@ -32,6 +33,7 @@ export default async function hostsRoutes(
 
         const items = hosts.map((host) => ({
           ...host,
+          online: isHostConnected(host.id),
           _links: [selfLink(`/hosts/${host.id}`)],
         }));
 

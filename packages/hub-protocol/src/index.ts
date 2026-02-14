@@ -125,9 +125,17 @@ export const HeartbeatSchema = z.object({
 });
 export type Heartbeat = z.infer<typeof HeartbeatSchema>;
 
+/** Per-agent notification IDs pushed from hub to connected clients */
+export const AgentNotificationSchema = z.object({
+  latestLogId: z.number(),
+  latestMailId: z.number(),
+});
+export type AgentNotification = z.infer<typeof AgentNotificationSchema>;
+
 /** Sent by hub to NAISYS instances with aggregate active user IDs */
 export const HeartbeatStatusSchema = z.object({
   hostActiveAgents: z.record(z.string(), z.array(z.number())),
+  agentNotifications: z.record(z.string(), AgentNotificationSchema).optional(),
 });
 export type HeartbeatStatus = z.infer<typeof HeartbeatStatusSchema>;
 
