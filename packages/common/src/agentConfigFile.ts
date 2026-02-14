@@ -1,5 +1,41 @@
 import { z } from "zod";
 
+export const LlmModelOptions = [
+  { value: "none", label: "None" },
+  { value: "mock", label: "Mock" },
+  { value: "local", label: "Local" },
+  // OpenRouter
+  { value: "llama3-405b", label: "Llama 3.1 405B" },
+  // Grok
+  { value: "grok4", label: "Grok 4" },
+  { value: "grok4fast", label: "Grok 4 Fast" },
+  // OpenAI
+  { value: "gpt5", label: "GPT 5.1" },
+  { value: "gpt5mini", label: "GPT 5 Mini" },
+  { value: "gpt5nano", label: "GPT 5 Nano" },
+  // Google
+  { value: "gemini3pro", label: "Gemini 3 Pro" },
+  { value: "gemini2.5pro", label: "Gemini 2.5 Pro" },
+  { value: "gemini2.5flash", label: "Gemini 2.5 Flash" },
+  { value: "gemini2.5flashlite", label: "Gemini 2.5 Flash Lite" },
+  // Anthropic
+  { value: "claude4opus", label: "Claude 4 Opus" },
+  { value: "claude4sonnet", label: "Claude 4 Sonnet" },
+  { value: "claude4haiku", label: "Claude 4 Haiku" },
+] as const;
+
+export type LlmModelKey = (typeof LlmModelOptions)[number]["value"];
+
+export const ImageModelOptions = [
+  { value: "dalle3-1024-HD", label: "DALL-E 3 1024 HD" },
+  { value: "dalle3-1024", label: "DALL-E 3 1024" },
+  { value: "dalle2-1024", label: "DALL-E 2 1024" },
+  { value: "dalle2-512", label: "DALL-E 2 512" },
+  { value: "dalle2-256", label: "DALL-E 2 256" },
+] as const;
+
+export type ImageModelKey = (typeof ImageModelOptions)[number]["value"];
+
 export enum CommandProtection {
   None = "none",
   Manual = "manual",

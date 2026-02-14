@@ -2,6 +2,8 @@ import {
   AgentConfigFile,
   AgentConfigFileSchema,
   CommandProtection,
+  ImageModelOptions,
+  LlmModelOptions,
 } from "@naisys/common";
 import {
   Button,
@@ -13,6 +15,7 @@ import {
   Text,
   TextInput,
   Textarea,
+
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { IconCheck, IconX } from "@tabler/icons-react";
@@ -187,29 +190,36 @@ export const AgentConfigForm: React.FC<AgentConfigFormProps> = ({
         <Text fw={600} size="sm" c="dimmed">
           Models
         </Text>
-        <TextInput
+        <Select
           label="Shell Model"
           description={desc("shellModel")}
           withAsterisk
           disabled={readOnly}
+          data={LlmModelOptions}
           {...form.getInputProps("shellModel")}
         />
-        <TextInput
+        <Select
           label="Web Model"
           description={desc("webModel")}
           disabled={readOnly}
+          clearable
+          data={LlmModelOptions}
           {...form.getInputProps("webModel")}
         />
-        <TextInput
+        <Select
           label="Compact Model"
           description={desc("compactModel")}
           disabled={readOnly}
+          clearable
+          data={LlmModelOptions}
           {...form.getInputProps("compactModel")}
         />
-        <TextInput
+        <Select
           label="Image Model"
           description={desc("imageModel")}
           disabled={readOnly}
+          clearable
+          data={ImageModelOptions}
           {...form.getInputProps("imageModel")}
         />
 
