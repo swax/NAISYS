@@ -2,17 +2,28 @@ import { Button, Code, Group, Loader, Stack, Text } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { hasAction, type HateoasAction } from "@naisys/common";
 import {
+  IconArchive,
+  IconArchiveOff,
   IconPlayerPause,
   IconPlayerPlay,
   IconPlayerStop,
+  IconTrash,
 } from "@tabler/icons-react";
 import React, { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { useAgentDataContext } from "../../contexts/AgentDataContext";
-import { getAgentDetail, startAgent, stopAgent } from "../../lib/apiAgents";
+import {
+  archiveAgent,
+  deleteAgentPermanently,
+  getAgentDetail,
+  startAgent,
+  stopAgent,
+  unarchiveAgent,
+} from "../../lib/apiAgents";
 
 export const AgentDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const { agents } = useAgentDataContext();
 
   const agentId = id ? Number(id) : null;
@@ -23,6 +34,8 @@ export const AgentDetail: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [starting, setStarting] = useState(false);
   const [stopping, setStopping] = useState(false);
+  const [archiving, setArchiving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const fetchDetail = async () => {
     if (!agentId) return;
@@ -118,6 +131,111 @@ export const AgentDetail: React.FC = () => {
     }
   };
 
+  const handleArchive = async () => {
+    if (!agentId) return;
+    const confirmed = window.confirm(
+      `Archive agent "${agentData?.name}"? It will be hidden from the main list but can still be edited.`,
+    );
+    if (!confirmed) return;
+
+    setArchiving(true);
+    try {
+      const result = await archiveAgent(agentId);
+      if (result.success) {
+        notifications.show({
+          title: "Agent Archived",
+          message: result.message,
+          color: "orange",
+        });
+        await fetchDetail();
+      } else {
+        notifications.show({
+          title: "Archive Failed",
+          message: result.message,
+          color: "red",
+        });
+      }
+    } catch (err) {
+      notifications.show({
+        title: "Archive Failed",
+        message: err instanceof Error ? err.message : "Unknown error",
+        color: "red",
+      });
+    } finally {
+      setArchiving(false);
+    }
+  };
+
+  const handleUnarchive = async () => {
+    if (!agentId) return;
+    setArchiving(true);
+    try {
+      const result = await unarchiveAgent(agentId);
+      if (result.success) {
+        notifications.show({
+          title: "Agent Unarchived",
+          message: result.message,
+          color: "teal",
+        });
+        await fetchDetail();
+      } else {
+        notifications.show({
+          title: "Unarchive Failed",
+          message: result.message,
+          color: "red",
+        });
+      }
+    } catch (err) {
+      notifications.show({
+        title: "Unarchive Failed",
+        message: err instanceof Error ? err.message : "Unknown error",
+        color: "red",
+      });
+    } finally {
+      setArchiving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!agentId) return;
+    const confirmed = window.confirm(
+      `Permanently delete agent "${agentData?.name}"? This will remove all associated data and cannot be undone.`,
+    );
+    if (!confirmed) return;
+
+    const doubleConfirmed = window.confirm(
+      `Are you absolutely sure? All runs, logs, costs, and mail records for "${agentData?.name}" will be permanently deleted.`,
+    );
+    if (!doubleConfirmed) return;
+
+    setDeleting(true);
+    try {
+      const result = await deleteAgentPermanently(agentId);
+      if (result.success) {
+        notifications.show({
+          title: "Agent Deleted",
+          message: result.message,
+          color: "red",
+        });
+        navigate("/agents");
+      } else {
+        notifications.show({
+          title: "Delete Failed",
+          message: result.message,
+          color: "red",
+        });
+      }
+    } catch (err) {
+      notifications.show({
+        title: "Delete Failed",
+        message: err instanceof Error ? err.message : "Unknown error",
+        color: "red",
+      });
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   if (!agentId) {
     return <Text size="xl">Agent Detail</Text>;
   }
@@ -160,6 +278,41 @@ export const AgentDetail: React.FC = () => {
         >
           Stop
         </Button>
+      </Group>
+
+      <Group>
+        <Text fw={500}>Lifecycle:</Text>
+        {hasAction(actions, "archive") && (
+          <Button
+            color="orange"
+            loading={archiving}
+            leftSection={<IconArchive size={16} />}
+            onClick={handleArchive}
+          >
+            Archive
+          </Button>
+        )}
+        {hasAction(actions, "unarchive") && (
+          <Button
+            color="teal"
+            loading={archiving}
+            leftSection={<IconArchiveOff size={16} />}
+            onClick={handleUnarchive}
+          >
+            Unarchive
+          </Button>
+        )}
+        {hasAction(actions, "delete") && (
+          <Button
+            color="red"
+            variant="outline"
+            loading={deleting}
+            leftSection={<IconTrash size={16} />}
+            onClick={handleDelete}
+          >
+            Delete
+          </Button>
+        )}
       </Group>
 
       {configPath && (

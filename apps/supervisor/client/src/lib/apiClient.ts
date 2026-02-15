@@ -1,6 +1,7 @@
 import type { AgentConfigFile } from "@naisys/common";
 import type {
   Agent,
+  AgentActionResult,
   AgentDetailResponse,
   AgentListResponse,
   AgentStartResult,
@@ -29,6 +30,7 @@ export const API_BASE = "/api/supervisor";
 
 export type {
   Agent,
+  AgentActionResult,
   AgentConfigFile,
   AgentDetailResponse,
   AgentListResponse,
@@ -124,5 +126,8 @@ export const apiEndpoints = {
     `/agents/${id}/runs/${runId}/sessions/${sessionId}/logs`,
   agentStart: (id: number) => `/agents/${id}/start`,
   agentStop: (id: number) => `/agents/${id}/stop`,
+  agentArchive: (id: number) => `/agents/${id}/archive`,
+  agentUnarchive: (id: number) => `/agents/${id}/unarchive`,
+  agentDelete: (id: number) => `/agents/${id}`,
   sendMail: "/send-mail",
 };

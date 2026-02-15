@@ -5,7 +5,7 @@ import { getLogger } from "../logger.js";
 import { cachedForSeconds } from "../utils/cache.js";
 
 export const getAgents = cachedForSeconds(
-  1,
+  0.25,
   async (updatedSince?: string): Promise<Agent[]> => {
     const agents: Agent[] = [];
 
@@ -16,6 +16,7 @@ export const getAgents = cachedForSeconds(
             id: true,
             username: true,
             title: true,
+            archived: true,
             lead_user: { select: { username: true } },
             user_notifications: {
               select: {
@@ -47,6 +48,7 @@ export const getAgents = cachedForSeconds(
           leadUsername: user.lead_user?.username || undefined,
           latestLogId: user.user_notifications?.latest_log_id ?? 0,
           latestMailId: user.user_notifications?.latest_mail_id ?? 0,
+          archived: user.archived,
         });
       });
     } catch (error) {
@@ -68,6 +70,7 @@ export async function getAgent(
           id: true,
           username: true,
           title: true,
+          archived: true,
           agent_path: true,
           lead_user: { select: { username: true } },
           user_notifications: {
@@ -105,6 +108,7 @@ export async function getAgent(
       leadUsername: user.lead_user?.username || undefined,
       latestLogId: user.user_notifications?.latest_log_id ?? 0,
       latestMailId: user.user_notifications?.latest_mail_id ?? 0,
+      archived: user.archived,
       config,
       configPath,
       _links: [],
@@ -115,7 +119,60 @@ export async function getAgent(
   }
 }
 
-export const getHosts = cachedForSeconds(1, async (): Promise<Host[]> => {
+export async function archiveAgent(id: number): Promise<void> {
+  await usingNaisysDb(async (prisma) => {
+    await prisma.users.update({
+      where: { id },
+      data: { archived: true },
+    });
+  });
+}
+
+export async function unarchiveAgent(id: number): Promise<void> {
+  await usingNaisysDb(async (prisma) => {
+    await prisma.users.update({
+      where: { id },
+      data: { archived: false },
+    });
+  });
+}
+
+export async function deleteAgent(
+  id: number,
+): Promise<{ agentPath: string }> {
+  return await usingNaisysDb(async (prisma) => {
+    const user = await prisma.users.findUnique({
+      where: { id },
+      select: { agent_path: true },
+    });
+
+    if (!user) {
+      throw new Error(`Agent with ID ${id} not found`);
+    }
+
+    await prisma.$transaction(async (tx) => {
+      await tx.context_log.deleteMany({ where: { user_id: id } });
+      await tx.costs.deleteMany({ where: { user_id: id } });
+      await tx.run_session.deleteMany({ where: { user_id: id } });
+      await tx.mail_messages.updateMany({
+        where: { from_user_id: id },
+        data: { from_user_id: null },
+      });
+      await tx.mail_recipients.deleteMany({ where: { user_id: id } });
+      await tx.user_notifications.deleteMany({ where: { user_id: id } });
+      await tx.user_hosts.deleteMany({ where: { user_id: id } });
+      await tx.users.updateMany({
+        where: { lead_user_id: id },
+        data: { lead_user_id: null },
+      });
+      await tx.users.delete({ where: { id } });
+    });
+
+    return { agentPath: user.agent_path };
+  });
+}
+
+export const getHosts = cachedForSeconds(0.25, async (): Promise<Host[]> => {
   try {
     const hosts = await usingNaisysDb(async (prisma) => {
       return prisma.hosts.findMany({

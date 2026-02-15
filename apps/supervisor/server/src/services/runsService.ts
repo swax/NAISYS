@@ -21,7 +21,7 @@ export interface ContextLogData {
 }
 
 export const getRunsData = cachedForSeconds(
-  1,
+  0.25,
   async (
     userId: number,
     updatedSince?: string,
@@ -93,7 +93,7 @@ export const getRunsData = cachedForSeconds(
 );
 
 export const getContextLog = cachedForSeconds(
-  1,
+  0.25,
   async (
     userId: number,
     runId: number,

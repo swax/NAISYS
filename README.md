@@ -1,6 +1,6 @@
 # NAISYS Project
 
-A monorepo containing NAISYS (Networked Autonomous Intelligence System) and Supervisor (web-based agent management interface).
+A monorepo containing NAISYS (Networked Agents Interface System) and Supervisor (web-based agent management interface).
 
 [NPM](https://www.npmjs.com/package/naisys) | [Website](https://naisys.org) | [Discord](https://discord.gg/JBUPWSbaEt) | [Demo Video](https://www.youtube.com/watch?v=Ttya3ixjumo)
 

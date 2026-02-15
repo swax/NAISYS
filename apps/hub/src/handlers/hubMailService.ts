@@ -39,7 +39,7 @@ export function createHubMailService(
         await dbService.usingDatabase(async (prisma) => {
           // Resolve usernames to user IDs
           const resolvedUsers = await prisma.users.findMany({
-            where: { username: { in: parsed.toUsernames }, deleted_at: null },
+            where: { username: { in: parsed.toUsernames }, archived: false },
             select: { id: true, username: true },
           });
 
@@ -179,7 +179,7 @@ export function createHubMailService(
 
             return {
               id: m.id,
-              fromUsername: m.from_user.username,
+              fromUsername: m.from_user?.username ?? "(deleted)",
               recipientUsernames: m.recipients.map((r) => r.user.username),
               subject: m.subject,
               createdAt: m.created_at.toISOString(),
@@ -243,8 +243,8 @@ export function createHubMailService(
             message: {
               id: message.id,
               subject: message.subject,
-              fromUsername: message.from_user.username,
-              fromTitle: message.from_user.title,
+              fromUsername: message.from_user?.username ?? "(deleted)",
+              fromTitle: message.from_user?.title ?? "",
               recipientUsernames: message.recipients.map(
                 (r) => r.user.username,
               ),
@@ -361,7 +361,7 @@ export function createHubMailService(
           const messageData = messages.map((m) => ({
             id: m.id,
             subject: m.subject,
-            fromUsername: m.from_user.username,
+            fromUsername: m.from_user?.username ?? "(deleted)",
             createdAt: m.created_at.toISOString(),
           }));
 

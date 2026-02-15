@@ -38,7 +38,7 @@ CREATE TABLE "costs" (
 -- CreateTable
 CREATE TABLE "mail_messages" (
     "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-    "from_user_id" INTEGER NOT NULL,
+    "from_user_id" INTEGER,
     "host_id" INTEGER,
     "subject" TEXT NOT NULL,
     "body" TEXT NOT NULL,
@@ -72,7 +72,7 @@ CREATE TABLE "users" (
     "config" TEXT NOT NULL DEFAULT '{}',
     "created_at" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" DATETIME NOT NULL,
-    "deleted_at" DATETIME,
+    "archived" BOOLEAN NOT NULL DEFAULT false,
     CONSTRAINT "users_lead_user_id_fkey" FOREIGN KEY ("lead_user_id") REFERENCES "users" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION
 );
 

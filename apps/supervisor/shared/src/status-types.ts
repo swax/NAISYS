@@ -23,6 +23,7 @@ export const AgentStatusEventSchema = z.object({
       }),
     )
     .optional(),
+  listChanged: z.boolean().optional(),
 });
 
 export type AgentStatusEvent = z.infer<typeof AgentStatusEventSchema>;

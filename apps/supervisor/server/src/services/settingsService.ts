@@ -22,7 +22,7 @@ export async function saveSettings(settings: Settings): Promise<void> {
 }
 
 export const getSettings = cachedForSeconds(
-  1,
+  0.25,
   async (): Promise<Settings | null> => {
     const record = await prisma.setting.findUnique({ where: { id: 1 } });
 

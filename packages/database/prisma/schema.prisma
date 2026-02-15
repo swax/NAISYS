@@ -50,12 +50,12 @@ model costs {
 
 model mail_messages {
   id           Int               @id @default(autoincrement())
-  from_user_id Int
+  from_user_id Int?
   host_id      Int? // Sender's host
   subject      String
   body         String
   created_at   DateTime          @default(now())
-  from_user    users             @relation("mail_messages_from_user", fields: [from_user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  from_user    users?            @relation("mail_messages_from_user", fields: [from_user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   host         hosts?            @relation(fields: [host_id], references: [id])
   recipients   mail_recipients[]
 
@@ -89,7 +89,7 @@ model users {
   config             String              @default("{}")
   created_at         DateTime            @default(now())
   updated_at         DateTime            @updatedAt
-  deleted_at         DateTime? // Soft delete for deactivated agents
+  archived           Boolean             @default(false)
   lead_user          users?              @relation("lead_to_subagents", fields: [lead_user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   subagents          users[]             @relation("lead_to_subagents")
   mail_messages_sent mail_messages[]     @relation("mail_messages_from_user")

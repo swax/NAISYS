@@ -1,5 +1,14 @@
-import { Badge, Button, Card, Group, Stack, Text } from "@mantine/core";
 import {
+  Badge,
+  Button,
+  Card,
+  Collapse,
+  Group,
+  Stack,
+  Text,
+} from "@mantine/core";
+import {
+  IconArchive,
   IconFileText,
   IconMail,
   IconPlus,
@@ -22,6 +31,7 @@ export const AgentSidebar: React.FC = () => {
   const { isAuthenticated } = useSession();
   const { status: connectionStatus } = useConnectionStatus();
   const [modalOpened, setModalOpened] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
 
   const isAgentSelected = (agent: Agent) => {
     if (agent.name === "all") {
@@ -197,70 +207,76 @@ export const AgentSidebar: React.FC = () => {
     );
   };
 
-  const orderedAgents = organizeAgentsHierarchically(agents);
+  const activeAgents = agents.filter((a) => !a.archived);
+  const archivedAgents = agents.filter((a) => a.archived);
+
+  const orderedActiveAgents = organizeAgentsHierarchically(activeAgents);
+  const orderedArchivedAgents = organizeAgentsHierarchically(archivedAgents);
+
+  const renderAgentCard = (agent: AgentWithDepth, dimmed?: boolean) => (
+    <Card
+      key={agent.name}
+      padding="sm"
+      radius="md"
+      withBorder
+      component="a"
+      href={getAbsoluteUrl(agent)}
+      onClick={(e) => handleAgentClick(e, agent)}
+      style={{
+        cursor: "pointer",
+        backgroundColor: isAgentSelected(agent)
+          ? "var(--mantine-color-blue-9)"
+          : undefined,
+        opacity: dimmed ? 0.4 : agent.name === "All" ? 1 : agent.online ? 1 : 0.5,
+        marginLeft: agent.depth ? `${agent.depth * 1.5}rem` : undefined,
+        textDecoration: "none",
+        color: "inherit",
+        display: "block",
+      }}
+    >
+      <Group justify="space-between" align="center" wrap="nowrap">
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <Group gap="xs" align="center" wrap="nowrap">
+            <IconRobot size="1rem" style={{ flexShrink: 0 }} />
+            <Text size="sm" fw={500} truncate="end">
+              {agent.name}
+            </Text>
+            {getUnreadLogBadge(agent)}
+            {getUnreadMailBadge(agent)}
+          </Group>
+          <Text size="xs" c="dimmed" truncate="end">
+            {agent.title}
+          </Text>
+        </div>
+        {agent.name !== "All" &&
+          connectionStatus === "connected" && (
+            <Badge
+              size="xs"
+              variant="light"
+              color={agent.online ? "green" : "gray"}
+              style={{
+                flexShrink: 0,
+                cursor: agent.online ? "pointer" : "default",
+              }}
+              onClick={(e) => {
+                if (agent.online) {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  navigate(`/agents/${agent.id}/runs?expand=online`);
+                }
+              }}
+            >
+              {agent.online ? "online" : "offline"}
+            </Badge>
+          )}
+      </Group>
+    </Card>
+  );
 
   return (
     <>
       <Stack gap="xs">
-        {orderedAgents.map((agent) => (
-          <Card
-            key={agent.name}
-            padding="sm"
-            radius="md"
-            withBorder
-            component="a"
-            href={getAbsoluteUrl(agent)}
-            onClick={(e) => handleAgentClick(e, agent)}
-            style={{
-              cursor: "pointer",
-              backgroundColor: isAgentSelected(agent)
-                ? "var(--mantine-color-blue-9)"
-                : undefined,
-              opacity: agent.name === "All" ? 1 : agent.online ? 1 : 0.5,
-              marginLeft: agent.depth ? `${agent.depth * 1.5}rem` : undefined,
-              textDecoration: "none",
-              color: "inherit",
-              display: "block",
-            }}
-          >
-            <Group justify="space-between" align="center" wrap="nowrap">
-              <div style={{ minWidth: 0, flex: 1 }}>
-                <Group gap="xs" align="center" wrap="nowrap">
-                  <IconRobot size="1rem" style={{ flexShrink: 0 }} />
-                  <Text size="sm" fw={500} truncate="end">
-                    {agent.name}
-                  </Text>
-                  {getUnreadLogBadge(agent)}
-                  {getUnreadMailBadge(agent)}
-                </Group>
-                <Text size="xs" c="dimmed" truncate="end">
-                  {agent.title}
-                </Text>
-              </div>
-              {agent.name !== "All" &&
-                connectionStatus === "connected" && (
-                  <Badge
-                    size="xs"
-                    variant="light"
-                    color={agent.online ? "green" : "gray"}
-                    style={{
-                      flexShrink: 0,
-                      cursor: agent.online ? "pointer" : "default",
-                    }}
-                    onClick={(e) => {
-                      if (agent.online) {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        navigate(`/agents/${agent.id}/runs?expand=online`);
-                      }
-                    }}
-                  >
-                    {agent.online ? "online" : "offline"}
-                  </Badge>
-                )}
-            </Group>
-          </Card>
-        ))}
+        {orderedActiveAgents.map((agent) => renderAgentCard(agent))}
         <Button
           variant="subtle"
           color="gray"
@@ -272,6 +288,27 @@ export const AgentSidebar: React.FC = () => {
         >
           Add Agent
         </Button>
+        {archivedAgents.length > 0 && (
+          <>
+            <Button
+              variant="subtle"
+              color="gray"
+              size="compact-xs"
+              leftSection={<IconArchive size="0.8rem" />}
+              onClick={() => setShowArchived(!showArchived)}
+              fullWidth
+            >
+              {showArchived ? "Hide" : "Show"} archived ({archivedAgents.length})
+            </Button>
+            <Collapse in={showArchived}>
+              <Stack gap="xs">
+                {orderedArchivedAgents.map((agent) =>
+                  renderAgentCard(agent, true),
+                )}
+              </Stack>
+            </Collapse>
+          </>
+        )}
       </Stack>
 
       <AddAgentDialog
