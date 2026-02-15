@@ -17,7 +17,6 @@ export function createHubUserService(
           id: true,
           username: true,
           config: true,
-          agent_path: true,
           lead_user_id: true,
           api_key: true,
           user_hosts: {

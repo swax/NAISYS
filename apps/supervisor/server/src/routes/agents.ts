@@ -44,11 +44,14 @@ import {
   AgentStartResultSchema,
   AgentStopResult,
   AgentStopResultSchema,
+  SetLeadAgentRequest,
+  SetLeadAgentRequestSchema,
 } from "@naisys-supervisor/shared";
 import fs from "fs/promises";
 import { FastifyInstance, FastifyPluginOptions } from "fastify";
+import type { HateoasAction } from "@naisys/common";
 import { requirePermission } from "../auth-middleware.js";
-import { agentActions, collectionLink, selfLink } from "../hateoas.js";
+import { API_PREFIX, collectionLink, selfLink } from "../hateoas.js";
 import {
   isAgentActive,
   isHubConnected,
@@ -67,9 +70,69 @@ import {
   getAgent,
   getAgents,
   unarchiveAgent,
+  updateLeadAgent,
 } from "../services/agentService.js";
 import { getMailDataByUserId, sendMessage } from "../services/mailService.js";
 import { getContextLog, getRunsData } from "../services/runsService.js";
+
+function agentActions(
+  agentId: number,
+  hasManagePermission: boolean,
+  archived: boolean,
+): HateoasAction[] {
+  const actions: HateoasAction[] = [];
+  const active = isAgentActive(agentId);
+
+  if (hasManagePermission && !active && !archived) {
+    actions.push({
+      rel: "start",
+      href: `${API_PREFIX}/agents/${agentId}/start`,
+      method: "POST",
+      title: "Start Agent",
+    });
+  }
+  if (hasManagePermission && active) {
+    actions.push({
+      rel: "stop",
+      href: `${API_PREFIX}/agents/${agentId}/stop`,
+      method: "POST",
+      title: "Stop Agent",
+    });
+  }
+  if (hasManagePermission && !active && !archived) {
+    actions.push({
+      rel: "archive",
+      href: `${API_PREFIX}/agents/${agentId}/archive`,
+      method: "POST",
+      title: "Archive Agent",
+    });
+  }
+  if (hasManagePermission && archived) {
+    actions.push({
+      rel: "unarchive",
+      href: `${API_PREFIX}/agents/${agentId}/unarchive`,
+      method: "POST",
+      title: "Unarchive Agent",
+    });
+  }
+  if (hasManagePermission && !active && archived) {
+    actions.push({
+      rel: "delete",
+      href: `${API_PREFIX}/agents/${agentId}`,
+      method: "DELETE",
+      title: "Delete Agent",
+    });
+  }
+  if (hasManagePermission && !archived) {
+    actions.push({
+      rel: "set-lead",
+      href: `${API_PREFIX}/agents/${agentId}/lead`,
+      method: "PUT",
+      title: "Set Lead Agent",
+    });
+  }
+  return actions;
+}
 
 function agentLinks(agentId: number) {
   return [
@@ -223,7 +286,11 @@ export default async function agentsRoutes(
           ...agent,
           online: isAgentActive(id),
           _links: agentLinks(id),
-          _actions: agentActions(id, hasManagePermission, agent.archived ?? false),
+          _actions: agentActions(
+            id,
+            hasManagePermission,
+            agent.archived ?? false,
+          ),
         };
       } catch (error) {
         request.log.error(error, "Error in GET /agents/:id route");
@@ -439,6 +506,53 @@ export default async function agentsRoutes(
     },
   );
 
+  // PUT /:id/lead — Set or clear lead agent
+  fastify.put<{
+    Params: AgentIdParams;
+    Body: SetLeadAgentRequest;
+    Reply: AgentActionResult | ErrorResponse;
+  }>(
+    "/:id/lead",
+    {
+      preHandler: [requirePermission("manage_agents")],
+      schema: {
+        description: "Set or clear the lead agent",
+        tags: ["Agents"],
+        params: AgentIdParamsSchema,
+        body: SetLeadAgentRequestSchema,
+        response: {
+          200: AgentActionResultSchema,
+          400: ErrorResponseSchema,
+          500: ErrorResponseSchema,
+        },
+        security: [{ cookieAuth: [] }],
+      },
+    },
+    async (request, reply) => {
+      try {
+        const { id } = request.params;
+        const { leadAgentId } = request.body;
+
+        await updateLeadAgent(id, leadAgentId);
+        sendUserListChanged();
+
+        return {
+          success: true,
+          message: leadAgentId ? "Lead agent updated" : "Lead agent cleared",
+        };
+      } catch (error) {
+        request.log.error(error, "Error in PUT /agents/:id/lead route");
+        return reply.status(500).send({
+          success: false,
+          message:
+            error instanceof Error
+              ? error.message
+              : "Internal server error while updating lead agent",
+        });
+      }
+    },
+  );
+
   // DELETE /:id — Permanently delete agent
   fastify.delete<{
     Params: AgentIdParams;
@@ -487,10 +601,12 @@ export default async function agentsRoutes(
 
         const { agentPath } = await deleteAgent(id);
 
-        try {
-          await fs.unlink(agentPath);
-        } catch {
-          // YAML file may already be missing
+        if (agentPath) {
+          try {
+            await fs.unlink(agentPath);
+          } catch {
+            // YAML file may already be missing
+          }
         }
 
         sendUserListChanged();

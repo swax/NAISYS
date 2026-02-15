@@ -10,16 +10,92 @@ import {
   UpdatePlanningOrderRevisionSchema,
   type RevisionStatus,
 } from "@naisys-erp/shared";
+import type { HateoasAction, HateoasLink } from "@naisys/common";
 import { writeAuditEntry } from "../audit.js";
 import prisma from "../db.js";
 import { sendError } from "../error-handler.js";
 import {
-  revisionItemLinks,
-  revisionItemActions,
+  API_PREFIX,
   paginationLinks,
+  schemaLink,
   selfLink,
 } from "../hateoas.js";
 import type { PlanningOrderRevisionModel } from "../generated/prisma/models/PlanningOrderRevision.js";
+
+function revisionItemLinks(
+  parentResource: string,
+  parentId: number,
+  revisionId: number,
+): HateoasLink[] {
+  const basePath = `/${parentResource}/${parentId}/revisions`;
+  return [
+    selfLink(`${basePath}/${revisionId}`),
+    {
+      rel: "collection",
+      href: `${API_PREFIX}${basePath}`,
+      title: "Revisions",
+    },
+    {
+      rel: "parent",
+      href: `${API_PREFIX}/${parentResource}/${parentId}`,
+      title: "Planning Order",
+    },
+    schemaLink("PlanningOrderRevision"),
+  ];
+}
+
+function revisionItemActions(
+  parentResource: string,
+  parentId: number,
+  revisionId: number,
+  status: string,
+): HateoasAction[] {
+  const href = `${API_PREFIX}/${parentResource}/${parentId}/revisions/${revisionId}`;
+  const actions: HateoasAction[] = [];
+
+  if (status === "draft") {
+    actions.push(
+      {
+        rel: "update",
+        href,
+        method: "PUT",
+        title: "Update",
+        schema: `${API_PREFIX}/schemas/UpdatePlanningOrderRevision`,
+      },
+      {
+        rel: "approve",
+        href: `${href}/approve`,
+        method: "POST",
+        title: "Approve",
+      },
+      {
+        rel: "delete",
+        href,
+        method: "DELETE",
+        title: "Delete",
+      },
+    );
+  } else if (status === "approved") {
+    actions.push(
+      {
+        rel: "cut-order",
+        href: `${API_PREFIX}/execution/orders`,
+        method: "POST",
+        title: "Cut Order",
+        schema: `${API_PREFIX}/schemas/CreateExecutionOrder`,
+      },
+      {
+        rel: "obsolete",
+        href: `${href}/obsolete`,
+        method: "POST",
+        title: "Mark Obsolete",
+      },
+    );
+  }
+  // obsolete: no actions
+
+  return actions;
+}
 
 const PARENT_RESOURCE = "planning/orders";
 

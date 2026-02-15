@@ -14,14 +14,86 @@ import {
 import type { Permission } from "../generated/prisma/client.js";
 import { requirePermission, authCache } from "../auth-middleware.js";
 import * as userService from "../services/userService.js";
+import type { HateoasAction, HateoasLink } from "@naisys/common";
 import {
-  userItemLinks,
-  userActions,
-  permissionActions,
+  API_PREFIX,
   paginationLinks,
   selfLink,
   collectionLink,
+  schemaLink,
 } from "../hateoas.js";
+
+function userItemLinks(userId: number): HateoasLink[] {
+  return [
+    selfLink(`/users/${userId}`),
+    collectionLink("users"),
+    schemaLink("UpdateUser"),
+  ];
+}
+
+function userActions(
+  userId: number,
+  isSelf: boolean,
+  isAdmin: boolean,
+): HateoasAction[] {
+  const href = `${API_PREFIX}/users/${userId}`;
+  const actions: HateoasAction[] = [];
+
+  // Admins can update any user; non-admins can update themselves (password only)
+  if (isAdmin || isSelf) {
+    actions.push({
+      rel: "update",
+      href,
+      method: "PUT",
+      title: isSelf && !isAdmin ? "Change Password" : "Update",
+      schema: `${API_PREFIX}/schemas/UpdateUser`,
+    });
+  }
+
+  if (isAdmin) {
+    actions.push({
+      rel: "grant-permission",
+      href: `${href}/permissions`,
+      method: "POST",
+      title: "Grant Permission",
+      schema: `${API_PREFIX}/schemas/GrantPermission`,
+    });
+
+    if (!isSelf) {
+      actions.push({
+        rel: "delete",
+        href,
+        method: "DELETE",
+        title: "Delete",
+      });
+    }
+  }
+
+  return actions;
+}
+
+function permissionActions(
+  userId: number,
+  permission: string,
+  isSelf: boolean,
+  isAdmin: boolean,
+): HateoasAction[] {
+  if (!isAdmin) return [];
+
+  const actions: HateoasAction[] = [];
+
+  // Cannot revoke own supervisor_admin
+  if (!(isSelf && permission === "supervisor_admin")) {
+    actions.push({
+      rel: "revoke",
+      href: `${API_PREFIX}/users/${userId}/permissions/${permission}`,
+      method: "DELETE",
+      title: "Revoke",
+    });
+  }
+
+  return actions;
+}
 
 function formatUser(
   user: Awaited<ReturnType<typeof userService.getUserById>>,

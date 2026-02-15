@@ -12,7 +12,7 @@ import {
 interface ConfigEntry {
   configId: string;
   username: string;
-  agentPath: string;
+  agentPath?: string;
   leadConfigId?: string;
   config: AgentConfigFile;
 }
@@ -51,7 +51,6 @@ export function loadAgentConfigs(startupPath: string): Map<number, UserEntry> {
     configEntries.push({
       configId: adminAgentConfig._id!,
       username: adminAgentConfig.username,
-      agentPath: "admin.yaml",
       config: adminAgentConfig,
     });
   }

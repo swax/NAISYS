@@ -1,33 +1,8 @@
 import { AgentConfigFile, AgentConfigFileSchema } from "@naisys/common";
 import fs from "fs/promises";
 import yaml from "js-yaml";
-import path from "path";
 import { usingNaisysDb } from "../database/naisysDatabase.js";
 import { sendUserListChanged } from "./hubConnectionService.js";
-
-/**
- * Resolve a user by username and host name.
- */
-async function resolveUser(
-  username: string,
-  host: string,
-): Promise<{ id: number; agent_path: string }> {
-  return await usingNaisysDb(async (prisma) => {
-    const user = await prisma.users.findFirst({
-      where: {
-        username,
-        archived: false,
-      },
-      select: { id: true, agent_path: true },
-    });
-
-    if (!user) {
-      throw new Error(`User '${username}' not found on host '${host}'`);
-    }
-
-    return user;
-  });
-}
 
 /**
  * Update the modified date on the user_notifications table
@@ -51,46 +26,9 @@ async function updateUserNotificationModifiedDate(
 }
 
 /**
- * Get agent configuration YAML content for a specific user
- */
-export async function getAgentConfig(
-  username: string,
-  host: string,
-): Promise<{ config: string; path: string }> {
-  const user = await resolveUser(username, host);
-
-  // Read the agent config file
-  try {
-    const configContent = await fs.readFile(user.agent_path, "utf-8");
-    return { config: configContent, path: user.agent_path };
-  } catch (error) {
-    throw new Error(
-      `Failed to read agent configuration file at ${user.agent_path}`,
-    );
-  }
-}
-
-/**
- * Create a new agent with YAML config file and database entry
+ * Create a new agent with database entry (no YAML file).
  */
 export async function createAgentConfig(name: string): Promise<void> {
-  const naisysFolder = process.env.NAISYS_FOLDER;
-  if (!naisysFolder) {
-    throw new Error("NAISYS_FOLDER environment variable is not set");
-  }
-
-  const agentFilePath = path.join(naisysFolder, `${name}.yaml`);
-
-  // Check if agent file already exists
-  try {
-    await fs.access(agentFilePath);
-    throw new Error(`Agent '${name}' already exists`);
-  } catch (error: any) {
-    if (error.code !== "ENOENT") {
-      throw error;
-    }
-  }
-
   // Check db if username already exists
   const existingAgent = await usingNaisysDb(async (prisma) => {
     return await prisma.users.findFirst({
@@ -116,9 +54,6 @@ debugPauseSeconds: 5
 webEnabled: true
 `;
 
-  // Write the YAML file
-  await fs.writeFile(agentFilePath, yamlContent, "utf-8");
-
   // Add agent to the database, let DB autoincrement
   const user = await usingNaisysDb(async (prisma) => {
     return await prisma.users.create({
@@ -126,7 +61,7 @@ webEnabled: true
         uuid: crypto.randomUUID(),
         username: name,
         title: "Assistant",
-        agent_path: agentFilePath,
+        agent_path: null,
         config: yamlContent,
       },
     });
@@ -144,7 +79,7 @@ webEnabled: true
  */
 async function resolveUserById(
   id: number,
-): Promise<{ id: number; agent_path: string }> {
+): Promise<{ id: number; agent_path: string | null }> {
   return await usingNaisysDb(async (prisma) => {
     const user = await prisma.users.findUnique({
       where: { id },
@@ -160,13 +95,23 @@ async function resolveUserById(
 }
 
 /**
- * Get parsed agent configuration by user ID.
+ * Get parsed agent configuration by user ID. Reads from DB config column.
  */
 export async function getAgentConfigById(id: number): Promise<AgentConfigFile> {
-  const user = await resolveUserById(id);
+  const configStr = await usingNaisysDb(async (prisma) => {
+    const user = await prisma.users.findUnique({
+      where: { id },
+      select: { config: true },
+    });
 
-  const yamlStr = await fs.readFile(user.agent_path, "utf-8");
-  const parsed = yaml.load(yamlStr);
+    if (!user) {
+      throw new Error(`User with ID ${id} not found`);
+    }
+
+    return user.config;
+  });
+
+  const parsed = yaml.load(configStr);
   return AgentConfigFileSchema.parse(parsed);
 }
 
@@ -225,8 +170,8 @@ function canonicalConfigOrder(
 }
 
 /**
- * Update agent configuration by user ID. Accepts a JSON config object,
- * serializes to YAML for file storage.
+ * Update agent configuration by user ID. Always updates DB.
+ * Writes to file only if agent_path is non-null.
  */
 export async function updateAgentConfigById(
   id: number,
@@ -236,56 +181,25 @@ export async function updateAgentConfigById(
   const ordered = canonicalConfigOrder(config);
   const yamlStr = yaml.dump(ordered, { lineWidth: -1, noRefs: true });
 
-  // Write the agent config file
-  try {
-    await fs.writeFile(user.agent_path, yamlStr, "utf-8");
-  } catch (error) {
-    throw new Error(
-      `Failed to write agent configuration file at ${user.agent_path}`,
-    );
-  }
-
-  // Update the config in the database
+  // Always update the config and denormalized fields in the database
   await usingNaisysDb(async (prisma) => {
     await prisma.users.update({
       where: { id: user.id },
-      data: { config: yamlStr },
+      data: {
+        config: yamlStr,
+        title: config.title,
+      },
     });
   });
 
-  // Update user notification modified date
-  await updateUserNotificationModifiedDate(user.id);
-
-  // Notify hub to broadcast updated user list to all NAISYS clients
-  sendUserListChanged();
-}
-
-/**
- * Update agent configuration YAML content for a specific user
- */
-export async function updateAgentConfig(
-  username: string,
-  config: string,
-  host: string,
-): Promise<void> {
-  const user = await resolveUser(username, host);
-
-  // Write the agent config file
-  try {
-    await fs.writeFile(user.agent_path, config, "utf-8");
-  } catch (error) {
-    throw new Error(
-      `Failed to write agent configuration file at ${user.agent_path}`,
-    );
+  // Write to file only if agent_path is non-null
+  if (user.agent_path) {
+    try {
+      await fs.writeFile(user.agent_path, yamlStr, "utf-8");
+    } catch {
+      // File may not exist or be inaccessible — DB is the source of truth
+    }
   }
-
-  // Update the config in the database
-  await usingNaisysDb(async (prisma) => {
-    await prisma.users.update({
-      where: { id: user.id },
-      data: { config },
-    });
-  });
 
   // Update user notification modified date
   await updateUserNotificationModifiedDate(user.id);
