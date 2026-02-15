@@ -89,9 +89,7 @@ export const stopAgent = async (id: number): Promise<AgentStopResult> => {
   return await api.post<{}, AgentStopResult>(apiEndpoints.agentStop(id), {});
 };
 
-export const archiveAgent = async (
-  id: number,
-): Promise<AgentActionResult> => {
+export const archiveAgent = async (id: number): Promise<AgentActionResult> => {
   return await api.post<{}, AgentActionResult>(
     apiEndpoints.agentArchive(id),
     {},
@@ -104,6 +102,16 @@ export const unarchiveAgent = async (
   return await api.post<{}, AgentActionResult>(
     apiEndpoints.agentUnarchive(id),
     {},
+  );
+};
+
+export const setAgentLead = async (
+  id: number,
+  leadAgentId: number | null,
+): Promise<AgentActionResult> => {
+  return await api.put<{ leadAgentId: number | null }, AgentActionResult>(
+    apiEndpoints.agentLead(id),
+    { leadAgentId },
   );
 };
 

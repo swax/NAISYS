@@ -9,16 +9,84 @@ import {
   PlanningOrderSchema,
   UpdatePlanningOrderSchema,
 } from "@naisys-erp/shared";
+import type { HateoasAction, HateoasLink } from "@naisys/common";
 import prisma from "../db.js";
 import { sendError } from "../error-handler.js";
 import {
-  itemLinks,
-  itemActions,
+  API_PREFIX,
+  collectionLink,
   paginationLinks,
-  revisionCollectionLink,
+  schemaLink,
   selfLink,
 } from "../hateoas.js";
 import type { PlanningOrderModel } from "../generated/prisma/models/PlanningOrder.js";
+
+function itemLinks(
+  resource: string,
+  id: number,
+  schemaName: string,
+): HateoasLink[] {
+  return [
+    selfLink(`/${resource}/${id}`),
+    collectionLink(resource),
+    schemaLink(schemaName),
+  ];
+}
+
+function itemActions(
+  resource: string,
+  id: number,
+  status: string,
+): HateoasAction[] {
+  const href = `${API_PREFIX}/${resource}/${id}`;
+  const actions: HateoasAction[] = [
+    {
+      rel: "update",
+      href,
+      method: "PUT",
+      title: "Update",
+      schema: `${API_PREFIX}/schemas/UpdatePlanningOrder`,
+    },
+  ];
+
+  if (status === "active") {
+    actions.push({
+      rel: "archive",
+      href,
+      method: "PUT",
+      title: "Archive",
+      body: { status: "archived" },
+    });
+  } else {
+    actions.push({
+      rel: "activate",
+      href,
+      method: "PUT",
+      title: "Activate",
+      body: { status: "active" },
+    });
+  }
+
+  actions.push({
+    rel: "delete",
+    href,
+    method: "DELETE",
+    title: "Delete",
+  });
+
+  return actions;
+}
+
+function revisionCollectionLink(
+  parentResource: string,
+  parentId: number,
+): HateoasLink {
+  return {
+    rel: "revisions",
+    href: `${API_PREFIX}/${parentResource}/${parentId}/revisions`,
+    title: "Revisions",
+  };
+}
 
 const RESOURCE = "planning/orders";
 

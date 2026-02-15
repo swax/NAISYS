@@ -227,7 +227,13 @@ export const AgentSidebar: React.FC = () => {
         backgroundColor: isAgentSelected(agent)
           ? "var(--mantine-color-blue-9)"
           : undefined,
-        opacity: dimmed ? 0.4 : agent.name === "All" ? 1 : agent.online ? 1 : 0.5,
+        opacity: dimmed
+          ? 0.4
+          : agent.name === "All"
+            ? 1
+            : agent.online
+              ? 1
+              : 0.5,
         marginLeft: agent.depth ? `${agent.depth * 1.5}rem` : undefined,
         textDecoration: "none",
         color: "inherit",
@@ -248,27 +254,26 @@ export const AgentSidebar: React.FC = () => {
             {agent.title}
           </Text>
         </div>
-        {agent.name !== "All" &&
-          connectionStatus === "connected" && (
-            <Badge
-              size="xs"
-              variant="light"
-              color={agent.online ? "green" : "gray"}
-              style={{
-                flexShrink: 0,
-                cursor: agent.online ? "pointer" : "default",
-              }}
-              onClick={(e) => {
-                if (agent.online) {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  navigate(`/agents/${agent.id}/runs?expand=online`);
-                }
-              }}
-            >
-              {agent.online ? "online" : "offline"}
-            </Badge>
-          )}
+        {agent.name !== "All" && connectionStatus === "connected" && (
+          <Badge
+            size="xs"
+            variant="light"
+            color={agent.online ? "green" : "gray"}
+            style={{
+              flexShrink: 0,
+              cursor: agent.online ? "pointer" : "default",
+            }}
+            onClick={(e) => {
+              if (agent.online) {
+                e.preventDefault();
+                e.stopPropagation();
+                navigate(`/agents/${agent.id}/runs?expand=online`);
+              }
+            }}
+          >
+            {agent.online ? "online" : "offline"}
+          </Badge>
+        )}
       </Group>
     </Card>
   );
@@ -298,7 +303,8 @@ export const AgentSidebar: React.FC = () => {
               onClick={() => setShowArchived(!showArchived)}
               fullWidth
             >
-              {showArchived ? "Hide" : "Show"} archived ({archivedAgents.length})
+              {showArchived ? "Hide" : "Show"} archived ({archivedAgents.length}
+              )
             </Button>
             <Collapse in={showArchived}>
               <Stack gap="xs">

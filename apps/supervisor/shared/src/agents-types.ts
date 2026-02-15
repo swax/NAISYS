@@ -81,6 +81,11 @@ export type AgentDetailResponse = z.infer<typeof AgentDetailResponseSchema>;
 export type HostIdParams = z.infer<typeof HostIdParamsSchema>;
 export type HostListResponse = z.infer<typeof HostListResponseSchema>;
 
+export const SetLeadAgentRequestSchema = z.object({
+  leadAgentId: z.number().nullable(),
+});
+export type SetLeadAgentRequest = z.infer<typeof SetLeadAgentRequestSchema>;
+
 export const AgentActionResultSchema = z.object({
   success: z.boolean(),
   message: z.string(),

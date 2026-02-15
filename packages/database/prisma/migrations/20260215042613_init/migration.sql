@@ -67,7 +67,7 @@ CREATE TABLE "users" (
     "username" TEXT NOT NULL,
     "title" TEXT NOT NULL,
     "api_key" TEXT,
-    "agent_path" TEXT NOT NULL,
+    "agent_path" TEXT,
     "lead_user_id" INTEGER,
     "config" TEXT NOT NULL DEFAULT '{}',
     "created_at" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -174,9 +174,6 @@ CREATE UNIQUE INDEX "users_uuid_key" ON "users"("uuid");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "users_api_key_key" ON "users"("api_key");
-
--- CreateIndex
-CREATE UNIQUE INDEX "unq_users_agent_path" ON "users"("agent_path");
 
 -- CreateIndex
 CREATE INDEX "idx_users_username" ON "users"("username");

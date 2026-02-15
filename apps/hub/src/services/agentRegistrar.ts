@@ -23,10 +23,6 @@ export async function createAgentRegistrar(
     const configIdToDbId = new Map<string, number>();
 
     for (const user of users.values()) {
-      if (!user.agentPath) {
-        throw new Error(`User ${user.username} is missing agentPath`);
-      }
-
       await dbService.usingDatabase(async (prisma) => {
         const dbUser = await prisma.users.upsert({
           where: { uuid: user.configId },
@@ -34,13 +30,13 @@ export async function createAgentRegistrar(
             uuid: user.configId,
             username: user.username,
             title: user.config.title,
-            agent_path: user.agentPath!,
+            agent_path: user.agentPath ?? null,
             config: yaml.dump(user.config),
             api_key: randomBytes(32).toString("hex"),
           },
           update: {
             title: user.config.title,
-            agent_path: user.agentPath,
+            agent_path: user.agentPath ?? null,
             config: yaml.dump(user.config),
           },
         });

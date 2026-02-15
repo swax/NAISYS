@@ -33,11 +33,7 @@ export const HostPage: React.FC = () => {
         {connectionStatus === "connected" && (
           <>
             {" is "}
-            <Text
-              component="span"
-              c={host?.online ? "green" : "gray"}
-              inherit
-            >
+            <Text component="span" c={host?.online ? "green" : "gray"} inherit>
               {host?.online ? "online" : "offline"}
             </Text>
           </>

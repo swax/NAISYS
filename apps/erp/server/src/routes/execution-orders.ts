@@ -11,18 +11,93 @@ import {
   type ExecutionOrderPriority,
   type ExecutionOrderStatus,
 } from "@naisys-erp/shared";
+import type { HateoasAction, HateoasLink } from "@naisys/common";
 import { writeAuditEntry } from "../audit.js";
 import prisma from "../db.js";
 import { sendError } from "../error-handler.js";
 import {
-  execOrderItemLinks,
-  execOrderItemActions,
+  API_PREFIX,
+  collectionLink,
   paginationLinks,
+  schemaLink,
   selfLink,
 } from "../hateoas.js";
 import type { ExecOrderModel } from "../generated/prisma/models/ExecOrder.js";
 
-const RESOURCE = "execution/orders";
+const EXEC_RESOURCE = "execution/orders";
+
+function execOrderItemLinks(id: number, planOrderId: number): HateoasLink[] {
+  return [
+    selfLink(`/${EXEC_RESOURCE}/${id}`),
+    collectionLink(EXEC_RESOURCE),
+    schemaLink("ExecutionOrder"),
+    {
+      rel: "planning-order",
+      href: `${API_PREFIX}/planning/orders/${planOrderId}`,
+      title: "Planning Order",
+    },
+  ];
+}
+
+function execOrderItemActions(id: number, status: string): HateoasAction[] {
+  const href = `${API_PREFIX}/${EXEC_RESOURCE}/${id}`;
+  const actions: HateoasAction[] = [];
+
+  if (status === "released") {
+    actions.push(
+      {
+        rel: "update",
+        href,
+        method: "PUT",
+        title: "Update",
+        schema: `${API_PREFIX}/schemas/UpdateExecutionOrder`,
+      },
+      {
+        rel: "start",
+        href: `${href}/start`,
+        method: "POST",
+        title: "Start",
+      },
+      {
+        rel: "cancel",
+        href: `${href}/cancel`,
+        method: "POST",
+        title: "Cancel",
+      },
+      {
+        rel: "delete",
+        href,
+        method: "DELETE",
+        title: "Delete",
+      },
+    );
+  } else if (status === "started") {
+    actions.push(
+      {
+        rel: "update",
+        href,
+        method: "PUT",
+        title: "Update",
+        schema: `${API_PREFIX}/schemas/UpdateExecutionOrder`,
+      },
+      {
+        rel: "close",
+        href: `${href}/close`,
+        method: "POST",
+        title: "Close",
+      },
+      {
+        rel: "cancel",
+        href: `${href}/cancel`,
+        method: "POST",
+        title: "Cancel",
+      },
+    );
+  }
+  // closed/cancelled: no actions
+
+  return actions;
+}
 
 const IdParamsSchema = z.object({
   id: z.coerce.number().int(),
@@ -58,7 +133,7 @@ function formatListItem(item: ExecOrderModel) {
   const { _actions, ...rest } = formatItem(item);
   return {
     ...rest,
-    _links: [selfLink(`/${RESOURCE}/${item.id}`)],
+    _links: [selfLink(`/${EXEC_RESOURCE}/${item.id}`)],
   };
 }
 
@@ -104,14 +179,14 @@ export default async function executionOrderRoutes(fastify: FastifyInstance) {
         page,
         pageSize,
         _links: [
-          ...paginationLinks(RESOURCE, page, pageSize, total, {
+          ...paginationLinks(EXEC_RESOURCE, page, pageSize, total, {
             status,
             priority,
             search,
           }),
           {
             rel: "create",
-            href: `/api/erp/${RESOURCE}`,
+            href: `/api/erp/${EXEC_RESOURCE}`,
             method: "POST",
           },
         ],

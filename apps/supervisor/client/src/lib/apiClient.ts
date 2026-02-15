@@ -128,6 +128,7 @@ export const apiEndpoints = {
   agentStop: (id: number) => `/agents/${id}/stop`,
   agentArchive: (id: number) => `/agents/${id}/archive`,
   agentUnarchive: (id: number) => `/agents/${id}/unarchive`,
+  agentLead: (id: number) => `/agents/${id}/lead`,
   agentDelete: (id: number) => `/agents/${id}`,
   sendMail: "/send-mail",
 };
