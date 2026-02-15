@@ -15,7 +15,7 @@ import { sendMailViaHub } from "./hubConnectionService.js";
  * Get mail data for a specific agent by userId, optionally filtering by updatedSince
  */
 export const getMailDataByUserId = cachedForSeconds(
-  1,
+  0.25,
   async (
     userId: number,
     updatedSince?: string,
@@ -84,8 +84,8 @@ export const getMailDataByUserId = cachedForSeconds(
 
       const messages: MailMessage[] = result.dbMessages.map((msg) => ({
         id: msg.id,
-        fromUserId: msg.from_user_id,
-        fromUsername: msg.from_user.username,
+        fromUserId: msg.from_user_id ?? 0,
+        fromUsername: msg.from_user?.username ?? "(deleted)",
         subject: msg.subject,
         body: msg.body,
         createdAt: msg.created_at.toISOString(),

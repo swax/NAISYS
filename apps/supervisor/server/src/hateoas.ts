@@ -97,9 +97,12 @@ export function permissionActions(
 export function agentActions(
   agentId: number,
   hasManagePermission: boolean,
+  archived: boolean,
 ): HateoasAction[] {
   const actions: HateoasAction[] = [];
-  if (hasManagePermission && !isAgentActive(agentId)) {
+  const active = isAgentActive(agentId);
+
+  if (hasManagePermission && !active && !archived) {
     actions.push({
       rel: "start",
       href: `${API_PREFIX}/agents/${agentId}/start`,
@@ -107,12 +110,36 @@ export function agentActions(
       title: "Start Agent",
     });
   }
-  if (hasManagePermission && isAgentActive(agentId)) {
+  if (hasManagePermission && active) {
     actions.push({
       rel: "stop",
       href: `${API_PREFIX}/agents/${agentId}/stop`,
       method: "POST",
       title: "Stop Agent",
+    });
+  }
+  if (hasManagePermission && !active && !archived) {
+    actions.push({
+      rel: "archive",
+      href: `${API_PREFIX}/agents/${agentId}/archive`,
+      method: "POST",
+      title: "Archive Agent",
+    });
+  }
+  if (hasManagePermission && archived) {
+    actions.push({
+      rel: "unarchive",
+      href: `${API_PREFIX}/agents/${agentId}/unarchive`,
+      method: "POST",
+      title: "Unarchive Agent",
+    });
+  }
+  if (hasManagePermission && !active && archived) {
+    actions.push({
+      rel: "delete",
+      href: `${API_PREFIX}/agents/${agentId}`,
+      method: "DELETE",
+      title: "Delete Agent",
     });
   }
   return actions;

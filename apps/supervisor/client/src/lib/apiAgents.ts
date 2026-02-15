@@ -1,5 +1,6 @@
 import type { AgentConfigFile } from "@naisys/common";
 import type {
+  AgentActionResult,
   AgentDetailResponse,
   AgentListResponse,
   AgentStartResult,
@@ -86,4 +87,28 @@ export const startAgent = async (id: number): Promise<AgentStartResult> => {
 
 export const stopAgent = async (id: number): Promise<AgentStopResult> => {
   return await api.post<{}, AgentStopResult>(apiEndpoints.agentStop(id), {});
+};
+
+export const archiveAgent = async (
+  id: number,
+): Promise<AgentActionResult> => {
+  return await api.post<{}, AgentActionResult>(
+    apiEndpoints.agentArchive(id),
+    {},
+  );
+};
+
+export const unarchiveAgent = async (
+  id: number,
+): Promise<AgentActionResult> => {
+  return await api.post<{}, AgentActionResult>(
+    apiEndpoints.agentUnarchive(id),
+    {},
+  );
+};
+
+export const deleteAgentPermanently = async (
+  id: number,
+): Promise<AgentActionResult> => {
+  return await api.delete<AgentActionResult>(apiEndpoints.agentDelete(id));
 };

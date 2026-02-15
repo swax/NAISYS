@@ -16,7 +16,7 @@ async function resolveUser(
     const user = await prisma.users.findFirst({
       where: {
         username,
-        deleted_at: null,
+        archived: false,
       },
       select: { id: true, agent_path: true },
     });

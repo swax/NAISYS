@@ -1,6 +1,6 @@
 {
   "name": "naisys",
-  "description": "Networked Autonomous Intelligence System",
+  "description": "Networked Agents Interface System",
   "version": "2.3.0",
   "type": "module",
   "main": "dist/naisys.js",

@@ -108,6 +108,14 @@ export function initHubConnection(hubUrl: string) {
     // Emit status update for SSE listeners
     statusEmitter.emit("agentStatusUpdate", getAgentStatusSnapshot());
   });
+
+  // User list changed (hub broadcasts after create/edit/archive/delete)
+  socket.on(HubEvents.USER_LIST, () => {
+    statusEmitter.emit("agentStatusUpdate", {
+      ...getAgentStatusSnapshot(),
+      listChanged: true,
+    });
+  });
 }
 
 export function isHubConnected(): boolean {
@@ -136,6 +144,10 @@ export function sendAgentStart(
       HubEvents.AGENT_START,
       { userId, taskDescription },
       (response: AgentStartResponse) => {
+        if (response.success) {
+          activeAgentIds.add(userId);
+          statusEmitter.emit("agentStatusUpdate", getAgentStatusSnapshot());
+        }
         resolve(response);
       },
     );
@@ -231,6 +243,10 @@ export function sendAgentStop(
       HubEvents.AGENT_STOP,
       { userId, reason },
       (response: AgentStopResponse) => {
+        if (response.success) {
+          activeAgentIds.delete(userId);
+          statusEmitter.emit("agentStatusUpdate", getAgentStatusSnapshot());
+        }
         resolve(response);
       },
     );

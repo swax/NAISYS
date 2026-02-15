@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useState } from "react";
 import {
   Agent as BaseAgent,
@@ -15,6 +15,7 @@ let updatedSinceCache: string | undefined = undefined;
 export const useAgentData = () => {
   // Version counter to trigger re-renders when cache updates
   const [, setCacheVersion] = useState(0);
+  const queryClient = useQueryClient();
 
   const queryFn = useCallback(async () => {
     return await getAgentData({
@@ -37,19 +38,21 @@ export const useAgentData = () => {
     if (query.data?.items) {
       const updatedAgents = query.data.items;
 
-      const existingAgents = agentCache;
+      let mergedAgents: BaseAgent[];
 
-      // Create a map of existing agents for quick lookup (using BaseAgent to allow updates)
-      const mergeAgents = new Map<number, BaseAgent>(
-        existingAgents.map((agent: Agent) => [agent.id, agent]),
-      );
-
-      // Update existing agents and add new ones
-      updatedAgents.forEach((agent: BaseAgent) => {
-        mergeAgents.set(agent.id, agent);
-      });
-
-      const mergedAgents = Array.from(mergeAgents.values());
+      if (updatedSinceCache === undefined) {
+        // Full refetch — replace cache entirely (handles deletes)
+        mergedAgents = updatedAgents;
+      } else {
+        // Incremental update — merge with existing cache
+        const mergeMap = new Map<number, BaseAgent>(
+          agentCache.map((agent: Agent) => [agent.id, agent]),
+        );
+        updatedAgents.forEach((agent: BaseAgent) => {
+          mergeMap.set(agent.id, agent);
+        });
+        mergedAgents = Array.from(mergeMap.values());
+      }
 
       const agentsWithOnline: Agent[] = mergedAgents.map((agent) => ({
         ...agent,
@@ -75,6 +78,13 @@ export const useAgentData = () => {
   // Handle SSE updates for fast-changing fields (online, latestLogId, latestMailId)
   const handleSSEUpdate = useCallback(
     (event: AgentStatusEvent) => {
+      // Agent list changed (create/archive/unarchive/delete) — refetch full list
+      if (event.listChanged) {
+        updatedSinceCache = undefined;
+        queryClient.invalidateQueries({ queryKey: ["agent-data"] });
+        return;
+      }
+
       let changed = false;
 
       for (const agent of agentCache) {
@@ -101,7 +111,7 @@ export const useAgentData = () => {
         setCacheVersion((v) => v + 1);
       }
     },
-    [], // eslint-disable-line react-hooks/exhaustive-deps -- accesses module-level agentCache
+    [queryClient], // eslint-disable-line react-hooks/exhaustive-deps -- accesses module-level agentCache
   );
 
   useAgentStatusStream(handleSSEUpdate, agentCache.length > 0);

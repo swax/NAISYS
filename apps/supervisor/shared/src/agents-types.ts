@@ -17,6 +17,7 @@ export const AgentSchema = z.object({
   leadUsername: z.string().optional(),
   latestLogId: z.number(),
   latestMailId: z.number(),
+  archived: z.boolean().optional(),
   online: z.boolean().optional(),
   _links: z.array(LinkSchema).optional(),
 });
@@ -57,6 +58,7 @@ export const AgentDetailResponseSchema = z.object({
   leadUsername: z.string().optional(),
   latestLogId: z.number(),
   latestMailId: z.number(),
+  archived: z.boolean().optional(),
   online: z.boolean().optional(),
   config: z.string(),
   configPath: z.string(),
@@ -78,6 +80,12 @@ export type AgentIdParams = z.infer<typeof AgentIdParamsSchema>;
 export type AgentDetailResponse = z.infer<typeof AgentDetailResponseSchema>;
 export type HostIdParams = z.infer<typeof HostIdParamsSchema>;
 export type HostListResponse = z.infer<typeof HostListResponseSchema>;
+
+export const AgentActionResultSchema = z.object({
+  success: z.boolean(),
+  message: z.string(),
+});
+export type AgentActionResult = z.infer<typeof AgentActionResultSchema>;
 
 export const AgentStartResultSchema = z.object({
   success: z.boolean(),

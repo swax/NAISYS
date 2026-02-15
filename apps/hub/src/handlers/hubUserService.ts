@@ -12,7 +12,7 @@ export function createHubUserService(
   async function buildUserListPayload(): Promise<UserListResponse> {
     const dbUsers = await dbService.usingDatabase(async (prisma) => {
       return await prisma.users.findMany({
-        where: { deleted_at: null },
+        where: { archived: false },
         select: {
           id: true,
           username: true,

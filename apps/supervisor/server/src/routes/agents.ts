@@ -38,11 +38,14 @@ import {
   UpdateAgentConfigRequestSchema,
   UpdateAgentConfigResponse,
   UpdateAgentConfigResponseSchema,
+  AgentActionResult,
+  AgentActionResultSchema,
   AgentStartResult,
   AgentStartResultSchema,
   AgentStopResult,
   AgentStopResultSchema,
 } from "@naisys-supervisor/shared";
+import fs from "fs/promises";
 import { FastifyInstance, FastifyPluginOptions } from "fastify";
 import { requirePermission } from "../auth-middleware.js";
 import { agentActions, collectionLink, selfLink } from "../hateoas.js";
@@ -51,13 +54,20 @@ import {
   isHubConnected,
   sendAgentStart,
   sendAgentStop,
+  sendUserListChanged,
 } from "../services/hubConnectionService.js";
 import {
   createAgentConfig,
   getAgentConfigById,
   updateAgentConfigById,
 } from "../services/agentConfigService.js";
-import { getAgent, getAgents } from "../services/agentService.js";
+import {
+  archiveAgent,
+  deleteAgent,
+  getAgent,
+  getAgents,
+  unarchiveAgent,
+} from "../services/agentService.js";
 import { getMailDataByUserId, sendMessage } from "../services/mailService.js";
 import { getContextLog, getRunsData } from "../services/runsService.js";
 
@@ -213,7 +223,7 @@ export default async function agentsRoutes(
           ...agent,
           online: isAgentActive(id),
           _links: agentLinks(id),
-          _actions: agentActions(id, hasManagePermission),
+          _actions: agentActions(id, hasManagePermission, agent.archived ?? false),
         };
       } catch (error) {
         request.log.error(error, "Error in GET /agents/:id route");
@@ -335,6 +345,165 @@ export default async function agentsRoutes(
             error instanceof Error
               ? error.message
               : "Internal server error while stopping agent",
+        });
+      }
+    },
+  );
+
+  // POST /:id/archive — Archive agent
+  fastify.post<{
+    Params: AgentIdParams;
+    Reply: AgentActionResult | ErrorResponse;
+  }>(
+    "/:id/archive",
+    {
+      preHandler: [requirePermission("manage_agents")],
+      schema: {
+        description: "Archive an agent",
+        tags: ["Agents"],
+        params: AgentIdParamsSchema,
+        response: {
+          200: AgentActionResultSchema,
+          400: ErrorResponseSchema,
+          500: ErrorResponseSchema,
+        },
+        security: [{ cookieAuth: [] }],
+      },
+    },
+    async (request, reply) => {
+      try {
+        const { id } = request.params;
+
+        if (isAgentActive(id)) {
+          return reply.status(400).send({
+            success: false,
+            message: "Cannot archive an active agent. Stop it first.",
+          });
+        }
+
+        await archiveAgent(id);
+        sendUserListChanged();
+
+        return { success: true, message: "Agent archived" };
+      } catch (error) {
+        request.log.error(error, "Error in POST /agents/:id/archive route");
+        return reply.status(500).send({
+          success: false,
+          message:
+            error instanceof Error
+              ? error.message
+              : "Internal server error while archiving agent",
+        });
+      }
+    },
+  );
+
+  // POST /:id/unarchive — Unarchive agent
+  fastify.post<{
+    Params: AgentIdParams;
+    Reply: AgentActionResult | ErrorResponse;
+  }>(
+    "/:id/unarchive",
+    {
+      preHandler: [requirePermission("manage_agents")],
+      schema: {
+        description: "Unarchive an agent",
+        tags: ["Agents"],
+        params: AgentIdParamsSchema,
+        response: {
+          200: AgentActionResultSchema,
+          400: ErrorResponseSchema,
+          500: ErrorResponseSchema,
+        },
+        security: [{ cookieAuth: [] }],
+      },
+    },
+    async (request, reply) => {
+      try {
+        const { id } = request.params;
+
+        await unarchiveAgent(id);
+        sendUserListChanged();
+
+        return { success: true, message: "Agent unarchived" };
+      } catch (error) {
+        request.log.error(error, "Error in POST /agents/:id/unarchive route");
+        return reply.status(500).send({
+          success: false,
+          message:
+            error instanceof Error
+              ? error.message
+              : "Internal server error while unarchiving agent",
+        });
+      }
+    },
+  );
+
+  // DELETE /:id — Permanently delete agent
+  fastify.delete<{
+    Params: AgentIdParams;
+    Reply: AgentActionResult | ErrorResponse;
+  }>(
+    "/:id",
+    {
+      preHandler: [requirePermission("manage_agents")],
+      schema: {
+        description: "Permanently delete an archived agent",
+        tags: ["Agents"],
+        params: AgentIdParamsSchema,
+        response: {
+          200: AgentActionResultSchema,
+          400: ErrorResponseSchema,
+          500: ErrorResponseSchema,
+        },
+        security: [{ cookieAuth: [] }],
+      },
+    },
+    async (request, reply) => {
+      try {
+        const { id } = request.params;
+
+        if (isAgentActive(id)) {
+          return reply.status(400).send({
+            success: false,
+            message: "Cannot delete an active agent. Stop it first.",
+          });
+        }
+
+        const agent = await getAgent(id);
+        if (!agent) {
+          return reply.status(404).send({
+            success: false,
+            message: `Agent with ID ${id} not found`,
+          });
+        }
+
+        if (!agent.archived) {
+          return reply.status(400).send({
+            success: false,
+            message: "Agent must be archived before it can be deleted.",
+          });
+        }
+
+        const { agentPath } = await deleteAgent(id);
+
+        try {
+          await fs.unlink(agentPath);
+        } catch {
+          // YAML file may already be missing
+        }
+
+        sendUserListChanged();
+
+        return { success: true, message: "Agent permanently deleted" };
+      } catch (error) {
+        request.log.error(error, "Error in DELETE /agents/:id route");
+        return reply.status(500).send({
+          success: false,
+          message:
+            error instanceof Error
+              ? error.message
+              : "Internal server error while deleting agent",
         });
       }
     },

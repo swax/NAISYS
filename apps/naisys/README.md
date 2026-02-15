@@ -1,4 +1,4 @@
-## NAISYS (Networked Autonomous Intelligence System)
+## NAISYS (Networked Agents Interface System)
 
 [← Back to main README](../../README.md)
 
