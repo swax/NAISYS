@@ -33,6 +33,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
 
   const isAgentsPage = location.pathname.startsWith("/agents");
   const isHostsPage = location.pathname.startsWith("/hosts");
+  const isModelsPage = location.pathname.startsWith("/models");
   const isUsersPage = location.pathname.startsWith("/users");
   const showUsersTab = hasPermission("supervisor_admin");
 
@@ -124,6 +125,25 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
               c={!isHostsPage ? "dimmed" : undefined}
             >
               Hosts
+            </Text>
+          </UnstyledButton>
+          <UnstyledButton
+            onClick={() => navigate("/models")}
+            px="sm"
+            py={4}
+            style={(theme) => ({
+              borderRadius: theme.radius.sm,
+              backgroundColor: isModelsPage
+                ? "var(--mantine-color-dark-5)"
+                : undefined,
+            })}
+          >
+            <Text
+              size="sm"
+              fw={isModelsPage ? 600 : 400}
+              c={!isModelsPage ? "dimmed" : undefined}
+            >
+              Models
             </Text>
           </UnstyledButton>
           {showUsersTab && (

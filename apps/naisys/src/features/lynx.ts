@@ -568,8 +568,10 @@ Final Merged Content:
   }
 
   async function callGoogleSearchApi(query: string): Promise<string> {
-    if (!globalConfig().googleApiKey) {
-      throw "Error, googleApiKey is not defined";
+    const googleApiKey = globalConfig().getEnv("GOOGLE_API_KEY");
+
+    if (!googleApiKey) {
+      throw "Error, set GOOGLE_API_KEY env var";
     }
 
     if (!globalConfig().googleSearchEngineId) {
@@ -578,7 +580,7 @@ Final Merged Content:
 
     const runSearchPromise = new Promise<string>((resolve, reject) => {
       const queryParams = new URLSearchParams({
-        key: globalConfig().googleApiKey!,
+        key: googleApiKey,
         cx: globalConfig().googleSearchEngineId!,
         q: query,
       }).toString();

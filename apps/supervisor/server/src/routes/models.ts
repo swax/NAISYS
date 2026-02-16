@@ -1,4 +1,9 @@
-import { getAllImageModelOptions, getAllLlmModelOptions } from "@naisys/common";
+import {
+  getAllImageModelOptions,
+  getAllImageModels,
+  getAllLlmModelOptions,
+  getAllLlmModels,
+} from "@naisys/common";
 import { loadCustomModels } from "@naisys/common/dist/customModelsLoader.js";
 import {
   ErrorResponse,
@@ -30,6 +35,8 @@ export default async function modelsRoutes(
         return {
           llmModels: getAllLlmModelOptions(custom.llmModels),
           imageModels: getAllImageModelOptions(custom.imageModels),
+          llmModelDetails: getAllLlmModels(custom.llmModels),
+          imageModelDetails: getAllImageModels(custom.imageModels),
         };
       } catch (error) {
         return reply.code(500).send({

@@ -41,6 +41,10 @@ export function createLLMService(
       );
     }
 
+    const apiKey = model.keyEnvVar
+      ? globalConfig().getEnv(model.keyEnvVar)
+      : undefined;
+
     if (model.apiType === LlmApiType.None) {
       throw "This should be unreachable";
     } else if (model.apiType === LlmApiType.Mock) {
@@ -51,6 +55,7 @@ export function createLLMService(
         systemMessage,
         context,
         source,
+        apiKey,
         abortSignal,
       );
     } else if (model.apiType == LlmApiType.Anthropic) {
@@ -59,13 +64,10 @@ export function createLLMService(
         systemMessage,
         context,
         source,
+        apiKey,
         abortSignal,
       );
     } else if (model.apiType == LlmApiType.OpenAI) {
-      const apiKey = model.keyEnvVar
-        ? globalConfig().getEnv(model.keyEnvVar)
-        : globalConfig().openaiApiKey;
-
       return sendWithOpenAiCompatible(
         modelKey,
         systemMessage,
@@ -121,12 +123,8 @@ export function createLLMService(
   ): Promise<string[]> {
     const model = llModels.get(modelKey);
 
-    if (model.key === "local") {
-      if (!model.baseUrl) {
-        throw "Error, local model baseUrl is not defined";
-      }
-    } else if (!globalConfig().openaiApiKey) {
-      throw "Error, openaiApiKey is not defined";
+    if (!apiKey) {
+      throw `Error, set ${model.keyEnvVar} env var`;
     }
 
     const openAI = new OpenAI({
@@ -213,14 +211,19 @@ export function createLLMService(
     systemMessage: string,
     context: LlmMessage[],
     source: QuerySources,
+    apiKey?: string,
     abortSignal?: AbortSignal,
   ): Promise<string[]> {
-    if (!globalConfig().googleApiKey) {
-      throw "Error, googleApiKey is not defined";
-    }
     const model = llModels.get(modelKey);
 
-    const ai = new GoogleGenAI({});
+    if (!apiKey) {
+      throw `Error, set ${model.keyEnvVar} env var`;
+    }
+
+    const ai = new GoogleGenAI({
+      apiKey,
+      httpOptions: model.baseUrl ? { baseUrl: model.baseUrl } : undefined,
+    });
 
     // Assert the last message on the context is a user message
     const lastMessage = context[context.length - 1];
@@ -314,16 +317,18 @@ export function createLLMService(
     systemMessage: string,
     context: LlmMessage[],
     source: QuerySources,
+    apiKey?: string,
     abortSignal?: AbortSignal,
   ): Promise<string[]> {
     const model = llModels.get(modelKey);
 
-    if (!globalConfig().anthropicApiKey) {
-      throw "Error, anthropicApiKey is not defined";
+    if (!apiKey) {
+      throw `Error, set ${model.keyEnvVar} env var`;
     }
 
     const anthropic = new Anthropic({
-      apiKey: globalConfig().anthropicApiKey,
+      apiKey,
+      baseURL: model.baseUrl,
     });
 
     // Assert the last message on the context is a user message
