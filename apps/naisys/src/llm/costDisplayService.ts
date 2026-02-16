@@ -118,7 +118,7 @@ export function createCostDisplayService(
       }
 
       output.comment(
-        `  ${model.name}: $${(modelData.cost || 0).toFixed(4)} total`,
+        `  ${model.label}: $${(modelData.cost || 0).toFixed(4)} total`,
       );
 
       // Show token breakdown

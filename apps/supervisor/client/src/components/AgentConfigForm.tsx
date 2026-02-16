@@ -2,8 +2,6 @@ import {
   AgentConfigFile,
   AgentConfigFileSchema,
   CommandProtection,
-  ImageModelOptions,
-  LlmModelOptions,
 } from "@naisys/common";
 import {
   Button,
@@ -20,8 +18,15 @@ import { useForm } from "@mantine/form";
 import { IconCheck, IconX } from "@tabler/icons-react";
 import { zodResolver } from "../lib/zod-resolver";
 
+interface ModelOption {
+  value: string;
+  label: string;
+}
+
 interface AgentConfigFormProps {
   config: AgentConfigFile;
+  llmModelOptions: ModelOption[];
+  imageModelOptions: ModelOption[];
   readOnly?: boolean;
   saving?: boolean;
   onSave?: (config: AgentConfigFile) => void;
@@ -105,6 +110,8 @@ function desc(field: string): string | undefined {
 
 export const AgentConfigForm: React.FC<AgentConfigFormProps> = ({
   config,
+  llmModelOptions,
+  imageModelOptions,
   readOnly,
   saving,
   onSave,
@@ -198,7 +205,7 @@ export const AgentConfigForm: React.FC<AgentConfigFormProps> = ({
           description={desc("shellModel")}
           withAsterisk
           disabled={readOnly}
-          data={LlmModelOptions}
+          data={llmModelOptions}
           {...form.getInputProps("shellModel")}
         />
         <Select
@@ -206,7 +213,7 @@ export const AgentConfigForm: React.FC<AgentConfigFormProps> = ({
           description={desc("webModel")}
           disabled={readOnly}
           clearable
-          data={LlmModelOptions}
+          data={llmModelOptions}
           {...form.getInputProps("webModel")}
         />
         <Select
@@ -214,7 +221,7 @@ export const AgentConfigForm: React.FC<AgentConfigFormProps> = ({
           description={desc("compactModel")}
           disabled={readOnly}
           clearable
-          data={LlmModelOptions}
+          data={llmModelOptions}
           {...form.getInputProps("compactModel")}
         />
         <Select
@@ -222,7 +229,7 @@ export const AgentConfigForm: React.FC<AgentConfigFormProps> = ({
           description={desc("imageModel")}
           disabled={readOnly}
           clearable
-          data={ImageModelOptions}
+          data={imageModelOptions}
           {...form.getInputProps("imageModel")}
         />
 

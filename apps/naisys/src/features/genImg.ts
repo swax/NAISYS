@@ -1,4 +1,5 @@
-import { ImageModelKey } from "@naisys/common";
+import type { ImageModel } from "@naisys/common";
+import { loadCustomModels } from "@naisys/common/dist/customModelsLoader.js";
 import OpenAI from "openai";
 import path from "path";
 import sharp from "sharp";
@@ -56,8 +57,8 @@ export function createGenImg(
 
     const response = await openai.images.generate({
       prompt: description,
-      model: model.name,
-      size: model.size,
+      model: model.versionName,
+      size: model.size as "1024x1024",
       quality: model.quality,
       response_format: "b64_json",
     });
@@ -105,47 +106,55 @@ export function createGenImg(
 
 export type GenImg = ReturnType<typeof createGenImg>;
 
-interface ImageModel {
-  key: ImageModelKey;
-  name: "dall-e-2" | "dall-e-3";
-  size: "1024x1024" | "512x512" | "256x256";
-  quality?: "standard" | "hd";
-  cost: number;
-}
-
 const imageModels: ImageModel[] = [
   {
     key: "dalle3-1024-HD",
-    name: "dall-e-3",
+    label: "DALL-E 3 1024 HD",
+    versionName: "dall-e-3",
     size: "1024x1024",
     quality: "hd",
     cost: 0.08,
   },
   {
     key: "dalle3-1024",
-    name: "dall-e-3",
+    label: "DALL-E 3 1024",
+    versionName: "dall-e-3",
     size: "1024x1024",
     cost: 0.04,
   },
   {
     key: "dalle2-1024",
-    name: "dall-e-2",
+    label: "DALL-E 2 1024",
+    versionName: "dall-e-2",
     size: "1024x1024",
     cost: 0.02,
   },
   {
     key: "dalle2-512",
-    name: "dall-e-2",
+    label: "DALL-E 2 512",
+    versionName: "dall-e-2",
     size: "512x512",
     cost: 0.018,
   },
   {
     key: "dalle2-256",
-    name: "dall-e-2",
+    label: "DALL-E 2 256",
+    versionName: "dall-e-2",
     size: "256x256",
     cost: 0.016,
   },
 ];
+
+// Merge custom image models from custom-models.yaml
+const customModels = loadCustomModels();
+for (const custom of customModels.imageModels ?? []) {
+  const existingIndex = imageModels.findIndex((m) => m.key === custom.key);
+  if (existingIndex >= 0) {
+    imageModels[existingIndex] = custom;
+  } else {
+    imageModels.push(custom);
+  }
+}
 
 function getImageModel(key: string) {
   const model = imageModels.find((m) => m.key === key);

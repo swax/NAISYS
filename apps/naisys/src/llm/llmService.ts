@@ -142,7 +142,7 @@ export function createLLMService(
     }
 
     const chatRequest: ChatCompletionCreateParamsNonStreaming = {
-      model: model.name,
+      model: model.versionName,
       stream: false,
       reasoning_effort: "high", // should put behind a usethinking flag?
       messages: [
@@ -239,7 +239,7 @@ export function createLLMService(
 
     // Prepare config with system instruction
     const chatConfig: any = {
-      model: model.name,
+      model: model.versionName,
       config: {
         systemInstruction: systemMessage,
         thinkingConfig: {
@@ -336,7 +336,7 @@ export function createLLMService(
     const useThinking = true;
 
     const createParams: Anthropic.MessageCreateParams = {
-      model: model.name,
+      model: model.versionName,
       max_tokens: 4096, // Blows up on anything higher
       messages: [
         {
