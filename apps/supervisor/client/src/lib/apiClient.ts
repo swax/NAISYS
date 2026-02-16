@@ -16,6 +16,7 @@ import type {
   LogoutResponse,
   MailDataResponse,
   MailMessage,
+  ModelsResponse,
   RunsDataResponse,
   RunSession,
   SendMailRequest,
@@ -46,6 +47,7 @@ export type {
   LogoutResponse,
   MailDataResponse,
   MailMessage,
+  ModelsResponse,
   RunsDataResponse,
   RunSession,
   SendMailRequest,
@@ -130,5 +132,6 @@ export const apiEndpoints = {
   agentUnarchive: (id: number) => `/agents/${id}/unarchive`,
   agentLead: (id: number) => `/agents/${id}/lead`,
   agentDelete: (id: number) => `/agents/${id}`,
+  models: "/models",
   sendMail: "/send-mail",
 };

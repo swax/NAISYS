@@ -109,7 +109,7 @@ export default async function agentRunsRoutes(
 
         const maxLogId = data?.logs.length
           ? Math.max(...data.logs.map((l) => l.id))
-          : logsAfter ?? 0;
+          : (logsAfter ?? 0);
 
         return {
           success: true,

@@ -1,32 +1,15 @@
-import { LlmModelKey } from "@naisys/common";
+import { LlmApiType, type LlmModel } from "@naisys/common";
+import { loadCustomModels } from "@naisys/common/dist/customModelsLoader.js";
 import { GlobalConfig } from "../globalConfig.js";
 
-export enum LlmApiType {
-  OpenAI = "openai",
-  Google = "google",
-  Anthropic = "anthropic",
-  Mock = "mock",
-  None = "none",
-}
-
-interface LlmModel {
-  key: LlmModelKey;
-  name: string;
-  baseUrl?: string;
-  apiType: LlmApiType;
-  keyEnvVar?: string;
-  maxTokens: number;
-  inputCost: number;
-  outputCost: number;
-  cacheWriteCost?: number;
-  cacheReadCost?: number;
-}
+export { LlmApiType };
 
 export function createLLModels({ globalConfig }: GlobalConfig) {
   const llmModels: LlmModel[] = [
     {
       key: LlmApiType.None,
-      name: LlmApiType.None,
+      label: "None",
+      versionName: LlmApiType.None,
       apiType: LlmApiType.None,
       maxTokens: 10_000,
       inputCost: 0,
@@ -35,7 +18,8 @@ export function createLLModels({ globalConfig }: GlobalConfig) {
     // Dummy model is good for testing agent concurrency without incurring costs
     {
       key: LlmApiType.Mock,
-      name: LlmApiType.Mock,
+      label: "Mock",
+      versionName: LlmApiType.Mock,
       apiType: LlmApiType.Mock,
       maxTokens: 10_000,
       inputCost: 0,
@@ -43,7 +27,8 @@ export function createLLModels({ globalConfig }: GlobalConfig) {
     },
     {
       key: "local",
-      name: globalConfig().localLlmName || "local",
+      label: "Local",
+      versionName: globalConfig().localLlmName || "local",
       baseUrl: globalConfig().localLlmUrl,
       apiType: LlmApiType.OpenAI,
       maxTokens: 8_000,
@@ -54,7 +39,8 @@ export function createLLModels({ globalConfig }: GlobalConfig) {
     // Open Router
     {
       key: "llama3-405b",
-      name: "meta-llama/llama-3.1-405b-instruct",
+      label: "Llama 3.1 405B",
+      versionName: "meta-llama/llama-3.1-405b-instruct",
       baseUrl: "https://openrouter.ai/api/v1",
       apiType: LlmApiType.OpenAI,
       keyEnvVar: "OPENROUTER_API_KEY",
@@ -66,7 +52,8 @@ export function createLLModels({ globalConfig }: GlobalConfig) {
     // Grok
     {
       key: "grok4",
-      name: "grok-4",
+      label: "Grok 4",
+      versionName: "grok-4",
       baseUrl: "https://api.x.ai/v1",
       apiType: LlmApiType.OpenAI,
       keyEnvVar: "XAI_API_KEY",
@@ -79,7 +66,8 @@ export function createLLModels({ globalConfig }: GlobalConfig) {
     },
     {
       key: "grok4fast",
-      name: "grok-4-fast",
+      label: "Grok 4 Fast",
+      versionName: "grok-4-fast",
       baseUrl: "https://api.x.ai/v1",
       apiType: LlmApiType.OpenAI,
       keyEnvVar: "XAI_API_KEY",
@@ -94,7 +82,8 @@ export function createLLModels({ globalConfig }: GlobalConfig) {
     // https://openai.com/api/pricing/
     {
       key: "gpt5",
-      name: "gpt-5.1",
+      label: "GPT 5.1",
+      versionName: "gpt-5.1",
       apiType: LlmApiType.OpenAI,
       maxTokens: 400_000,
       // Prices are per 1M tokens
@@ -105,7 +94,8 @@ export function createLLModels({ globalConfig }: GlobalConfig) {
     },
     {
       key: "gpt5mini",
-      name: "gpt-5-mini",
+      label: "GPT 5 Mini",
+      versionName: "gpt-5-mini",
       apiType: LlmApiType.OpenAI,
       maxTokens: 400_000,
       // Prices are per 1M tokens
@@ -116,7 +106,8 @@ export function createLLModels({ globalConfig }: GlobalConfig) {
     },
     {
       key: "gpt5nano",
-      name: "gpt-5-nano",
+      label: "GPT 5 Nano",
+      versionName: "gpt-5-nano",
       apiType: LlmApiType.OpenAI,
       maxTokens: 400_000,
       // Prices are per 1M tokens
@@ -128,7 +119,8 @@ export function createLLModels({ globalConfig }: GlobalConfig) {
     // Google Models - Prices are per 1M tokens
     {
       key: "gemini3pro",
-      name: "gemini-3-pro-image-preview",
+      label: "Gemini 3 Pro",
+      versionName: "gemini-3-pro-image-preview",
       apiType: LlmApiType.Google,
       maxTokens: 2_000_000,
       // Prices are per 1M tokens
@@ -139,7 +131,8 @@ export function createLLModels({ globalConfig }: GlobalConfig) {
     },
     {
       key: "gemini2.5pro",
-      name: "gemini-2.5-pro",
+      label: "Gemini 2.5 Pro",
+      versionName: "gemini-2.5-pro",
       apiType: LlmApiType.Google,
       maxTokens: 2_000_000,
       // Prices are per 1M tokens
@@ -150,7 +143,8 @@ export function createLLModels({ globalConfig }: GlobalConfig) {
     },
     {
       key: "gemini2.5flash",
-      name: "gemini-2.5-flash",
+      label: "Gemini 2.5 Flash",
+      versionName: "gemini-2.5-flash",
       apiType: LlmApiType.Google,
       maxTokens: 1_000_000,
       // Prices are per 1M tokens
@@ -161,7 +155,8 @@ export function createLLModels({ globalConfig }: GlobalConfig) {
     },
     {
       key: "gemini2.5flashlite",
-      name: "gemini-2.5-flash-lite",
+      label: "Gemini 2.5 Flash Lite",
+      versionName: "gemini-2.5-flash-lite",
       apiType: LlmApiType.Google,
       maxTokens: 1_000_000,
       // Prices are per 1M tokens
@@ -173,7 +168,8 @@ export function createLLModels({ globalConfig }: GlobalConfig) {
     // Anthropic Models
     {
       key: "claude4opus",
-      name: "claude-opus-4-20250514",
+      label: "Claude 4 Opus",
+      versionName: "claude-opus-4-20250514",
       apiType: LlmApiType.Anthropic,
       maxTokens: 200_000,
       // Prices are per 1M tokens
@@ -184,7 +180,8 @@ export function createLLModels({ globalConfig }: GlobalConfig) {
     },
     {
       key: "claude4sonnet",
-      name: "claude-sonnet-4-5-20250929",
+      label: "Claude 4 Sonnet",
+      versionName: "claude-sonnet-4-5-20250929",
       apiType: LlmApiType.Anthropic,
       maxTokens: 200_000,
       // Prices are per 1M tokens
@@ -195,7 +192,8 @@ export function createLLModels({ globalConfig }: GlobalConfig) {
     },
     {
       key: "claude4haiku",
-      name: "claude-haiku-4-5-20251001",
+      label: "Claude 4 Haiku",
+      versionName: "claude-haiku-4-5-20251001",
       apiType: LlmApiType.Anthropic,
       maxTokens: 200_000,
       // Prices are per 1M tokens
@@ -206,17 +204,22 @@ export function createLLModels({ globalConfig }: GlobalConfig) {
     },
   ];
 
-  function get(keyName: string) {
-    const [key, name] = keyName.split("/");
+  // Merge custom models from custom-models.yaml
+  const customModels = loadCustomModels();
+  for (const custom of customModels.llmModels ?? []) {
+    const existingIndex = llmModels.findIndex((m) => m.key === custom.key);
+    if (existingIndex >= 0) {
+      llmModels[existingIndex] = custom;
+    } else {
+      llmModels.push(custom);
+    }
+  }
 
-    const model = structuredClone(llmModels.find((m) => m.key === key));
+  function get(key: string) {
+    const model = llmModels.find((m) => m.key === key);
 
     if (!model) {
       throw `Error, model not found: ${key}`;
-    }
-
-    if (name) {
-      model.name = name;
     }
 
     return model;

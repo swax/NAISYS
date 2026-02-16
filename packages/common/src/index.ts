@@ -7,3 +7,4 @@ export * from "./authCache.js";
 export * from "./hateoas-types.js";
 export * from "./hateoas.js";
 export * from "./sleep.js";
+export * from "./modelTypes.js";

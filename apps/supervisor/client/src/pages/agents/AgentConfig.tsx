@@ -1,4 +1,5 @@
 import type { AgentConfigFile } from "@naisys/common";
+import { LlmModelOptions, ImageModelOptions } from "@naisys/common";
 import { Alert, Button, Group, Loader, Stack, Text } from "@mantine/core";
 import { IconEdit } from "@tabler/icons-react";
 import React, { useCallback, useEffect, useState } from "react";
@@ -7,6 +8,7 @@ import { AgentConfigForm } from "../../components/AgentConfigForm";
 import { useAgentDataContext } from "../../contexts/AgentDataContext";
 import { useSession } from "../../contexts/SessionContext";
 import { getAgentConfig, updateAgentConfig } from "../../lib/apiAgents";
+import { api, apiEndpoints, type ModelsResponse } from "../../lib/apiClient";
 
 export const AgentConfig: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -21,6 +23,12 @@ export const AgentConfig: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [llmModelOptions, setLlmModelOptions] = useState<
+    { value: string; label: string }[]
+  >(LlmModelOptions.map((o) => ({ value: o.value, label: o.label })));
+  const [imageModelOptions, setImageModelOptions] = useState<
+    { value: string; label: string }[]
+  >(ImageModelOptions.map((o) => ({ value: o.value, label: o.label })));
 
   // Block in-app navigation while editing
   const blocker = useBlocker(isEditing);
@@ -49,6 +57,18 @@ export const AgentConfig: React.FC = () => {
     window.addEventListener("beforeunload", handleBeforeUnload);
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, [handleBeforeUnload]);
+
+  useEffect(() => {
+    api
+      .get<ModelsResponse>(apiEndpoints.models)
+      .then((data) => {
+        setLlmModelOptions(data.llmModels);
+        setImageModelOptions(data.imageModels);
+      })
+      .catch(() => {
+        // Fall back to static options (already set as defaults)
+      });
+  }, []);
 
   useEffect(() => {
     if (!agentId) {
@@ -160,6 +180,8 @@ export const AgentConfig: React.FC = () => {
         <AgentConfigForm
           key={isEditing ? "edit" : "view"}
           config={config}
+          llmModelOptions={llmModelOptions}
+          imageModelOptions={imageModelOptions}
           readOnly={!isEditing}
           saving={saving}
           onSave={handleSave}

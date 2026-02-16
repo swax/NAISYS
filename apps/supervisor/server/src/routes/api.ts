@@ -9,6 +9,7 @@ import agentMailRoutes from "./agentMail.js";
 import authRoutes from "./auth.js";
 import hostsRoutes from "./hosts.js";
 import mailRoutes from "./mail.js";
+import modelsRoutes from "./models.js";
 import rootRoutes from "./root.js";
 import schemaRoutes from "./schemas.js";
 import settingsRoutes from "./settings.js";
@@ -48,6 +49,9 @@ export default async function apiRoutes(
 
   // Register hosts routes
   await fastify.register(hostsRoutes, { prefix: "/hosts" });
+
+  // Register models routes
+  await fastify.register(modelsRoutes);
 
   // Register top-level mail routes (send-mail)
   await fastify.register(mailRoutes);

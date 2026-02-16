@@ -1,6 +1,13 @@
 import {
+  getAllImageModelOptions,
+  getAllLlmModelOptions,
+  getValidModelKeys,
+} from "@naisys/common";
+import { loadCustomModels } from "@naisys/common/dist/customModelsLoader.js";
+import {
   AgentIdParams,
   AgentIdParamsSchema,
+  ErrorResponse,
   ErrorResponseSchema,
   GetAgentConfigResponse,
   GetAgentConfigResponseSchema,
@@ -15,7 +22,6 @@ import {
   getAgentConfigById,
   updateAgentConfigById,
 } from "../services/agentConfigService.js";
-import { ErrorResponse } from "@naisys-supervisor/shared";
 
 export default async function agentConfigRoutes(
   fastify: FastifyInstance,
@@ -92,6 +98,37 @@ export default async function agentConfigRoutes(
       try {
         const { id } = request.params;
         const { config } = request.body;
+
+        // Validate model keys against known models
+        const custom = loadCustomModels();
+        const validLlmKeys = getValidModelKeys(
+          getAllLlmModelOptions(custom.llmModels),
+        );
+        const validImageKeys = getValidModelKeys(
+          getAllImageModelOptions(custom.imageModels),
+        );
+
+        const invalidModels: string[] = [];
+        if (!validLlmKeys.has(config.shellModel)) {
+          invalidModels.push(`shellModel: "${config.shellModel}"`);
+        }
+        if (config.webModel && !validLlmKeys.has(config.webModel)) {
+          invalidModels.push(`webModel: "${config.webModel}"`);
+        }
+        if (config.compactModel && !validLlmKeys.has(config.compactModel)) {
+          invalidModels.push(`compactModel: "${config.compactModel}"`);
+        }
+        if (config.imageModel && !validImageKeys.has(config.imageModel)) {
+          invalidModels.push(`imageModel: "${config.imageModel}"`);
+        }
+
+        if (invalidModels.length > 0) {
+          return reply.status(400).send({
+            success: false,
+            message: `Invalid model key(s): ${invalidModels.join(", ")}`,
+          });
+        }
+
         await updateAgentConfigById(id, config);
 
         return {
