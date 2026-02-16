@@ -179,7 +179,7 @@ export function createSubagentService(
   function raiseSwitchEvent() {
     promptNotification.notify({
       userId: localUserId,
-      wake: true,
+      wake: "always",
     });
   }
 
@@ -342,7 +342,7 @@ export function createSubagentService(
 
     promptNotification.notify({
       userId: localUserId,
-      wake: !!agentConfig().wakeOnMessage,
+      wake: "yes",
       contextOutput: [
         `Subagent '${subagent.agentName}' has terminated. Reason: ${reason}`,
       ],

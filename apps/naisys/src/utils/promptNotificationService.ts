@@ -1,5 +1,8 @@
+/** "no" = don't wake, "yes" = wake if agent has wakeOnMessage enabled, "always" = always wake */
+export type WakeLevel = "no" | "yes" | "always";
+
 export interface PromptNotification {
-  wake: boolean;
+  wake: WakeLevel;
   userId?: number;
   contextOutput?: string[];
   commentOutput?: string[];
@@ -37,20 +40,24 @@ export function createPromptNotificationService() {
     pending.get(userId)!.push(notification);
   }
 
-  function hasPending(userId: number, filter?: "wake"): boolean {
+  function shouldWake(wake: WakeLevel, wakeOnMessage: boolean): boolean {
+    return wake === "always" || (wake === "yes" && wakeOnMessage);
+  }
+
+  function hasPending(userId: number, wakeOnMessage: boolean): boolean {
     const userQueue = pending.get(userId) || [];
 
     // Check user's own queue
-    const hasUserPending =
-      filter === "wake" ? userQueue.some((n) => n.wake) : userQueue.length > 0;
-
-    if (hasUserPending) return true;
+    if (userQueue.some((n) => shouldWake(n.wake, wakeOnMessage))) {
+      return true;
+    }
 
     // Check unseen global notification
-    if (globalNotification && !globalNotifiedUserIds.has(userId)) {
-      if (filter === "wake") {
-        return globalNotification.wake;
-      }
+    if (
+      globalNotification &&
+      !globalNotifiedUserIds.has(userId) &&
+      shouldWake(globalNotification.wake, wakeOnMessage)
+    ) {
       return true;
     }
 

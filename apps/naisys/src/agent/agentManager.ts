@@ -83,7 +83,7 @@ export class AgentManager {
     const adminUserId = this.userService.getUserByName("admin")?.userId ?? 0;
 
     this.promptNotification.notify({
-      wake: true,
+      wake: "always",
       userId: adminUserId,
       commentOutput: [`Received request from hub to ${type} ${username}`],
     });
@@ -139,7 +139,7 @@ export class AgentManager {
 
     // Wake the agent if it's blocked waiting for input (debug prompt timeout, etc.)
     this.promptNotification.notify({
-      wake: true,
+      wake: "always",
       userId: agentUserId,
       commentOutput: [],
     });

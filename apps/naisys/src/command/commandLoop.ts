@@ -75,7 +75,7 @@ export function createCommandLoop(
       }
 
       for (const initialCommand of agentConfig().initialCommands) {
-        const prompt = await promptBuilder.getPrompt(0, false);
+        const prompt = await promptBuilder.getPrompt(0);
         await contextManager.append(prompt, ContentSource.ConsolePrompt);
         await commandHandler.processCommand(prompt, [
           agentConfig().resolveConfigVars(initialCommand),
@@ -85,7 +85,6 @@ export function createCommandLoop(
       inputMode.setDebug();
 
       let pauseSeconds: number | undefined = undefined;
-      let wakeOnMessage: boolean | undefined = undefined;
 
       while (
         nextCommandAction == NextCommandAction.Continue &&
@@ -112,11 +111,7 @@ export function createCommandLoop(
             pauseSeconds = agentConfig().debugPauseSeconds;
           }
         }
-        if (wakeOnMessage === undefined) {
-          wakeOnMessage = agentConfig().wakeOnMessage;
-        }
-
-        let prompt = await promptBuilder.getPrompt(pauseSeconds, wakeOnMessage);
+        let prompt = await promptBuilder.getPrompt(pauseSeconds);
         let commandList: string[] = [];
         let blankDebugInput = false;
 
@@ -132,7 +127,6 @@ export function createCommandLoop(
         else if (inputMode.isLLM()) {
           // Clear pause/wait settings after use
           pauseSeconds = undefined;
-          wakeOnMessage = undefined;
 
           const workingMsg =
             prompt +
@@ -143,7 +137,7 @@ export function createCommandLoop(
           try {
             // In the cases that the input prompt is interrupted for a notification, return to the debug prompt
             if (
-              promptNotification.hasPending(localUserId) ||
+              promptNotification.hasPending(localUserId, true) ||
               agentConfig().shellModel === LlmApiType.None // Check this last so notifications get processed/cleared
             ) {
               const pendingOutput =
@@ -216,7 +210,7 @@ export function createCommandLoop(
             // Can't do this in a finally because it needs to happen before the error is printed
             clearPromptMessage(workingMsg);
 
-            ({ llmErrorCount, pauseSeconds, wakeOnMessage } =
+            ({ llmErrorCount, pauseSeconds } =
               await handleErrorAndSwitchToDebugMode(e, llmErrorCount, false));
 
             continue;
@@ -227,14 +221,14 @@ export function createCommandLoop(
 
         // Run the command
         try {
-          ({ nextCommandAction, pauseSeconds, wakeOnMessage } =
+          ({ nextCommandAction, pauseSeconds } =
             await commandHandler.processCommand(prompt, commandList));
 
           if (inputMode.isLLM()) {
             llmErrorCount = 0;
           }
         } catch (e) {
-          ({ llmErrorCount, pauseSeconds, wakeOnMessage } =
+          ({ llmErrorCount, pauseSeconds } =
             await handleErrorAndSwitchToDebugMode(e, llmErrorCount, true));
           continue;
         }
@@ -293,7 +287,6 @@ export function createCommandLoop(
 
     // If llm is in some error loop then hold in debug mode
     let pauseSeconds = agentConfig().debugPauseSeconds;
-    let wakeOnMessage = agentConfig().wakeOnMessage;
 
     if (inputMode.isLLM()) {
       llmErrorCount++;
@@ -312,7 +305,6 @@ export function createCommandLoop(
     return {
       llmErrorCount,
       pauseSeconds,
-      wakeOnMessage,
     };
   }
 
@@ -337,7 +329,7 @@ export function createCommandLoop(
   }
 
   async function displayPreviousSessionNotes(prevSessionNotes: string) {
-    const prompt = await promptBuilder.getPrompt(0, false);
+    const prompt = await promptBuilder.getPrompt(0);
     await contextManager.append(prompt, ContentSource.ConsolePrompt);
     const prevSessionNotesCommand = "cat ~/prev_session_notes";
     await contextManager.append(

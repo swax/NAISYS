@@ -104,7 +104,7 @@ const heartbeatService = createHeartbeatService(
 );
 
 // Resolve the agent path to a username (or admin if no path) and start the agent
-const startupUserIds = userService.getStartupUserIds(integratedHub);
+const startupUserIds = userService.getStartupUserIds();
 for (const userId of startupUserIds) {
   await agentManager.startAgent(userId);
 }

@@ -52,7 +52,7 @@ export function createHubClient(
 
     if (hasConnectedOnce) {
       promptNotification.notify({
-        wake: true,
+        wake: "always",
         commentOutput: ["Hub connection re-established"],
       });
     }
@@ -68,7 +68,7 @@ export function createHubClient(
     if (hasConnectedOnce && !disconnectNotified) {
       disconnectNotified = true;
       promptNotification.notify({
-        wake: true,
+        wake: "always",
         commentOutput: ["Hub connection lost"],
       });
     }

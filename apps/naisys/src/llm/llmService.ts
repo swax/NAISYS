@@ -107,7 +107,7 @@ export function createLLMService(
 
     return [
       `ns-comment "Mock LLM ran at ${new Date().toISOString()}"`,
-      `ns-session pause 5`,
+      `ns-session wait 5`,
     ];
   }
 
