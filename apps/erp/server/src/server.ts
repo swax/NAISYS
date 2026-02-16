@@ -18,12 +18,12 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { registerApiReference } from "./api-reference.js";
 import { registerAuthMiddleware } from "./auth-middleware.js";
-import { erpDbPath } from "./dbConfig.js";
+import { ERP_DB_VERSION, erpDbPath } from "./dbConfig.js";
 import { registerErrorHandler } from "./error-handler.js";
 import {
   initHubSessions,
   ensureAdminUser,
-  resetPassword,
+  handleResetPassword,
   deployPrismaMigrations,
 } from "@naisys/database";
 import auditRoutes from "./routes/audit.js";
@@ -61,8 +61,8 @@ export const erpPlugin = fp(async (fastify) => {
   const erpServerDir = path.join(__dirname, "..");
   await deployPrismaMigrations({
     packageDir: erpServerDir,
-    databasePath: erpDbPath,
-    expectedVersion: 2,
+    databasePath: erpDbPath(),
+    expectedVersion: ERP_DB_VERSION,
   });
 
   initHubSessions();
@@ -84,6 +84,13 @@ export const erpPlugin = fp(async (fastify) => {
     prefix: "/api/erp/execution/orders",
   });
   fastify.register(schemaRoutes, { prefix: "/api/erp/schemas" });
+
+  // Public endpoint to expose client configuration (publicRead, etc.)
+  fastify.get(
+    "/api/erp/client-config",
+    { schema: { hide: true } },
+    async () => ({ publicRead: process.env.PUBLIC_READ === "true" }),
+  );
 
   registerApiReference(fastify);
 
@@ -173,38 +180,25 @@ async function startServer() {
   }
 }
 
-async function handleResetPassword() {
-  const erpServerDir = path.join(__dirname, "..");
-  await deployPrismaMigrations({
-    packageDir: erpServerDir,
-    databasePath: (await import("./dbConfig.js")).erpDbPath,
-    expectedVersion: 2,
-  });
-
-  initHubSessions();
-
-  const prisma = (await import("./db.js")).default;
-
-  await resetPassword(
-    async (username) => {
-      const user = await prisma.user.findUnique({ where: { username } });
-      return user
-        ? { id: user.id, username: user.username, uuid: user.uuid }
-        : null;
-    },
-    async (userId, passwordHash) => {
-      await prisma.user.update({
-        where: { id: userId },
-        data: { passwordHash },
-      });
-    },
-  );
-}
-
 // Start server if this file is run directly
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   if (process.argv.includes("--reset-password")) {
-    void handleResetPassword();
+    void handleResetPassword({
+      findLocalUser: async (username) => {
+        const prisma = (await import("./db.js")).default;
+        const user = await prisma.user.findUnique({ where: { username } });
+        return user
+          ? { id: user.id, username: user.username, uuid: user.uuid }
+          : null;
+      },
+      updateLocalPassword: async (userId, passwordHash) => {
+        const prisma = (await import("./db.js")).default;
+        await prisma.user.update({
+          where: { id: userId },
+          data: { passwordHash },
+        });
+      },
+    });
   } else {
     void startServer();
   }

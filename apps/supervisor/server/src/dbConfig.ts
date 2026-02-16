@@ -1,5 +1,12 @@
 import { join } from "path";
 
-const naisysFolder = process.env.NAISYS_FOLDER || "";
-export const supervisorDbPath = join(naisysFolder, "database", "supervisor.db");
-export const supervisorDbUrl = "file:" + supervisorDbPath;
+export function supervisorDbPath(): string {
+  return join(process.env.NAISYS_FOLDER || "", "database", "supervisor.db");
+}
+
+export function supervisorDbUrl(): string {
+  return "file:" + supervisorDbPath();
+}
+
+/** Must match the version in the latest migration's schema_version insert */
+export const SUPERVISOR_DB_VERSION = 2;

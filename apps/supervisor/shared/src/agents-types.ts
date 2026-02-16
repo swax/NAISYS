@@ -43,6 +43,7 @@ export const AgentListResponseSchema = z.object({
   items: z.array(AgentSchema),
   timestamp: z.string(),
   _links: z.array(LinkSchema),
+  _actions: z.array(HateoasActionSchema).optional(),
 });
 
 export const AgentIdParamsSchema = z.object({
@@ -81,9 +82,11 @@ export type AgentDetailResponse = z.infer<typeof AgentDetailResponseSchema>;
 export type HostIdParams = z.infer<typeof HostIdParamsSchema>;
 export type HostListResponse = z.infer<typeof HostListResponseSchema>;
 
-export const SetLeadAgentRequestSchema = z.object({
-  leadAgentId: z.number().nullable(),
-});
+export const SetLeadAgentRequestSchema = z
+  .object({
+    leadAgentId: z.number().nullable(),
+  })
+  .strict();
 export type SetLeadAgentRequest = z.infer<typeof SetLeadAgentRequestSchema>;
 
 export const AgentActionResultSchema = z.object({
@@ -91,6 +94,13 @@ export const AgentActionResultSchema = z.object({
   message: z.string(),
 });
 export type AgentActionResult = z.infer<typeof AgentActionResultSchema>;
+
+export const AgentStartRequestSchema = z
+  .object({
+    task: z.string().optional(),
+  })
+  .strict();
+export type AgentStartRequest = z.infer<typeof AgentStartRequestSchema>;
 
 export const AgentStartResultSchema = z.object({
   success: z.boolean(),

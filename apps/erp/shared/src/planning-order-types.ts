@@ -19,27 +19,31 @@ export const PlanningOrderSchema = z.object({
 export type PlanningOrder = z.infer<typeof PlanningOrderSchema>;
 
 // Input for creating a planning order
-export const CreatePlanningOrderSchema = z.object({
-  key: z
-    .string()
-    .min(1)
-    .max(100)
-    .regex(
-      /^[a-z0-9]+(-[a-z0-9]+)*$/,
-      "Key must be lowercase alphanumeric with hyphens",
-    ),
-  name: z.string().min(1).max(200),
-  description: z.string().max(2000).optional().default(""),
-});
+export const CreatePlanningOrderSchema = z
+  .object({
+    key: z
+      .string()
+      .min(1)
+      .max(100)
+      .regex(
+        /^[a-z0-9]+(-[a-z0-9]+)*$/,
+        "Key must be lowercase alphanumeric with hyphens",
+      ),
+    name: z.string().min(1).max(200),
+    description: z.string().max(2000).optional().default(""),
+  })
+  .strict();
 
 export type CreatePlanningOrder = z.infer<typeof CreatePlanningOrderSchema>;
 
 // Input for updating a planning order
-export const UpdatePlanningOrderSchema = z.object({
-  name: z.string().min(1).max(200).optional(),
-  description: z.string().max(2000).optional(),
-  status: z.enum(["active", "archived"]).optional(),
-});
+export const UpdatePlanningOrderSchema = z
+  .object({
+    name: z.string().min(1).max(200).optional(),
+    description: z.string().max(2000).optional(),
+    status: z.enum(["active", "archived"]).optional(),
+  })
+  .strict();
 
 export type UpdatePlanningOrder = z.infer<typeof UpdatePlanningOrderSchema>;
 

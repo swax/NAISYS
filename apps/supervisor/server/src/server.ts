@@ -1,3 +1,5 @@
+import "dotenv/config";
+// Important to load dotenv before any other imports, to ensure environment variables are available
 import type { StartServer } from "@naisys/common";
 import cookie from "@fastify/cookie";
 import cors from "@fastify/cors";
@@ -5,7 +7,6 @@ import multipart from "@fastify/multipart";
 import staticFiles from "@fastify/static";
 import swagger from "@fastify/swagger";
 import scalarReference from "@scalar/fastify-api-reference";
-import dotenv from "dotenv";
 import Fastify from "fastify";
 import {
   jsonSchemaTransform,
@@ -20,10 +21,10 @@ import {
   initHubSessions,
   isHubAvailable,
   ensureAdminUser,
-  resetPassword,
+  handleResetPassword,
   deployPrismaMigrations,
 } from "@naisys/database";
-import { supervisorDbPath } from "./dbConfig.js";
+import { SUPERVISOR_DB_VERSION, supervisorDbPath } from "./dbConfig.js";
 import prisma from "./db.js";
 import { initLogger } from "./logger.js";
 import apiRoutes from "./routes/api.js";
@@ -54,8 +55,8 @@ export const startServer: StartServer = async (
   const supervisorServerDir = path.join(path.dirname(__filename_startup), "..");
   await deployPrismaMigrations({
     packageDir: supervisorServerDir,
-    databasePath: supervisorDbPath,
-    expectedVersion: 2,
+    databasePath: supervisorDbPath(),
+    expectedVersion: SUPERVISOR_DB_VERSION,
   });
 
   initHubSessions();
@@ -187,11 +188,11 @@ export const startServer: StartServer = async (
 
   fastify.register(apiRoutes, { prefix: "/api/supervisor" });
 
-  // Public endpoint to expose enabled plugins to the client
+  // Public endpoint to expose client configuration (plugins, publicRead, etc.)
   fastify.get(
-    "/api/supervisor/plugins",
+    "/api/supervisor/client-config",
     { schema: { hide: true } },
-    async () => ({ plugins }),
+    async () => ({ plugins, publicRead: process.env.PUBLIC_READ === "true" }),
   );
 
   // Conditionally load ERP plugin
@@ -257,39 +258,19 @@ export const startServer: StartServer = async (
   }
 };
 
-async function handleResetPassword() {
-  const __filename_reset = fileURLToPath(import.meta.url);
-  const serverDir = path.join(path.dirname(__filename_reset), "..");
-  await deployPrismaMigrations({
-    packageDir: serverDir,
-    databasePath: supervisorDbPath,
-    expectedVersion: 2,
-  });
-
-  initHubSessions();
-
-  if (!isHubAvailable()) {
-    console.error("[Supervisor] Hub database not found.");
-    process.exit(1);
-  }
-
-  await resetPassword(
-    async (username) => {
-      const user = await getUserByUsername(username);
-      return user
-        ? { id: user.id, username: user.username, uuid: user.uuid }
-        : null;
-    },
-    async () => {}, // Password is stored in hub only
-  );
-}
-
 // Start server if this file is run directly
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  dotenv.config({ quiet: true });
-
   if (process.argv.includes("--reset-password")) {
-    void handleResetPassword();
+    void handleResetPassword({
+      findLocalUser: async (username) => {
+        const user = await getUserByUsername(username);
+        return user
+          ? { id: user.id, username: user.username, uuid: user.uuid }
+          : null;
+      },
+      updateLocalPassword: async () => {},
+      requireHub: true,
+    });
   } else {
     void startServer("standalone");
   }

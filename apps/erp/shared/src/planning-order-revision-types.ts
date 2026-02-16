@@ -23,20 +23,24 @@ export const PlanningOrderRevisionSchema = z.object({
 export type PlanningOrderRevision = z.infer<typeof PlanningOrderRevisionSchema>;
 
 // Input for creating a revision
-export const CreatePlanningOrderRevisionSchema = z.object({
-  notes: z.string().max(2000).optional(),
-  changeSummary: z.string().max(2000).optional(),
-});
+export const CreatePlanningOrderRevisionSchema = z
+  .object({
+    notes: z.string().max(2000).optional(),
+    changeSummary: z.string().max(2000).optional(),
+  })
+  .strict();
 
 export type CreatePlanningOrderRevision = z.infer<
   typeof CreatePlanningOrderRevisionSchema
 >;
 
 // Input for updating a revision
-export const UpdatePlanningOrderRevisionSchema = z.object({
-  notes: z.string().max(2000).optional(),
-  changeSummary: z.string().max(2000).optional(),
-});
+export const UpdatePlanningOrderRevisionSchema = z
+  .object({
+    notes: z.string().max(2000).optional(),
+    changeSummary: z.string().max(2000).optional(),
+  })
+  .strict();
 
 export type UpdatePlanningOrderRevision = z.infer<
   typeof UpdatePlanningOrderRevisionSchema

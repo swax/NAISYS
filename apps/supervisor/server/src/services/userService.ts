@@ -1,16 +1,14 @@
-import { createHash, randomUUID } from "crypto";
+import { randomUUID } from "crypto";
 import bcrypt from "bcrypt";
+import { hashToken } from "@naisys/common/dist/hashToken.js";
 import { createHubUser, updateHubUserPassword } from "@naisys/database";
 import prisma from "../db.js";
 import type { Permission } from "../generated/prisma/client.js";
 
 export type { User as SupervisorUserRow } from "../generated/prisma/client.js";
+export { hashToken };
 
 const SALT_ROUNDS = 10;
-
-export function hashToken(token: string): string {
-  return createHash("sha256").update(token).digest("hex");
-}
 
 export async function getUserByUsername(username: string) {
   return prisma.user.findUnique({ where: { username } });

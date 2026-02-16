@@ -10,8 +10,9 @@
   "scripts": {
     "clean": "rimraf dist client-dist",
     "dev": "tsx watch src/server.ts",
-    "build": "prisma generate && tsc && npx shx rm -rf client-dist && npx shx cp -r ../client/dist client-dist",
-    "start": "node dist/server.js --reset-password",
+    "build": "prisma generate && tsc",
+    "bundle": "npx shx rm -rf client-dist && npx shx cp -r ../client/dist client-dist",
+    "start": "node dist/server.js",
     "type-check": "tsc --noEmit",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
@@ -42,7 +43,6 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
-    "@naisys-erp/client": "file:../client",
     "@playwright/test": "^1.58.2",
     "@types/bcrypt": "^6.0.0",
     "@types/better-sqlite3": "^7.6.13",

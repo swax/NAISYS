@@ -26,9 +26,11 @@ export function isHubAvailable(): boolean {
 export function initHubSessions(): void {
   if (prisma) return;
 
-  if (!existsSync(hubDbPath)) return;
+  const dbPath = hubDbPath();
 
-  prisma = createPrismaClient(hubDbPath);
+  if (!existsSync(dbPath)) return;
+
+  prisma = createPrismaClient(dbPath);
   console.log("[Hub] Cross-app sessions enabled");
 }
 
@@ -230,6 +232,28 @@ export async function deleteHubSession(tokenHash: string): Promise<void> {
       session_expires_at: null,
     },
   });
+}
+
+/**
+ * CLI entry point for --reset-password. Initializes hub sessions,
+ * then runs the interactive password reset.
+ */
+export async function handleResetPassword(options: {
+  findLocalUser: (
+    username: string,
+  ) => Promise<{ id: number; username: string; uuid: string } | null>;
+  updateLocalPassword: (userId: number, passwordHash: string) => Promise<void>;
+  requireHub?: boolean;
+}): Promise<void> {
+  console.log(`NAISYS_FOLDER: ${process.env.NAISYS_FOLDER}`);
+  initHubSessions();
+
+  if (options.requireHub && !isHubAvailable()) {
+    console.error("Hub database not found. Cannot reset password without it.");
+    process.exit(1);
+  }
+
+  await resetPassword(options.findLocalUser, options.updateLocalPassword);
 }
 
 /**

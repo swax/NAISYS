@@ -81,8 +81,14 @@ export const createAgent = async (
   }
 };
 
-export const startAgent = async (id: number): Promise<AgentStartResult> => {
-  return await api.post<{}, AgentStartResult>(apiEndpoints.agentStart(id), {});
+export const startAgent = async (
+  id: number,
+  task?: string,
+): Promise<AgentStartResult> => {
+  return await api.post<{ task?: string }, AgentStartResult>(
+    apiEndpoints.agentStart(id),
+    task ? { task } : {},
+  );
 };
 
 export const stopAgent = async (id: number): Promise<AgentStopResult> => {

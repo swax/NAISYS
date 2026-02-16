@@ -3,18 +3,22 @@ import { z } from "zod";
 
 // Zod schemas for agent config operations
 
-export const CreateAgentConfigRequestSchema = z.object({
-  name: z.string().min(1).max(100),
-});
+export const CreateAgentConfigRequestSchema = z
+  .object({
+    name: z.string().min(1).max(100),
+  })
+  .strict();
 
 export const CreateAgentConfigResponseSchema = z.object({
   success: z.boolean(),
   message: z.string(),
 });
 
-export const UpdateAgentConfigRequestSchema = z.object({
-  config: AgentConfigFileSchema,
-});
+export const UpdateAgentConfigRequestSchema = z
+  .object({
+    config: AgentConfigFileSchema,
+  })
+  .strict();
 
 export const UpdateAgentConfigResponseSchema = z.object({
   success: z.boolean(),

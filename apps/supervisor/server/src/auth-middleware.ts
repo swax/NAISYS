@@ -1,12 +1,12 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { AuthCache } from "@naisys/common";
-import { findHubSession } from "@naisys/database";
+import { hashToken } from "@naisys/common/dist/hashToken.js";
+import { findAgentByApiKey, findHubSession } from "@naisys/database";
 import {
   createUser,
   getUserByUuid,
-  hashToken,
+  getUserPermissions,
 } from "./services/userService.js";
-import { getUserPermissions } from "./services/userService.js";
 
 export interface SupervisorUser {
   id: number;
@@ -79,6 +79,36 @@ export function registerAuthMiddleware(fastify: FastifyInstance) {
           request.supervisorUser = user;
         } else {
           authCache.set(cacheKey, null);
+        }
+      }
+    }
+
+    // API key auth (for agents / machine-to-machine)
+    if (!request.supervisorUser) {
+      const apiKey = request.headers["x-api-key"] as string | undefined;
+      if (apiKey) {
+        const apiKeyHash = hashToken(apiKey);
+        const cacheKey = `apikey:${apiKeyHash}`;
+        const cached = authCache.get(cacheKey);
+
+        if (cached !== undefined) {
+          if (cached) request.supervisorUser = cached;
+        } else {
+          const agent = await findAgentByApiKey(apiKey);
+          if (agent) {
+            let localUser = await getUserByUuid(agent.uuid);
+            if (!localUser) {
+              localUser = await createUser(agent.username, agent.uuid);
+            }
+            const user = await buildSupervisorUser(
+              localUser.id,
+              localUser.username,
+            );
+            authCache.set(cacheKey, user);
+            request.supervisorUser = user;
+          } else {
+            authCache.set(cacheKey, null);
+          }
         }
       }
     }

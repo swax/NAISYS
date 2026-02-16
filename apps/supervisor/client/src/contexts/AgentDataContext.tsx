@@ -1,3 +1,4 @@
+import type { HateoasAction } from "@naisys/common";
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { useAgentData } from "../hooks/useAgentData";
 import { Agent } from "../types/agent";
@@ -9,6 +10,7 @@ export interface ClientReadStatus {
 
 interface AgentDataContextType {
   agents: Agent[];
+  actions?: HateoasAction[];
   isLoading: boolean;
   error: Error | null;
   readStatus: Record<string, ClientReadStatus>;
@@ -31,7 +33,12 @@ export const AgentDataProvider: React.FC<{ children: React.ReactNode }> = ({
     Record<string, ClientReadStatus>
   >({});
 
-  const { agents: cachedAgents, isLoading, error } = useAgentData();
+  const {
+    agents: cachedAgents,
+    actions: cachedActions,
+    isLoading,
+    error,
+  } = useAgentData();
 
   // Update data from agent polling responses
   useEffect(() => {
@@ -105,6 +112,7 @@ export const AgentDataProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const value: AgentDataContextType = {
     agents,
+    actions: cachedActions,
     isLoading,
     error,
     readStatus,

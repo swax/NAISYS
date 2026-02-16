@@ -10,6 +10,7 @@ export {
   createHubUser,
   updateHubUserPassword,
   ensureAdminUser,
+  handleResetPassword,
   resetPassword,
   findAgentByApiKey,
   findHubSession,

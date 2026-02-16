@@ -152,6 +152,7 @@ export type AgentConfigFile = z.infer<typeof AgentConfigFileSchema>;
  * 6. Having it as an official user means mail will be logged by the hub as well which is helpful for debugging and monitoring
  */
 export const adminAgentConfig = {
+  _id: "admin-user-id",
   username: "admin", // Must be "admin" for special handling in hub and supervisor
   title: "Admin",
   shellModel: "none",
