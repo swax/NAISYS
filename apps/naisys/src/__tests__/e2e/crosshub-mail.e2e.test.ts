@@ -6,6 +6,7 @@ import {
   jest,
   test,
 } from "@jest/globals";
+import { sleep } from "@naisys/common";
 import { mkdirSync, writeFileSync } from "fs";
 import { join } from "path";
 import {
@@ -77,7 +78,7 @@ describe("Cross-Hub Mail E2E", () => {
       await hub.cleanup();
       hub = null;
     }
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    await sleep(500);
     cleanupTestDir(testDir);
   });
 
@@ -106,7 +107,7 @@ HUB_ACCESS_KEY=${HUB_ACCESS_KEY}
     // --- Start Hub ---
     hub = spawnHub(hubDir);
     await hub.waitForOutput("Running on ws://localhost:", 30000);
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    await sleep(500);
 
     // --- Start Host A (admin starts automatically) ---
     createClientEnvFile(hostADir, "HOST-A");
@@ -148,7 +149,7 @@ HUB_ACCESS_KEY=${HUB_ACCESS_KEY}
     await hostB.waitForPrompt();
 
     // --- Wait for heartbeat sync ---
-    await new Promise((resolve) => setTimeout(resolve, 3000));
+    await sleep(3000);
 
     // --- Send mail from alex to bob ---
     const testSubject = "Cross Hub Test";
@@ -163,7 +164,7 @@ HUB_ACCESS_KEY=${HUB_ACCESS_KEY}
     expect(alexOutput).toContain("Mail sent");
 
     // --- Wait for mail to propagate through hub ---
-    await new Promise((resolve) => setTimeout(resolve, 3000));
+    await sleep(3000);
 
     // --- Verify bob received mail ---
     hostB.flushOutput();

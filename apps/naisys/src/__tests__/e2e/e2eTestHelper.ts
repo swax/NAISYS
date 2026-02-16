@@ -1,3 +1,4 @@
+import { sleep } from "@naisys/common";
 import { ChildProcess, spawn } from "child_process";
 import { existsSync, mkdirSync, rmSync, writeFileSync } from "fs";
 import { tmpdir } from "os";
@@ -198,7 +199,7 @@ export function spawnHub(testDir: string, debug = false): HubTestProcess {
       if (stdout.join("").includes(text)) {
         return;
       }
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      await sleep(100);
     }
 
     throw new Error(
@@ -303,7 +304,7 @@ export function spawnNaisys(
       if (getOutputSinceFlush().includes(text)) {
         return;
       }
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      await sleep(100);
     }
 
     throw new Error(
@@ -324,7 +325,7 @@ export function spawnNaisys(
       if (matches >= count) {
         return;
       }
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      await sleep(100);
     }
 
     throw new Error(
@@ -336,7 +337,7 @@ export function spawnNaisys(
     // [Tokens: X/Y] appears in every prompt line - wait for one since last flush
     await waitForOutputCount("[Tokens:", 1, timeoutMs);
     // Small delay to ensure prompt is fully ready
-    await new Promise((resolve) => setTimeout(resolve, 300));
+    await sleep(300);
   };
 
   const getFullOutput = () => stdout.join("");

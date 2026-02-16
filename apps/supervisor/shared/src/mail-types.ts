@@ -1,3 +1,4 @@
+import { HateoasLinkSchema } from "@naisys/common";
 import { z } from "zod";
 
 // Zod schemas for the new flat message model
@@ -56,6 +57,7 @@ export const MailDataResponseSchema = z.object({
       total: z.number().optional(),
     })
     .optional(),
+  _links: z.array(HateoasLinkSchema).optional(),
 });
 
 // Inferred types

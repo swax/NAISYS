@@ -119,6 +119,11 @@ export const RunSessionCard: React.FC<{
     if ((e.target as HTMLElement).closest("[data-action-icon]")) {
       return;
     }
+    // Don't toggle if user was selecting text (e.g. dragged from log area to header)
+    const selection = window.getSelection();
+    if (selection && selection.toString().length > 0) {
+      return;
+    }
     onSelect();
     setExpanded(!expanded);
   };
