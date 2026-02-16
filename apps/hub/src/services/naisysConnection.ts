@@ -52,9 +52,9 @@ export function createNaisysConnection(
    * Send a message to this client's socket.
    * If ack callback is provided, waits for client acknowledgement.
    */
-  function sendMessage<T = unknown>(
+  function sendMessage<P, T = unknown>(
     event: string,
-    payload: unknown,
+    payload: P,
     ack?: AckCallback<T>,
   ) {
     if (ack) {

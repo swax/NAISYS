@@ -10,6 +10,7 @@ import {
   MailSearchRequestSchema,
   MailSearchResponse,
   MailSendRequestSchema,
+  MailReceivedPush,
   MailSendResponse,
   MailUnreadRequestSchema,
   MailUnreadResponse,
@@ -25,6 +26,72 @@ export function createHubMailService(
   logService: HubServerLog,
   heartbeatService: HubHeartbeatService,
 ) {
+  /** Send a mail message directly by user IDs */
+  async function sendMail(params: {
+    fromUserId: number | null;
+    recipientUserIds: number[];
+    subject: string;
+    body: string;
+    hostId?: number;
+  }) {
+    await dbService.usingDatabase(async (prisma) => {
+      const now = new Date();
+
+      const message = await prisma.mail_messages.create({
+        data: {
+          from_user_id: params.fromUserId,
+          host_id: params.hostId,
+          subject: params.subject,
+          body: params.body,
+          created_at: now,
+        },
+      });
+
+      await prisma.mail_recipients.createMany({
+        data: params.recipientUserIds.map((userId) => ({
+          message_id: message.id,
+          user_id: userId,
+          type: "to",
+          created_at: now,
+        })),
+      });
+
+      await prisma.user_notifications.updateMany({
+        where: { user_id: { in: params.recipientUserIds } },
+        data: { latest_mail_id: message.id },
+      });
+
+      for (const userId of params.recipientUserIds) {
+        heartbeatService.updateAgentNotification(
+          userId,
+          "latestMailId",
+          message.id,
+        );
+      }
+      heartbeatService.throttledPushHeartbeatStatus();
+
+      const targetHostIds = new Set<number>();
+      for (const userId of params.recipientUserIds) {
+        for (const hId of heartbeatService.findHostsForAgent(userId)) {
+          targetHostIds.add(hId);
+        }
+      }
+
+      if (targetHostIds.size > 0) {
+        const payload: MailReceivedPush = {
+          recipientUserIds: params.recipientUserIds,
+        };
+        for (const targetHostId of targetHostIds) {
+          naisysServer.sendMessage<MailReceivedPush>(
+            targetHostId,
+            HubEvents.MAIL_RECEIVED,
+            payload,
+          );
+        }
+      }
+    });
+  }
+
   // MAIL_SEND
   naisysServer.registerEvent(
     HubEvents.MAIL_SEND,
@@ -36,84 +103,15 @@ export function createHubMailService(
       try {
         const parsed = MailSendRequestSchema.parse(data);
 
-        await dbService.usingDatabase(async (prisma) => {
-          // Resolve usernames to user IDs
-          const resolvedUsers = await prisma.users.findMany({
-            where: { username: { in: parsed.toUsernames }, archived: false },
-            select: { id: true, username: true },
-          });
-
-          const foundNames = new Set(resolvedUsers.map((u) => u.username));
-          const missing = parsed.toUsernames.filter((n) => !foundNames.has(n));
-          if (missing.length > 0) {
-            ack({
-              success: false,
-              error: `Users not found: ${missing.join(", ")}`,
-            });
-            return;
-          }
-
-          // Create message
-          const message = await prisma.mail_messages.create({
-            data: {
-              from_user_id: parsed.fromUserId,
-              host_id: hostId,
-              subject: parsed.subject,
-              body: parsed.body,
-              created_at: new Date(),
-            },
-          });
-
-          // Create recipient entries in batch
-          const now = new Date();
-          await prisma.mail_recipients.createMany({
-            data: resolvedUsers.map((user) => ({
-              message_id: message.id,
-              user_id: user.id,
-              type: "to",
-              created_at: now,
-            })),
-          });
-
-          // Update latest_mail_id on user_notifications for all recipients
-          const recipientUserIds = resolvedUsers.map((u) => u.id);
-          await prisma.user_notifications.updateMany({
-            where: { user_id: { in: recipientUserIds } },
-            data: { latest_mail_id: message.id },
-          });
-
-          // Push notification ID updates via heartbeat
-          for (const userId of recipientUserIds) {
-            heartbeatService.updateAgentNotification(
-              userId,
-              "latestMailId",
-              message.id,
-            );
-          }
-          heartbeatService.throttledPushHeartbeatStatus();
-
-          // Push MAIL_RECEIVED only to hosts that have active recipients
-          const targetHostIds = new Set<number>();
-
-          for (const userId of recipientUserIds) {
-            for (const hId of heartbeatService.findHostsForAgent(userId)) {
-              targetHostIds.add(hId);
-            }
-          }
-
-          if (targetHostIds.size > 0) {
-            const payload = { recipientUserIds };
-            for (const targetHostId of targetHostIds) {
-              naisysServer.sendMessage(
-                targetHostId,
-                HubEvents.MAIL_RECEIVED,
-                payload,
-              );
-            }
-          }
-
-          ack({ success: true });
+        await sendMail({
+          fromUserId: parsed.fromUserId,
+          recipientUserIds: parsed.toUserIds,
+          subject: parsed.subject,
+          body: parsed.body,
+          hostId,
         });
+
+        ack({ success: true });
       } catch (error) {
         logService.error(
           `[HubMailService] mail_send error from host ${hostId}: ${error}`,
@@ -410,4 +408,8 @@ export function createHubMailService(
       }
     },
   );
+
+  return { sendMail };
 }
+
+export type HubMailService = ReturnType<typeof createHubMailService>;

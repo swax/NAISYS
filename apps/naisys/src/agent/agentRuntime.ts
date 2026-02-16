@@ -129,7 +129,6 @@ export async function createAgentRuntime(
     promptNotification,
   );
   const subagentService = createSubagentService(
-    agentConfig,
     mailService,
     output,
     agentManager,

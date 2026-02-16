@@ -8,7 +8,7 @@ interface MailMessageProps {
   message: MailMessageType;
   currentAgent?: string;
   agents: { name: string; title?: string }[];
-  onReply?: (recipient: string, subject: string, body: string) => void;
+  onReply?: (recipientId: number, subject: string, body: string) => void;
 }
 
 export const MailMessage: React.FC<MailMessageProps> = ({
@@ -102,7 +102,7 @@ export const MailMessage: React.FC<MailMessageProps> = ({
                       .map((line) => `> ${line}`)
                       .join("\n");
                     onReply(
-                      message.fromUsername,
+                      message.fromUserId,
                       `RE: ${message.subject}`,
                       `\n\n${quotedBody}`,
                     );

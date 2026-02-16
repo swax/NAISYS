@@ -131,8 +131,9 @@ export function isHostConnected(hostId: number): boolean {
 }
 
 export function sendAgentStart(
-  userId: number,
-  taskDescription: string,
+  startUserId: number,
+  taskDescription: string | undefined,
+  requesterUserId: number,
 ): Promise<AgentStartResponse> {
   return new Promise((resolve, reject) => {
     if (!socket || !connected) {
@@ -142,10 +143,10 @@ export function sendAgentStart(
 
     socket.emit(
       HubEvents.AGENT_START,
-      { userId, taskDescription },
+      { startUserId, taskDescription, requesterUserId },
       (response: AgentStartResponse) => {
         if (response.success) {
-          activeAgentIds.add(userId);
+          activeAgentIds.add(startUserId);
           statusEmitter.emit("agentStatusUpdate", getAgentStatusSnapshot());
         }
         resolve(response);
@@ -198,7 +199,7 @@ export function onAgentStatusUpdate(
 
 export function sendMailViaHub(
   fromUserId: number,
-  toUsernames: string[],
+  toUserIds: number[],
   subject: string,
   body: string,
 ): Promise<MailSendResponse> {
@@ -210,7 +211,7 @@ export function sendMailViaHub(
 
     socket.emit(
       HubEvents.MAIL_SEND,
-      { fromUserId, toUsernames, subject, body },
+      { fromUserId, toUserIds, subject, body },
       (response: MailSendResponse) => {
         resolve(response);
       },

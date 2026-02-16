@@ -45,7 +45,9 @@ export function createSystemMessage(
   let sessionCmd = "";
   const sessionSubcommands: string[] = [];
 
-  sessionSubcommands.push(`wait [<seconds>] - Wait <seconds> or indefinitely if not specified. Will auto-wake on new mail or on other events.`);
+  sessionSubcommands.push(
+    `wait [<seconds>] - Wait <seconds> or indefinitely if not specified. Will auto-wake on new mail or on other events.`,
+  );
   if (globalConfig().compactSessionEnabled) {
     sessionSubcommands.push(
       `compact "<note>" - Compact the session which will reset the token count. The note should contain your next goal, and important things you should remember.`,

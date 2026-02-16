@@ -161,8 +161,9 @@ export type HostList = z.infer<typeof HostListSchema>;
 
 /** Request to start an agent on its assigned host */
 export const AgentStartRequestSchema = z.object({
-  userId: z.number(),
-  taskDescription: z.string(),
+  startUserId: z.number(),
+  requesterUserId: z.number(),
+  taskDescription: z.string().optional(),
   sourceHostId: z.number().optional(),
 });
 export type AgentStartRequest = z.infer<typeof AgentStartRequestSchema>;
@@ -220,7 +221,7 @@ export type UserListResponse = z.infer<typeof UserListResponseSchema>;
 /** Request to send a mail message */
 export const MailSendRequestSchema = z.object({
   fromUserId: z.number(),
-  toUsernames: z.array(z.string()),
+  toUserIds: z.array(z.number()),
   subject: z.string(),
   body: z.string(),
 });

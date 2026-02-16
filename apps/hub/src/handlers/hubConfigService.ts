@@ -16,15 +16,15 @@ export function createHubConfigService(
         `[HubConfigService] Pushing config to naisys instance ${hostId}`,
       );
 
-      naisysServer.sendMessage(hostId, HubEvents.CONFIG, {
+      naisysServer.sendMessage<ConfigResponse>(hostId, HubEvents.CONFIG, {
         success: true,
         config: hubConfig,
-      } satisfies ConfigResponse);
+      });
     } catch (error) {
       logService.error(
         `[HubConfigService] Error sending config to naisys instance ${hostId}: ${error}`,
       );
-      naisysServer.sendMessage(hostId, HubEvents.CONFIG, {
+      naisysServer.sendMessage<ConfigResponse>(hostId, HubEvents.CONFIG, {
         success: false,
         error: String(error),
       });

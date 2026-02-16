@@ -85,10 +85,10 @@ export function createNaisysServer(
    * Send an event to a specific client by hostId.
    * If ack callback is provided, waits for client acknowledgement.
    */
-  function sendMessage<T = unknown>(
+  function sendMessage<P, T = unknown>(
     hostId: number,
     event: string,
-    payload: unknown,
+    payload: P,
     ack?: AckCallback<T>,
   ): boolean {
     const connection = naisysConnections.get(hostId);

@@ -23,7 +23,6 @@ interface Subagent {
 }
 
 export function createSubagentService(
-  { agentConfig }: AgentConfig,
   mailService: MailService,
   output: OutputService,
   agentManager: IAgentManager,
@@ -240,7 +239,11 @@ export function createSubagentService(
       // Hub mode: send start request through hub, which routes to the target host
       const response = await hubClient.sendRequest<AgentStartResponse>(
         HubEvents.AGENT_START,
-        { userId: subagent.userId, taskDescription },
+        {
+          startUserId: subagent.userId,
+          requesterUserId: localUserId,
+          taskDescription,
+        },
       );
 
       if (!response.success) {
@@ -259,7 +262,10 @@ export function createSubagentService(
 
     subagent.taskDescription = taskDescription;
 
-    await sendStartupMessage(subagent, taskDescription);
+    // In non-hub mode, send mail locally; in hub mode, the hub sends it from the AGENT_START handler
+    if (!hubClient) {
+      await sendStartupMessage(subagent, taskDescription);
+    }
 
     return resultMessage;
   }

@@ -25,7 +25,7 @@ export function createHubHostService(
     const json = JSON.stringify(payload);
 
     // Always send to the newly connecting client
-    naisysServer.sendMessage(hostId, HubEvents.HOST_LIST, payload);
+    naisysServer.sendMessage<HostList>(hostId, HubEvents.HOST_LIST, payload);
 
     // Broadcast to other existing connections only if the list changed
     if (json !== cachedHostListJson) {
@@ -37,7 +37,7 @@ export function createHubHostService(
 
       for (const connection of naisysServer.getConnectedClients()) {
         if (connection.getHostId() !== hostId) {
-          naisysServer.sendMessage(
+          naisysServer.sendMessage<HostList>(
             connection.getHostId(),
             HubEvents.HOST_LIST,
             payload,

@@ -53,7 +53,12 @@ import fs from "fs/promises";
 import { FastifyInstance, FastifyPluginOptions } from "fastify";
 import type { HateoasAction } from "@naisys/common";
 import { requirePermission } from "../auth-middleware.js";
-import { API_PREFIX, collectionLink, schemaLink, selfLink } from "../hateoas.js";
+import {
+  API_PREFIX,
+  collectionLink,
+  schemaLink,
+  selfLink,
+} from "../hateoas.js";
 import {
   isAgentActive,
   isHubConnected,
@@ -74,6 +79,7 @@ import {
   unarchiveAgent,
   updateLeadAgent,
 } from "../services/agentService.js";
+import { usingNaisysDb } from "../database/naisysDatabase.js";
 import { getMailDataByUserId, sendMessage } from "../services/mailService.js";
 import { getContextLog, getRunsData } from "../services/runsService.js";
 
@@ -147,8 +153,9 @@ function agentActions(
 function agentLinks(agentId: number) {
   return [
     selfLink(`/agents/${agentId}`),
-    { rel: "runs", href: `/api/supervisor/agents/${agentId}/runs` },
-    { rel: "mail", href: `/api/supervisor/agents/${agentId}/mail` },
+    { rel: "config", href: `${API_PREFIX}/agents/${agentId}/config` },
+    { rel: "runs", href: `${API_PREFIX}/agents/${agentId}/runs` },
+    { rel: "mail", href: `${API_PREFIX}/agents/${agentId}/mail` },
     collectionLink("agents"),
   ];
 }
@@ -248,11 +255,14 @@ export default async function agentsRoutes(
           });
         }
 
-        await createAgentConfig(name);
+        const agentId = await createAgentConfig(name);
 
         return {
           success: true,
           message: `Agent '${name}' created successfully`,
+          id: agentId,
+          _links: agentLinks(agentId),
+          _actions: agentActions(agentId, true, false),
         };
       } catch (error) {
         request.log.error(error, "Error in POST /agents route");
@@ -362,10 +372,27 @@ export default async function agentsRoutes(
           });
         }
 
-        const response = await sendAgentStart(
-          id,
-          task || "Started from supervisor",
-        );
+        const naisysUser = await usingNaisysDb(async (prisma) => {
+          const user = await prisma.users.findFirst({
+            where: { uuid: request.supervisorUser!.uuid },
+            select: { id: true },
+          });
+          if (user) return user;
+
+          return prisma.users.findFirst({
+            where: { username: "admin" },
+            select: { id: true },
+          });
+        });
+
+        if (!naisysUser) {
+          return reply.status(500).send({
+            success: false,
+            message: "No matching user found in NAISYS database",
+          });
+        }
+
+        const response = await sendAgentStart(id, task, naisysUser.id);
 
         if (response.success) {
           return {
@@ -905,8 +932,8 @@ export default async function agentsRoutes(
     async (request, reply) => {
       try {
         const contentType = request.headers["content-type"];
-        let from: string = "",
-          to: string = "",
+        let fromId: number = 0,
+          toId: number = 0,
           subject: string = "",
           message: string = "";
         let attachments: Array<{ filename: string; data: Buffer }> = [];
@@ -918,11 +945,11 @@ export default async function agentsRoutes(
             if (part.type === "field") {
               const field = part as any;
               switch (field.fieldname) {
-                case "from":
-                  from = field.value;
+                case "fromId":
+                  fromId = Number(field.value);
                   break;
-                case "to":
-                  to = field.value;
+                case "toId":
+                  toId = Number(field.value);
                   break;
                 case "subject":
                   subject = field.value;
@@ -944,22 +971,22 @@ export default async function agentsRoutes(
           }
         } else {
           const body = request.body as SendMailRequest;
-          from = body.from;
-          to = body.to;
+          fromId = body.fromId;
+          toId = body.toId;
           subject = body.subject;
           message = body.message;
         }
 
-        if (!from || !to || !subject || !message) {
+        if (!fromId || !toId || !subject || !message) {
           return reply.code(400).send({
             success: false,
-            message: "Missing required fields: from, to, subject, message",
+            message: "Missing required fields: fromId, toId, subject, message",
           });
         }
 
         const result = await sendMessage({
-          from,
-          to,
+          fromId,
+          toId,
           subject,
           message,
           attachments: attachments.length > 0 ? attachments : undefined,

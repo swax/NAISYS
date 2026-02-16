@@ -28,7 +28,7 @@ async function updateUserNotificationModifiedDate(
 /**
  * Create a new agent with database entry (no YAML file).
  */
-export async function createAgentConfig(name: string): Promise<void> {
+export async function createAgentConfig(name: string): Promise<number> {
   // Check db if username already exists
   const existingAgent = await usingNaisysDb(async (prisma) => {
     return await prisma.users.findFirst({
@@ -72,6 +72,8 @@ webEnabled: true
 
   // Notify hub to broadcast updated user list to all NAISYS clients
   sendUserListChanged();
+
+  return user.id;
 }
 
 /**

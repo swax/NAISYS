@@ -28,15 +28,15 @@ interface NewMessageModalProps {
   opened: boolean;
   onClose: () => void;
   agents: Agent[];
-  currentAgentName: string;
+  currentAgentId: number;
   onSend: (
-    sender: string,
-    recipient: string,
+    senderId: number,
+    recipientId: number,
     subject: string,
     body: string,
     attachments: FileAttachment[],
   ) => Promise<void>;
-  initialRecipient?: string;
+  initialRecipientId?: number;
   initialSubject?: string;
   initialBody?: string;
 }
@@ -45,14 +45,14 @@ export const NewMessageModal: React.FC<NewMessageModalProps> = ({
   opened,
   onClose,
   agents,
-  currentAgentName,
+  currentAgentId,
   onSend,
-  initialRecipient,
+  initialRecipientId,
   initialSubject,
   initialBody,
 }) => {
-  const [sender, setSender] = useState<string>(currentAgentName);
-  const [recipient, setRecipient] = useState<string>("");
+  const [senderId, setSenderId] = useState<string>(String(currentAgentId));
+  const [recipientId, setRecipientId] = useState<string>("");
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -62,15 +62,15 @@ export const NewMessageModal: React.FC<NewMessageModalProps> = ({
   );
   const bodyTextareaRef = React.useRef<HTMLTextAreaElement>(null);
 
-  // Update sender when currentAgentName changes
+  // Update sender when currentAgentId changes
   useEffect(() => {
-    setSender(currentAgentName);
-  }, [currentAgentName]);
+    setSenderId(String(currentAgentId));
+  }, [currentAgentId]);
 
   // Set initial values when modal opens with reply data
   useEffect(() => {
-    if (opened && initialRecipient) {
-      setRecipient(initialRecipient);
+    if (opened && initialRecipientId) {
+      setRecipientId(String(initialRecipientId));
     }
     if (opened && initialSubject) {
       setSubject(initialSubject);
@@ -85,7 +85,7 @@ export const NewMessageModal: React.FC<NewMessageModalProps> = ({
         }
       }, 0);
     }
-  }, [opened, initialRecipient, initialSubject, initialBody]);
+  }, [opened, initialRecipientId, initialSubject, initialBody]);
 
   // Add paste event listener for images
   useEffect(() => {
@@ -123,13 +123,13 @@ export const NewMessageModal: React.FC<NewMessageModalProps> = ({
 
   // Create options for all agents (including current for sender selection)
   const allAgentOptions = agents.map((agent) => ({
-    value: agent.name,
+    value: String(agent.id),
     label: agent.title ? `${agent.name} (${agent.title})` : agent.name,
   }));
 
   // Filter out the current sender from the recipients list
   const availableRecipients = allAgentOptions.filter(
-    (agent) => agent.value !== sender,
+    (agent) => agent.value !== senderId,
   );
 
   const handleFilesAdd = async (files: File[]) => {
@@ -182,7 +182,7 @@ export const NewMessageModal: React.FC<NewMessageModalProps> = ({
   };
 
   const handleSend = async () => {
-    if (!recipient || !subject.trim() || !body.trim()) {
+    if (!recipientId || !subject.trim() || !body.trim()) {
       return;
     }
 
@@ -197,14 +197,14 @@ export const NewMessageModal: React.FC<NewMessageModalProps> = ({
       }));
 
       await onSend(
-        sender,
-        recipient,
+        Number(senderId),
+        Number(recipientId),
         subject,
         body,
         attachmentsWithUpdatedNames,
       );
-      setSender(currentAgentName);
-      setRecipient("");
+      setSenderId(String(currentAgentId));
+      setRecipientId("");
       setSubject("");
       setBody("");
       attachments.forEach((attachment) => {
@@ -224,8 +224,8 @@ export const NewMessageModal: React.FC<NewMessageModalProps> = ({
 
   const handleClose = () => {
     if (!isLoading) {
-      setSender(currentAgentName);
-      setRecipient("");
+      setSenderId(String(currentAgentId));
+      setRecipientId("");
       setSubject("");
       setBody("");
       attachments.forEach((attachment) => {
@@ -255,8 +255,8 @@ export const NewMessageModal: React.FC<NewMessageModalProps> = ({
           label="From"
           placeholder="Select sender"
           data={allAgentOptions}
-          value={sender}
-          onChange={(value) => setSender(value || currentAgentName)}
+          value={senderId}
+          onChange={(value) => setSenderId(value || String(currentAgentId))}
           required
           searchable
           disabled={isLoading}
@@ -266,8 +266,8 @@ export const NewMessageModal: React.FC<NewMessageModalProps> = ({
           label="To"
           placeholder="Select recipient"
           data={availableRecipients}
-          value={recipient}
-          onChange={(value) => setRecipient(value || "")}
+          value={recipientId}
+          onChange={(value) => setRecipientId(value || "")}
           required
           searchable
           disabled={isLoading}
@@ -399,7 +399,7 @@ export const NewMessageModal: React.FC<NewMessageModalProps> = ({
           </Button>
           <Button
             onClick={handleSend}
-            disabled={!recipient || !subject.trim() || !body.trim()}
+            disabled={!recipientId || !subject.trim() || !body.trim()}
             loading={isLoading}
           >
             Send

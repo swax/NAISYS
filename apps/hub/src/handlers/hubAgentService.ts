@@ -1,7 +1,9 @@
 import { DatabaseService } from "@naisys/database";
 import {
+  AgentStartRequest,
   AgentStartRequestSchema,
   AgentStartResponse,
+  AgentStopRequest,
   AgentStopRequestSchema,
   AgentStopResponse,
   HubEvents,
@@ -9,6 +11,7 @@ import {
 import { HubServerLog } from "../services/hubServerLog.js";
 import { NaisysServer } from "../services/naisysServer.js";
 import { HubHeartbeatService } from "./hubHeartbeatService.js";
+import { HubMailService } from "./hubMailService.js";
 
 /** Handles agent_start requests by routing them to the least-loaded eligible host */
 export function createHubAgentService(
@@ -16,6 +19,7 @@ export function createHubAgentService(
   dbService: DatabaseService,
   logService: HubServerLog,
   heartbeatService: HubHeartbeatService,
+  mailService: HubMailService,
 ) {
   naisysServer.registerEvent(
     HubEvents.AGENT_START,
@@ -28,15 +32,20 @@ export function createHubAgentService(
         const parsed = AgentStartRequestSchema.parse(data);
 
         // Look up which hosts this user is assigned to
-        const assignedHostIds = await dbService.usingDatabase(
+        const { assignedHostIds } = await dbService.usingDatabase(
           async (prisma) => {
             const userHosts = await prisma.user_hosts.findMany({
-              where: { user_id: parsed.userId },
+              where: { user_id: parsed.startUserId },
               select: { host_id: true },
             });
-            return userHosts.map((uh) => uh.host_id);
+
+            return {
+              assignedHostIds: userHosts.map((uh) => uh.host_id),
+            };
           },
         );
+
+        const requesterUserId = parsed.requesterUserId;
 
         // Determine eligible hosts: assigned hosts, or all connected if unassigned
         let eligibleHostIds: number[];
@@ -56,7 +65,7 @@ export function createHubAgentService(
         if (connectedEligible.length === 0) {
           ack({
             success: false,
-            error: `No eligible hosts are online for user ${parsed.userId}`,
+            error: `No eligible hosts are online for user ${parsed.startUserId}`,
           });
           return;
         }
@@ -73,18 +82,31 @@ export function createHubAgentService(
           }
         }
 
+        // Send task description mail before starting so the agent sees it on boot
+        if (parsed.taskDescription) {
+          await sendTaskMail(
+            parsed.startUserId,
+            requesterUserId,
+            parsed.taskDescription,
+          );
+        }
+
         // Forward the start request to the selected host
-        const sent = naisysServer.sendMessage<AgentStartResponse>(
+        const sent = naisysServer.sendMessage<
+          AgentStartRequest,
+          AgentStartResponse
+        >(
           bestHostId,
           HubEvents.AGENT_START,
           {
-            userId: parsed.userId,
+            startUserId: parsed.startUserId,
+            requesterUserId,
             taskDescription: parsed.taskDescription,
             sourceHostId: hostId,
           },
           (response) => {
             if (response.success) {
-              heartbeatService.addStartedAgent(bestHostId, parsed.userId);
+              heartbeatService.addStartedAgent(bestHostId, parsed.startUserId);
             }
             ack(response);
           },
@@ -104,6 +126,23 @@ export function createHubAgentService(
       }
     },
   );
+
+  async function sendTaskMail(
+    startUserId: number,
+    requesterUserId: number,
+    taskDescription: string,
+  ) {
+    try {
+      await mailService.sendMail({
+        fromUserId: requesterUserId,
+        recipientUserIds: [startUserId],
+        subject: "Your Task",
+        body: taskDescription,
+      });
+    } catch (err) {
+      logService.error(`[HubAgentService] Failed to send task mail: ${err}`);
+    }
+  }
 
   naisysServer.registerEvent(
     HubEvents.AGENT_STOP,
@@ -131,7 +170,10 @@ export function createHubAgentService(
         let sendFailures = 0;
 
         for (const targetHostId of targetHostIds) {
-          const sent = naisysServer.sendMessage<AgentStopResponse>(
+          const sent = naisysServer.sendMessage<
+            AgentStopRequest,
+            AgentStopResponse
+          >(
             targetHostId,
             HubEvents.AGENT_STOP,
             {
