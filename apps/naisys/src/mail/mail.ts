@@ -159,25 +159,7 @@ export function createMailService(
   ): Promise<string> {
     message = message.replace(/\\n/g, "\n");
 
-    if (hubClient) {
-      const response = await hubClient.sendRequest<MailSendResponse>(
-        HubEvents.MAIL_SEND,
-        {
-          fromUserId: localUserId,
-          toUsernames: usernames,
-          subject,
-          body: message,
-        },
-      );
-
-      if (!response.success) {
-        throw response.error || "Failed to send message";
-      }
-
-      return "Mail sent";
-    }
-
-    // Local mode: resolve users via userService and emit to event bus
+    // Resolve usernames to user IDs
     const resolvedRecipients: { id: number; username: string }[] = [];
     const errors: string[] = [];
 
@@ -196,6 +178,26 @@ export function createMailService(
     if (errors.length > 0) {
       throw `Error: ${errors.join("; ")}`;
     }
+
+    if (hubClient) {
+      const response = await hubClient.sendRequest<MailSendResponse>(
+        HubEvents.MAIL_SEND,
+        {
+          fromUserId: localUserId,
+          toUserIds: resolvedRecipients.map((r) => r.id),
+          subject,
+          body: message,
+        },
+      );
+
+      if (!response.success) {
+        throw response.error || "Failed to send message";
+      }
+
+      return "Mail sent";
+    }
+
+    // Local mode: emit to event bus
 
     const mailContent: MailContent = {
       fromUsername: localUsername,

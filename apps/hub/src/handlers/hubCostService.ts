@@ -197,11 +197,11 @@ export function createHubCostService(
     const hostIds = heartbeatService.findHostsForAgent(userId);
 
     for (const hostId of hostIds) {
-      naisysServer.sendMessage(hostId, HubEvents.COST_CONTROL, {
+      naisysServer.sendMessage<CostControl>(hostId, HubEvents.COST_CONTROL, {
         userId,
         enabled,
         reason,
-      } satisfies CostControl);
+      });
     }
   }
 

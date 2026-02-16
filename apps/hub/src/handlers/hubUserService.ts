@@ -51,7 +51,7 @@ export function createHubUserService(
       );
 
       for (const connection of clients) {
-        naisysServer.sendMessage(
+        naisysServer.sendMessage<UserListResponse>(
           connection.getHostId(),
           HubEvents.USER_LIST,
           payload,
@@ -75,15 +75,23 @@ export function createHubUserService(
           `[HubUserService] Pushing ${payload.users?.length ?? 0} users to naisys instance ${hostId}`,
         );
 
-        naisysServer.sendMessage(hostId, HubEvents.USER_LIST, payload);
+        naisysServer.sendMessage<UserListResponse>(
+          hostId,
+          HubEvents.USER_LIST,
+          payload,
+        );
       } catch (error) {
         logService.error(
           `[HubUserService] Error querying users for naisys instance ${hostId}: ${error}`,
         );
-        naisysServer.sendMessage(hostId, HubEvents.USER_LIST, {
-          success: false,
-          error: String(error),
-        });
+        naisysServer.sendMessage<UserListResponse>(
+          hostId,
+          HubEvents.USER_LIST,
+          {
+            success: false,
+            error: String(error),
+          },
+        );
       }
     },
   );

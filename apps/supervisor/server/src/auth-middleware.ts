@@ -11,6 +11,7 @@ import {
 export interface SupervisorUser {
   id: number;
   username: string;
+  uuid: string;
   permissions: string[];
 }
 
@@ -42,9 +43,10 @@ function isPublicRoute(url: string): boolean {
 async function buildSupervisorUser(
   id: number,
   username: string,
+  uuid: string,
 ): Promise<SupervisorUser> {
   const permissions = await getUserPermissions(id);
-  return { id, username, permissions };
+  return { id, username, uuid, permissions };
 }
 
 export function registerAuthMiddleware(fastify: FastifyInstance) {
@@ -74,6 +76,7 @@ export function registerAuthMiddleware(fastify: FastifyInstance) {
           const user = await buildSupervisorUser(
             localUser.id,
             localUser.username,
+            localUser.uuid,
           );
           authCache.set(cacheKey, user);
           request.supervisorUser = user;
@@ -103,6 +106,7 @@ export function registerAuthMiddleware(fastify: FastifyInstance) {
             const user = await buildSupervisorUser(
               localUser.id,
               localUser.username,
+              localUser.uuid,
             );
             authCache.set(cacheKey, user);
             request.supervisorUser = user;

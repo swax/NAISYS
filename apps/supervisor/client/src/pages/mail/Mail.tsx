@@ -61,7 +61,7 @@ export const Mail: React.FC = () => {
     message: string;
   } | null>(null);
   const [replyData, setReplyData] = useState<{
-    recipient: string;
+    recipientId: number;
     subject: string;
     body: string;
   } | null>(null);
@@ -104,23 +104,23 @@ export const Mail: React.FC = () => {
   }).length;
 
   // Handle reply to a message
-  const handleReply = (recipient: string, subject: string, body: string) => {
-    setReplyData({ recipient, subject, body });
+  const handleReply = (recipientId: number, subject: string, body: string) => {
+    setReplyData({ recipientId, subject, body });
     setNewMessageModalOpened(true);
   };
 
   // Handle sending a new message
   const handleSendMessage = async (
-    sender: string,
-    recipient: string,
+    senderId: number,
+    recipientId: number,
     subject: string,
     body: string,
     attachments: Array<{ file: File; name: string; previewUrl?: string }>,
   ): Promise<void> => {
     try {
       const response = await sendMail({
-        from: sender,
-        to: recipient,
+        fromId: senderId,
+        toId: recipientId,
         subject,
         message: body,
         files: attachments.map((attachment) => attachment.file),
@@ -272,9 +272,9 @@ export const Mail: React.FC = () => {
           setReplyData(null);
         }}
         agents={agents}
-        currentAgentName={agentName}
+        currentAgentId={agentId}
         onSend={handleSendMessage}
-        initialRecipient={replyData?.recipient}
+        initialRecipientId={replyData?.recipientId}
         initialSubject={replyData?.subject}
         initialBody={replyData?.body}
       />

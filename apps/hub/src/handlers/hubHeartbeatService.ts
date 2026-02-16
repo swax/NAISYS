@@ -2,6 +2,7 @@ import { DatabaseService } from "@naisys/database";
 import {
   HEARTBEAT_INTERVAL_MS,
   HeartbeatSchema,
+  HeartbeatStatus,
   HubEvents,
 } from "@naisys/hub-protocol";
 import { HubServerLog } from "../services/hubServerLog.js";
@@ -84,13 +85,13 @@ export function createHubHeartbeatService(
 
   /** Push aggregate active user status to all connected NAISYS instances */
   function pushHeartbeatStatus() {
-    const payload = {
+    const payload: HeartbeatStatus = {
       hostActiveAgents: Object.fromEntries(hostActiveAgents),
       agentNotifications: Object.fromEntries(agentNotifications),
     };
 
     for (const connection of naisysServer.getConnectedClients()) {
-      naisysServer.sendMessage(
+      naisysServer.sendMessage<HeartbeatStatus>(
         connection.getHostId(),
         HubEvents.HEARTBEAT_STATUS,
         payload,

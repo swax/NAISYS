@@ -34,8 +34,8 @@ export default async function mailRoutes(
     async (request, reply) => {
       try {
         const contentType = request.headers["content-type"];
-        let from: string = "",
-          to: string = "",
+        let fromId: number = 0,
+          toId: number = 0,
           subject: string = "",
           message: string = "";
         let attachments: Array<{ filename: string; data: Buffer }> = [];
@@ -48,11 +48,11 @@ export default async function mailRoutes(
             if (part.type === "field") {
               const field = part as any;
               switch (field.fieldname) {
-                case "from":
-                  from = field.value;
+                case "fromId":
+                  fromId = Number(field.value);
                   break;
-                case "to":
-                  to = field.value;
+                case "toId":
+                  toId = Number(field.value);
                   break;
                 case "subject":
                   subject = field.value;
@@ -75,24 +75,24 @@ export default async function mailRoutes(
         } else {
           // Handle JSON request
           const body = request.body as SendMailRequest;
-          from = body.from;
-          to = body.to;
+          fromId = body.fromId;
+          toId = body.toId;
           subject = body.subject;
           message = body.message;
         }
 
         // Validate required fields
-        if (!from || !to || !subject || !message) {
+        if (!fromId || !toId || !subject || !message) {
           return reply.code(400).send({
             success: false,
-            message: "Missing required fields: from, to, subject, message",
+            message: "Missing required fields: fromId, toId, subject, message",
           });
         }
 
         // Send the message
         const result = await sendMessage({
-          from,
-          to,
+          fromId,
+          toId,
           subject,
           message,
           attachments: attachments.length > 0 ? attachments : undefined,

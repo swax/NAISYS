@@ -96,16 +96,22 @@ export const startHub: StartHub = async (
     // Register hub log service for log_write events from NAISYS instances
     createHubLogService(naisysServer, dbService, logService, heartbeatService);
 
-    // Register hub agent service for agent_start requests routed to target hosts
-    createHubAgentService(
+    // Register hub mail service for mail events from NAISYS instances
+    const mailService = createHubMailService(
       naisysServer,
       dbService,
       logService,
       heartbeatService,
     );
 
-    // Register hub mail service for mail events from NAISYS instances
-    createHubMailService(naisysServer, dbService, logService, heartbeatService);
+    // Register hub agent service for agent_start requests routed to target hosts
+    createHubAgentService(
+      naisysServer,
+      dbService,
+      logService,
+      heartbeatService,
+      mailService,
+    );
 
     // Register hub cost service for cost_write events from NAISYS instances
     createHubCostService(

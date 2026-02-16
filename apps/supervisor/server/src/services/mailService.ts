@@ -8,7 +8,6 @@ import path from "path";
 import { usingNaisysDb } from "../database/naisysDatabase.js";
 import { getLogger } from "../logger.js";
 import { cachedForSeconds } from "../utils/cache.js";
-import { getAgents } from "./agentService.js";
 import { sendMailViaHub } from "./hubConnectionService.js";
 
 /**
@@ -118,20 +117,10 @@ export async function sendMessage(
   request: SendMailRequest,
 ): Promise<SendMailResponse> {
   try {
-    const { from, to, subject, message, attachments } = request;
+    const { fromId, toId, subject, message, attachments } = request;
 
     // Clean message (handle escaped newlines)
     let cleanMessage = message.replace(/\\n/g, "\n");
-
-    // Get all agents to validate the 'from' user exists
-    const agents = await getAgents();
-    const fromUser = agents.find((agent) => agent.name === from);
-    if (!fromUser) {
-      return {
-        success: false,
-        message: `Error: User ${from} not found`,
-      };
-    }
 
     // Save attachments and append info to message body
     if (attachments && attachments.length > 0) {
@@ -161,8 +150,8 @@ export async function sendMessage(
     }
 
     const response = await sendMailViaHub(
-      fromUser.id,
-      [to],
+      fromId,
+      [toId],
       subject,
       cleanMessage,
     );

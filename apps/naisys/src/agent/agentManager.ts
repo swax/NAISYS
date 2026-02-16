@@ -36,10 +36,10 @@ export class AgentManager {
             const parsed = AgentStartRequestSchema.parse(data);
 
             if (parsed.sourceHostId !== this.hostService.getLocalHostId()) {
-              this.notifyHubRequest("start", parsed.userId);
+              this.notifyHubRequest("start", parsed.startUserId);
             }
 
-            await this.startAgent(parsed.userId);
+            await this.startAgent(parsed.startUserId);
 
             ack({
               success: true,

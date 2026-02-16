@@ -1,4 +1,8 @@
-import { AgentConfigFileSchema } from "@naisys/common";
+import {
+  AgentConfigFileSchema,
+  HateoasActionSchema,
+  HateoasLinkSchema,
+} from "@naisys/common";
 import { z } from "zod";
 
 // Zod schemas for agent config operations
@@ -12,6 +16,9 @@ export const CreateAgentConfigRequestSchema = z
 export const CreateAgentConfigResponseSchema = z.object({
   success: z.boolean(),
   message: z.string(),
+  id: z.number().optional(),
+  _links: z.array(HateoasLinkSchema).optional(),
+  _actions: z.array(HateoasActionSchema).optional(),
 });
 
 export const UpdateAgentConfigRequestSchema = z

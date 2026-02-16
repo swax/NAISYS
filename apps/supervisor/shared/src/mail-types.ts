@@ -19,8 +19,8 @@ export const MailMessageSchema = z.object({
 
 export const SendMailRequestSchema = z
   .object({
-    from: z.string(),
-    to: z.string(),
+    fromId: z.number(),
+    toId: z.number(),
     subject: z.string(),
     message: z.string(),
     attachments: z

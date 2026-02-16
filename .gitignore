@@ -5,6 +5,7 @@ node_modules/
 .env*
 .test-naisys
 .turbo
+*.tsbuildinfo
 
 # Only include files one level deep in agents/testing/
 agents/testing/**

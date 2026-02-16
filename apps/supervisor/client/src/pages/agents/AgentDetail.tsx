@@ -76,10 +76,7 @@ export const AgentDetail: React.FC = () => {
     if (!agentId) return;
     setStarting(true);
     try {
-      const result = await startAgent(
-        agentId,
-        taskInput.trim() || undefined,
-      );
+      const result = await startAgent(agentId, taskInput.trim() || undefined);
       if (result.success) {
         setTaskInput("");
         notifications.show({
@@ -307,7 +304,6 @@ export const AgentDetail: React.FC = () => {
   return (
     <Stack p="md">
       <Group>
-        <Text fw={500}>Force Agent:</Text>
         <Button
           color="green"
           disabled={!hasAction(actions, "start")}
@@ -341,10 +337,6 @@ export const AgentDetail: React.FC = () => {
         >
           Stop
         </Button>
-      </Group>
-
-      <Group>
-        <Text fw={500}>Lifecycle:</Text>
         {hasAction(actions, "archive") && (
           <Button
             color="orange"
