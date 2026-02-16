@@ -15,6 +15,7 @@ enum AuthType {
 enum Permission {
   supervisor_admin
   manage_agents
+  manage_models
 }
 
 model User {

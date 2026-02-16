@@ -7,7 +7,7 @@ import multipart from "@fastify/multipart";
 import staticFiles from "@fastify/static";
 import swagger from "@fastify/swagger";
 import scalarReference from "@scalar/fastify-api-reference";
-import Fastify from "fastify";
+import Fastify, { type FastifyError } from "fastify";
 import {
   jsonSchemaTransform,
   jsonSchemaTransformObject,
@@ -120,6 +120,27 @@ export const startServer: StartServer = async (
   // Set Zod validator and serializer compilers
   fastify.setValidatorCompiler(validatorCompiler);
   fastify.setSerializerCompiler(serializerCompiler);
+
+  // Custom error handler — logs the real error and returns a plain JSON response
+  // that bypasses the route's response serializer (avoids cascading "Failed to
+  // serialize an error" when the error format doesn't match the route schema).
+  fastify.setErrorHandler((error: FastifyError, request, reply) => {
+    const statusCode = error.statusCode ?? 500;
+    request.log.error(
+      { err: error, url: request.url, method: request.method },
+      "Request error",
+    );
+    // Use raw reply so the response isn't run through the route's Zod serializer
+    reply
+      .status(statusCode)
+      .header("content-type", "application/json; charset=utf-8")
+      .send(
+        JSON.stringify({
+          success: false,
+          message: error.message,
+        }),
+      );
+  });
 
   await fastify.register(cors, {
     origin: isProd ? false : ["http://localhost:5173"],

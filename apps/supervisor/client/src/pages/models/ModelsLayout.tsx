@@ -4,6 +4,7 @@ import { IconCpu } from "@tabler/icons-react";
 import React from "react";
 import { Outlet, useLocation, useOutletContext } from "react-router-dom";
 import { ModelSidebar } from "../../headers/ModelSidebar";
+import type { HateoasAction } from "@naisys/common";
 import {
   api,
   apiEndpoints,
@@ -17,7 +18,9 @@ const SIDEBAR_WIDTH = 300;
 export interface ModelsOutletContext {
   llmModels: LlmModelDetail[];
   imageModels: ImageModelDetail[];
+  actions: HateoasAction[] | undefined;
   isLoading: boolean;
+  refreshModels: () => Promise<void>;
 }
 
 export function useModelsContext() {
@@ -30,25 +33,36 @@ export const ModelsLayout: React.FC = () => {
   const location = useLocation();
   const [llmModels, setLlmModels] = React.useState<LlmModelDetail[]>([]);
   const [imageModels, setImageModels] = React.useState<ImageModelDetail[]>([]);
+  const [actions, setActions] = React.useState<HateoasAction[] | undefined>();
   const [isLoading, setIsLoading] = React.useState(true);
 
-  React.useEffect(() => {
-    api
-      .get<ModelsResponse>(apiEndpoints.models)
-      .then((data) => {
-        setLlmModels(data.llmModelDetails);
-        setImageModels(data.imageModelDetails);
-      })
-      .catch(() => {})
-      .finally(() => setIsLoading(false));
+  const refreshModels = React.useCallback(async () => {
+    try {
+      const data = await api.get<ModelsResponse>(apiEndpoints.models);
+      setLlmModels(data.llmModelDetails);
+      setImageModels(data.imageModelDetails);
+      setActions(data._actions);
+    } catch {
+      // ignore
+    }
   }, []);
+
+  React.useEffect(() => {
+    refreshModels().finally(() => setIsLoading(false));
+  }, [refreshModels]);
 
   // Close drawer on navigation
   React.useEffect(() => {
     closeDrawer();
   }, [location.pathname]);
 
-  const context: ModelsOutletContext = { llmModels, imageModels, isLoading };
+  const context: ModelsOutletContext = {
+    llmModels,
+    imageModels,
+    actions,
+    isLoading,
+    refreshModels,
+  };
 
   return (
     <div
@@ -70,6 +84,7 @@ export const ModelsLayout: React.FC = () => {
         <ModelSidebar
           llmModels={llmModels}
           imageModels={imageModels}
+          actions={actions}
           isLoading={isLoading}
         />
       </Box>
@@ -81,6 +96,7 @@ export const ModelsLayout: React.FC = () => {
           display: "flex",
           flexDirection: "column",
           minWidth: 0,
+          paddingLeft: "var(--mantine-spacing-md)",
         }}
       >
         {/* Sub-header: mobile model icon */}
@@ -111,6 +127,7 @@ export const ModelsLayout: React.FC = () => {
         <ModelSidebar
           llmModels={llmModels}
           imageModels={imageModels}
+          actions={actions}
           isLoading={isLoading}
         />
       </Drawer>

@@ -24,3 +24,26 @@ export function loadCustomModels(naisysFolder?: string): CustomModelsFile {
     imageModels: result.imageModels ?? [],
   };
 }
+
+export function saveCustomModels(data: CustomModelsFile): void {
+  const folder = process.env.NAISYS_FOLDER;
+  if (!folder) {
+    throw new Error("NAISYS_FOLDER environment variable is not set");
+  }
+
+  // Validate before writing
+  CustomModelsFileSchema.parse(data);
+
+  // Omit empty arrays from output
+  const output: Record<string, unknown> = {};
+  if (data.llmModels && data.llmModels.length > 0) {
+    output.llmModels = data.llmModels;
+  }
+  if (data.imageModels && data.imageModels.length > 0) {
+    output.imageModels = data.imageModels;
+  }
+
+  const filePath = path.join(folder, "custom-models.yaml");
+  const yamlStr = yaml.dump(output, { lineWidth: -1 });
+  fs.writeFileSync(filePath, yamlStr, "utf-8");
+}
