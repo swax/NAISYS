@@ -34,6 +34,9 @@ import { Runs } from "./pages/runs/Runs";
 import { UserList } from "./pages/users/UserList";
 import { UserDetail } from "./pages/users/UserDetail";
 import { AgentsLayout } from "./pages/agents/AgentsLayout";
+import { ModelsLayout } from "./pages/models/ModelsLayout";
+import { ModelIndex } from "./pages/models/ModelIndex";
+import { ModelPage } from "./pages/models/ModelPage";
 
 const AppContent: React.FC = () => {
   const [opened, { toggle, close }] = useDisclosure();
@@ -113,6 +116,10 @@ const router = createBrowserRouter(
       <Route path="/hosts" element={<HostsLayout />}>
         <Route index element={<HostIndex />} />
         <Route path=":id" element={<HostPage />} />
+      </Route>
+      <Route path="/models" element={<ModelsLayout />}>
+        <Route index element={<ModelIndex />} />
+        <Route path=":key" element={<ModelPage />} />
       </Route>
       <Route path="/users" element={<UserList />} />
       <Route path="/users/:id" element={<UserDetail />} />

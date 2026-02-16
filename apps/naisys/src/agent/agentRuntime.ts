@@ -74,7 +74,7 @@ export async function createAgentRuntime(
   // LLM
   const inputMode = createInputMode();
   const systemMessage = createSystemMessage(globalConfig, agentConfig);
-  const llModels = createLLModels(globalConfig);
+  const llModels = createLLModels();
   const tools = createCommandTools(agentConfig);
   const costTracker = createCostTracker(
     globalConfig,
@@ -114,7 +114,7 @@ export async function createAgentRuntime(
   );
 
   // Features
-  const genimg = createGenImg(agentConfig, costTracker, output);
+  const genimg = createGenImg(globalConfig, agentConfig, costTracker, output);
   const userDisplayService = createUserDisplayService(userService, inputMode);
   const mailDisplayService = hubClient
     ? createMailDisplayService(hubClient, localUserId)

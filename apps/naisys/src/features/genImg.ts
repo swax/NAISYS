@@ -1,4 +1,4 @@
-import type { ImageModel } from "@naisys/common";
+import { getAllImageModels } from "@naisys/common";
 import { loadCustomModels } from "@naisys/common/dist/customModelsLoader.js";
 import OpenAI from "openai";
 import path from "path";
@@ -6,11 +6,13 @@ import sharp from "sharp";
 import stringArgv from "string-argv";
 import { AgentConfig } from "../agent/agentConfig.js";
 import { RegistrableCommand } from "../command/commandRegistry.js";
+import { GlobalConfig } from "../globalConfig.js";
 import { CostTracker } from "../llm/costTracker.js";
 import * as pathService from "../services/pathService.js";
 import { OutputService } from "../utils/output.js";
 
 export function createGenImg(
+  { globalConfig }: GlobalConfig,
   { agentConfig }: AgentConfig,
   costTracker: CostTracker,
   output: OutputService,
@@ -51,9 +53,20 @@ export function createGenImg(
 
     await output.commentAndLog(`Generating image with ${imageModelName}...`);
 
-    const openai = new OpenAI();
-
     const model = getImageModel(imageModelName);
+
+    const apiKey = model.keyEnvVar
+      ? globalConfig().getEnv(model.keyEnvVar)
+      : undefined;
+
+    if (!apiKey) {
+      throw `Error, set ${model.keyEnvVar} env var`;
+    }
+
+    const openai = new OpenAI({
+      apiKey,
+      baseURL: model.baseUrl,
+    });
 
     const response = await openai.images.generate({
       prompt: description,
@@ -106,55 +119,8 @@ export function createGenImg(
 
 export type GenImg = ReturnType<typeof createGenImg>;
 
-const imageModels: ImageModel[] = [
-  {
-    key: "dalle3-1024-HD",
-    label: "DALL-E 3 1024 HD",
-    versionName: "dall-e-3",
-    size: "1024x1024",
-    quality: "hd",
-    cost: 0.08,
-  },
-  {
-    key: "dalle3-1024",
-    label: "DALL-E 3 1024",
-    versionName: "dall-e-3",
-    size: "1024x1024",
-    cost: 0.04,
-  },
-  {
-    key: "dalle2-1024",
-    label: "DALL-E 2 1024",
-    versionName: "dall-e-2",
-    size: "1024x1024",
-    cost: 0.02,
-  },
-  {
-    key: "dalle2-512",
-    label: "DALL-E 2 512",
-    versionName: "dall-e-2",
-    size: "512x512",
-    cost: 0.018,
-  },
-  {
-    key: "dalle2-256",
-    label: "DALL-E 2 256",
-    versionName: "dall-e-2",
-    size: "256x256",
-    cost: 0.016,
-  },
-];
-
-// Merge custom image models from custom-models.yaml
 const customModels = loadCustomModels();
-for (const custom of customModels.imageModels ?? []) {
-  const existingIndex = imageModels.findIndex((m) => m.key === custom.key);
-  if (existingIndex >= 0) {
-    imageModels[existingIndex] = custom;
-  } else {
-    imageModels.push(custom);
-  }
-}
+const imageModels = getAllImageModels(customModels.imageModels);
 
 function getImageModel(key: string) {
   const model = imageModels.find((m) => m.key === key);
