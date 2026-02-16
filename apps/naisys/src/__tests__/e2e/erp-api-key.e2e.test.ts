@@ -6,6 +6,7 @@ import {
   jest,
   test,
 } from "@jest/globals";
+import { sleep } from "@naisys/common";
 import { writeFileSync } from "fs";
 import { join } from "path";
 import {
@@ -52,7 +53,7 @@ describe("ERP API Key Auth E2E", () => {
       await naisys.cleanup();
       naisys = null;
     }
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    await sleep(500);
     cleanupTestDir(testDir);
   });
 

@@ -4,12 +4,15 @@ import { AgentConfig } from "../agent/agentConfig.js";
 import { LynxService } from "../features/lynx.js";
 import { WorkspacesFeature } from "../features/workspaces.js";
 import { GlobalConfig } from "../globalConfig.js";
+import { HubClient } from "../hub/hubClient.js";
 import { ContextManager } from "../llm/contextManager.js";
 import { ContentSource, LlmRole } from "../llm/llmDtos.js";
 import { LlmApiType } from "../llm/llModels.js";
 import { LLMService } from "../llm/llmService.js";
 import { SessionCompactor } from "../llm/sessionCompactor.js";
+import { MailService } from "../mail/mail.js";
 import { LogService } from "../services/logService.js";
+import { sleep } from "@naisys/common";
 import { RunService } from "../services/runService.js";
 import { createEscKeyListener } from "../utils/escKeyListener.js";
 import { InputModeService } from "../utils/inputMode.js";
@@ -38,6 +41,8 @@ export function createCommandLoop(
   runService: RunService,
   promptNotification: PromptNotificationService,
   localUserId: number,
+  mailService: MailService,
+  hubClient: HubClient | undefined,
 ) {
   async function run(abortSignal?: AbortSignal) {
     await output.commentAndLog(`AGENT STARTED`);
@@ -74,12 +79,24 @@ export function createCommandLoop(
         await displayPreviousSessionNotes(lastSessionSummary);
       }
 
+      // Check for mail that arrived before/during startup (e.g. task mail)
+      if (hubClient) {
+        // After successful startup, the hub sends startup messages, so wait a second for that to happen
+        await sleep(1000);
+      }
+      await mailService.checkAndNotify();
+      await processNotifications();
+
       for (const initialCommand of agentConfig().initialCommands) {
-        const prompt = await promptBuilder.getPrompt(0);
-        await contextManager.append(prompt, ContentSource.ConsolePrompt);
-        await commandHandler.processCommand(prompt, [
-          agentConfig().resolveConfigVars(initialCommand),
-        ]);
+        try {
+          const prompt = await promptBuilder.getPrompt(0);
+          await contextManager.append(prompt, ContentSource.ConsolePrompt);
+          await commandHandler.processCommand(prompt, [
+            agentConfig().resolveConfigVars(initialCommand),
+          ]);
+        } catch (e) {
+          await handleErrorAndSwitchToDebugMode(e, llmErrorCount, true);
+        }
       }
 
       inputMode.setDebug();
@@ -140,15 +157,7 @@ export function createCommandLoop(
               promptNotification.hasPending(localUserId, true) ||
               agentConfig().shellModel === LlmApiType.None // Check this last so notifications get processed/cleared
             ) {
-              const pendingOutput =
-                await promptNotification.processPending(localUserId);
-              for (const item of pendingOutput) {
-                if (item.type === "context") {
-                  await contextManager.append(item.text, ContentSource.Console);
-                } else {
-                  await output.commentAndLog(item.text);
-                }
-              }
+              await processNotifications();
               inputMode.setDebug();
               continue;
             }
@@ -252,6 +261,17 @@ export function createCommandLoop(
       await output.commentAndLog(`AGENT STOPPED (${abortSignal.reason})`);
     } else {
       await output.commentAndLog(`AGENT EXITED`);
+    }
+  }
+
+  async function processNotifications() {
+    const pendingOutput = await promptNotification.processPending(localUserId);
+    for (const item of pendingOutput) {
+      if (item.type === "context") {
+        await contextManager.append(item.text, ContentSource.Console);
+      } else {
+        await output.commentAndLog(item.text);
+      }
     }
   }
 

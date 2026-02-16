@@ -317,9 +317,6 @@ export function createMailService(
     };
     hubClient.registerEvent(HubEvents.MAIL_RECEIVED, mailReceivedHandler);
 
-    // Check for mail that arrived while offline
-    void checkAndNotify();
-
     cleanupFn = () => {
       hubClient.unregisterEvent(HubEvents.MAIL_RECEIVED, mailReceivedHandler);
     };

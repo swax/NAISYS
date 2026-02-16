@@ -231,6 +231,8 @@ export async function createAgentRuntime(
     runService,
     promptNotification,
     localUserId,
+    mailService,
+    hubClient,
   );
 
   const abortController = new AbortController();

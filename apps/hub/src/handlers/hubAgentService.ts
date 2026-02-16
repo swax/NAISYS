@@ -82,15 +82,6 @@ export function createHubAgentService(
           }
         }
 
-        // Send task description mail before starting so the agent sees it on boot
-        if (parsed.taskDescription) {
-          await sendTaskMail(
-            parsed.startUserId,
-            requesterUserId,
-            parsed.taskDescription,
-          );
-        }
-
         // Forward the start request to the selected host
         const sent = naisysServer.sendMessage<
           AgentStartRequest,
@@ -109,6 +100,15 @@ export function createHubAgentService(
               heartbeatService.addStartedAgent(bestHostId, parsed.startUserId);
             }
             ack(response);
+            // Send task description mail after successful start to avoid
+            // orphaned mails from failed start attempts
+            if (response.success && parsed.taskDescription) {
+              void sendTaskMail(
+                parsed.startUserId,
+                requesterUserId,
+                parsed.taskDescription,
+              );
+            }
           },
         );
 

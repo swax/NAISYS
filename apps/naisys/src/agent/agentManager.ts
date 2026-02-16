@@ -5,6 +5,7 @@ import {
   AgentStopResponse,
   HubEvents,
 } from "@naisys/hub-protocol";
+import { sleep } from "@naisys/common";
 import { GlobalConfig } from "../globalConfig.js";
 import { HubClient } from "../hub/hubClient.js";
 import { HostService } from "../services/hostService.js";
@@ -218,7 +219,7 @@ export class AgentManager {
   async waitForAllAgentsToComplete() {
     // Poll every second to see if there are running agents
     while (this.runningAgents.length > 0) {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await sleep(1000);
     }
   }
 }
