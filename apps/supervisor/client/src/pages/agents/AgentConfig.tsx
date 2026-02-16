@@ -1,8 +1,8 @@
 import type { AgentConfigFile } from "@naisys/common";
 import { Alert, Button, Group, Loader, Stack, Text } from "@mantine/core";
 import { IconEdit } from "@tabler/icons-react";
-import React, { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import React, { useCallback, useEffect, useState } from "react";
+import { useBlocker, useParams } from "react-router-dom";
 import { AgentConfigForm } from "../../components/AgentConfigForm";
 import { useAgentDataContext } from "../../contexts/AgentDataContext";
 import { useSession } from "../../contexts/SessionContext";
@@ -21,6 +21,34 @@ export const AgentConfig: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
+
+  // Block in-app navigation while editing
+  const blocker = useBlocker(isEditing);
+
+  useEffect(() => {
+    if (blocker.state === "blocked") {
+      if (window.confirm("You have unsaved changes. Leave this page?")) {
+        blocker.proceed();
+      } else {
+        blocker.reset();
+      }
+    }
+  }, [blocker]);
+
+  // Block browser refresh/close while editing
+  const handleBeforeUnload = useCallback(
+    (e: BeforeUnloadEvent) => {
+      if (isEditing) {
+        e.preventDefault();
+      }
+    },
+    [isEditing],
+  );
+
+  useEffect(() => {
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [handleBeforeUnload]);
 
   useEffect(() => {
     if (!agentId) {

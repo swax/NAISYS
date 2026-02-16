@@ -13,8 +13,8 @@ export enum NextCommandAction {
 
 export interface NextCommandResponse {
   nextCommandAction: NextCommandAction;
+  /** 0 means no wait, and -1 means wait indefinitely until a wake event occurs */
   pauseSeconds?: number;
-  wakeOnMessage?: boolean;
 }
 
 /**

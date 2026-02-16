@@ -56,11 +56,6 @@ export function createMailService(
             `  search <terms> [-archived] [-subject] Search messages`,
           );
         }
-        lines.push(
-          `  wait <seconds>                     Wait for new mail`,
-          ``,
-          `* Attachments are not supported`,
-        );
         return lines.join("\n");
       }
 
@@ -88,21 +83,6 @@ export function createMailService(
         }
 
         return sendMessage(usernames, subject, message);
-      }
-
-      case "wait": {
-        const pauseSeconds = argv[1]
-          ? parseInt(argv[1])
-          : globalConfig().shellCommand.maxTimeoutSeconds;
-
-        return {
-          content: `Waiting ${pauseSeconds} seconds for new mail messages...`,
-          nextCommandResponse: {
-            nextCommandAction: NextCommandAction.Continue,
-            pauseSeconds,
-            wakeOnMessage: true,
-          },
-        };
       }
 
       case "read": {
@@ -231,7 +211,7 @@ export function createMailService(
     for (const recipient of resolvedRecipients) {
       promptNotification.notify({
         userId: recipient.id,
-        wake: true,
+        wake: "yes",
         contextOutput: ["New Message:", display],
       });
     }
@@ -314,7 +294,7 @@ export function createMailService(
 
     promptNotification.notify({
       userId: localUserId,
-      wake: agentConfig().wakeOnMessage,
+      wake: "yes",
       contextOutput,
       processed: () => {
         messageIds.forEach((id) => notifiedMessageIds.delete(id));

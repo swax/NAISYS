@@ -173,7 +173,8 @@ export async function createAgentRuntime(
     shellCommand,
     mailService,
     output,
-    inputMode,
+    userService,
+    localUserId,
   );
   const commandProtection = createCommandProtection(
     agentConfig,

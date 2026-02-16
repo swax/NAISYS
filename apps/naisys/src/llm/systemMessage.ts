@@ -27,8 +27,8 @@ export function createSystemMessage(
 
   let llmailCmd = "";
   if (agentConfig().mailEnabled) {
-    llmailCmd = `\n  ns-users: Display a list of users in the organization`;
-    llmailCmd = `\n  ns-mail: A local mail system for communicating with your team`;
+    llmailCmd += `\n  ns-users: Display a list of users in the organization`;
+    llmailCmd += `\n  ns-mail: A private mail system for communicating with your team`;
   }
 
   let lynxCmd = "";
@@ -45,7 +45,7 @@ export function createSystemMessage(
   let sessionCmd = "";
   const sessionSubcommands: string[] = [];
 
-  sessionSubcommands.push(`pause <seconds> - Pause for <seconds>`);
+  sessionSubcommands.push(`wait [<seconds>] - Wait <seconds> or indefinitely if not specified. Will auto-wake on new mail or on other events.`);
   if (globalConfig().compactSessionEnabled) {
     sessionSubcommands.push(
       `compact "<note>" - Compact the session which will reset the token count. The note should contain your next goal, and important things you should remember.`,
@@ -53,7 +53,7 @@ export function createSystemMessage(
   }
   if (agentConfig().completeSessionEnabled) {
     sessionSubcommands.push(
-      `complete [<notify_user>] ["<result>"] - End the session. Optionally notify a user with any important information or output from your session.`,
+      `complete - End the session. Make sure to notify who you need to with results before completing.`,
     );
   }
 
@@ -66,18 +66,18 @@ export function createSystemMessage(
 
   if (globalConfig().compactSessionEnabled) {
     tokenNote =
-      "\n  Make sure to call 'ns-session compact' before the token limit is hit so you can continue your work without interruption.";
+      "\n  Make sure to call `ns-session compact` before the token limit is hit so you can continue your work without interruption.";
   }
 
   if (agentConfig().disableMultipleCommands) {
     tokenNote +=
-      "\n  Only run one command at a time, evaluate the output, then run the next command. Don't overload the same line with multiple commands either.";
+      "\n  Only run one command at a time, evaluate the output, then run the next command. Don't overload the same line with multiple commands.";
   } else {
     tokenNote +=
       "\n  Be careful running multiple commands on a single prompt, and never assume the output of commands. Better to run one command at a time if you're not sure.";
   }
 
-  const subagentNote = `\n  ns-agent: You can create subagents to help you with your work.`;
+  const subagentNote = `\n  ns-agent: Manually manage sub-agents.`;
 
   // Fill out the templates in the agent prompt and stick it to the front of the system message
   // A lot of the stipulations in here are to prevent common LLM mistakes
@@ -90,9 +90,9 @@ export function createSystemMessage(
 
 This is a command line interface presenting you with the next command prompt.
 *** Your response will literally be piped into a command shell, so you must use valid commands.
-Make sure the read the command line rules in the MOTD carefully.
+Make sure to read the command line rules in the MOTD carefully.
 Don't put commands in \`\`\` blocks.
-Do not preempt or hallucinate the output of commands. The system will provide the output of commands you.
+Do not preempt or hallucinate the output of commands. The system will provide the output of commands for you.
 For example when you run 'cat' or 'ls', don't write what you think the output will be. Let the system do that.
 The system will provide responses and next command prompt. Don't output your own command prompt.
 Be careful when writing files through the command prompt with cat. Make sure to close and escape quotes properly.
@@ -116,7 +116,7 @@ ${platformConfig.displayName} Commands:
 NAISYS Commands: (cannot be used with other commands on the same prompt)${llmailCmd}${subagentNote}${lynxCmd}${genImgCmd}${workspaceCmd}
   ns-comment "<thought>": Any non-command output like thinking out loud, prefix with the 'ns-comment' command${sessionCmd}
 Tokens:
-  The console log can only hold a certain number of 'tokens' that is specified in the prompt${tokenNote}`;
+  The console log can only hold a certain number of tokens that is specified in the prompt.${tokenNote}`;
 
   return systemMessage;
 }

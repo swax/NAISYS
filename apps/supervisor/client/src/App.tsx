@@ -6,10 +6,12 @@ import "@mantine/notifications/styles.css";
 import { QueryClientProvider } from "@tanstack/react-query";
 import React from "react";
 import {
-  BrowserRouter as Router,
+  createBrowserRouter,
+  createRoutesFromElements,
   Navigate,
+  Outlet,
   Route,
-  Routes,
+  RouterProvider,
 } from "react-router-dom";
 import { ROUTER_BASENAME } from "./constants";
 import { AgentDataProvider } from "./contexts/AgentDataContext";
@@ -90,28 +92,35 @@ const AppContent: React.FC = () => {
 
       <AppShell.Main>
         <DisconnectedBanner />
-        <Routes>
-          <Route path="/agents" element={<AgentsLayout />}>
-            <Route index element={<AgentIndex />} />
-            <Route path=":id" element={<AgentDetail />} />
-            <Route path=":id/config" element={<AgentConfig />} />
-            <Route path=":id/runs" element={<Runs />} />
-            <Route path=":id/mail" element={<Mail />} />
-            <Route path=":id/mail/:messageId" element={<Mail />} />
-          </Route>
-          <Route path="/hosts" element={<HostsLayout />}>
-            <Route index element={<HostIndex />} />
-            <Route path=":id" element={<HostPage />} />
-          </Route>
-          <Route path="/users" element={<UserList />} />
-          <Route path="/users/:id" element={<UserDetail />} />
-          <Route path="/" element={<Navigate to="/agents" replace />} />
-        </Routes>
+        <Outlet />
       </AppShell.Main>
       <LoginDialog opened={loginOpen} onClose={closeLogin} />
     </AppShell>
   );
 };
+
+const router = createBrowserRouter(
+  createRoutesFromElements(
+    <Route element={<AppContent />}>
+      <Route path="/agents" element={<AgentsLayout />}>
+        <Route index element={<AgentIndex />} />
+        <Route path=":id" element={<AgentDetail />} />
+        <Route path=":id/config" element={<AgentConfig />} />
+        <Route path=":id/runs" element={<Runs />} />
+        <Route path=":id/mail" element={<Mail />} />
+        <Route path=":id/mail/:messageId" element={<Mail />} />
+      </Route>
+      <Route path="/hosts" element={<HostsLayout />}>
+        <Route index element={<HostIndex />} />
+        <Route path=":id" element={<HostPage />} />
+      </Route>
+      <Route path="/users" element={<UserList />} />
+      <Route path="/users/:id" element={<UserDetail />} />
+      <Route path="/" element={<Navigate to="/agents" replace />} />
+    </Route>,
+  ),
+  { basename: ROUTER_BASENAME },
+);
 
 const App: React.FC = () => {
   return (
@@ -121,9 +130,7 @@ const App: React.FC = () => {
         <SessionProvider>
           <AgentDataProvider>
             <HostDataProvider>
-              <Router basename={ROUTER_BASENAME}>
-                <AppContent />
-              </Router>
+              <RouterProvider router={router} />
             </HostDataProvider>
           </AgentDataProvider>
         </SessionProvider>

@@ -136,7 +136,7 @@ initialCommands:
 - Special Commands usable by the LLM as well as by the debug prompt
   - `ns-comment "<note>"` - The LLM is directed to use this for 'thinking out loud' which avoids 'invalid command' errors
   - `ns-session` - Session management commands:
-    - `ns-session pause <seconds>` - Pause execution for a set number of seconds
+    - `ns-session wait <seconds>` - Pause execution for a set number of seconds
     - `ns-session trim <indexes>` - Remove prompts by index to save tokens (e.g., "1-5, 8")
     - `ns-session compact "<note>"` - End session and start fresh with a note for the next session
     - `ns-session complete "<result>"` - Mark task as complete and exit (for sub-agents: notifies lead agent)

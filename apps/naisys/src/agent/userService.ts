@@ -74,13 +74,13 @@ export function createUserService(
   }
 
   /** In hub mode, we just start the admin user, otherwise we start all lead agents */
-  function getStartupUserIds(integratedHub: boolean): number[] {
+  function getStartupUserIds(): number[] {
     const adminUser = getUserByName("admin");
     const adminId = adminUser?.userId ?? 0;
 
     const notify = (userId: number, message: string) => {
       promptNotificationService.notify({
-        wake: true,
+        wake: "always",
         userId,
         commentOutput: [message],
       });

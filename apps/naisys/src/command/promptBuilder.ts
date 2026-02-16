@@ -32,7 +32,7 @@ export function createPromptBuilder(
    */
   writeEventManager.hookStdout();
 
-  async function getPrompt(pauseSeconds: number, wakeOnMessage: boolean) {
+  async function getPrompt(pauseSeconds: number) {
     const promptSuffix = isElevated()
       ? platformConfig.adminPromptSuffix
       : platformConfig.promptSuffix;
@@ -44,10 +44,10 @@ export function createPromptBuilder(
     let pause = "";
 
     if (inputMode.isDebug()) {
-      if (pauseSeconds) {
-        pause += ` [Paused: ${pauseSeconds}s]`;
+      if (pauseSeconds > 0) {
+        pause += ` [Wait: ${pauseSeconds}s]`;
       }
-      if (wakeOnMessage) {
+      if (agentConfig().wakeOnMessage) {
         pause += " [WakeOnMsg]";
       }
     }
@@ -102,7 +102,7 @@ export function createPromptBuilder(
         // Else timeout interrupted by user input
 
         // Clear out the timeout information from the prompt to prevent the user from thinking the timeout still applies
-        let pausePos = commandPrompt.indexOf("[Paused:");
+        let pausePos = commandPrompt.indexOf("[Wait:");
         pausePos =
           pausePos == -1 ? commandPrompt.indexOf("[WakeOnMsg]") : pausePos;
 
@@ -155,15 +155,20 @@ export function createPromptBuilder(
       }
 
       // This pauses the app for a specified time before the next llm call
-      // This is how `llmail wait` and `ns-session pause` are implemented
+      // This is how `ns-session wait` is implemented
       // It also allows the user to wake the debug prompt on incoming mail or switching the in focus agent
-      if (pauseSeconds) {
+      if (pauseSeconds > 0) {
         timeout = setTimeout(abortQuestion, pauseSeconds * 1000);
       }
 
       // Poll for prompt notifications that should wake/interrupt
       notificationInterval = setInterval(() => {
-        if (promptNotification.hasPending(localUserId, "wake")) {
+        if (
+          promptNotification.hasPending(
+            localUserId,
+            agentConfig().wakeOnMessage,
+          )
+        ) {
           abortQuestion();
         }
       }, 250);

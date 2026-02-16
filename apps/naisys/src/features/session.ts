@@ -1,5 +1,6 @@
 import stringArgv from "string-argv";
 import { AgentConfig } from "../agent/agentConfig.js";
+import { UserService } from "../agent/userService.js";
 import {
   CommandResponse,
   NextCommandAction,
@@ -9,7 +10,6 @@ import { ShellCommand } from "../command/shellCommand.js";
 import { GlobalConfig } from "../globalConfig.js";
 import { SessionCompactor } from "../llm/sessionCompactor.js";
 import { MailService } from "../mail/mail.js";
-import { InputModeService } from "../utils/inputMode.js";
 import { OutputService } from "../utils/output.js";
 import * as utilities from "../utils/utilities.js";
 
@@ -20,7 +20,8 @@ export function createSessionService(
   shellCommand: ShellCommand,
   mailService: MailService,
   output: OutputService,
-  inputMode: InputModeService,
+  userService: UserService,
+  localUserId: number,
 ) {
   async function handleCommand(
     args: string,
@@ -36,14 +37,15 @@ export function createSessionService(
       case "help":
         return getHelpText();
 
-      case "pause":
-        return handlePause(argv[1]);
+      // Changed nomenclature from pause to wait to better reflect that the session can wake on events
+      case "wait":
+        return handleWait(argv[1]);
 
       case "compact":
         return handleCompact(args.slice(subcommand.length).trim());
 
       case "complete":
-        return handleComplete(argv[1], argv[2]);
+        return handleComplete();
 
       default:
         return `Unknown subcommand: ${subcommand}\n\n${getHelpText()}`;
@@ -52,41 +54,44 @@ export function createSessionService(
 
   function getHelpText(): string {
     let helpText = `ns-session <subcommand>
-  pause <seconds>         Pause session for the given number of seconds. 
-                          Session will wake on new mail`;
+  wait [<seconds>]    Wait for the given number of seconds or indefinitely if not specified.
+                      Session will wake on new mail or other events`;
 
     if (globalConfig().compactSessionEnabled) {
       helpText += `
-  compact "<note>"        Compact context and reset the session
-                          The note should contain your next goal and important things to remember`;
+  compact "<note>"    Compact context and reset the session
+                      The note should contain your next goal and important things to remember`;
     }
 
     if (agentConfig().completeSessionEnabled) {
       helpText += `
-  complete [<notify_user>] ["<result>"]
-                          End the session
-                          Optionally notify a user with important information or output`;
+  complete            End the session
+                      Make sure to notify who you need to with results before completing.`;
     }
 
     return helpText;
   }
 
-  function handlePause(
+  function handleWait(
     secondsArg: string | undefined,
   ): string | CommandResponse {
-    const pauseSeconds = secondsArg ? parseInt(secondsArg) : 0;
+    let waitSeconds = secondsArg ? parseInt(secondsArg) : 0;
 
-    // Don't allow the LLM to hang itself
-    if (inputMode.isLLM() && !pauseSeconds) {
-      return "Pause command requires a number of seconds to pause for";
+    // No wait implies indefinite wait, but for lead agents we want to put a cap on it to prevent system hangs
+    if (!waitSeconds) {
+      const localUser = userService.getUserById(localUserId);
+      if (!localUser?.leadUserId) {
+        waitSeconds = globalConfig().shellCommand.maxTimeoutSeconds;
+      } else {
+        waitSeconds = -1; // Indefinite wait until wake event
+      }
     }
 
     return {
       content: "",
       nextCommandResponse: {
         nextCommandAction: NextCommandAction.Continue,
-        pauseSeconds,
-        wakeOnMessage: agentConfig().wakeOnMessage,
+        pauseSeconds: waitSeconds,
       },
     };
   }
@@ -119,45 +124,33 @@ export function createSessionService(
       nextCommandResponse: {
         nextCommandAction: NextCommandAction.CompactSession,
         pauseSeconds: 0,
-        wakeOnMessage: false,
       },
     };
   }
 
-  async function handleComplete(
-    notifyUser: string | undefined,
-    taskResult: string | undefined,
-  ): Promise<string | CommandResponse> {
+  /**
+   * Tried havin a user/message param on this command but even advanced LLMs were getting it confused.
+   * Just tell it to notify whoever it needs to before running the command and keep this one simple.
+   */
+  async function handleComplete(): Promise<string | CommandResponse> {
     if (!agentConfig().completeSessionEnabled) {
-      return 'The "ns-session complete" command is not enabled for this agent.';
+      return 'The "ns-session complete" command is not enabled for you, please use wait command instead.';
     }
 
-    if (notifyUser) {
-      await output.commentAndLog(
-        `Session completed. Notifying ${notifyUser} and exiting process.`,
-      );
-      await mailService.sendMessage(
-        [notifyUser],
-        "Session Completed",
-        taskResult || "Session completed",
-      );
-    } else {
-      await output.commentAndLog("Session completed. Exiting process.");
-    }
+    await output.commentAndLog("Session completed. Exiting process.");
 
     return {
       content: "",
       nextCommandResponse: {
         nextCommandAction: NextCommandAction.ExitApplication,
         pauseSeconds: 0,
-        wakeOnMessage: false,
       },
     };
   }
 
   const registrableCommand: RegistrableCommand = {
     commandName: "ns-session",
-    helpText: "Manage session (compact, pause, or end)",
+    helpText: "Manage session (compact, wait, or end)",
     handleCommand,
   };
 
