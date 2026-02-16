@@ -5,9 +5,11 @@ export const SettingsSchema = z.object({
   example: z.string(),
 });
 
-export const SettingsRequestSchema = z.object({
-  settings: SettingsSchema,
-});
+export const SettingsRequestSchema = z
+  .object({
+    settings: SettingsSchema,
+  })
+  .strict();
 
 export const SettingsResponseSchema = z.object({
   success: z.boolean(),

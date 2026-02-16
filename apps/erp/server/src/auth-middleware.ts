@@ -1,6 +1,6 @@
-import { createHash } from "crypto";
 import type { FastifyInstance } from "fastify";
 import { AuthCache } from "@naisys/common";
+import { hashToken } from "@naisys/common/dist/hashToken.js";
 import prisma from "./db.js";
 import {
   findAgentByApiKey,
@@ -21,7 +21,7 @@ declare module "fastify" {
 
 const COOKIE_NAME = "naisys_session";
 
-const PUBLIC_PREFIXES = ["/api/erp/auth/login"];
+const PUBLIC_PREFIXES = ["/api/erp/auth/login", "/api/erp/client-config"];
 
 export const authCache = new AuthCache<ErpUser>();
 
@@ -41,10 +41,6 @@ function isPublicRoute(url: string): boolean {
   if (!url.startsWith("/api/erp")) return true;
 
   return false;
-}
-
-function hashToken(token: string): string {
-  return createHash("sha256").update(token).digest("hex");
 }
 
 export function registerAuthMiddleware(fastify: FastifyInstance) {

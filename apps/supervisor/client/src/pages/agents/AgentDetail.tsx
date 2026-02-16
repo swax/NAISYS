@@ -6,6 +6,7 @@ import {
   Select,
   Stack,
   Text,
+  TextInput,
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { hasAction, type HateoasAction } from "@naisys/common";
@@ -41,6 +42,7 @@ export const AgentDetail: React.FC = () => {
   const [configPath, setConfigPath] = useState<string | null>(null);
   const [actions, setActions] = useState<HateoasAction[] | undefined>();
   const [loading, setLoading] = useState(true);
+  const [taskInput, setTaskInput] = useState("");
   const [starting, setStarting] = useState(false);
   const [stopping, setStopping] = useState(false);
   const [archiving, setArchiving] = useState(false);
@@ -74,8 +76,12 @@ export const AgentDetail: React.FC = () => {
     if (!agentId) return;
     setStarting(true);
     try {
-      const result = await startAgent(agentId);
+      const result = await startAgent(
+        agentId,
+        taskInput.trim() || undefined,
+      );
       if (result.success) {
+        setTaskInput("");
         notifications.show({
           title: "Agent Started",
           message: result.hostname
@@ -311,6 +317,14 @@ export const AgentDetail: React.FC = () => {
         >
           Start
         </Button>
+        {hasAction(actions, "start") && (
+          <TextInput
+            placeholder="Task description (optional)"
+            value={taskInput}
+            onChange={(e) => setTaskInput(e.currentTarget.value)}
+            style={{ flex: 1 }}
+          />
+        )}
         <Button
           color="yellow"
           disabled

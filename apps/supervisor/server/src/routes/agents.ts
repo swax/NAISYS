@@ -40,6 +40,8 @@ import {
   UpdateAgentConfigResponseSchema,
   AgentActionResult,
   AgentActionResultSchema,
+  AgentStartRequest,
+  AgentStartRequestSchema,
   AgentStartResult,
   AgentStartResultSchema,
   AgentStopResult,
@@ -51,7 +53,7 @@ import fs from "fs/promises";
 import { FastifyInstance, FastifyPluginOptions } from "fastify";
 import type { HateoasAction } from "@naisys/common";
 import { requirePermission } from "../auth-middleware.js";
-import { API_PREFIX, collectionLink, selfLink } from "../hateoas.js";
+import { API_PREFIX, collectionLink, schemaLink, selfLink } from "../hateoas.js";
 import {
   isAgentActive,
   isHubConnected,
@@ -89,6 +91,7 @@ function agentActions(
       href: `${API_PREFIX}/agents/${agentId}/start`,
       method: "POST",
       title: "Start Agent",
+      schema: `${API_PREFIX}/schemas/StartAgent`,
     });
   }
   if (hasManagePermission && active) {
@@ -124,6 +127,13 @@ function agentActions(
     });
   }
   if (hasManagePermission && !archived) {
+    actions.push({
+      rel: "update-config",
+      href: `${API_PREFIX}/agents/${agentId}/config`,
+      method: "PUT",
+      title: "Update Agent Config",
+      schema: `${API_PREFIX}/schemas/UpdateAgentConfig`,
+    });
     actions.push({
       rel: "set-lead",
       href: `${API_PREFIX}/agents/${agentId}/lead`,
@@ -175,10 +185,26 @@ export default async function agentsRoutes(
           _links: agentLinks(agent.id),
         }));
 
+        const hasManagePermission =
+          request.supervisorUser?.permissions.includes("manage_agents") ??
+          false;
+
+        const actions: HateoasAction[] = [];
+        if (hasManagePermission) {
+          actions.push({
+            rel: "create",
+            href: `${API_PREFIX}/agents`,
+            method: "POST",
+            title: "Create Agent",
+            schema: `${API_PREFIX}/schemas/CreateAgent`,
+          });
+        }
+
         return {
           items,
           timestamp: new Date().toISOString(),
-          _links: [selfLink("/agents")],
+          _links: [selfLink("/agents"), schemaLink("CreateAgent")],
+          _actions: actions.length > 0 ? actions : undefined,
         };
       } catch (error) {
         request.log.error(error, "Error in GET /agents route");
@@ -305,6 +331,7 @@ export default async function agentsRoutes(
   // POST /:id/start — Start agent via hub
   fastify.post<{
     Params: AgentIdParams;
+    Body: AgentStartRequest;
     Reply: AgentStartResult | ErrorResponse;
   }>(
     "/:id/start",
@@ -314,6 +341,7 @@ export default async function agentsRoutes(
         description: "Start an agent via the hub",
         tags: ["Agents"],
         params: AgentIdParamsSchema,
+        body: AgentStartRequestSchema,
         response: {
           200: AgentStartResultSchema,
           503: ErrorResponseSchema,
@@ -325,6 +353,7 @@ export default async function agentsRoutes(
     async (request, reply) => {
       try {
         const { id } = request.params;
+        const { task } = request.body;
 
         if (!isHubConnected()) {
           return reply.status(503).send({
@@ -333,7 +362,10 @@ export default async function agentsRoutes(
           });
         }
 
-        const response = await sendAgentStart(id, "Started from supervisor");
+        const response = await sendAgentStart(
+          id,
+          task || "Started from supervisor",
+        );
 
         if (response.success) {
           return {

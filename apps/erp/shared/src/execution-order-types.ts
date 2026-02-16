@@ -41,26 +41,30 @@ export const ExecutionOrderSchema = z.object({
 export type ExecutionOrder = z.infer<typeof ExecutionOrderSchema>;
 
 // Input for creating an execution order
-export const CreateExecutionOrderSchema = z.object({
-  planOrderId: z.number().int().min(1),
-  planOrderRevId: z.number().int().min(1),
-  priority: ExecutionOrderPriorityEnum.optional().default("medium"),
-  scheduledStartAt: z.iso.datetime().optional(),
-  dueAt: z.iso.datetime().optional(),
-  assignedTo: z.string().max(200).optional(),
-  notes: z.string().max(2000).optional(),
-});
+export const CreateExecutionOrderSchema = z
+  .object({
+    planOrderId: z.number().int().min(1),
+    planOrderRevId: z.number().int().min(1),
+    priority: ExecutionOrderPriorityEnum.optional().default("medium"),
+    scheduledStartAt: z.iso.datetime().optional(),
+    dueAt: z.iso.datetime().optional(),
+    assignedTo: z.string().max(200).optional(),
+    notes: z.string().max(2000).optional(),
+  })
+  .strict();
 
 export type CreateExecutionOrder = z.infer<typeof CreateExecutionOrderSchema>;
 
 // Input for updating an execution order
-export const UpdateExecutionOrderSchema = z.object({
-  priority: ExecutionOrderPriorityEnum.optional(),
-  scheduledStartAt: z.iso.datetime().nullable().optional(),
-  dueAt: z.iso.datetime().nullable().optional(),
-  assignedTo: z.string().max(200).nullable().optional(),
-  notes: z.string().max(2000).nullable().optional(),
-});
+export const UpdateExecutionOrderSchema = z
+  .object({
+    priority: ExecutionOrderPriorityEnum.optional(),
+    scheduledStartAt: z.iso.datetime().nullable().optional(),
+    dueAt: z.iso.datetime().nullable().optional(),
+    assignedTo: z.string().max(200).nullable().optional(),
+    notes: z.string().max(2000).nullable().optional(),
+  })
+  .strict();
 
 export type UpdateExecutionOrder = z.infer<typeof UpdateExecutionOrderSchema>;
 

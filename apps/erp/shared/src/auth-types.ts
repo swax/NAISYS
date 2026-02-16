@@ -1,9 +1,11 @@
 import { z } from "zod/v4";
 
-export const LoginRequestSchema = z.object({
-  username: z.string().min(1),
-  password: z.string().min(1),
-});
+export const LoginRequestSchema = z
+  .object({
+    username: z.string().min(1),
+    password: z.string().min(1),
+  })
+  .strict();
 
 export type LoginRequest = z.infer<typeof LoginRequestSchema>;
 

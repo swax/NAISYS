@@ -10,13 +10,15 @@ export async function createDatabaseService() {
   /** Should match version in schema_version table of latest migration script */
   const latestDbVersion = 12;
 
+  const dbPath = hubDbPath();
+
   // Ensure database directory exists
-  const databaseDir = dirname(hubDbPath);
+  const databaseDir = dirname(dbPath);
   if (!existsSync(databaseDir)) {
     mkdirSync(databaseDir, { recursive: true });
   }
 
-  const prisma = createPrismaClient(hubDbPath);
+  const prisma = createPrismaClient(dbPath);
 
   await runMigrations();
 
@@ -26,7 +28,7 @@ export async function createDatabaseService() {
 
     await deployPrismaMigrations({
       packageDir: databasePackageDir,
-      databasePath: hubDbPath,
+      databasePath: dbPath,
       expectedVersion: latestDbVersion,
     });
   }

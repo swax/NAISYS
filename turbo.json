@@ -3,7 +3,19 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": ["dist/**", "client-dist/**"]
+      "outputs": ["dist/**"]
+    },
+    "bundle": {
+      "outputs": ["client-dist/**"]
+    },
+    "@naisys-erp/server#bundle": {
+      "dependsOn": ["@naisys-erp/client#build", "@naisys-erp/server#build"]
+    },
+    "@naisys-supervisor/server#bundle": {
+      "dependsOn": [
+        "@naisys-supervisor/client#build",
+        "@naisys-supervisor/server#build"
+      ]
     },
     "clean": {
       "cache": false

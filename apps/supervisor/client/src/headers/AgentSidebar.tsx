@@ -16,19 +16,18 @@ import {
 } from "@tabler/icons-react";
 import React, { useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { hasAction } from "@naisys/common";
 import { AddAgentDialog } from "../components/AddAgentDialog";
 import { ROUTER_BASENAME } from "../constants";
 import { useAgentDataContext } from "../contexts/AgentDataContext";
 import { useConnectionStatus } from "../hooks/useConnectionStatus";
-import { useSession } from "../contexts/SessionContext";
 import { Agent } from "../types/agent";
 
 export const AgentSidebar: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { id: currentId } = useParams<{ id: string }>();
-  const { agents, isLoading, readStatus } = useAgentDataContext();
-  const { isAuthenticated } = useSession();
+  const { agents, actions, isLoading, readStatus } = useAgentDataContext();
   const { status: connectionStatus } = useConnectionStatus();
   const [modalOpened, setModalOpened] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
@@ -282,17 +281,18 @@ export const AgentSidebar: React.FC = () => {
     <>
       <Stack gap="xs">
         {orderedActiveAgents.map((agent) => renderAgentCard(agent))}
-        <Button
-          variant="subtle"
-          color="gray"
-          size="compact-sm"
-          leftSection={<IconPlus size="0.9rem" />}
-          onClick={() => setModalOpened(true)}
-          disabled={!isAuthenticated}
-          fullWidth
-        >
-          Add Agent
-        </Button>
+        {hasAction(actions, "create") && (
+          <Button
+            variant="subtle"
+            color="gray"
+            size="compact-sm"
+            leftSection={<IconPlus size="0.9rem" />}
+            onClick={() => setModalOpened(true)}
+            fullWidth
+          >
+            Add Agent
+          </Button>
+        )}
         {archivedAgents.length > 0 && (
           <>
             <Button

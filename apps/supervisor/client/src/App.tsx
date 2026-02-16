@@ -15,7 +15,8 @@ import { ROUTER_BASENAME } from "./constants";
 import { AgentDataProvider } from "./contexts/AgentDataContext";
 import { HostDataProvider } from "./contexts/HostDataContext";
 import { LoginDialog } from "./components/LoginDialog";
-import { SessionProvider } from "./contexts/SessionContext";
+import { SessionProvider, useSession } from "./contexts/SessionContext";
+import { LoginPage } from "./pages/LoginPage";
 import { AppHeader } from "./headers/AppHeader";
 import { AppNavbar } from "./headers/AppNavbar";
 import { DisconnectedBanner } from "./headers/DisconnectedBanner";
@@ -36,16 +37,33 @@ const AppContent: React.FC = () => {
   const [opened, { toggle, close }] = useDisclosure();
   const [loginOpen, { open: openLogin, close: closeLogin }] = useDisclosure();
   const [plugins, setPlugins] = React.useState<string[]>([]);
+  const [publicRead, setPublicRead] = React.useState(false);
+  const [clientConfigLoaded, setClientConfigLoaded] = React.useState(false);
+  const { isAuthenticated, isCheckingSession } = useSession();
 
-  // Fetch enabled plugins on mount
+  // Fetch client config (plugins, publicRead) on mount
   React.useEffect(() => {
-    fetch("/api/supervisor/plugins")
+    fetch("/api/supervisor/client-config")
       .then((r) => r.json())
-      .then((d) => setPlugins(d.plugins))
-      .catch(() => {});
+      .then((d) => {
+        setPlugins(d.plugins);
+        setPublicRead(d.publicRead);
+      })
+      .catch(() => {})
+      .finally(() => setClientConfigLoaded(true));
   }, []);
 
   const hasErp = plugins.includes("erp");
+
+  // Wait for both session check and client config to complete
+  if (isCheckingSession || !clientConfigLoaded) {
+    return null;
+  }
+
+  // Show full-page login when not authenticated and public read is disabled
+  if (!isAuthenticated && !publicRead) {
+    return <LoginPage />;
+  }
 
   return (
     <AppShell

@@ -73,7 +73,7 @@ export function createUserService(
     return userMap.get(id);
   }
 
-  /** In non integrated hub mode, we just start the debug user, otherwise we start all lead agents */
+  /** In hub mode, we just start the admin user, otherwise we start all lead agents */
   function getStartupUserIds(integratedHub: boolean): number[] {
     const adminUser = getUserByName("admin");
     const adminId = adminUser?.userId ?? 0;
@@ -86,7 +86,7 @@ export function createUserService(
       });
     };
 
-    if (hubClient && !integratedHub) {
+    if (hubClient) {
       notify(
         adminId,
         `No agents running yet. Hub will start agents on demand.`,
@@ -105,11 +105,11 @@ export function createUserService(
 
     // In standalone mode with a single agent, don't start admin as it would
     // require the user to exit twice and prevent ns-session complete from ending the app
-    if (leadAgents.length === 1 && !integratedHub) {
+    if (leadAgents.length === 1) {
       return [leadAgents[0].userId];
     }
 
-    // Integrated hub mode or multiple agents: always include admin so that all agents can be turned off without ending process
+    // Multiple agents: always include admin so that all agents can be turned off without ending process
     const agentList = leadAgents.map((u) => u.username).join(", ");
     leadAgents.forEach((agent) =>
       notify(agent.userId, `Multiple agents started: ${agentList}`),

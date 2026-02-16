@@ -17,20 +17,22 @@ export const MailMessageSchema = z.object({
   recipients: z.array(MailRecipientSchema),
 });
 
-export const SendMailRequestSchema = z.object({
-  from: z.string(),
-  to: z.string(),
-  subject: z.string(),
-  message: z.string(),
-  attachments: z
-    .array(
-      z.object({
-        filename: z.string(),
-        data: z.instanceof(Buffer),
-      }),
-    )
-    .optional(),
-});
+export const SendMailRequestSchema = z
+  .object({
+    from: z.string(),
+    to: z.string(),
+    subject: z.string(),
+    message: z.string(),
+    attachments: z
+      .array(
+        z.object({
+          filename: z.string(),
+          data: z.instanceof(Buffer),
+        }),
+      )
+      .optional(),
+  })
+  .strict();
 
 export const SendMailResponseSchema = z.object({
   success: z.boolean(),

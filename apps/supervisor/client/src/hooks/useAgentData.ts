@@ -1,5 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useState } from "react";
+import type { HateoasAction } from "@naisys/common";
 import {
   Agent as BaseAgent,
   AgentStatusEvent,
@@ -10,6 +11,7 @@ import { useAgentStatusStream } from "./useAgentStatusStream";
 
 // Module-level caches (shared across all hook instances and persist across remounts)
 let agentCache: Agent[] = [];
+let actionsCache: HateoasAction[] | undefined = undefined;
 let updatedSinceCache: string | undefined = undefined;
 
 export const useAgentData = () => {
@@ -64,8 +66,9 @@ export const useAgentData = () => {
         a.name.localeCompare(b.name),
       );
 
-      // Update cache with sorted agents
+      // Update caches
       agentCache = sortedAgents;
+      actionsCache = query.data._actions;
 
       // Update updatedSince with the current timestamp
       updatedSinceCache = new Date().toISOString();
@@ -116,11 +119,9 @@ export const useAgentData = () => {
 
   useAgentStatusStream(handleSSEUpdate, agentCache.length > 0);
 
-  // Get current agents from cache (already sorted)
-  const agents = agentCache;
-
   return {
-    agents,
+    agents: agentCache,
+    actions: actionsCache,
     isLoading: query.isLoading,
     error: query.error,
   };

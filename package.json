@@ -20,7 +20,7 @@
   ],
   "scripts": {
     "clean": "turbo clean && rm -rf .turbo",
-    "build": "turbo build",
+    "build": "turbo build bundle",
     "test": "turbo test",
     "lint": "eslint .",
     "prettier": "prettier --write .",
