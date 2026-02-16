@@ -89,6 +89,7 @@ function agentActions(
       href: `${API_PREFIX}/agents/${agentId}/lead`,
       method: "PUT",
       title: "Set Lead Agent",
+      schema: `${API_PREFIX}/schemas/SetLeadAgent`,
     });
   }
   return actions;

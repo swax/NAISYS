@@ -1,6 +1,10 @@
 import { z } from "zod";
 
-export const PermissionEnum = z.enum(["supervisor_admin", "manage_agents"]);
+export const PermissionEnum = z.enum([
+  "supervisor_admin",
+  "manage_agents",
+  "manage_models",
+]);
 export type Permission = z.infer<typeof PermissionEnum>;
 
 export const AuthTypeEnum = z.enum(["password", "api_key"]);

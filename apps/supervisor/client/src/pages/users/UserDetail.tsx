@@ -26,7 +26,7 @@ import {
   revokePermission,
 } from "../../lib/apiUsers";
 
-const ALL_PERMISSIONS = ["supervisor_admin", "manage_agents"];
+const ALL_PERMISSIONS = ["supervisor_admin", "manage_agents", "manage_models"];
 
 export const UserDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();

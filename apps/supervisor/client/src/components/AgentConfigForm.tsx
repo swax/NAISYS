@@ -339,30 +339,39 @@ export const AgentConfigForm: React.FC<AgentConfigFormProps> = ({
           }}
           {...form.getInputProps("initialCommands")}
         />
-
-        {/* Save / Cancel */}
-        {!readOnly && (
-          <Group>
-            <Button
-              type="submit"
-              color="green"
-              leftSection={<IconCheck size={16} />}
-              loading={saving}
-              disabled={saving}
-            >
-              Save
-            </Button>
-            <Button
-              color="gray"
-              leftSection={<IconX size={16} />}
-              onClick={onCancel}
-              disabled={saving}
-            >
-              Discard
-            </Button>
-          </Group>
-        )}
       </Stack>
+
+      {/* Sticky Save / Cancel */}
+      {!readOnly && (
+        <Group
+          style={{
+            position: "sticky",
+            bottom: 0,
+            backgroundColor: "var(--mantine-color-body)",
+            borderTop: "1px solid var(--mantine-color-default-border)",
+            padding: "var(--mantine-spacing-sm) 0",
+            zIndex: 10,
+          }}
+        >
+          <Button
+            type="submit"
+            color="green"
+            leftSection={<IconCheck size={16} />}
+            loading={saving}
+            disabled={saving}
+          >
+            Save
+          </Button>
+          <Button
+            color="gray"
+            leftSection={<IconX size={16} />}
+            onClick={onCancel}
+            disabled={saving}
+          >
+            Discard
+          </Button>
+        </Group>
+      )}
     </form>
   );
 };

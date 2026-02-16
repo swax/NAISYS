@@ -74,7 +74,7 @@ export async function createAgentRuntime(
   // LLM
   const inputMode = createInputMode();
   const systemMessage = createSystemMessage(globalConfig, agentConfig);
-  const llModels = createLLModels();
+  const llModels = createLLModels(); // Important to to at runtime so we get the latest model changes
   const tools = createCommandTools(agentConfig);
   const costTracker = createCostTracker(
     globalConfig,

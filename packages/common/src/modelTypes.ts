@@ -354,3 +354,25 @@ export function getAllImageModelOptions(
 export function getValidModelKeys(options: ModelOption[]): Set<string> {
   return new Set(options.map((o) => o.value));
 }
+
+// --- WithCustomFlag helpers ---
+
+export function getAllLlmModelsWithCustomFlag(
+  customLlmModels?: LlmModel[],
+): (LlmModel & { isCustom: boolean })[] {
+  const customKeys = new Set((customLlmModels ?? []).map((m) => m.key));
+  return getAllLlmModels(customLlmModels).map((m) => ({
+    ...m,
+    isCustom: customKeys.has(m.key),
+  }));
+}
+
+export function getAllImageModelsWithCustomFlag(
+  customImageModels?: ImageModel[],
+): (ImageModel & { isCustom: boolean })[] {
+  const customKeys = new Set((customImageModels ?? []).map((m) => m.key));
+  return getAllImageModels(customImageModels).map((m) => ({
+    ...m,
+    isCustom: customKeys.has(m.key),
+  }));
+}

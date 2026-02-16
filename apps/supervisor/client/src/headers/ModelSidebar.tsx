@@ -1,5 +1,6 @@
-import { Card, Group, Stack, Text } from "@mantine/core";
-import { IconCpu, IconPhoto } from "@tabler/icons-react";
+import { Badge, Button, Card, Group, Stack, Text } from "@mantine/core";
+import { hasAction, type HateoasAction } from "@naisys/common";
+import { IconCpu, IconPhoto, IconPlus } from "@tabler/icons-react";
 import React from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { ROUTER_BASENAME } from "../constants";
@@ -8,12 +9,14 @@ import type { LlmModelDetail, ImageModelDetail } from "../lib/apiClient";
 interface ModelSidebarProps {
   llmModels: LlmModelDetail[];
   imageModels: ImageModelDetail[];
+  actions: HateoasAction[] | undefined;
   isLoading: boolean;
 }
 
 export const ModelSidebar: React.FC<ModelSidebarProps> = ({
   llmModels,
   imageModels,
+  actions,
   isLoading,
 }) => {
   const navigate = useNavigate();
@@ -76,9 +79,21 @@ export const ModelSidebar: React.FC<ModelSidebarProps> = ({
               <Group gap="xs" align="center" wrap="nowrap">
                 <IconCpu size="1rem" style={{ flexShrink: 0 }} />
                 <div style={{ minWidth: 0, flex: 1 }}>
-                  <Text size="sm" fw={500} truncate="end">
-                    {model.label}
-                  </Text>
+                  <Group gap={4} wrap="nowrap">
+                    <Text size="sm" fw={500} truncate="end">
+                      {model.label}
+                    </Text>
+                    {model.isCustom && (
+                      <Badge
+                        size="xs"
+                        variant="light"
+                        color="teal"
+                        style={{ flexShrink: 0 }}
+                      >
+                        Custom
+                      </Badge>
+                    )}
+                  </Group>
                   <Text size="xs" c="dimmed" truncate="end">
                     {model.apiType} &middot; {model.maxTokens.toLocaleString()}{" "}
                     tokens
@@ -87,6 +102,18 @@ export const ModelSidebar: React.FC<ModelSidebarProps> = ({
               </Group>
             </Card>
           ))}
+          {hasAction(actions, "save-llm") && (
+            <Button
+              variant="subtle"
+              color="gray"
+              size="compact-sm"
+              leftSection={<IconPlus size="0.9rem" />}
+              onClick={() => navigate("/models/new-llm")}
+              fullWidth
+            >
+              Add LLM Model
+            </Button>
+          )}
         </Stack>
       </div>
 
@@ -118,9 +145,21 @@ export const ModelSidebar: React.FC<ModelSidebarProps> = ({
               <Group gap="xs" align="center" wrap="nowrap">
                 <IconPhoto size="1rem" style={{ flexShrink: 0 }} />
                 <div style={{ minWidth: 0, flex: 1 }}>
-                  <Text size="sm" fw={500} truncate="end">
-                    {model.label}
-                  </Text>
+                  <Group gap={4} wrap="nowrap">
+                    <Text size="sm" fw={500} truncate="end">
+                      {model.label}
+                    </Text>
+                    {model.isCustom && (
+                      <Badge
+                        size="xs"
+                        variant="light"
+                        color="teal"
+                        style={{ flexShrink: 0 }}
+                      >
+                        Custom
+                      </Badge>
+                    )}
+                  </Group>
                   <Text size="xs" c="dimmed" truncate="end">
                     {model.size} &middot; ${model.cost}
                   </Text>
@@ -128,6 +167,18 @@ export const ModelSidebar: React.FC<ModelSidebarProps> = ({
               </Group>
             </Card>
           ))}
+          {hasAction(actions, "save-image") && (
+            <Button
+              variant="subtle"
+              color="gray"
+              size="compact-sm"
+              leftSection={<IconPlus size="0.9rem" />}
+              onClick={() => navigate("/models/new-image")}
+              fullWidth
+            >
+              Add Image Model
+            </Button>
+          )}
         </Stack>
       </div>
     </Stack>
