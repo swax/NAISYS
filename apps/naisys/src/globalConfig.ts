@@ -1,4 +1,4 @@
-import { HubLoadableConfig, loadHubConfig } from "@naisys/common";
+import { ClientConfig, buildClientConfig } from "@naisys/common";
 import { ConfigResponseSchema, HubEvents } from "@naisys/hub-protocol";
 import { readFile } from "fs/promises";
 import os from "os";
@@ -8,9 +8,9 @@ import * as pathService from "./services/pathService.js";
 import { useNativeWindows } from "./services/shellPlatform.js";
 
 export function createGlobalConfig(hubClient?: HubClient) {
-  type ConfigType = Awaited<ReturnType<typeof buildConfig>>;
+  type FullClientConfig = Awaited<ReturnType<typeof appendClientConfig>>;
 
-  let cachedConfig: ConfigType;
+  let cachedConfig: FullClientConfig;
   let configReadyPromise: Promise<void>;
 
   init();
@@ -35,7 +35,7 @@ export function createGlobalConfig(hubClient?: HubClient) {
             return;
           }
 
-          cachedConfig = await buildConfig(response.config);
+          cachedConfig = await appendClientConfig(response.config);
           resolveConfig();
         } catch (error) {
           rejectConfig(
@@ -44,26 +44,25 @@ export function createGlobalConfig(hubClient?: HubClient) {
         }
       });
     } else {
-      const hubLoadable = loadHubConfig();
-      configReadyPromise = buildConfig(hubLoadable).then((config) => {
+      const clientConfig = buildClientConfig(process.env);
+      configReadyPromise = appendClientConfig(clientConfig).then((config) => {
         cachedConfig = config;
       });
     }
   }
 
-  async function buildConfig(hubLoadable: HubLoadableConfig) {
+  async function appendClientConfig(clientConfig: ClientConfig) {
     /** Identifies this runner - shows after @ in prompt, used for multi-machine host identification */
-    const hostname = getEnv("NAISYS_HOSTNAME") || os.hostname();
+    const hostname = process.env.NAISYS_HOSTNAME || os.hostname();
 
     const packageVersion = await getVersion();
     const binPath = getBinPath();
 
     return {
-      ...hubLoadable,
+      ...clientConfig,
       hostname,
       packageVersion,
       binPath,
-      getEnv,
     };
   }
 
@@ -106,14 +105,6 @@ export function createGlobalConfig(hubClient?: HubClient) {
     globalConfig: () => cachedConfig,
     waitForConfig: () => configReadyPromise,
   };
-}
-
-function getEnv(key: string, required?: boolean) {
-  const value = process.env[key];
-  if (value === undefined && required) {
-    throw `Config: Error, .env ${key} is not defined`;
-  }
-  return value;
 }
 
 export type GlobalConfig = ReturnType<typeof createGlobalConfig>;

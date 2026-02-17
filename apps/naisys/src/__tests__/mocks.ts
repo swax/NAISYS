@@ -232,13 +232,13 @@ export function createMockGlobalConfig(): GlobalConfig {
       retrySecondsMax: 1800,
       compactSessionEnabled: false,
       naisysFolder: "/naisys",
+      variableMap: {},
       googleSearchEngineId: undefined,
       spendLimitDollars: undefined,
       spendLimitHours: undefined,
       useToolsForLlmConsoleResponses: true,
       packageVersion: "1.0.0",
       binPath: "/bin",
-      getEnv: jest.fn((key: string) => undefined),
     }),
   };
 }

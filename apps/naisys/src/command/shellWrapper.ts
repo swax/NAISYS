@@ -18,22 +18,6 @@ enum ShellEvent {
   Exit = "exit",
 }
 
-/**
- * Create clean env variables to pass to a spawned process.
- * Clean of NAISYS specific vars that could also conflict with env vars in the spawned process.
- */
-function getCleanEnv(apiKey?: string) {
-  const cleanEnv = { ...process.env };
-  delete cleanEnv.OPENAI_API_KEY;
-  delete cleanEnv.GOOGLE_API_KEY;
-  delete cleanEnv.ANTHROPIC_API_KEY;
-  delete cleanEnv.WEBSITE_URL;
-  if (apiKey) {
-    cleanEnv.NAISYS_API_KEY = apiKey;
-  }
-  return cleanEnv;
-}
-
 export function createShellWrapper(
   { globalConfig }: GlobalConfig,
   { agentConfig }: AgentConfig,
@@ -74,6 +58,23 @@ export function createShellWrapper(
 
   const platformConfig = getPlatformConfig();
 
+  /**
+   * Create clean env variables to pass to a spawned process.
+   * Starts from system env (for PATH, HOME, etc.) and overlays .env vars,
+   * then removes NAISYS-specific vars that could conflict with the spawned process.
+   */
+  function getCleanEnv() {
+    const cleanEnv = { ...process.env, ...globalConfig().variableMap };
+    delete cleanEnv.OPENAI_API_KEY;
+    delete cleanEnv.GOOGLE_API_KEY;
+    delete cleanEnv.ANTHROPIC_API_KEY;
+    delete cleanEnv.WEBSITE_URL;
+    if (_apiKey) {
+      cleanEnv.NAISYS_API_KEY = _apiKey;
+    }
+    return cleanEnv;
+  }
+
   async function ensureOpen() {
     if (_process) {
       return;
@@ -83,7 +84,7 @@ export function createShellWrapper(
 
     _process = spawn(platformConfig.shellCommand, platformConfig.shellArgs, {
       stdio: "pipe",
-      env: getCleanEnv(_apiKey),
+      env: getCleanEnv(),
       shell: false,
     });
 

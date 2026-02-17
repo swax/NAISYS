@@ -42,7 +42,7 @@ export function createLLMService(
     }
 
     const apiKey = model.keyEnvVar
-      ? globalConfig().getEnv(model.keyEnvVar)
+      ? globalConfig().variableMap[model.keyEnvVar]
       : undefined;
 
     if (model.apiType === LlmApiType.None) {

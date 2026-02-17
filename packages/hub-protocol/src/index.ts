@@ -366,6 +366,7 @@ export const ConfigResponseSchema = z.object({
       retrySecondsMax: z.number(),
       webTokenMax: z.number(),
       compactSessionEnabled: z.boolean(),
+      variableMap: z.record(z.string(), z.string()),
       googleSearchEngineId: z.string().optional(),
       spendLimitDollars: z.number().optional(),
       spendLimitHours: z.number().optional(),

@@ -14,7 +14,6 @@ import { createHubLogService } from "./handlers/hubLogService.js";
 import { createHubMailService } from "./handlers/hubMailService.js";
 import { createHubRunService } from "./handlers/hubRunService.js";
 import { createHubUserService } from "./handlers/hubUserService.js";
-import { createHubConfig } from "./hubConfig.js";
 import { createAgentRegistrar } from "./services/agentRegistrar.js";
 import { createHubServerLog } from "./services/hubServerLog.js";
 import { createHostRegistrar } from "./services/hostRegistrar.js";
@@ -48,9 +47,6 @@ export const startHub: StartHub = async (
     // Schema version for sync protocol - should match NAISYS instance
     const dbService = await createDatabaseService();
 
-    // Create hub config and host service (hub owns its host identity)
-    const hubConfig = createHubConfig();
-
     // Seed database with agent configs from yaml files
     await createAgentRegistrar(dbService, startupAgentPath);
 
@@ -75,7 +71,7 @@ export const startHub: StartHub = async (
     );
 
     // Register hub config service for config_get requests from NAISYS instances
-    createHubConfigService(naisysServer, logService);
+    await createHubConfigService(naisysServer, dbService, logService);
 
     // Register hub user service for user_list requests from NAISYS instances
     createHubUserService(naisysServer, dbService, logService);
@@ -119,7 +115,6 @@ export const startHub: StartHub = async (
       dbService,
       logService,
       heartbeatService,
-      hubConfig,
     );
 
     // Start listening

@@ -2,6 +2,7 @@ import {
   AgentConfigFileSchema,
   calculatePeriodBoundaries,
   COST_AGGREGATION_WINDOW_MS,
+  sanitizeSpendLimit,
 } from "@naisys/common";
 import { DatabaseService, PrismaClient } from "@naisys/database";
 import {
@@ -10,7 +11,6 @@ import {
   HubEvents,
 } from "@naisys/hub-protocol";
 import yaml from "js-yaml";
-import { HubConfig } from "../hubConfig.js";
 import { HubServerLog } from "../services/hubServerLog.js";
 import { NaisysServer } from "../services/naisysServer.js";
 import { HubHeartbeatService } from "./hubHeartbeatService.js";
@@ -23,11 +23,13 @@ export function createHubCostService(
   dbService: DatabaseService,
   logService: HubServerLog,
   heartbeatService: HubHeartbeatService,
-  { hubConfig }: HubConfig,
 ) {
   // Track which users have been suspended due to spend limit overrun
   const suspendedByGlobal = new Set<number>();
   const suspendedByAgent = new Set<number>();
+
+  const spendLimitDollars = sanitizeSpendLimit(process.env.SPEND_LIMIT_DOLLARS);
+  const spendLimitHours = sanitizeSpendLimit(process.env.SPEND_LIMIT_HOURS);
 
   naisysServer.registerEvent(
     HubEvents.COST_WRITE,
@@ -128,12 +130,12 @@ export function createHubCostService(
 
       await dbService.usingDatabase(async (prisma) => {
         // 1. Global spend limit check — costs across ALL agents
-        if (hubConfig().spendLimitDollars !== undefined) {
+        if (spendLimitDollars !== undefined) {
           await checkGlobalSpendLimit(
             prisma,
             activeUserIds,
-            hubConfig().spendLimitDollars!,
-            hubConfig().spendLimitHours,
+            spendLimitDollars,
+            spendLimitHours,
           );
         }
 

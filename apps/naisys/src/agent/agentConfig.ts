@@ -52,7 +52,11 @@ export function createAgentConfig(
     function resolveConfigVars(templateString: string) {
       let resolvedString = templateString;
       resolvedString = resolveTemplateVars(resolvedString, "agent", config);
-      resolvedString = resolveTemplateVars(resolvedString, "env", process.env);
+      resolvedString = resolveTemplateVars(
+        resolvedString,
+        "env",
+        globalConfig().variableMap,
+      );
       return resolvedString;
     }
 

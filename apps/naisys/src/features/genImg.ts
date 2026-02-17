@@ -56,7 +56,7 @@ export function createGenImg(
     const model = getImageModel(imageModelName);
 
     const apiKey = model.keyEnvVar
-      ? globalConfig().getEnv(model.keyEnvVar)
+      ? globalConfig().variableMap[model.keyEnvVar]
       : undefined;
 
     if (!apiKey) {

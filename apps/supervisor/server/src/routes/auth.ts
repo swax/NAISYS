@@ -98,7 +98,6 @@ export default async function authRoutes(
         hubUser.username,
         hubUser.password_hash,
         hubUser.uuid,
-        "supervisor",
         expiresAt,
       );
 

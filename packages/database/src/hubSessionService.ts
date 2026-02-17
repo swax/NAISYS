@@ -87,7 +87,6 @@ export async function createHubSession(
   username: string,
   passwordHash: string,
   uuid: string,
-  _app: string,
   expiresAt: Date,
 ): Promise<void> {
   if (!prisma) return;

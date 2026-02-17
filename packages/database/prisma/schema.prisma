@@ -175,3 +175,10 @@ model web_users {
   created_at         DateTime  @default(now())
   updated_at         DateTime  @updatedAt
 }
+
+model variables {
+  key        String   @id
+  value      String
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+}

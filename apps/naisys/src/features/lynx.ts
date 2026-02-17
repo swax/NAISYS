@@ -568,7 +568,7 @@ Final Merged Content:
   }
 
   async function callGoogleSearchApi(query: string): Promise<string> {
-    const googleApiKey = globalConfig().getEnv("GOOGLE_API_KEY");
+    const googleApiKey = globalConfig().variableMap["GOOGLE_API_KEY"];
 
     if (!googleApiKey) {
       throw "Error, set GOOGLE_API_KEY env var";
