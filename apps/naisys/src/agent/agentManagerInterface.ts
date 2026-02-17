@@ -10,7 +10,7 @@ export interface IAgentManager {
     agentUsername: string;
     agentTitle: string;
   }>;
-  getBufferLineCount: (agentUserId: number) => number;
+  getBufferLines: (agentUserId: number) => string[];
   setActiveConsoleAgent: (agentUserId: number) => void;
   /** This ensures other agents are immediately notified when an agent goes on/offline. It also helps test run faster */
   onHeartbeatNeeded?: () => void;

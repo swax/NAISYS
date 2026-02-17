@@ -57,10 +57,11 @@ export function createHubAgentService(
             .map((c) => c.getHostId());
         }
 
-        // Filter to connected hosts only, excluding the requesting host (e.g. supervisor)
-        const connectedEligible = eligibleHostIds.filter(
-          (hid) => hid !== hostId && naisysServer.getConnectionByHostId(hid),
-        );
+        // Filter to connected hosts that can run agents
+        const connectedEligible = eligibleHostIds.filter((hid) => {
+          const conn = naisysServer.getConnectionByHostId(hid);
+          return conn && conn.canRunAgents();
+        });
 
         if (connectedEligible.length === 0) {
           ack({

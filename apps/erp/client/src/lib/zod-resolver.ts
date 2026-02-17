@@ -7,6 +7,9 @@ export function zodResolver(schema: z.ZodType) {
     const errors: Record<string, string> = {};
     for (const issue of result.error.issues) {
       const path = issue.path.join(".");
+      // Skip root-level errors (e.g. unrecognized keys from .strict() schemas)
+      // so that extra form fields don't block submission
+      if (!path) continue;
       if (!errors[path]) errors[path] = issue.message;
     }
     return errors;

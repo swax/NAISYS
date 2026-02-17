@@ -48,7 +48,7 @@ describe("Basic Mail E2E", () => {
     cleanupTestDir(testDir);
   });
 
-  async function runMailTest(naisysArgs: string[] = []) {
+  async function runMailTest(naisysArgs: string[] = [], manualStart = false) {
     // Create two agent yamls in test dir root (auto-start as lead agents)
     createAgentYaml(testDir, "alex.yaml", {
       username: "alex",
@@ -63,9 +63,27 @@ describe("Basic Mail E2E", () => {
     // Spawn naisys - loads all yamls, starts lead agents, alex gets focus
     naisys = spawnNaisys(testDir, { args: naisysArgs });
 
-    // Wait for alex to start and show prompt
+    // Wait for startup and show prompt
     await naisys.waitForOutput("AGENT STARTED", 30000);
     await naisys.waitForPrompt();
+
+    if (manualStart) {
+      // In integrated-hub mode, only admin starts. Start agents manually.
+      naisys.flushOutput();
+      naisys.sendCommand('ns-agent start alex "mail test"');
+      await naisys.waitForOutput("started", 15000);
+      await naisys.waitForPrompt();
+
+      naisys.flushOutput();
+      naisys.sendCommand('ns-agent start bob "mail test"');
+      await naisys.waitForOutput("started", 15000);
+      await naisys.waitForPrompt();
+
+      naisys.flushOutput();
+      naisys.sendCommand("ns-agent switch alex");
+      await naisys.waitForOutput("alex@", 15000);
+      await naisys.waitForPrompt();
+    }
 
     // Send mail from alex to bob
     naisys.flushOutput();
@@ -108,6 +126,6 @@ describe("Basic Mail E2E", () => {
       join(testDir, ".env"),
       `\nHUB_ACCESS_KEY=TESTKEY123\nHUB_PORT=${HUB_PORT}`,
     );
-    await runMailTest(["--integrated-hub"]);
+    await runMailTest(["--integrated-hub"], true);
   });
 });

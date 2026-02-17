@@ -20,9 +20,9 @@ export default function globalSetup() {
   // Ensure the database directory exists
   mkdirSync(path.dirname(testDbPath), { recursive: true });
 
-  // Push schema to create/reset tables (--force-reset handles the reset
-  // without deleting the file, so a reused server's open connection stays valid)
-  execSync("npx prisma db push --force-reset --accept-data-loss", {
+  // Reset and re-apply migrations so _prisma_migrations exists for the
+  // server's deployPrismaMigrations() call (which uses migrate deploy)
+  execSync("npx prisma migrate reset --force", {
     cwd: serverDir,
     env: {
       ...process.env,

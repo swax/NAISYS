@@ -206,14 +206,14 @@ export class AgentManager {
     }
   }
 
-  getBufferLineCount(userId: number) {
+  getBufferLines(userId: number) {
     const agent = this.runningAgents.find((a) => a.agentUserId === userId);
 
     if (!agent) {
-      return 0;
+      return [];
     }
 
-    return agent.output.consoleBuffer.length;
+    return [...agent.output.consoleBuffer];
   }
 
   async waitForAllAgentsToComplete() {
