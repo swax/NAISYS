@@ -3,7 +3,6 @@ import { loadAgentConfigs } from "@naisys/common/dist/agentConfigLoader.js";
 import { DatabaseService } from "@naisys/database";
 import { randomBytes } from "crypto";
 import yaml from "js-yaml";
-import { HubConfig } from "../hubConfig.js";
 
 /** Loads agent configs from yaml files, then syncs them to the database */
 export async function createAgentRegistrar(

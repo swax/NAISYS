@@ -112,7 +112,6 @@ export default async function authRoutes(fastify: FastifyInstance) {
           user.username,
           user.passwordHash,
           user.uuid,
-          "erp",
           expiresAt,
         );
         await prisma.user.update({

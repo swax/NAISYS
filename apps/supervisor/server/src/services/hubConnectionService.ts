@@ -37,7 +37,7 @@ export function initHubConnection(hubUrl: string) {
   socket = io(hubUrl + "/naisys", {
     auth: {
       accessKey,
-      hostName: "supervisor",
+      hostName: "SUPERVISOR",
       canRunAgents: false,
     },
     reconnection: true,
