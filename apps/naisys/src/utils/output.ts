@@ -30,12 +30,17 @@ export function createOutputService(logService: LogService) {
     }
   }
 
+  const BUFFER_MAX_LINES = 10;
+
   // color available on chalk
   function write(msg: string, color: OutputColor = OutputColor.console) {
     if (consoleEnabled) {
       console.log(chalk[color](msg));
     } else {
       consoleBuffer.push(chalk[color](msg));
+      if (consoleBuffer.length > BUFFER_MAX_LINES) {
+        consoleBuffer.splice(0, consoleBuffer.length - BUFFER_MAX_LINES);
+      }
     }
   }
 

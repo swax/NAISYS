@@ -38,6 +38,7 @@ export function initHubConnection(hubUrl: string) {
     auth: {
       accessKey,
       hostName: "supervisor",
+      canRunAgents: false,
     },
     reconnection: true,
     reconnectionDelay: 1000,

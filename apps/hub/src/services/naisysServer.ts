@@ -101,7 +101,11 @@ export function createNaisysServer(
 
   // Authentication middleware
   nsp.use(async (socket, next) => {
-    const { accessKey: clientAccessKey, hostName } = socket.handshake.auth;
+    const {
+      accessKey: clientAccessKey,
+      hostName,
+      canRunAgents,
+    } = socket.handshake.auth;
 
     if (!clientAccessKey || clientAccessKey !== accessKey) {
       logService.log(
@@ -130,6 +134,7 @@ export function createNaisysServer(
 
       socket.data.hostId = hostId;
       socket.data.hostName = hostName;
+      socket.data.canRunAgents = canRunAgents !== false;
       next();
     } catch (err) {
       logService.error(
@@ -150,6 +155,7 @@ export function createNaisysServer(
         hostId,
         hostName,
         connectedAt: new Date(),
+        canRunAgents: socket.data.canRunAgents,
       },
       raiseEvent,
       logService,

@@ -5,7 +5,6 @@ import {
 } from "@naisys/hub-protocol";
 import stringArgv from "string-argv";
 import table from "text-table";
-import { AgentConfig } from "../agent/agentConfig.js";
 import { IAgentManager } from "../agent/agentManagerInterface.js";
 import { UserService } from "../agent/userService.js";
 import { RegistrableCommand } from "../command/commandRegistry.js";
@@ -46,13 +45,14 @@ export function createSubagentService(
     switch (argv[0]) {
       case "help": {
         let helpOutput = `subagent <command>
+  list: Lists your subagents and their status
   start <name> "<task>": Starts agent by name with a description of the task to perform
   stop <name>: Stops an agent by name`;
 
         if (inputMode.isDebug()) {
-          helpOutput += `\n  !list: Lists all running agents`;
-          helpOutput += `\n  !switch <name>: Switch context to a started in-process agent`;
-          helpOutput += `\n  !flush <name>: Flush a spawned agent's output`;
+          helpOutput += `\n  !local: Lists agents running locally in this process`;
+          helpOutput += `\n  !switch <name>: Switch session to a local running agent`;
+          helpOutput += `\n  !peek <name>: Show the last 10 lines from a local agent's output`;
         }
 
         helpOutput += `\n\n* Use ns-mail to communicate with subagents once started`;
@@ -61,13 +61,16 @@ export function createSubagentService(
         return helpOutput;
       }
       case "list": {
+        return listMySubagents();
+      }
+      case "local": {
         if (!inputMode.isDebug()) {
           errorText =
-            "The 'subagent list' command is only available in debug mode.\n";
+            "The 'subagent local' command is only available in debug mode.\n";
           break;
         }
 
-        return listSubagents();
+        return listLocalAgents();
       }
       // "create" command removed - generated agent yaml configs from a template and wrote them to disk. See git history.
       // "spawn" command removed - launched agents as separate child node processes. See git history.
@@ -92,6 +95,16 @@ export function createSubagentService(
 
         const switchName = argv[1];
         return switchAgent(switchName);
+      }
+      case "peek": {
+        if (!inputMode.isDebug()) {
+          errorText =
+            "The 'subagent peek' command is only available in debug mode.\n";
+          break;
+        }
+
+        const peekName = argv[1];
+        return peekAgent(peekName);
       }
       case "stop": {
         const stopName = argv[1];
@@ -143,34 +156,39 @@ export function createSubagentService(
     return runningAgentIds;
   }
 
-  function listSubagents() {
-    const allUsers = userService.getUsers();
-    const activeUsers = allUsers.filter((u) =>
-      userService.isUserActive(u.userId),
-    );
+  function listMySubagents() {
+    refreshMySubagents();
 
-    if (activeUsers.length === 0) {
-      return "No active agents.";
+    if (mySubagentsMap.size === 0) {
+      return "No subagents.";
     }
 
-    const runningAgentIds = new Set(
-      agentManager.runningAgents.map((a) => a.agentUserId),
-    );
+    const runningAgentIds = getRunningAgentsIds();
 
-    const rows = activeUsers.map((u) => {
-      const subagent = mySubagentsMap.get(u.userId);
-      const unreadLines = runningAgentIds.has(u.userId)
-        ? agentManager.getBufferLineCount(u.userId).toString()
-        : "";
+    const rows = [...mySubagentsMap.values()].map((subagent) => {
+      const running = runningAgentIds.has(subagent.userId);
       return [
-        u.username,
-        subagent?.taskDescription?.substring(0, 70) || u.config.title,
-        userService.getUserHostDisplayNames(u.userId).join(", ") || "",
-        unreadLines,
+        subagent.agentName,
+        subagent.taskDescription?.substring(0, 70) || subagent.title,
+        running ? "running" : "stopped",
       ];
     });
 
-    return table([["Name", "Task", "Host", "Unread Lines"], ...rows], {
+    return table([["Name", "Task", "Status"], ...rows], {
+      hsep: " | ",
+    });
+  }
+
+  function listLocalAgents() {
+    if (agentManager.runningAgents.length === 0) {
+      return "No locally running agents.";
+    }
+
+    const rows = agentManager.runningAgents.map((a) => {
+      return [a.agentUsername, "Running"];
+    });
+
+    return table([["Name", "Status"], ...rows], {
       hsep: " | ",
     });
   }
@@ -341,6 +359,18 @@ export function createSubagentService(
     agentManager.setActiveConsoleAgent(userId);
 
     return "";
+  }
+
+  function peekAgent(agentName: string) {
+    const userId = validateAgentRunning(agentName);
+
+    const lines = agentManager.getBufferLines(userId);
+
+    if (lines.length === 0) {
+      return `No buffered output for '${agentName}'.`;
+    }
+
+    return lines.join("\n");
   }
 
   function handleAgentTermination(subagent: Subagent, reason: string) {

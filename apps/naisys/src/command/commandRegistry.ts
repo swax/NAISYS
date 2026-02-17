@@ -92,6 +92,19 @@ export function createCommandRegistry(
   };
   registry.set(helpCommand.commandName, helpCommand);
 
+  const exitCommand: RegistrableCommand = {
+    commandName: "exit",
+    helpText: "Exit the application",
+    isDebug: true,
+    handleCommand: (): CommandResponse => ({
+      content: "",
+      nextCommandResponse: {
+        nextCommandAction: NextCommandAction.ExitApplication,
+      },
+    }),
+  };
+  registry.set(exitCommand.commandName, exitCommand);
+
   for (const command of commands) {
     if (registry.has(command.commandName)) {
       throw new Error(`Duplicate command registration: ${command.commandName}`);

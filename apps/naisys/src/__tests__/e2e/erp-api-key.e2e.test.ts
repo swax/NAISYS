@@ -84,8 +84,19 @@ SUPERVISOR_PORT=${SUPERVISOR_PORT}
       env: { NODE_ENV: "production", NAISYS_FOLDER: testDir },
     });
 
-    // Wait for full startup (hub, supervisor, ERP, then NAISYS agent)
+    // Wait for full startup (hub, supervisor, ERP, then admin agent)
     await naisys.waitForOutput("AGENT STARTED", 60000);
+    await naisys.waitForPrompt();
+
+    // --- Start and switch to testbot (integrated-hub only starts admin) ---
+    naisys.flushOutput();
+    naisys.sendCommand('ns-agent start testbot "erp api key test"');
+    await naisys.waitForOutput("started", 15000);
+    await naisys.waitForPrompt();
+
+    naisys.flushOutput();
+    naisys.sendCommand("ns-agent switch testbot");
+    await naisys.waitForOutput("testbot@", 15000);
     await naisys.waitForPrompt();
 
     // --- Send curl command using $api_key variable ---
