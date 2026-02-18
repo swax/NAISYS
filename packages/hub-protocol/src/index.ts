@@ -384,7 +384,7 @@ export const HubEvents = {
   // Hub -> Client
   USER_LIST: "user_list",
   HOST_LIST: "host_list",
-  CONFIG: "config",
+  CONFIG_UPDATE: "config_update",
 
   // Internal hub events (not sent over wire)
   CLIENT_CONNECTED: "client_connected",
