@@ -2,7 +2,7 @@ import { createPrismaClient, PrismaClient } from "@naisys/database";
 import path from "path";
 import { env } from "process";
 
-function getNaisysDatabasePath(): string {
+export function getNaisysDatabasePath(): string {
   if (!env.NAISYS_FOLDER) {
     throw new Error("NAISYS_FOLDER environment variable is not set.");
   }

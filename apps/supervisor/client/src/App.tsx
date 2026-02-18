@@ -37,6 +37,7 @@ import { AgentsLayout } from "./pages/agents/AgentsLayout";
 import { ModelsLayout } from "./pages/models/ModelsLayout";
 import { ModelIndex } from "./pages/models/ModelIndex";
 import { ModelPage } from "./pages/models/ModelPage";
+import { AdminPage } from "./pages/admin/AdminPage";
 import { VariablesPage } from "./pages/variables/VariablesPage";
 
 const AppContent: React.FC = () => {
@@ -123,6 +124,7 @@ const router = createBrowserRouter(
         <Route path=":key" element={<ModelPage />} />
       </Route>
       <Route path="/variables" element={<VariablesPage />} />
+      <Route path="/admin" element={<AdminPage />} />
       <Route path="/users" element={<UserList />} />
       <Route path="/users/:id" element={<UserDetail />} />
       <Route path="/" element={<Navigate to="/agents" replace />} />

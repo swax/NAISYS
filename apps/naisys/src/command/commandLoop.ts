@@ -1,3 +1,4 @@
+import { LlmApiType, sleep } from "@naisys/common";
 import chalk from "chalk";
 import * as readline from "readline";
 import { AgentConfig } from "../agent/agentConfig.js";
@@ -7,12 +8,10 @@ import { GlobalConfig } from "../globalConfig.js";
 import { HubClient } from "../hub/hubClient.js";
 import { ContextManager } from "../llm/contextManager.js";
 import { ContentSource, LlmRole } from "../llm/llmDtos.js";
-import { LlmApiType } from "@naisys/common";
 import { LLMService } from "../llm/llmService.js";
 import { SessionCompactor } from "../llm/sessionCompactor.js";
 import { MailService } from "../mail/mail.js";
 import { LogService } from "../services/logService.js";
-import { sleep } from "@naisys/common";
 import { RunService } from "../services/runService.js";
 import { createEscKeyListener } from "../utils/escKeyListener.js";
 import { InputModeService } from "../utils/inputMode.js";
@@ -45,7 +44,7 @@ export function createCommandLoop(
   hubClient: HubClient | undefined,
 ) {
   async function run(abortSignal?: AbortSignal) {
-    await output.commentAndLog(`Agent started`);
+    await output.commentAndLog(`AGENT STARTED`);
 
     // Show Agent Config exept the agent prompt
     await output.commentAndLog(
@@ -258,9 +257,9 @@ export function createCommandLoop(
     }
 
     if (abortSignal?.aborted) {
-      await output.commentAndLog(`Agent stopped (${abortSignal.reason})`);
+      await output.commentAndLog(`AGENT STOPPED (${abortSignal.reason})`);
     } else {
-      await output.commentAndLog(`Agent exited`);
+      await output.commentAndLog(`AGENT EXITED`);
     }
   }
 

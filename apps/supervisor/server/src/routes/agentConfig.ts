@@ -51,7 +51,10 @@ export default async function agentConfigRoutes(
         const { id } = request.params;
         const config = await getAgentConfigById(id);
 
-        const canManage = hasPermission(request.supervisorUser, "manage_agents");
+        const canManage = hasPermission(
+          request.supervisorUser,
+          "manage_agents",
+        );
         return {
           config,
           _actions: canManage
