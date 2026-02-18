@@ -8,10 +8,10 @@ import {
   Text,
 } from "@mantine/core";
 import { IconMailbox, IconPlus, IconSend } from "@tabler/icons-react";
+import { hasAction } from "@naisys/common";
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useAgentDataContext } from "../../contexts/AgentDataContext";
-import { useSession } from "../../contexts/SessionContext";
 import { useMailData } from "../../hooks/useMailData";
 import { MailMessage as MailMessageType } from "../../lib/apiClient";
 import { sendMail } from "../../lib/apiMail";
@@ -21,7 +21,6 @@ import { NewMessageModal } from "./NewMessageModal";
 export const Mail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { agents, updateReadStatus, readStatus } = useAgentDataContext();
-  const { isAuthenticated } = useSession();
 
   const agentId = id ? Number(id) : 0;
   const agent = agents.find((a) => a.id === agentId);
@@ -31,9 +30,12 @@ export const Mail: React.FC = () => {
   const {
     mail: allMail,
     total: totalMail,
+    actions: mailActions,
     isLoading: mailLoading,
     error: mailError,
   } = useMailData(agentId, Boolean(id));
+
+  const canSend = hasAction(mailActions, "send");
 
   console.log(`Loaded mail for agent ${agentName}`);
 
@@ -179,15 +181,16 @@ export const Mail: React.FC = () => {
   return (
     <Stack gap="md" style={{ height: "100%" }}>
       <Group justify="space-between">
-        <Button
-          variant="outline"
-          size="xs"
-          leftSection={<IconPlus size={16} />}
-          onClick={() => setNewMessageModalOpened(true)}
-          disabled={!isAuthenticated}
-        >
-          New Message
-        </Button>
+        {canSend && (
+          <Button
+            variant="outline"
+            size="xs"
+            leftSection={<IconPlus size={16} />}
+            onClick={() => setNewMessageModalOpened(true)}
+          >
+            New Message
+          </Button>
+        )}
         <Group gap="md">
           <Button
             variant={showReceived ? "filled" : "outline"}
@@ -248,7 +251,7 @@ export const Mail: React.FC = () => {
                 message={message}
                 currentAgent={agentName}
                 agents={agents}
-                onReply={handleReply}
+                onReply={canSend ? handleReply : undefined}
               />
             </React.Fragment>
           );

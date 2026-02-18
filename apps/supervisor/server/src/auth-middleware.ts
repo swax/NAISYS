@@ -131,6 +131,17 @@ export function registerAuthMiddleware(fastify: FastifyInstance) {
   });
 }
 
+export function hasPermission(
+  user: SupervisorUser | undefined,
+  permission: string,
+): boolean {
+  return (
+    (user?.permissions.includes(permission) ||
+      user?.permissions.includes("supervisor_admin")) ??
+    false
+  );
+}
+
 export function requirePermission(permission: string) {
   return async (request: FastifyRequest, reply: FastifyReply) => {
     if (!request.supervisorUser) {
@@ -142,10 +153,7 @@ export function requirePermission(permission: string) {
       return;
     }
 
-    if (
-      !request.supervisorUser.permissions.includes(permission) &&
-      !request.supervisorUser.permissions.includes("supervisor_admin")
-    ) {
+    if (!hasPermission(request.supervisorUser, permission)) {
       reply.status(403).send({
         statusCode: 403,
         error: "Forbidden",

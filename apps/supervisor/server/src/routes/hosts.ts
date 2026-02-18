@@ -10,7 +10,7 @@ import {
 } from "@naisys-supervisor/shared";
 import type { HateoasAction } from "@naisys/common";
 import { FastifyInstance, FastifyPluginOptions } from "fastify";
-import { requirePermission } from "../auth-middleware.js";
+import { hasPermission, requirePermission } from "../auth-middleware.js";
 import { API_PREFIX, selfLink } from "../hateoas.js";
 import { deleteHost, getHosts } from "../services/agentService.js";
 import { isHostConnected } from "../services/agentHostStatusService.js";
@@ -56,9 +56,10 @@ export default async function hostsRoutes(
       try {
         const hosts = await getHosts();
 
-        const hasManagePermission =
-          request.supervisorUser?.permissions.includes("manage_agents") ??
-          false;
+        const hasManagePermission = hasPermission(
+          request.supervisorUser,
+          "manage_agents",
+        );
 
         const items = hosts.map((host) => {
           const online = isHostConnected(host.id);

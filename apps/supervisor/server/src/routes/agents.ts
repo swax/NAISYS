@@ -16,7 +16,7 @@ import {
 } from "@naisys-supervisor/shared";
 import { FastifyInstance, FastifyPluginOptions } from "fastify";
 import type { HateoasAction } from "@naisys/common";
-import { requirePermission } from "../auth-middleware.js";
+import { hasPermission, requirePermission } from "../auth-middleware.js";
 import {
   API_PREFIX,
   collectionLink,
@@ -137,9 +137,10 @@ export default async function agentsRoutes(
           _links: agentLinks(agent.id),
         }));
 
-        const hasManagePermission =
-          request.supervisorUser?.permissions.includes("manage_agents") ??
-          false;
+        const hasManagePermission = hasPermission(
+          request.supervisorUser,
+          "manage_agents",
+        );
 
         const actions: HateoasAction[] = [];
         if (hasManagePermission) {
@@ -259,9 +260,10 @@ export default async function agentsRoutes(
           });
         }
 
-        const hasManagePermission =
-          request.supervisorUser?.permissions.includes("manage_agents") ??
-          false;
+        const hasManagePermission = hasPermission(
+          request.supervisorUser,
+          "manage_agents",
+        );
 
         return {
           ...agent,

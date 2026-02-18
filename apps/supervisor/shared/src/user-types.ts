@@ -3,6 +3,7 @@ import { z } from "zod";
 export const PermissionEnum = z.enum([
   "supervisor_admin",
   "manage_agents",
+  "agent_communication",
   "manage_models",
   "manage_variables",
 ]);

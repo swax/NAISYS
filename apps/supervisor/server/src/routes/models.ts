@@ -23,7 +23,7 @@ import {
   SaveModelResponseSchema,
 } from "@naisys-supervisor/shared";
 import { FastifyInstance, FastifyPluginOptions } from "fastify";
-import { requirePermission } from "../auth-middleware.js";
+import { hasPermission, requirePermission } from "../auth-middleware.js";
 import { API_PREFIX } from "../hateoas.js";
 import { sendModelsChanged } from "../services/hubConnectionService.js";
 import {
@@ -90,9 +90,10 @@ export default async function modelsRoutes(
           (r) => r.type === "image",
         ) as ModelDbRow[];
 
-        const hasManagePermission =
-          request.supervisorUser?.permissions.includes("manage_models") ??
-          false;
+        const hasManagePermission = hasPermission(
+          request.supervisorUser,
+          "manage_models",
+        );
         const actions = modelActions(hasManagePermission);
 
         return {

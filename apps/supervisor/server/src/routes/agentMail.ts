@@ -14,7 +14,7 @@ import {
   SendMailResponseSchema,
 } from "@naisys-supervisor/shared";
 import { FastifyInstance, FastifyPluginOptions } from "fastify";
-import { requirePermission } from "../auth-middleware.js";
+import { hasPermission, requirePermission } from "../auth-middleware.js";
 import { API_PREFIX } from "../hateoas.js";
 import { getMailDataByUserId, sendMessage } from "../services/mailService.js";
 
@@ -48,6 +48,11 @@ export default async function agentMailRoutes(
 
         const data = await getMailDataByUserId(id, updatedSince, page, count);
 
+        const canSend = hasPermission(
+          request.supervisorUser,
+          "agent_communication",
+        );
+
         return {
           success: true,
           message: "Mail data retrieved successfully",
@@ -58,6 +63,16 @@ export default async function agentMailRoutes(
                   rel: "next",
                   href: `${API_PREFIX}/agents/${id}/mail?updatedSince=${encodeURIComponent(data.timestamp)}`,
                   title: "Poll for newer mail",
+                },
+              ]
+            : undefined,
+          _actions: canSend
+            ? [
+                {
+                  rel: "send",
+                  href: `${API_PREFIX}/agents/${id}/mail`,
+                  method: "POST" as const,
+                  title: "Send Mail",
                 },
               ]
             : undefined,
@@ -79,7 +94,7 @@ export default async function agentMailRoutes(
   }>(
     "/:id/mail",
     {
-      preHandler: [requirePermission("manage_agents")],
+      preHandler: [requirePermission("agent_communication")],
       schema: {
         description:
           "Send email as agent with optional attachments. Supports JSON and multipart/form-data",

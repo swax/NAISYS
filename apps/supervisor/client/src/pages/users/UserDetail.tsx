@@ -30,6 +30,7 @@ import {
 const ALL_PERMISSIONS = [
   "supervisor_admin",
   "manage_agents",
+  "agent_communication",
   "manage_models",
   "manage_variables",
 ];
