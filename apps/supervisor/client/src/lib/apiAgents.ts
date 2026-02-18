@@ -32,6 +32,10 @@ export const getHostData = async (): Promise<HostListResponse> => {
   return await api.get<HostListResponse>(apiEndpoints.hosts);
 };
 
+export const deleteHost = async (id: number): Promise<AgentActionResult> => {
+  return await api.delete<AgentActionResult>(apiEndpoints.hostDelete(id));
+};
+
 export const getAgentDetail = async (
   id: number,
 ): Promise<AgentDetailResponse> => {

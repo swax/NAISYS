@@ -146,6 +146,7 @@ export const apiEndpoints = {
   agentUnarchive: (id: number) => `/agents/${id}/unarchive`,
   agentLead: (id: number) => `/agents/${id}/lead`,
   agentDelete: (id: number) => `/agents/${id}`,
+  hostDelete: (id: number) => `/hosts/${id}`,
   models: "/models",
   saveLlmModel: "/models/llm",
   saveImageModel: "/models/image",
