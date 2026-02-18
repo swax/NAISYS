@@ -45,7 +45,7 @@ export function createCommandLoop(
   hubClient: HubClient | undefined,
 ) {
   async function run(abortSignal?: AbortSignal) {
-    await output.commentAndLog(`AGENT STARTED`);
+    await output.commentAndLog(`Agent started`);
 
     // Show Agent Config exept the agent prompt
     await output.commentAndLog(
@@ -258,9 +258,9 @@ export function createCommandLoop(
     }
 
     if (abortSignal?.aborted) {
-      await output.commentAndLog(`AGENT STOPPED (${abortSignal.reason})`);
+      await output.commentAndLog(`Agent stopped (${abortSignal.reason})`);
     } else {
-      await output.commentAndLog(`AGENT EXITED`);
+      await output.commentAndLog(`Agent exited`);
     }
   }
 

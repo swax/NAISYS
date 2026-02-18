@@ -91,7 +91,7 @@ if (hubClient) {
 
 await globalConfig.waitForConfig();
 
-console.log(`NAISYS STARTED`);
+console.log(`[NAISYS] Started`);
 const agentManager = new AgentManager(
   globalConfig,
   hubClient,
@@ -117,6 +117,6 @@ await agentManager.waitForAllAgentsToComplete();
 
 heartbeatService.cleanup();
 
-console.log(`NAISYS EXITED`);
+console.log(`[NAISYS] Exited`);
 
 process.exit(0);

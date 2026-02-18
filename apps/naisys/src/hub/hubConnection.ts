@@ -22,7 +22,7 @@ export function createHubConnection(
   let connected = false;
 
   function connect() {
-    hubClientLog.write(`[Hub] Connecting to ${hubUrl}...`);
+    hubClientLog.write(`[NAISYS:HubClient] Connecting to ${hubUrl}...`);
 
     socket = io(hubUrl + "/naisys", {
       auth: {
@@ -36,26 +36,26 @@ export function createHubConnection(
 
     socket.on("connect", () => {
       connected = true;
-      hubClientLog.write(`[Hub] Connected to ${hubUrl}`);
+      hubClientLog.write(`[NAISYS:HubClient] Connected to ${hubUrl}`);
       onConnected();
     });
 
     socket.on("disconnect", (reason) => {
       connected = false;
-      hubClientLog.write(`[Hub] Disconnected from ${hubUrl}: ${reason}`);
+      hubClientLog.write(`[NAISYS:HubClient] Disconnected from ${hubUrl}: ${reason}`);
       onDisconnected();
     });
 
     socket.on("connect_error", (error) => {
       hubClientLog.write(
-        `[Hub] Connection error to ${hubUrl}: ${error.message}`,
+        `[NAISYS:HubClient] Connection error to ${hubUrl}: ${error.message}`,
       );
       onConnectError(error.message);
     });
 
     // Forward all socket events to hubClient's event handlers
     socket.onAny((eventName: string, ...args: unknown[]) => {
-      hubClientLog.write(`[Hub] Received ${eventName} from ${hubUrl}`);
+      hubClientLog.write(`[NAISYS:HubClient] Received ${eventName} from ${hubUrl}`);
       raiseEvent(eventName, ...args);
     });
   }
@@ -65,7 +65,7 @@ export function createHubConnection(
       socket.disconnect();
       socket = null;
       connected = false;
-      hubClientLog.write(`[Hub] Disconnected from ${hubUrl}`);
+      hubClientLog.write(`[NAISYS:HubClient] Disconnected from ${hubUrl}`);
     }
   }
 

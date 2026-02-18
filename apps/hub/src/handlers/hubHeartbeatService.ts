@@ -68,7 +68,7 @@ export function createHubHeartbeatService(
         });
       } catch (error) {
         logService.error(
-          `[HubHeartbeatService] Error updating heartbeat for host ${hostId}: ${error}`,
+          `[Hub:Heartbeat] Error updating heartbeat for host ${hostId}: ${error}`,
         );
       }
     },

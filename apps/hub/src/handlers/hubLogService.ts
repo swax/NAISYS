@@ -75,7 +75,7 @@ export function createHubLogService(
         heartbeatService.throttledPushHeartbeatStatus();
       } catch (error) {
         logService.error(
-          `[HubLogService] Error processing log_write from host ${hostId}: ${error}`,
+          `[Hub:Logs] Error processing log_write from host ${hostId}: ${error}`,
         );
       }
     },

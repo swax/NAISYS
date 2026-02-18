@@ -27,12 +27,12 @@ export function initHubConnection(hubUrl: string) {
 
   if (!accessKey) {
     console.warn(
-      "[HubConnection] HUB_ACCESS_KEY not set, skipping hub connection",
+      "[Supervisor:HubClient] HUB_ACCESS_KEY not set, skipping hub connection",
     );
     return;
   }
 
-  console.log(`[HubConnection] Connecting to ${hubUrl}...`);
+  console.log(`[Supervisor:HubClient] Connecting to ${hubUrl}...`);
 
   socket = io(hubUrl + "/naisys", {
     auth: {
@@ -47,22 +47,22 @@ export function initHubConnection(hubUrl: string) {
 
   socket.on("connect", () => {
     connected = true;
-    console.log(`[HubConnection] Connected to ${hubUrl}`);
+    console.log(`[Supervisor:HubClient] Connected to ${hubUrl}`);
   });
 
   socket.on("disconnect", (reason) => {
     connected = false;
-    console.log(`[HubConnection] Disconnected: ${reason}`);
+    console.log(`[Supervisor:HubClient] Disconnected: ${reason}`);
   });
 
   socket.on("connect_error", (error) => {
-    console.warn(`[HubConnection] Connection error: ${error.message}`);
+    console.warn(`[Supervisor:HubClient] Connection error: ${error.message}`);
   });
 
   socket.on(HubEvents.HEARTBEAT_STATUS, (data: unknown) => {
     const parsed = HeartbeatStatusSchema.safeParse(data);
     if (!parsed.success) {
-      console.warn("[HubConnection] Invalid heartbeat status:", parsed.error);
+      console.warn("[Supervisor:HubClient] Invalid heartbeat status:", parsed.error);
       return;
     }
 
@@ -93,7 +93,7 @@ export function initHubConnection(hubUrl: string) {
   socket.on(HubEvents.HOST_LIST, (data: unknown) => {
     const parsed = HostListSchema.safeParse(data);
     if (!parsed.success) {
-      console.warn("[HubConnection] Invalid host list:", parsed.error);
+      console.warn("[Supervisor:HubClient] Invalid host list:", parsed.error);
       return;
     }
 
@@ -223,7 +223,7 @@ export function sendMailViaHub(
 export function sendUserListChanged(): void {
   if (!socket || !connected) {
     console.warn(
-      "[HubConnection] Not connected to hub, cannot send user list changed",
+      "[Supervisor:HubClient] Not connected to hub, cannot send user list changed",
     );
     return;
   }
@@ -234,7 +234,7 @@ export function sendUserListChanged(): void {
 export function sendModelsChanged(): void {
   if (!socket || !connected) {
     console.warn(
-      "[HubConnection] Not connected to hub, cannot send models changed",
+      "[Supervisor:HubClient] Not connected to hub, cannot send models changed",
     );
     return;
   }
@@ -245,7 +245,7 @@ export function sendModelsChanged(): void {
 export function sendVariablesChanged(): void {
   if (!socket || !connected) {
     console.warn(
-      "[HubConnection] Not connected to hub, cannot send variables changed",
+      "[Supervisor:HubClient] Not connected to hub, cannot send variables changed",
     );
     return;
   }

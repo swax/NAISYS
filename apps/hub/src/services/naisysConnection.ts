@@ -28,13 +28,13 @@ export function createNaisysConnection(
   const { hostId, hostName, connectedAt, canRunAgents } = connectionInfo;
 
   logService.log(
-    `[NaisysConnection] NAISYS instance connected: ${hostName} (${hostId})`,
+    `[Hub:Connection] NAISYS instance connected: ${hostName} (${hostId})`,
   );
 
   // Forward all socket events to hub's emit function
   // Note: Socket.IO passes (eventName, ...args) where last arg may be an ack callback
   socket.onAny((eventName: string, ...args: unknown[]) => {
-    logService.log(`[NaisysConnection] Received ${eventName} from ${hostName}`);
+    logService.log(`[Hub:Connection] Received ${eventName} from ${hostName}`);
     // Pass all args including any ack callback (usually data and optional ack)
     raiseEvent(eventName, hostId, ...args);
   });
@@ -42,7 +42,7 @@ export function createNaisysConnection(
   // Handle disconnect
   socket.on("disconnect", (reason) => {
     logService.log(
-      `[NaisysConnection] NAISYS instance disconnected: ${hostName} (${hostId}) - ${reason}`,
+      `[Hub:Connection] NAISYS instance disconnected: ${hostName} (${hostId}) - ${reason}`,
     );
   });
 

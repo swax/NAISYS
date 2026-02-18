@@ -20,6 +20,7 @@ export async function createHubConfigService(
   await dbService.usingDatabase(async (prisma) => {
     const existing = await prisma.variables.findMany();
     if (existing.length > 0) {
+      logService.log("[Hub:Config] .env variables already seeded");
       return;
     }
 
@@ -37,6 +38,10 @@ export async function createHubConfigService(
         })),
       });
     }
+
+    logService.log(
+      `[Hub:Config] Seeded ${entries.length} variables from .env file into database`,
+    );
   });
 
   /** Read variables from DB and build a ConfigResponse */
@@ -64,7 +69,7 @@ export async function createHubConfigService(
       const clients = naisysServer.getConnectedClients();
 
       logService.log(
-        `[HubConfigService] Broadcasting config to ${clients.length} clients`,
+        `[Hub:Config] Broadcasting config to ${clients.length} clients`,
       );
 
       for (const connection of clients) {
@@ -75,9 +80,7 @@ export async function createHubConfigService(
         );
       }
     } catch (error) {
-      logService.error(
-        `[HubConfigService] Error broadcasting config: ${error}`,
-      );
+      logService.error(`[Hub:Config] Error broadcasting config: ${error}`);
     }
   }
 
@@ -89,7 +92,7 @@ export async function createHubConfigService(
         const payload = await buildConfigPayload();
 
         logService.log(
-          `[HubConfigService] Pushing config to naisys instance ${hostId}`,
+          `[Hub:Config] Pushing config to naisys instance ${hostId}`,
         );
 
         naisysServer.sendMessage<ConfigResponse>(
@@ -99,7 +102,7 @@ export async function createHubConfigService(
         );
       } catch (error) {
         logService.error(
-          `[HubConfigService] Error sending config to naisys instance ${hostId}: ${error}`,
+          `[Hub:Config] Error sending config to naisys instance ${hostId}: ${error}`,
         );
         naisysServer.sendMessage<ConfigResponse>(
           hostId,

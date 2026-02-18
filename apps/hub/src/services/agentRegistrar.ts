@@ -18,7 +18,7 @@ export async function seedAgentConfigs(
   });
 
   if (hasUsers) {
-    logService.log("[AgentRegistrar] Users already seeded, skipping");
+    logService.log("[Hub:AgentRegistrar] Agents already seeded");
     return;
   }
 
@@ -73,5 +73,7 @@ async function seedUsersToDatabase(
     }
   }
 
-  logService.log(`[AgentRegistrar] Seeded ${users.size} users into database`);
+  logService.log(
+    `[Hub:AgentRegistrar] Seeded ${users.size} users into database`,
+  );
 }
