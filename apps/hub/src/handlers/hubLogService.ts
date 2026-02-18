@@ -72,7 +72,7 @@ export function createHubLogService(
         });
 
         // Trigger throttled push after all entries processed
-        heartbeatService.throttledPushHeartbeatStatus();
+        heartbeatService.throttledPushAgentsStatus();
       } catch (error) {
         logService.error(
           `[Hub:Logs] Error processing log_write from host ${hostId}: ${error}`,

@@ -106,7 +106,9 @@ export function createHubClient(
   /** Send a fire-and-forget message to the hub */
   function sendMessage(event: string, payload: unknown): boolean {
     if (!activeConnection) {
-      hubClientLog.write("[NAISYS:HubClient] No active connection for sendMessage");
+      hubClientLog.write(
+        "[NAISYS:HubClient] No active connection for sendMessage",
+      );
       return false;
     }
     activeConnection.sendMessage(event, payload);
@@ -119,7 +121,9 @@ export function createHubClient(
     payload: unknown,
   ): Promise<T> {
     if (!activeConnection) {
-      hubClientLog.write("[NAISYS:HubClient] No active connection for sendRequest");
+      hubClientLog.write(
+        "[NAISYS:HubClient] No active connection for sendRequest",
+      );
       return Promise.reject(new Error("No active hub connection"));
     }
 

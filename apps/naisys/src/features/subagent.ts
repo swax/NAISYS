@@ -138,7 +138,7 @@ export function createSubagentService(
     }
   }
 
-  /** Returns IDs of running agents. In hub mode, includes remote agents via heartbeat status. */
+  /** Returns IDs of running agents. In hub mode, includes remote agents via agent status. */
   function getRunningAgentsIds() {
     const runningAgentIds = new Set(
       agentManager.runningAgents.map((a) => a.agentUserId),

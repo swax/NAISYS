@@ -42,7 +42,9 @@ export function createHubConnection(
 
     socket.on("disconnect", (reason) => {
       connected = false;
-      hubClientLog.write(`[NAISYS:HubClient] Disconnected from ${hubUrl}: ${reason}`);
+      hubClientLog.write(
+        `[NAISYS:HubClient] Disconnected from ${hubUrl}: ${reason}`,
+      );
       onDisconnected();
     });
 
@@ -55,7 +57,9 @@ export function createHubConnection(
 
     // Forward all socket events to hubClient's event handlers
     socket.onAny((eventName: string, ...args: unknown[]) => {
-      hubClientLog.write(`[NAISYS:HubClient] Received ${eventName} from ${hubUrl}`);
+      hubClientLog.write(
+        `[NAISYS:HubClient] Received ${eventName} from ${hubUrl}`,
+      );
       raiseEvent(eventName, ...args);
     });
   }

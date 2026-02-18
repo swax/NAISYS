@@ -75,7 +75,7 @@ export async function createHubConfigService(
       for (const connection of clients) {
         naisysServer.sendMessage<ConfigResponse>(
           connection.getHostId(),
-          HubEvents.CONFIG_UPDATE,
+          HubEvents.VARIABLES_UPDATED,
           payload,
         );
       }
@@ -97,7 +97,7 @@ export async function createHubConfigService(
 
         naisysServer.sendMessage<ConfigResponse>(
           hostId,
-          HubEvents.CONFIG_UPDATE,
+          HubEvents.VARIABLES_UPDATED,
           payload,
         );
       } catch (error) {
@@ -106,7 +106,7 @@ export async function createHubConfigService(
         );
         naisysServer.sendMessage<ConfigResponse>(
           hostId,
-          HubEvents.CONFIG_UPDATE,
+          HubEvents.VARIABLES_UPDATED,
           {
             success: false,
             error: String(error),

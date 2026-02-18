@@ -68,7 +68,7 @@ export function createHubMailService(
           message.id,
         );
       }
-      heartbeatService.throttledPushHeartbeatStatus();
+      heartbeatService.throttledPushAgentsStatus();
 
       const targetHostIds = new Set<number>();
       for (const userId of params.recipientUserIds) {

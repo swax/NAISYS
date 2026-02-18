@@ -23,7 +23,7 @@ export function createModelService(hubClient: HubClient | undefined) {
         rejectModels = reject;
       });
 
-      hubClient.registerEvent(HubEvents.MODELS, (data: unknown) => {
+      hubClient.registerEvent(HubEvents.MODELS_UPDATED, (data: unknown) => {
         try {
           const response = ModelsResponseSchema.parse(data);
           if (!response.success) {

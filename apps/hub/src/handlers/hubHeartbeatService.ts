@@ -2,7 +2,7 @@ import { DatabaseService } from "@naisys/database";
 import {
   HEARTBEAT_INTERVAL_MS,
   HeartbeatSchema,
-  HeartbeatStatus,
+  AgentsStatus,
   HubEvents,
 } from "@naisys/hub-protocol";
 import { HubServerLog } from "../services/hubServerLog.js";
@@ -79,21 +79,21 @@ export function createHubHeartbeatService(
     HubEvents.CLIENT_DISCONNECTED,
     (hostId: number) => {
       hostActiveAgents.delete(hostId);
-      throttledPushHeartbeatStatus();
+      throttledPushAgentsStatus();
     },
   );
 
-  /** Push aggregate active user status to all connected NAISYS instances */
-  function pushHeartbeatStatus() {
-    const payload: HeartbeatStatus = {
+  /** Push aggregate agent status to all connected NAISYS instances */
+  function pushAgentsStatus() {
+    const payload: AgentsStatus = {
       hostActiveAgents: Object.fromEntries(hostActiveAgents),
       agentNotifications: Object.fromEntries(agentNotifications),
     };
 
     for (const connection of naisysServer.getConnectedClients()) {
-      naisysServer.sendMessage<HeartbeatStatus>(
+      naisysServer.sendMessage<AgentsStatus>(
         connection.getHostId(),
-        HubEvents.HEARTBEAT_STATUS,
+        HubEvents.AGENTS_STATUS,
         payload,
       );
     }
@@ -102,19 +102,16 @@ export function createHubHeartbeatService(
   /** Throttled push for agent start/stop changes — at most once per 500ms */
   let throttleTimer: ReturnType<typeof setTimeout> | null = null;
 
-  function throttledPushHeartbeatStatus() {
+  function throttledPushAgentsStatus() {
     if (throttleTimer) return;
-    pushHeartbeatStatus();
+    pushAgentsStatus();
     throttleTimer = setTimeout(() => {
       throttleTimer = null;
     }, 500);
   }
 
   // Periodically push aggregate active user status to all NAISYS instances
-  const pushInterval = setInterval(
-    pushHeartbeatStatus,
-    HUB_HEARTBEAT_INTERVAL_MS,
-  );
+  const pushInterval = setInterval(pushAgentsStatus, HUB_HEARTBEAT_INTERVAL_MS);
 
   function getHostActiveAgentCount(hostId: number): number {
     return hostActiveAgents.get(hostId)?.length ?? 0;
@@ -141,7 +138,7 @@ export function createHubHeartbeatService(
     } else {
       hostActiveAgents.set(hostId, [userId]);
     }
-    throttledPushHeartbeatStatus();
+    throttledPushAgentsStatus();
   }
 
   /** Remove a userId from a host's active list after a successful stop */
@@ -153,7 +150,7 @@ export function createHubHeartbeatService(
         userIds.splice(index, 1);
       }
     }
-    throttledPushHeartbeatStatus();
+    throttledPushAgentsStatus();
   }
 
   function cleanup() {
@@ -179,7 +176,7 @@ export function createHubHeartbeatService(
     addStartedAgent,
     removeStoppedAgent,
     updateAgentNotification,
-    throttledPushHeartbeatStatus,
+    throttledPushAgentsStatus,
   };
 }
 

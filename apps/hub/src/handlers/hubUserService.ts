@@ -53,14 +53,12 @@ export function createHubUserService(
       for (const connection of clients) {
         naisysServer.sendMessage<UserListResponse>(
           connection.getHostId(),
-          HubEvents.USER_LIST,
+          HubEvents.USERS_UPDATED,
           payload,
         );
       }
     } catch (error) {
-      logService.error(
-        `[Hub:Users] Error broadcasting user list: ${error}`,
-      );
+      logService.error(`[Hub:Users] Error broadcasting user list: ${error}`);
     }
   }
 
@@ -77,7 +75,7 @@ export function createHubUserService(
 
         naisysServer.sendMessage<UserListResponse>(
           hostId,
-          HubEvents.USER_LIST,
+          HubEvents.USERS_UPDATED,
           payload,
         );
       } catch (error) {
@@ -86,7 +84,7 @@ export function createHubUserService(
         );
         naisysServer.sendMessage<UserListResponse>(
           hostId,
-          HubEvents.USER_LIST,
+          HubEvents.USERS_UPDATED,
           {
             success: false,
             error: String(error),
@@ -98,7 +96,7 @@ export function createHubUserService(
 
   // Broadcast user list to all clients when users are created/edited
   naisysServer.registerEvent(
-    HubEvents.USER_LIST_CHANGED,
+    HubEvents.USERS_CHANGED,
     async (_hostId: number) => {
       await broadcastUserList();
     },

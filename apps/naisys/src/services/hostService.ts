@@ -8,7 +8,7 @@ interface HostEntry {
   online: boolean;
 }
 
-/** Receives HOST_LIST pushes from the hub and provides hostId → hostName lookups */
+/** Receives HOSTS_UPDATED pushes from the hub and provides hostId → hostName lookups */
 export function createHostService(
   hubClient: HubClient | undefined,
   globalConfig: GlobalConfig,
@@ -16,7 +16,7 @@ export function createHostService(
   const hostMap = new Map<number, HostEntry>();
 
   if (hubClient) {
-    hubClient.registerEvent(HubEvents.HOST_LIST, (data: unknown) => {
+    hubClient.registerEvent(HubEvents.HOSTS_UPDATED, (data: unknown) => {
       const parsed = HostListSchema.parse(data);
 
       hostMap.clear();
@@ -34,7 +34,7 @@ export function createHostService(
     return hostMap.get(hostId)?.hostName;
   }
 
-  /** Resolve lazily — HOST_LIST may arrive before CONFIG */
+  /** Resolve lazily — HOSTS_UPDATED may arrive before VARIABLES_UPDATED */
   function getLocalHostId(): number | undefined {
     const localHostName = globalConfig.globalConfig()?.hostname;
     if (!localHostName) return undefined;

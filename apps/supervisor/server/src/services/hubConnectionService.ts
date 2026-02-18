@@ -3,7 +3,7 @@ import { io, Socket } from "socket.io-client";
 import {
   AgentStartResponse,
   AgentStopResponse,
-  HeartbeatStatusSchema,
+  AgentsStatusSchema,
   HostListSchema,
   HubEvents,
   MailSendResponse,
@@ -59,10 +59,13 @@ export function initHubConnection(hubUrl: string) {
     console.warn(`[Supervisor:HubClient] Connection error: ${error.message}`);
   });
 
-  socket.on(HubEvents.HEARTBEAT_STATUS, (data: unknown) => {
-    const parsed = HeartbeatStatusSchema.safeParse(data);
+  socket.on(HubEvents.AGENTS_STATUS, (data: unknown) => {
+    const parsed = AgentsStatusSchema.safeParse(data);
     if (!parsed.success) {
-      console.warn("[Supervisor:HubClient] Invalid heartbeat status:", parsed.error);
+      console.warn(
+        "[Supervisor:HubClient] Invalid agents status:",
+        parsed.error,
+      );
       return;
     }
 
@@ -90,7 +93,7 @@ export function initHubConnection(hubUrl: string) {
     statusEmitter.emit("agentStatusUpdate", getAgentStatusSnapshot());
   });
 
-  socket.on(HubEvents.HOST_LIST, (data: unknown) => {
+  socket.on(HubEvents.HOSTS_UPDATED, (data: unknown) => {
     const parsed = HostListSchema.safeParse(data);
     if (!parsed.success) {
       console.warn("[Supervisor:HubClient] Invalid host list:", parsed.error);
@@ -111,7 +114,7 @@ export function initHubConnection(hubUrl: string) {
   });
 
   // User list changed (hub broadcasts after create/edit/archive/delete)
-  socket.on(HubEvents.USER_LIST, () => {
+  socket.on(HubEvents.USERS_UPDATED, () => {
     statusEmitter.emit("agentStatusUpdate", {
       ...getAgentStatusSnapshot(),
       listChanged: true,
@@ -228,7 +231,7 @@ export function sendUserListChanged(): void {
     return;
   }
 
-  socket.emit(HubEvents.USER_LIST_CHANGED);
+  socket.emit(HubEvents.USERS_CHANGED);
 }
 
 export function sendModelsChanged(): void {

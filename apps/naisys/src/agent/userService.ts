@@ -36,7 +36,7 @@ export function createUserService(
         rejectUsers = reject;
       });
 
-      hubClient.registerEvent(HubEvents.USER_LIST, (data: unknown) => {
+      hubClient.registerEvent(HubEvents.USERS_UPDATED, (data: unknown) => {
         try {
           const response = UserListResponseSchema.parse(data);
           if (!response.success) {
