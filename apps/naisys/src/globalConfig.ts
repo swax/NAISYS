@@ -1,5 +1,6 @@
 import { ClientConfig, buildClientConfig } from "@naisys/common";
 import { ConfigResponseSchema, HubEvents } from "@naisys/hub-protocol";
+import dotenv from "dotenv";
 import { readFile } from "fs/promises";
 import os from "os";
 import path from "path";
@@ -44,7 +45,8 @@ export function createGlobalConfig(hubClient?: HubClient) {
         }
       });
     } else {
-      const clientConfig = buildClientConfig(process.env);
+      const { parsed: dotenvVars } = dotenv.config({ quiet: true });
+      const clientConfig = buildClientConfig(dotenvVars ?? {});
       configReadyPromise = appendClientConfig(clientConfig).then((config) => {
         cachedConfig = config;
       });

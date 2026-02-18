@@ -16,7 +16,9 @@ export const AppNavbar: React.FC<AppNavbarProps> = ({ onClose, hasErp }) => {
   const isAgentsPage = location.pathname.startsWith("/agents");
   const isHostsPage = location.pathname.startsWith("/hosts");
   const isModelsPage = location.pathname.startsWith("/models");
+  const isVariablesPage = location.pathname.startsWith("/variables");
   const isUsersPage = location.pathname.startsWith("/users");
+  const showVariablesTab = hasPermission("manage_variables");
   const showUsersTab = hasPermission("supervisor_admin");
 
   return (
@@ -87,6 +89,30 @@ export const AppNavbar: React.FC<AppNavbarProps> = ({ onClose, hasErp }) => {
           Models
         </Text>
       </UnstyledButton>
+      {showVariablesTab && (
+        <UnstyledButton
+          onClick={() => {
+            navigate("/variables");
+            onClose();
+          }}
+          p="sm"
+          mb={4}
+          style={(theme) => ({
+            borderRadius: theme.radius.sm,
+            backgroundColor: isVariablesPage
+              ? "var(--mantine-color-dark-5)"
+              : undefined,
+          })}
+        >
+          <Text
+            size="sm"
+            fw={isVariablesPage ? 600 : 400}
+            c={!isVariablesPage ? "dimmed" : undefined}
+          >
+            Variables
+          </Text>
+        </UnstyledButton>
+      )}
       {showUsersTab && (
         <UnstyledButton
           onClick={() => {

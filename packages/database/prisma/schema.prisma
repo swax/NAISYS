@@ -99,7 +99,6 @@ model users {
   costs              costs[]             @relation("costs_user")
   user_notifications user_notifications?
   user_hosts         user_hosts[]
-
   @@index([username], map: "idx_users_username") // WHERE username in hubMailService recipient resolution, agentConfigService user lookup
 }
 
@@ -165,7 +164,7 @@ model hosts {
   user_hosts         user_hosts[]
 }
 
-model web_users {
+model supervisor_users {
   id                 Int       @id @default(autoincrement())
   uuid               String    @unique
   username           String    @unique
@@ -179,6 +178,8 @@ model web_users {
 model variables {
   key        String   @id
   value      String
+  created_by String
+  updated_by String
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
 }

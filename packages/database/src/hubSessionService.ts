@@ -42,7 +42,7 @@ export async function findHubSession(
 ): Promise<HubUser | null> {
   if (!prisma) return null;
 
-  const user = await prisma.web_users.findFirst({
+  const user = await prisma.supervisor_users.findFirst({
     where: {
       session_token_hash: tokenHash,
       session_expires_at: { gt: new Date() },
@@ -66,7 +66,7 @@ export async function findHubUserByUsername(
 ): Promise<HubUser | null> {
   if (!prisma) return null;
 
-  const user = await prisma.web_users.findUnique({
+  const user = await prisma.supervisor_users.findUnique({
     where: { username },
   });
 
@@ -91,7 +91,7 @@ export async function createHubSession(
 ): Promise<void> {
   if (!prisma) return;
 
-  await prisma.web_users.upsert({
+  await prisma.supervisor_users.upsert({
     where: { uuid },
     create: {
       uuid,
@@ -114,7 +114,7 @@ export async function createHubSession(
  */
 export async function countHubUsers(): Promise<number> {
   if (!prisma) return 0;
-  return prisma.web_users.count();
+  return prisma.supervisor_users.count();
 }
 
 /**
@@ -127,7 +127,7 @@ export async function createHubUser(
 ): Promise<void> {
   if (!prisma) return;
 
-  await prisma.web_users.upsert({
+  await prisma.supervisor_users.upsert({
     where: { uuid },
     create: {
       uuid,
@@ -153,15 +153,17 @@ export async function updateHubUserPassword(
 ): Promise<void> {
   if (!prisma) return;
 
-  const existing = await prisma.web_users.findUnique({ where: { username } });
+  const existing = await prisma.supervisor_users.findUnique({
+    where: { username },
+  });
 
   if (existing) {
-    await prisma.web_users.update({
+    await prisma.supervisor_users.update({
       where: { username },
       data: { password_hash: passwordHash },
     });
   } else {
-    await prisma.web_users.create({
+    await prisma.supervisor_users.create({
       data: {
         uuid,
         username,
@@ -224,7 +226,7 @@ export async function findAgentByApiKey(
 export async function deleteHubSession(tokenHash: string): Promise<void> {
   if (!prisma) return;
 
-  await prisma.web_users.updateMany({
+  await prisma.supervisor_users.updateMany({
     where: { session_token_hash: tokenHash },
     data: {
       session_token_hash: null,

@@ -134,13 +134,23 @@ CREATE TABLE "hosts" (
 );
 
 -- CreateTable
-CREATE TABLE "web_users" (
+CREATE TABLE "supervisor_users" (
     "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     "uuid" TEXT NOT NULL,
     "username" TEXT NOT NULL,
     "password_hash" TEXT NOT NULL,
     "session_token_hash" TEXT,
     "session_expires_at" DATETIME,
+    "created_at" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" DATETIME NOT NULL
+);
+
+-- CreateTable
+CREATE TABLE "variables" (
+    "key" TEXT NOT NULL PRIMARY KEY,
+    "value" TEXT NOT NULL,
+    "created_by" TEXT NOT NULL,
+    "updated_by" TEXT NOT NULL,
     "created_at" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" DATETIME NOT NULL
 );
@@ -191,7 +201,7 @@ CREATE UNIQUE INDEX "unq_schema_version_version" ON "schema_version"("version");
 CREATE UNIQUE INDEX "unq_hosts_name" ON "hosts"("name");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "web_users_uuid_key" ON "web_users"("uuid");
+CREATE UNIQUE INDEX "supervisor_users_uuid_key" ON "supervisor_users"("uuid");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "web_users_username_key" ON "web_users"("username");
+CREATE UNIQUE INDEX "supervisor_users_username_key" ON "supervisor_users"("username");

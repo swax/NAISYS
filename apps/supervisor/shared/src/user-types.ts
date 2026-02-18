@@ -4,6 +4,7 @@ export const PermissionEnum = z.enum([
   "supervisor_admin",
   "manage_agents",
   "manage_models",
+  "manage_variables",
 ]);
 export type Permission = z.infer<typeof PermissionEnum>;
 

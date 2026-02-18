@@ -26,6 +26,12 @@ export default async function rootRoutes(
         { rel: "schemas", href: `${API_PREFIX}/schemas/`, title: "Schemas" },
         { rel: "agents", href: `${API_PREFIX}/agents`, title: "Agents" },
         { rel: "hosts", href: `${API_PREFIX}/hosts`, title: "Hosts" },
+        { rel: "models", href: `${API_PREFIX}/models`, title: "Models" },
+        {
+          rel: "variables",
+          href: `${API_PREFIX}/variables`,
+          title: "Variables",
+        },
       ];
 
       // Only show user management links if user has supervisor_admin permission

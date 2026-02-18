@@ -78,9 +78,9 @@ Both apps share the same `AuthUser` shape exposed to clients:
 
 When supervisor and ERP are co-hosted, a user previously had to log in to each app separately. The apps used different cookies (`supervisor_session` vs `erp_session`) and different user tables, so there was no session portability.
 
-### Solution: Hub `web_users` Table
+### Solution: Hub `supervisor_users` Table
 
-Both apps share a single cookie name (`naisys_session`). When the hub database is available (SSO mode), the hub `web_users` table is the **single source of truth** for session tokens. When running standalone, each app falls back to local session storage.
+Both apps share a single cookie name (`naisys_session`). When the hub database is available (SSO mode), the hub `supervisor_users` table is the **single source of truth** for session tokens. When running standalone, each app falls back to local session storage.
 
 #### Single Cookie
 
@@ -88,11 +88,11 @@ Both apps read/write the same `naisys_session` cookie, replacing the old per-app
 
 #### SSO Mode (Hub Available)
 
-On login, the session token is written **only** to the hub `web_users` table. The local user table's session field is set to `!sso` as a placeholder (not a real token). The hub user record is upserted (created or updated) with credentials and session data.
+On login, the session token is written **only** to the hub `supervisor_users` table. The local user table's session field is set to `!sso` as a placeholder (not a real token). The hub user record is upserted (created or updated) with credentials and session data.
 
 On each request, the middleware checks **only** the hub for the session token. If valid, it resolves (or auto-provisions) the local user by `uuid`. Logging out from either app clears the hub session token (the user record persists), effectively logging the user out of both apps.
 
-On login, if the user doesn't exist locally but exists in the hub `web_users` table, the app auto-provisions a local user from the hub credentials.
+On login, if the user doesn't exist locally but exists in the hub `supervisor_users` table, the app auto-provisions a local user from the hub credentials.
 
 #### Standalone Mode (No Hub)
 
@@ -103,21 +103,21 @@ On login, the session token is written to the local user table. On each request,
 The hub user record carries `username`, `password_hash`, and `uuid`. Auto-provisioning happens in two places:
 
 1. **Auth middleware**: When a valid hub session is found, the middleware resolves the local user by `uuid`. If the user doesn't exist locally, it's auto-created from the hub data.
-2. **Login route**: When a user enters credentials that don't match any local user, the app checks the hub `web_users` table by username. If found and the password matches, the user is auto-provisioned locally and logged in.
+2. **Login route**: When a user enters credentials that don't match any local user, the app checks the hub `supervisor_users` table by username. If found and the password matches, the user is auto-provisioned locally and logged in.
 
 This eliminates the need to seed the same user in both apps.
 
 #### Auth Middleware Check Order
 
 1. Read `naisys_session` cookie → hash it
-2. If hub available → check hub `web_users` by session token → resolve local user by `uuid` (or auto-create)
+2. If hub available → check hub `supervisor_users` by session token → resolve local user by `uuid` (or auto-create)
 3. If hub not available → check local user table by token hash
 4. Apply existing auth rules (public routes, `PUBLIC_READ`, etc.)
 
-#### Hub `web_users` Schema
+#### Hub `supervisor_users` Schema
 
 ```
-web_users (uuid UNIQUE, username UNIQUE, password_hash, session_token_hash, session_expires_at, created_at, updated_at)
+supervisor_users (uuid UNIQUE, username UNIQUE, password_hash, session_token_hash, session_expires_at, created_at, updated_at)
 ```
 
 - User records persist across login/logout cycles — only the session token is cleared on logout

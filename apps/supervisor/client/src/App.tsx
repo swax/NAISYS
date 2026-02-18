@@ -37,6 +37,7 @@ import { AgentsLayout } from "./pages/agents/AgentsLayout";
 import { ModelsLayout } from "./pages/models/ModelsLayout";
 import { ModelIndex } from "./pages/models/ModelIndex";
 import { ModelPage } from "./pages/models/ModelPage";
+import { VariablesPage } from "./pages/variables/VariablesPage";
 
 const AppContent: React.FC = () => {
   const [opened, { toggle, close }] = useDisclosure();
@@ -121,6 +122,7 @@ const router = createBrowserRouter(
         <Route index element={<ModelIndex />} />
         <Route path=":key" element={<ModelPage />} />
       </Route>
+      <Route path="/variables" element={<VariablesPage />} />
       <Route path="/users" element={<UserList />} />
       <Route path="/users/:id" element={<UserDetail />} />
       <Route path="/" element={<Navigate to="/agents" replace />} />
