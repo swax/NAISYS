@@ -13,7 +13,7 @@ import { FastifyInstance, FastifyPluginOptions } from "fastify";
 import { requirePermission } from "../auth-middleware.js";
 import { API_PREFIX, selfLink } from "../hateoas.js";
 import { deleteHost, getHosts } from "../services/agentService.js";
-import { isHostConnected } from "../services/hubConnectionService.js";
+import { isHostConnected } from "../services/agentHostStatusService.js";
 
 function hostActions(
   hostId: number,

@@ -23,7 +23,7 @@ import {
   schemaLink,
   selfLink,
 } from "../hateoas.js";
-import { isAgentActive } from "../services/hubConnectionService.js";
+import { isAgentActive } from "../services/agentHostStatusService.js";
 import { createAgentConfig } from "../services/agentConfigService.js";
 import { getAgent, getAgents } from "../services/agentService.js";
 
