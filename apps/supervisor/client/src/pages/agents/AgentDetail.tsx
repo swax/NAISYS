@@ -39,7 +39,6 @@ export const AgentDetail: React.FC = () => {
   const agentId = id ? Number(id) : null;
   const agentData = agents.find((a) => a.id === agentId);
   const [config, setConfig] = useState<string | null>(null);
-  const [configPath, setConfigPath] = useState<string | null>(null);
   const [actions, setActions] = useState<HateoasAction[] | undefined>();
   const [loading, setLoading] = useState(true);
   const [taskInput, setTaskInput] = useState("");
@@ -54,7 +53,6 @@ export const AgentDetail: React.FC = () => {
     try {
       const data = await getAgentDetail(agentId);
       setConfig(data.config);
-      setConfigPath(data.configPath || null);
       setActions(data._actions);
     } catch (err) {
       console.error("Error fetching agent detail:", err);
@@ -382,12 +380,6 @@ export const AgentDetail: React.FC = () => {
           disabled={settingLead}
           maw={300}
         />
-      )}
-
-      {configPath && (
-        <Text size="sm" c="dimmed">
-          {agentData?.name}@{agentData?.host}:{configPath}
-        </Text>
       )}
 
       {config && (

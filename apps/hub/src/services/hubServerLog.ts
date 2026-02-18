@@ -6,6 +6,7 @@ export type LogFn = (message: string) => void;
 export interface HubServerLog {
   log: LogFn;
   error: LogFn;
+  disableConsole: () => void;
 }
 
 /**
@@ -34,9 +35,24 @@ export function createHubServerLog(
       },
     });
 
+    let consoleEnabled = true;
+
     return {
-      log: (message: string) => logger.info(message),
-      error: (message: string) => logger.error(message),
+      log: (message: string) => {
+        logger.info(message);
+        if (consoleEnabled) {
+          console.log(message);
+        }
+      },
+      error: (message: string) => {
+        logger.error(message);
+        if (consoleEnabled) {
+          console.error(message);
+        }
+      },
+      disableConsole: () => {
+        consoleEnabled = false;
+      },
     };
   }
 
@@ -44,5 +60,6 @@ export function createHubServerLog(
   return {
     log: (message: string) => console.log(message),
     error: (message: string) => console.error(message),
+    disableConsole: () => {},
   };
 }

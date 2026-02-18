@@ -44,7 +44,6 @@ export enum CommandProtection {
 
 // Zod schema for validation
 export const AgentConfigFileSchema = z.object({
-  _id: z.string().optional().describe("Unique config identifier"),
   username: z
     .string()
     .min(1, "Username is required")
@@ -152,7 +151,6 @@ export type AgentConfigFile = z.infer<typeof AgentConfigFileSchema>;
  * 6. Having it as an official user means mail will be logged by the hub as well which is helpful for debugging and monitoring
  */
 export const adminAgentConfig = {
-  _id: "admin-user-id",
   username: "admin", // Must be "admin" for special handling in hub and supervisor
   title: "Admin",
   shellModel: "none",
@@ -164,9 +162,7 @@ export const adminAgentConfig = {
 export interface UserEntry {
   userId: number;
   username: string;
-  configId: string;
   leadUserId?: number;
-  agentPath?: string;
   assignedHostIds?: number[];
   apiKey?: string;
   config: AgentConfigFile;

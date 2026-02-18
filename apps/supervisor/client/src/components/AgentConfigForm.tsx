@@ -43,7 +43,6 @@ function transformFormValues(values: FormValues): Record<string, unknown> {
     tokenMax: values.tokenMax,
   };
 
-  if (values._id) result._id = values._id;
   if (values.webModel) result.webModel = values.webModel;
   if (values.compactModel) result.compactModel = values.compactModel;
   if (values.imageModel) result.imageModel = values.imageModel;
@@ -73,7 +72,6 @@ function transformFormValues(values: FormValues): Record<string, unknown> {
 }
 
 interface FormValues {
-  _id: string;
   username: string;
   title: string;
   agentPrompt: string;
@@ -119,7 +117,6 @@ export const AgentConfigForm: React.FC<AgentConfigFormProps> = ({
 }) => {
   const form = useForm<FormValues>({
     initialValues: {
-      _id: config._id ?? "",
       username: config.username,
       title: config.title,
       agentPrompt: config.agentPrompt,
@@ -157,14 +154,6 @@ export const AgentConfigForm: React.FC<AgentConfigFormProps> = ({
         <Text fw={600} size="sm" c="dimmed">
           Identity
         </Text>
-        {form.values._id && (
-          <TextInput
-            label="Config ID"
-            description={desc("_id")}
-            disabled
-            {...form.getInputProps("_id")}
-          />
-        )}
         <TextInput
           label="Username"
           description={desc("username")}

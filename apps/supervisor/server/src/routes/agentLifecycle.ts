@@ -14,7 +14,6 @@ import {
   SetLeadAgentRequest,
   SetLeadAgentRequestSchema,
 } from "@naisys-supervisor/shared";
-import fs from "fs/promises";
 import { FastifyInstance, FastifyPluginOptions } from "fastify";
 import { requirePermission } from "../auth-middleware.js";
 import {
@@ -357,15 +356,7 @@ export default async function agentLifecycleRoutes(
           });
         }
 
-        const { agentPath } = await deleteAgent(id);
-
-        if (agentPath) {
-          try {
-            await fs.unlink(agentPath);
-          } catch {
-            // YAML file may already be missing
-          }
-        }
+        await deleteAgent(id);
 
         sendUserListChanged();
 

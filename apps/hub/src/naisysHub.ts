@@ -14,7 +14,7 @@ import { createHubLogService } from "./handlers/hubLogService.js";
 import { createHubMailService } from "./handlers/hubMailService.js";
 import { createHubRunService } from "./handlers/hubRunService.js";
 import { createHubUserService } from "./handlers/hubUserService.js";
-import { createAgentRegistrar } from "./services/agentRegistrar.js";
+import { seedAgentConfigs } from "./services/agentRegistrar.js";
 import { createHubServerLog } from "./services/hubServerLog.js";
 import { createHostRegistrar } from "./services/hostRegistrar.js";
 import { createNaisysServer } from "./services/naisysServer.js";
@@ -47,8 +47,8 @@ export const startHub: StartHub = async (
     // Schema version for sync protocol - should match NAISYS instance
     const dbService = await createDatabaseService();
 
-    // Seed database with agent configs from yaml files
-    await createAgentRegistrar(dbService, startupAgentPath);
+    // Seed database with agent configs from yaml files (one-time, skips if non-empty)
+    await seedAgentConfigs(dbService, logService, startupAgentPath);
 
     // Create host registrar for tracking NAISYS instance connections
     const hostRegistrar = await createHostRegistrar(dbService);
@@ -132,9 +132,10 @@ export const startHub: StartHub = async (
       });
     });
 
-    console.log(
+    logService.log(
       `[Hub] Running on ws://localhost:${hubPort}, logs written to file`,
     );
+    logService.disableConsole();
 
     /**
      * There should be no dependency between supervisor and hub

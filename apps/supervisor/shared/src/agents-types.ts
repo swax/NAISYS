@@ -63,7 +63,6 @@ export const AgentDetailResponseSchema = z.object({
   archived: z.boolean().optional(),
   online: z.boolean().optional(),
   config: z.string(),
-  configPath: z.string(),
   _links: z.array(LinkSchema),
   _actions: z.array(HateoasActionSchema).optional(),
 });

@@ -1,5 +1,4 @@
 import { AgentConfigFile, AgentConfigFileSchema } from "@naisys/common";
-import fs from "fs/promises";
 import yaml from "js-yaml";
 import { usingNaisysDb } from "../database/naisysDatabase.js";
 import { sendUserListChanged } from "./hubConnectionService.js";
@@ -61,7 +60,6 @@ webEnabled: true
         uuid: crypto.randomUUID(),
         username: name,
         title: "Assistant",
-        agent_path: null,
         config: yamlContent,
       },
     });
@@ -74,26 +72,6 @@ webEnabled: true
   sendUserListChanged();
 
   return user.id;
-}
-
-/**
- * Resolve a user by ID.
- */
-async function resolveUserById(
-  id: number,
-): Promise<{ id: number; agent_path: string | null }> {
-  return await usingNaisysDb(async (prisma) => {
-    const user = await prisma.users.findUnique({
-      where: { id },
-      select: { id: true, agent_path: true },
-    });
-
-    if (!user) {
-      throw new Error(`User with ID ${id} not found`);
-    }
-
-    return user;
-  });
 }
 
 /**
@@ -126,7 +104,6 @@ function canonicalConfigOrder(
   const ordered: Record<string, unknown> = {};
 
   // Identity
-  if (config._id !== undefined) ordered._id = config._id;
   ordered.username = config.username;
   ordered.title = config.title;
 
@@ -179,14 +156,12 @@ export async function updateAgentConfigById(
   id: number,
   config: AgentConfigFile,
 ): Promise<void> {
-  const user = await resolveUserById(id);
   const ordered = canonicalConfigOrder(config);
   const yamlStr = yaml.dump(ordered, { lineWidth: -1, noRefs: true });
 
-  // Always update the config and denormalized fields in the database
   await usingNaisysDb(async (prisma) => {
     await prisma.users.update({
-      where: { id: user.id },
+      where: { id },
       data: {
         config: yamlStr,
         title: config.title,
@@ -194,17 +169,8 @@ export async function updateAgentConfigById(
     });
   });
 
-  // Write to file only if agent_path is non-null
-  if (user.agent_path) {
-    try {
-      await fs.writeFile(user.agent_path, yamlStr, "utf-8");
-    } catch {
-      // File may not exist or be inaccessible — DB is the source of truth
-    }
-  }
-
   // Update user notification modified date
-  await updateUserNotificationModifiedDate(user.id);
+  await updateUserNotificationModifiedDate(id);
 
   // Notify hub to broadcast updated user list to all NAISYS clients
   sendUserListChanged();
