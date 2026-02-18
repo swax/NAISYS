@@ -1,5 +1,6 @@
 import type { AgentConfigFile } from "@naisys/common";
 import type {
+  AdminInfoResponse,
   Agent,
   AgentActionResult,
   AgentDetailResponse,
@@ -35,6 +36,7 @@ import type {
 export const API_BASE = "/api/supervisor";
 
 export type {
+  AdminInfoResponse,
   Agent,
   AgentActionResult,
   AgentConfigFile,
@@ -151,4 +153,6 @@ export const apiEndpoints = {
   saveVariable: (key: string) => `/variables/${encodeURIComponent(key)}`,
   deleteVariable: (key: string) => `/variables/${encodeURIComponent(key)}`,
   sendMail: "/send-mail",
+  admin: "/admin",
+  adminExportConfig: "/admin/export-config",
 };

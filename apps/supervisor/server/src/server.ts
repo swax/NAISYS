@@ -181,6 +181,10 @@ export const startServer: StartServer = async (
           name: "Configuration",
           tags: ["Models", "Variables"],
         },
+        {
+          name: "Administration",
+          tags: ["Admin"],
+        },
       ],
     };
   });

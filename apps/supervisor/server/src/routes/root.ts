@@ -41,6 +41,11 @@ export default async function rootRoutes(
           href: `${API_PREFIX}/users`,
           title: "User Management",
         });
+        links.push({
+          rel: "admin",
+          href: `${API_PREFIX}/admin`,
+          title: "Admin",
+        });
       }
 
       return { _links: links };
