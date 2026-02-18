@@ -23,15 +23,16 @@ export function isHubAvailable(): boolean {
  * Idempotent — returns early if already initialized.
  * No-ops gracefully if NAISYS_FOLDER is unset or the database doesn't exist.
  */
-export function initHubSessions(): void {
-  if (prisma) return;
+export function initHubSessions(): boolean {
+  if (prisma) return true;
 
   const dbPath = hubDbPath();
 
-  if (!existsSync(dbPath)) return;
+  if (!existsSync(dbPath)) return false;
 
   prisma = createPrismaClient(dbPath);
   console.log("[Hub] Cross-app sessions enabled");
+  return true;
 }
 
 /**
@@ -247,9 +248,9 @@ export async function handleResetPassword(options: {
   requireHub?: boolean;
 }): Promise<void> {
   console.log(`NAISYS_FOLDER: ${process.env.NAISYS_FOLDER}`);
-  initHubSessions();
+  const hubAvailable = initHubSessions();
 
-  if (options.requireHub && !isHubAvailable()) {
+  if (options.requireHub && !hubAvailable) {
     console.error("Hub database not found. Cannot reset password without it.");
     process.exit(1);
   }

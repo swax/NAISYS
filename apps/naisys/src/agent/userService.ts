@@ -195,7 +195,6 @@ export function createUserService(
       map.set(user.userId, {
         userId: user.userId,
         username: user.username,
-        configId: "",
         leadUserId: user.leadUserId,
         assignedHostIds: user.assignedHostIds,
         apiKey: user.apiKey,

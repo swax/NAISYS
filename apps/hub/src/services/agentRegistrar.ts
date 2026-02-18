@@ -1,81 +1,77 @@
 import { UserEntry } from "@naisys/common";
 import { loadAgentConfigs } from "@naisys/common/dist/agentConfigLoader.js";
 import { DatabaseService } from "@naisys/database";
-import { randomBytes } from "crypto";
+import { randomBytes, randomUUID } from "crypto";
 import yaml from "js-yaml";
+import { HubServerLog } from "./hubServerLog";
 
-/** Loads agent configs from yaml files, then syncs them to the database */
-export async function createAgentRegistrar(
+/** Seeds agent configs from YAML files into an empty database. Skips if users already exist. */
+export async function seedAgentConfigs(
   dbService: DatabaseService,
+  logService: HubServerLog,
   startupAgentPath?: string,
 ) {
-  await reloadAgents();
+  // Check if users table already has rows (seed-once pattern)
+  const hasUsers = await dbService.usingDatabase(async (prisma) => {
+    const count = await prisma.users.count();
+    return count > 0;
+  });
 
-  async function reloadAgents() {
-    const users = loadAgentConfigs(startupAgentPath || "");
-
-    await syncUsersToDatabase(users);
+  if (hasUsers) {
+    logService.log("[AgentRegistrar] Users already seeded, skipping");
+    return;
   }
 
-  async function syncUsersToDatabase(users: Map<number, UserEntry>) {
-    // First pass: upsert all users by uuid, build configId → dbId map
-    const configIdToDbId = new Map<string, number>();
+  // Default to CWD when no path specified (matches standalone hub behavior)
+  const users = loadAgentConfigs(startupAgentPath || "");
+  await seedUsersToDatabase(dbService, logService, users);
+}
 
-    for (const user of users.values()) {
-      await dbService.usingDatabase(async (prisma) => {
-        const dbUser = await prisma.users.upsert({
-          where: { uuid: user.configId },
-          create: {
-            uuid: user.configId,
-            username: user.username,
-            title: user.config.title,
-            agent_path: user.agentPath ?? null,
-            config: yaml.dump(user.config),
-            api_key: randomBytes(32).toString("hex"),
-          },
-          update: {
-            title: user.config.title,
-            agent_path: user.agentPath ?? null,
-            config: yaml.dump(user.config),
-          },
-        });
+async function seedUsersToDatabase(
+  dbService: DatabaseService,
+  logService: HubServerLog,
+  users: Map<number, UserEntry>,
+) {
+  // First pass: create all users, build loader userId → DB id map
+  const loaderIdToDbId = new Map<number, number>();
 
-        configIdToDbId.set(user.configId, dbUser.id);
-
-        await prisma.user_notifications.upsert({
-          where: { user_id: dbUser.id },
-          create: {
-            user_id: dbUser.id,
-          },
-          update: {},
-        });
+  for (const user of users.values()) {
+    await dbService.usingDatabase(async (prisma) => {
+      const dbUser = await prisma.users.create({
+        data: {
+          uuid: randomUUID(),
+          username: user.username,
+          title: user.config.title,
+          config: yaml.dump(user.config),
+          api_key: randomBytes(32).toString("hex"),
+        },
       });
-    }
 
-    // Second pass: update lead_user_id relationships
-    for (const user of users.values()) {
-      if (user.leadUserId !== undefined) {
-        // Find the lead user's configId from the user map
-        const leadUser = users.get(user.leadUserId);
-        if (leadUser) {
-          const dbId = configIdToDbId.get(user.configId);
-          const leadDbId = configIdToDbId.get(leadUser.configId);
-          if (dbId !== undefined && leadDbId !== undefined) {
-            await dbService.usingDatabase(async (prisma) => {
-              await prisma.users.update({
-                where: { id: dbId },
-                data: { lead_user_id: leadDbId },
-              });
-            });
-          }
-        }
+      loaderIdToDbId.set(user.userId, dbUser.id);
+
+      await prisma.user_notifications.create({
+        data: {
+          user_id: dbUser.id,
+        },
+      });
+    });
+  }
+
+  // Second pass: update lead_user_id relationships
+  for (const user of users.values()) {
+    if (user.leadUserId !== undefined) {
+      const dbId = loaderIdToDbId.get(user.userId);
+      const leadDbId = loaderIdToDbId.get(user.leadUserId);
+      if (dbId !== undefined && leadDbId !== undefined) {
+        await dbService.usingDatabase(async (prisma) => {
+          await prisma.users.update({
+            where: { id: dbId },
+            data: { lead_user_id: leadDbId },
+          });
+        });
       }
     }
   }
 
-  return {
-    reloadAgents,
-  };
+  logService.log(`[AgentRegistrar] Seeded ${users.size} users into database`);
 }
-
-export type AgentRegistrar = Awaited<ReturnType<typeof createAgentRegistrar>>;

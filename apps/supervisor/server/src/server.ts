@@ -19,7 +19,6 @@ import path from "path";
 import { fileURLToPath } from "url";
 import {
   initHubSessions,
-  isHubAvailable,
   ensureAdminUser,
   handleResetPassword,
   deployPrismaMigrations,
@@ -59,19 +58,17 @@ export const startServer: StartServer = async (
     expectedVersion: SUPERVISOR_DB_VERSION,
   });
 
-  initHubSessions();
+  if (!initHubSessions()) {
+    console.error(
+      "[Supervisor] Hub database not found. Cannot start without it.",
+    );
+    process.exit(1);
+  }
 
   // Connect to hub via Socket.IO for agent management
   const hubUrl = hubPort ? `http://localhost:${hubPort}` : process.env.HUB_URL;
   if (hubUrl) {
     initHubConnection(hubUrl);
-  }
-
-  if (!isHubAvailable()) {
-    console.error(
-      "[Supervisor] Hub database not found. Cannot start without it.",
-    );
-    process.exit(1);
   }
 
   await ensureAdminUser(

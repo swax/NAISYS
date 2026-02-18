@@ -1,6 +1,4 @@
 import { Agent, AgentDetailResponse, Host } from "@naisys-supervisor/shared";
-import fs from "fs/promises";
-import path from "path";
 import { usingNaisysDb } from "../database/naisysDatabase.js";
 import { getLogger } from "../logger.js";
 import { cachedForSeconds } from "../utils/cache.js";
@@ -72,7 +70,6 @@ export async function getAgent(
           username: true,
           title: true,
           archived: true,
-          agent_path: true,
           config: true,
           lead_user: { select: { username: true } },
           user_notifications: {
@@ -92,9 +89,6 @@ export async function getAgent(
       return null;
     }
 
-    const config = user.config;
-    const configPath = user.agent_path ?? "";
-
     return {
       id: user.id,
       name: user.username,
@@ -105,8 +99,7 @@ export async function getAgent(
       latestLogId: user.user_notifications?.latest_log_id ?? 0,
       latestMailId: user.user_notifications?.latest_mail_id ?? 0,
       archived: user.archived,
-      config,
-      configPath,
+      config: user.config,
       _links: [],
     };
   } catch (error) {
@@ -140,7 +133,7 @@ export async function updateLeadAgent(
   const agent = await usingNaisysDb(async (prisma) => {
     return prisma.users.findUnique({
       where: { id },
-      select: { agent_path: true },
+      select: { id: true },
     });
   });
 
@@ -148,95 +141,32 @@ export async function updateLeadAgent(
     throw new Error(`Agent with ID ${id} not found`);
   }
 
-  const leadAgent = leadUserId
-    ? await usingNaisysDb(async (prisma) => {
-        return prisma.users.findUnique({
-          where: { id: leadUserId },
-          select: { agent_path: true },
-        });
-      })
-    : null;
+  if (leadUserId) {
+    const leadAgent = await usingNaisysDb(async (prisma) => {
+      return prisma.users.findUnique({
+        where: { id: leadUserId },
+        select: { id: true },
+      });
+    });
 
-  if (leadUserId && !leadAgent) {
-    throw new Error(`Lead agent with ID ${leadUserId} not found`);
+    if (!leadAgent) {
+      throw new Error(`Lead agent with ID ${leadUserId} not found`);
+    }
   }
 
-  // Update DB first — it's the source of truth
   await usingNaisysDb(async (prisma) => {
     await prisma.users.update({
       where: { id },
       data: { lead_user_id: leadUserId },
     });
   });
-
-  // If file-backed, move the YAML file (best-effort)
-  if (agent.agent_path) {
-    try {
-      let newDir: string;
-      if (leadUserId && leadAgent?.agent_path) {
-        // Move into lead agent's subdir: strip extension from lead's path
-        const leadDir = leadAgent.agent_path.replace(/\.[^.]+$/, "");
-        newDir = leadDir;
-      } else {
-        // Find a top-level agent to determine the root agents directory
-        const topLevelAgent = await usingNaisysDb(async (prisma) => {
-          return prisma.users.findFirst({
-            where: {
-              lead_user_id: null,
-              agent_path: { not: null },
-              id: { not: id },
-            },
-            select: { agent_path: true },
-          });
-        });
-
-        if (!topLevelAgent?.agent_path) {
-          throw new Error(
-            "Unable to move the agent file. Recommend re-creating this agent.",
-          );
-        }
-
-        newDir = path.dirname(topLevelAgent.agent_path);
-      }
-
-      const fileName = path.basename(agent.agent_path);
-      const newPath = path.join(newDir, fileName);
-
-      if (newPath !== agent.agent_path) {
-        await fs.mkdir(newDir, { recursive: true });
-        await fs.rename(agent.agent_path, newPath);
-
-        // Move subagent directory too, if it exists
-        const agentSubdir = agent.agent_path.replace(/\.[^.]+$/, "");
-        const newSubdir = newPath.replace(/\.[^.]+$/, "");
-        try {
-          await fs.access(agentSubdir);
-          await fs.rename(agentSubdir, newSubdir);
-        } catch {
-          // No subagent directory to move
-        }
-
-        // Update agent_path in DB
-        await usingNaisysDb(async (prisma) => {
-          await prisma.users.update({
-            where: { id },
-            data: { agent_path: newPath },
-          });
-        });
-      }
-    } catch (err) {
-      getLogger().error(err, "Best-effort file move failed for agent %d", id);
-    }
-  }
 }
 
-export async function deleteAgent(
-  id: number,
-): Promise<{ agentPath: string | null }> {
-  return await usingNaisysDb(async (prisma) => {
+export async function deleteAgent(id: number): Promise<void> {
+  await usingNaisysDb(async (prisma) => {
     const user = await prisma.users.findUnique({
       where: { id },
-      select: { agent_path: true },
+      select: { id: true },
     });
 
     if (!user) {
@@ -260,8 +190,6 @@ export async function deleteAgent(
       });
       await tx.users.delete({ where: { id } });
     });
-
-    return { agentPath: user.agent_path };
   });
 }
 
