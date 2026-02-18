@@ -48,7 +48,11 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   const hasPermission = (permission: string): boolean => {
-    return user?.permissions?.includes(permission) ?? false;
+    return (
+      (user?.permissions?.includes(permission) ||
+        user?.permissions?.includes("supervisor_admin")) ??
+      false
+    );
   };
 
   return (
