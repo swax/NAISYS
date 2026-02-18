@@ -17,12 +17,12 @@ import {
 import { FastifyInstance, FastifyPluginOptions } from "fastify";
 import { requirePermission } from "../auth-middleware.js";
 import {
-  isAgentActive,
   isHubConnected,
   sendAgentStart,
   sendAgentStop,
   sendUserListChanged,
 } from "../services/hubConnectionService.js";
+import { isAgentActive } from "../services/agentHostStatusService.js";
 import {
   archiveAgent,
   deleteAgent,

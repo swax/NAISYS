@@ -141,7 +141,7 @@ function ModelSelect(props: SelectProps & { data: ModelOption[] }) {
       data={effectiveData}
       value={value}
       onSearchChange={setSearch}
-      nothingFoundMessage='Type ${VAR} for a config variable'
+      nothingFoundMessage="Type ${VAR} for a config variable"
     />
   );
 }
