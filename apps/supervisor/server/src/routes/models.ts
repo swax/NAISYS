@@ -1,13 +1,11 @@
 import {
-  getAllImageModelOptions,
-  getAllImageModelsWithCustomFlag,
-  getAllLlmModelOptions,
-  getAllLlmModelsWithCustomFlag,
   LlmModelSchema,
   ImageModelSchema,
+  dbFieldsToLlmModel,
+  dbFieldsToImageModel,
+  type ModelDbRow,
 } from "@naisys/common";
 import type { HateoasAction } from "@naisys/common";
-import { loadCustomModels } from "@naisys/common/dist/customModelsLoader.js";
 import {
   DeleteModelParams,
   DeleteModelParamsSchema,
@@ -27,7 +25,9 @@ import {
 import { FastifyInstance, FastifyPluginOptions } from "fastify";
 import { requirePermission } from "../auth-middleware.js";
 import { API_PREFIX } from "../hateoas.js";
+import { sendModelsChanged } from "../services/hubConnectionService.js";
 import {
+  getAllModelsFromDb,
   saveLlmModel,
   saveImageModel,
   deleteLlmModel,
@@ -82,7 +82,13 @@ export default async function modelsRoutes(
     },
     async (request, reply) => {
       try {
-        const custom = loadCustomModels();
+        const allModels = await getAllModelsFromDb();
+        const llmRows = allModels.filter(
+          (r) => r.type === "llm",
+        ) as ModelDbRow[];
+        const imageRows = allModels.filter(
+          (r) => r.type === "image",
+        ) as ModelDbRow[];
 
         const hasManagePermission =
           request.supervisorUser?.permissions.includes("manage_models") ??
@@ -90,12 +96,19 @@ export default async function modelsRoutes(
         const actions = modelActions(hasManagePermission);
 
         return {
-          llmModels: getAllLlmModelOptions(custom.llmModels),
-          imageModels: getAllImageModelOptions(custom.imageModels),
-          llmModelDetails: getAllLlmModelsWithCustomFlag(custom.llmModels),
-          imageModelDetails: getAllImageModelsWithCustomFlag(
-            custom.imageModels,
-          ),
+          llmModels: llmRows.map((r) => ({ value: r.key, label: r.label })),
+          imageModels: imageRows.map((r) => ({
+            value: r.key,
+            label: r.label,
+          })),
+          llmModelDetails: llmRows.map((r) => ({
+            ...dbFieldsToLlmModel(r),
+            isCustom: r.is_custom,
+          })),
+          imageModelDetails: imageRows.map((r) => ({
+            ...dbFieldsToImageModel(r),
+            isCustom: r.is_custom,
+          })),
           _actions: actions.length > 0 ? actions : undefined,
         };
       } catch (error) {
@@ -130,7 +143,9 @@ export default async function modelsRoutes(
       try {
         // Validate with the full common schema (includes superRefine)
         const parsed = LlmModelSchema.parse(request.body.model);
-        return saveLlmModel(parsed);
+        const result = await saveLlmModel(parsed);
+        sendModelsChanged();
+        return result;
       } catch (error) {
         const message =
           error instanceof Error ? error.message : "Failed to save LLM model";
@@ -161,7 +176,9 @@ export default async function modelsRoutes(
     async (request, reply) => {
       try {
         const parsed = ImageModelSchema.parse(request.body.model);
-        return saveImageModel(parsed);
+        const result = await saveImageModel(parsed);
+        sendModelsChanged();
+        return result;
       } catch (error) {
         const message =
           error instanceof Error ? error.message : "Failed to save image model";
@@ -193,15 +210,18 @@ export default async function modelsRoutes(
     async (request, reply) => {
       try {
         const { type, key } = request.params;
+        let result;
         if (type === "llm") {
-          return deleteLlmModel(key);
+          result = await deleteLlmModel(key);
         } else if (type === "image") {
-          return deleteImageModel(key);
+          result = await deleteImageModel(key);
         } else {
           return reply
             .code(400)
             .send({ success: false, message: "Invalid model type" });
         }
+        sendModelsChanged();
+        return result;
       } catch (error) {
         const message =
           error instanceof Error ? error.message : "Failed to delete model";

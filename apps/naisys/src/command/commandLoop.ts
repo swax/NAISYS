@@ -7,7 +7,7 @@ import { GlobalConfig } from "../globalConfig.js";
 import { HubClient } from "../hub/hubClient.js";
 import { ContextManager } from "../llm/contextManager.js";
 import { ContentSource, LlmRole } from "../llm/llmDtos.js";
-import { LlmApiType } from "../llm/llModels.js";
+import { LlmApiType } from "@naisys/common";
 import { LLMService } from "../llm/llmService.js";
 import { SessionCompactor } from "../llm/sessionCompactor.js";
 import { MailService } from "../mail/mail.js";

@@ -9,7 +9,7 @@ import { AgentConfig } from "../agent/agentConfig.js";
 import { GlobalConfig } from "../globalConfig.js";
 import { HubClient } from "../hub/hubClient.js";
 import { RunService } from "../services/runService.js";
-import { LLModels } from "./llModels.js";
+import { ModelService } from "../services/modelService.js";
 
 export interface LlmModelCosts {
   inputCost: number;
@@ -42,7 +42,7 @@ export interface PeriodInfo {
 export function createCostTracker(
   { globalConfig }: GlobalConfig,
   { agentConfig }: AgentConfig,
-  llModels: LLModels,
+  modelService: ModelService,
   runService: RunService,
   hubClient: HubClient | undefined,
   localUserId: number,
@@ -144,7 +144,7 @@ export function createCostTracker(
     cacheWriteTokens: number = 0,
     cacheReadTokens: number = 0,
   ) {
-    const model = llModels.get(modelKey);
+    const model = modelService.getLlmModel(modelKey);
     const tokenUsage: TokenUsage = {
       inputTokens,
       outputTokens,

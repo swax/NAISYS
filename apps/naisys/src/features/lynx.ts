@@ -12,7 +12,7 @@ import { RegistrableCommand } from "../command/commandRegistry.js";
 import { GlobalConfig } from "../globalConfig.js";
 import { CostTracker } from "../llm/costTracker.js";
 import { LlmMessage, LlmRole } from "../llm/llmDtos.js";
-import { LLModels } from "../llm/llModels.js";
+import { ModelService } from "../services/modelService.js";
 import { LLMService } from "../llm/llmService.js";
 import { OutputService } from "../utils/output.js";
 import * as utilities from "../utils/utilities.js";
@@ -22,7 +22,7 @@ export function createLynxService(
   { agentConfig }: AgentConfig,
   llmService: LLMService,
   costTracker: CostTracker,
-  llModels: LLModels,
+  modelService: ModelService,
   output: OutputService,
 ) {
   // Flag to control LLM-based content reduction - set to false for pagination instead
@@ -314,7 +314,7 @@ export function createLynxService(
     contentTokenSize: number,
     linkPageAsContent?: number,
   ) {
-    const model = llModels.get(agentConfig().webModel);
+    const model = modelService.getLlmModel(agentConfig().webModel);
 
     // For example if context is 16k, and max tokens is 2k, 3k with 1.5x overrun
     // That would be 3k for the current compressed content, 10k for the chunk, and 3k for the output

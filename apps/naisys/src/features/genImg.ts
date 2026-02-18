@@ -1,5 +1,4 @@
-import { getAllImageModels } from "@naisys/common";
-import { loadCustomModels } from "@naisys/common/dist/customModelsLoader.js";
+import type { ImageModel } from "@naisys/common";
 import OpenAI from "openai";
 import path from "path";
 import sharp from "sharp";
@@ -16,6 +15,7 @@ export function createGenImg(
   { agentConfig }: AgentConfig,
   costTracker: CostTracker,
   output: OutputService,
+  getImageModel: (key: string) => ImageModel,
 ) {
   /** genimg "<description>" <filepath>: Generate an image with the description and save it to the file path */
   async function handleCommand(args: string): Promise<string> {
@@ -118,16 +118,3 @@ export function createGenImg(
 }
 
 export type GenImg = ReturnType<typeof createGenImg>;
-
-const customModels = loadCustomModels();
-const imageModels = getAllImageModels(customModels.imageModels);
-
-function getImageModel(key: string) {
-  const model = imageModels.find((m) => m.key === key);
-
-  if (!model) {
-    throw `Error, image model not found: ${key}`;
-  }
-
-  return model;
-}

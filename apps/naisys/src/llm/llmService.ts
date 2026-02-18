@@ -8,7 +8,8 @@ import { GlobalConfig } from "../globalConfig.js";
 import { CommandTools } from "./commandTool.js";
 import { CostTracker } from "./costTracker.js";
 import { LlmMessage, LlmRole } from "./llmDtos.js";
-import { LlmApiType, LLModels } from "./llModels.js";
+import { LlmApiType } from "@naisys/common";
+import { ModelService } from "../services/modelService.js";
 
 type QuerySources = "console" | "write-protection" | "compact" | "lynx";
 
@@ -17,7 +18,7 @@ export function createLLMService(
   { agentConfig }: AgentConfig,
   costTracker: CostTracker,
   tools: CommandTools,
-  llModels: LLModels,
+  modelService: ModelService,
 ) {
   async function query(
     modelKey: string,
@@ -29,7 +30,7 @@ export function createLLMService(
     // Check if spend limit has been reached (throws error if so)
     await costTracker.checkSpendLimit();
 
-    const model = llModels.get(modelKey);
+    const model = modelService.getLlmModel(modelKey);
 
     // Workspaces feature only works with Anthropic models due to cache_control support
     if (
@@ -121,7 +122,7 @@ export function createLLMService(
     apiKey?: string,
     abortSignal?: AbortSignal,
   ): Promise<string[]> {
-    const model = llModels.get(modelKey);
+    const model = modelService.getLlmModel(modelKey);
 
     if (!apiKey) {
       throw `Error, set ${model.apiKeyVar} variable`;
@@ -214,7 +215,7 @@ export function createLLMService(
     apiKey?: string,
     abortSignal?: AbortSignal,
   ): Promise<string[]> {
-    const model = llModels.get(modelKey);
+    const model = modelService.getLlmModel(modelKey);
 
     if (!apiKey) {
       throw `Error, set ${model.apiKeyVar} variable`;
@@ -320,7 +321,7 @@ export function createLLMService(
     apiKey?: string,
     abortSignal?: AbortSignal,
   ): Promise<string[]> {
-    const model = llModels.get(modelKey);
+    const model = modelService.getLlmModel(modelKey);
 
     if (!apiKey) {
       throw `Error, set ${model.apiKeyVar} variable`;
