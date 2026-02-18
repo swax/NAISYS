@@ -17,7 +17,8 @@ import {
   UpdateAgentConfigResponseSchema,
 } from "@naisys-supervisor/shared";
 import { FastifyInstance, FastifyPluginOptions } from "fastify";
-import { requirePermission } from "../auth-middleware.js";
+import { hasPermission, requirePermission } from "../auth-middleware.js";
+import { API_PREFIX } from "../hateoas.js";
 import {
   getAgentConfigById,
   updateAgentConfigById,
@@ -50,7 +51,20 @@ export default async function agentConfigRoutes(
         const { id } = request.params;
         const config = await getAgentConfigById(id);
 
-        return { config };
+        const canManage = hasPermission(request.supervisorUser, "manage_agents");
+        return {
+          config,
+          _actions: canManage
+            ? [
+                {
+                  rel: "update",
+                  href: `${API_PREFIX}/agents/${id}/config`,
+                  method: "PUT" as const,
+                  title: "Update Config",
+                },
+              ]
+            : undefined,
+        };
       } catch (error) {
         request.log.error(error, "Error in GET /agents/:id/config route");
         const errorMessage =

@@ -17,7 +17,7 @@ import {
 import React, { useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { hasAction } from "@naisys/common";
-import { AddAgentDialog } from "../components/AddAgentDialog";
+import { AddAgentDialog } from "../pages/agents/AddAgentDialog";
 import { ROUTER_BASENAME } from "../constants";
 import { useAgentDataContext } from "../contexts/AgentDataContext";
 import { useConnectionStatus } from "../hooks/useConnectionStatus";

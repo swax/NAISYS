@@ -34,6 +34,7 @@ export const UpdateAgentConfigResponseSchema = z.object({
 
 export const GetAgentConfigResponseSchema = z.object({
   config: AgentConfigFileSchema,
+  _actions: z.array(HateoasActionSchema).optional(),
 });
 
 // Inferred types

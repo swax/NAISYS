@@ -1,7 +1,6 @@
 import { ActionIcon, Card, Flex, Group, Stack, Text } from "@mantine/core";
 import { IconCornerUpLeft, IconMailbox, IconSend } from "@tabler/icons-react";
 import React, { useState } from "react";
-import { useSession } from "../../contexts/SessionContext";
 import { MailMessage as MailMessageType } from "../../lib/apiClient";
 
 interface MailMessageProps {
@@ -17,7 +16,6 @@ export const MailMessage: React.FC<MailMessageProps> = ({
   agents,
   onReply,
 }) => {
-  const { isAuthenticated } = useSession();
   const [isExpanded, setIsExpanded] = useState(false);
   const isFromCurrentAgent =
     currentAgent && message.fromUsername === currentAgent;
@@ -94,7 +92,6 @@ export const MailMessage: React.FC<MailMessageProps> = ({
                   variant="subtle"
                   color="blue"
                   size="sm"
-                  disabled={!isAuthenticated}
                   onClick={(e) => {
                     e.stopPropagation();
                     const quotedBody = message.body

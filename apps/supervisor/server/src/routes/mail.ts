@@ -17,7 +17,7 @@ export default async function mailRoutes(
   fastify.post<{ Reply: SendMailResponse }>(
     "/send-mail",
     {
-      preHandler: [requirePermission("manage_agents")],
+      preHandler: [requirePermission("agent_communication")],
       schema: {
         description:
           "Send email with optional attachments. Supports JSON and multipart/form-data",

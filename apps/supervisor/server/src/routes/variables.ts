@@ -14,7 +14,7 @@ import {
   VariablesResponseSchema,
 } from "@naisys-supervisor/shared";
 import { FastifyInstance, FastifyPluginOptions } from "fastify";
-import { requirePermission } from "../auth-middleware.js";
+import { hasPermission, requirePermission } from "../auth-middleware.js";
 import { API_PREFIX } from "../hateoas.js";
 import { sendVariablesChanged } from "../services/hubConnectionService.js";
 import {
@@ -65,9 +65,10 @@ export default async function variablesRoutes(
     async (request, reply) => {
       try {
         const items = await getVariables();
-        const hasManagePermission =
-          request.supervisorUser?.permissions.includes("manage_variables") ??
-          false;
+        const hasManagePermission = hasPermission(
+          request.supervisorUser,
+          "manage_variables",
+        );
         const actions = variableActions(hasManagePermission);
         return {
           items: items.map((v) => ({ key: v.key, value: v.value })),

@@ -1,17 +1,16 @@
-import type { AgentConfigFile } from "@naisys/common";
+import type { AgentConfigFile, HateoasAction } from "@naisys/common";
 import { Alert, Button, Group, Loader, Stack, Text } from "@mantine/core";
 import { IconEdit } from "@tabler/icons-react";
 import React, { useCallback, useEffect, useState } from "react";
 import { useBlocker, useParams } from "react-router-dom";
-import { AgentConfigForm } from "../../components/AgentConfigForm";
+import { AgentConfigForm } from "./AgentConfigForm";
+import { hasAction } from "@naisys/common";
 import { useAgentDataContext } from "../../contexts/AgentDataContext";
-import { useSession } from "../../contexts/SessionContext";
 import { getAgentConfig, updateAgentConfig } from "../../lib/apiAgents";
 import { api, apiEndpoints, type ModelsResponse } from "../../lib/apiClient";
 
 export const AgentConfig: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const { isAuthenticated } = useSession();
   const { agents } = useAgentDataContext();
 
   const agentId = id ? Number(id) : null;
@@ -28,6 +27,7 @@ export const AgentConfig: React.FC = () => {
   const [imageModelOptions, setImageModelOptions] = useState<
     { value: string; label: string }[]
   >([]);
+  const [actions, setActions] = useState<HateoasAction[] | undefined>();
 
   // Block in-app navigation while editing
   const blocker = useBlocker(isEditing);
@@ -79,6 +79,7 @@ export const AgentConfig: React.FC = () => {
       try {
         const data = await getAgentConfig(agentId);
         setConfig(data.config);
+        setActions(data._actions);
       } catch (err) {
         console.error("Error fetching agent config:", err);
         setError("An error occurred while loading the configuration");
@@ -152,10 +153,9 @@ export const AgentConfig: React.FC = () => {
   return (
     <Stack p="md">
       <Group>
-        {!isEditing && (
+        {!isEditing && hasAction(actions, "update") && (
           <Button
             color="blue"
-            disabled={!isAuthenticated}
             leftSection={<IconEdit size={16} />}
             onClick={handleEdit}
           >

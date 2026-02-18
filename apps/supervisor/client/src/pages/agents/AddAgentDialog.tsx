@@ -1,6 +1,6 @@
 import { Button, Group, Modal, Stack, TextInput } from "@mantine/core";
 import React, { useState } from "react";
-import { createAgent } from "../lib/apiAgents";
+import { createAgent } from "../../lib/apiAgents";
 
 interface AddAgentDialogProps {
   opened: boolean;

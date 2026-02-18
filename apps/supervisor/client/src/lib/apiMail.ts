@@ -60,9 +60,10 @@ export const sendMail = async (
       return result;
     } else {
       // No files, use regular JSON request
+      const { files: _files, ...body } = mailData;
       return await api.post<SendMailRequest, SendMailResponse>(
         apiEndpoints.sendMail,
-        mailData,
+        body,
       );
     }
   } catch (error) {

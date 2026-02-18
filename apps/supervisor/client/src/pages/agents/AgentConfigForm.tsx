@@ -18,7 +18,7 @@ import {
 import { useForm } from "@mantine/form";
 import { IconCheck, IconX } from "@tabler/icons-react";
 import { useMemo, useState } from "react";
-import { zodResolver } from "../lib/zod-resolver";
+import { zodResolver } from "../../lib/zod-resolver";
 
 interface ModelOption {
   value: string;

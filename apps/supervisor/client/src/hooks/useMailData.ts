@@ -1,3 +1,4 @@
+import type { HateoasAction } from "@naisys/common";
 import { useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useState } from "react";
 import { getMailData, MailDataParams } from "../lib/apiMail";
@@ -7,6 +8,7 @@ import { MailMessage } from "../lib/apiClient";
 const mailCache = new Map<number, MailMessage[]>();
 const updatedSinceCache = new Map<number, string | undefined>();
 const totalCache = new Map<number, number>();
+let actionsCache: HateoasAction[] | undefined = undefined;
 
 export const useMailData = (agentId: number, enabled: boolean = true) => {
   // Version counter to trigger re-renders when cache updates
@@ -39,6 +41,9 @@ export const useMailData = (agentId: number, enabled: boolean = true) => {
 
   // Merge new data when it arrives
   useEffect(() => {
+    if (query.data?._actions) {
+      actionsCache = query.data._actions;
+    }
     if (query.data?.success && query.data.data) {
       const updatedMail = query.data.data.mail;
       const total = query.data.data.total;
@@ -95,6 +100,7 @@ export const useMailData = (agentId: number, enabled: boolean = true) => {
   return {
     mail,
     total,
+    actions: actionsCache,
     isLoading: query.isLoading,
     error: query.error,
   };
