@@ -26,24 +26,27 @@ export function createGlobalConfig(hubClient?: HubClient) {
         rejectConfig = reject;
       });
 
-      hubClient.registerEvent(HubEvents.CONFIG_UPDATE, async (data: unknown) => {
-        try {
-          const response = ConfigResponseSchema.parse(data);
-          if (!response.success || !response.config) {
-            rejectConfig(
-              new Error(response.error || "Failed to get config from hub"),
-            );
-            return;
-          }
+      hubClient.registerEvent(
+        HubEvents.CONFIG_UPDATE,
+        async (data: unknown) => {
+          try {
+            const response = ConfigResponseSchema.parse(data);
+            if (!response.success || !response.config) {
+              rejectConfig(
+                new Error(response.error || "Failed to get config from hub"),
+              );
+              return;
+            }
 
-          cachedConfig = await appendClientConfig(response.config);
-          resolveConfig();
-        } catch (error) {
-          rejectConfig(
-            error instanceof Error ? error : new Error(String(error)),
-          );
-        }
-      });
+            cachedConfig = await appendClientConfig(response.config);
+            resolveConfig();
+          } catch (error) {
+            rejectConfig(
+              error instanceof Error ? error : new Error(String(error)),
+            );
+          }
+        },
+      );
     } else {
       const { parsed: dotenvVars } = dotenv.config({ quiet: true });
       const clientConfig = buildClientConfig(dotenvVars ?? {});

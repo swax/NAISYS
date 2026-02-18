@@ -5,21 +5,22 @@ import dotenv from "dotenv";
 import { HubServerLog } from "../services/hubServerLog.js";
 import { NaisysServer } from "../services/naisysServer.js";
 
-/** Pushes the global config to NAISYS instances when they connect */
+/** Pushes the global config to NAISYS instances when they connect or when variables change */
 export async function createHubConfigService(
   naisysServer: NaisysServer,
   dbService: DatabaseService,
   logService: HubServerLog,
 ) {
-  // Seed DB from .env on first run, then always read from DB
-  const variableMap = await dbService.usingDatabase(async (prisma) => {
+  let cachedConfig: ConfigResponse = {
+    success: false,
+    error: "Not yet loaded",
+  };
+
+  // Seed DB from .env on first run
+  await dbService.usingDatabase(async (prisma) => {
     const existing = await prisma.variables.findMany();
     if (existing.length > 0) {
-      const map: Record<string, string> = {};
-      for (const row of existing) {
-        map[row.key] = row.value;
-      }
-      return map;
+      return;
     }
 
     // First run: seed from .env file only (not all of process.env)
@@ -36,30 +37,98 @@ export async function createHubConfigService(
         })),
       });
     }
-    return fileConfig.variableMap;
   });
 
-  // Build full config using DB-sourced env vars
-  const clientConfig = buildClientConfig(variableMap);
+  /** Read variables from DB and build a ConfigResponse */
+  async function buildConfigPayload(): Promise<ConfigResponse> {
+    const variableMap = await dbService.usingDatabase(async (prisma) => {
+      const rows = await prisma.variables.findMany();
+      const map: Record<string, string> = {};
+      for (const row of rows) {
+        map[row.key] = row.value;
+      }
+      return map;
+    });
 
-  naisysServer.registerEvent(HubEvents.CLIENT_CONNECTED, (hostId: number) => {
+    cachedConfig = {
+      success: true,
+      config: buildClientConfig(variableMap),
+    };
+    return cachedConfig;
+  }
+
+  /** Broadcast current config to all connected clients */
+  async function broadcastConfig() {
     try {
+      const payload = await buildConfigPayload();
+      const clients = naisysServer.getConnectedClients();
+
       logService.log(
-        `[HubConfigService] Pushing config to naisys instance ${hostId}`,
+        `[HubConfigService] Broadcasting config to ${clients.length} clients`,
       );
 
-      naisysServer.sendMessage<ConfigResponse>(hostId, HubEvents.CONFIG_UPDATE, {
-        success: true,
-        config: clientConfig,
-      });
+      for (const connection of clients) {
+        naisysServer.sendMessage<ConfigResponse>(
+          connection.getHostId(),
+          HubEvents.CONFIG_UPDATE,
+          payload,
+        );
+      }
     } catch (error) {
       logService.error(
-        `[HubConfigService] Error sending config to naisys instance ${hostId}: ${error}`,
+        `[HubConfigService] Error broadcasting config: ${error}`,
       );
-      naisysServer.sendMessage<ConfigResponse>(hostId, HubEvents.CONFIG_UPDATE, {
-        success: false,
-        error: String(error),
-      });
     }
-  });
+  }
+
+  // Push config to newly connected clients
+  naisysServer.registerEvent(
+    HubEvents.CLIENT_CONNECTED,
+    async (hostId: number) => {
+      try {
+        const payload = await buildConfigPayload();
+
+        logService.log(
+          `[HubConfigService] Pushing config to naisys instance ${hostId}`,
+        );
+
+        naisysServer.sendMessage<ConfigResponse>(
+          hostId,
+          HubEvents.CONFIG_UPDATE,
+          payload,
+        );
+      } catch (error) {
+        logService.error(
+          `[HubConfigService] Error sending config to naisys instance ${hostId}: ${error}`,
+        );
+        naisysServer.sendMessage<ConfigResponse>(
+          hostId,
+          HubEvents.CONFIG_UPDATE,
+          {
+            success: false,
+            error: String(error),
+          },
+        );
+      }
+    },
+  );
+
+  // Broadcast config to all clients when variables change
+  naisysServer.registerEvent(
+    HubEvents.VARIABLES_CHANGED,
+    async (_hostId: number) => {
+      await broadcastConfig();
+    },
+  );
+
+  // Build initial config so it's available immediately
+  await buildConfigPayload();
+
+  return {
+    getConfig: () => cachedConfig,
+  };
 }
+
+export type HubConfigService = Awaited<
+  ReturnType<typeof createHubConfigService>
+>;

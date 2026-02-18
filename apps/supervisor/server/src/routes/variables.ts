@@ -16,6 +16,7 @@ import {
 import { FastifyInstance, FastifyPluginOptions } from "fastify";
 import { requirePermission } from "../auth-middleware.js";
 import { API_PREFIX } from "../hateoas.js";
+import { sendVariablesChanged } from "../services/hubConnectionService.js";
 import {
   getVariables,
   saveVariable,
@@ -106,7 +107,13 @@ export default async function variablesRoutes(
       try {
         const { key } = request.params;
         const { value } = request.body;
-        return await saveVariable(key, value, request.supervisorUser!.uuid);
+        const result = await saveVariable(
+          key,
+          value,
+          request.supervisorUser!.uuid,
+        );
+        sendVariablesChanged();
+        return result;
       } catch (error) {
         const message =
           error instanceof Error ? error.message : "Failed to save variable";
@@ -137,7 +144,9 @@ export default async function variablesRoutes(
     async (request, reply) => {
       try {
         const { key } = request.params;
-        return await deleteVariable(key);
+        const result = await deleteVariable(key);
+        sendVariablesChanged();
+        return result;
       } catch (error) {
         const message =
           error instanceof Error ? error.message : "Failed to delete variable";
