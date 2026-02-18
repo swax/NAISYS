@@ -174,7 +174,7 @@ export const startServer: StartServer = async (
       "x-tagGroups": [
         {
           name: "General",
-          tags: ["Discovery", "Authentication", "Users", "Settings", "Status"],
+          tags: ["Discovery", "Authentication", "Users", "Status"],
         },
         { name: "Agents", tags: ["Agents", "Runs", "Mail", "Hosts"] },
         {

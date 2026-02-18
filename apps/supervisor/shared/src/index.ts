@@ -7,7 +7,6 @@ export * from "./mail-types.js";
 export * from "./runs-types.js";
 export * from "./auth-types.js";
 export * from "./user-types.js";
-export * from "./settings-types.js";
 export * from "./status-types.js";
 export * from "./models-types.js";
 export * from "./variables-types.js";
