@@ -188,7 +188,7 @@ Uses Socket.IO's native event + acknowledgement pattern over the existing WebSoc
 // Client side: hubClient.sendRequest<T>(event, payload) returns Promise<T>
 // Uses Socket.IO's built-in acknowledgement callbacks for correlation
 const response = await hubClient.sendRequest<UserListResponse>(
-  HubEvents.USER_LIST,
+  HubEvents.USERS_UPDATED,
   {},
 );
 ```

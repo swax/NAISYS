@@ -51,7 +51,7 @@ export async function createHubModelsService(
       for (const connection of clients) {
         naisysServer.sendMessage<ModelsResponse>(
           connection.getHostId(),
-          HubEvents.MODELS,
+          HubEvents.MODELS_UPDATED,
           payload,
         );
       }
@@ -73,17 +73,21 @@ export async function createHubModelsService(
 
         naisysServer.sendMessage<ModelsResponse>(
           hostId,
-          HubEvents.MODELS,
+          HubEvents.MODELS_UPDATED,
           payload,
         );
       } catch (error) {
         logService.error(
           `[Hub:Models] Error querying models for naisys instance ${hostId}: ${error}`,
         );
-        naisysServer.sendMessage<ModelsResponse>(hostId, HubEvents.MODELS, {
-          success: false,
-          error: String(error),
-        });
+        naisysServer.sendMessage<ModelsResponse>(
+          hostId,
+          HubEvents.MODELS_UPDATED,
+          {
+            success: false,
+            error: String(error),
+          },
+        );
       }
     },
   );

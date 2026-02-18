@@ -241,7 +241,9 @@ export const startServer: StartServer = async (
         break;
       } catch (err: any) {
         if (err.code === "EADDRINUSE") {
-          console.log(`[Supervisor] Port ${port} is in use, trying port ${port + 1}...`);
+          console.log(
+            `[Supervisor] Port ${port} is in use, trying port ${port + 1}...`,
+          );
           port++;
           attempts++;
           if (attempts >= maxAttempts) {

@@ -1,6 +1,6 @@
 import {
   HEARTBEAT_INTERVAL_MS,
-  HeartbeatStatusSchema,
+  AgentsStatusSchema,
   HubEvents,
 } from "@naisys/hub-protocol";
 import { IAgentManager } from "../agent/agentManagerInterface.js";
@@ -12,10 +12,10 @@ export function createHeartbeatService(
   agentManager: IAgentManager,
   userService: UserService,
 ) {
-  // In hub mode, listen for heartbeat status pushes from the hub
+  // In hub mode, listen for agent status pushes from the hub
   if (hubClient) {
-    hubClient.registerEvent(HubEvents.HEARTBEAT_STATUS, (data: unknown) => {
-      const parsed = HeartbeatStatusSchema.parse(data);
+    hubClient.registerEvent(HubEvents.AGENTS_STATUS, (data: unknown) => {
+      const parsed = AgentsStatusSchema.parse(data);
       userService.setActiveUsers(parsed.hostActiveAgents);
     });
 
