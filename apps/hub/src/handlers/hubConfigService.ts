@@ -48,7 +48,7 @@ export async function createHubConfigService(
         `[HubConfigService] Pushing config to naisys instance ${hostId}`,
       );
 
-      naisysServer.sendMessage<ConfigResponse>(hostId, HubEvents.CONFIG, {
+      naisysServer.sendMessage<ConfigResponse>(hostId, HubEvents.CONFIG_UPDATE, {
         success: true,
         config: clientConfig,
       });
@@ -56,7 +56,7 @@ export async function createHubConfigService(
       logService.error(
         `[HubConfigService] Error sending config to naisys instance ${hostId}: ${error}`,
       );
-      naisysServer.sendMessage<ConfigResponse>(hostId, HubEvents.CONFIG, {
+      naisysServer.sendMessage<ConfigResponse>(hostId, HubEvents.CONFIG_UPDATE, {
         success: false,
         error: String(error),
       });

@@ -26,7 +26,7 @@ export function createGlobalConfig(hubClient?: HubClient) {
         rejectConfig = reject;
       });
 
-      hubClient.registerEvent(HubEvents.CONFIG, async (data: unknown) => {
+      hubClient.registerEvent(HubEvents.CONFIG_UPDATE, async (data: unknown) => {
         try {
           const response = ConfigResponseSchema.parse(data);
           if (!response.success || !response.config) {
