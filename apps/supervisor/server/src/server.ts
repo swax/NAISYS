@@ -199,6 +199,10 @@ export const startServer: StartServer = async (
           tags: ["Discovery", "Authentication", "Users", "Settings", "Status"],
         },
         { name: "Agents", tags: ["Agents", "Runs", "Mail", "Hosts"] },
+        {
+          name: "Configuration",
+          tags: ["Models", "Variables"],
+        },
       ],
     };
   });

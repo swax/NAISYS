@@ -110,12 +110,7 @@ export const startHub: StartHub = async (
     );
 
     // Register hub cost service for cost_write events from NAISYS instances
-    createHubCostService(
-      naisysServer,
-      dbService,
-      logService,
-      heartbeatService,
-    );
+    createHubCostService(naisysServer, dbService, logService, heartbeatService);
 
     // Start listening
     await new Promise<void>((resolve, reject) => {

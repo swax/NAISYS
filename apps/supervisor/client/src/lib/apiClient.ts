@@ -10,6 +10,7 @@ import type {
   ContextLogResponse,
   CreateAgentConfigResponse,
   DeleteModelResponse,
+  DeleteVariableResponse,
   GetAgentConfigResponse,
   HostListResponse,
   ImageModelDetail,
@@ -23,12 +24,14 @@ import type {
   RunsDataResponse,
   RunSession,
   SaveModelResponse,
+  SaveVariableResponse,
   SendMailRequest,
   SendMailResponse,
   SettingsRequest,
   SettingsResponse,
   StatusResponse,
   UpdateAgentConfigResponse,
+  VariablesResponse,
 } from "@naisys-supervisor/shared";
 
 export const API_BASE = "/api/supervisor";
@@ -45,6 +48,7 @@ export type {
   ContextLogResponse,
   CreateAgentConfigResponse,
   DeleteModelResponse,
+  DeleteVariableResponse,
   GetAgentConfigResponse,
   HostListResponse,
   ImageModelDetail,
@@ -58,12 +62,14 @@ export type {
   RunsDataResponse,
   RunSession,
   SaveModelResponse,
+  SaveVariableResponse,
   SendMailRequest,
   SendMailResponse,
   SettingsRequest,
   SettingsResponse,
   StatusResponse,
   UpdateAgentConfigResponse,
+  VariablesResponse,
 };
 
 export const api = {
@@ -145,5 +151,8 @@ export const apiEndpoints = {
   saveImageModel: "/models/image",
   deleteModel: (type: "llm" | "image", key: string) =>
     `/models/${type}/${encodeURIComponent(key)}`,
+  variables: "/variables",
+  saveVariable: (key: string) => `/variables/${encodeURIComponent(key)}`,
+  deleteVariable: (key: string) => `/variables/${encodeURIComponent(key)}`,
   sendMail: "/send-mail",
 };

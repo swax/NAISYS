@@ -1,6 +1,7 @@
 import { buildClientConfig } from "@naisys/common";
 import type { DatabaseService } from "@naisys/database";
 import { ConfigResponse, HubEvents } from "@naisys/hub-protocol";
+import dotenv from "dotenv";
 import { HubServerLog } from "../services/hubServerLog.js";
 import { NaisysServer } from "../services/naisysServer.js";
 
@@ -21,12 +22,18 @@ export async function createHubConfigService(
       return map;
     }
 
-    // First run: seed from process.env (which includes .env via dotenv)
-    const fileConfig = buildClientConfig(process.env);
+    // First run: seed from .env file only (not all of process.env)
+    const { parsed: dotenvVars } = dotenv.config({ quiet: true });
+    const fileConfig = buildClientConfig(dotenvVars ?? {});
     const entries = Object.entries(fileConfig.variableMap);
     if (entries.length > 0) {
       await prisma.variables.createMany({
-        data: entries.map(([key, value]) => ({ key, value })),
+        data: entries.map(([key, value]) => ({
+          key,
+          value,
+          created_by: "hub",
+          updated_by: "hub",
+        })),
       });
     }
     return fileConfig.variableMap;

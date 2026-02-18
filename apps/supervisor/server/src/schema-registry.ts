@@ -13,6 +13,7 @@ import {
   SettingsRequestSchema,
   SaveLlmModelRequestSchema,
   SaveImageModelRequestSchema,
+  SaveVariableRequestSchema,
 } from "@naisys-supervisor/shared";
 
 export const schemaRegistry: Record<string, $ZodType> = {
@@ -28,6 +29,7 @@ export const schemaRegistry: Record<string, $ZodType> = {
   SaveSettings: SettingsRequestSchema,
   SaveLlmModel: SaveLlmModelRequestSchema,
   SaveImageModel: SaveImageModelRequestSchema,
+  SaveVariable: SaveVariableRequestSchema,
 };
 
 // Register schemas with Zod global registry for OpenAPI components/schemas population

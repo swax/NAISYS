@@ -16,6 +16,7 @@ enum Permission {
   supervisor_admin
   manage_agents
   manage_models
+  manage_variables
 }
 
 model User {

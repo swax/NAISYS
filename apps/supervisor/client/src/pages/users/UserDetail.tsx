@@ -26,7 +26,13 @@ import {
   revokePermission,
 } from "../../lib/apiUsers";
 
-const ALL_PERMISSIONS = ["supervisor_admin", "manage_agents", "manage_models"];
+// Keep in sync with PermissionEnum in shared/src/user-types.ts
+const ALL_PERMISSIONS = [
+  "supervisor_admin",
+  "manage_agents",
+  "manage_models",
+  "manage_variables",
+];
 
 export const UserDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
