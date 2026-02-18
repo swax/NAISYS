@@ -8,3 +8,4 @@ export * from "./hateoas-types.js";
 export * from "./hateoas.js";
 export * from "./sleep.js";
 export * from "./modelTypes.js";
+export * from "./errorHandler.js";

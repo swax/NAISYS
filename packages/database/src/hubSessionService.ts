@@ -31,7 +31,6 @@ export function initHubSessions(): boolean {
   if (!existsSync(dbPath)) return false;
 
   prisma = createPrismaClient(dbPath);
-  console.log("[Hub] Cross-app sessions enabled");
   return true;
 }
 

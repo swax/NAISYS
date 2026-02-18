@@ -5,8 +5,7 @@ import cors from "@fastify/cors";
 import rateLimit from "@fastify/rate-limit";
 import staticFiles from "@fastify/static";
 import swagger from "@fastify/swagger";
-import Fastify from "fastify";
-import fp from "fastify-plugin";
+import Fastify, { type FastifyPluginAsync } from "fastify";
 import {
   jsonSchemaTransform,
   jsonSchemaTransformObject,
@@ -19,7 +18,7 @@ import { fileURLToPath } from "url";
 import { registerApiReference } from "./api-reference.js";
 import { registerAuthMiddleware } from "./auth-middleware.js";
 import { ERP_DB_VERSION, erpDbPath } from "./dbConfig.js";
-import { registerErrorHandler } from "./error-handler.js";
+import { commonErrorHandler } from "@naisys/common";
 import {
   initHubSessions,
   ensureAdminUser,
@@ -42,7 +41,7 @@ const __dirname = path.dirname(__filename);
  * Fastify plugin that registers ERP routes and static files.
  * Can be used standalone or registered inside another Fastify app (e.g. supervisor).
  */
-export const erpPlugin = fp(async (fastify) => {
+export const erpPlugin: FastifyPluginAsync = async (fastify) => {
   const isProd = process.env.NODE_ENV === "production";
 
   // Cookie plugin (guard for supervisor embedding)
@@ -67,7 +66,7 @@ export const erpPlugin = fp(async (fastify) => {
 
   initHubSessions();
 
-  registerErrorHandler(fastify);
+  fastify.setErrorHandler(commonErrorHandler);
   registerAuthMiddleware(fastify);
 
   // API routes under /api/erp prefix
@@ -114,7 +113,7 @@ export const erpPlugin = fp(async (fastify) => {
       });
     });
   }
-});
+};
 
 async function startServer() {
   const isProd = process.env.NODE_ENV === "production";
