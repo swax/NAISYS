@@ -405,6 +405,9 @@ export const HubEvents = {
   // User list changed (supervisor -> hub, fire-and-forget, triggers broadcast)
   USER_LIST_CHANGED: "user_list_changed",
 
+  // Variables changed (supervisor -> hub, fire-and-forget, triggers config broadcast)
+  VARIABLES_CHANGED: "variables_changed",
+
   // Log events (NAISYS -> hub, fire-and-forget)
   LOG_WRITE: "log_write",
 

@@ -231,6 +231,17 @@ export function sendUserListChanged(): void {
   socket.emit(HubEvents.USER_LIST_CHANGED);
 }
 
+export function sendVariablesChanged(): void {
+  if (!socket || !connected) {
+    console.warn(
+      "[HubConnection] Not connected to hub, cannot send variables changed",
+    );
+    return;
+  }
+
+  socket.emit(HubEvents.VARIABLES_CHANGED);
+}
+
 export function sendAgentStop(
   userId: number,
   reason: string,

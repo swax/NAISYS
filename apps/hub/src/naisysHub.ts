@@ -71,7 +71,11 @@ export const startHub: StartHub = async (
     );
 
     // Register hub config service for config_get requests from NAISYS instances
-    await createHubConfigService(naisysServer, dbService, logService);
+    const configService = await createHubConfigService(
+      naisysServer,
+      dbService,
+      logService,
+    );
 
     // Register hub user service for user_list requests from NAISYS instances
     createHubUserService(naisysServer, dbService, logService);
@@ -110,7 +114,13 @@ export const startHub: StartHub = async (
     );
 
     // Register hub cost service for cost_write events from NAISYS instances
-    createHubCostService(naisysServer, dbService, logService, heartbeatService);
+    createHubCostService(
+      naisysServer,
+      dbService,
+      logService,
+      heartbeatService,
+      configService,
+    );
 
     // Start listening
     await new Promise<void>((resolve, reject) => {
