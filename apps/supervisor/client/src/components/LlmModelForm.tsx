@@ -20,7 +20,7 @@ interface LlmFormValues {
   apiType: string;
   maxTokens: number | string;
   baseUrl: string;
-  keyEnvVar: string;
+  apiKeyVar: string;
   inputCost: number | string;
   outputCost: number | string;
   cacheWriteCost: number | string;
@@ -34,7 +34,7 @@ function transformFormValues(values: LlmFormValues): Record<string, unknown> {
     versionName: values.versionName,
     apiType: values.apiType,
     maxTokens: values.maxTokens,
-    keyEnvVar: values.keyEnvVar,
+    apiKeyVar: values.apiKeyVar,
     inputCost: typeof values.inputCost === "number" ? values.inputCost : 0,
     outputCost: typeof values.outputCost === "number" ? values.outputCost : 0,
   };
@@ -76,7 +76,7 @@ export const LlmModelForm: React.FC<LlmModelFormProps> = ({
       apiType: model?.apiType ?? LlmApiType.OpenAI,
       maxTokens: model?.maxTokens ?? 128000,
       baseUrl: model?.baseUrl ?? "",
-      keyEnvVar: model?.keyEnvVar ?? "",
+      apiKeyVar: model?.apiKeyVar ?? "",
       inputCost: model?.inputCost ?? 0,
       outputCost: model?.outputCost ?? 0,
       cacheWriteCost: model?.cacheWriteCost ?? ("" as number | string),
@@ -135,10 +135,10 @@ export const LlmModelForm: React.FC<LlmModelFormProps> = ({
           {...form.getInputProps("baseUrl")}
         />
         <TextInput
-          label="Key Env Var"
-          description="Environment variable name for the API key"
+          label="API Key Var"
+          description="Variable name for the API key"
           disabled={readOnly}
-          {...form.getInputProps("keyEnvVar")}
+          {...form.getInputProps("apiKeyVar")}
         />
         <NumberInput
           label="Max Tokens"

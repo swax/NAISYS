@@ -41,8 +41,8 @@ export function createLLMService(
       );
     }
 
-    const apiKey = model.keyEnvVar
-      ? globalConfig().variableMap[model.keyEnvVar]
+    const apiKey = model.apiKeyVar
+      ? globalConfig().variableMap[model.apiKeyVar]
       : undefined;
 
     if (model.apiType === LlmApiType.None) {
@@ -124,7 +124,7 @@ export function createLLMService(
     const model = llModels.get(modelKey);
 
     if (!apiKey) {
-      throw `Error, set ${model.keyEnvVar} env var`;
+      throw `Error, set ${model.apiKeyVar} variable`;
     }
 
     const openAI = new OpenAI({
@@ -217,7 +217,7 @@ export function createLLMService(
     const model = llModels.get(modelKey);
 
     if (!apiKey) {
-      throw `Error, set ${model.keyEnvVar} env var`;
+      throw `Error, set ${model.apiKeyVar} variable`;
     }
 
     const ai = new GoogleGenAI({
@@ -323,7 +323,7 @@ export function createLLMService(
     const model = llModels.get(modelKey);
 
     if (!apiKey) {
-      throw `Error, set ${model.keyEnvVar} env var`;
+      throw `Error, set ${model.apiKeyVar} variable`;
     }
 
     const anthropic = new Anthropic({

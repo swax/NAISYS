@@ -55,12 +55,12 @@ export function createGenImg(
 
     const model = getImageModel(imageModelName);
 
-    const apiKey = model.keyEnvVar
-      ? globalConfig().variableMap[model.keyEnvVar]
+    const apiKey = model.apiKeyVar
+      ? globalConfig().variableMap[model.apiKeyVar]
       : undefined;
 
     if (!apiKey) {
-      throw `Error, set ${model.keyEnvVar} env var`;
+      throw `Error, set ${model.apiKeyVar} variable`;
     }
 
     const openai = new OpenAI({

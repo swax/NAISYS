@@ -19,7 +19,7 @@ interface ImageFormValues {
   versionName: string;
   size: string;
   baseUrl: string;
-  keyEnvVar: string;
+  apiKeyVar: string;
   cost: number | string;
   quality: string;
 }
@@ -30,7 +30,7 @@ function transformFormValues(values: ImageFormValues): Record<string, unknown> {
     label: values.label,
     versionName: values.versionName,
     size: values.size,
-    keyEnvVar: values.keyEnvVar,
+    apiKeyVar: values.apiKeyVar,
     cost: typeof values.cost === "number" ? values.cost : 0,
   };
   if (values.baseUrl) result.baseUrl = values.baseUrl;
@@ -62,7 +62,7 @@ export const ImageModelForm: React.FC<ImageModelFormProps> = ({
       versionName: model?.versionName ?? "",
       size: model?.size ?? "1024x1024",
       baseUrl: model?.baseUrl ?? "",
-      keyEnvVar: model?.keyEnvVar ?? "",
+      apiKeyVar: model?.apiKeyVar ?? "",
       cost: model?.cost ?? 0,
       quality: model?.quality ?? "",
     },
@@ -119,10 +119,10 @@ export const ImageModelForm: React.FC<ImageModelFormProps> = ({
           {...form.getInputProps("baseUrl")}
         />
         <TextInput
-          label="Key Env Var"
-          description="Environment variable name for the API key"
+          label="API Key Var"
+          description="Variable name for the API key"
           disabled={readOnly}
-          {...form.getInputProps("keyEnvVar")}
+          {...form.getInputProps("apiKeyVar")}
         />
         <Select
           label="Quality"

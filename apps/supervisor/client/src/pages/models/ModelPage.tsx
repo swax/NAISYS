@@ -330,7 +330,7 @@ function LlmReadOnlyTable({
     apiType: string;
     maxTokens: number;
     baseUrl?: string;
-    keyEnvVar: string;
+    apiKeyVar: string;
     inputCost: number;
     outputCost: number;
     cacheWriteCost?: number;
@@ -343,7 +343,7 @@ function LlmReadOnlyTable({
     ["Version Name", model.versionName],
     ["API Type", model.apiType],
     ["Base URL", model.baseUrl || "\u2014"],
-    ["Key Env Var", model.keyEnvVar || "\u2014"],
+    ["API Key Var", model.apiKeyVar || "\u2014"],
     ["Max Tokens", model.maxTokens.toLocaleString()],
     ["Input Cost (per 1M tokens)", `$${model.inputCost}`],
     ["Output Cost (per 1M tokens)", `$${model.outputCost}`],
@@ -380,7 +380,7 @@ function ImageReadOnlyTable({
     versionName: string;
     size: string;
     baseUrl?: string;
-    keyEnvVar: string;
+    apiKeyVar: string;
     cost: number;
     quality?: string;
   };
@@ -391,7 +391,7 @@ function ImageReadOnlyTable({
     ["Version Name", model.versionName],
     ["Size", model.size],
     ["Base URL", model.baseUrl || "\u2014"],
-    ["Key Env Var", model.keyEnvVar || "\u2014"],
+    ["API Key Var", model.apiKeyVar || "\u2014"],
     ["Cost (per image)", `$${model.cost}`],
   ];
   if (model.quality) {
