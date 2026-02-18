@@ -1,5 +1,4 @@
 import type { AgentConfigFile } from "@naisys/common";
-import { LlmModelOptions, ImageModelOptions } from "@naisys/common";
 import { Alert, Button, Group, Loader, Stack, Text } from "@mantine/core";
 import { IconEdit } from "@tabler/icons-react";
 import React, { useCallback, useEffect, useState } from "react";
@@ -25,10 +24,10 @@ export const AgentConfig: React.FC = () => {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [llmModelOptions, setLlmModelOptions] = useState<
     { value: string; label: string }[]
-  >(LlmModelOptions.map((o) => ({ value: o.value, label: o.label })));
+  >([]);
   const [imageModelOptions, setImageModelOptions] = useState<
     { value: string; label: string }[]
-  >(ImageModelOptions.map((o) => ({ value: o.value, label: o.label })));
+  >([]);
 
   // Block in-app navigation while editing
   const blocker = useBlocker(isEditing);

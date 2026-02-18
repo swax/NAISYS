@@ -8,6 +8,7 @@ import {
   Group,
   NumberInput,
   Select,
+  type SelectProps,
   Stack,
   Switch,
   Text,
@@ -16,6 +17,7 @@ import {
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { IconCheck, IconX } from "@tabler/icons-react";
+import { useMemo, useState } from "react";
 import { zodResolver } from "../lib/zod-resolver";
 
 interface ModelOption {
@@ -106,6 +108,44 @@ function desc(field: string): string | undefined {
   return fieldDescriptions[field];
 }
 
+/** Select that allows typing ${VAR} template variables in addition to picking from options. */
+function ModelSelect(props: SelectProps & { data: ModelOption[] }) {
+  const { data, value, ...rest } = props;
+  const [search, setSearch] = useState("");
+
+  const effectiveData = useMemo(() => {
+    const result = [...data];
+    // Show current value even if not in options (e.g. a saved template variable)
+    if (
+      typeof value === "string" &&
+      value &&
+      !result.some((o) => o.value === value)
+    ) {
+      result.unshift({ value, label: value });
+    }
+    // Allow creating a template variable while typing
+    if (
+      search.startsWith("${") &&
+      search.length > 2 &&
+      !result.some((o) => o.value === search)
+    ) {
+      result.push({ value: search, label: search });
+    }
+    return result;
+  }, [data, value, search]);
+
+  return (
+    <Select
+      {...rest}
+      searchable
+      data={effectiveData}
+      value={value}
+      onSearchChange={setSearch}
+      nothingFoundMessage='Type ${VAR} for a config variable'
+    />
+  );
+}
+
 export const AgentConfigForm: React.FC<AgentConfigFormProps> = ({
   config,
   llmModelOptions,
@@ -189,7 +229,7 @@ export const AgentConfigForm: React.FC<AgentConfigFormProps> = ({
         <Text fw={600} size="sm" c="dimmed">
           Models
         </Text>
-        <Select
+        <ModelSelect
           label="Shell Model"
           description={desc("shellModel")}
           withAsterisk
@@ -197,7 +237,7 @@ export const AgentConfigForm: React.FC<AgentConfigFormProps> = ({
           data={llmModelOptions}
           {...form.getInputProps("shellModel")}
         />
-        <Select
+        <ModelSelect
           label="Web Model"
           description={desc("webModel")}
           disabled={readOnly}
@@ -205,7 +245,7 @@ export const AgentConfigForm: React.FC<AgentConfigFormProps> = ({
           data={llmModelOptions}
           {...form.getInputProps("webModel")}
         />
-        <Select
+        <ModelSelect
           label="Compact Model"
           description={desc("compactModel")}
           disabled={readOnly}
@@ -213,7 +253,7 @@ export const AgentConfigForm: React.FC<AgentConfigFormProps> = ({
           data={llmModelOptions}
           {...form.getInputProps("compactModel")}
         />
-        <Select
+        <ModelSelect
           label="Image Model"
           description={desc("imageModel")}
           disabled={readOnly}

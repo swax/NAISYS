@@ -99,7 +99,9 @@ export default async function agentConfigRoutes(
         const { id } = request.params;
         const { config } = request.body;
 
-        // Validate model keys against known models
+        // Validate model keys against known models (skip template variables)
+        const isTemplateVar = (v: string) => /^\$\{.+\}$/.test(v);
+
         const custom = loadCustomModels();
         const validLlmKeys = getValidModelKeys(
           getAllLlmModelOptions(custom.llmModels),
@@ -109,16 +111,31 @@ export default async function agentConfigRoutes(
         );
 
         const invalidModels: string[] = [];
-        if (!validLlmKeys.has(config.shellModel)) {
+        if (
+          !isTemplateVar(config.shellModel) &&
+          !validLlmKeys.has(config.shellModel)
+        ) {
           invalidModels.push(`shellModel: "${config.shellModel}"`);
         }
-        if (config.webModel && !validLlmKeys.has(config.webModel)) {
+        if (
+          config.webModel &&
+          !isTemplateVar(config.webModel) &&
+          !validLlmKeys.has(config.webModel)
+        ) {
           invalidModels.push(`webModel: "${config.webModel}"`);
         }
-        if (config.compactModel && !validLlmKeys.has(config.compactModel)) {
+        if (
+          config.compactModel &&
+          !isTemplateVar(config.compactModel) &&
+          !validLlmKeys.has(config.compactModel)
+        ) {
           invalidModels.push(`compactModel: "${config.compactModel}"`);
         }
-        if (config.imageModel && !validImageKeys.has(config.imageModel)) {
+        if (
+          config.imageModel &&
+          !isTemplateVar(config.imageModel) &&
+          !validImageKeys.has(config.imageModel)
+        ) {
           invalidModels.push(`imageModel: "${config.imageModel}"`);
         }
 
