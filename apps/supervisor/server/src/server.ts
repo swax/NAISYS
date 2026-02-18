@@ -143,7 +143,7 @@ export const startServer: StartServer = async (
   });
 
   await fastify.register(cors, {
-    origin: isProd ? false : ["http://localhost:5173"],
+    origin: isProd ? false : ["http://localhost:3002"],
   });
 
   await fastify.register(cookie);

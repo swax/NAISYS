@@ -33,7 +33,7 @@ describe("Basic Mail E2E", () => {
   let testDir: string;
   let naisys: NaisysTestProcess | null = null;
 
-  const HUB_PORT = 5031;
+  const HUB_PORT = 4121;
 
   beforeEach(() => {
     testDir = getTestDir("basic_mail");

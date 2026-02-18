@@ -48,7 +48,7 @@ describe("Cross-Hub Mail E2E", () => {
   let hostA: NaisysTestProcess | null = null;
   let hostB: NaisysTestProcess | null = null;
 
-  const HUB_PORT = 5011;
+  const HUB_PORT = 4101;
   const HUB_ACCESS_KEY = "TESTKEY123";
   const HUB_URL = `http://localhost:${HUB_PORT}`;
 

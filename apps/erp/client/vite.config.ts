@@ -5,9 +5,10 @@ export default defineConfig({
   plugins: [react()],
   base: "/erp/",
   server: {
+    port: 3202,
     proxy: {
       "/api/erp": {
-        target: "http://localhost:3002",
+        target: "http://localhost:3201",
         changeOrigin: true,
       },
     },
