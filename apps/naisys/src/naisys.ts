@@ -8,6 +8,7 @@ import { HubClient, createHubClient } from "./hub/hubClient.js";
 import { createHubClientConfig } from "./hub/hubClientConfig.js";
 import { createHubClientLog } from "./hub/hubClientLog.js";
 import { createHeartbeatService } from "./services/heartbeatService.js";
+import { createModelService } from "./services/modelService.js";
 import { createHostService } from "./services/hostService.js";
 import { createPromptNotificationService } from "./utils/promptNotificationService.js";
 
@@ -75,11 +76,13 @@ const userService = createUserService(
   hostService,
   agentPath,
 );
+const modelService = createModelService(hubClient);
 
 if (hubClient) {
   try {
     await hubClient.waitForConnection();
     await userService.waitForUsers();
+    await modelService.waitForModels();
   } catch (error) {
     console.error(`Failed to connect to hub: ${error}`);
     process.exit(1);
@@ -94,6 +97,7 @@ const agentManager = new AgentManager(
   hubClient,
   hostService,
   userService,
+  modelService,
   promptNotification,
 );
 

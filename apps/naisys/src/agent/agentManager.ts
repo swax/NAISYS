@@ -9,6 +9,7 @@ import { sleep } from "@naisys/common";
 import { GlobalConfig } from "../globalConfig.js";
 import { HubClient } from "../hub/hubClient.js";
 import { HostService } from "../services/hostService.js";
+import { ModelService } from "../services/modelService.js";
 import { OutputColor } from "../utils/output.js";
 import { PromptNotificationService } from "../utils/promptNotificationService.js";
 import { AgentRuntime, createAgentRuntime } from "./agentRuntime.js";
@@ -25,6 +26,7 @@ export class AgentManager {
     private hubClient: HubClient | undefined,
     private hostService: HostService,
     private userService: UserService,
+    private modelService: ModelService,
     private promptNotification: PromptNotificationService,
   ) {
     if (hubClient) {
@@ -104,6 +106,7 @@ export class AgentManager {
       this.hubClient,
       this.hostService,
       this.userService,
+      this.modelService,
       this.promptNotification,
     );
 

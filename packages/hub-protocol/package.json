@@ -17,6 +17,7 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
+    "@naisys/common": "*",
     "zod": "^4.3.6"
   }
 }

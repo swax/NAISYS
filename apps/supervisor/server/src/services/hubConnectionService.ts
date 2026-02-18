@@ -231,6 +231,17 @@ export function sendUserListChanged(): void {
   socket.emit(HubEvents.USER_LIST_CHANGED);
 }
 
+export function sendModelsChanged(): void {
+  if (!socket || !connected) {
+    console.warn(
+      "[HubConnection] Not connected to hub, cannot send models changed",
+    );
+    return;
+  }
+
+  socket.emit(HubEvents.MODELS_CHANGED);
+}
+
 export function sendVariablesChanged(): void {
   if (!socket || !connected) {
     console.warn(

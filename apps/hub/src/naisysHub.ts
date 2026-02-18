@@ -15,6 +15,7 @@ import { createHubMailService } from "./handlers/hubMailService.js";
 import { createHubRunService } from "./handlers/hubRunService.js";
 import { createHubUserService } from "./handlers/hubUserService.js";
 import { seedAgentConfigs } from "./services/agentRegistrar.js";
+import { createHubModelsService } from "./handlers/hubModelsService.js";
 import { createHubServerLog } from "./services/hubServerLog.js";
 import { createHostRegistrar } from "./services/hostRegistrar.js";
 import { createNaisysServer } from "./services/naisysServer.js";
@@ -79,6 +80,9 @@ export const startHub: StartHub = async (
 
     // Register hub user service for user_list requests from NAISYS instances
     createHubUserService(naisysServer, dbService, logService);
+
+    // Register hub models service for seeding and broadcasting models
+    await createHubModelsService(naisysServer, dbService, logService);
 
     // Register hub host service for broadcasting connected host list
     createHubHostService(naisysServer, hostRegistrar, logService);

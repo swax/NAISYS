@@ -17,7 +17,6 @@ import { createCommandTools } from "../llm/commandTool.js";
 import { createContextManager } from "../llm/contextManager.js";
 import { createCostDisplayService } from "../llm/costDisplayService.js";
 import { createCostTracker } from "../llm/costTracker.js";
-import { createLLModels } from "../llm/llModels.js";
 import { createLLMService } from "../llm/llmService.js";
 import { createSessionCompactor } from "../llm/sessionCompactor.js";
 import { createSystemMessage } from "../llm/systemMessage.js";
@@ -25,6 +24,7 @@ import { createMailService } from "../mail/mail.js";
 import { createMailDisplayService } from "../mail/mailDisplayService.js";
 import { HostService } from "../services/hostService.js";
 import { createLogService } from "../services/logService.js";
+import { ModelService } from "../services/modelService.js";
 import { createRunService } from "../services/runService.js";
 import { getPlatformConfig } from "../services/shellPlatform.js";
 import { createInputMode } from "../utils/inputMode.js";
@@ -42,6 +42,7 @@ export async function createAgentRuntime(
   hubClient: HubClient | undefined,
   hostService: HostService,
   userService: UserService,
+  modelService: ModelService,
   promptNotification: PromptNotificationService,
 ) {
   /*
@@ -74,12 +75,11 @@ export async function createAgentRuntime(
   // LLM
   const inputMode = createInputMode();
   const systemMessage = createSystemMessage(globalConfig, agentConfig);
-  const llModels = createLLModels(); // Important to to at runtime so we get the latest model changes
   const tools = createCommandTools(agentConfig);
   const costTracker = createCostTracker(
     globalConfig,
     agentConfig,
-    llModels,
+    modelService,
     runService,
     hubClient,
     localUserId,
@@ -88,7 +88,7 @@ export async function createAgentRuntime(
     globalConfig,
     agentConfig,
     costTracker,
-    llModels,
+    modelService,
     output,
   );
   const contextManager = createContextManager(
@@ -104,7 +104,7 @@ export async function createAgentRuntime(
     agentConfig,
     costTracker,
     tools,
-    llModels,
+    modelService,
   );
   const sessionCompactor = createSessionCompactor(
     agentConfig,
@@ -114,7 +114,13 @@ export async function createAgentRuntime(
   );
 
   // Features
-  const genimg = createGenImg(globalConfig, agentConfig, costTracker, output);
+  const genimg = createGenImg(
+    globalConfig,
+    agentConfig,
+    costTracker,
+    output,
+    modelService.getImageModel,
+  );
   const userDisplayService = createUserDisplayService(userService, inputMode);
   const mailDisplayService = hubClient
     ? createMailDisplayService(hubClient, localUserId)
@@ -143,7 +149,7 @@ export async function createAgentRuntime(
     agentConfig,
     llmService,
     costTracker,
-    llModels,
+    modelService,
     output,
   );
   // Command components

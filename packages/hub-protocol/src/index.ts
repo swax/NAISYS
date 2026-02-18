@@ -1,3 +1,4 @@
+import { LlmModelSchema, ImageModelSchema } from "@naisys/common";
 import { z } from "zod";
 
 /**
@@ -377,6 +378,19 @@ export const ConfigResponseSchema = z.object({
 export type ConfigResponse = z.infer<typeof ConfigResponseSchema>;
 
 // =============================================================================
+// Models Messages (Hub -> NAISYS, push on connect and on change)
+// =============================================================================
+
+/** Pushed from hub to NAISYS instances with all model definitions */
+export const ModelsResponseSchema = z.object({
+  success: z.boolean(),
+  error: z.string().optional(),
+  llmModels: z.array(LlmModelSchema).optional(),
+  imageModels: z.array(ImageModelSchema).optional(),
+});
+export type ModelsResponse = z.infer<typeof ModelsResponseSchema>;
+
+// =============================================================================
 // Event Names (for type-safe event handling)
 // =============================================================================
 
@@ -407,6 +421,10 @@ export const HubEvents = {
 
   // Variables changed (supervisor -> hub, fire-and-forget, triggers config broadcast)
   VARIABLES_CHANGED: "variables_changed",
+
+  // Models events (hub -> client push, supervisor -> hub fire-and-forget)
+  MODELS: "models",
+  MODELS_CHANGED: "models_changed",
 
   // Log events (NAISYS -> hub, fire-and-forget)
   LOG_WRITE: "log_write",

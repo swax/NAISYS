@@ -182,3 +182,16 @@ model variables {
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
 }
+
+model models {
+  id           Int      @id @default(autoincrement())
+  key          String   @unique
+  type         String   // "llm" | "image"
+  label        String
+  version_name String
+  is_builtin   Boolean  @default(false)
+  is_custom    Boolean  @default(false)
+  meta         String   // JSON blob — type-specific properties validated by Zod
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+}

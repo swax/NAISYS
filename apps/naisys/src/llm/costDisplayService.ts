@@ -4,13 +4,13 @@ import { RegistrableCommand } from "../command/commandRegistry.js";
 import { GlobalConfig } from "../globalConfig.js";
 import { OutputService } from "../utils/output.js";
 import { CostTracker, LlmModelCosts } from "./costTracker.js";
-import { LLModels } from "./llModels.js";
+import { ModelService } from "../services/modelService.js";
 
 export function createCostDisplayService(
   { globalConfig }: GlobalConfig,
   { agentConfig }: AgentConfig,
   costTracker: CostTracker,
-  llModels: LLModels,
+  modelService: ModelService,
   output: OutputService,
 ) {
   function formatCostDetail(
@@ -51,7 +51,7 @@ export function createCostDisplayService(
 
     for (const modelData of modelBreakdowns) {
       try {
-        const model = llModels.get(modelData.model);
+        const model = modelService.getLlmModel(modelData.model);
 
         const cacheSavings = calculateModelCacheSavings(modelData, model);
         if (cacheSavings) {
@@ -110,7 +110,7 @@ export function createCostDisplayService(
     for (const modelData of modelBreakdowns) {
       let model;
       try {
-        model = llModels.get(modelData.model);
+        model = modelService.getLlmModel(modelData.model);
       } catch {
         output.comment(`  Non-model: ${modelData.model}`);
         output.comment(`    Total cost: $${(modelData.cost || 0).toFixed(4)}`);
