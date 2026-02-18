@@ -265,6 +265,26 @@ export async function deleteAgent(
   });
 }
 
+export async function deleteHost(id: number): Promise<void> {
+  await usingNaisysDb(async (prisma) => {
+    await prisma.$transaction(async (tx) => {
+      await tx.context_log.deleteMany({ where: { host_id: id } });
+      await tx.costs.deleteMany({ where: { host_id: id } });
+      await tx.run_session.deleteMany({ where: { host_id: id } });
+      await tx.mail_messages.updateMany({
+        where: { host_id: id },
+        data: { host_id: null },
+      });
+      await tx.user_notifications.updateMany({
+        where: { latest_host_id: id },
+        data: { latest_host_id: null },
+      });
+      await tx.user_hosts.deleteMany({ where: { host_id: id } });
+      await tx.hosts.delete({ where: { id } });
+    });
+  });
+}
+
 export const getHosts = cachedForSeconds(0.25, async (): Promise<Host[]> => {
   try {
     const hosts = await usingNaisysDb(async (prisma) => {

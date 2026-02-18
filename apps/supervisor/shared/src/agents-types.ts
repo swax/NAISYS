@@ -29,6 +29,7 @@ export const HostSchema = z.object({
   agentCount: z.number(),
   online: z.boolean().optional(),
   _links: z.array(LinkSchema).optional(),
+  _actions: z.array(HateoasActionSchema).optional(),
 });
 
 export const HostIdParamsSchema = z.object({
@@ -70,6 +71,7 @@ export const AgentDetailResponseSchema = z.object({
 export const HostListResponseSchema = z.object({
   items: z.array(HostSchema),
   _links: z.array(LinkSchema),
+  _actions: z.array(HateoasActionSchema).optional(),
 });
 
 // Inferred types
