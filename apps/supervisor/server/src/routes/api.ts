@@ -12,7 +12,6 @@ import mailRoutes from "./mail.js";
 import modelsRoutes from "./models.js";
 import rootRoutes from "./root.js";
 import schemaRoutes from "./schemas.js";
-import settingsRoutes from "./settings.js";
 import statusRoutes from "./status.js";
 import variablesRoutes from "./variables.js";
 
@@ -34,9 +33,6 @@ export default async function apiRoutes(
 
   // Register user routes
   await fastify.register(userRoutes, { prefix: "/users" });
-
-  // Register settings routes
-  await fastify.register(settingsRoutes);
 
   // Register status routes
   await fastify.register(statusRoutes);

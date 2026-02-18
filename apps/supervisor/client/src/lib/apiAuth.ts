@@ -2,8 +2,6 @@ import type {
   AuthUser,
   LoginResponse,
   LogoutResponse,
-  SettingsRequest,
-  SettingsResponse,
   StatusResponse,
 } from "./apiClient";
 import { api, apiEndpoints } from "./apiClient";
@@ -24,35 +22,6 @@ export const login = async (
 
 export const logout = async (): Promise<LogoutResponse> => {
   return await api.post<{}, LogoutResponse>(apiEndpoints.logout, {});
-};
-
-export const getSettings = async (): Promise<SettingsResponse> => {
-  try {
-    return await api.get<SettingsResponse>(apiEndpoints.settings);
-  } catch (error) {
-    return {
-      success: false,
-      message:
-        error instanceof Error ? error.message : "Failed to load settings",
-    };
-  }
-};
-
-export const saveSettings = async (
-  settings: SettingsRequest,
-): Promise<SettingsResponse> => {
-  try {
-    return await api.post<SettingsRequest, SettingsResponse>(
-      apiEndpoints.settings,
-      settings,
-    );
-  } catch (error) {
-    return {
-      success: false,
-      message:
-        error instanceof Error ? error.message : "Failed to save settings",
-    };
-  }
 };
 
 export const getStatus = async (): Promise<StatusResponse> => {

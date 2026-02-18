@@ -46,15 +46,6 @@ model UserPermission {
   @@map("user_permissions")
 }
 
-model Setting {
-  id             Int    @id @default(1)
-  settingsJson   String @map("settings_json")
-  modifyDate     String @map("modify_date")
-  readStatusJson String @default("{}") @map("read_status_json")
-
-  @@map("settings")
-}
-
 model SchemaVersion {
   id      Int    @id @default(1)
   version Int
