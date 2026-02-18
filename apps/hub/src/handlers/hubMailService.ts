@@ -114,7 +114,7 @@ export function createHubMailService(
         ack({ success: true });
       } catch (error) {
         logService.error(
-          `[HubMailService] mail_send error from host ${hostId}: ${error}`,
+          `[Hub:Mail] mail_send error from host ${hostId}: ${error}`,
         );
         ack({ success: false, error: String(error) });
       }
@@ -189,7 +189,7 @@ export function createHubMailService(
         });
       } catch (error) {
         logService.error(
-          `[HubMailService] mail_list error from host ${hostId}: ${error}`,
+          `[Hub:Mail] mail_list error from host ${hostId}: ${error}`,
         );
         ack({ success: false, error: String(error) });
       }
@@ -253,7 +253,7 @@ export function createHubMailService(
         });
       } catch (error) {
         logService.error(
-          `[HubMailService] mail_read error from host ${hostId}: ${error}`,
+          `[Hub:Mail] mail_read error from host ${hostId}: ${error}`,
         );
         ack({ success: false, error: String(error) });
       }
@@ -299,7 +299,7 @@ export function createHubMailService(
         });
       } catch (error) {
         logService.error(
-          `[HubMailService] mail_archive error from host ${hostId}: ${error}`,
+          `[Hub:Mail] mail_archive error from host ${hostId}: ${error}`,
         );
         ack({ success: false, error: String(error) });
       }
@@ -367,7 +367,7 @@ export function createHubMailService(
         });
       } catch (error) {
         logService.error(
-          `[HubMailService] mail_search error from host ${hostId}: ${error}`,
+          `[Hub:Mail] mail_search error from host ${hostId}: ${error}`,
         );
         ack({ success: false, error: String(error) });
       }
@@ -402,7 +402,7 @@ export function createHubMailService(
         });
       } catch (error) {
         logService.error(
-          `[HubMailService] mail_unread error from host ${hostId}: ${error}`,
+          `[Hub:Mail] mail_unread error from host ${hostId}: ${error}`,
         );
         ack({ success: false, error: String(error) });
       }

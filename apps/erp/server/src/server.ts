@@ -174,7 +174,7 @@ async function startServer() {
       `[ERP] API Reference: http://${host}:${port}/erp/api-reference`,
     );
   } catch (err) {
-    console.error("Failed to start ERP server:", err);
+    console.error("[ERP] Failed to start:", err);
     process.exit(1);
   }
 }

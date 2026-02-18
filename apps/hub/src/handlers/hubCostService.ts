@@ -109,7 +109,7 @@ export function createHubCostService(
         }
       } catch (error) {
         logService.error(
-          `[HubCostService] Error processing cost_write from host ${hostId}: ${error}`,
+          `[Hub:Costs] Error processing cost_write from host ${hostId}: ${error}`,
         );
       }
     },
@@ -165,13 +165,13 @@ export function createHubCostService(
             );
           } catch (userError) {
             logService.error(
-              `[HubCostService] Error checking spend limit for user ${user.id}: ${userError}`,
+              `[Hub:Costs] Error checking spend limit for user ${user.id}: ${userError}`,
             );
           }
         }
       });
     } catch (error) {
-      logService.error(`[HubCostService] Error in spend limit check: ${error}`);
+      logService.error(`[Hub:Costs] Error in spend limit check: ${error}`);
     }
   }
 
@@ -225,14 +225,14 @@ export function createHubCostService(
       if (isOverLimit && !wasSuspended) {
         const reason = `Global spend limit of $${spendLimit} reached (total: $${totalCost.toFixed(2)})`;
         logService.log(
-          `[HubCostService] Suspending user ${userId} (global limit): ${reason}`,
+          `[Hub:Costs] Suspending user ${userId} (global limit): ${reason}`,
         );
         sendCostControl(userId, false, reason);
         suspendedByGlobal.add(userId);
       } else if (!isOverLimit && wasSuspended) {
         const reason = `Global spend limit period reset (total: $${totalCost.toFixed(2)}, limit: $${spendLimit})`;
         logService.log(
-          `[HubCostService] Resuming user ${userId} (global limit): ${reason}`,
+          `[Hub:Costs] Resuming user ${userId} (global limit): ${reason}`,
         );
         sendCostControl(userId, true, reason);
         suspendedByGlobal.delete(userId);
@@ -253,12 +253,12 @@ export function createHubCostService(
 
     if (isOverLimit && !wasSuspended) {
       const reason = `Spend limit of $${spendLimit} reached (current: $${periodCost.toFixed(2)})`;
-      logService.log(`[HubCostService] Suspending user ${userId}: ${reason}`);
+      logService.log(`[Hub:Costs] Suspending user ${userId}: ${reason}`);
       sendCostControl(userId, false, reason);
       suspendedByAgent.add(userId);
     } else if (!isOverLimit && wasSuspended) {
       const reason = `Spend limit period reset (current: $${periodCost.toFixed(2)}, limit: $${spendLimit})`;
-      logService.log(`[HubCostService] Resuming user ${userId}: ${reason}`);
+      logService.log(`[Hub:Costs] Resuming user ${userId}: ${reason}`);
       sendCostControl(userId, true, reason);
       suspendedByAgent.delete(userId);
     }

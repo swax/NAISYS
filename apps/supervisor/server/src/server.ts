@@ -44,7 +44,7 @@ export const startServer: StartServer = async (
 
   if (startupType === "hosted" && !isProd) {
     console.error(
-      "--supervisor can only be used when .env NODE_ENV=production",
+      "[Supervisor] --supervisor can only be used when .env NODE_ENV=production",
     );
     process.exit(1);
   }
@@ -241,7 +241,7 @@ export const startServer: StartServer = async (
         break;
       } catch (err: any) {
         if (err.code === "EADDRINUSE") {
-          console.log(`Port ${port} is in use, trying port ${port + 1}...`);
+          console.log(`[Supervisor] Port ${port} is in use, trying port ${port + 1}...`);
           port++;
           attempts++;
           if (attempts >= maxAttempts) {
@@ -255,7 +255,7 @@ export const startServer: StartServer = async (
       }
     }
   } catch (err) {
-    console.error("Failed to start Supervisor:", err);
+    console.error("[Supervisor] Failed to start:", err);
     fastify.log.error(err);
     process.exit(1);
   }

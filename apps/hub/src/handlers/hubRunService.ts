@@ -51,7 +51,7 @@ export function createHubRunService(
         });
       } catch (error) {
         logService.error(
-          `[HubRunService] session_create error for host ${hostId}: ${error}`,
+          `[Hub:Runs] session_create error for host ${hostId}: ${error}`,
         );
         ack({ success: false, error: String(error) });
       }
@@ -95,7 +95,7 @@ export function createHubRunService(
         ack({ success: true, sessionId: result.sessionId });
       } catch (error) {
         logService.error(
-          `[HubRunService] session_increment error for host ${hostId}: ${error}`,
+          `[Hub:Runs] session_increment error for host ${hostId}: ${error}`,
         );
         ack({ success: false, error: String(error) });
       }

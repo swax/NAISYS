@@ -47,7 +47,7 @@ export function createHubUserService(
       const clients = naisysServer.getConnectedClients();
 
       logService.log(
-        `[HubUserService] Broadcasting ${payload.users?.length ?? 0} users to ${clients.length} clients`,
+        `[Hub:Users] Broadcasting ${payload.users?.length ?? 0} users to ${clients.length} clients`,
       );
 
       for (const connection of clients) {
@@ -59,7 +59,7 @@ export function createHubUserService(
       }
     } catch (error) {
       logService.error(
-        `[HubUserService] Error broadcasting user list: ${error}`,
+        `[Hub:Users] Error broadcasting user list: ${error}`,
       );
     }
   }
@@ -72,7 +72,7 @@ export function createHubUserService(
         const payload = await buildUserListPayload();
 
         logService.log(
-          `[HubUserService] Pushing ${payload.users?.length ?? 0} users to naisys instance ${hostId}`,
+          `[Hub:Users] Pushing ${payload.users?.length ?? 0} users to naisys instance ${hostId}`,
         );
 
         naisysServer.sendMessage<UserListResponse>(
@@ -82,7 +82,7 @@ export function createHubUserService(
         );
       } catch (error) {
         logService.error(
-          `[HubUserService] Error querying users for naisys instance ${hostId}: ${error}`,
+          `[Hub:Users] Error querying users for naisys instance ${hostId}: ${error}`,
         );
         naisysServer.sendMessage<UserListResponse>(
           hostId,

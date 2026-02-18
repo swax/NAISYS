@@ -32,7 +32,7 @@ export function createHubHostService(
       cachedHostListJson = json;
 
       logService.log(
-        `[HubHostService] Broadcasting host list (${hosts.length} hosts)`,
+        `[Hub:Hosts] Broadcasting host list (${hosts.length} hosts)`,
       );
 
       for (const connection of naisysServer.getConnectedClients()) {

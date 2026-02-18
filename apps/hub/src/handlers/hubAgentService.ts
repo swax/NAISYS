@@ -121,7 +121,7 @@ export function createHubAgentService(
         }
       } catch (error) {
         logService.error(
-          `[HubAgentService] agent_start error from host ${hostId}: ${error}`,
+          `[Hub:Agents] agent_start error from host ${hostId}: ${error}`,
         );
         ack({ success: false, error: String(error) });
       }
@@ -141,7 +141,7 @@ export function createHubAgentService(
         body: taskDescription,
       });
     } catch (err) {
-      logService.error(`[HubAgentService] Failed to send task mail: ${err}`);
+      logService.error(`[Hub:Agents] Failed to send task mail: ${err}`);
     }
   }
 
@@ -210,7 +210,7 @@ export function createHubAgentService(
         }
       } catch (error) {
         logService.error(
-          `[HubAgentService] agent_stop error from host ${hostId}: ${error}`,
+          `[Hub:Agents] agent_stop error from host ${hostId}: ${error}`,
         );
         ack({ success: false, error: String(error) });
       }

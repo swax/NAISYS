@@ -1,10 +1,10 @@
 import {
-  dbFieldsToLlmModel,
-  dbFieldsToImageModel,
-  builtInLlmModels,
   builtInImageModels,
-  llmModelToDbFields,
+  builtInLlmModels,
+  dbFieldsToImageModel,
+  dbFieldsToLlmModel,
   imageModelToDbFields,
+  llmModelToDbFields,
   type ModelDbFields,
   type ModelDbRow,
 } from "@naisys/common";
@@ -45,7 +45,7 @@ export async function createHubModelsService(
       const clients = naisysServer.getConnectedClients();
 
       logService.log(
-        `[HubModelsService] Broadcasting ${payload.llmModels?.length ?? 0} LLM + ${payload.imageModels?.length ?? 0} image models to ${clients.length} clients`,
+        `[Hub:Models] Broadcasting ${payload.llmModels?.length ?? 0} LLM + ${payload.imageModels?.length ?? 0} image models to ${clients.length} clients`,
       );
 
       for (const connection of clients) {
@@ -56,9 +56,7 @@ export async function createHubModelsService(
         );
       }
     } catch (error) {
-      logService.error(
-        `[HubModelsService] Error broadcasting models: ${error}`,
-      );
+      logService.error(`[Hub:Models] Error broadcasting models: ${error}`);
     }
   }
 
@@ -70,7 +68,7 @@ export async function createHubModelsService(
         const payload = await buildModelsPayload();
 
         logService.log(
-          `[HubModelsService] Pushing ${payload.llmModels?.length ?? 0} LLM + ${payload.imageModels?.length ?? 0} image models to naisys instance ${hostId}`,
+          `[Hub:Models] Pushing ${payload.llmModels?.length ?? 0} LLM + ${payload.imageModels?.length ?? 0} image models to naisys instance ${hostId}`,
         );
 
         naisysServer.sendMessage<ModelsResponse>(
@@ -80,7 +78,7 @@ export async function createHubModelsService(
         );
       } catch (error) {
         logService.error(
-          `[HubModelsService] Error querying models for naisys instance ${hostId}: ${error}`,
+          `[Hub:Models] Error querying models for naisys instance ${hostId}: ${error}`,
         );
         naisysServer.sendMessage<ModelsResponse>(hostId, HubEvents.MODELS, {
           success: false,
@@ -106,8 +104,10 @@ async function seedModels(
 ) {
   await dbService.usingDatabase(async (prisma) => {
     const count = await prisma.models.count();
-    if (count > 0) return;
-
+    if (count > 0) {
+      logService.log(`[Hub:Models] Models already seeded`);
+      return;
+    }
     // Start with all built-in models
     const rows: ModelDbFields[] = [
       ...builtInLlmModels.map((m) => llmModelToDbFields(m, true, false)),
@@ -140,8 +140,6 @@ async function seedModels(
     }
 
     await prisma.models.createMany({ data: rows });
-    logService.log(
-      `[HubModelsService] Seeded ${rows.length} models into database`,
-    );
+    logService.log(`[Hub:Models] Seeded ${rows.length} models into database`);
   });
 }
