@@ -39,8 +39,8 @@ describe("ERP API Key Auth E2E", () => {
   let testDir: string;
   let naisys: NaisysTestProcess | null = null;
 
-  const HUB_PORT = 5021;
-  const SUPERVISOR_PORT = 5022;
+  const HUB_PORT = 4111;
+  const SUPERVISOR_PORT = 4012;
   const HUB_ACCESS_KEY = "TESTKEY_ERP_E2E";
 
   beforeEach(() => {

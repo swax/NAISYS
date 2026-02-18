@@ -5,6 +5,7 @@ export default defineConfig({
   plugins: [react()],
   base: "/supervisor/",
   server: {
+    port: 3002,
     proxy: {
       "/api/supervisor": {
         target: "http://localhost:3001",

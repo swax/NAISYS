@@ -55,7 +55,7 @@ apps/erp/
 
 The ERP is built as a **Fastify plugin** (`erpPlugin`) that can be:
 
-- **Standalone** - Runs on port 3002 for independent development
+- **Standalone** - Runs on port 3201 for independent development
 - **Embedded** - Mounted into the NAISYS supervisor application under `/erp/`
 
 ### Tech Stack

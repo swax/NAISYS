@@ -40,7 +40,7 @@ node dist/naisys.js ../../agents/assistant.yaml --supervisor
 
 ### 5. Open Supervisor Interface
 
-Navigate to `http://localhost:3001` in your browser to monitor your NAISYS agents.
+Navigate to `http://localhost:3001/supervisor/` in your browser to monitor your NAISYS agents.
 
 ## Additional Information
 

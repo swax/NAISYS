@@ -132,7 +132,7 @@ async function startServer() {
   fastify.setSerializerCompiler(serializerCompiler);
 
   await fastify.register(cors, {
-    origin: isProd ? false : ["http://localhost:5173"],
+    origin: isProd ? false : ["http://localhost:3202"],
     credentials: true,
   });
 
@@ -165,7 +165,7 @@ async function startServer() {
     },
   );
 
-  const port = Number(process.env.ERP_PORT) || 3002;
+  const port = Number(process.env.ERP_PORT) || 3201;
   const host = isProd ? "0.0.0.0" : "localhost";
 
   try {

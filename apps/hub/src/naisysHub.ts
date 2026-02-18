@@ -35,7 +35,7 @@ export const startHub: StartHub = async (
 
     logService.log(`[Hub] Starting Hub server in ${startupType} mode...`);
 
-    const hubPort = Number(process.env.HUB_PORT) || 3002;
+    const hubPort = Number(process.env.HUB_PORT) || 3101;
     const hubAccessKey = process.env.HUB_ACCESS_KEY;
     if (!hubAccessKey) {
       const errorStr = "Error: HUB_ACCESS_KEY environment variable is required";
