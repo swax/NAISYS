@@ -142,7 +142,10 @@ export function requirePermission(permission: string) {
       return;
     }
 
-    if (!request.supervisorUser.permissions.includes(permission)) {
+    if (
+      !request.supervisorUser.permissions.includes(permission) &&
+      !request.supervisorUser.permissions.includes("supervisor_admin")
+    ) {
       reply.status(403).send({
         statusCode: 403,
         error: "Forbidden",
