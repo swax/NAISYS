@@ -4,14 +4,18 @@ import {
   ErrorResponse,
   ErrorResponseSchema,
 } from "@naisys-supervisor/shared";
-import type { HateoasAction } from "@naisys/common";
+import type { HateoasAction, ModelDbRow } from "@naisys/common";
 import archiver from "archiver";
 import { FastifyInstance, FastifyPluginOptions } from "fastify";
 import { hasPermission, requirePermission } from "../auth-middleware.js";
 import { supervisorDbPath } from "../dbConfig.js";
-import { getNaisysDatabasePath } from "../database/naisysDatabase.js";
+import { getNaisysDatabasePath, usingNaisysDb } from "../database/naisysDatabase.js";
 import { API_PREFIX } from "../hateoas.js";
 import { isHubConnected } from "../services/hubConnectionService.js";
+import {
+  buildExportFiles,
+  type ExportUserRow,
+} from "../services/configExportService.js";
 
 function adminActions(hasAdminPermission: boolean): HateoasAction[] {
   const actions: HateoasAction[] = [];
@@ -86,6 +90,32 @@ export default async function adminRoutes(
       },
     },
     async (_request, reply) => {
+      const users = await usingNaisysDb((prisma) =>
+        prisma.users.findMany({
+          select: {
+            id: true,
+            username: true,
+            title: true,
+            config: true,
+            lead_user_id: true,
+            archived: true,
+          },
+        }),
+      ) as ExportUserRow[];
+
+      const variables = await usingNaisysDb((prisma) =>
+        prisma.variables.findMany({
+          select: { key: true, value: true },
+          orderBy: { key: "asc" },
+        }),
+      );
+
+      const modelRows = await usingNaisysDb((prisma) =>
+        prisma.models.findMany(),
+      ) as ModelDbRow[];
+
+      const exportFiles = buildExportFiles(users, variables, modelRows);
+
       reply.header(
         "Content-Disposition",
         'attachment; filename="naisys-config.zip"',
@@ -98,7 +128,10 @@ export default async function adminRoutes(
         reply.log.error(err, "Archiver error");
       });
 
-      archive.append("Hello from NAISYS!", { name: "hello.txt" });
+      for (const file of exportFiles) {
+        archive.append(file.content, { name: file.path });
+      }
+
       await archive.finalize();
 
       return reply.send(archive);
