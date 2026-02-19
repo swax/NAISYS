@@ -1,5 +1,5 @@
 import type { StartHub, StartServer } from "@naisys/common";
-import { createDatabaseService } from "@naisys/database";
+import { createDatabaseService } from "@naisys/hub-database";
 import { program } from "commander";
 import dotenv from "dotenv";
 import http from "http";

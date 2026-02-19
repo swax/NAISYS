@@ -13,7 +13,7 @@ import {
   createHubSession,
   deleteHubSession,
   findHubUserByUsername,
-} from "@naisys/database";
+} from "@naisys/hub-database";
 import {
   createUser,
   getUserByUsername,

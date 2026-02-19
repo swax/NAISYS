@@ -22,7 +22,7 @@ import {
   ensureSuperAdmin,
   handleResetPassword,
   deployPrismaMigrations,
-} from "@naisys/database";
+} from "@naisys/hub-database";
 import { SUPERVISOR_DB_VERSION, supervisorDbPath } from "./dbConfig.js";
 import prisma from "./db.js";
 import { initLogger } from "./logger.js";

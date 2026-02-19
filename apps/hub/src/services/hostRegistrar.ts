@@ -1,4 +1,4 @@
-import { DatabaseService } from "@naisys/database";
+import { DatabaseService } from "@naisys/hub-database";
 
 export async function createHostRegistrar(dbService: DatabaseService) {
   /** Cache of all known hosts keyed by id */

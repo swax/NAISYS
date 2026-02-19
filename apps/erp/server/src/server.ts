@@ -24,7 +24,7 @@ import {
   ensureSuperAdmin,
   handleResetPassword,
   deployPrismaMigrations,
-} from "@naisys/database";
+} from "@naisys/hub-database";
 import auditRoutes from "./routes/audit.js";
 import authRoutes from "./routes/auth.js";
 import executionOrderRoutes from "./routes/execution-orders.js";

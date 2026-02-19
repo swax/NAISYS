@@ -6,7 +6,7 @@ import {
   findAgentByApiKey,
   findHubSession,
   isHubAvailable,
-} from "@naisys/database";
+} from "@naisys/hub-database";
 
 export interface ErpUser {
   id: number;

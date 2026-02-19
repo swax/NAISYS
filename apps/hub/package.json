@@ -24,7 +24,7 @@
   },
   "dependencies": {
     "@naisys/common": "file:../../packages/common",
-    "@naisys/database": "file:../../packages/database",
+    "@naisys/hub-database": "file:../../packages/hub-database",
     "@naisys/hub-protocol": "file:../../packages/hub-protocol",
     "commander": "^14.0.3",
     "dotenv": "^17.2.4",

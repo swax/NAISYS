@@ -1,7 +1,7 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { AuthCache } from "@naisys/common";
 import { hashToken } from "@naisys/common/dist/hashToken.js";
-import { findAgentByApiKey, findHubSession } from "@naisys/database";
+import { findAgentByApiKey, findHubSession } from "@naisys/hub-database";
 import {
   createUser,
   getUserByUuid,

@@ -9,7 +9,7 @@ import {
   type ModelDbRow,
 } from "@naisys/common";
 import { loadCustomModels } from "@naisys/common/dist/customModelsLoader.js";
-import { DatabaseService } from "@naisys/database";
+import { DatabaseService } from "@naisys/hub-database";
 import { HubEvents, ModelsResponse } from "@naisys/hub-protocol";
 import { HubServerLog } from "../services/hubServerLog.js";
 import { NaisysServer } from "../services/naisysServer.js";

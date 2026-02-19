@@ -1,5 +1,5 @@
 import { jest, test } from "@jest/globals";
-import { DatabaseService, PrismaClient } from "@naisys/database";
+import { DatabaseService, PrismaClient } from "@naisys/hub-database";
 import { AgentConfig } from "../agent/agentConfig.js";
 import { CommandProtection } from "../command/commandProtection.js";
 import { PromptBuilder } from "../command/promptBuilder.js";

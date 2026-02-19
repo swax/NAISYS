@@ -7,7 +7,7 @@
   "type": "module",
   "workspaces": [
     "packages/common",
-    "packages/database",
+    "packages/hub-database",
     "packages/hub-protocol",
     "apps/erp/shared",
     "apps/erp/client",
