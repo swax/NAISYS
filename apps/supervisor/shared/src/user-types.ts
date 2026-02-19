@@ -38,3 +38,11 @@ export const GrantPermissionSchema = z
   .strict();
 
 export type GrantPermission = z.infer<typeof GrantPermissionSchema>;
+
+export const ChangePasswordSchema = z
+  .object({
+    password: z.string().min(6),
+  })
+  .strict();
+
+export type ChangePassword = z.infer<typeof ChangePasswordSchema>;

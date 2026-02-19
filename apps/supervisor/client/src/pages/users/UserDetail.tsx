@@ -24,6 +24,7 @@ import {
   deleteUser,
   grantPermission,
   revokePermission,
+  changePassword,
 } from "../../lib/apiUsers";
 
 // Keep in sync with PermissionEnum in shared/src/user-types.ts
@@ -44,10 +45,13 @@ export const UserDetail: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [editOpened, { open: openEdit, close: closeEdit }] = useDisclosure();
   const [editUsername, setEditUsername] = useState("");
-  const [editPassword, setEditPassword] = useState("");
   const [saving, setSaving] = useState(false);
   const [editError, setEditError] = useState("");
   const [grantPerm, setGrantPerm] = useState<string | null>(null);
+  const [pwOpened, { open: openPw, close: closePw }] = useDisclosure();
+  const [newPassword, setNewPassword] = useState("");
+  const [pwSaving, setPwSaving] = useState(false);
+  const [pwError, setPwError] = useState("");
 
   const fetchUser = useCallback(async () => {
     if (!id) return;
@@ -77,16 +81,12 @@ export const UserDetail: React.FC = () => {
   };
 
   const handleUpdate = async () => {
-    if (!id) return;
+    if (!id || !editUsername) return;
     setSaving(true);
     setEditError("");
     try {
-      const data: Record<string, string> = {};
-      if (editUsername) data.username = editUsername;
-      if (editPassword) data.password = editPassword;
-      await updateUser(Number(id), data);
+      await updateUser(Number(id), { username: editUsername });
       closeEdit();
-      setEditPassword("");
       fetchUser();
     } catch (err) {
       setEditError(
@@ -94,6 +94,23 @@ export const UserDetail: React.FC = () => {
       );
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleChangePassword = async () => {
+    if (!newPassword) return;
+    setPwSaving(true);
+    setPwError("");
+    try {
+      await changePassword(newPassword);
+      closePw();
+      setNewPassword("");
+    } catch (err) {
+      setPwError(
+        err instanceof Error ? err.message : "Failed to change password",
+      );
+    } finally {
+      setPwSaving(false);
     }
   };
 
@@ -153,11 +170,22 @@ export const UserDetail: React.FC = () => {
           >
             Back
           </Button>
+          {hasAction(user._actions, "change-password") && (
+            <Button
+              variant="outline"
+              onClick={() => {
+                setNewPassword("");
+                setPwError("");
+                openPw();
+              }}
+            >
+              Change Password
+            </Button>
+          )}
           {hasAction(user._actions, "update") && (
             <Button
               onClick={() => {
                 setEditUsername(user.username);
-                setEditPassword("");
                 setEditError("");
                 openEdit();
               }}
@@ -262,29 +290,12 @@ export const UserDetail: React.FC = () => {
           </Group>
         )}
 
-      <Modal
-        opened={editOpened}
-        onClose={closeEdit}
-        title={
-          hasPermission("supervisor_admin") ? "Edit User" : "Change Password"
-        }
-      >
+      <Modal opened={editOpened} onClose={closeEdit} title="Edit User">
         <Stack>
-          {hasPermission("supervisor_admin") && (
-            <TextInput
-              label="Username"
-              value={editUsername}
-              onChange={(e) => setEditUsername(e.currentTarget.value)}
-            />
-          )}
-          <PasswordInput
-            label={
-              hasPermission("supervisor_admin")
-                ? "New Password (leave blank to keep)"
-                : "New Password"
-            }
-            value={editPassword}
-            onChange={(e) => setEditPassword(e.currentTarget.value)}
+          <TextInput
+            label="Username"
+            value={editUsername}
+            onChange={(e) => setEditUsername(e.currentTarget.value)}
           />
           {editError && (
             <Text c="red" size="sm">
@@ -296,6 +307,29 @@ export const UserDetail: React.FC = () => {
               Cancel
             </Button>
             <Button onClick={handleUpdate} loading={saving}>
+              Save
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
+
+      <Modal opened={pwOpened} onClose={closePw} title="Change Password">
+        <Stack>
+          <PasswordInput
+            label="New Password"
+            value={newPassword}
+            onChange={(e) => setNewPassword(e.currentTarget.value)}
+          />
+          {pwError && (
+            <Text c="red" size="sm">
+              {pwError}
+            </Text>
+          )}
+          <Group justify="flex-end">
+            <Button variant="subtle" onClick={closePw}>
+              Cancel
+            </Button>
+            <Button onClick={handleChangePassword} loading={pwSaving}>
               Save
             </Button>
           </Group>

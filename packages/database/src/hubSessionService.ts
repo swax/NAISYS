@@ -174,34 +174,52 @@ export async function updateHubUserPassword(
 }
 
 /**
- * Ensure an admin user exists. Checks hub users, then local users via the
- * provided callback. If neither exist, auto-creates an admin with a random
- * password and prints it to the console.
+ * Find a hub agent (from the hub `users` table) by username.
+ */
+export async function findHubAgentByUsername(
+  username: string,
+): Promise<{ uuid: string } | null> {
+  if (!prisma) return null;
+
+  const agent = await prisma.users.findFirst({
+    where: { username },
+    select: { uuid: true },
+  });
+
+  return agent;
+}
+
+/**
+ * Ensure an admin user exists locally. Looks up the "admin" agent in the hub
+ * `users` table to get its UUID, then delegates to the callback which should
+ * create the admin if it doesn't already exist (upsert by UUID).
+ *
+ * Returns true if a new admin was created (password was generated).
  */
 export async function ensureAdminUser(
-  countLocalUsers: () => Promise<number>,
-  createLocalUser: (
-    username: string,
+  ensureLocalAdmin: (
     passwordHash: string,
     uuid: string,
-  ) => Promise<void>,
+  ) => Promise<boolean>,
 ): Promise<void> {
-  // If hub has users, they can SSO in — no local admin needed
-  if (isHubAvailable() && (await countHubUsers()) > 0) return;
+  const hubAgent = await findHubAgentByUsername("admin");
+  if (!hubAgent) {
+    console.error(
+      "[ensureAdminUser] No 'admin' agent found in hub. Was the agent config seeded?",
+    );
+    process.exit(1);
+  }
 
-  // If local DB already has users, nothing to do
-  if ((await countLocalUsers()) > 0) return;
-
-  // No users anywhere — generate a random password and create admin
   const password = randomUUID().slice(0, 8);
   const hash = await bcrypt.hash(password, 10);
-  const uuid = randomUUID();
 
-  await createLocalUser("admin", hash, uuid);
-  await createHubUser("admin", hash, uuid);
+  const created = await ensureLocalAdmin(hash, hubAgent.uuid);
 
-  console.log(`\n  Admin user created. Password: ${password}`);
-  console.log(`  Change it via the web UI\n`);
+  if (created) {
+    await createHubUser("admin", hash, hubAgent.uuid);
+    console.log(`\n  Admin user created. Password: ${password}`);
+    console.log(`  Change it via the web UI or ns-admin-pw command\n`);
+  }
 }
 
 /**

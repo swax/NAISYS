@@ -38,6 +38,7 @@ const agentPath = program.args[0];
 
 let hubUrl: string | undefined = program.opts().hub;
 const integratedHub = Boolean(program.opts().integratedHub);
+let supervisorPort: number | undefined;
 
 if (integratedHub) {
   // Don't import the hub module tree unless needed, sharing the same process space is to save memory on small servers
@@ -46,13 +47,14 @@ if (integratedHub) {
   const { startHub } = (await import(hubModule)) as { startHub: StartHub };
   const plugins: "erp"[] = [];
   if (program.opts().erp) plugins.push("erp");
-  const hubPort = await startHub(
+  const hubResult = await startHub(
     "hosted",
     program.opts().supervisor,
     plugins,
     agentPath,
   );
-  hubUrl = `http://localhost:${hubPort}`;
+  hubUrl = `http://localhost:${hubResult.hubPort}`;
+  supervisorPort = hubResult.supervisorPort;
 }
 
 const promptNotification = createPromptNotificationService();
@@ -68,7 +70,7 @@ if (hubUrl) {
   );
 }
 
-const globalConfig = createGlobalConfig(hubClient);
+const globalConfig = createGlobalConfig(hubClient, supervisorPort);
 const hostService = createHostService(hubClient, globalConfig);
 const userService = createUserService(
   hubClient,

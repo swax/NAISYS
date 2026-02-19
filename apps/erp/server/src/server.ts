@@ -155,14 +155,14 @@ async function startServer() {
   await fastify.register(erpPlugin);
 
   const { default: prisma } = await import("./db.js");
-  await ensureAdminUser(
-    () => prisma.user.count(),
-    async (username, passwordHash, uuid) => {
-      await prisma.user.create({
-        data: { uuid, username, passwordHash },
-      });
-    },
-  );
+  await ensureAdminUser(async (passwordHash, uuid) => {
+    const existing = await prisma.user.findFirst({ where: { uuid } });
+    if (existing) return false;
+    await prisma.user.create({
+      data: { uuid, username: "admin", passwordHash },
+    });
+    return true;
+  });
 
   const port = Number(process.env.ERP_PORT) || 3201;
   const host = isProd ? "0.0.0.0" : "localhost";
