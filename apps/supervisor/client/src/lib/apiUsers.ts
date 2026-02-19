@@ -29,7 +29,7 @@ export const createUser = async (data: {
 
 export const updateUser = async (
   id: number,
-  data: { username?: string; password?: string },
+  data: { username?: string },
 ): Promise<any> => {
   return api.put(`/users/${id}`, data);
 };
@@ -50,4 +50,8 @@ export const revokePermission = async (
   permission: string,
 ): Promise<any> => {
   return api.delete(`/users/${userId}/permissions/${permission}`);
+};
+
+export const changePassword = async (password: string): Promise<any> => {
+  return api.post("/users/me/password", { password });
 };

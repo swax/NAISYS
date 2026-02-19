@@ -7,6 +7,7 @@ import {
 } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import {
+  ChangePasswordSchema,
   CreateUserSchema,
   UpdateUserSchema,
   GrantPermissionSchema,
@@ -39,14 +40,25 @@ function userActions(
   const href = `${API_PREFIX}/users/${userId}`;
   const actions: HateoasAction[] = [];
 
-  // Admins can update any user; non-admins can update themselves (password only)
-  if (isAdmin || isSelf) {
+  // Admins can edit any user (username + password)
+  if (isAdmin) {
     actions.push({
       rel: "update",
       href,
       method: "PUT",
-      title: isSelf && !isAdmin ? "Change Password" : "Update",
+      title: "Update",
       schema: `${API_PREFIX}/schemas/UpdateUser`,
+    });
+  }
+
+  // Any authenticated user can change their own password
+  if (isSelf) {
+    actions.push({
+      rel: "change-password",
+      href: `${API_PREFIX}/users/me/password`,
+      method: "POST",
+      title: "Change Password",
+      schema: `${API_PREFIX}/schemas/ChangePassword`,
     });
   }
 
@@ -193,6 +205,35 @@ export default async function userRoutes(
           search,
         }),
       };
+    },
+  );
+
+  // CHANGE OWN PASSWORD (must be registered before /:id routes)
+  app.post(
+    "/me/password",
+    {
+      schema: {
+        description: "Change the current user's password",
+        tags: ["Users"],
+        body: ChangePasswordSchema,
+        security: [{ cookieAuth: [] }],
+      },
+    },
+    async (request, reply) => {
+      if (!request.supervisorUser) {
+        reply.status(401).send({
+          statusCode: 401,
+          error: "Unauthorized",
+          message: "Authentication required",
+        });
+        return;
+      }
+
+      await userService.updateUser(request.supervisorUser.id, {
+        password: request.body.password,
+      });
+      authCache.clear();
+      return { success: true, message: "Password changed" };
     },
   );
 

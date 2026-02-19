@@ -29,6 +29,7 @@ import { initLogger } from "./logger.js";
 import apiRoutes from "./routes/api.js";
 import {
   createUser,
+  getUserByUuid,
   grantInitialAdminPermissions,
   getUserByUsername,
 } from "./services/userService.js";
@@ -71,13 +72,13 @@ export const startServer: StartServer = async (
     initHubConnection(hubUrl);
   }
 
-  await ensureAdminUser(
-    () => prisma.user.count(),
-    async (username, _passwordHash, uuid) => {
-      const user = await createUser(username, uuid);
-      await grantInitialAdminPermissions(user.id);
-    },
-  );
+  await ensureAdminUser(async (passwordHash, uuid) => {
+    const existing = await getUserByUuid(uuid);
+    if (existing) return false;
+    const user = await createUser("admin", uuid);
+    await grantInitialAdminPermissions(user.id);
+    return true;
+  });
 
   const __filename = fileURLToPath(import.meta.url);
   const __dirname = path.dirname(__filename);
@@ -242,7 +243,7 @@ export const startServer: StartServer = async (
         console.log(
           `[Supervisor] Running on http://${host}:${port}/supervisor, logs written to file`,
         );
-        break;
+        return port;
       } catch (err: any) {
         if (err.code === "EADDRINUSE") {
           console.log(
@@ -260,6 +261,8 @@ export const startServer: StartServer = async (
         }
       }
     }
+    // Unreachable — the loop either returns or throws
+    throw new Error("Unreachable");
   } catch (err) {
     console.error("[Supervisor] Failed to start:", err);
     fastify.log.error(err);

@@ -145,6 +145,7 @@ export const startHub: StartHub = async (
      * There should be no dependency between supervisor and hub
      * Sharing the same process space is to save 150 mb of node.js runtime memory on small servers
      */
+    let supervisorPort: number | undefined;
     if (startSupervisor) {
       // Don't import the whole fastify web server module tree unless needed
       // Use variable to avoid compile-time type dependency on @naisys-supervisor/server (allows parallel builds)
@@ -152,10 +153,10 @@ export const startHub: StartHub = async (
       const { startServer } = (await import(supervisorModule)) as {
         startServer: StartServer;
       };
-      await startServer("hosted", plugins, hubPort);
+      supervisorPort = await startServer("hosted", plugins, hubPort);
     }
 
-    return hubPort;
+    return { hubPort, supervisorPort };
   } catch (err) {
     console.error("[Hub] Failed to start hub server:", err);
     process.exit(1);

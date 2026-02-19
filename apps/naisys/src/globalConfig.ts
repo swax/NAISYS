@@ -8,7 +8,10 @@ import { HubClient } from "./hub/hubClient.js";
 import * as pathService from "./services/pathService.js";
 import { useNativeWindows } from "./services/shellPlatform.js";
 
-export function createGlobalConfig(hubClient?: HubClient) {
+export function createGlobalConfig(
+  hubClient?: HubClient,
+  supervisorPort?: number,
+) {
   type FullClientConfig = Awaited<ReturnType<typeof appendClientConfig>>;
 
   let cachedConfig: FullClientConfig;
@@ -68,6 +71,7 @@ export function createGlobalConfig(hubClient?: HubClient) {
       hostname,
       packageVersion,
       binPath,
+      supervisorPort,
     };
   }
 
