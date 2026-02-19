@@ -278,6 +278,13 @@ export const startServer: StartServer = async (
 // Start server if this file is run directly
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   if (process.argv.includes("--reset-password")) {
+    const usernameIdx = process.argv.indexOf("--username");
+    const passwordIdx = process.argv.indexOf("--password");
+    const username =
+      usernameIdx !== -1 ? process.argv[usernameIdx + 1] : undefined;
+    const password =
+      passwordIdx !== -1 ? process.argv[passwordIdx + 1] : undefined;
+
     void handleResetPassword({
       findLocalUser: async (username) => {
         const user = await getUserByUsername(username);
@@ -286,6 +293,8 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
           : null;
       },
       updateLocalPassword: async () => {},
+      username,
+      password,
     });
   } else {
     void startServer("standalone");
