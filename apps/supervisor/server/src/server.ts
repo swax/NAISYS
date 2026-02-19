@@ -19,7 +19,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import {
   initHubSessions,
-  ensureAdminUser,
+  ensureSuperAdmin,
   handleResetPassword,
   deployPrismaMigrations,
 } from "@naisys/database";
@@ -72,10 +72,10 @@ export const startServer: StartServer = async (
     initHubConnection(hubUrl);
   }
 
-  await ensureAdminUser(async (passwordHash, uuid) => {
+  await ensureSuperAdmin(async (passwordHash, uuid) => {
     const existing = await getUserByUuid(uuid);
     if (existing) return false;
-    const user = await createUser("admin", uuid);
+    const user = await createUser("superadmin", uuid);
     await grantInitialAdminPermissions(user.id);
     return true;
   });

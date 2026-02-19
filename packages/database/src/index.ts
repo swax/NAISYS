@@ -9,7 +9,7 @@ export {
   countHubUsers,
   createHubUser,
   updateHubUserPassword,
-  ensureAdminUser,
+  ensureSuperAdmin,
   handleResetPassword,
   resetPassword,
   findAgentByApiKey,

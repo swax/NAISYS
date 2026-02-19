@@ -190,9 +190,6 @@ export async function createAgentRuntime(
 
   const debugCommands = createDebugCommands(
     globalConfig,
-    agentConfig,
-    userService,
-    localUserId,
     contextManager,
     output,
     inputMode,
