@@ -5,6 +5,16 @@ import cors from "@fastify/cors";
 import rateLimit from "@fastify/rate-limit";
 import staticFiles from "@fastify/static";
 import swagger from "@fastify/swagger";
+import { commonErrorHandler } from "@naisys/common";
+import {
+  createHubDatabaseClient,
+  deployPrismaMigrations,
+} from "@naisys/hub-database";
+import {
+  createSupervisorDatabaseClient,
+  ensureSuperAdmin,
+  handleResetPassword,
+} from "@naisys/supervisor-database";
 import Fastify, { type FastifyPluginAsync } from "fastify";
 import {
   jsonSchemaTransform,
@@ -18,16 +28,6 @@ import { fileURLToPath } from "url";
 import { registerApiReference } from "./api-reference.js";
 import { registerAuthMiddleware } from "./auth-middleware.js";
 import { ERP_DB_VERSION, erpDbPath } from "./dbConfig.js";
-import { commonErrorHandler } from "@naisys/common";
-import {
-  initHubSessions,
-  deployPrismaMigrations,
-} from "@naisys/hub-database";
-import {
-  initSupervisorSessions,
-  ensureSuperAdmin,
-  handleResetPassword,
-} from "@naisys/supervisor-database";
 import auditRoutes from "./routes/audit.js";
 import authRoutes from "./routes/auth.js";
 import executionOrderRoutes from "./routes/execution-orders.js";
@@ -36,6 +36,9 @@ import planningOrderRoutes from "./routes/planning-orders.js";
 import rootRoute from "./routes/root.js";
 import schemaRoutes from "./routes/schemas.js";
 import "./schema-registry.js";
+import { enableSupervisorAuth, isSupervisorAuth } from "./supervisorAuth.js";
+import { ensureLocalSuperAdmin, resetLocalPassword } from "./userService.js";
+export { enableSupervisorAuth } from "./supervisorAuth.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -67,8 +70,18 @@ export const erpPlugin: FastifyPluginAsync = async (fastify) => {
     expectedVersion: ERP_DB_VERSION,
   });
 
-  initHubSessions();
-  initSupervisorSessions();
+  if (isSupervisorAuth()) {
+    if (!createHubDatabaseClient()) {
+      throw new Error(
+        "[ERP] Hub database not available. Required for supervisor auth.",
+      );
+    }
+    if (!createSupervisorDatabaseClient()) {
+      throw new Error(
+        "[ERP] Supervisor database not available. Required for supervisor auth.",
+      );
+    }
+  }
 
   fastify.setErrorHandler(commonErrorHandler);
   registerAuthMiddleware(fastify);
@@ -158,15 +171,19 @@ async function startServer() {
 
   await fastify.register(erpPlugin);
 
-  const { default: prisma } = await import("./db.js");
-  await ensureSuperAdmin(async (passwordHash, uuid) => {
-    const existing = await prisma.user.findFirst({ where: { uuid } });
-    if (existing) return false;
-    await prisma.user.create({
-      data: { uuid, username: "superadmin", passwordHash },
+  if (isSupervisorAuth()) {
+    const { default: prisma } = await import("./db.js");
+    await ensureSuperAdmin(async (passwordHash, uuid, superAdminName) => {
+      const existing = await prisma.user.findFirst({ where: { uuid } });
+      if (existing) return false;
+      await prisma.user.create({
+        data: { uuid, username: superAdminName, passwordHash },
+      });
+      return true;
     });
-    return true;
-  });
+  } else {
+    await ensureLocalSuperAdmin();
+  }
 
   const port = Number(process.env.ERP_PORT) || 3201;
   const host = isProd ? "0.0.0.0" : "localhost";
@@ -185,23 +202,31 @@ async function startServer() {
 
 // Start server if this file is run directly
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  if (process.argv.includes("--supervisor-auth")) {
+    enableSupervisorAuth();
+  }
+
   if (process.argv.includes("--reset-password")) {
-    void handleResetPassword({
-      findLocalUser: async (username) => {
-        const prisma = (await import("./db.js")).default;
-        const user = await prisma.user.findUnique({ where: { username } });
-        return user
-          ? { id: user.id, username: user.username, uuid: user.uuid }
-          : null;
-      },
-      updateLocalPassword: async (userId, passwordHash) => {
-        const prisma = (await import("./db.js")).default;
-        await prisma.user.update({
-          where: { id: userId },
-          data: { passwordHash },
-        });
-      },
-    });
+    if (isSupervisorAuth()) {
+      void handleResetPassword({
+        findLocalUser: async (username) => {
+          const prisma = (await import("./db.js")).default;
+          const user = await prisma.user.findUnique({ where: { username } });
+          return user
+            ? { id: user.id, username: user.username, uuid: user.uuid }
+            : null;
+        },
+        updateLocalPassword: async (userId, passwordHash) => {
+          const prisma = (await import("./db.js")).default;
+          await prisma.user.update({
+            where: { id: userId },
+            data: { passwordHash },
+          });
+        },
+      });
+    } else {
+      void resetLocalPassword();
+    }
   } else {
     void startServer();
   }

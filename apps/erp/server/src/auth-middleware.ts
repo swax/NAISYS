@@ -3,10 +3,8 @@ import { AuthCache } from "@naisys/common";
 import { hashToken } from "@naisys/common/dist/hashToken.js";
 import prisma from "./db.js";
 import { findSession } from "@naisys/supervisor-database";
-import {
-  findAgentByApiKey,
-  isHubAvailable,
-} from "@naisys/hub-database";
+import { findAgentByApiKey } from "@naisys/hub-database";
+import { isSupervisorAuth } from "./supervisorAuth.js";
 
 export interface ErpUser {
   id: number;
@@ -59,7 +57,7 @@ export function registerAuthMiddleware(fastify: FastifyInstance) {
       if (cached !== undefined) {
         // Cache hit (valid or negative)
         if (cached) request.erpUser = cached;
-      } else if (isHubAvailable()) {
+      } else if (isSupervisorAuth()) {
         // SSO mode: supervisor DB is source of truth for sessions
         const session = await findSession(tokenHash);
         if (session) {

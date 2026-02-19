@@ -4,10 +4,8 @@ export { createDatabaseService, DatabaseService } from "./dbService.js";
 export { deployPrismaMigrations } from "@naisys/common/dist/migrationHelper.js";
 // Re-export Hub Session Service
 export {
-  initHubSessions,
-  isHubAvailable,
+  createHubDatabaseClient,
   findAgentByApiKey,
-  findHubAgentByUsername,
 } from "./hubSessionService.js";
 // Re-export Prisma Client and all generated types
 export * from "./generated/prisma/client.js";

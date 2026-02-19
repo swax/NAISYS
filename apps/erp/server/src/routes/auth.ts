@@ -1,4 +1,4 @@
-import { randomUUID, createHash } from "crypto";
+import { randomUUID } from "crypto";
 import bcrypt from "bcrypt";
 import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
@@ -12,18 +12,14 @@ import prisma from "../db.js";
 import { sendError } from "../error-handler.js";
 import { authCache } from "../auth-middleware.js";
 import {
-  createSession,
+  authenticateAndCreateSession,
   deleteSession,
-  findUserByUsername,
 } from "@naisys/supervisor-database";
-import { isHubAvailable } from "@naisys/hub-database";
+import { hashToken } from "@naisys/common/dist/hashToken.js";
+import { isSupervisorAuth } from "../supervisorAuth.js";
 
 const COOKIE_NAME = "naisys_session";
 const SESSION_DURATION_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
-
-function hashToken(token: string): string {
-  return createHash("sha256").update(token).digest("hex");
-}
 
 export default async function authRoutes(fastify: FastifyInstance) {
   const app = fastify.withTypeProvider<ZodTypeProvider>();
@@ -49,82 +45,55 @@ export default async function authRoutes(fastify: FastifyInstance) {
     handler: async (request, reply) => {
       const { username, password } = request.body;
 
-      let user = await prisma.user.findUnique({ where: { username } });
-      let passwordVerified = false;
-
-      // Supervisor DB-first password check (SSO mode)
-      if (isHubAvailable()) {
-        const sessionUser = await findUserByUsername(username);
-        if (sessionUser) {
-          const valid = await bcrypt.compare(password, sessionUser.passwordHash);
-          if (valid) {
-            if (!user) {
-              // Auto-provision local user from supervisor DB
-              user = await prisma.user.create({
-                data: {
-                  uuid: sessionUser.uuid,
-                  username: sessionUser.username,
-                  passwordHash: sessionUser.passwordHash,
-                },
-              });
-            } else if (user.passwordHash !== sessionUser.passwordHash) {
-              // Sync supervisor hash down to local
-              user = await prisma.user.update({
-                where: { id: user.id },
-                data: { passwordHash: sessionUser.passwordHash },
-              });
-            }
-            passwordVerified = true;
-          }
+      // SSO mode: authenticate against supervisor DB
+      if (isSupervisorAuth()) {
+        const authResult = await authenticateAndCreateSession(username, password);
+        if (!authResult) {
+          return sendError(reply, 401, "Unauthorized", "Invalid username or password");
         }
+
+        const ssoData = {
+          username,
+          passwordHash: authResult.user.passwordHash,
+          sessionTokenHash: "!sso",
+          sessionExpiresAt: authResult.expiresAt,
+        };
+        const user = await prisma.user.upsert({
+          where: { uuid: authResult.user.uuid },
+          create: { uuid: authResult.user.uuid, ...ssoData },
+          update: ssoData,
+        });
+
+        reply.setCookie(COOKIE_NAME, authResult.token, {
+          path: "/",
+          httpOnly: true,
+          sameSite: "lax",
+          secure: process.env.NODE_ENV === "production",
+          maxAge: (authResult.expiresAt.getTime() - Date.now()) / 1000,
+        });
+
+        return { user: { id: user.id, username: user.username } };
       }
 
+      // Standalone mode: authenticate against local DB
+      const user = await prisma.user.findUnique({ where: { username } });
       if (!user) {
-        return sendError(
-          reply,
-          401,
-          "Unauthorized",
-          "Invalid username or password",
-        );
+        return sendError(reply, 401, "Unauthorized", "Invalid username or password");
       }
 
-      // Fall back to local hash check (standalone mode or user not in hub)
-      if (!passwordVerified) {
-        const valid = await bcrypt.compare(password, user.passwordHash);
-        if (!valid) {
-          return sendError(
-            reply,
-            401,
-            "Unauthorized",
-            "Invalid username or password",
-          );
-        }
+      const valid = await bcrypt.compare(password, user.passwordHash);
+      if (!valid) {
+        return sendError(reply, 401, "Unauthorized", "Invalid username or password");
       }
 
       const token = randomUUID();
       const tokenHash = hashToken(token);
       const expiresAt = new Date(Date.now() + SESSION_DURATION_MS);
 
-      if (isHubAvailable()) {
-        // SSO mode: supervisor DB is source of truth for sessions
-        await createSession(
-          tokenHash,
-          user.username,
-          user.passwordHash,
-          user.uuid,
-          expiresAt,
-        );
-        await prisma.user.update({
-          where: { id: user.id },
-          data: { sessionTokenHash: "!sso", sessionExpiresAt: expiresAt },
-        });
-      } else {
-        // Standalone mode: local session only
-        await prisma.user.update({
-          where: { id: user.id },
-          data: { sessionTokenHash: tokenHash, sessionExpiresAt: expiresAt },
-        });
-      }
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { sessionTokenHash: tokenHash, sessionExpiresAt: expiresAt },
+      });
 
       reply.setCookie(COOKIE_NAME, token, {
         path: "/",
@@ -134,12 +103,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
         maxAge: SESSION_DURATION_MS / 1000,
       });
 
-      return {
-        user: {
-          id: user.id,
-          username: user.username,
-        },
-      };
+      return { user: { id: user.id, username: user.username } };
     },
   });
 
