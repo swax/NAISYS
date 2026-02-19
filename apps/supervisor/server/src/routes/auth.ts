@@ -10,10 +10,10 @@ import {
 import { FastifyInstance, FastifyPluginOptions } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import {
-  createHubSession,
-  deleteHubSession,
-  findHubUserByUsername,
-} from "@naisys/hub-database";
+  createSession,
+  deleteSession,
+  findUserByUsername,
+} from "@naisys/supervisor-database";
 import {
   createUser,
   getUserByUsername,
@@ -63,9 +63,9 @@ export default async function authRoutes(
 
       const { username, password } = request.body;
 
-      // Verify password against hub
-      const hubUser = await findHubUserByUsername(username);
-      if (!hubUser) {
+      // Verify password against supervisor DB
+      const sessionUser = await findUserByUsername(username);
+      if (!sessionUser) {
         reply.code(401);
         return {
           success: false as const,
@@ -73,7 +73,7 @@ export default async function authRoutes(
         };
       }
 
-      const valid = await bcrypt.compare(password, hubUser.password_hash);
+      const valid = await bcrypt.compare(password, sessionUser.passwordHash);
       if (!valid) {
         reply.code(401);
         return {
@@ -85,19 +85,19 @@ export default async function authRoutes(
       // Auto-provision local user if needed
       let user = await getUserByUsername(username);
       if (!user) {
-        user = await createUser(hubUser.username, hubUser.uuid);
+        user = await createUser(sessionUser.username, sessionUser.uuid);
       }
 
-      // Create session in hub
+      // Create session in supervisor DB
       const token = randomUUID();
       const tokenHash = hashToken(token);
       const expiresAt = new Date(Date.now() + SESSION_DURATION_MS);
 
-      await createHubSession(
+      await createSession(
         tokenHash,
-        hubUser.username,
-        hubUser.password_hash,
-        hubUser.uuid,
+        sessionUser.username,
+        sessionUser.passwordHash,
+        sessionUser.uuid,
         expiresAt,
       );
 
@@ -141,7 +141,7 @@ export default async function authRoutes(
       if (token) {
         const tokenHash = hashToken(token);
         authCache.invalidate(`cookie:${tokenHash}`);
-        await deleteHubSession(tokenHash);
+        await deleteSession(tokenHash);
       }
 
       reply.clearCookie(COOKIE_NAME, { path: "/" });

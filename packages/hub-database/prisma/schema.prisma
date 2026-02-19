@@ -163,17 +163,6 @@ model hosts {
   user_hosts         user_hosts[]
 }
 
-model supervisor_users {
-  id                 Int       @id @default(autoincrement())
-  uuid               String    @unique
-  username           String    @unique
-  password_hash      String
-  session_token_hash String?
-  session_expires_at DateTime?
-  created_at         DateTime  @default(now())
-  updated_at         DateTime  @updatedAt
-}
-
 model variables {
   key        String   @id
   value      String

@@ -21,10 +21,13 @@ import { ERP_DB_VERSION, erpDbPath } from "./dbConfig.js";
 import { commonErrorHandler } from "@naisys/common";
 import {
   initHubSessions,
-  ensureSuperAdmin,
-  handleResetPassword,
   deployPrismaMigrations,
 } from "@naisys/hub-database";
+import {
+  initSupervisorSessions,
+  ensureSuperAdmin,
+  handleResetPassword,
+} from "@naisys/supervisor-database";
 import auditRoutes from "./routes/audit.js";
 import authRoutes from "./routes/auth.js";
 import executionOrderRoutes from "./routes/execution-orders.js";
@@ -65,6 +68,7 @@ export const erpPlugin: FastifyPluginAsync = async (fastify) => {
   });
 
   initHubSessions();
+  initSupervisorSessions();
 
   fastify.setErrorHandler(commonErrorHandler);
   registerAuthMiddleware(fastify);

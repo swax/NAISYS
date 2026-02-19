@@ -6,19 +6,9 @@ export { deployPrismaMigrations } from "@naisys/common/dist/migrationHelper.js";
 export {
   initHubSessions,
   isHubAvailable,
-  countHubUsers,
-  createHubUser,
-  updateHubUserPassword,
-  ensureSuperAdmin,
-  handleResetPassword,
-  resetPassword,
   findAgentByApiKey,
-  findHubSession,
-  findHubUserByUsername,
-  createHubSession,
-  deleteHubSession,
+  findHubAgentByUsername,
 } from "./hubSessionService.js";
-export type { HubUser } from "./hubSessionService.js";
 // Re-export Prisma Client and all generated types
 export * from "./generated/prisma/client.js";
 export { PrismaClient } from "./generated/prisma/client.js";

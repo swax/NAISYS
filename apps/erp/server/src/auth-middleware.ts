@@ -2,9 +2,9 @@ import type { FastifyInstance } from "fastify";
 import { AuthCache } from "@naisys/common";
 import { hashToken } from "@naisys/common/dist/hashToken.js";
 import prisma from "./db.js";
+import { findSession } from "@naisys/supervisor-database";
 import {
   findAgentByApiKey,
-  findHubSession,
   isHubAvailable,
 } from "@naisys/hub-database";
 
@@ -60,18 +60,18 @@ export function registerAuthMiddleware(fastify: FastifyInstance) {
         // Cache hit (valid or negative)
         if (cached) request.erpUser = cached;
       } else if (isHubAvailable()) {
-        // SSO mode: hub is source of truth
-        const hubSession = await findHubSession(tokenHash);
-        if (hubSession) {
+        // SSO mode: supervisor DB is source of truth for sessions
+        const session = await findSession(tokenHash);
+        if (session) {
           let localUser = await prisma.user.findUnique({
-            where: { uuid: hubSession.uuid },
+            where: { uuid: session.uuid },
           });
           if (!localUser) {
             localUser = await prisma.user.create({
               data: {
-                uuid: hubSession.uuid,
-                username: hubSession.username,
-                passwordHash: hubSession.password_hash,
+                uuid: session.uuid,
+                username: session.username,
+                passwordHash: session.passwordHash,
               },
             });
           }

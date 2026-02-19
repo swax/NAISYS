@@ -1,7 +1,8 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { AuthCache } from "@naisys/common";
 import { hashToken } from "@naisys/common/dist/hashToken.js";
-import { findAgentByApiKey, findHubSession } from "@naisys/hub-database";
+import { findSession } from "@naisys/supervisor-database";
+import { findAgentByApiKey } from "@naisys/hub-database";
 import {
   createUser,
   getUserByUuid,
@@ -66,12 +67,12 @@ export function registerAuthMiddleware(fastify: FastifyInstance) {
         // Cache hit (valid or negative)
         if (cached) request.supervisorUser = cached;
       } else {
-        // Hub is source of truth for sessions
-        const hubSession = await findHubSession(tokenHash);
-        if (hubSession) {
-          let localUser = await getUserByUuid(hubSession.uuid);
+        // Supervisor DB is source of truth for sessions
+        const session = await findSession(tokenHash);
+        if (session) {
+          let localUser = await getUserByUuid(session.uuid);
           if (!localUser) {
-            localUser = await createUser(hubSession.username, hubSession.uuid);
+            localUser = await createUser(session.username, session.uuid);
           }
           const user = await buildSupervisorUser(
             localUser.id,

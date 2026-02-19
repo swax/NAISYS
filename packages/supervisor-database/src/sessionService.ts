@@ -1,0 +1,210 @@
+import bcrypt from "bcrypt";
+import { randomUUID } from "crypto";
+import readline from "readline/promises";
+import { supervisorDbPath } from "./dbConfig.js";
+import { PrismaClient } from "./generated/prisma/client.js";
+import { createPrismaClient } from "./prismaClient.js";
+import { existsSync } from "fs";
+
+export interface SessionUser {
+  username: string;
+  passwordHash: string;
+  uuid: string;
+}
+
+let prisma: PrismaClient | null = null;
+
+/**
+ * Initialize supervisor sessions by connecting to supervisor.db.
+ * Idempotent — returns early if already initialized.
+ * No-ops gracefully if NAISYS_FOLDER is unset or the database doesn't exist.
+ */
+export function initSupervisorSessions(): boolean {
+  if (prisma) return true;
+
+  const dbPath = supervisorDbPath();
+
+  if (!existsSync(dbPath)) return false;
+
+  prisma = createPrismaClient(dbPath);
+  return true;
+}
+
+/**
+ * Find a session user by session token hash. Returns null if not found or expired.
+ */
+export async function findSession(
+  tokenHash: string,
+): Promise<SessionUser | null> {
+  if (!prisma) return null;
+
+  const user = await prisma.user.findFirst({
+    where: {
+      sessionTokenHash: tokenHash,
+      sessionExpiresAt: { gt: new Date() },
+    },
+  });
+
+  if (!user) return null;
+
+  return {
+    username: user.username,
+    passwordHash: user.passwordHash,
+    uuid: user.uuid,
+  };
+}
+
+/**
+ * Look up a session user by username.
+ */
+export async function findUserByUsername(
+  username: string,
+): Promise<SessionUser | null> {
+  if (!prisma) return null;
+
+  const user = await prisma.user.findUnique({
+    where: { username },
+  });
+
+  if (!user) return null;
+
+  return {
+    username: user.username,
+    passwordHash: user.passwordHash,
+    uuid: user.uuid,
+  };
+}
+
+/**
+ * Create or update a session for a user by uuid.
+ */
+export async function createSession(
+  tokenHash: string,
+  username: string,
+  passwordHash: string,
+  uuid: string,
+  expiresAt: Date,
+): Promise<void> {
+  if (!prisma) return;
+
+  await prisma.user.update({
+    where: { username },
+    data: {
+      passwordHash,
+      sessionTokenHash: tokenHash,
+      sessionExpiresAt: expiresAt,
+    },
+  });
+}
+
+/**
+ * Update a user's password hash. No-op if not initialized.
+ */
+export async function updateUserPassword(
+  username: string,
+  passwordHash: string,
+): Promise<void> {
+  if (!prisma) return;
+
+  await prisma.user.update({
+    where: { username },
+    data: { passwordHash },
+  });
+}
+
+/**
+ * Clear session token for a user by token hash.
+ */
+export async function deleteSession(tokenHash: string): Promise<void> {
+  if (!prisma) return;
+
+  await prisma.user.updateMany({
+    where: { sessionTokenHash: tokenHash },
+    data: {
+      sessionTokenHash: null,
+      sessionExpiresAt: null,
+    },
+  });
+}
+
+/**
+ * Ensure a "superadmin" user exists in the supervisor database.
+ * If the entry already exists with a password, this is a no-op.
+ * Otherwise generates credentials and delegates local user creation to the callback.
+ */
+export async function ensureSuperAdmin(
+  ensureLocalSuperAdmin: (
+    passwordHash: string,
+    uuid: string,
+  ) => Promise<boolean>,
+): Promise<void> {
+  const existing = await findUserByUsername("superadmin");
+  if (existing && existing.passwordHash !== "") return;
+
+  const uuid = existing?.uuid || randomUUID();
+  const password = randomUUID().slice(0, 8);
+  const hash = await bcrypt.hash(password, 10);
+
+  const created = await ensureLocalSuperAdmin(hash, uuid);
+
+  if (created) {
+    await updateUserPassword("superadmin", hash);
+    console.log(`\n  superadmin user created. Password: ${password}`);
+    console.log(`  Change it via the web UI or ns-admin-pw command\n`);
+  }
+}
+
+/**
+ * CLI entry point for --reset-password. Initializes supervisor sessions,
+ * then runs the interactive password reset.
+ */
+export async function handleResetPassword(options: {
+  findLocalUser: (
+    username: string,
+  ) => Promise<{ id: number; username: string; uuid: string } | null>;
+  updateLocalPassword: (userId: number, passwordHash: string) => Promise<void>;
+}): Promise<void> {
+  console.log(`NAISYS_FOLDER: ${process.env.NAISYS_FOLDER}`);
+  initSupervisorSessions();
+
+  await resetPassword(options.findLocalUser, options.updateLocalPassword);
+}
+
+/**
+ * Interactive CLI to reset a user's password. Updates both local DB (via
+ * callbacks) and the supervisor DB.
+ */
+export async function resetPassword(
+  findLocalUser: (
+    username: string,
+  ) => Promise<{ id: number; username: string; uuid: string } | null>,
+  updateLocalPassword: (userId: number, passwordHash: string) => Promise<void>,
+): Promise<void> {
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  });
+
+  try {
+    const username = await rl.question("Username: ");
+    const user = await findLocalUser(username);
+    if (!user) {
+      console.error(`User '${username}' not found.`);
+      process.exit(1);
+    }
+
+    const password = await rl.question("New password: ");
+    if (password.length < 6) {
+      console.error("Password must be at least 6 characters.");
+      process.exit(1);
+    }
+
+    const hash = await bcrypt.hash(password, 10);
+    await updateLocalPassword(user.id, hash);
+    await updateUserPassword(username, hash);
+
+    console.log(`Password reset for '${username}'.`);
+  } finally {
+    rl.close();
+  }
+}
