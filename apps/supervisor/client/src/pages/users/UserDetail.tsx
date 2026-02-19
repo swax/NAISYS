@@ -16,8 +16,9 @@ import {
 import { useDisclosure } from "@mantine/hooks";
 import { hasAction } from "@naisys/common";
 import { useCallback, useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useOutletContext, useParams } from "react-router-dom";
 import { useSession } from "../../contexts/SessionContext";
+import type { AppOutletContext } from "../../App";
 import {
   getUser,
   updateUser,
@@ -26,15 +27,6 @@ import {
   revokePermission,
   changePassword,
 } from "../../lib/apiUsers";
-
-// Keep in sync with PermissionEnum in shared/src/user-types.ts
-const ALL_PERMISSIONS = [
-  "supervisor_admin",
-  "manage_agents",
-  "agent_communication",
-  "manage_models",
-  "manage_variables",
-];
 
 export const UserDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -52,6 +44,7 @@ export const UserDetail: React.FC = () => {
   const [newPassword, setNewPassword] = useState("");
   const [pwSaving, setPwSaving] = useState(false);
   const [pwError, setPwError] = useState("");
+  const { permissions: allPermissions } = useOutletContext<AppOutletContext>();
 
   const fetchUser = useCallback(async () => {
     if (!id) return;
@@ -153,7 +146,7 @@ export const UserDetail: React.FC = () => {
     );
   }
 
-  const grantablePermissions = ALL_PERMISSIONS.filter(
+  const grantablePermissions = allPermissions.filter(
     (p) => !user.permissions?.some((up: any) => up.permission === p),
   );
 

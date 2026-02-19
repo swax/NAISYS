@@ -40,21 +40,27 @@ import { ModelPage } from "./pages/models/ModelPage";
 import { AdminPage } from "./pages/admin/AdminPage";
 import { VariablesPage } from "./pages/variables/VariablesPage";
 
+export interface AppOutletContext {
+  permissions: string[];
+}
+
 const AppContent: React.FC = () => {
   const [opened, { toggle, close }] = useDisclosure();
   const [loginOpen, { open: openLogin, close: closeLogin }] = useDisclosure();
   const [plugins, setPlugins] = React.useState<string[]>([]);
   const [publicRead, setPublicRead] = React.useState(false);
+  const [permissions, setPermissions] = React.useState<string[]>([]);
   const [clientConfigLoaded, setClientConfigLoaded] = React.useState(false);
   const { isAuthenticated, isCheckingSession } = useSession();
 
-  // Fetch client config (plugins, publicRead) on mount
+  // Fetch client config (plugins, publicRead, permissions) on mount
   React.useEffect(() => {
     fetch("/api/supervisor/client-config")
       .then((r) => r.json())
       .then((d) => {
         setPlugins(d.plugins);
         setPublicRead(d.publicRead);
+        setPermissions(d.permissions);
       })
       .catch(() => {})
       .finally(() => setClientConfigLoaded(true));
@@ -97,7 +103,7 @@ const AppContent: React.FC = () => {
 
       <AppShell.Main>
         <DisconnectedBanner />
-        <Outlet />
+        <Outlet context={{ permissions }} />
       </AppShell.Main>
       <LoginDialog opened={loginOpen} onClose={closeLogin} />
     </AppShell>

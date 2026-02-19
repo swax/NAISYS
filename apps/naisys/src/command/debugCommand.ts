@@ -76,9 +76,9 @@ export function createDebugCommands(
   const supervisorPort = globalConfig.globalConfig().supervisorPort;
   if (supervisorPort) {
     const nsAdminPw: RegistrableCommand = {
-      commandName: "ns-reset-superadmin-password",
+      commandName: "ns-reset-supervisor-password",
       helpText:
-        "Change the supervisor superadmin password: ns-reset-superadmin-password <newpassword>",
+        "Change a supervisor user's password: ns-reset-supervisor-password",
       isDebug: true,
       handleCommand: async (cmdArgs) => {
         return "todo";
