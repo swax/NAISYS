@@ -119,7 +119,7 @@ async function seedModels(
     ];
 
     // Merge custom models from YAML (migration from file-based storage)
-    const custom = loadCustomModels();
+    const custom = loadCustomModels(process.env.NAISYS_FOLDER || "");
 
     for (const m of custom.llmModels ?? []) {
       const isBuiltin = builtInLlmModels.some((b) => b.key === m.key);

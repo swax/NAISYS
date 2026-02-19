@@ -302,22 +302,38 @@ export const AgentDetail: React.FC = () => {
   return (
     <Stack p="md">
       <Group>
-        <Button
-          color="green"
-          disabled={!hasAction(actions, "start")}
-          loading={starting}
-          leftSection={<IconPlayerPlay size={16} />}
-          onClick={handleStart}
-        >
-          Start
-        </Button>
-        {hasAction(actions, "start") && (
-          <TextInput
-            placeholder="Task description (optional)"
-            value={taskInput}
-            onChange={(e) => setTaskInput(e.currentTarget.value)}
-            style={{ flex: 1 }}
-          />
+        {hasAction(actions, "start") ? (
+          <Group gap={0} style={{ flex: 1 }}>
+            <TextInput
+              placeholder="Task description (optional)"
+              value={taskInput}
+              onChange={(e) => setTaskInput(e.currentTarget.value)}
+              style={{ flex: 1 }}
+              styles={{
+                input: {
+                  borderTopRightRadius: 0,
+                  borderBottomRightRadius: 0,
+                },
+              }}
+            />
+            <Button
+              color="green"
+              loading={starting}
+              leftSection={<IconPlayerPlay size={16} />}
+              onClick={handleStart}
+              style={{ borderTopLeftRadius: 0, borderBottomLeftRadius: 0 }}
+            >
+              Start
+            </Button>
+          </Group>
+        ) : (
+          <Button
+            color="green"
+            disabled
+            leftSection={<IconPlayerPlay size={16} />}
+          >
+            Start
+          </Button>
         )}
         <Button
           color="yellow"

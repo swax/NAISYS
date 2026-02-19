@@ -1,5 +1,6 @@
 import xterm from "@xterm/headless";
 import { ChildProcessWithoutNullStreams, spawn } from "child_process";
+import crypto from "crypto";
 import * as fs from "fs";
 import os from "os";
 import path from "path";
@@ -539,16 +540,33 @@ export function createShellWrapper(
     _terminal = undefined;
   }
 
+  /** Hash of the process working directory, used to disambiguate script files
+   *  when multiple instances run under the same username */
+  const _cwdHash = crypto
+    .createHash("sha256")
+    .update(process.cwd())
+    .digest("hex")
+    .slice(0, 4);
+
   /** Wraps multi line commands in a script to make it easier to diagnose the source of errors based on line number
    * May also help with common escaping errors */
   function putMultilineCommandInAScript(command: string) {
-    const scriptPath = path.join(
-      os.homedir(),
-      ".naisys",
-      "agent-data",
-      agentConfig().username,
-      `multiline-command${platformConfig.scriptExtension}`,
-    );
+    const naisysFolder = process.env.NAISYS_FOLDER;
+
+    const scriptPath = naisysFolder
+      ? path.join(
+          naisysFolder,
+          "agent-data",
+          agentConfig().username,
+          `multiline-command${platformConfig.scriptExtension}`,
+        )
+      : path.join(
+          os.homedir(),
+          ".naisys",
+          "agent-data",
+          `${agentConfig().username}-${_cwdHash}`,
+          `multiline-command${platformConfig.scriptExtension}`,
+        );
 
     pathService.ensureFileDirExists(scriptPath);
 
