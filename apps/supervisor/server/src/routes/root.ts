@@ -1,4 +1,5 @@
 import type { HateoasLink } from "@naisys/common";
+import { PermissionEnum } from "@naisys-supervisor/shared";
 import { FastifyInstance, FastifyPluginOptions } from "fastify";
 
 const API_PREFIX = "/api/supervisor";
@@ -32,6 +33,11 @@ export default async function rootRoutes(
           href: `${API_PREFIX}/variables`,
           title: "Variables",
         },
+        {
+          rel: "permissions",
+          href: `${API_PREFIX}/permissions`,
+          title: "Available Permissions",
+        },
       ];
 
       // Only show user management links if user has supervisor_admin permission
@@ -49,6 +55,19 @@ export default async function rootRoutes(
       }
 
       return { _links: links };
+    },
+  );
+
+  fastify.get(
+    "/permissions",
+    {
+      schema: {
+        description: "List all available permissions",
+        tags: ["Discovery"],
+      },
+    },
+    async () => {
+      return { permissions: PermissionEnum.options };
     },
   );
 }

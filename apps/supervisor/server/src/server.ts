@@ -25,6 +25,7 @@ import {
 } from "@naisys/supervisor-database";
 import { createHubDatabaseClient } from "@naisys/hub-database";
 import { initLogger } from "./logger.js";
+import { PermissionEnum } from "@naisys-supervisor/shared";
 import apiRoutes from "./routes/api.js";
 import {
   createUser,
@@ -196,7 +197,11 @@ export const startServer: StartServer = async (
   fastify.get(
     "/api/supervisor/client-config",
     { schema: { hide: true } },
-    async () => ({ plugins, publicRead: process.env.PUBLIC_READ === "true" }),
+    async () => ({
+      plugins,
+      publicRead: process.env.PUBLIC_READ === "true",
+      permissions: PermissionEnum.options,
+    }),
   );
 
   // Conditionally load ERP plugin

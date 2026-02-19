@@ -55,3 +55,4 @@ export const revokePermission = async (
 export const changePassword = async (password: string): Promise<any> => {
   return api.post("/users/me/password", { password });
 };
+

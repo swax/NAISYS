@@ -13,6 +13,7 @@
     "build": "prisma generate && tsc",
     "bundle": "npx shx rm -rf client-dist && npx shx cp -r ../client/dist client-dist",
     "start": "node dist/server.js",
+    "start:reset-password": "node dist/server.js --reset-password",
     "type-check": "tsc --noEmit",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
