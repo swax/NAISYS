@@ -203,48 +203,67 @@ export async function handleResetPassword(options: {
     username: string,
   ) => Promise<{ id: number; username: string; uuid: string } | null>;
   updateLocalPassword: (userId: number, passwordHash: string) => Promise<void>;
+  username?: string;
+  password?: string;
 }): Promise<void> {
   console.log(`NAISYS_FOLDER: ${process.env.NAISYS_FOLDER}`);
   createSupervisorDatabaseClient();
 
-  await resetPassword(options.findLocalUser, options.updateLocalPassword);
+  await resetPassword(
+    options.findLocalUser,
+    options.updateLocalPassword,
+    options.username,
+    options.password,
+  );
 }
 
 /**
- * Interactive CLI to reset a user's password. Updates both local DB (via
- * callbacks) and the supervisor DB.
+ * CLI to reset a user's password. Updates both local DB (via callbacks) and
+ * the supervisor DB. If username/password are provided, skips interactive
+ * prompts.
  */
 export async function resetPassword(
   findLocalUser: (
     username: string,
   ) => Promise<{ id: number; username: string; uuid: string } | null>,
   updateLocalPassword: (userId: number, passwordHash: string) => Promise<void>,
+  usernameArg?: string,
+  passwordArg?: string,
 ): Promise<void> {
-  const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout,
-  });
+  let username: string;
+  let password: string;
 
-  try {
-    const username = await rl.question("Username: ");
-    const user = await findLocalUser(username);
-    if (!user) {
-      console.error(`User '${username}' not found.`);
-      process.exit(1);
+  if (usernameArg && passwordArg) {
+    username = usernameArg;
+    password = passwordArg;
+  } else {
+    const rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout,
+    });
+
+    try {
+      username = usernameArg || (await rl.question("Username: "));
+      password = passwordArg || (await rl.question("New password: "));
+    } finally {
+      rl.close();
     }
-
-    const password = await rl.question("New password: ");
-    if (password.length < 6) {
-      console.error("Password must be at least 6 characters.");
-      process.exit(1);
-    }
-
-    const hash = await bcrypt.hash(password, 10);
-    await updateLocalPassword(user.id, hash);
-    await updateUserPassword(username, hash);
-
-    console.log(`Password reset for '${username}'.`);
-  } finally {
-    rl.close();
   }
+
+  const user = await findLocalUser(username);
+  if (!user) {
+    console.error(`User '${username}' not found.`);
+    process.exit(1);
+  }
+
+  if (password.length < 6) {
+    console.error("Password must be at least 6 characters.");
+    process.exit(1);
+  }
+
+  const hash = await bcrypt.hash(password, 10);
+  await updateLocalPassword(user.id, hash);
+  await updateUserPassword(username, hash);
+
+  console.log(`Password reset for '${username}'.`);
 }

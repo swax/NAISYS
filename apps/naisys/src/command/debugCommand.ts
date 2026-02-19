@@ -1,3 +1,5 @@
+import { spawnSync } from "child_process";
+import { fileURLToPath } from "url";
 import { GlobalConfig } from "../globalConfig.js";
 import { ContextManager } from "../llm/contextManager.js";
 import { LlmRole } from "../llm/llmDtos.js";
@@ -76,12 +78,30 @@ export function createDebugCommands(
   const supervisorPort = globalConfig.globalConfig().supervisorPort;
   if (supervisorPort) {
     const nsAdminPw: RegistrableCommand = {
-      commandName: "ns-reset-supervisor-password",
+      commandName: "ns-superadmin-password",
       helpText:
-        "Change a supervisor user's password: ns-reset-supervisor-password",
+        "Change the superadmin's password. Usage: ns-superadmin-password [password]",
       isDebug: true,
       handleCommand: async (cmdArgs) => {
-        return "todo";
+        const serverUrl = import.meta.resolve("@naisys-supervisor/server");
+        const serverPath = fileURLToPath(serverUrl);
+
+        const args = [serverPath, "--reset-password"];
+        const parts = cmdArgs.trim().split(/\s+/);
+        args.push("--username", "superadmin");
+        if (parts[0]) {
+          args.push("--password", parts[0]);
+        }
+
+        const result = spawnSync("node", args, {
+          stdio: "inherit",
+        });
+
+        if (result.status !== 0) {
+          return `Reset password failed with exit code ${result.status}`;
+        }
+
+        return "Password reset complete.";
       },
     };
 

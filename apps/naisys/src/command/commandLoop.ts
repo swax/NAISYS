@@ -70,6 +70,15 @@ export function createCommandLoop(
     ) {
       inputMode.setLLM();
 
+      if (globalConfig().supervisorPort) {
+        output.comment(
+          `Supervisor available at http://localhost:${globalConfig().supervisorPort}/supervisor`,
+        );
+        output.comment(
+          `  Use 'ns-superadmin-password [password]' to set password then login as superadmin`,
+        );
+      }
+
       await output.commentAndLog("Use ns-help to see all available commands");
       await output.commentAndLog("Starting Context:");
 

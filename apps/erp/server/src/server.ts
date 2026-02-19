@@ -207,6 +207,13 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   }
 
   if (process.argv.includes("--reset-password")) {
+    const usernameIdx = process.argv.indexOf("--username");
+    const passwordIdx = process.argv.indexOf("--password");
+    const username =
+      usernameIdx !== -1 ? process.argv[usernameIdx + 1] : undefined;
+    const password =
+      passwordIdx !== -1 ? process.argv[passwordIdx + 1] : undefined;
+
     if (isSupervisorAuth()) {
       void handleResetPassword({
         findLocalUser: async (username) => {
@@ -223,6 +230,8 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
             data: { passwordHash },
           });
         },
+        username,
+        password,
       });
     } else {
       void resetLocalPassword();
