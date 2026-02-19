@@ -1,5 +1,3 @@
-import { randomUUID } from "crypto";
-import bcrypt from "bcrypt";
 import {
   AuthUserSchema,
   ErrorResponseSchema,
@@ -10,20 +8,14 @@ import {
 import { FastifyInstance, FastifyPluginOptions } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import {
-  createSession,
+  authenticateAndCreateSession,
   deleteSession,
-  findUserByUsername,
 } from "@naisys/supervisor-database";
-import {
-  createUser,
-  getUserByUsername,
-  hashToken,
-} from "../services/userService.js";
-import { getUserPermissions } from "../services/userService.js";
+import { hashToken } from "@naisys/common/dist/hashToken.js";
+import { getUserByUsername, getUserPermissions } from "../services/userService.js";
 import { authCache } from "../auth-middleware.js";
 
 const COOKIE_NAME = "naisys_session";
-const SESSION_DURATION_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
 let lastLoginRequestTime = 0;
 
@@ -63,9 +55,8 @@ export default async function authRoutes(
 
       const { username, password } = request.body;
 
-      // Verify password against supervisor DB
-      const sessionUser = await findUserByUsername(username);
-      if (!sessionUser) {
+      const authResult = await authenticateAndCreateSession(username, password);
+      if (!authResult) {
         reply.code(401);
         return {
           success: false as const,
@@ -73,48 +64,21 @@ export default async function authRoutes(
         };
       }
 
-      const valid = await bcrypt.compare(password, sessionUser.passwordHash);
-      if (!valid) {
-        reply.code(401);
-        return {
-          success: false as const,
-          message: "Invalid username or password",
-        };
-      }
-
-      // Auto-provision local user if needed
-      let user = await getUserByUsername(username);
-      if (!user) {
-        user = await createUser(sessionUser.username, sessionUser.uuid);
-      }
-
-      // Create session in supervisor DB
-      const token = randomUUID();
-      const tokenHash = hashToken(token);
-      const expiresAt = new Date(Date.now() + SESSION_DURATION_MS);
-
-      await createSession(
-        tokenHash,
-        sessionUser.username,
-        sessionUser.passwordHash,
-        sessionUser.uuid,
-        expiresAt,
-      );
-
-      reply.setCookie(COOKIE_NAME, token, {
+      reply.setCookie(COOKIE_NAME, authResult.token, {
         path: "/",
         httpOnly: true,
         sameSite: "lax",
         secure: process.env.NODE_ENV === "production",
-        maxAge: SESSION_DURATION_MS / 1000,
+        maxAge: (authResult.expiresAt.getTime() - Date.now()) / 1000,
       });
 
-      const permissions = await getUserPermissions(user.id);
+      const user = await getUserByUsername(username);
+      const permissions = user ? await getUserPermissions(user.id) : [];
 
       return {
         user: {
-          id: user.id,
-          username: user.username,
+          id: user?.id ?? 0,
+          username: authResult.user.username,
           permissions,
         },
       };

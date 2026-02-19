@@ -1,10 +1,13 @@
 import bcrypt from "bcrypt";
 import { randomUUID } from "crypto";
+import { existsSync } from "fs";
 import readline from "readline/promises";
+import { hashToken } from "@naisys/common/dist/hashToken.js";
 import { supervisorDbPath } from "./dbConfig.js";
 import { PrismaClient } from "./generated/prisma/client.js";
 import { createPrismaClient } from "./prismaClient.js";
-import { existsSync } from "fs";
+
+const SESSION_DURATION_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
 export interface SessionUser {
   username: string;
@@ -19,7 +22,7 @@ let prisma: PrismaClient | null = null;
  * Idempotent — returns early if already initialized.
  * No-ops gracefully if NAISYS_FOLDER is unset or the database doesn't exist.
  */
-export function initSupervisorSessions(): boolean {
+export function createSupervisorDatabaseClient(): boolean {
   if (prisma) return true;
 
   const dbPath = supervisorDbPath();
@@ -57,7 +60,7 @@ export async function findSession(
 /**
  * Look up a session user by username.
  */
-export async function findUserByUsername(
+export async function lookupUsername(
   username: string,
 ): Promise<SessionUser | null> {
   if (!prisma) return null;
@@ -73,6 +76,35 @@ export async function findUserByUsername(
     passwordHash: user.passwordHash,
     uuid: user.uuid,
   };
+}
+
+export interface AuthResult {
+  token: string;
+  user: SessionUser;
+  expiresAt: Date;
+}
+
+/**
+ * Authenticate a user by username/password and create a session.
+ * Returns null if credentials are invalid or DB is not initialized.
+ */
+export async function authenticateAndCreateSession(
+  username: string,
+  password: string,
+): Promise<AuthResult | null> {
+  const user = await lookupUsername(username);
+  if (!user) return null;
+
+  const valid = await bcrypt.compare(password, user.passwordHash);
+  if (!valid) return null;
+
+  const token = randomUUID();
+  const tokenHash = hashToken(token);
+  const expiresAt = new Date(Date.now() + SESSION_DURATION_MS);
+
+  await createSession(tokenHash, user.username, user.passwordHash, user.uuid, expiresAt);
+
+  return { token, user, expiresAt };
 }
 
 /**
@@ -136,20 +168,22 @@ export async function ensureSuperAdmin(
   ensureLocalSuperAdmin: (
     passwordHash: string,
     uuid: string,
+    superAdminName: string,
   ) => Promise<boolean>,
 ): Promise<void> {
-  const existing = await findUserByUsername("superadmin");
+  const superAdminName = "superadmin";
+  const existing = await lookupUsername(superAdminName);
   if (existing && existing.passwordHash !== "") return;
 
   const uuid = existing?.uuid || randomUUID();
   const password = randomUUID().slice(0, 8);
   const hash = await bcrypt.hash(password, 10);
 
-  const created = await ensureLocalSuperAdmin(hash, uuid);
+  const created = await ensureLocalSuperAdmin(hash, uuid, superAdminName);
 
   if (created) {
-    await updateUserPassword("superadmin", hash);
-    console.log(`\n  superadmin user created. Password: ${password}`);
+    await updateUserPassword(superAdminName, hash);
+    console.log(`\n  ${superAdminName} user created. Password: ${password}`);
     console.log(`  Change it via the web UI or ns-admin-pw command\n`);
   }
 }
@@ -165,7 +199,7 @@ export async function handleResetPassword(options: {
   updateLocalPassword: (userId: number, passwordHash: string) => Promise<void>;
 }): Promise<void> {
   console.log(`NAISYS_FOLDER: ${process.env.NAISYS_FOLDER}`);
-  initSupervisorSessions();
+  createSupervisorDatabaseClient();
 
   await resetPassword(options.findLocalUser, options.updateLocalPassword);
 }

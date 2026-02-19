@@ -19,11 +19,11 @@ import path from "path";
 import { fileURLToPath } from "url";
 import {
   deploySupervisorMigrations,
-  initSupervisorSessions,
+  createSupervisorDatabaseClient,
   ensureSuperAdmin,
   handleResetPassword,
 } from "@naisys/supervisor-database";
-import { initHubSessions } from "@naisys/hub-database";
+import { createHubDatabaseClient } from "@naisys/hub-database";
 import { initLogger } from "./logger.js";
 import apiRoutes from "./routes/api.js";
 import {
@@ -52,7 +52,7 @@ export const startServer: StartServer = async (
   // Auto-migrate supervisor database
   await deploySupervisorMigrations();
 
-  if (!initSupervisorSessions()) {
+  if (!createSupervisorDatabaseClient()) {
     console.error(
       "[Supervisor] Supervisor database not found. Cannot start without it.",
     );
@@ -60,7 +60,7 @@ export const startServer: StartServer = async (
   }
 
   // Hub DB still needed for agent API key auth
-  initHubSessions();
+  createHubDatabaseClient();
 
   // Connect to hub via Socket.IO for agent management
   const hubUrl = hubPort ? `http://localhost:${hubPort}` : process.env.HUB_URL;
@@ -68,10 +68,10 @@ export const startServer: StartServer = async (
     initHubConnection(hubUrl);
   }
 
-  await ensureSuperAdmin(async (passwordHash, uuid) => {
+  await ensureSuperAdmin(async (passwordHash, uuid, superAdminName) => {
     const existing = await getUserByUuid(uuid);
     if (existing) return false;
-    const user = await createUser("superadmin", uuid);
+    const user = await createUser(superAdminName, uuid);
     await grantInitialAdminPermissions(user.id);
     return true;
   });
@@ -204,7 +204,11 @@ export const startServer: StartServer = async (
     // Use variable to avoid compile-time type dependency on @naisys-erp/server (allows parallel builds)
     const erpModule = "@naisys-erp/server";
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { erpPlugin } = (await import(erpModule)) as { erpPlugin: any };
+    const { erpPlugin, enableSupervisorAuth } = (await import(erpModule)) as {
+      erpPlugin: any;
+      enableSupervisorAuth: any;
+    };
+    enableSupervisorAuth();
     await fastify.register(erpPlugin);
   }
 

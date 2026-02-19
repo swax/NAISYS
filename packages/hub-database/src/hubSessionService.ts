@@ -5,16 +5,12 @@ import { createPrismaClient } from "./prismaClient.js";
 
 let prisma: PrismaClient | null = null;
 
-export function isHubAvailable(): boolean {
-  return prisma !== null;
-}
-
 /**
  * Initialize hub sessions by connecting to the shared naisys_hub.db.
  * Idempotent — returns early if already initialized.
  * No-ops gracefully if NAISYS_FOLDER is unset or the database doesn't exist.
  */
-export function initHubSessions(): boolean {
+export function createHubDatabaseClient(): boolean {
   if (prisma) return true;
 
   const dbPath = hubDbPath();
@@ -23,22 +19,6 @@ export function initHubSessions(): boolean {
 
   prisma = createPrismaClient(dbPath);
   return true;
-}
-
-/**
- * Find a hub agent (from the hub `users` table) by username.
- */
-export async function findHubAgentByUsername(
-  username: string,
-): Promise<{ uuid: string } | null> {
-  if (!prisma) return null;
-
-  const agent = await prisma.users.findFirst({
-    where: { username },
-    select: { uuid: true },
-  });
-
-  return agent;
 }
 
 /**
