@@ -1,4 +1,4 @@
-import { createPrismaClient, PrismaClient } from "@naisys/database";
+import { createPrismaClient, PrismaClient } from "@naisys/hub-database";
 import path from "path";
 import { env } from "process";
 

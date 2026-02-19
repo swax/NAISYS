@@ -3,7 +3,7 @@ import {
   calculatePeriodBoundaries,
   COST_AGGREGATION_WINDOW_MS,
 } from "@naisys/common";
-import { DatabaseService, PrismaClient } from "@naisys/database";
+import { DatabaseService, PrismaClient } from "@naisys/hub-database";
 import {
   CostControl,
   CostWriteRequestSchema,

@@ -30,7 +30,7 @@
     "@fastify/static": "^9.0.0",
     "@fastify/swagger": "^9.7.0",
     "@naisys/common": "file:../../../packages/common",
-    "@naisys/database": "file:../../../packages/database",
+    "@naisys/hub-database": "file:../../../packages/hub-database",
     "@naisys-erp/shared": "file:../shared",
     "@prisma/adapter-better-sqlite3": "^7.3.0",
     "@prisma/client": "^7.3.0",

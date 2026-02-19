@@ -1,4 +1,4 @@
-import { DatabaseService } from "@naisys/database";
+import { DatabaseService } from "@naisys/hub-database";
 import {
   HEARTBEAT_INTERVAL_MS,
   HeartbeatSchema,

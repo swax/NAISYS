@@ -1,7 +1,7 @@
 import { randomUUID } from "crypto";
 import bcrypt from "bcrypt";
 import { hashToken } from "@naisys/common/dist/hashToken.js";
-import { createHubUser, updateHubUserPassword } from "@naisys/database";
+import { createHubUser, updateHubUserPassword } from "@naisys/hub-database";
 import prisma from "../db.js";
 import type { Permission } from "../generated/prisma/client.js";
 

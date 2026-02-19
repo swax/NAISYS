@@ -1,5 +1,5 @@
 import { buildClientConfig } from "@naisys/common";
-import type { DatabaseService } from "@naisys/database";
+import type { DatabaseService } from "@naisys/hub-database";
 import { ConfigResponse, HubEvents } from "@naisys/hub-protocol";
 import dotenv from "dotenv";
 import { HubServerLog } from "../services/hubServerLog.js";

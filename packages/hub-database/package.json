@@ -1,5 +1,5 @@
 {
-  "name": "@naisys/database",
+  "name": "@naisys/hub-database",
   "version": "1.0.0",
   "type": "module",
   "description": "Shared database schema and Prisma client for NAISYS",
