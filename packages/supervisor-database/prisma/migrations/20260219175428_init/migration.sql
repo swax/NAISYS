@@ -20,14 +20,6 @@ CREATE TABLE "user_permissions" (
 );
 
 -- CreateTable
-CREATE TABLE "settings" (
-    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT DEFAULT 1,
-    "settings_json" TEXT NOT NULL,
-    "modify_date" TEXT NOT NULL,
-    "read_status_json" TEXT NOT NULL DEFAULT '{}'
-);
-
--- CreateTable
 CREATE TABLE "schema_version" (
     "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT DEFAULT 1,
     "version" INTEGER NOT NULL,

@@ -3,9 +3,9 @@ import bcrypt from "bcrypt";
 import { hashToken } from "@naisys/common/dist/hashToken.js";
 import { createHubUser, updateHubUserPassword } from "@naisys/hub-database";
 import prisma from "../db.js";
-import type { Permission } from "../generated/prisma/client.js";
+import type { Permission } from "@naisys/supervisor-database";
 
-export type { User as SupervisorUserRow } from "../generated/prisma/client.js";
+export type { User as SupervisorUserRow } from "@naisys/supervisor-database";
 export { hashToken };
 
 const SALT_ROUNDS = 10;

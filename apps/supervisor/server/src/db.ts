@@ -1,8 +1,5 @@
-import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
-import { PrismaClient } from "./generated/prisma/client.js";
-import { supervisorDbUrl } from "./dbConfig.js";
+import { createPrismaClient, supervisorDbPath } from "@naisys/supervisor-database";
 
-const adapter = new PrismaBetterSqlite3({ url: supervisorDbUrl() });
-const prisma = new PrismaClient({ adapter });
+const prisma = createPrismaClient(supervisorDbPath());
 
 export default prisma;

@@ -9,6 +9,7 @@
     "packages/common",
     "packages/hub-database",
     "packages/hub-protocol",
+    "packages/supervisor-database",
     "apps/erp/shared",
     "apps/erp/client",
     "apps/erp/server",
