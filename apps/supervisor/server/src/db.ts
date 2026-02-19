@@ -1,4 +1,7 @@
-import { createPrismaClient, supervisorDbPath } from "@naisys/supervisor-database";
+import {
+  createPrismaClient,
+  supervisorDbPath,
+} from "@naisys/supervisor-database";
 
 const prisma = createPrismaClient(supervisorDbPath());
 

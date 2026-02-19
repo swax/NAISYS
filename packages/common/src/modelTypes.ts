@@ -197,4 +197,3 @@ export function getAllImageModels(
 ): ImageModel[] {
   return mergeModels(builtInImageModels, customImageModels);
 }
-

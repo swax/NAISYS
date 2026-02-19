@@ -102,7 +102,13 @@ export async function authenticateAndCreateSession(
   const tokenHash = hashToken(token);
   const expiresAt = new Date(Date.now() + SESSION_DURATION_MS);
 
-  await createSession(tokenHash, user.username, user.passwordHash, user.uuid, expiresAt);
+  await createSession(
+    tokenHash,
+    user.username,
+    user.passwordHash,
+    user.uuid,
+    expiresAt,
+  );
 
   return { token, user, expiresAt };
 }

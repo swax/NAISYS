@@ -9,7 +9,10 @@ import archiver from "archiver";
 import { FastifyInstance, FastifyPluginOptions } from "fastify";
 import { hasPermission, requirePermission } from "../auth-middleware.js";
 import { supervisorDbPath } from "@naisys/supervisor-database";
-import { getNaisysDatabasePath, usingNaisysDb } from "../database/naisysDatabase.js";
+import {
+  getNaisysDatabasePath,
+  usingNaisysDb,
+} from "../database/naisysDatabase.js";
 import { API_PREFIX } from "../hateoas.js";
 import { isHubConnected } from "../services/hubConnectionService.js";
 import {
@@ -90,7 +93,7 @@ export default async function adminRoutes(
       },
     },
     async (_request, reply) => {
-      const users = await usingNaisysDb((prisma) =>
+      const users = (await usingNaisysDb((prisma) =>
         prisma.users.findMany({
           select: {
             id: true,
@@ -101,7 +104,7 @@ export default async function adminRoutes(
             archived: true,
           },
         }),
-      ) as ExportUserRow[];
+      )) as ExportUserRow[];
 
       const variables = await usingNaisysDb((prisma) =>
         prisma.variables.findMany({
@@ -110,9 +113,9 @@ export default async function adminRoutes(
         }),
       );
 
-      const modelRows = await usingNaisysDb((prisma) =>
+      const modelRows = (await usingNaisysDb((prisma) =>
         prisma.models.findMany(),
-      ) as ModelDbRow[];
+      )) as ModelDbRow[];
 
       const exportFiles = buildExportFiles(users, variables, modelRows);
 
