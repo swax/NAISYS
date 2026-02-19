@@ -119,7 +119,7 @@ export function registerAuthMiddleware(fastify: FastifyInstance) {
                   uuid: agent.uuid,
                   username: agent.username,
                   passwordHash: "!api-key-only",
-                  authType: "api_key",
+                  isAgent: true,
                 },
               });
             }

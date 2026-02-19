@@ -7,11 +7,6 @@ generator client {
   output   = "../src/generated/prisma"
 }
 
-enum AuthType {
-  password
-  api_key
-}
-
 enum Permission {
   supervisor_admin
   manage_agents
@@ -24,7 +19,7 @@ model User {
   id               Int              @id @default(autoincrement())
   username         String           @unique
   uuid             String           @default("")
-  authType         AuthType         @default(password) @map("auth_type")
+  isAgent          Boolean          @default(false) @map("is_agent")
   passwordHash     String           @default("") @map("password_hash")
   sessionTokenHash String?          @map("session_token_hash")
   sessionExpiresAt DateTime?        @map("session_expires_at")

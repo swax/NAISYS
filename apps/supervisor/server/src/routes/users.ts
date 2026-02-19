@@ -118,7 +118,7 @@ function formatUser(
   return {
     id: user.id,
     username: user.username,
-    authType: user.authType,
+    isAgent: user.isAgent,
     createdAt: user.createdAt.toISOString(),
     updatedAt: user.updatedAt.toISOString(),
     permissions: user.permissions.map((p) => ({
@@ -138,7 +138,7 @@ function formatListUser(
   return {
     id: user.id,
     username: user.username,
-    authType: user.authType,
+    isAgent: user.isAgent,
     createdAt: user.createdAt.toISOString(),
     permissionCount: user.permissions.length,
     _links: [selfLink(`/users/${user.id}`)],

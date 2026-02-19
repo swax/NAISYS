@@ -58,7 +58,7 @@ export async function getUserById(id: number) {
 export async function createUserWithPassword(data: {
   username: string;
   password: string;
-  authType?: string;
+  isAgent?: boolean;
 }) {
   const passwordHash = await bcrypt.hash(data.password, SALT_ROUNDS);
   const uuid = randomUUID();
@@ -67,7 +67,7 @@ export async function createUserWithPassword(data: {
       username: data.username,
       uuid,
       passwordHash,
-      authType: (data.authType as "password" | "api_key") || "password",
+      isAgent: data.isAgent ?? false,
     },
     include: { permissions: true },
   });

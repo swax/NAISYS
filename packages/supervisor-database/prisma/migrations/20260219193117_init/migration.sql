@@ -3,7 +3,10 @@ CREATE TABLE "users" (
     "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     "username" TEXT NOT NULL,
     "uuid" TEXT NOT NULL DEFAULT '',
-    "auth_type" TEXT NOT NULL DEFAULT 'password',
+    "is_agent" BOOLEAN NOT NULL DEFAULT false,
+    "password_hash" TEXT NOT NULL DEFAULT '',
+    "session_token_hash" TEXT,
+    "session_expires_at" DATETIME,
     "created_at" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" DATETIME NOT NULL
 );

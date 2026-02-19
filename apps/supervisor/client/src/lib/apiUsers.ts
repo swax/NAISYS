@@ -22,7 +22,7 @@ export const getUser = async (id: number): Promise<any> => {
 export const createUser = async (data: {
   username: string;
   password: string;
-  authType?: string;
+  isAgent?: boolean;
 }): Promise<any> => {
   return api.post("/users", data);
 };
