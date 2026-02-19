@@ -20,11 +20,13 @@
     "npm:publish:dryrun": "npm run clean && npm run build && npm publish --dry-run"
   },
   "devDependencies": {
+    "@types/bcrypt": "^6.0.0",
     "@types/better-sqlite3": "^7.6.13",
     "typescript": "^5.9.3"
   },
   "dependencies": {
     "@naisys/common": "file:../common",
+    "bcrypt": "^6.0.0",
     "@prisma/adapter-better-sqlite3": "^7.3.0",
     "@prisma/client": "^7.3.0",
     "better-sqlite3": "^12.6.2",

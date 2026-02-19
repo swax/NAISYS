@@ -1,7 +1,7 @@
 import { randomUUID } from "crypto";
 import bcrypt from "bcrypt";
 import { hashToken } from "@naisys/common/dist/hashToken.js";
-import { createHubUser, updateHubUserPassword } from "@naisys/hub-database";
+import { updateUserPassword } from "@naisys/supervisor-database";
 import prisma from "../db.js";
 import type { Permission } from "@naisys/supervisor-database";
 
@@ -66,11 +66,11 @@ export async function createUserWithPassword(data: {
     data: {
       username: data.username,
       uuid,
+      passwordHash,
       authType: (data.authType as "password" | "api_key") || "password",
     },
     include: { permissions: true },
   });
-  await createHubUser(data.username, passwordHash, uuid);
   return user;
 }
 
@@ -89,7 +89,7 @@ export async function updateUser(
 
   if (data.password !== undefined) {
     const newHash = await bcrypt.hash(data.password, SALT_ROUNDS);
-    await updateHubUserPassword(updated.username, newHash, updated.uuid);
+    await updateUserPassword(updated.username, newHash);
   }
 
   return updated;

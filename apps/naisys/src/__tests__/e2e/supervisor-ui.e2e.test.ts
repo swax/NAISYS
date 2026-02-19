@@ -90,7 +90,7 @@ SUPERVISOR_PORT=${SUPERVISOR_PORT}
     // --- Capture admin password from startup output ---
     const fullOutput = naisys.getFullOutput();
     const passwordMatch = fullOutput.match(
-      /Admin user created\. Password: (\S+)/,
+      /superadmin user created\. Password: (\S+)/,
     );
     expect(passwordMatch).not.toBeNull();
     const adminPassword = passwordMatch![1];
@@ -101,7 +101,7 @@ SUPERVISOR_PORT=${SUPERVISOR_PORT}
 
     // --- Login ---
     await page.goto(`http://localhost:${SUPERVISOR_PORT}/supervisor/`);
-    await page.getByLabel("Username").fill("admin");
+    await page.getByLabel("Username").fill("superadmin");
     await page.getByLabel("Password").fill(adminPassword);
     await page.getByRole("button", { name: "Login" }).click();
 

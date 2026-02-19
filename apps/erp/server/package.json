@@ -31,6 +31,7 @@
     "@fastify/swagger": "^9.7.0",
     "@naisys/common": "file:../../../packages/common",
     "@naisys/hub-database": "file:../../../packages/hub-database",
+    "@naisys/supervisor-database": "file:../../../packages/supervisor-database",
     "@naisys-erp/shared": "file:../shared",
     "@prisma/adapter-better-sqlite3": "^7.3.0",
     "@prisma/client": "^7.3.0",

@@ -18,11 +18,12 @@ import {
 import path from "path";
 import { fileURLToPath } from "url";
 import {
-  initHubSessions,
+  deploySupervisorMigrations,
+  initSupervisorSessions,
   ensureSuperAdmin,
   handleResetPassword,
-} from "@naisys/hub-database";
-import { deploySupervisorMigrations } from "@naisys/supervisor-database";
+} from "@naisys/supervisor-database";
+import { initHubSessions } from "@naisys/hub-database";
 import { initLogger } from "./logger.js";
 import apiRoutes from "./routes/api.js";
 import {
@@ -51,12 +52,15 @@ export const startServer: StartServer = async (
   // Auto-migrate supervisor database
   await deploySupervisorMigrations();
 
-  if (!initHubSessions()) {
+  if (!initSupervisorSessions()) {
     console.error(
-      "[Supervisor] Hub database not found. Cannot start without it.",
+      "[Supervisor] Supervisor database not found. Cannot start without it.",
     );
     process.exit(1);
   }
+
+  // Hub DB still needed for agent API key auth
+  initHubSessions();
 
   // Connect to hub via Socket.IO for agent management
   const hubUrl = hubPort ? `http://localhost:${hubPort}` : process.env.HUB_URL;
@@ -273,7 +277,6 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
           : null;
       },
       updateLocalPassword: async () => {},
-      requireHub: true,
     });
   } else {
     void startServer("standalone");

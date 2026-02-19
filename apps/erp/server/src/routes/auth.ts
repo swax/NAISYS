@@ -12,11 +12,11 @@ import prisma from "../db.js";
 import { sendError } from "../error-handler.js";
 import { authCache } from "../auth-middleware.js";
 import {
-  createHubSession,
-  deleteHubSession,
-  findHubUserByUsername,
-  isHubAvailable,
-} from "@naisys/hub-database";
+  createSession,
+  deleteSession,
+  findUserByUsername,
+} from "@naisys/supervisor-database";
+import { isHubAvailable } from "@naisys/hub-database";
 
 const COOKIE_NAME = "naisys_session";
 const SESSION_DURATION_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
@@ -52,26 +52,26 @@ export default async function authRoutes(fastify: FastifyInstance) {
       let user = await prisma.user.findUnique({ where: { username } });
       let passwordVerified = false;
 
-      // Hub-first password check
+      // Supervisor DB-first password check (SSO mode)
       if (isHubAvailable()) {
-        const hubUser = await findHubUserByUsername(username);
-        if (hubUser) {
-          const valid = await bcrypt.compare(password, hubUser.password_hash);
+        const sessionUser = await findUserByUsername(username);
+        if (sessionUser) {
+          const valid = await bcrypt.compare(password, sessionUser.passwordHash);
           if (valid) {
             if (!user) {
-              // Auto-provision local user from hub
+              // Auto-provision local user from supervisor DB
               user = await prisma.user.create({
                 data: {
-                  uuid: hubUser.uuid,
-                  username: hubUser.username,
-                  passwordHash: hubUser.password_hash,
+                  uuid: sessionUser.uuid,
+                  username: sessionUser.username,
+                  passwordHash: sessionUser.passwordHash,
                 },
               });
-            } else if (user.passwordHash !== hubUser.password_hash) {
-              // Sync hub hash down to local
+            } else if (user.passwordHash !== sessionUser.passwordHash) {
+              // Sync supervisor hash down to local
               user = await prisma.user.update({
                 where: { id: user.id },
-                data: { passwordHash: hubUser.password_hash },
+                data: { passwordHash: sessionUser.passwordHash },
               });
             }
             passwordVerified = true;
@@ -106,8 +106,8 @@ export default async function authRoutes(fastify: FastifyInstance) {
       const expiresAt = new Date(Date.now() + SESSION_DURATION_MS);
 
       if (isHubAvailable()) {
-        // SSO mode: hub is source of truth for sessions
-        await createHubSession(
+        // SSO mode: supervisor DB is source of truth for sessions
+        await createSession(
           tokenHash,
           user.username,
           user.passwordHash,
@@ -166,7 +166,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
       if (token) {
         const tokenHash = hashToken(token);
         authCache.invalidate(`cookie:${tokenHash}`);
-        await deleteHubSession(tokenHash);
+        await deleteSession(tokenHash);
       }
 
       reply.clearCookie(COOKIE_NAME, { path: "/" });

@@ -8,7 +8,7 @@ import { createPrismaClient } from "./prismaClient.js";
 
 export async function createDatabaseService() {
   /** Should match version in schema_version table of latest migration script */
-  const latestDbVersion = 14;
+  const latestDbVersion = 15;
 
   const dbPath = hubDbPath();
 
