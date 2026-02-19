@@ -12,7 +12,7 @@ import {
   UpdateUserSchema,
   GrantPermissionSchema,
 } from "@naisys-supervisor/shared";
-import type { Permission } from "../generated/prisma/client.js";
+import type { Permission } from "@naisys/supervisor-database";
 import { requirePermission, authCache } from "../auth-middleware.js";
 import * as userService from "../services/userService.js";
 import type { HateoasAction, HateoasLink } from "@naisys/common";

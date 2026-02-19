@@ -12,11 +12,8 @@
     "dev": "tsx watch src/server.ts",
     "start": "node dist/server.js",
     "start:reset-password": "node dist/server.js --reset-password",
-    "build": "prisma generate && tsc",
+    "build": "tsc",
     "bundle": "npx shx rm -rf client-dist && npx shx cp -r ../client/dist client-dist",
-    "db:generate": "prisma generate",
-    "db:migrate": "prisma migrate dev",
-    "db:push": "prisma db push",
     "type-check": "tsc --noEmit",
     "npm:publish:dryrun": "npm run clean && npm run build && npm publish --dry-run"
   },
@@ -37,8 +34,7 @@
     "@naisys/common": "file:../../../packages/common",
     "@naisys/hub-database": "file:../../../packages/hub-database",
     "@naisys/hub-protocol": "file:../../../packages/hub-protocol",
-    "@prisma/adapter-better-sqlite3": "^7.3.0",
-    "@prisma/client": "^7.3.0",
+    "@naisys/supervisor-database": "file:../../../packages/supervisor-database",
     "@scalar/fastify-api-reference": "^1.44.16",
     "@types/archiver": "^7.0.0",
     "archiver": "^7.0.1",
@@ -53,10 +49,8 @@
   },
   "devDependencies": {
     "@types/bcrypt": "^6.0.0",
-    "@types/better-sqlite3": "^7.6.13",
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^25.2.3",
-    "prisma": "^7.3.0",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3"
   },

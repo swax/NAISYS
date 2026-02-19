@@ -21,10 +21,8 @@ import {
   initHubSessions,
   ensureSuperAdmin,
   handleResetPassword,
-  deployPrismaMigrations,
 } from "@naisys/hub-database";
-import { SUPERVISOR_DB_VERSION, supervisorDbPath } from "./dbConfig.js";
-import prisma from "./db.js";
+import { deploySupervisorMigrations } from "@naisys/supervisor-database";
 import { initLogger } from "./logger.js";
 import apiRoutes from "./routes/api.js";
 import {
@@ -51,13 +49,7 @@ export const startServer: StartServer = async (
   }
 
   // Auto-migrate supervisor database
-  const __filename_startup = fileURLToPath(import.meta.url);
-  const supervisorServerDir = path.join(path.dirname(__filename_startup), "..");
-  await deployPrismaMigrations({
-    packageDir: supervisorServerDir,
-    databasePath: supervisorDbPath(),
-    expectedVersion: SUPERVISOR_DB_VERSION,
-  });
+  await deploySupervisorMigrations();
 
   if (!initHubSessions()) {
     console.error(

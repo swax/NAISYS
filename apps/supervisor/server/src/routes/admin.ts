@@ -8,7 +8,7 @@ import type { HateoasAction, ModelDbRow } from "@naisys/common";
 import archiver from "archiver";
 import { FastifyInstance, FastifyPluginOptions } from "fastify";
 import { hasPermission, requirePermission } from "../auth-middleware.js";
-import { supervisorDbPath } from "../dbConfig.js";
+import { supervisorDbPath } from "@naisys/supervisor-database";
 import { getNaisysDatabasePath, usingNaisysDb } from "../database/naisysDatabase.js";
 import { API_PREFIX } from "../hateoas.js";
 import { isHubConnected } from "../services/hubConnectionService.js";
