@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import yaml from "js-yaml";
-import { CustomModelsFileSchema, type CustomModelsFile } from "./modelTypes.js";
+import { CustomModelsFileSchema, type CustomModelsFile } from "@naisys/common";
 
 export function loadCustomModels(folder: string): CustomModelsFile {
   if (!folder) {

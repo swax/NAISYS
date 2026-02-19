@@ -3,7 +3,7 @@ import { dirname } from "path";
 import { fileURLToPath } from "url";
 import { hubDbPath } from "./dbConfig.js";
 import { PrismaClient } from "./generated/prisma/client.js";
-import { deployPrismaMigrations } from "@naisys/common/dist/migrationHelper.js";
+import { deployPrismaMigrations } from "@naisys/common-node";
 import { createPrismaClient } from "./prismaClient.js";
 
 export async function createDatabaseService() {

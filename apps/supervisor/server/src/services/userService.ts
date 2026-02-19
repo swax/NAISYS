@@ -1,6 +1,6 @@
 import { randomUUID } from "crypto";
 import bcrypt from "bcrypt";
-import { hashToken } from "@naisys/common/dist/hashToken.js";
+import { hashToken } from "@naisys/common-node";
 import { updateUserPassword } from "@naisys/supervisor-database";
 import prisma from "../db.js";
 import type { Permission } from "@naisys/supervisor-database";

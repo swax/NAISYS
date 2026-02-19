@@ -1,8 +1,8 @@
 {
-  "name": "@naisys/common",
+  "name": "@naisys/common-node",
   "version": "1.0.0",
   "type": "module",
-  "description": "Common utilities and constants for NAISYS",
+  "description": "Node-only utilities for NAISYS (better-sqlite3, js-yaml, crypto, fs)",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": [
@@ -14,9 +14,13 @@
     "prepare": "npm run build"
   },
   "dependencies": {
-    "zod": "^4.3.6"
+    "@naisys/common": "file:../common",
+    "better-sqlite3": "^12.6.2",
+    "js-yaml": "^4.1.1"
   },
   "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/js-yaml": "^4.0.9",
     "typescript": "^5.9.3"
   }
 }

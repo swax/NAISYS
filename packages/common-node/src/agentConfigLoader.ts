@@ -6,7 +6,7 @@ import {
   AgentConfigFile,
   AgentConfigFileSchema,
   UserEntry,
-} from "./agentConfigFile.js";
+} from "@naisys/common";
 
 interface ConfigEntry {
   username: string;

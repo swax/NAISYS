@@ -1,6 +1,6 @@
 import type { LlmModel, ImageModel } from "@naisys/common";
 import { getAllLlmModels, getAllImageModels } from "@naisys/common";
-import { loadCustomModels } from "@naisys/common/dist/customModelsLoader.js";
+import { loadCustomModels } from "@naisys/common-node";
 import { HubEvents, ModelsResponseSchema } from "@naisys/hub-protocol";
 import { HubClient } from "../hub/hubClient.js";
 

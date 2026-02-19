@@ -1,7 +1,7 @@
 // Re-export Database Service
 export { createDatabaseService, DatabaseService } from "./dbService.js";
-// Re-export Migration Helper (moved to @naisys/common)
-export { deployPrismaMigrations } from "@naisys/common/dist/migrationHelper.js";
+// Re-export Migration Helper
+export { deployPrismaMigrations } from "@naisys/common-node";
 // Re-export Hub Session Service
 export {
   createHubDatabaseClient,

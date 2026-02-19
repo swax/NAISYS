@@ -15,7 +15,7 @@ import {
   authenticateAndCreateSession,
   deleteSession,
 } from "@naisys/supervisor-database";
-import { hashToken } from "@naisys/common/dist/hashToken.js";
+import { hashToken } from "@naisys/common-node";
 import { isSupervisorAuth } from "../supervisorAuth.js";
 
 const COOKIE_NAME = "naisys_session";

@@ -1,5 +1,5 @@
 import { AgentConfigFileSchema, UserEntry } from "@naisys/common";
-import { loadAgentConfigs } from "@naisys/common/dist/agentConfigLoader.js";
+import { loadAgentConfigs } from "@naisys/common-node";
 import {
   HubEvents,
   UserListResponse,
