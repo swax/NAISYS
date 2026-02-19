@@ -106,7 +106,7 @@ export const AgentDetail: React.FC = () => {
   const handleStop = async () => {
     if (!agentId) return;
 
-    if (agentData?.name === "admin") {
+    if (agentData?.name === "superadmin") {
       const confirmed = window.confirm(
         "The admin agent keeps the NAISYS process running when all other agents are stopped. " +
           "Stopping it may end the process. Are you sure?",

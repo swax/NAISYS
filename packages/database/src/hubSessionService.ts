@@ -190,34 +190,28 @@ export async function findHubAgentByUsername(
 }
 
 /**
- * Ensure an admin user exists locally. Looks up the "admin" agent in the hub
- * `users` table to get its UUID, then delegates to the callback which should
- * create the admin if it doesn't already exist (upsert by UUID).
- *
- * Returns true if a new admin was created (password was generated).
+ * Ensure a "superadmin" user exists in both the hub `supervisor_users` table
+ * and the local app database. If the hub entry already exists, this is a no-op.
+ * Otherwise generates credentials and delegates local user creation to the callback.
  */
-export async function ensureAdminUser(
-  ensureLocalAdmin: (
+export async function ensureSuperAdmin(
+  ensureLocalSuperAdmin: (
     passwordHash: string,
     uuid: string,
   ) => Promise<boolean>,
 ): Promise<void> {
-  const hubAgent = await findHubAgentByUsername("admin");
-  if (!hubAgent) {
-    console.error(
-      "[ensureAdminUser] No 'admin' agent found in hub. Was the agent config seeded?",
-    );
-    process.exit(1);
-  }
+  const existing = await findHubUserByUsername("superadmin");
+  if (existing) return;
 
+  const uuid = randomUUID();
   const password = randomUUID().slice(0, 8);
   const hash = await bcrypt.hash(password, 10);
 
-  const created = await ensureLocalAdmin(hash, hubAgent.uuid);
+  const created = await ensureLocalSuperAdmin(hash, uuid);
 
   if (created) {
-    await createHubUser("admin", hash, hubAgent.uuid);
-    console.log(`\n  Admin user created. Password: ${password}`);
+    await createHubUser("superadmin", hash, uuid);
+    console.log(`\n  Super admin user created. Password: ${password}`);
     console.log(`  Change it via the web UI or ns-admin-pw command\n`);
   }
 }

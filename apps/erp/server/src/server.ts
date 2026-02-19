@@ -21,7 +21,7 @@ import { ERP_DB_VERSION, erpDbPath } from "./dbConfig.js";
 import { commonErrorHandler } from "@naisys/common";
 import {
   initHubSessions,
-  ensureAdminUser,
+  ensureSuperAdmin,
   handleResetPassword,
   deployPrismaMigrations,
 } from "@naisys/database";
@@ -155,11 +155,11 @@ async function startServer() {
   await fastify.register(erpPlugin);
 
   const { default: prisma } = await import("./db.js");
-  await ensureAdminUser(async (passwordHash, uuid) => {
+  await ensureSuperAdmin(async (passwordHash, uuid) => {
     const existing = await prisma.user.findFirst({ where: { uuid } });
     if (existing) return false;
     await prisma.user.create({
-      data: { uuid, username: "admin", passwordHash },
+      data: { uuid, username: "superadmin", passwordHash },
     });
     return true;
   });
