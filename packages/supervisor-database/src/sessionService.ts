@@ -2,7 +2,7 @@ import bcrypt from "bcrypt";
 import { randomUUID } from "crypto";
 import { existsSync } from "fs";
 import readline from "readline/promises";
-import { hashToken } from "@naisys/common/dist/hashToken.js";
+import { hashToken } from "@naisys/common-node";
 import { supervisorDbPath } from "./dbConfig.js";
 import { PrismaClient } from "./generated/prisma/client.js";
 import { createPrismaClient } from "./prismaClient.js";

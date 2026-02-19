@@ -1,5 +1,5 @@
 import { UserEntry } from "@naisys/common";
-import { loadAgentConfigs } from "@naisys/common/dist/agentConfigLoader.js";
+import { loadAgentConfigs } from "@naisys/common-node";
 import { DatabaseService } from "@naisys/hub-database";
 import { randomBytes, randomUUID } from "crypto";
 import yaml from "js-yaml";

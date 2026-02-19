@@ -25,6 +25,7 @@
   },
   "dependencies": {
     "@naisys/common": "file:../common",
+    "@naisys/common-node": "file:../common-node",
     "@prisma/adapter-better-sqlite3": "^7.3.0",
     "@prisma/client": "^7.3.0",
     "better-sqlite3": "^12.6.2",

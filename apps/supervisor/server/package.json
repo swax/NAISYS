@@ -32,6 +32,7 @@
     "@fastify/swagger": "^9.7.0",
     "@naisys-supervisor/shared": "file:../shared",
     "@naisys/common": "file:../../../packages/common",
+    "@naisys/common-node": "file:../../../packages/common-node",
     "@naisys/hub-database": "file:../../../packages/hub-database",
     "@naisys/hub-protocol": "file:../../../packages/hub-protocol",
     "@naisys/supervisor-database": "file:../../../packages/supervisor-database",

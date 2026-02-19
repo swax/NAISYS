@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { AuthCache } from "@naisys/common";
-import { hashToken } from "@naisys/common/dist/hashToken.js";
+import { hashToken } from "@naisys/common-node";
 import prisma from "./db.js";
 import { findSession } from "@naisys/supervisor-database";
 import { findAgentByApiKey } from "@naisys/hub-database";

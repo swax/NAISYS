@@ -11,7 +11,7 @@ import {
   authenticateAndCreateSession,
   deleteSession,
 } from "@naisys/supervisor-database";
-import { hashToken } from "@naisys/common/dist/hashToken.js";
+import { hashToken } from "@naisys/common-node";
 import { getUserByUsername, getUserPermissions } from "../services/userService.js";
 import { authCache } from "../auth-middleware.js";
 
