@@ -83,7 +83,7 @@ model User {
   uuid         String    @unique
   username     String    @unique
   passwordHash String    @map("password_hash")
-  authType     String    @default("password") @map("auth_type")
+  isAgent      Boolean   @default(false) @map("is_agent")
   createdAt    DateTime  @default(now()) @map("created_at")
   updatedAt    DateTime  @updatedAt @map("updated_at")
   deletedAt    DateTime? @map("deleted_at")

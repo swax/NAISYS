@@ -211,9 +211,9 @@ export const UserDetail: React.FC = () => {
           </Group>
           <Group>
             <Text fw={600} w={120}>
-              Auth Type:
+              Type:
             </Text>
-            <Text>{user.authType}</Text>
+            <Text>{user.isAgent ? "Agent" : "User"}</Text>
           </Group>
           <Group>
             <Text fw={600} w={120}>

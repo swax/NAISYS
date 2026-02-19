@@ -9,14 +9,11 @@ export const PermissionEnum = z.enum([
 ]);
 export type Permission = z.infer<typeof PermissionEnum>;
 
-export const AuthTypeEnum = z.enum(["password", "api_key"]);
-export type AuthType = z.infer<typeof AuthTypeEnum>;
-
 export const CreateUserSchema = z
   .object({
     username: z.string().min(1).max(64),
     password: z.string().min(6),
-    authType: AuthTypeEnum.optional(),
+    isAgent: z.boolean().optional(),
   })
   .strict();
 

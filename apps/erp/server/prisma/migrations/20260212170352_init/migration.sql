@@ -59,7 +59,7 @@ CREATE TABLE "users" (
     "uuid" TEXT NOT NULL,
     "username" TEXT NOT NULL,
     "password_hash" TEXT NOT NULL,
-    "auth_type" TEXT NOT NULL DEFAULT 'password',
+    "is_agent" INTEGER NOT NULL DEFAULT 0,
     "created_at" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" DATETIME NOT NULL,
     "deleted_at" DATETIME,

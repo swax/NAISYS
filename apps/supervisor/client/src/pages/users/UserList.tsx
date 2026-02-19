@@ -104,7 +104,7 @@ export const UserList: React.FC = () => {
             <Table.Thead>
               <Table.Tr>
                 <Table.Th>Username</Table.Th>
-                <Table.Th>Auth Type</Table.Th>
+                <Table.Th>Type</Table.Th>
                 <Table.Th>Created</Table.Th>
               </Table.Tr>
             </Table.Thead>
@@ -116,7 +116,7 @@ export const UserList: React.FC = () => {
                   onClick={() => navigate(`/users/${item.id}`)}
                 >
                   <Table.Td>{item.username}</Table.Td>
-                  <Table.Td>{item.authType}</Table.Td>
+                  <Table.Td>{item.isAgent ? "Agent" : "User"}</Table.Td>
                   <Table.Td>
                     {new Date(item.createdAt).toLocaleDateString()}
                   </Table.Td>
