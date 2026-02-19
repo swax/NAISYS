@@ -3,7 +3,7 @@ import { loadAgentConfigs } from "@naisys/common-node";
 import { DatabaseService } from "@naisys/hub-database";
 import { randomBytes, randomUUID } from "crypto";
 import yaml from "js-yaml";
-import { HubServerLog } from "./hubServerLog";
+import { HubServerLog } from "./hubServerLog.js";
 
 /** Seeds agent configs from YAML files into an empty database. Skips if users already exist. */
 export async function seedAgentConfigs(

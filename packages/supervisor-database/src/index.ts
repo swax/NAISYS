@@ -1,5 +1,9 @@
 // Re-export Database Config
-export { supervisorDbPath, supervisorDbUrl, SUPERVISOR_DB_VERSION } from "./dbConfig.js";
+export {
+  supervisorDbPath,
+  supervisorDbUrl,
+  SUPERVISOR_DB_VERSION,
+} from "./dbConfig.js";
 // Re-export Prisma client factory
 export { createPrismaClient } from "./prismaClient.js";
 // Re-export Migration Helper

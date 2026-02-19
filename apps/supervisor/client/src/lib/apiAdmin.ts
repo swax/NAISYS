@@ -1,9 +1,7 @@
 import { API_BASE, apiEndpoints } from "./apiClient";
 
 export async function downloadExportConfig(): Promise<void> {
-  const response = await fetch(
-    `${API_BASE}${apiEndpoints.adminExportConfig}`,
-  );
+  const response = await fetch(`${API_BASE}${apiEndpoints.adminExportConfig}`);
 
   if (!response.ok) {
     throw new Error(`Export failed: ${response.status}`);

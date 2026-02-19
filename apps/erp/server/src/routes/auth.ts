@@ -47,9 +47,17 @@ export default async function authRoutes(fastify: FastifyInstance) {
 
       // SSO mode: authenticate against supervisor DB
       if (isSupervisorAuth()) {
-        const authResult = await authenticateAndCreateSession(username, password);
+        const authResult = await authenticateAndCreateSession(
+          username,
+          password,
+        );
         if (!authResult) {
-          return sendError(reply, 401, "Unauthorized", "Invalid username or password");
+          return sendError(
+            reply,
+            401,
+            "Unauthorized",
+            "Invalid username or password",
+          );
         }
 
         const ssoData = {
@@ -78,12 +86,22 @@ export default async function authRoutes(fastify: FastifyInstance) {
       // Standalone mode: authenticate against local DB
       const user = await prisma.user.findUnique({ where: { username } });
       if (!user) {
-        return sendError(reply, 401, "Unauthorized", "Invalid username or password");
+        return sendError(
+          reply,
+          401,
+          "Unauthorized",
+          "Invalid username or password",
+        );
       }
 
       const valid = await bcrypt.compare(password, user.passwordHash);
       if (!valid) {
-        return sendError(reply, 401, "Unauthorized", "Invalid username or password");
+        return sendError(
+          reply,
+          401,
+          "Unauthorized",
+          "Invalid username or password",
+        );
       }
 
       const token = randomUUID();

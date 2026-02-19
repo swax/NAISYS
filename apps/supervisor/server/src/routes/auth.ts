@@ -5,15 +5,18 @@ import {
   LoginResponseSchema,
   LogoutResponseSchema,
 } from "@naisys-supervisor/shared";
-import { FastifyInstance, FastifyPluginOptions } from "fastify";
-import type { ZodTypeProvider } from "fastify-type-provider-zod";
+import { hashToken } from "@naisys/common-node";
 import {
   authenticateAndCreateSession,
   deleteSession,
 } from "@naisys/supervisor-database";
-import { hashToken } from "@naisys/common-node";
-import { getUserByUsername, getUserPermissions } from "../services/userService.js";
+import { FastifyInstance, FastifyPluginOptions } from "fastify";
+import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { authCache } from "../auth-middleware.js";
+import {
+  getUserByUsername,
+  getUserPermissions,
+} from "../services/userService.js";
 
 const COOKIE_NAME = "naisys_session";
 
@@ -69,7 +72,9 @@ export default async function authRoutes(
         httpOnly: true,
         sameSite: "lax",
         secure: process.env.NODE_ENV === "production",
-        maxAge: (authResult.expiresAt.getTime() - Date.now()) / 1000,
+        maxAge: Math.floor(
+          (authResult.expiresAt.getTime() - Date.now()) / 1000,
+        ),
       });
 
       const user = await getUserByUsername(username);

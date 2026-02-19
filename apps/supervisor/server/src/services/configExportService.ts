@@ -54,10 +54,14 @@ export function buildExportFiles(
   // Walk up ancestor chain to build full directory path
   function agentDirPath(user: ExportUserRow): string {
     const segments: string[] = [];
-    let current = user.lead_user_id ? userById.get(user.lead_user_id) : undefined;
+    let current = user.lead_user_id
+      ? userById.get(user.lead_user_id)
+      : undefined;
     while (current) {
       segments.unshift(agentFileName(current));
-      current = current.lead_user_id ? userById.get(current.lead_user_id) : undefined;
+      current = current.lead_user_id
+        ? userById.get(current.lead_user_id)
+        : undefined;
     }
     return ["agents", ...segments].join("/");
   }

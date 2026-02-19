@@ -117,7 +117,11 @@ export default async function agentConfigRoutes(
 
         const allModels = await getAllModelsFromDb();
         const keysOfType = (type: string) =>
-          new Set(allModels.filter((r: ModelDbRow) => r.type === type).map((r: ModelDbRow) => r.key));
+          new Set(
+            allModels
+              .filter((r: ModelDbRow) => r.type === type)
+              .map((r: ModelDbRow) => r.key),
+          );
         const validLlmKeys = keysOfType("llm");
         const validImageKeys = keysOfType("image");
 

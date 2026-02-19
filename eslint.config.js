@@ -1,6 +1,7 @@
 import tseslint from "@typescript-eslint/eslint-plugin";
 import tsparser from "@typescript-eslint/parser";
 import aliasMatchFilename from "./eslint-rules/alias-match-filename.js";
+import requireJsExtension from "./eslint-rules/require-js-extension.js";
 
 export default [
   {
@@ -12,7 +13,11 @@ export default [
     ],
   },
   {
-    files: ["apps/*/src/**/*.ts", "packages/*/src/**/*.ts"],
+    files: [
+      "apps/*/src/**/*.ts",
+      "apps/*/*/src/**/*.ts",
+      "packages/*/src/**/*.ts",
+    ],
     languageOptions: {
       parser: tsparser,
       parserOptions: {
@@ -24,6 +29,7 @@ export default [
       "custom-rules": {
         rules: {
           "alias-match-filename": aliasMatchFilename,
+          "require-js-extension": requireJsExtension,
         },
       },
     },
@@ -31,6 +37,14 @@ export default [
       "@typescript-eslint/require-await": "error",
       "@typescript-eslint/no-floating-promises": "error",
       "custom-rules/alias-match-filename": "error",
+      "custom-rules/require-js-extension": "error",
+    },
+  },
+  // Client apps use bundler resolution (Vite) which doesn't need .js extensions
+  {
+    files: ["apps/*/client/src/**/*.ts", "apps/*/client/src/**/*.tsx"],
+    rules: {
+      "custom-rules/require-js-extension": "off",
     },
   },
 ];
