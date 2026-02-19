@@ -1,9 +1,4 @@
-import {
-  getAllImageModelOptions,
-  getAllLlmModelOptions,
-  getValidModelKeys,
-} from "@naisys/common";
-import { loadCustomModels } from "@naisys/common/dist/customModelsLoader.js";
+import type { ModelDbRow } from "@naisys/common";
 import {
   AgentIdParams,
   AgentIdParamsSchema,
@@ -23,6 +18,7 @@ import {
   getAgentConfigById,
   updateAgentConfigById,
 } from "../services/agentConfigService.js";
+import { getAllModelsFromDb } from "../services/modelService.js";
 
 export default async function agentConfigRoutes(
   fastify: FastifyInstance,
@@ -119,13 +115,11 @@ export default async function agentConfigRoutes(
         // Validate model keys against known models (skip template variables)
         const isTemplateVar = (v: string) => /^\$\{.+\}$/.test(v);
 
-        const custom = loadCustomModels();
-        const validLlmKeys = getValidModelKeys(
-          getAllLlmModelOptions(custom.llmModels),
-        );
-        const validImageKeys = getValidModelKeys(
-          getAllImageModelOptions(custom.imageModels),
-        );
+        const allModels = await getAllModelsFromDb();
+        const keysOfType = (type: string) =>
+          new Set(allModels.filter((r: ModelDbRow) => r.type === type).map((r: ModelDbRow) => r.key));
+        const validLlmKeys = keysOfType("llm");
+        const validImageKeys = keysOfType("image");
 
         const invalidModels: string[] = [];
         if (

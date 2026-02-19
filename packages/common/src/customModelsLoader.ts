@@ -3,8 +3,7 @@ import path from "path";
 import yaml from "js-yaml";
 import { CustomModelsFileSchema, type CustomModelsFile } from "./modelTypes.js";
 
-export function loadCustomModels(naisysFolder?: string): CustomModelsFile {
-  const folder = naisysFolder || process.env.NAISYS_FOLDER;
+export function loadCustomModels(folder: string): CustomModelsFile {
   if (!folder) {
     return { llmModels: [], imageModels: [] };
   }

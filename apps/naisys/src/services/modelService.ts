@@ -44,7 +44,7 @@ export function createModelService(hubClient: HubClient | undefined) {
       });
     } else {
       // Standalone mode: load from disk
-      const custom = loadCustomModels();
+      const custom = loadCustomModels(process.env.NAISYS_FOLDER || "");
       llmModels = getAllLlmModels(custom.llmModels);
       imageModels = getAllImageModels(custom.imageModels);
       modelsReadyPromise = Promise.resolve();

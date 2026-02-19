@@ -198,29 +198,3 @@ export function getAllImageModels(
   return mergeModels(builtInImageModels, customImageModels);
 }
 
-interface ModelOption {
-  value: string;
-  label: string;
-}
-
-export function getAllLlmModelOptions(
-  customLlmModels?: LlmModel[],
-): ModelOption[] {
-  return getAllLlmModels(customLlmModels).map((m) => ({
-    value: m.key,
-    label: m.label,
-  }));
-}
-
-export function getAllImageModelOptions(
-  customImageModels?: ImageModel[],
-): ModelOption[] {
-  return getAllImageModels(customImageModels).map((m) => ({
-    value: m.key,
-    label: m.label,
-  }));
-}
-
-export function getValidModelKeys(options: ModelOption[]): Set<string> {
-  return new Set(options.map((o) => o.value));
-}
