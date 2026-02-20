@@ -1,4 +1,4 @@
-import { DatabaseService } from "@naisys/hub-database";
+import type { HubDatabaseService } from "@naisys/hub-database";
 import { HubEvents, UserListResponse } from "@naisys/hub-protocol";
 import { HubServerLog } from "../services/hubServerLog.js";
 import { NaisysServer } from "../services/naisysServer.js";
@@ -6,12 +6,12 @@ import { NaisysServer } from "../services/naisysServer.js";
 /** Pushes the user list to NAISYS instances when they connect or when users change */
 export function createHubUserService(
   naisysServer: NaisysServer,
-  dbService: DatabaseService,
+  { usingHubDatabase }: HubDatabaseService,
   logService: HubServerLog,
 ) {
   async function buildUserListPayload(): Promise<UserListResponse> {
-    const dbUsers = await dbService.usingDatabase(async (prisma) => {
-      return await prisma.users.findMany({
+    const dbUsers = await usingHubDatabase(async (hubDb) => {
+      return await hubDb.users.findMany({
         where: { archived: false },
         select: {
           id: true,

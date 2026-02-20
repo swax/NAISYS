@@ -9,10 +9,7 @@ import archiver from "archiver";
 import { FastifyInstance, FastifyPluginOptions } from "fastify";
 import { hasPermission, requirePermission } from "../auth-middleware.js";
 import { supervisorDbPath } from "@naisys/supervisor-database";
-import {
-  getNaisysDatabasePath,
-  usingNaisysDb,
-} from "../database/naisysDatabase.js";
+import { getNaisysDatabasePath, hubDb } from "../database/hubDb.js";
 import { API_PREFIX } from "../hateoas.js";
 import { isHubConnected } from "../services/hubConnectionService.js";
 import {
@@ -93,29 +90,23 @@ export default async function adminRoutes(
       },
     },
     async (_request, reply) => {
-      const users = (await usingNaisysDb((prisma) =>
-        prisma.users.findMany({
-          select: {
-            id: true,
-            username: true,
-            title: true,
-            config: true,
-            lead_user_id: true,
-            archived: true,
-          },
-        }),
-      )) as ExportUserRow[];
+      const users = (await hubDb.users.findMany({
+        select: {
+          id: true,
+          username: true,
+          title: true,
+          config: true,
+          lead_user_id: true,
+          archived: true,
+        },
+      })) as ExportUserRow[];
 
-      const variables = await usingNaisysDb((prisma) =>
-        prisma.variables.findMany({
-          select: { key: true, value: true },
-          orderBy: { key: "asc" },
-        }),
-      );
+      const variables = await hubDb.variables.findMany({
+        select: { key: true, value: true },
+        orderBy: { key: "asc" },
+      });
 
-      const modelRows = (await usingNaisysDb((prisma) =>
-        prisma.models.findMany(),
-      )) as ModelDbRow[];
+      const modelRows = (await hubDb.models.findMany()) as ModelDbRow[];
 
       const exportFiles = buildExportFiles(users, variables, modelRows);
 

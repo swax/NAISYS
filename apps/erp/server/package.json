@@ -3,17 +3,17 @@
   "version": "1.0.0",
   "description": "NAISYS ERP - Fastify backend server",
   "type": "module",
-  "main": "dist/server.js",
+  "main": "dist/erpServer.js",
   "exports": {
-    ".": "./dist/server.js"
+    ".": "./dist/erpServer.js"
   },
   "scripts": {
-    "clean": "rimraf dist client-dist",
-    "dev": "tsx watch src/server.ts",
+    "clean": "rimraf dist client-dist .test-naisys",
+    "dev": "tsx watch src/erpServer.ts",
     "build": "prisma generate && tsc",
     "bundle": "npx shx rm -rf client-dist && npx shx cp -r ../client/dist client-dist",
-    "start": "node dist/server.js",
-    "start:reset-password": "node dist/server.js --reset-password",
+    "start": "node dist/erpServer.js",
+    "start:reset-password": "node dist/erpServer.js --reset-password",
     "type-check": "tsc --noEmit",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",

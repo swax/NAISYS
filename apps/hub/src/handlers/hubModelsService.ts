@@ -9,7 +9,7 @@ import {
   type ModelDbRow,
 } from "@naisys/common";
 import { loadCustomModels } from "@naisys/common-node";
-import { DatabaseService } from "@naisys/hub-database";
+import type { HubDatabaseService } from "@naisys/hub-database";
 import { HubEvents, ModelsResponse } from "@naisys/hub-protocol";
 import { HubServerLog } from "../services/hubServerLog.js";
 import { NaisysServer } from "../services/naisysServer.js";
@@ -17,15 +17,15 @@ import { NaisysServer } from "../services/naisysServer.js";
 /** Hub handler that seeds models on startup, pushes them on connect, and broadcasts on change */
 export async function createHubModelsService(
   naisysServer: NaisysServer,
-  dbService: DatabaseService,
+  { usingHubDatabase }: HubDatabaseService,
   logService: HubServerLog,
 ) {
   // Seed models table from built-in + YAML custom models (one-time, skips if non-empty)
-  await seedModels(dbService, logService);
+  await seedModels(usingHubDatabase, logService);
 
   async function buildModelsPayload(): Promise<ModelsResponse> {
-    const rows = (await dbService.usingDatabase(async (prisma) => {
-      return await prisma.models.findMany();
+    const rows = (await usingHubDatabase(async (hubDb) => {
+      return await hubDb.models.findMany();
     })) as ModelDbRow[];
 
     const llmModels = rows
@@ -103,11 +103,11 @@ export async function createHubModelsService(
 
 /** Seeds models table from built-in models + any YAML custom models (one-time). */
 async function seedModels(
-  dbService: DatabaseService,
+  usingHubDatabase: HubDatabaseService["usingHubDatabase"],
   logService: HubServerLog,
 ) {
-  await dbService.usingDatabase(async (prisma) => {
-    const count = await prisma.models.count();
+  await usingHubDatabase(async (hubDb) => {
+    const count = await hubDb.models.count();
     if (count > 0) {
       logService.log(`[Hub:Models] Models already seeded`);
       return;
@@ -143,7 +143,7 @@ async function seedModels(
       }
     }
 
-    await prisma.models.createMany({ data: rows });
+    await hubDb.models.createMany({ data: rows });
     logService.log(`[Hub:Models] Seeded ${rows.length} models into database`);
   });
 }

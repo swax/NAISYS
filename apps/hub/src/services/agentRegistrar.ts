@@ -1,19 +1,19 @@
 import { UserEntry } from "@naisys/common";
 import { loadAgentConfigs } from "@naisys/common-node";
-import { DatabaseService } from "@naisys/hub-database";
+import type { HubDatabaseService } from "@naisys/hub-database";
 import { randomBytes, randomUUID } from "crypto";
 import yaml from "js-yaml";
 import { HubServerLog } from "./hubServerLog.js";
 
 /** Seeds agent configs from YAML files into an empty database. Skips if users already exist. */
 export async function seedAgentConfigs(
-  dbService: DatabaseService,
+  { usingHubDatabase }: HubDatabaseService,
   logService: HubServerLog,
   startupAgentPath?: string,
 ) {
   // Check if users table already has rows (seed-once pattern)
-  const hasUsers = await dbService.usingDatabase(async (prisma) => {
-    const count = await prisma.users.count();
+  const hasUsers = await usingHubDatabase(async (hubDb) => {
+    const count = await hubDb.users.count();
     return count > 0;
   });
 
@@ -24,11 +24,11 @@ export async function seedAgentConfigs(
 
   // Default to CWD when no path specified (matches standalone hub behavior)
   const users = loadAgentConfigs(startupAgentPath || "");
-  await seedUsersToDatabase(dbService, logService, users);
+  await seedUsersToDatabase(usingHubDatabase, logService, users);
 }
 
 async function seedUsersToDatabase(
-  dbService: DatabaseService,
+  usingHubDatabase: HubDatabaseService["usingHubDatabase"],
   logService: HubServerLog,
   users: Map<number, UserEntry>,
 ) {
@@ -36,8 +36,8 @@ async function seedUsersToDatabase(
   const loaderIdToDbId = new Map<number, number>();
 
   for (const user of users.values()) {
-    await dbService.usingDatabase(async (prisma) => {
-      const dbUser = await prisma.users.create({
+    await usingHubDatabase(async (hubDb) => {
+      const dbUser = await hubDb.users.create({
         data: {
           uuid: randomUUID(),
           username: user.username,
@@ -49,7 +49,7 @@ async function seedUsersToDatabase(
 
       loaderIdToDbId.set(user.userId, dbUser.id);
 
-      await prisma.user_notifications.create({
+      await hubDb.user_notifications.create({
         data: {
           user_id: dbUser.id,
         },
@@ -63,8 +63,8 @@ async function seedUsersToDatabase(
       const dbId = loaderIdToDbId.get(user.userId);
       const leadDbId = loaderIdToDbId.get(user.leadUserId);
       if (dbId !== undefined && leadDbId !== undefined) {
-        await dbService.usingDatabase(async (prisma) => {
-          await prisma.users.update({
+        await usingHubDatabase(async (hubDb) => {
+          await hubDb.users.update({
             where: { id: dbId },
             data: { lead_user_id: leadDbId },
           });

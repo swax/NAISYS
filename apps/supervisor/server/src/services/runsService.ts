@@ -5,7 +5,7 @@ import {
   LogType,
   RunSession,
 } from "@naisys-supervisor/shared";
-import { usingNaisysDb } from "../database/naisysDatabase.js";
+import { hubDb } from "../database/hubDb.js";
 import { getLogger } from "../logger.js";
 import { cachedForSeconds } from "../utils/cache.js";
 
@@ -29,39 +29,35 @@ export const getRunsData = cachedForSeconds(
     count: number = 50,
   ): Promise<RunsData> => {
     try {
-      const result = await usingNaisysDb(async (prisma) => {
-        // Build the where clause
-        const where: any = {
-          user_id: userId,
+      // Build the where clause
+      const where: any = {
+        user_id: userId,
+      };
+
+      // If updatedSince is provided, only fetch runs that were updated after that time
+      if (updatedSince) {
+        where.last_active = {
+          gt: updatedSince,
         };
+      }
 
-        // If updatedSince is provided, only fetch runs that were updated after that time
-        if (updatedSince) {
-          where.last_active = {
-            gt: updatedSince,
-          };
-        }
+      // Only get total count on initial fetch (when updatedSince is not set)
+      const total = updatedSince
+        ? undefined
+        : await hubDb.run_session.count({ where });
 
-        // Only get total count on initial fetch (when updatedSince is not set)
-        const total = updatedSince
-          ? undefined
-          : await prisma.run_session.count({ where });
-
-        // Get paginated runs
-        const runSessions = await prisma.run_session.findMany({
-          where,
-          orderBy: {
-            last_active: "desc",
-          },
-          skip: (page - 1) * count,
-          take: count,
-        });
-
-        return { runSessions, total };
+      // Get paginated runs
+      const runSessions = await hubDb.run_session.findMany({
+        where,
+        orderBy: {
+          last_active: "desc",
+        },
+        skip: (page - 1) * count,
+        take: count,
       });
 
       // Map database records to our API format
-      const runs: RunSession[] = result.runSessions.map((session) => {
+      const runs: RunSession[] = runSessions.map((session) => {
         return {
           userId: session.user_id,
           runId: session.run_id,
@@ -78,7 +74,7 @@ export const getRunsData = cachedForSeconds(
       return {
         runs,
         timestamp: new Date().toISOString(),
-        total: result.total,
+        total,
       };
     } catch (error) {
       getLogger().error(error, "Error fetching runs data");
@@ -101,35 +97,33 @@ export const getContextLog = cachedForSeconds(
     logsAfter?: number,
   ): Promise<ContextLogData> => {
     try {
-      const dbLogs = await usingNaisysDb(async (prisma) => {
-        const where: any = {
-          user_id: userId,
-          run_id: runId,
-          session_id: sessionId,
-        };
+      const where: any = {
+        user_id: userId,
+        run_id: runId,
+        session_id: sessionId,
+      };
 
-        // If logsAfter is provided, only fetch logs after that ID
-        if (logsAfter !== undefined) {
-          where.id = { gt: logsAfter };
-        }
+      // If logsAfter is provided, only fetch logs after that ID
+      if (logsAfter !== undefined) {
+        where.id = { gt: logsAfter };
+      }
 
-        return await prisma.context_log.findMany({
-          where,
-          orderBy: { id: "desc" },
-          select: {
-            id: true,
-            role: true,
-            source: true,
-            type: true,
-            message: true,
-            created_at: true,
-            users: {
-              select: {
-                username: true,
-              },
+      const dbLogs = await hubDb.context_log.findMany({
+        where,
+        orderBy: { id: "desc" },
+        select: {
+          id: true,
+          role: true,
+          source: true,
+          type: true,
+          message: true,
+          created_at: true,
+          users: {
+            select: {
+              username: true,
             },
           },
-        });
+        },
       });
 
       const logs: LogEntry[] = dbLogs.map((log) => ({

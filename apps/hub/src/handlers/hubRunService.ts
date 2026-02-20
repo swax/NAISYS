@@ -1,4 +1,4 @@
-import { DatabaseService } from "@naisys/hub-database";
+import type { HubDatabaseService } from "@naisys/hub-database";
 import {
   HubEvents,
   SessionCreateRequestSchema,
@@ -10,7 +10,7 @@ import { NaisysServer } from "../services/naisysServer.js";
 /** Handles session_create and session_increment requests from NAISYS instances */
 export function createHubRunService(
   naisysServer: NaisysServer,
-  dbService: DatabaseService,
+  { usingHubDatabase }: HubDatabaseService,
   logService: HubServerLog,
 ) {
   naisysServer.registerEvent(
@@ -19,9 +19,9 @@ export function createHubRunService(
       try {
         const parsed = SessionCreateRequestSchema.parse(data);
 
-        const result = await dbService.usingDatabase(async (prisma) => {
+        const result = await usingHubDatabase(async (hubDb) => {
           // Get the last run_id across all sessions
-          const lastRun = await prisma.run_session.findFirst({
+          const lastRun = await hubDb.run_session.findFirst({
             select: { run_id: true },
             orderBy: { run_id: "desc" },
           });
@@ -29,7 +29,7 @@ export function createHubRunService(
           const newRunId = lastRun ? lastRun.run_id + 1 : 1;
           const newSessionId = 1;
 
-          await prisma.run_session.create({
+          await hubDb.run_session.create({
             data: {
               user_id: parsed.userId,
               run_id: newRunId,
@@ -64,9 +64,9 @@ export function createHubRunService(
       try {
         const parsed = SessionIncrementRequestSchema.parse(data);
 
-        const result = await dbService.usingDatabase(async (prisma) => {
+        const result = await usingHubDatabase(async (hubDb) => {
           // Get the max session_id for this user + run
-          const lastSession = await prisma.run_session.findFirst({
+          const lastSession = await hubDb.run_session.findFirst({
             select: { session_id: true },
             where: {
               user_id: parsed.userId,
@@ -77,7 +77,7 @@ export function createHubRunService(
 
           const newSessionId = lastSession ? lastSession.session_id + 1 : 1;
 
-          await prisma.run_session.create({
+          await hubDb.run_session.create({
             data: {
               user_id: parsed.userId,
               run_id: parsed.runId,

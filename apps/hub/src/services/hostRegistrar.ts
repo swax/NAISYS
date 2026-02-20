@@ -1,12 +1,14 @@
-import { DatabaseService } from "@naisys/hub-database";
+import type { HubDatabaseService } from "@naisys/hub-database";
 
-export async function createHostRegistrar(dbService: DatabaseService) {
+export async function createHostRegistrar({
+  usingHubDatabase,
+}: HubDatabaseService) {
   /** Cache of all known hosts keyed by id */
   const hostsById = new Map<number, string>();
 
   // Seed the cache from the database
-  await dbService.usingDatabase(async (prisma) => {
-    const rows = await prisma.hosts.findMany({
+  await usingHubDatabase(async (hubDb) => {
+    const rows = await hubDb.hosts.findMany({
       select: { id: true, name: true },
     });
     for (const row of rows) {
@@ -20,20 +22,20 @@ export async function createHostRegistrar(dbService: DatabaseService) {
    * @returns The host's autoincrement id
    */
   async function registerHost(hostName: string): Promise<number> {
-    return await dbService.usingDatabase(async (prisma) => {
-      const existing = await prisma.hosts.findUnique({
+    return await usingHubDatabase(async (hubDb) => {
+      const existing = await hubDb.hosts.findUnique({
         where: { name: hostName },
       });
 
       if (existing) {
-        await prisma.hosts.update({
+        await hubDb.hosts.update({
           where: { id: existing.id },
           data: { last_active: new Date().toISOString() },
         });
         return existing.id;
       }
 
-      const created = await prisma.hosts.create({
+      const created = await hubDb.hosts.create({
         data: {
           name: hostName,
           last_active: new Date().toISOString(),

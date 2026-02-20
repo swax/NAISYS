@@ -30,7 +30,7 @@ import {
   unarchiveAgent,
   updateLeadAgent,
 } from "../services/agentService.js";
-import { usingNaisysDb } from "../database/naisysDatabase.js";
+import { hubDb } from "../database/hubDb.js";
 
 export default async function agentLifecycleRoutes(
   fastify: FastifyInstance,
@@ -70,18 +70,15 @@ export default async function agentLifecycleRoutes(
           });
         }
 
-        const naisysUser = await usingNaisysDb(async (prisma) => {
-          const user = await prisma.users.findFirst({
+        const naisysUser =
+          (await hubDb.users.findFirst({
             where: { uuid: request.supervisorUser!.uuid },
             select: { id: true },
-          });
-          if (user) return user;
-
-          return prisma.users.findFirst({
+          })) ??
+          (await hubDb.users.findFirst({
             where: { username: "admin" },
             select: { id: true },
-          });
-        });
+          }));
 
         if (!naisysUser) {
           return reply.status(500).send({

@@ -1,7 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { AuthCache } from "@naisys/common";
 import { hashToken } from "@naisys/common-node";
-import prisma from "./db.js";
+import erpDb from "./erpDb.js";
 import { findSession } from "@naisys/supervisor-database";
 import { findAgentByApiKey } from "@naisys/hub-database";
 import { isSupervisorAuth } from "./supervisorAuth.js";
@@ -61,11 +61,11 @@ export function registerAuthMiddleware(fastify: FastifyInstance) {
         // SSO mode: supervisor DB is source of truth for sessions
         const session = await findSession(tokenHash);
         if (session) {
-          let localUser = await prisma.user.findUnique({
+          let localUser = await erpDb.user.findUnique({
             where: { uuid: session.uuid },
           });
           if (!localUser) {
-            localUser = await prisma.user.create({
+            localUser = await erpDb.user.create({
               data: {
                 uuid: session.uuid,
                 username: session.username,
@@ -81,7 +81,7 @@ export function registerAuthMiddleware(fastify: FastifyInstance) {
         }
       } else {
         // Standalone mode: local session only
-        const user = await prisma.user.findFirst({
+        const user = await erpDb.user.findFirst({
           where: {
             sessionTokenHash: tokenHash,
             sessionExpiresAt: { gt: new Date() },
@@ -110,11 +110,11 @@ export function registerAuthMiddleware(fastify: FastifyInstance) {
         } else {
           const agent = await findAgentByApiKey(apiKey);
           if (agent) {
-            let localUser = await prisma.user.findUnique({
+            let localUser = await erpDb.user.findUnique({
               where: { uuid: agent.uuid },
             });
             if (!localUser) {
-              localUser = await prisma.user.create({
+              localUser = await erpDb.user.create({
                 data: {
                   uuid: agent.uuid,
                   username: agent.username,

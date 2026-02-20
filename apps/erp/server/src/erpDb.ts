@@ -3,6 +3,6 @@ import { PrismaClient } from "./generated/prisma/client.js";
 import { erpDbUrl } from "./dbConfig.js";
 
 const adapter = new PrismaBetterSqlite3({ url: erpDbUrl() });
-const prisma = new PrismaClient({ adapter });
+const erpDb = new PrismaClient({ adapter });
 
-export default prisma;
+export default erpDb;

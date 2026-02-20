@@ -71,12 +71,21 @@ export const ImportConfigDialog: React.FC<ImportConfigDialogProps> = ({
           disabled={isImporting}
         />
         {error && (
-          <Alert color="red" title="Error" withCloseButton onClose={() => setError(null)}>
+          <Alert
+            color="red"
+            title="Error"
+            withCloseButton
+            onClose={() => setError(null)}
+          >
             {error}
           </Alert>
         )}
         <Group justify="flex-end">
-          <Button variant="default" onClick={handleClose} disabled={isImporting}>
+          <Button
+            variant="default"
+            onClick={handleClose}
+            disabled={isImporting}
+          >
             Cancel
           </Button>
           <Button

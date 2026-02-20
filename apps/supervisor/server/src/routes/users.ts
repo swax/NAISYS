@@ -29,10 +29,7 @@ import {
   schemaLink,
 } from "../hateoas.js";
 
-function userItemLinks(
-  userId: number,
-  agentId?: number | null,
-): HateoasLink[] {
+function userItemLinks(userId: number, agentId?: number | null): HateoasLink[] {
   const links: HateoasLink[] = [
     selfLink(`/users/${userId}`),
     collectionLink("users"),
@@ -328,16 +325,24 @@ export default async function userRoutes(
       const existingByUuid = await userService.getUserByUuid(hubAgent.uuid);
       if (existingByUuid) {
         reply.code(409);
-        return { success: false, message: "A user with this agent's UUID already exists" };
+        return {
+          success: false,
+          message: "A user with this agent's UUID already exists",
+        };
       }
 
-      const existingByUsername = await userService.getUserByUsername(hubAgent.username);
+      const existingByUsername = await userService.getUserByUsername(
+        hubAgent.username,
+      );
       if (existingByUsername) {
         reply.code(409);
         return { success: false, message: "Username already exists" };
       }
 
-      const user = await userService.createUser(hubAgent.username, hubAgent.uuid);
+      const user = await userService.createUser(
+        hubAgent.username,
+        hubAgent.uuid,
+      );
       reply.code(201);
       return formatUser(
         user,

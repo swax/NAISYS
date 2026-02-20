@@ -6,7 +6,7 @@ import { PrismaClient } from "./generated/prisma/client.js";
 import { deployPrismaMigrations } from "@naisys/common-node";
 import { createPrismaClient } from "./prismaClient.js";
 
-export async function createDatabaseService() {
+export async function createHubDatabaseService() {
   /** Should match version in schema_version table of latest migration script */
   const latestDbVersion = 15;
 
@@ -37,8 +37,8 @@ export async function createDatabaseService() {
    * Wrapper for database operations with retry logic and exponential backoff.
    * Automatically retries on transient errors like lock timeouts and socket timeouts.
    */
-  async function usingDatabase<T>(
-    run: (prisma: PrismaClient) => Promise<T>,
+  async function usingHubDatabase<T>(
+    run: (hubDb: PrismaClient) => Promise<T>,
     maxRetries: number = 5,
     baseDelayMs: number = 100,
   ): Promise<T> {
@@ -86,10 +86,12 @@ export async function createDatabaseService() {
   }
 
   return {
-    usingDatabase,
+    usingHubDatabase,
     getSchemaVersion,
     disconnect,
   };
 }
 
-export type DatabaseService = Awaited<ReturnType<typeof createDatabaseService>>;
+export type HubDatabaseService = Awaited<
+  ReturnType<typeof createHubDatabaseService>
+>;

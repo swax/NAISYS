@@ -1,6 +1,6 @@
 import { AgentConfigFile, AgentConfigFileSchema } from "@naisys/common";
 import yaml from "js-yaml";
-import { usingNaisysDb } from "../database/naisysDatabase.js";
+import { hubDb } from "../database/hubDb.js";
 import { sendUserListChanged } from "./hubConnectionService.js";
 
 /**
@@ -9,18 +9,15 @@ import { sendUserListChanged } from "./hubConnectionService.js";
 async function updateUserNotificationModifiedDate(
   userId: number,
 ): Promise<void> {
-  await usingNaisysDb(async (prisma) => {
-    // Upsert the user_notifications record to update updated_at
-    await prisma.user_notifications.upsert({
-      where: { user_id: userId },
-      create: {
-        user_id: userId,
-        updated_at: new Date(),
-      },
-      update: {
-        updated_at: new Date(),
-      },
-    });
+  await hubDb.user_notifications.upsert({
+    where: { user_id: userId },
+    create: {
+      user_id: userId,
+      updated_at: new Date(),
+    },
+    update: {
+      updated_at: new Date(),
+    },
   });
 }
 
@@ -29,12 +26,10 @@ async function updateUserNotificationModifiedDate(
  */
 export async function createAgentConfig(name: string): Promise<number> {
   // Check db if username already exists
-  const existingAgent = await usingNaisysDb(async (prisma) => {
-    return await prisma.users.findFirst({
-      where: {
-        username: name,
-      },
-    });
+  const existingAgent = await hubDb.users.findFirst({
+    where: {
+      username: name,
+    },
   });
 
   if (existingAgent) {
@@ -54,15 +49,13 @@ webEnabled: true
 `;
 
   // Add agent to the database, let DB autoincrement
-  const user = await usingNaisysDb(async (prisma) => {
-    return await prisma.users.create({
-      data: {
-        uuid: crypto.randomUUID(),
-        username: name,
-        title: "Assistant",
-        config: yamlContent,
-      },
-    });
+  const user = await hubDb.users.create({
+    data: {
+      uuid: crypto.randomUUID(),
+      username: name,
+      title: "Assistant",
+      config: yamlContent,
+    },
   });
 
   // Update user notification modified date
@@ -78,20 +71,16 @@ webEnabled: true
  * Get parsed agent configuration by user ID. Reads from DB config column.
  */
 export async function getAgentConfigById(id: number): Promise<AgentConfigFile> {
-  const configStr = await usingNaisysDb(async (prisma) => {
-    const user = await prisma.users.findUnique({
-      where: { id },
-      select: { config: true },
-    });
-
-    if (!user) {
-      throw new Error(`User with ID ${id} not found`);
-    }
-
-    return user.config;
+  const user = await hubDb.users.findUnique({
+    where: { id },
+    select: { config: true },
   });
 
-  const parsed = yaml.load(configStr);
+  if (!user) {
+    throw new Error(`User with ID ${id} not found`);
+  }
+
+  const parsed = yaml.load(user.config);
   return AgentConfigFileSchema.parse(parsed);
 }
 
@@ -159,14 +148,12 @@ export async function updateAgentConfigById(
   const ordered = canonicalConfigOrder(config);
   const yamlStr = yaml.dump(ordered, { lineWidth: -1, noRefs: true });
 
-  await usingNaisysDb(async (prisma) => {
-    await prisma.users.update({
-      where: { id },
-      data: {
-        config: yamlStr,
-        title: config.title,
-      },
-    });
+  await hubDb.users.update({
+    where: { id },
+    data: {
+      config: yamlStr,
+      title: config.title,
+    },
   });
 
   // Update user notification modified date

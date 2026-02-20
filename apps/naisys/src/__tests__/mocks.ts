@@ -1,5 +1,5 @@
 import { jest, test } from "@jest/globals";
-import { DatabaseService, PrismaClient } from "@naisys/hub-database";
+import { type HubDatabaseService, PrismaClient } from "@naisys/hub-database";
 import { AgentConfig } from "../agent/agentConfig.js";
 import { CommandProtection } from "../command/commandProtection.js";
 import { PromptBuilder } from "../command/promptBuilder.js";
@@ -19,10 +19,10 @@ import { LogService } from "../services/logService.js";
 import { RunService } from "../services/runService.js";
 import { OutputService } from "../utils/output.js";
 
-export function createMockDatabaseService(): DatabaseService {
+export function createMockDatabaseService(): HubDatabaseService {
   return {
-    usingDatabase: <T>(
-      run: (prisma: PrismaClient) => Promise<T>,
+    usingHubDatabase: <T>(
+      run: (hubDb: PrismaClient) => Promise<T>,
     ): Promise<T> => {
       throw new Error("Mock database not implemented");
     },

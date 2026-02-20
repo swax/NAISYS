@@ -2,7 +2,7 @@ import { randomUUID } from "crypto";
 import bcrypt from "bcrypt";
 import { hashToken } from "@naisys/common-node";
 import { updateUserPassword } from "@naisys/supervisor-database";
-import prisma from "../db.js";
+import supervisorDb from "../database/supervisorDb.js";
 import type { Permission } from "@naisys/supervisor-database";
 
 export type { User as SupervisorUserRow } from "@naisys/supervisor-database";
@@ -11,15 +11,15 @@ export { hashToken };
 const SALT_ROUNDS = 10;
 
 export async function getUserByUsername(username: string) {
-  return prisma.user.findUnique({ where: { username } });
+  return supervisorDb.user.findUnique({ where: { username } });
 }
 
 export async function getUserByUuid(uuid: string) {
-  return prisma.user.findFirst({ where: { uuid } });
+  return supervisorDb.user.findFirst({ where: { uuid } });
 }
 
 export async function createUser(username: string, uuid: string) {
-  return prisma.user.create({
+  return supervisorDb.user.create({
     data: { username, uuid, isAgent: true },
     include: { permissions: true },
   });
@@ -36,21 +36,21 @@ export async function listUsers(options: {
   const where = search ? { username: { contains: search } } : {};
 
   const [items, total] = await Promise.all([
-    prisma.user.findMany({
+    supervisorDb.user.findMany({
       where,
       include: { permissions: true },
       orderBy: { createdAt: "desc" },
       skip: (page - 1) * pageSize,
       take: pageSize,
     }),
-    prisma.user.count({ where }),
+    supervisorDb.user.count({ where }),
   ]);
 
   return { items, total, pageSize };
 }
 
 export async function getUserById(id: number) {
-  return prisma.user.findUnique({
+  return supervisorDb.user.findUnique({
     where: { id },
     include: { permissions: true },
   });
@@ -63,7 +63,7 @@ export async function createUserWithPassword(data: {
 }) {
   const passwordHash = await bcrypt.hash(data.password, SALT_ROUNDS);
   const uuid = randomUUID();
-  const user = await prisma.user.create({
+  const user = await supervisorDb.user.create({
     data: {
       username: data.username,
       uuid,
@@ -82,7 +82,7 @@ export async function updateUser(
   const updateData: Record<string, unknown> = {};
   if (data.username !== undefined) updateData.username = data.username;
 
-  const updated = await prisma.user.update({
+  const updated = await supervisorDb.user.update({
     where: { id },
     data: updateData,
     include: { permissions: true },
@@ -97,7 +97,7 @@ export async function updateUser(
 }
 
 export async function deleteUser(id: number) {
-  return prisma.user.delete({ where: { id } });
+  return supervisorDb.user.delete({ where: { id } });
 }
 
 export async function grantPermission(
@@ -105,19 +105,19 @@ export async function grantPermission(
   permission: Permission,
   grantedBy: number,
 ) {
-  return prisma.userPermission.create({
+  return supervisorDb.userPermission.create({
     data: { userId, permission, grantedBy },
   });
 }
 
 export async function revokePermission(userId: number, permission: Permission) {
-  return prisma.userPermission.deleteMany({
+  return supervisorDb.userPermission.deleteMany({
     where: { userId, permission },
   });
 }
 
 export async function getUserPermissions(userId: number): Promise<string[]> {
-  const perms = await prisma.userPermission.findMany({
+  const perms = await supervisorDb.userPermission.findMany({
     where: { userId },
     select: { permission: true },
   });
@@ -128,7 +128,7 @@ export async function checkUserPermission(
   userId: number,
   permission: string,
 ): Promise<boolean> {
-  const perm = await prisma.userPermission.findFirst({
+  const perm = await supervisorDb.userPermission.findFirst({
     where: { userId, permission: permission as Permission },
   });
   return perm !== null;
@@ -137,7 +137,7 @@ export async function checkUserPermission(
 export async function grantInitialAdminPermissions(userId: number) {
   const permissions: Permission[] = ["supervisor_admin", "manage_agents"];
   for (const permission of permissions) {
-    await prisma.userPermission.upsert({
+    await supervisorDb.userPermission.upsert({
       where: { userId_permission: { userId, permission } },
       create: { userId, permission },
       update: {},
