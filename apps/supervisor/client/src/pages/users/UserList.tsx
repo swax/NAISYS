@@ -11,11 +11,13 @@ import {
   Loader,
   Modal,
   PasswordInput,
+  Select,
 } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { getUsers, createUser } from "../../lib/apiUsers";
+import { getUsers, createUser, createAgentUser } from "../../lib/apiUsers";
+import { getAgentData } from "../../lib/apiAgents";
 
 export const UserList: React.FC = () => {
   const navigate = useNavigate();
@@ -33,6 +35,16 @@ export const UserList: React.FC = () => {
   const [newPassword, setNewPassword] = useState("");
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState("");
+
+  const [agentOpened, { open: openAgent, close: closeAgent }] =
+    useDisclosure();
+  const [availableAgents, setAvailableAgents] = useState<
+    { value: string; label: string }[]
+  >([]);
+  const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
+  const [creatingAgent, setCreatingAgent] = useState(false);
+  const [agentError, setAgentError] = useState("");
+  const [loadingAgents, setLoadingAgents] = useState(false);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -68,13 +80,62 @@ export const UserList: React.FC = () => {
     }
   };
 
+  const handleOpenAgentModal = async () => {
+    openAgent();
+    setSelectedAgentId(null);
+    setAgentError("");
+    setLoadingAgents(true);
+    try {
+      const agentResponse = await getAgentData();
+      let allUsers: any[] = [];
+      let userPage = 1;
+      let userResult;
+      do {
+        userResult = await getUsers({ page: userPage, pageSize: 100 });
+        allUsers = allUsers.concat(userResult.items);
+        userPage++;
+      } while (allUsers.length < userResult.total);
+      const existingUuids = new Set(allUsers.map((u: any) => u.uuid));
+      const filtered = agentResponse.items
+        .filter((a) => !a.archived && !existingUuids.has(a.uuid))
+        .map((a) => ({ value: String(a.id), label: a.name }));
+      setAvailableAgents(filtered);
+    } catch {
+      setAgentError("Failed to load agents");
+    } finally {
+      setLoadingAgents(false);
+    }
+  };
+
+  const handleCreateAgentUser = async () => {
+    if (!selectedAgentId) return;
+    setCreatingAgent(true);
+    setAgentError("");
+    try {
+      await createAgentUser(Number(selectedAgentId));
+      closeAgent();
+      fetchData();
+    } catch (err) {
+      setAgentError(
+        err instanceof Error ? err.message : "Failed to create agent user",
+      );
+    } finally {
+      setCreatingAgent(false);
+    }
+  };
+
   const totalPages = data ? Math.ceil(data.total / data.pageSize) : 0;
 
   return (
     <Container size="lg" py="xl">
       <Group justify="space-between" mb="lg">
         <Title order={2}>Users</Title>
-        <Button onClick={openCreate}>Create New</Button>
+        <Group>
+          <Button variant="outline" onClick={handleOpenAgentModal}>
+            Create Agent User
+          </Button>
+          <Button onClick={openCreate}>Create New</Button>
+        </Group>
       </Group>
 
       <Group mb="md">
@@ -172,6 +233,44 @@ export const UserList: React.FC = () => {
               onClick={handleCreate}
               loading={creating}
               disabled={!newUsername || !newPassword}
+            >
+              Create
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
+
+      <Modal
+        opened={agentOpened}
+        onClose={closeAgent}
+        title="Create Agent User"
+      >
+        <Stack>
+          {loadingAgents ? (
+            <Loader size="sm" />
+          ) : (
+            <Select
+              label="Agent"
+              placeholder="Select an agent"
+              data={availableAgents}
+              value={selectedAgentId}
+              onChange={setSelectedAgentId}
+              searchable
+            />
+          )}
+          {agentError && (
+            <Text c="red" size="sm">
+              {agentError}
+            </Text>
+          )}
+          <Group justify="flex-end">
+            <Button variant="subtle" onClick={closeAgent}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleCreateAgentUser}
+              loading={creatingAgent}
+              disabled={!selectedAgentId}
             >
               Create
             </Button>

@@ -13,6 +13,7 @@ export const getAgents = cachedForSeconds(
         return prisma.users.findMany({
           select: {
             id: true,
+            uuid: true,
             username: true,
             title: true,
             archived: true,
@@ -40,6 +41,7 @@ export const getAgents = cachedForSeconds(
       users.forEach((user) => {
         agents.push({
           id: user.id,
+          uuid: user.uuid,
           name: user.username,
           title: user.title,
           host: user.user_notifications?.host?.name ?? "",
@@ -57,6 +59,24 @@ export const getAgents = cachedForSeconds(
     return agents;
   },
 );
+
+export async function getHubAgentById(id: number) {
+  return usingNaisysDb(async (prisma) => {
+    return prisma.users.findUnique({
+      where: { id },
+      select: { id: true, uuid: true, username: true },
+    });
+  });
+}
+
+export async function getHubAgentByUuid(uuid: string) {
+  return usingNaisysDb(async (prisma) => {
+    return prisma.users.findFirst({
+      where: { uuid },
+      select: { id: true },
+    });
+  });
+}
 
 export async function getAgent(
   id: number,

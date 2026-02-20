@@ -43,3 +43,11 @@ export const ChangePasswordSchema = z
   .strict();
 
 export type ChangePassword = z.infer<typeof ChangePasswordSchema>;
+
+export const CreateAgentUserSchema = z
+  .object({
+    agentId: z.number().int(),
+  })
+  .strict();
+
+export type CreateAgentUser = z.infer<typeof CreateAgentUserSchema>;
