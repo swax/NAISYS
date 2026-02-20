@@ -14,6 +14,7 @@ import type {
   DeleteVariableResponse,
   GetAgentConfigResponse,
   HostListResponse,
+  ImportAgentConfigResponse,
   ImageModelDetail,
   LlmModelDetail,
   LogEntry,
@@ -52,6 +53,7 @@ export type {
   GetAgentConfigResponse,
   HostListResponse,
   ImageModelDetail,
+  ImportAgentConfigResponse,
   LlmModelDetail,
   LogEntry,
   LoginResponse,
@@ -133,6 +135,7 @@ export const apiEndpoints = {
   hosts: "/hosts",
   agentDetail: (id: number) => `/agents/${id}`,
   agentConfig: (id: number) => `/agents/${id}/config`,
+  agentConfigImport: (id: number) => `/agents/${id}/config/import`,
   agentRuns: (id: number) => `/agents/${id}/runs`,
   agentMail: (id: number) => `/agents/${id}/mail`,
   agentContextLog: (id: number, runId: number, sessionId: number) =>

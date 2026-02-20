@@ -1,9 +1,10 @@
 import type { AgentConfigFile, HateoasAction } from "@naisys/common";
 import { Alert, Button, Group, Loader, Stack, Text } from "@mantine/core";
-import { IconEdit } from "@tabler/icons-react";
+import { IconEdit, IconFileImport } from "@tabler/icons-react";
 import React, { useCallback, useEffect, useState } from "react";
 import { useBlocker, useParams } from "react-router-dom";
 import { AgentConfigForm } from "./AgentConfigForm";
+import { ImportConfigDialog } from "./ImportConfigDialog";
 import { hasAction } from "@naisys/common";
 import { useAgentDataContext } from "../../contexts/AgentDataContext";
 import { getAgentConfig, updateAgentConfig } from "../../lib/apiAgents";
@@ -28,6 +29,8 @@ export const AgentConfig: React.FC = () => {
     { value: string; label: string }[]
   >([]);
   const [actions, setActions] = useState<HateoasAction[] | undefined>();
+  const [configRevision, setConfigRevision] = useState(0);
+  const [importDialogOpened, setImportDialogOpened] = useState(false);
 
   // Block in-app navigation while editing
   const blocker = useBlocker(isEditing);
@@ -69,27 +72,28 @@ export const AgentConfig: React.FC = () => {
       });
   }, []);
 
-  useEffect(() => {
+  const fetchConfig = useCallback(async () => {
     if (!agentId) {
       setLoading(false);
       return;
     }
 
-    const fetchConfig = async () => {
-      try {
-        const data = await getAgentConfig(agentId);
-        setConfig(data.config);
-        setActions(data._actions);
-      } catch (err) {
-        console.error("Error fetching agent config:", err);
-        setError("An error occurred while loading the configuration");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchConfig();
+    try {
+      const data = await getAgentConfig(agentId);
+      setConfig(data.config);
+      setActions(data._actions);
+      setConfigRevision((r) => r + 1);
+    } catch (err) {
+      console.error("Error fetching agent config:", err);
+      setError("An error occurred while loading the configuration");
+    } finally {
+      setLoading(false);
+    }
   }, [agentId]);
+
+  useEffect(() => {
+    fetchConfig();
+  }, [fetchConfig]);
 
   const handleEdit = () => {
     if (config) {
@@ -162,6 +166,15 @@ export const AgentConfig: React.FC = () => {
             Edit Config
           </Button>
         )}
+        {!isEditing && hasAction(actions, "import-config") && (
+          <Button
+            variant="outline"
+            leftSection={<IconFileImport size={16} />}
+            onClick={() => setImportDialogOpened(true)}
+          >
+            Import Config
+          </Button>
+        )}
       </Group>
 
       {saveError && (
@@ -177,7 +190,7 @@ export const AgentConfig: React.FC = () => {
 
       {config && (
         <AgentConfigForm
-          key={isEditing ? "edit" : "view"}
+          key={isEditing ? "edit" : `view-${configRevision}`}
           config={config}
           llmModelOptions={llmModelOptions}
           imageModelOptions={imageModelOptions}
@@ -185,6 +198,15 @@ export const AgentConfig: React.FC = () => {
           saving={saving}
           onSave={handleSave}
           onCancel={handleCancel}
+        />
+      )}
+
+      {agentId && (
+        <ImportConfigDialog
+          agentId={agentId}
+          opened={importDialogOpened}
+          onClose={() => setImportDialogOpened(false)}
+          onSuccess={fetchConfig}
         />
       )}
     </Stack>

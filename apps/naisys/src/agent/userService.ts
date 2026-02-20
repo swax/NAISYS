@@ -89,7 +89,7 @@ export function createUserService(
     if (hubClient) {
       notify(
         adminId,
-        `No agents running yet. Hub will start agents on demand.`,
+        `No agents running yet. Supervisor/Hub will start agents on demand.`,
       );
       return [adminId];
     }

@@ -8,6 +8,7 @@ import type {
   CreateAgentConfigResponse,
   GetAgentConfigResponse,
   HostListResponse,
+  ImportAgentConfigResponse,
   UpdateAgentConfigResponse,
 } from "./apiClient";
 import { api, apiEndpoints } from "./apiClient";
@@ -64,6 +65,26 @@ export const updateAgentConfig = async (
         error instanceof Error
           ? error.message
           : "Failed to save agent configuration",
+    };
+  }
+};
+
+export const importAgentConfig = async (
+  agentId: number,
+  yaml: string,
+): Promise<ImportAgentConfigResponse> => {
+  try {
+    return await api.post<{ yaml: string }, ImportAgentConfigResponse>(
+      apiEndpoints.agentConfigImport(agentId),
+      { yaml },
+    );
+  } catch (error) {
+    return {
+      success: false,
+      message:
+        error instanceof Error
+          ? error.message
+          : "Failed to import agent configuration",
     };
   }
 };
