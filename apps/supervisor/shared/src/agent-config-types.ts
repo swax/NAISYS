@@ -32,6 +32,17 @@ export const UpdateAgentConfigResponseSchema = z.object({
   message: z.string(),
 });
 
+export const ImportAgentConfigRequestSchema = z
+  .object({
+    yaml: z.string().min(1),
+  })
+  .strict();
+
+export const ImportAgentConfigResponseSchema = z.object({
+  success: z.boolean(),
+  message: z.string(),
+});
+
 export const GetAgentConfigResponseSchema = z.object({
   config: AgentConfigFileSchema,
   _actions: z.array(HateoasActionSchema).optional(),
@@ -49,6 +60,12 @@ export type UpdateAgentConfigRequest = z.infer<
 >;
 export type UpdateAgentConfigResponse = z.infer<
   typeof UpdateAgentConfigResponseSchema
+>;
+export type ImportAgentConfigRequest = z.infer<
+  typeof ImportAgentConfigRequestSchema
+>;
+export type ImportAgentConfigResponse = z.infer<
+  typeof ImportAgentConfigResponseSchema
 >;
 export type GetAgentConfigResponse = z.infer<
   typeof GetAgentConfigResponseSchema
