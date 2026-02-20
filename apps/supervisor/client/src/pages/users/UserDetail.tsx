@@ -16,7 +16,12 @@ import {
 import { useDisclosure } from "@mantine/hooks";
 import { hasAction } from "@naisys/common";
 import { useCallback, useEffect, useState } from "react";
-import { useNavigate, useOutletContext, useParams } from "react-router-dom";
+import {
+  Link,
+  useNavigate,
+  useOutletContext,
+  useParams,
+} from "react-router-dom";
 import { useSession } from "../../contexts/SessionContext";
 import type { AppOutletContext } from "../../App";
 import {
@@ -208,6 +213,29 @@ export const UserDetail: React.FC = () => {
             </Text>
             <Text>{user.isAgent ? "Agent" : "User"}</Text>
           </Group>
+          {(() => {
+            const agentLink = user._links?.find(
+              (l: any) => l.rel === "agent",
+            );
+            if (!agentLink) return null;
+            const agentId = agentLink.href.match(/\/agents\/(\d+)/)?.[1];
+            if (!agentId) return null;
+            return (
+              <Group>
+                <Text fw={600} w={120}>
+                  Agent:
+                </Text>
+                <Text
+                  component={Link}
+                  to={`/agents/${agentId}`}
+                  c="blue"
+                  td="underline"
+                >
+                  View Agent
+                </Text>
+              </Group>
+            );
+          })()}
           <Group>
             <Text fw={600} w={120}>
               Created:

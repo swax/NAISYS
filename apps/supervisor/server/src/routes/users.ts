@@ -9,12 +9,17 @@ import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import {
   ChangePasswordSchema,
   CreateUserSchema,
+  CreateAgentUserSchema,
   UpdateUserSchema,
   GrantPermissionSchema,
 } from "@naisys-supervisor/shared";
 import type { Permission } from "@naisys/supervisor-database";
 import { requirePermission, authCache } from "../auth-middleware.js";
 import * as userService from "../services/userService.js";
+import {
+  getHubAgentById,
+  getHubAgentByUuid,
+} from "../services/agentService.js";
 import type { HateoasAction, HateoasLink } from "@naisys/common";
 import {
   API_PREFIX,
@@ -24,12 +29,23 @@ import {
   schemaLink,
 } from "../hateoas.js";
 
-function userItemLinks(userId: number): HateoasLink[] {
-  return [
+function userItemLinks(
+  userId: number,
+  agentId?: number | null,
+): HateoasLink[] {
+  const links: HateoasLink[] = [
     selfLink(`/users/${userId}`),
     collectionLink("users"),
     schemaLink("UpdateUser"),
   ];
+  if (agentId != null) {
+    links.push({
+      rel: "agent",
+      href: `${API_PREFIX}/agents/${agentId}`,
+      title: "View Agent",
+    });
+  }
+  return links;
 }
 
 function userActions(
@@ -111,6 +127,7 @@ function formatUser(
   user: Awaited<ReturnType<typeof userService.getUserById>>,
   currentUserId: number,
   currentUserPermissions: string[],
+  agentId?: number | null,
 ) {
   if (!user) return null;
   const isSelf = user.id === currentUserId;
@@ -127,7 +144,7 @@ function formatUser(
       grantedBy: p.grantedBy,
       _actions: permissionActions(user.id, p.permission, isSelf, isAdmin),
     })),
-    _links: userItemLinks(user.id),
+    _links: userItemLinks(user.id, agentId),
     _actions: userActions(user.id, isSelf, isAdmin),
   };
 }
@@ -137,6 +154,7 @@ function formatListUser(
 ) {
   return {
     id: user.id,
+    uuid: user.uuid,
     username: user.username,
     isAgent: user.isAgent,
     createdAt: user.createdAt.toISOString(),
@@ -197,6 +215,23 @@ export default async function userRoutes(
       const { page, pageSize, search } = request.query;
       const result = await userService.listUsers({ page, pageSize, search });
 
+      const actions: HateoasAction[] = [
+        {
+          rel: "create",
+          href: `${API_PREFIX}/users`,
+          method: "POST",
+          title: "Create User",
+          schema: `${API_PREFIX}/schemas/CreateUser`,
+        },
+        {
+          rel: "create-from-agent",
+          href: `${API_PREFIX}/users/from-agent`,
+          method: "POST",
+          title: "Import User from Agent",
+          schema: `${API_PREFIX}/schemas/CreateAgentUser`,
+        },
+      ];
+
       return {
         items: result.items.map(formatListUser),
         total: result.total,
@@ -204,6 +239,7 @@ export default async function userRoutes(
         _links: paginationLinks("users", page, pageSize, result.total, {
           search,
         }),
+        _actions: actions,
       };
     },
   );
@@ -268,6 +304,49 @@ export default async function userRoutes(
     },
   );
 
+  // CREATE AGENT USER (from hub agent)
+  app.post(
+    "/from-agent",
+    {
+      preHandler: adminPreHandler,
+      schema: {
+        description: "Create a supervisor user from an existing hub agent",
+        tags: ["Users"],
+        body: CreateAgentUserSchema,
+        security: [{ cookieAuth: [] }],
+      },
+    },
+    async (request, reply) => {
+      const { agentId } = request.body;
+
+      const hubAgent = await getHubAgentById(agentId);
+      if (!hubAgent) {
+        reply.code(404);
+        return { success: false, message: "Agent not found" };
+      }
+
+      const existingByUuid = await userService.getUserByUuid(hubAgent.uuid);
+      if (existingByUuid) {
+        reply.code(409);
+        return { success: false, message: "A user with this agent's UUID already exists" };
+      }
+
+      const existingByUsername = await userService.getUserByUsername(hubAgent.username);
+      if (existingByUsername) {
+        reply.code(409);
+        return { success: false, message: "Username already exists" };
+      }
+
+      const user = await userService.createUser(hubAgent.username, hubAgent.uuid);
+      reply.code(201);
+      return formatUser(
+        user,
+        request.supervisorUser!.id,
+        request.supervisorUser!.permissions,
+      );
+    },
+  );
+
   // GET USER (admin or self)
   app.get(
     "/:id",
@@ -286,10 +365,18 @@ export default async function userRoutes(
         reply.code(404);
         return { success: false, message: "User not found" };
       }
+
+      let agentId: number | null = null;
+      if (user.isAgent && user.uuid) {
+        const hubAgent = await getHubAgentByUuid(user.uuid);
+        agentId = hubAgent?.id ?? null;
+      }
+
       return formatUser(
         user,
         request.supervisorUser!.id,
         request.supervisorUser!.permissions,
+        agentId,
       );
     },
   );

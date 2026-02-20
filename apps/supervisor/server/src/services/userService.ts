@@ -20,7 +20,8 @@ export async function getUserByUuid(uuid: string) {
 
 export async function createUser(username: string, uuid: string) {
   return prisma.user.create({
-    data: { username, uuid },
+    data: { username, uuid, isAgent: true },
+    include: { permissions: true },
   });
 }
 

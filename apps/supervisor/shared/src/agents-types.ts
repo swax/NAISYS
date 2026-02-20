@@ -10,6 +10,7 @@ const LinkSchema = z.object({
 // Zod schemas
 export const AgentSchema = z.object({
   id: z.number(),
+  uuid: z.string(),
   name: z.string(),
   title: z.string(),
   host: z.string(),
