@@ -49,7 +49,7 @@ export const PlanningOrderList: React.FC = () => {
   }, [page, status, search]);
 
   useEffect(() => {
-    fetchData();
+    void fetchData();
   }, [fetchData]);
 
   const totalPages = data ? Math.ceil(data.total / data.pageSize) : 0;

@@ -144,7 +144,7 @@ async function ensureOrderExists(orderId: number) {
   return order;
 }
 
-export default async function planningOrderRevisionRoutes(
+export default function planningOrderRevisionRoutes(
   fastify: FastifyInstance,
 ) {
   const app = fastify.withTypeProvider<ZodTypeProvider>();

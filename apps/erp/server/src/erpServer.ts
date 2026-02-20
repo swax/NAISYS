@@ -105,7 +105,7 @@ export const erpPlugin: FastifyPluginAsync = async (fastify) => {
   fastify.get(
     "/api/erp/client-config",
     { schema: { hide: true } },
-    async () => ({ publicRead: process.env.PUBLIC_READ === "true" }),
+    () => ({ publicRead: process.env.PUBLIC_READ === "true" }),
   );
 
   registerApiReference(fastify);

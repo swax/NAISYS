@@ -52,7 +52,7 @@ export const Mail: React.FC = () => {
       (max, mail) => (mail.id > max ? mail.id : max),
       0,
     );
-    updateReadStatus(agentName, undefined, maxMailId);
+    void updateReadStatus(agentName, undefined, maxMailId);
   }, [allMail]);
 
   const [showSent, setShowSent] = useState(false);

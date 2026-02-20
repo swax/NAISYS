@@ -32,7 +32,7 @@ function adminActions(hasAdminPermission: boolean): HateoasAction[] {
   return actions;
 }
 
-export default async function adminRoutes(
+export default function adminRoutes(
   fastify: FastifyInstance,
   _options: FastifyPluginOptions,
 ) {

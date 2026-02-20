@@ -77,7 +77,7 @@ async function validateModelKeys(
   return null;
 }
 
-export default async function agentConfigRoutes(
+export default function agentConfigRoutes(
   fastify: FastifyInstance,
   _options: FastifyPluginOptions,
 ) {

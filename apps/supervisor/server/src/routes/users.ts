@@ -160,7 +160,7 @@ function formatListUser(
   };
 }
 
-export default async function userRoutes(
+export default function userRoutes(
   fastify: FastifyInstance,
   _options: FastifyPluginOptions,
 ) {

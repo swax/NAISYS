@@ -44,8 +44,8 @@ export const HostPage: React.FC = () => {
           message: result.message,
           color: "red",
         });
-        queryClient.invalidateQueries({ queryKey: ["host-data"] });
-        navigate("/");
+        void queryClient.invalidateQueries({ queryKey: ["host-data"] });
+        void navigate("/");
       } else {
         notifications.show({
           title: "Delete Failed",

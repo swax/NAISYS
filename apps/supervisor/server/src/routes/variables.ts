@@ -45,7 +45,7 @@ function variableActions(hasManagePermission: boolean): HateoasAction[] {
   return actions;
 }
 
-export default async function variablesRoutes(
+export default function variablesRoutes(
   fastify: FastifyInstance,
   _options: FastifyPluginOptions,
 ) {

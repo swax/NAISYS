@@ -30,7 +30,7 @@ export const AppLayout: React.FC = () => {
   const isActive = (path: string) => location.pathname.startsWith(path);
 
   const handleNav = (path: string) => {
-    navigate(path);
+    void navigate(path);
     close();
   };
 

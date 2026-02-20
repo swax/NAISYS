@@ -107,7 +107,7 @@ export const ModelPage: React.FC = () => {
 
   const handleCancel = () => {
     if (isNew) {
-      navigate("/models");
+      void navigate("/models");
     } else {
       setIsEditing(false);
       setSaveError(null);
@@ -126,7 +126,7 @@ export const ModelPage: React.FC = () => {
       if (result.success) {
         await refreshModels();
         if (isNew) {
-          navigate(`/models/${encodeURIComponent(model.key as string)}`);
+          void navigate(`/models/${encodeURIComponent(model.key as string)}`);
         } else {
           setIsEditing(false);
         }
@@ -153,7 +153,7 @@ export const ModelPage: React.FC = () => {
         if (result.revertedToBuiltIn) {
           // Stay on the same page — model is now the built-in version
         } else {
-          navigate("/models");
+          void navigate("/models");
         }
       } else {
         setSaveError(result.message || "Failed to delete model");

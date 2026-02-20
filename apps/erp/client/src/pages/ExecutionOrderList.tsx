@@ -65,7 +65,7 @@ export const ExecutionOrderList: React.FC = () => {
   }, [page, status, priority, search]);
 
   useEffect(() => {
-    fetchData();
+    void fetchData();
   }, [fetchData]);
 
   const totalPages = data ? Math.ceil(data.total / data.pageSize) : 0;

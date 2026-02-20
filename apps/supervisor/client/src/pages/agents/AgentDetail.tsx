@@ -67,7 +67,7 @@ export const AgentDetail: React.FC = () => {
       return;
     }
 
-    fetchDetail();
+    void fetchDetail();
   }, [agentId]);
 
   const handleStart = async () => {
@@ -228,7 +228,7 @@ export const AgentDetail: React.FC = () => {
           message: result.message,
           color: "red",
         });
-        navigate("/agents");
+        void navigate("/agents");
       } else {
         notifications.show({
           title: "Delete Failed",

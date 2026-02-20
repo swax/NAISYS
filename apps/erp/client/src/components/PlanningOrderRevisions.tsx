@@ -71,7 +71,7 @@ export const PlanningOrderRevisions: React.FC<Props> = ({ orderId }) => {
   }, [basePath, page]);
 
   useEffect(() => {
-    fetchRevisions();
+    void fetchRevisions();
   }, [fetchRevisions]);
 
   const handleCreate = async (values: typeof form.values) => {

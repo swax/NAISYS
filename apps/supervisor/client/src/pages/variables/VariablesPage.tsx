@@ -48,7 +48,7 @@ export const VariablesPage: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    fetchData();
+    void fetchData();
   }, [fetchData]);
 
   const canManage = data ? !!hasAction(data._actions, "save") : false;
@@ -61,7 +61,7 @@ export const VariablesPage: React.FC = () => {
       if (result.success) {
         setNewKey("");
         setNewValue("");
-        fetchData();
+        void fetchData();
       }
     } finally {
       setSaving(false);
@@ -74,7 +74,7 @@ export const VariablesPage: React.FC = () => {
       const result = await saveVariable(key, editValue);
       if (result.success) {
         setEditingKey(null);
-        fetchData();
+        void fetchData();
       }
     } finally {
       setSaving(false);
@@ -85,7 +85,7 @@ export const VariablesPage: React.FC = () => {
     if (!window.confirm(`Delete variable "${key}"?`)) return;
     const result = await deleteVariable(key);
     if (result.success) {
-      fetchData();
+      void fetchData();
     }
   };
 
@@ -128,7 +128,7 @@ export const VariablesPage: React.FC = () => {
                       onChange={(e) => setEditValue(e.currentTarget.value)}
                       size="xs"
                       onKeyDown={(e) => {
-                        if (e.key === "Enter") handleSaveEdit(item.key);
+                        if (e.key === "Enter") void handleSaveEdit(item.key);
                         if (e.key === "Escape") cancelEdit();
                       }}
                       autoFocus
@@ -201,7 +201,7 @@ export const VariablesPage: React.FC = () => {
                     onChange={(e) => setNewValue(e.currentTarget.value)}
                     size="xs"
                     onKeyDown={(e) => {
-                      if (e.key === "Enter") handleSaveNew();
+                      if (e.key === "Enter") void handleSaveNew();
                     }}
                   />
                 </Table.Td>

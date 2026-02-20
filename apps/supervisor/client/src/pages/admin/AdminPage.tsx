@@ -31,7 +31,7 @@ export const AdminPage: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    fetchData();
+    void fetchData();
   }, [fetchData]);
 
   const handleExport = async () => {

@@ -82,7 +82,7 @@ export function createDebugCommands(
       helpText:
         "Change the superadmin's password. Usage: ns-superadmin-password [password]",
       isDebug: true,
-      handleCommand: async (cmdArgs) => {
+      handleCommand: (cmdArgs) => {
         const serverUrl = import.meta.resolve("@naisys-supervisor/server");
         const serverPath = fileURLToPath(serverUrl);
 

@@ -26,7 +26,6 @@ export const UserList: React.FC = () => {
   const page = Number(searchParams.get("page")) || 1;
   const search = searchParams.get("search") || "";
 
-  /* eslint-disable @typescript-eslint/no-explicit-any */
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [createOpened, { open: openCreate, close: closeCreate }] =
@@ -58,7 +57,7 @@ export const UserList: React.FC = () => {
   }, [page, search]);
 
   useEffect(() => {
-    fetchData();
+    void fetchData();
   }, [fetchData]);
 
   const handleCreate = async () => {
@@ -69,7 +68,7 @@ export const UserList: React.FC = () => {
       closeCreate();
       setNewUsername("");
       setNewPassword("");
-      fetchData();
+      void fetchData();
     } catch (err) {
       setCreateError(
         err instanceof Error ? err.message : "Failed to create user",
@@ -113,7 +112,7 @@ export const UserList: React.FC = () => {
     try {
       await createAgentUser(Number(selectedAgentId));
       closeAgent();
-      fetchData();
+      void fetchData();
     } catch (err) {
       setAgentError(
         err instanceof Error ? err.message : "Failed to create agent user",

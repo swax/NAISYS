@@ -1,7 +1,5 @@
 import { api } from "./apiClient";
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 export const getUsers = async (params: {
   page?: number;
   pageSize?: number;

@@ -2,14 +2,14 @@ import { z } from "zod/v4";
 import { FastifyInstance } from "fastify";
 import { schemaRegistry } from "../schema-registry.js";
 
-export default async function schemaRoutes(fastify: FastifyInstance) {
+export default function schemaRoutes(fastify: FastifyInstance) {
   // List all available schema names
   fastify.get("/", {
     schema: {
       description: "List all available schema names",
       tags: ["Discovery"],
     },
-    handler: async () => {
+    handler: () => {
       return { schemas: Object.keys(schemaRegistry) };
     },
   });
@@ -20,7 +20,7 @@ export default async function schemaRoutes(fastify: FastifyInstance) {
       description: "Get a JSON Schema by name",
       tags: ["Discovery"],
     },
-    handler: async (request, reply) => {
+    handler: (request, reply) => {
       const { schemaName } = request.params as { schemaName: string };
       const zodSchema = schemaRegistry[schemaName];
 

@@ -38,7 +38,7 @@ export const PlanningOrderDetail: React.FC = () => {
   }, [id]);
 
   useEffect(() => {
-    fetchItem();
+    void fetchItem();
   }, [fetchItem]);
 
   const handleUpdate = async (data: UpdatePlanningOrder) => {
@@ -52,7 +52,7 @@ export const PlanningOrderDetail: React.FC = () => {
     if (!id || !confirm("Delete this planning order?")) return;
     try {
       await api.delete(`planning/orders/${id}`);
-      navigate("/planning/orders");
+      void navigate("/planning/orders");
     } catch (err) {
       showErrorNotification(err);
     }

@@ -48,7 +48,7 @@ export const ModelsLayout: React.FC = () => {
   }, []);
 
   React.useEffect(() => {
-    refreshModels().finally(() => setIsLoading(false));
+    void refreshModels().finally(() => setIsLoading(false));
   }, [refreshModels]);
 
   // Close drawer on navigation

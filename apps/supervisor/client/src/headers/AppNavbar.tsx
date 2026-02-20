@@ -27,7 +27,7 @@ export const AppNavbar: React.FC<AppNavbarProps> = ({ onClose, hasErp }) => {
     <>
       <UnstyledButton
         onClick={() => {
-          navigate("/agents");
+          void navigate("/agents");
           onClose();
         }}
         p="sm"
@@ -49,7 +49,7 @@ export const AppNavbar: React.FC<AppNavbarProps> = ({ onClose, hasErp }) => {
       </UnstyledButton>
       <UnstyledButton
         onClick={() => {
-          navigate("/hosts");
+          void navigate("/hosts");
           onClose();
         }}
         p="sm"
@@ -71,7 +71,7 @@ export const AppNavbar: React.FC<AppNavbarProps> = ({ onClose, hasErp }) => {
       </UnstyledButton>
       <UnstyledButton
         onClick={() => {
-          navigate("/models");
+          void navigate("/models");
           onClose();
         }}
         p="sm"
@@ -94,7 +94,7 @@ export const AppNavbar: React.FC<AppNavbarProps> = ({ onClose, hasErp }) => {
       {showVariablesTab && (
         <UnstyledButton
           onClick={() => {
-            navigate("/variables");
+            void navigate("/variables");
             onClose();
           }}
           p="sm"
@@ -118,7 +118,7 @@ export const AppNavbar: React.FC<AppNavbarProps> = ({ onClose, hasErp }) => {
       {showUsersTab && (
         <UnstyledButton
           onClick={() => {
-            navigate("/users");
+            void navigate("/users");
             onClose();
           }}
           p="sm"
@@ -142,7 +142,7 @@ export const AppNavbar: React.FC<AppNavbarProps> = ({ onClose, hasErp }) => {
       {showAdminTab && (
         <UnstyledButton
           onClick={() => {
-            navigate("/admin");
+            void navigate("/admin");
             onClose();
           }}
           p="sm"

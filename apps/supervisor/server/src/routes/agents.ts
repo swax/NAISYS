@@ -105,7 +105,7 @@ function agentLinks(agentId: number) {
   ];
 }
 
-export default async function agentsRoutes(
+export default function agentsRoutes(
   fastify: FastifyInstance,
   _options: FastifyPluginOptions,
 ) {
