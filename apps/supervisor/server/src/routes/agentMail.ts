@@ -18,7 +18,7 @@ import { hasPermission, requirePermission } from "../auth-middleware.js";
 import { API_PREFIX } from "../hateoas.js";
 import { getMailDataByUserId, sendMessage } from "../services/mailService.js";
 
-export default async function agentMailRoutes(
+export default function agentMailRoutes(
   fastify: FastifyInstance,
   _options: FastifyPluginOptions,
 ) {

@@ -38,7 +38,7 @@ export const ModelSidebar: React.FC<ModelSidebarProps> = ({
       return;
     }
     e.preventDefault();
-    navigate(getModelUrl(key));
+    void navigate(getModelUrl(key));
   };
 
   if (isLoading) {

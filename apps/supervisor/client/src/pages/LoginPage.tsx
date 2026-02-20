@@ -32,7 +32,7 @@ export const LoginPage: React.FC = () => {
 
   const handleKeyDown = (event: React.KeyboardEvent) => {
     if (event.key === "Enter") {
-      handleLogin();
+      void handleLogin();
     }
   };
 

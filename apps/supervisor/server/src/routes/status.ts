@@ -10,7 +10,7 @@ import {
   onAgentStatusUpdate,
 } from "../services/agentHostStatusService.js";
 
-export default async function statusRoutes(
+export default function statusRoutes(
   fastify: FastifyInstance,
   _options: FastifyPluginOptions,
 ) {
@@ -27,7 +27,7 @@ export default async function statusRoutes(
         security: [{ cookieAuth: [] }],
       },
     },
-    async () => {
+    () => {
       return {
         hubConnected: isHubConnected(),
       };

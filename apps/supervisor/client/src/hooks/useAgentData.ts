@@ -84,7 +84,7 @@ export const useAgentData = () => {
       // Agent list changed (create/archive/unarchive/delete) — refetch full list
       if (event.listChanged) {
         updatedSinceCache = undefined;
-        queryClient.invalidateQueries({ queryKey: ["agent-data"] });
+        void queryClient.invalidateQueries({ queryKey: ["agent-data"] });
         return;
       }
 
@@ -114,7 +114,7 @@ export const useAgentData = () => {
         setCacheVersion((v) => v + 1);
       }
     },
-    [queryClient], // eslint-disable-line react-hooks/exhaustive-deps -- accesses module-level agentCache
+    [queryClient],
   );
 
   useAgentStatusStream(handleSSEUpdate, agentCache.length > 0);

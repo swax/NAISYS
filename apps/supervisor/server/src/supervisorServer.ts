@@ -148,7 +148,6 @@ export const startServer: StartServer = async (
     transformObject: jsonSchemaTransformObject,
   });
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   await fastify.register(scalarReference as any, {
     routePrefix: "/supervisor/api-reference",
     configuration: {
@@ -158,7 +157,7 @@ export const startServer: StartServer = async (
   });
 
   // Serve the OpenAPI spec with tag groups (filtered to supervisor paths only)
-  fastify.get("/api/supervisor/openapi.json", async () => {
+  fastify.get("/api/supervisor/openapi.json", () => {
     const spec = fastify.swagger();
     const filteredPaths: Record<string, unknown> = {};
     for (const [path, value] of Object.entries(spec.paths || {})) {
@@ -197,7 +196,7 @@ export const startServer: StartServer = async (
   fastify.get(
     "/api/supervisor/client-config",
     { schema: { hide: true } },
-    async () => ({
+    () => ({
       plugins,
       publicRead: process.env.PUBLIC_READ === "true",
       permissions: PermissionEnum.options,
@@ -208,7 +207,6 @@ export const startServer: StartServer = async (
   if (plugins.includes("erp")) {
     // Use variable to avoid compile-time type dependency on @naisys-erp/server (allows parallel builds)
     const erpModule = "@naisys-erp/server";
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { erpPlugin, enableSupervisorAuth } = (await import(erpModule)) as {
       erpPlugin: any;
       enableSupervisorAuth: any;

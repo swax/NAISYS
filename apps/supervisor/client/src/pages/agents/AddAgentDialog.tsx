@@ -57,7 +57,7 @@ export const AddAgentDialog: React.FC<AddAgentDialogProps> = ({
           onChange={(e) => setNewAgentName(e.currentTarget.value)}
           onKeyDown={(e) => {
             if (e.key === "Enter" && newAgentName.trim()) {
-              handleCreateAgent();
+              void handleCreateAgent();
             }
           }}
           disabled={isCreating}

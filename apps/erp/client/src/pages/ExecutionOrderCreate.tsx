@@ -12,7 +12,7 @@ export const ExecutionOrderCreate: React.FC = () => {
 
   const handleCreate = async (data: CreateExecutionOrder) => {
     await api.post("execution/orders", data);
-    navigate("/execution/orders");
+    void navigate("/execution/orders");
   };
 
   return (

@@ -121,7 +121,7 @@ function formatListItem(item: PlanningOrderModel) {
   };
 }
 
-export default async function planningOrderRoutes(fastify: FastifyInstance) {
+export default function planningOrderRoutes(fastify: FastifyInstance) {
   const app = fastify.withTypeProvider<ZodTypeProvider>();
 
   // LIST

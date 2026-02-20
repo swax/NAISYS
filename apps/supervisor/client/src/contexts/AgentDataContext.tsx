@@ -18,7 +18,7 @@ interface AgentDataContextType {
     agentName: string,
     lastReadLogId?: number,
     lastReadMailId?: number,
-  ) => Promise<void>;
+  ) => void;
 }
 
 const AgentDataContext = createContext<AgentDataContextType | undefined>(
@@ -70,11 +70,11 @@ export const AgentDataProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   }, [cachedAgents]);
 
-  const updateReadStatus = async (
+  const updateReadStatus = (
     agentName: string,
     lastReadLogId?: number,
     lastReadMailId?: number,
-  ): Promise<void> => {
+  ): void => {
     setReadStatus((prevStatus) => {
       const currentStatus = prevStatus[agentName] || {
         lastReadLogId: 0,

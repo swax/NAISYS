@@ -63,7 +63,7 @@ function modelActions(hasManagePermission: boolean): HateoasAction[] {
   return actions;
 }
 
-export default async function modelsRoutes(
+export default function modelsRoutes(
   fastify: FastifyInstance,
   _options: FastifyPluginOptions,
 ) {

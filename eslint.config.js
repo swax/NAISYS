@@ -14,9 +14,9 @@ export default [
   },
   {
     files: [
-      "apps/*/src/**/*.ts",
-      "apps/*/*/src/**/*.ts",
-      "packages/*/src/**/*.ts",
+      "apps/*/src/**/*.{ts,tsx}",
+      "apps/*/*/src/**/*.{ts,tsx}",
+      "packages/*/src/**/*.{ts,tsx}",
     ],
     languageOptions: {
       parser: tsparser,

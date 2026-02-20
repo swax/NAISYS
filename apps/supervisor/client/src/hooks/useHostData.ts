@@ -65,7 +65,7 @@ export const useHostData = () => {
         setCacheVersion((v) => v + 1);
       }
     },
-    [], // eslint-disable-line react-hooks/exhaustive-deps -- accesses module-level hostCache
+    [],
   );
 
   useAgentStatusStream(handleSSEUpdate, hostCache.length > 0);

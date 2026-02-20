@@ -76,7 +76,7 @@ export const AgentSidebar: React.FC = () => {
 
     // Prevent default for regular clicks and handle with navigate
     e.preventDefault();
-    navigate(getAgentUrl(agent));
+    void navigate(getAgentUrl(agent));
   };
 
   if (isLoading) {
@@ -152,7 +152,7 @@ export const AgentSidebar: React.FC = () => {
     const handleLogClick = (e: React.MouseEvent) => {
       e.preventDefault();
       e.stopPropagation();
-      navigate(`/agents/${agent.id}/runs?expand=new`);
+      void navigate(`/agents/${agent.id}/runs?expand=new`);
     };
 
     return (
@@ -185,7 +185,7 @@ export const AgentSidebar: React.FC = () => {
     const handleMailClick = (e: React.MouseEvent) => {
       e.preventDefault();
       e.stopPropagation();
-      navigate(`/agents/${agent.id}/mail`);
+      void navigate(`/agents/${agent.id}/mail`);
     };
 
     return (
@@ -266,7 +266,7 @@ export const AgentSidebar: React.FC = () => {
               if (agent.online) {
                 e.preventDefault();
                 e.stopPropagation();
-                navigate(`/agents/${agent.id}/runs?expand=online`);
+                void navigate(`/agents/${agent.id}/runs?expand=online`);
               }
             }}
           >

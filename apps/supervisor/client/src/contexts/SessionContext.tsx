@@ -31,7 +31,7 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({
       }
     };
 
-    checkExistingSession();
+    void checkExistingSession();
   }, []);
 
   const login = async (username: string, password: string) => {

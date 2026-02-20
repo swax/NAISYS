@@ -9,7 +9,7 @@ export const PlanningOrderCreate: React.FC = () => {
 
   const handleCreate = async (data: CreatePlanningOrder) => {
     await api.post("planning/orders", data);
-    navigate("/planning/orders");
+    void navigate("/planning/orders");
   };
 
   return (

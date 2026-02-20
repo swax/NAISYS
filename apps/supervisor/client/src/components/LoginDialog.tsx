@@ -71,7 +71,7 @@ export const LoginDialog: React.FC<LoginDialogProps> = ({
 
   const handleKeyDown = (event: React.KeyboardEvent) => {
     if (event.key === "Enter") {
-      handleLogin();
+      void handleLogin();
     }
   };
 

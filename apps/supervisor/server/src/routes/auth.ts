@@ -22,7 +22,7 @@ const COOKIE_NAME = "naisys_session";
 
 let lastLoginRequestTime = 0;
 
-export default async function authRoutes(
+export default function authRoutes(
   fastify: FastifyInstance,
   _options: FastifyPluginOptions,
 ) {

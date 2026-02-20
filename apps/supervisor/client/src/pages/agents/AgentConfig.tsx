@@ -92,7 +92,7 @@ export const AgentConfig: React.FC = () => {
   }, [agentId]);
 
   useEffect(() => {
-    fetchConfig();
+    void fetchConfig();
   }, [fetchConfig]);
 
   const handleEdit = () => {

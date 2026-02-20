@@ -29,7 +29,7 @@ export const HostSidebar: React.FC = () => {
       return;
     }
     e.preventDefault();
-    navigate(getHostUrl(host));
+    void navigate(getHostUrl(host));
   };
 
   if (isLoading) {

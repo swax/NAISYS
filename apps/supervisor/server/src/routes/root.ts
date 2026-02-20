@@ -4,7 +4,7 @@ import { FastifyInstance, FastifyPluginOptions } from "fastify";
 
 const API_PREFIX = "/api/supervisor";
 
-export default async function rootRoutes(
+export default function rootRoutes(
   fastify: FastifyInstance,
   _options: FastifyPluginOptions,
 ) {
@@ -16,7 +16,7 @@ export default async function rootRoutes(
         tags: ["Discovery"],
       },
     },
-    async (request) => {
+    (request) => {
       const links: HateoasLink[] = [
         { rel: "self", href: `${API_PREFIX}/` },
         {
@@ -66,7 +66,7 @@ export default async function rootRoutes(
         tags: ["Discovery"],
       },
     },
-    async () => {
+    () => {
       return { permissions: PermissionEnum.options };
     },
   );

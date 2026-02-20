@@ -63,7 +63,7 @@ export const ExecutionOrderDetail: React.FC = () => {
   }, [id]);
 
   useEffect(() => {
-    fetchItem();
+    void fetchItem();
   }, [fetchItem]);
 
   const handleUpdate = async (data: UpdateExecutionOrder) => {
@@ -77,7 +77,7 @@ export const ExecutionOrderDetail: React.FC = () => {
     if (!id || !confirm("Delete this execution order?")) return;
     try {
       await api.delete(`execution/orders/${id}`);
-      navigate("/execution/orders");
+      void navigate("/execution/orders");
     } catch (err) {
       showErrorNotification(err);
     }

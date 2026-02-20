@@ -10,7 +10,7 @@ import { FastifyInstance, FastifyPluginOptions } from "fastify";
 import { requirePermission } from "../auth-middleware.js";
 import { sendMessage } from "../services/mailService.js";
 
-export default async function mailRoutes(
+export default function mailRoutes(
   fastify: FastifyInstance,
   _options: FastifyPluginOptions,
 ) {

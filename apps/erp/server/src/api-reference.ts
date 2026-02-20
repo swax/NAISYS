@@ -12,7 +12,7 @@ import path from "path";
  */
 export function registerApiReference(fastify: FastifyInstance) {
   // Serve ERP OpenAPI spec filtered to ERP paths only
-  fastify.get("/api/erp/openapi.json", async () => {
+  fastify.get("/api/erp/openapi.json", () => {
     const spec = fastify.swagger();
     const filteredPaths: Record<string, unknown> = {};
     for (const [p, value] of Object.entries(spec.paths || {})) {

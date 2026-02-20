@@ -34,7 +34,7 @@ function hostActions(
   return actions;
 }
 
-export default async function hostsRoutes(
+export default function hostsRoutes(
   fastify: FastifyInstance,
   _options: FastifyPluginOptions,
 ) {

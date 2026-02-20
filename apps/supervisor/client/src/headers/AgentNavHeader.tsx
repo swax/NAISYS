@@ -62,7 +62,7 @@ export const AgentNavHeader: React.FC<AgentNavHeaderProps> = ({ agentId }) => {
 
     // Prevent default for regular clicks and handle with navigate
     e.preventDefault();
-    navigate(getTabUrl(section));
+    void navigate(getTabUrl(section));
   };
 
   return (

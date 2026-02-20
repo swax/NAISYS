@@ -1,13 +1,13 @@
 import { FastifyInstance } from "fastify";
 
-export default async function rootRoute(fastify: FastifyInstance) {
+export default function rootRoute(fastify: FastifyInstance) {
   fastify.get("/", {
     schema: {
       description:
         "API discovery root - lists all available resources and actions",
       tags: ["Discovery"],
     },
-    handler: async (request) => {
+    handler: (request) => {
       const publicRead = process.env.PUBLIC_READ === "true";
 
       const base = {

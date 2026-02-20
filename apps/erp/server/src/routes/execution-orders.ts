@@ -137,7 +137,7 @@ function formatListItem(item: ExecOrderModel) {
   };
 }
 
-export default async function executionOrderRoutes(fastify: FastifyInstance) {
+export default function executionOrderRoutes(fastify: FastifyInstance) {
   const app = fastify.withTypeProvider<ZodTypeProvider>();
 
   // LIST

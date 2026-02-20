@@ -108,7 +108,7 @@ export const NewMessageModal: React.FC<NewMessageModalProps> = ({
 
       if (files.length > 0) {
         event.preventDefault();
-        handleFilesAdd(files);
+        void handleFilesAdd(files);
       }
     };
 
@@ -132,7 +132,7 @@ export const NewMessageModal: React.FC<NewMessageModalProps> = ({
     (agent) => agent.value !== senderId,
   );
 
-  const handleFilesAdd = async (files: File[]) => {
+  const handleFilesAdd = (files: File[]) => {
     const newAttachments: FileAttachment[] = [];
 
     for (const file of files) {

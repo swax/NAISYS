@@ -21,7 +21,7 @@ import { isSupervisorAuth } from "../supervisorAuth.js";
 const COOKIE_NAME = "naisys_session";
 const SESSION_DURATION_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
-export default async function authRoutes(fastify: FastifyInstance) {
+export default function authRoutes(fastify: FastifyInstance) {
   const app = fastify.withTypeProvider<ZodTypeProvider>();
 
   // LOGIN

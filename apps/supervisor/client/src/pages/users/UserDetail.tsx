@@ -37,7 +37,6 @@ export const UserDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { hasPermission } = useSession();
-  /* eslint-disable @typescript-eslint/no-explicit-any */
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [editOpened, { open: openEdit, close: closeEdit }] = useDisclosure();
@@ -65,14 +64,14 @@ export const UserDetail: React.FC = () => {
   }, [id]);
 
   useEffect(() => {
-    fetchUser();
+    void fetchUser();
   }, [fetchUser]);
 
   const handleDelete = async () => {
     if (!id || !confirm("Delete this user?")) return;
     try {
       await deleteUser(Number(id));
-      navigate("/users");
+      void navigate("/users");
     } catch (err) {
       alert(err instanceof Error ? err.message : "Failed to delete user");
     }
@@ -85,7 +84,7 @@ export const UserDetail: React.FC = () => {
     try {
       await updateUser(Number(id), { username: editUsername });
       closeEdit();
-      fetchUser();
+      void fetchUser();
     } catch (err) {
       setEditError(
         err instanceof Error ? err.message : "Failed to update user",
@@ -117,7 +116,7 @@ export const UserDetail: React.FC = () => {
     try {
       await grantPermission(Number(id), grantPerm);
       setGrantPerm(null);
-      fetchUser();
+      void fetchUser();
     } catch (err) {
       alert(err instanceof Error ? err.message : "Failed to grant permission");
     }
@@ -127,7 +126,7 @@ export const UserDetail: React.FC = () => {
     if (!id) return;
     try {
       await revokePermission(Number(id), permission);
-      fetchUser();
+      void fetchUser();
     } catch (err) {
       alert(err instanceof Error ? err.message : "Failed to revoke permission");
     }

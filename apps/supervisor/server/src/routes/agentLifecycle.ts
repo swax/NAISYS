@@ -32,7 +32,7 @@ import {
 } from "../services/agentService.js";
 import { hubDb } from "../database/hubDb.js";
 
-export default async function agentLifecycleRoutes(
+export default function agentLifecycleRoutes(
   fastify: FastifyInstance,
   _options: FastifyPluginOptions,
 ) {
