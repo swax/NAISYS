@@ -3,7 +3,8 @@ import {
   calculatePeriodBoundaries,
   COST_AGGREGATION_WINDOW_MS,
 } from "@naisys/common";
-import { DatabaseService, PrismaClient } from "@naisys/hub-database";
+import type { HubDatabaseService } from "@naisys/hub-database";
+import { PrismaClient } from "@naisys/hub-database";
 import {
   CostControl,
   CostWriteRequestSchema,
@@ -20,7 +21,7 @@ const SPEND_LIMIT_CHECK_INTERVAL_MS = 10_000;
 /** Handles cost_write events from NAISYS instances (fire-and-forget) */
 export function createHubCostService(
   naisysServer: NaisysServer,
-  dbService: DatabaseService,
+  { usingHubDatabase }: HubDatabaseService,
   logService: HubServerLog,
   heartbeatService: HubHeartbeatService,
   configService: HubConfigService,
@@ -38,10 +39,10 @@ export function createHubCostService(
         // Collect unique user IDs from this batch
         const batchUserIds = new Set(parsed.entries.map((e) => e.userId));
 
-        await dbService.usingDatabase(async (prisma) => {
+        await usingHubDatabase(async (hubDb) => {
           for (const entry of parsed.entries) {
             // Find the most recent cost record for this combination
-            const existingRecord = await prisma.costs.findFirst({
+            const existingRecord = await hubDb.costs.findFirst({
               where: {
                 user_id: entry.userId,
                 run_id: entry.runId,
@@ -59,7 +60,7 @@ export function createHubCostService(
               Date.now() - existingRecord.created_at.getTime() <
                 COST_AGGREGATION_WINDOW_MS
             ) {
-              await prisma.costs.update({
+              await hubDb.costs.update({
                 where: { id: existingRecord.id },
                 data: {
                   cost: { increment: entry.cost },
@@ -70,7 +71,7 @@ export function createHubCostService(
                 },
               });
             } else {
-              await prisma.costs.create({
+              await hubDb.costs.create({
                 data: {
                   user_id: entry.userId,
                   run_id: entry.runId,
@@ -88,7 +89,7 @@ export function createHubCostService(
             }
 
             // Update run_session total_cost
-            await prisma.run_session.updateMany({
+            await hubDb.run_session.updateMany({
               where: {
                 user_id: entry.userId,
                 run_id: entry.runId,
@@ -130,11 +131,11 @@ export function createHubCostService(
       const spendLimitDollars = config?.spendLimitDollars;
       const spendLimitHours = config?.spendLimitHours;
 
-      await dbService.usingDatabase(async (prisma) => {
+      await usingHubDatabase(async (hubDb) => {
         // 1. Global spend limit check — costs across ALL agents
         if (spendLimitDollars !== undefined) {
           await checkGlobalSpendLimit(
-            prisma,
+            hubDb,
             activeUserIds,
             spendLimitDollars,
             spendLimitHours,
@@ -142,7 +143,7 @@ export function createHubCostService(
         }
 
         // 2. Per-agent spend limit checks — costs for individual agents
-        const users = await prisma.users.findMany({
+        const users = await hubDb.users.findMany({
           where: { id: { in: Array.from(activeUserIds) } },
           select: { id: true, config: true },
         });
@@ -158,7 +159,7 @@ export function createHubCostService(
             if (config.spendLimitDollars === undefined) continue;
 
             await checkAgentSpendLimit(
-              prisma,
+              hubDb,
               user.id,
               config.spendLimitDollars,
               config.spendLimitHours,
@@ -176,7 +177,7 @@ export function createHubCostService(
   }
 
   async function queryCostSum(
-    prisma: PrismaClient,
+    hubDb: PrismaClient,
     spendLimitHours: number | undefined,
     userIdFilter?: number,
   ): Promise<number> {
@@ -190,7 +191,7 @@ export function createHubCostService(
       where.created_at = { gte: periodStart };
     }
 
-    const result = await prisma.costs.aggregate({
+    const result = await hubDb.costs.aggregate({
       where,
       _sum: { cost: true },
     });
@@ -211,12 +212,12 @@ export function createHubCostService(
 
   /** Check the global spend limit across all agents */
   async function checkGlobalSpendLimit(
-    prisma: PrismaClient,
+    hubDb: PrismaClient,
     activeUserIds: Set<number>,
     spendLimit: number,
     spendLimitHours: number | undefined,
   ) {
-    const totalCost = await queryCostSum(prisma, spendLimitHours);
+    const totalCost = await queryCostSum(hubDb, spendLimitHours);
     const isOverLimit = totalCost >= spendLimit;
 
     for (const userId of activeUserIds) {
@@ -242,12 +243,12 @@ export function createHubCostService(
 
   /** Check a per-agent spend limit */
   async function checkAgentSpendLimit(
-    prisma: PrismaClient,
+    hubDb: PrismaClient,
     userId: number,
     spendLimit: number,
     spendLimitHours: number | undefined,
   ) {
-    const periodCost = await queryCostSum(prisma, spendLimitHours, userId);
+    const periodCost = await queryCostSum(hubDb, spendLimitHours, userId);
     const isOverLimit = periodCost >= spendLimit;
     const wasSuspended = suspendedByAgent.has(userId);
 

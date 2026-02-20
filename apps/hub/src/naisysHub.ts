@@ -1,5 +1,5 @@
 import type { StartHub, StartServer } from "@naisys/common";
-import { createDatabaseService } from "@naisys/hub-database";
+import { createHubDatabaseService } from "@naisys/hub-database";
 import { program } from "commander";
 import dotenv from "dotenv";
 import http from "http";
@@ -46,13 +46,13 @@ export const startHub: StartHub = async (
     }
 
     // Schema version for sync protocol - should match NAISYS instance
-    const dbService = await createDatabaseService();
+    const hubDatabaseService = await createHubDatabaseService();
 
     // Seed database with agent configs from yaml files (one-time, skips if non-empty)
-    await seedAgentConfigs(dbService, logService, startupAgentPath);
+    await seedAgentConfigs(hubDatabaseService, logService, startupAgentPath);
 
     // Create host registrar for tracking NAISYS instance connections
-    const hostRegistrar = await createHostRegistrar(dbService);
+    const hostRegistrar = await createHostRegistrar(hubDatabaseService);
 
     // Create shared HTTP server and Socket.IO instance
     const httpServer = http.createServer();
@@ -74,36 +74,41 @@ export const startHub: StartHub = async (
     // Register hub config service for config_get requests from NAISYS instances
     const configService = await createHubConfigService(
       naisysServer,
-      dbService,
+      hubDatabaseService,
       logService,
     );
 
     // Register hub user service for user_list requests from NAISYS instances
-    createHubUserService(naisysServer, dbService, logService);
+    createHubUserService(naisysServer, hubDatabaseService, logService);
 
     // Register hub models service for seeding and broadcasting models
-    await createHubModelsService(naisysServer, dbService, logService);
+    await createHubModelsService(naisysServer, hubDatabaseService, logService);
 
     // Register hub host service for broadcasting connected host list
     createHubHostService(naisysServer, hostRegistrar, logService);
 
     // Register hub run service for session_create/session_increment requests
-    createHubRunService(naisysServer, dbService, logService);
+    createHubRunService(naisysServer, hubDatabaseService, logService);
 
     // Register hub heartbeat service for NAISYS instance heartbeat tracking
     const heartbeatService = createHubHeartbeatService(
       naisysServer,
-      dbService,
+      hubDatabaseService,
       logService,
     );
 
     // Register hub log service for log_write events from NAISYS instances
-    createHubLogService(naisysServer, dbService, logService, heartbeatService);
+    createHubLogService(
+      naisysServer,
+      hubDatabaseService,
+      logService,
+      heartbeatService,
+    );
 
     // Register hub mail service for mail events from NAISYS instances
     const mailService = createHubMailService(
       naisysServer,
-      dbService,
+      hubDatabaseService,
       logService,
       heartbeatService,
     );
@@ -111,7 +116,7 @@ export const startHub: StartHub = async (
     // Register hub agent service for agent_start requests routed to target hosts
     createHubAgentService(
       naisysServer,
-      dbService,
+      hubDatabaseService,
       logService,
       heartbeatService,
       mailService,
@@ -120,7 +125,7 @@ export const startHub: StartHub = async (
     // Register hub cost service for cost_write events from NAISYS instances
     createHubCostService(
       naisysServer,
-      dbService,
+      hubDatabaseService,
       logService,
       heartbeatService,
       configService,

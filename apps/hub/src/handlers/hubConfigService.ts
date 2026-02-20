@@ -1,5 +1,5 @@
 import { buildClientConfig } from "@naisys/common";
-import type { DatabaseService } from "@naisys/hub-database";
+import type { HubDatabaseService } from "@naisys/hub-database";
 import { ConfigResponse, HubEvents } from "@naisys/hub-protocol";
 import dotenv from "dotenv";
 import { HubServerLog } from "../services/hubServerLog.js";
@@ -8,7 +8,7 @@ import { NaisysServer } from "../services/naisysServer.js";
 /** Pushes the global config to NAISYS instances when they connect or when variables change */
 export async function createHubConfigService(
   naisysServer: NaisysServer,
-  dbService: DatabaseService,
+  { usingHubDatabase }: HubDatabaseService,
   logService: HubServerLog,
 ) {
   let cachedConfig: ConfigResponse = {
@@ -17,8 +17,8 @@ export async function createHubConfigService(
   };
 
   // Seed DB from .env on first run
-  await dbService.usingDatabase(async (prisma) => {
-    const existing = await prisma.variables.findMany();
+  await usingHubDatabase(async (hubDb) => {
+    const existing = await hubDb.variables.findMany();
     if (existing.length > 0) {
       logService.log("[Hub:Config] .env variables already seeded");
       return;
@@ -29,7 +29,7 @@ export async function createHubConfigService(
     const fileConfig = buildClientConfig(dotenvVars ?? {});
     const entries = Object.entries(fileConfig.variableMap);
     if (entries.length > 0) {
-      await prisma.variables.createMany({
+      await hubDb.variables.createMany({
         data: entries.map(([key, value]) => ({
           key,
           value,
@@ -46,8 +46,8 @@ export async function createHubConfigService(
 
   /** Read variables from DB and build a ConfigResponse */
   async function buildConfigPayload(): Promise<ConfigResponse> {
-    const variableMap = await dbService.usingDatabase(async (prisma) => {
-      const rows = await prisma.variables.findMany();
+    const variableMap = await usingHubDatabase(async (hubDb) => {
+      const rows = await hubDb.variables.findMany();
       const map: Record<string, string> = {};
       for (const row of rows) {
         map[row.key] = row.value;

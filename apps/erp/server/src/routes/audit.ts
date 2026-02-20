@@ -1,7 +1,7 @@
 import { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { AuditListResponseSchema, AuditQuerySchema } from "@naisys-erp/shared";
-import prisma from "../db.js";
+import erpDb from "../erpDb.js";
 
 export default async function auditRoutes(fastify: FastifyInstance) {
   const app = fastify.withTypeProvider<ZodTypeProvider>();
@@ -18,7 +18,7 @@ export default async function auditRoutes(fastify: FastifyInstance) {
     handler: async (request) => {
       const { entityType, entityId } = request.query;
 
-      const items = await prisma.auditLog.findMany({
+      const items = await erpDb.auditLog.findMany({
         where: { entityType, entityId },
         orderBy: { createdAt: "desc" },
       });

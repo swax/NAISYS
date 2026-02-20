@@ -1,4 +1,4 @@
-import { DatabaseService } from "@naisys/hub-database";
+import type { HubDatabaseService } from "@naisys/hub-database";
 import {
   AgentStartRequest,
   AgentStartRequestSchema,
@@ -16,7 +16,7 @@ import { HubMailService } from "./hubMailService.js";
 /** Handles agent_start requests by routing them to the least-loaded eligible host */
 export function createHubAgentService(
   naisysServer: NaisysServer,
-  dbService: DatabaseService,
+  { usingHubDatabase }: HubDatabaseService,
   logService: HubServerLog,
   heartbeatService: HubHeartbeatService,
   mailService: HubMailService,
@@ -32,18 +32,16 @@ export function createHubAgentService(
         const parsed = AgentStartRequestSchema.parse(data);
 
         // Look up which hosts this user is assigned to
-        const { assignedHostIds } = await dbService.usingDatabase(
-          async (prisma) => {
-            const userHosts = await prisma.user_hosts.findMany({
-              where: { user_id: parsed.startUserId },
-              select: { host_id: true },
-            });
+        const { assignedHostIds } = await usingHubDatabase(async (hubDb) => {
+          const userHosts = await hubDb.user_hosts.findMany({
+            where: { user_id: parsed.startUserId },
+            select: { host_id: true },
+          });
 
-            return {
-              assignedHostIds: userHosts.map((uh) => uh.host_id),
-            };
-          },
-        );
+          return {
+            assignedHostIds: userHosts.map((uh) => uh.host_id),
+          };
+        });
 
         const requesterUserId = parsed.requesterUserId;
 

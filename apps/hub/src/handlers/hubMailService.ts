@@ -1,4 +1,4 @@
-import { DatabaseService } from "@naisys/hub-database";
+import type { HubDatabaseService } from "@naisys/hub-database";
 import {
   HubEvents,
   MailArchiveRequestSchema,
@@ -22,7 +22,7 @@ import { HubHeartbeatService } from "./hubHeartbeatService.js";
 /** Handles mail events from NAISYS instances */
 export function createHubMailService(
   naisysServer: NaisysServer,
-  dbService: DatabaseService,
+  { usingHubDatabase }: HubDatabaseService,
   logService: HubServerLog,
   heartbeatService: HubHeartbeatService,
 ) {
@@ -34,10 +34,10 @@ export function createHubMailService(
     body: string;
     hostId?: number;
   }) {
-    await dbService.usingDatabase(async (prisma) => {
+    await usingHubDatabase(async (hubDb) => {
       const now = new Date();
 
-      const message = await prisma.mail_messages.create({
+      const message = await hubDb.mail_messages.create({
         data: {
           from_user_id: params.fromUserId,
           host_id: params.hostId,
@@ -47,7 +47,7 @@ export function createHubMailService(
         },
       });
 
-      await prisma.mail_recipients.createMany({
+      await hubDb.mail_recipients.createMany({
         data: params.recipientUserIds.map((userId) => ({
           message_id: message.id,
           user_id: userId,
@@ -56,7 +56,7 @@ export function createHubMailService(
         })),
       });
 
-      await prisma.user_notifications.updateMany({
+      await hubDb.user_notifications.updateMany({
         where: { user_id: { in: params.recipientUserIds } },
         data: { latest_mail_id: message.id },
       });
@@ -132,7 +132,7 @@ export function createHubMailService(
       try {
         const parsed = MailListRequestSchema.parse(data);
 
-        await dbService.usingDatabase(async (prisma) => {
+        await usingHubDatabase(async (hubDb) => {
           // Build ownership condition based on filter
           const ownershipCondition =
             parsed.filter === "received"
@@ -146,7 +146,7 @@ export function createHubMailService(
                     ],
                   };
 
-          const messages = await prisma.mail_messages.findMany({
+          const messages = await hubDb.mail_messages.findMany({
             where: {
               ...ownershipCondition,
               NOT: {
@@ -207,8 +207,8 @@ export function createHubMailService(
       try {
         const parsed = MailReadRequestSchema.parse(data);
 
-        await dbService.usingDatabase(async (prisma) => {
-          const message = await prisma.mail_messages.findUnique({
+        await usingHubDatabase(async (hubDb) => {
+          const message = await hubDb.mail_messages.findUnique({
             where: { id: parsed.messageId },
             include: {
               from_user: { select: { username: true, title: true } },
@@ -227,7 +227,7 @@ export function createHubMailService(
           }
 
           // Mark as read
-          await prisma.mail_recipients.updateMany({
+          await hubDb.mail_recipients.updateMany({
             where: {
               message_id: message.id,
               user_id: parsed.userId,
@@ -271,11 +271,11 @@ export function createHubMailService(
       try {
         const parsed = MailArchiveRequestSchema.parse(data);
 
-        await dbService.usingDatabase(async (prisma) => {
+        await usingHubDatabase(async (hubDb) => {
           const archivedIds: number[] = [];
 
           for (const messageId of parsed.messageIds) {
-            const message = await prisma.mail_messages.findUnique({
+            const message = await hubDb.mail_messages.findUnique({
               where: { id: messageId },
             });
 
@@ -287,7 +287,7 @@ export function createHubMailService(
               return;
             }
 
-            await prisma.mail_recipients.updateMany({
+            await hubDb.mail_recipients.updateMany({
               where: { message_id: message.id, user_id: parsed.userId },
               data: { archived_at: new Date() },
             });
@@ -317,7 +317,7 @@ export function createHubMailService(
       try {
         const parsed = MailSearchRequestSchema.parse(data);
 
-        await dbService.usingDatabase(async (prisma) => {
+        await usingHubDatabase(async (hubDb) => {
           const searchCondition = parsed.subjectOnly
             ? { subject: { contains: parsed.terms } }
             : {
@@ -340,7 +340,7 @@ export function createHubMailService(
                 },
               };
 
-          const messages = await prisma.mail_messages.findMany({
+          const messages = await hubDb.mail_messages.findMany({
             where: {
               OR: [
                 { from_user_id: parsed.userId },
@@ -385,8 +385,8 @@ export function createHubMailService(
       try {
         const parsed = MailUnreadRequestSchema.parse(data);
 
-        await dbService.usingDatabase(async (prisma) => {
-          const messages = await prisma.mail_messages.findMany({
+        await usingHubDatabase(async (hubDb) => {
+          const messages = await hubDb.mail_messages.findMany({
             where: {
               recipients: {
                 some: { user_id: parsed.userId, read_at: null },

@@ -1,9 +1,7 @@
-import { usingNaisysDb } from "../database/naisysDatabase.js";
+import { hubDb } from "../database/hubDb.js";
 
 export async function getVariables() {
-  return usingNaisysDb((prisma) =>
-    prisma.variables.findMany({ orderBy: { key: "asc" } }),
-  );
+  return hubDb.variables.findMany({ orderBy: { key: "asc" } });
 }
 
 export async function saveVariable(
@@ -11,19 +9,17 @@ export async function saveVariable(
   value: string,
   userUuid: string,
 ): Promise<{ success: boolean; message: string }> {
-  await usingNaisysDb((prisma) =>
-    prisma.variables.upsert({
-      where: { key },
-      update: { value, updated_by: userUuid },
-      create: { key, value, created_by: userUuid, updated_by: userUuid },
-    }),
-  );
+  await hubDb.variables.upsert({
+    where: { key },
+    update: { value, updated_by: userUuid },
+    create: { key, value, created_by: userUuid, updated_by: userUuid },
+  });
   return { success: true, message: "Variable saved" };
 }
 
 export async function deleteVariable(
   key: string,
 ): Promise<{ success: boolean; message: string }> {
-  await usingNaisysDb((prisma) => prisma.variables.delete({ where: { key } }));
+  await hubDb.variables.delete({ where: { key } });
   return { success: true, message: "Variable deleted" };
 }

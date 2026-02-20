@@ -13,7 +13,7 @@ import {
 } from "@naisys-erp/shared";
 import type { HateoasAction, HateoasLink } from "@naisys/common";
 import { writeAuditEntry } from "../audit.js";
-import prisma from "../db.js";
+import erpDb from "../erpDb.js";
 import { sendError } from "../error-handler.js";
 import {
   API_PREFIX,
@@ -164,13 +164,13 @@ export default async function executionOrderRoutes(fastify: FastifyInstance) {
       }
 
       const [items, total] = await Promise.all([
-        prisma.execOrder.findMany({
+        erpDb.execOrder.findMany({
           where,
           skip: (page - 1) * pageSize,
           take: pageSize,
           orderBy: { createdAt: "desc" },
         }),
-        prisma.execOrder.count({ where }),
+        erpDb.execOrder.count({ where }),
       ]);
 
       return {
@@ -218,7 +218,7 @@ export default async function executionOrderRoutes(fastify: FastifyInstance) {
       const userId = request.erpUser!.id;
 
       // Validate planning order exists
-      const planOrder = await prisma.planningOrder.findUnique({
+      const planOrder = await erpDb.planningOrder.findUnique({
         where: { id: planOrderId },
       });
       if (!planOrder) {
@@ -231,7 +231,7 @@ export default async function executionOrderRoutes(fastify: FastifyInstance) {
       }
 
       // Validate revision exists and belongs to the planning order
-      const planOrderRev = await prisma.planningOrderRevision.findFirst({
+      const planOrderRev = await erpDb.planningOrderRevision.findFirst({
         where: { id: planOrderRevId, planOrderId },
       });
       if (!planOrderRev) {
@@ -244,7 +244,7 @@ export default async function executionOrderRoutes(fastify: FastifyInstance) {
       }
 
       // Auto-increment orderNo inside a transaction to prevent race conditions
-      const item = await prisma.$transaction(async (tx) => {
+      const item = await erpDb.$transaction(async (tx) => {
         const maxOrder = await tx.execOrder.findFirst({
           where: { planOrderId },
           orderBy: { orderNo: "desc" },
@@ -289,7 +289,7 @@ export default async function executionOrderRoutes(fastify: FastifyInstance) {
     handler: async (request, reply) => {
       const { id } = request.params;
 
-      const item = await prisma.execOrder.findUnique({ where: { id } });
+      const item = await erpDb.execOrder.findUnique({ where: { id } });
       if (!item) {
         return sendError(
           reply,
@@ -322,7 +322,7 @@ export default async function executionOrderRoutes(fastify: FastifyInstance) {
       const data = request.body;
       const userId = request.erpUser!.id;
 
-      const existing = await prisma.execOrder.findUnique({ where: { id } });
+      const existing = await erpDb.execOrder.findUnique({ where: { id } });
       if (!existing) {
         return sendError(
           reply,
@@ -355,7 +355,7 @@ export default async function executionOrderRoutes(fastify: FastifyInstance) {
         updateData.dueAt = data.dueAt ? new Date(data.dueAt) : null;
       }
 
-      const item = await prisma.execOrder.update({
+      const item = await erpDb.execOrder.update({
         where: { id },
         data: updateData,
       });
@@ -379,7 +379,7 @@ export default async function executionOrderRoutes(fastify: FastifyInstance) {
     handler: async (request, reply) => {
       const { id } = request.params;
 
-      const existing = await prisma.execOrder.findUnique({ where: { id } });
+      const existing = await erpDb.execOrder.findUnique({ where: { id } });
       if (!existing) {
         return sendError(
           reply,
@@ -398,7 +398,7 @@ export default async function executionOrderRoutes(fastify: FastifyInstance) {
         );
       }
 
-      await prisma.execOrder.delete({ where: { id } });
+      await erpDb.execOrder.delete({ where: { id } });
       reply.status(204);
     },
   });
@@ -418,7 +418,7 @@ export default async function executionOrderRoutes(fastify: FastifyInstance) {
     handler: async (request, reply) => {
       const { id } = request.params;
 
-      const existing = await prisma.execOrder.findUnique({ where: { id } });
+      const existing = await erpDb.execOrder.findUnique({ where: { id } });
       if (!existing) {
         return sendError(
           reply,
@@ -438,7 +438,7 @@ export default async function executionOrderRoutes(fastify: FastifyInstance) {
       }
 
       const userId = request.erpUser!.id;
-      const item = await prisma.$transaction(async (tx) => {
+      const item = await erpDb.$transaction(async (tx) => {
         const updated = await tx.execOrder.update({
           where: { id },
           data: { status: "started", updatedById: userId },
@@ -475,7 +475,7 @@ export default async function executionOrderRoutes(fastify: FastifyInstance) {
     handler: async (request, reply) => {
       const { id } = request.params;
 
-      const existing = await prisma.execOrder.findUnique({ where: { id } });
+      const existing = await erpDb.execOrder.findUnique({ where: { id } });
       if (!existing) {
         return sendError(
           reply,
@@ -495,7 +495,7 @@ export default async function executionOrderRoutes(fastify: FastifyInstance) {
       }
 
       const userId = request.erpUser!.id;
-      const item = await prisma.$transaction(async (tx) => {
+      const item = await erpDb.$transaction(async (tx) => {
         const updated = await tx.execOrder.update({
           where: { id },
           data: { status: "closed", updatedById: userId },
@@ -532,7 +532,7 @@ export default async function executionOrderRoutes(fastify: FastifyInstance) {
     handler: async (request, reply) => {
       const { id } = request.params;
 
-      const existing = await prisma.execOrder.findUnique({ where: { id } });
+      const existing = await erpDb.execOrder.findUnique({ where: { id } });
       if (!existing) {
         return sendError(
           reply,
@@ -552,7 +552,7 @@ export default async function executionOrderRoutes(fastify: FastifyInstance) {
       }
 
       const userId = request.erpUser!.id;
-      const item = await prisma.$transaction(async (tx) => {
+      const item = await erpDb.$transaction(async (tx) => {
         const updated = await tx.execOrder.update({
           where: { id },
           data: { status: "cancelled", updatedById: userId },

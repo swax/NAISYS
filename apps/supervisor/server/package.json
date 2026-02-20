@@ -3,15 +3,15 @@
   "version": "1.0.0",
   "description": "NAISYS Supervisor - Fastify backend server",
   "type": "module",
-  "main": "dist/server.js",
+  "main": "dist/supervisorServer.js",
   "exports": {
-    ".": "./dist/server.js"
+    ".": "./dist/supervisorServer.js"
   },
   "scripts": {
     "clean": "rimraf dist client-dist",
-    "dev": "tsx watch src/server.ts",
-    "start": "node dist/server.js",
-    "start:reset-password": "node dist/server.js --reset-password",
+    "dev": "tsx watch src/supervisorServer.ts",
+    "start": "node dist/supervisorServer.js",
+    "start:reset-password": "node dist/supervisorServer.js --reset-password",
     "build": "tsc",
     "bundle": "npx shx rm -rf client-dist && npx shx cp -r ../client/dist client-dist",
     "type-check": "tsc --noEmit",

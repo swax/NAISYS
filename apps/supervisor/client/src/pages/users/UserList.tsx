@@ -36,8 +36,7 @@ export const UserList: React.FC = () => {
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState("");
 
-  const [agentOpened, { open: openAgent, close: closeAgent }] =
-    useDisclosure();
+  const [agentOpened, { open: openAgent, close: closeAgent }] = useDisclosure();
   const [availableAgents, setAvailableAgents] = useState<
     { value: string; label: string }[]
   >([]);

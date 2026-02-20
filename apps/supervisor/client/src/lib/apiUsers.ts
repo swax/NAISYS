@@ -59,4 +59,3 @@ export const changePassword = async (password: string): Promise<any> => {
 export const createAgentUser = async (agentId: number): Promise<any> => {
   return api.post("/users/from-agent", { agentId });
 };
-

@@ -1,4 +1,4 @@
-import { DatabaseService } from "@naisys/hub-database";
+import type { HubDatabaseService } from "@naisys/hub-database";
 import {
   HEARTBEAT_INTERVAL_MS,
   HeartbeatSchema,
@@ -13,7 +13,7 @@ const HUB_HEARTBEAT_INTERVAL_MS = HEARTBEAT_INTERVAL_MS * 2;
 /** Tracks NAISYS instance heartbeats and pushes aggregate active user status to all instances */
 export function createHubHeartbeatService(
   naisysServer: NaisysServer,
-  dbService: DatabaseService,
+  { usingHubDatabase }: HubDatabaseService,
   logService: HubServerLog,
 ) {
   // Track active agent user IDs per host from heartbeat data
@@ -49,18 +49,18 @@ export function createHubHeartbeatService(
       hostActiveAgents.set(hostId, parsed.activeUserIds);
 
       try {
-        await dbService.usingDatabase(async (prisma) => {
+        await usingHubDatabase(async (hubDb) => {
           const now = new Date().toISOString();
 
           // Update host last_active
-          await prisma.hosts.updateMany({
+          await hubDb.hosts.updateMany({
             where: { id: hostId },
             data: { last_active: now },
           });
 
           // Update user_notifications.last_active for each active user
           if (parsed.activeUserIds.length > 0) {
-            await prisma.user_notifications.updateMany({
+            await hubDb.user_notifications.updateMany({
               where: { user_id: { in: parsed.activeUserIds } },
               data: { last_active: now, latest_host_id: hostId },
             });

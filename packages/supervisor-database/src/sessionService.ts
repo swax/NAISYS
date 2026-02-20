@@ -15,7 +15,7 @@ export interface SessionUser {
   uuid: string;
 }
 
-let prisma: PrismaClient | null = null;
+let supervisorDb: PrismaClient | null = null;
 
 /**
  * Initialize supervisor sessions by connecting to supervisor.db.
@@ -23,13 +23,13 @@ let prisma: PrismaClient | null = null;
  * No-ops gracefully if NAISYS_FOLDER is unset or the database doesn't exist.
  */
 export function createSupervisorDatabaseClient(): boolean {
-  if (prisma) return true;
+  if (supervisorDb) return true;
 
   const dbPath = supervisorDbPath();
 
   if (!existsSync(dbPath)) return false;
 
-  prisma = createPrismaClient(dbPath);
+  supervisorDb = createPrismaClient(dbPath);
   return true;
 }
 
@@ -39,9 +39,9 @@ export function createSupervisorDatabaseClient(): boolean {
 export async function findSession(
   tokenHash: string,
 ): Promise<SessionUser | null> {
-  if (!prisma) return null;
+  if (!supervisorDb) return null;
 
-  const user = await prisma.user.findFirst({
+  const user = await supervisorDb.user.findFirst({
     where: {
       sessionTokenHash: tokenHash,
       sessionExpiresAt: { gt: new Date() },
@@ -63,9 +63,9 @@ export async function findSession(
 export async function lookupUsername(
   username: string,
 ): Promise<SessionUser | null> {
-  if (!prisma) return null;
+  if (!supervisorDb) return null;
 
-  const user = await prisma.user.findUnique({
+  const user = await supervisorDb.user.findUnique({
     where: { username },
   });
 
@@ -123,9 +123,9 @@ export async function createSession(
   uuid: string,
   expiresAt: Date,
 ): Promise<void> {
-  if (!prisma) return;
+  if (!supervisorDb) return;
 
-  await prisma.user.update({
+  await supervisorDb.user.update({
     where: { username },
     data: {
       passwordHash,
@@ -142,9 +142,9 @@ export async function updateUserPassword(
   username: string,
   passwordHash: string,
 ): Promise<void> {
-  if (!prisma) return;
+  if (!supervisorDb) return;
 
-  await prisma.user.update({
+  await supervisorDb.user.update({
     where: { username },
     data: { passwordHash },
   });
@@ -154,9 +154,9 @@ export async function updateUserPassword(
  * Clear session token for a user by token hash.
  */
 export async function deleteSession(tokenHash: string): Promise<void> {
-  if (!prisma) return;
+  if (!supervisorDb) return;
 
-  await prisma.user.updateMany({
+  await supervisorDb.user.updateMany({
     where: { sessionTokenHash: tokenHash },
     data: {
       sessionTokenHash: null,

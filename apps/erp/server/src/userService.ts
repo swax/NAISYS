@@ -1,14 +1,14 @@
 import bcrypt from "bcrypt";
 import { randomUUID } from "crypto";
 import readline from "readline/promises";
-import prisma from "./db.js";
+import erpDb from "./erpDb.js";
 
 /**
  * Ensure a superadmin user exists in the local ERP database.
  * For standalone mode (no supervisor auth).
  */
 export async function ensureLocalSuperAdmin(): Promise<void> {
-  const existing = await prisma.user.findUnique({
+  const existing = await erpDb.user.findUnique({
     where: { username: "superadmin" },
   });
   if (existing) return;
@@ -16,7 +16,7 @@ export async function ensureLocalSuperAdmin(): Promise<void> {
   const password = randomUUID().slice(0, 8);
   const hash = await bcrypt.hash(password, 10);
 
-  await prisma.user.create({
+  await erpDb.user.create({
     data: { uuid: randomUUID(), username: "superadmin", passwordHash: hash },
   });
 
@@ -36,7 +36,7 @@ export async function resetLocalPassword(): Promise<void> {
 
   try {
     const username = await rl.question("Username: ");
-    const user = await prisma.user.findUnique({ where: { username } });
+    const user = await erpDb.user.findUnique({ where: { username } });
     if (!user) {
       console.error(`User '${username}' not found.`);
       process.exit(1);
@@ -49,7 +49,7 @@ export async function resetLocalPassword(): Promise<void> {
     }
 
     const hash = await bcrypt.hash(password, 10);
-    await prisma.user.update({
+    await erpDb.user.update({
       where: { id: user.id },
       data: { passwordHash: hash },
     });

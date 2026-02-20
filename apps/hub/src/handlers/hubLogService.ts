@@ -1,4 +1,4 @@
-import { DatabaseService } from "@naisys/hub-database";
+import type { HubDatabaseService } from "@naisys/hub-database";
 import { HubEvents, LogWriteRequestSchema } from "@naisys/hub-protocol";
 import { HubServerLog } from "../services/hubServerLog.js";
 import { NaisysServer } from "../services/naisysServer.js";
@@ -7,7 +7,7 @@ import { HubHeartbeatService } from "./hubHeartbeatService.js";
 /** Handles log_write events from NAISYS instances (fire-and-forget) */
 export function createHubLogService(
   naisysServer: NaisysServer,
-  dbService: DatabaseService,
+  { usingHubDatabase }: HubDatabaseService,
   logService: HubServerLog,
   heartbeatService: HubHeartbeatService,
 ) {
@@ -17,11 +17,11 @@ export function createHubLogService(
       try {
         const parsed = LogWriteRequestSchema.parse(data);
 
-        await dbService.usingDatabase(async (prisma) => {
+        await usingHubDatabase(async (hubDb) => {
           for (const entry of parsed.entries) {
             const now = new Date().toISOString();
 
-            const log = await prisma.context_log.create({
+            const log = await hubDb.context_log.create({
               data: {
                 user_id: entry.userId,
                 run_id: entry.runId,
@@ -36,7 +36,7 @@ export function createHubLogService(
             });
 
             // Update session table with total lines and last active
-            await prisma.run_session.updateMany({
+            await hubDb.run_session.updateMany({
               where: {
                 user_id: entry.userId,
                 run_id: entry.runId,
@@ -52,7 +52,7 @@ export function createHubLogService(
             });
 
             // Update user_notifications with latest_log_id and last_active
-            await prisma.user_notifications.updateMany({
+            await hubDb.user_notifications.updateMany({
               where: {
                 user_id: entry.userId,
               },

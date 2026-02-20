@@ -12,7 +12,7 @@ import {
 } from "@naisys-erp/shared";
 import type { HateoasAction, HateoasLink } from "@naisys/common";
 import { writeAuditEntry } from "../audit.js";
-import prisma from "../db.js";
+import erpDb from "../erpDb.js";
 import { sendError } from "../error-handler.js";
 import {
   API_PREFIX,
@@ -138,7 +138,7 @@ function formatListItem(orderId: number, item: PlanningOrderRevisionModel) {
 }
 
 async function ensureOrderExists(orderId: number) {
-  const order = await prisma.planningOrder.findUnique({
+  const order = await erpDb.planningOrder.findUnique({
     where: { id: orderId },
   });
   return order;
@@ -179,13 +179,13 @@ export default async function planningOrderRevisionRoutes(
       if (status) where.status = status;
 
       const [items, total] = await Promise.all([
-        prisma.planningOrderRevision.findMany({
+        erpDb.planningOrderRevision.findMany({
           where,
           skip: (page - 1) * pageSize,
           take: pageSize,
           orderBy: { revNo: "desc" },
         }),
-        prisma.planningOrderRevision.count({ where }),
+        erpDb.planningOrderRevision.count({ where }),
       ]);
 
       return {
@@ -232,7 +232,7 @@ export default async function planningOrderRevisionRoutes(
       }
 
       // Auto-increment revNo inside a transaction to prevent race conditions
-      const item = await prisma.$transaction(async (tx) => {
+      const item = await erpDb.$transaction(async (tx) => {
         const maxRev = await tx.planningOrderRevision.findFirst({
           where: { planOrderId: orderId },
           orderBy: { revNo: "desc" },
@@ -271,7 +271,7 @@ export default async function planningOrderRevisionRoutes(
     handler: async (request, reply) => {
       const { orderId, revisionId } = request.params;
 
-      const item = await prisma.planningOrderRevision.findFirst({
+      const item = await erpDb.planningOrderRevision.findFirst({
         where: { id: revisionId, planOrderId: orderId },
       });
       if (!item) {
@@ -305,7 +305,7 @@ export default async function planningOrderRevisionRoutes(
       const { notes, changeSummary } = request.body;
       const userId = request.erpUser!.id;
 
-      const existing = await prisma.planningOrderRevision.findFirst({
+      const existing = await erpDb.planningOrderRevision.findFirst({
         where: { id: revisionId, planOrderId: orderId },
       });
       if (!existing) {
@@ -326,7 +326,7 @@ export default async function planningOrderRevisionRoutes(
         );
       }
 
-      const item = await prisma.planningOrderRevision.update({
+      const item = await erpDb.planningOrderRevision.update({
         where: { id: revisionId },
         data: {
           ...(notes !== undefined ? { notes } : {}),
@@ -354,7 +354,7 @@ export default async function planningOrderRevisionRoutes(
     handler: async (request, reply) => {
       const { orderId, revisionId } = request.params;
 
-      const existing = await prisma.planningOrderRevision.findFirst({
+      const existing = await erpDb.planningOrderRevision.findFirst({
         where: { id: revisionId, planOrderId: orderId },
       });
       if (!existing) {
@@ -375,7 +375,7 @@ export default async function planningOrderRevisionRoutes(
         );
       }
 
-      const execOrderCount = await prisma.execOrder.count({
+      const execOrderCount = await erpDb.execOrder.count({
         where: { planOrderRevId: revisionId },
       });
       if (execOrderCount > 0) {
@@ -387,7 +387,7 @@ export default async function planningOrderRevisionRoutes(
         );
       }
 
-      await prisma.planningOrderRevision.delete({ where: { id: revisionId } });
+      await erpDb.planningOrderRevision.delete({ where: { id: revisionId } });
       reply.status(204);
     },
   });
@@ -407,7 +407,7 @@ export default async function planningOrderRevisionRoutes(
     handler: async (request, reply) => {
       const { orderId, revisionId } = request.params;
 
-      const existing = await prisma.planningOrderRevision.findFirst({
+      const existing = await erpDb.planningOrderRevision.findFirst({
         where: { id: revisionId, planOrderId: orderId },
       });
       if (!existing) {
@@ -429,7 +429,7 @@ export default async function planningOrderRevisionRoutes(
       }
 
       const userId = request.erpUser!.id;
-      const item = await prisma.$transaction(async (tx) => {
+      const item = await erpDb.$transaction(async (tx) => {
         const updated = await tx.planningOrderRevision.update({
           where: { id: revisionId },
           data: { status: "approved", updatedById: userId },
@@ -466,7 +466,7 @@ export default async function planningOrderRevisionRoutes(
     handler: async (request, reply) => {
       const { orderId, revisionId } = request.params;
 
-      const existing = await prisma.planningOrderRevision.findFirst({
+      const existing = await erpDb.planningOrderRevision.findFirst({
         where: { id: revisionId, planOrderId: orderId },
       });
       if (!existing) {
@@ -488,7 +488,7 @@ export default async function planningOrderRevisionRoutes(
       }
 
       const userId = request.erpUser!.id;
-      const item = await prisma.$transaction(async (tx) => {
+      const item = await erpDb.$transaction(async (tx) => {
         const updated = await tx.planningOrderRevision.update({
           where: { id: revisionId },
           data: { status: "obsolete", updatedById: userId },

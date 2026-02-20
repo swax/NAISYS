@@ -214,9 +214,7 @@ export const UserDetail: React.FC = () => {
             <Text>{user.isAgent ? "Agent" : "User"}</Text>
           </Group>
           {(() => {
-            const agentLink = user._links?.find(
-              (l: any) => l.rel === "agent",
-            );
+            const agentLink = user._links?.find((l: any) => l.rel === "agent");
             if (!agentLink) return null;
             const agentId = agentLink.href.match(/\/agents\/(\d+)/)?.[1];
             if (!agentId) return null;

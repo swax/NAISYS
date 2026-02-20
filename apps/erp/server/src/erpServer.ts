@@ -172,11 +172,11 @@ async function startServer() {
   await fastify.register(erpPlugin);
 
   if (isSupervisorAuth()) {
-    const { default: prisma } = await import("./db.js");
+    const { default: erpDb } = await import("./erpDb.js");
     await ensureSuperAdmin(async (passwordHash, uuid, superAdminName) => {
-      const existing = await prisma.user.findFirst({ where: { uuid } });
+      const existing = await erpDb.user.findFirst({ where: { uuid } });
       if (existing) return false;
-      await prisma.user.create({
+      await erpDb.user.create({
         data: { uuid, username: superAdminName, passwordHash },
       });
       return true;
@@ -217,14 +217,14 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     if (isSupervisorAuth()) {
       void handleResetPassword({
         findLocalUser: async (username) => {
-          const prisma = (await import("./db.js")).default;
+          const prisma = (await import("./erpDb.js")).default;
           const user = await prisma.user.findUnique({ where: { username } });
           return user
             ? { id: user.id, username: user.username, uuid: user.uuid }
             : null;
         },
         updateLocalPassword: async (userId, passwordHash) => {
-          const prisma = (await import("./db.js")).default;
+          const prisma = (await import("./erpDb.js")).default;
           await prisma.user.update({
             where: { id: userId },
             data: { passwordHash },

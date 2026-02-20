@@ -10,7 +10,7 @@ import {
   UpdatePlanningOrderSchema,
 } from "@naisys-erp/shared";
 import type { HateoasAction, HateoasLink } from "@naisys/common";
-import prisma from "../db.js";
+import erpDb from "../erpDb.js";
 import { sendError } from "../error-handler.js";
 import {
   API_PREFIX,
@@ -148,13 +148,13 @@ export default async function planningOrderRoutes(fastify: FastifyInstance) {
       }
 
       const [items, total] = await Promise.all([
-        prisma.planningOrder.findMany({
+        erpDb.planningOrder.findMany({
           where,
           skip: (page - 1) * pageSize,
           take: pageSize,
           orderBy: { createdAt: "desc" },
         }),
-        prisma.planningOrder.count({ where }),
+        erpDb.planningOrder.count({ where }),
       ]);
 
       return {
@@ -191,7 +191,7 @@ export default async function planningOrderRoutes(fastify: FastifyInstance) {
       const { key, name, description } = request.body;
       const userId = request.erpUser!.id;
 
-      const item = await prisma.planningOrder.create({
+      const item = await erpDb.planningOrder.create({
         data: {
           key,
           name,
@@ -220,7 +220,7 @@ export default async function planningOrderRoutes(fastify: FastifyInstance) {
     handler: async (request, reply) => {
       const { id } = request.params;
 
-      const item = await prisma.planningOrder.findUnique({ where: { id } });
+      const item = await erpDb.planningOrder.findUnique({ where: { id } });
       if (!item) {
         return sendError(
           reply,
@@ -251,7 +251,7 @@ export default async function planningOrderRoutes(fastify: FastifyInstance) {
       const data = request.body;
       const userId = request.erpUser!.id;
 
-      const existing = await prisma.planningOrder.findUnique({
+      const existing = await erpDb.planningOrder.findUnique({
         where: { id },
       });
       if (!existing) {
@@ -263,7 +263,7 @@ export default async function planningOrderRoutes(fastify: FastifyInstance) {
         );
       }
 
-      const item = await prisma.planningOrder.update({
+      const item = await erpDb.planningOrder.update({
         where: { id },
         data: { ...data, updatedById: userId },
       });
@@ -287,7 +287,7 @@ export default async function planningOrderRoutes(fastify: FastifyInstance) {
     handler: async (request, reply) => {
       const { id } = request.params;
 
-      const existing = await prisma.planningOrder.findUnique({
+      const existing = await erpDb.planningOrder.findUnique({
         where: { id },
       });
       if (!existing) {
@@ -299,7 +299,7 @@ export default async function planningOrderRoutes(fastify: FastifyInstance) {
         );
       }
 
-      const revisionCount = await prisma.planningOrderRevision.count({
+      const revisionCount = await erpDb.planningOrderRevision.count({
         where: { planOrderId: id },
       });
       if (revisionCount > 0) {
@@ -311,7 +311,7 @@ export default async function planningOrderRoutes(fastify: FastifyInstance) {
         );
       }
 
-      await prisma.planningOrder.delete({ where: { id } });
+      await erpDb.planningOrder.delete({ where: { id } });
       reply.status(204);
     },
   });

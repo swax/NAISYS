@@ -8,7 +8,7 @@ import {
   LoginResponseSchema,
   AuthUserSchema,
 } from "@naisys-erp/shared";
-import prisma from "../db.js";
+import erpDb from "../erpDb.js";
 import { sendError } from "../error-handler.js";
 import { authCache } from "../auth-middleware.js";
 import {
@@ -66,7 +66,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
           sessionTokenHash: "!sso",
           sessionExpiresAt: authResult.expiresAt,
         };
-        const user = await prisma.user.upsert({
+        const user = await erpDb.user.upsert({
           where: { uuid: authResult.user.uuid },
           create: { uuid: authResult.user.uuid, ...ssoData },
           update: ssoData,
@@ -84,7 +84,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
       }
 
       // Standalone mode: authenticate against local DB
-      const user = await prisma.user.findUnique({ where: { username } });
+      const user = await erpDb.user.findUnique({ where: { username } });
       if (!user) {
         return sendError(
           reply,
@@ -108,7 +108,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
       const tokenHash = hashToken(token);
       const expiresAt = new Date(Date.now() + SESSION_DURATION_MS);
 
-      await prisma.user.update({
+      await erpDb.user.update({
         where: { id: user.id },
         data: { sessionTokenHash: tokenHash, sessionExpiresAt: expiresAt },
       });
@@ -135,7 +135,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
       const token = request.cookies?.[COOKIE_NAME];
 
       if (request.erpUser) {
-        await prisma.user.update({
+        await erpDb.user.update({
           where: { id: request.erpUser.id },
           data: {
             sessionTokenHash: null,

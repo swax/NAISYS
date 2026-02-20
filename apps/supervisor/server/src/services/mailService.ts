@@ -5,7 +5,7 @@ import {
 } from "@naisys-supervisor/shared";
 import fs from "fs/promises";
 import path from "path";
-import { usingNaisysDb } from "../database/naisysDatabase.js";
+import { hubDb } from "../database/hubDb.js";
 import { getLogger } from "../logger.js";
 import { cachedForSeconds } from "../utils/cache.js";
 import { sendMailViaHub } from "./hubConnectionService.js";
@@ -30,58 +30,53 @@ export const getMailDataByUserId = cachedForSeconds(
         whereClause.created_at = { gte: updatedSince };
       }
 
-      // Fetch messages where the user is sender or recipient
-      const result = await usingNaisysDb(async (prisma) => {
-        const where = {
-          ...whereClause,
-          OR: [
-            { from_user_id: userId },
-            {
-              recipients: {
-                some: {
-                  user_id: userId,
-                },
-              },
-            },
-          ],
-        };
-
-        // Only get total count on initial fetch (when updatedSince is not set)
-        const total = updatedSince
-          ? undefined
-          : await prisma.mail_messages.count({ where });
-
-        // Get paginated messages
-        const dbMessages = await prisma.mail_messages.findMany({
-          where,
-          orderBy: { id: "desc" },
-          skip: (page - 1) * count,
-          take: count,
-          select: {
-            id: true,
-            from_user_id: true,
-            subject: true,
-            body: true,
-            created_at: true,
-            from_user: {
-              select: { username: true },
-            },
+      const where = {
+        ...whereClause,
+        OR: [
+          { from_user_id: userId },
+          {
             recipients: {
-              select: {
-                user_id: true,
-                type: true,
-                user: {
-                  select: { username: true },
-                },
+              some: {
+                user_id: userId,
               },
             },
           },
-        });
+        ],
+      };
 
-        return { dbMessages, total };
+      // Only get total count on initial fetch (when updatedSince is not set)
+      const total = updatedSince
+        ? undefined
+        : await hubDb.mail_messages.count({ where });
+
+      // Get paginated messages
+      const dbMessages = await hubDb.mail_messages.findMany({
+        where,
+        orderBy: { id: "desc" },
+        skip: (page - 1) * count,
+        take: count,
+        select: {
+          id: true,
+          from_user_id: true,
+          subject: true,
+          body: true,
+          created_at: true,
+          from_user: {
+            select: { username: true },
+          },
+          recipients: {
+            select: {
+              user_id: true,
+              type: true,
+              user: {
+                select: { username: true },
+              },
+            },
+          },
+        },
       });
 
-      const messages: MailMessage[] = result.dbMessages.map((msg) => ({
+      const messages: MailMessage[] = dbMessages.map((msg) => ({
         id: msg.id,
         fromUserId: msg.from_user_id ?? 0,
         fromUsername: msg.from_user?.username ?? "(deleted)",
@@ -98,7 +93,7 @@ export const getMailDataByUserId = cachedForSeconds(
       return {
         mail: messages,
         timestamp: new Date().toISOString(),
-        total: result.total,
+        total,
       };
     } catch (error) {
       getLogger().error(error, "Error fetching mail data");
