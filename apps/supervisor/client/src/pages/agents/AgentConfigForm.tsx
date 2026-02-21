@@ -1,9 +1,4 @@
 import {
-  AgentConfigFile,
-  AgentConfigFileSchema,
-  CommandProtection,
-} from "@naisys/common";
-import {
   Button,
   Group,
   NumberInput,
@@ -16,6 +11,11 @@ import {
   Textarea,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
+import {
+  AgentConfigFile,
+  AgentConfigFileSchema,
+  CommandProtection,
+} from "@naisys/common";
 import { IconCheck, IconX } from "@tabler/icons-react";
 import { useMemo, useState } from "react";
 import { zodResolver } from "../../lib/zod-resolver";
@@ -45,7 +45,6 @@ function transformFormValues(values: FormValues): Record<string, unknown> {
     tokenMax: values.tokenMax,
   };
 
-  if (values.webModel) result.webModel = values.webModel;
   if (values.compactModel) result.compactModel = values.compactModel;
   if (values.imageModel) result.imageModel = values.imageModel;
   if (typeof values.spendLimitDollars === "number")
@@ -59,7 +58,7 @@ function transformFormValues(values: FormValues): Record<string, unknown> {
   if (values.completeSessionEnabled) result.completeSessionEnabled = true;
   if (values.wakeOnMessage) result.wakeOnMessage = true;
   if (values.workspacesEnabled) result.workspacesEnabled = true;
-  if (values.disableMultipleCommands) result.disableMultipleCommands = true;
+  if (values.multipleCommandsEnabled) result.multipleCommandsEnabled = true;
 
   if (
     values.commandProtection &&
@@ -79,7 +78,6 @@ interface FormValues {
   title: string;
   agentPrompt: string;
   shellModel: string;
-  webModel: string;
   compactModel: string;
   imageModel: string;
   tokenMax: number | string;
@@ -91,7 +89,7 @@ interface FormValues {
   completeSessionEnabled: boolean;
   wakeOnMessage: boolean;
   workspacesEnabled: boolean;
-  disableMultipleCommands: boolean;
+  multipleCommandsEnabled: boolean;
   commandProtection: string;
   debugPauseSeconds: number | string;
   initialCommands: string;
@@ -163,7 +161,6 @@ export const AgentConfigForm: React.FC<AgentConfigFormProps> = ({
       title: config.title,
       agentPrompt: config.agentPrompt,
       shellModel: config.shellModel,
-      webModel: config.webModel ?? "",
       compactModel: config.compactModel ?? "",
       imageModel: config.imageModel ?? "",
       tokenMax: config.tokenMax,
@@ -175,9 +172,9 @@ export const AgentConfigForm: React.FC<AgentConfigFormProps> = ({
       completeSessionEnabled: config.completeSessionEnabled ?? false,
       wakeOnMessage: config.wakeOnMessage ?? false,
       workspacesEnabled: config.workspacesEnabled ?? false,
-      disableMultipleCommands: config.disableMultipleCommands ?? false,
+      multipleCommandsEnabled: config.multipleCommandsEnabled ?? false,
       commandProtection: config.commandProtection ?? CommandProtection.None,
-      debugPauseSeconds: config.debugPauseSeconds ?? ("" as number | string),
+      debugPauseSeconds: config.debugPauseSeconds ?? 0,
       initialCommands: config.initialCommands?.join("\n") ?? "",
     },
     validate: (values) =>
@@ -239,14 +236,6 @@ export const AgentConfigForm: React.FC<AgentConfigFormProps> = ({
           disabled={readOnly}
           data={llmModelOptions}
           {...form.getInputProps("shellModel")}
-        />
-        <ModelSelect
-          label="Web Model"
-          description={desc("webModel")}
-          disabled={readOnly}
-          clearable
-          data={llmModelOptions}
-          {...form.getInputProps("webModel")}
         />
         <ModelSelect
           label="Compact Model"
@@ -336,10 +325,10 @@ export const AgentConfigForm: React.FC<AgentConfigFormProps> = ({
           {...form.getInputProps("workspacesEnabled", { type: "checkbox" })}
         />
         <Switch
-          label="Disable Multiple Commands"
-          description={desc("disableMultipleCommands")}
+          label="Multiple Commands Enabled"
+          description={desc("multipleCommandsEnabled")}
           disabled={readOnly}
-          {...form.getInputProps("disableMultipleCommands", {
+          {...form.getInputProps("multipleCommandsEnabled", {
             type: "checkbox",
           })}
         />

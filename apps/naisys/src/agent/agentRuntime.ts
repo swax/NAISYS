@@ -1,4 +1,4 @@
-import { createChatService } from "../chat/chat.js";
+import { createChatService } from "../mail/chat.js";
 import { createCommandHandler } from "../command/commandHandler.js";
 import { createCommandLoop } from "../command/commandLoop.js";
 import { createCommandProtection } from "../command/commandProtection.js";
@@ -149,14 +149,7 @@ export async function createAgentRuntime(
     promptNotification,
     hubClient,
   );
-  const lynxService = createLynxService(
-    globalConfig,
-    agentConfig,
-    llmService,
-    costTracker,
-    modelService,
-    output,
-  );
+  const lynxService = createLynxService(globalConfig, costTracker, output);
   // Command components
   const platformConfig = getPlatformConfig();
   const promptBuilder = createPromptBuilder(

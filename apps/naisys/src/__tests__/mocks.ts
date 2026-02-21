@@ -15,7 +15,7 @@ import { CommandProtection } from "../command/commandProtection.js";
 import { PromptBuilder } from "../command/promptBuilder.js";
 import { ShellCommand } from "../command/shellCommand.js";
 import { GenImg } from "../features/genImg.js";
-import { ChatService } from "../chat/chat.js";
+import { ChatService } from "../mail/chat.js";
 import { MailService } from "../mail/mail.js";
 import { LynxService } from "../features/lynx.js";
 import { SessionService } from "../features/session.js";
@@ -280,7 +280,6 @@ export function createMockAgentConfig(): AgentConfig {
       spendLimitHours: undefined,
       tokenMax: 2000,
       shellModel: "gpt-4",
-      webModel: "gpt-4",
       compactModel: "gpt-4",
       imageModel: undefined,
       mailEnabled: true,
@@ -291,7 +290,7 @@ export function createMockAgentConfig(): AgentConfig {
       wakeOnMessage: false,
       commandProtection: "none" as any,
       initialCommands: [],
-      disableMultipleCommands: false,
+      multipleCommandsEnabled: true,
       workspacesEnabled: false,
       resolveConfigVars: (str: string) => str,
     }),

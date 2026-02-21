@@ -10,7 +10,7 @@ import { ContextManager } from "../llm/contextManager.js";
 import { ContentSource, LlmRole } from "../llm/llmDtos.js";
 import { LLMService } from "../llm/llmService.js";
 import { SessionCompactor } from "../llm/sessionCompactor.js";
-import { ChatService } from "../chat/chat.js";
+import { ChatService } from "../mail/chat.js";
 import { MailService } from "../mail/mail.js";
 import { LogService } from "../services/logService.js";
 import { RunService } from "../services/runService.js";

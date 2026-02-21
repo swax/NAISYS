@@ -5,7 +5,7 @@ export function createCommandTools({ agentConfig }: AgentConfig) {
   const escapedQuoteRegex = /"/g;
   const escapedBackslashRegex = /\\/g;
 
-  const multipleCommandsDisabled = !!agentConfig().disableMultipleCommands;
+  const multipleCommandsDisabled = !agentConfig().multipleCommandsEnabled;
 
   // Common description strings
   const COMMENT_DESCRIPTION =

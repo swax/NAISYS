@@ -1,4 +1,8 @@
-import { AgentConfigFile, AgentConfigFileSchema } from "@naisys/common";
+import {
+  AgentConfigFile,
+  AgentConfigFileSchema,
+  buildDefaultAgentConfig,
+} from "@naisys/common";
 import yaml from "js-yaml";
 import { hubDb } from "../database/hubDb.js";
 import { sendUserListChanged } from "./hubConnectionService.js";
@@ -36,24 +40,19 @@ export async function createAgentConfig(name: string): Promise<number> {
     throw new Error(`Agent '${name}' already exists in the database`);
   }
 
-  // Create default YAML content
-  const yamlContent = `username: ${name}
-title: Assistant
-shellModel: none
-agentPrompt: |
-  You are \${name} a \${title} with the job of helping out the admin with what he wants to do.
-spendLimitDollars: 1
-tokenMax: 20000
-debugPauseSeconds: 5
-webEnabled: true
-`;
+  // Create default config and convert to YAML
+  const defaultConfig = buildDefaultAgentConfig(name);
+  const yamlContent = yaml.dump(canonicalConfigOrder(defaultConfig), {
+    lineWidth: -1,
+    noRefs: true,
+  });
 
   // Add agent to the database, let DB autoincrement
   const user = await hubDb.users.create({
     data: {
       uuid: crypto.randomUUID(),
-      username: name,
-      title: "Assistant",
+      username: defaultConfig.username,
+      title: defaultConfig.title,
       config: yamlContent,
     },
   });
@@ -101,7 +100,6 @@ function canonicalConfigOrder(
 
   // Models
   ordered.shellModel = config.shellModel;
-  if (config.webModel !== undefined) ordered.webModel = config.webModel;
   if (config.compactModel !== undefined)
     ordered.compactModel = config.compactModel;
   if (config.imageModel !== undefined) ordered.imageModel = config.imageModel;
@@ -125,8 +123,8 @@ function canonicalConfigOrder(
     ordered.wakeOnMessage = config.wakeOnMessage;
   if (config.workspacesEnabled !== undefined)
     ordered.workspacesEnabled = config.workspacesEnabled;
-  if (config.disableMultipleCommands !== undefined)
-    ordered.disableMultipleCommands = config.disableMultipleCommands;
+  if (config.multipleCommandsEnabled !== undefined)
+    ordered.multipleCommandsEnabled = config.multipleCommandsEnabled;
 
   // Advanced
   if (config.commandProtection !== undefined)

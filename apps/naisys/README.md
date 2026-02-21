@@ -24,7 +24,7 @@ you can allow agents to start their own sub-agents on demand with instructions d
 - Prevent the context from being polluted by catching common errors like output that includes the command prompt itself
 - Allows debugging by way of a 'debug' prompt after each run of the LLM
 - A custom 'mail' system for context friendly inter-agent communication
-- A browser called 'ns-lynx' that uses a separate LLM to reduce web page size as well as make links unique across the context
+- A browser called 'ns-lynx' that paginates web pages and makes links unique across the context
 - Cost tracking and cost limits that must be set in the config
 - Support for multiple LLM backends, configurable per agent - OpenAI, Google, Anthropic, and self-hosted LLMs
 
@@ -48,10 +48,6 @@ shellModel: gpt4turbo
 # Only used between sessions to provide guidance for the next session (use a more powerful model for this)
 # defaults to the shellModel if omitted
 compactModel: claude3opus
-
-# The model to use for ns-lynx, pre-processing websites to fit into a smaller context (use a cheaper model)
-# defaults to the shellModel if omitted
-webModel: claude3haiku
 
 # The model used by the 'ns-genimg' command. If not defined then the ns-genimg command is not available to the LLM
 # Valid values: dalle2-256, dalle2-512, dalle2-1024, dalle3-1024, dalle3-1024-HD
