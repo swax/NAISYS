@@ -54,7 +54,7 @@ export function createCommandHandler(
           output.write(prompt + chalk[OutputColor.llm](input));
         } else {
           // Check if multiple commands are disabled
-          if (!firstCommand && agentConfig().disableMultipleCommands) {
+          if (!firstCommand && !agentConfig().multipleCommandsEnabled) {
             await output.errorAndLog(
               `Multiple commands disabled. Blocked command: ${input}`,
             );

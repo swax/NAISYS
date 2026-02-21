@@ -88,12 +88,12 @@ export function createSystemMessage(
       "\n  Make sure to call `ns-session compact` before the token limit is hit so you can continue your work without interruption.";
   }
 
-  if (agentConfig().disableMultipleCommands) {
-    tokenNote +=
-      "\n  Only run one command at a time, evaluate the output, then run the next command. Don't overload the same line with multiple commands.";
-  } else {
+  if (agentConfig().multipleCommandsEnabled) {
     tokenNote +=
       "\n  Be careful running multiple commands on a single prompt, and never assume the output of commands. Better to run one command at a time if you're not sure.";
+  } else {
+    tokenNote +=
+      "\n  Only run one command at a time, evaluate the output, then run the next command. Don't overload the same line with multiple commands.";
   }
 
   const subagentStr = `\n  ${subagentCmd.name}: ${subagentCmd.description}`;

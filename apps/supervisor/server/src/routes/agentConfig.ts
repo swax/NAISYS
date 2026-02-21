@@ -50,13 +50,6 @@ async function validateModelKeys(
     invalidModels.push(`shellModel: "${config.shellModel}"`);
   }
   if (
-    config.webModel &&
-    !isTemplateVar(config.webModel) &&
-    !validLlmKeys.has(config.webModel)
-  ) {
-    invalidModels.push(`webModel: "${config.webModel}"`);
-  }
-  if (
     config.compactModel &&
     !isTemplateVar(config.compactModel) &&
     !validLlmKeys.has(config.compactModel)

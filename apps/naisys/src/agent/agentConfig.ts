@@ -42,7 +42,6 @@ export function createAgentConfig(
 
     // Resolve model configs
     const shellModel = resolveConfigVars(config.shellModel);
-    const webModel = resolveConfigVars(config.webModel || config.shellModel);
     const compactModel = resolveConfigVars(
       config.compactModel || config.shellModel,
     );
@@ -82,26 +81,20 @@ export function createAgentConfig(
       spendLimitDollars,
       spendLimitHours,
       shellModel,
-      webModel,
       compactModel,
       imageModel,
       resolveConfigVars,
-      mailEnabled: config.mailEnabled ?? true,
-      chatEnabled: config.chatEnabled ?? true,
-      webEnabled: config.webEnabled ?? false,
-      completeSessionEnabled: config.completeSessionEnabled ?? true,
-      wakeOnMessage: config.wakeOnMessage ?? true,
+      mailEnabled: !!config.mailEnabled,
+      chatEnabled: !!config.chatEnabled,
+      webEnabled: !!config.webEnabled,
+      completeSessionEnabled: !!config.completeSessionEnabled,
+      wakeOnMessage: !!config.wakeOnMessage,
       initialCommands: config.initialCommands ?? [],
       commandProtection: config.commandProtection ?? CommandProtection.None,
       debugPauseSeconds:
-        config.debugPauseSeconds === undefined
-          ? 1000
-          : config.debugPauseSeconds,
-      disableMultipleCommands:
-        config.disableMultipleCommands === undefined
-          ? true
-          : config.disableMultipleCommands,
-      workspacesEnabled: config.workspacesEnabled ?? false,
+        config.debugPauseSeconds === undefined ? 0 : config.debugPauseSeconds,
+      multipleCommandsEnabled: !!config.multipleCommandsEnabled,
+      workspacesEnabled: !!config.workspacesEnabled,
     };
   }
 

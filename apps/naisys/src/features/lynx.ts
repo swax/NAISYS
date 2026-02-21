@@ -7,28 +7,18 @@ import * as crypto from "crypto";
 import * as https from "https";
 import * as os from "os";
 import stringArgv from "string-argv";
-import { AgentConfig } from "../agent/agentConfig.js";
 import { lynxCmd } from "../command/commandDefs.js";
 import { RegistrableCommand } from "../command/commandRegistry.js";
 import { GlobalConfig } from "../globalConfig.js";
 import { CostTracker } from "../llm/costTracker.js";
-import { LlmMessage, LlmRole } from "../llm/llmDtos.js";
-import { ModelService } from "../services/modelService.js";
-import { LLMService } from "../llm/llmService.js";
 import { OutputService } from "../utils/output.js";
 import * as utilities from "../utils/utilities.js";
 
 export function createLynxService(
   { globalConfig }: GlobalConfig,
-  { agentConfig }: AgentConfig,
-  llmService: LLMService,
   costTracker: CostTracker,
-  modelService: ModelService,
   output: OutputService,
 ) {
-  // Flag to control LLM-based content reduction - set to false for pagination instead
-  const USE_LLM_REDUCTION = false;
-
   let debugMode = false;
 
   // Single pagination state since we only navigate one page at a time
@@ -38,14 +28,6 @@ export function createLynxService(
     currentPage: number;
     contentHash: string;
   } | null = null;
-
-  const _reducedContentCache = new Map<
-    string,
-    {
-      contentHash: string;
-      reducedContent: string;
-    }
-  >();
 
   /** Links numbers are unique in the context so that `ns-lynx follow <linknum>` can be called on all previous output */
   const _globalLinkMap = new Map<number, string>();
@@ -118,8 +100,8 @@ export function createLynxService(
     }
   }
 
-  /** The content here is not reduced by an LLM, just a paged list of global links is returned */
-  async function loadUrlLinks(url: string, linkPageAsContent: number) {
+  /** Returns a paginated list of global links for the given URL */
+  async function loadUrlLinks(url: string, linkPageNumber: number) {
     let content = await runLynx(url);
     let links = "";
 
@@ -154,14 +136,20 @@ export function createLynxService(
 
     outputInDebugMode(`Links Token size: ${linksTokenSize}`);
 
-    // Reduce content using LLM if it's over the token max
+    // Paginate if over the token max
     if (linksTokenSize > globalConfig().webTokenMax) {
-      content = await reduceContent(
-        url,
-        content,
-        linksTokenSize,
-        linkPageAsContent,
+      const pages = breakContentIntoPages(content, globalConfig().webTokenMax);
+
+      // Clamp page number
+      const pageIndex = Math.max(
+        0,
+        Math.min(linkPageNumber - 1, pages.length - 1),
       );
+      content = globalizeLinkList(pages[pageIndex]);
+
+      if (pages.length > 1) {
+        content += `\n--- Page ${pageIndex + 1} of ${pages.length}. Use 'ns-lynx links <url> <page>' for other pages ---`;
+      }
     } else {
       output.comment(
         `No need to reduce, link Content is already under ${globalConfig().webTokenMax} tokens.`,
@@ -199,66 +187,35 @@ export function createLynxService(
         `Links Token size: ${linksTokenSize}`,
     );
 
-    if (USE_LLM_REDUCTION) {
-      // Original LLM reduction logic
-      let usingCachedContent = false;
+    if (contentTokenSize > globalConfig().webTokenMax) {
+      const pages = breakContentIntoPages(
+        content,
+        globalConfig().webTokenMax,
+      );
 
-      if (_reducedContentCache.has(url)) {
-        const cachedContent = _reducedContentCache.get(url)!;
-        if (cachedContent.contentHash === contentHash) {
-          content = cachedContent.reducedContent;
-          usingCachedContent = true;
-        }
+      // Set up pagination state
+      _currentPagination = {
+        url: url,
+        pages: pages,
+        currentPage: 1,
+        contentHash: contentHash,
+      };
+
+      // Get first page content
+      content = pages[0];
+
+      // Add pagination info if there are more pages
+      if (pages.length > 1) {
+        content += `\n\n--- More content available. Use 'ns-lynx more' to view page 2 of ${pages.length} ---`;
       }
 
-      if (usingCachedContent) {
-        output.comment(
-          "No changes detected, using already cached reduced content",
-        );
-      } else if (contentTokenSize > globalConfig().webTokenMax) {
-        content = await reduceContent(url, content, contentTokenSize);
-
-        _reducedContentCache.set(url, {
-          contentHash,
-          reducedContent: content,
-        });
-      } else {
-        output.comment(
-          `No need to reduce, content is already under ${globalConfig().webTokenMax} tokens.`,
-        );
-      }
+      output.comment(
+        `Content is ${contentTokenSize} tokens. Showing page 1 of ${pages.length}. Use 'ns-lynx more' for next page.`,
+      );
     } else {
-      // New pagination logic
-      if (contentTokenSize > globalConfig().webTokenMax) {
-        const pages = breakContentIntoPages(
-          content,
-          globalConfig().webTokenMax,
-        );
-
-        // Set up pagination state
-        _currentPagination = {
-          url: url,
-          pages: pages,
-          currentPage: 1,
-          contentHash: contentHash,
-        };
-
-        // Get first page content
-        content = pages[0];
-
-        // Add pagination info if there are more pages
-        if (pages.length > 1) {
-          content += `\n\n--- More content available. Use 'ns-lynx more' to view page 2 of ${pages.length} ---`;
-        }
-
-        output.comment(
-          `Content is ${contentTokenSize} tokens. Showing page 1 of ${pages.length}. Use 'ns-lynx more' for next page.`,
-        );
-      } else {
-        output.comment(
-          `Content is already under ${globalConfig().webTokenMax} tokens.`,
-        );
-      }
+      output.comment(
+        `Content is already under ${globalConfig().webTokenMax} tokens.`,
+      );
     }
 
     // Prefix content with url if following as otherwise the url is never shown
@@ -309,133 +266,6 @@ export function createLynxService(
         },
       );
     });
-  }
-
-  async function reduceContent(
-    url: string,
-    content: string,
-    contentTokenSize: number,
-    linkPageAsContent?: number,
-  ) {
-    const model = modelService.getLlmModel(agentConfig().webModel);
-
-    // For example if context is 16k, and max tokens is 2k, 3k with 1.5x overrun
-    // That would be 3k for the current compressed content, 10k for the chunk, and 3k for the output
-    let tokenChunkSize = model.maxTokens - globalConfig().webTokenMax * 2 * 1.5;
-    if (linkPageAsContent) {
-      tokenChunkSize = globalConfig().webTokenMax;
-    }
-
-    outputInDebugMode(
-      `Token max chunk size: ${tokenChunkSize}. Total content size: ${contentTokenSize}`,
-    );
-
-    const pieceCount = Math.ceil(contentTokenSize / tokenChunkSize);
-    const pieceSize = content.length / pieceCount;
-    let reducedOutput = "";
-
-    for (let i = 0; i < pieceCount; i++) {
-      const startPos = i * pieceSize;
-      const pieceStr = content.substring(startPos, startPos + pieceSize);
-
-      if (linkPageAsContent) {
-        if (linkPageAsContent === i + 1) {
-          return globalizeLinkList(pieceStr);
-        }
-        continue;
-      }
-
-      if (pieceCount == 1) {
-        output.comment(
-          `Reducing content from ${contentTokenSize} tokens to under ${globalConfig().webTokenMax} tokens with ${model.key}...`,
-        );
-      } else {
-        output.comment(
-          `Processing Piece ${i + 1} of ${pieceCount} with ${model.key}...`,
-        );
-
-        outputInDebugMode(
-          `  Reduced output tokens: ${utilities.getTokenCount(reducedOutput)}\n` +
-            `  Current Piece tokens: ${utilities.getTokenCount(pieceStr)}`,
-        );
-      }
-
-      reducedOutput = await llmReduce(
-        url,
-        reducedOutput,
-        i + 1,
-        pieceCount,
-        pieceStr,
-        contentTokenSize,
-      );
-    }
-
-    if (linkPageAsContent) {
-      return "";
-    }
-
-    const finalTokenSize = utilities.getTokenCount(reducedOutput);
-
-    output.comment(
-      `Content reduced from ${contentTokenSize} to ${finalTokenSize} tokens`,
-    );
-
-    return reducedOutput;
-  }
-
-  async function llmReduce(
-    url: string,
-    reducedOutput: string,
-    pieceNumber: number,
-    pieceTotal: number,
-    pieceStr: string,
-    contentTokenSize: number,
-  ) {
-    let systemMessage = "";
-    let content = "";
-
-    if (pieceTotal === 1) {
-      systemMessage = `The web page "${url}" content that is currently ${contentTokenSize} tokens needs to be reduced down to around ${globalConfig().webTokenMax} tokens.
-Links are represented as numbers in brackets, for example [4]. Keep links in the reduced output'
-Try to prioritize content of substance and primary navigation links over advertising content.`;
-
-      content = `Web Page Content:
-${pieceStr}
-
-Please reduce the content above to around ${globalConfig().webTokenMax} tokens while maintaining relevant links in brackets like [4].`;
-    } else {
-      systemMessage = `You will be iteratively fed the web page "${url}" broken into ${pieceTotal} pieces.
-Each 'Web Page Piece' should be merged with the  in order 'Current Reduced Content' to maintain the meaning of the page while reducing verbosity and duplication.
-The final output should be around ${globalConfig().webTokenMax} tokens.
-Links are represented as numbers in brackets, for example [4]. Try not to remove them in the 'Final Merged Content'
-Try to prioritize content of substance over advertising content.`;
-
-      content = `Web Page Piece ${pieceNumber} of ${pieceTotal}:
-${pieceStr}
-
-Please merge the 'Web Page Piece' above into the 'Current Reduced Content' below while keeping the result to around ${globalConfig().webTokenMax} tokens.
-
-Current Reduced Content: 
-${reducedOutput}
-
-
-Final Merged Content:
-`;
-    }
-
-    const context: LlmMessage = {
-      role: LlmRole.User,
-      content,
-    };
-
-    return (
-      await llmService.query(
-        agentConfig().webModel,
-        systemMessage,
-        [context],
-        "lynx",
-      )
-    )[0];
   }
 
   function outputInDebugMode(msg: string) {

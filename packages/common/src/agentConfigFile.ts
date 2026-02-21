@@ -11,61 +11,83 @@ export const AgentConfigFileSchema = z.object({
   username: z
     .string()
     .min(1, "Username is required")
-    .describe("Agent username, must be unique"),
-  title: z.string().describe("Agent role/title"),
+    .describe(
+      "The name the agent identifies itself with when communicating with other agents",
+    ),
+
+  title: z
+    .string()
+    .describe(
+      "Displayed to other agents to give context about this agent's role in the system",
+    ),
+
   agentPrompt: z
     .string()
     .min(1, "Agent prompt is required")
     .describe(
-      "System prompt sent to the LLM. Supports ${agent.*} template variables",
+      "Gives the agent instructions and/or purpose when starting up. Supports ${agent.*} and ${env.*} template variables",
     ),
 
   spendLimitDollars: z
     .number()
     .min(0, "Must be non-negative")
     .optional()
-    .describe("Local spend limit in dollars for this agent"),
+    .describe(
+      "Local spend limit in dollars for this agent, defaults to the SPEND_LIMIT_DOLLARS variable",
+    ),
+
   spendLimitHours: z
     .number()
     .min(0, "Must be non-negative")
     .optional()
     .describe(
-      "Rolling time window in hours for spend limit. If unset, limit applies to all time",
+      "Rolling time window in hours for spend limit, defaults to the SPEND_LIMIT_HOURS variable. If neither are set then the spend limit is fixed and not rolling",
     ),
 
   tokenMax: z
     .number()
     .int("Must be a whole number")
     .min(1, "Must be at least 1")
-    .describe("Maximum context window tokens before compaction"),
+    .describe(
+      "How many tokens this agent is allocated per session before it must end or compact the context",
+    ),
 
   shellModel: z
     .string()
     .min(1, "Shell model is required")
-    .describe("Primary LLM model used for shell interactions"),
-  webModel: z.string().optional().describe("Model used for web browsing tasks"),
+    .describe("Primary LLM used for shell interactions"),
+
   compactModel: z
     .string()
     .optional()
-    .describe("Model used for context compaction"),
+    .describe("LLM used for session compaction"),
+
   imageModel: z.string().optional().describe("Model used for image generation"),
 
   mailEnabled: z
     .boolean()
     .optional()
     .describe(
-      "Show mail commands to agent. Sub-agent mail still works behind the scenes when disabled",
+      "Show mail commands to the agent. Mail encourages verbose communication which can be distracting",
     ),
+
   chatEnabled: z
     .boolean()
     .optional()
-    .describe("Show chat commands to agent"),
-  webEnabled: z.boolean().optional().describe("Allow agent to browse the web"),
+    .describe(
+      "Show chat commands to the agent. Chat encourages more concise communication",
+    ),
+
+  webEnabled: z
+    .boolean()
+    .optional()
+    .describe("Allow agent to browse the web with Lynx, a text based browser"),
+
   completeSessionEnabled: z
     .boolean()
     .optional()
     .describe(
-      "Allow agent to end its own session. In sub-agent mode the app exits",
+      "Allow the agent to end its session. Once ended, it can only be restarted explicitly or via mail if wakeOnMessage is enabled. Disable on root agents to prevent the system from going unresponsive",
     ),
 
   debugPauseSeconds: z
@@ -74,34 +96,42 @@ export const AgentConfigFileSchema = z.object({
     .min(0, "Must be non-negative")
     .optional()
     .describe(
-      "Seconds to pause at debug prompt before auto-continuing. 0 or unset = wait indefinitely",
+      "Seconds to wait at the debug prompt before auto-continuing, only applies when the agent's console is in focus. Unset waits indefinitely for manual input",
     ),
+
   wakeOnMessage: z
     .boolean()
     .optional()
-    .describe("Start agent automatically when it receives mail"),
+    .describe(
+      "When mail or chat is received, start the agent automatically, or wake it from its wait state",
+    ),
+
   commandProtection: z
     .enum(CommandProtection)
     .optional()
     .describe(
-      "Guard destructive commands: none, manual approval, or auto-check",
+      "None allows the LLM to run any command, Manual requires user confirmation for each command, and Auto uses a secondary LLM to try to validate a command is safe",
     ),
+
   initialCommands: z
     .array(z.string())
     .optional()
-    .describe("Shell commands to run at session start before the LLM prompt"),
+    .describe(
+      "Shell commands to run at session start before the first LLM prompt, providing additional context to the agent",
+    ),
 
-  disableMultipleCommands: z
+  multipleCommandsEnabled: z
     .boolean()
     .optional()
     .describe(
-      "Force one command per turn. Slower but prevents hallucinated output",
+      "Allow the LLM to run multiple commands per turn. Faster but the LLM may get ahead of itself and produce errors",
     ),
+
   workspacesEnabled: z
     .boolean()
     .optional()
     .describe(
-      "Experimental: live-updating context area for files, avoids repeated cat calls",
+      "Experimental: Allows the LLM to pin files to the end of the context. Each turn the agent sees the latest version without old versions taking up context space",
     ),
 });
 
@@ -118,6 +148,23 @@ export type AgentConfigFile = z.infer<typeof AgentConfigFileSchema>;
  * 5. The hub supports agents running simultaneously across hosts, so each client can run an admin fine
  * 6. Having it as an official user means mail will be logged by the hub as well which is helpful for debugging and monitoring
  */
+export function buildDefaultAgentConfig(username: string): AgentConfigFile {
+  return {
+    username,
+    title: "Assistant",
+    shellModel: "none",
+    agentPrompt:
+      "You are ${agent.username} a ${agent.title} with the job of helping out the admin with what they want to do.",
+    tokenMax: 20000,
+    debugPauseSeconds: 5,
+    chatEnabled: true,
+    webEnabled: true,
+    wakeOnMessage: true,
+    completeSessionEnabled: true,
+    multipleCommandsEnabled: true,
+  };
+}
+
 export const adminAgentConfig = {
   username: "admin", // Must be "admin" for special handling in hub and supervisor
   title: "Admin",
