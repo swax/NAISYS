@@ -45,28 +45,25 @@ export const useHostData = () => {
   }, [query.data]);
 
   // Handle SSE updates for host online status
-  const handleSSEUpdate = useCallback(
-    (event: AgentStatusEvent) => {
-      if (!event.hosts) return;
+  const handleSSEUpdate = useCallback((event: AgentStatusEvent) => {
+    if (!event.hosts) return;
 
-      let changed = false;
+    let changed = false;
 
-      for (const host of hostCache) {
-        const update = event.hosts[String(host.id)];
-        if (!update) continue;
+    for (const host of hostCache) {
+      const update = event.hosts[String(host.id)];
+      if (!update) continue;
 
-        if (host.online !== update.online) {
-          host.online = update.online;
-          changed = true;
-        }
+      if (host.online !== update.online) {
+        host.online = update.online;
+        changed = true;
       }
+    }
 
-      if (changed) {
-        setCacheVersion((v) => v + 1);
-      }
-    },
-    [],
-  );
+    if (changed) {
+      setCacheVersion((v) => v + 1);
+    }
+  }, []);
 
   useAgentStatusStream(handleSSEUpdate, hostCache.length > 0);
 

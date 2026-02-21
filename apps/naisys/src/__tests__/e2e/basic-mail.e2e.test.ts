@@ -122,10 +122,7 @@ describe("Basic Mail E2E", () => {
 
   test("integrated-hub: send mail from alex to bob", async () => {
     createEnvFile(testDir);
-    appendFileSync(
-      join(testDir, ".env"),
-      `\nHUB_ACCESS_KEY=TESTKEY123\nHUB_PORT=${HUB_PORT}`,
-    );
+    appendFileSync(join(testDir, ".env"), `\nHUB_PORT=${HUB_PORT}`);
     await runMailTest(["--integrated-hub"], true);
   });
 });

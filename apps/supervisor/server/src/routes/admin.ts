@@ -11,7 +11,10 @@ import { hasPermission, requirePermission } from "../auth-middleware.js";
 import { supervisorDbPath } from "@naisys/supervisor-database";
 import { getNaisysDatabasePath, hubDb } from "../database/hubDb.js";
 import { API_PREFIX } from "../hateoas.js";
-import { isHubConnected } from "../services/hubConnectionService.js";
+import {
+  getHubAccessKey,
+  isHubConnected,
+} from "../services/hubConnectionService.js";
 import {
   buildExportFiles,
   type ExportUserRow,
@@ -66,6 +69,7 @@ export default function adminRoutes(
           supervisorDbPath: supervisorDbPath(),
           hubDbPath: getNaisysDatabasePath(),
           hubConnected: isHubConnected(),
+          hubAccessKey: getHubAccessKey(),
           _actions: actions.length > 0 ? actions : undefined,
         };
       } catch (error) {

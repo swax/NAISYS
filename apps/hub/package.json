@@ -31,6 +31,7 @@
     "dotenv": "^17.2.4",
     "js-yaml": "^4.1.1",
     "pino": "^10.3.1",
+    "selfsigned": "^5.5.0",
     "socket.io": "^4.8.3",
     "socket.io-client": "^4.8.3",
     "text-table": "^0.2.0",

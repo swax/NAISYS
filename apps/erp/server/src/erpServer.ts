@@ -102,11 +102,9 @@ export const erpPlugin: FastifyPluginAsync = async (fastify) => {
   fastify.register(schemaRoutes, { prefix: "/api/erp/schemas" });
 
   // Public endpoint to expose client configuration (publicRead, etc.)
-  fastify.get(
-    "/api/erp/client-config",
-    { schema: { hide: true } },
-    () => ({ publicRead: process.env.PUBLIC_READ === "true" }),
-  );
+  fastify.get("/api/erp/client-config", { schema: { hide: true } }, () => ({
+    publicRead: process.env.PUBLIC_READ === "true",
+  }));
 
   registerApiReference(fastify);
 

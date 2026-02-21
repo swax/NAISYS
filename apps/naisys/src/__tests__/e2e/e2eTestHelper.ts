@@ -135,14 +135,29 @@ export function getHubPath(): string {
  */
 export function createHubEnvFile(
   testDir: string,
-  options: { port: number; accessKey: string },
+  options: { port: number; naisysFolder: string },
 ): void {
   const envContent = `
-NAISYS_FOLDER=""
+NAISYS_FOLDER=${options.naisysFolder}
 HUB_PORT=${options.port}
-HUB_ACCESS_KEY=${options.accessKey}
 `.trim();
   writeFileSync(join(testDir, ".env"), envContent);
+}
+
+/**
+ * Extract the hub access key from hub stdout.
+ * The hub logs: "[Hub] Hub access key: <fingerprint_prefix>+<secret>"
+ */
+export function extractAccessKey(hubOutput: string): string {
+  const match = hubOutput.match(
+    /Hub access key:\s*([0-9a-f]{16}\+[0-9a-f]{16})/i,
+  );
+  if (!match) {
+    throw new Error(
+      `Could not find hub access key in hub output:\n${hubOutput}`,
+    );
+  }
+  return match[1];
 }
 
 export interface HubTestProcess {

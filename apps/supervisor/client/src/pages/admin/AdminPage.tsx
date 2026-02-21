@@ -2,12 +2,15 @@ import {
   Badge,
   Button,
   Container,
+  Group,
   Loader,
   Stack,
   Table,
   Title,
+  Tooltip,
 } from "@mantine/core";
 import { hasAction } from "@naisys/common";
+import { IconInfoCircle } from "@tabler/icons-react";
 import { useCallback, useEffect, useState } from "react";
 import type { AdminInfoResponse } from "../../lib/apiClient";
 import { api, apiEndpoints } from "../../lib/apiClient";
@@ -67,6 +70,26 @@ export const AdminPage: React.FC = () => {
                 <Table.Td fw={600}>Hub DB Path</Table.Td>
                 <Table.Td>{data.hubDbPath}</Table.Td>
               </Table.Tr>
+              {data.hubAccessKey && (
+                <Table.Tr>
+                  <Table.Td fw={600}>
+                    <Group gap={4}>
+                      Hub Access Key
+                      <Tooltip
+                        label="Set as HUB_ACCESS_KEY when installing NAISYS on other machines to connect to this hub"
+                        multiline
+                        w={250}
+                      >
+                        <IconInfoCircle
+                          size="1rem"
+                          style={{ cursor: "pointer" }}
+                        />
+                      </Tooltip>
+                    </Group>
+                  </Table.Td>
+                  <Table.Td>{data.hubAccessKey}</Table.Td>
+                </Table.Tr>
+              )}
               <Table.Tr>
                 <Table.Td fw={600}>Hub Connection</Table.Td>
                 <Table.Td>
