@@ -3,6 +3,7 @@ import { type HubDatabaseService, PrismaClient } from "@naisys/hub-database";
 import { AgentConfig } from "../agent/agentConfig.js";
 import {
   agentConfigCmd,
+  chatCmd,
   genImgCmd,
   lynxCmd,
   mailCmd,
@@ -14,6 +15,7 @@ import { CommandProtection } from "../command/commandProtection.js";
 import { PromptBuilder } from "../command/promptBuilder.js";
 import { ShellCommand } from "../command/shellCommand.js";
 import { GenImg } from "../features/genImg.js";
+import { ChatService } from "../chat/chat.js";
 import { MailService } from "../mail/mail.js";
 import { LynxService } from "../features/lynx.js";
 import { SessionService } from "../features/session.js";
@@ -102,7 +104,7 @@ export function createMockMailService() {
   const mailService: MailService = {
     command: mailCmd,
     handleCommand: jest.fn(() => ""),
-    getUnreadThreads: jest.fn(() => Promise.resolve([])),
+    getUnreadMessages: jest.fn(() => Promise.resolve([])),
     sendMessage: jest.fn(() => Promise.resolve("")),
     getAllUserNames: jest.fn(() => []),
     hasMultipleUsers: jest.fn(() => false),
@@ -111,6 +113,17 @@ export function createMockMailService() {
   };
 
   return mailService;
+}
+
+export function createMockChatService() {
+  const chatService: ChatService = {
+    command: chatCmd,
+    handleCommand: jest.fn(() => ""),
+    checkAndNotify: jest.fn(() => Promise.resolve()),
+    cleanup: jest.fn(),
+  };
+
+  return chatService;
 }
 
 export function createMockLynxService() {
@@ -271,6 +284,7 @@ export function createMockAgentConfig(): AgentConfig {
       compactModel: "gpt-4",
       imageModel: undefined,
       mailEnabled: true,
+      chatEnabled: true,
       webEnabled: false,
       completeSessionEnabled: false,
       debugPauseSeconds: 0,

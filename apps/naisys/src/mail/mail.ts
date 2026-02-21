@@ -6,15 +6,12 @@ import {
   MailUnreadResponse,
 } from "@naisys/hub-protocol";
 import stringArgv from "string-argv";
-import { AgentConfig } from "../agent/agentConfig.js";
-import { UserService } from "../agent/userService.js";
+import { UserEntry, UserService } from "../agent/userService.js";
 import { mailCmd } from "../command/commandDefs.js";
 import {
   CommandResponse,
-  NextCommandAction,
   RegistrableCommand,
 } from "../command/commandRegistry.js";
-import { GlobalConfig } from "../globalConfig.js";
 import { HubClient } from "../hub/hubClient.js";
 import { PromptNotificationService } from "../utils/promptNotificationService.js";
 import {
@@ -24,8 +21,6 @@ import {
 } from "./mailDisplayService.js";
 
 export function createMailService(
-  { globalConfig }: GlobalConfig,
-  { agentConfig }: AgentConfig,
   hubClient: HubClient | undefined,
   userService: UserService,
   mailDisplayService: MailDisplayService | null,
@@ -76,15 +71,12 @@ export function createMailService(
 
       case "send": {
         // Expected: ns-mail send "user1,user2" "subject" "message"
-        const usernames = argv[1]?.split(",").map((u) => u.trim());
-        const subject = argv[2];
-        const message = argv[3];
-
-        if (!usernames || !subject || !message) {
+        if (!argv[1] || !argv[2] || !argv[3]) {
           throw "Invalid parameters. There should be a username, subject and message. All contained in quotes.";
         }
 
-        return sendMessage(usernames, subject, message);
+        const recipients = userService.resolveUsernames(argv[1]);
+        return sendMessage(recipients, argv[2], argv[3]);
       }
 
       case "read": {
@@ -155,40 +147,21 @@ export function createMailService(
   }
 
   async function sendMessage(
-    usernames: string[],
+    recipients: UserEntry[],
     subject: string,
     message: string,
   ): Promise<string> {
     message = message.replace(/\\n/g, "\n");
-
-    // Resolve usernames to user IDs
-    const resolvedRecipients: { id: number; username: string }[] = [];
-    const errors: string[] = [];
-
-    for (const username of usernames) {
-      const user = userService.getUserByName(username);
-      if (!user) {
-        errors.push(`${username} not found`);
-      } else {
-        resolvedRecipients.push({
-          id: user.userId,
-          username: user.username,
-        });
-      }
-    }
-
-    if (errors.length > 0) {
-      throw `Error: ${errors.join("; ")}`;
-    }
 
     if (hubClient) {
       const response = await hubClient.sendRequest<MailSendResponse>(
         HubEvents.MAIL_SEND,
         {
           fromUserId: localUserId,
-          toUserIds: resolvedRecipients.map((r) => r.id),
+          toUserIds: recipients.map((r) => r.userId),
           subject,
           body: message,
+          kind: "mail",
         },
       );
 
@@ -204,7 +177,7 @@ export function createMailService(
     const mailContent: MailContent = {
       fromUsername: localUsername,
       fromTitle: localTitle,
-      recipientUsernames: resolvedRecipients.map((r) => r.username),
+      recipientUsernames: recipients.map((r) => r.username),
       subject,
       body: message,
       createdAt: new Date().toISOString(),
@@ -212,9 +185,9 @@ export function createMailService(
 
     const display = formatMessageDisplay(mailContent);
 
-    for (const recipient of resolvedRecipients) {
+    for (const recipient of recipients) {
       promptNotification.notify({
-        userId: recipient.id,
+        userId: recipient.userId,
         wake: "yes",
         contextOutput: ["New Message:", display],
       });
@@ -245,14 +218,14 @@ export function createMailService(
     return userService.getUsers().length > 1;
   }
 
-  async function getUnreadThreads(): Promise<{ message_id: number }[]> {
+  async function getUnreadMessages(): Promise<{ message_id: number }[]> {
     if (!hubClient) {
       return [];
     }
 
     const response = await hubClient.sendRequest<MailUnreadResponse>(
       HubEvents.MAIL_UNREAD,
-      { userId: localUserId },
+      { userId: localUserId, kind: "mail" },
     );
 
     if (!response.success || !response.messageIds) {
@@ -273,7 +246,7 @@ export function createMailService(
   async function checkAndNotify(): Promise<void> {
     if (!hubClient || !mailDisplayService) return;
 
-    const unreadMessages = await getUnreadThreads();
+    const unreadMessages = await getUnreadMessages();
     if (!unreadMessages.length) {
       return;
     }
@@ -313,6 +286,7 @@ export function createMailService(
     // Hub mode: listen for MAIL_RECEIVED push from hub
     const mailReceivedHandler = (data: unknown) => {
       const push = data as MailReceivedPush;
+      if (push.kind !== "mail") return;
       if (push.recipientUserIds.includes(localUserId)) {
         void checkAndNotify();
       }
@@ -338,7 +312,7 @@ export function createMailService(
 
   return {
     ...registrableCommand,
-    getUnreadThreads,
+    getUnreadMessages,
     sendMessage,
     getAllUserNames,
     hasMultipleUsers,

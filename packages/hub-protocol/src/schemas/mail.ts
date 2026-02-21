@@ -1,6 +1,13 @@
 import { z } from "zod";
 
 // =============================================================================
+// Common
+// =============================================================================
+
+export const MessageKindSchema = z.enum(["mail", "chat"]);
+export type MessageKind = z.infer<typeof MessageKindSchema>;
+
+// =============================================================================
 // Send
 // =============================================================================
 
@@ -10,6 +17,7 @@ export const MailSendRequestSchema = z.object({
   toUserIds: z.array(z.number()),
   subject: z.string(),
   body: z.string(),
+  kind: MessageKindSchema,
 });
 export type MailSendRequest = z.infer<typeof MailSendRequestSchema>;
 
@@ -28,6 +36,10 @@ export type MailSendResponse = z.infer<typeof MailSendResponseSchema>;
 export const MailListRequestSchema = z.object({
   userId: z.number(),
   filter: z.enum(["received", "sent"]).optional(),
+  kind: MessageKindSchema,
+  skip: z.number().optional(),
+  take: z.number().optional(),
+  withUserIds: z.array(z.number()).optional(),
 });
 export type MailListRequest = z.infer<typeof MailListRequestSchema>;
 
@@ -39,6 +51,7 @@ export const MailListMessageDataSchema = z.object({
   subject: z.string(),
   createdAt: z.string(),
   isUnread: z.boolean(),
+  body: z.string().optional(),
 });
 export type MailListMessageData = z.infer<typeof MailListMessageDataSchema>;
 
@@ -137,6 +150,7 @@ export type MailSearchResponse = z.infer<typeof MailSearchResponseSchema>;
 /** Request to get unread message IDs */
 export const MailUnreadRequestSchema = z.object({
   userId: z.number(),
+  kind: MessageKindSchema,
 });
 export type MailUnreadRequest = z.infer<typeof MailUnreadRequestSchema>;
 
@@ -155,5 +169,6 @@ export type MailUnreadResponse = z.infer<typeof MailUnreadResponseSchema>;
 /** Push notification from hub to NAISYS when mail is received */
 export const MailReceivedPushSchema = z.object({
   recipientUserIds: z.array(z.number()),
+  kind: MessageKindSchema,
 });
 export type MailReceivedPush = z.infer<typeof MailReceivedPushSchema>;

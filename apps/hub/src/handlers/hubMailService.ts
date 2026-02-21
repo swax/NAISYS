@@ -32,15 +32,25 @@ export function createHubMailService(
     recipientUserIds: number[];
     subject: string;
     body: string;
+    kind: string;
     hostId?: number;
   }) {
     await usingHubDatabase(async (hubDb) => {
       const now = new Date();
 
+      const participantIds = [
+        ...(params.fromUserId != null ? [params.fromUserId] : []),
+        ...params.recipientUserIds,
+      ]
+        .sort((a, b) => a - b)
+        .join(",");
+
       const message = await hubDb.mail_messages.create({
         data: {
           from_user_id: params.fromUserId,
           host_id: params.hostId,
+          kind: params.kind,
+          participant_ids: participantIds,
           subject: params.subject,
           body: params.body,
           created_at: now,
@@ -80,6 +90,7 @@ export function createHubMailService(
       if (targetHostIds.size > 0) {
         const payload: MailReceivedPush = {
           recipientUserIds: params.recipientUserIds,
+          kind: params.kind as MailReceivedPush["kind"],
         };
         for (const targetHostId of targetHostIds) {
           naisysServer.sendMessage<MailReceivedPush>(
@@ -108,6 +119,7 @@ export function createHubMailService(
           recipientUserIds: parsed.toUserIds,
           subject: parsed.subject,
           body: parsed.body,
+          kind: parsed.kind,
           hostId,
         });
 
@@ -134,21 +146,30 @@ export function createHubMailService(
 
         await usingHubDatabase(async (hubDb) => {
           // Build ownership condition based on filter
-          const ownershipCondition =
-            parsed.filter === "received"
-              ? { recipients: { some: { user_id: parsed.userId } } }
-              : parsed.filter === "sent"
-                ? { from_user_id: parsed.userId }
-                : {
-                    OR: [
-                      { from_user_id: parsed.userId },
-                      { recipients: { some: { user_id: parsed.userId } } },
-                    ],
-                  };
+          let ownershipCondition;
+          if (parsed.withUserIds?.length) {
+            // Messages between exactly this group of participants
+            const participantIds = [parsed.userId, ...parsed.withUserIds]
+              .sort((a, b) => a - b)
+              .join(",");
+            ownershipCondition = { participant_ids: participantIds };
+          } else if (parsed.filter === "received") {
+            ownershipCondition = { recipients: { some: { user_id: parsed.userId } } };
+          } else if (parsed.filter === "sent") {
+            ownershipCondition = { from_user_id: parsed.userId };
+          } else {
+            ownershipCondition = {
+              OR: [
+                { from_user_id: parsed.userId },
+                { recipients: { some: { user_id: parsed.userId } } },
+              ],
+            };
+          }
 
           const messages = await hubDb.mail_messages.findMany({
             where: {
               ...ownershipCondition,
+              kind: parsed.kind,
               NOT: {
                 recipients: {
                   some: {
@@ -165,7 +186,8 @@ export function createHubMailService(
               },
             },
             orderBy: { created_at: "desc" },
-            take: 20,
+            skip: parsed.skip,
+            take: parsed.take ?? 20,
           });
 
           const messageData = messages.map((m) => {
@@ -182,6 +204,7 @@ export function createHubMailService(
               subject: m.subject,
               createdAt: m.created_at.toISOString(),
               isUnread,
+              ...(parsed.kind === "chat" ? { body: m.body } : {}),
             };
           });
 
@@ -388,6 +411,7 @@ export function createHubMailService(
         await usingHubDatabase(async (hubDb) => {
           const messages = await hubDb.mail_messages.findMany({
             where: {
+              kind: parsed.kind,
               recipients: {
                 some: { user_id: parsed.userId, read_at: null },
               },

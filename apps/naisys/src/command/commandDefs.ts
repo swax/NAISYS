@@ -93,6 +93,21 @@ export const mailCmd: CommandDef = {
   },
 };
 
+export const chatCmd: CommandDef = {
+  name: "ns-chat",
+  description: "Quick back-and-forth chat with your team",
+  subcommands: {
+    send: {
+      usage: 'send "<users>" "<msg>"',
+      description: "Send a chat message",
+    },
+    recent: {
+      usage: 'recent ["<users>"] [skip] [take]',
+      description: "Show recent chat messages, optionally filtered by user(s) (* = unread)",
+    },
+  },
+};
+
 export const sessionCmd: CommandDef = {
   name: "ns-session",
   description: "Manage session (compact, wait, or end)",

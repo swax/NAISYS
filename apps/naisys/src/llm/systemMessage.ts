@@ -12,6 +12,7 @@
 
 import { AgentConfig } from "../agent/agentConfig.js";
 import {
+  chatCmd,
   commentCmd,
   genImgCmd,
   lynxCmd,
@@ -39,6 +40,11 @@ export function createSystemMessage(
   if (agentConfig().mailEnabled) {
     mailStr += `\n  ${usersCmd.name}: ${usersCmd.description}`;
     mailStr += `\n  ${mailCmd.name}: ${mailCmd.description}`;
+  }
+
+  let chatStr = "";
+  if (agentConfig().chatEnabled) {
+    chatStr = `\n  ${chatCmd.name}: ${chatCmd.description}`;
   }
 
   let lynxStr = "";
@@ -126,7 +132,7 @@ ${platformConfig.displayName} Commands:
   Read files with cat. Write files with \`cat > filename << 'EOF'\``
   }
   Do not input notes after the prompt. Only valid commands.
-NAISYS Commands: (cannot be used with other commands on the same prompt)${mailStr}${subagentStr}${lynxStr}${genImgStr}${workspaceStr}
+NAISYS Commands: (cannot be used with other commands on the same prompt)${mailStr}${chatStr}${subagentStr}${lynxStr}${genImgStr}${workspaceStr}
   ${commentCmd.name} ${commentCmd.usage}: ${commentCmd.description}${sessionCmdStr}
 Tokens:
   The console log can only hold a certain number of tokens that is specified in the prompt.${tokenNote}`;

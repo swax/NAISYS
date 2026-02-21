@@ -137,6 +137,7 @@ export function createHubAgentService(
         recipientUserIds: [startUserId],
         subject: "Your Task",
         body: taskDescription,
+        kind: "mail",
       });
     } catch (err) {
       logService.error(`[Hub:Agents] Failed to send task mail: ${err}`);

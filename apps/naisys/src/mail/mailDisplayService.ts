@@ -37,7 +37,7 @@ export function createMailDisplayService(
   async function listMessages(filter?: "received" | "sent"): Promise<string> {
     const response = await hubClient.sendRequest<MailListResponse>(
       HubEvents.MAIL_LIST,
-      { userId: localUserId, filter },
+      { userId: localUserId, filter, kind: "mail" },
     );
 
     if (!response.success) {

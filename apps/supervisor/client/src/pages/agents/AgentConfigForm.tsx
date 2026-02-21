@@ -54,6 +54,7 @@ function transformFormValues(values: FormValues): Record<string, unknown> {
     result.spendLimitHours = values.spendLimitHours;
 
   if (values.mailEnabled) result.mailEnabled = true;
+  if (values.chatEnabled) result.chatEnabled = true;
   if (values.webEnabled) result.webEnabled = true;
   if (values.completeSessionEnabled) result.completeSessionEnabled = true;
   if (values.wakeOnMessage) result.wakeOnMessage = true;
@@ -85,6 +86,7 @@ interface FormValues {
   spendLimitDollars: number | string;
   spendLimitHours: number | string;
   mailEnabled: boolean;
+  chatEnabled: boolean;
   webEnabled: boolean;
   completeSessionEnabled: boolean;
   wakeOnMessage: boolean;
@@ -168,6 +170,7 @@ export const AgentConfigForm: React.FC<AgentConfigFormProps> = ({
       spendLimitDollars: config.spendLimitDollars ?? ("" as number | string),
       spendLimitHours: config.spendLimitHours ?? ("" as number | string),
       mailEnabled: config.mailEnabled ?? false,
+      chatEnabled: config.chatEnabled ?? false,
       webEnabled: config.webEnabled ?? false,
       completeSessionEnabled: config.completeSessionEnabled ?? false,
       wakeOnMessage: config.wakeOnMessage ?? false,
@@ -299,6 +302,12 @@ export const AgentConfigForm: React.FC<AgentConfigFormProps> = ({
           description={desc("mailEnabled")}
           disabled={readOnly}
           {...form.getInputProps("mailEnabled", { type: "checkbox" })}
+        />
+        <Switch
+          label="Chat Enabled"
+          description={desc("chatEnabled")}
+          disabled={readOnly}
+          {...form.getInputProps("chatEnabled", { type: "checkbox" })}
         />
         <Switch
           label="Web Enabled"

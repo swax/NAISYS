@@ -213,6 +213,28 @@ export function createUserService(
     return undefined;
   }
 
+  /** Parse a comma-separated username string and resolve to users. Throws on any not-found. */
+  function resolveUsernames(csvUsernames: string): UserEntry[] {
+    const usernames = csvUsernames.split(",").map((u) => u.trim());
+    const resolved: UserEntry[] = [];
+    const errors: string[] = [];
+
+    for (const username of usernames) {
+      const user = getUserByName(username);
+      if (!user) {
+        errors.push(`'${username}' not found`);
+      } else {
+        resolved.push(user);
+      }
+    }
+
+    if (errors.length > 0) {
+      throw `Error: ${errors.join("; ")}`;
+    }
+
+    return resolved;
+  }
+
   return {
     getUsers,
     getUserById,
@@ -225,6 +247,7 @@ export function createUserService(
     getUserHostDisplayNames,
     getUserStatus,
     getUserByName,
+    resolveUsernames,
   };
 }
 

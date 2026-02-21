@@ -87,6 +87,7 @@ export function createAgentConfig(
       imageModel,
       resolveConfigVars,
       mailEnabled: config.mailEnabled ?? true,
+      chatEnabled: config.chatEnabled ?? true,
       webEnabled: config.webEnabled ?? false,
       completeSessionEnabled: config.completeSessionEnabled ?? true,
       wakeOnMessage: config.wakeOnMessage ?? true,
