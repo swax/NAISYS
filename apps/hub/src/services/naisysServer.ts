@@ -20,7 +20,7 @@ interface RegisteredHandler {
  */
 export function createNaisysServer(
   nsp: Namespace,
-  accessKey: string,
+  hubAccessKey: string,
   logService: HubServerLog,
   hostRegistrar: HostRegistrar,
 ) {
@@ -102,12 +102,12 @@ export function createNaisysServer(
   // Authentication middleware
   nsp.use(async (socket, next) => {
     const {
-      accessKey: clientAccessKey,
+      hubAccessKey: clientAccessKey,
       hostName,
       canRunAgents,
     } = socket.handshake.auth;
 
-    if (!clientAccessKey || clientAccessKey !== accessKey) {
+    if (!clientAccessKey || clientAccessKey !== hubAccessKey) {
       logService.log(
         `[Hub] Connection rejected: invalid access key from ${socket.handshake.address}`,
       );

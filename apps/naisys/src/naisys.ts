@@ -39,6 +39,7 @@ const agentPath = program.args[0];
 let hubUrl: string | undefined = program.opts().hub;
 const integratedHub = Boolean(program.opts().integratedHub);
 let supervisorPort: number | undefined;
+let hubAccessKey: string | undefined;
 
 if (integratedHub) {
   // Don't import the hub module tree unless needed, sharing the same process space is to save memory on small servers
@@ -53,7 +54,8 @@ if (integratedHub) {
     plugins,
     agentPath,
   );
-  hubUrl = `http://localhost:${hubResult.hubPort}`;
+  hubUrl = `https://localhost:${hubResult.hubPort}`;
+  hubAccessKey = hubResult.hubAccessKey;
   supervisorPort = hubResult.supervisorPort;
 }
 
@@ -61,7 +63,7 @@ const promptNotification = createPromptNotificationService();
 
 let hubClient: HubClient | undefined;
 if (hubUrl) {
-  const hubClientConfig = createHubClientConfig(hubUrl);
+  const hubClientConfig = createHubClientConfig(hubUrl, hubAccessKey);
   const hubClientLog = createHubClientLog();
   hubClient = createHubClient(
     hubClientConfig,

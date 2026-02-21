@@ -1,3 +1,4 @@
+import { parseHubAccessKey, verifyHubCertificate } from "@naisys/common-node";
 import { io, Socket } from "socket.io-client";
 import { HubClientConfig } from "./hubClientConfig.js";
 import { HubClientLog } from "./hubClientLog.js";
@@ -24,11 +25,33 @@ export function createHubConnection(
   function connect() {
     hubClientLog.write(`[NAISYS:HubClient] Connecting to ${hubUrl}...`);
 
+    // Verify the hub's TLS certificate fingerprint matches the access key
+    // before establishing the socket.io connection
+    const { fingerprintPrefix } = parseHubAccessKey(
+      hubClientConfig.hubAccessKey,
+    );
+    const url = new URL(hubUrl);
+    verifyHubCertificate(
+      url.hostname,
+      Number(url.port) || 443,
+      fingerprintPrefix,
+    )
+      .then(() => connectSocket())
+      .catch((err) => {
+        hubClientLog.write(
+          `[NAISYS:HubClient] Certificate verification failed: ${err.message}`,
+        );
+        onConnectError(err.message);
+      });
+  }
+
+  function connectSocket() {
     socket = io(hubUrl + "/naisys", {
       auth: {
-        accessKey: hubClientConfig.hubAccessKey,
+        hubAccessKey: hubClientConfig.hubAccessKey,
         hostName: hubClientConfig.hostname,
       },
+      rejectUnauthorized: false,
       reconnection: true,
       reconnectionDelay: 1000,
       reconnectionDelayMax: 30000,

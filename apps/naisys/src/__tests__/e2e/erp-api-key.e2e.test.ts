@@ -41,7 +41,6 @@ describe("ERP API Key Auth E2E", () => {
 
   const HUB_PORT = 4111;
   const SUPERVISOR_PORT = 4012;
-  const HUB_ACCESS_KEY = "TESTKEY_ERP_E2E";
 
   beforeEach(() => {
     testDir = getTestDir("erp_api_key");
@@ -62,7 +61,6 @@ describe("ERP API Key Auth E2E", () => {
 NAISYS_FOLDER="${dir}"
 NAISYS_HOSTNAME="TEST-ERP"
 SPEND_LIMIT_DOLLARS=10
-HUB_ACCESS_KEY=${HUB_ACCESS_KEY}
 HUB_PORT=${HUB_PORT}
 SUPERVISOR_PORT=${SUPERVISOR_PORT}
 `.trim();

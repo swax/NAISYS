@@ -37,7 +37,6 @@ describe("Supervisor UI E2E", () => {
 
   const HUB_PORT = 4131;
   const SUPERVISOR_PORT = 4032;
-  const HUB_ACCESS_KEY = "TESTKEY_SUPERVISOR_UI";
 
   beforeEach(() => {
     testDir = getTestDir("supervisor_ui");
@@ -62,7 +61,6 @@ describe("Supervisor UI E2E", () => {
 NAISYS_FOLDER="${dir}"
 NAISYS_HOSTNAME="TEST-SUPERVISOR-UI"
 SPEND_LIMIT_DOLLARS=10
-HUB_ACCESS_KEY=${HUB_ACCESS_KEY}
 HUB_PORT=${HUB_PORT}
 SUPERVISOR_PORT=${SUPERVISOR_PORT}
 `.trim();

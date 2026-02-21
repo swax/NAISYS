@@ -40,6 +40,7 @@ export const startServer: StartServer = async (
   startupType,
   plugins = [],
   hubPort?,
+  hubAccessKey?,
 ) => {
   const isProd = process.env.NODE_ENV === "production";
 
@@ -64,9 +65,9 @@ export const startServer: StartServer = async (
   createHubDatabaseClient();
 
   // Connect to hub via Socket.IO for agent management
-  const hubUrl = hubPort ? `http://localhost:${hubPort}` : process.env.HUB_URL;
+  const hubUrl = hubPort ? `https://localhost:${hubPort}` : process.env.HUB_URL;
   if (hubUrl) {
-    initHubConnection(hubUrl);
+    initHubConnection(hubUrl, hubAccessKey);
   }
 
   await ensureSuperAdmin(async (passwordHash, uuid, superAdminName) => {

@@ -1,3 +1,4 @@
+import { parseHubAccessKey, verifyHubCertificate } from "@naisys/common-node";
 import { io, Socket } from "socket.io-client";
 import {
   AgentStartResponse,
@@ -17,11 +18,13 @@ import {
 
 let socket: Socket | null = null;
 let connected = false;
+let resolvedHubAccessKey: string | undefined;
 
-export function initHubConnection(hubUrl: string) {
-  const accessKey = process.env.HUB_ACCESS_KEY;
+export function initHubConnection(hubUrl: string, hubAccessKey?: string) {
+  hubAccessKey = hubAccessKey || process.env.HUB_ACCESS_KEY;
+  resolvedHubAccessKey = hubAccessKey;
 
-  if (!accessKey) {
+  if (!hubAccessKey) {
     console.warn(
       "[Supervisor:HubClient] HUB_ACCESS_KEY not set, skipping hub connection",
     );
@@ -30,12 +33,26 @@ export function initHubConnection(hubUrl: string) {
 
   console.log(`[Supervisor:HubClient] Connecting to ${hubUrl}...`);
 
+  // Verify the hub's TLS certificate fingerprint matches the access key
+  const { fingerprintPrefix } = parseHubAccessKey(hubAccessKey);
+  const url = new URL(hubUrl);
+  verifyHubCertificate(url.hostname, Number(url.port) || 443, fingerprintPrefix)
+    .then(() => connectSocket(hubUrl, hubAccessKey!))
+    .catch((err) => {
+      console.error(
+        `[Supervisor:HubClient] Certificate verification failed: ${err.message}`,
+      );
+    });
+}
+
+function connectSocket(hubUrl: string, hubAccessKey: string) {
   socket = io(hubUrl + "/naisys", {
     auth: {
-      accessKey,
+      hubAccessKey,
       hostName: "SUPERVISOR",
       canRunAgents: false,
     },
+    rejectUnauthorized: false,
     reconnection: true,
     reconnectionDelay: 1000,
     reconnectionDelayMax: 30000,
@@ -89,6 +106,10 @@ export function initHubConnection(hubUrl: string) {
 
 export function isHubConnected(): boolean {
   return connected;
+}
+
+export function getHubAccessKey(): string | undefined {
+  return resolvedHubAccessKey;
 }
 
 export function sendAgentStart(

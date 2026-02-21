@@ -13,6 +13,7 @@ import {
   cleanupTestDir,
   createAgentYaml,
   createHubEnvFile,
+  extractAccessKey,
   getTestDir,
   HubTestProcess,
   NaisysTestProcess,
@@ -49,8 +50,7 @@ describe("Cross-Hub Mail E2E", () => {
   let hostB: NaisysTestProcess | null = null;
 
   const HUB_PORT = 4101;
-  const HUB_ACCESS_KEY = "TESTKEY123";
-  const HUB_URL = `http://localhost:${HUB_PORT}`;
+  const HUB_URL = `https://localhost:${HUB_PORT}`;
 
   beforeEach(() => {
     testDir = getTestDir("crosshub_mail");
@@ -82,19 +82,23 @@ describe("Cross-Hub Mail E2E", () => {
     cleanupTestDir(testDir);
   });
 
-  function createClientEnvFile(dir: string, hostname: string) {
+  function createClientEnvFile(
+    dir: string,
+    hostname: string,
+    hubAccessKey: string,
+  ) {
     const envContent = `
 NAISYS_FOLDER=""
 NAISYS_HOSTNAME="${hostname}"
 SPEND_LIMIT_DOLLARS=10
-HUB_ACCESS_KEY=${HUB_ACCESS_KEY}
+HUB_ACCESS_KEY=${hubAccessKey}
 `.trim();
     writeFileSync(join(dir, ".env"), envContent);
   }
 
   test("should send mail from alex on HOST-A to bob on HOST-B via hub", async () => {
     // --- Setup Hub with agent configs ---
-    createHubEnvFile(hubDir, { port: HUB_PORT, accessKey: HUB_ACCESS_KEY });
+    createHubEnvFile(hubDir, { port: HUB_PORT, naisysFolder: hubDir });
     createAgentYaml(hubDir, "alex.yaml", {
       username: "alex",
       title: "Test Agent Alex",
@@ -106,11 +110,12 @@ HUB_ACCESS_KEY=${HUB_ACCESS_KEY}
 
     // --- Start Hub ---
     hub = spawnHub(hubDir);
-    await hub.waitForOutput("Running on ws://localhost:", 30000);
+    await hub.waitForOutput("Running on wss://localhost:", 30000);
+    const hubAccessKey = extractAccessKey(hub.getFullOutput());
     await sleep(500);
 
     // --- Start Host A (admin starts automatically) ---
-    createClientEnvFile(hostADir, "HOST-A");
+    createClientEnvFile(hostADir, "HOST-A", hubAccessKey);
     hostA = spawnNaisys(hostADir, { args: [`--hub=${HUB_URL}`] });
     await hostA.waitForOutput("AGENT STARTED", 30000);
     await hostA.waitForPrompt();
@@ -129,7 +134,7 @@ HUB_ACCESS_KEY=${HUB_ACCESS_KEY}
     await hostA.waitForPrompt();
 
     // --- Start Host B (admin starts automatically) ---
-    createClientEnvFile(hostBDir, "HOST-B");
+    createClientEnvFile(hostBDir, "HOST-B", hubAccessKey);
     hostB = spawnNaisys(hostBDir, { args: [`--hub=${HUB_URL}`] });
     await hostB.waitForOutput("AGENT STARTED", 30000);
     await hostB.waitForPrompt();
