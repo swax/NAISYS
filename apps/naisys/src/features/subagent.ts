@@ -7,6 +7,7 @@ import stringArgv from "string-argv";
 import table from "text-table";
 import { IAgentManager } from "../agent/agentManagerInterface.js";
 import { UserService } from "../agent/userService.js";
+import { subagentCmd } from "../command/commandDefs.js";
 import { RegistrableCommand } from "../command/commandRegistry.js";
 import { HubClient } from "../hub/hubClient.js";
 import { MailService } from "../mail/mail.js";
@@ -44,15 +45,16 @@ export function createSubagentService(
 
     switch (argv[0]) {
       case "help": {
-        let helpOutput = `subagent <command>
-  list: Lists your subagents and their status
-  start <name> "<task>": Starts agent by name with a description of the task to perform
-  stop <name>: Stops an agent by name`;
+        const subs = subagentCmd.subcommands!;
+        let helpOutput = `${subagentCmd.name} <command>
+  ${subs.list.usage}: ${subs.list.description}
+  ${subs.start.usage}: ${subs.start.description}
+  ${subs.stop.usage}: ${subs.stop.description}`;
 
         if (inputMode.isDebug()) {
-          helpOutput += `\n  !local: Lists agents running locally in this process`;
-          helpOutput += `\n  !switch <name>: Switch session to a local running agent`;
-          helpOutput += `\n  !peek <name>: Show the last 10 lines from a local agent's output`;
+          helpOutput += `\n  ${subs.local.usage}: ${subs.local.description}`;
+          helpOutput += `\n  ${subs.switch.usage}: ${subs.switch.description}`;
+          helpOutput += `\n  ${subs.peek.usage}: ${subs.peek.description}`;
         }
 
         helpOutput += `\n\n* Use ns-mail to communicate with subagents once started`;
@@ -386,8 +388,7 @@ export function createSubagentService(
   }
 
   const registrableCommand: RegistrableCommand = {
-    commandName: "ns-agent",
-    helpText: "Spawn and manage subagents",
+    command: subagentCmd,
     handleCommand,
   };
 

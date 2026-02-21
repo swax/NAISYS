@@ -11,6 +11,16 @@
  */
 
 import { AgentConfig } from "../agent/agentConfig.js";
+import {
+  commentCmd,
+  genImgCmd,
+  lynxCmd,
+  mailCmd,
+  sessionCmd,
+  subagentCmd,
+  usersCmd,
+  workspaceCmd,
+} from "../command/commandDefs.js";
 import { GlobalConfig } from "../globalConfig.js";
 import { getPlatformConfig } from "../services/shellPlatform.js";
 
@@ -20,47 +30,48 @@ export function createSystemMessage(
 ) {
   const platformConfig = getPlatformConfig();
 
-  let genImgCmd = "";
+  let genImgStr = "";
   if (agentConfig().imageModel) {
-    genImgCmd = `\n  ns-genimg "<description>" <filepath>: Generate an image with the description and save it to the given fully qualified path`;
+    genImgStr = `\n  ${genImgCmd.name} ${genImgCmd.usage}: ${genImgCmd.description}`;
   }
 
-  let llmailCmd = "";
+  let mailStr = "";
   if (agentConfig().mailEnabled) {
-    llmailCmd += `\n  ns-users: Display a list of users in the organization`;
-    llmailCmd += `\n  ns-mail: A private mail system for communicating with your team`;
+    mailStr += `\n  ${usersCmd.name}: ${usersCmd.description}`;
+    mailStr += `\n  ${mailCmd.name}: ${mailCmd.description}`;
   }
 
-  let lynxCmd = "";
+  let lynxStr = "";
   if (agentConfig().webEnabled) {
-    lynxCmd = `\n  ns-lynx: A context optimized web browser. Enter 'ns-lynx help' to learn how to use it`;
+    lynxStr = `\n  ${lynxCmd.name}: ${lynxCmd.description}`;
   }
 
-  let workspaceCmd = "";
+  let workspaceStr = "";
   if (agentConfig().workspacesEnabled) {
-    workspaceCmd = `\n  ns-workspace: Use to pin files to the session so the you always sees the latest file contents`;
+    workspaceStr = `\n  ${workspaceCmd.name}: ${workspaceCmd.description}`;
   }
 
   // Build ns-session command help based on enabled features
-  let sessionCmd = "";
+  const sessionSubs = sessionCmd.subcommands!;
+  let sessionCmdStr = "";
   const sessionSubcommands: string[] = [];
 
   sessionSubcommands.push(
-    `wait [<seconds>] - Wait <seconds> or indefinitely if not specified. Will auto-wake on new mail or on other events.`,
+    `${sessionSubs.wait.usage} - ${sessionSubs.wait.description}`,
   );
   if (globalConfig().compactSessionEnabled) {
     sessionSubcommands.push(
-      `compact "<note>" - Compact the session which will reset the token count. The note should contain your next goal, and important things you should remember.`,
+      `${sessionSubs.compact.usage} - ${sessionSubs.compact.description}`,
     );
   }
   if (agentConfig().completeSessionEnabled) {
     sessionSubcommands.push(
-      `complete - End the session. Make sure to notify who you need to with results before completing.`,
+      `${sessionSubs.complete.usage} - ${sessionSubs.complete.description}`,
     );
   }
 
   if (sessionSubcommands.length > 0) {
-    sessionCmd = `\n  ns-session: Session management. Subcommands:
+    sessionCmdStr = `\n  ns-session: Session management. Subcommands:
     ${sessionSubcommands.join("\n    ")}`;
   }
 
@@ -79,7 +90,7 @@ export function createSystemMessage(
       "\n  Be careful running multiple commands on a single prompt, and never assume the output of commands. Better to run one command at a time if you're not sure.";
   }
 
-  const subagentNote = `\n  ns-agent: Manually manage sub-agents.`;
+  const subagentStr = `\n  ${subagentCmd.name}: ${subagentCmd.description}`;
 
   // Fill out the templates in the agent prompt and stick it to the front of the system message
   // A lot of the stipulations in here are to prevent common LLM mistakes
@@ -115,8 +126,8 @@ ${platformConfig.displayName} Commands:
   Read files with cat. Write files with \`cat > filename << 'EOF'\``
   }
   Do not input notes after the prompt. Only valid commands.
-NAISYS Commands: (cannot be used with other commands on the same prompt)${llmailCmd}${subagentNote}${lynxCmd}${genImgCmd}${workspaceCmd}
-  ns-comment "<thought>": Any non-command output like thinking out loud, prefix with the 'ns-comment' command${sessionCmd}
+NAISYS Commands: (cannot be used with other commands on the same prompt)${mailStr}${subagentStr}${lynxStr}${genImgStr}${workspaceStr}
+  ${commentCmd.name} ${commentCmd.usage}: ${commentCmd.description}${sessionCmdStr}
 Tokens:
   The console log can only hold a certain number of tokens that is specified in the prompt.${tokenNote}`;
 

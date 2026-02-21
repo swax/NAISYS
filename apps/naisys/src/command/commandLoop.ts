@@ -75,7 +75,7 @@ export function createCommandLoop(
           `Supervisor available at http://localhost:${globalConfig().supervisorPort}/supervisor`,
         );
         output.comment(
-          `  Use 'ns-superadmin-password [password]' to set password then login as superadmin`,
+          `  Use 'ns-superadmin-password <password>' to set password then login as superadmin`,
         );
       }
 

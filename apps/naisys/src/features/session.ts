@@ -1,6 +1,7 @@
 import stringArgv from "string-argv";
 import { AgentConfig } from "../agent/agentConfig.js";
 import { UserService } from "../agent/userService.js";
+import { sessionCmd } from "../command/commandDefs.js";
 import {
   CommandResponse,
   NextCommandAction,
@@ -45,7 +46,7 @@ export function createSessionService(
         return handleCompact(args.slice(subcommand.length).trim());
 
       case "complete":
-        return handleComplete();
+        return handleComplete(args.slice(subcommand.length).trim());
 
       default:
         return `Unknown subcommand: ${subcommand}\n\n${getHelpText()}`;
@@ -53,20 +54,19 @@ export function createSessionService(
   }
 
   function getHelpText(): string {
-    let helpText = `ns-session <subcommand>
-  wait [<seconds>]    Wait for the given number of seconds or indefinitely if not specified.
-                      Session will wake on new mail or other events`;
+    const subs = sessionCmd.subcommands!;
+
+    let helpText = `${sessionCmd.name} <subcommand>
+  ${subs.wait.usage.padEnd(20)}${subs.wait.description}`;
 
     if (globalConfig().compactSessionEnabled) {
       helpText += `
-  compact "<note>"    Compact context and reset the session
-                      The note should contain your next goal and important things to remember`;
+  ${subs.compact.usage.padEnd(20)}${subs.compact.description}`;
     }
 
     if (agentConfig().completeSessionEnabled) {
       helpText += `
-  complete            End the session
-                      Make sure to notify who you need to with results before completing.`;
+  ${subs.complete.usage.padEnd(20)}${subs.complete.description}`;
     }
 
     return helpText;
@@ -77,14 +77,10 @@ export function createSessionService(
   ): string | CommandResponse {
     let waitSeconds = secondsArg ? parseInt(secondsArg) : 0;
 
-    // No wait implies indefinite wait, but for lead agents we want to put a cap on it to prevent system hangs
+    // We did support indefinite waiting, which you can do by returning a pauseSeconds value of -1
+    // The problem was all the agents waiting indefinitely would end up hanging the entire system
     if (!waitSeconds) {
-      const localUser = userService.getUserById(localUserId);
-      if (!localUser?.leadUserId) {
-        waitSeconds = globalConfig().shellCommand.maxTimeoutSeconds;
-      } else {
-        waitSeconds = -1; // Indefinite wait until wake event
-      }
+      return `Please specify the number of seconds to wait, for example: ns-session wait 60`;
     }
 
     return {
@@ -132,7 +128,10 @@ export function createSessionService(
    * Tried havin a user/message param on this command but even advanced LLMs were getting it confused.
    * Just tell it to notify whoever it needs to before running the command and keep this one simple.
    */
-  async function handleComplete(): Promise<string | CommandResponse> {
+  async function handleComplete(
+    args: string,
+  ): Promise<string | CommandResponse> {
+    const result = utilities.trimChars(args, '"');
     if (!agentConfig().completeSessionEnabled) {
       return 'The "ns-session complete" command is not enabled for you, please use wait command instead.';
     }
@@ -149,8 +148,7 @@ export function createSessionService(
   }
 
   const registrableCommand: RegistrableCommand = {
-    commandName: "ns-session",
-    helpText: "Manage session (compact, wait, or end)",
+    command: sessionCmd,
     handleCommand,
   };
 

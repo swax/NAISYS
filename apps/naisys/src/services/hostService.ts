@@ -1,7 +1,9 @@
 import { HostListSchema, HubEvents } from "@naisys/hub-protocol";
 import table from "text-table";
+import { hostCmd } from "../command/commandDefs.js";
 import { GlobalConfig } from "../globalConfig.js";
 import { HubClient } from "../hub/hubClient.js";
+import { Command } from "commander";
 
 interface HostEntry {
   hostName: string;
@@ -67,9 +69,7 @@ export function createHostService(
 
   return {
     // RegistrableCommand
-    commandName: "ns-host",
-    helpText: "List all known hosts and their status",
-    isDebug: true,
+    command: hostCmd,
     handleCommand,
 
     // HostService API

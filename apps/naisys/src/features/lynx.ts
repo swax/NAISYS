@@ -8,6 +8,7 @@ import * as https from "https";
 import * as os from "os";
 import stringArgv from "string-argv";
 import { AgentConfig } from "../agent/agentConfig.js";
+import { lynxCmd } from "../command/commandDefs.js";
 import { RegistrableCommand } from "../command/commandRegistry.js";
 import { GlobalConfig } from "../globalConfig.js";
 import { CostTracker } from "../llm/costTracker.js";
@@ -61,15 +62,17 @@ export function createLynxService(
     }
 
     switch (argv[0]) {
-      case "help":
-        return `ns-lynx <command> (results will be paginated to ${globalConfig().webTokenMax} tokens per page)
-  search <query>: Search google for the given query
-  open <url>: Opens the given url. Links are represented as numbers in brackets which prefix the word they are linking like [123]
-  follow <link number>: Opens the given link number. Link numbers work across all previous outputs
-  links <url> <page>: Lists only the links for the given url. Use the page number to get more links
-  more: Show the next page of content from the last URL opened
+      case "help": {
+        const subs = lynxCmd.subcommands!;
+        return `${lynxCmd.name} <command> (results will be paginated to ${globalConfig().webTokenMax} tokens per page)
+  ${subs.search.usage}: ${subs.search.description}
+  ${subs.open.usage}: ${subs.open.description}
+  ${subs.follow.usage}: ${subs.follow.description}
+  ${subs.links.usage}: ${subs.links.description}
+  ${subs.more.usage}: ${subs.more.description}
 
-*ns-lynx does not support input. Use ns-lynx or curl to call APIs directly*`;
+*${lynxCmd.name} does not support input. Use ${lynxCmd.name} or curl to call APIs directly*`;
+      }
       case "search": {
         const query = argv.slice(1).join(" ");
 
@@ -648,8 +651,7 @@ Final Merged Content:
   }
 
   const registrableCommand: RegistrableCommand = {
-    commandName: "ns-lynx",
-    helpText: "Browse the web",
+    command: lynxCmd,
     handleCommand,
   };
 

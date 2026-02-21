@@ -1,6 +1,7 @@
 import * as fs from "fs";
 import path from "path";
 import stringArgv from "string-argv";
+import { workspaceCmd } from "../command/commandDefs.js";
 import { RegistrableCommand } from "../command/commandRegistry.js";
 import { ShellWrapper } from "../command/shellWrapper.js";
 import * as utilities from "../utils/utilities.js";
@@ -23,12 +24,14 @@ export function createWorkspacesFeature(shellWrapper: ShellWrapper) {
         return listFiles();
       case "clear":
         return _clearFiles();
-      default:
-        return `Usage: ns-workspace <add|remove|list|clear> [filepath]
-  add <filepath>    - Add a file to the workspace (contents shown in context)
-  remove <filepath> - Remove a file from the workspace
-  list              - List all tracked files
-  clear             - Remove all files from the workspace`;
+      default: {
+        const subs = workspaceCmd.subcommands!;
+        return `Usage: ${workspaceCmd.name} <add|remove|list|clear> [filepath]
+  ${subs.add.usage.padEnd(20)}${subs.add.description}
+  ${subs.remove.usage.padEnd(20)}${subs.remove.description}
+  ${subs.list.usage.padEnd(20)}${subs.list.description}
+  ${subs.clear.usage.padEnd(20)}${subs.clear.description}`;
+      }
     }
   }
 
@@ -121,8 +124,7 @@ export function createWorkspacesFeature(shellWrapper: ShellWrapper) {
   }
 
   const registrableCommand: RegistrableCommand = {
-    commandName: "ns-workspace",
-    helpText: "Manage files in the workspace for context inclusion",
+    command: workspaceCmd,
     handleCommand,
   };
 
