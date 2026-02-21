@@ -49,18 +49,21 @@ model costs {
 }
 
 model mail_messages {
-  id           Int               @id @default(autoincrement())
-  from_user_id Int?
-  host_id      Int? // Sender's host
-  subject      String
-  body         String
-  created_at   DateTime          @default(now())
-  from_user    users?            @relation("mail_messages_from_user", fields: [from_user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  host         hosts?            @relation(fields: [host_id], references: [id])
-  recipients   mail_recipients[]
+  id              Int               @id @default(autoincrement())
+  from_user_id    Int?
+  host_id         Int? // Sender's host
+  kind            String            @default("mail")
+  participant_ids String? // Sorted comma-joined user IDs of all participants (sender + recipients)
+  subject         String
+  body            String
+  created_at      DateTime          @default(now())
+  from_user       users?            @relation("mail_messages_from_user", fields: [from_user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  host            hosts?            @relation(fields: [host_id], references: [id])
+  recipients      mail_recipients[]
 
   @@index([from_user_id], map: "idx_mail_messages_from_user_id") // WHERE from_user_id in sent messages filter
   @@index([created_at(sort: Desc)], map: "idx_mail_messages_created_at_desc") // ORDER BY created_at DESC in listMessages and searchMessages
+  @@index([participant_ids], map: "idx_mail_messages_participant_ids") // WHERE participant_ids in chat recent filtering
 }
 
 model mail_recipients {

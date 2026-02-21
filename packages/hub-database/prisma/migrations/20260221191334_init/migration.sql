@@ -40,6 +40,8 @@ CREATE TABLE "mail_messages" (
     "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     "from_user_id" INTEGER,
     "host_id" INTEGER,
+    "kind" TEXT NOT NULL DEFAULT 'mail',
+    "participant_ids" TEXT,
     "subject" TEXT NOT NULL,
     "body" TEXT NOT NULL,
     "created_at" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -67,7 +69,6 @@ CREATE TABLE "users" (
     "username" TEXT NOT NULL,
     "title" TEXT NOT NULL,
     "api_key" TEXT,
-    "agent_path" TEXT,
     "lead_user_id" INTEGER,
     "config" TEXT NOT NULL DEFAULT '{}',
     "created_at" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -134,23 +135,25 @@ CREATE TABLE "hosts" (
 );
 
 -- CreateTable
-CREATE TABLE "supervisor_users" (
-    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-    "uuid" TEXT NOT NULL,
-    "username" TEXT NOT NULL,
-    "password_hash" TEXT NOT NULL,
-    "session_token_hash" TEXT,
-    "session_expires_at" DATETIME,
-    "created_at" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updated_at" DATETIME NOT NULL
-);
-
--- CreateTable
 CREATE TABLE "variables" (
     "key" TEXT NOT NULL PRIMARY KEY,
     "value" TEXT NOT NULL,
     "created_by" TEXT NOT NULL,
     "updated_by" TEXT NOT NULL,
+    "created_at" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" DATETIME NOT NULL
+);
+
+-- CreateTable
+CREATE TABLE "models" (
+    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "key" TEXT NOT NULL,
+    "type" TEXT NOT NULL,
+    "label" TEXT NOT NULL,
+    "version_name" TEXT NOT NULL,
+    "is_builtin" BOOLEAN NOT NULL DEFAULT false,
+    "is_custom" BOOLEAN NOT NULL DEFAULT false,
+    "meta" TEXT NOT NULL,
     "created_at" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" DATETIME NOT NULL
 );
@@ -172,6 +175,9 @@ CREATE INDEX "idx_mail_messages_from_user_id" ON "mail_messages"("from_user_id")
 
 -- CreateIndex
 CREATE INDEX "idx_mail_messages_created_at_desc" ON "mail_messages"("created_at" DESC);
+
+-- CreateIndex
+CREATE INDEX "idx_mail_messages_participant_ids" ON "mail_messages"("participant_ids");
 
 -- CreateIndex
 CREATE INDEX "idx_mail_recipients_message_user" ON "mail_recipients"("message_id", "user_id");
@@ -201,7 +207,4 @@ CREATE UNIQUE INDEX "unq_schema_version_version" ON "schema_version"("version");
 CREATE UNIQUE INDEX "unq_hosts_name" ON "hosts"("name");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "supervisor_users_uuid_key" ON "supervisor_users"("uuid");
-
--- CreateIndex
-CREATE UNIQUE INDEX "supervisor_users_username_key" ON "supervisor_users"("username");
+CREATE UNIQUE INDEX "models_key_key" ON "models"("key");

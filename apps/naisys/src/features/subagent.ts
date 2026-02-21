@@ -294,8 +294,9 @@ export function createSubagentService(
     subagent: Subagent,
     taskDescription: string,
   ) {
+    const recipients = userService.resolveUsernames(subagent.agentName);
     return await mailService
-      .sendMessage([subagent.agentName], "Your Task", taskDescription)
+      .sendMessage(recipients, "Your Task", taskDescription)
       .catch(async () => {
         await output.commentAndLog(
           `Failed to send initial task email to subagent ${subagent.agentName}`,

@@ -1,3 +1,4 @@
+import { createChatService } from "../chat/chat.js";
 import { createCommandHandler } from "../command/commandHandler.js";
 import { createCommandLoop } from "../command/commandLoop.js";
 import { createCommandProtection } from "../command/commandProtection.js";
@@ -126,11 +127,15 @@ export async function createAgentRuntime(
     ? createMailDisplayService(hubClient, localUserId)
     : null;
   const mailService = createMailService(
-    globalConfig,
-    agentConfig,
     hubClient,
     userService,
     mailDisplayService,
+    localUserId,
+    promptNotification,
+  );
+  const chatService = createChatService(
+    hubClient,
+    userService,
     localUserId,
     promptNotification,
   );
@@ -201,6 +206,7 @@ export async function createAgentRuntime(
     genimg,
     subagentService,
     mailService,
+    chatService,
     costDisplayService,
     sessionService,
     workspaces,
@@ -239,6 +245,7 @@ export async function createAgentRuntime(
     promptNotification,
     localUserId,
     mailService,
+    chatService,
     hubClient,
   );
 
@@ -261,6 +268,7 @@ export async function createAgentRuntime(
       logService.cleanup();
       subagentService.cleanup(reason);
       mailService.cleanup();
+      chatService.cleanup();
     },
   };
 }

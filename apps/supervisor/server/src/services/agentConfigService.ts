@@ -116,6 +116,8 @@ function canonicalConfigOrder(
   // Features
   if (config.mailEnabled !== undefined)
     ordered.mailEnabled = config.mailEnabled;
+  if (config.chatEnabled !== undefined)
+    ordered.chatEnabled = config.chatEnabled;
   if (config.webEnabled !== undefined) ordered.webEnabled = config.webEnabled;
   if (config.completeSessionEnabled !== undefined)
     ordered.completeSessionEnabled = config.completeSessionEnabled;

@@ -56,6 +56,10 @@ export const AgentConfigFileSchema = z.object({
     .describe(
       "Show mail commands to agent. Sub-agent mail still works behind the scenes when disabled",
     ),
+  chatEnabled: z
+    .boolean()
+    .optional()
+    .describe("Show chat commands to agent"),
   webEnabled: z.boolean().optional().describe("Allow agent to browse the web"),
   completeSessionEnabled: z
     .boolean()

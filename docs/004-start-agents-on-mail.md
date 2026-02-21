@@ -33,7 +33,7 @@ This document outlines a significant architectural change to simplify agent life
 ### Wake on Message
 
 - Agents can be configured with `wakeOnMessage: true`
-- `promptBuilder.ts:getInput()` polls `llmail.getUnreadThreads()` every 5 seconds
+- `promptBuilder.ts:getInput()` polls `llmail.getUnreadMessages()` every 5 seconds
 - If unread mail found, aborts the current pause/wait
 - Only works for already-running agents that are paused (distinct from auto-start which starts non-running agents)
 
