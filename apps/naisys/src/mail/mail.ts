@@ -8,6 +8,7 @@ import {
 import stringArgv from "string-argv";
 import { AgentConfig } from "../agent/agentConfig.js";
 import { UserService } from "../agent/userService.js";
+import { mailCmd } from "../command/commandDefs.js";
 import {
   CommandResponse,
   NextCommandAction,
@@ -46,14 +47,15 @@ export function createMailService(
 
     switch (argv[0]) {
       case "help": {
-        const lines = [`ns-mail <command>`];
-        lines.push(`  send "<users>" "<subject>" "<msg>" Send a message.`);
+        const subs = mailCmd.subcommands!;
+        const lines = [`${mailCmd.name} <command>`];
+        lines.push(`  ${subs.send.usage.padEnd(40)}${subs.send.description}`);
         if (hubClient) {
           lines.push(
-            `  list [received|sent]               List recent messages (non-archived, * = unread)`,
-            `  read <id>                          Read a message (marks as read)`,
-            `  archive <ids>                      Archive messages (comma-separated)`,
-            `  search <terms> [-archived] [-subject] Search messages`,
+            `  ${subs.list.usage.padEnd(40)}${subs.list.description}`,
+            `  ${subs.read.usage.padEnd(40)}${subs.read.description}`,
+            `  ${subs.archive.usage.padEnd(40)}${subs.archive.description}`,
+            `  ${subs.search.usage.padEnd(40)}${subs.search.description}`,
           );
         }
         return lines.join("\n");
@@ -330,8 +332,7 @@ export function createMailService(
   }
 
   const registrableCommand: RegistrableCommand = {
-    commandName: "ns-mail",
-    helpText: "Send and receive messages",
+    command: mailCmd,
     handleCommand,
   };
 

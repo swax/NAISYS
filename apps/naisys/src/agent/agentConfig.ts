@@ -4,6 +4,7 @@ import {
   sanitizeSpendLimit,
 } from "@naisys/common";
 import table from "text-table";
+import { agentConfigCmd } from "../command/commandDefs.js";
 import { RegistrableCommand } from "../command/commandRegistry.js";
 import { GlobalConfig } from "../globalConfig.js";
 import { valueFromString } from "../utils/utilities.js";
@@ -169,10 +170,7 @@ export function createAgentConfig(
   }
 
   const registrableCommand: RegistrableCommand = {
-    commandName: "ns-agent-config",
-    helpText:
-      "View or update agent config: ns-agent-config [name] [value] (update only lasts for current session)",
-    isDebug: true,
+    command: agentConfigCmd,
     handleCommand,
   };
 

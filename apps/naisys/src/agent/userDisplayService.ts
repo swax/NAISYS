@@ -1,4 +1,5 @@
 import table from "text-table";
+import { usersCmd } from "../command/commandDefs.js";
 import { RegistrableCommand } from "../command/commandRegistry.js";
 import { InputModeService } from "../utils/inputMode.js";
 import { UserService } from "./userService.js";
@@ -118,8 +119,7 @@ export function createUserDisplayService(
   }
 
   const registrableCommand: RegistrableCommand = {
-    commandName: "ns-users",
-    helpText: "List all users and their status",
+    command: usersCmd,
     handleCommand,
   };
 

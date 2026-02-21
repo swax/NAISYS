@@ -5,6 +5,7 @@ import { ContextManager } from "../llm/contextManager.js";
 import { LlmRole } from "../llm/llmDtos.js";
 import { InputModeService } from "../utils/inputMode.js";
 import { OutputService } from "../utils/output.js";
+import { contextCmd, superadminPasswordCmd, talkCmd } from "./commandDefs.js";
 import { RegistrableCommand } from "./commandRegistry.js";
 
 export function createDebugCommands(
@@ -43,9 +44,7 @@ export function createDebugCommands(
   }
 
   const nsContext: RegistrableCommand = {
-    commandName: "ns-context",
-    helpText: "Print the current LLM context",
-    isDebug: true,
+    command: contextCmd,
     handleCommand: () => {
       output.comment("#####################");
       output.comment(printContext());
@@ -55,9 +54,7 @@ export function createDebugCommands(
   };
 
   const nsTalk: RegistrableCommand = {
-    commandName: "ns-talk",
-    helpText: "Send a message to the agent",
-    isDebug: true,
+    command: talkCmd,
     handleCommand: async (cmdArgs) => {
       if (inputMode.isLLM()) {
         return "Message sent!";
@@ -78,10 +75,7 @@ export function createDebugCommands(
   const supervisorPort = globalConfig.globalConfig().supervisorPort;
   if (supervisorPort) {
     const nsAdminPw: RegistrableCommand = {
-      commandName: "ns-superadmin-password",
-      helpText:
-        "Change the superadmin's password. Usage: ns-superadmin-password [password]",
-      isDebug: true,
+      command: superadminPasswordCmd,
       handleCommand: (cmdArgs) => {
         const serverUrl = import.meta.resolve("@naisys-supervisor/server");
         const serverPath = fileURLToPath(serverUrl);

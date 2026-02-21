@@ -1,3 +1,4 @@
+import { hubCmd } from "../command/commandDefs.js";
 import { PromptNotificationService } from "../utils/promptNotificationService.js";
 import { HubClientConfig } from "./hubClientConfig.js";
 import { HubClientLog } from "./hubClientLog.js";
@@ -180,9 +181,7 @@ export function createHubClient(
 
   return {
     // RegistrableCommand
-    commandName: "ns-hub",
-    helpText: "Show hub connection status",
-    isDebug: true,
+    command: hubCmd,
     handleCommand: () =>
       `${hubUrl} - ${isConnected() ? "Connected" : "Disconnected"}`,
 

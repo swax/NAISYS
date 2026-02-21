@@ -1,5 +1,6 @@
 import stringArgv from "string-argv";
 import { AgentConfig } from "../agent/agentConfig.js";
+import { costCmd } from "../command/commandDefs.js";
 import { RegistrableCommand } from "../command/commandRegistry.js";
 import { GlobalConfig } from "../globalConfig.js";
 import { OutputService } from "../utils/output.js";
@@ -254,9 +255,7 @@ export function createCostDisplayService(
   }
 
   const registrableCommand: RegistrableCommand = {
-    commandName: "ns-cost",
-    helpText: "Show token usage and cost tracking",
-    isDebug: true,
+    command: costCmd,
     handleCommand,
   };
 

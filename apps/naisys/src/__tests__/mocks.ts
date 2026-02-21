@@ -1,6 +1,15 @@
 import { jest, test } from "@jest/globals";
 import { type HubDatabaseService, PrismaClient } from "@naisys/hub-database";
 import { AgentConfig } from "../agent/agentConfig.js";
+import {
+  agentConfigCmd,
+  genImgCmd,
+  lynxCmd,
+  mailCmd,
+  sessionCmd,
+  subagentCmd,
+  workspaceCmd,
+} from "../command/commandDefs.js";
 import { CommandProtection } from "../command/commandProtection.js";
 import { PromptBuilder } from "../command/promptBuilder.js";
 import { ShellCommand } from "../command/shellCommand.js";
@@ -73,14 +82,14 @@ export function createMockShellCommand() {
 
 export function createMockGenImg() {
   return {
-    commandName: "ns-genimg",
+    command: genImgCmd,
     handleCommand: jest.fn(() => ""),
   } satisfies GenImg;
 }
 
 export function createMockSubagent() {
   const subagent: SubagentService = {
-    commandName: "ns-agent",
+    command: subagentCmd,
     handleCommand: jest.fn(() => ""),
     cleanup: jest.fn(() => Promise.resolve()),
     raiseSwitchEvent: jest.fn(),
@@ -91,7 +100,7 @@ export function createMockSubagent() {
 
 export function createMockMailService() {
   const mailService: MailService = {
-    commandName: "ns-mail",
+    command: mailCmd,
     handleCommand: jest.fn(() => ""),
     getUnreadThreads: jest.fn(() => Promise.resolve([])),
     sendMessage: jest.fn(() => Promise.resolve("")),
@@ -106,7 +115,7 @@ export function createMockMailService() {
 
 export function createMockLynxService() {
   const lynxService: LynxService = {
-    commandName: "ns-lynx",
+    command: lynxCmd,
     handleCommand: jest.fn(() => ""),
     clear: jest.fn(),
   };
@@ -125,7 +134,7 @@ export function createMockSessionCompactor() {
 
 export function createMockSessionService() {
   const sessionService: SessionService = {
-    commandName: "ns-session",
+    command: sessionCmd,
     handleCommand: jest.fn(() => ""),
   };
 
@@ -155,7 +164,7 @@ export function createMockContextManager() {
 
 export function createMockWorkspacesFeature() {
   const workspaces: WorkspacesFeature = {
-    commandName: "ns-workspace",
+    command: workspaceCmd,
     handleCommand: jest.fn(() => ""),
     getContext: jest.fn(() => ""),
     listFiles: jest.fn(() => ""),
@@ -246,9 +255,7 @@ export function createMockGlobalConfig(): GlobalConfig {
 
 export function createMockAgentConfig(): AgentConfig {
   return {
-    commandName: "ns-agent-config",
-    helpText: "View or update agent config: ns-agent-config [name] [value]",
-    isDebug: true,
+    command: agentConfigCmd,
     handleCommand: jest.fn(() => ""),
     reloadAgentConfig: jest.fn(async () => {}),
     updateConfigField: jest.fn(async () => {}),

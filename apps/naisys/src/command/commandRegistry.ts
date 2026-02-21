@@ -4,6 +4,7 @@
  */
 
 import { InputModeService } from "../utils/inputMode.js";
+import { CommandDef, exitCmd, helpCmd } from "./commandDefs.js";
 
 export enum NextCommandAction {
   Continue,
@@ -33,14 +34,7 @@ export interface CommandResponse {
  * The handler returns either a string or CommandResponse to be appended to context.
  */
 export interface RegistrableCommand {
-  /** The command name, e.g., "ns-lynx" */
-  commandName: string;
-
-  /** Brief description shown in ns-help */
-  helpText?: string;
-
-  /** If true, command is shown in debug section of ns-help */
-  isDebug?: boolean;
+  command: CommandDef;
 
   /** Handler function that processes the command and returns a response */
   handleCommand: (
@@ -60,18 +54,19 @@ export function createCommandRegistry(
 
   // Add built-in ns-help command
   const helpCommand: RegistrableCommand = {
-    commandName: "ns-help",
-    helpText: "Show available commands",
+    command: helpCmd,
     handleCommand: () => {
       const allCommands = Array.from(registry.values()).sort((a, b) =>
-        a.commandName.localeCompare(b.commandName),
+        a.command.name.localeCompare(b.command.name),
       );
 
-      const mainCommands = allCommands.filter((c) => !c.isDebug);
-      const debugCommands = allCommands.filter((c) => c.isDebug);
+      const mainCommands = allCommands.filter((c) => !c.command.isDebug);
+      const debugCommands = allCommands.filter((c) => c.command.isDebug);
 
       const formatTable = (cmds: RegistrableCommand[]) => {
-        const rows = [...cmds.map((c) => [c.commandName, c.helpText || ""])];
+        const rows = [
+          ...cmds.map((c) => [c.command.name, c.command.description || ""]),
+        ];
         const colWidths = rows[0].map((_, i) =>
           Math.max(...rows.map((r) => r[i].length)),
         );
@@ -90,12 +85,10 @@ export function createCommandRegistry(
       return output;
     },
   };
-  registry.set(helpCommand.commandName, helpCommand);
+  registry.set(helpCommand.command.name, helpCommand);
 
   const exitCommand: RegistrableCommand = {
-    commandName: "exit",
-    helpText: "Exit the application",
-    isDebug: true,
+    command: exitCmd,
     handleCommand: (): CommandResponse => ({
       content: "",
       nextCommandResponse: {
@@ -103,13 +96,15 @@ export function createCommandRegistry(
       },
     }),
   };
-  registry.set(exitCommand.commandName, exitCommand);
+  registry.set(exitCommand.command.name, exitCommand);
 
   for (const command of commands) {
-    if (registry.has(command.commandName)) {
-      throw new Error(`Duplicate command registration: ${command.commandName}`);
+    if (registry.has(command.command.name)) {
+      throw new Error(
+        `Duplicate command registration: ${command.command.name}`,
+      );
     }
-    registry.set(command.commandName, command);
+    registry.set(command.command.name, command);
   }
 
   function get(commandName: string): RegistrableCommand | undefined {
