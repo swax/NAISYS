@@ -101,49 +101,73 @@ export async function createHubModelsService(
   );
 }
 
-/** Seeds models table from built-in models + any YAML custom models (one-time). */
+/** Seeds models table from built-in models + any YAML custom models.
+ *  Built-in models are upserted on every startup unless the user has customized them.
+ *  YAML custom models are only imported on first run (empty table). */
 async function seedModels(
   usingHubDatabase: HubDatabaseService["usingHubDatabase"],
   logService: HubServerLog,
 ) {
   await usingHubDatabase(async (hubDb) => {
-    const count = await hubDb.models.count();
-    if (count > 0) {
-      logService.log(`[Hub:Models] Models already seeded`);
-      return;
-    }
-    // Start with all built-in models
-    const rows: ModelDbFields[] = [
+    const existingRows = (await hubDb.models.findMany()) as ModelDbRow[];
+    const isFirstRun = existingRows.length === 0;
+
+    // Upsert built-in models that haven't been customized
+    const builtInFields: ModelDbFields[] = [
       ...builtInLlmModels.map((m) => llmModelToDbFields(m, true, false)),
       ...builtInImageModels.map((m) => imageModelToDbFields(m, true, false)),
     ];
 
-    // Merge custom models from YAML (migration from file-based storage)
-    const custom = loadCustomModels(process.env.NAISYS_FOLDER || "");
-
-    for (const m of custom.llmModels ?? []) {
-      const isBuiltin = builtInLlmModels.some((b) => b.key === m.key);
-      const fields = llmModelToDbFields(m, isBuiltin, true);
-      const idx = rows.findIndex((r) => r.key === m.key);
-      if (idx >= 0) {
-        rows[idx] = fields; // override built-in
-      } else {
-        rows.push(fields); // new custom model
+    let upsertCount = 0;
+    for (const fields of builtInFields) {
+      const existing = existingRows.find((r) => r.key === fields.key);
+      if (existing?.is_custom) {
+        // User has customized this built-in model, don't overwrite
+        continue;
       }
+      if (existing) {
+        await hubDb.models.update({ where: { key: fields.key }, data: fields });
+      } else {
+        await hubDb.models.create({ data: fields });
+      }
+      upsertCount++;
     }
 
-    for (const m of custom.imageModels ?? []) {
-      const isBuiltin = builtInImageModels.some((b) => b.key === m.key);
-      const fields = imageModelToDbFields(m, isBuiltin, true);
-      const idx = rows.findIndex((r) => r.key === m.key);
-      if (idx >= 0) {
-        rows[idx] = fields;
-      } else {
-        rows.push(fields);
-      }
-    }
+    // Import YAML custom models only on first run (migration from file-based storage)
+    if (isFirstRun) {
+      const custom = loadCustomModels(process.env.NAISYS_FOLDER || "");
+      const customRows: ModelDbFields[] = [];
 
-    await hubDb.models.createMany({ data: rows });
-    logService.log(`[Hub:Models] Seeded ${rows.length} models into database`);
+      for (const m of custom.llmModels ?? []) {
+        const isBuiltin = builtInLlmModels.some((b) => b.key === m.key);
+        const fields = llmModelToDbFields(m, isBuiltin, true);
+        if (isBuiltin) {
+          // Override the built-in row we just inserted
+          await hubDb.models.update({ where: { key: m.key }, data: fields });
+        } else {
+          customRows.push(fields);
+        }
+      }
+
+      for (const m of custom.imageModels ?? []) {
+        const isBuiltin = builtInImageModels.some((b) => b.key === m.key);
+        const fields = imageModelToDbFields(m, isBuiltin, true);
+        if (isBuiltin) {
+          await hubDb.models.update({ where: { key: m.key }, data: fields });
+        } else {
+          customRows.push(fields);
+        }
+      }
+
+      if (customRows.length > 0) {
+        await hubDb.models.createMany({ data: customRows });
+      }
+
+      logService.log(
+        `[Hub:Models] First run: imported ${(custom.llmModels?.length ?? 0) + (custom.imageModels?.length ?? 0)} custom models from YAML`,
+      );
+    } else {
+      logService.log(`[Hub:Models] Models already seeded`);
+    }
   });
 }

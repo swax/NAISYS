@@ -4,7 +4,7 @@ import {
   LogWriteEntry,
 } from "@naisys/hub-protocol";
 import { HubClient } from "../hub/hubClient.js";
-import { LlmMessage, LlmRole } from "../llm/llmDtos.js";
+import { LlmMessage, LlmRole, getTextContent } from "../llm/llmDtos.js";
 import { RunService } from "./runService.js";
 
 export function createLogService(
@@ -32,7 +32,7 @@ export function createLogService(
         role: toSimpleRole(message.role),
         source: message.source?.toString() || "",
         type: message.type || "",
-        message: message.content,
+        message: getTextContent(message.content),
         createdAt: new Date().toISOString(),
       });
     }

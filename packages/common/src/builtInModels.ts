@@ -48,6 +48,7 @@ export const builtInLlmModels: LlmModel[] = [
     outputCost: 15,
     cacheWriteCost: 0.75,
     cacheReadCost: 0.75,
+    supportsVision: true,
   },
   {
     key: "grok4fast",
@@ -61,6 +62,7 @@ export const builtInLlmModels: LlmModel[] = [
     outputCost: 0.5,
     cacheWriteCost: 0.05,
     cacheReadCost: 0.05,
+    supportsVision: true,
   },
   // OpenAI Models
   // https://openai.com/api/pricing/
@@ -75,6 +77,7 @@ export const builtInLlmModels: LlmModel[] = [
     outputCost: 10.0,
     cacheWriteCost: 0.125,
     cacheReadCost: 0.125,
+    supportsVision: true,
   },
   {
     key: "gpt5mini",
@@ -87,6 +90,7 @@ export const builtInLlmModels: LlmModel[] = [
     outputCost: 2.0,
     cacheWriteCost: 0.025,
     cacheReadCost: 0.025,
+    supportsVision: true,
   },
   {
     key: "gpt5nano",
@@ -99,6 +103,7 @@ export const builtInLlmModels: LlmModel[] = [
     outputCost: 0.4,
     cacheWriteCost: 0.005,
     cacheReadCost: 0.005,
+    supportsVision: true,
   },
   // Google Models
   {
@@ -112,6 +117,7 @@ export const builtInLlmModels: LlmModel[] = [
     outputCost: 12.0,
     cacheWriteCost: 0.2,
     cacheReadCost: 0.2,
+    supportsVision: true,
   },
   {
     key: "gemini2.5pro",
@@ -124,6 +130,7 @@ export const builtInLlmModels: LlmModel[] = [
     outputCost: 10.0,
     cacheWriteCost: 0.125,
     cacheReadCost: 0.125,
+    supportsVision: true,
   },
   {
     key: "gemini2.5flash",
@@ -136,6 +143,7 @@ export const builtInLlmModels: LlmModel[] = [
     outputCost: 2.5,
     cacheWriteCost: 0.03,
     cacheReadCost: 0.03,
+    supportsVision: true,
   },
   {
     key: "gemini2.5flashlite",
@@ -148,6 +156,7 @@ export const builtInLlmModels: LlmModel[] = [
     outputCost: 0.4,
     cacheWriteCost: 0.01,
     cacheReadCost: 0.01,
+    supportsVision: true,
   },
   // Anthropic Models
   {
@@ -161,6 +170,7 @@ export const builtInLlmModels: LlmModel[] = [
     outputCost: 75,
     cacheWriteCost: 18.75,
     cacheReadCost: 1.5,
+    supportsVision: true,
   },
   {
     key: "claude4sonnet",
@@ -173,6 +183,7 @@ export const builtInLlmModels: LlmModel[] = [
     outputCost: 15,
     cacheWriteCost: 3.75,
     cacheReadCost: 0.3,
+    supportsVision: true,
   },
   {
     key: "claude4haiku",
@@ -185,6 +196,7 @@ export const builtInLlmModels: LlmModel[] = [
     outputCost: 5,
     cacheWriteCost: 1.25,
     cacheReadCost: 0.1,
+    supportsVision: true,
   },
 ];
 

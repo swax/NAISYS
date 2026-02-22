@@ -195,6 +195,7 @@ export function createCommandHandler(
       newLinePos > 0 &&
       (nextInput.startsWith("ns-comment ") ||
         nextInput.startsWith("ns-genimg ") ||
+        nextInput.startsWith("ns-look ") ||
         nextInput.startsWith("ns-session "))
     ) {
       input = nextInput.slice(0, newLinePos);

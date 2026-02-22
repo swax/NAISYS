@@ -8,6 +8,7 @@ import { createPromptBuilder } from "../command/promptBuilder.js";
 import { createShellCommand } from "../command/shellCommand.js";
 import { createShellWrapper } from "../command/shellWrapper.js";
 import { createGenImg } from "../features/genImg.js";
+import { createLookService } from "../features/look.js";
 import { createLynxService } from "../features/lynx.js";
 import { createSessionService } from "../features/session.js";
 import { createSubagentService } from "../features/subagent.js";
@@ -75,7 +76,7 @@ export async function createAgentRuntime(
 
   // LLM
   const inputMode = createInputMode();
-  const systemMessage = createSystemMessage(globalConfig, agentConfig);
+  const systemMessage = createSystemMessage(globalConfig, agentConfig, modelService);
   const tools = createCommandTools(agentConfig);
   const costTracker = createCostTracker(
     globalConfig,
@@ -115,6 +116,7 @@ export async function createAgentRuntime(
   );
 
   // Features
+  const lookService = createLookService(agentConfig, modelService, contextManager, llmService, shellWrapper);
   const genimg = createGenImg(
     globalConfig,
     agentConfig,
@@ -197,6 +199,7 @@ export async function createAgentRuntime(
   const commandRegistry = createCommandRegistry(inputMode, [
     lynxService,
     genimg,
+    lookService,
     subagentService,
     mailService,
     chatService,

@@ -16,9 +16,37 @@ export enum ContentSource {
   LLM = "llm",
 }
 
+// --- Content block types for multi-modal messages ---
+
+export interface TextBlock {
+  type: "text";
+  text: string;
+}
+
+export interface ImageBlock {
+  type: "image";
+  base64: string;
+  mimeType: string;
+}
+
+export type ContentBlock = TextBlock | ImageBlock;
+
+/** Rough token estimate for an image in context */
+export const IMAGE_TOKEN_ESTIMATE = 1000;
+
+/** Extract text content from a message's content field. Returns "[Image]" placeholder for image blocks. */
+export function getTextContent(content: string | ContentBlock[]): string {
+  if (typeof content === "string") {
+    return content;
+  }
+  return content
+    .map((block) => (block.type === "text" ? block.text : "[Image]"))
+    .join("\n");
+}
+
 export interface LlmMessage {
   role: LlmRole;
-  content: string;
+  content: string | ContentBlock[];
   /** this is like a sub-type on the source/role, like the type of model, or the type of output like an error */
   type?: LlmMessageType;
   source?: ContentSource;

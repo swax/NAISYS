@@ -1,7 +1,7 @@
 import { AgentConfig } from "../agent/agentConfig.js";
 import { OutputService } from "../utils/output.js";
 import { ContextManager } from "./contextManager.js";
-import { ContentSource, LlmRole } from "./llmDtos.js";
+import { ContentSource, LlmRole, getTextContent } from "./llmDtos.js";
 import { LLMService } from "./llmService.js";
 
 export function createSessionCompactor(
@@ -38,7 +38,7 @@ and how to do it.`;
       .getCombinedMessages()
       .map((m) => {
         const suffix = m.source == ContentSource.ConsolePrompt ? "" : "\n";
-        return m.content + suffix;
+        return getTextContent(m.content) + suffix;
       })
       .join("");
 
