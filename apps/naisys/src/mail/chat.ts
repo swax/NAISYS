@@ -2,6 +2,8 @@ import {
   HubEvents,
   MailListMessageData,
   MailListResponse,
+  MailMarkReadResponse,
+  MailMessageData,
   MailReceivedPush,
   MailSendResponse,
   MailUnreadResponse,
@@ -209,57 +211,72 @@ export function createChatService(
     return `${prefix}${dateStr}: ${sender}: ${m.body ?? ""}`;
   }
 
-  // Track message IDs that have been notified but not yet processed
-  const notifiedMessageIds = new Set<number>();
+  /** Format a MailMessageData (from MAIL_UNREAD) as a chat line for notifications */
+  function formatUnreadChatLine(m: MailMessageData): string {
+    const date = new Date(m.createdAt);
+    const MM = String(date.getMonth() + 1).padStart(2, "0");
+    const DD = String(date.getDate()).padStart(2, "0");
+    const HH = String(date.getHours()).padStart(2, "0");
+    const mm = String(date.getMinutes()).padStart(2, "0");
+    const dateStr = `${MM}/${DD} ${HH}:${mm}`;
+
+    const isGroup = m.recipientUsernames.length > 1;
+    let sender: string;
+    if (isGroup) {
+      const participants = [m.fromUsername, ...m.recipientUsernames]
+        .sort()
+        .join(",");
+      sender = `[${participants}] ${m.fromUsername}`;
+    } else {
+      sender = m.fromUsername;
+    }
+
+    return `* ${dateStr}: ${sender}: ${m.body}`;
+  }
+
+  /** Highest message ID we've seen from MAIL_UNREAD, used as cursor */
+  let lastUnreadId = 0;
+
+  async function markMessagesRead(messageIds: number[]): Promise<void> {
+    if (!hubClient || !messageIds.length) return;
+
+    await hubClient.sendRequest<MailMarkReadResponse>(
+      HubEvents.MAIL_MARK_READ,
+      { userId: localUserId, messageIds },
+    );
+  }
 
   async function checkAndNotify(): Promise<void> {
     if (!hubClient) return;
 
     const response = await hubClient.sendRequest<MailUnreadResponse>(
       HubEvents.MAIL_UNREAD,
-      { userId: localUserId, kind: "chat" },
+      { userId: localUserId, kind: "chat", afterId: lastUnreadId },
     );
 
-    if (!response.success || !response.messageIds) return;
+    if (!response.success || !response.messages?.length) return;
 
-    const newIds = response.messageIds.filter(
-      (id) => !notifiedMessageIds.has(id),
-    );
-    if (!newIds.length) return;
+    const messages = response.messages;
 
-    newIds.forEach((id) => notifiedMessageIds.add(id));
+    // Advance cursor to max returned ID
+    for (const m of messages) {
+      if (m.id > lastUnreadId) {
+        lastUnreadId = m.id;
+      }
+    }
 
-    // Fetch recent messages to display them compactly
-    const listResponse = await hubClient.sendRequest<MailListResponse>(
-      HubEvents.MAIL_LIST,
-      {
-        userId: localUserId,
-        kind: "chat",
-        take: newIds.length,
-      },
-    );
-
-    if (!listResponse.success || !listResponse.messages) return;
-
-    // Only show messages that are actually new/unread
-    const unreadMessages = listResponse.messages.filter((m) =>
-      newIds.includes(m.id),
-    );
-
-    if (!unreadMessages.length) return;
+    const messageIds = messages.map((m) => m.id);
 
     const contextOutput = [
       "New chat messages:",
-      ...unreadMessages.map((m) => formatChatLine(m, "notify")),
+      ...messages.map((m) => formatUnreadChatLine(m)),
     ];
 
     promptNotification.notify({
       userId: localUserId,
       wake: "yes",
       contextOutput,
-      processed: () => {
-        newIds.forEach((id) => notifiedMessageIds.delete(id));
-      },
+      processed: () => markMessagesRead(messageIds),
     });
   }
 

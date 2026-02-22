@@ -1,7 +1,6 @@
 import {
   HubEvents,
   MailListResponse,
-  MailReadResponse,
   MailSearchResponse,
 } from "@naisys/hub-protocol";
 import table from "text-table";
@@ -20,13 +19,13 @@ export interface MailContent {
 /** Standard display format for a mail message */
 export function formatMessageDisplay(content: MailContent): string {
   return (
-    `Subject: ${content.subject}\n` +
-    `From: ${content.fromUsername}\n` +
-    `Title: ${content.fromTitle}\n` +
-    `To: ${content.recipientUsernames.join(", ")}\n` +
-    `Date: ${new Date(content.createdAt).toLocaleString()}\n` +
-    `Message:\n` +
-    `${content.body}`
+    `  Subject: ${content.subject}\n` +
+    `  From: ${content.fromUsername}\n` +
+    `  Title: ${content.fromTitle}\n` +
+    `  To: ${content.recipientUsernames.join(", ")}\n` +
+    `  Date: ${new Date(content.createdAt).toLocaleString()}\n` +
+    `  Message:\n` +
+    `  ${content.body}`
   );
 }
 
@@ -73,32 +72,6 @@ export function createMailDisplayService(
     );
   }
 
-  async function readMessage(
-    messageId: number,
-  ): Promise<{ fullMessageId: number; display: string }> {
-    const response = await hubClient.sendRequest<MailReadResponse>(
-      HubEvents.MAIL_READ,
-      { userId: localUserId, messageId },
-    );
-
-    if (!response.success || !response.message) {
-      throw response.error || "Failed to read message";
-    }
-
-    const msg = response.message;
-
-    const display = formatMessageDisplay({
-      fromUsername: msg.fromUsername,
-      fromTitle: msg.fromTitle,
-      recipientUsernames: msg.recipientUsernames,
-      subject: msg.subject,
-      body: msg.body,
-      createdAt: msg.createdAt,
-    });
-
-    return { fullMessageId: msg.id, display };
-  }
-
   async function searchMessages(
     searchTerm: string,
     includeArchived: boolean,
@@ -139,7 +112,6 @@ export function createMailDisplayService(
 
   return {
     listMessages,
-    readMessage,
     searchMessages,
   };
 }
