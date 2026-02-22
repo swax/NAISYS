@@ -18,6 +18,7 @@ export const LlmModelDetailSchema = z.object({
   outputCost: z.number(),
   cacheWriteCost: z.number().optional(),
   cacheReadCost: z.number().optional(),
+  supportsVision: z.boolean().optional(),
   isCustom: z.boolean(),
 });
 
@@ -62,6 +63,7 @@ export const SaveLlmModelRequestSchema = z.object({
     outputCost: z.number().default(0),
     cacheWriteCost: z.number().optional(),
     cacheReadCost: z.number().optional(),
+    supportsVision: z.boolean().optional(),
   }),
 });
 

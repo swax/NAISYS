@@ -4,7 +4,14 @@ import { LogService } from "../services/logService.js";
 import { InputModeService } from "../utils/inputMode.js";
 import { OutputColor, OutputService } from "../utils/output.js";
 import * as utilities from "../utils/utilities.js";
-import { ContentSource, LlmMessage, LlmRole } from "./llmDtos.js";
+import {
+  ContentBlock,
+  ContentSource,
+  IMAGE_TOKEN_ESTIMATE,
+  LlmMessage,
+  LlmRole,
+  getTextContent,
+} from "./llmDtos.js";
 
 export function createContextManager(
   { agentConfig }: AgentConfig,
@@ -64,6 +71,32 @@ export function createContextManager(
     logService.write(llmMessage);
   }
 
+  function appendImage(base64: string, mimeType: string, caption: string) {
+    if (inputMode.isDebug()) {
+      output.comment(`[Image: ${caption}]`);
+      return;
+    }
+
+    const contentBlocks: ContentBlock[] = [
+      { type: "text", text: caption },
+      { type: "image", base64, mimeType },
+    ];
+
+    const llmMessage: LlmMessage = {
+      source: ContentSource.Console,
+      role: LlmRole.User,
+      content: contentBlocks,
+    };
+
+    _messages.push(llmMessage);
+
+    // Log text only
+    logService.write(llmMessage);
+
+    // Display placeholder to console
+    output.write(`[Image: ${caption}]`, OutputColor.console);
+  }
+
   function clear() {
     _messages = [];
   }
@@ -73,7 +106,19 @@ export function createContextManager(
     const workspaceTokens = utilities.getTokenCount(getWorkspaceContent());
 
     return _messages.reduce((acc, message) => {
-      return acc + utilities.getTokenCount(message.content);
+      if (typeof message.content === "string") {
+        return acc + utilities.getTokenCount(message.content);
+      }
+      // ContentBlock[] — sum text tokens + IMAGE_TOKEN_ESTIMATE per image
+      let tokens = 0;
+      for (const block of message.content) {
+        if (block.type === "text") {
+          tokens += utilities.getTokenCount(block.text);
+        } else {
+          tokens += IMAGE_TOKEN_ESTIMATE;
+        }
+      }
+      return acc + tokens;
     }, sytemMessageTokens + workspaceTokens);
   }
 
@@ -83,8 +128,18 @@ export function createContextManager(
     let lastMessage: LlmMessage | undefined;
 
     for (const message of _messages) {
-      if (lastMessage && lastMessage.role == message.role) {
-        lastMessage.content += `\n${message.content}`;
+      // Don't combine if either message has ContentBlock[] content
+      const lastIsBlocks =
+        lastMessage && typeof lastMessage.content !== "string";
+      const currentIsBlocks = typeof message.content !== "string";
+
+      if (
+        lastMessage &&
+        lastMessage.role == message.role &&
+        !lastIsBlocks &&
+        !currentIsBlocks
+      ) {
+        (lastMessage as { content: string }).content += `\n${message.content}`;
       } else {
         const clonedMsg = { ...message };
         combinedMessages.push(clonedMsg);
@@ -95,7 +150,11 @@ export function createContextManager(
     // Append workspace content at the end (for prompt cache stability)
     const workspaceContent = getWorkspaceContent();
     if (workspaceContent) {
-      if (lastMessage && lastMessage.role == LlmRole.User) {
+      if (
+        lastMessage &&
+        lastMessage.role == LlmRole.User &&
+        typeof lastMessage.content === "string"
+      ) {
         // Combine with the last user message
         lastMessage.content = `${workspaceContent}\n${lastMessage.content}`;
       } else {
@@ -140,6 +199,7 @@ export function createContextManager(
 
   return {
     append,
+    appendImage,
     clear,
     getTokenCount,
     getCombinedMessages,

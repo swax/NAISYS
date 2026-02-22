@@ -1,17 +1,24 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { MessageParam } from "@anthropic-ai/sdk/resources";
 import { GoogleGenAI } from "@google/genai";
+import { LlmApiType } from "@naisys/common";
 import OpenAI from "openai";
 import { ChatCompletionCreateParamsNonStreaming } from "openai/resources";
 import { AgentConfig } from "../agent/agentConfig.js";
 import { GlobalConfig } from "../globalConfig.js";
+import { ModelService } from "../services/modelService.js";
 import { CommandTools } from "./commandTool.js";
 import { CostTracker } from "./costTracker.js";
-import { LlmMessage, LlmRole } from "./llmDtos.js";
-import { LlmApiType } from "@naisys/common";
-import { ModelService } from "../services/modelService.js";
+import { ContentBlock, LlmMessage, LlmRole } from "./llmDtos.js";
 
-type QuerySources = "console" | "write-protection" | "compact" | "lynx";
+type QuerySources =
+  | "console"
+  | "write-protection"
+  | "compact"
+  | "lynx"
+  | "look";
+
+const useThinking = true;
 
 export function createLLMService(
   { globalConfig }: GlobalConfig,
@@ -143,14 +150,14 @@ export function createLLMService(
     const chatRequest: ChatCompletionCreateParamsNonStreaming = {
       model: model.versionName,
       stream: false,
-      reasoning_effort: "high", // should put behind a usethinking flag?
+      reasoning_effort: useThinking ? "medium" : "none",
       messages: [
         {
           role: LlmRole.System, // LlmRole.User, //
           content: systemMessage,
         },
         ...context.map((m) => ({
-          content: m.content,
+          content: formatContentForOpenAI(m.content),
           role: m.role,
         })),
       ],
@@ -238,7 +245,7 @@ export function createLLMService(
       .filter((m) => m !== lastMessage)
       .map((m) => ({
         role: m.role === LlmRole.Assistant ? "model" : "user",
-        parts: [{ text: m.content }],
+        parts: formatPartsForGoogle(m.content),
       }));
 
     // Prepare config with system instruction
@@ -247,11 +254,8 @@ export function createLLMService(
       config: {
         systemInstruction: systemMessage,
         thinkingConfig: {
-          // thinkingBudget: 1024,
-          // Turn off thinking:
-          // thinkingBudget: 0
-          // Turn on dynamic thinking:
-          thinkingBudget: -1,
+          // -1 is dynamic thinking, 0 is no thinking
+          thinkingBudget: useThinking ? -1 : 0,
         },
       },
       history,
@@ -276,7 +280,7 @@ export function createLLMService(
     const chat = ai.chats.create(chatConfig);
 
     const result = await chat.sendMessage({
-      message: lastMessage.content,
+      message: formatPartsForGoogle(lastMessage.content),
       config: abortSignal ? { abortSignal } : undefined,
     });
 
@@ -339,8 +343,6 @@ export function createLLMService(
       throw "Error, last message on context is not a user message";
     }
 
-    const useThinking = true;
-
     const createParams: Anthropic.MessageCreateParams = {
       model: model.versionName,
       max_tokens: 4096, // Blows up on anything higher
@@ -365,15 +367,7 @@ export function createLLMService(
         ...context.map((msg) => {
           return {
             role: msg.role == LlmRole.Assistant ? "assistant" : "user",
-            content: msg.cachePoint
-              ? [
-                  {
-                    type: "text",
-                    text: msg.content,
-                    cache_control: { type: "ephemeral" },
-                  },
-                ]
-              : msg.content,
+            content: formatContentForAnthropic(msg.content, msg.cachePoint),
           } satisfies MessageParam;
         }),
       ],
@@ -430,6 +424,84 @@ export function createLLMService(
     }
 
     return [msgResponse.content.find((c) => c.type == "text")?.text || ""];
+  }
+
+  // --- Content block format helpers ---
+
+  function formatContentForOpenAI(
+    content: string | ContentBlock[],
+  ): string | Array<any> {
+    if (typeof content === "string") {
+      return content;
+    }
+    return content.map((block) => {
+      if (block.type === "text") {
+        return { type: "text", text: block.text };
+      }
+      return {
+        type: "image_url",
+        image_url: {
+          url: `data:${block.mimeType};base64,${block.base64}`,
+        },
+      };
+    });
+  }
+
+  function formatPartsForGoogle(content: string | ContentBlock[]): Array<any> {
+    if (typeof content === "string") {
+      return [{ text: content }];
+    }
+    return content.map((block) => {
+      if (block.type === "text") {
+        return { text: block.text };
+      }
+      return {
+        inlineData: { mimeType: block.mimeType, data: block.base64 },
+      };
+    });
+  }
+
+  function formatContentForAnthropic(
+    content: string | ContentBlock[],
+    cachePoint?: boolean,
+  ): string | Array<any> {
+    if (typeof content === "string") {
+      if (cachePoint) {
+        return [
+          {
+            type: "text",
+            text: content,
+            cache_control: { type: "ephemeral" },
+          },
+        ];
+      }
+      return content;
+    }
+    // ContentBlock[] — map to Anthropic content blocks
+    const blocks = content.map((block, index) => {
+      if (block.type === "text") {
+        const textBlock: any = { type: "text", text: block.text };
+        // Apply cache_control to the last block if cachePoint
+        if (cachePoint && index === content.length - 1) {
+          textBlock.cache_control = { type: "ephemeral" };
+        }
+        return textBlock;
+      }
+      const imageBlock: any = {
+        type: "image",
+        source: {
+          type: "base64",
+          media_type: block.mimeType,
+          data: block.base64,
+        },
+      };
+      // Apply cache_control to the last block if cachePoint
+      if (cachePoint && index === content.length - 1) {
+        imageBlock.cache_control = { type: "ephemeral" };
+      }
+      return imageBlock;
+    });
+    return blocks;
   }
 
   return {

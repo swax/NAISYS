@@ -5,6 +5,7 @@ import {
   NumberInput,
   Select,
   Stack,
+  Switch,
   Text,
   TextInput,
 } from "@mantine/core";
@@ -25,6 +26,7 @@ interface LlmFormValues {
   outputCost: number | string;
   cacheWriteCost: number | string;
   cacheReadCost: number | string;
+  supportsVision: boolean;
 }
 
 function transformFormValues(values: LlmFormValues): Record<string, unknown> {
@@ -43,6 +45,7 @@ function transformFormValues(values: LlmFormValues): Record<string, unknown> {
     result.cacheWriteCost = values.cacheWriteCost;
   if (typeof values.cacheReadCost === "number")
     result.cacheReadCost = values.cacheReadCost;
+  if (values.supportsVision) result.supportsVision = true;
   return result;
 }
 
@@ -81,6 +84,7 @@ export const LlmModelForm: React.FC<LlmModelFormProps> = ({
       outputCost: model?.outputCost ?? 0,
       cacheWriteCost: model?.cacheWriteCost ?? ("" as number | string),
       cacheReadCost: model?.cacheReadCost ?? ("" as number | string),
+      supportsVision: model?.supportsVision ?? false,
     },
     validate: (values) =>
       zodResolver(LlmModelSchema)(transformFormValues(values)),
@@ -178,6 +182,16 @@ export const LlmModelForm: React.FC<LlmModelFormProps> = ({
           min={0}
           decimalScale={4}
           {...form.getInputProps("cacheReadCost")}
+        />
+
+        <Text fw={600} size="sm" c="dimmed">
+          Capabilities
+        </Text>
+        <Switch
+          label="Supports Vision"
+          description="Model can process image inputs"
+          disabled={readOnly}
+          {...form.getInputProps("supportsVision", { type: "checkbox" })}
         />
       </Stack>
 

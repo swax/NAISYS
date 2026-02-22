@@ -165,8 +165,11 @@ export function createMockContextManager() {
     getMessages: jest.fn((): LlmMessage[] => []),
   };
 
+  const appendImage = jest.fn();
+
   const contextManager: ContextManager = {
     append,
+    appendImage,
     clear,
     getTokenCount,
     getCombinedMessages,

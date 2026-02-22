@@ -28,6 +28,13 @@ export const commentCmd: CommandDef = {
     "Any non-command output like thinking out loud, prefix with `ns-comment`",
 };
 
+export const lookCmd: CommandDef = {
+  name: "ns-look",
+  usage: "[--describe] <filepath>",
+  description:
+    "Look at an image file and add it to the conversation context. With --describe, returns a text description instead",
+};
+
 export const genImgCmd: CommandDef = {
   name: "ns-genimg",
   usage: '"<description>" <filepath>',
