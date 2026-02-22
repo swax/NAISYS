@@ -66,15 +66,19 @@ export function createHubMailService(
         })),
       });
 
+      const notificationField =
+        params.kind === "chat" ? "latest_chat_id" : "latest_mail_id";
       await hubDb.user_notifications.updateMany({
         where: { user_id: { in: params.recipientUserIds } },
-        data: { latest_mail_id: message.id },
+        data: { [notificationField]: message.id },
       });
 
+      const heartbeatField =
+        params.kind === "chat" ? "latestChatId" : "latestMailId";
       for (const userId of params.recipientUserIds) {
         heartbeatService.updateAgentNotification(
           userId,
-          "latestMailId",
+          heartbeatField,
           message.id,
         );
       }

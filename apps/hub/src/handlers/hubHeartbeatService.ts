@@ -22,18 +22,18 @@ export function createHubHeartbeatService(
   // Track per-agent notification IDs (latestLogId, latestMailId)
   const agentNotifications = new Map<
     number,
-    { latestLogId: number; latestMailId: number }
+    { latestLogId: number; latestMailId: number; latestChatId: number }
   >();
 
   /** Update a single notification field for an agent */
   function updateAgentNotification(
     userId: number,
-    field: "latestLogId" | "latestMailId",
+    field: "latestLogId" | "latestMailId" | "latestChatId",
     value: number,
   ) {
     let entry = agentNotifications.get(userId);
     if (!entry) {
-      entry = { latestLogId: 0, latestMailId: 0 };
+      entry = { latestLogId: 0, latestMailId: 0, latestChatId: 0 };
       agentNotifications.set(userId, entry);
     }
     entry[field] = value;

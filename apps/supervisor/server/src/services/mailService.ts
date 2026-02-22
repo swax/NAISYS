@@ -20,10 +20,11 @@ export const getMailDataByUserId = cachedForSeconds(
     updatedSince?: string,
     page: number = 1,
     count: number = 50,
+    kind: string = "mail",
   ): Promise<{ mail: MailMessage[]; timestamp: string; total?: number }> => {
     try {
       // Build the where clause
-      const whereClause: any = {};
+      const whereClause: any = { kind };
 
       // If updatedSince is provided, filter by date
       if (updatedSince) {
