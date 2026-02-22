@@ -1,11 +1,19 @@
 import "dotenv/config";
 // Important to load dotenv before any other imports, to ensure environment variables are available
-import { commonErrorHandler, type StartServer } from "@naisys/common";
 import cookie from "@fastify/cookie";
 import cors from "@fastify/cors";
 import multipart from "@fastify/multipart";
 import staticFiles from "@fastify/static";
 import swagger from "@fastify/swagger";
+import { PermissionEnum } from "@naisys-supervisor/shared";
+import { commonErrorHandler, type StartServer } from "@naisys/common";
+import { createHubDatabaseClient } from "@naisys/hub-database";
+import {
+  createSupervisorDatabaseClient,
+  deploySupervisorMigrations,
+  ensureSuperAdmin,
+  handleResetPassword,
+} from "@naisys/supervisor-database";
 import scalarReference from "@scalar/fastify-api-reference";
 import Fastify from "fastify";
 import {
@@ -17,24 +25,16 @@ import {
 } from "fastify-type-provider-zod";
 import path from "path";
 import { fileURLToPath } from "url";
-import {
-  deploySupervisorMigrations,
-  createSupervisorDatabaseClient,
-  ensureSuperAdmin,
-  handleResetPassword,
-} from "@naisys/supervisor-database";
-import { createHubDatabaseClient } from "@naisys/hub-database";
 import { initLogger } from "./logger.js";
-import { PermissionEnum } from "@naisys-supervisor/shared";
 import apiRoutes from "./routes/api.js";
+import "./schema-registry.js";
+import { initHubConnection } from "./services/hubConnectionService.js";
 import {
   createUser,
+  getUserByUsername,
   getUserByUuid,
   grantInitialAdminPermissions,
-  getUserByUsername,
 } from "./services/userService.js";
-import { initHubConnection } from "./services/hubConnectionService.js";
-import "./schema-registry.js";
 
 export const startServer: StartServer = async (
   startupType,
@@ -172,9 +172,9 @@ export const startServer: StartServer = async (
       "x-tagGroups": [
         {
           name: "General",
-          tags: ["Discovery", "Authentication", "Users", "Status"],
+          tags: ["Discovery", "Authentication", "Hosts", "Status", "Users"],
         },
-        { name: "Agents", tags: ["Agents", "Runs", "Mail", "Hosts"] },
+        { name: "Agents", tags: ["Agents", "Chat", "Mail", "Runs"] },
         {
           name: "Configuration",
           tags: ["Models", "Variables"],

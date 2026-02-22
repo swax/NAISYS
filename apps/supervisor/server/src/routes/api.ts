@@ -6,6 +6,7 @@ import agentLifecycleRoutes from "./agentLifecycle.js";
 import agentConfigRoutes from "./agentConfig.js";
 import agentRunsRoutes from "./agentRuns.js";
 import agentMailRoutes from "./agentMail.js";
+import agentChatRoutes from "./agentChat.js";
 import authRoutes from "./auth.js";
 import hostsRoutes from "./hosts.js";
 import mailRoutes from "./mail.js";
@@ -44,6 +45,7 @@ export default async function apiRoutes(
   await fastify.register(agentConfigRoutes, { prefix: "/agents" });
   await fastify.register(agentRunsRoutes, { prefix: "/agents" });
   await fastify.register(agentMailRoutes, { prefix: "/agents" });
+  await fastify.register(agentChatRoutes, { prefix: "/agents" });
 
   // Register hosts routes
   await fastify.register(hostsRoutes, { prefix: "/hosts" });
