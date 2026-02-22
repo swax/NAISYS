@@ -1,22 +1,15 @@
-import Anthropic from "@anthropic-ai/sdk";
-import { MessageParam } from "@anthropic-ai/sdk/resources";
-import { GoogleGenAI } from "@google/genai";
 import { LlmApiType } from "@naisys/common";
-import OpenAI from "openai";
-import { ChatCompletionCreateParamsNonStreaming } from "openai/resources";
 import { AgentConfig } from "../agent/agentConfig.js";
 import { GlobalConfig } from "../globalConfig.js";
 import { ModelService } from "../services/modelService.js";
 import { CommandTools } from "./commandTool.js";
 import { CostTracker } from "./costTracker.js";
-import { ContentBlock, LlmMessage, LlmRole } from "./llmDtos.js";
-
-type QuerySources =
-  | "console"
-  | "write-protection"
-  | "compact"
-  | "lynx"
-  | "look";
+import { LlmMessage } from "./llmDtos.js";
+import { sendWithAnthropic } from "./vendors/anthropic.js";
+import { sendWithGoogle } from "./vendors/google.js";
+import { sendWithMock } from "./vendors/mock.js";
+import { sendWithOpenAiCompatible } from "./vendors/openai.js";
+import { QuerySources, VendorDeps } from "./vendors/vendorTypes.js";
 
 const useThinking = true;
 
@@ -57,8 +50,20 @@ export function createLLMService(
       throw "This should be unreachable";
     } else if (model.apiType === LlmApiType.Mock) {
       return sendWithMock(abortSignal);
-    } else if (model.apiType == LlmApiType.Google) {
+    }
+
+    const deps: VendorDeps = {
+      modelService,
+      costTracker,
+      tools,
+      useToolsForLlmConsoleResponses:
+        globalConfig().useToolsForLlmConsoleResponses,
+      useThinking,
+    };
+
+    if (model.apiType == LlmApiType.Google) {
       return sendWithGoogle(
+        deps,
         modelKey,
         systemMessage,
         context,
@@ -68,6 +73,7 @@ export function createLLMService(
       );
     } else if (model.apiType == LlmApiType.Anthropic) {
       return sendWithAnthropic(
+        deps,
         modelKey,
         systemMessage,
         context,
@@ -77,6 +83,7 @@ export function createLLMService(
       );
     } else if (model.apiType == LlmApiType.OpenAI) {
       return sendWithOpenAiCompatible(
+        deps,
         modelKey,
         systemMessage,
         context,
@@ -87,421 +94,6 @@ export function createLLMService(
     } else {
       throw `Error, unknown LLM API type ${model.apiType}`;
     }
-  }
-
-  /**
-   * @param abortSignal 5 second mock delay, to simulate network latency and test ESC command
-   * @returns Return with a 5 second pause so we can test out of focus agents still waiting before next mock request
-   */
-  async function sendWithMock(abortSignal?: AbortSignal): Promise<string[]> {
-    await new Promise<void>((resolve, reject) => {
-      const timeoutId = setTimeout(resolve, 5000);
-
-      if (abortSignal) {
-        if (abortSignal.aborted) {
-          clearTimeout(timeoutId);
-          reject(abortSignal.reason);
-          return;
-        }
-
-        abortSignal.addEventListener(
-          "abort",
-          () => {
-            clearTimeout(timeoutId);
-            reject(abortSignal.reason);
-          },
-          { once: true },
-        );
-      }
-    });
-
-    return [
-      `ns-comment "Mock LLM ran at ${new Date().toISOString()}"`,
-      `ns-session wait 5`,
-    ];
-  }
-
-  async function sendWithOpenAiCompatible(
-    modelKey: string,
-    systemMessage: string,
-    context: LlmMessage[],
-    source: QuerySources,
-    apiKey?: string,
-    abortSignal?: AbortSignal,
-  ): Promise<string[]> {
-    const model = modelService.getLlmModel(modelKey);
-
-    if (!apiKey) {
-      throw `Error, set ${model.apiKeyVar} variable`;
-    }
-
-    const openAI = new OpenAI({
-      baseURL: model.baseUrl,
-      apiKey,
-    });
-
-    // Assert the last message on the context is a user message
-    const lastMessage = context[context.length - 1];
-
-    if (lastMessage.role !== LlmRole.User) {
-      throw "Error, last message on context is not a user message";
-    }
-
-    const chatRequest: ChatCompletionCreateParamsNonStreaming = {
-      model: model.versionName,
-      stream: false,
-      reasoning_effort: useThinking ? "medium" : "none",
-      messages: [
-        {
-          role: LlmRole.System, // LlmRole.User, //
-          content: systemMessage,
-        },
-        ...context.map((m) => ({
-          content: formatContentForOpenAI(m.content),
-          role: m.role,
-        })),
-      ],
-    };
-
-    if (source === "console" && globalConfig().useToolsForLlmConsoleResponses) {
-      chatRequest.tools = [tools.consoleToolOpenAI];
-      chatRequest.tool_choice = {
-        type: "function",
-        function: { name: tools.consoleToolOpenAI.function.name },
-      };
-    }
-
-    const chatResponse = await openAI.chat.completions.create(chatRequest, {
-      signal: abortSignal,
-    });
-
-    if (!model.inputCost && !model.outputCost) {
-      // Don't cost models with no costs
-    }
-    // Record token usage
-    if (chatResponse.usage) {
-      const cacheReadTokens =
-        chatResponse.usage.prompt_tokens_details?.cached_tokens || 0;
-
-      // Remove cached tokens so we only bill fresh tokens at the full input rate.
-      const nonCachedPromptTokens = Math.max(
-        0,
-        (chatResponse.usage.prompt_tokens || 0) - cacheReadTokens,
-      );
-
-      await costTracker.recordTokens(
-        source,
-        model.key,
-        nonCachedPromptTokens,
-        chatResponse.usage.completion_tokens,
-        0, // OpenAI doesn't report cache write tokens separately - it's automatic
-        cacheReadTokens,
-      );
-    } else {
-      throw "Error, no usage data returned from OpenAI API.";
-    }
-
-    if (chatRequest.tools) {
-      const commandsFromTool = tools.getCommandsFromOpenAiToolUse(
-        chatResponse.choices.at(0)?.message?.tool_calls,
-      );
-
-      if (commandsFromTool) {
-        return commandsFromTool;
-      }
-    }
-
-    return [chatResponse.choices[0].message.content || ""];
-  }
-
-  async function sendWithGoogle(
-    modelKey: string,
-    systemMessage: string,
-    context: LlmMessage[],
-    source: QuerySources,
-    apiKey?: string,
-    abortSignal?: AbortSignal,
-  ): Promise<string[]> {
-    const model = modelService.getLlmModel(modelKey);
-
-    if (!apiKey) {
-      throw `Error, set ${model.apiKeyVar} variable`;
-    }
-
-    const ai = new GoogleGenAI({
-      apiKey,
-      httpOptions: model.baseUrl ? { baseUrl: model.baseUrl } : undefined,
-    });
-
-    // Assert the last message on the context is a user message
-    const lastMessage = context[context.length - 1];
-
-    if (lastMessage.role !== LlmRole.User) {
-      throw "Error, last message on context is not a user message";
-    }
-
-    // Build history from context (excluding last message)
-    const history = context
-      .filter((m) => m !== lastMessage)
-      .map((m) => ({
-        role: m.role === LlmRole.Assistant ? "model" : "user",
-        parts: formatPartsForGoogle(m.content),
-      }));
-
-    // Prepare config with system instruction
-    const chatConfig: any = {
-      model: model.versionName,
-      config: {
-        systemInstruction: systemMessage,
-        thinkingConfig: {
-          // -1 is dynamic thinking, 0 is no thinking
-          thinkingBudget: useThinking ? -1 : 0,
-        },
-      },
-      history,
-    };
-
-    // Add tool if console source and tools are enabled
-    if (source === "console" && globalConfig().useToolsForLlmConsoleResponses) {
-      chatConfig.config.tools = [
-        {
-          functionDeclarations: [tools.consoleToolGoogle],
-        },
-      ];
-
-      chatConfig.config.toolConfig = {
-        functionCallingConfig: {
-          // Set the mode to "ANY" to force the model to use the tool response
-          mode: "ANY",
-        },
-      };
-    }
-
-    const chat = ai.chats.create(chatConfig);
-
-    const result = await chat.sendMessage({
-      message: formatPartsForGoogle(lastMessage.content),
-      config: abortSignal ? { abortSignal } : undefined,
-    });
-
-    // Use actual token counts from Google API response
-    if (result.usageMetadata) {
-      const inputTokenCount = result.usageMetadata.promptTokenCount || 0;
-      const outputTokenCount = result.usageMetadata.candidatesTokenCount || 0;
-      const cachedTokenCount =
-        result.usageMetadata.cachedContentTokenCount || 0;
-
-      await costTracker.recordTokens(
-        source,
-        model.key,
-        inputTokenCount - cachedTokenCount,
-        outputTokenCount,
-        0, // Cache write tokens (not separately reported)
-        cachedTokenCount, // Cache read tokens
-      );
-    } else {
-      throw "Error, no usage metadata returned from Google API.";
-    }
-
-    // Check for function calls if tools were enabled
-    if (chatConfig.config.tools) {
-      const commandsFromTool = tools.getCommandsFromGoogleToolUse(
-        result.functionCalls,
-      );
-
-      if (commandsFromTool) {
-        return commandsFromTool;
-      }
-    }
-
-    return [result.text || ""];
-  }
-
-  async function sendWithAnthropic(
-    modelKey: string,
-    systemMessage: string,
-    context: LlmMessage[],
-    source: QuerySources,
-    apiKey?: string,
-    abortSignal?: AbortSignal,
-  ): Promise<string[]> {
-    const model = modelService.getLlmModel(modelKey);
-
-    if (!apiKey) {
-      throw `Error, set ${model.apiKeyVar} variable`;
-    }
-
-    const anthropic = new Anthropic({
-      apiKey,
-      baseURL: model.baseUrl,
-    });
-
-    // Assert the last message on the context is a user message
-    const lastMessage = context[context.length - 1];
-
-    if (lastMessage.role !== LlmRole.User) {
-      throw "Error, last message on context is not a user message";
-    }
-
-    const createParams: Anthropic.MessageCreateParams = {
-      model: model.versionName,
-      max_tokens: 4096, // Blows up on anything higher
-      messages: [
-        {
-          role: "user",
-          content: systemMessage,
-        },
-        {
-          role: "assistant",
-          content:
-            context.length === 0
-              ? [
-                  {
-                    type: "text",
-                    text: "Understood",
-                    cache_control: { type: "ephemeral" },
-                  },
-                ]
-              : "Understood",
-        },
-        ...context.map((msg) => {
-          return {
-            role: msg.role == LlmRole.Assistant ? "assistant" : "user",
-            content: formatContentForAnthropic(msg.content, msg.cachePoint),
-          } satisfies MessageParam;
-        }),
-      ],
-    };
-
-    if (useThinking) {
-      createParams.thinking = {
-        type: "enabled",
-        budget_tokens: createParams.max_tokens! / 2,
-      };
-    }
-
-    if (source === "console" && globalConfig().useToolsForLlmConsoleResponses) {
-      createParams.tools = [tools.consoleToolAnthropic];
-      if (useThinking) {
-        createParams.tool_choice = {
-          // With thinking enabled, only "auto" is supported
-          type: "auto",
-        };
-      } else {
-        createParams.tool_choice = {
-          type: "tool",
-          name: tools.consoleToolAnthropic.name,
-        };
-      }
-    }
-
-    const msgResponse = await anthropic.messages.create(createParams, {
-      signal: abortSignal,
-    });
-
-    // Record token usage
-    if (msgResponse.usage) {
-      await costTracker.recordTokens(
-        source,
-        model.key,
-        msgResponse.usage.input_tokens,
-        msgResponse.usage.output_tokens,
-        msgResponse.usage.cache_creation_input_tokens || 0,
-        msgResponse.usage.cache_read_input_tokens || 0,
-      );
-    } else {
-      throw "Error, no usage data returned from Anthropic API.";
-    }
-
-    if (createParams.tools) {
-      const commandsFromTool = tools.getCommandsFromAnthropicToolUse(
-        msgResponse.content,
-      );
-
-      if (commandsFromTool) {
-        return commandsFromTool;
-      }
-    }
-
-    return [msgResponse.content.find((c) => c.type == "text")?.text || ""];
-  }
-
-  // --- Content block format helpers ---
-
-  function formatContentForOpenAI(
-    content: string | ContentBlock[],
-  ): string | Array<any> {
-    if (typeof content === "string") {
-      return content;
-    }
-    return content.map((block) => {
-      if (block.type === "text") {
-        return { type: "text", text: block.text };
-      }
-      return {
-        type: "image_url",
-        image_url: {
-          url: `data:${block.mimeType};base64,${block.base64}`,
-        },
-      };
-    });
-  }
-
-  function formatPartsForGoogle(content: string | ContentBlock[]): Array<any> {
-    if (typeof content === "string") {
-      return [{ text: content }];
-    }
-    return content.map((block) => {
-      if (block.type === "text") {
-        return { text: block.text };
-      }
-      return {
-        inlineData: { mimeType: block.mimeType, data: block.base64 },
-      };
-    });
-  }
-
-  function formatContentForAnthropic(
-    content: string | ContentBlock[],
-    cachePoint?: boolean,
-  ): string | Array<any> {
-    if (typeof content === "string") {
-      if (cachePoint) {
-        return [
-          {
-            type: "text",
-            text: content,
-            cache_control: { type: "ephemeral" },
-          },
-        ];
-      }
-      return content;
-    }
-    // ContentBlock[] — map to Anthropic content blocks
-    const blocks = content.map((block, index) => {
-      if (block.type === "text") {
-        const textBlock: any = { type: "text", text: block.text };
-        // Apply cache_control to the last block if cachePoint
-        if (cachePoint && index === content.length - 1) {
-          textBlock.cache_control = { type: "ephemeral" };
-        }
-        return textBlock;
-      }
-      const imageBlock: any = {
-        type: "image",
-        source: {
-          type: "base64",
-          media_type: block.mimeType,
-          data: block.base64,
-        },
-      };
-      // Apply cache_control to the last block if cachePoint
-      if (cachePoint && index === content.length - 1) {
-        imageBlock.cache_control = { type: "ephemeral" };
-      }
-      return imageBlock;
-    });
-    return blocks;
   }
 
   return {

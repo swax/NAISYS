@@ -121,7 +121,7 @@ export function createCommandLoop(
         if (shellCommand.isShellSuspended()) {
           const elapsedTime = shellCommand.getCommandElapsedTimeString();
           await contextManager.append(
-            `Command has been running for ${elapsedTime}. Enter 'wait <seconds>' to continue waiting. 'kill' to terminate. Other input will be sent to the process.`,
+            `Command has been running for ${elapsedTime}. Enter 'wait <seconds>' to continue waiting. 'kill' to terminate. Any other input will be sent directly to the running process.`,
             ContentSource.Console,
           );
         }
