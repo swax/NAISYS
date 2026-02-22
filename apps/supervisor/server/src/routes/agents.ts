@@ -15,7 +15,7 @@ import {
   ErrorResponseSchema,
 } from "@naisys-supervisor/shared";
 import { FastifyInstance, FastifyPluginOptions } from "fastify";
-import type { HateoasAction } from "@naisys/common";
+import type { AgentConfigFile, HateoasAction } from "@naisys/common";
 import { hasPermission, requirePermission } from "../auth-middleware.js";
 import {
   API_PREFIX,
@@ -25,7 +25,10 @@ import {
 } from "../hateoas.js";
 import { isAgentActive } from "../services/agentHostStatusService.js";
 import { createAgentConfig } from "../services/agentConfigService.js";
-import { getAgent, getAgents } from "../services/agentService.js";
+import {
+  getAgent,
+  getAgents,
+} from "../services/agentService.js";
 
 function agentActions(
   agentId: number,
@@ -95,14 +98,23 @@ function agentActions(
   return actions;
 }
 
-function agentLinks(agentId: number) {
-  return [
+function agentLinks(
+  agentId: number,
+  config: AgentConfigFile | null | undefined,
+) {
+  const links = [
     selfLink(`/agents/${agentId}`),
     { rel: "config", href: `${API_PREFIX}/agents/${agentId}/config` },
     { rel: "runs", href: `${API_PREFIX}/agents/${agentId}/runs` },
-    { rel: "mail", href: `${API_PREFIX}/agents/${agentId}/mail` },
     collectionLink("agents"),
   ];
+  if (config?.mailEnabled) {
+    links.push({ rel: "mail", href: `${API_PREFIX}/agents/${agentId}/mail` });
+  }
+  if (config?.chatEnabled) {
+    links.push({ rel: "chat", href: `${API_PREFIX}/agents/${agentId}/chat` });
+  }
+  return links;
 }
 
 export default function agentsRoutes(
@@ -134,7 +146,7 @@ export default function agentsRoutes(
         const items = agents.map((agent) => ({
           ...agent,
           online: isAgentActive(agent.id),
-          _links: agentLinks(agent.id),
+          _links: [selfLink(`/agents/${agent.id}`)],
         }));
 
         const hasManagePermission = hasPermission(
@@ -178,7 +190,7 @@ export default function agentsRoutes(
     {
       preHandler: [requirePermission("manage_agents")],
       schema: {
-        description: "Create a new agent with YAML configuration file",
+        description: "Create a new agent with configuration file",
         tags: ["Agents"],
         body: CreateAgentConfigRequestSchema,
         response: {
@@ -201,13 +213,13 @@ export default function agentsRoutes(
           });
         }
 
-        const agentId = await createAgentConfig(name);
+        const { id: agentId, config } = await createAgentConfig(name);
 
         return {
           success: true,
           message: `Agent '${name}' created successfully`,
           id: agentId,
-          _links: agentLinks(agentId),
+          _links: agentLinks(agentId, config),
           _actions: agentActions(agentId, true, false),
         };
       } catch (error) {
@@ -268,7 +280,7 @@ export default function agentsRoutes(
         return {
           ...agent,
           online: isAgentActive(id),
-          _links: agentLinks(id),
+          _links: agentLinks(id, agent.config),
           _actions: agentActions(
             id,
             hasManagePermission,

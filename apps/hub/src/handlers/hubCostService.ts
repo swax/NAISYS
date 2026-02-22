@@ -10,7 +10,6 @@ import {
   CostWriteRequestSchema,
   HubEvents,
 } from "@naisys/hub-protocol";
-import yaml from "js-yaml";
 import { HubServerLog } from "../services/hubServerLog.js";
 import { NaisysServer } from "../services/naisysServer.js";
 import { HubConfigService } from "./hubConfigService.js";
@@ -151,7 +150,7 @@ export function createHubCostService(
         for (const user of users) {
           try {
             const parsed = AgentConfigFileSchema.safeParse(
-              yaml.load(user.config),
+              JSON.parse(user.config),
             );
             if (!parsed.success) continue;
 

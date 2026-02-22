@@ -29,8 +29,8 @@ import { AgentIndex } from "./pages/agents/AgentIndex";
 import { HostPage } from "./pages/hosts/HostPage";
 import { HostIndex } from "./pages/hosts/HostIndex";
 import { HostsLayout } from "./pages/hosts/HostsLayout";
-import { Mail } from "./pages/mail/Mail";
-import { Runs } from "./pages/runs/Runs";
+import { AgentMail } from "./pages/mail/AgentMail";
+import { AgentRuns } from "./pages/runs/AgentRuns";
 import { UserList } from "./pages/users/UserList";
 import { UserDetail } from "./pages/users/UserDetail";
 import { AgentsLayout } from "./pages/agents/AgentsLayout";
@@ -39,6 +39,9 @@ import { ModelIndex } from "./pages/models/ModelIndex";
 import { ModelPage } from "./pages/models/ModelPage";
 import { AdminPage } from "./pages/admin/AdminPage";
 import { VariablesPage } from "./pages/variables/VariablesPage";
+import { AgentChat } from "./pages/chat/AgentChat";
+import { NotFoundPage } from "./components/NotFoundPage";
+import { RootErrorPage } from "./components/RootErrorPage";
 
 export interface AppOutletContext {
   permissions: string[];
@@ -112,14 +115,17 @@ const AppContent: React.FC = () => {
 
 const router = createBrowserRouter(
   createRoutesFromElements(
-    <Route element={<AppContent />}>
+    <Route element={<AppContent />} errorElement={<RootErrorPage />}>
       <Route path="/agents" element={<AgentsLayout />}>
         <Route index element={<AgentIndex />} />
         <Route path=":id" element={<AgentDetail />} />
         <Route path=":id/config" element={<AgentConfig />} />
-        <Route path=":id/runs" element={<Runs />} />
-        <Route path=":id/mail" element={<Mail />} />
-        <Route path=":id/mail/:messageId" element={<Mail />} />
+        <Route path=":id/runs" element={<AgentRuns />} />
+        <Route path=":id/mail" element={<AgentMail />} />
+        <Route path=":id/mail/:messageId" element={<AgentMail />} />
+        <Route path=":id/chat" element={<AgentChat />} />
+        <Route path=":id/*" element={<NotFoundPage />} />
+        <Route path="*" element={<NotFoundPage />} />
       </Route>
       <Route path="/hosts" element={<HostsLayout />}>
         <Route index element={<HostIndex />} />
@@ -134,6 +140,7 @@ const router = createBrowserRouter(
       <Route path="/users" element={<UserList />} />
       <Route path="/users/:id" element={<UserDetail />} />
       <Route path="/" element={<Navigate to="/agents" replace />} />
+      <Route path="*" element={<NotFoundPage />} />
     </Route>,
   ),
   { basename: ROUTER_BASENAME },

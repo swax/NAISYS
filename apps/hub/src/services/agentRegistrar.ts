@@ -2,7 +2,6 @@ import { UserEntry } from "@naisys/common";
 import { loadAgentConfigs } from "@naisys/common-node";
 import type { HubDatabaseService } from "@naisys/hub-database";
 import { randomBytes, randomUUID } from "crypto";
-import yaml from "js-yaml";
 import { HubServerLog } from "./hubServerLog.js";
 
 /** Seeds agent configs from YAML files into an empty database. Skips if users already exist. */
@@ -42,7 +41,7 @@ async function seedUsersToDatabase(
           uuid: randomUUID(),
           username: user.username,
           title: user.config.title,
-          config: yaml.dump(user.config),
+          config: JSON.stringify(user.config),
           api_key: randomBytes(32).toString("hex"),
         },
       });

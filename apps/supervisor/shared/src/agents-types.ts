@@ -1,4 +1,4 @@
-import { HateoasActionSchema } from "@naisys/common";
+import { AgentConfigFileSchema, HateoasActionSchema } from "@naisys/common";
 import { z } from "zod";
 
 const LinkSchema = z.object({
@@ -63,7 +63,7 @@ export const AgentDetailResponseSchema = z.object({
   latestMailId: z.number(),
   archived: z.boolean().optional(),
   online: z.boolean().optional(),
-  config: z.string(),
+  config: AgentConfigFileSchema,
   _links: z.array(LinkSchema),
   _actions: z.array(HateoasActionSchema).optional(),
 });

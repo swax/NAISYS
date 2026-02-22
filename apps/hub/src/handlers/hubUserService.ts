@@ -30,7 +30,7 @@ export function createHubUserService(
       userId: u.id,
       username: u.username,
       leadUserId: u.lead_user_id || undefined,
-      configYaml: u.config,
+      config: JSON.parse(u.config),
       assignedHostIds:
         u.user_hosts.length > 0
           ? u.user_hosts.map((uh) => uh.host_id)

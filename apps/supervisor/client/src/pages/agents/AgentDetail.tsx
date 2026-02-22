@@ -1,6 +1,5 @@
 import {
   Button,
-  Code,
   Group,
   Loader,
   Select,
@@ -9,6 +8,7 @@ import {
   TextInput,
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
+import { AgentDetailResponse } from "@naisys-supervisor/shared";
 import { hasAction, type HateoasAction } from "@naisys/common";
 import {
   IconArchive,
@@ -38,7 +38,9 @@ export const AgentDetail: React.FC = () => {
 
   const agentId = id ? Number(id) : null;
   const agentData = agents.find((a) => a.id === agentId);
-  const [config, setConfig] = useState<string | null>(null);
+  const [, setConfig] = useState<AgentDetailResponse["config"] | null>(
+    null,
+  );
   const [actions, setActions] = useState<HateoasAction[] | undefined>();
   const [loading, setLoading] = useState(true);
   const [taskInput, setTaskInput] = useState("");
@@ -396,12 +398,6 @@ export const AgentDetail: React.FC = () => {
           disabled={settingLead}
           maw={300}
         />
-      )}
-
-      {config && (
-        <Code block style={{ whiteSpace: "pre-wrap" }}>
-          {config}
-        </Code>
       )}
     </Stack>
   );

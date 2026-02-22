@@ -1,12 +1,15 @@
+import { AgentConfigFile, AgentConfigFileSchema } from "@naisys/common";
 import { Agent, AgentDetailResponse, Host } from "@naisys-supervisor/shared";
 import { hubDb } from "../database/hubDb.js";
 import { getLogger } from "../logger.js";
 import { cachedForSeconds } from "../utils/cache.js";
 
+export type AgentWithConfig = Agent & { config?: AgentConfigFile | null };
+
 export const getAgents = cachedForSeconds(
   0.25,
-  async (updatedSince?: string): Promise<Agent[]> => {
-    const agents: Agent[] = [];
+  async (updatedSince?: string): Promise<AgentWithConfig[]> => {
+    const agents: AgentWithConfig[] = [];
 
     try {
       const users = await hubDb.users.findMany({
@@ -16,6 +19,7 @@ export const getAgents = cachedForSeconds(
           username: true,
           title: true,
           archived: true,
+          config: true,
           lead_user: { select: { username: true } },
           user_notifications: {
             select: {
@@ -48,6 +52,7 @@ export const getAgents = cachedForSeconds(
           latestLogId: user.user_notifications?.latest_log_id ?? 0,
           latestMailId: user.user_notifications?.latest_mail_id ?? 0,
           archived: user.archived,
+          config: parseConfig(user.config),
         });
       });
     } catch (error) {
@@ -57,6 +62,15 @@ export const getAgents = cachedForSeconds(
     return agents;
   },
 );
+
+function parseConfig(config: string | null): AgentConfigFile | null {
+  if (!config) return null;
+  try {
+    return AgentConfigFileSchema.parse(JSON.parse(config));
+  } catch {
+    return null;
+  }
+}
 
 export async function getHubAgentById(id: number) {
   return hubDb.users.findUnique({
@@ -111,7 +125,7 @@ export async function getAgent(
       latestLogId: user.user_notifications?.latest_log_id ?? 0,
       latestMailId: user.user_notifications?.latest_mail_id ?? 0,
       archived: user.archived,
-      config: user.config,
+      config: parseConfig(user.config)!,
       _links: [],
     };
   } catch (error) {

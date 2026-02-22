@@ -3,7 +3,6 @@ import {
   AgentConfigFileSchema,
   buildDefaultAgentConfig,
 } from "@naisys/common";
-import yaml from "js-yaml";
 import { hubDb } from "../database/hubDb.js";
 import { sendUserListChanged } from "./hubConnectionService.js";
 
@@ -26,9 +25,11 @@ async function updateUserNotificationModifiedDate(
 }
 
 /**
- * Create a new agent with database entry (no YAML file).
+ * Create a new agent with database entry.
  */
-export async function createAgentConfig(name: string): Promise<number> {
+export async function createAgentConfig(
+  name: string,
+): Promise<{ id: number; config: AgentConfigFile }> {
   // Check db if username already exists
   const existingAgent = await hubDb.users.findFirst({
     where: {
@@ -40,12 +41,9 @@ export async function createAgentConfig(name: string): Promise<number> {
     throw new Error(`Agent '${name}' already exists in the database`);
   }
 
-  // Create default config and convert to YAML
+  // Create default config and convert to JSON
   const defaultConfig = buildDefaultAgentConfig(name);
-  const yamlContent = yaml.dump(canonicalConfigOrder(defaultConfig), {
-    lineWidth: -1,
-    noRefs: true,
-  });
+  const jsonContent = JSON.stringify(canonicalConfigOrder(defaultConfig));
 
   // Add agent to the database, let DB autoincrement
   const user = await hubDb.users.create({
@@ -53,7 +51,7 @@ export async function createAgentConfig(name: string): Promise<number> {
       uuid: crypto.randomUUID(),
       username: defaultConfig.username,
       title: defaultConfig.title,
-      config: yamlContent,
+      config: jsonContent,
     },
   });
 
@@ -63,7 +61,7 @@ export async function createAgentConfig(name: string): Promise<number> {
   // Notify hub to broadcast updated user list to all NAISYS clients
   sendUserListChanged();
 
-  return user.id;
+  return { id: user.id, config: defaultConfig };
 }
 
 /**
@@ -79,12 +77,12 @@ export async function getAgentConfigById(id: number): Promise<AgentConfigFile> {
     throw new Error(`User with ID ${id} not found`);
   }
 
-  const parsed = yaml.load(user.config);
+  const parsed = JSON.parse(user.config);
   return AgentConfigFileSchema.parse(parsed);
 }
 
 /**
- * Build config object in canonical field order for readable YAML output.
+ * Build config object in canonical field order for consistent JSON output.
  */
 function canonicalConfigOrder(
   config: AgentConfigFile,
@@ -146,12 +144,12 @@ export async function updateAgentConfigById(
   config: AgentConfigFile,
 ): Promise<void> {
   const ordered = canonicalConfigOrder(config);
-  const yamlStr = yaml.dump(ordered, { lineWidth: -1, noRefs: true });
+  const jsonStr = JSON.stringify(ordered);
 
   await hubDb.users.update({
     where: { id },
     data: {
-      config: yamlStr,
+      config: jsonStr,
       title: config.title,
     },
   });
