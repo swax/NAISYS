@@ -56,7 +56,7 @@ export const AgentSidebar: React.FC = () => {
       return "/agents";
     }
 
-    if (currentSection && ["runs", "mail"].includes(currentSection)) {
+    if (currentSection && ["runs", "mail", "chat", "config"].includes(currentSection)) {
       return `/agents/${agent.id}/${currentSection}`;
     } else {
       return `/agents/${agent.id}`;
