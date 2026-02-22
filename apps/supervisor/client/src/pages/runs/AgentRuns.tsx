@@ -7,7 +7,7 @@ import { RunsCostChart } from "./RunsCostChart";
 import { RunSessionCard } from "./RunSessionCard";
 
 /** Re-rendering triggered by agentParam */
-export const Runs: React.FC = () => {
+export const AgentRuns: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { agents } = useAgentDataContext();
   const [selectedRowKey, setSelectedRowKey] = useState<string | null>(null);

@@ -1,11 +1,10 @@
-import { AgentConfigFileSchema, UserEntry } from "@naisys/common";
+import { UserEntry } from "@naisys/common";
 import { loadAgentConfigs } from "@naisys/common-node";
 import {
   HubEvents,
   UserListResponse,
   UserListResponseSchema,
 } from "@naisys/hub-protocol";
-import yaml from "js-yaml";
 import { HubClient } from "../hub/hubClient.js";
 import { HostService } from "../services/hostService.js";
 import { PromptNotificationService } from "../utils/promptNotificationService.js";
@@ -189,16 +188,13 @@ export function createUserService(
   function parseUserList(response: UserListResponse): Map<number, UserEntry> {
     const map = new Map<number, UserEntry>();
     for (const user of response.users ?? []) {
-      const configObj = yaml.load(user.configYaml);
-      const config = AgentConfigFileSchema.parse(configObj);
-
       map.set(user.userId, {
         userId: user.userId,
         username: user.username,
         leadUserId: user.leadUserId,
         assignedHostIds: user.assignedHostIds,
         apiKey: user.apiKey,
-        config,
+        config: user.config,
       });
     }
     return map;

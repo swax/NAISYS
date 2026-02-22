@@ -3,12 +3,14 @@ import {
   IconHistory,
   IconInfoCircle,
   IconMail,
+  IconMessageCircle,
   IconSettings,
 } from "@tabler/icons-react";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { ROUTER_BASENAME } from "../constants";
 import { useAgentDataContext } from "../contexts/AgentDataContext";
+import { getAgentDetail } from "../lib/apiAgents";
 
 interface AgentNavHeaderProps {
   agentId?: number;
@@ -18,6 +20,18 @@ export const AgentNavHeader: React.FC<AgentNavHeaderProps> = ({ agentId }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { agents, readStatus } = useAgentDataContext();
+  const [links, setLinks] = useState<{ rel: string; href: string }[]>([]);
+
+  // Fetch detail links when agent changes
+  useEffect(() => {
+    if (!agentId) {
+      setLinks([]);
+      return;
+    }
+    void getAgentDetail(agentId).then((data) => {
+      setLinks(data._links);
+    });
+  }, [agentId]);
 
   if (!agentId) {
     return null;
@@ -26,6 +40,10 @@ export const AgentNavHeader: React.FC<AgentNavHeaderProps> = ({ agentId }) => {
   // Find the current agent
   const currentAgent = agents.find((agent) => agent.id === agentId);
   const agentName = currentAgent?.name;
+
+  // Check if mail/chat are enabled via detail _links
+  const hasMailLink = links.some((link) => link.rel === "mail");
+  const hasChatLink = links.some((link) => link.rel === "chat");
 
   // Check for unread data
   const hasUnreadLogs =
@@ -100,24 +118,38 @@ export const AgentNavHeader: React.FC<AgentNavHeaderProps> = ({ agentId }) => {
               Runs
             </Tabs.Tab>
           </Indicator>
-          <Indicator
-            disabled={!hasUnreadMail}
-            color="blue"
-            size={8}
-            offset={7}
-            processing
-          >
+          {hasMailLink && (
+            <Indicator
+              disabled={!hasUnreadMail}
+              color="blue"
+              size={8}
+              offset={7}
+              processing
+            >
+              <Tabs.Tab
+                value="mail"
+                leftSection={<IconMail size="1rem" />}
+                component="a"
+                // @ts-expect-error - Mantine Tabs.Tab doesn't properly type component prop with href
+                href={getAbsoluteUrl("mail")}
+                onClick={(e: React.MouseEvent) => handleTabClick(e, "mail")}
+              >
+                Mail
+              </Tabs.Tab>
+            </Indicator>
+          )}
+          {hasChatLink && (
             <Tabs.Tab
-              value="mail"
-              leftSection={<IconMail size="1rem" />}
+              value="chat"
+              leftSection={<IconMessageCircle size="1rem" />}
               component="a"
               // @ts-expect-error - Mantine Tabs.Tab doesn't properly type component prop with href
-              href={getAbsoluteUrl("mail")}
-              onClick={(e: React.MouseEvent) => handleTabClick(e, "mail")}
+              href={getAbsoluteUrl("chat")}
+              onClick={(e: React.MouseEvent) => handleTabClick(e, "chat")}
             >
-              Mail
+              Chat
             </Tabs.Tab>
-          </Indicator>
+          )}
           <Tabs.Tab
             value="config"
             leftSection={<IconSettings size="1rem" />}

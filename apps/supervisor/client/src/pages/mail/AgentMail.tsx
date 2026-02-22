@@ -18,7 +18,7 @@ import { sendMail } from "../../lib/apiMail";
 import { MailMessage } from "./MailMessage";
 import { NewMessageModal } from "./NewMessageModal";
 
-export const Mail: React.FC = () => {
+export const AgentMail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { agents, updateReadStatus, readStatus } = useAgentDataContext();
 
