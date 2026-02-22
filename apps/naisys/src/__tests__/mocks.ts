@@ -16,8 +16,6 @@ import { CommandProtection } from "../command/commandProtection.js";
 import { PromptBuilder } from "../command/promptBuilder.js";
 import { ShellCommand } from "../command/shellCommand.js";
 import { GenImg } from "../features/genImg.js";
-import { ChatService } from "../mail/chat.js";
-import { MailService } from "../mail/mail.js";
 import { LynxService } from "../features/lynx.js";
 import { SessionService } from "../features/session.js";
 import { SubagentService } from "../features/subagent.js";
@@ -26,7 +24,8 @@ import { GlobalConfig } from "../globalConfig.js";
 import { ContextManager } from "../llm/contextManager.js";
 import { CostTracker } from "../llm/costTracker.js";
 import { LlmMessage } from "../llm/llmDtos.js";
-import { SessionCompactor } from "../llm/sessionCompactor.js";
+import { ChatService } from "../mail/chat.js";
+import { MailService } from "../mail/mail.js";
 import { LogService } from "../services/logService.js";
 import { RunService } from "../services/runService.js";
 import { OutputService } from "../utils/output.js";
@@ -137,19 +136,11 @@ export function createMockLynxService() {
   return lynxService;
 }
 
-export function createMockSessionCompactor() {
-  const sessionCompactor: SessionCompactor = {
-    getLastSessionSummary: jest.fn(() => ""),
-    run: jest.fn(() => Promise.resolve("")),
-  };
-
-  return sessionCompactor;
-}
-
 export function createMockSessionService() {
   const sessionService: SessionService = {
     command: sessionCmd,
     handleCommand: jest.fn(() => ""),
+    canRestore: jest.fn(() => false),
   };
 
   return sessionService;
@@ -284,7 +275,6 @@ export function createMockAgentConfig(): AgentConfig {
       spendLimitHours: undefined,
       tokenMax: 2000,
       shellModel: "gpt-4",
-      compactModel: "gpt-4",
       imageModel: undefined,
       mailEnabled: true,
       chatEnabled: true,

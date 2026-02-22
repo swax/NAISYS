@@ -29,12 +29,7 @@ export async function sendWithGoogle(
     httpOptions: model.baseUrl ? { baseUrl: model.baseUrl } : undefined,
   });
 
-  // Assert the last message on the context is a user message
   const lastMessage = context[context.length - 1];
-
-  if (lastMessage.role !== LlmRole.User) {
-    throw "Error, last message on context is not a user message";
-  }
 
   // Build history from context (excluding last message)
   const history = context

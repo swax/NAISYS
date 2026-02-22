@@ -42,9 +42,6 @@ export function createAgentConfig(
 
     // Resolve model configs
     const shellModel = resolveConfigVars(config.shellModel);
-    const compactModel = resolveConfigVars(
-      config.compactModel || config.shellModel,
-    );
     const imageModel = config.imageModel
       ? resolveConfigVars(config.imageModel)
       : undefined;
@@ -81,7 +78,6 @@ export function createAgentConfig(
       spendLimitDollars,
       spendLimitHours,
       shellModel,
-      compactModel,
       imageModel,
       resolveConfigVars,
       mailEnabled: !!config.mailEnabled,

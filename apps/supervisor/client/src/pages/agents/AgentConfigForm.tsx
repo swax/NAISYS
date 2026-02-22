@@ -45,7 +45,6 @@ function transformFormValues(values: FormValues): Record<string, unknown> {
     tokenMax: values.tokenMax,
   };
 
-  if (values.compactModel) result.compactModel = values.compactModel;
   if (values.imageModel) result.imageModel = values.imageModel;
   if (typeof values.spendLimitDollars === "number")
     result.spendLimitDollars = values.spendLimitDollars;
@@ -78,7 +77,6 @@ interface FormValues {
   title: string;
   agentPrompt: string;
   shellModel: string;
-  compactModel: string;
   imageModel: string;
   tokenMax: number | string;
   spendLimitDollars: number | string;
@@ -161,7 +159,6 @@ export const AgentConfigForm: React.FC<AgentConfigFormProps> = ({
       title: config.title,
       agentPrompt: config.agentPrompt,
       shellModel: config.shellModel,
-      compactModel: config.compactModel ?? "",
       imageModel: config.imageModel ?? "",
       tokenMax: config.tokenMax,
       spendLimitDollars: config.spendLimitDollars ?? ("" as number | string),
@@ -236,14 +233,6 @@ export const AgentConfigForm: React.FC<AgentConfigFormProps> = ({
           disabled={readOnly}
           data={llmModelOptions}
           {...form.getInputProps("shellModel")}
-        />
-        <ModelSelect
-          label="Compact Model"
-          description={desc("compactModel")}
-          disabled={readOnly}
-          clearable
-          data={llmModelOptions}
-          {...form.getInputProps("compactModel")}
         />
         <ModelSelect
           label="Image Model"

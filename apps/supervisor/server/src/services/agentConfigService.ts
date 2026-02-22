@@ -98,8 +98,6 @@ function canonicalConfigOrder(
 
   // Models
   ordered.shellModel = config.shellModel;
-  if (config.compactModel !== undefined)
-    ordered.compactModel = config.compactModel;
   if (config.imageModel !== undefined) ordered.imageModel = config.imageModel;
 
   // Limits

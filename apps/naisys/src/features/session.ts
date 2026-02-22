@@ -1,6 +1,5 @@
 import stringArgv from "string-argv";
 import { AgentConfig } from "../agent/agentConfig.js";
-import { UserService } from "../agent/userService.js";
 import { sessionCmd } from "../command/commandDefs.js";
 import {
   CommandResponse,
@@ -9,21 +8,23 @@ import {
 } from "../command/commandRegistry.js";
 import { ShellCommand } from "../command/shellCommand.js";
 import { GlobalConfig } from "../globalConfig.js";
-import { SessionCompactor } from "../llm/sessionCompactor.js";
-import { MailService } from "../mail/mail.js";
+import { ContextManager } from "../llm/contextManager.js";
+import { LLMService } from "../llm/llmService.js";
 import { OutputService } from "../utils/output.js";
 import * as utilities from "../utils/utilities.js";
+import { getTokenCount } from "../utils/utilities.js";
 
 export function createSessionService(
   { globalConfig }: GlobalConfig,
   { agentConfig }: AgentConfig,
-  sessionCompactor: SessionCompactor,
   shellCommand: ShellCommand,
-  mailService: MailService,
   output: OutputService,
-  userService: UserService,
-  localUserId: number,
+  contextManager: ContextManager,
+  systemMessage: string,
+  llmService: LLMService,
 ) {
+  let restoreInfo = "";
+
   async function handleCommand(
     args: string,
   ): Promise<string | CommandResponse> {
@@ -44,6 +45,9 @@ export function createSessionService(
 
       case "compact":
         return handleCompact(args.slice(subcommand.length).trim());
+
+      case "restore":
+        return handleRestore();
 
       case "complete":
         return handleComplete(args.slice(subcommand.length).trim());
@@ -103,14 +107,32 @@ export function createSessionService(
       return "Session cannot be compacted while a shell command is active.";
     }
 
-    const sessionNotes = utilities.trimChars(args, '"');
+    await output.commentAndLog("Compacting session...");
 
-    if (!sessionNotes) {
-      return 'Session notes are required. Use ns-session compact "<notes>"';
-    }
+    contextManager.append(
+      "Process this session log and reduce it down to important things to remember - " +
+        "references, plans, project structure, schemas, file locations, urls, and more. Focus on the near term, next logical steps. " +
+        "Check for and fix any inconsistencies in the current context to avoid passing them on the next session. " +
+        "The next session should be able to start with minimal bootstrapping or scanning of existing files. " +
+        "What are the things the next session should do when restored - tasks, goals, etc.. And ensure it has " +
+        "all the important context to do those things, as it will be starting from a blank slate. \n\n" +
+        "# Write the restored-session seed below (no preamble).",
+    );
 
-    await sessionCompactor.run();
+    await output.commentAndLog(`Compacting...`);
 
+    const commandList = await llmService.query(
+      agentConfig().shellModel,
+      systemMessage,
+      contextManager.getCombinedMessages(),
+      "compact",
+    );
+
+    restoreInfo = commandList.join("\n");
+
+    await output.commentAndLog(
+      `Session compacted to ${getTokenCount(restoreInfo)} tokens. Restarting Session.`,
+    );
     await output.commentAndLog(
       "------------------------------------------------------",
     );
@@ -120,6 +142,23 @@ export function createSessionService(
       nextCommandResponse: {
         nextCommandAction: NextCommandAction.CompactSession,
         pauseSeconds: 0,
+      },
+    };
+  }
+
+  function canRestore() {
+    return !!restoreInfo;
+  }
+
+  async function handleRestore(): Promise<string | CommandResponse> {
+    if (!restoreInfo) {
+      return "No session restore information available.";
+    }
+
+    return {
+      content: restoreInfo,
+      nextCommandResponse: {
+        nextCommandAction: NextCommandAction.Continue,
       },
     };
   }
@@ -154,6 +193,7 @@ export function createSessionService(
 
   return {
     ...registrableCommand,
+    canRestore,
   };
 }
 

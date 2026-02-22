@@ -30,13 +30,6 @@ export async function sendWithOpenAiCompatible(
     apiKey,
   });
 
-  // Assert the last message on the context is a user message
-  const lastMessage = context[context.length - 1];
-
-  if (lastMessage.role !== LlmRole.User) {
-    throw "Error, last message on context is not a user message";
-  }
-
   const chatRequest: ChatCompletionCreateParamsNonStreaming = {
     model: model.versionName,
     stream: false,
