@@ -3,13 +3,13 @@ import chalk from "chalk";
 import * as readline from "readline";
 import { AgentConfig } from "../agent/agentConfig.js";
 import { LynxService } from "../features/lynx.js";
+import { SessionService } from "../features/session.js";
 import { WorkspacesFeature } from "../features/workspaces.js";
 import { GlobalConfig } from "../globalConfig.js";
 import { HubClient } from "../hub/hubClient.js";
 import { ContextManager } from "../llm/contextManager.js";
 import { ContentSource, LlmRole } from "../llm/llmDtos.js";
 import { LLMService } from "../llm/llmService.js";
-import { SessionCompactor } from "../llm/sessionCompactor.js";
 import { ChatService } from "../mail/chat.js";
 import { MailService } from "../mail/mail.js";
 import { LogService } from "../services/logService.js";
@@ -30,7 +30,6 @@ export function createCommandLoop(
   promptBuilder: PromptBuilder,
   shellCommand: ShellCommand,
   lynxService: LynxService,
-  sessionCompactor: SessionCompactor,
   contextManager: ContextManager,
   workspaces: WorkspacesFeature,
   llmService: LLMService,
@@ -44,6 +43,7 @@ export function createCommandLoop(
   mailService: MailService,
   chatService: ChatService,
   hubClient: HubClient | undefined,
+  sessionService: SessionService,
 ) {
   async function run(abortSignal?: AbortSignal) {
     await output.commentAndLog(`AGENT STARTED`);
@@ -84,21 +84,19 @@ export function createCommandLoop(
       await output.commentAndLog("Use ns-help to see all available commands");
       await output.commentAndLog("Starting Context:");
 
-      const lastSessionSummary = await sessionCompactor.getLastSessionSummary();
-      if (lastSessionSummary) {
-        await displayPreviousSessionNotes(lastSessionSummary);
-      }
-
       // Check for mail that arrived before/during startup (e.g. task mail)
       if (hubClient) {
         // After successful startup, the hub sends startup messages, so wait a second for that to happen
         await sleep(1000);
       }
-      await mailService.checkAndNotify();
-      await chatService.checkAndNotify();
-      await processNotifications();
 
-      for (const initialCommand of agentConfig().initialCommands) {
+      const initialCommands = agentConfig().initialCommands;
+
+      if (sessionService.canRestore()) {
+        initialCommands.push("ns-session restore");
+      }
+
+      for (const initialCommand of initialCommands) {
         try {
           const prompt = await promptBuilder.getPrompt(0);
           await contextManager.append(prompt, ContentSource.ConsolePrompt);
@@ -109,6 +107,10 @@ export function createCommandLoop(
           await handleErrorAndSwitchToDebugMode(e, llmErrorCount, true);
         }
       }
+
+      await mailService.checkAndNotify();
+      await chatService.checkAndNotify();
+      await processNotifications();
 
       inputMode.setDebug();
 
@@ -347,9 +349,7 @@ export function createCommandLoop(
       let tokenNote = "";
 
       if (globalConfig().compactSessionEnabled) {
-        tokenNote += `\nUse 'ns-session compact "<note>"' to clear the console and reset the session.
-    The note should help you find your bearings in the next session.
-    The note should contain your next goal, and important things should you remember.`;
+        tokenNote += `\nUse 'ns-session compact' to reduce the token usage of the session.`;
       }
 
       await contextManager.append(
@@ -357,18 +357,6 @@ export function createCommandLoop(
         ContentSource.Console,
       );
     }
-  }
-
-  async function displayPreviousSessionNotes(prevSessionNotes: string) {
-    const prompt = await promptBuilder.getPrompt(0);
-    await contextManager.append(prompt, ContentSource.ConsolePrompt);
-    const prevSessionNotesCommand = "cat ~/prev_session_notes";
-    await contextManager.append(
-      prevSessionNotesCommand,
-      ContentSource.LlmPromptResponse,
-    );
-    output.write(prompt + chalk[OutputColor.llm](prevSessionNotesCommand));
-    await contextManager.append(prevSessionNotes);
   }
 
   return {

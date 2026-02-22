@@ -4,7 +4,7 @@ import { GlobalConfig } from "../globalConfig.js";
 import { ModelService } from "../services/modelService.js";
 import { CommandTools } from "./commandTool.js";
 import { CostTracker } from "./costTracker.js";
-import { LlmMessage } from "./llmDtos.js";
+import { LlmMessage, LlmRole } from "./llmDtos.js";
 import { sendWithAnthropic } from "./vendors/anthropic.js";
 import { sendWithGoogle } from "./vendors/google.js";
 import { sendWithMock } from "./vendors/mock.js";
@@ -50,6 +50,13 @@ export function createLLMService(
       throw "This should be unreachable";
     } else if (model.apiType === LlmApiType.Mock) {
       return sendWithMock(abortSignal);
+    }
+
+    // Assert the last message on the context is a user message
+    const lastMessage = context[context.length - 1];
+
+    if (lastMessage && lastMessage.role !== LlmRole.User) {
+      throw "Error, last message on context is not a user message";
     }
 
     const deps: VendorDeps = {

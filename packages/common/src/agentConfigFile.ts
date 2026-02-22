@@ -57,11 +57,6 @@ export const AgentConfigFileSchema = z.object({
     .min(1, "Shell model is required")
     .describe("Primary LLM used for shell interactions"),
 
-  compactModel: z
-    .string()
-    .optional()
-    .describe("LLM used for session compaction"),
-
   imageModel: z.string().optional().describe("Model used for image generation"),
 
   mailEnabled: z

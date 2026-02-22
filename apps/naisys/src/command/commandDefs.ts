@@ -110,14 +110,15 @@ export const chatCmd: CommandDef = {
     },
     recent: {
       usage: 'recent ["<users>"] [skip] [take]',
-      description: "Show recent chat messages, optionally filtered by user(s) (* = unread)",
+      description:
+        "Show recent chat messages, optionally filtered by user(s) (* = unread)",
     },
   },
 };
 
 export const sessionCmd: CommandDef = {
   name: "ns-session",
-  description: "Manage session (compact, wait, or end)",
+  description: "Manage session (compact, wait, or complete)",
   subcommands: {
     wait: {
       usage: "wait <seconds>",
@@ -125,14 +126,14 @@ export const sessionCmd: CommandDef = {
         "Pause and wait. Will auto-wake for new mail or other events.",
     },
     compact: {
-      usage: 'compact "<note>"',
+      usage: "compact",
       description:
-        "Compact the session which will reset the token count. The note should contain your next goal and important things to remember.",
+        "Compact the session which will reset the token count. The next session will run a restore command to continue.",
     },
     complete: {
       usage: 'complete "<result>"',
       description:
-        "End the session with a result message. Make sure to notify who you need to with results before completing.",
+        "Complete the session with a result message. Make sure to notify who you need to with results before completing.",
     },
   },
 };

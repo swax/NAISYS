@@ -61,7 +61,7 @@ export function createDebugCommands(
       } else if (inputMode.isDebug()) {
         inputMode.setLLM();
         await contextManager.append(
-          `Message from admin: ${cmdArgs}. Respond via the ns-mail command.`,
+          `Message from admin: ${cmdArgs}`,
         );
         inputMode.setDebug();
         return "";

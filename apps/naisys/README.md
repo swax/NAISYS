@@ -45,10 +45,6 @@ title: Software Engineer
 # (gpt4turbo, gpt4turbo, gemini-pro, claude3sonnet, claude3opus, local)
 shellModel: gpt4turbo
 
-# Only used between sessions to provide guidance for the next session (use a more powerful model for this)
-# defaults to the shellModel if omitted
-compactModel: claude3opus
-
 # The model used by the 'ns-genimg' command. If not defined then the ns-genimg command is not available to the LLM
 # Valid values: dalle2-256, dalle2-512, dalle2-1024, dalle3-1024, dalle3-1024-HD
 imageModel: dalle3-1024
@@ -134,7 +130,7 @@ initialCommands:
   - `ns-session` - Session management commands:
     - `ns-session wait <seconds>` - Pause execution for a set number of seconds
     - `ns-session trim <indexes>` - Remove prompts by index to save tokens (e.g., "1-5, 8")
-    - `ns-session compact "<note>"` - End session and start fresh with a note for the next session
+    - `ns-session compact` - Compact the context and restart the session with that
     - `ns-session complete "<result>"` - Mark task as complete and exit (for sub-agents: notifies lead agent)
 - NAISYS apps
   - `ns-mail` - A context friendly 'mail system' used for agent to agent communication

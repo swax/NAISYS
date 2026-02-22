@@ -30,13 +30,6 @@ export async function sendWithAnthropic(
     baseURL: model.baseUrl,
   });
 
-  // Assert the last message on the context is a user message
-  const lastMessage = context[context.length - 1];
-
-  if (lastMessage.role !== LlmRole.User) {
-    throw "Error, last message on context is not a user message";
-  }
-
   const createParams: Anthropic.MessageCreateParams = {
     model: model.versionName,
     max_tokens: 4096, // Blows up on anything higher

@@ -1,4 +1,3 @@
-import { createChatService } from "../mail/chat.js";
 import { createCommandHandler } from "../command/commandHandler.js";
 import { createCommandLoop } from "../command/commandLoop.js";
 import { createCommandProtection } from "../command/commandProtection.js";
@@ -20,8 +19,8 @@ import { createContextManager } from "../llm/contextManager.js";
 import { createCostDisplayService } from "../llm/costDisplayService.js";
 import { createCostTracker } from "../llm/costTracker.js";
 import { createLLMService } from "../llm/llmService.js";
-import { createSessionCompactor } from "../llm/sessionCompactor.js";
 import { createSystemMessage } from "../llm/systemMessage.js";
+import { createChatService } from "../mail/chat.js";
 import { createMailService } from "../mail/mail.js";
 import { createMailDisplayService } from "../mail/mailDisplayService.js";
 import { HostService } from "../services/hostService.js";
@@ -76,7 +75,11 @@ export async function createAgentRuntime(
 
   // LLM
   const inputMode = createInputMode();
-  const systemMessage = createSystemMessage(globalConfig, agentConfig, modelService);
+  const systemMessage = createSystemMessage(
+    globalConfig,
+    agentConfig,
+    modelService,
+  );
   const tools = createCommandTools(agentConfig);
   const costTracker = createCostTracker(
     globalConfig,
@@ -108,15 +111,15 @@ export async function createAgentRuntime(
     tools,
     modelService,
   );
-  const sessionCompactor = createSessionCompactor(
-    agentConfig,
-    contextManager,
-    llmService,
-    output,
-  );
 
   // Features
-  const lookService = createLookService(agentConfig, modelService, contextManager, llmService, shellWrapper);
+  const lookService = createLookService(
+    agentConfig,
+    modelService,
+    contextManager,
+    llmService,
+    shellWrapper,
+  );
   const genimg = createGenImg(
     globalConfig,
     agentConfig,
@@ -174,12 +177,11 @@ export async function createAgentRuntime(
   const sessionService = createSessionService(
     globalConfig,
     agentConfig,
-    sessionCompactor,
     shellCommand,
-    mailService,
     output,
-    userService,
-    localUserId,
+    contextManager,
+    systemMessage,
+    llmService,
   );
   const commandProtection = createCommandProtection(
     agentConfig,
@@ -229,7 +231,6 @@ export async function createAgentRuntime(
     promptBuilder,
     shellCommand,
     lynxService,
-    sessionCompactor,
     contextManager,
     workspaces,
     llmService,
@@ -243,6 +244,7 @@ export async function createAgentRuntime(
     mailService,
     chatService,
     hubClient,
+    sessionService,
   );
 
   const abortController = new AbortController();
