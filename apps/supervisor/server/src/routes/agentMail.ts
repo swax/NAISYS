@@ -46,7 +46,13 @@ export default function agentMailRoutes(
         const { id } = request.params;
         const { updatedSince, page, count } = request.query;
 
-        const data = await getMailDataByUserId(id, updatedSince, page, count);
+        const data = await getMailDataByUserId(
+          id,
+          updatedSince,
+          page,
+          count,
+          "mail",
+        );
 
         const canSend = hasPermission(
           request.supervisorUser,

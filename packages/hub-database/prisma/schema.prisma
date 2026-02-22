@@ -109,6 +109,7 @@ model user_notifications {
   latest_host_id Int?
   latest_log_id  Int       @default(0)
   latest_mail_id Int       @default(0)
+  latest_chat_id Int       @default(0)
   last_active    DateTime?
   updated_at     DateTime  @updatedAt
   users          users     @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)

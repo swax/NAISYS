@@ -13,6 +13,7 @@ export type Heartbeat = z.infer<typeof HeartbeatSchema>;
 export const AgentNotificationSchema = z.object({
   latestLogId: z.number(),
   latestMailId: z.number(),
+  latestChatId: z.number(),
 });
 export type AgentNotification = z.infer<typeof AgentNotificationSchema>;
 

@@ -141,6 +141,7 @@ export function sendMailViaHub(
   toUserIds: number[],
   subject: string,
   body: string,
+  kind: "mail" | "chat" = "mail",
 ): Promise<MailSendResponse> {
   return new Promise((resolve, reject) => {
     if (!socket || !connected) {
@@ -150,7 +151,7 @@ export function sendMailViaHub(
 
     socket.emit(
       HubEvents.MAIL_SEND,
-      { fromUserId, toUserIds, subject, body },
+      { fromUserId, toUserIds, subject, body, kind },
       (response: MailSendResponse) => {
         resolve(response);
       },
