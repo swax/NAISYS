@@ -78,13 +78,15 @@ export const HubEvents = {
   MAIL_SEND: "mail_send",
   /** List recent mail messages */
   MAIL_LIST: "mail_list",
-  /** Read a specific mail message */
-  MAIL_READ: "mail_read",
+  /** Fetch a specific mail message (does not mark as read) */
+  MAIL_PEEK: "mail_peek",
+  /** Mark messages as read */
+  MAIL_MARK_READ: "mail_mark_read",
   /** Archive mail messages */
   MAIL_ARCHIVE: "mail_archive",
   /** Full-text search of mail */
   MAIL_SEARCH: "mail_search",
-  /** Get unread message IDs */
+  /** Get unread messages with full data */
   MAIL_UNREAD: "mail_unread",
 
   // ---------------------------------------------------------------------------

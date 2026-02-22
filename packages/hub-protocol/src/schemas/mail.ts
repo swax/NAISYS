@@ -64,18 +64,18 @@ export const MailListResponseSchema = z.object({
 export type MailListResponse = z.infer<typeof MailListResponseSchema>;
 
 // =============================================================================
-// Read
+// Peek (fetch without marking as read)
 // =============================================================================
 
-/** Request to read a specific mail message */
-export const MailReadRequestSchema = z.object({
+/** Request to peek at a specific mail message */
+export const MailPeekRequestSchema = z.object({
   userId: z.number(),
   messageId: z.number(),
 });
-export type MailReadRequest = z.infer<typeof MailReadRequestSchema>;
+export type MailPeekRequest = z.infer<typeof MailPeekRequestSchema>;
 
-/** Full message data returned when reading a message */
-export const MailReadMessageDataSchema = z.object({
+/** Full message data returned when fetching a message */
+export const MailMessageDataSchema = z.object({
   id: z.number(),
   subject: z.string(),
   fromUsername: z.string(),
@@ -84,15 +84,15 @@ export const MailReadMessageDataSchema = z.object({
   createdAt: z.string(),
   body: z.string(),
 });
-export type MailReadMessageData = z.infer<typeof MailReadMessageDataSchema>;
+export type MailMessageData = z.infer<typeof MailMessageDataSchema>;
 
-/** Response to mail read request */
-export const MailReadResponseSchema = z.object({
+/** Response to mail peek request */
+export const MailPeekResponseSchema = z.object({
   success: z.boolean(),
-  message: MailReadMessageDataSchema.optional(),
+  message: MailMessageDataSchema.optional(),
   error: z.string().optional(),
 });
-export type MailReadResponse = z.infer<typeof MailReadResponseSchema>;
+export type MailPeekResponse = z.infer<typeof MailPeekResponseSchema>;
 
 // =============================================================================
 // Archive
@@ -144,20 +144,39 @@ export const MailSearchResponseSchema = z.object({
 export type MailSearchResponse = z.infer<typeof MailSearchResponseSchema>;
 
 // =============================================================================
+// Mark Read
+// =============================================================================
+
+/** Request to mark messages as read */
+export const MailMarkReadRequestSchema = z.object({
+  userId: z.number(),
+  messageIds: z.array(z.number()),
+});
+export type MailMarkReadRequest = z.infer<typeof MailMarkReadRequestSchema>;
+
+/** Response to mark-read request */
+export const MailMarkReadResponseSchema = z.object({
+  success: z.boolean(),
+  error: z.string().optional(),
+});
+export type MailMarkReadResponse = z.infer<typeof MailMarkReadResponseSchema>;
+
+// =============================================================================
 // Unread
 // =============================================================================
 
-/** Request to get unread message IDs */
+/** Request to get unread messages */
 export const MailUnreadRequestSchema = z.object({
   userId: z.number(),
   kind: MessageKindSchema,
+  afterId: z.number().optional(),
 });
 export type MailUnreadRequest = z.infer<typeof MailUnreadRequestSchema>;
 
-/** Response to unread message request */
+/** Response to unread messages request */
 export const MailUnreadResponseSchema = z.object({
   success: z.boolean(),
-  messageIds: z.array(z.number()).optional(),
+  messages: z.array(MailMessageDataSchema).optional(),
   error: z.string().optional(),
 });
 export type MailUnreadResponse = z.infer<typeof MailUnreadResponseSchema>;

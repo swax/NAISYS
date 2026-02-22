@@ -5,8 +5,10 @@ import {
   MailArchiveResponse,
   MailListRequestSchema,
   MailListResponse,
-  MailReadRequestSchema,
-  MailReadResponse,
+  MailMarkReadRequestSchema,
+  MailMarkReadResponse,
+  MailPeekRequestSchema,
+  MailPeekResponse,
   MailSearchRequestSchema,
   MailSearchResponse,
   MailSendRequestSchema,
@@ -223,16 +225,16 @@ export function createHubMailService(
     },
   );
 
-  // MAIL_READ
+  // MAIL_PEEK
   naisysServer.registerEvent(
-    HubEvents.MAIL_READ,
+    HubEvents.MAIL_PEEK,
     async (
       hostId: number,
       data: unknown,
-      ack: (response: MailReadResponse) => void,
+      ack: (response: MailPeekResponse) => void,
     ) => {
       try {
-        const parsed = MailReadRequestSchema.parse(data);
+        const parsed = MailPeekRequestSchema.parse(data);
 
         await usingHubDatabase(async (hubDb) => {
           const message = await hubDb.mail_messages.findUnique({
@@ -253,16 +255,6 @@ export function createHubMailService(
             return;
           }
 
-          // Mark as read
-          await hubDb.mail_recipients.updateMany({
-            where: {
-              message_id: message.id,
-              user_id: parsed.userId,
-              read_at: null,
-            },
-            data: { read_at: new Date() },
-          });
-
           ack({
             success: true,
             message: {
@@ -280,7 +272,39 @@ export function createHubMailService(
         });
       } catch (error) {
         logService.error(
-          `[Hub:Mail] mail_read error from host ${hostId}: ${error}`,
+          `[Hub:Mail] mail_peek error from host ${hostId}: ${error}`,
+        );
+        ack({ success: false, error: String(error) });
+      }
+    },
+  );
+
+  // MAIL_MARK_READ
+  naisysServer.registerEvent(
+    HubEvents.MAIL_MARK_READ,
+    async (
+      hostId: number,
+      data: unknown,
+      ack: (response: MailMarkReadResponse) => void,
+    ) => {
+      try {
+        const parsed = MailMarkReadRequestSchema.parse(data);
+
+        await usingHubDatabase(async (hubDb) => {
+          await hubDb.mail_recipients.updateMany({
+            where: {
+              message_id: { in: parsed.messageIds },
+              user_id: parsed.userId,
+              read_at: null,
+            },
+            data: { read_at: new Date() },
+          });
+
+          ack({ success: true });
+        });
+      } catch (error) {
+        logService.error(
+          `[Hub:Mail] mail_mark_read error from host ${hostId}: ${error}`,
         );
         ack({ success: false, error: String(error) });
       }
@@ -416,16 +440,31 @@ export function createHubMailService(
           const messages = await hubDb.mail_messages.findMany({
             where: {
               kind: parsed.kind,
+              ...(parsed.afterId ? { id: { gt: parsed.afterId } } : {}),
               recipients: {
                 some: { user_id: parsed.userId, read_at: null },
               },
             },
-            select: { id: true },
+            include: {
+              from_user: { select: { username: true, title: true } },
+              recipients: {
+                include: { user: { select: { username: true } } },
+              },
+            },
+            orderBy: { id: "asc" },
           });
 
           ack({
             success: true,
-            messageIds: messages.map((m) => m.id),
+            messages: messages.map((m) => ({
+              id: m.id,
+              subject: m.subject,
+              fromUsername: m.from_user?.username ?? "(deleted)",
+              fromTitle: m.from_user?.title ?? "",
+              recipientUsernames: m.recipients.map((r) => r.user.username),
+              createdAt: m.created_at.toISOString(),
+              body: m.body,
+            })),
           });
         });
       } catch (error) {

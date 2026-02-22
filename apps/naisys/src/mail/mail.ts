@@ -1,6 +1,9 @@
 import {
   HubEvents,
   MailArchiveResponse,
+  MailMarkReadResponse,
+  MailMessageData,
+  MailPeekResponse,
   MailReceivedPush,
   MailSendResponse,
   MailUnreadResponse,
@@ -80,15 +83,16 @@ export function createMailService(
       }
 
       case "read": {
-        if (!hubClient || !mailDisplayService) {
+        if (!hubClient) {
           throw "Not available in local mode.";
         }
         const messageId = parseInt(argv[1]);
         if (isNaN(messageId)) {
           throw "Invalid parameters. Please provide a message id.";
         }
-        const { display } = await mailDisplayService.readMessage(messageId);
-        return display;
+        const msg = await peekMessage(messageId);
+        await markMessagesRead([msg.id]);
+        return formatMessageDisplay(msg);
       }
 
       case "archive": {
@@ -218,64 +222,78 @@ export function createMailService(
     return userService.getUsers().length > 1;
   }
 
-  async function getUnreadMessages(): Promise<{ message_id: number }[]> {
+  /** Highest message ID we've seen from MAIL_UNREAD, used as cursor */
+  let lastUnreadId = 0;
+
+  async function getUnreadMessages(): Promise<MailMessageData[]> {
     if (!hubClient) {
       return [];
     }
 
     const response = await hubClient.sendRequest<MailUnreadResponse>(
       HubEvents.MAIL_UNREAD,
-      { userId: localUserId, kind: "mail" },
+      { userId: localUserId, kind: "mail", afterId: lastUnreadId },
     );
 
-    if (!response.success || !response.messageIds) {
+    if (!response.success || !response.messages?.length) {
       return [];
     }
 
-    return response.messageIds.map((id) => ({ message_id: id }));
+    // Advance cursor to max returned ID
+    for (const m of response.messages) {
+      if (m.id > lastUnreadId) {
+        lastUnreadId = m.id;
+      }
+    }
+
+    return response.messages;
   }
 
-  // Track message IDs that have been notified but not yet processed
-  const notifiedMessageIds = new Set<number>();
+  async function peekMessage(messageId: number): Promise<MailMessageData> {
+    const response = await hubClient!.sendRequest<MailPeekResponse>(
+      HubEvents.MAIL_PEEK,
+      { userId: localUserId, messageId },
+    );
+
+    if (!response.success || !response.message) {
+      throw response.error || "Failed to read message";
+    }
+
+    return response.message;
+  }
+
+  async function markMessagesRead(messageIds: number[]): Promise<void> {
+    if (!hubClient || !messageIds.length) return;
+
+    await hubClient.sendRequest<MailMarkReadResponse>(
+      HubEvents.MAIL_MARK_READ,
+      { userId: localUserId, messageIds },
+    );
+  }
 
   /**
    * Check for new mail and create a notification if there are unread messages.
-   * Tracks notified message IDs to avoid duplicate notifications.
+   * Uses afterId cursor to avoid duplicate notifications.
    * (Hub mode only)
    */
   async function checkAndNotify(): Promise<void> {
-    if (!hubClient || !mailDisplayService) return;
+    if (!hubClient) return;
 
-    const unreadMessages = await getUnreadMessages();
-    if (!unreadMessages.length) {
-      return;
-    }
+    const messages = await getUnreadMessages();
+    if (!messages.length) return;
 
-    // Filter out messages we've already notified about
-    const newMessages = unreadMessages.filter(
-      (m) => !notifiedMessageIds.has(m.message_id),
-    );
-    if (!newMessages.length) {
-      return;
-    }
+    const messageIds = messages.map((m) => m.id);
 
-    // Track these message IDs as notified
-    const messageIds = newMessages.map((m) => m.message_id);
-    messageIds.forEach((id) => notifiedMessageIds.add(id));
-
-    const contextOutput: string[] = [];
-    for (const messageId of messageIds) {
-      const { display } = await mailDisplayService.readMessage(messageId);
-      contextOutput.push("New Message:", display);
-    }
+    const contextOutput = messages.flatMap((m) => [
+      "New Message:",
+      formatMessageDisplay(m),
+    ]);
 
     promptNotification.notify({
       userId: localUserId,
       wake: "yes",
       contextOutput,
-      processed: () => {
-        messageIds.forEach((id) => notifiedMessageIds.delete(id));
-      },
+      processed: () => markMessagesRead(messageIds),
     });
   }
 

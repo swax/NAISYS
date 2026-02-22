@@ -1,5 +1,6 @@
 import { jest, test } from "@jest/globals";
 import { type HubDatabaseService, PrismaClient } from "@naisys/hub-database";
+import { MailMessageData } from "@naisys/hub-protocol";
 import { AgentConfig } from "../agent/agentConfig.js";
 import {
   agentConfigCmd,
@@ -104,7 +105,7 @@ export function createMockMailService() {
   const mailService: MailService = {
     command: mailCmd,
     handleCommand: jest.fn(() => ""),
-    getUnreadMessages: jest.fn(() => Promise.resolve([])),
+    getUnreadMessages: jest.fn((): Promise<MailMessageData[]> => Promise.resolve([])),
     sendMessage: jest.fn(() => Promise.resolve("")),
     getAllUserNames: jest.fn(() => []),
     hasMultipleUsers: jest.fn(() => false),
