@@ -14,19 +14,44 @@ export interface MailContent {
   subject: string;
   body: string;
   createdAt: string;
+  attachments?: { id: number; filename: string; fileSize: number }[];
+}
+
+/** Format a byte count into a human-readable size string */
+function formatSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 /** Standard display format for a mail message */
-export function formatMessageDisplay(content: MailContent): string {
-  return (
+export function formatMessageDisplay(
+  content: MailContent,
+  hubUrl?: string,
+): string {
+  let output =
     `  Subject: ${content.subject}\n` +
     `  From: ${content.fromUsername}\n` +
     `  Title: ${content.fromTitle}\n` +
     `  To: ${content.recipientUsernames.join(", ")}\n` +
     `  Date: ${new Date(content.createdAt).toLocaleString()}\n` +
     `  Message:\n` +
-    `  ${content.body}`
-  );
+    `  ${content.body}`;
+
+  if (content.attachments?.length) {
+    output += "\n  Attachments:";
+    for (const att of content.attachments) {
+      output += `\n    ${att.id}: ${att.filename} (${formatSize(att.fileSize)})`;
+    }
+    if (hubUrl) {
+      output += "\n  Download:";
+      for (const att of content.attachments) {
+        output += `\n    curl -k "${hubUrl}/attachments/${att.id}?apiKey=$NAISYS_API_KEY" -o ${att.filename}`;
+      }
+    }
+  }
+
+  return output;
 }
 
 export function createMailDisplayService(

@@ -6,6 +6,7 @@ import https from "https";
 import { Server } from "socket.io";
 import { fileURLToPath } from "url";
 import { createHubAgentService } from "./handlers/hubAgentService.js";
+import { createHubAttachmentService } from "./handlers/hubAttachmentService.js";
 import { createHubConfigService } from "./handlers/hubConfigService.js";
 import { createHubCostService } from "./handlers/hubCostService.js";
 import { createHubHeartbeatService } from "./handlers/hubHeartbeatService.js";
@@ -57,6 +58,10 @@ export const startHub: StartHub = async (
       key: certInfo.key,
       cert: certInfo.cert,
     });
+
+    // Register HTTP attachment upload/download handler before Socket.IO
+    createHubAttachmentService(httpsServer, hubDatabaseService, logService);
+
     const io = new Server(httpsServer, {
       cors: {
         origin: "*", // In production, restrict this
