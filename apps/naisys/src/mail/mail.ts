@@ -17,6 +17,7 @@ import {
 } from "../command/commandRegistry.js";
 import { HubClient } from "../hub/hubClient.js";
 import { PromptNotificationService } from "../utils/promptNotificationService.js";
+import { MailAttachmentService } from "./mailAttachmentService.js";
 import {
   MailContent,
   MailDisplayService,
@@ -29,6 +30,7 @@ export function createMailService(
   mailDisplayService: MailDisplayService | null,
   localUserId: number,
   promptNotification: PromptNotificationService,
+  attachmentService: MailAttachmentService,
 ) {
   const localUser = userService.getUserById(localUserId);
   const localUsername = localUser?.username || "unknown";
@@ -73,13 +75,21 @@ export function createMailService(
       }
 
       case "send": {
-        // Expected: ns-mail send "user1,user2" "subject" "message"
+        // Expected: ns-mail send "user1,user2" "subject" "message" [file1 file2 ...]
         if (!argv[1] || !argv[2] || !argv[3]) {
           throw "Invalid parameters. There should be a username, subject and message. All contained in quotes.";
         }
 
         const recipients = userService.resolveUsernames(argv[1]);
-        return sendMessage(recipients, argv[2], argv[3]);
+
+        // Upload any file attachments (argv[4+])
+        let attachmentIds: number[] | undefined;
+        const filePaths = argv.slice(4);
+        if (filePaths.length > 0) {
+          attachmentIds = await attachmentService.resolveAndUpload(filePaths);
+        }
+
+        return sendMessage(recipients, argv[2], argv[3], attachmentIds);
       }
 
       case "read": {
@@ -92,7 +102,7 @@ export function createMailService(
         }
         const msg = await peekMessage(messageId);
         await markMessagesRead([msg.id]);
-        return formatMessageDisplay(msg);
+        return formatMessageDisplay(msg, hubClient.getHubUrl());
       }
 
       case "archive": {
@@ -154,6 +164,7 @@ export function createMailService(
     recipients: UserEntry[],
     subject: string,
     message: string,
+    attachmentIds?: number[],
   ): Promise<string> {
     message = message.replace(/\\n/g, "\n");
 
@@ -166,6 +177,7 @@ export function createMailService(
           subject,
           body: message,
           kind: "mail",
+          attachmentIds,
         },
       );
 
@@ -286,7 +298,7 @@ export function createMailService(
 
     const contextOutput = messages.flatMap((m) => [
       "New Message:",
-      formatMessageDisplay(m),
+      formatMessageDisplay(m, hubClient?.getHubUrl()),
     ]);
 
     promptNotification.notify({

@@ -187,6 +187,7 @@ export function createHubClient(
 
     // HubClient API
     getConnectionInfo,
+    getHubUrl: () => hubUrl,
     isConnected,
     waitForConnection,
     registerEvent,

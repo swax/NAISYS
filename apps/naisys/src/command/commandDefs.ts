@@ -32,14 +32,14 @@ export const lookCmd: CommandDef = {
   name: "ns-look",
   usage: "[--describe] <filepath>",
   description:
-    "Look at an image by adding it to the context. With --describe, only add a text description instead",
+    "Look at an image by adding it to the context. Optional --describe to add only a text description instead",
 };
 
 export const listenCmd: CommandDef = {
   name: "ns-listen",
   usage: "[--transcribe] <filepath>",
   description:
-    "Listen to audio by adding it to the context. With --transcribe, only add a text transcription instead",
+    "Listen to audio by adding it to the context. Optional --transcribe to add only a text transcription instead",
 };
 
 export const genImgCmd: CommandDef = {
@@ -85,8 +85,8 @@ export const mailCmd: CommandDef = {
   description: "A private mail system for communicating with your team",
   subcommands: {
     send: {
-      usage: 'send "<users>" "<subject>" "<msg>"',
-      description: "Send a message",
+      usage: 'send "<users>" "<subject>" "<msg>" [file1 file2 ...]',
+      description: "Send a message, optionally attach files",
     },
     list: {
       usage: "list [received|sent]",
@@ -112,8 +112,8 @@ export const chatCmd: CommandDef = {
   description: "Quick back-and-forth chat with your team",
   subcommands: {
     send: {
-      usage: 'send "<users>" "<msg>"',
-      description: "Send a chat message",
+      usage: 'send "<users>" "<msg>" [file1 file2 ...]',
+      description: "Send a chat message, optionally attach files",
     },
     recent: {
       usage: 'recent ["<users>"] [skip] [take]',

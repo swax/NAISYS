@@ -18,6 +18,7 @@ export const MailSendRequestSchema = z.object({
   subject: z.string(),
   body: z.string(),
   kind: MessageKindSchema,
+  attachmentIds: z.array(z.number()).optional(),
 });
 export type MailSendRequest = z.infer<typeof MailSendRequestSchema>;
 
@@ -43,6 +44,14 @@ export const MailListRequestSchema = z.object({
 });
 export type MailListRequest = z.infer<typeof MailListRequestSchema>;
 
+/** Attachment metadata included in message responses */
+export const MailAttachmentDataSchema = z.object({
+  id: z.number(),
+  filename: z.string(),
+  fileSize: z.number(),
+});
+export type MailAttachmentData = z.infer<typeof MailAttachmentDataSchema>;
+
 /** A single message in a mail list response */
 export const MailListMessageDataSchema = z.object({
   id: z.number(),
@@ -52,6 +61,7 @@ export const MailListMessageDataSchema = z.object({
   createdAt: z.string(),
   isUnread: z.boolean(),
   body: z.string().optional(),
+  attachments: z.array(MailAttachmentDataSchema).optional(),
 });
 export type MailListMessageData = z.infer<typeof MailListMessageDataSchema>;
 
@@ -83,6 +93,7 @@ export const MailMessageDataSchema = z.object({
   recipientUsernames: z.array(z.string()),
   createdAt: z.string(),
   body: z.string(),
+  attachments: z.array(MailAttachmentDataSchema).optional(),
 });
 export type MailMessageData = z.infer<typeof MailMessageDataSchema>;
 

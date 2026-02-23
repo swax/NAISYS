@@ -36,6 +36,7 @@ export function createHubMailService(
     body: string;
     kind: string;
     hostId?: number;
+    attachmentIds?: number[];
   }) {
     await usingHubDatabase(async (hubDb) => {
       const now = new Date();
@@ -58,6 +59,23 @@ export function createHubMailService(
           created_at: now,
         },
       });
+
+      // Link uploaded attachments to the new message
+      if (params.attachmentIds?.length) {
+        for (const attId of params.attachmentIds) {
+          const att = await hubDb.mail_attachments.findUnique({ where: { id: attId } });
+          if (!att) {
+            throw new Error(`Attachment ${attId} not found`);
+          }
+          if (att.message_id != null) {
+            throw new Error(`Attachment ${attId} is already linked to message ${att.message_id}`);
+          }
+          await hubDb.mail_attachments.update({
+            where: { id: attId },
+            data: { message_id: message.id },
+          });
+        }
+      }
 
       await hubDb.mail_recipients.createMany({
         data: params.recipientUserIds.map((userId) => ({
@@ -127,6 +145,7 @@ export function createHubMailService(
           body: parsed.body,
           kind: parsed.kind,
           hostId,
+          attachmentIds: parsed.attachmentIds,
         });
 
         ack({ success: true });
@@ -190,6 +209,9 @@ export function createHubMailService(
               recipients: {
                 include: { user: { select: { username: true } } },
               },
+              attachments: {
+                select: { id: true, filename: true, file_size: true },
+              },
             },
             orderBy: { created_at: "desc" },
             skip: parsed.skip,
@@ -211,6 +233,13 @@ export function createHubMailService(
               createdAt: m.created_at.toISOString(),
               isUnread,
               ...(parsed.kind === "chat" ? { body: m.body } : {}),
+              attachments: m.attachments.length
+                ? m.attachments.map((a) => ({
+                    id: a.id,
+                    filename: a.filename,
+                    fileSize: a.file_size,
+                  }))
+                : undefined,
             };
           });
 
@@ -244,6 +273,9 @@ export function createHubMailService(
               recipients: {
                 include: { user: { select: { username: true } } },
               },
+              attachments: {
+                select: { id: true, filename: true, file_size: true },
+              },
             },
           });
 
@@ -267,6 +299,13 @@ export function createHubMailService(
               ),
               createdAt: message.created_at.toISOString(),
               body: message.body,
+              attachments: message.attachments.length
+                ? message.attachments.map((a) => ({
+                    id: a.id,
+                    filename: a.filename,
+                    fileSize: a.file_size,
+                  }))
+                : undefined,
             },
           });
         });
@@ -450,6 +489,9 @@ export function createHubMailService(
               recipients: {
                 include: { user: { select: { username: true } } },
               },
+              attachments: {
+                select: { id: true, filename: true, file_size: true },
+              },
             },
             orderBy: { id: "asc" },
           });
@@ -464,6 +506,13 @@ export function createHubMailService(
               recipientUsernames: m.recipients.map((r) => r.user.username),
               createdAt: m.created_at.toISOString(),
               body: m.body,
+              attachments: m.attachments.length
+                ? m.attachments.map((a) => ({
+                    id: a.id,
+                    filename: a.filename,
+                    fileSize: a.file_size,
+                  }))
+                : undefined,
             })),
           });
         });

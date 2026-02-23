@@ -49,21 +49,37 @@ model costs {
 }
 
 model mail_messages {
-  id              Int               @id @default(autoincrement())
+  id              Int                @id @default(autoincrement())
   from_user_id    Int?
   host_id         Int? // Sender's host
-  kind            String            @default("mail")
+  kind            String             @default("mail")
   participant_ids String? // Sorted comma-joined user IDs of all participants (sender + recipients)
   subject         String
   body            String
-  created_at      DateTime          @default(now())
-  from_user       users?            @relation("mail_messages_from_user", fields: [from_user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  host            hosts?            @relation(fields: [host_id], references: [id])
+  created_at      DateTime           @default(now())
+  from_user       users?             @relation("mail_messages_from_user", fields: [from_user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  host            hosts?             @relation(fields: [host_id], references: [id])
   recipients      mail_recipients[]
+  attachments     mail_attachments[]
 
   @@index([from_user_id], map: "idx_mail_messages_from_user_id") // WHERE from_user_id in sent messages filter
   @@index([created_at(sort: Desc)], map: "idx_mail_messages_created_at_desc") // ORDER BY created_at DESC in listMessages and searchMessages
   @@index([participant_ids], map: "idx_mail_messages_participant_ids") // WHERE participant_ids in chat recent filtering
+}
+
+model mail_attachments {
+  id          Int            @id @default(autoincrement())
+  filepath    String // Server storage path
+  filename    String
+  file_size   Int
+  file_hash   String
+  message_id  Int?
+  uploaded_by Int
+  created_at  DateTime       @default(now())
+  message     mail_messages? @relation(fields: [message_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  uploader    users          @relation("uploaded_attachments", fields: [uploaded_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([message_id], map: "idx_mail_attachments_message_id") // JOIN from mail_messages includes
 }
 
 model mail_recipients {
@@ -99,8 +115,9 @@ model users {
   run_sessions       run_session[]
   context_logs       context_log[]       @relation("context_log_user")
   costs              costs[]             @relation("costs_user")
-  user_notifications user_notifications?
-  user_hosts         user_hosts[]
+  uploaded_attachments mail_attachments[] @relation("uploaded_attachments")
+  user_notifications   user_notifications?
+  user_hosts           user_hosts[]
   @@index([username], map: "idx_users_username") // WHERE username in hubMailService recipient resolution, agentConfigService user lookup
 }
 

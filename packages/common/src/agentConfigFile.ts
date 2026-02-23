@@ -166,6 +166,11 @@ export const adminAgentConfig = {
   shellModel: "none",
   agentPrompt: "Human admin for monitoring and control.",
   tokenMax: 100_000,
+  mailEnabled: true,
+  chatEnabled: true,
+  wakeOnMessage: true,
+  webEnabled: true,
+  multipleCommandsEnabled: true,
   spendLimitDollars: 1, // Required on all agents
 } satisfies AgentConfigFile;
 

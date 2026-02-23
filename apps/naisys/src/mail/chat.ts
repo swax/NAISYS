@@ -1,5 +1,6 @@
 import {
   HubEvents,
+  MailAttachmentData,
   MailListMessageData,
   MailListResponse,
   MailMarkReadResponse,
@@ -14,12 +15,46 @@ import { chatCmd } from "../command/commandDefs.js";
 import { RegistrableCommand } from "../command/commandRegistry.js";
 import { HubClient } from "../hub/hubClient.js";
 import { PromptNotificationService } from "../utils/promptNotificationService.js";
+import { MailAttachmentService } from "./mailAttachmentService.js";
+
+function formatSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes}B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)}KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)}MB`;
+}
+
+/** Format inline attachment suffix, e.g. " [file.txt 2.1KB]" */
+function formatAttachmentSuffix(attachments?: MailAttachmentData[]): string {
+  if (!attachments?.length) return "";
+  return attachments
+    .map((a) => ` [${a.filename} ${formatSize(a.fileSize)}]`)
+    .join("");
+}
+
+/** Build download commands for all attachments in a batch of messages */
+function formatDownloadFooter(
+  hubUrl: string,
+  messages: { attachments?: MailAttachmentData[] }[],
+): string {
+  const allAttachments = messages.flatMap((m) => m.attachments ?? []);
+  if (!allAttachments.length) return "";
+  return (
+    "\nDownload:\n" +
+    allAttachments
+      .map(
+        (a) =>
+          `  curl -k "${hubUrl}/attachments/${a.id}?apiKey=$NAISYS_API_KEY" -o ${a.filename}`,
+      )
+      .join("\n")
+  );
+}
 
 export function createChatService(
   hubClient: HubClient | undefined,
   userService: UserService,
   localUserId: number,
   promptNotification: PromptNotificationService,
+  attachmentService: MailAttachmentService,
 ) {
   async function handleCommand(args: string): Promise<string> {
     const argv = stringArgv(args);
@@ -42,13 +77,21 @@ export function createChatService(
       }
 
       case "send": {
-        // Expected: ns-chat send "user1,user2" "message"
+        // Expected: ns-chat send "user1,user2" "message" [file1 file2 ...]
         if (!argv[1] || !argv[2]) {
           throw 'Invalid parameters. Usage: ns-chat send "users" "message"';
         }
 
         const recipients = userService.resolveUsernames(argv[1]);
-        return sendMessage(recipients, argv[2]);
+
+        // Upload any file attachments (argv[3+])
+        let attachmentIds: number[] | undefined;
+        const filePaths = argv.slice(3);
+        if (filePaths.length > 0) {
+          attachmentIds = await attachmentService.resolveAndUpload(filePaths);
+        }
+
+        return sendMessage(recipients, argv[2], attachmentIds);
       }
 
       case "recent": {
@@ -85,6 +128,7 @@ export function createChatService(
   async function sendMessage(
     recipients: UserEntry[],
     message: string,
+    attachmentIds?: number[],
   ): Promise<string> {
     message = message.replace(/\\n/g, "\n");
 
@@ -97,6 +141,7 @@ export function createChatService(
           subject: "",
           body: message,
           kind: "chat",
+          attachmentIds,
         },
       );
 
@@ -153,9 +198,15 @@ export function createChatService(
     const conversation = !!withUserIds;
     const chronological = [...messages].reverse();
 
-    return chronological
+    let output = chronological
       .map((m) => formatChatLine(m, conversation ? "conversation" : "overview"))
       .join("\n");
+
+    if (hubClient) {
+      output += formatDownloadFooter(hubClient.getHubUrl(), chronological);
+    }
+
+    return output;
   }
 
   /**
@@ -208,7 +259,7 @@ export function createChatService(
       }
     }
 
-    return `${prefix}${dateStr}: ${sender}: ${m.body ?? ""}`;
+    return `${prefix}${dateStr}: ${sender}: ${m.body ?? ""}${formatAttachmentSuffix(m.attachments)}`;
   }
 
   /** Format a MailMessageData (from MAIL_UNREAD) as a chat line for notifications */
@@ -231,7 +282,7 @@ export function createChatService(
       sender = m.fromUsername;
     }
 
-    return `* ${dateStr}: ${sender}: ${m.body}`;
+    return `* ${dateStr}: ${sender}: ${m.body}${formatAttachmentSuffix(m.attachments)}`;
   }
 
   /** Highest message ID we've seen from MAIL_UNREAD, used as cursor */
@@ -267,9 +318,15 @@ export function createChatService(
 
     const messageIds = messages.map((m) => m.id);
 
+    const lines = messages.map((m) => formatUnreadChatLine(m));
+    const downloadFooter = formatDownloadFooter(
+      hubClient.getHubUrl(),
+      messages,
+    );
     const contextOutput = [
       "New chat messages:",
-      ...messages.map((m) => formatUnreadChatLine(m)),
+      ...lines,
+      ...(downloadFooter ? [downloadFooter] : []),
     ];
 
     promptNotification.notify({

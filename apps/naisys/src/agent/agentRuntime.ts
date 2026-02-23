@@ -23,6 +23,7 @@ import { createLLMService } from "../llm/llmService.js";
 import { createSystemMessage } from "../llm/systemMessage.js";
 import { createChatService } from "../mail/chat.js";
 import { createMailService } from "../mail/mail.js";
+import { createMailAttachmentService } from "../mail/mailAttachmentService.js";
 import { createMailDisplayService } from "../mail/mailDisplayService.js";
 import { HostService } from "../services/hostService.js";
 import { createLogService } from "../services/logService.js";
@@ -139,18 +140,26 @@ export async function createAgentRuntime(
   const mailDisplayService = hubClient
     ? createMailDisplayService(hubClient, localUserId)
     : null;
+  const attachmentService = createMailAttachmentService(
+    hubClient,
+    userService,
+    localUserId,
+    shellWrapper,
+  );
   const mailService = createMailService(
     hubClient,
     userService,
     mailDisplayService,
     localUserId,
     promptNotification,
+    attachmentService,
   );
   const chatService = createChatService(
     hubClient,
     userService,
     localUserId,
     promptNotification,
+    attachmentService,
   );
   const subagentService = createSubagentService(
     mailService,
