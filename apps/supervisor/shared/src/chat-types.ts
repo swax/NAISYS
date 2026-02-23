@@ -9,12 +9,19 @@ export const ChatConversationSchema = z.object({
   lastMessageFrom: z.string(),
 });
 
+export const ChatAttachmentSchema = z.object({
+  id: z.number(),
+  filename: z.string(),
+  fileSize: z.number(),
+});
+
 export const ChatMessageSchema = z.object({
   id: z.number(),
   fromUserId: z.number(),
   fromUsername: z.string(),
   body: z.string(),
   createdAt: z.string(),
+  attachments: z.array(ChatAttachmentSchema).optional(),
 });
 
 export const ChatConversationsResponseSchema = z.object({
@@ -51,6 +58,7 @@ export const SendChatResponseSchema = z.object({
 });
 
 // Inferred types
+export type ChatAttachment = z.infer<typeof ChatAttachmentSchema>;
 export type ChatConversation = z.infer<typeof ChatConversationSchema>;
 export type ChatMessage = z.infer<typeof ChatMessageSchema>;
 export type ChatConversationsResponse = z.infer<

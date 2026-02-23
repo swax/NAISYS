@@ -30,7 +30,6 @@ interface NewMessageModalProps {
   agents: Agent[];
   currentAgentId: number;
   onSend: (
-    senderId: number,
     recipientId: number,
     subject: string,
     body: string,
@@ -51,7 +50,6 @@ export const NewMessageModal: React.FC<NewMessageModalProps> = ({
   initialSubject,
   initialBody,
 }) => {
-  const [senderId, setSenderId] = useState<string>(String(currentAgentId));
   const [recipientId, setRecipientId] = useState<string>("");
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
@@ -61,11 +59,6 @@ export const NewMessageModal: React.FC<NewMessageModalProps> = ({
     null,
   );
   const bodyTextareaRef = React.useRef<HTMLTextAreaElement>(null);
-
-  // Update sender when currentAgentId changes
-  useEffect(() => {
-    setSenderId(String(currentAgentId));
-  }, [currentAgentId]);
 
   // Set initial values when modal opens with reply data
   useEffect(() => {
@@ -121,16 +114,20 @@ export const NewMessageModal: React.FC<NewMessageModalProps> = ({
     };
   }, [opened, isLoading]);
 
-  // Create options for all agents (including current for sender selection)
-  const allAgentOptions = agents.map((agent) => ({
-    value: String(agent.id),
-    label: agent.title ? `${agent.name} (${agent.title})` : agent.name,
-  }));
+  const currentAgent = agents.find((a) => a.id === currentAgentId);
+  const currentAgentLabel = currentAgent
+    ? currentAgent.title
+      ? `${currentAgent.name} (${currentAgent.title})`
+      : currentAgent.name
+    : "";
 
-  // Filter out the current sender from the recipients list
-  const availableRecipients = allAgentOptions.filter(
-    (agent) => agent.value !== senderId,
-  );
+  // Filter out the current agent from the recipients list
+  const availableRecipients = agents
+    .filter((agent) => agent.id !== currentAgentId)
+    .map((agent) => ({
+      value: String(agent.id),
+      label: agent.title ? `${agent.name} (${agent.title})` : agent.name,
+    }));
 
   const handleFilesAdd = (files: File[]) => {
     const newAttachments: FileAttachment[] = [];
@@ -197,13 +194,11 @@ export const NewMessageModal: React.FC<NewMessageModalProps> = ({
       }));
 
       await onSend(
-        Number(senderId),
         Number(recipientId),
         subject,
         body,
         attachmentsWithUpdatedNames,
       );
-      setSenderId(String(currentAgentId));
       setRecipientId("");
       setSubject("");
       setBody("");
@@ -222,21 +217,27 @@ export const NewMessageModal: React.FC<NewMessageModalProps> = ({
     }
   };
 
+  const hasContent =
+    recipientId || subject.trim() || body.trim() || attachments.length > 0;
+
   const handleClose = () => {
-    if (!isLoading) {
-      setSenderId(String(currentAgentId));
-      setRecipientId("");
-      setSubject("");
-      setBody("");
-      attachments.forEach((attachment) => {
-        if (attachment.previewUrl) {
-          URL.revokeObjectURL(attachment.previewUrl);
-        }
-      });
-      setAttachments([]);
-      setExpandedImageIndex(null);
-      onClose();
+    if (isLoading) return;
+
+    if (hasContent && !window.confirm("Discard this message?")) {
+      return;
     }
+
+    setRecipientId("");
+    setSubject("");
+    setBody("");
+    attachments.forEach((attachment) => {
+      if (attachment.previewUrl) {
+        URL.revokeObjectURL(attachment.previewUrl);
+      }
+    });
+    setAttachments([]);
+    setExpandedImageIndex(null);
+    onClose();
   };
 
   return (
@@ -251,16 +252,7 @@ export const NewMessageModal: React.FC<NewMessageModalProps> = ({
       size="lg"
     >
       <Stack gap="md">
-        <Select
-          label="From"
-          placeholder="Select sender"
-          data={allAgentOptions}
-          value={senderId}
-          onChange={(value) => setSenderId(value || String(currentAgentId))}
-          required
-          searchable
-          disabled={isLoading}
-        />
+        <TextInput label="From" value={currentAgentLabel} readOnly />
 
         <Select
           label="To"

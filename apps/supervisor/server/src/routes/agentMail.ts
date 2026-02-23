@@ -79,6 +79,13 @@ export default function agentMailRoutes(
                   href: `${API_PREFIX}/agents/${id}/mail`,
                   method: "POST" as const,
                   title: "Send Mail",
+                  schema: `${API_PREFIX}/schemas/SendMail`,
+                  alternateEncoding: {
+                    contentType: "multipart/form-data",
+                    description:
+                      "Send as multipart to include file attachments",
+                    fileFields: ["attachments"],
+                  },
                 },
               ]
             : undefined,
@@ -106,7 +113,7 @@ export default function agentMailRoutes(
           "Send email as agent with optional attachments. Supports JSON and multipart/form-data",
         tags: ["Mail"],
         params: AgentIdParamsSchema,
-        body: SendMailRequestSchema,
+        // No body schema — multipart requests are parsed manually via request.parts()
         response: {
           200: SendMailResponseSchema,
           400: ErrorResponseSchema,
@@ -170,13 +177,10 @@ export default function agentMailRoutes(
           });
         }
 
-        const result = await sendMessage({
-          fromId,
-          toId,
-          subject,
-          message,
-          attachments: attachments.length > 0 ? attachments : undefined,
-        });
+        const result = await sendMessage(
+          { fromId, toId, subject, message },
+          attachments.length > 0 ? attachments : undefined,
+        );
 
         if (result.success) {
           return reply.code(200).send(result);

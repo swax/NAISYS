@@ -113,15 +113,14 @@ export const AgentMail: React.FC = () => {
 
   // Handle sending a new message
   const handleSendMessage = async (
-    senderId: number,
     recipientId: number,
     subject: string,
     body: string,
     attachments: Array<{ file: File; name: string; previewUrl?: string }>,
   ): Promise<void> => {
     try {
-      const response = await sendMail({
-        fromId: senderId,
+      const response = await sendMail(agentId, {
+        fromId: agentId,
         toId: recipientId,
         subject,
         message: body,

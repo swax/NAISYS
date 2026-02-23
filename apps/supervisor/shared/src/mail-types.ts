@@ -8,6 +8,12 @@ export const MailRecipientSchema = z.object({
   type: z.string(), // "to", "cc", "bcc"
 });
 
+export const MailAttachmentSchema = z.object({
+  id: z.number(),
+  filename: z.string(),
+  fileSize: z.number(),
+});
+
 export const MailMessageSchema = z.object({
   id: z.number(),
   fromUserId: z.number(),
@@ -16,6 +22,7 @@ export const MailMessageSchema = z.object({
   body: z.string(),
   createdAt: z.string(),
   recipients: z.array(MailRecipientSchema),
+  attachments: z.array(MailAttachmentSchema).optional(),
 });
 
 export const SendMailRequestSchema = z
@@ -24,14 +31,6 @@ export const SendMailRequestSchema = z
     toId: z.number(),
     subject: z.string(),
     message: z.string(),
-    attachments: z
-      .array(
-        z.object({
-          filename: z.string(),
-          data: z.instanceof(Buffer),
-        }),
-      )
-      .optional(),
   })
   .strict();
 
@@ -62,6 +61,7 @@ export const MailDataResponseSchema = z.object({
 });
 
 // Inferred types
+export type MailAttachment = z.infer<typeof MailAttachmentSchema>;
 export type MailRecipient = z.infer<typeof MailRecipientSchema>;
 export type MailMessage = z.infer<typeof MailMessageSchema>;
 export type SendMailRequest = z.infer<typeof SendMailRequestSchema>;

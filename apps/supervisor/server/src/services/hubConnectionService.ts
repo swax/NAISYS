@@ -19,10 +19,12 @@ import {
 let socket: Socket | null = null;
 let connected = false;
 let resolvedHubAccessKey: string | undefined;
+let resolvedHubUrl: string | undefined;
 
 export function initHubConnection(hubUrl: string, hubAccessKey?: string) {
   hubAccessKey = hubAccessKey || process.env.HUB_ACCESS_KEY;
   resolvedHubAccessKey = hubAccessKey;
+  resolvedHubUrl = hubUrl;
 
   if (!hubAccessKey) {
     console.warn(
@@ -112,6 +114,10 @@ export function getHubAccessKey(): string | undefined {
   return resolvedHubAccessKey;
 }
 
+export function getHubUrl(): string | undefined {
+  return resolvedHubUrl;
+}
+
 export function sendAgentStart(
   startUserId: number,
   taskDescription: string | undefined,
@@ -142,6 +148,7 @@ export function sendMailViaHub(
   subject: string,
   body: string,
   kind: "mail" | "chat" = "mail",
+  attachmentIds?: number[],
 ): Promise<MailSendResponse> {
   return new Promise((resolve, reject) => {
     if (!socket || !connected) {
@@ -151,7 +158,7 @@ export function sendMailViaHub(
 
     socket.emit(
       HubEvents.MAIL_SEND,
-      { fromUserId, toUserIds, subject, body, kind },
+      { fromUserId, toUserIds, subject, body, kind, attachmentIds },
       (response: MailSendResponse) => {
         resolve(response);
       },

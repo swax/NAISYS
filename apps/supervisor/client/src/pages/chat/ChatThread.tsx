@@ -1,6 +1,13 @@
-import { Box, Paper, ScrollArea, Stack, Text } from "@mantine/core";
+import { Anchor, Box, Image, Paper, ScrollArea, Stack, Text } from "@mantine/core";
+import { IconFile } from "@tabler/icons-react";
 import React, { useEffect, useRef } from "react";
+import { formatFileSize } from "@naisys/common";
+import { API_BASE, apiEndpoints } from "../../lib/apiClient";
 import type { ChatMessage } from "../../lib/apiClient";
+
+function isImageFilename(filename: string): boolean {
+  return /\.(jpg|jpeg|png|gif|webp|svg|bmp)$/i.test(filename);
+}
 
 interface ChatThreadProps {
   messages: ChatMessage[];
@@ -112,6 +119,51 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
                   >
                     {msg.body}
                   </Text>
+                  {msg.attachments && msg.attachments.length > 0 && (
+                    <Stack gap={4} mt="xs">
+                      {msg.attachments.map((att) => {
+                        const downloadUrl = `${API_BASE}${apiEndpoints.attachmentDownload(att.id)}`;
+                        if (isImageFilename(att.filename)) {
+                          return (
+                            <Box key={att.id}>
+                              <Image
+                                src={downloadUrl}
+                                alt={att.filename}
+                                maw={240}
+                                radius="sm"
+                                style={{ cursor: "pointer" }}
+                                onClick={() => window.open(downloadUrl, "_blank")}
+                              />
+                              <Text
+                                size="xs"
+                                c={isOwn ? "rgba(255,255,255,0.7)" : "dimmed"}
+                                mt={2}
+                              >
+                                {att.filename} ({formatFileSize(att.fileSize)})
+                              </Text>
+                            </Box>
+                          );
+                        }
+                        return (
+                          <Anchor
+                            key={att.id}
+                            href={downloadUrl}
+                            download
+                            size="xs"
+                            c={isOwn ? "white" : undefined}
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 4,
+                            }}
+                          >
+                            <IconFile size={14} />
+                            {att.filename} ({formatFileSize(att.fileSize)})
+                          </Anchor>
+                        );
+                      })}
+                    </Stack>
+                  )}
                   <Text
                     size="xs"
                     c={isOwn ? "rgba(255,255,255,0.7)" : "dimmed"}
