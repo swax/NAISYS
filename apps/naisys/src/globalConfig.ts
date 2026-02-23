@@ -1,9 +1,10 @@
-import { ClientConfig, buildClientConfig } from "@naisys/common";
+import { buildClientConfig,ClientConfig } from "@naisys/common";
 import { ConfigResponseSchema, HubEvents } from "@naisys/hub-protocol";
 import dotenv from "dotenv";
 import { readFile } from "fs/promises";
 import os from "os";
 import path from "path";
+
 import { HubClient } from "./hub/hubClient.js";
 import * as pathService from "./services/pathService.js";
 import { useNativeWindows } from "./services/shellPlatform.js";

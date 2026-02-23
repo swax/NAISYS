@@ -9,7 +9,8 @@ import {
 import { sleep } from "@naisys/common";
 import { writeFileSync } from "fs";
 import { join } from "path";
-import { chromium, type Browser, type Page } from "playwright";
+import { type Browser, chromium, type Page } from "playwright";
+
 import {
   cleanupTestDir,
   createAgentYaml,

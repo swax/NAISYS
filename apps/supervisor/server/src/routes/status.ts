@@ -4,11 +4,12 @@ import {
   StatusResponseSchema,
 } from "@naisys-supervisor/shared";
 import { FastifyInstance, FastifyPluginOptions } from "fastify";
-import { isHubConnected } from "../services/hubConnectionService.js";
+
 import {
   getAgentStatusSnapshot,
   onAgentStatusUpdate,
 } from "../services/agentHostStatusService.js";
+import { isHubConnected } from "../services/hubConnectionService.js";
 
 export default function statusRoutes(
   fastify: FastifyInstance,

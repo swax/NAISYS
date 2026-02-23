@@ -3,6 +3,7 @@ import { hasAction } from "@naisys/common";
 import { IconPlus } from "@tabler/icons-react";
 import React from "react";
 import { useNavigate } from "react-router-dom";
+
 import { useModelsContext } from "./ModelsLayout";
 
 export const ModelIndex: React.FC = () => {

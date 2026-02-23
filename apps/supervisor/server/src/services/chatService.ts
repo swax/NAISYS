@@ -1,4 +1,5 @@
 import { ChatConversation, ChatMessage } from "@naisys-supervisor/shared";
+
 import { hubDb } from "../database/hubDb.js";
 import { getLogger } from "../logger.js";
 import { cachedForSeconds } from "../utils/cache.js";
@@ -100,7 +101,11 @@ export const getMessages = cachedForSeconds(
     updatedSince?: string,
     page: number = 1,
     count: number = 50,
-  ): Promise<{ messages: ChatMessage[]; total?: number; timestamp: string }> => {
+  ): Promise<{
+    messages: ChatMessage[];
+    total?: number;
+    timestamp: string;
+  }> => {
     try {
       const whereClause: any = {
         kind: "chat",
@@ -175,7 +180,14 @@ export async function sendChatMessage(
 ): Promise<{ success: boolean; message?: string }> {
   try {
     const cleanMessage = message.replace(/\\n/g, "\n");
-    const response = await sendMailViaHub(fromId, toIds, "", cleanMessage, "chat", attachmentIds);
+    const response = await sendMailViaHub(
+      fromId,
+      toIds,
+      "",
+      cleanMessage,
+      "chat",
+      attachmentIds,
+    );
 
     if (response.success) {
       return { success: true, message: "Chat message sent" };

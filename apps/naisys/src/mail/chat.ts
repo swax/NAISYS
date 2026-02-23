@@ -1,3 +1,4 @@
+import { formatFileSize } from "@naisys/common";
 import {
   HubEvents,
   MailAttachmentData,
@@ -9,8 +10,8 @@ import {
   MailSendResponse,
   MailUnreadResponse,
 } from "@naisys/hub-protocol";
-import { formatFileSize } from "@naisys/common";
 import stringArgv from "string-argv";
+
 import { UserEntry, UserService } from "../agent/userService.js";
 import { chatCmd } from "../command/commandDefs.js";
 import { RegistrableCommand } from "../command/commandRegistry.js";

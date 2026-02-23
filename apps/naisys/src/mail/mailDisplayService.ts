@@ -1,10 +1,11 @@
+import { formatFileSize } from "@naisys/common";
 import {
   HubEvents,
   MailListResponse,
   MailSearchResponse,
 } from "@naisys/hub-protocol";
-import { formatFileSize } from "@naisys/common";
 import table from "text-table";
+
 import { HubClient } from "../hub/hubClient.js";
 
 /** Content carried with mail delivery */

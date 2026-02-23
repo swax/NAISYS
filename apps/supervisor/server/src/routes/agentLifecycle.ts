@@ -1,27 +1,23 @@
 import {
-  AgentIdParams,
-  AgentIdParamsSchema,
-  ErrorResponse,
-  ErrorResponseSchema,
   AgentActionResult,
   AgentActionResultSchema,
+  AgentIdParams,
+  AgentIdParamsSchema,
   AgentStartRequest,
   AgentStartRequestSchema,
   AgentStartResult,
   AgentStartResultSchema,
   AgentStopResult,
   AgentStopResultSchema,
+  ErrorResponse,
+  ErrorResponseSchema,
   SetLeadAgentRequest,
   SetLeadAgentRequestSchema,
 } from "@naisys-supervisor/shared";
 import { FastifyInstance, FastifyPluginOptions } from "fastify";
+
 import { requirePermission } from "../auth-middleware.js";
-import {
-  isHubConnected,
-  sendAgentStart,
-  sendAgentStop,
-  sendUserListChanged,
-} from "../services/hubConnectionService.js";
+import { hubDb } from "../database/hubDb.js";
 import { isAgentActive } from "../services/agentHostStatusService.js";
 import {
   archiveAgent,
@@ -30,7 +26,12 @@ import {
   unarchiveAgent,
   updateLeadAgent,
 } from "../services/agentService.js";
-import { hubDb } from "../database/hubDb.js";
+import {
+  isHubConnected,
+  sendAgentStart,
+  sendAgentStop,
+  sendUserListChanged,
+} from "../services/hubConnectionService.js";
 
 export default function agentLifecycleRoutes(
   fastify: FastifyInstance,

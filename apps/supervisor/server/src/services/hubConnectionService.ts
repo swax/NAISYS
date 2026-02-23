@@ -1,13 +1,14 @@
 import { parseHubAccessKey, verifyHubCertificate } from "@naisys/common-node";
-import { io, Socket } from "socket.io-client";
 import {
+  AgentsStatusSchema,
   AgentStartResponse,
   AgentStopResponse,
-  AgentsStatusSchema,
   HostListSchema,
   HubEvents,
   MailSendResponse,
 } from "@naisys/hub-protocol";
+import { io, Socket } from "socket.io-client";
+
 import {
   emitListChanged,
   markAgentStarted,

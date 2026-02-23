@@ -1,4 +1,5 @@
 import { HostList, HubEvents } from "@naisys/hub-protocol";
+
 import { HostRegistrar } from "../services/hostRegistrar.js";
 import { HubServerLog } from "../services/hubServerLog.js";
 import { NaisysServer } from "../services/naisysServer.js";

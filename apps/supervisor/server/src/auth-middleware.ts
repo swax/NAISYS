@@ -1,8 +1,9 @@
-import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { AuthCache } from "@naisys/common";
 import { hashToken } from "@naisys/common-node";
-import { findSession } from "@naisys/supervisor-database";
 import { findAgentByApiKey } from "@naisys/hub-database";
+import { findSession } from "@naisys/supervisor-database";
+import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
+
 import {
   createUser,
   getUserByUuid,

@@ -1,4 +1,5 @@
 import stringArgv from "string-argv";
+
 import { AgentConfig } from "../agent/agentConfig.js";
 import { sessionCmd } from "../command/commandDefs.js";
 import {
@@ -150,7 +151,7 @@ export function createSessionService(
     return !!restoreInfo;
   }
 
-  async function handleRestore(): Promise<string | CommandResponse> {
+  function handleRestore(): string | CommandResponse {
     if (!restoreInfo) {
       return "No session restore information available.";
     }

@@ -1,14 +1,15 @@
-import type { AgentConfigFile, HateoasAction } from "@naisys/common";
 import { Alert, Button, Group, Loader, Stack, Text } from "@mantine/core";
+import type { AgentConfigFile, HateoasAction } from "@naisys/common";
+import { hasAction } from "@naisys/common";
 import { IconEdit, IconFileImport } from "@tabler/icons-react";
 import React, { useCallback, useEffect, useState } from "react";
 import { useBlocker, useParams } from "react-router-dom";
-import { AgentConfigForm } from "./AgentConfigForm";
-import { ImportConfigDialog } from "./ImportConfigDialog";
-import { hasAction } from "@naisys/common";
+
 import { useAgentDataContext } from "../../contexts/AgentDataContext";
 import { getAgentConfig, updateAgentConfig } from "../../lib/apiAgents";
 import { api, apiEndpoints, type ModelsResponse } from "../../lib/apiClient";
+import { AgentConfigForm } from "./AgentConfigForm";
+import { ImportConfigDialog } from "./ImportConfigDialog";
 
 export const AgentConfig: React.FC = () => {
   const { id } = useParams<{ id: string }>();

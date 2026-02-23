@@ -1,6 +1,7 @@
 import { LlmApiType, sleep } from "@naisys/common";
 import chalk from "chalk";
 import * as readline from "readline";
+
 import { AgentConfig } from "../agent/agentConfig.js";
 import { LynxService } from "../features/lynx.js";
 import { SessionService } from "../features/session.js";

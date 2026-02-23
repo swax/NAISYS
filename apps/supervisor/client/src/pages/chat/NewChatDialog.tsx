@@ -9,6 +9,7 @@ import {
 } from "@mantine/core";
 import { IconPlus } from "@tabler/icons-react";
 import React, { useState } from "react";
+
 import type { Agent } from "../../lib/apiClient";
 
 interface NewChatDialogProps {
@@ -47,9 +48,7 @@ export const NewChatDialog: React.FC<NewChatDialogProps> = ({
   };
 
   const updateSlot = (index: number, value: string | null) => {
-    setRecipientSlots((prev) =>
-      prev.map((v, i) => (i === index ? value : v)),
-    );
+    setRecipientSlots((prev) => prev.map((v, i) => (i === index ? value : v)));
   };
 
   const removeSlot = (index: number) => {

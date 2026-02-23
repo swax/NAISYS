@@ -7,6 +7,7 @@ import {
   Stack,
   Text,
 } from "@mantine/core";
+import { hasAction } from "@naisys/common";
 import {
   IconArchive,
   IconFileText,
@@ -16,11 +17,11 @@ import {
 } from "@tabler/icons-react";
 import React, { useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
-import { hasAction } from "@naisys/common";
-import { AddAgentDialog } from "../pages/agents/AddAgentDialog";
+
 import { ROUTER_BASENAME } from "../constants";
 import { useAgentDataContext } from "../contexts/AgentDataContext";
 import { useConnectionStatus } from "../hooks/useConnectionStatus";
+import { AddAgentDialog } from "../pages/agents/AddAgentDialog";
 import { Agent } from "../types/agent";
 
 export const AgentSidebar: React.FC = () => {
@@ -56,7 +57,10 @@ export const AgentSidebar: React.FC = () => {
       return "/agents";
     }
 
-    if (currentSection && ["runs", "mail", "chat", "config"].includes(currentSection)) {
+    if (
+      currentSection &&
+      ["runs", "mail", "chat", "config"].includes(currentSection)
+    ) {
       return `/agents/${agent.id}/${currentSection}`;
     } else {
       return `/agents/${agent.id}`;

@@ -8,7 +8,11 @@ interface ChatInputProps {
   focusKey?: string | null;
 }
 
-export const ChatInput: React.FC<ChatInputProps> = ({ onSend, disabled, focusKey }) => {
+export const ChatInput: React.FC<ChatInputProps> = ({
+  onSend,
+  disabled,
+  focusKey,
+}) => {
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
@@ -128,7 +132,9 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSend, disabled, focusKey
           color="blue"
           size="lg"
           onClick={handleSend}
-          disabled={disabled || sending || (!message.trim() && files.length === 0)}
+          disabled={
+            disabled || sending || (!message.trim() && files.length === 0)
+          }
           loading={sending}
         >
           <IconSend size={18} />

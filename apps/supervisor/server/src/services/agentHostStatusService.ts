@@ -1,4 +1,5 @@
 import { EventEmitter } from "node:events";
+
 import type { AgentStatusEvent } from "@naisys-supervisor/shared";
 
 const activeAgentIds = new Set<number>();

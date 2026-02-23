@@ -1,5 +1,6 @@
 import { HateoasLinkSchema } from "@naisys/common";
 import { z } from "zod";
+
 import { LogEntrySchema } from "./log-types.js";
 
 // Zod schemas

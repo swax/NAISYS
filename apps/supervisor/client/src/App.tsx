@@ -1,8 +1,9 @@
-import { AppShell, MantineProvider } from "@mantine/core";
 import "@mantine/core/styles.css";
+import "@mantine/notifications/styles.css";
+
+import { AppShell, MantineProvider } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import { Notifications } from "@mantine/notifications";
-import "@mantine/notifications/styles.css";
 import { QueryClientProvider } from "@tanstack/react-query";
 import React from "react";
 import {
@@ -13,35 +14,36 @@ import {
   Route,
   RouterProvider,
 } from "react-router-dom";
+
+import { LoginDialog } from "./components/LoginDialog";
+import { NotFoundPage } from "./components/NotFoundPage";
+import { RootErrorPage } from "./components/RootErrorPage";
 import { ROUTER_BASENAME } from "./constants";
 import { AgentDataProvider } from "./contexts/AgentDataContext";
 import { HostDataProvider } from "./contexts/HostDataContext";
-import { LoginDialog } from "./components/LoginDialog";
 import { SessionProvider, useSession } from "./contexts/SessionContext";
-import { LoginPage } from "./pages/LoginPage";
 import { AppHeader } from "./headers/AppHeader";
 import { AppNavbar } from "./headers/AppNavbar";
 import { DisconnectedBanner } from "./headers/DisconnectedBanner";
 import { queryClient } from "./lib/queryClient";
+import { AdminPage } from "./pages/admin/AdminPage";
 import { AgentConfig } from "./pages/agents/AgentConfig";
 import { AgentDetail } from "./pages/agents/AgentDetail";
 import { AgentIndex } from "./pages/agents/AgentIndex";
-import { HostPage } from "./pages/hosts/HostPage";
-import { HostIndex } from "./pages/hosts/HostIndex";
-import { HostsLayout } from "./pages/hosts/HostsLayout";
-import { AgentMail } from "./pages/mail/AgentMail";
-import { AgentRuns } from "./pages/runs/AgentRuns";
-import { UserList } from "./pages/users/UserList";
-import { UserDetail } from "./pages/users/UserDetail";
 import { AgentsLayout } from "./pages/agents/AgentsLayout";
-import { ModelsLayout } from "./pages/models/ModelsLayout";
+import { AgentChat } from "./pages/chat/AgentChat";
+import { HostIndex } from "./pages/hosts/HostIndex";
+import { HostPage } from "./pages/hosts/HostPage";
+import { HostsLayout } from "./pages/hosts/HostsLayout";
+import { LoginPage } from "./pages/LoginPage";
+import { AgentMail } from "./pages/mail/AgentMail";
 import { ModelIndex } from "./pages/models/ModelIndex";
 import { ModelPage } from "./pages/models/ModelPage";
-import { AdminPage } from "./pages/admin/AdminPage";
+import { ModelsLayout } from "./pages/models/ModelsLayout";
+import { AgentRuns } from "./pages/runs/AgentRuns";
+import { UserDetail } from "./pages/users/UserDetail";
+import { UserList } from "./pages/users/UserList";
 import { VariablesPage } from "./pages/variables/VariablesPage";
-import { AgentChat } from "./pages/chat/AgentChat";
-import { NotFoundPage } from "./components/NotFoundPage";
-import { RootErrorPage } from "./components/RootErrorPage";
 
 export interface AppOutletContext {
   permissions: string[];

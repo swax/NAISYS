@@ -1,5 +1,5 @@
-import type { FastifyReply } from "fastify";
 import type { ErrorResponse } from "@naisys-erp/shared";
+import type { FastifyReply } from "fastify";
 
 export function sendError(
   reply: FastifyReply,

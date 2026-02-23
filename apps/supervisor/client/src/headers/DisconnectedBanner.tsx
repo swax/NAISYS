@@ -1,6 +1,7 @@
 import { Alert } from "@mantine/core";
-import { IconPlugConnectedX, IconPlugConnected } from "@tabler/icons-react";
+import { IconPlugConnected,IconPlugConnectedX } from "@tabler/icons-react";
 import React from "react";
+
 import { useConnectionStatus } from "../hooks/useConnectionStatus";
 
 export const DisconnectedBanner: React.FC = () => {

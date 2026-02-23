@@ -3,8 +3,9 @@ import {
   LOG_FLUSH_INTERVAL_MS,
   LogWriteEntry,
 } from "@naisys/hub-protocol";
+
 import { HubClient } from "../hub/hubClient.js";
-import { LlmMessage, LlmRole, getTextContent } from "../llm/llmDtos.js";
+import { getTextContent,LlmMessage, LlmRole } from "../llm/llmDtos.js";
 import { RunService } from "./runService.js";
 
 export function createLogService(

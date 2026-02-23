@@ -1,11 +1,11 @@
+import type { HateoasAction } from "@naisys/common";
 import {
-  LlmModelSchema,
-  ImageModelSchema,
-  dbFieldsToLlmModel,
   dbFieldsToImageModel,
+  dbFieldsToLlmModel,
+  ImageModelSchema,
+  LlmModelSchema,
   type ModelDbRow,
 } from "@naisys/common";
-import type { HateoasAction } from "@naisys/common";
 import {
   DeleteModelParams,
   DeleteModelParamsSchema,
@@ -15,23 +15,24 @@ import {
   ErrorResponseSchema,
   ModelsResponse,
   ModelsResponseSchema,
-  SaveLlmModelRequest,
-  SaveLlmModelRequestSchema,
   SaveImageModelRequest,
   SaveImageModelRequestSchema,
+  SaveLlmModelRequest,
+  SaveLlmModelRequestSchema,
   SaveModelResponse,
   SaveModelResponseSchema,
 } from "@naisys-supervisor/shared";
 import { FastifyInstance, FastifyPluginOptions } from "fastify";
+
 import { hasPermission, requirePermission } from "../auth-middleware.js";
 import { API_PREFIX } from "../hateoas.js";
 import { sendModelsChanged } from "../services/hubConnectionService.js";
 import {
-  getAllModelsFromDb,
-  saveLlmModel,
-  saveImageModel,
-  deleteLlmModel,
   deleteImageModel,
+  deleteLlmModel,
+  getAllModelsFromDb,
+  saveImageModel,
+  saveLlmModel,
 } from "../services/modelService.js";
 
 function modelActions(hasManagePermission: boolean): HateoasAction[] {

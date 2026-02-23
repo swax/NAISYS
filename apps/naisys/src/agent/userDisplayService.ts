@@ -1,4 +1,5 @@
 import table from "text-table";
+
 import { usersCmd } from "../command/commandDefs.js";
 import { RegistrableCommand } from "../command/commandRegistry.js";
 import { InputModeService } from "../utils/inputMode.js";

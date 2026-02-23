@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+
 import { AgentConfig } from "../agent/agentConfig.js";
 import { listenCmd } from "../command/commandDefs.js";
 import { RegistrableCommand } from "../command/commandRegistry.js";

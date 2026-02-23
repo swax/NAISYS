@@ -1,5 +1,6 @@
 import chalk from "chalk";
 import stringArgv from "string-argv";
+
 import { AgentConfig } from "../agent/agentConfig.js";
 import { GlobalConfig } from "../globalConfig.js";
 import { ContextManager } from "../llm/contextManager.js";

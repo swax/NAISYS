@@ -14,13 +14,14 @@ import {
   VariablesResponseSchema,
 } from "@naisys-supervisor/shared";
 import { FastifyInstance, FastifyPluginOptions } from "fastify";
+
 import { hasPermission, requirePermission } from "../auth-middleware.js";
 import { API_PREFIX } from "../hateoas.js";
 import { sendVariablesChanged } from "../services/hubConnectionService.js";
 import {
+  deleteVariable,
   getVariables,
   saveVariable,
-  deleteVariable,
 } from "../services/variableService.js";
 
 function variableActions(hasManagePermission: boolean): HateoasAction[] {

@@ -1,10 +1,11 @@
 import type { HubDatabaseService } from "@naisys/hub-database";
 import {
+  AgentsStatus,
   HEARTBEAT_INTERVAL_MS,
   HeartbeatSchema,
-  AgentsStatus,
   HubEvents,
 } from "@naisys/hub-protocol";
+
 import { HubServerLog } from "../services/hubServerLog.js";
 import { NaisysServer } from "../services/naisysServer.js";
 

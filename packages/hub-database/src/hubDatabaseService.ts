@@ -1,9 +1,10 @@
+import { deployPrismaMigrations } from "@naisys/common-node";
 import { existsSync, mkdirSync } from "fs";
 import { dirname } from "path";
 import { fileURLToPath } from "url";
+
 import { hubDbPath } from "./dbConfig.js";
 import { PrismaClient } from "./generated/prisma/client.js";
-import { deployPrismaMigrations } from "@naisys/common-node";
 import { createPrismaClient } from "./prismaClient.js";
 
 export async function createHubDatabaseService() {

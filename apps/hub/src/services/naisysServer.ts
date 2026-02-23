@@ -1,11 +1,12 @@
 import { Namespace } from "socket.io";
 import { ZodSchema } from "zod";
+
+import { HostRegistrar } from "./hostRegistrar.js";
 import { HubServerLog } from "./hubServerLog.js";
 import {
   createNaisysConnection,
   NaisysConnection,
 } from "./naisysConnection.js";
-import { HostRegistrar } from "./hostRegistrar.js";
 
 type EventHandler = (hostId: number, ...args: any[]) => void;
 

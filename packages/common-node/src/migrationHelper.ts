@@ -1,8 +1,8 @@
+import Database from "better-sqlite3";
 import { exec } from "child_process";
 import { existsSync, mkdirSync } from "fs";
 import { dirname, join, resolve } from "path";
 import { promisify } from "util";
-import Database from "better-sqlite3";
 
 const execAsync = promisify(exec);
 

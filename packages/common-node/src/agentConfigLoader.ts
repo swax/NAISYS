@@ -1,12 +1,12 @@
-import * as fs from "fs";
-import yaml from "js-yaml";
-import * as path from "path";
 import {
   adminAgentConfig,
   AgentConfigFile,
   AgentConfigFileSchema,
   UserEntry,
 } from "@naisys/common";
+import * as fs from "fs";
+import yaml from "js-yaml";
+import * as path from "path";
 
 interface ConfigEntry {
   username: string;

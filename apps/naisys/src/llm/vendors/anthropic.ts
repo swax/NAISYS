@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { MessageParam } from "@anthropic-ai/sdk/resources";
+
 import { ContentBlock, LlmMessage, LlmRole } from "../llmDtos.js";
 import { QueryResult, QuerySources, VendorDeps } from "./vendorTypes.js";
 
@@ -122,9 +123,7 @@ export async function sendWithAnthropic(
   }
 
   return {
-    responses: [
-      msgResponse.content.find((c) => c.type == "text")?.text || "",
-    ],
+    responses: [msgResponse.content.find((c) => c.type == "text")?.text || ""],
     messagesTokenCount,
   };
 }

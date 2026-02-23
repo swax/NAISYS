@@ -1,4 +1,5 @@
 import { FastifyInstance, FastifyPluginOptions } from "fastify";
+
 import { proxyDownloadFromHub } from "../services/attachmentProxyService.js";
 
 export default function attachmentRoutes(

@@ -1,17 +1,18 @@
 import {
-  Container,
-  Title,
-  Group,
+  Badge,
   Button,
-  Text,
+  Card,
+  Container,
+  Group,
   Loader,
   Stack,
-  Badge,
-  Card,
+  Text,
+  Title,
 } from "@mantine/core";
+import type { PlanningOrder, UpdatePlanningOrder } from "@naisys-erp/shared";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
-import type { PlanningOrder, UpdatePlanningOrder } from "@naisys-erp/shared";
+
 import { PlanningOrderForm } from "../components/PlanningOrderForm";
 import { PlanningOrderRevisions } from "../components/PlanningOrderRevisions";
 import { api, showErrorNotification } from "../lib/api";

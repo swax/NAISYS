@@ -1,7 +1,8 @@
 import { Alert, Button, Center, Stack, Text, TextInput } from "@mantine/core";
-import React from "react";
-import { useSession } from "../contexts/SessionContext";
 import naisysLogo from "@naisys/common/assets/naisys-logo.webp";
+import React from "react";
+
+import { useSession } from "../contexts/SessionContext";
 
 export const LoginPage: React.FC = () => {
   const { login } = useSession();

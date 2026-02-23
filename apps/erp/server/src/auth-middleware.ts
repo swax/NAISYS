@@ -1,9 +1,10 @@
-import type { FastifyInstance } from "fastify";
 import { AuthCache } from "@naisys/common";
 import { hashToken } from "@naisys/common-node";
-import erpDb from "./erpDb.js";
-import { findSession } from "@naisys/supervisor-database";
 import { findAgentByApiKey } from "@naisys/hub-database";
+import { findSession } from "@naisys/supervisor-database";
+import type { FastifyInstance } from "fastify";
+
+import erpDb from "./erpDb.js";
 import { isSupervisorAuth } from "./supervisorAuth.js";
 
 export interface ErpUser {

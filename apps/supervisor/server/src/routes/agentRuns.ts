@@ -13,6 +13,7 @@ import {
   RunsDataResponseSchema,
 } from "@naisys-supervisor/shared";
 import { FastifyInstance, FastifyPluginOptions } from "fastify";
+
 import { API_PREFIX } from "../hateoas.js";
 import { getContextLog, getRunsData } from "../services/runsService.js";
 

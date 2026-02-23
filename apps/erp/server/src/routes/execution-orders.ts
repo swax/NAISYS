@@ -1,20 +1,22 @@
-import { FastifyInstance } from "fastify";
-import type { ZodTypeProvider } from "fastify-type-provider-zod";
-import { z } from "zod/v4";
+import type { HateoasAction, HateoasLink } from "@naisys/common";
 import {
   CreateExecutionOrderSchema,
   ErrorResponseSchema,
   ExecutionOrderListQuerySchema,
   ExecutionOrderListResponseSchema,
-  ExecutionOrderSchema,
-  UpdateExecutionOrderSchema,
   type ExecutionOrderPriority,
+  ExecutionOrderSchema,
   type ExecutionOrderStatus,
+  UpdateExecutionOrderSchema,
 } from "@naisys-erp/shared";
-import type { HateoasAction, HateoasLink } from "@naisys/common";
+import { FastifyInstance } from "fastify";
+import type { ZodTypeProvider } from "fastify-type-provider-zod";
+import { z } from "zod/v4";
+
 import { writeAuditEntry } from "../audit.js";
 import erpDb from "../erpDb.js";
 import { sendError } from "../error-handler.js";
+import type { ExecOrderModel } from "../generated/prisma/models/ExecOrder.js";
 import {
   API_PREFIX,
   collectionLink,
@@ -22,7 +24,6 @@ import {
   schemaLink,
   selfLink,
 } from "../hateoas.js";
-import type { ExecOrderModel } from "../generated/prisma/models/ExecOrder.js";
 
 const EXEC_RESOURCE = "execution/orders";
 

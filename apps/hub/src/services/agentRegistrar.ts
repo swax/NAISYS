@@ -2,6 +2,7 @@ import { UserEntry } from "@naisys/common";
 import { loadAgentConfigs } from "@naisys/common-node";
 import type { HubDatabaseService } from "@naisys/hub-database";
 import { randomBytes, randomUUID } from "crypto";
+
 import { HubServerLog } from "./hubServerLog.js";
 
 /** Seeds agent configs from YAML files into an empty database. Skips if users already exist. */

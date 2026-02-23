@@ -3,6 +3,7 @@ import { useDisclosure } from "@mantine/hooks";
 import { IconServer } from "@tabler/icons-react";
 import React from "react";
 import { Outlet, useLocation } from "react-router-dom";
+
 import { HostSidebar } from "../../headers/HostSidebar";
 
 const SIDEBAR_WIDTH = 300;

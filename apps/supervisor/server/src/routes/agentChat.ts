@@ -11,11 +11,11 @@ import {
   ErrorResponse,
   ErrorResponseSchema,
   SendChatRequest,
-  SendChatRequestSchema,
   SendChatResponse,
   SendChatResponseSchema,
 } from "@naisys-supervisor/shared";
 import { FastifyInstance, FastifyPluginOptions } from "fastify";
+
 import { hasPermission, requirePermission } from "../auth-middleware.js";
 import { API_PREFIX } from "../hateoas.js";
 import { uploadToHub } from "../services/attachmentProxyService.js";

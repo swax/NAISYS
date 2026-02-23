@@ -1,5 +1,6 @@
 import type { HubDatabaseService } from "@naisys/hub-database";
 import { HubEvents, UserListResponse } from "@naisys/hub-protocol";
+
 import { HubServerLog } from "../services/hubServerLog.js";
 import { NaisysServer } from "../services/naisysServer.js";
 

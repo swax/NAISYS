@@ -1,5 +1,6 @@
-import { useEffect, useRef } from "react";
 import type { AgentStatusEvent } from "@naisys-supervisor/shared";
+import { useEffect, useRef } from "react";
+
 import { SSE_STREAM_URL } from "../lib/apiClient";
 
 // Shared singleton EventSource so multiple hooks can subscribe without

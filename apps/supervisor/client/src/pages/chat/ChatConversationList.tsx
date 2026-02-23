@@ -1,13 +1,7 @@
-import {
-  Button,
-  Group,
-  NavLink,
-  ScrollArea,
-  Stack,
-  Text,
-} from "@mantine/core";
+import { Button, Group, NavLink, ScrollArea, Stack, Text } from "@mantine/core";
 import { IconMessagePlus } from "@tabler/icons-react";
 import React, { useState } from "react";
+
 import type { Agent, ChatConversation } from "../../lib/apiClient";
 import { NewChatDialog } from "./NewChatDialog";
 
@@ -50,7 +44,10 @@ export const ChatConversationList: React.FC<ChatConversationListProps> = ({
   return (
     <Stack gap={0} style={{ height: "100%" }}>
       {canSend && (
-        <Group p="xs" style={{ borderBottom: "1px solid var(--mantine-color-dark-4)" }}>
+        <Group
+          p="xs"
+          style={{ borderBottom: "1px solid var(--mantine-color-dark-4)" }}
+        >
           <Button
             variant="light"
             size="xs"

@@ -1,3 +1,8 @@
+import { hashToken } from "@naisys/common-node";
+import {
+  authenticateAndCreateSession,
+  deleteSession,
+} from "@naisys/supervisor-database";
 import {
   AuthUserSchema,
   ErrorResponseSchema,
@@ -5,13 +10,9 @@ import {
   LoginResponseSchema,
   LogoutResponseSchema,
 } from "@naisys-supervisor/shared";
-import { hashToken } from "@naisys/common-node";
-import {
-  authenticateAndCreateSession,
-  deleteSession,
-} from "@naisys/supervisor-database";
 import { FastifyInstance, FastifyPluginOptions } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
+
 import { authCache } from "../auth-middleware.js";
 import {
   getUserByUsername,

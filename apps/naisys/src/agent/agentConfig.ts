@@ -4,6 +4,7 @@ import {
   sanitizeSpendLimit,
 } from "@naisys/common";
 import table from "text-table";
+
 import { agentConfigCmd } from "../command/commandDefs.js";
 import { RegistrableCommand } from "../command/commandRegistry.js";
 import { GlobalConfig } from "../globalConfig.js";

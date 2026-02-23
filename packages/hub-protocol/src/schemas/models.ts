@@ -1,4 +1,4 @@
-import { LlmModelSchema, ImageModelSchema } from "@naisys/common";
+import { ImageModelSchema,LlmModelSchema } from "@naisys/common";
 import { z } from "zod";
 
 /** Pushed from hub to NAISYS instances with all model definitions */

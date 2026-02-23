@@ -8,6 +8,7 @@ import {
   Stack,
   Text,
 } from "@mantine/core";
+import { formatFileSize } from "@naisys/common";
 import {
   IconCornerUpLeft,
   IconFile,
@@ -16,8 +17,12 @@ import {
   IconSend,
 } from "@tabler/icons-react";
 import React, { useState } from "react";
-import { formatFileSize } from "@naisys/common";
-import { API_BASE, apiEndpoints, MailMessage as MailMessageType } from "../../lib/apiClient";
+
+import {
+  API_BASE,
+  apiEndpoints,
+  MailMessage as MailMessageType,
+} from "../../lib/apiClient";
 
 function isImageFilename(filename: string): boolean {
   return /\.(jpg|jpeg|png|gif|webp|svg|bmp)$/i.test(filename);
@@ -42,8 +47,7 @@ export const MailMessage: React.FC<MailMessageProps> = ({
   const recipientUsernames = message.recipients.map((r) => r.username);
 
   const messageWithSubject = `${message.subject} - ${message.body}`;
-  const hasAttachments =
-    message.attachments && message.attachments.length > 0;
+  const hasAttachments = message.attachments && message.attachments.length > 0;
   const hasMoreContent =
     messageWithSubject.includes("\n") ||
     messageWithSubject.length > 100 ||

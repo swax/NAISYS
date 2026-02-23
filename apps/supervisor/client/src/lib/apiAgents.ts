@@ -1,4 +1,5 @@
 import type { AgentConfigFile } from "@naisys/common";
+
 import type {
   AgentActionResult,
   AgentDetailResponse,

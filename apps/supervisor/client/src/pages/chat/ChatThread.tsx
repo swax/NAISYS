@@ -1,9 +1,18 @@
-import { Anchor, Box, Image, Paper, ScrollArea, Stack, Text } from "@mantine/core";
+import {
+  Anchor,
+  Box,
+  Image,
+  Paper,
+  ScrollArea,
+  Stack,
+  Text,
+} from "@mantine/core";
+import { formatFileSize } from "@naisys/common";
 import { IconFile } from "@tabler/icons-react";
 import React, { useEffect, useRef } from "react";
-import { formatFileSize } from "@naisys/common";
-import { API_BASE, apiEndpoints } from "../../lib/apiClient";
+
 import type { ChatMessage } from "../../lib/apiClient";
+import { API_BASE, apiEndpoints } from "../../lib/apiClient";
 
 function isImageFilename(filename: string): boolean {
   return /\.(jpg|jpeg|png|gif|webp|svg|bmp)$/i.test(filename);
@@ -26,7 +35,8 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
     if (messages.length > prevMessageCount.current && viewport.current) {
       viewport.current.scrollTo({
         top: viewport.current.scrollHeight,
-        behavior: messages.length - prevMessageCount.current > 5 ? "instant" : "smooth",
+        behavior:
+          messages.length - prevMessageCount.current > 5 ? "instant" : "smooth",
       });
     }
     prevMessageCount.current = messages.length;
@@ -78,12 +88,7 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
           return (
             <React.Fragment key={msg.id}>
               {showDateDivider && (
-                <Text
-                  size="xs"
-                  c="dimmed"
-                  ta="center"
-                  py="xs"
-                >
+                <Text size="xs" c="dimmed" ta="center" py="xs">
                   {msgDate}
                 </Text>
               )}
@@ -132,7 +137,9 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
                                 maw={240}
                                 radius="sm"
                                 style={{ cursor: "pointer" }}
-                                onClick={() => window.open(downloadUrl, "_blank")}
+                                onClick={() =>
+                                  window.open(downloadUrl, "_blank")
+                                }
                               />
                               <Text
                                 size="xs"

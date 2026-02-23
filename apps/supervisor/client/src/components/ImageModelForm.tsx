@@ -10,6 +10,7 @@ import {
 import { useForm } from "@mantine/form";
 import { ImageModelSchema } from "@naisys/common";
 import { IconCheck, IconX } from "@tabler/icons-react";
+
 import type { ImageModelDetail } from "../lib/apiClient";
 import { zodResolver } from "../lib/zod-resolver";
 
