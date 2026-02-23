@@ -1,6 +1,7 @@
-import { LlmApiType, type LlmModel, type ImageModel } from "./modelTypes.js";
+import { LlmApiType, type ImageModel, type LlmModel } from "./modelTypes.js";
 
 // --- Built-in LLM models ---
+// Prices are per 1M tokens in USD. Last updated: February 2026.
 
 export const builtInLlmModels: LlmModel[] = [
   {
@@ -23,19 +24,23 @@ export const builtInLlmModels: LlmModel[] = [
     inputCost: 0,
     outputCost: 0,
   },
-  // Open Router
+
+  // ── Open Router ──────────────────────────────────────────────────────
   {
-    key: "llama3-405b",
-    label: "Llama 3.1 405B",
-    versionName: "meta-llama/llama-3.1-405b-instruct",
+    key: "llama4",
+    label: "Llama 4 Maverick",
+    versionName: "meta-llama/llama-4-maverick",
     baseUrl: "https://openrouter.ai/api/v1",
     apiType: LlmApiType.OpenAI,
     apiKeyVar: "OPENROUTER_API_KEY",
-    maxTokens: 128_000,
-    inputCost: 2.7,
-    outputCost: 2.7,
+    maxTokens: 1_000_000,
+    inputCost: 0.15,
+    outputCost: 0.6,
+    supportsVision: true,
   },
-  // Grok
+
+  // ── xAI / Grok ──────────────────────────────────────────────────────
+  // https://docs.x.ai/developers/models
   {
     key: "grok4",
     label: "Grok 4",
@@ -52,8 +57,8 @@ export const builtInLlmModels: LlmModel[] = [
   },
   {
     key: "grok4fast",
-    label: "Grok 4 Fast",
-    versionName: "grok-4-fast",
+    label: "Grok 4.1 Fast",
+    versionName: "grok-4.1-fast",
     baseUrl: "https://api.x.ai/v1",
     apiType: LlmApiType.OpenAI,
     apiKeyVar: "XAI_API_KEY",
@@ -64,20 +69,22 @@ export const builtInLlmModels: LlmModel[] = [
     cacheReadCost: 0.05,
     supportsVision: true,
   },
-  // OpenAI Models
+
+  // ── OpenAI Models ────────────────────────────────────────────────────
   // https://openai.com/api/pricing/
   {
     key: "gpt5",
-    label: "GPT 5.1",
-    versionName: "gpt-5.1",
+    label: "GPT 5.2",
+    versionName: "gpt-5.2",
     apiType: LlmApiType.OpenAI,
     apiKeyVar: "OPENAI_API_KEY",
     maxTokens: 400_000,
-    inputCost: 1.25,
-    outputCost: 10.0,
-    cacheWriteCost: 0.125,
-    cacheReadCost: 0.125,
+    inputCost: 1.75,
+    outputCost: 14.0,
+    cacheWriteCost: 0.18,
+    cacheReadCost: 0.18,
     supportsVision: true,
+    supportsHearing: true,
   },
   {
     key: "gpt5mini",
@@ -91,6 +98,7 @@ export const builtInLlmModels: LlmModel[] = [
     cacheWriteCost: 0.025,
     cacheReadCost: 0.025,
     supportsVision: true,
+    supportsHearing: true,
   },
   {
     key: "gpt5nano",
@@ -104,12 +112,15 @@ export const builtInLlmModels: LlmModel[] = [
     cacheWriteCost: 0.005,
     cacheReadCost: 0.005,
     supportsVision: true,
+    supportsHearing: true,
   },
-  // Google Models
+
+  // ── Google Models ────────────────────────────────────────────────────
+  // https://ai.google.dev/gemini-api/docs/pricing
   {
     key: "gemini3pro",
-    label: "Gemini 3 Pro",
-    versionName: "gemini-3-pro-image-preview",
+    label: "Gemini 3.1 Pro",
+    versionName: "gemini-3.1-pro-preview",
     apiType: LlmApiType.Google,
     apiKeyVar: "GOOGLE_API_KEY",
     maxTokens: 2_000_000,
@@ -118,64 +129,43 @@ export const builtInLlmModels: LlmModel[] = [
     cacheWriteCost: 0.2,
     cacheReadCost: 0.2,
     supportsVision: true,
+    supportsHearing: true,
   },
   {
-    key: "gemini2.5pro",
-    label: "Gemini 2.5 Pro",
-    versionName: "gemini-2.5-pro",
-    apiType: LlmApiType.Google,
-    apiKeyVar: "GOOGLE_API_KEY",
-    maxTokens: 2_000_000,
-    inputCost: 1.25,
-    outputCost: 10.0,
-    cacheWriteCost: 0.125,
-    cacheReadCost: 0.125,
-    supportsVision: true,
-  },
-  {
-    key: "gemini2.5flash",
-    label: "Gemini 2.5 Flash",
-    versionName: "gemini-2.5-flash",
+    key: "gemini3flash",
+    label: "Gemini 3 Flash",
+    versionName: "gemini-3-flash-preview",
     apiType: LlmApiType.Google,
     apiKeyVar: "GOOGLE_API_KEY",
     maxTokens: 1_000_000,
-    inputCost: 0.3,
-    outputCost: 2.5,
-    cacheWriteCost: 0.03,
-    cacheReadCost: 0.03,
+    inputCost: 0.5,
+    outputCost: 3.0,
+    cacheWriteCost: 0.05,
+    cacheReadCost: 0.05,
     supportsVision: true,
+    supportsHearing: true,
   },
-  {
-    key: "gemini2.5flashlite",
-    label: "Gemini 2.5 Flash Lite",
-    versionName: "gemini-2.5-flash-lite",
-    apiType: LlmApiType.Google,
-    apiKeyVar: "GOOGLE_API_KEY",
-    maxTokens: 1_000_000,
-    inputCost: 0.1,
-    outputCost: 0.4,
-    cacheWriteCost: 0.01,
-    cacheReadCost: 0.01,
-    supportsVision: true,
-  },
-  // Anthropic Models
+
+  // ── Anthropic Models ─────────────────────────────────────────────────
+  // https://platform.claude.com/docs/en/about-claude/pricing
+  // Cache: 5m write = 1.25× input, read = 0.1× input
   {
     key: "claude4opus",
-    label: "Claude 4 Opus",
-    versionName: "claude-opus-4-20250514",
+    label: "Claude Opus 4.6",
+    versionName: "claude-opus-4-6",
     apiType: LlmApiType.Anthropic,
     apiKeyVar: "ANTHROPIC_API_KEY",
     maxTokens: 200_000,
-    inputCost: 15,
-    outputCost: 75,
-    cacheWriteCost: 18.75,
-    cacheReadCost: 1.5,
+    inputCost: 5,
+    outputCost: 25,
+    cacheWriteCost: 6.25,
+    cacheReadCost: 0.5,
     supportsVision: true,
   },
   {
     key: "claude4sonnet",
-    label: "Claude 4 Sonnet",
-    versionName: "claude-sonnet-4-5-20250929",
+    label: "Claude Sonnet 4.6",
+    versionName: "claude-sonnet-4-6",
     apiType: LlmApiType.Anthropic,
     apiKeyVar: "ANTHROPIC_API_KEY",
     maxTokens: 200_000,
@@ -187,8 +177,8 @@ export const builtInLlmModels: LlmModel[] = [
   },
   {
     key: "claude4haiku",
-    label: "Claude 4 Haiku",
-    versionName: "claude-haiku-4-5-20251001",
+    label: "Claude Haiku 4.5",
+    versionName: "claude-haiku-4-5",
     apiType: LlmApiType.Anthropic,
     apiKeyVar: "ANTHROPIC_API_KEY",
     maxTokens: 200_000,
@@ -201,8 +191,36 @@ export const builtInLlmModels: LlmModel[] = [
 ];
 
 // --- Built-in image models ---
+// Costs are approximate per-image for 1024x1024.
 
 export const builtInImageModels: ImageModel[] = [
+  {
+    key: "gptimage1high",
+    label: "GPT Image 1.5 High",
+    versionName: "gpt-image-1.5",
+    size: "1024x1024",
+    apiKeyVar: "OPENAI_API_KEY",
+    quality: "high",
+    cost: 0.17,
+  },
+  {
+    key: "gptimage1medium",
+    label: "GPT Image 1.5 Medium",
+    versionName: "gpt-image-1.5",
+    size: "1024x1024",
+    apiKeyVar: "OPENAI_API_KEY",
+    quality: "medium",
+    cost: 0.04,
+  },
+  {
+    key: "gptimage1low",
+    label: "GPT Image 1.5 Low",
+    versionName: "gpt-image-1.5",
+    size: "1024x1024",
+    apiKeyVar: "OPENAI_API_KEY",
+    quality: "low",
+    cost: 0.01,
+  },
   {
     key: "dalle3-1024-HD",
     label: "DALL-E 3 1024 HD",
@@ -219,29 +237,5 @@ export const builtInImageModels: ImageModel[] = [
     size: "1024x1024",
     apiKeyVar: "OPENAI_API_KEY",
     cost: 0.04,
-  },
-  {
-    key: "dalle2-1024",
-    label: "DALL-E 2 1024",
-    versionName: "dall-e-2",
-    size: "1024x1024",
-    apiKeyVar: "OPENAI_API_KEY",
-    cost: 0.02,
-  },
-  {
-    key: "dalle2-512",
-    label: "DALL-E 2 512",
-    versionName: "dall-e-2",
-    size: "512x512",
-    apiKeyVar: "OPENAI_API_KEY",
-    cost: 0.018,
-  },
-  {
-    key: "dalle2-256",
-    label: "DALL-E 2 256",
-    versionName: "dall-e-2",
-    size: "256x256",
-    apiKeyVar: "OPENAI_API_KEY",
-    cost: 0.016,
   },
 ];

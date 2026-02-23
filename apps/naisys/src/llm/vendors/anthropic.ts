@@ -139,6 +139,11 @@ function formatContentForAnthropic(
       }
       return textBlock;
     }
+    if (block.type === "audio") {
+      throw new Error(
+        "Anthropic does not support audio input. Use an OpenAI or Google model for audio.",
+      );
+    }
     const imageBlock: any = {
       type: "image",
       source: {

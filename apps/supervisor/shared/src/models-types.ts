@@ -19,6 +19,7 @@ export const LlmModelDetailSchema = z.object({
   cacheWriteCost: z.number().optional(),
   cacheReadCost: z.number().optional(),
   supportsVision: z.boolean().optional(),
+  supportsHearing: z.boolean().optional(),
   isCustom: z.boolean(),
 });
 
@@ -64,6 +65,7 @@ export const SaveLlmModelRequestSchema = z.object({
     cacheWriteCost: z.number().optional(),
     cacheReadCost: z.number().optional(),
     supportsVision: z.boolean().optional(),
+    supportsHearing: z.boolean().optional(),
   }),
 });
 

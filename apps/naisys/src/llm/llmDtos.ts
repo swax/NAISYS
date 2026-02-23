@@ -29,10 +29,19 @@ export interface ImageBlock {
   mimeType: string;
 }
 
-export type ContentBlock = TextBlock | ImageBlock;
+export interface AudioBlock {
+  type: "audio";
+  base64: string;
+  mimeType: string;
+}
+
+export type ContentBlock = TextBlock | ImageBlock | AudioBlock;
 
 /** Rough token estimate for an image in context */
 export const IMAGE_TOKEN_ESTIMATE = 1000;
+
+/** Rough token estimate for an audio clip in context */
+export const AUDIO_TOKEN_ESTIMATE = 2000;
 
 /** Extract text content from a message's content field. Returns "[Image]" placeholder for image blocks. */
 export function getTextContent(content: string | ContentBlock[]): string {
@@ -40,7 +49,13 @@ export function getTextContent(content: string | ContentBlock[]): string {
     return content;
   }
   return content
-    .map((block) => (block.type === "text" ? block.text : "[Image]"))
+    .map((block) =>
+      block.type === "text"
+        ? block.text
+        : block.type === "image"
+          ? "[Image]"
+          : "[Audio]",
+    )
     .join("\n");
 }
 

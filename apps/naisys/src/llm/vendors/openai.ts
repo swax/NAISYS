@@ -97,6 +97,15 @@ export async function sendWithOpenAiCompatible(
   return [chatResponse.choices[0].message.content || ""];
 }
 
+const AUDIO_MIME_TO_FORMAT: Record<string, string> = {
+  "audio/mpeg": "mp3",
+  "audio/mp4": "m4a",
+  "audio/wav": "wav",
+  "audio/flac": "flac",
+  "audio/ogg": "ogg",
+  "audio/webm": "webm",
+};
+
 function formatContentForOpenAI(
   content: string | ContentBlock[],
 ): string | Array<any> {
@@ -106,6 +115,13 @@ function formatContentForOpenAI(
   return content.map((block) => {
     if (block.type === "text") {
       return { type: "text", text: block.text };
+    }
+    if (block.type === "audio") {
+      const format = AUDIO_MIME_TO_FORMAT[block.mimeType] || "mp3";
+      return {
+        type: "input_audio",
+        input_audio: { data: block.base64, format },
+      };
     }
     return {
       type: "image_url",

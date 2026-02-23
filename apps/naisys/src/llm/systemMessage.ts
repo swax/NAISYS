@@ -15,6 +15,7 @@ import {
   chatCmd,
   commentCmd,
   genImgCmd,
+  listenCmd,
   lookCmd,
   lynxCmd,
   mailCmd,
@@ -43,6 +44,11 @@ export function createSystemMessage(
   const shellModel = modelService.getLlmModel(agentConfig().shellModel);
   if (shellModel.supportsVision) {
     lookStr = `\n  ${lookCmd.name} ${lookCmd.usage}: ${lookCmd.description}`;
+  }
+
+  let listenStr = "";
+  if (shellModel.supportsHearing) {
+    listenStr = `\n  ${listenCmd.name} ${listenCmd.usage}: ${listenCmd.description}`;
   }
 
   let mailStr = "";
@@ -141,7 +147,7 @@ ${platformConfig.displayName} Commands:
   Read files with cat. Write files with \`cat > filename << 'EOF'\``
   }
   Do not input notes after the prompt. Only valid commands.
-NAISYS Commands: (cannot be used with other commands on the same prompt)${mailStr}${chatStr}${subagentStr}${lynxStr}${genImgStr}${lookStr}${workspaceStr}
+NAISYS Commands: (cannot be used with other commands on the same prompt)${mailStr}${chatStr}${subagentStr}${lynxStr}${genImgStr}${lookStr}${listenStr}${workspaceStr}
   ${commentCmd.name} ${commentCmd.usage}: ${commentCmd.description}${sessionCmdStr}
 Tokens:
   The console log can only hold a certain number of tokens that is specified in the prompt.${tokenNote}`;

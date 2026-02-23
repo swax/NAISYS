@@ -5,6 +5,7 @@ import { InputModeService } from "../utils/inputMode.js";
 import { OutputColor, OutputService } from "../utils/output.js";
 import * as utilities from "../utils/utilities.js";
 import {
+  AUDIO_TOKEN_ESTIMATE,
   ContentBlock,
   ContentSource,
   IMAGE_TOKEN_ESTIMATE,
@@ -97,6 +98,32 @@ export function createContextManager(
     output.write(`[Image: ${caption}]`, OutputColor.console);
   }
 
+  function appendAudio(base64: string, mimeType: string, caption: string) {
+    if (inputMode.isDebug()) {
+      output.comment(`[Audio: ${caption}]`);
+      return;
+    }
+
+    const contentBlocks: ContentBlock[] = [
+      { type: "text", text: caption },
+      { type: "audio", base64, mimeType },
+    ];
+
+    const llmMessage: LlmMessage = {
+      source: ContentSource.Console,
+      role: LlmRole.User,
+      content: contentBlocks,
+    };
+
+    _messages.push(llmMessage);
+
+    // Log text only
+    logService.write(llmMessage);
+
+    // Display placeholder to console
+    output.write(`[Audio: ${caption}]`, OutputColor.console);
+  }
+
   function clear() {
     _messages = [];
   }
@@ -109,11 +136,13 @@ export function createContextManager(
       if (typeof message.content === "string") {
         return acc + utilities.getTokenCount(message.content);
       }
-      // ContentBlock[] — sum text tokens + IMAGE_TOKEN_ESTIMATE per image
+      // ContentBlock[] — sum text tokens + estimates per media block
       let tokens = 0;
       for (const block of message.content) {
         if (block.type === "text") {
           tokens += utilities.getTokenCount(block.text);
+        } else if (block.type === "audio") {
+          tokens += AUDIO_TOKEN_ESTIMATE;
         } else {
           tokens += IMAGE_TOKEN_ESTIMATE;
         }
@@ -200,6 +229,7 @@ export function createContextManager(
   return {
     append,
     appendImage,
+    appendAudio,
     clear,
     getTokenCount,
     getCombinedMessages,
