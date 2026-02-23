@@ -71,23 +71,37 @@ export function createMailAttachmentService(
   }
 
   /**
+   * Resolve relative file paths to absolute, verifying each exists.
+   */
+  async function resolvePaths(filePaths: string[]): Promise<string[]> {
+    const cwd = await shellWrapper.getCurrentPath();
+    const resolved: string[] = [];
+
+    for (const fp of filePaths) {
+      let r = fp;
+      if (!path.isAbsolute(r) && cwd) {
+        r = path.resolve(cwd, r);
+      }
+      if (!fs.existsSync(r)) {
+        throw `File not found: ${r}`;
+      }
+      resolved.push(r);
+    }
+
+    return resolved;
+  }
+
+  /**
    * Resolve file paths and upload each one.
    * Returns the array of attachment IDs.
    */
   async function resolveAndUpload(filePaths: string[]): Promise<number[]> {
     if (!hubClient) throw "Attachments not available in local mode.";
 
-    const cwd = await shellWrapper.getCurrentPath();
+    const resolvedPaths = await resolvePaths(filePaths);
     const attachmentIds: number[] = [];
 
-    for (const fp of filePaths) {
-      let resolved = fp;
-      if (!path.isAbsolute(resolved) && cwd) {
-        resolved = path.resolve(cwd, resolved);
-      }
-      if (!fs.existsSync(resolved)) {
-        throw `File not found: ${resolved}`;
-      }
+    for (const resolved of resolvedPaths) {
       const attId = await uploadAttachment(resolved);
       attachmentIds.push(attId);
     }
@@ -95,7 +109,7 @@ export function createMailAttachmentService(
     return attachmentIds;
   }
 
-  return { resolveAndUpload };
+  return { resolvePaths, resolveAndUpload };
 }
 
 export type MailAttachmentService = ReturnType<

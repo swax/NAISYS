@@ -85,12 +85,17 @@ export function createMailService(
 
         // Upload any file attachments (argv[4+])
         let attachmentIds: number[] | undefined;
+        let resolvedPaths: string[] | undefined;
         const filePaths = argv.slice(4);
         if (filePaths.length > 0) {
-          attachmentIds = await attachmentService.resolveAndUpload(filePaths);
+          if (hubClient) {
+            attachmentIds = await attachmentService.resolveAndUpload(filePaths);
+          } else {
+            resolvedPaths = await attachmentService.resolvePaths(filePaths);
+          }
         }
 
-        return sendMessage(recipients, argv[2], argv[3], attachmentIds);
+        return sendMessage(recipients, argv[2], argv[3], attachmentIds, resolvedPaths);
       }
 
       case "read": {
@@ -166,6 +171,7 @@ export function createMailService(
     subject: string,
     message: string,
     attachmentIds?: number[],
+    resolvedPaths?: string[],
   ): Promise<string> {
     message = message.replace(/\\n/g, "\n");
 
@@ -198,6 +204,7 @@ export function createMailService(
       subject,
       body: message,
       createdAt: new Date().toISOString(),
+      filePaths: resolvedPaths,
     };
 
     const display = formatMessageDisplay(mailContent);
