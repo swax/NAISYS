@@ -1,3 +1,4 @@
+import { MultipartFile } from "@fastify/multipart";
 import {
   AgentIdParams,
   AgentIdParamsSchema,
@@ -17,11 +18,27 @@ import {
 import { FastifyInstance, FastifyPluginOptions } from "fastify";
 import { hasPermission, requirePermission } from "../auth-middleware.js";
 import { API_PREFIX } from "../hateoas.js";
+import { uploadToHub } from "../services/attachmentProxyService.js";
 import {
   getConversations,
   getMessages,
   sendChatMessage,
 } from "../services/chatService.js";
+
+function sendChatAction(agentId: number) {
+  return {
+    rel: "send",
+    href: `${API_PREFIX}/agents/${agentId}/chat`,
+    method: "POST" as const,
+    title: "Send Chat Message",
+    schema: `${API_PREFIX}/schemas/SendChat`,
+    alternateEncoding: {
+      contentType: "multipart/form-data",
+      description: "Send as multipart to include file attachments",
+      fileFields: ["attachments"],
+    },
+  };
+}
 
 export default function agentChatRoutes(
   fastify: FastifyInstance,
@@ -57,17 +74,7 @@ export default function agentChatRoutes(
         return {
           success: true,
           conversations,
-          _actions: canSend
-            ? [
-                {
-                  rel: "send",
-                  href: `${API_PREFIX}/agents/${id}/chat`,
-                  method: "POST" as const,
-                  title: "Send Chat Message",
-                  schema: `${API_PREFIX}/schemas/SendChat`,
-                },
-              ]
-            : undefined,
+          _actions: canSend ? [sendChatAction(id)] : undefined,
         };
       } catch (error) {
         request.log.error(error, "Error in GET /agents/:id/chat route");
@@ -123,17 +130,7 @@ export default function agentChatRoutes(
           messages: data.messages,
           total: data.total,
           timestamp: data.timestamp,
-          _actions: canSend
-            ? [
-                {
-                  rel: "send",
-                  href: `${API_PREFIX}/agents/${id}/chat`,
-                  method: "POST" as const,
-                  title: "Send Chat Message",
-                  schema: `${API_PREFIX}/schemas/SendChat`,
-                },
-              ]
-            : undefined,
+          _actions: canSend ? [sendChatAction(id)] : undefined,
         };
       } catch (error) {
         request.log.error(
@@ -158,10 +155,11 @@ export default function agentChatRoutes(
     {
       preHandler: [requirePermission("agent_communication")],
       schema: {
-        description: "Send a chat message as an agent",
+        description:
+          "Send a chat message as an agent with optional attachments. Supports JSON and multipart/form-data",
         tags: ["Chat"],
         params: AgentIdParamsSchema,
-        body: SendChatRequestSchema,
+        // No body schema — multipart requests are parsed manually via request.parts()
         response: {
           200: SendChatResponseSchema,
           400: ErrorResponseSchema,
@@ -172,19 +170,69 @@ export default function agentChatRoutes(
     },
     async (request, reply) => {
       try {
-        const body = request.body;
+        const contentType = request.headers["content-type"];
+        let fromId: number = 0,
+          toIds: number[] = [],
+          message: string = "";
+        let attachmentBuffers: Array<{ filename: string; data: Buffer }> = [];
 
-        if (!body.fromId || !body.toIds?.length || !body.message) {
+        if (contentType?.includes("multipart/form-data")) {
+          const parts = request.parts();
+
+          for await (const part of parts) {
+            if (part.type === "field") {
+              const field = part as any;
+              switch (field.fieldname) {
+                case "fromId":
+                  fromId = Number(field.value);
+                  break;
+                case "toIds":
+                  toIds = JSON.parse(field.value);
+                  break;
+                case "message":
+                  message = field.value;
+                  break;
+              }
+            } else if (part.type === "file") {
+              const file = part as MultipartFile;
+              if (file.fieldname === "attachments") {
+                const buffer = await file.toBuffer();
+                attachmentBuffers.push({
+                  filename: file.filename || "unnamed_file",
+                  data: buffer,
+                });
+              }
+            }
+          }
+        } else {
+          const body = request.body as SendChatRequest;
+          fromId = body.fromId;
+          toIds = body.toIds;
+          message = body.message;
+        }
+
+        if (!fromId || !toIds?.length || !message) {
           return reply.code(400).send({
             success: false,
             message: "Missing required fields: fromId, toIds, message",
           });
         }
 
+        // Upload attachments to hub and collect IDs
+        let attachmentIds: number[] | undefined;
+        if (attachmentBuffers.length > 0) {
+          attachmentIds = [];
+          for (const att of attachmentBuffers) {
+            const id = await uploadToHub(att.data, att.filename, fromId);
+            attachmentIds.push(id);
+          }
+        }
+
         const result = await sendChatMessage(
-          body.fromId,
-          body.toIds,
-          body.message,
+          fromId,
+          toIds,
+          message,
+          attachmentIds,
         );
 
         if (result.success) {

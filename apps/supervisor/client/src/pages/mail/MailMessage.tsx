@@ -1,7 +1,27 @@
-import { ActionIcon, Card, Flex, Group, Stack, Text } from "@mantine/core";
-import { IconCornerUpLeft, IconMailbox, IconSend } from "@tabler/icons-react";
+import {
+  ActionIcon,
+  Anchor,
+  Card,
+  Flex,
+  Group,
+  Image,
+  Stack,
+  Text,
+} from "@mantine/core";
+import {
+  IconCornerUpLeft,
+  IconFile,
+  IconMailbox,
+  IconPaperclip,
+  IconSend,
+} from "@tabler/icons-react";
 import React, { useState } from "react";
-import { MailMessage as MailMessageType } from "../../lib/apiClient";
+import { formatFileSize } from "@naisys/common";
+import { API_BASE, apiEndpoints, MailMessage as MailMessageType } from "../../lib/apiClient";
+
+function isImageFilename(filename: string): boolean {
+  return /\.(jpg|jpeg|png|gif|webp|svg|bmp)$/i.test(filename);
+}
 
 interface MailMessageProps {
   message: MailMessageType;
@@ -22,8 +42,12 @@ export const MailMessage: React.FC<MailMessageProps> = ({
   const recipientUsernames = message.recipients.map((r) => r.username);
 
   const messageWithSubject = `${message.subject} - ${message.body}`;
+  const hasAttachments =
+    message.attachments && message.attachments.length > 0;
   const hasMoreContent =
-    messageWithSubject.includes("\n") || messageWithSubject.length > 100;
+    messageWithSubject.includes("\n") ||
+    messageWithSubject.length > 100 ||
+    hasAttachments;
 
   const fromToUsernames = isFromCurrentAgent
     ? recipientUsernames.length > 0
@@ -131,6 +155,18 @@ export const MailMessage: React.FC<MailMessageProps> = ({
             textOverflow: isExpanded ? "clip" : "ellipsis",
           }}
         >
+          {hasAttachments && (
+            <IconPaperclip
+              size={14}
+              stroke={1.5}
+              style={{
+                display: "inline-block",
+                verticalAlign: "middle",
+                marginRight: 4,
+                color: "var(--mantine-color-dimmed)",
+              }}
+            />
+          )}
           <Text component="span" fw={600}>
             {message.subject}
           </Text>{" "}
@@ -140,6 +176,48 @@ export const MailMessage: React.FC<MailMessageProps> = ({
             {message.body.split("\n").length > 1 && !isExpanded && "🔽"}
           </Text>
         </Text>
+        {isExpanded && hasAttachments && (
+          <Stack gap="xs" mt="xs">
+            <Text size="xs" fw={600} c="dimmed">
+              Attachments:
+            </Text>
+            {message.attachments!.map((att) => {
+              const downloadUrl = `${API_BASE}${apiEndpoints.attachmentDownload(att.id)}`;
+              return (
+                <Group key={att.id} gap="xs" align="center">
+                  {isImageFilename(att.filename) ? (
+                    <Image
+                      src={downloadUrl}
+                      alt={att.filename}
+                      h={60}
+                      w="auto"
+                      fit="contain"
+                      radius="sm"
+                      style={{ cursor: "pointer" }}
+                      onClick={(e: React.MouseEvent) => {
+                        e.stopPropagation();
+                        window.open(downloadUrl, "_blank");
+                      }}
+                    />
+                  ) : (
+                    <IconFile size={16} />
+                  )}
+                  <Anchor
+                    href={downloadUrl}
+                    download
+                    size="xs"
+                    onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                  >
+                    {att.filename}
+                  </Anchor>
+                  <Text size="xs" c="dimmed">
+                    ({formatFileSize(att.fileSize)})
+                  </Text>
+                </Group>
+              );
+            })}
+          </Stack>
+        )}
       </Stack>
     </Card>
   );

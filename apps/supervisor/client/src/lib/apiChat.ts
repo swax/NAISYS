@@ -4,7 +4,7 @@ import type {
   SendChatRequest,
   SendChatResponse,
 } from "./apiClient";
-import { api, apiEndpoints } from "./apiClient";
+import { api, API_BASE, apiEndpoints } from "./apiClient";
 
 export const getChatConversations = async (
   agentId: number,
@@ -44,12 +44,38 @@ export const getChatMessages = async (
 export const sendChatMessage = async (
   agentId: number,
   data: SendChatRequest,
+  files?: File[],
 ): Promise<SendChatResponse> => {
   try {
-    return await api.post<SendChatRequest, SendChatResponse>(
-      apiEndpoints.agentChat(agentId),
-      data,
-    );
+    if (files && files.length > 0) {
+      const formData = new FormData();
+      formData.append("fromId", String(data.fromId));
+      formData.append("toIds", JSON.stringify(data.toIds));
+      formData.append("message", data.message);
+
+      for (const file of files) {
+        formData.append("attachments", file);
+      }
+
+      const response = await fetch(
+        `${API_BASE}${apiEndpoints.agentChat(agentId)}`,
+        {
+          method: "POST",
+          body: formData,
+        },
+      );
+
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.message || `API Error: ${response.status}`);
+      }
+      return result;
+    } else {
+      return await api.post<SendChatRequest, SendChatResponse>(
+        apiEndpoints.agentChat(agentId),
+        data,
+      );
+    }
   } catch (error) {
     return {
       success: false,

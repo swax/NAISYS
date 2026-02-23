@@ -9,12 +9,13 @@ import agentMailRoutes from "./agentMail.js";
 import agentChatRoutes from "./agentChat.js";
 import authRoutes from "./auth.js";
 import hostsRoutes from "./hosts.js";
-import mailRoutes from "./mail.js";
+
 import modelsRoutes from "./models.js";
 import rootRoutes from "./root.js";
 import schemaRoutes from "./schemas.js";
 import statusRoutes from "./status.js";
 import adminRoutes from "./admin.js";
+import attachmentRoutes from "./attachments.js";
 import variablesRoutes from "./variables.js";
 
 export default async function apiRoutes(
@@ -59,6 +60,7 @@ export default async function apiRoutes(
   // Register admin routes
   await fastify.register(adminRoutes, { prefix: "/admin" });
 
-  // Register top-level mail routes (send-mail)
-  await fastify.register(mailRoutes);
+  // Register attachment routes
+  await fastify.register(attachmentRoutes, { prefix: "/attachments" });
+
 }

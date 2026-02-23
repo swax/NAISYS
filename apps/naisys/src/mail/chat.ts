@@ -9,6 +9,7 @@ import {
   MailSendResponse,
   MailUnreadResponse,
 } from "@naisys/hub-protocol";
+import { formatFileSize } from "@naisys/common";
 import stringArgv from "string-argv";
 import { UserEntry, UserService } from "../agent/userService.js";
 import { chatCmd } from "../command/commandDefs.js";
@@ -17,17 +18,11 @@ import { HubClient } from "../hub/hubClient.js";
 import { PromptNotificationService } from "../utils/promptNotificationService.js";
 import { MailAttachmentService } from "./mailAttachmentService.js";
 
-function formatSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes}B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)}KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)}MB`;
-}
-
 /** Format inline attachment suffix, e.g. " [file.txt 2.1KB]" */
 function formatAttachmentSuffix(attachments?: MailAttachmentData[]): string {
   if (!attachments?.length) return "";
   return attachments
-    .map((a) => ` [${a.filename} ${formatSize(a.fileSize)}]`)
+    .map((a) => ` [${a.filename} ${formatFileSize(a.fileSize)}]`)
     .join("");
 }
 

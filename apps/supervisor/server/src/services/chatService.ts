@@ -127,6 +127,9 @@ export const getMessages = cachedForSeconds(
           body: true,
           created_at: true,
           from_user: { select: { username: true } },
+          attachments: {
+            select: { id: true, filename: true, file_size: true },
+          },
         },
       });
 
@@ -136,6 +139,14 @@ export const getMessages = cachedForSeconds(
         fromUsername: msg.from_user?.username ?? "(deleted)",
         body: msg.body,
         createdAt: msg.created_at.toISOString(),
+        attachments:
+          msg.attachments.length > 0
+            ? msg.attachments.map((a) => ({
+                id: a.id,
+                filename: a.filename,
+                fileSize: a.file_size,
+              }))
+            : undefined,
       }));
 
       return {
@@ -160,10 +171,11 @@ export async function sendChatMessage(
   fromId: number,
   toIds: number[],
   message: string,
+  attachmentIds?: number[],
 ): Promise<{ success: boolean; message?: string }> {
   try {
     const cleanMessage = message.replace(/\\n/g, "\n");
-    const response = await sendMailViaHub(fromId, toIds, "", cleanMessage, "chat");
+    const response = await sendMailViaHub(fromId, toIds, "", cleanMessage, "chat", attachmentIds);
 
     if (response.success) {
       return { success: true, message: "Chat message sent" };

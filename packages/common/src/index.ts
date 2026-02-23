@@ -10,3 +10,4 @@ export * from "./sleep.js";
 export * from "./builtInModels.js";
 export * from "./modelTypes.js";
 export * from "./errorHandler.js";
+export * from "./formatFileSize.js";

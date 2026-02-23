@@ -50,7 +50,7 @@ export const AgentChat: React.FC = () => {
   );
 
   const handleSendMessage = useCallback(
-    async (message: string) => {
+    async (message: string, files?: File[]) => {
       if (!selectedParticipantIds) return;
 
       // Extract recipient IDs from participant IDs (exclude current agent)
@@ -59,11 +59,15 @@ export const AgentChat: React.FC = () => {
         .map(Number)
         .filter((pid) => pid !== agentId);
 
-      await sendChatMessage(agentId, {
-        fromId: agentId,
-        toIds,
-        message,
-      });
+      await sendChatMessage(
+        agentId,
+        {
+          fromId: agentId,
+          toIds,
+          message,
+        },
+        files,
+      );
     },
     [agentId, selectedParticipantIds],
   );

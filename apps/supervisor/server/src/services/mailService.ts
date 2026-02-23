@@ -3,11 +3,10 @@ import {
   SendMailRequest,
   SendMailResponse,
 } from "@naisys-supervisor/shared";
-import fs from "fs/promises";
-import path from "path";
 import { hubDb } from "../database/hubDb.js";
 import { getLogger } from "../logger.js";
 import { cachedForSeconds } from "../utils/cache.js";
+import { uploadToHub } from "./attachmentProxyService.js";
 import { sendMailViaHub } from "./hubConnectionService.js";
 
 /**
@@ -74,6 +73,9 @@ export const getMailDataByUserId = cachedForSeconds(
               },
             },
           },
+          attachments: {
+            select: { id: true, filename: true, file_size: true },
+          },
         },
       });
 
@@ -89,6 +91,14 @@ export const getMailDataByUserId = cachedForSeconds(
           username: r.user.username,
           type: r.type,
         })),
+        attachments:
+          msg.attachments.length > 0
+            ? msg.attachments.map((a) => ({
+                id: a.id,
+                filename: a.filename,
+                fileSize: a.file_size,
+              }))
+            : undefined,
       }));
 
       return {
@@ -107,49 +117,36 @@ export const getMailDataByUserId = cachedForSeconds(
 );
 
 /**
- * Send a message via the hub
+ * Send a message via the hub, uploading any attachments first
  */
 export async function sendMessage(
   request: SendMailRequest,
+  attachments?: Array<{ filename: string; data: Buffer }>,
 ): Promise<SendMailResponse> {
   try {
-    const { fromId, toId, subject, message, attachments } = request;
+    const { fromId, toId, subject, message } = request;
 
     // Clean message (handle escaped newlines)
-    let cleanMessage = message.replace(/\\n/g, "\n");
+    const cleanMessage = message.replace(/\\n/g, "\n");
 
-    // Save attachments and append info to message body
+    // Upload attachments to hub and collect IDs
+    let attachmentIds: number[] | undefined;
     if (attachments && attachments.length > 0) {
-      const naisysFolderPath = process.env.NAISYS_FOLDER;
-      if (!naisysFolderPath) {
-        throw new Error("NAISYS_FOLDER environment variable not set");
+      attachmentIds = [];
+      for (const attachment of attachments) {
+        const id = await uploadToHub(attachment.data, attachment.filename, fromId);
+        attachmentIds.push(id);
       }
-
-      // Use a timestamp-based folder since we don't have a message ID yet
-      const attachmentId = Date.now();
-      const attachmentsDir = path.join(
-        naisysFolderPath,
-        "attachments",
-        String(attachmentId),
-      );
-      await saveAttachments(attachmentsDir, attachments);
-
-      const attachmentDetails = attachments
-        .map((att) => {
-          const sizeKB = (att.data.length / 1024).toFixed(1);
-          return `${att.filename} (${sizeKB} KB)`;
-        })
-        .join(", ");
-
-      const attachmentCount = attachments.length;
-      cleanMessage = `${cleanMessage}\n\n${attachmentCount} attached file${attachmentCount > 1 ? "s" : ""}, located in ${attachmentsDir}\nFilenames: ${attachmentDetails}`;
     }
+
 
     const response = await sendMailViaHub(
       fromId,
       [toId],
       subject,
       cleanMessage,
+      "mail",
+      attachmentIds,
     );
 
     if (response.success) {
@@ -170,17 +167,5 @@ export async function sendMessage(
       message:
         error instanceof Error ? error.message : "Failed to send message",
     };
-  }
-}
-
-async function saveAttachments(
-  attachmentsDir: string,
-  attachments: Array<{ filename: string; data: Buffer }>,
-) {
-  await fs.mkdir(attachmentsDir, { recursive: true });
-
-  for (const attachment of attachments) {
-    const filePath = path.join(attachmentsDir, attachment.filename);
-    await fs.writeFile(filePath, attachment.data);
   }
 }

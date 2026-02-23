@@ -170,7 +170,7 @@ export const apiEndpoints = {
   variables: "/variables",
   saveVariable: (key: string) => `/variables/${encodeURIComponent(key)}`,
   deleteVariable: (key: string) => `/variables/${encodeURIComponent(key)}`,
-  sendMail: "/send-mail",
+  attachmentDownload: (id: number) => `/attachments/${id}`,
   permissions: "/permissions",
   admin: "/admin",
   adminExportConfig: "/admin/export-config",

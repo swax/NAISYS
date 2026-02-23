@@ -3,6 +3,7 @@ import {
   MailListResponse,
   MailSearchResponse,
 } from "@naisys/hub-protocol";
+import { formatFileSize } from "@naisys/common";
 import table from "text-table";
 import { HubClient } from "../hub/hubClient.js";
 
@@ -15,13 +16,6 @@ export interface MailContent {
   body: string;
   createdAt: string;
   attachments?: { id: number; filename: string; fileSize: number }[];
-}
-
-/** Format a byte count into a human-readable size string */
-function formatSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 /** Standard display format for a mail message */
@@ -41,7 +35,7 @@ export function formatMessageDisplay(
   if (content.attachments?.length) {
     output += "\n  Attachments:";
     for (const att of content.attachments) {
-      output += `\n    ${att.id}: ${att.filename} (${formatSize(att.fileSize)})`;
+      output += `\n    ${att.id}: ${att.filename} (${formatFileSize(att.fileSize)})`;
     }
     if (hubUrl) {
       output += "\n  Download:";

@@ -102,7 +102,7 @@ model users {
   uuid               String              @unique
   username           String
   title              String
-  api_key            String?             @unique
+  api_key            String              @unique
   lead_user_id       Int?
   config             String              @default("{}")
   created_at         DateTime            @default(now())

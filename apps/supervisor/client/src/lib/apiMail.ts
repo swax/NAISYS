@@ -32,9 +32,12 @@ export const getMailData = async (
 };
 
 export const sendMail = async (
+  agentId: number,
   mailData: SendMailRequest & { files?: File[] },
 ): Promise<SendMailResponse> => {
   try {
+    const endpoint = apiEndpoints.agentMail(agentId);
+
     // If there are files, use FormData
     if (mailData.files && mailData.files.length > 0) {
       const formData = new FormData();
@@ -48,7 +51,7 @@ export const sendMail = async (
         formData.append(`attachments`, file);
       });
 
-      const response = await fetch(`${API_BASE}${apiEndpoints.sendMail}`, {
+      const response = await fetch(`${API_BASE}${endpoint}`, {
         method: "POST",
         body: formData,
       });
@@ -61,10 +64,7 @@ export const sendMail = async (
     } else {
       // No files, use regular JSON request
       const { files: _files, ...body } = mailData;
-      return await api.post<SendMailRequest, SendMailResponse>(
-        apiEndpoints.sendMail,
-        body,
-      );
+      return await api.post<SendMailRequest, SendMailResponse>(endpoint, body);
     }
   } catch (error) {
     return {
