@@ -17,6 +17,8 @@ export interface MailContent {
   body: string;
   createdAt: string;
   attachments?: { id: number; filename: string; fileSize: number }[];
+  /** Local-mode file paths (no hub upload) */
+  filePaths?: string[];
 }
 
 /** Standard display format for a mail message */
@@ -43,6 +45,13 @@ export function formatMessageDisplay(
       for (const att of content.attachments) {
         output += `\n    curl -k "${hubUrl}/attachments/${att.id}?apiKey=$NAISYS_API_KEY" -o ${att.filename}`;
       }
+    }
+  }
+
+  if (content.filePaths?.length) {
+    output += "\n  Attachments:";
+    for (const fp of content.filePaths) {
+      output += `\n    ${fp}`;
     }
   }
 

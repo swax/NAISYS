@@ -82,12 +82,17 @@ export function createChatService(
 
         // Upload any file attachments (argv[3+])
         let attachmentIds: number[] | undefined;
+        let resolvedPaths: string[] | undefined;
         const filePaths = argv.slice(3);
         if (filePaths.length > 0) {
-          attachmentIds = await attachmentService.resolveAndUpload(filePaths);
+          if (hubClient) {
+            attachmentIds = await attachmentService.resolveAndUpload(filePaths);
+          } else {
+            resolvedPaths = await attachmentService.resolvePaths(filePaths);
+          }
         }
 
-        return sendMessage(recipients, argv[2], attachmentIds);
+        return sendMessage(recipients, argv[2], attachmentIds, resolvedPaths);
       }
 
       case "recent": {
@@ -125,6 +130,7 @@ export function createChatService(
     recipients: UserEntry[],
     message: string,
     attachmentIds?: number[],
+    resolvedPaths?: string[],
   ): Promise<string> {
     message = message.replace(/\\n/g, "\n");
 
@@ -152,11 +158,19 @@ export function createChatService(
     const localUser = userService.getUserById(localUserId);
     const localUsername = localUser?.username || "unknown";
 
+    let text = `Chat from ${localUsername}: ${message}`;
+    if (resolvedPaths?.length) {
+      text += "\n  Attachments:";
+      for (const fp of resolvedPaths) {
+        text += `\n    ${fp}`;
+      }
+    }
+
     for (const recipient of recipients) {
       promptNotification.notify({
         userId: recipient.userId,
         wake: "yes",
-        contextOutput: [`Chat from ${localUsername}: ${message}`],
+        contextOutput: [text],
       });
     }
 
