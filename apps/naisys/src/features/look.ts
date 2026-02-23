@@ -108,7 +108,7 @@ export function createLookService(
         "look",
       );
 
-      return `[${filepath}]\n${result.join("\n")}`;
+      return `[${filepath}]\n${result.responses.join("\n")}`;
     }
 
     // Default: pin image into context

@@ -52,7 +52,7 @@ In addition to the commands you know are ok, these additional commands are white
   ns-mail, ns-lynx, ns-session, and ns-comment
 Reply with 'allow' to allow the command, otherwise you can give a reason for your rejection.`;
 
-    const response = await llmService.query(
+    const queryResult = await llmService.query(
       agentConfig().shellModel,
       systemMessage,
       [
@@ -64,13 +64,15 @@ Reply with 'allow' to allow the command, otherwise you can give a reason for you
       "write-protection",
     );
 
-    const commandAllowed = response[0].toLocaleLowerCase().startsWith("allow");
+    const commandAllowed = queryResult.responses[0]
+      .toLocaleLowerCase()
+      .startsWith("allow");
 
     return {
       commandAllowed,
       rejectReason: commandAllowed
         ? undefined
-        : "Command Rejected: " + response,
+        : "Command Rejected: " + queryResult.responses[0],
     };
   }
   return {

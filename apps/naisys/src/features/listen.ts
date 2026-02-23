@@ -110,7 +110,7 @@ export function createListenService(
         "listen",
       );
 
-      return `[${filepath}]\n${result.join("\n")}`;
+      return `[${filepath}]\n${result.responses.join("\n")}`;
     }
 
     // Default: pin audio into context

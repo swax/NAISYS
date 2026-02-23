@@ -1,10 +1,12 @@
+import { QueryResult } from "./vendorTypes.js";
+
 /**
  * @param abortSignal 5 second mock delay, to simulate network latency and test ESC command
  * @returns Return with a 5 second pause so we can test out of focus agents still waiting before next mock request
  */
 export async function sendWithMock(
   abortSignal?: AbortSignal,
-): Promise<string[]> {
+): Promise<QueryResult> {
   await new Promise<void>((resolve, reject) => {
     const timeoutId = setTimeout(resolve, 5000);
 
@@ -26,8 +28,11 @@ export async function sendWithMock(
     }
   });
 
-  return [
-    `ns-comment "Mock LLM ran at ${new Date().toISOString()}"`,
-    `ns-session wait 5`,
-  ];
+  return {
+    responses: [
+      `ns-comment "Mock LLM ran at ${new Date().toISOString()}"`,
+      `ns-session wait 5`,
+    ],
+    messagesTokenCount: 0,
+  };
 }

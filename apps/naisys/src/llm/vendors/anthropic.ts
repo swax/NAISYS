@@ -1,7 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { MessageParam } from "@anthropic-ai/sdk/resources";
 import { ContentBlock, LlmMessage, LlmRole } from "../llmDtos.js";
-import { QuerySources, VendorDeps } from "./vendorTypes.js";
+import { QueryResult, QuerySources, VendorDeps } from "./vendorTypes.js";
 
 export async function sendWithAnthropic(
   deps: VendorDeps,
@@ -11,7 +11,7 @@ export async function sendWithAnthropic(
   source: QuerySources,
   apiKey?: string,
   abortSignal?: AbortSignal,
-): Promise<string[]> {
+): Promise<QueryResult> {
   const {
     modelService,
     costTracker,
@@ -87,18 +87,29 @@ export async function sendWithAnthropic(
   });
 
   // Record token usage
-  if (msgResponse.usage) {
-    await costTracker.recordTokens(
-      source,
-      model.key,
-      msgResponse.usage.input_tokens,
-      msgResponse.usage.output_tokens,
-      msgResponse.usage.cache_creation_input_tokens || 0,
-      msgResponse.usage.cache_read_input_tokens || 0,
-    );
-  } else {
+  if (!msgResponse.usage) {
     throw "Error, no usage data returned from Anthropic API.";
   }
+
+  const inputTokens = msgResponse.usage.input_tokens;
+  const outputTokens = msgResponse.usage.output_tokens;
+  const cacheCreationTokens =
+    msgResponse.usage.cache_creation_input_tokens || 0;
+  const cacheReadTokens = msgResponse.usage.cache_read_input_tokens || 0;
+  // input_tokens only counts non-cached tokens, so add back cached portions for the full context size
+  // Excludes output_tokens because it contains thinking tokens that don't persist in context;
+  // the actual response text is estimated locally by contextManager.getTokenCount()
+  const messagesTokenCount =
+    inputTokens + cacheCreationTokens + cacheReadTokens;
+
+  await costTracker.recordTokens(
+    source,
+    model.key,
+    inputTokens,
+    outputTokens,
+    msgResponse.usage.cache_creation_input_tokens || 0,
+    msgResponse.usage.cache_read_input_tokens || 0,
+  );
 
   if (createParams.tools) {
     const commandsFromTool = tools.getCommandsFromAnthropicToolUse(
@@ -106,11 +117,16 @@ export async function sendWithAnthropic(
     );
 
     if (commandsFromTool) {
-      return commandsFromTool;
+      return { responses: commandsFromTool, messagesTokenCount };
     }
   }
 
-  return [msgResponse.content.find((c) => c.type == "text")?.text || ""];
+  return {
+    responses: [
+      msgResponse.content.find((c) => c.type == "text")?.text || "",
+    ],
+    messagesTokenCount,
+  };
 }
 
 function formatContentForAnthropic(

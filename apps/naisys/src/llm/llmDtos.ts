@@ -37,12 +37,6 @@ export interface AudioBlock {
 
 export type ContentBlock = TextBlock | ImageBlock | AudioBlock;
 
-/** Rough token estimate for an image in context */
-export const IMAGE_TOKEN_ESTIMATE = 1000;
-
-/** Rough token estimate for an audio clip in context */
-export const AUDIO_TOKEN_ESTIMATE = 2000;
-
 /** Extract text content from a message's content field. Returns "[Image]" placeholder for image blocks. */
 export function getTextContent(content: string | ContentBlock[]): string {
   if (typeof content === "string") {

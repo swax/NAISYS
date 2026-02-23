@@ -1,7 +1,7 @@
 import OpenAI from "openai";
 import { ChatCompletionCreateParamsNonStreaming } from "openai/resources";
 import { ContentBlock, LlmMessage, LlmRole } from "../llmDtos.js";
-import { QuerySources, VendorDeps } from "./vendorTypes.js";
+import { QueryResult, QuerySources, VendorDeps } from "./vendorTypes.js";
 
 export async function sendWithOpenAiCompatible(
   deps: VendorDeps,
@@ -11,7 +11,7 @@ export async function sendWithOpenAiCompatible(
   source: QuerySources,
   apiKey?: string,
   abortSignal?: AbortSignal,
-): Promise<string[]> {
+): Promise<QueryResult> {
   const {
     modelService,
     costTracker,
@@ -62,27 +62,29 @@ export async function sendWithOpenAiCompatible(
     // Don't cost models with no costs
   }
   // Record token usage
-  if (chatResponse.usage) {
-    const cacheReadTokens =
-      chatResponse.usage.prompt_tokens_details?.cached_tokens || 0;
-
-    // Remove cached tokens so we only bill fresh tokens at the full input rate.
-    const nonCachedPromptTokens = Math.max(
-      0,
-      (chatResponse.usage.prompt_tokens || 0) - cacheReadTokens,
-    );
-
-    await costTracker.recordTokens(
-      source,
-      model.key,
-      nonCachedPromptTokens,
-      chatResponse.usage.completion_tokens,
-      0, // OpenAI doesn't report cache write tokens separately - it's automatic
-      cacheReadTokens,
-    );
-  } else {
+  if (!chatResponse.usage) {
     throw "Error, no usage data returned from OpenAI API.";
   }
+
+  const inputTokens = chatResponse.usage.prompt_tokens || 0;
+  const outputTokens = chatResponse.usage.completion_tokens || 0;
+  // Excludes output_tokens because it contains reasoning tokens that don't persist in context;
+  // the actual response text is estimated locally by contextManager.getTokenCount()
+  const messagesTokenCount = inputTokens;
+  const cacheReadTokens =
+    chatResponse.usage.prompt_tokens_details?.cached_tokens || 0;
+
+  // Remove cached tokens so we only bill fresh tokens at the full input rate.
+  const nonCachedPromptTokens = Math.max(0, inputTokens - cacheReadTokens);
+
+  await costTracker.recordTokens(
+    source,
+    model.key,
+    nonCachedPromptTokens,
+    outputTokens,
+    0, // OpenAI doesn't report cache write tokens separately - it's automatic
+    cacheReadTokens,
+  );
 
   if (chatRequest.tools) {
     const commandsFromTool = tools.getCommandsFromOpenAiToolUse(
@@ -90,11 +92,14 @@ export async function sendWithOpenAiCompatible(
     );
 
     if (commandsFromTool) {
-      return commandsFromTool;
+      return { responses: commandsFromTool, messagesTokenCount };
     }
   }
 
-  return [chatResponse.choices[0].message.content || ""];
+  return {
+    responses: [chatResponse.choices[0].message.content || ""],
+    messagesTokenCount,
+  };
 }
 
 const AUDIO_MIME_TO_FORMAT: Record<string, string> = {
