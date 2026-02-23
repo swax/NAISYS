@@ -7,7 +7,8 @@ export type QuerySources =
   | "write-protection"
   | "compact"
   | "lynx"
-  | "look";
+  | "look"
+  | "listen";
 
 export interface VendorDeps {
   modelService: ModelService;

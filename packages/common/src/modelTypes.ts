@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { builtInLlmModels, builtInImageModels } from "./builtInModels.js";
+import { builtInImageModels, builtInLlmModels } from "./builtInModels.js";
 
 // --- Enums ---
 
@@ -28,6 +28,7 @@ export const LlmModelSchema = z
     cacheWriteCost: z.number().optional(),
     cacheReadCost: z.number().optional(),
     supportsVision: z.boolean().optional(),
+    supportsHearing: z.boolean().optional(),
   })
   .superRefine((data, ctx) => {
     if (
@@ -54,7 +55,7 @@ export const ImageModelSchema = z.object({
   baseUrl: z.string().optional(),
   apiKeyVar: z.string(),
   cost: z.number(),
-  quality: z.enum(["standard", "hd"]).optional(),
+  quality: z.enum(["standard", "hd", "high", "medium", "low"]).optional(),
 });
 
 export type ImageModel = z.infer<typeof ImageModelSchema>;
@@ -80,6 +81,7 @@ const LlmMetaSchema = z.object({
   cacheWriteCost: z.number().optional(),
   cacheReadCost: z.number().optional(),
   supportsVision: z.boolean().optional(),
+  supportsHearing: z.boolean().optional(),
 });
 
 const ImageMetaSchema = z.object({
@@ -87,7 +89,7 @@ const ImageMetaSchema = z.object({
   baseUrl: z.string().optional(),
   apiKeyVar: z.string(),
   cost: z.number(),
-  quality: z.enum(["standard", "hd"]).optional(),
+  quality: z.enum(["standard", "hd", "high", "medium", "low"]).optional(),
 });
 
 // --- DB conversion helpers ---

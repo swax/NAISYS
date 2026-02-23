@@ -27,9 +27,9 @@ export function createGenImg(
 
     const argv = stringArgv(args);
 
-    // Expected: genimg "description" /path/to/file.png
-    const description = argv[1];
-    const filepath = argv[2] || "";
+    // args already has the command name stripped, so argv[0] is the description
+    const description = argv[0];
+    const filepath = argv[1] || "";
 
     if (!description) {
       throw "Invalid parameters: Description in quotes and fully qualified filepath with desired image extension are required";
@@ -69,12 +69,14 @@ export function createGenImg(
       baseURL: model.baseUrl,
     });
 
+    const isDalle = model.versionName.startsWith("dall-e");
+
     const response = await openai.images.generate({
       prompt: description,
       model: model.versionName,
       size: model.size as "1024x1024",
       quality: model.quality,
-      response_format: "b64_json",
+      ...(isDalle ? { response_format: "b64_json" } : {}),
     });
 
     // save to filepath

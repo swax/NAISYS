@@ -336,6 +336,7 @@ function LlmReadOnlyTable({
     cacheWriteCost?: number;
     cacheReadCost?: number;
     supportsVision?: boolean;
+    supportsHearing?: boolean;
   };
 }) {
   const rows: [string, string | number][] = [
@@ -356,6 +357,7 @@ function LlmReadOnlyTable({
     rows.push(["Cache Read Cost (per 1M tokens)", `$${model.cacheReadCost}`]);
   }
   rows.push(["Supports Vision", model.supportsVision ? "Yes" : "No"]);
+  rows.push(["Supports Hearing", model.supportsHearing ? "Yes" : "No"]);
 
   return (
     <Table striped>

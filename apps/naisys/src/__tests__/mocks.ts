@@ -157,10 +157,12 @@ export function createMockContextManager() {
   };
 
   const appendImage = jest.fn();
+  const appendAudio = jest.fn();
 
   const contextManager: ContextManager = {
     append,
     appendImage,
+    appendAudio,
     clear,
     getTokenCount,
     getCombinedMessages,

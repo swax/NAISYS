@@ -7,6 +7,7 @@ import { createPromptBuilder } from "../command/promptBuilder.js";
 import { createShellCommand } from "../command/shellCommand.js";
 import { createShellWrapper } from "../command/shellWrapper.js";
 import { createGenImg } from "../features/genImg.js";
+import { createListenService } from "../features/listen.js";
 import { createLookService } from "../features/look.js";
 import { createLynxService } from "../features/lynx.js";
 import { createSessionService } from "../features/session.js";
@@ -120,6 +121,13 @@ export async function createAgentRuntime(
     llmService,
     shellWrapper,
   );
+  const listenService = createListenService(
+    agentConfig,
+    modelService,
+    contextManager,
+    llmService,
+    shellWrapper,
+  );
   const genimg = createGenImg(
     globalConfig,
     agentConfig,
@@ -202,6 +210,7 @@ export async function createAgentRuntime(
     lynxService,
     genimg,
     lookService,
+    listenService,
     subagentService,
     mailService,
     chatService,

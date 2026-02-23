@@ -27,6 +27,7 @@ interface LlmFormValues {
   cacheWriteCost: number | string;
   cacheReadCost: number | string;
   supportsVision: boolean;
+  supportsHearing: boolean;
 }
 
 function transformFormValues(values: LlmFormValues): Record<string, unknown> {
@@ -46,6 +47,7 @@ function transformFormValues(values: LlmFormValues): Record<string, unknown> {
   if (typeof values.cacheReadCost === "number")
     result.cacheReadCost = values.cacheReadCost;
   if (values.supportsVision) result.supportsVision = true;
+  if (values.supportsHearing) result.supportsHearing = true;
   return result;
 }
 
@@ -85,6 +87,7 @@ export const LlmModelForm: React.FC<LlmModelFormProps> = ({
       cacheWriteCost: model?.cacheWriteCost ?? ("" as number | string),
       cacheReadCost: model?.cacheReadCost ?? ("" as number | string),
       supportsVision: model?.supportsVision ?? false,
+      supportsHearing: model?.supportsHearing ?? false,
     },
     validate: (values) =>
       zodResolver(LlmModelSchema)(transformFormValues(values)),
@@ -192,6 +195,12 @@ export const LlmModelForm: React.FC<LlmModelFormProps> = ({
           description="Model can process image inputs"
           disabled={readOnly}
           {...form.getInputProps("supportsVision", { type: "checkbox" })}
+        />
+        <Switch
+          label="Supports Hearing"
+          description="Model can process audio inputs"
+          disabled={readOnly}
+          {...form.getInputProps("supportsHearing", { type: "checkbox" })}
         />
       </Stack>
 

@@ -1,4 +1,3 @@
-import { ImageModelSchema } from "@naisys/common";
 import {
   Button,
   Group,
@@ -9,6 +8,7 @@ import {
   TextInput,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
+import { ImageModelSchema } from "@naisys/common";
 import { IconCheck, IconX } from "@tabler/icons-react";
 import type { ImageModelDetail } from "../lib/apiClient";
 import { zodResolver } from "../lib/zod-resolver";
@@ -132,6 +132,9 @@ export const ImageModelForm: React.FC<ImageModelFormProps> = ({
           data={[
             { value: "standard", label: "Standard" },
             { value: "hd", label: "HD" },
+            { value: "high", label: "High" },
+            { value: "medium", label: "Medium" },
+            { value: "low", label: "Low" },
           ]}
           {...form.getInputProps("quality")}
         />
