@@ -32,14 +32,14 @@ export const lookCmd: CommandDef = {
   name: "ns-look",
   usage: "[--describe] <filepath>",
   description:
-    "Look at an image file and add it to the conversation context. With --describe, returns a text description instead",
+    "Look at an image by adding it to the context. With --describe, only add a text description instead",
 };
 
 export const listenCmd: CommandDef = {
   name: "ns-listen",
   usage: "[--transcribe] <filepath>",
   description:
-    "Listen to an audio file and add it to the conversation context. With --transcribe, returns a text transcription instead",
+    "Listen to audio by adding it to the context. With --transcribe, only add a text transcription instead",
 };
 
 export const genImgCmd: CommandDef = {

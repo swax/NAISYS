@@ -58,9 +58,6 @@ export async function sendWithOpenAiCompatible(
     signal: abortSignal,
   });
 
-  if (!model.inputCost && !model.outputCost) {
-    // Don't cost models with no costs
-  }
   // Record token usage
   if (!chatResponse.usage) {
     throw "Error, no usage data returned from OpenAI API.";
@@ -102,15 +99,6 @@ export async function sendWithOpenAiCompatible(
   };
 }
 
-const AUDIO_MIME_TO_FORMAT: Record<string, string> = {
-  "audio/mpeg": "mp3",
-  "audio/mp4": "m4a",
-  "audio/wav": "wav",
-  "audio/flac": "flac",
-  "audio/ogg": "ogg",
-  "audio/webm": "webm",
-};
-
 function formatContentForOpenAI(
   content: string | ContentBlock[],
 ): string | Array<any> {
@@ -120,13 +108,6 @@ function formatContentForOpenAI(
   return content.map((block) => {
     if (block.type === "text") {
       return { type: "text", text: block.text };
-    }
-    if (block.type === "audio") {
-      const format = AUDIO_MIME_TO_FORMAT[block.mimeType] || "mp3";
-      return {
-        type: "input_audio",
-        input_audio: { data: block.base64, format },
-      };
     }
     return {
       type: "image_url",
