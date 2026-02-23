@@ -119,7 +119,6 @@ async function seedModels(
       ...builtInImageModels.map((m) => imageModelToDbFields(m, true, false)),
     ];
 
-    let upsertCount = 0;
     for (const fields of builtInFields) {
       const existing = existingRows.find((r) => r.key === fields.key);
       if (existing?.is_custom) {
@@ -131,7 +130,6 @@ async function seedModels(
       } else {
         await hubDb.models.create({ data: fields });
       }
-      upsertCount++;
     }
 
     // Import YAML custom models only on first run (migration from file-based storage)

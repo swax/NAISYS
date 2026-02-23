@@ -72,7 +72,7 @@ export const startServer: StartServer = async (
     initHubConnection(hubUrl, hubAccessKey);
   }
 
-  await ensureSuperAdmin(async (passwordHash, uuid, superAdminName) => {
+  await ensureSuperAdmin(async (_passwordHash, uuid, superAdminName) => {
     const existing = await getUserByUuid(uuid);
     if (existing) return false;
     const user = await createUser(superAdminName, uuid);

@@ -113,7 +113,6 @@ export default function agentChatRoutes(
         const dbParticipantIds = String(participantIds).replace(/-/g, ",");
 
         const data = await getMessages(
-          id,
           dbParticipantIds,
           updatedSince,
           page,

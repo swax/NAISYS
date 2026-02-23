@@ -258,6 +258,8 @@ export function createLynxService(
 
           if (output.includes("Exiting via interrupt")) {
             reject("Timed out loading URL: May be inaccessible");
+          } else if (error && !output) {
+            reject(`Failed to load URL: ${error.message}`);
           } else {
             resolve(output);
           }
@@ -291,7 +293,7 @@ export function createLynxService(
     }
 
     // Replace local link numbers with global link numbers
-    return content.replace(/\[(\d+)\]/g, (match, linkStr: string) => {
+    return content.replace(/\[(\d+)\]/g, (_match, linkStr: string) => {
       const localLinkNum = parseInt(linkStr)!;
       const url = linkMap.get(localLinkNum)!;
 

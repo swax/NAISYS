@@ -113,7 +113,7 @@ export default function modelsRoutes(
           })),
           _actions: actions.length > 0 ? actions : undefined,
         };
-      } catch (error) {
+      } catch (_error) {
         return reply.code(500).send({
           success: false,
           message: "Error loading model options",

@@ -103,37 +103,16 @@ export async function authenticateAndCreateSession(
   const tokenHash = hashToken(token);
   const expiresAt = new Date(Date.now() + SESSION_DURATION_MS);
 
-  await createSession(
-    tokenHash,
-    user.username,
-    user.passwordHash,
-    user.uuid,
-    expiresAt,
-  );
-
-  return { token, user, expiresAt };
-}
-
-/**
- * Create or update a session for a user by uuid.
- */
-export async function createSession(
-  tokenHash: string,
-  username: string,
-  passwordHash: string,
-  uuid: string,
-  expiresAt: Date,
-): Promise<void> {
-  if (!supervisorDb) return;
-
-  await supervisorDb.user.update({
+  await supervisorDb!.user.update({
     where: { username },
     data: {
-      passwordHash,
+      passwordHash: user.passwordHash,
       sessionTokenHash: tokenHash,
       sessionExpiresAt: expiresAt,
     },
   });
+
+  return { token, user, expiresAt };
 }
 
 /**
