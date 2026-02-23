@@ -4,15 +4,7 @@ import { LogService } from "../services/logService.js";
 import { InputModeService } from "../utils/inputMode.js";
 import { OutputColor, OutputService } from "../utils/output.js";
 import * as utilities from "../utils/utilities.js";
-import {
-  AUDIO_TOKEN_ESTIMATE,
-  ContentBlock,
-  ContentSource,
-  IMAGE_TOKEN_ESTIMATE,
-  LlmMessage,
-  LlmRole,
-  getTextContent,
-} from "./llmDtos.js";
+import { ContentBlock, ContentSource, LlmMessage, LlmRole } from "./llmDtos.js";
 
 export function createContextManager(
   { agentConfig }: AgentConfig,
@@ -22,7 +14,12 @@ export function createContextManager(
   logService: LogService,
   inputMode: InputModeService,
 ) {
-  let _messages: LlmMessage[] = [];
+  let messages: LlmMessage[] = [];
+
+  // Actual messages token count from last API response
+  let lastKnownTokenCount = 0;
+  // Message index at the time lastKnownTokenCount was set
+  let lastKnownMessageIndex = 0;
 
   clear();
 
@@ -66,7 +63,7 @@ export function createContextManager(
     }
 
     const llmMessage = <LlmMessage>{ source, role, content };
-    _messages.push(llmMessage);
+    messages.push(llmMessage);
 
     // Log the message
     logService.write(llmMessage);
@@ -89,7 +86,7 @@ export function createContextManager(
       content: contentBlocks,
     };
 
-    _messages.push(llmMessage);
+    messages.push(llmMessage);
 
     // Log text only
     logService.write(llmMessage);
@@ -115,7 +112,7 @@ export function createContextManager(
       content: contentBlocks,
     };
 
-    _messages.push(llmMessage);
+    messages.push(llmMessage);
 
     // Log text only
     logService.write(llmMessage);
@@ -125,30 +122,56 @@ export function createContextManager(
   }
 
   function clear() {
-    _messages = [];
+    messages = [];
+    lastKnownTokenCount = 0;
+    lastKnownMessageIndex = 0;
   }
 
-  function getTokenCount() {
-    const sytemMessageTokens = utilities.getTokenCount(systemMessage);
-    const workspaceTokens = utilities.getTokenCount(getWorkspaceContent());
+  /** Set the actual messages token count from the last API response */
+  function setMessagesTokenCount(messagesTokenCount: number) {
+    if (messagesTokenCount < lastKnownTokenCount) {
+      output.write(
+        `Warning: Messages token count decreased from ${lastKnownTokenCount} to ${messagesTokenCount}`,
+        OutputColor.error,
+      );
+    }
+    lastKnownTokenCount = messagesTokenCount;
+    lastKnownMessageIndex = messages.length;
+  }
 
-    return _messages.reduce((acc, message) => {
+  function estimateMessagesTokenCount(messages: LlmMessage[]) {
+    return messages.reduce((acc, message) => {
       if (typeof message.content === "string") {
         return acc + utilities.getTokenCount(message.content);
       }
-      // ContentBlock[] — sum text tokens + estimates per media block
       let tokens = 0;
       for (const block of message.content) {
         if (block.type === "text") {
           tokens += utilities.getTokenCount(block.text);
-        } else if (block.type === "audio") {
-          tokens += AUDIO_TOKEN_ESTIMATE;
-        } else {
-          tokens += IMAGE_TOKEN_ESTIMATE;
         }
       }
       return acc + tokens;
-    }, sytemMessageTokens + workspaceTokens);
+    }, 0);
+  }
+
+  function getTokenCount() {
+    if (lastKnownTokenCount > 0) {
+      // Use actual count from last API call + estimate only for messages added since
+      return (
+        lastKnownTokenCount +
+        estimateMessagesTokenCount(messages.slice(lastKnownMessageIndex))
+      );
+    }
+
+    // No API call yet — estimate everything locally
+    const systemMessageTokens = utilities.getTokenCount(systemMessage);
+    const workspaceTokens = utilities.getTokenCount(getWorkspaceContent());
+
+    return (
+      systemMessageTokens +
+      workspaceTokens +
+      estimateMessagesTokenCount(messages)
+    );
   }
 
   /** Combine message list with adjacent messages of the same role role combined */
@@ -156,7 +179,7 @@ export function createContextManager(
     const combinedMessages: LlmMessage[] = [];
     let lastMessage: LlmMessage | undefined;
 
-    for (const message of _messages) {
+    for (const message of messages) {
       // Don't combine if either message has ContentBlock[] content
       const lastIsBlocks =
         lastMessage && typeof lastMessage.content !== "string";
@@ -215,7 +238,7 @@ export function createContextManager(
   }
 
   const exportedForTesting = {
-    getMessages: () => _messages,
+    getMessages: () => messages,
   };
 
   function getWorkspaceContent() {
@@ -231,6 +254,7 @@ export function createContextManager(
     appendImage,
     appendAudio,
     clear,
+    setMessagesTokenCount,
     getTokenCount,
     getCombinedMessages,
     exportedForTesting,

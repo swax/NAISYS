@@ -90,7 +90,7 @@ export function createCommandLoop(
         await sleep(1000);
       }
 
-      const initialCommands = agentConfig().initialCommands;
+      const initialCommands = structuredClone(agentConfig().initialCommands);
 
       if (sessionService.canRestore()) {
         initialCommands.push("ns-session restore");
@@ -201,12 +201,16 @@ export function createCommandLoop(
 
             let queryCancelled = false;
             try {
-              commandList = await llmService.query(
+              const queryResult = await llmService.query(
                 agentConfig().shellModel,
                 systemMessage,
                 contextManager.getCombinedMessages(),
                 "console",
                 queryController.signal,
+              );
+              commandList = queryResult.responses;
+              contextManager.setMessagesTokenCount(
+                queryResult.messagesTokenCount,
               );
             } catch (queryError) {
               // Check if this was an ESC cancellation

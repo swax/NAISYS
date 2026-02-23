@@ -149,6 +149,7 @@ export function createMockSessionService() {
 export function createMockContextManager() {
   const append = jest.fn(() => Promise.resolve());
   const clear = jest.fn();
+  const setMessagesTokenCount = jest.fn();
   const getTokenCount = jest.fn(() => 0);
   const printContext = jest.fn(() => "");
   const getCombinedMessages = jest.fn((): LlmMessage[] => []);
@@ -164,6 +165,7 @@ export function createMockContextManager() {
     appendImage,
     appendAudio,
     clear,
+    setMessagesTokenCount,
     getTokenCount,
     getCombinedMessages,
     exportedForTesting,

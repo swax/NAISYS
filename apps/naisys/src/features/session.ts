@@ -121,14 +121,14 @@ export function createSessionService(
 
     await output.commentAndLog(`Compacting...`);
 
-    const commandList = await llmService.query(
+    const queryResult = await llmService.query(
       agentConfig().shellModel,
       systemMessage,
       contextManager.getCombinedMessages(),
       "compact",
     );
 
-    restoreInfo = commandList.join("\n");
+    restoreInfo = queryResult.responses.join("\n");
 
     await output.commentAndLog(
       `Session compacted to ${getTokenCount(restoreInfo)} tokens. Restarting Session.`,

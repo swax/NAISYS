@@ -1,6 +1,6 @@
 import { GoogleGenAI } from "@google/genai";
 import { ContentBlock, LlmMessage, LlmRole } from "../llmDtos.js";
-import { QuerySources, VendorDeps } from "./vendorTypes.js";
+import { QueryResult, QuerySources, VendorDeps } from "./vendorTypes.js";
 
 export async function sendWithGoogle(
   deps: VendorDeps,
@@ -10,7 +10,7 @@ export async function sendWithGoogle(
   source: QuerySources,
   apiKey?: string,
   abortSignal?: AbortSignal,
-): Promise<string[]> {
+): Promise<QueryResult> {
   const {
     modelService,
     costTracker,
@@ -76,22 +76,25 @@ export async function sendWithGoogle(
   });
 
   // Use actual token counts from Google API response
-  if (result.usageMetadata) {
-    const inputTokenCount = result.usageMetadata.promptTokenCount || 0;
-    const outputTokenCount = result.usageMetadata.candidatesTokenCount || 0;
-    const cachedTokenCount = result.usageMetadata.cachedContentTokenCount || 0;
-
-    await costTracker.recordTokens(
-      source,
-      model.key,
-      inputTokenCount - cachedTokenCount,
-      outputTokenCount,
-      0, // Cache write tokens (not separately reported)
-      cachedTokenCount, // Cache read tokens
-    );
-  } else {
+  if (!result.usageMetadata) {
     throw "Error, no usage metadata returned from Google API.";
   }
+
+  const inputTokens = result.usageMetadata.promptTokenCount || 0;
+  const outputTokens = result.usageMetadata.candidatesTokenCount || 0;
+  // Excludes output_tokens because it contains thinking tokens that don't persist in context;
+  // the actual response text is estimated locally by contextManager.getTokenCount()
+  const messagesTokenCount = inputTokens;
+  const cachedTokenCount = result.usageMetadata.cachedContentTokenCount || 0;
+
+  await costTracker.recordTokens(
+    source,
+    model.key,
+    inputTokens - cachedTokenCount,
+    outputTokens,
+    0, // Cache write tokens (not separately reported)
+    cachedTokenCount, // Cache read tokens
+  );
 
   // Check for function calls if tools were enabled
   if (chatConfig.config.tools) {
@@ -100,11 +103,11 @@ export async function sendWithGoogle(
     );
 
     if (commandsFromTool) {
-      return commandsFromTool;
+      return { responses: commandsFromTool, messagesTokenCount };
     }
   }
 
-  return [result.text || ""];
+  return { responses: [result.text || ""], messagesTokenCount };
 }
 
 function formatPartsForGoogle(content: string | ContentBlock[]): Array<any> {

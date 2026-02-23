@@ -9,7 +9,7 @@ import { sendWithAnthropic } from "./vendors/anthropic.js";
 import { sendWithGoogle } from "./vendors/google.js";
 import { sendWithMock } from "./vendors/mock.js";
 import { sendWithOpenAiCompatible } from "./vendors/openai.js";
-import { QuerySources, VendorDeps } from "./vendors/vendorTypes.js";
+import { QueryResult, QuerySources, VendorDeps } from "./vendors/vendorTypes.js";
 
 const useThinking = true;
 
@@ -26,7 +26,7 @@ export function createLLMService(
     context: LlmMessage[],
     source: QuerySources,
     abortSignal?: AbortSignal,
-  ): Promise<string[]> {
+  ): Promise<QueryResult> {
     // Check if spend limit has been reached (throws error if so)
     await costTracker.checkSpendLimit();
 

@@ -10,6 +10,12 @@ export type QuerySources =
   | "look"
   | "listen";
 
+export interface QueryResult {
+  responses: string[];
+  /** Total input context size (excludes output/thinking tokens which don't persist) */
+  messagesTokenCount: number;
+}
+
 export interface VendorDeps {
   modelService: ModelService;
   costTracker: CostTracker;
