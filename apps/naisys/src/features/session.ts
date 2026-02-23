@@ -12,7 +12,6 @@ import { GlobalConfig } from "../globalConfig.js";
 import { ContextManager } from "../llm/contextManager.js";
 import { LLMService } from "../llm/llmService.js";
 import { OutputService } from "../utils/output.js";
-import * as utilities from "../utils/utilities.js";
 import { getTokenCount } from "../utils/utilities.js";
 
 export function createSessionService(
@@ -45,13 +44,13 @@ export function createSessionService(
         return handleWait(argv[1]);
 
       case "compact":
-        return handleCompact(args.slice(subcommand.length).trim());
+        return handleCompact();
 
       case "restore":
         return handleRestore();
 
       case "complete":
-        return handleComplete(args.slice(subcommand.length).trim());
+        return handleComplete();
 
       default:
         return `Unknown subcommand: ${subcommand}\n\n${getHelpText()}`;
@@ -97,9 +96,7 @@ export function createSessionService(
     };
   }
 
-  async function handleCompact(
-    args: string,
-  ): Promise<string | CommandResponse> {
+  async function handleCompact(): Promise<string | CommandResponse> {
     if (!globalConfig().compactSessionEnabled) {
       return 'The "ns-session compact" command is not enabled in this environment.';
     }
@@ -168,10 +165,7 @@ export function createSessionService(
    * Tried havin a user/message param on this command but even advanced LLMs were getting it confused.
    * Just tell it to notify whoever it needs to before running the command and keep this one simple.
    */
-  async function handleComplete(
-    args: string,
-  ): Promise<string | CommandResponse> {
-    const result = utilities.trimChars(args, '"');
+  async function handleComplete(): Promise<string | CommandResponse> {
     if (!agentConfig().completeSessionEnabled) {
       return 'The "ns-session complete" command is not enabled for you, please use wait command instead.';
     }

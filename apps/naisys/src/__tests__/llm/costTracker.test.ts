@@ -189,7 +189,6 @@ describe("calculateModelCacheSavings", () => {
       (cacheReadTokens * (model.inputCost - (model.cacheReadCost || 0))) /
         1_000_000;
 
-    const actualCacheSpend = modelData.cache_write + modelData.cache_read;
     const costWithoutCaching = modelData.total + cacheSavingsAmount;
     const savingsPercent =
       cacheSavingsAmount > 0

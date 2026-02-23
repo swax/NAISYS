@@ -89,7 +89,7 @@ export function createGlobalConfig(
       const packageJsonPath = path.join(installPath, "package.json");
       const packageJson = JSON.parse(await readFile(packageJsonPath, "utf8"));
       return packageJson.version;
-    } catch (e) {
+    } catch (_e) {
       return "Error getting NAISYS verison";
     }
   }

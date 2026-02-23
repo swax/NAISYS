@@ -12,7 +12,6 @@ export { deploySupervisorMigrations } from "./migrationHelper.js";
 export type { AuthResult,SessionUser } from "./sessionService.js";
 export {
   authenticateAndCreateSession,
-  createSession,
   createSupervisorDatabaseClient,
   deleteSession,
   ensureSuperAdmin,

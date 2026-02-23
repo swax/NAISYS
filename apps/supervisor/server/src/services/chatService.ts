@@ -96,7 +96,6 @@ export const getConversations = cachedForSeconds(
 export const getMessages = cachedForSeconds(
   0.25,
   async (
-    userId: number,
     participantIds: string,
     updatedSince?: string,
     page: number = 1,

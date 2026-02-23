@@ -75,7 +75,7 @@ export default function variablesRoutes(
           items: items.map((v) => ({ key: v.key, value: v.value })),
           _actions: actions.length > 0 ? actions : undefined,
         };
-      } catch (error) {
+      } catch (_error) {
         return reply.code(500).send({
           success: false,
           message: "Error loading variables",

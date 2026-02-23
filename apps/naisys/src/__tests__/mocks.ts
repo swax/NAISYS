@@ -34,7 +34,7 @@ import { OutputService } from "../utils/output.js";
 export function createMockDatabaseService(): HubDatabaseService {
   return {
     usingHubDatabase: <T>(
-      run: (hubDb: PrismaClient) => Promise<T>,
+      _run: (hubDb: PrismaClient) => Promise<T>,
     ): Promise<T> => {
       throw new Error("Mock database not implemented");
     },
@@ -53,7 +53,7 @@ export function createMockRunService(): RunService {
 
 export function createMockLogService() {
   return {
-    write: (msg: LlmMessage) => {},
+    write: (_msg: LlmMessage) => {},
     cleanup: () => {},
   } satisfies LogService;
 }
@@ -154,7 +154,6 @@ export function createMockContextManager() {
   const clear = jest.fn();
   const setMessagesTokenCount = jest.fn();
   const getTokenCount = jest.fn(() => 0);
-  const printContext = jest.fn(() => "");
   const getCombinedMessages = jest.fn((): LlmMessage[] => []);
   const exportedForTesting = {
     getMessages: jest.fn((): LlmMessage[] => []),
