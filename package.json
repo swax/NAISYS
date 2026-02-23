@@ -48,6 +48,8 @@
     "@typescript-eslint/eslint-plugin": "^8.55.0",
     "@typescript-eslint/parser": "^8.55.0",
     "eslint": "^9.39.2",
+    "eslint-plugin-simple-import-sort": "^12.1.1",
+    "eslint-plugin-unused-imports": "^4.4.1",
     "npm-check-updates": "^19.3.2",
     "prettier": "^3.8.1",
     "rimraf": "6.1.2",

@@ -7,6 +7,7 @@ import * as crypto from "crypto";
 import * as https from "https";
 import * as os from "os";
 import stringArgv from "string-argv";
+
 import { lynxCmd } from "../command/commandDefs.js";
 import { RegistrableCommand } from "../command/commandRegistry.js";
 import { GlobalConfig } from "../globalConfig.js";
@@ -188,10 +189,7 @@ export function createLynxService(
     );
 
     if (contentTokenSize > globalConfig().webTokenMax) {
-      const pages = breakContentIntoPages(
-        content,
-        globalConfig().webTokenMax,
-      );
+      const pages = breakContentIntoPages(content, globalConfig().webTokenMax);
 
       // Set up pagination state
       _currentPagination = {

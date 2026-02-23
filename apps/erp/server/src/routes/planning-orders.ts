@@ -1,6 +1,4 @@
-import { FastifyInstance } from "fastify";
-import type { ZodTypeProvider } from "fastify-type-provider-zod";
-import { z } from "zod/v4";
+import type { HateoasAction, HateoasLink } from "@naisys/common";
 import {
   CreatePlanningOrderSchema,
   ErrorResponseSchema,
@@ -9,9 +7,13 @@ import {
   PlanningOrderSchema,
   UpdatePlanningOrderSchema,
 } from "@naisys-erp/shared";
-import type { HateoasAction, HateoasLink } from "@naisys/common";
+import { FastifyInstance } from "fastify";
+import type { ZodTypeProvider } from "fastify-type-provider-zod";
+import { z } from "zod/v4";
+
 import erpDb from "../erpDb.js";
 import { sendError } from "../error-handler.js";
+import type { PlanningOrderModel } from "../generated/prisma/models/PlanningOrder.js";
 import {
   API_PREFIX,
   collectionLink,
@@ -19,7 +21,6 @@ import {
   schemaLink,
   selfLink,
 } from "../hateoas.js";
-import type { PlanningOrderModel } from "../generated/prisma/models/PlanningOrder.js";
 
 function itemLinks(
   resource: string,

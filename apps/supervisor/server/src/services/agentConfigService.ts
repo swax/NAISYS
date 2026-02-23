@@ -4,6 +4,7 @@ import {
   buildDefaultAgentConfig,
 } from "@naisys/common";
 import { randomBytes } from "crypto";
+
 import { hubDb } from "../database/hubDb.js";
 import { sendUserListChanged } from "./hubConnectionService.js";
 

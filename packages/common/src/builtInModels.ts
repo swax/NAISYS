@@ -1,4 +1,4 @@
-import { LlmApiType, type ImageModel, type LlmModel } from "./modelTypes.js";
+import { type ImageModel, LlmApiType, type LlmModel } from "./modelTypes.js";
 
 // --- Built-in LLM models ---
 // Prices are per 1M tokens in USD. Last updated: February 2026.

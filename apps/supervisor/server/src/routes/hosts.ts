@@ -1,3 +1,4 @@
+import type { HateoasAction } from "@naisys/common";
 import {
   AgentActionResult,
   AgentActionResultSchema,
@@ -8,12 +9,12 @@ import {
   HostListResponse,
   HostListResponseSchema,
 } from "@naisys-supervisor/shared";
-import type { HateoasAction } from "@naisys/common";
 import { FastifyInstance, FastifyPluginOptions } from "fastify";
+
 import { hasPermission, requirePermission } from "../auth-middleware.js";
 import { API_PREFIX, selfLink } from "../hateoas.js";
-import { deleteHost, getHosts } from "../services/agentService.js";
 import { isHostConnected } from "../services/agentHostStatusService.js";
+import { deleteHost, getHosts } from "../services/agentService.js";
 
 function hostActions(
   hostId: number,

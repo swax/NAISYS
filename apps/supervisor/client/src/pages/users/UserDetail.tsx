@@ -1,17 +1,17 @@
 import {
-  Container,
-  Title,
-  Group,
   Button,
-  Text,
-  Loader,
-  Stack,
   Card,
-  Table,
-  Select,
-  TextInput,
-  PasswordInput,
+  Container,
+  Group,
+  Loader,
   Modal,
+  PasswordInput,
+  Select,
+  Stack,
+  Table,
+  Text,
+  TextInput,
+  Title,
 } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import { hasAction } from "@naisys/common";
@@ -22,15 +22,16 @@ import {
   useOutletContext,
   useParams,
 } from "react-router-dom";
-import { useSession } from "../../contexts/SessionContext";
+
 import type { AppOutletContext } from "../../App";
+import { useSession } from "../../contexts/SessionContext";
 import {
-  getUser,
-  updateUser,
+  changePassword,
   deleteUser,
+  getUser,
   grantPermission,
   revokePermission,
-  changePassword,
+  updateUser,
 } from "../../lib/apiUsers";
 
 export const UserDetail: React.FC = () => {

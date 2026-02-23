@@ -1,5 +1,6 @@
 import { spawnSync } from "child_process";
 import { fileURLToPath } from "url";
+
 import { GlobalConfig } from "../globalConfig.js";
 import { ContextManager } from "../llm/contextManager.js";
 import { LlmRole } from "../llm/llmDtos.js";
@@ -61,9 +62,7 @@ export function createDebugCommands(
       } else if (inputMode.isDebug()) {
         inputMode.setLLM();
         // Dont say specifically mail/chat was used for admin message so agent can choose from available reply methods (mail/chat/comment)
-        await contextManager.append(
-          `Message from admin: ${cmdArgs}`,
-        );
+        await contextManager.append(`Message from admin: ${cmdArgs}`);
         inputMode.setDebug();
         return "";
       }

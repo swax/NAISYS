@@ -1,24 +1,25 @@
+import type { HateoasAction, ModelDbRow } from "@naisys/common";
+import { supervisorDbPath } from "@naisys/supervisor-database";
 import {
   AdminInfoResponse,
   AdminInfoResponseSchema,
   ErrorResponse,
   ErrorResponseSchema,
 } from "@naisys-supervisor/shared";
-import type { HateoasAction, ModelDbRow } from "@naisys/common";
 import archiver from "archiver";
 import { FastifyInstance, FastifyPluginOptions } from "fastify";
+
 import { hasPermission, requirePermission } from "../auth-middleware.js";
-import { supervisorDbPath } from "@naisys/supervisor-database";
 import { getNaisysDatabasePath, hubDb } from "../database/hubDb.js";
 import { API_PREFIX } from "../hateoas.js";
-import {
-  getHubAccessKey,
-  isHubConnected,
-} from "../services/hubConnectionService.js";
 import {
   buildExportFiles,
   type ExportUserRow,
 } from "../services/configExportService.js";
+import {
+  getHubAccessKey,
+  isHubConnected,
+} from "../services/hubConnectionService.js";
 
 function adminActions(hasAdminPermission: boolean): HateoasAction[] {
   const actions: HateoasAction[] = [];

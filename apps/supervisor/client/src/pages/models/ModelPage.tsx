@@ -12,9 +12,10 @@ import { hasAction } from "@naisys/common";
 import { IconEdit, IconTrash } from "@tabler/icons-react";
 import React, { useCallback, useEffect, useState } from "react";
 import { useBlocker, useNavigate, useParams } from "react-router-dom";
-import { LlmModelForm } from "../../components/LlmModelForm";
+
 import { ImageModelForm } from "../../components/ImageModelForm";
-import { saveLlmModel, saveImageModel, deleteModel } from "../../lib/apiModels";
+import { LlmModelForm } from "../../components/LlmModelForm";
+import { deleteModel,saveImageModel, saveLlmModel } from "../../lib/apiModels";
 import { useModelsContext } from "./ModelsLayout";
 
 type ModelType = "llm" | "image";

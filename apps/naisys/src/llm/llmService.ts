@@ -1,4 +1,5 @@
 import { LlmApiType } from "@naisys/common";
+
 import { AgentConfig } from "../agent/agentConfig.js";
 import { GlobalConfig } from "../globalConfig.js";
 import { ModelService } from "../services/modelService.js";
@@ -8,8 +9,8 @@ import { LlmMessage, LlmRole } from "./llmDtos.js";
 import { sendWithAnthropic } from "./vendors/anthropic.js";
 import { sendWithGoogle } from "./vendors/google.js";
 import { sendWithMock } from "./vendors/mock.js";
-import { sendWithOpenAiStandard } from "./vendors/openai-standard.js";
 import { sendWithOpenAiCompatible } from "./vendors/openai-compatible.js";
+import { sendWithOpenAiStandard } from "./vendors/openai-standard.js";
 import {
   QueryResult,
   QuerySources,

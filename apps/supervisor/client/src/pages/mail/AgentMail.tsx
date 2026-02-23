@@ -7,10 +7,11 @@ import {
   Stack,
   Text,
 } from "@mantine/core";
-import { IconMailbox, IconPlus, IconSend } from "@tabler/icons-react";
 import { hasAction } from "@naisys/common";
+import { IconMailbox, IconPlus, IconSend } from "@tabler/icons-react";
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
+
 import { useAgentDataContext } from "../../contexts/AgentDataContext";
 import { useMailData } from "../../hooks/useMailData";
 import { MailMessage as MailMessageType } from "../../lib/apiClient";

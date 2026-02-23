@@ -3,8 +3,9 @@ import { hasAction, type HateoasAction } from "@naisys/common";
 import { IconCpu, IconPhoto, IconPlus } from "@tabler/icons-react";
 import React from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+
 import { ROUTER_BASENAME } from "../constants";
-import type { LlmModelDetail, ImageModelDetail } from "../lib/apiClient";
+import type { ImageModelDetail,LlmModelDetail } from "../lib/apiClient";
 
 interface ModelSidebarProps {
   llmModels: LlmModelDetail[];

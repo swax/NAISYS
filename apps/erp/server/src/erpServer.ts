@@ -1,4 +1,6 @@
 import "dotenv/config";
+import "./schema-registry.js";
+
 // Important to load dotenv before any other imports, to ensure environment variables are available
 import cookie from "@fastify/cookie";
 import cors from "@fastify/cors";
@@ -25,6 +27,7 @@ import {
 } from "fastify-type-provider-zod";
 import path from "path";
 import { fileURLToPath } from "url";
+
 import { registerApiReference } from "./api-reference.js";
 import { registerAuthMiddleware } from "./auth-middleware.js";
 import { ERP_DB_VERSION, erpDbPath } from "./dbConfig.js";
@@ -35,7 +38,6 @@ import planningOrderRevisionRoutes from "./routes/planning-order-revisions.js";
 import planningOrderRoutes from "./routes/planning-orders.js";
 import rootRoute from "./routes/root.js";
 import schemaRoutes from "./routes/schemas.js";
-import "./schema-registry.js";
 import { enableSupervisorAuth, isSupervisorAuth } from "./supervisorAuth.js";
 import { ensureLocalSuperAdmin, resetLocalPassword } from "./userService.js";
 export { enableSupervisorAuth } from "./supervisorAuth.js";

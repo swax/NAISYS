@@ -1,14 +1,13 @@
 import {
-  TextInput,
-  Textarea,
-  Select,
   Button,
   Group,
-  Stack,
   NumberInput,
+  Select,
+  Stack,
+  Textarea,
+  TextInput,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
-import { useState } from "react";
 import type {
   CreateExecutionOrder,
   UpdateExecutionOrder,
@@ -17,6 +16,8 @@ import {
   CreateExecutionOrderSchema,
   UpdateExecutionOrderSchema,
 } from "@naisys-erp/shared";
+import { useState } from "react";
+
 import { zodResolver } from "../lib/zod-resolver";
 
 type FormData<TEdit extends boolean> = TEdit extends true

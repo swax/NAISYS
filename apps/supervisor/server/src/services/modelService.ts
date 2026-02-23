@@ -1,12 +1,13 @@
 import {
-  builtInLlmModels,
   builtInImageModels,
-  llmModelToDbFields,
+  builtInLlmModels,
+  type ImageModel,
   imageModelToDbFields,
   type LlmModel,
-  type ImageModel,
+  llmModelToDbFields,
   type ModelDbRow,
 } from "@naisys/common";
+
 import { hubDb } from "../database/hubDb.js";
 
 export async function getAllModelsFromDb(): Promise<ModelDbRow[]> {

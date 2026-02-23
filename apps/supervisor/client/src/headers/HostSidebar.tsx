@@ -2,9 +2,10 @@ import { Badge, Card, Group, Stack, Text } from "@mantine/core";
 import { IconServer } from "@tabler/icons-react";
 import React from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+
 import { ROUTER_BASENAME } from "../constants";
-import { useConnectionStatus } from "../hooks/useConnectionStatus";
 import { useHostDataContext } from "../contexts/HostDataContext";
+import { useConnectionStatus } from "../hooks/useConnectionStatus";
 import { Host } from "../types/agent";
 
 export const HostSidebar: React.FC = () => {

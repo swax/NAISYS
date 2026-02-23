@@ -1,5 +1,6 @@
 import { parseHubAccessKey, verifyHubCertificate } from "@naisys/common-node";
 import { io, Socket } from "socket.io-client";
+
 import { HubClientConfig } from "./hubClientConfig.js";
 import { HubClientLog } from "./hubClientLog.js";
 

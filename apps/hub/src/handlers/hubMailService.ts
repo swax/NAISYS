@@ -9,14 +9,15 @@ import {
   MailMarkReadResponse,
   MailPeekRequestSchema,
   MailPeekResponse,
+  MailReceivedPush,
   MailSearchRequestSchema,
   MailSearchResponse,
   MailSendRequestSchema,
-  MailReceivedPush,
   MailSendResponse,
   MailUnreadRequestSchema,
   MailUnreadResponse,
 } from "@naisys/hub-protocol";
+
 import { HubServerLog } from "../services/hubServerLog.js";
 import { NaisysServer } from "../services/naisysServer.js";
 import { HubHeartbeatService } from "./hubHeartbeatService.js";
@@ -63,12 +64,16 @@ export function createHubMailService(
       // Link uploaded attachments to the new message
       if (params.attachmentIds?.length) {
         for (const attId of params.attachmentIds) {
-          const att = await hubDb.mail_attachments.findUnique({ where: { id: attId } });
+          const att = await hubDb.mail_attachments.findUnique({
+            where: { id: attId },
+          });
           if (!att) {
             throw new Error(`Attachment ${attId} not found`);
           }
           if (att.message_id != null) {
-            throw new Error(`Attachment ${attId} is already linked to message ${att.message_id}`);
+            throw new Error(
+              `Attachment ${attId} is already linked to message ${att.message_id}`,
+            );
           }
           await hubDb.mail_attachments.update({
             where: { id: attId },
@@ -179,7 +184,9 @@ export function createHubMailService(
               .join(",");
             ownershipCondition = { participant_ids: participantIds };
           } else if (parsed.filter === "received") {
-            ownershipCondition = { recipients: { some: { user_id: parsed.userId } } };
+            ownershipCondition = {
+              recipients: { some: { user_id: parsed.userId } },
+            };
           } else if (parsed.filter === "sent") {
             ownershipCondition = { from_user_id: parsed.userId };
           } else {

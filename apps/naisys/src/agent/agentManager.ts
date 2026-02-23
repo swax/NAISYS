@@ -1,3 +1,4 @@
+import { sleep } from "@naisys/common";
 import {
   AgentStartRequestSchema,
   AgentStartResponse,
@@ -5,7 +6,7 @@ import {
   AgentStopResponse,
   HubEvents,
 } from "@naisys/hub-protocol";
-import { sleep } from "@naisys/common";
+
 import { GlobalConfig } from "../globalConfig.js";
 import { HubClient } from "../hub/hubClient.js";
 import { HostService } from "../services/hostService.js";

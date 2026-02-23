@@ -1,15 +1,16 @@
 import { ActionIcon, Box, Drawer, Group } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
+import type { HateoasAction } from "@naisys/common";
 import { IconCpu } from "@tabler/icons-react";
 import React from "react";
 import { Outlet, useLocation, useOutletContext } from "react-router-dom";
+
 import { ModelSidebar } from "../../headers/ModelSidebar";
-import type { HateoasAction } from "@naisys/common";
 import {
   api,
   apiEndpoints,
-  type LlmModelDetail,
   type ImageModelDetail,
+  type LlmModelDetail,
   type ModelsResponse,
 } from "../../lib/apiClient";
 

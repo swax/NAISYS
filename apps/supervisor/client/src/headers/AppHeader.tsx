@@ -1,18 +1,19 @@
 import {
   ActionIcon,
-  Button,
   Burger,
+  Button,
   Group,
   Text,
   Tooltip,
   UnstyledButton,
 } from "@mantine/core";
+import naisysLogo from "@naisys/common/assets/naisys-logo.webp";
 import { IconApi } from "@tabler/icons-react";
 import React from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+
 import { useSession } from "../contexts/SessionContext";
 import { ConnectionStatus } from "./ConnectionStatus";
-import naisysLogo from "@naisys/common/assets/naisys-logo.webp";
 
 interface AppHeaderProps {
   burgerOpened: boolean;

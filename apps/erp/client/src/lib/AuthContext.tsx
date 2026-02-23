@@ -1,3 +1,4 @@
+import type { AuthUser } from "@naisys-erp/shared";
 import {
   createContext,
   useCallback,
@@ -5,7 +6,7 @@ import {
   useEffect,
   useState,
 } from "react";
-import type { AuthUser } from "@naisys-erp/shared";
+
 import { authApi } from "./api";
 
 interface AuthContextValue {

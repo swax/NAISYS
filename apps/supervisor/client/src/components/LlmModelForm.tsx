@@ -1,4 +1,3 @@
-import { LlmApiType, LlmModelSchema } from "@naisys/common";
 import {
   Button,
   Group,
@@ -10,7 +9,9 @@ import {
   TextInput,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
+import { LlmApiType, LlmModelSchema } from "@naisys/common";
 import { IconCheck, IconX } from "@tabler/icons-react";
+
 import type { LlmModelDetail } from "../lib/apiClient";
 import { zodResolver } from "../lib/zod-resolver";
 

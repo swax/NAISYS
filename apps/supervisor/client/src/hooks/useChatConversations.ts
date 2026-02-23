@@ -1,5 +1,6 @@
 import type { HateoasAction } from "@naisys/common";
 import { useQuery } from "@tanstack/react-query";
+
 import { getChatConversations } from "../lib/apiChat";
 import type { ChatConversation } from "../lib/apiClient";
 
@@ -19,8 +20,7 @@ export const useChatConversations = (
     retryDelay: 1000,
   });
 
-  const conversations: ChatConversation[] =
-    query.data?.conversations ?? [];
+  const conversations: ChatConversation[] = query.data?.conversations ?? [];
   const actions: HateoasAction[] | undefined = query.data?._actions;
 
   return {

@@ -1,9 +1,11 @@
-import { MantineProvider } from "@mantine/core";
 import "@mantine/core/styles.css";
-import { Notifications } from "@mantine/notifications";
 import "@mantine/notifications/styles.css";
+
+import { MantineProvider } from "@mantine/core";
+import { Notifications } from "@mantine/notifications";
 import React from "react";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router";
+import { BrowserRouter, Navigate,Route, Routes } from "react-router";
+
 import { AppLayout } from "./components/AppLayout";
 import { AuthProvider, useAuth } from "./lib/AuthContext";
 import { ExecutionOrderCreate } from "./pages/ExecutionOrderCreate";

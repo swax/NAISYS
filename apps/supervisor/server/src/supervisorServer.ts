@@ -1,11 +1,12 @@
 import "dotenv/config";
+import "./schema-registry.js";
+
 // Important to load dotenv before any other imports, to ensure environment variables are available
 import cookie from "@fastify/cookie";
 import cors from "@fastify/cors";
 import multipart from "@fastify/multipart";
 import staticFiles from "@fastify/static";
 import swagger from "@fastify/swagger";
-import { PermissionEnum } from "@naisys-supervisor/shared";
 import { commonErrorHandler, type StartServer } from "@naisys/common";
 import { createHubDatabaseClient } from "@naisys/hub-database";
 import {
@@ -14,6 +15,7 @@ import {
   ensureSuperAdmin,
   handleResetPassword,
 } from "@naisys/supervisor-database";
+import { PermissionEnum } from "@naisys-supervisor/shared";
 import scalarReference from "@scalar/fastify-api-reference";
 import Fastify from "fastify";
 import {
@@ -25,9 +27,9 @@ import {
 } from "fastify-type-provider-zod";
 import path from "path";
 import { fileURLToPath } from "url";
+
 import { initLogger } from "./logger.js";
 import apiRoutes from "./routes/api.js";
-import "./schema-registry.js";
 import { initHubConnection } from "./services/hubConnectionService.js";
 import {
   createUser,

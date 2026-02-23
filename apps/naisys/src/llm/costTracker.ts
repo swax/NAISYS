@@ -5,11 +5,12 @@ import {
   CostWriteEntry,
   HubEvents,
 } from "@naisys/hub-protocol";
+
 import { AgentConfig } from "../agent/agentConfig.js";
 import { GlobalConfig } from "../globalConfig.js";
 import { HubClient } from "../hub/hubClient.js";
-import { RunService } from "../services/runService.js";
 import { ModelService } from "../services/modelService.js";
+import { RunService } from "../services/runService.js";
 
 export interface LlmModelCosts {
   inputCost: number;

@@ -9,6 +9,7 @@ import {
   MailUnreadResponse,
 } from "@naisys/hub-protocol";
 import stringArgv from "string-argv";
+
 import { UserEntry, UserService } from "../agent/userService.js";
 import { mailCmd } from "../command/commandDefs.js";
 import {
@@ -19,9 +20,9 @@ import { HubClient } from "../hub/hubClient.js";
 import { PromptNotificationService } from "../utils/promptNotificationService.js";
 import { MailAttachmentService } from "./mailAttachmentService.js";
 import {
+  formatMessageDisplay,
   MailContent,
   MailDisplayService,
-  formatMessageDisplay,
 } from "./mailDisplayService.js";
 
 export function createMailService(

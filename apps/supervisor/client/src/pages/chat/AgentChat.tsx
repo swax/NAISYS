@@ -1,9 +1,19 @@
-import { ActionIcon, Alert, Box, Drawer, Group, Loader, Stack, Text } from "@mantine/core";
+import {
+  ActionIcon,
+  Alert,
+  Box,
+  Drawer,
+  Group,
+  Loader,
+  Stack,
+  Text,
+} from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import { hasAction } from "@naisys/common";
 import { IconMessageCircle } from "@tabler/icons-react";
 import React, { useCallback, useState } from "react";
 import { useParams } from "react-router-dom";
+
 import { useAgentDataContext } from "../../contexts/AgentDataContext";
 import { useChatConversations } from "../../hooks/useChatConversations";
 import { useChatMessages } from "../../hooks/useChatMessages";
@@ -34,10 +44,11 @@ export const AgentChat: React.FC = () => {
     error: convError,
   } = useChatConversations(agentId, Boolean(id));
 
-  const {
-    messages,
-    isLoading: msgLoading,
-  } = useChatMessages(agentId, selectedParticipantIds, Boolean(selectedParticipantIds));
+  const { messages, isLoading: msgLoading } = useChatMessages(
+    agentId,
+    selectedParticipantIds,
+    Boolean(selectedParticipantIds),
+  );
 
   const canSend = !!hasAction(convActions, "send");
 
@@ -170,7 +181,11 @@ export const AgentChat: React.FC = () => {
         )}
 
         {/* Mobile conversation toggle */}
-        <Box hiddenFrom="sm" p="xs" style={{ borderBottom: "1px solid var(--mantine-color-dark-4)" }}>
+        <Box
+          hiddenFrom="sm"
+          p="xs"
+          style={{ borderBottom: "1px solid var(--mantine-color-dark-4)" }}
+        >
           <ActionIcon variant="subtle" color="gray" onClick={openDrawer}>
             <IconMessageCircle size="1.2rem" />
           </ActionIcon>
@@ -201,7 +216,10 @@ export const AgentChat: React.FC = () => {
                   ?.split(",")
                   .map(Number)
                   .filter((pid) => pid !== agentId)
-                  .map((pid) => agents.find((a) => a.id === pid)?.name ?? `#${pid}`)
+                  .map(
+                    (pid) =>
+                      agents.find((a) => a.id === pid)?.name ?? `#${pid}`,
+                  )
                   .join(", ")}
               </Text>
             </Group>
@@ -218,10 +236,7 @@ export const AgentChat: React.FC = () => {
                 <Loader size="md" />
               </Box>
             ) : (
-              <ChatThread
-                messages={messages}
-                currentAgentId={agentId}
-              />
+              <ChatThread messages={messages} currentAgentId={agentId} />
             )}
             {canSend && (
               <ChatInput

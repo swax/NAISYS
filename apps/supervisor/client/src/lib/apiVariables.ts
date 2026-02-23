@@ -1,4 +1,4 @@
-import type { SaveVariableResponse, DeleteVariableResponse } from "./apiClient";
+import type { DeleteVariableResponse,SaveVariableResponse } from "./apiClient";
 import { api, apiEndpoints } from "./apiClient";
 
 export const saveVariable = async (

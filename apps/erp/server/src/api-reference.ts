@@ -1,6 +1,7 @@
+import { readFileSync } from "node:fs";
+
 import type { FastifyInstance } from "fastify";
 import { createRequire } from "module";
-import { readFileSync } from "node:fs";
 import path from "path";
 
 /**

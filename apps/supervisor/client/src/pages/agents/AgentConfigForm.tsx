@@ -7,8 +7,8 @@ import {
   Stack,
   Switch,
   Text,
-  TextInput,
   Textarea,
+  TextInput,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import {
@@ -18,6 +18,7 @@ import {
 } from "@naisys/common";
 import { IconCheck, IconX } from "@tabler/icons-react";
 import { useMemo, useState } from "react";
+
 import { zodResolver } from "../../lib/zod-resolver";
 
 interface ModelOption {

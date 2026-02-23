@@ -1,33 +1,34 @@
-import { z } from "zod/v4";
+import type { HateoasAction, HateoasLink } from "@naisys/common";
+import type { Permission } from "@naisys/supervisor-database";
+import {
+  ChangePasswordSchema,
+  CreateAgentUserSchema,
+  CreateUserSchema,
+  GrantPermissionSchema,
+  UpdateUserSchema,
+} from "@naisys-supervisor/shared";
 import {
   FastifyInstance,
   FastifyPluginOptions,
-  FastifyRequest,
   FastifyReply,
+  FastifyRequest,
 } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
+import { z } from "zod/v4";
+
+import { authCache,requirePermission } from "../auth-middleware.js";
 import {
-  ChangePasswordSchema,
-  CreateUserSchema,
-  CreateAgentUserSchema,
-  UpdateUserSchema,
-  GrantPermissionSchema,
-} from "@naisys-supervisor/shared";
-import type { Permission } from "@naisys/supervisor-database";
-import { requirePermission, authCache } from "../auth-middleware.js";
-import * as userService from "../services/userService.js";
+  API_PREFIX,
+  collectionLink,
+  paginationLinks,
+  schemaLink,
+  selfLink,
+} from "../hateoas.js";
 import {
   getHubAgentById,
   getHubAgentByUuid,
 } from "../services/agentService.js";
-import type { HateoasAction, HateoasLink } from "@naisys/common";
-import {
-  API_PREFIX,
-  paginationLinks,
-  selfLink,
-  collectionLink,
-  schemaLink,
-} from "../hateoas.js";
+import * as userService from "../services/userService.js";
 
 function userItemLinks(userId: number, agentId?: number | null): HateoasLink[] {
   const links: HateoasLink[] = [

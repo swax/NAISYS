@@ -1,21 +1,21 @@
-import { z } from "zod/v4";
-import type { $ZodType } from "zod/v4/core";
 import {
   AgentStartRequestSchema,
-  CreateAgentConfigRequestSchema,
-  UpdateAgentConfigRequestSchema,
-  SetLeadAgentRequestSchema,
-  SendChatRequestSchema,
-  SendMailRequestSchema,
   ChangePasswordSchema,
+  CreateAgentConfigRequestSchema,
   CreateUserSchema,
-  UpdateUserSchema,
   GrantPermissionSchema,
   LoginRequestSchema,
-  SaveLlmModelRequestSchema,
   SaveImageModelRequestSchema,
+  SaveLlmModelRequestSchema,
   SaveVariableRequestSchema,
+  SendChatRequestSchema,
+  SendMailRequestSchema,
+  SetLeadAgentRequestSchema,
+  UpdateAgentConfigRequestSchema,
+  UpdateUserSchema,
 } from "@naisys-supervisor/shared";
+import { z } from "zod/v4";
+import type { $ZodType } from "zod/v4/core";
 
 export const schemaRegistry: Record<string, $ZodType> = {
   CreateAgent: CreateAgentConfigRequestSchema,

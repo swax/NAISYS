@@ -3,6 +3,7 @@ import {
   SendMailRequest,
   SendMailResponse,
 } from "@naisys-supervisor/shared";
+
 import { hubDb } from "../database/hubDb.js";
 import { getLogger } from "../logger.js";
 import { cachedForSeconds } from "../utils/cache.js";
@@ -134,11 +135,14 @@ export async function sendMessage(
     if (attachments && attachments.length > 0) {
       attachmentIds = [];
       for (const attachment of attachments) {
-        const id = await uploadToHub(attachment.data, attachment.filename, fromId);
+        const id = await uploadToHub(
+          attachment.data,
+          attachment.filename,
+          fromId,
+        );
         attachmentIds.push(id);
       }
     }
-
 
     const response = await sendMailViaHub(
       fromId,

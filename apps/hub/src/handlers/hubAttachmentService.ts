@@ -1,10 +1,18 @@
 import type { HubDatabaseService } from "@naisys/hub-database";
 import { createHash } from "crypto";
-import { createReadStream, createWriteStream, existsSync, mkdirSync, statSync, unlinkSync } from "fs";
+import {
+  createReadStream,
+  createWriteStream,
+  existsSync,
+  mkdirSync,
+  statSync,
+  unlinkSync,
+} from "fs";
 import type { IncomingMessage, ServerResponse } from "http";
 import type { Server as HttpsServer } from "https";
 import { join } from "path";
 import { pipeline, Writable } from "stream";
+
 import { HubServerLog } from "../services/hubServerLog.js";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
@@ -22,7 +30,10 @@ export function createHubAttachmentService(
   const naisysFolder = process.env.NAISYS_FOLDER || "";
 
   httpsServer.on("request", (req: IncomingMessage, res: ServerResponse) => {
-    const url = new URL(req.url || "", `https://${req.headers.host || "localhost"}`);
+    const url = new URL(
+      req.url || "",
+      `https://${req.headers.host || "localhost"}`,
+    );
     const pathname = url.pathname;
 
     if (pathname === "/attachments" && req.method === "POST") {
@@ -64,7 +75,12 @@ export function createHubAttachmentService(
 
     if (!apiKey || !filename || !fileSizeStr || !fileHash) {
       res.writeHead(400, { "Content-Type": "application/json" });
-      res.end(JSON.stringify({ error: "Missing required query params: apiKey, filename, filesize, filehash" }));
+      res.end(
+        JSON.stringify({
+          error:
+            "Missing required query params: apiKey, filename, filesize, filehash",
+        }),
+      );
       return;
     }
 
@@ -77,7 +93,11 @@ export function createHubAttachmentService(
 
     if (fileSize > MAX_FILE_SIZE) {
       res.writeHead(413, { "Content-Type": "application/json" });
-      res.end(JSON.stringify({ error: `File too large. Max size: ${MAX_FILE_SIZE} bytes` }));
+      res.end(
+        JSON.stringify({
+          error: `File too large. Max size: ${MAX_FILE_SIZE} bytes`,
+        }),
+      );
       return;
     }
 
@@ -122,7 +142,11 @@ export function createHubAttachmentService(
       pipeline(req, sizeChecker, (err) => {
         if (err) {
           fileStream.destroy();
-          try { unlinkSync(storagePath); } catch { /* ignore */ }
+          try {
+            unlinkSync(storagePath);
+          } catch {
+            /* ignore */
+          }
           resolve(false);
         } else {
           resolve(true);
@@ -132,16 +156,26 @@ export function createHubAttachmentService(
 
     if (!success) {
       res.writeHead(413, { "Content-Type": "application/json" });
-      res.end(JSON.stringify({ error: "File exceeds size limit during upload" }));
+      res.end(
+        JSON.stringify({ error: "File exceeds size limit during upload" }),
+      );
       return;
     }
 
     // Verify hash
     const computedHash = hash.digest("hex");
     if (computedHash !== fileHash) {
-      try { unlinkSync(storagePath); } catch { /* ignore */ }
+      try {
+        unlinkSync(storagePath);
+      } catch {
+        /* ignore */
+      }
       res.writeHead(400, { "Content-Type": "application/json" });
-      res.end(JSON.stringify({ error: `Hash mismatch. Expected: ${fileHash}, got: ${computedHash}` }));
+      res.end(
+        JSON.stringify({
+          error: `Hash mismatch. Expected: ${fileHash}, got: ${computedHash}`,
+        }),
+      );
       return;
     }
 
@@ -160,7 +194,9 @@ export function createHubAttachmentService(
       return record.id;
     });
 
-    logService.log(`[Hub:Attachment] Uploaded attachment ${attachmentId}: ${filename} (${bytesWritten} bytes) by user ${userId}`);
+    logService.log(
+      `[Hub:Attachment] Uploaded attachment ${attachmentId}: ${filename} (${bytesWritten} bytes) by user ${userId}`,
+    );
 
     res.writeHead(200, { "Content-Type": "application/json" });
     res.end(JSON.stringify({ id: attachmentId }));

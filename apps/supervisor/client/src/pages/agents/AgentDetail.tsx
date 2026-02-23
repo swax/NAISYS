@@ -8,8 +8,8 @@ import {
   TextInput,
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
-import { AgentDetailResponse } from "@naisys-supervisor/shared";
 import { hasAction, type HateoasAction } from "@naisys/common";
+import { AgentDetailResponse } from "@naisys-supervisor/shared";
 import {
   IconArchive,
   IconArchiveOff,
@@ -20,6 +20,7 @@ import {
 } from "@tabler/icons-react";
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+
 import { useAgentDataContext } from "../../contexts/AgentDataContext";
 import {
   archiveAgent,
@@ -38,9 +39,7 @@ export const AgentDetail: React.FC = () => {
 
   const agentId = id ? Number(id) : null;
   const agentData = agents.find((a) => a.id === agentId);
-  const [, setConfig] = useState<AgentDetailResponse["config"] | null>(
-    null,
-  );
+  const [, setConfig] = useState<AgentDetailResponse["config"] | null>(null);
   const [actions, setActions] = useState<HateoasAction[] | undefined>();
   const [loading, setLoading] = useState(true);
   const [taskInput, setTaskInput] = useState("");

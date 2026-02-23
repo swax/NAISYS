@@ -1,10 +1,11 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useEffect, useState } from "react";
 import type { HateoasAction } from "@naisys/common";
 import {
   Agent as BaseAgent,
   AgentStatusEvent,
 } from "@naisys-supervisor/shared";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useCallback, useEffect, useState } from "react";
+
 import { getAgentData } from "../lib/apiAgents";
 import { Agent } from "../types/agent";
 import { useAgentStatusStream } from "./useAgentStatusStream";

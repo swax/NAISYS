@@ -1,9 +1,10 @@
 import { createHash } from "crypto";
-import https from "https";
 import type { FastifyReply } from "fastify";
+import https from "https";
+
 import { hubDb } from "../database/hubDb.js";
-import { getHubUrl } from "./hubConnectionService.js";
 import { getLogger } from "../logger.js";
+import { getHubUrl } from "./hubConnectionService.js";
 
 /**
  * Upload a file buffer to the hub's attachment endpoint.
@@ -57,7 +58,8 @@ export async function uploadToHub(
             if (res.statusCode !== 200) {
               reject(
                 new Error(
-                  parsed.error || `Hub upload failed with status ${res.statusCode}`,
+                  parsed.error ||
+                    `Hub upload failed with status ${res.statusCode}`,
                 ),
               );
             } else {
@@ -141,7 +143,10 @@ export async function proxyDownloadFromHub(
 
         // Forward headers from hub
         if (res.headers["content-disposition"]) {
-          reply.header("content-disposition", res.headers["content-disposition"]);
+          reply.header(
+            "content-disposition",
+            res.headers["content-disposition"],
+          );
         }
         if (res.headers["content-type"]) {
           reply.header("content-type", res.headers["content-type"]);

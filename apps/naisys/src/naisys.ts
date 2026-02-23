@@ -1,15 +1,16 @@
 import type { StartHub } from "@naisys/common";
 import { program } from "commander";
 import dotenv from "dotenv";
+
 import { AgentManager } from "./agent/agentManager.js";
 import { createUserService } from "./agent/userService.js";
 import { createGlobalConfig } from "./globalConfig.js";
-import { HubClient, createHubClient } from "./hub/hubClient.js";
+import { createHubClient,HubClient } from "./hub/hubClient.js";
 import { createHubClientConfig } from "./hub/hubClientConfig.js";
 import { createHubClientLog } from "./hub/hubClientLog.js";
 import { createHeartbeatService } from "./services/heartbeatService.js";
-import { createModelService } from "./services/modelService.js";
 import { createHostService } from "./services/hostService.js";
+import { createModelService } from "./services/modelService.js";
 import { createPromptNotificationService } from "./utils/promptNotificationService.js";
 
 dotenv.config({ quiet: true });

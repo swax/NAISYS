@@ -1,26 +1,27 @@
-import { FastifyInstance } from "fastify";
-import type { ZodTypeProvider } from "fastify-type-provider-zod";
-import { z } from "zod/v4";
+import type { HateoasAction, HateoasLink } from "@naisys/common";
 import {
   CreatePlanningOrderRevisionSchema,
   ErrorResponseSchema,
   PlanningOrderRevisionListQuerySchema,
   PlanningOrderRevisionListResponseSchema,
   PlanningOrderRevisionSchema,
-  UpdatePlanningOrderRevisionSchema,
   type RevisionStatus,
+  UpdatePlanningOrderRevisionSchema,
 } from "@naisys-erp/shared";
-import type { HateoasAction, HateoasLink } from "@naisys/common";
+import { FastifyInstance } from "fastify";
+import type { ZodTypeProvider } from "fastify-type-provider-zod";
+import { z } from "zod/v4";
+
 import { writeAuditEntry } from "../audit.js";
 import erpDb from "../erpDb.js";
 import { sendError } from "../error-handler.js";
+import type { PlanningOrderRevisionModel } from "../generated/prisma/models/PlanningOrderRevision.js";
 import {
   API_PREFIX,
   paginationLinks,
   schemaLink,
   selfLink,
 } from "../hateoas.js";
-import type { PlanningOrderRevisionModel } from "../generated/prisma/models/PlanningOrderRevision.js";
 
 function revisionItemLinks(
   parentResource: string,

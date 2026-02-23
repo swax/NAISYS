@@ -1,21 +1,21 @@
 import { FastifyInstance, FastifyPluginOptions } from "fastify";
+
 import { registerAuthMiddleware } from "../auth-middleware.js";
-import userRoutes from "./users.js";
-import agentsRoutes from "./agents.js";
-import agentLifecycleRoutes from "./agentLifecycle.js";
-import agentConfigRoutes from "./agentConfig.js";
-import agentRunsRoutes from "./agentRuns.js";
-import agentMailRoutes from "./agentMail.js";
+import adminRoutes from "./admin.js";
 import agentChatRoutes from "./agentChat.js";
+import agentConfigRoutes from "./agentConfig.js";
+import agentLifecycleRoutes from "./agentLifecycle.js";
+import agentMailRoutes from "./agentMail.js";
+import agentRunsRoutes from "./agentRuns.js";
+import agentsRoutes from "./agents.js";
+import attachmentRoutes from "./attachments.js";
 import authRoutes from "./auth.js";
 import hostsRoutes from "./hosts.js";
-
 import modelsRoutes from "./models.js";
 import rootRoutes from "./root.js";
 import schemaRoutes from "./schemas.js";
 import statusRoutes from "./status.js";
-import adminRoutes from "./admin.js";
-import attachmentRoutes from "./attachments.js";
+import userRoutes from "./users.js";
 import variablesRoutes from "./variables.js";
 
 export default async function apiRoutes(
@@ -62,5 +62,4 @@ export default async function apiRoutes(
 
   // Register attachment routes
   await fastify.register(attachmentRoutes, { prefix: "/attachments" });
-
 }

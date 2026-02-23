@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+
 import { LlmMessage } from "../llmDtos.js";
 import { QueryResult, QuerySources, VendorDeps } from "./vendorTypes.js";
 

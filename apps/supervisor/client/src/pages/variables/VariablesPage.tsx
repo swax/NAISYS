@@ -10,12 +10,13 @@ import {
   TextInput,
   Title,
 } from "@mantine/core";
-import { IconPencil, IconTrash, IconCheck, IconX } from "@tabler/icons-react";
 import { hasAction } from "@naisys/common";
+import { IconCheck, IconPencil, IconTrash, IconX } from "@tabler/icons-react";
 import { useCallback, useEffect, useState } from "react";
+
 import type { VariablesResponse } from "../../lib/apiClient";
 import { api, apiEndpoints } from "../../lib/apiClient";
-import { saveVariable, deleteVariable } from "../../lib/apiVariables";
+import { deleteVariable,saveVariable } from "../../lib/apiVariables";
 
 interface VariableRow {
   key: string;

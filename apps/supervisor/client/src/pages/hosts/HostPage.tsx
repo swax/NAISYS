@@ -5,9 +5,10 @@ import { IconTrash } from "@tabler/icons-react";
 import { useQueryClient } from "@tanstack/react-query";
 import React, { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+
 import { useAgentDataContext } from "../../contexts/AgentDataContext";
-import { useConnectionStatus } from "../../hooks/useConnectionStatus";
 import { useHostDataContext } from "../../contexts/HostDataContext";
+import { useConnectionStatus } from "../../hooks/useConnectionStatus";
 import { deleteHost } from "../../lib/apiAgents";
 
 export const HostPage: React.FC = () => {

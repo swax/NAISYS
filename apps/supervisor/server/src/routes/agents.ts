@@ -1,3 +1,4 @@
+import type { AgentConfigFile, HateoasAction } from "@naisys/common";
 import {
   AgentDetailResponse,
   AgentDetailResponseSchema,
@@ -15,7 +16,7 @@ import {
   ErrorResponseSchema,
 } from "@naisys-supervisor/shared";
 import { FastifyInstance, FastifyPluginOptions } from "fastify";
-import type { AgentConfigFile, HateoasAction } from "@naisys/common";
+
 import { hasPermission, requirePermission } from "../auth-middleware.js";
 import {
   API_PREFIX,
@@ -23,12 +24,9 @@ import {
   schemaLink,
   selfLink,
 } from "../hateoas.js";
-import { isAgentActive } from "../services/agentHostStatusService.js";
 import { createAgentConfig } from "../services/agentConfigService.js";
-import {
-  getAgent,
-  getAgents,
-} from "../services/agentService.js";
+import { isAgentActive } from "../services/agentHostStatusService.js";
+import { getAgent, getAgents } from "../services/agentService.js";
 
 function agentActions(
   agentId: number,

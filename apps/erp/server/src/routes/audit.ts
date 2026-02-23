@@ -1,6 +1,7 @@
+import { AuditListResponseSchema, AuditQuerySchema } from "@naisys-erp/shared";
 import { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
-import { AuditListResponseSchema, AuditQuerySchema } from "@naisys-erp/shared";
+
 import erpDb from "../erpDb.js";
 
 export default function auditRoutes(fastify: FastifyInstance) {

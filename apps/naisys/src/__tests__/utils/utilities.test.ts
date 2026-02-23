@@ -1,4 +1,5 @@
 import { describe, expect, test } from "@jest/globals";
+
 import { trimChars, valueFromString } from "../../utils/utilities.js";
 
 describe("trimChars function", () => {

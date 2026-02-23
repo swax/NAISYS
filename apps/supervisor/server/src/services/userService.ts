@@ -1,9 +1,10 @@
-import { randomUUID } from "crypto";
-import bcrypt from "bcrypt";
 import { hashToken } from "@naisys/common-node";
-import { updateUserPassword } from "@naisys/supervisor-database";
-import supervisorDb from "../database/supervisorDb.js";
 import type { Permission } from "@naisys/supervisor-database";
+import { updateUserPassword } from "@naisys/supervisor-database";
+import bcrypt from "bcrypt";
+import { randomUUID } from "crypto";
+
+import supervisorDb from "../database/supervisorDb.js";
 
 export type { User as SupervisorUserRow } from "@naisys/supervisor-database";
 export { hashToken };

@@ -2,18 +2,17 @@ import { MultipartFile } from "@fastify/multipart";
 import {
   AgentIdParams,
   AgentIdParamsSchema,
-  ErrorResponse,
   ErrorResponseSchema,
   MailDataRequest,
   MailDataRequestSchema,
   MailDataResponse,
   MailDataResponseSchema,
   SendMailRequest,
-  SendMailRequestSchema,
   SendMailResponse,
   SendMailResponseSchema,
 } from "@naisys-supervisor/shared";
 import { FastifyInstance, FastifyPluginOptions } from "fastify";
+
 import { hasPermission, requirePermission } from "../auth-middleware.js";
 import { API_PREFIX } from "../hateoas.js";
 import { getMailDataByUserId, sendMessage } from "../services/mailService.js";
