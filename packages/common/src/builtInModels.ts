@@ -84,7 +84,6 @@ export const builtInLlmModels: LlmModel[] = [
     cacheWriteCost: 0.18,
     cacheReadCost: 0.18,
     supportsVision: true,
-    supportsHearing: true,
   },
   {
     key: "gpt5mini",
@@ -98,7 +97,6 @@ export const builtInLlmModels: LlmModel[] = [
     cacheWriteCost: 0.025,
     cacheReadCost: 0.025,
     supportsVision: true,
-    supportsHearing: true,
   },
   {
     key: "gpt5nano",
@@ -112,7 +110,6 @@ export const builtInLlmModels: LlmModel[] = [
     cacheWriteCost: 0.005,
     cacheReadCost: 0.005,
     supportsVision: true,
-    supportsHearing: true,
   },
 
   // ── Google Models ────────────────────────────────────────────────────

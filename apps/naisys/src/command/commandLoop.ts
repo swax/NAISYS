@@ -13,6 +13,7 @@ import { LLMService } from "../llm/llmService.js";
 import { ChatService } from "../mail/chat.js";
 import { MailService } from "../mail/mail.js";
 import { LogService } from "../services/logService.js";
+import { ModelService } from "../services/modelService.js";
 import { RunService } from "../services/runService.js";
 import { createEscKeyListener } from "../utils/escKeyListener.js";
 import { InputModeService } from "../utils/inputMode.js";
@@ -44,6 +45,7 @@ export function createCommandLoop(
   chatService: ChatService,
   hubClient: HubClient | undefined,
   sessionService: SessionService,
+  modelService: ModelService,
 ) {
   async function run(abortSignal?: AbortSignal) {
     await output.commentAndLog(`AGENT STARTED`);
@@ -157,18 +159,19 @@ export function createCommandLoop(
         else if (inputMode.isLLM()) {
           // Clear pause/wait settings after use
           pauseSeconds = undefined;
+          const shellModel = agentConfig().shellModel;
+          const modelName =
+            modelService.getLlmModel(shellModel)?.label || shellModel;
 
           const workingMsg =
             prompt +
-            chalk[OutputColor.loading](
-              `LLM (${agentConfig().shellModel}) Working...`,
-            );
+            chalk[OutputColor.loading](`LLM (${modelName}) Working...`);
 
           try {
             // In the cases that the input prompt is interrupted for a notification, return to the debug prompt
             if (
               promptNotification.hasPending(localUserId, true) ||
-              agentConfig().shellModel === LlmApiType.None // Check this last so notifications get processed/cleared
+              shellModel === LlmApiType.None // Check this last so notifications get processed/cleared
             ) {
               await processNotifications();
               inputMode.setDebug();
@@ -202,7 +205,7 @@ export function createCommandLoop(
             let queryCancelled = false;
             try {
               const queryResult = await llmService.query(
-                agentConfig().shellModel,
+                shellModel,
                 systemMessage,
                 contextManager.getCombinedMessages(),
                 "console",

@@ -8,8 +8,13 @@ import { LlmMessage, LlmRole } from "./llmDtos.js";
 import { sendWithAnthropic } from "./vendors/anthropic.js";
 import { sendWithGoogle } from "./vendors/google.js";
 import { sendWithMock } from "./vendors/mock.js";
-import { sendWithOpenAiCompatible } from "./vendors/openai.js";
-import { QueryResult, QuerySources, VendorDeps } from "./vendors/vendorTypes.js";
+import { sendWithOpenAiStandard } from "./vendors/openai-standard.js";
+import { sendWithOpenAiCompatible } from "./vendors/openai-compatible.js";
+import {
+  QueryResult,
+  QuerySources,
+  VendorDeps,
+} from "./vendors/vendorTypes.js";
 
 const useThinking = true;
 
@@ -89,7 +94,11 @@ export function createLLMService(
         abortSignal,
       );
     } else if (model.apiType == LlmApiType.OpenAI) {
-      return sendWithOpenAiCompatible(
+      const sendFn = modelKey.startsWith("gpt")
+        ? sendWithOpenAiStandard
+        : sendWithOpenAiCompatible;
+
+      return sendFn(
         deps,
         modelKey,
         systemMessage,

@@ -254,6 +254,7 @@ export async function createAgentRuntime(
     chatService,
     hubClient,
     sessionService,
+    modelService,
   );
 
   const abortController = new AbortController();
