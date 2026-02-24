@@ -9,10 +9,12 @@ CREATE TABLE "context_log" (
     "source" TEXT NOT NULL,
     "type" TEXT NOT NULL,
     "message" TEXT NOT NULL,
+    "attachment_id" INTEGER,
     "created_at" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "context_log_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION,
     CONSTRAINT "context_log_user_id_run_id_session_id_fkey" FOREIGN KEY ("user_id", "run_id", "session_id") REFERENCES "run_session" ("user_id", "run_id", "session_id") ON DELETE NO ACTION ON UPDATE NO ACTION,
-    CONSTRAINT "context_log_host_id_fkey" FOREIGN KEY ("host_id") REFERENCES "hosts" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
+    CONSTRAINT "context_log_host_id_fkey" FOREIGN KEY ("host_id") REFERENCES "hosts" ("id") ON DELETE RESTRICT ON UPDATE CASCADE,
+    CONSTRAINT "context_log_attachment_id_fkey" FOREIGN KEY ("attachment_id") REFERENCES "attachments" ("id") ON DELETE SET NULL ON UPDATE NO ACTION
 );
 
 -- CreateTable
@@ -50,6 +52,30 @@ CREATE TABLE "mail_messages" (
 );
 
 -- CreateTable
+CREATE TABLE "attachments" (
+    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "filepath" TEXT NOT NULL,
+    "filename" TEXT NOT NULL,
+    "file_size" INTEGER NOT NULL,
+    "file_hash" TEXT NOT NULL,
+    "purpose" TEXT NOT NULL,
+    "uploaded_by" INTEGER NOT NULL,
+    "created_at" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "attachments_uploaded_by_fkey" FOREIGN KEY ("uploaded_by") REFERENCES "users" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION
+);
+
+-- CreateTable
+CREATE TABLE "mail_attachments" (
+    "message_id" INTEGER NOT NULL,
+    "attachment_id" INTEGER NOT NULL,
+    "created_at" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    PRIMARY KEY ("message_id", "attachment_id"),
+    CONSTRAINT "mail_attachments_message_id_fkey" FOREIGN KEY ("message_id") REFERENCES "mail_messages" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION,
+    CONSTRAINT "mail_attachments_attachment_id_fkey" FOREIGN KEY ("attachment_id") REFERENCES "attachments" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION
+);
+
+-- CreateTable
 CREATE TABLE "mail_recipients" (
     "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     "message_id" INTEGER NOT NULL,
@@ -68,7 +94,7 @@ CREATE TABLE "users" (
     "uuid" TEXT NOT NULL,
     "username" TEXT NOT NULL,
     "title" TEXT NOT NULL,
-    "api_key" TEXT,
+    "api_key" TEXT NOT NULL,
     "lead_user_id" INTEGER,
     "config" TEXT NOT NULL DEFAULT '{}',
     "created_at" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -83,6 +109,7 @@ CREATE TABLE "user_notifications" (
     "latest_host_id" INTEGER,
     "latest_log_id" INTEGER NOT NULL DEFAULT 0,
     "latest_mail_id" INTEGER NOT NULL DEFAULT 0,
+    "latest_chat_id" INTEGER NOT NULL DEFAULT 0,
     "last_active" DATETIME,
     "updated_at" DATETIME NOT NULL,
     CONSTRAINT "user_notifications_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION,

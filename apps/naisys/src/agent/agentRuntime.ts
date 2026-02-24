@@ -23,7 +23,7 @@ import { createLLMService } from "../llm/llmService.js";
 import { createSystemMessage } from "../llm/systemMessage.js";
 import { createChatService } from "../mail/chat.js";
 import { createMailService } from "../mail/mail.js";
-import { createMailAttachmentService } from "../mail/mailAttachmentService.js";
+import { createAttachmentService } from "../services/attachmentService.js";
 import { createMailDisplayService } from "../mail/mailDisplayService.js";
 import { HostService } from "../services/hostService.js";
 import { createLogService } from "../services/logService.js";
@@ -62,7 +62,17 @@ export async function createAgentRuntime(
     hubClient,
     localUserId,
   );
-  const logService = createLogService(hubClient, runService, localUserId);
+  const attachmentService = createAttachmentService(
+    hubClient,
+    userService,
+    localUserId,
+  );
+  const logService = createLogService(
+    hubClient,
+    runService,
+    localUserId,
+    attachmentService,
+  );
   const output = createOutputService(logService);
 
   // Shell and workspaces (needed by contextManager)
@@ -140,12 +150,6 @@ export async function createAgentRuntime(
   const mailDisplayService = hubClient
     ? createMailDisplayService(hubClient, localUserId)
     : null;
-  const attachmentService = createMailAttachmentService(
-    hubClient,
-    userService,
-    localUserId,
-    shellWrapper,
-  );
   const mailService = createMailService(
     hubClient,
     userService,
@@ -153,6 +157,7 @@ export async function createAgentRuntime(
     localUserId,
     promptNotification,
     attachmentService,
+    shellWrapper,
   );
   const chatService = createChatService(
     hubClient,
@@ -160,6 +165,7 @@ export async function createAgentRuntime(
     localUserId,
     promptNotification,
     attachmentService,
+    shellWrapper,
   );
   const subagentService = createSubagentService(
     mailService,
@@ -280,9 +286,9 @@ export async function createAgentRuntime(
     requestShutdown: (reason: string) => {
       abortController.abort(reason);
     },
-    completeShutdown: (reason: string) => {
+    completeShutdown: async (reason: string) => {
       costTracker.cleanup();
-      logService.cleanup();
+      await logService.cleanup();
       subagentService.cleanup(reason);
       mailService.cleanup();
       chatService.cleanup();

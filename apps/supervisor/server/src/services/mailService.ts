@@ -74,8 +74,12 @@ export const getMailDataByUserId = cachedForSeconds(
               },
             },
           },
-          attachments: {
-            select: { id: true, filename: true, file_size: true },
+          mail_attachments: {
+            include: {
+              attachment: {
+                select: { id: true, filename: true, file_size: true },
+              },
+            },
           },
         },
       });
@@ -93,11 +97,11 @@ export const getMailDataByUserId = cachedForSeconds(
           type: r.type,
         })),
         attachments:
-          msg.attachments.length > 0
-            ? msg.attachments.map((a) => ({
-                id: a.id,
-                filename: a.filename,
-                fileSize: a.file_size,
+          msg.mail_attachments.length > 0
+            ? msg.mail_attachments.map((ma) => ({
+                id: ma.attachment.id,
+                filename: ma.attachment.filename,
+                fileSize: ma.attachment.file_size,
               }))
             : undefined,
       }));
@@ -139,6 +143,7 @@ export async function sendMessage(
           attachment.data,
           attachment.filename,
           fromId,
+          "mail",
         );
         attachmentIds.push(id);
       }

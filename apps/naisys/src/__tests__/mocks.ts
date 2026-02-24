@@ -53,8 +53,8 @@ export function createMockRunService(): RunService {
 
 export function createMockLogService() {
   return {
-    write: (_msg: LlmMessage) => {},
-    cleanup: () => {},
+    write: (_msg: LlmMessage, _filepath?: string) => {},
+    cleanup: async () => {},
   } satisfies LogService;
 }
 
