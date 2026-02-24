@@ -131,6 +131,9 @@ export const getMessages = cachedForSeconds(
           body: true,
           created_at: true,
           from_user: { select: { username: true } },
+          recipients: {
+            select: { user_id: true, read_at: true },
+          },
           mail_attachments: {
             include: {
               attachment: {
@@ -141,21 +144,28 @@ export const getMessages = cachedForSeconds(
         },
       });
 
-      const messages: ChatMessage[] = dbMessages.map((msg) => ({
-        id: msg.id,
-        fromUserId: msg.from_user_id ?? 0,
-        fromUsername: msg.from_user?.username ?? "(deleted)",
-        body: msg.body,
-        createdAt: msg.created_at.toISOString(),
-        attachments:
-          msg.mail_attachments.length > 0
-            ? msg.mail_attachments.map((ma) => ({
-                id: ma.attachment.id,
-                filename: ma.attachment.filename,
-                fileSize: ma.attachment.file_size,
-              }))
-            : undefined,
-      }));
+      const messages: ChatMessage[] = dbMessages.map((msg) => {
+        const readByIds = msg.recipients
+          .filter((r) => r.read_at !== null)
+          .map((r) => r.user_id);
+
+        return {
+          id: msg.id,
+          fromUserId: msg.from_user_id ?? 0,
+          fromUsername: msg.from_user?.username ?? "(deleted)",
+          body: msg.body,
+          createdAt: msg.created_at.toISOString(),
+          attachments:
+            msg.mail_attachments.length > 0
+              ? msg.mail_attachments.map((ma) => ({
+                  id: ma.attachment.id,
+                  filename: ma.attachment.filename,
+                  fileSize: ma.attachment.file_size,
+                }))
+              : undefined,
+          readBy: readByIds.length > 0 ? readByIds : undefined,
+        };
+      });
 
       return {
         messages,

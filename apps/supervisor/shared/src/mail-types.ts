@@ -6,6 +6,7 @@ export const MailRecipientSchema = z.object({
   userId: z.number(),
   username: z.string(),
   type: z.string(), // "to", "cc", "bcc"
+  readAt: z.string().nullable(), // ISO date or null
 });
 
 export const MailAttachmentSchema = z.object({

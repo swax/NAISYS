@@ -70,13 +70,15 @@ export function createContextManager(
   }
 
   function appendImage(base64: string, mimeType: string, filepath: string) {
+    const text = `[Image: ${filepath}]`;
+
     if (inputMode.isDebug()) {
-      output.comment(`[Image: ${filepath}]`);
+      output.comment(text);
       return;
     }
 
     const contentBlocks: ContentBlock[] = [
-      { type: "text", text: filepath },
+      { type: "text", text },
       { type: "image", base64, mimeType },
     ];
 
@@ -92,17 +94,19 @@ export function createContextManager(
     logService.write(llmMessage, filepath);
 
     // Display placeholder to console
-    output.write(`[Image: ${filepath}]`, OutputColor.console);
+    output.write(text, OutputColor.console);
   }
 
   function appendAudio(base64: string, mimeType: string, filepath: string) {
+    const text = `[Audio: ${filepath}]`;
+
     if (inputMode.isDebug()) {
-      output.comment(`[Audio: ${filepath}]`);
+      output.comment(text);
       return;
     }
 
     const contentBlocks: ContentBlock[] = [
-      { type: "text", text: filepath },
+      { type: "text", text },
       { type: "audio", base64, mimeType },
     ];
 
@@ -118,7 +122,7 @@ export function createContextManager(
     logService.write(llmMessage, filepath);
 
     // Display placeholder to console
-    output.write(`[Audio: ${filepath}]`, OutputColor.console);
+    output.write(text, OutputColor.console);
   }
 
   function clear() {

@@ -69,6 +69,7 @@ export const getMailDataByUserId = cachedForSeconds(
             select: {
               user_id: true,
               type: true,
+              read_at: true,
               user: {
                 select: { username: true },
               },
@@ -95,6 +96,7 @@ export const getMailDataByUserId = cachedForSeconds(
           userId: r.user_id,
           username: r.user.username,
           type: r.type,
+          readAt: r.read_at?.toISOString() ?? null,
         })),
         attachments:
           msg.mail_attachments.length > 0
