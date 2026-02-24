@@ -13,6 +13,7 @@ export const LogWriteEntrySchema = z.object({
   type: z.string(),
   message: z.string(),
   createdAt: z.string(),
+  attachmentId: z.number().optional(),
 });
 export type LogWriteEntry = z.infer<typeof LogWriteEntrySchema>;
 

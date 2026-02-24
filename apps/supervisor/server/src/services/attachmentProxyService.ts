@@ -14,6 +14,7 @@ export async function uploadToHub(
   fileBuffer: Buffer,
   filename: string,
   uploadAsUserId: number,
+  purpose: string = "mail",
 ): Promise<number> {
   const hubUrl = getHubUrl();
   if (!hubUrl) {
@@ -38,6 +39,7 @@ export async function uploadToHub(
   url.searchParams.set("filename", filename);
   url.searchParams.set("filesize", String(fileBuffer.length));
   url.searchParams.set("filehash", fileHash);
+  url.searchParams.set("purpose", purpose);
 
   const response = await new Promise<{ id: number }>((resolve, reject) => {
     const req = https.request(
@@ -97,7 +99,7 @@ export async function proxyDownloadFromHub(
   }
 
   // Look up the attachment to get the uploader's user ID
-  const attachment = await hubDb.mail_attachments.findUnique({
+  const attachment = await hubDb.attachments.findUnique({
     where: { id: attachmentId },
     select: { uploaded_by: true },
   });

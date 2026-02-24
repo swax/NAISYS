@@ -72,14 +72,23 @@ export function createHubAttachmentService(
     const filename = url.searchParams.get("filename");
     const fileSizeStr = url.searchParams.get("filesize");
     const fileHash = url.searchParams.get("filehash");
+    const purpose = url.searchParams.get("purpose");
 
-    if (!apiKey || !filename || !fileSizeStr || !fileHash) {
+    if (!apiKey || !filename || !fileSizeStr || !fileHash || !purpose) {
       res.writeHead(400, { "Content-Type": "application/json" });
       res.end(
         JSON.stringify({
           error:
-            "Missing required query params: apiKey, filename, filesize, filehash",
+            "Missing required query params: apiKey, filename, filesize, filehash, purpose",
         }),
+      );
+      return;
+    }
+
+    if (purpose !== "mail" && purpose !== "context") {
+      res.writeHead(400, { "Content-Type": "application/json" });
+      res.end(
+        JSON.stringify({ error: 'Invalid purpose. Must be "mail" or "context"' }),
       );
       return;
     }
@@ -108,11 +117,11 @@ export function createHubAttachmentService(
       return;
     }
 
-    // Build storage path: NAISYS_FOLDER/attachments/YYYY-MM-DD/<timestamp>_<userId>_<safeFilename>
+    // Build storage path: NAISYS_FOLDER/attachments/<purpose>/YYYY-MM-DD/<timestamp>_<userId>_<safeFilename>
     const now = new Date();
     const dateDir = now.toISOString().slice(0, 10);
     const safeFilename = filename.replace(/[^a-zA-Z0-9._-]/g, "_");
-    const storageDir = join(naisysFolder, "attachments", dateDir);
+    const storageDir = join(naisysFolder, "attachments", purpose, dateDir);
     mkdirSync(storageDir, { recursive: true });
 
     const storageName = `${now.getTime()}_${userId}_${safeFilename}`;
@@ -181,14 +190,14 @@ export function createHubAttachmentService(
 
     // Create DB record
     const attachmentId = await usingHubDatabase(async (hubDb) => {
-      const record = await hubDb.mail_attachments.create({
+      const record = await hubDb.attachments.create({
         data: {
           filepath: storagePath,
           filename,
           file_size: bytesWritten,
           file_hash: computedHash,
+          purpose,
           uploaded_by: userId,
-          message_id: null,
         },
       });
       return record.id;
@@ -232,7 +241,7 @@ export function createHubAttachmentService(
     }
 
     const attachment = await usingHubDatabase(async (hubDb) => {
-      return hubDb.mail_attachments.findUnique({ where: { id: attachmentId } });
+      return hubDb.attachments.findUnique({ where: { id: attachmentId } });
     });
 
     if (!attachment) {

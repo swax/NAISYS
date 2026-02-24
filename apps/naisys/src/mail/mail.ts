@@ -16,9 +16,10 @@ import {
   CommandResponse,
   RegistrableCommand,
 } from "../command/commandRegistry.js";
+import { ShellWrapper } from "../command/shellWrapper.js";
 import { HubClient } from "../hub/hubClient.js";
+import { AttachmentService } from "../services/attachmentService.js";
 import { PromptNotificationService } from "../utils/promptNotificationService.js";
-import { MailAttachmentService } from "./mailAttachmentService.js";
 import {
   formatMessageDisplay,
   MailContent,
@@ -31,7 +32,8 @@ export function createMailService(
   mailDisplayService: MailDisplayService | null,
   localUserId: number,
   promptNotification: PromptNotificationService,
-  attachmentService: MailAttachmentService,
+  attachmentService: AttachmentService,
+  shellWrapper: ShellWrapper,
 ) {
   const localUser = userService.getUserById(localUserId);
   const localUsername = localUser?.username || "unknown";
@@ -88,10 +90,9 @@ export function createMailService(
         let resolvedPaths: string[] | undefined;
         const filePaths = argv.slice(4);
         if (filePaths.length > 0) {
+          resolvedPaths = await shellWrapper.resolvePaths(filePaths);
           if (hubClient) {
-            attachmentIds = await attachmentService.resolveAndUpload(filePaths);
-          } else {
-            resolvedPaths = await attachmentService.resolvePaths(filePaths);
+            attachmentIds = await attachmentService.uploadAll(resolvedPaths, "mail");
           }
         }
 

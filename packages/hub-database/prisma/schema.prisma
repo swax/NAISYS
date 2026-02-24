@@ -8,19 +8,21 @@ datasource db {
 }
 
 model context_log {
-  id          Int         @id @default(autoincrement())
-  user_id     Int
-  run_id      Int
-  session_id  Int
-  host_id     Int
-  role        String
-  source      String
-  type        String
-  message     String
-  created_at  DateTime    @default(now())
-  users       users       @relation("context_log_user", fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  run_session run_session @relation(fields: [user_id, run_id, session_id], references: [user_id, run_id, session_id], onDelete: NoAction, onUpdate: NoAction)
-  host        hosts       @relation(fields: [host_id], references: [id])
+  id            Int          @id @default(autoincrement())
+  user_id       Int
+  run_id        Int
+  session_id    Int
+  host_id       Int
+  role          String
+  source        String
+  type          String
+  message       String
+  attachment_id Int?
+  created_at    DateTime     @default(now())
+  users         users        @relation("context_log_user", fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  run_session   run_session  @relation(fields: [user_id, run_id, session_id], references: [user_id, run_id, session_id], onDelete: NoAction, onUpdate: NoAction)
+  host          hosts        @relation(fields: [host_id], references: [id])
+  attachment    attachments? @relation(fields: [attachment_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
 
   @@index([user_id, run_id, session_id], map: "idx_context_log_user_run_session") // WHERE user_id, run_id, session_id in runsService.getContextLog
 }
@@ -60,26 +62,35 @@ model mail_messages {
   from_user       users?             @relation("mail_messages_from_user", fields: [from_user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   host            hosts?             @relation(fields: [host_id], references: [id])
   recipients      mail_recipients[]
-  attachments     mail_attachments[]
+  mail_attachments mail_attachments[]
 
   @@index([from_user_id], map: "idx_mail_messages_from_user_id") // WHERE from_user_id in sent messages filter
   @@index([created_at(sort: Desc)], map: "idx_mail_messages_created_at_desc") // ORDER BY created_at DESC in listMessages and searchMessages
   @@index([participant_ids], map: "idx_mail_messages_participant_ids") // WHERE participant_ids in chat recent filtering
 }
 
-model mail_attachments {
-  id          Int            @id @default(autoincrement())
-  filepath    String // Server storage path
-  filename    String
-  file_size   Int
-  file_hash   String
-  message_id  Int?
-  uploaded_by Int
-  created_at  DateTime       @default(now())
-  message     mail_messages? @relation(fields: [message_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  uploader    users          @relation("uploaded_attachments", fields: [uploaded_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+model attachments {
+  id               Int                @id @default(autoincrement())
+  filepath         String
+  filename         String
+  file_size        Int
+  file_hash        String
+  purpose          String             // "mail" | "context"
+  uploaded_by      Int
+  created_at       DateTime           @default(now())
+  uploader         users              @relation("uploaded_attachments", fields: [uploaded_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  mail_attachments mail_attachments[]
+  context_logs     context_log[]
+}
 
-  @@index([message_id], map: "idx_mail_attachments_message_id") // JOIN from mail_messages includes
+model mail_attachments {
+  message_id    Int
+  attachment_id Int
+  created_at    DateTime      @default(now())
+  message       mail_messages @relation(fields: [message_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  attachment    attachments   @relation(fields: [attachment_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([message_id, attachment_id])
 }
 
 model mail_recipients {
@@ -115,7 +126,7 @@ model users {
   run_sessions       run_session[]
   context_logs       context_log[]       @relation("context_log_user")
   costs              costs[]             @relation("costs_user")
-  uploaded_attachments mail_attachments[] @relation("uploaded_attachments")
+  uploaded_attachments attachments[]      @relation("uploaded_attachments")
   user_notifications   user_notifications?
   user_hosts           user_hosts[]
   @@index([username], map: "idx_users_username") // WHERE username in hubMailService recipient resolution, agentConfigService user lookup

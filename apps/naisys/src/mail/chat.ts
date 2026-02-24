@@ -15,9 +15,10 @@ import stringArgv from "string-argv";
 import { UserEntry, UserService } from "../agent/userService.js";
 import { chatCmd } from "../command/commandDefs.js";
 import { RegistrableCommand } from "../command/commandRegistry.js";
+import { ShellWrapper } from "../command/shellWrapper.js";
 import { HubClient } from "../hub/hubClient.js";
+import { AttachmentService } from "../services/attachmentService.js";
 import { PromptNotificationService } from "../utils/promptNotificationService.js";
-import { MailAttachmentService } from "./mailAttachmentService.js";
 
 /** Format inline attachment suffix, e.g. " [file.txt 2.1KB]" */
 function formatAttachmentSuffix(attachments?: MailAttachmentData[]): string {
@@ -50,7 +51,8 @@ export function createChatService(
   userService: UserService,
   localUserId: number,
   promptNotification: PromptNotificationService,
-  attachmentService: MailAttachmentService,
+  attachmentService: AttachmentService,
+  shellWrapper: ShellWrapper,
 ) {
   async function handleCommand(args: string): Promise<string> {
     const argv = stringArgv(args);
@@ -85,10 +87,9 @@ export function createChatService(
         let resolvedPaths: string[] | undefined;
         const filePaths = argv.slice(3);
         if (filePaths.length > 0) {
+          resolvedPaths = await shellWrapper.resolvePaths(filePaths);
           if (hubClient) {
-            attachmentIds = await attachmentService.resolveAndUpload(filePaths);
-          } else {
-            resolvedPaths = await attachmentService.resolvePaths(filePaths);
+            attachmentIds = await attachmentService.uploadAll(resolvedPaths, "mail");
           }
         }
 

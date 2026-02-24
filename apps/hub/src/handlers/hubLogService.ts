@@ -33,6 +33,7 @@ export function createHubLogService(
                 type: entry.type,
                 message: entry.message,
                 created_at: entry.createdAt,
+                attachment_id: entry.attachmentId ?? null,
               },
             });
 

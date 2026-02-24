@@ -69,14 +69,14 @@ export function createContextManager(
     logService.write(llmMessage);
   }
 
-  function appendImage(base64: string, mimeType: string, caption: string) {
+  function appendImage(base64: string, mimeType: string, filepath: string) {
     if (inputMode.isDebug()) {
-      output.comment(`[Image: ${caption}]`);
+      output.comment(`[Image: ${filepath}]`);
       return;
     }
 
     const contentBlocks: ContentBlock[] = [
-      { type: "text", text: caption },
+      { type: "text", text: filepath },
       { type: "image", base64, mimeType },
     ];
 
@@ -88,21 +88,21 @@ export function createContextManager(
 
     messages.push(llmMessage);
 
-    // Log text only
-    logService.write(llmMessage);
+    // Log text only — pass filepath for hub attachment upload
+    logService.write(llmMessage, filepath);
 
     // Display placeholder to console
-    output.write(`[Image: ${caption}]`, OutputColor.console);
+    output.write(`[Image: ${filepath}]`, OutputColor.console);
   }
 
-  function appendAudio(base64: string, mimeType: string, caption: string) {
+  function appendAudio(base64: string, mimeType: string, filepath: string) {
     if (inputMode.isDebug()) {
-      output.comment(`[Audio: ${caption}]`);
+      output.comment(`[Audio: ${filepath}]`);
       return;
     }
 
     const contentBlocks: ContentBlock[] = [
-      { type: "text", text: caption },
+      { type: "text", text: filepath },
       { type: "audio", base64, mimeType },
     ];
 
@@ -114,11 +114,11 @@ export function createContextManager(
 
     messages.push(llmMessage);
 
-    // Log text only
-    logService.write(llmMessage);
+    // Log text only — pass filepath for hub attachment upload
+    logService.write(llmMessage, filepath);
 
     // Display placeholder to console
-    output.write(`[Audio: ${caption}]`, OutputColor.console);
+    output.write(`[Audio: ${filepath}]`, OutputColor.console);
   }
 
   function clear() {

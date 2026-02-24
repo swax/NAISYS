@@ -648,10 +648,32 @@ ${command.trim()}`;
     return output.trim();
   }
 
+  /**
+   * Resolve relative file paths against the shell's cwd, verifying each exists.
+   */
+  async function resolvePaths(filePaths: string[]): Promise<string[]> {
+    const cwd = await getCurrentPath();
+    const resolved: string[] = [];
+
+    for (const fp of filePaths) {
+      let r = fp;
+      if (!path.isAbsolute(r) && cwd) {
+        r = path.resolve(cwd, r);
+      }
+      if (!fs.existsSync(r)) {
+        throw `File not found: ${r}`;
+      }
+      resolved.push(r);
+    }
+
+    return resolved;
+  }
+
   return {
     executeCommand,
     continueCommand,
     getCurrentPath,
+    resolvePaths,
     terminate,
     isShellSuspended,
     getCommandElapsedTimeString,

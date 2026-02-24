@@ -131,8 +131,12 @@ export const getMessages = cachedForSeconds(
           body: true,
           created_at: true,
           from_user: { select: { username: true } },
-          attachments: {
-            select: { id: true, filename: true, file_size: true },
+          mail_attachments: {
+            include: {
+              attachment: {
+                select: { id: true, filename: true, file_size: true },
+              },
+            },
           },
         },
       });
@@ -144,11 +148,11 @@ export const getMessages = cachedForSeconds(
         body: msg.body,
         createdAt: msg.created_at.toISOString(),
         attachments:
-          msg.attachments.length > 0
-            ? msg.attachments.map((a) => ({
-                id: a.id,
-                filename: a.filename,
-                fileSize: a.file_size,
+          msg.mail_attachments.length > 0
+            ? msg.mail_attachments.map((ma) => ({
+                id: ma.attachment.id,
+                filename: ma.attachment.filename,
+                fileSize: ma.attachment.file_size,
               }))
             : undefined,
       }));
