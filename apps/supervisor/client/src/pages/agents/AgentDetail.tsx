@@ -301,7 +301,7 @@ export const AgentDetail: React.FC = () => {
   }
 
   return (
-    <Stack p="md">
+    <Stack p="xs">
       <Group>
         {hasAction(actions, "start") ? (
           <Group gap={0} style={{ flex: 1 }}>
@@ -324,7 +324,7 @@ export const AgentDetail: React.FC = () => {
               onClick={handleStart}
               style={{ borderTopLeftRadius: 0, borderBottomLeftRadius: 0 }}
             >
-              Start
+              <Text visibleFrom="sm" span>Start</Text>
             </Button>
           </Group>
         ) : (
@@ -333,7 +333,7 @@ export const AgentDetail: React.FC = () => {
             disabled
             leftSection={<IconPlayerPlay size={16} />}
           >
-            Start
+            <Text visibleFrom="sm" span>Start</Text>
           </Button>
         )}
         <Button
@@ -341,7 +341,7 @@ export const AgentDetail: React.FC = () => {
           disabled
           leftSection={<IconPlayerPause size={16} />}
         >
-          Pause
+          <Text visibleFrom="sm" span>Pause</Text>
         </Button>
         <Button
           color="red"
@@ -350,7 +350,7 @@ export const AgentDetail: React.FC = () => {
           leftSection={<IconPlayerStop size={16} />}
           onClick={handleStop}
         >
-          Stop
+          <Text visibleFrom="sm" span>Stop</Text>
         </Button>
         {hasAction(actions, "archive") && (
           <Button
@@ -359,7 +359,7 @@ export const AgentDetail: React.FC = () => {
             leftSection={<IconArchive size={16} />}
             onClick={handleArchive}
           >
-            Archive
+            <Text visibleFrom="sm" span>Archive</Text>
           </Button>
         )}
         {hasAction(actions, "unarchive") && (
@@ -369,7 +369,7 @@ export const AgentDetail: React.FC = () => {
             leftSection={<IconArchiveOff size={16} />}
             onClick={handleUnarchive}
           >
-            Unarchive
+            <Text visibleFrom="sm" span>Unarchive</Text>
           </Button>
         )}
         {hasAction(actions, "delete") && (
@@ -380,7 +380,7 @@ export const AgentDetail: React.FC = () => {
             leftSection={<IconTrash size={16} />}
             onClick={handleDelete}
           >
-            Delete
+            <Text visibleFrom="sm" span>Delete</Text>
           </Button>
         )}
       </Group>

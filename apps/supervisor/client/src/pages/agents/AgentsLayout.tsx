@@ -9,10 +9,9 @@ import {
   useSearchParams,
 } from "react-router-dom";
 
+import { SIDEBAR_WIDTH } from "../../constants";
 import { AgentNavHeader } from "../../headers/AgentNavHeader";
 import { AgentSidebar } from "../../headers/AgentSidebar";
-
-const SIDEBAR_WIDTH = 300;
 
 export const AgentsLayout: React.FC = () => {
   const [drawerOpened, { open: openDrawer, close: closeDrawer }] =
@@ -33,11 +32,9 @@ export const AgentsLayout: React.FC = () => {
   const key = `${agentId || "no-agent"}-${expandParam || ""}`;
 
   return (
-    <div
-      style={{
-        display: "flex",
-        height: "calc(100vh - 48px - 2 * var(--mantine-spacing-md))",
-      }}
+    <Box
+      display="flex"
+      style={{ flex: 1, minHeight: 0 }}
     >
       {/* Desktop sidebar */}
       <Box
@@ -62,7 +59,7 @@ export const AgentsLayout: React.FC = () => {
         }}
       >
         {/* Sub-header: mobile robot icon + agent nav tabs */}
-        <Group mb="md" gap="xs">
+        <Group mb={{ base: 0, sm: "md" }} gap="xs">
           <ActionIcon
             variant="subtle"
             color="gray"
@@ -75,7 +72,16 @@ export const AgentsLayout: React.FC = () => {
         </Group>
 
         {/* Route content */}
-        <div key={key} style={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
+        <div
+          key={key}
+          style={{
+            flex: 1,
+            minHeight: 0,
+            overflowY: "auto",
+            display: "flex",
+            flexDirection: "column",
+          }}
+        >
           <Outlet />
         </div>
       </div>
@@ -89,6 +95,6 @@ export const AgentsLayout: React.FC = () => {
       >
         <AgentSidebar />
       </Drawer>
-    </div>
+    </Box>
   );
 };

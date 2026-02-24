@@ -11,9 +11,10 @@ import {
 import { useDisclosure } from "@mantine/hooks";
 import { hasAction } from "@naisys/common";
 import { IconMessageCircle } from "@tabler/icons-react";
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 
+import { SIDEBAR_WIDTH } from "../../constants";
 import { useAgentDataContext } from "../../contexts/AgentDataContext";
 import { useChatConversations } from "../../hooks/useChatConversations";
 import { useChatMessages } from "../../hooks/useChatMessages";
@@ -21,8 +22,6 @@ import { sendChatMessage } from "../../lib/apiChat";
 import { ChatConversationList } from "./ChatConversationList";
 import { ChatInput } from "./ChatInput";
 import { ChatThread } from "./ChatThread";
-
-const SIDEBAR_WIDTH = 280;
 
 export const AgentChat: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -43,6 +42,13 @@ export const AgentChat: React.FC = () => {
     isLoading: convLoading,
     error: convError,
   } = useChatConversations(agentId, Boolean(id));
+
+  // Auto-select first conversation when data loads
+  useEffect(() => {
+    if (!selectedParticipantIds && conversations.length > 0) {
+      setSelectedParticipantIds(conversations[0].participantIds);
+    }
+  }, [conversations, selectedParticipantIds]);
 
   const { messages, isLoading: msgLoading } = useChatMessages(
     agentId,
@@ -137,7 +143,8 @@ export const AgentChat: React.FC = () => {
     <Box
       style={{
         display: "flex",
-        height: "100%",
+        flex: 1,
+        minHeight: 0,
         overflow: "hidden",
       }}
     >
@@ -180,26 +187,25 @@ export const AgentChat: React.FC = () => {
           </Alert>
         )}
 
-        {/* Mobile conversation toggle */}
-        <Box
-          hiddenFrom="sm"
-          p="xs"
-          style={{ borderBottom: "1px solid var(--mantine-color-dark-4)" }}
-        >
-          <ActionIcon variant="subtle" color="gray" onClick={openDrawer}>
-            <IconMessageCircle size="1.2rem" />
-          </ActionIcon>
-        </Box>
-
         {!selectedParticipantIds ? (
           <Box
             style={{
               flex: 1,
               display: "flex",
+              flexDirection: "column",
               alignItems: "center",
               justifyContent: "center",
             }}
           >
+            <ActionIcon
+              hiddenFrom="sm"
+              variant="subtle"
+              color="gray"
+              onClick={openDrawer}
+              mb="xs"
+            >
+              <IconMessageCircle size="1.2rem" />
+            </ActionIcon>
             <Text c="dimmed">Select a conversation or start a new chat</Text>
           </Box>
         ) : (
@@ -211,6 +217,15 @@ export const AgentChat: React.FC = () => {
               px="md"
               style={{ borderBottom: "1px solid var(--mantine-color-dark-4)" }}
             >
+              {/* Mobile conversation toggle */}
+              <ActionIcon
+                hiddenFrom="sm"
+                variant="subtle"
+                color="gray"
+                onClick={openDrawer}
+              >
+                <IconMessageCircle size="1.2rem" />
+              </ActionIcon>
               <Text size="sm" fw={600}>
                 {selectedParticipantIds
                   ?.split(",")

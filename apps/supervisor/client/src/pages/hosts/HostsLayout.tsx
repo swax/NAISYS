@@ -4,9 +4,8 @@ import { IconServer } from "@tabler/icons-react";
 import React from "react";
 import { Outlet, useLocation } from "react-router-dom";
 
+import { SIDEBAR_WIDTH } from "../../constants";
 import { HostSidebar } from "../../headers/HostSidebar";
-
-const SIDEBAR_WIDTH = 300;
 
 export const HostsLayout: React.FC = () => {
   const [drawerOpened, { open: openDrawer, close: closeDrawer }] =
@@ -19,11 +18,9 @@ export const HostsLayout: React.FC = () => {
   }, [location.pathname]);
 
   return (
-    <div
-      style={{
-        display: "flex",
-        height: "calc(100vh - 48px - 2 * var(--mantine-spacing-md))",
-      }}
+    <Box
+      display="flex"
+      style={{ flex: 1, minHeight: 0 }}
     >
       {/* Desktop sidebar */}
       <Box
@@ -74,6 +71,6 @@ export const HostsLayout: React.FC = () => {
       >
         <HostSidebar />
       </Drawer>
-    </div>
+    </Box>
   );
 };

@@ -25,8 +25,7 @@ import { GroupedLogComponent, groupPromptEntries } from "./LogEntries";
 
 export const RunSessionLog: React.FC<{
   run: RunSession;
-  runSessionCardRef: React.RefObject<HTMLDivElement | null>;
-}> = ({ run, runSessionCardRef }) => {
+}> = ({ run }) => {
   const { id: agentIdParam } = useParams<{ id: string }>();
   const { agents, updateReadStatus, readStatus } = useAgentDataContext();
   const agentName = agents.find((a) => a.id === Number(agentIdParam))?.name;
@@ -50,26 +49,12 @@ export const RunSessionLog: React.FC<{
     error: logsError,
   } = useContextLog(run.userId, run.runId, run.sessionId, true, run.isOnline);
 
-  // Scroll to bottom when first expanded with logs
+  // Mark panel as ready once logs arrive
   useEffect(() => {
     if (logs.length > 0) {
-      // If runSessionCardRef not in full view then scroll it into view
-      if (runSessionCardRef.current) {
-        const rect = runSessionCardRef.current.getBoundingClientRect();
-        if (
-          rect.top < 0 ||
-          rect.bottom >
-            (window.innerHeight || document.documentElement.clientHeight)
-        ) {
-          runSessionCardRef.current?.scrollIntoView({
-            behavior: "instant",
-            block: "end",
-          });
-        }
-      }
       setScrollPanelIntoView(false);
     }
-  }, [logs, runSessionCardRef]);
+  }, [logs]);
 
   // Track scroll position to know if we should auto-scroll when new content arrives
   const handleScroll = useCallback(() => {
@@ -161,7 +146,15 @@ export const RunSessionLog: React.FC<{
 
   const renderLogView = (isFullscreen: boolean = false) => {
     return (
-      <Box style={{ position: "relative" }}>
+      <Box
+        style={{
+          position: "relative",
+          display: "flex",
+          flexDirection: "column",
+          flex: isFullscreen ? undefined : 1,
+          minHeight: isFullscreen ? undefined : 0,
+        }}
+      >
         {isFullscreen && (
           <>
             <ActionIcon
@@ -236,8 +229,10 @@ export const RunSessionLog: React.FC<{
             backgroundColor: "#1a1a1a",
             padding: "8px",
             borderRadius: "4px",
-            maxHeight: isFullscreen ? "100vh" : "600px",
-            height: isFullscreen ? "100vh" : "auto",
+            maxHeight: isFullscreen ? "100vh" : undefined,
+            height: isFullscreen ? "100vh" : undefined,
+            flex: isFullscreen ? undefined : 1,
+            minHeight: isFullscreen ? undefined : 0,
             overflowY: "auto",
           }}
         >
@@ -283,7 +278,14 @@ export const RunSessionLog: React.FC<{
 
   return (
     <>
-      <div style={{ display: "block" }}>
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          flex: 1,
+          minHeight: 0,
+        }}
+      >
         {logsError && (
           <Alert color="red" title="Error loading logs">
             {logsError instanceof Error
