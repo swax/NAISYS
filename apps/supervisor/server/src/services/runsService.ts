@@ -124,6 +124,13 @@ export const getContextLog = cachedForSeconds(
               username: true,
             },
           },
+          attachment: {
+            select: {
+              id: true,
+              filename: true,
+              file_size: true,
+            },
+          },
         },
       });
 
@@ -135,6 +142,13 @@ export const getContextLog = cachedForSeconds(
         type: log.type as LogType,
         message: log.message,
         createdAt: log.created_at.toISOString(),
+        ...(log.attachment && {
+          attachment: {
+            id: log.attachment.id,
+            filename: log.attachment.filename,
+            fileSize: log.attachment.file_size,
+          },
+        }),
       }));
 
       return {

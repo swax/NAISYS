@@ -42,15 +42,11 @@ export function getTextContent(content: string | ContentBlock[]): string {
   if (typeof content === "string") {
     return content;
   }
+  // For image/audio blocks, there should only be a single text block that is like [Image: filename.jpg]
   return content
-    .map((block) =>
-      block.type === "text"
-        ? block.text
-        : block.type === "image"
-          ? "[Image]"
-          : "[Audio]",
-    )
-    .join("\n");
+    .filter((block) => block.type === "text")
+    .map((block) => block.text)
+    .join(" | ");
 }
 
 export interface LlmMessage {

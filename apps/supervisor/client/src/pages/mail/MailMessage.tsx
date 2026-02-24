@@ -10,6 +10,7 @@ import {
 } from "@mantine/core";
 import { formatFileSize } from "@naisys/common";
 import {
+  IconChecks,
   IconCornerUpLeft,
   IconFile,
   IconMailbox,
@@ -96,6 +97,9 @@ export const MailMessage: React.FC<MailMessageProps> = ({
               <Group gap="xs" align="baseline" style={{ flexWrap: "wrap" }}>
                 {fromToUsernames.map((username, index) => {
                   const agent = agents.find((a) => a.name === username);
+                  const recipient = isFromCurrentAgent
+                    ? message.recipients.find((r) => r.username === username)
+                    : undefined;
                   return (
                     <React.Fragment key={username}>
                       {index > 0 && (
@@ -110,6 +114,13 @@ export const MailMessage: React.FC<MailMessageProps> = ({
                         <Text size="xs" c="dimmed" fw={400}>
                           ({agent.title})
                         </Text>
+                      )}
+                      {recipient?.readAt && (
+                        <IconChecks
+                          size={14}
+                          color="var(--mantine-color-blue-filled)"
+                          title={`Read ${new Date(recipient.readAt).toLocaleString()}`}
+                        />
                       )}
                     </React.Fragment>
                   );

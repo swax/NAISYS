@@ -8,7 +8,7 @@ import {
   Text,
 } from "@mantine/core";
 import { formatFileSize } from "@naisys/common";
-import { IconFile } from "@tabler/icons-react";
+import { IconCheck, IconChecks, IconFile } from "@tabler/icons-react";
 import React, { useEffect, useRef } from "react";
 
 import type { ChatMessage } from "../../lib/apiClient";
@@ -176,8 +176,28 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
                     c={isOwn ? "rgba(255,255,255,0.7)" : "dimmed"}
                     ta="right"
                     mt={2}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "flex-end",
+                      gap: 4,
+                    }}
                   >
                     {formatTime(msg.createdAt)}
+                    {isOwn &&
+                      (msg.readBy && msg.readBy.length > 0 ? (
+                        <IconChecks
+                          size={14}
+                          color="rgba(255,255,255,0.7)"
+                          title="Read"
+                        />
+                      ) : (
+                        <IconCheck
+                          size={14}
+                          color="rgba(255,255,255,0.7)"
+                          title="Delivered"
+                        />
+                      ))}
                   </Text>
                 </Paper>
               </Box>

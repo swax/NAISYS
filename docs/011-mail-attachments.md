@@ -1,18 +1,18 @@
-# Mail & Chat Attachment Support
+# Attachment Support
 
 ## Goal
 
-Allow agents to share files with each other via `ns-mail` and `ns-chat`. Files are uploaded/downloaded over HTTP on the hub's HTTPS server, with only attachment metadata sent over Socket.IO alongside the message.
+Allow agents to share files with each other via `ns-mail` and `ns-chat`, and to attach files to run context logs. Files are uploaded/downloaded over HTTP on the hub's HTTPS server, with only attachment metadata sent over Socket.IO alongside messages.
 
 ## Design
 
-### Upload flow
+### Upload flow (mail/chat)
 
 1. Agent runs `ns-mail send "bob" "subject" "msg" /path/file1.txt` or `ns-chat send "bob" "msg" /path/file1.txt`
-2. The NAISYS client reads each file, computes its SHA-256 hash, and POSTs the file body to the hub's `/attachments` HTTP endpoint with query params for auth, filename, size, and hash.
-3. The hub validates the API key, streams the file to disk under `NAISYS_FOLDER/attachments/<date>/`, verifies the hash, creates a `mail_attachments` database record (with `message_id = null`), and returns the attachment ID.
+2. The NAISYS client reads each file, computes its SHA-256 hash, and POSTs the file body to the hub's `/attachments` HTTP endpoint with query params for auth, filename, size, hash, and purpose.
+3. The hub validates the API key, streams the file to disk under `NAISYS_FOLDER/attachments/<date>/`, verifies the hash, creates an `attachments` database record (with `purpose = "mail"`), and returns the attachment ID.
 4. The client sends the `MAIL_SEND` Socket.IO event with the list of `attachmentIds`.
-5. The hub links each attachment record to the newly created message.
+5. The hub creates `mail_attachments` join records linking each attachment to the newly created message.
 
 ### Download flow
 
@@ -28,7 +28,7 @@ The `$NAISYS_API_KEY` environment variable is already available in every agent's
 
 Both endpoints live on the hub's existing HTTPS server, registered as a raw `request` handler that checks the pathname before Socket.IO processes the request.
 
-**POST `/attachments?apiKey=...&filename=...&filesize=...&filehash=...`** — Upload a file. Body is the raw file content. Returns `{ id }`. 10 MB size limit.
+**POST `/attachments?apiKey=...&filename=...&filesize=...&filehash=...&purpose=...`** — Upload a file. Body is the raw file content. `purpose` is `"mail"` or `"context"`. Returns `{ id }`. 10 MB size limit.
 
 **GET `/attachments/<id>?apiKey=...`** — Download a file. Streams the file with `Content-Disposition: attachment`.
 
@@ -38,23 +38,31 @@ Both endpoints authenticate using the per-user `api_key` from the `users` table 
 
 ### Storage
 
-Files are stored on disk at `NAISYS_FOLDER/attachments/<YYYY-MM-DD>/<timestamp>_<userId>_<safeFilename>`. The full path is recorded in the `mail_attachments` database record.
+Files are stored on disk at `NAISYS_FOLDER/attachments/<YYYY-MM-DD>/<timestamp>_<userId>_<safeFilename>`. The full path is recorded in the `attachments` database record.
 
 ### Database
 
-The `mail_attachments` table tracks each uploaded file:
+The `attachments` table tracks each uploaded file:
 
 - `id` — autoincrement primary key
 - `filepath` — server-side storage path
 - `filename` — original filename
 - `file_size`, `file_hash` — size in bytes and SHA-256 hex digest
-- `message_id` — nullable FK to `mail_messages` (null until the send completes)
+- `purpose` — `"mail"` or `"context"`
 - `uploaded_by` — FK to `users`
 - `created_at`
 
+The `mail_attachments` join table links attachments to mail messages:
+
+- `message_id` — FK to `mail_messages`
+- `attachment_id` — FK to `attachments`
+- Composite primary key on `(message_id, attachment_id)`
+
+Context log attachments are linked directly via `context_log.attachment_id` (nullable FK to `attachments`).
+
 ### Client architecture
 
-The upload logic (file resolution, hashing, HTTP POST) lives in a shared `mailAttachmentService` that is injected into both `createMailService` and `createChatService`. This avoids duplicating the upload code across the two commands.
+The upload logic (file resolution, hashing, HTTP POST) lives in a shared `attachmentService` that is used by both mail/chat commands and context log uploads. The service accepts a `purpose` parameter to distinguish between attachment types.
 
 ### Protocol changes
 

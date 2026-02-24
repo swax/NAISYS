@@ -22,6 +22,7 @@ export const ChatMessageSchema = z.object({
   body: z.string(),
   createdAt: z.string(),
   attachments: z.array(ChatAttachmentSchema).optional(),
+  readBy: z.array(z.number()).optional(), // user IDs who have read
 });
 
 export const ChatConversationsResponseSchema = z.object({
