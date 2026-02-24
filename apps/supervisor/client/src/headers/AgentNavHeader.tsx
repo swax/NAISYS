@@ -1,4 +1,4 @@
-import { Group, Indicator, Tabs } from "@mantine/core";
+import { Group, Indicator, Tabs, Text } from "@mantine/core";
 import {
   IconHistory,
   IconInfoCircle,
@@ -99,7 +99,7 @@ export const AgentNavHeader: React.FC<AgentNavHeaderProps> = ({ agentId }) => {
             href={getAbsoluteUrl("detail")}
             onClick={(e: React.MouseEvent) => handleTabClick(e, "detail")}
           >
-            Detail
+            <Text visibleFrom="sm" span>Detail</Text>
           </Tabs.Tab>
           <Indicator
             disabled={!hasUnreadLogs}
@@ -116,7 +116,7 @@ export const AgentNavHeader: React.FC<AgentNavHeaderProps> = ({ agentId }) => {
               href={getAbsoluteUrl("runs")}
               onClick={(e: React.MouseEvent) => handleTabClick(e, "runs")}
             >
-              Runs
+              <Text visibleFrom="sm" span>Runs</Text>
             </Tabs.Tab>
           </Indicator>
           {hasMailLink && (
@@ -135,7 +135,7 @@ export const AgentNavHeader: React.FC<AgentNavHeaderProps> = ({ agentId }) => {
                 href={getAbsoluteUrl("mail")}
                 onClick={(e: React.MouseEvent) => handleTabClick(e, "mail")}
               >
-                Mail
+                <Text visibleFrom="sm" span>Mail</Text>
               </Tabs.Tab>
             </Indicator>
           )}
@@ -148,7 +148,7 @@ export const AgentNavHeader: React.FC<AgentNavHeaderProps> = ({ agentId }) => {
               href={getAbsoluteUrl("chat")}
               onClick={(e: React.MouseEvent) => handleTabClick(e, "chat")}
             >
-              Chat
+              <Text visibleFrom="sm" span>Chat</Text>
             </Tabs.Tab>
           )}
           <Tabs.Tab
@@ -159,7 +159,7 @@ export const AgentNavHeader: React.FC<AgentNavHeaderProps> = ({ agentId }) => {
             href={getAbsoluteUrl("config")}
             onClick={(e: React.MouseEvent) => handleTabClick(e, "config")}
           >
-            Config
+            <Text visibleFrom="sm" span>Config</Text>
           </Tabs.Tab>
         </Tabs.List>
       </Tabs>

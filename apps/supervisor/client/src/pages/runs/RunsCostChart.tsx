@@ -31,9 +31,9 @@ export const RunsCostChart: React.FC<RunsCostChartProps> = ({ runs }) => {
   }
 
   return (
-    <Paper p="md" withBorder>
+    <Paper p="xs" withBorder>
       <LineChart
-        h={100}
+        h={60}
         data={chartData}
         dataKey="date"
         series={[{ name: "cost", label: "Cost ($)", color: "blue.6" }]}
@@ -42,7 +42,6 @@ export const RunsCostChart: React.FC<RunsCostChartProps> = ({ runs }) => {
         tooltipProps={{
           position: { y: -160 },
         }}
-        withDots
         gridAxis="none"
         valueFormatter={(value: number) => `$${value.toFixed(2)}`}
       />

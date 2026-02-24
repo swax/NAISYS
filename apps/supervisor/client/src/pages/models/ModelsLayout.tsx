@@ -5,6 +5,7 @@ import { IconCpu } from "@tabler/icons-react";
 import React from "react";
 import { Outlet, useLocation, useOutletContext } from "react-router-dom";
 
+import { SIDEBAR_WIDTH } from "../../constants";
 import { ModelSidebar } from "../../headers/ModelSidebar";
 import {
   api,
@@ -13,8 +14,6 @@ import {
   type LlmModelDetail,
   type ModelsResponse,
 } from "../../lib/apiClient";
-
-const SIDEBAR_WIDTH = 300;
 
 export interface ModelsOutletContext {
   llmModels: LlmModelDetail[];
@@ -66,11 +65,9 @@ export const ModelsLayout: React.FC = () => {
   };
 
   return (
-    <div
-      style={{
-        display: "flex",
-        height: "calc(100vh - 48px - 2 * var(--mantine-spacing-md))",
-      }}
+    <Box
+      display="flex"
+      style={{ flex: 1, minHeight: 0 }}
     >
       {/* Desktop sidebar */}
       <Box
@@ -132,6 +129,6 @@ export const ModelsLayout: React.FC = () => {
           isLoading={isLoading}
         />
       </Drawer>
-    </div>
+    </Box>
   );
 };

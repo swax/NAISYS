@@ -179,7 +179,7 @@ export const AgentMail: React.FC = () => {
   }
 
   return (
-    <Stack gap="md" style={{ height: "100%" }}>
+    <Stack gap="md" p="xs" style={{ height: "100%" }}>
       <Group justify="space-between">
         {canSend && (
           <Button

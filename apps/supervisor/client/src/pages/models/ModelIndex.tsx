@@ -1,14 +1,25 @@
 import { Button, Group, Stack, Text } from "@mantine/core";
 import { hasAction } from "@naisys/common";
 import { IconPlus } from "@tabler/icons-react";
-import React from "react";
+import React, { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { useModelsContext } from "./ModelsLayout";
 
 export const ModelIndex: React.FC = () => {
   const navigate = useNavigate();
-  const { actions } = useModelsContext();
+  const { actions, llmModels, imageModels, isLoading } = useModelsContext();
+
+  useEffect(() => {
+    if (isLoading) return;
+
+    const firstModel = llmModels[0] ?? imageModels[0];
+    if (firstModel) {
+      navigate(`/models/${encodeURIComponent(firstModel.key)}`, {
+        replace: true,
+      });
+    }
+  }, [llmModels, imageModels, isLoading, navigate]);
 
   return (
     <Stack gap="md">

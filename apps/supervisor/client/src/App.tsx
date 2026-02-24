@@ -1,7 +1,7 @@
 import "@mantine/core/styles.css";
 import "@mantine/notifications/styles.css";
 
-import { AppShell, MantineProvider } from "@mantine/core";
+import { AppShell, Box, MantineProvider } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import { Notifications } from "@mantine/notifications";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -91,7 +91,7 @@ const AppContent: React.FC = () => {
         breakpoint: "sm",
         collapsed: { desktop: true, mobile: !opened },
       }}
-      padding="md"
+      padding={0}
     >
       <AppShell.Header>
         <AppHeader
@@ -106,9 +106,27 @@ const AppContent: React.FC = () => {
         <AppNavbar onClose={close} hasErp={hasErp} />
       </AppShell.Navbar>
 
-      <AppShell.Main>
-        <DisconnectedBanner />
-        <Outlet context={{ permissions }} />
+      <AppShell.Main
+        style={{
+          height: "100dvh",
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
+        <Box
+          p={{ base: 0, sm: "xs" }}
+          pb={0}
+          style={{
+            flex: 1,
+            minHeight: 0,
+            display: "flex",
+            flexDirection: "column",
+            overflow: "auto",
+          }}
+        >
+          <DisconnectedBanner />
+          <Outlet context={{ permissions }} />
+        </Box>
       </AppShell.Main>
       <LoginDialog opened={loginOpen} onClose={closeLogin} />
     </AppShell>
