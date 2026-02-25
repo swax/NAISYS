@@ -57,13 +57,13 @@ export const useAgentData = () => {
         mergedAgents = Array.from(mergeMap.values());
       }
 
-      const agentsWithOnline: Agent[] = mergedAgents.map((agent) => ({
+      const agentsWithStatus: Agent[] = mergedAgents.map((agent) => ({
         ...agent,
-        online: agent.online ?? false,
+        status: agent.status ?? "offline",
       }));
 
       // Sort by name
-      const sortedAgents = agentsWithOnline.sort((a, b) =>
+      const sortedAgents = agentsWithStatus.sort((a, b) =>
         a.name.localeCompare(b.name),
       );
 
@@ -95,16 +95,16 @@ export const useAgentData = () => {
         const update = event.agents[String(agent.id)];
         if (!update) continue;
 
-        const newOnline = update.online;
+        const newStatus = update.status;
         const newLogId = update.latestLogId;
         const newMailId = update.latestMailId;
 
         if (
-          agent.online !== newOnline ||
+          agent.status !== newStatus ||
           agent.latestLogId !== newLogId ||
           agent.latestMailId !== newMailId
         ) {
-          agent.online = newOnline;
+          agent.status = newStatus;
           agent.latestLogId = newLogId;
           agent.latestMailId = newMailId;
           changed = true;

@@ -9,6 +9,7 @@ const agentNotifications = new Map<
   { latestLogId: number; latestMailId: number }
 >();
 const hostOnlineStatus = new Map<number, boolean>();
+const agentHostAssignments = new Map<number, number[]>();
 
 const statusEmitter = new EventEmitter();
 
@@ -68,10 +69,34 @@ export function emitListChanged(): void {
   });
 }
 
+// --- Agent host assignment cache ---
+
+export function updateAgentHostAssignments(
+  assignments: { agentId: number; hostIds: number[] }[],
+): void {
+  for (const { agentId, hostIds } of assignments) {
+    agentHostAssignments.set(agentId, hostIds);
+  }
+}
+
 // --- Query functions ---
 
 export function isAgentActive(userId: number): boolean {
   return activeAgentIds.has(userId);
+}
+
+export function getAgentStatus(
+  agentId: number,
+): "active" | "available" | "offline" {
+  if (activeAgentIds.has(agentId)) return "active";
+
+  const assignedHostIds = agentHostAssignments.get(agentId);
+  if (!assignedHostIds || assignedHostIds.length === 0) return "available";
+
+  const anyHostOnline = assignedHostIds.some((hid) =>
+    connectedHostIds.has(hid),
+  );
+  return anyHostOnline ? "available" : "offline";
 }
 
 export function isHostConnected(hostId: number): boolean {
@@ -85,7 +110,7 @@ export function getAgentStatusSnapshot(): AgentStatusEvent {
   // Include all agents we know about from notifications
   for (const [userId, notif] of agentNotifications) {
     agents[String(userId)] = {
-      online: activeAgentIds.has(userId),
+      status: getAgentStatus(userId),
       latestLogId: notif.latestLogId,
       latestMailId: notif.latestMailId,
     };
@@ -95,7 +120,7 @@ export function getAgentStatusSnapshot(): AgentStatusEvent {
   for (const userId of activeAgentIds) {
     if (!agents[String(userId)]) {
       agents[String(userId)] = {
-        online: true,
+        status: "active",
         latestLogId: 0,
         latestMailId: 0,
       };

@@ -234,9 +234,9 @@ export const AgentSidebar: React.FC = () => {
           ? 0.4
           : agent.name === "All"
             ? 1
-            : agent.online
-              ? 1
-              : 0.5,
+            : agent.status === "offline"
+              ? 0.5
+              : 1,
         marginLeft: agent.depth ? `${agent.depth * 1.5}rem` : undefined,
         textDecoration: "none",
         color: "inherit",
@@ -261,20 +261,26 @@ export const AgentSidebar: React.FC = () => {
           <Badge
             size="xs"
             variant="light"
-            color={agent.online ? "green" : "gray"}
+            color={
+              agent.status === "active"
+                ? "green"
+                : agent.status === "available"
+                  ? "yellow"
+                  : "gray"
+            }
             style={{
               flexShrink: 0,
-              cursor: agent.online ? "pointer" : "default",
+              cursor: agent.status === "active" ? "pointer" : "default",
             }}
             onClick={(e) => {
-              if (agent.online) {
+              if (agent.status === "active") {
                 e.preventDefault();
                 e.stopPropagation();
                 void navigate(`/agents/${agent.id}/runs?expand=online`);
               }
             }}
           >
-            {agent.online ? "online" : "offline"}
+            {agent.status}
           </Badge>
         )}
       </Group>

@@ -3,6 +3,7 @@ import { Agent, AgentDetailResponse, Host } from "@naisys-supervisor/shared";
 
 import { hubDb } from "../database/hubDb.js";
 import { getLogger } from "../logger.js";
+import { updateAgentHostAssignments } from "./agentHostStatusService.js";
 import { cachedForSeconds } from "../utils/cache.js";
 
 export type AgentWithConfig = Agent & { config?: AgentConfigFile | null };
@@ -22,6 +23,7 @@ export const getAgents = cachedForSeconds(
           archived: true,
           config: true,
           lead_user: { select: { username: true } },
+          user_hosts: { select: { host_id: true } },
           user_notifications: {
             select: {
               latest_log_id: true,
@@ -56,6 +58,13 @@ export const getAgents = cachedForSeconds(
           config: parseConfig(user.config),
         });
       });
+
+      updateAgentHostAssignments(
+        users.map((user) => ({
+          agentId: user.id,
+          hostIds: user.user_hosts.map((uh) => uh.host_id),
+        })),
+      );
     } catch (error) {
       getLogger().error(error, "Error fetching users from Naisys database");
     }
@@ -100,6 +109,7 @@ export async function getAgent(
         archived: true,
         config: true,
         lead_user: { select: { username: true } },
+        user_hosts: { select: { host_id: true } },
         user_notifications: {
           select: {
             latest_log_id: true,
@@ -115,6 +125,13 @@ export async function getAgent(
     if (!user) {
       return null;
     }
+
+    updateAgentHostAssignments([
+      {
+        agentId: user.id,
+        hostIds: user.user_hosts.map((uh) => uh.host_id),
+      },
+    ]);
 
     return {
       id: user.id,

@@ -7,7 +7,7 @@ import {
  * Client-side Agent type with computed properties
  */
 export type Agent = BaseAgent & {
-  online: boolean;
+  status: "active" | "available" | "offline";
 };
 
 /**
