@@ -2,7 +2,6 @@ import {
   Button,
   Group,
   Loader,
-  Select,
   Stack,
   Text,
   TextInput,
@@ -26,11 +25,11 @@ import {
   archiveAgent,
   deleteAgentPermanently,
   getAgentDetail,
-  setAgentLead,
   startAgent,
   stopAgent,
   unarchiveAgent,
 } from "../../lib/apiAgents";
+import { ConfigSummary } from "./ConfigSummary";
 
 export const AgentDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -39,7 +38,9 @@ export const AgentDetail: React.FC = () => {
 
   const agentId = id ? Number(id) : null;
   const agentData = agents.find((a) => a.id === agentId);
-  const [, setConfig] = useState<AgentDetailResponse["config"] | null>(null);
+  const [config, setConfig] = useState<AgentDetailResponse["config"] | null>(
+    null,
+  );
   const [actions, setActions] = useState<HateoasAction[] | undefined>();
   const [loading, setLoading] = useState(true);
   const [taskInput, setTaskInput] = useState("");
@@ -47,7 +48,6 @@ export const AgentDetail: React.FC = () => {
   const [stopping, setStopping] = useState(false);
   const [archiving, setArchiving] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [settingLead, setSettingLead] = useState(false);
 
   const fetchDetail = async () => {
     if (!agentId) return;
@@ -248,45 +248,6 @@ export const AgentDetail: React.FC = () => {
     }
   };
 
-  const handleSetLead = async (value: string | null) => {
-    if (!agentId) return;
-    setSettingLead(true);
-    try {
-      const leadAgentId = value ? Number(value) : null;
-      const result = await setAgentLead(agentId, leadAgentId);
-      if (result.success) {
-        notifications.show({
-          title: "Lead Agent Updated",
-          message: result.message,
-          color: "green",
-        });
-        await fetchDetail();
-      } else {
-        notifications.show({
-          title: "Update Failed",
-          message: result.message,
-          color: "red",
-        });
-      }
-    } catch (err) {
-      notifications.show({
-        title: "Update Failed",
-        message: err instanceof Error ? err.message : "Unknown error",
-        color: "red",
-      });
-    } finally {
-      setSettingLead(false);
-    }
-  };
-
-  const leadAgentOptions = agents
-    .filter((a) => a.id !== agentId && !a.archived)
-    .map((a) => ({ value: String(a.id), label: a.name }));
-
-  const currentLeadValue = agents.find(
-    (a) => a.name === agentData?.leadUsername,
-  )?.id;
-
   if (!agentId) {
     return <Text size="xl">Agent Detail</Text>;
   }
@@ -385,17 +346,10 @@ export const AgentDetail: React.FC = () => {
         )}
       </Group>
 
-      {hasAction(actions, "set-lead") && (
-        <Select
-          label="Lead Agent"
-          placeholder="None (top-level agent)"
-          data={leadAgentOptions}
-          value={currentLeadValue ? String(currentLeadValue) : null}
-          onChange={handleSetLead}
-          clearable
-          searchable
-          disabled={settingLead}
-          maw={300}
+      {config && (
+        <ConfigSummary
+          config={config}
+          leadUsername={agentData?.leadUsername}
         />
       )}
     </Stack>

@@ -14,6 +14,7 @@ import { IconList, IconSend } from "@tabler/icons-react";
 import React, { useCallback, useEffect, useState } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 
+import { CollapsibleSidebar } from "../../components/CollapsibleSidebar";
 import { SIDEBAR_WIDTH } from "../../constants";
 import { useAgentDataContext } from "../../contexts/AgentDataContext";
 import { useRunsData } from "../../hooks/useRunsData";
@@ -187,18 +188,9 @@ export const AgentRuns: React.FC = () => {
       )}
 
       {/* Desktop sidebar */}
-      <Box
-        visibleFrom="sm"
-        style={{
-          width: SIDEBAR_WIDTH,
-          minWidth: SIDEBAR_WIDTH,
-          borderRight: "1px solid var(--mantine-color-dark-4)",
-          display: "flex",
-          flexDirection: "column",
-        }}
-      >
+      <CollapsibleSidebar>
         {sidebarContent}
-      </Box>
+      </CollapsibleSidebar>
 
       {/* Mobile drawer */}
       <Drawer

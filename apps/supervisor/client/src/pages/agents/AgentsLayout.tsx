@@ -9,6 +9,7 @@ import {
   useSearchParams,
 } from "react-router-dom";
 
+import { CollapsibleSidebar } from "../../components/CollapsibleSidebar";
 import { SIDEBAR_WIDTH } from "../../constants";
 import { AgentNavHeader } from "../../headers/AgentNavHeader";
 import { AgentSidebar } from "../../headers/AgentSidebar";
@@ -37,17 +38,15 @@ export const AgentsLayout: React.FC = () => {
       style={{ flex: 1, minHeight: 0 }}
     >
       {/* Desktop sidebar */}
-      <Box
-        visibleFrom="sm"
-        style={{
-          width: SIDEBAR_WIDTH,
-          flexShrink: 0,
+      <CollapsibleSidebar
+        visibleFrom="md"
+        contentStyle={{
           overflowY: "auto",
           paddingRight: "var(--mantine-spacing-md)",
         }}
       >
         <AgentSidebar />
-      </Box>
+      </CollapsibleSidebar>
 
       {/* Main content */}
       <div
@@ -59,12 +58,19 @@ export const AgentsLayout: React.FC = () => {
         }}
       >
         {/* Sub-header: mobile robot icon + agent nav tabs */}
-        <Group mb={{ base: 0, sm: "md" }} gap="xs">
+        <Group
+          gap="xs"
+          pl={{ base: "md", md: 0 }}
+          style={{
+            borderBottom:
+              "calc(0.125rem * var(--mantine-scale)) solid var(--mantine-color-dark-4)",
+          }}
+        >
           <ActionIcon
             variant="subtle"
             color="gray"
             onClick={openDrawer}
-            hiddenFrom="sm"
+            hiddenFrom="md"
           >
             <IconRobot size="1.2rem" />
           </ActionIcon>

@@ -114,7 +114,8 @@ const AppContent: React.FC = () => {
         }}
       >
         <Box
-          p={{ base: 0, sm: "xs" }}
+          px={{ base: 0, sm: "xs" }}
+          pt={0}
           pb={0}
           style={{
             flex: 1,

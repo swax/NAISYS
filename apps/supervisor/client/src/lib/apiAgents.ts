@@ -7,6 +7,7 @@ import type {
   AgentStartResult,
   AgentStopResult,
   CreateAgentConfigResponse,
+  ExportAgentConfigResponse,
   GetAgentConfigResponse,
   HostListResponse,
   ImportAgentConfigResponse,
@@ -88,6 +89,14 @@ export const importAgentConfig = async (
           : "Failed to import agent configuration",
     };
   }
+};
+
+export const exportAgentConfig = async (
+  agentId: number,
+): Promise<ExportAgentConfigResponse> => {
+  return await api.get<ExportAgentConfigResponse>(
+    apiEndpoints.agentConfigExport(agentId),
+  );
 };
 
 export const createAgent = async (

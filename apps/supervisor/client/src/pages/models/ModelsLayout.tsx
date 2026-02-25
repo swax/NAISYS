@@ -5,6 +5,7 @@ import { IconCpu } from "@tabler/icons-react";
 import React from "react";
 import { Outlet, useLocation, useOutletContext } from "react-router-dom";
 
+import { CollapsibleSidebar } from "../../components/CollapsibleSidebar";
 import { SIDEBAR_WIDTH } from "../../constants";
 import { ModelSidebar } from "../../headers/ModelSidebar";
 import {
@@ -70,11 +71,8 @@ export const ModelsLayout: React.FC = () => {
       style={{ flex: 1, minHeight: 0 }}
     >
       {/* Desktop sidebar */}
-      <Box
-        visibleFrom="sm"
-        style={{
-          width: SIDEBAR_WIDTH,
-          flexShrink: 0,
+      <CollapsibleSidebar
+        contentStyle={{
           overflowY: "auto",
           paddingRight: "var(--mantine-spacing-md)",
         }}
@@ -85,7 +83,7 @@ export const ModelsLayout: React.FC = () => {
           actions={actions}
           isLoading={isLoading}
         />
-      </Box>
+      </CollapsibleSidebar>
 
       {/* Main content */}
       <div
@@ -94,11 +92,17 @@ export const ModelsLayout: React.FC = () => {
           display: "flex",
           flexDirection: "column",
           minWidth: 0,
-          paddingLeft: "var(--mantine-spacing-md)",
         }}
       >
         {/* Sub-header: mobile model icon */}
-        <Group mb="md" gap="xs">
+        <Group
+          gap="xs"
+          pl={{ base: "md", sm: 0 }}
+          style={{
+            borderBottom:
+              "calc(0.125rem * var(--mantine-scale)) solid var(--mantine-color-dark-4)",
+          }}
+        >
           <ActionIcon
             variant="subtle"
             color="gray"
@@ -110,7 +114,7 @@ export const ModelsLayout: React.FC = () => {
         </Group>
 
         {/* Route content */}
-        <div style={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
+        <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "var(--mantine-spacing-md)" }}>
           <Outlet context={context} />
         </div>
       </div>
