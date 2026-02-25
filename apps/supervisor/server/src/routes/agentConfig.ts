@@ -1,5 +1,3 @@
-import type { AgentConfigFile, ModelDbRow } from "@naisys/common";
-import { AgentConfigFileSchema } from "@naisys/common";
 import {
   AgentIdParams,
   AgentIdParamsSchema,
@@ -18,6 +16,8 @@ import {
   UpdateAgentConfigResponse,
   UpdateAgentConfigResponseSchema,
 } from "@naisys-supervisor/shared";
+import type { AgentConfigFile, ModelDbRow } from "@naisys/common";
+import { AgentConfigFileSchema } from "@naisys/common";
 import { FastifyInstance, FastifyPluginOptions } from "fastify";
 import yaml from "js-yaml";
 
@@ -179,7 +179,7 @@ export default function agentConfigRoutes(
           });
         }
 
-        await updateAgentConfigById(id, config);
+        await updateAgentConfigById(id, config, true);
 
         return {
           success: true,
@@ -247,8 +247,7 @@ export default function agentConfigRoutes(
 
         return reply.status(500).send({
           success: false,
-          message:
-            "Internal server error while exporting agent configuration",
+          message: "Internal server error while exporting agent configuration",
         });
       }
     },
@@ -317,7 +316,7 @@ export default function agentConfigRoutes(
           });
         }
 
-        await updateAgentConfigById(id, config);
+        await updateAgentConfigById(id, config, false);
 
         return {
           success: true,
