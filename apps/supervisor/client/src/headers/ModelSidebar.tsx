@@ -1,6 +1,6 @@
 import { Badge, Button, Card, Group, Stack, Text } from "@mantine/core";
 import { hasAction, type HateoasAction } from "@naisys/common";
-import { IconCpu, IconPhoto, IconPlus } from "@tabler/icons-react";
+import { IconChartDots, IconCpu, IconPhoto, IconPlus } from "@tabler/icons-react";
 import React from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
@@ -50,8 +50,40 @@ export const ModelSidebar: React.FC<ModelSidebarProps> = ({
     );
   }
 
+  const isOverview = location.pathname === "/models";
+
   return (
     <Stack gap="md">
+      {/* Overview Link */}
+      <Card
+        padding="sm"
+        radius="md"
+        withBorder
+        component="a"
+        href={`${ROUTER_BASENAME}/models`}
+        onClick={(e: React.MouseEvent) => {
+          if (e.button === 1 || e.ctrlKey || e.metaKey) return;
+          e.preventDefault();
+          void navigate("/models");
+        }}
+        style={{
+          cursor: "pointer",
+          backgroundColor: isOverview
+            ? "var(--mantine-color-blue-9)"
+            : undefined,
+          textDecoration: "none",
+          color: "inherit",
+          display: "block",
+        }}
+      >
+        <Group gap="xs" align="center" wrap="nowrap">
+          <IconChartDots size="1rem" style={{ flexShrink: 0 }} />
+          <Text size="sm" fw={500}>
+            Overview
+          </Text>
+        </Group>
+      </Card>
+
       {/* LLM Models Section */}
       <div>
         <Text size="xs" fw={700} c="dimmed" tt="uppercase" mb="xs">

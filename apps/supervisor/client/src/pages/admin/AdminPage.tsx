@@ -50,7 +50,7 @@ export const AdminPage: React.FC = () => {
   const canExport = data ? !!hasAction(data._actions, "export-config") : false;
 
   return (
-    <Container size="lg" py="xl">
+    <Container size="lg" py="xl" w="100%">
       <Title order={2} mb="lg">
         Admin
       </Title>

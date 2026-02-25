@@ -25,7 +25,10 @@ import {
   selfLink,
 } from "../hateoas.js";
 import { createAgentConfig } from "../services/agentConfigService.js";
-import { isAgentActive } from "../services/agentHostStatusService.js";
+import {
+  getAgentStatus,
+  isAgentActive,
+} from "../services/agentHostStatusService.js";
 import { getAgent, getAgents } from "../services/agentService.js";
 
 function agentActions(
@@ -143,7 +146,7 @@ export default function agentsRoutes(
 
         const items = agents.map((agent) => ({
           ...agent,
-          online: isAgentActive(agent.id),
+          status: getAgentStatus(agent.id),
           _links: [selfLink(`/agents/${agent.id}`)],
         }));
 
@@ -277,7 +280,7 @@ export default function agentsRoutes(
 
         return {
           ...agent,
-          online: isAgentActive(id),
+          status: getAgentStatus(id),
           _links: agentLinks(id, agent.config),
           _actions: agentActions(
             id,

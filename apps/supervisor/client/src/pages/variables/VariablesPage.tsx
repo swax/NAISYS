@@ -100,7 +100,7 @@ export const VariablesPage: React.FC = () => {
   };
 
   return (
-    <Container size="lg" py="xl">
+    <Container size="lg" py="xl" w="100%">
       <Title order={2} mb="lg">
         Variables
       </Title>

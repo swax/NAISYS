@@ -135,7 +135,7 @@ export const UserDetail: React.FC = () => {
 
   if (loading) {
     return (
-      <Container size="md" py="xl">
+      <Container size="md" py="xl" w="100%">
         <Stack align="center">
           <Loader />
         </Stack>
@@ -145,7 +145,7 @@ export const UserDetail: React.FC = () => {
 
   if (!user) {
     return (
-      <Container size="md" py="xl">
+      <Container size="md" py="xl" w="100%">
         <Text>User not found.</Text>
       </Container>
     );
@@ -156,7 +156,7 @@ export const UserDetail: React.FC = () => {
   );
 
   return (
-    <Container size="md" py="xl">
+    <Container size="md" py="xl" w="100%">
       <Group justify="space-between" mb="lg">
         <Title order={2}>{user.username}</Title>
         <Group>

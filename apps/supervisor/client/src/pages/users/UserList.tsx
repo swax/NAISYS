@@ -126,7 +126,7 @@ export const UserList: React.FC = () => {
   const totalPages = data ? Math.ceil(data.total / data.pageSize) : 0;
 
   return (
-    <Container size="lg" py="xl">
+    <Container size="lg" py="xl" w="100%">
       <Group justify="space-between" mb="lg">
         <Title order={2}>Users</Title>
         <Group>

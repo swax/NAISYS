@@ -131,9 +131,15 @@ export const HostPage: React.FC = () => {
                     <Badge
                       size="sm"
                       variant="light"
-                      color={agent.online ? "green" : "gray"}
+                      color={
+                        agent.status === "active"
+                          ? "green"
+                          : agent.status === "available"
+                            ? "yellow"
+                            : "gray"
+                      }
                     >
-                      {agent.online ? "online" : "offline"}
+                      {agent.status}
                     </Badge>
                   )}
                 </Table.Td>

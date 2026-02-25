@@ -19,7 +19,7 @@ export const AgentSchema = z.object({
   latestLogId: z.number(),
   latestMailId: z.number(),
   archived: z.boolean().optional(),
-  online: z.boolean().optional(),
+  status: z.enum(["active", "available", "offline"]).optional(),
   _links: z.array(LinkSchema).optional(),
 });
 
@@ -62,7 +62,7 @@ export const AgentDetailResponseSchema = z.object({
   latestLogId: z.number(),
   latestMailId: z.number(),
   archived: z.boolean().optional(),
-  online: z.boolean().optional(),
+  status: z.enum(["active", "available", "offline"]).optional(),
   config: AgentConfigFileSchema,
   _links: z.array(LinkSchema),
   _actions: z.array(HateoasActionSchema).optional(),
