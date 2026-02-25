@@ -14,6 +14,7 @@ import { IconMessageCircle } from "@tabler/icons-react";
 import React, { useCallback, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 
+import { CollapsibleSidebar } from "../../components/CollapsibleSidebar";
 import { SIDEBAR_WIDTH } from "../../constants";
 import { useAgentDataContext } from "../../contexts/AgentDataContext";
 import { useChatConversations } from "../../hooks/useChatConversations";
@@ -149,18 +150,9 @@ export const AgentChat: React.FC = () => {
       }}
     >
       {/* Desktop conversation sidebar */}
-      <Box
-        visibleFrom="sm"
-        style={{
-          width: SIDEBAR_WIDTH,
-          minWidth: SIDEBAR_WIDTH,
-          borderRight: "1px solid var(--mantine-color-dark-4)",
-          display: "flex",
-          flexDirection: "column",
-        }}
-      >
+      <CollapsibleSidebar>
         {conversationList}
-      </Box>
+      </CollapsibleSidebar>
 
       {/* Mobile drawer for conversations */}
       <Drawer

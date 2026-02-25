@@ -48,6 +48,10 @@ export const GetAgentConfigResponseSchema = z.object({
   _actions: z.array(HateoasActionSchema).optional(),
 });
 
+export const ExportAgentConfigResponseSchema = z.object({
+  yaml: z.string(),
+});
+
 // Inferred types
 export type CreateAgentConfigRequest = z.infer<
   typeof CreateAgentConfigRequestSchema
@@ -69,4 +73,7 @@ export type ImportAgentConfigResponse = z.infer<
 >;
 export type GetAgentConfigResponse = z.infer<
   typeof GetAgentConfigResponseSchema
+>;
+export type ExportAgentConfigResponse = z.infer<
+  typeof ExportAgentConfigResponseSchema
 >;

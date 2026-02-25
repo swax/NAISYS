@@ -1,15 +1,28 @@
-import { Alert, Button, Group, Loader, Stack, Text } from "@mantine/core";
+import {
+  Alert,
+  Button,
+  Group,
+  Loader,
+  Select,
+  Stack,
+  Text,
+} from "@mantine/core";
+import { notifications } from "@mantine/notifications";
 import type { AgentConfigFile, HateoasAction } from "@naisys/common";
 import { hasAction } from "@naisys/common";
-import { IconEdit, IconFileImport } from "@tabler/icons-react";
+import { IconFileExport, IconFileImport } from "@tabler/icons-react";
 import React, { useCallback, useEffect, useState } from "react";
-import { useBlocker, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 
 import { useAgentDataContext } from "../../contexts/AgentDataContext";
-import { getAgentConfig, updateAgentConfig } from "../../lib/apiAgents";
+import {
+  getAgentConfig,
+  setAgentLead,
+  updateAgentConfig,
+} from "../../lib/apiAgents";
 import { api, apiEndpoints, type ModelsResponse } from "../../lib/apiClient";
 import { AgentConfigForm } from "./AgentConfigForm";
-import { ImportConfigDialog } from "./ImportConfigDialog";
+import { ConfigYamlDialog } from "./ConfigYamlDialog";
 
 export const AgentConfig: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -18,7 +31,6 @@ export const AgentConfig: React.FC = () => {
   const agentId = id ? Number(id) : null;
   const agentData = agents.find((a) => a.id === agentId);
   const [config, setConfig] = useState<AgentConfigFile | null>(null);
-  const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -31,35 +43,10 @@ export const AgentConfig: React.FC = () => {
   >([]);
   const [actions, setActions] = useState<HateoasAction[] | undefined>();
   const [configRevision, setConfigRevision] = useState(0);
-  const [importDialogOpened, setImportDialogOpened] = useState(false);
-
-  // Block in-app navigation while editing
-  const blocker = useBlocker(isEditing);
-
-  useEffect(() => {
-    if (blocker.state === "blocked") {
-      if (window.confirm("You have unsaved changes. Leave this page?")) {
-        blocker.proceed();
-      } else {
-        blocker.reset();
-      }
-    }
-  }, [blocker]);
-
-  // Block browser refresh/close while editing
-  const handleBeforeUnload = useCallback(
-    (e: BeforeUnloadEvent) => {
-      if (isEditing) {
-        e.preventDefault();
-      }
-    },
-    [isEditing],
-  );
-
-  useEffect(() => {
-    window.addEventListener("beforeunload", handleBeforeUnload);
-    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-  }, [handleBeforeUnload]);
+  const [configDialogMode, setConfigDialogMode] = useState<
+    "import" | "export" | null
+  >(null);
+  const [settingLead, setSettingLead] = useState(false);
 
   useEffect(() => {
     api
@@ -96,18 +83,6 @@ export const AgentConfig: React.FC = () => {
     void fetchConfig();
   }, [fetchConfig]);
 
-  const handleEdit = () => {
-    if (config) {
-      setIsEditing(true);
-      setSaveError(null);
-    }
-  };
-
-  const handleCancel = () => {
-    setIsEditing(false);
-    setSaveError(null);
-  };
-
   const handleSave = async (updatedConfig: AgentConfigFile) => {
     if (!agentId) return;
 
@@ -119,7 +94,7 @@ export const AgentConfig: React.FC = () => {
 
       if (data.success) {
         setConfig(updatedConfig);
-        setIsEditing(false);
+        setConfigRevision((r) => r + 1);
       } else {
         setSaveError(data.message || "Failed to save configuration");
       }
@@ -130,6 +105,44 @@ export const AgentConfig: React.FC = () => {
       setSaving(false);
     }
   };
+
+  const handleSetLead = async (value: string | null) => {
+    if (!agentId) return;
+    setSettingLead(true);
+    try {
+      const leadAgentId = value ? Number(value) : null;
+      const result = await setAgentLead(agentId, leadAgentId);
+      if (result.success) {
+        notifications.show({
+          title: "Lead Agent Updated",
+          message: result.message,
+          color: "green",
+        });
+      } else {
+        notifications.show({
+          title: "Update Failed",
+          message: result.message,
+          color: "red",
+        });
+      }
+    } catch (err) {
+      notifications.show({
+        title: "Update Failed",
+        message: err instanceof Error ? err.message : "Unknown error",
+        color: "red",
+      });
+    } finally {
+      setSettingLead(false);
+    }
+  };
+
+  const leadAgentOptions = agents
+    .filter((a) => a.id !== agentId && !a.archived)
+    .map((a) => ({ value: String(a.id), label: a.name }));
+
+  const currentLeadValue = agents.find(
+    (a) => a.name === agentData?.leadUsername,
+  )?.id;
 
   if (!agentId) {
     return <Text size="xl">Agent Config</Text>;
@@ -158,25 +171,39 @@ export const AgentConfig: React.FC = () => {
   return (
     <Stack p="md">
       <Group>
-        {!isEditing && hasAction(actions, "update") && (
+        {hasAction(actions, "export-config") && (
           <Button
-            color="blue"
-            leftSection={<IconEdit size={16} />}
-            onClick={handleEdit}
+            variant="outline"
+            leftSection={<IconFileExport size={16} />}
+            onClick={() => setConfigDialogMode("export")}
           >
-            Edit Config
+            Export
           </Button>
         )}
-        {!isEditing && hasAction(actions, "import-config") && (
+        {hasAction(actions, "import-config") && (
           <Button
             variant="outline"
             leftSection={<IconFileImport size={16} />}
-            onClick={() => setImportDialogOpened(true)}
+            onClick={() => setConfigDialogMode("import")}
           >
-            Import Config
+            Import
           </Button>
         )}
       </Group>
+
+      {hasAction(actions, "update") && (
+        <Select
+          label="Lead Agent"
+          placeholder="None (top-level agent)"
+          data={leadAgentOptions}
+          value={currentLeadValue ? String(currentLeadValue) : null}
+          onChange={handleSetLead}
+          clearable
+          searchable
+          disabled={settingLead}
+          maw={300}
+        />
+      )}
 
       {saveError && (
         <Alert
@@ -191,22 +218,21 @@ export const AgentConfig: React.FC = () => {
 
       {config && (
         <AgentConfigForm
-          key={isEditing ? "edit" : `view-${configRevision}`}
+          key={configRevision}
           config={config}
           llmModelOptions={llmModelOptions}
           imageModelOptions={imageModelOptions}
-          readOnly={!isEditing}
           saving={saving}
           onSave={handleSave}
-          onCancel={handleCancel}
         />
       )}
 
-      {agentId && (
-        <ImportConfigDialog
+      {agentId && configDialogMode && (
+        <ConfigYamlDialog
           agentId={agentId}
-          opened={importDialogOpened}
-          onClose={() => setImportDialogOpened(false)}
+          mode={configDialogMode}
+          opened={true}
+          onClose={() => setConfigDialogMode(null)}
           onSuccess={fetchConfig}
         />
       )}

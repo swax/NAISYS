@@ -4,6 +4,7 @@ import { IconServer } from "@tabler/icons-react";
 import React from "react";
 import { Outlet, useLocation } from "react-router-dom";
 
+import { CollapsibleSidebar } from "../../components/CollapsibleSidebar";
 import { SIDEBAR_WIDTH } from "../../constants";
 import { HostSidebar } from "../../headers/HostSidebar";
 
@@ -23,17 +24,14 @@ export const HostsLayout: React.FC = () => {
       style={{ flex: 1, minHeight: 0 }}
     >
       {/* Desktop sidebar */}
-      <Box
-        visibleFrom="sm"
-        style={{
-          width: SIDEBAR_WIDTH,
-          flexShrink: 0,
+      <CollapsibleSidebar
+        contentStyle={{
           overflowY: "auto",
           paddingRight: "var(--mantine-spacing-md)",
         }}
       >
         <HostSidebar />
-      </Box>
+      </CollapsibleSidebar>
 
       {/* Main content */}
       <div
@@ -45,7 +43,14 @@ export const HostsLayout: React.FC = () => {
         }}
       >
         {/* Sub-header: mobile server icon */}
-        <Group mb="md" gap="xs">
+        <Group
+          gap="xs"
+          pl={{ base: "md", sm: 0 }}
+          style={{
+            borderBottom:
+              "calc(0.125rem * var(--mantine-scale)) solid var(--mantine-color-dark-4)",
+          }}
+        >
           <ActionIcon
             variant="subtle"
             color="gray"
@@ -57,7 +62,7 @@ export const HostsLayout: React.FC = () => {
         </Group>
 
         {/* Route content */}
-        <div style={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
+        <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "var(--mantine-spacing-md)" }}>
           <Outlet />
         </div>
       </div>

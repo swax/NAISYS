@@ -17,7 +17,8 @@ import {
   CommandProtection,
 } from "@naisys/common";
 import { IconCheck, IconX } from "@tabler/icons-react";
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useBlocker } from "react-router-dom";
 
 import { zodResolver } from "../../lib/zod-resolver";
 
@@ -30,10 +31,8 @@ interface AgentConfigFormProps {
   config: AgentConfigFile;
   llmModelOptions: ModelOption[];
   imageModelOptions: ModelOption[];
-  readOnly?: boolean;
   saving?: boolean;
   onSave?: (config: AgentConfigFile) => void;
-  onCancel?: () => void;
 }
 
 /** Convert form values to AgentConfigFile, omitting empty optionals. */
@@ -149,10 +148,8 @@ export const AgentConfigForm: React.FC<AgentConfigFormProps> = ({
   config,
   llmModelOptions,
   imageModelOptions,
-  readOnly,
   saving,
   onSave,
-  onCancel,
 }) => {
   const form = useForm<FormValues>({
     initialValues: {
@@ -179,6 +176,36 @@ export const AgentConfigForm: React.FC<AgentConfigFormProps> = ({
       zodResolver(AgentConfigFileSchema)(transformFormValues(values)),
   });
 
+  const isDirty = form.isDirty();
+
+  // Block in-app navigation while form has unsaved changes
+  const blocker = useBlocker(isDirty);
+
+  useEffect(() => {
+    if (blocker.state === "blocked") {
+      if (window.confirm("You have unsaved changes. Leave this page?")) {
+        blocker.proceed();
+      } else {
+        blocker.reset();
+      }
+    }
+  }, [blocker]);
+
+  // Block browser refresh/close while form has unsaved changes
+  const handleBeforeUnload = useCallback(
+    (e: BeforeUnloadEvent) => {
+      if (isDirty) {
+        e.preventDefault();
+      }
+    },
+    [isDirty],
+  );
+
+  useEffect(() => {
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [handleBeforeUnload]);
+
   const handleSubmit = (values: FormValues) => {
     const transformed = transformFormValues(values);
     const parsed = AgentConfigFileSchema.parse(transformed);
@@ -196,13 +223,11 @@ export const AgentConfigForm: React.FC<AgentConfigFormProps> = ({
           label="Username"
           description={desc("username")}
           withAsterisk
-          disabled={readOnly}
           {...form.getInputProps("username")}
         />
         <TextInput
           label="Title"
           description={desc("title")}
-          disabled={readOnly}
           {...form.getInputProps("title")}
         />
 
@@ -214,7 +239,6 @@ export const AgentConfigForm: React.FC<AgentConfigFormProps> = ({
           label="Agent Prompt"
           description={desc("agentPrompt")}
           withAsterisk
-          disabled={readOnly}
           autosize
           minRows={4}
           styles={{
@@ -231,14 +255,12 @@ export const AgentConfigForm: React.FC<AgentConfigFormProps> = ({
           label="Shell Model"
           description={desc("shellModel")}
           withAsterisk
-          disabled={readOnly}
           data={llmModelOptions}
           {...form.getInputProps("shellModel")}
         />
         <ModelSelect
           label="Image Model"
           description={desc("imageModel")}
-          disabled={readOnly}
           clearable
           data={imageModelOptions}
           {...form.getInputProps("imageModel")}
@@ -252,14 +274,12 @@ export const AgentConfigForm: React.FC<AgentConfigFormProps> = ({
           label="Token Max"
           description={desc("tokenMax")}
           withAsterisk
-          disabled={readOnly}
           min={1}
           {...form.getInputProps("tokenMax")}
         />
         <NumberInput
           label="Spend Limit ($)"
           description={desc("spendLimitDollars")}
-          disabled={readOnly}
           min={0}
           decimalScale={2}
           {...form.getInputProps("spendLimitDollars")}
@@ -267,7 +287,6 @@ export const AgentConfigForm: React.FC<AgentConfigFormProps> = ({
         <NumberInput
           label="Spend Limit Hours"
           description={desc("spendLimitHours")}
-          disabled={readOnly}
           min={0}
           {...form.getInputProps("spendLimitHours")}
         />
@@ -279,25 +298,21 @@ export const AgentConfigForm: React.FC<AgentConfigFormProps> = ({
         <Switch
           label="Mail Enabled"
           description={desc("mailEnabled")}
-          disabled={readOnly}
           {...form.getInputProps("mailEnabled", { type: "checkbox" })}
         />
         <Switch
           label="Chat Enabled"
           description={desc("chatEnabled")}
-          disabled={readOnly}
           {...form.getInputProps("chatEnabled", { type: "checkbox" })}
         />
         <Switch
           label="Web Enabled"
           description={desc("webEnabled")}
-          disabled={readOnly}
           {...form.getInputProps("webEnabled", { type: "checkbox" })}
         />
         <Switch
           label="Complete Session Enabled"
           description={desc("completeSessionEnabled")}
-          disabled={readOnly}
           {...form.getInputProps("completeSessionEnabled", {
             type: "checkbox",
           })}
@@ -305,19 +320,16 @@ export const AgentConfigForm: React.FC<AgentConfigFormProps> = ({
         <Switch
           label="Wake On Message"
           description={desc("wakeOnMessage")}
-          disabled={readOnly}
           {...form.getInputProps("wakeOnMessage", { type: "checkbox" })}
         />
         <Switch
           label="Workspaces Enabled"
           description={desc("workspacesEnabled")}
-          disabled={readOnly}
           {...form.getInputProps("workspacesEnabled", { type: "checkbox" })}
         />
         <Switch
           label="Multiple Commands Enabled"
           description={desc("multipleCommandsEnabled")}
-          disabled={readOnly}
           {...form.getInputProps("multipleCommandsEnabled", {
             type: "checkbox",
           })}
@@ -330,7 +342,6 @@ export const AgentConfigForm: React.FC<AgentConfigFormProps> = ({
         <Select
           label="Command Protection"
           description={desc("commandProtection")}
-          disabled={readOnly}
           data={[
             { value: CommandProtection.None, label: "None" },
             { value: CommandProtection.Manual, label: "Manual" },
@@ -341,14 +352,12 @@ export const AgentConfigForm: React.FC<AgentConfigFormProps> = ({
         <NumberInput
           label="Debug Pause Seconds"
           description={desc("debugPauseSeconds")}
-          disabled={readOnly}
           min={0}
           {...form.getInputProps("debugPauseSeconds")}
         />
         <Textarea
           label="Initial Commands"
           description={desc("initialCommands")}
-          disabled={readOnly}
           autosize
           minRows={2}
           styles={{
@@ -358,8 +367,8 @@ export const AgentConfigForm: React.FC<AgentConfigFormProps> = ({
         />
       </Stack>
 
-      {/* Sticky Save / Cancel */}
-      {!readOnly && (
+      {/* Sticky Save / Discard */}
+      {isDirty && (
         <Group
           style={{
             position: "sticky",
@@ -382,7 +391,7 @@ export const AgentConfigForm: React.FC<AgentConfigFormProps> = ({
           <Button
             color="gray"
             leftSection={<IconX size={16} />}
-            onClick={onCancel}
+            onClick={() => form.reset()}
             disabled={saving}
           >
             Discard

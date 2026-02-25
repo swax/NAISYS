@@ -5,6 +5,8 @@ import {
   AgentIdParamsSchema,
   ErrorResponse,
   ErrorResponseSchema,
+  ExportAgentConfigResponse,
+  ExportAgentConfigResponseSchema,
   GetAgentConfigResponse,
   GetAgentConfigResponseSchema,
   ImportAgentConfigRequest,
@@ -111,6 +113,12 @@ export default function agentConfigRoutes(
                   method: "POST" as const,
                   title: "Import Config",
                 },
+                {
+                  rel: "export-config",
+                  href: `${API_PREFIX}/agents/${id}/config/export`,
+                  method: "GET" as const,
+                  title: "Export Config",
+                },
               ]
             : undefined,
         };
@@ -192,6 +200,55 @@ export default function agentConfigRoutes(
         return reply.status(500).send({
           success: false,
           message: "Internal server error while updating agent configuration",
+        });
+      }
+    },
+  );
+
+  // GET /:id/config/export — Export agent config as YAML
+  fastify.get<{
+    Params: AgentIdParams;
+    Reply: ExportAgentConfigResponse | ErrorResponse;
+  }>(
+    "/:id/config/export",
+    {
+      schema: {
+        description: "Export agent configuration as YAML",
+        tags: ["Agents"],
+        params: AgentIdParamsSchema,
+        response: {
+          200: ExportAgentConfigResponseSchema,
+          404: ErrorResponseSchema,
+          500: ErrorResponseSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      try {
+        const { id } = request.params;
+        const config = await getAgentConfigById(id);
+        const yamlString = yaml.dump(config, { lineWidth: -1 });
+
+        return { yaml: yamlString };
+      } catch (error) {
+        request.log.error(
+          error,
+          "Error in GET /agents/:id/config/export route",
+        );
+        const errorMessage =
+          error instanceof Error ? error.message : "Unknown error";
+
+        if (errorMessage.includes("not found")) {
+          return reply.status(404).send({
+            success: false,
+            message: errorMessage,
+          });
+        }
+
+        return reply.status(500).send({
+          success: false,
+          message:
+            "Internal server error while exporting agent configuration",
         });
       }
     },

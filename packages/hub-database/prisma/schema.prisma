@@ -55,7 +55,7 @@ model mail_messages {
   from_user_id    Int?
   host_id         Int? // Sender's host
   kind            String             @default("mail")
-  participant_ids String? // Sorted comma-joined user IDs of all participants (sender + recipients)
+  participant_ids String? // Used as a lookup key to quickly find all messages in a conversation
   subject         String
   body            String
   created_at      DateTime           @default(now())
