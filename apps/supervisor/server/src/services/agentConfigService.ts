@@ -143,7 +143,18 @@ function canonicalConfigOrder(
 export async function updateAgentConfigById(
   id: number,
   config: AgentConfigFile,
+  setUsername: boolean,
 ): Promise<void> {
+  if (setUsername) {
+    // Normal edit: push config.username to the DB column
+  } else {
+    // Import: preserve the DB username, override it in the config
+    const user = await hubDb.users.findUnique({ where: { id } });
+    if (user) {
+      config = { ...config, username: user.username };
+    }
+  }
+
   const ordered = canonicalConfigOrder(config);
   const jsonStr = JSON.stringify(ordered);
 
@@ -151,6 +162,7 @@ export async function updateAgentConfigById(
     where: { id },
     data: {
       config: jsonStr,
+      ...(setUsername && { username: config.username }),
       title: config.title,
     },
   });
