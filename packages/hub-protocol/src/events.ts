@@ -99,6 +99,8 @@ export const HubEvents = {
   VARIABLES_CHANGED: "variables_changed",
   /** Models changed — hub re-reads models and broadcasts MODELS_UPDATED */
   MODELS_CHANGED: "models_changed",
+  /** Hosts changed — hub refreshes host cache and broadcasts HOSTS_UPDATED */
+  HOSTS_CHANGED: "hosts_changed",
 } as const;
 
 export type HubEventName = (typeof HubEvents)[keyof typeof HubEvents];

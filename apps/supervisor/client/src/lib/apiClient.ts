@@ -39,6 +39,7 @@ import type {
   StatusResponse,
   UpdateAgentConfigResponse,
   VariablesResponse,
+  HostDetailResponse,
 } from "@naisys-supervisor/shared";
 
 export const API_BASE = "/api/supervisor";
@@ -63,6 +64,7 @@ export type {
   DeleteVariableResponse,
   ExportAgentConfigResponse,
   GetAgentConfigResponse,
+  HostDetailResponse,
   HostListResponse,
   ImageModelDetail,
   ImportAgentConfigResponse,
@@ -164,6 +166,12 @@ export const apiEndpoints = {
   agentUnarchive: (id: number) => `/agents/${id}/unarchive`,
   agentLead: (id: number) => `/agents/${id}/lead`,
   agentDelete: (id: number) => `/agents/${id}`,
+  hostDetail: (id: number) => `/hosts/${id}`,
+  hostUpdate: (id: number) => `/hosts/${id}`,
+  hostCreate: "/hosts",
+  hostAssignAgent: (id: number) => `/hosts/${id}/agents`,
+  hostUnassignAgent: (id: number, agentId: number) =>
+    `/hosts/${id}/agents/${agentId}`,
   hostDelete: (id: number) => `/hosts/${id}`,
   models: "/models",
   saveLlmModel: "/models/llm",

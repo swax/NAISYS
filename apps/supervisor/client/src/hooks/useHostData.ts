@@ -1,3 +1,4 @@
+import type { HateoasAction } from "@naisys/common";
 import { AgentStatusEvent, Host as BaseHost } from "@naisys-supervisor/shared";
 import { useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useState } from "react";
@@ -8,6 +9,7 @@ import { useAgentStatusStream } from "./useAgentStatusStream";
 
 // Module-level cache (shared across all hook instances and persists across remounts)
 let hostCache: Host[] = [];
+let listActionsCache: HateoasAction[] | undefined;
 
 export const useHostData = () => {
   // Version counter to trigger re-renders when cache updates
@@ -39,6 +41,7 @@ export const useHostData = () => {
       );
 
       hostCache = sortedHosts;
+      listActionsCache = query.data._actions;
 
       // Trigger re-render
       setCacheVersion((v) => v + 1);
@@ -68,10 +71,9 @@ export const useHostData = () => {
 
   useAgentStatusStream(handleSSEUpdate, hostCache.length > 0);
 
-  const hosts = hostCache;
-
   return {
-    hosts,
+    hosts: hostCache,
+    listActions: listActionsCache,
     isLoading: query.isLoading,
     error: query.error,
   };

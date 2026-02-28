@@ -4,15 +4,18 @@ export async function createHostRegistrar({
   usingHubDatabase,
 }: HubDatabaseService) {
   /** Cache of all known hosts keyed by id */
-  const hostsById = new Map<number, string>();
+  const hostsById = new Map<
+    number,
+    { hostName: string; restricted: boolean }
+  >();
 
   // Seed the cache from the database
   await usingHubDatabase(async (hubDb) => {
     const rows = await hubDb.hosts.findMany({
-      select: { id: true, name: true },
+      select: { id: true, name: true, restricted: true },
     });
     for (const row of rows) {
-      hostsById.set(row.id, row.name);
+      hostsById.set(row.id, { hostName: row.name, restricted: row.restricted });
     }
   });
 
@@ -32,6 +35,10 @@ export async function createHostRegistrar({
           where: { id: existing.id },
           data: { last_active: new Date().toISOString() },
         });
+        hostsById.set(existing.id, {
+          hostName,
+          restricted: existing.restricted,
+        });
         return existing.id;
       }
 
@@ -42,23 +49,42 @@ export async function createHostRegistrar({
         },
       });
 
-      hostsById.set(created.id, hostName);
+      hostsById.set(created.id, { hostName, restricted: false });
 
       return created.id;
     });
   }
 
   /** Returns all known hosts (from DB + any newly registered) */
-  function getAllHosts(): { hostId: number; hostName: string }[] {
-    return Array.from(hostsById, ([hostId, hostName]) => ({
+  function getAllHosts(): {
+    hostId: number;
+    hostName: string;
+    restricted: boolean;
+  }[] {
+    return Array.from(hostsById, ([hostId, entry]) => ({
       hostId,
-      hostName,
+      hostName: entry.hostName,
+      restricted: entry.restricted,
     }));
+  }
+
+  /** Re-read all hosts from DB and replace the in-memory cache */
+  async function refreshHosts(): Promise<void> {
+    await usingHubDatabase(async (hubDb) => {
+      const rows = await hubDb.hosts.findMany({
+        select: { id: true, name: true, restricted: true },
+      });
+      hostsById.clear();
+      for (const row of rows) {
+        hostsById.set(row.id, { hostName: row.name, restricted: row.restricted });
+      }
+    });
   }
 
   return {
     registerHost,
     getAllHosts,
+    refreshHosts,
   };
 }
 

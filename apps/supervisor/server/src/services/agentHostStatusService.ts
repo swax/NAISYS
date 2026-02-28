@@ -1,6 +1,7 @@
 import { EventEmitter } from "node:events";
 
 import type { AgentStatusEvent } from "@naisys-supervisor/shared";
+import { determineAgentStatus } from "@naisys/common";
 
 const activeAgentIds = new Set<number>();
 const connectedHostIds = new Set<number>();
@@ -9,6 +10,7 @@ const agentNotifications = new Map<
   { latestLogId: number; latestMailId: number }
 >();
 const hostOnlineStatus = new Map<number, boolean>();
+const hostRestrictedStatus = new Map<number, boolean>();
 const agentHostAssignments = new Map<number, number[]>();
 
 const statusEmitter = new EventEmitter();
@@ -38,12 +40,14 @@ export function updateAgentsStatus(
 }
 
 export function updateHostsStatus(
-  hosts: { hostId: number; online: boolean }[],
+  hosts: { hostId: number; online: boolean; restricted: boolean }[],
 ): void {
   hostOnlineStatus.clear();
+  hostRestrictedStatus.clear();
   connectedHostIds.clear();
   for (const host of hosts) {
     hostOnlineStatus.set(host.hostId, host.online);
+    hostRestrictedStatus.set(host.hostId, host.restricted);
     if (host.online) {
       connectedHostIds.add(host.hostId);
     }
@@ -85,18 +89,22 @@ export function isAgentActive(userId: number): boolean {
   return activeAgentIds.has(userId);
 }
 
+function hasNonRestrictedOnlineHost(): boolean {
+  for (const [hostId, online] of hostOnlineStatus) {
+    if (online && !hostRestrictedStatus.get(hostId)) return true;
+  }
+  return false;
+}
+
 export function getAgentStatus(
   agentId: number,
 ): "active" | "available" | "offline" {
-  if (activeAgentIds.has(agentId)) return "active";
-
-  const assignedHostIds = agentHostAssignments.get(agentId);
-  if (!assignedHostIds || assignedHostIds.length === 0) return "available";
-
-  const anyHostOnline = assignedHostIds.some((hid) =>
-    connectedHostIds.has(hid),
-  );
-  return anyHostOnline ? "available" : "offline";
+  return determineAgentStatus({
+    isActive: activeAgentIds.has(agentId),
+    assignedHostIds: agentHostAssignments.get(agentId),
+    isHostOnline: (hid) => connectedHostIds.has(hid),
+    hasNonRestrictedOnlineHost: hasNonRestrictedOnlineHost(),
+  });
 }
 
 export function isHostConnected(hostId: number): boolean {

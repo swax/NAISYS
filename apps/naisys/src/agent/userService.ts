@@ -1,4 +1,4 @@
-import { UserEntry } from "@naisys/common";
+import { UserEntry, determineAgentStatus } from "@naisys/common";
 import { loadAgentConfigs } from "@naisys/common-node";
 import {
   HubEvents,
@@ -171,18 +171,20 @@ export function createUserService(
   }
 
   function getUserStatus(userId: number): "Active" | "Available" | "Offline" {
-    if (isUserActive(userId)) return "Active";
     if (!hubClient) return "Available";
 
     const user = userMap.get(userId);
-    if (!user?.assignedHostIds || user.assignedHostIds.length === 0)
-      return "Available";
+    const status = determineAgentStatus({
+      isActive: isUserActive(userId),
+      assignedHostIds: user?.assignedHostIds,
+      isHostOnline: hostService.isHostActive,
+      hasNonRestrictedOnlineHost: hostService.hasNonRestrictedOnlineHost(),
+    });
 
-    for (const hostId of user.assignedHostIds) {
-      if (hostService.isHostActive(hostId)) return "Available";
-    }
-
-    return "Offline";
+    return (status.charAt(0).toUpperCase() + status.slice(1)) as
+      | "Active"
+      | "Available"
+      | "Offline";
   }
 
   /** Parse a UserListResponse into a userId → UserEntry map */

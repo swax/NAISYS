@@ -1,4 +1,5 @@
 import {
+  Anchor,
   Badge,
   Code,
   Group,
@@ -9,11 +10,17 @@ import {
 } from "@mantine/core";
 import { AgentDetailResponse } from "@naisys-supervisor/shared";
 import React from "react";
+import { Link } from "react-router-dom";
+
+import { Agent, Host } from "../../types/agent";
 
 export const ConfigSummary: React.FC<{
   config: AgentDetailResponse["config"];
   leadUsername?: string;
-}> = ({ config, leadUsername }) => {
+  assignedHosts?: { id: number; name: string }[];
+  hosts?: Host[];
+  agents?: Agent[];
+}> = ({ config, leadUsername, assignedHosts, hosts, agents }) => {
   const features: string[] = [];
   if (config.mailEnabled) features.push("Mail");
   if (config.chatEnabled) features.push("Chat");
@@ -36,17 +43,100 @@ export const ConfigSummary: React.FC<{
           {leadUsername && (
             <Table.Tr>
               <Table.Td c="dimmed">Lead Agent</Table.Td>
-              <Table.Td>{leadUsername}</Table.Td>
+              <Table.Td>
+                {(() => {
+                  const leadAgent = agents?.find(
+                    (a) => a.name === leadUsername,
+                  );
+                  return leadAgent ? (
+                    <Anchor
+                      component={Link}
+                      to={`/agents/${leadAgent.id}`}
+                      size="sm"
+                    >
+                      {leadUsername}
+                    </Anchor>
+                  ) : (
+                    leadUsername
+                  );
+                })()}
+              </Table.Td>
             </Table.Tr>
           )}
           <Table.Tr>
+            <Table.Td c="dimmed">Assigned Hosts</Table.Td>
+            <Table.Td>
+              {assignedHosts && assignedHosts.length > 0 ? (
+                <Group gap="sm">
+                  {assignedHosts.map((h) => {
+                    const hostData = hosts?.find((host) => host.id === h.id);
+                    const isOnline = hostData?.online ?? false;
+                    return (
+                      <Group key={h.id} gap={4} wrap="nowrap">
+                        <div
+                          style={{
+                            width: 8,
+                            height: 8,
+                            borderRadius: "50%",
+                            backgroundColor: isOnline
+                              ? "var(--mantine-color-green-6)"
+                              : "var(--mantine-color-red-6)",
+                            flexShrink: 0,
+                          }}
+                        />
+                        <Anchor
+                          component={Link}
+                          to={`/hosts/${h.id}`}
+                          size="sm"
+                        >
+                          {h.name}
+                        </Anchor>
+                      </Group>
+                    );
+                  })}
+                </Group>
+              ) : (
+                <Group gap={4} wrap="nowrap">
+                  <div
+                    style={{
+                      width: 8,
+                      height: 8,
+                      borderRadius: "50%",
+                      backgroundColor: hosts?.some((h) => h.online)
+                        ? "var(--mantine-color-green-6)"
+                        : "var(--mantine-color-red-6)",
+                      flexShrink: 0,
+                    }}
+                  />
+                  <Text size="sm">Any host</Text>
+                </Group>
+              )}
+            </Table.Td>
+          </Table.Tr>
+          <Table.Tr>
             <Table.Td c="dimmed">Shell Model</Table.Td>
-            <Table.Td>{config.shellModel}</Table.Td>
+            <Table.Td>
+              <Anchor
+                component={Link}
+                to={`/models/${encodeURIComponent(config.shellModel)}`}
+                size="sm"
+              >
+                {config.shellModel}
+              </Anchor>
+            </Table.Td>
           </Table.Tr>
           {config.imageModel && (
             <Table.Tr>
               <Table.Td c="dimmed">Image Model</Table.Td>
-              <Table.Td>{config.imageModel}</Table.Td>
+              <Table.Td>
+                <Anchor
+                  component={Link}
+                  to={`/models/${encodeURIComponent(config.imageModel)}`}
+                  size="sm"
+                >
+                  {config.imageModel}
+                </Anchor>
+              </Table.Td>
             </Table.Tr>
           )}
           <Table.Tr>

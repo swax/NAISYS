@@ -7,6 +7,7 @@ import { HubClient } from "../hub/hubClient.js";
 
 interface HostEntry {
   hostName: string;
+  restricted: boolean;
   online: boolean;
 }
 
@@ -26,6 +27,7 @@ export function createHostService(
       for (const host of parsed.hosts) {
         hostMap.set(host.hostId, {
           hostName: host.hostName,
+          restricted: host.restricted,
           online: host.online,
         });
       }
@@ -49,6 +51,13 @@ export function createHostService(
 
   function isHostActive(hostId: number): boolean {
     return hostMap.get(hostId)?.online ?? false;
+  }
+
+  function hasNonRestrictedOnlineHost(): boolean {
+    for (const entry of hostMap.values()) {
+      if (entry.online && !entry.restricted) return true;
+    }
+    return false;
   }
 
   function handleCommand(): string {
@@ -76,6 +85,7 @@ export function createHostService(
     getHostName,
     getLocalHostId,
     isHostActive,
+    hasNonRestrictedOnlineHost,
   };
 }
 

@@ -9,6 +9,7 @@ import {
   HubEvents,
 } from "@naisys/hub-protocol";
 
+import { HostRegistrar } from "../services/hostRegistrar.js";
 import { HubServerLog } from "../services/hubServerLog.js";
 import { NaisysServer } from "../services/naisysServer.js";
 import { HubHeartbeatService } from "./hubHeartbeatService.js";
@@ -21,6 +22,7 @@ export function createHubAgentService(
   logService: HubServerLog,
   heartbeatService: HubHeartbeatService,
   mailService: HubMailService,
+  hostRegistrar: HostRegistrar,
 ) {
   naisysServer.registerEvent(
     HubEvents.AGENT_START,
@@ -46,14 +48,21 @@ export function createHubAgentService(
 
         const requesterUserId = parsed.requesterUserId;
 
-        // Determine eligible hosts: assigned hosts, or all connected if unassigned
+        // Determine eligible hosts: assigned hosts, or all connected (non-restricted) if unassigned
         let eligibleHostIds: number[];
         if (assignedHostIds.length > 0) {
           eligibleHostIds = assignedHostIds;
         } else {
+          const restrictedHostIds = new Set(
+            hostRegistrar
+              .getAllHosts()
+              .filter((h) => h.restricted)
+              .map((h) => h.hostId),
+          );
           eligibleHostIds = naisysServer
             .getConnectedClients()
-            .map((c) => c.getHostId());
+            .map((c) => c.getHostId())
+            .filter((hid) => !restrictedHostIds.has(hid));
         }
 
         // Filter to connected hosts that can run agents
