@@ -1,4 +1,5 @@
 import {
+  Badge,
   Button,
   Group,
   Loader,
@@ -21,6 +22,8 @@ import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { useAgentDataContext } from "../../contexts/AgentDataContext";
+import { useHostDataContext } from "../../contexts/HostDataContext";
+import { useConnectionStatus } from "../../hooks/useConnectionStatus";
 import {
   archiveAgent,
   deleteAgentPermanently,
@@ -35,12 +38,17 @@ export const AgentDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { agents } = useAgentDataContext();
+  const { hosts } = useHostDataContext();
+  const { status: connectionStatus } = useConnectionStatus();
 
   const agentId = id ? Number(id) : null;
   const agentData = agents.find((a) => a.id === agentId);
   const [config, setConfig] = useState<AgentDetailResponse["config"] | null>(
     null,
   );
+  const [assignedHosts, setAssignedHosts] = useState<
+    { id: number; name: string }[] | undefined
+  >();
   const [actions, setActions] = useState<HateoasAction[] | undefined>();
   const [loading, setLoading] = useState(true);
   const [taskInput, setTaskInput] = useState("");
@@ -54,6 +62,7 @@ export const AgentDetail: React.FC = () => {
     try {
       const data = await getAgentDetail(agentId);
       setConfig(data.config);
+      setAssignedHosts(data.assignedHosts);
       setActions(data._actions);
     } catch (err) {
       console.error("Error fetching agent detail:", err);
@@ -346,10 +355,36 @@ export const AgentDetail: React.FC = () => {
         )}
       </Group>
 
+      {agentData && connectionStatus === "connected" && (
+        <Group gap="xs" align="center">
+          <Badge
+            size="sm"
+            variant="light"
+            color={
+              agentData.status === "active"
+                ? "green"
+                : agentData.status === "available"
+                  ? "yellow"
+                  : "gray"
+            }
+          >
+            {agentData.status}
+          </Badge>
+          {agentData.status === "active" && agentData.host && (
+            <Text size="sm" c="dimmed">
+              Running on {agentData.host}
+            </Text>
+          )}
+        </Group>
+      )}
+
       {config && (
         <ConfigSummary
           config={config}
           leadUsername={agentData?.leadUsername}
+          assignedHosts={assignedHosts}
+          hosts={hosts}
+          agents={agents}
         />
       )}
     </Stack>

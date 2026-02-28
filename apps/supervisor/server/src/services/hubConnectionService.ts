@@ -200,6 +200,17 @@ export function sendVariablesChanged(): void {
   socket.emit(HubEvents.VARIABLES_CHANGED);
 }
 
+export function sendHostsChanged(): void {
+  if (!socket || !connected) {
+    console.warn(
+      "[Supervisor:HubClient] Not connected to hub, cannot send hosts changed",
+    );
+    return;
+  }
+
+  socket.emit(HubEvents.HOSTS_CHANGED);
+}
+
 export function sendAgentStop(
   userId: number,
   reason: string,

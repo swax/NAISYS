@@ -12,7 +12,7 @@ export function createHubHostService(
 ) {
   let cachedHostListJson = "";
 
-  naisysServer.registerEvent(HubEvents.CLIENT_CONNECTED, (hostId: number) => {
+  function broadcastHostList(excludeHostId?: number) {
     const connectedHostIds = new Set(
       naisysServer.getConnectedClients().map((c) => c.getHostId()),
     );
@@ -25,12 +25,14 @@ export function createHubHostService(
     const payload: HostList = { hosts };
     const json = JSON.stringify(payload);
 
-    // Always send to the newly connecting client
-    naisysServer.sendMessage<HostList>(
-      hostId,
-      HubEvents.HOSTS_UPDATED,
-      payload,
-    );
+    // Send to the excluded host (newly connecting) directly
+    if (excludeHostId !== undefined) {
+      naisysServer.sendMessage<HostList>(
+        excludeHostId,
+        HubEvents.HOSTS_UPDATED,
+        payload,
+      );
+    }
 
     // Broadcast to other existing connections only if the list changed
     if (json !== cachedHostListJson) {
@@ -41,7 +43,7 @@ export function createHubHostService(
       );
 
       for (const connection of naisysServer.getConnectedClients()) {
-        if (connection.getHostId() !== hostId) {
+        if (connection.getHostId() !== excludeHostId) {
           naisysServer.sendMessage<HostList>(
             connection.getHostId(),
             HubEvents.HOSTS_UPDATED,
@@ -50,5 +52,16 @@ export function createHubHostService(
         }
       }
     }
+  }
+
+  naisysServer.registerEvent(HubEvents.CLIENT_CONNECTED, (hostId: number) => {
+    broadcastHostList(hostId);
+  });
+
+  naisysServer.registerEvent(HubEvents.HOSTS_CHANGED, async () => {
+    logService.log("[Hub:Hosts] Received HOSTS_CHANGED, refreshing cache...");
+    await hostRegistrar.refreshHosts();
+    cachedHostListJson = ""; // Force broadcast
+    broadcastHostList();
   });
 }

@@ -1,3 +1,4 @@
+import type { HateoasAction } from "@naisys/common";
 import React, { createContext, useContext, useEffect, useState } from "react";
 
 import { useHostData } from "../hooks/useHostData";
@@ -5,6 +6,7 @@ import { Host } from "../types/agent";
 
 interface HostDataContextType {
   hosts: Host[];
+  listActions?: HateoasAction[];
   isLoading: boolean;
   error: Error | null;
 }
@@ -18,7 +20,12 @@ export const HostDataProvider: React.FC<{ children: React.ReactNode }> = ({
 }) => {
   const [hosts, setHosts] = useState<Host[]>([]);
 
-  const { hosts: cachedHosts, isLoading, error } = useHostData();
+  const {
+    hosts: cachedHosts,
+    listActions,
+    isLoading,
+    error,
+  } = useHostData();
 
   useEffect(() => {
     if (cachedHosts) {
@@ -28,6 +35,7 @@ export const HostDataProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const value: HostDataContextType = {
     hosts,
+    listActions,
     isLoading,
     error,
   };

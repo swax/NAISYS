@@ -9,6 +9,7 @@ import type {
   CreateAgentConfigResponse,
   ExportAgentConfigResponse,
   GetAgentConfigResponse,
+  HostDetailResponse,
   HostListResponse,
   ImportAgentConfigResponse,
   UpdateAgentConfigResponse,
@@ -160,4 +161,50 @@ export const deleteAgentPermanently = async (
   id: number,
 ): Promise<AgentActionResult> => {
   return await api.delete<AgentActionResult>(apiEndpoints.agentDelete(id));
+};
+
+// --- Host API functions ---
+
+export const getHostDetail = async (
+  id: number,
+): Promise<HostDetailResponse> => {
+  return await api.get<HostDetailResponse>(apiEndpoints.hostDetail(id));
+};
+
+export const createHostApi = async (
+  name: string,
+): Promise<AgentActionResult> => {
+  return await api.post<{ name: string }, AgentActionResult>(
+    apiEndpoints.hostCreate,
+    { name },
+  );
+};
+
+export const updateHostApi = async (
+  id: number,
+  data: { name?: string; restricted?: boolean },
+): Promise<AgentActionResult> => {
+  return await api.put<
+    { name?: string; restricted?: boolean },
+    AgentActionResult
+  >(apiEndpoints.hostUpdate(id), data);
+};
+
+export const assignAgentToHost = async (
+  hostId: number,
+  agentId: number,
+): Promise<AgentActionResult> => {
+  return await api.post<{ agentId: number }, AgentActionResult>(
+    apiEndpoints.hostAssignAgent(hostId),
+    { agentId },
+  );
+};
+
+export const unassignAgentFromHost = async (
+  hostId: number,
+  agentId: number,
+): Promise<AgentActionResult> => {
+  return await api.delete<AgentActionResult>(
+    apiEndpoints.hostUnassignAgent(hostId, agentId),
+  );
 };

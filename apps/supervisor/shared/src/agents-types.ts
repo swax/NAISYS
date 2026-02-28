@@ -28,6 +28,7 @@ export const HostSchema = z.object({
   name: z.string(),
   lastActive: z.string().nullable(),
   agentCount: z.number(),
+  restricted: z.boolean().optional(),
   online: z.boolean().optional(),
   _links: z.array(LinkSchema).optional(),
   _actions: z.array(HateoasActionSchema).optional(),
@@ -64,6 +65,9 @@ export const AgentDetailResponseSchema = z.object({
   archived: z.boolean().optional(),
   status: z.enum(["active", "available", "offline"]).optional(),
   config: AgentConfigFileSchema,
+  assignedHosts: z
+    .array(z.object({ id: z.number(), name: z.string() }))
+    .optional(),
   _links: z.array(LinkSchema),
   _actions: z.array(HateoasActionSchema).optional(),
 });
@@ -116,3 +120,52 @@ export const AgentStopResultSchema = z.object({
   message: z.string(),
 });
 export type AgentStopResult = z.infer<typeof AgentStopResultSchema>;
+
+// --- Host CRUD schemas ---
+
+const AssignedAgentSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  title: z.string(),
+  _actions: z.array(HateoasActionSchema).optional(),
+});
+
+export const HostDetailResponseSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  lastActive: z.string().nullable(),
+  restricted: z.boolean(),
+  online: z.boolean(),
+  assignedAgents: z.array(AssignedAgentSchema),
+  _links: z.array(LinkSchema),
+  _actions: z.array(HateoasActionSchema).optional(),
+});
+export type HostDetailResponse = z.infer<typeof HostDetailResponseSchema>;
+
+export const UpdateHostRequestSchema = z
+  .object({
+    name: z.string().min(1).max(64).optional(),
+    restricted: z.boolean().optional(),
+  })
+  .strict();
+export type UpdateHostRequest = z.infer<typeof UpdateHostRequestSchema>;
+
+export const CreateHostRequestSchema = z
+  .object({
+    name: z.string().min(1).max(64),
+  })
+  .strict();
+export type CreateHostRequest = z.infer<typeof CreateHostRequestSchema>;
+
+export const AssignAgentToHostRequestSchema = z
+  .object({
+    agentId: z.number().int(),
+  })
+  .strict();
+export type AssignAgentToHostRequest = z.infer<
+  typeof AssignAgentToHostRequestSchema
+>;
+
+export const AgentIdParamSchema = z.object({
+  agentId: z.coerce.number(),
+});

@@ -127,6 +127,7 @@ export const startHub: StartHub = async (
       logService,
       heartbeatService,
       mailService,
+      hostRegistrar,
     );
 
     // Register hub cost service for cost_write events from NAISYS instances

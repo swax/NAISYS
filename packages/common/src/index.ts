@@ -1,4 +1,5 @@
 export * from "./agentConfigFile.js";
+export * from "./agentStatus.js";
 export * from "./authCache.js";
 export * from "./builtInModels.js";
 export * from "./configUtils.js";

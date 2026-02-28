@@ -185,6 +185,7 @@ model schema_version {
 model hosts {
   id                 Int                  @id @default(autoincrement())
   name               String               @unique(map: "unq_hosts_name") // NAISYS_HOSTNAME
+  restricted         Boolean              @default(false)
   last_active        DateTime?
   created_at         DateTime             @default(now())
   user_notifications user_notifications[]

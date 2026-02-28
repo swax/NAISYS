@@ -1,5 +1,5 @@
 import { AgentConfigFile, AgentConfigFileSchema } from "@naisys/common";
-import { Agent, AgentDetailResponse, Host } from "@naisys-supervisor/shared";
+import { Agent, AgentDetailResponse } from "@naisys-supervisor/shared";
 
 import { hubDb } from "../database/hubDb.js";
 import { getLogger } from "../logger.js";
@@ -109,7 +109,12 @@ export async function getAgent(
         archived: true,
         config: true,
         lead_user: { select: { username: true } },
-        user_hosts: { select: { host_id: true } },
+        user_hosts: {
+          select: {
+            host_id: true,
+            host: { select: { id: true, name: true } },
+          },
+        },
         user_notifications: {
           select: {
             latest_log_id: true,
@@ -144,6 +149,10 @@ export async function getAgent(
       latestMailId: user.user_notifications?.latest_mail_id ?? 0,
       archived: user.archived,
       config: parseConfig(user.config)!,
+      assignedHosts: user.user_hosts.map((uh) => ({
+        id: uh.host.id,
+        name: uh.host.name,
+      })),
       _links: [],
     };
   } catch (error) {
@@ -225,45 +234,3 @@ export async function deleteAgent(id: number): Promise<void> {
   });
 }
 
-export async function deleteHost(id: number): Promise<void> {
-  await hubDb.$transaction(async (tx) => {
-    await tx.context_log.deleteMany({ where: { host_id: id } });
-    await tx.costs.deleteMany({ where: { host_id: id } });
-    await tx.run_session.deleteMany({ where: { host_id: id } });
-    await tx.mail_messages.updateMany({
-      where: { host_id: id },
-      data: { host_id: null },
-    });
-    await tx.user_notifications.updateMany({
-      where: { latest_host_id: id },
-      data: { latest_host_id: null },
-    });
-    await tx.user_hosts.deleteMany({ where: { host_id: id } });
-    await tx.hosts.delete({ where: { id } });
-  });
-}
-
-export const getHosts = cachedForSeconds(0.25, async (): Promise<Host[]> => {
-  try {
-    const hosts = await hubDb.hosts.findMany({
-      select: {
-        id: true,
-        name: true,
-        last_active: true,
-        _count: {
-          select: { user_hosts: true },
-        },
-      },
-    });
-
-    return hosts.map((host) => ({
-      id: host.id,
-      name: host.name,
-      lastActive: host.last_active?.toISOString() ?? null,
-      agentCount: host._count.user_hosts,
-    }));
-  } catch (error) {
-    getLogger().error(error, "Error fetching hosts from Naisys database");
-    return [];
-  }
-});
