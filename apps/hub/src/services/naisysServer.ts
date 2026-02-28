@@ -105,7 +105,7 @@ export function createNaisysServer(
     const {
       hubAccessKey: clientAccessKey,
       hostName,
-      canRunAgents,
+      hostType: rawHostType,
     } = socket.handshake.auth;
 
     if (!clientAccessKey || clientAccessKey !== hubAccessKey) {
@@ -121,7 +121,8 @@ export function createNaisysServer(
     }
 
     try {
-      const hostId = await hostRegistrar.registerHost(hostName);
+      const hostType = typeof rawHostType === "string" ? rawHostType : "naisys";
+      const hostId = await hostRegistrar.registerHost(hostName, hostType);
 
       // Reject if this host already has an active connection
       if (naisysConnections.has(hostId)) {
@@ -135,7 +136,7 @@ export function createNaisysServer(
 
       socket.data.hostId = hostId;
       socket.data.hostName = hostName;
-      socket.data.canRunAgents = canRunAgents !== false;
+      socket.data.hostType = hostType;
       next();
     } catch (err) {
       logService.error(
@@ -156,7 +157,7 @@ export function createNaisysServer(
         hostId,
         hostName,
         connectedAt: new Date(),
-        canRunAgents: socket.data.canRunAgents,
+        hostType: socket.data.hostType,
       },
       raiseEvent,
       logService,

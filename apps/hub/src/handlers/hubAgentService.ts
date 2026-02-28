@@ -68,7 +68,7 @@ export function createHubAgentService(
         // Filter to connected hosts that can run agents
         const connectedEligible = eligibleHostIds.filter((hid) => {
           const conn = naisysServer.getConnectionByHostId(hid);
-          return conn && conn.canRunAgents();
+          return conn && conn.getHostType() === "naisys";
         });
 
         if (connectedEligible.length === 0) {

@@ -4,7 +4,7 @@
  * Participants:
  *   NAISYS      – AI agent host instances (Socket.IO clients)
  *   Hub         – Central coordination server (Socket.IO server)
- *   Supervisor  – Web admin backend (Socket.IO client, canRunAgents: false)
+ *   Supervisor  – Web admin backend (Socket.IO client, hostType: "supervisor")
  */
 
 export const HubEvents = {

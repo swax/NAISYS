@@ -11,6 +11,7 @@ export const getHosts = cachedForSeconds(0.25, async (): Promise<Host[]> => {
         id: true,
         name: true,
         restricted: true,
+        host_type: true,
         last_active: true,
         _count: {
           select: { user_hosts: true },
@@ -24,6 +25,7 @@ export const getHosts = cachedForSeconds(0.25, async (): Promise<Host[]> => {
       lastActive: host.last_active?.toISOString() ?? null,
       agentCount: host._count.user_hosts,
       restricted: host.restricted,
+      hostType: host.host_type,
     }));
   } catch (error) {
     getLogger().error(error, "Error fetching hosts from Naisys database");
@@ -41,6 +43,7 @@ export async function getHostDetail(
         id: true,
         name: true,
         restricted: true,
+        host_type: true,
         last_active: true,
         user_hosts: {
           select: {
@@ -59,6 +62,7 @@ export async function getHostDetail(
       name: host.name,
       lastActive: host.last_active?.toISOString() ?? null,
       restricted: host.restricted,
+      hostType: host.host_type,
       online: false, // Caller sets this from agentHostStatusService
       assignedAgents: host.user_hosts.map((uh) => ({
         id: uh.users.id,

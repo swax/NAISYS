@@ -8,6 +8,7 @@ import { HubClient } from "../hub/hubClient.js";
 interface HostEntry {
   hostName: string;
   restricted: boolean;
+  hostType: string;
   online: boolean;
 }
 
@@ -28,6 +29,7 @@ export function createHostService(
         hostMap.set(host.hostId, {
           hostName: host.hostName,
           restricted: host.restricted,
+          hostType: host.hostType,
           online: host.online,
         });
       }
@@ -55,7 +57,7 @@ export function createHostService(
 
   function hasNonRestrictedOnlineHost(): boolean {
     for (const entry of hostMap.values()) {
-      if (entry.online && !entry.restricted) return true;
+      if (entry.online && !entry.restricted && entry.hostType === "naisys") return true;
     }
     return false;
   }
