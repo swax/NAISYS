@@ -272,6 +272,15 @@ export const HostPage: React.FC = () => {
           ) : (
             <Title order={2}>{host?.name ?? `Host ${hostId}`}</Title>
           )}
+          {hostDetail?.hostType && (
+            <Badge
+              size="lg"
+              variant="light"
+              color={hostDetail.hostType === "supervisor" ? "violet" : "blue"}
+            >
+              {hostDetail.hostType}
+            </Badge>
+          )}
           {connectionStatus === "connected" && (
             <Badge
               size="lg"

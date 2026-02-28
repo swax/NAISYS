@@ -69,7 +69,20 @@ export const UserDetail: React.FC = () => {
   }, [fetchUser]);
 
   const handleDelete = async () => {
-    if (!id || !confirm("Delete this user?")) return;
+    if (!id) return;
+    const isAdmin = user?.permissions?.some(
+      (p: any) => p.permission === "supervisor_admin",
+    );
+    if (isAdmin) {
+      if (
+        !confirm(
+          "Warning: This user has supervisor_admin permissions. Deleting them may remove your ability to manage the system. Are you absolutely sure?",
+        )
+      )
+        return;
+    } else if (!confirm("Delete this user?")) {
+      return;
+    }
     try {
       await deleteUser(Number(id));
       void navigate("/users");

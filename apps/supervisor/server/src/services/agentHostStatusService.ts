@@ -11,6 +11,7 @@ const agentNotifications = new Map<
 >();
 const hostOnlineStatus = new Map<number, boolean>();
 const hostRestrictedStatus = new Map<number, boolean>();
+const hostTypeStatus = new Map<number, string>();
 const agentHostAssignments = new Map<number, number[]>();
 
 const statusEmitter = new EventEmitter();
@@ -40,14 +41,16 @@ export function updateAgentsStatus(
 }
 
 export function updateHostsStatus(
-  hosts: { hostId: number; online: boolean; restricted: boolean }[],
+  hosts: { hostId: number; online: boolean; restricted: boolean; hostType: string }[],
 ): void {
   hostOnlineStatus.clear();
   hostRestrictedStatus.clear();
+  hostTypeStatus.clear();
   connectedHostIds.clear();
   for (const host of hosts) {
     hostOnlineStatus.set(host.hostId, host.online);
     hostRestrictedStatus.set(host.hostId, host.restricted);
+    hostTypeStatus.set(host.hostId, host.hostType);
     if (host.online) {
       connectedHostIds.add(host.hostId);
     }
@@ -91,7 +94,7 @@ export function isAgentActive(userId: number): boolean {
 
 function hasNonRestrictedOnlineHost(): boolean {
   for (const [hostId, online] of hostOnlineStatus) {
-    if (online && !hostRestrictedStatus.get(hostId)) return true;
+    if (online && !hostRestrictedStatus.get(hostId) && hostTypeStatus.get(hostId) === "naisys") return true;
   }
   return false;
 }

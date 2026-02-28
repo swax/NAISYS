@@ -7,6 +7,7 @@ export const HostListSchema = z.object({
       hostId: z.number(),
       hostName: z.string(),
       restricted: z.boolean(),
+      hostType: z.string(),
       online: z.boolean(),
     }),
   ),

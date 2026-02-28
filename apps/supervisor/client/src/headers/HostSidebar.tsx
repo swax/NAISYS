@@ -131,6 +131,11 @@ export const HostSidebar: React.FC = () => {
                 </Text>
               </div>
               <Group gap={4} style={{ flexShrink: 0 }} wrap="nowrap">
+                {host.hostType === "supervisor" && (
+                  <Badge size="xs" variant="light" color="violet">
+                    SV
+                  </Badge>
+                )}
                 {host.restricted && (
                   <Badge size="xs" variant="light" color="orange">
                     R

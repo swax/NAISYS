@@ -53,7 +53,7 @@ function connectSocket(hubUrl: string, hubAccessKey: string) {
     auth: {
       hubAccessKey,
       hostName: "SUPERVISOR",
-      canRunAgents: false,
+      hostType: "supervisor",
     },
     rejectUnauthorized: false,
     reconnection: true,

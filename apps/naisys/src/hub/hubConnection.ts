@@ -51,6 +51,7 @@ export function createHubConnection(
       auth: {
         hubAccessKey: hubClientConfig.hubAccessKey,
         hostName: hubClientConfig.hostname,
+        hostType: "naisys",
       },
       rejectUnauthorized: false,
       reconnection: true,
