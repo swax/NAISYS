@@ -10,6 +10,7 @@ export enum NextCommandAction {
   Continue,
   CompactSession,
   ExitApplication,
+  SessionComplete,
 }
 
 export interface NextCommandResponse {
