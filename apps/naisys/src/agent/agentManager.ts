@@ -43,7 +43,10 @@ export class AgentManager {
               this.notifyHubRequest("start", parsed.startUserId);
             }
 
-            await this.startAgent(parsed.startUserId);
+            await this.startAgent(
+              parsed.startUserId,
+              parsed.requesterUserId,
+            );
 
             ack({
               success: true,
@@ -93,7 +96,11 @@ export class AgentManager {
     });
   }
 
-  async startAgent(userId: number, onStop?: (reason: string) => void) {
+  async startAgent(
+    userId: number,
+    requesterUserId?: number,
+    onStop?: (reason: string) => void,
+  ) {
     // Check if agent is already running
     const existing = this.runningAgents.find((a) => a.agentUserId === userId);
     if (existing) {
@@ -103,6 +110,7 @@ export class AgentManager {
     const agent = await createAgentRuntime(
       this,
       userId,
+      requesterUserId,
       this.globalConfig,
       this.hubClient,
       this.hostService,

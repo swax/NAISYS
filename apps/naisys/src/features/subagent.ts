@@ -275,7 +275,7 @@ export function createSubagentService(
     }
     // Non-hub mode: start agent locally
     else {
-      await agentManager.startAgent(subagent.userId, (stopReason) =>
+      await agentManager.startAgent(subagent.userId, localUserId, (stopReason) =>
         handleAgentTermination(subagent, stopReason),
       );
       resultMessage = `Subagent '${agentName}' started`;

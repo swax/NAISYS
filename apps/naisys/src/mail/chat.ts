@@ -377,9 +377,21 @@ export function createChatService(
     handleCommand,
   };
 
+  async function sendToUser(
+    userId: number,
+    message: string,
+  ): Promise<string> {
+    const user = userService.getUserById(userId);
+    if (!user) {
+      throw `User with ID ${userId} not found`;
+    }
+    return sendMessage([user], message);
+  }
+
   return {
     ...registrableCommand,
     checkAndNotify,
+    sendToUser,
     cleanup,
   };
 }

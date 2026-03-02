@@ -123,6 +123,7 @@ export function createMockChatService() {
     command: chatCmd,
     handleCommand: jest.fn(() => ""),
     checkAndNotify: jest.fn(() => Promise.resolve()),
+    sendToUser: jest.fn(() => Promise.resolve("")),
     cleanup: jest.fn(),
   };
 
