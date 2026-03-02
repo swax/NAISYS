@@ -2,6 +2,7 @@
 export interface IAgentManager {
   startAgent: (
     userId: number,
+    requesterUserId?: number,
     onStop?: (reason: string) => void,
   ) => Promise<number>;
   stopAgent: (agentUserId: number, reason: string) => Promise<void>;

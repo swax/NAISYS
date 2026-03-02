@@ -145,7 +145,7 @@ export function createHubAgentService(
       await mailService.sendMail({
         fromUserId: requesterUserId,
         recipientUserIds: [startUserId],
-        subject: "Your Task",
+        subject: "Session Start", // Agent will send a 'Session Completed' mail when session is completed
         body: taskDescription,
         kind: "mail",
       });

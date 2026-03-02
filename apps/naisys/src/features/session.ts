@@ -11,8 +11,10 @@ import { ShellCommand } from "../command/shellCommand.js";
 import { GlobalConfig } from "../globalConfig.js";
 import { ContextManager } from "../llm/contextManager.js";
 import { LLMService } from "../llm/llmService.js";
+import { MailService } from "../mail/mail.js";
 import { OutputService } from "../utils/output.js";
-import { getTokenCount } from "../utils/utilities.js";
+import { getTokenCount, trimChars } from "../utils/utilities.js";
+import { UserService } from "../agent/userService.js";
 
 export function createSessionService(
   { globalConfig }: GlobalConfig,
@@ -22,6 +24,10 @@ export function createSessionService(
   contextManager: ContextManager,
   systemMessage: string,
   llmService: LLMService,
+  mailService: MailService,
+  userService: UserService,
+  localUserId: number,
+  requesterUserId: number | undefined,
 ) {
   let restoreInfo = "";
 
@@ -50,7 +56,7 @@ export function createSessionService(
         return handleRestore();
 
       case "complete":
-        return handleComplete();
+        return handleComplete(args.slice(subcommand.length).trim());
 
       default:
         return `Unknown subcommand: ${subcommand}\n\n${getHelpText()}`;
@@ -161,16 +167,41 @@ export function createSessionService(
     };
   }
 
-  /**
-   * Tried havin a user/message param on this command but even advanced LLMs were getting it confused.
-   * Just tell it to notify whoever it needs to before running the command and keep this one simple.
-   */
-  async function handleComplete(): Promise<string | CommandResponse> {
+  async function handleComplete(
+    resultArg: string,
+  ): Promise<string | CommandResponse> {
     if (!agentConfig().completeSessionEnabled) {
       return 'The "ns-session complete" command is not enabled for you, please use wait command instead.';
     }
 
-    await output.commentAndLog("Session completed. Exiting process.");
+    const result = trimChars(resultArg, '"');
+
+    if (!result) {
+      return 'Please provide a result message, for example: ns-session complete "Task finished successfully"';
+    }
+
+    const localUser = userService.getUserById(localUserId);
+    const recipientId =
+      requesterUserId ??
+      localUser?.leadUserId ??
+      userService.getUserByName("admin")?.userId;
+
+    const recipient = recipientId
+      ? userService.getUserById(recipientId)
+      : undefined;
+
+    if (recipient) {
+      await mailService.sendMessage(
+        [recipient],
+        "Session Completed",
+        result,
+      );
+      await output.commentAndLog(
+        `Session completed. Result sent to ${recipient.username}. Exiting process.`,
+      );
+    } else {
+      await output.commentAndLog("Session completed. Exiting process.");
+    }
 
     return {
       content: "",
