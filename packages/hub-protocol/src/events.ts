@@ -69,6 +69,8 @@ export const HubEvents = {
   AGENT_START: "agent_start",
   /** Stop an agent on its current host */
   AGENT_STOP: "agent_stop",
+  /** Peek at an agent's output buffer */
+  AGENT_PEEK: "agent_peek",
 
   // ---------------------------------------------------------------------------
   // NAISYS/Supervisor -> Hub (request/response) – Mail

@@ -170,8 +170,8 @@ export const subagentCmd: CommandDef = {
       description: "Switch session to a local running agent",
     },
     peek: {
-      usage: "!peek <name>",
-      description: "Show the last 10 lines from a local agent's output",
+      usage: "peek <name> [skip] [take]",
+      description: "Peek at an agent's output buffer",
     },
   },
 };

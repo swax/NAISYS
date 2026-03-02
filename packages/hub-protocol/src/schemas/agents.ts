@@ -31,3 +31,21 @@ export const AgentStopResponseSchema = z.object({
   error: z.string().optional(),
 });
 export type AgentStopResponse = z.infer<typeof AgentStopResponseSchema>;
+
+/** Request to peek at an agent's output buffer */
+export const AgentPeekRequestSchema = z.object({
+  userId: z.number(),
+  skip: z.number().optional(),
+  take: z.number().optional(),
+  sourceHostId: z.number().optional(),
+});
+export type AgentPeekRequest = z.infer<typeof AgentPeekRequestSchema>;
+
+/** Response to agent peek request */
+export const AgentPeekResponseSchema = z.object({
+  success: z.boolean(),
+  error: z.string().optional(),
+  lines: z.array(z.string()).optional(),
+  totalLines: z.number().optional(),
+});
+export type AgentPeekResponse = z.infer<typeof AgentPeekResponseSchema>;
