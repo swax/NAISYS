@@ -355,8 +355,15 @@ export function createSubagentService(
     return `Agent '${agentName}' stop requested`;
   }
 
-  /** Stop all running subagents */
+  /** 
+   * Stop all running subagents (unless exiting via session complete) 
+   * Exit/stop is a cascading shutdown
+   * Session complete is a local, sub-agents can still be working,
+   * Sub-agents completing will fire a mail to the lead which will wake the lead back up to handle things
+   */
   function cleanup(reason: string) {
+    if (reason === "session-complete") return;
+
     const runningAgentIds = getRunningAgentsIds();
     mySubagentsMap.forEach((subagent) => {
       if (runningAgentIds.has(subagent.userId)) {

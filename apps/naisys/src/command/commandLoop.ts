@@ -48,7 +48,7 @@ export function createCommandLoop(
   sessionService: SessionService,
   modelService: ModelService,
 ) {
-  async function run(abortSignal?: AbortSignal) {
+  async function run(abortSignal?: AbortSignal): Promise<string> {
     await output.commentAndLog(`AGENT STARTED`);
 
     // Show Agent Config exept the agent prompt
@@ -70,7 +70,8 @@ export function createCommandLoop(
     let llmErrorCount = 0;
 
     while (
-      nextCommandAction != NextCommandAction.ExitApplication &&
+      nextCommandAction !== NextCommandAction.ExitApplication &&
+      nextCommandAction !== NextCommandAction.SessionComplete &&
       !abortSignal?.aborted
     ) {
       inputMode.setLLM();
@@ -280,8 +281,13 @@ export function createCommandLoop(
 
     if (abortSignal?.aborted) {
       await output.commentAndLog(`AGENT STOPPED (${abortSignal.reason})`);
+      return String(abortSignal.reason);
+    } else if (nextCommandAction === NextCommandAction.SessionComplete) {
+      await output.commentAndLog(`AGENT SESSION COMPLETED`);
+      return "session-complete";
     } else {
       await output.commentAndLog(`AGENT EXITED`);
+      return "exit";
     }
   }
 

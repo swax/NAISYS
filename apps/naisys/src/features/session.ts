@@ -206,7 +206,7 @@ export function createSessionService(
     return {
       content: "",
       nextCommandResponse: {
-        nextCommandAction: NextCommandAction.ExitApplication,
+        nextCommandAction: NextCommandAction.SessionComplete,
         pauseSeconds: 0,
       },
     };
