@@ -1,8 +1,10 @@
 import {
+  AgentPeekResponse,
   AgentStartResponse,
   AgentStopResponse,
   HubEvents,
 } from "@naisys/hub-protocol";
+import stripAnsi from "strip-ansi";
 import stringArgv from "string-argv";
 import table from "text-table";
 
@@ -50,12 +52,12 @@ export function createSubagentService(
         let helpOutput = `${subagentCmd.name} <command>
   ${subs.list.usage}: ${subs.list.description}
   ${subs.start.usage}: ${subs.start.description}
-  ${subs.stop.usage}: ${subs.stop.description}`;
+  ${subs.stop.usage}: ${subs.stop.description}
+  ${subs.peek.usage}: ${subs.peek.description}`;
 
         if (inputMode.isDebug()) {
           helpOutput += `\n  ${subs.local.usage}: ${subs.local.description}`;
           helpOutput += `\n  ${subs.switch.usage}: ${subs.switch.description}`;
-          helpOutput += `\n  ${subs.peek.usage}: ${subs.peek.description}`;
         }
 
         helpOutput += `\n\n* Use ns-mail to communicate with subagents once started`;
@@ -100,14 +102,10 @@ export function createSubagentService(
         return switchAgent(switchName);
       }
       case "peek": {
-        if (!inputMode.isDebug()) {
-          errorText =
-            "The 'subagent peek' command is only available in debug mode.\n";
-          break;
-        }
-
         const peekName = argv[1];
-        return peekAgent(peekName);
+        const skip = argv[2] ? parseInt(argv[2], 10) : undefined;
+        const take = argv[3] ? parseInt(argv[3], 10) : undefined;
+        return await peekAgent(peekName, skip, take);
       }
       case "stop": {
         const stopName = argv[1];
@@ -203,6 +201,19 @@ export function createSubagentService(
     });
   }
 
+  /** Check if targetUserId is a subordinate of localUserId at any depth */
+  function isSubordinate(targetUserId: number): boolean {
+    let current = userService.getUserById(targetUserId);
+    const visited = new Set<number>();
+    while (current?.leadUserId != null) {
+      if (current.leadUserId === localUserId) return true;
+      if (visited.has(current.leadUserId)) return false; // cycle guard
+      visited.add(current.leadUserId);
+      current = userService.getUserById(current.leadUserId);
+    }
+    return false;
+  }
+
   function validateUser(agentName: string) {
     const user = userService.getUserByName(agentName);
     if (!user) {
@@ -222,10 +233,8 @@ export function createSubagentService(
 
     const user = validateUser(agentName);
 
-    const subagent = mySubagentsMap.get(user.userId);
-
-    if (!inputMode.isDebug() && !subagent) {
-      throw "You're not authorized to start this subagent directly";
+    if (!inputMode.isDebug() && !isSubordinate(user.userId)) {
+      throw "You're not authorized to start this agent — not your subordinate";
     }
 
     const runningAgentIds = getRunningAgentsIds();
@@ -324,8 +333,8 @@ export function createSubagentService(
     // Also check if running in agentManager (debug user can stop agents other than local subagents)
     const userId = validateAgentRunning(agentName);
 
-    if (!mySubagentsMap.has(userId) && !inputMode.isDebug()) {
-      throw `You're not authorized to stop agent '${agentName}' directly`;
+    if (!inputMode.isDebug() && !isSubordinate(userId)) {
+      throw `You're not authorized to stop agent '${agentName}' — not your subordinate`;
     }
 
     if (hubClient) {
@@ -365,16 +374,45 @@ export function createSubagentService(
     return "";
   }
 
-  function peekAgent(agentName: string) {
+  async function peekAgent(agentName: string, skip?: number, take?: number) {
     const userId = validateAgentRunning(agentName);
 
-    const lines = agentManager.getBufferLines(userId);
+    if (!inputMode.isDebug() && !isSubordinate(userId)) {
+      throw `You're not authorized to peek at agent '${agentName}' — not your subordinate`;
+    }
+
+    let lines: string[];
+    let totalLines: number;
+
+    if (hubClient) {
+      const response = await hubClient.sendRequest<AgentPeekResponse>(
+        HubEvents.AGENT_PEEK,
+        { userId, skip, take },
+      );
+
+      if (!response.success) {
+        throw `Failed to peek agent via hub: ${response.error}`;
+      }
+
+      lines = response.lines ?? [];
+      totalLines = response.totalLines ?? 0;
+    } else {
+      // Local mode: get buffer lines directly
+      const allLines = agentManager
+        .getBufferLines(userId)
+        .map((line) => stripAnsi(line));
+      totalLines = allLines.length;
+
+      const s = skip ?? 0;
+      const t = take ?? totalLines;
+      lines = allLines.slice(s, s + t);
+    }
 
     if (lines.length === 0) {
       return `No buffered output for '${agentName}'.`;
     }
 
-    return lines.join("\n");
+    return `[${lines.length} of ${totalLines} lines]\n` + lines.join("\n");
   }
 
   function handleAgentTermination(subagent: Subagent, reason: string) {

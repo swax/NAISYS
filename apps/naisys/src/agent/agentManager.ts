@@ -4,8 +4,11 @@ import {
   AgentStartResponse,
   AgentStopRequestSchema,
   AgentStopResponse,
+  AgentPeekRequestSchema,
+  AgentPeekResponse,
   HubEvents,
 } from "@naisys/hub-protocol";
+import stripAnsi from "strip-ansi";
 
 import { GlobalConfig } from "../globalConfig.js";
 import { HubClient } from "../hub/hubClient.js";
@@ -75,6 +78,28 @@ export class AgentManager {
             await this.stopAgent(parsed.userId, parsed.reason);
 
             ack({ success: true });
+          } catch (error) {
+            ack({ success: false, error: String(error) });
+          }
+        },
+      );
+
+      hubClient.registerEvent(
+        HubEvents.AGENT_PEEK,
+        (data: unknown, ack: (response: AgentPeekResponse) => void) => {
+          try {
+            const parsed = AgentPeekRequestSchema.parse(data);
+
+            const allLines = this.getBufferLines(parsed.userId).map((line) =>
+              stripAnsi(line),
+            );
+            const totalLines = allLines.length;
+
+            const skip = parsed.skip ?? 0;
+            const take = parsed.take ?? totalLines;
+            const lines = allLines.slice(skip, skip + take);
+
+            ack({ success: true, lines, totalLines });
           } catch (error) {
             ack({ success: false, error: String(error) });
           }

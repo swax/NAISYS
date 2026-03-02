@@ -6,6 +6,9 @@ import {
   AgentStopRequest,
   AgentStopRequestSchema,
   AgentStopResponse,
+  AgentPeekRequest,
+  AgentPeekRequestSchema,
+  AgentPeekResponse,
   HubEvents,
 } from "@naisys/hub-protocol";
 
@@ -220,6 +223,61 @@ export function createHubAgentService(
       } catch (error) {
         logService.error(
           `[Hub:Agents] agent_stop error from host ${hostId}: ${error}`,
+        );
+        ack({ success: false, error: String(error) });
+      }
+    },
+  );
+
+  naisysServer.registerEvent(
+    HubEvents.AGENT_PEEK,
+    (
+      hostId: number,
+      data: unknown,
+      ack: (response: AgentPeekResponse) => void,
+    ) => {
+      try {
+        const parsed = AgentPeekRequestSchema.parse(data);
+
+        // Find which host the agent is running on
+        const targetHostIds = heartbeatService.findHostsForAgent(parsed.userId);
+
+        if (targetHostIds.length === 0) {
+          ack({
+            success: false,
+            error: `Agent ${parsed.userId} is not running on any known host`,
+          });
+          return;
+        }
+
+        // Forward peek request to the first host (only need one response)
+        const targetHostId = targetHostIds[0];
+        const sent = naisysServer.sendMessage<
+          AgentPeekRequest,
+          AgentPeekResponse
+        >(
+          targetHostId,
+          HubEvents.AGENT_PEEK,
+          {
+            userId: parsed.userId,
+            skip: parsed.skip,
+            take: parsed.take,
+            sourceHostId: hostId,
+          },
+          (response) => {
+            ack(response);
+          },
+        );
+
+        if (!sent) {
+          ack({
+            success: false,
+            error: `Failed to send to host ${targetHostId}`,
+          });
+        }
+      } catch (error) {
+        logService.error(
+          `[Hub:Agents] agent_peek error from host ${hostId}: ${error}`,
         );
         ack({ success: false, error: String(error) });
       }
