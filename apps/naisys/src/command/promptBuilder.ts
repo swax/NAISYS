@@ -53,7 +53,11 @@ export function createPromptBuilder(
       }
     }
 
-    return `${await getUserHostPathPrompt()}${tokenSuffix}${pause}${promptSuffix} `;
+    const now = new Date();
+    const timestamp = now.toLocaleDateString("en-US", { month: "short", day: "2-digit" })
+      + " " + now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false });
+
+    return `[${timestamp}] ${await getUserHostPathPrompt()}${tokenSuffix}${pause}${promptSuffix} `;
   }
 
   async function getUserHostPathPrompt() {
