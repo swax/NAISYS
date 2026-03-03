@@ -49,6 +49,9 @@ export const AgentDetail: React.FC = () => {
   const [assignedHosts, setAssignedHosts] = useState<
     { id: number; name: string }[] | undefined
   >();
+  const [costSuspendedReason, setCostSuspendedReason] = useState<
+    string | undefined
+  >();
   const [actions, setActions] = useState<HateoasAction[] | undefined>();
   const [loading, setLoading] = useState(true);
   const [taskInput, setTaskInput] = useState("");
@@ -63,6 +66,7 @@ export const AgentDetail: React.FC = () => {
       const data = await getAgentDetail(agentId);
       setConfig(data.config);
       setAssignedHosts(data.assignedHosts);
+      setCostSuspendedReason(data.costSuspendedReason);
       setActions(data._actions);
     } catch (err) {
       console.error("Error fetching agent detail:", err);
@@ -377,9 +381,11 @@ export const AgentDetail: React.FC = () => {
             color={
               agentData.status === "active"
                 ? "green"
-                : agentData.status === "available"
-                  ? "yellow"
-                  : "gray"
+                : agentData.status === "suspended"
+                  ? "red"
+                  : agentData.status === "available"
+                    ? "yellow"
+                    : "gray"
             }
           >
             {agentData.status}
@@ -387,6 +393,11 @@ export const AgentDetail: React.FC = () => {
           {agentData.status === "active" && agentData.host && (
             <Text size="sm" c="dimmed">
               Running on {agentData.host}
+            </Text>
+          )}
+          {agentData.status === "suspended" && costSuspendedReason && (
+            <Text size="sm" c="red">
+              {costSuspendedReason}
             </Text>
           )}
         </Group>
