@@ -73,8 +73,7 @@ export const getAgents = cachedForSeconds(
       updateCostSuspendedAgents(
         users.map((user) => ({
           agentId: user.id,
-          isSuspended:
-            !!user.user_notifications?.cost_suspended_reason,
+          isSuspended: !!user.user_notifications?.cost_suspended_reason,
         })),
       );
     } catch (error) {

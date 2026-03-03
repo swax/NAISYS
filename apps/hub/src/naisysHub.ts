@@ -114,7 +114,7 @@ export const startHub: StartHub = async (
     );
 
     // Register hub cost service for cost_write events from NAISYS instances
-    createHubCostService(
+    const costService = createHubCostService(
       naisysServer,
       hubDatabaseService,
       logService,
@@ -147,6 +147,7 @@ export const startHub: StartHub = async (
       heartbeatService,
       sendMailService,
       agentService,
+      costService,
     );
 
     // Start listening

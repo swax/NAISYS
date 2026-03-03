@@ -111,64 +111,74 @@ export function createHubCostService(
 
   // Periodic spend limit checking
   const spendLimitCheckInterval = setInterval(
-    () => void checkSpendLimits(),
+    () =>
+      void checkSpendLimits().catch((error) => {
+        logService.error(`[Hub:Costs] Error in spend limit check: ${error}`);
+      }),
     SPEND_LIMIT_CHECK_INTERVAL_MS,
   );
 
-  async function checkSpendLimits() {
-    try {
-      const activeUserIds = heartbeatService.getActiveUserIds();
-      if (activeUserIds.size === 0) return;
+  async function checkSpendLimits(candidateUserIds?: Iterable<number>) {
+    const activeUserIds = heartbeatService.getActiveUserIds();
+    const usersToCheck = new Set(activeUserIds);
+    for (const userId of suspendedByGlobal) usersToCheck.add(userId);
+    for (const userId of suspendedByAgent) usersToCheck.add(userId);
+    if (candidateUserIds) {
+      for (const userId of candidateUserIds) usersToCheck.add(userId);
+    }
+    if (usersToCheck.size === 0) return;
 
-      const config = configService.getConfig().config;
-      const spendLimitDollars = config?.spendLimitDollars;
-      const spendLimitHours = config?.spendLimitHours;
+    const config = configService.getConfig().config;
+    const spendLimitDollars = config?.spendLimitDollars;
+    const spendLimitHours = config?.spendLimitHours;
 
-      await usingHubDatabase(async (hubDb) => {
-        // 1. Global spend limit check — costs across ALL agents
-        if (spendLimitDollars !== undefined) {
-          await checkGlobalSpendLimit(
+    await usingHubDatabase(async (hubDb) => {
+      // 1. Global spend limit check — costs across ALL agents
+      if (spendLimitDollars !== undefined) {
+        await checkGlobalSpendLimit(
+          hubDb,
+          usersToCheck,
+          spendLimitDollars,
+          spendLimitHours,
+        );
+      }
+
+      // 2. Per-agent spend limit checks — costs for individual agents
+      const users = await hubDb.users.findMany({
+        where: { id: { in: Array.from(usersToCheck) } },
+        select: { id: true, config: true },
+      });
+
+      for (const user of users) {
+        try {
+          const parsed = AgentConfigFileSchema.safeParse(
+            JSON.parse(user.config),
+          );
+          if (!parsed.success) continue;
+
+          const config = parsed.data;
+          if (config.spendLimitDollars === undefined) continue;
+
+          await checkAgentSpendLimit(
             hubDb,
-            activeUserIds,
-            spendLimitDollars,
-            spendLimitHours,
+            user.id,
+            config.spendLimitDollars,
+            config.spendLimitHours,
+          );
+        } catch (userError) {
+          logService.error(
+            `[Hub:Costs] Error checking spend limit for user ${user.id}: ${userError}`,
           );
         }
-
-        // 2. Per-agent spend limit checks — costs for individual agents
-        const users = await hubDb.users.findMany({
-          where: { id: { in: Array.from(activeUserIds) } },
-          select: { id: true, config: true },
-        });
-
-        for (const user of users) {
-          try {
-            const parsed = AgentConfigFileSchema.safeParse(
-              JSON.parse(user.config),
-            );
-            if (!parsed.success) continue;
-
-            const config = parsed.data;
-            if (config.spendLimitDollars === undefined) continue;
-
-            await checkAgentSpendLimit(
-              hubDb,
-              user.id,
-              config.spendLimitDollars,
-              config.spendLimitHours,
-            );
-          } catch (userError) {
-            logService.error(
-              `[Hub:Costs] Error checking spend limit for user ${user.id}: ${userError}`,
-            );
-          }
-        }
-      });
-    } catch (error) {
-      logService.error(`[Hub:Costs] Error in spend limit check: ${error}`);
-    }
+      }
+    });
   }
 
+  /**
+   * Finds the total cost over the period, if this period is used up, we wait until the next period to resume.
+   * We don't use a sliding window as that would cause the LLM to get stuck in a cycle of sending off a query,
+   * only for the window to close again, and the LLM cache to *expire* creating constant cache misses.
+   */
   async function queryCostSum(
     hubDb: PrismaClient,
     spendLimitHours: number | undefined,
@@ -217,14 +227,14 @@ export function createHubCostService(
   /** Check the global spend limit across all agents */
   async function checkGlobalSpendLimit(
     hubDb: PrismaClient,
-    activeUserIds: Set<number>,
+    usersToCheck: Set<number>,
     spendLimit: number,
     spendLimitHours: number | undefined,
   ) {
     const totalCost = await queryCostSum(hubDb, spendLimitHours);
     const isOverLimit = totalCost >= spendLimit;
 
-    for (const userId of activeUserIds) {
+    for (const userId of usersToCheck) {
       const wasSuspended = suspendedByGlobal.has(userId);
 
       if (isOverLimit && !wasSuspended) {
@@ -279,9 +289,19 @@ export function createHubCostService(
     }
   }
 
+  function isUserSpendSuspended(userId: number) {
+    return suspendedByGlobal.has(userId) || suspendedByAgent.has(userId);
+  }
+
   function cleanup() {
     clearInterval(spendLimitCheckInterval);
   }
 
-  return { cleanup };
+  return {
+    cleanup,
+    checkSpendLimits,
+    isUserSpendSuspended,
+  };
 }
+
+export type HubCostService = ReturnType<typeof createHubCostService>;
