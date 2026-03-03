@@ -3,6 +3,21 @@ import { GoogleGenAI } from "@google/genai";
 import { ContentBlock, LlmMessage, LlmRole } from "../llmDtos.js";
 import { QueryResult, QuerySources, VendorDeps } from "./vendorTypes.js";
 
+const clientCache = new Map<string, GoogleGenAI>();
+
+function getClient(apiKey: string, baseUrl?: string): GoogleGenAI {
+  const cacheKey = `${baseUrl || ""}|${apiKey}`;
+  let client = clientCache.get(cacheKey);
+  if (!client) {
+    client = new GoogleGenAI({
+      apiKey,
+      httpOptions: baseUrl ? { baseUrl } : undefined,
+    });
+    clientCache.set(cacheKey, client);
+  }
+  return client;
+}
+
 export async function sendWithGoogle(
   deps: VendorDeps,
   modelKey: string,
@@ -25,10 +40,7 @@ export async function sendWithGoogle(
     throw `Error, set ${model.apiKeyVar} variable`;
   }
 
-  const ai = new GoogleGenAI({
-    apiKey,
-    httpOptions: model.baseUrl ? { baseUrl: model.baseUrl } : undefined,
-  });
+  const ai = getClient(apiKey, model.baseUrl);
 
   const lastMessage = context[context.length - 1];
 

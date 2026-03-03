@@ -112,6 +112,8 @@ export function createCommandLoop(
         }
       }
 
+      // Even if mail/chat not enabled, we may be sent mail/chat from agents that do have it enabled, and we 
+      // need to receive these msgs and mark them as read as agents are auto-started to handle unread messages
       await mailService.checkAndNotify();
       await chatService.checkAndNotify();
       await processNotifications();

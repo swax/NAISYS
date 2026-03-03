@@ -4,8 +4,8 @@ import {
   AgentStopResponse,
   HubEvents,
 } from "@naisys/hub-protocol";
-import stripAnsi from "strip-ansi";
 import stringArgv from "string-argv";
+import stripAnsi from "strip-ansi";
 import table from "text-table";
 
 import { IAgentManager } from "../agent/agentManagerInterface.js";
@@ -284,7 +284,7 @@ export function createSubagentService(
     }
     // Non-hub mode: start agent locally
     else {
-      await agentManager.startAgent(subagent.userId, localUserId, (stopReason) =>
+      await agentManager.startAgent(subagent.userId, (stopReason) =>
         handleAgentTermination(subagent, stopReason),
       );
       resultMessage = `Subagent '${agentName}' started`;
@@ -355,8 +355,8 @@ export function createSubagentService(
     return `Agent '${agentName}' stop requested`;
   }
 
-  /** 
-   * Stop all running subagents (unless exiting via session complete) 
+  /**
+   * Stop all running subagents (unless exiting via session complete)
    * Exit/stop is a cascading shutdown
    * Session complete is a local, sub-agents can still be working,
    * Sub-agents completing will fire a mail to the lead which will wake the lead back up to handle things

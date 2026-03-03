@@ -50,6 +50,12 @@ export async function deployPrismaMigrations(options: {
 
   // Log migration status
   if (currentVersion !== undefined) {
+    if (currentVersion > expectedVersion) {
+      throw new Error(
+        `Database version ${currentVersion} is newer than expected ${expectedVersion}. Manual intervention required.`,
+      );
+    }
+
     console.log(
       `Migrating database from version ${currentVersion} to ${expectedVersion}...`,
     );

@@ -3,8 +3,10 @@ import { z } from "zod";
 /** Request to start an agent on its assigned host */
 export const AgentStartRequestSchema = z.object({
   startUserId: z.number(),
-  requesterUserId: z.number(),
   taskDescription: z.string().optional(),
+  // Used for permission validation
+  requesterUserId: z.number().optional(),
+  // Used to prevent redundant notification on loop back
   sourceHostId: z.number().optional(),
 });
 export type AgentStartRequest = z.infer<typeof AgentStartRequestSchema>;

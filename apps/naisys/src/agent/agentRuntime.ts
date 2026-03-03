@@ -41,7 +41,6 @@ import { UserService } from "./userService.js";
 export async function createAgentRuntime(
   agentManager: IAgentManager,
   localUserId: number,
-  requesterUserId: number | undefined,
   globalConfig: GlobalConfig,
   hubClient: HubClient | undefined,
   hostService: HostService,
@@ -209,7 +208,6 @@ export async function createAgentRuntime(
     mailService,
     userService,
     localUserId,
-    requesterUserId,
   );
   const commandProtection = createCommandProtection(
     agentConfig,

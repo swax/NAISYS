@@ -47,7 +47,7 @@ export const getConversations = cachedForSeconds(
           conversationMap.set(pids, {
             lastMessage: msg.body,
             lastMessageAt: msg.created_at,
-            lastMessageFrom: msg.from_user?.username ?? "(deleted)",
+            lastMessageFrom: msg.from_user.username,
           });
         }
       }
@@ -151,8 +151,8 @@ export const getMessages = cachedForSeconds(
 
         return {
           id: msg.id,
-          fromUserId: msg.from_user_id ?? 0,
-          fromUsername: msg.from_user?.username ?? "(deleted)",
+          fromUserId: msg.from_user_id,
+          fromUsername: msg.from_user.username,
           body: msg.body,
           createdAt: msg.created_at.toISOString(),
           attachments:

@@ -4,6 +4,18 @@ import { MessageParam } from "@anthropic-ai/sdk/resources";
 import { ContentBlock, LlmMessage, LlmRole } from "../llmDtos.js";
 import { QueryResult, QuerySources, VendorDeps } from "./vendorTypes.js";
 
+const clientCache = new Map<string, Anthropic>();
+
+function getClient(apiKey: string, baseURL?: string): Anthropic {
+  const cacheKey = `${baseURL || ""}|${apiKey}`;
+  let client = clientCache.get(cacheKey);
+  if (!client) {
+    client = new Anthropic({ apiKey, baseURL });
+    clientCache.set(cacheKey, client);
+  }
+  return client;
+}
+
 export async function sendWithAnthropic(
   deps: VendorDeps,
   modelKey: string,
@@ -26,10 +38,7 @@ export async function sendWithAnthropic(
     throw `Error, set ${model.apiKeyVar} variable`;
   }
 
-  const anthropic = new Anthropic({
-    apiKey,
-    baseURL: model.baseUrl,
-  });
+  const anthropic = getClient(apiKey, model.baseUrl);
 
   const createParams: Anthropic.MessageCreateParams = {
     model: model.versionName,

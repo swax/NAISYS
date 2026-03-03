@@ -16,6 +16,7 @@ import { createHubLogService } from "./handlers/hubLogService.js";
 import { createHubMailService } from "./handlers/hubMailService.js";
 import { createHubModelsService } from "./handlers/hubModelsService.js";
 import { createHubRunService } from "./handlers/hubRunService.js";
+import { createHubSendMailService } from "./handlers/hubSendMailService.js";
 import { createHubUserService } from "./handlers/hubUserService.js";
 import { seedAgentConfigs } from "./services/agentRegistrar.js";
 import { loadOrCreateCert } from "./services/certService.js";
@@ -112,8 +113,17 @@ export const startHub: StartHub = async (
       heartbeatService,
     );
 
-    // Register hub mail service for mail events from NAISYS instances
-    const mailService = createHubMailService(
+    // Register hub cost service for cost_write events from NAISYS instances
+    const costService = createHubCostService(
+      naisysServer,
+      hubDatabaseService,
+      logService,
+      heartbeatService,
+      configService,
+    );
+
+    // Register hub send mail service (pure mail sending, no auto-start logic)
+    const sendMailService = createHubSendMailService(
       naisysServer,
       hubDatabaseService,
       logService,
@@ -121,22 +131,23 @@ export const startHub: StartHub = async (
     );
 
     // Register hub agent service for agent_start requests routed to target hosts
-    createHubAgentService(
+    const agentService = createHubAgentService(
       naisysServer,
       hubDatabaseService,
       logService,
       heartbeatService,
-      mailService,
+      sendMailService,
       hostRegistrar,
     );
 
-    // Register hub cost service for cost_write events from NAISYS instances
-    createHubCostService(
+    // Register hub mail service for mail events from NAISYS instances
+    createHubMailService(
       naisysServer,
       hubDatabaseService,
       logService,
       heartbeatService,
-      configService,
+      sendMailService,
+      agentService,
     );
 
     // Start listening
