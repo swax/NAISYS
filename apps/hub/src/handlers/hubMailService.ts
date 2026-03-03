@@ -22,7 +22,7 @@ const MAIL_AUTOSTART_CHECK_INTERVAL_MS = 10_000;
 /** Handles mail events from NAISYS instances */
 export function createHubMailService(
   naisysServer: NaisysServer,
-  { usingHubDatabase }: HubDatabaseService,
+  { hubDb }: HubDatabaseService,
   logService: HubServerLog,
   heartbeatService: HubHeartbeatService,
   sendMailService: HubSendMailService,
@@ -34,18 +34,16 @@ export function createHubMailService(
     try {
       const activeUserIds = heartbeatService.getActiveUserIds();
 
-      const unreadRecipients = await usingHubDatabase(async (hubDb) =>
-        // Find distinct users with unread mail from real senders
-        hubDb.mail_recipients.findMany({
-          where: {
-            read_at: null,
-          },
-          select: {
-            user_id: true,
-          },
-          distinct: ["user_id"],
-        }),
-      );
+      // Find distinct users with unread mail from real senders
+      const unreadRecipients = await hubDb.mail_recipients.findMany({
+        where: {
+          read_at: null,
+        },
+        select: {
+          user_id: true,
+        },
+        distinct: ["user_id"],
+      });
 
       const inactiveUserIds = unreadRecipients
         .map((recipient) => recipient.user_id)
@@ -109,88 +107,86 @@ export function createHubMailService(
     try {
       const parsed = MailListRequestSchema.parse(data);
 
-      await usingHubDatabase(async (hubDb) => {
-        // Build ownership condition based on filter
-        let ownershipCondition;
-        if (parsed.withUserIds?.length) {
-          // Messages between exactly this group of participants
-          const participantIds = [parsed.userId, ...parsed.withUserIds]
-            .sort((a, b) => a - b)
-            .join(",");
-          ownershipCondition = { participant_ids: participantIds };
-        } else if (parsed.filter === "received") {
-          ownershipCondition = {
-            recipients: { some: { user_id: parsed.userId } },
-          };
-        } else if (parsed.filter === "sent") {
-          ownershipCondition = { from_user_id: parsed.userId };
-        } else {
-          ownershipCondition = {
-            OR: [
-              { from_user_id: parsed.userId },
-              { recipients: { some: { user_id: parsed.userId } } },
-            ],
-          };
-        }
+      // Build ownership condition based on filter
+      let ownershipCondition;
+      if (parsed.withUserIds?.length) {
+        // Messages between exactly this group of participants
+        const participantIds = [parsed.userId, ...parsed.withUserIds]
+          .sort((a, b) => a - b)
+          .join(",");
+        ownershipCondition = { participant_ids: participantIds };
+      } else if (parsed.filter === "received") {
+        ownershipCondition = {
+          recipients: { some: { user_id: parsed.userId } },
+        };
+      } else if (parsed.filter === "sent") {
+        ownershipCondition = { from_user_id: parsed.userId };
+      } else {
+        ownershipCondition = {
+          OR: [
+            { from_user_id: parsed.userId },
+            { recipients: { some: { user_id: parsed.userId } } },
+          ],
+        };
+      }
 
-        const messages = await hubDb.mail_messages.findMany({
-          where: {
-            ...ownershipCondition,
-            kind: parsed.kind,
-            NOT: {
-              recipients: {
-                some: {
-                  user_id: parsed.userId,
-                  archived_at: { not: null },
-                },
-              },
-            },
-          },
-          include: {
-            from_user: { select: { username: true } },
+      const messages = await hubDb.mail_messages.findMany({
+        where: {
+          ...ownershipCondition,
+          kind: parsed.kind,
+          NOT: {
             recipients: {
-              include: { user: { select: { username: true } } },
-            },
-            mail_attachments: {
-              include: {
-                attachment: {
-                  select: { id: true, filename: true, file_size: true },
-                },
+              some: {
+                user_id: parsed.userId,
+                archived_at: { not: null },
               },
             },
           },
-          orderBy: { created_at: "desc" },
-          skip: parsed.skip,
-          take: parsed.take ?? 20,
-        });
-
-        const messageData = messages.map((m) => {
-          const myRecipient = m.recipients.find(
-            (r) => r.user_id === parsed.userId,
-          );
-          const isUnread =
-            m.from_user_id !== parsed.userId && !myRecipient?.read_at;
-
-          return {
-            id: m.id,
-            fromUsername: m.from_user.username,
-            recipientUsernames: m.recipients.map((r) => r.user.username),
-            subject: m.subject,
-            createdAt: m.created_at.toISOString(),
-            isUnread,
-            ...(parsed.kind === "chat" ? { body: m.body } : {}),
-            attachments: m.mail_attachments.length
-              ? m.mail_attachments.map((ma) => ({
-                  id: ma.attachment.id,
-                  filename: ma.attachment.filename,
-                  fileSize: ma.attachment.file_size,
-                }))
-              : undefined,
-          };
-        });
-
-        ack({ success: true, messages: messageData });
+        },
+        include: {
+          from_user: { select: { username: true } },
+          recipients: {
+            include: { user: { select: { username: true } } },
+          },
+          mail_attachments: {
+            include: {
+              attachment: {
+                select: { id: true, filename: true, file_size: true },
+              },
+            },
+          },
+        },
+        orderBy: { created_at: "desc" },
+        skip: parsed.skip,
+        take: parsed.take ?? 20,
       });
+
+      const messageData = messages.map((m) => {
+        const myRecipient = m.recipients.find(
+          (r) => r.user_id === parsed.userId,
+        );
+        const isUnread =
+          m.from_user_id !== parsed.userId && !myRecipient?.read_at;
+
+        return {
+          id: m.id,
+          fromUsername: m.from_user.username,
+          recipientUsernames: m.recipients.map((r) => r.user.username),
+          subject: m.subject,
+          createdAt: m.created_at.toISOString(),
+          isUnread,
+          ...(parsed.kind === "chat" ? { body: m.body } : {}),
+          attachments: m.mail_attachments.length
+            ? m.mail_attachments.map((ma) => ({
+                id: ma.attachment.id,
+                filename: ma.attachment.filename,
+                fileSize: ma.attachment.file_size,
+              }))
+            : undefined,
+        };
+      });
+
+      ack({ success: true, messages: messageData });
     } catch (error) {
       logService.error(
         `[Hub:Mail] mail_list error from host ${hostId}: ${error}`,
@@ -204,51 +200,49 @@ export function createHubMailService(
     try {
       const parsed = MailPeekRequestSchema.parse(data);
 
-      await usingHubDatabase(async (hubDb) => {
-        const message = await hubDb.mail_messages.findUnique({
-          where: { id: parsed.messageId },
-          include: {
-            from_user: { select: { username: true, title: true } },
-            recipients: {
-              include: { user: { select: { username: true } } },
-            },
-            mail_attachments: {
-              include: {
-                attachment: {
-                  select: { id: true, filename: true, file_size: true },
-                },
+      const message = await hubDb.mail_messages.findUnique({
+        where: { id: parsed.messageId },
+        include: {
+          from_user: { select: { username: true, title: true } },
+          recipients: {
+            include: { user: { select: { username: true } } },
+          },
+          mail_attachments: {
+            include: {
+              attachment: {
+                select: { id: true, filename: true, file_size: true },
               },
             },
           },
-        });
+        },
+      });
 
-        if (!message) {
-          ack({
-            success: false,
-            error: `Message ${parsed.messageId} not found`,
-          });
-          return;
-        }
-
+      if (!message) {
         ack({
-          success: true,
-          message: {
-            id: message.id,
-            subject: message.subject,
-            fromUsername: message.from_user.username,
-            fromTitle: message.from_user.title,
-            recipientUsernames: message.recipients.map((r) => r.user.username),
-            createdAt: message.created_at.toISOString(),
-            body: message.body,
-            attachments: message.mail_attachments.length
-              ? message.mail_attachments.map((ma) => ({
-                  id: ma.attachment.id,
-                  filename: ma.attachment.filename,
-                  fileSize: ma.attachment.file_size,
-                }))
-              : undefined,
-          },
+          success: false,
+          error: `Message ${parsed.messageId} not found`,
         });
+        return;
+      }
+
+      ack({
+        success: true,
+        message: {
+          id: message.id,
+          subject: message.subject,
+          fromUsername: message.from_user.username,
+          fromTitle: message.from_user.title,
+          recipientUsernames: message.recipients.map((r) => r.user.username),
+          createdAt: message.created_at.toISOString(),
+          body: message.body,
+          attachments: message.mail_attachments.length
+            ? message.mail_attachments.map((ma) => ({
+                id: ma.attachment.id,
+                filename: ma.attachment.filename,
+                fileSize: ma.attachment.file_size,
+              }))
+            : undefined,
+        },
       });
     } catch (error) {
       logService.error(
@@ -265,18 +259,16 @@ export function createHubMailService(
       try {
         const parsed = MailMarkReadRequestSchema.parse(data);
 
-        await usingHubDatabase(async (hubDb) => {
-          await hubDb.mail_recipients.updateMany({
-            where: {
-              message_id: { in: parsed.messageIds },
-              user_id: parsed.userId,
-              read_at: null,
-            },
-            data: { read_at: new Date() },
-          });
-
-          ack({ success: true });
+        await hubDb.mail_recipients.updateMany({
+          where: {
+            message_id: { in: parsed.messageIds },
+            user_id: parsed.userId,
+            read_at: null,
+          },
+          data: { read_at: new Date() },
         });
+
+        ack({ success: true });
       } catch (error) {
         logService.error(
           `[Hub:Mail] mail_mark_read error from host ${hostId}: ${error}`,
@@ -293,32 +285,30 @@ export function createHubMailService(
       try {
         const parsed = MailArchiveRequestSchema.parse(data);
 
-        await usingHubDatabase(async (hubDb) => {
-          const archivedIds: number[] = [];
+        const archivedIds: number[] = [];
 
-          for (const messageId of parsed.messageIds) {
-            const message = await hubDb.mail_messages.findUnique({
-              where: { id: messageId },
+        for (const messageId of parsed.messageIds) {
+          const message = await hubDb.mail_messages.findUnique({
+            where: { id: messageId },
+          });
+
+          if (!message) {
+            ack({
+              success: false,
+              error: `Message ${messageId} not found`,
             });
-
-            if (!message) {
-              ack({
-                success: false,
-                error: `Message ${messageId} not found`,
-              });
-              return;
-            }
-
-            await hubDb.mail_recipients.updateMany({
-              where: { message_id: message.id, user_id: parsed.userId },
-              data: { archived_at: new Date() },
-            });
-
-            archivedIds.push(messageId);
+            return;
           }
 
-          ack({ success: true, archivedIds });
-        });
+          await hubDb.mail_recipients.updateMany({
+            where: { message_id: message.id, user_id: parsed.userId },
+            data: { archived_at: new Date() },
+          });
+
+          archivedIds.push(messageId);
+        }
+
+        ack({ success: true, archivedIds });
       } catch (error) {
         logService.error(
           `[Hub:Mail] mail_archive error from host ${hostId}: ${error}`,
@@ -335,54 +325,52 @@ export function createHubMailService(
       try {
         const parsed = MailSearchRequestSchema.parse(data);
 
-        await usingHubDatabase(async (hubDb) => {
-          const searchCondition = parsed.subjectOnly
-            ? { subject: { contains: parsed.terms } }
-            : {
-                OR: [
-                  { subject: { contains: parsed.terms } },
-                  { body: { contains: parsed.terms } },
-                ],
-              };
+        const searchCondition = parsed.subjectOnly
+          ? { subject: { contains: parsed.terms } }
+          : {
+              OR: [
+                { subject: { contains: parsed.terms } },
+                { body: { contains: parsed.terms } },
+              ],
+            };
 
-          const archiveCondition = parsed.includeArchived
-            ? {}
-            : {
-                NOT: {
-                  recipients: {
-                    some: {
-                      user_id: parsed.userId,
-                      archived_at: { not: null },
-                    },
+        const archiveCondition = parsed.includeArchived
+          ? {}
+          : {
+              NOT: {
+                recipients: {
+                  some: {
+                    user_id: parsed.userId,
+                    archived_at: { not: null },
                   },
                 },
-              };
+              },
+            };
 
-          const messages = await hubDb.mail_messages.findMany({
-            where: {
-              OR: [
-                { from_user_id: parsed.userId },
-                { recipients: { some: { user_id: parsed.userId } } },
-              ],
-              ...searchCondition,
-              ...archiveCondition,
-            },
-            include: {
-              from_user: { select: { username: true } },
-            },
-            orderBy: { created_at: "desc" },
-            take: 50,
-          });
-
-          const messageData = messages.map((m) => ({
-            id: m.id,
-            subject: m.subject,
-            fromUsername: m.from_user.username,
-            createdAt: m.created_at.toISOString(),
-          }));
-
-          ack({ success: true, messages: messageData });
+        const messages = await hubDb.mail_messages.findMany({
+          where: {
+            OR: [
+              { from_user_id: parsed.userId },
+              { recipients: { some: { user_id: parsed.userId } } },
+            ],
+            ...searchCondition,
+            ...archiveCondition,
+          },
+          include: {
+            from_user: { select: { username: true } },
+          },
+          orderBy: { created_at: "desc" },
+          take: 50,
         });
+
+        const messageData = messages.map((m) => ({
+          id: m.id,
+          subject: m.subject,
+          fromUsername: m.from_user.username,
+          createdAt: m.created_at.toISOString(),
+        }));
+
+        ack({ success: true, messages: messageData });
       } catch (error) {
         logService.error(
           `[Hub:Mail] mail_search error from host ${hostId}: ${error}`,
@@ -399,50 +387,48 @@ export function createHubMailService(
       try {
         const parsed = MailUnreadRequestSchema.parse(data);
 
-        await usingHubDatabase(async (hubDb) => {
-          const messages = await hubDb.mail_messages.findMany({
-            where: {
-              kind: parsed.kind,
-              ...(parsed.afterId ? { id: { gt: parsed.afterId } } : {}),
-              recipients: {
-                some: { user_id: parsed.userId, read_at: null },
-              },
+        const messages = await hubDb.mail_messages.findMany({
+          where: {
+            kind: parsed.kind,
+            ...(parsed.afterId ? { id: { gt: parsed.afterId } } : {}),
+            recipients: {
+              some: { user_id: parsed.userId, read_at: null },
             },
-            include: {
-              from_user: { select: { username: true, title: true } },
-              recipients: {
-                include: { user: { select: { username: true } } },
-              },
-              mail_attachments: {
-                include: {
-                  attachment: {
-                    select: { id: true, filename: true, file_size: true },
-                  },
+          },
+          include: {
+            from_user: { select: { username: true, title: true } },
+            recipients: {
+              include: { user: { select: { username: true } } },
+            },
+            mail_attachments: {
+              include: {
+                attachment: {
+                  select: { id: true, filename: true, file_size: true },
                 },
               },
             },
-            orderBy: { id: "asc" },
-          });
+          },
+          orderBy: { id: "asc" },
+        });
 
-          ack({
-            success: true,
-            messages: messages.map((m) => ({
-              id: m.id,
-              subject: m.subject,
-              fromUsername: m.from_user.username,
-              fromTitle: m.from_user.title,
-              recipientUsernames: m.recipients.map((r) => r.user.username),
-              createdAt: m.created_at.toISOString(),
-              body: m.body,
-              attachments: m.mail_attachments.length
-                ? m.mail_attachments.map((ma) => ({
-                    id: ma.attachment.id,
-                    filename: ma.attachment.filename,
-                    fileSize: ma.attachment.file_size,
-                  }))
-                : undefined,
-            })),
-          });
+        ack({
+          success: true,
+          messages: messages.map((m) => ({
+            id: m.id,
+            subject: m.subject,
+            fromUsername: m.from_user.username,
+            fromTitle: m.from_user.title,
+            recipientUsernames: m.recipients.map((r) => r.user.username),
+            createdAt: m.created_at.toISOString(),
+            body: m.body,
+            attachments: m.mail_attachments.length
+              ? m.mail_attachments.map((ma) => ({
+                  id: ma.attachment.id,
+                  filename: ma.attachment.filename,
+                  fileSize: ma.attachment.file_size,
+                }))
+              : undefined,
+          })),
         });
       } catch (error) {
         logService.error(

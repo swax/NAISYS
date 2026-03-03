@@ -56,7 +56,7 @@ export const startServer: StartServer = async (
   // Auto-migrate supervisor database
   await deploySupervisorMigrations();
 
-  if (!createSupervisorDatabaseClient()) {
+  if (!(await createSupervisorDatabaseClient())) {
     console.error(
       "[Supervisor] Supervisor database not found. Cannot start without it.",
     );
@@ -64,7 +64,7 @@ export const startServer: StartServer = async (
   }
 
   // Hub DB still needed for agent API key auth
-  createHubDatabaseClient();
+  await createHubDatabaseClient();
 
   // Connect to hub via Socket.IO for agent management
   const hubUrl = hubPort ? `https://localhost:${hubPort}` : process.env.HUB_URL;

@@ -11,4 +11,4 @@ export function getNaisysDatabasePath(): string {
   return path.join(env.NAISYS_FOLDER, "database", dbFilename);
 }
 
-export const hubDb = createPrismaClient(getNaisysDatabasePath());
+export const hubDb = await createPrismaClient(getNaisysDatabasePath());

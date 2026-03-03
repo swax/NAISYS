@@ -1,8 +1,6 @@
 import type { HubDatabaseService } from "@naisys/hub-database";
 
-export async function createHostRegistrar({
-  usingHubDatabase,
-}: HubDatabaseService) {
+export async function createHostRegistrar({ hubDb }: HubDatabaseService) {
   /** Cache of all known hosts keyed by id */
   const hostsById = new Map<
     number,
@@ -10,18 +8,16 @@ export async function createHostRegistrar({
   >();
 
   // Seed the cache from the database
-  await usingHubDatabase(async (hubDb) => {
-    const rows = await hubDb.hosts.findMany({
-      select: { id: true, name: true, restricted: true, host_type: true },
-    });
-    for (const row of rows) {
-      hostsById.set(row.id, {
-        hostName: row.name,
-        restricted: row.restricted,
-        hostType: row.host_type,
-      });
-    }
+  const rows = await hubDb.hosts.findMany({
+    select: { id: true, name: true, restricted: true, host_type: true },
   });
+  for (const row of rows) {
+    hostsById.set(row.id, {
+      hostName: row.name,
+      restricted: row.restricted,
+      hostType: row.host_type,
+    });
+  }
 
   /**
    * Register a NAISYS instance by name. Creates a new record if not found,
@@ -32,36 +28,34 @@ export async function createHostRegistrar({
     hostName: string,
     hostType: string,
   ): Promise<number> {
-    return await usingHubDatabase(async (hubDb) => {
-      const existing = await hubDb.hosts.findUnique({
-        where: { name: hostName },
-      });
-
-      if (existing) {
-        await hubDb.hosts.update({
-          where: { id: existing.id },
-          data: { last_active: new Date().toISOString(), host_type: hostType },
-        });
-        hostsById.set(existing.id, {
-          hostName,
-          restricted: existing.restricted,
-          hostType,
-        });
-        return existing.id;
-      }
-
-      const created = await hubDb.hosts.create({
-        data: {
-          name: hostName,
-          host_type: hostType,
-          last_active: new Date().toISOString(),
-        },
-      });
-
-      hostsById.set(created.id, { hostName, restricted: false, hostType });
-
-      return created.id;
+    const existing = await hubDb.hosts.findUnique({
+      where: { name: hostName },
     });
+
+    if (existing) {
+      await hubDb.hosts.update({
+        where: { id: existing.id },
+        data: { last_active: new Date().toISOString(), host_type: hostType },
+      });
+      hostsById.set(existing.id, {
+        hostName,
+        restricted: existing.restricted,
+        hostType,
+      });
+      return existing.id;
+    }
+
+    const created = await hubDb.hosts.create({
+      data: {
+        name: hostName,
+        host_type: hostType,
+        last_active: new Date().toISOString(),
+      },
+    });
+
+    hostsById.set(created.id, { hostName, restricted: false, hostType });
+
+    return created.id;
   }
 
   /** Returns all known hosts (from DB + any newly registered) */
@@ -81,19 +75,17 @@ export async function createHostRegistrar({
 
   /** Re-read all hosts from DB and replace the in-memory cache */
   async function refreshHosts(): Promise<void> {
-    await usingHubDatabase(async (hubDb) => {
-      const rows = await hubDb.hosts.findMany({
-        select: { id: true, name: true, restricted: true, host_type: true },
-      });
-      hostsById.clear();
-      for (const row of rows) {
-        hostsById.set(row.id, {
-          hostName: row.name,
-          restricted: row.restricted,
-          hostType: row.host_type,
-        });
-      }
+    const rows = await hubDb.hosts.findMany({
+      select: { id: true, name: true, restricted: true, host_type: true },
     });
+    hostsById.clear();
+    for (const row of rows) {
+      hostsById.set(row.id, {
+        hostName: row.name,
+        restricted: row.restricted,
+        hostType: row.host_type,
+      });
+    }
   }
 
   return {

@@ -5,7 +5,7 @@ type PrismaTransaction = Parameters<
 >[0];
 
 export async function writeAuditEntry(
-  tx: PrismaTransaction,
+  erpTx: PrismaTransaction,
   entityType: string,
   entityId: number,
   action: string,
@@ -14,7 +14,7 @@ export async function writeAuditEntry(
   newValue: string | null,
   userId: number,
 ) {
-  await tx.auditLog.create({
+  await erpTx.auditLog.create({
     data: {
       entityType,
       entityId,

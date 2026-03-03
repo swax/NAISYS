@@ -17,7 +17,7 @@ const SPEND_LIMIT_CHECK_INTERVAL_MS = 10_000;
 /** Handles cost_write events from NAISYS instances (fire-and-forget) */
 export function createHubCostService(
   naisysServer: NaisysServer,
-  { usingHubDatabase }: HubDatabaseService,
+  { hubDb }: HubDatabaseService,
   logService: HubServerLog,
   heartbeatService: HubHeartbeatService,
   configService: HubConfigService,
@@ -33,68 +33,66 @@ export function createHubCostService(
       // Collect unique user IDs from this batch
       const batchUserIds = new Set(parsed.entries.map((e) => e.userId));
 
-      await usingHubDatabase(async (hubDb) => {
-        for (const entry of parsed.entries) {
-          // Find the most recent cost record for this combination
-          const existingRecord = await hubDb.costs.findFirst({
-            where: {
+      for (const entry of parsed.entries) {
+        // Find the most recent cost record for this combination
+        const existingRecord = await hubDb.costs.findFirst({
+          where: {
+            user_id: entry.userId,
+            run_id: entry.runId,
+            session_id: entry.sessionId,
+            source: entry.source,
+            model: entry.model,
+          },
+          orderBy: { created_at: "desc" },
+          select: { id: true, created_at: true },
+        });
+
+        // Update existing record if within aggregation window, otherwise create new
+        if (
+          existingRecord &&
+          Date.now() - existingRecord.created_at.getTime() <
+            COST_AGGREGATION_WINDOW_MS
+        ) {
+          await hubDb.costs.update({
+            where: { id: existingRecord.id },
+            data: {
+              cost: { increment: entry.cost },
+              input_tokens: { increment: entry.inputTokens },
+              output_tokens: { increment: entry.outputTokens },
+              cache_write_tokens: { increment: entry.cacheWriteTokens },
+              cache_read_tokens: { increment: entry.cacheReadTokens },
+            },
+          });
+        } else {
+          await hubDb.costs.create({
+            data: {
               user_id: entry.userId,
               run_id: entry.runId,
               session_id: entry.sessionId,
+              host_id: hostId,
               source: entry.source,
               model: entry.model,
-            },
-            orderBy: { created_at: "desc" },
-            select: { id: true, created_at: true },
-          });
-
-          // Update existing record if within aggregation window, otherwise create new
-          if (
-            existingRecord &&
-            Date.now() - existingRecord.created_at.getTime() <
-              COST_AGGREGATION_WINDOW_MS
-          ) {
-            await hubDb.costs.update({
-              where: { id: existingRecord.id },
-              data: {
-                cost: { increment: entry.cost },
-                input_tokens: { increment: entry.inputTokens },
-                output_tokens: { increment: entry.outputTokens },
-                cache_write_tokens: { increment: entry.cacheWriteTokens },
-                cache_read_tokens: { increment: entry.cacheReadTokens },
-              },
-            });
-          } else {
-            await hubDb.costs.create({
-              data: {
-                user_id: entry.userId,
-                run_id: entry.runId,
-                session_id: entry.sessionId,
-                host_id: hostId,
-                source: entry.source,
-                model: entry.model,
-                cost: entry.cost,
-                input_tokens: entry.inputTokens,
-                output_tokens: entry.outputTokens,
-                cache_write_tokens: entry.cacheWriteTokens,
-                cache_read_tokens: entry.cacheReadTokens,
-              },
-            });
-          }
-
-          // Update run_session total_cost
-          await hubDb.run_session.updateMany({
-            where: {
-              user_id: entry.userId,
-              run_id: entry.runId,
-              session_id: entry.sessionId,
-            },
-            data: {
-              total_cost: { increment: entry.cost },
+              cost: entry.cost,
+              input_tokens: entry.inputTokens,
+              output_tokens: entry.outputTokens,
+              cache_write_tokens: entry.cacheWriteTokens,
+              cache_read_tokens: entry.cacheReadTokens,
             },
           });
         }
-      });
+
+        // Update run_session total_cost
+        await hubDb.run_session.updateMany({
+          where: {
+            user_id: entry.userId,
+            run_id: entry.runId,
+            session_id: entry.sessionId,
+          },
+          data: {
+            total_cost: { increment: entry.cost },
+          },
+        });
+      }
 
       // Re-send cost_control to any suspended users still writing costs
       for (const userId of batchUserIds) {
@@ -132,46 +130,42 @@ export function createHubCostService(
     const spendLimitDollars = config?.spendLimitDollars;
     const spendLimitHours = config?.spendLimitHours;
 
-    await usingHubDatabase(async (hubDb) => {
-      // 1. Global spend limit check — costs across ALL agents
-      if (spendLimitDollars !== undefined) {
-        await checkGlobalSpendLimit(
+    // 1. Global spend limit check — costs across ALL agents
+    if (spendLimitDollars !== undefined) {
+      await checkGlobalSpendLimit(
+        hubDb,
+        usersToCheck,
+        spendLimitDollars,
+        spendLimitHours,
+      );
+    }
+
+    // 2. Per-agent spend limit checks — costs for individual agents
+    const users = await hubDb.users.findMany({
+      where: { id: { in: Array.from(usersToCheck) } },
+      select: { id: true, config: true },
+    });
+
+    for (const user of users) {
+      try {
+        const parsed = AgentConfigFileSchema.safeParse(JSON.parse(user.config));
+        if (!parsed.success) continue;
+
+        const config = parsed.data;
+        if (config.spendLimitDollars === undefined) continue;
+
+        await checkAgentSpendLimit(
           hubDb,
-          usersToCheck,
-          spendLimitDollars,
-          spendLimitHours,
+          user.id,
+          config.spendLimitDollars,
+          config.spendLimitHours,
+        );
+      } catch (userError) {
+        logService.error(
+          `[Hub:Costs] Error checking spend limit for user ${user.id}: ${userError}`,
         );
       }
-
-      // 2. Per-agent spend limit checks — costs for individual agents
-      const users = await hubDb.users.findMany({
-        where: { id: { in: Array.from(usersToCheck) } },
-        select: { id: true, config: true },
-      });
-
-      for (const user of users) {
-        try {
-          const parsed = AgentConfigFileSchema.safeParse(
-            JSON.parse(user.config),
-          );
-          if (!parsed.success) continue;
-
-          const config = parsed.data;
-          if (config.spendLimitDollars === undefined) continue;
-
-          await checkAgentSpendLimit(
-            hubDb,
-            user.id,
-            config.spendLimitDollars,
-            config.spendLimitHours,
-          );
-        } catch (userError) {
-          logService.error(
-            `[Hub:Costs] Error checking spend limit for user ${user.id}: ${userError}`,
-          );
-        }
-      }
-    });
+    }
   }
 
   /**

@@ -172,19 +172,19 @@ export async function unassignAgentFromHost(
 }
 
 export async function deleteHost(id: number): Promise<void> {
-  await hubDb.$transaction(async (tx) => {
-    await tx.context_log.deleteMany({ where: { host_id: id } });
-    await tx.costs.deleteMany({ where: { host_id: id } });
-    await tx.run_session.deleteMany({ where: { host_id: id } });
-    await tx.mail_messages.updateMany({
+  await hubDb.$transaction(async (hubTx) => {
+    await hubTx.context_log.deleteMany({ where: { host_id: id } });
+    await hubTx.costs.deleteMany({ where: { host_id: id } });
+    await hubTx.run_session.deleteMany({ where: { host_id: id } });
+    await hubTx.mail_messages.updateMany({
       where: { host_id: id },
       data: { host_id: null },
     });
-    await tx.user_notifications.updateMany({
+    await hubTx.user_notifications.updateMany({
       where: { latest_host_id: id },
       data: { latest_host_id: null },
     });
-    await tx.user_hosts.deleteMany({ where: { host_id: id } });
-    await tx.hosts.delete({ where: { id } });
+    await hubTx.user_hosts.deleteMany({ where: { host_id: id } });
+    await hubTx.hosts.delete({ where: { id } });
   });
 }

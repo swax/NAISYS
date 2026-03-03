@@ -231,15 +231,15 @@ export default function planningOrderRevisionRoutes(fastify: FastifyInstance) {
       }
 
       // Auto-increment revNo inside a transaction to prevent race conditions
-      const item = await erpDb.$transaction(async (tx) => {
-        const maxRev = await tx.planningOrderRevision.findFirst({
+      const item = await erpDb.$transaction(async (erpTx) => {
+        const maxRev = await erpTx.planningOrderRevision.findFirst({
           where: { planOrderId: orderId },
           orderBy: { revNo: "desc" },
           select: { revNo: true },
         });
         const nextRevNo = (maxRev?.revNo ?? 0) + 1;
 
-        return tx.planningOrderRevision.create({
+        return erpTx.planningOrderRevision.create({
           data: {
             planOrderId: orderId,
             revNo: nextRevNo,
@@ -428,13 +428,13 @@ export default function planningOrderRevisionRoutes(fastify: FastifyInstance) {
       }
 
       const userId = request.erpUser!.id;
-      const item = await erpDb.$transaction(async (tx) => {
-        const updated = await tx.planningOrderRevision.update({
+      const item = await erpDb.$transaction(async (erpTx) => {
+        const updated = await erpTx.planningOrderRevision.update({
           where: { id: revisionId },
           data: { status: "approved", updatedById: userId },
         });
         await writeAuditEntry(
-          tx,
+          erpTx,
           "PlanningOrderRevision",
           revisionId,
           "approve",
@@ -487,13 +487,13 @@ export default function planningOrderRevisionRoutes(fastify: FastifyInstance) {
       }
 
       const userId = request.erpUser!.id;
-      const item = await erpDb.$transaction(async (tx) => {
-        const updated = await tx.planningOrderRevision.update({
+      const item = await erpDb.$transaction(async (erpTx) => {
+        const updated = await erpTx.planningOrderRevision.update({
           where: { id: revisionId },
           data: { status: "obsolete", updatedById: userId },
         });
         await writeAuditEntry(
-          tx,
+          erpTx,
           "PlanningOrderRevision",
           revisionId,
           "obsolete",

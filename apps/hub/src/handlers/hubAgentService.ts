@@ -15,7 +15,7 @@ import { HubSendMailService } from "./hubSendMailService.js";
 /** Handles agent_start requests by routing them to the least-loaded eligible host */
 export function createHubAgentService(
   naisysServer: NaisysServer,
-  { usingHubDatabase }: HubDatabaseService,
+  { hubDb }: HubDatabaseService,
   logService: HubServerLog,
   heartbeatService: HubHeartbeatService,
   sendMailService: HubSendMailService,
@@ -24,16 +24,11 @@ export function createHubAgentService(
   /** Find the least-loaded eligible host for a given user */
   async function findBestHost(startUserId: number): Promise<number | null> {
     // Look up which hosts this user is assigned to
-    const { assignedHostIds } = await usingHubDatabase(async (hubDb) => {
-      const userHosts = await hubDb.user_hosts.findMany({
-        where: { user_id: startUserId },
-        select: { host_id: true },
-      });
-
-      return {
-        assignedHostIds: userHosts.map((uh) => uh.host_id),
-      };
+    const userHosts = await hubDb.user_hosts.findMany({
+      where: { user_id: startUserId },
+      select: { host_id: true },
     });
+    const assignedHostIds = userHosts.map((uh) => uh.host_id);
 
     // Determine eligible hosts: assigned hosts, or all connected (non-restricted) if unassigned
     let eligibleHostIds: number[];

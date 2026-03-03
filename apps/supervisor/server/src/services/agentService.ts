@@ -229,37 +229,37 @@ export async function deleteAgent(id: number): Promise<void> {
     throw new Error(`Agent with ID ${id} not found`);
   }
 
-  await hubDb.$transaction(async (tx) => {
-    await tx.context_log.deleteMany({ where: { user_id: id } });
-    await tx.costs.deleteMany({ where: { user_id: id } });
-    await tx.run_session.deleteMany({ where: { user_id: id } });
+  await hubDb.$transaction(async (hubTx) => {
+    await hubTx.context_log.deleteMany({ where: { user_id: id } });
+    await hubTx.costs.deleteMany({ where: { user_id: id } });
+    await hubTx.run_session.deleteMany({ where: { user_id: id } });
 
     // Get sent message IDs so we can delete their attachments and recipients
-    const sentMessages = await tx.mail_messages.findMany({
+    const sentMessages = await hubTx.mail_messages.findMany({
       where: { from_user_id: id },
       select: { id: true },
     });
     const sentMessageIds = sentMessages.map((m) => m.id);
     if (sentMessageIds.length > 0) {
-      await tx.mail_attachments.deleteMany({
+      await hubTx.mail_attachments.deleteMany({
         where: { message_id: { in: sentMessageIds } },
       });
-      await tx.mail_recipients.deleteMany({
+      await hubTx.mail_recipients.deleteMany({
         where: { message_id: { in: sentMessageIds } },
       });
-      await tx.mail_messages.deleteMany({
+      await hubTx.mail_messages.deleteMany({
         where: { id: { in: sentMessageIds } },
       });
     }
 
     // Delete remaining recipient entries (for messages received by this agent)
-    await tx.mail_recipients.deleteMany({ where: { user_id: id } });
-    await tx.user_notifications.deleteMany({ where: { user_id: id } });
-    await tx.user_hosts.deleteMany({ where: { user_id: id } });
-    await tx.users.updateMany({
+    await hubTx.mail_recipients.deleteMany({ where: { user_id: id } });
+    await hubTx.user_notifications.deleteMany({ where: { user_id: id } });
+    await hubTx.user_hosts.deleteMany({ where: { user_id: id } });
+    await hubTx.users.updateMany({
       where: { lead_user_id: id },
       data: { lead_user_id: null },
     });
-    await tx.users.delete({ where: { id } });
+    await hubTx.users.delete({ where: { id } });
   });
 }

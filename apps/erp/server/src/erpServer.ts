@@ -31,6 +31,7 @@ import { fileURLToPath } from "url";
 import { registerApiReference } from "./api-reference.js";
 import { registerAuthMiddleware } from "./auth-middleware.js";
 import { ERP_DB_VERSION, erpDbPath } from "./dbConfig.js";
+import { initErpDb } from "./erpDb.js";
 import auditRoutes from "./routes/audit.js";
 import authRoutes from "./routes/auth.js";
 import executionOrderRoutes from "./routes/execution-orders.js";
@@ -72,13 +73,16 @@ export const erpPlugin: FastifyPluginAsync = async (fastify) => {
     expectedVersion: ERP_DB_VERSION,
   });
 
+  // Initialize SQLite pragmas now that the database exists
+  await initErpDb();
+
   if (isSupervisorAuth()) {
-    if (!createHubDatabaseClient()) {
+    if (!(await createHubDatabaseClient())) {
       throw new Error(
         "[ERP] Hub database not available. Required for supervisor auth.",
       );
     }
-    if (!createSupervisorDatabaseClient()) {
+    if (!(await createSupervisorDatabaseClient())) {
       throw new Error(
         "[ERP] Supervisor database not available. Required for supervisor auth.",
       );

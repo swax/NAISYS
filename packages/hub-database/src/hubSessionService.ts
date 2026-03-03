@@ -11,14 +11,14 @@ let prisma: PrismaClient | null = null;
  * Idempotent — returns early if already initialized.
  * No-ops gracefully if NAISYS_FOLDER is unset or the database doesn't exist.
  */
-export function createHubDatabaseClient(): boolean {
+export async function createHubDatabaseClient(): Promise<boolean> {
   if (prisma) return true;
 
   const dbPath = hubDbPath();
 
   if (!existsSync(dbPath)) return false;
 
-  prisma = createPrismaClient(dbPath);
+  prisma = await createPrismaClient(dbPath);
   return true;
 }
 
