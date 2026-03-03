@@ -1,5 +1,4 @@
-import { execSync } from "child_process";
-import { mkdirSync } from "fs";
+import { existsSync, mkdirSync } from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import Database from "better-sqlite3";
@@ -16,24 +15,49 @@ const TEST_PASSWORD_HASH =
 // Create enough users so each parallel worker gets its own
 const TEST_USER_COUNT = 10;
 
+/**
+ * Poll until the server's deployPrismaMigrations has created and migrated the
+ * database. Playwright starts the webServer before globalSetup, so the file
+ * may not exist yet. Returns an open connection for immediate reuse.
+ */
+function waitForDatabase(timeoutMs = 30_000): Database.Database {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (!existsSync(testDbPath)) {
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 200);
+      continue;
+    }
+    try {
+      const db = new Database(testDbPath, { timeout: 10_000 });
+      db.prepare("SELECT 1 FROM users LIMIT 1").get();
+      return db;
+    } catch {
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 200);
+    }
+  }
+  throw new Error(`Timed out waiting for database at ${testDbPath}`);
+}
+
 export default function globalSetup() {
-  // Ensure the database directory exists
+  // Ensure the database directory exists so the server can create the file
   mkdirSync(path.dirname(testDbPath), { recursive: true });
 
-  // Reset and re-apply migrations so _prisma_migrations exists for the
-  // server's deployPrismaMigrations() call (which uses migrate deploy)
-  execSync("npx prisma migrate reset --force", {
-    cwd: serverDir,
-    env: {
-      ...process.env,
-      NAISYS_FOLDER: testNaisysFolder,
-      PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION: "sure",
-    },
-    stdio: "inherit",
-  });
+  // Wait for the server's deployPrismaMigrations to finish
+  const db = waitForDatabase();
 
-  // Seed test users (one per worker) with real bcrypt password hash
-  const db = new Database(testDbPath);
+  // Wipe all data tables (disable FKs so order doesn't matter)
+  db.pragma("foreign_keys = OFF");
+  const tables = db
+    .prepare(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE '_prisma%' AND name != 'sqlite_sequence' AND name != 'schema_version'",
+    )
+    .all() as { name: string }[];
+  for (const { name } of tables) {
+    db.exec(`DELETE FROM "${name}"`);
+  }
+  db.pragma("foreign_keys = ON");
+
+  // Seed test users (one per parallel worker)
   const insert = db.prepare(
     `INSERT INTO users (uuid, username, password_hash, created_at, updated_at)
      VALUES (?, ?, ?, datetime('now'), datetime('now'))`,

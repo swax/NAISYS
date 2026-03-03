@@ -9,7 +9,7 @@ import { NaisysServer } from "../services/naisysServer.js";
 /** Pushes the global config to NAISYS instances when they connect or when variables change */
 export async function createHubConfigService(
   naisysServer: NaisysServer,
-  { usingHubDatabase }: HubDatabaseService,
+  { hubDb }: HubDatabaseService,
   logService: HubServerLog,
 ) {
   let cachedConfig: ConfigResponse = {
@@ -18,13 +18,10 @@ export async function createHubConfigService(
   };
 
   // Seed DB from .env on first run
-  await usingHubDatabase(async (hubDb) => {
-    const existing = await hubDb.variables.findMany();
-    if (existing.length > 0) {
-      logService.log("[Hub:Config] .env variables already seeded");
-      return;
-    }
-
+  const existing = await hubDb.variables.findMany();
+  if (existing.length > 0) {
+    logService.log("[Hub:Config] .env variables already seeded");
+  } else {
     // First run: seed from .env file only (not all of process.env)
     const { parsed: dotenvVars } = dotenv.config({ quiet: true });
     const fileConfig = buildClientConfig(dotenvVars ?? {});
@@ -43,18 +40,15 @@ export async function createHubConfigService(
     logService.log(
       `[Hub:Config] Seeded ${entries.length} variables from .env file into database`,
     );
-  });
+  }
 
   /** Read variables from DB and build a ConfigResponse */
   async function buildConfigPayload(): Promise<ConfigResponse> {
-    const variableMap = await usingHubDatabase(async (hubDb) => {
-      const rows = await hubDb.variables.findMany();
-      const map: Record<string, string> = {};
-      for (const row of rows) {
-        map[row.key] = row.value;
-      }
-      return map;
-    });
+    const rows = await hubDb.variables.findMany();
+    const variableMap: Record<string, string> = {};
+    for (const row of rows) {
+      variableMap[row.key] = row.value;
+    }
 
     cachedConfig = {
       success: true,

@@ -7,24 +7,22 @@ import { NaisysServer } from "../services/naisysServer.js";
 /** Pushes the user list to NAISYS instances when they connect or when users change */
 export function createHubUserService(
   naisysServer: NaisysServer,
-  { usingHubDatabase }: HubDatabaseService,
+  { hubDb }: HubDatabaseService,
   logService: HubServerLog,
 ) {
   async function buildUserListPayload(): Promise<UserListResponse> {
-    const dbUsers = await usingHubDatabase(async (hubDb) => {
-      return await hubDb.users.findMany({
-        where: { archived: false },
-        select: {
-          id: true,
-          username: true,
-          config: true,
-          lead_user_id: true,
-          api_key: true,
-          user_hosts: {
-            select: { host_id: true },
-          },
+    const dbUsers = await hubDb.users.findMany({
+      where: { archived: false },
+      select: {
+        id: true,
+        username: true,
+        config: true,
+        lead_user_id: true,
+        api_key: true,
+        user_hosts: {
+          select: { host_id: true },
         },
-      });
+      },
     });
 
     const users = dbUsers.map((u) => ({

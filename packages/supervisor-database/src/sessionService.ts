@@ -23,14 +23,14 @@ let supervisorDb: PrismaClient | null = null;
  * Idempotent — returns early if already initialized.
  * No-ops gracefully if NAISYS_FOLDER is unset or the database doesn't exist.
  */
-export function createSupervisorDatabaseClient(): boolean {
+export async function createSupervisorDatabaseClient(): Promise<boolean> {
   if (supervisorDb) return true;
 
   const dbPath = supervisorDbPath();
 
   if (!existsSync(dbPath)) return false;
 
-  supervisorDb = createPrismaClient(dbPath);
+  supervisorDb = await createPrismaClient(dbPath);
   return true;
 }
 
@@ -187,7 +187,7 @@ export async function handleResetPassword(options: {
   password?: string;
 }): Promise<void> {
   console.log(`NAISYS_FOLDER: ${process.env.NAISYS_FOLDER}`);
-  createSupervisorDatabaseClient();
+  await createSupervisorDatabaseClient();
 
   await resetPassword(
     options.findLocalUser,

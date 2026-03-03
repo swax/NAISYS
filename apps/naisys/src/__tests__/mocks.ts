@@ -33,11 +33,7 @@ import { OutputService } from "../utils/output.js";
 
 export function createMockDatabaseService(): HubDatabaseService {
   return {
-    usingHubDatabase: <T>(
-      _run: (hubDb: PrismaClient) => Promise<T>,
-    ): Promise<T> => {
-      throw new Error("Mock database not implemented");
-    },
+    hubDb: {} as PrismaClient,
     getSchemaVersion: () => 1,
     disconnect: () => Promise.resolve(),
   };

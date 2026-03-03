@@ -3,6 +3,6 @@ import {
   supervisorDbPath,
 } from "@naisys/supervisor-database";
 
-const supervisorDb = createPrismaClient(supervisorDbPath());
+const supervisorDb = await createPrismaClient(supervisorDbPath());
 
 export default supervisorDb;

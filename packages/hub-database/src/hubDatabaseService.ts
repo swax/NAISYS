@@ -4,7 +4,6 @@ import { dirname } from "path";
 import { fileURLToPath } from "url";
 
 import { hubDbPath } from "./dbConfig.js";
-import { PrismaClient } from "./generated/prisma/client.js";
 import { createPrismaClient } from "./prismaClient.js";
 
 export async function createHubDatabaseService() {
@@ -19,7 +18,7 @@ export async function createHubDatabaseService() {
     mkdirSync(databaseDir, { recursive: true });
   }
 
-  const prisma = createPrismaClient(dbPath);
+  const prisma = await createPrismaClient(dbPath);
 
   await runMigrations();
 
@@ -34,50 +33,6 @@ export async function createHubDatabaseService() {
     });
   }
 
-  /**
-   * Wrapper for database operations with retry logic and exponential backoff.
-   * Automatically retries on transient errors like lock timeouts and socket timeouts.
-   */
-  async function usingHubDatabase<T>(
-    run: (hubDb: PrismaClient) => Promise<T>,
-    maxRetries: number = 5,
-    baseDelayMs: number = 100,
-  ): Promise<T> {
-    let lastError: unknown;
-
-    for (let attempt = 0; attempt <= maxRetries; attempt++) {
-      try {
-        return await run(prisma);
-      } catch (error: unknown) {
-        lastError = error;
-
-        const errorObj = error as { code?: string; message?: string };
-
-        // Check if this is a retryable error
-        const isRetryable =
-          errorObj?.code === "P1008" || // Socket timeout
-          errorObj?.code === "P2034" || // Database is locked
-          errorObj?.message?.includes("SQLITE_BUSY") ||
-          errorObj?.message?.includes("database is locked") ||
-          errorObj?.message?.includes("Socket timeout");
-
-        if (!isRetryable || attempt === maxRetries) {
-          throw error; // Not retryable or out of retries
-        }
-
-        // Exponential backoff: baseDelay * 2^attempt
-        const delayMs = baseDelayMs * Math.pow(2, attempt);
-        console.warn(
-          `Database operation failed (attempt ${attempt + 1}/${maxRetries + 1}), retrying in ${delayMs}ms: ${errorObj?.code || errorObj?.message}`,
-        );
-
-        await new Promise((resolve) => setTimeout(resolve, delayMs));
-      }
-    }
-
-    throw lastError; // Should never reach here, but satisfies TypeScript
-  }
-
   function getSchemaVersion(): number {
     return HUB_DB_VERSION;
   }
@@ -87,7 +42,7 @@ export async function createHubDatabaseService() {
   }
 
   return {
-    usingHubDatabase,
+    hubDb: prisma,
     getSchemaVersion,
     disconnect,
   };

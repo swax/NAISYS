@@ -24,7 +24,7 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
  */
 export function createHubAttachmentService(
   httpsServer: HttpsServer,
-  { usingHubDatabase }: HubDatabaseService,
+  { hubDb }: HubDatabaseService,
   logService: HubServerLog,
 ) {
   const naisysFolder = process.env.NAISYS_FOLDER || "";
@@ -57,10 +57,8 @@ export function createHubAttachmentService(
   });
 
   async function resolveUserByApiKey(apiKey: string): Promise<number | null> {
-    return usingHubDatabase(async (hubDb) => {
-      const user = await hubDb.users.findUnique({ where: { api_key: apiKey } });
-      return user?.id ?? null;
-    });
+    const user = await hubDb.users.findUnique({ where: { api_key: apiKey } });
+    return user?.id ?? null;
   }
 
   async function handleUpload(
@@ -191,19 +189,17 @@ export function createHubAttachmentService(
     }
 
     // Create DB record
-    const attachmentId = await usingHubDatabase(async (hubDb) => {
-      const record = await hubDb.attachments.create({
-        data: {
-          filepath: storagePath,
-          filename,
-          file_size: bytesWritten,
-          file_hash: computedHash,
-          purpose,
-          uploaded_by: userId,
-        },
-      });
-      return record.id;
+    const record = await hubDb.attachments.create({
+      data: {
+        filepath: storagePath,
+        filename,
+        file_size: bytesWritten,
+        file_hash: computedHash,
+        purpose,
+        uploaded_by: userId,
+      },
     });
+    const attachmentId = record.id;
 
     logService.log(
       `[Hub:Attachment] Uploaded attachment ${attachmentId}: ${filename} (${bytesWritten} bytes) by user ${userId}`,
@@ -242,8 +238,8 @@ export function createHubAttachmentService(
       return;
     }
 
-    const attachment = await usingHubDatabase(async (hubDb) => {
-      return hubDb.attachments.findUnique({ where: { id: attachmentId } });
+    const attachment = await hubDb.attachments.findUnique({
+      where: { id: attachmentId },
     });
 
     if (!attachment) {

@@ -245,15 +245,15 @@ export default function executionOrderRoutes(fastify: FastifyInstance) {
       }
 
       // Auto-increment orderNo inside a transaction to prevent race conditions
-      const item = await erpDb.$transaction(async (tx) => {
-        const maxOrder = await tx.execOrder.findFirst({
+      const item = await erpDb.$transaction(async (erpTx) => {
+        const maxOrder = await erpTx.execOrder.findFirst({
           where: { planOrderId },
           orderBy: { orderNo: "desc" },
           select: { orderNo: true },
         });
         const nextOrderNo = (maxOrder?.orderNo ?? 0) + 1;
 
-        return tx.execOrder.create({
+        return erpTx.execOrder.create({
           data: {
             orderNo: nextOrderNo,
             planOrderId,
@@ -439,13 +439,13 @@ export default function executionOrderRoutes(fastify: FastifyInstance) {
       }
 
       const userId = request.erpUser!.id;
-      const item = await erpDb.$transaction(async (tx) => {
-        const updated = await tx.execOrder.update({
+      const item = await erpDb.$transaction(async (erpTx) => {
+        const updated = await erpTx.execOrder.update({
           where: { id },
           data: { status: "started", updatedById: userId },
         });
         await writeAuditEntry(
-          tx,
+          erpTx,
           "ExecOrder",
           id,
           "start",
@@ -496,13 +496,13 @@ export default function executionOrderRoutes(fastify: FastifyInstance) {
       }
 
       const userId = request.erpUser!.id;
-      const item = await erpDb.$transaction(async (tx) => {
-        const updated = await tx.execOrder.update({
+      const item = await erpDb.$transaction(async (erpTx) => {
+        const updated = await erpTx.execOrder.update({
           where: { id },
           data: { status: "closed", updatedById: userId },
         });
         await writeAuditEntry(
-          tx,
+          erpTx,
           "ExecOrder",
           id,
           "close",
@@ -553,13 +553,13 @@ export default function executionOrderRoutes(fastify: FastifyInstance) {
       }
 
       const userId = request.erpUser!.id;
-      const item = await erpDb.$transaction(async (tx) => {
-        const updated = await tx.execOrder.update({
+      const item = await erpDb.$transaction(async (erpTx) => {
+        const updated = await erpTx.execOrder.update({
           where: { id },
           data: { status: "cancelled", updatedById: userId },
         });
         await writeAuditEntry(
-          tx,
+          erpTx,
           "ExecOrder",
           id,
           "cancel",
