@@ -5,8 +5,8 @@
  * the Hub server, and the Supervisor for multi-machine synchronization.
  */
 
-export * from "./events.js";
 export * from "./eventMap.js";
+export * from "./events.js";
 export * from "./schemas/agents.js";
 export * from "./schemas/config.js";
 export * from "./schemas/costs.js";

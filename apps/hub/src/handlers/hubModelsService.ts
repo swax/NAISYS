@@ -62,44 +62,30 @@ export async function createHubModelsService(
   }
 
   // Push models to newly connected clients
-  naisysServer.registerEvent(
-    HubEvents.CLIENT_CONNECTED,
-    async (hostId) => {
-      try {
-        const payload = await buildModelsPayload();
+  naisysServer.registerEvent(HubEvents.CLIENT_CONNECTED, async (hostId) => {
+    try {
+      const payload = await buildModelsPayload();
 
-        logService.log(
-          `[Hub:Models] Pushing ${payload.llmModels?.length ?? 0} LLM + ${payload.imageModels?.length ?? 0} image models to naisys instance ${hostId}`,
-        );
+      logService.log(
+        `[Hub:Models] Pushing ${payload.llmModels?.length ?? 0} LLM + ${payload.imageModels?.length ?? 0} image models to naisys instance ${hostId}`,
+      );
 
-        naisysServer.sendMessage(
-          hostId,
-          HubEvents.MODELS_UPDATED,
-          payload,
-        );
-      } catch (error) {
-        logService.error(
-          `[Hub:Models] Error querying models for naisys instance ${hostId}: ${error}`,
-        );
-        naisysServer.sendMessage(
-          hostId,
-          HubEvents.MODELS_UPDATED,
-          {
-            success: false,
-            error: String(error),
-          },
-        );
-      }
-    },
-  );
+      naisysServer.sendMessage(hostId, HubEvents.MODELS_UPDATED, payload);
+    } catch (error) {
+      logService.error(
+        `[Hub:Models] Error querying models for naisys instance ${hostId}: ${error}`,
+      );
+      naisysServer.sendMessage(hostId, HubEvents.MODELS_UPDATED, {
+        success: false,
+        error: String(error),
+      });
+    }
+  });
 
   // Broadcast models to all clients when supervisor saves/deletes a model
-  naisysServer.registerEvent(
-    HubEvents.MODELS_CHANGED,
-    async () => {
-      await broadcastModels();
-    },
-  );
+  naisysServer.registerEvent(HubEvents.MODELS_CHANGED, async () => {
+    await broadcastModels();
+  });
 }
 
 /** Seeds models table from built-in models + any YAML custom models.

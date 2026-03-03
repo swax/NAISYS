@@ -1,5 +1,5 @@
 import { Alert } from "@mantine/core";
-import { IconPlugConnected,IconPlugConnectedX } from "@tabler/icons-react";
+import { IconPlugConnected, IconPlugConnectedX } from "@tabler/icons-react";
 import React from "react";
 
 import { useConnectionStatus } from "../hooks/useConnectionStatus";

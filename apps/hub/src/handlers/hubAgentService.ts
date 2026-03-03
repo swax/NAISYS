@@ -78,9 +78,7 @@ export function createHubAgentService(
   }
 
   /** Try to start an agent on the best available host (fire-and-forget) */
-  async function tryStartAgent(
-    startUserId: number,
-  ): Promise<boolean> {
+  async function tryStartAgent(startUserId: number): Promise<boolean> {
     try {
       const bestHostId = await findBestHost(startUserId);
       if (bestHostId === null) {
@@ -205,118 +203,109 @@ export function createHubAgentService(
     }
   }
 
-  naisysServer.registerEvent(
-    HubEvents.AGENT_STOP,
-    (hostId, data, ack) => {
-      try {
-        const parsed = AgentStopRequestSchema.parse(data);
+  naisysServer.registerEvent(HubEvents.AGENT_STOP, (hostId, data, ack) => {
+    try {
+      const parsed = AgentStopRequestSchema.parse(data);
 
-        // Find which hosts the agent is currently running on
-        const targetHostIds = heartbeatService.findHostsForAgent(parsed.userId);
+      // Find which hosts the agent is currently running on
+      const targetHostIds = heartbeatService.findHostsForAgent(parsed.userId);
 
-        if (targetHostIds.length === 0) {
-          ack({
-            success: false,
-            error: `Agent ${parsed.userId} is not running on any known host`,
-          });
-          return;
-        }
-
-        // Forward the stop request to all hosts running this agent
-        let acked = false;
-        let sendFailures = 0;
-
-        for (const targetHostId of targetHostIds) {
-          const sent = naisysServer.sendMessage(
-            targetHostId,
-            HubEvents.AGENT_STOP,
-            {
-              userId: parsed.userId,
-              reason: parsed.reason,
-              sourceHostId: hostId,
-            },
-            (response) => {
-              if (response.success) {
-                heartbeatService.removeStoppedAgent(
-                  targetHostId,
-                  parsed.userId,
-                );
-              }
-              // Ack with the first response
-              if (!acked) {
-                acked = true;
-                ack(response);
-              }
-            },
-          );
-
-          if (!sent) {
-            sendFailures++;
-          }
-        }
-
-        if (sendFailures === targetHostIds.length && !acked) {
-          ack({
-            success: false,
-            error: `No target hosts are connected`,
-          });
-        }
-      } catch (error) {
-        logService.error(
-          `[Hub:Agents] agent_stop error from host ${hostId}: ${error}`,
-        );
-        ack({ success: false, error: String(error) });
+      if (targetHostIds.length === 0) {
+        ack({
+          success: false,
+          error: `Agent ${parsed.userId} is not running on any known host`,
+        });
+        return;
       }
-    },
-  );
 
-  naisysServer.registerEvent(
-    HubEvents.AGENT_PEEK,
-    (hostId, data, ack) => {
-      try {
-        const parsed = AgentPeekRequestSchema.parse(data);
+      // Forward the stop request to all hosts running this agent
+      let acked = false;
+      let sendFailures = 0;
 
-        // Find which host the agent is running on
-        const targetHostIds = heartbeatService.findHostsForAgent(parsed.userId);
-
-        if (targetHostIds.length === 0) {
-          ack({
-            success: false,
-            error: `Agent ${parsed.userId} is not running on any known host`,
-          });
-          return;
-        }
-
-        // Forward peek request to the first host (only need one response)
-        const targetHostId = targetHostIds[0];
+      for (const targetHostId of targetHostIds) {
         const sent = naisysServer.sendMessage(
           targetHostId,
-          HubEvents.AGENT_PEEK,
+          HubEvents.AGENT_STOP,
           {
             userId: parsed.userId,
-            skip: parsed.skip,
-            take: parsed.take,
+            reason: parsed.reason,
             sourceHostId: hostId,
           },
           (response) => {
-            ack(response);
+            if (response.success) {
+              heartbeatService.removeStoppedAgent(targetHostId, parsed.userId);
+            }
+            // Ack with the first response
+            if (!acked) {
+              acked = true;
+              ack(response);
+            }
           },
         );
 
         if (!sent) {
-          ack({
-            success: false,
-            error: `Failed to send to host ${targetHostId}`,
-          });
+          sendFailures++;
         }
-      } catch (error) {
-        logService.error(
-          `[Hub:Agents] agent_peek error from host ${hostId}: ${error}`,
-        );
-        ack({ success: false, error: String(error) });
       }
-    },
-  );
+
+      if (sendFailures === targetHostIds.length && !acked) {
+        ack({
+          success: false,
+          error: `No target hosts are connected`,
+        });
+      }
+    } catch (error) {
+      logService.error(
+        `[Hub:Agents] agent_stop error from host ${hostId}: ${error}`,
+      );
+      ack({ success: false, error: String(error) });
+    }
+  });
+
+  naisysServer.registerEvent(HubEvents.AGENT_PEEK, (hostId, data, ack) => {
+    try {
+      const parsed = AgentPeekRequestSchema.parse(data);
+
+      // Find which host the agent is running on
+      const targetHostIds = heartbeatService.findHostsForAgent(parsed.userId);
+
+      if (targetHostIds.length === 0) {
+        ack({
+          success: false,
+          error: `Agent ${parsed.userId} is not running on any known host`,
+        });
+        return;
+      }
+
+      // Forward peek request to the first host (only need one response)
+      const targetHostId = targetHostIds[0];
+      const sent = naisysServer.sendMessage(
+        targetHostId,
+        HubEvents.AGENT_PEEK,
+        {
+          userId: parsed.userId,
+          skip: parsed.skip,
+          take: parsed.take,
+          sourceHostId: hostId,
+        },
+        (response) => {
+          ack(response);
+        },
+      );
+
+      if (!sent) {
+        ack({
+          success: false,
+          error: `Failed to send to host ${targetHostId}`,
+        });
+      }
+    } catch (error) {
+      logService.error(
+        `[Hub:Agents] agent_peek error from host ${hostId}: ${error}`,
+      );
+      ack({ success: false, error: String(error) });
+    }
+  });
 
   return { tryStartAgent };
 }

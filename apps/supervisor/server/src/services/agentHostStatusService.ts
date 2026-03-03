@@ -1,7 +1,7 @@
 import { EventEmitter } from "node:events";
 
-import type { AgentStatusEvent } from "@naisys-supervisor/shared";
 import { determineAgentStatus } from "@naisys/common";
+import type { AgentStatusEvent } from "@naisys-supervisor/shared";
 
 const activeAgentIds = new Set<number>();
 const connectedHostIds = new Set<number>();
@@ -41,7 +41,12 @@ export function updateAgentsStatus(
 }
 
 export function updateHostsStatus(
-  hosts: { hostId: number; online: boolean; restricted: boolean; hostType: string }[],
+  hosts: {
+    hostId: number;
+    online: boolean;
+    restricted: boolean;
+    hostType: string;
+  }[],
 ): void {
   hostOnlineStatus.clear();
   hostRestrictedStatus.clear();
@@ -94,7 +99,12 @@ export function isAgentActive(userId: number): boolean {
 
 function hasNonRestrictedOnlineHost(): boolean {
   for (const [hostId, online] of hostOnlineStatus) {
-    if (online && !hostRestrictedStatus.get(hostId) && hostTypeStatus.get(hostId) === "naisys") return true;
+    if (
+      online &&
+      !hostRestrictedStatus.get(hostId) &&
+      hostTypeStatus.get(hostId) === "naisys"
+    )
+      return true;
   }
   return false;
 }

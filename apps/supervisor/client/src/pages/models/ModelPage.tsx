@@ -15,7 +15,7 @@ import { useBlocker, useNavigate, useParams } from "react-router-dom";
 
 import { ImageModelForm } from "../../components/ImageModelForm";
 import { LlmModelForm } from "../../components/LlmModelForm";
-import { deleteModel,saveImageModel, saveLlmModel } from "../../lib/apiModels";
+import { deleteModel, saveImageModel, saveLlmModel } from "../../lib/apiModels";
 import { useModelsContext } from "./ModelsLayout";
 
 type ModelType = "llm" | "image";

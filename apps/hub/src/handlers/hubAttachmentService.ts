@@ -88,7 +88,9 @@ export function createHubAttachmentService(
     if (purpose !== "mail" && purpose !== "context") {
       res.writeHead(400, { "Content-Type": "application/json" });
       res.end(
-        JSON.stringify({ error: 'Invalid purpose. Must be "mail" or "context"' }),
+        JSON.stringify({
+          error: 'Invalid purpose. Must be "mail" or "context"',
+        }),
       );
       return;
     }

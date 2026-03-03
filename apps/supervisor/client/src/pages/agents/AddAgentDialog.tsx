@@ -40,9 +40,7 @@ export const AddAgentDialog: React.FC<AddAgentDialogProps> = ({
     } catch (error) {
       console.error("Error exporting agent config:", error);
       alert(
-        error instanceof Error
-          ? error.message
-          : "Failed to load agent config",
+        error instanceof Error ? error.message : "Failed to load agent config",
       );
     } finally {
       setLoadingCopy(false);

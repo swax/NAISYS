@@ -153,13 +153,12 @@ export const ConfigSummary: React.FC<{
               </Table.Td>
             </Table.Tr>
           )}
-          {config.commandProtection &&
-            config.commandProtection !== "none" && (
-              <Table.Tr>
-                <Table.Td c="dimmed">Command Protection</Table.Td>
-                <Table.Td>{config.commandProtection}</Table.Td>
-              </Table.Tr>
-            )}
+          {config.commandProtection && config.commandProtection !== "none" && (
+            <Table.Tr>
+              <Table.Td c="dimmed">Command Protection</Table.Td>
+              <Table.Td>{config.commandProtection}</Table.Td>
+            </Table.Tr>
+          )}
           {config.debugPauseSeconds != null && (
             <Table.Tr>
               <Table.Td c="dimmed">Debug Pause</Table.Td>

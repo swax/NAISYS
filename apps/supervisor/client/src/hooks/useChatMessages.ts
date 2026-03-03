@@ -2,7 +2,7 @@ import type { HateoasAction } from "@naisys/common";
 import { useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useState } from "react";
 
-import { ChatMessagesParams,getChatMessages } from "../lib/apiChat";
+import { ChatMessagesParams, getChatMessages } from "../lib/apiChat";
 import type { ChatMessage } from "../lib/apiClient";
 
 // Module-level caches (persist across remounts)

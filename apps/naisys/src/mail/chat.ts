@@ -85,7 +85,10 @@ export function createChatService(
         if (filePaths.length > 0) {
           resolvedPaths = await shellWrapper.resolvePaths(filePaths);
           if (hubClient) {
-            attachmentIds = await attachmentService.uploadAll(resolvedPaths, "mail");
+            attachmentIds = await attachmentService.uploadAll(
+              resolvedPaths,
+              "mail",
+            );
           }
         }
 
@@ -132,17 +135,14 @@ export function createChatService(
     message = message.replace(/\\n/g, "\n");
 
     if (hubClient) {
-      const response = await hubClient.sendRequest(
-        HubEvents.MAIL_SEND,
-        {
-          fromUserId: localUserId,
-          toUserIds: recipients.map((r) => r.userId),
-          subject: "",
-          body: message,
-          kind: "chat",
-          attachmentIds,
-        },
-      );
+      const response = await hubClient.sendRequest(HubEvents.MAIL_SEND, {
+        fromUserId: localUserId,
+        toUserIds: recipients.map((r) => r.userId),
+        subject: "",
+        body: message,
+        kind: "chat",
+        attachmentIds,
+      });
 
       if (!response.success) {
         throw response.error || "Failed to send chat message";
@@ -181,16 +181,13 @@ export function createChatService(
   ): Promise<string> {
     if (!hubClient) throw "Not available in local mode.";
 
-    const response = await hubClient.sendRequest(
-      HubEvents.MAIL_LIST,
-      {
-        userId: localUserId,
-        kind: "chat",
-        skip,
-        take: take ?? 10,
-        ...(withUserIds ? { withUserIds } : {}),
-      },
-    );
+    const response = await hubClient.sendRequest(HubEvents.MAIL_LIST, {
+      userId: localUserId,
+      kind: "chat",
+      skip,
+      take: take ?? 10,
+      ...(withUserIds ? { withUserIds } : {}),
+    });
 
     if (!response.success) {
       throw response.error || "Failed to list chat messages";
@@ -298,19 +295,20 @@ export function createChatService(
   async function markMessagesRead(messageIds: number[]): Promise<void> {
     if (!hubClient || !messageIds.length) return;
 
-    await hubClient.sendRequest(
-      HubEvents.MAIL_MARK_READ,
-      { userId: localUserId, messageIds },
-    );
+    await hubClient.sendRequest(HubEvents.MAIL_MARK_READ, {
+      userId: localUserId,
+      messageIds,
+    });
   }
 
   async function checkAndNotify(): Promise<void> {
     if (!hubClient) return;
 
-    const response = await hubClient.sendRequest(
-      HubEvents.MAIL_UNREAD,
-      { userId: localUserId, kind: "chat", afterId: lastUnreadId },
-    );
+    const response = await hubClient.sendRequest(HubEvents.MAIL_UNREAD, {
+      userId: localUserId,
+      kind: "chat",
+      afterId: lastUnreadId,
+    });
 
     if (!response.success || !response.messages?.length) return;
 
@@ -372,10 +370,7 @@ export function createChatService(
     handleCommand,
   };
 
-  async function sendToUser(
-    userId: number,
-    message: string,
-  ): Promise<string> {
+  async function sendToUser(userId: number, message: string): Promise<string> {
     const user = userService.getUserById(userId);
     if (!user) {
       throw `User with ID ${userId} not found`;

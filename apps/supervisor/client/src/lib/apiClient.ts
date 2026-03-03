@@ -18,6 +18,7 @@ import type {
   DeleteVariableResponse,
   ExportAgentConfigResponse,
   GetAgentConfigResponse,
+  HostDetailResponse,
   HostListResponse,
   ImageModelDetail,
   ImportAgentConfigResponse,
@@ -39,7 +40,6 @@ import type {
   StatusResponse,
   UpdateAgentConfigResponse,
   VariablesResponse,
-  HostDetailResponse,
 } from "@naisys-supervisor/shared";
 
 export const API_BASE = "/api/supervisor";

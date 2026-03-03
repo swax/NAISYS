@@ -20,12 +20,7 @@ export const HostDataProvider: React.FC<{ children: React.ReactNode }> = ({
 }) => {
   const [hosts, setHosts] = useState<Host[]>([]);
 
-  const {
-    hosts: cachedHosts,
-    listActions,
-    isLoading,
-    error,
-  } = useHostData();
+  const { hosts: cachedHosts, listActions, isLoading, error } = useHostData();
 
   useEffect(() => {
     if (cachedHosts) {

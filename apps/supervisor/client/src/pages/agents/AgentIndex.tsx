@@ -11,7 +11,7 @@ export const AgentIndex: React.FC = () => {
   useEffect(() => {
     const firstActive = agents.find((a) => !a.archived);
     if (firstActive) {
-      navigate(`/agents/${firstActive.id}`, { replace: true });
+      void navigate(`/agents/${firstActive.id}`, { replace: true });
     }
   }, [agents, navigate]);
 

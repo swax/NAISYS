@@ -1,4 +1,4 @@
-import { buildClientConfig,ClientConfig } from "@naisys/common";
+import { buildClientConfig, ClientConfig } from "@naisys/common";
 import { ConfigResponseSchema, HubEvents } from "@naisys/hub-protocol";
 import dotenv from "dotenv";
 import { readFile } from "fs/promises";
@@ -30,27 +30,24 @@ export function createGlobalConfig(
         rejectConfig = reject;
       });
 
-      hubClient.registerEvent(
-        HubEvents.VARIABLES_UPDATED,
-        async (data) => {
-          try {
-            const response = ConfigResponseSchema.parse(data);
-            if (!response.success || !response.config) {
-              rejectConfig(
-                new Error(response.error || "Failed to get config from hub"),
-              );
-              return;
-            }
-
-            cachedConfig = await appendClientConfig(response.config);
-            resolveConfig();
-          } catch (error) {
+      hubClient.registerEvent(HubEvents.VARIABLES_UPDATED, async (data) => {
+        try {
+          const response = ConfigResponseSchema.parse(data);
+          if (!response.success || !response.config) {
             rejectConfig(
-              error instanceof Error ? error : new Error(String(error)),
+              new Error(response.error || "Failed to get config from hub"),
             );
+            return;
           }
-        },
-      );
+
+          cachedConfig = await appendClientConfig(response.config);
+          resolveConfig();
+        } catch (error) {
+          rejectConfig(
+            error instanceof Error ? error : new Error(String(error)),
+          );
+        }
+      });
     } else {
       const { parsed: dotenvVars } = dotenv.config({ quiet: true });
       const clientConfig = buildClientConfig(dotenvVars ?? {});

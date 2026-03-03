@@ -18,10 +18,10 @@ export async function createRunService(
 
   async function init() {
     if (hubClient) {
-      const response = await hubClient.sendRequest(
-        HubEvents.SESSION_CREATE,
-        { userId: localUserId, modelName: agentConfig().shellModel },
-      );
+      const response = await hubClient.sendRequest(HubEvents.SESSION_CREATE, {
+        userId: localUserId,
+        modelName: agentConfig().shellModel,
+      });
 
       if (!response.success) {
         throw new Error(`Failed to create session via hub: ${response.error}`);

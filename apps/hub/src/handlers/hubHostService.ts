@@ -27,11 +27,7 @@ export function createHubHostService(
 
     // Send to the excluded host (newly connecting) directly
     if (excludeHostId !== undefined) {
-      naisysServer.sendMessage(
-        excludeHostId,
-        HubEvents.HOSTS_UPDATED,
-        payload,
-      );
+      naisysServer.sendMessage(excludeHostId, HubEvents.HOSTS_UPDATED, payload);
     }
 
     // Broadcast to other existing connections only if the list changed

@@ -1,11 +1,16 @@
 import { Badge, Button, Card, Group, Stack, Text } from "@mantine/core";
 import { hasAction, type HateoasAction } from "@naisys/common";
-import { IconChartDots, IconCpu, IconPhoto, IconPlus } from "@tabler/icons-react";
+import {
+  IconChartDots,
+  IconCpu,
+  IconPhoto,
+  IconPlus,
+} from "@tabler/icons-react";
 import React from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import { ROUTER_BASENAME } from "../constants";
-import type { ImageModelDetail,LlmModelDetail } from "../lib/apiClient";
+import type { ImageModelDetail, LlmModelDetail } from "../lib/apiClient";
 
 interface ModelSidebarProps {
   llmModels: LlmModelDetail[];

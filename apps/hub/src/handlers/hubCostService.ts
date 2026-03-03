@@ -5,10 +5,7 @@ import {
 } from "@naisys/common";
 import type { HubDatabaseService } from "@naisys/hub-database";
 import { PrismaClient } from "@naisys/hub-database";
-import {
-  CostWriteRequestSchema,
-  HubEvents,
-} from "@naisys/hub-protocol";
+import { CostWriteRequestSchema, HubEvents } from "@naisys/hub-protocol";
 
 import { HubServerLog } from "../services/hubServerLog.js";
 import { NaisysServer } from "../services/naisysServer.js";
@@ -29,91 +26,88 @@ export function createHubCostService(
   const suspendedByGlobal = new Set<number>();
   const suspendedByAgent = new Set<number>();
 
-  naisysServer.registerEvent(
-    HubEvents.COST_WRITE,
-    async (hostId, data) => {
-      try {
-        const parsed = CostWriteRequestSchema.parse(data);
+  naisysServer.registerEvent(HubEvents.COST_WRITE, async (hostId, data) => {
+    try {
+      const parsed = CostWriteRequestSchema.parse(data);
 
-        // Collect unique user IDs from this batch
-        const batchUserIds = new Set(parsed.entries.map((e) => e.userId));
+      // Collect unique user IDs from this batch
+      const batchUserIds = new Set(parsed.entries.map((e) => e.userId));
 
-        await usingHubDatabase(async (hubDb) => {
-          for (const entry of parsed.entries) {
-            // Find the most recent cost record for this combination
-            const existingRecord = await hubDb.costs.findFirst({
-              where: {
+      await usingHubDatabase(async (hubDb) => {
+        for (const entry of parsed.entries) {
+          // Find the most recent cost record for this combination
+          const existingRecord = await hubDb.costs.findFirst({
+            where: {
+              user_id: entry.userId,
+              run_id: entry.runId,
+              session_id: entry.sessionId,
+              source: entry.source,
+              model: entry.model,
+            },
+            orderBy: { created_at: "desc" },
+            select: { id: true, created_at: true },
+          });
+
+          // Update existing record if within aggregation window, otherwise create new
+          if (
+            existingRecord &&
+            Date.now() - existingRecord.created_at.getTime() <
+              COST_AGGREGATION_WINDOW_MS
+          ) {
+            await hubDb.costs.update({
+              where: { id: existingRecord.id },
+              data: {
+                cost: { increment: entry.cost },
+                input_tokens: { increment: entry.inputTokens },
+                output_tokens: { increment: entry.outputTokens },
+                cache_write_tokens: { increment: entry.cacheWriteTokens },
+                cache_read_tokens: { increment: entry.cacheReadTokens },
+              },
+            });
+          } else {
+            await hubDb.costs.create({
+              data: {
                 user_id: entry.userId,
                 run_id: entry.runId,
                 session_id: entry.sessionId,
+                host_id: hostId,
                 source: entry.source,
                 model: entry.model,
-              },
-              orderBy: { created_at: "desc" },
-              select: { id: true, created_at: true },
-            });
-
-            // Update existing record if within aggregation window, otherwise create new
-            if (
-              existingRecord &&
-              Date.now() - existingRecord.created_at.getTime() <
-                COST_AGGREGATION_WINDOW_MS
-            ) {
-              await hubDb.costs.update({
-                where: { id: existingRecord.id },
-                data: {
-                  cost: { increment: entry.cost },
-                  input_tokens: { increment: entry.inputTokens },
-                  output_tokens: { increment: entry.outputTokens },
-                  cache_write_tokens: { increment: entry.cacheWriteTokens },
-                  cache_read_tokens: { increment: entry.cacheReadTokens },
-                },
-              });
-            } else {
-              await hubDb.costs.create({
-                data: {
-                  user_id: entry.userId,
-                  run_id: entry.runId,
-                  session_id: entry.sessionId,
-                  host_id: hostId,
-                  source: entry.source,
-                  model: entry.model,
-                  cost: entry.cost,
-                  input_tokens: entry.inputTokens,
-                  output_tokens: entry.outputTokens,
-                  cache_write_tokens: entry.cacheWriteTokens,
-                  cache_read_tokens: entry.cacheReadTokens,
-                },
-              });
-            }
-
-            // Update run_session total_cost
-            await hubDb.run_session.updateMany({
-              where: {
-                user_id: entry.userId,
-                run_id: entry.runId,
-                session_id: entry.sessionId,
-              },
-              data: {
-                total_cost: { increment: entry.cost },
+                cost: entry.cost,
+                input_tokens: entry.inputTokens,
+                output_tokens: entry.outputTokens,
+                cache_write_tokens: entry.cacheWriteTokens,
+                cache_read_tokens: entry.cacheReadTokens,
               },
             });
           }
-        });
 
-        // Re-send cost_control to any suspended users still writing costs
-        for (const userId of batchUserIds) {
-          if (suspendedByGlobal.has(userId) || suspendedByAgent.has(userId)) {
-            sendCostControl(userId, false, "Spend limit exceeded");
-          }
+          // Update run_session total_cost
+          await hubDb.run_session.updateMany({
+            where: {
+              user_id: entry.userId,
+              run_id: entry.runId,
+              session_id: entry.sessionId,
+            },
+            data: {
+              total_cost: { increment: entry.cost },
+            },
+          });
         }
-      } catch (error) {
-        logService.error(
-          `[Hub:Costs] Error processing cost_write from host ${hostId}: ${error}`,
-        );
+      });
+
+      // Re-send cost_control to any suspended users still writing costs
+      for (const userId of batchUserIds) {
+        if (suspendedByGlobal.has(userId) || suspendedByAgent.has(userId)) {
+          sendCostControl(userId, false, "Spend limit exceeded");
+        }
       }
-    },
-  );
+    } catch (error) {
+      logService.error(
+        `[Hub:Costs] Error processing cost_write from host ${hostId}: ${error}`,
+      );
+    }
+  });
 
   // Periodic spend limit checking
   const spendLimitCheckInterval = setInterval(

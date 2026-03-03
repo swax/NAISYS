@@ -150,9 +150,7 @@ export const AgentChat: React.FC = () => {
       }}
     >
       {/* Desktop conversation sidebar */}
-      <CollapsibleSidebar>
-        {conversationList}
-      </CollapsibleSidebar>
+      <CollapsibleSidebar>{conversationList}</CollapsibleSidebar>
 
       {/* Mobile drawer for conversations */}
       <Drawer

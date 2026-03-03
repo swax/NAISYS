@@ -57,7 +57,8 @@ export function createHostService(
 
   function hasNonRestrictedOnlineHost(): boolean {
     for (const entry of hostMap.values()) {
-      if (entry.online && !entry.restricted && entry.hostType === "naisys") return true;
+      if (entry.online && !entry.restricted && entry.hostType === "naisys")
+        return true;
     }
     return false;
   }

@@ -11,7 +11,7 @@ import {
 import { useDisclosure } from "@mantine/hooks";
 import naisysLogo from "@naisys/common/assets/naisys-logo.webp";
 import { IconApi } from "@tabler/icons-react";
-import { Link, Outlet,useLocation, useNavigate } from "react-router";
+import { Link, Outlet, useLocation, useNavigate } from "react-router";
 
 import { useAuth } from "../lib/AuthContext";
 import { LoginModal } from "./LoginModal";

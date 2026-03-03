@@ -222,7 +222,12 @@ export default function agentChatRoutes(
         if (attachmentBuffers.length > 0) {
           attachmentIds = [];
           for (const att of attachmentBuffers) {
-            const id = await uploadToHub(att.data, att.filename, fromId, "mail");
+            const id = await uploadToHub(
+              att.data,
+              att.filename,
+              fromId,
+              "mail",
+            );
             attachmentIds.push(id);
           }
         }

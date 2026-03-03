@@ -99,7 +99,9 @@ export const AgentNavHeader: React.FC<AgentNavHeaderProps> = ({ agentId }) => {
             href={getAbsoluteUrl("detail")}
             onClick={(e: React.MouseEvent) => handleTabClick(e, "detail")}
           >
-            <Text visibleFrom="sm" span>Detail</Text>
+            <Text visibleFrom="sm" span>
+              Detail
+            </Text>
           </Tabs.Tab>
           <Indicator
             disabled={!hasUnreadLogs}
@@ -116,7 +118,9 @@ export const AgentNavHeader: React.FC<AgentNavHeaderProps> = ({ agentId }) => {
               href={getAbsoluteUrl("runs")}
               onClick={(e: React.MouseEvent) => handleTabClick(e, "runs")}
             >
-              <Text visibleFrom="sm" span>Runs</Text>
+              <Text visibleFrom="sm" span>
+                Runs
+              </Text>
             </Tabs.Tab>
           </Indicator>
           {hasMailLink && (
@@ -135,7 +139,9 @@ export const AgentNavHeader: React.FC<AgentNavHeaderProps> = ({ agentId }) => {
                 href={getAbsoluteUrl("mail")}
                 onClick={(e: React.MouseEvent) => handleTabClick(e, "mail")}
               >
-                <Text visibleFrom="sm" span>Mail</Text>
+                <Text visibleFrom="sm" span>
+                  Mail
+                </Text>
               </Tabs.Tab>
             </Indicator>
           )}
@@ -148,7 +154,9 @@ export const AgentNavHeader: React.FC<AgentNavHeaderProps> = ({ agentId }) => {
               href={getAbsoluteUrl("chat")}
               onClick={(e: React.MouseEvent) => handleTabClick(e, "chat")}
             >
-              <Text visibleFrom="sm" span>Chat</Text>
+              <Text visibleFrom="sm" span>
+                Chat
+              </Text>
             </Tabs.Tab>
           )}
           <Tabs.Tab
@@ -159,7 +167,9 @@ export const AgentNavHeader: React.FC<AgentNavHeaderProps> = ({ agentId }) => {
             href={getAbsoluteUrl("config")}
             onClick={(e: React.MouseEvent) => handleTabClick(e, "config")}
           >
-            <Text visibleFrom="sm" span>Config</Text>
+            <Text visibleFrom="sm" span>
+              Config
+            </Text>
           </Tabs.Tab>
         </Tabs.List>
       </Tabs>

@@ -31,74 +31,65 @@ export class AgentManager {
     private promptNotification: PromptNotificationService,
   ) {
     if (hubClient) {
-      hubClient.registerEvent(
-        HubEvents.AGENT_START,
-        async (data, ack) => {
-          const hostname = this.globalConfig.globalConfig().hostname;
+      hubClient.registerEvent(HubEvents.AGENT_START, async (data, ack) => {
+        const hostname = this.globalConfig.globalConfig().hostname;
 
-          try {
-            const parsed = AgentStartRequestSchema.parse(data);
+        try {
+          const parsed = AgentStartRequestSchema.parse(data);
 
-            if (parsed.sourceHostId !== this.hostService.getLocalHostId()) {
-              this.notifyHubRequest("start", parsed.startUserId);
-            }
-
-            await this.startAgent(parsed.startUserId);
-
-            ack({
-              success: true,
-              hostname,
-            });
-          } catch (error) {
-            ack({
-              success: false,
-              error: String(error),
-              hostname,
-            });
+          if (parsed.sourceHostId !== this.hostService.getLocalHostId()) {
+            this.notifyHubRequest("start", parsed.startUserId);
           }
-        },
-      );
 
-      hubClient.registerEvent(
-        HubEvents.AGENT_STOP,
-        async (data, ack) => {
-          try {
-            const parsed = AgentStopRequestSchema.parse(data);
+          await this.startAgent(parsed.startUserId);
 
-            if (parsed.sourceHostId !== this.hostService.getLocalHostId()) {
-              this.notifyHubRequest("stop", parsed.userId);
-            }
+          ack({
+            success: true,
+            hostname,
+          });
+        } catch (error) {
+          ack({
+            success: false,
+            error: String(error),
+            hostname,
+          });
+        }
+      });
 
-            await this.stopAgent(parsed.userId, parsed.reason);
+      hubClient.registerEvent(HubEvents.AGENT_STOP, async (data, ack) => {
+        try {
+          const parsed = AgentStopRequestSchema.parse(data);
 
-            ack({ success: true });
-          } catch (error) {
-            ack({ success: false, error: String(error) });
+          if (parsed.sourceHostId !== this.hostService.getLocalHostId()) {
+            this.notifyHubRequest("stop", parsed.userId);
           }
-        },
-      );
 
-      hubClient.registerEvent(
-        HubEvents.AGENT_PEEK,
-        (data, ack) => {
-          try {
-            const parsed = AgentPeekRequestSchema.parse(data);
+          await this.stopAgent(parsed.userId, parsed.reason);
 
-            const allLines = this.getBufferLines(parsed.userId).map((line) =>
-              stripAnsi(line),
-            );
-            const totalLines = allLines.length;
+          ack({ success: true });
+        } catch (error) {
+          ack({ success: false, error: String(error) });
+        }
+      });
 
-            const skip = parsed.skip ?? 0;
-            const take = parsed.take ?? totalLines;
-            const lines = allLines.slice(skip, skip + take);
+      hubClient.registerEvent(HubEvents.AGENT_PEEK, (data, ack) => {
+        try {
+          const parsed = AgentPeekRequestSchema.parse(data);
 
-            ack({ success: true, lines, totalLines });
-          } catch (error) {
-            ack({ success: false, error: String(error) });
-          }
-        },
-      );
+          const allLines = this.getBufferLines(parsed.userId).map((line) =>
+            stripAnsi(line),
+          );
+          const totalLines = allLines.length;
+
+          const skip = parsed.skip ?? 0;
+          const take = parsed.take ?? totalLines;
+          const lines = allLines.slice(skip, skip + take);
+
+          ack({ success: true, lines, totalLines });
+        } catch (error) {
+          ack({ success: false, error: String(error) });
+        }
+      });
     }
   }
 
@@ -143,9 +134,9 @@ export class AgentManager {
     const runPromise = agent
       .runCommandLoop()
       .catch((ex: any) => `error: ${ex}`)
-      .then((exitReason) => {
+      .then(async (exitReason) => {
         onStop?.(exitReason);
-        this.cleanupAgent(agent, exitReason);
+        await this.cleanupAgent(agent, exitReason);
       });
 
     this.runPromises.set(userId, runPromise);
