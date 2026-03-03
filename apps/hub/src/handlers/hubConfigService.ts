@@ -74,7 +74,7 @@ export async function createHubConfigService(
       );
 
       for (const connection of clients) {
-        naisysServer.sendMessage<ConfigResponse>(
+        naisysServer.sendMessage(
           connection.getHostId(),
           HubEvents.VARIABLES_UPDATED,
           payload,
@@ -88,7 +88,7 @@ export async function createHubConfigService(
   // Push config to newly connected clients
   naisysServer.registerEvent(
     HubEvents.CLIENT_CONNECTED,
-    async (hostId: number) => {
+    async (hostId) => {
       try {
         const payload = await buildConfigPayload();
 
@@ -96,7 +96,7 @@ export async function createHubConfigService(
           `[Hub:Config] Pushing config to naisys instance ${hostId}`,
         );
 
-        naisysServer.sendMessage<ConfigResponse>(
+        naisysServer.sendMessage(
           hostId,
           HubEvents.VARIABLES_UPDATED,
           payload,
@@ -105,7 +105,7 @@ export async function createHubConfigService(
         logService.error(
           `[Hub:Config] Error sending config to naisys instance ${hostId}: ${error}`,
         );
-        naisysServer.sendMessage<ConfigResponse>(
+        naisysServer.sendMessage(
           hostId,
           HubEvents.VARIABLES_UPDATED,
           {
@@ -120,7 +120,7 @@ export async function createHubConfigService(
   // Broadcast config to all clients when variables change
   naisysServer.registerEvent(
     HubEvents.VARIABLES_CHANGED,
-    async (_hostId: number) => {
+    async () => {
       await broadcastConfig();
     },
   );

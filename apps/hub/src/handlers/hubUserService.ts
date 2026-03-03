@@ -1,5 +1,5 @@
 import type { HubDatabaseService } from "@naisys/hub-database";
-import { HubEvents, UserListResponse } from "@naisys/hub-protocol";
+import { HubEvents, type UserListResponse } from "@naisys/hub-protocol";
 
 import { HubServerLog } from "../services/hubServerLog.js";
 import { NaisysServer } from "../services/naisysServer.js";
@@ -52,7 +52,7 @@ export function createHubUserService(
       );
 
       for (const connection of clients) {
-        naisysServer.sendMessage<UserListResponse>(
+        naisysServer.sendMessage(
           connection.getHostId(),
           HubEvents.USERS_UPDATED,
           payload,
@@ -66,7 +66,7 @@ export function createHubUserService(
   // Push user list to newly connected clients
   naisysServer.registerEvent(
     HubEvents.CLIENT_CONNECTED,
-    async (hostId: number) => {
+    async (hostId) => {
       try {
         const payload = await buildUserListPayload();
 
@@ -74,7 +74,7 @@ export function createHubUserService(
           `[Hub:Users] Pushing ${payload.users?.length ?? 0} users to naisys instance ${hostId}`,
         );
 
-        naisysServer.sendMessage<UserListResponse>(
+        naisysServer.sendMessage(
           hostId,
           HubEvents.USERS_UPDATED,
           payload,
@@ -83,7 +83,7 @@ export function createHubUserService(
         logService.error(
           `[Hub:Users] Error querying users for naisys instance ${hostId}: ${error}`,
         );
-        naisysServer.sendMessage<UserListResponse>(
+        naisysServer.sendMessage(
           hostId,
           HubEvents.USERS_UPDATED,
           {
@@ -98,7 +98,7 @@ export function createHubUserService(
   // Broadcast user list to all clients when users are created/edited
   naisysServer.registerEvent(
     HubEvents.USERS_CHANGED,
-    async (_hostId: number) => {
+    async () => {
       await broadcastUserList();
     },
   );

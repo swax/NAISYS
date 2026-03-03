@@ -1,11 +1,15 @@
 import { parseHubAccessKey, verifyHubCertificate } from "@naisys/common-node";
-import {
-  AgentsStatusSchema,
+import type {
   AgentStartResponse,
   AgentStopResponse,
+  MailSendResponse,
+  SupervisorListenEvents,
+  SupervisorEmitEvents,
+} from "@naisys/hub-protocol";
+import {
+  AgentsStatusSchema,
   HostListSchema,
   HubEvents,
-  MailSendResponse,
 } from "@naisys/hub-protocol";
 import { io, Socket } from "socket.io-client";
 
@@ -17,7 +21,7 @@ import {
   updateHostsStatus,
 } from "./agentHostStatusService.js";
 
-let socket: Socket | null = null;
+let socket: Socket<SupervisorListenEvents, SupervisorEmitEvents> | null = null;
 let connected = false;
 let resolvedHubAccessKey: string | undefined;
 let resolvedHubUrl: string | undefined;
@@ -75,7 +79,7 @@ function connectSocket(hubUrl: string, hubAccessKey: string) {
     console.warn(`[Supervisor:HubClient] Connection error: ${error.message}`);
   });
 
-  socket.on(HubEvents.AGENTS_STATUS, (data: unknown) => {
+  socket.on(HubEvents.AGENTS_STATUS, (data) => {
     const parsed = AgentsStatusSchema.safeParse(data);
     if (!parsed.success) {
       console.warn(
@@ -91,7 +95,7 @@ function connectSocket(hubUrl: string, hubAccessKey: string) {
     );
   });
 
-  socket.on(HubEvents.HOSTS_UPDATED, (data: unknown) => {
+  socket.on(HubEvents.HOSTS_UPDATED, (data) => {
     const parsed = HostListSchema.safeParse(data);
     if (!parsed.success) {
       console.warn("[Supervisor:HubClient] Invalid host list:", parsed.error);
@@ -123,8 +127,8 @@ export function sendAgentStart(
   startUserId: number,
   taskDescription: string | undefined,
   requesterUserId: number,
-): Promise<AgentStartResponse> {
-  return new Promise((resolve, reject) => {
+) {
+  return new Promise<AgentStartResponse>((resolve, reject) => {
     if (!socket || !connected) {
       reject(new Error("Not connected to hub"));
       return;
@@ -133,7 +137,7 @@ export function sendAgentStart(
     socket.emit(
       HubEvents.AGENT_START,
       { startUserId, taskDescription, requesterUserId },
-      (response: AgentStartResponse) => {
+      (response) => {
         if (response.success) {
           markAgentStarted(startUserId);
         }
@@ -150,8 +154,8 @@ export function sendMailViaHub(
   body: string,
   kind: "mail" | "chat" = "mail",
   attachmentIds?: number[],
-): Promise<MailSendResponse> {
-  return new Promise((resolve, reject) => {
+) {
+  return new Promise<MailSendResponse>((resolve, reject) => {
     if (!socket || !connected) {
       reject(new Error("Not connected to hub"));
       return;
@@ -160,7 +164,7 @@ export function sendMailViaHub(
     socket.emit(
       HubEvents.MAIL_SEND,
       { fromUserId, toUserIds, subject, body, kind, attachmentIds },
-      (response: MailSendResponse) => {
+      (response) => {
         resolve(response);
       },
     );
@@ -214,8 +218,8 @@ export function sendHostsChanged(): void {
 export function sendAgentStop(
   userId: number,
   reason: string,
-): Promise<AgentStopResponse> {
-  return new Promise((resolve, reject) => {
+) {
+  return new Promise<AgentStopResponse>((resolve, reject) => {
     if (!socket || !connected) {
       reject(new Error("Not connected to hub"));
       return;
@@ -224,7 +228,7 @@ export function sendAgentStop(
     socket.emit(
       HubEvents.AGENT_STOP,
       { userId, reason },
-      (response: AgentStopResponse) => {
+      (response) => {
         if (response.success) {
           markAgentStopped(userId);
         }

@@ -1,9 +1,5 @@
 import { formatFileSize } from "@naisys/common";
-import {
-  HubEvents,
-  MailListResponse,
-  MailSearchResponse,
-} from "@naisys/hub-protocol";
+import { HubEvents } from "@naisys/hub-protocol";
 import table from "text-table";
 
 import { HubClient } from "../hub/hubClient.js";
@@ -63,7 +59,7 @@ export function createMailDisplayService(
   localUserId: number,
 ) {
   async function listMessages(filter?: "received" | "sent"): Promise<string> {
-    const response = await hubClient.sendRequest<MailListResponse>(
+    const response = await hubClient.sendRequest(
       HubEvents.MAIL_LIST,
       { userId: localUserId, filter, kind: "mail" },
     );
@@ -106,7 +102,7 @@ export function createMailDisplayService(
     includeArchived: boolean,
     subjectOnly: boolean,
   ): Promise<string> {
-    const response = await hubClient.sendRequest<MailSearchResponse>(
+    const response = await hubClient.sendRequest(
       HubEvents.MAIL_SEARCH,
       {
         userId: localUserId,

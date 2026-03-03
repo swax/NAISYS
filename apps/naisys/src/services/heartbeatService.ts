@@ -15,7 +15,7 @@ export function createHeartbeatService(
 ) {
   // In hub mode, listen for agent status pushes from the hub
   if (hubClient) {
-    hubClient.registerEvent(HubEvents.AGENTS_STATUS, (data: unknown) => {
+    hubClient.registerEvent(HubEvents.AGENTS_STATUS, (data) => {
       const parsed = AgentsStatusSchema.parse(data);
       userService.setActiveUsers(parsed.hostActiveAgents);
     });

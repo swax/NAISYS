@@ -105,7 +105,7 @@ export function createHubSendMailService(
           kind: params.kind as MailReceivedPush["kind"],
         };
         for (const targetHostId of targetHostIds) {
-          naisysServer.sendMessage<MailReceivedPush>(
+          naisysServer.sendMessage(
             targetHostId,
             HubEvents.MAIL_RECEIVED,
             payload,

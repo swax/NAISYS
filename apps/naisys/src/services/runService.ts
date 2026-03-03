@@ -1,8 +1,4 @@
-import {
-  HubEvents,
-  SessionCreateResponse,
-  SessionIncrementResponse,
-} from "@naisys/hub-protocol";
+import { HubEvents } from "@naisys/hub-protocol";
 
 import { AgentConfig } from "../agent/agentConfig.js";
 import { HubClient } from "../hub/hubClient.js";
@@ -22,7 +18,7 @@ export async function createRunService(
 
   async function init() {
     if (hubClient) {
-      const response = await hubClient.sendRequest<SessionCreateResponse>(
+      const response = await hubClient.sendRequest(
         HubEvents.SESSION_CREATE,
         { userId: localUserId, modelName: agentConfig().shellModel },
       );
@@ -41,7 +37,7 @@ export async function createRunService(
 
   async function incrementSession(): Promise<void> {
     if (hubClient) {
-      const response = await hubClient.sendRequest<SessionIncrementResponse>(
+      const response = await hubClient.sendRequest(
         HubEvents.SESSION_INCREMENT,
         { userId: localUserId, runId },
       );

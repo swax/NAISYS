@@ -1,3 +1,13 @@
+import type {
+  HubRequestEvents,
+  HubRequestEventName,
+  HubFireAndForgetEvents,
+  HubFireAndForgetEventName,
+  HubPushEvents,
+  HubPushEventName,
+  HubTriggerEvents,
+  HubTriggerEventName,
+} from "@naisys/hub-protocol";
 import { Namespace } from "socket.io";
 import { ZodSchema } from "zod";
 
@@ -9,6 +19,12 @@ import {
 } from "./naisysConnection.js";
 
 type EventHandler = (hostId: number, ...args: any[]) => void;
+
+/** Internal hub-only events (not part of the wire protocol) */
+export interface HubInternalEvents {
+  client_connected: NaisysConnection;
+  client_disconnected: void;
+}
 
 /** Registered handler with optional schema for validation */
 interface RegisteredHandler {
@@ -32,6 +48,30 @@ export function createNaisysServer(
   const eventHandlers = new Map<string, Set<RegisteredHandler>>();
 
   // Register an event handler with optional schema for validation
+  function registerEvent<E extends HubFireAndForgetEventName>(
+    event: E,
+    handler: (hostId: number, data: HubFireAndForgetEvents[E]) => void,
+    schema?: ZodSchema,
+  ): void;
+  function registerEvent<E extends HubRequestEventName>(
+    event: E,
+    handler: (
+      hostId: number,
+      data: HubRequestEvents[E]["request"],
+      ack: (response: HubRequestEvents[E]["response"]) => void,
+    ) => void,
+    schema?: ZodSchema,
+  ): void;
+  function registerEvent<E extends HubTriggerEventName>(
+    event: E,
+    handler: (hostId: number) => void,
+  ): void;
+  function registerEvent<E extends keyof HubInternalEvents>(
+    event: E,
+    handler: HubInternalEvents[E] extends void
+      ? (hostId: number) => void
+      : (hostId: number, data: HubInternalEvents[E]) => void,
+  ): void;
   function registerEvent(
     event: string,
     handler: EventHandler,
@@ -86,11 +126,22 @@ export function createNaisysServer(
    * Send an event to a specific client by hostId.
    * If ack callback is provided, waits for client acknowledgement.
    */
-  function sendMessage<P, T = unknown>(
+  function sendMessage<E extends HubPushEventName>(
+    hostId: number,
+    event: E,
+    payload: HubPushEvents[E],
+  ): boolean;
+  function sendMessage<E extends HubRequestEventName>(
+    hostId: number,
+    event: E,
+    payload: HubRequestEvents[E]["request"],
+    ack: AckCallback<HubRequestEvents[E]["response"]>,
+  ): boolean;
+  function sendMessage(
     hostId: number,
     event: string,
-    payload: P,
-    ack?: AckCallback<T>,
+    payload: unknown,
+    ack?: AckCallback,
   ): boolean {
     const connection = naisysConnections.get(hostId);
     if (!connection) {

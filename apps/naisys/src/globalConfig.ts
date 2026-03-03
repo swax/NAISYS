@@ -32,7 +32,7 @@ export function createGlobalConfig(
 
       hubClient.registerEvent(
         HubEvents.VARIABLES_UPDATED,
-        async (data: unknown) => {
+        async (data) => {
           try {
             const response = ConfigResponseSchema.parse(data);
             if (!response.success || !response.config) {

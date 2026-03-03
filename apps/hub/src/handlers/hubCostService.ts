@@ -6,7 +6,6 @@ import {
 import type { HubDatabaseService } from "@naisys/hub-database";
 import { PrismaClient } from "@naisys/hub-database";
 import {
-  CostControl,
   CostWriteRequestSchema,
   HubEvents,
 } from "@naisys/hub-protocol";
@@ -32,7 +31,7 @@ export function createHubCostService(
 
   naisysServer.registerEvent(
     HubEvents.COST_WRITE,
-    async (hostId: number, data: unknown) => {
+    async (hostId, data) => {
       try {
         const parsed = CostWriteRequestSchema.parse(data);
 
@@ -202,7 +201,7 @@ export function createHubCostService(
     const hostIds = heartbeatService.findHostsForAgent(userId);
 
     for (const hostId of hostIds) {
-      naisysServer.sendMessage<CostControl>(hostId, HubEvents.COST_CONTROL, {
+      naisysServer.sendMessage(hostId, HubEvents.COST_CONTROL, {
         userId,
         enabled,
         reason,

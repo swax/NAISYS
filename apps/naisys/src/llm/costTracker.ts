@@ -70,7 +70,7 @@ export function createCostTracker(
   let hubCostControlReason: string | undefined;
 
   if (hubClient) {
-    hubClient.registerEvent(HubEvents.COST_CONTROL, (data: unknown) => {
+    hubClient.registerEvent(HubEvents.COST_CONTROL, (data) => {
       const parsed = CostControlSchema.parse(data);
       if (parsed.userId !== localUserId) return;
 
