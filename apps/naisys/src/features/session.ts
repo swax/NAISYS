@@ -1,6 +1,7 @@
 import stringArgv from "string-argv";
 
 import { AgentConfig } from "../agent/agentConfig.js";
+import { UserService } from "../agent/userService.js";
 import { sessionCmd } from "../command/commandDefs.js";
 import {
   CommandResponse,
@@ -14,7 +15,6 @@ import { LLMService } from "../llm/llmService.js";
 import { MailService } from "../mail/mail.js";
 import { OutputService } from "../utils/output.js";
 import { getTokenCount, trimChars } from "../utils/utilities.js";
-import { UserService } from "../agent/userService.js";
 
 export function createSessionService(
   { globalConfig }: GlobalConfig,
@@ -27,7 +27,6 @@ export function createSessionService(
   mailService: MailService,
   userService: UserService,
   localUserId: number,
-  requesterUserId: number | undefined,
 ) {
   let restoreInfo = "";
 
@@ -182,20 +181,14 @@ export function createSessionService(
 
     const localUser = userService.getUserById(localUserId);
     const recipientId =
-      requesterUserId ??
-      localUser?.leadUserId ??
-      userService.getUserByName("admin")?.userId;
+      localUser?.leadUserId ?? userService.getUserByName("admin")?.userId;
 
     const recipient = recipientId
       ? userService.getUserById(recipientId)
       : undefined;
 
     if (recipient) {
-      await mailService.sendMessage(
-        [recipient],
-        "Session Completed",
-        result,
-      );
+      await mailService.sendMessage([recipient], "Session Completed", result);
       await output.commentAndLog(
         `Session completed. Result sent to ${recipient.username}. Exiting process.`,
       );

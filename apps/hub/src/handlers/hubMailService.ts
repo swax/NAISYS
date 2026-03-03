@@ -9,7 +9,6 @@ import {
   MailMarkReadResponse,
   MailPeekRequestSchema,
   MailPeekResponse,
-  MailReceivedPush,
   MailSearchRequestSchema,
   MailSearchResponse,
   MailSendRequestSchema,
@@ -20,7 +19,9 @@ import {
 
 import { HubServerLog } from "../services/hubServerLog.js";
 import { NaisysServer } from "../services/naisysServer.js";
+import { HubAgentService } from "./hubAgentService.js";
 import { HubHeartbeatService } from "./hubHeartbeatService.js";
+import { HubSendMailService } from "./hubSendMailService.js";
 
 /** Handles mail events from NAISYS instances */
 export function createHubMailService(
@@ -28,109 +29,58 @@ export function createHubMailService(
   { usingHubDatabase }: HubDatabaseService,
   logService: HubServerLog,
   heartbeatService: HubHeartbeatService,
+  sendMailService: HubSendMailService,
+  agentService: HubAgentService,
 ) {
-  /** Send a mail message directly by user IDs */
-  async function sendMail(params: {
-    fromUserId: number | null;
-    recipientUserIds: number[];
-    subject: string;
-    body: string;
-    kind: string;
-    hostId?: number;
-    attachmentIds?: number[];
-  }) {
-    await usingHubDatabase(async (hubDb) => {
-      const now = new Date();
-
-      const participantIds = [
-        ...(params.fromUserId != null ? [params.fromUserId] : []),
-        ...params.recipientUserIds,
-      ]
-        .sort((a, b) => a - b)
-        .join(",");
-
-      const message = await hubDb.mail_messages.create({
-        data: {
-          from_user_id: params.fromUserId,
-          host_id: params.hostId,
-          kind: params.kind,
-          participant_ids: participantIds,
-          subject: params.subject,
-          body: params.body,
-          created_at: now,
-        },
-      });
-
-      // Link uploaded attachments to the new message via junction table
-      if (params.attachmentIds?.length) {
-        // Verify all attachment IDs exist
-        const found = await hubDb.attachments.findMany({
-          where: { id: { in: params.attachmentIds } },
-          select: { id: true },
-        });
-        if (found.length !== params.attachmentIds.length) {
-          const foundIds = new Set(found.map((a) => a.id));
-          const missing = params.attachmentIds.filter((id) => !foundIds.has(id));
-          throw new Error(`Attachments not found: ${missing.join(", ")}`);
-        }
-
-        await hubDb.mail_attachments.createMany({
-          data: params.attachmentIds.map((attId) => ({
-            message_id: message.id,
-            attachment_id: attId,
-          })),
-        });
-      }
-
-      await hubDb.mail_recipients.createMany({
-        data: params.recipientUserIds.map((userId) => ({
-          message_id: message.id,
-          user_id: userId,
-          type: "to",
-          created_at: now,
-        })),
-      });
-
-      const notificationField =
-        params.kind === "chat" ? "latest_chat_id" : "latest_mail_id";
-      await hubDb.user_notifications.updateMany({
-        where: { user_id: { in: params.recipientUserIds } },
-        data: { [notificationField]: message.id },
-      });
-
-      const heartbeatField =
-        params.kind === "chat" ? "latestChatId" : "latestMailId";
-      for (const userId of params.recipientUserIds) {
-        heartbeatService.updateAgentNotification(
-          userId,
-          heartbeatField,
-          message.id,
-        );
-      }
-      heartbeatService.throttledPushAgentsStatus();
-
-      const targetHostIds = new Set<number>();
-      for (const userId of params.recipientUserIds) {
-        for (const hId of heartbeatService.findHostsForAgent(userId)) {
-          targetHostIds.add(hId);
+  /** Auto-start inactive agents that received mail */
+  function autoStartInactiveAgents(recipientUserIds: number[]) {
+    try {
+      const activeUserIds = heartbeatService.getActiveUserIds();
+      for (const recipientUserId of recipientUserIds) {
+        if (!activeUserIds.has(recipientUserId)) {
+          void agentService.tryStartAgent(recipientUserId);
         }
       }
-
-      if (targetHostIds.size > 0) {
-        const payload: MailReceivedPush = {
-          recipientUserIds: params.recipientUserIds,
-          kind: params.kind as MailReceivedPush["kind"],
-        };
-        for (const targetHostId of targetHostIds) {
-          naisysServer.sendMessage<MailReceivedPush>(
-            targetHostId,
-            HubEvents.MAIL_RECEIVED,
-            payload,
-          );
-        }
-      }
-    });
+    } catch {
+      // Fire-and-forget — don't affect mail delivery
+    }
   }
+
+  /** Check for inactive users with unread mail and trigger auto-start for each */
+  async function checkPendingAutoStarts() {
+    try {
+      const activeUserIds = heartbeatService.getActiveUserIds();
+
+      await usingHubDatabase(async (hubDb) => {
+        // Find distinct users with unread mail from real senders
+        const unreadRecipients = await hubDb.mail_recipients.findMany({
+          where: {
+            read_at: null,
+          },
+          select: {
+            user_id: true,
+          },
+          distinct: ["user_id"],
+        });
+
+        for (const recipient of unreadRecipients) {
+          if (!activeUserIds.has(recipient.user_id)) {
+            void agentService.tryStartAgent(recipient.user_id);
+          }
+        }
+      });
+    } catch {
+      // Fire-and-forget
+    }
+  }
+
+  // When a NAISYS host connects, check for pending unread mail and auto-start agents
+  naisysServer.registerEvent(HubEvents.CLIENT_CONNECTED, (hostId: number) => {
+    const conn = naisysServer.getConnectionByHostId(hostId);
+    if (conn?.getHostType() === "naisys") {
+      void checkPendingAutoStarts();
+    }
+  });
 
   // MAIL_SEND
   naisysServer.registerEvent(
@@ -143,7 +93,7 @@ export function createHubMailService(
       try {
         const parsed = MailSendRequestSchema.parse(data);
 
-        await sendMail({
+        await sendMailService.sendMail({
           fromUserId: parsed.fromUserId,
           recipientUserIds: parsed.toUserIds,
           subject: parsed.subject,
@@ -154,6 +104,8 @@ export function createHubMailService(
         });
 
         ack({ success: true });
+
+        autoStartInactiveAgents(parsed.toUserIds);
       } catch (error) {
         logService.error(
           `[Hub:Mail] mail_send error from host ${hostId}: ${error}`,
@@ -238,7 +190,7 @@ export function createHubMailService(
 
             return {
               id: m.id,
-              fromUsername: m.from_user?.username ?? "(deleted)",
+              fromUsername: m.from_user.username,
               recipientUsernames: m.recipients.map((r) => r.user.username),
               subject: m.subject,
               createdAt: m.created_at.toISOString(),
@@ -307,8 +259,8 @@ export function createHubMailService(
             message: {
               id: message.id,
               subject: message.subject,
-              fromUsername: message.from_user?.username ?? "(deleted)",
-              fromTitle: message.from_user?.title ?? "",
+              fromUsername: message.from_user.username,
+              fromTitle: message.from_user.title,
               recipientUsernames: message.recipients.map(
                 (r) => r.user.username,
               ),
@@ -464,7 +416,7 @@ export function createHubMailService(
           const messageData = messages.map((m) => ({
             id: m.id,
             subject: m.subject,
-            fromUsername: m.from_user?.username ?? "(deleted)",
+            fromUsername: m.from_user.username,
             createdAt: m.created_at.toISOString(),
           }));
 
@@ -520,8 +472,8 @@ export function createHubMailService(
             messages: messages.map((m) => ({
               id: m.id,
               subject: m.subject,
-              fromUsername: m.from_user?.username ?? "(deleted)",
-              fromTitle: m.from_user?.title ?? "",
+              fromUsername: m.from_user.username,
+              fromTitle: m.from_user.title,
               recipientUsernames: m.recipients.map((r) => r.user.username),
               createdAt: m.created_at.toISOString(),
               body: m.body,
@@ -543,8 +495,6 @@ export function createHubMailService(
       }
     },
   );
-
-  return { sendMail };
 }
 
 export type HubMailService = ReturnType<typeof createHubMailService>;

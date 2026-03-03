@@ -1,14 +1,14 @@
 import type { HubDatabaseService } from "@naisys/hub-database";
 import {
+  AgentPeekRequest,
+  AgentPeekRequestSchema,
+  AgentPeekResponse,
   AgentStartRequest,
   AgentStartRequestSchema,
   AgentStartResponse,
   AgentStopRequest,
   AgentStopRequestSchema,
   AgentStopResponse,
-  AgentPeekRequest,
-  AgentPeekRequestSchema,
-  AgentPeekResponse,
   HubEvents,
 } from "@naisys/hub-protocol";
 
@@ -16,7 +16,7 @@ import { HostRegistrar } from "../services/hostRegistrar.js";
 import { HubServerLog } from "../services/hubServerLog.js";
 import { NaisysServer } from "../services/naisysServer.js";
 import { HubHeartbeatService } from "./hubHeartbeatService.js";
-import { HubMailService } from "./hubMailService.js";
+import { HubSendMailService } from "./hubSendMailService.js";
 
 /** Handles agent_start requests by routing them to the least-loaded eligible host */
 export function createHubAgentService(
@@ -24,9 +24,110 @@ export function createHubAgentService(
   { usingHubDatabase }: HubDatabaseService,
   logService: HubServerLog,
   heartbeatService: HubHeartbeatService,
-  mailService: HubMailService,
+  sendMailService: HubSendMailService,
   hostRegistrar: HostRegistrar,
 ) {
+  /** Find the least-loaded eligible host for a given user */
+  async function findBestHost(startUserId: number): Promise<number | null> {
+    // Look up which hosts this user is assigned to
+    const { assignedHostIds } = await usingHubDatabase(async (hubDb) => {
+      const userHosts = await hubDb.user_hosts.findMany({
+        where: { user_id: startUserId },
+        select: { host_id: true },
+      });
+
+      return {
+        assignedHostIds: userHosts.map((uh) => uh.host_id),
+      };
+    });
+
+    // Determine eligible hosts: assigned hosts, or all connected (non-restricted) if unassigned
+    let eligibleHostIds: number[];
+    if (assignedHostIds.length > 0) {
+      eligibleHostIds = assignedHostIds;
+    } else {
+      const restrictedHostIds = new Set(
+        hostRegistrar
+          .getAllHosts()
+          .filter((h) => h.restricted)
+          .map((h) => h.hostId),
+      );
+      eligibleHostIds = naisysServer
+        .getConnectedClients()
+        .map((c) => c.getHostId())
+        .filter((hid) => !restrictedHostIds.has(hid));
+    }
+
+    // Filter to connected hosts that can run agents
+    const connectedEligible = eligibleHostIds.filter((hid) => {
+      const conn = naisysServer.getConnectionByHostId(hid);
+      return conn && conn.getHostType() === "naisys";
+    });
+
+    if (connectedEligible.length === 0) {
+      return null;
+    }
+
+    // Pick the host with the fewest active agents
+    let bestHostId = connectedEligible[0];
+    let bestCount = heartbeatService.getHostActiveAgentCount(bestHostId);
+
+    for (const hid of connectedEligible.slice(1)) {
+      const count = heartbeatService.getHostActiveAgentCount(hid);
+      if (count < bestCount) {
+        bestHostId = hid;
+        bestCount = count;
+      }
+    }
+
+    return bestHostId;
+  }
+
+  /** Try to start an agent on the best available host (fire-and-forget) */
+  async function tryStartAgent(
+    startUserId: number,
+  ): Promise<boolean> {
+    try {
+      const bestHostId = await findBestHost(startUserId);
+      if (bestHostId === null) {
+        logService.log(
+          `[Hub:Agents] Auto-start: no eligible host for user ${startUserId}`,
+        );
+        return false;
+      }
+
+      const sent = naisysServer.sendMessage<
+        AgentStartRequest,
+        AgentStartResponse
+      >(
+        bestHostId,
+        HubEvents.AGENT_START,
+        {
+          startUserId,
+        },
+        (response) => {
+          if (response.success) {
+            heartbeatService.addStartedAgent(bestHostId, startUserId);
+          } else {
+            logService.error(
+              `[Hub:Agents] Auto-start failed for user ${startUserId}: ${response.error}`,
+            );
+          }
+        },
+      );
+
+      if (sent) {
+        logService.log(
+          `[Hub:Agents] Auto-start: sent start for user ${startUserId} to host ${bestHostId}`,
+        );
+      }
+      return sent;
+    } catch (error) {
+      logService.error(`[Hub:Agents] Auto-start error: ${error}`);
+      return false;
+    }
+  }
+
   naisysServer.registerEvent(
     HubEvents.AGENT_START,
     async (
@@ -36,45 +137,11 @@ export function createHubAgentService(
     ) => {
       try {
         const parsed = AgentStartRequestSchema.parse(data);
-
-        // Look up which hosts this user is assigned to
-        const { assignedHostIds } = await usingHubDatabase(async (hubDb) => {
-          const userHosts = await hubDb.user_hosts.findMany({
-            where: { user_id: parsed.startUserId },
-            select: { host_id: true },
-          });
-
-          return {
-            assignedHostIds: userHosts.map((uh) => uh.host_id),
-          };
-        });
-
         const requesterUserId = parsed.requesterUserId;
 
-        // Determine eligible hosts: assigned hosts, or all connected (non-restricted) if unassigned
-        let eligibleHostIds: number[];
-        if (assignedHostIds.length > 0) {
-          eligibleHostIds = assignedHostIds;
-        } else {
-          const restrictedHostIds = new Set(
-            hostRegistrar
-              .getAllHosts()
-              .filter((h) => h.restricted)
-              .map((h) => h.hostId),
-          );
-          eligibleHostIds = naisysServer
-            .getConnectedClients()
-            .map((c) => c.getHostId())
-            .filter((hid) => !restrictedHostIds.has(hid));
-        }
+        const bestHostId = await findBestHost(parsed.startUserId);
 
-        // Filter to connected hosts that can run agents
-        const connectedEligible = eligibleHostIds.filter((hid) => {
-          const conn = naisysServer.getConnectionByHostId(hid);
-          return conn && conn.getHostType() === "naisys";
-        });
-
-        if (connectedEligible.length === 0) {
+        if (bestHostId === null) {
           ack({
             success: false,
             error: `No eligible hosts are online for user ${parsed.startUserId}`,
@@ -82,16 +149,12 @@ export function createHubAgentService(
           return;
         }
 
-        // Pick the host with the fewest active agents
-        let bestHostId = connectedEligible[0];
-        let bestCount = heartbeatService.getHostActiveAgentCount(bestHostId);
-
-        for (const hid of connectedEligible.slice(1)) {
-          const count = heartbeatService.getHostActiveAgentCount(hid);
-          if (count < bestCount) {
-            bestHostId = hid;
-            bestCount = count;
-          }
+        if (!requesterUserId) {
+          ack({
+            success: false,
+            error: `Missing requesterUserId in agent_start request for user ${parsed.startUserId}`,
+          });
+          return;
         }
 
         // Forward the start request to the selected host
@@ -103,7 +166,6 @@ export function createHubAgentService(
           HubEvents.AGENT_START,
           {
             startUserId: parsed.startUserId,
-            requesterUserId,
             taskDescription: parsed.taskDescription,
             sourceHostId: hostId,
           },
@@ -111,6 +173,8 @@ export function createHubAgentService(
             if (response.success) {
               heartbeatService.addStartedAgent(bestHostId, parsed.startUserId);
             }
+
+            // Reverse-ack with the response from the host (including success status and any error message) back to the original requester
             ack(response);
             // Send task description mail after successful start to avoid
             // orphaned mails from failed start attempts
@@ -145,7 +209,7 @@ export function createHubAgentService(
     taskDescription: string,
   ) {
     try {
-      await mailService.sendMail({
+      await sendMailService.sendMail({
         fromUserId: requesterUserId,
         recipientUserIds: [startUserId],
         subject: "Session Start", // Agent will send a 'Session Completed' mail when session is completed
@@ -283,4 +347,8 @@ export function createHubAgentService(
       }
     },
   );
+
+  return { tryStartAgent };
 }
+
+export type HubAgentService = ReturnType<typeof createHubAgentService>;

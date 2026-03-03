@@ -87,8 +87,8 @@ export const getMailDataByUserId = cachedForSeconds(
 
       const messages: MailMessage[] = dbMessages.map((msg) => ({
         id: msg.id,
-        fromUserId: msg.from_user_id ?? 0,
-        fromUsername: msg.from_user?.username ?? "(deleted)",
+        fromUserId: msg.from_user_id,
+        fromUsername: msg.from_user.username,
         subject: msg.subject,
         body: msg.body,
         createdAt: msg.created_at.toISOString(),

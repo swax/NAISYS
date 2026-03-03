@@ -219,10 +219,26 @@ export async function deleteAgent(id: number): Promise<void> {
     await tx.context_log.deleteMany({ where: { user_id: id } });
     await tx.costs.deleteMany({ where: { user_id: id } });
     await tx.run_session.deleteMany({ where: { user_id: id } });
-    await tx.mail_messages.updateMany({
+
+    // Get sent message IDs so we can delete their attachments and recipients
+    const sentMessages = await tx.mail_messages.findMany({
       where: { from_user_id: id },
-      data: { from_user_id: null },
+      select: { id: true },
     });
+    const sentMessageIds = sentMessages.map((m) => m.id);
+    if (sentMessageIds.length > 0) {
+      await tx.mail_attachments.deleteMany({
+        where: { message_id: { in: sentMessageIds } },
+      });
+      await tx.mail_recipients.deleteMany({
+        where: { message_id: { in: sentMessageIds } },
+      });
+      await tx.mail_messages.deleteMany({
+        where: { id: { in: sentMessageIds } },
+      });
+    }
+
+    // Delete remaining recipient entries (for messages received by this agent)
     await tx.mail_recipients.deleteMany({ where: { user_id: id } });
     await tx.user_notifications.deleteMany({ where: { user_id: id } });
     await tx.user_hosts.deleteMany({ where: { user_id: id } });

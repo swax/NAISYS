@@ -4,6 +4,18 @@ import { ChatCompletionCreateParamsNonStreaming } from "openai/resources";
 import { ContentBlock, LlmMessage, LlmRole } from "../llmDtos.js";
 import { QueryResult, QuerySources, VendorDeps } from "./vendorTypes.js";
 
+const clientCache = new Map<string, OpenAI>();
+
+function getClient(apiKey: string, baseURL?: string): OpenAI {
+  const cacheKey = `${baseURL || ""}|${apiKey}`;
+  let client = clientCache.get(cacheKey);
+  if (!client) {
+    client = new OpenAI({ baseURL, apiKey });
+    clientCache.set(cacheKey, client);
+  }
+  return client;
+}
+
 export async function sendWithOpenAiCompatible(
   deps: VendorDeps,
   modelKey: string,
@@ -26,10 +38,7 @@ export async function sendWithOpenAiCompatible(
     throw `Error, set ${model.apiKeyVar} variable`;
   }
 
-  const openAI = new OpenAI({
-    baseURL: model.baseUrl,
-    apiKey,
-  });
+  const openAI = getClient(apiKey, model.baseUrl);
 
   const chatRequest: ChatCompletionCreateParamsNonStreaming = {
     model: model.versionName,

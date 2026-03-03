@@ -52,14 +52,14 @@ model costs {
 
 model mail_messages {
   id              Int                @id @default(autoincrement())
-  from_user_id    Int?
+  from_user_id    Int
   host_id         Int? // Sender's host
   kind            String             @default("mail")
   participant_ids String? // Used as a lookup key to quickly find all messages in a conversation
   subject         String
   body            String
   created_at      DateTime           @default(now())
-  from_user       users?             @relation("mail_messages_from_user", fields: [from_user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  from_user       users              @relation("mail_messages_from_user", fields: [from_user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   host            hosts?             @relation(fields: [host_id], references: [id])
   recipients      mail_recipients[]
   mail_attachments mail_attachments[]
