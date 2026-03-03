@@ -2,19 +2,12 @@ import type { HubDatabaseService } from "@naisys/hub-database";
 import {
   HubEvents,
   MailArchiveRequestSchema,
-  MailArchiveResponse,
   MailListRequestSchema,
-  MailListResponse,
   MailMarkReadRequestSchema,
-  MailMarkReadResponse,
   MailPeekRequestSchema,
-  MailPeekResponse,
   MailSearchRequestSchema,
-  MailSearchResponse,
   MailSendRequestSchema,
-  MailSendResponse,
   MailUnreadRequestSchema,
-  MailUnreadResponse,
 } from "@naisys/hub-protocol";
 
 import { HubServerLog } from "../services/hubServerLog.js";
@@ -75,7 +68,7 @@ export function createHubMailService(
   }
 
   // When a NAISYS host connects, check for pending unread mail and auto-start agents
-  naisysServer.registerEvent(HubEvents.CLIENT_CONNECTED, (hostId: number) => {
+  naisysServer.registerEvent(HubEvents.CLIENT_CONNECTED, (hostId) => {
     const conn = naisysServer.getConnectionByHostId(hostId);
     if (conn?.getHostType() === "naisys") {
       void checkPendingAutoStarts();
@@ -85,11 +78,7 @@ export function createHubMailService(
   // MAIL_SEND
   naisysServer.registerEvent(
     HubEvents.MAIL_SEND,
-    async (
-      hostId: number,
-      data: unknown,
-      ack: (response: MailSendResponse) => void,
-    ) => {
+    async (hostId, data, ack) => {
       try {
         const parsed = MailSendRequestSchema.parse(data);
 
@@ -118,11 +107,7 @@ export function createHubMailService(
   // MAIL_LIST
   naisysServer.registerEvent(
     HubEvents.MAIL_LIST,
-    async (
-      hostId: number,
-      data: unknown,
-      ack: (response: MailListResponse) => void,
-    ) => {
+    async (hostId, data, ack) => {
       try {
         const parsed = MailListRequestSchema.parse(data);
 
@@ -220,11 +205,7 @@ export function createHubMailService(
   // MAIL_PEEK
   naisysServer.registerEvent(
     HubEvents.MAIL_PEEK,
-    async (
-      hostId: number,
-      data: unknown,
-      ack: (response: MailPeekResponse) => void,
-    ) => {
+    async (hostId, data, ack) => {
       try {
         const parsed = MailPeekRequestSchema.parse(data);
 
@@ -288,11 +269,7 @@ export function createHubMailService(
   // MAIL_MARK_READ
   naisysServer.registerEvent(
     HubEvents.MAIL_MARK_READ,
-    async (
-      hostId: number,
-      data: unknown,
-      ack: (response: MailMarkReadResponse) => void,
-    ) => {
+    async (hostId, data, ack) => {
       try {
         const parsed = MailMarkReadRequestSchema.parse(data);
 
@@ -320,11 +297,7 @@ export function createHubMailService(
   // MAIL_ARCHIVE
   naisysServer.registerEvent(
     HubEvents.MAIL_ARCHIVE,
-    async (
-      hostId: number,
-      data: unknown,
-      ack: (response: MailArchiveResponse) => void,
-    ) => {
+    async (hostId, data, ack) => {
       try {
         const parsed = MailArchiveRequestSchema.parse(data);
 
@@ -366,11 +339,7 @@ export function createHubMailService(
   // MAIL_SEARCH
   naisysServer.registerEvent(
     HubEvents.MAIL_SEARCH,
-    async (
-      hostId: number,
-      data: unknown,
-      ack: (response: MailSearchResponse) => void,
-    ) => {
+    async (hostId, data, ack) => {
       try {
         const parsed = MailSearchRequestSchema.parse(data);
 
@@ -434,11 +403,7 @@ export function createHubMailService(
   // MAIL_UNREAD
   naisysServer.registerEvent(
     HubEvents.MAIL_UNREAD,
-    async (
-      hostId: number,
-      data: unknown,
-      ack: (response: MailUnreadResponse) => void,
-    ) => {
+    async (hostId, data, ack) => {
       try {
         const parsed = MailUnreadRequestSchema.parse(data);
 

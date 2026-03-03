@@ -1,12 +1,7 @@
 import {
   HubEvents,
-  MailArchiveResponse,
-  MailMarkReadResponse,
   MailMessageData,
-  MailPeekResponse,
   MailReceivedPush,
-  MailSendResponse,
-  MailUnreadResponse,
 } from "@naisys/hub-protocol";
 import stringArgv from "string-argv";
 
@@ -177,7 +172,7 @@ export function createMailService(
     message = message.replace(/\\n/g, "\n");
 
     if (hubClient) {
-      const response = await hubClient.sendRequest<MailSendResponse>(
+      const response = await hubClient.sendRequest(
         HubEvents.MAIL_SEND,
         {
           fromUserId: localUserId,
@@ -223,7 +218,7 @@ export function createMailService(
 
   async function archiveMessages(messageIds: number[]): Promise<string> {
     if (!hubClient) throw "Not available in local mode.";
-    const response = await hubClient.sendRequest<MailArchiveResponse>(
+    const response = await hubClient.sendRequest(
       HubEvents.MAIL_ARCHIVE,
       { userId: localUserId, messageIds },
     );
@@ -251,7 +246,7 @@ export function createMailService(
       return [];
     }
 
-    const response = await hubClient.sendRequest<MailUnreadResponse>(
+    const response = await hubClient.sendRequest(
       HubEvents.MAIL_UNREAD,
       { userId: localUserId, kind: "mail", afterId: lastUnreadId },
     );
@@ -271,7 +266,7 @@ export function createMailService(
   }
 
   async function peekMessage(messageId: number): Promise<MailMessageData> {
-    const response = await hubClient!.sendRequest<MailPeekResponse>(
+    const response = await hubClient!.sendRequest(
       HubEvents.MAIL_PEEK,
       { userId: localUserId, messageId },
     );
@@ -286,7 +281,7 @@ export function createMailService(
   async function markMessagesRead(messageIds: number[]): Promise<void> {
     if (!hubClient || !messageIds.length) return;
 
-    await hubClient.sendRequest<MailMarkReadResponse>(
+    await hubClient.sendRequest(
       HubEvents.MAIL_MARK_READ,
       { userId: localUserId, messageIds },
     );
@@ -323,10 +318,9 @@ export function createMailService(
 
   if (hubClient) {
     // Hub mode: listen for MAIL_RECEIVED push from hub
-    const mailReceivedHandler = (data: unknown) => {
-      const push = data as MailReceivedPush;
-      if (push.kind !== "mail") return;
-      if (push.recipientUserIds.includes(localUserId)) {
+    const mailReceivedHandler = (data: MailReceivedPush) => {
+      if (data.kind !== "mail") return;
+      if (data.recipientUserIds.includes(localUserId)) {
         void checkAndNotify();
       }
     };

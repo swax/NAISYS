@@ -14,7 +14,7 @@ export function createHubLogService(
 ) {
   naisysServer.registerEvent(
     HubEvents.LOG_WRITE,
-    async (hostId: number, data: unknown) => {
+    async (hostId, data) => {
       try {
         const parsed = LogWriteRequestSchema.parse(data);
 

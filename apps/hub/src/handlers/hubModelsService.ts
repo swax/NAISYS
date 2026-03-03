@@ -50,7 +50,7 @@ export async function createHubModelsService(
       );
 
       for (const connection of clients) {
-        naisysServer.sendMessage<ModelsResponse>(
+        naisysServer.sendMessage(
           connection.getHostId(),
           HubEvents.MODELS_UPDATED,
           payload,
@@ -64,7 +64,7 @@ export async function createHubModelsService(
   // Push models to newly connected clients
   naisysServer.registerEvent(
     HubEvents.CLIENT_CONNECTED,
-    async (hostId: number) => {
+    async (hostId) => {
       try {
         const payload = await buildModelsPayload();
 
@@ -72,7 +72,7 @@ export async function createHubModelsService(
           `[Hub:Models] Pushing ${payload.llmModels?.length ?? 0} LLM + ${payload.imageModels?.length ?? 0} image models to naisys instance ${hostId}`,
         );
 
-        naisysServer.sendMessage<ModelsResponse>(
+        naisysServer.sendMessage(
           hostId,
           HubEvents.MODELS_UPDATED,
           payload,
@@ -81,7 +81,7 @@ export async function createHubModelsService(
         logService.error(
           `[Hub:Models] Error querying models for naisys instance ${hostId}: ${error}`,
         );
-        naisysServer.sendMessage<ModelsResponse>(
+        naisysServer.sendMessage(
           hostId,
           HubEvents.MODELS_UPDATED,
           {
@@ -96,7 +96,7 @@ export async function createHubModelsService(
   // Broadcast models to all clients when supervisor saves/deletes a model
   naisysServer.registerEvent(
     HubEvents.MODELS_CHANGED,
-    async (_hostId: number) => {
+    async () => {
       await broadcastModels();
     },
   );

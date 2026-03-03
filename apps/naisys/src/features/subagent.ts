@@ -1,9 +1,4 @@
-import {
-  AgentPeekResponse,
-  AgentStartResponse,
-  AgentStopResponse,
-  HubEvents,
-} from "@naisys/hub-protocol";
+import { HubEvents } from "@naisys/hub-protocol";
 import stringArgv from "string-argv";
 import stripAnsi from "strip-ansi";
 import table from "text-table";
@@ -267,7 +262,7 @@ export function createSubagentService(
 
     if (hubClient) {
       // Hub mode: send start request through hub, which routes to the target host
-      const response = await hubClient.sendRequest<AgentStartResponse>(
+      const response = await hubClient.sendRequest(
         HubEvents.AGENT_START,
         {
           startUserId: subagent.userId,
@@ -339,7 +334,7 @@ export function createSubagentService(
 
     if (hubClient) {
       // Hub mode: send stop request through hub, which routes to the agent's host
-      const response = await hubClient.sendRequest<AgentStopResponse>(
+      const response = await hubClient.sendRequest(
         HubEvents.AGENT_STOP,
         { userId, reason },
       );
@@ -392,7 +387,7 @@ export function createSubagentService(
     let totalLines: number;
 
     if (hubClient) {
-      const response = await hubClient.sendRequest<AgentPeekResponse>(
+      const response = await hubClient.sendRequest(
         HubEvents.AGENT_PEEK,
         { userId, skip, take },
       );

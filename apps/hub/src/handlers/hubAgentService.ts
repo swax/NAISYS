@@ -1,14 +1,8 @@
 import type { HubDatabaseService } from "@naisys/hub-database";
 import {
-  AgentPeekRequest,
   AgentPeekRequestSchema,
-  AgentPeekResponse,
-  AgentStartRequest,
   AgentStartRequestSchema,
-  AgentStartResponse,
-  AgentStopRequest,
   AgentStopRequestSchema,
-  AgentStopResponse,
   HubEvents,
 } from "@naisys/hub-protocol";
 
@@ -96,10 +90,7 @@ export function createHubAgentService(
         return false;
       }
 
-      const sent = naisysServer.sendMessage<
-        AgentStartRequest,
-        AgentStartResponse
-      >(
+      const sent = naisysServer.sendMessage(
         bestHostId,
         HubEvents.AGENT_START,
         {
@@ -130,11 +121,7 @@ export function createHubAgentService(
 
   naisysServer.registerEvent(
     HubEvents.AGENT_START,
-    async (
-      hostId: number,
-      data: unknown,
-      ack: (response: AgentStartResponse) => void,
-    ) => {
+    async (hostId, data, ack) => {
       try {
         const parsed = AgentStartRequestSchema.parse(data);
         const requesterUserId = parsed.requesterUserId;
@@ -158,10 +145,7 @@ export function createHubAgentService(
         }
 
         // Forward the start request to the selected host
-        const sent = naisysServer.sendMessage<
-          AgentStartRequest,
-          AgentStartResponse
-        >(
+        const sent = naisysServer.sendMessage(
           bestHostId,
           HubEvents.AGENT_START,
           {
@@ -223,11 +207,7 @@ export function createHubAgentService(
 
   naisysServer.registerEvent(
     HubEvents.AGENT_STOP,
-    (
-      hostId: number,
-      data: unknown,
-      ack: (response: AgentStopResponse) => void,
-    ) => {
+    (hostId, data, ack) => {
       try {
         const parsed = AgentStopRequestSchema.parse(data);
 
@@ -247,10 +227,7 @@ export function createHubAgentService(
         let sendFailures = 0;
 
         for (const targetHostId of targetHostIds) {
-          const sent = naisysServer.sendMessage<
-            AgentStopRequest,
-            AgentStopResponse
-          >(
+          const sent = naisysServer.sendMessage(
             targetHostId,
             HubEvents.AGENT_STOP,
             {
@@ -295,11 +272,7 @@ export function createHubAgentService(
 
   naisysServer.registerEvent(
     HubEvents.AGENT_PEEK,
-    (
-      hostId: number,
-      data: unknown,
-      ack: (response: AgentPeekResponse) => void,
-    ) => {
+    (hostId, data, ack) => {
       try {
         const parsed = AgentPeekRequestSchema.parse(data);
 
@@ -316,10 +289,7 @@ export function createHubAgentService(
 
         // Forward peek request to the first host (only need one response)
         const targetHostId = targetHostIds[0];
-        const sent = naisysServer.sendMessage<
-          AgentPeekRequest,
-          AgentPeekResponse
-        >(
+        const sent = naisysServer.sendMessage(
           targetHostId,
           HubEvents.AGENT_PEEK,
           {

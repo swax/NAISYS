@@ -20,7 +20,7 @@ export function createHostService(
   const hostMap = new Map<number, HostEntry>();
 
   if (hubClient) {
-    hubClient.registerEvent(HubEvents.HOSTS_UPDATED, (data: unknown) => {
+    hubClient.registerEvent(HubEvents.HOSTS_UPDATED, (data) => {
       const parsed = HostListSchema.parse(data);
 
       hostMap.clear();

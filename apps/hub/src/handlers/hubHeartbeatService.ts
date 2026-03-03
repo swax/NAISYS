@@ -43,7 +43,7 @@ export function createHubHeartbeatService(
   // Handle heartbeat from NAISYS instances
   naisysServer.registerEvent(
     HubEvents.HEARTBEAT,
-    async (hostId: number, data: unknown) => {
+    async (hostId, data) => {
       const parsed = HeartbeatSchema.parse(data);
 
       // Update in-memory per-host active agent IDs
@@ -78,7 +78,7 @@ export function createHubHeartbeatService(
   // Clean up tracking when a host disconnects
   naisysServer.registerEvent(
     HubEvents.CLIENT_DISCONNECTED,
-    (hostId: number) => {
+    (hostId) => {
       hostActiveAgents.delete(hostId);
       throttledPushAgentsStatus();
     },
@@ -92,7 +92,7 @@ export function createHubHeartbeatService(
     };
 
     for (const connection of naisysServer.getConnectedClients()) {
-      naisysServer.sendMessage<AgentsStatus>(
+      naisysServer.sendMessage(
         connection.getHostId(),
         HubEvents.AGENTS_STATUS,
         payload,

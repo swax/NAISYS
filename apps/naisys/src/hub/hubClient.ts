@@ -1,3 +1,12 @@
+import type {
+  HubRequestEvents,
+  HubRequestEventName,
+  HubFireAndForgetEvents,
+  HubFireAndForgetEventName,
+  HubPushEvents,
+  HubPushEventName,
+} from "@naisys/hub-protocol";
+
 import { hubCmd } from "../command/commandDefs.js";
 import { PromptNotificationService } from "../utils/promptNotificationService.js";
 import { HubClientConfig } from "./hubClientConfig.js";
@@ -75,6 +84,17 @@ export function createHubClient(
   }
 
   /** Register an event handler */
+  function registerEvent<E extends HubPushEventName>(
+    event: E,
+    handler: (data: HubPushEvents[E]) => void,
+  ): void;
+  function registerEvent<E extends HubRequestEventName>(
+    event: E,
+    handler: (
+      data: HubRequestEvents[E]["request"],
+      ack: (response: HubRequestEvents[E]["response"]) => void,
+    ) => void,
+  ): void;
   function registerEvent(event: string, handler: EventHandler) {
     if (!eventHandlers.has(event)) {
       eventHandlers.set(event, new Set());
@@ -105,6 +125,10 @@ export function createHubClient(
   }
 
   /** Send a fire-and-forget message to the hub */
+  function sendMessage<E extends HubFireAndForgetEventName>(
+    event: E,
+    payload: HubFireAndForgetEvents[E],
+  ): boolean;
   function sendMessage(event: string, payload: unknown): boolean {
     if (!activeConnection) {
       hubClientLog.write(
@@ -117,10 +141,11 @@ export function createHubClient(
   }
 
   /** Send a message to the hub and await a response via ack */
-  function sendRequest<T = unknown>(
-    event: string,
-    payload: unknown,
-  ): Promise<T> {
+  function sendRequest<E extends HubRequestEventName>(
+    event: E,
+    payload: HubRequestEvents[E]["request"],
+  ): Promise<HubRequestEvents[E]["response"]>;
+  function sendRequest(event: string, payload: unknown): Promise<unknown> {
     if (!activeConnection) {
       hubClientLog.write(
         "[NAISYS:HubClient] No active connection for sendRequest",
@@ -128,11 +153,11 @@ export function createHubClient(
       return Promise.reject(new Error("No active hub connection"));
     }
 
-    return new Promise<T>((resolve, reject) => {
-      const sent = activeConnection!.sendMessage<T>(
+    return new Promise((resolve, reject) => {
+      const sent = activeConnection!.sendMessage(
         event,
         payload,
-        (response: T) => resolve(response),
+        (response: unknown) => resolve(response),
       );
 
       if (!sent) {

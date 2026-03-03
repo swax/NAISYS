@@ -3,12 +3,8 @@ import {
   HubEvents,
   MailAttachmentData,
   MailListMessageData,
-  MailListResponse,
-  MailMarkReadResponse,
   MailMessageData,
   MailReceivedPush,
-  MailSendResponse,
-  MailUnreadResponse,
 } from "@naisys/hub-protocol";
 import stringArgv from "string-argv";
 
@@ -136,7 +132,7 @@ export function createChatService(
     message = message.replace(/\\n/g, "\n");
 
     if (hubClient) {
-      const response = await hubClient.sendRequest<MailSendResponse>(
+      const response = await hubClient.sendRequest(
         HubEvents.MAIL_SEND,
         {
           fromUserId: localUserId,
@@ -185,7 +181,7 @@ export function createChatService(
   ): Promise<string> {
     if (!hubClient) throw "Not available in local mode.";
 
-    const response = await hubClient.sendRequest<MailListResponse>(
+    const response = await hubClient.sendRequest(
       HubEvents.MAIL_LIST,
       {
         userId: localUserId,
@@ -302,7 +298,7 @@ export function createChatService(
   async function markMessagesRead(messageIds: number[]): Promise<void> {
     if (!hubClient || !messageIds.length) return;
 
-    await hubClient.sendRequest<MailMarkReadResponse>(
+    await hubClient.sendRequest(
       HubEvents.MAIL_MARK_READ,
       { userId: localUserId, messageIds },
     );
@@ -311,7 +307,7 @@ export function createChatService(
   async function checkAndNotify(): Promise<void> {
     if (!hubClient) return;
 
-    const response = await hubClient.sendRequest<MailUnreadResponse>(
+    const response = await hubClient.sendRequest(
       HubEvents.MAIL_UNREAD,
       { userId: localUserId, kind: "chat", afterId: lastUnreadId },
     );
@@ -352,10 +348,9 @@ export function createChatService(
   let cleanupFn: () => void;
 
   if (hubClient) {
-    const chatReceivedHandler = (data: unknown) => {
-      const push = data as MailReceivedPush;
-      if (push.kind !== "chat") return;
-      if (push.recipientUserIds.includes(localUserId)) {
+    const chatReceivedHandler = (data: MailReceivedPush) => {
+      if (data.kind !== "chat") return;
+      if (data.recipientUserIds.includes(localUserId)) {
         void checkAndNotify();
       }
     };

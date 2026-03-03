@@ -140,7 +140,7 @@ export const sessionCmd: CommandDef = {
     complete: {
       usage: 'complete "<result>"',
       description:
-        "Complete the session and mail the result to the requester, lead agent, or admin.",
+        "Complete the session result will be mailed to the lead agent or admin.",
     },
   },
 };

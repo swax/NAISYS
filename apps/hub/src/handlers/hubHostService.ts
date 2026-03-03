@@ -27,7 +27,7 @@ export function createHubHostService(
 
     // Send to the excluded host (newly connecting) directly
     if (excludeHostId !== undefined) {
-      naisysServer.sendMessage<HostList>(
+      naisysServer.sendMessage(
         excludeHostId,
         HubEvents.HOSTS_UPDATED,
         payload,
@@ -44,7 +44,7 @@ export function createHubHostService(
 
       for (const connection of naisysServer.getConnectedClients()) {
         if (connection.getHostId() !== excludeHostId) {
-          naisysServer.sendMessage<HostList>(
+          naisysServer.sendMessage(
             connection.getHostId(),
             HubEvents.HOSTS_UPDATED,
             payload,
@@ -54,7 +54,7 @@ export function createHubHostService(
     }
   }
 
-  naisysServer.registerEvent(HubEvents.CLIENT_CONNECTED, (hostId: number) => {
+  naisysServer.registerEvent(HubEvents.CLIENT_CONNECTED, (hostId) => {
     broadcastHostList(hostId);
   });
 

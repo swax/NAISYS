@@ -1,11 +1,8 @@
 import { sleep } from "@naisys/common";
 import {
   AgentPeekRequestSchema,
-  AgentPeekResponse,
   AgentStartRequestSchema,
-  AgentStartResponse,
   AgentStopRequestSchema,
-  AgentStopResponse,
   HubEvents,
 } from "@naisys/hub-protocol";
 import stripAnsi from "strip-ansi";
@@ -36,7 +33,7 @@ export class AgentManager {
     if (hubClient) {
       hubClient.registerEvent(
         HubEvents.AGENT_START,
-        async (data: unknown, ack: (response: AgentStartResponse) => void) => {
+        async (data, ack) => {
           const hostname = this.globalConfig.globalConfig().hostname;
 
           try {
@@ -64,7 +61,7 @@ export class AgentManager {
 
       hubClient.registerEvent(
         HubEvents.AGENT_STOP,
-        async (data: unknown, ack: (response: AgentStopResponse) => void) => {
+        async (data, ack) => {
           try {
             const parsed = AgentStopRequestSchema.parse(data);
 
@@ -83,7 +80,7 @@ export class AgentManager {
 
       hubClient.registerEvent(
         HubEvents.AGENT_PEEK,
-        (data: unknown, ack: (response: AgentPeekResponse) => void) => {
+        (data, ack) => {
           try {
             const parsed = AgentPeekRequestSchema.parse(data);
 
