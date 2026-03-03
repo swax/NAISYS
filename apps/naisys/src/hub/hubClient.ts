@@ -1,10 +1,10 @@
 import type {
-  HubRequestEvents,
-  HubRequestEventName,
-  HubFireAndForgetEvents,
   HubFireAndForgetEventName,
-  HubPushEvents,
+  HubFireAndForgetEvents,
   HubPushEventName,
+  HubPushEvents,
+  HubRequestEventName,
+  HubRequestEvents,
 } from "@naisys/hub-protocol";
 
 import { hubCmd } from "../command/commandDefs.js";

@@ -73,9 +73,7 @@ export const ModelIndex: React.FC = () => {
     ];
 
     const cacheName = "Cache Read";
-    const cacheModels = llmModels.filter(
-      (m) => m.cacheReadCost != null,
-    );
+    const cacheModels = llmModels.filter((m) => m.cacheReadCost != null);
     const cacheSeries: ScatterChartSeries[] =
       cacheModels.length > 0
         ? [
@@ -198,7 +196,6 @@ export const ModelIndex: React.FC = () => {
           </Table>
         </Paper>
       )}
-
     </Stack>
   );
 };

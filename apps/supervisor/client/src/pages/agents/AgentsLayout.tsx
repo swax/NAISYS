@@ -33,10 +33,7 @@ export const AgentsLayout: React.FC = () => {
   const key = `${agentId || "no-agent"}-${expandParam || ""}`;
 
   return (
-    <Box
-      display="flex"
-      style={{ flex: 1, minHeight: 0 }}
-    >
+    <Box display="flex" style={{ flex: 1, minHeight: 0 }}>
       {/* Desktop sidebar */}
       <CollapsibleSidebar
         visibleFrom="md"

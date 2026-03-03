@@ -1,7 +1,6 @@
 import type { HubDatabaseService } from "@naisys/hub-database";
 import { HubEvents, MailReceivedPush } from "@naisys/hub-protocol";
 
-import { HubServerLog } from "../services/hubServerLog.js";
 import { NaisysServer } from "../services/naisysServer.js";
 import { HubHeartbeatService } from "./hubHeartbeatService.js";
 
@@ -9,7 +8,6 @@ import { HubHeartbeatService } from "./hubHeartbeatService.js";
 export function createHubSendMailService(
   naisysServer: NaisysServer,
   { usingHubDatabase }: HubDatabaseService,
-  logService: HubServerLog,
   heartbeatService: HubHeartbeatService,
 ) {
   /** Send a mail message directly by user IDs */
@@ -25,10 +23,7 @@ export function createHubSendMailService(
     await usingHubDatabase(async (hubDb) => {
       const now = new Date();
 
-      const participantIds = [
-        params.fromUserId,
-        ...params.recipientUserIds,
-      ]
+      const participantIds = [params.fromUserId, ...params.recipientUserIds]
         .sort((a, b) => a - b)
         .join(",");
 
@@ -53,7 +48,9 @@ export function createHubSendMailService(
         });
         if (found.length !== params.attachmentIds.length) {
           const foundIds = new Set(found.map((a) => a.id));
-          const missing = params.attachmentIds.filter((id) => !foundIds.has(id));
+          const missing = params.attachmentIds.filter(
+            (id) => !foundIds.has(id),
+          );
           throw new Error(`Attachments not found: ${missing.join(", ")}`);
         }
 

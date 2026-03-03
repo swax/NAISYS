@@ -19,10 +19,7 @@ export const HostsLayout: React.FC = () => {
   }, [location.pathname]);
 
   return (
-    <Box
-      display="flex"
-      style={{ flex: 1, minHeight: 0 }}
-    >
+    <Box display="flex" style={{ flex: 1, minHeight: 0 }}>
       {/* Desktop sidebar */}
       <CollapsibleSidebar
         contentStyle={{
@@ -62,7 +59,14 @@ export const HostsLayout: React.FC = () => {
         </Group>
 
         {/* Route content */}
-        <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "var(--mantine-spacing-md)" }}>
+        <div
+          style={{
+            flex: 1,
+            minHeight: 0,
+            overflowY: "auto",
+            padding: "var(--mantine-spacing-md)",
+          }}
+        >
           <Outlet />
         </div>
       </div>

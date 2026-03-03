@@ -117,7 +117,11 @@ export default function hostsRoutes(
 
         const items = hosts.map((host) => {
           const online = isHostConnected(host.id);
-          const actions = hostActions(host.id, hasManageHostsPermission, online);
+          const actions = hostActions(
+            host.id,
+            hasManageHostsPermission,
+            online,
+          );
           return {
             ...host,
             online,

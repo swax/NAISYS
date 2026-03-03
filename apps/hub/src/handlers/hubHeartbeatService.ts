@@ -41,48 +41,42 @@ export function createHubHeartbeatService(
   }
 
   // Handle heartbeat from NAISYS instances
-  naisysServer.registerEvent(
-    HubEvents.HEARTBEAT,
-    async (hostId, data) => {
-      const parsed = HeartbeatSchema.parse(data);
+  naisysServer.registerEvent(HubEvents.HEARTBEAT, async (hostId, data) => {
+    const parsed = HeartbeatSchema.parse(data);
 
-      // Update in-memory per-host active agent IDs
-      hostActiveAgents.set(hostId, parsed.activeUserIds);
+    // Update in-memory per-host active agent IDs
+    hostActiveAgents.set(hostId, parsed.activeUserIds);
 
-      try {
-        await usingHubDatabase(async (hubDb) => {
-          const now = new Date().toISOString();
+    try {
+      await usingHubDatabase(async (hubDb) => {
+        const now = new Date().toISOString();
 
-          // Update host last_active
-          await hubDb.hosts.updateMany({
-            where: { id: hostId },
-            data: { last_active: now },
-          });
-
-          // Update user_notifications.last_active for each active user
-          if (parsed.activeUserIds.length > 0) {
-            await hubDb.user_notifications.updateMany({
-              where: { user_id: { in: parsed.activeUserIds } },
-              data: { last_active: now, latest_host_id: hostId },
-            });
-          }
+        // Update host last_active
+        await hubDb.hosts.updateMany({
+          where: { id: hostId },
+          data: { last_active: now },
         });
-      } catch (error) {
-        logService.error(
-          `[Hub:Heartbeat] Error updating heartbeat for host ${hostId}: ${error}`,
-        );
-      }
-    },
-  );
+
+        // Update user_notifications.last_active for each active user
+        if (parsed.activeUserIds.length > 0) {
+          await hubDb.user_notifications.updateMany({
+            where: { user_id: { in: parsed.activeUserIds } },
+            data: { last_active: now, latest_host_id: hostId },
+          });
+        }
+      });
+    } catch (error) {
+      logService.error(
+        `[Hub:Heartbeat] Error updating heartbeat for host ${hostId}: ${error}`,
+      );
+    }
+  });
 
   // Clean up tracking when a host disconnects
-  naisysServer.registerEvent(
-    HubEvents.CLIENT_DISCONNECTED,
-    (hostId) => {
-      hostActiveAgents.delete(hostId);
-      throttledPushAgentsStatus();
-    },
-  );
+  naisysServer.registerEvent(HubEvents.CLIENT_DISCONNECTED, (hostId) => {
+    hostActiveAgents.delete(hostId);
+    throttledPushAgentsStatus();
+  });
 
   /** Push aggregate agent status to all connected NAISYS instances */
   function pushAgentsStatus() {

@@ -10,7 +10,7 @@ export const HostIndex: React.FC = () => {
 
   useEffect(() => {
     if (hosts.length > 0) {
-      navigate(`/hosts/${hosts[0].id}`, { replace: true });
+      void navigate(`/hosts/${hosts[0].id}`, { replace: true });
     }
   }, [hosts, navigate]);
 

@@ -16,7 +16,7 @@ import {
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod/v4";
 
-import { authCache,requirePermission } from "../auth-middleware.js";
+import { authCache, requirePermission } from "../auth-middleware.js";
 import {
   API_PREFIX,
   collectionLink,

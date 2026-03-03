@@ -11,8 +11,8 @@ import {
   Title,
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
-import { hasAction } from "@naisys/common";
 import type { HateoasAction } from "@naisys/common";
+import { hasAction } from "@naisys/common";
 import type { HostDetailResponse } from "@naisys-supervisor/shared";
 import { IconPlus, IconTrash, IconX } from "@tabler/icons-react";
 import { useQueryClient } from "@tanstack/react-query";

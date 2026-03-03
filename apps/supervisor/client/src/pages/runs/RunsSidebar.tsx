@@ -82,7 +82,7 @@ export const getRunIdLabel = (run: RunSession) => {
 export const getRowKey = (run: RunSession) =>
   `${run.userId}-${run.runId}-${run.sessionId}`;
 
-export { formatCost, formatDuration,formatPrimaryTime };
+export { formatCost, formatDuration, formatPrimaryTime };
 
 export const RunsSidebar: React.FC<RunsSidebarProps> = ({
   runs,

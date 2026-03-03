@@ -1,11 +1,10 @@
 import type {
-  HubRequestEvents,
-  HubRequestEventName,
-  HubFireAndForgetEvents,
   HubFireAndForgetEventName,
-  HubPushEvents,
+  HubFireAndForgetEvents,
   HubPushEventName,
-  HubTriggerEvents,
+  HubPushEvents,
+  HubRequestEventName,
+  HubRequestEvents,
   HubTriggerEventName,
 } from "@naisys/hub-protocol";
 import { Namespace } from "socket.io";

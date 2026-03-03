@@ -87,11 +87,20 @@ export function createMailService(
         if (filePaths.length > 0) {
           resolvedPaths = await shellWrapper.resolvePaths(filePaths);
           if (hubClient) {
-            attachmentIds = await attachmentService.uploadAll(resolvedPaths, "mail");
+            attachmentIds = await attachmentService.uploadAll(
+              resolvedPaths,
+              "mail",
+            );
           }
         }
 
-        return sendMessage(recipients, argv[2], argv[3], attachmentIds, resolvedPaths);
+        return sendMessage(
+          recipients,
+          argv[2],
+          argv[3],
+          attachmentIds,
+          resolvedPaths,
+        );
       }
 
       case "read": {
@@ -172,17 +181,14 @@ export function createMailService(
     message = message.replace(/\\n/g, "\n");
 
     if (hubClient) {
-      const response = await hubClient.sendRequest(
-        HubEvents.MAIL_SEND,
-        {
-          fromUserId: localUserId,
-          toUserIds: recipients.map((r) => r.userId),
-          subject,
-          body: message,
-          kind: "mail",
-          attachmentIds,
-        },
-      );
+      const response = await hubClient.sendRequest(HubEvents.MAIL_SEND, {
+        fromUserId: localUserId,
+        toUserIds: recipients.map((r) => r.userId),
+        subject,
+        body: message,
+        kind: "mail",
+        attachmentIds,
+      });
 
       if (!response.success) {
         throw response.error || "Failed to send message";
@@ -218,10 +224,10 @@ export function createMailService(
 
   async function archiveMessages(messageIds: number[]): Promise<string> {
     if (!hubClient) throw "Not available in local mode.";
-    const response = await hubClient.sendRequest(
-      HubEvents.MAIL_ARCHIVE,
-      { userId: localUserId, messageIds },
-    );
+    const response = await hubClient.sendRequest(HubEvents.MAIL_ARCHIVE, {
+      userId: localUserId,
+      messageIds,
+    });
 
     if (!response.success) {
       throw response.error || "Failed to archive messages";
@@ -246,10 +252,11 @@ export function createMailService(
       return [];
     }
 
-    const response = await hubClient.sendRequest(
-      HubEvents.MAIL_UNREAD,
-      { userId: localUserId, kind: "mail", afterId: lastUnreadId },
-    );
+    const response = await hubClient.sendRequest(HubEvents.MAIL_UNREAD, {
+      userId: localUserId,
+      kind: "mail",
+      afterId: lastUnreadId,
+    });
 
     if (!response.success || !response.messages?.length) {
       return [];
@@ -266,10 +273,10 @@ export function createMailService(
   }
 
   async function peekMessage(messageId: number): Promise<MailMessageData> {
-    const response = await hubClient!.sendRequest(
-      HubEvents.MAIL_PEEK,
-      { userId: localUserId, messageId },
-    );
+    const response = await hubClient!.sendRequest(HubEvents.MAIL_PEEK, {
+      userId: localUserId,
+      messageId,
+    });
 
     if (!response.success || !response.message) {
       throw response.error || "Failed to read message";
@@ -281,10 +288,10 @@ export function createMailService(
   async function markMessagesRead(messageIds: number[]): Promise<void> {
     if (!hubClient || !messageIds.length) return;
 
-    await hubClient.sendRequest(
-      HubEvents.MAIL_MARK_READ,
-      { userId: localUserId, messageIds },
-    );
+    await hubClient.sendRequest(HubEvents.MAIL_MARK_READ, {
+      userId: localUserId,
+      messageIds,
+    });
   }
 
   /**

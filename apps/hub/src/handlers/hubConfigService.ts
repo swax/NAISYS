@@ -86,44 +86,30 @@ export async function createHubConfigService(
   }
 
   // Push config to newly connected clients
-  naisysServer.registerEvent(
-    HubEvents.CLIENT_CONNECTED,
-    async (hostId) => {
-      try {
-        const payload = await buildConfigPayload();
+  naisysServer.registerEvent(HubEvents.CLIENT_CONNECTED, async (hostId) => {
+    try {
+      const payload = await buildConfigPayload();
 
-        logService.log(
-          `[Hub:Config] Pushing config to naisys instance ${hostId}`,
-        );
+      logService.log(
+        `[Hub:Config] Pushing config to naisys instance ${hostId}`,
+      );
 
-        naisysServer.sendMessage(
-          hostId,
-          HubEvents.VARIABLES_UPDATED,
-          payload,
-        );
-      } catch (error) {
-        logService.error(
-          `[Hub:Config] Error sending config to naisys instance ${hostId}: ${error}`,
-        );
-        naisysServer.sendMessage(
-          hostId,
-          HubEvents.VARIABLES_UPDATED,
-          {
-            success: false,
-            error: String(error),
-          },
-        );
-      }
-    },
-  );
+      naisysServer.sendMessage(hostId, HubEvents.VARIABLES_UPDATED, payload);
+    } catch (error) {
+      logService.error(
+        `[Hub:Config] Error sending config to naisys instance ${hostId}: ${error}`,
+      );
+      naisysServer.sendMessage(hostId, HubEvents.VARIABLES_UPDATED, {
+        success: false,
+        error: String(error),
+      });
+    }
+  });
 
   // Broadcast config to all clients when variables change
-  naisysServer.registerEvent(
-    HubEvents.VARIABLES_CHANGED,
-    async () => {
-      await broadcastConfig();
-    },
-  );
+  naisysServer.registerEvent(HubEvents.VARIABLES_CHANGED, async () => {
+    await broadcastConfig();
+  });
 
   // Build initial config so it's available immediately
   await buildConfigPayload();

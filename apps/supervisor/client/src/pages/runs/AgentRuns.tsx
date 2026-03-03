@@ -188,9 +188,7 @@ export const AgentRuns: React.FC = () => {
       )}
 
       {/* Desktop sidebar */}
-      <CollapsibleSidebar>
-        {sidebarContent}
-      </CollapsibleSidebar>
+      <CollapsibleSidebar>{sidebarContent}</CollapsibleSidebar>
 
       {/* Mobile drawer */}
       <Drawer
@@ -269,7 +267,10 @@ export const AgentRuns: React.FC = () => {
                   Run {getRunIdLabel(selectedRun)}
                 </Text>
                 <Text size="xs" c="dimmed">
-                  {formatDuration(selectedRun.createdAt, selectedRun.lastActive)}
+                  {formatDuration(
+                    selectedRun.createdAt,
+                    selectedRun.lastActive,
+                  )}
                 </Text>
                 <Text size="sm" fw={500} c="green">
                   {formatCost(selectedRun.totalCost)}

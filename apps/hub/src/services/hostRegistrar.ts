@@ -15,7 +15,11 @@ export async function createHostRegistrar({
       select: { id: true, name: true, restricted: true, host_type: true },
     });
     for (const row of rows) {
-      hostsById.set(row.id, { hostName: row.name, restricted: row.restricted, hostType: row.host_type });
+      hostsById.set(row.id, {
+        hostName: row.name,
+        restricted: row.restricted,
+        hostType: row.host_type,
+      });
     }
   });
 
@@ -24,7 +28,10 @@ export async function createHostRegistrar({
    * updates last_active on every call.
    * @returns The host's autoincrement id
    */
-  async function registerHost(hostName: string, hostType: string): Promise<number> {
+  async function registerHost(
+    hostName: string,
+    hostType: string,
+  ): Promise<number> {
     return await usingHubDatabase(async (hubDb) => {
       const existing = await hubDb.hosts.findUnique({
         where: { name: hostName },
@@ -80,7 +87,11 @@ export async function createHostRegistrar({
       });
       hostsById.clear();
       for (const row of rows) {
-        hostsById.set(row.id, { hostName: row.name, restricted: row.restricted, hostType: row.host_type });
+        hostsById.set(row.id, {
+          hostName: row.name,
+          restricted: row.restricted,
+          hostType: row.host_type,
+        });
       }
     });
   }

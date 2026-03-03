@@ -262,14 +262,11 @@ export function createSubagentService(
 
     if (hubClient) {
       // Hub mode: send start request through hub, which routes to the target host
-      const response = await hubClient.sendRequest(
-        HubEvents.AGENT_START,
-        {
-          startUserId: subagent.userId,
-          requesterUserId: localUserId,
-          taskDescription,
-        },
-      );
+      const response = await hubClient.sendRequest(HubEvents.AGENT_START, {
+        startUserId: subagent.userId,
+        requesterUserId: localUserId,
+        taskDescription,
+      });
 
       if (!response.success) {
         throw `Failed to start agent via hub: ${response.error}`;
@@ -334,10 +331,10 @@ export function createSubagentService(
 
     if (hubClient) {
       // Hub mode: send stop request through hub, which routes to the agent's host
-      const response = await hubClient.sendRequest(
-        HubEvents.AGENT_STOP,
-        { userId, reason },
-      );
+      const response = await hubClient.sendRequest(HubEvents.AGENT_STOP, {
+        userId,
+        reason,
+      });
 
       if (!response.success) {
         throw `Failed to stop agent via hub: ${response.error}`;
@@ -387,10 +384,11 @@ export function createSubagentService(
     let totalLines: number;
 
     if (hubClient) {
-      const response = await hubClient.sendRequest(
-        HubEvents.AGENT_PEEK,
-        { userId, skip, take },
-      );
+      const response = await hubClient.sendRequest(HubEvents.AGENT_PEEK, {
+        userId,
+        skip,
+        take,
+      });
 
       if (!response.success) {
         throw `Failed to peek agent via hub: ${response.error}`;

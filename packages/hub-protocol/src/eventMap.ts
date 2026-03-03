@@ -7,43 +7,43 @@
 
 import type { HubEvents } from "./events.js";
 import type {
+  AgentPeekRequest,
+  AgentPeekResponse,
   AgentStartRequest,
   AgentStartResponse,
   AgentStopRequest,
   AgentStopResponse,
-  AgentPeekRequest,
-  AgentPeekResponse,
 } from "./schemas/agents.js";
+import type { ConfigResponse } from "./schemas/config.js";
+import type { CostControl,CostWriteRequest } from "./schemas/costs.js";
+import type { AgentsStatus,Heartbeat } from "./schemas/heartbeat.js";
+import type { HostList } from "./schemas/hosts.js";
+import type { LogWriteRequest } from "./schemas/logs.js";
+import type {
+  MailArchiveRequest,
+  MailArchiveResponse,
+  MailListRequest,
+  MailListResponse,
+  MailMarkReadRequest,
+  MailMarkReadResponse,
+  MailPeekRequest,
+  MailPeekResponse,
+  MailSearchRequest,
+  MailSearchResponse,
+  MailSendRequest,
+  MailSendResponse,
+  MailUnreadRequest,
+  MailUnreadResponse,
+} from "./schemas/mail.js";
+import type { MailReceivedPush } from "./schemas/mail.js";
+import type { ModelsResponse } from "./schemas/models.js";
 import type {
   SessionCreateRequest,
   SessionCreateResponse,
   SessionIncrementRequest,
   SessionIncrementResponse,
 } from "./schemas/sessions.js";
-import type {
-  MailSendRequest,
-  MailSendResponse,
-  MailListRequest,
-  MailListResponse,
-  MailPeekRequest,
-  MailPeekResponse,
-  MailMarkReadRequest,
-  MailMarkReadResponse,
-  MailArchiveRequest,
-  MailArchiveResponse,
-  MailSearchRequest,
-  MailSearchResponse,
-  MailUnreadRequest,
-  MailUnreadResponse,
-} from "./schemas/mail.js";
-import type { Heartbeat, AgentsStatus } from "./schemas/heartbeat.js";
-import type { LogWriteRequest } from "./schemas/logs.js";
-import type { CostWriteRequest, CostControl } from "./schemas/costs.js";
 import type { UserListResponse } from "./schemas/users.js";
-import type { HostList } from "./schemas/hosts.js";
-import type { ConfigResponse } from "./schemas/config.js";
-import type { ModelsResponse } from "./schemas/models.js";
-import type { MailReceivedPush } from "./schemas/mail.js";
 
 // ---------------------------------------------------------------------------
 // Request/response events (use sendRequest / ack callback)

@@ -59,10 +59,11 @@ export function createMailDisplayService(
   localUserId: number,
 ) {
   async function listMessages(filter?: "received" | "sent"): Promise<string> {
-    const response = await hubClient.sendRequest(
-      HubEvents.MAIL_LIST,
-      { userId: localUserId, filter, kind: "mail" },
-    );
+    const response = await hubClient.sendRequest(HubEvents.MAIL_LIST, {
+      userId: localUserId,
+      filter,
+      kind: "mail",
+    });
 
     if (!response.success) {
       throw response.error || "Failed to list messages";
@@ -102,15 +103,12 @@ export function createMailDisplayService(
     includeArchived: boolean,
     subjectOnly: boolean,
   ): Promise<string> {
-    const response = await hubClient.sendRequest(
-      HubEvents.MAIL_SEARCH,
-      {
-        userId: localUserId,
-        terms: searchTerm,
-        includeArchived,
-        subjectOnly,
-      },
-    );
+    const response = await hubClient.sendRequest(HubEvents.MAIL_SEARCH, {
+      userId: localUserId,
+      terms: searchTerm,
+      includeArchived,
+      subjectOnly,
+    });
 
     if (!response.success) {
       throw response.error || "Failed to search messages";

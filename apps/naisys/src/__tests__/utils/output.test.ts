@@ -7,7 +7,8 @@ import { createMockLogService } from "../mocks.js";
 const mockLogService = createMockLogService();
 
 // Mock logService module
-mockLogService.write = jest.fn<(message: LlmMessage, filepath?: string) => void>();
+mockLogService.write =
+  jest.fn<(message: LlmMessage, filepath?: string) => void>();
 
 // Load target module
 const output = createOutputService(mockLogService);

@@ -5,7 +5,7 @@ import dotenv from "dotenv";
 import { AgentManager } from "./agent/agentManager.js";
 import { createUserService } from "./agent/userService.js";
 import { createGlobalConfig } from "./globalConfig.js";
-import { createHubClient,HubClient } from "./hub/hubClient.js";
+import { createHubClient, HubClient } from "./hub/hubClient.js";
 import { createHubClientConfig } from "./hub/hubClientConfig.js";
 import { createHubClientLog } from "./hub/hubClientLog.js";
 import { createHeartbeatService } from "./services/heartbeatService.js";

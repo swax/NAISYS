@@ -3,8 +3,8 @@ import { Agent, AgentDetailResponse } from "@naisys-supervisor/shared";
 
 import { hubDb } from "../database/hubDb.js";
 import { getLogger } from "../logger.js";
-import { updateAgentHostAssignments } from "./agentHostStatusService.js";
 import { cachedForSeconds } from "../utils/cache.js";
+import { updateAgentHostAssignments } from "./agentHostStatusService.js";
 
 export type AgentWithConfig = Agent & { config?: AgentConfigFile | null };
 
@@ -249,4 +249,3 @@ export async function deleteAgent(id: number): Promise<void> {
     await tx.users.delete({ where: { id } });
   });
 }
-

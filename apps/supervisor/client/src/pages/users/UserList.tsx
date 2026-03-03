@@ -18,7 +18,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { getAgentData } from "../../lib/apiAgents";
-import { createAgentUser,createUser, getUsers } from "../../lib/apiUsers";
+import { createAgentUser, createUser, getUsers } from "../../lib/apiUsers";
 
 export const UserList: React.FC = () => {
   const navigate = useNavigate();

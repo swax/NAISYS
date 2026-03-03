@@ -1,3 +1,5 @@
+import type { AgentConfigFile, ModelDbRow } from "@naisys/common";
+import { AgentConfigFileSchema } from "@naisys/common";
 import {
   AgentIdParams,
   AgentIdParamsSchema,
@@ -16,8 +18,6 @@ import {
   UpdateAgentConfigResponse,
   UpdateAgentConfigResponseSchema,
 } from "@naisys-supervisor/shared";
-import type { AgentConfigFile, ModelDbRow } from "@naisys/common";
-import { AgentConfigFileSchema } from "@naisys/common";
 import { FastifyInstance, FastifyPluginOptions } from "fastify";
 import yaml from "js-yaml";
 

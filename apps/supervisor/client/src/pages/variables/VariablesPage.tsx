@@ -16,7 +16,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import type { VariablesResponse } from "../../lib/apiClient";
 import { api, apiEndpoints } from "../../lib/apiClient";
-import { deleteVariable,saveVariable } from "../../lib/apiVariables";
+import { deleteVariable, saveVariable } from "../../lib/apiVariables";
 
 interface VariableRow {
   key: string;

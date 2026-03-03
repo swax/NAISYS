@@ -3,8 +3,8 @@ import type {
   AgentStartResponse,
   AgentStopResponse,
   MailSendResponse,
-  SupervisorListenEvents,
   SupervisorEmitEvents,
+  SupervisorListenEvents,
 } from "@naisys/hub-protocol";
 import {
   AgentsStatusSchema,
@@ -215,25 +215,18 @@ export function sendHostsChanged(): void {
   socket.emit(HubEvents.HOSTS_CHANGED);
 }
 
-export function sendAgentStop(
-  userId: number,
-  reason: string,
-) {
+export function sendAgentStop(userId: number, reason: string) {
   return new Promise<AgentStopResponse>((resolve, reject) => {
     if (!socket || !connected) {
       reject(new Error("Not connected to hub"));
       return;
     }
 
-    socket.emit(
-      HubEvents.AGENT_STOP,
-      { userId, reason },
-      (response) => {
-        if (response.success) {
-          markAgentStopped(userId);
-        }
-        resolve(response);
-      },
-    );
+    socket.emit(HubEvents.AGENT_STOP, { userId, reason }, (response) => {
+      if (response.success) {
+        markAgentStopped(userId);
+      }
+      resolve(response);
+    });
   });
 }
