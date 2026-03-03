@@ -19,7 +19,7 @@ export const AgentSchema = z.object({
   latestLogId: z.number(),
   latestMailId: z.number(),
   archived: z.boolean().optional(),
-  status: z.enum(["active", "available", "offline"]).optional(),
+  status: z.enum(["active", "available", "offline", "suspended"]).optional(),
   _links: z.array(LinkSchema).optional(),
 });
 
@@ -64,7 +64,8 @@ export const AgentDetailResponseSchema = z.object({
   latestLogId: z.number(),
   latestMailId: z.number(),
   archived: z.boolean().optional(),
-  status: z.enum(["active", "available", "offline"]).optional(),
+  status: z.enum(["active", "available", "offline", "suspended"]).optional(),
+  costSuspendedReason: z.string().optional(),
   config: AgentConfigFileSchema,
   assignedHosts: z
     .array(z.object({ id: z.number(), name: z.string() }))

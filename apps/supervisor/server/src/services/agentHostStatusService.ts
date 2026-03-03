@@ -1,9 +1,10 @@
 import { EventEmitter } from "node:events";
 
-import { determineAgentStatus } from "@naisys/common";
+import { type AgentStatus, determineAgentStatus } from "@naisys/common";
 import type { AgentStatusEvent } from "@naisys-supervisor/shared";
 
 const activeAgentIds = new Set<number>();
+const costSuspendedAgentIds = new Set<number>();
 const connectedHostIds = new Set<number>();
 const agentNotifications = new Map<
   number,
@@ -91,6 +92,20 @@ export function updateAgentHostAssignments(
   }
 }
 
+// --- Cost suspension cache ---
+
+export function updateCostSuspendedAgents(
+  agents: { agentId: number; isSuspended: boolean }[],
+): void {
+  for (const { agentId, isSuspended } of agents) {
+    if (isSuspended) {
+      costSuspendedAgentIds.add(agentId);
+    } else {
+      costSuspendedAgentIds.delete(agentId);
+    }
+  }
+}
+
 // --- Query functions ---
 
 export function isAgentActive(userId: number): boolean {
@@ -109,11 +124,10 @@ function hasNonRestrictedOnlineHost(): boolean {
   return false;
 }
 
-export function getAgentStatus(
-  agentId: number,
-): "active" | "available" | "offline" {
+export function getAgentStatus(agentId: number): AgentStatus {
   return determineAgentStatus({
     isActive: activeAgentIds.has(agentId),
+    isSuspended: costSuspendedAgentIds.has(agentId),
     assignedHostIds: agentHostAssignments.get(agentId),
     isHostOnline: (hid) => connectedHostIds.has(hid),
     hasNonRestrictedOnlineHost: hasNonRestrictedOnlineHost(),

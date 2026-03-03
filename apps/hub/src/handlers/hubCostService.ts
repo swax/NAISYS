@@ -203,6 +203,17 @@ export function createHubCostService(
     }
   }
 
+  async function setCostSuspendedReason(
+    hubDb: PrismaClient,
+    userId: number,
+    reason: string | null,
+  ) {
+    await hubDb.user_notifications.updateMany({
+      where: { user_id: userId },
+      data: { cost_suspended_reason: reason },
+    });
+  }
+
   /** Check the global spend limit across all agents */
   async function checkGlobalSpendLimit(
     hubDb: PrismaClient,
@@ -223,6 +234,7 @@ export function createHubCostService(
         );
         sendCostControl(userId, false, reason);
         suspendedByGlobal.add(userId);
+        await setCostSuspendedReason(hubDb, userId, reason);
       } else if (!isOverLimit && wasSuspended) {
         const reason = `Global spend limit period reset (total: $${totalCost.toFixed(2)}, limit: $${spendLimit})`;
         logService.log(
@@ -230,6 +242,10 @@ export function createHubCostService(
         );
         sendCostControl(userId, true, reason);
         suspendedByGlobal.delete(userId);
+        // Only clear DB reason if not also suspended by per-agent limit
+        if (!suspendedByAgent.has(userId)) {
+          await setCostSuspendedReason(hubDb, userId, null);
+        }
       }
     }
   }
@@ -250,11 +266,16 @@ export function createHubCostService(
       logService.log(`[Hub:Costs] Suspending user ${userId}: ${reason}`);
       sendCostControl(userId, false, reason);
       suspendedByAgent.add(userId);
+      await setCostSuspendedReason(hubDb, userId, reason);
     } else if (!isOverLimit && wasSuspended) {
       const reason = `Spend limit period reset (current: $${periodCost.toFixed(2)}, limit: $${spendLimit})`;
       logService.log(`[Hub:Costs] Resuming user ${userId}: ${reason}`);
       sendCostControl(userId, true, reason);
       suspendedByAgent.delete(userId);
+      // Only clear DB reason if not also suspended by global limit
+      if (!suspendedByGlobal.has(userId)) {
+        await setCostSuspendedReason(hubDb, userId, null);
+      }
     }
   }
 

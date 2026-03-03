@@ -264,9 +264,11 @@ export const AgentSidebar: React.FC = () => {
             color={
               agent.status === "active"
                 ? "green"
-                : agent.status === "available"
-                  ? "yellow"
-                  : "gray"
+                : agent.status === "suspended"
+                  ? "red"
+                  : agent.status === "available"
+                    ? "yellow"
+                    : "gray"
             }
             style={{
               flexShrink: 0,

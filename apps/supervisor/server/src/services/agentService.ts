@@ -4,7 +4,10 @@ import { Agent, AgentDetailResponse } from "@naisys-supervisor/shared";
 import { hubDb } from "../database/hubDb.js";
 import { getLogger } from "../logger.js";
 import { cachedForSeconds } from "../utils/cache.js";
-import { updateAgentHostAssignments } from "./agentHostStatusService.js";
+import {
+  updateAgentHostAssignments,
+  updateCostSuspendedAgents,
+} from "./agentHostStatusService.js";
 
 export type AgentWithConfig = Agent & { config?: AgentConfigFile | null };
 
@@ -29,6 +32,7 @@ export const getAgents = cachedForSeconds(
               latest_log_id: true,
               latest_mail_id: true,
               last_active: true,
+              cost_suspended_reason: true,
               updated_at: true,
               host: { select: { name: true } },
             },
@@ -63,6 +67,14 @@ export const getAgents = cachedForSeconds(
         users.map((user) => ({
           agentId: user.id,
           hostIds: user.user_hosts.map((uh) => uh.host_id),
+        })),
+      );
+
+      updateCostSuspendedAgents(
+        users.map((user) => ({
+          agentId: user.id,
+          isSuspended:
+            !!user.user_notifications?.cost_suspended_reason,
         })),
       );
     } catch (error) {
@@ -120,6 +132,7 @@ export async function getAgent(
             latest_log_id: true,
             latest_mail_id: true,
             last_active: true,
+            cost_suspended_reason: true,
             updated_at: true,
             host: { select: { name: true } },
           },
@@ -148,6 +161,8 @@ export async function getAgent(
       latestLogId: user.user_notifications?.latest_log_id ?? 0,
       latestMailId: user.user_notifications?.latest_mail_id ?? 0,
       archived: user.archived,
+      costSuspendedReason:
+        user.user_notifications?.cost_suspended_reason ?? undefined,
       config: parseConfig(user.config)!,
       assignedHosts: user.user_hosts.map((uh) => ({
         id: uh.host.id,
