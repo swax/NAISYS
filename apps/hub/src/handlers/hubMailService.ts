@@ -13,8 +13,11 @@ import {
 import { HubServerLog } from "../services/hubServerLog.js";
 import { NaisysServer } from "../services/naisysServer.js";
 import { HubAgentService } from "./hubAgentService.js";
+import type { HubCostService } from "./hubCostService.js";
 import { HubHeartbeatService } from "./hubHeartbeatService.js";
 import { HubSendMailService } from "./hubSendMailService.js";
+
+const MAIL_AUTOSTART_CHECK_INTERVAL_MS = 10_000;
 
 /** Handles mail events from NAISYS instances */
 export function createHubMailService(
@@ -24,29 +27,16 @@ export function createHubMailService(
   heartbeatService: HubHeartbeatService,
   sendMailService: HubSendMailService,
   agentService: HubAgentService,
+  costService: HubCostService,
 ) {
-  /** Auto-start inactive agents that received mail */
-  function autoStartInactiveAgents(recipientUserIds: number[]) {
-    try {
-      const activeUserIds = heartbeatService.getActiveUserIds();
-      for (const recipientUserId of recipientUserIds) {
-        if (!activeUserIds.has(recipientUserId)) {
-          void agentService.tryStartAgent(recipientUserId);
-        }
-      }
-    } catch {
-      // Fire-and-forget — don't affect mail delivery
-    }
-  }
-
   /** Check for inactive users with unread mail and trigger auto-start for each */
   async function checkPendingAutoStarts() {
     try {
       const activeUserIds = heartbeatService.getActiveUserIds();
 
-      await usingHubDatabase(async (hubDb) => {
+      const unreadRecipients = await usingHubDatabase(async (hubDb) =>
         // Find distinct users with unread mail from real senders
-        const unreadRecipients = await hubDb.mail_recipients.findMany({
+        hubDb.mail_recipients.findMany({
           where: {
             read_at: null,
           },
@@ -54,16 +44,24 @@ export function createHubMailService(
             user_id: true,
           },
           distinct: ["user_id"],
-        });
+        }),
+      );
 
-        for (const recipient of unreadRecipients) {
-          if (!activeUserIds.has(recipient.user_id)) {
-            void agentService.tryStartAgent(recipient.user_id);
-          }
-        }
-      });
-    } catch {
-      // Fire-and-forget
+      const inactiveUserIds = unreadRecipients
+        .map((recipient) => recipient.user_id)
+        .filter((userId) => !activeUserIds.has(userId));
+
+      if (inactiveUserIds.length === 0) return;
+
+      await costService.checkSpendLimits(inactiveUserIds);
+
+      for (const userId of inactiveUserIds) {
+        if (heartbeatService.getActiveUserIds().has(userId)) continue;
+        if (costService.isUserSpendSuspended(userId)) continue;
+        void agentService.tryStartAgent(userId);
+      }
+    } catch (error) {
+      logService.error(`[Hub:Mail] Auto-start check failed: ${error}`);
     }
   }
 
@@ -74,6 +72,11 @@ export function createHubMailService(
       void checkPendingAutoStarts();
     }
   });
+
+  const pendingAutoStartInterval = setInterval(
+    () => void checkPendingAutoStarts(),
+    MAIL_AUTOSTART_CHECK_INTERVAL_MS,
+  );
 
   // MAIL_SEND
   naisysServer.registerEvent(HubEvents.MAIL_SEND, async (hostId, data, ack) => {
@@ -92,7 +95,7 @@ export function createHubMailService(
 
       ack({ success: true });
 
-      autoStartInactiveAgents(parsed.toUserIds);
+      void checkPendingAutoStarts();
     } catch (error) {
       logService.error(
         `[Hub:Mail] mail_send error from host ${hostId}: ${error}`,
@@ -449,6 +452,12 @@ export function createHubMailService(
       }
     },
   );
+
+  function cleanup() {
+    clearInterval(pendingAutoStartInterval);
+  }
+
+  return { cleanup };
 }
 
 export type HubMailService = ReturnType<typeof createHubMailService>;

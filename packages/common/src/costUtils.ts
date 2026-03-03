@@ -4,6 +4,8 @@ export const COST_AGGREGATION_WINDOW_MS = 5 * 60 * 1000; // 5 minutes
 /**
  * Calculate the current period boundaries based on a given number of hours.
  * Periods are fixed multiples of hours from midnight (server local time).
+ * The reason we don't slide the window is that we don't want to the llm to get stuck sending off a query
+ * only for the window to close again, and the llm cache to *expire* creating a cycle of constant cache misses
  */
 export function calculatePeriodBoundaries(hours: number): {
   periodStart: Date;

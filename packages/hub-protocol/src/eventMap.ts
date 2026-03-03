@@ -15,8 +15,8 @@ import type {
   AgentStopResponse,
 } from "./schemas/agents.js";
 import type { ConfigResponse } from "./schemas/config.js";
-import type { CostControl,CostWriteRequest } from "./schemas/costs.js";
-import type { AgentsStatus,Heartbeat } from "./schemas/heartbeat.js";
+import type { CostControl, CostWriteRequest } from "./schemas/costs.js";
+import type { AgentsStatus, Heartbeat } from "./schemas/heartbeat.js";
 import type { HostList } from "./schemas/hosts.js";
 import type { LogWriteRequest } from "./schemas/logs.js";
 import type {

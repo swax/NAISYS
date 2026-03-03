@@ -1,4 +1,4 @@
-import { determineAgentStatus,UserEntry } from "@naisys/common";
+import { determineAgentStatus, UserEntry } from "@naisys/common";
 import { loadAgentConfigs } from "@naisys/common-node";
 import {
   HubEvents,

@@ -106,6 +106,7 @@ model mail_recipients {
 
   @@index([message_id, user_id], map: "idx_mail_recipients_message_user") // JOIN from mail_messages includes, WHERE message_id + user_id in read/archive updateMany
   @@index([user_id, message_id(sort: Desc)], map: "idx_mail_recipients_user_message_desc") // recipients.some({ user_id }) in mail list/search/unread filtering
+  @@index([read_at, user_id], map: "idx_mail_recipients_read_at_user_id") // WHERE read_at IS NULL with distinct/select user_id for auto-start candidate scans
 }
 
 model users {
