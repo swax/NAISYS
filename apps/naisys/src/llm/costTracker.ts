@@ -11,6 +11,16 @@ import { GlobalConfig } from "../globalConfig.js";
 import { HubClient } from "../hub/hubClient.js";
 import { ModelService } from "../services/modelService.js";
 import { RunService } from "../services/runService.js";
+import { PromptNotificationService } from "../utils/promptNotificationService.js";
+
+export const SPEND_LIMIT_TIMEOUT_SECONDS = 60;
+
+export class SpendLimitError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "SpendLimitError";
+  }
+}
 
 export interface LlmModelCosts {
   inputCost: number;
@@ -47,6 +57,7 @@ export function createCostTracker(
   runService: RunService,
   hubClient: HubClient | undefined,
   localUserId: number,
+  promptNotification: PromptNotificationService,
 ) {
   // In-memory per-model aggregated costs (always maintained, both modes)
   const modelCosts = new Map<string, ModelCostData>();
@@ -76,6 +87,11 @@ export function createCostTracker(
 
       if (parsed.enabled) {
         hubCostControlReason = undefined;
+        promptNotification.notify({
+          wake: "always",
+          userId: localUserId,
+          commentOutput: ["Cost control suspension lifted, resuming"],
+        });
       } else {
         hubCostControlReason = parsed.reason;
       }
@@ -220,9 +236,11 @@ export function createCostTracker(
   function checkSpendLimit() {
     if (hubClient) {
       if (!hubClient.isConnected()) {
-        throw "LLM Spend limit check failed: not connected to hub";
+        throw new SpendLimitError(
+          "LLM Spend limit check failed: not connected to hub",
+        );
       } else if (hubCostControlReason) {
-        throw `LLM ${hubCostControlReason}`;
+        throw new SpendLimitError(`LLM ${hubCostControlReason}`);
       }
       return;
     }
@@ -266,7 +284,9 @@ export function createCostTracker(
       const userDescription = agentConfig().spendLimitDollars
         ? `${agentConfig().username}`
         : "all users";
-      throw `LLM Spend limit of $${spendLimit} ${periodDescription} reached for ${userDescription}, current cost $${currentCost.toFixed(2)}`;
+      throw new SpendLimitError(
+        `LLM Spend limit of $${spendLimit} ${periodDescription} reached for ${userDescription}, current cost $${currentCost.toFixed(2)}`,
+      );
     }
   }
 

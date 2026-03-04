@@ -100,6 +100,7 @@ export async function createAgentRuntime(
     runService,
     hubClient,
     localUserId,
+    promptNotification,
   );
   const costDisplayService = createCostDisplayService(
     globalConfig,
@@ -158,6 +159,8 @@ export async function createAgentRuntime(
     promptNotification,
     attachmentService,
     shellWrapper,
+    globalConfig,
+    agentManager,
   );
   const chatService = createChatService(
     hubClient,

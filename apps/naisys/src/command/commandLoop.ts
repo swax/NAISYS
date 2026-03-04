@@ -9,6 +9,10 @@ import { WorkspacesFeature } from "../features/workspaces.js";
 import { GlobalConfig } from "../globalConfig.js";
 import { HubClient } from "../hub/hubClient.js";
 import { ContextManager } from "../llm/contextManager.js";
+import {
+  SPEND_LIMIT_TIMEOUT_SECONDS,
+  SpendLimitError,
+} from "../llm/costTracker.js";
 import { ContentSource, LlmRole } from "../llm/llmDtos.js";
 import { LLMService } from "../llm/llmService.js";
 import { ChatService } from "../mail/chat.js";
@@ -338,14 +342,20 @@ export function createCommandLoop(
     let pauseSeconds = agentConfig().debugPauseSeconds;
 
     if (inputMode.isLLM()) {
-      llmErrorCount++;
+      if (e instanceof SpendLimitError) {
+        // Spend limit errors use a constant timeout since they resolve on a schedule
+        pauseSeconds = SPEND_LIMIT_TIMEOUT_SECONDS;
+      } else {
+        llmErrorCount++;
 
-      // Set the pause seconds to exponential backoff, up to retrySecondsMax
-      pauseSeconds = agentConfig().debugPauseSeconds * 2 ** (llmErrorCount - 1);
+        // Set the pause seconds to exponential backoff, up to retrySecondsMax
+        pauseSeconds =
+          agentConfig().debugPauseSeconds * 2 ** (llmErrorCount - 1);
 
-      if (pauseSeconds > globalConfig().retrySecondsMax) {
-        pauseSeconds = globalConfig().retrySecondsMax;
-        llmErrorCount--; // Prevent overflowing the calculation above
+        if (pauseSeconds > globalConfig().retrySecondsMax) {
+          pauseSeconds = globalConfig().retrySecondsMax;
+          llmErrorCount--; // Prevent overflowing the calculation above
+        }
       }
     }
 

@@ -148,6 +148,7 @@ export const startHub: StartHub = async (
       sendMailService,
       agentService,
       costService,
+      configService,
     );
 
     // Start listening

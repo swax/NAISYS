@@ -260,6 +260,7 @@ export function createMockGlobalConfig(): GlobalConfig {
       packageVersion: "1.0.0",
       binPath: "/bin",
       supervisorPort: undefined,
+      autoStartAgentsOnMessage: true,
     }),
   };
 }

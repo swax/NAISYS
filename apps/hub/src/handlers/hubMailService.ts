@@ -13,6 +13,7 @@ import {
 import { HubServerLog } from "../services/hubServerLog.js";
 import { NaisysServer } from "../services/naisysServer.js";
 import { HubAgentService } from "./hubAgentService.js";
+import type { HubConfigService } from "./hubConfigService.js";
 import type { HubCostService } from "./hubCostService.js";
 import { HubHeartbeatService } from "./hubHeartbeatService.js";
 import { HubSendMailService } from "./hubSendMailService.js";
@@ -28,10 +29,14 @@ export function createHubMailService(
   sendMailService: HubSendMailService,
   agentService: HubAgentService,
   costService: HubCostService,
+  configService: HubConfigService,
 ) {
   /** Check for inactive users with unread mail and trigger auto-start for each */
   async function checkPendingAutoStarts() {
     try {
+      const config = configService.getConfig();
+      if (!config.success || !config.config?.autoStartAgentsOnMessage) return;
+
       const activeUserIds = heartbeatService.getActiveUserIds();
 
       // Find distinct users with unread mail from real senders

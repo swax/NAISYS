@@ -412,7 +412,10 @@ export function createSubagentService(
       return `No buffered output for '${agentName}'.`;
     }
 
-    return `[${lines.length} of ${totalLines} lines]\n` + lines.join("\n");
+    return (
+      `[${lines.length} of ${totalLines} lines]\n` +
+      lines.map((l) => "  " + l).join("\n")
+    );
   }
 
   function handleAgentTermination(subagent: Subagent, reason: string) {
