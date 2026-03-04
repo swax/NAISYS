@@ -5,6 +5,7 @@ import {
 } from "@naisys/hub-protocol";
 import stringArgv from "string-argv";
 
+import { IAgentManager } from "../agent/agentManagerInterface.js";
 import { UserEntry, UserService } from "../agent/userService.js";
 import { mailCmd } from "../command/commandDefs.js";
 import {
@@ -12,6 +13,7 @@ import {
   RegistrableCommand,
 } from "../command/commandRegistry.js";
 import { ShellWrapper } from "../command/shellWrapper.js";
+import { GlobalConfig } from "../globalConfig.js";
 import { HubClient } from "../hub/hubClient.js";
 import { AttachmentService } from "../services/attachmentService.js";
 import { PromptNotificationService } from "../utils/promptNotificationService.js";
@@ -29,6 +31,8 @@ export function createMailService(
   promptNotification: PromptNotificationService,
   attachmentService: AttachmentService,
   shellWrapper: ShellWrapper,
+  globalConfig: GlobalConfig,
+  agentManager: IAgentManager,
 ) {
   const localUser = userService.getUserById(localUserId);
   const localUsername = localUser?.username || "unknown";
@@ -217,6 +221,21 @@ export function createMailService(
         wake: "yes",
         contextOutput: ["New Message:", display],
       });
+    }
+
+    // Auto-start inactive recipient agents so they can process the mail
+    if (globalConfig.globalConfig().autoStartAgentsOnMessage) {
+      const runningUserIds = new Set(
+        agentManager.runningAgents.map((a) => a.agentUserId),
+      );
+      for (const recipient of recipients) {
+        if (
+          recipient.userId !== localUserId &&
+          !runningUserIds.has(recipient.userId)
+        ) {
+          agentManager.startAgent(recipient.userId).catch(() => {});
+        }
+      }
     }
 
     return "Mail sent";

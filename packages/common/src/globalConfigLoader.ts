@@ -14,6 +14,7 @@ export interface ClientConfig {
   spendLimitHours?: number;
   variableMap: Record<string, string>;
   useToolsForLlmConsoleResponses: boolean;
+  autoStartAgentsOnMessage: boolean;
 }
 
 /** Keys that should never be distributed to clients */
@@ -57,6 +58,7 @@ export function buildClientConfig(
   const spendLimitHours = sanitizeSpendLimit(variableMap.SPEND_LIMIT_HOURS);
 
   const useToolsForLlmConsoleResponses = true;
+  const autoStartAgentsOnMessage = true;
 
   return {
     shellCommand,
@@ -68,5 +70,6 @@ export function buildClientConfig(
     spendLimitDollars,
     spendLimitHours,
     useToolsForLlmConsoleResponses,
+    autoStartAgentsOnMessage,
   };
 }
