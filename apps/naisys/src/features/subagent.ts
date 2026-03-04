@@ -103,8 +103,15 @@ export function createSubagentService(
         return await peekAgent(peekName, skip, take);
       }
       case "stop": {
-        const stopName = argv[1];
-        return await stopAgent(stopName, "subagent stop");
+        const recursive = argv[1] === "-r";
+        const username = recursive ? argv[2] : argv[1];
+        const recursiveText = recursive ? " (recursive)" : "";
+
+        return await stopAgent(
+          username,
+          "subagent stop" + recursiveText,
+          recursive,
+        );
       }
       default: {
         errorText = "Error, unknown command. See valid commands below:\n";
@@ -321,7 +328,30 @@ export function createSubagentService(
     return userId;
   }
 
-  async function stopAgent(agentName: string, reason: string) {
+  /** Find all running subordinates of a user (recursively) */
+  function findRunningSubordinates(parentUserId: number): number[] {
+    const allUsers = userService.getUsers();
+    const runningAgentIds = getRunningAgentsIds();
+    const result: number[] = [];
+
+    function collect(parentId: number) {
+      for (const user of allUsers) {
+        if (user.leadUserId === parentId && runningAgentIds.has(user.userId)) {
+          result.push(user.userId);
+          collect(user.userId);
+        }
+      }
+    }
+    collect(parentUserId);
+
+    return result;
+  }
+
+  async function stopAgent(
+    agentName: string,
+    reason: string,
+    recursive?: boolean,
+  ) {
     // Also check if running in agentManager (debug user can stop agents other than local subagents)
     const userId = validateAgentRunning(agentName);
 
@@ -329,8 +359,11 @@ export function createSubagentService(
       throw `You're not authorized to stop agent '${agentName}' — not your subordinate`;
     }
 
+    // Collect subordinate IDs before stopping the parent
+    const subordinateIds = recursive ? findRunningSubordinates(userId) : [];
+
     if (hubClient) {
-      // Hub mode: send stop request through hub, which routes to the agent's host
+      // Hub mode: send stop requests through hub for each agent
       const response = await hubClient.sendRequest(HubEvents.AGENT_STOP, {
         userId,
         reason,
@@ -339,29 +372,25 @@ export function createSubagentService(
       if (!response.success) {
         throw `Failed to stop agent via hub: ${response.error}`;
       }
+
+      // Stop subordinates (fire-and-forget, don't block on results)
+      for (const subId of subordinateIds) {
+        void hubClient
+          .sendRequest(HubEvents.AGENT_STOP, { userId: subId, reason })
+          .catch(() => {});
+      }
     } else {
-      // Non-hub mode: stop agent locally
+      // Non-hub mode: stop agents locally
+      for (const subId of subordinateIds) {
+        void agentManager.stopAgent(subId, reason);
+      }
       void agentManager.stopAgent(userId, reason);
     }
 
-    return `Agent '${agentName}' stop requested`;
-  }
-
-  /**
-   * Stop all running subagents (unless exiting via session complete)
-   * Exit/stop is a cascading shutdown
-   * Session complete is a local, sub-agents can still be working,
-   * Sub-agents completing will fire a mail to the lead which will wake the lead back up to handle things
-   */
-  function cleanup(reason: string) {
-    if (reason === "session-complete") return;
-
-    const runningAgentIds = getRunningAgentsIds();
-    mySubagentsMap.forEach((subagent) => {
-      if (runningAgentIds.has(subagent.userId)) {
-        void stopAgent(subagent.agentName, reason).catch(() => {});
-      }
-    });
+    const stoppedCount = subordinateIds.length + 1;
+    return recursive && stoppedCount > 1
+      ? `Stop requested for '${agentName}' and ${stoppedCount - 1} subordinate(s)`
+      : `Agent '${agentName}' stop requested`;
   }
 
   /** Only for in-process agents */
@@ -437,7 +466,6 @@ export function createSubagentService(
 
   return {
     ...registrableCommand,
-    cleanup,
     raiseSwitchEvent,
   };
 }

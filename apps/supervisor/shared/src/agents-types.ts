@@ -117,6 +117,13 @@ export const AgentStartResultSchema = z.object({
 });
 export type AgentStartResult = z.infer<typeof AgentStartResultSchema>;
 
+export const AgentStopRequestSchema = z
+  .object({
+    recursive: z.boolean().optional(),
+  })
+  .strict();
+export type AgentStopRequest = z.infer<typeof AgentStopRequestSchema>;
+
 export const AgentStopResultSchema = z.object({
   success: z.boolean(),
   message: z.string(),

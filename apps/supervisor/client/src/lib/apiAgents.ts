@@ -127,8 +127,14 @@ export const startAgent = async (
   );
 };
 
-export const stopAgent = async (id: number): Promise<AgentStopResult> => {
-  return await api.post<{}, AgentStopResult>(apiEndpoints.agentStop(id), {});
+export const stopAgent = async (
+  id: number,
+  recursive?: boolean,
+): Promise<AgentStopResult> => {
+  return await api.post<{ recursive?: boolean }, AgentStopResult>(
+    apiEndpoints.agentStop(id),
+    recursive ? { recursive } : {},
+  );
 };
 
 export const archiveAgent = async (id: number): Promise<AgentActionResult> => {

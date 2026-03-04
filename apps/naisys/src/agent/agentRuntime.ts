@@ -225,6 +225,8 @@ export async function createAgentRuntime(
     output,
     inputMode,
     systemMessage,
+    agentManager,
+    localUserId,
   );
 
   const commandRegistry = createCommandRegistry(inputMode, [
@@ -292,10 +294,9 @@ export async function createAgentRuntime(
     requestShutdown: (reason: string) => {
       abortController.abort(reason);
     },
-    completeShutdown: async (reason: string) => {
+    completeShutdown: async () => {
       costTracker.cleanup();
       await logService.cleanup();
-      subagentService.cleanup(reason);
       mailService.cleanup();
       chatService.cleanup();
     },

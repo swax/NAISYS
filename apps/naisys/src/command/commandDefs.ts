@@ -158,8 +158,9 @@ export const subagentCmd: CommandDef = {
       description: "Start agent by name with a task description",
     },
     stop: {
-      usage: "stop <name>",
-      description: "Stop an agent by name",
+      usage: "stop [-r] <name>",
+      description:
+        "Stop an agent by name. Use -r to recursively stop subordinate agents",
     },
     local: {
       usage: "!local",
@@ -259,6 +260,8 @@ export const helpCmd: CommandDef = {
 
 export const exitCmd: CommandDef = {
   name: "exit",
-  description: "Exit the application",
+  usage: "[all]",
+  description:
+    "Exit the current agent. Use 'exit all' to exit all agents, ending the application",
   isDebug: true,
 };
