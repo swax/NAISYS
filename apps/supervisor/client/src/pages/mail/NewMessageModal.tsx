@@ -38,7 +38,6 @@ interface NewMessageModalProps {
   ) => Promise<void>;
   initialRecipientId?: number;
   initialSubject?: string;
-  initialBody?: string;
 }
 
 export const NewMessageModal: React.FC<NewMessageModalProps> = ({
@@ -49,7 +48,6 @@ export const NewMessageModal: React.FC<NewMessageModalProps> = ({
   onSend,
   initialRecipientId,
   initialSubject,
-  initialBody,
 }) => {
   const [recipientId, setRecipientId] = useState<string>("");
   const [subject, setSubject] = useState("");
@@ -69,8 +67,7 @@ export const NewMessageModal: React.FC<NewMessageModalProps> = ({
     if (opened && initialSubject) {
       setSubject(initialSubject);
     }
-    if (opened && initialBody) {
-      setBody(initialBody);
+    if (opened) {
       // Focus the textarea and position cursor at the beginning
       setTimeout(() => {
         if (bodyTextareaRef.current) {
@@ -79,7 +76,7 @@ export const NewMessageModal: React.FC<NewMessageModalProps> = ({
         }
       }, 0);
     }
-  }, [opened, initialRecipientId, initialSubject, initialBody]);
+  }, [opened, initialRecipientId, initialSubject]);
 
   // Add paste event listener for images
   useEffect(() => {

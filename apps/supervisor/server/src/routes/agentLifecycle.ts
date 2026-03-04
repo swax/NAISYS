@@ -35,7 +35,9 @@ import {
   sendUserListChanged,
 } from "../services/hubConnectionService.js";
 
-async function findRunningSubordinates(parentUserId: number): Promise<number[]> {
+async function findRunningSubordinates(
+  parentUserId: number,
+): Promise<number[]> {
   const allUsers = await hubDb.users.findMany({
     select: { id: true, lead_user_id: true },
   });
