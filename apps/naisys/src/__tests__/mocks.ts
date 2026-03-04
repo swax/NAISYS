@@ -90,7 +90,6 @@ export function createMockSubagent() {
   const subagent: SubagentService = {
     command: subagentCmd,
     handleCommand: jest.fn(() => ""),
-    cleanup: jest.fn(() => Promise.resolve()),
     raiseSwitchEvent: jest.fn(),
   };
 

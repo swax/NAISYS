@@ -7,6 +7,8 @@ import {
   AgentStartRequestSchema,
   AgentStartResult,
   AgentStartResultSchema,
+  AgentStopRequest,
+  AgentStopRequestSchema,
   AgentStopResult,
   AgentStopResultSchema,
   ErrorResponse,
@@ -32,6 +34,25 @@ import {
   sendAgentStop,
   sendUserListChanged,
 } from "../services/hubConnectionService.js";
+
+async function findRunningSubordinates(parentUserId: number): Promise<number[]> {
+  const allUsers = await hubDb.users.findMany({
+    select: { id: true, lead_user_id: true },
+  });
+  const result: number[] = [];
+  function collectSubordinates(parentId: number) {
+    for (const user of allUsers) {
+      if (user.lead_user_id === parentId) {
+        if (isAgentActive(user.id)) {
+          result.push(user.id);
+        }
+        collectSubordinates(user.id);
+      }
+    }
+  }
+  collectSubordinates(parentUserId);
+  return result;
+}
 
 export default function agentLifecycleRoutes(
   fastify: FastifyInstance,
@@ -118,6 +139,7 @@ export default function agentLifecycleRoutes(
   // POST /:id/stop — Stop agent via hub
   fastify.post<{
     Params: AgentIdParams;
+    Body: AgentStopRequest;
     Reply: AgentStopResult | ErrorResponse;
   }>(
     "/:id/stop",
@@ -127,6 +149,7 @@ export default function agentLifecycleRoutes(
         description: "Stop an agent via the hub",
         tags: ["Agents"],
         params: AgentIdParamsSchema,
+        body: AgentStopRequestSchema,
         response: {
           200: AgentStopResultSchema,
           503: ErrorResponseSchema,
@@ -138,6 +161,7 @@ export default function agentLifecycleRoutes(
     async (request, reply) => {
       try {
         const { id } = request.params;
+        const { recursive } = request.body;
 
         if (!isHubConnected()) {
           return reply.status(503).send({
@@ -146,12 +170,28 @@ export default function agentLifecycleRoutes(
           });
         }
 
+        // Fire-and-forget stops for subordinates when recursive
+        if (recursive) {
+          const subordinates = await findRunningSubordinates(id);
+          for (const subId of subordinates) {
+            sendAgentStop(subId, "Stopped from supervisor (recursive)").catch(
+              (err) =>
+                request.log.error(
+                  err,
+                  `Failed to stop subordinate agent ${subId}`,
+                ),
+            );
+          }
+        }
+
         const response = await sendAgentStop(id, "Stopped from supervisor");
 
         if (response.success) {
           return {
             success: true,
-            message: "Agent stopped",
+            message: recursive
+              ? "Agent and subordinates stopped"
+              : "Agent stopped",
           };
         } else {
           return reply.status(500).send({

@@ -3,6 +3,7 @@ import {
   Button,
   Group,
   Loader,
+  Menu,
   Stack,
   Text,
   TextInput,
@@ -13,6 +14,7 @@ import { AgentDetailResponse } from "@naisys-supervisor/shared";
 import {
   IconArchive,
   IconArchiveOff,
+  IconChevronDown,
   IconPlayerPause,
   IconPlayerPlay,
   IconPlayerStop,
@@ -117,7 +119,7 @@ export const AgentDetail: React.FC = () => {
     }
   };
 
-  const handleStop = async () => {
+  const handleStop = async (recursive?: boolean) => {
     if (!agentId) return;
 
     if (agentData?.name === "admin") {
@@ -130,7 +132,7 @@ export const AgentDetail: React.FC = () => {
 
     setStopping(true);
     try {
-      const result = await stopAgent(agentId);
+      const result = await stopAgent(agentId, recursive);
       if (result.success) {
         notifications.show({
           title: "Agent Stopped",
@@ -323,17 +325,45 @@ export const AgentDetail: React.FC = () => {
             Pause
           </Text>
         </Button>
-        <Button
-          color="red"
-          disabled={!hasAction(actions, "stop")}
-          loading={stopping}
-          leftSection={<IconPlayerStop size={16} />}
-          onClick={handleStop}
-        >
-          <Text visibleFrom="sm" span>
-            Stop
-          </Text>
-        </Button>
+        <Group gap={0}>
+          <Button
+            color="red"
+            disabled={!hasAction(actions, "stop")}
+            loading={stopping}
+            leftSection={<IconPlayerStop size={16} />}
+            onClick={() => handleStop()}
+            style={{ borderTopRightRadius: 0, borderBottomRightRadius: 0 }}
+          >
+            <Text visibleFrom="sm" span>
+              Stop
+            </Text>
+          </Button>
+          <Menu position="bottom-end" withinPortal>
+            <Menu.Target>
+              <Button
+                color="red"
+                disabled={!hasAction(actions, "stop") || stopping}
+                style={{
+                  borderTopLeftRadius: 0,
+                  borderBottomLeftRadius: 0,
+                  borderLeft: "1px solid rgba(255,255,255,0.3)",
+                  paddingLeft: 6,
+                  paddingRight: 6,
+                }}
+              >
+                <IconChevronDown size={16} />
+              </Button>
+            </Menu.Target>
+            <Menu.Dropdown>
+              <Menu.Item
+                leftSection={<IconPlayerStop size={14} />}
+                onClick={() => handleStop(true)}
+              >
+                Stop with Subordinates
+              </Menu.Item>
+            </Menu.Dropdown>
+          </Menu>
+        </Group>
         {hasAction(actions, "archive") && (
           <Button
             color="orange"

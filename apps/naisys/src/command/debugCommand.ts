@@ -1,13 +1,23 @@
 import { spawnSync } from "child_process";
 import { fileURLToPath } from "url";
 
+import { IAgentManager } from "../agent/agentManagerInterface.js";
 import { GlobalConfig } from "../globalConfig.js";
 import { ContextManager } from "../llm/contextManager.js";
 import { LlmRole } from "../llm/llmDtos.js";
 import { InputModeService } from "../utils/inputMode.js";
 import { OutputService } from "../utils/output.js";
-import { contextCmd, superadminPasswordCmd, talkCmd } from "./commandDefs.js";
-import { RegistrableCommand } from "./commandRegistry.js";
+import {
+  contextCmd,
+  exitCmd,
+  superadminPasswordCmd,
+  talkCmd,
+} from "./commandDefs.js";
+import {
+  CommandResponse,
+  NextCommandAction,
+  RegistrableCommand,
+} from "./commandRegistry.js";
 
 export function createDebugCommands(
   globalConfig: GlobalConfig,
@@ -15,6 +25,8 @@ export function createDebugCommands(
   output: OutputService,
   inputMode: InputModeService,
   systemMessage: string,
+  agentManager: IAgentManager,
+  localUserId: number,
 ): RegistrableCommand[] {
   function roleToString(role: LlmRole) {
     switch (role) {
@@ -70,7 +82,32 @@ export function createDebugCommands(
     },
   };
 
-  const commands: RegistrableCommand[] = [nsContext, nsTalk];
+  const nsExit: RegistrableCommand = {
+    command: exitCmd,
+    handleCommand: async (cmdArgs): Promise<CommandResponse> => {
+      if (cmdArgs.trim() === "all") {
+        const otherAgents = agentManager.runningAgents.filter(
+          (a) => a.agentUserId !== localUserId,
+        );
+
+        for (const agent of otherAgents) {
+          output.comment(`Stopping agent '${agent.agentUsername}'...`);
+          await agentManager.stopAgent(agent.agentUserId, "exit all");
+        }
+
+        output.comment(`Stopped ${otherAgents.length} agent(s)`);
+      }
+
+      return {
+        content: "",
+        nextCommandResponse: {
+          nextCommandAction: NextCommandAction.ExitApplication,
+        },
+      };
+    },
+  };
+
+  const commands: RegistrableCommand[] = [nsContext, nsTalk, nsExit];
 
   const supervisorPort = globalConfig.globalConfig().supervisorPort;
   if (supervisorPort) {

@@ -136,7 +136,7 @@ export class AgentManager {
       .catch((ex: any) => `error: ${ex}`)
       .then(async (exitReason) => {
         onStop?.(exitReason);
-        await this.cleanupAgent(agent, exitReason);
+        await this.cleanupAgent(agent);
       });
 
     this.runPromises.set(userId, runPromise);
@@ -168,7 +168,7 @@ export class AgentManager {
     }
   }
 
-  private async cleanupAgent(agent: AgentRuntime, reason: string) {
+  private async cleanupAgent(agent: AgentRuntime) {
     if (agent.output.isConsoleEnabled()) {
       const switchToAgent = this.runningAgents.find((a) => a !== agent);
 
@@ -183,7 +183,7 @@ export class AgentManager {
     }
 
     this.onHeartbeatNeeded?.();
-    await agent.completeShutdown(reason);
+    await agent.completeShutdown();
     this.runPromises.delete(agent.agentUserId);
   }
 

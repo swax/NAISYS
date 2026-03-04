@@ -4,7 +4,7 @@
  */
 
 import { InputModeService } from "../utils/inputMode.js";
-import { CommandDef, exitCmd, helpCmd } from "./commandDefs.js";
+import { CommandDef, helpCmd } from "./commandDefs.js";
 
 export enum NextCommandAction {
   Continue,
@@ -87,17 +87,6 @@ export function createCommandRegistry(
     },
   };
   registry.set(helpCommand.command.name, helpCommand);
-
-  const exitCommand: RegistrableCommand = {
-    command: exitCmd,
-    handleCommand: (): CommandResponse => ({
-      content: "",
-      nextCommandResponse: {
-        nextCommandAction: NextCommandAction.ExitApplication,
-      },
-    }),
-  };
-  registry.set(exitCommand.command.name, exitCommand);
 
   for (const command of commands) {
     if (registry.has(command.command.name)) {
