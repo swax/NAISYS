@@ -1,5 +1,4 @@
 import chalk from "chalk";
-import * as readline from "readline";
 
 import { AgentConfig } from "../agent/agentConfig.js";
 import { GlobalConfig } from "../globalConfig.js";
@@ -9,7 +8,6 @@ import { InputModeService } from "../utils/inputMode.js";
 import { OutputService } from "../utils/output.js";
 import { PromptNotificationService } from "../utils/promptNotificationService.js";
 import { getSharedReadline } from "../utils/sharedReadline.js";
-import { writeEventManager } from "../utils/writeEventManager.js";
 import { ShellWrapper } from "./shellWrapper.js";
 
 export function createPromptBuilder(
@@ -23,16 +21,6 @@ export function createPromptBuilder(
   promptNotification: PromptNotificationService,
   localUserId: number,
 ) {
-  /**
-   * When actual output is entered by the user we want to cancel any auto-continue timers and/or wake on message
-   * We don't want to cancel if the user is entering a chords like ctrl+b then down arrow, when using tmux
-   * This is why we can't put the event listener on the standard process.stdin/keypress event.
-   * There is no 'data entered' output event so this monkey patch does that
-   *
-   * Using a shared writeEventManager singleton to avoid conflicts when multiple agents are running
-   */
-  writeEventManager.hookStdout();
-
   async function getPrompt(pauseSeconds: number) {
     const promptSuffix = isElevated()
       ? platformConfig.adminPromptSuffix
@@ -82,26 +70,30 @@ export function createPromptBuilder(
       let timeout: NodeJS.Timeout | undefined;
       let notificationInterval: NodeJS.Timeout | undefined;
       let timeoutCancelled = false;
-      let unsubscribeWrite: (() => void) | undefined;
+      let unsubscribeInput: (() => void) | undefined;
 
       function clearTimers() {
         timeoutCancelled = true;
-        if (unsubscribeWrite) {
-          unsubscribeWrite();
-          unsubscribeWrite = undefined;
+        if (unsubscribeInput) {
+          unsubscribeInput();
+          unsubscribeInput = undefined;
         }
 
         clearTimeout(timeout);
         clearInterval(notificationInterval);
       }
 
+      /**
+       * Using a shared readline interface singleton to avoid conflicts when multiple agents are running.
+       * Only one agent should be active on the console at a time (controlled by output.isWriteEnabled).
+       */
+      const readlineInterface = output.isConsoleEnabled()
+        ? getSharedReadline()
+        : undefined;
+
       /** Cancels waiting for user input */
-      const cancelWaitingForUserInput = (
-        questionAborted: boolean,
-        buffer?: string,
-      ) => {
-        // Don't allow console escape commands like \x1B[1G to cancel the timeout
-        if (timeoutCancelled || (buffer && !/^[a-zA-Z0-9 ]+$/.test(buffer))) {
+      const cancelWaitingForUserInput = (questionAborted: boolean) => {
+        if (timeoutCancelled) {
           return;
         }
 
@@ -112,28 +104,15 @@ export function createPromptBuilder(
         }
         // Else timeout interrupted by user input
 
-        // Clear out the timeout information from the prompt to prevent the user from thinking the timeout still applies
-        let pausePos = commandPrompt.indexOf("[Wait:");
-        pausePos =
-          pausePos == -1 ? commandPrompt.indexOf("[WakeOnMsg]") : pausePos;
+        // Update the prompt to remove timeout information so the user
+        // doesn't think the timeout is still active
+        if (readlineInterface) {
+          const newPrompt = commandPrompt.replace(/\s*\[Wait: \d+s\]/, "");
 
-        if (pausePos > 0) {
-          // BUG: When the user hits delete, the prompt is reset to the original which is confusing as user will think timeout is still active
-          // Fix is probably to reset the entire the question when the timeout is interrupted
-          const charsBack = commandPrompt.length - pausePos - 1; // pluse 1 for the space after the #
-          readline.moveCursor(process.stdout, -charsBack, 0);
-          process.stdout.write("-".repeat(charsBack - 3));
-          readline.moveCursor(process.stdout, 3, 0);
+          readlineInterface.setPrompt(chalk.greenBright(newPrompt));
+          (readlineInterface as any)._refreshLine();
         }
       };
-
-      /**
-       * Using a shared readline interface singleton to avoid conflicts when multiple agents are running.
-       * Only one agent should be active on the console at a time (controlled by output.isWriteEnabled).
-       */
-      const readlineInterface = output.isConsoleEnabled()
-        ? getSharedReadline()
-        : undefined;
 
       if (readlineInterface) {
         readlineInterface.question(
@@ -146,8 +125,11 @@ export function createPromptBuilder(
           },
         );
 
-        // If user starts typing in prompt, cancel any auto timeouts or wake on msg
-        unsubscribeWrite = writeEventManager.onWrite(cancelWaitingForUserInput);
+        // If user presses any key, cancel auto-continue timers and/or wake on msg
+        const onStdinData = () => cancelWaitingForUserInput(false);
+        process.stdin.on("data", onStdinData);
+        unsubscribeInput = () =>
+          process.stdin.removeListener("data", onStdinData);
       } else {
         // Agent not in focus - just output to buffer and wait for events
         // Don't actively cycle with timeouts as stdout writes interfere with readline
