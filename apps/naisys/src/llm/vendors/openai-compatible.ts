@@ -84,7 +84,7 @@ export async function sendWithOpenAiCompatible(
   // Remove cached tokens so we only bill fresh tokens at the full input rate.
   const nonCachedPromptTokens = Math.max(0, inputTokens - cacheReadTokens);
 
-  await costTracker.recordTokens(
+  costTracker.recordTokens(
     source,
     model.key,
     nonCachedPromptTokens,

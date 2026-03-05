@@ -36,7 +36,7 @@ export function createLLMService(
     // Check if spend limit has been reached (throws error if so)
     // Except for compact as when the spend limit is lifted, we don't want to start querying with an expensive expired cache
     if (source != "compact") {
-      await costTracker.checkSpendLimit();
+      costTracker.checkSpendLimit();
     }
 
     const model = modelService.getLlmModel(modelKey);

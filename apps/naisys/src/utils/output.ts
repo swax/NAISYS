@@ -61,24 +61,24 @@ export function createOutputService(logService: LogService) {
     write(msg, OutputColor.comment);
   }
 
-  async function commentAndLog(msg: string) {
+  function commentAndLog(msg: string) {
     comment(msg);
 
-    await writeDbLog(msg, "comment");
+    writeDbLog(msg, "comment");
   }
 
   function error(msg: string) {
     write(msg, OutputColor.error);
   }
 
-  async function errorAndLog(msg: string) {
+  function errorAndLog(msg: string) {
     error(msg);
 
-    await writeDbLog(msg, "error");
+    writeDbLog(msg, "error");
   }
 
-  async function writeDbLog(msg: string, type: LlmMessageType) {
-    await logService.write({
+  function writeDbLog(msg: string, type: LlmMessageType) {
+    logService.write({
       role: LlmRole.User,
       content: msg,
       type,

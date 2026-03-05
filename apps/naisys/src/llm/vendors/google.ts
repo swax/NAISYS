@@ -100,7 +100,7 @@ export async function sendWithGoogle(
   const messagesTokenCount = inputTokens;
   const cachedTokenCount = result.usageMetadata.cachedContentTokenCount || 0;
 
-  await costTracker.recordTokens(
+  costTracker.recordTokens(
     source,
     model.key,
     inputTokens - cachedTokenCount,

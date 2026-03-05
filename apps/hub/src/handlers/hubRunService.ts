@@ -79,7 +79,7 @@ export function createHubRunService(
             run_id: parsed.runId,
             session_id: newSessionId,
             host_id: hostId,
-            model_name: "",
+            model_name: parsed.modelName,
             created_at: new Date().toISOString(),
             last_active: new Date().toISOString(),
           },

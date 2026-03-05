@@ -14,9 +14,9 @@ mockLogService.write =
 const output = createOutputService(mockLogService);
 
 describe("commentAndLog function", () => {
-  it("should call writeDbLog with the correct arguments", async () => {
+  it("should call writeDbLog with the correct arguments", () => {
     // Assuming you've refactored commentAndLog to take logService or its functionality as a parameter
-    await output.commentAndLog("Test message");
+    output.commentAndLog("Test message");
 
     // Verify the mock was called correctly
     expect(mockLogService.write).toHaveBeenCalledWith({

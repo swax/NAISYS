@@ -38,6 +38,7 @@ export default [
       },
     },
     rules: {
+      "@typescript-eslint/await-thenable": "error",
       "@typescript-eslint/require-await": "error",
       "@typescript-eslint/no-floating-promises": "error",
       "simple-import-sort/imports": "error",

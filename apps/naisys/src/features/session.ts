@@ -125,7 +125,7 @@ export function createSessionService(
         "# Write the restored-session seed below (no preamble).",
     );
 
-    await output.commentAndLog(`Compacting...`);
+    output.commentAndLog(`Compacting...`);
 
     const queryResult = await llmService.query(
       agentConfig().shellModel,
@@ -136,10 +136,10 @@ export function createSessionService(
 
     restoreInfo = queryResult.responses.join("\n");
 
-    await output.commentAndLog(
+    output.commentAndLog(
       `Session compacted to ${getTokenCount(restoreInfo)} tokens. Restarting Session.`,
     );
-    await output.commentAndLog(
+    output.commentAndLog(
       "------------------------------------------------------",
     );
 
@@ -167,12 +167,12 @@ export function createSessionService(
     }
 
     if (remaining > 0) {
-      await output.commentAndLog(
+      output.commentAndLog(
         `Pre-emptively compacting session before read cache expires. Will continue waiting ${remaining} seconds on resume...`,
       );
       resumeWaitSeconds = remaining;
     } else {
-      await output.commentAndLog(
+      output.commentAndLog(
         `Pre-emptively compacting session before read cache expires...`,
       );
     }
@@ -215,11 +215,11 @@ export function createSessionService(
 
     if (recipient) {
       await mailService.sendMessage([recipient], "Session Completed", result);
-      await output.commentAndLog(
+      output.commentAndLog(
         `Session completed. Result sent to ${recipient.username}. Exiting process.`,
       );
     } else {
-      await output.commentAndLog("Session completed. Exiting process.");
+      output.commentAndLog("Session completed. Exiting process.");
     }
 
     return {

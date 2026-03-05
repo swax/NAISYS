@@ -57,17 +57,17 @@ export function createCommandLoop(
   let currentWait: { startTime: number; totalSeconds: number } | undefined;
 
   async function run(abortSignal?: AbortSignal): Promise<string> {
-    await output.commentAndLog(`AGENT STARTED`);
+    output.commentAndLog(`AGENT STARTED`);
 
     // Show Agent Config exept the agent prompt
-    await output.commentAndLog(
+    output.commentAndLog(
       `Agent configured to use ${agentConfig().shellModel} model`,
     );
 
     // Show System Message
-    await output.commentAndLog("System Message:");
+    output.commentAndLog("System Message:");
     output.write(systemMessage);
-    await logService.write({
+    logService.write({
       role: LlmRole.System,
       content: systemMessage,
       type: "system",
@@ -95,8 +95,8 @@ export function createCommandLoop(
         );
       }
 
-      await output.commentAndLog("Use ns-help to see all available commands");
-      await output.commentAndLog("Starting Context:");
+      output.commentAndLog("Use ns-help to see all available commands");
+      output.commentAndLog("Starting Context:");
 
       // Check for mail that arrived before/during startup (e.g. task mail)
       if (hubClient) {
@@ -112,15 +112,15 @@ export function createCommandLoop(
       for (const initialCommand of initialCommands) {
         try {
           const prompt = await promptBuilder.getPrompt(0);
-          
-          await contextManager.append(prompt, ContentSource.ConsolePrompt);
+
+          contextManager.append(prompt, ContentSource.ConsolePrompt);
 
           ({ nextCommandAction, pauseSeconds } =
             await commandHandler.processCommand(prompt, [
               agentConfig().resolveConfigVars(initialCommand),
             ]));
         } catch (e) {
-          await handleErrorAndSwitchToDebugMode(e, llmErrorCount, true);
+          handleErrorAndSwitchToDebugMode(e, llmErrorCount, true);
         }
       }
 
@@ -139,7 +139,7 @@ export function createCommandLoop(
       ) {
         if (shellCommand.isShellSuspended()) {
           const elapsedTime = shellCommand.getCommandElapsedTimeString();
-          await contextManager.append(
+          contextManager.append(
             `Command has been running for ${elapsedTime}. Enter 'wait <seconds>' to continue waiting. 'kill' to terminate. Any other input will be sent directly to the running process.`,
             ContentSource.Console,
           );
@@ -205,13 +205,13 @@ export function createCommandLoop(
             }
           }
 
-          await checkContextLimitWarning();
+          checkContextLimitWarning();
 
           if (agentConfig().workspacesEnabled && workspaces.hasFiles()) {
-            await output.comment(workspaces.listFiles());
+            output.comment(workspaces.listFiles());
           }
 
-          await contextManager.append(prompt, ContentSource.ConsolePrompt);
+          contextManager.append(prompt, ContentSource.ConsolePrompt);
 
           // Query LLM unless commands were already provided by notifications
           if (commandList.length === 0) {
@@ -260,7 +260,7 @@ export function createCommandLoop(
               // Handle ESC cancellation
               if (queryCancelled) {
                 clearPromptMessage(workingMsg);
-                await output.commentAndLog("LLM query cancelled by ESC");
+                output.commentAndLog("LLM query cancelled by ESC");
                 inputMode.setDebug();
                 continue;
               }
@@ -271,7 +271,7 @@ export function createCommandLoop(
               clearPromptMessage(workingMsg);
 
               ({ llmErrorCount, pauseSeconds } =
-                await handleErrorAndSwitchToDebugMode(e, llmErrorCount, false));
+                handleErrorAndSwitchToDebugMode(e, llmErrorCount, false));
 
               continue;
             }
@@ -289,8 +289,11 @@ export function createCommandLoop(
             llmErrorCount = 0;
           }
         } catch (e) {
-          ({ llmErrorCount, pauseSeconds } =
-            await handleErrorAndSwitchToDebugMode(e, llmErrorCount, true));
+          ({ llmErrorCount, pauseSeconds } = handleErrorAndSwitchToDebugMode(
+            e,
+            llmErrorCount,
+            true,
+          ));
           continue;
         }
 
@@ -311,13 +314,13 @@ export function createCommandLoop(
     }
 
     if (abortSignal?.aborted) {
-      await output.commentAndLog(`AGENT STOPPED (${abortSignal.reason})`);
+      output.commentAndLog(`AGENT STOPPED (${abortSignal.reason})`);
       return String(abortSignal.reason);
     } else if (nextCommandAction === NextCommandAction.SessionComplete) {
-      await output.commentAndLog(`AGENT SESSION COMPLETED`);
+      output.commentAndLog(`AGENT SESSION COMPLETED`);
       return "session-complete";
     } else {
-      await output.commentAndLog(`AGENT EXITED`);
+      output.commentAndLog(`AGENT EXITED`);
       return "exit";
     }
   }
@@ -376,9 +379,9 @@ export function createCommandLoop(
     const result = await promptNotification.processPending(localUserId);
     for (const item of result.output) {
       if (item.type === "context") {
-        await contextManager.append(item.text, ContentSource.Console);
+        contextManager.append(item.text, ContentSource.Console);
       } else {
-        await output.commentAndLog(item.text);
+        output.commentAndLog(item.text);
       }
     }
     return result.commands;
@@ -393,7 +396,7 @@ export function createCommandLoop(
   }
 
   /** Name is comically long because of a prettier formatting issue when the name is too short */
-  async function handleErrorAndSwitchToDebugMode(
+  function handleErrorAndSwitchToDebugMode(
     e: unknown,
     llmErrorCount: number,
     addToContext: boolean,
@@ -402,16 +405,16 @@ export function createCommandLoop(
     const errorMsg = `${e}`;
 
     if (addToContext) {
-      await contextManager.append(errorMsg.slice(0, maxErrorLength));
+      contextManager.append(errorMsg.slice(0, maxErrorLength));
 
       if (errorMsg.length > maxErrorLength) {
-        await contextManager.append("...");
-        await output.errorAndLog(
+        contextManager.append("...");
+        output.errorAndLog(
           `Error too long for context: ${errorMsg.slice(200)}`,
         );
       }
     } else {
-      await output.errorAndLog(errorMsg);
+      output.errorAndLog(errorMsg);
     }
 
     // If llm is in some error loop then hold in debug mode
@@ -443,7 +446,7 @@ export function createCommandLoop(
     };
   }
 
-  async function checkContextLimitWarning() {
+  function checkContextLimitWarning() {
     const tokenCount = contextManager.getTokenCount();
     const tokenMax = agentConfig().tokenMax;
 
@@ -454,7 +457,7 @@ export function createCommandLoop(
         tokenNote += `\nUse 'ns-session compact' to reduce the token usage of the session.`;
       }
 
-      await contextManager.append(
+      contextManager.append(
         `The token limit for this session has been exceeded.${tokenNote}`,
         ContentSource.Console,
       );

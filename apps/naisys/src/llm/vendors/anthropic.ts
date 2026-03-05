@@ -112,7 +112,7 @@ export async function sendWithAnthropic(
   const messagesTokenCount =
     inputTokens + cacheCreationTokens + cacheReadTokens;
 
-  await costTracker.recordTokens(
+  costTracker.recordTokens(
     source,
     model.key,
     inputTokens,

@@ -68,13 +68,13 @@ export function createDebugCommands(
 
   const nsTalk: RegistrableCommand = {
     command: talkCmd,
-    handleCommand: async (cmdArgs) => {
+    handleCommand: (cmdArgs) => {
       if (inputMode.isLLM()) {
         return "Message sent!";
       } else if (inputMode.isDebug()) {
         inputMode.setLLM();
         // Dont say specifically mail/chat was used for admin message so agent can choose from available reply methods (mail/chat/comment)
-        await contextManager.append(`Message from admin: ${cmdArgs}`);
+        contextManager.append(`Message from admin: ${cmdArgs}`);
         inputMode.setDebug();
         return "";
       }
