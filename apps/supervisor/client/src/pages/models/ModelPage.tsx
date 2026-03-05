@@ -336,6 +336,7 @@ function LlmReadOnlyTable({
     outputCost: number;
     cacheWriteCost?: number;
     cacheReadCost?: number;
+    cacheTtlSeconds?: number;
     supportsVision?: boolean;
     supportsHearing?: boolean;
   };
@@ -356,6 +357,9 @@ function LlmReadOnlyTable({
   }
   if (model.cacheReadCost !== undefined) {
     rows.push(["Cache Read Cost (per 1M tokens)", `$${model.cacheReadCost}`]);
+  }
+  if (model.cacheTtlSeconds !== undefined) {
+    rows.push(["Cache TTL (seconds)", model.cacheTtlSeconds]);
   }
   rows.push(["Supports Vision", model.supportsVision ? "Yes" : "No"]);
   rows.push(["Supports Hearing", model.supportsHearing ? "Yes" : "No"]);

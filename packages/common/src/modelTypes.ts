@@ -27,6 +27,7 @@ export const LlmModelSchema = z
     outputCost: z.number().default(0),
     cacheWriteCost: z.number().optional(),
     cacheReadCost: z.number().optional(),
+    cacheTtlSeconds: z.number().int().positive().optional(),
     supportsVision: z.boolean().optional(),
     supportsHearing: z.boolean().optional(),
   })
@@ -80,6 +81,7 @@ const LlmMetaSchema = z.object({
   outputCost: z.number().default(0),
   cacheWriteCost: z.number().optional(),
   cacheReadCost: z.number().optional(),
+  cacheTtlSeconds: z.number().int().positive().optional(),
   supportsVision: z.boolean().optional(),
   supportsHearing: z.boolean().optional(),
 });

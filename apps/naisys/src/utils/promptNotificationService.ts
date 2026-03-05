@@ -6,7 +6,13 @@ export interface PromptNotification {
   userId?: number;
   contextOutput?: string[];
   commentOutput?: string[];
+  commands?: string[];
   processed?: () => void | Promise<void>;
+}
+
+export interface ProcessedResult {
+  output: ProcessedOutput[];
+  commands: string[];
 }
 
 export interface ProcessedOutput {
@@ -64,31 +70,34 @@ export function createPromptNotificationService() {
     return false;
   }
 
-  function collectOutput(
+  function collectNotification(
     notification: PromptNotification,
-    output: ProcessedOutput[],
+    result: ProcessedResult,
   ) {
     if (notification.contextOutput) {
       for (const text of notification.contextOutput) {
-        output.push({ type: "context", text });
+        result.output.push({ type: "context", text });
       }
     }
     if (notification.commentOutput) {
       for (const text of notification.commentOutput) {
-        output.push({ type: "comment", text });
+        result.output.push({ type: "comment", text });
       }
+    }
+    if (notification.commands) {
+      result.commands.push(...notification.commands);
     }
   }
 
-  async function processPending(userId: number): Promise<ProcessedOutput[]> {
-    const output: ProcessedOutput[] = [];
+  async function processPending(userId: number): Promise<ProcessedResult> {
+    const result: ProcessedResult = { output: [], commands: [] };
 
     // Process user-specific notifications
     const userQueue = pending.get(userId);
     if (userQueue) {
       while (userQueue.length > 0) {
         const notification = userQueue.shift()!;
-        collectOutput(notification, output);
+        collectNotification(notification, result);
         await notification.processed?.();
       }
     }
@@ -96,11 +105,11 @@ export function createPromptNotificationService() {
     // Process global notification if unseen
     if (globalNotification && !globalNotifiedUserIds.has(userId)) {
       globalNotifiedUserIds.add(userId);
-      collectOutput(globalNotification, output);
+      collectNotification(globalNotification, result);
       await globalNotification.processed?.();
     }
 
-    return output;
+    return result;
   }
 
   return { notify, hasPending, processPending };

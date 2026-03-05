@@ -20,6 +20,8 @@ export function createContextManager(
   let lastKnownTokenCount = 0;
   // Message index at the time lastKnownTokenCount was set
   let lastKnownMessageIndex = 0;
+  // Timestamp of the last LLM query (for cache TTL tracking)
+  let lastQueryTime = 0;
 
   clear();
 
@@ -129,6 +131,7 @@ export function createContextManager(
     messages = [];
     lastKnownTokenCount = 0;
     lastKnownMessageIndex = 0;
+    lastQueryTime = 0;
   }
 
   /** Set the actual messages token count from the last API response */
@@ -141,6 +144,7 @@ export function createContextManager(
     }
     lastKnownTokenCount = messagesTokenCount;
     lastKnownMessageIndex = messages.length;
+    lastQueryTime = Date.now();
   }
 
   function estimateMessagesTokenCount(messages: LlmMessage[]) {
@@ -259,6 +263,7 @@ export function createContextManager(
     appendAudio,
     clear,
     setMessagesTokenCount,
+    getLastQueryTime: () => lastQueryTime,
     getTokenCount,
     getCombinedMessages,
     exportedForTesting,

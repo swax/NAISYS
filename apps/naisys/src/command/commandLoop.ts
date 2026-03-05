@@ -52,6 +52,10 @@ export function createCommandLoop(
   sessionService: SessionService,
   modelService: ModelService,
 ) {
+  let preemptiveCompactTimeout: NodeJS.Timeout | undefined;
+  /** Tracks the current wait so preemptive compact can calculate remaining time */
+  let currentWait: { startTime: number; totalSeconds: number } | undefined;
+
   async function run(abortSignal?: AbortSignal): Promise<string> {
     await output.commentAndLog(`AGENT STARTED`);
 
@@ -78,6 +82,8 @@ export function createCommandLoop(
       nextCommandAction !== NextCommandAction.SessionComplete &&
       !abortSignal?.aborted
     ) {
+      let pauseSeconds: number | undefined = undefined;
+
       inputMode.setLLM();
 
       if (globalConfig().supervisorPort) {
@@ -98,19 +104,21 @@ export function createCommandLoop(
         await sleep(1000);
       }
 
-      const initialCommands = structuredClone(agentConfig().initialCommands);
-
-      if (sessionService.canRestore()) {
-        initialCommands.push("ns-session restore");
-      }
+      const initialCommands = [
+        ...structuredClone(agentConfig().initialCommands),
+        ...sessionService.getResumeCommands(),
+      ];
 
       for (const initialCommand of initialCommands) {
         try {
           const prompt = await promptBuilder.getPrompt(0);
+          
           await contextManager.append(prompt, ContentSource.ConsolePrompt);
-          await commandHandler.processCommand(prompt, [
-            agentConfig().resolveConfigVars(initialCommand),
-          ]);
+
+          ({ nextCommandAction, pauseSeconds } =
+            await commandHandler.processCommand(prompt, [
+              agentConfig().resolveConfigVars(initialCommand),
+            ]));
         } catch (e) {
           await handleErrorAndSwitchToDebugMode(e, llmErrorCount, true);
         }
@@ -120,11 +128,10 @@ export function createCommandLoop(
       // need to receive these msgs and mark them as read as agents are auto-started to handle unread messages
       await mailService.checkAndNotify();
       await chatService.checkAndNotify();
+      // Discard commands from startup notifications — they'll be picked up in the main loop
       await processNotifications();
 
       inputMode.setDebug();
-
-      let pauseSeconds: number | undefined = undefined;
 
       while (
         nextCommandAction == NextCommandAction.Continue &&
@@ -138,12 +145,14 @@ export function createCommandLoop(
           );
         }
 
+        // pauseSeconds undefined means use the default value based on debug/LLM mode,
+        // otherwise use the explicitly set value (e.g. from ns-session wait command or exponential backoff after errors)
         if (pauseSeconds === undefined) {
           // When llm model is set to none then we should hold indefinitely
           if (agentConfig().shellModel === LlmApiType.None) {
             pauseSeconds = 0;
           }
-          // Debug prompt handles the pause/wait commands when agent is not in focus so only skip when pauseSeconds is undefined
+          // Unfocused agents keep processing commands without delay, unless pauseSeconds was expliclity set by a wait command or error backoff
           else if (!output.isConsoleEnabled() && inputMode.isDebug()) {
             inputMode.setLLM();
             pauseSeconds = -1;
@@ -157,10 +166,15 @@ export function createCommandLoop(
 
         // Debug command prompt
         if (inputMode.isDebug()) {
+          if (pauseSeconds > 0) {
+            currentWait = { startTime: Date.now(), totalSeconds: pauseSeconds };
+          }
+
           commandList = [
             await promptBuilder.getInput(`${prompt}`, pauseSeconds),
           ];
 
+          currentWait = undefined;
           blankDebugInput = commandList[0].trim().length == 0;
         }
         // LLM command prompt
@@ -175,82 +189,92 @@ export function createCommandLoop(
             prompt +
             chalk[OutputColor.loading](`LLM (${modelName}) Working...`);
 
-          try {
-            // In the cases that the input prompt is interrupted for a notification, return to the debug prompt
-            if (
-              promptNotification.hasPending(localUserId, true) ||
-              shellModel === LlmApiType.None // Check this last so notifications get processed/cleared
-            ) {
-              await processNotifications();
+          // Check for pending notifications that should interrupt
+          if (
+            promptNotification.hasPending(localUserId, true) ||
+            shellModel === LlmApiType.None // Check this last so notifications get processed/cleared
+          ) {
+            const notificationCommands = await processNotifications();
+
+            // If notifications carry commands (e.g. preemptive compact), run them directly
+            if (notificationCommands.length > 0) {
+              commandList = notificationCommands;
+            } else {
               inputMode.setDebug();
               continue;
             }
+          }
 
-            await checkContextLimitWarning();
+          await checkContextLimitWarning();
 
-            if (agentConfig().workspacesEnabled && workspaces.hasFiles()) {
-              await output.comment(workspaces.listFiles());
-            }
+          if (agentConfig().workspacesEnabled && workspaces.hasFiles()) {
+            await output.comment(workspaces.listFiles());
+          }
 
-            await contextManager.append(prompt, ContentSource.ConsolePrompt);
+          await contextManager.append(prompt, ContentSource.ConsolePrompt);
 
-            if (output.isConsoleEnabled()) {
-              process.stdout.write(workingMsg);
-            }
-
-            // Set up ESC key cancellation for LLM query
-            const queryController = new AbortController();
-            let stopEscListener = () => {};
-
-            // Only set up ESC listener if agent is in focus to avoid interfering with readline
-            if (output.isConsoleEnabled()) {
-              const escListener = createEscKeyListener();
-              stopEscListener = escListener.start(() => {
-                queryController.abort();
-              });
-            }
-
-            let queryCancelled = false;
+          // Query LLM unless commands were already provided by notifications
+          if (commandList.length === 0) {
             try {
-              const queryResult = await llmService.query(
-                shellModel,
-                systemMessage,
-                contextManager.getCombinedMessages(),
-                "console",
-                queryController.signal,
-              );
-              commandList = queryResult.responses;
-              contextManager.setMessagesTokenCount(
-                queryResult.messagesTokenCount,
-              );
-            } catch (queryError) {
-              // Check if this was an ESC cancellation
-              if (queryController.signal.aborted) {
-                queryCancelled = true;
-              } else {
-                throw queryError; // Re-throw non-abort errors
+              if (output.isConsoleEnabled()) {
+                process.stdout.write(workingMsg);
               }
-            } finally {
-              stopEscListener();
-            }
 
-            // Handle ESC cancellation
-            if (queryCancelled) {
+              // Set up ESC key cancellation for LLM query
+              const queryController = new AbortController();
+              let stopEscListener = () => {};
+
+              // Only set up ESC listener if agent is in focus to avoid interfering with readline
+              if (output.isConsoleEnabled()) {
+                const escListener = createEscKeyListener();
+                stopEscListener = escListener.start(() => {
+                  queryController.abort();
+                });
+              }
+
+              let queryCancelled = false;
+              try {
+                const queryResult = await llmService.query(
+                  shellModel,
+                  systemMessage,
+                  contextManager.getCombinedMessages(),
+                  "console",
+                  queryController.signal,
+                );
+                commandList = queryResult.responses;
+                contextManager.setMessagesTokenCount(
+                  queryResult.messagesTokenCount,
+                );
+                schedulePreemptiveCompact();
+              } catch (queryError) {
+                // Check if this was an ESC cancellation
+                if (queryController.signal.aborted) {
+                  queryCancelled = true;
+                } else {
+                  throw queryError; // Re-throw non-abort errors
+                }
+              } finally {
+                stopEscListener();
+              }
+
+              // Handle ESC cancellation
+              if (queryCancelled) {
+                clearPromptMessage(workingMsg);
+                await output.commentAndLog("LLM query cancelled by ESC");
+                inputMode.setDebug();
+                continue;
+              }
+
               clearPromptMessage(workingMsg);
-              await output.commentAndLog("LLM query cancelled by ESC");
-              inputMode.setDebug();
+            } catch (e) {
+              // Can't do this in a finally because it needs to happen before the error is printed
+              clearPromptMessage(workingMsg);
+
+              ({ llmErrorCount, pauseSeconds } =
+                await handleErrorAndSwitchToDebugMode(e, llmErrorCount, false));
+
               continue;
             }
-
-            clearPromptMessage(workingMsg);
-          } catch (e) {
-            // Can't do this in a finally because it needs to happen before the error is printed
-            clearPromptMessage(workingMsg);
-
-            ({ llmErrorCount, pauseSeconds } =
-              await handleErrorAndSwitchToDebugMode(e, llmErrorCount, false));
-
-            continue;
           }
         } else {
           throw `Unreachable: Invalid input mode`;
@@ -278,6 +302,7 @@ export function createCommandLoop(
       }
 
       if (nextCommandAction == NextCommandAction.CompactSession) {
+        clearTimeout(preemptiveCompactTimeout);
         lynxService.clear();
         contextManager.clear();
         await runService.incrementSession();
@@ -297,15 +322,66 @@ export function createCommandLoop(
     }
   }
 
-  async function processNotifications() {
-    const pendingOutput = await promptNotification.processPending(localUserId);
-    for (const item of pendingOutput) {
+  const MIN_TOKENS_FOR_PREEMPTIVE_COMPACT = 4000;
+  const CACHE_EXPIRY_MARGIN_SECONDS = 30;
+
+  function schedulePreemptiveCompact() {
+    clearTimeout(preemptiveCompactTimeout);
+
+    if (
+      !globalConfig().compactSessionEnabled ||
+      !globalConfig().preemptiveCompactEnabled ||
+      shellCommand.isShellSuspended()
+    ) {
+      return;
+    }
+
+    const shellModel = agentConfig().shellModel;
+    const model = modelService.getLlmModel(shellModel);
+    const cacheTtl = model.cacheTtlSeconds;
+    const lastQueryTime = contextManager.getLastQueryTime();
+
+    if (
+      !cacheTtl ||
+      lastQueryTime <= 0 ||
+      contextManager.getTokenCount() <= MIN_TOKENS_FOR_PREEMPTIVE_COMPACT
+    ) {
+      return;
+    }
+
+    const cacheExpiresAt = lastQueryTime + cacheTtl * 1000;
+    const compactAt = cacheExpiresAt - CACHE_EXPIRY_MARGIN_SECONDS * 1000;
+    const compactAfterMs = compactAt - Date.now();
+
+    if (compactAfterMs <= 0) {
+      return;
+    }
+
+    preemptiveCompactTimeout = setTimeout(() => {
+      let remainingSeconds = 0;
+      if (currentWait) {
+        const elapsed = Math.round((Date.now() - currentWait.startTime) / 1000);
+        remainingSeconds = Math.max(0, currentWait.totalSeconds - elapsed);
+      }
+
+      promptNotification.notify({
+        wake: "always",
+        userId: localUserId,
+        commands: [`ns-session preemptive-compact ${remainingSeconds}`],
+      });
+    }, compactAfterMs);
+  }
+
+  async function processNotifications(): Promise<string[]> {
+    const result = await promptNotification.processPending(localUserId);
+    for (const item of result.output) {
       if (item.type === "context") {
         await contextManager.append(item.text, ContentSource.Console);
       } else {
         await output.commentAndLog(item.text);
       }
     }
+    return result.commands;
   }
 
   function clearPromptMessage(waitingMessage: string) {
