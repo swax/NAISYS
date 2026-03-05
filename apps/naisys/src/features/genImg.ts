@@ -53,7 +53,7 @@ export function createGenImg(
       throw "Error: imageModel is not defined in agent config";
     }
 
-    await output.commentAndLog(`Generating image with ${imageModelName}...`);
+    output.commentAndLog(`Generating image with ${imageModelName}...`);
 
     const model = getImageModel(imageModelName);
 
@@ -105,7 +105,7 @@ export function createGenImg(
       .toFile(filepath);
 
     // Record the cost
-    await costTracker.recordCost(model.cost, "genimg", model.key);
+    costTracker.recordCost(model.cost, "genimg", model.key);
 
     return "1024x1024 Image generated and saved to " + filepath;
   }

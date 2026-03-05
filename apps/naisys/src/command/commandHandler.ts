@@ -51,20 +51,20 @@ export function createCommandHandler(
       if (inputMode.isLLM()) {
         if (firstLine) {
           firstLine = false;
-          await contextManager.append(input, ContentSource.LlmPromptResponse);
+          contextManager.append(input, ContentSource.LlmPromptResponse);
           output.write(prompt + chalk[OutputColor.llm](input));
         } else {
           // Check if multiple commands are disabled
           if (!firstCommand && !agentConfig().multipleCommandsEnabled) {
-            await output.errorAndLog(
+            output.errorAndLog(
               `Multiple commands disabled. Blocked command: ${input}`,
             );
             break;
           }
-          await output.commentAndLog(
+          output.commentAndLog(
             `Continuing with next command from same LLM response...`,
           );
-          await contextManager.append(input, ContentSource.LLM);
+          contextManager.append(input, ContentSource.LLM);
         }
 
         // Run write protection checks if enabled
@@ -72,8 +72,8 @@ export function createCommandHandler(
           await commandProtection.validateCommand(input);
 
         if (!commandAllowed) {
-          await output.errorAndLog(`Write Protection Triggered`);
-          await contextManager.append(rejectReason || "Unknown");
+          output.errorAndLog(`Write Protection Triggered`);
+          contextManager.append(rejectReason || "Unknown");
           break;
         }
       }
@@ -90,9 +90,9 @@ export function createCommandHandler(
 
         // Handle string or CommandResponse
         if (typeof response === "string") {
-          await contextManager.append(response);
+          contextManager.append(response);
         } else {
-          await contextManager.append(response.content);
+          contextManager.append(response.content);
 
           // If command provides a next command response, return it directly
           if (response.nextCommandResponse) {
@@ -104,7 +104,7 @@ export function createCommandHandler(
           case "ns-comment": {
             // Important - Hint the LLM to turn their thoughts into accounts
             // ./bin/ns-comment shell script has the same message
-            await contextManager.append(
+            contextManager.append(
               "Comment noted. Try running commands now to achieve your goal.",
             );
             break;
@@ -126,7 +126,7 @@ export function createCommandHandler(
 
     // display unprocessed lines to aid in debugging
     if (commandList.length) {
-      await output.errorAndLog(
+      output.errorAndLog(
         `Unprocessed LLM commands:\n${commandList.map((c, i) => `${i + 1}: ${c}`).join("\n")}`,
       );
     }

@@ -82,7 +82,7 @@ export async function sendWithOpenAiStandard(
     response.usage.input_tokens_details?.cached_tokens || 0;
   const nonCachedPromptTokens = Math.max(0, inputTokens - cacheReadTokens);
 
-  await costTracker.recordTokens(
+  costTracker.recordTokens(
     source,
     model.key,
     nonCachedPromptTokens,

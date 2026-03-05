@@ -94,7 +94,8 @@ export const MailThread: React.FC<MailThreadProps> = ({
             !newMailDividerShown &&
             lastReadMailId !== null &&
             msg.id > lastReadMailId &&
-            (!nextMsg || nextMsg.id <= lastReadMailId);
+            nextMsg &&
+            nextMsg.id <= lastReadMailId;
           if (showNewMailDivider) {
             newMailDividerShown = true;
           }

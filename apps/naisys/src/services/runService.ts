@@ -39,7 +39,7 @@ export async function createRunService(
     if (hubClient) {
       const response = await hubClient.sendRequest(
         HubEvents.SESSION_INCREMENT,
-        { userId: localUserId, runId },
+        { userId: localUserId, runId, modelName: agentConfig().shellModel },
       );
 
       if (!response.success) {

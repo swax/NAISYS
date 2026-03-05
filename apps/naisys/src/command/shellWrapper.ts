@@ -112,17 +112,17 @@ export function createShellWrapper(
 
     // Init users home dir on first run, on shell crash/rerun go back to the current path
     if (!_currentPath) {
-      await output.commentAndLog(
+      output.commentAndLog(
         `NEW ${platformConfig.shellName.toUpperCase()} SHELL OPENED. PID: ${pid}`,
       );
 
       // If we want to give agent a home folder, we can add mkir/cd ${username} folder in the initCommands of the agent
     } else {
-      await output.commentAndLog(
+      output.commentAndLog(
         `${platformConfig.shellName.toUpperCase()} SHELL RESTORED. PID: ${pid}`,
       );
 
-      await errorIfNotEmpty(
+      errorIfNotEmpty(
         await executeCommand(platformConfig.cdCommand(_currentPath)),
       );
     }
@@ -134,9 +134,9 @@ export function createShellWrapper(
   }
 
   /** Basically don't show anything in the console unless there is an error */
-  async function errorIfNotEmpty(response: string) {
+  function errorIfNotEmpty(response: string) {
     if (response) {
-      await output.errorAndLog(response);
+      output.errorAndLog(response);
     }
   }
 
@@ -352,7 +352,7 @@ export function createShellWrapper(
       choice = "input";
     }
 
-    return new Promise<string>(async (resolve, reject) => {
+    return new Promise<string>((resolve, reject) => {
       _resolveCurrentCommand = resolve;
 
       // If new output from the shell was queued while waiting for the LLM to decide what to do
@@ -383,7 +383,7 @@ export function createShellWrapper(
       else if (choice == "kill") {
         if (!_currentProcessId) {
           reject("No process to kill");
-        } else if (await resetShell(_currentProcessId)) {
+        } else if (resetShell(_currentProcessId)) {
           return; // Wait for exit event
         } else {
           reject("Unable to kill. Process not found");
@@ -463,15 +463,13 @@ export function createShellWrapper(
     _completeCommand(outputWithInstruction);
   }
 
-  async function resetShell(pid: number) {
+  function resetShell(pid: number) {
     if (!_process || _process.pid != pid) {
-      await output.commentAndLog(
-        "Ignoring timeout for old shell process " + pid,
-      );
+      output.commentAndLog("Ignoring timeout for old shell process " + pid);
       return false;
     }
 
-    await output.errorAndLog(`KILL-TREE SIGNAL SENT TO PID: ${_process.pid}`);
+    output.errorAndLog(`KILL-TREE SIGNAL SENT TO PID: ${_process.pid}`);
     treeKill(pid, "SIGKILL");
 
     // Should trigger the process close event from here

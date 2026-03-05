@@ -20,6 +20,7 @@ export type SessionCreateResponse = z.infer<typeof SessionCreateResponseSchema>;
 export const SessionIncrementRequestSchema = z.object({
   userId: z.number(),
   runId: z.number(),
+  modelName: z.string(),
 });
 export type SessionIncrementRequest = z.infer<
   typeof SessionIncrementRequestSchema

@@ -78,7 +78,7 @@ export function createShellCommand(
     }
 
     // TODO: move this into the command handler to remove the context manager dependency
-    await contextManager.append(response);
+    contextManager.append(response);
 
     return false;
   }

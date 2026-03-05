@@ -475,7 +475,7 @@ export function createLynxService(
     const result = await runSearchPromise;
 
     // https://developers.google.com/custom-search/v1/overview
-    await costTracker.recordCost(0.005, "lynx", "search");
+    costTracker.recordCost(0.005, "lynx", "search");
 
     return result;
   }

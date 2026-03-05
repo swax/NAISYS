@@ -2,7 +2,6 @@ import {
   Button,
   Checkbox,
   Group,
-  Indicator,
   NavLink,
   ScrollArea,
   Stack,
@@ -102,25 +101,9 @@ export const MailConversationList: React.FC<MailConversationListProps> = ({
                 active={selectedKey === conv.key}
                 onClick={() => onSelect(conv.key)}
                 label={
-                  <Group gap={6} wrap="nowrap">
-                    {conv.hasUnread && (
-                      <Indicator
-                        color="blue"
-                        size={8}
-                        processing
-                        style={{ flexShrink: 0 }}
-                      >
-                        <span />
-                      </Indicator>
-                    )}
-                    <Text
-                      size="sm"
-                      fw={conv.hasUnread ? 700 : 400}
-                      lineClamp={1}
-                    >
-                      {groupBySubject ? conv.normalizedSubject : displayNames}
-                    </Text>
-                  </Group>
+                  <Text size="sm" lineClamp={1}>
+                    {groupBySubject ? conv.normalizedSubject : displayNames}
+                  </Text>
                 }
                 description={
                   <Text size="xs" c="dimmed" lineClamp={1}>
