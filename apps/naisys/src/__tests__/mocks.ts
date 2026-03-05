@@ -139,7 +139,7 @@ export function createMockSessionService() {
   const sessionService: SessionService = {
     command: sessionCmd,
     handleCommand: jest.fn(() => ""),
-    canRestore: jest.fn(() => false),
+    getResumeCommands: jest.fn(() => []),
   };
 
   return sessionService;
@@ -164,6 +164,7 @@ export function createMockContextManager() {
     appendAudio,
     clear,
     setMessagesTokenCount,
+    getLastQueryTime: jest.fn(() => 0),
     getTokenCount,
     getCombinedMessages,
     exportedForTesting,
@@ -250,6 +251,7 @@ export function createMockGlobalConfig(): GlobalConfig {
       webTokenMax: 5000,
       retrySecondsMax: 1800,
       compactSessionEnabled: false,
+      preemptiveCompactEnabled: false,
       naisysFolder: "/naisys",
       variableMap: {},
       googleSearchEngineId: undefined,

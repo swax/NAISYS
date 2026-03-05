@@ -9,6 +9,7 @@ export interface ClientConfig {
   retrySecondsMax: number;
   webTokenMax: number;
   compactSessionEnabled: boolean;
+  preemptiveCompactEnabled: boolean;
   googleSearchEngineId?: string;
   spendLimitDollars?: number;
   spendLimitHours?: number;
@@ -43,6 +44,7 @@ export function buildClientConfig(
   const retrySecondsMax = 30 * 60;
   const webTokenMax = 5000;
   const compactSessionEnabled = true;
+  const preemptiveCompactEnabled = true;
 
   // Build variableMap, filtering out excluded keys and undefined values
   const variableMap: Record<string, string> = {};
@@ -65,6 +67,7 @@ export function buildClientConfig(
     retrySecondsMax,
     webTokenMax,
     compactSessionEnabled,
+    preemptiveCompactEnabled,
     variableMap,
     googleSearchEngineId,
     spendLimitDollars,

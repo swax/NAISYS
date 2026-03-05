@@ -27,6 +27,7 @@ interface LlmFormValues {
   outputCost: number | string;
   cacheWriteCost: number | string;
   cacheReadCost: number | string;
+  cacheTtlSeconds: number | string;
   supportsVision: boolean;
   supportsHearing: boolean;
 }
@@ -47,6 +48,8 @@ function transformFormValues(values: LlmFormValues): Record<string, unknown> {
     result.cacheWriteCost = values.cacheWriteCost;
   if (typeof values.cacheReadCost === "number")
     result.cacheReadCost = values.cacheReadCost;
+  if (typeof values.cacheTtlSeconds === "number")
+    result.cacheTtlSeconds = values.cacheTtlSeconds;
   if (values.supportsVision) result.supportsVision = true;
   if (values.supportsHearing) result.supportsHearing = true;
   return result;
@@ -87,6 +90,7 @@ export const LlmModelForm: React.FC<LlmModelFormProps> = ({
       outputCost: model?.outputCost ?? 0,
       cacheWriteCost: model?.cacheWriteCost ?? ("" as number | string),
       cacheReadCost: model?.cacheReadCost ?? ("" as number | string),
+      cacheTtlSeconds: model?.cacheTtlSeconds ?? ("" as number | string),
       supportsVision: model?.supportsVision ?? false,
       supportsHearing: model?.supportsHearing ?? false,
     },
@@ -186,6 +190,13 @@ export const LlmModelForm: React.FC<LlmModelFormProps> = ({
           min={0}
           decimalScale={4}
           {...form.getInputProps("cacheReadCost")}
+        />
+        <NumberInput
+          label="Cache TTL (seconds)"
+          description="How long the provider caches prompt context"
+          disabled={readOnly}
+          min={1}
+          {...form.getInputProps("cacheTtlSeconds")}
         />
 
         <Text fw={600} size="sm" c="dimmed">

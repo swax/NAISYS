@@ -29,6 +29,7 @@ export function createSessionService(
   localUserId: number,
 ) {
   let restoreInfo = "";
+  let resumeWaitSeconds: number | undefined;
 
   async function handleCommand(
     args: string,
@@ -46,10 +47,14 @@ export function createSessionService(
 
       // Changed nomenclature from pause to wait to better reflect that the session can wake on events
       case "wait":
+      case "continue-wait":
         return handleWait(argv[1]);
 
       case "compact":
         return handleCompact();
+
+      case "preemptive-compact":
+        return handlePreemptiveCompact(argv[1]);
 
       case "restore":
         return handleRestore();
@@ -110,8 +115,6 @@ export function createSessionService(
       return "Session cannot be compacted while a shell command is active.";
     }
 
-    await output.commentAndLog("Compacting session...");
-
     contextManager.append(
       "Process this session log and reduce it down to important things to remember - " +
         "references, plans, project structure, schemas, file locations, urls, and more. Focus on the near term, next logical steps. " +
@@ -149,8 +152,31 @@ export function createSessionService(
     };
   }
 
-  function canRestore() {
-    return !!restoreInfo;
+  async function handlePreemptiveCompact(
+    remainingSecondsArg: string | undefined,
+  ): Promise<string | CommandResponse> {
+    if (!globalConfig().preemptiveCompactEnabled) {
+      throw new Error("Preemptive compact is not enabled");
+    }
+
+    const remaining = remainingSecondsArg ? parseInt(remainingSecondsArg) : 0;
+    if (isNaN(remaining) || remaining < 0) {
+      throw new Error(
+        "Preemptive compact requires a valid remaining seconds argument",
+      );
+    }
+
+    if (remaining > 0) {
+      await output.commentAndLog(
+        `Pre-emptively compacting session before read cache expires. Will continue waiting ${remaining} seconds on resume...`,
+      );
+      resumeWaitSeconds = remaining;
+    } else {
+      await output.commentAndLog(
+        `Pre-emptively compacting session before read cache expires...`,
+      );
+    }
+    return handleCompact();
   }
 
   function handleRestore(): string | CommandResponse {
@@ -210,9 +236,24 @@ export function createSessionService(
     handleCommand,
   };
 
+  function getResumeCommands(): string[] {
+    const commands: string[] = [];
+
+    if (restoreInfo) {
+      commands.push("ns-session restore");
+    }
+
+    if (resumeWaitSeconds && resumeWaitSeconds > 0) {
+      commands.push(`ns-session continue-wait ${resumeWaitSeconds}`);
+      resumeWaitSeconds = undefined;
+    }
+
+    return commands;
+  }
+
   return {
     ...registrableCommand,
-    canRestore,
+    getResumeCommands,
   };
 }
 

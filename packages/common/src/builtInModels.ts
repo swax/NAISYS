@@ -53,6 +53,7 @@ export const builtInLlmModels: LlmModel[] = [
     outputCost: 15,
     cacheWriteCost: 0.75,
     cacheReadCost: 0.75,
+    cacheTtlSeconds: 300,
     supportsVision: true,
   },
   {
@@ -67,6 +68,7 @@ export const builtInLlmModels: LlmModel[] = [
     outputCost: 0.5,
     cacheWriteCost: 0.05,
     cacheReadCost: 0.05,
+    cacheTtlSeconds: 300,
     supportsVision: true,
   },
 
@@ -83,6 +85,7 @@ export const builtInLlmModels: LlmModel[] = [
     outputCost: 14.0,
     cacheWriteCost: 0.18,
     cacheReadCost: 0.18,
+    cacheTtlSeconds: 300,
     supportsVision: true,
   },
   {
@@ -96,6 +99,7 @@ export const builtInLlmModels: LlmModel[] = [
     outputCost: 2.0,
     cacheWriteCost: 0.025,
     cacheReadCost: 0.025,
+    cacheTtlSeconds: 300,
     supportsVision: true,
   },
   {
@@ -109,6 +113,7 @@ export const builtInLlmModels: LlmModel[] = [
     outputCost: 0.4,
     cacheWriteCost: 0.005,
     cacheReadCost: 0.005,
+    cacheTtlSeconds: 300,
     supportsVision: true,
   },
 
@@ -125,6 +130,7 @@ export const builtInLlmModels: LlmModel[] = [
     outputCost: 12.0,
     cacheWriteCost: 0.2,
     cacheReadCost: 0.2,
+    cacheTtlSeconds: 300,
     supportsVision: true,
     supportsHearing: true,
   },
@@ -139,6 +145,7 @@ export const builtInLlmModels: LlmModel[] = [
     outputCost: 3.0,
     cacheWriteCost: 0.05,
     cacheReadCost: 0.05,
+    cacheTtlSeconds: 300,
     supportsVision: true,
     supportsHearing: true,
   },
@@ -157,6 +164,7 @@ export const builtInLlmModels: LlmModel[] = [
     outputCost: 25,
     cacheWriteCost: 6.25,
     cacheReadCost: 0.5,
+    cacheTtlSeconds: 300,
     supportsVision: true,
   },
   {
@@ -170,6 +178,7 @@ export const builtInLlmModels: LlmModel[] = [
     outputCost: 15,
     cacheWriteCost: 3.75,
     cacheReadCost: 0.3,
+    cacheTtlSeconds: 300,
     supportsVision: true,
   },
   {
@@ -183,6 +192,7 @@ export const builtInLlmModels: LlmModel[] = [
     outputCost: 5,
     cacheWriteCost: 1.25,
     cacheReadCost: 0.1,
+    cacheTtlSeconds: 300,
     supportsVision: true,
   },
 ];
