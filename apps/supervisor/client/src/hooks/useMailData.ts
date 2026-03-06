@@ -1,11 +1,11 @@
 import type { HateoasAction } from "@naisys/common";
-import type { MailPush } from "@naisys/hub-protocol";
 import { useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { useAgentDataContext } from "../contexts/AgentDataContext";
 import { MailMessage } from "../lib/apiClient";
 import { getMailData, MailDataParams } from "../lib/apiMail";
+import { mergeIntoCache, MessageRoomEvent } from "./messageCacheUtils";
 import { useSubscription } from "./useSubscription";
 
 // Module-level caches (shared across all hook instances and persist across remounts)
@@ -24,65 +24,67 @@ export const useMailData = (agentId: number, enabled: boolean = true) => {
 
   const mergeMail = useCallback(
     (updatedMail: MailMessage[], total?: number) => {
-      if (updatedMail.length === 0 && total === undefined) return;
-
-      const existingMail = mailCache.get(agentId) || [];
-
-      const mergeMap = new Map(
-        existingMail.map((mail: MailMessage) => [mail.id, mail]),
-      );
-
-      const existingCount = mergeMap.size;
-
-      updatedMail.forEach((mail) => {
-        mergeMap.set(mail.id, mail);
-      });
-
-      const mergedMail = Array.from(mergeMap.values());
-      const newCount = mergedMail.length - existingCount;
-
-      // Sort newest first
-      mergedMail.sort(
-        (a, b) =>
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-      );
-
-      mailCache.set(agentId, mergedMail);
-
-      if (total !== undefined) {
-        totalCache.set(agentId, total);
-      } else if (newCount > 0) {
-        const currentTotal = totalCache.get(agentId) || 0;
-        totalCache.set(agentId, currentTotal + newCount);
+      if (
+        mergeIntoCache(
+          agentId,
+          updatedMail,
+          total,
+          mailCache,
+          totalCache,
+          updatedSinceCache,
+          true,
+        )
+      ) {
+        setCacheVersion((v) => v + 1);
       }
-
-      updatedSinceCache.set(agentId, new Date().toISOString());
-
-      setCacheVersion((v) => v + 1);
     },
     [agentId],
   );
 
   const handleMailPush = useCallback(
-    (event: MailPush) => {
-      const msg: MailMessage = {
-        id: event.messageId,
-        fromUserId: event.fromUserId,
-        fromUsername:
-          userLookup.get(event.fromUserId) ?? String(event.fromUserId),
-        subject: event.subject ?? "",
-        body: event.body,
-        createdAt: event.createdAt,
-        recipients: event.recipientUserIds.map((uid) => ({
-          userId: uid,
-          username: userLookup.get(uid) ?? String(uid),
-          type: "to",
-          readAt: null,
-        })),
-      };
-      mergeMail([msg]);
+    (event: MessageRoomEvent) => {
+      switch (event.type) {
+        case "new-message": {
+          const msg: MailMessage = {
+            id: event.messageId,
+            fromUserId: event.fromUserId,
+            fromUsername:
+              userLookup.get(event.fromUserId) ?? String(event.fromUserId),
+            subject: event.subject ?? "",
+            body: event.body,
+            createdAt: event.createdAt,
+            recipients: event.recipientUserIds.map((uid) => ({
+              userId: uid,
+              username: userLookup.get(uid) ?? String(uid),
+              type: "to",
+              readAt: null,
+            })),
+          };
+          mergeMail([msg]);
+          break;
+        }
+        case "read-receipt": {
+          const cached = mailCache.get(agentId);
+          if (!cached) return;
+
+          let changed = false;
+          for (const msg of cached) {
+            if (event.messageIds.includes(msg.id)) {
+              const recipient = msg.recipients.find(
+                (r) => r.userId === event.userId,
+              );
+              if (recipient && !recipient.readAt) {
+                recipient.readAt = new Date().toISOString();
+                changed = true;
+              }
+            }
+          }
+          if (changed) setCacheVersion((v) => v + 1);
+          break;
+        }
+      }
     },
-    [mergeMail, userLookup],
+    [agentId, mergeMail, userLookup],
   );
 
   const queryFn = useCallback(async ({ queryKey }: any) => {
@@ -120,8 +122,8 @@ export const useMailData = (agentId: number, enabled: boolean = true) => {
     }
   }, [query.data, mergeMail]);
 
-  // WebSocket subscription for real-time mail updates
-  useSubscription<MailPush>(
+  // WebSocket subscription for real-time mail and read receipt updates
+  useSubscription<MessageRoomEvent>(
     enabled && agentId ? `mail:${agentId}` : null,
     handleMailPush,
   );

@@ -264,7 +264,7 @@ export function createHubMailService(
       try {
         const parsed = MailMarkReadRequestSchema.parse(data);
 
-        await hubDb.mail_recipients.updateMany({
+        const result = await hubDb.mail_recipients.updateMany({
           where: {
             message_id: { in: parsed.messageIds },
             user_id: parsed.userId,
@@ -274,6 +274,36 @@ export function createHubMailService(
         });
 
         ack({ success: true });
+
+        // Push read receipts to supervisor connections
+        if (result.count > 0) {
+          const messages = await hubDb.mail_messages.findMany({
+            where: { id: { in: parsed.messageIds } },
+            select: { participant_ids: true },
+          });
+
+          // participantIds is like the room id, we broadcast to all rooms the read message ids
+          // It's ok if the specific message id is not in the room, the client will ignore it
+          const participantIds = [
+            ...new Set(messages.map((m) => m.participant_ids)),
+          ];
+
+          const payload = {
+            messageIds: parsed.messageIds,
+            userId: parsed.userId,
+            kind: parsed.kind,
+            participantIds,
+          };
+
+          for (const connection of naisysServer.getConnectedClients()) {
+            if (connection.getHostType() !== "supervisor") continue;
+            naisysServer.sendMessage(
+              connection.getHostId(),
+              HubEvents.MAIL_READ_PUSH,
+              payload,
+            );
+          }
+        }
       } catch (error) {
         logService.error(
           `[Hub:Mail] mail_mark_read error from host ${hostId}: ${error}`,

@@ -13,6 +13,7 @@ import {
   HubEvents,
   LogPushSchema,
   MailPushSchema,
+  MailReadPushSchema,
   SessionPushSchema,
 } from "@naisys/hub-protocol";
 import { io, Socket } from "socket.io-client";
@@ -176,6 +177,7 @@ function connectSocket(hubUrl: string, hubAccessKey: string) {
 
     const browserIO = getIO();
     const msg = parsed.data;
+    const payload = { type: "new-message" as const, ...msg };
     const affectedUserIds = [
       ...new Set([...msg.recipientUserIds, msg.fromUserId]),
     ];
@@ -183,17 +185,55 @@ function connectSocket(hubUrl: string, hubAccessKey: string) {
     if (msg.kind === "mail") {
       for (const uid of affectedUserIds) {
         const room = `mail:${uid}`;
-        browserIO.to(room).emit(room, msg);
+        browserIO.to(room).emit(room, payload);
       }
     } else if (msg.kind === "chat") {
       // Chat messages
       const msgRoom = `chat-messages:${msg.participantIds}`;
-      browserIO.to(msgRoom).emit(msgRoom, msg);
+      browserIO.to(msgRoom).emit(msgRoom, payload);
 
       // Chat conversations
       for (const uid of affectedUserIds) {
         const convRoom = `chat-conversations:${uid}`;
-        browserIO.to(convRoom).emit(convRoom, msg);
+        browserIO.to(convRoom).emit(convRoom, payload);
+      }
+    }
+  });
+
+  socket.on(HubEvents.MAIL_READ_PUSH, (data) => {
+    const parsed = MailReadPushSchema.safeParse(data);
+    if (!parsed.success) {
+      console.warn(
+        "[Supervisor:HubClient] Invalid mail read push:",
+        parsed.error,
+      );
+      return;
+    }
+
+    const browserIO = getIO();
+    const msg = parsed.data;
+    const receipt = {
+      type: "read-receipt" as const,
+      messageIds: msg.messageIds,
+      userId: msg.userId,
+    };
+
+    if (msg.kind === "mail") {
+      // Create a set of unique user ids from participantIds which is a csv string
+      const participantIds = new Set(
+        msg.participantIds
+          .map((pid) => pid.split(",").map((id) => Number(id)))
+          .flat(),
+      );
+      for (const uid of participantIds) {
+        const room = `mail:${uid}`;
+        browserIO.to(room).emit(room, receipt);
+      }
+    } else if (msg.kind === "chat") {
+      // participantIds here is like the name of the room
+      for (const pids of msg.participantIds) {
+        const room = `chat-messages:${pids}`;
+        browserIO.to(room).emit(room, receipt);
       }
     }
   });

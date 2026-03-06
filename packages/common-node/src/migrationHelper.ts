@@ -41,6 +41,17 @@ export async function deployPrismaMigrations(options: {
     } catch {
       // "no such table" → treat as new DB, proceed with migration
     }
+
+    // Switch from WAL to DELETE journal mode before closing. This merges any
+    // pending WAL data and removes the -wal/-shm files entirely. Without this,
+    // prisma migrate (a separate process) sees the leftover SHM file and fails
+    // with "database is locked".
+    try {
+      db.pragma("journal_mode=DELETE");
+    } catch {
+      // Failed — another process may genuinely hold the lock
+    }
+
     db.close();
 
     if (currentVersion === expectedVersion) {
@@ -68,19 +79,33 @@ export async function deployPrismaMigrations(options: {
   // Run prisma migrate deploy
   const schemaPath = join(packageDir, "prisma", "schema.prisma");
   const absoluteDbPath = resolve(databasePath).replace(/\\/g, "/");
-  const { stdout, stderr } = await execAsync(
-    `npx prisma migrate deploy --schema="${schemaPath}"`,
-    {
-      cwd: packageDir,
-      env: {
-        ...process.env,
-        // Resolve to absolute so prisma.config.ts gets a correct path
-        // regardless of this subprocess's cwd (which is packageDir)
-        NAISYS_FOLDER: resolve(process.env.NAISYS_FOLDER || ""),
-        ...envOverrides,
+  let stdout: string;
+  let stderr: string;
+  try {
+    ({ stdout, stderr } = await execAsync(
+      `npx prisma migrate deploy --schema="${schemaPath}"`,
+      {
+        cwd: packageDir,
+        env: {
+          ...process.env,
+          // Resolve to absolute so prisma.config.ts gets a correct path
+          // regardless of this subprocess's cwd (which is packageDir)
+          NAISYS_FOLDER: resolve(process.env.NAISYS_FOLDER || ""),
+          ...envOverrides,
+        },
       },
-    },
-  );
+    ));
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
+    if (msg.includes("database is locked")) {
+      throw new Error(
+        `Database is locked: ${absoluteDbPath}\n` +
+          `Another process may be using the database, or stale WAL files remain.\n` +
+          `To fix manually: sqlite3 "${absoluteDbPath}" "PRAGMA journal_mode=DELETE;"`,
+      );
+    }
+    throw error;
+  }
 
   if (stdout) console.log(stdout);
   if (stderr && !stderr.includes("Loaded Prisma config")) {

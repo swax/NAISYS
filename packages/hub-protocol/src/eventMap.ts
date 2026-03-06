@@ -33,6 +33,7 @@ import type {
   MailPeekRequest,
   MailPeekResponse,
   MailPush,
+  MailReadPush,
   MailReceivedPush,
   MailSearchRequest,
   MailSearchResponse,
@@ -141,6 +142,7 @@ export interface HubPushEvents {
 export interface HubSupervisorPushEvents {
   [HubEvents.LOG_PUSH]: LogPush;
   [HubEvents.MAIL_PUSH]: MailPush;
+  [HubEvents.MAIL_READ_PUSH]: MailReadPush;
   [HubEvents.COST_PUSH]: CostPush;
   [HubEvents.SESSION_PUSH]: SessionPush;
 }

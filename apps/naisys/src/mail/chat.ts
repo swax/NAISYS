@@ -298,6 +298,7 @@ export function createChatService(
     await hubClient.sendRequest(HubEvents.MAIL_MARK_READ, {
       userId: localUserId,
       messageIds,
+      kind: "chat",
     });
   }
 

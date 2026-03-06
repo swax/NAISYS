@@ -15,7 +15,7 @@ export async function getConversations(
     const messages = await hubDb.mail_messages.findMany({
       where: {
         kind: "chat",
-        participant_ids: { not: null },
+        participant_ids: { not: "" },
         OR: [
           { from_user_id: userId },
           { recipients: { some: { user_id: userId } } },
@@ -41,7 +41,7 @@ export async function getConversations(
     >();
 
     for (const msg of messages) {
-      const pids = msg.participant_ids!;
+      const pids = msg.participant_ids;
       if (!conversationMap.has(pids)) {
         conversationMap.set(pids, {
           lastMessage: msg.body,

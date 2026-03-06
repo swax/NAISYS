@@ -162,6 +162,7 @@ export type MailSearchResponse = z.infer<typeof MailSearchResponseSchema>;
 export const MailMarkReadRequestSchema = z.object({
   userId: z.number(),
   messageIds: z.array(z.number()),
+  kind: MessageKindSchema,
 });
 export type MailMarkReadRequest = z.infer<typeof MailMarkReadRequestSchema>;
 
@@ -216,3 +217,12 @@ export const MailPushSchema = z.object({
   attachmentIds: z.array(z.number()).optional(),
 });
 export type MailPush = z.infer<typeof MailPushSchema>;
+
+/** Read-receipt push from hub to supervisor when messages are marked read */
+export const MailReadPushSchema = z.object({
+  messageIds: z.array(z.number()),
+  userId: z.number(),
+  kind: MessageKindSchema,
+  participantIds: z.array(z.string()),
+});
+export type MailReadPush = z.infer<typeof MailReadPushSchema>;
