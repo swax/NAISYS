@@ -32,13 +32,13 @@ export const HostSidebar: React.FC = () => {
   const [newHostName, setNewHostName] = useState("");
   const [creating, setCreating] = useState(false);
 
-  const isHostSelected = (hostId: number) => {
+  const isHostSelected = (hostname: string) => {
     const pathParts = location.pathname.split("/");
-    // Path: /hosts/:id
-    return pathParts[2] === String(hostId);
+    // Path: /hosts/:hostname
+    return pathParts[2] === hostname;
   };
 
-  const getHostUrl = (host: Host) => `/hosts/${host.id}`;
+  const getHostUrl = (host: Host) => `/hosts/${host.name}`;
 
   const getHostAbsoluteUrl = (host: Host) =>
     `${ROUTER_BASENAME}${getHostUrl(host)}`;
@@ -65,11 +65,7 @@ export const HostSidebar: React.FC = () => {
         setCreateOpen(false);
         setNewHostName("");
         void queryClient.invalidateQueries({ queryKey: ["host-data"] });
-        // Navigate to the new host if id is in the result
-        const newId = (result as { id?: number }).id;
-        if (newId) {
-          void navigate(`/hosts/${newId}`);
-        }
+        void navigate(`/hosts/${newHostName.trim()}`);
       } else {
         notifications.show({
           title: "Create Failed",
@@ -110,7 +106,7 @@ export const HostSidebar: React.FC = () => {
             onClick={(e) => handleHostClick(e, host)}
             style={{
               cursor: "pointer",
-              backgroundColor: isHostSelected(host.id)
+              backgroundColor: isHostSelected(host.name)
                 ? "var(--mantine-color-blue-9)"
                 : undefined,
               textDecoration: "none",

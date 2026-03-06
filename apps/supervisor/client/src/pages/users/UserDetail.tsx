@@ -35,7 +35,7 @@ import {
 } from "../../lib/apiUsers";
 
 export const UserDetail: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
+  const { username: routeUsername } = useParams<{ username: string }>();
   const navigate = useNavigate();
   const { hasPermission } = useSession();
   const [user, setUser] = useState<any>(null);
@@ -52,24 +52,24 @@ export const UserDetail: React.FC = () => {
   const { permissions: allPermissions } = useOutletContext<AppOutletContext>();
 
   const fetchUser = useCallback(async () => {
-    if (!id) return;
+    if (!routeUsername) return;
     setLoading(true);
     try {
-      const result = await getUser(Number(id));
+      const result = await getUser(routeUsername);
       setUser(result);
     } catch {
       // error handled silently
     } finally {
       setLoading(false);
     }
-  }, [id]);
+  }, [routeUsername]);
 
   useEffect(() => {
     void fetchUser();
   }, [fetchUser]);
 
   const handleDelete = async () => {
-    if (!id) return;
+    if (!routeUsername) return;
     const isAdmin = user?.permissions?.some(
       (p: any) => p.permission === "supervisor_admin",
     );
@@ -84,7 +84,7 @@ export const UserDetail: React.FC = () => {
       return;
     }
     try {
-      await deleteUser(Number(id));
+      await deleteUser(routeUsername);
       void navigate("/users");
     } catch (err) {
       alert(err instanceof Error ? err.message : "Failed to delete user");
@@ -92,13 +92,17 @@ export const UserDetail: React.FC = () => {
   };
 
   const handleUpdate = async () => {
-    if (!id || !editUsername) return;
+    if (!routeUsername || !editUsername) return;
     setSaving(true);
     setEditError("");
     try {
-      await updateUser(Number(id), { username: editUsername });
+      await updateUser(routeUsername, { username: editUsername });
       closeEdit();
-      void fetchUser();
+      if (editUsername !== routeUsername) {
+        void navigate(`/users/${editUsername}`, { replace: true });
+      } else {
+        void fetchUser();
+      }
     } catch (err) {
       setEditError(
         err instanceof Error ? err.message : "Failed to update user",
@@ -126,9 +130,9 @@ export const UserDetail: React.FC = () => {
   };
 
   const handleGrantPermission = async () => {
-    if (!id || !grantPerm) return;
+    if (!routeUsername || !grantPerm) return;
     try {
-      await grantPermission(Number(id), grantPerm);
+      await grantPermission(routeUsername, grantPerm);
       setGrantPerm(null);
       void fetchUser();
     } catch (err) {
@@ -137,9 +141,9 @@ export const UserDetail: React.FC = () => {
   };
 
   const handleRevokePermission = async (permission: string) => {
-    if (!id) return;
+    if (!routeUsername) return;
     try {
-      await revokePermission(Number(id), permission);
+      await revokePermission(routeUsername, permission);
       void fetchUser();
     } catch (err) {
       alert(err instanceof Error ? err.message : "Failed to revoke permission");

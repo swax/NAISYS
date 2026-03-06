@@ -13,8 +13,8 @@ export const getUsers = async (params: {
   return api.get(`/users?${queryParams}`);
 };
 
-export const getUser = async (id: number): Promise<any> => {
-  return api.get(`/users/${id}`);
+export const getUser = async (username: string): Promise<any> => {
+  return api.get(`/users/${username}`);
 };
 
 export const createUser = async (data: {
@@ -26,28 +26,28 @@ export const createUser = async (data: {
 };
 
 export const updateUser = async (
-  id: number,
+  username: string,
   data: { username?: string },
 ): Promise<any> => {
-  return api.put(`/users/${id}`, data);
+  return api.put(`/users/${username}`, data);
 };
 
-export const deleteUser = async (id: number): Promise<any> => {
-  return api.delete(`/users/${id}`);
+export const deleteUser = async (username: string): Promise<any> => {
+  return api.delete(`/users/${username}`);
 };
 
 export const grantPermission = async (
-  userId: number,
+  username: string,
   permission: string,
 ): Promise<any> => {
-  return api.post(`/users/${userId}/permissions`, { permission });
+  return api.post(`/users/${username}/permissions`, { permission });
 };
 
 export const revokePermission = async (
-  userId: number,
+  username: string,
   permission: string,
 ): Promise<any> => {
-  return api.delete(`/users/${userId}/permissions/${permission}`);
+  return api.delete(`/users/${username}/permissions/${permission}`);
 };
 
 export const changePassword = async (password: string): Promise<any> => {

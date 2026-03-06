@@ -30,16 +30,19 @@ import {
 } from "../services/agentService.js";
 import * as userService from "../services/userService.js";
 
-function userItemLinks(userId: number, agentId?: number | null): HateoasLink[] {
+function userItemLinks(
+  username: string,
+  agentUsername?: string | null,
+): HateoasLink[] {
   const links: HateoasLink[] = [
-    selfLink(`/users/${userId}`),
+    selfLink(`/users/${username}`),
     collectionLink("users"),
     schemaLink("UpdateUser"),
   ];
-  if (agentId != null) {
+  if (agentUsername != null) {
     links.push({
       rel: "agent",
-      href: `${API_PREFIX}/agents/${agentId}`,
+      href: `${API_PREFIX}/agents/${agentUsername}`,
       title: "View Agent",
     });
   }
@@ -47,11 +50,11 @@ function userItemLinks(userId: number, agentId?: number | null): HateoasLink[] {
 }
 
 function userActions(
-  userId: number,
+  username: string,
   isSelf: boolean,
   isAdmin: boolean,
 ): HateoasAction[] {
-  const href = `${API_PREFIX}/users/${userId}`;
+  const href = `${API_PREFIX}/users/${username}`;
   const actions: HateoasAction[] = [];
 
   // Admins can edit any user (username + password)
@@ -99,7 +102,7 @@ function userActions(
 }
 
 function permissionActions(
-  userId: number,
+  username: string,
   permission: string,
   isSelf: boolean,
   isAdmin: boolean,
@@ -112,7 +115,7 @@ function permissionActions(
   if (!(isSelf && permission === "supervisor_admin")) {
     actions.push({
       rel: "revoke",
-      href: `${API_PREFIX}/users/${userId}/permissions/${permission}`,
+      href: `${API_PREFIX}/users/${username}/permissions/${permission}`,
       method: "DELETE",
       title: "Revoke",
     });
@@ -125,7 +128,7 @@ function formatUser(
   user: Awaited<ReturnType<typeof userService.getUserById>>,
   currentUserId: number,
   currentUserPermissions: string[],
-  agentId?: number | null,
+  agentUsername?: string | null,
 ) {
   if (!user) return null;
   const isSelf = user.id === currentUserId;
@@ -140,10 +143,10 @@ function formatUser(
       permission: p.permission,
       grantedAt: p.grantedAt.toISOString(),
       grantedBy: p.grantedBy,
-      _actions: permissionActions(user.id, p.permission, isSelf, isAdmin),
+      _actions: permissionActions(user.username, p.permission, isSelf, isAdmin),
     })),
-    _links: userItemLinks(user.id, agentId),
-    _actions: userActions(user.id, isSelf, isAdmin),
+    _links: userItemLinks(user.username, agentUsername),
+    _actions: userActions(user.username, isSelf, isAdmin),
   };
 }
 
@@ -157,7 +160,7 @@ function formatListUser(
     isAgent: user.isAgent,
     createdAt: user.createdAt.toISOString(),
     permissionCount: user.permissions.length,
-    _links: [selfLink(`/users/${user.id}`)],
+    _links: [selfLink(`/users/${user.username}`)],
   };
 }
 
@@ -169,7 +172,7 @@ export default function userRoutes(
   const adminPreHandler = [requirePermission("supervisor_admin")];
 
   const requireAdminOrSelf = async (
-    request: FastifyRequest<{ Params: { id: number } }>,
+    request: FastifyRequest<{ Params: { username: string } }>,
     reply: FastifyReply,
   ) => {
     if (!request.supervisorUser) {
@@ -182,7 +185,7 @@ export default function userRoutes(
     }
     const isAdmin =
       request.supervisorUser.permissions.includes("supervisor_admin");
-    const isSelf = request.params.id === request.supervisorUser.id;
+    const isSelf = request.params.username === request.supervisorUser.username;
     if (!isAdmin && !isSelf) {
       reply.status(403).send({
         statusCode: 403,
@@ -242,7 +245,7 @@ export default function userRoutes(
     },
   );
 
-  // CHANGE OWN PASSWORD (must be registered before /:id routes)
+  // CHANGE OWN PASSWORD (must be registered before /:username routes)
   app.post(
     "/me/password",
     {
@@ -353,54 +356,66 @@ export default function userRoutes(
     },
   );
 
+  const usernameParams = z.object({ username: z.string() });
+
   // GET USER (admin or self)
   app.get(
-    "/:id",
+    "/:username",
     {
       preHandler: [requireAdminOrSelf],
       schema: {
         description: "Get user details",
         tags: ["Users"],
-        params: z.object({ id: z.coerce.number().int() }),
+        params: usernameParams,
         security: [{ cookieAuth: [] }],
       },
     },
     async (request, reply) => {
-      const user = await userService.getUserById(request.params.id);
+      const user = await userService.getUserByUsernameWithPermissions(
+        request.params.username,
+      );
       if (!user) {
         reply.code(404);
         return { success: false, message: "User not found" };
       }
 
-      let agentId: number | null = null;
+      let agentUsername: string | null = null;
       if (user.isAgent && user.uuid) {
         const hubAgent = await getHubAgentByUuid(user.uuid);
-        agentId = hubAgent?.id ?? null;
+        agentUsername = hubAgent?.username ?? null;
       }
 
       return formatUser(
         user,
         request.supervisorUser!.id,
         request.supervisorUser!.permissions,
-        agentId,
+        agentUsername,
       );
     },
   );
 
   // UPDATE USER (admin can update any field; non-admin can only change own password)
   app.put(
-    "/:id",
+    "/:username",
     {
       preHandler: [requireAdminOrSelf],
       schema: {
         description: "Update a user",
         tags: ["Users"],
-        params: z.object({ id: z.coerce.number().int() }),
+        params: usernameParams,
         body: UpdateUserSchema,
         security: [{ cookieAuth: [] }],
       },
     },
     async (request, reply) => {
+      const targetUser = await userService.getUserByUsernameWithPermissions(
+        request.params.username,
+      );
+      if (!targetUser) {
+        reply.code(404);
+        return { success: false, message: "User not found" };
+      }
+
       const isAdmin =
         request.supervisorUser!.permissions.includes("supervisor_admin");
 
@@ -408,7 +423,7 @@ export default function userRoutes(
       const body = isAdmin ? request.body : { password: request.body.password };
 
       try {
-        const user = await userService.updateUser(request.params.id, body);
+        const user = await userService.updateUser(targetUser.id, body);
         authCache.clear();
         return formatUser(
           user,
@@ -427,22 +442,29 @@ export default function userRoutes(
 
   // DELETE USER
   app.delete(
-    "/:id",
+    "/:username",
     {
       preHandler: adminPreHandler,
       schema: {
         description: "Delete a user",
         tags: ["Users"],
-        params: z.object({ id: z.coerce.number().int() }),
+        params: usernameParams,
         security: [{ cookieAuth: [] }],
       },
     },
     async (request, reply) => {
-      if (request.params.id === request.supervisorUser!.id) {
+      if (request.params.username === request.supervisorUser!.username) {
         reply.code(409);
         return { success: false, message: "Cannot delete yourself" };
       }
-      await userService.deleteUser(request.params.id);
+      const targetUser = await userService.getUserByUsernameWithPermissions(
+        request.params.username,
+      );
+      if (!targetUser) {
+        reply.code(404);
+        return { success: false, message: "User not found" };
+      }
+      await userService.deleteUser(targetUser.id);
       authCache.clear();
       return { success: true, message: "User deleted" };
     },
@@ -450,26 +472,34 @@ export default function userRoutes(
 
   // GRANT PERMISSION
   app.post(
-    "/:id/permissions",
+    "/:username/permissions",
     {
       preHandler: adminPreHandler,
       schema: {
         description: "Grant a permission to a user",
         tags: ["Users"],
-        params: z.object({ id: z.coerce.number().int() }),
+        params: usernameParams,
         body: GrantPermissionSchema,
         security: [{ cookieAuth: [] }],
       },
     },
     async (request, reply) => {
+      const targetUser = await userService.getUserByUsernameWithPermissions(
+        request.params.username,
+      );
+      if (!targetUser) {
+        reply.code(404);
+        return { success: false, message: "User not found" };
+      }
+
       try {
         await userService.grantPermission(
-          request.params.id,
+          targetUser.id,
           request.body.permission as Permission,
           request.supervisorUser!.id,
         );
         authCache.clear();
-        const user = await userService.getUserById(request.params.id);
+        const user = await userService.getUserById(targetUser.id);
         return formatUser(
           user,
           request.supervisorUser!.id,
@@ -490,25 +520,25 @@ export default function userRoutes(
 
   // REVOKE PERMISSION
   app.delete(
-    "/:id/permissions/:permission",
+    "/:username/permissions/:permission",
     {
       preHandler: adminPreHandler,
       schema: {
         description: "Revoke a permission from a user",
         tags: ["Users"],
         params: z.object({
-          id: z.coerce.number().int(),
+          username: z.string(),
           permission: z.string(),
         }),
         security: [{ cookieAuth: [] }],
       },
     },
     async (request, reply) => {
-      const { id, permission } = request.params;
+      const { username, permission } = request.params;
 
       // Cannot revoke own supervisor_admin
       if (
-        id === request.supervisorUser!.id &&
+        username === request.supervisorUser!.username &&
         permission === "supervisor_admin"
       ) {
         reply.code(409);
@@ -518,9 +548,19 @@ export default function userRoutes(
         };
       }
 
-      await userService.revokePermission(id, permission as Permission);
+      const targetUser =
+        await userService.getUserByUsernameWithPermissions(username);
+      if (!targetUser) {
+        reply.code(404);
+        return { success: false, message: "User not found" };
+      }
+
+      await userService.revokePermission(
+        targetUser.id,
+        permission as Permission,
+      );
       authCache.clear();
-      const user = await userService.getUserById(id);
+      const user = await userService.getUserById(targetUser.id);
       return formatUser(
         user,
         request.supervisorUser!.id,

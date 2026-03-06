@@ -3,6 +3,7 @@ import type { Host, HostDetailResponse } from "@naisys-supervisor/shared";
 import { hubDb } from "../database/hubDb.js";
 import { getLogger } from "../logger.js";
 import { cachedForSeconds } from "../utils/cache.js";
+import { resolveAgentId } from "./agentService.js";
 
 export const getHosts = cachedForSeconds(0.25, async (): Promise<Host[]> => {
   try {
@@ -34,11 +35,11 @@ export const getHosts = cachedForSeconds(0.25, async (): Promise<Host[]> => {
 });
 
 export async function getHostDetail(
-  hostId: number,
+  hostname: string,
 ): Promise<HostDetailResponse | null> {
   try {
     const host = await hubDb.hosts.findUnique({
-      where: { id: hostId },
+      where: { name: hostname },
       select: {
         id: true,
         name: true,
@@ -97,12 +98,12 @@ export async function createHost(name: string): Promise<{ id: number }> {
 }
 
 export async function updateHost(
-  hostId: number,
+  hostname: string,
   data: { name?: string; restricted?: boolean },
 ): Promise<void> {
-  const host = await hubDb.hosts.findUnique({ where: { id: hostId } });
+  const host = await hubDb.hosts.findUnique({ where: { name: hostname } });
   if (!host) {
-    throw new Error(`Host with ID ${hostId} not found`);
+    throw new Error(`Host "${hostname}" not found`);
   }
 
   if (data.name && data.name !== host.name) {
@@ -121,7 +122,7 @@ export async function updateHost(
   }
 
   await hubDb.hosts.update({
-    where: { id: hostId },
+    where: { name: hostname },
     data: {
       ...(data.name !== undefined ? { name: data.name } : {}),
       ...(data.restricted !== undefined ? { restricted: data.restricted } : {}),
@@ -130,12 +131,12 @@ export async function updateHost(
 }
 
 export async function assignAgentToHost(
-  hostId: number,
+  hostname: string,
   agentId: number,
 ): Promise<void> {
-  const host = await hubDb.hosts.findUnique({ where: { id: hostId } });
+  const host = await hubDb.hosts.findUnique({ where: { name: hostname } });
   if (!host) {
-    throw new Error(`Host with ID ${hostId} not found`);
+    throw new Error(`Host "${hostname}" not found`);
   }
 
   const agent = await hubDb.users.findUnique({ where: { id: agentId } });
@@ -144,34 +145,50 @@ export async function assignAgentToHost(
   }
 
   const existing = await hubDb.user_hosts.findUnique({
-    where: { user_id_host_id: { user_id: agentId, host_id: hostId } },
+    where: { user_id_host_id: { user_id: agentId, host_id: host.id } },
   });
   if (existing) {
     throw new Error("Agent is already assigned to this host");
   }
 
   await hubDb.user_hosts.create({
-    data: { user_id: agentId, host_id: hostId },
+    data: { user_id: agentId, host_id: host.id },
   });
 }
 
 export async function unassignAgentFromHost(
-  hostId: number,
-  agentId: number,
+  hostname: string,
+  agentName: string,
 ): Promise<void> {
+  const host = await hubDb.hosts.findUnique({ where: { name: hostname } });
+  if (!host) {
+    throw new Error(`Host "${hostname}" not found`);
+  }
+
+  const agentId = resolveAgentId(agentName);
+  if (!agentId) {
+    throw new Error(`Agent "${agentName}" not found`);
+  }
+
   const existing = await hubDb.user_hosts.findUnique({
-    where: { user_id_host_id: { user_id: agentId, host_id: hostId } },
+    where: { user_id_host_id: { user_id: agentId, host_id: host.id } },
   });
   if (!existing) {
     throw new Error("Agent is not assigned to this host");
   }
 
   await hubDb.user_hosts.delete({
-    where: { user_id_host_id: { user_id: agentId, host_id: hostId } },
+    where: { user_id_host_id: { user_id: agentId, host_id: host.id } },
   });
 }
 
-export async function deleteHost(id: number): Promise<void> {
+export async function deleteHost(hostname: string): Promise<void> {
+  const host = await hubDb.hosts.findUnique({ where: { name: hostname } });
+  if (!host) {
+    throw new Error(`Host "${hostname}" not found`);
+  }
+
+  const id = host.id;
   await hubDb.$transaction(async (hubTx) => {
     await hubTx.context_log.deleteMany({ where: { host_id: id } });
     await hubTx.costs.deleteMany({ where: { host_id: id } });

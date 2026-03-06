@@ -131,7 +131,7 @@ export async function getHubAgentById(id: number) {
 export async function getHubAgentByUuid(uuid: string) {
   return hubDb.users.findFirst({
     where: { uuid },
-    select: { id: true },
+    select: { id: true, username: true },
   });
 }
 

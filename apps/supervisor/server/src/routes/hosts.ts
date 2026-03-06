@@ -2,7 +2,7 @@ import type { HateoasAction } from "@naisys/common";
 import {
   AgentActionResult,
   AgentActionResultSchema,
-  AgentIdParamSchema,
+  AgentNameParamSchema,
   AssignAgentToHostRequest,
   AssignAgentToHostRequestSchema,
   CreateHostRequest,
@@ -11,10 +11,10 @@ import {
   ErrorResponseSchema,
   HostDetailResponse,
   HostDetailResponseSchema,
-  HostIdParams,
-  HostIdParamsSchema,
   HostListResponse,
   HostListResponseSchema,
+  HostNameParams,
+  HostNameParamsSchema,
   UpdateHostRequest,
   UpdateHostRequestSchema,
 } from "@naisys-supervisor/shared";
@@ -38,7 +38,7 @@ import {
 } from "../services/hubConnectionService.js";
 
 function hostActions(
-  hostId: number,
+  hostname: string,
   hasManageHostsPermission: boolean,
   isOnline: boolean,
 ): HateoasAction[] {
@@ -47,13 +47,13 @@ function hostActions(
   if (hasManageHostsPermission) {
     actions.push({
       rel: "update",
-      href: `${API_PREFIX}/hosts/${hostId}`,
+      href: `${API_PREFIX}/hosts/${hostname}`,
       method: "PUT",
       title: "Update Host",
     });
     actions.push({
       rel: "assign-agent",
-      href: `${API_PREFIX}/hosts/${hostId}/agents`,
+      href: `${API_PREFIX}/hosts/${hostname}/agents`,
       method: "POST",
       title: "Assign Agent",
     });
@@ -62,7 +62,7 @@ function hostActions(
   if (hasManageHostsPermission && !isOnline) {
     actions.push({
       rel: "delete",
-      href: `${API_PREFIX}/hosts/${hostId}`,
+      href: `${API_PREFIX}/hosts/${hostname}`,
       method: "DELETE",
       title: "Delete Host",
     });
@@ -72,15 +72,15 @@ function hostActions(
 }
 
 function assignedAgentActions(
-  hostId: number,
-  agentId: number,
+  hostname: string,
+  agentName: string,
   hasManageHostsPermission: boolean,
 ): HateoasAction[] {
   if (!hasManageHostsPermission) return [];
   return [
     {
       rel: "unassign",
-      href: `${API_PREFIX}/hosts/${hostId}/agents/${agentId}`,
+      href: `${API_PREFIX}/hosts/${hostname}/agents/${agentName}`,
       method: "DELETE",
       title: "Unassign Agent",
     },
@@ -118,14 +118,14 @@ export default function hostsRoutes(
         const items = hosts.map((host) => {
           const online = isHostConnected(host.id);
           const actions = hostActions(
-            host.id,
+            host.name,
             hasManageHostsPermission,
             online,
           );
           return {
             ...host,
             online,
-            _links: [selfLink(`/hosts/${host.id}`)],
+            _links: [selfLink(`/hosts/${host.name}`)],
             _actions: actions.length > 0 ? actions : undefined,
           };
         });
@@ -211,17 +211,17 @@ export default function hostsRoutes(
     },
   );
 
-  // GET /:id — Host detail
+  // GET /:hostname — Host detail
   fastify.get<{
-    Params: HostIdParams;
+    Params: HostNameParams;
     Reply: HostDetailResponse | ErrorResponse;
   }>(
-    "/:id",
+    "/:hostname",
     {
       schema: {
         description: "Get host detail with assigned agents",
         tags: ["Hosts"],
-        params: HostIdParamsSchema,
+        params: HostNameParamsSchema,
         response: {
           200: HostDetailResponseSchema,
           404: ErrorResponseSchema,
@@ -231,13 +231,13 @@ export default function hostsRoutes(
     },
     async (request, reply) => {
       try {
-        const { id } = request.params;
-        const host = await getHostDetail(id);
+        const { hostname } = request.params;
+        const host = await getHostDetail(hostname);
 
         if (!host) {
           return reply.status(404).send({
             success: false,
-            message: `Host with ID ${id} not found`,
+            message: `Host "${hostname}" not found`,
           });
         }
 
@@ -246,7 +246,7 @@ export default function hostsRoutes(
           "manage_hosts",
         );
 
-        const online = isHostConnected(id);
+        const online = isHostConnected(host.id);
 
         return {
           ...host,
@@ -254,16 +254,16 @@ export default function hostsRoutes(
           assignedAgents: host.assignedAgents.map((agent) => ({
             ...agent,
             _actions: assignedAgentActions(
-              id,
-              agent.id,
+              hostname,
+              agent.name,
               hasManageHostsPermission,
             ),
           })),
-          _links: [selfLink(`/hosts/${id}`)],
-          _actions: hostActions(id, hasManageHostsPermission, online),
+          _links: [selfLink(`/hosts/${hostname}`)],
+          _actions: hostActions(hostname, hasManageHostsPermission, online),
         };
       } catch (error) {
-        request.log.error(error, "Error in GET /hosts/:id route");
+        request.log.error(error, "Error in GET /hosts/:hostname route");
         return reply.status(500).send({
           success: false,
           message: "Internal server error while fetching host detail",
@@ -272,19 +272,19 @@ export default function hostsRoutes(
     },
   );
 
-  // PUT /:id — Update host
+  // PUT /:hostname — Update host
   fastify.put<{
-    Params: HostIdParams;
+    Params: HostNameParams;
     Body: UpdateHostRequest;
     Reply: AgentActionResult | ErrorResponse;
   }>(
-    "/:id",
+    "/:hostname",
     {
       preHandler: [requirePermission("manage_hosts")],
       schema: {
         description: "Update host name and/or restricted flag",
         tags: ["Hosts"],
-        params: HostIdParamsSchema,
+        params: HostNameParamsSchema,
         body: UpdateHostRequestSchema,
         response: {
           200: AgentActionResultSchema,
@@ -297,24 +297,33 @@ export default function hostsRoutes(
     },
     async (request, reply) => {
       try {
-        const { id } = request.params;
+        const { hostname } = request.params;
         const body = request.body;
 
+        // Look up host to get id for online check
+        const host = await getHostDetail(hostname);
+        if (!host) {
+          return reply.status(404).send({
+            success: false,
+            message: `Host "${hostname}" not found`,
+          });
+        }
+
         // Name change only allowed when offline
-        if (body.name !== undefined && isHostConnected(id)) {
+        if (body.name !== undefined && isHostConnected(host.id)) {
           return reply.status(400).send({
             success: false,
             message: "Cannot rename an online host. Disconnect it first.",
           });
         }
 
-        await updateHost(id, body);
+        await updateHost(hostname, body);
 
         sendHostsChanged();
 
         return { success: true, message: "Host updated" };
       } catch (error) {
-        request.log.error(error, "Error in PUT /hosts/:id route");
+        request.log.error(error, "Error in PUT /hosts/:hostname route");
         const errorMessage =
           error instanceof Error ? error.message : "Unknown error";
 
@@ -342,18 +351,18 @@ export default function hostsRoutes(
     },
   );
 
-  // DELETE /:id — Permanently delete a host
+  // DELETE /:hostname — Permanently delete a host
   fastify.delete<{
-    Params: HostIdParams;
+    Params: HostNameParams;
     Reply: AgentActionResult | ErrorResponse;
   }>(
-    "/:id",
+    "/:hostname",
     {
       preHandler: [requirePermission("manage_hosts")],
       schema: {
         description: "Permanently delete an offline host",
         tags: ["Hosts"],
-        params: HostIdParamsSchema,
+        params: HostNameParamsSchema,
         response: {
           200: AgentActionResultSchema,
           400: ErrorResponseSchema,
@@ -365,32 +374,32 @@ export default function hostsRoutes(
     },
     async (request, reply) => {
       try {
-        const { id } = request.params;
+        const { hostname } = request.params;
 
         const hosts = await getHosts();
-        const host = hosts.find((h) => h.id === id);
+        const host = hosts.find((h) => h.name === hostname);
 
         if (!host) {
           return reply.status(404).send({
             success: false,
-            message: `Host with ID ${id} not found`,
+            message: `Host "${hostname}" not found`,
           });
         }
 
-        if (isHostConnected(id)) {
+        if (isHostConnected(host.id)) {
           return reply.status(400).send({
             success: false,
             message: "Cannot delete an online host. Disconnect it first.",
           });
         }
 
-        await deleteHost(id);
+        await deleteHost(hostname);
 
         sendHostsChanged();
 
         return { success: true, message: "Host permanently deleted" };
       } catch (error) {
-        request.log.error(error, "Error in DELETE /hosts/:id route");
+        request.log.error(error, "Error in DELETE /hosts/:hostname route");
         return reply.status(500).send({
           success: false,
           message:
@@ -402,19 +411,19 @@ export default function hostsRoutes(
     },
   );
 
-  // POST /:id/agents — Assign agent to host
+  // POST /:hostname/agents — Assign agent to host
   fastify.post<{
-    Params: HostIdParams;
+    Params: HostNameParams;
     Body: AssignAgentToHostRequest;
     Reply: AgentActionResult | ErrorResponse;
   }>(
-    "/:id/agents",
+    "/:hostname/agents",
     {
       preHandler: [requirePermission("manage_hosts")],
       schema: {
         description: "Assign an agent to this host",
         tags: ["Hosts"],
-        params: HostIdParamsSchema,
+        params: HostNameParamsSchema,
         body: AssignAgentToHostRequestSchema,
         response: {
           200: AgentActionResultSchema,
@@ -427,16 +436,16 @@ export default function hostsRoutes(
     },
     async (request, reply) => {
       try {
-        const { id } = request.params;
+        const { hostname } = request.params;
         const { agentId } = request.body;
 
-        await assignAgentToHost(id, agentId);
+        await assignAgentToHost(hostname, agentId);
 
         sendUserListChanged();
 
         return { success: true, message: "Agent assigned to host" };
       } catch (error) {
-        request.log.error(error, "Error in POST /hosts/:id/agents route");
+        request.log.error(error, "Error in POST /hosts/:hostname/agents route");
         const errorMessage =
           error instanceof Error ? error.message : "Unknown error";
 
@@ -461,18 +470,18 @@ export default function hostsRoutes(
     },
   );
 
-  // DELETE /:id/agents/:agentId — Unassign agent from host
+  // DELETE /:hostname/agents/:agentName — Unassign agent from host
   fastify.delete<{
-    Params: HostIdParams & { agentId: number };
+    Params: HostNameParams & { agentName: string };
     Reply: AgentActionResult | ErrorResponse;
   }>(
-    "/:id/agents/:agentId",
+    "/:hostname/agents/:agentName",
     {
       preHandler: [requirePermission("manage_hosts")],
       schema: {
         description: "Unassign an agent from this host",
         tags: ["Hosts"],
-        params: HostIdParamsSchema.merge(AgentIdParamSchema),
+        params: HostNameParamsSchema.merge(AgentNameParamSchema),
         response: {
           200: AgentActionResultSchema,
           400: ErrorResponseSchema,
@@ -484,9 +493,9 @@ export default function hostsRoutes(
     },
     async (request, reply) => {
       try {
-        const { id, agentId } = request.params;
+        const { hostname, agentName } = request.params;
 
-        await unassignAgentFromHost(id, agentId);
+        await unassignAgentFromHost(hostname, agentName);
 
         sendUserListChanged();
 
@@ -494,7 +503,7 @@ export default function hostsRoutes(
       } catch (error) {
         request.log.error(
           error,
-          "Error in DELETE /hosts/:id/agents/:agentId route",
+          "Error in DELETE /hosts/:hostname/agents/:agentName route",
         );
         const errorMessage =
           error instanceof Error ? error.message : "Unknown error";

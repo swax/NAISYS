@@ -31,7 +31,7 @@ import {
 } from "../../lib/apiAgents";
 
 export const HostPage: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
+  const { hostname } = useParams<{ hostname: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { agents } = useAgentDataContext();
@@ -52,13 +52,12 @@ export const HostPage: React.FC = () => {
   const [assigning, setAssigning] = useState(false);
   const [selectedAgentId, setSelectedAgentId] = useState("");
 
-  const hostId = id ? Number(id) : null;
-  const host = hosts.find((h) => h.id === hostId);
+  const host = hostname ? hosts.find((h) => h.name === hostname) : undefined;
 
   const fetchDetail = useCallback(async () => {
-    if (!hostId) return;
+    if (!hostname) return;
     try {
-      const data = await getHostDetail(hostId);
+      const data = await getHostDetail(hostname);
       setHostDetail(data);
       setActions(data._actions);
       setEditName(data.name);
@@ -68,23 +67,23 @@ export const HostPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [hostId]);
+  }, [hostname]);
 
   useEffect(() => {
-    if (!hostId) {
+    if (!hostname) {
       setLoading(false);
       return;
     }
     setLoading(true);
     void fetchDetail();
-  }, [hostId, fetchDetail]);
+  }, [hostname, fetchDetail]);
 
   const hasChanges =
     hostDetail &&
     (editName !== hostDetail.name || editRestricted !== hostDetail.restricted);
 
   const handleSave = async () => {
-    if (!hostId || !hostDetail) return;
+    if (!hostname || !hostDetail) return;
     setSaving(true);
     try {
       const updates: { name?: string; restricted?: boolean } = {};
@@ -92,7 +91,7 @@ export const HostPage: React.FC = () => {
       if (editRestricted !== hostDetail.restricted)
         updates.restricted = editRestricted;
 
-      const result = await updateHostApi(hostId, updates);
+      const result = await updateHostApi(hostname, updates);
       if (result.success) {
         notifications.show({
           title: "Host Updated",
@@ -100,7 +99,11 @@ export const HostPage: React.FC = () => {
           color: "green",
         });
         void queryClient.invalidateQueries({ queryKey: ["host-data"] });
-        void fetchDetail();
+        if (updates.name && updates.name !== hostname) {
+          void navigate(`/hosts/${updates.name}`, { replace: true });
+        } else {
+          void fetchDetail();
+        }
       } else {
         notifications.show({
           title: "Update Failed",
@@ -126,7 +129,7 @@ export const HostPage: React.FC = () => {
   };
 
   const handleDelete = async () => {
-    if (!hostId || !host) return;
+    if (!hostname || !host) return;
     const confirmed = window.confirm(
       `Permanently delete host "${host.name}"? This will remove all associated run sessions, logs, and cost records and cannot be undone.`,
     );
@@ -139,7 +142,7 @@ export const HostPage: React.FC = () => {
 
     setDeleting(true);
     try {
-      const result = await deleteHost(hostId);
+      const result = await deleteHost(hostname);
       if (result.success) {
         notifications.show({
           title: "Host Deleted",
@@ -167,10 +170,10 @@ export const HostPage: React.FC = () => {
   };
 
   const handleAssign = async () => {
-    if (!hostId || !selectedAgentId) return;
+    if (!hostname || !selectedAgentId) return;
     setAssigning(true);
     try {
-      const result = await assignAgentToHost(hostId, Number(selectedAgentId));
+      const result = await assignAgentToHost(hostname, Number(selectedAgentId));
       if (result.success) {
         notifications.show({
           title: "Agent Assigned",
@@ -199,10 +202,10 @@ export const HostPage: React.FC = () => {
     }
   };
 
-  const handleUnassign = async (agentId: number) => {
-    if (!hostId) return;
+  const handleUnassign = async (agentName: string) => {
+    if (!hostname) return;
     try {
-      const result = await unassignAgentFromHost(hostId, agentId);
+      const result = await unassignAgentFromHost(hostname, agentName);
       if (result.success) {
         notifications.show({
           title: "Agent Unassigned",
@@ -228,7 +231,7 @@ export const HostPage: React.FC = () => {
     }
   };
 
-  if (!hostId) {
+  if (!hostname) {
     return (
       <Stack gap="md">
         <Text c="dimmed" ta="center">
@@ -270,7 +273,7 @@ export const HostPage: React.FC = () => {
               styles={{ input: { fontWeight: 700 } }}
             />
           ) : (
-            <Title order={2}>{host?.name ?? `Host ${hostId}`}</Title>
+            <Title order={2}>{host?.name ?? hostname}</Title>
           )}
           {hostDetail?.hostType && (
             <Badge
@@ -394,7 +397,7 @@ export const HostPage: React.FC = () => {
                       color="red"
                       onClick={(e) => {
                         e.stopPropagation();
-                        void handleUnassign(agent.id);
+                        void handleUnassign(agent.name);
                       }}
                     >
                       <IconX size={14} />

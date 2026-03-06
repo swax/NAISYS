@@ -266,7 +266,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
           <Menu.Dropdown>
             <Menu.Item
               leftSection={<IconUser size="0.9rem" />}
-              onClick={() => navigate(`/users/${user?.id}`)}
+              onClick={() => navigate(`/users/${user?.username}`)}
             >
               My User
             </Menu.Item>

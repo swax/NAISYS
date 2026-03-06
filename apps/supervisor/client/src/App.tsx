@@ -150,7 +150,7 @@ const router = createBrowserRouter(
       </Route>
       <Route path="/hosts" element={<HostsLayout />}>
         <Route index element={<HostIndex />} />
-        <Route path=":id" element={<HostPage />} />
+        <Route path=":hostname" element={<HostPage />} />
       </Route>
       <Route path="/models" element={<ModelsLayout />}>
         <Route index element={<ModelIndex />} />
@@ -159,7 +159,7 @@ const router = createBrowserRouter(
       <Route path="/variables" element={<VariablesPage />} />
       <Route path="/admin" element={<AdminPage />} />
       <Route path="/users" element={<UserList />} />
-      <Route path="/users/:id" element={<UserDetail />} />
+      <Route path="/users/:username" element={<UserDetail />} />
       <Route path="/" element={<Navigate to="/agents" replace />} />
       <Route path="*" element={<NotFoundPage />} />
     </Route>,

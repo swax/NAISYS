@@ -36,8 +36,10 @@ export const getHostData = async (): Promise<HostListResponse> => {
   return await api.get<HostListResponse>(apiEndpoints.hosts);
 };
 
-export const deleteHost = async (id: number): Promise<AgentActionResult> => {
-  return await api.delete<AgentActionResult>(apiEndpoints.hostDelete(id));
+export const deleteHost = async (
+  hostname: string,
+): Promise<AgentActionResult> => {
+  return await api.delete<AgentActionResult>(apiEndpoints.hostDelete(hostname));
 };
 
 export const getAgentDetail = async (
@@ -178,9 +180,9 @@ export const deleteAgentPermanently = async (
 // --- Host API functions ---
 
 export const getHostDetail = async (
-  id: number,
+  hostname: string,
 ): Promise<HostDetailResponse> => {
-  return await api.get<HostDetailResponse>(apiEndpoints.hostDetail(id));
+  return await api.get<HostDetailResponse>(apiEndpoints.hostDetail(hostname));
 };
 
 export const createHostApi = async (
@@ -193,30 +195,30 @@ export const createHostApi = async (
 };
 
 export const updateHostApi = async (
-  id: number,
+  hostname: string,
   data: { name?: string; restricted?: boolean },
 ): Promise<AgentActionResult> => {
   return await api.put<
     { name?: string; restricted?: boolean },
     AgentActionResult
-  >(apiEndpoints.hostUpdate(id), data);
+  >(apiEndpoints.hostUpdate(hostname), data);
 };
 
 export const assignAgentToHost = async (
-  hostId: number,
+  hostname: string,
   agentId: number,
 ): Promise<AgentActionResult> => {
   return await api.post<{ agentId: number }, AgentActionResult>(
-    apiEndpoints.hostAssignAgent(hostId),
+    apiEndpoints.hostAssignAgent(hostname),
     { agentId },
   );
 };
 
 export const unassignAgentFromHost = async (
-  hostId: number,
-  agentId: number,
+  hostname: string,
+  agentName: string,
 ): Promise<AgentActionResult> => {
   return await api.delete<AgentActionResult>(
-    apiEndpoints.hostUnassignAgent(hostId, agentId),
+    apiEndpoints.hostUnassignAgent(hostname, agentName),
   );
 };
