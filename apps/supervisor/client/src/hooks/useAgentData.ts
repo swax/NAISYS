@@ -8,7 +8,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { getAgentData } from "../lib/apiAgents";
 import { Agent } from "../types/agent";
-import { useAgentStatusStream } from "./useAgentStatusStream";
+import { useSubscription } from "./useSubscription";
 
 // Module-level caches (shared across all hook instances and persist across remounts)
 let agentCache: Agent[] = [];
@@ -30,8 +30,6 @@ export const useAgentData = () => {
     queryKey: ["agent-data"],
     queryFn,
     enabled: true,
-    refetchInterval: 15_000,
-    refetchIntervalInBackground: false,
     refetchOnWindowFocus: true,
     retry: false,
   });
@@ -79,11 +77,11 @@ export const useAgentData = () => {
     }
   }, [query.data]);
 
-  // Handle SSE updates for fast-changing fields (online, latestLogId, latestMailId)
-  const handleSSEUpdate = useCallback(
+  // Handle WebSocket updates for fast-changing fields (status, latestLogId, latestMailId)
+  const handleStatusUpdate = useCallback(
     (event: AgentStatusEvent) => {
       // Agent list changed (create/archive/unarchive/delete) — refetch full list
-      if (event.listChanged) {
+      if (event.agentsListChanged) {
         updatedSinceCache = undefined;
         void queryClient.invalidateQueries({ queryKey: ["agent-data"] });
         return;
@@ -118,7 +116,7 @@ export const useAgentData = () => {
     [queryClient],
   );
 
-  useAgentStatusStream(handleSSEUpdate, agentCache.length > 0);
+  useSubscription<AgentStatusEvent>("agent-status", handleStatusUpdate);
 
   return {
     agents: agentCache,

@@ -15,15 +15,25 @@ export const AgentStatusEventSchema = z.object({
       latestMailId: z.number(),
     }),
   ),
-  hosts: z
-    .record(
-      z.string(),
-      z.object({
-        online: z.boolean(),
-      }),
-    )
-    .optional(),
-  listChanged: z.boolean().optional(),
+  agentsListChanged: z.boolean().optional(),
 });
 
 export type AgentStatusEvent = z.infer<typeof AgentStatusEventSchema>;
+
+export const HostStatusEventSchema = z.object({
+  hosts: z.record(
+    z.string(),
+    z.object({
+      online: z.boolean(),
+    }),
+  ),
+  hostsListChanged: z.boolean().optional(),
+});
+
+export type HostStatusEvent = z.infer<typeof HostStatusEventSchema>;
+
+export const HubStatusEventSchema = z.object({
+  hubConnected: z.boolean(),
+});
+
+export type HubStatusEvent = z.infer<typeof HubStatusEventSchema>;

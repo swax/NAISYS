@@ -1,11 +1,11 @@
 import type { HateoasAction } from "@naisys/common";
-import { AgentStatusEvent, Host as BaseHost } from "@naisys-supervisor/shared";
-import { useQuery } from "@tanstack/react-query";
+import { Host as BaseHost, HostStatusEvent } from "@naisys-supervisor/shared";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useState } from "react";
 
 import { getHostData } from "../lib/apiAgents";
 import { Host } from "../types/agent";
-import { useAgentStatusStream } from "./useAgentStatusStream";
+import { useSubscription } from "./useSubscription";
 
 // Module-level cache (shared across all hook instances and persists across remounts)
 let hostCache: Host[] = [];
@@ -14,13 +14,12 @@ let listActionsCache: HateoasAction[] | undefined;
 export const useHostData = () => {
   // Version counter to trigger re-renders when cache updates
   const [, setCacheVersion] = useState(0);
+  const queryClient = useQueryClient();
 
   const query = useQuery({
     queryKey: ["host-data"],
     queryFn: getHostData,
     enabled: true,
-    refetchInterval: 15_000,
-    refetchIntervalInBackground: false,
     refetchOnWindowFocus: true,
     retry: false,
   });
@@ -48,28 +47,35 @@ export const useHostData = () => {
     }
   }, [query.data]);
 
-  // Handle SSE updates for host online status
-  const handleSSEUpdate = useCallback((event: AgentStatusEvent) => {
-    if (!event.hosts) return;
-
-    let changed = false;
-
-    for (const host of hostCache) {
-      const update = event.hosts[String(host.id)];
-      if (!update) continue;
-
-      if (host.online !== update.online) {
-        host.online = update.online;
-        changed = true;
+  // Handle WebSocket updates for host online status and list changes
+  const handleStatusUpdate = useCallback(
+    (event: HostStatusEvent) => {
+      // Host list changed (create/update/delete/topology change) — refetch
+      if (event.hostsListChanged) {
+        void queryClient.invalidateQueries({ queryKey: ["host-data"] });
+        return;
       }
-    }
 
-    if (changed) {
-      setCacheVersion((v) => v + 1);
-    }
-  }, []);
+      let changed = false;
 
-  useAgentStatusStream(handleSSEUpdate, hostCache.length > 0);
+      for (const host of hostCache) {
+        const update = event.hosts[String(host.id)];
+        if (!update) continue;
+
+        if (host.online !== update.online) {
+          host.online = update.online;
+          changed = true;
+        }
+      }
+
+      if (changed) {
+        setCacheVersion((v) => v + 1);
+      }
+    },
+    [queryClient],
+  );
+
+  useSubscription<HostStatusEvent>("host-status", handleStatusUpdate);
 
   return {
     hosts: hostCache,
