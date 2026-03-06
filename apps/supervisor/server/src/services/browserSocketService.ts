@@ -6,6 +6,7 @@ import {
   resolveUserFromApiKey,
   resolveUserFromToken,
 } from "../auth-middleware.js";
+import { isHubConnected } from "./hubConnectionService.js";
 
 let io: SocketIOServer | null = null;
 
@@ -46,6 +47,9 @@ export function initBrowserSocket(httpServer: http.Server, isProd: boolean) {
   });
 
   io.on("connection", (socket) => {
+    // Send initial hub connection status to newly connected browser client
+    socket.emit("hub-status", { hubConnected: isHubConnected() });
+
     socket.on("subscribe", (data: { room: string }) => {
       if (typeof data?.room === "string" && isRoomAllowed(data.room)) {
         void socket.join(data.room);
@@ -71,7 +75,9 @@ function parseCookie(header: string, name: string): string | undefined {
 }
 
 const ALLOWED_ROOM_PREFIXES = [
-  "status",
+  "agent-status",
+  "host-status",
+  "hub-status",
   "runs:",
   "logs:",
   "mail:",

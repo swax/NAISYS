@@ -77,11 +77,17 @@ export function createHubHeartbeatService(
   });
 
   /** Push aggregate agent status to all connected NAISYS instances */
+  let lastPushedJson = "";
+
   function pushAgentsStatus() {
     const payload: AgentsStatus = {
       hostActiveAgents: Object.fromEntries(hostActiveAgents),
       agentNotifications: Object.fromEntries(agentNotifications),
     };
+
+    const json = JSON.stringify(payload);
+    if (json === lastPushedJson) return;
+    lastPushedJson = json;
 
     for (const connection of naisysServer.getConnectedClients()) {
       naisysServer.sendMessage(

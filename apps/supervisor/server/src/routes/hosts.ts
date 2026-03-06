@@ -22,7 +22,10 @@ import { FastifyInstance, FastifyPluginOptions } from "fastify";
 
 import { hasPermission, requirePermission } from "../auth-middleware.js";
 import { API_PREFIX, selfLink } from "../hateoas.js";
-import { isHostConnected } from "../services/agentHostStatusService.js";
+import {
+  emitHostsListChanged,
+  isHostConnected,
+} from "../services/agentHostStatusService.js";
 import {
   assignAgentToHost,
   createHost,
@@ -442,6 +445,7 @@ export default function hostsRoutes(
         await assignAgentToHost(hostname, agentId);
 
         sendUserListChanged();
+        emitHostsListChanged();
 
         return { success: true, message: "Agent assigned to host" };
       } catch (error) {
@@ -498,6 +502,7 @@ export default function hostsRoutes(
         await unassignAgentFromHost(hostname, agentName);
 
         sendUserListChanged();
+        emitHostsListChanged();
 
         return { success: true, message: "Agent unassigned from host" };
       } catch (error) {

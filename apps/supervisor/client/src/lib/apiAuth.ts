@@ -1,9 +1,4 @@
-import type {
-  AuthUser,
-  LoginResponse,
-  LogoutResponse,
-  StatusResponse,
-} from "./apiClient";
+import type { AuthUser, LoginResponse, LogoutResponse } from "./apiClient";
 import { api, apiEndpoints } from "./apiClient";
 
 export const getMe = async (): Promise<AuthUser> => {
@@ -22,8 +17,4 @@ export const login = async (
 
 export const logout = async (): Promise<LogoutResponse> => {
   return await api.post<{}, LogoutResponse>(apiEndpoints.logout, {});
-};
-
-export const getStatus = async (): Promise<StatusResponse> => {
-  return await api.get<StatusResponse>(apiEndpoints.status);
 };

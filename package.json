@@ -24,7 +24,7 @@
     "clean": "turbo clean && rm -rf .turbo",
     "build": "turbo build bundle",
     "test": "turbo test",
-    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
     "prettier": "prettier --write .",
     "publish:dryrun": "npm run clean && npm run build && npm run npm:publish:dryrun --workspaces --if-present",
     "updates:check": "npm-check-updates && npm-check-updates --workspaces",

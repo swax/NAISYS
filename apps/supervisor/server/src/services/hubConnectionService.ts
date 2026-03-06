@@ -19,7 +19,8 @@ import {
 import { io, Socket } from "socket.io-client";
 
 import {
-  emitListChanged,
+  emitAgentsListChanged,
+  emitHubConnectionStatus,
   markAgentStarted,
   markAgentStopped,
   updateAgentsStatus,
@@ -76,11 +77,13 @@ function connectSocket(hubUrl: string, hubAccessKey: string) {
     connected = true;
     console.log(`[Supervisor:HubClient] Connected to ${hubUrl}`);
     void refreshUserLookup();
+    emitHubConnectionStatus(true);
   });
 
   socket.on("disconnect", (reason) => {
     connected = false;
     console.log(`[Supervisor:HubClient] Disconnected: ${reason}`);
+    emitHubConnectionStatus(false);
   });
 
   socket.on("connect_error", (error) => {
@@ -258,7 +261,7 @@ function connectSocket(hubUrl: string, hubAccessKey: string) {
   // User list changed (hub broadcasts after create/edit/archive/delete)
   socket.on(HubEvents.USERS_UPDATED, () => {
     void refreshUserLookup();
-    emitListChanged();
+    emitAgentsListChanged();
   });
 }
 

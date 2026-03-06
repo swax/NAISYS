@@ -1,5 +1,9 @@
 import { type AgentStatus, determineAgentStatus } from "@naisys/common";
-import type { AgentStatusEvent } from "@naisys-supervisor/shared";
+import type {
+  AgentStatusEvent,
+  HostStatusEvent,
+  HubStatusEvent,
+} from "@naisys-supervisor/shared";
 
 import { getIO } from "./browserSocketService.js";
 
@@ -15,12 +19,20 @@ const hostRestrictedStatus = new Map<number, boolean>();
 const hostTypeStatus = new Map<number, string>();
 const agentHostAssignments = new Map<number, number[]>();
 
-function broadcastStatus(event: AgentStatusEvent) {
+function broadcast<T>(room: string, event: T) {
   try {
-    getIO().to("status").emit("status", event);
+    getIO().to(room).emit(room, event);
   } catch {
     // Socket.IO not yet initialized during startup — safe to ignore
   }
+}
+
+function broadcastAgentStatus(event: AgentStatusEvent) {
+  broadcast("agent-status", event);
+}
+
+function broadcastHostStatus(event: HostStatusEvent) {
+  broadcast("host-status", event);
 }
 
 // --- Mutation functions (called by hubConnectionService event handlers) ---
@@ -44,7 +56,7 @@ export function updateAgentsStatus(
     }
   }
 
-  broadcastStatus(getAgentStatusSnapshot());
+  broadcastAgentStatus(getAgentSnapshot());
 }
 
 export function updateHostsStatus(
@@ -55,6 +67,13 @@ export function updateHostsStatus(
     hostType: string;
   }[],
 ): void {
+  // Detect if the set of host IDs changed
+  const newHostIds = new Set(hosts.map((h) => h.hostId));
+  const prevHostIds = new Set(hostOnlineStatus.keys());
+  const hostSetChanged =
+    newHostIds.size !== prevHostIds.size ||
+    [...newHostIds].some((id) => !prevHostIds.has(id));
+
   hostOnlineStatus.clear();
   hostRestrictedStatus.clear();
   hostTypeStatus.clear();
@@ -68,24 +87,43 @@ export function updateHostsStatus(
     }
   }
 
-  broadcastStatus(getAgentStatusSnapshot());
+  // Host topology changes can affect agent statuses (available/offline)
+  broadcastAgentStatus(getAgentSnapshot());
+
+  const hostEvent = getHostSnapshot();
+  if (hostSetChanged) {
+    hostEvent.hostsListChanged = true;
+  }
+  broadcastHostStatus(hostEvent);
 }
 
 export function markAgentStarted(userId: number): void {
   activeAgentIds.add(userId);
-  broadcastStatus(getAgentStatusSnapshot());
+  broadcastAgentStatus(getAgentSnapshot());
 }
 
 export function markAgentStopped(userId: number): void {
   activeAgentIds.delete(userId);
-  broadcastStatus(getAgentStatusSnapshot());
+  broadcastAgentStatus(getAgentSnapshot());
 }
 
-export function emitListChanged(): void {
-  broadcastStatus({
-    ...getAgentStatusSnapshot(),
-    listChanged: true,
+export function emitAgentsListChanged(): void {
+  broadcastAgentStatus({
+    ...getAgentSnapshot(),
+    agentsListChanged: true,
   });
+}
+
+export function emitHostsListChanged(): void {
+  broadcastHostStatus({
+    ...getHostSnapshot(),
+    hostsListChanged: true,
+  });
+}
+
+export function emitHubConnectionStatus(connected: boolean): void {
+  const event: HubStatusEvent = { hubConnected: connected };
+  broadcast("hub-status", event);
 }
 
 // --- Agent host assignment cache ---
@@ -145,7 +183,7 @@ export function isHostConnected(hostId: number): boolean {
 }
 
 /** Build a snapshot of all agent statuses from current state */
-function getAgentStatusSnapshot(): AgentStatusEvent {
+function getAgentSnapshot(): AgentStatusEvent {
   const agents: AgentStatusEvent["agents"] = {};
 
   // Include all agents we know about from notifications
@@ -168,10 +206,14 @@ function getAgentStatusSnapshot(): AgentStatusEvent {
     }
   }
 
-  const hosts: NonNullable<AgentStatusEvent["hosts"]> = {};
+  return { agents };
+}
+
+/** Build a snapshot of all host online statuses from current state */
+function getHostSnapshot(): HostStatusEvent {
+  const hosts: HostStatusEvent["hosts"] = {};
   for (const [hostId, online] of hostOnlineStatus) {
     hosts[String(hostId)] = { online };
   }
-
-  return { agents, hosts };
+  return { hosts };
 }
