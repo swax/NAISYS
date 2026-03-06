@@ -1,3 +1,4 @@
+import { assertUrlSafeKey } from "@naisys/common";
 import { hashToken } from "@naisys/common-node";
 import type { Permission } from "@naisys/supervisor-database";
 import { updateUserPassword } from "@naisys/supervisor-database";
@@ -27,6 +28,7 @@ export async function getUserByUuid(uuid: string) {
 }
 
 export async function createUser(username: string, uuid: string) {
+  assertUrlSafeKey(username, "Username");
   return supervisorDb.user.create({
     data: { username, uuid, isAgent: true },
     include: { permissions: true },
@@ -69,6 +71,7 @@ export async function createUserWithPassword(data: {
   password: string;
   isAgent?: boolean;
 }) {
+  assertUrlSafeKey(data.username, "Username");
   const passwordHash = await bcrypt.hash(data.password, SALT_ROUNDS);
   const uuid = randomUUID();
   const user = await supervisorDb.user.create({
@@ -88,7 +91,10 @@ export async function updateUser(
   data: { username?: string; password?: string },
 ) {
   const updateData: Record<string, unknown> = {};
-  if (data.username !== undefined) updateData.username = data.username;
+  if (data.username !== undefined) {
+    assertUrlSafeKey(data.username, "Username");
+    updateData.username = data.username;
+  }
 
   const updated = await supervisorDb.user.update({
     where: { id },

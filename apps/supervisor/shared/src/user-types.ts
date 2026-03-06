@@ -1,3 +1,4 @@
+import { URL_SAFE_KEY_MESSAGE, URL_SAFE_KEY_REGEX } from "@naisys/common";
 import { z } from "zod";
 
 export const PermissionEnum = z.enum([
@@ -10,9 +11,15 @@ export const PermissionEnum = z.enum([
 ]);
 export type Permission = z.infer<typeof PermissionEnum>;
 
+const urlSafeUsername = z
+  .string()
+  .min(1)
+  .max(64)
+  .regex(URL_SAFE_KEY_REGEX, URL_SAFE_KEY_MESSAGE);
+
 export const CreateUserSchema = z
   .object({
-    username: z.string().min(1).max(64),
+    username: urlSafeUsername,
     password: z.string().min(6),
     isAgent: z.boolean().optional(),
   })
@@ -22,7 +29,7 @@ export type CreateUser = z.infer<typeof CreateUserSchema>;
 
 export const UpdateUserSchema = z
   .object({
-    username: z.string().min(1).max(64).optional(),
+    username: urlSafeUsername.optional(),
     password: z.string().min(6).optional(),
   })
   .strict();

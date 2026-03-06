@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { URL_SAFE_KEY_MESSAGE, URL_SAFE_KEY_REGEX } from "./urlSafeKey.js";
+
 export const commandProtectionValues = ["none", "manual", "auto"] as const;
 
 // Zod schema for validation
@@ -7,6 +9,7 @@ export const AgentConfigFileSchema = z.object({
   username: z
     .string()
     .min(1, "Username is required")
+    .regex(URL_SAFE_KEY_REGEX, URL_SAFE_KEY_MESSAGE)
     .describe(
       "The name the agent identifies itself with when communicating with other agents",
     ),

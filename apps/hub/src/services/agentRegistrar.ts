@@ -1,4 +1,4 @@
-import { UserEntry } from "@naisys/common";
+import { toUrlSafeKey, UserEntry } from "@naisys/common";
 import { loadAgentConfigs } from "@naisys/common-node";
 import {
   type HubDatabaseService,
@@ -37,12 +37,14 @@ async function seedUsersToDatabase(
   const loaderIdToDbId = new Map<number, number>();
 
   for (const user of users.values()) {
+    const safeUsername = toUrlSafeKey(user.username);
+
     const dbUser = await hubDb.users.create({
       data: {
         uuid: randomUUID(),
-        username: user.username,
+        username: safeUsername,
         title: user.config.title,
-        config: JSON.stringify(user.config),
+        config: JSON.stringify({ ...user.config, username: safeUsername }),
         api_key: randomBytes(32).toString("hex"),
       },
     });

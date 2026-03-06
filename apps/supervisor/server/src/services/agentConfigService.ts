@@ -1,6 +1,7 @@
 import {
   AgentConfigFile,
   AgentConfigFileSchema,
+  assertUrlSafeKey,
   buildDefaultAgentConfig,
 } from "@naisys/common";
 import { randomBytes } from "crypto";
@@ -32,6 +33,8 @@ async function updateUserNotificationModifiedDate(
 export async function createAgentConfig(
   name: string,
 ): Promise<{ id: number; config: AgentConfigFile }> {
+  assertUrlSafeKey(name, "Agent name");
+
   // Check db if username already exists
   const existingAgent = await hubDb.users.findFirst({
     where: {

@@ -2,6 +2,8 @@ import {
   AgentConfigFileSchema,
   HateoasActionSchema,
   HateoasLinkSchema,
+  URL_SAFE_KEY_MESSAGE,
+  URL_SAFE_KEY_REGEX,
 } from "@naisys/common";
 import { z } from "zod";
 
@@ -9,7 +11,11 @@ import { z } from "zod";
 
 export const CreateAgentConfigRequestSchema = z
   .object({
-    name: z.string().min(1).max(100),
+    name: z
+      .string()
+      .min(1)
+      .max(100)
+      .regex(URL_SAFE_KEY_REGEX, URL_SAFE_KEY_MESSAGE),
   })
   .strict();
 
