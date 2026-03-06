@@ -1,3 +1,4 @@
+import { assertUrlSafeKey } from "@naisys/common";
 import type { Host, HostDetailResponse } from "@naisys-supervisor/shared";
 
 import { hubDb } from "../database/hubDb.js";
@@ -79,11 +80,7 @@ export async function getHostDetail(
 }
 
 export async function createHost(name: string): Promise<{ id: number }> {
-  if (!/^[a-zA-Z0-9_-]+$/.test(name)) {
-    throw new Error(
-      "Host name must contain only alphanumeric characters, hyphens, and underscores",
-    );
-  }
+  assertUrlSafeKey(name, "Host name");
 
   const existing = await hubDb.hosts.findUnique({ where: { name } });
   if (existing) {
@@ -107,11 +104,7 @@ export async function updateHost(
   }
 
   if (data.name && data.name !== host.name) {
-    if (!/^[a-zA-Z0-9_-]+$/.test(data.name)) {
-      throw new Error(
-        "Host name must contain only alphanumeric characters, hyphens, and underscores",
-      );
-    }
+    assertUrlSafeKey(data.name, "Host name");
 
     const existing = await hubDb.hosts.findUnique({
       where: { name: data.name },

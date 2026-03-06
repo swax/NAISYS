@@ -1,3 +1,4 @@
+import { toUrlSafeKey } from "@naisys/common";
 import type { HubDatabaseService } from "@naisys/hub-database";
 
 export async function createHostRegistrar({ hubDb }: HubDatabaseService) {
@@ -28,6 +29,8 @@ export async function createHostRegistrar({ hubDb }: HubDatabaseService) {
     hostName: string,
     hostType: string,
   ): Promise<number> {
+    hostName = toUrlSafeKey(hostName);
+
     const existing = await hubDb.hosts.findUnique({
       where: { name: hostName },
     });

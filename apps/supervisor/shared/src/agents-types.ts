@@ -1,4 +1,9 @@
-import { AgentConfigFileSchema, HateoasActionSchema } from "@naisys/common";
+import {
+  AgentConfigFileSchema,
+  HateoasActionSchema,
+  URL_SAFE_KEY_MESSAGE,
+  URL_SAFE_KEY_REGEX,
+} from "@naisys/common";
 import { z } from "zod";
 
 const LinkSchema = z.object({
@@ -154,7 +159,12 @@ export type HostDetailResponse = z.infer<typeof HostDetailResponseSchema>;
 
 export const UpdateHostRequestSchema = z
   .object({
-    name: z.string().min(1).max(64).optional(),
+    name: z
+      .string()
+      .min(1)
+      .max(64)
+      .regex(URL_SAFE_KEY_REGEX, URL_SAFE_KEY_MESSAGE)
+      .optional(),
     restricted: z.boolean().optional(),
   })
   .strict();
@@ -162,7 +172,11 @@ export type UpdateHostRequest = z.infer<typeof UpdateHostRequestSchema>;
 
 export const CreateHostRequestSchema = z
   .object({
-    name: z.string().min(1).max(64),
+    name: z
+      .string()
+      .min(1)
+      .max(64)
+      .regex(URL_SAFE_KEY_REGEX, URL_SAFE_KEY_MESSAGE),
   })
   .strict();
 export type CreateHostRequest = z.infer<typeof CreateHostRequestSchema>;
