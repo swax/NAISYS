@@ -1,8 +1,11 @@
+import type { LogPushEntry } from "@naisys/hub-protocol";
 import { useQuery } from "@tanstack/react-query";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { useAgentDataContext } from "../contexts/AgentDataContext";
 import { LogEntry } from "../lib/apiClient";
 import { ContextLogParams, getContextLog } from "../lib/apiRuns";
+import { useSubscription } from "./useSubscription";
 
 // Module-level caches (shared across all hook instances and persist across remounts)
 const logsCache = new Map<string, LogEntry[]>();
@@ -15,10 +18,66 @@ export const useContextLog = (
   enabled: boolean = true,
   isOnline: boolean = false,
 ) => {
+  const { agents } = useAgentDataContext();
+  const userLookup = useMemo(
+    () => new Map(agents.map((a) => [a.id, a.name])),
+    [agents],
+  );
+
   // Create a unique key for this session
   const sessionKey = `${agentId}-${runId}-${sessionId}`;
   // Version counter to trigger re-renders when cache updates
   const [, setCacheVersion] = useState(0);
+
+  const mergeLogs = useCallback(
+    (newLogs: LogEntry[]) => {
+      if (newLogs.length === 0) return;
+
+      const existingLogs = logsCache.get(sessionKey) || [];
+
+      const logsMap = new Map(
+        existingLogs.map((log: LogEntry) => [log.id, log]),
+      );
+
+      newLogs.forEach((log) => {
+        logsMap.set(log.id, log);
+      });
+
+      const sortedLogs = Array.from(logsMap.values()).sort(
+        (a, b) => a.id - b.id,
+      );
+
+      logsCache.set(sessionKey, sortedLogs);
+
+      if (sortedLogs.length > 0) {
+        const maxLogId = sortedLogs[sortedLogs.length - 1].id;
+        logsAfterCache.set(sessionKey, maxLogId);
+      }
+
+      setCacheVersion((v) => v + 1);
+    },
+    [sessionKey],
+  );
+
+  // Handle push entries: resolve userId to username from agent context
+  const handlePushEntries = useCallback(
+    (entries: LogPushEntry[]) => {
+      const logs: LogEntry[] = entries.map((e) => ({
+        id: e.id,
+        username: userLookup.get(e.userId) ?? String(e.userId),
+        role: e.role as LogEntry["role"],
+        source: e.source as LogEntry["source"],
+        type: e.type as LogEntry["type"],
+        message: e.message,
+        createdAt: e.createdAt,
+        attachment: e.attachmentId
+          ? { id: e.attachmentId, filename: "", fileSize: 0 }
+          : undefined,
+      }));
+      mergeLogs(logs);
+    },
+    [mergeLogs, userLookup],
+  );
 
   const queryFn = useCallback(
     async ({ queryKey }: any) => {
@@ -40,52 +99,28 @@ export const useContextLog = (
     queryKey: ["context-log", sessionKey],
     queryFn,
     enabled: enabled && !!agentId,
-    refetchInterval: isOnline ? 5000 : false, // Only poll if online
+    refetchInterval: false,
     refetchIntervalInBackground: false,
-    refetchOnWindowFocus: true,
-    refetchOnMount: "always", // Immediate update when agentId changes
+    refetchOnWindowFocus: !isOnline,
+    refetchOnMount: "always",
     retry: 3,
     retryDelay: 1000,
   });
 
-  // Merge new data when it arrives
+  // Merge REST data when it arrives
   useEffect(() => {
     if (query.data?.success && query.data.data) {
-      const newLogs = query.data.data.logs;
-
-      const existingLogs = logsCache.get(sessionKey) || [];
-
-      // Create a map of existing logs for quick lookup
-      const logsMap = new Map(
-        existingLogs.map((log: LogEntry) => [log.id, log]),
-      );
-
-      // Update existing logs and add new ones
-      newLogs.forEach((log) => {
-        logsMap.set(log.id, log);
-      });
-
-      const mergedLogs = Array.from(logsMap.values());
-
-      // Sort once when updating cache (ascending - oldest first)
-      const sortedLogs = mergedLogs.sort((a, b) => a.id - b.id);
-
-      // Update cache with sorted logs
-      logsCache.set(sessionKey, sortedLogs);
-
-      // Update logsAfter with the highest log ID we've seen
-      if (sortedLogs.length > 0) {
-        const maxLogId = sortedLogs.reduce(
-          (max, log) => (log.id > max ? log.id : max),
-          sortedLogs[0].id,
-        );
-        logsAfterCache.set(sessionKey, maxLogId);
-      }
-
-      // Trigger re-render
-      setCacheVersion((v) => v + 1);
+      mergeLogs(query.data.data.logs);
     }
-  }, [query.data, sessionKey]);
+  }, [query.data, mergeLogs]);
+
+  // WebSocket subscription for real-time log updates when online
+  useSubscription<LogPushEntry[]>(
+    isOnline && enabled && agentId
+      ? `logs:${agentId}:${runId}:${sessionId}`
+      : null,
+    handlePushEntries,
+  );
 
   // Get current logs from cache (already sorted)
   const logs = logsCache.get(sessionKey) || [];

@@ -33,6 +33,19 @@ export const HubEvents = {
   AGENTS_STATUS: "agents_status",
 
   // ---------------------------------------------------------------------------
+  // Hub -> Supervisor push (targeted to supervisor connections only)
+  // ---------------------------------------------------------------------------
+
+  /** Full-data log push with entries and session deltas */
+  LOG_PUSH: "log_push",
+  /** Full-data mail/chat push with message data */
+  MAIL_PUSH: "mail_push",
+  /** Cost delta push per session */
+  COST_PUSH: "cost_push",
+  /** New session push with full RunSession data */
+  SESSION_PUSH: "session_push",
+
+  // ---------------------------------------------------------------------------
   // Hub -> NAISYS push (targeted to specific host)
   // ---------------------------------------------------------------------------
 

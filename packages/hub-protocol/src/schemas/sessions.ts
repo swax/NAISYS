@@ -1,5 +1,21 @@
 import { z } from "zod";
 
+/** Full session data pushed from hub to supervisor after creation */
+export const SessionPushSchema = z.object({
+  session: z.object({
+    userId: z.number(),
+    runId: z.number(),
+    sessionId: z.number(),
+    modelName: z.string(),
+    createdAt: z.string(),
+    lastActive: z.string(),
+    latestLogId: z.number(),
+    totalLines: z.number(),
+    totalCost: z.number(),
+  }),
+});
+export type SessionPush = z.infer<typeof SessionPushSchema>;
+
 /** Request to create a new run session */
 export const SessionCreateRequestSchema = z.object({
   userId: z.number(),

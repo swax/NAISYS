@@ -15,10 +15,14 @@ import type {
   AgentStopResponse,
 } from "./schemas/agents.js";
 import type { ConfigResponse } from "./schemas/config.js";
-import type { CostControl, CostWriteRequest } from "./schemas/costs.js";
+import type {
+  CostControl,
+  CostPush,
+  CostWriteRequest,
+} from "./schemas/costs.js";
 import type { AgentsStatus, Heartbeat } from "./schemas/heartbeat.js";
 import type { HostList } from "./schemas/hosts.js";
-import type { LogWriteRequest } from "./schemas/logs.js";
+import type { LogPush, LogWriteRequest } from "./schemas/logs.js";
 import type {
   MailArchiveRequest,
   MailArchiveResponse,
@@ -28,6 +32,8 @@ import type {
   MailMarkReadResponse,
   MailPeekRequest,
   MailPeekResponse,
+  MailPush,
+  MailReceivedPush,
   MailSearchRequest,
   MailSearchResponse,
   MailSendRequest,
@@ -35,13 +41,13 @@ import type {
   MailUnreadRequest,
   MailUnreadResponse,
 } from "./schemas/mail.js";
-import type { MailReceivedPush } from "./schemas/mail.js";
 import type { ModelsResponse } from "./schemas/models.js";
 import type {
   SessionCreateRequest,
   SessionCreateResponse,
   SessionIncrementRequest,
   SessionIncrementResponse,
+  SessionPush,
 } from "./schemas/sessions.js";
 import type { UserListResponse } from "./schemas/users.js";
 
@@ -128,6 +134,18 @@ export interface HubPushEvents {
 }
 
 // ---------------------------------------------------------------------------
+// Supervisor-only push events (Hub → Supervisor, no ack)
+// ---------------------------------------------------------------------------
+
+/** Events pushed from Hub to Supervisor connections only */
+export interface HubSupervisorPushEvents {
+  [HubEvents.LOG_PUSH]: LogPush;
+  [HubEvents.MAIL_PUSH]: MailPush;
+  [HubEvents.COST_PUSH]: CostPush;
+  [HubEvents.SESSION_PUSH]: SessionPush;
+}
+
+// ---------------------------------------------------------------------------
 // Trigger events (Supervisor → Hub, no payload, triggers broadcast)
 // ---------------------------------------------------------------------------
 
@@ -146,6 +164,7 @@ export interface HubTriggerEvents {
 export type HubRequestEventName = keyof HubRequestEvents;
 export type HubFireAndForgetEventName = keyof HubFireAndForgetEvents;
 export type HubPushEventName = keyof HubPushEvents;
+export type HubSupervisorPushEventName = keyof HubSupervisorPushEvents;
 export type HubTriggerEventName = keyof HubTriggerEvents;
 
 // ---------------------------------------------------------------------------
@@ -155,6 +174,8 @@ export type HubTriggerEventName = keyof HubTriggerEvents;
 /** Events the supervisor listens for (hub → supervisor push events) */
 export type SupervisorListenEvents = {
   [E in HubPushEventName]: (data: HubPushEvents[E]) => void;
+} & {
+  [E in HubSupervisorPushEventName]: (data: HubSupervisorPushEvents[E]) => void;
 };
 
 /** Events the supervisor emits (supervisor → hub) */

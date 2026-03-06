@@ -1,7 +1,7 @@
-import { EventEmitter } from "node:events";
-
 import { type AgentStatus, determineAgentStatus } from "@naisys/common";
 import type { AgentStatusEvent } from "@naisys-supervisor/shared";
+
+import { getIO } from "./browserSocketService.js";
 
 const activeAgentIds = new Set<number>();
 const costSuspendedAgentIds = new Set<number>();
@@ -15,7 +15,13 @@ const hostRestrictedStatus = new Map<number, boolean>();
 const hostTypeStatus = new Map<number, string>();
 const agentHostAssignments = new Map<number, number[]>();
 
-const statusEmitter = new EventEmitter();
+function broadcastStatus(event: AgentStatusEvent) {
+  try {
+    getIO().to("status").emit("status", event);
+  } catch {
+    // Socket.IO not yet initialized during startup — safe to ignore
+  }
+}
 
 // --- Mutation functions (called by hubConnectionService event handlers) ---
 
@@ -38,7 +44,7 @@ export function updateAgentsStatus(
     }
   }
 
-  statusEmitter.emit("agentStatusUpdate", getAgentStatusSnapshot());
+  broadcastStatus(getAgentStatusSnapshot());
 }
 
 export function updateHostsStatus(
@@ -62,21 +68,21 @@ export function updateHostsStatus(
     }
   }
 
-  statusEmitter.emit("agentStatusUpdate", getAgentStatusSnapshot());
+  broadcastStatus(getAgentStatusSnapshot());
 }
 
 export function markAgentStarted(userId: number): void {
   activeAgentIds.add(userId);
-  statusEmitter.emit("agentStatusUpdate", getAgentStatusSnapshot());
+  broadcastStatus(getAgentStatusSnapshot());
 }
 
 export function markAgentStopped(userId: number): void {
   activeAgentIds.delete(userId);
-  statusEmitter.emit("agentStatusUpdate", getAgentStatusSnapshot());
+  broadcastStatus(getAgentStatusSnapshot());
 }
 
 export function emitListChanged(): void {
-  statusEmitter.emit("agentStatusUpdate", {
+  broadcastStatus({
     ...getAgentStatusSnapshot(),
     listChanged: true,
   });
@@ -139,7 +145,7 @@ export function isHostConnected(hostId: number): boolean {
 }
 
 /** Build a snapshot of all agent statuses from current state */
-export function getAgentStatusSnapshot(): AgentStatusEvent {
+function getAgentStatusSnapshot(): AgentStatusEvent {
   const agents: AgentStatusEvent["agents"] = {};
 
   // Include all agents we know about from notifications
@@ -168,14 +174,4 @@ export function getAgentStatusSnapshot(): AgentStatusEvent {
   }
 
   return { agents, hosts };
-}
-
-/** Subscribe to agent status updates. Returns an unsubscribe function. */
-export function onAgentStatusUpdate(
-  listener: (event: AgentStatusEvent) => void,
-): () => void {
-  statusEmitter.on("agentStatusUpdate", listener);
-  return () => {
-    statusEmitter.off("agentStatusUpdate", listener);
-  };
 }

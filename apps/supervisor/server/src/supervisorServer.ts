@@ -30,6 +30,7 @@ import { fileURLToPath } from "url";
 
 import { initLogger } from "./logger.js";
 import apiRoutes from "./routes/api.js";
+import { initBrowserSocket } from "./services/browserSocketService.js";
 import { initHubConnection } from "./services/hubConnectionService.js";
 import {
   createUser,
@@ -246,6 +247,7 @@ export const startServer: StartServer = async (
     while (attempts < maxAttempts) {
       try {
         await fastify.listen({ port, host });
+        initBrowserSocket(fastify.server, isProd);
         console.log(
           `[Supervisor] Running on http://${host}:${port}/supervisor, logs written to file`,
         );

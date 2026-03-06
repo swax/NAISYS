@@ -51,6 +51,64 @@ async function buildSupervisorUser(
   return { id, username, uuid, permissions };
 }
 
+export async function resolveUserFromToken(
+  token: string,
+): Promise<SupervisorUser | null> {
+  const tokenHash = hashToken(token);
+  const cacheKey = `cookie:${tokenHash}`;
+  const cached = authCache.get(cacheKey);
+
+  if (cached !== undefined) return cached;
+
+  const session = await findSession(tokenHash);
+  if (!session) {
+    authCache.set(cacheKey, null);
+    return null;
+  }
+
+  let localUser = await getUserByUuid(session.uuid);
+  if (!localUser) {
+    localUser = await createUser(session.username, session.uuid);
+  }
+
+  const user = await buildSupervisorUser(
+    localUser.id,
+    localUser.username,
+    localUser.uuid,
+  );
+  authCache.set(cacheKey, user);
+  return user;
+}
+
+export async function resolveUserFromApiKey(
+  apiKey: string,
+): Promise<SupervisorUser | null> {
+  const apiKeyHash = hashToken(apiKey);
+  const cacheKey = `apikey:${apiKeyHash}`;
+  const cached = authCache.get(cacheKey);
+
+  if (cached !== undefined) return cached;
+
+  const agent = await findAgentByApiKey(apiKey);
+  if (!agent) {
+    authCache.set(cacheKey, null);
+    return null;
+  }
+
+  let localUser = await getUserByUuid(agent.uuid);
+  if (!localUser) {
+    localUser = await createUser(agent.username, agent.uuid);
+  }
+
+  const user = await buildSupervisorUser(
+    localUser.id,
+    localUser.username,
+    localUser.uuid,
+  );
+  authCache.set(cacheKey, user);
+  return user;
+}
+
 export function registerAuthMiddleware(fastify: FastifyInstance) {
   const publicRead = process.env.PUBLIC_READ === "true";
 
@@ -60,62 +118,16 @@ export function registerAuthMiddleware(fastify: FastifyInstance) {
     const token = request.cookies?.[COOKIE_NAME];
 
     if (token) {
-      const tokenHash = hashToken(token);
-      const cacheKey = `cookie:${tokenHash}`;
-      const cached = authCache.get(cacheKey);
-
-      if (cached !== undefined) {
-        // Cache hit (valid or negative)
-        if (cached) request.supervisorUser = cached;
-      } else {
-        // Supervisor DB is source of truth for sessions
-        const session = await findSession(tokenHash);
-        if (session) {
-          let localUser = await getUserByUuid(session.uuid);
-          if (!localUser) {
-            localUser = await createUser(session.username, session.uuid);
-          }
-          const user = await buildSupervisorUser(
-            localUser.id,
-            localUser.username,
-            localUser.uuid,
-          );
-          authCache.set(cacheKey, user);
-          request.supervisorUser = user;
-        } else {
-          authCache.set(cacheKey, null);
-        }
-      }
+      const user = await resolveUserFromToken(token);
+      if (user) request.supervisorUser = user;
     }
 
     // API key auth (for agents / machine-to-machine)
     if (!request.supervisorUser) {
       const apiKey = request.headers["x-api-key"] as string | undefined;
       if (apiKey) {
-        const apiKeyHash = hashToken(apiKey);
-        const cacheKey = `apikey:${apiKeyHash}`;
-        const cached = authCache.get(cacheKey);
-
-        if (cached !== undefined) {
-          if (cached) request.supervisorUser = cached;
-        } else {
-          const agent = await findAgentByApiKey(apiKey);
-          if (agent) {
-            let localUser = await getUserByUuid(agent.uuid);
-            if (!localUser) {
-              localUser = await createUser(agent.username, agent.uuid);
-            }
-            const user = await buildSupervisorUser(
-              localUser.id,
-              localUser.username,
-              localUser.uuid,
-            );
-            authCache.set(cacheKey, user);
-            request.supervisorUser = user;
-          } else {
-            authCache.set(cacheKey, null);
-          }
-        }
+        const user = await resolveUserFromApiKey(apiKey);
+        if (user) request.supervisorUser = user;
       }
     }
 

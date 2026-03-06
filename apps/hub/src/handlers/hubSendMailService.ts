@@ -1,5 +1,9 @@
 import type { HubDatabaseService } from "@naisys/hub-database";
-import { HubEvents, MailReceivedPush } from "@naisys/hub-protocol";
+import {
+  HubEvents,
+  type MailPush,
+  MailReceivedPush,
+} from "@naisys/hub-protocol";
 
 import { NaisysServer } from "../services/naisysServer.js";
 import { HubHeartbeatService } from "./hubHeartbeatService.js";
@@ -112,6 +116,27 @@ export function createHubSendMailService(
           payload,
         );
       }
+    }
+
+    // Push full message data to supervisor connections
+    const mailPush: MailPush = {
+      recipientUserIds: params.recipientUserIds,
+      fromUserId: params.fromUserId,
+      kind: params.kind as MailPush["kind"],
+      messageId: message.id,
+      subject: params.subject,
+      body: params.body,
+      createdAt: now.toISOString(),
+      participantIds,
+      attachmentIds: params.attachmentIds,
+    };
+    for (const connection of naisysServer.getConnectedClients()) {
+      if (connection.getHostType() !== "supervisor") continue;
+      naisysServer.sendMessage(
+        connection.getHostId(),
+        HubEvents.MAIL_PUSH,
+        mailPush,
+      );
     }
   }
 

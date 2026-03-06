@@ -5,10 +5,6 @@ import {
 } from "@naisys-supervisor/shared";
 import { FastifyInstance, FastifyPluginOptions } from "fastify";
 
-import {
-  getAgentStatusSnapshot,
-  onAgentStatusUpdate,
-} from "../services/agentHostStatusService.js";
 import { isHubConnected } from "../services/hubConnectionService.js";
 
 export default function statusRoutes(
@@ -32,38 +28,6 @@ export default function statusRoutes(
       return {
         hubConnected: isHubConnected(),
       };
-    },
-  );
-
-  fastify.get(
-    "/status/stream",
-    { schema: { hide: true } },
-    async (request, reply) => {
-      reply.raw.writeHead(200, {
-        "Content-Type": "text/event-stream",
-        "Cache-Control": "no-cache",
-        Connection: "keep-alive",
-      });
-
-      // Send initial snapshot
-      const snapshot = getAgentStatusSnapshot();
-      reply.raw.write(`data: ${JSON.stringify(snapshot)}\n\n`);
-
-      // Subscribe to updates
-      const unsubscribe = onAgentStatusUpdate((event) => {
-        reply.raw.write(`data: ${JSON.stringify(event)}\n\n`);
-      });
-
-      // 30s keepalive to prevent proxy timeouts
-      const keepalive = setInterval(() => {
-        reply.raw.write(": keepalive\n\n");
-      }, 30_000);
-
-      // Cleanup on client disconnect
-      request.raw.on("close", () => {
-        unsubscribe();
-        clearInterval(keepalive);
-      });
     },
   );
 }

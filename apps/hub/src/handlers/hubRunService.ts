@@ -14,6 +14,32 @@ export function createHubRunService(
   { hubDb }: HubDatabaseService,
   logService: HubServerLog,
 ) {
+  function pushSessionToSupervisors(session: {
+    userId: number;
+    runId: number;
+    sessionId: number;
+    modelName: string;
+    createdAt: string;
+    lastActive: string;
+  }) {
+    const payload = {
+      session: {
+        ...session,
+        latestLogId: 0,
+        totalLines: 0,
+        totalCost: 0,
+      },
+    };
+    for (const connection of naisysServer.getConnectedClients()) {
+      if (connection.getHostType() !== "supervisor") continue;
+      naisysServer.sendMessage(
+        connection.getHostId(),
+        HubEvents.SESSION_PUSH,
+        payload,
+      );
+    }
+  }
+
   naisysServer.registerEvent(
     HubEvents.SESSION_CREATE,
     async (hostId, data, ack) => {
@@ -28,6 +54,7 @@ export function createHubRunService(
 
         const newRunId = lastRun ? lastRun.run_id + 1 : 1;
         const newSessionId = 1;
+        const now = new Date().toISOString();
 
         await hubDb.run_session.create({
           data: {
@@ -36,8 +63,8 @@ export function createHubRunService(
             session_id: newSessionId,
             host_id: hostId,
             model_name: parsed.modelName,
-            created_at: new Date().toISOString(),
-            last_active: new Date().toISOString(),
+            created_at: now,
+            last_active: now,
           },
         });
 
@@ -45,6 +72,15 @@ export function createHubRunService(
           success: true,
           runId: newRunId,
           sessionId: newSessionId,
+        });
+
+        pushSessionToSupervisors({
+          userId: parsed.userId,
+          runId: newRunId,
+          sessionId: newSessionId,
+          modelName: parsed.modelName,
+          createdAt: now,
+          lastActive: now,
         });
       } catch (error) {
         logService.error(
@@ -72,6 +108,7 @@ export function createHubRunService(
         });
 
         const newSessionId = lastSession ? lastSession.session_id + 1 : 1;
+        const now = new Date().toISOString();
 
         await hubDb.run_session.create({
           data: {
@@ -80,12 +117,21 @@ export function createHubRunService(
             session_id: newSessionId,
             host_id: hostId,
             model_name: parsed.modelName,
-            created_at: new Date().toISOString(),
-            last_active: new Date().toISOString(),
+            created_at: now,
+            last_active: now,
           },
         });
 
         ack({ success: true, sessionId: newSessionId });
+
+        pushSessionToSupervisors({
+          userId: parsed.userId,
+          runId: parsed.runId,
+          sessionId: newSessionId,
+          modelName: parsed.modelName,
+          createdAt: now,
+          lastActive: now,
+        });
       } catch (error) {
         logService.error(
           `[Hub:Runs] session_increment error for host ${hostId}: ${error}`,
