@@ -2,11 +2,10 @@ import type { HateoasAction } from "@naisys/common";
 import { useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import type { MailPush } from "@naisys/hub-protocol";
-
 import { useAgentDataContext } from "../contexts/AgentDataContext";
 import { ChatMessagesParams, getChatMessages } from "../lib/apiChat";
 import type { ChatMessage } from "../lib/apiClient";
+import { mergeIntoCache, MessageRoomEvent } from "./messageCacheUtils";
 import { useSubscription } from "./useSubscription";
 
 // Module-level caches (persist across remounts)
@@ -30,53 +29,58 @@ export const useChatMessages = (
 
   const mergeMessages = useCallback(
     (newMessages: ChatMessage[], total?: number) => {
-      if (newMessages.length === 0 && total === undefined) return;
-
-      const existing = messagesCache.get(cacheKey) || [];
-      const mergeMap = new Map(existing.map((m) => [m.id, m]));
-
-      const existingCount = mergeMap.size;
-      for (const msg of newMessages) {
-        mergeMap.set(msg.id, msg);
+      if (
+        mergeIntoCache(
+          cacheKey,
+          newMessages,
+          total,
+          messagesCache,
+          totalCache,
+          updatedSinceCache,
+          false,
+        )
+      ) {
+        setCacheVersion((v) => v + 1);
       }
-
-      const merged = Array.from(mergeMap.values());
-      const newCount = merged.length - existingCount;
-
-      // Sort chronologically (oldest first for chat)
-      merged.sort(
-        (a, b) =>
-          new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
-      );
-
-      messagesCache.set(cacheKey, merged);
-
-      if (total !== undefined) {
-        totalCache.set(cacheKey, total);
-      } else if (newCount > 0) {
-        const currentTotal = totalCache.get(cacheKey) || 0;
-        totalCache.set(cacheKey, currentTotal + newCount);
-      }
-
-      updatedSinceCache.set(cacheKey, new Date().toISOString());
-      setCacheVersion((v) => v + 1);
     },
     [cacheKey],
   );
 
   const handleChatPush = useCallback(
-    (event: MailPush) => {
-      const msg: ChatMessage = {
-        id: event.messageId,
-        fromUserId: event.fromUserId,
-        fromUsername:
-          userLookup.get(event.fromUserId) ?? String(event.fromUserId),
-        body: event.body,
-        createdAt: event.createdAt,
-      };
-      mergeMessages([msg]);
+    (event: MessageRoomEvent) => {
+      switch (event.type) {
+        case "new-message": {
+          const msg: ChatMessage = {
+            id: event.messageId,
+            fromUserId: event.fromUserId,
+            fromUsername:
+              userLookup.get(event.fromUserId) ?? String(event.fromUserId),
+            body: event.body,
+            createdAt: event.createdAt,
+          };
+          mergeMessages([msg]);
+          break;
+        }
+        case "read-receipt": {
+          const cached = messagesCache.get(cacheKey);
+          if (!cached) return;
+
+          let changed = false;
+          for (const msg of cached) {
+            if (event.messageIds.includes(msg.id)) {
+              const readBy = msg.readBy ?? [];
+              if (!readBy.includes(event.userId)) {
+                msg.readBy = [...readBy, event.userId];
+                changed = true;
+              }
+            }
+          }
+          if (changed) setCacheVersion((v) => v + 1);
+          break;
+        }
+      }
     },
-    [mergeMessages, userLookup],
+    [cacheKey, mergeMessages, userLookup],
   );
 
   const queryFn = useCallback(async () => {
@@ -115,8 +119,8 @@ export const useChatMessages = (
     }
   }, [query.data, mergeMessages]);
 
-  // WebSocket subscription for real-time chat message updates
-  useSubscription<MailPush>(
+  // WebSocket subscription for real-time chat message and read receipt updates
+  useSubscription<MessageRoomEvent>(
     enabled && agentId && participantIds
       ? `chat-messages:${participantIds}`
       : null,

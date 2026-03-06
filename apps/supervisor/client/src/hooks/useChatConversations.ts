@@ -1,11 +1,11 @@
 import type { HateoasAction } from "@naisys/common";
-import type { MailPush } from "@naisys/hub-protocol";
 import { useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { useAgentDataContext } from "../contexts/AgentDataContext";
 import { getChatConversations } from "../lib/apiChat";
 import type { ChatConversation } from "../lib/apiClient";
+import { MessageRoomEvent } from "./messageCacheUtils";
 import { useSubscription } from "./useSubscription";
 
 // Module-level cache (shared across hook instances, persists across remounts)
@@ -49,7 +49,9 @@ export const useChatConversations = (
   );
 
   const handleChatPush = useCallback(
-    (event: MailPush) => {
+    (event: MessageRoomEvent) => {
+      if (event.type !== "new-message") return;
+
       const allIds = [
         ...new Set([...event.recipientUserIds, event.fromUserId]),
       ];
@@ -86,7 +88,7 @@ export const useChatConversations = (
   }, [query.data, mergeConversations]);
 
   // WebSocket subscription for real-time conversation updates
-  useSubscription<MailPush>(
+  useSubscription<MessageRoomEvent>(
     enabled && agentId ? `chat-conversations:${agentId}` : null,
     handleChatPush,
   );

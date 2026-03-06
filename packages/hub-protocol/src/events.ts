@@ -40,6 +40,8 @@ export const HubEvents = {
   LOG_PUSH: "log_push",
   /** Full-data mail/chat push with message data */
   MAIL_PUSH: "mail_push",
+  /** Read-receipt push when messages are marked read */
+  MAIL_READ_PUSH: "mail_read_push",
   /** Cost delta push per session */
   COST_PUSH: "cost_push",
   /** New session push with full RunSession data */

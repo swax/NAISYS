@@ -310,6 +310,7 @@ export function createMailService(
     await hubClient.sendRequest(HubEvents.MAIL_MARK_READ, {
       userId: localUserId,
       messageIds,
+      kind: "mail",
     });
   }
 
