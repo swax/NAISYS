@@ -31,7 +31,7 @@ import {
 
 /** Re-rendering triggered by agentParam */
 export const AgentRuns: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
+  const { username } = useParams<{ username: string }>();
   const { agents, readStatus } = useAgentDataContext();
   const [selectedRowKey, setSelectedRowKey] = useState<string | null>(null);
   const [freshData, setFreshData] = useState<"loading" | "loaded">("loading");
@@ -39,8 +39,7 @@ export const AgentRuns: React.FC = () => {
   const [drawerOpened, { open: openDrawer, close: closeDrawer }] =
     useDisclosure();
 
-  const agentId = id ? Number(id) : 0;
-  const agent = agents.find((a) => a.id === agentId);
+  const agent = agents.find((a) => a.name === username);
   const agentName = agent?.name;
 
   const {
@@ -49,7 +48,7 @@ export const AgentRuns: React.FC = () => {
     isLoading: runsLoading,
     error: runsError,
     isFetchedAfterMount,
-  } = useRunsData(agentId, Boolean(id));
+  } = useRunsData(username ?? "", Boolean(username));
 
   // There's a bug where even through isFetchedAfterMount is true, the latest log id of all runs is still old.
   // And usually on the next render cycle this is updated.
@@ -106,7 +105,7 @@ export const AgentRuns: React.FC = () => {
   useEffect(() => {
     setSelectedRowKey(null);
     setFreshData("loading");
-  }, [id]);
+  }, [username]);
 
   const selectedRun = allRuns.find((run) => getRowKey(run) === selectedRowKey);
 
@@ -128,7 +127,7 @@ export const AgentRuns: React.FC = () => {
     [closeDrawer],
   );
 
-  if (!id) {
+  if (!username) {
     return (
       <Stack gap="md" style={{ height: "100%" }}>
         <Group justify="space-between">
@@ -149,7 +148,7 @@ export const AgentRuns: React.FC = () => {
   if (!agent) {
     return (
       <Alert color="yellow" title="Agent not found">
-        Agent with ID {id} not found
+        Agent &quot;{username}&quot; not found
       </Alert>
     );
   }

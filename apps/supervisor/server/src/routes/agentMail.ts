@@ -1,7 +1,7 @@
 import { MultipartFile } from "@fastify/multipart";
 import {
-  AgentIdParams,
-  AgentIdParamsSchema,
+  AgentUsernameParams,
+  AgentUsernameParamsSchema,
   ErrorResponseSchema,
   MailDataRequest,
   MailDataRequestSchema,
@@ -15,24 +15,25 @@ import { FastifyInstance, FastifyPluginOptions } from "fastify";
 
 import { hasPermission, requirePermission } from "../auth-middleware.js";
 import { API_PREFIX } from "../hateoas.js";
+import { resolveAgentId } from "../services/agentService.js";
 import { getMailDataByUserId, sendMessage } from "../services/mailService.js";
 
 export default function agentMailRoutes(
   fastify: FastifyInstance,
   _options: FastifyPluginOptions,
 ) {
-  // GET /:id/mail — Mail for agent
+  // GET /:username/mail — Mail for agent
   fastify.get<{
-    Params: AgentIdParams;
+    Params: AgentUsernameParams;
     Querystring: MailDataRequest;
     Reply: MailDataResponse;
   }>(
-    "/:id/mail",
+    "/:username/mail",
     {
       schema: {
         description: "Get mail data for a specific agent",
         tags: ["Mail"],
-        params: AgentIdParamsSchema,
+        params: AgentUsernameParamsSchema,
         querystring: MailDataRequestSchema,
         response: {
           200: MailDataResponseSchema,
@@ -42,8 +43,16 @@ export default function agentMailRoutes(
     },
     async (request, reply) => {
       try {
-        const { id } = request.params;
+        const { username } = request.params;
         const { updatedSince, page, count } = request.query;
+        const id = resolveAgentId(username);
+
+        if (!id) {
+          return reply.status(500).send({
+            success: false,
+            message: `Agent '${username}' not found`,
+          });
+        }
 
         const data = await getMailDataByUserId(
           id,
@@ -66,7 +75,7 @@ export default function agentMailRoutes(
             ? [
                 {
                   rel: "next",
-                  href: `${API_PREFIX}/agents/${id}/mail?updatedSince=${encodeURIComponent(data.timestamp)}`,
+                  href: `${API_PREFIX}/agents/${username}/mail?updatedSince=${encodeURIComponent(data.timestamp)}`,
                   title: "Poll for newer mail",
                 },
               ]
@@ -75,7 +84,7 @@ export default function agentMailRoutes(
             ? [
                 {
                   rel: "send",
-                  href: `${API_PREFIX}/agents/${id}/mail`,
+                  href: `${API_PREFIX}/agents/${username}/mail`,
                   method: "POST" as const,
                   title: "Send Mail",
                   schema: `${API_PREFIX}/schemas/SendMail`,
@@ -90,7 +99,7 @@ export default function agentMailRoutes(
             : undefined,
         };
       } catch (error) {
-        request.log.error(error, "Error in GET /agents/:id/mail route");
+        request.log.error(error, "Error in GET /agents/:username/mail route");
         return reply.status(500).send({
           success: false,
           message: "Internal server error while fetching mail data",
@@ -99,19 +108,19 @@ export default function agentMailRoutes(
     },
   );
 
-  // POST /:id/mail — Send mail as agent
+  // POST /:username/mail — Send mail as agent
   fastify.post<{
-    Params: AgentIdParams;
+    Params: AgentUsernameParams;
     Reply: SendMailResponse;
   }>(
-    "/:id/mail",
+    "/:username/mail",
     {
       preHandler: [requirePermission("agent_communication")],
       schema: {
         description:
           "Send email as agent with optional attachments. Supports JSON and multipart/form-data",
         tags: ["Mail"],
-        params: AgentIdParamsSchema,
+        params: AgentUsernameParamsSchema,
         // No body schema — multipart requests are parsed manually via request.parts()
         response: {
           200: SendMailResponseSchema,
@@ -187,7 +196,7 @@ export default function agentMailRoutes(
           return reply.code(500).send(result);
         }
       } catch (error) {
-        request.log.error(error, "Error in POST /agents/:id/mail route");
+        request.log.error(error, "Error in POST /agents/:username/mail route");
         return reply.code(500).send({
           success: false,
           message:

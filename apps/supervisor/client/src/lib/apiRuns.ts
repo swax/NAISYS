@@ -2,7 +2,7 @@ import type { ContextLogResponse, RunsDataResponse } from "./apiClient";
 import { api, apiEndpoints } from "./apiClient";
 
 export interface RunsDataParams {
-  agentId: number;
+  agentUsername: string;
   updatedSince?: string;
   page?: number;
   count?: number;
@@ -23,12 +23,12 @@ export const getRunsData = async (
   }
 
   const query = queryParams.toString();
-  const url = `${apiEndpoints.agentRuns(params.agentId)}${query ? `?${query}` : ""}`;
+  const url = `${apiEndpoints.agentRuns(params.agentUsername)}${query ? `?${query}` : ""}`;
   return await api.get<RunsDataResponse>(url);
 };
 
 export interface ContextLogParams {
-  agentId: number;
+  agentUsername: string;
   runId: number;
   sessionId: number;
   logsAfter?: number;
@@ -43,6 +43,6 @@ export const getContextLog = async (
   }
 
   const query = queryParams.toString();
-  const url = `${apiEndpoints.agentContextLog(params.agentId, params.runId, params.sessionId)}${query ? `?${query}` : ""}`;
+  const url = `${apiEndpoints.agentContextLog(params.agentUsername, params.runId, params.sessionId)}${query ? `?${query}` : ""}`;
   return await api.get<ContextLogResponse>(url);
 };

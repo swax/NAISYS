@@ -26,9 +26,10 @@ import { GroupedLogComponent, groupPromptEntries } from "./LogEntries";
 export const RunSessionLog: React.FC<{
   run: RunSession;
 }> = ({ run }) => {
-  const { id: agentIdParam } = useParams<{ id: string }>();
+  const { username } = useParams<{ username: string }>();
   const { agents, updateReadStatus, readStatus } = useAgentDataContext();
-  const agentName = agents.find((a) => a.id === Number(agentIdParam))?.name;
+  const agent = agents.find((a) => a.name === username);
+  const agentName = agent?.name;
   const [fullscreen, setFullscreen] = useState(false);
   const logContainerRef = useRef<HTMLDivElement>(null);
   const [, setScrollPanelIntoView] = useState(true);
@@ -47,7 +48,13 @@ export const RunSessionLog: React.FC<{
     logs,
     isLoading: logsLoading,
     error: logsError,
-  } = useContextLog(run.userId, run.runId, run.sessionId, true, run.isOnline);
+  } = useContextLog(
+    username ?? "",
+    run.runId,
+    run.sessionId,
+    true,
+    run.isOnline,
+  );
 
   // Mark panel as ready once logs arrive
   useEffect(() => {

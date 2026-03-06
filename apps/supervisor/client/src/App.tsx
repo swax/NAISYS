@@ -139,13 +139,13 @@ const router = createBrowserRouter(
     <Route element={<AppContent />} errorElement={<RootErrorPage />}>
       <Route path="/agents" element={<AgentsLayout />}>
         <Route index element={<AgentIndex />} />
-        <Route path=":id" element={<AgentDetail />} />
-        <Route path=":id/config" element={<AgentConfig />} />
-        <Route path=":id/runs" element={<AgentRuns />} />
-        <Route path=":id/mail" element={<AgentMail />} />
-        <Route path=":id/mail/:messageId" element={<AgentMail />} />
-        <Route path=":id/chat" element={<AgentChat />} />
-        <Route path=":id/*" element={<NotFoundPage />} />
+        <Route path=":username" element={<AgentDetail />} />
+        <Route path=":username/config" element={<AgentConfig />} />
+        <Route path=":username/runs" element={<AgentRuns />} />
+        <Route path=":username/mail" element={<AgentMail />} />
+        <Route path=":username/mail/:messageId" element={<AgentMail />} />
+        <Route path=":username/chat" element={<AgentChat />} />
+        <Route path=":username/*" element={<NotFoundPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
       <Route path="/hosts" element={<HostsLayout />}>

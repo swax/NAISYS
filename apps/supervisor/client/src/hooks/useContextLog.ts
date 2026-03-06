@@ -12,7 +12,7 @@ const logsCache = new Map<string, LogEntry[]>();
 const logsAfterCache = new Map<string, number | undefined>();
 
 export const useContextLog = (
-  agentId: number,
+  agentUsername: string,
   runId: number,
   sessionId: number,
   enabled: boolean = true,
@@ -25,7 +25,7 @@ export const useContextLog = (
   );
 
   // Create a unique key for this session
-  const sessionKey = `${agentId}-${runId}-${sessionId}`;
+  const sessionKey = `${agentUsername}-${runId}-${sessionId}`;
   // Version counter to trigger re-renders when cache updates
   const [, setCacheVersion] = useState(0);
 
@@ -84,7 +84,7 @@ export const useContextLog = (
       const [, sessionKey] = queryKey;
 
       const params: ContextLogParams = {
-        agentId,
+        agentUsername,
         runId,
         sessionId,
         logsAfter: logsAfterCache.get(sessionKey),
@@ -92,13 +92,13 @@ export const useContextLog = (
 
       return await getContextLog(params);
     },
-    [agentId, runId, sessionId],
+    [agentUsername, runId, sessionId],
   );
 
   const query = useQuery({
     queryKey: ["context-log", sessionKey],
     queryFn,
-    enabled: enabled && !!agentId,
+    enabled: enabled && !!agentUsername,
     refetchInterval: false,
     refetchIntervalInBackground: false,
     refetchOnWindowFocus: !isOnline,
@@ -116,8 +116,8 @@ export const useContextLog = (
 
   // WebSocket subscription for real-time log updates when online
   useSubscription<LogPushEntry[]>(
-    isOnline && enabled && agentId
-      ? `logs:${agentId}:${runId}:${sessionId}`
+    isOnline && enabled && agentUsername
+      ? `logs:${agentUsername}:${runId}:${sessionId}`
       : null,
     handlePushEntries,
   );

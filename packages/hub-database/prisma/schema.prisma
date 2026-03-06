@@ -112,7 +112,7 @@ model mail_recipients {
 model users {
   id                 Int                 @id @default(autoincrement())
   uuid               String              @unique
-  username           String
+  username           String              @unique
   title              String
   api_key            String              @unique
   lead_user_id       Int?
@@ -130,7 +130,7 @@ model users {
   uploaded_attachments attachments[]      @relation("uploaded_attachments")
   user_notifications   user_notifications?
   user_hosts           user_hosts[]
-  @@index([username], map: "idx_users_username") // WHERE username in hubMailService recipient resolution, agentConfigService user lookup
+  // username has @unique which creates an implicit index
 }
 
 model user_notifications {

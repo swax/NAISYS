@@ -31,11 +31,11 @@ export const AddAgentDialog: React.FC<AddAgentDialogProps> = ({
   const [isCreating, setIsCreating] = useState(false);
   const [loadingCopy, setLoadingCopy] = useState(false);
 
-  const handleCopyFrom = async (agentIdStr: string | null) => {
-    if (!agentIdStr) return;
+  const handleCopyFrom = async (agentName: string | null) => {
+    if (!agentName) return;
     setLoadingCopy(true);
     try {
-      const data = await exportAgentConfig(Number(agentIdStr));
+      const data = await exportAgentConfig(agentName);
       setYamlConfig(data.yaml);
     } catch (error) {
       console.error("Error exporting agent config:", error);
@@ -59,8 +59,8 @@ export const AddAgentDialog: React.FC<AddAgentDialogProps> = ({
       }
 
       // If YAML config was provided, import it
-      if (yamlConfig.trim() && result.id) {
-        const importResult = await importAgentConfig(result.id, yamlConfig);
+      if (yamlConfig.trim() && result.name) {
+        const importResult = await importAgentConfig(result.name, yamlConfig);
         if (!importResult.success) {
           throw new Error(
             importResult.message || "Agent created but config import failed",
@@ -87,7 +87,7 @@ export const AddAgentDialog: React.FC<AddAgentDialogProps> = ({
   };
 
   const copyFromOptions = agents.map((a) => ({
-    value: String(a.id),
+    value: a.name,
     label: a.name,
   }));
 

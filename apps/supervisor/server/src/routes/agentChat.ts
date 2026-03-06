@@ -1,7 +1,7 @@
 import { MultipartFile } from "@fastify/multipart";
 import {
-  AgentIdParams,
-  AgentIdParamsSchema,
+  AgentUsernameParams,
+  AgentUsernameParamsSchema,
   ChatConversationsResponse,
   ChatConversationsResponseSchema,
   ChatMessagesRequest,
@@ -18,6 +18,7 @@ import { FastifyInstance, FastifyPluginOptions } from "fastify";
 
 import { hasPermission, requirePermission } from "../auth-middleware.js";
 import { API_PREFIX } from "../hateoas.js";
+import { resolveAgentId } from "../services/agentService.js";
 import { uploadToHub } from "../services/attachmentProxyService.js";
 import {
   getConversations,
@@ -25,10 +26,10 @@ import {
   sendChatMessage,
 } from "../services/chatService.js";
 
-function sendChatAction(agentId: number) {
+function sendChatAction(username: string) {
   return {
     rel: "send",
-    href: `${API_PREFIX}/agents/${agentId}/chat`,
+    href: `${API_PREFIX}/agents/${username}/chat`,
     method: "POST" as const,
     title: "Send Chat Message",
     schema: `${API_PREFIX}/schemas/SendChat`,
@@ -44,17 +45,17 @@ export default function agentChatRoutes(
   fastify: FastifyInstance,
   _options: FastifyPluginOptions,
 ) {
-  // GET /:id/chat — List conversations for agent
+  // GET /:username/chat — List conversations for agent
   fastify.get<{
-    Params: AgentIdParams;
+    Params: AgentUsernameParams;
     Reply: ChatConversationsResponse | ErrorResponse;
   }>(
-    "/:id/chat",
+    "/:username/chat",
     {
       schema: {
         description: "Get chat conversations for a specific agent",
         tags: ["Chat"],
-        params: AgentIdParamsSchema,
+        params: AgentUsernameParamsSchema,
         response: {
           200: ChatConversationsResponseSchema,
           500: ErrorResponseSchema,
@@ -63,7 +64,16 @@ export default function agentChatRoutes(
     },
     async (request, reply) => {
       try {
-        const { id } = request.params;
+        const { username } = request.params;
+        const id = resolveAgentId(username);
+
+        if (!id) {
+          return reply.status(500).send({
+            success: false,
+            message: `Agent '${username}' not found`,
+          });
+        }
+
         const conversations = await getConversations(id);
 
         const canSend = hasPermission(
@@ -74,10 +84,10 @@ export default function agentChatRoutes(
         return {
           success: true,
           conversations,
-          _actions: canSend ? [sendChatAction(id)] : undefined,
+          _actions: canSend ? [sendChatAction(username)] : undefined,
         };
       } catch (error) {
-        request.log.error(error, "Error in GET /agents/:id/chat route");
+        request.log.error(error, "Error in GET /agents/:username/chat route");
         return reply.status(500).send({
           success: false,
           message: "Internal server error while fetching chat conversations",
@@ -86,13 +96,13 @@ export default function agentChatRoutes(
     },
   );
 
-  // GET /:id/chat/:participantIds — Messages in a conversation
+  // GET /:username/chat/:participantIds — Messages in a conversation
   fastify.get<{
-    Params: AgentIdParams & { participantIds: string };
+    Params: AgentUsernameParams & { participantIds: string };
     Querystring: ChatMessagesRequest;
     Reply: ChatMessagesResponse | ErrorResponse;
   }>(
-    "/:id/chat/:participantIds",
+    "/:username/chat/:participantIds",
     {
       schema: {
         description: "Get chat messages for a specific conversation",
@@ -106,7 +116,7 @@ export default function agentChatRoutes(
     },
     async (request, reply) => {
       try {
-        const { id, participantIds } = request.params;
+        const { username, participantIds } = request.params;
         const { updatedSince, page, count } = request.query;
 
         // URL uses dashes as separator, DB uses commas
@@ -129,12 +139,12 @@ export default function agentChatRoutes(
           messages: data.messages,
           total: data.total,
           timestamp: data.timestamp,
-          _actions: canSend ? [sendChatAction(id)] : undefined,
+          _actions: canSend ? [sendChatAction(username)] : undefined,
         };
       } catch (error) {
         request.log.error(
           error,
-          "Error in GET /agents/:id/chat/:participantIds route",
+          "Error in GET /agents/:username/chat/:participantIds route",
         );
         return reply.status(500).send({
           success: false,
@@ -144,20 +154,20 @@ export default function agentChatRoutes(
     },
   );
 
-  // POST /:id/chat — Send chat message
+  // POST /:username/chat — Send chat message
   fastify.post<{
-    Params: AgentIdParams;
+    Params: AgentUsernameParams;
     Body: SendChatRequest;
     Reply: SendChatResponse | ErrorResponse;
   }>(
-    "/:id/chat",
+    "/:username/chat",
     {
       preHandler: [requirePermission("agent_communication")],
       schema: {
         description:
           "Send a chat message as an agent with optional attachments. Supports JSON and multipart/form-data",
         tags: ["Chat"],
-        params: AgentIdParamsSchema,
+        params: AgentUsernameParamsSchema,
         // No body schema — multipart requests are parsed manually via request.parts()
         response: {
           200: SendChatResponseSchema,
@@ -245,7 +255,7 @@ export default function agentChatRoutes(
           return reply.code(500).send(result);
         }
       } catch (error) {
-        request.log.error(error, "Error in POST /agents/:id/chat route");
+        request.log.error(error, "Error in POST /agents/:username/chat route");
         return reply.code(500).send({
           success: false,
           message:

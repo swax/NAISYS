@@ -37,14 +37,13 @@ import {
 import { ConfigSummary } from "./ConfigSummary";
 
 export const AgentDetail: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
+  const { username } = useParams<{ username: string }>();
   const navigate = useNavigate();
   const { agents } = useAgentDataContext();
   const { hosts } = useHostDataContext();
   const { status: connectionStatus } = useConnectionStatus();
 
-  const agentId = id ? Number(id) : null;
-  const agentData = agents.find((a) => a.id === agentId);
+  const agentData = username ? agents.find((a) => a.name === username) : null;
   const [config, setConfig] = useState<AgentDetailResponse["config"] | null>(
     null,
   );
@@ -63,9 +62,9 @@ export const AgentDetail: React.FC = () => {
   const [deleting, setDeleting] = useState(false);
 
   const fetchDetail = async () => {
-    if (!agentId) return;
+    if (!username) return;
     try {
-      const data = await getAgentDetail(agentId);
+      const data = await getAgentDetail(username);
       setConfig(data.config);
       setAssignedHosts(data.assignedHosts);
       setCostSuspendedReason(data.costSuspendedReason);
@@ -78,19 +77,19 @@ export const AgentDetail: React.FC = () => {
   };
 
   useEffect(() => {
-    if (!agentId) {
+    if (!username) {
       setLoading(false);
       return;
     }
 
     void fetchDetail();
-  }, [agentId]);
+  }, [username]);
 
   const handleStart = async () => {
-    if (!agentId) return;
+    if (!username) return;
     setStarting(true);
     try {
-      const result = await startAgent(agentId, taskInput.trim() || undefined);
+      const result = await startAgent(username, taskInput.trim() || undefined);
       if (result.success) {
         setTaskInput("");
         notifications.show({
@@ -120,7 +119,7 @@ export const AgentDetail: React.FC = () => {
   };
 
   const handleStop = async (recursive?: boolean) => {
-    if (!agentId) return;
+    if (!username) return;
 
     if (agentData?.name === "admin") {
       const confirmed = window.confirm(
@@ -132,7 +131,7 @@ export const AgentDetail: React.FC = () => {
 
     setStopping(true);
     try {
-      const result = await stopAgent(agentId, recursive);
+      const result = await stopAgent(username, recursive);
       if (result.success) {
         notifications.show({
           title: "Agent Stopped",
@@ -159,7 +158,7 @@ export const AgentDetail: React.FC = () => {
   };
 
   const handleArchive = async () => {
-    if (!agentId) return;
+    if (!username) return;
     const confirmed = window.confirm(
       `Archive agent "${agentData?.name}"? It will be hidden from the main list but can still be edited.`,
     );
@@ -167,7 +166,7 @@ export const AgentDetail: React.FC = () => {
 
     setArchiving(true);
     try {
-      const result = await archiveAgent(agentId);
+      const result = await archiveAgent(username);
       if (result.success) {
         notifications.show({
           title: "Agent Archived",
@@ -194,10 +193,10 @@ export const AgentDetail: React.FC = () => {
   };
 
   const handleUnarchive = async () => {
-    if (!agentId) return;
+    if (!username) return;
     setArchiving(true);
     try {
-      const result = await unarchiveAgent(agentId);
+      const result = await unarchiveAgent(username);
       if (result.success) {
         notifications.show({
           title: "Agent Unarchived",
@@ -224,7 +223,7 @@ export const AgentDetail: React.FC = () => {
   };
 
   const handleDelete = async () => {
-    if (!agentId) return;
+    if (!username) return;
     const confirmed = window.confirm(
       `Permanently delete agent "${agentData?.name}"? This will remove all associated data and cannot be undone.`,
     );
@@ -237,7 +236,7 @@ export const AgentDetail: React.FC = () => {
 
     setDeleting(true);
     try {
-      const result = await deleteAgentPermanently(agentId);
+      const result = await deleteAgentPermanently(username);
       if (result.success) {
         notifications.show({
           title: "Agent Deleted",
@@ -263,7 +262,7 @@ export const AgentDetail: React.FC = () => {
     }
   };
 
-  if (!agentId) {
+  if (!username) {
     return <Text size="xl">Agent Detail</Text>;
   }
 

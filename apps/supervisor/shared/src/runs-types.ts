@@ -37,7 +37,7 @@ export const RunsDataResponseSchema = z.object({
 });
 
 export const ContextLogParamsSchema = z.object({
-  id: z.coerce.number(),
+  username: z.string(),
   runId: z.coerce.number(),
   sessionId: z.coerce.number(),
 });

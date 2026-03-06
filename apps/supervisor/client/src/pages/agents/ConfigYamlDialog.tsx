@@ -12,7 +12,7 @@ import React, { useEffect, useState } from "react";
 import { exportAgentConfig, importAgentConfig } from "../../lib/apiAgents";
 
 interface ConfigYamlDialogProps {
-  agentId: number;
+  agentUsername: string;
   mode: "import" | "export";
   opened: boolean;
   onClose: () => void;
@@ -20,7 +20,7 @@ interface ConfigYamlDialogProps {
 }
 
 export const ConfigYamlDialog: React.FC<ConfigYamlDialogProps> = ({
-  agentId,
+  agentUsername,
   mode,
   opened,
   onClose,
@@ -38,7 +38,7 @@ export const ConfigYamlDialog: React.FC<ConfigYamlDialogProps> = ({
     if (mode === "export") {
       setLoading(true);
       setError(null);
-      exportAgentConfig(agentId)
+      exportAgentConfig(agentUsername)
         .then((result) => {
           setYamlText(result.yaml);
         })
@@ -55,7 +55,7 @@ export const ConfigYamlDialog: React.FC<ConfigYamlDialogProps> = ({
     } else {
       setYamlText("");
     }
-  }, [opened, mode, agentId]);
+  }, [opened, mode, agentUsername]);
 
   const handleImport = async () => {
     if (!yamlText.trim()) return;
@@ -64,7 +64,7 @@ export const ConfigYamlDialog: React.FC<ConfigYamlDialogProps> = ({
     setError(null);
 
     try {
-      const result = await importAgentConfig(agentId, yamlText);
+      const result = await importAgentConfig(agentUsername, yamlText);
 
       if (!result.success) {
         setError(result.message || "Failed to import configuration");

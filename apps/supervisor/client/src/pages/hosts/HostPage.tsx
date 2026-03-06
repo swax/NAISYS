@@ -350,7 +350,7 @@ export const HostPage: React.FC = () => {
               <Table.Tr
                 key={agent.id}
                 style={{ cursor: "pointer" }}
-                onClick={() => navigate(`/agents/${agent.id}`)}
+                onClick={() => navigate(`/agents/${agent.name}`)}
               >
                 <Table.Td>{agent.name}</Table.Td>
                 <Table.Td>{agent.title}</Table.Td>
@@ -382,7 +382,7 @@ export const HostPage: React.FC = () => {
               <Table.Tr
                 key={agent.id}
                 style={{ cursor: "pointer" }}
-                onClick={() => navigate(`/agents/${agent.id}`)}
+                onClick={() => navigate(`/agents/${agent.name}`)}
               >
                 <Table.Td>{agent.name}</Table.Td>
                 <Table.Td>{agent.title}</Table.Td>

@@ -30,13 +30,13 @@ import { MailThread } from "./MailThread";
 import { NewMessageModal } from "./NewMessageModal";
 
 export const AgentMail: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
+  const { username } = useParams<{ username: string }>();
   const { agents, updateReadStatus, readStatus } = useAgentDataContext();
   const [drawerOpened, { open: openDrawer, close: closeDrawer }] =
     useDisclosure();
 
-  const agentId = id ? Number(id) : 0;
-  const agent = agents.find((a) => a.id === agentId);
+  const agent = agents.find((a) => a.name === username);
+  const agentId = agent?.id ?? 0;
   const agentName = agent?.name || "";
 
   const {
@@ -45,7 +45,7 @@ export const AgentMail: React.FC = () => {
     actions: mailActions,
     isLoading: mailLoading,
     error: mailError,
-  } = useMailData(agentId, Boolean(id));
+  } = useMailData(username ?? "", Boolean(username));
 
   const canSend = !!hasAction(mailActions, "send");
 
@@ -152,7 +152,7 @@ export const AgentMail: React.FC = () => {
     attachments: Array<{ file: File; name: string; previewUrl?: string }>,
   ): Promise<void> => {
     try {
-      const response = await sendMail(agentId, {
+      const response = await sendMail(username ?? "", {
         fromId: agentId,
         toId: recipientId,
         subject,
@@ -180,7 +180,7 @@ export const AgentMail: React.FC = () => {
     }
   };
 
-  if (!id) {
+  if (!username) {
     return (
       <Stack gap="md">
         <Text size="xl" fw={600}>
@@ -196,7 +196,7 @@ export const AgentMail: React.FC = () => {
   if (!agent) {
     return (
       <Alert color="yellow" title="Agent not found">
-        Agent with ID {id} not found
+        Agent &quot;{username}&quot; not found
       </Alert>
     );
   }

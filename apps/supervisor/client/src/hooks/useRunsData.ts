@@ -1,9 +1,9 @@
-import { RunSession as BaseRunSession } from "@naisys-supervisor/shared";
 import type {
   CostPushEntry,
   LogPushSessionUpdate,
   SessionPush,
 } from "@naisys/hub-protocol";
+import { RunSession as BaseRunSession } from "@naisys-supervisor/shared";
 import { useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useState } from "react";
 
@@ -14,16 +14,16 @@ import { useSubscription } from "./useSubscription";
 type RunSessionWithFlag = RunSession & { isFirst?: boolean };
 
 // Module-level caches (shared across all hook instances and persist across remounts)
-const runsCache = new Map<number, BaseRunSession[]>();
-const updatedSinceCache = new Map<number, string | undefined>();
-const totalCache = new Map<number, number>();
+const runsCache = new Map<string, BaseRunSession[]>();
+const updatedSinceCache = new Map<string, string | undefined>();
+const totalCache = new Map<string, number>();
 
 type RunsLogUpdate = LogPushSessionUpdate & { type: "log-update" };
 type RunsCostUpdate = CostPushEntry & { type: "cost-update" };
 type RunsNewSession = SessionPush["session"] & { type: "new-session" };
 type RunsEvent = RunsLogUpdate | RunsCostUpdate | RunsNewSession;
 
-export const useRunsData = (agentId: number, enabled: boolean = true) => {
+export const useRunsData = (agentUsername: string, enabled: boolean = true) => {
   // Version counter to trigger re-renders when cache updates
   const [, setCacheVersion] = useState(0);
 
@@ -31,7 +31,7 @@ export const useRunsData = (agentId: number, enabled: boolean = true) => {
     (updatedRuns: BaseRunSession[], total?: number) => {
       if (updatedRuns.length === 0 && total === undefined) return;
 
-      const existingRuns = runsCache.get(agentId) || [];
+      const existingRuns = runsCache.get(agentUsername) || [];
 
       const mergeMap = new Map<string, BaseRunSession>(
         existingRuns.map((run) => [
@@ -55,25 +55,25 @@ export const useRunsData = (agentId: number, enabled: boolean = true) => {
           new Date(b.lastActive).getTime() - new Date(a.lastActive).getTime(),
       );
 
-      runsCache.set(agentId, mergedRuns);
+      runsCache.set(agentUsername, mergedRuns);
 
       if (total !== undefined) {
-        totalCache.set(agentId, total);
+        totalCache.set(agentUsername, total);
       } else if (newCount > 0) {
-        const currentTotal = totalCache.get(agentId) || 0;
-        totalCache.set(agentId, currentTotal + newCount);
+        const currentTotal = totalCache.get(agentUsername) || 0;
+        totalCache.set(agentUsername, currentTotal + newCount);
       }
 
-      updatedSinceCache.set(agentId, new Date().toISOString());
+      updatedSinceCache.set(agentUsername, new Date().toISOString());
 
       setCacheVersion((v) => v + 1);
     },
-    [agentId],
+    [agentUsername],
   );
 
   const handleRunsEvent = useCallback(
     (event: RunsEvent) => {
-      const existingRuns = runsCache.get(agentId) || [];
+      const existingRuns = runsCache.get(agentUsername) || [];
       const key = `${event.userId}-${event.runId}-${event.sessionId}`;
 
       if (event.type === "new-session") {
@@ -115,15 +115,15 @@ export const useRunsData = (agentId: number, enabled: boolean = true) => {
         mergeRuns([updated]);
       }
     },
-    [agentId, mergeRuns],
+    [agentUsername, mergeRuns],
   );
 
   const queryFn = useCallback(async ({ queryKey }: any) => {
-    const [, agentId] = queryKey;
+    const [, agentUsername] = queryKey;
 
     const params: RunsDataParams = {
-      agentId,
-      updatedSince: updatedSinceCache.get(agentId),
+      agentUsername,
+      updatedSince: updatedSinceCache.get(agentUsername),
       page: 1,
       count: 50,
     };
@@ -132,9 +132,9 @@ export const useRunsData = (agentId: number, enabled: boolean = true) => {
   }, []);
 
   const query = useQuery({
-    queryKey: ["runs-data", agentId],
+    queryKey: ["runs-data", agentUsername],
     queryFn,
-    enabled: enabled && !!agentId,
+    enabled: enabled && !!agentUsername,
     refetchInterval: false,
     refetchIntervalInBackground: false,
     refetchOnWindowFocus: true,
@@ -152,18 +152,18 @@ export const useRunsData = (agentId: number, enabled: boolean = true) => {
 
   // WebSocket subscription for real-time run updates
   useSubscription<RunsEvent>(
-    enabled && agentId ? `runs:${agentId}` : null,
+    enabled && agentUsername ? `runs:${agentUsername}` : null,
     handleRunsEvent,
   );
 
   // Get current runs from cache, compute isOnline at read time
-  const baseRuns = runsCache.get(agentId) || [];
+  const baseRuns = runsCache.get(agentUsername) || [];
   const runs: RunSessionWithFlag[] = baseRuns.map((run, index) => ({
     ...run,
     isOnline: isRunActive(run.lastActive),
     isFirst: index === 0,
   }));
-  const total = totalCache.get(agentId) || 0;
+  const total = totalCache.get(agentUsername) || 0;
 
   return {
     runs,

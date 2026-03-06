@@ -41,26 +41,28 @@ export const deleteHost = async (id: number): Promise<AgentActionResult> => {
 };
 
 export const getAgentDetail = async (
-  id: number,
+  username: string,
 ): Promise<AgentDetailResponse> => {
-  return await api.get<AgentDetailResponse>(apiEndpoints.agentDetail(id));
+  return await api.get<AgentDetailResponse>(apiEndpoints.agentDetail(username));
 };
 
 export const getAgentConfig = async (
-  id: number,
+  username: string,
 ): Promise<GetAgentConfigResponse> => {
-  return await api.get<GetAgentConfigResponse>(apiEndpoints.agentConfig(id));
+  return await api.get<GetAgentConfigResponse>(
+    apiEndpoints.agentConfig(username),
+  );
 };
 
 export const updateAgentConfig = async (
-  agentId: number,
+  username: string,
   config: AgentConfigFile,
 ): Promise<UpdateAgentConfigResponse> => {
   try {
     return await api.put<
       { config: AgentConfigFile },
       UpdateAgentConfigResponse
-    >(apiEndpoints.agentConfig(agentId), { config });
+    >(apiEndpoints.agentConfig(username), { config });
   } catch (error) {
     return {
       success: false,
@@ -73,12 +75,12 @@ export const updateAgentConfig = async (
 };
 
 export const importAgentConfig = async (
-  agentId: number,
+  username: string,
   yaml: string,
 ): Promise<ImportAgentConfigResponse> => {
   try {
     return await api.post<{ yaml: string }, ImportAgentConfigResponse>(
-      apiEndpoints.agentConfigImport(agentId),
+      apiEndpoints.agentConfigImport(username),
       { yaml },
     );
   } catch (error) {
@@ -93,10 +95,10 @@ export const importAgentConfig = async (
 };
 
 export const exportAgentConfig = async (
-  agentId: number,
+  username: string,
 ): Promise<ExportAgentConfigResponse> => {
   return await api.get<ExportAgentConfigResponse>(
-    apiEndpoints.agentConfigExport(agentId),
+    apiEndpoints.agentConfigExport(username),
   );
 };
 
@@ -118,55 +120,59 @@ export const createAgent = async (
 };
 
 export const startAgent = async (
-  id: number,
+  username: string,
   task?: string,
 ): Promise<AgentStartResult> => {
   return await api.post<{ task?: string }, AgentStartResult>(
-    apiEndpoints.agentStart(id),
+    apiEndpoints.agentStart(username),
     task ? { task } : {},
   );
 };
 
 export const stopAgent = async (
-  id: number,
+  username: string,
   recursive?: boolean,
 ): Promise<AgentStopResult> => {
   return await api.post<{ recursive?: boolean }, AgentStopResult>(
-    apiEndpoints.agentStop(id),
+    apiEndpoints.agentStop(username),
     recursive ? { recursive } : {},
   );
 };
 
-export const archiveAgent = async (id: number): Promise<AgentActionResult> => {
+export const archiveAgent = async (
+  username: string,
+): Promise<AgentActionResult> => {
   return await api.post<{}, AgentActionResult>(
-    apiEndpoints.agentArchive(id),
+    apiEndpoints.agentArchive(username),
     {},
   );
 };
 
 export const unarchiveAgent = async (
-  id: number,
+  username: string,
 ): Promise<AgentActionResult> => {
   return await api.post<{}, AgentActionResult>(
-    apiEndpoints.agentUnarchive(id),
+    apiEndpoints.agentUnarchive(username),
     {},
   );
 };
 
 export const setAgentLead = async (
-  id: number,
-  leadAgentId: number | null,
+  username: string,
+  leadAgentUsername: string | null,
 ): Promise<AgentActionResult> => {
-  return await api.put<{ leadAgentId: number | null }, AgentActionResult>(
-    apiEndpoints.agentLead(id),
-    { leadAgentId },
+  return await api.put<{ leadAgentUsername: string | null }, AgentActionResult>(
+    apiEndpoints.agentLead(username),
+    { leadAgentUsername },
   );
 };
 
 export const deleteAgentPermanently = async (
-  id: number,
+  username: string,
 ): Promise<AgentActionResult> => {
-  return await api.delete<AgentActionResult>(apiEndpoints.agentDelete(id));
+  return await api.delete<AgentActionResult>(
+    apiEndpoints.agentDelete(username),
+  );
 };
 
 // --- Host API functions ---

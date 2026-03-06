@@ -1,8 +1,8 @@
 import type { AgentConfigFile, ModelDbRow } from "@naisys/common";
 import { AgentConfigFileSchema } from "@naisys/common";
 import {
-  AgentIdParams,
-  AgentIdParamsSchema,
+  AgentUsernameParams,
+  AgentUsernameParamsSchema,
   ErrorResponse,
   ErrorResponseSchema,
   ExportAgentConfigResponse,
@@ -27,6 +27,7 @@ import {
   getAgentConfigById,
   updateAgentConfigById,
 } from "../services/agentConfigService.js";
+import { resolveAgentId } from "../services/agentService.js";
 import { getAllModelsFromDb } from "../services/modelService.js";
 
 /** Validate model keys in config against known models. Returns error message or null. */
@@ -70,17 +71,17 @@ export default function agentConfigRoutes(
   fastify: FastifyInstance,
   _options: FastifyPluginOptions,
 ) {
-  // GET /:id/config — Get parsed agent config
+  // GET /:username/config — Get parsed agent config
   fastify.get<{
-    Params: AgentIdParams;
+    Params: AgentUsernameParams;
     Reply: GetAgentConfigResponse | ErrorResponse;
   }>(
-    "/:id/config",
+    "/:username/config",
     {
       schema: {
         description: "Get parsed agent configuration",
         tags: ["Agents"],
-        params: AgentIdParamsSchema,
+        params: AgentUsernameParamsSchema,
         response: {
           200: GetAgentConfigResponseSchema,
           404: ErrorResponseSchema,
@@ -90,7 +91,16 @@ export default function agentConfigRoutes(
     },
     async (request, reply) => {
       try {
-        const { id } = request.params;
+        const { username } = request.params;
+        const id = resolveAgentId(username);
+
+        if (!id) {
+          return reply.status(404).send({
+            success: false,
+            message: `Agent '${username}' not found`,
+          });
+        }
+
         const config = await getAgentConfigById(id);
 
         const canManage = hasPermission(
@@ -103,19 +113,19 @@ export default function agentConfigRoutes(
             ? [
                 {
                   rel: "update",
-                  href: `${API_PREFIX}/agents/${id}/config`,
+                  href: `${API_PREFIX}/agents/${username}/config`,
                   method: "PUT" as const,
                   title: "Update Config",
                 },
                 {
                   rel: "import-config",
-                  href: `${API_PREFIX}/agents/${id}/config/import`,
+                  href: `${API_PREFIX}/agents/${username}/config/import`,
                   method: "POST" as const,
                   title: "Import Config",
                 },
                 {
                   rel: "export-config",
-                  href: `${API_PREFIX}/agents/${id}/config/export`,
+                  href: `${API_PREFIX}/agents/${username}/config/export`,
                   method: "GET" as const,
                   title: "Export Config",
                 },
@@ -123,7 +133,7 @@ export default function agentConfigRoutes(
             : undefined,
         };
       } catch (error) {
-        request.log.error(error, "Error in GET /agents/:id/config route");
+        request.log.error(error, "Error in GET /agents/:username/config route");
         const errorMessage =
           error instanceof Error ? error.message : "Unknown error";
 
@@ -142,19 +152,19 @@ export default function agentConfigRoutes(
     },
   );
 
-  // PUT /:id/config — Update agent config
+  // PUT /:username/config — Update agent config
   fastify.put<{
-    Params: AgentIdParams;
+    Params: AgentUsernameParams;
     Body: UpdateAgentConfigRequest;
     Reply: UpdateAgentConfigResponse;
   }>(
-    "/:id/config",
+    "/:username/config",
     {
       preHandler: [requirePermission("manage_agents")],
       schema: {
         description: "Update agent configuration",
         tags: ["Agents"],
-        params: AgentIdParamsSchema,
+        params: AgentUsernameParamsSchema,
         body: UpdateAgentConfigRequestSchema,
         response: {
           200: UpdateAgentConfigResponseSchema,
@@ -167,8 +177,16 @@ export default function agentConfigRoutes(
     },
     async (request, reply) => {
       try {
-        const { id } = request.params;
+        const { username } = request.params;
         const { config } = request.body;
+        const id = resolveAgentId(username);
+
+        if (!id) {
+          return reply.status(404).send({
+            success: false,
+            message: `Agent '${username}' not found`,
+          });
+        }
 
         // Validate model keys against known models
         const modelError = await validateModelKeys(config);
@@ -186,7 +204,7 @@ export default function agentConfigRoutes(
           message: "Agent configuration updated successfully",
         };
       } catch (error) {
-        request.log.error(error, "Error in PUT /agents/:id/config route");
+        request.log.error(error, "Error in PUT /agents/:username/config route");
         const errorMessage =
           error instanceof Error ? error.message : "Unknown error";
 
@@ -205,17 +223,17 @@ export default function agentConfigRoutes(
     },
   );
 
-  // GET /:id/config/export — Export agent config as YAML
+  // GET /:username/config/export — Export agent config as YAML
   fastify.get<{
-    Params: AgentIdParams;
+    Params: AgentUsernameParams;
     Reply: ExportAgentConfigResponse | ErrorResponse;
   }>(
-    "/:id/config/export",
+    "/:username/config/export",
     {
       schema: {
         description: "Export agent configuration as YAML",
         tags: ["Agents"],
-        params: AgentIdParamsSchema,
+        params: AgentUsernameParamsSchema,
         response: {
           200: ExportAgentConfigResponseSchema,
           404: ErrorResponseSchema,
@@ -225,7 +243,16 @@ export default function agentConfigRoutes(
     },
     async (request, reply) => {
       try {
-        const { id } = request.params;
+        const { username } = request.params;
+        const id = resolveAgentId(username);
+
+        if (!id) {
+          return reply.status(404).send({
+            success: false,
+            message: `Agent '${username}' not found`,
+          });
+        }
+
         const config = await getAgentConfigById(id);
         const yamlString = yaml.dump(config, { lineWidth: -1 });
 
@@ -233,7 +260,7 @@ export default function agentConfigRoutes(
       } catch (error) {
         request.log.error(
           error,
-          "Error in GET /agents/:id/config/export route",
+          "Error in GET /agents/:username/config/export route",
         );
         const errorMessage =
           error instanceof Error ? error.message : "Unknown error";
@@ -253,19 +280,19 @@ export default function agentConfigRoutes(
     },
   );
 
-  // POST /:id/config/import — Import agent config from YAML
+  // POST /:username/config/import — Import agent config from YAML
   fastify.post<{
-    Params: AgentIdParams;
+    Params: AgentUsernameParams;
     Body: ImportAgentConfigRequest;
     Reply: ImportAgentConfigResponse;
   }>(
-    "/:id/config/import",
+    "/:username/config/import",
     {
       preHandler: [requirePermission("manage_agents")],
       schema: {
         description: "Import agent configuration from YAML",
         tags: ["Agents"],
-        params: AgentIdParamsSchema,
+        params: AgentUsernameParamsSchema,
         body: ImportAgentConfigRequestSchema,
         response: {
           200: ImportAgentConfigResponseSchema,
@@ -278,8 +305,16 @@ export default function agentConfigRoutes(
     },
     async (request, reply) => {
       try {
-        const { id } = request.params;
+        const { username } = request.params;
         const { yaml: yamlString } = request.body;
+        const id = resolveAgentId(username);
+
+        if (!id) {
+          return reply.status(404).send({
+            success: false,
+            message: `Agent '${username}' not found`,
+          });
+        }
 
         // Parse YAML
         let parsed: unknown;
@@ -325,7 +360,7 @@ export default function agentConfigRoutes(
       } catch (error) {
         request.log.error(
           error,
-          "Error in POST /agents/:id/config/import route",
+          "Error in POST /agents/:username/config/import route",
         );
         const errorMessage =
           error instanceof Error ? error.message : "Unknown error";
