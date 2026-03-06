@@ -1,7 +1,10 @@
 import { z } from "zod";
 
 /** How often NAISYS instances send heartbeats to the hub (ms) */
-export const HEARTBEAT_INTERVAL_MS = 2000;
+export const NAISYS_HEARTBEAT_INTERVAL_MS = 2000;
+
+/** How often the hub pushes aggregate active user status to all connections (NAISYS/Supervisors) (ms) */
+export const HUB_HEARTBEAT_INTERVAL_MS = 2000;
 
 /** Sent by NAISYS instance to hub with active user IDs */
 export const HeartbeatSchema = z.object({

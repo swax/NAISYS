@@ -1,7 +1,7 @@
 import {
   AgentsStatusSchema,
-  HEARTBEAT_INTERVAL_MS,
   HubEvents,
+  NAISYS_HEARTBEAT_INTERVAL_MS,
 } from "@naisys/hub-protocol";
 
 import { IAgentManager } from "../agent/agentManagerInterface.js";
@@ -34,7 +34,7 @@ export function createHeartbeatService(
   }
 
   // Start periodic heartbeat
-  const interval = setInterval(sendHeartbeat, HEARTBEAT_INTERVAL_MS);
+  const interval = setInterval(sendHeartbeat, NAISYS_HEARTBEAT_INTERVAL_MS);
 
   function cleanup() {
     clearInterval(interval);
