@@ -35,8 +35,8 @@ export const HostSchema = z.object({
   _actions: z.array(HateoasActionSchema).optional(),
 });
 
-export const HostIdParamsSchema = z.object({
-  id: z.coerce.number(),
+export const HostNameParamsSchema = z.object({
+  hostname: z.string(),
 });
 
 export const AgentListRequestSchema = z.object({
@@ -87,7 +87,7 @@ export type AgentListRequest = z.infer<typeof AgentListRequestSchema>;
 export type AgentListResponse = z.infer<typeof AgentListResponseSchema>;
 export type AgentUsernameParams = z.infer<typeof AgentUsernameParamsSchema>;
 export type AgentDetailResponse = z.infer<typeof AgentDetailResponseSchema>;
-export type HostIdParams = z.infer<typeof HostIdParamsSchema>;
+export type HostNameParams = z.infer<typeof HostNameParamsSchema>;
 export type HostListResponse = z.infer<typeof HostListResponseSchema>;
 
 export const SetLeadAgentRequestSchema = z
@@ -176,6 +176,6 @@ export type AssignAgentToHostRequest = z.infer<
   typeof AssignAgentToHostRequestSchema
 >;
 
-export const AgentIdParamSchema = z.object({
-  agentId: z.coerce.number(),
+export const AgentNameParamSchema = z.object({
+  agentName: z.string(),
 });

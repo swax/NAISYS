@@ -86,7 +86,7 @@ export const ConfigSummary: React.FC<{
                         />
                         <Anchor
                           component={Link}
-                          to={`/hosts/${h.id}`}
+                          to={`/hosts/${h.name}`}
                           size="sm"
                         >
                           {h.name}

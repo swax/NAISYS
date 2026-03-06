@@ -60,7 +60,7 @@ export const AgentNavHeader: React.FC<AgentNavHeaderProps> = ({
       : false;
 
   // Determine active tab from current location
-  // Path: /agents/:id/runs → split("/")[3] = "runs"
+  // Path: /agents/:username/runs → split("/")[3] = "runs"
   const pathParts = location.pathname.split("/");
   const currentSection = pathParts.length >= 4 ? pathParts[3] : "detail";
 

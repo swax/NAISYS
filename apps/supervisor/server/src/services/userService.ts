@@ -15,6 +15,13 @@ export async function getUserByUsername(username: string) {
   return supervisorDb.user.findUnique({ where: { username } });
 }
 
+export async function getUserByUsernameWithPermissions(username: string) {
+  return supervisorDb.user.findUnique({
+    where: { username },
+    include: { permissions: true },
+  });
+}
+
 export async function getUserByUuid(uuid: string) {
   return supervisorDb.user.findFirst({ where: { uuid } });
 }

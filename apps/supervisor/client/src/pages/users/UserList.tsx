@@ -173,7 +173,7 @@ export const UserList: React.FC = () => {
                 <Table.Tr
                   key={item.id}
                   style={{ cursor: "pointer" }}
-                  onClick={() => navigate(`/users/${item.id}`)}
+                  onClick={() => navigate(`/users/${item.username}`)}
                 >
                   <Table.Td>{item.username}</Table.Td>
                   <Table.Td>{item.isAgent ? "Agent" : "User"}</Table.Td>
