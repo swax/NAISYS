@@ -1,7 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { MessageParam } from "@anthropic-ai/sdk/resources";
 
-import { ContentBlock, LlmMessage, LlmRole } from "../llmDtos.js";
+import { ContentBlock, LlmMessage } from "../llmDtos.js";
 import { QueryResult, QuerySources, VendorDeps } from "./vendorTypes.js";
 
 const clientCache = new Map<string, Anthropic>();
@@ -63,7 +63,7 @@ export async function sendWithAnthropic(
       },
       ...context.map((msg) => {
         return {
-          role: msg.role == LlmRole.Assistant ? "assistant" : "user",
+          role: msg.role == "assistant" ? "assistant" : "user",
           content: formatContentForAnthropic(msg.content, msg.cachePoint),
         } satisfies MessageParam;
       }),

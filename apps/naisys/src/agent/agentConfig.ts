@@ -1,8 +1,4 @@
-import {
-  AgentConfigFile,
-  CommandProtection,
-  sanitizeSpendLimit,
-} from "@naisys/common";
+import { AgentConfigFile, sanitizeSpendLimit } from "@naisys/common";
 import table from "text-table";
 
 import { agentConfigCmd } from "../command/commandDefs.js";
@@ -87,7 +83,7 @@ export function createAgentConfig(
       completeSessionEnabled: !!config.completeSessionEnabled,
       wakeOnMessage: !!config.wakeOnMessage,
       initialCommands: config.initialCommands ?? [],
-      commandProtection: config.commandProtection ?? CommandProtection.None,
+      commandProtection: config.commandProtection ?? "none",
       debugPauseSeconds:
         config.debugPauseSeconds === undefined ? 0 : config.debugPauseSeconds,
       multipleCommandsEnabled: !!config.multipleCommandsEnabled,

@@ -1,7 +1,4 @@
-import { CommandProtection as CommandProtectionEnum } from "@naisys/common";
-
 import { AgentConfig } from "../agent/agentConfig.js";
-import { LlmRole } from "../llm/llmDtos.js";
 import { LLMService } from "../llm/llmService.js";
 import { OutputService } from "../utils/output.js";
 import { PromptBuilder } from "./promptBuilder.js";
@@ -21,11 +18,11 @@ export function createCommandProtection(
     command: string,
   ): Promise<ValidateCommandResponse> {
     switch (agentConfig().commandProtection) {
-      case CommandProtectionEnum.None:
+      case "none":
         return {
           commandAllowed: true,
         };
-      case CommandProtectionEnum.Manual: {
+      case "manual": {
         const confirmation = await promptBuilder.getCommandConfirmation();
         const commandAllowed = confirmation.toLowerCase() === "y";
         return {
@@ -33,7 +30,7 @@ export function createCommandProtection(
           rejectReason: commandAllowed ? undefined : "Command denied by admin",
         };
       }
-      case CommandProtectionEnum.Auto:
+      case "auto":
         return await autoValidateCommand(command);
       default:
         throw "Write protection not configured correctly";
@@ -58,7 +55,7 @@ Reply with 'allow' to allow the command, otherwise you can give a reason for you
       systemMessage,
       [
         {
-          role: LlmRole.User,
+          role: "user",
           content: command,
         },
       ],

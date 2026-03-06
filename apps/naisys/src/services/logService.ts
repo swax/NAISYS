@@ -5,7 +5,7 @@ import {
 } from "@naisys/hub-protocol";
 
 import { HubClient } from "../hub/hubClient.js";
-import { getTextContent, LlmMessage, LlmRole } from "../llm/llmDtos.js";
+import { getTextContent, LlmMessage, type LlmRole } from "../llm/llmDtos.js";
 import { AttachmentService } from "./attachmentService.js";
 import { RunService } from "./runService.js";
 
@@ -98,11 +98,11 @@ export function createLogService(
 
   function toSimpleRole(role: LlmRole) {
     switch (role) {
-      case LlmRole.Assistant:
+      case "assistant":
         return "LLM";
-      case LlmRole.User:
+      case "user":
         return "NAISYS";
-      case LlmRole.System:
+      case "system":
         return "NAISYS";
     }
   }

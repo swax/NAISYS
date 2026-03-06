@@ -4,7 +4,7 @@ import { LogService } from "../services/logService.js";
 import { InputModeService } from "../utils/inputMode.js";
 import { OutputColor, OutputService } from "../utils/output.js";
 import * as utilities from "../utils/utilities.js";
-import { ContentBlock, ContentSource, LlmMessage, LlmRole } from "./llmDtos.js";
+import { ContentBlock, ContentSource, LlmMessage } from "./llmDtos.js";
 
 export function createContextManager(
   { agentConfig }: AgentConfig,
@@ -43,10 +43,10 @@ export function createContextManager(
     // Else otherwise we're running in LLM mode
     const role =
       source == ContentSource.ConsolePrompt || source == ContentSource.Console
-        ? LlmRole.User
+        ? "user"
         : source == ContentSource.LlmPromptResponse ||
             source == ContentSource.LLM
-          ? LlmRole.Assistant
+          ? "assistant"
           : undefined;
 
     if (!role) {
@@ -86,7 +86,7 @@ export function createContextManager(
 
     const llmMessage: LlmMessage = {
       source: ContentSource.Console,
-      role: LlmRole.User,
+      role: "user",
       content: contentBlocks,
     };
 
@@ -114,7 +114,7 @@ export function createContextManager(
 
     const llmMessage: LlmMessage = {
       source: ContentSource.Console,
-      role: LlmRole.User,
+      role: "user",
       content: contentBlocks,
     };
 
@@ -212,7 +212,7 @@ export function createContextManager(
     if (workspaceContent) {
       if (
         lastMessage &&
-        lastMessage.role == LlmRole.User &&
+        lastMessage.role == "user" &&
         typeof lastMessage.content === "string"
       ) {
         // Combine with the last user message
@@ -221,7 +221,7 @@ export function createContextManager(
         // Add as a new user message
         combinedMessages.push({
           source: ContentSource.Console,
-          role: LlmRole.User,
+          role: "user",
           content: workspaceContent,
         });
       }
@@ -232,13 +232,13 @@ export function createContextManager(
     if (
       agentConfig().workspacesEnabled &&
       beforeWorkspaceMsg &&
-      beforeWorkspaceMsg.role === LlmRole.Assistant
+      beforeWorkspaceMsg.role === "assistant"
     ) {
       beforeWorkspaceMsg.cachePoint = true;
     }
 
     const latestPromptMsg = combinedMessages[combinedMessages.length - 1];
-    if (latestPromptMsg && latestPromptMsg.role === LlmRole.User) {
+    if (latestPromptMsg && latestPromptMsg.role === "user") {
       latestPromptMsg.cachePoint = true;
     }
 

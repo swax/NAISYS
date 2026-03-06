@@ -4,7 +4,7 @@ import { fileURLToPath } from "url";
 import { IAgentManager } from "../agent/agentManagerInterface.js";
 import { GlobalConfig } from "../globalConfig.js";
 import { ContextManager } from "../llm/contextManager.js";
-import { LlmRole } from "../llm/llmDtos.js";
+import type { LlmRole } from "../llm/llmDtos.js";
 import { InputModeService } from "../utils/inputMode.js";
 import { OutputService } from "../utils/output.js";
 import {
@@ -30,11 +30,11 @@ export function createDebugCommands(
 ): RegistrableCommand[] {
   function roleToString(role: LlmRole) {
     switch (role) {
-      case LlmRole.Assistant:
+      case "assistant":
         return "LLM/Assistant";
-      case LlmRole.User:
+      case "user":
         return "NAISYS/User";
-      case LlmRole.System:
+      case "system":
         return "NAISYS/System";
       default:
         return "Unknown";

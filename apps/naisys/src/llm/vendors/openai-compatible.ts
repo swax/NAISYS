@@ -1,7 +1,7 @@
 import OpenAI from "openai";
 import { ChatCompletionCreateParamsNonStreaming } from "openai/resources";
 
-import { ContentBlock, LlmMessage, LlmRole } from "../llmDtos.js";
+import { ContentBlock, LlmMessage } from "../llmDtos.js";
 import { QueryResult, QuerySources, VendorDeps } from "./vendorTypes.js";
 
 const clientCache = new Map<string, OpenAI>();
@@ -46,7 +46,7 @@ export async function sendWithOpenAiCompatible(
     reasoning_effort: useThinking ? "medium" : "none",
     messages: [
       {
-        role: LlmRole.System,
+        role: "system",
         content: systemMessage,
       },
       ...context.map((m) => ({

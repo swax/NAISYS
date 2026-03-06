@@ -6,7 +6,6 @@ import { listenCmd } from "../command/commandDefs.js";
 import { RegistrableCommand } from "../command/commandRegistry.js";
 import { ShellWrapper } from "../command/shellWrapper.js";
 import { ContextManager } from "../llm/contextManager.js";
-import { LlmRole } from "../llm/llmDtos.js";
 import { LLMService } from "../llm/llmService.js";
 import { ModelService } from "../services/modelService.js";
 
@@ -94,7 +93,7 @@ export function createListenService(
         transcribeSystemPrompt,
         [
           {
-            role: LlmRole.User,
+            role: "user",
             content: [
               {
                 type: "text",
