@@ -1,15 +1,13 @@
 import type { HubDatabaseService } from "@naisys/hub-database";
 import {
   AgentsStatus,
-  HEARTBEAT_INTERVAL_MS,
+  HUB_HEARTBEAT_INTERVAL_MS,
   HeartbeatSchema,
   HubEvents,
 } from "@naisys/hub-protocol";
 
 import { HubServerLog } from "../services/hubServerLog.js";
 import { NaisysServer } from "../services/naisysServer.js";
-
-const HUB_HEARTBEAT_INTERVAL_MS = HEARTBEAT_INTERVAL_MS * 2;
 
 /** Tracks NAISYS instance heartbeats and pushes aggregate active user status to all instances */
 export function createHubHeartbeatService(
