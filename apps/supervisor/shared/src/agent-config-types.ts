@@ -16,7 +16,7 @@ export const CreateAgentConfigRequestSchema = z
 export const CreateAgentConfigResponseSchema = z.object({
   success: z.boolean(),
   message: z.string(),
-  id: z.number().optional(),
+  name: z.string().optional(),
   _links: z.array(HateoasLinkSchema).optional(),
   _actions: z.array(HateoasActionSchema).optional(),
 });

@@ -25,13 +25,13 @@ import { ChatInput } from "./ChatInput";
 import { ChatThread } from "./ChatThread";
 
 export const AgentChat: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
+  const { username } = useParams<{ username: string }>();
   const { agents } = useAgentDataContext();
   const [drawerOpened, { open: openDrawer, close: closeDrawer }] =
     useDisclosure();
 
-  const agentId = id ? Number(id) : 0;
-  const agent = agents.find((a) => a.id === agentId);
+  const agent = agents.find((a) => a.name === username);
+  const agentId = agent?.id ?? 0;
 
   const [selectedParticipantIds, setSelectedParticipantIds] = useState<
     string | null
@@ -42,7 +42,7 @@ export const AgentChat: React.FC = () => {
     actions: convActions,
     isLoading: convLoading,
     error: convError,
-  } = useChatConversations(agentId, Boolean(id));
+  } = useChatConversations(username ?? "", Boolean(username));
 
   // Auto-select first conversation when data loads
   useEffect(() => {
@@ -52,7 +52,7 @@ export const AgentChat: React.FC = () => {
   }, [conversations, selectedParticipantIds]);
 
   const { messages, isLoading: msgLoading } = useChatMessages(
-    agentId,
+    username ?? "",
     selectedParticipantIds,
     Boolean(selectedParticipantIds),
   );
@@ -78,7 +78,7 @@ export const AgentChat: React.FC = () => {
         .filter((pid) => pid !== agentId);
 
       await sendChatMessage(
-        agentId,
+        username ?? "",
         {
           fromId: agentId,
           toIds,
@@ -87,7 +87,7 @@ export const AgentChat: React.FC = () => {
         files,
       );
     },
-    [agentId, selectedParticipantIds],
+    [username, agentId, selectedParticipantIds],
   );
 
   const handleNewChat = useCallback(
@@ -103,7 +103,7 @@ export const AgentChat: React.FC = () => {
     [agentId, closeDrawer],
   );
 
-  if (!id) {
+  if (!username) {
     return (
       <Stack gap="md">
         <Text size="xl" fw={600}>
@@ -119,7 +119,7 @@ export const AgentChat: React.FC = () => {
   if (!agent) {
     return (
       <Alert color="yellow" title="Agent not found">
-        Agent with ID {id} not found
+        Agent &quot;{username}&quot; not found
       </Alert>
     );
   }

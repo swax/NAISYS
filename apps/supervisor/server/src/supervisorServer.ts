@@ -30,6 +30,7 @@ import { fileURLToPath } from "url";
 
 import { initLogger } from "./logger.js";
 import apiRoutes from "./routes/api.js";
+import { refreshUserLookup } from "./services/agentService.js";
 import { initBrowserSocket } from "./services/browserSocketService.js";
 import { initHubConnection } from "./services/hubConnectionService.js";
 import {
@@ -66,6 +67,9 @@ export const startServer: StartServer = async (
 
   // Hub DB still needed for agent API key auth
   await createHubDatabaseClient();
+
+  // Populate in-memory user lookup for username ↔ id resolution
+  await refreshUserLookup();
 
   // Connect to hub via Socket.IO for agent management
   const hubUrl = hubPort ? `https://localhost:${hubPort}` : process.env.HUB_URL;

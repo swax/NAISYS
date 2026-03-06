@@ -7,15 +7,15 @@ import type {
 import { api, API_BASE, apiEndpoints } from "./apiClient";
 
 export const getChatConversations = async (
-  agentId: number,
+  agentUsername: string,
 ): Promise<ChatConversationsResponse> => {
   return await api.get<ChatConversationsResponse>(
-    apiEndpoints.agentChat(agentId),
+    apiEndpoints.agentChat(agentUsername),
   );
 };
 
 export interface ChatMessagesParams {
-  agentId: number;
+  agentUsername: string;
   participantIds: string;
   updatedSince?: string;
   page?: number;
@@ -37,12 +37,12 @@ export const getChatMessages = async (
   }
 
   const query = queryParams.toString();
-  const url = `${apiEndpoints.agentChatMessages(params.agentId, params.participantIds)}${query ? `?${query}` : ""}`;
+  const url = `${apiEndpoints.agentChatMessages(params.agentUsername, params.participantIds)}${query ? `?${query}` : ""}`;
   return await api.get<ChatMessagesResponse>(url);
 };
 
 export const sendChatMessage = async (
-  agentId: number,
+  agentUsername: string,
   data: SendChatRequest,
   files?: File[],
 ): Promise<SendChatResponse> => {
@@ -58,7 +58,7 @@ export const sendChatMessage = async (
       }
 
       const response = await fetch(
-        `${API_BASE}${apiEndpoints.agentChat(agentId)}`,
+        `${API_BASE}${apiEndpoints.agentChat(agentUsername)}`,
         {
           method: "POST",
           body: formData,
@@ -72,7 +72,7 @@ export const sendChatMessage = async (
       return result;
     } else {
       return await api.post<SendChatRequest, SendChatResponse>(
-        apiEndpoints.agentChat(agentId),
+        apiEndpoints.agentChat(agentUsername),
         data,
       );
     }

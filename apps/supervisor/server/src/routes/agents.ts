@@ -2,12 +2,12 @@ import type { AgentConfigFile, HateoasAction } from "@naisys/common";
 import {
   AgentDetailResponse,
   AgentDetailResponseSchema,
-  AgentIdParams,
-  AgentIdParamsSchema,
   AgentListRequest,
   AgentListRequestSchema,
   AgentListResponse,
   AgentListResponseSchema,
+  AgentUsernameParams,
+  AgentUsernameParamsSchema,
   CreateAgentConfigRequest,
   CreateAgentConfigRequestSchema,
   CreateAgentConfigResponse,
@@ -29,20 +29,25 @@ import {
   getAgentStatus,
   isAgentActive,
 } from "../services/agentHostStatusService.js";
-import { getAgent, getAgents } from "../services/agentService.js";
+import {
+  getAgent,
+  getAgents,
+  resolveAgentId,
+} from "../services/agentService.js";
 
 function agentActions(
-  agentId: number,
+  username: string,
   hasManagePermission: boolean,
   archived: boolean,
+  agentId?: number,
 ): HateoasAction[] {
   const actions: HateoasAction[] = [];
-  const active = isAgentActive(agentId);
+  const active = agentId ? isAgentActive(agentId) : false;
 
   if (hasManagePermission && !active && !archived) {
     actions.push({
       rel: "start",
-      href: `${API_PREFIX}/agents/${agentId}/start`,
+      href: `${API_PREFIX}/agents/${username}/start`,
       method: "POST",
       title: "Start Agent",
       schema: `${API_PREFIX}/schemas/StartAgent`,
@@ -51,7 +56,7 @@ function agentActions(
   if (hasManagePermission && active) {
     actions.push({
       rel: "stop",
-      href: `${API_PREFIX}/agents/${agentId}/stop`,
+      href: `${API_PREFIX}/agents/${username}/stop`,
       method: "POST",
       title: "Stop Agent",
     });
@@ -59,7 +64,7 @@ function agentActions(
   if (hasManagePermission && !active && !archived) {
     actions.push({
       rel: "archive",
-      href: `${API_PREFIX}/agents/${agentId}/archive`,
+      href: `${API_PREFIX}/agents/${username}/archive`,
       method: "POST",
       title: "Archive Agent",
     });
@@ -67,7 +72,7 @@ function agentActions(
   if (hasManagePermission && archived) {
     actions.push({
       rel: "unarchive",
-      href: `${API_PREFIX}/agents/${agentId}/unarchive`,
+      href: `${API_PREFIX}/agents/${username}/unarchive`,
       method: "POST",
       title: "Unarchive Agent",
     });
@@ -75,7 +80,7 @@ function agentActions(
   if (hasManagePermission && !active && archived) {
     actions.push({
       rel: "delete",
-      href: `${API_PREFIX}/agents/${agentId}`,
+      href: `${API_PREFIX}/agents/${username}`,
       method: "DELETE",
       title: "Delete Agent",
     });
@@ -83,14 +88,14 @@ function agentActions(
   if (hasManagePermission && !archived) {
     actions.push({
       rel: "update-config",
-      href: `${API_PREFIX}/agents/${agentId}/config`,
+      href: `${API_PREFIX}/agents/${username}/config`,
       method: "PUT",
       title: "Update Agent Config",
       schema: `${API_PREFIX}/schemas/UpdateAgentConfig`,
     });
     actions.push({
       rel: "set-lead",
-      href: `${API_PREFIX}/agents/${agentId}/lead`,
+      href: `${API_PREFIX}/agents/${username}/lead`,
       method: "PUT",
       title: "Set Lead Agent",
       schema: `${API_PREFIX}/schemas/SetLeadAgent`,
@@ -100,20 +105,20 @@ function agentActions(
 }
 
 function agentLinks(
-  agentId: number,
+  username: string,
   config: AgentConfigFile | null | undefined,
 ) {
   const links = [
-    selfLink(`/agents/${agentId}`),
-    { rel: "config", href: `${API_PREFIX}/agents/${agentId}/config` },
-    { rel: "runs", href: `${API_PREFIX}/agents/${agentId}/runs` },
+    selfLink(`/agents/${username}`),
+    { rel: "config", href: `${API_PREFIX}/agents/${username}/config` },
+    { rel: "runs", href: `${API_PREFIX}/agents/${username}/runs` },
     collectionLink("agents"),
   ];
   if (config?.mailEnabled) {
-    links.push({ rel: "mail", href: `${API_PREFIX}/agents/${agentId}/mail` });
+    links.push({ rel: "mail", href: `${API_PREFIX}/agents/${username}/mail` });
   }
   if (config?.chatEnabled) {
-    links.push({ rel: "chat", href: `${API_PREFIX}/agents/${agentId}/chat` });
+    links.push({ rel: "chat", href: `${API_PREFIX}/agents/${username}/chat` });
   }
   return links;
 }
@@ -147,7 +152,7 @@ export default function agentsRoutes(
         const items = agents.map((agent) => ({
           ...agent,
           status: getAgentStatus(agent.id),
-          _links: [selfLink(`/agents/${agent.id}`)],
+          _links: [selfLink(`/agents/${agent.name}`)],
         }));
 
         const hasManagePermission = hasPermission(
@@ -214,14 +219,14 @@ export default function agentsRoutes(
           });
         }
 
-        const { id: agentId, config } = await createAgentConfig(name);
+        const { config } = await createAgentConfig(name);
 
         return {
           success: true,
           message: `Agent '${name}' created successfully`,
-          id: agentId,
-          _links: agentLinks(agentId, config),
-          _actions: agentActions(agentId, true, false),
+          name,
+          _links: agentLinks(name, config),
+          _actions: agentActions(name, true, false),
         };
       } catch (error) {
         request.log.error(error, "Error in POST /agents route");
@@ -243,17 +248,17 @@ export default function agentsRoutes(
     },
   );
 
-  // GET /:id — Agent detail with config
+  // GET /:username — Agent detail with config
   fastify.get<{
-    Params: AgentIdParams;
+    Params: AgentUsernameParams;
     Reply: AgentDetailResponse | ErrorResponse;
   }>(
-    "/:id",
+    "/:username",
     {
       schema: {
         description: "Get agent detail with configuration",
         tags: ["Agents"],
-        params: AgentIdParamsSchema,
+        params: AgentUsernameParamsSchema,
         response: {
           200: AgentDetailResponseSchema,
           404: ErrorResponseSchema,
@@ -263,13 +268,22 @@ export default function agentsRoutes(
     },
     async (request, reply) => {
       try {
-        const { id } = request.params;
+        const { username } = request.params;
+        const id = resolveAgentId(username);
+
+        if (!id) {
+          return reply.status(404).send({
+            success: false,
+            message: `Agent '${username}' not found`,
+          });
+        }
+
         const agent = await getAgent(id);
 
         if (!agent) {
           return reply.status(404).send({
             success: false,
-            message: `Agent with ID ${id} not found`,
+            message: `Agent '${username}' not found`,
           });
         }
 
@@ -281,15 +295,16 @@ export default function agentsRoutes(
         return {
           ...agent,
           status: getAgentStatus(id),
-          _links: agentLinks(id, agent.config),
+          _links: agentLinks(username, agent.config),
           _actions: agentActions(
-            id,
+            username,
             hasManagePermission,
             agent.archived ?? false,
+            id,
           ),
         };
       } catch (error) {
-        request.log.error(error, "Error in GET /agents/:id route");
+        request.log.error(error, "Error in GET /agents/:username route");
         return reply.status(500).send({
           success: false,
           message: "Internal server error while fetching agent detail",

@@ -19,18 +19,16 @@ export const AgentsLayout: React.FC = () => {
     useDisclosure();
   const location = useLocation();
   const [searchParams] = useSearchParams();
-  const { id } = useParams<{ id: string }>();
+  const { username } = useParams<{ username: string }>();
 
   // Close drawer on navigation
   React.useEffect(() => {
     closeDrawer();
   }, [location.pathname]);
 
-  const agentId = id ? Number(id) : null;
-
   // Key for remounting on agent/expand change
   const expandParam = searchParams.get("expand");
-  const key = `${agentId || "no-agent"}-${expandParam || ""}`;
+  const key = `${username || "no-agent"}-${expandParam || ""}`;
 
   return (
     <Box display="flex" style={{ flex: 1, minHeight: 0 }}>
@@ -71,7 +69,7 @@ export const AgentsLayout: React.FC = () => {
           >
             <IconRobot size="1.2rem" />
           </ActionIcon>
-          <AgentNavHeader agentId={agentId || undefined} />
+          <AgentNavHeader agentUsername={username} />
         </Group>
 
         {/* Route content */}

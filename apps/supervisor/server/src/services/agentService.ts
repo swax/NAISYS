@@ -93,6 +93,34 @@ function parseConfig(config: string | null): AgentConfigFile | null {
   }
 }
 
+// In-memory bidirectional lookup, refreshed by refreshUserLookup()
+const idToUsername = new Map<number, string>();
+const usernameToId = new Map<string, number>();
+
+export function resolveAgentId(username: string): number | undefined {
+  return usernameToId.get(username);
+}
+
+export function resolveUsername(userId: number): string | undefined {
+  return idToUsername.get(userId);
+}
+
+export async function refreshUserLookup(): Promise<void> {
+  try {
+    const users = await hubDb.users.findMany({
+      select: { id: true, username: true },
+    });
+    idToUsername.clear();
+    usernameToId.clear();
+    for (const user of users) {
+      idToUsername.set(user.id, user.username);
+      usernameToId.set(user.username, user.id);
+    }
+  } catch (error) {
+    getLogger().error(error, "Error refreshing user lookup");
+  }
+}
+
 export async function getHubAgentById(id: number) {
   return hubDb.users.findUnique({
     where: { id },
@@ -191,7 +219,7 @@ export async function unarchiveAgent(id: number): Promise<void> {
 
 export async function updateLeadAgent(
   id: number,
-  leadUserId: number | null,
+  leadUsername: string | null,
 ): Promise<void> {
   const agent = await hubDb.users.findUnique({
     where: { id },
@@ -202,15 +230,17 @@ export async function updateLeadAgent(
     throw new Error(`Agent with ID ${id} not found`);
   }
 
-  if (leadUserId) {
+  let leadUserId: number | null = null;
+  if (leadUsername) {
     const leadAgent = await hubDb.users.findUnique({
-      where: { id: leadUserId },
+      where: { username: leadUsername },
       select: { id: true },
     });
 
     if (!leadAgent) {
-      throw new Error(`Lead agent with ID ${leadUserId} not found`);
+      throw new Error(`Lead agent '${leadUsername}' not found`);
     }
+    leadUserId = leadAgent.id;
   }
 
   await hubDb.users.update({

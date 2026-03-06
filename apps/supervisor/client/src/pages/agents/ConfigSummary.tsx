@@ -51,7 +51,7 @@ export const ConfigSummary: React.FC<{
                   return leadAgent ? (
                     <Anchor
                       component={Link}
-                      to={`/agents/${leadAgent.id}`}
+                      to={`/agents/${leadAgent.name}`}
                       size="sm"
                     >
                       {leadUsername}

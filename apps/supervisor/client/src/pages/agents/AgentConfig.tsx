@@ -25,11 +25,10 @@ import { AgentConfigForm } from "./AgentConfigForm";
 import { ConfigYamlDialog } from "./ConfigYamlDialog";
 
 export const AgentConfig: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
+  const { username } = useParams<{ username: string }>();
   const { agents } = useAgentDataContext();
 
-  const agentId = id ? Number(id) : null;
-  const agentData = agents.find((a) => a.id === agentId);
+  const agentData = username ? agents.find((a) => a.name === username) : null;
   const [config, setConfig] = useState<AgentConfigFile | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -61,13 +60,13 @@ export const AgentConfig: React.FC = () => {
   }, []);
 
   const fetchConfig = useCallback(async () => {
-    if (!agentId) {
+    if (!username) {
       setLoading(false);
       return;
     }
 
     try {
-      const data = await getAgentConfig(agentId);
+      const data = await getAgentConfig(username);
       setConfig(data.config);
       setActions(data._actions);
       setConfigRevision((r) => r + 1);
@@ -77,20 +76,20 @@ export const AgentConfig: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [agentId]);
+  }, [username]);
 
   useEffect(() => {
     void fetchConfig();
   }, [fetchConfig]);
 
   const handleSave = async (updatedConfig: AgentConfigFile) => {
-    if (!agentId) return;
+    if (!username) return;
 
     setSaving(true);
     setSaveError(null);
 
     try {
-      const data = await updateAgentConfig(agentId, updatedConfig);
+      const data = await updateAgentConfig(username, updatedConfig);
 
       if (data.success) {
         setConfig(updatedConfig);
@@ -107,11 +106,10 @@ export const AgentConfig: React.FC = () => {
   };
 
   const handleSetLead = async (value: string | null) => {
-    if (!agentId) return;
+    if (!username) return;
     setSettingLead(true);
     try {
-      const leadAgentId = value ? Number(value) : null;
-      const result = await setAgentLead(agentId, leadAgentId);
+      const result = await setAgentLead(username, value);
       if (result.success) {
         notifications.show({
           title: "Lead Agent Updated",
@@ -137,14 +135,12 @@ export const AgentConfig: React.FC = () => {
   };
 
   const leadAgentOptions = agents
-    .filter((a) => a.id !== agentId && !a.archived)
-    .map((a) => ({ value: String(a.id), label: a.name }));
+    .filter((a) => a.name !== username && !a.archived)
+    .map((a) => ({ value: a.name, label: a.name }));
 
-  const currentLeadValue = agents.find(
-    (a) => a.name === agentData?.leadUsername,
-  )?.id;
+  const currentLeadValue = agentData?.leadUsername;
 
-  if (!agentId) {
+  if (!username) {
     return <Text size="xl">Agent Config</Text>;
   }
 
@@ -160,7 +156,7 @@ export const AgentConfig: React.FC = () => {
   if (error) {
     return (
       <Stack p="md">
-        <Text size="xl">{agentData?.name || `Agent ${agentId}`}</Text>
+        <Text size="xl">{agentData?.name || username}</Text>
         <Alert color="red" title="Error">
           {error}
         </Alert>
@@ -196,7 +192,7 @@ export const AgentConfig: React.FC = () => {
           label="Lead Agent"
           placeholder="None (top-level agent)"
           data={leadAgentOptions}
-          value={currentLeadValue ? String(currentLeadValue) : null}
+          value={currentLeadValue ?? null}
           onChange={handleSetLead}
           clearable
           searchable
@@ -227,9 +223,9 @@ export const AgentConfig: React.FC = () => {
         />
       )}
 
-      {agentId && configDialogMode && (
+      {username && configDialogMode && (
         <ConfigYamlDialog
-          agentId={agentId}
+          agentUsername={username}
           mode={configDialogMode}
           opened={true}
           onClose={() => setConfigDialogMode(null)}

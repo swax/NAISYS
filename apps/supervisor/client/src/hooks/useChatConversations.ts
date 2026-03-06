@@ -9,10 +9,10 @@ import { MessageRoomEvent } from "./messageCacheUtils";
 import { useSubscription } from "./useSubscription";
 
 // Module-level cache (shared across hook instances, persists across remounts)
-const conversationsCache = new Map<number, ChatConversation[]>();
+const conversationsCache = new Map<string, ChatConversation[]>();
 
 export const useChatConversations = (
-  agentId: number,
+  agentUsername: string,
   enabled: boolean = true,
 ) => {
   const { agents } = useAgentDataContext();
@@ -26,7 +26,7 @@ export const useChatConversations = (
     (updated: ChatConversation[]) => {
       if (updated.length === 0) return;
 
-      const existing = conversationsCache.get(agentId) || [];
+      const existing = conversationsCache.get(agentUsername) || [];
       const mergeMap = new Map(existing.map((c) => [c.participantIds, c]));
 
       for (const conv of updated) {
@@ -42,10 +42,10 @@ export const useChatConversations = (
           new Date(a.lastMessageAt).getTime(),
       );
 
-      conversationsCache.set(agentId, merged);
+      conversationsCache.set(agentUsername, merged);
       setCacheVersion((v) => v + 1);
     },
-    [agentId],
+    [agentUsername],
   );
 
   const handleChatPush = useCallback(
@@ -69,9 +69,9 @@ export const useChatConversations = (
   );
 
   const query = useQuery({
-    queryKey: ["chat-conversations", agentId],
-    queryFn: () => getChatConversations(agentId),
-    enabled: enabled && !!agentId,
+    queryKey: ["chat-conversations", agentUsername],
+    queryFn: () => getChatConversations(agentUsername),
+    enabled: enabled && !!agentUsername,
     refetchInterval: false,
     refetchIntervalInBackground: false,
     refetchOnWindowFocus: true,
@@ -89,11 +89,11 @@ export const useChatConversations = (
 
   // WebSocket subscription for real-time conversation updates
   useSubscription<MessageRoomEvent>(
-    enabled && agentId ? `chat-conversations:${agentId}` : null,
+    enabled && agentUsername ? `chat-conversations:${agentUsername}` : null,
     handleChatPush,
   );
 
-  const conversations = conversationsCache.get(agentId) || [];
+  const conversations = conversationsCache.get(agentUsername) || [];
   const actions: HateoasAction[] | undefined = query.data?._actions;
 
   return {

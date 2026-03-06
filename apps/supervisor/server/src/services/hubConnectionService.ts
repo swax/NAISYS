@@ -25,6 +25,7 @@ import {
   updateAgentsStatus,
   updateHostsStatus,
 } from "./agentHostStatusService.js";
+import { refreshUserLookup, resolveUsername } from "./agentService.js";
 import { getIO } from "./browserSocketService.js";
 
 let socket: Socket<SupervisorListenEvents, SupervisorEmitEvents> | null = null;
@@ -74,6 +75,7 @@ function connectSocket(hubUrl: string, hubAccessKey: string) {
   socket.on("connect", () => {
     connected = true;
     console.log(`[Supervisor:HubClient] Connected to ${hubUrl}`);
+    void refreshUserLookup();
   });
 
   socket.on("disconnect", (reason) => {
@@ -123,7 +125,9 @@ function connectSocket(hubUrl: string, hubAccessKey: string) {
     // Group log entries by session and emit to log rooms
     const bySession = new Map<string, typeof parsed.data.entries>();
     for (const entry of parsed.data.entries) {
-      const room = `logs:${entry.userId}:${entry.runId}:${entry.sessionId}`;
+      const username = resolveUsername(entry.userId);
+      if (!username) continue;
+      const room = `logs:${username}:${entry.runId}:${entry.sessionId}`;
       if (!bySession.has(room)) bySession.set(room, []);
       bySession.get(room)!.push(entry);
     }
@@ -133,7 +137,9 @@ function connectSocket(hubUrl: string, hubAccessKey: string) {
 
     // Emit session deltas to runs rooms
     for (const update of parsed.data.sessionUpdates) {
-      const room = `runs:${update.userId}`;
+      const username = resolveUsername(update.userId);
+      if (!username) continue;
+      const room = `runs:${username}`;
       browserIO.to(room).emit(room, { type: "log-update", ...update });
     }
   });
@@ -147,7 +153,9 @@ function connectSocket(hubUrl: string, hubAccessKey: string) {
 
     const browserIO = getIO();
     for (const entry of parsed.data.entries) {
-      const room = `runs:${entry.userId}`;
+      const username = resolveUsername(entry.userId);
+      if (!username) continue;
+      const room = `runs:${username}`;
       browserIO.to(room).emit(room, { type: "cost-update", ...entry });
     }
   });
@@ -162,9 +170,12 @@ function connectSocket(hubUrl: string, hubAccessKey: string) {
       return;
     }
 
-    const browserIO = getIO();
     const { session } = parsed.data;
-    const room = `runs:${session.userId}`;
+    const username = resolveUsername(session.userId);
+    if (!username) return;
+
+    const browserIO = getIO();
+    const room = `runs:${username}`;
     browserIO.to(room).emit(room, { type: "new-session", ...session });
   });
 
@@ -175,26 +186,28 @@ function connectSocket(hubUrl: string, hubAccessKey: string) {
       return;
     }
 
-    const browserIO = getIO();
     const msg = parsed.data;
     const payload = { type: "new-message" as const, ...msg };
-    const affectedUserIds = [
-      ...new Set([...msg.recipientUserIds, msg.fromUserId]),
-    ];
+    const affectedUserIds = new Set([...msg.recipientUserIds, msg.fromUserId]);
+    const browserIO = getIO();
 
     if (msg.kind === "mail") {
       for (const uid of affectedUserIds) {
-        const room = `mail:${uid}`;
+        const username = resolveUsername(uid);
+        if (!username) continue;
+        const room = `mail:${username}`;
         browserIO.to(room).emit(room, payload);
       }
     } else if (msg.kind === "chat") {
-      // Chat messages
+      // Chat messages — room keyed by participantIds (unchanged, not user-specific)
       const msgRoom = `chat-messages:${msg.participantIds}`;
       browserIO.to(msgRoom).emit(msgRoom, payload);
 
-      // Chat conversations
+      // Chat conversations — rooms keyed by username
       for (const uid of affectedUserIds) {
-        const convRoom = `chat-conversations:${uid}`;
+        const username = resolveUsername(uid);
+        if (!username) continue;
+        const convRoom = `chat-conversations:${username}`;
         browserIO.to(convRoom).emit(convRoom, payload);
       }
     }
@@ -210,7 +223,6 @@ function connectSocket(hubUrl: string, hubAccessKey: string) {
       return;
     }
 
-    const browserIO = getIO();
     const msg = parsed.data;
     const receipt = {
       type: "read-receipt" as const,
@@ -219,18 +231,23 @@ function connectSocket(hubUrl: string, hubAccessKey: string) {
     };
 
     if (msg.kind === "mail") {
-      // Create a set of unique user ids from participantIds which is a csv string
-      const participantIds = new Set(
+      // Collect all unique participant user IDs
+      const participantUserIds = new Set(
         msg.participantIds
           .map((pid) => pid.split(",").map((id) => Number(id)))
           .flat(),
       );
-      for (const uid of participantIds) {
-        const room = `mail:${uid}`;
+
+      const browserIO = getIO();
+      for (const uid of participantUserIds) {
+        const username = resolveUsername(uid);
+        if (!username) continue;
+        const room = `mail:${username}`;
         browserIO.to(room).emit(room, receipt);
       }
     } else if (msg.kind === "chat") {
-      // participantIds here is like the name of the room
+      // participantIds here is like the name of the room (unchanged)
+      const browserIO = getIO();
       for (const pids of msg.participantIds) {
         const room = `chat-messages:${pids}`;
         browserIO.to(room).emit(room, receipt);
@@ -240,6 +257,7 @@ function connectSocket(hubUrl: string, hubAccessKey: string) {
 
   // User list changed (hub broadcasts after create/edit/archive/delete)
   socket.on(HubEvents.USERS_UPDATED, () => {
+    void refreshUserLookup();
     emitListChanged();
   });
 }

@@ -229,8 +229,9 @@ export const UserDetail: React.FC = () => {
           {(() => {
             const agentLink = user._links?.find((l: any) => l.rel === "agent");
             if (!agentLink) return null;
-            const agentId = agentLink.href.match(/\/agents\/(\d+)/)?.[1];
-            if (!agentId) return null;
+            const agentUsername =
+              agentLink.href.match(/\/agents\/([^/]+)/)?.[1];
+            if (!agentUsername) return null;
             return (
               <Group>
                 <Text fw={600} w={120}>
@@ -238,7 +239,7 @@ export const UserDetail: React.FC = () => {
                 </Text>
                 <Text
                   component={Link}
-                  to={`/agents/${agentId}`}
+                  to={`/agents/${agentUsername}`}
                   c="blue"
                   td="underline"
                 >

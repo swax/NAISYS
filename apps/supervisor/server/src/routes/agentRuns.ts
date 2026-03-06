@@ -1,6 +1,6 @@
 import {
-  AgentIdParams,
-  AgentIdParamsSchema,
+  AgentUsernameParams,
+  AgentUsernameParamsSchema,
   ContextLogParams,
   ContextLogParamsSchema,
   ContextLogRequest,
@@ -15,24 +15,25 @@ import {
 import { FastifyInstance, FastifyPluginOptions } from "fastify";
 
 import { API_PREFIX } from "../hateoas.js";
+import { resolveAgentId } from "../services/agentService.js";
 import { getContextLog, getRunsData } from "../services/runsService.js";
 
 export default function agentRunsRoutes(
   fastify: FastifyInstance,
   _options: FastifyPluginOptions,
 ) {
-  // GET /:id/runs — Runs for agent
+  // GET /:username/runs — Runs for agent
   fastify.get<{
-    Params: AgentIdParams;
+    Params: AgentUsernameParams;
     Querystring: RunsDataRequest;
     Reply: RunsDataResponse;
   }>(
-    "/:id/runs",
+    "/:username/runs",
     {
       schema: {
         description: "Get run sessions for a specific agent",
         tags: ["Runs"],
-        params: AgentIdParamsSchema,
+        params: AgentUsernameParamsSchema,
         querystring: RunsDataRequestSchema,
         response: {
           200: RunsDataResponseSchema,
@@ -42,8 +43,16 @@ export default function agentRunsRoutes(
     },
     async (request, reply) => {
       try {
-        const { id } = request.params;
+        const { username } = request.params;
         const { updatedSince, page, count } = request.query;
+        const id = resolveAgentId(username);
+
+        if (!id) {
+          return reply.status(500).send({
+            success: false,
+            message: `Agent '${username}' not found`,
+          });
+        }
 
         const data = await getRunsData(id, updatedSince, page, count);
 
@@ -57,7 +66,7 @@ export default function agentRunsRoutes(
               _links: [
                 {
                   rel: "logs",
-                  href: `${API_PREFIX}/agents/${id}/runs/${run.runId}/sessions/${run.sessionId}/logs`,
+                  href: `${API_PREFIX}/agents/${username}/runs/${run.runId}/sessions/${run.sessionId}/logs`,
                 },
               ],
             })),
@@ -66,14 +75,14 @@ export default function agentRunsRoutes(
             ? [
                 {
                   rel: "next",
-                  href: `${API_PREFIX}/agents/${id}/runs?updatedSince=${encodeURIComponent(data.timestamp)}`,
+                  href: `${API_PREFIX}/agents/${username}/runs?updatedSince=${encodeURIComponent(data.timestamp)}`,
                   title: "Poll for updated runs",
                 },
               ]
             : undefined,
         };
       } catch (error) {
-        request.log.error(error, "Error in GET /agents/:id/runs route");
+        request.log.error(error, "Error in GET /agents/:username/runs route");
         return reply.status(500).send({
           success: false,
           message: "Internal server error while fetching runs data",
@@ -82,13 +91,13 @@ export default function agentRunsRoutes(
     },
   );
 
-  // GET /:id/runs/:runId/sessions/:sessionId/logs — Context log
+  // GET /:username/runs/:runId/sessions/:sessionId/logs — Context log
   fastify.get<{
     Params: ContextLogParams;
     Querystring: ContextLogRequest;
     Reply: ContextLogResponse;
   }>(
-    "/:id/runs/:runId/sessions/:sessionId/logs",
+    "/:username/runs/:runId/sessions/:sessionId/logs",
     {
       schema: {
         description: "Get context log for a specific run session",
@@ -103,8 +112,16 @@ export default function agentRunsRoutes(
     },
     async (request, reply) => {
       try {
-        const { id, runId, sessionId } = request.params;
+        const { username, runId, sessionId } = request.params;
         const { logsAfter } = request.query;
+        const id = resolveAgentId(username);
+
+        if (!id) {
+          return reply.status(500).send({
+            success: false,
+            message: `Agent '${username}' not found`,
+          });
+        }
 
         const data = await getContextLog(id, runId, sessionId, logsAfter);
 
@@ -119,7 +136,7 @@ export default function agentRunsRoutes(
           _links: [
             {
               rel: "next",
-              href: `${API_PREFIX}/agents/${id}/runs/${runId}/sessions/${sessionId}/logs?logsAfter=${maxLogId}`,
+              href: `${API_PREFIX}/agents/${username}/runs/${runId}/sessions/${sessionId}/logs?logsAfter=${maxLogId}`,
               title: "Poll for newer logs",
             },
           ],
@@ -127,7 +144,7 @@ export default function agentRunsRoutes(
       } catch (error) {
         request.log.error(
           error,
-          "Error in GET /agents/:id/runs/:runId/sessions/:sessionId/logs route",
+          "Error in GET /agents/:username/runs/:runId/sessions/:sessionId/logs route",
         );
         return reply.status(500).send({
           success: false,

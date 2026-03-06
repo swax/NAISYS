@@ -27,7 +27,7 @@ import { Agent } from "../types/agent";
 export const AgentSidebar: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { id: currentId } = useParams<{ id: string }>();
+  const { username: currentUsername } = useParams<{ username: string }>();
   const { agents, actions, isLoading, readStatus } = useAgentDataContext();
   const { status: connectionStatus } = useConnectionStatus();
   const [modalOpened, setModalOpened] = useState(false);
@@ -35,16 +35,16 @@ export const AgentSidebar: React.FC = () => {
 
   const isAgentSelected = (agent: Agent) => {
     if (agent.name === "all") {
-      return !currentId;
+      return !currentUsername;
     }
-    return currentId === String(agent.id);
+    return currentUsername === agent.name;
   };
 
   const getCurrentSection = () => {
-    // Path: /agents/:id/runs → extract section after the ID
+    // Path: /agents/:username/runs → extract section after the username
     const pathParts = location.pathname.split("/");
-    // pathParts: ["", "agents", ":id", "section"]
-    if (currentId && pathParts.length >= 4) {
+    // pathParts: ["", "agents", ":username", "section"]
+    if (currentUsername && pathParts.length >= 4) {
       return pathParts[3];
     }
     return null;
@@ -61,9 +61,9 @@ export const AgentSidebar: React.FC = () => {
       currentSection &&
       ["runs", "mail", "chat", "config"].includes(currentSection)
     ) {
-      return `/agents/${agent.id}/${currentSection}`;
+      return `/agents/${agent.name}/${currentSection}`;
     } else {
-      return `/agents/${agent.id}`;
+      return `/agents/${agent.name}`;
     }
   };
 
@@ -156,7 +156,7 @@ export const AgentSidebar: React.FC = () => {
     const handleLogClick = (e: React.MouseEvent) => {
       e.preventDefault();
       e.stopPropagation();
-      void navigate(`/agents/${agent.id}/runs?expand=new`);
+      void navigate(`/agents/${agent.name}/runs?expand=new`);
     };
 
     return (
@@ -189,7 +189,7 @@ export const AgentSidebar: React.FC = () => {
     const handleMailClick = (e: React.MouseEvent) => {
       e.preventDefault();
       e.stopPropagation();
-      void navigate(`/agents/${agent.id}/mail`);
+      void navigate(`/agents/${agent.name}/mail`);
     };
 
     return (
@@ -278,7 +278,7 @@ export const AgentSidebar: React.FC = () => {
               if (agent.status === "active") {
                 e.preventDefault();
                 e.stopPropagation();
-                void navigate(`/agents/${agent.id}/runs?expand=online`);
+                void navigate(`/agents/${agent.name}/runs?expand=online`);
               }
             }}
           >

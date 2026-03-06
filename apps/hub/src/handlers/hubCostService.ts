@@ -6,9 +6,9 @@ import {
 import type { HubDatabaseService } from "@naisys/hub-database";
 import { PrismaClient } from "@naisys/hub-database";
 import {
+  type CostPushEntry,
   CostWriteRequestSchema,
   HubEvents,
-  type CostPushEntry,
 } from "@naisys/hub-protocol";
 
 import { HubServerLog } from "../services/hubServerLog.js";

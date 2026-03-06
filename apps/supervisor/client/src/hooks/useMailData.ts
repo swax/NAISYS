@@ -9,12 +9,12 @@ import { mergeIntoCache, MessageRoomEvent } from "./messageCacheUtils";
 import { useSubscription } from "./useSubscription";
 
 // Module-level caches (shared across all hook instances and persist across remounts)
-const mailCache = new Map<number, MailMessage[]>();
-const updatedSinceCache = new Map<number, string | undefined>();
-const totalCache = new Map<number, number>();
+const mailCache = new Map<string, MailMessage[]>();
+const updatedSinceCache = new Map<string, string | undefined>();
+const totalCache = new Map<string, number>();
 let actionsCache: HateoasAction[] | undefined = undefined;
 
-export const useMailData = (agentId: number, enabled: boolean = true) => {
+export const useMailData = (agentUsername: string, enabled: boolean = true) => {
   const { agents } = useAgentDataContext();
   const userLookup = useMemo(
     () => new Map(agents.map((a) => [a.id, a.name])),
@@ -26,7 +26,7 @@ export const useMailData = (agentId: number, enabled: boolean = true) => {
     (updatedMail: MailMessage[], total?: number) => {
       if (
         mergeIntoCache(
-          agentId,
+          agentUsername,
           updatedMail,
           total,
           mailCache,
@@ -38,7 +38,7 @@ export const useMailData = (agentId: number, enabled: boolean = true) => {
         setCacheVersion((v) => v + 1);
       }
     },
-    [agentId],
+    [agentUsername],
   );
 
   const handleMailPush = useCallback(
@@ -64,7 +64,7 @@ export const useMailData = (agentId: number, enabled: boolean = true) => {
           break;
         }
         case "read-receipt": {
-          const cached = mailCache.get(agentId);
+          const cached = mailCache.get(agentUsername);
           if (!cached) return;
 
           let changed = false;
@@ -84,15 +84,15 @@ export const useMailData = (agentId: number, enabled: boolean = true) => {
         }
       }
     },
-    [agentId, mergeMail, userLookup],
+    [agentUsername, mergeMail, userLookup],
   );
 
   const queryFn = useCallback(async ({ queryKey }: any) => {
-    const [, agentId] = queryKey;
+    const [, agentUsername] = queryKey;
 
     const params: MailDataParams = {
-      agentId,
-      updatedSince: updatedSinceCache.get(agentId),
+      agentUsername,
+      updatedSince: updatedSinceCache.get(agentUsername),
       page: 1,
       count: 50,
     };
@@ -101,9 +101,9 @@ export const useMailData = (agentId: number, enabled: boolean = true) => {
   }, []);
 
   const query = useQuery({
-    queryKey: ["mail-data", agentId],
+    queryKey: ["mail-data", agentUsername],
     queryFn,
-    enabled: enabled && !!agentId,
+    enabled: enabled && !!agentUsername,
     refetchInterval: false,
     refetchIntervalInBackground: false,
     refetchOnWindowFocus: true,
@@ -124,12 +124,12 @@ export const useMailData = (agentId: number, enabled: boolean = true) => {
 
   // WebSocket subscription for real-time mail and read receipt updates
   useSubscription<MessageRoomEvent>(
-    enabled && agentId ? `mail:${agentId}` : null,
+    enabled && agentUsername ? `mail:${agentUsername}` : null,
     handleMailPush,
   );
 
-  const mail = mailCache.get(agentId) || [];
-  const total = totalCache.get(agentId) || 0;
+  const mail = mailCache.get(agentUsername) || [];
+  const total = totalCache.get(agentUsername) || 0;
 
   return {
     mail,

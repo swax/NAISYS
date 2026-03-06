@@ -14,10 +14,12 @@ import { useAgentDataContext } from "../contexts/AgentDataContext";
 import { getAgentDetail } from "../lib/apiAgents";
 
 interface AgentNavHeaderProps {
-  agentId?: number;
+  agentUsername?: string;
 }
 
-export const AgentNavHeader: React.FC<AgentNavHeaderProps> = ({ agentId }) => {
+export const AgentNavHeader: React.FC<AgentNavHeaderProps> = ({
+  agentUsername,
+}) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { agents, readStatus } = useAgentDataContext();
@@ -25,21 +27,21 @@ export const AgentNavHeader: React.FC<AgentNavHeaderProps> = ({ agentId }) => {
 
   // Fetch detail links when agent changes
   useEffect(() => {
-    if (!agentId) {
+    if (!agentUsername) {
       setLinks([]);
       return;
     }
-    void getAgentDetail(agentId).then((data) => {
+    void getAgentDetail(agentUsername).then((data) => {
       setLinks(data._links);
     });
-  }, [agentId]);
+  }, [agentUsername]);
 
-  if (!agentId) {
+  if (!agentUsername) {
     return null;
   }
 
   // Find the current agent
-  const currentAgent = agents.find((agent) => agent.id === agentId);
+  const currentAgent = agents.find((agent) => agent.name === agentUsername);
   const agentName = currentAgent?.name;
 
   // Check if mail/chat are enabled via detail _links
@@ -64,9 +66,9 @@ export const AgentNavHeader: React.FC<AgentNavHeaderProps> = ({ agentId }) => {
 
   const getTabUrl = (section: string) => {
     if (section === "detail") {
-      return `/agents/${agentId}`;
+      return `/agents/${agentUsername}`;
     }
-    return `/agents/${agentId}/${section}`;
+    return `/agents/${agentUsername}/${section}`;
   };
 
   const getAbsoluteUrl = (section: string) => {

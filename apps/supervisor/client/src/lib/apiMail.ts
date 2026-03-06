@@ -6,7 +6,7 @@ import type {
 import { api, API_BASE, apiEndpoints } from "./apiClient";
 
 export interface MailDataParams {
-  agentId: number;
+  agentUsername: string;
   updatedSince?: string;
   page?: number;
   count?: number;
@@ -27,16 +27,16 @@ export const getMailData = async (
   }
 
   const query = queryParams.toString();
-  const url = `${apiEndpoints.agentMail(params.agentId)}${query ? `?${query}` : ""}`;
+  const url = `${apiEndpoints.agentMail(params.agentUsername)}${query ? `?${query}` : ""}`;
   return await api.get<MailDataResponse>(url);
 };
 
 export const sendMail = async (
-  agentId: number,
+  agentUsername: string,
   mailData: SendMailRequest & { files?: File[] },
 ): Promise<SendMailResponse> => {
   try {
-    const endpoint = apiEndpoints.agentMail(agentId);
+    const endpoint = apiEndpoints.agentMail(agentUsername);
 
     // If there are files, use FormData
     if (mailData.files && mailData.files.length > 0) {
