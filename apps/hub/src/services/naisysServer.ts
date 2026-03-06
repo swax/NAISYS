@@ -5,6 +5,8 @@ import type {
   HubPushEvents,
   HubRequestEventName,
   HubRequestEvents,
+  HubSupervisorPushEventName,
+  HubSupervisorPushEvents,
   HubTriggerEventName,
 } from "@naisys/hub-protocol";
 import { Namespace } from "socket.io";
@@ -129,6 +131,11 @@ export function createNaisysServer(
     hostId: number,
     event: E,
     payload: HubPushEvents[E],
+  ): boolean;
+  function sendMessage<E extends HubSupervisorPushEventName>(
+    hostId: number,
+    event: E,
+    payload: HubSupervisorPushEvents[E],
   ): boolean;
   function sendMessage<E extends HubRequestEventName>(
     hostId: number,

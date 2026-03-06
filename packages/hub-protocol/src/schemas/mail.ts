@@ -202,3 +202,17 @@ export const MailReceivedPushSchema = z.object({
   kind: MessageKindSchema,
 });
 export type MailReceivedPush = z.infer<typeof MailReceivedPushSchema>;
+
+/** Full-data mail/chat push from hub to supervisor after DB write */
+export const MailPushSchema = z.object({
+  recipientUserIds: z.array(z.number()),
+  fromUserId: z.number(),
+  kind: MessageKindSchema,
+  messageId: z.number(),
+  subject: z.string().optional(),
+  body: z.string(),
+  createdAt: z.string(),
+  participantIds: z.string(),
+  attachmentIds: z.array(z.number()).optional(),
+});
+export type MailPush = z.infer<typeof MailPushSchema>;

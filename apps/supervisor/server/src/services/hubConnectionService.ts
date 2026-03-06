@@ -8,8 +8,12 @@ import type {
 } from "@naisys/hub-protocol";
 import {
   AgentsStatusSchema,
+  CostPushSchema,
   HostListSchema,
   HubEvents,
+  LogPushSchema,
+  MailPushSchema,
+  SessionPushSchema,
 } from "@naisys/hub-protocol";
 import { io, Socket } from "socket.io-client";
 
@@ -20,6 +24,7 @@ import {
   updateAgentsStatus,
   updateHostsStatus,
 } from "./agentHostStatusService.js";
+import { getIO } from "./browserSocketService.js";
 
 let socket: Socket<SupervisorListenEvents, SupervisorEmitEvents> | null = null;
 let connected = false;
@@ -103,6 +108,94 @@ function connectSocket(hubUrl: string, hubAccessKey: string) {
     }
 
     updateHostsStatus(parsed.data.hosts);
+  });
+
+  socket.on(HubEvents.LOG_PUSH, (data) => {
+    const parsed = LogPushSchema.safeParse(data);
+    if (!parsed.success) {
+      console.warn("[Supervisor:HubClient] Invalid log push:", parsed.error);
+      return;
+    }
+
+    const browserIO = getIO();
+
+    // Group log entries by session and emit to log rooms
+    const bySession = new Map<string, typeof parsed.data.entries>();
+    for (const entry of parsed.data.entries) {
+      const room = `logs:${entry.userId}:${entry.runId}:${entry.sessionId}`;
+      if (!bySession.has(room)) bySession.set(room, []);
+      bySession.get(room)!.push(entry);
+    }
+    for (const [room, entries] of bySession) {
+      browserIO.to(room).emit(room, entries);
+    }
+
+    // Emit session deltas to runs rooms
+    for (const update of parsed.data.sessionUpdates) {
+      const room = `runs:${update.userId}`;
+      browserIO.to(room).emit(room, { type: "log-update", ...update });
+    }
+  });
+
+  socket.on(HubEvents.COST_PUSH, (data) => {
+    const parsed = CostPushSchema.safeParse(data);
+    if (!parsed.success) {
+      console.warn("[Supervisor:HubClient] Invalid cost push:", parsed.error);
+      return;
+    }
+
+    const browserIO = getIO();
+    for (const entry of parsed.data.entries) {
+      const room = `runs:${entry.userId}`;
+      browserIO.to(room).emit(room, { type: "cost-update", ...entry });
+    }
+  });
+
+  socket.on(HubEvents.SESSION_PUSH, (data) => {
+    const parsed = SessionPushSchema.safeParse(data);
+    if (!parsed.success) {
+      console.warn(
+        "[Supervisor:HubClient] Invalid session push:",
+        parsed.error,
+      );
+      return;
+    }
+
+    const browserIO = getIO();
+    const { session } = parsed.data;
+    const room = `runs:${session.userId}`;
+    browserIO.to(room).emit(room, { type: "new-session", ...session });
+  });
+
+  socket.on(HubEvents.MAIL_PUSH, (data) => {
+    const parsed = MailPushSchema.safeParse(data);
+    if (!parsed.success) {
+      console.warn("[Supervisor:HubClient] Invalid mail push:", parsed.error);
+      return;
+    }
+
+    const browserIO = getIO();
+    const msg = parsed.data;
+    const affectedUserIds = [
+      ...new Set([...msg.recipientUserIds, msg.fromUserId]),
+    ];
+
+    if (msg.kind === "mail") {
+      for (const uid of affectedUserIds) {
+        const room = `mail:${uid}`;
+        browserIO.to(room).emit(room, msg);
+      }
+    } else if (msg.kind === "chat") {
+      // Chat messages
+      const msgRoom = `chat-messages:${msg.participantIds}`;
+      browserIO.to(msgRoom).emit(msgRoom, msg);
+
+      // Chat conversations
+      for (const uid of affectedUserIds) {
+        const convRoom = `chat-conversations:${uid}`;
+        browserIO.to(convRoom).emit(convRoom, msg);
+      }
+    }
   });
 
   // User list changed (hub broadcasts after create/edit/archive/delete)

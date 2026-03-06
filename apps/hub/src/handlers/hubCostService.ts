@@ -5,7 +5,11 @@ import {
 } from "@naisys/common";
 import type { HubDatabaseService } from "@naisys/hub-database";
 import { PrismaClient } from "@naisys/hub-database";
-import { CostWriteRequestSchema, HubEvents } from "@naisys/hub-protocol";
+import {
+  CostWriteRequestSchema,
+  HubEvents,
+  type CostPushEntry,
+} from "@naisys/hub-protocol";
 
 import { HubServerLog } from "../services/hubServerLog.js";
 import { NaisysServer } from "../services/naisysServer.js";
@@ -32,6 +36,7 @@ export function createHubCostService(
 
       // Collect unique user IDs from this batch
       const batchUserIds = new Set(parsed.entries.map((e) => e.userId));
+      const costPushEntries: CostPushEntry[] = [];
 
       for (const entry of parsed.entries) {
         // Find the most recent cost record for this combination
@@ -92,6 +97,25 @@ export function createHubCostService(
             total_cost: { increment: entry.cost },
           },
         });
+
+        costPushEntries.push({
+          userId: entry.userId,
+          runId: entry.runId,
+          sessionId: entry.sessionId,
+          costDelta: entry.cost,
+        });
+      }
+
+      // Push cost deltas to supervisor connections
+      if (costPushEntries.length > 0) {
+        for (const connection of naisysServer.getConnectedClients()) {
+          if (connection.getHostType() !== "supervisor") continue;
+          naisysServer.sendMessage(
+            connection.getHostId(),
+            HubEvents.COST_PUSH,
+            { entries: costPushEntries },
+          );
+        }
       }
 
       // Re-send cost_control to any suspended users still writing costs

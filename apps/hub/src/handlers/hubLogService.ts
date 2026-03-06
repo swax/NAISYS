@@ -1,5 +1,10 @@
 import type { HubDatabaseService } from "@naisys/hub-database";
-import { HubEvents, LogWriteRequestSchema } from "@naisys/hub-protocol";
+import {
+  HubEvents,
+  type LogPushEntry,
+  type LogPushSessionUpdate,
+  LogWriteRequestSchema,
+} from "@naisys/hub-protocol";
 
 import { HubServerLog } from "../services/hubServerLog.js";
 import { NaisysServer } from "../services/naisysServer.js";
@@ -16,8 +21,13 @@ export function createHubLogService(
     try {
       const parsed = LogWriteRequestSchema.parse(data);
 
+      // Collect push entries and session deltas
+      const pushEntries: LogPushEntry[] = [];
+      const sessionUpdates = new Map<string, LogPushSessionUpdate>();
+
       for (const entry of parsed.entries) {
         const now = new Date().toISOString();
+        const lineCount = entry.message.split("\n").length;
 
         const log = await hubDb.context_log.create({
           data: {
@@ -45,7 +55,7 @@ export function createHubLogService(
             last_active: now,
             latest_log_id: log.id,
             total_lines: {
-              increment: entry.message.split("\n").length,
+              increment: lineCount,
             },
           },
         });
@@ -66,6 +76,52 @@ export function createHubLogService(
           entry.userId,
           "latestLogId",
           log.id,
+        );
+
+        // Collect push entry with DB-assigned ID
+        pushEntries.push({
+          id: log.id,
+          userId: entry.userId,
+          runId: entry.runId,
+          sessionId: entry.sessionId,
+          role: entry.role,
+          source: entry.source,
+          type: entry.type,
+          message: entry.message,
+          createdAt: entry.createdAt,
+          attachmentId: entry.attachmentId,
+        });
+
+        // Track session delta (accumulate totalLinesDelta, keep latest logId)
+        const sessionKey = `${entry.userId}-${entry.runId}-${entry.sessionId}`;
+        const existing = sessionUpdates.get(sessionKey);
+        if (existing) {
+          existing.latestLogId = Math.max(existing.latestLogId, log.id);
+          existing.lastActive = now;
+          existing.totalLinesDelta += lineCount;
+        } else {
+          sessionUpdates.set(sessionKey, {
+            userId: entry.userId,
+            runId: entry.runId,
+            sessionId: entry.sessionId,
+            lastActive: now,
+            latestLogId: log.id,
+            totalLinesDelta: lineCount,
+          });
+        }
+      }
+
+      // Push full log data to supervisor connections
+      const pushPayload = {
+        entries: pushEntries,
+        sessionUpdates: Array.from(sessionUpdates.values()),
+      };
+      for (const connection of naisysServer.getConnectedClients()) {
+        if (connection.getHostType() !== "supervisor") continue;
+        naisysServer.sendMessage(
+          connection.getHostId(),
+          HubEvents.LOG_PUSH,
+          pushPayload,
         );
       }
 

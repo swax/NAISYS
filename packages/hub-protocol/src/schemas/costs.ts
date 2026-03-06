@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 /** How often NAISYS instances flush buffered cost entries to the hub (ms) */
-export const COST_FLUSH_INTERVAL_MS = 2000;
+export const COST_FLUSH_INTERVAL_MS = 100;
 
 /** A single cost entry sent from NAISYS instance to hub */
 export const CostWriteEntrySchema = z.object({
@@ -23,6 +23,20 @@ export const CostWriteRequestSchema = z.object({
   entries: z.array(CostWriteEntrySchema),
 });
 export type CostWriteRequest = z.infer<typeof CostWriteRequestSchema>;
+
+/** Cost delta pushed from hub to supervisor after DB write */
+export const CostPushEntrySchema = z.object({
+  userId: z.number(),
+  runId: z.number(),
+  sessionId: z.number(),
+  costDelta: z.number(),
+});
+export type CostPushEntry = z.infer<typeof CostPushEntrySchema>;
+
+export const CostPushSchema = z.object({
+  entries: z.array(CostPushEntrySchema),
+});
+export type CostPush = z.infer<typeof CostPushSchema>;
 
 /** Pushed from hub when an agent's spending status changes */
 export const CostControlSchema = z.object({
