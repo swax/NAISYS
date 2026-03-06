@@ -11,11 +11,7 @@ import {
   TextInput,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
-import {
-  AgentConfigFile,
-  AgentConfigFileSchema,
-  CommandProtection,
-} from "@naisys/common";
+import { AgentConfigFile, AgentConfigFileSchema } from "@naisys/common";
 import { IconCheck, IconX } from "@tabler/icons-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useBlocker } from "react-router-dom";
@@ -59,10 +55,7 @@ function transformFormValues(values: FormValues): Record<string, unknown> {
   if (values.workspacesEnabled) result.workspacesEnabled = true;
   if (values.multipleCommandsEnabled) result.multipleCommandsEnabled = true;
 
-  if (
-    values.commandProtection &&
-    values.commandProtection !== CommandProtection.None
-  )
+  if (values.commandProtection && values.commandProtection !== "none")
     result.commandProtection = values.commandProtection;
   if (typeof values.debugPauseSeconds === "number")
     result.debugPauseSeconds = values.debugPauseSeconds;
@@ -168,7 +161,7 @@ export const AgentConfigForm: React.FC<AgentConfigFormProps> = ({
       wakeOnMessage: config.wakeOnMessage ?? false,
       workspacesEnabled: config.workspacesEnabled ?? false,
       multipleCommandsEnabled: config.multipleCommandsEnabled ?? false,
-      commandProtection: config.commandProtection ?? CommandProtection.None,
+      commandProtection: config.commandProtection ?? "none",
       debugPauseSeconds: config.debugPauseSeconds ?? 0,
       initialCommands: config.initialCommands?.join("\n") ?? "",
     },
@@ -343,9 +336,9 @@ export const AgentConfigForm: React.FC<AgentConfigFormProps> = ({
           label="Command Protection"
           description={desc("commandProtection")}
           data={[
-            { value: CommandProtection.None, label: "None" },
-            { value: CommandProtection.Manual, label: "Manual" },
-            { value: CommandProtection.Auto, label: "Auto" },
+            { value: "none", label: "None" },
+            { value: "manual", label: "Manual" },
+            { value: "auto", label: "Auto" },
           ]}
           {...form.getInputProps("commandProtection")}
         />

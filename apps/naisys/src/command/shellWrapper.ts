@@ -14,11 +14,7 @@ import * as pathService from "../services/pathService.js";
 import { getPlatformConfig } from "../services/shellPlatform.js";
 import { OutputService } from "../utils/output.js";
 
-enum ShellEvent {
-  Ouptput = "stdout",
-  Error = "stderr",
-  Exit = "exit",
-}
+type ShellEvent = "stdout" | "stderr" | "exit";
 
 export function createShellWrapper(
   { globalConfig }: GlobalConfig,
@@ -99,15 +95,15 @@ export function createShellWrapper(
     _currentProcessId = pid;
 
     _process.stdout.on("data", (data: Buffer) => {
-      processOutput(data, ShellEvent.Ouptput, pid);
+      processOutput(data, "stdout", pid);
     });
 
     _process.stderr.on("data", (data: Buffer) => {
-      processOutput(data, ShellEvent.Error, pid);
+      processOutput(data, "stderr", pid);
     });
 
     _process.on("close", (code) => {
-      processOutput(Buffer.from(`${code}`), ShellEvent.Exit, pid);
+      processOutput(Buffer.from(`${code}`), "exit", pid);
     });
 
     // Init users home dir on first run, on shell crash/rerun go back to the current path
@@ -209,7 +205,7 @@ export function createShellWrapper(
       return;
     }
 
-    if (eventType === ShellEvent.Exit) {
+    if (eventType === "exit") {
       void output.errorAndLog(
         `SHELL EXIT. PID: ${_process?.pid}, CODE: ${rawDataStr}`,
       );

@@ -1,10 +1,6 @@
 import { z } from "zod";
 
-export enum CommandProtection {
-  None = "none",
-  Manual = "manual",
-  Auto = "auto",
-}
+export const commandProtectionValues = ["none", "manual", "auto"] as const;
 
 // Zod schema for validation
 export const AgentConfigFileSchema = z.object({
@@ -102,7 +98,7 @@ export const AgentConfigFileSchema = z.object({
     ),
 
   commandProtection: z
-    .enum(CommandProtection)
+    .enum(commandProtectionValues)
     .optional()
     .describe(
       "None allows the LLM to run any command, Manual requires user confirmation for each command, and Auto uses a secondary LLM to try to validate a command is safe",

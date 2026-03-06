@@ -1,6 +1,6 @@
 import { GoogleGenAI } from "@google/genai";
 
-import { ContentBlock, LlmMessage, LlmRole } from "../llmDtos.js";
+import { ContentBlock, LlmMessage } from "../llmDtos.js";
 import { QueryResult, QuerySources, VendorDeps } from "./vendorTypes.js";
 
 const clientCache = new Map<string, GoogleGenAI>();
@@ -48,7 +48,7 @@ export async function sendWithGoogle(
   const history = context
     .filter((m) => m !== lastMessage)
     .map((m) => ({
-      role: m.role === LlmRole.Assistant ? "model" : "user",
+      role: m.role === "assistant" ? "model" : "user",
       parts: formatPartsForGoogle(m.content),
     }));
 

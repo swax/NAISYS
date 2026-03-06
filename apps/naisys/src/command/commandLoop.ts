@@ -13,7 +13,7 @@ import {
   SPEND_LIMIT_TIMEOUT_SECONDS,
   SpendLimitError,
 } from "../llm/costTracker.js";
-import { ContentSource, LlmRole } from "../llm/llmDtos.js";
+import { ContentSource } from "../llm/llmDtos.js";
 import { LLMService } from "../llm/llmService.js";
 import { ChatService } from "../mail/chat.js";
 import { MailService } from "../mail/mail.js";
@@ -68,7 +68,7 @@ export function createCommandLoop(
     output.commentAndLog("System Message:");
     output.write(systemMessage);
     logService.write({
-      role: LlmRole.System,
+      role: "system",
       content: systemMessage,
       type: "system",
     });
@@ -82,226 +82,17 @@ export function createCommandLoop(
       nextCommandAction !== NextCommandAction.SessionComplete &&
       !abortSignal?.aborted
     ) {
-      let pauseSeconds: number | undefined = undefined;
+      let pauseSeconds: number | undefined;
 
-      inputMode.setLLM();
-
-      if (globalConfig().supervisorPort) {
-        output.comment(
-          `Supervisor available at http://localhost:${globalConfig().supervisorPort}/supervisor`,
-        );
-        output.comment(
-          `  Use 'ns-superadmin-password <password>' to set password then login as superadmin`,
-        );
-      }
-
-      output.commentAndLog("Use ns-help to see all available commands");
-      output.commentAndLog("Starting Context:");
-
-      // Check for mail that arrived before/during startup (e.g. task mail)
-      if (hubClient) {
-        // After successful startup, the hub sends startup messages, so wait a second for that to happen
-        await sleep(1000);
-      }
-
-      const initialCommands = [
-        ...structuredClone(agentConfig().initialCommands),
-        ...sessionService.getResumeCommands(),
-      ];
-
-      for (const initialCommand of initialCommands) {
-        try {
-          const prompt = await promptBuilder.getPrompt(0);
-
-          contextManager.append(prompt, ContentSource.ConsolePrompt);
-
-          ({ nextCommandAction, pauseSeconds } =
-            await commandHandler.processCommand(prompt, [
-              agentConfig().resolveConfigVars(initialCommand),
-            ]));
-        } catch (e) {
-          handleErrorAndSwitchToDebugMode(e, llmErrorCount, true);
-        }
-      }
-
-      // Even if mail/chat not enabled, we may be sent mail/chat from agents that do have it enabled, and we
-      // need to receive these msgs and mark them as read as agents are auto-started to handle unread messages
-      await mailService.checkAndNotify();
-      await chatService.checkAndNotify();
-      // Discard commands from startup notifications — they'll be picked up in the main loop
-      await processNotifications();
-
-      inputMode.setDebug();
+      ({ nextCommandAction, pauseSeconds } =
+        await runSessionStartup(llmErrorCount));
 
       while (
         nextCommandAction == NextCommandAction.Continue &&
         !abortSignal?.aborted
       ) {
-        if (shellCommand.isShellSuspended()) {
-          const elapsedTime = shellCommand.getCommandElapsedTimeString();
-          contextManager.append(
-            `Command has been running for ${elapsedTime}. Enter 'wait <seconds>' to continue waiting. 'kill' to terminate. Any other input will be sent directly to the running process.`,
-            ContentSource.Console,
-          );
-        }
-
-        // pauseSeconds undefined means use the default value based on debug/LLM mode,
-        // otherwise use the explicitly set value (e.g. from ns-session wait command or exponential backoff after errors)
-        if (pauseSeconds === undefined) {
-          // When llm model is set to none then we should hold indefinitely
-          if (agentConfig().shellModel === LlmApiType.None) {
-            pauseSeconds = 0;
-          }
-          // Unfocused agents keep processing commands without delay, unless pauseSeconds was expliclity set by a wait command or error backoff
-          else if (!output.isConsoleEnabled() && inputMode.isDebug()) {
-            inputMode.setLLM();
-            pauseSeconds = -1;
-          } else {
-            pauseSeconds = agentConfig().debugPauseSeconds;
-          }
-        }
-        let prompt = await promptBuilder.getPrompt(pauseSeconds);
-        let commandList: string[] = [];
-        let blankDebugInput = false;
-
-        // Debug command prompt
-        if (inputMode.isDebug()) {
-          if (pauseSeconds > 0) {
-            currentWait = { startTime: Date.now(), totalSeconds: pauseSeconds };
-          }
-
-          commandList = [
-            await promptBuilder.getInput(`${prompt}`, pauseSeconds),
-          ];
-
-          currentWait = undefined;
-          blankDebugInput = commandList[0].trim().length == 0;
-        }
-        // LLM command prompt
-        else if (inputMode.isLLM()) {
-          // Clear pause/wait settings after use
-          pauseSeconds = undefined;
-          const shellModel = agentConfig().shellModel;
-          const modelName =
-            modelService.getLlmModel(shellModel)?.label || shellModel;
-
-          const workingMsg =
-            prompt +
-            chalk[OutputColor.loading](`LLM (${modelName}) Working...`);
-
-          // Check for pending notifications that should interrupt
-          if (
-            promptNotification.hasPending(localUserId, true) ||
-            shellModel === LlmApiType.None // Check this last so notifications get processed/cleared
-          ) {
-            const notificationCommands = await processNotifications();
-
-            // If notifications carry commands (e.g. preemptive compact), run them directly
-            if (notificationCommands.length > 0) {
-              commandList = notificationCommands;
-            } else {
-              inputMode.setDebug();
-              continue;
-            }
-          }
-
-          checkContextLimitWarning();
-
-          if (agentConfig().workspacesEnabled && workspaces.hasFiles()) {
-            output.comment(workspaces.listFiles());
-          }
-
-          contextManager.append(prompt, ContentSource.ConsolePrompt);
-
-          // Query LLM unless commands were already provided by notifications
-          if (commandList.length === 0) {
-            try {
-              if (output.isConsoleEnabled()) {
-                process.stdout.write(workingMsg);
-              }
-
-              // Set up ESC key cancellation for LLM query
-              const queryController = new AbortController();
-              let stopEscListener = () => {};
-
-              // Only set up ESC listener if agent is in focus to avoid interfering with readline
-              if (output.isConsoleEnabled()) {
-                const escListener = createEscKeyListener();
-                stopEscListener = escListener.start(() => {
-                  queryController.abort();
-                });
-              }
-
-              let queryCancelled = false;
-              try {
-                const queryResult = await llmService.query(
-                  shellModel,
-                  systemMessage,
-                  contextManager.getCombinedMessages(),
-                  "console",
-                  queryController.signal,
-                );
-                commandList = queryResult.responses;
-                contextManager.setMessagesTokenCount(
-                  queryResult.messagesTokenCount,
-                );
-                schedulePreemptiveCompact();
-              } catch (queryError) {
-                // Check if this was an ESC cancellation
-                if (queryController.signal.aborted) {
-                  queryCancelled = true;
-                } else {
-                  throw queryError; // Re-throw non-abort errors
-                }
-              } finally {
-                stopEscListener();
-              }
-
-              // Handle ESC cancellation
-              if (queryCancelled) {
-                clearPromptMessage(workingMsg);
-                output.commentAndLog("LLM query cancelled by ESC");
-                inputMode.setDebug();
-                continue;
-              }
-
-              clearPromptMessage(workingMsg);
-            } catch (e) {
-              // Can't do this in a finally because it needs to happen before the error is printed
-              clearPromptMessage(workingMsg);
-
-              ({ llmErrorCount, pauseSeconds } =
-                handleErrorAndSwitchToDebugMode(e, llmErrorCount, false));
-
-              continue;
-            }
-          }
-        } else {
-          throw `Unreachable: Invalid input mode`;
-        }
-
-        // Run the command
-        try {
-          ({ nextCommandAction, pauseSeconds } =
-            await commandHandler.processCommand(prompt, commandList));
-
-          if (inputMode.isLLM()) {
-            llmErrorCount = 0;
-          }
-        } catch (e) {
-          ({ llmErrorCount, pauseSeconds } = handleErrorAndSwitchToDebugMode(
-            e,
-            llmErrorCount,
-            true,
-          ));
-          continue;
-        }
-
-        // If the user is in debug mode and they didn't enter anything, switch to LLM
-        // If in LLM mode, auto switch back to debug
-        if ((inputMode.isDebug() && blankDebugInput) || inputMode.isLLM()) {
-          inputMode.toggle();
-        }
+        ({ nextCommandAction, pauseSeconds, llmErrorCount } =
+          await processOneIteration(pauseSeconds, llmErrorCount));
       }
 
       if (nextCommandAction == NextCommandAction.CompactSession) {
@@ -385,6 +176,288 @@ export function createCommandLoop(
       }
     }
     return result.commands;
+  }
+
+  async function runSessionStartup(llmErrorCount: number): Promise<{
+    nextCommandAction: NextCommandAction;
+    pauseSeconds: number | undefined;
+  }> {
+    let nextCommandAction = NextCommandAction.Continue;
+    let pauseSeconds: number | undefined = undefined;
+
+    // This ensures output is appended to the llm context
+    inputMode.setLLM();
+
+    if (globalConfig().supervisorPort) {
+      output.comment(
+        `Supervisor available at http://localhost:${globalConfig().supervisorPort}/supervisor`,
+      );
+      output.comment(
+        `  Use 'ns-superadmin-password <password>' to set password then login as superadmin`,
+      );
+    }
+
+    output.commentAndLog("Use ns-help to see all available commands");
+    output.commentAndLog("Starting Context:");
+
+    // Check for mail that arrived before/during startup (e.g. task mail)
+    if (hubClient) {
+      // After successful startup, the hub sends startup messages, so wait a second for that to happen
+      await sleep(1000);
+    }
+
+    const initialCommands = [
+      ...structuredClone(agentConfig().initialCommands),
+      ...sessionService.getResumeCommands(),
+    ];
+
+    for (const initialCommand of initialCommands) {
+      try {
+        const prompt = await promptBuilder.getPrompt(0);
+
+        contextManager.append(prompt, ContentSource.ConsolePrompt);
+
+        ({ nextCommandAction, pauseSeconds } =
+          await commandHandler.processCommand(prompt, [
+            agentConfig().resolveConfigVars(initialCommand),
+          ]));
+      } catch (e) {
+        handleErrorAndSwitchToDebugMode(e, llmErrorCount, true);
+      }
+    }
+
+    // Even if mail/chat not enabled, we may be sent mail/chat from agents that do have it enabled, and we
+    // need to receive these msgs and mark them as read as agents are auto-started to handle unread messages
+    await mailService.checkAndNotify();
+    await chatService.checkAndNotify();
+    // Discard commands from startup notifications — they'll be picked up in the main loop
+    await processNotifications();
+
+    inputMode.setDebug();
+
+    return { nextCommandAction, pauseSeconds };
+  }
+
+  type IterationResult = {
+    nextCommandAction: NextCommandAction;
+    pauseSeconds: number | undefined;
+    llmErrorCount: number;
+  };
+
+  async function processOneIteration(
+    pauseSeconds: number | undefined,
+    llmErrorCount: number,
+  ): Promise<IterationResult> {
+    if (shellCommand.isShellSuspended()) {
+      const elapsedTime = shellCommand.getCommandElapsedTimeString();
+      contextManager.append(
+        `Command has been running for ${elapsedTime}. Enter 'wait <seconds>' to continue waiting. 'kill' to terminate. Any other input will be sent directly to the running process.`,
+        ContentSource.Console,
+      );
+    }
+
+    // If pauseSeconds was explicitly set (e.g. by a wait command or error backoff), use it;
+    // otherwise fall back to the default based on current mode
+    if (pauseSeconds === undefined) {
+      // When llm model is set to none then we should hold indefinitely
+      if (agentConfig().shellModel === LlmApiType.None) {
+        pauseSeconds = 0;
+      }
+      // Unfocused agents keep processing commands without delay, unless pauseSeconds was expliclity set by a wait command or error backoff
+      else if (!output.isConsoleEnabled() && inputMode.isDebug()) {
+        inputMode.setLLM();
+        pauseSeconds = -1;
+      } else {
+        pauseSeconds = agentConfig().debugPauseSeconds;
+      }
+    }
+
+    const prompt = await promptBuilder.getPrompt(pauseSeconds);
+    let commandList: string[] = [];
+    let blankDebugInput = false;
+
+    // Debug command prompt
+    if (inputMode.isDebug()) {
+      if (pauseSeconds > 0) {
+        currentWait = { startTime: Date.now(), totalSeconds: pauseSeconds };
+      }
+
+      commandList = [await promptBuilder.getInput(`${prompt}`, pauseSeconds)];
+
+      currentWait = undefined;
+      blankDebugInput = commandList[0].trim().length == 0;
+    }
+    // LLM command prompt
+    else if (inputMode.isLLM()) {
+      pauseSeconds = undefined;
+
+      const result = await getLlmCommands(prompt, llmErrorCount);
+
+      if (result.outcome === "skip") {
+        return {
+          nextCommandAction: NextCommandAction.Continue,
+          llmErrorCount: result.llmErrorCount,
+          pauseSeconds: result.pauseSeconds,
+        };
+      }
+
+      commandList = result.commands;
+    } else {
+      throw `Unreachable: Invalid input mode`;
+    }
+
+    // Run the command
+    try {
+      const commandResult = await commandHandler.processCommand(
+        prompt,
+        commandList,
+      );
+
+      if (inputMode.isLLM()) {
+        llmErrorCount = 0;
+      }
+
+      // If the user is in debug mode and they didn't enter anything, switch to LLM
+      // If in LLM mode, auto switch back to debug
+      if ((inputMode.isDebug() && blankDebugInput) || inputMode.isLLM()) {
+        inputMode.toggle();
+      }
+
+      return {
+        nextCommandAction: commandResult.nextCommandAction,
+        pauseSeconds: commandResult.pauseSeconds,
+        llmErrorCount,
+      };
+    } catch (e) {
+      const errorResult = handleErrorAndSwitchToDebugMode(
+        e,
+        llmErrorCount,
+        true,
+      );
+      return {
+        nextCommandAction: NextCommandAction.Continue,
+        llmErrorCount: errorResult.llmErrorCount,
+        pauseSeconds: errorResult.pauseSeconds,
+      };
+    }
+  }
+
+  type LlmCommandsResult =
+    | { outcome: "commands"; commands: string[] }
+    | {
+        outcome: "skip";
+        llmErrorCount: number;
+        pauseSeconds: number | undefined;
+      };
+
+  async function getLlmCommands(
+    prompt: string,
+    llmErrorCount: number,
+  ): Promise<LlmCommandsResult> {
+    const shellModel = agentConfig().shellModel;
+    const modelName = modelService.getLlmModel(shellModel)?.label || shellModel;
+
+    const workingMsg =
+      prompt + chalk[OutputColor.loading](`LLM (${modelName}) Working...`);
+
+    let commands: string[] = [];
+
+    // Check for pending notifications that should interrupt
+    if (
+      promptNotification.hasPending(localUserId, true) ||
+      shellModel === LlmApiType.None // Check this last so notifications get processed/cleared
+    ) {
+      const notificationCommands = await processNotifications();
+
+      // If notifications carry commands (e.g. preemptive compact), run them directly
+      if (notificationCommands.length > 0) {
+        commands = notificationCommands;
+      } else {
+        inputMode.setDebug();
+        return { outcome: "skip", llmErrorCount, pauseSeconds: undefined };
+      }
+    }
+
+    checkContextLimitWarning();
+
+    if (agentConfig().workspacesEnabled && workspaces.hasFiles()) {
+      output.comment(workspaces.listFiles());
+    }
+
+    contextManager.append(prompt, ContentSource.ConsolePrompt);
+
+    // If commands were generated from notifications, skip the LLM query and run them directly,
+    // most often ns-session preemptive-compact commands from the preemptive compact notification
+    if (commands.length > 0) {
+      return { outcome: "commands", commands };
+    }
+
+    try {
+      if (output.isConsoleEnabled()) {
+        process.stdout.write(workingMsg);
+      }
+
+      // Set up ESC key cancellation for LLM query
+      const queryController = new AbortController();
+      let stopEscListener = () => {};
+
+      // Only set up ESC listener if agent is in focus to avoid interfering with readline
+      if (output.isConsoleEnabled()) {
+        const escListener = createEscKeyListener();
+        stopEscListener = escListener.start(() => {
+          queryController.abort();
+        });
+      }
+
+      let queryCancelled = false;
+      try {
+        const queryResult = await llmService.query(
+          shellModel,
+          systemMessage,
+          contextManager.getCombinedMessages(),
+          "console",
+          queryController.signal,
+        );
+        commands = queryResult.responses;
+        contextManager.setMessagesTokenCount(queryResult.messagesTokenCount);
+        schedulePreemptiveCompact();
+      } catch (queryError) {
+        // Check if this was an ESC cancellation
+        if (queryController.signal.aborted) {
+          queryCancelled = true;
+        } else {
+          throw queryError; // Re-throw non-abort errors
+        }
+      } finally {
+        stopEscListener();
+      }
+
+      // Handle ESC cancellation
+      if (queryCancelled) {
+        clearPromptMessage(workingMsg);
+        output.commentAndLog("LLM query cancelled by ESC");
+        inputMode.setDebug();
+        return { outcome: "skip", llmErrorCount, pauseSeconds: undefined };
+      }
+
+      clearPromptMessage(workingMsg);
+    } catch (e) {
+      // Can't do this in a finally because it needs to happen before the error is printed
+      clearPromptMessage(workingMsg);
+
+      const errorResult = handleErrorAndSwitchToDebugMode(
+        e,
+        llmErrorCount,
+        false,
+      );
+      return {
+        outcome: "skip",
+        llmErrorCount: errorResult.llmErrorCount,
+        pauseSeconds: errorResult.pauseSeconds,
+      };
+    }
+
+    return { outcome: "commands", commands };
   }
 
   function clearPromptMessage(waitingMessage: string) {

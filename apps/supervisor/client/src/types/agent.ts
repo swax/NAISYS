@@ -1,3 +1,4 @@
+import type { AgentStatus } from "@naisys/common";
 import {
   Agent as BaseAgent,
   Host as BaseHost,
@@ -7,7 +8,7 @@ import {
  * Client-side Agent type with computed properties
  */
 export type Agent = BaseAgent & {
-  status: "active" | "available" | "offline" | "suspended";
+  status: AgentStatus;
 };
 
 /**
