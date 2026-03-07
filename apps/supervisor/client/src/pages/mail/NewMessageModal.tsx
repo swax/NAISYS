@@ -1,5 +1,6 @@
 import {
   ActionIcon,
+  Alert,
   Box,
   Button,
   Flex,
@@ -53,6 +54,7 @@ export const NewMessageModal: React.FC<NewMessageModalProps> = ({
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
   const [attachments, setAttachments] = useState<FileAttachment[]>([]);
   const [expandedImageIndex, setExpandedImageIndex] = useState<number | null>(
     null,
@@ -182,6 +184,7 @@ export const NewMessageModal: React.FC<NewMessageModalProps> = ({
     }
 
     setIsLoading(true);
+    setSendError(null);
     try {
       // Create new File objects with updated names
       const attachmentsWithUpdatedNames = attachments.map((attachment) => ({
@@ -209,7 +212,9 @@ export const NewMessageModal: React.FC<NewMessageModalProps> = ({
       setExpandedImageIndex(null);
       onClose();
     } catch (error) {
-      console.error("Failed to send message:", error);
+      setSendError(
+        error instanceof Error ? error.message : "Failed to send message",
+      );
     } finally {
       setIsLoading(false);
     }
@@ -235,6 +240,7 @@ export const NewMessageModal: React.FC<NewMessageModalProps> = ({
     });
     setAttachments([]);
     setExpandedImageIndex(null);
+    setSendError(null);
     onClose();
   };
 
@@ -250,6 +256,17 @@ export const NewMessageModal: React.FC<NewMessageModalProps> = ({
       size="lg"
     >
       <Stack gap="md">
+        {sendError && (
+          <Alert
+            color="red"
+            title="Send failed"
+            onClose={() => setSendError(null)}
+            withCloseButton
+          >
+            {sendError}
+          </Alert>
+        )}
+
         <TextInput label="From" value={currentAgentLabel} readOnly />
 
         <Select

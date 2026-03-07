@@ -73,10 +73,6 @@ export const AgentMail: React.FC = () => {
 
   // Modal state
   const [newMessageModalOpened, setNewMessageModalOpened] = useState(false);
-  const [sendStatus, setSendStatus] = useState<{
-    type: "success" | "error";
-    message: string;
-  } | null>(null);
   const [replyData, setReplyData] = useState<{
     recipientId: number;
     subject: string;
@@ -151,32 +147,16 @@ export const AgentMail: React.FC = () => {
     body: string,
     attachments: Array<{ file: File; name: string; previewUrl?: string }>,
   ): Promise<void> => {
-    try {
-      const response = await sendMail(username ?? "", {
-        fromId: agentId,
-        toId: recipientId,
-        subject,
-        message: body,
-        files: attachments.map((attachment) => attachment.file),
-      });
+    const response = await sendMail(username ?? "", {
+      fromId: agentId,
+      toId: recipientId,
+      subject,
+      message: body,
+      files: attachments.map((attachment) => attachment.file),
+    });
 
-      if (response.success) {
-        setSendStatus({
-          type: "success",
-          message: "Message sent successfully!",
-        });
-      } else {
-        setSendStatus({
-          type: "error",
-          message: response.message || "Failed to send message",
-        });
-      }
-    } catch (error) {
-      setSendStatus({
-        type: "error",
-        message:
-          error instanceof Error ? error.message : "Error sending message",
-      });
+    if (!response.success) {
+      throw new Error(response.message || "Failed to send message");
     }
   };
 
@@ -255,18 +235,6 @@ export const AgentMail: React.FC = () => {
         {mailError && (
           <Alert color="red" title="Error" m="xs">
             {String(mailError)}
-          </Alert>
-        )}
-
-        {sendStatus && (
-          <Alert
-            color={sendStatus.type === "success" ? "green" : "red"}
-            title={sendStatus.type === "success" ? "Success" : "Error"}
-            onClose={() => setSendStatus(null)}
-            withCloseButton
-            m="xs"
-          >
-            {sendStatus.message}
           </Alert>
         )}
 
