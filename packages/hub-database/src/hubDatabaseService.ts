@@ -8,7 +8,7 @@ import { createPrismaClient } from "./prismaClient.js";
 
 export async function createHubDatabaseService() {
   /** Should match version in schema_version table of latest migration script */
-  const HUB_DB_VERSION = 24;
+  const HUB_DB_VERSION = 25;
 
   const dbPath = hubDbPath();
 
@@ -18,9 +18,9 @@ export async function createHubDatabaseService() {
     mkdirSync(databaseDir, { recursive: true });
   }
 
-  const prisma = await createPrismaClient(dbPath);
-
   await runMigrations();
+
+  const prisma = await createPrismaClient(dbPath);
 
   async function runMigrations(): Promise<void> {
     const currentFilePath = fileURLToPath(import.meta.url);

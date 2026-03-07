@@ -47,6 +47,7 @@ export async function getHostDetail(
         restricted: true,
         host_type: true,
         last_active: true,
+        last_ip: true,
         user_hosts: {
           select: {
             users: {
@@ -63,6 +64,7 @@ export async function getHostDetail(
       id: host.id,
       name: host.name,
       lastActive: host.last_active?.toISOString() ?? null,
+      lastIp: host.last_ip ?? null,
       restricted: host.restricted,
       hostType: host.host_type,
       online: false, // Caller sets this from agentHostStatusService

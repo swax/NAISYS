@@ -148,6 +148,7 @@ export const HostDetailResponseSchema = z.object({
   id: z.number(),
   name: z.string(),
   lastActive: z.string().nullable(),
+  lastIp: z.string().nullable(),
   restricted: z.boolean(),
   hostType: z.string(),
   online: z.boolean(),

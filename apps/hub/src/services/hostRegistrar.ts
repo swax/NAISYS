@@ -28,6 +28,7 @@ export async function createHostRegistrar({ hubDb }: HubDatabaseService) {
   async function registerHost(
     hostName: string,
     hostType: string,
+    lastIp?: string,
   ): Promise<number> {
     hostName = toUrlSafeKey(hostName);
 
@@ -38,7 +39,7 @@ export async function createHostRegistrar({ hubDb }: HubDatabaseService) {
     if (existing) {
       await hubDb.hosts.update({
         where: { id: existing.id },
-        data: { last_active: new Date().toISOString(), host_type: hostType },
+        data: { last_active: new Date().toISOString(), host_type: hostType, last_ip: lastIp },
       });
       hostsById.set(existing.id, {
         hostName,
@@ -52,6 +53,7 @@ export async function createHostRegistrar({ hubDb }: HubDatabaseService) {
       data: {
         name: hostName,
         host_type: hostType,
+        last_ip: lastIp,
         last_active: new Date().toISOString(),
       },
     });

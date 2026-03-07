@@ -189,6 +189,7 @@ model hosts {
   name               String               @unique(map: "unq_hosts_name") // NAISYS_HOSTNAME
   restricted         Boolean              @default(false)
   host_type          String               @default("naisys")
+  last_ip            String?
   last_active        DateTime?
   created_at         DateTime             @default(now())
   user_notifications user_notifications[]
