@@ -118,6 +118,20 @@ export function createHubSendMailService(
       }
     }
 
+    // Query attachment metadata for the push if there are attachments
+    let attachments: MailPush["attachments"];
+    if (params.attachmentIds?.length) {
+      const rows = await hubDb.attachments.findMany({
+        where: { id: { in: params.attachmentIds } },
+        select: { id: true, filename: true, file_size: true },
+      });
+      attachments = rows.map((r) => ({
+        id: r.id,
+        filename: r.filename,
+        fileSize: r.file_size,
+      }));
+    }
+
     // Push full message data to supervisor connections
     const mailPush: MailPush = {
       recipientUserIds: params.recipientUserIds,
@@ -128,7 +142,7 @@ export function createHubSendMailService(
       body: params.body,
       createdAt: now.toISOString(),
       participantIds,
-      attachmentIds: params.attachmentIds,
+      attachments,
     };
     for (const connection of naisysServer.getConnectedClients()) {
       if (connection.getHostType() !== "supervisor") continue;

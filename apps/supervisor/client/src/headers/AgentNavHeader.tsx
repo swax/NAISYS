@@ -100,98 +100,100 @@ export const AgentNavHeader: React.FC<AgentNavHeaderProps> = ({
 
   return (
     <div style={{ flex: 1 }}>
-    <Group gap="md" align="center">
-      <Tabs
-        value={currentSection || "detail"}
-        style={{ flex: 1, height: "100%" }}
-      >
-        <Tabs.List>
-          <Tabs.Tab
-            value="detail"
-            leftSection={<IconInfoCircle size="1rem" />}
-            component="a"
-            // @ts-expect-error - Mantine Tabs.Tab doesn't properly type component prop with href
-            href={getAbsoluteUrl("detail")}
-            onClick={(e: React.MouseEvent) => handleTabClick(e, "detail")}
-          >
-            <Text visibleFrom="sm" span>
-              Detail
-            </Text>
-          </Tabs.Tab>
-          <Indicator
-            disabled={!hasUnreadLogs}
-            color="pink"
-            size={8}
-            offset={7}
-            processing
-          >
+      <Group gap="md" align="center">
+        <Tabs
+          value={currentSection || "detail"}
+          style={{ flex: 1, height: "100%" }}
+        >
+          <Tabs.List>
             <Tabs.Tab
-              value="runs"
-              leftSection={<IconHistory size="1rem" />}
+              value="detail"
+              leftSection={<IconInfoCircle size="1rem" />}
               component="a"
               // @ts-expect-error - Mantine Tabs.Tab doesn't properly type component prop with href
-              href={getAbsoluteUrl("runs")}
-              onClick={(e: React.MouseEvent) => handleTabClick(e, "runs")}
+              href={getAbsoluteUrl("detail")}
+              onClick={(e: React.MouseEvent) => handleTabClick(e, "detail")}
             >
               <Text visibleFrom="sm" span>
-                Runs
+                Detail
               </Text>
             </Tabs.Tab>
-          </Indicator>
-          <Indicator
-            disabled={!hasUnreadMail}
-            color="blue"
-            size={8}
-            offset={7}
-            processing
-          >
+            <Indicator
+              disabled={!hasUnreadLogs}
+              color="pink"
+              size={8}
+              offset={7}
+              processing
+            >
+              <Tabs.Tab
+                value="runs"
+                leftSection={<IconHistory size="1rem" />}
+                component="a"
+                // @ts-expect-error - Mantine Tabs.Tab doesn't properly type component prop with href
+                href={getAbsoluteUrl("runs")}
+                onClick={(e: React.MouseEvent) => handleTabClick(e, "runs")}
+              >
+                <Text visibleFrom="sm" span>
+                  Runs
+                </Text>
+              </Tabs.Tab>
+            </Indicator>
+            <Indicator
+              disabled={!hasUnreadMail}
+              color="blue"
+              size={8}
+              offset={7}
+              processing
+            >
+              <Tabs.Tab
+                value="mail"
+                leftSection={<IconMail size="1rem" />}
+                component="a"
+                // @ts-expect-error - Mantine Tabs.Tab doesn't properly type component prop with href
+                href={getAbsoluteUrl("mail")}
+                onClick={(e: React.MouseEvent) => handleTabClick(e, "mail")}
+                style={
+                  !hasMailLink && linksLoaded ? { opacity: 0.4 } : undefined
+                }
+              >
+                <Text visibleFrom="sm" span>
+                  Mail
+                </Text>
+              </Tabs.Tab>
+            </Indicator>
             <Tabs.Tab
-              value="mail"
-              leftSection={<IconMail size="1rem" />}
+              value="chat"
+              leftSection={<IconMessageCircle size="1rem" />}
               component="a"
               // @ts-expect-error - Mantine Tabs.Tab doesn't properly type component prop with href
-              href={getAbsoluteUrl("mail")}
-              onClick={(e: React.MouseEvent) => handleTabClick(e, "mail")}
-              style={!hasMailLink && linksLoaded ? { opacity: 0.4 } : undefined}
+              href={getAbsoluteUrl("chat")}
+              onClick={(e: React.MouseEvent) => handleTabClick(e, "chat")}
+              style={!hasChatLink && linksLoaded ? { opacity: 0.4 } : undefined}
             >
               <Text visibleFrom="sm" span>
-                Mail
+                Chat
               </Text>
             </Tabs.Tab>
-          </Indicator>
-          <Tabs.Tab
-            value="chat"
-            leftSection={<IconMessageCircle size="1rem" />}
-            component="a"
-            // @ts-expect-error - Mantine Tabs.Tab doesn't properly type component prop with href
-            href={getAbsoluteUrl("chat")}
-            onClick={(e: React.MouseEvent) => handleTabClick(e, "chat")}
-            style={!hasChatLink && linksLoaded ? { opacity: 0.4 } : undefined}
-          >
-            <Text visibleFrom="sm" span>
-              Chat
-            </Text>
-          </Tabs.Tab>
-          <Tabs.Tab
-            value="config"
-            leftSection={<IconSettings size="1rem" />}
-            component="a"
-            // @ts-expect-error - Mantine Tabs.Tab doesn't properly type component prop with href
-            href={getAbsoluteUrl("config")}
-            onClick={(e: React.MouseEvent) => handleTabClick(e, "config")}
-          >
-            <Text visibleFrom="sm" span>
-              Config
-            </Text>
-          </Tabs.Tab>
-        </Tabs.List>
-      </Tabs>
-    </Group>
-    {disabledTabMessage && (
-      <Alert variant="light" color="yellow" py="xs" px="md">
-        {disabledTabMessage}
-      </Alert>
-    )}
+            <Tabs.Tab
+              value="config"
+              leftSection={<IconSettings size="1rem" />}
+              component="a"
+              // @ts-expect-error - Mantine Tabs.Tab doesn't properly type component prop with href
+              href={getAbsoluteUrl("config")}
+              onClick={(e: React.MouseEvent) => handleTabClick(e, "config")}
+            >
+              <Text visibleFrom="sm" span>
+                Config
+              </Text>
+            </Tabs.Tab>
+          </Tabs.List>
+        </Tabs>
+      </Group>
+      {disabledTabMessage && (
+        <Alert variant="light" color="yellow" py="xs" px="md">
+          {disabledTabMessage}
+        </Alert>
+      )}
     </div>
   );
 };

@@ -59,6 +59,7 @@ export const useMailData = (agentUsername: string, enabled: boolean = true) => {
               type: "to",
               readAt: null,
             })),
+            attachments: event.attachments,
           };
           mergeMail([msg]);
           break;

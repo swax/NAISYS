@@ -167,9 +167,7 @@ export const ModelCalculator: React.FC = () => {
             <Table.Tbody>
               <Table.Tr>
                 <Table.Td>Turns</Table.Td>
-                <Table.Td ta="right">
-                  {result.turns.toLocaleString()}
-                </Table.Td>
+                <Table.Td ta="right">{result.turns.toLocaleString()}</Table.Td>
               </Table.Tr>
               <Table.Tr>
                 <Table.Td>Session Cost</Table.Td>

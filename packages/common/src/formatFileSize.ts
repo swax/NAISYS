@@ -1,3 +1,6 @@
+/** Maximum allowed file size for attachments (10 MB) */
+export const MAX_ATTACHMENT_SIZE = 10 * 1024 * 1024;
+
 /** Format a byte count into a human-readable size string (e.g. "1.2 KB") */
 export function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;

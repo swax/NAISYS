@@ -1,4 +1,11 @@
-import { ActionIcon, Badge, Group, Stack, Textarea } from "@mantine/core";
+import {
+  ActionIcon,
+  Alert,
+  Badge,
+  Group,
+  Stack,
+  Textarea,
+} from "@mantine/core";
 import { IconPaperclip, IconSend, IconX } from "@tabler/icons-react";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 
@@ -16,6 +23,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
+  const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -31,10 +39,13 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     if ((!trimmed && files.length === 0) || sending) return;
 
     setSending(true);
+    setError(null);
     try {
       await onSend(trimmed, files.length > 0 ? files : undefined);
       setMessage("");
       setFiles([]);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to send message");
     } finally {
       setSending(false);
     }
@@ -77,6 +88,18 @@ export const ChatInput: React.FC<ChatInputProps> = ({
       onDrop={handleDrop}
       onDragOver={handleDragOver}
     >
+      {error && (
+        <Alert
+          color="red"
+          p="xs"
+          mx="xs"
+          mt="xs"
+          withCloseButton
+          onClose={() => setError(null)}
+        >
+          {error}
+        </Alert>
+      )}
       {files.length > 0 && (
         <Group gap="xs" p="xs" pb={0} style={{ flexWrap: "wrap" }}>
           {files.map((file, index) => (

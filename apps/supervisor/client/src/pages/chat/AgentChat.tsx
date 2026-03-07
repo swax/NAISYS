@@ -10,7 +10,7 @@ import {
   UnstyledButton,
 } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
-import { hasAction } from "@naisys/common";
+import { formatFileSize, hasAction, MAX_ATTACHMENT_SIZE } from "@naisys/common";
 import { IconMessageCircle } from "@tabler/icons-react";
 import React, { useCallback, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
@@ -72,13 +72,23 @@ export const AgentChat: React.FC = () => {
     async (message: string, files?: File[]) => {
       if (!selectedParticipantIds) return;
 
+      if (files) {
+        for (const file of files) {
+          if (file.size > MAX_ATTACHMENT_SIZE) {
+            throw new Error(
+              `File "${file.name}" is ${formatFileSize(file.size)}, which exceeds the ${formatFileSize(MAX_ATTACHMENT_SIZE)} limit`,
+            );
+          }
+        }
+      }
+
       // Extract recipient IDs from participant IDs (exclude current agent)
       const toIds = selectedParticipantIds
         .split(",")
         .map(Number)
         .filter((pid) => pid !== agentId);
 
-      await sendChatMessage(
+      const result = await sendChatMessage(
         username ?? "",
         {
           fromId: agentId,
@@ -87,6 +97,10 @@ export const AgentChat: React.FC = () => {
         },
         files,
       );
+
+      if (!result.success) {
+        throw new Error(result.message ?? "Failed to send message");
+      }
     },
     [username, agentId, selectedParticipantIds],
   );

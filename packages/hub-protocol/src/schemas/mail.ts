@@ -214,7 +214,7 @@ export const MailPushSchema = z.object({
   body: z.string(),
   createdAt: z.string(),
   participantIds: z.string(),
-  attachmentIds: z.array(z.number()).optional(),
+  attachments: z.array(MailAttachmentDataSchema).optional(),
 });
 export type MailPush = z.infer<typeof MailPushSchema>;
 

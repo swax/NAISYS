@@ -9,8 +9,13 @@ import {
   UnstyledButton,
 } from "@mantine/core";
 import naisysLogo from "@naisys/common/assets/naisys-logo.webp";
-import { IconApi, IconLogout, IconUser } from "@tabler/icons-react";
-import React from "react";
+import {
+  IconApi,
+  IconLogout,
+  IconRefresh,
+  IconUser,
+} from "@tabler/icons-react";
+import React, { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 
 import { useSession } from "../contexts/SessionContext";
@@ -30,6 +35,19 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   const navigate = useNavigate();
   const location = useLocation();
   const { user, isAuthenticated, hasPermission, logout } = useSession();
+
+  const [isPwa, setIsPwa] = useState(
+    () =>
+      window.matchMedia("(display-mode: standalone)").matches ||
+      (navigator as unknown as { standalone?: boolean }).standalone === true,
+  );
+
+  useEffect(() => {
+    const mql = window.matchMedia("(display-mode: standalone)");
+    const handler = (e: MediaQueryListEvent) => setIsPwa(e.matches);
+    mql.addEventListener("change", handler);
+    return () => mql.removeEventListener("change", handler);
+  }, []);
 
   const isAgentsPage = location.pathname.startsWith("/agents");
   const isHostsPage = location.pathname.startsWith("/hosts");
@@ -264,12 +282,25 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
       <Box hiddenFrom="sm" style={{ flex: 1 }} />
 
       {/* Right side */}
+      {isPwa && (
+        <Tooltip label="Refresh">
+          <ActionIcon
+            variant="subtle"
+            color="gray"
+            onClick={() => window.location.reload()}
+            style={{ flexShrink: 0 }}
+          >
+            <IconRefresh size="1.2rem" />
+          </ActionIcon>
+        </Tooltip>
+      )}
       <Tooltip label="API Reference">
         <ActionIcon
           variant="subtle"
           color="gray"
           component="a"
           href="/supervisor/api-reference/"
+          visibleFrom="sm"
           style={{ flexShrink: 0 }}
         >
           <IconApi size="1.2rem" />

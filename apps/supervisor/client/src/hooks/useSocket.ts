@@ -9,7 +9,7 @@ export function getSocket(): Socket {
       withCredentials: true,
       reconnection: true,
       reconnectionDelay: 1000,
-      reconnectionDelayMax: 30000,
+      // No backoff, we need to know asap when the server is back up
     });
   }
   return socket;

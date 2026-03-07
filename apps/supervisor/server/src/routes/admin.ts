@@ -1,3 +1,5 @@
+import fs from "node:fs/promises";
+
 import type { HateoasAction, ModelDbRow } from "@naisys/common";
 import { supervisorDbPath } from "@naisys/supervisor-database";
 import {
@@ -11,7 +13,6 @@ import {
   ServerLogResponseSchema,
 } from "@naisys-supervisor/shared";
 import archiver from "archiver";
-import fs from "node:fs/promises";
 import { FastifyInstance, FastifyPluginOptions } from "fastify";
 
 import { hasPermission, requirePermission } from "../auth-middleware.js";
@@ -25,10 +26,7 @@ import {
   getHubAccessKey,
   isHubConnected,
 } from "../services/hubConnectionService.js";
-import {
-  getLogFilePath,
-  tailLogFile,
-} from "../services/logFileService.js";
+import { getLogFilePath, tailLogFile } from "../services/logFileService.js";
 
 function adminActions(hasAdminPermission: boolean): HateoasAction[] {
   const actions: HateoasAction[] = [];
@@ -84,8 +82,14 @@ export default function adminRoutes(
         const actions = adminActions(hasAdminPermission);
 
         const [supervisorDbSize, hubDbSize] = await Promise.all([
-          fs.stat(supervisorDbPath()).then((s) => s.size).catch(() => undefined),
-          fs.stat(getNaisysDatabasePath()).then((s) => s.size).catch(() => undefined),
+          fs
+            .stat(supervisorDbPath())
+            .then((s) => s.size)
+            .catch(() => undefined),
+          fs
+            .stat(getNaisysDatabasePath())
+            .then((s) => s.size)
+            .catch(() => undefined),
         ]);
 
         return {

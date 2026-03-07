@@ -1,7 +1,6 @@
 import type { AgentConfigFile } from "@naisys/common";
 import type {
   AdminInfoResponse,
-  PinoLogEntry,
   Agent,
   AgentActionResult,
   AgentDetailResponse,
@@ -30,6 +29,7 @@ import type {
   MailDataResponse,
   MailMessage,
   ModelsResponse,
+  PinoLogEntry,
   RunsDataResponse,
   RunSession,
   SaveModelResponse,
@@ -38,10 +38,10 @@ import type {
   SendChatResponse,
   SendMailRequest,
   SendMailResponse,
+  ServerLogResponse,
   StatusResponse,
   UpdateAgentConfigResponse,
   VariablesResponse,
-  ServerLogResponse,
 } from "@naisys-supervisor/shared";
 
 export const API_BASE = "/api/supervisor";
@@ -77,6 +77,7 @@ export type {
   MailDataResponse,
   MailMessage,
   ModelsResponse,
+  PinoLogEntry,
   RunsDataResponse,
   RunSession,
   SaveModelResponse,
@@ -84,7 +85,6 @@ export type {
   SendChatRequest,
   SendChatResponse,
   SendMailRequest,
-  PinoLogEntry,
   SendMailResponse,
   ServerLogResponse,
   StatusResponse,
