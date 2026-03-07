@@ -37,6 +37,7 @@ import { HostPage } from "./pages/hosts/HostPage";
 import { HostsLayout } from "./pages/hosts/HostsLayout";
 import { LoginPage } from "./pages/LoginPage";
 import { AgentMail } from "./pages/mail/AgentMail";
+import { ModelCalculator } from "./pages/models/ModelCalculator";
 import { ModelIndex } from "./pages/models/ModelIndex";
 import { ModelPage } from "./pages/models/ModelPage";
 import { ModelsLayout } from "./pages/models/ModelsLayout";
@@ -153,6 +154,7 @@ const router = createBrowserRouter(
       </Route>
       <Route path="/models" element={<ModelsLayout />}>
         <Route index element={<ModelIndex />} />
+        <Route path="calculator" element={<ModelCalculator />} />
         <Route path=":key" element={<ModelPage />} />
       </Route>
       <Route path="/variables" element={<VariablesPage />} />
