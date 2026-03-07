@@ -206,8 +206,7 @@ export const AgentMail: React.FC = () => {
     ? selectedConversation?.normalizedSubject
     : selectedConversation?.participantNames
         .filter((n) => n !== agentName)
-        .join(", ") ||
-      selectedConversation?.participantNames.join(", ");
+        .join(", ") || selectedConversation?.participantNames.join(", ");
 
   return (
     <Box
@@ -284,7 +283,12 @@ export const AgentMail: React.FC = () => {
               <UnstyledButton
                 hiddenFrom="sm"
                 onClick={openDrawer}
-                style={{ display: "flex", alignItems: "center", gap: 6, flex: 1 }}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  flex: 1,
+                }}
               >
                 <ActionIcon variant="subtle" color="gray" component="span">
                   <IconMail size="1.2rem" />

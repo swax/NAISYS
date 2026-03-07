@@ -57,6 +57,7 @@ export const useChatMessages = (
               userLookup.get(event.fromUserId) ?? String(event.fromUserId),
             body: event.body,
             createdAt: event.createdAt,
+            attachments: event.attachments,
           };
           mergeMessages([msg]);
           break;

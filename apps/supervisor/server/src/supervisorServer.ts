@@ -7,7 +7,11 @@ import cors from "@fastify/cors";
 import multipart from "@fastify/multipart";
 import staticFiles from "@fastify/static";
 import swagger from "@fastify/swagger";
-import { commonErrorHandler, type StartServer } from "@naisys/common";
+import {
+  commonErrorHandler,
+  MAX_ATTACHMENT_SIZE,
+  type StartServer,
+} from "@naisys/common";
 import { createHubDatabaseClient } from "@naisys/hub-database";
 import {
   createSupervisorDatabaseClient,
@@ -132,7 +136,9 @@ export const startServer: StartServer = async (
 
   await fastify.register(cookie);
 
-  await fastify.register(multipart);
+  await fastify.register(multipart, {
+    limits: { fileSize: MAX_ATTACHMENT_SIZE },
+  });
 
   // Register Swagger + Scalar
   await fastify.register(swagger, {

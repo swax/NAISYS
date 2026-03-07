@@ -65,9 +65,7 @@ export async function tailLogFile(
         }
       }
       const detail =
-        Object.keys(extra).length > 0
-          ? JSON.stringify(extra)
-          : undefined;
+        Object.keys(extra).length > 0 ? JSON.stringify(extra) : undefined;
 
       entries.push({
         level: parsed.level ?? 30,

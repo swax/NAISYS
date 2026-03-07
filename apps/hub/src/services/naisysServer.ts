@@ -179,7 +179,11 @@ export function createNaisysServer(
 
     try {
       const hostType = typeof rawHostType === "string" ? rawHostType : "naisys";
-      const hostId = await hostRegistrar.registerHost(hostName, hostType, socket.handshake.address);
+      const hostId = await hostRegistrar.registerHost(
+        hostName,
+        hostType,
+        socket.handshake.address,
+      );
 
       // Reject if this host already has an active connection
       if (naisysConnections.has(hostId)) {

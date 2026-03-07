@@ -39,7 +39,11 @@ export async function createHostRegistrar({ hubDb }: HubDatabaseService) {
     if (existing) {
       await hubDb.hosts.update({
         where: { id: existing.id },
-        data: { last_active: new Date().toISOString(), host_type: hostType, last_ip: lastIp },
+        data: {
+          last_active: new Date().toISOString(),
+          host_type: hostType,
+          last_ip: lastIp,
+        },
       });
       hostsById.set(existing.id, {
         hostName,

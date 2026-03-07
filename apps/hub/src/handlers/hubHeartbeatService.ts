@@ -1,8 +1,8 @@
 import type { HubDatabaseService } from "@naisys/hub-database";
 import {
   AgentsStatus,
-  HUB_HEARTBEAT_INTERVAL_MS,
   HeartbeatSchema,
+  HUB_HEARTBEAT_INTERVAL_MS,
   HubEvents,
 } from "@naisys/hub-protocol";
 

@@ -248,14 +248,6 @@ export function createCommandLoop(
     pauseSeconds: number | undefined,
     llmErrorCount: number,
   ): Promise<IterationResult> {
-    if (shellCommand.isShellSuspended()) {
-      const elapsedTime = shellCommand.getCommandElapsedTimeString();
-      contextManager.append(
-        `Command has been running for ${elapsedTime}. Enter 'wait <seconds>' to continue waiting. 'kill' to terminate. Any other input will be sent directly to the running process.`,
-        ContentSource.Console,
-      );
-    }
-
     // If pauseSeconds was explicitly set (e.g. by a wait command or error backoff), use it;
     // otherwise fall back to the default based on current mode
     if (pauseSeconds === undefined) {
@@ -270,6 +262,15 @@ export function createCommandLoop(
       } else {
         pauseSeconds = agentConfig().debugPauseSeconds;
       }
+    }
+
+    // Must be after the mode switch above so the message is added to the right context LLM/Debug
+    if (shellCommand.isShellSuspended()) {
+      const elapsedTime = shellCommand.getCommandElapsedTimeString();
+      contextManager.append(
+        `Command has been running for ${elapsedTime}. Enter 'wait <seconds>' to continue waiting. 'kill' to terminate. Any other input will be sent directly to the running process.`,
+        ContentSource.Console,
+      );
     }
 
     const prompt = await promptBuilder.getPrompt(pauseSeconds);
