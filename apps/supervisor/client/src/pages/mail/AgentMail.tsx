@@ -8,6 +8,7 @@ import {
   Loader,
   Stack,
   Text,
+  UnstyledButton,
 } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import { hasAction } from "@naisys/common";
@@ -201,6 +202,13 @@ export const AgentMail: React.FC = () => {
     />
   );
 
+  const conversationLabel = groupBySubject
+    ? selectedConversation?.normalizedSubject
+    : selectedConversation?.participantNames
+        .filter((n) => n !== agentName)
+        .join(", ") ||
+      selectedConversation?.participantNames.join(", ");
+
   return (
     <Box
       style={{
@@ -272,21 +280,22 @@ export const AgentMail: React.FC = () => {
               px="md"
               style={{ borderBottom: "1px solid var(--mantine-color-dark-4)" }}
             >
-              <ActionIcon
+              {/* Mobile conversation toggle (icon + label) */}
+              <UnstyledButton
                 hiddenFrom="sm"
-                variant="subtle"
-                color="gray"
                 onClick={openDrawer}
+                style={{ display: "flex", alignItems: "center", gap: 6, flex: 1 }}
               >
-                <IconMail size="1.2rem" />
-              </ActionIcon>
-              <Text size="sm" fw={600} style={{ flex: 1 }}>
-                {groupBySubject
-                  ? selectedConversation?.normalizedSubject
-                  : selectedConversation?.participantNames
-                      .filter((n) => n !== agentName)
-                      .join(", ") ||
-                    selectedConversation?.participantNames.join(", ")}
+                <ActionIcon variant="subtle" color="gray" component="span">
+                  <IconMail size="1.2rem" />
+                </ActionIcon>
+                <Text size="sm" fw={600}>
+                  {conversationLabel}
+                </Text>
+              </UnstyledButton>
+              {/* Desktop label only */}
+              <Text size="sm" fw={600} style={{ flex: 1 }} visibleFrom="sm">
+                {conversationLabel}
               </Text>
               {canSend && (
                 <Button

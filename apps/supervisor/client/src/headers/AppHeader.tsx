@@ -1,7 +1,6 @@
 import {
   ActionIcon,
   Box,
-  Burger,
   Button,
   Group,
   Menu,
@@ -18,14 +17,12 @@ import { useSession } from "../contexts/SessionContext";
 import { ConnectionStatus } from "./ConnectionStatus";
 
 interface AppHeaderProps {
-  burgerOpened: boolean;
   onBurgerClick: () => void;
   onLoginOpen: () => void;
   hasErp: boolean;
 }
 
 export const AppHeader: React.FC<AppHeaderProps> = ({
-  burgerOpened,
   onBurgerClick,
   onLoginOpen,
   hasErp,
@@ -40,41 +37,69 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   const isVariablesPage = location.pathname.startsWith("/variables");
   const isUsersPage = location.pathname.startsWith("/users");
   const isAdminPage = location.pathname.startsWith("/admin");
+
+  const currentTabName = isAdminPage
+    ? "Admin"
+    : isUsersPage
+      ? "Users"
+      : isVariablesPage
+        ? "Variables"
+        : isModelsPage
+          ? "Models"
+          : isHostsPage
+            ? "Hosts"
+            : "Agents";
   const showVariablesTab = hasPermission("manage_variables");
   const showUsersTab = hasPermission("supervisor_admin");
   const showAdminTab = hasPermission("supervisor_admin");
 
   return (
     <Group h="100%" px="md" wrap="nowrap" gap="xs">
-      {/* Logo / Burger */}
-      <Burger
-        opened={burgerOpened}
+      {/* Logo (acts as burger on mobile) */}
+      <UnstyledButton
         onClick={onBurgerClick}
         hiddenFrom="sm"
-        size="sm"
-        style={{ flexShrink: 0 }}
-      />
-      <Link
-        to="/agents"
-        style={{
-          textDecoration: "none",
-          color: "inherit",
-          display: "flex",
-          alignItems: "center",
-          gap: "0.5rem",
-          cursor: "pointer",
-          flexShrink: 0,
-        }}
+        style={{ flexShrink: 0, display: "flex", alignItems: "center" }}
       >
         <img
           src={naisysLogo}
           alt="NAISYS"
           style={{ width: "36px", height: "36px" }}
         />
-        <Text size="lg" fw={500} visibleFrom="sm">
-          NAISYS
+      </UnstyledButton>
+      <Box visibleFrom="sm" style={{ flexShrink: 0 }}>
+        <Link
+          to="/agents"
+          style={{
+            textDecoration: "none",
+            color: "inherit",
+            display: "flex",
+            alignItems: "center",
+            gap: "0.5rem",
+            cursor: "pointer",
+          }}
+        >
+          <img
+            src={naisysLogo}
+            alt="NAISYS"
+            style={{ width: "36px", height: "36px" }}
+          />
+          <Text size="lg" fw={500}>
+            NAISYS
+          </Text>
+        </Link>
+      </Box>
+
+      {/* Current tab label (mobile only) */}
+      <UnstyledButton
+        hiddenFrom="sm"
+        onClick={onBurgerClick}
+        style={{ flexShrink: 0 }}
+      >
+        <Text size="sm" fw={600}>
+          NAISYS / {currentTabName}
         </Text>
-      </Link>
+      </UnstyledButton>
 
       {/* App title */}
       <Group gap={6} visibleFrom="sm" wrap="nowrap" style={{ flexShrink: 0 }}>

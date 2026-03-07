@@ -95,7 +95,6 @@ const AppContent: React.FC = () => {
     >
       <AppShell.Header>
         <AppHeader
-          burgerOpened={opened}
           onBurgerClick={toggle}
           onLoginOpen={openLogin}
           hasErp={hasErp}
