@@ -1,6 +1,6 @@
 import Database from "better-sqlite3";
 import { exec } from "child_process";
-import { existsSync, mkdirSync } from "fs";
+import { existsSync, mkdirSync, unlinkSync } from "fs";
 import { dirname, join, resolve } from "path";
 import { promisify } from "util";
 
@@ -98,13 +98,39 @@ export async function deployPrismaMigrations(options: {
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : String(error);
     if (msg.includes("database is locked")) {
-      throw new Error(
-        `Database is locked: ${absoluteDbPath}\n` +
-          `Another process may be using the database, or stale WAL files remain.\n` +
-          `To fix manually: sqlite3 "${absoluteDbPath}" "PRAGMA journal_mode=DELETE;"`,
-      );
+      // Stale WAL/SHM files from a crashed process — remove and retry
+      const walPath = absoluteDbPath + "-wal";
+      const shmPath = absoluteDbPath + "-shm";
+      let removed = false;
+      for (const staleFile of [walPath, shmPath]) {
+        if (existsSync(staleFile)) {
+          console.log(`Removing stale file: ${staleFile}`);
+          unlinkSync(staleFile);
+          removed = true;
+        }
+      }
+      if (removed) {
+        console.log("Retrying migration after removing stale WAL files...");
+        ({ stdout, stderr } = await execAsync(
+          `npx prisma migrate deploy --schema="${schemaPath}"`,
+          {
+            cwd: packageDir,
+            env: {
+              ...process.env,
+              NAISYS_FOLDER: resolve(process.env.NAISYS_FOLDER || ""),
+              ...envOverrides,
+            },
+          },
+        ));
+      } else {
+        throw new Error(
+          `Database is locked: ${absoluteDbPath}\n` +
+            `Another process may be using the database.`,
+        );
+      }
+    } else {
+      throw error;
     }
-    throw error;
   }
 
   if (stdout) console.log(stdout);
