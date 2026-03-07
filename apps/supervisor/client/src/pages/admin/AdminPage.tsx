@@ -9,7 +9,7 @@ import {
   Title,
   Tooltip,
 } from "@mantine/core";
-import { hasAction } from "@naisys/common";
+import { formatFileSize, hasAction } from "@naisys/common";
 import { IconInfoCircle } from "@tabler/icons-react";
 import { useCallback, useEffect, useState } from "react";
 
@@ -65,11 +65,19 @@ export const AdminPage: React.FC = () => {
             <Table.Tbody>
               <Table.Tr>
                 <Table.Td fw={600}>Supervisor DB Path</Table.Td>
-                <Table.Td>{data.supervisorDbPath}</Table.Td>
+                <Table.Td>
+                  {data.supervisorDbPath}
+                  {data.supervisorDbSize != null &&
+                    ` (${formatFileSize(data.supervisorDbSize)})`}
+                </Table.Td>
               </Table.Tr>
               <Table.Tr>
                 <Table.Td fw={600}>Hub DB Path</Table.Td>
-                <Table.Td>{data.hubDbPath}</Table.Td>
+                <Table.Td>
+                  {data.hubDbPath}
+                  {data.hubDbSize != null &&
+                    ` (${formatFileSize(data.hubDbSize)})`}
+                </Table.Td>
               </Table.Tr>
               {data.hubAccessKey && (
                 <Table.Tr>

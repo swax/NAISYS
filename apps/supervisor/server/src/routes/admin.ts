@@ -7,6 +7,7 @@ import {
   ErrorResponseSchema,
 } from "@naisys-supervisor/shared";
 import archiver from "archiver";
+import fs from "node:fs/promises";
 import { FastifyInstance, FastifyPluginOptions } from "fastify";
 
 import { hasPermission, requirePermission } from "../auth-middleware.js";
@@ -66,9 +67,16 @@ export default function adminRoutes(
 
         const actions = adminActions(hasAdminPermission);
 
+        const [supervisorDbSize, hubDbSize] = await Promise.all([
+          fs.stat(supervisorDbPath()).then((s) => s.size).catch(() => undefined),
+          fs.stat(getNaisysDatabasePath()).then((s) => s.size).catch(() => undefined),
+        ]);
+
         return {
           supervisorDbPath: supervisorDbPath(),
+          supervisorDbSize,
           hubDbPath: getNaisysDatabasePath(),
+          hubDbSize,
           hubConnected: isHubConnected(),
           hubAccessKey: getHubAccessKey(),
           _actions: actions.length > 0 ? actions : undefined,
