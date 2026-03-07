@@ -16,6 +16,7 @@ import { useCallback, useEffect, useState } from "react";
 import { downloadExportConfig } from "../../lib/apiAdmin";
 import type { AdminInfoResponse } from "../../lib/apiClient";
 import { api, apiEndpoints } from "../../lib/apiClient";
+import { ServerLogViewer } from "./ServerLogViewer";
 
 export const AdminPage: React.FC = () => {
   const [data, setData] = useState<AdminInfoResponse | null>(null);
@@ -48,6 +49,7 @@ export const AdminPage: React.FC = () => {
   };
 
   const canExport = data ? !!hasAction(data._actions, "export-config") : false;
+  const canViewLogs = data ? !!hasAction(data._actions, "view-logs") : false;
 
   return (
     <Container size="lg" py="xl" w="100%">
@@ -123,6 +125,8 @@ export const AdminPage: React.FC = () => {
               Export Config
             </Button>
           )}
+
+          {canViewLogs && <ServerLogViewer />}
         </Stack>
       ) : null}
     </Container>
