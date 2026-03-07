@@ -1,6 +1,7 @@
 import type { AgentConfigFile } from "@naisys/common";
 import type {
   AdminInfoResponse,
+  PinoLogEntry,
   Agent,
   AgentActionResult,
   AgentDetailResponse,
@@ -40,6 +41,7 @@ import type {
   StatusResponse,
   UpdateAgentConfigResponse,
   VariablesResponse,
+  ServerLogResponse,
 } from "@naisys-supervisor/shared";
 
 export const API_BASE = "/api/supervisor";
@@ -82,7 +84,9 @@ export type {
   SendChatRequest,
   SendChatResponse,
   SendMailRequest,
+  PinoLogEntry,
   SendMailResponse,
+  ServerLogResponse,
   StatusResponse,
   UpdateAgentConfigResponse,
   VariablesResponse,
@@ -182,4 +186,6 @@ export const apiEndpoints = {
   permissions: "/permissions",
   admin: "/admin",
   adminExportConfig: "/admin/export-config",
+  adminLogs: (file: string, lines?: number) =>
+    `/admin/logs?file=${file}${lines ? `&lines=${lines}` : ""}`,
 };

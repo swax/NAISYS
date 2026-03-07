@@ -5,6 +5,10 @@ import {
   AdminInfoResponseSchema,
   ErrorResponse,
   ErrorResponseSchema,
+  ServerLogRequest,
+  ServerLogRequestSchema,
+  ServerLogResponse,
+  ServerLogResponseSchema,
 } from "@naisys-supervisor/shared";
 import archiver from "archiver";
 import fs from "node:fs/promises";
@@ -21,17 +25,29 @@ import {
   getHubAccessKey,
   isHubConnected,
 } from "../services/hubConnectionService.js";
+import {
+  getLogFilePath,
+  tailLogFile,
+} from "../services/logFileService.js";
 
 function adminActions(hasAdminPermission: boolean): HateoasAction[] {
   const actions: HateoasAction[] = [];
 
   if (hasAdminPermission) {
-    actions.push({
-      rel: "export-config",
-      href: `${API_PREFIX}/admin/export-config`,
-      method: "GET",
-      title: "Export Config",
-    });
+    actions.push(
+      {
+        rel: "export-config",
+        href: `${API_PREFIX}/admin/export-config`,
+        method: "GET",
+        title: "Export Config",
+      },
+      {
+        rel: "view-logs",
+        href: `${API_PREFIX}/admin/logs`,
+        method: "GET",
+        title: "View Logs",
+      },
+    );
   }
 
   return actions;
@@ -142,6 +158,46 @@ export default function adminRoutes(
       await archive.finalize();
 
       return reply.send(archive);
+    },
+  );
+
+  // GET /logs — Tail server log files
+  fastify.get<{
+    Querystring: ServerLogRequest;
+    Reply: ServerLogResponse | ErrorResponse;
+  }>(
+    "/logs",
+    {
+      preHandler: [requirePermission("supervisor_admin")],
+      schema: {
+        description: "Get tail of a server log file",
+        tags: ["Admin"],
+        querystring: ServerLogRequestSchema,
+        response: {
+          200: ServerLogResponseSchema,
+          500: ErrorResponseSchema,
+        },
+        security: [{ cookieAuth: [] }],
+      },
+    },
+    async (request, reply) => {
+      try {
+        const { file, lines } = request.query;
+        const cappedLines = Math.min(lines, 1000);
+        const filePath = getLogFilePath(file);
+        const { entries, fileSize } = await tailLogFile(filePath, cappedLines);
+        return {
+          entries,
+          fileName: `${file}.log`,
+          fileSize,
+        };
+      } catch (error) {
+        reply.log.error(error, "Error in GET /admin/logs route");
+        return reply.status(500).send({
+          success: false,
+          message: "Internal server error while reading log file",
+        });
+      }
     },
   );
 }
