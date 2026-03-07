@@ -7,6 +7,7 @@ import {
   Loader,
   Stack,
   Text,
+  UnstyledButton,
 } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import { hasAction } from "@naisys/common";
@@ -140,6 +141,13 @@ export const AgentChat: React.FC = () => {
     />
   );
 
+  const conversationLabel = selectedParticipantIds
+    ?.split(",")
+    .map(Number)
+    .filter((pid) => pid !== agentId)
+    .map((pid) => agents.find((a) => a.id === pid)?.name ?? `#${pid}`)
+    .join(", ");
+
   return (
     <Box
       style={{
@@ -207,25 +215,22 @@ export const AgentChat: React.FC = () => {
               px="md"
               style={{ borderBottom: "1px solid var(--mantine-color-dark-4)" }}
             >
-              {/* Mobile conversation toggle */}
-              <ActionIcon
+              {/* Mobile conversation toggle (icon + label) */}
+              <UnstyledButton
                 hiddenFrom="sm"
-                variant="subtle"
-                color="gray"
                 onClick={openDrawer}
+                style={{ display: "flex", alignItems: "center", gap: 6 }}
               >
-                <IconMessageCircle size="1.2rem" />
-              </ActionIcon>
-              <Text size="sm" fw={600}>
-                {selectedParticipantIds
-                  ?.split(",")
-                  .map(Number)
-                  .filter((pid) => pid !== agentId)
-                  .map(
-                    (pid) =>
-                      agents.find((a) => a.id === pid)?.name ?? `#${pid}`,
-                  )
-                  .join(", ")}
+                <ActionIcon variant="subtle" color="gray" component="span">
+                  <IconMessageCircle size="1.2rem" />
+                </ActionIcon>
+                <Text size="sm" fw={600}>
+                  {conversationLabel}
+                </Text>
+              </UnstyledButton>
+              {/* Desktop label only */}
+              <Text size="sm" fw={600} visibleFrom="sm">
+                {conversationLabel}
               </Text>
             </Group>
 

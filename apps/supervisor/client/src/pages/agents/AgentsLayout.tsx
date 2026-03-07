@@ -52,7 +52,25 @@ export const AgentsLayout: React.FC = () => {
           minWidth: 0,
         }}
       >
-        {/* Sub-header: mobile robot icon + agent nav tabs */}
+        {/* Mobile agent picker row */}
+        <Group
+          gap="xs"
+          pl={{ base: "md", md: 0 }}
+          hiddenFrom="md"
+          style={{ cursor: "pointer" }}
+          onClick={openDrawer}
+        >
+          <ActionIcon variant="subtle" color="gray">
+            <IconRobot size="1.2rem" />
+          </ActionIcon>
+          {username && (
+            <Box fw={600} fz="sm">
+              {username}
+            </Box>
+          )}
+        </Group>
+
+        {/* Agent nav tabs */}
         <Group
           gap="xs"
           pl={{ base: "md", md: 0 }}
@@ -61,14 +79,6 @@ export const AgentsLayout: React.FC = () => {
               "calc(0.125rem * var(--mantine-scale)) solid var(--mantine-color-dark-4)",
           }}
         >
-          <ActionIcon
-            variant="subtle"
-            color="gray"
-            onClick={openDrawer}
-            hiddenFrom="md"
-          >
-            <IconRobot size="1.2rem" />
-          </ActionIcon>
           <AgentNavHeader agentUsername={username} />
         </Group>
 
