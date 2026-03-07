@@ -1,6 +1,7 @@
 import { Badge, Button, Card, Group, Stack, Text } from "@mantine/core";
 import { hasAction, type HateoasAction } from "@naisys/common";
 import {
+  IconCalculator,
   IconChartDots,
   IconCpu,
   IconPhoto,
@@ -56,6 +57,7 @@ export const ModelSidebar: React.FC<ModelSidebarProps> = ({
   }
 
   const isOverview = location.pathname === "/models";
+  const isCalculator = location.pathname === "/models/calculator";
 
   return (
     <Stack gap="md">
@@ -85,6 +87,36 @@ export const ModelSidebar: React.FC<ModelSidebarProps> = ({
           <IconChartDots size="1rem" style={{ flexShrink: 0 }} />
           <Text size="sm" fw={500}>
             Overview
+          </Text>
+        </Group>
+      </Card>
+
+      {/* Calculator Link */}
+      <Card
+        padding="sm"
+        radius="md"
+        withBorder
+        component="a"
+        href={`${ROUTER_BASENAME}/models/calculator`}
+        onClick={(e: React.MouseEvent) => {
+          if (e.button === 1 || e.ctrlKey || e.metaKey) return;
+          e.preventDefault();
+          void navigate("/models/calculator");
+        }}
+        style={{
+          cursor: "pointer",
+          backgroundColor: isCalculator
+            ? "var(--mantine-color-blue-9)"
+            : undefined,
+          textDecoration: "none",
+          color: "inherit",
+          display: "block",
+        }}
+      >
+        <Group gap="xs" align="center" wrap="nowrap">
+          <IconCalculator size="1rem" style={{ flexShrink: 0 }} />
+          <Text size="sm" fw={500}>
+            Calculator
           </Text>
         </Group>
       </Card>
