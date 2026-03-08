@@ -178,15 +178,6 @@ export const ConfigSummary: React.FC<{
         </Group>
       )}
 
-      {config.initialCommands && config.initialCommands.length > 0 && (
-        <div>
-          <Text size="sm" c="dimmed" mb={4}>
-            Initial Commands
-          </Text>
-          <Code block>{config.initialCommands.join("\n\n")}</Code>
-        </div>
-      )}
-
       <div>
         <Text size="sm" c="dimmed" mb={4}>
           Agent Prompt
@@ -195,6 +186,15 @@ export const ConfigSummary: React.FC<{
           <Code block>{config.agentPrompt}</Code>
         </Spoiler>
       </div>
+
+      {config.initialCommands && config.initialCommands.length > 0 && (
+        <div>
+          <Text size="sm" c="dimmed" mb={4}>
+            Initial Commands
+          </Text>
+          <Code block>{config.initialCommands.join("\n\n")}</Code>
+        </div>
+      )}
     </Stack>
   );
 };

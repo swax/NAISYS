@@ -218,6 +218,8 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     const password =
       passwordIdx !== -1 ? process.argv[passwordIdx + 1] : undefined;
 
+    await initErpDb();
+
     if (isSupervisorAuth()) {
       void handleResetPassword({
         findLocalUser: async (username) => {

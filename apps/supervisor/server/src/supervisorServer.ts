@@ -32,6 +32,8 @@ import {
 import path from "path";
 import { fileURLToPath } from "url";
 
+import { initHubDb } from "./database/hubDb.js";
+import { initSupervisorDb } from "./database/supervisorDb.js";
 import { initLogger } from "./logger.js";
 import apiRoutes from "./routes/api.js";
 import { refreshUserLookup } from "./services/agentService.js";
@@ -71,6 +73,10 @@ export const startServer: StartServer = async (
 
   // Hub DB still needed for agent API key auth
   await createHubDatabaseClient();
+
+  // Initialize local Prisma clients (after migrations so they don't lock the DB)
+  await initSupervisorDb();
+  await initHubDb();
 
   // Populate in-memory user lookup for username ↔ id resolution
   await refreshUserLookup();
@@ -297,6 +303,8 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
       usernameIdx !== -1 ? process.argv[usernameIdx + 1] : undefined;
     const password =
       passwordIdx !== -1 ? process.argv[passwordIdx + 1] : undefined;
+
+    await initSupervisorDb();
 
     void handleResetPassword({
       findLocalUser: async (username) => {

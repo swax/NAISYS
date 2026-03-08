@@ -149,7 +149,7 @@ export function createHubMailService(
           },
         },
         include: {
-          from_user: { select: { username: true } },
+          from_user: { select: { username: true, title: true } },
           recipients: {
             include: { user: { select: { username: true } } },
           },
@@ -176,6 +176,7 @@ export function createHubMailService(
         return {
           id: m.id,
           fromUsername: m.from_user.username,
+          fromTitle: m.from_user.title,
           recipientUsernames: m.recipients.map((r) => r.user.username),
           subject: m.subject,
           createdAt: m.created_at.toISOString(),

@@ -105,7 +105,9 @@ export const RunsSidebar: React.FC<RunsSidebarProps> = ({
       )}
 
       <ScrollArea style={{ flex: 1 }}>
-        {runs.map((run, index) => {
+        {(() => {
+          let groupIndex = 0;
+          return runs.map((run, index) => {
           const rowKey = getRowKey(run);
           const unread = hasUnreadLogs(run) && selectedRowKey !== rowKey;
 
@@ -122,6 +124,9 @@ export const RunsSidebar: React.FC<RunsSidebarProps> = ({
           const isLastInGroup =
             isMultiSession &&
             (!nextRun || nextRun.runId !== run.runId || nextRun.userId !== run.userId);
+
+          if (isFirstInGroup) groupIndex++;
+          const groupColor = groupIndex % 2 === 0 ? "violet" : "blue";
 
           return (
             <NavLink
@@ -171,7 +176,7 @@ export const RunsSidebar: React.FC<RunsSidebarProps> = ({
                     ? "none"
                     : "1px solid var(--mantine-color-dark-6)",
                   borderLeft: isMultiSession
-                    ? "3px solid var(--mantine-color-blue-7)"
+                    ? `3px solid var(--mantine-color-${groupColor}-7)`
                     : undefined,
                   borderTopLeftRadius: isFirstInGroup ? 4 : 0,
                   borderBottomLeftRadius: isLastInGroup ? 4 : 0,
@@ -179,7 +184,8 @@ export const RunsSidebar: React.FC<RunsSidebarProps> = ({
               }}
             />
           );
-        })}
+        });
+        })()}
 
         {runs.length === 0 && !runsLoading && (
           <Text c="dimmed" ta="center" size="sm" p="md">

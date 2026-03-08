@@ -64,8 +64,6 @@ export default function authRoutes(fastify: FastifyInstance) {
         const ssoData = {
           username,
           passwordHash: authResult.user.passwordHash,
-          sessionTokenHash: "!sso",
-          sessionExpiresAt: authResult.expiresAt,
         };
         const user = await erpDb.user.upsert({
           where: { uuid: authResult.user.uuid },
@@ -109,9 +107,8 @@ export default function authRoutes(fastify: FastifyInstance) {
       const tokenHash = hashToken(token);
       const expiresAt = new Date(Date.now() + SESSION_DURATION_MS);
 
-      await erpDb.user.update({
-        where: { id: user.id },
-        data: { sessionTokenHash: tokenHash, sessionExpiresAt: expiresAt },
+      await erpDb.session.create({
+        data: { userId: user.id, tokenHash, expiresAt },
       });
 
       reply.setCookie(COOKIE_NAME, token, {
@@ -135,20 +132,14 @@ export default function authRoutes(fastify: FastifyInstance) {
     handler: async (request, reply) => {
       const token = request.cookies?.[COOKIE_NAME];
 
-      if (request.erpUser) {
-        await erpDb.user.update({
-          where: { id: request.erpUser.id },
-          data: {
-            sessionTokenHash: null,
-            sessionExpiresAt: null,
-          },
-        });
-      }
-
-      // Also clear from hub and auth cache
       if (token) {
         const tokenHash = hashToken(token);
         authCache.invalidate(`cookie:${tokenHash}`);
+
+        // Delete from local ERP sessions
+        await erpDb.session.deleteMany({ where: { tokenHash } });
+
+        // Also delete from supervisor sessions (SSO mode)
         await deleteSession(tokenHash);
       }
 

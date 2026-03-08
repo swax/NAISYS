@@ -82,14 +82,18 @@ export function registerAuthMiddleware(fastify: FastifyInstance) {
         }
       } else {
         // Standalone mode: local session only
-        const user = await erpDb.user.findFirst({
+        const session = await erpDb.session.findUnique({
           where: {
-            sessionTokenHash: tokenHash,
-            sessionExpiresAt: { gt: new Date() },
+            tokenHash,
+            expiresAt: { gt: new Date() },
           },
+          include: { user: true },
         });
-        if (user) {
-          const erpUser = { id: user.id, username: user.username };
+        if (session) {
+          const erpUser = {
+            id: session.user.id,
+            username: session.user.username,
+          };
           authCache.set(cacheKey, erpUser);
           request.erpUser = erpUser;
         } else {

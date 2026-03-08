@@ -103,6 +103,11 @@ export function createSystemMessage(
       "\n  Make sure to call `ns-session compact` before the token limit is hit so you can continue your work without interruption.";
   }
 
+  if (agentConfig().completeSessionEnabled) {
+    tokenNote =
+      "\n  Complete the session if there's nothing specific you're waiting for. New messages or events will startup the session again.";
+  }
+
   if (agentConfig().multipleCommandsEnabled) {
     tokenNote +=
       "\n  Be careful running multiple commands on a single prompt, and never assume the output of commands. Better to run one command at a time if you're not sure.";

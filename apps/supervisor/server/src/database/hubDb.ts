@@ -11,4 +11,23 @@ export function getNaisysDatabasePath(): string {
   return path.join(env.NAISYS_FOLDER, "database", dbFilename);
 }
 
-export const hubDb = await createPrismaClient(getNaisysDatabasePath());
+type HubDb = Awaited<ReturnType<typeof createPrismaClient>>;
+let _db: HubDb | undefined;
+
+/** Lazily initialized Prisma client. First access creates the connection. */
+export const hubDb = new Proxy({} as HubDb, {
+  get(_target, prop, receiver) {
+    if (!_db) {
+      throw new Error(
+        "hubDb accessed before initialization. Ensure migrations have completed first.",
+      );
+    }
+    return Reflect.get(_db, prop, receiver);
+  },
+});
+
+export async function initHubDb(): Promise<void> {
+  if (!_db) {
+    _db = await createPrismaClient(getNaisysDatabasePath());
+  }
+}
