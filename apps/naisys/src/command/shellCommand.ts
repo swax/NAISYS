@@ -15,6 +15,7 @@ export function createShellCommand(
   const isShellSuspended = () => shellWrapper.isShellSuspended();
   const getCommandElapsedTimeString = () =>
     shellWrapper.getCommandElapsedTimeString();
+  const getCurrentCommandName = () => shellWrapper.getCurrentCommandName();
 
   async function handleCommand(input: string): Promise<boolean> {
     const cmdParams = input.split(" ");
@@ -86,6 +87,7 @@ export function createShellCommand(
   return {
     isShellSuspended,
     getCommandElapsedTimeString,
+    getCurrentCommandName,
     handleCommand,
   };
 }

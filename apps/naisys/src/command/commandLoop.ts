@@ -267,8 +267,9 @@ export function createCommandLoop(
     // Must be after the mode switch above so the message is added to the right context LLM/Debug
     if (shellCommand.isShellSuspended()) {
       const elapsedTime = shellCommand.getCommandElapsedTimeString();
+      const commandName = shellCommand.getCurrentCommandName();
       contextManager.append(
-        `Command has been running for ${elapsedTime}. Enter 'wait <seconds>' to continue waiting. 'kill' to terminate. Any other input will be sent directly to the running process.`,
+        `'${commandName}' has been running for ${elapsedTime}. Enter 'wait <seconds>' to continue waiting. 'kill' to terminate. Any other input will be sent directly to the running process.`,
         ContentSource.Console,
       );
     }

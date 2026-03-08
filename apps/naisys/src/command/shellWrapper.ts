@@ -663,6 +663,10 @@ ${command.trim()}`;
     return resolved;
   }
 
+  function getCurrentCommandName() {
+    return _currentCommandText?.split(/\s/)[0] ?? "";
+  }
+
   return {
     executeCommand,
     continueCommand,
@@ -671,6 +675,7 @@ ${command.trim()}`;
     terminate,
     isShellSuspended,
     getCommandElapsedTimeString,
+    getCurrentCommandName,
   };
 }
 

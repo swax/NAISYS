@@ -67,7 +67,7 @@ export const AgentMail: React.FC = () => {
   }, [allMail]);
 
   // Grouping mode
-  const [groupBySubject, setGroupBySubject] = useState(true);
+  const [groupBySubject, setGroupBySubject] = useState(false);
 
   // Selection state
   const [selectedKey, setSelectedKey] = useState<string | null>(null);

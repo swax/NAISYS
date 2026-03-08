@@ -74,6 +74,7 @@ export function createMockShellCommand() {
     handleCommand: jest.fn(() => Promise.resolve(false)),
     isShellSuspended: jest.fn(() => false),
     getCommandElapsedTimeString: jest.fn(() => ""),
+    getCurrentCommandName: jest.fn(() => ""),
   };
 
   return shellCommand;

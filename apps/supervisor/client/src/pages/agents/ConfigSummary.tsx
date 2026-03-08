@@ -183,7 +183,7 @@ export const ConfigSummary: React.FC<{
           <Text size="sm" c="dimmed" mb={4}>
             Initial Commands
           </Text>
-          <Code block>{config.initialCommands.join("\n")}</Code>
+          <Code block>{config.initialCommands.join("\n\n")}</Code>
         </div>
       )}
 
