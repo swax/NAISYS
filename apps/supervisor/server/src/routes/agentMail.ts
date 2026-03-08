@@ -134,7 +134,7 @@ export default function agentMailRoutes(
       try {
         const contentType = request.headers["content-type"];
         let fromId: number = 0,
-          toId: number = 0,
+          toIds: number[] = [],
           subject: string = "",
           message: string = "";
         let attachments: Array<{ filename: string; data: Buffer }> = [];
@@ -149,8 +149,8 @@ export default function agentMailRoutes(
                 case "fromId":
                   fromId = Number(field.value);
                   break;
-                case "toId":
-                  toId = Number(field.value);
+                case "toIds":
+                  toIds = JSON.parse(field.value as string);
                   break;
                 case "subject":
                   subject = field.value;
@@ -173,20 +173,20 @@ export default function agentMailRoutes(
         } else {
           const body = request.body as SendMailRequest;
           fromId = body.fromId;
-          toId = body.toId;
+          toIds = body.toIds;
           subject = body.subject;
           message = body.message;
         }
 
-        if (!fromId || !toId || !subject || !message) {
+        if (!fromId || toIds.length === 0 || !subject || !message) {
           return reply.code(400).send({
             success: false,
-            message: "Missing required fields: fromId, toId, subject, message",
+            message: "Missing required fields: fromId, toIds, subject, message",
           });
         }
 
         const result = await sendMessage(
-          { fromId, toId, subject, message },
+          { fromId, toIds, subject, message },
           attachments.length > 0 ? attachments : undefined,
         );
 
