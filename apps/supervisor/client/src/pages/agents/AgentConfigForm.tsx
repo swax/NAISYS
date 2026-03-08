@@ -60,7 +60,10 @@ function transformFormValues(values: FormValues): Record<string, unknown> {
   if (typeof values.debugPauseSeconds === "number")
     result.debugPauseSeconds = values.debugPauseSeconds;
   if (values.initialCommands.trim())
-    result.initialCommands = values.initialCommands.split("\n").filter(Boolean);
+    result.initialCommands = values.initialCommands
+      .split(/\n\n+/)
+      .map((s) => s.trim())
+      .filter(Boolean);
 
   return result;
 }
@@ -163,7 +166,7 @@ export const AgentConfigForm: React.FC<AgentConfigFormProps> = ({
       multipleCommandsEnabled: config.multipleCommandsEnabled ?? false,
       commandProtection: config.commandProtection ?? "none",
       debugPauseSeconds: config.debugPauseSeconds ?? 0,
-      initialCommands: config.initialCommands?.join("\n") ?? "",
+      initialCommands: config.initialCommands?.join("\n\n") ?? "",
     },
     validate: (values) =>
       zodResolver(AgentConfigFileSchema)(transformFormValues(values)),
@@ -350,7 +353,7 @@ export const AgentConfigForm: React.FC<AgentConfigFormProps> = ({
         />
         <Textarea
           label="Initial Commands"
-          description={desc("initialCommands")}
+          description={`${desc("initialCommands") ?? ""} Separate commands with a blank line.`}
           autosize
           minRows={2}
           styles={{

@@ -105,9 +105,23 @@ export const RunsSidebar: React.FC<RunsSidebarProps> = ({
       )}
 
       <ScrollArea style={{ flex: 1 }}>
-        {runs.map((run) => {
+        {runs.map((run, index) => {
           const rowKey = getRowKey(run);
           const unread = hasUnreadLogs(run) && selectedRowKey !== rowKey;
+
+          // Detect multi-session run grouping
+          const prevRun = index > 0 ? runs[index - 1] : null;
+          const nextRun =
+            index < runs.length - 1 ? runs[index + 1] : null;
+          const isMultiSession = run.sessionId > 1 ||
+            (nextRun && nextRun.runId === run.runId && nextRun.userId === run.userId) ||
+            (prevRun && prevRun.runId === run.runId && prevRun.userId === run.userId);
+          const isFirstInGroup =
+            isMultiSession &&
+            (!prevRun || prevRun.runId !== run.runId || prevRun.userId !== run.userId);
+          const isLastInGroup =
+            isMultiSession &&
+            (!nextRun || nextRun.runId !== run.runId || nextRun.userId !== run.userId);
 
           return (
             <NavLink
@@ -152,7 +166,15 @@ export const RunsSidebar: React.FC<RunsSidebarProps> = ({
               }
               styles={{
                 root: {
-                  borderBottom: "1px solid var(--mantine-color-dark-6)",
+                  marginTop: isFirstInGroup ? 6 : 0,
+                  borderBottom: isMultiSession && !isLastInGroup
+                    ? "none"
+                    : "1px solid var(--mantine-color-dark-6)",
+                  borderLeft: isMultiSession
+                    ? "3px solid var(--mantine-color-blue-7)"
+                    : undefined,
+                  borderTopLeftRadius: isFirstInGroup ? 4 : 0,
+                  borderBottomLeftRadius: isLastInGroup ? 4 : 0,
                 },
               }}
             />

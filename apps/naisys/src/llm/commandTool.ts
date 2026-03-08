@@ -6,7 +6,7 @@ export function createCommandTools({ agentConfig }: AgentConfig) {
   const escapedQuoteRegex = /"/g;
   const escapedBackslashRegex = /\\/g;
 
-  const multipleCommandsDisabled = !agentConfig().multipleCommandsEnabled;
+  const multipleCommandsEnabled = agentConfig().multipleCommandsEnabled;
 
   // Common description strings
   const COMMENT_DESCRIPTION =
@@ -18,18 +18,8 @@ export function createCommandTools({ agentConfig }: AgentConfig) {
   const TOOL_DESCRIPTION =
     "Return the commands to run next along with an optional comment explaining the plan.";
 
-  const commandProperties = multipleCommandsDisabled
+  const commandProperties = multipleCommandsEnabled
     ? {
-        comment: {
-          type: "string",
-          description: COMMENT_DESCRIPTION,
-        },
-        command: {
-          type: "string",
-          description: SINGLE_COMMAND_DESCRIPTION,
-        },
-      }
-    : {
         comment: {
           type: "string",
           description: COMMENT_DESCRIPTION,
@@ -41,11 +31,21 @@ export function createCommandTools({ agentConfig }: AgentConfig) {
             type: "string",
           },
         },
+      }
+    : {
+        comment: {
+          type: "string",
+          description: COMMENT_DESCRIPTION,
+        },
+        command: {
+          type: "string",
+          description: SINGLE_COMMAND_DESCRIPTION,
+        },
       };
 
-  const requiredProperties = multipleCommandsDisabled
-    ? ["comment", "command"]
-    : ["comment", "commandList"];
+  const requiredProperties = multipleCommandsEnabled
+    ? ["comment", "commandList"]
+    : ["comment", "command"];
 
   const consoleToolOpenAI = {
     type: "function" as const,
@@ -72,18 +72,8 @@ export function createCommandTools({ agentConfig }: AgentConfig) {
   };
 
   // Google-compatible tool definition
-  const googleCommandProperties = multipleCommandsDisabled
+  const googleCommandProperties = multipleCommandsEnabled
     ? {
-        comment: {
-          type: Type.STRING,
-          description: COMMENT_DESCRIPTION,
-        },
-        command: {
-          type: Type.STRING,
-          description: SINGLE_COMMAND_DESCRIPTION,
-        },
-      }
-    : {
         comment: {
           type: Type.STRING,
           description: COMMENT_DESCRIPTION,
@@ -94,6 +84,16 @@ export function createCommandTools({ agentConfig }: AgentConfig) {
           items: {
             type: Type.STRING,
           },
+        },
+      }
+    : {
+        comment: {
+          type: Type.STRING,
+          description: COMMENT_DESCRIPTION,
+        },
+        command: {
+          type: Type.STRING,
+          description: SINGLE_COMMAND_DESCRIPTION,
         },
       };
 
@@ -165,16 +165,16 @@ export function createCommandTools({ agentConfig }: AgentConfig) {
         commands.push(buildCommentCommand(comment.trim()));
       }
 
-      if (multipleCommandsDisabled) {
-        if (typeof command === "string" && command.trim()) {
-          commands.push(command.trim());
-        }
-      } else if (Array.isArray(commandList)) {
-        for (const command of commandList) {
-          if (typeof command === "string" && command.trim()) {
-            commands.push(command.trim());
+      if (multipleCommandsEnabled) {
+        if (Array.isArray(commandList)) {
+          for (const command of commandList) {
+            if (typeof command === "string" && command.trim()) {
+              commands.push(command.trim());
+            }
           }
         }
+      } else if (typeof command === "string" && command.trim()) {
+        commands.push(command.trim());
       }
 
       if (commands.length) {
@@ -228,16 +228,16 @@ export function createCommandTools({ agentConfig }: AgentConfig) {
         commands.push(buildCommentCommand(comment.trim()));
       }
 
-      if (multipleCommandsDisabled) {
-        if (typeof command === "string" && command.trim()) {
-          commands.push(command.trim());
-        }
-      } else if (Array.isArray(commandList)) {
-        for (const command of commandList) {
-          if (typeof command === "string" && command.trim()) {
-            commands.push(command.trim());
+      if (multipleCommandsEnabled) {
+        if (Array.isArray(commandList)) {
+          for (const command of commandList) {
+            if (typeof command === "string" && command.trim()) {
+              commands.push(command.trim());
+            }
           }
         }
+      } else if (typeof command === "string" && command.trim()) {
+        commands.push(command.trim());
       }
 
       if (commands.length) {
@@ -281,16 +281,16 @@ export function createCommandTools({ agentConfig }: AgentConfig) {
         commands.push(buildCommentCommand(comment.trim()));
       }
 
-      if (multipleCommandsDisabled) {
-        if (typeof command === "string" && command.trim()) {
-          commands.push(command.trim());
-        }
-      } else if (Array.isArray(commandList)) {
-        for (const command of commandList) {
-          if (typeof command === "string" && command.trim()) {
-            commands.push(command.trim());
+      if (multipleCommandsEnabled) {
+        if (Array.isArray(commandList)) {
+          for (const command of commandList) {
+            if (typeof command === "string" && command.trim()) {
+              commands.push(command.trim());
+            }
           }
         }
+      } else if (typeof command === "string" && command.trim()) {
+        commands.push(command.trim());
       }
 
       if (commands.length) {

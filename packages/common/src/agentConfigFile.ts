@@ -155,7 +155,6 @@ export function buildDefaultAgentConfig(username: string): AgentConfigFile {
     webEnabled: true,
     wakeOnMessage: true,
     completeSessionEnabled: true,
-    multipleCommandsEnabled: true,
   };
 }
 
@@ -169,7 +168,6 @@ export const adminAgentConfig = {
   chatEnabled: true,
   wakeOnMessage: true,
   webEnabled: true,
-  multipleCommandsEnabled: true,
   spendLimitDollars: 1, // Required on all agents
 } satisfies AgentConfigFile;
 

@@ -68,7 +68,9 @@ export function buildExportFiles(
 
   for (const user of activeUsers) {
     const filePath = `${agentDirPath(user)}/${agentFileName(user)}.yaml`;
-    files.push({ path: filePath, content: user.config });
+    const configObj = JSON.parse(user.config);
+    const configYaml = yaml.dump(configObj, { lineWidth: -1 });
+    files.push({ path: filePath, content: configYaml });
   }
 
   // --- Variables ---
