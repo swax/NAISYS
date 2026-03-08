@@ -38,10 +38,11 @@ interface RegisteredHandler {
  */
 export function createNaisysServer(
   nsp: Namespace,
-  hubAccessKey: string,
+  initialHubAccessKey: string,
   logService: HubServerLog,
   hostRegistrar: HostRegistrar,
 ) {
+  let hubAccessKey = initialHubAccessKey;
   // Track connected NAISYS instances
   const naisysConnections = new Map<number, NaisysConnection>();
 
@@ -237,6 +238,18 @@ export function createNaisysServer(
     });
   });
 
+  /** Update the hub access key used for authenticating new connections */
+  function updateHubAccessKey(newKey: string) {
+    hubAccessKey = newKey;
+  }
+
+  /** Disconnect all connected clients */
+  function disconnectAllClients() {
+    for (const connection of naisysConnections.values()) {
+      connection.disconnect();
+    }
+  }
+
   // Return control interface
   return {
     registerEvent,
@@ -245,6 +258,8 @@ export function createNaisysServer(
     getConnectedClients: () => Array.from(naisysConnections.values()),
     getConnectionByHostId: (hostId: number) => naisysConnections.get(hostId),
     getConnectionCount: () => naisysConnections.size,
+    updateHubAccessKey,
+    disconnectAllClients,
   };
 }
 

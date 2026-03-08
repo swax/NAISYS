@@ -30,6 +30,7 @@ import type {
   MailMessage,
   ModelsResponse,
   PinoLogEntry,
+  RotateAccessKeyResult,
   RunsDataResponse,
   RunSession,
   SaveModelResponse,
@@ -78,6 +79,7 @@ export type {
   MailMessage,
   ModelsResponse,
   PinoLogEntry,
+  RotateAccessKeyResult,
   RunsDataResponse,
   RunSession,
   SaveModelResponse,
@@ -186,6 +188,7 @@ export const apiEndpoints = {
   permissions: "/permissions",
   admin: "/admin",
   adminExportConfig: "/admin/export-config",
+  adminRotateAccessKey: "/admin/rotate-access-key",
   adminLogs: (file: string, lines?: number) =>
     `/admin/logs?file=${file}${lines ? `&lines=${lines}` : ""}`,
 };

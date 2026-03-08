@@ -7,6 +7,10 @@
 
 import type { HubEvents } from "./events.js";
 import type {
+  RotateAccessKeyRequest,
+  RotateAccessKeyResponse,
+} from "./schemas/admin.js";
+import type {
   AgentPeekRequest,
   AgentPeekResponse,
   AgentStartRequest,
@@ -105,6 +109,10 @@ export interface HubRequestEvents {
   [HubEvents.MAIL_UNREAD]: {
     request: MailUnreadRequest;
     response: MailUnreadResponse;
+  };
+  [HubEvents.ROTATE_ACCESS_KEY]: {
+    request: RotateAccessKeyRequest;
+    response: RotateAccessKeyResponse;
   };
 }
 

@@ -1,4 +1,8 @@
-import { parseHubAccessKey, verifyHubCertificate } from "@naisys/common-node";
+import {
+  parseHubAccessKey,
+  resolveHubAccessKey,
+  verifyHubCertificate,
+} from "@naisys/common-node";
 import { io, Socket } from "socket.io-client";
 
 import { HubClientConfig } from "./hubClientConfig.js";
@@ -26,11 +30,15 @@ export function createHubConnection(
   function connect() {
     hubClientLog.write(`[NAISYS:HubClient] Connecting to ${hubUrl}...`);
 
+    const hubAccessKey = resolveHubAccessKey();
+    if (!hubAccessKey) {
+      onConnectError("No hub access key available");
+      return;
+    }
+
     // Verify the hub's TLS certificate fingerprint matches the access key
     // before establishing the socket.io connection
-    const { fingerprintPrefix } = parseHubAccessKey(
-      hubClientConfig.hubAccessKey,
-    );
+    const { fingerprintPrefix } = parseHubAccessKey(hubAccessKey);
     const url = new URL(hubUrl);
     verifyHubCertificate(
       url.hostname,
@@ -48,10 +56,13 @@ export function createHubConnection(
 
   function connectSocket() {
     socket = io(hubUrl + "/naisys", {
-      auth: {
-        hubAccessKey: hubClientConfig.hubAccessKey,
-        hostName: hubClientConfig.hostname,
-        hostType: "naisys",
+      auth: (cb) => {
+        // Re-read access key on each connection attempt so rotated keys are picked up
+        cb({
+          hubAccessKey: resolveHubAccessKey(),
+          hostName: hubClientConfig.hostname,
+          hostType: "naisys",
+        });
       },
       rejectUnauthorized: false,
       reconnection: true,
@@ -71,6 +82,11 @@ export function createHubConnection(
         `[NAISYS:HubClient] Disconnected from ${hubUrl}: ${reason}`,
       );
       onDisconnected();
+
+      // Server-initiated disconnects don't auto-reconnect in Socket.IO
+      if (reason === "io server disconnect") {
+        socket?.connect();
+      }
     });
 
     socket.on("connect_error", (error) => {

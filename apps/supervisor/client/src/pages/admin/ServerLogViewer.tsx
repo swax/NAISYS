@@ -102,7 +102,7 @@ export const ServerLogViewer: React.FC = () => {
               fontSize: 13,
             }}
           >
-            {logData.entries.map((entry: PinoLogEntry, i: number) => {
+            {[...logData.entries].reverse().map((entry: PinoLogEntry, i: number) => {
               const { label, color } = pinoLevelDisplay(entry.level);
               return (
                 <Group

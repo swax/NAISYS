@@ -1,11 +1,10 @@
+import { resolveHubAccessKey } from "@naisys/common-node";
 import os from "os";
 
-export function createHubClientConfig(hubUrl: string, hubAccessKey?: string) {
-  hubAccessKey = hubAccessKey || process.env.HUB_ACCESS_KEY;
-
-  if (!hubAccessKey) {
+export function createHubClientConfig(hubUrl: string) {
+  if (!resolveHubAccessKey()) {
     throw new Error(
-      "HUB_ACCESS_KEY is required to connect to a hub. Set it in .env or pass it via --integrated-hub.",
+      "HUB_ACCESS_KEY is required to connect to a hub. Set it in .env or place it in NAISYS_FOLDER/cert/hub-access-key.",
     );
   }
 
@@ -13,7 +12,6 @@ export function createHubClientConfig(hubUrl: string, hubAccessKey?: string) {
 
   return {
     hubUrl,
-    hubAccessKey,
     hostname,
   };
 }

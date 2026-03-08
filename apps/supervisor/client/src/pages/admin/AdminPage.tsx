@@ -10,10 +10,10 @@ import {
   Tooltip,
 } from "@mantine/core";
 import { formatFileSize, hasAction } from "@naisys/common";
-import { IconInfoCircle } from "@tabler/icons-react";
+import { IconInfoCircle, IconRefresh } from "@tabler/icons-react";
 import { useCallback, useEffect, useState } from "react";
 
-import { downloadExportConfig } from "../../lib/apiAdmin";
+import { downloadExportConfig, rotateHubAccessKey } from "../../lib/apiAdmin";
 import type { AdminInfoResponse } from "../../lib/apiClient";
 import { api, apiEndpoints } from "../../lib/apiClient";
 import { ServerLogViewer } from "./ServerLogViewer";
@@ -22,6 +22,7 @@ export const AdminPage: React.FC = () => {
   const [data, setData] = useState<AdminInfoResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
+  const [rotating, setRotating] = useState(false);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -48,8 +49,30 @@ export const AdminPage: React.FC = () => {
     }
   };
 
+  const handleRotateAccessKey = async () => {
+    const confirmed = window.confirm(
+      "This will generate a new hub access key and disconnect all clients. " +
+        "All NAISYS instances will need their HUB_ACCESS_KEY environment " +
+        "variable updated in their .env file before they can reconnect.",
+    );
+    if (!confirmed) return;
+
+    setRotating(true);
+    try {
+      const result = await rotateHubAccessKey();
+      if (result.success) {
+        void fetchData();
+      }
+    } finally {
+      setRotating(false);
+    }
+  };
+
   const canExport = data ? !!hasAction(data._actions, "export-config") : false;
   const canViewLogs = data ? !!hasAction(data._actions, "view-logs") : false;
+  const canRotateKey = data
+    ? !!hasAction(data._actions, "rotate-access-key")
+    : false;
 
   return (
     <Container size="lg" py="xl" w="100%">
@@ -98,7 +121,23 @@ export const AdminPage: React.FC = () => {
                       </Tooltip>
                     </Group>
                   </Table.Td>
-                  <Table.Td>{data.hubAccessKey}</Table.Td>
+                  <Table.Td>
+                    <Group gap="xs">
+                      {data.hubAccessKey}
+                      {canRotateKey && (
+                        <Tooltip label="Rotate Hub Access Key">
+                          <Button
+                            variant="subtle"
+                            size="compact-xs"
+                            onClick={handleRotateAccessKey}
+                            loading={rotating}
+                          >
+                            <IconRefresh size="1rem" />
+                          </Button>
+                        </Tooltip>
+                      )}
+                    </Group>
+                  </Table.Td>
                 </Table.Tr>
               )}
               <Table.Tr>

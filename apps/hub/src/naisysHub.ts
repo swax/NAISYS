@@ -6,6 +6,7 @@ import https from "https";
 import { Server } from "socket.io";
 import { fileURLToPath } from "url";
 
+import { createHubAccessKeyService } from "./handlers/hubAccessKeyService.js";
 import { createHubAgentService } from "./handlers/hubAgentService.js";
 import { createHubAttachmentService } from "./handlers/hubAttachmentService.js";
 import { createHubConfigService } from "./handlers/hubConfigService.js";
@@ -78,6 +79,9 @@ export const startHub: StartHub = async (
       logService,
       hostRegistrar,
     );
+
+    // Register hub access key rotation handler
+    createHubAccessKeyService(naisysServer, logService, certInfo.cert);
 
     // Register hub config service for config_get requests from NAISYS instances
     const configService = await createHubConfigService(
@@ -178,15 +182,10 @@ export const startHub: StartHub = async (
       const { startServer } = (await import(supervisorModule)) as {
         startServer: StartServer;
       };
-      supervisorPort = await startServer(
-        "hosted",
-        plugins,
-        hubPort,
-        certInfo.hubAccessKey,
-      );
+      supervisorPort = await startServer("hosted", plugins, hubPort);
     }
 
-    return { hubPort, hubAccessKey: certInfo.hubAccessKey, supervisorPort };
+    return { hubPort, supervisorPort };
   } catch (err) {
     console.error("[Hub] Failed to start hub server:", err);
     process.exit(1);

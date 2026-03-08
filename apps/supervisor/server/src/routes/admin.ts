@@ -7,6 +7,8 @@ import {
   AdminInfoResponseSchema,
   ErrorResponse,
   ErrorResponseSchema,
+  RotateAccessKeyResult,
+  RotateAccessKeyResultSchema,
   ServerLogRequest,
   ServerLogRequestSchema,
   ServerLogResponse,
@@ -25,6 +27,7 @@ import {
 import {
   getHubAccessKey,
   isHubConnected,
+  sendRotateAccessKey,
 } from "../services/hubConnectionService.js";
 import { getLogFilePath, tailLogFile } from "../services/logFileService.js";
 
@@ -46,6 +49,15 @@ function adminActions(hasAdminPermission: boolean): HateoasAction[] {
         title: "View Logs",
       },
     );
+
+    if (getHubAccessKey()) {
+      actions.push({
+        rel: "rotate-access-key",
+        href: `${API_PREFIX}/admin/rotate-access-key`,
+        method: "POST",
+        title: "Rotate Hub Access Key",
+      });
+    }
   }
 
   return actions;
@@ -162,6 +174,40 @@ export default function adminRoutes(
       await archive.finalize();
 
       return reply.send(archive);
+    },
+  );
+
+  // POST /rotate-access-key — Rotate hub access key
+  fastify.post<{
+    Reply: RotateAccessKeyResult | ErrorResponse;
+  }>(
+    "/rotate-access-key",
+    {
+      preHandler: [requirePermission("supervisor_admin")],
+      schema: {
+        description: "Rotate the hub access key",
+        tags: ["Admin"],
+        response: {
+          200: RotateAccessKeyResultSchema,
+          500: ErrorResponseSchema,
+        },
+        security: [{ cookieAuth: [] }],
+      },
+    },
+    async (_request, reply) => {
+      try {
+        const result = await sendRotateAccessKey();
+        return result;
+      } catch (error) {
+        reply.log.error(error, "Error in POST /admin/rotate-access-key route");
+        return reply.status(500).send({
+          success: false,
+          message:
+            error instanceof Error
+              ? error.message
+              : "Failed to rotate access key",
+        });
+      }
     },
   );
 

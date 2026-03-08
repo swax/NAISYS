@@ -75,3 +75,31 @@ export async function loadOrCreateCert(): Promise<CertInfo> {
 
   return { key, cert, hubAccessKey };
 }
+
+/**
+ * Rotates the hub access key by generating a new random secret while
+ * keeping the same certificate fingerprint prefix. Writes the new key
+ * to disk and returns it.
+ */
+export function rotateAccessKey(cert: string): string {
+  const naisysFolder = process.env.NAISYS_FOLDER || "";
+  const accessKeyPath = join(naisysFolder, "cert", "hub-access-key");
+
+  const secretKey = randomBytes(8).toString("hex"); // 16 hex chars
+
+  const derMatch = cert.match(
+    /-----BEGIN CERTIFICATE-----\s*([\s\S]+?)\s*-----END CERTIFICATE-----/,
+  );
+  if (!derMatch) {
+    throw new Error("Failed to parse PEM certificate");
+  }
+  const der = Buffer.from(derMatch[1].replace(/\s/g, ""), "base64");
+  const fingerprint = computeCertFingerprint(der);
+  const fingerprintPrefix = fingerprint.substring(0, 16);
+
+  const newAccessKey = `${fingerprintPrefix}+${secretKey}`;
+
+  writeFileSync(accessKeyPath, newAccessKey, { mode: 0o600 });
+
+  return newAccessKey;
+}
