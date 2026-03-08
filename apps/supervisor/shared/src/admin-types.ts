@@ -13,6 +13,13 @@ export const AdminInfoResponseSchema = z.object({
 
 export type AdminInfoResponse = z.infer<typeof AdminInfoResponseSchema>;
 
+export const RotateAccessKeyResultSchema = z.object({
+  success: z.boolean(),
+  newAccessKey: z.string().optional(),
+  error: z.string().optional(),
+});
+export type RotateAccessKeyResult = z.infer<typeof RotateAccessKeyResultSchema>;
+
 export const ServerLogFileSchema = z.enum([
   "supervisor",
   "hub-server",

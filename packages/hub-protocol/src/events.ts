@@ -88,6 +88,13 @@ export const HubEvents = {
   AGENT_PEEK: "agent_peek",
 
   // ---------------------------------------------------------------------------
+  // Supervisor -> Hub (request/response) – Admin
+  // ---------------------------------------------------------------------------
+
+  /** Rotate the hub access key */
+  ROTATE_ACCESS_KEY: "rotate_access_key",
+
+  // ---------------------------------------------------------------------------
   // NAISYS/Supervisor -> Hub (request/response) – Mail
   // ---------------------------------------------------------------------------
 

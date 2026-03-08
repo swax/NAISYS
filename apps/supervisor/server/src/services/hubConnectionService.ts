@@ -1,8 +1,13 @@
-import { parseHubAccessKey, verifyHubCertificate } from "@naisys/common-node";
+import {
+  parseHubAccessKey,
+  resolveHubAccessKey,
+  verifyHubCertificate,
+} from "@naisys/common-node";
 import type {
   AgentStartResponse,
   AgentStopResponse,
   MailSendResponse,
+  RotateAccessKeyResponse,
   SupervisorEmitEvents,
   SupervisorListenEvents,
 } from "@naisys/hub-protocol";
@@ -31,12 +36,10 @@ import { getIO } from "./browserSocketService.js";
 
 let socket: Socket<SupervisorListenEvents, SupervisorEmitEvents> | null = null;
 let connected = false;
-let resolvedHubAccessKey: string | undefined;
 let resolvedHubUrl: string | undefined;
 
-export function initHubConnection(hubUrl: string, hubAccessKey?: string) {
-  hubAccessKey = hubAccessKey || process.env.HUB_ACCESS_KEY;
-  resolvedHubAccessKey = hubAccessKey;
+export function initHubConnection(hubUrl: string) {
+  const hubAccessKey = resolveHubAccessKey();
   resolvedHubUrl = hubUrl;
 
   if (!hubAccessKey) {
@@ -52,7 +55,7 @@ export function initHubConnection(hubUrl: string, hubAccessKey?: string) {
   const { fingerprintPrefix } = parseHubAccessKey(hubAccessKey);
   const url = new URL(hubUrl);
   verifyHubCertificate(url.hostname, Number(url.port) || 443, fingerprintPrefix)
-    .then(() => connectSocket(hubUrl, hubAccessKey!))
+    .then(() => connectSocket(hubUrl))
     .catch((err) => {
       console.error(
         `[Supervisor:HubClient] Certificate verification failed: ${err.message}`,
@@ -60,12 +63,15 @@ export function initHubConnection(hubUrl: string, hubAccessKey?: string) {
     });
 }
 
-function connectSocket(hubUrl: string, hubAccessKey: string) {
+function connectSocket(hubUrl: string) {
   socket = io(hubUrl + "/naisys", {
-    auth: {
-      hubAccessKey,
-      hostName: "SUPERVISOR",
-      hostType: "supervisor",
+    auth: (cb) => {
+      // Re-read access key on each connection attempt so rotated keys are picked up
+      cb({
+        hubAccessKey: resolveHubAccessKey(),
+        hostName: "SUPERVISOR",
+        hostType: "supervisor",
+      });
     },
     rejectUnauthorized: false,
     reconnection: true,
@@ -84,6 +90,11 @@ function connectSocket(hubUrl: string, hubAccessKey: string) {
     connected = false;
     console.log(`[Supervisor:HubClient] Disconnected: ${reason}`);
     emitHubConnectionStatus(false);
+
+    // Server-initiated disconnects don't auto-reconnect in Socket.IO
+    if (reason === "io server disconnect") {
+      socket?.connect();
+    }
   });
 
   socket.on("connect_error", (error) => {
@@ -263,6 +274,7 @@ function connectSocket(hubUrl: string, hubAccessKey: string) {
     void refreshUserLookup();
     emitAgentsListChanged();
   });
+
 }
 
 export function isHubConnected(): boolean {
@@ -270,7 +282,7 @@ export function isHubConnected(): boolean {
 }
 
 export function getHubAccessKey(): string | undefined {
-  return resolvedHubAccessKey;
+  return resolveHubAccessKey();
 }
 
 export function getHubUrl(): string | undefined {
@@ -367,6 +379,19 @@ export function sendHostsChanged(): void {
   }
 
   socket.emit(HubEvents.HOSTS_CHANGED);
+}
+
+export function sendRotateAccessKey() {
+  return new Promise<RotateAccessKeyResponse>((resolve, reject) => {
+    if (!socket || !connected) {
+      reject(new Error("Not connected to hub"));
+      return;
+    }
+
+    socket.emit(HubEvents.ROTATE_ACCESS_KEY, {}, (response) => {
+      resolve(response);
+    });
+  });
 }
 
 export function sendAgentStop(userId: number, reason: string) {

@@ -66,8 +66,14 @@ export function createNaisysConnection(
     }
   }
 
+  /** Forcefully disconnect this client */
+  function disconnect() {
+    socket.disconnect(true);
+  }
+
   return {
     sendMessage,
+    disconnect,
     getHostId: () => hostId,
     getHostName: () => hostName,
     getConnectedAt: () => connectedAt,

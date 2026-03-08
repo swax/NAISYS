@@ -14,7 +14,6 @@ export type StartHub = (
   startupAgentPath?: string,
 ) => Promise<{
   hubPort: number;
-  hubAccessKey: string;
   supervisorPort?: number;
 }>;
 
@@ -23,5 +22,4 @@ export type StartServer = (
   startupType: "standalone" | "hosted",
   plugins?: "erp"[],
   hubPort?: number,
-  hubAccessKey?: string,
 ) => Promise<number>;
