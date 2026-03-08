@@ -56,6 +56,7 @@ export type MailAttachmentData = z.infer<typeof MailAttachmentDataSchema>;
 export const MailListMessageDataSchema = z.object({
   id: z.number(),
   fromUsername: z.string(),
+  fromTitle: z.string(),
   recipientUsernames: z.array(z.string()),
   subject: z.string(),
   createdAt: z.string(),

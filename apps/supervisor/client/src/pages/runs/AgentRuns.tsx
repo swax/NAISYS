@@ -249,7 +249,16 @@ export const AgentRuns: React.FC = () => {
                 >
                   <IconList size="1.2rem" />
                 </ActionIcon>
-                <Text size="sm" fw={600}>
+                <Text
+                  size="sm"
+                  fw={600}
+                  hiddenFrom="sm"
+                  onClick={openDrawer}
+                  style={{ cursor: "pointer" }}
+                >
+                  {formatPrimaryTime(selectedRun.createdAt)}
+                </Text>
+                <Text size="sm" fw={600} visibleFrom="sm">
                   {formatPrimaryTime(selectedRun.createdAt)}
                 </Text>
                 <Badge size="sm" variant="light" color="blue">

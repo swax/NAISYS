@@ -235,20 +235,21 @@ export function createChatService(
     const dateStr = `${MM}/${DD} ${HH}:${mm}`;
 
     const isGroup = m.recipientUsernames.length > 1;
+    const fromName = `${m.fromUsername} (${m.fromTitle})`;
     let sender: string;
     if (mode === "conversation") {
       // Participants already known from the command context
-      sender = m.fromUsername;
+      sender = fromName;
     } else if (mode === "notify") {
       if (isGroup) {
         // Group context needed so agent knows which conversation
         const participants = [m.fromUsername, ...m.recipientUsernames]
           .sort()
           .join(",");
-        sender = `[${participants}] ${m.fromUsername}`;
+        sender = `[${participants}] ${fromName}`;
       } else {
         // 1:1 is obvious from sender alone
-        sender = m.fromUsername;
+        sender = fromName;
       }
     } else {
       // overview: messages from different conversations are mixed
@@ -256,10 +257,10 @@ export function createChatService(
         const participants = [m.fromUsername, ...m.recipientUsernames]
           .sort()
           .join(",");
-        sender = `[${participants}] ${m.fromUsername}`;
+        sender = `[${participants}] ${fromName}`;
       } else {
         // Show direction so agent can distinguish different 1:1 conversations
-        sender = `${m.fromUsername} → ${m.recipientUsernames[0]}`;
+        sender = `${fromName} → ${m.recipientUsernames[0]}`;
       }
     }
 
@@ -281,9 +282,9 @@ export function createChatService(
       const participants = [m.fromUsername, ...m.recipientUsernames]
         .sort()
         .join(",");
-      sender = `[${participants}] ${m.fromUsername}`;
+      sender = `[${participants}] ${m.fromUsername} (${m.fromTitle})`;
     } else {
-      sender = m.fromUsername;
+      sender = `${m.fromUsername} (${m.fromTitle})`;
     }
 
     return `* ${dateStr}: ${sender}: ${m.body}${formatAttachmentSuffix(m.attachments)}`;

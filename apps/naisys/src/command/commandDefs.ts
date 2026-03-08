@@ -135,12 +135,12 @@ export const sessionCmd: CommandDef = {
     compact: {
       usage: "compact",
       description:
-        "Compact the session which will reset the token count. The next session will run a restore command to continue.",
+        "Compact the session which will reset the token count.",
     },
     complete: {
       usage: 'complete "<result>"',
       description:
-        "Complete the session result will be mailed to the lead agent or admin.",
+        "Complete the session, result will be mailed to the lead agent or admin.",
     },
   },
 };

@@ -42,19 +42,20 @@ export async function findSession(
 ): Promise<SessionUser | null> {
   if (!supervisorDb) return null;
 
-  const user = await supervisorDb.user.findFirst({
+  const session = await supervisorDb.session.findUnique({
     where: {
-      sessionTokenHash: tokenHash,
-      sessionExpiresAt: { gt: new Date() },
+      tokenHash,
+      expiresAt: { gt: new Date() },
     },
+    include: { user: true },
   });
 
-  if (!user) return null;
+  if (!session) return null;
 
   return {
-    username: user.username,
-    passwordHash: user.passwordHash,
-    uuid: user.uuid,
+    username: session.user.username,
+    passwordHash: session.user.passwordHash,
+    uuid: session.user.uuid,
   };
 }
 
@@ -103,12 +104,15 @@ export async function authenticateAndCreateSession(
   const tokenHash = hashToken(token);
   const expiresAt = new Date(Date.now() + SESSION_DURATION_MS);
 
-  await supervisorDb!.user.update({
+  const dbUser = await supervisorDb!.user.findUnique({
     where: { username },
+  });
+
+  await supervisorDb!.session.create({
     data: {
-      passwordHash: user.passwordHash,
-      sessionTokenHash: tokenHash,
-      sessionExpiresAt: expiresAt,
+      userId: dbUser!.id,
+      tokenHash,
+      expiresAt,
     },
   });
 
@@ -131,17 +135,13 @@ export async function updateUserPassword(
 }
 
 /**
- * Clear session token for a user by token hash.
+ * Delete a session by token hash.
  */
 export async function deleteSession(tokenHash: string): Promise<void> {
   if (!supervisorDb) return;
 
-  await supervisorDb.user.updateMany({
-    where: { sessionTokenHash: tokenHash },
-    data: {
-      sessionTokenHash: null,
-      sessionExpiresAt: null,
-    },
+  await supervisorDb.session.deleteMany({
+    where: { tokenHash },
   });
 }
 

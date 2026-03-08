@@ -24,8 +24,7 @@ export function formatMessageDisplay(
 ): string {
   let output =
     `  Subject: ${content.subject}\n` +
-    `  From: ${content.fromUsername}\n` +
-    `  Title: ${content.fromTitle}\n` +
+    `  From: ${content.fromUsername} (${content.fromTitle})\n` +
     `  To: ${content.recipientUsernames.join(", ")}\n` +
     `  Date: ${new Date(content.createdAt).toLocaleString()}\n` +
     `  Message:\n` +
