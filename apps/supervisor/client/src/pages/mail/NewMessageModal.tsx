@@ -7,8 +7,8 @@ import {
   Group,
   Image,
   Modal,
+  MultiSelect,
   Paper,
-  Select,
   Stack,
   Text,
   Textarea,
@@ -32,13 +32,14 @@ interface NewMessageModalProps {
   agents: Agent[];
   currentAgentId: number;
   onSend: (
-    recipientId: number,
+    recipientIds: number[],
     subject: string,
     body: string,
     attachments: FileAttachment[],
   ) => Promise<void>;
   initialRecipientId?: number;
   initialSubject?: string;
+  initialBody?: string;
 }
 
 export const NewMessageModal: React.FC<NewMessageModalProps> = ({
@@ -49,8 +50,9 @@ export const NewMessageModal: React.FC<NewMessageModalProps> = ({
   onSend,
   initialRecipientId,
   initialSubject,
+  initialBody,
 }) => {
-  const [recipientId, setRecipientId] = useState<string>("");
+  const [recipientIds, setRecipientIds] = useState<string[]>([]);
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -64,10 +66,13 @@ export const NewMessageModal: React.FC<NewMessageModalProps> = ({
   // Set initial values when modal opens with reply data
   useEffect(() => {
     if (opened && initialRecipientId) {
-      setRecipientId(String(initialRecipientId));
+      setRecipientIds([String(initialRecipientId)]);
     }
     if (opened && initialSubject) {
       setSubject(initialSubject);
+    }
+    if (opened && initialBody) {
+      setBody(initialBody);
     }
     if (opened) {
       // Focus the textarea and position cursor at the beginning
@@ -78,7 +83,7 @@ export const NewMessageModal: React.FC<NewMessageModalProps> = ({
         }
       }, 0);
     }
-  }, [opened, initialRecipientId, initialSubject]);
+  }, [opened, initialRecipientId, initialSubject, initialBody]);
 
   // Add paste event listener for images
   useEffect(() => {
@@ -179,7 +184,7 @@ export const NewMessageModal: React.FC<NewMessageModalProps> = ({
   };
 
   const handleSend = async () => {
-    if (!recipientId || !subject.trim() || !body.trim()) {
+    if (recipientIds.length === 0 || !subject.trim() || !body.trim()) {
       return;
     }
 
@@ -195,12 +200,12 @@ export const NewMessageModal: React.FC<NewMessageModalProps> = ({
       }));
 
       await onSend(
-        Number(recipientId),
+        recipientIds.map(Number),
         subject,
         body,
         attachmentsWithUpdatedNames,
       );
-      setRecipientId("");
+      setRecipientIds([]);
       setSubject("");
       setBody("");
       attachments.forEach((attachment) => {
@@ -221,7 +226,7 @@ export const NewMessageModal: React.FC<NewMessageModalProps> = ({
   };
 
   const hasContent =
-    recipientId || subject.trim() || body.trim() || attachments.length > 0;
+    recipientIds.length > 0 || subject.trim() || body.trim() || attachments.length > 0;
 
   const handleClose = () => {
     if (isLoading) return;
@@ -230,7 +235,7 @@ export const NewMessageModal: React.FC<NewMessageModalProps> = ({
       return;
     }
 
-    setRecipientId("");
+    setRecipientIds([]);
     setSubject("");
     setBody("");
     attachments.forEach((attachment) => {
@@ -269,12 +274,12 @@ export const NewMessageModal: React.FC<NewMessageModalProps> = ({
 
         <TextInput label="From" value={currentAgentLabel} readOnly />
 
-        <Select
+        <MultiSelect
           label="To"
-          placeholder="Select recipient"
+          placeholder="Select recipients"
           data={availableRecipients}
-          value={recipientId}
-          onChange={(value) => setRecipientId(value || "")}
+          value={recipientIds}
+          onChange={setRecipientIds}
           required
           searchable
           disabled={isLoading}
@@ -406,7 +411,7 @@ export const NewMessageModal: React.FC<NewMessageModalProps> = ({
           </Button>
           <Button
             onClick={handleSend}
-            disabled={!recipientId || !subject.trim() || !body.trim()}
+            disabled={recipientIds.length === 0 || !subject.trim() || !body.trim()}
             loading={isLoading}
           >
             Send

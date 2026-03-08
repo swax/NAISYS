@@ -127,7 +127,7 @@ export async function sendMessage(
   attachments?: Array<{ filename: string; data: Buffer }>,
 ): Promise<SendMailResponse> {
   try {
-    const { fromId, toId, subject, message } = request;
+    const { fromId, toIds, subject, message } = request;
 
     // Clean message (handle escaped newlines)
     const cleanMessage = message.replace(/\\n/g, "\n");
@@ -149,7 +149,7 @@ export async function sendMessage(
 
     const response = await sendMailViaHub(
       fromId,
-      [toId],
+      toIds,
       subject,
       cleanMessage,
       "mail",

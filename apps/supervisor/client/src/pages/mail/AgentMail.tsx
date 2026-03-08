@@ -143,14 +143,14 @@ export const AgentMail: React.FC = () => {
   }, [threadMessages, agentName]);
 
   const handleSendMessage = async (
-    recipientId: number,
+    recipientIds: number[],
     subject: string,
     body: string,
     attachments: Array<{ file: File; name: string; previewUrl?: string }>,
   ): Promise<void> => {
     const response = await sendMail(username ?? "", {
       fromId: agentId,
-      toId: recipientId,
+      toIds: recipientIds,
       subject,
       message: body,
       files: attachments.map((attachment) => attachment.file),
@@ -340,6 +340,7 @@ export const AgentMail: React.FC = () => {
         onSend={handleSendMessage}
         initialRecipientId={replyData?.recipientId}
         initialSubject={replyData?.subject}
+        initialBody={replyData?.body}
       />
     </Box>
   );

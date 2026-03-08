@@ -29,7 +29,7 @@ export const MailMessageSchema = z.object({
 export const SendMailRequestSchema = z
   .object({
     fromId: z.number(),
-    toId: z.number(),
+    toIds: z.array(z.number()),
     subject: z.string(),
     message: z.string(),
   })

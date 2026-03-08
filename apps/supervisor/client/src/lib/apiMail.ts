@@ -42,7 +42,7 @@ export const sendMail = async (
     if (mailData.files && mailData.files.length > 0) {
       const formData = new FormData();
       formData.append("fromId", String(mailData.fromId));
-      formData.append("toId", String(mailData.toId));
+      formData.append("toIds", JSON.stringify(mailData.toIds));
       formData.append("subject", mailData.subject);
       formData.append("message", mailData.message);
 
