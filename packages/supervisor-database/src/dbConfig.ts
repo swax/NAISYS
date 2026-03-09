@@ -8,5 +8,5 @@ export function supervisorDbUrl(): string {
   return "file:" + supervisorDbPath();
 }
 
-/** Must match the version in the latest migration's schema_version insert */
+/** We run migration scripts if this is greater than what's in the schema_version table */
 export const SUPERVISOR_DB_VERSION = 8;

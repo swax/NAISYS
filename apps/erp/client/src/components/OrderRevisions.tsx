@@ -214,7 +214,7 @@ export const OrderRevisions: React.FC<Props> = ({ orderKey }) => {
                           color="teal"
                           onClick={() =>
                             navigate(
-                              `/orders/${orderKey}/runs/new?orderRevId=${rev.id}`,
+                              `/orders/${orderKey}/runs/new?revNo=${rev.revNo}`,
                             )
                           }
                           data-testid={`revision-cut-order-${rev.revNo}`}

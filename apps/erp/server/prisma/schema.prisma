@@ -70,7 +70,7 @@ model PlanOperation {
 
 model OrderRun {
   id               Int       @id @default(autoincrement())
-  orderNo          Int       @map("order_no")
+  runNo            Int       @map("run_no")
   orderId          Int       @map("order_id")
   orderRevId       Int       @map("order_rev_id")
   status           String    @default("released")
@@ -90,7 +90,7 @@ model OrderRun {
   order        Order                 @relation(fields: [orderId], references: [id], onDelete: Restrict)
   orderRev     OrderRevision         @relation(fields: [orderRevId], references: [id], onDelete: Restrict)
 
-  @@unique([orderId, orderNo])
+  @@unique([orderId, runNo])
   @@index([status]) // LIST filter in order-runs.ts
   @@index([priority]) // LIST filter in order-runs.ts
   @@index([createdAt]) // LIST orderBy in order-runs.ts

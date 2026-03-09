@@ -153,7 +153,7 @@ export const OrderRunList: React.FC = () => {
           <Table striped highlightOnHover>
             <Table.Thead>
               <Table.Tr>
-                <Table.Th>Order #</Table.Th>
+                <Table.Th>Run #</Table.Th>
                 <Table.Th>Status</Table.Th>
                 <Table.Th>Priority</Table.Th>
                 <Table.Th>Assigned To</Table.Th>
@@ -167,11 +167,11 @@ export const OrderRunList: React.FC = () => {
                   key={item.id}
                   style={{ cursor: "pointer" }}
                   onClick={() => navigate(`/orders/${orderKey}/runs/${item.id}`)}
-                  data-testid={`order-run-row-${item.orderNo}`}
+                  data-testid={`order-run-row-${item.runNo}`}
                 >
                   <Table.Td>
                     <Text size="sm" ff="monospace">
-                      {item.orderNo}
+                      {item.runNo}
                     </Text>
                   </Table.Td>
                   <Table.Td>

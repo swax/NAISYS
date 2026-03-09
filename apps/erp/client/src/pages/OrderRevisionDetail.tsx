@@ -136,7 +136,7 @@ export const OrderRevisionDetail: React.FC = () => {
               color="teal"
               onClick={() =>
                 navigate(
-                  `/orders/${orderKey}/runs/new?orderRevId=${item.id}`,
+                  `/orders/${orderKey}/runs/new?revNo=${item.revNo}`,
                 )
               }
             >

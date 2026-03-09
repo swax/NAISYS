@@ -162,7 +162,7 @@ export const OrderRunDetail: React.FC = () => {
     <Container size="md" py="xl">
       <Group justify="space-between" mb="lg">
         <Group>
-          <Title order={2}>Order Run #{item.orderNo}</Title>
+          <Title order={2}>Order Run #{item.runNo}</Title>
           <Badge
             color={STATUS_COLORS[item.status] ?? "gray"}
             variant="light"
@@ -234,9 +234,9 @@ export const OrderRunDetail: React.FC = () => {
           </Group>
           <Group>
             <Text fw={600} w={140}>
-              Order Rev ID:
+              Rev No:
             </Text>
-            <Text ff="monospace">{item.orderRevId}</Text>
+            <Text ff="monospace">{item.revNo}</Text>
           </Group>
           <Group>
             <Text fw={600} w={140}>

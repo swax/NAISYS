@@ -26,7 +26,7 @@ type FormData<TEdit extends boolean> = TEdit extends true
 
 interface Props<TEdit extends boolean = boolean> {
   initialData?: Partial<{
-    orderRevId: number;
+    revNo: number;
     priority: string;
     scheduledStartAt: string;
     dueAt: string;
@@ -45,7 +45,7 @@ function toISOOrEmpty(datetimeLocal: string): string | undefined {
 
 function transformFormValues(
   values: {
-    orderRevId: number | string;
+    revNo: number | string;
     priority: string;
     scheduledStartAt: string;
     dueAt: string;
@@ -68,9 +68,9 @@ function transformFormValues(
     if (!values.assignedTo) result.assignedTo = null;
     if (!values.notes) result.notes = null;
   } else {
-    result.orderRevId =
-      typeof values.orderRevId === "number"
-        ? values.orderRevId
+    result.revNo =
+      typeof values.revNo === "number"
+        ? values.revNo
         : undefined;
   }
   return result;
@@ -88,7 +88,7 @@ export const OrderRunForm = <TEdit extends boolean = false>({
 
   const form = useForm({
     initialValues: {
-      orderRevId: (initialData?.orderRevId ?? "") as number | string,
+      revNo: (initialData?.revNo ?? "") as number | string,
       priority: initialData?.priority ?? "medium",
       scheduledStartAt: initialData?.scheduledStartAt ?? "",
       dueAt: initialData?.dueAt ?? "",
@@ -120,9 +120,9 @@ export const OrderRunForm = <TEdit extends boolean = false>({
       <Stack gap="md">
         {!isEdit && (
           <NumberInput
-            label="Order Revision ID"
+            label="Rev No"
             min={1}
-            {...form.getInputProps("orderRevId")}
+            {...form.getInputProps("revNo")}
           />
         )}
         <Select

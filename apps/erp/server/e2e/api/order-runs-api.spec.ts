@@ -5,7 +5,7 @@ const API = "http://localhost:3201/api/erp";
 
 test.describe("Order Runs - API happy path", () => {
   let orderKey: string;
-  let orderRevId: number;
+  let revNo: number;
   let orderRunId: number;
   let orderRunId2: number;
   let api: APIRequestContext;
@@ -41,13 +41,13 @@ test.describe("Order Runs - API happy path", () => {
     });
     expect(revRes.status()).toBe(201);
     const rev = await revRes.json();
-    orderRevId = rev.id;
+    revNo = rev.revNo;
   });
 
   test("create order run", async () => {
     const res = await api.post(`${API}/orders/${orderKey}/runs`, {
       data: {
-        orderRevId,
+        revNo,
         priority: "high",
         assignedTo: "test-user",
         notes: "First order run",
@@ -56,12 +56,12 @@ test.describe("Order Runs - API happy path", () => {
     expect(res.status()).toBe(201);
 
     const body = await res.json();
-    expect(body.orderNo).toBe(1);
+    expect(body.runNo).toBe(1);
     expect(body.status).toBe("released");
     expect(body.priority).toBe("high");
     expect(body.assignedTo).toBe("test-user");
     expect(body.orderKey).toBe(orderKey);
-    expect(body.orderRevId).toBe(orderRevId);
+    expect(body.revNo).toBe(revNo);
     expect(body.releasedAt).toBeTruthy();
     expect(body._actions).toEqual(
       expect.arrayContaining([
@@ -229,13 +229,13 @@ test.describe("Order Runs - API happy path", () => {
     // Create second order run
     const createRes = await api.post(`${API}/orders/${orderKey}/runs`, {
       data: {
-        orderRevId,
+        revNo,
         priority: "low",
       },
     });
     expect(createRes.status()).toBe(201);
     const created = await createRes.json();
-    expect(created.orderNo).toBe(2);
+    expect(created.runNo).toBe(2);
     orderRunId2 = created.id;
 
     // Cancel it
@@ -293,7 +293,7 @@ test.describe("Order Runs - API happy path", () => {
 
     const runRes = await api.post(`${API}/orders/${orderKey}/runs`, {
       data: {
-        orderRevId: rev.id,
+        revNo: rev.revNo,
         priority: "low",
       },
     });

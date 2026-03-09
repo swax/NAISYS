@@ -9,7 +9,7 @@ export const OrderRunCreate: React.FC = () => {
   const { orderKey } = useParams<{ orderKey: string }>();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const prefillOrderRevId = Number(searchParams.get("orderRevId")) || 0;
+  const prefillRevNo = Number(searchParams.get("revNo")) || 0;
 
   const handleCreate = async (data: CreateOrderRun) => {
     await api.post(`orders/${orderKey}/runs`, data);
@@ -23,7 +23,7 @@ export const OrderRunCreate: React.FC = () => {
       </Title>
       <OrderRunForm<false>
         initialData={{
-          orderRevId: prefillOrderRevId || undefined,
+          revNo: prefillRevNo || undefined,
         }}
         onSubmit={handleCreate}
         onCancel={() => navigate(`/orders/${orderKey}/runs`)}
