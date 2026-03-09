@@ -23,6 +23,7 @@ model User {
   isAgent          Boolean          @default(false) @map("is_agent")
   passwordHash     String           @default("") @map("password_hash")
   createdAt        DateTime         @default(now()) @map("created_at")
+  apiKey           String?          @unique @map("api_key")
   updatedAt        DateTime         @updatedAt @map("updated_at")
   permissions      UserPermission[] @relation("UserPermissions")
   grantedPermissions UserPermission[] @relation("GrantedByPermissions")

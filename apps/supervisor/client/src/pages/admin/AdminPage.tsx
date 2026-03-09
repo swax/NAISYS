@@ -10,9 +10,10 @@ import {
   Tooltip,
 } from "@mantine/core";
 import { formatFileSize, hasAction } from "@naisys/common";
-import { IconInfoCircle, IconRefresh } from "@tabler/icons-react";
+import { IconInfoCircle } from "@tabler/icons-react";
 import { useCallback, useEffect, useState } from "react";
 
+import { SecretField } from "../../components/SecretField";
 import { downloadExportConfig, rotateHubAccessKey } from "../../lib/apiAdmin";
 import type { AdminInfoResponse } from "../../lib/apiClient";
 import { api, apiEndpoints } from "../../lib/apiClient";
@@ -122,21 +123,13 @@ export const AdminPage: React.FC = () => {
                     </Group>
                   </Table.Td>
                   <Table.Td>
-                    <Group gap="xs">
-                      {data.hubAccessKey}
-                      {canRotateKey && (
-                        <Tooltip label="Rotate Hub Access Key">
-                          <Button
-                            variant="subtle"
-                            size="compact-xs"
-                            onClick={handleRotateAccessKey}
-                            loading={rotating}
-                          >
-                            <IconRefresh size="1rem" />
-                          </Button>
-                        </Tooltip>
-                      )}
-                    </Group>
+                    <SecretField
+                      value={data.hubAccessKey}
+                      onRotate={
+                        canRotateKey ? handleRotateAccessKey : undefined
+                      }
+                      rotating={rotating}
+                    />
                   </Table.Td>
                 </Table.Tr>
               )}

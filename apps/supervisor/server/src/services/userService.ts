@@ -3,8 +3,9 @@ import { hashToken } from "@naisys/common-node";
 import type { Permission } from "@naisys/supervisor-database";
 import { updateUserPassword } from "@naisys/supervisor-database";
 import bcrypt from "bcrypt";
-import { randomUUID } from "crypto";
+import { randomBytes, randomUUID } from "crypto";
 
+import { hubDb } from "../database/hubDb.js";
 import supervisorDb from "../database/supervisorDb.js";
 
 export type { User as SupervisorUserRow } from "@naisys/supervisor-database";
@@ -27,10 +28,14 @@ export async function getUserByUuid(uuid: string) {
   return supervisorDb.user.findFirst({ where: { uuid } });
 }
 
-export async function createUser(username: string, uuid: string) {
+export async function createUserForAgent(username: string, uuid: string) {
   assertUrlSafeKey(username, "Username");
   return supervisorDb.user.create({
-    data: { username, uuid, isAgent: true },
+    data: {
+      username,
+      uuid,
+      isAgent: true,
+    },
     include: { permissions: true },
   });
 }
@@ -69,7 +74,6 @@ export async function getUserById(id: number) {
 export async function createUserWithPassword(data: {
   username: string;
   password: string;
-  isAgent?: boolean;
 }) {
   assertUrlSafeKey(data.username, "Username");
   const passwordHash = await bcrypt.hash(data.password, SALT_ROUNDS);
@@ -79,7 +83,8 @@ export async function createUserWithPassword(data: {
       username: data.username,
       uuid,
       passwordHash,
-      isAgent: data.isAgent ?? false,
+      isAgent: false,
+      apiKey: randomBytes(32).toString("hex"),
     },
     include: { permissions: true },
   });
@@ -148,13 +153,49 @@ export async function checkUserPermission(
   return perm !== null;
 }
 
-export async function grantInitialAdminPermissions(userId: number) {
-  const permissions: Permission[] = ["supervisor_admin", "manage_agents"];
-  for (const permission of permissions) {
-    await supervisorDb.userPermission.upsert({
-      where: { userId_permission: { userId, permission } },
-      create: { userId, permission },
-      update: {},
+export async function getUserApiKey(id: number): Promise<string | null> {
+  const user = await supervisorDb.user.findUnique({
+    where: { id },
+    select: { isAgent: true, uuid: true, apiKey: true },
+  });
+  if (!user) return null;
+
+  if (user.isAgent) {
+    const hubUser = await hubDb.users.findFirst({
+      where: { uuid: user.uuid },
+      select: { api_key: true },
+    });
+    return hubUser?.api_key ?? null;
+  } else {
+    return user.apiKey ?? null;
+  }
+}
+
+export async function rotateUserApiKey(id: number): Promise<string> {
+  const newKey = randomBytes(32).toString("hex");
+
+  const user = await supervisorDb.user.findUnique({
+    where: { id },
+    select: { isAgent: true, uuid: true },
+  });
+  if (!user) throw new Error("User not found");
+
+  if (user.isAgent) {
+    const hubUser = await hubDb.users.findFirst({
+      where: { uuid: user.uuid },
+      select: { id: true },
+    });
+    if (!hubUser) throw new Error("Agent not found in hub database");
+    await hubDb.users.update({
+      where: { id: hubUser.id },
+      data: { api_key: newKey },
+    });
+  } else {
+    await supervisorDb.user.update({
+      where: { id },
+      data: { apiKey: newKey },
     });
   }
+
+  return newKey;
 }

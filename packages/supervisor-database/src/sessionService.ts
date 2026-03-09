@@ -1,6 +1,7 @@
+import { SUPER_ADMIN_USERNAME } from "@naisys/common";
 import { hashToken } from "@naisys/common-node";
 import bcrypt from "bcrypt";
-import { randomUUID } from "crypto";
+import { randomBytes, randomUUID } from "crypto";
 import { existsSync } from "fs";
 import readline from "readline/promises";
 
@@ -11,6 +12,7 @@ import { createPrismaClient } from "./prismaClient.js";
 const SESSION_DURATION_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
 export interface SessionUser {
+  userId: number;
   username: string;
   passwordHash: string;
   uuid: string;
@@ -53,6 +55,7 @@ export async function findSession(
   if (!session) return null;
 
   return {
+    userId: session.user.id,
     username: session.user.username,
     passwordHash: session.user.passwordHash,
     uuid: session.user.uuid,
@@ -74,10 +77,27 @@ export async function lookupUsername(
   if (!user) return null;
 
   return {
+    userId: user.id,
     username: user.username,
     passwordHash: user.passwordHash,
     uuid: user.uuid,
   };
+}
+
+/**
+ * Find a supervisor user by API key. Returns null if not found or DB not initialized.
+ */
+export async function findUserByApiKey(
+  apiKey: string,
+): Promise<{ uuid: string; username: string } | null> {
+  if (!supervisorDb) return null;
+
+  const user = await supervisorDb.user.findUnique({
+    where: { apiKey },
+    select: { uuid: true, username: true },
+  });
+
+  return user;
 }
 
 export interface AuthResult {
@@ -145,33 +165,61 @@ export async function deleteSession(tokenHash: string): Promise<void> {
   });
 }
 
+export interface EnsureSuperAdminResult {
+  /** Whether the superadmin was newly created */
+  created: boolean;
+  /** The generated password (only set when created) */
+  generatedPassword?: string;
+  /** The superadmin user info */
+  user: {
+    uuid: string;
+    username: string;
+    passwordHash: string;
+    apiKey: string | null;
+  };
+}
+
 /**
  * Ensure a "superadmin" user exists in the supervisor database.
- * If the entry already exists with a password, this is a no-op.
- * Otherwise generates credentials and delegates local user creation to the callback.
+ * If already exists, returns it as-is. Otherwise creates with generated credentials.
  */
-export async function ensureSuperAdmin(
-  ensureLocalSuperAdmin: (
-    passwordHash: string,
-    uuid: string,
-    superAdminName: string,
-  ) => Promise<boolean>,
-): Promise<void> {
-  const superAdminName = "superadmin";
-  const existing = await lookupUsername(superAdminName);
-  if (existing && existing.passwordHash !== "") return;
+export async function ensureSuperAdmin(): Promise<EnsureSuperAdminResult> {
+  if (!supervisorDb) throw new Error("Supervisor DB not initialized");
 
-  const uuid = existing?.uuid || randomUUID();
-  const password = randomUUID().slice(0, 8);
-  const hash = await bcrypt.hash(password, 10);
+  const existing = await supervisorDb.user.findUnique({
+    where: { username: SUPER_ADMIN_USERNAME },
+  });
 
-  const created = await ensureLocalSuperAdmin(hash, uuid, superAdminName);
-
-  if (created) {
-    await updateUserPassword(superAdminName, hash);
-    console.log(`\n  ${superAdminName} user created. Password: ${password}`);
-    console.log(`  Change it via the web UI or ns-admin-pw command\n`);
+  if (existing) {
+    return {
+      created: false,
+      user: {
+        uuid: existing.uuid,
+        username: existing.username,
+        passwordHash: existing.passwordHash,
+        apiKey: existing.apiKey,
+      },
+    };
   }
+
+  const uuid = randomUUID();
+  const password = randomUUID().slice(0, 8);
+  const passwordHash = await bcrypt.hash(password, 10);
+  const apiKey = randomBytes(32).toString("hex");
+
+  const user = await supervisorDb.user.create({
+    data: { uuid, username: SUPER_ADMIN_USERNAME, passwordHash, apiKey },
+  });
+
+  await supervisorDb.userPermission.create({
+    data: { userId: user.id, permission: "supervisor_admin" },
+  });
+
+  return {
+    created: true,
+    generatedPassword: password,
+    user: { uuid, username: SUPER_ADMIN_USERNAME, passwordHash, apiKey },
+  };
 }
 
 /**

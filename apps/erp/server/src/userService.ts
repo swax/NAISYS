@@ -1,3 +1,4 @@
+import { SUPER_ADMIN_USERNAME } from "@naisys/common";
 import bcrypt from "bcrypt";
 import { randomUUID } from "crypto";
 import readline from "readline/promises";
@@ -10,7 +11,7 @@ import erpDb from "./erpDb.js";
  */
 export async function ensureLocalSuperAdmin(): Promise<void> {
   const existing = await erpDb.user.findUnique({
-    where: { username: "superadmin" },
+    where: { username: SUPER_ADMIN_USERNAME },
   });
   if (existing) return;
 
@@ -18,10 +19,16 @@ export async function ensureLocalSuperAdmin(): Promise<void> {
   const hash = await bcrypt.hash(password, 10);
 
   await erpDb.user.create({
-    data: { uuid: randomUUID(), username: "superadmin", passwordHash: hash },
+    data: {
+      uuid: randomUUID(),
+      username: SUPER_ADMIN_USERNAME,
+      passwordHash: hash,
+    },
   });
 
-  console.log(`\n  superadmin user created. Password: ${password}`);
+  console.log(
+    `\n  ${SUPER_ADMIN_USERNAME} user created. Password: ${password}`,
+  );
   console.log(`  Change it via --reset-password\n`);
 }
 

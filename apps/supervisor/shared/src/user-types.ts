@@ -21,7 +21,6 @@ export const CreateUserSchema = z
   .object({
     username: urlSafeUsername,
     password: z.string().min(6),
-    isAgent: z.boolean().optional(),
   })
   .strict();
 

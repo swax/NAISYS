@@ -11,6 +11,7 @@ import {
   commonErrorHandler,
   MAX_ATTACHMENT_SIZE,
   type StartServer,
+  SUPER_ADMIN_USERNAME,
 } from "@naisys/common";
 import { createHubDatabaseClient } from "@naisys/hub-database";
 import {
@@ -39,12 +40,7 @@ import apiRoutes from "./routes/api.js";
 import { refreshUserLookup } from "./services/agentService.js";
 import { initBrowserSocket } from "./services/browserSocketService.js";
 import { initHubConnection } from "./services/hubConnectionService.js";
-import {
-  createUser,
-  getUserByUsername,
-  getUserByUuid,
-  grantInitialAdminPermissions,
-} from "./services/userService.js";
+import { getUserByUsername } from "./services/userService.js";
 
 export const startServer: StartServer = async (
   startupType,
@@ -86,13 +82,13 @@ export const startServer: StartServer = async (
     initHubConnection(hubUrl);
   }
 
-  await ensureSuperAdmin(async (_passwordHash, uuid, superAdminName) => {
-    const existing = await getUserByUuid(uuid);
-    if (existing) return false;
-    const user = await createUser(superAdminName, uuid);
-    await grantInitialAdminPermissions(user.id);
-    return true;
-  });
+  const superAdminResult = await ensureSuperAdmin();
+  if (superAdminResult.created) {
+    console.log(
+      `\n  ${SUPER_ADMIN_USERNAME} user created. Password: ${superAdminResult.generatedPassword}`,
+    );
+    console.log(`  Change it via the web UI or ns-admin-pw command\n`);
+  }
 
   const __filename = fileURLToPath(import.meta.url);
   const __dirname = path.dirname(__filename);
