@@ -27,6 +27,7 @@ export const AddAgentDialog: React.FC<AddAgentDialogProps> = ({
 }) => {
   const { agents } = useAgentDataContext();
   const [newAgentName, setNewAgentName] = useState("");
+  const [newAgentTitle, setNewAgentTitle] = useState("");
   const [yamlConfig, setYamlConfig] = useState("");
   const [isCreating, setIsCreating] = useState(false);
   const [loadingCopy, setLoadingCopy] = useState(false);
@@ -52,7 +53,10 @@ export const AddAgentDialog: React.FC<AddAgentDialogProps> = ({
 
     setIsCreating(true);
     try {
-      const result = await createAgent(newAgentName.trim());
+      const result = await createAgent(
+        newAgentName.trim(),
+        newAgentTitle.trim() || undefined,
+      );
 
       if (!result.success) {
         throw new Error(result.message || "Failed to create agent");
@@ -82,6 +86,7 @@ export const AddAgentDialog: React.FC<AddAgentDialogProps> = ({
 
   const handleClose = () => {
     setNewAgentName("");
+    setNewAgentTitle("");
     setYamlConfig("");
     onClose();
   };
@@ -110,6 +115,13 @@ export const AddAgentDialog: React.FC<AddAgentDialogProps> = ({
               void handleCreateAgent();
             }
           }}
+          disabled={isCreating}
+        />
+        <TextInput
+          label="Title"
+          placeholder="Assistant"
+          value={newAgentTitle}
+          onChange={(e) => setNewAgentTitle(e.currentTarget.value)}
           disabled={isCreating}
         />
         <Select

@@ -32,6 +32,7 @@ async function updateUserNotificationModifiedDate(
  */
 export async function createAgentConfig(
   name: string,
+  title?: string,
 ): Promise<{ id: number; config: AgentConfigFile }> {
   assertUrlSafeKey(name, "Agent name");
 
@@ -48,6 +49,9 @@ export async function createAgentConfig(
 
   // Create default config and convert to JSON
   const defaultConfig = buildDefaultAgentConfig(name);
+  if (title) {
+    defaultConfig.title = title;
+  }
   const jsonContent = JSON.stringify(canonicalConfigOrder(defaultConfig));
 
   // Add agent to the database, let DB autoincrement
