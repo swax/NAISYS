@@ -7,7 +7,7 @@ generator client {
   output   = "../src/generated/prisma"
 }
 
-model PlanningOrder {
+model Order {
   id          Int      @id @default(autoincrement())
   key         String   @unique
   name        String
@@ -18,19 +18,19 @@ model PlanningOrder {
   updatedById Int      @map("updated_by")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
-  createdBy  User                    @relation("planOrderCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
-  updatedBy  User                    @relation("planOrderUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+  createdBy  User                    @relation("orderCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy  User                    @relation("orderUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
   revisions  OrderRevision[]
   orderRuns OrderRun[]
 
-  @@index([status]) // LIST filter in planning-orders.ts
-  @@index([createdAt]) // LIST orderBy in planning-orders.ts
-  @@map("plan_orders")
+  @@index([status]) // LIST filter in orders.ts
+  @@index([createdAt]) // LIST orderBy in orders.ts
+  @@map("orders")
 }
 
 model OrderRevision {
   id            Int       @id @default(autoincrement())
-  planOrderId   Int       @map("plan_order_id")
+  orderId       Int       @map("order_id")
   revNo         Int       @map("rev_no")
   status        String    @default("draft") // "draft" | "approved" | "obsolete"
   notes         String?
@@ -41,11 +41,11 @@ model OrderRevision {
   updatedById   Int       @map("updated_by")
   createdBy  User          @relation("orderRevCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
   updatedBy  User          @relation("orderRevUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
-  order      PlanningOrder @relation(fields: [planOrderId], references: [id], onDelete: Restrict)
+  order      Order         @relation(fields: [orderId], references: [id], onDelete: Restrict)
   orderRuns  OrderRun[]
   operations PlanOperation[]
 
-  @@unique([planOrderId, revNo])
+  @@unique([orderId, revNo])
   @@map("order_revisions")
 }
 
@@ -71,7 +71,7 @@ model PlanOperation {
 model OrderRun {
   id               Int       @id @default(autoincrement())
   orderNo          Int       @map("order_no")
-  planOrderId      Int       @map("plan_order_id")
+  orderId          Int       @map("order_id")
   orderRevId       Int       @map("order_rev_id")
   status           String    @default("released")
   priority         String    @default("medium")
@@ -87,10 +87,10 @@ model OrderRun {
 
   createdBy    User                  @relation("orderRunCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
   updatedBy    User                  @relation("orderRunUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
-  planOrder    PlanningOrder         @relation(fields: [planOrderId], references: [id], onDelete: Restrict)
+  order        Order                 @relation(fields: [orderId], references: [id], onDelete: Restrict)
   orderRev     OrderRevision         @relation(fields: [orderRevId], references: [id], onDelete: Restrict)
 
-  @@unique([planOrderId, orderNo])
+  @@unique([orderId, orderNo])
   @@index([status]) // LIST filter in order-runs.ts
   @@index([priority]) // LIST filter in order-runs.ts
   @@index([createdAt]) // LIST orderBy in order-runs.ts
@@ -109,8 +109,8 @@ model User {
   updatedAt    DateTime  @updatedAt @map("updated_at")
   deletedAt    DateTime? @map("deleted_at")
 
-  planOrdersCreated    PlanningOrder[]         @relation("planOrderCreatedBy")
-  planOrdersUpdated    PlanningOrder[]         @relation("planOrderUpdatedBy")
+  ordersCreated        Order[]                 @relation("orderCreatedBy")
+  ordersUpdated        Order[]                 @relation("orderUpdatedBy")
   orderRevsCreated     OrderRevision[]         @relation("orderRevCreatedBy")
   orderRevsUpdated     OrderRevision[]         @relation("orderRevUpdatedBy")
   orderRunsCreated     OrderRun[]              @relation("orderRunCreatedBy")

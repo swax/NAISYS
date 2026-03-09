@@ -32,10 +32,9 @@ export function registerApiReference(fastify: FastifyInstance) {
       "x-tagGroups": [
         { name: "General", tags: ["Discovery", "Auth"] },
         {
-          name: "Planning",
-          tags: ["Planning Orders", "Planning Order Revisions"],
+          name: "Orders",
+          tags: ["Orders", "Order Revisions", "Order Runs"],
         },
-        { name: "Execution", tags: ["Execution Orders"] },
       ],
     };
   });

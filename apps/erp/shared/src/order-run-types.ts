@@ -22,8 +22,8 @@ export type OrderRunPriority = z.infer<typeof OrderRunPriorityEnum>;
 export const OrderRunSchema = z.object({
   id: z.number(),
   orderNo: z.number(),
-  planOrderId: z.number(),
-  planOrderKey: z.string(),
+  orderId: z.number(),
+  orderKey: z.string(),
   orderRevId: z.number(),
   status: OrderRunStatusEnum,
   priority: OrderRunPriorityEnum,

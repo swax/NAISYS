@@ -41,9 +41,9 @@ function orderRunItemLinks(
       title: "Runs",
     },
     {
-      rel: "planning-order",
+      rel: "order",
       href: `${API_PREFIX}/orders/${orderKey}`,
-      title: "Planning Order",
+      title: "Order",
     },
     schemaLink("OrderRun"),
   ];
@@ -127,7 +127,7 @@ function formatDate(d: Date | null): string | null {
 }
 
 async function resolveOrder(orderKey: string) {
-  return erpDb.planningOrder.findUnique({
+  return erpDb.order.findUnique({
     where: { key: orderKey },
   });
 }
@@ -136,8 +136,8 @@ function formatItem(orderKey: string, item: OrderRunModel) {
   return {
     id: item.id,
     orderNo: item.orderNo,
-    planOrderId: item.planOrderId,
-    planOrderKey: orderKey,
+    orderId: item.orderId,
+    orderKey,
     orderRevId: item.orderRevId,
     status: item.status as OrderRunStatus,
     priority: item.priority as OrderRunPriority,
@@ -169,7 +169,7 @@ export default function orderRunRoutes(fastify: FastifyInstance) {
   // LIST
   app.get("/", {
     schema: {
-      description: "List order runs for a planning order",
+      description: "List order runs for an order",
       tags: ["Order Runs"],
       params: OrderKeyParamsSchema,
       querystring: OrderRunListQuerySchema,
@@ -188,11 +188,11 @@ export default function orderRunRoutes(fastify: FastifyInstance) {
           reply,
           404,
           "Not Found",
-          `Planning order '${orderKey}' not found`,
+          `Order '${orderKey}' not found`,
         );
       }
 
-      const where: Record<string, unknown> = { planOrderId: order.id };
+      const where: Record<string, unknown> = { orderId: order.id };
       if (status) where.status = status;
       if (priority) where.priority = priority;
       if (search) {
@@ -231,7 +231,7 @@ export default function orderRunRoutes(fastify: FastifyInstance) {
   // CREATE
   app.post("/", {
     schema: {
-      description: "Create a new order run for a planning order",
+      description: "Create a new order run for an order",
       tags: ["Order Runs"],
       params: OrderKeyParamsSchema,
       body: CreateOrderRunSchema,
@@ -258,15 +258,15 @@ export default function orderRunRoutes(fastify: FastifyInstance) {
           reply,
           404,
           "Not Found",
-          `Planning order '${orderKey}' not found`,
+          `Order '${orderKey}' not found`,
         );
       }
 
-      const planOrderId = order.id;
+      const orderId = order.id;
 
-      // Validate revision exists and belongs to the planning order
+      // Validate revision exists and belongs to the order
       const orderRev = await erpDb.orderRevision.findFirst({
-        where: { id: orderRevId, planOrderId },
+        where: { id: orderRevId, orderId },
       });
       if (!orderRev) {
         return sendError(
@@ -280,7 +280,7 @@ export default function orderRunRoutes(fastify: FastifyInstance) {
       // Auto-increment orderNo inside a transaction to prevent race conditions
       const item = await erpDb.$transaction(async (erpTx) => {
         const maxOrder = await erpTx.orderRun.findFirst({
-          where: { planOrderId },
+          where: { orderId },
           orderBy: { orderNo: "desc" },
           select: { orderNo: true },
         });
@@ -289,7 +289,7 @@ export default function orderRunRoutes(fastify: FastifyInstance) {
         return erpTx.orderRun.create({
           data: {
             orderNo: nextOrderNo,
-            planOrderId,
+            orderId,
             orderRevId,
             priority,
             scheduledStartAt: scheduledStartAt
@@ -329,12 +329,12 @@ export default function orderRunRoutes(fastify: FastifyInstance) {
           reply,
           404,
           "Not Found",
-          `Planning order '${orderKey}' not found`,
+          `Order '${orderKey}' not found`,
         );
       }
 
       const item = await erpDb.orderRun.findUnique({ where: { id } });
-      if (!item || item.planOrderId !== order.id) {
+      if (!item || item.orderId !== order.id) {
         return sendError(
           reply,
           404,
@@ -372,12 +372,12 @@ export default function orderRunRoutes(fastify: FastifyInstance) {
           reply,
           404,
           "Not Found",
-          `Planning order '${orderKey}' not found`,
+          `Order '${orderKey}' not found`,
         );
       }
 
       const existing = await erpDb.orderRun.findUnique({ where: { id } });
-      if (!existing || existing.planOrderId !== order.id) {
+      if (!existing || existing.orderId !== order.id) {
         return sendError(
           reply,
           404,
@@ -439,12 +439,12 @@ export default function orderRunRoutes(fastify: FastifyInstance) {
           reply,
           404,
           "Not Found",
-          `Planning order '${orderKey}' not found`,
+          `Order '${orderKey}' not found`,
         );
       }
 
       const existing = await erpDb.orderRun.findUnique({ where: { id } });
-      if (!existing || existing.planOrderId !== order.id) {
+      if (!existing || existing.orderId !== order.id) {
         return sendError(
           reply,
           404,
@@ -488,12 +488,12 @@ export default function orderRunRoutes(fastify: FastifyInstance) {
           reply,
           404,
           "Not Found",
-          `Planning order '${orderKey}' not found`,
+          `Order '${orderKey}' not found`,
         );
       }
 
       const existing = await erpDb.orderRun.findUnique({ where: { id } });
-      if (!existing || existing.planOrderId !== order.id) {
+      if (!existing || existing.orderId !== order.id) {
         return sendError(
           reply,
           404,
@@ -555,12 +555,12 @@ export default function orderRunRoutes(fastify: FastifyInstance) {
           reply,
           404,
           "Not Found",
-          `Planning order '${orderKey}' not found`,
+          `Order '${orderKey}' not found`,
         );
       }
 
       const existing = await erpDb.orderRun.findUnique({ where: { id } });
-      if (!existing || existing.planOrderId !== order.id) {
+      if (!existing || existing.orderId !== order.id) {
         return sendError(
           reply,
           404,
@@ -622,12 +622,12 @@ export default function orderRunRoutes(fastify: FastifyInstance) {
           reply,
           404,
           "Not Found",
-          `Planning order '${orderKey}' not found`,
+          `Order '${orderKey}' not found`,
         );
       }
 
       const existing = await erpDb.orderRun.findUnique({ where: { id } });
-      if (!existing || existing.planOrderId !== order.id) {
+      if (!existing || existing.orderId !== order.id) {
         return sendError(
           reply,
           404,

@@ -8,20 +8,20 @@ import {
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import type {
-  CreatePlanningOrder,
-  UpdatePlanningOrder,
+  CreateOrder,
+  UpdateOrder,
 } from "@naisys-erp/shared";
 import {
-  CreatePlanningOrderSchema,
-  UpdatePlanningOrderSchema,
+  CreateOrderSchema,
+  UpdateOrderSchema,
 } from "@naisys-erp/shared";
 import { useState } from "react";
 
 import { zodResolver } from "../lib/zod-resolver";
 
 type FormData<TEdit extends boolean> = TEdit extends true
-  ? UpdatePlanningOrder
-  : CreatePlanningOrder;
+  ? UpdateOrder
+  : CreateOrder;
 
 interface Props<TEdit extends boolean = boolean> {
   initialData?: {
@@ -34,13 +34,13 @@ interface Props<TEdit extends boolean = boolean> {
   onCancel: () => void;
 }
 
-export const PlanningOrderForm = <TEdit extends boolean = false>({
+export const OrderForm = <TEdit extends boolean = false>({
   initialData,
   isEdit,
   onSubmit,
   onCancel,
 }: Props<TEdit>) => {
-  const schema = isEdit ? UpdatePlanningOrderSchema : CreatePlanningOrderSchema;
+  const schema = isEdit ? UpdateOrderSchema : CreateOrderSchema;
 
   const form = useForm({
     initialValues: {
@@ -96,7 +96,7 @@ export const PlanningOrderForm = <TEdit extends boolean = false>({
         />
         <Textarea
           label="Description"
-          placeholder="Describe this planning order..."
+          placeholder="Describe this order..."
           {...form.getInputProps("description")}
           minRows={3}
         />

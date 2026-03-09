@@ -24,7 +24,7 @@ test.describe.serial("Full order lifecycle (UI)", () => {
     await page.close();
   });
 
-  test("create a planning order", async () => {
+  test("create an order", async () => {
     await page.goto("/erp/orders");
     await page.getByRole("button", { name: "Create New" }).click();
 
@@ -36,7 +36,7 @@ test.describe.serial("Full order lifecycle (UI)", () => {
 
     // Should redirect back to list
     await expect(
-      page.getByRole("heading", { name: "Planning Orders" }),
+      page.getByRole("heading", { name: "Orders" }),
     ).toBeVisible();
 
     // Click into the newly created order

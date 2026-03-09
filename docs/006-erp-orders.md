@@ -34,12 +34,12 @@ An agent workflow becomes: fetch resource, read `_actions`, pick the appropriate
 
 API schemas are discoverable through three complementary mechanisms:
 
-1. **Per-schema endpoint** at `/api/erp/schemas/:name` - Returns a single JSON Schema for a named schema (e.g., `CreatePlanningOrder`). This is what HATEOAS `_actions` and `_links` point to, so an agent can fetch only the schema it needs for a specific action without downloading the entire API spec.
+1. **Per-schema endpoint** at `/api/erp/schemas/:name` - Returns a single JSON Schema for a named schema (e.g., `CreateOrder`). This is what HATEOAS `_actions` and `_links` point to, so an agent can fetch only the schema it needs for a specific action without downloading the entire API spec.
 2. **Schema catalog** at `/api/erp/schemas/` - Lists all available schema names, useful for agent discovery.
 3. **OpenAPI spec** at `/api/erp/openapi.json` - Full machine-readable API contract auto-generated from Zod schemas, with `components/schemas` populated. Useful for tools like Scalar UI or for caching the complete API surface.
 4. **Interactive API reference** at `/erp/api-reference` - Scalar UI for human exploration and testing.
 
-The per-schema endpoint is the primary mechanism for agents. When an agent sees an action like `{ "rel": "update", "schema": "/api/erp/schemas/UpdatePlanningOrder" }`, it fetches that URL to get the exact JSON Schema for the request body — field names, types, constraints, enums — without the overhead of the full OpenAPI spec.
+The per-schema endpoint is the primary mechanism for agents. When an agent sees an action like `{ "rel": "update", "schema": "/api/erp/schemas/UpdateOrder" }`, it fetches that URL to get the exact JSON Schema for the request body — field names, types, constraints, enums — without the overhead of the full OpenAPI spec.
 
 ## Architecture
 
@@ -80,24 +80,24 @@ GET /api/erp/
   "description": "AI-first ERP system",
   "_links": [
     { "rel": "self", "href": "/api/erp/" },
-    { "rel": "planning-orders", "href": "/api/erp/orders" },
+    { "rel": "orders", "href": "/api/erp/orders" },
     { "rel": "schemas", "href": "/api/erp/schemas/" },
     { "rel": "api-reference", "href": "/erp/api-reference" }
   ],
   "_actions": [
-    { "rel": "create-planning-order", "href": "/api/erp/orders", "method": "POST",
-      "schema": "/api/erp/schemas/CreatePlanningOrder" }
+    { "rel": "create-order", "href": "/api/erp/orders", "method": "POST",
+      "schema": "/api/erp/schemas/CreateOrder" }
   ]
 }
 ```
 
-From this single response, an agent knows: what the API is, where to find the full spec, what resources exist, and how to create new ones. Execution orders (runs) are nested under planning orders and discovered via planning order links.
+From this single response, an agent knows: what the API is, where to find the full spec, what resources exist, and how to create new ones. Order runs are nested under orders and discovered via order links.
 
 ## Data Model
 
-The order system uses a three-tier hierarchy: Planning Orders define what to build, Revisions capture the approval workflow, and Order Runs track the actual work.
+The order system uses a three-tier hierarchy: Orders define what to build, Revisions capture the approval workflow, and Order Runs track the actual work.
 
-### Planning Orders
+### Orders
 
 The top-level entity representing a type of work to be done.
 
@@ -115,12 +115,12 @@ The top-level entity representing a type of work to be done.
 
 ### Order Revisions
 
-Versioned snapshots of a planning order that go through an approval workflow.
+Versioned snapshots of an order that go through an approval workflow.
 
 | Field          | Type      | Notes                                  |
 | -------------- | --------- | -------------------------------------- |
 | id             | int (PK)  | Auto-increment                         |
-| plan_order_id  | int (FK)  | Parent planning order                  |
+| order_id       | int (FK)  | Parent order                           |
 | rev_no         | int       | Auto-incremented per order             |
 | status         | enum      | `draft` / `approved` / `obsolete`      |
 | notes          | string?   | Revision details                       |
@@ -128,18 +128,18 @@ Versioned snapshots of a planning order that go through an approval workflow.
 | created_at     | datetime  | When created                           |
 | approved_at    | datetime? | When approved (null if draft/obsolete) |
 
-**Unique constraint**: `(plan_order_id, rev_no)` - revision numbers are sequential per order.
+**Unique constraint**: `(order_id, rev_no)` - revision numbers are sequential per order.
 
 ### Order Runs
 
-Concrete work items created from an approved revision. Track the actual execution of planned work. Nested under planning orders as "runs".
+Concrete work items created from an approved revision. Track the actual execution of planned work. Nested under orders as "runs".
 
 | Field              | Type            | Notes                                           |
 | ------------------ | --------------- | ----------------------------------------------- |
 | id                 | int (PK)        | Auto-increment                                  |
-| order_no           | int             | Auto-incremented per planning order             |
-| plan_order_id      | int (FK)        | Source planning order                           |
-| order_rev_id  | int (FK)        | Source revision                                 |
+| order_no           | int             | Auto-incremented per order                      |
+| order_id           | int (FK)        | Source order                                    |
+| order_rev_id       | int (FK)        | Source revision                                 |
 | status             | enum            | `released` / `started` / `closed` / `cancelled` |
 | priority           | enum            | `low` / `medium` / `high` / `critical`          |
 | scheduled_start_at | datetime?       | When work should begin                          |
@@ -149,13 +149,13 @@ Concrete work items created from an approved revision. Track the actual executio
 | created_by/at      | string/datetime | Audit trail                                     |
 | updated_by/at      | string/datetime | Audit trail                                     |
 
-**Unique constraint**: `(plan_order_id, order_no)` - order numbers are sequential per planning order.
+**Unique constraint**: `(order_id, order_no)` - order numbers are sequential per order.
 
 ### Referential Integrity
 
 Deletes are guarded to prevent orphaned data:
 
-- A **Planning Order** cannot be deleted if it has any revisions (409 Conflict). Archive it instead.
+- An **Order** cannot be deleted if it has any revisions (409 Conflict). Archive it instead.
 - A **Revision** can only be deleted while in `draft` status, and only if it has no order runs referencing it (409 Conflict).
 - An **Order Run** can only be deleted while in `released` status.
 
@@ -190,8 +190,8 @@ The `_actions` array in each response is **state-dependent**. The server evaluat
 
 | Resource  | State     | Available Actions             |
 | --------- | --------- | ----------------------------- |
-| PlanOrder | active    | update, delete, archive       |
-| PlanOrder | archived  | update, delete, activate      |
+| Order     | active    | update, delete, archive       |
+| Order     | archived  | update, delete, activate      |
 | Revision  | draft     | update, approve, delete       |
 | Revision  | approved  | cut-order, obsolete           |
 | Revision  | obsolete  | (none)                        |
@@ -200,11 +200,11 @@ The `_actions` array in each response is **state-dependent**. The server evaluat
 | OrderRun | closed    | (none)                        |
 | OrderRun | cancelled | (none)                        |
 
-Each action includes a `schema` URL (e.g., `/api/erp/schemas/UpdatePlanningOrder`) that the agent can fetch to get the JSON Schema for the request body. Some actions include a `body` template with required fields pre-filled (e.g., a status transition action that requires `{ status: "archived" }`).
+Each action includes a `schema` URL (e.g., `/api/erp/schemas/UpdateOrder`) that the agent can fetch to get the JSON Schema for the request body. Some actions include a `body` template with required fields pre-filled (e.g., a status transition action that requires `{ status: "archived" }`).
 
 ## API Endpoints
 
-### Planning Orders
+### Orders
 
 | Method | Path                           | Description                  |
 | ------ | ------------------------------ | ---------------------------- |
@@ -246,13 +246,13 @@ Each action includes a `schema` URL (e.g., `/api/erp/schemas/UpdatePlanningOrder
 | GET    | `/api/erp/schemas/`            | List all available schema names |
 | GET    | `/api/erp/schemas/:schemaName` | Get a single JSON Schema        |
 
-Available schemas: `CreatePlanningOrder`, `UpdatePlanningOrder`, `CreateOrderRevision`, `UpdateOrderRevision`, `CreateOrderRun`, `UpdateOrderRun`.
+Available schemas: `CreateOrder`, `UpdateOrder`, `CreateOrderRevision`, `UpdateOrderRevision`, `CreateOrderRun`, `UpdateOrderRun`.
 
 ### Query Parameters
 
 All list endpoints support `page` (default 1) and `pageSize` (default 20, max 100). Additional filters:
 
-- Planning Orders: `status` (active/archived), `search` (name/key)
+- Orders: `status` (active/archived), `search` (name/key)
 - Revisions: `status` (draft/approved/obsolete)
 - Order Runs: `status`, `priority`, `search`
 
@@ -264,11 +264,11 @@ This illustrates how an agent with zero prior knowledge can operate the system:
 1. GET /api/erp/
    -> Learn about available resources, get links and actions
 
-2. Read the "create-planning-order" action from _actions
+2. Read the "create-order" action from _actions
    -> { href: "/api/erp/orders", method: "POST",
-        schema: "/api/erp/schemas/CreatePlanningOrder" }
+        schema: "/api/erp/schemas/CreateOrder" }
 
-3. GET /api/erp/schemas/CreatePlanningOrder
+3. GET /api/erp/schemas/CreateOrder
    -> JSON Schema with required fields, types, constraints
       (lightweight ~200 bytes, not the full OpenAPI spec)
 
@@ -307,12 +307,12 @@ At no point did the agent need to know URL patterns, valid status transitions, o
 
 The React frontend mirrors the API's capabilities and is structured around the same resource hierarchy:
 
-- **Planning Order List** - Paginated table with search and status filters
-- **Planning Order Detail** - View/edit with embedded revision management
-- **Planning Order Create** - Form with key validation
-- **Runs List** - Paginated table with status and priority filters, scoped to a planning order
+- **Order List** - Paginated table with search and status filters
+- **Order Detail** - View/edit with embedded revision management
+- **Order Create** - Form with key validation
+- **Runs List** - Paginated table with status and priority filters, scoped to an order
 - **Run Detail** - View/edit with state-dependent action buttons
-- **Run Create** - Form with revision selection (planning order derived from URL)
+- **Run Create** - Form with revision selection (order derived from URL)
 
 The UI conditionally renders action buttons based on the `_actions` array from the API, ensuring the UI and API always agree on what's possible.
 
@@ -320,13 +320,13 @@ The UI conditionally renders action buttons based on the `_actions` array from t
 
 Playwright E2E tests cover the API happy paths:
 
-- **Planning Orders**: CRUD operations, status transitions
+- **Orders**: CRUD operations, status transitions
 - **Order Revisions**: Full lifecycle (draft -> approved -> obsolete), auto-incrementing rev_no, status filtering, referential integrity (409 on delete with children)
 - **Order Runs**: Full lifecycle (released -> started -> closed, released -> cancelled), priority filtering, state transition validation (409 on invalid transitions), referential integrity guards
 
 ## Future Considerations
 
-- Order definitions as templates for creating planning orders
+- Order definitions as templates for creating orders
 - Batch operations for managing multiple orders
 - Webhook/event notifications for status changes
 - Agent-specific API keys and audit trails per agent identity

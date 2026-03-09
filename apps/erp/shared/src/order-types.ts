@@ -2,8 +2,8 @@ import { z } from "zod/v4";
 
 import { HateoasActionSchema, HateoasLinkSchema } from "./hateoas-types.js";
 
-// Full planning order response shape
-export const PlanningOrderSchema = z.object({
+// Full order response shape
+export const OrderSchema = z.object({
   id: z.number(),
   key: z.string(),
   name: z.string(),
@@ -17,10 +17,10 @@ export const PlanningOrderSchema = z.object({
   _actions: z.array(HateoasActionSchema).optional(),
 });
 
-export type PlanningOrder = z.infer<typeof PlanningOrderSchema>;
+export type Order = z.infer<typeof OrderSchema>;
 
-// Input for creating a planning order
-export const CreatePlanningOrderSchema = z
+// Input for creating an order
+export const CreateOrderSchema = z
   .object({
     key: z
       .string()
@@ -35,10 +35,10 @@ export const CreatePlanningOrderSchema = z
   })
   .strict();
 
-export type CreatePlanningOrder = z.infer<typeof CreatePlanningOrderSchema>;
+export type CreateOrder = z.infer<typeof CreateOrderSchema>;
 
-// Input for updating a planning order
-export const UpdatePlanningOrderSchema = z
+// Input for updating an order
+export const UpdateOrderSchema = z
   .object({
     name: z.string().min(1).max(200).optional(),
     description: z.string().max(2000).optional(),
@@ -46,23 +46,21 @@ export const UpdatePlanningOrderSchema = z
   })
   .strict();
 
-export type UpdatePlanningOrder = z.infer<typeof UpdatePlanningOrderSchema>;
+export type UpdateOrder = z.infer<typeof UpdateOrderSchema>;
 
-// Query params for listing planning orders
-export const PlanningOrderListQuerySchema = z.object({
+// Query params for listing orders
+export const OrderListQuerySchema = z.object({
   page: z.coerce.number().int().min(1).optional().default(1),
   pageSize: z.coerce.number().int().min(1).max(100).optional().default(20),
   status: z.enum(["active", "archived"]).optional(),
   search: z.string().optional(),
 });
 
-export type PlanningOrderListQuery = z.infer<
-  typeof PlanningOrderListQuerySchema
->;
+export type OrderListQuery = z.infer<typeof OrderListQuerySchema>;
 
 // List response
-export const PlanningOrderListResponseSchema = z.object({
-  items: z.array(PlanningOrderSchema),
+export const OrderListResponseSchema = z.object({
+  items: z.array(OrderSchema),
   total: z.number(),
   page: z.number(),
   pageSize: z.number(),
@@ -70,6 +68,4 @@ export const PlanningOrderListResponseSchema = z.object({
   _actions: z.array(HateoasActionSchema).optional(),
 });
 
-export type PlanningOrderListResponse = z.infer<
-  typeof PlanningOrderListResponseSchema
->;
+export type OrderListResponse = z.infer<typeof OrderListResponseSchema>;

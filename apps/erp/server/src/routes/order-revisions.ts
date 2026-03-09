@@ -39,7 +39,7 @@ function revisionItemLinks(
     {
       rel: "parent",
       href: `${API_PREFIX}/${parentResource}/${orderKey}`,
-      title: "Planning Order",
+      title: "Order",
     },
     schemaLink("OrderRevision"),
   ];
@@ -112,7 +112,7 @@ const RevNoParamsSchema = z.object({
 function formatItem(orderKey: string, item: OrderRevisionModel) {
   return {
     id: item.id,
-    planOrderId: item.planOrderId,
+    orderId: item.orderId,
     revNo: item.revNo,
     status: item.status as RevisionStatus,
     notes: item.notes,
@@ -139,14 +139,14 @@ function formatListItem(orderKey: string, item: OrderRevisionModel) {
 }
 
 async function resolveOrder(orderKey: string) {
-  return erpDb.planningOrder.findUnique({
+  return erpDb.order.findUnique({
     where: { key: orderKey },
   });
 }
 
-async function findRevision(planOrderId: number, revNo: number) {
+async function findRevision(orderId: number, revNo: number) {
   return erpDb.orderRevision.findFirst({
-    where: { planOrderId, revNo },
+    where: { orderId, revNo },
   });
 }
 
@@ -156,7 +156,7 @@ export default function orderRevisionRoutes(fastify: FastifyInstance) {
   // LIST
   app.get("/", {
     schema: {
-      description: "List revisions for a planning order",
+      description: "List revisions for an order",
       tags: ["Order Revisions"],
       params: OrderKeyParamsSchema,
       querystring: OrderRevisionListQuerySchema,
@@ -175,11 +175,11 @@ export default function orderRevisionRoutes(fastify: FastifyInstance) {
           reply,
           404,
           "Not Found",
-          `Planning order '${orderKey}' not found`,
+          `Order '${orderKey}' not found`,
         );
       }
 
-      const where: Record<string, unknown> = { planOrderId: order.id };
+      const where: Record<string, unknown> = { orderId: order.id };
       if (status) where.status = status;
 
       const [items, total] = await Promise.all([
@@ -211,7 +211,7 @@ export default function orderRevisionRoutes(fastify: FastifyInstance) {
   // CREATE
   app.post("/", {
     schema: {
-      description: "Create a new revision for a planning order",
+      description: "Create a new revision for an order",
       tags: ["Order Revisions"],
       params: OrderKeyParamsSchema,
       body: CreateOrderRevisionSchema,
@@ -231,14 +231,14 @@ export default function orderRevisionRoutes(fastify: FastifyInstance) {
           reply,
           404,
           "Not Found",
-          `Planning order '${orderKey}' not found`,
+          `Order '${orderKey}' not found`,
         );
       }
 
       // Auto-increment revNo inside a transaction to prevent race conditions
       const item = await erpDb.$transaction(async (erpTx) => {
         const maxRev = await erpTx.orderRevision.findFirst({
-          where: { planOrderId: order.id },
+          where: { orderId: order.id },
           orderBy: { revNo: "desc" },
           select: { revNo: true },
         });
@@ -246,7 +246,7 @@ export default function orderRevisionRoutes(fastify: FastifyInstance) {
 
         return erpTx.orderRevision.create({
           data: {
-            planOrderId: order.id,
+            orderId: order.id,
             revNo: nextRevNo,
             notes: notes ?? null,
             changeSummary: changeSummary ?? null,
@@ -281,7 +281,7 @@ export default function orderRevisionRoutes(fastify: FastifyInstance) {
           reply,
           404,
           "Not Found",
-          `Planning order '${orderKey}' not found`,
+          `Order '${orderKey}' not found`,
         );
       }
 
@@ -323,7 +323,7 @@ export default function orderRevisionRoutes(fastify: FastifyInstance) {
           reply,
           404,
           "Not Found",
-          `Planning order '${orderKey}' not found`,
+          `Order '${orderKey}' not found`,
         );
       }
 
@@ -380,7 +380,7 @@ export default function orderRevisionRoutes(fastify: FastifyInstance) {
           reply,
           404,
           "Not Found",
-          `Planning order '${orderKey}' not found`,
+          `Order '${orderKey}' not found`,
         );
       }
 
@@ -441,7 +441,7 @@ export default function orderRevisionRoutes(fastify: FastifyInstance) {
           reply,
           404,
           "Not Found",
-          `Planning order '${orderKey}' not found`,
+          `Order '${orderKey}' not found`,
         );
       }
 
@@ -508,7 +508,7 @@ export default function orderRevisionRoutes(fastify: FastifyInstance) {
           reply,
           404,
           "Not Found",
-          `Planning order '${orderKey}' not found`,
+          `Order '${orderKey}' not found`,
         );
       }
 

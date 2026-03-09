@@ -8,7 +8,7 @@ export type RevisionStatus = z.infer<typeof RevisionStatusEnum>;
 // Full revision response shape
 export const OrderRevisionSchema = z.object({
   id: z.number(),
-  planOrderId: z.number(),
+  orderId: z.number(),
   revNo: z.number(),
   status: RevisionStatusEnum,
   notes: z.string().nullable(),

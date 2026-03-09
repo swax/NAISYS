@@ -1,18 +1,18 @@
 import {
   CreateOrderRunSchema,
   CreateOrderRevisionSchema,
-  CreatePlanningOrderSchema,
+  CreateOrderSchema,
   LoginRequestSchema,
   UpdateOrderRunSchema,
   UpdateOrderRevisionSchema,
-  UpdatePlanningOrderSchema,
+  UpdateOrderSchema,
 } from "@naisys-erp/shared";
 import { z } from "zod/v4";
 import type { $ZodType } from "zod/v4/core";
 
 export const schemaRegistry: Record<string, $ZodType> = {
-  CreatePlanningOrder: CreatePlanningOrderSchema,
-  UpdatePlanningOrder: UpdatePlanningOrderSchema,
+  CreateOrder: CreateOrderSchema,
+  UpdateOrder: UpdateOrderSchema,
   CreateOrderRevision: CreateOrderRevisionSchema,
   UpdateOrderRevision: UpdateOrderRevisionSchema,
   CreateOrderRun: CreateOrderRunSchema,
