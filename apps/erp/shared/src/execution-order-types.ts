@@ -23,6 +23,7 @@ export const ExecutionOrderSchema = z.object({
   id: z.number(),
   orderNo: z.number(),
   planOrderId: z.number(),
+  planOrderKey: z.string(),
   planOrderRevId: z.number(),
   status: ExecutionOrderStatusEnum,
   priority: ExecutionOrderPriorityEnum,
@@ -44,7 +45,6 @@ export type ExecutionOrder = z.infer<typeof ExecutionOrderSchema>;
 // Input for creating an execution order
 export const CreateExecutionOrderSchema = z
   .object({
-    planOrderId: z.number().int().min(1),
     planOrderRevId: z.number().int().min(1),
     priority: ExecutionOrderPriorityEnum.optional().default("medium"),
     scheduledStartAt: z.iso.datetime().optional(),

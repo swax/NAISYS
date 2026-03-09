@@ -39,7 +39,7 @@ export const PlanningOrderList: React.FC = () => {
       if (search) params.set("search", search);
 
       const result = await api.get<PlanningOrderListResponse>(
-        `planning/orders?${params}`,
+        `orders?${params}`,
       );
       setData(result);
     } catch (err) {
@@ -59,7 +59,7 @@ export const PlanningOrderList: React.FC = () => {
     <Container size="lg" py="xl">
       <Group justify="space-between" mb="lg">
         <Title order={2}>Planning Orders</Title>
-        <Button onClick={() => navigate("/planning/orders/new")}>
+        <Button onClick={() => navigate("/orders/new")}>
           Create New
         </Button>
       </Group>
@@ -118,7 +118,7 @@ export const PlanningOrderList: React.FC = () => {
                 <Table.Tr
                   key={item.id}
                   style={{ cursor: "pointer" }}
-                  onClick={() => navigate(`/planning/orders/${item.key}`)}
+                  onClick={() => navigate(`/orders/${item.key}`)}
                 >
                   <Table.Td>
                     <Text size="sm" ff="monospace">

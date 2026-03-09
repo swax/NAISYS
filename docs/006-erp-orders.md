@@ -80,26 +80,22 @@ GET /api/erp/
   "description": "AI-first ERP system",
   "_links": [
     { "rel": "self", "href": "/api/erp/" },
-    { "rel": "planning-orders", "href": "/api/erp/planning/orders" },
-    { "rel": "execution-orders", "href": "/api/erp/execution/orders" },
+    { "rel": "planning-orders", "href": "/api/erp/orders" },
     { "rel": "schemas", "href": "/api/erp/schemas/" },
-    { "rel": "openapi-spec", "href": "/api/erp/openapi.json" },
     { "rel": "api-reference", "href": "/erp/api-reference" }
   ],
   "_actions": [
-    { "rel": "create-planning-order", "href": "/api/erp/planning/orders", "method": "POST",
-      "schema": "/api/erp/schemas/CreatePlanningOrder" },
-    { "rel": "create-execution-order", "href": "/api/erp/execution/orders", "method": "POST",
-      "schema": "/api/erp/schemas/CreateExecutionOrder" }
+    { "rel": "create-planning-order", "href": "/api/erp/orders", "method": "POST",
+      "schema": "/api/erp/schemas/CreatePlanningOrder" }
   ]
 }
 ```
 
-From this single response, an agent knows: what the API is, where to find the full spec, what resources exist, and how to create new ones.
+From this single response, an agent knows: what the API is, where to find the full spec, what resources exist, and how to create new ones. Execution orders (runs) are nested under planning orders and discovered via planning order links.
 
 ## Data Model
 
-The order system uses a three-tier hierarchy: Planning Orders define what to build, Revisions capture the approval workflow, and Execution Orders track the actual work.
+The order system uses a three-tier hierarchy: Planning Orders define what to build, Revisions capture the approval workflow, and Execution Orders (Runs) track the actual work.
 
 ### Planning Orders
 
@@ -134,9 +130,9 @@ Versioned snapshots of a planning order that go through an approval workflow.
 
 **Unique constraint**: `(plan_order_id, rev_no)` - revision numbers are sequential per order.
 
-### Execution Orders
+### Execution Orders (Runs)
 
-Concrete work items created from an approved revision. Track the actual execution of planned work.
+Concrete work items created from an approved revision. Track the actual execution of planned work. Nested under planning orders as "runs".
 
 | Field              | Type            | Notes                                           |
 | ------------------ | --------------- | ----------------------------------------------- |
@@ -172,10 +168,10 @@ draft ──[approve]──> approved ──[obsolete]──> obsolete
 ```
 
 - **Draft**: Can be updated, approved, or deleted
-- **Approved**: Read-only; can be marked obsolete; can be used to create Execution Orders
+- **Approved**: Read-only; can be marked obsolete; can be used to create Execution Orders (runs)
 - **Obsolete**: Terminal state, no further actions
 
-### Execution Orders
+### Execution Orders (Runs)
 
 ```
 released ──[start]──> started ──[close]──> closed
@@ -197,7 +193,7 @@ The `_actions` array in each response is **state-dependent**. The server evaluat
 | PlanOrder | active    | update, delete, archive       |
 | PlanOrder | archived  | update, delete, activate      |
 | Revision  | draft     | update, approve, delete       |
-| Revision  | approved  | obsolete                      |
+| Revision  | approved  | cut-order, obsolete           |
 | Revision  | obsolete  | (none)                        |
 | ExecOrder | released  | update, start, cancel, delete |
 | ExecOrder | started   | update, close, cancel         |
@@ -212,36 +208,36 @@ Each action includes a `schema` URL (e.g., `/api/erp/schemas/UpdatePlanningOrder
 
 | Method | Path                           | Description                  |
 | ------ | ------------------------------ | ---------------------------- |
-| GET    | `/api/erp/planning/orders`     | List (paginated, filterable) |
-| POST   | `/api/erp/planning/orders`     | Create                       |
-| GET    | `/api/erp/planning/orders/:id` | Get single                   |
-| PUT    | `/api/erp/planning/orders/:id` | Update                       |
-| DELETE | `/api/erp/planning/orders/:id` | Delete (if no revisions)     |
+| GET    | `/api/erp/orders`     | List (paginated, filterable) |
+| POST   | `/api/erp/orders`     | Create                       |
+| GET    | `/api/erp/orders/:id` | Get single                   |
+| PUT    | `/api/erp/orders/:id` | Update                       |
+| DELETE | `/api/erp/orders/:id` | Delete (if no revisions)     |
 
 ### Planning Order Revisions
 
 | Method | Path                                                      | Description          |
 | ------ | --------------------------------------------------------- | -------------------- |
-| GET    | `/api/erp/planning/orders/:orderId/revisions`             | List                 |
-| POST   | `/api/erp/planning/orders/:orderId/revisions`             | Create               |
-| GET    | `/api/erp/planning/orders/:orderId/revisions/:revisionId` | Get single           |
-| PUT    | `/api/erp/planning/orders/:orderId/revisions/:revisionId` | Update (draft only)  |
-| DELETE | `/api/erp/planning/orders/:orderId/revisions/:revisionId` | Delete (draft only)  |
-| POST   | `.../revisions/:revisionId/approve`                       | Draft -> Approved    |
-| POST   | `.../revisions/:revisionId/obsolete`                      | Approved -> Obsolete |
+| GET    | `/api/erp/orders/:orderKey/revs`             | List                 |
+| POST   | `/api/erp/orders/:orderKey/revs`             | Create               |
+| GET    | `/api/erp/orders/:orderKey/revs/:revNo`      | Get single           |
+| PUT    | `/api/erp/orders/:orderKey/revs/:revNo`      | Update (draft only)  |
+| DELETE | `/api/erp/orders/:orderKey/revs/:revNo`      | Delete (draft only)  |
+| POST   | `.../revs/:revNo/approve`                                 | Draft -> Approved    |
+| POST   | `.../revs/:revNo/obsolete`                                | Approved -> Obsolete |
 
-### Execution Orders
+### Execution Orders (Runs)
 
-| Method | Path                                   | Description               |
-| ------ | -------------------------------------- | ------------------------- |
-| GET    | `/api/erp/execution/orders`            | List (paginated)          |
-| POST   | `/api/erp/execution/orders`            | Create                    |
-| GET    | `/api/erp/execution/orders/:id`        | Get single                |
-| PUT    | `/api/erp/execution/orders/:id`        | Update (released/started) |
-| DELETE | `/api/erp/execution/orders/:id`        | Delete (released only)    |
-| POST   | `/api/erp/execution/orders/:id/start`  | Released -> Started       |
-| POST   | `/api/erp/execution/orders/:id/close`  | Started -> Closed         |
-| POST   | `/api/erp/execution/orders/:id/cancel` | -> Cancelled              |
+| Method | Path                                              | Description               |
+| ------ | ------------------------------------------------- | ------------------------- |
+| GET    | `/api/erp/orders/:orderKey/runs`                  | List (paginated)          |
+| POST   | `/api/erp/orders/:orderKey/runs`                  | Create                    |
+| GET    | `/api/erp/orders/:orderKey/runs/:id`              | Get single                |
+| PUT    | `/api/erp/orders/:orderKey/runs/:id`              | Update (released/started) |
+| DELETE | `/api/erp/orders/:orderKey/runs/:id`              | Delete (released only)    |
+| POST   | `/api/erp/orders/:orderKey/runs/:id/start`        | Released -> Started       |
+| POST   | `/api/erp/orders/:orderKey/runs/:id/close`        | Started -> Closed         |
+| POST   | `/api/erp/orders/:orderKey/runs/:id/cancel`       | -> Cancelled              |
 
 ### Schemas
 
@@ -258,7 +254,7 @@ All list endpoints support `page` (default 1) and `pageSize` (default 20, max 10
 
 - Planning Orders: `status` (active/archived), `search` (name/key)
 - Revisions: `status` (draft/approved/obsolete)
-- Execution Orders: `status`, `priority`, `search`
+- Execution Orders (Runs): `status`, `priority`, `search`
 
 ## Example AI Agent Workflow
 
@@ -269,35 +265,39 @@ This illustrates how an agent with zero prior knowledge can operate the system:
    -> Learn about available resources, get links and actions
 
 2. Read the "create-planning-order" action from _actions
-   -> { href: "/api/erp/planning/orders", method: "POST",
+   -> { href: "/api/erp/orders", method: "POST",
         schema: "/api/erp/schemas/CreatePlanningOrder" }
 
 3. GET /api/erp/schemas/CreatePlanningOrder
    -> JSON Schema with required fields, types, constraints
       (lightweight ~200 bytes, not the full OpenAPI spec)
 
-4. POST /api/erp/planning/orders { key: "widget-assembly", name: "Widget Assembly", ... }
+4. POST /api/erp/orders { key: "widget-assembly", name: "Widget Assembly", ... }
    -> Response includes _links (self, revisions) and _actions (update, delete, archive)
 
-5. Follow "revisions" link -> GET /api/erp/planning/orders/1/revisions
+5. Follow "revisions" link -> GET /api/erp/orders/widget-assembly/revs
    -> Empty list, use create action
 
-6. POST /api/erp/planning/orders/1/revisions { notes: "Initial plan", ... }
+6. POST /api/erp/orders/widget-assembly/revs { notes: "Initial plan", ... }
    -> Response: revision in "draft" status, _actions: [update, approve, delete]
 
-7. POST .../revisions/1/approve  (from _actions)
-   -> Response: "approved" status, _actions: [obsolete]
+7. POST .../revs/1/approve  (from _actions)
+   -> Response: "approved" status, _actions: [cut-order, obsolete]
 
-8. GET /api/erp/schemas/CreateExecutionOrder  (from root _actions schema ref)
-   -> Learn required fields: planOrderId, planOrderRevId, createdBy, etc.
+8. Follow "cut-order" action from the approved revision
+   -> { href: "/api/erp/orders/widget-assembly/runs", method: "POST",
+        schema: "/api/erp/schemas/CreateExecutionOrder" }
 
-9. POST /api/erp/execution/orders { planOrderId: 1, planOrderRevId: 1, priority: "high", ... }
-   -> Response: execution order in "released" status, _actions: [update, start, cancel, delete]
+9. GET /api/erp/schemas/CreateExecutionOrder
+   -> Learn required fields: planOrderRevId, etc.
 
-10. POST /api/erp/execution/orders/1/start  (from _actions)
+10. POST /api/erp/orders/widget-assembly/runs { planOrderRevId: 1, priority: "high", ... }
+    -> Response: execution order in "released" status, _actions: [update, start, cancel, delete]
+
+11. POST /api/erp/orders/widget-assembly/runs/1/start  (from _actions)
     -> Response: "started" status, _actions: [update, close, cancel]
 
-11. POST /api/erp/execution/orders/1/close  (from _actions)
+12. POST /api/erp/orders/widget-assembly/runs/1/close  (from _actions)
     -> Response: "closed" status, _actions: []  (terminal state)
 ```
 
@@ -310,9 +310,9 @@ The React frontend mirrors the API's capabilities and is structured around the s
 - **Planning Order List** - Paginated table with search and status filters
 - **Planning Order Detail** - View/edit with embedded revision management
 - **Planning Order Create** - Form with key validation
-- **Execution Order List** - Paginated table with status and priority filters
-- **Execution Order Detail** - View/edit with state-dependent action buttons
-- **Execution Order Create** - Form with planning order/revision selection
+- **Runs List** - Paginated table with status and priority filters, scoped to a planning order
+- **Run Detail** - View/edit with state-dependent action buttons
+- **Run Create** - Form with revision selection (planning order derived from URL)
 
 The UI conditionally renders action buttons based on the `_actions` array from the API, ensuring the UI and API always agree on what's possible.
 
@@ -322,7 +322,7 @@ Playwright E2E tests cover the API happy paths:
 
 - **Planning Orders**: CRUD operations, status transitions
 - **Planning Order Revisions**: Full lifecycle (draft -> approved -> obsolete), auto-incrementing rev_no, status filtering, referential integrity (409 on delete with children)
-- **Execution Orders**: Full lifecycle (released -> started -> closed, released -> cancelled), priority filtering, state transition validation (409 on invalid transitions), referential integrity guards
+- **Execution Orders (Runs)**: Full lifecycle (released -> started -> closed, released -> cancelled), priority filtering, state transition validation (409 on invalid transitions), referential integrity guards
 
 ## Future Considerations
 

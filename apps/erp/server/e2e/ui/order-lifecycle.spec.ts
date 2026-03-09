@@ -25,7 +25,7 @@ test.describe.serial("Full order lifecycle (UI)", () => {
   });
 
   test("create a planning order", async () => {
-    await page.goto("/erp/planning/orders");
+    await page.goto("/erp/orders");
     await page.getByRole("button", { name: "Create New" }).click();
 
     // Fill the form
@@ -52,40 +52,36 @@ test.describe.serial("Full order lifecycle (UI)", () => {
     await page.getByLabel("Change Summary").fill("First draft of the order");
     await page.getByRole("button", { name: "Create" }).click();
 
-    // Verify draft revision appears in the table
-    const row = page.getByTestId("revision-row-1");
-    await expect(row).toBeVisible();
-    await expect(page.getByTestId("revision-status-1")).toHaveText("draft");
+    // Should navigate to the revision detail page
+    await expect(
+      page.getByRole("heading", { name: "Revision #1" }),
+    ).toBeVisible();
   });
 
   test("approve the revision", async () => {
     // Accept the confirm() dialog before clicking
     page.on("dialog", (d) => d.accept());
 
-    await page.getByTestId("revision-approve-1").click();
+    await page.getByRole("button", { name: "Approve" }).click();
 
-    // Verify status changes to approved
-    await expect(page.getByTestId("revision-status-1")).toHaveText("approved");
+    // Verify status badge changes to approved
+    await expect(page.getByText("approved")).toBeVisible();
   });
 
   test("cut an execution order", async () => {
-    await page.getByTestId("revision-cut-order-1").click();
+    await page.getByRole("button", { name: "Cut Order" }).click();
 
-    // Should navigate to exec order create page with prefilled IDs
+    // Should navigate to exec order create page
     await expect(
       page.getByRole("heading", { name: "Create Execution Order" }),
     ).toBeVisible();
 
-    // The plan order ID and rev ID fields should be prefilled (non-empty)
-    const planOrderIdInput = page.getByLabel("Planning Order ID");
-    await expect(planOrderIdInput).not.toHaveValue("");
-
     // Submit the form
     await page.getByRole("button", { name: "Create" }).click();
 
-    // Should redirect to execution orders list
+    // Should redirect to runs list
     await expect(
-      page.getByRole("heading", { name: "Execution Orders" }),
+      page.getByRole("heading", { name: `Runs for ${uniqueKey}` }),
     ).toBeVisible();
   });
 

@@ -29,7 +29,7 @@ export const PlanningOrderDetail: React.FC = () => {
     if (!key) return;
     setLoading(true);
     try {
-      const result = await api.get<PlanningOrder>(`planning/orders/${key}`);
+      const result = await api.get<PlanningOrder>(`orders/${key}`);
       setItem(result);
     } catch (err) {
       showErrorNotification(err);
@@ -44,7 +44,7 @@ export const PlanningOrderDetail: React.FC = () => {
 
   const handleUpdate = async (data: UpdatePlanningOrder) => {
     if (!key) return;
-    await api.put(`planning/orders/${key}`, data);
+    await api.put(`orders/${key}`, data);
     setEditing(false);
     await fetchItem();
   };
@@ -52,8 +52,8 @@ export const PlanningOrderDetail: React.FC = () => {
   const handleDelete = async () => {
     if (!key || !confirm("Delete this planning order?")) return;
     try {
-      await api.delete(`planning/orders/${key}`);
-      void navigate("/planning/orders");
+      await api.delete(`orders/${key}`);
+      void navigate("/orders");
     } catch (err) {
       showErrorNotification(err);
     }
@@ -111,8 +111,14 @@ export const PlanningOrderDetail: React.FC = () => {
           </Badge>
         </Group>
         <Group>
-          <Button variant="subtle" onClick={() => navigate("/planning/orders")}>
+          <Button variant="subtle" onClick={() => navigate("/orders")}>
             Back
+          </Button>
+          <Button
+            variant="light"
+            onClick={() => navigate(`/orders/${key}/runs`)}
+          >
+            View Runs
           </Button>
           {hasAction(item._actions, "update") && (
             <Button onClick={() => setEditing(true)}>Edit</Button>

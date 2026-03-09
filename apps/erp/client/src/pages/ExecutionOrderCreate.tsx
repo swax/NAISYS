@@ -1,19 +1,19 @@
 import { Container, Title } from "@mantine/core";
 import type { CreateExecutionOrder } from "@naisys-erp/shared";
-import { useNavigate, useSearchParams } from "react-router";
+import { useNavigate, useParams, useSearchParams } from "react-router";
 
 import { ExecutionOrderForm } from "../components/ExecutionOrderForm";
 import { api } from "../lib/api";
 
 export const ExecutionOrderCreate: React.FC = () => {
+  const { orderKey } = useParams<{ orderKey: string }>();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const prefillPlanOrderId = Number(searchParams.get("planOrderId")) || 0;
   const prefillPlanOrderRevId = Number(searchParams.get("planOrderRevId")) || 0;
 
   const handleCreate = async (data: CreateExecutionOrder) => {
-    await api.post("execution/orders", data);
-    void navigate("/execution/orders");
+    await api.post(`orders/${orderKey}/runs`, data);
+    void navigate(`/orders/${orderKey}/runs`);
   };
 
   return (
@@ -23,11 +23,10 @@ export const ExecutionOrderCreate: React.FC = () => {
       </Title>
       <ExecutionOrderForm<false>
         initialData={{
-          planOrderId: prefillPlanOrderId || undefined,
           planOrderRevId: prefillPlanOrderRevId || undefined,
         }}
         onSubmit={handleCreate}
-        onCancel={() => navigate("/execution/orders")}
+        onCancel={() => navigate(`/orders/${orderKey}/runs`)}
       />
     </Container>
   );
