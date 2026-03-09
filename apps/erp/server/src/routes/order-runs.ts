@@ -1,13 +1,13 @@
 import type { HateoasAction, HateoasLink } from "@naisys/common";
 import {
-  CreateExecutionOrderSchema,
+  CreateOrderRunSchema,
   ErrorResponseSchema,
-  ExecutionOrderListQuerySchema,
-  ExecutionOrderListResponseSchema,
-  type ExecutionOrderPriority,
-  ExecutionOrderSchema,
-  type ExecutionOrderStatus,
-  UpdateExecutionOrderSchema,
+  OrderRunListQuerySchema,
+  OrderRunListResponseSchema,
+  type OrderRunPriority,
+  OrderRunSchema,
+  type OrderRunStatus,
+  UpdateOrderRunSchema,
 } from "@naisys-erp/shared";
 import { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
@@ -16,7 +16,7 @@ import { z } from "zod/v4";
 import { writeAuditEntry } from "../audit.js";
 import erpDb from "../erpDb.js";
 import { sendError } from "../error-handler.js";
-import type { ExecOrderModel } from "../generated/prisma/models/ExecOrder.js";
+import type { OrderRunModel } from "../generated/prisma/models/OrderRun.js";
 import {
   API_PREFIX,
   paginationLinks,
@@ -24,15 +24,15 @@ import {
   selfLink,
 } from "../hateoas.js";
 
-function execResource(orderKey: string) {
+function runResource(orderKey: string) {
   return `orders/${orderKey}/runs`;
 }
 
-function execOrderItemLinks(
+function orderRunItemLinks(
   orderKey: string,
   id: number,
 ): HateoasLink[] {
-  const resource = execResource(orderKey);
+  const resource = runResource(orderKey);
   return [
     selfLink(`/${resource}/${id}`),
     {
@@ -45,16 +45,16 @@ function execOrderItemLinks(
       href: `${API_PREFIX}/orders/${orderKey}`,
       title: "Planning Order",
     },
-    schemaLink("ExecutionOrder"),
+    schemaLink("OrderRun"),
   ];
 }
 
-function execOrderItemActions(
+function orderRunItemActions(
   orderKey: string,
   id: number,
   status: string,
 ): HateoasAction[] {
-  const href = `${API_PREFIX}/${execResource(orderKey)}/${id}`;
+  const href = `${API_PREFIX}/${runResource(orderKey)}/${id}`;
   const actions: HateoasAction[] = [];
 
   if (status === "released") {
@@ -64,7 +64,7 @@ function execOrderItemActions(
         href,
         method: "PUT",
         title: "Update",
-        schema: `${API_PREFIX}/schemas/UpdateExecutionOrder`,
+        schema: `${API_PREFIX}/schemas/UpdateOrderRun`,
       },
       {
         rel: "start",
@@ -92,7 +92,7 @@ function execOrderItemActions(
         href,
         method: "PUT",
         title: "Update",
-        schema: `${API_PREFIX}/schemas/UpdateExecutionOrder`,
+        schema: `${API_PREFIX}/schemas/UpdateOrderRun`,
       },
       {
         rel: "close",
@@ -132,15 +132,15 @@ async function resolveOrder(orderKey: string) {
   });
 }
 
-function formatItem(orderKey: string, item: ExecOrderModel) {
+function formatItem(orderKey: string, item: OrderRunModel) {
   return {
     id: item.id,
     orderNo: item.orderNo,
     planOrderId: item.planOrderId,
     planOrderKey: orderKey,
     planOrderRevId: item.planOrderRevId,
-    status: item.status as ExecutionOrderStatus,
-    priority: item.priority as ExecutionOrderPriority,
+    status: item.status as OrderRunStatus,
+    priority: item.priority as OrderRunPriority,
     scheduledStartAt: formatDate(item.scheduledStartAt),
     dueAt: formatDate(item.dueAt),
     releasedAt: item.releasedAt.toISOString(),
@@ -150,31 +150,31 @@ function formatItem(orderKey: string, item: ExecOrderModel) {
     createdBy: item.createdById,
     updatedAt: item.updatedAt.toISOString(),
     updatedBy: item.updatedById,
-    _links: execOrderItemLinks(orderKey, item.id),
-    _actions: execOrderItemActions(orderKey, item.id, item.status),
+    _links: orderRunItemLinks(orderKey, item.id),
+    _actions: orderRunItemActions(orderKey, item.id, item.status),
   };
 }
 
-function formatListItem(orderKey: string, item: ExecOrderModel) {
+function formatListItem(orderKey: string, item: OrderRunModel) {
   const { _actions, ...rest } = formatItem(orderKey, item);
   return {
     ...rest,
-    _links: [selfLink(`/${execResource(orderKey)}/${item.id}`)],
+    _links: [selfLink(`/${runResource(orderKey)}/${item.id}`)],
   };
 }
 
-export default function executionOrderRoutes(fastify: FastifyInstance) {
+export default function orderRunRoutes(fastify: FastifyInstance) {
   const app = fastify.withTypeProvider<ZodTypeProvider>();
 
   // LIST
   app.get("/", {
     schema: {
-      description: "List execution orders (runs) for a planning order",
-      tags: ["Execution Orders"],
+      description: "List order runs for a planning order",
+      tags: ["Order Runs"],
       params: OrderKeyParamsSchema,
-      querystring: ExecutionOrderListQuerySchema,
+      querystring: OrderRunListQuerySchema,
       response: {
-        200: ExecutionOrderListResponseSchema,
+        200: OrderRunListResponseSchema,
         404: ErrorResponseSchema,
       },
     },
@@ -203,16 +203,16 @@ export default function executionOrderRoutes(fastify: FastifyInstance) {
       }
 
       const [items, total] = await Promise.all([
-        erpDb.execOrder.findMany({
+        erpDb.orderRun.findMany({
           where,
           skip: (page - 1) * pageSize,
           take: pageSize,
           orderBy: { createdAt: "desc" },
         }),
-        erpDb.execOrder.count({ where }),
+        erpDb.orderRun.count({ where }),
       ]);
 
-      const resource = execResource(orderKey);
+      const resource = runResource(orderKey);
 
       return {
         items: items.map((item) => formatListItem(orderKey, item)),
@@ -231,12 +231,12 @@ export default function executionOrderRoutes(fastify: FastifyInstance) {
   // CREATE
   app.post("/", {
     schema: {
-      description: "Create a new execution order (run) for a planning order",
-      tags: ["Execution Orders"],
+      description: "Create a new order run for a planning order",
+      tags: ["Order Runs"],
       params: OrderKeyParamsSchema,
-      body: CreateExecutionOrderSchema,
+      body: CreateOrderRunSchema,
       response: {
-        201: ExecutionOrderSchema,
+        201: OrderRunSchema,
         404: ErrorResponseSchema,
       },
     },
@@ -279,14 +279,14 @@ export default function executionOrderRoutes(fastify: FastifyInstance) {
 
       // Auto-increment orderNo inside a transaction to prevent race conditions
       const item = await erpDb.$transaction(async (erpTx) => {
-        const maxOrder = await erpTx.execOrder.findFirst({
+        const maxOrder = await erpTx.orderRun.findFirst({
           where: { planOrderId },
           orderBy: { orderNo: "desc" },
           select: { orderNo: true },
         });
         const nextOrderNo = (maxOrder?.orderNo ?? 0) + 1;
 
-        return erpTx.execOrder.create({
+        return erpTx.orderRun.create({
           data: {
             orderNo: nextOrderNo,
             planOrderId,
@@ -312,11 +312,11 @@ export default function executionOrderRoutes(fastify: FastifyInstance) {
   // GET by ID
   app.get("/:id", {
     schema: {
-      description: "Get a single execution order (run) by ID",
-      tags: ["Execution Orders"],
+      description: "Get a single order run by ID",
+      tags: ["Order Runs"],
       params: IdParamsSchema,
       response: {
-        200: ExecutionOrderSchema,
+        200: OrderRunSchema,
         404: ErrorResponseSchema,
       },
     },
@@ -333,13 +333,13 @@ export default function executionOrderRoutes(fastify: FastifyInstance) {
         );
       }
 
-      const item = await erpDb.execOrder.findUnique({ where: { id } });
+      const item = await erpDb.orderRun.findUnique({ where: { id } });
       if (!item || item.planOrderId !== order.id) {
         return sendError(
           reply,
           404,
           "Not Found",
-          `Execution order ${id} not found for order '${orderKey}'`,
+          `Order run ${id} not found for order '${orderKey}'`,
         );
       }
 
@@ -351,12 +351,12 @@ export default function executionOrderRoutes(fastify: FastifyInstance) {
   app.put("/:id", {
     schema: {
       description:
-        "Update an execution order (released or started status only)",
-      tags: ["Execution Orders"],
+        "Update an order run (released or started status only)",
+      tags: ["Order Runs"],
       params: IdParamsSchema,
-      body: UpdateExecutionOrderSchema,
+      body: UpdateOrderRunSchema,
       response: {
-        200: ExecutionOrderSchema,
+        200: OrderRunSchema,
         404: ErrorResponseSchema,
         409: ErrorResponseSchema,
       },
@@ -376,13 +376,13 @@ export default function executionOrderRoutes(fastify: FastifyInstance) {
         );
       }
 
-      const existing = await erpDb.execOrder.findUnique({ where: { id } });
+      const existing = await erpDb.orderRun.findUnique({ where: { id } });
       if (!existing || existing.planOrderId !== order.id) {
         return sendError(
           reply,
           404,
           "Not Found",
-          `Execution order ${id} not found for order '${orderKey}'`,
+          `Order run ${id} not found for order '${orderKey}'`,
         );
       }
 
@@ -391,7 +391,7 @@ export default function executionOrderRoutes(fastify: FastifyInstance) {
           reply,
           409,
           "Conflict",
-          `Cannot update execution order in ${existing.status} status`,
+          `Cannot update order run in ${existing.status} status`,
         );
       }
 
@@ -409,7 +409,7 @@ export default function executionOrderRoutes(fastify: FastifyInstance) {
         updateData.dueAt = data.dueAt ? new Date(data.dueAt) : null;
       }
 
-      const item = await erpDb.execOrder.update({
+      const item = await erpDb.orderRun.update({
         where: { id },
         data: updateData,
       });
@@ -421,8 +421,8 @@ export default function executionOrderRoutes(fastify: FastifyInstance) {
   // DELETE (released only)
   app.delete("/:id", {
     schema: {
-      description: "Delete an execution order (released status only)",
-      tags: ["Execution Orders"],
+      description: "Delete an order run (released status only)",
+      tags: ["Order Runs"],
       params: IdParamsSchema,
       response: {
         204: z.void(),
@@ -443,13 +443,13 @@ export default function executionOrderRoutes(fastify: FastifyInstance) {
         );
       }
 
-      const existing = await erpDb.execOrder.findUnique({ where: { id } });
+      const existing = await erpDb.orderRun.findUnique({ where: { id } });
       if (!existing || existing.planOrderId !== order.id) {
         return sendError(
           reply,
           404,
           "Not Found",
-          `Execution order ${id} not found for order '${orderKey}'`,
+          `Order run ${id} not found for order '${orderKey}'`,
         );
       }
 
@@ -458,11 +458,11 @@ export default function executionOrderRoutes(fastify: FastifyInstance) {
           reply,
           409,
           "Conflict",
-          `Cannot delete execution order in ${existing.status} status`,
+          `Cannot delete order run in ${existing.status} status`,
         );
       }
 
-      await erpDb.execOrder.delete({ where: { id } });
+      await erpDb.orderRun.delete({ where: { id } });
       reply.status(204);
     },
   });
@@ -470,11 +470,11 @@ export default function executionOrderRoutes(fastify: FastifyInstance) {
   // START (released → started)
   app.post("/:id/start", {
     schema: {
-      description: "Start an execution order (released → started)",
-      tags: ["Execution Orders"],
+      description: "Start an order run (released → started)",
+      tags: ["Order Runs"],
       params: IdParamsSchema,
       response: {
-        200: ExecutionOrderSchema,
+        200: OrderRunSchema,
         404: ErrorResponseSchema,
         409: ErrorResponseSchema,
       },
@@ -492,13 +492,13 @@ export default function executionOrderRoutes(fastify: FastifyInstance) {
         );
       }
 
-      const existing = await erpDb.execOrder.findUnique({ where: { id } });
+      const existing = await erpDb.orderRun.findUnique({ where: { id } });
       if (!existing || existing.planOrderId !== order.id) {
         return sendError(
           reply,
           404,
           "Not Found",
-          `Execution order ${id} not found for order '${orderKey}'`,
+          `Order run ${id} not found for order '${orderKey}'`,
         );
       }
 
@@ -507,19 +507,19 @@ export default function executionOrderRoutes(fastify: FastifyInstance) {
           reply,
           409,
           "Conflict",
-          `Cannot start execution order in ${existing.status} status`,
+          `Cannot start order run in ${existing.status} status`,
         );
       }
 
       const userId = request.erpUser!.id;
       const item = await erpDb.$transaction(async (erpTx) => {
-        const updated = await erpTx.execOrder.update({
+        const updated = await erpTx.orderRun.update({
           where: { id },
           data: { status: "started", updatedById: userId },
         });
         await writeAuditEntry(
           erpTx,
-          "ExecOrder",
+          "OrderRun",
           id,
           "start",
           "status",
@@ -537,11 +537,11 @@ export default function executionOrderRoutes(fastify: FastifyInstance) {
   // CLOSE (started → closed)
   app.post("/:id/close", {
     schema: {
-      description: "Close an execution order (started → closed)",
-      tags: ["Execution Orders"],
+      description: "Close an order run (started → closed)",
+      tags: ["Order Runs"],
       params: IdParamsSchema,
       response: {
-        200: ExecutionOrderSchema,
+        200: OrderRunSchema,
         404: ErrorResponseSchema,
         409: ErrorResponseSchema,
       },
@@ -559,13 +559,13 @@ export default function executionOrderRoutes(fastify: FastifyInstance) {
         );
       }
 
-      const existing = await erpDb.execOrder.findUnique({ where: { id } });
+      const existing = await erpDb.orderRun.findUnique({ where: { id } });
       if (!existing || existing.planOrderId !== order.id) {
         return sendError(
           reply,
           404,
           "Not Found",
-          `Execution order ${id} not found for order '${orderKey}'`,
+          `Order run ${id} not found for order '${orderKey}'`,
         );
       }
 
@@ -574,19 +574,19 @@ export default function executionOrderRoutes(fastify: FastifyInstance) {
           reply,
           409,
           "Conflict",
-          `Cannot close execution order in ${existing.status} status`,
+          `Cannot close order run in ${existing.status} status`,
         );
       }
 
       const userId = request.erpUser!.id;
       const item = await erpDb.$transaction(async (erpTx) => {
-        const updated = await erpTx.execOrder.update({
+        const updated = await erpTx.orderRun.update({
           where: { id },
           data: { status: "closed", updatedById: userId },
         });
         await writeAuditEntry(
           erpTx,
-          "ExecOrder",
+          "OrderRun",
           id,
           "close",
           "status",
@@ -604,11 +604,11 @@ export default function executionOrderRoutes(fastify: FastifyInstance) {
   // CANCEL (released/started → cancelled)
   app.post("/:id/cancel", {
     schema: {
-      description: "Cancel an execution order (released/started → cancelled)",
-      tags: ["Execution Orders"],
+      description: "Cancel an order run (released/started → cancelled)",
+      tags: ["Order Runs"],
       params: IdParamsSchema,
       response: {
-        200: ExecutionOrderSchema,
+        200: OrderRunSchema,
         404: ErrorResponseSchema,
         409: ErrorResponseSchema,
       },
@@ -626,13 +626,13 @@ export default function executionOrderRoutes(fastify: FastifyInstance) {
         );
       }
 
-      const existing = await erpDb.execOrder.findUnique({ where: { id } });
+      const existing = await erpDb.orderRun.findUnique({ where: { id } });
       if (!existing || existing.planOrderId !== order.id) {
         return sendError(
           reply,
           404,
           "Not Found",
-          `Execution order ${id} not found for order '${orderKey}'`,
+          `Order run ${id} not found for order '${orderKey}'`,
         );
       }
 
@@ -641,19 +641,19 @@ export default function executionOrderRoutes(fastify: FastifyInstance) {
           reply,
           409,
           "Conflict",
-          `Cannot cancel execution order in ${existing.status} status`,
+          `Cannot cancel order run in ${existing.status} status`,
         );
       }
 
       const userId = request.erpUser!.id;
       const item = await erpDb.$transaction(async (erpTx) => {
-        const updated = await erpTx.execOrder.update({
+        const updated = await erpTx.orderRun.update({
           where: { id },
           data: { status: "cancelled", updatedById: userId },
         });
         await writeAuditEntry(
           erpTx,
-          "ExecOrder",
+          "OrderRun",
           id,
           "cancel",
           "status",

@@ -34,7 +34,7 @@ import { ERP_DB_VERSION, erpDbPath } from "./dbConfig.js";
 import { initErpDb } from "./erpDb.js";
 import auditRoutes from "./routes/audit.js";
 import authRoutes from "./routes/auth.js";
-import executionOrderRoutes from "./routes/execution-orders.js";
+import orderRunRoutes from "./routes/order-runs.js";
 import planningOrderRevisionRoutes from "./routes/planning-order-revisions.js";
 import planningOrderRoutes from "./routes/planning-orders.js";
 import rootRoute from "./routes/root.js";
@@ -102,7 +102,7 @@ export const erpPlugin: FastifyPluginAsync = async (fastify) => {
   fastify.register(planningOrderRevisionRoutes, {
     prefix: "/api/erp/orders/:orderKey/revs",
   });
-  fastify.register(executionOrderRoutes, {
+  fastify.register(orderRunRoutes, {
     prefix: "/api/erp/orders/:orderKey/runs",
   });
   fastify.register(schemaRoutes, { prefix: "/api/erp/schemas" });

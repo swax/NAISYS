@@ -83,7 +83,7 @@ function revisionItemActions(
         href: `${API_PREFIX}/orders/${orderKey}/runs`,
         method: "POST",
         title: "Cut Order",
-        schema: `${API_PREFIX}/schemas/CreateExecutionOrder`,
+        schema: `${API_PREFIX}/schemas/CreateOrderRun`,
       },
       {
         rel: "obsolete",
@@ -403,15 +403,15 @@ export default function planningOrderRevisionRoutes(fastify: FastifyInstance) {
         );
       }
 
-      const execOrderCount = await erpDb.execOrder.count({
+      const orderRunCount = await erpDb.orderRun.count({
         where: { planOrderRevId: existing.id },
       });
-      if (execOrderCount > 0) {
+      if (orderRunCount > 0) {
         return sendError(
           reply,
           409,
           "Conflict",
-          "Cannot delete revision with existing execution orders.",
+          "Cannot delete revision with existing order runs.",
         );
       }
 

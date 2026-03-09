@@ -8,9 +8,9 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router";
 
 import { AppLayout } from "./components/AppLayout";
 import { AuthProvider, useAuth } from "./lib/AuthContext";
-import { ExecutionOrderCreate } from "./pages/ExecutionOrderCreate";
-import { ExecutionOrderDetail } from "./pages/ExecutionOrderDetail";
-import { ExecutionOrderList } from "./pages/ExecutionOrderList";
+import { OrderRunCreate } from "./pages/OrderRunCreate";
+import { OrderRunDetail } from "./pages/OrderRunDetail";
+import { OrderRunList } from "./pages/OrderRunList";
 import { LoginPage } from "./pages/LoginPage";
 import { PlanningOrderCreate } from "./pages/PlanningOrderCreate";
 import { PlanningOrderDetail } from "./pages/PlanningOrderDetail";
@@ -54,15 +54,15 @@ const AppContent: React.FC = () => {
         />
         <Route
           path="/orders/:orderKey/runs"
-          element={<ExecutionOrderList />}
+          element={<OrderRunList />}
         />
         <Route
           path="/orders/:orderKey/runs/new"
-          element={<ExecutionOrderCreate />}
+          element={<OrderRunCreate />}
         />
         <Route
           path="/orders/:orderKey/runs/:id"
-          element={<ExecutionOrderDetail />}
+          element={<OrderRunDetail />}
         />
       </Route>
     </Routes>

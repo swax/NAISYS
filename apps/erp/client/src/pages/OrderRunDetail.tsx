@@ -12,13 +12,13 @@ import {
 } from "@mantine/core";
 import type {
   AuditListResponse,
-  ExecutionOrder,
-  UpdateExecutionOrder,
+  OrderRun,
+  UpdateOrderRun,
 } from "@naisys-erp/shared";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 
-import { ExecutionOrderForm } from "../components/ExecutionOrderForm";
+import { OrderRunForm } from "../components/OrderRunForm";
 import { api, showErrorNotification } from "../lib/api";
 import { hasAction } from "../lib/hateoas";
 
@@ -36,10 +36,10 @@ const PRIORITY_COLORS: Record<string, string> = {
   critical: "red",
 };
 
-export const ExecutionOrderDetail: React.FC = () => {
+export const OrderRunDetail: React.FC = () => {
   const { orderKey, id } = useParams<{ orderKey: string; id: string }>();
   const navigate = useNavigate();
-  const [item, setItem] = useState<ExecutionOrder | null>(null);
+  const [item, setItem] = useState<OrderRun | null>(null);
   const [auditEntries, setAuditEntries] = useState<AuditListResponse["items"]>(
     [],
   );
@@ -51,8 +51,8 @@ export const ExecutionOrderDetail: React.FC = () => {
     setLoading(true);
     try {
       const [result, audit] = await Promise.all([
-        api.get<ExecutionOrder>(`orders/${orderKey}/runs/${id}`),
-        api.get<AuditListResponse>(`audit?entityType=ExecOrder&entityId=${id}`),
+        api.get<OrderRun>(`orders/${orderKey}/runs/${id}`),
+        api.get<AuditListResponse>(`audit?entityType=OrderRun&entityId=${id}`),
       ]);
       setItem(result);
       setAuditEntries(audit.items);
@@ -67,7 +67,7 @@ export const ExecutionOrderDetail: React.FC = () => {
     void fetchItem();
   }, [fetchItem]);
 
-  const handleUpdate = async (data: UpdateExecutionOrder) => {
+  const handleUpdate = async (data: UpdateOrderRun) => {
     if (!id) return;
     await api.put(`orders/${orderKey}/runs/${id}`, data);
     setEditing(false);
@@ -75,7 +75,7 @@ export const ExecutionOrderDetail: React.FC = () => {
   };
 
   const handleDelete = async () => {
-    if (!id || !confirm("Delete this execution order?")) return;
+    if (!id || !confirm("Delete this order run?")) return;
     try {
       await api.delete(`orders/${orderKey}/runs/${id}`);
       void navigate(`/orders/${orderKey}/runs`);
@@ -105,7 +105,7 @@ export const ExecutionOrderDetail: React.FC = () => {
   };
 
   const handleCancel = async () => {
-    if (!id || !confirm("Cancel this execution order?")) return;
+    if (!id || !confirm("Cancel this order run?")) return;
     try {
       await api.post(`orders/${orderKey}/runs/${id}/cancel`, {});
       await fetchItem();
@@ -127,7 +127,7 @@ export const ExecutionOrderDetail: React.FC = () => {
   if (!item) {
     return (
       <Container size="md" py="xl">
-        <Text>Execution order not found.</Text>
+        <Text>Order run not found.</Text>
       </Container>
     );
   }
@@ -136,9 +136,9 @@ export const ExecutionOrderDetail: React.FC = () => {
     return (
       <Container size="md" py="xl">
         <Title order={2} mb="lg">
-          Edit Execution Order
+          Edit Order Run
         </Title>
-        <ExecutionOrderForm<true>
+        <OrderRunForm<true>
           initialData={{
             priority: item.priority,
             scheduledStartAt: item.scheduledStartAt
@@ -162,12 +162,12 @@ export const ExecutionOrderDetail: React.FC = () => {
     <Container size="md" py="xl">
       <Group justify="space-between" mb="lg">
         <Group>
-          <Title order={2}>Execution Order #{item.orderNo}</Title>
+          <Title order={2}>Order Run #{item.orderNo}</Title>
           <Badge
             color={STATUS_COLORS[item.status] ?? "gray"}
             variant="light"
             size="lg"
-            data-testid="exec-order-status"
+            data-testid="order-run-status"
           >
             {item.status}
           </Badge>
@@ -191,7 +191,7 @@ export const ExecutionOrderDetail: React.FC = () => {
             <Button
               color="green"
               onClick={handleStart}
-              data-testid="exec-order-start"
+              data-testid="order-run-start"
             >
               Start
             </Button>
@@ -205,7 +205,7 @@ export const ExecutionOrderDetail: React.FC = () => {
             <Button
               color="green"
               onClick={handleClose}
-              data-testid="exec-order-close"
+              data-testid="order-run-close"
             >
               Close
             </Button>

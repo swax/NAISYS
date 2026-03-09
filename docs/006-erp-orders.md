@@ -95,7 +95,7 @@ From this single response, an agent knows: what the API is, where to find the fu
 
 ## Data Model
 
-The order system uses a three-tier hierarchy: Planning Orders define what to build, Revisions capture the approval workflow, and Execution Orders (Runs) track the actual work.
+The order system uses a three-tier hierarchy: Planning Orders define what to build, Revisions capture the approval workflow, and Order Runs track the actual work.
 
 ### Planning Orders
 
@@ -130,7 +130,7 @@ Versioned snapshots of a planning order that go through an approval workflow.
 
 **Unique constraint**: `(plan_order_id, rev_no)` - revision numbers are sequential per order.
 
-### Execution Orders (Runs)
+### Order Runs
 
 Concrete work items created from an approved revision. Track the actual execution of planned work. Nested under planning orders as "runs".
 
@@ -156,8 +156,8 @@ Concrete work items created from an approved revision. Track the actual executio
 Deletes are guarded to prevent orphaned data:
 
 - A **Planning Order** cannot be deleted if it has any revisions (409 Conflict). Archive it instead.
-- A **Revision** can only be deleted while in `draft` status, and only if it has no execution orders referencing it (409 Conflict).
-- An **Execution Order** can only be deleted while in `released` status.
+- A **Revision** can only be deleted while in `draft` status, and only if it has no order runs referencing it (409 Conflict).
+- An **Order Run** can only be deleted while in `released` status.
 
 ## State Machines
 
@@ -168,10 +168,10 @@ draft ──[approve]──> approved ──[obsolete]──> obsolete
 ```
 
 - **Draft**: Can be updated, approved, or deleted
-- **Approved**: Read-only; can be marked obsolete; can be used to create Execution Orders (runs)
+- **Approved**: Read-only; can be marked obsolete; can be used to create Order Runs (runs)
 - **Obsolete**: Terminal state, no further actions
 
-### Execution Orders (Runs)
+### Order Runs
 
 ```
 released ──[start]──> started ──[close]──> closed
@@ -195,10 +195,10 @@ The `_actions` array in each response is **state-dependent**. The server evaluat
 | Revision  | draft     | update, approve, delete       |
 | Revision  | approved  | cut-order, obsolete           |
 | Revision  | obsolete  | (none)                        |
-| ExecOrder | released  | update, start, cancel, delete |
-| ExecOrder | started   | update, close, cancel         |
-| ExecOrder | closed    | (none)                        |
-| ExecOrder | cancelled | (none)                        |
+| OrderRun | released  | update, start, cancel, delete |
+| OrderRun | started   | update, close, cancel         |
+| OrderRun | closed    | (none)                        |
+| OrderRun | cancelled | (none)                        |
 
 Each action includes a `schema` URL (e.g., `/api/erp/schemas/UpdatePlanningOrder`) that the agent can fetch to get the JSON Schema for the request body. Some actions include a `body` template with required fields pre-filled (e.g., a status transition action that requires `{ status: "archived" }`).
 
@@ -226,7 +226,7 @@ Each action includes a `schema` URL (e.g., `/api/erp/schemas/UpdatePlanningOrder
 | POST   | `.../revs/:revNo/approve`                                 | Draft -> Approved    |
 | POST   | `.../revs/:revNo/obsolete`                                | Approved -> Obsolete |
 
-### Execution Orders (Runs)
+### Order Runs
 
 | Method | Path                                              | Description               |
 | ------ | ------------------------------------------------- | ------------------------- |
@@ -246,7 +246,7 @@ Each action includes a `schema` URL (e.g., `/api/erp/schemas/UpdatePlanningOrder
 | GET    | `/api/erp/schemas/`            | List all available schema names |
 | GET    | `/api/erp/schemas/:schemaName` | Get a single JSON Schema        |
 
-Available schemas: `CreatePlanningOrder`, `UpdatePlanningOrder`, `CreatePlanningOrderRevision`, `UpdatePlanningOrderRevision`, `CreateExecutionOrder`, `UpdateExecutionOrder`.
+Available schemas: `CreatePlanningOrder`, `UpdatePlanningOrder`, `CreatePlanningOrderRevision`, `UpdatePlanningOrderRevision`, `CreateOrderRun`, `UpdateOrderRun`.
 
 ### Query Parameters
 
@@ -254,7 +254,7 @@ All list endpoints support `page` (default 1) and `pageSize` (default 20, max 10
 
 - Planning Orders: `status` (active/archived), `search` (name/key)
 - Revisions: `status` (draft/approved/obsolete)
-- Execution Orders (Runs): `status`, `priority`, `search`
+- Order Runs: `status`, `priority`, `search`
 
 ## Example AI Agent Workflow
 
@@ -286,13 +286,13 @@ This illustrates how an agent with zero prior knowledge can operate the system:
 
 8. Follow "cut-order" action from the approved revision
    -> { href: "/api/erp/orders/widget-assembly/runs", method: "POST",
-        schema: "/api/erp/schemas/CreateExecutionOrder" }
+        schema: "/api/erp/schemas/CreateOrderRun" }
 
-9. GET /api/erp/schemas/CreateExecutionOrder
+9. GET /api/erp/schemas/CreateOrderRun
    -> Learn required fields: planOrderRevId, etc.
 
 10. POST /api/erp/orders/widget-assembly/runs { planOrderRevId: 1, priority: "high", ... }
-    -> Response: execution order in "released" status, _actions: [update, start, cancel, delete]
+    -> Response: order run in "released" status, _actions: [update, start, cancel, delete]
 
 11. POST /api/erp/orders/widget-assembly/runs/1/start  (from _actions)
     -> Response: "started" status, _actions: [update, close, cancel]
@@ -322,7 +322,7 @@ Playwright E2E tests cover the API happy paths:
 
 - **Planning Orders**: CRUD operations, status transitions
 - **Planning Order Revisions**: Full lifecycle (draft -> approved -> obsolete), auto-incrementing rev_no, status filtering, referential integrity (409 on delete with children)
-- **Execution Orders (Runs)**: Full lifecycle (released -> started -> closed, released -> cancelled), priority filtering, state transition validation (409 on invalid transitions), referential integrity guards
+- **Order Runs**: Full lifecycle (released -> started -> closed, released -> cancelled), priority filtering, state transition validation (409 on invalid transitions), referential integrity guards
 
 ## Future Considerations
 

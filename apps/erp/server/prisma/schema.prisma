@@ -21,7 +21,7 @@ model PlanningOrder {
   createdBy  User                    @relation("planOrderCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
   updatedBy  User                    @relation("planOrderUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
   revisions  PlanningOrderRevision[]
-  execOrders ExecOrder[]
+  orderRuns OrderRun[]
 
   @@index([status]) // LIST filter in planning-orders.ts
   @@index([createdAt]) // LIST orderBy in planning-orders.ts
@@ -42,7 +42,7 @@ model PlanningOrderRevision {
   createdBy  User          @relation("planOrderRevCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
   updatedBy  User          @relation("planOrderRevUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
   order      PlanningOrder @relation(fields: [planOrderId], references: [id], onDelete: Restrict)
-  execOrders ExecOrder[]
+  orderRuns  OrderRun[]
   operations PlanOperation[]
 
   @@unique([planOrderId, revNo])
@@ -68,7 +68,7 @@ model PlanOperation {
   @@map("plan_operations")
 }
 
-model ExecOrder {
+model OrderRun {
   id               Int       @id @default(autoincrement())
   orderNo          Int       @map("order_no")
   planOrderId      Int       @map("plan_order_id")
@@ -85,17 +85,17 @@ model ExecOrder {
   updatedAt        DateTime  @updatedAt @map("updated_at")
   updatedById      Int       @map("updated_by")
 
-  createdBy    User                  @relation("execOrderCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
-  updatedBy    User                  @relation("execOrderUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+  createdBy    User                  @relation("orderRunCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy    User                  @relation("orderRunUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
   planOrder    PlanningOrder         @relation(fields: [planOrderId], references: [id], onDelete: Restrict)
   planOrderRev PlanningOrderRevision @relation(fields: [planOrderRevId], references: [id], onDelete: Restrict)
 
   @@unique([planOrderId, orderNo])
-  @@index([status]) // LIST filter in execution-orders.ts
-  @@index([priority]) // LIST filter in execution-orders.ts
-  @@index([createdAt]) // LIST orderBy in execution-orders.ts
+  @@index([status]) // LIST filter in order-runs.ts
+  @@index([priority]) // LIST filter in order-runs.ts
+  @@index([createdAt]) // LIST orderBy in order-runs.ts
   @@index([planOrderRevId]) // FK lookup for planOrderRev relation
-  @@map("exec_orders")
+  @@map("order_runs")
 }
 
 model User {
@@ -113,8 +113,8 @@ model User {
   planOrdersUpdated    PlanningOrder[]         @relation("planOrderUpdatedBy")
   planOrderRevsCreated PlanningOrderRevision[] @relation("planOrderRevCreatedBy")
   planOrderRevsUpdated PlanningOrderRevision[] @relation("planOrderRevUpdatedBy")
-  execOrdersCreated    ExecOrder[]             @relation("execOrderCreatedBy")
-  execOrdersUpdated    ExecOrder[]             @relation("execOrderUpdatedBy")
+  orderRunsCreated     OrderRun[]              @relation("orderRunCreatedBy")
+  orderRunsUpdated     OrderRun[]              @relation("orderRunUpdatedBy")
   planOpsCreated       PlanOperation[]         @relation("planOpCreatedBy")
   planOpsUpdated       PlanOperation[]         @relation("planOpUpdatedBy")
   auditLogs            AuditLog[]

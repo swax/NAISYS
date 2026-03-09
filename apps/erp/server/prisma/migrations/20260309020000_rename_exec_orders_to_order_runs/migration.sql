@@ -1,0 +1,13 @@
+ALTER TABLE "exec_orders" RENAME TO "order_runs";
+DROP INDEX "exec_orders_status_idx";
+DROP INDEX "exec_orders_priority_idx";
+DROP INDEX "exec_orders_created_at_idx";
+DROP INDEX "exec_orders_plan_order_rev_id_idx";
+DROP INDEX "exec_orders_plan_order_id_order_no_key";
+CREATE INDEX "order_runs_status_idx" ON "order_runs"("status");
+CREATE INDEX "order_runs_priority_idx" ON "order_runs"("priority");
+CREATE INDEX "order_runs_created_at_idx" ON "order_runs"("created_at");
+CREATE INDEX "order_runs_plan_order_rev_id_idx" ON "order_runs"("plan_order_rev_id");
+CREATE UNIQUE INDEX "order_runs_plan_order_id_order_no_key" ON "order_runs"("plan_order_id", "order_no");
+UPDATE "audit_log" SET "entity_type" = 'OrderRun' WHERE "entity_type" = 'ExecOrder';
+UPDATE "schema_version" SET "version" = 6, "updated" = datetime('now');
