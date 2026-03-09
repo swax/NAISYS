@@ -15,7 +15,7 @@ import { LoginPage } from "./pages/LoginPage";
 import { PlanningOrderCreate } from "./pages/PlanningOrderCreate";
 import { PlanningOrderDetail } from "./pages/PlanningOrderDetail";
 import { PlanningOrderList } from "./pages/PlanningOrderList";
-import { PlanningOrderRevisionDetail } from "./pages/PlanningOrderRevisionDetail";
+import { OrderRevisionDetail } from "./pages/OrderRevisionDetail";
 
 const AppContent: React.FC = () => {
   const [publicRead, setPublicRead] = React.useState(false);
@@ -50,7 +50,7 @@ const AppContent: React.FC = () => {
         <Route path="/orders/:key" element={<PlanningOrderDetail />} />
         <Route
           path="/orders/:orderKey/revs/:revNo"
-          element={<PlanningOrderRevisionDetail />}
+          element={<OrderRevisionDetail />}
         />
         <Route
           path="/orders/:orderKey/runs"

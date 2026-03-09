@@ -138,7 +138,7 @@ function formatItem(orderKey: string, item: OrderRunModel) {
     orderNo: item.orderNo,
     planOrderId: item.planOrderId,
     planOrderKey: orderKey,
-    planOrderRevId: item.planOrderRevId,
+    orderRevId: item.orderRevId,
     status: item.status as OrderRunStatus,
     priority: item.priority as OrderRunPriority,
     scheduledStartAt: formatDate(item.scheduledStartAt),
@@ -243,7 +243,7 @@ export default function orderRunRoutes(fastify: FastifyInstance) {
     handler: async (request, reply) => {
       const { orderKey } = request.params;
       const {
-        planOrderRevId,
+        orderRevId,
         priority,
         scheduledStartAt,
         dueAt,
@@ -265,15 +265,15 @@ export default function orderRunRoutes(fastify: FastifyInstance) {
       const planOrderId = order.id;
 
       // Validate revision exists and belongs to the planning order
-      const planOrderRev = await erpDb.planningOrderRevision.findFirst({
-        where: { id: planOrderRevId, planOrderId },
+      const orderRev = await erpDb.orderRevision.findFirst({
+        where: { id: orderRevId, planOrderId },
       });
-      if (!planOrderRev) {
+      if (!orderRev) {
         return sendError(
           reply,
           404,
           "Not Found",
-          `Planning order revision ${planOrderRevId} not found for order '${orderKey}'`,
+          `Order revision ${orderRevId} not found for order '${orderKey}'`,
         );
       }
 
@@ -290,7 +290,7 @@ export default function orderRunRoutes(fastify: FastifyInstance) {
           data: {
             orderNo: nextOrderNo,
             planOrderId,
-            planOrderRevId,
+            orderRevId,
             priority,
             scheduledStartAt: scheduledStartAt
               ? new Date(scheduledStartAt)

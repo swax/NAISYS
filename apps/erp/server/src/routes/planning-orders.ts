@@ -300,7 +300,7 @@ export default function planningOrderRoutes(fastify: FastifyInstance) {
         );
       }
 
-      const revisionCount = await erpDb.planningOrderRevision.count({
+      const revisionCount = await erpDb.orderRevision.count({
         where: { planOrderId: existing.id },
       });
       if (revisionCount > 0) {

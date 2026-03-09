@@ -20,7 +20,7 @@ model PlanningOrder {
 
   createdBy  User                    @relation("planOrderCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
   updatedBy  User                    @relation("planOrderUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
-  revisions  PlanningOrderRevision[]
+  revisions  OrderRevision[]
   orderRuns OrderRun[]
 
   @@index([status]) // LIST filter in planning-orders.ts
@@ -28,7 +28,7 @@ model PlanningOrder {
   @@map("plan_orders")
 }
 
-model PlanningOrderRevision {
+model OrderRevision {
   id            Int       @id @default(autoincrement())
   planOrderId   Int       @map("plan_order_id")
   revNo         Int       @map("rev_no")
@@ -39,19 +39,19 @@ model PlanningOrderRevision {
   createdById   Int       @map("created_by")
   updatedAt     DateTime  @updatedAt @map("updated_at")
   updatedById   Int       @map("updated_by")
-  createdBy  User          @relation("planOrderRevCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
-  updatedBy  User          @relation("planOrderRevUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+  createdBy  User          @relation("orderRevCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy  User          @relation("orderRevUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
   order      PlanningOrder @relation(fields: [planOrderId], references: [id], onDelete: Restrict)
   orderRuns  OrderRun[]
   operations PlanOperation[]
 
   @@unique([planOrderId, revNo])
-  @@map("plan_order_revs")
+  @@map("order_revisions")
 }
 
 model PlanOperation {
   id             Int      @id @default(autoincrement())
-  planOrderRevId Int      @map("plan_order_rev_id")
+  orderRevId     Int      @map("order_rev_id")
   seqNo          Int      @map("seq_no")
   title          String
   description    String   @default("")
@@ -60,11 +60,11 @@ model PlanOperation {
   updatedAt      DateTime @updatedAt @map("updated_at")
   updatedById    Int      @map("updated_by")
 
-  createdBy    User                  @relation("planOpCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
-  updatedBy    User                  @relation("planOpUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
-  planOrderRev PlanningOrderRevision @relation(fields: [planOrderRevId], references: [id], onDelete: Restrict)
+  createdBy    User           @relation("planOpCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy    User           @relation("planOpUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+  orderRev     OrderRevision  @relation(fields: [orderRevId], references: [id], onDelete: Restrict)
 
-  @@unique([planOrderRevId, seqNo])
+  @@unique([orderRevId, seqNo])
   @@map("plan_operations")
 }
 
@@ -72,7 +72,7 @@ model OrderRun {
   id               Int       @id @default(autoincrement())
   orderNo          Int       @map("order_no")
   planOrderId      Int       @map("plan_order_id")
-  planOrderRevId   Int       @map("plan_order_rev_id")
+  orderRevId       Int       @map("order_rev_id")
   status           String    @default("released")
   priority         String    @default("medium")
   scheduledStartAt DateTime? @map("scheduled_start_at")
@@ -88,13 +88,13 @@ model OrderRun {
   createdBy    User                  @relation("orderRunCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
   updatedBy    User                  @relation("orderRunUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
   planOrder    PlanningOrder         @relation(fields: [planOrderId], references: [id], onDelete: Restrict)
-  planOrderRev PlanningOrderRevision @relation(fields: [planOrderRevId], references: [id], onDelete: Restrict)
+  orderRev     OrderRevision         @relation(fields: [orderRevId], references: [id], onDelete: Restrict)
 
   @@unique([planOrderId, orderNo])
   @@index([status]) // LIST filter in order-runs.ts
   @@index([priority]) // LIST filter in order-runs.ts
   @@index([createdAt]) // LIST orderBy in order-runs.ts
-  @@index([planOrderRevId]) // FK lookup for planOrderRev relation
+  @@index([orderRevId]) // FK lookup for orderRev relation
   @@map("order_runs")
 }
 
@@ -111,8 +111,8 @@ model User {
 
   planOrdersCreated    PlanningOrder[]         @relation("planOrderCreatedBy")
   planOrdersUpdated    PlanningOrder[]         @relation("planOrderUpdatedBy")
-  planOrderRevsCreated PlanningOrderRevision[] @relation("planOrderRevCreatedBy")
-  planOrderRevsUpdated PlanningOrderRevision[] @relation("planOrderRevUpdatedBy")
+  orderRevsCreated     OrderRevision[]         @relation("orderRevCreatedBy")
+  orderRevsUpdated     OrderRevision[]         @relation("orderRevUpdatedBy")
   orderRunsCreated     OrderRun[]              @relation("orderRunCreatedBy")
   orderRunsUpdated     OrderRun[]              @relation("orderRunUpdatedBy")
   planOpsCreated       PlanOperation[]         @relation("planOpCreatedBy")

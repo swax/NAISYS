@@ -24,7 +24,7 @@ export const OrderRunSchema = z.object({
   orderNo: z.number(),
   planOrderId: z.number(),
   planOrderKey: z.string(),
-  planOrderRevId: z.number(),
+  orderRevId: z.number(),
   status: OrderRunStatusEnum,
   priority: OrderRunPriorityEnum,
   scheduledStartAt: z.iso.datetime().nullable(),
@@ -45,7 +45,7 @@ export type OrderRun = z.infer<typeof OrderRunSchema>;
 // Input for creating an order run
 export const CreateOrderRunSchema = z
   .object({
-    planOrderRevId: z.number().int().min(1),
+    orderRevId: z.number().int().min(1),
     priority: OrderRunPriorityEnum.optional().default("medium"),
     scheduledStartAt: z.iso.datetime().optional(),
     dueAt: z.iso.datetime().optional(),

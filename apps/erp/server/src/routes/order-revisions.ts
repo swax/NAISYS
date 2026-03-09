@@ -1,12 +1,12 @@
 import type { HateoasAction, HateoasLink } from "@naisys/common";
 import {
-  CreatePlanningOrderRevisionSchema,
+  CreateOrderRevisionSchema,
   ErrorResponseSchema,
-  PlanningOrderRevisionListQuerySchema,
-  PlanningOrderRevisionListResponseSchema,
-  PlanningOrderRevisionSchema,
+  OrderRevisionListQuerySchema,
+  OrderRevisionListResponseSchema,
+  OrderRevisionSchema,
   type RevisionStatus,
-  UpdatePlanningOrderRevisionSchema,
+  UpdateOrderRevisionSchema,
 } from "@naisys-erp/shared";
 import { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
@@ -15,7 +15,7 @@ import { z } from "zod/v4";
 import { writeAuditEntry } from "../audit.js";
 import erpDb from "../erpDb.js";
 import { sendError } from "../error-handler.js";
-import type { PlanningOrderRevisionModel } from "../generated/prisma/models/PlanningOrderRevision.js";
+import type { OrderRevisionModel } from "../generated/prisma/models/OrderRevision.js";
 import {
   API_PREFIX,
   paginationLinks,
@@ -41,7 +41,7 @@ function revisionItemLinks(
       href: `${API_PREFIX}/${parentResource}/${orderKey}`,
       title: "Planning Order",
     },
-    schemaLink("PlanningOrderRevision"),
+    schemaLink("OrderRevision"),
   ];
 }
 
@@ -61,7 +61,7 @@ function revisionItemActions(
         href,
         method: "PUT",
         title: "Update",
-        schema: `${API_PREFIX}/schemas/UpdatePlanningOrderRevision`,
+        schema: `${API_PREFIX}/schemas/UpdateOrderRevision`,
       },
       {
         rel: "approve",
@@ -109,7 +109,7 @@ const RevNoParamsSchema = z.object({
   revNo: z.coerce.number().int(),
 });
 
-function formatItem(orderKey: string, item: PlanningOrderRevisionModel) {
+function formatItem(orderKey: string, item: OrderRevisionModel) {
   return {
     id: item.id,
     planOrderId: item.planOrderId,
@@ -131,7 +131,7 @@ function formatItem(orderKey: string, item: PlanningOrderRevisionModel) {
   };
 }
 
-function formatListItem(orderKey: string, item: PlanningOrderRevisionModel) {
+function formatListItem(orderKey: string, item: OrderRevisionModel) {
   return {
     ...formatItem(orderKey, item),
     _links: [selfLink(`/${PARENT_RESOURCE}/${orderKey}/revs/${item.revNo}`)],
@@ -145,23 +145,23 @@ async function resolveOrder(orderKey: string) {
 }
 
 async function findRevision(planOrderId: number, revNo: number) {
-  return erpDb.planningOrderRevision.findFirst({
+  return erpDb.orderRevision.findFirst({
     where: { planOrderId, revNo },
   });
 }
 
-export default function planningOrderRevisionRoutes(fastify: FastifyInstance) {
+export default function orderRevisionRoutes(fastify: FastifyInstance) {
   const app = fastify.withTypeProvider<ZodTypeProvider>();
 
   // LIST
   app.get("/", {
     schema: {
       description: "List revisions for a planning order",
-      tags: ["Planning Order Revisions"],
+      tags: ["Order Revisions"],
       params: OrderKeyParamsSchema,
-      querystring: PlanningOrderRevisionListQuerySchema,
+      querystring: OrderRevisionListQuerySchema,
       response: {
-        200: PlanningOrderRevisionListResponseSchema,
+        200: OrderRevisionListResponseSchema,
         404: ErrorResponseSchema,
       },
     },
@@ -183,13 +183,13 @@ export default function planningOrderRevisionRoutes(fastify: FastifyInstance) {
       if (status) where.status = status;
 
       const [items, total] = await Promise.all([
-        erpDb.planningOrderRevision.findMany({
+        erpDb.orderRevision.findMany({
           where,
           skip: (page - 1) * pageSize,
           take: pageSize,
           orderBy: { revNo: "desc" },
         }),
-        erpDb.planningOrderRevision.count({ where }),
+        erpDb.orderRevision.count({ where }),
       ]);
 
       return {
@@ -212,11 +212,11 @@ export default function planningOrderRevisionRoutes(fastify: FastifyInstance) {
   app.post("/", {
     schema: {
       description: "Create a new revision for a planning order",
-      tags: ["Planning Order Revisions"],
+      tags: ["Order Revisions"],
       params: OrderKeyParamsSchema,
-      body: CreatePlanningOrderRevisionSchema,
+      body: CreateOrderRevisionSchema,
       response: {
-        201: PlanningOrderRevisionSchema,
+        201: OrderRevisionSchema,
         404: ErrorResponseSchema,
       },
     },
@@ -237,14 +237,14 @@ export default function planningOrderRevisionRoutes(fastify: FastifyInstance) {
 
       // Auto-increment revNo inside a transaction to prevent race conditions
       const item = await erpDb.$transaction(async (erpTx) => {
-        const maxRev = await erpTx.planningOrderRevision.findFirst({
+        const maxRev = await erpTx.orderRevision.findFirst({
           where: { planOrderId: order.id },
           orderBy: { revNo: "desc" },
           select: { revNo: true },
         });
         const nextRevNo = (maxRev?.revNo ?? 0) + 1;
 
-        return erpTx.planningOrderRevision.create({
+        return erpTx.orderRevision.create({
           data: {
             planOrderId: order.id,
             revNo: nextRevNo,
@@ -265,10 +265,10 @@ export default function planningOrderRevisionRoutes(fastify: FastifyInstance) {
   app.get("/:revNo", {
     schema: {
       description: "Get a single revision by revision number",
-      tags: ["Planning Order Revisions"],
+      tags: ["Order Revisions"],
       params: RevNoParamsSchema,
       response: {
-        200: PlanningOrderRevisionSchema,
+        200: OrderRevisionSchema,
         404: ErrorResponseSchema,
       },
     },
@@ -303,11 +303,11 @@ export default function planningOrderRevisionRoutes(fastify: FastifyInstance) {
   app.put("/:revNo", {
     schema: {
       description: "Update a revision (draft status only)",
-      tags: ["Planning Order Revisions"],
+      tags: ["Order Revisions"],
       params: RevNoParamsSchema,
-      body: UpdatePlanningOrderRevisionSchema,
+      body: UpdateOrderRevisionSchema,
       response: {
-        200: PlanningOrderRevisionSchema,
+        200: OrderRevisionSchema,
         404: ErrorResponseSchema,
         409: ErrorResponseSchema,
       },
@@ -346,7 +346,7 @@ export default function planningOrderRevisionRoutes(fastify: FastifyInstance) {
         );
       }
 
-      const item = await erpDb.planningOrderRevision.update({
+      const item = await erpDb.orderRevision.update({
         where: { id: existing.id },
         data: {
           ...(notes !== undefined ? { notes } : {}),
@@ -363,7 +363,7 @@ export default function planningOrderRevisionRoutes(fastify: FastifyInstance) {
   app.delete("/:revNo", {
     schema: {
       description: "Delete a revision (draft status only)",
-      tags: ["Planning Order Revisions"],
+      tags: ["Order Revisions"],
       params: RevNoParamsSchema,
       response: {
         204: z.void(),
@@ -404,7 +404,7 @@ export default function planningOrderRevisionRoutes(fastify: FastifyInstance) {
       }
 
       const orderRunCount = await erpDb.orderRun.count({
-        where: { planOrderRevId: existing.id },
+        where: { orderRevId: existing.id },
       });
       if (orderRunCount > 0) {
         return sendError(
@@ -415,7 +415,7 @@ export default function planningOrderRevisionRoutes(fastify: FastifyInstance) {
         );
       }
 
-      await erpDb.planningOrderRevision.delete({ where: { id: existing.id } });
+      await erpDb.orderRevision.delete({ where: { id: existing.id } });
       reply.status(204);
     },
   });
@@ -424,10 +424,10 @@ export default function planningOrderRevisionRoutes(fastify: FastifyInstance) {
   app.post("/:revNo/approve", {
     schema: {
       description: "Approve a draft revision",
-      tags: ["Planning Order Revisions"],
+      tags: ["Order Revisions"],
       params: RevNoParamsSchema,
       response: {
-        200: PlanningOrderRevisionSchema,
+        200: OrderRevisionSchema,
         404: ErrorResponseSchema,
         409: ErrorResponseSchema,
       },
@@ -466,13 +466,13 @@ export default function planningOrderRevisionRoutes(fastify: FastifyInstance) {
 
       const userId = request.erpUser!.id;
       const item = await erpDb.$transaction(async (erpTx) => {
-        const updated = await erpTx.planningOrderRevision.update({
+        const updated = await erpTx.orderRevision.update({
           where: { id: existing.id },
           data: { status: "approved", updatedById: userId },
         });
         await writeAuditEntry(
           erpTx,
-          "PlanningOrderRevision",
+          "OrderRevision",
           existing.id,
           "approve",
           "status",
@@ -491,10 +491,10 @@ export default function planningOrderRevisionRoutes(fastify: FastifyInstance) {
   app.post("/:revNo/obsolete", {
     schema: {
       description: "Mark an approved revision as obsolete",
-      tags: ["Planning Order Revisions"],
+      tags: ["Order Revisions"],
       params: RevNoParamsSchema,
       response: {
-        200: PlanningOrderRevisionSchema,
+        200: OrderRevisionSchema,
         404: ErrorResponseSchema,
         409: ErrorResponseSchema,
       },
@@ -533,13 +533,13 @@ export default function planningOrderRevisionRoutes(fastify: FastifyInstance) {
 
       const userId = request.erpUser!.id;
       const item = await erpDb.$transaction(async (erpTx) => {
-        const updated = await erpTx.planningOrderRevision.update({
+        const updated = await erpTx.orderRevision.update({
           where: { id: existing.id },
           data: { status: "obsolete", updatedById: userId },
         });
         await writeAuditEntry(
           erpTx,
-          "PlanningOrderRevision",
+          "OrderRevision",
           existing.id,
           "obsolete",
           "status",

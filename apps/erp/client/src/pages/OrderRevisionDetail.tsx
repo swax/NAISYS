@@ -9,7 +9,7 @@ import {
   Text,
   Title,
 } from "@mantine/core";
-import type { PlanningOrderRevision } from "@naisys-erp/shared";
+import type { OrderRevision } from "@naisys-erp/shared";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 
@@ -22,17 +22,17 @@ const STATUS_COLORS: Record<string, string> = {
   obsolete: "gray",
 };
 
-export const PlanningOrderRevisionDetail: React.FC = () => {
+export const OrderRevisionDetail: React.FC = () => {
   const { orderKey, revNo } = useParams<{ orderKey: string; revNo: string }>();
   const navigate = useNavigate();
-  const [item, setItem] = useState<PlanningOrderRevision | null>(null);
+  const [item, setItem] = useState<OrderRevision | null>(null);
   const [loading, setLoading] = useState(true);
 
   const fetchItem = useCallback(async () => {
     if (!orderKey || !revNo) return;
     setLoading(true);
     try {
-      const result = await api.get<PlanningOrderRevision>(
+      const result = await api.get<OrderRevision>(
         `orders/${orderKey}/revs/${revNo}`,
       );
       setItem(result);
@@ -136,7 +136,7 @@ export const PlanningOrderRevisionDetail: React.FC = () => {
               color="teal"
               onClick={() =>
                 navigate(
-                  `/orders/${orderKey}/runs/new?planOrderRevId=${item.id}`,
+                  `/orders/${orderKey}/runs/new?orderRevId=${item.id}`,
                 )
               }
             >

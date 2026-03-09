@@ -14,7 +14,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 
 import { PlanningOrderForm } from "../components/PlanningOrderForm";
-import { PlanningOrderRevisions } from "../components/PlanningOrderRevisions";
+import { OrderRevisions } from "../components/OrderRevisions";
 import { api, showErrorNotification } from "../lib/api";
 import { hasAction } from "../lib/hateoas";
 
@@ -172,7 +172,7 @@ export const PlanningOrderDetail: React.FC = () => {
         </Stack>
       </Card>
 
-      <PlanningOrderRevisions orderKey={key!} />
+      <OrderRevisions orderKey={key!} />
     </Container>
   );
 };
