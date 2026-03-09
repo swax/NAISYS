@@ -25,12 +25,12 @@ import {
 
 function revisionItemLinks(
   parentResource: string,
-  parentId: number,
-  revisionId: number,
+  orderKey: string,
+  revNo: number,
 ): HateoasLink[] {
-  const basePath = `/${parentResource}/${parentId}/revisions`;
+  const basePath = `/${parentResource}/${orderKey}/revs`;
   return [
-    selfLink(`${basePath}/${revisionId}`),
+    selfLink(`${basePath}/${revNo}`),
     {
       rel: "collection",
       href: `${API_PREFIX}${basePath}`,
@@ -38,7 +38,7 @@ function revisionItemLinks(
     },
     {
       rel: "parent",
-      href: `${API_PREFIX}/${parentResource}/${parentId}`,
+      href: `${API_PREFIX}/${parentResource}/${orderKey}`,
       title: "Planning Order",
     },
     schemaLink("PlanningOrderRevision"),
@@ -47,11 +47,11 @@ function revisionItemLinks(
 
 function revisionItemActions(
   parentResource: string,
-  parentId: number,
-  revisionId: number,
+  orderKey: string,
+  revNo: number,
   status: string,
 ): HateoasAction[] {
-  const href = `${API_PREFIX}/${parentResource}/${parentId}/revisions/${revisionId}`;
+  const href = `${API_PREFIX}/${parentResource}/${orderKey}/revs/${revNo}`;
   const actions: HateoasAction[] = [];
 
   if (status === "draft") {
@@ -100,16 +100,16 @@ function revisionItemActions(
 
 const PARENT_RESOURCE = "planning/orders";
 
-const OrderIdParamsSchema = z.object({
-  orderId: z.coerce.number().int(),
+const OrderKeyParamsSchema = z.object({
+  orderKey: z.string(),
 });
 
-const RevisionIdParamsSchema = z.object({
-  orderId: z.coerce.number().int(),
-  revisionId: z.coerce.number().int(),
+const RevNoParamsSchema = z.object({
+  orderKey: z.string(),
+  revNo: z.coerce.number().int(),
 });
 
-function formatItem(orderId: number, item: PlanningOrderRevisionModel) {
+function formatItem(orderKey: string, item: PlanningOrderRevisionModel) {
   return {
     id: item.id,
     planOrderId: item.planOrderId,
@@ -121,28 +121,33 @@ function formatItem(orderId: number, item: PlanningOrderRevisionModel) {
     createdBy: item.createdById,
     updatedAt: item.updatedAt.toISOString(),
     updatedBy: item.updatedById,
-    _links: revisionItemLinks(PARENT_RESOURCE, orderId, item.id),
+    _links: revisionItemLinks(PARENT_RESOURCE, orderKey, item.revNo),
     _actions: revisionItemActions(
       PARENT_RESOURCE,
-      orderId,
-      item.id,
+      orderKey,
+      item.revNo,
       item.status,
     ),
   };
 }
 
-function formatListItem(orderId: number, item: PlanningOrderRevisionModel) {
+function formatListItem(orderKey: string, item: PlanningOrderRevisionModel) {
   return {
-    ...formatItem(orderId, item),
-    _links: [selfLink(`/${PARENT_RESOURCE}/${orderId}/revisions/${item.id}`)],
+    ...formatItem(orderKey, item),
+    _links: [selfLink(`/${PARENT_RESOURCE}/${orderKey}/revs/${item.revNo}`)],
   };
 }
 
-async function ensureOrderExists(orderId: number) {
-  const order = await erpDb.planningOrder.findUnique({
-    where: { id: orderId },
+async function resolveOrder(orderKey: string) {
+  return erpDb.planningOrder.findUnique({
+    where: { key: orderKey },
   });
-  return order;
+}
+
+async function findRevision(planOrderId: number, revNo: number) {
+  return erpDb.planningOrderRevision.findFirst({
+    where: { planOrderId, revNo },
+  });
 }
 
 export default function planningOrderRevisionRoutes(fastify: FastifyInstance) {
@@ -153,7 +158,7 @@ export default function planningOrderRevisionRoutes(fastify: FastifyInstance) {
     schema: {
       description: "List revisions for a planning order",
       tags: ["Planning Order Revisions"],
-      params: OrderIdParamsSchema,
+      params: OrderKeyParamsSchema,
       querystring: PlanningOrderRevisionListQuerySchema,
       response: {
         200: PlanningOrderRevisionListResponseSchema,
@@ -161,20 +166,20 @@ export default function planningOrderRevisionRoutes(fastify: FastifyInstance) {
       },
     },
     handler: async (request, reply) => {
-      const { orderId } = request.params;
+      const { orderKey } = request.params;
       const { page, pageSize, status } = request.query;
 
-      const order = await ensureOrderExists(orderId);
+      const order = await resolveOrder(orderKey);
       if (!order) {
         return sendError(
           reply,
           404,
           "Not Found",
-          `Planning order ${orderId} not found`,
+          `Planning order '${orderKey}' not found`,
         );
       }
 
-      const where: Record<string, unknown> = { planOrderId: orderId };
+      const where: Record<string, unknown> = { planOrderId: order.id };
       if (status) where.status = status;
 
       const [items, total] = await Promise.all([
@@ -188,12 +193,12 @@ export default function planningOrderRevisionRoutes(fastify: FastifyInstance) {
       ]);
 
       return {
-        items: items.map((item) => formatListItem(orderId, item)),
+        items: items.map((item) => formatListItem(orderKey, item)),
         total,
         page,
         pageSize,
         _links: paginationLinks(
-          `${PARENT_RESOURCE}/${orderId}/revisions`,
+          `${PARENT_RESOURCE}/${orderKey}/revs`,
           page,
           pageSize,
           total,
@@ -208,7 +213,7 @@ export default function planningOrderRevisionRoutes(fastify: FastifyInstance) {
     schema: {
       description: "Create a new revision for a planning order",
       tags: ["Planning Order Revisions"],
-      params: OrderIdParamsSchema,
+      params: OrderKeyParamsSchema,
       body: CreatePlanningOrderRevisionSchema,
       response: {
         201: PlanningOrderRevisionSchema,
@@ -216,24 +221,24 @@ export default function planningOrderRevisionRoutes(fastify: FastifyInstance) {
       },
     },
     handler: async (request, reply) => {
-      const { orderId } = request.params;
+      const { orderKey } = request.params;
       const { notes, changeSummary } = request.body;
       const userId = request.erpUser!.id;
 
-      const order = await ensureOrderExists(orderId);
+      const order = await resolveOrder(orderKey);
       if (!order) {
         return sendError(
           reply,
           404,
           "Not Found",
-          `Planning order ${orderId} not found`,
+          `Planning order '${orderKey}' not found`,
         );
       }
 
       // Auto-increment revNo inside a transaction to prevent race conditions
       const item = await erpDb.$transaction(async (erpTx) => {
         const maxRev = await erpTx.planningOrderRevision.findFirst({
-          where: { planOrderId: orderId },
+          where: { planOrderId: order.id },
           orderBy: { revNo: "desc" },
           select: { revNo: true },
         });
@@ -241,7 +246,7 @@ export default function planningOrderRevisionRoutes(fastify: FastifyInstance) {
 
         return erpTx.planningOrderRevision.create({
           data: {
-            planOrderId: orderId,
+            planOrderId: order.id,
             revNo: nextRevNo,
             notes: notes ?? null,
             changeSummary: changeSummary ?? null,
@@ -252,46 +257,54 @@ export default function planningOrderRevisionRoutes(fastify: FastifyInstance) {
       });
 
       reply.status(201);
-      return formatItem(orderId, item);
+      return formatItem(orderKey, item);
     },
   });
 
-  // GET by ID
-  app.get("/:revisionId", {
+  // GET by revNo
+  app.get("/:revNo", {
     schema: {
-      description: "Get a single revision by ID",
+      description: "Get a single revision by revision number",
       tags: ["Planning Order Revisions"],
-      params: RevisionIdParamsSchema,
+      params: RevNoParamsSchema,
       response: {
         200: PlanningOrderRevisionSchema,
         404: ErrorResponseSchema,
       },
     },
     handler: async (request, reply) => {
-      const { orderId, revisionId } = request.params;
+      const { orderKey, revNo } = request.params;
 
-      const item = await erpDb.planningOrderRevision.findFirst({
-        where: { id: revisionId, planOrderId: orderId },
-      });
+      const order = await resolveOrder(orderKey);
+      if (!order) {
+        return sendError(
+          reply,
+          404,
+          "Not Found",
+          `Planning order '${orderKey}' not found`,
+        );
+      }
+
+      const item = await findRevision(order.id, revNo);
       if (!item) {
         return sendError(
           reply,
           404,
           "Not Found",
-          `Revision ${revisionId} not found for order ${orderId}`,
+          `Revision ${revNo} not found for order '${orderKey}'`,
         );
       }
 
-      return formatItem(orderId, item);
+      return formatItem(orderKey, item);
     },
   });
 
   // UPDATE (draft only)
-  app.put("/:revisionId", {
+  app.put("/:revNo", {
     schema: {
       description: "Update a revision (draft status only)",
       tags: ["Planning Order Revisions"],
-      params: RevisionIdParamsSchema,
+      params: RevNoParamsSchema,
       body: UpdatePlanningOrderRevisionSchema,
       response: {
         200: PlanningOrderRevisionSchema,
@@ -300,19 +313,27 @@ export default function planningOrderRevisionRoutes(fastify: FastifyInstance) {
       },
     },
     handler: async (request, reply) => {
-      const { orderId, revisionId } = request.params;
+      const { orderKey, revNo } = request.params;
       const { notes, changeSummary } = request.body;
       const userId = request.erpUser!.id;
 
-      const existing = await erpDb.planningOrderRevision.findFirst({
-        where: { id: revisionId, planOrderId: orderId },
-      });
+      const order = await resolveOrder(orderKey);
+      if (!order) {
+        return sendError(
+          reply,
+          404,
+          "Not Found",
+          `Planning order '${orderKey}' not found`,
+        );
+      }
+
+      const existing = await findRevision(order.id, revNo);
       if (!existing) {
         return sendError(
           reply,
           404,
           "Not Found",
-          `Revision ${revisionId} not found for order ${orderId}`,
+          `Revision ${revNo} not found for order '${orderKey}'`,
         );
       }
 
@@ -326,7 +347,7 @@ export default function planningOrderRevisionRoutes(fastify: FastifyInstance) {
       }
 
       const item = await erpDb.planningOrderRevision.update({
-        where: { id: revisionId },
+        where: { id: existing.id },
         data: {
           ...(notes !== undefined ? { notes } : {}),
           ...(changeSummary !== undefined ? { changeSummary } : {}),
@@ -334,16 +355,16 @@ export default function planningOrderRevisionRoutes(fastify: FastifyInstance) {
         },
       });
 
-      return formatItem(orderId, item);
+      return formatItem(orderKey, item);
     },
   });
 
   // DELETE (draft only)
-  app.delete("/:revisionId", {
+  app.delete("/:revNo", {
     schema: {
       description: "Delete a revision (draft status only)",
       tags: ["Planning Order Revisions"],
-      params: RevisionIdParamsSchema,
+      params: RevNoParamsSchema,
       response: {
         204: z.void(),
         404: ErrorResponseSchema,
@@ -351,17 +372,25 @@ export default function planningOrderRevisionRoutes(fastify: FastifyInstance) {
       },
     },
     handler: async (request, reply) => {
-      const { orderId, revisionId } = request.params;
+      const { orderKey, revNo } = request.params;
 
-      const existing = await erpDb.planningOrderRevision.findFirst({
-        where: { id: revisionId, planOrderId: orderId },
-      });
+      const order = await resolveOrder(orderKey);
+      if (!order) {
+        return sendError(
+          reply,
+          404,
+          "Not Found",
+          `Planning order '${orderKey}' not found`,
+        );
+      }
+
+      const existing = await findRevision(order.id, revNo);
       if (!existing) {
         return sendError(
           reply,
           404,
           "Not Found",
-          `Revision ${revisionId} not found for order ${orderId}`,
+          `Revision ${revNo} not found for order '${orderKey}'`,
         );
       }
 
@@ -375,7 +404,7 @@ export default function planningOrderRevisionRoutes(fastify: FastifyInstance) {
       }
 
       const execOrderCount = await erpDb.execOrder.count({
-        where: { planOrderRevId: revisionId },
+        where: { planOrderRevId: existing.id },
       });
       if (execOrderCount > 0) {
         return sendError(
@@ -386,17 +415,17 @@ export default function planningOrderRevisionRoutes(fastify: FastifyInstance) {
         );
       }
 
-      await erpDb.planningOrderRevision.delete({ where: { id: revisionId } });
+      await erpDb.planningOrderRevision.delete({ where: { id: existing.id } });
       reply.status(204);
     },
   });
 
   // APPROVE (draft → approved)
-  app.post("/:revisionId/approve", {
+  app.post("/:revNo/approve", {
     schema: {
       description: "Approve a draft revision",
       tags: ["Planning Order Revisions"],
-      params: RevisionIdParamsSchema,
+      params: RevNoParamsSchema,
       response: {
         200: PlanningOrderRevisionSchema,
         404: ErrorResponseSchema,
@@ -404,17 +433,25 @@ export default function planningOrderRevisionRoutes(fastify: FastifyInstance) {
       },
     },
     handler: async (request, reply) => {
-      const { orderId, revisionId } = request.params;
+      const { orderKey, revNo } = request.params;
 
-      const existing = await erpDb.planningOrderRevision.findFirst({
-        where: { id: revisionId, planOrderId: orderId },
-      });
+      const order = await resolveOrder(orderKey);
+      if (!order) {
+        return sendError(
+          reply,
+          404,
+          "Not Found",
+          `Planning order '${orderKey}' not found`,
+        );
+      }
+
+      const existing = await findRevision(order.id, revNo);
       if (!existing) {
         return sendError(
           reply,
           404,
           "Not Found",
-          `Revision ${revisionId} not found for order ${orderId}`,
+          `Revision ${revNo} not found for order '${orderKey}'`,
         );
       }
 
@@ -430,13 +467,13 @@ export default function planningOrderRevisionRoutes(fastify: FastifyInstance) {
       const userId = request.erpUser!.id;
       const item = await erpDb.$transaction(async (erpTx) => {
         const updated = await erpTx.planningOrderRevision.update({
-          where: { id: revisionId },
+          where: { id: existing.id },
           data: { status: "approved", updatedById: userId },
         });
         await writeAuditEntry(
           erpTx,
           "PlanningOrderRevision",
-          revisionId,
+          existing.id,
           "approve",
           "status",
           "draft",
@@ -446,16 +483,16 @@ export default function planningOrderRevisionRoutes(fastify: FastifyInstance) {
         return updated;
       });
 
-      return formatItem(orderId, item);
+      return formatItem(orderKey, item);
     },
   });
 
   // OBSOLETE (approved → obsolete)
-  app.post("/:revisionId/obsolete", {
+  app.post("/:revNo/obsolete", {
     schema: {
       description: "Mark an approved revision as obsolete",
       tags: ["Planning Order Revisions"],
-      params: RevisionIdParamsSchema,
+      params: RevNoParamsSchema,
       response: {
         200: PlanningOrderRevisionSchema,
         404: ErrorResponseSchema,
@@ -463,17 +500,25 @@ export default function planningOrderRevisionRoutes(fastify: FastifyInstance) {
       },
     },
     handler: async (request, reply) => {
-      const { orderId, revisionId } = request.params;
+      const { orderKey, revNo } = request.params;
 
-      const existing = await erpDb.planningOrderRevision.findFirst({
-        where: { id: revisionId, planOrderId: orderId },
-      });
+      const order = await resolveOrder(orderKey);
+      if (!order) {
+        return sendError(
+          reply,
+          404,
+          "Not Found",
+          `Planning order '${orderKey}' not found`,
+        );
+      }
+
+      const existing = await findRevision(order.id, revNo);
       if (!existing) {
         return sendError(
           reply,
           404,
           "Not Found",
-          `Revision ${revisionId} not found for order ${orderId}`,
+          `Revision ${revNo} not found for order '${orderKey}'`,
         );
       }
 
@@ -489,13 +534,13 @@ export default function planningOrderRevisionRoutes(fastify: FastifyInstance) {
       const userId = request.erpUser!.id;
       const item = await erpDb.$transaction(async (erpTx) => {
         const updated = await erpTx.planningOrderRevision.update({
-          where: { id: revisionId },
+          where: { id: existing.id },
           data: { status: "obsolete", updatedById: userId },
         });
         await writeAuditEntry(
           erpTx,
           "PlanningOrderRevision",
-          revisionId,
+          existing.id,
           "obsolete",
           "status",
           "approved",
@@ -505,7 +550,7 @@ export default function planningOrderRevisionRoutes(fastify: FastifyInstance) {
         return updated;
       });
 
-      return formatItem(orderId, item);
+      return formatItem(orderKey, item);
     },
   });
 }

@@ -19,40 +19,40 @@ import { api, showErrorNotification } from "../lib/api";
 import { hasAction } from "../lib/hateoas";
 
 export const PlanningOrderDetail: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
+  const { key } = useParams<{ key: string }>();
   const navigate = useNavigate();
   const [item, setItem] = useState<PlanningOrder | null>(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
 
   const fetchItem = useCallback(async () => {
-    if (!id) return;
+    if (!key) return;
     setLoading(true);
     try {
-      const result = await api.get<PlanningOrder>(`planning/orders/${id}`);
+      const result = await api.get<PlanningOrder>(`planning/orders/${key}`);
       setItem(result);
     } catch (err) {
       showErrorNotification(err);
     } finally {
       setLoading(false);
     }
-  }, [id]);
+  }, [key]);
 
   useEffect(() => {
     void fetchItem();
   }, [fetchItem]);
 
   const handleUpdate = async (data: UpdatePlanningOrder) => {
-    if (!id) return;
-    await api.put(`planning/orders/${id}`, data);
+    if (!key) return;
+    await api.put(`planning/orders/${key}`, data);
     setEditing(false);
     await fetchItem();
   };
 
   const handleDelete = async () => {
-    if (!id || !confirm("Delete this planning order?")) return;
+    if (!key || !confirm("Delete this planning order?")) return;
     try {
-      await api.delete(`planning/orders/${id}`);
+      await api.delete(`planning/orders/${key}`);
       void navigate("/planning/orders");
     } catch (err) {
       showErrorNotification(err);
@@ -166,7 +166,7 @@ export const PlanningOrderDetail: React.FC = () => {
         </Stack>
       </Card>
 
-      <PlanningOrderRevisions orderId={id!} />
+      <PlanningOrderRevisions orderKey={key!} />
     </Container>
   );
 };

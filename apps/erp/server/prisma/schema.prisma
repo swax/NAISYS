@@ -43,9 +43,29 @@ model PlanningOrderRevision {
   updatedBy  User          @relation("planOrderRevUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
   order      PlanningOrder @relation(fields: [planOrderId], references: [id], onDelete: Restrict)
   execOrders ExecOrder[]
+  operations PlanOperation[]
 
   @@unique([planOrderId, revNo])
   @@map("plan_order_revs")
+}
+
+model PlanOperation {
+  id             Int      @id @default(autoincrement())
+  planOrderRevId Int      @map("plan_order_rev_id")
+  seqNo          Int      @map("seq_no")
+  title          String
+  description    String   @default("")
+  createdAt      DateTime @default(now()) @map("created_at")
+  createdById    Int      @map("created_by")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+  updatedById    Int      @map("updated_by")
+
+  createdBy    User                  @relation("planOpCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy    User                  @relation("planOpUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+  planOrderRev PlanningOrderRevision @relation(fields: [planOrderRevId], references: [id], onDelete: Restrict)
+
+  @@unique([planOrderRevId, seqNo])
+  @@map("plan_operations")
 }
 
 model ExecOrder {
@@ -95,6 +115,8 @@ model User {
   planOrderRevsUpdated PlanningOrderRevision[] @relation("planOrderRevUpdatedBy")
   execOrdersCreated    ExecOrder[]             @relation("execOrderCreatedBy")
   execOrdersUpdated    ExecOrder[]             @relation("execOrderUpdatedBy")
+  planOpsCreated       PlanOperation[]         @relation("planOpCreatedBy")
+  planOpsUpdated       PlanOperation[]         @relation("planOpUpdatedBy")
   auditLogs            AuditLog[]
   sessions             Session[]
 

@@ -100,7 +100,7 @@ export const erpPlugin: FastifyPluginAsync = async (fastify) => {
     prefix: "/api/erp/planning/orders",
   });
   fastify.register(planningOrderRevisionRoutes, {
-    prefix: "/api/erp/planning/orders/:orderId/revisions",
+    prefix: "/api/erp/planning/orders/:orderKey/revs",
   });
   fastify.register(executionOrderRoutes, {
     prefix: "/api/erp/execution/orders",
