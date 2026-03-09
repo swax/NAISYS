@@ -24,11 +24,11 @@ import {
 
 function itemLinks(
   resource: string,
-  id: number,
+  key: string,
   schemaName: string,
 ): HateoasLink[] {
   return [
-    selfLink(`/${resource}/${id}`),
+    selfLink(`/${resource}/${key}`),
     collectionLink(resource),
     schemaLink(schemaName),
   ];
@@ -36,10 +36,10 @@ function itemLinks(
 
 function itemActions(
   resource: string,
-  id: number,
+  key: string,
   status: string,
 ): HateoasAction[] {
-  const href = `${API_PREFIX}/${resource}/${id}`;
+  const href = `${API_PREFIX}/${resource}/${key}`;
   const actions: HateoasAction[] = [
     {
       rel: "update",
@@ -80,19 +80,19 @@ function itemActions(
 
 function revisionCollectionLink(
   parentResource: string,
-  parentId: number,
+  key: string,
 ): HateoasLink {
   return {
     rel: "revisions",
-    href: `${API_PREFIX}/${parentResource}/${parentId}/revisions`,
+    href: `${API_PREFIX}/${parentResource}/${key}/revs`,
     title: "Revisions",
   };
 }
 
 const RESOURCE = "planning/orders";
 
-const IdParamsSchema = z.object({
-  id: z.coerce.number().int(),
+const KeyParamsSchema = z.object({
+  key: z.string(),
 });
 
 function formatItem(item: PlanningOrderModel) {
@@ -107,10 +107,10 @@ function formatItem(item: PlanningOrderModel) {
     updatedBy: item.updatedById,
     updatedAt: item.updatedAt.toISOString(),
     _links: [
-      ...itemLinks(RESOURCE, item.id, "PlanningOrder"),
-      revisionCollectionLink(RESOURCE, item.id),
+      ...itemLinks(RESOURCE, item.key, "PlanningOrder"),
+      revisionCollectionLink(RESOURCE, item.key),
     ],
-    _actions: itemActions(RESOURCE, item.id, item.status),
+    _actions: itemActions(RESOURCE, item.key, item.status),
   };
 }
 
@@ -118,7 +118,7 @@ function formatListItem(item: PlanningOrderModel) {
   const { _actions, ...rest } = formatItem(item);
   return {
     ...rest,
-    _links: [selfLink(`/${RESOURCE}/${item.id}`)],
+    _links: [selfLink(`/${RESOURCE}/${item.key}`)],
   };
 }
 
@@ -207,27 +207,27 @@ export default function planningOrderRoutes(fastify: FastifyInstance) {
     },
   });
 
-  // GET by ID
-  app.get("/:id", {
+  // GET by key
+  app.get("/:key", {
     schema: {
-      description: "Get a single planning order by ID",
+      description: "Get a single planning order by key",
       tags: ["Planning Orders"],
-      params: IdParamsSchema,
+      params: KeyParamsSchema,
       response: {
         200: PlanningOrderSchema,
         404: ErrorResponseSchema,
       },
     },
     handler: async (request, reply) => {
-      const { id } = request.params;
+      const { key } = request.params;
 
-      const item = await erpDb.planningOrder.findUnique({ where: { id } });
+      const item = await erpDb.planningOrder.findUnique({ where: { key } });
       if (!item) {
         return sendError(
           reply,
           404,
           "Not Found",
-          `Planning order ${id} not found`,
+          `Planning order '${key}' not found`,
         );
       }
 
@@ -236,11 +236,11 @@ export default function planningOrderRoutes(fastify: FastifyInstance) {
   });
 
   // UPDATE
-  app.put("/:id", {
+  app.put("/:key", {
     schema: {
       description: "Update a planning order",
       tags: ["Planning Orders"],
-      params: IdParamsSchema,
+      params: KeyParamsSchema,
       body: UpdatePlanningOrderSchema,
       response: {
         200: PlanningOrderSchema,
@@ -248,24 +248,24 @@ export default function planningOrderRoutes(fastify: FastifyInstance) {
       },
     },
     handler: async (request, reply) => {
-      const { id } = request.params;
+      const { key } = request.params;
       const data = request.body;
       const userId = request.erpUser!.id;
 
       const existing = await erpDb.planningOrder.findUnique({
-        where: { id },
+        where: { key },
       });
       if (!existing) {
         return sendError(
           reply,
           404,
           "Not Found",
-          `Planning order ${id} not found`,
+          `Planning order '${key}' not found`,
         );
       }
 
       const item = await erpDb.planningOrder.update({
-        where: { id },
+        where: { key },
         data: { ...data, updatedById: userId },
       });
 
@@ -274,11 +274,11 @@ export default function planningOrderRoutes(fastify: FastifyInstance) {
   });
 
   // DELETE
-  app.delete("/:id", {
+  app.delete("/:key", {
     schema: {
       description: "Delete a planning order",
       tags: ["Planning Orders"],
-      params: IdParamsSchema,
+      params: KeyParamsSchema,
       response: {
         204: z.void(),
         404: ErrorResponseSchema,
@@ -286,22 +286,22 @@ export default function planningOrderRoutes(fastify: FastifyInstance) {
       },
     },
     handler: async (request, reply) => {
-      const { id } = request.params;
+      const { key } = request.params;
 
       const existing = await erpDb.planningOrder.findUnique({
-        where: { id },
+        where: { key },
       });
       if (!existing) {
         return sendError(
           reply,
           404,
           "Not Found",
-          `Planning order ${id} not found`,
+          `Planning order '${key}' not found`,
         );
       }
 
       const revisionCount = await erpDb.planningOrderRevision.count({
-        where: { planOrderId: id },
+        where: { planOrderId: existing.id },
       });
       if (revisionCount > 0) {
         return sendError(
@@ -312,7 +312,7 @@ export default function planningOrderRoutes(fastify: FastifyInstance) {
         );
       }
 
-      await erpDb.planningOrder.delete({ where: { id } });
+      await erpDb.planningOrder.delete({ where: { key } });
       reply.status(204);
     },
   });

@@ -34,10 +34,10 @@ const STATUS_COLORS: Record<string, string> = {
 const PAGE_SIZE = 10;
 
 interface Props {
-  orderId: string;
+  orderKey: string;
 }
 
-export const PlanningOrderRevisions: React.FC<Props> = ({ orderId }) => {
+export const PlanningOrderRevisions: React.FC<Props> = ({ orderKey }) => {
   const navigate = useNavigate();
   const [data, setData] = useState<PlanningOrderRevisionListResponse | null>(
     null,
@@ -55,7 +55,7 @@ export const PlanningOrderRevisions: React.FC<Props> = ({ orderId }) => {
     validate: zodResolver(CreatePlanningOrderRevisionSchema),
   });
 
-  const basePath = `planning/orders/${orderId}/revisions`;
+  const basePath = `planning/orders/${orderKey}/revs`;
 
   const fetchRevisions = useCallback(async () => {
     setLoading(true);
@@ -78,13 +78,13 @@ export const PlanningOrderRevisions: React.FC<Props> = ({ orderId }) => {
   const handleCreate = async (values: typeof form.values) => {
     setSubmitting(true);
     try {
-      await api.post(basePath, {
+      const created = await api.post<PlanningOrderRevision>(basePath, {
         notes: values.notes || undefined,
         changeSummary: values.changeSummary || undefined,
       });
       setModalOpen(false);
       form.reset();
-      await fetchRevisions();
+      void navigate(`/planning/orders/${orderKey}/revs/${created.revNo}`);
     } catch (err) {
       showErrorNotification(err);
     } finally {
@@ -100,7 +100,7 @@ export const PlanningOrderRevisions: React.FC<Props> = ({ orderId }) => {
   const handleApprove = async (rev: PlanningOrderRevision) => {
     if (!confirm(`Approve revision #${rev.revNo}?`)) return;
     try {
-      await api.post(`${basePath}/${rev.id}/approve`, {});
+      await api.post(`${basePath}/${rev.revNo}/approve`, {});
       await fetchRevisions();
     } catch (err) {
       showErrorNotification(err);
@@ -110,7 +110,7 @@ export const PlanningOrderRevisions: React.FC<Props> = ({ orderId }) => {
   const handleObsolete = async (rev: PlanningOrderRevision) => {
     if (!confirm(`Mark revision #${rev.revNo} as obsolete?`)) return;
     try {
-      await api.post(`${basePath}/${rev.id}/obsolete`, {});
+      await api.post(`${basePath}/${rev.revNo}/obsolete`, {});
       await fetchRevisions();
     } catch (err) {
       showErrorNotification(err);
@@ -120,7 +120,7 @@ export const PlanningOrderRevisions: React.FC<Props> = ({ orderId }) => {
   const handleDelete = async (rev: PlanningOrderRevision) => {
     if (!confirm(`Delete revision #${rev.revNo}?`)) return;
     try {
-      await api.delete(`${basePath}/${rev.id}`);
+      await api.delete(`${basePath}/${rev.revNo}`);
       await fetchRevisions();
     } catch (err) {
       showErrorNotification(err);
@@ -161,6 +161,12 @@ export const PlanningOrderRevisions: React.FC<Props> = ({ orderId }) => {
               {data.items.map((rev) => (
                 <Table.Tr
                   key={rev.id}
+                  style={{ cursor: "pointer" }}
+                  onClick={() =>
+                    navigate(
+                      `/planning/orders/${orderKey}/revs/${rev.revNo}`,
+                    )
+                  }
                   data-testid={`revision-row-${rev.revNo}`}
                 >
                   <Table.Td>{rev.revNo}</Table.Td>
@@ -178,7 +184,7 @@ export const PlanningOrderRevisions: React.FC<Props> = ({ orderId }) => {
                   <Table.Td>
                     {new Date(rev.createdAt).toLocaleString()}
                   </Table.Td>
-                  <Table.Td>
+                  <Table.Td onClick={(e) => e.stopPropagation()}>
                     <Group gap="xs">
                       {hasAction(rev._actions, "approve") && (
                         <Button
@@ -208,7 +214,7 @@ export const PlanningOrderRevisions: React.FC<Props> = ({ orderId }) => {
                           color="teal"
                           onClick={() =>
                             navigate(
-                              `/execution/orders/new?planOrderId=${orderId}&planOrderRevId=${rev.id}`,
+                              `/execution/orders/new?planOrderId=${orderKey}&planOrderRevId=${rev.id}`,
                             )
                           }
                           data-testid={`revision-cut-order-${rev.revNo}`}

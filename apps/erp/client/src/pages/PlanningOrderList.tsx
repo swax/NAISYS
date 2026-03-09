@@ -118,7 +118,7 @@ export const PlanningOrderList: React.FC = () => {
                 <Table.Tr
                   key={item.id}
                   style={{ cursor: "pointer" }}
-                  onClick={() => navigate(`/planning/orders/${item.id}`)}
+                  onClick={() => navigate(`/planning/orders/${item.key}`)}
                 >
                   <Table.Td>
                     <Text size="sm" ff="monospace">
