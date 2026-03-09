@@ -16,6 +16,7 @@ export const CreateAgentConfigRequestSchema = z
       .min(1)
       .max(100)
       .regex(URL_SAFE_KEY_REGEX, URL_SAFE_KEY_MESSAGE),
+    title: z.string().max(200).optional(),
   })
   .strict();
 

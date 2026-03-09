@@ -106,12 +106,13 @@ export const exportAgentConfig = async (
 
 export const createAgent = async (
   name: string,
+  title?: string,
 ): Promise<CreateAgentConfigResponse> => {
   try {
-    return await api.post<{ name: string }, CreateAgentConfigResponse>(
-      apiEndpoints.agents,
-      { name },
-    );
+    return await api.post<
+      { name: string; title?: string },
+      CreateAgentConfigResponse
+    >(apiEndpoints.agents, { name, ...(title ? { title } : {}) });
   } catch (error) {
     return {
       success: false,

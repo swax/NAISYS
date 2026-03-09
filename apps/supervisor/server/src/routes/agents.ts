@@ -209,7 +209,7 @@ export default function agentsRoutes(
     },
     async (request, reply) => {
       try {
-        const { name } = request.body;
+        const { name, title } = request.body;
 
         if (!/^[a-zA-Z0-9_-]+$/.test(name)) {
           return reply.status(400).send({
@@ -219,7 +219,7 @@ export default function agentsRoutes(
           });
         }
 
-        const { config } = await createAgentConfig(name);
+        const { config } = await createAgentConfig(name, title);
 
         return {
           success: true,
