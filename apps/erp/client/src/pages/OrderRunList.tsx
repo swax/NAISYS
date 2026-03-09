@@ -12,7 +12,7 @@ import {
   TextInput,
   Title,
 } from "@mantine/core";
-import type { ExecutionOrderListResponse } from "@naisys-erp/shared";
+import type { OrderRunListResponse } from "@naisys-erp/shared";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router";
 
@@ -32,7 +32,7 @@ const PRIORITY_COLORS: Record<string, string> = {
   critical: "red",
 };
 
-export const ExecutionOrderList: React.FC = () => {
+export const OrderRunList: React.FC = () => {
   const { orderKey } = useParams<{ orderKey: string }>();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -42,7 +42,7 @@ export const ExecutionOrderList: React.FC = () => {
   const priority = searchParams.get("priority") || undefined;
   const search = searchParams.get("search") || "";
 
-  const [data, setData] = useState<ExecutionOrderListResponse | null>(null);
+  const [data, setData] = useState<OrderRunListResponse | null>(null);
   const [loading, setLoading] = useState(true);
 
   const fetchData = useCallback(async () => {
@@ -55,7 +55,7 @@ export const ExecutionOrderList: React.FC = () => {
       if (priority) params.set("priority", priority);
       if (search) params.set("search", search);
 
-      const result = await api.get<ExecutionOrderListResponse>(
+      const result = await api.get<OrderRunListResponse>(
         `orders/${orderKey}/runs?${params}`,
       );
       setData(result);
@@ -167,7 +167,7 @@ export const ExecutionOrderList: React.FC = () => {
                   key={item.id}
                   style={{ cursor: "pointer" }}
                   onClick={() => navigate(`/orders/${orderKey}/runs/${item.id}`)}
-                  data-testid={`exec-order-row-${item.orderNo}`}
+                  data-testid={`order-run-row-${item.orderNo}`}
                 >
                   <Table.Td>
                     <Text size="sm" ff="monospace">
@@ -220,7 +220,7 @@ export const ExecutionOrderList: React.FC = () => {
         </>
       ) : (
         <Text c="dimmed" ta="center" py="xl">
-          No execution orders found.
+          No order runs found.
         </Text>
       )}
     </Container>

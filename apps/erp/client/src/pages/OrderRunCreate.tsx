@@ -1,17 +1,17 @@
 import { Container, Title } from "@mantine/core";
-import type { CreateExecutionOrder } from "@naisys-erp/shared";
+import type { CreateOrderRun } from "@naisys-erp/shared";
 import { useNavigate, useParams, useSearchParams } from "react-router";
 
-import { ExecutionOrderForm } from "../components/ExecutionOrderForm";
+import { OrderRunForm } from "../components/OrderRunForm";
 import { api } from "../lib/api";
 
-export const ExecutionOrderCreate: React.FC = () => {
+export const OrderRunCreate: React.FC = () => {
   const { orderKey } = useParams<{ orderKey: string }>();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const prefillPlanOrderRevId = Number(searchParams.get("planOrderRevId")) || 0;
 
-  const handleCreate = async (data: CreateExecutionOrder) => {
+  const handleCreate = async (data: CreateOrderRun) => {
     await api.post(`orders/${orderKey}/runs`, data);
     void navigate(`/orders/${orderKey}/runs`);
   };
@@ -19,9 +19,9 @@ export const ExecutionOrderCreate: React.FC = () => {
   return (
     <Container size="md" py="xl">
       <Title order={2} mb="lg">
-        Create Execution Order
+        Create Order Run
       </Title>
-      <ExecutionOrderForm<false>
+      <OrderRunForm<false>
         initialData={{
           planOrderRevId: prefillPlanOrderRevId || undefined,
         }}

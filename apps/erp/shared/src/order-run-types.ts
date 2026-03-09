@@ -2,31 +2,31 @@ import { z } from "zod/v4";
 
 import { HateoasActionSchema, HateoasLinkSchema } from "./hateoas-types.js";
 
-export const ExecutionOrderStatusEnum = z.enum([
+export const OrderRunStatusEnum = z.enum([
   "released",
   "started",
   "closed",
   "cancelled",
 ]);
-export type ExecutionOrderStatus = z.infer<typeof ExecutionOrderStatusEnum>;
+export type OrderRunStatus = z.infer<typeof OrderRunStatusEnum>;
 
-export const ExecutionOrderPriorityEnum = z.enum([
+export const OrderRunPriorityEnum = z.enum([
   "low",
   "medium",
   "high",
   "critical",
 ]);
-export type ExecutionOrderPriority = z.infer<typeof ExecutionOrderPriorityEnum>;
+export type OrderRunPriority = z.infer<typeof OrderRunPriorityEnum>;
 
-// Full execution order response shape
-export const ExecutionOrderSchema = z.object({
+// Full order run response shape
+export const OrderRunSchema = z.object({
   id: z.number(),
   orderNo: z.number(),
   planOrderId: z.number(),
   planOrderKey: z.string(),
   planOrderRevId: z.number(),
-  status: ExecutionOrderStatusEnum,
-  priority: ExecutionOrderPriorityEnum,
+  status: OrderRunStatusEnum,
+  priority: OrderRunPriorityEnum,
   scheduledStartAt: z.iso.datetime().nullable(),
   dueAt: z.iso.datetime().nullable(),
   releasedAt: z.iso.datetime(),
@@ -40,13 +40,13 @@ export const ExecutionOrderSchema = z.object({
   _actions: z.array(HateoasActionSchema).optional(),
 });
 
-export type ExecutionOrder = z.infer<typeof ExecutionOrderSchema>;
+export type OrderRun = z.infer<typeof OrderRunSchema>;
 
-// Input for creating an execution order
-export const CreateExecutionOrderSchema = z
+// Input for creating an order run
+export const CreateOrderRunSchema = z
   .object({
     planOrderRevId: z.number().int().min(1),
-    priority: ExecutionOrderPriorityEnum.optional().default("medium"),
+    priority: OrderRunPriorityEnum.optional().default("medium"),
     scheduledStartAt: z.iso.datetime().optional(),
     dueAt: z.iso.datetime().optional(),
     assignedTo: z.string().max(200).optional(),
@@ -54,12 +54,12 @@ export const CreateExecutionOrderSchema = z
   })
   .strict();
 
-export type CreateExecutionOrder = z.infer<typeof CreateExecutionOrderSchema>;
+export type CreateOrderRun = z.infer<typeof CreateOrderRunSchema>;
 
-// Input for updating an execution order
-export const UpdateExecutionOrderSchema = z
+// Input for updating an order run
+export const UpdateOrderRunSchema = z
   .object({
-    priority: ExecutionOrderPriorityEnum.optional(),
+    priority: OrderRunPriorityEnum.optional(),
     scheduledStartAt: z.iso.datetime().nullable().optional(),
     dueAt: z.iso.datetime().nullable().optional(),
     assignedTo: z.string().max(200).nullable().optional(),
@@ -67,24 +67,22 @@ export const UpdateExecutionOrderSchema = z
   })
   .strict();
 
-export type UpdateExecutionOrder = z.infer<typeof UpdateExecutionOrderSchema>;
+export type UpdateOrderRun = z.infer<typeof UpdateOrderRunSchema>;
 
-// Query params for listing execution orders
-export const ExecutionOrderListQuerySchema = z.object({
+// Query params for listing order runs
+export const OrderRunListQuerySchema = z.object({
   page: z.coerce.number().int().min(1).optional().default(1),
   pageSize: z.coerce.number().int().min(1).max(100).optional().default(20),
-  status: ExecutionOrderStatusEnum.optional(),
-  priority: ExecutionOrderPriorityEnum.optional(),
+  status: OrderRunStatusEnum.optional(),
+  priority: OrderRunPriorityEnum.optional(),
   search: z.string().optional(),
 });
 
-export type ExecutionOrderListQuery = z.infer<
-  typeof ExecutionOrderListQuerySchema
->;
+export type OrderRunListQuery = z.infer<typeof OrderRunListQuerySchema>;
 
 // List response
-export const ExecutionOrderListResponseSchema = z.object({
-  items: z.array(ExecutionOrderSchema),
+export const OrderRunListResponseSchema = z.object({
+  items: z.array(OrderRunSchema),
   total: z.number(),
   page: z.number(),
   pageSize: z.number(),
@@ -92,6 +90,4 @@ export const ExecutionOrderListResponseSchema = z.object({
   _actions: z.array(HateoasActionSchema).optional(),
 });
 
-export type ExecutionOrderListResponse = z.infer<
-  typeof ExecutionOrderListResponseSchema
->;
+export type OrderRunListResponse = z.infer<typeof OrderRunListResponseSchema>;

@@ -9,20 +9,20 @@ import {
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import type {
-  CreateExecutionOrder,
-  UpdateExecutionOrder,
+  CreateOrderRun,
+  UpdateOrderRun,
 } from "@naisys-erp/shared";
 import {
-  CreateExecutionOrderSchema,
-  UpdateExecutionOrderSchema,
+  CreateOrderRunSchema,
+  UpdateOrderRunSchema,
 } from "@naisys-erp/shared";
 import { useState } from "react";
 
 import { zodResolver } from "../lib/zod-resolver";
 
 type FormData<TEdit extends boolean> = TEdit extends true
-  ? UpdateExecutionOrder
-  : CreateExecutionOrder;
+  ? UpdateOrderRun
+  : CreateOrderRun;
 
 interface Props<TEdit extends boolean = boolean> {
   initialData?: Partial<{
@@ -76,15 +76,15 @@ function transformFormValues(
   return result;
 }
 
-export const ExecutionOrderForm = <TEdit extends boolean = false>({
+export const OrderRunForm = <TEdit extends boolean = false>({
   initialData,
   isEdit,
   onSubmit,
   onCancel,
 }: Props<TEdit>) => {
   const schema = isEdit
-    ? UpdateExecutionOrderSchema
-    : CreateExecutionOrderSchema;
+    ? UpdateOrderRunSchema
+    : CreateOrderRunSchema;
 
   const form = useForm({
     initialValues: {

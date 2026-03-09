@@ -68,12 +68,12 @@ test.describe.serial("Full order lifecycle (UI)", () => {
     await expect(page.getByText("approved")).toBeVisible();
   });
 
-  test("cut an execution order", async () => {
+  test("cut an order run", async () => {
     await page.getByRole("button", { name: "Cut Order" }).click();
 
-    // Should navigate to exec order create page
+    // Should navigate to order run create page
     await expect(
-      page.getByRole("heading", { name: "Create Execution Order" }),
+      page.getByRole("heading", { name: "Create Order Run" }),
     ).toBeVisible();
 
     // Submit the form
@@ -85,28 +85,28 @@ test.describe.serial("Full order lifecycle (UI)", () => {
     ).toBeVisible();
   });
 
-  test("start the execution order", async () => {
-    // Click the first (most recent) execution order row
+  test("start the order run", async () => {
+    // Click the first (most recent) order run row
     await page.locator("table tbody tr").first().click();
 
     // Verify initial status is released
-    await expect(page.getByTestId("exec-order-status")).toHaveText("released");
+    await expect(page.getByTestId("order-run-status")).toHaveText("released");
 
     // Click Start
-    await page.getByTestId("exec-order-start").click();
+    await page.getByTestId("order-run-start").click();
 
     // Verify status changes to started
-    await expect(page.getByTestId("exec-order-status")).toHaveText("started");
+    await expect(page.getByTestId("order-run-status")).toHaveText("started");
   });
 
-  test("close the execution order", async () => {
-    await page.getByTestId("exec-order-close").click();
+  test("close the order run", async () => {
+    await page.getByTestId("order-run-close").click();
 
     // Verify status changes to closed
-    await expect(page.getByTestId("exec-order-status")).toHaveText("closed");
+    await expect(page.getByTestId("order-run-status")).toHaveText("closed");
 
     // Start and Close buttons should be gone
-    await expect(page.getByTestId("exec-order-start")).not.toBeVisible();
-    await expect(page.getByTestId("exec-order-close")).not.toBeVisible();
+    await expect(page.getByTestId("order-run-start")).not.toBeVisible();
+    await expect(page.getByTestId("order-run-close")).not.toBeVisible();
   });
 });
