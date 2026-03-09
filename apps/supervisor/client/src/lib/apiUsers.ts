@@ -20,7 +20,6 @@ export const getUser = async (username: string): Promise<any> => {
 export const createUser = async (data: {
   username: string;
   password: string;
-  isAgent?: boolean;
 }): Promise<any> => {
   return api.post("/users", data);
 };
@@ -52,6 +51,10 @@ export const revokePermission = async (
 
 export const changePassword = async (password: string): Promise<any> => {
   return api.post("/users/me/password", { password });
+};
+
+export const rotateUserApiKey = async (username: string): Promise<any> => {
+  return api.post(`/users/${username}/rotate-key`, {});
 };
 
 export const createAgentUser = async (agentId: number): Promise<any> => {

@@ -9,4 +9,4 @@ export function supervisorDbUrl(): string {
 }
 
 /** Must match the version in the latest migration's schema_version insert */
-export const SUPERVISOR_DB_VERSION = 7;
+export const SUPERVISOR_DB_VERSION = 8;

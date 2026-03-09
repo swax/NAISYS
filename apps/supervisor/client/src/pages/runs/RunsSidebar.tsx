@@ -108,83 +108,92 @@ export const RunsSidebar: React.FC<RunsSidebarProps> = ({
         {(() => {
           let groupIndex = 0;
           return runs.map((run, index) => {
-          const rowKey = getRowKey(run);
-          const unread = hasUnreadLogs(run) && selectedRowKey !== rowKey;
+            const rowKey = getRowKey(run);
+            const unread = hasUnreadLogs(run) && selectedRowKey !== rowKey;
 
-          // Detect multi-session run grouping
-          const prevRun = index > 0 ? runs[index - 1] : null;
-          const nextRun =
-            index < runs.length - 1 ? runs[index + 1] : null;
-          const isMultiSession = run.sessionId > 1 ||
-            (nextRun && nextRun.runId === run.runId && nextRun.userId === run.userId) ||
-            (prevRun && prevRun.runId === run.runId && prevRun.userId === run.userId);
-          const isFirstInGroup =
-            isMultiSession &&
-            (!prevRun || prevRun.runId !== run.runId || prevRun.userId !== run.userId);
-          const isLastInGroup =
-            isMultiSession &&
-            (!nextRun || nextRun.runId !== run.runId || nextRun.userId !== run.userId);
+            // Detect multi-session run grouping
+            const prevRun = index > 0 ? runs[index - 1] : null;
+            const nextRun = index < runs.length - 1 ? runs[index + 1] : null;
+            const isMultiSession =
+              run.sessionId > 1 ||
+              (nextRun &&
+                nextRun.runId === run.runId &&
+                nextRun.userId === run.userId) ||
+              (prevRun &&
+                prevRun.runId === run.runId &&
+                prevRun.userId === run.userId);
+            const isFirstInGroup =
+              isMultiSession &&
+              (!prevRun ||
+                prevRun.runId !== run.runId ||
+                prevRun.userId !== run.userId);
+            const isLastInGroup =
+              isMultiSession &&
+              (!nextRun ||
+                nextRun.runId !== run.runId ||
+                nextRun.userId !== run.userId);
 
-          if (isFirstInGroup) groupIndex++;
-          const groupColor = groupIndex % 2 === 0 ? "violet" : "blue";
+            if (isFirstInGroup) groupIndex++;
+            const groupColor = groupIndex % 2 === 0 ? "violet" : "blue";
 
-          return (
-            <NavLink
-              key={rowKey}
-              active={selectedRowKey === rowKey}
-              onClick={() => onSelectRun(run)}
-              label={
-                <Group gap="xs" wrap="nowrap">
-                  <Text size="sm" fw={500}>
-                    {formatPrimaryTime(run.createdAt)}
-                  </Text>
-                  <Badge size="xs" variant="light" color="blue">
-                    {run.modelName}
-                  </Badge>
-                </Group>
-              }
-              description={
-                <Text size="xs" c="dimmed">
-                  {getRunIdLabel(run)} &middot;{" "}
-                  {formatDuration(run.createdAt, run.lastActive)}
-                </Text>
-              }
-              rightSection={
-                <Stack gap={2} align="flex-end">
-                  <Text size="xs" fw={500} c="green">
-                    {formatCost(run.totalCost)}
-                  </Text>
-                  <Group gap={4}>
-                    {run.isOnline && (
-                      <Badge size="xs" variant="dot" color="green">
-                        Online
-                      </Badge>
-                    )}
-                    {unread && (
-                      <IconFileText
-                        size={14}
-                        color="var(--mantine-color-pink-5)"
-                      />
-                    )}
+            return (
+              <NavLink
+                key={rowKey}
+                active={selectedRowKey === rowKey}
+                onClick={() => onSelectRun(run)}
+                label={
+                  <Group gap="xs" wrap="nowrap">
+                    <Text size="sm" fw={500}>
+                      {formatPrimaryTime(run.createdAt)}
+                    </Text>
+                    <Badge size="xs" variant="light" color="blue">
+                      {run.modelName}
+                    </Badge>
                   </Group>
-                </Stack>
-              }
-              styles={{
-                root: {
-                  marginTop: isFirstInGroup ? 6 : 0,
-                  borderBottom: isMultiSession && !isLastInGroup
-                    ? "none"
-                    : "1px solid var(--mantine-color-dark-6)",
-                  borderLeft: isMultiSession
-                    ? `3px solid var(--mantine-color-${groupColor}-7)`
-                    : undefined,
-                  borderTopLeftRadius: isFirstInGroup ? 4 : 0,
-                  borderBottomLeftRadius: isLastInGroup ? 4 : 0,
-                },
-              }}
-            />
-          );
-        });
+                }
+                description={
+                  <Text size="xs" c="dimmed">
+                    {getRunIdLabel(run)} &middot;{" "}
+                    {formatDuration(run.createdAt, run.lastActive)}
+                  </Text>
+                }
+                rightSection={
+                  <Stack gap={2} align="flex-end">
+                    <Text size="xs" fw={500} c="green">
+                      {formatCost(run.totalCost)}
+                    </Text>
+                    <Group gap={4}>
+                      {run.isOnline && (
+                        <Badge size="xs" variant="dot" color="green">
+                          Online
+                        </Badge>
+                      )}
+                      {unread && (
+                        <IconFileText
+                          size={14}
+                          color="var(--mantine-color-pink-5)"
+                        />
+                      )}
+                    </Group>
+                  </Stack>
+                }
+                styles={{
+                  root: {
+                    marginTop: isFirstInGroup ? 6 : 0,
+                    borderBottom:
+                      isMultiSession && !isLastInGroup
+                        ? "none"
+                        : "1px solid var(--mantine-color-dark-6)",
+                    borderLeft: isMultiSession
+                      ? `3px solid var(--mantine-color-${groupColor}-7)`
+                      : undefined,
+                    borderTopLeftRadius: isFirstInGroup ? 4 : 0,
+                    borderBottomLeftRadius: isLastInGroup ? 4 : 0,
+                  },
+                }}
+              />
+            );
+          });
         })()}
 
         {runs.length === 0 && !runsLoading && (

@@ -1,7 +1,7 @@
 import { AuthCache } from "@naisys/common";
 import { hashToken } from "@naisys/common-node";
 import { findAgentByApiKey } from "@naisys/hub-database";
-import { findSession } from "@naisys/supervisor-database";
+import { findSession, findUserByApiKey } from "@naisys/supervisor-database";
 import type { FastifyInstance } from "fastify";
 
 import erpDb from "./erpDb.js";
@@ -112,22 +112,37 @@ export function registerAuthMiddleware(fastify: FastifyInstance) {
 
         if (cached !== undefined) {
           if (cached) request.erpUser = cached;
-        } else {
-          const agent = await findAgentByApiKey(apiKey);
-          if (agent) {
+        } else if (isSupervisorAuth()) {
+          // SSO mode: try supervisor DB (human users), then hub DB (agents)
+          const match =
+            (await findUserByApiKey(apiKey)) ??
+            (await findAgentByApiKey(apiKey));
+          if (match) {
             let localUser = await erpDb.user.findUnique({
-              where: { uuid: agent.uuid },
+              where: { uuid: match.uuid },
             });
             if (!localUser) {
               localUser = await erpDb.user.create({
                 data: {
-                  uuid: agent.uuid,
-                  username: agent.username,
+                  uuid: match.uuid,
+                  username: match.username,
                   passwordHash: "!api-key-only",
                   isAgent: true,
                 },
               });
             }
+            const erpUser = { id: localUser.id, username: localUser.username };
+            authCache.set(cacheKey, erpUser);
+            request.erpUser = erpUser;
+          } else {
+            authCache.set(cacheKey, null);
+          }
+        } else {
+          // Standalone mode: check local ERP user table
+          const localUser = await erpDb.user.findUnique({
+            where: { apiKey },
+          });
+          if (localUser) {
             const erpUser = { id: localUser.id, username: localUser.username };
             authCache.set(cacheKey, erpUser);
             request.erpUser = erpUser;

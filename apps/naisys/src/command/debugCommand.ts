@@ -1,3 +1,4 @@
+import { SUPER_ADMIN_USERNAME } from "@naisys/common";
 import { spawnSync } from "child_process";
 import { fileURLToPath } from "url";
 
@@ -119,7 +120,7 @@ export function createDebugCommands(
 
         const args = [serverPath, "--reset-password"];
         const parts = cmdArgs.trim().split(/\s+/);
-        args.push("--username", "superadmin");
+        args.push("--username", SUPER_ADMIN_USERNAME);
         if (parts[0]) {
           args.push("--password", parts[0]);
         }

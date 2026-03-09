@@ -9,13 +9,18 @@ export { createPrismaClient } from "./prismaClient.js";
 // Re-export Migration Helper
 export { deploySupervisorMigrations } from "./migrationHelper.js";
 // Re-export Session Service
-export type { AuthResult, SessionUser } from "./sessionService.js";
+export type {
+  AuthResult,
+  EnsureSuperAdminResult,
+  SessionUser,
+} from "./sessionService.js";
 export {
   authenticateAndCreateSession,
   createSupervisorDatabaseClient,
   deleteSession,
   ensureSuperAdmin,
   findSession,
+  findUserByApiKey,
   handleResetPassword,
   lookupUsername,
   resetPassword,

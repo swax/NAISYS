@@ -134,8 +134,7 @@ export const sessionCmd: CommandDef = {
     },
     compact: {
       usage: "compact",
-      description:
-        "Compact the session which will reset the token count.",
+      description: "Compact the session which will reset the token count.",
     },
     complete: {
       usage: 'complete "<result>"',

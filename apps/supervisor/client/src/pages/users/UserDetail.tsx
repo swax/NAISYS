@@ -24,6 +24,7 @@ import {
 } from "react-router-dom";
 
 import type { AppOutletContext } from "../../App";
+import { SecretField } from "../../components/SecretField";
 import { useSession } from "../../contexts/SessionContext";
 import {
   changePassword,
@@ -31,6 +32,7 @@ import {
   getUser,
   grantPermission,
   revokePermission,
+  rotateUserApiKey,
   updateUser,
 } from "../../lib/apiUsers";
 
@@ -45,6 +47,8 @@ export const UserDetail: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [editError, setEditError] = useState("");
   const [grantPerm, setGrantPerm] = useState<string | null>(null);
+  const [apiKey, setApiKey] = useState<string | null>(null);
+  const [rotating, setRotating] = useState(false);
   const [pwOpened, { open: openPw, close: closePw }] = useDisclosure();
   const [newPassword, setNewPassword] = useState("");
   const [pwSaving, setPwSaving] = useState(false);
@@ -57,6 +61,7 @@ export const UserDetail: React.FC = () => {
     try {
       const result = await getUser(routeUsername);
       setUser(result);
+      setApiKey(result.apiKey ?? null);
     } catch {
       // error handled silently
     } finally {
@@ -147,6 +152,25 @@ export const UserDetail: React.FC = () => {
       void fetchUser();
     } catch (err) {
       alert(err instanceof Error ? err.message : "Failed to revoke permission");
+    }
+  };
+
+  const handleRotateKey = async () => {
+    if (!routeUsername) return;
+    if (
+      !confirm(
+        "Rotate this user's API key? The old key will stop working immediately.",
+      )
+    )
+      return;
+    setRotating(true);
+    try {
+      await rotateUserApiKey(routeUsername);
+      void fetchUser();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to rotate API key");
+    } finally {
+      setRotating(false);
     }
   };
 
@@ -264,6 +288,22 @@ export const UserDetail: React.FC = () => {
             </Text>
             <Text>{new Date(user.updatedAt).toLocaleString()}</Text>
           </Group>
+          {apiKey && (
+            <Group>
+              <Text fw={600} w={120}>
+                API Key:
+              </Text>
+              <SecretField
+                value={apiKey}
+                onRotate={
+                  hasAction(user._actions, "rotate-key")
+                    ? handleRotateKey
+                    : undefined
+                }
+                rotating={rotating}
+              />
+            </Group>
+          )}
         </Stack>
       </Card>
 

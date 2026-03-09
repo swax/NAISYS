@@ -88,6 +88,13 @@ function userActions(
       schema: `${API_PREFIX}/schemas/GrantPermission`,
     });
 
+    actions.push({
+      rel: "rotate-key",
+      href: `${href}/rotate-key`,
+      method: "POST",
+      title: "Rotate API Key",
+    });
+
     if (!isSelf) {
       actions.push({
         rel: "delete",
@@ -128,7 +135,7 @@ function formatUser(
   user: Awaited<ReturnType<typeof userService.getUserById>>,
   currentUserId: number,
   currentUserPermissions: string[],
-  agentUsername?: string | null,
+  options?: { agentUsername?: string | null; apiKey?: string | null },
 ) {
   if (!user) return null;
   const isSelf = user.id === currentUserId;
@@ -139,13 +146,14 @@ function formatUser(
     isAgent: user.isAgent,
     createdAt: user.createdAt.toISOString(),
     updatedAt: user.updatedAt.toISOString(),
+    apiKey: isAdmin ? (options?.apiKey ?? null) : undefined,
     permissions: user.permissions.map((p) => ({
       permission: p.permission,
       grantedAt: p.grantedAt.toISOString(),
       grantedBy: p.grantedBy,
       _actions: permissionActions(user.username, p.permission, isSelf, isAdmin),
     })),
-    _links: userItemLinks(user.username, agentUsername),
+    _links: userItemLinks(user.username, options?.agentUsername),
     _actions: userActions(user.username, isSelf, isAdmin),
   };
 }
@@ -343,7 +351,7 @@ export default function userRoutes(
         return { success: false, message: "Username already exists" };
       }
 
-      const user = await userService.createUser(
+      const user = await userService.createUserForAgent(
         hubAgent.username,
         hubAgent.uuid,
       );
@@ -385,11 +393,13 @@ export default function userRoutes(
         agentUsername = hubAgent?.username ?? null;
       }
 
+      const apiKey = await userService.getUserApiKey(user.id);
+
       return formatUser(
         user,
         request.supervisorUser!.id,
         request.supervisorUser!.permissions,
-        agentUsername,
+        { agentUsername, apiKey },
       );
     },
   );
@@ -467,6 +477,32 @@ export default function userRoutes(
       await userService.deleteUser(targetUser.id);
       authCache.clear();
       return { success: true, message: "User deleted" };
+    },
+  );
+
+  // ROTATE API KEY
+  app.post(
+    "/:username/rotate-key",
+    {
+      preHandler: adminPreHandler,
+      schema: {
+        description: "Rotate a user's API key",
+        tags: ["Users"],
+        params: usernameParams,
+        security: [{ cookieAuth: [] }],
+      },
+    },
+    async (request, reply) => {
+      const targetUser = await userService.getUserByUsernameWithPermissions(
+        request.params.username,
+      );
+      if (!targetUser) {
+        reply.code(404);
+        return { success: false, message: "User not found" };
+      }
+      await userService.rotateUserApiKey(targetUser.id);
+      authCache.clear();
+      return { success: true, message: "API key rotated" };
     },
   );
 

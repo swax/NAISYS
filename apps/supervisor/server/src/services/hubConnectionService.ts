@@ -274,7 +274,6 @@ function connectSocket(hubUrl: string) {
     void refreshUserLookup();
     emitAgentsListChanged();
   });
-
 }
 
 export function isHubConnected(): boolean {

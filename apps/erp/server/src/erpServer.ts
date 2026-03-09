@@ -7,7 +7,7 @@ import cors from "@fastify/cors";
 import rateLimit from "@fastify/rate-limit";
 import staticFiles from "@fastify/static";
 import swagger from "@fastify/swagger";
-import { commonErrorHandler } from "@naisys/common";
+import { commonErrorHandler, SUPER_ADMIN_USERNAME } from "@naisys/common";
 import {
   createHubDatabaseClient,
   deployPrismaMigrations,
@@ -177,14 +177,29 @@ async function startServer() {
 
   if (isSupervisorAuth()) {
     const { default: erpDb } = await import("./erpDb.js");
-    await ensureSuperAdmin(async (passwordHash, uuid, superAdminName) => {
-      const existing = await erpDb.user.findFirst({ where: { uuid } });
-      if (existing) return false;
-      await erpDb.user.create({
-        data: { uuid, username: superAdminName, passwordHash },
-      });
-      return true;
+    const result = await ensureSuperAdmin();
+
+    // Upsert superadmin into ERP DB to stay in sync with supervisor
+    await erpDb.user.upsert({
+      where: { uuid: result.user.uuid },
+      create: {
+        uuid: result.user.uuid,
+        username: result.user.username,
+        passwordHash: result.user.passwordHash,
+        apiKey: result.user.apiKey,
+      },
+      update: {
+        username: result.user.username,
+        passwordHash: result.user.passwordHash,
+        apiKey: result.user.apiKey,
+      },
     });
+
+    if (result.created) {
+      console.log(
+        `[ERP] ${SUPER_ADMIN_USERNAME} user created. Password: ${result.generatedPassword}`,
+      );
+    }
   } else {
     await ensureLocalSuperAdmin();
   }

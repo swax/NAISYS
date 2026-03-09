@@ -226,7 +226,10 @@ export const NewMessageModal: React.FC<NewMessageModalProps> = ({
   };
 
   const hasContent =
-    recipientIds.length > 0 || subject.trim() || body.trim() || attachments.length > 0;
+    recipientIds.length > 0 ||
+    subject.trim() ||
+    body.trim() ||
+    attachments.length > 0;
 
   const handleClose = () => {
     if (isLoading) return;
@@ -411,7 +414,9 @@ export const NewMessageModal: React.FC<NewMessageModalProps> = ({
           </Button>
           <Button
             onClick={handleSend}
-            disabled={recipientIds.length === 0 || !subject.trim() || !body.trim()}
+            disabled={
+              recipientIds.length === 0 || !subject.trim() || !body.trim()
+            }
             loading={isLoading}
           >
             Send

@@ -3,6 +3,7 @@ export * from "./agentStatus.js";
 export * from "./authCache.js";
 export * from "./builtInModels.js";
 export * from "./configUtils.js";
+export * from "./constants.js";
 export * from "./costUtils.js";
 export * from "./errorHandler.js";
 export * from "./formatFileSize.js";

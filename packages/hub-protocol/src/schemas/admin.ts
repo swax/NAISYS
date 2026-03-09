@@ -15,4 +15,3 @@ export const RotateAccessKeyResponseSchema = z.object({
 export type RotateAccessKeyResponse = z.infer<
   typeof RotateAccessKeyResponseSchema
 >;
-

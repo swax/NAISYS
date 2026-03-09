@@ -1,11 +1,11 @@
 import { AuthCache } from "@naisys/common";
 import { hashToken } from "@naisys/common-node";
 import { findAgentByApiKey } from "@naisys/hub-database";
-import { findSession } from "@naisys/supervisor-database";
+import { findSession, findUserByApiKey } from "@naisys/supervisor-database";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 
 import {
-  createUser,
+  createUserForAgent,
   getUserByUuid,
   getUserPermissions,
 } from "./services/userService.js";
@@ -66,15 +66,10 @@ export async function resolveUserFromToken(
     return null;
   }
 
-  let localUser = await getUserByUuid(session.uuid);
-  if (!localUser) {
-    localUser = await createUser(session.username, session.uuid);
-  }
-
   const user = await buildSupervisorUser(
-    localUser.id,
-    localUser.username,
-    localUser.uuid,
+    session.userId,
+    session.username,
+    session.uuid,
   );
   authCache.set(cacheKey, user);
   return user;
@@ -89,15 +84,17 @@ export async function resolveUserFromApiKey(
 
   if (cached !== undefined) return cached;
 
-  const agent = await findAgentByApiKey(apiKey);
-  if (!agent) {
+  // Try supervisor DB first (human users), then hub DB (agents)
+  const match =
+    (await findUserByApiKey(apiKey)) ?? (await findAgentByApiKey(apiKey));
+  if (!match) {
     authCache.set(cacheKey, null);
     return null;
   }
 
-  let localUser = await getUserByUuid(agent.uuid);
+  let localUser = await getUserByUuid(match.uuid);
   if (!localUser) {
-    localUser = await createUser(agent.username, agent.uuid);
+    localUser = await createUserForAgent(match.username, match.uuid);
   }
 
   const user = await buildSupervisorUser(

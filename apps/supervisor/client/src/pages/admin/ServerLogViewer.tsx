@@ -102,54 +102,56 @@ export const ServerLogViewer: React.FC = () => {
               fontSize: 13,
             }}
           >
-            {[...logData.entries].reverse().map((entry: PinoLogEntry, i: number) => {
-              const { label, color } = pinoLevelDisplay(entry.level);
-              return (
-                <Group
-                  key={i}
-                  gap="xs"
-                  wrap="nowrap"
-                  align="flex-start"
-                  style={{ lineHeight: 1.6 }}
-                >
-                  <Text
-                    size="xs"
-                    c="dimmed"
-                    style={{
-                      fontFamily: "monospace",
-                      whiteSpace: "nowrap",
-                    }}
+            {[...logData.entries]
+              .reverse()
+              .map((entry: PinoLogEntry, i: number) => {
+                const { label, color } = pinoLevelDisplay(entry.level);
+                return (
+                  <Group
+                    key={i}
+                    gap="xs"
+                    wrap="nowrap"
+                    align="flex-start"
+                    style={{ lineHeight: 1.6 }}
                   >
-                    {new Date(entry.time).toLocaleString()}
-                  </Text>
-                  <Badge
-                    size="xs"
-                    color={color}
-                    variant="filled"
-                    style={{ flexShrink: 0 }}
-                  >
-                    {label}
-                  </Badge>
-                  <Text
-                    size="xs"
-                    c="gray.3"
-                    style={{
-                      fontFamily: "monospace",
-                      whiteSpace: "pre-wrap",
-                      wordBreak: "break-all",
-                    }}
-                  >
-                    {entry.msg}
-                    {entry.detail && (
-                      <span style={{ color: "var(--mantine-color-dimmed)" }}>
-                        {" "}
-                        {entry.detail}
-                      </span>
-                    )}
-                  </Text>
-                </Group>
-              );
-            })}
+                    <Text
+                      size="xs"
+                      c="dimmed"
+                      style={{
+                        fontFamily: "monospace",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {new Date(entry.time).toLocaleString()}
+                    </Text>
+                    <Badge
+                      size="xs"
+                      color={color}
+                      variant="filled"
+                      style={{ flexShrink: 0 }}
+                    >
+                      {label}
+                    </Badge>
+                    <Text
+                      size="xs"
+                      c="gray.3"
+                      style={{
+                        fontFamily: "monospace",
+                        whiteSpace: "pre-wrap",
+                        wordBreak: "break-all",
+                      }}
+                    >
+                      {entry.msg}
+                      {entry.detail && (
+                        <span style={{ color: "var(--mantine-color-dimmed)" }}>
+                          {" "}
+                          {entry.detail}
+                        </span>
+                      )}
+                    </Text>
+                  </Group>
+                );
+              })}
           </Box>
         </ScrollArea>
       ) : (
