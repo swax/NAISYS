@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { getTestCredentials } from "../auth-helper";
 
-test("planning orders page renders with title and create button", async ({
+test("orders page renders with title and create button", async ({
   page,
   request,
 }, testInfo) => {
@@ -15,7 +15,7 @@ test("planning orders page renders with title and create button", async ({
 
   // Verify the page title renders
   await expect(
-    page.getByRole("heading", { name: "Planning Orders" }),
+    page.getByRole("heading", { name: "Orders" }),
   ).toBeVisible();
 
   // Verify the "Create New" button exists

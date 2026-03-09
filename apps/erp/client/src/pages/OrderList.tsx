@@ -12,13 +12,13 @@ import {
   TextInput,
   Title,
 } from "@mantine/core";
-import type { PlanningOrderListResponse } from "@naisys-erp/shared";
+import type { OrderListResponse } from "@naisys-erp/shared";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 
 import { api, showErrorNotification } from "../lib/api";
 
-export const PlanningOrderList: React.FC = () => {
+export const OrderList: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -26,7 +26,7 @@ export const PlanningOrderList: React.FC = () => {
   const status = searchParams.get("status") || undefined;
   const search = searchParams.get("search") || "";
 
-  const [data, setData] = useState<PlanningOrderListResponse | null>(null);
+  const [data, setData] = useState<OrderListResponse | null>(null);
   const [loading, setLoading] = useState(true);
 
   const fetchData = useCallback(async () => {
@@ -38,7 +38,7 @@ export const PlanningOrderList: React.FC = () => {
       if (status) params.set("status", status);
       if (search) params.set("search", search);
 
-      const result = await api.get<PlanningOrderListResponse>(
+      const result = await api.get<OrderListResponse>(
         `orders?${params}`,
       );
       setData(result);
@@ -58,7 +58,7 @@ export const PlanningOrderList: React.FC = () => {
   return (
     <Container size="lg" py="xl">
       <Group justify="space-between" mb="lg">
-        <Title order={2}>Planning Orders</Title>
+        <Title order={2}>Orders</Title>
         <Button onClick={() => navigate("/orders/new")}>
           Create New
         </Button>
@@ -158,7 +158,7 @@ export const PlanningOrderList: React.FC = () => {
         </>
       ) : (
         <Text c="dimmed" ta="center" py="xl">
-          No planning orders found.
+          No orders found.
         </Text>
       )}
     </Container>

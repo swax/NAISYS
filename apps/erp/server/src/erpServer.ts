@@ -36,7 +36,7 @@ import auditRoutes from "./routes/audit.js";
 import authRoutes from "./routes/auth.js";
 import orderRunRoutes from "./routes/order-runs.js";
 import orderRevisionRoutes from "./routes/order-revisions.js";
-import planningOrderRoutes from "./routes/planning-orders.js";
+import orderRoutes from "./routes/orders.js";
 import rootRoute from "./routes/root.js";
 import schemaRoutes from "./routes/schemas.js";
 import { enableSupervisorAuth, isSupervisorAuth } from "./supervisorAuth.js";
@@ -96,7 +96,7 @@ export const erpPlugin: FastifyPluginAsync = async (fastify) => {
   fastify.register(auditRoutes, { prefix: "/api/erp/audit" });
   fastify.register(authRoutes, { prefix: "/api/erp/auth" });
   fastify.register(rootRoute, { prefix: "/api/erp" });
-  fastify.register(planningOrderRoutes, {
+  fastify.register(orderRoutes, {
     prefix: "/api/erp/orders",
   });
   fastify.register(orderRevisionRoutes, {

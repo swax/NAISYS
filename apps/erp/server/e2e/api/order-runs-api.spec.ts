@@ -19,7 +19,7 @@ test.describe("Order Runs - API happy path", () => {
     await api.dispose();
   });
 
-  test("create a planning order + revision for testing", async () => {
+  test("create an order + revision for testing", async () => {
     orderKey = `e2e-run-test-${Date.now()}`;
 
     // Create planning order
@@ -60,7 +60,7 @@ test.describe("Order Runs - API happy path", () => {
     expect(body.status).toBe("released");
     expect(body.priority).toBe("high");
     expect(body.assignedTo).toBe("test-user");
-    expect(body.planOrderKey).toBe(orderKey);
+    expect(body.orderKey).toBe(orderKey);
     expect(body.orderRevId).toBe(orderRevId);
     expect(body.releasedAt).toBeTruthy();
     expect(body._actions).toEqual(
@@ -73,7 +73,7 @@ test.describe("Order Runs - API happy path", () => {
     );
     expect(body._links).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ rel: "planning-order" }),
+        expect.objectContaining({ rel: "order" }),
       ]),
     );
     orderRunId = body.id;
@@ -274,7 +274,7 @@ test.describe("Order Runs - API happy path", () => {
     }
   });
 
-  test("cannot delete planning order with revisions (409)", async () => {
+  test("cannot delete order with revisions (409)", async () => {
     const res = await api.delete(`${API}/orders/${orderKey}`);
     expect(res.status()).toBe(409);
     const body = await res.json();

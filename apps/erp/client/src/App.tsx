@@ -12,9 +12,9 @@ import { OrderRunCreate } from "./pages/OrderRunCreate";
 import { OrderRunDetail } from "./pages/OrderRunDetail";
 import { OrderRunList } from "./pages/OrderRunList";
 import { LoginPage } from "./pages/LoginPage";
-import { PlanningOrderCreate } from "./pages/PlanningOrderCreate";
-import { PlanningOrderDetail } from "./pages/PlanningOrderDetail";
-import { PlanningOrderList } from "./pages/PlanningOrderList";
+import { OrderCreate } from "./pages/OrderCreate";
+import { OrderDetail } from "./pages/OrderDetail";
+import { OrderList } from "./pages/OrderList";
 import { OrderRevisionDetail } from "./pages/OrderRevisionDetail";
 
 const AppContent: React.FC = () => {
@@ -45,9 +45,9 @@ const AppContent: React.FC = () => {
     <Routes>
       <Route element={<AppLayout />}>
         <Route path="/" element={<Navigate to="/orders" replace />} />
-        <Route path="/orders" element={<PlanningOrderList />} />
-        <Route path="/orders/new" element={<PlanningOrderCreate />} />
-        <Route path="/orders/:key" element={<PlanningOrderDetail />} />
+        <Route path="/orders" element={<OrderList />} />
+        <Route path="/orders/new" element={<OrderCreate />} />
+        <Route path="/orders/:key" element={<OrderDetail />} />
         <Route
           path="/orders/:orderKey/revs/:revNo"
           element={<OrderRevisionDetail />}

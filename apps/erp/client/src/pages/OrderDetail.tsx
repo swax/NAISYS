@@ -9,19 +9,19 @@ import {
   Text,
   Title,
 } from "@mantine/core";
-import type { PlanningOrder, UpdatePlanningOrder } from "@naisys-erp/shared";
+import type { Order, UpdateOrder } from "@naisys-erp/shared";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 
-import { PlanningOrderForm } from "../components/PlanningOrderForm";
+import { OrderForm } from "../components/OrderForm";
 import { OrderRevisions } from "../components/OrderRevisions";
 import { api, showErrorNotification } from "../lib/api";
 import { hasAction } from "../lib/hateoas";
 
-export const PlanningOrderDetail: React.FC = () => {
+export const OrderDetail: React.FC = () => {
   const { key } = useParams<{ key: string }>();
   const navigate = useNavigate();
-  const [item, setItem] = useState<PlanningOrder | null>(null);
+  const [item, setItem] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
 
@@ -29,7 +29,7 @@ export const PlanningOrderDetail: React.FC = () => {
     if (!key) return;
     setLoading(true);
     try {
-      const result = await api.get<PlanningOrder>(`orders/${key}`);
+      const result = await api.get<Order>(`orders/${key}`);
       setItem(result);
     } catch (err) {
       showErrorNotification(err);
@@ -42,7 +42,7 @@ export const PlanningOrderDetail: React.FC = () => {
     void fetchItem();
   }, [fetchItem]);
 
-  const handleUpdate = async (data: UpdatePlanningOrder) => {
+  const handleUpdate = async (data: UpdateOrder) => {
     if (!key) return;
     await api.put(`orders/${key}`, data);
     setEditing(false);
@@ -50,7 +50,7 @@ export const PlanningOrderDetail: React.FC = () => {
   };
 
   const handleDelete = async () => {
-    if (!key || !confirm("Delete this planning order?")) return;
+    if (!key || !confirm("Delete this order?")) return;
     try {
       await api.delete(`orders/${key}`);
       void navigate("/orders");
@@ -72,7 +72,7 @@ export const PlanningOrderDetail: React.FC = () => {
   if (!item) {
     return (
       <Container size="md" py="xl">
-        <Text>Planning order not found.</Text>
+        <Text>Order not found.</Text>
       </Container>
     );
   }
@@ -81,9 +81,9 @@ export const PlanningOrderDetail: React.FC = () => {
     return (
       <Container size="md" py="xl">
         <Title order={2} mb="lg">
-          Edit Planning Order
+          Edit Order
         </Title>
-        <PlanningOrderForm<true>
+        <OrderForm<true>
           initialData={{
             name: item.name,
             description: item.description,

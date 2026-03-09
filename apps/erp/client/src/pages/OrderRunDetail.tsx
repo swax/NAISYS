@@ -222,7 +222,7 @@ export const OrderRunDetail: React.FC = () => {
         <Stack gap="sm">
           <Group>
             <Text fw={600} w={140}>
-              Plan Order:
+              Order:
             </Text>
             <Text
               ff="monospace"

@@ -17,7 +17,7 @@ test.describe("Order Revisions - API happy path", () => {
     await api.dispose();
   });
 
-  test("create a planning order", async () => {
+  test("create an order", async () => {
     orderKey = `e2e-rev-test-${Date.now()}`;
 
     const res = await api.post(`${API}/orders`, {
@@ -217,7 +217,7 @@ test.describe("Order Revisions - API happy path", () => {
     expect(after.total).toBe(1);
   });
 
-  test("cannot delete planning order with revisions (409)", async () => {
+  test("cannot delete order with revisions (409)", async () => {
     // There's still 1 obsolete revision, so delete should be blocked
     const res = await api.delete(`${API}/orders/${orderKey}`);
     expect(res.status()).toBe(409);

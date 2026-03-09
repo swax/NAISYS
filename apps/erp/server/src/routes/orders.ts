@@ -1,11 +1,11 @@
 import type { HateoasAction, HateoasLink } from "@naisys/common";
 import {
-  CreatePlanningOrderSchema,
+  CreateOrderSchema,
   ErrorResponseSchema,
-  PlanningOrderListQuerySchema,
-  PlanningOrderListResponseSchema,
-  PlanningOrderSchema,
-  UpdatePlanningOrderSchema,
+  OrderListQuerySchema,
+  OrderListResponseSchema,
+  OrderSchema,
+  UpdateOrderSchema,
 } from "@naisys-erp/shared";
 import { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
@@ -13,7 +13,7 @@ import { z } from "zod/v4";
 
 import erpDb from "../erpDb.js";
 import { sendError } from "../error-handler.js";
-import type { PlanningOrderModel } from "../generated/prisma/models/PlanningOrder.js";
+import type { OrderModel } from "../generated/prisma/models/Order.js";
 import {
   API_PREFIX,
   collectionLink,
@@ -46,7 +46,7 @@ function itemActions(
       href,
       method: "PUT",
       title: "Update",
-      schema: `${API_PREFIX}/schemas/UpdatePlanningOrder`,
+      schema: `${API_PREFIX}/schemas/UpdateOrder`,
     },
   ];
 
@@ -95,7 +95,7 @@ const KeyParamsSchema = z.object({
   key: z.string(),
 });
 
-function formatItem(item: PlanningOrderModel) {
+function formatItem(item: OrderModel) {
   return {
     id: item.id,
     key: item.key,
@@ -107,14 +107,14 @@ function formatItem(item: PlanningOrderModel) {
     updatedBy: item.updatedById,
     updatedAt: item.updatedAt.toISOString(),
     _links: [
-      ...itemLinks(RESOURCE, item.key, "PlanningOrder"),
+      ...itemLinks(RESOURCE, item.key, "Order"),
       revisionCollectionLink(RESOURCE, item.key),
     ],
     _actions: itemActions(RESOURCE, item.key, item.status),
   };
 }
 
-function formatListItem(item: PlanningOrderModel) {
+function formatListItem(item: OrderModel) {
   const { _actions, ...rest } = formatItem(item);
   return {
     ...rest,
@@ -122,17 +122,17 @@ function formatListItem(item: PlanningOrderModel) {
   };
 }
 
-export default function planningOrderRoutes(fastify: FastifyInstance) {
+export default function orderRoutes(fastify: FastifyInstance) {
   const app = fastify.withTypeProvider<ZodTypeProvider>();
 
   // LIST
   app.get("/", {
     schema: {
-      description: "List planning orders with pagination and filtering",
-      tags: ["Planning Orders"],
-      querystring: PlanningOrderListQuerySchema,
+      description: "List orders with pagination and filtering",
+      tags: ["Orders"],
+      querystring: OrderListQuerySchema,
       response: {
-        200: PlanningOrderListResponseSchema,
+        200: OrderListResponseSchema,
       },
     },
     handler: async (request) => {
@@ -149,13 +149,13 @@ export default function planningOrderRoutes(fastify: FastifyInstance) {
       }
 
       const [items, total] = await Promise.all([
-        erpDb.planningOrder.findMany({
+        erpDb.order.findMany({
           where,
           skip: (page - 1) * pageSize,
           take: pageSize,
           orderBy: { createdAt: "desc" },
         }),
-        erpDb.planningOrder.count({ where }),
+        erpDb.order.count({ where }),
       ]);
 
       return {
@@ -181,18 +181,18 @@ export default function planningOrderRoutes(fastify: FastifyInstance) {
   // CREATE
   app.post("/", {
     schema: {
-      description: "Create a new planning order",
-      tags: ["Planning Orders"],
-      body: CreatePlanningOrderSchema,
+      description: "Create a new order",
+      tags: ["Orders"],
+      body: CreateOrderSchema,
       response: {
-        201: PlanningOrderSchema,
+        201: OrderSchema,
       },
     },
     handler: async (request, reply) => {
       const { key, name, description } = request.body;
       const userId = request.erpUser!.id;
 
-      const item = await erpDb.planningOrder.create({
+      const item = await erpDb.order.create({
         data: {
           key,
           name,
@@ -210,24 +210,24 @@ export default function planningOrderRoutes(fastify: FastifyInstance) {
   // GET by key
   app.get("/:key", {
     schema: {
-      description: "Get a single planning order by key",
-      tags: ["Planning Orders"],
+      description: "Get a single order by key",
+      tags: ["Orders"],
       params: KeyParamsSchema,
       response: {
-        200: PlanningOrderSchema,
+        200: OrderSchema,
         404: ErrorResponseSchema,
       },
     },
     handler: async (request, reply) => {
       const { key } = request.params;
 
-      const item = await erpDb.planningOrder.findUnique({ where: { key } });
+      const item = await erpDb.order.findUnique({ where: { key } });
       if (!item) {
         return sendError(
           reply,
           404,
           "Not Found",
-          `Planning order '${key}' not found`,
+          `Order '${key}' not found`,
         );
       }
 
@@ -238,12 +238,12 @@ export default function planningOrderRoutes(fastify: FastifyInstance) {
   // UPDATE
   app.put("/:key", {
     schema: {
-      description: "Update a planning order",
-      tags: ["Planning Orders"],
+      description: "Update an order",
+      tags: ["Orders"],
       params: KeyParamsSchema,
-      body: UpdatePlanningOrderSchema,
+      body: UpdateOrderSchema,
       response: {
-        200: PlanningOrderSchema,
+        200: OrderSchema,
         404: ErrorResponseSchema,
       },
     },
@@ -252,7 +252,7 @@ export default function planningOrderRoutes(fastify: FastifyInstance) {
       const data = request.body;
       const userId = request.erpUser!.id;
 
-      const existing = await erpDb.planningOrder.findUnique({
+      const existing = await erpDb.order.findUnique({
         where: { key },
       });
       if (!existing) {
@@ -260,11 +260,11 @@ export default function planningOrderRoutes(fastify: FastifyInstance) {
           reply,
           404,
           "Not Found",
-          `Planning order '${key}' not found`,
+          `Order '${key}' not found`,
         );
       }
 
-      const item = await erpDb.planningOrder.update({
+      const item = await erpDb.order.update({
         where: { key },
         data: { ...data, updatedById: userId },
       });
@@ -276,8 +276,8 @@ export default function planningOrderRoutes(fastify: FastifyInstance) {
   // DELETE
   app.delete("/:key", {
     schema: {
-      description: "Delete a planning order",
-      tags: ["Planning Orders"],
+      description: "Delete an order",
+      tags: ["Orders"],
       params: KeyParamsSchema,
       response: {
         204: z.void(),
@@ -288,7 +288,7 @@ export default function planningOrderRoutes(fastify: FastifyInstance) {
     handler: async (request, reply) => {
       const { key } = request.params;
 
-      const existing = await erpDb.planningOrder.findUnique({
+      const existing = await erpDb.order.findUnique({
         where: { key },
       });
       if (!existing) {
@@ -296,23 +296,23 @@ export default function planningOrderRoutes(fastify: FastifyInstance) {
           reply,
           404,
           "Not Found",
-          `Planning order '${key}' not found`,
+          `Order '${key}' not found`,
         );
       }
 
       const revisionCount = await erpDb.orderRevision.count({
-        where: { planOrderId: existing.id },
+        where: { orderId: existing.id },
       });
       if (revisionCount > 0) {
         return sendError(
           reply,
           409,
           "Conflict",
-          "Cannot delete planning order with existing revisions. Archive it instead.",
+          "Cannot delete order with existing revisions. Archive it instead.",
         );
       }
 
-      await erpDb.planningOrder.delete({ where: { key } });
+      await erpDb.order.delete({ where: { key } });
       reply.status(204);
     },
   });
