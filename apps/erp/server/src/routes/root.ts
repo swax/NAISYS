@@ -19,14 +19,8 @@ export default function rootRoute(fastify: FastifyInstance) {
       const readLinks = [
         {
           rel: "planning-orders",
-          href: "/api/erp/planning/orders",
+          href: "/api/erp/orders",
           title: "Planning Orders",
-          method: "GET",
-        },
-        {
-          rel: "execution-orders",
-          href: "/api/erp/execution/orders",
-          title: "Execution Orders",
           method: "GET",
         },
         {
@@ -55,17 +49,10 @@ export default function rootRoute(fastify: FastifyInstance) {
           _actions: [
             {
               rel: "create-planning-order",
-              href: "/api/erp/planning/orders",
+              href: "/api/erp/orders",
               method: "POST",
               title: "Create Planning Order",
               schema: "/api/erp/schemas/CreatePlanningOrder",
-            },
-            {
-              rel: "create-execution-order",
-              href: "/api/erp/execution/orders",
-              method: "POST",
-              title: "Create Execution Order",
-              schema: "/api/erp/schemas/CreateExecutionOrder",
             },
             {
               rel: "logout",

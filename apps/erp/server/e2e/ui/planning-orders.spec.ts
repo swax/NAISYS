@@ -11,7 +11,7 @@ test("planning orders page renders with title and create button", async ({
     data: creds,
   });
 
-  await page.goto("/erp/planning/orders");
+  await page.goto("/erp/orders");
 
   // Verify the page title renders
   await expect(

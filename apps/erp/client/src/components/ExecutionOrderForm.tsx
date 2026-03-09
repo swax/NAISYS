@@ -26,7 +26,6 @@ type FormData<TEdit extends boolean> = TEdit extends true
 
 interface Props<TEdit extends boolean = boolean> {
   initialData?: Partial<{
-    planOrderId: number;
     planOrderRevId: number;
     priority: string;
     scheduledStartAt: string;
@@ -46,7 +45,6 @@ function toISOOrEmpty(datetimeLocal: string): string | undefined {
 
 function transformFormValues(
   values: {
-    planOrderId: number | string;
     planOrderRevId: number | string;
     priority: string;
     scheduledStartAt: string;
@@ -70,8 +68,6 @@ function transformFormValues(
     if (!values.assignedTo) result.assignedTo = null;
     if (!values.notes) result.notes = null;
   } else {
-    result.planOrderId =
-      typeof values.planOrderId === "number" ? values.planOrderId : undefined;
     result.planOrderRevId =
       typeof values.planOrderRevId === "number"
         ? values.planOrderRevId
@@ -92,7 +88,6 @@ export const ExecutionOrderForm = <TEdit extends boolean = false>({
 
   const form = useForm({
     initialValues: {
-      planOrderId: (initialData?.planOrderId ?? "") as number | string,
       planOrderRevId: (initialData?.planOrderRevId ?? "") as number | string,
       priority: initialData?.priority ?? "medium",
       scheduledStartAt: initialData?.scheduledStartAt ?? "",
@@ -124,18 +119,11 @@ export const ExecutionOrderForm = <TEdit extends boolean = false>({
     <form onSubmit={form.onSubmit(handleSubmit)}>
       <Stack gap="md">
         {!isEdit && (
-          <>
-            <NumberInput
-              label="Planning Order ID"
-              min={1}
-              {...form.getInputProps("planOrderId")}
-            />
-            <NumberInput
-              label="Planning Order Revision ID"
-              min={1}
-              {...form.getInputProps("planOrderRevId")}
-            />
-          </>
+          <NumberInput
+            label="Planning Order Revision ID"
+            min={1}
+            {...form.getInputProps("planOrderRevId")}
+          />
         )}
         <Select
           label="Priority"

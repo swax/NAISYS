@@ -9,8 +9,8 @@ export const PlanningOrderCreate: React.FC = () => {
   const navigate = useNavigate();
 
   const handleCreate = async (data: CreatePlanningOrder) => {
-    await api.post("planning/orders", data);
-    void navigate("/planning/orders");
+    await api.post("orders", data);
+    void navigate("/orders");
   };
 
   return (
@@ -20,7 +20,7 @@ export const PlanningOrderCreate: React.FC = () => {
       </Title>
       <PlanningOrderForm<false>
         onSubmit={handleCreate}
-        onCancel={() => navigate("/planning/orders")}
+        onCancel={() => navigate("/orders")}
       />
     </Container>
   );

@@ -55,7 +55,7 @@ export const PlanningOrderRevisions: React.FC<Props> = ({ orderKey }) => {
     validate: zodResolver(CreatePlanningOrderRevisionSchema),
   });
 
-  const basePath = `planning/orders/${orderKey}/revs`;
+  const basePath = `orders/${orderKey}/revs`;
 
   const fetchRevisions = useCallback(async () => {
     setLoading(true);
@@ -84,7 +84,7 @@ export const PlanningOrderRevisions: React.FC<Props> = ({ orderKey }) => {
       });
       setModalOpen(false);
       form.reset();
-      void navigate(`/planning/orders/${orderKey}/revs/${created.revNo}`);
+      void navigate(`/orders/${orderKey}/revs/${created.revNo}`);
     } catch (err) {
       showErrorNotification(err);
     } finally {
@@ -164,7 +164,7 @@ export const PlanningOrderRevisions: React.FC<Props> = ({ orderKey }) => {
                   style={{ cursor: "pointer" }}
                   onClick={() =>
                     navigate(
-                      `/planning/orders/${orderKey}/revs/${rev.revNo}`,
+                      `/orders/${orderKey}/revs/${rev.revNo}`,
                     )
                   }
                   data-testid={`revision-row-${rev.revNo}`}
@@ -214,7 +214,7 @@ export const PlanningOrderRevisions: React.FC<Props> = ({ orderKey }) => {
                           color="teal"
                           onClick={() =>
                             navigate(
-                              `/execution/orders/new?planOrderId=${orderKey}&planOrderRevId=${rev.id}`,
+                              `/orders/${orderKey}/runs/new?planOrderRevId=${rev.id}`,
                             )
                           }
                           data-testid={`revision-cut-order-${rev.revNo}`}

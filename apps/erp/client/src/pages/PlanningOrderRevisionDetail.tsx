@@ -33,7 +33,7 @@ export const PlanningOrderRevisionDetail: React.FC = () => {
     setLoading(true);
     try {
       const result = await api.get<PlanningOrderRevision>(
-        `planning/orders/${orderKey}/revs/${revNo}`,
+        `orders/${orderKey}/revs/${revNo}`,
       );
       setItem(result);
     } catch (err) {
@@ -51,7 +51,7 @@ export const PlanningOrderRevisionDetail: React.FC = () => {
     if (!confirm(`Approve revision #${revNo}?`)) return;
     try {
       await api.post(
-        `planning/orders/${orderKey}/revs/${revNo}/approve`,
+        `orders/${orderKey}/revs/${revNo}/approve`,
         {},
       );
       await fetchItem();
@@ -64,7 +64,7 @@ export const PlanningOrderRevisionDetail: React.FC = () => {
     if (!confirm(`Mark revision #${revNo} as obsolete?`)) return;
     try {
       await api.post(
-        `planning/orders/${orderKey}/revs/${revNo}/obsolete`,
+        `orders/${orderKey}/revs/${revNo}/obsolete`,
         {},
       );
       await fetchItem();
@@ -76,8 +76,8 @@ export const PlanningOrderRevisionDetail: React.FC = () => {
   const handleDelete = async () => {
     if (!confirm(`Delete revision #${revNo}?`)) return;
     try {
-      await api.delete(`planning/orders/${orderKey}/revs/${revNo}`);
-      void navigate(`/planning/orders/${orderKey}`);
+      await api.delete(`orders/${orderKey}/revs/${revNo}`);
+      void navigate(`/orders/${orderKey}`);
     } catch (err) {
       showErrorNotification(err);
     }
@@ -117,7 +117,7 @@ export const PlanningOrderRevisionDetail: React.FC = () => {
         <Group>
           <Button
             variant="subtle"
-            onClick={() => navigate(`/planning/orders/${orderKey}`)}
+            onClick={() => navigate(`/orders/${orderKey}`)}
           >
             Back to Order
           </Button>
@@ -136,7 +136,7 @@ export const PlanningOrderRevisionDetail: React.FC = () => {
               color="teal"
               onClick={() =>
                 navigate(
-                  `/execution/orders/new?planOrderId=${orderKey}&planOrderRevId=${item.id}`,
+                  `/orders/${orderKey}/runs/new?planOrderRevId=${item.id}`,
                 )
               }
             >

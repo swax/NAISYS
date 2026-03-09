@@ -44,21 +44,24 @@ const AppContent: React.FC = () => {
   return (
     <Routes>
       <Route element={<AppLayout />}>
-        <Route path="/" element={<Navigate to="/planning/orders" replace />} />
-        <Route path="/planning/orders" element={<PlanningOrderList />} />
-        <Route path="/planning/orders/new" element={<PlanningOrderCreate />} />
-        <Route path="/planning/orders/:key" element={<PlanningOrderDetail />} />
+        <Route path="/" element={<Navigate to="/orders" replace />} />
+        <Route path="/orders" element={<PlanningOrderList />} />
+        <Route path="/orders/new" element={<PlanningOrderCreate />} />
+        <Route path="/orders/:key" element={<PlanningOrderDetail />} />
         <Route
-          path="/planning/orders/:orderKey/revs/:revNo"
+          path="/orders/:orderKey/revs/:revNo"
           element={<PlanningOrderRevisionDetail />}
         />
-        <Route path="/execution/orders" element={<ExecutionOrderList />} />
         <Route
-          path="/execution/orders/new"
+          path="/orders/:orderKey/runs"
+          element={<ExecutionOrderList />}
+        />
+        <Route
+          path="/orders/:orderKey/runs/new"
           element={<ExecutionOrderCreate />}
         />
         <Route
-          path="/execution/orders/:id"
+          path="/orders/:orderKey/runs/:id"
           element={<ExecutionOrderDetail />}
         />
       </Route>

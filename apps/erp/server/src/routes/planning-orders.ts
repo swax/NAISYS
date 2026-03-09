@@ -89,7 +89,7 @@ function revisionCollectionLink(
   };
 }
 
-const RESOURCE = "planning/orders";
+const RESOURCE = "orders";
 
 const KeyParamsSchema = z.object({
   key: z.string(),

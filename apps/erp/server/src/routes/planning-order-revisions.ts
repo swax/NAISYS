@@ -80,7 +80,7 @@ function revisionItemActions(
     actions.push(
       {
         rel: "cut-order",
-        href: `${API_PREFIX}/execution/orders`,
+        href: `${API_PREFIX}/orders/${orderKey}/runs`,
         method: "POST",
         title: "Cut Order",
         schema: `${API_PREFIX}/schemas/CreateExecutionOrder`,
@@ -98,7 +98,7 @@ function revisionItemActions(
   return actions;
 }
 
-const PARENT_RESOURCE = "planning/orders";
+const PARENT_RESOURCE = "orders";
 
 const OrderKeyParamsSchema = z.object({
   orderKey: z.string(),

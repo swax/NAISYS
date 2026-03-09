@@ -19,29 +19,42 @@ import { sendError } from "../error-handler.js";
 import type { ExecOrderModel } from "../generated/prisma/models/ExecOrder.js";
 import {
   API_PREFIX,
-  collectionLink,
   paginationLinks,
   schemaLink,
   selfLink,
 } from "../hateoas.js";
 
-const EXEC_RESOURCE = "execution/orders";
+function execResource(orderKey: string) {
+  return `orders/${orderKey}/runs`;
+}
 
-function execOrderItemLinks(id: number, planOrderId: number): HateoasLink[] {
+function execOrderItemLinks(
+  orderKey: string,
+  id: number,
+): HateoasLink[] {
+  const resource = execResource(orderKey);
   return [
-    selfLink(`/${EXEC_RESOURCE}/${id}`),
-    collectionLink(EXEC_RESOURCE),
-    schemaLink("ExecutionOrder"),
+    selfLink(`/${resource}/${id}`),
+    {
+      rel: "collection",
+      href: `${API_PREFIX}/${resource}`,
+      title: "Runs",
+    },
     {
       rel: "planning-order",
-      href: `${API_PREFIX}/planning/orders/${planOrderId}`,
+      href: `${API_PREFIX}/orders/${orderKey}`,
       title: "Planning Order",
     },
+    schemaLink("ExecutionOrder"),
   ];
 }
 
-function execOrderItemActions(id: number, status: string): HateoasAction[] {
-  const href = `${API_PREFIX}/${EXEC_RESOURCE}/${id}`;
+function execOrderItemActions(
+  orderKey: string,
+  id: number,
+  status: string,
+): HateoasAction[] {
+  const href = `${API_PREFIX}/${execResource(orderKey)}/${id}`;
   const actions: HateoasAction[] = [];
 
   if (status === "released") {
@@ -100,7 +113,12 @@ function execOrderItemActions(id: number, status: string): HateoasAction[] {
   return actions;
 }
 
+const OrderKeyParamsSchema = z.object({
+  orderKey: z.string(),
+});
+
 const IdParamsSchema = z.object({
+  orderKey: z.string(),
   id: z.coerce.number().int(),
 });
 
@@ -108,11 +126,18 @@ function formatDate(d: Date | null): string | null {
   return d ? d.toISOString() : null;
 }
 
-function formatItem(item: ExecOrderModel) {
+async function resolveOrder(orderKey: string) {
+  return erpDb.planningOrder.findUnique({
+    where: { key: orderKey },
+  });
+}
+
+function formatItem(orderKey: string, item: ExecOrderModel) {
   return {
     id: item.id,
     orderNo: item.orderNo,
     planOrderId: item.planOrderId,
+    planOrderKey: orderKey,
     planOrderRevId: item.planOrderRevId,
     status: item.status as ExecutionOrderStatus,
     priority: item.priority as ExecutionOrderPriority,
@@ -125,16 +150,16 @@ function formatItem(item: ExecOrderModel) {
     createdBy: item.createdById,
     updatedAt: item.updatedAt.toISOString(),
     updatedBy: item.updatedById,
-    _links: execOrderItemLinks(item.id, item.planOrderId),
-    _actions: execOrderItemActions(item.id, item.status),
+    _links: execOrderItemLinks(orderKey, item.id),
+    _actions: execOrderItemActions(orderKey, item.id, item.status),
   };
 }
 
-function formatListItem(item: ExecOrderModel) {
-  const { _actions, ...rest } = formatItem(item);
+function formatListItem(orderKey: string, item: ExecOrderModel) {
+  const { _actions, ...rest } = formatItem(orderKey, item);
   return {
     ...rest,
-    _links: [selfLink(`/${EXEC_RESOURCE}/${item.id}`)],
+    _links: [selfLink(`/${execResource(orderKey)}/${item.id}`)],
   };
 }
 
@@ -144,17 +169,30 @@ export default function executionOrderRoutes(fastify: FastifyInstance) {
   // LIST
   app.get("/", {
     schema: {
-      description: "List execution orders with pagination and filtering",
+      description: "List execution orders (runs) for a planning order",
       tags: ["Execution Orders"],
+      params: OrderKeyParamsSchema,
       querystring: ExecutionOrderListQuerySchema,
       response: {
         200: ExecutionOrderListResponseSchema,
+        404: ErrorResponseSchema,
       },
     },
-    handler: async (request) => {
+    handler: async (request, reply) => {
+      const { orderKey } = request.params;
       const { page, pageSize, status, priority, search } = request.query;
 
-      const where: Record<string, unknown> = {};
+      const order = await resolveOrder(orderKey);
+      if (!order) {
+        return sendError(
+          reply,
+          404,
+          "Not Found",
+          `Planning order '${orderKey}' not found`,
+        );
+      }
+
+      const where: Record<string, unknown> = { planOrderId: order.id };
       if (status) where.status = status;
       if (priority) where.priority = priority;
       if (search) {
@@ -174,23 +212,18 @@ export default function executionOrderRoutes(fastify: FastifyInstance) {
         erpDb.execOrder.count({ where }),
       ]);
 
+      const resource = execResource(orderKey);
+
       return {
-        items: items.map(formatListItem),
+        items: items.map((item) => formatListItem(orderKey, item)),
         total,
         page,
         pageSize,
-        _links: [
-          ...paginationLinks(EXEC_RESOURCE, page, pageSize, total, {
-            status,
-            priority,
-            search,
-          }),
-          {
-            rel: "create",
-            href: `/api/erp/${EXEC_RESOURCE}`,
-            method: "POST",
-          },
-        ],
+        _links: paginationLinks(resource, page, pageSize, total, {
+          status,
+          priority,
+          search,
+        }),
       };
     },
   });
@@ -198,8 +231,9 @@ export default function executionOrderRoutes(fastify: FastifyInstance) {
   // CREATE
   app.post("/", {
     schema: {
-      description: "Create a new execution order",
+      description: "Create a new execution order (run) for a planning order",
       tags: ["Execution Orders"],
+      params: OrderKeyParamsSchema,
       body: CreateExecutionOrderSchema,
       response: {
         201: ExecutionOrderSchema,
@@ -207,8 +241,8 @@ export default function executionOrderRoutes(fastify: FastifyInstance) {
       },
     },
     handler: async (request, reply) => {
+      const { orderKey } = request.params;
       const {
-        planOrderId,
         planOrderRevId,
         priority,
         scheduledStartAt,
@@ -218,18 +252,17 @@ export default function executionOrderRoutes(fastify: FastifyInstance) {
       } = request.body;
       const userId = request.erpUser!.id;
 
-      // Validate planning order exists
-      const planOrder = await erpDb.planningOrder.findUnique({
-        where: { id: planOrderId },
-      });
-      if (!planOrder) {
+      const order = await resolveOrder(orderKey);
+      if (!order) {
         return sendError(
           reply,
           404,
           "Not Found",
-          `Planning order ${planOrderId} not found`,
+          `Planning order '${orderKey}' not found`,
         );
       }
+
+      const planOrderId = order.id;
 
       // Validate revision exists and belongs to the planning order
       const planOrderRev = await erpDb.planningOrderRevision.findFirst({
@@ -240,7 +273,7 @@ export default function executionOrderRoutes(fastify: FastifyInstance) {
           reply,
           404,
           "Not Found",
-          `Planning order revision ${planOrderRevId} not found for order ${planOrderId}`,
+          `Planning order revision ${planOrderRevId} not found for order '${orderKey}'`,
         );
       }
 
@@ -272,14 +305,14 @@ export default function executionOrderRoutes(fastify: FastifyInstance) {
       });
 
       reply.status(201);
-      return formatItem(item);
+      return formatItem(orderKey, item);
     },
   });
 
   // GET by ID
   app.get("/:id", {
     schema: {
-      description: "Get a single execution order by ID",
+      description: "Get a single execution order (run) by ID",
       tags: ["Execution Orders"],
       params: IdParamsSchema,
       response: {
@@ -288,19 +321,29 @@ export default function executionOrderRoutes(fastify: FastifyInstance) {
       },
     },
     handler: async (request, reply) => {
-      const { id } = request.params;
+      const { orderKey, id } = request.params;
 
-      const item = await erpDb.execOrder.findUnique({ where: { id } });
-      if (!item) {
+      const order = await resolveOrder(orderKey);
+      if (!order) {
         return sendError(
           reply,
           404,
           "Not Found",
-          `Execution order ${id} not found`,
+          `Planning order '${orderKey}' not found`,
         );
       }
 
-      return formatItem(item);
+      const item = await erpDb.execOrder.findUnique({ where: { id } });
+      if (!item || item.planOrderId !== order.id) {
+        return sendError(
+          reply,
+          404,
+          "Not Found",
+          `Execution order ${id} not found for order '${orderKey}'`,
+        );
+      }
+
+      return formatItem(orderKey, item);
     },
   });
 
@@ -319,17 +362,27 @@ export default function executionOrderRoutes(fastify: FastifyInstance) {
       },
     },
     handler: async (request, reply) => {
-      const { id } = request.params;
+      const { orderKey, id } = request.params;
       const data = request.body;
       const userId = request.erpUser!.id;
 
-      const existing = await erpDb.execOrder.findUnique({ where: { id } });
-      if (!existing) {
+      const order = await resolveOrder(orderKey);
+      if (!order) {
         return sendError(
           reply,
           404,
           "Not Found",
-          `Execution order ${id} not found`,
+          `Planning order '${orderKey}' not found`,
+        );
+      }
+
+      const existing = await erpDb.execOrder.findUnique({ where: { id } });
+      if (!existing || existing.planOrderId !== order.id) {
+        return sendError(
+          reply,
+          404,
+          "Not Found",
+          `Execution order ${id} not found for order '${orderKey}'`,
         );
       }
 
@@ -361,7 +414,7 @@ export default function executionOrderRoutes(fastify: FastifyInstance) {
         data: updateData,
       });
 
-      return formatItem(item);
+      return formatItem(orderKey, item);
     },
   });
 
@@ -378,15 +431,25 @@ export default function executionOrderRoutes(fastify: FastifyInstance) {
       },
     },
     handler: async (request, reply) => {
-      const { id } = request.params;
+      const { orderKey, id } = request.params;
 
-      const existing = await erpDb.execOrder.findUnique({ where: { id } });
-      if (!existing) {
+      const order = await resolveOrder(orderKey);
+      if (!order) {
         return sendError(
           reply,
           404,
           "Not Found",
-          `Execution order ${id} not found`,
+          `Planning order '${orderKey}' not found`,
+        );
+      }
+
+      const existing = await erpDb.execOrder.findUnique({ where: { id } });
+      if (!existing || existing.planOrderId !== order.id) {
+        return sendError(
+          reply,
+          404,
+          "Not Found",
+          `Execution order ${id} not found for order '${orderKey}'`,
         );
       }
 
@@ -417,15 +480,25 @@ export default function executionOrderRoutes(fastify: FastifyInstance) {
       },
     },
     handler: async (request, reply) => {
-      const { id } = request.params;
+      const { orderKey, id } = request.params;
 
-      const existing = await erpDb.execOrder.findUnique({ where: { id } });
-      if (!existing) {
+      const order = await resolveOrder(orderKey);
+      if (!order) {
         return sendError(
           reply,
           404,
           "Not Found",
-          `Execution order ${id} not found`,
+          `Planning order '${orderKey}' not found`,
+        );
+      }
+
+      const existing = await erpDb.execOrder.findUnique({ where: { id } });
+      if (!existing || existing.planOrderId !== order.id) {
+        return sendError(
+          reply,
+          404,
+          "Not Found",
+          `Execution order ${id} not found for order '${orderKey}'`,
         );
       }
 
@@ -457,7 +530,7 @@ export default function executionOrderRoutes(fastify: FastifyInstance) {
         return updated;
       });
 
-      return formatItem(item);
+      return formatItem(orderKey, item);
     },
   });
 
@@ -474,15 +547,25 @@ export default function executionOrderRoutes(fastify: FastifyInstance) {
       },
     },
     handler: async (request, reply) => {
-      const { id } = request.params;
+      const { orderKey, id } = request.params;
 
-      const existing = await erpDb.execOrder.findUnique({ where: { id } });
-      if (!existing) {
+      const order = await resolveOrder(orderKey);
+      if (!order) {
         return sendError(
           reply,
           404,
           "Not Found",
-          `Execution order ${id} not found`,
+          `Planning order '${orderKey}' not found`,
+        );
+      }
+
+      const existing = await erpDb.execOrder.findUnique({ where: { id } });
+      if (!existing || existing.planOrderId !== order.id) {
+        return sendError(
+          reply,
+          404,
+          "Not Found",
+          `Execution order ${id} not found for order '${orderKey}'`,
         );
       }
 
@@ -514,7 +597,7 @@ export default function executionOrderRoutes(fastify: FastifyInstance) {
         return updated;
       });
 
-      return formatItem(item);
+      return formatItem(orderKey, item);
     },
   });
 
@@ -531,15 +614,25 @@ export default function executionOrderRoutes(fastify: FastifyInstance) {
       },
     },
     handler: async (request, reply) => {
-      const { id } = request.params;
+      const { orderKey, id } = request.params;
 
-      const existing = await erpDb.execOrder.findUnique({ where: { id } });
-      if (!existing) {
+      const order = await resolveOrder(orderKey);
+      if (!order) {
         return sendError(
           reply,
           404,
           "Not Found",
-          `Execution order ${id} not found`,
+          `Planning order '${orderKey}' not found`,
+        );
+      }
+
+      const existing = await erpDb.execOrder.findUnique({ where: { id } });
+      if (!existing || existing.planOrderId !== order.id) {
+        return sendError(
+          reply,
+          404,
+          "Not Found",
+          `Execution order ${id} not found for order '${orderKey}'`,
         );
       }
 
@@ -571,7 +664,7 @@ export default function executionOrderRoutes(fastify: FastifyInstance) {
         return updated;
       });
 
-      return formatItem(item);
+      return formatItem(orderKey, item);
     },
   });
 }

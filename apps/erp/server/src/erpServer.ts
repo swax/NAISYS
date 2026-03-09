@@ -97,13 +97,13 @@ export const erpPlugin: FastifyPluginAsync = async (fastify) => {
   fastify.register(authRoutes, { prefix: "/api/erp/auth" });
   fastify.register(rootRoute, { prefix: "/api/erp" });
   fastify.register(planningOrderRoutes, {
-    prefix: "/api/erp/planning/orders",
+    prefix: "/api/erp/orders",
   });
   fastify.register(planningOrderRevisionRoutes, {
-    prefix: "/api/erp/planning/orders/:orderKey/revs",
+    prefix: "/api/erp/orders/:orderKey/revs",
   });
   fastify.register(executionOrderRoutes, {
-    prefix: "/api/erp/execution/orders",
+    prefix: "/api/erp/orders/:orderKey/runs",
   });
   fastify.register(schemaRoutes, { prefix: "/api/erp/schemas" });
 

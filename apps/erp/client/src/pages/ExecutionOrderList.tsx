@@ -14,7 +14,7 @@ import {
 } from "@mantine/core";
 import type { ExecutionOrderListResponse } from "@naisys-erp/shared";
 import { useCallback, useEffect, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router";
+import { useNavigate, useParams, useSearchParams } from "react-router";
 
 import { api, showErrorNotification } from "../lib/api";
 
@@ -33,6 +33,7 @@ const PRIORITY_COLORS: Record<string, string> = {
 };
 
 export const ExecutionOrderList: React.FC = () => {
+  const { orderKey } = useParams<{ orderKey: string }>();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -55,7 +56,7 @@ export const ExecutionOrderList: React.FC = () => {
       if (search) params.set("search", search);
 
       const result = await api.get<ExecutionOrderListResponse>(
-        `execution/orders?${params}`,
+        `orders/${orderKey}/runs?${params}`,
       );
       setData(result);
     } catch (err) {
@@ -63,7 +64,7 @@ export const ExecutionOrderList: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [page, status, priority, search]);
+  }, [orderKey, page, status, priority, search]);
 
   useEffect(() => {
     void fetchData();
@@ -74,10 +75,18 @@ export const ExecutionOrderList: React.FC = () => {
   return (
     <Container size="lg" py="xl">
       <Group justify="space-between" mb="lg">
-        <Title order={2}>Execution Orders</Title>
-        <Button onClick={() => navigate("/execution/orders/new")}>
-          Create New
-        </Button>
+        <Title order={2}>Runs for {orderKey}</Title>
+        <Group>
+          <Button
+            variant="subtle"
+            onClick={() => navigate(`/orders/${orderKey}`)}
+          >
+            Back to Order
+          </Button>
+          <Button onClick={() => navigate(`/orders/${orderKey}/runs/new`)}>
+            Create New
+          </Button>
+        </Group>
       </Group>
 
       <Group mb="md">
@@ -157,7 +166,7 @@ export const ExecutionOrderList: React.FC = () => {
                 <Table.Tr
                   key={item.id}
                   style={{ cursor: "pointer" }}
-                  onClick={() => navigate(`/execution/orders/${item.id}`)}
+                  onClick={() => navigate(`/orders/${orderKey}/runs/${item.id}`)}
                   data-testid={`exec-order-row-${item.orderNo}`}
                 >
                   <Table.Td>

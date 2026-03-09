@@ -37,7 +37,7 @@ const PRIORITY_COLORS: Record<string, string> = {
 };
 
 export const ExecutionOrderDetail: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
+  const { orderKey, id } = useParams<{ orderKey: string; id: string }>();
   const navigate = useNavigate();
   const [item, setItem] = useState<ExecutionOrder | null>(null);
   const [auditEntries, setAuditEntries] = useState<AuditListResponse["items"]>(
@@ -51,7 +51,7 @@ export const ExecutionOrderDetail: React.FC = () => {
     setLoading(true);
     try {
       const [result, audit] = await Promise.all([
-        api.get<ExecutionOrder>(`execution/orders/${id}`),
+        api.get<ExecutionOrder>(`orders/${orderKey}/runs/${id}`),
         api.get<AuditListResponse>(`audit?entityType=ExecOrder&entityId=${id}`),
       ]);
       setItem(result);
@@ -61,7 +61,7 @@ export const ExecutionOrderDetail: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [id]);
+  }, [orderKey, id]);
 
   useEffect(() => {
     void fetchItem();
@@ -69,7 +69,7 @@ export const ExecutionOrderDetail: React.FC = () => {
 
   const handleUpdate = async (data: UpdateExecutionOrder) => {
     if (!id) return;
-    await api.put(`execution/orders/${id}`, data);
+    await api.put(`orders/${orderKey}/runs/${id}`, data);
     setEditing(false);
     await fetchItem();
   };
@@ -77,8 +77,8 @@ export const ExecutionOrderDetail: React.FC = () => {
   const handleDelete = async () => {
     if (!id || !confirm("Delete this execution order?")) return;
     try {
-      await api.delete(`execution/orders/${id}`);
-      void navigate("/execution/orders");
+      await api.delete(`orders/${orderKey}/runs/${id}`);
+      void navigate(`/orders/${orderKey}/runs`);
     } catch (err) {
       showErrorNotification(err);
     }
@@ -87,7 +87,7 @@ export const ExecutionOrderDetail: React.FC = () => {
   const handleStart = async () => {
     if (!id) return;
     try {
-      await api.post(`execution/orders/${id}/start`, {});
+      await api.post(`orders/${orderKey}/runs/${id}/start`, {});
       await fetchItem();
     } catch (err) {
       showErrorNotification(err);
@@ -97,7 +97,7 @@ export const ExecutionOrderDetail: React.FC = () => {
   const handleClose = async () => {
     if (!id) return;
     try {
-      await api.post(`execution/orders/${id}/close`, {});
+      await api.post(`orders/${orderKey}/runs/${id}/close`, {});
       await fetchItem();
     } catch (err) {
       showErrorNotification(err);
@@ -107,7 +107,7 @@ export const ExecutionOrderDetail: React.FC = () => {
   const handleCancel = async () => {
     if (!id || !confirm("Cancel this execution order?")) return;
     try {
-      await api.post(`execution/orders/${id}/cancel`, {});
+      await api.post(`orders/${orderKey}/runs/${id}/cancel`, {});
       await fetchItem();
     } catch (err) {
       showErrorNotification(err);
@@ -182,7 +182,7 @@ export const ExecutionOrderDetail: React.FC = () => {
         <Group>
           <Button
             variant="subtle"
-            onClick={() => navigate("/execution/orders")}
+            onClick={() => navigate(`/orders/${orderKey}/runs`)}
           >
             Back
           </Button>
@@ -222,14 +222,14 @@ export const ExecutionOrderDetail: React.FC = () => {
         <Stack gap="sm">
           <Group>
             <Text fw={600} w={140}>
-              Plan Order ID:
+              Plan Order:
             </Text>
             <Text
               ff="monospace"
               style={{ cursor: "pointer", textDecoration: "underline" }}
-              onClick={() => navigate(`/planning/orders/${item.planOrderId}`)}
+              onClick={() => navigate(`/orders/${orderKey}`)}
             >
-              {item.planOrderId}
+              {orderKey}
             </Text>
           </Group>
           <Group>
