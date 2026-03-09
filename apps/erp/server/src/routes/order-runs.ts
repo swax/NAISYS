@@ -132,13 +132,16 @@ async function resolveOrder(orderKey: string) {
   });
 }
 
-function formatItem(orderKey: string, item: OrderRunModel) {
+type OrderRunWithRev = OrderRunModel & { orderRev: { revNo: number } };
+const includeRev = { orderRev: { select: { revNo: true } } } as const;
+
+function formatItem(orderKey: string, item: OrderRunWithRev) {
   return {
     id: item.id,
-    orderNo: item.orderNo,
+    runNo: item.runNo,
     orderId: item.orderId,
     orderKey,
-    orderRevId: item.orderRevId,
+    revNo: item.orderRev.revNo,
     status: item.status as OrderRunStatus,
     priority: item.priority as OrderRunPriority,
     scheduledStartAt: formatDate(item.scheduledStartAt),
@@ -155,7 +158,7 @@ function formatItem(orderKey: string, item: OrderRunModel) {
   };
 }
 
-function formatListItem(orderKey: string, item: OrderRunModel) {
+function formatListItem(orderKey: string, item: OrderRunWithRev) {
   const { _actions, ...rest } = formatItem(orderKey, item);
   return {
     ...rest,
@@ -205,6 +208,7 @@ export default function orderRunRoutes(fastify: FastifyInstance) {
       const [items, total] = await Promise.all([
         erpDb.orderRun.findMany({
           where,
+          include: includeRev,
           skip: (page - 1) * pageSize,
           take: pageSize,
           orderBy: { createdAt: "desc" },
@@ -243,7 +247,7 @@ export default function orderRunRoutes(fastify: FastifyInstance) {
     handler: async (request, reply) => {
       const { orderKey } = request.params;
       const {
-        orderRevId,
+        revNo,
         priority,
         scheduledStartAt,
         dueAt,
@@ -265,32 +269,32 @@ export default function orderRunRoutes(fastify: FastifyInstance) {
       const orderId = order.id;
 
       // Validate revision exists and belongs to the order
-      const orderRev = await erpDb.orderRevision.findFirst({
-        where: { id: orderRevId, orderId },
+      const orderRev = await erpDb.orderRevision.findUnique({
+        where: { orderId_revNo: { orderId, revNo } },
       });
       if (!orderRev) {
         return sendError(
           reply,
           404,
           "Not Found",
-          `Order revision ${orderRevId} not found for order '${orderKey}'`,
+          `Order revision ${revNo} not found for order '${orderKey}'`,
         );
       }
 
-      // Auto-increment orderNo inside a transaction to prevent race conditions
+      // Auto-increment runNo inside a transaction to prevent race conditions
       const item = await erpDb.$transaction(async (erpTx) => {
         const maxOrder = await erpTx.orderRun.findFirst({
           where: { orderId },
-          orderBy: { orderNo: "desc" },
-          select: { orderNo: true },
+          orderBy: { runNo: "desc" },
+          select: { runNo: true },
         });
-        const nextOrderNo = (maxOrder?.orderNo ?? 0) + 1;
+        const nextRunNo = (maxOrder?.runNo ?? 0) + 1;
 
         return erpTx.orderRun.create({
           data: {
-            orderNo: nextOrderNo,
+            runNo: nextRunNo,
             orderId,
-            orderRevId,
+            orderRevId: orderRev.id,
             priority,
             scheduledStartAt: scheduledStartAt
               ? new Date(scheduledStartAt)
@@ -301,6 +305,7 @@ export default function orderRunRoutes(fastify: FastifyInstance) {
             createdById: userId,
             updatedById: userId,
           },
+          include: includeRev,
         });
       });
 
@@ -333,7 +338,10 @@ export default function orderRunRoutes(fastify: FastifyInstance) {
         );
       }
 
-      const item = await erpDb.orderRun.findUnique({ where: { id } });
+      const item = await erpDb.orderRun.findUnique({
+        where: { id },
+        include: includeRev,
+      });
       if (!item || item.orderId !== order.id) {
         return sendError(
           reply,
@@ -412,6 +420,7 @@ export default function orderRunRoutes(fastify: FastifyInstance) {
       const item = await erpDb.orderRun.update({
         where: { id },
         data: updateData,
+        include: includeRev,
       });
 
       return formatItem(orderKey, item);
@@ -516,6 +525,7 @@ export default function orderRunRoutes(fastify: FastifyInstance) {
         const updated = await erpTx.orderRun.update({
           where: { id },
           data: { status: "started", updatedById: userId },
+          include: includeRev,
         });
         await writeAuditEntry(
           erpTx,
@@ -583,6 +593,7 @@ export default function orderRunRoutes(fastify: FastifyInstance) {
         const updated = await erpTx.orderRun.update({
           where: { id },
           data: { status: "closed", updatedById: userId },
+          include: includeRev,
         });
         await writeAuditEntry(
           erpTx,
@@ -650,6 +661,7 @@ export default function orderRunRoutes(fastify: FastifyInstance) {
         const updated = await erpTx.orderRun.update({
           where: { id },
           data: { status: "cancelled", updatedById: userId },
+          include: includeRev,
         });
         await writeAuditEntry(
           erpTx,

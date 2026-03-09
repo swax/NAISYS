@@ -8,5 +8,5 @@ export function erpDbUrl(): string {
   return "file:" + erpDbPath();
 }
 
-/** Must match the version in the latest migration's schema_version insert */
-export const ERP_DB_VERSION = 8;
+/** We run migration scripts if this is greater than what's in the schema_version table */
+export const ERP_DB_VERSION = 9;

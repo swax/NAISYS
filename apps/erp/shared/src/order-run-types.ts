@@ -21,10 +21,10 @@ export type OrderRunPriority = z.infer<typeof OrderRunPriorityEnum>;
 // Full order run response shape
 export const OrderRunSchema = z.object({
   id: z.number(),
-  orderNo: z.number(),
+  runNo: z.number(),
   orderId: z.number(),
   orderKey: z.string(),
-  orderRevId: z.number(),
+  revNo: z.number(),
   status: OrderRunStatusEnum,
   priority: OrderRunPriorityEnum,
   scheduledStartAt: z.iso.datetime().nullable(),
@@ -45,7 +45,7 @@ export type OrderRun = z.infer<typeof OrderRunSchema>;
 // Input for creating an order run
 export const CreateOrderRunSchema = z
   .object({
-    orderRevId: z.number().int().min(1),
+    revNo: z.number().int().min(1),
     priority: OrderRunPriorityEnum.optional().default("medium"),
     scheduledStartAt: z.iso.datetime().optional(),
     dueAt: z.iso.datetime().optional(),
