@@ -127,6 +127,39 @@ export function createContextManager(
     output.write(text, OutputColor.console);
   }
 
+  /** Scrub non-text content blocks (image, audio) from recent user messages,
+   *  walking backwards until an assistant message is hit.
+   *  Removes media blocks and appends "(scrubbed from context)" to the existing text block.
+   *  Returns true if anything was scrubbed. */
+  function scrubRecentMedia(): boolean {
+    let scrubbed = false;
+
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const msg = messages[i];
+      if (msg.role === "assistant") break;
+
+      if (typeof msg.content === "string") continue;
+
+      const hasMedia = msg.content.some((block) => block.type !== "text");
+      if (!hasMedia) continue;
+
+      // Remove media blocks, keep only text
+      msg.content = msg.content.filter((block) => block.type === "text");
+
+      // Append scrubbed note to existing text block, or add one
+      const textBlock = msg.content.find((block) => block.type === "text");
+      if (textBlock) {
+        textBlock.text += " (scrubbed from context)";
+      } else {
+        msg.content.push({ type: "text", text: "(scrubbed from context)" });
+      }
+
+      scrubbed = true;
+    }
+
+    return scrubbed;
+  }
+
   function clear() {
     messages = [];
     lastKnownTokenCount = 0;
@@ -261,6 +294,7 @@ export function createContextManager(
     append,
     appendImage,
     appendAudio,
+    scrubRecentMedia,
     clear,
     setMessagesTokenCount,
     getLastQueryTime: () => lastQueryTime,

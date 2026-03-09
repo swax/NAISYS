@@ -25,6 +25,52 @@ const MIME_TYPES: Record<string, string> = {
   ".webp": "image/webp",
 };
 
+/** Detect actual MIME type from file magic bytes, ignoring the file extension */
+function detectMimeType(buffer: Buffer): string | undefined {
+  if (buffer.length < 12) return undefined;
+
+  // PNG: 89 50 4E 47
+  if (
+    buffer[0] === 0x89 &&
+    buffer[1] === 0x50 &&
+    buffer[2] === 0x4e &&
+    buffer[3] === 0x47
+  ) {
+    return "image/png";
+  }
+
+  // JPEG: FF D8 FF
+  if (buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) {
+    return "image/jpeg";
+  }
+
+  // GIF: 47 49 46 38 ("GIF8")
+  if (
+    buffer[0] === 0x47 &&
+    buffer[1] === 0x49 &&
+    buffer[2] === 0x46 &&
+    buffer[3] === 0x38
+  ) {
+    return "image/gif";
+  }
+
+  // WebP: RIFF....WEBP
+  if (
+    buffer[0] === 0x52 &&
+    buffer[1] === 0x49 &&
+    buffer[2] === 0x46 &&
+    buffer[3] === 0x46 &&
+    buffer[8] === 0x57 &&
+    buffer[9] === 0x45 &&
+    buffer[10] === 0x42 &&
+    buffer[11] === 0x50
+  ) {
+    return "image/webp";
+  }
+
+  return undefined;
+}
+
 export function createLookService(
   { agentConfig }: AgentConfig,
   modelService: ModelService,
@@ -79,7 +125,18 @@ export function createLookService(
     // Read file and encode to base64
     const fileBuffer = fs.readFileSync(filepath);
     const base64 = fileBuffer.toString("base64");
-    const mimeType = MIME_TYPES[ext];
+
+    // Detect actual MIME type from file content, fall back to extension
+    const detectedMime = detectMimeType(fileBuffer);
+    const extensionMime = MIME_TYPES[ext];
+    const mimeType = detectedMime ?? extensionMime;
+
+    if (!mimeType) {
+      return `Error: Could not determine image type for '${filepath}'.`;
+    }
+
+    // Note: if extension and content disagree, we use the detected (content-based) MIME type
+    // since that's what the LLM API validates against
 
     if (describe) {
       // One-shot: send image to LLM for a text description

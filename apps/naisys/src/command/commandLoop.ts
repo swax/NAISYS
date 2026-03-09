@@ -447,6 +447,20 @@ export function createCommandLoop(
       // Can't do this in a finally because it needs to happen before the error is printed
       clearPromptMessage(workingMsg);
 
+      // Check if the error is a bad request (400) that might be caused by media content
+      // in the context (e.g. mismatched MIME type). Scrub non-text content from recent
+      // user messages so the agent can recover instead of getting stuck in an error loop.
+      const errorStr = `${e}`;
+      if (errorStr.includes("400") && contextManager.scrubRecentMedia()) {
+        output.errorAndLog(
+          `Attempting Context Recovery: Recent media scrubbed from context due to API error: ${errorStr}`,
+        );
+        contextManager.append(
+          `System: Recent media was scrubbed from the context because it caused an API error: ${errorStr.slice(0, 150)}`,
+        );
+        return { outcome: "skip", llmErrorCount, pauseSeconds: undefined };
+      }
+
       const errorResult = handleErrorAndSwitchToDebugMode(
         e,
         llmErrorCount,

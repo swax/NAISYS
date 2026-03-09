@@ -30,7 +30,7 @@ export function parseHubAccessKey(accessKey: string): {
   const plusIndex = accessKey.indexOf("+");
   if (plusIndex === -1) {
     throw new Error(
-      "Invalid hub access key format, expected <fingerprint>+<secret>",
+      `Invalid hub access key format, expected <fingerprint>+<secret>, got ${accessKey}`,
     );
   }
   return {

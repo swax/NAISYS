@@ -163,6 +163,7 @@ export function createMockContextManager() {
     append,
     appendImage,
     appendAudio,
+    scrubRecentMedia: jest.fn(() => false),
     clear,
     setMessagesTokenCount,
     getLastQueryTime: jest.fn(() => 0),
