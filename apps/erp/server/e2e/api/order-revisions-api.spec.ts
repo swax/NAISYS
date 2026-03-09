@@ -3,7 +3,7 @@ import { loginAsTestUser } from "../auth-helper";
 
 const API = "http://localhost:3201/api/erp";
 
-test.describe("Planning Order Revisions - API happy path", () => {
+test.describe("Order Revisions - API happy path", () => {
   let orderKey: string;
   let revisionId: number;
   let api: APIRequestContext;
@@ -96,7 +96,7 @@ test.describe("Planning Order Revisions - API happy path", () => {
 
     // Verify audit entry was created
     const auditRes = await api.get(
-      `${API}/audit?entityType=PlanningOrderRevision&entityId=${revisionId}`,
+      `${API}/audit?entityType=OrderRevision&entityId=${revisionId}`,
     );
     const audit = await auditRes.json();
     expect(audit.items).toEqual(

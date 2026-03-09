@@ -5,7 +5,7 @@ const API = "http://localhost:3201/api/erp";
 
 test.describe("Order Runs - API happy path", () => {
   let orderKey: string;
-  let planOrderRevId: number;
+  let orderRevId: number;
   let orderRunId: number;
   let orderRunId2: number;
   let api: APIRequestContext;
@@ -41,13 +41,13 @@ test.describe("Order Runs - API happy path", () => {
     });
     expect(revRes.status()).toBe(201);
     const rev = await revRes.json();
-    planOrderRevId = rev.id;
+    orderRevId = rev.id;
   });
 
   test("create order run", async () => {
     const res = await api.post(`${API}/orders/${orderKey}/runs`, {
       data: {
-        planOrderRevId,
+        orderRevId,
         priority: "high",
         assignedTo: "test-user",
         notes: "First order run",
@@ -61,7 +61,7 @@ test.describe("Order Runs - API happy path", () => {
     expect(body.priority).toBe("high");
     expect(body.assignedTo).toBe("test-user");
     expect(body.planOrderKey).toBe(orderKey);
-    expect(body.planOrderRevId).toBe(planOrderRevId);
+    expect(body.orderRevId).toBe(orderRevId);
     expect(body.releasedAt).toBeTruthy();
     expect(body._actions).toEqual(
       expect.arrayContaining([
@@ -229,7 +229,7 @@ test.describe("Order Runs - API happy path", () => {
     // Create second order run
     const createRes = await api.post(`${API}/orders/${orderKey}/runs`, {
       data: {
-        planOrderRevId,
+        orderRevId,
         priority: "low",
       },
     });
@@ -293,7 +293,7 @@ test.describe("Order Runs - API happy path", () => {
 
     const runRes = await api.post(`${API}/orders/${orderKey}/runs`, {
       data: {
-        planOrderRevId: rev.id,
+        orderRevId: rev.id,
         priority: "low",
       },
     });

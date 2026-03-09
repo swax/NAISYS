@@ -113,7 +113,7 @@ The top-level entity representing a type of work to be done.
 | updated_by  | string   | Audit: who last modified     |
 | updated_at  | datetime | Audit: when last modified    |
 
-### Planning Order Revisions
+### Order Revisions
 
 Versioned snapshots of a planning order that go through an approval workflow.
 
@@ -139,7 +139,7 @@ Concrete work items created from an approved revision. Track the actual executio
 | id                 | int (PK)        | Auto-increment                                  |
 | order_no           | int             | Auto-incremented per planning order             |
 | plan_order_id      | int (FK)        | Source planning order                           |
-| plan_order_rev_id  | int (FK)        | Source revision                                 |
+| order_rev_id  | int (FK)        | Source revision                                 |
 | status             | enum            | `released` / `started` / `closed` / `cancelled` |
 | priority           | enum            | `low` / `medium` / `high` / `critical`          |
 | scheduled_start_at | datetime?       | When work should begin                          |
@@ -161,7 +161,7 @@ Deletes are guarded to prevent orphaned data:
 
 ## State Machines
 
-### Planning Order Revisions
+### Order Revisions
 
 ```
 draft ──[approve]──> approved ──[obsolete]──> obsolete
@@ -214,7 +214,7 @@ Each action includes a `schema` URL (e.g., `/api/erp/schemas/UpdatePlanningOrder
 | PUT    | `/api/erp/orders/:id` | Update                       |
 | DELETE | `/api/erp/orders/:id` | Delete (if no revisions)     |
 
-### Planning Order Revisions
+### Order Revisions
 
 | Method | Path                                                      | Description          |
 | ------ | --------------------------------------------------------- | -------------------- |
@@ -246,7 +246,7 @@ Each action includes a `schema` URL (e.g., `/api/erp/schemas/UpdatePlanningOrder
 | GET    | `/api/erp/schemas/`            | List all available schema names |
 | GET    | `/api/erp/schemas/:schemaName` | Get a single JSON Schema        |
 
-Available schemas: `CreatePlanningOrder`, `UpdatePlanningOrder`, `CreatePlanningOrderRevision`, `UpdatePlanningOrderRevision`, `CreateOrderRun`, `UpdateOrderRun`.
+Available schemas: `CreatePlanningOrder`, `UpdatePlanningOrder`, `CreateOrderRevision`, `UpdateOrderRevision`, `CreateOrderRun`, `UpdateOrderRun`.
 
 ### Query Parameters
 
@@ -289,9 +289,9 @@ This illustrates how an agent with zero prior knowledge can operate the system:
         schema: "/api/erp/schemas/CreateOrderRun" }
 
 9. GET /api/erp/schemas/CreateOrderRun
-   -> Learn required fields: planOrderRevId, etc.
+   -> Learn required fields: orderRevId, etc.
 
-10. POST /api/erp/orders/widget-assembly/runs { planOrderRevId: 1, priority: "high", ... }
+10. POST /api/erp/orders/widget-assembly/runs { orderRevId: 1, priority: "high", ... }
     -> Response: order run in "released" status, _actions: [update, start, cancel, delete]
 
 11. POST /api/erp/orders/widget-assembly/runs/1/start  (from _actions)
@@ -321,7 +321,7 @@ The UI conditionally renders action buttons based on the `_actions` array from t
 Playwright E2E tests cover the API happy paths:
 
 - **Planning Orders**: CRUD operations, status transitions
-- **Planning Order Revisions**: Full lifecycle (draft -> approved -> obsolete), auto-incrementing rev_no, status filtering, referential integrity (409 on delete with children)
+- **Order Revisions**: Full lifecycle (draft -> approved -> obsolete), auto-incrementing rev_no, status filtering, referential integrity (409 on delete with children)
 - **Order Runs**: Full lifecycle (released -> started -> closed, released -> cancelled), priority filtering, state transition validation (409 on invalid transitions), referential integrity guards
 
 ## Future Considerations

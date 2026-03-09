@@ -14,10 +14,10 @@ import {
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import type {
-  PlanningOrderRevision,
-  PlanningOrderRevisionListResponse,
+  OrderRevision,
+  OrderRevisionListResponse,
 } from "@naisys-erp/shared";
-import { CreatePlanningOrderRevisionSchema } from "@naisys-erp/shared";
+import { CreateOrderRevisionSchema } from "@naisys-erp/shared";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 
@@ -37,9 +37,9 @@ interface Props {
   orderKey: string;
 }
 
-export const PlanningOrderRevisions: React.FC<Props> = ({ orderKey }) => {
+export const OrderRevisions: React.FC<Props> = ({ orderKey }) => {
   const navigate = useNavigate();
-  const [data, setData] = useState<PlanningOrderRevisionListResponse | null>(
+  const [data, setData] = useState<OrderRevisionListResponse | null>(
     null,
   );
   const [loading, setLoading] = useState(true);
@@ -52,7 +52,7 @@ export const PlanningOrderRevisions: React.FC<Props> = ({ orderKey }) => {
       notes: "",
       changeSummary: "",
     },
-    validate: zodResolver(CreatePlanningOrderRevisionSchema),
+    validate: zodResolver(CreateOrderRevisionSchema),
   });
 
   const basePath = `orders/${orderKey}/revs`;
@@ -60,7 +60,7 @@ export const PlanningOrderRevisions: React.FC<Props> = ({ orderKey }) => {
   const fetchRevisions = useCallback(async () => {
     setLoading(true);
     try {
-      const result = await api.get<PlanningOrderRevisionListResponse>(
+      const result = await api.get<OrderRevisionListResponse>(
         `${basePath}?page=${page}&pageSize=${PAGE_SIZE}`,
       );
       setData(result);
@@ -78,7 +78,7 @@ export const PlanningOrderRevisions: React.FC<Props> = ({ orderKey }) => {
   const handleCreate = async (values: typeof form.values) => {
     setSubmitting(true);
     try {
-      const created = await api.post<PlanningOrderRevision>(basePath, {
+      const created = await api.post<OrderRevision>(basePath, {
         notes: values.notes || undefined,
         changeSummary: values.changeSummary || undefined,
       });
@@ -97,7 +97,7 @@ export const PlanningOrderRevisions: React.FC<Props> = ({ orderKey }) => {
     form.reset();
   };
 
-  const handleApprove = async (rev: PlanningOrderRevision) => {
+  const handleApprove = async (rev: OrderRevision) => {
     if (!confirm(`Approve revision #${rev.revNo}?`)) return;
     try {
       await api.post(`${basePath}/${rev.revNo}/approve`, {});
@@ -107,7 +107,7 @@ export const PlanningOrderRevisions: React.FC<Props> = ({ orderKey }) => {
     }
   };
 
-  const handleObsolete = async (rev: PlanningOrderRevision) => {
+  const handleObsolete = async (rev: OrderRevision) => {
     if (!confirm(`Mark revision #${rev.revNo} as obsolete?`)) return;
     try {
       await api.post(`${basePath}/${rev.revNo}/obsolete`, {});
@@ -117,7 +117,7 @@ export const PlanningOrderRevisions: React.FC<Props> = ({ orderKey }) => {
     }
   };
 
-  const handleDelete = async (rev: PlanningOrderRevision) => {
+  const handleDelete = async (rev: OrderRevision) => {
     if (!confirm(`Delete revision #${rev.revNo}?`)) return;
     try {
       await api.delete(`${basePath}/${rev.revNo}`);
@@ -214,7 +214,7 @@ export const PlanningOrderRevisions: React.FC<Props> = ({ orderKey }) => {
                           color="teal"
                           onClick={() =>
                             navigate(
-                              `/orders/${orderKey}/runs/new?planOrderRevId=${rev.id}`,
+                              `/orders/${orderKey}/runs/new?orderRevId=${rev.id}`,
                             )
                           }
                           data-testid={`revision-cut-order-${rev.revNo}`}

@@ -234,9 +234,9 @@ export const OrderRunDetail: React.FC = () => {
           </Group>
           <Group>
             <Text fw={600} w={140}>
-              Plan Rev ID:
+              Order Rev ID:
             </Text>
-            <Text ff="monospace">{item.planOrderRevId}</Text>
+            <Text ff="monospace">{item.orderRevId}</Text>
           </Group>
           <Group>
             <Text fw={600} w={140}>
