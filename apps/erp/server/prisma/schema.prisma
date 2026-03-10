@@ -63,9 +63,28 @@ model Operation {
   createdBy    User           @relation("opCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
   updatedBy    User           @relation("opUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
   orderRev     OrderRevision  @relation(fields: [orderRevId], references: [id], onDelete: Restrict)
+  steps        Step[]
 
   @@unique([orderRevId, seqNo])
   @@map("operations")
+}
+
+model Step {
+  id          Int      @id @default(autoincrement())
+  operationId Int      @map("operation_id")
+  seqNo       Int      @map("seq_no")
+  instructions String  @default("")
+  createdAt   DateTime @default(now()) @map("created_at")
+  createdById Int      @map("created_by")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  updatedById Int      @map("updated_by")
+
+  createdBy  User      @relation("stepCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy  User      @relation("stepUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+  operation  Operation @relation(fields: [operationId], references: [id], onDelete: Cascade)
+
+  @@unique([operationId, seqNo])
+  @@map("steps")
 }
 
 model OrderRun {
@@ -117,6 +136,8 @@ model User {
   orderRunsUpdated     OrderRun[]              @relation("orderRunUpdatedBy")
   opsCreated           Operation[]             @relation("opCreatedBy")
   opsUpdated           Operation[]             @relation("opUpdatedBy")
+  stepsCreated         Step[]                  @relation("stepCreatedBy")
+  stepsUpdated         Step[]                  @relation("stepUpdatedBy")
   auditLogs            AuditLog[]
   sessions             Session[]
   permissions          UserPermission[]        @relation("userPermissions")
