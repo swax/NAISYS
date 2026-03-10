@@ -142,6 +142,7 @@ const router = createBrowserRouter(
         <Route path=":username" element={<AgentDetail />} />
         <Route path=":username/config" element={<AgentConfig />} />
         <Route path=":username/runs" element={<AgentRuns />} />
+        <Route path=":username/runs/:runKey" element={<AgentRuns />} />
         <Route path=":username/mail" element={<AgentMail />} />
         <Route path=":username/mail/:messageId" element={<AgentMail />} />
         <Route path=":username/chat" element={<AgentChat />} />

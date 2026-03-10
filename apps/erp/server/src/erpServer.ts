@@ -7,14 +7,13 @@ import cors from "@fastify/cors";
 import rateLimit from "@fastify/rate-limit";
 import staticFiles from "@fastify/static";
 import swagger from "@fastify/swagger";
-import { commonErrorHandler, SUPER_ADMIN_USERNAME } from "@naisys/common";
+import { commonErrorHandler } from "@naisys/common";
 import {
   createHubDatabaseClient,
   deployPrismaMigrations,
 } from "@naisys/hub-database";
 import {
   createSupervisorDatabaseClient,
-  ensureSuperAdmin,
   handleResetPassword,
 } from "@naisys/supervisor-database";
 import Fastify, { type FastifyPluginAsync } from "fastify";
@@ -44,8 +43,8 @@ import stepRoutes from "./routes/steps.js";
 import userRoutes from "./routes/users.js";
 import { isSupervisorAuth } from "./supervisorAuth.js";
 import {
-  ensureErpAdminPermission,
   ensureLocalSuperAdmin,
+  ensureSupervisorSuperAdmin,
   resetLocalPassword,
 } from "./userService.js";
 export { enableSupervisorAuth } from "./supervisorAuth.js";
@@ -94,6 +93,10 @@ export const erpPlugin: FastifyPluginAsync = async (fastify) => {
         "[ERP] Supervisor database not available. Required for supervisor auth.",
       );
     }
+
+    await ensureSupervisorSuperAdmin();
+  } else {
+    await ensureLocalSuperAdmin();
   }
 
   fastify.setErrorHandler(commonErrorHandler);
@@ -189,54 +192,6 @@ async function startServer() {
   });
 
   await fastify.register(erpPlugin);
-
-  if (isSupervisorAuth()) {
-    const { default: erpDb } = await import("./erpDb.js");
-    const result = await ensureSuperAdmin();
-
-    // Upsert superadmin into ERP DB to stay in sync with supervisor
-    await erpDb.user.upsert({
-      where: { uuid: result.user.uuid },
-      create: {
-        uuid: result.user.uuid,
-        username: result.user.username,
-        passwordHash: result.user.passwordHash,
-        apiKey: result.user.apiKey,
-      },
-      update: {
-        username: result.user.username,
-        passwordHash: result.user.passwordHash,
-        apiKey: result.user.apiKey,
-      },
-    });
-
-    // Ensure superadmin has erp_admin permission
-    const localSuperAdmin = await erpDb.user.findUnique({
-      where: { uuid: result.user.uuid },
-    });
-    if (localSuperAdmin) {
-      await ensureErpAdminPermission(localSuperAdmin.id);
-    }
-
-    if (result.created) {
-      console.log(
-        `[ERP] ${SUPER_ADMIN_USERNAME} user created. Password: ${result.generatedPassword}`,
-      );
-    }
-  } else {
-    await ensureLocalSuperAdmin();
-
-    // Warn if agent users exist without supervisor auth
-    const { default: erpDb } = await import("./erpDb.js");
-    const agentCount = await erpDb.user.count({ where: { isAgent: true } });
-    if (agentCount > 0) {
-      console.warn(
-        `[ERP] Warning: ${agentCount} agent user(s) found but supervisor auth is disabled. ` +
-          `Agent API key lookups and authentication will not work. ` +
-          `Start with --supervisor-auth to enable.`,
-      );
-    }
-  }
 
   const port = Number(process.env.ERP_PORT) || 3201;
   const host = isProd ? "0.0.0.0" : "localhost";

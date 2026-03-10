@@ -12,7 +12,7 @@ import {
 import { useDisclosure } from "@mantine/hooks";
 import { IconList, IconSend } from "@tabler/icons-react";
 import React, { useCallback, useEffect, useState } from "react";
-import { useParams, useSearchParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 
 import { CollapsibleSidebar } from "../../components/CollapsibleSidebar";
 import { SIDEBAR_WIDTH } from "../../constants";
@@ -24,16 +24,19 @@ import {
   formatCost,
   formatDuration,
   formatPrimaryTime,
-  getRowKey,
   getRunIdLabel,
+  getRunKey,
   RunsSidebar,
 } from "./RunsSidebar";
 
 /** Re-rendering triggered by agentParam */
 export const AgentRuns: React.FC = () => {
-  const { username } = useParams<{ username: string }>();
+  const { username, runKey } = useParams<{
+    username: string;
+    runKey: string;
+  }>();
+  const navigate = useNavigate();
   const { agents, readStatus } = useAgentDataContext();
-  const [selectedRowKey, setSelectedRowKey] = useState<string | null>(null);
   const [freshData, setFreshData] = useState<"loading" | "loaded">("loading");
   const [searchParams] = useSearchParams();
   const [drawerOpened, { open: openDrawer, close: closeDrawer }] =
@@ -67,47 +70,48 @@ export const AgentRuns: React.FC = () => {
     }
   }, [freshData, isFetchedAfterMount, allRuns, agents]);
 
-  // Auto-select a run when fresh data arrives based on URL params
+  // Auto-select a run when fresh data arrives and no run is in the URL
   useEffect(() => {
     if (freshData !== "loaded") return;
-    if (selectedRowKey) return; // Don't override user selection
+    if (runKey) return; // URL already has a run selected
+    if (allRuns.length === 0) return;
 
     const expandParam = searchParams.get("expand");
+    let targetRun: RunSession | undefined;
 
     if (expandParam === "new") {
       // Select first run with unread logs
-      const unreadRun = allRuns.find((run) => {
+      targetRun = allRuns.find((run) => {
         if (!agentName) return false;
         const agentReadStatus = readStatus[agentName];
         if (!agentReadStatus) return false;
         return run.latestLogId > agentReadStatus.lastReadLogId;
       });
-      if (unreadRun) {
-        setSelectedRowKey(getRowKey(unreadRun));
-        return;
-      }
     } else if (expandParam === "online") {
       // Select first online run
-      const onlineRun = allRuns.find((run) => run.isOnline);
-      if (onlineRun) {
-        setSelectedRowKey(getRowKey(onlineRun));
-        return;
-      }
+      targetRun = allRuns.find((run) => run.isOnline);
     }
 
     // Fallback: select first run
-    if (allRuns.length > 0) {
-      setSelectedRowKey(getRowKey(allRuns[0]));
+    if (!targetRun) {
+      targetRun = allRuns[0];
     }
-  }, [freshData, allRuns, agentName, readStatus, searchParams, selectedRowKey]);
+
+    if (targetRun) {
+      navigate(`/agents/${username}/runs/${getRunKey(targetRun)}`, {
+        replace: true,
+      });
+    }
+  }, [freshData, allRuns, agentName, readStatus, searchParams, runKey, username, navigate]);
 
   // Clear state when agent changes
   useEffect(() => {
-    setSelectedRowKey(null);
     setFreshData("loading");
   }, [username]);
 
-  const selectedRun = allRuns.find((run) => getRowKey(run) === selectedRowKey);
+  const selectedRun = runKey
+    ? allRuns.find((run) => getRunKey(run) === runKey)
+    : undefined;
 
   const hasUnreadLogs = useCallback(
     (run: RunSession) => {
@@ -117,14 +121,6 @@ export const AgentRuns: React.FC = () => {
       return run.latestLogId > agentReadStatus.lastReadLogId;
     },
     [agentName, readStatus],
-  );
-
-  const handleSelectRun = useCallback(
-    (run: RunSession) => {
-      setSelectedRowKey(getRowKey(run));
-      closeDrawer();
-    },
-    [closeDrawer],
   );
 
   if (!username) {
@@ -159,8 +155,8 @@ export const AgentRuns: React.FC = () => {
       totalRuns={totalRuns}
       runsLoading={runsLoading}
       agentName={agent.name}
-      selectedRowKey={selectedRowKey}
-      onSelectRun={handleSelectRun}
+      activeRunKey={runKey}
+      onNavLinkClick={closeDrawer}
       hasUnreadLogs={hasUnreadLogs}
     />
   );

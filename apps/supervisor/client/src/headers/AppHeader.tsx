@@ -132,10 +132,9 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
             <Text
               size="sm"
               c="dimmed"
-              style={{ cursor: "pointer" }}
-              onClick={() => {
-                window.location.href = "/erp/";
-              }}
+              component="a"
+              href="/erp/"
+              style={{ cursor: "pointer", textDecoration: "none" }}
             >
               ERP
             </Text>
@@ -151,7 +150,8 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         style={{ flex: 1, minWidth: 0, overflow: "hidden" }}
       >
         <UnstyledButton
-          onClick={() => navigate("/agents")}
+          component={Link}
+          to="/agents"
           px="sm"
           py={4}
           style={(theme) => ({
@@ -171,7 +171,8 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
           </Text>
         </UnstyledButton>
         <UnstyledButton
-          onClick={() => navigate("/hosts")}
+          component={Link}
+          to="/hosts"
           px="sm"
           py={4}
           style={(theme) => ({
@@ -191,7 +192,8 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
           </Text>
         </UnstyledButton>
         <UnstyledButton
-          onClick={() => navigate("/models")}
+          component={Link}
+          to="/models"
           px="sm"
           py={4}
           style={(theme) => ({
@@ -212,7 +214,8 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         </UnstyledButton>
         {showVariablesTab && (
           <UnstyledButton
-            onClick={() => navigate("/variables")}
+            component={Link}
+            to="/variables"
             px="sm"
             py={4}
             style={(theme) => ({
@@ -234,7 +237,8 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         )}
         {showUsersTab && (
           <UnstyledButton
-            onClick={() => navigate("/users")}
+            component={Link}
+            to="/users"
             px="sm"
             py={4}
             style={(theme) => ({
@@ -256,7 +260,8 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         )}
         {showAdminTab && (
           <UnstyledButton
-            onClick={() => navigate("/admin")}
+            component={Link}
+            to="/admin"
             px="sm"
             py={4}
             style={(theme) => ({

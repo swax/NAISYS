@@ -11,7 +11,7 @@ import {
 import { useDisclosure } from "@mantine/hooks";
 import naisysLogo from "@naisys/common/assets/naisys-logo.webp";
 import { IconApi } from "@tabler/icons-react";
-import { Link, Outlet, useLocation, useNavigate } from "react-router";
+import { Link, Outlet, useLocation } from "react-router";
 
 import { useAuth } from "../lib/AuthContext";
 import { LoginModal } from "./LoginModal";
@@ -32,16 +32,10 @@ interface AppLayoutProps {
 export const AppLayout: React.FC<AppLayoutProps> = ({ supervisorAuth }) => {
   const [opened, { toggle, close }] = useDisclosure();
   const [loginOpen, { open: openLogin, close: closeLogin }] = useDisclosure();
-  const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useAuth();
 
   const isActive = (path: string) => location.pathname.startsWith(path);
-
-  const handleNav = (path: string) => {
-    void navigate(path);
-    close();
-  };
 
   const handleLogout = async () => {
     await logout();
@@ -92,10 +86,9 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ supervisorAuth }) => {
                   <Text
                     size="sm"
                     c="dimmed"
-                    style={{ cursor: "pointer" }}
-                    onClick={() => {
-                      window.location.href = "/supervisor/";
-                    }}
+                    component="a"
+                    href="/supervisor/"
+                    style={{ cursor: "pointer", textDecoration: "none" }}
                   >
                     Supervisor
                   </Text>
@@ -112,7 +105,8 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ supervisorAuth }) => {
               {navLinks.map((link) => (
                 <UnstyledButton
                   key={link.path}
-                  onClick={() => handleNav(link.path)}
+                  component={Link}
+                  to={link.path}
                   px="sm"
                   py={4}
                   style={(theme) => ({
@@ -163,13 +157,14 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ supervisorAuth }) => {
       <AppShell.Navbar p="md">
         {supervisorAuth && (
           <UnstyledButton
-            onClick={() => {
-              window.location.href = "/supervisor/";
-            }}
+            component="a"
+            href="/supervisor/"
             p="sm"
             mb={4}
             style={(theme) => ({
               borderRadius: theme.radius.sm,
+              textDecoration: "none",
+              color: "inherit",
             })}
           >
             <Text size="sm" c="dimmed">
@@ -180,7 +175,9 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ supervisorAuth }) => {
         {navLinks.map((link) => (
           <UnstyledButton
             key={link.path}
-            onClick={() => handleNav(link.path)}
+            component={Link}
+            to={link.path}
+            onClick={close}
             p="sm"
             mb={4}
             style={(theme) => ({
