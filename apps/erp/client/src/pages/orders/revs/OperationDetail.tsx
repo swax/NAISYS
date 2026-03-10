@@ -19,6 +19,7 @@ import { MetadataTooltip } from "../../../components/MetadataTooltip";
 import { api, showErrorNotification } from "../../../lib/api";
 import { hasAction } from "../../../lib/hateoas";
 import { zodResolver } from "../../../lib/zod-resolver";
+import { StepList } from "./StepList";
 
 export const OperationDetail: React.FC = () => {
   const { orderKey, revNo, seqNo } = useParams<{
@@ -199,6 +200,10 @@ export const OperationDetail: React.FC = () => {
           </Stack>
         )}
       </Card>
+
+      <StepList
+        stepsPath={`orders/${orderKey}/revs/${revNo}/ops/${seqNo}/steps`}
+      />
     </Stack>
   );
 };

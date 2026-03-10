@@ -28,13 +28,14 @@ export function showErrorNotification(err: unknown) {
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const url = path.startsWith("/") ? path : `${API_BASE}/${path}`;
+  const headers: Record<string, string> = { ...options?.headers as Record<string, string> };
+  if (options?.body) {
+    headers["Content-Type"] = "application/json";
+  }
   const res = await fetch(url, {
     ...options,
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      ...options?.headers,
-    },
+    headers,
   });
 
   if (res.status === 204) return undefined as T;
