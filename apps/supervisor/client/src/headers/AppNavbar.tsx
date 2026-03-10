@@ -1,6 +1,6 @@
 import { Text, UnstyledButton } from "@mantine/core";
 import React from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 
 import { useSession } from "../contexts/SessionContext";
 
@@ -10,7 +10,6 @@ interface AppNavbarProps {
 }
 
 export const AppNavbar: React.FC<AppNavbarProps> = ({ onClose, hasErp }) => {
-  const navigate = useNavigate();
   const location = useLocation();
   const { hasPermission } = useSession();
 
@@ -27,10 +26,9 @@ export const AppNavbar: React.FC<AppNavbarProps> = ({ onClose, hasErp }) => {
   return (
     <>
       <UnstyledButton
-        onClick={() => {
-          void navigate("/agents");
-          onClose();
-        }}
+        component={Link}
+        to="/agents"
+        onClick={onClose}
         p="sm"
         mb={4}
         style={(theme) => ({
@@ -49,10 +47,9 @@ export const AppNavbar: React.FC<AppNavbarProps> = ({ onClose, hasErp }) => {
         </Text>
       </UnstyledButton>
       <UnstyledButton
-        onClick={() => {
-          void navigate("/hosts");
-          onClose();
-        }}
+        component={Link}
+        to="/hosts"
+        onClick={onClose}
         p="sm"
         mb={4}
         style={(theme) => ({
@@ -71,10 +68,9 @@ export const AppNavbar: React.FC<AppNavbarProps> = ({ onClose, hasErp }) => {
         </Text>
       </UnstyledButton>
       <UnstyledButton
-        onClick={() => {
-          void navigate("/models");
-          onClose();
-        }}
+        component={Link}
+        to="/models"
+        onClick={onClose}
         p="sm"
         mb={4}
         style={(theme) => ({
@@ -94,10 +90,9 @@ export const AppNavbar: React.FC<AppNavbarProps> = ({ onClose, hasErp }) => {
       </UnstyledButton>
       {showVariablesTab && (
         <UnstyledButton
-          onClick={() => {
-            void navigate("/variables");
-            onClose();
-          }}
+          component={Link}
+          to="/variables"
+          onClick={onClose}
           p="sm"
           mb={4}
           style={(theme) => ({
@@ -118,10 +113,9 @@ export const AppNavbar: React.FC<AppNavbarProps> = ({ onClose, hasErp }) => {
       )}
       {showUsersTab && (
         <UnstyledButton
-          onClick={() => {
-            void navigate("/users");
-            onClose();
-          }}
+          component={Link}
+          to="/users"
+          onClick={onClose}
           p="sm"
           mb={4}
           style={(theme) => ({
@@ -142,10 +136,9 @@ export const AppNavbar: React.FC<AppNavbarProps> = ({ onClose, hasErp }) => {
       )}
       {showAdminTab && (
         <UnstyledButton
-          onClick={() => {
-            void navigate("/admin");
-            onClose();
-          }}
+          component={Link}
+          to="/admin"
+          onClick={onClose}
           p="sm"
           mb={4}
           style={(theme) => ({
@@ -166,13 +159,14 @@ export const AppNavbar: React.FC<AppNavbarProps> = ({ onClose, hasErp }) => {
       )}
       {hasErp && (
         <UnstyledButton
-          onClick={() => {
-            window.location.href = "/erp/";
-          }}
+          component="a"
+          href="/erp/"
           p="sm"
           mb={4}
           style={(theme) => ({
             borderRadius: theme.radius.sm,
+            textDecoration: "none",
+            color: "inherit",
           })}
         >
           <Text size="sm" c="dimmed">

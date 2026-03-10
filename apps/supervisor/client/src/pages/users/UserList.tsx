@@ -15,13 +15,18 @@ import {
 } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import { useCallback, useEffect, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 
 import { getAgentData } from "../../lib/apiAgents";
 import { createAgentUser, createUser, getUsers } from "../../lib/apiUsers";
 
+const cellLinkStyle = {
+  display: "block",
+  color: "inherit",
+  textDecoration: "none",
+};
+
 export const UserList: React.FC = () => {
-  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const page = Number(searchParams.get("page")) || 1;
@@ -173,12 +178,21 @@ export const UserList: React.FC = () => {
                 <Table.Tr
                   key={item.id}
                   style={{ cursor: "pointer" }}
-                  onClick={() => navigate(`/users/${item.username}`)}
                 >
-                  <Table.Td>{item.username}</Table.Td>
-                  <Table.Td>{item.isAgent ? "Agent" : "User"}</Table.Td>
                   <Table.Td>
-                    {new Date(item.createdAt).toLocaleDateString()}
+                    <Link to={`/users/${item.username}`} style={cellLinkStyle}>
+                      {item.username}
+                    </Link>
+                  </Table.Td>
+                  <Table.Td>
+                    <Link to={`/users/${item.username}`} style={cellLinkStyle}>
+                      {item.isAgent ? "Agent" : "User"}
+                    </Link>
+                  </Table.Td>
+                  <Table.Td>
+                    <Link to={`/users/${item.username}`} style={cellLinkStyle}>
+                      {new Date(item.createdAt).toLocaleDateString()}
+                    </Link>
                   </Table.Td>
                 </Table.Tr>
               ))}

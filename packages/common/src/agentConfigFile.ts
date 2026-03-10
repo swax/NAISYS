@@ -156,6 +156,7 @@ export function buildDefaultAgentConfig(username: string): AgentConfigFile {
     webEnabled: true,
     wakeOnMessage: true,
     completeSessionEnabled: true,
+    multipleCommandsEnabled: true,
   };
 }
 

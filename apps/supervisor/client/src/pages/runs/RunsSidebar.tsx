@@ -9,6 +9,7 @@ import {
 } from "@mantine/core";
 import { IconFileText } from "@tabler/icons-react";
 import React from "react";
+import { Link } from "react-router-dom";
 
 import { RunSession } from "../../types/runSession";
 import { RunsCostChart } from "./RunsCostChart";
@@ -18,8 +19,8 @@ interface RunsSidebarProps {
   totalRuns: number;
   runsLoading: boolean;
   agentName: string;
-  selectedRowKey: string | null;
-  onSelectRun: (run: RunSession) => void;
+  activeRunKey: string | undefined;
+  onNavLinkClick?: () => void;
   hasUnreadLogs: (run: RunSession) => boolean;
 }
 
@@ -82,6 +83,9 @@ export const getRunIdLabel = (run: RunSession) => {
 export const getRowKey = (run: RunSession) =>
   `${run.userId}-${run.runId}-${run.sessionId}`;
 
+export const getRunKey = (run: RunSession) =>
+  `${run.runId}-${run.sessionId}`;
+
 export { formatCost, formatDuration, formatPrimaryTime };
 
 export const RunsSidebar: React.FC<RunsSidebarProps> = ({
@@ -89,8 +93,8 @@ export const RunsSidebar: React.FC<RunsSidebarProps> = ({
   totalRuns,
   runsLoading,
   agentName,
-  selectedRowKey,
-  onSelectRun,
+  activeRunKey,
+  onNavLinkClick,
   hasUnreadLogs,
 }) => {
   return (
@@ -109,7 +113,8 @@ export const RunsSidebar: React.FC<RunsSidebarProps> = ({
           let groupIndex = 0;
           return runs.map((run, index) => {
             const rowKey = getRowKey(run);
-            const unread = hasUnreadLogs(run) && selectedRowKey !== rowKey;
+            const runKey = getRunKey(run);
+            const unread = hasUnreadLogs(run) && activeRunKey !== runKey;
 
             // Detect multi-session run grouping
             const prevRun = index > 0 ? runs[index - 1] : null;
@@ -139,8 +144,10 @@ export const RunsSidebar: React.FC<RunsSidebarProps> = ({
             return (
               <NavLink
                 key={rowKey}
-                active={selectedRowKey === rowKey}
-                onClick={() => onSelectRun(run)}
+                active={activeRunKey === runKey}
+                component={Link}
+                to={`/agents/${agentName}/runs/${runKey}`}
+                onClick={onNavLinkClick}
                 label={
                   <Group gap="xs" wrap="nowrap">
                     <Text size="sm" fw={500}>

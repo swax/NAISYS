@@ -17,13 +17,18 @@ import { useDisclosure } from "@mantine/hooks";
 import type { UserListResponse } from "@naisys-erp/shared";
 import { IconAlertTriangle } from "@tabler/icons-react";
 import { useCallback, useEffect, useState } from "react";
-import { useNavigate, useOutletContext, useSearchParams } from "react-router";
+import { Link, useOutletContext, useSearchParams } from "react-router";
 
 import type { AppOutletContext } from "../../components/AppLayout";
 import { api, apiEndpoints, showErrorNotification } from "../../lib/api";
 
+const cellLinkStyle = {
+  display: "block",
+  color: "inherit",
+  textDecoration: "none",
+};
+
 export const UserList: React.FC = () => {
-  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { supervisorAuth } = useOutletContext<AppOutletContext>();
 
@@ -125,29 +130,38 @@ export const UserList: React.FC = () => {
                 <Table.Tr
                   key={item.id}
                   style={{ cursor: "pointer" }}
-                  onClick={() => navigate(`/users/${item.username}`)}
                 >
                   <Table.Td>
-                    <Text size="sm" ff="monospace">
-                      {item.username}
-                    </Text>
+                    <Link to={`/users/${item.username}`} style={cellLinkStyle}>
+                      <Text size="sm" ff="monospace">
+                        {item.username}
+                      </Text>
+                    </Link>
                   </Table.Td>
                   <Table.Td>
-                    <Group gap={4} wrap="nowrap">
-                      {item.isAgent ? "Agent" : "User"}
-                      {item.isAgent && !supervisorAuth && (
-                        <Tooltip label="Agent user without supervisor auth — API key and auth will not work">
-                          <IconAlertTriangle
-                            size={14}
-                            color="var(--mantine-color-red-6)"
-                          />
-                        </Tooltip>
-                      )}
-                    </Group>
+                    <Link to={`/users/${item.username}`} style={cellLinkStyle}>
+                      <Group gap={4} wrap="nowrap">
+                        {item.isAgent ? "Agent" : "User"}
+                        {item.isAgent && !supervisorAuth && (
+                          <Tooltip label="Agent user without supervisor auth — API key and auth will not work">
+                            <IconAlertTriangle
+                              size={14}
+                              color="var(--mantine-color-red-6)"
+                            />
+                          </Tooltip>
+                        )}
+                      </Group>
+                    </Link>
                   </Table.Td>
-                  <Table.Td>{item.permissionCount}</Table.Td>
                   <Table.Td>
-                    {new Date(item.createdAt).toLocaleDateString()}
+                    <Link to={`/users/${item.username}`} style={cellLinkStyle}>
+                      {item.permissionCount}
+                    </Link>
+                  </Table.Td>
+                  <Table.Td>
+                    <Link to={`/users/${item.username}`} style={cellLinkStyle}>
+                      {new Date(item.createdAt).toLocaleDateString()}
+                    </Link>
                   </Table.Td>
                 </Table.Tr>
               ))}
