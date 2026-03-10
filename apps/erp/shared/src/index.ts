@@ -6,3 +6,4 @@ export * from "./order-run-types.js";
 export * from "./hateoas-types.js";
 export * from "./order-revision-types.js";
 export * from "./order-types.js";
+export * from "./plan-operation-types.js";

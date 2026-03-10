@@ -37,6 +37,7 @@ import authRoutes from "./routes/auth.js";
 import orderRunRoutes from "./routes/order-runs.js";
 import orderRevisionRoutes from "./routes/order-revisions.js";
 import orderRoutes from "./routes/orders.js";
+import planOperationRoutes from "./routes/plan-operations.js";
 import rootRoute from "./routes/root.js";
 import schemaRoutes from "./routes/schemas.js";
 import { enableSupervisorAuth, isSupervisorAuth } from "./supervisorAuth.js";
@@ -104,6 +105,9 @@ export const erpPlugin: FastifyPluginAsync = async (fastify) => {
   });
   fastify.register(orderRunRoutes, {
     prefix: "/api/erp/orders/:orderKey/runs",
+  });
+  fastify.register(planOperationRoutes, {
+    prefix: "/api/erp/orders/:orderKey/revs/:revNo/ops",
   });
   fastify.register(schemaRoutes, { prefix: "/api/erp/schemas" });
 

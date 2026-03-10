@@ -2,8 +2,8 @@ import { Container, Title } from "@mantine/core";
 import type { CreateOrderRun } from "@naisys-erp/shared";
 import { useNavigate, useParams, useSearchParams } from "react-router";
 
-import { OrderRunForm } from "../components/OrderRunForm";
-import { api } from "../lib/api";
+import { OrderRunForm } from "../../../components/OrderRunForm";
+import { api } from "../../../lib/api";
 
 export const OrderRunCreate: React.FC = () => {
   const { orderKey } = useParams<{ orderKey: string }>();

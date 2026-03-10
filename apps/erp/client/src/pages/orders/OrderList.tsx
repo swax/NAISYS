@@ -12,37 +12,21 @@ import {
   TextInput,
   Title,
 } from "@mantine/core";
-import type { OrderRunListResponse } from "@naisys-erp/shared";
+import type { OrderListResponse } from "@naisys-erp/shared";
 import { useCallback, useEffect, useState } from "react";
-import { useNavigate, useParams, useSearchParams } from "react-router";
+import { useNavigate, useSearchParams } from "react-router";
 
-import { api, showErrorNotification } from "../lib/api";
+import { api, showErrorNotification } from "../../lib/api";
 
-const STATUS_COLORS: Record<string, string> = {
-  released: "blue",
-  started: "yellow",
-  closed: "green",
-  cancelled: "gray",
-};
-
-const PRIORITY_COLORS: Record<string, string> = {
-  low: "gray",
-  medium: "blue",
-  high: "orange",
-  critical: "red",
-};
-
-export const OrderRunList: React.FC = () => {
-  const { orderKey } = useParams<{ orderKey: string }>();
+export const OrderList: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const page = Number(searchParams.get("page")) || 1;
   const status = searchParams.get("status") || undefined;
-  const priority = searchParams.get("priority") || undefined;
   const search = searchParams.get("search") || "";
 
-  const [data, setData] = useState<OrderRunListResponse | null>(null);
+  const [data, setData] = useState<OrderListResponse | null>(null);
   const [loading, setLoading] = useState(true);
 
   const fetchData = useCallback(async () => {
@@ -52,11 +36,10 @@ export const OrderRunList: React.FC = () => {
       params.set("page", String(page));
       params.set("pageSize", "20");
       if (status) params.set("status", status);
-      if (priority) params.set("priority", priority);
       if (search) params.set("search", search);
 
-      const result = await api.get<OrderRunListResponse>(
-        `orders/${orderKey}/runs?${params}`,
+      const result = await api.get<OrderListResponse>(
+        `orders?${params}`,
       );
       setData(result);
     } catch (err) {
@@ -64,7 +47,7 @@ export const OrderRunList: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [orderKey, page, status, priority, search]);
+  }, [page, status, search]);
 
   useEffect(() => {
     void fetchData();
@@ -75,18 +58,10 @@ export const OrderRunList: React.FC = () => {
   return (
     <Container size="lg" py="xl">
       <Group justify="space-between" mb="lg">
-        <Title order={2}>Runs for {orderKey}</Title>
-        <Group>
-          <Button
-            variant="subtle"
-            onClick={() => navigate(`/orders/${orderKey}`)}
-          >
-            Back to Order
-          </Button>
-          <Button onClick={() => navigate(`/orders/${orderKey}/runs/new`)}>
-            Create New
-          </Button>
-        </Group>
+        <Title order={2}>Orders</Title>
+        <Button onClick={() => navigate("/orders/new")}>
+          Create New
+        </Button>
       </Group>
 
       <Group mb="md">
@@ -107,35 +82,14 @@ export const OrderRunList: React.FC = () => {
         <Select
           placeholder="All statuses"
           data={[
-            { value: "released", label: "Released" },
-            { value: "started", label: "Started" },
-            { value: "closed", label: "Closed" },
-            { value: "cancelled", label: "Cancelled" },
+            { value: "active", label: "Active" },
+            { value: "archived", label: "Archived" },
           ]}
           value={status ?? null}
           onChange={(val) => {
             setSearchParams((prev) => {
               if (val) prev.set("status", val);
               else prev.delete("status");
-              prev.set("page", "1");
-              return prev;
-            });
-          }}
-          clearable
-        />
-        <Select
-          placeholder="All priorities"
-          data={[
-            { value: "low", label: "Low" },
-            { value: "medium", label: "Medium" },
-            { value: "high", label: "High" },
-            { value: "critical", label: "Critical" },
-          ]}
-          value={priority ?? null}
-          onChange={(val) => {
-            setSearchParams((prev) => {
-              if (val) prev.set("priority", val);
-              else prev.delete("priority");
               prev.set("page", "1");
               return prev;
             });
@@ -153,11 +107,9 @@ export const OrderRunList: React.FC = () => {
           <Table striped highlightOnHover>
             <Table.Thead>
               <Table.Tr>
-                <Table.Th>Run #</Table.Th>
+                <Table.Th>Key</Table.Th>
+                <Table.Th>Name</Table.Th>
                 <Table.Th>Status</Table.Th>
-                <Table.Th>Priority</Table.Th>
-                <Table.Th>Assigned To</Table.Th>
-                <Table.Th>Due</Table.Th>
                 <Table.Th>Created</Table.Th>
               </Table.Tr>
             </Table.Thead>
@@ -166,35 +118,21 @@ export const OrderRunList: React.FC = () => {
                 <Table.Tr
                   key={item.id}
                   style={{ cursor: "pointer" }}
-                  onClick={() => navigate(`/orders/${orderKey}/runs/${item.id}`)}
-                  data-testid={`order-run-row-${item.runNo}`}
+                  onClick={() => navigate(`/orders/${item.key}`)}
                 >
                   <Table.Td>
                     <Text size="sm" ff="monospace">
-                      {item.runNo}
+                      {item.key}
                     </Text>
                   </Table.Td>
+                  <Table.Td>{item.name}</Table.Td>
                   <Table.Td>
                     <Badge
-                      color={STATUS_COLORS[item.status] ?? "gray"}
+                      color={item.status === "active" ? "green" : "gray"}
                       variant="light"
                     >
                       {item.status}
                     </Badge>
-                  </Table.Td>
-                  <Table.Td>
-                    <Badge
-                      color={PRIORITY_COLORS[item.priority] ?? "gray"}
-                      variant="light"
-                    >
-                      {item.priority}
-                    </Badge>
-                  </Table.Td>
-                  <Table.Td>{item.assignedTo ?? "—"}</Table.Td>
-                  <Table.Td>
-                    {item.dueAt
-                      ? new Date(item.dueAt).toLocaleDateString()
-                      : "—"}
                   </Table.Td>
                   <Table.Td>
                     {new Date(item.createdAt).toLocaleDateString()}
@@ -220,7 +158,7 @@ export const OrderRunList: React.FC = () => {
         </>
       ) : (
         <Text c="dimmed" ta="center" py="xl">
-          No order runs found.
+          No orders found.
         </Text>
       )}
     </Container>

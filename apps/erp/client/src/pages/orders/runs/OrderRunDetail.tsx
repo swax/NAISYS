@@ -18,9 +18,10 @@ import type {
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 
-import { OrderRunForm } from "../components/OrderRunForm";
-import { api, showErrorNotification } from "../lib/api";
-import { hasAction } from "../lib/hateoas";
+import { MetadataTooltip } from "../../../components/MetadataTooltip";
+import { OrderRunForm } from "../../../components/OrderRunForm";
+import { api, showErrorNotification } from "../../../lib/api";
+import { hasAction } from "../../../lib/hateoas";
 
 const STATUS_COLORS: Record<string, string> = {
   released: "blue",
@@ -163,6 +164,12 @@ export const OrderRunDetail: React.FC = () => {
       <Group justify="space-between" mb="lg">
         <Group>
           <Title order={2}>Order Run #{item.runNo}</Title>
+          <MetadataTooltip
+            createdBy={item.createdBy}
+            createdAt={item.createdAt}
+            updatedBy={item.updatedBy}
+            updatedAt={item.updatedAt}
+          />
           <Badge
             color={STATUS_COLORS[item.status] ?? "gray"}
             variant="light"
@@ -273,30 +280,6 @@ export const OrderRunDetail: React.FC = () => {
               Notes:
             </Text>
             <Text>{item.notes || "—"}</Text>
-          </Group>
-          <Group>
-            <Text fw={600} w={140}>
-              Created by:
-            </Text>
-            <Text>{item.createdBy}</Text>
-          </Group>
-          <Group>
-            <Text fw={600} w={140}>
-              Created at:
-            </Text>
-            <Text>{new Date(item.createdAt).toLocaleString()}</Text>
-          </Group>
-          <Group>
-            <Text fw={600} w={140}>
-              Updated by:
-            </Text>
-            <Text>{item.updatedBy}</Text>
-          </Group>
-          <Group>
-            <Text fw={600} w={140}>
-              Updated at:
-            </Text>
-            <Text>{new Date(item.updatedAt).toLocaleString()}</Text>
           </Group>
         </Stack>
       </Card>

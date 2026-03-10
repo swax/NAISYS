@@ -13,10 +13,11 @@ import type { Order, UpdateOrder } from "@naisys-erp/shared";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 
-import { OrderForm } from "../components/OrderForm";
-import { OrderRevisions } from "../components/OrderRevisions";
-import { api, showErrorNotification } from "../lib/api";
-import { hasAction } from "../lib/hateoas";
+import { MetadataTooltip } from "../../components/MetadataTooltip";
+import { OrderForm } from "../../components/OrderForm";
+import { OrderRevisions } from "../../components/OrderRevisions";
+import { api, showErrorNotification } from "../../lib/api";
+import { hasAction } from "../../lib/hateoas";
 
 export const OrderDetail: React.FC = () => {
   const { key } = useParams<{ key: string }>();
@@ -102,6 +103,12 @@ export const OrderDetail: React.FC = () => {
       <Group justify="space-between" mb="lg">
         <Group>
           <Title order={2}>{item.name}</Title>
+          <MetadataTooltip
+            createdBy={item.createdBy}
+            createdAt={item.createdAt}
+            updatedBy={item.updatedBy}
+            updatedAt={item.updatedAt}
+          />
           <Badge
             color={item.status === "active" ? "green" : "gray"}
             variant="light"
@@ -144,30 +151,6 @@ export const OrderDetail: React.FC = () => {
               Description:
             </Text>
             <Text>{item.description || "—"}</Text>
-          </Group>
-          <Group>
-            <Text fw={600} w={120}>
-              Created by:
-            </Text>
-            <Text>{item.createdBy}</Text>
-          </Group>
-          <Group>
-            <Text fw={600} w={120}>
-              Created at:
-            </Text>
-            <Text>{new Date(item.createdAt).toLocaleString()}</Text>
-          </Group>
-          <Group>
-            <Text fw={600} w={120}>
-              Updated by:
-            </Text>
-            <Text>{item.updatedBy}</Text>
-          </Group>
-          <Group>
-            <Text fw={600} w={120}>
-              Updated at:
-            </Text>
-            <Text>{new Date(item.updatedAt).toLocaleString()}</Text>
           </Group>
         </Stack>
       </Card>

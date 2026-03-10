@@ -53,7 +53,9 @@ function orderRunItemActions(
   orderKey: string,
   id: number,
   status: string,
+  isAuthenticated: boolean,
 ): HateoasAction[] {
+  if (!isAuthenticated) return [];
   const href = `${API_PREFIX}/${runResource(orderKey)}/${id}`;
   const actions: HateoasAction[] = [];
 
@@ -132,10 +134,18 @@ async function resolveOrder(orderKey: string) {
   });
 }
 
-type OrderRunWithRev = OrderRunModel & { orderRev: { revNo: number } };
-const includeRev = { orderRev: { select: { revNo: true } } } as const;
+type OrderRunWithRev = OrderRunModel & {
+  orderRev: { revNo: number };
+  createdBy: { username: string };
+  updatedBy: { username: string };
+};
+const includeRev = {
+  orderRev: { select: { revNo: true } },
+  createdBy: { select: { username: true } },
+  updatedBy: { select: { username: true } },
+} as const;
 
-function formatItem(orderKey: string, item: OrderRunWithRev) {
+function formatItem(orderKey: string, isAuthenticated: boolean, item: OrderRunWithRev) {
   return {
     id: item.id,
     runNo: item.runNo,
@@ -150,16 +160,16 @@ function formatItem(orderKey: string, item: OrderRunWithRev) {
     assignedTo: item.assignedTo,
     notes: item.notes,
     createdAt: item.createdAt.toISOString(),
-    createdBy: item.createdById,
+    createdBy: item.createdBy.username,
     updatedAt: item.updatedAt.toISOString(),
-    updatedBy: item.updatedById,
+    updatedBy: item.updatedBy.username,
     _links: orderRunItemLinks(orderKey, item.id),
-    _actions: orderRunItemActions(orderKey, item.id, item.status),
+    _actions: orderRunItemActions(orderKey, item.id, item.status, isAuthenticated),
   };
 }
 
-function formatListItem(orderKey: string, item: OrderRunWithRev) {
-  const { _actions, ...rest } = formatItem(orderKey, item);
+function formatListItem(orderKey: string, isAuthenticated: boolean, item: OrderRunWithRev) {
+  const { _actions, ...rest } = formatItem(orderKey, isAuthenticated, item);
   return {
     ...rest,
     _links: [selfLink(`/${runResource(orderKey)}/${item.id}`)],
@@ -219,7 +229,7 @@ export default function orderRunRoutes(fastify: FastifyInstance) {
       const resource = runResource(orderKey);
 
       return {
-        items: items.map((item) => formatListItem(orderKey, item)),
+        items: items.map((item) => formatListItem(orderKey, !!request.erpUser, item)),
         total,
         page,
         pageSize,
@@ -310,7 +320,7 @@ export default function orderRunRoutes(fastify: FastifyInstance) {
       });
 
       reply.status(201);
-      return formatItem(orderKey, item);
+      return formatItem(orderKey, !!request.erpUser, item);
     },
   });
 
@@ -351,7 +361,7 @@ export default function orderRunRoutes(fastify: FastifyInstance) {
         );
       }
 
-      return formatItem(orderKey, item);
+      return formatItem(orderKey, !!request.erpUser, item);
     },
   });
 
@@ -423,7 +433,7 @@ export default function orderRunRoutes(fastify: FastifyInstance) {
         include: includeRev,
       });
 
-      return formatItem(orderKey, item);
+      return formatItem(orderKey, !!request.erpUser, item);
     },
   });
 
@@ -540,7 +550,7 @@ export default function orderRunRoutes(fastify: FastifyInstance) {
         return updated;
       });
 
-      return formatItem(orderKey, item);
+      return formatItem(orderKey, !!request.erpUser, item);
     },
   });
 
@@ -608,7 +618,7 @@ export default function orderRunRoutes(fastify: FastifyInstance) {
         return updated;
       });
 
-      return formatItem(orderKey, item);
+      return formatItem(orderKey, !!request.erpUser, item);
     },
   });
 
@@ -676,7 +686,7 @@ export default function orderRunRoutes(fastify: FastifyInstance) {
         return updated;
       });
 
-      return formatItem(orderKey, item);
+      return formatItem(orderKey, !!request.erpUser, item);
     },
   });
 }
