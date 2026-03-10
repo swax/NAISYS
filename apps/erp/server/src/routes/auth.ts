@@ -1,4 +1,8 @@
-import { hashToken } from "@naisys/common-node";
+import {
+  hashToken,
+  SESSION_COOKIE_NAME,
+  sessionCookieOptions,
+} from "@naisys/common-node";
 import {
   authenticateAndCreateSession,
   deleteSession,
@@ -19,7 +23,6 @@ import erpDb from "../erpDb.js";
 import { sendError } from "../error-handler.js";
 import { isSupervisorAuth } from "../supervisorAuth.js";
 
-const COOKIE_NAME = "naisys_session";
 const SESSION_DURATION_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
 export default function authRoutes(fastify: FastifyInstance) {
@@ -71,13 +74,11 @@ export default function authRoutes(fastify: FastifyInstance) {
           update: ssoData,
         });
 
-        reply.setCookie(COOKIE_NAME, authResult.token, {
-          path: "/",
-          httpOnly: true,
-          sameSite: "lax",
-          secure: process.env.NODE_ENV === "production",
-          maxAge: (authResult.expiresAt.getTime() - Date.now()) / 1000,
-        });
+        reply.setCookie(
+          SESSION_COOKIE_NAME,
+          authResult.token,
+          sessionCookieOptions(authResult.expiresAt),
+        );
 
         return { user: { id: user.id, username: user.username } };
       }
@@ -111,13 +112,11 @@ export default function authRoutes(fastify: FastifyInstance) {
         data: { userId: user.id, tokenHash, expiresAt },
       });
 
-      reply.setCookie(COOKIE_NAME, token, {
-        path: "/",
-        httpOnly: true,
-        sameSite: "lax",
-        secure: process.env.NODE_ENV === "production",
-        maxAge: SESSION_DURATION_MS / 1000,
-      });
+      reply.setCookie(
+        SESSION_COOKIE_NAME,
+        token,
+        sessionCookieOptions(expiresAt),
+      );
 
       return { user: { id: user.id, username: user.username } };
     },
@@ -130,7 +129,7 @@ export default function authRoutes(fastify: FastifyInstance) {
       tags: ["Auth"],
     },
     handler: async (request, reply) => {
-      const token = request.cookies?.[COOKIE_NAME];
+      const token = request.cookies?.[SESSION_COOKIE_NAME];
 
       if (token) {
         const tokenHash = hashToken(token);
@@ -143,7 +142,7 @@ export default function authRoutes(fastify: FastifyInstance) {
         await deleteSession(tokenHash);
       }
 
-      reply.clearCookie(COOKIE_NAME, { path: "/" });
+      reply.clearCookie(SESSION_COOKIE_NAME, { path: "/" });
       return { ok: true };
     },
   });

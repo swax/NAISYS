@@ -3,7 +3,7 @@
  * databases for SSO authentication and agent API key lookups.
  *
  * Enabled by:
- *  - `--supervisor-auth` CLI flag when running standalone
+ *  - SUPERVISOR_AUTH=true environment variable
  *  - Supervisor calling `enableSupervisorAuth()` before registering the ERP plugin
  */
 let _enabled = false;
@@ -13,5 +13,5 @@ export function enableSupervisorAuth(): void {
 }
 
 export function isSupervisorAuth(): boolean {
-  return _enabled;
+  return _enabled || process.env.SUPERVISOR_AUTH === "true";
 }

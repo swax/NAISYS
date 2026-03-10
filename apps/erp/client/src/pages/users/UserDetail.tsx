@@ -20,20 +20,23 @@ import { useDisclosure } from "@mantine/hooks";
 import { notifications } from "@mantine/notifications";
 import { ErpPermissionEnum, type User } from "@naisys-erp/shared";
 import {
+  IconAlertTriangle,
   IconCopy,
   IconEye,
   IconEyeOff,
   IconRefresh,
 } from "@tabler/icons-react";
 import { useCallback, useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router";
+import { useNavigate, useOutletContext, useParams } from "react-router";
 
+import type { AppOutletContext } from "../../components/AppLayout";
 import { api, apiEndpoints, showErrorNotification } from "../../lib/api";
 import { hasAction } from "../../lib/hateoas";
 
 export const UserDetail: React.FC = () => {
   const { username: routeUsername } = useParams<{ username: string }>();
   const navigate = useNavigate();
+  const { supervisorAuth } = useOutletContext<AppOutletContext>();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [editOpened, { open: openEdit, close: closeEdit }] = useDisclosure();
@@ -219,6 +222,18 @@ export const UserDetail: React.FC = () => {
         </Group>
       </Group>
 
+      {user.isAgent && !supervisorAuth && (
+        <Card withBorder p="sm" mb="lg" bg="var(--mantine-color-red-light)">
+          <Group gap="xs" wrap="nowrap">
+            <IconAlertTriangle size={18} color="var(--mantine-color-red-6)" />
+            <Text size="sm">
+              This is an agent user but ERP is running without supervisor auth.
+              API key lookups and agent authentication will not work.
+            </Text>
+          </Group>
+        </Card>
+      )}
+
       <Card withBorder p="lg" mb="lg">
         <Stack gap="sm">
           <Group>
@@ -251,48 +266,58 @@ export const UserDetail: React.FC = () => {
             </Text>
             <Text>{new Date(user.updatedAt).toLocaleString()}</Text>
           </Group>
-          {user.apiKey && (
+          {(user.apiKey || hasAction(user._actions, "rotate-key")) && (
             <Group>
               <Text fw={600} w={120}>
                 API Key:
               </Text>
               <Group gap="xs" align="center">
-                <Code>
-                  {keyVisible
-                    ? user.apiKey
-                    : "\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022"}
-                </Code>
-                <Tooltip label={keyVisible ? "Hide" : "Show"}>
-                  <ActionIcon
-                    variant="subtle"
-                    size="sm"
-                    onClick={() => setKeyVisible((v) => !v)}
-                  >
-                    {keyVisible ? (
-                      <IconEyeOff size={14} />
-                    ) : (
-                      <IconEye size={14} />
-                    )}
-                  </ActionIcon>
-                </Tooltip>
-                <Tooltip label="Copy to clipboard">
-                  <ActionIcon
-                    variant="subtle"
-                    size="sm"
-                    onClick={() => {
-                      void navigator.clipboard.writeText(user.apiKey!);
-                      notifications.show({
-                        title: "Copied",
-                        message: "Copied to clipboard",
-                        color: "green",
-                      });
-                    }}
-                  >
-                    <IconCopy size={14} />
-                  </ActionIcon>
-                </Tooltip>
+                {user.apiKey ? (
+                  <>
+                    <Code>
+                      {keyVisible
+                        ? user.apiKey
+                        : "\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022"}
+                    </Code>
+                    <Tooltip label={keyVisible ? "Hide" : "Show"}>
+                      <ActionIcon
+                        variant="subtle"
+                        size="sm"
+                        onClick={() => setKeyVisible((v) => !v)}
+                      >
+                        {keyVisible ? (
+                          <IconEyeOff size={14} />
+                        ) : (
+                          <IconEye size={14} />
+                        )}
+                      </ActionIcon>
+                    </Tooltip>
+                    <Tooltip label="Copy to clipboard">
+                      <ActionIcon
+                        variant="subtle"
+                        size="sm"
+                        onClick={() => {
+                          void navigator.clipboard.writeText(user.apiKey!);
+                          notifications.show({
+                            title: "Copied",
+                            message: "Copied to clipboard",
+                            color: "green",
+                          });
+                        }}
+                      >
+                        <IconCopy size={14} />
+                      </ActionIcon>
+                    </Tooltip>
+                  </>
+                ) : (
+                  <Text c="dimmed" size="sm">
+                    Not set
+                  </Text>
+                )}
                 {hasAction(user._actions, "rotate-key") && (
-                  <Tooltip label="Rotate key">
+                  <Tooltip
+                    label={user.apiKey ? "Rotate key" : "Generate API key"}
+                  >
                     <ActionIcon
                       variant="subtle"
                       size="sm"

@@ -1,5 +1,5 @@
 import { AuthCache } from "@naisys/common";
-import { hashToken } from "@naisys/common-node";
+import { hashToken,SESSION_COOKIE_NAME } from "@naisys/common-node";
 import { findAgentByApiKey } from "@naisys/hub-database";
 import { findSession, findUserByApiKey } from "@naisys/supervisor-database";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
@@ -18,8 +18,6 @@ declare module "fastify" {
     erpUser?: ErpUser;
   }
 }
-
-const COOKIE_NAME = "naisys_session";
 
 const PUBLIC_PREFIXES = ["/api/erp/auth/login", "/api/erp/client-config"];
 
@@ -89,7 +87,7 @@ export function registerAuthMiddleware(fastify: FastifyInstance) {
   fastify.decorateRequest("erpUser", undefined);
 
   fastify.addHook("onRequest", async (request, reply) => {
-    const token = request.cookies?.[COOKIE_NAME];
+    const token = request.cookies?.[SESSION_COOKIE_NAME];
 
     if (token) {
       const tokenHash = hashToken(token);

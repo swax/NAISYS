@@ -1,9 +1,14 @@
 import { SUPER_ADMIN_USERNAME } from "@naisys/common";
+import {
+  getAgentApiKeyByUuid,
+  rotateAgentApiKeyByUuid,
+} from "@naisys/hub-database";
 import bcrypt from "bcrypt";
 import { randomBytes, randomUUID } from "crypto";
 import readline from "readline/promises";
 
 import erpDb from "./erpDb.js";
+import { isSupervisorAuth } from "./supervisorAuth.js";
 
 const SALT_ROUNDS = 10;
 
@@ -29,6 +34,7 @@ export async function ensureLocalSuperAdmin(): Promise<void> {
       uuid: randomUUID(),
       username: SUPER_ADMIN_USERNAME,
       passwordHash: hash,
+      apiKey: randomBytes(32).toString("hex"),
     },
   });
 
@@ -185,11 +191,37 @@ export async function revokePermission(userId: number, permission: string) {
   });
 }
 
+export async function getUserApiKey(id: number): Promise<string | null> {
+  const user = await erpDb.user.findUnique({
+    where: { id },
+    select: { isAgent: true, uuid: true, apiKey: true },
+  });
+  if (!user) return null;
+
+  if (user.isAgent && isSupervisorAuth()) {
+    return getAgentApiKeyByUuid(user.uuid);
+  } else {
+    return user.apiKey ?? null;
+  }
+}
+
 export async function rotateUserApiKey(id: number): Promise<string> {
   const newKey = randomBytes(32).toString("hex");
-  await erpDb.user.update({
+
+  const user = await erpDb.user.findUnique({
     where: { id },
-    data: { apiKey: newKey },
+    select: { isAgent: true, uuid: true },
   });
+  if (!user) throw new Error("User not found");
+
+  if (user.isAgent && isSupervisorAuth()) {
+    await rotateAgentApiKeyByUuid(user.uuid, newKey);
+  } else {
+    await erpDb.user.update({
+      where: { id },
+      data: { apiKey: newKey },
+    });
+  }
+
   return newKey;
 }
