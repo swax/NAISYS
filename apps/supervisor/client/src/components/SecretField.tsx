@@ -1,4 +1,4 @@
-import { ActionIcon, Code, Group, Tooltip } from "@mantine/core";
+import { ActionIcon, Code, Group, Text, Tooltip } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import {
   IconCopy,
@@ -9,7 +9,7 @@ import {
 import { useState } from "react";
 
 interface SecretFieldProps {
-  value: string;
+  value: string | null;
   onRotate?: () => void;
   rotating?: boolean;
 }
@@ -23,34 +23,42 @@ export const SecretField: React.FC<SecretFieldProps> = ({
 
   return (
     <Group gap="xs" align="center">
-      <Code>{visible ? value : "••••••••••••••••"}</Code>
-      <Tooltip label={visible ? "Hide" : "Show"}>
-        <ActionIcon
-          variant="subtle"
-          size="sm"
-          onClick={() => setVisible((v) => !v)}
-        >
-          {visible ? <IconEyeOff size={14} /> : <IconEye size={14} />}
-        </ActionIcon>
-      </Tooltip>
-      <Tooltip label="Copy to clipboard">
-        <ActionIcon
-          variant="subtle"
-          size="sm"
-          onClick={() => {
-            void navigator.clipboard.writeText(value);
-            notifications.show({
-              title: "Copied",
-              message: "Copied to clipboard",
-              color: "green",
-            });
-          }}
-        >
-          <IconCopy size={14} />
-        </ActionIcon>
-      </Tooltip>
+      {value ? (
+        <>
+          <Code>{visible ? value : "••••••••••••••••"}</Code>
+          <Tooltip label={visible ? "Hide" : "Show"}>
+            <ActionIcon
+              variant="subtle"
+              size="sm"
+              onClick={() => setVisible((v) => !v)}
+            >
+              {visible ? <IconEyeOff size={14} /> : <IconEye size={14} />}
+            </ActionIcon>
+          </Tooltip>
+          <Tooltip label="Copy to clipboard">
+            <ActionIcon
+              variant="subtle"
+              size="sm"
+              onClick={() => {
+                void navigator.clipboard.writeText(value);
+                notifications.show({
+                  title: "Copied",
+                  message: "Copied to clipboard",
+                  color: "green",
+                });
+              }}
+            >
+              <IconCopy size={14} />
+            </ActionIcon>
+          </Tooltip>
+        </>
+      ) : (
+        <Text c="dimmed" size="sm">
+          Not set
+        </Text>
+      )}
       {onRotate && (
-        <Tooltip label="Rotate key">
+        <Tooltip label={value ? "Rotate key" : "Generate API key"}>
           <ActionIcon
             variant="subtle"
             size="sm"

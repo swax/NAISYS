@@ -11,17 +11,21 @@ import {
   Text,
   TextInput,
   Title,
+  Tooltip,
 } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import type { UserListResponse } from "@naisys-erp/shared";
+import { IconAlertTriangle } from "@tabler/icons-react";
 import { useCallback, useEffect, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router";
+import { useNavigate, useOutletContext, useSearchParams } from "react-router";
 
+import type { AppOutletContext } from "../../components/AppLayout";
 import { api, apiEndpoints, showErrorNotification } from "../../lib/api";
 
 export const UserList: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const { supervisorAuth } = useOutletContext<AppOutletContext>();
 
   const page = Number(searchParams.get("page")) || 1;
   const search = searchParams.get("search") || "";
@@ -128,7 +132,19 @@ export const UserList: React.FC = () => {
                       {item.username}
                     </Text>
                   </Table.Td>
-                  <Table.Td>{item.isAgent ? "Agent" : "User"}</Table.Td>
+                  <Table.Td>
+                    <Group gap={4} wrap="nowrap">
+                      {item.isAgent ? "Agent" : "User"}
+                      {item.isAgent && !supervisorAuth && (
+                        <Tooltip label="Agent user without supervisor auth — API key and auth will not work">
+                          <IconAlertTriangle
+                            size={14}
+                            color="var(--mantine-color-red-6)"
+                          />
+                        </Tooltip>
+                      )}
+                    </Group>
+                  </Table.Td>
                   <Table.Td>{item.permissionCount}</Table.Td>
                   <Table.Td>
                     {new Date(item.createdAt).toLocaleDateString()}

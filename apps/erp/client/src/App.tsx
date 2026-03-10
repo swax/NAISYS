@@ -23,14 +23,18 @@ import { UserList } from "./pages/users/UserList";
 
 const AppContent: React.FC = () => {
   const [publicRead, setPublicRead] = React.useState(false);
+  const [supervisorAuth, setSupervisorAuth] = React.useState(false);
   const [clientConfigLoaded, setClientConfigLoaded] = React.useState(false);
   const { user, loading } = useAuth();
 
-  // Fetch client config (publicRead) on mount
+  // Fetch client config on mount
   React.useEffect(() => {
     fetch("/api/erp/client-config")
       .then((r) => r.json())
-      .then((d) => setPublicRead(d.publicRead))
+      .then((d) => {
+        setPublicRead(d.publicRead);
+        setSupervisorAuth(d.supervisorAuth);
+      })
       .catch(() => {})
       .finally(() => setClientConfigLoaded(true));
   }, []);
@@ -47,7 +51,7 @@ const AppContent: React.FC = () => {
 
   return (
     <Routes>
-      <Route element={<AppLayout />}>
+      <Route element={<AppLayout supervisorAuth={supervisorAuth} />}>
         <Route path="/" element={<Navigate to="/orders" replace />} />
         <Route path="/orders" element={<OrderList />} />
         <Route path="/orders/new" element={<OrderCreate />} />

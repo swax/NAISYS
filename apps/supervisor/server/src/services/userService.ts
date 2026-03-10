@@ -1,11 +1,14 @@
 import { assertUrlSafeKey } from "@naisys/common";
 import { hashToken } from "@naisys/common-node";
+import {
+  getAgentApiKeyByUuid,
+  rotateAgentApiKeyByUuid,
+} from "@naisys/hub-database";
 import type { Permission } from "@naisys/supervisor-database";
 import { updateUserPassword } from "@naisys/supervisor-database";
 import bcrypt from "bcrypt";
 import { randomBytes, randomUUID } from "crypto";
 
-import { hubDb } from "../database/hubDb.js";
 import supervisorDb from "../database/supervisorDb.js";
 
 export type { User as SupervisorUserRow } from "@naisys/supervisor-database";
@@ -161,11 +164,7 @@ export async function getUserApiKey(id: number): Promise<string | null> {
   if (!user) return null;
 
   if (user.isAgent) {
-    const hubUser = await hubDb.users.findFirst({
-      where: { uuid: user.uuid },
-      select: { api_key: true },
-    });
-    return hubUser?.api_key ?? null;
+    return getAgentApiKeyByUuid(user.uuid);
   } else {
     return user.apiKey ?? null;
   }
@@ -181,15 +180,7 @@ export async function rotateUserApiKey(id: number): Promise<string> {
   if (!user) throw new Error("User not found");
 
   if (user.isAgent) {
-    const hubUser = await hubDb.users.findFirst({
-      where: { uuid: user.uuid },
-      select: { id: true },
-    });
-    if (!hubUser) throw new Error("Agent not found in hub database");
-    await hubDb.users.update({
-      where: { id: hubUser.id },
-      data: { api_key: newKey },
-    });
+    await rotateAgentApiKeyByUuid(user.uuid, newKey);
   } else {
     await supervisorDb.user.update({
       where: { id },

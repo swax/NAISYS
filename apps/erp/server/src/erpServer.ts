@@ -34,15 +34,15 @@ import { ERP_DB_VERSION, erpDbPath } from "./dbConfig.js";
 import { initErpDb } from "./erpDb.js";
 import auditRoutes from "./routes/audit.js";
 import authRoutes from "./routes/auth.js";
+import operationRoutes from "./routes/operations.js";
 import orderRevisionRoutes from "./routes/order-revisions.js";
 import orderRunRoutes from "./routes/order-runs.js";
 import orderRoutes from "./routes/orders.js";
-import operationRoutes from "./routes/operations.js";
-import stepRoutes from "./routes/steps.js";
 import rootRoute from "./routes/root.js";
 import schemaRoutes from "./routes/schemas.js";
+import stepRoutes from "./routes/steps.js";
 import userRoutes from "./routes/users.js";
-import { enableSupervisorAuth, isSupervisorAuth } from "./supervisorAuth.js";
+import { isSupervisorAuth } from "./supervisorAuth.js";
 import {
   ensureErpAdminPermission,
   ensureLocalSuperAdmin,
@@ -124,6 +124,7 @@ export const erpPlugin: FastifyPluginAsync = async (fastify) => {
   // Public endpoint to expose client configuration (publicRead, etc.)
   fastify.get("/api/erp/client-config", { schema: { hide: true } }, () => ({
     publicRead: process.env.PUBLIC_READ === "true",
+    supervisorAuth: isSupervisorAuth(),
   }));
 
   registerApiReference(fastify);
@@ -224,6 +225,17 @@ async function startServer() {
     }
   } else {
     await ensureLocalSuperAdmin();
+
+    // Warn if agent users exist without supervisor auth
+    const { default: erpDb } = await import("./erpDb.js");
+    const agentCount = await erpDb.user.count({ where: { isAgent: true } });
+    if (agentCount > 0) {
+      console.warn(
+        `[ERP] Warning: ${agentCount} agent user(s) found but supervisor auth is disabled. ` +
+          `Agent API key lookups and authentication will not work. ` +
+          `Start with --supervisor-auth to enable.`,
+      );
+    }
   }
 
   const port = Number(process.env.ERP_PORT) || 3201;
@@ -235,6 +247,9 @@ async function startServer() {
     console.log(
       `[ERP] API Reference: http://${host}:${port}/erp/api-reference`,
     );
+    console.log(
+      `[ERP] Auth mode: ${isSupervisorAuth() ? "supervisor" : "standalone"}`,
+    );
   } catch (err) {
     console.error("[ERP] Failed to start:", err);
     process.exit(1);
@@ -243,10 +258,6 @@ async function startServer() {
 
 // Start server if this file is run directly
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  if (process.argv.includes("--supervisor-auth")) {
-    enableSupervisorAuth();
-  }
-
   if (process.argv.includes("--reset-password")) {
     const usernameIdx = process.argv.indexOf("--username");
     const passwordIdx = process.argv.indexOf("--password");

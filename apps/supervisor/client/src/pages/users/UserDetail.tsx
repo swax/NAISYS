@@ -288,7 +288,7 @@ export const UserDetail: React.FC = () => {
             </Text>
             <Text>{new Date(user.updatedAt).toLocaleString()}</Text>
           </Group>
-          {apiKey && (
+          {(apiKey || hasAction(user._actions, "rotate-key")) && (
             <Group>
               <Text fw={600} w={120}>
                 API Key:

@@ -21,7 +21,15 @@ const navLinks = [
   { label: "Users", path: "/users" },
 ];
 
-export const AppLayout: React.FC = () => {
+export interface AppOutletContext {
+  supervisorAuth: boolean;
+}
+
+interface AppLayoutProps {
+  supervisorAuth: boolean;
+}
+
+export const AppLayout: React.FC<AppLayoutProps> = ({ supervisorAuth }) => {
   const [opened, { toggle, close }] = useDisclosure();
   const [loginOpen, { open: openLogin, close: closeLogin }] = useDisclosure();
   const navigate = useNavigate();
@@ -79,19 +87,23 @@ export const AppLayout: React.FC = () => {
               </Text>
             </Link>
             <Group gap={6} visibleFrom="sm">
-              <Text
-                size="sm"
-                c="dimmed"
-                style={{ cursor: "pointer" }}
-                onClick={() => {
-                  window.location.href = "/supervisor/";
-                }}
-              >
-                Supervisor
-              </Text>
-              <Text size="sm" c="dimmed">
-                |
-              </Text>
+              {supervisorAuth && (
+                <>
+                  <Text
+                    size="sm"
+                    c="dimmed"
+                    style={{ cursor: "pointer" }}
+                    onClick={() => {
+                      window.location.href = "/supervisor/";
+                    }}
+                  >
+                    Supervisor
+                  </Text>
+                  <Text size="sm" c="dimmed">
+                    |
+                  </Text>
+                </>
+              )}
               <Text size="sm" fw={700}>
                 ERP
               </Text>
@@ -149,20 +161,22 @@ export const AppLayout: React.FC = () => {
       </AppShell.Header>
 
       <AppShell.Navbar p="md">
-        <UnstyledButton
-          onClick={() => {
-            window.location.href = "/supervisor/";
-          }}
-          p="sm"
-          mb={4}
-          style={(theme) => ({
-            borderRadius: theme.radius.sm,
-          })}
-        >
-          <Text size="sm" c="dimmed">
-            Supervisor
-          </Text>
-        </UnstyledButton>
+        {supervisorAuth && (
+          <UnstyledButton
+            onClick={() => {
+              window.location.href = "/supervisor/";
+            }}
+            p="sm"
+            mb={4}
+            style={(theme) => ({
+              borderRadius: theme.radius.sm,
+            })}
+          >
+            <Text size="sm" c="dimmed">
+              Supervisor
+            </Text>
+          </UnstyledButton>
+        )}
         {navLinks.map((link) => (
           <UnstyledButton
             key={link.path}
@@ -188,7 +202,7 @@ export const AppLayout: React.FC = () => {
       </AppShell.Navbar>
 
       <AppShell.Main>
-        <Outlet />
+        <Outlet context={{ supervisorAuth }} />
       </AppShell.Main>
 
       <LoginModal opened={loginOpen} onClose={closeLogin} />

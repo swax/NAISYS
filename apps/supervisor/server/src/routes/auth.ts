@@ -1,4 +1,8 @@
-import { hashToken } from "@naisys/common-node";
+import {
+  hashToken,
+  SESSION_COOKIE_NAME,
+  sessionCookieOptions,
+} from "@naisys/common-node";
 import {
   authenticateAndCreateSession,
   deleteSession,
@@ -18,8 +22,6 @@ import {
   getUserByUsername,
   getUserPermissions,
 } from "../services/userService.js";
-
-const COOKIE_NAME = "naisys_session";
 
 let lastLoginRequestTime = 0;
 
@@ -68,15 +70,11 @@ export default function authRoutes(
         };
       }
 
-      reply.setCookie(COOKIE_NAME, authResult.token, {
-        path: "/",
-        httpOnly: true,
-        sameSite: "lax",
-        secure: process.env.NODE_ENV === "production",
-        maxAge: Math.floor(
-          (authResult.expiresAt.getTime() - Date.now()) / 1000,
-        ),
-      });
+      reply.setCookie(
+        SESSION_COOKIE_NAME,
+        authResult.token,
+        sessionCookieOptions(authResult.expiresAt),
+      );
 
       const user = await getUserByUsername(username);
       const permissions = user ? await getUserPermissions(user.id) : [];
@@ -105,7 +103,7 @@ export default function authRoutes(
       },
     },
     async (request, reply) => {
-      const token = request.cookies?.[COOKIE_NAME];
+      const token = request.cookies?.[SESSION_COOKIE_NAME];
 
       // Clear from hub and auth cache
       if (token) {
@@ -114,7 +112,7 @@ export default function authRoutes(
         await deleteSession(tokenHash);
       }
 
-      reply.clearCookie(COOKIE_NAME, { path: "/" });
+      reply.clearCookie(SESSION_COOKIE_NAME, { path: "/" });
       return {
         success: true,
         message: "Logged out successfully",

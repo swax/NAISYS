@@ -299,11 +299,13 @@ export default function userRoutes(fastify: FastifyInstance) {
         return { success: false, message: "User not found" };
       }
 
+      const apiKey = await userService.getUserApiKey(user.id);
+
       return formatUser(
         user,
         request.erpUser!.id,
         request.erpUser!.permissions,
-        { apiKey: user.apiKey },
+        { apiKey },
       );
     },
   );
