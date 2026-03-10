@@ -116,7 +116,11 @@ export function createCommandLoop(
     }
   }
 
-  const MIN_TOKENS_FOR_PREEMPTIVE_COMPACT = 4000;
+  /**
+   * Optimal point to compact context. Waiting longer wastes money on bloated reads;
+   * compacting sooner wastes money generating summaries too often. Model min cacheable size agnostic.
+   */
+  const PREEMPTIVE_COMPACTION_THRESHOLD_TOKENS = 2400;
   const CACHE_EXPIRY_MARGIN_SECONDS = 30;
 
   function schedulePreemptiveCompact() {
@@ -138,7 +142,7 @@ export function createCommandLoop(
     if (
       !cacheTtl ||
       lastQueryTime <= 0 ||
-      contextManager.getTokenCount() <= MIN_TOKENS_FOR_PREEMPTIVE_COMPACT
+      contextManager.getTokenCount() <= PREEMPTIVE_COMPACTION_THRESHOLD_TOKENS
     ) {
       return;
     }
