@@ -1,10 +1,10 @@
 import type { HateoasAction, HateoasLink } from "@naisys/common";
 import {
-  CreatePlanOperationSchema,
+  CreateOperationSchema,
   ErrorResponseSchema,
-  PlanOperationListResponseSchema,
-  PlanOperationSchema,
-  UpdatePlanOperationSchema,
+  OperationListResponseSchema,
+  OperationSchema,
+  UpdateOperationSchema,
 } from "@naisys-erp/shared";
 import { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
@@ -14,7 +14,7 @@ import type { ErpUser } from "../auth-middleware.js";
 import { hasPermission } from "../auth-middleware.js";
 import erpDb from "../erpDb.js";
 import { sendError } from "../error-handler.js";
-import type { PlanOperationModel } from "../generated/prisma/models/PlanOperation.js";
+import type { OperationModel } from "../generated/prisma/models/Operation.js";
 import { API_PREFIX, schemaLink, selfLink } from "../hateoas.js";
 
 const ParamsSchema = z.object({
@@ -33,7 +33,7 @@ const includeUsers = {
   updatedBy: { select: { username: true } },
 } as const;
 
-type PlanOpWithUsers = PlanOperationModel & {
+type OpWithUsers = OperationModel & {
   createdBy: { username: string };
   updatedBy: { username: string };
 };
@@ -60,7 +60,7 @@ function opItemLinks(
       href: `${API_PREFIX}/orders/${orderKey}/revs/${revNo}`,
       title: "Revision",
     },
-    schemaLink("PlanOperation"),
+    schemaLink("Operation"),
   ];
 }
 
@@ -80,7 +80,7 @@ function opItemActions(
       href,
       method: "PUT",
       title: "Update",
-      schema: `${API_PREFIX}/schemas/UpdatePlanOperation`,
+      schema: `${API_PREFIX}/schemas/UpdateOperation`,
     },
     {
       rel: "delete",
@@ -96,7 +96,7 @@ function formatItem(
   revNo: number,
   revStatus: string,
   user: ErpUser | undefined,
-  item: PlanOpWithUsers,
+  item: OpWithUsers,
 ) {
   return {
     id: item.id,
@@ -125,17 +125,17 @@ async function resolveRevision(orderKey: string, revNo: number) {
   return { order, rev };
 }
 
-export default function planOperationRoutes(fastify: FastifyInstance) {
+export default function operationRoutes(fastify: FastifyInstance) {
   const app = fastify.withTypeProvider<ZodTypeProvider>();
 
   // LIST
   app.get("/", {
     schema: {
       description: "List operations for a revision",
-      tags: ["Plan Operations"],
+      tags: ["Operations"],
       params: ParamsSchema,
       response: {
-        200: PlanOperationListResponseSchema,
+        200: OperationListResponseSchema,
         404: ErrorResponseSchema,
       },
     },
@@ -147,7 +147,7 @@ export default function planOperationRoutes(fastify: FastifyInstance) {
         return sendError(reply, 404, "Not Found", `Revision not found`);
       }
 
-      const items = await erpDb.planOperation.findMany({
+      const items = await erpDb.operation.findMany({
         where: { orderRevId: resolved.rev.id },
         include: includeUsers,
         orderBy: { seqNo: "asc" },
@@ -174,7 +174,7 @@ export default function planOperationRoutes(fastify: FastifyInstance) {
                   href: `${API_PREFIX}${base}`,
                   method: "POST" as const,
                   title: "Add Operation",
-                  schema: `${API_PREFIX}/schemas/CreatePlanOperation`,
+                  schema: `${API_PREFIX}/schemas/CreateOperation`,
                 },
               ]
             : [],
@@ -186,11 +186,11 @@ export default function planOperationRoutes(fastify: FastifyInstance) {
   app.post("/", {
     schema: {
       description: "Create an operation for a revision",
-      tags: ["Plan Operations"],
+      tags: ["Operations"],
       params: ParamsSchema,
-      body: CreatePlanOperationSchema,
+      body: CreateOperationSchema,
       response: {
-        201: PlanOperationSchema,
+        201: OperationSchema,
         404: ErrorResponseSchema,
         409: ErrorResponseSchema,
       },
@@ -215,7 +215,7 @@ export default function planOperationRoutes(fastify: FastifyInstance) {
       }
 
       const item = await erpDb.$transaction(async (erpTx) => {
-        const maxSeq = await erpTx.planOperation.findFirst({
+        const maxSeq = await erpTx.operation.findFirst({
           where: { orderRevId: resolved.rev.id },
           orderBy: { seqNo: "desc" },
           select: { seqNo: true },
@@ -223,7 +223,7 @@ export default function planOperationRoutes(fastify: FastifyInstance) {
         const defaultSeqNo = Math.ceil(((maxSeq?.seqNo ?? 0) + 1) / 10) * 10;
         const nextSeqNo = requestedSeqNo ?? defaultSeqNo;
 
-        return erpTx.planOperation.create({
+        return erpTx.operation.create({
           data: {
             orderRevId: resolved.rev.id,
             seqNo: nextSeqNo,
@@ -251,10 +251,10 @@ export default function planOperationRoutes(fastify: FastifyInstance) {
   app.get("/:seqNo", {
     schema: {
       description: "Get an operation by sequence number",
-      tags: ["Plan Operations"],
+      tags: ["Operations"],
       params: OpParamsSchema,
       response: {
-        200: PlanOperationSchema,
+        200: OperationSchema,
         404: ErrorResponseSchema,
       },
     },
@@ -266,7 +266,7 @@ export default function planOperationRoutes(fastify: FastifyInstance) {
         return sendError(reply, 404, "Not Found", `Revision not found`);
       }
 
-      const item = await erpDb.planOperation.findFirst({
+      const item = await erpDb.operation.findFirst({
         where: { orderRevId: resolved.rev.id, seqNo },
         include: includeUsers,
       });
@@ -293,11 +293,11 @@ export default function planOperationRoutes(fastify: FastifyInstance) {
   app.put("/:seqNo", {
     schema: {
       description: "Update an operation (draft revision only)",
-      tags: ["Plan Operations"],
+      tags: ["Operations"],
       params: OpParamsSchema,
-      body: UpdatePlanOperationSchema,
+      body: UpdateOperationSchema,
       response: {
-        200: PlanOperationSchema,
+        200: OperationSchema,
         404: ErrorResponseSchema,
         409: ErrorResponseSchema,
       },
@@ -321,7 +321,7 @@ export default function planOperationRoutes(fastify: FastifyInstance) {
         );
       }
 
-      const existing = await erpDb.planOperation.findFirst({
+      const existing = await erpDb.operation.findFirst({
         where: { orderRevId: resolved.rev.id, seqNo },
       });
       if (!existing) {
@@ -333,7 +333,7 @@ export default function planOperationRoutes(fastify: FastifyInstance) {
         );
       }
 
-      const item = await erpDb.planOperation.update({
+      const item = await erpDb.operation.update({
         where: { id: existing.id },
         data: {
           ...(title !== undefined ? { title } : {}),
@@ -358,7 +358,7 @@ export default function planOperationRoutes(fastify: FastifyInstance) {
   app.delete("/:seqNo", {
     schema: {
       description: "Delete an operation (draft revision only)",
-      tags: ["Plan Operations"],
+      tags: ["Operations"],
       params: OpParamsSchema,
       response: {
         204: z.void(),
@@ -383,7 +383,7 @@ export default function planOperationRoutes(fastify: FastifyInstance) {
         );
       }
 
-      const existing = await erpDb.planOperation.findFirst({
+      const existing = await erpDb.operation.findFirst({
         where: { orderRevId: resolved.rev.id, seqNo },
       });
       if (!existing) {
@@ -395,7 +395,7 @@ export default function planOperationRoutes(fastify: FastifyInstance) {
         );
       }
 
-      await erpDb.planOperation.delete({ where: { id: existing.id } });
+      await erpDb.operation.delete({ where: { id: existing.id } });
       reply.status(204);
     },
   });

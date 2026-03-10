@@ -43,13 +43,13 @@ model OrderRevision {
   updatedBy  User          @relation("orderRevUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
   order      Order         @relation(fields: [orderId], references: [id], onDelete: Restrict)
   orderRuns  OrderRun[]
-  operations PlanOperation[]
+  operations Operation[]
 
   @@unique([orderId, revNo])
   @@map("order_revisions")
 }
 
-model PlanOperation {
+model Operation {
   id             Int      @id @default(autoincrement())
   orderRevId     Int      @map("order_rev_id")
   seqNo          Int      @map("seq_no")
@@ -60,12 +60,12 @@ model PlanOperation {
   updatedAt      DateTime @updatedAt @map("updated_at")
   updatedById    Int      @map("updated_by")
 
-  createdBy    User           @relation("planOpCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
-  updatedBy    User           @relation("planOpUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+  createdBy    User           @relation("opCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy    User           @relation("opUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
   orderRev     OrderRevision  @relation(fields: [orderRevId], references: [id], onDelete: Restrict)
 
   @@unique([orderRevId, seqNo])
-  @@map("plan_operations")
+  @@map("operations")
 }
 
 model OrderRun {
@@ -115,8 +115,8 @@ model User {
   orderRevsUpdated     OrderRevision[]         @relation("orderRevUpdatedBy")
   orderRunsCreated     OrderRun[]              @relation("orderRunCreatedBy")
   orderRunsUpdated     OrderRun[]              @relation("orderRunUpdatedBy")
-  planOpsCreated       PlanOperation[]         @relation("planOpCreatedBy")
-  planOpsUpdated       PlanOperation[]         @relation("planOpUpdatedBy")
+  opsCreated           Operation[]             @relation("opCreatedBy")
+  opsUpdated           Operation[]             @relation("opUpdatedBy")
   auditLogs            AuditLog[]
   sessions             Session[]
   permissions          UserPermission[]        @relation("userPermissions")

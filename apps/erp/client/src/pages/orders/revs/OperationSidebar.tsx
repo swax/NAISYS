@@ -12,10 +12,10 @@ import {
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import type {
-  PlanOperation,
-  PlanOperationListResponse,
+  Operation,
+  OperationListResponse,
 } from "@naisys-erp/shared";
-import { CreatePlanOperationSchema } from "@naisys-erp/shared";
+import { CreateOperationSchema } from "@naisys-erp/shared";
 import { IconPlus } from "@tabler/icons-react";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
@@ -32,7 +32,7 @@ interface Props {
 export const OperationSidebar: React.FC<Props> = ({ orderKey, revNo }) => {
   const navigate = useNavigate();
   const { seqNo: currentSeqNo } = useParams<{ seqNo: string }>();
-  const [data, setData] = useState<PlanOperationListResponse | null>(null);
+  const [data, setData] = useState<OperationListResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -41,13 +41,13 @@ export const OperationSidebar: React.FC<Props> = ({ orderKey, revNo }) => {
 
   const form = useForm({
     initialValues: { seqNo: 10, title: "", description: "" },
-    validate: zodResolver(CreatePlanOperationSchema),
+    validate: zodResolver(CreateOperationSchema),
   });
 
   const fetchOps = useCallback(async () => {
     setLoading(true);
     try {
-      const result = await api.get<PlanOperationListResponse>(basePath);
+      const result = await api.get<OperationListResponse>(basePath);
       setData(result);
     } catch (err) {
       showErrorNotification(err);
@@ -68,7 +68,7 @@ export const OperationSidebar: React.FC<Props> = ({ orderKey, revNo }) => {
   const handleCreate = async (values: typeof form.values) => {
     setSubmitting(true);
     try {
-      const created = await api.post<PlanOperation>(basePath, {
+      const created = await api.post<Operation>(basePath, {
         seqNo: values.seqNo,
         title: values.title,
         description: values.description || undefined,
