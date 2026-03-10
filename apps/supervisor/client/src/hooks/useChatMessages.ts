@@ -16,7 +16,7 @@ let actionsCache: HateoasAction[] | undefined = undefined;
 
 export const useChatMessages = (
   agentUsername: string,
-  participantIds: string | null,
+  participants: string | null,
   enabled: boolean = true,
 ) => {
   const { agents } = useAgentDataContext();
@@ -25,7 +25,7 @@ export const useChatMessages = (
     [agents],
   );
   const [, setCacheVersion] = useState(0);
-  const cacheKey = `${agentUsername}:${participantIds}`;
+  const cacheKey = `${agentUsername}:${participants}`;
 
   const mergeMessages = useCallback(
     (newMessages: ChatMessage[], total?: number) => {
@@ -85,23 +85,23 @@ export const useChatMessages = (
   );
 
   const queryFn = useCallback(async () => {
-    if (!participantIds) throw new Error("No conversation selected");
+    if (!participants) throw new Error("No conversation selected");
 
     const params: ChatMessagesParams = {
       agentUsername,
-      participantIds,
+      participants,
       updatedSince: updatedSinceCache.get(cacheKey),
       page: 1,
       count: 50,
     };
 
     return await getChatMessages(params);
-  }, [agentUsername, participantIds, cacheKey]);
+  }, [agentUsername, participants, cacheKey]);
 
   const query = useQuery({
-    queryKey: ["chat-messages", agentUsername, participantIds],
+    queryKey: ["chat-messages", agentUsername, participants],
     queryFn,
-    enabled: enabled && !!agentUsername && !!participantIds,
+    enabled: enabled && !!agentUsername && !!participants,
     refetchInterval: false,
     refetchIntervalInBackground: false,
     refetchOnWindowFocus: true,
@@ -122,8 +122,8 @@ export const useChatMessages = (
 
   // WebSocket subscription for real-time chat message and read receipt updates
   useSubscription<MessageRoomEvent>(
-    enabled && agentUsername && participantIds
-      ? `chat-messages:${participantIds}`
+    enabled && agentUsername && participants
+      ? `chat-messages:${participants}`
       : null,
     handleChatPush,
   );

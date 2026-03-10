@@ -34,7 +34,7 @@ export const AgentChat: React.FC = () => {
   const agent = agents.find((a) => a.name === username);
   const agentId = agent?.id ?? 0;
 
-  const [selectedParticipantIds, setSelectedParticipantIds] = useState<
+  const [selectedParticipants, setSelectedParticipants] = useState<
     string | null
   >(null);
 
@@ -47,22 +47,22 @@ export const AgentChat: React.FC = () => {
 
   // Auto-select first conversation when data loads
   useEffect(() => {
-    if (!selectedParticipantIds && conversations.length > 0) {
-      setSelectedParticipantIds(conversations[0].participantIds);
+    if (!selectedParticipants && conversations.length > 0) {
+      setSelectedParticipants(conversations[0].participants);
     }
-  }, [conversations, selectedParticipantIds]);
+  }, [conversations, selectedParticipants]);
 
   const { messages, isLoading: msgLoading } = useChatMessages(
     username ?? "",
-    selectedParticipantIds,
-    Boolean(selectedParticipantIds),
+    selectedParticipants,
+    Boolean(selectedParticipants),
   );
 
   const canSend = !!hasAction(convActions, "send");
 
   const handleSelectConversation = useCallback(
-    (participantIds: string) => {
-      setSelectedParticipantIds(participantIds);
+    (participants: string) => {
+      setSelectedParticipants(participants);
       closeDrawer();
     },
     [closeDrawer],
@@ -70,7 +70,7 @@ export const AgentChat: React.FC = () => {
 
   const handleSendMessage = useCallback(
     async (message: string, files?: File[]) => {
-      if (!selectedParticipantIds) return;
+      if (!selectedParticipants) return;
 
       if (files) {
         for (const file of files) {
@@ -82,11 +82,12 @@ export const AgentChat: React.FC = () => {
         }
       }
 
-      // Extract recipient IDs from participant IDs (exclude current agent)
-      const toIds = selectedParticipantIds
+      // Extract recipient IDs from participant usernames (exclude current agent)
+      const toIds = selectedParticipants
         .split(",")
-        .map(Number)
-        .filter((pid) => pid !== agentId);
+        .filter((name) => name !== username)
+        .map((name) => agents.find((a) => a.name === name)?.id)
+        .filter((id): id is number => id !== undefined);
 
       const result = await sendChatMessage(
         username ?? "",
@@ -102,20 +103,23 @@ export const AgentChat: React.FC = () => {
         throw new Error(result.message ?? "Failed to send message");
       }
     },
-    [username, agentId, selectedParticipantIds],
+    [username, agentId, agents, selectedParticipants],
   );
 
   const handleNewChat = useCallback(
     (toIds: number[]) => {
-      // Build participant IDs string (sorted)
-      const allIds = [agentId, ...toIds].sort((a, b) => a - b);
-      const participantIds = allIds.join(",");
+      // Build participants string from usernames (sorted alphabetically)
+      const allNames = [agentId, ...toIds]
+        .map((id) => agents.find((a) => a.id === id)?.name ?? "")
+        .filter(Boolean)
+        .sort();
+      const participants = allNames.join(",");
 
       // Select this conversation (it may or may not exist yet)
-      setSelectedParticipantIds(participantIds);
+      setSelectedParticipants(participants);
       closeDrawer();
     },
-    [agentId, closeDrawer],
+    [agentId, agents, closeDrawer],
   );
 
   if (!username) {
@@ -146,7 +150,7 @@ export const AgentChat: React.FC = () => {
   const conversationList = (
     <ChatConversationList
       conversations={conversations}
-      selectedParticipantIds={selectedParticipantIds}
+      selectedParticipants={selectedParticipants}
       onSelect={handleSelectConversation}
       onNewChat={handleNewChat}
       canSend={canSend}
@@ -155,11 +159,9 @@ export const AgentChat: React.FC = () => {
     />
   );
 
-  const conversationLabel = selectedParticipantIds
+  const conversationLabel = selectedParticipants
     ?.split(",")
-    .map(Number)
-    .filter((pid) => pid !== agentId)
-    .map((pid) => agents.find((a) => a.id === pid)?.name ?? `#${pid}`)
+    .filter((name) => name !== username)
     .join(", ");
 
   return (
@@ -199,7 +201,7 @@ export const AgentChat: React.FC = () => {
           </Alert>
         )}
 
-        {!selectedParticipantIds ? (
+        {!selectedParticipants ? (
           <Box
             style={{
               flex: 1,
@@ -265,8 +267,8 @@ export const AgentChat: React.FC = () => {
             {canSend && (
               <ChatInput
                 onSend={handleSendMessage}
-                disabled={!selectedParticipantIds}
-                focusKey={selectedParticipantIds}
+                disabled={!selectedParticipants}
+                focusKey={selectedParticipants}
               />
             )}
           </>

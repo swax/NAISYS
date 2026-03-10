@@ -159,8 +159,8 @@ export const apiEndpoints = {
   agentRuns: (username: string) => `/agents/${username}/runs`,
   agentMail: (username: string) => `/agents/${username}/mail`,
   agentChat: (username: string) => `/agents/${username}/chat`,
-  agentChatMessages: (username: string, participantIds: string) =>
-    `/agents/${username}/chat/${participantIds.replace(/,/g, "-")}`,
+  agentChatMessages: (username: string, participants: string) =>
+    `/agents/${username}/chat/${participants}`,
   agentContextLog: (username: string, runId: number, sessionId: number) =>
     `/agents/${username}/runs/${runId}/sessions/${sessionId}/logs`,
   agentStart: (username: string) => `/agents/${username}/start`,

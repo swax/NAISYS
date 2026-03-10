@@ -116,10 +116,18 @@ export function createHubMailService(
       let ownershipCondition;
       if (parsed.withUserIds?.length) {
         // Messages between exactly this group of participants
-        const participantIds = [parsed.userId, ...parsed.withUserIds]
-          .sort((a, b) => a - b)
+        const allUserIds = [
+          ...new Set([parsed.userId, ...parsed.withUserIds]),
+        ];
+        const users = await hubDb.users.findMany({
+          where: { id: { in: allUserIds } },
+          select: { username: true },
+        });
+        const participants = users
+          .map((u) => u.username)
+          .sort()
           .join(",");
-        ownershipCondition = { participant_ids: participantIds };
+        ownershipCondition = { participants };
       } else if (parsed.filter === "received") {
         ownershipCondition = {
           recipients: { some: { user_id: parsed.userId } },
@@ -280,20 +288,20 @@ export function createHubMailService(
         if (result.count > 0) {
           const messages = await hubDb.mail_messages.findMany({
             where: { id: { in: parsed.messageIds } },
-            select: { participant_ids: true },
+            select: { participants: true },
           });
 
-          // participantIds is like the room id, we broadcast to all rooms the read message ids
+          // participants is like the room id, we broadcast to all rooms the read message ids
           // It's ok if the specific message id is not in the room, the client will ignore it
-          const participantIds = [
-            ...new Set(messages.map((m) => m.participant_ids)),
+          const participants = [
+            ...new Set(messages.map((m) => m.participants)),
           ];
 
           const payload = {
             messageIds: parsed.messageIds,
             userId: parsed.userId,
             kind: parsed.kind,
-            participantIds,
+            participants,
           };
 
           for (const connection of naisysServer.getConnectedClients()) {

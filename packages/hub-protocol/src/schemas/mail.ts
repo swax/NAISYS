@@ -214,7 +214,7 @@ export const MailPushSchema = z.object({
   subject: z.string().optional(),
   body: z.string(),
   createdAt: z.string(),
-  participantIds: z.string(),
+  participants: z.string(),
   attachments: z.array(MailAttachmentDataSchema).optional(),
 });
 export type MailPush = z.infer<typeof MailPushSchema>;
@@ -224,6 +224,6 @@ export const MailReadPushSchema = z.object({
   messageIds: z.array(z.number()),
   userId: z.number(),
   kind: MessageKindSchema,
-  participantIds: z.array(z.string()),
+  participants: z.array(z.string()),
 });
 export type MailReadPush = z.infer<typeof MailReadPushSchema>;

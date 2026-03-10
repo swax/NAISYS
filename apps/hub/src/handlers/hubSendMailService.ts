@@ -26,8 +26,17 @@ export function createHubSendMailService(
   }) {
     const now = new Date();
 
-    const participantIds = [params.fromUserId, ...params.recipientUserIds]
-      .sort((a, b) => a - b)
+    // Build participants string from usernames (sorted alphabetically)
+    const allUserIds = [
+      ...new Set([params.fromUserId, ...params.recipientUserIds]),
+    ];
+    const users = await hubDb.users.findMany({
+      where: { id: { in: allUserIds } },
+      select: { username: true },
+    });
+    const participants = users
+      .map((u) => u.username)
+      .sort()
       .join(",");
 
     // Atomic transaction: create message, link attachments, add recipients, update notifications
@@ -37,7 +46,7 @@ export function createHubSendMailService(
           from_user_id: params.fromUserId,
           host_id: params.hostId,
           kind: params.kind,
-          participant_ids: participantIds,
+          participants,
           subject: params.subject,
           body: params.body,
           created_at: now,
@@ -141,7 +150,7 @@ export function createHubSendMailService(
       subject: params.subject,
       body: params.body,
       createdAt: now.toISOString(),
-      participantIds,
+      participants,
       attachments,
     };
     for (const connection of naisysServer.getConnectedClients()) {

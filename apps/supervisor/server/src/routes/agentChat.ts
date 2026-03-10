@@ -96,13 +96,13 @@ export default function agentChatRoutes(
     },
   );
 
-  // GET /:username/chat/:participantIds — Messages in a conversation
+  // GET /:username/chat/:participants — Messages in a conversation
   fastify.get<{
-    Params: AgentUsernameParams & { participantIds: string };
+    Params: AgentUsernameParams & { participants: string };
     Querystring: ChatMessagesRequest;
     Reply: ChatMessagesResponse | ErrorResponse;
   }>(
-    "/:username/chat/:participantIds",
+    "/:username/chat/:participants",
     {
       schema: {
         description: "Get chat messages for a specific conversation",
@@ -116,14 +116,11 @@ export default function agentChatRoutes(
     },
     async (request, reply) => {
       try {
-        const { username, participantIds } = request.params;
+        const { username, participants } = request.params;
         const { updatedSince, page, count } = request.query;
 
-        // URL uses dashes as separator, DB uses commas
-        const dbParticipantIds = String(participantIds).replace(/-/g, ",");
-
         const data = await getMessages(
-          dbParticipantIds,
+          participants,
           updatedSince,
           page,
           count,
@@ -144,7 +141,7 @@ export default function agentChatRoutes(
       } catch (error) {
         request.log.error(
           error,
-          "Error in GET /agents/:username/chat/:participantIds route",
+          "Error in GET /agents/:username/chat/:participants route",
         );
         return reply.status(500).send({
           success: false,
