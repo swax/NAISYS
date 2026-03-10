@@ -18,7 +18,7 @@ import {
 import { useCallback, useEffect, useState } from "react";
 import { Outlet, useLocation, useParams } from "react-router";
 
-import { api, showErrorNotification } from "../../../lib/api";
+import { api, apiEndpoints, showErrorNotification } from "../../../lib/api";
 import { OperationSidebar } from "./OperationSidebar";
 import { RevisionHeader } from "./RevisionHeader";
 
@@ -41,7 +41,7 @@ export const RevisionLayout: React.FC = () => {
     setLoading(true);
     try {
       const result = await api.get<OrderRevision>(
-        `orders/${orderKey}/revs/${revNo}`,
+        apiEndpoints.orderRev(orderKey, revNo),
       );
       setItem(result);
     } catch (err) {

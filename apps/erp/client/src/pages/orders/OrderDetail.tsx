@@ -16,7 +16,7 @@ import { useNavigate, useParams } from "react-router";
 import { MetadataTooltip } from "../../components/MetadataTooltip";
 import { OrderForm } from "../../components/OrderForm";
 import { OrderRevisions } from "../../components/OrderRevisions";
-import { api, showErrorNotification } from "../../lib/api";
+import { api, apiEndpoints, showErrorNotification } from "../../lib/api";
 import { hasAction } from "../../lib/hateoas";
 
 export const OrderDetail: React.FC = () => {
@@ -30,7 +30,7 @@ export const OrderDetail: React.FC = () => {
     if (!key) return;
     setLoading(true);
     try {
-      const result = await api.get<Order>(`orders/${key}`);
+      const result = await api.get<Order>(apiEndpoints.order(key));
       setItem(result);
     } catch (err) {
       showErrorNotification(err);
@@ -45,7 +45,7 @@ export const OrderDetail: React.FC = () => {
 
   const handleUpdate = async (data: UpdateOrder) => {
     if (!key) return;
-    await api.put(`orders/${key}`, data);
+    await api.put(apiEndpoints.order(key), data);
     setEditing(false);
     await fetchItem();
   };
@@ -53,7 +53,7 @@ export const OrderDetail: React.FC = () => {
   const handleDelete = async () => {
     if (!key || !confirm("Delete this order?")) return;
     try {
-      await api.delete(`orders/${key}`);
+      await api.delete(apiEndpoints.order(key));
       void navigate("/orders");
     } catch (err) {
       showErrorNotification(err);

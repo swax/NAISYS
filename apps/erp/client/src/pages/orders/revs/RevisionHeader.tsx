@@ -2,7 +2,7 @@ import { Badge, Button, Group, Text } from "@mantine/core";
 import type { OrderRevision } from "@naisys-erp/shared";
 import { useNavigate } from "react-router";
 
-import { api, showErrorNotification } from "../../../lib/api";
+import { api, apiEndpoints, showErrorNotification } from "../../../lib/api";
 import { hasAction } from "../../../lib/hateoas";
 
 const STATUS_COLORS: Record<string, string> = {
@@ -29,7 +29,7 @@ export const RevisionHeader: React.FC<Props> = ({
   const handleApprove = async () => {
     if (!confirm(`Approve revision #${revNo}?`)) return;
     try {
-      await api.post(`orders/${orderKey}/revs/${revNo}/approve`, {});
+      await api.post(apiEndpoints.orderRevApprove(orderKey, revNo), {});
       onRefresh();
     } catch (err) {
       showErrorNotification(err);
@@ -39,7 +39,7 @@ export const RevisionHeader: React.FC<Props> = ({
   const handleObsolete = async () => {
     if (!confirm(`Mark revision #${revNo} as obsolete?`)) return;
     try {
-      await api.post(`orders/${orderKey}/revs/${revNo}/obsolete`, {});
+      await api.post(apiEndpoints.orderRevObsolete(orderKey, revNo), {});
       onRefresh();
     } catch (err) {
       showErrorNotification(err);
@@ -49,7 +49,7 @@ export const RevisionHeader: React.FC<Props> = ({
   const handleDelete = async () => {
     if (!confirm(`Delete revision #${revNo}?`)) return;
     try {
-      await api.delete(`orders/${orderKey}/revs/${revNo}`);
+      await api.delete(apiEndpoints.orderRev(orderKey, revNo));
       void navigate(`/orders/${orderKey}`);
     } catch (err) {
       showErrorNotification(err);

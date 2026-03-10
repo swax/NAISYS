@@ -50,6 +50,4 @@ export const OperationListResponseSchema = z.object({
   _actions: z.array(HateoasActionSchema).optional(),
 });
 
-export type OperationListResponse = z.infer<
-  typeof OperationListResponseSchema
->;
+export type OperationListResponse = z.infer<typeof OperationListResponseSchema>;

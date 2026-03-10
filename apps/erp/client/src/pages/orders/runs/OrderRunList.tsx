@@ -16,7 +16,7 @@ import type { OrderRunListResponse } from "@naisys-erp/shared";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router";
 
-import { api, showErrorNotification } from "../../../lib/api";
+import { api, apiEndpoints, showErrorNotification } from "../../../lib/api";
 
 const STATUS_COLORS: Record<string, string> = {
   released: "blue",
@@ -56,7 +56,7 @@ export const OrderRunList: React.FC = () => {
       if (search) params.set("search", search);
 
       const result = await api.get<OrderRunListResponse>(
-        `orders/${orderKey}/runs?${params}`,
+        `${apiEndpoints.orderRuns(orderKey!)}?${params}`,
       );
       setData(result);
     } catch (err) {

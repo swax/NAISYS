@@ -21,7 +21,7 @@ import { CreateOrderRevisionSchema } from "@naisys-erp/shared";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 
-import { api, showErrorNotification } from "../lib/api";
+import { api, apiEndpoints, showErrorNotification } from "../lib/api";
 import { hasAction } from "../lib/hateoas";
 import { zodResolver } from "../lib/zod-resolver";
 
@@ -53,13 +53,11 @@ export const OrderRevisions: React.FC<Props> = ({ orderKey }) => {
     validate: zodResolver(CreateOrderRevisionSchema),
   });
 
-  const basePath = `orders/${orderKey}/revs`;
-
   const fetchRevisions = useCallback(async () => {
     setLoading(true);
     try {
       const result = await api.get<OrderRevisionListResponse>(
-        `${basePath}?page=${page}&pageSize=${PAGE_SIZE}`,
+        `${apiEndpoints.orderRevs(orderKey)}?page=${page}&pageSize=${PAGE_SIZE}`,
       );
       setData(result);
     } catch (err) {
@@ -67,7 +65,7 @@ export const OrderRevisions: React.FC<Props> = ({ orderKey }) => {
     } finally {
       setLoading(false);
     }
-  }, [basePath, page]);
+  }, [orderKey, page]);
 
   useEffect(() => {
     void fetchRevisions();
@@ -76,10 +74,13 @@ export const OrderRevisions: React.FC<Props> = ({ orderKey }) => {
   const handleCreate = async (values: typeof form.values) => {
     setSubmitting(true);
     try {
-      const created = await api.post<OrderRevision>(basePath, {
-        notes: values.notes || undefined,
-        changeSummary: values.changeSummary || undefined,
-      });
+      const created = await api.post<OrderRevision>(
+        apiEndpoints.orderRevs(orderKey),
+        {
+          notes: values.notes || undefined,
+          changeSummary: values.changeSummary || undefined,
+        },
+      );
       setModalOpen(false);
       form.reset();
       void navigate(`/orders/${orderKey}/revs/${created.revNo}`);
@@ -98,7 +99,7 @@ export const OrderRevisions: React.FC<Props> = ({ orderKey }) => {
   const handleApprove = async (rev: OrderRevision) => {
     if (!confirm(`Approve revision #${rev.revNo}?`)) return;
     try {
-      await api.post(`${basePath}/${rev.revNo}/approve`, {});
+      await api.post(apiEndpoints.orderRevApprove(orderKey, rev.revNo), {});
       await fetchRevisions();
     } catch (err) {
       showErrorNotification(err);
@@ -108,7 +109,7 @@ export const OrderRevisions: React.FC<Props> = ({ orderKey }) => {
   const handleObsolete = async (rev: OrderRevision) => {
     if (!confirm(`Mark revision #${rev.revNo} as obsolete?`)) return;
     try {
-      await api.post(`${basePath}/${rev.revNo}/obsolete`, {});
+      await api.post(apiEndpoints.orderRevObsolete(orderKey, rev.revNo), {});
       await fetchRevisions();
     } catch (err) {
       showErrorNotification(err);
@@ -118,7 +119,7 @@ export const OrderRevisions: React.FC<Props> = ({ orderKey }) => {
   const handleDelete = async (rev: OrderRevision) => {
     if (!confirm(`Delete revision #${rev.revNo}?`)) return;
     try {
-      await api.delete(`${basePath}/${rev.revNo}`);
+      await api.delete(apiEndpoints.orderRev(orderKey, rev.revNo));
       await fetchRevisions();
     } catch (err) {
       showErrorNotification(err);

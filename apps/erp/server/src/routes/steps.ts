@@ -180,14 +180,7 @@ export default function stepRoutes(fastify: FastifyInstance) {
       const base = stepBasePath(orderKey, revNo, seqNo);
       return {
         items: items.map((item) =>
-          formatItem(
-            orderKey,
-            revNo,
-            seqNo,
-            resolved.rev.status,
-            user,
-            item,
-          ),
+          formatItem(orderKey, revNo, seqNo, resolved.rev.status, user, item),
         ),
         total: items.length,
         nextSeqNo,

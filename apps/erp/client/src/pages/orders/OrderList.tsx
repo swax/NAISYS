@@ -16,7 +16,7 @@ import type { OrderListResponse } from "@naisys-erp/shared";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 
-import { api, showErrorNotification } from "../../lib/api";
+import { api, apiEndpoints, showErrorNotification } from "../../lib/api";
 import { hasAction } from "../../lib/hateoas";
 
 export const OrderList: React.FC = () => {
@@ -39,7 +39,9 @@ export const OrderList: React.FC = () => {
       if (status) params.set("status", status);
       if (search) params.set("search", search);
 
-      const result = await api.get<OrderListResponse>(`orders?${params}`);
+      const result = await api.get<OrderListResponse>(
+        `${apiEndpoints.orders}?${params}`,
+      );
       setData(result);
     } catch (err) {
       showErrorNotification(err);

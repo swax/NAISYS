@@ -11,16 +11,13 @@ import {
   TextInput,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
-import type {
-  Operation,
-  OperationListResponse,
-} from "@naisys-erp/shared";
+import type { Operation, OperationListResponse } from "@naisys-erp/shared";
 import { CreateOperationSchema } from "@naisys-erp/shared";
 import { IconPlus } from "@tabler/icons-react";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 
-import { api, showErrorNotification } from "../../../lib/api";
+import { api, apiEndpoints, showErrorNotification } from "../../../lib/api";
 import { hasAction } from "../../../lib/hateoas";
 import { zodResolver } from "../../../lib/zod-resolver";
 
@@ -37,8 +34,6 @@ export const OperationSidebar: React.FC<Props> = ({ orderKey, revNo }) => {
   const [modalOpen, setModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  const basePath = `orders/${orderKey}/revs/${revNo}/ops`;
-
   const form = useForm({
     initialValues: { seqNo: 10, title: "", description: "" },
     validate: zodResolver(CreateOperationSchema),
@@ -47,14 +42,16 @@ export const OperationSidebar: React.FC<Props> = ({ orderKey, revNo }) => {
   const fetchOps = useCallback(async () => {
     setLoading(true);
     try {
-      const result = await api.get<OperationListResponse>(basePath);
+      const result = await api.get<OperationListResponse>(
+        apiEndpoints.orderRevOps(orderKey, revNo),
+      );
       setData(result);
     } catch (err) {
       showErrorNotification(err);
     } finally {
       setLoading(false);
     }
-  }, [basePath]);
+  }, [orderKey, revNo]);
 
   useEffect(() => {
     void fetchOps();
@@ -68,11 +65,14 @@ export const OperationSidebar: React.FC<Props> = ({ orderKey, revNo }) => {
   const handleCreate = async (values: typeof form.values) => {
     setSubmitting(true);
     try {
-      const created = await api.post<Operation>(basePath, {
-        seqNo: values.seqNo,
-        title: values.title,
-        description: values.description || undefined,
-      });
+      const created = await api.post<Operation>(
+        apiEndpoints.orderRevOps(orderKey, revNo),
+        {
+          seqNo: values.seqNo,
+          title: values.title,
+          description: values.description || undefined,
+        },
+      );
       setModalOpen(false);
       form.reset();
       await fetchOps();
