@@ -16,7 +16,10 @@ import { Link, Outlet, useLocation, useNavigate } from "react-router";
 import { useAuth } from "../lib/AuthContext";
 import { LoginModal } from "./LoginModal";
 
-const navLinks = [{ label: "Orders", path: "/orders" }];
+const navLinks = [
+  { label: "Orders", path: "/orders" },
+  { label: "Users", path: "/users" },
+];
 
 export const AppLayout: React.FC = () => {
   const [opened, { toggle, close }] = useDisclosure();

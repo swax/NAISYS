@@ -1,34 +1,38 @@
 import {
-  Badge,
   Button,
   Container,
   Group,
   Loader,
+  Modal,
   Pagination,
-  Select,
+  PasswordInput,
   Stack,
   Table,
   Text,
   TextInput,
   Title,
 } from "@mantine/core";
-import type { OrderListResponse } from "@naisys-erp/shared";
+import { useDisclosure } from "@mantine/hooks";
+import type { UserListResponse } from "@naisys-erp/shared";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 
 import { api, showErrorNotification } from "../../lib/api";
-import { hasAction } from "../../lib/hateoas";
 
-export const OrderList: React.FC = () => {
+export const UserList: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const page = Number(searchParams.get("page")) || 1;
-  const status = searchParams.get("status") || undefined;
   const search = searchParams.get("search") || "";
 
-  const [data, setData] = useState<OrderListResponse | null>(null);
+  const [data, setData] = useState<UserListResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const [createOpened, { open: openCreate, close: closeCreate }] =
+    useDisclosure();
+  const [newUsername, setNewUsername] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [creating, setCreating] = useState(false);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -36,31 +40,46 @@ export const OrderList: React.FC = () => {
       const params = new URLSearchParams();
       params.set("page", String(page));
       params.set("pageSize", "20");
-      if (status) params.set("status", status);
       if (search) params.set("search", search);
 
-      const result = await api.get<OrderListResponse>(`orders?${params}`);
+      const result = await api.get<UserListResponse>(`users?${params}`);
       setData(result);
     } catch (err) {
       showErrorNotification(err);
     } finally {
       setLoading(false);
     }
-  }, [page, status, search]);
+  }, [page, search]);
 
   useEffect(() => {
     void fetchData();
   }, [fetchData]);
+
+  const handleCreate = async () => {
+    setCreating(true);
+    try {
+      await api.post("users", {
+        username: newUsername,
+        password: newPassword,
+      });
+      closeCreate();
+      setNewUsername("");
+      setNewPassword("");
+      void fetchData();
+    } catch (err) {
+      showErrorNotification(err);
+    } finally {
+      setCreating(false);
+    }
+  };
 
   const totalPages = data ? Math.ceil(data.total / data.pageSize) : 0;
 
   return (
     <Container size="lg" py="xl">
       <Group justify="space-between" mb="lg">
-        <Title order={2}>Orders</Title>
-        {data && hasAction(data._actions, "create") && (
-          <Button onClick={() => navigate("/orders/new")}>Create New</Button>
-        )}
+        <Title order={2}>Users</Title>
+        <Button onClick={openCreate}>Create User</Button>
       </Group>
 
       <Group mb="md">
@@ -78,23 +97,6 @@ export const OrderList: React.FC = () => {
           }}
           style={{ flex: 1 }}
         />
-        <Select
-          placeholder="All statuses"
-          data={[
-            { value: "active", label: "Active" },
-            { value: "archived", label: "Archived" },
-          ]}
-          value={status ?? null}
-          onChange={(val) => {
-            setSearchParams((prev) => {
-              if (val) prev.set("status", val);
-              else prev.delete("status");
-              prev.set("page", "1");
-              return prev;
-            });
-          }}
-          clearable
-        />
       </Group>
 
       {loading ? (
@@ -106,9 +108,9 @@ export const OrderList: React.FC = () => {
           <Table striped highlightOnHover>
             <Table.Thead>
               <Table.Tr>
-                <Table.Th>Key</Table.Th>
-                <Table.Th>Name</Table.Th>
-                <Table.Th>Status</Table.Th>
+                <Table.Th>Username</Table.Th>
+                <Table.Th>Type</Table.Th>
+                <Table.Th>Permissions</Table.Th>
                 <Table.Th>Created</Table.Th>
               </Table.Tr>
             </Table.Thead>
@@ -117,22 +119,15 @@ export const OrderList: React.FC = () => {
                 <Table.Tr
                   key={item.id}
                   style={{ cursor: "pointer" }}
-                  onClick={() => navigate(`/orders/${item.key}`)}
+                  onClick={() => navigate(`/users/${item.username}`)}
                 >
                   <Table.Td>
                     <Text size="sm" ff="monospace">
-                      {item.key}
+                      {item.username}
                     </Text>
                   </Table.Td>
-                  <Table.Td>{item.name}</Table.Td>
-                  <Table.Td>
-                    <Badge
-                      color={item.status === "active" ? "green" : "gray"}
-                      variant="light"
-                    >
-                      {item.status}
-                    </Badge>
-                  </Table.Td>
+                  <Table.Td>{item.isAgent ? "Agent" : "User"}</Table.Td>
+                  <Table.Td>{item.permissionCount}</Table.Td>
                   <Table.Td>
                     {new Date(item.createdAt).toLocaleDateString()}
                   </Table.Td>
@@ -157,9 +152,37 @@ export const OrderList: React.FC = () => {
         </>
       ) : (
         <Text c="dimmed" ta="center" py="xl">
-          No orders found.
+          No users found.
         </Text>
       )}
+
+      <Modal opened={createOpened} onClose={closeCreate} title="Create User">
+        <Stack>
+          <TextInput
+            label="Username"
+            value={newUsername}
+            onChange={(e) => setNewUsername(e.currentTarget.value)}
+            data-autofocus
+          />
+          <PasswordInput
+            label="Password"
+            value={newPassword}
+            onChange={(e) => setNewPassword(e.currentTarget.value)}
+          />
+          <Group justify="flex-end">
+            <Button variant="subtle" onClick={closeCreate}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleCreate}
+              loading={creating}
+              disabled={!newUsername || newPassword.length < 6}
+            >
+              Create
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
     </Container>
   );
 };

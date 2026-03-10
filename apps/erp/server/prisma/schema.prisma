@@ -119,8 +119,24 @@ model User {
   planOpsUpdated       PlanOperation[]         @relation("planOpUpdatedBy")
   auditLogs            AuditLog[]
   sessions             Session[]
+  permissions          UserPermission[]        @relation("userPermissions")
+  grantedPermissions   UserPermission[]        @relation("permissionGrantedBy")
 
   @@map("users")
+}
+
+model UserPermission {
+  id         Int      @id @default(autoincrement())
+  userId     Int      @map("user_id")
+  permission String
+  grantedAt  DateTime @default(now()) @map("granted_at")
+  grantedBy  Int?     @map("granted_by")
+
+  user        User @relation("userPermissions", fields: [userId], references: [id], onDelete: Cascade)
+  grantedByUser User? @relation("permissionGrantedBy", fields: [grantedBy], references: [id], onDelete: SetNull)
+
+  @@unique([userId, permission])
+  @@map("user_permissions")
 }
 
 model Session {

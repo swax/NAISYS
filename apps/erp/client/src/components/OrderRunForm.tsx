@@ -8,14 +8,8 @@ import {
   TextInput,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
-import type {
-  CreateOrderRun,
-  UpdateOrderRun,
-} from "@naisys-erp/shared";
-import {
-  CreateOrderRunSchema,
-  UpdateOrderRunSchema,
-} from "@naisys-erp/shared";
+import type { CreateOrderRun, UpdateOrderRun } from "@naisys-erp/shared";
+import { CreateOrderRunSchema, UpdateOrderRunSchema } from "@naisys-erp/shared";
 import { useState } from "react";
 
 import { zodResolver } from "../lib/zod-resolver";
@@ -68,10 +62,7 @@ function transformFormValues(
     if (!values.assignedTo) result.assignedTo = null;
     if (!values.notes) result.notes = null;
   } else {
-    result.revNo =
-      typeof values.revNo === "number"
-        ? values.revNo
-        : undefined;
+    result.revNo = typeof values.revNo === "number" ? values.revNo : undefined;
   }
   return result;
 }
@@ -82,9 +73,7 @@ export const OrderRunForm = <TEdit extends boolean = false>({
   onSubmit,
   onCancel,
 }: Props<TEdit>) => {
-  const schema = isEdit
-    ? UpdateOrderRunSchema
-    : CreateOrderRunSchema;
+  const schema = isEdit ? UpdateOrderRunSchema : CreateOrderRunSchema;
 
   const form = useForm({
     initialValues: {

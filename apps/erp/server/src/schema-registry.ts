@@ -1,13 +1,17 @@
 import {
-  CreateOrderRunSchema,
+  ChangePasswordSchema,
   CreateOrderRevisionSchema,
+  CreateOrderRunSchema,
   CreateOrderSchema,
   CreatePlanOperationSchema,
+  CreateUserSchema,
+  GrantPermissionSchema,
   LoginRequestSchema,
-  UpdateOrderRunSchema,
   UpdateOrderRevisionSchema,
+  UpdateOrderRunSchema,
   UpdateOrderSchema,
   UpdatePlanOperationSchema,
+  UpdateUserSchema,
 } from "@naisys-erp/shared";
 import { z } from "zod/v4";
 import type { $ZodType } from "zod/v4/core";
@@ -22,6 +26,10 @@ export const schemaRegistry: Record<string, $ZodType> = {
   CreatePlanOperation: CreatePlanOperationSchema,
   UpdatePlanOperation: UpdatePlanOperationSchema,
   LoginRequest: LoginRequestSchema,
+  CreateUser: CreateUserSchema,
+  UpdateUser: UpdateUserSchema,
+  GrantPermission: GrantPermissionSchema,
+  ChangePassword: ChangePasswordSchema,
 };
 
 // Register schemas with Zod global registry for OpenAPI components/schemas population

@@ -166,7 +166,9 @@ export const OrderRunList: React.FC = () => {
                 <Table.Tr
                   key={item.id}
                   style={{ cursor: "pointer" }}
-                  onClick={() => navigate(`/orders/${orderKey}/runs/${item.id}`)}
+                  onClick={() =>
+                    navigate(`/orders/${orderKey}/runs/${item.id}`)
+                  }
                   data-testid={`order-run-row-${item.runNo}`}
                 >
                   <Table.Td>

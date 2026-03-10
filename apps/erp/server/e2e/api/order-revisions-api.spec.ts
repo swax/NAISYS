@@ -86,9 +86,7 @@ test.describe("Order Revisions - API happy path", () => {
   });
 
   test("approve the revision", async () => {
-    const res = await api.post(
-      `${API}/orders/${orderKey}/revs/1/approve`,
-    );
+    const res = await api.post(`${API}/orders/${orderKey}/revs/1/approve`);
     expect(res.status()).toBe(200);
 
     const body = await res.json();
@@ -143,9 +141,7 @@ test.describe("Order Revisions - API happy path", () => {
   });
 
   test("mark approved revision as obsolete", async () => {
-    const res = await api.post(
-      `${API}/orders/${orderKey}/revs/1/obsolete`,
-    );
+    const res = await api.post(`${API}/orders/${orderKey}/revs/1/obsolete`);
     expect(res.status()).toBe(200);
 
     const body = await res.json();
@@ -181,9 +177,7 @@ test.describe("Order Revisions - API happy path", () => {
   });
 
   test("filter revisions by status", async () => {
-    const res = await api.get(
-      `${API}/orders/${orderKey}/revs?status=draft`,
-    );
+    const res = await api.get(`${API}/orders/${orderKey}/revs?status=draft`);
     expect(res.status()).toBe(200);
 
     const body = await res.json();

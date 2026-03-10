@@ -18,6 +18,8 @@ import { RevisionLayout } from "./pages/orders/revs/RevisionLayout";
 import { OrderRunCreate } from "./pages/orders/runs/OrderRunCreate";
 import { OrderRunDetail } from "./pages/orders/runs/OrderRunDetail";
 import { OrderRunList } from "./pages/orders/runs/OrderRunList";
+import { UserDetail } from "./pages/users/UserDetail";
+import { UserList } from "./pages/users/UserList";
 
 const AppContent: React.FC = () => {
   const [publicRead, setPublicRead] = React.useState(false);
@@ -57,18 +59,11 @@ const AppContent: React.FC = () => {
           <Route index element={<OperationIndex />} />
           <Route path="ops/:seqNo" element={<OperationDetail />} />
         </Route>
-        <Route
-          path="/orders/:orderKey/runs"
-          element={<OrderRunList />}
-        />
-        <Route
-          path="/orders/:orderKey/runs/new"
-          element={<OrderRunCreate />}
-        />
-        <Route
-          path="/orders/:orderKey/runs/:id"
-          element={<OrderRunDetail />}
-        />
+        <Route path="/orders/:orderKey/runs" element={<OrderRunList />} />
+        <Route path="/orders/:orderKey/runs/new" element={<OrderRunCreate />} />
+        <Route path="/orders/:orderKey/runs/:id" element={<OrderRunDetail />} />
+        <Route path="/users" element={<UserList />} />
+        <Route path="/users/:username" element={<UserDetail />} />
       </Route>
     </Routes>
   );

@@ -35,9 +35,7 @@ test.describe.serial("Full order lifecycle (UI)", () => {
     await page.getByRole("button", { name: "Create" }).click();
 
     // Should redirect back to list
-    await expect(
-      page.getByRole("heading", { name: "Orders" }),
-    ).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Orders" })).toBeVisible();
 
     // Click into the newly created order
     await page.getByText(uniqueKey).click();
@@ -53,9 +51,7 @@ test.describe.serial("Full order lifecycle (UI)", () => {
     await page.getByRole("button", { name: "Create" }).click();
 
     // Should navigate to the revision detail page
-    await expect(
-      page.getByRole("heading", { name: "Revision #1" }),
-    ).toBeVisible();
+    await expect(page.getByText("Rev #1")).toBeVisible();
   });
 
   test("approve the revision", async () => {

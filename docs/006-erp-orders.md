@@ -188,13 +188,13 @@ released ──[start]──> started ──[close]──> closed
 
 The `_actions` array in each response is **state-dependent**. The server evaluates the current resource state and only includes actions that are valid right now.
 
-| Resource  | State     | Available Actions             |
-| --------- | --------- | ----------------------------- |
-| Order     | active    | update, delete, archive       |
-| Order     | archived  | update, delete, activate      |
-| Revision  | draft     | update, approve, delete       |
-| Revision  | approved  | cut-order, obsolete           |
-| Revision  | obsolete  | (none)                        |
+| Resource | State     | Available Actions             |
+| -------- | --------- | ----------------------------- |
+| Order    | active    | update, delete, archive       |
+| Order    | archived  | update, delete, activate      |
+| Revision | draft     | update, approve, delete       |
+| Revision | approved  | cut-order, obsolete           |
+| Revision | obsolete  | (none)                        |
 | OrderRun | released  | update, start, cancel, delete |
 | OrderRun | started   | update, close, cancel         |
 | OrderRun | closed    | (none)                        |
@@ -206,8 +206,8 @@ Each action includes a `schema` URL (e.g., `/api/erp/schemas/UpdateOrder`) that 
 
 ### Orders
 
-| Method | Path                           | Description                  |
-| ------ | ------------------------------ | ---------------------------- |
+| Method | Path                  | Description                  |
+| ------ | --------------------- | ---------------------------- |
 | GET    | `/api/erp/orders`     | List (paginated, filterable) |
 | POST   | `/api/erp/orders`     | Create                       |
 | GET    | `/api/erp/orders/:id` | Get single                   |
@@ -216,28 +216,28 @@ Each action includes a `schema` URL (e.g., `/api/erp/schemas/UpdateOrder`) that 
 
 ### Order Revisions
 
-| Method | Path                                                      | Description          |
-| ------ | --------------------------------------------------------- | -------------------- |
-| GET    | `/api/erp/orders/:orderKey/revs`             | List                 |
-| POST   | `/api/erp/orders/:orderKey/revs`             | Create               |
-| GET    | `/api/erp/orders/:orderKey/revs/:revNo`      | Get single           |
-| PUT    | `/api/erp/orders/:orderKey/revs/:revNo`      | Update (draft only)  |
-| DELETE | `/api/erp/orders/:orderKey/revs/:revNo`      | Delete (draft only)  |
-| POST   | `.../revs/:revNo/approve`                                 | Draft -> Approved    |
-| POST   | `.../revs/:revNo/obsolete`                                | Approved -> Obsolete |
+| Method | Path                                    | Description          |
+| ------ | --------------------------------------- | -------------------- |
+| GET    | `/api/erp/orders/:orderKey/revs`        | List                 |
+| POST   | `/api/erp/orders/:orderKey/revs`        | Create               |
+| GET    | `/api/erp/orders/:orderKey/revs/:revNo` | Get single           |
+| PUT    | `/api/erp/orders/:orderKey/revs/:revNo` | Update (draft only)  |
+| DELETE | `/api/erp/orders/:orderKey/revs/:revNo` | Delete (draft only)  |
+| POST   | `.../revs/:revNo/approve`               | Draft -> Approved    |
+| POST   | `.../revs/:revNo/obsolete`              | Approved -> Obsolete |
 
 ### Order Runs
 
-| Method | Path                                              | Description               |
-| ------ | ------------------------------------------------- | ------------------------- |
-| GET    | `/api/erp/orders/:orderKey/runs`                  | List (paginated)          |
-| POST   | `/api/erp/orders/:orderKey/runs`                  | Create                    |
-| GET    | `/api/erp/orders/:orderKey/runs/:id`              | Get single                |
-| PUT    | `/api/erp/orders/:orderKey/runs/:id`              | Update (released/started) |
-| DELETE | `/api/erp/orders/:orderKey/runs/:id`              | Delete (released only)    |
-| POST   | `/api/erp/orders/:orderKey/runs/:id/start`        | Released -> Started       |
-| POST   | `/api/erp/orders/:orderKey/runs/:id/close`        | Started -> Closed         |
-| POST   | `/api/erp/orders/:orderKey/runs/:id/cancel`       | -> Cancelled              |
+| Method | Path                                        | Description               |
+| ------ | ------------------------------------------- | ------------------------- |
+| GET    | `/api/erp/orders/:orderKey/runs`            | List (paginated)          |
+| POST   | `/api/erp/orders/:orderKey/runs`            | Create                    |
+| GET    | `/api/erp/orders/:orderKey/runs/:id`        | Get single                |
+| PUT    | `/api/erp/orders/:orderKey/runs/:id`        | Update (released/started) |
+| DELETE | `/api/erp/orders/:orderKey/runs/:id`        | Delete (released only)    |
+| POST   | `/api/erp/orders/:orderKey/runs/:id/start`  | Released -> Started       |
+| POST   | `/api/erp/orders/:orderKey/runs/:id/close`  | Started -> Closed         |
+| POST   | `/api/erp/orders/:orderKey/runs/:id/cancel` | -> Cancelled              |
 
 ### Schemas
 
