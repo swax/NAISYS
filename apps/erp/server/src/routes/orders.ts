@@ -38,7 +38,9 @@ function itemActions(
   resource: string,
   key: string,
   status: string,
+  isAuthenticated: boolean,
 ): HateoasAction[] {
+  if (!isAuthenticated) return [];
   const href = `${API_PREFIX}/${resource}/${key}`;
   const actions: HateoasAction[] = [
     {
@@ -89,33 +91,43 @@ function revisionCollectionLink(
   };
 }
 
+const includeUsers = {
+  createdBy: { select: { username: true } },
+  updatedBy: { select: { username: true } },
+} as const;
+
+type OrderWithUsers = OrderModel & {
+  createdBy: { username: string };
+  updatedBy: { username: string };
+};
+
 const RESOURCE = "orders";
 
 const KeyParamsSchema = z.object({
   key: z.string(),
 });
 
-function formatItem(item: OrderModel) {
+function formatItem(item: OrderWithUsers, isAuthenticated: boolean) {
   return {
     id: item.id,
     key: item.key,
     name: item.name,
     description: item.description,
     status: item.status,
-    createdBy: item.createdById,
+    createdBy: item.createdBy.username,
     createdAt: item.createdAt.toISOString(),
-    updatedBy: item.updatedById,
+    updatedBy: item.updatedBy.username,
     updatedAt: item.updatedAt.toISOString(),
     _links: [
       ...itemLinks(RESOURCE, item.key, "Order"),
       revisionCollectionLink(RESOURCE, item.key),
     ],
-    _actions: itemActions(RESOURCE, item.key, item.status),
+    _actions: itemActions(RESOURCE, item.key, item.status, isAuthenticated),
   };
 }
 
-function formatListItem(item: OrderModel) {
-  const { _actions, ...rest } = formatItem(item);
+function formatListItem(item: OrderWithUsers, isAuthenticated: boolean) {
+  const { _actions, ...rest } = formatItem(item, isAuthenticated);
   return {
     ...rest,
     _links: [selfLink(`/${RESOURCE}/${item.key}`)],
@@ -151,6 +163,7 @@ export default function orderRoutes(fastify: FastifyInstance) {
       const [items, total] = await Promise.all([
         erpDb.order.findMany({
           where,
+          include: includeUsers,
           skip: (page - 1) * pageSize,
           take: pageSize,
           orderBy: { createdAt: "desc" },
@@ -159,7 +172,7 @@ export default function orderRoutes(fastify: FastifyInstance) {
       ]);
 
       return {
-        items: items.map(formatListItem),
+        items: items.map((item) => formatListItem(item, !!request.erpUser)),
         total,
         page,
         pageSize,
@@ -200,10 +213,11 @@ export default function orderRoutes(fastify: FastifyInstance) {
           createdById: userId,
           updatedById: userId,
         },
+        include: includeUsers,
       });
 
       reply.status(201);
-      return formatItem(item);
+      return formatItem(item, !!request.erpUser);
     },
   });
 
@@ -221,7 +235,7 @@ export default function orderRoutes(fastify: FastifyInstance) {
     handler: async (request, reply) => {
       const { key } = request.params;
 
-      const item = await erpDb.order.findUnique({ where: { key } });
+      const item = await erpDb.order.findUnique({ where: { key }, include: includeUsers });
       if (!item) {
         return sendError(
           reply,
@@ -231,7 +245,7 @@ export default function orderRoutes(fastify: FastifyInstance) {
         );
       }
 
-      return formatItem(item);
+      return formatItem(item, !!request.erpUser);
     },
   });
 
@@ -267,9 +281,10 @@ export default function orderRoutes(fastify: FastifyInstance) {
       const item = await erpDb.order.update({
         where: { key },
         data: { ...data, updatedById: userId },
+        include: includeUsers,
       });
 
-      return formatItem(item);
+      return formatItem(item, !!request.erpUser);
     },
   });
 

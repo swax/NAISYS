@@ -2,8 +2,8 @@ import { Container, Title } from "@mantine/core";
 import type { CreateOrder } from "@naisys-erp/shared";
 import { useNavigate } from "react-router";
 
-import { OrderForm } from "../components/OrderForm";
-import { api } from "../lib/api";
+import { OrderForm } from "../../components/OrderForm";
+import { api } from "../../lib/api";
 
 export const OrderCreate: React.FC = () => {
   const navigate = useNavigate();

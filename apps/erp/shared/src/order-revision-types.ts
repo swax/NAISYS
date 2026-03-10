@@ -14,9 +14,9 @@ export const OrderRevisionSchema = z.object({
   notes: z.string().nullable(),
   changeSummary: z.string().nullable(),
   createdAt: z.iso.datetime(),
-  createdBy: z.number(),
+  createdBy: z.string(),
   updatedAt: z.iso.datetime(),
-  updatedBy: z.number(),
+  updatedBy: z.string(),
   _links: z.array(HateoasLinkSchema),
   _actions: z.array(HateoasActionSchema).optional(),
 });

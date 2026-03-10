@@ -50,7 +50,9 @@ function revisionItemActions(
   orderKey: string,
   revNo: number,
   status: string,
+  isAuthenticated: boolean,
 ): HateoasAction[] {
+  if (!isAuthenticated) return [];
   const href = `${API_PREFIX}/${parentResource}/${orderKey}/revs/${revNo}`;
   const actions: HateoasAction[] = [];
 
@@ -98,6 +100,16 @@ function revisionItemActions(
   return actions;
 }
 
+const includeUsers = {
+  createdBy: { select: { username: true } },
+  updatedBy: { select: { username: true } },
+} as const;
+
+type RevisionWithUsers = OrderRevisionModel & {
+  createdBy: { username: string };
+  updatedBy: { username: string };
+};
+
 const PARENT_RESOURCE = "orders";
 
 const OrderKeyParamsSchema = z.object({
@@ -109,7 +121,7 @@ const RevNoParamsSchema = z.object({
   revNo: z.coerce.number().int(),
 });
 
-function formatItem(orderKey: string, item: OrderRevisionModel) {
+function formatItem(orderKey: string, isAuthenticated: boolean, item: RevisionWithUsers) {
   return {
     id: item.id,
     orderId: item.orderId,
@@ -118,22 +130,23 @@ function formatItem(orderKey: string, item: OrderRevisionModel) {
     notes: item.notes,
     changeSummary: item.changeSummary,
     createdAt: item.createdAt.toISOString(),
-    createdBy: item.createdById,
+    createdBy: item.createdBy.username,
     updatedAt: item.updatedAt.toISOString(),
-    updatedBy: item.updatedById,
+    updatedBy: item.updatedBy.username,
     _links: revisionItemLinks(PARENT_RESOURCE, orderKey, item.revNo),
     _actions: revisionItemActions(
       PARENT_RESOURCE,
       orderKey,
       item.revNo,
       item.status,
+      isAuthenticated,
     ),
   };
 }
 
-function formatListItem(orderKey: string, item: OrderRevisionModel) {
+function formatListItem(orderKey: string, isAuthenticated: boolean, item: RevisionWithUsers) {
   return {
-    ...formatItem(orderKey, item),
+    ...formatItem(orderKey, isAuthenticated, item),
     _links: [selfLink(`/${PARENT_RESOURCE}/${orderKey}/revs/${item.revNo}`)],
   };
 }
@@ -147,6 +160,7 @@ async function resolveOrder(orderKey: string) {
 async function findRevision(orderId: number, revNo: number) {
   return erpDb.orderRevision.findFirst({
     where: { orderId, revNo },
+    include: includeUsers,
   });
 }
 
@@ -185,6 +199,7 @@ export default function orderRevisionRoutes(fastify: FastifyInstance) {
       const [items, total] = await Promise.all([
         erpDb.orderRevision.findMany({
           where,
+          include: includeUsers,
           skip: (page - 1) * pageSize,
           take: pageSize,
           orderBy: { revNo: "desc" },
@@ -193,7 +208,7 @@ export default function orderRevisionRoutes(fastify: FastifyInstance) {
       ]);
 
       return {
-        items: items.map((item) => formatListItem(orderKey, item)),
+        items: items.map((item) => formatListItem(orderKey, !!request.erpUser, item)),
         total,
         page,
         pageSize,
@@ -253,11 +268,12 @@ export default function orderRevisionRoutes(fastify: FastifyInstance) {
             createdById: userId,
             updatedById: userId,
           },
+          include: includeUsers,
         });
       });
 
       reply.status(201);
-      return formatItem(orderKey, item);
+      return formatItem(orderKey, !!request.erpUser, item);
     },
   });
 
@@ -295,7 +311,7 @@ export default function orderRevisionRoutes(fastify: FastifyInstance) {
         );
       }
 
-      return formatItem(orderKey, item);
+      return formatItem(orderKey, !!request.erpUser, item);
     },
   });
 
@@ -353,9 +369,10 @@ export default function orderRevisionRoutes(fastify: FastifyInstance) {
           ...(changeSummary !== undefined ? { changeSummary } : {}),
           updatedById: userId,
         },
+        include: includeUsers,
       });
 
-      return formatItem(orderKey, item);
+      return formatItem(orderKey, !!request.erpUser, item);
     },
   });
 
@@ -469,6 +486,7 @@ export default function orderRevisionRoutes(fastify: FastifyInstance) {
         const updated = await erpTx.orderRevision.update({
           where: { id: existing.id },
           data: { status: "approved", updatedById: userId },
+          include: includeUsers,
         });
         await writeAuditEntry(
           erpTx,
@@ -483,7 +501,7 @@ export default function orderRevisionRoutes(fastify: FastifyInstance) {
         return updated;
       });
 
-      return formatItem(orderKey, item);
+      return formatItem(orderKey, !!request.erpUser, item);
     },
   });
 
@@ -536,6 +554,7 @@ export default function orderRevisionRoutes(fastify: FastifyInstance) {
         const updated = await erpTx.orderRevision.update({
           where: { id: existing.id },
           data: { status: "obsolete", updatedById: userId },
+          include: includeUsers,
         });
         await writeAuditEntry(
           erpTx,
@@ -550,7 +569,7 @@ export default function orderRevisionRoutes(fastify: FastifyInstance) {
         return updated;
       });
 
-      return formatItem(orderKey, item);
+      return formatItem(orderKey, !!request.erpUser, item);
     },
   });
 }

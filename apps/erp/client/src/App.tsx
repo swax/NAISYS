@@ -8,14 +8,16 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router";
 
 import { AppLayout } from "./components/AppLayout";
 import { AuthProvider, useAuth } from "./lib/AuthContext";
-import { OrderRunCreate } from "./pages/OrderRunCreate";
-import { OrderRunDetail } from "./pages/OrderRunDetail";
-import { OrderRunList } from "./pages/OrderRunList";
 import { LoginPage } from "./pages/LoginPage";
-import { OrderCreate } from "./pages/OrderCreate";
-import { OrderDetail } from "./pages/OrderDetail";
-import { OrderList } from "./pages/OrderList";
-import { OrderRevisionDetail } from "./pages/OrderRevisionDetail";
+import { OrderCreate } from "./pages/orders/OrderCreate";
+import { OrderDetail } from "./pages/orders/OrderDetail";
+import { OrderList } from "./pages/orders/OrderList";
+import { OperationDetail } from "./pages/orders/revs/OperationDetail";
+import { OperationIndex } from "./pages/orders/revs/OperationIndex";
+import { RevisionLayout } from "./pages/orders/revs/RevisionLayout";
+import { OrderRunCreate } from "./pages/orders/runs/OrderRunCreate";
+import { OrderRunDetail } from "./pages/orders/runs/OrderRunDetail";
+import { OrderRunList } from "./pages/orders/runs/OrderRunList";
 
 const AppContent: React.FC = () => {
   const [publicRead, setPublicRead] = React.useState(false);
@@ -50,8 +52,11 @@ const AppContent: React.FC = () => {
         <Route path="/orders/:key" element={<OrderDetail />} />
         <Route
           path="/orders/:orderKey/revs/:revNo"
-          element={<OrderRevisionDetail />}
-        />
+          element={<RevisionLayout />}
+        >
+          <Route index element={<OperationIndex />} />
+          <Route path="ops/:seqNo" element={<OperationDetail />} />
+        </Route>
         <Route
           path="/orders/:orderKey/runs"
           element={<OrderRunList />}
