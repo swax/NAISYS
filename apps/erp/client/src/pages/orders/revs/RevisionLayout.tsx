@@ -18,9 +18,9 @@ import {
 import { useCallback, useEffect, useState } from "react";
 import { Outlet, useLocation, useParams } from "react-router";
 
+import { api, showErrorNotification } from "../../../lib/api";
 import { OperationSidebar } from "./OperationSidebar";
 import { RevisionHeader } from "./RevisionHeader";
-import { api, showErrorNotification } from "../../../lib/api";
 
 const SIDEBAR_WIDTH = 260;
 
@@ -77,7 +77,10 @@ export const RevisionLayout: React.FC = () => {
   }
 
   return (
-    <Box display="flex" style={{ flexDirection: "column", flex: 1, minHeight: 0 }}>
+    <Box
+      display="flex"
+      style={{ flexDirection: "column", flex: 1, minHeight: 0 }}
+    >
       {/* Header */}
       <RevisionHeader
         item={item}

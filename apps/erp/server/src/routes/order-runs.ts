@@ -14,6 +14,8 @@ import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod/v4";
 
 import { writeAuditEntry } from "../audit.js";
+import type { ErpUser } from "../auth-middleware.js";
+import { hasPermission } from "../auth-middleware.js";
 import erpDb from "../erpDb.js";
 import { sendError } from "../error-handler.js";
 import type { OrderRunModel } from "../generated/prisma/models/OrderRun.js";
@@ -28,10 +30,7 @@ function runResource(orderKey: string) {
   return `orders/${orderKey}/runs`;
 }
 
-function orderRunItemLinks(
-  orderKey: string,
-  id: number,
-): HateoasLink[] {
+function orderRunItemLinks(orderKey: string, id: number): HateoasLink[] {
   const resource = runResource(orderKey);
   return [
     selfLink(`/${resource}/${id}`),
@@ -53,9 +52,9 @@ function orderRunItemActions(
   orderKey: string,
   id: number,
   status: string,
-  isAuthenticated: boolean,
+  user: ErpUser | undefined,
 ): HateoasAction[] {
-  if (!isAuthenticated) return [];
+  if (!hasPermission(user, "manage_runs")) return [];
   const href = `${API_PREFIX}/${runResource(orderKey)}/${id}`;
   const actions: HateoasAction[] = [];
 
@@ -145,7 +144,11 @@ const includeRev = {
   updatedBy: { select: { username: true } },
 } as const;
 
-function formatItem(orderKey: string, isAuthenticated: boolean, item: OrderRunWithRev) {
+function formatItem(
+  orderKey: string,
+  user: ErpUser | undefined,
+  item: OrderRunWithRev,
+) {
   return {
     id: item.id,
     runNo: item.runNo,
@@ -164,12 +167,16 @@ function formatItem(orderKey: string, isAuthenticated: boolean, item: OrderRunWi
     updatedAt: item.updatedAt.toISOString(),
     updatedBy: item.updatedBy.username,
     _links: orderRunItemLinks(orderKey, item.id),
-    _actions: orderRunItemActions(orderKey, item.id, item.status, isAuthenticated),
+    _actions: orderRunItemActions(orderKey, item.id, item.status, user),
   };
 }
 
-function formatListItem(orderKey: string, isAuthenticated: boolean, item: OrderRunWithRev) {
-  const { _actions, ...rest } = formatItem(orderKey, isAuthenticated, item);
+function formatListItem(
+  orderKey: string,
+  user: ErpUser | undefined,
+  item: OrderRunWithRev,
+) {
+  const { _actions, ...rest } = formatItem(orderKey, user, item);
   return {
     ...rest,
     _links: [selfLink(`/${runResource(orderKey)}/${item.id}`)],
@@ -229,7 +236,9 @@ export default function orderRunRoutes(fastify: FastifyInstance) {
       const resource = runResource(orderKey);
 
       return {
-        items: items.map((item) => formatListItem(orderKey, !!request.erpUser, item)),
+        items: items.map((item) =>
+          formatListItem(orderKey, request.erpUser, item),
+        ),
         total,
         page,
         pageSize,
@@ -256,14 +265,8 @@ export default function orderRunRoutes(fastify: FastifyInstance) {
     },
     handler: async (request, reply) => {
       const { orderKey } = request.params;
-      const {
-        revNo,
-        priority,
-        scheduledStartAt,
-        dueAt,
-        assignedTo,
-        notes,
-      } = request.body;
+      const { revNo, priority, scheduledStartAt, dueAt, assignedTo, notes } =
+        request.body;
       const userId = request.erpUser!.id;
 
       const order = await resolveOrder(orderKey);
@@ -320,7 +323,7 @@ export default function orderRunRoutes(fastify: FastifyInstance) {
       });
 
       reply.status(201);
-      return formatItem(orderKey, !!request.erpUser, item);
+      return formatItem(orderKey, request.erpUser, item);
     },
   });
 
@@ -361,15 +364,14 @@ export default function orderRunRoutes(fastify: FastifyInstance) {
         );
       }
 
-      return formatItem(orderKey, !!request.erpUser, item);
+      return formatItem(orderKey, request.erpUser, item);
     },
   });
 
   // UPDATE (released/started only)
   app.put("/:id", {
     schema: {
-      description:
-        "Update an order run (released or started status only)",
+      description: "Update an order run (released or started status only)",
       tags: ["Order Runs"],
       params: IdParamsSchema,
       body: UpdateOrderRunSchema,
@@ -433,7 +435,7 @@ export default function orderRunRoutes(fastify: FastifyInstance) {
         include: includeRev,
       });
 
-      return formatItem(orderKey, !!request.erpUser, item);
+      return formatItem(orderKey, request.erpUser, item);
     },
   });
 
@@ -550,7 +552,7 @@ export default function orderRunRoutes(fastify: FastifyInstance) {
         return updated;
       });
 
-      return formatItem(orderKey, !!request.erpUser, item);
+      return formatItem(orderKey, request.erpUser, item);
     },
   });
 
@@ -618,7 +620,7 @@ export default function orderRunRoutes(fastify: FastifyInstance) {
         return updated;
       });
 
-      return formatItem(orderKey, !!request.erpUser, item);
+      return formatItem(orderKey, request.erpUser, item);
     },
   });
 
@@ -686,7 +688,7 @@ export default function orderRunRoutes(fastify: FastifyInstance) {
         return updated;
       });
 
-      return formatItem(orderKey, !!request.erpUser, item);
+      return formatItem(orderKey, request.erpUser, item);
     },
   });
 }

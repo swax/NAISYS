@@ -39,9 +39,7 @@ interface Props {
 
 export const OrderRevisions: React.FC<Props> = ({ orderKey }) => {
   const navigate = useNavigate();
-  const [data, setData] = useState<OrderRevisionListResponse | null>(
-    null,
-  );
+  const [data, setData] = useState<OrderRevisionListResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [modalOpen, setModalOpen] = useState(false);
@@ -133,9 +131,11 @@ export const OrderRevisions: React.FC<Props> = ({ orderKey }) => {
     <Card withBorder p="lg" mt="lg">
       <Group justify="space-between" mb="md">
         <Title order={4}>Revisions</Title>
-        <Button size="sm" onClick={() => setModalOpen(true)}>
-          New Revision
-        </Button>
+        {data && hasAction(data._actions, "create") && (
+          <Button size="sm" onClick={() => setModalOpen(true)}>
+            New Revision
+          </Button>
+        )}
       </Group>
 
       {loading ? (
@@ -163,9 +163,7 @@ export const OrderRevisions: React.FC<Props> = ({ orderKey }) => {
                   key={rev.id}
                   style={{ cursor: "pointer" }}
                   onClick={() =>
-                    navigate(
-                      `/orders/${orderKey}/revs/${rev.revNo}`,
-                    )
+                    navigate(`/orders/${orderKey}/revs/${rev.revNo}`)
                   }
                   data-testid={`revision-row-${rev.revNo}`}
                 >

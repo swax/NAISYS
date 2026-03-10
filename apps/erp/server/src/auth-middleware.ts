@@ -2,7 +2,7 @@ import { AuthCache } from "@naisys/common";
 import { hashToken } from "@naisys/common-node";
 import { findAgentByApiKey } from "@naisys/hub-database";
 import { findSession, findUserByApiKey } from "@naisys/supervisor-database";
-import type { FastifyInstance } from "fastify";
+import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 
 import erpDb from "./erpDb.js";
 import { isSupervisorAuth } from "./supervisorAuth.js";
@@ -10,6 +10,7 @@ import { isSupervisorAuth } from "./supervisorAuth.js";
 export interface ErpUser {
   id: number;
   username: string;
+  permissions: string[];
 }
 
 declare module "fastify" {
@@ -23,6 +24,46 @@ const COOKIE_NAME = "naisys_session";
 const PUBLIC_PREFIXES = ["/api/erp/auth/login", "/api/erp/client-config"];
 
 export const authCache = new AuthCache<ErpUser>();
+
+async function loadPermissions(userId: number): Promise<string[]> {
+  const perms = await erpDb.userPermission.findMany({
+    where: { userId },
+    select: { permission: true },
+  });
+  return perms.map((p) => p.permission);
+}
+
+export function hasPermission(
+  user: ErpUser | undefined,
+  permission: string,
+): boolean {
+  if (!user) return false;
+  return (
+    user.permissions.includes(permission) ||
+    user.permissions.includes("erp_admin")
+  );
+}
+
+export function requirePermission(permission: string) {
+  return async (request: FastifyRequest, reply: FastifyReply) => {
+    if (!request.erpUser) {
+      reply.status(401).send({
+        statusCode: 401,
+        error: "Unauthorized",
+        message: "Authentication required",
+      });
+      return;
+    }
+    if (!hasPermission(request.erpUser, permission)) {
+      reply.status(403).send({
+        statusCode: 403,
+        error: "Forbidden",
+        message: `Permission '${permission}' required`,
+      });
+      return;
+    }
+  };
+}
 
 function isPublicRoute(url: string): boolean {
   // Exact match: API root
@@ -74,7 +115,12 @@ export function registerAuthMiddleware(fastify: FastifyInstance) {
               },
             });
           }
-          const erpUser = { id: localUser.id, username: localUser.username };
+          const permissions = await loadPermissions(localUser.id);
+          const erpUser = {
+            id: localUser.id,
+            username: localUser.username,
+            permissions,
+          };
           authCache.set(cacheKey, erpUser);
           request.erpUser = erpUser;
         } else {
@@ -90,9 +136,11 @@ export function registerAuthMiddleware(fastify: FastifyInstance) {
           include: { user: true },
         });
         if (session) {
+          const permissions = await loadPermissions(session.user.id);
           const erpUser = {
             id: session.user.id,
             username: session.user.username,
+            permissions,
           };
           authCache.set(cacheKey, erpUser);
           request.erpUser = erpUser;
@@ -131,7 +179,12 @@ export function registerAuthMiddleware(fastify: FastifyInstance) {
                 },
               });
             }
-            const erpUser = { id: localUser.id, username: localUser.username };
+            const permissions = await loadPermissions(localUser.id);
+            const erpUser = {
+              id: localUser.id,
+              username: localUser.username,
+              permissions,
+            };
             authCache.set(cacheKey, erpUser);
             request.erpUser = erpUser;
           } else {
@@ -143,7 +196,12 @@ export function registerAuthMiddleware(fastify: FastifyInstance) {
             where: { apiKey },
           });
           if (localUser) {
-            const erpUser = { id: localUser.id, username: localUser.username };
+            const permissions = await loadPermissions(localUser.id);
+            const erpUser = {
+              id: localUser.id,
+              username: localUser.username,
+              permissions,
+            };
             authCache.set(cacheKey, erpUser);
             request.erpUser = erpUser;
           } else {

@@ -10,10 +10,12 @@ import { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod/v4";
 
+import type { ErpUser } from "../auth-middleware.js";
+import { hasPermission } from "../auth-middleware.js";
 import erpDb from "../erpDb.js";
 import { sendError } from "../error-handler.js";
 import type { PlanOperationModel } from "../generated/prisma/models/PlanOperation.js";
-import { API_PREFIX, selfLink, schemaLink } from "../hateoas.js";
+import { API_PREFIX, schemaLink, selfLink } from "../hateoas.js";
 
 const ParamsSchema = z.object({
   orderKey: z.string(),
@@ -67,9 +69,9 @@ function opItemActions(
   revNo: number,
   seqNo: number,
   revStatus: string,
-  isAuthenticated: boolean,
+  user: ErpUser | undefined,
 ): HateoasAction[] {
-  if (!isAuthenticated || revStatus !== "draft") return [];
+  if (!hasPermission(user, "manage_orders") || revStatus !== "draft") return [];
 
   const href = `${API_PREFIX}${opBasePath(orderKey, revNo)}/${seqNo}`;
   return [
@@ -93,7 +95,7 @@ function formatItem(
   orderKey: string,
   revNo: number,
   revStatus: string,
-  isAuthenticated: boolean,
+  user: ErpUser | undefined,
   item: PlanOpWithUsers,
 ) {
   return {
@@ -107,7 +109,7 @@ function formatItem(
     updatedAt: item.updatedAt.toISOString(),
     updatedBy: item.updatedBy.username,
     _links: opItemLinks(orderKey, revNo, item.seqNo),
-    _actions: opItemActions(orderKey, revNo, item.seqNo, revStatus, isAuthenticated),
+    _actions: opItemActions(orderKey, revNo, item.seqNo, revStatus, user),
   };
 }
 
@@ -154,17 +156,18 @@ export default function planOperationRoutes(fastify: FastifyInstance) {
       const maxSeq = items.length > 0 ? items[items.length - 1].seqNo : 0;
       const nextSeqNo = Math.ceil((maxSeq + 1) / 10) * 10;
 
-      const isAuthenticated = !!request.erpUser;
+      const user = request.erpUser;
       const base = opBasePath(orderKey, revNo);
       return {
         items: items.map((item) =>
-          formatItem(orderKey, revNo, resolved.rev.status, isAuthenticated, item),
+          formatItem(orderKey, revNo, resolved.rev.status, user, item),
         ),
         total: items.length,
         nextSeqNo,
         _links: [selfLink(base)],
         _actions:
-          isAuthenticated && resolved.rev.status === "draft"
+          hasPermission(user, "manage_orders") &&
+          resolved.rev.status === "draft"
             ? [
                 {
                   rel: "create",
@@ -234,7 +237,13 @@ export default function planOperationRoutes(fastify: FastifyInstance) {
       });
 
       reply.status(201);
-      return formatItem(orderKey, revNo, resolved.rev.status, !!request.erpUser, item);
+      return formatItem(
+        orderKey,
+        revNo,
+        resolved.rev.status,
+        request.erpUser,
+        item,
+      );
     },
   });
 
@@ -270,7 +279,13 @@ export default function planOperationRoutes(fastify: FastifyInstance) {
         );
       }
 
-      return formatItem(orderKey, revNo, resolved.rev.status, !!request.erpUser, item);
+      return formatItem(
+        orderKey,
+        revNo,
+        resolved.rev.status,
+        request.erpUser,
+        item,
+      );
     },
   });
 
@@ -329,7 +344,13 @@ export default function planOperationRoutes(fastify: FastifyInstance) {
         include: includeUsers,
       });
 
-      return formatItem(orderKey, revNo, resolved.rev.status, !!request.erpUser, item);
+      return formatItem(
+        orderKey,
+        revNo,
+        resolved.rev.status,
+        request.erpUser,
+        item,
+      );
     },
   });
 

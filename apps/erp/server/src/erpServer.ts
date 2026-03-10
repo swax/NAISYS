@@ -34,14 +34,19 @@ import { ERP_DB_VERSION, erpDbPath } from "./dbConfig.js";
 import { initErpDb } from "./erpDb.js";
 import auditRoutes from "./routes/audit.js";
 import authRoutes from "./routes/auth.js";
-import orderRunRoutes from "./routes/order-runs.js";
 import orderRevisionRoutes from "./routes/order-revisions.js";
+import orderRunRoutes from "./routes/order-runs.js";
 import orderRoutes from "./routes/orders.js";
 import planOperationRoutes from "./routes/plan-operations.js";
 import rootRoute from "./routes/root.js";
 import schemaRoutes from "./routes/schemas.js";
+import userRoutes from "./routes/users.js";
 import { enableSupervisorAuth, isSupervisorAuth } from "./supervisorAuth.js";
-import { ensureLocalSuperAdmin, resetLocalPassword } from "./userService.js";
+import {
+  ensureErpAdminPermission,
+  ensureLocalSuperAdmin,
+  resetLocalPassword,
+} from "./userService.js";
 export { enableSupervisorAuth } from "./supervisorAuth.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -110,6 +115,7 @@ export const erpPlugin: FastifyPluginAsync = async (fastify) => {
     prefix: "/api/erp/orders/:orderKey/revs/:revNo/ops",
   });
   fastify.register(schemaRoutes, { prefix: "/api/erp/schemas" });
+  fastify.register(userRoutes, { prefix: "/api/erp/users" });
 
   // Public endpoint to expose client configuration (publicRead, etc.)
   fastify.get("/api/erp/client-config", { schema: { hide: true } }, () => ({
@@ -198,6 +204,14 @@ async function startServer() {
         apiKey: result.user.apiKey,
       },
     });
+
+    // Ensure superadmin has erp_admin permission
+    const localSuperAdmin = await erpDb.user.findUnique({
+      where: { uuid: result.user.uuid },
+    });
+    if (localSuperAdmin) {
+      await ensureErpAdminPermission(localSuperAdmin.id);
+    }
 
     if (result.created) {
       console.log(

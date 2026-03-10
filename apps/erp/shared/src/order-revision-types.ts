@@ -31,9 +31,7 @@ export const CreateOrderRevisionSchema = z
   })
   .strict();
 
-export type CreateOrderRevision = z.infer<
-  typeof CreateOrderRevisionSchema
->;
+export type CreateOrderRevision = z.infer<typeof CreateOrderRevisionSchema>;
 
 // Input for updating a revision
 export const UpdateOrderRevisionSchema = z
@@ -43,9 +41,7 @@ export const UpdateOrderRevisionSchema = z
   })
   .strict();
 
-export type UpdateOrderRevision = z.infer<
-  typeof UpdateOrderRevisionSchema
->;
+export type UpdateOrderRevision = z.infer<typeof UpdateOrderRevisionSchema>;
 
 // Query params for listing revisions
 export const OrderRevisionListQuerySchema = z.object({

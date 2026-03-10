@@ -72,9 +72,7 @@ test.describe("Order Runs - API happy path", () => {
       ]),
     );
     expect(body._links).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ rel: "order" }),
-      ]),
+      expect.arrayContaining([expect.objectContaining({ rel: "order" })]),
     );
     orderRunId = body.id;
   });
@@ -89,9 +87,7 @@ test.describe("Order Runs - API happy path", () => {
   });
 
   test("get order run by id", async () => {
-    const res = await api.get(
-      `${API}/orders/${orderKey}/runs/${orderRunId}`,
-    );
+    const res = await api.get(`${API}/orders/${orderKey}/runs/${orderRunId}`);
     expect(res.status()).toBe(200);
 
     const body = await res.json();
@@ -106,15 +102,12 @@ test.describe("Order Runs - API happy path", () => {
   });
 
   test("update released order run", async () => {
-    const res = await api.put(
-      `${API}/orders/${orderKey}/runs/${orderRunId}`,
-      {
-        data: {
-          priority: "critical",
-          notes: "Updated notes",
-        },
+    const res = await api.put(`${API}/orders/${orderKey}/runs/${orderRunId}`, {
+      data: {
+        priority: "critical",
+        notes: "Updated notes",
       },
-    );
+    });
     expect(res.status()).toBe(200);
 
     const body = await res.json();
@@ -251,9 +244,7 @@ test.describe("Order Runs - API happy path", () => {
   });
 
   test("filter by status", async () => {
-    const res = await api.get(
-      `${API}/orders/${orderKey}/runs?status=closed`,
-    );
+    const res = await api.get(`${API}/orders/${orderKey}/runs?status=closed`);
     expect(res.status()).toBe(200);
 
     const body = await res.json();

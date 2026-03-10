@@ -7,14 +7,8 @@ import {
   TextInput,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
-import type {
-  CreateOrder,
-  UpdateOrder,
-} from "@naisys-erp/shared";
-import {
-  CreateOrderSchema,
-  UpdateOrderSchema,
-} from "@naisys-erp/shared";
+import type { CreateOrder, UpdateOrder } from "@naisys-erp/shared";
+import { CreateOrderSchema, UpdateOrderSchema } from "@naisys-erp/shared";
 import { useState } from "react";
 
 import { zodResolver } from "../lib/zod-resolver";

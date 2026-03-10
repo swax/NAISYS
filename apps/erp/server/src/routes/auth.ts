@@ -163,7 +163,11 @@ export default function authRoutes(fastify: FastifyInstance) {
         return sendError(reply, 401, "Unauthorized", "Not authenticated");
       }
 
-      return request.erpUser;
+      return {
+        id: request.erpUser.id,
+        username: request.erpUser.username,
+        permissions: request.erpUser.permissions,
+      };
     },
   });
 }

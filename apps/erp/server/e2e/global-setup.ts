@@ -58,13 +58,22 @@ export default function globalSetup() {
   db.pragma("foreign_keys = ON");
 
   // Seed test users (one per parallel worker)
-  const insert = db.prepare(
+  const insertUser = db.prepare(
     `INSERT INTO users (uuid, username, password_hash, created_at, updated_at)
      VALUES (?, ?, ?, datetime('now'), datetime('now'))`,
   );
+  const insertPerm = db.prepare(
+    `INSERT INTO user_permissions (user_id, permission, granted_at)
+     VALUES (?, ?, datetime('now'))`,
+  );
+  const permissions = ["erp_admin", "manage_orders", "manage_runs", "view_all"];
   for (let i = 0; i < TEST_USER_COUNT; i++) {
     const uuid = `00000000-0000-0000-0000-${String(i).padStart(12, "0")}`;
-    insert.run(uuid, `e2e-test-${i}`, TEST_PASSWORD_HASH);
+    const result = insertUser.run(uuid, `e2e-test-${i}`, TEST_PASSWORD_HASH);
+    const userId = result.lastInsertRowid;
+    for (const perm of permissions) {
+      insertPerm.run(userId, perm);
+    }
   }
   db.close();
 }

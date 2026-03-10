@@ -13,6 +13,8 @@ import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod/v4";
 
 import { writeAuditEntry } from "../audit.js";
+import type { ErpUser } from "../auth-middleware.js";
+import { hasPermission } from "../auth-middleware.js";
 import erpDb from "../erpDb.js";
 import { sendError } from "../error-handler.js";
 import type { OrderRevisionModel } from "../generated/prisma/models/OrderRevision.js";
@@ -50,9 +52,9 @@ function revisionItemActions(
   orderKey: string,
   revNo: number,
   status: string,
-  isAuthenticated: boolean,
+  user: ErpUser | undefined,
 ): HateoasAction[] {
-  if (!isAuthenticated) return [];
+  if (!hasPermission(user, "manage_orders")) return [];
   const href = `${API_PREFIX}/${parentResource}/${orderKey}/revs/${revNo}`;
   const actions: HateoasAction[] = [];
 
@@ -79,21 +81,21 @@ function revisionItemActions(
       },
     );
   } else if (status === "approved") {
-    actions.push(
-      {
+    if (hasPermission(user, "manage_runs")) {
+      actions.push({
         rel: "cut-order",
         href: `${API_PREFIX}/orders/${orderKey}/runs`,
         method: "POST",
         title: "Cut Order",
         schema: `${API_PREFIX}/schemas/CreateOrderRun`,
-      },
-      {
-        rel: "obsolete",
-        href: `${href}/obsolete`,
-        method: "POST",
-        title: "Mark Obsolete",
-      },
-    );
+      });
+    }
+    actions.push({
+      rel: "obsolete",
+      href: `${href}/obsolete`,
+      method: "POST",
+      title: "Mark Obsolete",
+    });
   }
   // obsolete: no actions
 
@@ -121,7 +123,11 @@ const RevNoParamsSchema = z.object({
   revNo: z.coerce.number().int(),
 });
 
-function formatItem(orderKey: string, isAuthenticated: boolean, item: RevisionWithUsers) {
+function formatItem(
+  orderKey: string,
+  user: ErpUser | undefined,
+  item: RevisionWithUsers,
+) {
   return {
     id: item.id,
     orderId: item.orderId,
@@ -139,14 +145,18 @@ function formatItem(orderKey: string, isAuthenticated: boolean, item: RevisionWi
       orderKey,
       item.revNo,
       item.status,
-      isAuthenticated,
+      user,
     ),
   };
 }
 
-function formatListItem(orderKey: string, isAuthenticated: boolean, item: RevisionWithUsers) {
+function formatListItem(
+  orderKey: string,
+  user: ErpUser | undefined,
+  item: RevisionWithUsers,
+) {
   return {
-    ...formatItem(orderKey, isAuthenticated, item),
+    ...formatItem(orderKey, user, item),
     _links: [selfLink(`/${PARENT_RESOURCE}/${orderKey}/revs/${item.revNo}`)],
   };
 }
@@ -207,18 +217,26 @@ export default function orderRevisionRoutes(fastify: FastifyInstance) {
         erpDb.orderRevision.count({ where }),
       ]);
 
+      const revBasePath = `${PARENT_RESOURCE}/${orderKey}/revs`;
       return {
-        items: items.map((item) => formatListItem(orderKey, !!request.erpUser, item)),
+        items: items.map((item) =>
+          formatListItem(orderKey, request.erpUser, item),
+        ),
         total,
         page,
         pageSize,
-        _links: paginationLinks(
-          `${PARENT_RESOURCE}/${orderKey}/revs`,
-          page,
-          pageSize,
-          total,
-          { status },
-        ),
+        _links: paginationLinks(revBasePath, page, pageSize, total, { status }),
+        _actions: hasPermission(request.erpUser, "manage_orders")
+          ? [
+              {
+                rel: "create",
+                href: `${API_PREFIX}/${revBasePath}`,
+                method: "POST" as const,
+                title: "New Revision",
+                schema: `${API_PREFIX}/schemas/CreateOrderRevision`,
+              },
+            ]
+          : [],
       };
     },
   });
@@ -273,7 +291,7 @@ export default function orderRevisionRoutes(fastify: FastifyInstance) {
       });
 
       reply.status(201);
-      return formatItem(orderKey, !!request.erpUser, item);
+      return formatItem(orderKey, request.erpUser, item);
     },
   });
 
@@ -311,7 +329,7 @@ export default function orderRevisionRoutes(fastify: FastifyInstance) {
         );
       }
 
-      return formatItem(orderKey, !!request.erpUser, item);
+      return formatItem(orderKey, request.erpUser, item);
     },
   });
 
@@ -372,7 +390,7 @@ export default function orderRevisionRoutes(fastify: FastifyInstance) {
         include: includeUsers,
       });
 
-      return formatItem(orderKey, !!request.erpUser, item);
+      return formatItem(orderKey, request.erpUser, item);
     },
   });
 
@@ -501,7 +519,7 @@ export default function orderRevisionRoutes(fastify: FastifyInstance) {
         return updated;
       });
 
-      return formatItem(orderKey, !!request.erpUser, item);
+      return formatItem(orderKey, request.erpUser, item);
     },
   });
 
@@ -569,7 +587,7 @@ export default function orderRevisionRoutes(fastify: FastifyInstance) {
         return updated;
       });
 
-      return formatItem(orderKey, !!request.erpUser, item);
+      return formatItem(orderKey, request.erpUser, item);
     },
   });
 }

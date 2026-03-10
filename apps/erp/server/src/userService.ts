@@ -1,9 +1,11 @@
 import { SUPER_ADMIN_USERNAME } from "@naisys/common";
 import bcrypt from "bcrypt";
-import { randomUUID } from "crypto";
+import { randomBytes, randomUUID } from "crypto";
 import readline from "readline/promises";
 
 import erpDb from "./erpDb.js";
+
+const SALT_ROUNDS = 10;
 
 /**
  * Ensure a superadmin user exists in the local ERP database.
@@ -13,12 +15,16 @@ export async function ensureLocalSuperAdmin(): Promise<void> {
   const existing = await erpDb.user.findUnique({
     where: { username: SUPER_ADMIN_USERNAME },
   });
-  if (existing) return;
+  if (existing) {
+    // Ensure superadmin has erp_admin permission
+    await ensureErpAdminPermission(existing.id);
+    return;
+  }
 
   const password = randomUUID().slice(0, 8);
-  const hash = await bcrypt.hash(password, 10);
+  const hash = await bcrypt.hash(password, SALT_ROUNDS);
 
-  await erpDb.user.create({
+  const user = await erpDb.user.create({
     data: {
       uuid: randomUUID(),
       username: SUPER_ADMIN_USERNAME,
@@ -26,10 +32,26 @@ export async function ensureLocalSuperAdmin(): Promise<void> {
     },
   });
 
+  await ensureErpAdminPermission(user.id);
+
   console.log(
     `\n  ${SUPER_ADMIN_USERNAME} user created. Password: ${password}`,
   );
   console.log(`  Change it via --reset-password\n`);
+}
+
+/**
+ * Ensure a user has the erp_admin permission.
+ */
+export async function ensureErpAdminPermission(userId: number): Promise<void> {
+  const existing = await erpDb.userPermission.findUnique({
+    where: { userId_permission: { userId, permission: "erp_admin" } },
+  });
+  if (!existing) {
+    await erpDb.userPermission.create({
+      data: { userId, permission: "erp_admin" },
+    });
+  }
 }
 
 /**
@@ -56,7 +78,7 @@ export async function resetLocalPassword(): Promise<void> {
       process.exit(1);
     }
 
-    const hash = await bcrypt.hash(password, 10);
+    const hash = await bcrypt.hash(password, SALT_ROUNDS);
     await erpDb.user.update({
       where: { id: user.id },
       data: { passwordHash: hash },
@@ -66,4 +88,108 @@ export async function resetLocalPassword(): Promise<void> {
   } finally {
     rl.close();
   }
+}
+
+// --- User CRUD ---
+
+export async function listUsers(options: {
+  page: number;
+  pageSize: number;
+  search?: string;
+}) {
+  const { page, pageSize, search } = options;
+  const where = search ? { username: { contains: search } } : {};
+
+  const [items, total] = await Promise.all([
+    erpDb.user.findMany({
+      where,
+      include: { permissions: true },
+      orderBy: { createdAt: "desc" },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+    }),
+    erpDb.user.count({ where }),
+  ]);
+
+  return { items, total, pageSize };
+}
+
+export async function getUserByUsername(username: string) {
+  return erpDb.user.findUnique({
+    where: { username },
+    include: { permissions: true },
+  });
+}
+
+export async function getUserById(id: number) {
+  return erpDb.user.findUnique({
+    where: { id },
+    include: { permissions: true },
+  });
+}
+
+export async function createUserWithPassword(data: {
+  username: string;
+  password: string;
+}) {
+  const passwordHash = await bcrypt.hash(data.password, SALT_ROUNDS);
+  const uuid = randomUUID();
+  return erpDb.user.create({
+    data: {
+      username: data.username,
+      uuid,
+      passwordHash,
+      isAgent: false,
+      apiKey: randomBytes(32).toString("hex"),
+    },
+    include: { permissions: true },
+  });
+}
+
+export async function updateUser(
+  id: number,
+  data: { username?: string; password?: string },
+) {
+  const updateData: Record<string, unknown> = {};
+  if (data.username !== undefined) {
+    updateData.username = data.username;
+  }
+  if (data.password !== undefined) {
+    updateData.passwordHash = await bcrypt.hash(data.password, SALT_ROUNDS);
+  }
+
+  return erpDb.user.update({
+    where: { id },
+    data: updateData,
+    include: { permissions: true },
+  });
+}
+
+export async function deleteUser(id: number) {
+  return erpDb.user.delete({ where: { id } });
+}
+
+export async function grantPermission(
+  userId: number,
+  permission: string,
+  grantedBy: number,
+) {
+  return erpDb.userPermission.create({
+    data: { userId, permission, grantedBy },
+  });
+}
+
+export async function revokePermission(userId: number, permission: string) {
+  return erpDb.userPermission.deleteMany({
+    where: { userId, permission },
+  });
+}
+
+export async function rotateUserApiKey(id: number): Promise<string> {
+  const newKey = randomBytes(32).toString("hex");
+  await erpDb.user.update({
+    where: { id },
+    data: { apiKey: newKey },
+  });
+  return newKey;
 }

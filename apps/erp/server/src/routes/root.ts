@@ -1,5 +1,7 @@
 import { FastifyInstance } from "fastify";
 
+import { hasPermission } from "../auth-middleware.js";
+
 export default function rootRoute(fastify: FastifyInstance) {
   fastify.get("/", {
     schema: {
@@ -36,6 +38,23 @@ export default function rootRoute(fastify: FastifyInstance) {
       ];
 
       if (request.erpUser) {
+        const actions = [];
+        if (hasPermission(request.erpUser, "manage_orders")) {
+          actions.push({
+            rel: "create-order",
+            href: "/api/erp/orders",
+            method: "POST",
+            title: "Create Order",
+            schema: "/api/erp/schemas/CreateOrder",
+          });
+        }
+        actions.push({
+          rel: "logout",
+          href: "/api/erp/auth/logout",
+          method: "POST",
+          title: "Logout",
+        });
+
         return {
           ...base,
           _links: [
@@ -46,21 +65,7 @@ export default function rootRoute(fastify: FastifyInstance) {
             },
             ...readLinks,
           ],
-          _actions: [
-            {
-              rel: "create-order",
-              href: "/api/erp/orders",
-              method: "POST",
-              title: "Create Order",
-              schema: "/api/erp/schemas/CreateOrder",
-            },
-            {
-              rel: "logout",
-              href: "/api/erp/auth/logout",
-              method: "POST",
-              title: "Logout",
-            },
-          ],
+          _actions: actions,
         };
       }
 

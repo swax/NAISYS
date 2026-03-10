@@ -11,6 +11,8 @@ import { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod/v4";
 
+import type { ErpUser } from "../auth-middleware.js";
+import { hasPermission } from "../auth-middleware.js";
 import erpDb from "../erpDb.js";
 import { sendError } from "../error-handler.js";
 import type { OrderModel } from "../generated/prisma/models/Order.js";
@@ -38,9 +40,9 @@ function itemActions(
   resource: string,
   key: string,
   status: string,
-  isAuthenticated: boolean,
+  user: ErpUser | undefined,
 ): HateoasAction[] {
-  if (!isAuthenticated) return [];
+  if (!hasPermission(user, "manage_orders")) return [];
   const href = `${API_PREFIX}/${resource}/${key}`;
   const actions: HateoasAction[] = [
     {
@@ -107,7 +109,7 @@ const KeyParamsSchema = z.object({
   key: z.string(),
 });
 
-function formatItem(item: OrderWithUsers, isAuthenticated: boolean) {
+function formatItem(item: OrderWithUsers, user: ErpUser | undefined) {
   return {
     id: item.id,
     key: item.key,
@@ -122,12 +124,12 @@ function formatItem(item: OrderWithUsers, isAuthenticated: boolean) {
       ...itemLinks(RESOURCE, item.key, "Order"),
       revisionCollectionLink(RESOURCE, item.key),
     ],
-    _actions: itemActions(RESOURCE, item.key, item.status, isAuthenticated),
+    _actions: itemActions(RESOURCE, item.key, item.status, user),
   };
 }
 
-function formatListItem(item: OrderWithUsers, isAuthenticated: boolean) {
-  const { _actions, ...rest } = formatItem(item, isAuthenticated);
+function formatListItem(item: OrderWithUsers, user: ErpUser | undefined) {
+  const { _actions, ...rest } = formatItem(item, user);
   return {
     ...rest,
     _links: [selfLink(`/${RESOURCE}/${item.key}`)],
@@ -172,21 +174,25 @@ export default function orderRoutes(fastify: FastifyInstance) {
       ]);
 
       return {
-        items: items.map((item) => formatListItem(item, !!request.erpUser)),
+        items: items.map((item) => formatListItem(item, request.erpUser)),
         total,
         page,
         pageSize,
-        _links: [
-          ...paginationLinks(RESOURCE, page, pageSize, total, {
-            status,
-            search,
-          }),
-          {
-            rel: "create",
-            href: `/api/erp/${RESOURCE}`,
-            method: "POST",
-          },
-        ],
+        _links: paginationLinks(RESOURCE, page, pageSize, total, {
+          status,
+          search,
+        }),
+        _actions: hasPermission(request.erpUser, "manage_orders")
+          ? [
+              {
+                rel: "create",
+                href: `${API_PREFIX}/${RESOURCE}`,
+                method: "POST" as const,
+                title: "Create Order",
+                schema: `${API_PREFIX}/schemas/CreateOrder`,
+              },
+            ]
+          : [],
       };
     },
   });
@@ -217,7 +223,7 @@ export default function orderRoutes(fastify: FastifyInstance) {
       });
 
       reply.status(201);
-      return formatItem(item, !!request.erpUser);
+      return formatItem(item, request.erpUser);
     },
   });
 
@@ -235,17 +241,15 @@ export default function orderRoutes(fastify: FastifyInstance) {
     handler: async (request, reply) => {
       const { key } = request.params;
 
-      const item = await erpDb.order.findUnique({ where: { key }, include: includeUsers });
+      const item = await erpDb.order.findUnique({
+        where: { key },
+        include: includeUsers,
+      });
       if (!item) {
-        return sendError(
-          reply,
-          404,
-          "Not Found",
-          `Order '${key}' not found`,
-        );
+        return sendError(reply, 404, "Not Found", `Order '${key}' not found`);
       }
 
-      return formatItem(item, !!request.erpUser);
+      return formatItem(item, request.erpUser);
     },
   });
 
@@ -270,12 +274,7 @@ export default function orderRoutes(fastify: FastifyInstance) {
         where: { key },
       });
       if (!existing) {
-        return sendError(
-          reply,
-          404,
-          "Not Found",
-          `Order '${key}' not found`,
-        );
+        return sendError(reply, 404, "Not Found", `Order '${key}' not found`);
       }
 
       const item = await erpDb.order.update({
@@ -284,7 +283,7 @@ export default function orderRoutes(fastify: FastifyInstance) {
         include: includeUsers,
       });
 
-      return formatItem(item, !!request.erpUser);
+      return formatItem(item, request.erpUser);
     },
   });
 
@@ -307,12 +306,7 @@ export default function orderRoutes(fastify: FastifyInstance) {
         where: { key },
       });
       if (!existing) {
-        return sendError(
-          reply,
-          404,
-          "Not Found",
-          `Order '${key}' not found`,
-        );
+        return sendError(reply, 404, "Not Found", `Order '${key}' not found`);
       }
 
       const revisionCount = await erpDb.orderRevision.count({

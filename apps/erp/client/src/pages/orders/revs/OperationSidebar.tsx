@@ -7,8 +7,8 @@ import {
   NumberInput,
   Stack,
   Text,
-  TextInput,
   Textarea,
+  TextInput,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import type {
@@ -76,9 +76,7 @@ export const OperationSidebar: React.FC<Props> = ({ orderKey, revNo }) => {
       setModalOpen(false);
       form.reset();
       await fetchOps();
-      void navigate(
-        `/orders/${orderKey}/revs/${revNo}/ops/${created.seqNo}`,
-      );
+      void navigate(`/orders/${orderKey}/revs/${revNo}/ops/${created.seqNo}`);
     } catch (err) {
       showErrorNotification(err);
     } finally {
@@ -118,9 +116,7 @@ export const OperationSidebar: React.FC<Props> = ({ orderKey, revNo }) => {
               label={`${op.seqNo}. ${op.title}`}
               active={currentSeqNo === String(op.seqNo)}
               onClick={() =>
-                navigate(
-                  `/orders/${orderKey}/revs/${revNo}/ops/${op.seqNo}`,
-                )
+                navigate(`/orders/${orderKey}/revs/${revNo}/ops/${op.seqNo}`)
               }
             />
           ))
