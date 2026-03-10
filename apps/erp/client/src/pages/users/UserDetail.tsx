@@ -28,7 +28,7 @@ import {
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 
-import { api, showErrorNotification } from "../../lib/api";
+import { api, apiEndpoints, showErrorNotification } from "../../lib/api";
 import { hasAction } from "../../lib/hateoas";
 
 export const UserDetail: React.FC = () => {
@@ -52,7 +52,7 @@ export const UserDetail: React.FC = () => {
     if (!routeUsername) return;
     setLoading(true);
     try {
-      const result = await api.get<User>(`users/${routeUsername}`);
+      const result = await api.get<User>(apiEndpoints.user(routeUsername));
       setUser(result);
     } catch {
       // handled
@@ -68,7 +68,7 @@ export const UserDetail: React.FC = () => {
   const handleDelete = async () => {
     if (!routeUsername || !confirm("Delete this user?")) return;
     try {
-      await api.delete(`users/${routeUsername}`);
+      await api.delete(apiEndpoints.user(routeUsername));
       void navigate("/users");
     } catch (err) {
       showErrorNotification(err);
@@ -80,7 +80,9 @@ export const UserDetail: React.FC = () => {
     setSaving(true);
     setEditError("");
     try {
-      await api.put(`users/${routeUsername}`, { username: editUsername });
+      await api.put(apiEndpoints.user(routeUsername), {
+        username: editUsername,
+      });
       closeEdit();
       if (editUsername !== routeUsername) {
         void navigate(`/users/${editUsername}`, { replace: true });
@@ -101,7 +103,7 @@ export const UserDetail: React.FC = () => {
     setPwSaving(true);
     setPwError("");
     try {
-      await api.post("users/me/password", { password: newPassword });
+      await api.post(apiEndpoints.changePassword, { password: newPassword });
       closePw();
       setNewPassword("");
     } catch (err) {
@@ -116,7 +118,7 @@ export const UserDetail: React.FC = () => {
   const handleGrantPermission = async () => {
     if (!routeUsername || !grantPerm) return;
     try {
-      await api.post(`users/${routeUsername}/permissions`, {
+      await api.post(apiEndpoints.userPermissions(routeUsername), {
         permission: grantPerm,
       });
       setGrantPerm(null);
@@ -129,7 +131,7 @@ export const UserDetail: React.FC = () => {
   const handleRevokePermission = async (permission: string) => {
     if (!routeUsername) return;
     try {
-      await api.delete(`users/${routeUsername}/permissions/${permission}`);
+      await api.delete(apiEndpoints.userPermission(routeUsername, permission));
       void fetchUser();
     } catch (err) {
       showErrorNotification(err);
@@ -146,7 +148,7 @@ export const UserDetail: React.FC = () => {
       return;
     setRotating(true);
     try {
-      await api.post(`users/${routeUsername}/rotate-key`, {});
+      await api.post(apiEndpoints.userRotateKey(routeUsername), {});
       void fetchUser();
     } catch (err) {
       showErrorNotification(err);

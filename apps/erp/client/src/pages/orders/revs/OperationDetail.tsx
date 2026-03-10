@@ -16,7 +16,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 
 import { MetadataTooltip } from "../../../components/MetadataTooltip";
-import { api, showErrorNotification } from "../../../lib/api";
+import { api, apiEndpoints, showErrorNotification } from "../../../lib/api";
 import { hasAction } from "../../../lib/hateoas";
 import { zodResolver } from "../../../lib/zod-resolver";
 import { StepList } from "./StepList";
@@ -43,7 +43,7 @@ export const OperationDetail: React.FC = () => {
     setLoading(true);
     try {
       const result = await api.get<Operation>(
-        `orders/${orderKey}/revs/${revNo}/ops/${seqNo}`,
+        apiEndpoints.orderRevOp(orderKey, revNo, seqNo),
       );
       setItem(result);
     } catch (err) {
@@ -71,7 +71,7 @@ export const OperationDetail: React.FC = () => {
     setSaving(true);
     try {
       const updated = await api.put<Operation>(
-        `orders/${orderKey}/revs/${revNo}/ops/${item.seqNo}`,
+        apiEndpoints.orderRevOp(orderKey!, revNo!, item.seqNo),
         values,
       );
       setItem(updated);
@@ -93,7 +93,7 @@ export const OperationDetail: React.FC = () => {
   const handleDelete = async () => {
     if (!item || !confirm(`Delete operation "${item.title}"?`)) return;
     try {
-      await api.delete(`orders/${orderKey}/revs/${revNo}/ops/${item.seqNo}`);
+      await api.delete(apiEndpoints.orderRevOp(orderKey!, revNo!, item.seqNo));
       void navigate(`/orders/${orderKey}/revs/${revNo}`);
     } catch (err) {
       showErrorNotification(err);
@@ -201,9 +201,7 @@ export const OperationDetail: React.FC = () => {
         )}
       </Card>
 
-      <StepList
-        stepsPath={`orders/${orderKey}/revs/${revNo}/ops/${seqNo}/steps`}
-      />
+      <StepList orderKey={orderKey!} revNo={revNo!} opSeqNo={seqNo!} />
     </Stack>
   );
 };

@@ -21,15 +21,21 @@ import { useCallback, useEffect, useState } from "react";
 import Markdown from "react-markdown";
 
 import { MetadataTooltip } from "../../../components/MetadataTooltip";
-import { api, showErrorNotification } from "../../../lib/api";
+import { api, apiEndpoints, showErrorNotification } from "../../../lib/api";
 import { hasAction } from "../../../lib/hateoas";
 import { zodResolver } from "../../../lib/zod-resolver";
 
 interface StepListProps {
-  stepsPath: string;
+  orderKey: string;
+  revNo: string;
+  opSeqNo: string;
 }
 
-export const StepList: React.FC<StepListProps> = ({ stepsPath }) => {
+export const StepList: React.FC<StepListProps> = ({
+  orderKey,
+  revNo,
+  opSeqNo,
+}) => {
   const [steps, setSteps] = useState<StepListResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [editingStepId, setEditingStepId] = useState<number | null>(null);
@@ -49,14 +55,16 @@ export const StepList: React.FC<StepListProps> = ({ stepsPath }) => {
   const fetchSteps = useCallback(async () => {
     setLoading(true);
     try {
-      const result = await api.get<StepListResponse>(stepsPath);
+      const result = await api.get<StepListResponse>(
+        apiEndpoints.orderRevOpSteps(orderKey, revNo, opSeqNo),
+      );
       setSteps(result);
     } catch (err) {
       showErrorNotification(err);
     } finally {
       setLoading(false);
     }
-  }, [stepsPath]);
+  }, [orderKey, revNo, opSeqNo]);
 
   useEffect(() => {
     void fetchSteps();
@@ -76,7 +84,10 @@ export const StepList: React.FC<StepListProps> = ({ stepsPath }) => {
     if (!step) return;
     setSaving(true);
     try {
-      await api.put<Step>(`${stepsPath}/${step.seqNo}`, values);
+      await api.put<Step>(
+        apiEndpoints.orderRevOpStep(orderKey, revNo, opSeqNo, step.seqNo),
+        values,
+      );
       setEditingStepId(null);
       await fetchSteps();
     } catch (err) {
@@ -89,7 +100,9 @@ export const StepList: React.FC<StepListProps> = ({ stepsPath }) => {
   const handleDelete = async (step: Step) => {
     if (!confirm(`Delete step ${step.seqNo}?`)) return;
     try {
-      await api.delete(`${stepsPath}/${step.seqNo}`);
+      await api.delete(
+        apiEndpoints.orderRevOpStep(orderKey, revNo, opSeqNo, step.seqNo),
+      );
       await fetchSteps();
     } catch (err) {
       showErrorNotification(err);
@@ -108,7 +121,10 @@ export const StepList: React.FC<StepListProps> = ({ stepsPath }) => {
   const handleCreate = async (values: CreateStep) => {
     setSaving(true);
     try {
-      await api.post<Step>(stepsPath, values);
+      await api.post<Step>(
+        apiEndpoints.orderRevOpSteps(orderKey, revNo, opSeqNo),
+        values,
+      );
       setAddingStep(false);
       await fetchSteps();
     } catch (err) {

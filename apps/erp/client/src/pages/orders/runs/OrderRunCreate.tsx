@@ -3,7 +3,7 @@ import type { CreateOrderRun } from "@naisys-erp/shared";
 import { useNavigate, useParams, useSearchParams } from "react-router";
 
 import { OrderRunForm } from "../../../components/OrderRunForm";
-import { api } from "../../../lib/api";
+import { api, apiEndpoints } from "../../../lib/api";
 
 export const OrderRunCreate: React.FC = () => {
   const { orderKey } = useParams<{ orderKey: string }>();
@@ -12,7 +12,7 @@ export const OrderRunCreate: React.FC = () => {
   const prefillRevNo = Number(searchParams.get("revNo")) || 0;
 
   const handleCreate = async (data: CreateOrderRun) => {
-    await api.post(`orders/${orderKey}/runs`, data);
+    await api.post(apiEndpoints.orderRuns(orderKey!), data);
     void navigate(`/orders/${orderKey}/runs`);
   };
 

@@ -28,7 +28,9 @@ export function showErrorNotification(err: unknown) {
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const url = path.startsWith("/") ? path : `${API_BASE}/${path}`;
-  const headers: Record<string, string> = { ...options?.headers as Record<string, string> };
+  const headers: Record<string, string> = {
+    ...(options?.headers as Record<string, string>),
+  };
   if (options?.body) {
     headers["Content-Type"] = "application/json";
   }
@@ -65,6 +67,50 @@ export const api = {
     request<T>(path, { method: "PUT", body: JSON.stringify(body) }),
 
   delete: (path: string) => request<void>(path, { method: "DELETE" }),
+};
+
+export const apiEndpoints = {
+  orders: "orders",
+  order: (key: string) => `orders/${key}`,
+  orderRevs: (key: string) => `orders/${key}/revs`,
+  orderRev: (key: string, revNo: number | string) =>
+    `orders/${key}/revs/${revNo}`,
+  orderRevApprove: (key: string, revNo: number | string) =>
+    `orders/${key}/revs/${revNo}/approve`,
+  orderRevObsolete: (key: string, revNo: number | string) =>
+    `orders/${key}/revs/${revNo}/obsolete`,
+  orderRevOps: (key: string, revNo: number | string) =>
+    `orders/${key}/revs/${revNo}/ops`,
+  orderRevOp: (key: string, revNo: number | string, seqNo: number | string) =>
+    `orders/${key}/revs/${revNo}/ops/${seqNo}`,
+  orderRevOpSteps: (
+    key: string,
+    revNo: number | string,
+    seqNo: number | string,
+  ) => `orders/${key}/revs/${revNo}/ops/${seqNo}/steps`,
+  orderRevOpStep: (
+    key: string,
+    revNo: number | string,
+    seqNo: number | string,
+    stepSeqNo: number | string,
+  ) => `orders/${key}/revs/${revNo}/ops/${seqNo}/steps/${stepSeqNo}`,
+  orderRuns: (key: string) => `orders/${key}/runs`,
+  orderRun: (key: string, id: number | string) => `orders/${key}/runs/${id}`,
+  orderRunStart: (key: string, id: number | string) =>
+    `orders/${key}/runs/${id}/start`,
+  orderRunClose: (key: string, id: number | string) =>
+    `orders/${key}/runs/${id}/close`,
+  orderRunCancel: (key: string, id: number | string) =>
+    `orders/${key}/runs/${id}/cancel`,
+  users: "users",
+  user: (username: string) => `users/${username}`,
+  userPermissions: (username: string) => `users/${username}/permissions`,
+  userPermission: (username: string, perm: string) =>
+    `users/${username}/permissions/${perm}`,
+  userRotateKey: (username: string) => `users/${username}/rotate-key`,
+  changePassword: "users/me/password",
+  audit: (entityType: string, entityId: number | string) =>
+    `audit?entityType=${entityType}&entityId=${entityId}`,
 };
 
 export const authApi = {

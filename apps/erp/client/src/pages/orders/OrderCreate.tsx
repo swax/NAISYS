@@ -3,13 +3,13 @@ import type { CreateOrder } from "@naisys-erp/shared";
 import { useNavigate } from "react-router";
 
 import { OrderForm } from "../../components/OrderForm";
-import { api } from "../../lib/api";
+import { api, apiEndpoints } from "../../lib/api";
 
 export const OrderCreate: React.FC = () => {
   const navigate = useNavigate();
 
   const handleCreate = async (data: CreateOrder) => {
-    await api.post("orders", data);
+    await api.post(apiEndpoints.orders, data);
     void navigate("/orders");
   };
 

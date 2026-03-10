@@ -20,7 +20,7 @@ import { useNavigate, useParams } from "react-router";
 
 import { MetadataTooltip } from "../../../components/MetadataTooltip";
 import { OrderRunForm } from "../../../components/OrderRunForm";
-import { api, showErrorNotification } from "../../../lib/api";
+import { api, apiEndpoints, showErrorNotification } from "../../../lib/api";
 import { hasAction } from "../../../lib/hateoas";
 
 const STATUS_COLORS: Record<string, string> = {
@@ -52,8 +52,8 @@ export const OrderRunDetail: React.FC = () => {
     setLoading(true);
     try {
       const [result, audit] = await Promise.all([
-        api.get<OrderRun>(`orders/${orderKey}/runs/${id}`),
-        api.get<AuditListResponse>(`audit?entityType=OrderRun&entityId=${id}`),
+        api.get<OrderRun>(apiEndpoints.orderRun(orderKey!, id)),
+        api.get<AuditListResponse>(apiEndpoints.audit("OrderRun", id)),
       ]);
       setItem(result);
       setAuditEntries(audit.items);
@@ -70,7 +70,7 @@ export const OrderRunDetail: React.FC = () => {
 
   const handleUpdate = async (data: UpdateOrderRun) => {
     if (!id) return;
-    await api.put(`orders/${orderKey}/runs/${id}`, data);
+    await api.put(apiEndpoints.orderRun(orderKey!, id!), data);
     setEditing(false);
     await fetchItem();
   };
@@ -78,7 +78,7 @@ export const OrderRunDetail: React.FC = () => {
   const handleDelete = async () => {
     if (!id || !confirm("Delete this order run?")) return;
     try {
-      await api.delete(`orders/${orderKey}/runs/${id}`);
+      await api.delete(apiEndpoints.orderRun(orderKey!, id!));
       void navigate(`/orders/${orderKey}/runs`);
     } catch (err) {
       showErrorNotification(err);
@@ -88,7 +88,7 @@ export const OrderRunDetail: React.FC = () => {
   const handleStart = async () => {
     if (!id) return;
     try {
-      await api.post(`orders/${orderKey}/runs/${id}/start`, {});
+      await api.post(apiEndpoints.orderRunStart(orderKey!, id!), {});
       await fetchItem();
     } catch (err) {
       showErrorNotification(err);
@@ -98,7 +98,7 @@ export const OrderRunDetail: React.FC = () => {
   const handleClose = async () => {
     if (!id) return;
     try {
-      await api.post(`orders/${orderKey}/runs/${id}/close`, {});
+      await api.post(apiEndpoints.orderRunClose(orderKey!, id!), {});
       await fetchItem();
     } catch (err) {
       showErrorNotification(err);
@@ -108,7 +108,7 @@ export const OrderRunDetail: React.FC = () => {
   const handleCancel = async () => {
     if (!id || !confirm("Cancel this order run?")) return;
     try {
-      await api.post(`orders/${orderKey}/runs/${id}/cancel`, {});
+      await api.post(apiEndpoints.orderRunCancel(orderKey!, id!), {});
       await fetchItem();
     } catch (err) {
       showErrorNotification(err);

@@ -17,7 +17,7 @@ import type { UserListResponse } from "@naisys-erp/shared";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 
-import { api, showErrorNotification } from "../../lib/api";
+import { api, apiEndpoints, showErrorNotification } from "../../lib/api";
 
 export const UserList: React.FC = () => {
   const navigate = useNavigate();
@@ -42,7 +42,9 @@ export const UserList: React.FC = () => {
       params.set("pageSize", "20");
       if (search) params.set("search", search);
 
-      const result = await api.get<UserListResponse>(`users?${params}`);
+      const result = await api.get<UserListResponse>(
+        `${apiEndpoints.users}?${params}`,
+      );
       setData(result);
     } catch (err) {
       showErrorNotification(err);
@@ -58,7 +60,7 @@ export const UserList: React.FC = () => {
   const handleCreate = async () => {
     setCreating(true);
     try {
-      await api.post("users", {
+      await api.post(apiEndpoints.users, {
         username: newUsername,
         password: newPassword,
       });
