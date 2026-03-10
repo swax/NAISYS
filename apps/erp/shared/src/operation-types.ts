@@ -2,8 +2,8 @@ import { z } from "zod/v4";
 
 import { HateoasActionSchema, HateoasLinkSchema } from "./hateoas-types.js";
 
-// Full plan operation response shape
-export const PlanOperationSchema = z.object({
+// Full operation response shape
+export const OperationSchema = z.object({
   id: z.number(),
   orderRevId: z.number(),
   seqNo: z.number(),
@@ -17,10 +17,10 @@ export const PlanOperationSchema = z.object({
   _actions: z.array(HateoasActionSchema).optional(),
 });
 
-export type PlanOperation = z.infer<typeof PlanOperationSchema>;
+export type Operation = z.infer<typeof OperationSchema>;
 
 // Input for creating an operation
-export const CreatePlanOperationSchema = z
+export const CreateOperationSchema = z
   .object({
     seqNo: z.number().int().min(1).optional(),
     title: z.string().min(1).max(200),
@@ -28,10 +28,10 @@ export const CreatePlanOperationSchema = z
   })
   .strict();
 
-export type CreatePlanOperation = z.infer<typeof CreatePlanOperationSchema>;
+export type CreateOperation = z.infer<typeof CreateOperationSchema>;
 
 // Input for updating an operation
-export const UpdatePlanOperationSchema = z
+export const UpdateOperationSchema = z
   .object({
     title: z.string().min(1).max(200).optional(),
     description: z.string().max(2000).optional(),
@@ -39,17 +39,17 @@ export const UpdatePlanOperationSchema = z
   })
   .strict();
 
-export type UpdatePlanOperation = z.infer<typeof UpdatePlanOperationSchema>;
+export type UpdateOperation = z.infer<typeof UpdateOperationSchema>;
 
 // List response
-export const PlanOperationListResponseSchema = z.object({
-  items: z.array(PlanOperationSchema),
+export const OperationListResponseSchema = z.object({
+  items: z.array(OperationSchema),
   total: z.number(),
   nextSeqNo: z.number(),
   _links: z.array(HateoasLinkSchema),
   _actions: z.array(HateoasActionSchema).optional(),
 });
 
-export type PlanOperationListResponse = z.infer<
-  typeof PlanOperationListResponseSchema
+export type OperationListResponse = z.infer<
+  typeof OperationListResponseSchema
 >;

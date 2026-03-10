@@ -10,8 +10,8 @@ import {
   Title,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
-import type { PlanOperation, UpdatePlanOperation } from "@naisys-erp/shared";
-import { UpdatePlanOperationSchema } from "@naisys-erp/shared";
+import type { Operation, UpdateOperation } from "@naisys-erp/shared";
+import { UpdateOperationSchema } from "@naisys-erp/shared";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 
@@ -27,21 +27,21 @@ export const OperationDetail: React.FC = () => {
     seqNo: string;
   }>();
   const navigate = useNavigate();
-  const [item, setItem] = useState<PlanOperation | null>(null);
+  const [item, setItem] = useState<Operation | null>(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const form = useForm<UpdatePlanOperation>({
+  const form = useForm<UpdateOperation>({
     initialValues: { description: "", seqNo: 10 },
-    validate: zodResolver(UpdatePlanOperationSchema),
+    validate: zodResolver(UpdateOperationSchema),
   });
 
   const fetchItem = useCallback(async () => {
     if (!orderKey || !revNo || !seqNo) return;
     setLoading(true);
     try {
-      const result = await api.get<PlanOperation>(
+      const result = await api.get<Operation>(
         `orders/${orderKey}/revs/${revNo}/ops/${seqNo}`,
       );
       setItem(result);
@@ -65,11 +65,11 @@ export const OperationDetail: React.FC = () => {
     setEditing(true);
   };
 
-  const handleSave = async (values: UpdatePlanOperation) => {
+  const handleSave = async (values: UpdateOperation) => {
     if (!item) return;
     setSaving(true);
     try {
-      const updated = await api.put<PlanOperation>(
+      const updated = await api.put<Operation>(
         `orders/${orderKey}/revs/${revNo}/ops/${item.seqNo}`,
         values,
       );
