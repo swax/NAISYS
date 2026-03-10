@@ -5,17 +5,24 @@ import { getLogger } from "../logger.js";
 import { sendMailViaHub } from "./hubConnectionService.js";
 
 /**
- * Get chat conversations for a user, grouped by participant_ids
+ * Get chat conversations for a user, grouped by participants
  */
 export async function getConversations(
   userId: number,
 ): Promise<ChatConversation[]> {
   try {
+    // Look up the current user's username for filtering
+    const currentUser = await hubDb.users.findUnique({
+      where: { id: userId },
+      select: { username: true },
+    });
+    const currentUsername = currentUser?.username;
+
     // Get distinct conversations where this user is a participant
     const messages = await hubDb.mail_messages.findMany({
       where: {
         kind: "chat",
-        participant_ids: { not: "" },
+        participants: { not: "" },
         OR: [
           { from_user_id: userId },
           { recipients: { some: { user_id: userId } } },
@@ -23,14 +30,14 @@ export async function getConversations(
       },
       orderBy: { created_at: "desc" },
       select: {
-        participant_ids: true,
+        participants: true,
         body: true,
         created_at: true,
         from_user: { select: { username: true } },
       },
     });
 
-    // Group by participant_ids and take the latest message for each
+    // Group by participants and take the latest message for each
     const conversationMap = new Map<
       string,
       {
@@ -41,9 +48,9 @@ export async function getConversations(
     >();
 
     for (const msg of messages) {
-      const pids = msg.participant_ids;
-      if (!conversationMap.has(pids)) {
-        conversationMap.set(pids, {
+      const key = msg.participants;
+      if (!conversationMap.has(key)) {
+        conversationMap.set(key, {
           lastMessage: msg.body,
           lastMessageAt: msg.created_at,
           lastMessageFrom: msg.from_user.username,
@@ -51,22 +58,18 @@ export async function getConversations(
       }
     }
 
-    // Look up participant usernames
+    // participants field already contains usernames, just split
     const conversations: ChatConversation[] = [];
-    for (const [participantIds, conv] of conversationMap) {
-      const ids = participantIds.split(",").map(Number);
-      const users = await hubDb.users.findMany({
-        where: { id: { in: ids } },
-        select: { id: true, username: true },
-      });
+    for (const [participants, conv] of conversationMap) {
+      const names = participants.split(",");
 
       // Exclude the current user from participant names
-      const participantNames = users
-        .filter((u) => u.id !== userId)
-        .map((u) => u.username);
+      const participantNames = currentUsername
+        ? names.filter((n) => n !== currentUsername)
+        : names;
 
       conversations.push({
-        participantIds,
+        participants,
         participantNames,
         lastMessage: conv.lastMessage,
         lastMessageAt: conv.lastMessageAt.toISOString(),
@@ -92,7 +95,7 @@ export async function getConversations(
  * Get chat messages for a specific conversation
  */
 export async function getMessages(
-  participantIds: string,
+  participants: string,
   updatedSince?: string,
   page: number = 1,
   count: number = 50,
@@ -104,7 +107,7 @@ export async function getMessages(
   try {
     const whereClause: any = {
       kind: "chat",
-      participant_ids: participantIds,
+      participants,
     };
 
     if (updatedSince) {

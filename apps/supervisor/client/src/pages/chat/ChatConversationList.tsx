@@ -7,8 +7,8 @@ import { NewChatDialog } from "./NewChatDialog";
 
 interface ChatConversationListProps {
   conversations: ChatConversation[];
-  selectedParticipantIds: string | null;
-  onSelect: (participantIds: string) => void;
+  selectedParticipants: string | null;
+  onSelect: (participants: string) => void;
   onNewChat: (toIds: number[]) => void;
   canSend: boolean;
   agents: Agent[];
@@ -17,7 +17,7 @@ interface ChatConversationListProps {
 
 export const ChatConversationList: React.FC<ChatConversationListProps> = ({
   conversations,
-  selectedParticipantIds,
+  selectedParticipants,
   onSelect,
   onNewChat,
   canSend,
@@ -68,9 +68,9 @@ export const ChatConversationList: React.FC<ChatConversationListProps> = ({
         ) : (
           conversations.map((conv) => (
             <NavLink
-              key={conv.participantIds}
-              active={selectedParticipantIds === conv.participantIds}
-              onClick={() => onSelect(conv.participantIds)}
+              key={conv.participants}
+              active={selectedParticipants === conv.participants}
+              onClick={() => onSelect(conv.participants)}
               label={conv.participantNames.join(", ")}
               description={
                 <Text size="xs" c="dimmed" lineClamp={1}>

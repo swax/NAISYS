@@ -16,7 +16,7 @@ export const getChatConversations = async (
 
 export interface ChatMessagesParams {
   agentUsername: string;
-  participantIds: string;
+  participants: string;
   updatedSince?: string;
   page?: number;
   count?: number;
@@ -37,7 +37,7 @@ export const getChatMessages = async (
   }
 
   const query = queryParams.toString();
-  const url = `${apiEndpoints.agentChatMessages(params.agentUsername, params.participantIds)}${query ? `?${query}` : ""}`;
+  const url = `${apiEndpoints.agentChatMessages(params.agentUsername, params.participants)}${query ? `?${query}` : ""}`;
   return await api.get<ChatMessagesResponse>(url);
 };
 

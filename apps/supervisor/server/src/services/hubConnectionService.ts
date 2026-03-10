@@ -213,8 +213,8 @@ function connectSocket(hubUrl: string) {
         browserIO.to(room).emit(room, payload);
       }
     } else if (msg.kind === "chat") {
-      // Chat messages — room keyed by participantIds (unchanged, not user-specific)
-      const msgRoom = `chat-messages:${msg.participantIds}`;
+      // Chat messages — room keyed by participants (not user-specific)
+      const msgRoom = `chat-messages:${msg.participants}`;
       browserIO.to(msgRoom).emit(msgRoom, payload);
 
       // Chat conversations — rooms keyed by username
@@ -245,25 +245,21 @@ function connectSocket(hubUrl: string) {
     };
 
     if (msg.kind === "mail") {
-      // Collect all unique participant user IDs
-      const participantUserIds = new Set(
-        msg.participantIds
-          .map((pid) => pid.split(",").map((id) => Number(id)))
-          .flat(),
+      // Collect all unique participant usernames
+      const participantUsernames = new Set(
+        msg.participants.flatMap((p) => p.split(",")),
       );
 
       const browserIO = getIO();
-      for (const uid of participantUserIds) {
-        const username = resolveUsername(uid);
-        if (!username) continue;
-        const room = `mail:${username}`;
+      for (const name of participantUsernames) {
+        const room = `mail:${name}`;
         browserIO.to(room).emit(room, receipt);
       }
     } else if (msg.kind === "chat") {
-      // participantIds here is like the name of the room (unchanged)
+      // participants here is the room key
       const browserIO = getIO();
-      for (const pids of msg.participantIds) {
-        const room = `chat-messages:${pids}`;
+      for (const p of msg.participants) {
+        const room = `chat-messages:${p}`;
         browserIO.to(room).emit(room, receipt);
       }
     }

@@ -2,7 +2,7 @@ import { HateoasActionSchema } from "@naisys/common";
 import { z } from "zod";
 
 export const ChatConversationSchema = z.object({
-  participantIds: z.string(),
+  participants: z.string(),
   participantNames: z.array(z.string()),
   lastMessage: z.string(),
   lastMessageAt: z.string(),

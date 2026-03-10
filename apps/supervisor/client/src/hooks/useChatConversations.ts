@@ -27,10 +27,10 @@ export const useChatConversations = (
       if (updated.length === 0) return;
 
       const existing = conversationsCache.get(agentUsername) || [];
-      const mergeMap = new Map(existing.map((c) => [c.participantIds, c]));
+      const mergeMap = new Map(existing.map((c) => [c.participants, c]));
 
       for (const conv of updated) {
-        mergeMap.set(conv.participantIds, conv);
+        mergeMap.set(conv.participants, conv);
       }
 
       const merged = Array.from(mergeMap.values());
@@ -56,7 +56,7 @@ export const useChatConversations = (
         ...new Set([...event.recipientUserIds, event.fromUserId]),
       ];
       const conv: ChatConversation = {
-        participantIds: event.participantIds,
+        participants: event.participants,
         participantNames: allIds.map((id) => userLookup.get(id) ?? String(id)),
         lastMessage: event.body,
         lastMessageAt: event.createdAt,
