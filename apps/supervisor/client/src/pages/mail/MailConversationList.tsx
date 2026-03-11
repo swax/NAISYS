@@ -9,29 +9,32 @@ import {
 } from "@mantine/core";
 import { IconPlus } from "@tabler/icons-react";
 import React from "react";
+import { Link } from "react-router-dom";
 
 import type { MailConversation } from "./mailConversations";
 
 interface MailConversationListProps {
   conversations: MailConversation[];
-  selectedKey: string | null;
-  onSelect: (key: string) => void;
+  activeKey: string | null;
+  onNavLinkClick?: () => void;
   onNewMessage: () => void;
   canSend: boolean;
   groupBySubject: boolean;
   onToggleGroupBySubject: () => void;
   currentAgentName: string;
+  agentName: string;
 }
 
 export const MailConversationList: React.FC<MailConversationListProps> = ({
   conversations,
-  selectedKey,
-  onSelect,
+  activeKey,
+  onNavLinkClick,
   onNewMessage,
   canSend,
   groupBySubject,
   onToggleGroupBySubject,
   currentAgentName,
+  agentName,
 }) => {
   const formatTime = (dateStr: string) => {
     const date = new Date(dateStr);
@@ -95,11 +98,18 @@ export const MailConversationList: React.FC<MailConversationListProps> = ({
                 ? otherNames.join(", ")
                 : conv.participantNames.join(", ");
 
+            // Build link URL based on grouping mode
+            const to = groupBySubject
+              ? `/agents/${agentName}/mail/about/${encodeURIComponent(conv.normalizedSubject)}`
+              : `/agents/${agentName}/mail/with/${conv.participantNames.filter((n) => n !== currentAgentName).sort().join(",")}`;
+
             return (
               <NavLink
                 key={conv.key}
-                active={selectedKey === conv.key}
-                onClick={() => onSelect(conv.key)}
+                active={activeKey === conv.key}
+                component={Link}
+                to={to}
+                onClick={onNavLinkClick}
                 label={
                   <Text size="sm" lineClamp={1}>
                     {groupBySubject ? conv.normalizedSubject : displayNames}

@@ -16,11 +16,13 @@ function getMessageParticipants(msg: MailMessage): string[] {
   return [...names].sort();
 }
 
-/** Build a conversation key; when groupBySubject is true, includes normalized subject */
-function conversationKey(msg: MailMessage, groupBySubject: boolean): string {
-  const participants = getMessageParticipants(msg).join(",");
-  if (!groupBySubject) return participants;
-  return `${normalizeSubject(msg.subject)}|${participants}`;
+/** Build a conversation key; when groupBySubject is true, key is the normalized subject */
+export function conversationKey(
+  msg: MailMessage,
+  groupBySubject: boolean,
+): string {
+  if (!groupBySubject) return getMessageParticipants(msg).join(",");
+  return normalizeSubject(msg.subject);
 }
 
 export interface MailConversation {

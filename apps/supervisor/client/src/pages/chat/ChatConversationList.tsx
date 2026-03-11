@@ -1,28 +1,31 @@
 import { Button, Group, NavLink, ScrollArea, Stack, Text } from "@mantine/core";
 import { IconMessagePlus } from "@tabler/icons-react";
 import React, { useState } from "react";
+import { Link } from "react-router-dom";
 
 import type { Agent, ChatConversation } from "../../lib/apiClient";
 import { NewChatDialog } from "./NewChatDialog";
 
 interface ChatConversationListProps {
   conversations: ChatConversation[];
-  selectedParticipants: string | null;
-  onSelect: (participants: string) => void;
+  activeParticipants: string | null;
+  onNavLinkClick?: () => void;
   onNewChat: (toIds: number[]) => void;
   canSend: boolean;
   agents: Agent[];
   currentAgentId: number;
+  agentName: string;
 }
 
 export const ChatConversationList: React.FC<ChatConversationListProps> = ({
   conversations,
-  selectedParticipants,
-  onSelect,
+  activeParticipants,
+  onNavLinkClick,
   onNewChat,
   canSend,
   agents,
   currentAgentId,
+  agentName,
 }) => {
   const [newChatOpened, setNewChatOpened] = useState(false);
 
@@ -66,29 +69,38 @@ export const ChatConversationList: React.FC<ChatConversationListProps> = ({
             No conversations yet
           </Text>
         ) : (
-          conversations.map((conv) => (
-            <NavLink
-              key={conv.participants}
-              active={selectedParticipants === conv.participants}
-              onClick={() => onSelect(conv.participants)}
-              label={conv.participantNames.join(", ")}
-              description={
-                <Text size="xs" c="dimmed" lineClamp={1}>
-                  {conv.lastMessageFrom}: {conv.lastMessage}
-                </Text>
-              }
-              rightSection={
-                <Text size="xs" c="dimmed">
-                  {formatTime(conv.lastMessageAt)}
-                </Text>
-              }
-              styles={{
-                root: {
-                  borderBottom: "1px solid var(--mantine-color-dark-6)",
-                },
-              }}
-            />
-          ))
+          conversations.map((conv) => {
+            const otherParticipants = conv.participants
+              .split(",")
+              .filter((n) => n !== agentName)
+              .join(",");
+
+            return (
+              <NavLink
+                key={conv.participants}
+                active={activeParticipants === conv.participants}
+                component={Link}
+                to={`/agents/${agentName}/chat/${otherParticipants}`}
+                onClick={onNavLinkClick}
+                label={conv.participantNames.join(", ")}
+                description={
+                  <Text size="xs" c="dimmed" lineClamp={1}>
+                    {conv.lastMessageFrom}: {conv.lastMessage}
+                  </Text>
+                }
+                rightSection={
+                  <Text size="xs" c="dimmed">
+                    {formatTime(conv.lastMessageAt)}
+                  </Text>
+                }
+                styles={{
+                  root: {
+                    borderBottom: "1px solid var(--mantine-color-dark-6)",
+                  },
+                }}
+              />
+            );
+          })
         )}
       </ScrollArea>
 
