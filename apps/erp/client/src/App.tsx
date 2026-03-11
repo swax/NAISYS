@@ -15,8 +15,10 @@ import { OrderList } from "./pages/orders/OrderList";
 import { OperationDetail } from "./pages/orders/revs/OperationDetail";
 import { OperationIndex } from "./pages/orders/revs/OperationIndex";
 import { RevisionLayout } from "./pages/orders/revs/RevisionLayout";
+import { OperationRunDetail } from "./pages/orders/runs/OperationRunDetail";
+import { OperationRunIndex } from "./pages/orders/runs/OperationRunIndex";
 import { OrderRunCreate } from "./pages/orders/runs/OrderRunCreate";
-import { OrderRunDetail } from "./pages/orders/runs/OrderRunDetail";
+import { OrderRunLayout } from "./pages/orders/runs/OrderRunDetail";
 import { OrderRunList } from "./pages/orders/runs/OrderRunList";
 import { UserDetail } from "./pages/users/UserDetail";
 import { UserList } from "./pages/users/UserList";
@@ -65,7 +67,10 @@ const AppContent: React.FC = () => {
         </Route>
         <Route path="/orders/:orderKey/runs" element={<OrderRunList />} />
         <Route path="/orders/:orderKey/runs/new" element={<OrderRunCreate />} />
-        <Route path="/orders/:orderKey/runs/:id" element={<OrderRunDetail />} />
+        <Route path="/orders/:orderKey/runs/:id" element={<OrderRunLayout />}>
+          <Route index element={<OperationRunIndex />} />
+          <Route path="ops/:opRunId" element={<OperationRunDetail />} />
+        </Route>
         <Route path="/users" element={<UserList />} />
         <Route path="/users/:username" element={<UserDetail />} />
       </Route>

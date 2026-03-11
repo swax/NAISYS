@@ -33,6 +33,7 @@ import { ERP_DB_VERSION, erpDbPath } from "./dbConfig.js";
 import { initErpDb } from "./erpDb.js";
 import auditRoutes from "./routes/audit.js";
 import authRoutes from "./routes/auth.js";
+import operationRunRoutes from "./routes/operation-runs.js";
 import operationRoutes from "./routes/operations.js";
 import orderRevisionRoutes from "./routes/order-revisions.js";
 import orderRunRoutes from "./routes/order-runs.js";
@@ -40,6 +41,7 @@ import orderRoutes from "./routes/orders.js";
 import rootRoute from "./routes/root.js";
 import schemaRoutes from "./routes/schemas.js";
 import stepFieldRoutes from "./routes/step-fields.js";
+import stepRunRoutes from "./routes/step-runs.js";
 import stepRoutes from "./routes/steps.js";
 import userRoutes from "./routes/users.js";
 import { isSupervisorAuth } from "./supervisorAuth.js";
@@ -118,6 +120,13 @@ export const erpPlugin: FastifyPluginAsync = async (fastify) => {
   });
   fastify.register(operationRoutes, {
     prefix: "/api/erp/orders/:orderKey/revs/:revNo/ops",
+  });
+  fastify.register(operationRunRoutes, {
+    prefix: "/api/erp/orders/:orderKey/runs/:runId/ops",
+  });
+  fastify.register(stepRunRoutes, {
+    prefix:
+      "/api/erp/orders/:orderKey/runs/:runId/ops/:opRunId/steps",
   });
   fastify.register(stepRoutes, {
     prefix: "/api/erp/orders/:orderKey/revs/:revNo/ops/:seqNo/steps",

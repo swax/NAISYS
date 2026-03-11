@@ -294,7 +294,7 @@ export default function orderRunRoutes(fastify: FastifyInstance) {
         );
       }
 
-      // Auto-increment runNo inside a transaction to prevent race conditions
+      // Auto-increment runNo and create child run rows inside a transaction
       const item = await erpDb.$transaction(async (erpTx) => {
         const maxOrder = await erpTx.orderRun.findFirst({
           where: { orderId },
@@ -303,7 +303,7 @@ export default function orderRunRoutes(fastify: FastifyInstance) {
         });
         const nextRunNo = (maxOrder?.runNo ?? 0) + 1;
 
-        return erpTx.orderRun.create({
+        const orderRun = await erpTx.orderRun.create({
           data: {
             runNo: nextRunNo,
             orderId,
@@ -320,6 +320,55 @@ export default function orderRunRoutes(fastify: FastifyInstance) {
           },
           include: includeRev,
         });
+
+        // Fetch operations → steps → fields for this revision
+        const operations = await erpTx.operation.findMany({
+          where: { orderRevId: orderRev.id },
+          include: {
+            steps: {
+              include: { fields: true },
+              orderBy: { seqNo: "asc" },
+            },
+          },
+          orderBy: { seqNo: "asc" },
+        });
+
+        // Create OperationRun → StepRun → StepFieldValue rows
+        for (const op of operations) {
+          const opRun = await erpTx.operationRun.create({
+            data: {
+              orderRunId: orderRun.id,
+              operationId: op.id,
+              createdById: userId,
+              updatedById: userId,
+            },
+          });
+
+          for (const step of op.steps) {
+            const stepRun = await erpTx.stepRun.create({
+              data: {
+                operationRunId: opRun.id,
+                stepId: step.id,
+                createdById: userId,
+                updatedById: userId,
+              },
+            });
+
+            for (const field of step.fields) {
+              await erpTx.stepFieldValue.create({
+                data: {
+                  stepRunId: stepRun.id,
+                  stepFieldId: field.id,
+                  value: "",
+                  createdById: userId,
+                  updatedById: userId,
+                },
+              });
+            }
+          }
+        }
+
+        return orderRun;
       });
 
       reply.status(201);
