@@ -39,6 +39,7 @@ import orderRunRoutes from "./routes/order-runs.js";
 import orderRoutes from "./routes/orders.js";
 import rootRoute from "./routes/root.js";
 import schemaRoutes from "./routes/schemas.js";
+import stepFieldRoutes from "./routes/step-fields.js";
 import stepRoutes from "./routes/steps.js";
 import userRoutes from "./routes/users.js";
 import { isSupervisorAuth } from "./supervisorAuth.js";
@@ -121,6 +122,10 @@ export const erpPlugin: FastifyPluginAsync = async (fastify) => {
   fastify.register(stepRoutes, {
     prefix: "/api/erp/orders/:orderKey/revs/:revNo/ops/:seqNo/steps",
   });
+  fastify.register(stepFieldRoutes, {
+    prefix:
+      "/api/erp/orders/:orderKey/revs/:revNo/ops/:seqNo/steps/:stepSeqNo/fields",
+  });
   fastify.register(schemaRoutes, { prefix: "/api/erp/schemas" });
   fastify.register(userRoutes, { prefix: "/api/erp/users" });
 
@@ -158,6 +163,7 @@ async function startServer() {
   const isProd = process.env.NODE_ENV === "production";
 
   const fastify = Fastify({
+    pluginTimeout: 60_000,
     logger: {
       transport: {
         target: "pino-pretty",

@@ -24,6 +24,7 @@ import { MetadataTooltip } from "../../../components/MetadataTooltip";
 import { api, apiEndpoints, showErrorNotification } from "../../../lib/api";
 import { hasAction } from "../../../lib/hateoas";
 import { zodResolver } from "../../../lib/zod-resolver";
+import { StepFieldList } from "./StepFieldList";
 
 interface StepListProps {
   orderKey: string;
@@ -41,6 +42,16 @@ export const StepList: React.FC<StepListProps> = ({
   const [editingStepId, setEditingStepId] = useState<number | null>(null);
   const [addingStep, setAddingStep] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [loadedOpSeqNo, setLoadedOpSeqNo] = useState(opSeqNo);
+
+  // Clear stale steps immediately when operation changes
+  if (opSeqNo !== loadedOpSeqNo) {
+    setLoadedOpSeqNo(opSeqNo);
+    setSteps(null);
+    setLoading(true);
+    setEditingStepId(null);
+    setAddingStep(false);
+  }
 
   const editForm = useForm<UpdateStep>({
     initialValues: { seqNo: 10, instructions: "" },
@@ -225,6 +236,12 @@ export const StepList: React.FC<StepListProps> = ({
                   </Group>
                 </Group>
               )}
+              <StepFieldList
+                orderKey={orderKey}
+                revNo={revNo}
+                opSeqNo={opSeqNo}
+                stepSeqNo={step.seqNo}
+              />
             </Card>
           ))}
 
