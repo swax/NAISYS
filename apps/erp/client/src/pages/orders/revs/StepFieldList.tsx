@@ -3,7 +3,6 @@ import {
   Button,
   Checkbox,
   Group,
-  Loader,
   NumberInput,
   Select,
   Stack,
@@ -21,7 +20,7 @@ import {
   CreateStepFieldSchema,
   UpdateStepFieldSchema,
 } from "@naisys-erp/shared";
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 
 import { MetadataTooltip } from "../../../components/MetadataTooltip";
 import { api, apiEndpoints, showErrorNotification } from "../../../lib/api";
@@ -33,6 +32,7 @@ interface StepFieldListProps {
   revNo: string;
   opSeqNo: string;
   stepSeqNo: number;
+  initialData: StepFieldListResponse;
 }
 
 export const StepFieldList: React.FC<StepFieldListProps> = ({
@@ -40,9 +40,9 @@ export const StepFieldList: React.FC<StepFieldListProps> = ({
   revNo,
   opSeqNo,
   stepSeqNo,
+  initialData,
 }) => {
-  const [fields, setFields] = useState<StepFieldListResponse | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [fields, setFields] = useState<StepFieldListResponse>(initialData);
   const [editingFieldId, setEditingFieldId] = useState<number | null>(null);
   const [addingField, setAddingField] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -57,24 +57,6 @@ export const StepFieldList: React.FC<StepFieldListProps> = ({
     validate: zodResolver(CreateStepFieldSchema),
   });
 
-  const fetchFields = useCallback(async () => {
-    setLoading(true);
-    try {
-      const result = await api.get<StepFieldListResponse>(
-        apiEndpoints.orderRevOpStepFields(orderKey, revNo, opSeqNo, stepSeqNo),
-      );
-      setFields(result);
-    } catch (err) {
-      showErrorNotification(err);
-    } finally {
-      setLoading(false);
-    }
-  }, [orderKey, revNo, opSeqNo, stepSeqNo]);
-
-  useEffect(() => {
-    void fetchFields();
-  }, [fetchFields]);
-
   const startEditing = (field: StepField) => {
     editForm.setValues({
       seqNo: field.seqNo,
@@ -87,11 +69,11 @@ export const StepFieldList: React.FC<StepFieldListProps> = ({
   };
 
   const handleSave = async (values: UpdateStepField) => {
-    const field = fields?.items.find((f) => f.id === editingFieldId);
+    const field = fields.items.find((f) => f.id === editingFieldId);
     if (!field) return;
     setSaving(true);
     try {
-      await api.put<StepField>(
+      const updated = await api.put<StepField>(
         apiEndpoints.orderRevOpStepField(
           orderKey,
           revNo,
@@ -102,7 +84,12 @@ export const StepFieldList: React.FC<StepFieldListProps> = ({
         values,
       );
       setEditingFieldId(null);
-      await fetchFields();
+      setFields({
+        ...fields,
+        items: fields.items
+          .map((f) => (f.id === updated.id ? updated : f))
+          .sort((a, b) => a.seqNo - b.seqNo),
+      });
     } catch (err) {
       showErrorNotification(err);
     } finally {
@@ -122,7 +109,11 @@ export const StepFieldList: React.FC<StepFieldListProps> = ({
           field.seqNo,
         ),
       );
-      await fetchFields();
+      setFields({
+        ...fields,
+        items: fields.items.filter((f) => f.id !== field.id),
+        total: fields.total - 1,
+      });
     } catch (err) {
       showErrorNotification(err);
     }
@@ -130,7 +121,7 @@ export const StepFieldList: React.FC<StepFieldListProps> = ({
 
   const startAdding = () => {
     createForm.setValues({
-      seqNo: fields?.nextSeqNo ?? 10,
+      seqNo: fields.nextSeqNo,
       label: "",
       type: "string",
       required: false,
@@ -142,12 +133,17 @@ export const StepFieldList: React.FC<StepFieldListProps> = ({
   const handleCreate = async (values: CreateStepField) => {
     setSaving(true);
     try {
-      await api.post<StepField>(
+      const created = await api.post<StepField>(
         apiEndpoints.orderRevOpStepFields(orderKey, revNo, opSeqNo, stepSeqNo),
         values,
       );
       setAddingField(false);
-      await fetchFields();
+      setFields({
+        ...fields,
+        items: [...fields.items, created].sort((a, b) => a.seqNo - b.seqNo),
+        total: fields.total + 1,
+        nextSeqNo: created.seqNo + 10,
+      });
     } catch (err) {
       showErrorNotification(err);
     } finally {
@@ -186,28 +182,20 @@ export const StepFieldList: React.FC<StepFieldListProps> = ({
     </>
   );
 
-  if (loading) {
-    return (
-      <Stack align="center" py="xs">
-        <Loader size="xs" />
-      </Stack>
-    );
-  }
-
   return (
     <Stack gap="xs" mt="xs">
       <Group justify="space-between">
         <Text size="xs" fw={600} c="dimmed">
           Data Fields
         </Text>
-        {hasAction(fields?._actions, "create") && !addingField && (
+        {hasAction(fields._actions, "create") && !addingField && (
           <Button size="compact-xs" variant="subtle" onClick={startAdding}>
             Add Field
           </Button>
         )}
       </Group>
 
-      {fields?.items.map((field) => (
+      {fields.items.map((field) => (
         <div key={field.id}>
           {editingFieldId === field.id ? (
             <form onSubmit={editForm.onSubmit(handleSave)}>
@@ -275,7 +263,7 @@ export const StepFieldList: React.FC<StepFieldListProps> = ({
         </div>
       ))}
 
-      {fields && fields.items.length === 0 && !addingField && (
+      {fields.items.length === 0 && !addingField && (
         <Text size="xs" c="dimmed">
           No data fields.
         </Text>

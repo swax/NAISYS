@@ -268,16 +268,24 @@ export default function orderRevisionRoutes(fastify: FastifyInstance) {
         );
       }
 
-      // Auto-increment revNo inside a transaction to prevent race conditions
+      // Auto-increment revNo and copy previous revision's structure
       const item = await erpDb.$transaction(async (erpTx) => {
-        const maxRev = await erpTx.orderRevision.findFirst({
+        const prevRev = await erpTx.orderRevision.findFirst({
           where: { orderId: order.id },
           orderBy: { revNo: "desc" },
-          select: { revNo: true },
+          include: {
+            operations: {
+              include: {
+                steps: {
+                  include: { fields: true },
+                },
+              },
+            },
+          },
         });
-        const nextRevNo = (maxRev?.revNo ?? 0) + 1;
+        const nextRevNo = (prevRev?.revNo ?? 0) + 1;
 
-        return erpTx.orderRevision.create({
+        const newRev = await erpTx.orderRevision.create({
           data: {
             orderId: order.id,
             revNo: nextRevNo,
@@ -288,6 +296,50 @@ export default function orderRevisionRoutes(fastify: FastifyInstance) {
           },
           include: includeUsers,
         });
+
+        // Copy operations, steps, and fields from the previous revision
+        if (prevRev) {
+          for (const op of prevRev.operations) {
+            const newOp = await erpTx.operation.create({
+              data: {
+                orderRevId: newRev.id,
+                seqNo: op.seqNo,
+                title: op.title,
+                description: op.description,
+                createdById: userId,
+                updatedById: userId,
+              },
+            });
+
+            for (const step of op.steps) {
+              const newStep = await erpTx.step.create({
+                data: {
+                  operationId: newOp.id,
+                  seqNo: step.seqNo,
+                  instructions: step.instructions,
+                  createdById: userId,
+                  updatedById: userId,
+                },
+              });
+
+              for (const field of step.fields) {
+                await erpTx.stepField.create({
+                  data: {
+                    stepId: newStep.id,
+                    seqNo: field.seqNo,
+                    label: field.label,
+                    type: field.type,
+                    required: field.required,
+                    createdById: userId,
+                    updatedById: userId,
+                  },
+                });
+              }
+            }
+          }
+        }
+
+        return newRev;
       });
 
       reply.status(201);

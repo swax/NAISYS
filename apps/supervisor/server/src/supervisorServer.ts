@@ -4,6 +4,7 @@ import "./schema-registry.js";
 // Important to load dotenv before any other imports, to ensure environment variables are available
 import cookie from "@fastify/cookie";
 import cors from "@fastify/cors";
+import rateLimit from "@fastify/rate-limit";
 import multipart from "@fastify/multipart";
 import staticFiles from "@fastify/static";
 import swagger from "@fastify/swagger";
@@ -136,6 +137,13 @@ export const startServer: StartServer = async (
   });
 
   await fastify.register(cookie);
+
+  // Rate limiting
+  await fastify.register(rateLimit, {
+    max: 100,
+    timeWindow: "1 minute",
+    allowList: (request) => !request.url.startsWith("/api/"),
+  });
 
   await fastify.register(multipart, {
     limits: { fileSize: MAX_ATTACHMENT_SIZE },
