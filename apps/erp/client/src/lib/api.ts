@@ -121,6 +121,41 @@ export const apiEndpoints = {
   userPermissions: (username: string) => `users/${username}/permissions`,
   userPermission: (username: string, perm: string) =>
     `users/${username}/permissions/${perm}`,
+  operationRuns: (key: string, runId: number | string) =>
+    `orders/${key}/runs/${runId}/ops`,
+  operationRun: (key: string, runId: number | string, id: number | string) =>
+    `orders/${key}/runs/${runId}/ops/${id}`,
+  operationRunStart: (
+    key: string,
+    runId: number | string,
+    id: number | string,
+  ) => `orders/${key}/runs/${runId}/ops/${id}/start`,
+  operationRunComplete: (
+    key: string,
+    runId: number | string,
+    id: number | string,
+  ) => `orders/${key}/runs/${runId}/ops/${id}/complete`,
+  operationRunSkip: (
+    key: string,
+    runId: number | string,
+    id: number | string,
+  ) => `orders/${key}/runs/${runId}/ops/${id}/skip`,
+  operationRunFail: (
+    key: string,
+    runId: number | string,
+    id: number | string,
+  ) => `orders/${key}/runs/${runId}/ops/${id}/fail`,
+  stepRuns: (
+    key: string,
+    runId: number | string,
+    opRunId: number | string,
+  ) => `orders/${key}/runs/${runId}/ops/${opRunId}/steps`,
+  stepRun: (
+    key: string,
+    runId: number | string,
+    opRunId: number | string,
+    id: number | string,
+  ) => `orders/${key}/runs/${runId}/ops/${opRunId}/steps/${id}`,
   userRotateKey: (username: string) => `users/${username}/rotate-key`,
   changePassword: "users/me/password",
   audit: (entityType: string, entityId: number | string) =>

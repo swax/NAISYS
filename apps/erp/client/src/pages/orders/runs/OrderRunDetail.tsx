@@ -1,62 +1,49 @@
 import {
-  Badge,
-  Button,
-  Card,
-  Container,
+  ActionIcon,
+  Box,
+  Drawer,
   Group,
   Loader,
   Stack,
-  Table,
   Text,
-  Title,
+  Tooltip,
 } from "@mantine/core";
-import type {
-  AuditListResponse,
-  OrderRun,
-  UpdateOrderRun,
-} from "@naisys-erp/shared";
+import { useDisclosure } from "@mantine/hooks";
+import type { OrderRun } from "@naisys-erp/shared";
+import {
+  IconLayoutSidebarLeftCollapse,
+  IconLayoutSidebarLeftExpand,
+  IconListDetails,
+} from "@tabler/icons-react";
 import { useCallback, useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router";
+import { Outlet, useLocation, useParams } from "react-router";
 
-import { MetadataTooltip } from "../../../components/MetadataTooltip";
-import { OrderRunForm } from "../../../components/OrderRunForm";
 import { api, apiEndpoints, showErrorNotification } from "../../../lib/api";
-import { hasAction } from "../../../lib/hateoas";
+import { OperationRunSidebar } from "./OperationRunSidebar";
+import { OrderRunHeader } from "./OrderRunHeader";
 
-const STATUS_COLORS: Record<string, string> = {
-  released: "blue",
-  started: "yellow",
-  closed: "green",
-  cancelled: "gray",
-};
+const SIDEBAR_WIDTH = 260;
 
-const PRIORITY_COLORS: Record<string, string> = {
-  low: "gray",
-  medium: "blue",
-  high: "orange",
-  critical: "red",
-};
-
-export const OrderRunDetail: React.FC = () => {
-  const { orderKey, id } = useParams<{ orderKey: string; id: string }>();
-  const navigate = useNavigate();
+export const OrderRunLayout: React.FC = () => {
+  const { orderKey, id } = useParams<{
+    orderKey: string;
+    id: string;
+  }>();
+  const location = useLocation();
   const [item, setItem] = useState<OrderRun | null>(null);
-  const [auditEntries, setAuditEntries] = useState<AuditListResponse["items"]>(
-    [],
-  );
   const [loading, setLoading] = useState(true);
-  const [editing, setEditing] = useState(false);
+  const [sidebarCollapsed, { toggle: toggleSidebar }] = useDisclosure();
+  const [drawerOpened, { open: openDrawer, close: closeDrawer }] =
+    useDisclosure();
 
   const fetchItem = useCallback(async () => {
-    if (!id) return;
+    if (!orderKey || !id) return;
     setLoading(true);
     try {
-      const [result, audit] = await Promise.all([
-        api.get<OrderRun>(apiEndpoints.orderRun(orderKey!, id)),
-        api.get<AuditListResponse>(apiEndpoints.audit("OrderRun", id)),
-      ]);
+      const result = await api.get<OrderRun>(
+        apiEndpoints.orderRun(orderKey, id),
+      );
       setItem(result);
-      setAuditEntries(audit.items);
     } catch (err) {
       showErrorNotification(err);
     } finally {
@@ -68,253 +55,137 @@ export const OrderRunDetail: React.FC = () => {
     void fetchItem();
   }, [fetchItem]);
 
-  const handleUpdate = async (data: UpdateOrderRun) => {
-    if (!id) return;
-    await api.put(apiEndpoints.orderRun(orderKey!, id!), data);
-    setEditing(false);
-    await fetchItem();
-  };
-
-  const handleDelete = async () => {
-    if (!id || !confirm("Delete this order run?")) return;
-    try {
-      await api.delete(apiEndpoints.orderRun(orderKey!, id!));
-      void navigate(`/orders/${orderKey}/runs`);
-    } catch (err) {
-      showErrorNotification(err);
-    }
-  };
-
-  const handleStart = async () => {
-    if (!id) return;
-    try {
-      await api.post(apiEndpoints.orderRunStart(orderKey!, id!), {});
-      await fetchItem();
-    } catch (err) {
-      showErrorNotification(err);
-    }
-  };
-
-  const handleClose = async () => {
-    if (!id) return;
-    try {
-      await api.post(apiEndpoints.orderRunClose(orderKey!, id!), {});
-      await fetchItem();
-    } catch (err) {
-      showErrorNotification(err);
-    }
-  };
-
-  const handleCancel = async () => {
-    if (!id || !confirm("Cancel this order run?")) return;
-    try {
-      await api.post(apiEndpoints.orderRunCancel(orderKey!, id!), {});
-      await fetchItem();
-    } catch (err) {
-      showErrorNotification(err);
-    }
-  };
+  // Close drawer on navigation
+  useEffect(() => {
+    closeDrawer();
+  }, [location.pathname]);
 
   if (loading) {
     return (
-      <Container size="md" py="xl">
-        <Stack align="center">
-          <Loader />
-        </Stack>
-      </Container>
+      <Stack align="center" py="xl">
+        <Loader />
+      </Stack>
     );
   }
 
-  if (!item) {
+  if (!item || !orderKey || !id) {
     return (
-      <Container size="md" py="xl">
+      <Box p="md">
         <Text>Order run not found.</Text>
-      </Container>
+      </Box>
     );
   }
-
-  if (editing) {
-    return (
-      <Container size="md" py="xl">
-        <Title order={2} mb="lg">
-          Edit Order Run
-        </Title>
-        <OrderRunForm<true>
-          initialData={{
-            priority: item.priority,
-            scheduledStartAt: item.scheduledStartAt
-              ? item.scheduledStartAt.slice(0, 16)
-              : "",
-            dueAt: item.dueAt ? item.dueAt.slice(0, 16) : "",
-            assignedTo: item.assignedTo ?? "",
-            notes: item.notes ?? "",
-          }}
-          isEdit
-          onSubmit={handleUpdate}
-          onCancel={() => setEditing(false)}
-        />
-      </Container>
-    );
-  }
-
-  const canEdit = !!hasAction(item._actions, "update");
 
   return (
-    <Container size="md" py="xl">
-      <Group justify="space-between" mb="lg">
-        <Group>
-          <Title order={2}>Order Run #{item.runNo}</Title>
-          <MetadataTooltip
-            createdBy={item.createdBy}
-            createdAt={item.createdAt}
-            updatedBy={item.updatedBy}
-            updatedAt={item.updatedAt}
-          />
-          <Badge
-            color={STATUS_COLORS[item.status] ?? "gray"}
-            variant="light"
-            size="lg"
-            data-testid="order-run-status"
-          >
-            {item.status}
-          </Badge>
-          <Badge
-            color={PRIORITY_COLORS[item.priority] ?? "gray"}
-            variant="light"
-            size="lg"
-          >
-            {item.priority}
-          </Badge>
-        </Group>
-        <Group>
-          <Button
-            variant="subtle"
-            onClick={() => navigate(`/orders/${orderKey}/runs`)}
-          >
-            Back
-          </Button>
-          {canEdit && <Button onClick={() => setEditing(true)}>Edit</Button>}
-          {hasAction(item._actions, "start") && (
-            <Button
-              color="green"
-              onClick={handleStart}
-              data-testid="order-run-start"
-            >
-              Start
-            </Button>
-          )}
-          {hasAction(item._actions, "delete") && (
-            <Button color="red" variant="outline" onClick={handleDelete}>
-              Delete
-            </Button>
-          )}
-          {hasAction(item._actions, "close") && (
-            <Button
-              color="green"
-              onClick={handleClose}
-              data-testid="order-run-close"
-            >
-              Close
-            </Button>
-          )}
-          {hasAction(item._actions, "cancel") && (
-            <Button color="orange" variant="outline" onClick={handleCancel}>
-              Cancel
-            </Button>
-          )}
-        </Group>
-      </Group>
+    <Box
+      display="flex"
+      style={{ flexDirection: "column", flex: 1, minHeight: 0 }}
+    >
+      {/* Header */}
+      <OrderRunHeader
+        item={item}
+        orderKey={orderKey}
+        runId={id}
+        onRefresh={fetchItem}
+      />
 
-      <Card withBorder p="lg">
-        <Stack gap="sm">
-          <Group>
-            <Text fw={600} w={140}>
-              Order:
-            </Text>
-            <Text
-              ff="monospace"
-              style={{ cursor: "pointer", textDecoration: "underline" }}
-              onClick={() => navigate(`/orders/${orderKey}`)}
-            >
-              {orderKey}
-            </Text>
-          </Group>
-          <Group>
-            <Text fw={600} w={140}>
-              Rev No:
-            </Text>
-            <Text ff="monospace">{item.revNo}</Text>
-          </Group>
-          <Group>
-            <Text fw={600} w={140}>
-              Assigned To:
-            </Text>
-            <Text>{item.assignedTo || "—"}</Text>
-          </Group>
-          <Group>
-            <Text fw={600} w={140}>
-              Scheduled Start:
-            </Text>
-            <Text>
-              {item.scheduledStartAt
-                ? new Date(item.scheduledStartAt).toLocaleString()
-                : "—"}
-            </Text>
-          </Group>
-          <Group>
-            <Text fw={600} w={140}>
-              Due:
-            </Text>
-            <Text>
-              {item.dueAt ? new Date(item.dueAt).toLocaleString() : "—"}
-            </Text>
-          </Group>
-          <Group>
-            <Text fw={600} w={140}>
-              Released at:
-            </Text>
-            <Text>{new Date(item.releasedAt).toLocaleString()}</Text>
-          </Group>
-          <Group>
-            <Text fw={600} w={140}>
-              Notes:
-            </Text>
-            <Text>{item.notes || "—"}</Text>
-          </Group>
-        </Stack>
-      </Card>
+      {/* Body: sidebar + content */}
+      <Box display="flex" style={{ flex: 1, minHeight: 0 }}>
+        {/* Mobile operation picker */}
+        <Group
+          gap="xs"
+          px="md"
+          py="xs"
+          hiddenFrom="md"
+          style={{ cursor: "pointer" }}
+          onClick={openDrawer}
+        >
+          <ActionIcon variant="subtle" color="gray">
+            <IconListDetails size="1.2rem" />
+          </ActionIcon>
+          <Text size="sm" fw={500}>
+            Operations
+          </Text>
+        </Group>
 
-      {auditEntries.length > 0 && (
-        <Card withBorder p="lg" mt="lg">
-          <Title order={4} mb="md">
-            Status History
-          </Title>
-          <Table striped highlightOnHover>
-            <Table.Thead>
-              <Table.Tr>
-                <Table.Th>Action</Table.Th>
-                <Table.Th>From</Table.Th>
-                <Table.Th>To</Table.Th>
-                <Table.Th>User</Table.Th>
-                <Table.Th>When</Table.Th>
-              </Table.Tr>
-            </Table.Thead>
-            <Table.Tbody>
-              {auditEntries.map((entry) => (
-                <Table.Tr key={entry.id}>
-                  <Table.Td>{entry.action}</Table.Td>
-                  <Table.Td>{entry.oldValue ?? "—"}</Table.Td>
-                  <Table.Td>{entry.newValue ?? "—"}</Table.Td>
-                  <Table.Td>{entry.userId}</Table.Td>
-                  <Table.Td>
-                    {new Date(entry.createdAt).toLocaleString()}
-                  </Table.Td>
-                </Table.Tr>
-              ))}
-            </Table.Tbody>
-          </Table>
-        </Card>
-      )}
-    </Container>
+        {/* Desktop sidebar */}
+        <Box
+          visibleFrom="md"
+          style={{
+            flexShrink: 0,
+            display: "flex",
+            flexDirection: "column",
+          }}
+        >
+          {sidebarCollapsed ? (
+            <Box
+              style={{
+                borderRight: "1px solid var(--mantine-color-dark-4)",
+                paddingRight: 4,
+              }}
+            >
+              <Tooltip label="Expand sidebar" position="right">
+                <ActionIcon
+                  variant="subtle"
+                  color="gray"
+                  onClick={toggleSidebar}
+                >
+                  <IconLayoutSidebarLeftExpand size="1.2rem" />
+                </ActionIcon>
+              </Tooltip>
+            </Box>
+          ) : (
+            <Box
+              style={{
+                width: SIDEBAR_WIDTH,
+                minWidth: SIDEBAR_WIDTH,
+                borderRight: "1px solid var(--mantine-color-dark-4)",
+                display: "flex",
+                flexDirection: "column",
+                overflowY: "auto",
+                paddingRight: "var(--mantine-spacing-md)",
+              }}
+            >
+              <Group justify="flex-end" p={4}>
+                <Tooltip label="Collapse sidebar" position="right">
+                  <ActionIcon
+                    variant="subtle"
+                    color="gray"
+                    size="sm"
+                    onClick={toggleSidebar}
+                  >
+                    <IconLayoutSidebarLeftCollapse size="1rem" />
+                  </ActionIcon>
+                </Tooltip>
+              </Group>
+              <OperationRunSidebar orderKey={orderKey} runId={id} />
+            </Box>
+          )}
+        </Box>
+
+        {/* Main content */}
+        <div
+          style={{
+            flex: 1,
+            minHeight: 0,
+            overflowY: "auto",
+            display: "flex",
+            flexDirection: "column",
+          }}
+        >
+          <Outlet />
+        </div>
+      </Box>
+
+      {/* Mobile drawer */}
+      <Drawer
+        opened={drawerOpened}
+        onClose={closeDrawer}
+        title="Operations"
+        size={SIDEBAR_WIDTH}
+      >
+        <OperationRunSidebar orderKey={orderKey} runId={id} />
+      </Drawer>
+    </Box>
   );
 };
