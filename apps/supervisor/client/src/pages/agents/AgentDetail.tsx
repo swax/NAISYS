@@ -284,6 +284,7 @@ export const AgentDetail: React.FC = () => {
               placeholder="Task description (optional)"
               value={taskInput}
               onChange={(e) => setTaskInput(e.currentTarget.value)}
+              disabled={agentData?.status === "offline"}
               style={{ flex: 1 }}
               styles={{
                 input: {
@@ -295,6 +296,7 @@ export const AgentDetail: React.FC = () => {
             <Button
               color="green"
               loading={starting}
+              disabled={agentData?.status === "offline"}
               leftSection={<IconPlayerPlay size={16} />}
               onClick={handleStart}
               style={{ borderTopLeftRadius: 0, borderBottomLeftRadius: 0 }}

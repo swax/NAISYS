@@ -34,9 +34,6 @@ export const AgentSidebar: React.FC = () => {
   const [showArchived, setShowArchived] = useState(false);
 
   const isAgentSelected = (agent: Agent) => {
-    if (agent.name === "all") {
-      return !currentUsername;
-    }
     return currentUsername === agent.name;
   };
 
@@ -52,10 +49,6 @@ export const AgentSidebar: React.FC = () => {
 
   const getAgentUrl = (agent: Agent) => {
     const currentSection = getCurrentSection();
-
-    if (agent.name === "all") {
-      return "/agents";
-    }
 
     if (
       currentSection &&
@@ -230,13 +223,7 @@ export const AgentSidebar: React.FC = () => {
         backgroundColor: isAgentSelected(agent)
           ? "var(--mantine-color-blue-9)"
           : undefined,
-        opacity: dimmed
-          ? 0.4
-          : agent.name === "All"
-            ? 1
-            : agent.status === "offline"
-              ? 0.5
-              : 1,
+        opacity: dimmed ? 0.4 : agent.status === "offline" ? 0.5 : 1,
         marginLeft: agent.depth ? `${agent.depth * 1.5}rem` : undefined,
         textDecoration: "none",
         color: "inherit",
@@ -257,7 +244,7 @@ export const AgentSidebar: React.FC = () => {
             {agent.title}
           </Text>
         </div>
-        {agent.name !== "All" && connectionStatus === "connected" && (
+        {connectionStatus === "connected" && agent.status !== "available" && (
           <Badge
             size="xs"
             variant="light"
@@ -266,9 +253,7 @@ export const AgentSidebar: React.FC = () => {
                 ? "green"
                 : agent.status === "suspended"
                   ? "red"
-                  : agent.status === "available"
-                    ? "yellow"
-                    : "gray"
+                  : "gray"
             }
             style={{
               flexShrink: 0,

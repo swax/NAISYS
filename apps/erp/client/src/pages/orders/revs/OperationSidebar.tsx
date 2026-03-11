@@ -15,7 +15,7 @@ import type { Operation, OperationListResponse } from "@naisys-erp/shared";
 import { CreateOperationSchema } from "@naisys-erp/shared";
 import { IconPlus } from "@tabler/icons-react";
 import { useCallback, useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router";
+import { Link, useNavigate, useParams } from "react-router";
 
 import { api, apiEndpoints, showErrorNotification } from "../../../lib/api";
 import { hasAction } from "../../../lib/hateoas";
@@ -87,20 +87,6 @@ export const OperationSidebar: React.FC<Props> = ({ orderKey, revNo }) => {
   return (
     <>
       <Stack gap={0}>
-        {hasAction(data?._actions, "create") && (
-          <Button
-            variant="subtle"
-            color="gray"
-            size="compact-sm"
-            leftSection={<IconPlus size="0.9rem" />}
-            onClick={openCreateModal}
-            fullWidth
-            mb="xs"
-          >
-            Add Operation
-          </Button>
-        )}
-
         {loading ? (
           <Stack align="center" py="md">
             <Loader size="sm" />
@@ -113,13 +99,26 @@ export const OperationSidebar: React.FC<Props> = ({ orderKey, revNo }) => {
           data.items.map((op) => (
             <NavLink
               key={op.id}
+              component={Link}
+              to={`/orders/${orderKey}/revs/${revNo}/ops/${op.seqNo}`}
               label={`${op.seqNo}. ${op.title}`}
               active={currentSeqNo === String(op.seqNo)}
-              onClick={() =>
-                navigate(`/orders/${orderKey}/revs/${revNo}/ops/${op.seqNo}`)
-              }
             />
           ))
+        )}
+
+        {hasAction(data?._actions, "create") && (
+          <Button
+            variant="subtle"
+            color="gray"
+            size="compact-sm"
+            leftSection={<IconPlus size="0.9rem" />}
+            onClick={openCreateModal}
+            fullWidth
+            mt="xs"
+          >
+            Add Operation
+          </Button>
         )}
       </Stack>
 

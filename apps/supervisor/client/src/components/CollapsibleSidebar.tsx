@@ -30,6 +30,7 @@ export const CollapsibleSidebar: React.FC<CollapsibleSidebarProps> = ({
         flexShrink: 0,
         display: "flex",
         flexDirection: "column",
+        minHeight: 0,
       }}
     >
       {collapsed ? (
@@ -53,10 +54,11 @@ export const CollapsibleSidebar: React.FC<CollapsibleSidebarProps> = ({
             borderRight: "1px solid var(--mantine-color-dark-4)",
             display: "flex",
             flexDirection: "column",
-            ...contentStyle,
+            flex: 1,
+            minHeight: 0,
           }}
         >
-          <Group justify="flex-end" p={4}>
+          <Group justify="flex-end" p={4} style={{ flexShrink: 0 }}>
             <Tooltip label="Collapse sidebar" position="right">
               <ActionIcon
                 variant="subtle"
@@ -68,7 +70,9 @@ export const CollapsibleSidebar: React.FC<CollapsibleSidebarProps> = ({
               </ActionIcon>
             </Tooltip>
           </Group>
-          {children}
+          <Box style={{ flex: 1, minHeight: 0, ...contentStyle }}>
+            {children}
+          </Box>
         </Box>
       )}
     </Box>

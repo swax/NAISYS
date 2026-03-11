@@ -47,12 +47,15 @@ export function initBrowserSocket(httpServer: http.Server, isProd: boolean) {
   });
 
   io.on("connection", (socket) => {
-    // Send initial hub connection status to newly connected browser client
-    socket.emit("hub-status", { hubConnected: isHubConnected() });
-
     socket.on("subscribe", (data: { room: string }) => {
       if (typeof data?.room === "string" && isRoomAllowed(data.room)) {
         void socket.join(data.room);
+
+        // Send initial hub status when the client subscribes to the room
+        // (not on connect, because the client listener isn't ready yet)
+        if (data.room === "hub-status") {
+          socket.emit("hub-status", { hubConnected: isHubConnected() });
+        }
       }
     });
 
