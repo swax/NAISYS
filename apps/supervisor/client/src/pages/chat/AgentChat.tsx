@@ -12,8 +12,8 @@ import {
 import { useDisclosure } from "@mantine/hooks";
 import { formatFileSize, hasAction, MAX_ATTACHMENT_SIZE } from "@naisys/common";
 import { IconMessageCircle } from "@tabler/icons-react";
-import React, { useCallback, useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import React, { useCallback, useEffect, useMemo } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 
 import { CollapsibleSidebar } from "../../components/CollapsibleSidebar";
 import { SIDEBAR_WIDTH } from "../../constants";
@@ -26,7 +26,11 @@ import { ChatInput } from "./ChatInput";
 import { ChatThread } from "./ChatThread";
 
 export const AgentChat: React.FC = () => {
-  const { username } = useParams<{ username: string }>();
+  const { username, participants: participantsParam } = useParams<{
+    username: string;
+    participants: string;
+  }>();
+  const navigate = useNavigate();
   const { agents } = useAgentDataContext();
   const [drawerOpened, { open: openDrawer, close: closeDrawer }] =
     useDisclosure();
@@ -34,9 +38,12 @@ export const AgentChat: React.FC = () => {
   const agent = agents.find((a) => a.name === username);
   const agentId = agent?.id ?? 0;
 
-  const [selectedParticipants, setSelectedParticipants] = useState<
-    string | null
-  >(null);
+  // Derive selectedParticipants from URL param by adding current agent back
+  const selectedParticipants = useMemo(() => {
+    if (!participantsParam || !username) return null;
+    const others = participantsParam.split(",").filter(Boolean);
+    return [...others, username].sort().join(",");
+  }, [participantsParam, username]);
 
   const {
     conversations,
@@ -45,12 +52,17 @@ export const AgentChat: React.FC = () => {
     error: convError,
   } = useChatConversations(username ?? "", Boolean(username));
 
-  // Auto-select first conversation when data loads
+  // Auto-select first conversation when no URL param and conversations exist
   useEffect(() => {
-    if (!selectedParticipants && conversations.length > 0) {
-      setSelectedParticipants(conversations[0].participants);
+    if (!participantsParam && conversations.length > 0 && username) {
+      const first = conversations[0].participants;
+      const others = first
+        .split(",")
+        .filter((n) => n !== username)
+        .join(",");
+      navigate(`/agents/${username}/chat/${others}`, { replace: true });
     }
-  }, [conversations, selectedParticipants]);
+  }, [conversations, participantsParam, username, navigate]);
 
   const { messages, isLoading: msgLoading } = useChatMessages(
     username ?? "",
@@ -59,14 +71,6 @@ export const AgentChat: React.FC = () => {
   );
 
   const canSend = !!hasAction(convActions, "send");
-
-  const handleSelectConversation = useCallback(
-    (participants: string) => {
-      setSelectedParticipants(participants);
-      closeDrawer();
-    },
-    [closeDrawer],
-  );
 
   const handleSendMessage = useCallback(
     async (message: string, files?: File[]) => {
@@ -113,13 +117,12 @@ export const AgentChat: React.FC = () => {
         .map((id) => agents.find((a) => a.id === id)?.name ?? "")
         .filter(Boolean)
         .sort();
-      const participants = allNames.join(",");
+      const others = allNames.filter((n) => n !== username).join(",");
 
-      // Select this conversation (it may or may not exist yet)
-      setSelectedParticipants(participants);
+      navigate(`/agents/${username}/chat/${others}`);
       closeDrawer();
     },
-    [agentId, agents, closeDrawer],
+    [agentId, agents, username, closeDrawer, navigate],
   );
 
   if (!username) {
@@ -150,12 +153,13 @@ export const AgentChat: React.FC = () => {
   const conversationList = (
     <ChatConversationList
       conversations={conversations}
-      selectedParticipants={selectedParticipants}
-      onSelect={handleSelectConversation}
+      activeParticipants={selectedParticipants}
+      onNavLinkClick={closeDrawer}
       onNewChat={handleNewChat}
       canSend={canSend}
       agents={agents}
       currentAgentId={agentId}
+      agentName={username}
     />
   );
 

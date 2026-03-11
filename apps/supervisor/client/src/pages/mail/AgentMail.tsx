@@ -14,7 +14,7 @@ import { useDisclosure } from "@mantine/hooks";
 import { hasAction } from "@naisys/common";
 import { IconCornerUpLeft, IconMail } from "@tabler/icons-react";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 
 import { CollapsibleSidebar } from "../../components/CollapsibleSidebar";
 import { SIDEBAR_WIDTH } from "../../constants";
@@ -31,7 +31,12 @@ import { MailThread } from "./MailThread";
 import { NewMessageModal } from "./NewMessageModal";
 
 export const AgentMail: React.FC = () => {
-  const { username } = useParams<{ username: string }>();
+  const { username, "*": splatParam } = useParams<{
+    username: string;
+    "*": string;
+  }>();
+  const navigate = useNavigate();
+  const location = useLocation();
   const { agents, updateReadStatus, readStatus } = useAgentDataContext();
   const [drawerOpened, { open: openDrawer, close: closeDrawer }] =
     useDisclosure();
@@ -66,11 +71,22 @@ export const AgentMail: React.FC = () => {
     void updateReadStatus(agentName, undefined, maxMailId);
   }, [allMail]);
 
-  // Grouping mode
-  const [groupBySubject, setGroupBySubject] = useState(false);
+  // Determine URL mode
+  const basePath = `/agents/${username}/mail`;
+  const urlPath = location.pathname;
+  const isAboutUrl = urlPath.startsWith(`${basePath}/about/`);
+  const isWithUrl = urlPath.startsWith(`${basePath}/with/`);
+  const hasSelection = isAboutUrl || isWithUrl;
 
-  // Selection state
-  const [selectedKey, setSelectedKey] = useState<string | null>(null);
+  // groupBySubject state: synced from URL when a selection exists,
+  // preserved across toggles when at base /mail
+  const [groupBySubject, setGroupBySubject] = useState(isAboutUrl);
+
+  // Sync groupBySubject from URL when navigating to a specific conversation
+  useEffect(() => {
+    if (isAboutUrl) setGroupBySubject(true);
+    else if (isWithUrl) setGroupBySubject(false);
+  }, [isAboutUrl, isWithUrl]);
 
   // Modal state
   const [newMessageModalOpened, setNewMessageModalOpened] = useState(false);
@@ -86,22 +102,46 @@ export const AgentMail: React.FC = () => {
     [allMail, lastReadMailId, groupBySubject],
   );
 
-  // Auto-select first conversation when data loads or selection becomes invalid
-  useEffect(() => {
-    if (conversations.length === 0) {
-      setSelectedKey(null);
-      return;
+  // Derive selectedKey from URL
+  const selectedKey = useMemo(() => {
+    if (isAboutUrl && splatParam) {
+      return decodeURIComponent(splatParam);
     }
-    // If current selection is not in the filtered list, reset to first
-    if (
-      selectedKey === null ||
-      !conversations.some((c) => c.key === selectedKey)
-    ) {
-      setSelectedKey(conversations[0].key);
+    if (isWithUrl && splatParam) {
+      const others = splatParam.split(",").filter(Boolean);
+      return [...others, agentName].sort().join(",");
     }
-  }, [conversations, selectedKey]);
+    return null;
+  }, [isAboutUrl, isWithUrl, splatParam, agentName]);
 
-  // Get thread messages for selected conversation (always from allMail for full context)
+  // Auto-select first conversation when no selection in URL and conversations exist
+  useEffect(() => {
+    if (!hasSelection && conversations.length > 0 && username) {
+      const first = conversations[0];
+      if (groupBySubject) {
+        navigate(
+          `${basePath}/about/${encodeURIComponent(first.normalizedSubject)}`,
+          { replace: true },
+        );
+      } else {
+        const others = first.participantNames
+          .filter((n) => n !== agentName)
+          .sort()
+          .join(",");
+        navigate(`${basePath}/with/${others}`, { replace: true });
+      }
+    }
+  }, [
+    conversations,
+    hasSelection,
+    username,
+    agentName,
+    groupBySubject,
+    basePath,
+    navigate,
+  ]);
+
+  // Get thread messages for selected conversation
   const threadMessages = useMemo(() => {
     if (!selectedKey) return [];
     return getConversationMessages(allMail, selectedKey, groupBySubject);
@@ -110,17 +150,14 @@ export const AgentMail: React.FC = () => {
   // Get the selected conversation object for display
   const selectedConversation = conversations.find((c) => c.key === selectedKey);
 
-  const handleSelectConversation = useCallback(
-    (key: string) => {
-      setSelectedKey(key);
-      closeDrawer();
-    },
-    [closeDrawer],
-  );
+  const handleToggleGroupBySubject = useCallback(() => {
+    setGroupBySubject((v) => !v);
+    // Navigate to base mail URL; auto-select will pick the first conversation in new mode
+    navigate(basePath, { replace: true });
+  }, [basePath, navigate]);
 
   const handleReply = useCallback(() => {
     if (!threadMessages.length) return;
-    // Find the last received message to reply to, or fall back to last message
     const lastReceived = [...threadMessages]
       .reverse()
       .find((m) => m.fromUsername !== agentName);
@@ -189,16 +226,14 @@ export const AgentMail: React.FC = () => {
   const conversationList = (
     <MailConversationList
       conversations={conversations}
-      selectedKey={selectedKey}
-      onSelect={handleSelectConversation}
+      activeKey={selectedKey}
+      onNavLinkClick={closeDrawer}
       onNewMessage={() => setNewMessageModalOpened(true)}
       canSend={canSend}
       groupBySubject={groupBySubject}
-      onToggleGroupBySubject={() => {
-        setGroupBySubject((v) => !v);
-        setSelectedKey(null);
-      }}
+      onToggleGroupBySubject={handleToggleGroupBySubject}
       currentAgentName={agentName}
+      agentName={username}
     />
   );
 
