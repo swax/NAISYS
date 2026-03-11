@@ -1,9 +1,9 @@
 import {
   Button,
+  Card,
   Group,
   Loader,
   Modal,
-  NavLink,
   NumberInput,
   Stack,
   Text,
@@ -15,7 +15,7 @@ import type { Operation, OperationListResponse } from "@naisys-erp/shared";
 import { CreateOperationSchema } from "@naisys-erp/shared";
 import { IconPlus } from "@tabler/icons-react";
 import { useCallback, useEffect, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router";
+import { useNavigate, useParams } from "react-router";
 
 import { api, apiEndpoints, showErrorNotification } from "../../../lib/api";
 import { hasAction } from "../../../lib/hateoas";
@@ -57,6 +57,16 @@ export const OperationSidebar: React.FC<Props> = ({ orderKey, revNo }) => {
     void fetchOps();
   }, [fetchOps]);
 
+  // Auto-navigate to first operation when none is selected
+  useEffect(() => {
+    if (!currentSeqNo && data && data.items.length > 0) {
+      void navigate(
+        `/orders/${orderKey}/revs/${revNo}/ops/${data.items[0].seqNo}`,
+        { replace: true },
+      );
+    }
+  }, [currentSeqNo, data, navigate, orderKey, revNo]);
+
   const openCreateModal = () => {
     form.setFieldValue("seqNo", data?.nextSeqNo ?? 10);
     setModalOpen(true);
@@ -86,7 +96,7 @@ export const OperationSidebar: React.FC<Props> = ({ orderKey, revNo }) => {
 
   return (
     <>
-      <Stack gap={0}>
+      <Stack gap="xs">
         {loading ? (
           <Stack align="center" py="md">
             <Loader size="sm" />
@@ -96,15 +106,37 @@ export const OperationSidebar: React.FC<Props> = ({ orderKey, revNo }) => {
             No operations yet.
           </Text>
         ) : (
-          data.items.map((op) => (
-            <NavLink
-              key={op.id}
-              component={Link}
-              to={`/orders/${orderKey}/revs/${revNo}/ops/${op.seqNo}`}
-              label={`${op.seqNo}. ${op.title}`}
-              active={currentSeqNo === String(op.seqNo)}
-            />
-          ))
+          data.items.map((op) => {
+            const url = `/orders/${orderKey}/revs/${revNo}/ops/${op.seqNo}`;
+            return (
+              <Card
+                key={op.id}
+                padding="sm"
+                radius="md"
+                withBorder
+                component="a"
+                href={`/erp${url}`}
+                onClick={(e: React.MouseEvent) => {
+                  if (e.button === 1 || e.ctrlKey || e.metaKey) return;
+                  e.preventDefault();
+                  void navigate(url);
+                }}
+                style={{
+                  cursor: "pointer",
+                  textDecoration: "none",
+                  color: "inherit",
+                  backgroundColor:
+                    currentSeqNo === String(op.seqNo)
+                      ? "var(--mantine-color-blue-9)"
+                      : undefined,
+                }}
+              >
+                <Text size="sm" fw={500}>
+                  {op.seqNo}. {op.title}
+                </Text>
+              </Card>
+            );
+          })
         )}
 
         {hasAction(data?._actions, "create") && (

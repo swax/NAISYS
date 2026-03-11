@@ -1,4 +1,4 @@
-import { Badge, Button, Group, Text } from "@mantine/core";
+import { Anchor, Badge, Button, Group, Text } from "@mantine/core";
 import type { OrderRevision } from "@naisys-erp/shared";
 import { useNavigate } from "react-router";
 
@@ -67,14 +67,18 @@ export const RevisionHeader: React.FC<Props> = ({
       }}
     >
       <Group gap="sm">
-        <Text
+        <Anchor
           size="sm"
           c="dimmed"
-          style={{ cursor: "pointer" }}
-          onClick={() => navigate(`/orders/${orderKey}`)}
+          href={`/erp/orders/${orderKey}`}
+          onClick={(e: React.MouseEvent) => {
+            if (e.button === 1 || e.ctrlKey || e.metaKey) return;
+            e.preventDefault();
+            navigate(`/orders/${orderKey}`);
+          }}
         >
           {orderKey}
-        </Text>
+        </Anchor>
         <Text size="sm" c="dimmed">
           /
         </Text>

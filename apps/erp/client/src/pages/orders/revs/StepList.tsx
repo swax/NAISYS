@@ -92,15 +92,20 @@ export const StepList: React.FC<StepListProps> = ({
 
   const handleSave = async (values: UpdateStep) => {
     const step = steps?.items.find((s) => s.id === editingStepId);
-    if (!step) return;
+    if (!step || !steps) return;
     setSaving(true);
     try {
-      await api.put<Step>(
+      const updated = await api.put<Step>(
         apiEndpoints.orderRevOpStep(orderKey, revNo, opSeqNo, step.seqNo),
         values,
       );
       setEditingStepId(null);
-      await fetchSteps();
+      setSteps({
+        ...steps,
+        items: steps.items
+          .map((s) => (s.id === updated.id ? updated : s))
+          .sort((a, b) => a.seqNo - b.seqNo),
+      });
     } catch (err) {
       showErrorNotification(err);
     } finally {
@@ -109,12 +114,16 @@ export const StepList: React.FC<StepListProps> = ({
   };
 
   const handleDelete = async (step: Step) => {
-    if (!confirm(`Delete step ${step.seqNo}?`)) return;
+    if (!steps || !confirm(`Delete step ${step.seqNo}?`)) return;
     try {
       await api.delete(
         apiEndpoints.orderRevOpStep(orderKey, revNo, opSeqNo, step.seqNo),
       );
-      await fetchSteps();
+      setSteps({
+        ...steps,
+        items: steps.items.filter((s) => s.id !== step.id),
+        total: steps.total - 1,
+      });
     } catch (err) {
       showErrorNotification(err);
     }
@@ -130,14 +139,20 @@ export const StepList: React.FC<StepListProps> = ({
   };
 
   const handleCreate = async (values: CreateStep) => {
+    if (!steps) return;
     setSaving(true);
     try {
-      await api.post<Step>(
+      const created = await api.post<Step>(
         apiEndpoints.orderRevOpSteps(orderKey, revNo, opSeqNo),
         values,
       );
       setAddingStep(false);
-      await fetchSteps();
+      setSteps({
+        ...steps,
+        items: [...steps.items, created].sort((a, b) => a.seqNo - b.seqNo),
+        total: steps.total + 1,
+        nextSeqNo: created.seqNo + 10,
+      });
     } catch (err) {
       showErrorNotification(err);
     } finally {
@@ -241,6 +256,7 @@ export const StepList: React.FC<StepListProps> = ({
                 revNo={revNo}
                 opSeqNo={opSeqNo}
                 stepSeqNo={step.seqNo}
+                initialData={step.fields}
               />
             </Card>
           ))}

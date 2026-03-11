@@ -37,12 +37,54 @@ const includeUsers = {
   updatedBy: { select: { username: true } },
 } as const;
 
-type StepFieldWithUsers = StepFieldModel & {
+export type StepFieldWithUsers = StepFieldModel & {
   createdBy: { username: string };
   updatedBy: { username: string };
 };
 
-function fieldBasePath(
+export function formatFieldListResponse(
+  orderKey: string,
+  revNo: number,
+  opSeqNo: number,
+  stepSeqNo: number,
+  revStatus: string,
+  user: ErpUser | undefined,
+  items: StepFieldWithUsers[],
+) {
+  const maxSeq = items.length > 0 ? items[items.length - 1].seqNo : 0;
+  const nextSeqNo = Math.ceil((maxSeq + 1) / 10) * 10;
+  const base = fieldBasePath(orderKey, revNo, opSeqNo, stepSeqNo);
+  return {
+    items: items.map((item) =>
+      formatFieldItem(
+        orderKey,
+        revNo,
+        opSeqNo,
+        stepSeqNo,
+        revStatus,
+        user,
+        item,
+      ),
+    ),
+    total: items.length,
+    nextSeqNo,
+    _links: [selfLink(base)],
+    _actions:
+      hasPermission(user, "manage_orders") && revStatus === "draft"
+        ? [
+            {
+              rel: "create" as const,
+              href: `${API_PREFIX}${base}`,
+              method: "POST" as const,
+              title: "Add Field",
+              schema: `${API_PREFIX}/schemas/CreateStepField`,
+            },
+          ]
+        : [],
+  };
+}
+
+export function fieldBasePath(
   orderKey: string,
   revNo: number,
   opSeqNo: number,
@@ -51,7 +93,7 @@ function fieldBasePath(
   return `/orders/${orderKey}/revs/${revNo}/ops/${opSeqNo}/steps/${stepSeqNo}/fields`;
 }
 
-function fieldItemLinks(
+export function fieldItemLinks(
   orderKey: string,
   revNo: number,
   opSeqNo: number,
@@ -75,7 +117,7 @@ function fieldItemLinks(
   ];
 }
 
-function fieldItemActions(
+export function fieldItemActions(
   orderKey: string,
   revNo: number,
   opSeqNo: number,
@@ -104,7 +146,7 @@ function fieldItemActions(
   ];
 }
 
-function formatItem(
+export function formatFieldItem(
   orderKey: string,
   revNo: number,
   opSeqNo: number,
@@ -199,7 +241,7 @@ export default function stepFieldRoutes(fastify: FastifyInstance) {
       const base = fieldBasePath(orderKey, revNo, seqNo, stepSeqNo);
       return {
         items: items.map((item) =>
-          formatItem(
+          formatFieldItem(
             orderKey,
             revNo,
             seqNo,
@@ -285,7 +327,7 @@ export default function stepFieldRoutes(fastify: FastifyInstance) {
       });
 
       reply.status(201);
-      return formatItem(
+      return formatFieldItem(
         orderKey,
         revNo,
         seqNo,
@@ -330,7 +372,7 @@ export default function stepFieldRoutes(fastify: FastifyInstance) {
         );
       }
 
-      return formatItem(
+      return formatFieldItem(
         orderKey,
         revNo,
         seqNo,
@@ -404,7 +446,7 @@ export default function stepFieldRoutes(fastify: FastifyInstance) {
         include: includeUsers,
       });
 
-      return formatItem(
+      return formatFieldItem(
         orderKey,
         revNo,
         seqNo,

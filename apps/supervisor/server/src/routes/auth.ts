@@ -35,6 +35,12 @@ export default function authRoutes(
   app.post(
     "/auth/login",
     {
+      config: {
+        rateLimit: {
+          max: 5,
+          timeWindow: "1 minute",
+        },
+      },
       schema: {
         description: "Authenticate with username and password",
         tags: ["Authentication"],

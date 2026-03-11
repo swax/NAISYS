@@ -16,6 +16,10 @@ import erpDb from "../erpDb.js";
 import { sendError } from "../error-handler.js";
 import type { StepModel } from "../generated/prisma/models/Step.js";
 import { API_PREFIX, schemaLink, selfLink } from "../hateoas.js";
+import {
+  formatFieldListResponse,
+  type StepFieldWithUsers,
+} from "./step-fields.js";
 
 const ParamsSchema = z.object({
   orderKey: z.string(),
@@ -35,9 +39,21 @@ const includeUsers = {
   updatedBy: { select: { username: true } },
 } as const;
 
+const includeUsersAndFields = {
+  ...includeUsers,
+  fields: {
+    include: includeUsers,
+    orderBy: { seqNo: "asc" as const },
+  },
+} as const;
+
 type StepWithUsers = StepModel & {
   createdBy: { username: string };
   updatedBy: { username: string };
+};
+
+type StepWithUsersAndFields = StepWithUsers & {
+  fields: StepFieldWithUsers[];
 };
 
 function stepBasePath(orderKey: string, revNo: number, opSeqNo: number) {
@@ -101,7 +117,7 @@ function formatItem(
   opSeqNo: number,
   revStatus: string,
   user: ErpUser | undefined,
-  item: StepWithUsers,
+  item: StepWithUsersAndFields,
 ) {
   return {
     id: item.id,
@@ -112,6 +128,15 @@ function formatItem(
     createdBy: item.createdBy.username,
     updatedAt: item.updatedAt.toISOString(),
     updatedBy: item.updatedBy.username,
+    fields: formatFieldListResponse(
+      orderKey,
+      revNo,
+      opSeqNo,
+      item.seqNo,
+      revStatus,
+      user,
+      item.fields,
+    ),
     _links: stepItemLinks(orderKey, revNo, opSeqNo, item.seqNo),
     _actions: stepItemActions(
       orderKey,
@@ -169,7 +194,7 @@ export default function stepRoutes(fastify: FastifyInstance) {
 
       const items = await erpDb.step.findMany({
         where: { operationId: resolved.operation.id },
-        include: includeUsers,
+        include: includeUsersAndFields,
         orderBy: { seqNo: "asc" },
       });
 
@@ -180,7 +205,14 @@ export default function stepRoutes(fastify: FastifyInstance) {
       const base = stepBasePath(orderKey, revNo, seqNo);
       return {
         items: items.map((item) =>
-          formatItem(orderKey, revNo, seqNo, resolved.rev.status, user, item),
+          formatItem(
+            orderKey,
+            revNo,
+            seqNo,
+            resolved.rev.status,
+            user,
+            item,
+          ),
         ),
         total: items.length,
         nextSeqNo,
@@ -251,7 +283,7 @@ export default function stepRoutes(fastify: FastifyInstance) {
             createdById: userId,
             updatedById: userId,
           },
-          include: includeUsers,
+          include: includeUsersAndFields,
         });
       });
 
@@ -288,7 +320,7 @@ export default function stepRoutes(fastify: FastifyInstance) {
 
       const item = await erpDb.step.findFirst({
         where: { operationId: resolved.operation.id, seqNo: stepSeqNo },
-        include: includeUsers,
+        include: includeUsersAndFields,
       });
       if (!item) {
         return sendError(
@@ -361,7 +393,7 @@ export default function stepRoutes(fastify: FastifyInstance) {
           ...(newSeqNo !== undefined ? { seqNo: newSeqNo } : {}),
           updatedById: userId,
         },
-        include: includeUsers,
+        include: includeUsersAndFields,
       });
 
       return formatItem(
