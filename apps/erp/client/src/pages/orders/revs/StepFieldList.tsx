@@ -1,0 +1,305 @@
+import {
+  Badge,
+  Button,
+  Checkbox,
+  Group,
+  Loader,
+  NumberInput,
+  Select,
+  Stack,
+  Text,
+  TextInput,
+} from "@mantine/core";
+import { useForm } from "@mantine/form";
+import type {
+  CreateStepField,
+  StepField,
+  StepFieldListResponse,
+  UpdateStepField,
+} from "@naisys-erp/shared";
+import {
+  CreateStepFieldSchema,
+  UpdateStepFieldSchema,
+} from "@naisys-erp/shared";
+import { useCallback, useEffect, useState } from "react";
+
+import { MetadataTooltip } from "../../../components/MetadataTooltip";
+import { api, apiEndpoints, showErrorNotification } from "../../../lib/api";
+import { hasAction } from "../../../lib/hateoas";
+import { zodResolver } from "../../../lib/zod-resolver";
+
+interface StepFieldListProps {
+  orderKey: string;
+  revNo: string;
+  opSeqNo: string;
+  stepSeqNo: number;
+}
+
+export const StepFieldList: React.FC<StepFieldListProps> = ({
+  orderKey,
+  revNo,
+  opSeqNo,
+  stepSeqNo,
+}) => {
+  const [fields, setFields] = useState<StepFieldListResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [editingFieldId, setEditingFieldId] = useState<number | null>(null);
+  const [addingField, setAddingField] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  const editForm = useForm<UpdateStepField>({
+    initialValues: { seqNo: 10, label: "", type: "string", required: false },
+    validate: zodResolver(UpdateStepFieldSchema),
+  });
+
+  const createForm = useForm<CreateStepField>({
+    initialValues: { seqNo: 10, label: "", type: "string", required: false },
+    validate: zodResolver(CreateStepFieldSchema),
+  });
+
+  const fetchFields = useCallback(async () => {
+    setLoading(true);
+    try {
+      const result = await api.get<StepFieldListResponse>(
+        apiEndpoints.orderRevOpStepFields(orderKey, revNo, opSeqNo, stepSeqNo),
+      );
+      setFields(result);
+    } catch (err) {
+      showErrorNotification(err);
+    } finally {
+      setLoading(false);
+    }
+  }, [orderKey, revNo, opSeqNo, stepSeqNo]);
+
+  useEffect(() => {
+    void fetchFields();
+  }, [fetchFields]);
+
+  const startEditing = (field: StepField) => {
+    editForm.setValues({
+      seqNo: field.seqNo,
+      label: field.label,
+      type: field.type as "string" | "number",
+      required: field.required,
+    });
+    setEditingFieldId(field.id);
+    setAddingField(false);
+  };
+
+  const handleSave = async (values: UpdateStepField) => {
+    const field = fields?.items.find((f) => f.id === editingFieldId);
+    if (!field) return;
+    setSaving(true);
+    try {
+      await api.put<StepField>(
+        apiEndpoints.orderRevOpStepField(
+          orderKey,
+          revNo,
+          opSeqNo,
+          stepSeqNo,
+          field.seqNo,
+        ),
+        values,
+      );
+      setEditingFieldId(null);
+      await fetchFields();
+    } catch (err) {
+      showErrorNotification(err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async (field: StepField) => {
+    if (!confirm(`Delete field "${field.label}"?`)) return;
+    try {
+      await api.delete(
+        apiEndpoints.orderRevOpStepField(
+          orderKey,
+          revNo,
+          opSeqNo,
+          stepSeqNo,
+          field.seqNo,
+        ),
+      );
+      await fetchFields();
+    } catch (err) {
+      showErrorNotification(err);
+    }
+  };
+
+  const startAdding = () => {
+    createForm.setValues({
+      seqNo: fields?.nextSeqNo ?? 10,
+      label: "",
+      type: "string",
+      required: false,
+    });
+    setAddingField(true);
+    setEditingFieldId(null);
+  };
+
+  const handleCreate = async (values: CreateStepField) => {
+    setSaving(true);
+    try {
+      await api.post<StepField>(
+        apiEndpoints.orderRevOpStepFields(orderKey, revNo, opSeqNo, stepSeqNo),
+        values,
+      );
+      setAddingField(false);
+      await fetchFields();
+    } catch (err) {
+      showErrorNotification(err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const fieldFormFields = (
+    form: ReturnType<typeof useForm<CreateStepField | UpdateStepField>>,
+  ) => (
+    <>
+      <NumberInput
+        label="Sequence #"
+        min={1}
+        step={10}
+        {...form.getInputProps("seqNo")}
+      />
+      <TextInput
+        label="Label"
+        placeholder="Field label..."
+        {...form.getInputProps("label")}
+      />
+      <Select
+        label="Type"
+        data={[
+          { value: "string", label: "String" },
+          { value: "number", label: "Number" },
+          { value: "string[]", label: "String List" },
+        ]}
+        {...form.getInputProps("type")}
+      />
+      <Checkbox
+        label="Required"
+        {...form.getInputProps("required", { type: "checkbox" })}
+      />
+    </>
+  );
+
+  if (loading) {
+    return (
+      <Stack align="center" py="xs">
+        <Loader size="xs" />
+      </Stack>
+    );
+  }
+
+  return (
+    <Stack gap="xs" mt="xs">
+      <Group justify="space-between">
+        <Text size="xs" fw={600} c="dimmed">
+          Data Fields
+        </Text>
+        {hasAction(fields?._actions, "create") && !addingField && (
+          <Button size="compact-xs" variant="subtle" onClick={startAdding}>
+            Add Field
+          </Button>
+        )}
+      </Group>
+
+      {fields?.items.map((field) => (
+        <div key={field.id}>
+          {editingFieldId === field.id ? (
+            <form onSubmit={editForm.onSubmit(handleSave)}>
+              <Stack gap="xs">
+                {fieldFormFields(editForm as any)}
+                <Group justify="flex-end">
+                  <Button
+                    variant="subtle"
+                    size="compact-xs"
+                    onClick={() => setEditingFieldId(null)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button type="submit" size="compact-xs" loading={saving}>
+                    Save
+                  </Button>
+                </Group>
+              </Stack>
+            </form>
+          ) : (
+            <Group justify="space-between" wrap="nowrap">
+              <Group gap="xs">
+                <Text size="xs">{field.seqNo}.</Text>
+                <Text size="xs" fw={500}>
+                  {field.label}
+                </Text>
+                <Badge size="xs" variant="light">
+                  {field.type}
+                </Badge>
+                {field.required && (
+                  <Badge size="xs" variant="light" color="red">
+                    required
+                  </Badge>
+                )}
+              </Group>
+              <Group gap={4} wrap="nowrap">
+                <MetadataTooltip
+                  createdBy={field.createdBy}
+                  createdAt={field.createdAt}
+                  updatedBy={field.updatedBy}
+                  updatedAt={field.updatedAt}
+                />
+                {hasAction(field._actions, "update") && (
+                  <Button
+                    size="compact-xs"
+                    variant="subtle"
+                    onClick={() => startEditing(field)}
+                  >
+                    Edit
+                  </Button>
+                )}
+                {hasAction(field._actions, "delete") && (
+                  <Button
+                    size="compact-xs"
+                    color="red"
+                    variant="subtle"
+                    onClick={() => handleDelete(field)}
+                  >
+                    Delete
+                  </Button>
+                )}
+              </Group>
+            </Group>
+          )}
+        </div>
+      ))}
+
+      {fields && fields.items.length === 0 && !addingField && (
+        <Text size="xs" c="dimmed">
+          No data fields.
+        </Text>
+      )}
+
+      {addingField && (
+        <form onSubmit={createForm.onSubmit(handleCreate)}>
+          <Stack gap="xs">
+            {fieldFormFields(createForm as any)}
+            <Group justify="flex-end">
+              <Button
+                variant="subtle"
+                size="compact-xs"
+                onClick={() => setAddingField(false)}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" size="compact-xs" loading={saving}>
+                Add
+              </Button>
+            </Group>
+          </Stack>
+        </form>
+      )}
+    </Stack>
+  );
+};

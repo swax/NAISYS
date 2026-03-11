@@ -94,6 +94,20 @@ export const apiEndpoints = {
     seqNo: number | string,
     stepSeqNo: number | string,
   ) => `orders/${key}/revs/${revNo}/ops/${seqNo}/steps/${stepSeqNo}`,
+  orderRevOpStepFields: (
+    key: string,
+    revNo: number | string,
+    seqNo: number | string,
+    stepSeqNo: number | string,
+  ) => `orders/${key}/revs/${revNo}/ops/${seqNo}/steps/${stepSeqNo}/fields`,
+  orderRevOpStepField: (
+    key: string,
+    revNo: number | string,
+    seqNo: number | string,
+    stepSeqNo: number | string,
+    fieldSeqNo: number | string,
+  ) =>
+    `orders/${key}/revs/${revNo}/ops/${seqNo}/steps/${stepSeqNo}/fields/${fieldSeqNo}`,
   orderRuns: (key: string) => `orders/${key}/runs`,
   orderRun: (key: string, id: number | string) => `orders/${key}/runs/${id}`,
   orderRunStart: (key: string, id: number | string) =>
