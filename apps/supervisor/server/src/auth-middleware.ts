@@ -1,8 +1,8 @@
 import { AuthCache } from "@naisys/common";
-import { hashToken,SESSION_COOKIE_NAME } from "@naisys/common-node";
+import { hashToken, SESSION_COOKIE_NAME } from "@naisys/common-node";
 import { findAgentByApiKey } from "@naisys/hub-database";
-import { findSession, findUserByApiKey } from "@naisys/supervisor-database";
 import type { Permission } from "@naisys/supervisor-database";
+import { findSession, findUserByApiKey } from "@naisys/supervisor-database";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 
 import {

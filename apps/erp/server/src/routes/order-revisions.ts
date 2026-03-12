@@ -5,7 +5,7 @@ import {
   OrderRevisionListQuerySchema,
   OrderRevisionListResponseSchema,
   OrderRevisionSchema,
-  type RevisionStatus,
+  RevisionStatus,
   UpdateOrderRevisionSchema,
 } from "@naisys-erp/shared";
 import { FastifyInstance } from "fastify";
@@ -58,7 +58,7 @@ function revisionItemActions(
   const href = `${API_PREFIX}/${parentResource}/${orderKey}/revs/${revNo}`;
   const actions: HateoasAction[] = [];
 
-  if (status === "draft") {
+  if (status === RevisionStatus.draft) {
     actions.push(
       {
         rel: "update",
@@ -80,7 +80,7 @@ function revisionItemActions(
         title: "Delete",
       },
     );
-  } else if (status === "approved") {
+  } else if (status === RevisionStatus.approved) {
     if (hasPermission(user, "manage_runs")) {
       actions.push({
         rel: "cut-order",
@@ -132,7 +132,7 @@ function formatItem(
     id: item.id,
     orderId: item.orderId,
     revNo: item.revNo,
-    status: item.status as RevisionStatus,
+    status: item.status,
     notes: item.notes,
     changeSummary: item.changeSummary,
     createdAt: item.createdAt.toISOString(),
@@ -423,7 +423,7 @@ export default function orderRevisionRoutes(fastify: FastifyInstance) {
         );
       }
 
-      if (existing.status !== "draft") {
+      if (existing.status !== RevisionStatus.draft) {
         return sendError(
           reply,
           409,
@@ -481,7 +481,7 @@ export default function orderRevisionRoutes(fastify: FastifyInstance) {
         );
       }
 
-      if (existing.status !== "draft") {
+      if (existing.status !== RevisionStatus.draft) {
         return sendError(
           reply,
           409,
@@ -542,7 +542,7 @@ export default function orderRevisionRoutes(fastify: FastifyInstance) {
         );
       }
 
-      if (existing.status !== "draft") {
+      if (existing.status !== RevisionStatus.draft) {
         return sendError(
           reply,
           409,
@@ -555,7 +555,7 @@ export default function orderRevisionRoutes(fastify: FastifyInstance) {
       const item = await erpDb.$transaction(async (erpTx) => {
         const updated = await erpTx.orderRevision.update({
           where: { id: existing.id },
-          data: { status: "approved", updatedById: userId },
+          data: { status: RevisionStatus.approved, updatedById: userId },
           include: includeUsers,
         });
         await writeAuditEntry(
@@ -564,8 +564,8 @@ export default function orderRevisionRoutes(fastify: FastifyInstance) {
           existing.id,
           "approve",
           "status",
-          "draft",
-          "approved",
+          RevisionStatus.draft,
+          RevisionStatus.approved,
           userId,
         );
         return updated;
@@ -610,7 +610,7 @@ export default function orderRevisionRoutes(fastify: FastifyInstance) {
         );
       }
 
-      if (existing.status !== "approved") {
+      if (existing.status !== RevisionStatus.approved) {
         return sendError(
           reply,
           409,
@@ -623,7 +623,7 @@ export default function orderRevisionRoutes(fastify: FastifyInstance) {
       const item = await erpDb.$transaction(async (erpTx) => {
         const updated = await erpTx.orderRevision.update({
           where: { id: existing.id },
-          data: { status: "obsolete", updatedById: userId },
+          data: { status: RevisionStatus.obsolete, updatedById: userId },
           include: includeUsers,
         });
         await writeAuditEntry(
@@ -632,8 +632,8 @@ export default function orderRevisionRoutes(fastify: FastifyInstance) {
           existing.id,
           "obsolete",
           "status",
-          "approved",
-          "obsolete",
+          RevisionStatus.approved,
+          RevisionStatus.obsolete,
           userId,
         );
         return updated;

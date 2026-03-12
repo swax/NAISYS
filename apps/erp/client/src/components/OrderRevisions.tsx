@@ -17,7 +17,7 @@ import type {
   OrderRevision,
   OrderRevisionListResponse,
 } from "@naisys-erp/shared";
-import { CreateOrderRevisionSchema } from "@naisys-erp/shared";
+import { CreateOrderRevisionSchema, RevisionStatus } from "@naisys-erp/shared";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 
@@ -26,9 +26,9 @@ import { hasAction } from "../lib/hateoas";
 import { zodResolver } from "../lib/zod-resolver";
 
 const STATUS_COLORS: Record<string, string> = {
-  draft: "blue",
-  approved: "green",
-  obsolete: "gray",
+  [RevisionStatus.draft]: "blue",
+  [RevisionStatus.approved]: "green",
+  [RevisionStatus.obsolete]: "gray",
 };
 
 const PAGE_SIZE = 10;

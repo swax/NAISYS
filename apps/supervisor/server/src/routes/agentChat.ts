@@ -119,12 +119,7 @@ export default function agentChatRoutes(
         const { username, participants } = request.params;
         const { updatedSince, page, count } = request.query;
 
-        const data = await getMessages(
-          participants,
-          updatedSince,
-          page,
-          count,
-        );
+        const data = await getMessages(participants, updatedSince, page, count);
 
         const canSend = hasPermission(
           request.supervisorUser,

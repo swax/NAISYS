@@ -5,6 +5,7 @@ import {
   OrderListQuerySchema,
   OrderListResponseSchema,
   OrderSchema,
+  OrderStatus,
   UpdateOrderSchema,
 } from "@naisys-erp/shared";
 import { FastifyInstance } from "fastify";
@@ -54,13 +55,13 @@ function itemActions(
     },
   ];
 
-  if (status === "active") {
+  if (status === OrderStatus.active) {
     actions.push({
       rel: "archive",
       href,
       method: "PUT",
       title: "Archive",
-      body: { status: "archived" },
+      body: { status: OrderStatus.archived },
     });
   } else {
     actions.push({
@@ -68,7 +69,7 @@ function itemActions(
       href,
       method: "PUT",
       title: "Activate",
-      body: { status: "active" },
+      body: { status: OrderStatus.active },
     });
   }
 

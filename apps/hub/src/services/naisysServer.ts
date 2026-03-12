@@ -1,4 +1,5 @@
 import type {
+  HostType,
   HubFireAndForgetEventName,
   HubFireAndForgetEvents,
   HubPushEventName,
@@ -179,7 +180,9 @@ export function createNaisysServer(
     }
 
     try {
-      const hostType = typeof rawHostType === "string" ? rawHostType : "naisys";
+      const hostType = (
+        typeof rawHostType === "string" ? rawHostType : "naisys"
+      ) as HostType;
       const hostId = await hostRegistrar.registerHost(
         hostName,
         hostType,

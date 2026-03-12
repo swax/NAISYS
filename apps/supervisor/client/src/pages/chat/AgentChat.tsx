@@ -60,7 +60,7 @@ export const AgentChat: React.FC = () => {
         .split(",")
         .filter((n) => n !== username)
         .join(",");
-      navigate(`/agents/${username}/chat/${others}`, { replace: true });
+      void navigate(`/agents/${username}/chat/${others}`, { replace: true });
     }
   }, [conversations, participantsParam, username, navigate]);
 
@@ -119,7 +119,7 @@ export const AgentChat: React.FC = () => {
         .sort();
       const others = allNames.filter((n) => n !== username).join(",");
 
-      navigate(`/agents/${username}/chat/${others}`);
+      void navigate(`/agents/${username}/chat/${others}`);
       closeDrawer();
     },
     [agentId, agents, username, closeDrawer, navigate],

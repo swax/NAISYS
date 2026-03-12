@@ -592,10 +592,7 @@ export default function userRoutes(
         return { success: false, message: "User not found" };
       }
 
-      await userService.revokePermission(
-        targetUser.id,
-        permission,
-      );
+      await userService.revokePermission(targetUser.id, permission);
       authCache.clear();
       const user = await userService.getUserById(targetUser.id);
       return formatUser(

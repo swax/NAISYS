@@ -4,7 +4,7 @@ import { CostTracker } from "../costTracker.js";
 
 export type QuerySources =
   | "console"
-  | "write-protection"
+  | "write_protection"
   | "compact"
   | "lynx"
   | "look"

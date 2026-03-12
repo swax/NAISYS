@@ -59,7 +59,7 @@ Reply with 'allow' to allow the command, otherwise you can give a reason for you
           content: command,
         },
       ],
-      "write-protection",
+      "write_protection",
     );
 
     const commandAllowed = queryResult.responses[0]

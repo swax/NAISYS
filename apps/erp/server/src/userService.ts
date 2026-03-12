@@ -232,7 +232,10 @@ export async function grantPermission(
   });
 }
 
-export async function revokePermission(userId: number, permission: ErpPermission) {
+export async function revokePermission(
+  userId: number,
+  permission: ErpPermission,
+) {
   return erpDb.userPermission.deleteMany({
     where: { userId, permission },
   });

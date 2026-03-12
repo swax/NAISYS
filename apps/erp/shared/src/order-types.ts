@@ -2,13 +2,17 @@ import { z } from "zod/v4";
 
 import { HateoasActionSchema, HateoasLinkSchema } from "./hateoas-types.js";
 
+export const OrderStatusEnum = z.enum(["active", "archived"]);
+export type OrderStatus = z.infer<typeof OrderStatusEnum>;
+export const OrderStatus = OrderStatusEnum.enum;
+
 // Full order response shape
 export const OrderSchema = z.object({
   id: z.number(),
   key: z.string(),
   name: z.string(),
   description: z.string(),
-  status: z.string(),
+  status: OrderStatusEnum,
   createdBy: z.string(),
   createdAt: z.iso.datetime(),
   updatedBy: z.string(),
@@ -42,7 +46,7 @@ export const UpdateOrderSchema = z
   .object({
     name: z.string().min(1).max(200).optional(),
     description: z.string().max(2000).optional(),
-    status: z.enum(["active", "archived"]).optional(),
+    status: OrderStatusEnum.optional(),
   })
   .strict();
 

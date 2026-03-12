@@ -119,7 +119,7 @@ export const AgentMail: React.FC = () => {
     if (!hasSelection && conversations.length > 0 && username) {
       const first = conversations[0];
       if (groupBySubject) {
-        navigate(
+        void navigate(
           `${basePath}/about/${encodeURIComponent(first.normalizedSubject)}`,
           { replace: true },
         );
@@ -128,7 +128,7 @@ export const AgentMail: React.FC = () => {
           .filter((n) => n !== agentName)
           .sort()
           .join(",");
-        navigate(`${basePath}/with/${others}`, { replace: true });
+        void navigate(`${basePath}/with/${others}`, { replace: true });
       }
     }
   }, [
@@ -153,7 +153,7 @@ export const AgentMail: React.FC = () => {
   const handleToggleGroupBySubject = useCallback(() => {
     setGroupBySubject((v) => !v);
     // Navigate to base mail URL; auto-select will pick the first conversation in new mode
-    navigate(basePath, { replace: true });
+    void navigate(basePath, { replace: true });
   }, [basePath, navigate]);
 
   const handleReply = useCallback(() => {

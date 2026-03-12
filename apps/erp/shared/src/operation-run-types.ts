@@ -10,6 +10,7 @@ export const OperationRunStatusEnum = z.enum([
   "failed",
 ]);
 export type OperationRunStatus = z.infer<typeof OperationRunStatusEnum>;
+export const OperationRunStatus = OperationRunStatusEnum.enum;
 
 // Full operation run response shape
 export const OperationRunSchema = z.object({

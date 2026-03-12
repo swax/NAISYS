@@ -95,8 +95,11 @@ export const SaveModelResponseSchema = z.object({
 
 export type SaveModelResponse = z.infer<typeof SaveModelResponseSchema>;
 
+export const ModelTypeEnum = z.enum(["llm", "image"]);
+export type ModelType = z.infer<typeof ModelTypeEnum>;
+
 export const DeleteModelParamsSchema = z.object({
-  type: z.enum(["llm", "image"]),
+  type: ModelTypeEnum,
   key: z.string(),
 });
 

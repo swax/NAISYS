@@ -10,7 +10,7 @@
       },
       "problemMatcher": "$tsc",
       "label": "Build All",
-      "detail": "Build all projects with Turbo",
+      "detail": "Build all projects with Turbo"
     }
   ]
 }

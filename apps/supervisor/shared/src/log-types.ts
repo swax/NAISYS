@@ -6,14 +6,12 @@ export const LogSourceSchema = z.enum([
   "endPrompt",
   "console",
   "llm",
-  "",
 ]);
 export const LogTypeSchema = z.enum([
   "comment",
   "error",
   "system",
   "workspace",
-  "",
 ]);
 export const LogRoleSchema = z.enum(["NAISYS", "LLM"]);
 
@@ -27,8 +25,8 @@ export const LogEntrySchema = z.object({
   id: z.number(),
   username: z.string(),
   role: LogRoleSchema,
-  source: LogSourceSchema,
-  type: LogTypeSchema,
+  source: LogSourceSchema.nullable(),
+  type: LogTypeSchema.nullable(),
   message: z.string(),
   createdAt: z.string(),
   attachment: LogAttachmentSchema.optional(),

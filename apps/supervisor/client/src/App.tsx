@@ -4,6 +4,7 @@ import "@mantine/notifications/styles.css";
 import { AppShell, Box, MantineProvider } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import { Notifications } from "@mantine/notifications";
+import type { Permission } from "@naisys-supervisor/shared";
 import { QueryClientProvider } from "@tanstack/react-query";
 import React from "react";
 import {
@@ -45,8 +46,6 @@ import { AgentRuns } from "./pages/runs/AgentRuns";
 import { UserDetail } from "./pages/users/UserDetail";
 import { UserList } from "./pages/users/UserList";
 import { VariablesPage } from "./pages/variables/VariablesPage";
-
-import type { Permission } from "@naisys-supervisor/shared";
 
 export interface AppOutletContext {
   permissions: Permission[];
@@ -149,10 +148,7 @@ const router = createBrowserRouter(
         <Route path=":username/mail/with/*" element={<AgentMail />} />
         <Route path=":username/mail/about/*" element={<AgentMail />} />
         <Route path=":username/chat" element={<AgentChat />} />
-        <Route
-          path=":username/chat/:participants"
-          element={<AgentChat />}
-        />
+        <Route path=":username/chat/:participants" element={<AgentChat />} />
         <Route path=":username/*" element={<NotFoundPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>

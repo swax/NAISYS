@@ -83,8 +83,7 @@ export const getRunIdLabel = (run: RunSession) => {
 export const getRowKey = (run: RunSession) =>
   `${run.userId}-${run.runId}-${run.sessionId}`;
 
-export const getRunKey = (run: RunSession) =>
-  `${run.runId}-${run.sessionId}`;
+export const getRunKey = (run: RunSession) => `${run.runId}-${run.sessionId}`;
 
 export { formatCost, formatDuration, formatPrimaryTime };
 

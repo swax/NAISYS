@@ -1,14 +1,15 @@
 import { Anchor, Badge, Button, Group, Text } from "@mantine/core";
 import type { OrderRevision } from "@naisys-erp/shared";
+import { RevisionStatus } from "@naisys-erp/shared";
 import { useNavigate } from "react-router";
 
 import { api, apiEndpoints, showErrorNotification } from "../../../lib/api";
 import { hasAction } from "../../../lib/hateoas";
 
 const STATUS_COLORS: Record<string, string> = {
-  draft: "blue",
-  approved: "green",
-  obsolete: "gray",
+  [RevisionStatus.draft]: "blue",
+  [RevisionStatus.approved]: "green",
+  [RevisionStatus.obsolete]: "gray",
 };
 
 interface Props {
@@ -74,7 +75,7 @@ export const RevisionHeader: React.FC<Props> = ({
           onClick={(e: React.MouseEvent) => {
             if (e.button === 1 || e.ctrlKey || e.metaKey) return;
             e.preventDefault();
-            navigate(`/orders/${orderKey}`);
+            void navigate(`/orders/${orderKey}`);
           }}
         >
           {orderKey}

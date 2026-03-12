@@ -9,6 +9,7 @@ export const OrderRunStatusEnum = z.enum([
   "cancelled",
 ]);
 export type OrderRunStatus = z.infer<typeof OrderRunStatusEnum>;
+export const OrderRunStatus = OrderRunStatusEnum.enum;
 
 export const OrderRunPriorityEnum = z.enum([
   "low",
@@ -17,6 +18,7 @@ export const OrderRunPriorityEnum = z.enum([
   "critical",
 ]);
 export type OrderRunPriority = z.infer<typeof OrderRunPriorityEnum>;
+export const OrderRunPriority = OrderRunPriorityEnum.enum;
 
 // Full order run response shape
 export const OrderRunSchema = z.object({

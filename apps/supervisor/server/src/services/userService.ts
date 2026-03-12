@@ -138,7 +138,9 @@ export async function revokePermission(userId: number, permission: Permission) {
   });
 }
 
-export async function getUserPermissions(userId: number): Promise<Permission[]> {
+export async function getUserPermissions(
+  userId: number,
+): Promise<Permission[]> {
   const perms = await supervisorDb.userPermission.findMany({
     where: { userId },
     select: { permission: true },

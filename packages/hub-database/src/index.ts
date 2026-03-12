@@ -15,5 +15,7 @@ export {
 // Re-export Prisma Client and all generated types
 export * from "./generated/prisma/client.js";
 export { PrismaClient } from "./generated/prisma/client.js";
+// Re-export Prisma enums
+export * from "./generated/prisma/enums.js";
 // Re-export Prisma client factory
 export { createPrismaClient } from "./prismaClient.js";

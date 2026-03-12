@@ -3,6 +3,7 @@ import {
   HubEvents,
   type MailPush,
   MailReceivedPush,
+  type MessageKind,
 } from "@naisys/hub-protocol";
 
 import { NaisysServer } from "../services/naisysServer.js";
@@ -20,7 +21,7 @@ export function createHubSendMailService(
     recipientUserIds: number[];
     subject: string;
     body: string;
-    kind: string;
+    kind: MessageKind;
     hostId?: number;
     attachmentIds?: number[];
   }) {
@@ -116,7 +117,7 @@ export function createHubSendMailService(
     if (targetHostIds.size > 0) {
       const payload: MailReceivedPush = {
         recipientUserIds: params.recipientUserIds,
-        kind: params.kind as MailReceivedPush["kind"],
+        kind: params.kind,
       };
       for (const targetHostId of targetHostIds) {
         naisysServer.sendMessage(
@@ -145,7 +146,7 @@ export function createHubSendMailService(
     const mailPush: MailPush = {
       recipientUserIds: params.recipientUserIds,
       fromUserId: params.fromUserId,
-      kind: params.kind as MailPush["kind"],
+      kind: params.kind,
       messageId: message.id,
       subject: params.subject,
       body: params.body,

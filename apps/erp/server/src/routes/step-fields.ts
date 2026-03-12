@@ -2,8 +2,10 @@ import type { HateoasAction, HateoasLink } from "@naisys/common";
 import {
   CreateStepFieldSchema,
   ErrorResponseSchema,
+  RevisionStatus,
   StepFieldListResponseSchema,
   StepFieldSchema,
+  StepFieldType,
   UpdateStepFieldSchema,
 } from "@naisys-erp/shared";
 import { FastifyInstance } from "fastify";
@@ -70,7 +72,7 @@ export function formatFieldListResponse(
     nextSeqNo,
     _links: [selfLink(base)],
     _actions:
-      hasPermission(user, "manage_orders") && revStatus === "draft"
+      hasPermission(user, "manage_orders") && revStatus === RevisionStatus.draft
         ? [
             {
               rel: "create" as const,
@@ -126,7 +128,11 @@ export function fieldItemActions(
   revStatus: string,
   user: ErpUser | undefined,
 ): HateoasAction[] {
-  if (!hasPermission(user, "manage_orders") || revStatus !== "draft") return [];
+  if (
+    !hasPermission(user, "manage_orders") ||
+    revStatus !== RevisionStatus.draft
+  )
+    return [];
 
   const href = `${API_PREFIX}${fieldBasePath(orderKey, revNo, opSeqNo, stepSeqNo)}/${fieldSeqNo}`;
   return [
@@ -256,7 +262,7 @@ export default function stepFieldRoutes(fastify: FastifyInstance) {
         _links: [selfLink(base)],
         _actions:
           hasPermission(user, "manage_orders") &&
-          resolved.rev.status === "draft"
+          resolved.rev.status === RevisionStatus.draft
             ? [
                 {
                   rel: "create",
@@ -294,7 +300,7 @@ export default function stepFieldRoutes(fastify: FastifyInstance) {
         return sendError(reply, 404, "Not Found", "Step not found");
       }
 
-      if (resolved.rev.status !== "draft") {
+      if (resolved.rev.status !== RevisionStatus.draft) {
         return sendError(
           reply,
           409,
@@ -317,7 +323,7 @@ export default function stepFieldRoutes(fastify: FastifyInstance) {
             stepId: resolved.step.id,
             seqNo: nextSeqNo,
             label,
-            type: type ?? "string",
+            type: type ?? StepFieldType.string,
             required: required ?? false,
             createdById: userId,
             updatedById: userId,
@@ -351,8 +357,7 @@ export default function stepFieldRoutes(fastify: FastifyInstance) {
       },
     },
     handler: async (request, reply) => {
-      const { orderKey, revNo, seqNo, stepSeqNo, fieldSeqNo } =
-        request.params;
+      const { orderKey, revNo, seqNo, stepSeqNo, fieldSeqNo } = request.params;
 
       const resolved = await resolveStep(orderKey, revNo, seqNo, stepSeqNo);
       if (!resolved) {
@@ -398,14 +403,8 @@ export default function stepFieldRoutes(fastify: FastifyInstance) {
       },
     },
     handler: async (request, reply) => {
-      const { orderKey, revNo, seqNo, stepSeqNo, fieldSeqNo } =
-        request.params;
-      const {
-        label,
-        type,
-        required,
-        seqNo: newSeqNo,
-      } = request.body;
+      const { orderKey, revNo, seqNo, stepSeqNo, fieldSeqNo } = request.params;
+      const { label, type, required, seqNo: newSeqNo } = request.body;
       const userId = request.erpUser!.id;
 
       const resolved = await resolveStep(orderKey, revNo, seqNo, stepSeqNo);
@@ -413,7 +412,7 @@ export default function stepFieldRoutes(fastify: FastifyInstance) {
         return sendError(reply, 404, "Not Found", "Step not found");
       }
 
-      if (resolved.rev.status !== "draft") {
+      if (resolved.rev.status !== RevisionStatus.draft) {
         return sendError(
           reply,
           409,
@@ -471,15 +470,14 @@ export default function stepFieldRoutes(fastify: FastifyInstance) {
       },
     },
     handler: async (request, reply) => {
-      const { orderKey, revNo, seqNo, stepSeqNo, fieldSeqNo } =
-        request.params;
+      const { orderKey, revNo, seqNo, stepSeqNo, fieldSeqNo } = request.params;
 
       const resolved = await resolveStep(orderKey, revNo, seqNo, stepSeqNo);
       if (!resolved) {
         return sendError(reply, 404, "Not Found", "Step not found");
       }
 
-      if (resolved.rev.status !== "draft") {
+      if (resolved.rev.status !== RevisionStatus.draft) {
         return sendError(
           reply,
           409,

@@ -13,23 +13,29 @@ import {
   Title,
 } from "@mantine/core";
 import type { OrderRunListResponse } from "@naisys-erp/shared";
+import {
+  OrderRunPriority,
+  OrderRunPriorityEnum,
+  OrderRunStatus,
+  OrderRunStatusEnum,
+} from "@naisys-erp/shared";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router";
 
 import { api, apiEndpoints, showErrorNotification } from "../../../lib/api";
 
 const STATUS_COLORS: Record<string, string> = {
-  released: "blue",
-  started: "yellow",
-  closed: "green",
-  cancelled: "gray",
+  [OrderRunStatus.released]: "blue",
+  [OrderRunStatus.started]: "yellow",
+  [OrderRunStatus.closed]: "green",
+  [OrderRunStatus.cancelled]: "gray",
 };
 
 const PRIORITY_COLORS: Record<string, string> = {
-  low: "gray",
-  medium: "blue",
-  high: "orange",
-  critical: "red",
+  [OrderRunPriority.low]: "gray",
+  [OrderRunPriority.medium]: "blue",
+  [OrderRunPriority.high]: "orange",
+  [OrderRunPriority.critical]: "red",
 };
 
 export const OrderRunList: React.FC = () => {
@@ -106,12 +112,10 @@ export const OrderRunList: React.FC = () => {
         />
         <Select
           placeholder="All statuses"
-          data={[
-            { value: "released", label: "Released" },
-            { value: "started", label: "Started" },
-            { value: "closed", label: "Closed" },
-            { value: "cancelled", label: "Cancelled" },
-          ]}
+          data={OrderRunStatusEnum.options.map((v) => ({
+            value: v,
+            label: v.charAt(0).toUpperCase() + v.slice(1),
+          }))}
           value={status ?? null}
           onChange={(val) => {
             setSearchParams((prev) => {
@@ -125,12 +129,10 @@ export const OrderRunList: React.FC = () => {
         />
         <Select
           placeholder="All priorities"
-          data={[
-            { value: "low", label: "Low" },
-            { value: "medium", label: "Medium" },
-            { value: "high", label: "High" },
-            { value: "critical", label: "Critical" },
-          ]}
+          data={OrderRunPriorityEnum.options.map((v) => ({
+            value: v,
+            label: v.charAt(0).toUpperCase() + v.slice(1),
+          }))}
           value={priority ?? null}
           onChange={(val) => {
             setSearchParams((prev) => {

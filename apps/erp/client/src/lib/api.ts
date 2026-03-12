@@ -145,11 +145,8 @@ export const apiEndpoints = {
     runId: number | string,
     id: number | string,
   ) => `orders/${key}/runs/${runId}/ops/${id}/fail`,
-  stepRuns: (
-    key: string,
-    runId: number | string,
-    opRunId: number | string,
-  ) => `orders/${key}/runs/${runId}/ops/${opRunId}/steps`,
+  stepRuns: (key: string, runId: number | string, opRunId: number | string) =>
+    `orders/${key}/runs/${runId}/ops/${opRunId}/steps`,
   stepRun: (
     key: string,
     runId: number | string,

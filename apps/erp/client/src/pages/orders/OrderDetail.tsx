@@ -10,6 +10,7 @@ import {
   Title,
 } from "@mantine/core";
 import type { Order, UpdateOrder } from "@naisys-erp/shared";
+import { OrderStatus } from "@naisys-erp/shared";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 
@@ -110,7 +111,7 @@ export const OrderDetail: React.FC = () => {
             updatedAt={item.updatedAt}
           />
           <Badge
-            color={item.status === "active" ? "green" : "gray"}
+            color={item.status === OrderStatus.active ? "green" : "gray"}
             variant="light"
             size="lg"
           >

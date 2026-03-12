@@ -3,7 +3,7 @@ import {
   ErrorResponseSchema,
   OperationRunListResponseSchema,
   OperationRunSchema,
-  type OperationRunStatus,
+  OperationRunStatus,
   UpdateOperationRunSchema,
 } from "@naisys-erp/shared";
 import { FastifyInstance } from "fastify";
@@ -55,7 +55,7 @@ function opRunItemActions(
   const href = `${API_PREFIX}/${opRunResource(orderKey, runId)}/${id}`;
   const actions: HateoasAction[] = [];
 
-  if (status === "pending") {
+  if (status === OperationRunStatus.pending) {
     actions.push(
       {
         rel: "update",
@@ -77,7 +77,7 @@ function opRunItemActions(
         title: "Skip",
       },
     );
-  } else if (status === "in_progress") {
+  } else if (status === OperationRunStatus.in_progress) {
     actions.push(
       {
         rel: "update",
@@ -143,7 +143,7 @@ function formatItem(
     operationId: item.operationId,
     seqNo: item.operation.seqNo,
     title: item.operation.title,
-    status: item.status as OperationRunStatus,
+    status: item.status,
     completedAt: formatDate(item.completedAt),
     notes: item.notes,
     createdAt: item.createdAt.toISOString(),
@@ -197,12 +197,7 @@ export default function operationRunRoutes(fastify: FastifyInstance) {
 
       const resolved = await resolveOrderRun(orderKey, runId);
       if (!resolved) {
-        return sendError(
-          reply,
-          404,
-          "Not Found",
-          `Order run not found`,
-        );
+        return sendError(reply, 404, "Not Found", `Order run not found`);
       }
 
       const items = await erpDb.operationRun.findMany({
@@ -296,8 +291,8 @@ export default function operationRunRoutes(fastify: FastifyInstance) {
       }
 
       if (
-        existing.status !== "pending" &&
-        existing.status !== "in_progress"
+        existing.status !== OperationRunStatus.pending &&
+        existing.status !== OperationRunStatus.in_progress
       ) {
         return sendError(
           reply,
@@ -352,7 +347,7 @@ export default function operationRunRoutes(fastify: FastifyInstance) {
         );
       }
 
-      if (existing.status !== "pending") {
+      if (existing.status !== OperationRunStatus.pending) {
         return sendError(
           reply,
           409,
@@ -365,7 +360,7 @@ export default function operationRunRoutes(fastify: FastifyInstance) {
       const item = await erpDb.$transaction(async (erpTx) => {
         const updated = await erpTx.operationRun.update({
           where: { id },
-          data: { status: "in_progress", updatedById: userId },
+          data: { status: OperationRunStatus.in_progress, updatedById: userId },
           include: includeOp,
         });
         await writeAuditEntry(
@@ -374,8 +369,8 @@ export default function operationRunRoutes(fastify: FastifyInstance) {
           id,
           "start",
           "status",
-          "pending",
-          "in_progress",
+          OperationRunStatus.pending,
+          OperationRunStatus.in_progress,
           userId,
         );
         return updated;
@@ -417,7 +412,7 @@ export default function operationRunRoutes(fastify: FastifyInstance) {
         );
       }
 
-      if (existing.status !== "in_progress") {
+      if (existing.status !== OperationRunStatus.in_progress) {
         return sendError(
           reply,
           409,
@@ -431,7 +426,7 @@ export default function operationRunRoutes(fastify: FastifyInstance) {
         const updated = await erpTx.operationRun.update({
           where: { id },
           data: {
-            status: "completed",
+            status: OperationRunStatus.completed,
             completedAt: new Date(),
             updatedById: userId,
           },
@@ -443,8 +438,8 @@ export default function operationRunRoutes(fastify: FastifyInstance) {
           id,
           "complete",
           "status",
-          "in_progress",
-          "completed",
+          OperationRunStatus.in_progress,
+          OperationRunStatus.completed,
           userId,
         );
         return updated;
@@ -486,7 +481,7 @@ export default function operationRunRoutes(fastify: FastifyInstance) {
         );
       }
 
-      if (existing.status !== "pending") {
+      if (existing.status !== OperationRunStatus.pending) {
         return sendError(
           reply,
           409,
@@ -499,7 +494,7 @@ export default function operationRunRoutes(fastify: FastifyInstance) {
       const item = await erpDb.$transaction(async (erpTx) => {
         const updated = await erpTx.operationRun.update({
           where: { id },
-          data: { status: "skipped", updatedById: userId },
+          data: { status: OperationRunStatus.skipped, updatedById: userId },
           include: includeOp,
         });
         await writeAuditEntry(
@@ -508,8 +503,8 @@ export default function operationRunRoutes(fastify: FastifyInstance) {
           id,
           "skip",
           "status",
-          "pending",
-          "skipped",
+          OperationRunStatus.pending,
+          OperationRunStatus.skipped,
           userId,
         );
         return updated;
@@ -551,7 +546,7 @@ export default function operationRunRoutes(fastify: FastifyInstance) {
         );
       }
 
-      if (existing.status !== "in_progress") {
+      if (existing.status !== OperationRunStatus.in_progress) {
         return sendError(
           reply,
           409,
@@ -564,7 +559,7 @@ export default function operationRunRoutes(fastify: FastifyInstance) {
       const item = await erpDb.$transaction(async (erpTx) => {
         const updated = await erpTx.operationRun.update({
           where: { id },
-          data: { status: "failed", updatedById: userId },
+          data: { status: OperationRunStatus.failed, updatedById: userId },
           include: includeOp,
         });
         await writeAuditEntry(
@@ -573,8 +568,8 @@ export default function operationRunRoutes(fastify: FastifyInstance) {
           id,
           "fail",
           "status",
-          "in_progress",
-          "failed",
+          OperationRunStatus.in_progress,
+          OperationRunStatus.failed,
           userId,
         );
         return updated;

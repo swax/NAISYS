@@ -9,7 +9,12 @@ import {
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import type { CreateOrderRun, UpdateOrderRun } from "@naisys-erp/shared";
-import { CreateOrderRunSchema, UpdateOrderRunSchema } from "@naisys-erp/shared";
+import {
+  CreateOrderRunSchema,
+  OrderRunPriority,
+  OrderRunPriorityEnum,
+  UpdateOrderRunSchema,
+} from "@naisys-erp/shared";
 import { useState } from "react";
 
 import { zodResolver } from "../lib/zod-resolver";
@@ -78,7 +83,7 @@ export const OrderRunForm = <TEdit extends boolean = false>({
   const form = useForm({
     initialValues: {
       revNo: (initialData?.revNo ?? "") as number | string,
-      priority: initialData?.priority ?? "medium",
+      priority: initialData?.priority ?? OrderRunPriority.medium,
       scheduledStartAt: initialData?.scheduledStartAt ?? "",
       dueAt: initialData?.dueAt ?? "",
       assignedTo: initialData?.assignedTo ?? "",
@@ -116,12 +121,10 @@ export const OrderRunForm = <TEdit extends boolean = false>({
         )}
         <Select
           label="Priority"
-          data={[
-            { value: "low", label: "Low" },
-            { value: "medium", label: "Medium" },
-            { value: "high", label: "High" },
-            { value: "critical", label: "Critical" },
-          ]}
+          data={OrderRunPriorityEnum.options.map((v) => ({
+            value: v,
+            label: v.charAt(0).toUpperCase() + v.slice(1),
+          }))}
           {...form.getInputProps("priority")}
         />
         <TextInput

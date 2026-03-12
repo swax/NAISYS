@@ -101,7 +101,10 @@ export const MailConversationList: React.FC<MailConversationListProps> = ({
             // Build link URL based on grouping mode
             const to = groupBySubject
               ? `/agents/${agentName}/mail/about/${encodeURIComponent(conv.normalizedSubject)}`
-              : `/agents/${agentName}/mail/with/${conv.participantNames.filter((n) => n !== currentAgentName).sort().join(",")}`;
+              : `/agents/${agentName}/mail/with/${conv.participantNames
+                  .filter((n) => n !== currentAgentName)
+                  .sort()
+                  .join(",")}`;
 
             return (
               <NavLink

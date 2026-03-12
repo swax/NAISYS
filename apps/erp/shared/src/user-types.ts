@@ -7,6 +7,7 @@ export const ErpPermissionEnum = z.enum([
   "view_all",
 ]);
 export type ErpPermission = z.infer<typeof ErpPermissionEnum>;
+export const ErpPermission = ErpPermissionEnum.enum;
 
 const urlSafeUsername = z
   .string()

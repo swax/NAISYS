@@ -3,12 +3,23 @@ import { z } from "zod";
 /** How often NAISYS instances flush buffered cost entries to the hub (ms) */
 export const COST_FLUSH_INTERVAL_MS = 100;
 
+export const CostSourceEnum = z.enum([
+  "console",
+  "write_protection",
+  "compact",
+  "lynx",
+  "look",
+  "listen",
+  "genimg",
+]);
+export type CostSource = z.infer<typeof CostSourceEnum>;
+
 /** A single cost entry sent from NAISYS instance to hub */
 export const CostWriteEntrySchema = z.object({
   userId: z.number(),
   runId: z.number(),
   sessionId: z.number(),
-  source: z.string(),
+  source: CostSourceEnum,
   model: z.string(),
   cost: z.number(),
   inputTokens: z.number(),

@@ -1,11 +1,12 @@
 import { toUrlSafeKey } from "@naisys/common";
 import type { HubDatabaseService } from "@naisys/hub-database";
+import { HostType } from "@naisys/hub-database";
 
 export async function createHostRegistrar({ hubDb }: HubDatabaseService) {
   /** Cache of all known hosts keyed by id */
   const hostsById = new Map<
     number,
-    { hostName: string; restricted: boolean; hostType: string }
+    { hostName: string; restricted: boolean; hostType: HostType }
   >();
 
   // Seed the cache from the database
@@ -27,7 +28,7 @@ export async function createHostRegistrar({ hubDb }: HubDatabaseService) {
    */
   async function registerHost(
     hostName: string,
-    hostType: string,
+    hostType: HostType,
     lastIp?: string,
   ): Promise<number> {
     hostName = toUrlSafeKey(hostName);
@@ -41,7 +42,7 @@ export async function createHostRegistrar({ hubDb }: HubDatabaseService) {
         where: { id: existing.id },
         data: {
           last_active: new Date().toISOString(),
-          host_type: hostType,
+          host_type: hostType as HostType,
           last_ip: lastIp,
         },
       });
@@ -56,7 +57,7 @@ export async function createHostRegistrar({ hubDb }: HubDatabaseService) {
     const created = await hubDb.hosts.create({
       data: {
         name: hostName,
-        host_type: hostType,
+        host_type: hostType as HostType,
         last_ip: lastIp,
         last_active: new Date().toISOString(),
       },
@@ -72,7 +73,7 @@ export async function createHostRegistrar({ hubDb }: HubDatabaseService) {
     hostId: number;
     hostName: string;
     restricted: boolean;
-    hostType: string;
+    hostType: HostType;
   }[] {
     return Array.from(hostsById, ([hostId, entry]) => ({
       hostId,
