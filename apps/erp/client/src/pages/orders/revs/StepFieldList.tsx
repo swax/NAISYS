@@ -18,6 +18,8 @@ import type {
 } from "@naisys-erp/shared";
 import {
   CreateStepFieldSchema,
+  StepFieldType,
+  StepFieldTypeEnum,
   UpdateStepFieldSchema,
 } from "@naisys-erp/shared";
 import { useState } from "react";
@@ -48,12 +50,22 @@ export const StepFieldList: React.FC<StepFieldListProps> = ({
   const [saving, setSaving] = useState(false);
 
   const editForm = useForm<UpdateStepField>({
-    initialValues: { seqNo: 10, label: "", type: "string", required: false },
+    initialValues: {
+      seqNo: 10,
+      label: "",
+      type: StepFieldType.string,
+      required: false,
+    },
     validate: zodResolver(UpdateStepFieldSchema),
   });
 
   const createForm = useForm<CreateStepField>({
-    initialValues: { seqNo: 10, label: "", type: "string", required: false },
+    initialValues: {
+      seqNo: 10,
+      label: "",
+      type: StepFieldType.string,
+      required: false,
+    },
     validate: zodResolver(CreateStepFieldSchema),
   });
 
@@ -61,7 +73,7 @@ export const StepFieldList: React.FC<StepFieldListProps> = ({
     editForm.setValues({
       seqNo: field.seqNo,
       label: field.label,
-      type: field.type as "string" | "number",
+      type: field.type,
       required: field.required,
     });
     setEditingFieldId(field.id);
@@ -123,7 +135,7 @@ export const StepFieldList: React.FC<StepFieldListProps> = ({
     createForm.setValues({
       seqNo: fields.nextSeqNo,
       label: "",
-      type: "string",
+      type: StepFieldType.string,
       required: false,
     });
     setAddingField(true);
@@ -168,11 +180,13 @@ export const StepFieldList: React.FC<StepFieldListProps> = ({
       />
       <Select
         label="Type"
-        data={[
-          { value: "string", label: "String" },
-          { value: "number", label: "Number" },
-          { value: "string[]", label: "String List" },
-        ]}
+        data={StepFieldTypeEnum.options.map((v) => ({
+          value: v,
+          label:
+            v === StepFieldType.StringArray
+              ? "String Array"
+              : v.charAt(0).toUpperCase() + v.slice(1),
+        }))}
         {...form.getInputProps("type")}
       />
       <Checkbox

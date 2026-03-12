@@ -116,9 +116,7 @@ export function createHubMailService(
       let ownershipCondition;
       if (parsed.withUserIds?.length) {
         // Messages between exactly this group of participants
-        const allUserIds = [
-          ...new Set([parsed.userId, ...parsed.withUserIds]),
-        ];
+        const allUserIds = [...new Set([parsed.userId, ...parsed.withUserIds])];
         const users = await hubDb.users.findMany({
           where: { id: { in: allUserIds } },
           select: { username: true },

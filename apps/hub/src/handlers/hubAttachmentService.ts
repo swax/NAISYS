@@ -1,4 +1,5 @@
 import type { HubDatabaseService } from "@naisys/hub-database";
+import { AttachmentPurpose } from "@naisys/hub-database";
 import { createHash } from "crypto";
 import {
   createReadStream,
@@ -195,7 +196,7 @@ export function createHubAttachmentService(
         filename,
         file_size: bytesWritten,
         file_hash: computedHash,
-        purpose,
+        purpose: purpose as AttachmentPurpose,
         uploaded_by: userId,
       },
     });

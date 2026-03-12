@@ -2,10 +2,10 @@ import type { HateoasAction, HateoasLink } from "@naisys/common";
 import {
   ChangePasswordSchema,
   CreateUserSchema,
+  type ErpPermission,
   ErpPermissionEnum,
   GrantPermissionSchema,
   UpdateUserSchema,
-  type ErpPermission,
 } from "@naisys-erp/shared";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";

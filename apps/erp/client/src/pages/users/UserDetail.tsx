@@ -18,7 +18,11 @@ import {
 } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import { notifications } from "@mantine/notifications";
-import { ErpPermissionEnum, type ErpPermission, type User } from "@naisys-erp/shared";
+import {
+  type ErpPermission,
+  ErpPermissionEnum,
+  type User,
+} from "@naisys-erp/shared";
 import {
   IconAlertTriangle,
   IconCopy,

@@ -4,6 +4,7 @@ import { HateoasActionSchema, HateoasLinkSchema } from "./hateoas-types.js";
 
 export const RevisionStatusEnum = z.enum(["draft", "approved", "obsolete"]);
 export type RevisionStatus = z.infer<typeof RevisionStatusEnum>;
+export const RevisionStatus = RevisionStatusEnum.enum;
 
 // Full revision response shape
 export const OrderRevisionSchema = z.object({

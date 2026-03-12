@@ -4,6 +4,7 @@ import {
   ErrorResponseSchema,
   OperationListResponseSchema,
   OperationSchema,
+  RevisionStatus,
   UpdateOperationSchema,
 } from "@naisys-erp/shared";
 import { FastifyInstance } from "fastify";
@@ -71,7 +72,11 @@ function opItemActions(
   revStatus: string,
   user: ErpUser | undefined,
 ): HateoasAction[] {
-  if (!hasPermission(user, "manage_orders") || revStatus !== "draft") return [];
+  if (
+    !hasPermission(user, "manage_orders") ||
+    revStatus !== RevisionStatus.draft
+  )
+    return [];
 
   const href = `${API_PREFIX}${opBasePath(orderKey, revNo)}/${seqNo}`;
   return [
@@ -167,7 +172,7 @@ export default function operationRoutes(fastify: FastifyInstance) {
         _links: [selfLink(base)],
         _actions:
           hasPermission(user, "manage_orders") &&
-          resolved.rev.status === "draft"
+          resolved.rev.status === RevisionStatus.draft
             ? [
                 {
                   rel: "create",
@@ -205,7 +210,7 @@ export default function operationRoutes(fastify: FastifyInstance) {
         return sendError(reply, 404, "Not Found", `Revision not found`);
       }
 
-      if (resolved.rev.status !== "draft") {
+      if (resolved.rev.status !== RevisionStatus.draft) {
         return sendError(
           reply,
           409,
@@ -312,7 +317,7 @@ export default function operationRoutes(fastify: FastifyInstance) {
         return sendError(reply, 404, "Not Found", `Revision not found`);
       }
 
-      if (resolved.rev.status !== "draft") {
+      if (resolved.rev.status !== RevisionStatus.draft) {
         return sendError(
           reply,
           409,
@@ -374,7 +379,7 @@ export default function operationRoutes(fastify: FastifyInstance) {
         return sendError(reply, 404, "Not Found", `Revision not found`);
       }
 
-      if (resolved.rev.status !== "draft") {
+      if (resolved.rev.status !== RevisionStatus.draft) {
         return sendError(
           reply,
           409,

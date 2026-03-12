@@ -98,11 +98,20 @@ export const AgentRuns: React.FC = () => {
     }
 
     if (targetRun) {
-      navigate(`/agents/${username}/runs/${getRunKey(targetRun)}`, {
+      void navigate(`/agents/${username}/runs/${getRunKey(targetRun)}`, {
         replace: true,
       });
     }
-  }, [freshData, allRuns, agentName, readStatus, searchParams, runKey, username, navigate]);
+  }, [
+    freshData,
+    allRuns,
+    agentName,
+    readStatus,
+    searchParams,
+    runKey,
+    username,
+    navigate,
+  ]);
 
   // Clear state when agent changes
   useEffect(() => {

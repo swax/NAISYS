@@ -7,22 +7,85 @@ datasource db {
   provider = "sqlite"
 }
 
+// --- Enums (client-side only for SQLite — stored as TEXT) ---
+// These enums are intentionally duplicated as Zod schemas in @naisys/hub-protocol
+// and @naisys-supervisor/shared to avoid pulling heavy native deps (better-sqlite3,
+// @prisma/client) into lightweight shared packages. The sync test in
+// apps/supervisor/server/src/tests/hub-enum-sync.test.ts ensures they stay aligned.
+
+enum ContextLogRole {
+  NAISYS
+  LLM
+}
+
+enum ContextLogSource {
+  startPrompt
+  endPrompt
+  console
+  llm
+}
+
+enum ContextLogType {
+  comment
+  error
+  system
+  workspace
+}
+
+enum MessageKind {
+  mail
+  chat
+}
+
+enum RecipientType {
+  to
+  cc
+  bcc
+}
+
+enum AttachmentPurpose {
+  mail
+  context
+}
+
+enum HostType {
+  naisys
+  supervisor
+}
+
+enum ModelType {
+  llm
+  image
+}
+
+enum CostSource {
+  console
+  write_protection
+  compact
+  lynx
+  look
+  listen
+  genimg
+}
+
+// --- Models ---
+
 model context_log {
-  id            Int          @id @default(autoincrement())
+  id            Int              @id @default(autoincrement())
   user_id       Int
   run_id        Int
   session_id    Int
   host_id       Int
-  role          String
-  source        String
-  type          String
+  role          ContextLogRole
+  source        ContextLogSource?
+  type          ContextLogType?
   message       String
   attachment_id Int?
-  created_at    DateTime     @default(now())
-  users         users        @relation("context_log_user", fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  run_session   run_session  @relation(fields: [user_id, run_id, session_id], references: [user_id, run_id, session_id], onDelete: NoAction, onUpdate: NoAction)
-  host          hosts        @relation(fields: [host_id], references: [id])
-  attachment    attachments? @relation(fields: [attachment_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  created_at    DateTime         @default(now())
+  users         users            @relation("context_log_user", fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  run_session   run_session      @relation(fields: [user_id, run_id, session_id], references: [user_id, run_id, session_id], onDelete: NoAction, onUpdate: NoAction)
+  host          hosts            @relation(fields: [host_id], references: [id])
+  attachment    attachments?     @relation(fields: [attachment_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
 
   @@index([user_id, run_id, session_id], map: "idx_context_log_user_run_session") // WHERE user_id, run_id, session_id in runsService.getContextLog
 }
@@ -33,7 +96,7 @@ model costs {
   run_id             Int
   session_id         Int
   host_id            Int
-  source             String
+  source             CostSource
   model              String
   cost               Float?      @default(0)
   input_tokens       Int?        @default(0)
@@ -54,7 +117,7 @@ model mail_messages {
   id              Int                @id @default(autoincrement())
   from_user_id    Int
   host_id         Int? // Sender's host
-  kind            String             @default("mail")
+  kind            MessageKind        @default(mail)
   participants    String // Sorted CSV of participant usernames, used as conversation lookup key
   subject         String
   body            String
@@ -75,7 +138,7 @@ model attachments {
   filename         String
   file_size        Int
   file_hash        String
-  purpose          String             // "mail" | "context"
+  purpose          AttachmentPurpose
   uploaded_by      Int
   created_at       DateTime           @default(now())
   uploader         users              @relation("uploaded_attachments", fields: [uploaded_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
@@ -97,7 +160,7 @@ model mail_recipients {
   id          Int           @id @default(autoincrement())
   message_id  Int
   user_id     Int
-  type        String // "to", "cc", "bcc"
+  type        RecipientType
   read_at     DateTime?
   archived_at DateTime?
   created_at  DateTime      @default(now())
@@ -188,7 +251,7 @@ model hosts {
   id                 Int                  @id @default(autoincrement())
   name               String               @unique(map: "unq_hosts_name") // NAISYS_HOSTNAME
   restricted         Boolean              @default(false)
-  host_type          String               @default("naisys")
+  host_type          HostType             @default(naisys)
   last_ip            String?
   last_active        DateTime?
   created_at         DateTime             @default(now())
@@ -210,14 +273,14 @@ model variables {
 }
 
 model models {
-  id           Int      @id @default(autoincrement())
-  key          String   @unique
-  type         String   // "llm" | "image"
+  id           Int       @id @default(autoincrement())
+  key          String    @unique
+  type         ModelType
   label        String
   version_name String
-  is_builtin   Boolean  @default(false)
-  is_custom    Boolean  @default(false)
-  meta         String   // JSON blob — type-specific properties validated by Zod
-  created_at   DateTime @default(now())
-  updated_at   DateTime @updatedAt
+  is_builtin   Boolean   @default(false)
+  is_custom    Boolean   @default(false)
+  meta         String    // JSON blob — type-specific properties validated by Zod
+  created_at   DateTime  @default(now())
+  updated_at   DateTime  @updatedAt
 }

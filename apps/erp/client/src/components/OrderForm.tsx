@@ -8,7 +8,12 @@ import {
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import type { CreateOrder, UpdateOrder } from "@naisys-erp/shared";
-import { CreateOrderSchema, UpdateOrderSchema } from "@naisys-erp/shared";
+import {
+  CreateOrderSchema,
+  OrderStatus,
+  OrderStatusEnum,
+  UpdateOrderSchema,
+} from "@naisys-erp/shared";
 import { useState } from "react";
 
 import { zodResolver } from "../lib/zod-resolver";
@@ -41,7 +46,7 @@ export const OrderForm = <TEdit extends boolean = false>({
       key: "",
       name: initialData?.name ?? "",
       description: initialData?.description ?? "",
-      status: initialData?.status ?? "active",
+      status: initialData?.status ?? OrderStatus.active,
     },
     validate: zodResolver(schema),
   });
@@ -97,10 +102,10 @@ export const OrderForm = <TEdit extends boolean = false>({
         {isEdit && (
           <Select
             label="Status"
-            data={[
-              { value: "active", label: "Active" },
-              { value: "archived", label: "Archived" },
-            ]}
+            data={OrderStatusEnum.options.map((v) => ({
+              value: v,
+              label: v.charAt(0).toUpperCase() + v.slice(1),
+            }))}
             {...form.getInputProps("status")}
           />
         )}

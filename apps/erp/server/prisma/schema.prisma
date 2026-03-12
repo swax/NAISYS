@@ -7,16 +7,55 @@ generator client {
   output   = "../src/generated/prisma"
 }
 
+enum OrderStatus {
+  active
+  archived
+}
+
+enum RevisionStatus {
+  draft
+  approved
+  obsolete
+}
+
+enum OrderRunStatus {
+  released
+  started
+  closed
+  cancelled
+}
+
+enum OrderRunPriority {
+  low
+  medium
+  high
+  critical
+}
+
+enum OperationRunStatus {
+  pending
+  in_progress
+  completed
+  skipped
+  failed
+}
+
+enum StepFieldType {
+  string
+  number
+  StringArray
+}
+
 model Order {
-  id          Int      @id @default(autoincrement())
-  key         String   @unique
+  id          Int         @id @default(autoincrement())
+  key         String      @unique
   name        String
-  description String   @default("")
-  status      String   @default("active") // "active" | "archived"
-  createdById Int      @map("created_by")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedById Int      @map("updated_by")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  description String      @default("")
+  status      OrderStatus @default(active)
+  createdById Int         @map("created_by")
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedById Int         @map("updated_by")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
 
   createdBy  User                    @relation("orderCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
   updatedBy  User                    @relation("orderUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
@@ -32,7 +71,7 @@ model OrderRevision {
   id            Int       @id @default(autoincrement())
   orderId       Int       @map("order_id")
   revNo         Int       @map("rev_no")
-  status        String    @default("draft") // "draft" | "approved" | "obsolete"
+  status        RevisionStatus @default(draft)
   notes         String?
   changeSummary String?   @map("change_summary")
   createdAt     DateTime  @default(now()) @map("created_at")
@@ -95,7 +134,7 @@ model StepField {
   stepId      Int      @map("step_id")
   seqNo       Int      @map("seq_no")
   label       String
-  type        String   @default("string") // "string" | "number"
+  type        StepFieldType @default(string)
   required    Boolean  @default(false)
   createdAt   DateTime @default(now()) @map("created_at")
   createdById Int      @map("created_by")
@@ -116,8 +155,8 @@ model OrderRun {
   runNo            Int       @map("run_no")
   orderId          Int       @map("order_id")
   orderRevId       Int       @map("order_rev_id")
-  status           String    @default("released")
-  priority         String    @default("medium")
+  status           OrderRunStatus   @default(released)
+  priority         OrderRunPriority @default(medium)
   scheduledStartAt DateTime? @map("scheduled_start_at")
   dueAt            DateTime? @map("due_at")
   releasedAt       DateTime  @default(now()) @map("released_at")
@@ -146,7 +185,7 @@ model OperationRun {
   id          Int       @id @default(autoincrement())
   orderRunId  Int       @map("order_run_id")
   operationId Int       @map("operation_id")
-  status      String    @default("pending") // "pending" | "in_progress" | "completed" | "skipped" | "failed"
+  status      OperationRunStatus @default(pending)
   completedAt DateTime? @map("completed_at")
   notes       String?
   createdAt   DateTime  @default(now()) @map("created_at")

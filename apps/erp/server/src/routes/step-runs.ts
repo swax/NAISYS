@@ -1,6 +1,7 @@
 import type { HateoasAction, HateoasLink } from "@naisys/common";
 import {
   ErrorResponseSchema,
+  OperationRunStatus,
   StepRunListResponseSchema,
   StepRunSchema,
   UpdateStepRunSchema,
@@ -15,11 +16,7 @@ import erpDb from "../erpDb.js";
 import { sendError } from "../error-handler.js";
 import { API_PREFIX, schemaLink, selfLink } from "../hateoas.js";
 
-function stepRunResource(
-  orderKey: string,
-  runId: number,
-  opRunId: number,
-) {
+function stepRunResource(orderKey: string, runId: number, opRunId: number) {
   return `orders/${orderKey}/runs/${runId}/ops/${opRunId}/steps`;
 }
 
@@ -56,7 +53,7 @@ function stepRunItemActions(
 ): HateoasAction[] {
   if (!hasPermission(user, "manage_runs")) return [];
   // Only allow updates when the parent operation run is in_progress
-  if (opRunStatus !== "in_progress") return [];
+  if (opRunStatus !== OperationRunStatus.in_progress) return [];
 
   const href = `${API_PREFIX}/${stepRunResource(orderKey, runId, opRunId)}/${id}`;
   return [
@@ -88,7 +85,10 @@ const includeStep = {
     select: {
       seqNo: true,
       instructions: true,
-      fields: { select: { id: true, label: true, type: true, required: true }, orderBy: { seqNo: "asc" as const } },
+      fields: {
+        select: { id: true, label: true, type: true, required: true },
+        orderBy: { seqNo: "asc" as const },
+      },
     },
   },
   fieldValues: {
@@ -125,9 +125,7 @@ function formatItem(
 ) {
   // Merge field definitions with stored values
   const fieldValues = item.step.fields.map((field) => {
-    const stored = item.fieldValues.find(
-      (fv) => fv.stepFieldId === field.id,
-    );
+    const stored = item.fieldValues.find((fv) => fv.stepFieldId === field.id);
     return {
       stepFieldId: field.id,
       label: field.label,
@@ -247,12 +245,7 @@ export default function stepRunRoutes(fastify: FastifyInstance) {
         include: includeStep,
       });
       if (!item || item.operationRunId !== opRunId) {
-        return sendError(
-          reply,
-          404,
-          "Not Found",
-          `Step run ${id} not found`,
-        );
+        return sendError(reply, 404, "Not Found", `Step run ${id} not found`);
       }
 
       return formatItem(
@@ -290,7 +283,7 @@ export default function stepRunRoutes(fastify: FastifyInstance) {
         return sendError(reply, 404, "Not Found", `Operation run not found`);
       }
 
-      if (resolved.opRun.status !== "in_progress") {
+      if (resolved.opRun.status !== OperationRunStatus.in_progress) {
         return sendError(
           reply,
           409,
@@ -301,12 +294,7 @@ export default function stepRunRoutes(fastify: FastifyInstance) {
 
       const existing = await erpDb.stepRun.findUnique({ where: { id } });
       if (!existing || existing.operationRunId !== opRunId) {
-        return sendError(
-          reply,
-          404,
-          "Not Found",
-          `Step run ${id} not found`,
-        );
+        return sendError(reply, 404, "Not Found", `Step run ${id} not found`);
       }
 
       const item = await erpDb.$transaction(async (erpTx) => {

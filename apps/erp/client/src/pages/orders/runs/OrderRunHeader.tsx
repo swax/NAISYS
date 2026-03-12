@@ -1,5 +1,6 @@
 import { Anchor, Badge, Button, Group, Text } from "@mantine/core";
 import type { OrderRun, UpdateOrderRun } from "@naisys-erp/shared";
+import { OrderRunPriority, OrderRunStatus } from "@naisys-erp/shared";
 import { useState } from "react";
 import { useNavigate } from "react-router";
 
@@ -8,17 +9,17 @@ import { api, apiEndpoints, showErrorNotification } from "../../../lib/api";
 import { hasAction } from "../../../lib/hateoas";
 
 const STATUS_COLORS: Record<string, string> = {
-  released: "blue",
-  started: "yellow",
-  closed: "green",
-  cancelled: "gray",
+  [OrderRunStatus.released]: "blue",
+  [OrderRunStatus.started]: "yellow",
+  [OrderRunStatus.closed]: "green",
+  [OrderRunStatus.cancelled]: "gray",
 };
 
 const PRIORITY_COLORS: Record<string, string> = {
-  low: "gray",
-  medium: "blue",
-  high: "orange",
-  critical: "red",
+  [OrderRunPriority.low]: "gray",
+  [OrderRunPriority.medium]: "blue",
+  [OrderRunPriority.high]: "orange",
+  [OrderRunPriority.critical]: "red",
 };
 
 interface Props {
@@ -126,7 +127,7 @@ export const OrderRunHeader: React.FC<Props> = ({
           onClick={(e: React.MouseEvent) => {
             if (e.button === 1 || e.ctrlKey || e.metaKey) return;
             e.preventDefault();
-            navigate(`/orders/${orderKey}`);
+            void navigate(`/orders/${orderKey}`);
           }}
         >
           {orderKey}

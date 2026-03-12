@@ -4,8 +4,8 @@ import "./schema-registry.js";
 // Important to load dotenv before any other imports, to ensure environment variables are available
 import cookie from "@fastify/cookie";
 import cors from "@fastify/cors";
-import rateLimit from "@fastify/rate-limit";
 import multipart from "@fastify/multipart";
+import rateLimit from "@fastify/rate-limit";
 import staticFiles from "@fastify/static";
 import swagger from "@fastify/swagger";
 import {

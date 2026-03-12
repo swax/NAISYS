@@ -2,13 +2,17 @@ import { z } from "zod/v4";
 
 import { HateoasActionSchema, HateoasLinkSchema } from "./hateoas-types.js";
 
+export const StepFieldTypeEnum = z.enum(["string", "number", "StringArray"]);
+export type StepFieldType = z.infer<typeof StepFieldTypeEnum>;
+export const StepFieldType = StepFieldTypeEnum.enum;
+
 // Full step field response shape
 export const StepFieldSchema = z.object({
   id: z.number(),
   stepId: z.number(),
   seqNo: z.number(),
   label: z.string(),
-  type: z.string(),
+  type: StepFieldTypeEnum,
   required: z.boolean(),
   createdAt: z.iso.datetime(),
   createdBy: z.string(),
@@ -25,7 +29,7 @@ export const CreateStepFieldSchema = z
   .object({
     seqNo: z.number().int().min(1).optional(),
     label: z.string().min(1).max(200),
-    type: z.enum(["string", "number", "string[]"]).optional(),
+    type: StepFieldTypeEnum.optional(),
     required: z.boolean().optional(),
   })
   .strict();
@@ -37,7 +41,7 @@ export const UpdateStepFieldSchema = z
   .object({
     seqNo: z.number().int().min(1).optional(),
     label: z.string().min(1).max(200).optional(),
-    type: z.enum(["string", "number", "string[]"]).optional(),
+    type: StepFieldTypeEnum.optional(),
     required: z.boolean().optional(),
   })
   .strict();

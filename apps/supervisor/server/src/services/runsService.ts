@@ -1,10 +1,4 @@
-import {
-  LogEntry,
-  LogRole,
-  LogSource,
-  LogType,
-  RunSession,
-} from "@naisys-supervisor/shared";
+import { LogEntry, RunSession } from "@naisys-supervisor/shared";
 
 import { hubDb } from "../database/hubDb.js";
 import { getLogger } from "../logger.js";
@@ -131,9 +125,9 @@ export async function getContextLog(
     const logs: LogEntry[] = dbLogs.map((log) => ({
       id: log.id,
       username: log.users.username,
-      role: log.role as LogRole,
-      source: log.source as LogSource,
-      type: log.type as LogType,
+      role: log.role,
+      source: log.source,
+      type: log.type,
       message: log.message,
       createdAt: log.created_at.toISOString(),
       ...(log.attachment && {

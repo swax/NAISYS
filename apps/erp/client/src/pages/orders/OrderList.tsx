@@ -13,6 +13,7 @@ import {
   Title,
 } from "@mantine/core";
 import type { OrderListResponse } from "@naisys-erp/shared";
+import { OrderStatus, OrderStatusEnum } from "@naisys-erp/shared";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 
@@ -82,10 +83,10 @@ export const OrderList: React.FC = () => {
         />
         <Select
           placeholder="All statuses"
-          data={[
-            { value: "active", label: "Active" },
-            { value: "archived", label: "Archived" },
-          ]}
+          data={OrderStatusEnum.options.map((v) => ({
+            value: v,
+            label: v.charAt(0).toUpperCase() + v.slice(1),
+          }))}
           value={status ?? null}
           onChange={(val) => {
             setSearchParams((prev) => {
@@ -129,7 +130,9 @@ export const OrderList: React.FC = () => {
                   <Table.Td>{item.name}</Table.Td>
                   <Table.Td>
                     <Badge
-                      color={item.status === "active" ? "green" : "gray"}
+                      color={
+                        item.status === OrderStatus.active ? "green" : "gray"
+                      }
                       variant="light"
                     >
                       {item.status}

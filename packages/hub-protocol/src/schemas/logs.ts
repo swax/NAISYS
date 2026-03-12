@@ -3,14 +3,23 @@ import { z } from "zod";
 /** How often NAISYS instances flush buffered log entries to the hub (ms) */
 export const LOG_FLUSH_INTERVAL_MS = 100;
 
+export const LogRoleEnum = z.enum(["NAISYS", "LLM"]);
+export const LogSourceEnum = z.enum([
+  "startPrompt",
+  "endPrompt",
+  "console",
+  "llm",
+]);
+export const LogTypeEnum = z.enum(["comment", "error", "system", "workspace"]);
+
 /** A single log entry sent from NAISYS instance to hub */
 export const LogWriteEntrySchema = z.object({
   userId: z.number(),
   runId: z.number(),
   sessionId: z.number(),
-  role: z.string(),
-  source: z.string(),
-  type: z.string(),
+  role: LogRoleEnum,
+  source: LogSourceEnum.nullable(),
+  type: LogTypeEnum.nullable(),
   message: z.string(),
   createdAt: z.string(),
   attachmentId: z.number().optional(),
@@ -29,9 +38,9 @@ export const LogPushEntrySchema = z.object({
   userId: z.number(),
   runId: z.number(),
   sessionId: z.number(),
-  role: z.string(),
-  source: z.string(),
-  type: z.string(),
+  role: LogRoleEnum,
+  source: LogSourceEnum.nullable(),
+  type: LogTypeEnum.nullable(),
   message: z.string(),
   createdAt: z.string(),
   attachmentId: z.number().optional(),

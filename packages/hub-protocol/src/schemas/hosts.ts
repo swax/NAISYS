@@ -1,5 +1,8 @@
 import { z } from "zod";
 
+export const HostTypeEnum = z.enum(["naisys", "supervisor"]);
+export type HostType = z.infer<typeof HostTypeEnum>;
+
 /** Pushed from hub to all NAISYS instances when the set of known hosts changes */
 export const HostListSchema = z.object({
   hosts: z.array(
@@ -7,7 +10,7 @@ export const HostListSchema = z.object({
       hostId: z.number(),
       hostName: z.string(),
       restricted: z.boolean(),
-      hostType: z.string(),
+      hostType: HostTypeEnum,
       online: z.boolean(),
     }),
   ),

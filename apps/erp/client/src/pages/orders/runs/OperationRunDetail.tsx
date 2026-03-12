@@ -26,7 +26,11 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 export const OperationRunDetail: React.FC = () => {
-  const { orderKey, id: runId, opRunId } = useParams<{
+  const {
+    orderKey,
+    id: runId,
+    opRunId,
+  } = useParams<{
     orderKey: string;
     id: string;
     opRunId: string;
@@ -162,10 +166,7 @@ export const OperationRunDetail: React.FC = () => {
             <Text fw={600} w={120}>
               Status:
             </Text>
-            <Badge
-              color={STATUS_COLORS[item.status] ?? "gray"}
-              variant="light"
-            >
+            <Badge color={STATUS_COLORS[item.status] ?? "gray"} variant="light">
               {item.status}
             </Badge>
           </Group>
@@ -188,11 +189,7 @@ export const OperationRunDetail: React.FC = () => {
         </Stack>
       </Card>
 
-      <StepRunList
-        orderKey={orderKey!}
-        runId={runId!}
-        opRunId={opRunId!}
-      />
+      <StepRunList orderKey={orderKey!} runId={runId!} opRunId={opRunId!} />
     </Stack>
   );
 };

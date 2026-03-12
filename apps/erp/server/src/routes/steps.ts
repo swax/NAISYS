@@ -2,6 +2,7 @@ import type { HateoasAction, HateoasLink } from "@naisys/common";
 import {
   CreateStepSchema,
   ErrorResponseSchema,
+  RevisionStatus,
   StepListResponseSchema,
   StepSchema,
   UpdateStepSchema,
@@ -91,7 +92,11 @@ function stepItemActions(
   revStatus: string,
   user: ErpUser | undefined,
 ): HateoasAction[] {
-  if (!hasPermission(user, "manage_orders") || revStatus !== "draft") return [];
+  if (
+    !hasPermission(user, "manage_orders") ||
+    revStatus !== RevisionStatus.draft
+  )
+    return [];
 
   const href = `${API_PREFIX}${stepBasePath(orderKey, revNo, opSeqNo)}/${stepSeqNo}`;
   return [
@@ -205,21 +210,14 @@ export default function stepRoutes(fastify: FastifyInstance) {
       const base = stepBasePath(orderKey, revNo, seqNo);
       return {
         items: items.map((item) =>
-          formatItem(
-            orderKey,
-            revNo,
-            seqNo,
-            resolved.rev.status,
-            user,
-            item,
-          ),
+          formatItem(orderKey, revNo, seqNo, resolved.rev.status, user, item),
         ),
         total: items.length,
         nextSeqNo,
         _links: [selfLink(base)],
         _actions:
           hasPermission(user, "manage_orders") &&
-          resolved.rev.status === "draft"
+          resolved.rev.status === RevisionStatus.draft
             ? [
                 {
                   rel: "create",
@@ -257,7 +255,7 @@ export default function stepRoutes(fastify: FastifyInstance) {
         return sendError(reply, 404, "Not Found", "Operation not found");
       }
 
-      if (resolved.rev.status !== "draft") {
+      if (resolved.rev.status !== RevisionStatus.draft) {
         return sendError(
           reply,
           409,
@@ -365,7 +363,7 @@ export default function stepRoutes(fastify: FastifyInstance) {
         return sendError(reply, 404, "Not Found", "Operation not found");
       }
 
-      if (resolved.rev.status !== "draft") {
+      if (resolved.rev.status !== RevisionStatus.draft) {
         return sendError(
           reply,
           409,
@@ -427,7 +425,7 @@ export default function stepRoutes(fastify: FastifyInstance) {
         return sendError(reply, 404, "Not Found", "Operation not found");
       }
 
-      if (resolved.rev.status !== "draft") {
+      if (resolved.rev.status !== RevisionStatus.draft) {
         return sendError(
           reply,
           409,

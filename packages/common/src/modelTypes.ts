@@ -96,11 +96,13 @@ const ImageMetaSchema = z.object({
 
 // --- DB conversion helpers ---
 
+export type ModelDbType = "llm" | "image";
+
 /** Row shape returned from prisma models table */
 export interface ModelDbRow {
   id: number;
   key: string;
-  type: string;
+  type: ModelDbType;
   label: string;
   version_name: string;
   is_builtin: boolean;
@@ -111,7 +113,7 @@ export interface ModelDbRow {
 /** Fields for prisma models.createMany / update (without id, created_at, updated_at) */
 export interface ModelDbFields {
   key: string;
-  type: string;
+  type: ModelDbType;
   label: string;
   version_name: string;
   is_builtin: boolean;

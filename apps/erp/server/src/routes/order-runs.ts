@@ -4,9 +4,9 @@ import {
   ErrorResponseSchema,
   OrderRunListQuerySchema,
   OrderRunListResponseSchema,
-  type OrderRunPriority,
+  OrderRunPriority,
   OrderRunSchema,
-  type OrderRunStatus,
+  OrderRunStatus,
   UpdateOrderRunSchema,
 } from "@naisys-erp/shared";
 import { FastifyInstance } from "fastify";
@@ -58,7 +58,7 @@ function orderRunItemActions(
   const href = `${API_PREFIX}/${runResource(orderKey)}/${id}`;
   const actions: HateoasAction[] = [];
 
-  if (status === "released") {
+  if (status === OrderRunStatus.released) {
     actions.push(
       {
         rel: "update",
@@ -86,7 +86,7 @@ function orderRunItemActions(
         title: "Delete",
       },
     );
-  } else if (status === "started") {
+  } else if (status === OrderRunStatus.started) {
     actions.push(
       {
         rel: "update",
@@ -155,8 +155,8 @@ function formatItem(
     orderId: item.orderId,
     orderKey,
     revNo: item.orderRev.revNo,
-    status: item.status as OrderRunStatus,
-    priority: item.priority as OrderRunPriority,
+    status: item.status,
+    priority: item.priority,
     scheduledStartAt: formatDate(item.scheduledStartAt),
     dueAt: formatDate(item.dueAt),
     releasedAt: item.releasedAt.toISOString(),
@@ -455,7 +455,10 @@ export default function orderRunRoutes(fastify: FastifyInstance) {
         );
       }
 
-      if (existing.status !== "released" && existing.status !== "started") {
+      if (
+        existing.status !== OrderRunStatus.released &&
+        existing.status !== OrderRunStatus.started
+      ) {
         return sendError(
           reply,
           409,
@@ -523,7 +526,7 @@ export default function orderRunRoutes(fastify: FastifyInstance) {
         );
       }
 
-      if (existing.status !== "released") {
+      if (existing.status !== OrderRunStatus.released) {
         return sendError(
           reply,
           409,
@@ -572,7 +575,7 @@ export default function orderRunRoutes(fastify: FastifyInstance) {
         );
       }
 
-      if (existing.status !== "released") {
+      if (existing.status !== OrderRunStatus.released) {
         return sendError(
           reply,
           409,
@@ -585,7 +588,7 @@ export default function orderRunRoutes(fastify: FastifyInstance) {
       const item = await erpDb.$transaction(async (erpTx) => {
         const updated = await erpTx.orderRun.update({
           where: { id },
-          data: { status: "started", updatedById: userId },
+          data: { status: OrderRunStatus.started, updatedById: userId },
           include: includeRev,
         });
         await writeAuditEntry(
@@ -594,8 +597,8 @@ export default function orderRunRoutes(fastify: FastifyInstance) {
           id,
           "start",
           "status",
-          "released",
-          "started",
+          OrderRunStatus.released,
+          OrderRunStatus.started,
           userId,
         );
         return updated;
@@ -640,7 +643,7 @@ export default function orderRunRoutes(fastify: FastifyInstance) {
         );
       }
 
-      if (existing.status !== "started") {
+      if (existing.status !== OrderRunStatus.started) {
         return sendError(
           reply,
           409,
@@ -653,7 +656,7 @@ export default function orderRunRoutes(fastify: FastifyInstance) {
       const item = await erpDb.$transaction(async (erpTx) => {
         const updated = await erpTx.orderRun.update({
           where: { id },
-          data: { status: "closed", updatedById: userId },
+          data: { status: OrderRunStatus.closed, updatedById: userId },
           include: includeRev,
         });
         await writeAuditEntry(
@@ -662,8 +665,8 @@ export default function orderRunRoutes(fastify: FastifyInstance) {
           id,
           "close",
           "status",
-          "started",
-          "closed",
+          OrderRunStatus.started,
+          OrderRunStatus.closed,
           userId,
         );
         return updated;
@@ -708,7 +711,10 @@ export default function orderRunRoutes(fastify: FastifyInstance) {
         );
       }
 
-      if (existing.status !== "released" && existing.status !== "started") {
+      if (
+        existing.status !== OrderRunStatus.released &&
+        existing.status !== OrderRunStatus.started
+      ) {
         return sendError(
           reply,
           409,
@@ -721,7 +727,7 @@ export default function orderRunRoutes(fastify: FastifyInstance) {
       const item = await erpDb.$transaction(async (erpTx) => {
         const updated = await erpTx.orderRun.update({
           where: { id },
-          data: { status: "cancelled", updatedById: userId },
+          data: { status: OrderRunStatus.cancelled, updatedById: userId },
           include: includeRev,
         });
         await writeAuditEntry(
@@ -731,7 +737,7 @@ export default function orderRunRoutes(fastify: FastifyInstance) {
           "cancel",
           "status",
           existing.status,
-          "cancelled",
+          OrderRunStatus.cancelled,
           userId,
         );
         return updated;

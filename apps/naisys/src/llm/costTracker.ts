@@ -2,6 +2,7 @@ import { calculatePeriodBoundaries } from "@naisys/common";
 import {
   COST_FLUSH_INTERVAL_MS,
   CostControlSchema,
+  type CostSource,
   CostWriteEntry,
   HubEvents,
 } from "@naisys/hub-protocol";
@@ -128,7 +129,7 @@ export function createCostTracker(
   }
 
   function pushToBuffer(
-    source: string,
+    source: CostSource,
     modelKey: string,
     cost: number,
     inputTokens: number,
@@ -154,7 +155,7 @@ export function createCostTracker(
 
   // Record token usage for LLM calls
   function recordTokens(
-    source: string,
+    source: CostSource,
     modelKey: string,
     inputTokens: number = 0,
     outputTokens: number = 0,
@@ -193,7 +194,7 @@ export function createCostTracker(
   }
 
   // Record fixed cost for non-token services like image generation
-  function recordCost(cost: number, source: string, modelKey: string) {
+  function recordCost(cost: number, source: CostSource, modelKey: string) {
     updateInMemory(modelKey, cost, 0, 0, 0, 0);
 
     if (hubClient) {

@@ -175,10 +175,7 @@ export const UserList: React.FC = () => {
             </Table.Thead>
             <Table.Tbody>
               {data.items.map((item: any) => (
-                <Table.Tr
-                  key={item.id}
-                  style={{ cursor: "pointer" }}
-                >
+                <Table.Tr key={item.id} style={{ cursor: "pointer" }}>
                   <Table.Td>
                     <Link to={`/users/${item.username}`} style={cellLinkStyle}>
                       {item.username}

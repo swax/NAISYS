@@ -7,6 +7,9 @@ import { z } from "zod";
 export const MessageKindSchema = z.enum(["mail", "chat"]);
 export type MessageKind = z.infer<typeof MessageKindSchema>;
 
+export const AttachmentPurposeEnum = z.enum(["mail", "context"]);
+export type AttachmentPurpose = z.infer<typeof AttachmentPurposeEnum>;
+
 // =============================================================================
 // Send
 // =============================================================================
