@@ -33,9 +33,12 @@ import { ERP_DB_VERSION, erpDbPath } from "./dbConfig.js";
 import { initErpDb } from "./erpDb.js";
 import auditRoutes from "./routes/audit.js";
 import authRoutes from "./routes/auth.js";
+import operationRunTransitionRoutes from "./routes/operation-run-transitions.js";
 import operationRunRoutes from "./routes/operation-runs.js";
 import operationRoutes from "./routes/operations.js";
+import orderRevisionTransitionRoutes from "./routes/order-revision-transitions.js";
 import orderRevisionRoutes from "./routes/order-revisions.js";
+import orderRunTransitionRoutes from "./routes/order-run-transitions.js";
 import orderRunRoutes from "./routes/order-runs.js";
 import orderRoutes from "./routes/orders.js";
 import rootRoute from "./routes/root.js";
@@ -43,6 +46,7 @@ import schemaRoutes from "./routes/schemas.js";
 import stepFieldRoutes from "./routes/step-fields.js";
 import stepRunRoutes from "./routes/step-runs.js";
 import stepRoutes from "./routes/steps.js";
+import userPermissionRoutes from "./routes/user-permissions.js";
 import userRoutes from "./routes/users.js";
 import { isSupervisorAuth } from "./supervisorAuth.js";
 import {
@@ -115,13 +119,22 @@ export const erpPlugin: FastifyPluginAsync = async (fastify) => {
   fastify.register(orderRevisionRoutes, {
     prefix: "/api/erp/orders/:orderKey/revs",
   });
+  fastify.register(orderRevisionTransitionRoutes, {
+    prefix: "/api/erp/orders/:orderKey/revs",
+  });
   fastify.register(orderRunRoutes, {
+    prefix: "/api/erp/orders/:orderKey/runs",
+  });
+  fastify.register(orderRunTransitionRoutes, {
     prefix: "/api/erp/orders/:orderKey/runs",
   });
   fastify.register(operationRoutes, {
     prefix: "/api/erp/orders/:orderKey/revs/:revNo/ops",
   });
   fastify.register(operationRunRoutes, {
+    prefix: "/api/erp/orders/:orderKey/runs/:runId/ops",
+  });
+  fastify.register(operationRunTransitionRoutes, {
     prefix: "/api/erp/orders/:orderKey/runs/:runId/ops",
   });
   fastify.register(stepRunRoutes, {
@@ -136,6 +149,7 @@ export const erpPlugin: FastifyPluginAsync = async (fastify) => {
   });
   fastify.register(schemaRoutes, { prefix: "/api/erp/schemas" });
   fastify.register(userRoutes, { prefix: "/api/erp/users" });
+  fastify.register(userPermissionRoutes, { prefix: "/api/erp/users" });
 
   // Public endpoint to expose client configuration (publicRead, etc.)
   fastify.get("/api/erp/client-config", { schema: { hide: true } }, () => ({

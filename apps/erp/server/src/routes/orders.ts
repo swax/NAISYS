@@ -14,9 +14,7 @@ import { z } from "zod/v4";
 
 import type { ErpUser } from "../auth-middleware.js";
 import { hasPermission } from "../auth-middleware.js";
-import erpDb from "../erpDb.js";
 import { conflict, notFound } from "../error-handler.js";
-import type { OrderModel } from "../generated/prisma/models/Order.js";
 import {
   API_PREFIX,
   collectionLink,
@@ -24,11 +22,16 @@ import {
   schemaLink,
   selfLink,
 } from "../hateoas.js";
+import { formatAuditFields } from "../route-helpers.js";
 import {
-  formatAuditFields,
-  includeUsers,
-  type WithAuditUsers,
-} from "../route-helpers.js";
+  checkHasRevisions,
+  createOrder,
+  deleteOrder,
+  findExisting,
+  listOrders,
+  type OrderWithUsers,
+  updateOrder,
+} from "../services/order-service.js";
 
 function itemLinks(
   resource: string,
@@ -105,10 +108,7 @@ const KeyParamsSchema = z.object({
   key: z.string(),
 });
 
-function formatItem(
-  item: OrderModel & WithAuditUsers,
-  user: ErpUser | undefined,
-) {
+function formatItem(item: OrderWithUsers, user: ErpUser | undefined) {
   return {
     id: item.id,
     key: item.key,
@@ -124,10 +124,7 @@ function formatItem(
   };
 }
 
-function formatListItem(
-  item: OrderModel & WithAuditUsers,
-  user: ErpUser | undefined,
-) {
+function formatListItem(item: OrderWithUsers, user: ErpUser | undefined) {
   const { _actions, ...rest } = formatItem(item, user);
   return {
     ...rest,
@@ -161,16 +158,7 @@ export default function orderRoutes(fastify: FastifyInstance) {
         ];
       }
 
-      const [items, total] = await Promise.all([
-        erpDb.order.findMany({
-          where,
-          include: includeUsers,
-          skip: (page - 1) * pageSize,
-          take: pageSize,
-          orderBy: { createdAt: "desc" },
-        }),
-        erpDb.order.count({ where }),
-      ]);
+      const [items, total] = await listOrders(where, page, pageSize);
 
       return {
         items: items.map((item) => formatListItem(item, request.erpUser)),
@@ -210,16 +198,7 @@ export default function orderRoutes(fastify: FastifyInstance) {
       const { key, name, description } = request.body;
       const userId = request.erpUser!.id;
 
-      const item = await erpDb.order.create({
-        data: {
-          key,
-          name,
-          description,
-          createdById: userId,
-          updatedById: userId,
-        },
-        include: includeUsers,
-      });
+      const item = await createOrder(key, name, description, userId);
 
       reply.status(201);
       return formatItem(item, request.erpUser);
@@ -240,10 +219,7 @@ export default function orderRoutes(fastify: FastifyInstance) {
     handler: async (request, reply) => {
       const { key } = request.params;
 
-      const item = await erpDb.order.findUnique({
-        where: { key },
-        include: includeUsers,
-      });
+      const item = await findExisting(key);
       if (!item) {
         return notFound(reply, `Order '${key}' not found`);
       }
@@ -269,18 +245,12 @@ export default function orderRoutes(fastify: FastifyInstance) {
       const data = request.body;
       const userId = request.erpUser!.id;
 
-      const existing = await erpDb.order.findUnique({
-        where: { key },
-      });
+      const existing = await findExisting(key);
       if (!existing) {
         return notFound(reply, `Order '${key}' not found`);
       }
 
-      const item = await erpDb.order.update({
-        where: { key },
-        data: { ...data, updatedById: userId },
-        include: includeUsers,
-      });
+      const item = await updateOrder(key, data, userId);
 
       return formatItem(item, request.erpUser);
     },
@@ -301,24 +271,20 @@ export default function orderRoutes(fastify: FastifyInstance) {
     handler: async (request, reply) => {
       const { key } = request.params;
 
-      const existing = await erpDb.order.findUnique({
-        where: { key },
-      });
+      const existing = await findExisting(key);
       if (!existing) {
         return notFound(reply, `Order '${key}' not found`);
       }
 
-      const revisionCount = await erpDb.orderRevision.count({
-        where: { orderId: existing.id },
-      });
-      if (revisionCount > 0) {
+      const hasRevisions = await checkHasRevisions(existing.id);
+      if (hasRevisions) {
         return conflict(
           reply,
           "Cannot delete order with existing revisions. Archive it instead.",
         );
       }
 
-      await erpDb.order.delete({ where: { key } });
+      await deleteOrder(key);
       reply.status(204);
     },
   });

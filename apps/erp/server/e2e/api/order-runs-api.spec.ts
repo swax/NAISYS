@@ -192,8 +192,10 @@ test.describe("Order Runs - API happy path", () => {
       ]),
     );
 
-    // closed: no actions
-    expect(body._actions).toHaveLength(0);
+    // closed: only reopen action
+    expect(body._actions).toEqual([
+      expect.objectContaining({ rel: "reopen" }),
+    ]);
   });
 
   test("cannot start closed order run (409)", async () => {
@@ -239,8 +241,10 @@ test.describe("Order Runs - API happy path", () => {
 
     const body = await cancelRes.json();
     expect(body.status).toBe("cancelled");
-    // cancelled: no actions
-    expect(body._actions).toHaveLength(0);
+    // cancelled: only reopen action
+    expect(body._actions).toEqual([
+      expect.objectContaining({ rel: "reopen" }),
+    ]);
   });
 
   test("filter by status", async () => {

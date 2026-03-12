@@ -3,8 +3,6 @@ import {
   ChangePasswordSchema,
   CreateUserSchema,
   type ErpPermission,
-  ErpPermissionEnum,
-  GrantPermissionSchema,
   UpdateUserSchema,
 } from "@naisys-erp/shared";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
@@ -23,7 +21,15 @@ import {
   schemaLink,
   selfLink,
 } from "../hateoas.js";
-import * as userService from "../userService.js";
+import {
+  createUserWithPassword,
+  deleteUser,
+  getUserApiKey,
+  getUserById,
+  getUserByUsername,
+  listUsers,
+  updateUser,
+} from "../services/user-service.js";
 
 function userItemLinks(username: string): HateoasLink[] {
   return [
@@ -113,8 +119,8 @@ function permissionActions(
   return actions;
 }
 
-function formatUser(
-  user: Awaited<ReturnType<typeof userService.getUserById>>,
+export function formatUser(
+  user: Awaited<ReturnType<typeof getUserById>>,
   currentUserId: number,
   currentUserPermissions: ErpPermission[],
   options?: { apiKey?: string | null },
@@ -141,7 +147,7 @@ function formatUser(
 }
 
 function formatListUser(
-  user: Awaited<ReturnType<typeof userService.listUsers>>["items"][number],
+  user: Awaited<ReturnType<typeof listUsers>>["items"][number],
 ) {
   return {
     id: user.id,
@@ -200,7 +206,7 @@ export default function userRoutes(fastify: FastifyInstance) {
     },
     async (request) => {
       const { page, pageSize, search } = request.query;
-      const result = await userService.listUsers({ page, pageSize, search });
+      const result = await listUsers({ page, pageSize, search });
 
       const actions: HateoasAction[] = [
         {
@@ -245,7 +251,7 @@ export default function userRoutes(fastify: FastifyInstance) {
         return;
       }
 
-      await userService.updateUser(request.erpUser.id, {
+      await updateUser(request.erpUser.id, {
         password: request.body.password,
       });
       authCache.clear();
@@ -266,7 +272,7 @@ export default function userRoutes(fastify: FastifyInstance) {
     },
     async (request, reply) => {
       try {
-        const user = await userService.createUserWithPassword(request.body);
+        const user = await createUserWithPassword(request.body);
         reply.code(201);
         return formatUser(
           user,
@@ -295,13 +301,13 @@ export default function userRoutes(fastify: FastifyInstance) {
       },
     },
     async (request, reply) => {
-      const user = await userService.getUserByUsername(request.params.username);
+      const user = await getUserByUsername(request.params.username);
       if (!user) {
         reply.code(404);
         return { success: false, message: "User not found" };
       }
 
-      const apiKey = await userService.getUserApiKey(user.id);
+      const apiKey = await getUserApiKey(user.id);
 
       return formatUser(
         user,
@@ -325,9 +331,7 @@ export default function userRoutes(fastify: FastifyInstance) {
       },
     },
     async (request, reply) => {
-      const targetUser = await userService.getUserByUsername(
-        request.params.username,
-      );
+      const targetUser = await getUserByUsername(request.params.username);
       if (!targetUser) {
         reply.code(404);
         return { success: false, message: "User not found" };
@@ -339,7 +343,7 @@ export default function userRoutes(fastify: FastifyInstance) {
       const body = isAdmin ? request.body : { password: request.body.password };
 
       try {
-        const user = await userService.updateUser(targetUser.id, body);
+        const user = await updateUser(targetUser.id, body);
         authCache.clear();
         return formatUser(
           user,
@@ -372,134 +376,14 @@ export default function userRoutes(fastify: FastifyInstance) {
         reply.code(409);
         return { success: false, message: "Cannot delete yourself" };
       }
-      const targetUser = await userService.getUserByUsername(
-        request.params.username,
-      );
+      const targetUser = await getUserByUsername(request.params.username);
       if (!targetUser) {
         reply.code(404);
         return { success: false, message: "User not found" };
       }
-      await userService.deleteUser(targetUser.id);
+      await deleteUser(targetUser.id);
       authCache.clear();
       return { success: true, message: "User deleted" };
-    },
-  );
-
-  // ROTATE API KEY
-  app.post(
-    "/:username/rotate-key",
-    {
-      preHandler: adminPreHandler,
-      schema: {
-        description: "Rotate a user's API key",
-        tags: ["Users"],
-        params: usernameParams,
-      },
-    },
-    async (request, reply) => {
-      const targetUser = await userService.getUserByUsername(
-        request.params.username,
-      );
-      if (!targetUser) {
-        reply.code(404);
-        return { success: false, message: "User not found" };
-      }
-      await userService.rotateUserApiKey(targetUser.id);
-      authCache.clear();
-      return { success: true, message: "API key rotated" };
-    },
-  );
-
-  // GRANT PERMISSION
-  app.post(
-    "/:username/permissions",
-    {
-      preHandler: adminPreHandler,
-      schema: {
-        description: "Grant a permission to a user",
-        tags: ["Users"],
-        params: usernameParams,
-        body: GrantPermissionSchema,
-      },
-    },
-    async (request, reply) => {
-      const targetUser = await userService.getUserByUsername(
-        request.params.username,
-      );
-      if (!targetUser) {
-        reply.code(404);
-        return { success: false, message: "User not found" };
-      }
-
-      try {
-        await userService.grantPermission(
-          targetUser.id,
-          request.body.permission,
-          request.erpUser!.id,
-        );
-        authCache.clear();
-        const user = await userService.getUserById(targetUser.id);
-        return formatUser(
-          user,
-          request.erpUser!.id,
-          request.erpUser!.permissions,
-        );
-      } catch (err: unknown) {
-        if (err instanceof Error && err.message.includes("Unique constraint")) {
-          reply.code(409);
-          return {
-            success: false,
-            message: "Permission already granted",
-          };
-        }
-        throw err;
-      }
-    },
-  );
-
-  // REVOKE PERMISSION
-  app.delete(
-    "/:username/permissions/:permission",
-    {
-      preHandler: adminPreHandler,
-      schema: {
-        description: "Revoke a permission from a user",
-        tags: ["Users"],
-        params: z.object({
-          username: z.string(),
-          permission: ErpPermissionEnum,
-        }),
-      },
-    },
-    async (request, reply) => {
-      const { username, permission } = request.params;
-
-      // Cannot revoke own erp_admin
-      if (
-        username === request.erpUser!.username &&
-        permission === "erp_admin"
-      ) {
-        reply.code(409);
-        return {
-          success: false,
-          message: "Cannot revoke your own erp_admin permission",
-        };
-      }
-
-      const targetUser = await userService.getUserByUsername(username);
-      if (!targetUser) {
-        reply.code(404);
-        return { success: false, message: "User not found" };
-      }
-
-      await userService.revokePermission(targetUser.id, permission);
-      authCache.clear();
-      const user = await userService.getUserById(targetUser.id);
-      return formatUser(
-        user,
-        request.erpUser!.id,
-        request.erpUser!.permissions,
-      );
     },
   );
 }

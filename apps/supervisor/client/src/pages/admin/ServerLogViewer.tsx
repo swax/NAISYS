@@ -5,6 +5,7 @@ import {
   Group,
   Loader,
   ScrollArea,
+  SegmentedControl,
   Stack,
   Tabs,
   Text,
@@ -36,12 +37,14 @@ export const ServerLogViewer: React.FC = () => {
   const [logTab, setLogTab] = useState<string>("supervisor");
   const [logData, setLogData] = useState<ServerLogResponse | null>(null);
   const [logLoading, setLogLoading] = useState(false);
+  const [levelFilter, setLevelFilter] = useState<string>("all");
 
-  const fetchLogs = useCallback(async (file: string) => {
+  const fetchLogs = useCallback(async (file: string, filter: string) => {
     setLogLoading(true);
     try {
+      const minLevel = filter === "errors" ? 50 : undefined;
       const result = await api.get<ServerLogResponse>(
-        apiEndpoints.adminLogs(file),
+        apiEndpoints.adminLogs(file, undefined, minLevel),
       );
       setLogData(result);
     } catch {
@@ -52,8 +55,8 @@ export const ServerLogViewer: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    void fetchLogs(logTab);
-  }, [logTab, fetchLogs]);
+    void fetchLogs(logTab, levelFilter);
+  }, [logTab, levelFilter, fetchLogs]);
 
   return (
     <>
@@ -75,11 +78,20 @@ export const ServerLogViewer: React.FC = () => {
           size="xs"
           variant="light"
           leftSection={<IconRefresh size={14} />}
-          onClick={() => fetchLogs(logTab)}
+          onClick={() => fetchLogs(logTab, levelFilter)}
           loading={logLoading}
         >
           Refresh
         </Button>
+        <SegmentedControl
+          size="xs"
+          value={levelFilter}
+          onChange={setLevelFilter}
+          data={[
+            { value: "all", label: "All" },
+            { value: "errors", label: "Errors" },
+          ]}
+        />
         {logData?.fileSize != null && (
           <Text size="sm" c="dimmed">
             File size: {formatFileSize(logData.fileSize)}

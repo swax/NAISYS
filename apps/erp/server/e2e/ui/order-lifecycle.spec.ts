@@ -1,7 +1,8 @@
 import { test, expect, type Page } from "@playwright/test";
 import { getTestCredentials } from "../auth-helper";
+import { createOrderWithRevision } from "./helpers/order-setup";
 
-test.describe.serial("Full order lifecycle (UI)", () => {
+test.describe.serial("Order lifecycle (UI)", () => {
   const uniqueKey = `e2e-lifecycle-${Date.now()}`;
   const orderName = "Lifecycle Test Order";
   const orderDesc = "End-to-end lifecycle test";
@@ -24,34 +25,8 @@ test.describe.serial("Full order lifecycle (UI)", () => {
     await page.close();
   });
 
-  test("create an order", async () => {
-    await page.goto("/erp/orders");
-    await page.getByRole("button", { name: "Create New" }).click();
-
-    // Fill the form
-    await page.getByLabel("Key").fill(uniqueKey);
-    await page.getByLabel("Name").fill(orderName);
-    await page.getByLabel("Description").fill(orderDesc);
-    await page.getByRole("button", { name: "Create" }).click();
-
-    // Should redirect back to list
-    await expect(page.getByRole("heading", { name: "Orders" })).toBeVisible();
-
-    // Click into the newly created order
-    await page.getByText(uniqueKey).click();
-    await expect(page.getByRole("heading", { name: orderName })).toBeVisible();
-  });
-
-  test("create a revision", async () => {
-    await page.getByRole("button", { name: "New Revision" }).click();
-
-    // Fill the modal form
-    await page.getByLabel("Notes").fill("Initial revision notes");
-    await page.getByLabel("Change Summary").fill("First draft of the order");
-    await page.getByRole("button", { name: "Create" }).click();
-
-    // Should navigate to the revision detail page
-    await expect(page.getByText("Rev #1")).toBeVisible();
+  test("create order with revision", async () => {
+    await createOrderWithRevision(page, { uniqueKey, orderName, orderDesc });
   });
 
   test("approve the revision", async () => {
@@ -72,26 +47,16 @@ test.describe.serial("Full order lifecycle (UI)", () => {
       page.getByRole("heading", { name: "Create Order Run" }),
     ).toBeVisible();
 
-    // Submit the form
+    // Submit the form — redirects to the new order run detail
     await page.getByRole("button", { name: "Create" }).click();
 
-    // Should redirect to runs list
-    await expect(
-      page.getByRole("heading", { name: `Runs for ${uniqueKey}` }),
-    ).toBeVisible();
+    // Verify we landed on the run detail page
+    await expect(page.getByTestId("order-run-status")).toHaveText("released");
   });
 
   test("start the order run", async () => {
-    // Click the first (most recent) order run row
-    await page.locator("table tbody tr").first().click();
-
-    // Verify initial status is released
-    await expect(page.getByTestId("order-run-status")).toHaveText("released");
-
-    // Click Start
+    // Already on the run detail page from the previous step
     await page.getByTestId("order-run-start").click();
-
-    // Verify status changes to started
     await expect(page.getByTestId("order-run-status")).toHaveText("started");
   });
 

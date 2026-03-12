@@ -146,6 +146,7 @@ export const OrderRunHeader: React.FC<Props> = ({
           color={STATUS_COLORS[item.status] ?? "gray"}
           variant="light"
           size="sm"
+          data-testid="order-run-status"
         >
           {item.status}
         </Badge>
@@ -174,12 +175,22 @@ export const OrderRunHeader: React.FC<Props> = ({
           </Button>
         )}
         {hasAction(item._actions, "start") && (
-          <Button size="xs" color="green" onClick={() => handleAction("start")}>
+          <Button
+            size="xs"
+            color="green"
+            data-testid="order-run-start"
+            onClick={() => handleAction("start")}
+          >
             Start
           </Button>
         )}
         {hasAction(item._actions, "close") && (
-          <Button size="xs" color="green" onClick={() => handleAction("close")}>
+          <Button
+            size="xs"
+            color="green"
+            data-testid="order-run-close"
+            onClick={() => handleAction("close")}
+          >
             Close
           </Button>
         )}

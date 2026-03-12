@@ -30,6 +30,7 @@ export type ServerLogFile = z.infer<typeof ServerLogFileSchema>;
 export const ServerLogRequestSchema = z.object({
   file: ServerLogFileSchema,
   lines: z.coerce.number().optional().default(200),
+  minLevel: z.coerce.number().optional(),
 });
 export type ServerLogRequest = z.infer<typeof ServerLogRequestSchema>;
 
