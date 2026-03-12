@@ -9,9 +9,9 @@ import {
   Stack,
   Text,
 } from "@mantine/core";
-import { IconArrowBackUp } from "@tabler/icons-react";
 import type { OperationRun } from "@naisys-erp/shared";
 import { OperationRunStatus } from "@naisys-erp/shared";
+import { IconArrowBackUp } from "@tabler/icons-react";
 import { useCallback, useEffect, useState } from "react";
 import { useOutletContext, useParams } from "react-router";
 
@@ -110,122 +110,143 @@ export const OperationRunDetail: React.FC = () => {
   return (
     <Container size="md" py="xl">
       <Stack gap="md">
-      <Group justify="space-between">
-        <Group gap="xs">
-          <Text fw={600}>
-            OPERATION {item.seqNo}. {item.title}
-          </Text>
-          <MetadataTooltip
-            createdBy={item.createdBy}
-            createdAt={item.createdAt}
-            updatedBy={item.updatedBy}
-            updatedAt={item.updatedAt}
-          />
-          <Badge
-            color={STATUS_COLORS[item.status] ?? "gray"}
-            variant="light"
-            size="sm"
-          >
-            {item.status}
-          </Badge>
+        <Group justify="space-between">
+          <Group gap="xs">
+            <Text fw={600}>
+              OPERATION {item.seqNo}. {item.title}
+            </Text>
+            <MetadataTooltip
+              createdBy={item.createdBy}
+              createdAt={item.createdAt}
+              updatedBy={item.updatedBy}
+              updatedAt={item.updatedAt}
+            />
+            <Badge
+              color={STATUS_COLORS[item.status] ?? "gray"}
+              variant="light"
+              size="sm"
+            >
+              {item.status}
+            </Badge>
+          </Group>
+          <Group gap="xs">
+            {hasAction(item._actions, "start") && (
+              <Button
+                size="xs"
+                color="green"
+                onClick={() => handleAction("start")}
+              >
+                Start
+              </Button>
+            )}
+            {hasAction(item._actions, "complete") && (
+              <Button
+                size="xs"
+                color="green"
+                onClick={() => handleAction("complete")}
+              >
+                Complete
+              </Button>
+            )}
+            {hasAction(item._actions, "reopen") &&
+              (() => {
+                const labelMap: Record<
+                  string,
+                  { label: string; color: string }
+                > = {
+                  [OperationRunStatus.completed]: {
+                    label: "Completed",
+                    color: "green",
+                  },
+                  [OperationRunStatus.skipped]: {
+                    label: "Skipped",
+                    color: "gray",
+                  },
+                  [OperationRunStatus.failed]: {
+                    label: "Failed",
+                    color: "red",
+                  },
+                };
+                const { label, color } = labelMap[item.status] ?? {
+                  label: item.status,
+                  color: "gray",
+                };
+                return (
+                  <Group gap="xs" align="center">
+                    <Text size="xs" c={color}>
+                      {label} by {item.updatedBy} on{" "}
+                      {new Date(item.updatedAt).toLocaleString()}
+                    </Text>
+                    <ActionIcon
+                      size="xs"
+                      variant="subtle"
+                      color="gray"
+                      onClick={() => handleAction("reopen")}
+                      title={`Undo ${label.toLowerCase()}`}
+                    >
+                      <IconArrowBackUp size={14} />
+                    </ActionIcon>
+                  </Group>
+                );
+              })()}
+            {hasAction(item._actions, "skip") && (
+              <Button
+                size="xs"
+                color="gray"
+                variant="outline"
+                onClick={() => handleAction("skip")}
+              >
+                Skip
+              </Button>
+            )}
+            {hasAction(item._actions, "fail") && (
+              <Button
+                size="xs"
+                color="red"
+                variant="outline"
+                onClick={() => handleAction("fail")}
+              >
+                Fail
+              </Button>
+            )}
+          </Group>
         </Group>
-        <Group gap="xs">
-          {hasAction(item._actions, "start") && (
-            <Button
-              size="xs"
-              color="green"
-              onClick={() => handleAction("start")}
-            >
-              Start
-            </Button>
-          )}
-          {hasAction(item._actions, "complete") && (
-            <Button
-              size="xs"
-              color="green"
-              onClick={() => handleAction("complete")}
-            >
-              Complete
-            </Button>
-          )}
-          {hasAction(item._actions, "reopen") && (() => {
-            const labelMap: Record<string, { label: string; color: string }> = {
-              [OperationRunStatus.completed]: { label: "Completed", color: "green" },
-              [OperationRunStatus.skipped]: { label: "Skipped", color: "gray" },
-              [OperationRunStatus.failed]: { label: "Failed", color: "red" },
-            };
-            const { label, color } = labelMap[item.status] ?? { label: item.status, color: "gray" };
-            return (
-              <Group gap="xs" align="center">
-                <Text size="xs" c={color}>
-                  {label} by {item.updatedBy} on{" "}
-                  {new Date(item.updatedAt).toLocaleString()}
-                </Text>
-                <ActionIcon
-                  size="xs"
-                  variant="subtle"
-                  color="gray"
-                  onClick={() => handleAction("reopen")}
-                  title={`Undo ${label.toLowerCase()}`}
-                >
-                  <IconArrowBackUp size={14} />
-                </ActionIcon>
-              </Group>
-            );
-          })()}
-          {hasAction(item._actions, "skip") && (
-            <Button
-              size="xs"
-              color="gray"
-              variant="outline"
-              onClick={() => handleAction("skip")}
-            >
-              Skip
-            </Button>
-          )}
-          {hasAction(item._actions, "fail") && (
-            <Button
-              size="xs"
-              color="red"
-              variant="outline"
-              onClick={() => handleAction("fail")}
-            >
-              Fail
-            </Button>
-          )}
-        </Group>
-      </Group>
 
-      <Card withBorder p="lg">
-        <Stack gap="sm">
-          {item.description && (
+        <Card withBorder p="lg">
+          <Stack gap="sm">
+            {item.description && (
+              <Group align="flex-start">
+                <Text fw={600} w={120}>
+                  Description:
+                </Text>
+                <CompactMarkdown>{item.description}</CompactMarkdown>
+              </Group>
+            )}
+            {item.completedAt && (
+              <Group>
+                <Text fw={600} w={120}>
+                  Completed At:
+                </Text>
+                <Text>{new Date(item.completedAt).toLocaleString()}</Text>
+              </Group>
+            )}
             <Group align="flex-start">
               <Text fw={600} w={120}>
-                Description:
+                Notes:
               </Text>
-              <CompactMarkdown>{item.description}</CompactMarkdown>
-            </Group>
-          )}
-          {item.completedAt && (
-            <Group>
-              <Text fw={600} w={120}>
-                Completed At:
+              <Text style={{ whiteSpace: "pre-wrap" }}>
+                {item.notes || "\u2014"}
               </Text>
-              <Text>{new Date(item.completedAt).toLocaleString()}</Text>
             </Group>
-          )}
-          <Group align="flex-start">
-            <Text fw={600} w={120}>
-              Notes:
-            </Text>
-            <Text style={{ whiteSpace: "pre-wrap" }}>
-              {item.notes || "\u2014"}
-            </Text>
-          </Group>
-        </Stack>
-      </Card>
+          </Stack>
+        </Card>
 
-      <StepRunList orderKey={orderKey!} runId={runId!} opRunId={opRunId!} refreshKey={refreshKey} />
+        <StepRunList
+          orderKey={orderKey!}
+          runId={runId!}
+          opRunId={opRunId!}
+          refreshKey={refreshKey}
+        />
       </Stack>
     </Container>
   );

@@ -168,90 +168,90 @@ export const OrderRevisions: React.FC<Props> = ({ orderKey }) => {
               {data.items.map((rev) => {
                 const revLink = `/orders/${orderKey}/revs/${rev.revNo}`;
                 return (
-                <Table.Tr
-                  key={rev.id}
-                  style={{ cursor: "pointer" }}
-                  data-testid={`revision-row-${rev.revNo}`}
-                >
-                  <Table.Td>
-                    <Link to={revLink} style={cellLinkStyle}>
-                      {rev.revNo}
-                    </Link>
-                  </Table.Td>
-                  <Table.Td>
-                    <Link to={revLink} style={cellLinkStyle}>
-                      <Badge
-                        color={STATUS_COLORS[rev.status] ?? "gray"}
-                        variant="light"
-                        data-testid={`revision-status-${rev.revNo}`}
-                      >
-                        {rev.status}
-                      </Badge>
-                    </Link>
-                  </Table.Td>
-                  <Table.Td>
-                    <Link to={revLink} style={cellLinkStyle}>
-                      {rev.notes ?? "—"}
-                    </Link>
-                  </Table.Td>
-                  <Table.Td>
-                    <Link to={revLink} style={cellLinkStyle}>
-                      {rev.changeSummary ?? "—"}
-                    </Link>
-                  </Table.Td>
-                  <Table.Td>
-                    <Link to={revLink} style={cellLinkStyle}>
-                      {new Date(rev.createdAt).toLocaleString()}
-                    </Link>
-                  </Table.Td>
-                  <Table.Td>
-                    <Group gap="xs">
-                      {hasAction(rev._actions, "approve") && (
-                        <Button
-                          size="xs"
+                  <Table.Tr
+                    key={rev.id}
+                    style={{ cursor: "pointer" }}
+                    data-testid={`revision-row-${rev.revNo}`}
+                  >
+                    <Table.Td>
+                      <Link to={revLink} style={cellLinkStyle}>
+                        {rev.revNo}
+                      </Link>
+                    </Table.Td>
+                    <Table.Td>
+                      <Link to={revLink} style={cellLinkStyle}>
+                        <Badge
+                          color={STATUS_COLORS[rev.status] ?? "gray"}
                           variant="light"
-                          color="green"
-                          onClick={() => handleApprove(rev)}
-                          data-testid={`revision-approve-${rev.revNo}`}
+                          data-testid={`revision-status-${rev.revNo}`}
                         >
-                          Approve
-                        </Button>
-                      )}
-                      {hasAction(rev._actions, "delete") && (
-                        <Button
-                          size="xs"
-                          variant="light"
-                          color="red"
-                          onClick={() => handleDelete(rev)}
-                        >
-                          Delete
-                        </Button>
-                      )}
-                      {hasAction(rev._actions, "cut-order") && (
-                        <Button
-                          size="xs"
-                          variant="light"
-                          color="teal"
-                          component={Link}
-                          to={`/orders/${orderKey}/runs/new?revNo=${rev.revNo}`}
-                          data-testid={`revision-cut-order-${rev.revNo}`}
-                        >
-                          Cut Order
-                        </Button>
-                      )}
-                      {hasAction(rev._actions, "obsolete") && (
-                        <Button
-                          size="xs"
-                          variant="light"
-                          color="gray"
-                          onClick={() => handleObsolete(rev)}
-                        >
-                          Mark Obsolete
-                        </Button>
-                      )}
-                    </Group>
-                  </Table.Td>
-                </Table.Tr>
+                          {rev.status}
+                        </Badge>
+                      </Link>
+                    </Table.Td>
+                    <Table.Td>
+                      <Link to={revLink} style={cellLinkStyle}>
+                        {rev.notes ?? "—"}
+                      </Link>
+                    </Table.Td>
+                    <Table.Td>
+                      <Link to={revLink} style={cellLinkStyle}>
+                        {rev.changeSummary ?? "—"}
+                      </Link>
+                    </Table.Td>
+                    <Table.Td>
+                      <Link to={revLink} style={cellLinkStyle}>
+                        {new Date(rev.createdAt).toLocaleString()}
+                      </Link>
+                    </Table.Td>
+                    <Table.Td>
+                      <Group gap="xs">
+                        {hasAction(rev._actions, "approve") && (
+                          <Button
+                            size="xs"
+                            variant="light"
+                            color="green"
+                            onClick={() => handleApprove(rev)}
+                            data-testid={`revision-approve-${rev.revNo}`}
+                          >
+                            Approve
+                          </Button>
+                        )}
+                        {hasAction(rev._actions, "delete") && (
+                          <Button
+                            size="xs"
+                            variant="light"
+                            color="red"
+                            onClick={() => handleDelete(rev)}
+                          >
+                            Delete
+                          </Button>
+                        )}
+                        {hasAction(rev._actions, "cut-order") && (
+                          <Button
+                            size="xs"
+                            variant="light"
+                            color="teal"
+                            component={Link}
+                            to={`/orders/${orderKey}/runs/new?revNo=${rev.revNo}`}
+                            data-testid={`revision-cut-order-${rev.revNo}`}
+                          >
+                            Cut Order
+                          </Button>
+                        )}
+                        {hasAction(rev._actions, "obsolete") && (
+                          <Button
+                            size="xs"
+                            variant="light"
+                            color="gray"
+                            onClick={() => handleObsolete(rev)}
+                          >
+                            Mark Obsolete
+                          </Button>
+                        )}
+                      </Group>
+                    </Table.Td>
+                  </Table.Tr>
                 );
               })}
             </Table.Tbody>

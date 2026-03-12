@@ -168,7 +168,11 @@ export const OrderRunLayout: React.FC = () => {
                   </ActionIcon>
                 </Tooltip>
               </Group>
-              <OperationRunSidebar orderKey={orderKey} runId={id} refreshKey={opsRefreshKey} />
+              <OperationRunSidebar
+                orderKey={orderKey}
+                runId={id}
+                refreshKey={opsRefreshKey}
+              />
             </Box>
           )}
         </Box>
@@ -194,7 +198,11 @@ export const OrderRunLayout: React.FC = () => {
         title="Operations"
         size={SIDEBAR_WIDTH}
       >
-        <OperationRunSidebar orderKey={orderKey} runId={id} refreshKey={opsRefreshKey} />
+        <OperationRunSidebar
+          orderKey={orderKey}
+          runId={id}
+          refreshKey={opsRefreshKey}
+        />
       </Drawer>
     </Box>
   );

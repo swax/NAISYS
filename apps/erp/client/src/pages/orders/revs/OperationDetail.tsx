@@ -122,77 +122,75 @@ export const OperationDetail: React.FC = () => {
   return (
     <Container size="md" py="xl">
       <Stack gap="md">
-      <Group justify="space-between">
-        <Group gap="xs">
-          <Text fw={600}>
-            OPERATION {item.seqNo}. {item.title}
-          </Text>
-          <MetadataTooltip
-            createdBy={item.createdBy}
-            createdAt={item.createdAt}
-            updatedBy={item.updatedBy}
-            updatedAt={item.updatedAt}
-          />
+        <Group justify="space-between">
+          <Group gap="xs">
+            <Text fw={600}>
+              OPERATION {item.seqNo}. {item.title}
+            </Text>
+            <MetadataTooltip
+              createdBy={item.createdBy}
+              createdAt={item.createdAt}
+              updatedBy={item.updatedBy}
+              updatedAt={item.updatedAt}
+            />
+          </Group>
+          <Group gap="xs">
+            {canEdit && !editing && (
+              <Button size="xs" variant="light" onClick={startEditing}>
+                Edit
+              </Button>
+            )}
+            {hasAction(item._actions, "delete") && (
+              <Button
+                size="xs"
+                color="red"
+                variant="outline"
+                onClick={handleDelete}
+              >
+                Delete
+              </Button>
+            )}
+          </Group>
         </Group>
-        <Group gap="xs">
-          {canEdit && !editing && (
-            <Button size="xs" variant="light" onClick={startEditing}>
-              Edit
-            </Button>
-          )}
-          {hasAction(item._actions, "delete") && (
-            <Button
-              size="xs"
-              color="red"
-              variant="outline"
-              onClick={handleDelete}
-            >
-              Delete
-            </Button>
-          )}
-        </Group>
-      </Group>
 
-      <Card withBorder p="lg">
-        {editing ? (
-          <form onSubmit={form.onSubmit(handleSave)}>
-            <Stack gap="sm">
-              <NumberInput
-                label="Sequence #"
-                min={1}
-                step={10}
-                {...form.getInputProps("seqNo")}
-              />
-              <Textarea
-                label="Description"
-                placeholder="Operation description..."
-                minRows={3}
-                {...form.getInputProps("description")}
-              />
-              <Group justify="flex-end" mt="xs">
-                <Button
-                  variant="subtle"
-                  size="xs"
-                  onClick={() => setEditing(false)}
-                >
-                  Cancel
-                </Button>
-                <Button type="submit" size="xs" loading={saving}>
-                  Save
-                </Button>
-              </Group>
-            </Stack>
-          </form>
-        ) : (
-          item.description ? (
+        <Card withBorder p="lg">
+          {editing ? (
+            <form onSubmit={form.onSubmit(handleSave)}>
+              <Stack gap="sm">
+                <NumberInput
+                  label="Sequence #"
+                  min={1}
+                  step={10}
+                  {...form.getInputProps("seqNo")}
+                />
+                <Textarea
+                  label="Description"
+                  placeholder="Operation description..."
+                  minRows={3}
+                  {...form.getInputProps("description")}
+                />
+                <Group justify="flex-end" mt="xs">
+                  <Button
+                    variant="subtle"
+                    size="xs"
+                    onClick={() => setEditing(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button type="submit" size="xs" loading={saving}>
+                    Save
+                  </Button>
+                </Group>
+              </Stack>
+            </form>
+          ) : item.description ? (
             <CompactMarkdown>{item.description}</CompactMarkdown>
           ) : (
             <Text c="dimmed">No description</Text>
-          )
-        )}
-      </Card>
+          )}
+        </Card>
 
-      <StepList orderKey={orderKey!} revNo={revNo!} opSeqNo={seqNo!} />
+        <StepList orderKey={orderKey!} revNo={revNo!} opSeqNo={seqNo!} />
       </Stack>
     </Container>
   );

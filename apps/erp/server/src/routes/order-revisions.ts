@@ -1,4 +1,4 @@
-import type { HateoasAction, HateoasLink } from "@naisys/common";
+import type { HateoasAction } from "@naisys/common";
 import {
   CreateOrderRevisionSchema,
   ErrorResponseSchema,
@@ -16,36 +16,16 @@ import { writeAuditEntry } from "../audit.js";
 import type { ErpUser } from "../auth-middleware.js";
 import { hasPermission } from "../auth-middleware.js";
 import erpDb from "../erpDb.js";
-import { sendError } from "../error-handler.js";
+import { conflict, notFound } from "../error-handler.js";
 import type { OrderRevisionModel } from "../generated/prisma/models/OrderRevision.js";
+import { API_PREFIX, paginationLinks, selfLink } from "../hateoas.js";
 import {
-  API_PREFIX,
-  paginationLinks,
-  schemaLink,
-  selfLink,
-} from "../hateoas.js";
-
-function revisionItemLinks(
-  parentResource: string,
-  orderKey: string,
-  revNo: number,
-): HateoasLink[] {
-  const basePath = `/${parentResource}/${orderKey}/revs`;
-  return [
-    selfLink(`${basePath}/${revNo}`),
-    {
-      rel: "collection",
-      href: `${API_PREFIX}${basePath}`,
-      title: "Revisions",
-    },
-    {
-      rel: "parent",
-      href: `${API_PREFIX}/${parentResource}/${orderKey}`,
-      title: "Order",
-    },
-    schemaLink("OrderRevision"),
-  ];
-}
+  childItemLinks,
+  formatAuditFields,
+  includeUsers,
+  resolveOrder,
+  type WithAuditUsers,
+} from "../route-helpers.js";
 
 function revisionItemActions(
   parentResource: string,
@@ -102,16 +82,6 @@ function revisionItemActions(
   return actions;
 }
 
-const includeUsers = {
-  createdBy: { select: { username: true } },
-  updatedBy: { select: { username: true } },
-} as const;
-
-type RevisionWithUsers = OrderRevisionModel & {
-  createdBy: { username: string };
-  updatedBy: { username: string };
-};
-
 const PARENT_RESOURCE = "orders";
 
 const OrderKeyParamsSchema = z.object({
@@ -126,7 +96,7 @@ const RevNoParamsSchema = z.object({
 function formatItem(
   orderKey: string,
   user: ErpUser | undefined,
-  item: RevisionWithUsers,
+  item: OrderRevisionModel & WithAuditUsers,
 ) {
   return {
     id: item.id,
@@ -135,11 +105,15 @@ function formatItem(
     status: item.status,
     notes: item.notes,
     changeSummary: item.changeSummary,
-    createdAt: item.createdAt.toISOString(),
-    createdBy: item.createdBy.username,
-    updatedAt: item.updatedAt.toISOString(),
-    updatedBy: item.updatedBy.username,
-    _links: revisionItemLinks(PARENT_RESOURCE, orderKey, item.revNo),
+    ...formatAuditFields(item),
+    _links: childItemLinks(
+      `/${PARENT_RESOURCE}/${orderKey}/revs`,
+      item.revNo,
+      "Revisions",
+      `/${PARENT_RESOURCE}/${orderKey}`,
+      "Order",
+      "OrderRevision",
+    ),
     _actions: revisionItemActions(
       PARENT_RESOURCE,
       orderKey,
@@ -153,18 +127,12 @@ function formatItem(
 function formatListItem(
   orderKey: string,
   user: ErpUser | undefined,
-  item: RevisionWithUsers,
+  item: OrderRevisionModel & WithAuditUsers,
 ) {
   return {
     ...formatItem(orderKey, user, item),
     _links: [selfLink(`/${PARENT_RESOURCE}/${orderKey}/revs/${item.revNo}`)],
   };
-}
-
-async function resolveOrder(orderKey: string) {
-  return erpDb.order.findUnique({
-    where: { key: orderKey },
-  });
 }
 
 async function findRevision(orderId: number, revNo: number) {
@@ -195,12 +163,7 @@ export default function orderRevisionRoutes(fastify: FastifyInstance) {
 
       const order = await resolveOrder(orderKey);
       if (!order) {
-        return sendError(
-          reply,
-          404,
-          "Not Found",
-          `Order '${orderKey}' not found`,
-        );
+        return notFound(reply, `Order '${orderKey}' not found`);
       }
 
       const where: Record<string, unknown> = { orderId: order.id };
@@ -260,12 +223,7 @@ export default function orderRevisionRoutes(fastify: FastifyInstance) {
 
       const order = await resolveOrder(orderKey);
       if (!order) {
-        return sendError(
-          reply,
-          404,
-          "Not Found",
-          `Order '${orderKey}' not found`,
-        );
+        return notFound(reply, `Order '${orderKey}' not found`);
       }
 
       // Auto-increment revNo and copy previous revision's structure
@@ -363,20 +321,13 @@ export default function orderRevisionRoutes(fastify: FastifyInstance) {
 
       const order = await resolveOrder(orderKey);
       if (!order) {
-        return sendError(
-          reply,
-          404,
-          "Not Found",
-          `Order '${orderKey}' not found`,
-        );
+        return notFound(reply, `Order '${orderKey}' not found`);
       }
 
       const item = await findRevision(order.id, revNo);
       if (!item) {
-        return sendError(
+        return notFound(
           reply,
-          404,
-          "Not Found",
           `Revision ${revNo} not found for order '${orderKey}'`,
         );
       }
@@ -405,29 +356,20 @@ export default function orderRevisionRoutes(fastify: FastifyInstance) {
 
       const order = await resolveOrder(orderKey);
       if (!order) {
-        return sendError(
-          reply,
-          404,
-          "Not Found",
-          `Order '${orderKey}' not found`,
-        );
+        return notFound(reply, `Order '${orderKey}' not found`);
       }
 
       const existing = await findRevision(order.id, revNo);
       if (!existing) {
-        return sendError(
+        return notFound(
           reply,
-          404,
-          "Not Found",
           `Revision ${revNo} not found for order '${orderKey}'`,
         );
       }
 
       if (existing.status !== RevisionStatus.draft) {
-        return sendError(
+        return conflict(
           reply,
-          409,
-          "Conflict",
           `Cannot update revision in ${existing.status} status`,
         );
       }
@@ -463,29 +405,20 @@ export default function orderRevisionRoutes(fastify: FastifyInstance) {
 
       const order = await resolveOrder(orderKey);
       if (!order) {
-        return sendError(
-          reply,
-          404,
-          "Not Found",
-          `Order '${orderKey}' not found`,
-        );
+        return notFound(reply, `Order '${orderKey}' not found`);
       }
 
       const existing = await findRevision(order.id, revNo);
       if (!existing) {
-        return sendError(
+        return notFound(
           reply,
-          404,
-          "Not Found",
           `Revision ${revNo} not found for order '${orderKey}'`,
         );
       }
 
       if (existing.status !== RevisionStatus.draft) {
-        return sendError(
+        return conflict(
           reply,
-          409,
-          "Conflict",
           `Cannot delete revision in ${existing.status} status`,
         );
       }
@@ -494,10 +427,8 @@ export default function orderRevisionRoutes(fastify: FastifyInstance) {
         where: { orderRevId: existing.id },
       });
       if (orderRunCount > 0) {
-        return sendError(
+        return conflict(
           reply,
-          409,
-          "Conflict",
           "Cannot delete revision with existing order runs.",
         );
       }
@@ -524,29 +455,20 @@ export default function orderRevisionRoutes(fastify: FastifyInstance) {
 
       const order = await resolveOrder(orderKey);
       if (!order) {
-        return sendError(
-          reply,
-          404,
-          "Not Found",
-          `Order '${orderKey}' not found`,
-        );
+        return notFound(reply, `Order '${orderKey}' not found`);
       }
 
       const existing = await findRevision(order.id, revNo);
       if (!existing) {
-        return sendError(
+        return notFound(
           reply,
-          404,
-          "Not Found",
           `Revision ${revNo} not found for order '${orderKey}'`,
         );
       }
 
       if (existing.status !== RevisionStatus.draft) {
-        return sendError(
+        return conflict(
           reply,
-          409,
-          "Conflict",
           `Cannot approve revision in ${existing.status} status`,
         );
       }
@@ -592,29 +514,20 @@ export default function orderRevisionRoutes(fastify: FastifyInstance) {
 
       const order = await resolveOrder(orderKey);
       if (!order) {
-        return sendError(
-          reply,
-          404,
-          "Not Found",
-          `Order '${orderKey}' not found`,
-        );
+        return notFound(reply, `Order '${orderKey}' not found`);
       }
 
       const existing = await findRevision(order.id, revNo);
       if (!existing) {
-        return sendError(
+        return notFound(
           reply,
-          404,
-          "Not Found",
           `Revision ${revNo} not found for order '${orderKey}'`,
         );
       }
 
       if (existing.status !== RevisionStatus.approved) {
-        return sendError(
+        return conflict(
           reply,
-          409,
-          "Conflict",
           `Cannot mark revision as obsolete from ${existing.status} status`,
         );
       }

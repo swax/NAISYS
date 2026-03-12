@@ -9,16 +9,23 @@ import {
   TextInput,
   Title,
 } from "@mantine/core";
-import { IconArrowBackUp } from "@tabler/icons-react";
 import type {
   StepRun,
   StepRunListResponse,
   UpdateStepRun,
 } from "@naisys-erp/shared";
-import { useCallback, useEffect, useState } from "react";
+import {
+  IconAlertCircle,
+  IconArrowBackUp,
+  IconCheck,
+} from "@tabler/icons-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+
 import { CompactMarkdown } from "../../../components/CompactMarkdown";
 import { api, apiEndpoints, showErrorNotification } from "../../../lib/api";
 import { hasAction } from "../../../lib/hateoas";
+
+type FieldSaveStatus = "saving" | "saved" | "error";
 
 interface Props {
   orderKey: string;
@@ -31,12 +38,22 @@ interface StepRunState {
   fieldValues: Record<number, string>; // stepFieldId → value
 }
 
-export const StepRunList: React.FC<Props> = ({ orderKey, runId, opRunId, refreshKey }) => {
+export const StepRunList: React.FC<Props> = ({
+  orderKey,
+  runId,
+  opRunId,
+  refreshKey,
+}) => {
   const [data, setData] = useState<StepRunListResponse | null>(null);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState<number | null>(null);
+  const [savingStep, setSavingStep] = useState<number | null>(null);
   const [edits, setEdits] = useState<Record<number, StepRunState>>({});
   const [loadedOpRunId, setLoadedOpRunId] = useState(opRunId);
+  // key: "stepId:stepFieldId"
+  const [fieldStatus, setFieldStatus] = useState<
+    Record<string, FieldSaveStatus>
+  >({});
+  const savedTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
   // Clear stale data when operation run changes
   if (opRunId !== loadedOpRunId) {
@@ -74,10 +91,73 @@ export const StepRunList: React.FC<Props> = ({ orderKey, runId, opRunId, refresh
     void fetchSteps();
   }, [fetchSteps]);
 
+  const setFieldSaveStatus = (
+    stepId: number,
+    fieldIds: number[],
+    status: FieldSaveStatus,
+  ) => {
+    const update: Record<string, FieldSaveStatus> = {};
+    for (const fid of fieldIds) {
+      const key = `${stepId}:${fid}`;
+      update[key] = status;
+      // Clear any existing saved timer
+      if (savedTimers.current[key]) {
+        clearTimeout(savedTimers.current[key]);
+        delete savedTimers.current[key];
+      }
+      // Auto-clear "saved" after 1.5s
+      if (status === "saved") {
+        savedTimers.current[key] = setTimeout(() => {
+          setFieldStatus((prev) => {
+            const next = { ...prev };
+            delete next[key];
+            return next;
+          });
+          delete savedTimers.current[key];
+        }, 1500);
+      }
+    }
+    setFieldStatus((prev) => ({ ...prev, ...update }));
+  };
+
+  const applyStepUpdate = (updated: StepRun) => {
+    setData((prev) =>
+      prev
+        ? {
+            ...prev,
+            items: prev.items.map((s) => (s.id === updated.id ? updated : s)),
+          }
+        : prev,
+    );
+    setEdits((prev) => ({
+      ...prev,
+      [updated.id]: {
+        fieldValues: Object.fromEntries(
+          updated.fieldValues.map((fv) => [fv.stepFieldId, fv.value]),
+        ),
+      },
+    }));
+  };
+
   const saveStep = async (step: StepRun, completedOverride?: boolean) => {
     const edit = edits[step.id];
     if (!edit) return;
-    setSaving(step.id);
+
+    const isFieldSave = completedOverride === undefined;
+    const dirtyFieldIds = isFieldSave
+      ? step.fieldValues
+          .filter(
+            (fv) => (edit.fieldValues[fv.stepFieldId] ?? fv.value) !== fv.value,
+          )
+          .map((fv) => fv.stepFieldId)
+      : [];
+
+    if (isFieldSave) {
+      setFieldSaveStatus(step.id, dirtyFieldIds, "saving");
+    } else {
+      setSavingStep(step.id);
+    }
+
     try {
       const body: UpdateStepRun = {
         completed: completedOverride ?? step.completed,
@@ -90,27 +170,19 @@ export const StepRunList: React.FC<Props> = ({ orderKey, runId, opRunId, refresh
         apiEndpoints.stepRun(orderKey, runId, opRunId, step.id),
         body,
       );
-      // Update in place instead of re-fetching
-      setData((prev) =>
-        prev
-          ? {
-              ...prev,
-              items: prev.items.map((s) => (s.id === updated.id ? updated : s)),
-            }
-          : prev,
-      );
-      setEdits((prev) => ({
-        ...prev,
-        [updated.id]: {
-          fieldValues: Object.fromEntries(
-            updated.fieldValues.map((fv) => [fv.stepFieldId, fv.value]),
-          ),
-        },
-      }));
+      applyStepUpdate(updated);
+      if (isFieldSave) {
+        setFieldSaveStatus(step.id, dirtyFieldIds, "saved");
+      }
     } catch (err) {
       showErrorNotification(err);
+      if (isFieldSave) {
+        setFieldSaveStatus(step.id, dirtyFieldIds, "error");
+      }
     } finally {
-      setSaving(null);
+      if (!isFieldSave) {
+        setSavingStep(null);
+      }
     }
   };
 
@@ -179,34 +251,50 @@ export const StepRunList: React.FC<Props> = ({ orderKey, runId, opRunId, refresh
                       <Text size="xs" fw={600} c="dimmed">
                         Data Fields
                       </Text>
-                      {step.fieldValues.map((fv) => (
-                        <Group key={fv.stepFieldId} gap="xs" align="flex-end">
-                          {canUpdate ? (
-                            <TextInput
-                              label={fv.label}
-                              size="xs"
-                              style={{ flex: 1 }}
-                              value={
-                                edit?.fieldValues[fv.stepFieldId] ?? fv.value
-                              }
-                              onChange={(e) =>
-                                updateFieldValue(
-                                  step.id,
-                                  fv.stepFieldId,
-                                  e.currentTarget.value,
-                                )
-                              }
-                            />
-                          ) : (
-                            <Group gap="xs">
-                              <Text size="xs" fw={500}>
-                                {fv.label}:
-                              </Text>
-                              <Text size="xs">{fv.value || "—"}</Text>
-                            </Group>
-                          )}
-                        </Group>
-                      ))}
+                      {step.fieldValues.map((fv) => {
+                        const fKey = `${step.id}:${fv.stepFieldId}`;
+                        const status = fieldStatus[fKey];
+                        return (
+                          <Group key={fv.stepFieldId} gap="xs" align="flex-end">
+                            {canUpdate ? (
+                              <TextInput
+                                label={fv.label}
+                                size="xs"
+                                style={{ flex: 1 }}
+                                value={
+                                  edit?.fieldValues[fv.stepFieldId] ?? fv.value
+                                }
+                                onChange={(e) =>
+                                  updateFieldValue(
+                                    step.id,
+                                    fv.stepFieldId,
+                                    e.currentTarget.value,
+                                  )
+                                }
+                                onBlur={() => {
+                                  if (isFieldsDirty(step)) void saveStep(step);
+                                }}
+                                rightSection={
+                                  status === "saving" ? (
+                                    <Loader size={14} />
+                                  ) : status === "saved" ? (
+                                    <IconCheck size={14} color="green" />
+                                  ) : status === "error" ? (
+                                    <IconAlertCircle size={14} color="red" />
+                                  ) : null
+                                }
+                              />
+                            ) : (
+                              <Group gap="xs">
+                                <Text size="xs" fw={500}>
+                                  {fv.label}:
+                                </Text>
+                                <Text size="xs">{fv.value || "—"}</Text>
+                              </Group>
+                            )}
+                          </Group>
+                        );
+                      })}
                     </Stack>
                   )}
 
@@ -222,7 +310,7 @@ export const StepRunList: React.FC<Props> = ({ orderKey, runId, opRunId, refresh
                             size="xs"
                             variant="subtle"
                             color="gray"
-                            loading={saving === step.id}
+                            loading={savingStep === step.id}
                             onClick={() => saveStep(step, false)}
                             title="Undo completion"
                           >
@@ -233,19 +321,10 @@ export const StepRunList: React.FC<Props> = ({ orderKey, runId, opRunId, refresh
                         <Button
                           size="xs"
                           color="green"
-                          loading={saving === step.id}
+                          loading={savingStep === step.id}
                           onClick={() => saveStep(step, true)}
                         >
                           Complete
-                        </Button>
-                      )}
-                      {isFieldsDirty(step) && (
-                        <Button
-                          size="xs"
-                          loading={saving === step.id}
-                          onClick={() => saveStep(step)}
-                        >
-                          Save
                         </Button>
                       )}
                     </Group>

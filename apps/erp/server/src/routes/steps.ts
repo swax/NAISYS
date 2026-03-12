@@ -1,4 +1,3 @@
-import type { HateoasAction, HateoasLink } from "@naisys/common";
 import {
   CreateStepSchema,
   ErrorResponseSchema,
@@ -14,9 +13,18 @@ import { z } from "zod/v4";
 import type { ErpUser } from "../auth-middleware.js";
 import { hasPermission } from "../auth-middleware.js";
 import erpDb from "../erpDb.js";
-import { sendError } from "../error-handler.js";
+import { conflict, notFound } from "../error-handler.js";
 import type { StepModel } from "../generated/prisma/models/Step.js";
-import { API_PREFIX, schemaLink, selfLink } from "../hateoas.js";
+import { API_PREFIX, selfLink } from "../hateoas.js";
+import {
+  calcNextSeqNo,
+  childItemLinks,
+  draftCrudActions,
+  formatAuditFields,
+  includeUsers,
+  resolveOperation,
+  type WithAuditUsers,
+} from "../route-helpers.js";
 import {
   formatFieldListResponse,
   type StepFieldWithUsers,
@@ -35,11 +43,6 @@ const StepParamsSchema = z.object({
   stepSeqNo: z.coerce.number().int(),
 });
 
-const includeUsers = {
-  createdBy: { select: { username: true } },
-  updatedBy: { select: { username: true } },
-} as const;
-
 const includeUsersAndFields = {
   ...includeUsers,
   fields: {
@@ -48,72 +51,13 @@ const includeUsersAndFields = {
   },
 } as const;
 
-type StepWithUsers = StepModel & {
-  createdBy: { username: string };
-  updatedBy: { username: string };
-};
-
-type StepWithUsersAndFields = StepWithUsers & {
-  fields: StepFieldWithUsers[];
-};
+type StepWithUsersAndFields = StepModel &
+  WithAuditUsers & {
+    fields: StepFieldWithUsers[];
+  };
 
 function stepBasePath(orderKey: string, revNo: number, opSeqNo: number) {
   return `/orders/${orderKey}/revs/${revNo}/ops/${opSeqNo}/steps`;
-}
-
-function stepItemLinks(
-  orderKey: string,
-  revNo: number,
-  opSeqNo: number,
-  stepSeqNo: number,
-): HateoasLink[] {
-  const base = stepBasePath(orderKey, revNo, opSeqNo);
-  return [
-    selfLink(`${base}/${stepSeqNo}`),
-    {
-      rel: "collection",
-      href: `${API_PREFIX}${base}`,
-      title: "Steps",
-    },
-    {
-      rel: "parent",
-      href: `${API_PREFIX}/orders/${orderKey}/revs/${revNo}/ops/${opSeqNo}`,
-      title: "Operation",
-    },
-    schemaLink("Step"),
-  ];
-}
-
-function stepItemActions(
-  orderKey: string,
-  revNo: number,
-  opSeqNo: number,
-  stepSeqNo: number,
-  revStatus: string,
-  user: ErpUser | undefined,
-): HateoasAction[] {
-  if (
-    !hasPermission(user, "manage_orders") ||
-    revStatus !== RevisionStatus.draft
-  )
-    return [];
-
-  const href = `${API_PREFIX}${stepBasePath(orderKey, revNo, opSeqNo)}/${stepSeqNo}`;
-  return [
-    {
-      rel: "update",
-      href,
-      method: "PUT",
-      title: "Update",
-      schema: `${API_PREFIX}/schemas/UpdateStep`,
-    },
-    {
-      rel: "delete",
-      href,
-      method: "DELETE",
-      title: "Delete",
-    },
-  ];
 }
 
 function formatItem(
@@ -129,10 +73,7 @@ function formatItem(
     operationId: item.operationId,
     seqNo: item.seqNo,
     instructions: item.instructions,
-    createdAt: item.createdAt.toISOString(),
-    createdBy: item.createdBy.username,
-    updatedAt: item.updatedAt.toISOString(),
-    updatedBy: item.updatedBy.username,
+    ...formatAuditFields(item),
     fields: formatFieldListResponse(
       orderKey,
       revNo,
@@ -142,37 +83,21 @@ function formatItem(
       user,
       item.fields,
     ),
-    _links: stepItemLinks(orderKey, revNo, opSeqNo, item.seqNo),
-    _actions: stepItemActions(
-      orderKey,
-      revNo,
-      opSeqNo,
+    _links: childItemLinks(
+      stepBasePath(orderKey, revNo, opSeqNo),
       item.seqNo,
+      "Steps",
+      `/orders/${orderKey}/revs/${revNo}/ops/${opSeqNo}`,
+      "Operation",
+      "Step",
+    ),
+    _actions: draftCrudActions(
+      `${API_PREFIX}${stepBasePath(orderKey, revNo, opSeqNo)}/${item.seqNo}`,
+      "UpdateStep",
       revStatus,
       user,
     ),
   };
-}
-
-async function resolveOperation(
-  orderKey: string,
-  revNo: number,
-  opSeqNo: number,
-) {
-  const order = await erpDb.order.findUnique({ where: { key: orderKey } });
-  if (!order) return null;
-
-  const rev = await erpDb.orderRevision.findFirst({
-    where: { orderId: order.id, revNo },
-  });
-  if (!rev) return null;
-
-  const operation = await erpDb.operation.findFirst({
-    where: { orderRevId: rev.id, seqNo: opSeqNo },
-  });
-  if (!operation) return null;
-
-  return { order, rev, operation };
 }
 
 export default function stepRoutes(fastify: FastifyInstance) {
@@ -194,7 +119,7 @@ export default function stepRoutes(fastify: FastifyInstance) {
 
       const resolved = await resolveOperation(orderKey, revNo, seqNo);
       if (!resolved) {
-        return sendError(reply, 404, "Not Found", "Operation not found");
+        return notFound(reply, "Operation not found");
       }
 
       const items = await erpDb.step.findMany({
@@ -204,7 +129,6 @@ export default function stepRoutes(fastify: FastifyInstance) {
       });
 
       const maxSeq = items.length > 0 ? items[items.length - 1].seqNo : 0;
-      const nextSeqNo = Math.ceil((maxSeq + 1) / 10) * 10;
 
       const user = request.erpUser;
       const base = stepBasePath(orderKey, revNo, seqNo);
@@ -213,7 +137,7 @@ export default function stepRoutes(fastify: FastifyInstance) {
           formatItem(orderKey, revNo, seqNo, resolved.rev.status, user, item),
         ),
         total: items.length,
-        nextSeqNo,
+        nextSeqNo: calcNextSeqNo(maxSeq),
         _links: [selfLink(base)],
         _actions:
           hasPermission(user, "manage_orders") &&
@@ -252,14 +176,12 @@ export default function stepRoutes(fastify: FastifyInstance) {
 
       const resolved = await resolveOperation(orderKey, revNo, seqNo);
       if (!resolved) {
-        return sendError(reply, 404, "Not Found", "Operation not found");
+        return notFound(reply, "Operation not found");
       }
 
       if (resolved.rev.status !== RevisionStatus.draft) {
-        return sendError(
+        return conflict(
           reply,
-          409,
-          "Conflict",
           `Cannot add steps to a ${resolved.rev.status} revision`,
         );
       }
@@ -270,7 +192,7 @@ export default function stepRoutes(fastify: FastifyInstance) {
           orderBy: { seqNo: "desc" },
           select: { seqNo: true },
         });
-        const defaultSeqNo = Math.ceil(((maxSeq?.seqNo ?? 0) + 1) / 10) * 10;
+        const defaultSeqNo = calcNextSeqNo(maxSeq?.seqNo ?? 0);
         const nextSeqNo = requestedSeqNo ?? defaultSeqNo;
 
         return erpTx.step.create({
@@ -313,7 +235,7 @@ export default function stepRoutes(fastify: FastifyInstance) {
 
       const resolved = await resolveOperation(orderKey, revNo, seqNo);
       if (!resolved) {
-        return sendError(reply, 404, "Not Found", "Operation not found");
+        return notFound(reply, "Operation not found");
       }
 
       const item = await erpDb.step.findFirst({
@@ -321,12 +243,7 @@ export default function stepRoutes(fastify: FastifyInstance) {
         include: includeUsersAndFields,
       });
       if (!item) {
-        return sendError(
-          reply,
-          404,
-          "Not Found",
-          `Step ${stepSeqNo} not found`,
-        );
+        return notFound(reply, `Step ${stepSeqNo} not found`);
       }
 
       return formatItem(
@@ -360,14 +277,12 @@ export default function stepRoutes(fastify: FastifyInstance) {
 
       const resolved = await resolveOperation(orderKey, revNo, seqNo);
       if (!resolved) {
-        return sendError(reply, 404, "Not Found", "Operation not found");
+        return notFound(reply, "Operation not found");
       }
 
       if (resolved.rev.status !== RevisionStatus.draft) {
-        return sendError(
+        return conflict(
           reply,
-          409,
-          "Conflict",
           `Cannot update steps on a ${resolved.rev.status} revision`,
         );
       }
@@ -376,12 +291,7 @@ export default function stepRoutes(fastify: FastifyInstance) {
         where: { operationId: resolved.operation.id, seqNo: stepSeqNo },
       });
       if (!existing) {
-        return sendError(
-          reply,
-          404,
-          "Not Found",
-          `Step ${stepSeqNo} not found`,
-        );
+        return notFound(reply, `Step ${stepSeqNo} not found`);
       }
 
       const item = await erpDb.step.update({
@@ -422,14 +332,12 @@ export default function stepRoutes(fastify: FastifyInstance) {
 
       const resolved = await resolveOperation(orderKey, revNo, seqNo);
       if (!resolved) {
-        return sendError(reply, 404, "Not Found", "Operation not found");
+        return notFound(reply, "Operation not found");
       }
 
       if (resolved.rev.status !== RevisionStatus.draft) {
-        return sendError(
+        return conflict(
           reply,
-          409,
-          "Conflict",
           `Cannot delete steps on a ${resolved.rev.status} revision`,
         );
       }
@@ -438,12 +346,7 @@ export default function stepRoutes(fastify: FastifyInstance) {
         where: { operationId: resolved.operation.id, seqNo: stepSeqNo },
       });
       if (!existing) {
-        return sendError(
-          reply,
-          404,
-          "Not Found",
-          `Step ${stepSeqNo} not found`,
-        );
+        return notFound(reply, `Step ${stepSeqNo} not found`);
       }
 
       await erpDb.step.delete({ where: { id: existing.id } });

@@ -4,14 +4,15 @@ import {
   Burger,
   Button,
   Group,
+  Menu,
   Text,
   Tooltip,
   UnstyledButton,
 } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import naisysLogo from "@naisys/common/assets/naisys-logo.webp";
-import { IconApi } from "@tabler/icons-react";
-import { Link, Outlet, useLocation } from "react-router";
+import { IconApi, IconLogout, IconUser } from "@tabler/icons-react";
+import { Link, Outlet, useLocation, useNavigate } from "react-router";
 
 import { useAuth } from "../lib/AuthContext";
 import { LoginModal } from "./LoginModal";
@@ -32,6 +33,7 @@ interface AppLayoutProps {
 export const AppLayout: React.FC<AppLayoutProps> = ({ supervisorAuth }) => {
   const [opened, { toggle, close }] = useDisclosure();
   const [loginOpen, { open: openLogin, close: closeLogin }] = useDisclosure();
+  const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useAuth();
 
@@ -140,12 +142,27 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ supervisorAuth }) => {
               </ActionIcon>
             </Tooltip>
             {user ? (
-              <>
-                <Text size="sm">{user.username}</Text>
-                <Button size="xs" variant="subtle" onClick={handleLogout}>
-                  Logout
-                </Button>
-              </>
+              <Menu position="bottom-end" withArrow>
+                <Menu.Target>
+                  <Button variant="subtle" size="xs" color="gray">
+                    {user.username}
+                  </Button>
+                </Menu.Target>
+                <Menu.Dropdown>
+                  <Menu.Item
+                    leftSection={<IconUser size="0.9rem" />}
+                    onClick={() => navigate(`/users/${user.username}`)}
+                  >
+                    My User
+                  </Menu.Item>
+                  <Menu.Item
+                    leftSection={<IconLogout size="0.9rem" />}
+                    onClick={handleLogout}
+                  >
+                    Logout
+                  </Menu.Item>
+                </Menu.Dropdown>
+              </Menu>
             ) : (
               <Button size="xs" variant="subtle" onClick={openLogin}>
                 Login

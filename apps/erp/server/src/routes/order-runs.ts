@@ -1,10 +1,9 @@
-import type { HateoasAction, HateoasLink } from "@naisys/common";
+import type { HateoasAction } from "@naisys/common";
 import {
   CreateOrderRunSchema,
   ErrorResponseSchema,
   OrderRunListQuerySchema,
   OrderRunListResponseSchema,
-  OrderRunPriority,
   OrderRunSchema,
   OrderRunStatus,
   UpdateOrderRunSchema,
@@ -17,35 +16,18 @@ import { writeAuditEntry } from "../audit.js";
 import type { ErpUser } from "../auth-middleware.js";
 import { hasPermission } from "../auth-middleware.js";
 import erpDb from "../erpDb.js";
-import { sendError } from "../error-handler.js";
+import { conflict, notFound } from "../error-handler.js";
 import type { OrderRunModel } from "../generated/prisma/models/OrderRun.js";
+import { API_PREFIX, paginationLinks, selfLink } from "../hateoas.js";
 import {
-  API_PREFIX,
-  paginationLinks,
-  schemaLink,
-  selfLink,
-} from "../hateoas.js";
+  childItemLinks,
+  formatAuditFields,
+  formatDate,
+  resolveOrder,
+} from "../route-helpers.js";
 
 function runResource(orderKey: string) {
   return `orders/${orderKey}/runs`;
-}
-
-function orderRunItemLinks(orderKey: string, id: number): HateoasLink[] {
-  const resource = runResource(orderKey);
-  return [
-    selfLink(`/${resource}/${id}`),
-    {
-      rel: "collection",
-      href: `${API_PREFIX}/${resource}`,
-      title: "Runs",
-    },
-    {
-      rel: "order",
-      href: `${API_PREFIX}/orders/${orderKey}`,
-      title: "Order",
-    },
-    schemaLink("OrderRun"),
-  ];
 }
 
 function orderRunItemActions(
@@ -136,16 +118,6 @@ const IdParamsSchema = z.object({
   id: z.coerce.number().int(),
 });
 
-function formatDate(d: Date | null): string | null {
-  return d ? d.toISOString() : null;
-}
-
-async function resolveOrder(orderKey: string) {
-  return erpDb.order.findUnique({
-    where: { key: orderKey },
-  });
-}
-
 type OrderRunWithRev = OrderRunModel & {
   orderRev: { revNo: number };
   createdBy: { username: string };
@@ -175,11 +147,16 @@ function formatItem(
     releasedAt: item.releasedAt.toISOString(),
     assignedTo: item.assignedTo,
     notes: item.notes,
-    createdAt: item.createdAt.toISOString(),
-    createdBy: item.createdBy.username,
-    updatedAt: item.updatedAt.toISOString(),
-    updatedBy: item.updatedBy.username,
-    _links: orderRunItemLinks(orderKey, item.id),
+    ...formatAuditFields(item),
+    _links: childItemLinks(
+      "/" + runResource(orderKey),
+      item.id,
+      "Runs",
+      "/orders/" + orderKey,
+      "Order",
+      "OrderRun",
+      "order",
+    ),
     _actions: orderRunItemActions(orderKey, item.id, item.status, user),
   };
 }
@@ -217,12 +194,7 @@ export default function orderRunRoutes(fastify: FastifyInstance) {
 
       const order = await resolveOrder(orderKey);
       if (!order) {
-        return sendError(
-          reply,
-          404,
-          "Not Found",
-          `Order '${orderKey}' not found`,
-        );
+        return notFound(reply, `Order '${orderKey}' not found`);
       }
 
       const where: Record<string, unknown> = { orderId: order.id };
@@ -284,12 +256,7 @@ export default function orderRunRoutes(fastify: FastifyInstance) {
 
       const order = await resolveOrder(orderKey);
       if (!order) {
-        return sendError(
-          reply,
-          404,
-          "Not Found",
-          `Order '${orderKey}' not found`,
-        );
+        return notFound(reply, `Order '${orderKey}' not found`);
       }
 
       const orderId = order.id;
@@ -299,10 +266,8 @@ export default function orderRunRoutes(fastify: FastifyInstance) {
         where: { orderId_revNo: { orderId, revNo } },
       });
       if (!orderRev) {
-        return sendError(
+        return notFound(
           reply,
-          404,
-          "Not Found",
           `Order revision ${revNo} not found for order '${orderKey}'`,
         );
       }
@@ -405,12 +370,7 @@ export default function orderRunRoutes(fastify: FastifyInstance) {
 
       const order = await resolveOrder(orderKey);
       if (!order) {
-        return sendError(
-          reply,
-          404,
-          "Not Found",
-          `Order '${orderKey}' not found`,
-        );
+        return notFound(reply, `Order '${orderKey}' not found`);
       }
 
       const item = await erpDb.orderRun.findUnique({
@@ -418,10 +378,8 @@ export default function orderRunRoutes(fastify: FastifyInstance) {
         include: includeRev,
       });
       if (!item || item.orderId !== order.id) {
-        return sendError(
+        return notFound(
           reply,
-          404,
-          "Not Found",
           `Order run ${id} not found for order '${orderKey}'`,
         );
       }
@@ -450,20 +408,13 @@ export default function orderRunRoutes(fastify: FastifyInstance) {
 
       const order = await resolveOrder(orderKey);
       if (!order) {
-        return sendError(
-          reply,
-          404,
-          "Not Found",
-          `Order '${orderKey}' not found`,
-        );
+        return notFound(reply, `Order '${orderKey}' not found`);
       }
 
       const existing = await erpDb.orderRun.findUnique({ where: { id } });
       if (!existing || existing.orderId !== order.id) {
-        return sendError(
+        return notFound(
           reply,
-          404,
-          "Not Found",
           `Order run ${id} not found for order '${orderKey}'`,
         );
       }
@@ -472,10 +423,8 @@ export default function orderRunRoutes(fastify: FastifyInstance) {
         existing.status !== OrderRunStatus.released &&
         existing.status !== OrderRunStatus.started
       ) {
-        return sendError(
+        return conflict(
           reply,
-          409,
-          "Conflict",
           `Cannot update order run in ${existing.status} status`,
         );
       }
@@ -521,29 +470,20 @@ export default function orderRunRoutes(fastify: FastifyInstance) {
 
       const order = await resolveOrder(orderKey);
       if (!order) {
-        return sendError(
-          reply,
-          404,
-          "Not Found",
-          `Order '${orderKey}' not found`,
-        );
+        return notFound(reply, `Order '${orderKey}' not found`);
       }
 
       const existing = await erpDb.orderRun.findUnique({ where: { id } });
       if (!existing || existing.orderId !== order.id) {
-        return sendError(
+        return notFound(
           reply,
-          404,
-          "Not Found",
           `Order run ${id} not found for order '${orderKey}'`,
         );
       }
 
       if (existing.status !== OrderRunStatus.released) {
-        return sendError(
+        return conflict(
           reply,
-          409,
-          "Conflict",
           `Cannot delete order run in ${existing.status} status`,
         );
       }
@@ -570,29 +510,20 @@ export default function orderRunRoutes(fastify: FastifyInstance) {
 
       const order = await resolveOrder(orderKey);
       if (!order) {
-        return sendError(
-          reply,
-          404,
-          "Not Found",
-          `Order '${orderKey}' not found`,
-        );
+        return notFound(reply, `Order '${orderKey}' not found`);
       }
 
       const existing = await erpDb.orderRun.findUnique({ where: { id } });
       if (!existing || existing.orderId !== order.id) {
-        return sendError(
+        return notFound(
           reply,
-          404,
-          "Not Found",
           `Order run ${id} not found for order '${orderKey}'`,
         );
       }
 
       if (existing.status !== OrderRunStatus.released) {
-        return sendError(
+        return conflict(
           reply,
-          409,
-          "Conflict",
           `Cannot start order run in ${existing.status} status`,
         );
       }
@@ -638,29 +569,20 @@ export default function orderRunRoutes(fastify: FastifyInstance) {
 
       const order = await resolveOrder(orderKey);
       if (!order) {
-        return sendError(
-          reply,
-          404,
-          "Not Found",
-          `Order '${orderKey}' not found`,
-        );
+        return notFound(reply, `Order '${orderKey}' not found`);
       }
 
       const existing = await erpDb.orderRun.findUnique({ where: { id } });
       if (!existing || existing.orderId !== order.id) {
-        return sendError(
+        return notFound(
           reply,
-          404,
-          "Not Found",
           `Order run ${id} not found for order '${orderKey}'`,
         );
       }
 
       if (existing.status !== OrderRunStatus.started) {
-        return sendError(
+        return conflict(
           reply,
-          409,
-          "Conflict",
           `Cannot close order run in ${existing.status} status`,
         );
       }
@@ -706,20 +628,13 @@ export default function orderRunRoutes(fastify: FastifyInstance) {
 
       const order = await resolveOrder(orderKey);
       if (!order) {
-        return sendError(
-          reply,
-          404,
-          "Not Found",
-          `Order '${orderKey}' not found`,
-        );
+        return notFound(reply, `Order '${orderKey}' not found`);
       }
 
       const existing = await erpDb.orderRun.findUnique({ where: { id } });
       if (!existing || existing.orderId !== order.id) {
-        return sendError(
+        return notFound(
           reply,
-          404,
-          "Not Found",
           `Order run ${id} not found for order '${orderKey}'`,
         );
       }
@@ -728,10 +643,8 @@ export default function orderRunRoutes(fastify: FastifyInstance) {
         existing.status !== OrderRunStatus.released &&
         existing.status !== OrderRunStatus.started
       ) {
-        return sendError(
+        return conflict(
           reply,
-          409,
-          "Conflict",
           `Cannot cancel order run in ${existing.status} status`,
         );
       }
@@ -763,7 +676,8 @@ export default function orderRunRoutes(fastify: FastifyInstance) {
   // REOPEN (closed → started)
   app.post("/:id/reopen", {
     schema: {
-      description: "Reopen an order run (closed → started, cancelled → released)",
+      description:
+        "Reopen an order run (closed → started, cancelled → released)",
       tags: ["Order Runs"],
       params: IdParamsSchema,
       response: {
@@ -777,20 +691,13 @@ export default function orderRunRoutes(fastify: FastifyInstance) {
 
       const order = await resolveOrder(orderKey);
       if (!order) {
-        return sendError(
-          reply,
-          404,
-          "Not Found",
-          `Order '${orderKey}' not found`,
-        );
+        return notFound(reply, `Order '${orderKey}' not found`);
       }
 
       const existing = await erpDb.orderRun.findUnique({ where: { id } });
       if (!existing || existing.orderId !== order.id) {
-        return sendError(
+        return notFound(
           reply,
-          404,
-          "Not Found",
           `Order run ${id} not found for order '${orderKey}'`,
         );
       }
@@ -799,10 +706,8 @@ export default function orderRunRoutes(fastify: FastifyInstance) {
         existing.status !== OrderRunStatus.closed &&
         existing.status !== OrderRunStatus.cancelled
       ) {
-        return sendError(
+        return conflict(
           reply,
-          409,
-          "Conflict",
           `Cannot reopen order run in ${existing.status} status`,
         );
       }

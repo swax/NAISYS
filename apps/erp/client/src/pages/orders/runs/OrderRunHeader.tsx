@@ -1,7 +1,7 @@
 import { ActionIcon, Anchor, Badge, Button, Group, Text } from "@mantine/core";
-import { IconArrowBackUp } from "@tabler/icons-react";
 import type { OrderRun, UpdateOrderRun } from "@naisys-erp/shared";
 import { OrderRunPriority, OrderRunStatus } from "@naisys-erp/shared";
+import { IconArrowBackUp } from "@tabler/icons-react";
 import { useState } from "react";
 import { useNavigate } from "react-router";
 
@@ -190,8 +190,7 @@ export const OrderRunHeader: React.FC<Props> = ({
               c={item.status === OrderRunStatus.closed ? "green" : "orange"}
             >
               {item.status === OrderRunStatus.closed ? "Closed" : "Cancelled"}{" "}
-              by {item.updatedBy} on{" "}
-              {new Date(item.updatedAt).toLocaleString()}
+              by {item.updatedBy} on {new Date(item.updatedAt).toLocaleString()}
             </Text>
             <ActionIcon
               size="xs"

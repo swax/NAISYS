@@ -1,4 +1,4 @@
-import type { HateoasAction, HateoasLink } from "@naisys/common";
+import type { HateoasAction } from "@naisys/common";
 import {
   ErrorResponseSchema,
   OperationRunStatus,
@@ -13,34 +13,16 @@ import { z } from "zod/v4";
 import type { ErpUser } from "../auth-middleware.js";
 import { hasPermission } from "../auth-middleware.js";
 import erpDb from "../erpDb.js";
-import { sendError } from "../error-handler.js";
-import { API_PREFIX, schemaLink, selfLink } from "../hateoas.js";
+import { conflict, notFound } from "../error-handler.js";
+import { API_PREFIX, selfLink } from "../hateoas.js";
+import {
+  childItemLinks,
+  formatAuditFields,
+  resolveOpRun,
+} from "../route-helpers.js";
 
 function stepRunResource(orderKey: string, runId: number, opRunId: number) {
   return `orders/${orderKey}/runs/${runId}/ops/${opRunId}/steps`;
-}
-
-function stepRunItemLinks(
-  orderKey: string,
-  runId: number,
-  opRunId: number,
-  id: number,
-): HateoasLink[] {
-  const resource = stepRunResource(orderKey, runId, opRunId);
-  return [
-    selfLink(`/${resource}/${id}`),
-    {
-      rel: "collection",
-      href: `${API_PREFIX}/${resource}`,
-      title: "Step Runs",
-    },
-    {
-      rel: "operationRun",
-      href: `${API_PREFIX}/orders/${orderKey}/runs/${runId}/ops/${opRunId}`,
-      title: "Operation Run",
-    },
-    schemaLink("StepRun"),
-  ];
 }
 
 function stepRunItemActions(
@@ -143,11 +125,16 @@ function formatItem(
     instructions: item.step.instructions,
     completed: item.completed,
     fieldValues,
-    createdAt: item.createdAt.toISOString(),
-    createdBy: item.createdBy.username,
-    updatedAt: item.updatedAt.toISOString(),
-    updatedBy: item.updatedBy.username,
-    _links: stepRunItemLinks(orderKey, runId, opRunId, item.id),
+    ...formatAuditFields(item),
+    _links: childItemLinks(
+      "/" + stepRunResource(orderKey, runId, opRunId),
+      item.id,
+      "Step Runs",
+      "/orders/" + orderKey + "/runs/" + runId + "/ops/" + opRunId,
+      "Operation Run",
+      "StepRun",
+      "operationRun",
+    ),
     _actions: stepRunItemActions(
       orderKey,
       runId,
@@ -157,21 +144,6 @@ function formatItem(
       user,
     ),
   };
-}
-
-async function resolveOpRun(orderKey: string, runId: number, opRunId: number) {
-  const order = await erpDb.order.findUnique({ where: { key: orderKey } });
-  if (!order) return null;
-
-  const run = await erpDb.orderRun.findUnique({ where: { id: runId } });
-  if (!run || run.orderId !== order.id) return null;
-
-  const opRun = await erpDb.operationRun.findUnique({
-    where: { id: opRunId },
-  });
-  if (!opRun || opRun.orderRunId !== runId) return null;
-
-  return { order, run, opRun };
 }
 
 export default function stepRunRoutes(fastify: FastifyInstance) {
@@ -193,7 +165,7 @@ export default function stepRunRoutes(fastify: FastifyInstance) {
 
       const resolved = await resolveOpRun(orderKey, runId, opRunId);
       if (!resolved) {
-        return sendError(reply, 404, "Not Found", `Operation run not found`);
+        return notFound(reply, `Operation run not found`);
       }
 
       const items = await erpDb.stepRun.findMany({
@@ -237,7 +209,7 @@ export default function stepRunRoutes(fastify: FastifyInstance) {
 
       const resolved = await resolveOpRun(orderKey, runId, opRunId);
       if (!resolved) {
-        return sendError(reply, 404, "Not Found", `Operation run not found`);
+        return notFound(reply, `Operation run not found`);
       }
 
       const item = await erpDb.stepRun.findUnique({
@@ -245,7 +217,7 @@ export default function stepRunRoutes(fastify: FastifyInstance) {
         include: includeStep,
       });
       if (!item || item.operationRunId !== opRunId) {
-        return sendError(reply, 404, "Not Found", `Step run ${id} not found`);
+        return notFound(reply, `Step run ${id} not found`);
       }
 
       return formatItem(
@@ -280,21 +252,19 @@ export default function stepRunRoutes(fastify: FastifyInstance) {
 
       const resolved = await resolveOpRun(orderKey, runId, opRunId);
       if (!resolved) {
-        return sendError(reply, 404, "Not Found", `Operation run not found`);
+        return notFound(reply, `Operation run not found`);
       }
 
       if (resolved.opRun.status !== OperationRunStatus.in_progress) {
-        return sendError(
+        return conflict(
           reply,
-          409,
-          "Conflict",
           `Cannot update step run when operation run is ${resolved.opRun.status}`,
         );
       }
 
       const existing = await erpDb.stepRun.findUnique({ where: { id } });
       if (!existing || existing.operationRunId !== opRunId) {
-        return sendError(reply, 404, "Not Found", `Step run ${id} not found`);
+        return notFound(reply, `Step run ${id} not found`);
       }
 
       const item = await erpDb.$transaction(async (erpTx) => {
