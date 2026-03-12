@@ -12,8 +12,8 @@ export const OrderRunCreate: React.FC = () => {
   const prefillRevNo = Number(searchParams.get("revNo")) || 0;
 
   const handleCreate = async (data: CreateOrderRun) => {
-    await api.post(apiEndpoints.orderRuns(orderKey!), data);
-    void navigate(`/orders/${orderKey}/runs`);
+    const res = await api.post(apiEndpoints.orderRuns(orderKey!), data);
+    void navigate(`/orders/${orderKey}/runs/${res.data.id}`);
   };
 
   return (

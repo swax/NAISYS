@@ -19,11 +19,17 @@ import type {
 } from "@naisys-erp/shared";
 import { CreateOrderRevisionSchema, RevisionStatus } from "@naisys-erp/shared";
 import { useCallback, useEffect, useState } from "react";
-import { useNavigate } from "react-router";
+import { Link, useNavigate } from "react-router";
 
 import { api, apiEndpoints, showErrorNotification } from "../lib/api";
 import { hasAction } from "../lib/hateoas";
 import { zodResolver } from "../lib/zod-resolver";
+
+const cellLinkStyle = {
+  display: "block",
+  color: "inherit",
+  textDecoration: "none",
+};
 
 const STATUS_COLORS: Record<string, string> = {
   [RevisionStatus.draft]: "blue",
@@ -159,31 +165,46 @@ export const OrderRevisions: React.FC<Props> = ({ orderKey }) => {
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
-              {data.items.map((rev) => (
+              {data.items.map((rev) => {
+                const revLink = `/orders/${orderKey}/revs/${rev.revNo}`;
+                return (
                 <Table.Tr
                   key={rev.id}
                   style={{ cursor: "pointer" }}
-                  onClick={() =>
-                    navigate(`/orders/${orderKey}/revs/${rev.revNo}`)
-                  }
                   data-testid={`revision-row-${rev.revNo}`}
                 >
-                  <Table.Td>{rev.revNo}</Table.Td>
                   <Table.Td>
-                    <Badge
-                      color={STATUS_COLORS[rev.status] ?? "gray"}
-                      variant="light"
-                      data-testid={`revision-status-${rev.revNo}`}
-                    >
-                      {rev.status}
-                    </Badge>
+                    <Link to={revLink} style={cellLinkStyle}>
+                      {rev.revNo}
+                    </Link>
                   </Table.Td>
-                  <Table.Td>{rev.notes ?? "—"}</Table.Td>
-                  <Table.Td>{rev.changeSummary ?? "—"}</Table.Td>
                   <Table.Td>
-                    {new Date(rev.createdAt).toLocaleString()}
+                    <Link to={revLink} style={cellLinkStyle}>
+                      <Badge
+                        color={STATUS_COLORS[rev.status] ?? "gray"}
+                        variant="light"
+                        data-testid={`revision-status-${rev.revNo}`}
+                      >
+                        {rev.status}
+                      </Badge>
+                    </Link>
                   </Table.Td>
-                  <Table.Td onClick={(e) => e.stopPropagation()}>
+                  <Table.Td>
+                    <Link to={revLink} style={cellLinkStyle}>
+                      {rev.notes ?? "—"}
+                    </Link>
+                  </Table.Td>
+                  <Table.Td>
+                    <Link to={revLink} style={cellLinkStyle}>
+                      {rev.changeSummary ?? "—"}
+                    </Link>
+                  </Table.Td>
+                  <Table.Td>
+                    <Link to={revLink} style={cellLinkStyle}>
+                      {new Date(rev.createdAt).toLocaleString()}
+                    </Link>
+                  </Table.Td>
+                  <Table.Td>
                     <Group gap="xs">
                       {hasAction(rev._actions, "approve") && (
                         <Button
@@ -211,11 +232,8 @@ export const OrderRevisions: React.FC<Props> = ({ orderKey }) => {
                           size="xs"
                           variant="light"
                           color="teal"
-                          onClick={() =>
-                            navigate(
-                              `/orders/${orderKey}/runs/new?revNo=${rev.revNo}`,
-                            )
-                          }
+                          component={Link}
+                          to={`/orders/${orderKey}/runs/new?revNo=${rev.revNo}`}
                           data-testid={`revision-cut-order-${rev.revNo}`}
                         >
                           Cut Order
@@ -234,7 +252,8 @@ export const OrderRevisions: React.FC<Props> = ({ orderKey }) => {
                     </Group>
                   </Table.Td>
                 </Table.Tr>
-              ))}
+                );
+              })}
             </Table.Tbody>
           </Table>
 

@@ -99,6 +99,17 @@ function opRunItemActions(
         title: "Fail",
       },
     );
+  } else if (
+    status === OperationRunStatus.completed ||
+    status === OperationRunStatus.skipped ||
+    status === OperationRunStatus.failed
+  ) {
+    actions.push({
+      rel: "reopen",
+      href: `${href}/reopen`,
+      method: "POST",
+      title: "Reopen",
+    });
   }
 
   return actions;
@@ -116,13 +127,13 @@ const IdParamsSchema = z.object({
 });
 
 const includeOp = {
-  operation: { select: { seqNo: true, title: true } },
+  operation: { select: { seqNo: true, title: true, description: true } },
   createdBy: { select: { username: true } },
   updatedBy: { select: { username: true } },
 } as const;
 
 type OpRunWithOp = OperationRunModel & {
-  operation: { seqNo: number; title: string };
+  operation: { seqNo: number; title: string; description: string };
   createdBy: { username: string };
   updatedBy: { username: string };
 };
@@ -143,6 +154,7 @@ function formatItem(
     operationId: item.operationId,
     seqNo: item.operation.seqNo,
     title: item.operation.title,
+    description: item.operation.description,
     status: item.status,
     completedAt: formatDate(item.completedAt),
     notes: item.notes,
@@ -570,6 +582,84 @@ export default function operationRunRoutes(fastify: FastifyInstance) {
           "status",
           OperationRunStatus.in_progress,
           OperationRunStatus.failed,
+          userId,
+        );
+        return updated;
+      });
+
+      return formatItem(orderKey, runId, request.erpUser, item);
+    },
+  });
+
+  // REOPEN (completed → in_progress)
+  app.post("/:id/reopen", {
+    schema: {
+      description: "Reopen an operation run (completed → in_progress)",
+      tags: ["Operation Runs"],
+      params: IdParamsSchema,
+      response: {
+        200: OperationRunSchema,
+        404: ErrorResponseSchema,
+        409: ErrorResponseSchema,
+      },
+    },
+    handler: async (request, reply) => {
+      const { orderKey, runId, id } = request.params;
+
+      const resolved = await resolveOrderRun(orderKey, runId);
+      if (!resolved) {
+        return sendError(reply, 404, "Not Found", `Order run not found`);
+      }
+
+      const existing = await erpDb.operationRun.findUnique({
+        where: { id },
+      });
+      if (!existing || existing.orderRunId !== runId) {
+        return sendError(
+          reply,
+          404,
+          "Not Found",
+          `Operation run ${id} not found`,
+        );
+      }
+
+      if (
+        existing.status !== OperationRunStatus.completed &&
+        existing.status !== OperationRunStatus.skipped &&
+        existing.status !== OperationRunStatus.failed
+      ) {
+        return sendError(
+          reply,
+          409,
+          "Conflict",
+          `Cannot reopen operation run in ${existing.status} status`,
+        );
+      }
+
+      const reopenTo =
+        existing.status === OperationRunStatus.skipped
+          ? OperationRunStatus.pending
+          : OperationRunStatus.in_progress;
+
+      const userId = request.erpUser!.id;
+      const item = await erpDb.$transaction(async (erpTx) => {
+        const updated = await erpTx.operationRun.update({
+          where: { id },
+          data: {
+            status: reopenTo,
+            completedAt: null,
+            updatedById: userId,
+          },
+          include: includeOp,
+        });
+        await writeAuditEntry(
+          erpTx,
+          "OperationRun",
+          id,
+          "reopen",
+          "status",
+          existing.status,
+          reopenTo,
           userId,
         );
         return updated;

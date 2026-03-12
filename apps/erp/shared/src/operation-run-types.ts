@@ -19,6 +19,7 @@ export const OperationRunSchema = z.object({
   operationId: z.number(),
   seqNo: z.number(),
   title: z.string(),
+  description: z.string(),
   status: OperationRunStatusEnum,
   completedAt: z.iso.datetime().nullable(),
   notes: z.string().nullable(),

@@ -16,9 +16,10 @@ const STATUS_COLORS: Record<string, string> = {
 interface Props {
   orderKey: string;
   runId: string;
+  refreshKey?: number;
 }
 
-export const OperationRunSidebar: React.FC<Props> = ({ orderKey, runId }) => {
+export const OperationRunSidebar: React.FC<Props> = ({ orderKey, runId, refreshKey }) => {
   const navigate = useNavigate();
   const { opRunId: currentOpRunId } = useParams<{ opRunId: string }>();
   const [data, setData] = useState<OperationRunListResponse | null>(null);
@@ -40,7 +41,7 @@ export const OperationRunSidebar: React.FC<Props> = ({ orderKey, runId }) => {
 
   useEffect(() => {
     void fetchOps();
-  }, [fetchOps]);
+  }, [fetchOps, refreshKey]);
 
   // Auto-navigate to first operation run when none is selected
   useEffect(() => {

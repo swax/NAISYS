@@ -15,7 +15,7 @@ import {
   IconLayoutSidebarLeftExpand,
   IconListDetails,
 } from "@tabler/icons-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Outlet, useLocation, useParams } from "react-router";
 
 import { api, apiEndpoints, showErrorNotification } from "../../../lib/api";
@@ -35,6 +35,13 @@ export const OrderRunLayout: React.FC = () => {
   const [sidebarCollapsed, { toggle: toggleSidebar }] = useDisclosure();
   const [drawerOpened, { open: openDrawer, close: closeDrawer }] =
     useDisclosure();
+  const [opsRefreshKey, setOpsRefreshKey] = useState(0);
+  const outletContext = useMemo(
+    () => ({
+      onOperationUpdate: () => setOpsRefreshKey((k) => k + 1),
+    }),
+    [],
+  );
 
   const fetchItem = useCallback(async () => {
     if (!orderKey || !id) return;
@@ -79,14 +86,17 @@ export const OrderRunLayout: React.FC = () => {
   return (
     <Box
       display="flex"
-      style={{ flexDirection: "column", flex: 1, minHeight: 0 }}
+      style={{
+        flexDirection: "column",
+        height: "calc(100dvh - var(--app-shell-header-height, 0px))",
+      }}
     >
       {/* Header */}
       <OrderRunHeader
         item={item}
         orderKey={orderKey}
         runId={id}
-        onRefresh={fetchItem}
+        onUpdate={setItem}
       />
 
       {/* Body: sidebar + content */}
@@ -143,7 +153,7 @@ export const OrderRunLayout: React.FC = () => {
                 display: "flex",
                 flexDirection: "column",
                 overflowY: "auto",
-                paddingRight: "var(--mantine-spacing-md)",
+                padding: "0 var(--mantine-spacing-md)",
               }}
             >
               <Group justify="flex-end" p={4}>
@@ -158,7 +168,7 @@ export const OrderRunLayout: React.FC = () => {
                   </ActionIcon>
                 </Tooltip>
               </Group>
-              <OperationRunSidebar orderKey={orderKey} runId={id} />
+              <OperationRunSidebar orderKey={orderKey} runId={id} refreshKey={opsRefreshKey} />
             </Box>
           )}
         </Box>
@@ -173,7 +183,7 @@ export const OrderRunLayout: React.FC = () => {
             flexDirection: "column",
           }}
         >
-          <Outlet />
+          <Outlet context={outletContext} />
         </div>
       </Box>
 
@@ -184,7 +194,7 @@ export const OrderRunLayout: React.FC = () => {
         title="Operations"
         size={SIDEBAR_WIDTH}
       >
-        <OperationRunSidebar orderKey={orderKey} runId={id} />
+        <OperationRunSidebar orderKey={orderKey} runId={id} refreshKey={opsRefreshKey} />
       </Drawer>
     </Box>
   );

@@ -79,7 +79,10 @@ export const RevisionLayout: React.FC = () => {
   return (
     <Box
       display="flex"
-      style={{ flexDirection: "column", flex: 1, minHeight: 0 }}
+      style={{
+        flexDirection: "column",
+        height: "calc(100dvh - var(--app-shell-header-height, 0px))",
+      }}
     >
       {/* Header */}
       <RevisionHeader
@@ -143,7 +146,7 @@ export const RevisionLayout: React.FC = () => {
                 display: "flex",
                 flexDirection: "column",
                 overflowY: "auto",
-                paddingRight: "var(--mantine-spacing-md)",
+                padding: "0 var(--mantine-spacing-md)",
               }}
             >
               <Group justify="flex-end" p={4}>

@@ -12,7 +12,7 @@ import {
 import type { Order, UpdateOrder } from "@naisys-erp/shared";
 import { OrderStatus } from "@naisys-erp/shared";
 import { useCallback, useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router";
+import { Link, useNavigate, useParams } from "react-router";
 
 import { MetadataTooltip } from "../../components/MetadataTooltip";
 import { OrderForm } from "../../components/OrderForm";
@@ -124,7 +124,8 @@ export const OrderDetail: React.FC = () => {
           </Button>
           <Button
             variant="light"
-            onClick={() => navigate(`/orders/${key}/runs`)}
+            component={Link}
+            to={`/orders/${key}/runs`}
           >
             View Runs
           </Button>

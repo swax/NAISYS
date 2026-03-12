@@ -18,8 +18,7 @@ import type {
 } from "@naisys-erp/shared";
 import { CreateStepSchema, UpdateStepSchema } from "@naisys-erp/shared";
 import { useCallback, useEffect, useState } from "react";
-import Markdown from "react-markdown";
-
+import { CompactMarkdown } from "../../../components/CompactMarkdown";
 import { MetadataTooltip } from "../../../components/MetadataTooltip";
 import { api, apiEndpoints, showErrorNotification } from "../../../lib/api";
 import { hasAction } from "../../../lib/hateoas";
@@ -212,10 +211,10 @@ export const StepList: React.FC<StepListProps> = ({
                 <Group justify="space-between" align="flex-start" wrap="nowrap">
                   <Stack gap={4} style={{ flex: 1, minWidth: 0 }}>
                     <Text fw={600} size="sm">
-                      Step {step.seqNo}
+                      STEP {step.seqNo}
                     </Text>
                     {step.instructions ? (
-                      <Markdown>{step.instructions}</Markdown>
+                      <CompactMarkdown>{step.instructions}</CompactMarkdown>
                     ) : (
                       <Text size="sm" c="dimmed">
                         No instructions

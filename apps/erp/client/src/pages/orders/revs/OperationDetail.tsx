@@ -1,13 +1,13 @@
 import {
   Button,
   Card,
+  Container,
   Group,
   Loader,
   NumberInput,
   Stack,
   Text,
   Textarea,
-  Title,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import type { Operation, UpdateOperation } from "@naisys-erp/shared";
@@ -15,6 +15,7 @@ import { UpdateOperationSchema } from "@naisys-erp/shared";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 
+import { CompactMarkdown } from "../../../components/CompactMarkdown";
 import { MetadataTooltip } from "../../../components/MetadataTooltip";
 import { api, apiEndpoints, showErrorNotification } from "../../../lib/api";
 import { hasAction } from "../../../lib/hateoas";
@@ -119,12 +120,13 @@ export const OperationDetail: React.FC = () => {
   const canEdit = hasAction(item._actions, "update");
 
   return (
-    <Stack p="md" gap="md">
+    <Container size="md" py="xl">
+      <Stack gap="md">
       <Group justify="space-between">
         <Group gap="xs">
-          <Title order={4}>
-            {item.seqNo}. {item.title}
-          </Title>
+          <Text fw={600}>
+            OPERATION {item.seqNo}. {item.title}
+          </Text>
           <MetadataTooltip
             createdBy={item.createdBy}
             createdAt={item.createdAt}
@@ -182,26 +184,16 @@ export const OperationDetail: React.FC = () => {
             </Stack>
           </form>
         ) : (
-          <Stack gap="sm">
-            <Group>
-              <Text fw={600} w={120}>
-                Seq #:
-              </Text>
-              <Text>{item.seqNo}</Text>
-            </Group>
-            <Group align="flex-start">
-              <Text fw={600} w={120}>
-                Description:
-              </Text>
-              <Text style={{ whiteSpace: "pre-wrap" }}>
-                {item.description || "\u2014"}
-              </Text>
-            </Group>
-          </Stack>
+          item.description ? (
+            <CompactMarkdown>{item.description}</CompactMarkdown>
+          ) : (
+            <Text c="dimmed">No description</Text>
+          )
         )}
       </Card>
 
       <StepList orderKey={orderKey!} revNo={revNo!} opSeqNo={seqNo!} />
-    </Stack>
+      </Stack>
+    </Container>
   );
 };

@@ -68,23 +68,20 @@ export const RevisionHeader: React.FC<Props> = ({
       }}
     >
       <Group gap="sm">
-        <Anchor
-          size="sm"
-          c="dimmed"
-          href={`/erp/orders/${orderKey}`}
-          onClick={(e: React.MouseEvent) => {
-            if (e.button === 1 || e.ctrlKey || e.metaKey) return;
-            e.preventDefault();
-            void navigate(`/orders/${orderKey}`);
-          }}
-        >
-          {orderKey}
-        </Anchor>
-        <Text size="sm" c="dimmed">
-          /
-        </Text>
-        <Text size="sm" fw={600}>
-          Rev #{item.revNo}
+        <Text size="lg">
+          ORDER:{" "}
+          <Anchor
+            href={`/erp/orders/${orderKey}`}
+            onClick={(e: React.MouseEvent) => {
+              if (e.button === 1 || e.ctrlKey || e.metaKey) return;
+              e.preventDefault();
+              void navigate(`/orders/${orderKey}`);
+            }}
+          >
+            {orderKey}
+          </Anchor>
+          {" / "}
+          REV {item.revNo}
         </Text>
         <Badge
           color={STATUS_COLORS[item.status] ?? "gray"}
@@ -105,13 +102,6 @@ export const RevisionHeader: React.FC<Props> = ({
         )}
       </Group>
       <Group gap="xs">
-        <Button
-          size="xs"
-          variant="subtle"
-          onClick={() => navigate(`/orders/${orderKey}`)}
-        >
-          Back
-        </Button>
         {hasAction(item._actions, "approve") && (
           <Button size="xs" color="green" onClick={handleApprove}>
             Approve

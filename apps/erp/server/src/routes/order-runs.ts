@@ -108,8 +108,21 @@ function orderRunItemActions(
         title: "Cancel",
       },
     );
+  } else if (status === OrderRunStatus.closed) {
+    actions.push({
+      rel: "reopen",
+      href: `${href}/reopen`,
+      method: "POST",
+      title: "Reopen",
+    });
+  } else if (status === OrderRunStatus.cancelled) {
+    actions.push({
+      rel: "reopen",
+      href: `${href}/reopen`,
+      method: "POST",
+      title: "Reopen",
+    });
   }
-  // closed/cancelled: no actions
 
   return actions;
 }
@@ -738,6 +751,82 @@ export default function orderRunRoutes(fastify: FastifyInstance) {
           "status",
           existing.status,
           OrderRunStatus.cancelled,
+          userId,
+        );
+        return updated;
+      });
+
+      return formatItem(orderKey, request.erpUser, item);
+    },
+  });
+
+  // REOPEN (closed → started)
+  app.post("/:id/reopen", {
+    schema: {
+      description: "Reopen an order run (closed → started, cancelled → released)",
+      tags: ["Order Runs"],
+      params: IdParamsSchema,
+      response: {
+        200: OrderRunSchema,
+        404: ErrorResponseSchema,
+        409: ErrorResponseSchema,
+      },
+    },
+    handler: async (request, reply) => {
+      const { orderKey, id } = request.params;
+
+      const order = await resolveOrder(orderKey);
+      if (!order) {
+        return sendError(
+          reply,
+          404,
+          "Not Found",
+          `Order '${orderKey}' not found`,
+        );
+      }
+
+      const existing = await erpDb.orderRun.findUnique({ where: { id } });
+      if (!existing || existing.orderId !== order.id) {
+        return sendError(
+          reply,
+          404,
+          "Not Found",
+          `Order run ${id} not found for order '${orderKey}'`,
+        );
+      }
+
+      if (
+        existing.status !== OrderRunStatus.closed &&
+        existing.status !== OrderRunStatus.cancelled
+      ) {
+        return sendError(
+          reply,
+          409,
+          "Conflict",
+          `Cannot reopen order run in ${existing.status} status`,
+        );
+      }
+
+      const reopenTo =
+        existing.status === OrderRunStatus.closed
+          ? OrderRunStatus.started
+          : OrderRunStatus.released;
+
+      const userId = request.erpUser!.id;
+      const item = await erpDb.$transaction(async (erpTx) => {
+        const updated = await erpTx.orderRun.update({
+          where: { id },
+          data: { status: reopenTo, updatedById: userId },
+          include: includeRev,
+        });
+        await writeAuditEntry(
+          erpTx,
+          "OrderRun",
+          id,
+          "reopen",
+          "status",
+          existing.status,
+          reopenTo,
           userId,
         );
         return updated;

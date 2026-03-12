@@ -116,6 +116,8 @@ export const apiEndpoints = {
     `orders/${key}/runs/${id}/close`,
   orderRunCancel: (key: string, id: number | string) =>
     `orders/${key}/runs/${id}/cancel`,
+  orderRunReopen: (key: string, id: number | string) =>
+    `orders/${key}/runs/${id}/reopen`,
   users: "users",
   user: (username: string) => `users/${username}`,
   userPermissions: (username: string) => `users/${username}/permissions`,
@@ -145,6 +147,11 @@ export const apiEndpoints = {
     runId: number | string,
     id: number | string,
   ) => `orders/${key}/runs/${runId}/ops/${id}/fail`,
+  operationRunReopen: (
+    key: string,
+    runId: number | string,
+    id: number | string,
+  ) => `orders/${key}/runs/${runId}/ops/${id}/reopen`,
   stepRuns: (key: string, runId: number | string, opRunId: number | string) =>
     `orders/${key}/runs/${runId}/ops/${opRunId}/steps`,
   stepRun: (
