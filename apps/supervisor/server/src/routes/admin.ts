@@ -84,42 +84,34 @@ export default function adminRoutes(
         security: [{ cookieAuth: [] }],
       },
     },
-    async (request, reply) => {
-      try {
-        const hasAdminPermission = hasPermission(
-          request.supervisorUser,
-          "supervisor_admin",
-        );
+    async (request, _reply) => {
+      const hasAdminPermission = hasPermission(
+        request.supervisorUser,
+        "supervisor_admin",
+      );
 
-        const actions = adminActions(hasAdminPermission);
+      const actions = adminActions(hasAdminPermission);
 
-        const [supervisorDbSize, hubDbSize] = await Promise.all([
-          fs
-            .stat(supervisorDbPath())
-            .then((s) => s.size)
-            .catch(() => undefined),
-          fs
-            .stat(getNaisysDatabasePath())
-            .then((s) => s.size)
-            .catch(() => undefined),
-        ]);
+      const [supervisorDbSize, hubDbSize] = await Promise.all([
+        fs
+          .stat(supervisorDbPath())
+          .then((s) => s.size)
+          .catch(() => undefined),
+        fs
+          .stat(getNaisysDatabasePath())
+          .then((s) => s.size)
+          .catch(() => undefined),
+      ]);
 
-        return {
-          supervisorDbPath: supervisorDbPath(),
-          supervisorDbSize,
-          hubDbPath: getNaisysDatabasePath(),
-          hubDbSize,
-          hubConnected: isHubConnected(),
-          hubAccessKey: getHubAccessKey(),
-          _actions: actions.length > 0 ? actions : undefined,
-        };
-      } catch (error) {
-        reply.log.error(error, "Error in GET /admin route");
-        return reply.status(500).send({
-          success: false,
-          message: "Internal server error while fetching admin info",
-        });
-      }
+      return {
+        supervisorDbPath: supervisorDbPath(),
+        supervisorDbSize,
+        hubDbPath: getNaisysDatabasePath(),
+        hubDbSize,
+        hubConnected: isHubConnected(),
+        hubAccessKey: getHubAccessKey(),
+        _actions: actions.length > 0 ? actions : undefined,
+      };
     },
   );
 
@@ -230,24 +222,16 @@ export default function adminRoutes(
         security: [{ cookieAuth: [] }],
       },
     },
-    async (request, reply) => {
-      try {
-        const { file, lines } = request.query;
-        const cappedLines = Math.min(lines, 1000);
-        const filePath = getLogFilePath(file);
-        const { entries, fileSize } = await tailLogFile(filePath, cappedLines);
-        return {
-          entries,
-          fileName: `${file}.log`,
-          fileSize,
-        };
-      } catch (error) {
-        reply.log.error(error, "Error in GET /admin/logs route");
-        return reply.status(500).send({
-          success: false,
-          message: "Internal server error while reading log file",
-        });
-      }
+    async (request, _reply) => {
+      const { file, lines } = request.query;
+      const cappedLines = Math.min(lines, 1000);
+      const filePath = getLogFilePath(file);
+      const { entries, fileSize } = await tailLogFile(filePath, cappedLines);
+      return {
+        entries,
+        fileName: `${file}.log`,
+        fileSize,
+      };
     },
   );
 }

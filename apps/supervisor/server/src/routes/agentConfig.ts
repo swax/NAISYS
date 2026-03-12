@@ -22,6 +22,7 @@ import { FastifyInstance, FastifyPluginOptions } from "fastify";
 import yaml from "js-yaml";
 
 import { hasPermission, requirePermission } from "../auth-middleware.js";
+import { badRequest, notFound } from "../error-helpers.js";
 import { API_PREFIX } from "../hateoas.js";
 import {
   getAgentConfigById,
@@ -95,10 +96,7 @@ export default function agentConfigRoutes(
         const id = resolveAgentId(username);
 
         if (!id) {
-          return reply.status(404).send({
-            success: false,
-            message: `Agent '${username}' not found`,
-          });
+          return notFound(reply, `Agent '${username}' not found`);
         }
 
         const config = await getAgentConfigById(id);
@@ -138,16 +136,10 @@ export default function agentConfigRoutes(
           error instanceof Error ? error.message : "Unknown error";
 
         if (errorMessage.includes("not found")) {
-          return reply.status(404).send({
-            success: false,
-            message: errorMessage,
-          });
+          return notFound(reply, errorMessage);
         }
 
-        return reply.status(500).send({
-          success: false,
-          message: "Internal server error while fetching agent configuration",
-        });
+        throw error;
       }
     },
   );
@@ -182,19 +174,13 @@ export default function agentConfigRoutes(
         const id = resolveAgentId(username);
 
         if (!id) {
-          return reply.status(404).send({
-            success: false,
-            message: `Agent '${username}' not found`,
-          });
+          return notFound(reply, `Agent '${username}' not found`);
         }
 
         // Validate model keys against known models
         const modelError = await validateModelKeys(config);
         if (modelError) {
-          return reply.status(400).send({
-            success: false,
-            message: modelError,
-          });
+          return badRequest(reply, modelError);
         }
 
         await updateAgentConfigById(id, config, true);
@@ -209,16 +195,10 @@ export default function agentConfigRoutes(
           error instanceof Error ? error.message : "Unknown error";
 
         if (errorMessage.includes("not found")) {
-          return reply.status(404).send({
-            success: false,
-            message: errorMessage,
-          });
+          return notFound(reply, errorMessage);
         }
 
-        return reply.status(500).send({
-          success: false,
-          message: "Internal server error while updating agent configuration",
-        });
+        throw error;
       }
     },
   );
@@ -247,10 +227,7 @@ export default function agentConfigRoutes(
         const id = resolveAgentId(username);
 
         if (!id) {
-          return reply.status(404).send({
-            success: false,
-            message: `Agent '${username}' not found`,
-          });
+          return notFound(reply, `Agent '${username}' not found`);
         }
 
         const config = await getAgentConfigById(id);
@@ -266,16 +243,10 @@ export default function agentConfigRoutes(
           error instanceof Error ? error.message : "Unknown error";
 
         if (errorMessage.includes("not found")) {
-          return reply.status(404).send({
-            success: false,
-            message: errorMessage,
-          });
+          return notFound(reply, errorMessage);
         }
 
-        return reply.status(500).send({
-          success: false,
-          message: "Internal server error while exporting agent configuration",
-        });
+        throw error;
       }
     },
   );
@@ -310,10 +281,7 @@ export default function agentConfigRoutes(
         const id = resolveAgentId(username);
 
         if (!id) {
-          return reply.status(404).send({
-            success: false,
-            message: `Agent '${username}' not found`,
-          });
+          return notFound(reply, `Agent '${username}' not found`);
         }
 
         // Parse YAML
@@ -323,10 +291,7 @@ export default function agentConfigRoutes(
         } catch (err) {
           const message =
             err instanceof Error ? err.message : "Invalid YAML syntax";
-          return reply.status(400).send({
-            success: false,
-            message: `YAML parse error: ${message}`,
-          });
+          return badRequest(reply, `YAML parse error: ${message}`);
         }
 
         // Validate against schema
@@ -336,19 +301,13 @@ export default function agentConfigRoutes(
         } catch (err) {
           const message =
             err instanceof Error ? err.message : "Invalid config structure";
-          return reply.status(400).send({
-            success: false,
-            message: `Config validation error: ${message}`,
-          });
+          return badRequest(reply, `Config validation error: ${message}`);
         }
 
         // Validate model keys
         const modelError = await validateModelKeys(config);
         if (modelError) {
-          return reply.status(400).send({
-            success: false,
-            message: modelError,
-          });
+          return badRequest(reply, modelError);
         }
 
         await updateAgentConfigById(id, config, false);
@@ -366,16 +325,10 @@ export default function agentConfigRoutes(
           error instanceof Error ? error.message : "Unknown error";
 
         if (errorMessage.includes("not found")) {
-          return reply.status(404).send({
-            success: false,
-            message: errorMessage,
-          });
+          return notFound(reply, errorMessage);
         }
 
-        return reply.status(500).send({
-          success: false,
-          message: "Internal server error while importing agent configuration",
-        });
+        throw error;
       }
     },
   );

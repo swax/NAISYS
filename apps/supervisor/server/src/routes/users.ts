@@ -18,6 +18,7 @@ import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod/v4";
 
 import { authCache, requirePermission } from "../auth-middleware.js";
+import { conflict, notFound } from "../error-helpers.js";
 import {
   API_PREFIX,
   collectionLink,
@@ -306,8 +307,7 @@ export default function userRoutes(
         );
       } catch (err: unknown) {
         if (err instanceof Error && err.message.includes("Unique constraint")) {
-          reply.code(409);
-          return { success: false, message: "Username already exists" };
+          return conflict(reply, "Username already exists");
         }
         throw err;
       }
@@ -331,25 +331,19 @@ export default function userRoutes(
 
       const hubAgent = await getHubAgentById(agentId);
       if (!hubAgent) {
-        reply.code(404);
-        return { success: false, message: "Agent not found" };
+        return notFound(reply, "Agent not found");
       }
 
       const existingByUuid = await userService.getUserByUuid(hubAgent.uuid);
       if (existingByUuid) {
-        reply.code(409);
-        return {
-          success: false,
-          message: "A user with this agent's UUID already exists",
-        };
+        return conflict(reply, "A user with this agent's UUID already exists");
       }
 
       const existingByUsername = await userService.getUserByUsername(
         hubAgent.username,
       );
       if (existingByUsername) {
-        reply.code(409);
-        return { success: false, message: "Username already exists" };
+        return conflict(reply, "Username already exists");
       }
 
       const user = await userService.createUserForAgent(
@@ -384,8 +378,7 @@ export default function userRoutes(
         request.params.username,
       );
       if (!user) {
-        reply.code(404);
-        return { success: false, message: "User not found" };
+        return notFound(reply, "User not found");
       }
 
       let agentUsername: string | null = null;
@@ -423,8 +416,7 @@ export default function userRoutes(
         request.params.username,
       );
       if (!targetUser) {
-        reply.code(404);
-        return { success: false, message: "User not found" };
+        return notFound(reply, "User not found");
       }
 
       const isAdmin =
@@ -443,8 +435,7 @@ export default function userRoutes(
         );
       } catch (err: unknown) {
         if (err instanceof Error && err.message.includes("Unique constraint")) {
-          reply.code(409);
-          return { success: false, message: "Username already exists" };
+          return conflict(reply, "Username already exists");
         }
         throw err;
       }
@@ -465,15 +456,13 @@ export default function userRoutes(
     },
     async (request, reply) => {
       if (request.params.username === request.supervisorUser!.username) {
-        reply.code(409);
-        return { success: false, message: "Cannot delete yourself" };
+        return conflict(reply, "Cannot delete yourself");
       }
       const targetUser = await userService.getUserByUsernameWithPermissions(
         request.params.username,
       );
       if (!targetUser) {
-        reply.code(404);
-        return { success: false, message: "User not found" };
+        return notFound(reply, "User not found");
       }
       await userService.deleteUser(targetUser.id);
       authCache.clear();
@@ -498,8 +487,7 @@ export default function userRoutes(
         request.params.username,
       );
       if (!targetUser) {
-        reply.code(404);
-        return { success: false, message: "User not found" };
+        return notFound(reply, "User not found");
       }
       await userService.rotateUserApiKey(targetUser.id);
       authCache.clear();
@@ -525,8 +513,7 @@ export default function userRoutes(
         request.params.username,
       );
       if (!targetUser) {
-        reply.code(404);
-        return { success: false, message: "User not found" };
+        return notFound(reply, "User not found");
       }
 
       try {
@@ -544,11 +531,7 @@ export default function userRoutes(
         );
       } catch (err: unknown) {
         if (err instanceof Error && err.message.includes("Unique constraint")) {
-          reply.code(409);
-          return {
-            success: false,
-            message: "Permission already granted",
-          };
+          return conflict(reply, "Permission already granted");
         }
         throw err;
       }
@@ -578,18 +561,16 @@ export default function userRoutes(
         username === request.supervisorUser!.username &&
         permission === "supervisor_admin"
       ) {
-        reply.code(409);
-        return {
-          success: false,
-          message: "Cannot revoke your own supervisor_admin permission",
-        };
+        return conflict(
+          reply,
+          "Cannot revoke your own supervisor_admin permission",
+        );
       }
 
       const targetUser =
         await userService.getUserByUsernameWithPermissions(username);
       if (!targetUser) {
-        reply.code(404);
-        return { success: false, message: "User not found" };
+        return notFound(reply, "User not found");
       }
 
       await userService.revokePermission(targetUser.id, permission);
