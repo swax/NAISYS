@@ -18,6 +18,7 @@ import {
 import { FastifyInstance, FastifyPluginOptions } from "fastify";
 
 import { hasPermission, requirePermission } from "../auth-middleware.js";
+import { badRequest, notFound } from "../error-helpers.js";
 import {
   API_PREFIX,
   collectionLink,
@@ -144,46 +145,38 @@ export default function agentsRoutes(
         },
       },
     },
-    async (request, reply) => {
-      try {
-        const { updatedSince } = request.query;
-        const agents = await getAgents(updatedSince);
+    async (request, _reply) => {
+      const { updatedSince } = request.query;
+      const agents = await getAgents(updatedSince);
 
-        const items = agents.map((agent) => ({
-          ...agent,
-          status: getAgentStatus(agent.id),
-          _links: [selfLink(`/agents/${agent.name}`)],
-        }));
+      const items = agents.map((agent) => ({
+        ...agent,
+        status: getAgentStatus(agent.id),
+        _links: [selfLink(`/agents/${agent.name}`)],
+      }));
 
-        const hasManagePermission = hasPermission(
-          request.supervisorUser,
-          "manage_agents",
-        );
+      const hasManagePermission = hasPermission(
+        request.supervisorUser,
+        "manage_agents",
+      );
 
-        const actions: HateoasAction[] = [];
-        if (hasManagePermission) {
-          actions.push({
-            rel: "create",
-            href: `${API_PREFIX}/agents`,
-            method: "POST",
-            title: "Create Agent",
-            schema: `${API_PREFIX}/schemas/CreateAgent`,
-          });
-        }
-
-        return {
-          items,
-          timestamp: new Date().toISOString(),
-          _links: [selfLink("/agents"), schemaLink("CreateAgent")],
-          _actions: actions.length > 0 ? actions : undefined,
-        };
-      } catch (error) {
-        request.log.error(error, "Error in GET /agents route");
-        return reply.status(500).send({
-          success: false,
-          message: "Internal server error while fetching agents",
+      const actions: HateoasAction[] = [];
+      if (hasManagePermission) {
+        actions.push({
+          rel: "create",
+          href: `${API_PREFIX}/agents`,
+          method: "POST",
+          title: "Create Agent",
+          schema: `${API_PREFIX}/schemas/CreateAgent`,
         });
       }
+
+      return {
+        items,
+        timestamp: new Date().toISOString(),
+        _links: [selfLink("/agents"), schemaLink("CreateAgent")],
+        _actions: actions.length > 0 ? actions : undefined,
+      };
     },
   );
 
@@ -212,11 +205,10 @@ export default function agentsRoutes(
         const { name, title } = request.body;
 
         if (!/^[a-zA-Z0-9_-]+$/.test(name)) {
-          return reply.status(400).send({
-            success: false,
-            message:
-              "Agent name must contain only alphanumeric characters, hyphens, and underscores",
-          });
+          return badRequest(
+            reply,
+            "Agent name must contain only alphanumeric characters, hyphens, and underscores",
+          );
         }
 
         const { config } = await createAgentConfig(name, title);
@@ -234,16 +226,10 @@ export default function agentsRoutes(
           error instanceof Error ? error.message : "Unknown error";
 
         if (errorMessage.includes("already exists")) {
-          return reply.status(400).send({
-            success: false,
-            message: errorMessage,
-          });
+          return badRequest(reply, errorMessage);
         }
 
-        return reply.status(500).send({
-          success: false,
-          message: "Internal server error while creating agent",
-        });
+        throw error;
       }
     },
   );
@@ -267,49 +253,35 @@ export default function agentsRoutes(
       },
     },
     async (request, reply) => {
-      try {
-        const { username } = request.params;
-        const id = resolveAgentId(username);
+      const { username } = request.params;
+      const id = resolveAgentId(username);
 
-        if (!id) {
-          return reply.status(404).send({
-            success: false,
-            message: `Agent '${username}' not found`,
-          });
-        }
-
-        const agent = await getAgent(id);
-
-        if (!agent) {
-          return reply.status(404).send({
-            success: false,
-            message: `Agent '${username}' not found`,
-          });
-        }
-
-        const hasManagePermission = hasPermission(
-          request.supervisorUser,
-          "manage_agents",
-        );
-
-        return {
-          ...agent,
-          status: getAgentStatus(id),
-          _links: agentLinks(username, agent.config),
-          _actions: agentActions(
-            username,
-            hasManagePermission,
-            agent.archived ?? false,
-            id,
-          ),
-        };
-      } catch (error) {
-        request.log.error(error, "Error in GET /agents/:username route");
-        return reply.status(500).send({
-          success: false,
-          message: "Internal server error while fetching agent detail",
-        });
+      if (!id) {
+        return notFound(reply, `Agent '${username}' not found`);
       }
+
+      const agent = await getAgent(id);
+
+      if (!agent) {
+        return notFound(reply, `Agent '${username}' not found`);
+      }
+
+      const hasManagePermission = hasPermission(
+        request.supervisorUser,
+        "manage_agents",
+      );
+
+      return {
+        ...agent,
+        status: getAgentStatus(id),
+        _links: agentLinks(username, agent.config),
+        _actions: agentActions(
+          username,
+          hasManagePermission,
+          agent.archived ?? false,
+          id,
+        ),
+      };
     },
   );
 }

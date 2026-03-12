@@ -17,6 +17,7 @@ import {
 import { FastifyInstance, FastifyPluginOptions } from "fastify";
 
 import { hasPermission, requirePermission } from "../auth-middleware.js";
+import { badRequest, notFound } from "../error-helpers.js";
 import { API_PREFIX } from "../hateoas.js";
 import { resolveAgentId } from "../services/agentService.js";
 import { uploadToHub } from "../services/attachmentProxyService.js";
@@ -63,36 +64,25 @@ export default function agentChatRoutes(
       },
     },
     async (request, reply) => {
-      try {
-        const { username } = request.params;
-        const id = resolveAgentId(username);
+      const { username } = request.params;
+      const id = resolveAgentId(username);
 
-        if (!id) {
-          return reply.status(500).send({
-            success: false,
-            message: `Agent '${username}' not found`,
-          });
-        }
-
-        const conversations = await getConversations(id);
-
-        const canSend = hasPermission(
-          request.supervisorUser,
-          "agent_communication",
-        );
-
-        return {
-          success: true,
-          conversations,
-          _actions: canSend ? [sendChatAction(username)] : undefined,
-        };
-      } catch (error) {
-        request.log.error(error, "Error in GET /agents/:username/chat route");
-        return reply.status(500).send({
-          success: false,
-          message: "Internal server error while fetching chat conversations",
-        });
+      if (!id) {
+        return notFound(reply, `Agent '${username}' not found`);
       }
+
+      const conversations = await getConversations(id);
+
+      const canSend = hasPermission(
+        request.supervisorUser,
+        "agent_communication",
+      );
+
+      return {
+        success: true,
+        conversations,
+        _actions: canSend ? [sendChatAction(username)] : undefined,
+      };
     },
   );
 
@@ -114,35 +104,24 @@ export default function agentChatRoutes(
         },
       },
     },
-    async (request, reply) => {
-      try {
-        const { username, participants } = request.params;
-        const { updatedSince, page, count } = request.query;
+    async (request, _reply) => {
+      const { username, participants } = request.params;
+      const { updatedSince, page, count } = request.query;
 
-        const data = await getMessages(participants, updatedSince, page, count);
+      const data = await getMessages(participants, updatedSince, page, count);
 
-        const canSend = hasPermission(
-          request.supervisorUser,
-          "agent_communication",
-        );
+      const canSend = hasPermission(
+        request.supervisorUser,
+        "agent_communication",
+      );
 
-        return {
-          success: true,
-          messages: data.messages,
-          total: data.total,
-          timestamp: data.timestamp,
-          _actions: canSend ? [sendChatAction(username)] : undefined,
-        };
-      } catch (error) {
-        request.log.error(
-          error,
-          "Error in GET /agents/:username/chat/:participants route",
-        );
-        return reply.status(500).send({
-          success: false,
-          message: "Internal server error while fetching chat messages",
-        });
-      }
+      return {
+        success: true,
+        messages: data.messages,
+        total: data.total,
+        timestamp: data.timestamp,
+        _actions: canSend ? [sendChatAction(username)] : undefined,
+      };
     },
   );
 
@@ -170,89 +149,75 @@ export default function agentChatRoutes(
       },
     },
     async (request, reply) => {
-      try {
-        const contentType = request.headers["content-type"];
-        let fromId: number = 0,
-          toIds: number[] = [],
-          message: string = "";
-        let attachmentBuffers: Array<{ filename: string; data: Buffer }> = [];
+      const contentType = request.headers["content-type"];
+      let fromId: number = 0,
+        toIds: number[] = [],
+        message: string = "";
+      let attachmentBuffers: Array<{ filename: string; data: Buffer }> = [];
 
-        if (contentType?.includes("multipart/form-data")) {
-          const parts = request.parts();
+      if (contentType?.includes("multipart/form-data")) {
+        const parts = request.parts();
 
-          for await (const part of parts) {
-            if (part.type === "field") {
-              const field = part as any;
-              switch (field.fieldname) {
-                case "fromId":
-                  fromId = Number(field.value);
-                  break;
-                case "toIds":
-                  toIds = JSON.parse(field.value);
-                  break;
-                case "message":
-                  message = field.value;
-                  break;
-              }
-            } else if (part.type === "file") {
-              const file = part as MultipartFile;
-              if (file.fieldname === "attachments") {
-                const buffer = await file.toBuffer();
-                attachmentBuffers.push({
-                  filename: file.filename || "unnamed_file",
-                  data: buffer,
-                });
-              }
+        for await (const part of parts) {
+          if (part.type === "field") {
+            const field = part as any;
+            switch (field.fieldname) {
+              case "fromId":
+                fromId = Number(field.value);
+                break;
+              case "toIds":
+                toIds = JSON.parse(field.value);
+                break;
+              case "message":
+                message = field.value;
+                break;
+            }
+          } else if (part.type === "file") {
+            const file = part as MultipartFile;
+            if (file.fieldname === "attachments") {
+              const buffer = await file.toBuffer();
+              attachmentBuffers.push({
+                filename: file.filename || "unnamed_file",
+                data: buffer,
+              });
             }
           }
-        } else {
-          const body = request.body as SendChatRequest;
-          fromId = body.fromId;
-          toIds = body.toIds;
-          message = body.message;
         }
+      } else {
+        const body = request.body as SendChatRequest;
+        fromId = body.fromId;
+        toIds = body.toIds;
+        message = body.message;
+      }
 
-        if (!fromId || !toIds?.length || !message) {
-          return reply.code(400).send({
-            success: false,
-            message: "Missing required fields: fromId, toIds, message",
-          });
-        }
-
-        // Upload attachments to hub and collect IDs
-        let attachmentIds: number[] | undefined;
-        if (attachmentBuffers.length > 0) {
-          attachmentIds = [];
-          for (const att of attachmentBuffers) {
-            const id = await uploadToHub(
-              att.data,
-              att.filename,
-              fromId,
-              "mail",
-            );
-            attachmentIds.push(id);
-          }
-        }
-
-        const result = await sendChatMessage(
-          fromId,
-          toIds,
-          message,
-          attachmentIds,
+      if (!fromId || !toIds?.length || !message) {
+        return badRequest(
+          reply,
+          "Missing required fields: fromId, toIds, message",
         );
+      }
 
-        if (result.success) {
-          return reply.code(200).send(result);
-        } else {
-          return reply.code(500).send(result);
+      // Upload attachments to hub and collect IDs
+      let attachmentIds: number[] | undefined;
+      if (attachmentBuffers.length > 0) {
+        attachmentIds = [];
+        for (const att of attachmentBuffers) {
+          const id = await uploadToHub(att.data, att.filename, fromId, "mail");
+          attachmentIds.push(id);
         }
-      } catch (error) {
-        request.log.error(error, "Error in POST /agents/:username/chat route");
-        return reply.code(500).send({
-          success: false,
-          message:
-            error instanceof Error ? error.message : "Internal server error",
-        });
+      }
+
+      const result = await sendChatMessage(
+        fromId,
+        toIds,
+        message,
+        attachmentIds,
+      );
+
+      if (result.success) {
+        return reply.code(200).send(result);
+      } else {
+        return reply.code(500).send(result);
       }
     },
   );

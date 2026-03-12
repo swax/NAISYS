@@ -20,6 +20,7 @@ import { FastifyInstance, FastifyPluginOptions } from "fastify";
 
 import { requirePermission } from "../auth-middleware.js";
 import { hubDb } from "../database/hubDb.js";
+import { badRequest, notFound } from "../error-helpers.js";
 import { isAgentActive } from "../services/agentHostStatusService.js";
 import {
   archiveAgent,
@@ -84,64 +85,50 @@ export default function agentLifecycleRoutes(
       },
     },
     async (request, reply) => {
-      try {
-        const { username } = request.params;
-        const { task } = request.body;
-        const id = resolveAgentId(username);
+      const { username } = request.params;
+      const { task } = request.body;
+      const id = resolveAgentId(username);
 
-        if (!id) {
-          return reply.status(404).send({
-            success: false,
-            message: `Agent '${username}' not found`,
-          });
-        }
+      if (!id) {
+        return notFound(reply, "Agent not found");
+      }
 
-        if (!isHubConnected()) {
-          return reply.status(503).send({
-            success: false,
-            message: "Hub is not connected",
-          });
-        }
+      if (!isHubConnected()) {
+        return reply.status(503).send({
+          success: false,
+          message: "Hub is not connected",
+        });
+      }
 
-        const naisysUser =
-          (await hubDb.users.findFirst({
-            where: { uuid: request.supervisorUser!.uuid },
-            select: { id: true },
-          })) ??
-          (await hubDb.users.findFirst({
-            where: { username: "admin" },
-            select: { id: true },
-          }));
+      const naisysUser =
+        (await hubDb.users.findFirst({
+          where: { uuid: request.supervisorUser!.uuid },
+          select: { id: true },
+        })) ??
+        (await hubDb.users.findFirst({
+          where: { username: "admin" },
+          select: { id: true },
+        }));
 
-        if (!naisysUser) {
-          return reply.status(500).send({
-            success: false,
-            message: "No matching user found in NAISYS database",
-          });
-        }
-
-        const response = await sendAgentStart(id, task, naisysUser.id);
-
-        if (response.success) {
-          return {
-            success: true,
-            message: "Agent started",
-            hostname: response.hostname,
-          };
-        } else {
-          return reply.status(500).send({
-            success: false,
-            message: response.error || "Failed to start agent",
-          });
-        }
-      } catch (error) {
-        request.log.error(error, "Error in POST /agents/:username/start route");
+      if (!naisysUser) {
         return reply.status(500).send({
           success: false,
-          message:
-            error instanceof Error
-              ? error.message
-              : "Internal server error while starting agent",
+          message: "No matching user found in NAISYS database",
+        });
+      }
+
+      const response = await sendAgentStart(id, task, naisysUser.id);
+
+      if (response.success) {
+        return {
+          success: true,
+          message: "Agent started",
+          hostname: response.hostname,
+        };
+      } else {
+        return reply.status(500).send({
+          success: false,
+          message: response.error || "Failed to start agent",
         });
       }
     },
@@ -170,62 +157,48 @@ export default function agentLifecycleRoutes(
       },
     },
     async (request, reply) => {
-      try {
-        const { username } = request.params;
-        const { recursive } = request.body;
-        const id = resolveAgentId(username);
+      const { username } = request.params;
+      const { recursive } = request.body;
+      const id = resolveAgentId(username);
 
-        if (!id) {
-          return reply.status(404).send({
-            success: false,
-            message: `Agent '${username}' not found`,
-          });
+      if (!id) {
+        return notFound(reply, "Agent not found");
+      }
+
+      if (!isHubConnected()) {
+        return reply.status(503).send({
+          success: false,
+          message: "Hub is not connected",
+        });
+      }
+
+      // Fire-and-forget stops for subordinates when recursive
+      if (recursive) {
+        const subordinates = await findRunningSubordinates(id);
+        for (const subId of subordinates) {
+          sendAgentStop(subId, "Stopped from supervisor (recursive)").catch(
+            (err) =>
+              request.log.error(
+                err,
+                `Failed to stop subordinate agent ${subId}`,
+              ),
+          );
         }
+      }
 
-        if (!isHubConnected()) {
-          return reply.status(503).send({
-            success: false,
-            message: "Hub is not connected",
-          });
-        }
+      const response = await sendAgentStop(id, "Stopped from supervisor");
 
-        // Fire-and-forget stops for subordinates when recursive
-        if (recursive) {
-          const subordinates = await findRunningSubordinates(id);
-          for (const subId of subordinates) {
-            sendAgentStop(subId, "Stopped from supervisor (recursive)").catch(
-              (err) =>
-                request.log.error(
-                  err,
-                  `Failed to stop subordinate agent ${subId}`,
-                ),
-            );
-          }
-        }
-
-        const response = await sendAgentStop(id, "Stopped from supervisor");
-
-        if (response.success) {
-          return {
-            success: true,
-            message: recursive
-              ? "Agent and subordinates stopped"
-              : "Agent stopped",
-          };
-        } else {
-          return reply.status(500).send({
-            success: false,
-            message: response.error || "Failed to stop agent",
-          });
-        }
-      } catch (error) {
-        request.log.error(error, "Error in POST /agents/:username/stop route");
+      if (response.success) {
+        return {
+          success: true,
+          message: recursive
+            ? "Agent and subordinates stopped"
+            : "Agent stopped",
+        };
+      } else {
         return reply.status(500).send({
           success: false,
-          message:
-            error instanceof Error
-              ? error.message
-              : "Internal server error while stopping agent",
+          message: response.error || "Failed to stop agent",
         });
       }
     },
@@ -252,41 +225,24 @@ export default function agentLifecycleRoutes(
       },
     },
     async (request, reply) => {
-      try {
-        const { username } = request.params;
-        const id = resolveAgentId(username);
+      const { username } = request.params;
+      const id = resolveAgentId(username);
 
-        if (!id) {
-          return reply.status(404).send({
-            success: false,
-            message: `Agent '${username}' not found`,
-          });
-        }
-
-        if (isAgentActive(id)) {
-          return reply.status(400).send({
-            success: false,
-            message: "Cannot archive an active agent. Stop it first.",
-          });
-        }
-
-        await archiveAgent(id);
-        sendUserListChanged();
-
-        return { success: true, message: "Agent archived" };
-      } catch (error) {
-        request.log.error(
-          error,
-          "Error in POST /agents/:username/archive route",
-        );
-        return reply.status(500).send({
-          success: false,
-          message:
-            error instanceof Error
-              ? error.message
-              : "Internal server error while archiving agent",
-        });
+      if (!id) {
+        return notFound(reply, "Agent not found");
       }
+
+      if (isAgentActive(id)) {
+        return badRequest(
+          reply,
+          "Cannot archive an active agent. Stop it first.",
+        );
+      }
+
+      await archiveAgent(id);
+      sendUserListChanged();
+
+      return { success: true, message: "Agent archived" };
     },
   );
 
@@ -311,34 +267,17 @@ export default function agentLifecycleRoutes(
       },
     },
     async (request, reply) => {
-      try {
-        const { username } = request.params;
-        const id = resolveAgentId(username);
+      const { username } = request.params;
+      const id = resolveAgentId(username);
 
-        if (!id) {
-          return reply.status(404).send({
-            success: false,
-            message: `Agent '${username}' not found`,
-          });
-        }
-
-        await unarchiveAgent(id);
-        sendUserListChanged();
-
-        return { success: true, message: "Agent unarchived" };
-      } catch (error) {
-        request.log.error(
-          error,
-          "Error in POST /agents/:username/unarchive route",
-        );
-        return reply.status(500).send({
-          success: false,
-          message:
-            error instanceof Error
-              ? error.message
-              : "Internal server error while unarchiving agent",
-        });
+      if (!id) {
+        return notFound(reply, "Agent not found");
       }
+
+      await unarchiveAgent(id);
+      sendUserListChanged();
+
+      return { success: true, message: "Agent unarchived" };
     },
   );
 
@@ -365,37 +304,23 @@ export default function agentLifecycleRoutes(
       },
     },
     async (request, reply) => {
-      try {
-        const { username } = request.params;
-        const { leadAgentUsername } = request.body;
-        const id = resolveAgentId(username);
+      const { username } = request.params;
+      const { leadAgentUsername } = request.body;
+      const id = resolveAgentId(username);
 
-        if (!id) {
-          return reply.status(404).send({
-            success: false,
-            message: `Agent '${username}' not found`,
-          });
-        }
-
-        await updateLeadAgent(id, leadAgentUsername);
-        sendUserListChanged();
-
-        return {
-          success: true,
-          message: leadAgentUsername
-            ? "Lead agent updated"
-            : "Lead agent cleared",
-        };
-      } catch (error) {
-        request.log.error(error, "Error in PUT /agents/:username/lead route");
-        return reply.status(500).send({
-          success: false,
-          message:
-            error instanceof Error
-              ? error.message
-              : "Internal server error while updating lead agent",
-        });
+      if (!id) {
+        return notFound(reply, "Agent not found");
       }
+
+      await updateLeadAgent(id, leadAgentUsername);
+      sendUserListChanged();
+
+      return {
+        success: true,
+        message: leadAgentUsername
+          ? "Lead agent updated"
+          : "Lead agent cleared",
+      };
     },
   );
 
@@ -420,54 +345,37 @@ export default function agentLifecycleRoutes(
       },
     },
     async (request, reply) => {
-      try {
-        const { username } = request.params;
-        const id = resolveAgentId(username);
+      const { username } = request.params;
+      const id = resolveAgentId(username);
 
-        if (!id) {
-          return reply.status(404).send({
-            success: false,
-            message: `Agent '${username}' not found`,
-          });
-        }
-
-        if (isAgentActive(id)) {
-          return reply.status(400).send({
-            success: false,
-            message: "Cannot delete an active agent. Stop it first.",
-          });
-        }
-
-        const agent = await getAgent(id);
-        if (!agent) {
-          return reply.status(404).send({
-            success: false,
-            message: `Agent '${username}' not found`,
-          });
-        }
-
-        if (!agent.archived) {
-          return reply.status(400).send({
-            success: false,
-            message: "Agent must be archived before it can be deleted.",
-          });
-        }
-
-        await deleteAgent(id);
-
-        sendUserListChanged();
-
-        return { success: true, message: "Agent permanently deleted" };
-      } catch (error) {
-        request.log.error(error, "Error in DELETE /agents/:username route");
-        return reply.status(500).send({
-          success: false,
-          message:
-            error instanceof Error
-              ? error.message
-              : "Internal server error while deleting agent",
-        });
+      if (!id) {
+        return notFound(reply, "Agent not found");
       }
+
+      if (isAgentActive(id)) {
+        return badRequest(
+          reply,
+          "Cannot delete an active agent. Stop it first.",
+        );
+      }
+
+      const agent = await getAgent(id);
+      if (!agent) {
+        return notFound(reply, "Agent not found");
+      }
+
+      if (!agent.archived) {
+        return badRequest(
+          reply,
+          "Agent must be archived before it can be deleted.",
+        );
+      }
+
+      await deleteAgent(id);
+
+      sendUserListChanged();
+
+      return { success: true, message: "Agent permanently deleted" };
     },
   );
 }

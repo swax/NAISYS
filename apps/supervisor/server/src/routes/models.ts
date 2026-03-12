@@ -25,6 +25,7 @@ import {
 import { FastifyInstance, FastifyPluginOptions } from "fastify";
 
 import { hasPermission, requirePermission } from "../auth-middleware.js";
+import { badRequest } from "../error-helpers.js";
 import { API_PREFIX } from "../hateoas.js";
 import { sendModelsChanged } from "../services/hubConnectionService.js";
 import {
@@ -81,44 +82,35 @@ export default function modelsRoutes(
         },
       },
     },
-    async (request, reply) => {
-      try {
-        const allModels = await getAllModelsFromDb();
-        const llmRows = allModels.filter(
-          (r) => r.type === "llm",
-        ) as ModelDbRow[];
-        const imageRows = allModels.filter(
-          (r) => r.type === "image",
-        ) as ModelDbRow[];
+    async (request, _reply) => {
+      const allModels = await getAllModelsFromDb();
+      const llmRows = allModels.filter((r) => r.type === "llm") as ModelDbRow[];
+      const imageRows = allModels.filter(
+        (r) => r.type === "image",
+      ) as ModelDbRow[];
 
-        const hasManagePermission = hasPermission(
-          request.supervisorUser,
-          "manage_models",
-        );
-        const actions = modelActions(hasManagePermission);
+      const hasManagePermission = hasPermission(
+        request.supervisorUser,
+        "manage_models",
+      );
+      const actions = modelActions(hasManagePermission);
 
-        return {
-          llmModels: llmRows.map((r) => ({ value: r.key, label: r.label })),
-          imageModels: imageRows.map((r) => ({
-            value: r.key,
-            label: r.label,
-          })),
-          llmModelDetails: llmRows.map((r) => ({
-            ...dbFieldsToLlmModel(r),
-            isCustom: r.is_custom,
-          })),
-          imageModelDetails: imageRows.map((r) => ({
-            ...dbFieldsToImageModel(r),
-            isCustom: r.is_custom,
-          })),
-          _actions: actions.length > 0 ? actions : undefined,
-        };
-      } catch (_error) {
-        return reply.code(500).send({
-          success: false,
-          message: "Error loading model options",
-        });
-      }
+      return {
+        llmModels: llmRows.map((r) => ({ value: r.key, label: r.label })),
+        imageModels: imageRows.map((r) => ({
+          value: r.key,
+          label: r.label,
+        })),
+        llmModelDetails: llmRows.map((r) => ({
+          ...dbFieldsToLlmModel(r),
+          isCustom: r.is_custom,
+        })),
+        imageModelDetails: imageRows.map((r) => ({
+          ...dbFieldsToImageModel(r),
+          isCustom: r.is_custom,
+        })),
+        _actions: actions.length > 0 ? actions : undefined,
+      };
     },
   );
 
@@ -151,7 +143,7 @@ export default function modelsRoutes(
       } catch (error) {
         const message =
           error instanceof Error ? error.message : "Failed to save LLM model";
-        return reply.code(400).send({ success: false, message });
+        return badRequest(reply, message);
       }
     },
   );
@@ -184,7 +176,7 @@ export default function modelsRoutes(
       } catch (error) {
         const message =
           error instanceof Error ? error.message : "Failed to save image model";
-        return reply.code(400).send({ success: false, message });
+        return badRequest(reply, message);
       }
     },
   );
@@ -218,9 +210,7 @@ export default function modelsRoutes(
         } else if (type === "image") {
           result = await deleteImageModel(key);
         } else {
-          return reply
-            .code(400)
-            .send({ success: false, message: "Invalid model type" });
+          return badRequest(reply, "Invalid model type");
         }
         sendModelsChanged();
         return result;

@@ -63,24 +63,17 @@ export default function variablesRoutes(
         },
       },
     },
-    async (request, reply) => {
-      try {
-        const items = await getVariables();
-        const hasManagePermission = hasPermission(
-          request.supervisorUser,
-          "manage_variables",
-        );
-        const actions = variableActions(hasManagePermission);
-        return {
-          items: items.map((v) => ({ key: v.key, value: v.value })),
-          _actions: actions.length > 0 ? actions : undefined,
-        };
-      } catch (_error) {
-        return reply.code(500).send({
-          success: false,
-          message: "Error loading variables",
-        });
-      }
+    async (request, _reply) => {
+      const items = await getVariables();
+      const hasManagePermission = hasPermission(
+        request.supervisorUser,
+        "manage_variables",
+      );
+      const actions = variableActions(hasManagePermission);
+      return {
+        items: items.map((v) => ({ key: v.key, value: v.value })),
+        _actions: actions.length > 0 ? actions : undefined,
+      };
     },
   );
 

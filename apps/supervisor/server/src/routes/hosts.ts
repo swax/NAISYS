@@ -21,6 +21,7 @@ import {
 import { FastifyInstance, FastifyPluginOptions } from "fastify";
 
 import { hasPermission, requirePermission } from "../auth-middleware.js";
+import { badRequest, conflict, notFound } from "../error-helpers.js";
 import { API_PREFIX, selfLink } from "../hateoas.js";
 import {
   emitHostsListChanged,
@@ -109,53 +110,44 @@ export default function hostsRoutes(
         },
       },
     },
-    async (request, reply) => {
-      try {
-        const hosts = await getHosts();
+    async (request, _reply) => {
+      const hosts = await getHosts();
 
-        const hasManageHostsPermission = hasPermission(
-          request.supervisorUser,
-          "manage_hosts",
+      const hasManageHostsPermission = hasPermission(
+        request.supervisorUser,
+        "manage_hosts",
+      );
+
+      const items = hosts.map((host) => {
+        const online = isHostConnected(host.id);
+        const actions = hostActions(
+          host.name,
+          hasManageHostsPermission,
+          online,
         );
-
-        const items = hosts.map((host) => {
-          const online = isHostConnected(host.id);
-          const actions = hostActions(
-            host.name,
-            hasManageHostsPermission,
-            online,
-          );
-          return {
-            ...host,
-            online,
-            _links: [selfLink(`/hosts/${host.name}`)],
-            _actions: actions.length > 0 ? actions : undefined,
-          };
-        });
-
-        const collectionActions: HateoasAction[] = [];
-        if (hasManageHostsPermission) {
-          collectionActions.push({
-            rel: "create",
-            href: `${API_PREFIX}/hosts`,
-            method: "POST",
-            title: "Create Host",
-          });
-        }
-
         return {
-          items,
-          _links: [selfLink("/hosts")],
-          _actions:
-            collectionActions.length > 0 ? collectionActions : undefined,
+          ...host,
+          online,
+          _links: [selfLink(`/hosts/${host.name}`)],
+          _actions: actions.length > 0 ? actions : undefined,
         };
-      } catch (error) {
-        reply.log.error(error, "Error in GET /hosts route");
-        return reply.status(500).send({
-          success: false,
-          message: "Internal server error while fetching hosts",
+      });
+
+      const collectionActions: HateoasAction[] = [];
+      if (hasManageHostsPermission) {
+        collectionActions.push({
+          rel: "create",
+          href: `${API_PREFIX}/hosts`,
+          method: "POST",
+          title: "Create Host",
         });
       }
+
+      return {
+        items,
+        _links: [selfLink("/hosts")],
+        _actions: collectionActions.length > 0 ? collectionActions : undefined,
+      };
     },
   );
 
@@ -192,24 +184,17 @@ export default function hostsRoutes(
           id,
         };
       } catch (error) {
-        request.log.error(error, "Error in POST /hosts route");
         const errorMessage =
           error instanceof Error ? error.message : "Unknown error";
 
-        if (
-          errorMessage.includes("already exists") ||
-          errorMessage.includes("must contain only")
-        ) {
-          return reply.status(400).send({
-            success: false,
-            message: errorMessage,
-          });
+        if (errorMessage.includes("already exists")) {
+          return conflict(reply, errorMessage);
+        }
+        if (errorMessage.includes("must contain only")) {
+          return badRequest(reply, errorMessage);
         }
 
-        return reply.status(500).send({
-          success: false,
-          message: "Internal server error while creating host",
-        });
+        throw error;
       }
     },
   );
@@ -233,45 +218,34 @@ export default function hostsRoutes(
       },
     },
     async (request, reply) => {
-      try {
-        const { hostname } = request.params;
-        const host = await getHostDetail(hostname);
+      const { hostname } = request.params;
+      const host = await getHostDetail(hostname);
 
-        if (!host) {
-          return reply.status(404).send({
-            success: false,
-            message: `Host "${hostname}" not found`,
-          });
-        }
-
-        const hasManageHostsPermission = hasPermission(
-          request.supervisorUser,
-          "manage_hosts",
-        );
-
-        const online = isHostConnected(host.id);
-
-        return {
-          ...host,
-          online,
-          assignedAgents: host.assignedAgents.map((agent) => ({
-            ...agent,
-            _actions: assignedAgentActions(
-              hostname,
-              agent.name,
-              hasManageHostsPermission,
-            ),
-          })),
-          _links: [selfLink(`/hosts/${hostname}`)],
-          _actions: hostActions(hostname, hasManageHostsPermission, online),
-        };
-      } catch (error) {
-        request.log.error(error, "Error in GET /hosts/:hostname route");
-        return reply.status(500).send({
-          success: false,
-          message: "Internal server error while fetching host detail",
-        });
+      if (!host) {
+        return notFound(reply, `Host "${hostname}" not found`);
       }
+
+      const hasManageHostsPermission = hasPermission(
+        request.supervisorUser,
+        "manage_hosts",
+      );
+
+      const online = isHostConnected(host.id);
+
+      return {
+        ...host,
+        online,
+        assignedAgents: host.assignedAgents.map((agent) => ({
+          ...agent,
+          _actions: assignedAgentActions(
+            hostname,
+            agent.name,
+            hasManageHostsPermission,
+          ),
+        })),
+        _links: [selfLink(`/hosts/${hostname}`)],
+        _actions: hostActions(hostname, hasManageHostsPermission, online),
+      };
     },
   );
 
@@ -306,18 +280,15 @@ export default function hostsRoutes(
         // Look up host to get id for online check
         const host = await getHostDetail(hostname);
         if (!host) {
-          return reply.status(404).send({
-            success: false,
-            message: `Host "${hostname}" not found`,
-          });
+          return notFound(reply, `Host "${hostname}" not found`);
         }
 
         // Name change only allowed when offline
         if (body.name !== undefined && isHostConnected(host.id)) {
-          return reply.status(400).send({
-            success: false,
-            message: "Cannot rename an online host. Disconnect it first.",
-          });
+          return badRequest(
+            reply,
+            "Cannot rename an online host. Disconnect it first.",
+          );
         }
 
         await updateHost(hostname, body);
@@ -326,30 +297,20 @@ export default function hostsRoutes(
 
         return { success: true, message: "Host updated" };
       } catch (error) {
-        request.log.error(error, "Error in PUT /hosts/:hostname route");
         const errorMessage =
           error instanceof Error ? error.message : "Unknown error";
 
         if (errorMessage.includes("not found")) {
-          return reply.status(404).send({
-            success: false,
-            message: errorMessage,
-          });
+          return notFound(reply, errorMessage);
         }
-        if (
-          errorMessage.includes("already exists") ||
-          errorMessage.includes("must contain only")
-        ) {
-          return reply.status(400).send({
-            success: false,
-            message: errorMessage,
-          });
+        if (errorMessage.includes("already exists")) {
+          return conflict(reply, errorMessage);
+        }
+        if (errorMessage.includes("must contain only")) {
+          return badRequest(reply, errorMessage);
         }
 
-        return reply.status(500).send({
-          success: false,
-          message: "Internal server error while updating host",
-        });
+        throw error;
       }
     },
   );
@@ -376,41 +337,27 @@ export default function hostsRoutes(
       },
     },
     async (request, reply) => {
-      try {
-        const { hostname } = request.params;
+      const { hostname } = request.params;
 
-        const hosts = await getHosts();
-        const host = hosts.find((h) => h.name === hostname);
+      const hosts = await getHosts();
+      const host = hosts.find((h) => h.name === hostname);
 
-        if (!host) {
-          return reply.status(404).send({
-            success: false,
-            message: `Host "${hostname}" not found`,
-          });
-        }
-
-        if (isHostConnected(host.id)) {
-          return reply.status(400).send({
-            success: false,
-            message: "Cannot delete an online host. Disconnect it first.",
-          });
-        }
-
-        await deleteHost(hostname);
-
-        sendHostsChanged();
-
-        return { success: true, message: "Host permanently deleted" };
-      } catch (error) {
-        request.log.error(error, "Error in DELETE /hosts/:hostname route");
-        return reply.status(500).send({
-          success: false,
-          message:
-            error instanceof Error
-              ? error.message
-              : "Internal server error while deleting host",
-        });
+      if (!host) {
+        return notFound(reply, `Host "${hostname}" not found`);
       }
+
+      if (isHostConnected(host.id)) {
+        return badRequest(
+          reply,
+          "Cannot delete an online host. Disconnect it first.",
+        );
+      }
+
+      await deleteHost(hostname);
+
+      sendHostsChanged();
+
+      return { success: true, message: "Host permanently deleted" };
     },
   );
 
@@ -449,27 +396,17 @@ export default function hostsRoutes(
 
         return { success: true, message: "Agent assigned to host" };
       } catch (error) {
-        request.log.error(error, "Error in POST /hosts/:hostname/agents route");
         const errorMessage =
           error instanceof Error ? error.message : "Unknown error";
 
         if (errorMessage.includes("not found")) {
-          return reply.status(404).send({
-            success: false,
-            message: errorMessage,
-          });
+          return notFound(reply, errorMessage);
         }
         if (errorMessage.includes("already assigned")) {
-          return reply.status(400).send({
-            success: false,
-            message: errorMessage,
-          });
+          return conflict(reply, errorMessage);
         }
 
-        return reply.status(500).send({
-          success: false,
-          message: "Internal server error while assigning agent",
-        });
+        throw error;
       }
     },
   );
@@ -506,24 +443,14 @@ export default function hostsRoutes(
 
         return { success: true, message: "Agent unassigned from host" };
       } catch (error) {
-        request.log.error(
-          error,
-          "Error in DELETE /hosts/:hostname/agents/:agentName route",
-        );
         const errorMessage =
           error instanceof Error ? error.message : "Unknown error";
 
         if (errorMessage.includes("not assigned")) {
-          return reply.status(400).send({
-            success: false,
-            message: errorMessage,
-          });
+          return badRequest(reply, errorMessage);
         }
 
-        return reply.status(500).send({
-          success: false,
-          message: "Internal server error while unassigning agent",
-        });
+        throw error;
       }
     },
   );
