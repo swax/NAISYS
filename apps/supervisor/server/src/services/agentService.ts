@@ -2,8 +2,6 @@ import { AgentConfigFile, AgentConfigFileSchema } from "@naisys/common";
 import { Agent, AgentDetailResponse } from "@naisys-supervisor/shared";
 
 import { hubDb } from "../database/hubDb.js";
-import { getLogger } from "../logger.js";
-import { cachedForSeconds } from "../utils/cache.js";
 import {
   updateAgentHostAssignments,
   updateCostSuspendedAgents,
@@ -11,78 +9,69 @@ import {
 
 export type AgentWithConfig = Agent & { config?: AgentConfigFile | null };
 
-export const getAgents = cachedForSeconds(
-  0.25,
-  async (updatedSince?: string): Promise<AgentWithConfig[]> => {
-    const agents: AgentWithConfig[] = [];
-
-    try {
-      const users = await hubDb.users.findMany({
+export async function getAgents(
+  updatedSince?: string,
+): Promise<AgentWithConfig[]> {
+  const users = await hubDb.users.findMany({
+    select: {
+      id: true,
+      uuid: true,
+      username: true,
+      title: true,
+      archived: true,
+      config: true,
+      lead_user: { select: { username: true } },
+      user_hosts: { select: { host_id: true } },
+      user_notifications: {
         select: {
-          id: true,
-          uuid: true,
-          username: true,
-          title: true,
-          archived: true,
-          config: true,
-          lead_user: { select: { username: true } },
-          user_hosts: { select: { host_id: true } },
-          user_notifications: {
-            select: {
-              latest_log_id: true,
-              latest_mail_id: true,
-              last_active: true,
-              cost_suspended_reason: true,
-              updated_at: true,
-              host: { select: { name: true } },
-            },
-          },
+          latest_log_id: true,
+          latest_mail_id: true,
+          last_active: true,
+          cost_suspended_reason: true,
+          updated_at: true,
+          host: { select: { name: true } },
         },
-        where: updatedSince
-          ? {
-              user_notifications: {
-                updated_at: { gte: new Date(updatedSince) },
-              },
-            }
-          : undefined,
-      });
+      },
+    },
+    where: updatedSince
+      ? {
+          user_notifications: {
+            updated_at: { gte: new Date(updatedSince) },
+          },
+        }
+      : undefined,
+  });
 
-      users.forEach((user) => {
-        agents.push({
-          id: user.id,
-          uuid: user.uuid,
-          name: user.username,
-          title: user.title,
-          host: user.user_notifications?.host?.name ?? "",
-          lastActive: user.user_notifications?.last_active?.toISOString(),
-          leadUsername: user.lead_user?.username || undefined,
-          latestLogId: user.user_notifications?.latest_log_id ?? 0,
-          latestMailId: user.user_notifications?.latest_mail_id ?? 0,
-          archived: user.archived,
-          config: parseConfig(user.config),
-        });
-      });
+  const agents: AgentWithConfig[] = users.map((user) => ({
+    id: user.id,
+    uuid: user.uuid,
+    name: user.username,
+    title: user.title,
+    host: user.user_notifications?.host?.name ?? "",
+    lastActive: user.user_notifications?.last_active?.toISOString(),
+    leadUsername: user.lead_user?.username || undefined,
+    latestLogId: user.user_notifications?.latest_log_id ?? 0,
+    latestMailId: user.user_notifications?.latest_mail_id ?? 0,
+    archived: user.archived,
+    config: parseConfig(user.config),
+  }));
 
-      updateAgentHostAssignments(
-        users.map((user) => ({
-          agentId: user.id,
-          hostIds: user.user_hosts.map((uh) => uh.host_id),
-        })),
-      );
+  updateAgentHostAssignments(
+    users.map((user) => ({
+      agentId: user.id,
+      hostIds: user.user_hosts.map((uh) => uh.host_id),
+    })),
+  );
 
-      updateCostSuspendedAgents(
-        users.map((user) => ({
-          agentId: user.id,
-          isSuspended: !!user.user_notifications?.cost_suspended_reason,
-        })),
-      );
-    } catch (error) {
-      getLogger().error(error, "Error fetching users from Naisys database");
-    }
+  updateCostSuspendedAgents(
+    users.map((user) => ({
+      agentId: user.id,
+      isSuspended: !!user.user_notifications?.cost_suspended_reason,
+    })),
+  );
 
-    return agents;
-  },
-);
+  return agents;
+}
 
 function parseConfig(config: string | null): AgentConfigFile | null {
   if (!config) return null;
@@ -106,18 +95,14 @@ export function resolveUsername(userId: number): string | undefined {
 }
 
 export async function refreshUserLookup(): Promise<void> {
-  try {
-    const users = await hubDb.users.findMany({
-      select: { id: true, username: true },
-    });
-    idToUsername.clear();
-    usernameToId.clear();
-    for (const user of users) {
-      idToUsername.set(user.id, user.username);
-      usernameToId.set(user.username, user.id);
-    }
-  } catch (error) {
-    getLogger().error(error, "Error refreshing user lookup");
+  const users = await hubDb.users.findMany({
+    select: { id: true, username: true },
+  });
+  idToUsername.clear();
+  usernameToId.clear();
+  for (const user of users) {
+    idToUsername.set(user.id, user.username);
+    usernameToId.set(user.username, user.id);
   }
 }
 
@@ -138,69 +123,64 @@ export async function getHubAgentByUuid(uuid: string) {
 export async function getAgent(
   id: number,
 ): Promise<AgentDetailResponse | null> {
-  try {
-    const user = await hubDb.users.findUnique({
-      where: { id },
-      select: {
-        id: true,
-        username: true,
-        title: true,
-        archived: true,
-        config: true,
-        lead_user: { select: { username: true } },
-        user_hosts: {
-          select: {
-            host_id: true,
-            host: { select: { id: true, name: true } },
-          },
-        },
-        user_notifications: {
-          select: {
-            latest_log_id: true,
-            latest_mail_id: true,
-            last_active: true,
-            cost_suspended_reason: true,
-            updated_at: true,
-            host: { select: { name: true } },
-          },
+  const user = await hubDb.users.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      username: true,
+      title: true,
+      archived: true,
+      config: true,
+      lead_user: { select: { username: true } },
+      user_hosts: {
+        select: {
+          host_id: true,
+          host: { select: { id: true, name: true } },
         },
       },
-    });
-
-    if (!user) {
-      return null;
-    }
-
-    updateAgentHostAssignments([
-      {
-        agentId: user.id,
-        hostIds: user.user_hosts.map((uh) => uh.host_id),
+      user_notifications: {
+        select: {
+          latest_log_id: true,
+          latest_mail_id: true,
+          last_active: true,
+          cost_suspended_reason: true,
+          updated_at: true,
+          host: { select: { name: true } },
+        },
       },
-    ]);
+    },
+  });
 
-    return {
-      id: user.id,
-      name: user.username,
-      title: user.title,
-      host: user.user_notifications?.host?.name ?? "",
-      lastActive: user.user_notifications?.last_active?.toISOString(),
-      leadUsername: user.lead_user?.username || undefined,
-      latestLogId: user.user_notifications?.latest_log_id ?? 0,
-      latestMailId: user.user_notifications?.latest_mail_id ?? 0,
-      archived: user.archived,
-      costSuspendedReason:
-        user.user_notifications?.cost_suspended_reason ?? undefined,
-      config: parseConfig(user.config)!,
-      assignedHosts: user.user_hosts.map((uh) => ({
-        id: uh.host.id,
-        name: uh.host.name,
-      })),
-      _links: [],
-    };
-  } catch (error) {
-    getLogger().error(error, "Error fetching agent detail");
+  if (!user) {
     return null;
   }
+
+  updateAgentHostAssignments([
+    {
+      agentId: user.id,
+      hostIds: user.user_hosts.map((uh) => uh.host_id),
+    },
+  ]);
+
+  return {
+    id: user.id,
+    name: user.username,
+    title: user.title,
+    host: user.user_notifications?.host?.name ?? "",
+    lastActive: user.user_notifications?.last_active?.toISOString(),
+    leadUsername: user.lead_user?.username || undefined,
+    latestLogId: user.user_notifications?.latest_log_id ?? 0,
+    latestMailId: user.user_notifications?.latest_mail_id ?? 0,
+    archived: user.archived,
+    costSuspendedReason:
+      user.user_notifications?.cost_suspended_reason ?? undefined,
+    config: parseConfig(user.config)!,
+    assignedHosts: user.user_hosts.map((uh) => ({
+      id: uh.host.id,
+      name: uh.host.name,
+    })),
+    _links: [],
+  };
 }
 
 export async function archiveAgent(id: number): Promise<void> {

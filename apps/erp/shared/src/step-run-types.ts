@@ -2,6 +2,14 @@ import { z } from "zod/v4";
 
 import { HateoasActionSchema, HateoasLinkSchema } from "./hateoas-types.js";
 
+// Validation result for a field value
+export const StepFieldValidationSchema = z.object({
+  valid: z.boolean(),
+  error: z.string().optional(),
+});
+
+export type StepFieldValidation = z.infer<typeof StepFieldValidationSchema>;
+
 // A single field value within a step run
 export const StepFieldValueSchema = z.object({
   stepFieldId: z.number(),
@@ -9,6 +17,8 @@ export const StepFieldValueSchema = z.object({
   type: z.string(),
   required: z.boolean(),
   value: z.string(),
+  validation: StepFieldValidationSchema,
+  _actions: z.array(HateoasActionSchema).optional(),
 });
 
 export type StepFieldValue = z.infer<typeof StepFieldValueSchema>;
@@ -31,6 +41,15 @@ export const StepRunSchema = z.object({
 });
 
 export type StepRun = z.infer<typeof StepRunSchema>;
+
+// Single field value update
+export const UpdateStepFieldValueSchema = z
+  .object({
+    value: z.string().max(2000),
+  })
+  .strict();
+
+export type UpdateStepFieldValue = z.infer<typeof UpdateStepFieldValueSchema>;
 
 // Batch update input — completed flag + field values
 export const UpdateStepRunSchema = z

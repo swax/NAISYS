@@ -25,3 +25,10 @@ export function unauthorized(
 ): ErrorResponse {
   return send(reply, 401, "Unauthorized", message);
 }
+
+export function unprocessable(
+  reply: FastifyReply,
+  message: string,
+): ErrorResponse {
+  return send(reply, 422, "Unprocessable Entity", message);
+}

@@ -10,6 +10,7 @@ import {
   Title,
 } from "@mantine/core";
 import type {
+  StepFieldValue,
   StepRun,
   StepRunListResponse,
   UpdateStepRun,
@@ -139,50 +140,70 @@ export const StepRunList: React.FC<Props> = ({
     }));
   };
 
-  const saveStep = async (step: StepRun, completedOverride?: boolean) => {
+  const saveFieldValue = async (
+    step: StepRun,
+    stepFieldId: number,
+  ) => {
     const edit = edits[step.id];
     if (!edit) return;
+    const editedValue = edit.fieldValues[stepFieldId];
+    const currentValue =
+      step.fieldValues.find((fv) => fv.stepFieldId === stepFieldId)?.value ?? "";
+    if (editedValue === undefined || editedValue === currentValue) return;
 
-    const isFieldSave = completedOverride === undefined;
-    const dirtyFieldIds = isFieldSave
-      ? step.fieldValues
-          .filter(
-            (fv) => (edit.fieldValues[fv.stepFieldId] ?? fv.value) !== fv.value,
-          )
-          .map((fv) => fv.stepFieldId)
-      : [];
-
-    if (isFieldSave) {
-      setFieldSaveStatus(step.id, dirtyFieldIds, "saving");
-    } else {
-      setSavingStep(step.id);
-    }
+    setFieldSaveStatus(step.id, [stepFieldId], "saving");
 
     try {
-      const body: UpdateStepRun = {
-        completed: completedOverride ?? step.completed,
-        fieldValues: step.fieldValues.map((fv) => ({
-          stepFieldId: fv.stepFieldId,
-          value: edit.fieldValues[fv.stepFieldId] ?? fv.value,
-        })),
-      };
+      const updated = await api.put<StepFieldValue>(
+        apiEndpoints.stepRunFieldValue(
+          orderKey,
+          runId,
+          opRunId,
+          step.id,
+          stepFieldId,
+        ),
+        { value: editedValue },
+      );
+
+      // Update the field value + validation in data
+      setData((prev) =>
+        prev
+          ? {
+              ...prev,
+              items: prev.items.map((s) =>
+                s.id === step.id
+                  ? {
+                      ...s,
+                      fieldValues: s.fieldValues.map((fv) =>
+                        fv.stepFieldId === stepFieldId ? updated : fv,
+                      ),
+                    }
+                  : s,
+              ),
+            }
+          : prev,
+      );
+      setFieldSaveStatus(step.id, [stepFieldId], "saved");
+    } catch (err) {
+      showErrorNotification(err);
+      setFieldSaveStatus(step.id, [stepFieldId], "error");
+    }
+  };
+
+  const saveStep = async (step: StepRun, completed: boolean) => {
+    setSavingStep(step.id);
+
+    try {
+      const body: UpdateStepRun = { completed };
       const updated = await api.put<StepRun>(
         apiEndpoints.stepRun(orderKey, runId, opRunId, step.id),
         body,
       );
       applyStepUpdate(updated);
-      if (isFieldSave) {
-        setFieldSaveStatus(step.id, dirtyFieldIds, "saved");
-      }
     } catch (err) {
       showErrorNotification(err);
-      if (isFieldSave) {
-        setFieldSaveStatus(step.id, dirtyFieldIds, "error");
-      }
     } finally {
-      if (!isFieldSave) {
-        setSavingStep(null);
-      }
+      setSavingStep(null);
     }
   };
 
@@ -198,16 +219,6 @@ export const StepRunList: React.FC<Props> = ({
         fieldValues: { ...prev[stepId]?.fieldValues, [stepFieldId]: value },
       },
     }));
-  };
-
-  const isFieldsDirty = (step: StepRun): boolean => {
-    const edit = edits[step.id];
-    if (!edit) return false;
-    for (const fv of step.fieldValues) {
-      if ((edit.fieldValues[fv.stepFieldId] ?? fv.value) !== fv.value)
-        return true;
-    }
-    return false;
   };
 
   return (
@@ -254,13 +265,21 @@ export const StepRunList: React.FC<Props> = ({
                       {step.fieldValues.map((fv) => {
                         const fKey = `${step.id}:${fv.stepFieldId}`;
                         const status = fieldStatus[fKey];
+                        const fieldLabel = fv.required
+                          ? `${fv.label} *`
+                          : fv.label;
                         return (
                           <Group key={fv.stepFieldId} gap="xs" align="flex-end">
-                            {canUpdate ? (
+                            {hasAction(fv._actions, "update") ? (
                               <TextInput
-                                label={fv.label}
+                                label={fieldLabel}
                                 size="xs"
                                 style={{ flex: 1 }}
+                                error={
+                                  fv.validation && !fv.validation.valid
+                                    ? fv.validation.error
+                                    : undefined
+                                }
                                 value={
                                   edit?.fieldValues[fv.stepFieldId] ?? fv.value
                                 }
@@ -271,9 +290,9 @@ export const StepRunList: React.FC<Props> = ({
                                     e.currentTarget.value,
                                   )
                                 }
-                                onBlur={() => {
-                                  if (isFieldsDirty(step)) void saveStep(step);
-                                }}
+                                onBlur={() =>
+                                  void saveFieldValue(step, fv.stepFieldId)
+                                }
                                 rightSection={
                                   status === "saving" ? (
                                     <Loader size={14} />
@@ -287,9 +306,14 @@ export const StepRunList: React.FC<Props> = ({
                             ) : (
                               <Group gap="xs">
                                 <Text size="xs" fw={500}>
-                                  {fv.label}:
+                                  {fieldLabel}:
                                 </Text>
                                 <Text size="xs">{fv.value || "—"}</Text>
+                                {fv.validation && !fv.validation.valid && (
+                                  <Text size="xs" c="red">
+                                    {fv.validation.error}
+                                  </Text>
+                                )}
                               </Group>
                             )}
                           </Group>
