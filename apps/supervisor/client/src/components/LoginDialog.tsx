@@ -37,10 +37,7 @@ export const LoginDialog: React.FC<LoginDialogProps> = ({
 
     try {
       await login(username, password);
-      onClose();
-      setUsername("");
-      setPassword("");
-      setErrorMessage("");
+      window.location.reload();
     } catch (error) {
       setErrorMessage(
         error instanceof Error ? error.message : "An error occurred",
@@ -54,7 +51,7 @@ export const LoginDialog: React.FC<LoginDialogProps> = ({
     setIsLoading(true);
     try {
       await logout();
-      onClose();
+      window.location.reload();
     } catch (error) {
       console.error("Logout failed:", error);
       onClose();

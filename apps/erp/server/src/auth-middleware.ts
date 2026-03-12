@@ -2,6 +2,7 @@ import { AuthCache } from "@naisys/common";
 import { hashToken,SESSION_COOKIE_NAME } from "@naisys/common-node";
 import { findAgentByApiKey } from "@naisys/hub-database";
 import { findSession, findUserByApiKey } from "@naisys/supervisor-database";
+import type { ErpPermission } from "@naisys-erp/shared";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 
 import erpDb from "./erpDb.js";
@@ -10,7 +11,7 @@ import { isSupervisorAuth } from "./supervisorAuth.js";
 export interface ErpUser {
   id: number;
   username: string;
-  permissions: string[];
+  permissions: ErpPermission[];
 }
 
 declare module "fastify" {
@@ -23,7 +24,7 @@ const PUBLIC_PREFIXES = ["/api/erp/auth/login", "/api/erp/client-config"];
 
 export const authCache = new AuthCache<ErpUser>();
 
-async function loadPermissions(userId: number): Promise<string[]> {
+async function loadPermissions(userId: number): Promise<ErpPermission[]> {
   const perms = await erpDb.userPermission.findMany({
     where: { userId },
     select: { permission: true },
@@ -33,7 +34,7 @@ async function loadPermissions(userId: number): Promise<string[]> {
 
 export function hasPermission(
   user: ErpUser | undefined,
-  permission: string,
+  permission: ErpPermission,
 ): boolean {
   if (!user) return false;
   return (
@@ -42,7 +43,7 @@ export function hasPermission(
   );
 }
 
-export function requirePermission(permission: string) {
+export function requirePermission(permission: ErpPermission) {
   return async (request: FastifyRequest, reply: FastifyReply) => {
     if (!request.erpUser) {
       reply.status(401).send({

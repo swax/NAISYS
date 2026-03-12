@@ -52,7 +52,7 @@ export const ChangePasswordSchema = z
 export type ChangePassword = z.infer<typeof ChangePasswordSchema>;
 
 export const UserPermissionSchema = z.object({
-  permission: z.string(),
+  permission: ErpPermissionEnum,
   grantedAt: z.string(),
   grantedBy: z.number().nullable(),
   _actions: z.array(z.any()).optional(),

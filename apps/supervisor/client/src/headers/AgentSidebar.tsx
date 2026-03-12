@@ -230,9 +230,9 @@ export const AgentSidebar: React.FC = () => {
         display: "block",
       }}
     >
-      <Group justify="space-between" align="center" wrap="nowrap">
-        <div style={{ minWidth: 0, flex: 1 }}>
-          <Group gap="xs" align="center" wrap="nowrap">
+      <Stack gap={2}>
+        <Group justify="space-between" align="center" wrap="nowrap">
+          <Group gap="xs" align="center" wrap="nowrap" style={{ minWidth: 0 }}>
             <IconRobot size="1rem" style={{ flexShrink: 0 }} />
             <Text size="sm" fw={500} truncate="end">
               {agent.name}
@@ -240,37 +240,39 @@ export const AgentSidebar: React.FC = () => {
             {getUnreadLogBadge(agent)}
             {getUnreadMailBadge(agent)}
           </Group>
-          <Text size="xs" c="dimmed" truncate="end">
-            {agent.title}
-          </Text>
-        </div>
-        {connectionStatus === "connected" && agent.status !== "available" && (
-          <Badge
-            size="xs"
-            variant="light"
-            color={
-              agent.status === "active"
-                ? "green"
-                : agent.status === "suspended"
-                  ? "red"
-                  : "gray"
-            }
-            style={{
-              flexShrink: 0,
-              cursor: agent.status === "active" ? "pointer" : "default",
-            }}
-            onClick={(e) => {
-              if (agent.status === "active") {
-                e.preventDefault();
-                e.stopPropagation();
-                void navigate(`/agents/${agent.name}/runs?expand=online`);
+          {connectionStatus === "connected" && (
+            <Badge
+              size="xs"
+              variant="light"
+              color={
+                agent.status === "active"
+                  ? "green"
+                  : agent.status === "available"
+                    ? "yellow"
+                    : agent.status === "suspended"
+                      ? "red"
+                      : "gray"
               }
-            }}
-          >
-            {agent.status}
-          </Badge>
-        )}
-      </Group>
+              style={{
+                flexShrink: 0,
+                cursor: agent.status === "active" ? "pointer" : "default",
+              }}
+              onClick={(e) => {
+                if (agent.status === "active") {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  void navigate(`/agents/${agent.name}/runs?expand=online`);
+                }
+              }}
+            >
+              {agent.status}
+            </Badge>
+          )}
+        </Group>
+        <Text size="xs" c="dimmed" truncate="end">
+          {agent.title}
+        </Text>
+      </Stack>
     </Card>
   );
 

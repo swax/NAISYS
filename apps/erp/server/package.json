@@ -18,7 +18,7 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",
-    "test": "npx playwright test"
+    "test": "tsx --test src/tests/*.test.ts && npx playwright test"
   },
   "files": [
     "dist",

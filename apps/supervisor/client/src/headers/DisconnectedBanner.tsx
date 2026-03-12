@@ -2,12 +2,15 @@ import { Alert } from "@mantine/core";
 import { IconPlugConnected, IconPlugConnectedX } from "@tabler/icons-react";
 import React from "react";
 
+import { useSession } from "../contexts/SessionContext";
 import { useConnectionStatus } from "../hooks/useConnectionStatus";
 
 export const DisconnectedBanner: React.FC = () => {
+  const { isAuthenticated } = useSession();
   const { status, label } = useConnectionStatus();
 
-  if (status === "connected") {
+  // Don't show banner for unauthenticated users — WebSocket requires auth
+  if (status === "connected" || !isAuthenticated) {
     return null;
   }
 

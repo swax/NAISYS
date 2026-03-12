@@ -1,4 +1,4 @@
-import type { AuthUser } from "@naisys-supervisor/shared";
+import type { AuthUser, Permission } from "@naisys-supervisor/shared";
 import React, { createContext, useContext, useEffect, useState } from "react";
 
 import { getMe, login as apiLogin, logout as apiLogout } from "../lib/apiAuth";
@@ -7,7 +7,7 @@ interface SessionContextType {
   user: AuthUser | null;
   isAuthenticated: boolean;
   isCheckingSession: boolean;
-  hasPermission: (permission: string) => boolean;
+  hasPermission: (permission: Permission) => boolean;
   login: (username: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
 }
@@ -48,7 +48,7 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
-  const hasPermission = (permission: string): boolean => {
+  const hasPermission = (permission: Permission): boolean => {
     return (
       (user?.permissions?.includes(permission) ||
         user?.permissions?.includes("supervisor_admin")) ??
