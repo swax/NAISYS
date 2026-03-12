@@ -79,8 +79,7 @@ export async function getConversations(
   // Sort by latest message time (newest first)
   conversations.sort(
     (a, b) =>
-      new Date(b.lastMessageAt).getTime() -
-      new Date(a.lastMessageAt).getTime(),
+      new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime(),
   );
 
   return conversations;

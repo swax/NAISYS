@@ -223,10 +223,14 @@ export default function adminRoutes(
       },
     },
     async (request, _reply) => {
-      const { file, lines } = request.query;
+      const { file, lines, minLevel } = request.query;
       const cappedLines = Math.min(lines, 1000);
       const filePath = getLogFilePath(file);
-      const { entries, fileSize } = await tailLogFile(filePath, cappedLines);
+      const { entries, fileSize } = await tailLogFile(
+        filePath,
+        cappedLines,
+        minLevel,
+      );
       return {
         entries,
         fileName: `${file}.log`,

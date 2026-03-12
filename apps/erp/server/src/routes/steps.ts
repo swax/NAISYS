@@ -12,23 +12,25 @@ import { z } from "zod/v4";
 
 import type { ErpUser } from "../auth-middleware.js";
 import { hasPermission } from "../auth-middleware.js";
-import erpDb from "../erpDb.js";
 import { conflict, notFound } from "../error-handler.js";
-import type { StepModel } from "../generated/prisma/models/Step.js";
 import { API_PREFIX, selfLink } from "../hateoas.js";
 import {
   calcNextSeqNo,
   childItemLinks,
   draftCrudActions,
   formatAuditFields,
-  includeUsers,
   resolveOperation,
-  type WithAuditUsers,
 } from "../route-helpers.js";
 import {
-  formatFieldListResponse,
-  type StepFieldWithUsers,
-} from "./step-fields.js";
+  createStep,
+  deleteStep,
+  findExisting,
+  getStep,
+  listSteps,
+  type StepWithUsersAndFields,
+  updateStep,
+} from "../services/step-service.js";
+import { formatFieldListResponse } from "./step-fields.js";
 
 const ParamsSchema = z.object({
   orderKey: z.string(),
@@ -42,19 +44,6 @@ const StepParamsSchema = z.object({
   seqNo: z.coerce.number().int(),
   stepSeqNo: z.coerce.number().int(),
 });
-
-const includeUsersAndFields = {
-  ...includeUsers,
-  fields: {
-    include: includeUsers,
-    orderBy: { seqNo: "asc" as const },
-  },
-} as const;
-
-type StepWithUsersAndFields = StepModel &
-  WithAuditUsers & {
-    fields: StepFieldWithUsers[];
-  };
 
 function stepBasePath(orderKey: string, revNo: number, opSeqNo: number) {
   return `/orders/${orderKey}/revs/${revNo}/ops/${opSeqNo}/steps`;
@@ -122,11 +111,7 @@ export default function stepRoutes(fastify: FastifyInstance) {
         return notFound(reply, "Operation not found");
       }
 
-      const items = await erpDb.step.findMany({
-        where: { operationId: resolved.operation.id },
-        include: includeUsersAndFields,
-        orderBy: { seqNo: "asc" },
-      });
+      const items = await listSteps(resolved.operation.id);
 
       const maxSeq = items.length > 0 ? items[items.length - 1].seqNo : 0;
 
@@ -186,26 +171,12 @@ export default function stepRoutes(fastify: FastifyInstance) {
         );
       }
 
-      const item = await erpDb.$transaction(async (erpTx) => {
-        const maxSeq = await erpTx.step.findFirst({
-          where: { operationId: resolved.operation.id },
-          orderBy: { seqNo: "desc" },
-          select: { seqNo: true },
-        });
-        const defaultSeqNo = calcNextSeqNo(maxSeq?.seqNo ?? 0);
-        const nextSeqNo = requestedSeqNo ?? defaultSeqNo;
-
-        return erpTx.step.create({
-          data: {
-            operationId: resolved.operation.id,
-            seqNo: nextSeqNo,
-            instructions: instructions ?? "",
-            createdById: userId,
-            updatedById: userId,
-          },
-          include: includeUsersAndFields,
-        });
-      });
+      const item = await createStep(
+        resolved.operation.id,
+        requestedSeqNo,
+        instructions,
+        userId,
+      );
 
       reply.status(201);
       return formatItem(
@@ -238,10 +209,7 @@ export default function stepRoutes(fastify: FastifyInstance) {
         return notFound(reply, "Operation not found");
       }
 
-      const item = await erpDb.step.findFirst({
-        where: { operationId: resolved.operation.id, seqNo: stepSeqNo },
-        include: includeUsersAndFields,
-      });
+      const item = await getStep(resolved.operation.id, stepSeqNo);
       if (!item) {
         return notFound(reply, `Step ${stepSeqNo} not found`);
       }
@@ -287,22 +255,16 @@ export default function stepRoutes(fastify: FastifyInstance) {
         );
       }
 
-      const existing = await erpDb.step.findFirst({
-        where: { operationId: resolved.operation.id, seqNo: stepSeqNo },
-      });
+      const existing = await findExisting(resolved.operation.id, stepSeqNo);
       if (!existing) {
         return notFound(reply, `Step ${stepSeqNo} not found`);
       }
 
-      const item = await erpDb.step.update({
-        where: { id: existing.id },
-        data: {
-          ...(instructions !== undefined ? { instructions } : {}),
-          ...(newSeqNo !== undefined ? { seqNo: newSeqNo } : {}),
-          updatedById: userId,
-        },
-        include: includeUsersAndFields,
-      });
+      const item = await updateStep(
+        existing.id,
+        { instructions, seqNo: newSeqNo },
+        userId,
+      );
 
       return formatItem(
         orderKey,
@@ -342,14 +304,12 @@ export default function stepRoutes(fastify: FastifyInstance) {
         );
       }
 
-      const existing = await erpDb.step.findFirst({
-        where: { operationId: resolved.operation.id, seqNo: stepSeqNo },
-      });
+      const existing = await findExisting(resolved.operation.id, stepSeqNo);
       if (!existing) {
         return notFound(reply, `Step ${stepSeqNo} not found`);
       }
 
-      await erpDb.step.delete({ where: { id: existing.id } });
+      await deleteStep(existing.id);
       reply.status(204);
     },
   });

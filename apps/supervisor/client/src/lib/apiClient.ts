@@ -189,6 +189,6 @@ export const apiEndpoints = {
   admin: "/admin",
   adminExportConfig: "/admin/export-config",
   adminRotateAccessKey: "/admin/rotate-access-key",
-  adminLogs: (file: string, lines?: number) =>
-    `/admin/logs?file=${file}${lines ? `&lines=${lines}` : ""}`,
+  adminLogs: (file: string, lines?: number, minLevel?: number) =>
+    `/admin/logs?file=${file}${lines ? `&lines=${lines}` : ""}${minLevel ? `&minLevel=${minLevel}` : ""}`,
 };

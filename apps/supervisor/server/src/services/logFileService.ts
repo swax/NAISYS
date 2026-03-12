@@ -17,6 +17,7 @@ export function getLogFilePath(fileKey: ServerLogFile): string {
 export async function tailLogFile(
   filePath: string,
   lineCount: number,
+  minLevel?: number,
 ): Promise<{ entries: PinoLogEntry[]; fileSize: number }> {
   let stat: fs.Stats;
   try {
@@ -49,14 +50,15 @@ export async function tailLogFile(
     lines.shift();
   }
 
-  const tailLines = lines.slice(-lineCount);
-
   const OMIT_KEYS = new Set(["level", "time", "msg", "pid", "hostname"]);
 
   const entries: PinoLogEntry[] = [];
-  for (const line of tailLines) {
+  for (const line of lines) {
     try {
       const parsed = JSON.parse(line);
+      const level = parsed.level ?? 30;
+
+      if (minLevel != null && level < minLevel) continue;
 
       const extra: Record<string, unknown> = {};
       for (const key of Object.keys(parsed)) {
@@ -68,7 +70,7 @@ export async function tailLogFile(
         Object.keys(extra).length > 0 ? JSON.stringify(extra) : undefined;
 
       entries.push({
-        level: parsed.level ?? 30,
+        level,
         time: parsed.time ?? 0,
         msg: parsed.msg ?? "",
         detail,
@@ -78,5 +80,5 @@ export async function tailLogFile(
     }
   }
 
-  return { entries, fileSize };
+  return { entries: entries.slice(-lineCount), fileSize };
 }

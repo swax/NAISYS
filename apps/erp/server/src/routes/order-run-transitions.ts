@@ -1,0 +1,224 @@
+import {
+  ErrorResponseSchema,
+  OrderRunSchema,
+  OrderRunStatus,
+} from "@naisys-erp/shared";
+import { FastifyInstance } from "fastify";
+import type { ZodTypeProvider } from "fastify-type-provider-zod";
+
+import { conflict, notFound, unprocessable } from "../error-handler.js";
+import { resolveOrder } from "../route-helpers.js";
+import {
+  checkOpsComplete,
+  findExisting,
+  getReopenTarget,
+  transitionStatus,
+  validateStatusFor,
+} from "../services/order-run-service.js";
+import { formatItem, IdParamsSchema } from "./order-runs.js";
+
+export default function orderRunTransitionRoutes(fastify: FastifyInstance) {
+  const app = fastify.withTypeProvider<ZodTypeProvider>();
+
+  // START (released -> started)
+  app.post("/:id/start", {
+    schema: {
+      description: "Start an order run (released -> started)",
+      tags: ["Order Runs"],
+      params: IdParamsSchema,
+      response: {
+        200: OrderRunSchema,
+        404: ErrorResponseSchema,
+        409: ErrorResponseSchema,
+      },
+    },
+    handler: async (request, reply) => {
+      const { orderKey, id } = request.params;
+
+      const order = await resolveOrder(orderKey);
+      if (!order) {
+        return notFound(reply, `Order '${orderKey}' not found`);
+      }
+
+      const existing = await findExisting(id, order.id);
+      if (!existing) {
+        return notFound(
+          reply,
+          `Order run ${id} not found for order '${orderKey}'`,
+        );
+      }
+
+      const statusErr = validateStatusFor("start", existing.status, [
+        OrderRunStatus.released,
+      ]);
+      if (statusErr) return conflict(reply, statusErr);
+
+      const userId = request.erpUser!.id;
+      const item = await transitionStatus(
+        id,
+        "start",
+        OrderRunStatus.released,
+        OrderRunStatus.started,
+        userId,
+      );
+
+      return formatItem(orderKey, request.erpUser, item);
+    },
+  });
+
+  // CLOSE (started -> closed)
+  app.post("/:id/close", {
+    schema: {
+      description: "Close an order run (started -> closed)",
+      tags: ["Order Runs"],
+      params: IdParamsSchema,
+      response: {
+        200: OrderRunSchema,
+        404: ErrorResponseSchema,
+        409: ErrorResponseSchema,
+        422: ErrorResponseSchema,
+      },
+    },
+    handler: async (request, reply) => {
+      const { orderKey, id } = request.params;
+
+      const order = await resolveOrder(orderKey);
+      if (!order) {
+        return notFound(reply, `Order '${orderKey}' not found`);
+      }
+
+      const existing = await findExisting(id, order.id);
+      if (!existing) {
+        return notFound(
+          reply,
+          `Order run ${id} not found for order '${orderKey}'`,
+        );
+      }
+
+      const statusErr = validateStatusFor("close", existing.status, [
+        OrderRunStatus.started,
+      ]);
+      if (statusErr) return conflict(reply, statusErr);
+
+      // Validate all operation runs are completed or skipped
+      const opsErr = await checkOpsComplete(id);
+      if (opsErr) return unprocessable(reply, opsErr);
+
+      const userId = request.erpUser!.id;
+      const item = await transitionStatus(
+        id,
+        "close",
+        OrderRunStatus.started,
+        OrderRunStatus.closed,
+        userId,
+      );
+
+      return formatItem(orderKey, request.erpUser, item);
+    },
+  });
+
+  // CANCEL (released/started -> cancelled)
+  app.post("/:id/cancel", {
+    schema: {
+      description: "Cancel an order run (released/started -> cancelled)",
+      tags: ["Order Runs"],
+      params: IdParamsSchema,
+      response: {
+        200: OrderRunSchema,
+        404: ErrorResponseSchema,
+        409: ErrorResponseSchema,
+      },
+    },
+    handler: async (request, reply) => {
+      const { orderKey, id } = request.params;
+
+      const order = await resolveOrder(orderKey);
+      if (!order) {
+        return notFound(reply, `Order '${orderKey}' not found`);
+      }
+
+      const existing = await findExisting(id, order.id);
+      if (!existing) {
+        return notFound(
+          reply,
+          `Order run ${id} not found for order '${orderKey}'`,
+        );
+      }
+
+      const statusErr = validateStatusFor("cancel", existing.status, [
+        OrderRunStatus.released,
+        OrderRunStatus.started,
+      ]);
+      if (statusErr) return conflict(reply, statusErr);
+
+      const userId = request.erpUser!.id;
+      const item = await transitionStatus(
+        id,
+        "cancel",
+        existing.status as
+          | typeof OrderRunStatus.released
+          | typeof OrderRunStatus.started,
+        OrderRunStatus.cancelled,
+        userId,
+      );
+
+      return formatItem(orderKey, request.erpUser, item);
+    },
+  });
+
+  // REOPEN (closed -> started, cancelled -> released)
+  app.post("/:id/reopen", {
+    schema: {
+      description:
+        "Reopen an order run (closed -> started, cancelled -> released)",
+      tags: ["Order Runs"],
+      params: IdParamsSchema,
+      response: {
+        200: OrderRunSchema,
+        404: ErrorResponseSchema,
+        409: ErrorResponseSchema,
+      },
+    },
+    handler: async (request, reply) => {
+      const { orderKey, id } = request.params;
+
+      const order = await resolveOrder(orderKey);
+      if (!order) {
+        return notFound(reply, `Order '${orderKey}' not found`);
+      }
+
+      const existing = await findExisting(id, order.id);
+      if (!existing) {
+        return notFound(
+          reply,
+          `Order run ${id} not found for order '${orderKey}'`,
+        );
+      }
+
+      const statusErr = validateStatusFor("reopen", existing.status, [
+        OrderRunStatus.closed,
+        OrderRunStatus.cancelled,
+      ]);
+      if (statusErr) return conflict(reply, statusErr);
+
+      const reopenTo = getReopenTarget(
+        existing.status as
+          | typeof OrderRunStatus.closed
+          | typeof OrderRunStatus.cancelled,
+      );
+
+      const userId = request.erpUser!.id;
+      const item = await transitionStatus(
+        id,
+        "reopen",
+        existing.status as
+          | typeof OrderRunStatus.closed
+          | typeof OrderRunStatus.cancelled,
+        reopenTo,
+        userId,
+      );
+
+      return formatItem(orderKey, request.erpUser, item);
+    },
+  });
+}

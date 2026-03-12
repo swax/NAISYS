@@ -1,5 +1,9 @@
 import type { HateoasAction, HateoasLink } from "@naisys/common";
-import { RevisionStatus } from "@naisys-erp/shared";
+import {
+  OperationRunStatus,
+  OrderRunStatus,
+  RevisionStatus,
+} from "@naisys-erp/shared";
 
 import type { ErpUser } from "./auth-middleware.js";
 import { hasPermission } from "./auth-middleware.js";
@@ -92,6 +96,20 @@ export function draftCrudActions(
       title: "Delete",
     },
   ];
+}
+
+// --- Status guards (return error message or null) ---
+
+export function checkOrderRunStarted(status: string): string | null {
+  return status !== OrderRunStatus.started
+    ? `Order run is not started (status: ${status})`
+    : null;
+}
+
+export function checkOpRunInProgress(status: string): string | null {
+  return status !== OperationRunStatus.in_progress
+    ? `Operation run is not in_progress (status: ${status})`
+    : null;
 }
 
 // --- Resolution chains ---

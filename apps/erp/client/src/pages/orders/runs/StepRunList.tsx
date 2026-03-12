@@ -140,15 +140,13 @@ export const StepRunList: React.FC<Props> = ({
     }));
   };
 
-  const saveFieldValue = async (
-    step: StepRun,
-    stepFieldId: number,
-  ) => {
+  const saveFieldValue = async (step: StepRun, stepFieldId: number) => {
     const edit = edits[step.id];
     if (!edit) return;
     const editedValue = edit.fieldValues[stepFieldId];
     const currentValue =
-      step.fieldValues.find((fv) => fv.stepFieldId === stepFieldId)?.value ?? "";
+      step.fieldValues.find((fv) => fv.stepFieldId === stepFieldId)?.value ??
+      "";
     if (editedValue === undefined || editedValue === currentValue) return;
 
     setFieldSaveStatus(step.id, [stepFieldId], "saving");

@@ -2,8 +2,6 @@ import type { HateoasAction } from "@naisys/common";
 import {
   ErrorResponseSchema,
   OperationRunStatus,
-  StepFieldType,
-  type StepFieldValidation,
   StepFieldValueSchema,
   StepRunListResponseSchema,
   StepRunSchema,
@@ -16,14 +14,26 @@ import { z } from "zod/v4";
 
 import type { ErpUser } from "../auth-middleware.js";
 import { hasPermission } from "../auth-middleware.js";
-import erpDb from "../erpDb.js";
 import { conflict, notFound, unprocessable } from "../error-handler.js";
 import { API_PREFIX, selfLink } from "../hateoas.js";
 import {
+  checkOpRunInProgress,
+  checkOrderRunStarted,
   childItemLinks,
   formatAuditFields,
   resolveOpRun,
 } from "../route-helpers.js";
+import {
+  findExisting,
+  findStepRunWithField,
+  getStepRun,
+  listStepRuns,
+  type StepRunWithStep,
+  updateStepRun,
+  upsertFieldValue,
+  validateCompletionFields,
+  validateFieldValue,
+} from "../services/step-run-service.js";
 
 function stepRunResource(orderKey: string, runId: number, opRunId: number) {
   return `orders/${orderKey}/runs/${runId}/ops/${opRunId}/steps`;
@@ -73,57 +83,6 @@ const FieldValueParamsSchema = z.object({
   id: z.coerce.number().int(),
   stepFieldId: z.coerce.number().int(),
 });
-
-const includeStep = {
-  step: {
-    select: {
-      seqNo: true,
-      instructions: true,
-      fields: {
-        select: { id: true, label: true, type: true, required: true },
-        orderBy: { seqNo: "asc" as const },
-      },
-    },
-  },
-  fieldValues: {
-    select: { stepFieldId: true, value: true },
-  },
-  createdBy: { select: { username: true } },
-  updatedBy: { select: { username: true } },
-} as const;
-
-type StepRunWithStep = {
-  id: number;
-  operationRunId: number;
-  stepId: number;
-  completed: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-  step: {
-    seqNo: number;
-    instructions: string;
-    fields: { id: number; label: string; type: string; required: boolean }[];
-  };
-  fieldValues: { stepFieldId: number; value: string }[];
-  createdBy: { username: string };
-  updatedBy: { username: string };
-};
-
-function validateFieldValue(
-  type: string,
-  required: boolean,
-  value: string,
-): StepFieldValidation {
-  if (required && !value.trim()) {
-    return { valid: false, error: "Required" };
-  }
-  if (value.trim() && type === StepFieldType.number) {
-    if (isNaN(Number(value))) {
-      return { valid: false, error: "Must be a number" };
-    }
-  }
-  return { valid: true };
-}
 
 function formatItem(
   orderKey: string,
@@ -215,13 +174,7 @@ export default function stepRunRoutes(fastify: FastifyInstance) {
         return notFound(reply, `Operation run not found`);
       }
 
-      const items = await erpDb.stepRun.findMany({
-        where: { operationRunId: opRunId },
-        include: includeStep,
-        orderBy: { step: { seqNo: "asc" } },
-      });
-
-      const resource = stepRunResource(orderKey, runId, opRunId);
+      const items = await listStepRuns(opRunId);
 
       return {
         items: items.map((item) =>
@@ -235,7 +188,7 @@ export default function stepRunRoutes(fastify: FastifyInstance) {
           ),
         ),
         total: items.length,
-        _links: [selfLink(`/${resource}`)],
+        _links: [selfLink(`/${stepRunResource(orderKey, runId, opRunId)}`)],
       };
     },
   });
@@ -259,10 +212,7 @@ export default function stepRunRoutes(fastify: FastifyInstance) {
         return notFound(reply, `Operation run not found`);
       }
 
-      const item = await erpDb.stepRun.findUnique({
-        where: { id },
-        include: includeStep,
-      });
+      const item = await getStepRun(id);
       if (!item || item.operationRunId !== opRunId) {
         return notFound(reply, `Step run ${id} not found`);
       }
@@ -303,88 +253,27 @@ export default function stepRunRoutes(fastify: FastifyInstance) {
         return notFound(reply, `Operation run not found`);
       }
 
-      if (resolved.opRun.status !== OperationRunStatus.in_progress) {
-        return conflict(
-          reply,
-          `Cannot update step run when operation run is ${resolved.opRun.status}`,
-        );
-      }
+      const orderErr = checkOrderRunStarted(resolved.run.status);
+      if (orderErr) return conflict(reply, orderErr);
 
-      const existing = await erpDb.stepRun.findUnique({
-        where: { id },
-        include: includeStep,
-      });
-      if (!existing || existing.operationRunId !== opRunId) {
-        return notFound(reply, `Step run ${id} not found`);
+      const opErr = checkOpRunInProgress(resolved.opRun.status);
+      if (opErr) return conflict(reply, opErr);
+
+      const existing = await findExisting(id, opRunId);
+      if (!existing) return notFound(reply, `Step run ${id} not found`);
+
+      // Block field updates on a completed step unless also reopening
+      if (existing.completed && completed !== false && fieldValues?.length) {
+        return conflict(reply, `Cannot update fields: step run is completed`);
       }
 
       // When completing, validate all field values
       if (completed === true) {
-        // Build the effective values map (submitted values override stored)
-        const submittedMap = new Map(
-          (fieldValues ?? []).map((fv) => [fv.stepFieldId, fv.value]),
-        );
-        const storedMap = new Map(
-          existing.fieldValues.map((fv) => [fv.stepFieldId, fv.value]),
-        );
-
-        const errors: string[] = [];
-        for (const field of existing.step.fields) {
-          const value =
-            submittedMap.get(field.id) ?? storedMap.get(field.id) ?? "";
-          const result = validateFieldValue(field.type, field.required, value);
-          if (!result.valid) {
-            errors.push(`${field.label}: ${result.error}`);
-          }
-        }
-
-        if (errors.length > 0) {
-          return unprocessable(
-            reply,
-            `Cannot complete step: ${errors.join(", ")}`,
-          );
-        }
+        const completionErr = validateCompletionFields(existing, fieldValues);
+        if (completionErr) return unprocessable(reply, completionErr);
       }
 
-      const item = await erpDb.$transaction(async (erpTx) => {
-        // Update completed flag
-        if (completed !== undefined) {
-          await erpTx.stepRun.update({
-            where: { id },
-            data: { completed, updatedById: userId },
-          });
-        }
-
-        // Upsert field values
-        if (fieldValues && fieldValues.length > 0) {
-          for (const fv of fieldValues) {
-            await erpTx.stepFieldValue.upsert({
-              where: {
-                stepRunId_stepFieldId: {
-                  stepRunId: id,
-                  stepFieldId: fv.stepFieldId,
-                },
-              },
-              create: {
-                stepRunId: id,
-                stepFieldId: fv.stepFieldId,
-                value: fv.value,
-                createdById: userId,
-                updatedById: userId,
-              },
-              update: {
-                value: fv.value,
-                updatedById: userId,
-              },
-            });
-          }
-        }
-
-        return erpTx.stepRun.findUniqueOrThrow({
-          where: { id },
-          include: includeStep,
-        });
-      });
+      const item = await updateStepRun(id, completed, fieldValues, userId);
 
       return formatItem(
         orderKey,
@@ -421,28 +310,17 @@ export default function stepRunRoutes(fastify: FastifyInstance) {
         return notFound(reply, `Operation run not found`);
       }
 
-      if (resolved.opRun.status !== OperationRunStatus.in_progress) {
-        return conflict(
-          reply,
-          `Cannot update field when operation run is ${resolved.opRun.status}`,
-        );
-      }
+      const orderErr = checkOrderRunStarted(resolved.run.status);
+      if (orderErr) return conflict(reply, orderErr);
 
-      const stepRun = await erpDb.stepRun.findUnique({
-        where: { id },
-        include: {
-          step: {
-            select: {
-              fields: {
-                where: { id: stepFieldId },
-                select: { id: true, label: true, type: true, required: true },
-              },
-            },
-          },
-        },
-      });
-      if (!stepRun || stepRun.operationRunId !== opRunId) {
-        return notFound(reply, `Step run ${id} not found`);
+      const opErr = checkOpRunInProgress(resolved.opRun.status);
+      if (opErr) return conflict(reply, opErr);
+
+      const stepRun = await findStepRunWithField(id, opRunId, stepFieldId);
+      if (!stepRun) return notFound(reply, `Step run ${id} not found`);
+
+      if (stepRun.completed) {
+        return conflict(reply, `Cannot update field: step run is completed`);
       }
 
       const field = stepRun.step.fields[0];
@@ -450,22 +328,7 @@ export default function stepRunRoutes(fastify: FastifyInstance) {
         return notFound(reply, `Step field ${stepFieldId} not found`);
       }
 
-      await erpDb.stepFieldValue.upsert({
-        where: {
-          stepRunId_stepFieldId: { stepRunId: id, stepFieldId },
-        },
-        create: {
-          stepRunId: id,
-          stepFieldId,
-          value,
-          createdById: userId,
-          updatedById: userId,
-        },
-        update: {
-          value,
-          updatedById: userId,
-        },
-      });
+      await upsertFieldValue(id, stepFieldId, value, userId);
 
       const stepRunHref = `${API_PREFIX}/${stepRunResource(orderKey, runId, opRunId)}/${id}`;
       return {

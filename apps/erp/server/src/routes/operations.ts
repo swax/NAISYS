@@ -12,7 +12,6 @@ import { z } from "zod/v4";
 
 import type { ErpUser } from "../auth-middleware.js";
 import { hasPermission } from "../auth-middleware.js";
-import erpDb from "../erpDb.js";
 import { conflict, notFound } from "../error-handler.js";
 import type { OperationModel } from "../generated/prisma/models/Operation.js";
 import { API_PREFIX, selfLink } from "../hateoas.js";
@@ -21,10 +20,17 @@ import {
   childItemLinks,
   draftCrudActions,
   formatAuditFields,
-  includeUsers,
   resolveRevision,
   type WithAuditUsers,
 } from "../route-helpers.js";
+import {
+  createOperation,
+  deleteOperation,
+  findExisting,
+  getOperation,
+  listOperations,
+  updateOperation,
+} from "../services/operation-service.js";
 
 const ParamsSchema = z.object({
   orderKey: z.string(),
@@ -95,11 +101,7 @@ export default function operationRoutes(fastify: FastifyInstance) {
         return notFound(reply, `Revision not found`);
       }
 
-      const items = await erpDb.operation.findMany({
-        where: { orderRevId: resolved.rev.id },
-        include: includeUsers,
-        orderBy: { seqNo: "asc" },
-      });
+      const items = await listOperations(resolved.rev.id);
 
       const maxSeq = items.length > 0 ? items[items.length - 1].seqNo : 0;
 
@@ -159,27 +161,13 @@ export default function operationRoutes(fastify: FastifyInstance) {
         );
       }
 
-      const item = await erpDb.$transaction(async (erpTx) => {
-        const maxSeq = await erpTx.operation.findFirst({
-          where: { orderRevId: resolved.rev.id },
-          orderBy: { seqNo: "desc" },
-          select: { seqNo: true },
-        });
-        const defaultSeqNo = calcNextSeqNo(maxSeq?.seqNo ?? 0);
-        const nextSeqNo = requestedSeqNo ?? defaultSeqNo;
-
-        return erpTx.operation.create({
-          data: {
-            orderRevId: resolved.rev.id,
-            seqNo: nextSeqNo,
-            title,
-            description: description ?? "",
-            createdById: userId,
-            updatedById: userId,
-          },
-          include: includeUsers,
-        });
-      });
+      const item = await createOperation(
+        resolved.rev.id,
+        requestedSeqNo,
+        title,
+        description,
+        userId,
+      );
 
       reply.status(201);
       return formatItem(
@@ -211,10 +199,7 @@ export default function operationRoutes(fastify: FastifyInstance) {
         return notFound(reply, `Revision not found`);
       }
 
-      const item = await erpDb.operation.findFirst({
-        where: { orderRevId: resolved.rev.id, seqNo },
-        include: includeUsers,
-      });
+      const item = await getOperation(resolved.rev.id, seqNo);
       if (!item) {
         return notFound(reply, `Operation ${seqNo} not found`);
       }
@@ -259,23 +244,16 @@ export default function operationRoutes(fastify: FastifyInstance) {
         );
       }
 
-      const existing = await erpDb.operation.findFirst({
-        where: { orderRevId: resolved.rev.id, seqNo },
-      });
+      const existing = await findExisting(resolved.rev.id, seqNo);
       if (!existing) {
         return notFound(reply, `Operation ${seqNo} not found`);
       }
 
-      const item = await erpDb.operation.update({
-        where: { id: existing.id },
-        data: {
-          ...(title !== undefined ? { title } : {}),
-          ...(description !== undefined ? { description } : {}),
-          ...(newSeqNo !== undefined ? { seqNo: newSeqNo } : {}),
-          updatedById: userId,
-        },
-        include: includeUsers,
-      });
+      const item = await updateOperation(
+        existing.id,
+        { title, description, seqNo: newSeqNo },
+        userId,
+      );
 
       return formatItem(
         orderKey,
@@ -314,14 +292,12 @@ export default function operationRoutes(fastify: FastifyInstance) {
         );
       }
 
-      const existing = await erpDb.operation.findFirst({
-        where: { orderRevId: resolved.rev.id, seqNo },
-      });
+      const existing = await findExisting(resolved.rev.id, seqNo);
       if (!existing) {
         return notFound(reply, `Operation ${seqNo} not found`);
       }
 
-      await erpDb.operation.delete({ where: { id: existing.id } });
+      await deleteOperation(existing.id);
       reply.status(204);
     },
   });
