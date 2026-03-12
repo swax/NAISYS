@@ -1,4 +1,4 @@
-import type { HateoasAction, HateoasLink } from "@naisys/common";
+import type { HateoasAction } from "@naisys/common";
 import {
   ErrorResponseSchema,
   OperationRunListResponseSchema,
@@ -14,34 +14,18 @@ import { writeAuditEntry } from "../audit.js";
 import type { ErpUser } from "../auth-middleware.js";
 import { hasPermission } from "../auth-middleware.js";
 import erpDb from "../erpDb.js";
-import { sendError } from "../error-handler.js";
+import { conflict, notFound } from "../error-handler.js";
 import type { OperationRunModel } from "../generated/prisma/models/OperationRun.js";
-import { API_PREFIX, schemaLink, selfLink } from "../hateoas.js";
+import { API_PREFIX, selfLink } from "../hateoas.js";
+import {
+  childItemLinks,
+  formatAuditFields,
+  formatDate,
+  resolveOrderRun,
+} from "../route-helpers.js";
 
 function opRunResource(orderKey: string, runId: number) {
   return `orders/${orderKey}/runs/${runId}/ops`;
-}
-
-function opRunItemLinks(
-  orderKey: string,
-  runId: number,
-  id: number,
-): HateoasLink[] {
-  const resource = opRunResource(orderKey, runId);
-  return [
-    selfLink(`/${resource}/${id}`),
-    {
-      rel: "collection",
-      href: `${API_PREFIX}/${resource}`,
-      title: "Operation Runs",
-    },
-    {
-      rel: "run",
-      href: `${API_PREFIX}/orders/${orderKey}/runs/${runId}`,
-      title: "Order Run",
-    },
-    schemaLink("OperationRun"),
-  ];
 }
 
 function opRunItemActions(
@@ -138,10 +122,6 @@ type OpRunWithOp = OperationRunModel & {
   updatedBy: { username: string };
 };
 
-function formatDate(d: Date | null): string | null {
-  return d ? d.toISOString() : null;
-}
-
 function formatItem(
   orderKey: string,
   runId: number,
@@ -158,11 +138,16 @@ function formatItem(
     status: item.status,
     completedAt: formatDate(item.completedAt),
     notes: item.notes,
-    createdAt: item.createdAt.toISOString(),
-    createdBy: item.createdBy.username,
-    updatedAt: item.updatedAt.toISOString(),
-    updatedBy: item.updatedBy.username,
-    _links: opRunItemLinks(orderKey, runId, item.id),
+    ...formatAuditFields(item),
+    _links: childItemLinks(
+      "/" + opRunResource(orderKey, runId),
+      item.id,
+      "Operation Runs",
+      "/orders/" + orderKey + "/runs/" + runId,
+      "Order Run",
+      "OperationRun",
+      "run",
+    ),
     _actions: opRunItemActions(orderKey, runId, item.id, item.status, user),
   };
 }
@@ -178,16 +163,6 @@ function formatListItem(
     ...rest,
     _links: [selfLink(`/${opRunResource(orderKey, runId)}/${item.id}`)],
   };
-}
-
-async function resolveOrderRun(orderKey: string, runId: number) {
-  const order = await erpDb.order.findUnique({ where: { key: orderKey } });
-  if (!order) return null;
-
-  const run = await erpDb.orderRun.findUnique({ where: { id: runId } });
-  if (!run || run.orderId !== order.id) return null;
-
-  return { order, run };
 }
 
 export default function operationRunRoutes(fastify: FastifyInstance) {
@@ -209,7 +184,7 @@ export default function operationRunRoutes(fastify: FastifyInstance) {
 
       const resolved = await resolveOrderRun(orderKey, runId);
       if (!resolved) {
-        return sendError(reply, 404, "Not Found", `Order run not found`);
+        return notFound(reply, `Order run not found`);
       }
 
       const items = await erpDb.operationRun.findMany({
@@ -246,7 +221,7 @@ export default function operationRunRoutes(fastify: FastifyInstance) {
 
       const resolved = await resolveOrderRun(orderKey, runId);
       if (!resolved) {
-        return sendError(reply, 404, "Not Found", `Order run not found`);
+        return notFound(reply, `Order run not found`);
       }
 
       const item = await erpDb.operationRun.findUnique({
@@ -254,12 +229,7 @@ export default function operationRunRoutes(fastify: FastifyInstance) {
         include: includeOp,
       });
       if (!item || item.orderRunId !== runId) {
-        return sendError(
-          reply,
-          404,
-          "Not Found",
-          `Operation run ${id} not found`,
-        );
+        return notFound(reply, `Operation run ${id} not found`);
       }
 
       return formatItem(orderKey, runId, request.erpUser, item);
@@ -287,29 +257,22 @@ export default function operationRunRoutes(fastify: FastifyInstance) {
 
       const resolved = await resolveOrderRun(orderKey, runId);
       if (!resolved) {
-        return sendError(reply, 404, "Not Found", `Order run not found`);
+        return notFound(reply, `Order run not found`);
       }
 
       const existing = await erpDb.operationRun.findUnique({
         where: { id },
       });
       if (!existing || existing.orderRunId !== runId) {
-        return sendError(
-          reply,
-          404,
-          "Not Found",
-          `Operation run ${id} not found`,
-        );
+        return notFound(reply, `Operation run ${id} not found`);
       }
 
       if (
         existing.status !== OperationRunStatus.pending &&
         existing.status !== OperationRunStatus.in_progress
       ) {
-        return sendError(
+        return conflict(
           reply,
-          409,
-          "Conflict",
           `Cannot update operation run in ${existing.status} status`,
         );
       }
@@ -344,26 +307,19 @@ export default function operationRunRoutes(fastify: FastifyInstance) {
 
       const resolved = await resolveOrderRun(orderKey, runId);
       if (!resolved) {
-        return sendError(reply, 404, "Not Found", `Order run not found`);
+        return notFound(reply, `Order run not found`);
       }
 
       const existing = await erpDb.operationRun.findUnique({
         where: { id },
       });
       if (!existing || existing.orderRunId !== runId) {
-        return sendError(
-          reply,
-          404,
-          "Not Found",
-          `Operation run ${id} not found`,
-        );
+        return notFound(reply, `Operation run ${id} not found`);
       }
 
       if (existing.status !== OperationRunStatus.pending) {
-        return sendError(
+        return conflict(
           reply,
-          409,
-          "Conflict",
           `Cannot start operation run in ${existing.status} status`,
         );
       }
@@ -409,26 +365,19 @@ export default function operationRunRoutes(fastify: FastifyInstance) {
 
       const resolved = await resolveOrderRun(orderKey, runId);
       if (!resolved) {
-        return sendError(reply, 404, "Not Found", `Order run not found`);
+        return notFound(reply, `Order run not found`);
       }
 
       const existing = await erpDb.operationRun.findUnique({
         where: { id },
       });
       if (!existing || existing.orderRunId !== runId) {
-        return sendError(
-          reply,
-          404,
-          "Not Found",
-          `Operation run ${id} not found`,
-        );
+        return notFound(reply, `Operation run ${id} not found`);
       }
 
       if (existing.status !== OperationRunStatus.in_progress) {
-        return sendError(
+        return conflict(
           reply,
-          409,
-          "Conflict",
           `Cannot complete operation run in ${existing.status} status`,
         );
       }
@@ -478,26 +427,19 @@ export default function operationRunRoutes(fastify: FastifyInstance) {
 
       const resolved = await resolveOrderRun(orderKey, runId);
       if (!resolved) {
-        return sendError(reply, 404, "Not Found", `Order run not found`);
+        return notFound(reply, `Order run not found`);
       }
 
       const existing = await erpDb.operationRun.findUnique({
         where: { id },
       });
       if (!existing || existing.orderRunId !== runId) {
-        return sendError(
-          reply,
-          404,
-          "Not Found",
-          `Operation run ${id} not found`,
-        );
+        return notFound(reply, `Operation run ${id} not found`);
       }
 
       if (existing.status !== OperationRunStatus.pending) {
-        return sendError(
+        return conflict(
           reply,
-          409,
-          "Conflict",
           `Cannot skip operation run in ${existing.status} status`,
         );
       }
@@ -543,26 +485,19 @@ export default function operationRunRoutes(fastify: FastifyInstance) {
 
       const resolved = await resolveOrderRun(orderKey, runId);
       if (!resolved) {
-        return sendError(reply, 404, "Not Found", `Order run not found`);
+        return notFound(reply, `Order run not found`);
       }
 
       const existing = await erpDb.operationRun.findUnique({
         where: { id },
       });
       if (!existing || existing.orderRunId !== runId) {
-        return sendError(
-          reply,
-          404,
-          "Not Found",
-          `Operation run ${id} not found`,
-        );
+        return notFound(reply, `Operation run ${id} not found`);
       }
 
       if (existing.status !== OperationRunStatus.in_progress) {
-        return sendError(
+        return conflict(
           reply,
-          409,
-          "Conflict",
           `Cannot fail operation run in ${existing.status} status`,
         );
       }
@@ -608,19 +543,14 @@ export default function operationRunRoutes(fastify: FastifyInstance) {
 
       const resolved = await resolveOrderRun(orderKey, runId);
       if (!resolved) {
-        return sendError(reply, 404, "Not Found", `Order run not found`);
+        return notFound(reply, `Order run not found`);
       }
 
       const existing = await erpDb.operationRun.findUnique({
         where: { id },
       });
       if (!existing || existing.orderRunId !== runId) {
-        return sendError(
-          reply,
-          404,
-          "Not Found",
-          `Operation run ${id} not found`,
-        );
+        return notFound(reply, `Operation run ${id} not found`);
       }
 
       if (
@@ -628,10 +558,8 @@ export default function operationRunRoutes(fastify: FastifyInstance) {
         existing.status !== OperationRunStatus.skipped &&
         existing.status !== OperationRunStatus.failed
       ) {
-        return sendError(
+        return conflict(
           reply,
-          409,
-          "Conflict",
           `Cannot reopen operation run in ${existing.status} status`,
         );
       }

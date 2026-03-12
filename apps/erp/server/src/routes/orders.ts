@@ -15,7 +15,7 @@ import { z } from "zod/v4";
 import type { ErpUser } from "../auth-middleware.js";
 import { hasPermission } from "../auth-middleware.js";
 import erpDb from "../erpDb.js";
-import { sendError } from "../error-handler.js";
+import { conflict, notFound } from "../error-handler.js";
 import type { OrderModel } from "../generated/prisma/models/Order.js";
 import {
   API_PREFIX,
@@ -24,6 +24,11 @@ import {
   schemaLink,
   selfLink,
 } from "../hateoas.js";
+import {
+  formatAuditFields,
+  includeUsers,
+  type WithAuditUsers,
+} from "../route-helpers.js";
 
 function itemLinks(
   resource: string,
@@ -94,33 +99,23 @@ function revisionCollectionLink(
   };
 }
 
-const includeUsers = {
-  createdBy: { select: { username: true } },
-  updatedBy: { select: { username: true } },
-} as const;
-
-type OrderWithUsers = OrderModel & {
-  createdBy: { username: string };
-  updatedBy: { username: string };
-};
-
 const RESOURCE = "orders";
 
 const KeyParamsSchema = z.object({
   key: z.string(),
 });
 
-function formatItem(item: OrderWithUsers, user: ErpUser | undefined) {
+function formatItem(
+  item: OrderModel & WithAuditUsers,
+  user: ErpUser | undefined,
+) {
   return {
     id: item.id,
     key: item.key,
     name: item.name,
     description: item.description,
     status: item.status,
-    createdBy: item.createdBy.username,
-    createdAt: item.createdAt.toISOString(),
-    updatedBy: item.updatedBy.username,
-    updatedAt: item.updatedAt.toISOString(),
+    ...formatAuditFields(item),
     _links: [
       ...itemLinks(RESOURCE, item.key, "Order"),
       revisionCollectionLink(RESOURCE, item.key),
@@ -129,7 +124,10 @@ function formatItem(item: OrderWithUsers, user: ErpUser | undefined) {
   };
 }
 
-function formatListItem(item: OrderWithUsers, user: ErpUser | undefined) {
+function formatListItem(
+  item: OrderModel & WithAuditUsers,
+  user: ErpUser | undefined,
+) {
   const { _actions, ...rest } = formatItem(item, user);
   return {
     ...rest,
@@ -247,7 +245,7 @@ export default function orderRoutes(fastify: FastifyInstance) {
         include: includeUsers,
       });
       if (!item) {
-        return sendError(reply, 404, "Not Found", `Order '${key}' not found`);
+        return notFound(reply, `Order '${key}' not found`);
       }
 
       return formatItem(item, request.erpUser);
@@ -275,7 +273,7 @@ export default function orderRoutes(fastify: FastifyInstance) {
         where: { key },
       });
       if (!existing) {
-        return sendError(reply, 404, "Not Found", `Order '${key}' not found`);
+        return notFound(reply, `Order '${key}' not found`);
       }
 
       const item = await erpDb.order.update({
@@ -307,17 +305,15 @@ export default function orderRoutes(fastify: FastifyInstance) {
         where: { key },
       });
       if (!existing) {
-        return sendError(reply, 404, "Not Found", `Order '${key}' not found`);
+        return notFound(reply, `Order '${key}' not found`);
       }
 
       const revisionCount = await erpDb.orderRevision.count({
         where: { orderId: existing.id },
       });
       if (revisionCount > 0) {
-        return sendError(
+        return conflict(
           reply,
-          409,
-          "Conflict",
           "Cannot delete order with existing revisions. Archive it instead.",
         );
       }

@@ -20,7 +20,7 @@ import type { ZodTypeProvider } from "fastify-type-provider-zod";
 
 import { authCache } from "../auth-middleware.js";
 import erpDb from "../erpDb.js";
-import { sendError } from "../error-handler.js";
+import { unauthorized } from "../error-handler.js";
 import { isSupervisorAuth } from "../supervisorAuth.js";
 
 const SESSION_DURATION_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
@@ -56,12 +56,7 @@ export default function authRoutes(fastify: FastifyInstance) {
           password,
         );
         if (!authResult) {
-          return sendError(
-            reply,
-            401,
-            "Unauthorized",
-            "Invalid username or password",
-          );
+          return unauthorized(reply, "Invalid username or password");
         }
 
         const ssoData = {
@@ -86,22 +81,12 @@ export default function authRoutes(fastify: FastifyInstance) {
       // Standalone mode: authenticate against local DB
       const user = await erpDb.user.findUnique({ where: { username } });
       if (!user) {
-        return sendError(
-          reply,
-          401,
-          "Unauthorized",
-          "Invalid username or password",
-        );
+        return unauthorized(reply, "Invalid username or password");
       }
 
       const valid = await bcrypt.compare(password, user.passwordHash);
       if (!valid) {
-        return sendError(
-          reply,
-          401,
-          "Unauthorized",
-          "Invalid username or password",
-        );
+        return unauthorized(reply, "Invalid username or password");
       }
 
       const token = randomUUID();
@@ -159,7 +144,7 @@ export default function authRoutes(fastify: FastifyInstance) {
     },
     handler: async (request, reply) => {
       if (!request.erpUser) {
-        return sendError(reply, 401, "Unauthorized", "Not authenticated");
+        return unauthorized(reply, "Not authenticated");
       }
 
       return {

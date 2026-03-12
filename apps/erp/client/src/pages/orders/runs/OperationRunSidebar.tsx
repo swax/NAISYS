@@ -19,7 +19,11 @@ interface Props {
   refreshKey?: number;
 }
 
-export const OperationRunSidebar: React.FC<Props> = ({ orderKey, runId, refreshKey }) => {
+export const OperationRunSidebar: React.FC<Props> = ({
+  orderKey,
+  runId,
+  refreshKey,
+}) => {
   const navigate = useNavigate();
   const { opRunId: currentOpRunId } = useParams<{ opRunId: string }>();
   const [data, setData] = useState<OperationRunListResponse | null>(null);

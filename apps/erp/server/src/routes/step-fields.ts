@@ -1,4 +1,3 @@
-import type { HateoasAction, HateoasLink } from "@naisys/common";
 import {
   CreateStepFieldSchema,
   ErrorResponseSchema,
@@ -15,9 +14,18 @@ import { z } from "zod/v4";
 import type { ErpUser } from "../auth-middleware.js";
 import { hasPermission } from "../auth-middleware.js";
 import erpDb from "../erpDb.js";
-import { sendError } from "../error-handler.js";
+import { conflict, notFound } from "../error-handler.js";
 import type { StepFieldModel } from "../generated/prisma/models/StepField.js";
-import { API_PREFIX, schemaLink, selfLink } from "../hateoas.js";
+import { API_PREFIX, selfLink } from "../hateoas.js";
+import {
+  calcNextSeqNo,
+  childItemLinks,
+  draftCrudActions,
+  formatAuditFields,
+  includeUsers,
+  resolveStep,
+  type WithAuditUsers,
+} from "../route-helpers.js";
 
 const ParamsSchema = z.object({
   orderKey: z.string(),
@@ -34,15 +42,7 @@ const FieldParamsSchema = z.object({
   fieldSeqNo: z.coerce.number().int(),
 });
 
-const includeUsers = {
-  createdBy: { select: { username: true } },
-  updatedBy: { select: { username: true } },
-} as const;
-
-export type StepFieldWithUsers = StepFieldModel & {
-  createdBy: { username: string };
-  updatedBy: { username: string };
-};
+export type StepFieldWithUsers = StepFieldModel & WithAuditUsers;
 
 export function formatFieldListResponse(
   orderKey: string,
@@ -54,7 +54,6 @@ export function formatFieldListResponse(
   items: StepFieldWithUsers[],
 ) {
   const maxSeq = items.length > 0 ? items[items.length - 1].seqNo : 0;
-  const nextSeqNo = Math.ceil((maxSeq + 1) / 10) * 10;
   const base = fieldBasePath(orderKey, revNo, opSeqNo, stepSeqNo);
   return {
     items: items.map((item) =>
@@ -69,7 +68,7 @@ export function formatFieldListResponse(
       ),
     ),
     total: items.length,
-    nextSeqNo,
+    nextSeqNo: calcNextSeqNo(maxSeq),
     _links: [selfLink(base)],
     _actions:
       hasPermission(user, "manage_orders") && revStatus === RevisionStatus.draft
@@ -95,63 +94,6 @@ export function fieldBasePath(
   return `/orders/${orderKey}/revs/${revNo}/ops/${opSeqNo}/steps/${stepSeqNo}/fields`;
 }
 
-export function fieldItemLinks(
-  orderKey: string,
-  revNo: number,
-  opSeqNo: number,
-  stepSeqNo: number,
-  fieldSeqNo: number,
-): HateoasLink[] {
-  const base = fieldBasePath(orderKey, revNo, opSeqNo, stepSeqNo);
-  return [
-    selfLink(`${base}/${fieldSeqNo}`),
-    {
-      rel: "collection",
-      href: `${API_PREFIX}${base}`,
-      title: "Step Fields",
-    },
-    {
-      rel: "parent",
-      href: `${API_PREFIX}/orders/${orderKey}/revs/${revNo}/ops/${opSeqNo}/steps/${stepSeqNo}`,
-      title: "Step",
-    },
-    schemaLink("StepField"),
-  ];
-}
-
-export function fieldItemActions(
-  orderKey: string,
-  revNo: number,
-  opSeqNo: number,
-  stepSeqNo: number,
-  fieldSeqNo: number,
-  revStatus: string,
-  user: ErpUser | undefined,
-): HateoasAction[] {
-  if (
-    !hasPermission(user, "manage_orders") ||
-    revStatus !== RevisionStatus.draft
-  )
-    return [];
-
-  const href = `${API_PREFIX}${fieldBasePath(orderKey, revNo, opSeqNo, stepSeqNo)}/${fieldSeqNo}`;
-  return [
-    {
-      rel: "update",
-      href,
-      method: "PUT",
-      title: "Update",
-      schema: `${API_PREFIX}/schemas/UpdateStepField`,
-    },
-    {
-      rel: "delete",
-      href,
-      method: "DELETE",
-      title: "Delete",
-    },
-  ];
-}
-
 export function formatFieldItem(
   orderKey: string,
   revNo: number,
@@ -161,6 +103,7 @@ export function formatFieldItem(
   user: ErpUser | undefined,
   item: StepFieldWithUsers,
 ) {
+  const base = fieldBasePath(orderKey, revNo, opSeqNo, stepSeqNo);
   return {
     id: item.id,
     stepId: item.stepId,
@@ -168,48 +111,22 @@ export function formatFieldItem(
     label: item.label,
     type: item.type,
     required: item.required,
-    createdAt: item.createdAt.toISOString(),
-    createdBy: item.createdBy.username,
-    updatedAt: item.updatedAt.toISOString(),
-    updatedBy: item.updatedBy.username,
-    _links: fieldItemLinks(orderKey, revNo, opSeqNo, stepSeqNo, item.seqNo),
-    _actions: fieldItemActions(
-      orderKey,
-      revNo,
-      opSeqNo,
-      stepSeqNo,
+    ...formatAuditFields(item),
+    _links: childItemLinks(
+      base,
       item.seqNo,
+      "Step Fields",
+      `/orders/${orderKey}/revs/${revNo}/ops/${opSeqNo}/steps/${stepSeqNo}`,
+      "Step",
+      "StepField",
+    ),
+    _actions: draftCrudActions(
+      `${API_PREFIX}${base}/${item.seqNo}`,
+      "UpdateStepField",
       revStatus,
       user,
     ),
   };
-}
-
-async function resolveStep(
-  orderKey: string,
-  revNo: number,
-  opSeqNo: number,
-  stepSeqNo: number,
-) {
-  const order = await erpDb.order.findUnique({ where: { key: orderKey } });
-  if (!order) return null;
-
-  const rev = await erpDb.orderRevision.findFirst({
-    where: { orderId: order.id, revNo },
-  });
-  if (!rev) return null;
-
-  const operation = await erpDb.operation.findFirst({
-    where: { orderRevId: rev.id, seqNo: opSeqNo },
-  });
-  if (!operation) return null;
-
-  const step = await erpDb.step.findFirst({
-    where: { operationId: operation.id, seqNo: stepSeqNo },
-  });
-  if (!step) return null;
-
-  return { order, rev, operation, step };
 }
 
 export default function stepFieldRoutes(fastify: FastifyInstance) {
@@ -231,7 +148,7 @@ export default function stepFieldRoutes(fastify: FastifyInstance) {
 
       const resolved = await resolveStep(orderKey, revNo, seqNo, stepSeqNo);
       if (!resolved) {
-        return sendError(reply, 404, "Not Found", "Step not found");
+        return notFound(reply, "Step not found");
       }
 
       const items = await erpDb.stepField.findMany({
@@ -241,7 +158,6 @@ export default function stepFieldRoutes(fastify: FastifyInstance) {
       });
 
       const maxSeq = items.length > 0 ? items[items.length - 1].seqNo : 0;
-      const nextSeqNo = Math.ceil((maxSeq + 1) / 10) * 10;
 
       const user = request.erpUser;
       const base = fieldBasePath(orderKey, revNo, seqNo, stepSeqNo);
@@ -258,7 +174,7 @@ export default function stepFieldRoutes(fastify: FastifyInstance) {
           ),
         ),
         total: items.length,
-        nextSeqNo,
+        nextSeqNo: calcNextSeqNo(maxSeq),
         _links: [selfLink(base)],
         _actions:
           hasPermission(user, "manage_orders") &&
@@ -297,14 +213,12 @@ export default function stepFieldRoutes(fastify: FastifyInstance) {
 
       const resolved = await resolveStep(orderKey, revNo, seqNo, stepSeqNo);
       if (!resolved) {
-        return sendError(reply, 404, "Not Found", "Step not found");
+        return notFound(reply, "Step not found");
       }
 
       if (resolved.rev.status !== RevisionStatus.draft) {
-        return sendError(
+        return conflict(
           reply,
-          409,
-          "Conflict",
           `Cannot add fields to a ${resolved.rev.status} revision`,
         );
       }
@@ -315,7 +229,7 @@ export default function stepFieldRoutes(fastify: FastifyInstance) {
           orderBy: { seqNo: "desc" },
           select: { seqNo: true },
         });
-        const defaultSeqNo = Math.ceil(((maxSeq?.seqNo ?? 0) + 1) / 10) * 10;
+        const defaultSeqNo = calcNextSeqNo(maxSeq?.seqNo ?? 0);
         const nextSeqNo = requestedSeqNo ?? defaultSeqNo;
 
         return erpTx.stepField.create({
@@ -361,7 +275,7 @@ export default function stepFieldRoutes(fastify: FastifyInstance) {
 
       const resolved = await resolveStep(orderKey, revNo, seqNo, stepSeqNo);
       if (!resolved) {
-        return sendError(reply, 404, "Not Found", "Step not found");
+        return notFound(reply, "Step not found");
       }
 
       const item = await erpDb.stepField.findFirst({
@@ -369,12 +283,7 @@ export default function stepFieldRoutes(fastify: FastifyInstance) {
         include: includeUsers,
       });
       if (!item) {
-        return sendError(
-          reply,
-          404,
-          "Not Found",
-          `Field ${fieldSeqNo} not found`,
-        );
+        return notFound(reply, `Field ${fieldSeqNo} not found`);
       }
 
       return formatFieldItem(
@@ -409,14 +318,12 @@ export default function stepFieldRoutes(fastify: FastifyInstance) {
 
       const resolved = await resolveStep(orderKey, revNo, seqNo, stepSeqNo);
       if (!resolved) {
-        return sendError(reply, 404, "Not Found", "Step not found");
+        return notFound(reply, "Step not found");
       }
 
       if (resolved.rev.status !== RevisionStatus.draft) {
-        return sendError(
+        return conflict(
           reply,
-          409,
-          "Conflict",
           `Cannot update fields on a ${resolved.rev.status} revision`,
         );
       }
@@ -425,12 +332,7 @@ export default function stepFieldRoutes(fastify: FastifyInstance) {
         where: { stepId: resolved.step.id, seqNo: fieldSeqNo },
       });
       if (!existing) {
-        return sendError(
-          reply,
-          404,
-          "Not Found",
-          `Field ${fieldSeqNo} not found`,
-        );
+        return notFound(reply, `Field ${fieldSeqNo} not found`);
       }
 
       const item = await erpDb.stepField.update({
@@ -474,14 +376,12 @@ export default function stepFieldRoutes(fastify: FastifyInstance) {
 
       const resolved = await resolveStep(orderKey, revNo, seqNo, stepSeqNo);
       if (!resolved) {
-        return sendError(reply, 404, "Not Found", "Step not found");
+        return notFound(reply, "Step not found");
       }
 
       if (resolved.rev.status !== RevisionStatus.draft) {
-        return sendError(
+        return conflict(
           reply,
-          409,
-          "Conflict",
           `Cannot delete fields on a ${resolved.rev.status} revision`,
         );
       }
@@ -490,12 +390,7 @@ export default function stepFieldRoutes(fastify: FastifyInstance) {
         where: { stepId: resolved.step.id, seqNo: fieldSeqNo },
       });
       if (!existing) {
-        return sendError(
-          reply,
-          404,
-          "Not Found",
-          `Field ${fieldSeqNo} not found`,
-        );
+        return notFound(reply, `Field ${fieldSeqNo} not found`);
       }
 
       await erpDb.stepField.delete({ where: { id: existing.id } });

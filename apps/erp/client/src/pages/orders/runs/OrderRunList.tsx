@@ -88,11 +88,7 @@ export const OrderRunList: React.FC = () => {
       <Group justify="space-between" mb="lg">
         <Title order={2}>Runs for {orderKey}</Title>
         <Group>
-          <Button
-            variant="subtle"
-            component={Link}
-            to={`/orders/${orderKey}`}
-          >
+          <Button variant="subtle" component={Link} to={`/orders/${orderKey}`}>
             Back to Order
           </Button>
           <Button component={Link} to={`/orders/${orderKey}/runs/new`}>
@@ -173,56 +169,56 @@ export const OrderRunList: React.FC = () => {
               {data.items.map((item) => {
                 const runLink = `/orders/${orderKey}/runs/${item.id}`;
                 return (
-                <Table.Tr
-                  key={item.id}
-                  style={{ cursor: "pointer" }}
-                  data-testid={`order-run-row-${item.runNo}`}
-                >
-                  <Table.Td>
-                    <Link to={runLink} style={cellLinkStyle}>
-                      <Text size="sm" ff="monospace">
-                        {item.runNo}
-                      </Text>
-                    </Link>
-                  </Table.Td>
-                  <Table.Td>
-                    <Link to={runLink} style={cellLinkStyle}>
-                      <Badge
-                        color={STATUS_COLORS[item.status] ?? "gray"}
-                        variant="light"
-                      >
-                        {item.status}
-                      </Badge>
-                    </Link>
-                  </Table.Td>
-                  <Table.Td>
-                    <Link to={runLink} style={cellLinkStyle}>
-                      <Badge
-                        color={PRIORITY_COLORS[item.priority] ?? "gray"}
-                        variant="light"
-                      >
-                        {item.priority}
-                      </Badge>
-                    </Link>
-                  </Table.Td>
-                  <Table.Td>
-                    <Link to={runLink} style={cellLinkStyle}>
-                      {item.assignedTo ?? "—"}
-                    </Link>
-                  </Table.Td>
-                  <Table.Td>
-                    <Link to={runLink} style={cellLinkStyle}>
-                      {item.dueAt
-                        ? new Date(item.dueAt).toLocaleDateString()
-                        : "—"}
-                    </Link>
-                  </Table.Td>
-                  <Table.Td>
-                    <Link to={runLink} style={cellLinkStyle}>
-                      {new Date(item.createdAt).toLocaleDateString()}
-                    </Link>
-                  </Table.Td>
-                </Table.Tr>
+                  <Table.Tr
+                    key={item.id}
+                    style={{ cursor: "pointer" }}
+                    data-testid={`order-run-row-${item.runNo}`}
+                  >
+                    <Table.Td>
+                      <Link to={runLink} style={cellLinkStyle}>
+                        <Text size="sm" ff="monospace">
+                          {item.runNo}
+                        </Text>
+                      </Link>
+                    </Table.Td>
+                    <Table.Td>
+                      <Link to={runLink} style={cellLinkStyle}>
+                        <Badge
+                          color={STATUS_COLORS[item.status] ?? "gray"}
+                          variant="light"
+                        >
+                          {item.status}
+                        </Badge>
+                      </Link>
+                    </Table.Td>
+                    <Table.Td>
+                      <Link to={runLink} style={cellLinkStyle}>
+                        <Badge
+                          color={PRIORITY_COLORS[item.priority] ?? "gray"}
+                          variant="light"
+                        >
+                          {item.priority}
+                        </Badge>
+                      </Link>
+                    </Table.Td>
+                    <Table.Td>
+                      <Link to={runLink} style={cellLinkStyle}>
+                        {item.assignedTo ?? "—"}
+                      </Link>
+                    </Table.Td>
+                    <Table.Td>
+                      <Link to={runLink} style={cellLinkStyle}>
+                        {item.dueAt
+                          ? new Date(item.dueAt).toLocaleDateString()
+                          : "—"}
+                      </Link>
+                    </Table.Td>
+                    <Table.Td>
+                      <Link to={runLink} style={cellLinkStyle}>
+                        {new Date(item.createdAt).toLocaleDateString()}
+                      </Link>
+                    </Table.Td>
+                  </Table.Tr>
                 );
               })}
             </Table.Tbody>

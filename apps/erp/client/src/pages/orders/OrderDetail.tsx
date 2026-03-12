@@ -122,11 +122,7 @@ export const OrderDetail: React.FC = () => {
           <Button variant="subtle" onClick={() => navigate("/orders")}>
             Back
           </Button>
-          <Button
-            variant="light"
-            component={Link}
-            to={`/orders/${key}/runs`}
-          >
+          <Button variant="light" component={Link} to={`/orders/${key}/runs`}>
             View Runs
           </Button>
           {hasAction(item._actions, "update") && (
