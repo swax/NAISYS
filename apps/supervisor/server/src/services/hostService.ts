@@ -2,83 +2,71 @@ import { assertUrlSafeKey } from "@naisys/common";
 import type { Host, HostDetailResponse } from "@naisys-supervisor/shared";
 
 import { hubDb } from "../database/hubDb.js";
-import { getLogger } from "../logger.js";
-import { cachedForSeconds } from "../utils/cache.js";
 import { resolveAgentId } from "./agentService.js";
 
-export const getHosts = cachedForSeconds(0.25, async (): Promise<Host[]> => {
-  try {
-    const hosts = await hubDb.hosts.findMany({
-      select: {
-        id: true,
-        name: true,
-        restricted: true,
-        host_type: true,
-        last_active: true,
-        _count: {
-          select: { user_hosts: true },
-        },
+export async function getHosts(): Promise<Host[]> {
+  const hosts = await hubDb.hosts.findMany({
+    select: {
+      id: true,
+      name: true,
+      restricted: true,
+      host_type: true,
+      last_active: true,
+      _count: {
+        select: { user_hosts: true },
       },
-    });
+    },
+  });
 
-    return hosts.map((host) => ({
-      id: host.id,
-      name: host.name,
-      lastActive: host.last_active?.toISOString() ?? null,
-      agentCount: host._count.user_hosts,
-      restricted: host.restricted,
-      hostType: host.host_type,
-    }));
-  } catch (error) {
-    getLogger().error(error, "Error fetching hosts from Naisys database");
-    return [];
-  }
-});
+  return hosts.map((host) => ({
+    id: host.id,
+    name: host.name,
+    lastActive: host.last_active?.toISOString() ?? null,
+    agentCount: host._count.user_hosts,
+    restricted: host.restricted,
+    hostType: host.host_type,
+  }));
+}
 
 export async function getHostDetail(
   hostname: string,
 ): Promise<HostDetailResponse | null> {
-  try {
-    const host = await hubDb.hosts.findUnique({
-      where: { name: hostname },
-      select: {
-        id: true,
-        name: true,
-        restricted: true,
-        host_type: true,
-        last_active: true,
-        last_ip: true,
-        user_hosts: {
-          select: {
-            users: {
-              select: { id: true, username: true, title: true },
-            },
+  const host = await hubDb.hosts.findUnique({
+    where: { name: hostname },
+    select: {
+      id: true,
+      name: true,
+      restricted: true,
+      host_type: true,
+      last_active: true,
+      last_ip: true,
+      user_hosts: {
+        select: {
+          users: {
+            select: { id: true, username: true, title: true },
           },
         },
       },
-    });
+    },
+  });
 
-    if (!host) return null;
+  if (!host) return null;
 
-    return {
-      id: host.id,
-      name: host.name,
-      lastActive: host.last_active?.toISOString() ?? null,
-      lastIp: host.last_ip ?? null,
-      restricted: host.restricted,
-      hostType: host.host_type,
-      online: false, // Caller sets this from agentHostStatusService
-      assignedAgents: host.user_hosts.map((uh) => ({
-        id: uh.users.id,
-        name: uh.users.username,
-        title: uh.users.title,
-      })),
-      _links: [],
-    };
-  } catch (error) {
-    getLogger().error(error, "Error fetching host detail");
-    return null;
-  }
+  return {
+    id: host.id,
+    name: host.name,
+    lastActive: host.last_active?.toISOString() ?? null,
+    lastIp: host.last_ip ?? null,
+    restricted: host.restricted,
+    hostType: host.host_type,
+    online: false, // Caller sets this from agentHostStatusService
+    assignedAgents: host.user_hosts.map((uh) => ({
+      id: uh.users.id,
+      name: uh.users.username,
+      title: uh.users.title,
+    })),
+    _links: [],
+  };
 }
 
 export async function createHost(name: string): Promise<{ id: number }> {

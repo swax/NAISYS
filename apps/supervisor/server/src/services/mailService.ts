@@ -19,104 +19,96 @@ export async function getMailDataByUserId(
   count: number = 50,
   kind: string = "mail",
 ): Promise<{ mail: MailMessage[]; timestamp: string; total?: number }> {
-  try {
-    // Build the where clause
-    const whereClause: any = { kind };
+  // Build the where clause
+  const whereClause: any = { kind };
 
-    // If updatedSince is provided, filter by date
-    if (updatedSince) {
-      whereClause.created_at = { gte: updatedSince };
-    }
+  // If updatedSince is provided, filter by date
+  if (updatedSince) {
+    whereClause.created_at = { gte: updatedSince };
+  }
 
-    const where = {
-      ...whereClause,
-      OR: [
-        { from_user_id: userId },
-        {
-          recipients: {
-            some: {
-              user_id: userId,
-            },
-          },
-        },
-      ],
-    };
-
-    // Only get total count on initial fetch (when updatedSince is not set)
-    const total = updatedSince
-      ? undefined
-      : await hubDb.mail_messages.count({ where });
-
-    // Get paginated messages
-    const dbMessages = await hubDb.mail_messages.findMany({
-      where,
-      orderBy: { id: "desc" },
-      skip: (page - 1) * count,
-      take: count,
-      select: {
-        id: true,
-        from_user_id: true,
-        subject: true,
-        body: true,
-        created_at: true,
-        from_user: {
-          select: { username: true },
-        },
+  const where = {
+    ...whereClause,
+    OR: [
+      { from_user_id: userId },
+      {
         recipients: {
-          select: {
-            user_id: true,
-            type: true,
-            read_at: true,
-            user: {
-              select: { username: true },
-            },
-          },
-        },
-        mail_attachments: {
-          include: {
-            attachment: {
-              select: { id: true, filename: true, file_size: true },
-            },
+          some: {
+            user_id: userId,
           },
         },
       },
-    });
+    ],
+  };
 
-    const messages: MailMessage[] = dbMessages.map((msg) => ({
-      id: msg.id,
-      fromUserId: msg.from_user_id,
-      fromUsername: msg.from_user.username,
-      subject: msg.subject,
-      body: msg.body,
-      createdAt: msg.created_at.toISOString(),
-      recipients: msg.recipients.map((r) => ({
-        userId: r.user_id,
-        username: r.user.username,
-        type: r.type,
-        readAt: r.read_at?.toISOString() ?? null,
-      })),
-      attachments:
-        msg.mail_attachments.length > 0
-          ? msg.mail_attachments.map((ma) => ({
-              id: ma.attachment.id,
-              filename: ma.attachment.filename,
-              fileSize: ma.attachment.file_size,
-            }))
-          : undefined,
-    }));
+  // Only get total count on initial fetch (when updatedSince is not set)
+  const total = updatedSince
+    ? undefined
+    : await hubDb.mail_messages.count({ where });
 
-    return {
-      mail: messages,
-      timestamp: new Date().toISOString(),
-      total,
-    };
-  } catch (error) {
-    getLogger().error(error, "Error fetching mail data");
-    return {
-      mail: [],
-      timestamp: new Date().toISOString(),
-    };
-  }
+  // Get paginated messages
+  const dbMessages = await hubDb.mail_messages.findMany({
+    where,
+    orderBy: { id: "desc" },
+    skip: (page - 1) * count,
+    take: count,
+    select: {
+      id: true,
+      from_user_id: true,
+      subject: true,
+      body: true,
+      created_at: true,
+      from_user: {
+        select: { username: true },
+      },
+      recipients: {
+        select: {
+          user_id: true,
+          type: true,
+          read_at: true,
+          user: {
+            select: { username: true },
+          },
+        },
+      },
+      mail_attachments: {
+        include: {
+          attachment: {
+            select: { id: true, filename: true, file_size: true },
+          },
+        },
+      },
+    },
+  });
+
+  const messages: MailMessage[] = dbMessages.map((msg) => ({
+    id: msg.id,
+    fromUserId: msg.from_user_id,
+    fromUsername: msg.from_user.username,
+    subject: msg.subject,
+    body: msg.body,
+    createdAt: msg.created_at.toISOString(),
+    recipients: msg.recipients.map((r) => ({
+      userId: r.user_id,
+      username: r.user.username,
+      type: r.type,
+      readAt: r.read_at?.toISOString() ?? null,
+    })),
+    attachments:
+      msg.mail_attachments.length > 0
+        ? msg.mail_attachments.map((ma) => ({
+            id: ma.attachment.id,
+            filename: ma.attachment.filename,
+            fileSize: ma.attachment.file_size,
+          }))
+        : undefined,
+  }));
+
+  return {
+    mail: messages,
+    timestamp: new Date().toISOString(),
+    total,
+  };
 }
 
 /**

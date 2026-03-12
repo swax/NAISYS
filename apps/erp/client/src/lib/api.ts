@@ -160,6 +160,14 @@ export const apiEndpoints = {
     opRunId: number | string,
     id: number | string,
   ) => `orders/${key}/runs/${runId}/ops/${opRunId}/steps/${id}`,
+  stepRunFieldValue: (
+    key: string,
+    runId: number | string,
+    opRunId: number | string,
+    id: number | string,
+    stepFieldId: number | string,
+  ) =>
+    `orders/${key}/runs/${runId}/ops/${opRunId}/steps/${id}/fields/${stepFieldId}`,
   userRotateKey: (username: string) => `users/${username}/rotate-key`,
   changePassword: "users/me/password",
   audit: (entityType: string, entityId: number | string) =>
