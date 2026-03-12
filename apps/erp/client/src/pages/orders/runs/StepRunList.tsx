@@ -1,7 +1,7 @@
 import {
+  ActionIcon,
   Button,
   Card,
-  Checkbox,
   Group,
   Loader,
   Stack,
@@ -9,14 +9,14 @@ import {
   TextInput,
   Title,
 } from "@mantine/core";
+import { IconArrowBackUp } from "@tabler/icons-react";
 import type {
   StepRun,
   StepRunListResponse,
   UpdateStepRun,
 } from "@naisys-erp/shared";
 import { useCallback, useEffect, useState } from "react";
-import Markdown from "react-markdown";
-
+import { CompactMarkdown } from "../../../components/CompactMarkdown";
 import { api, apiEndpoints, showErrorNotification } from "../../../lib/api";
 import { hasAction } from "../../../lib/hateoas";
 
@@ -24,14 +24,14 @@ interface Props {
   orderKey: string;
   runId: string;
   opRunId: string;
+  refreshKey?: number;
 }
 
 interface StepRunState {
-  completed: boolean;
   fieldValues: Record<number, string>; // stepFieldId → value
 }
 
-export const StepRunList: React.FC<Props> = ({ orderKey, runId, opRunId }) => {
+export const StepRunList: React.FC<Props> = ({ orderKey, runId, opRunId, refreshKey }) => {
   const [data, setData] = useState<StepRunListResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<number | null>(null);
@@ -57,7 +57,6 @@ export const StepRunList: React.FC<Props> = ({ orderKey, runId, opRunId }) => {
       const newEdits: Record<number, StepRunState> = {};
       for (const step of result.items) {
         newEdits[step.id] = {
-          completed: step.completed,
           fieldValues: Object.fromEntries(
             step.fieldValues.map((fv) => [fv.stepFieldId, fv.value]),
           ),
@@ -69,41 +68,50 @@ export const StepRunList: React.FC<Props> = ({ orderKey, runId, opRunId }) => {
     } finally {
       setLoading(false);
     }
-  }, [orderKey, runId, opRunId]);
+  }, [orderKey, runId, opRunId, refreshKey]);
 
   useEffect(() => {
     void fetchSteps();
   }, [fetchSteps]);
 
-  const handleSave = async (step: StepRun) => {
+  const saveStep = async (step: StepRun, completedOverride?: boolean) => {
     const edit = edits[step.id];
     if (!edit) return;
     setSaving(step.id);
     try {
       const body: UpdateStepRun = {
-        completed: edit.completed,
+        completed: completedOverride ?? step.completed,
         fieldValues: step.fieldValues.map((fv) => ({
           stepFieldId: fv.stepFieldId,
           value: edit.fieldValues[fv.stepFieldId] ?? fv.value,
         })),
       };
-      await api.put(
+      const updated = await api.put<StepRun>(
         apiEndpoints.stepRun(orderKey, runId, opRunId, step.id),
         body,
       );
-      await fetchSteps();
+      // Update in place instead of re-fetching
+      setData((prev) =>
+        prev
+          ? {
+              ...prev,
+              items: prev.items.map((s) => (s.id === updated.id ? updated : s)),
+            }
+          : prev,
+      );
+      setEdits((prev) => ({
+        ...prev,
+        [updated.id]: {
+          fieldValues: Object.fromEntries(
+            updated.fieldValues.map((fv) => [fv.stepFieldId, fv.value]),
+          ),
+        },
+      }));
     } catch (err) {
       showErrorNotification(err);
     } finally {
       setSaving(null);
     }
-  };
-
-  const updateEdit = (stepId: number, patch: Partial<StepRunState>) => {
-    setEdits((prev) => ({
-      ...prev,
-      [stepId]: { ...prev[stepId], ...patch },
-    }));
   };
 
   const updateFieldValue = (
@@ -120,10 +128,9 @@ export const StepRunList: React.FC<Props> = ({ orderKey, runId, opRunId }) => {
     }));
   };
 
-  const isDirty = (step: StepRun): boolean => {
+  const isFieldsDirty = (step: StepRun): boolean => {
     const edit = edits[step.id];
     if (!edit) return false;
-    if (edit.completed !== step.completed) return true;
     for (const fv of step.fieldValues) {
       if ((edit.fieldValues[fv.stepFieldId] ?? fv.value) !== fv.value)
         return true;
@@ -150,20 +157,8 @@ export const StepRunList: React.FC<Props> = ({ orderKey, runId, opRunId }) => {
                 <Stack gap="xs">
                   <Group justify="space-between" align="flex-start">
                     <Text fw={600} size="sm">
-                      Step {step.seqNo}
+                      STEP {step.seqNo}
                     </Text>
-                    {canUpdate && (
-                      <Checkbox
-                        label="Completed"
-                        checked={edit?.completed ?? step.completed}
-                        onChange={(e) =>
-                          updateEdit(step.id, {
-                            completed: e.currentTarget.checked,
-                          })
-                        }
-                        size="xs"
-                      />
-                    )}
                     {!canUpdate && step.completed && (
                       <Text size="xs" c="green">
                         Completed
@@ -172,7 +167,7 @@ export const StepRunList: React.FC<Props> = ({ orderKey, runId, opRunId }) => {
                   </Group>
 
                   {step.instructions ? (
-                    <Markdown>{step.instructions}</Markdown>
+                    <CompactMarkdown>{step.instructions}</CompactMarkdown>
                   ) : (
                     <Text size="sm" c="dimmed">
                       No instructions
@@ -215,15 +210,44 @@ export const StepRunList: React.FC<Props> = ({ orderKey, runId, opRunId }) => {
                     </Stack>
                   )}
 
-                  {canUpdate && isDirty(step) && (
+                  {canUpdate && (
                     <Group justify="flex-end" mt="xs">
-                      <Button
-                        size="xs"
-                        loading={saving === step.id}
-                        onClick={() => handleSave(step)}
-                      >
-                        Save
-                      </Button>
+                      {step.completed ? (
+                        <Group gap="xs" align="center">
+                          <Text size="xs" c="green">
+                            Completed by {step.updatedBy} on{" "}
+                            {new Date(step.updatedAt).toLocaleString()}
+                          </Text>
+                          <ActionIcon
+                            size="xs"
+                            variant="subtle"
+                            color="gray"
+                            loading={saving === step.id}
+                            onClick={() => saveStep(step, false)}
+                            title="Undo completion"
+                          >
+                            <IconArrowBackUp size={14} />
+                          </ActionIcon>
+                        </Group>
+                      ) : (
+                        <Button
+                          size="xs"
+                          color="green"
+                          loading={saving === step.id}
+                          onClick={() => saveStep(step, true)}
+                        >
+                          Complete
+                        </Button>
+                      )}
+                      {isFieldsDirty(step) && (
+                        <Button
+                          size="xs"
+                          loading={saving === step.id}
+                          onClick={() => saveStep(step)}
+                        >
+                          Save
+                        </Button>
+                      )}
                     </Group>
                   )}
                 </Stack>

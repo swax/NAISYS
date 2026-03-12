@@ -1,4 +1,5 @@
-import { Anchor, Badge, Button, Group, Text } from "@mantine/core";
+import { ActionIcon, Anchor, Badge, Button, Group, Text } from "@mantine/core";
+import { IconArrowBackUp } from "@tabler/icons-react";
 import type { OrderRun, UpdateOrderRun } from "@naisys-erp/shared";
 import { OrderRunPriority, OrderRunStatus } from "@naisys-erp/shared";
 import { useState } from "react";
@@ -26,47 +27,42 @@ interface Props {
   item: OrderRun;
   orderKey: string;
   runId: string;
-  onRefresh: () => void;
+  onUpdate: (item: OrderRun) => void;
 }
 
 export const OrderRunHeader: React.FC<Props> = ({
   item,
   orderKey,
   runId,
-  onRefresh,
+  onUpdate,
 }) => {
   const navigate = useNavigate();
   const [editing, setEditing] = useState(false);
 
   const handleUpdate = async (data: UpdateOrderRun) => {
-    await api.put(apiEndpoints.orderRun(orderKey, runId), data);
+    const updated = await api.put<OrderRun>(
+      apiEndpoints.orderRun(orderKey, runId),
+      data,
+    );
     setEditing(false);
-    onRefresh();
+    onUpdate(updated);
   };
 
-  const handleStart = async () => {
+  const handleAction = async (
+    action: "start" | "close" | "cancel" | "reopen",
+  ) => {
+    const endpointMap = {
+      start: apiEndpoints.orderRunStart,
+      close: apiEndpoints.orderRunClose,
+      cancel: apiEndpoints.orderRunCancel,
+      reopen: apiEndpoints.orderRunReopen,
+    };
     try {
-      await api.post(apiEndpoints.orderRunStart(orderKey, runId), {});
-      onRefresh();
-    } catch (err) {
-      showErrorNotification(err);
-    }
-  };
-
-  const handleClose = async () => {
-    try {
-      await api.post(apiEndpoints.orderRunClose(orderKey, runId), {});
-      onRefresh();
-    } catch (err) {
-      showErrorNotification(err);
-    }
-  };
-
-  const handleCancel = async () => {
-    if (!confirm("Cancel this order run?")) return;
-    try {
-      await api.post(apiEndpoints.orderRunCancel(orderKey, runId), {});
-      onRefresh();
+      const updated = await api.post<OrderRun>(
+        endpointMap[action](orderKey, runId),
+        {},
+      );
+      onUpdate(updated);
     } catch (err) {
       showErrorNotification(err);
     }
@@ -120,23 +116,31 @@ export const OrderRunHeader: React.FC<Props> = ({
       }}
     >
       <Group gap="sm">
-        <Anchor
-          size="sm"
-          c="dimmed"
-          href={`/erp/orders/${orderKey}`}
-          onClick={(e: React.MouseEvent) => {
-            if (e.button === 1 || e.ctrlKey || e.metaKey) return;
-            e.preventDefault();
-            void navigate(`/orders/${orderKey}`);
-          }}
-        >
-          {orderKey}
-        </Anchor>
-        <Text size="sm" c="dimmed">
-          /
-        </Text>
-        <Text size="sm" fw={600}>
-          Run #{item.runNo}
+        <Text size="lg">
+          ORDER RUN:{" "}
+          <Anchor
+            href={`/erp/orders/${orderKey}`}
+            onClick={(e: React.MouseEvent) => {
+              if (e.button === 1 || e.ctrlKey || e.metaKey) return;
+              e.preventDefault();
+              void navigate(`/orders/${orderKey}`);
+            }}
+          >
+            {orderKey}
+          </Anchor>
+          {" / "}
+          <Anchor
+            href={`/erp/orders/${orderKey}/revs/${item.revNo}`}
+            onClick={(e: React.MouseEvent) => {
+              if (e.button === 1 || e.ctrlKey || e.metaKey) return;
+              e.preventDefault();
+              void navigate(`/orders/${orderKey}/revs/${item.revNo}`);
+            }}
+          >
+            REV {item.revNo}
+          </Anchor>
+          {" / "}
+          SN {item.runNo}
         </Text>
         <Badge
           color={STATUS_COLORS[item.status] ?? "gray"}
@@ -164,34 +168,52 @@ export const OrderRunHeader: React.FC<Props> = ({
         )}
       </Group>
       <Group gap="xs">
-        <Button
-          size="xs"
-          variant="subtle"
-          onClick={() => navigate(`/orders/${orderKey}/runs`)}
-        >
-          Back
-        </Button>
         {hasAction(item._actions, "update") && (
           <Button size="xs" variant="light" onClick={() => setEditing(true)}>
             Edit
           </Button>
         )}
         {hasAction(item._actions, "start") && (
-          <Button size="xs" color="green" onClick={handleStart}>
+          <Button size="xs" color="green" onClick={() => handleAction("start")}>
             Start
           </Button>
         )}
         {hasAction(item._actions, "close") && (
-          <Button size="xs" color="green" onClick={handleClose}>
+          <Button size="xs" color="green" onClick={() => handleAction("close")}>
             Close
           </Button>
+        )}
+        {hasAction(item._actions, "reopen") && (
+          <Group gap="xs" align="center">
+            <Text
+              size="xs"
+              c={item.status === OrderRunStatus.closed ? "green" : "orange"}
+            >
+              {item.status === OrderRunStatus.closed ? "Closed" : "Cancelled"}{" "}
+              by {item.updatedBy} on{" "}
+              {new Date(item.updatedAt).toLocaleString()}
+            </Text>
+            <ActionIcon
+              size="xs"
+              variant="subtle"
+              color="gray"
+              onClick={() => handleAction("reopen")}
+              title={`Undo ${item.status === OrderRunStatus.closed ? "close" : "cancel"}`}
+            >
+              <IconArrowBackUp size={14} />
+            </ActionIcon>
+          </Group>
         )}
         {hasAction(item._actions, "cancel") && (
           <Button
             size="xs"
             color="orange"
             variant="outline"
-            onClick={handleCancel}
+            onClick={() => {
+              if (confirm("Cancel this order run?")) {
+                void handleAction("cancel");
+              }
+            }}
           >
             Cancel
           </Button>

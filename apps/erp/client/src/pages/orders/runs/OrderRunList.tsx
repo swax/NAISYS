@@ -20,9 +20,15 @@ import {
   OrderRunStatusEnum,
 } from "@naisys-erp/shared";
 import { useCallback, useEffect, useState } from "react";
-import { useNavigate, useParams, useSearchParams } from "react-router";
+import { Link, useParams, useSearchParams } from "react-router";
 
 import { api, apiEndpoints, showErrorNotification } from "../../../lib/api";
+
+const cellLinkStyle = {
+  display: "block",
+  color: "inherit",
+  textDecoration: "none",
+};
 
 const STATUS_COLORS: Record<string, string> = {
   [OrderRunStatus.released]: "blue",
@@ -40,7 +46,6 @@ const PRIORITY_COLORS: Record<string, string> = {
 
 export const OrderRunList: React.FC = () => {
   const { orderKey } = useParams<{ orderKey: string }>();
-  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const page = Number(searchParams.get("page")) || 1;
@@ -85,11 +90,12 @@ export const OrderRunList: React.FC = () => {
         <Group>
           <Button
             variant="subtle"
-            onClick={() => navigate(`/orders/${orderKey}`)}
+            component={Link}
+            to={`/orders/${orderKey}`}
           >
             Back to Order
           </Button>
-          <Button onClick={() => navigate(`/orders/${orderKey}/runs/new`)}>
+          <Button component={Link} to={`/orders/${orderKey}/runs/new`}>
             Create New
           </Button>
         </Group>
@@ -164,47 +170,61 @@ export const OrderRunList: React.FC = () => {
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
-              {data.items.map((item) => (
+              {data.items.map((item) => {
+                const runLink = `/orders/${orderKey}/runs/${item.id}`;
+                return (
                 <Table.Tr
                   key={item.id}
                   style={{ cursor: "pointer" }}
-                  onClick={() =>
-                    navigate(`/orders/${orderKey}/runs/${item.id}`)
-                  }
                   data-testid={`order-run-row-${item.runNo}`}
                 >
                   <Table.Td>
-                    <Text size="sm" ff="monospace">
-                      {item.runNo}
-                    </Text>
+                    <Link to={runLink} style={cellLinkStyle}>
+                      <Text size="sm" ff="monospace">
+                        {item.runNo}
+                      </Text>
+                    </Link>
                   </Table.Td>
                   <Table.Td>
-                    <Badge
-                      color={STATUS_COLORS[item.status] ?? "gray"}
-                      variant="light"
-                    >
-                      {item.status}
-                    </Badge>
+                    <Link to={runLink} style={cellLinkStyle}>
+                      <Badge
+                        color={STATUS_COLORS[item.status] ?? "gray"}
+                        variant="light"
+                      >
+                        {item.status}
+                      </Badge>
+                    </Link>
                   </Table.Td>
                   <Table.Td>
-                    <Badge
-                      color={PRIORITY_COLORS[item.priority] ?? "gray"}
-                      variant="light"
-                    >
-                      {item.priority}
-                    </Badge>
-                  </Table.Td>
-                  <Table.Td>{item.assignedTo ?? "—"}</Table.Td>
-                  <Table.Td>
-                    {item.dueAt
-                      ? new Date(item.dueAt).toLocaleDateString()
-                      : "—"}
+                    <Link to={runLink} style={cellLinkStyle}>
+                      <Badge
+                        color={PRIORITY_COLORS[item.priority] ?? "gray"}
+                        variant="light"
+                      >
+                        {item.priority}
+                      </Badge>
+                    </Link>
                   </Table.Td>
                   <Table.Td>
-                    {new Date(item.createdAt).toLocaleDateString()}
+                    <Link to={runLink} style={cellLinkStyle}>
+                      {item.assignedTo ?? "—"}
+                    </Link>
+                  </Table.Td>
+                  <Table.Td>
+                    <Link to={runLink} style={cellLinkStyle}>
+                      {item.dueAt
+                        ? new Date(item.dueAt).toLocaleDateString()
+                        : "—"}
+                    </Link>
+                  </Table.Td>
+                  <Table.Td>
+                    <Link to={runLink} style={cellLinkStyle}>
+                      {new Date(item.createdAt).toLocaleDateString()}
+                    </Link>
                   </Table.Td>
                 </Table.Tr>
-              ))}
+                );
+              })}
             </Table.Tbody>
           </Table>
           {totalPages > 1 && (

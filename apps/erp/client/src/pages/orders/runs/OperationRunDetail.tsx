@@ -1,17 +1,21 @@
 import {
+  ActionIcon,
   Badge,
   Button,
   Card,
+  Container,
   Group,
   Loader,
   Stack,
   Text,
-  Title,
 } from "@mantine/core";
+import { IconArrowBackUp } from "@tabler/icons-react";
 import type { OperationRun } from "@naisys-erp/shared";
+import { OperationRunStatus } from "@naisys-erp/shared";
 import { useCallback, useEffect, useState } from "react";
-import { useParams } from "react-router";
+import { useOutletContext, useParams } from "react-router";
 
+import { CompactMarkdown } from "../../../components/CompactMarkdown";
 import { MetadataTooltip } from "../../../components/MetadataTooltip";
 import { api, apiEndpoints, showErrorNotification } from "../../../lib/api";
 import { hasAction } from "../../../lib/hateoas";
@@ -25,6 +29,10 @@ const STATUS_COLORS: Record<string, string> = {
   failed: "red",
 };
 
+export interface OrderRunOutletContext {
+  onOperationUpdate: () => void;
+}
+
 export const OperationRunDetail: React.FC = () => {
   const {
     orderKey,
@@ -35,8 +43,10 @@ export const OperationRunDetail: React.FC = () => {
     id: string;
     opRunId: string;
   }>();
+  const { onOperationUpdate } = useOutletContext<OrderRunOutletContext>();
   const [item, setItem] = useState<OperationRun | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const fetchItem = useCallback(async () => {
     if (!orderKey || !runId || !opRunId) return;
@@ -58,7 +68,7 @@ export const OperationRunDetail: React.FC = () => {
   }, [fetchItem]);
 
   const handleAction = async (
-    action: "start" | "complete" | "skip" | "fail",
+    action: "start" | "complete" | "skip" | "fail" | "reopen",
   ) => {
     if (!orderKey || !runId || !opRunId) return;
     const endpointMap = {
@@ -66,10 +76,16 @@ export const OperationRunDetail: React.FC = () => {
       complete: apiEndpoints.operationRunComplete,
       skip: apiEndpoints.operationRunSkip,
       fail: apiEndpoints.operationRunFail,
+      reopen: apiEndpoints.operationRunReopen,
     };
     try {
-      await api.post(endpointMap[action](orderKey, runId, opRunId), {});
-      await fetchItem();
+      const updated = await api.post<OperationRun>(
+        endpointMap[action](orderKey, runId, opRunId),
+        {},
+      );
+      setItem(updated);
+      setRefreshKey((k) => k + 1);
+      onOperationUpdate();
     } catch (err) {
       showErrorNotification(err);
     }
@@ -92,12 +108,13 @@ export const OperationRunDetail: React.FC = () => {
   }
 
   return (
-    <Stack p="md" gap="md">
+    <Container size="md" py="xl">
+      <Stack gap="md">
       <Group justify="space-between">
         <Group gap="xs">
-          <Title order={4}>
-            {item.seqNo}. {item.title}
-          </Title>
+          <Text fw={600}>
+            OPERATION {item.seqNo}. {item.title}
+          </Text>
           <MetadataTooltip
             createdBy={item.createdBy}
             createdAt={item.createdAt}
@@ -131,6 +148,31 @@ export const OperationRunDetail: React.FC = () => {
               Complete
             </Button>
           )}
+          {hasAction(item._actions, "reopen") && (() => {
+            const labelMap: Record<string, { label: string; color: string }> = {
+              [OperationRunStatus.completed]: { label: "Completed", color: "green" },
+              [OperationRunStatus.skipped]: { label: "Skipped", color: "gray" },
+              [OperationRunStatus.failed]: { label: "Failed", color: "red" },
+            };
+            const { label, color } = labelMap[item.status] ?? { label: item.status, color: "gray" };
+            return (
+              <Group gap="xs" align="center">
+                <Text size="xs" c={color}>
+                  {label} by {item.updatedBy} on{" "}
+                  {new Date(item.updatedAt).toLocaleString()}
+                </Text>
+                <ActionIcon
+                  size="xs"
+                  variant="subtle"
+                  color="gray"
+                  onClick={() => handleAction("reopen")}
+                  title={`Undo ${label.toLowerCase()}`}
+                >
+                  <IconArrowBackUp size={14} />
+                </ActionIcon>
+              </Group>
+            );
+          })()}
           {hasAction(item._actions, "skip") && (
             <Button
               size="xs"
@@ -156,20 +198,14 @@ export const OperationRunDetail: React.FC = () => {
 
       <Card withBorder p="lg">
         <Stack gap="sm">
-          <Group>
-            <Text fw={600} w={120}>
-              Seq #:
-            </Text>
-            <Text>{item.seqNo}</Text>
-          </Group>
-          <Group>
-            <Text fw={600} w={120}>
-              Status:
-            </Text>
-            <Badge color={STATUS_COLORS[item.status] ?? "gray"} variant="light">
-              {item.status}
-            </Badge>
-          </Group>
+          {item.description && (
+            <Group align="flex-start">
+              <Text fw={600} w={120}>
+                Description:
+              </Text>
+              <CompactMarkdown>{item.description}</CompactMarkdown>
+            </Group>
+          )}
           {item.completedAt && (
             <Group>
               <Text fw={600} w={120}>
@@ -189,7 +225,8 @@ export const OperationRunDetail: React.FC = () => {
         </Stack>
       </Card>
 
-      <StepRunList orderKey={orderKey!} runId={runId!} opRunId={opRunId!} />
-    </Stack>
+      <StepRunList orderKey={orderKey!} runId={runId!} opRunId={opRunId!} refreshKey={refreshKey} />
+      </Stack>
+    </Container>
   );
 };
