@@ -39,6 +39,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ supervisorAuth }) => {
 
   const handleLogout = async () => {
     await logout();
+    window.location.reload();
   };
 
   return (

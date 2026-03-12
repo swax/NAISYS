@@ -1,6 +1,7 @@
 import type { HubStatusEvent } from "@naisys-supervisor/shared";
 import { useCallback, useEffect, useState } from "react";
 
+import { useSession } from "../contexts/SessionContext";
 import { getSocket } from "./useSocket";
 import { useSubscription } from "./useSubscription";
 
@@ -10,6 +11,7 @@ export type ConnectionState = "connected" | "degraded" | "disconnected";
 let hubConnectedCache: boolean | null = null;
 
 export function useConnectionStatus() {
+  const { isAuthenticated } = useSession();
   const [serverReachable, setServerReachable] = useState(
     () => getSocket().connected,
   );
@@ -42,7 +44,10 @@ export function useConnectionStatus() {
   let status: ConnectionState;
   let label: string;
 
-  if (!serverReachable) {
+  if (!serverReachable && !isAuthenticated) {
+    status = "disconnected";
+    label = "Sign in for live updates";
+  } else if (!serverReachable) {
     status = "disconnected";
     label = "Server unreachable";
   } else if (hubConnectedCache === false) {

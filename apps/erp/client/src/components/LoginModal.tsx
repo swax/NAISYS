@@ -33,8 +33,7 @@ export const LoginModal: React.FC<Props> = ({ opened, onClose }) => {
     setSubmitting(true);
     try {
       await login(values.username, values.password);
-      form.reset();
-      onClose();
+      window.location.reload();
     } catch (err) {
       showErrorNotification(err);
     } finally {

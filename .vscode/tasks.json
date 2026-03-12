@@ -2,19 +2,15 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "Compile NAISYS",
-      "type": "shell",
-      "command": "npx",
-      "args": ["tsc"],
+      "type": "npm",
+      "script": "build",
       "group": {
         "kind": "build",
         "isDefault": true
       },
       "problemMatcher": "$tsc",
-      "presentation": {
-        "reveal": "silent",
-        "panel": "dedicated"
-      }
+      "label": "Build All",
+      "detail": "Build all projects with Turbo",
     }
   ]
 }

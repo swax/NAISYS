@@ -2,8 +2,10 @@ import type { HateoasAction, HateoasLink } from "@naisys/common";
 import {
   ChangePasswordSchema,
   CreateUserSchema,
+  ErpPermissionEnum,
   GrantPermissionSchema,
   UpdateUserSchema,
+  type ErpPermission,
 } from "@naisys-erp/shared";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
@@ -90,7 +92,7 @@ function userActions(
 
 function permissionActions(
   username: string,
-  permission: string,
+  permission: ErpPermission,
   isSelf: boolean,
   isAdmin: boolean,
 ): HateoasAction[] {
@@ -114,7 +116,7 @@ function permissionActions(
 function formatUser(
   user: Awaited<ReturnType<typeof userService.getUserById>>,
   currentUserId: number,
-  currentUserPermissions: string[],
+  currentUserPermissions: ErpPermission[],
   options?: { apiKey?: string | null },
 ) {
   if (!user) return null;
@@ -465,7 +467,7 @@ export default function userRoutes(fastify: FastifyInstance) {
         tags: ["Users"],
         params: z.object({
           username: z.string(),
-          permission: z.string(),
+          permission: ErpPermissionEnum,
         }),
       },
     },

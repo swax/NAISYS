@@ -2,6 +2,7 @@ import { AuthCache } from "@naisys/common";
 import { hashToken,SESSION_COOKIE_NAME } from "@naisys/common-node";
 import { findAgentByApiKey } from "@naisys/hub-database";
 import { findSession, findUserByApiKey } from "@naisys/supervisor-database";
+import type { Permission } from "@naisys/supervisor-database";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 
 import {
@@ -14,7 +15,7 @@ export interface SupervisorUser {
   id: number;
   username: string;
   uuid: string;
-  permissions: string[];
+  permissions: Permission[];
 }
 
 declare module "fastify" {
@@ -142,7 +143,7 @@ export function registerAuthMiddleware(fastify: FastifyInstance) {
 
 export function hasPermission(
   user: SupervisorUser | undefined,
-  permission: string,
+  permission: Permission,
 ): boolean {
   return (
     (user?.permissions.includes(permission) ||
@@ -151,7 +152,7 @@ export function hasPermission(
   );
 }
 
-export function requirePermission(permission: string) {
+export function requirePermission(permission: Permission) {
   return async (request: FastifyRequest, reply: FastifyReply) => {
     if (!request.supervisorUser) {
       reply.status(401).send({

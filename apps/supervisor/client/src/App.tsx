@@ -46,8 +46,10 @@ import { UserDetail } from "./pages/users/UserDetail";
 import { UserList } from "./pages/users/UserList";
 import { VariablesPage } from "./pages/variables/VariablesPage";
 
+import type { Permission } from "@naisys-supervisor/shared";
+
 export interface AppOutletContext {
-  permissions: string[];
+  permissions: Permission[];
 }
 
 const AppContent: React.FC = () => {
@@ -55,7 +57,7 @@ const AppContent: React.FC = () => {
   const [loginOpen, { open: openLogin, close: closeLogin }] = useDisclosure();
   const [plugins, setPlugins] = React.useState<string[]>([]);
   const [publicRead, setPublicRead] = React.useState(false);
-  const [permissions, setPermissions] = React.useState<string[]>([]);
+  const [permissions, setPermissions] = React.useState<Permission[]>([]);
   const [clientConfigLoaded, setClientConfigLoaded] = React.useState(false);
   const { isAuthenticated, isCheckingSession } = useSession();
 

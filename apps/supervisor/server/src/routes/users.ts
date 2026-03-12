@@ -5,6 +5,7 @@ import {
   CreateAgentUserSchema,
   CreateUserSchema,
   GrantPermissionSchema,
+  PermissionEnum,
   UpdateUserSchema,
 } from "@naisys-supervisor/shared";
 import {
@@ -110,7 +111,7 @@ function userActions(
 
 function permissionActions(
   username: string,
-  permission: string,
+  permission: Permission,
   isSelf: boolean,
   isAdmin: boolean,
 ): HateoasAction[] {
@@ -134,7 +135,7 @@ function permissionActions(
 function formatUser(
   user: Awaited<ReturnType<typeof userService.getUserById>>,
   currentUserId: number,
-  currentUserPermissions: string[],
+  currentUserPermissions: Permission[],
   options?: { agentUsername?: string | null; apiKey?: string | null },
 ) {
   if (!user) return null;
@@ -531,7 +532,7 @@ export default function userRoutes(
       try {
         await userService.grantPermission(
           targetUser.id,
-          request.body.permission as Permission,
+          request.body.permission,
           request.supervisorUser!.id,
         );
         authCache.clear();
@@ -564,7 +565,7 @@ export default function userRoutes(
         tags: ["Users"],
         params: z.object({
           username: z.string(),
-          permission: z.string(),
+          permission: PermissionEnum,
         }),
         security: [{ cookieAuth: [] }],
       },
@@ -593,7 +594,7 @@ export default function userRoutes(
 
       await userService.revokePermission(
         targetUser.id,
-        permission as Permission,
+        permission,
       );
       authCache.clear();
       const user = await userService.getUserById(targetUser.id);

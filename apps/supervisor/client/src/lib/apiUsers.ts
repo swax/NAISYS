@@ -1,3 +1,5 @@
+import type { Permission } from "@naisys-supervisor/shared";
+
 import { api } from "./apiClient";
 
 export const getUsers = async (params: {
@@ -37,14 +39,14 @@ export const deleteUser = async (username: string): Promise<any> => {
 
 export const grantPermission = async (
   username: string,
-  permission: string,
+  permission: Permission,
 ): Promise<any> => {
   return api.post(`/users/${username}/permissions`, { permission });
 };
 
 export const revokePermission = async (
   username: string,
-  permission: string,
+  permission: Permission,
 ): Promise<any> => {
   return api.delete(`/users/${username}/permissions/${permission}`);
 };

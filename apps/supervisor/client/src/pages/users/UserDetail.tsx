@@ -15,6 +15,7 @@ import {
 } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import { hasAction } from "@naisys/common";
+import type { Permission } from "@naisys-supervisor/shared";
 import { useCallback, useEffect, useState } from "react";
 import {
   Link,
@@ -46,7 +47,7 @@ export const UserDetail: React.FC = () => {
   const [editUsername, setEditUsername] = useState("");
   const [saving, setSaving] = useState(false);
   const [editError, setEditError] = useState("");
-  const [grantPerm, setGrantPerm] = useState<string | null>(null);
+  const [grantPerm, setGrantPerm] = useState<Permission | null>(null);
   const [apiKey, setApiKey] = useState<string | null>(null);
   const [rotating, setRotating] = useState(false);
   const [pwOpened, { open: openPw, close: closePw }] = useDisclosure();
@@ -145,7 +146,7 @@ export const UserDetail: React.FC = () => {
     }
   };
 
-  const handleRevokePermission = async (permission: string) => {
+  const handleRevokePermission = async (permission: Permission) => {
     if (!routeUsername) return;
     try {
       await revokePermission(routeUsername, permission);
@@ -359,7 +360,7 @@ export const UserDetail: React.FC = () => {
                 label: p,
               }))}
               value={grantPerm}
-              onChange={setGrantPerm}
+              onChange={(v) => setGrantPerm(v as Permission | null)}
             />
             <Button onClick={handleGrantPermission} disabled={!grantPerm}>
               Grant

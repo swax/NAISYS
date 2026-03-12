@@ -4,6 +4,7 @@ import {
   rotateAgentApiKeyByUuid,
 } from "@naisys/hub-database";
 import { ensureSuperAdmin } from "@naisys/supervisor-database";
+import type { ErpPermission } from "@naisys-erp/shared";
 import bcrypt from "bcrypt";
 import { randomBytes, randomUUID } from "crypto";
 import readline from "readline/promises";
@@ -223,7 +224,7 @@ export async function deleteUser(id: number) {
 
 export async function grantPermission(
   userId: number,
-  permission: string,
+  permission: ErpPermission,
   grantedBy: number,
 ) {
   return erpDb.userPermission.create({
@@ -231,7 +232,7 @@ export async function grantPermission(
   });
 }
 
-export async function revokePermission(userId: number, permission: string) {
+export async function revokePermission(userId: number, permission: ErpPermission) {
   return erpDb.userPermission.deleteMany({
     where: { userId, permission },
   });

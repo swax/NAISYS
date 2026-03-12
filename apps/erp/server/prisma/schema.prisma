@@ -241,10 +241,17 @@ model User {
   @@map("users")
 }
 
+enum ErpPermission {
+  erp_admin
+  manage_orders
+  manage_runs
+  view_all
+}
+
 model UserPermission {
-  id         Int      @id @default(autoincrement())
-  userId     Int      @map("user_id")
-  permission String
+  id         Int           @id @default(autoincrement())
+  userId     Int           @map("user_id")
+  permission ErpPermission
   grantedAt  DateTime @default(now()) @map("granted_at")
   grantedBy  Int?     @map("granted_by")
 

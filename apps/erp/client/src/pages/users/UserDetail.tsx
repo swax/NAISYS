@@ -18,7 +18,7 @@ import {
 } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import { notifications } from "@mantine/notifications";
-import { ErpPermissionEnum, type User } from "@naisys-erp/shared";
+import { ErpPermissionEnum, type ErpPermission, type User } from "@naisys-erp/shared";
 import {
   IconAlertTriangle,
   IconCopy,
@@ -43,7 +43,7 @@ export const UserDetail: React.FC = () => {
   const [editUsername, setEditUsername] = useState("");
   const [saving, setSaving] = useState(false);
   const [editError, setEditError] = useState("");
-  const [grantPerm, setGrantPerm] = useState<string | null>(null);
+  const [grantPerm, setGrantPerm] = useState<ErpPermission | null>(null);
   const [rotating, setRotating] = useState(false);
   const [pwOpened, { open: openPw, close: closePw }] = useDisclosure();
   const [newPassword, setNewPassword] = useState("");
@@ -131,7 +131,7 @@ export const UserDetail: React.FC = () => {
     }
   };
 
-  const handleRevokePermission = async (permission: string) => {
+  const handleRevokePermission = async (permission: ErpPermission) => {
     if (!routeUsername) return;
     try {
       await api.delete(apiEndpoints.userPermission(routeUsername, permission));
@@ -386,7 +386,7 @@ export const UserDetail: React.FC = () => {
                 label: p,
               }))}
               value={grantPerm}
-              onChange={setGrantPerm}
+              onChange={(v) => setGrantPerm(v as ErpPermission | null)}
             />
             <Button onClick={handleGrantPermission} disabled={!grantPerm}>
               Grant

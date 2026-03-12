@@ -14,6 +14,7 @@
     "start:reset-password": "node dist/supervisorServer.js --reset-password",
     "build": "tsc",
     "bundle": "npx shx rm -rf client-dist && npx shx cp -r ../client/dist client-dist",
+    "test": "tsx --test src/tests/*.test.ts",
     "type-check": "tsc --noEmit",
     "npm:publish:dryrun": "npm run clean && npm run build && npm publish --dry-run"
   },
