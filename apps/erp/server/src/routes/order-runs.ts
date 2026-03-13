@@ -137,6 +137,7 @@ export function formatItem(
     orderId: item.orderId,
     orderKey,
     revNo: item.orderRev.revNo,
+    itemKey: item.order?.item?.key ?? null,
     status: item.status,
     priority: item.priority,
     scheduledStartAt: formatDate(item.scheduledStartAt),

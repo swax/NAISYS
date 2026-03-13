@@ -18,6 +18,7 @@ import { useAuth } from "../lib/AuthContext";
 import { LoginModal } from "./LoginModal";
 
 const navLinks = [
+  { label: "Items", path: "/items" },
   { label: "Orders", path: "/orders" },
   { label: "Dispatch", path: "/dispatch" },
   { label: "Users", path: "/users" },

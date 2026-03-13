@@ -14,6 +14,7 @@ export const OrderRevisionSchema = z.object({
   status: RevisionStatusEnum,
   description: z.string(),
   changeSummary: z.string().nullable(),
+  itemKey: z.string().nullable(),
   createdAt: z.iso.datetime(),
   createdBy: z.string(),
   updatedAt: z.iso.datetime(),

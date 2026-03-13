@@ -3,6 +3,7 @@ export * from "./audit-types.js";
 export * from "./auth-types.js";
 export * from "./error-types.js";
 export * from "./hateoas-types.js";
+export * from "./item-types.js";
 export * from "./operation-run-types.js";
 export * from "./operation-types.js";
 export * from "./order-revision-types.js";

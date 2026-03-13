@@ -12,7 +12,7 @@ import { useForm } from "@mantine/form";
 import type { OrderRevision, UpdateOrderRevision } from "@naisys-erp/shared";
 import { UpdateOrderRevisionSchema } from "@naisys-erp/shared";
 import { useCallback, useEffect, useState } from "react";
-import { useParams } from "react-router";
+import { Link, useParams } from "react-router";
 
 import { CompactMarkdown } from "../../../components/CompactMarkdown";
 import { MetadataTooltip } from "../../../components/MetadataTooltip";
@@ -152,6 +152,24 @@ export const HeaderDetail: React.FC = () => {
             </form>
           ) : (
             <Stack gap="md">
+              <div>
+                <Text size="sm" fw={500} mb={4}>
+                  Produces Item
+                </Text>
+                {item.itemKey ? (
+                  <Text
+                    component={Link}
+                    to={`/items/${item.itemKey}`}
+                    size="sm"
+                    c="blue"
+                    style={{ textDecoration: "none" }}
+                  >
+                    {item.itemKey}
+                  </Text>
+                ) : (
+                  <Text c="dimmed">None</Text>
+                )}
+              </div>
               <div>
                 <Text size="sm" fw={500} mb={4}>
                   Description

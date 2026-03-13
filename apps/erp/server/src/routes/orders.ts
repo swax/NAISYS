@@ -29,7 +29,8 @@ import {
   deleteOrder,
   findExisting,
   listOrders,
-  type OrderWithUsers,
+  type OrderWithRelations,
+  resolveItemKey,
   updateOrder,
 } from "../services/order-service.js";
 
@@ -108,12 +109,13 @@ const KeyParamsSchema = z.object({
   key: z.string(),
 });
 
-function formatItem(item: OrderWithUsers, user: ErpUser | undefined) {
+function formatItem(item: OrderWithRelations, user: ErpUser | undefined) {
   return {
     id: item.id,
     key: item.key,
     description: item.description,
     status: item.status,
+    itemKey: item.item?.key ?? null,
     ...formatAuditFields(item),
     _links: [
       ...itemLinks(RESOURCE, item.key, "Order"),
@@ -123,7 +125,7 @@ function formatItem(item: OrderWithUsers, user: ErpUser | undefined) {
   };
 }
 
-function formatListItem(item: OrderWithUsers, user: ErpUser | undefined) {
+function formatListItem(item: OrderWithRelations, user: ErpUser | undefined) {
   const { _actions, ...rest } = formatItem(item, user);
   return {
     ...rest,
@@ -190,16 +192,26 @@ export default function orderRoutes(fastify: FastifyInstance) {
       body: CreateOrderSchema,
       response: {
         201: OrderSchema,
+        404: ErrorResponseSchema,
       },
     },
     handler: async (request, reply) => {
-      const { key, description } = request.body;
+      const { key, description, itemKey } = request.body;
       const userId = request.erpUser!.id;
 
-      const item = await createOrder(key, description, userId);
+      let itemId: number | null = null;
+      if (itemKey) {
+        try {
+          itemId = await resolveItemKey(itemKey);
+        } catch {
+          return notFound(reply, `Item '${itemKey}' not found`);
+        }
+      }
+
+      const order = await createOrder(key, description, itemId, userId);
 
       reply.status(201);
-      return formatItem(item, request.erpUser);
+      return formatItem(order, request.erpUser);
     },
   });
 
@@ -240,7 +252,7 @@ export default function orderRoutes(fastify: FastifyInstance) {
     },
     handler: async (request, reply) => {
       const { key } = request.params;
-      const data = request.body;
+      const { itemKey, ...rest } = request.body;
       const userId = request.erpUser!.id;
 
       const existing = await findExisting(key);
@@ -248,9 +260,22 @@ export default function orderRoutes(fastify: FastifyInstance) {
         return notFound(reply, `Order '${key}' not found`);
       }
 
-      const item = await updateOrder(key, data, userId);
+      const dbData: Record<string, unknown> = { ...rest };
+      if (itemKey !== undefined) {
+        if (itemKey === null) {
+          dbData.itemId = null;
+        } else {
+          try {
+            dbData.itemId = await resolveItemKey(itemKey);
+          } catch {
+            return notFound(reply, `Item '${itemKey}' not found`);
+          }
+        }
+      }
 
-      return formatItem(item, request.erpUser);
+      const order = await updateOrder(key, dbData, userId);
+
+      return formatItem(order, request.erpUser);
     },
   });
 

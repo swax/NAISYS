@@ -71,6 +71,8 @@ export const api = {
 
 export const apiEndpoints = {
   dispatch: "dispatch",
+  items: "items",
+  item: (key: string) => `items/${key}`,
   orders: "orders",
   order: (key: string) => `orders/${key}`,
   orderRevs: (key: string) => `orders/${key}/revs`,

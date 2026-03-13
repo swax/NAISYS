@@ -23,6 +23,7 @@ function formatDispatchItem(
     orderId: item.orderId,
     orderKey,
     revNo: item.orderRev.revNo,
+    itemKey: item.order?.item?.key ?? null,
     status: item.status,
     priority: item.priority,
     scheduledStartAt: formatDate(item.scheduledStartAt),
@@ -66,7 +67,7 @@ export default function dispatchRoutes(fastify: FastifyInstance) {
           where,
           include: {
             ...includeRev,
-            order: { select: { key: true } },
+            order: { select: { key: true, item: { select: { key: true } } } },
           },
           skip: (page - 1) * pageSize,
           take: pageSize,

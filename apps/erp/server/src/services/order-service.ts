@@ -4,7 +4,13 @@ import { includeUsers, type WithAuditUsers } from "../route-helpers.js";
 
 // --- Prisma include & result type ---
 
-export type OrderWithUsers = OrderModel & WithAuditUsers;
+const includeOrderRelations = {
+  ...includeUsers,
+  item: { select: { key: true } },
+} as const;
+
+export type OrderWithRelations = OrderModel &
+  WithAuditUsers & { item: { key: string } | null };
 
 // --- Lookups ---
 
@@ -12,11 +18,11 @@ export async function listOrders(
   where: Record<string, unknown>,
   page: number,
   pageSize: number,
-): Promise<[OrderWithUsers[], number]> {
+): Promise<[OrderWithRelations[], number]> {
   return Promise.all([
     erpDb.order.findMany({
       where,
-      include: includeUsers,
+      include: includeOrderRelations,
       skip: (page - 1) * pageSize,
       take: pageSize,
       orderBy: { createdAt: "desc" },
@@ -27,10 +33,10 @@ export async function listOrders(
 
 export async function findExisting(
   key: string,
-): Promise<OrderWithUsers | null> {
+): Promise<OrderWithRelations | null> {
   return erpDb.order.findUnique({
     where: { key },
-    include: includeUsers,
+    include: includeOrderRelations,
   });
 }
 
@@ -45,19 +51,33 @@ export async function checkHasRevisions(orderId: number): Promise<boolean> {
 
 // --- Mutations ---
 
+export async function resolveItemKey(
+  itemKey: string | undefined | null,
+): Promise<number | null> {
+  if (!itemKey) return null;
+  const item = await erpDb.item.findUnique({
+    where: { key: itemKey },
+    select: { id: true },
+  });
+  if (!item) throw new Error(`Item '${itemKey}' not found`);
+  return item.id;
+}
+
 export async function createOrder(
   key: string,
   description: string | undefined,
+  itemId: number | null,
   userId: number,
-): Promise<OrderWithUsers> {
+): Promise<OrderWithRelations> {
   return erpDb.order.create({
     data: {
       key,
       description,
+      itemId,
       createdById: userId,
       updatedById: userId,
     },
-    include: includeUsers,
+    include: includeOrderRelations,
   });
 }
 
@@ -65,11 +85,11 @@ export async function updateOrder(
   key: string,
   data: Record<string, unknown>,
   userId: number,
-): Promise<OrderWithUsers> {
+): Promise<OrderWithRelations> {
   return erpDb.order.update({
     where: { key },
     data: { ...data, updatedById: userId },
-    include: includeUsers,
+    include: includeOrderRelations,
   });
 }
 

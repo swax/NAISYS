@@ -2,17 +2,11 @@ import { z } from "zod/v4";
 
 import { HateoasActionSchema, HateoasLinkSchema } from "./hateoas-types.js";
 
-export const OrderStatusEnum = z.enum(["active", "archived"]);
-export type OrderStatus = z.infer<typeof OrderStatusEnum>;
-export const OrderStatus = OrderStatusEnum.enum;
-
-// Full order response shape
-export const OrderSchema = z.object({
+// Full item response shape
+export const ItemSchema = z.object({
   id: z.number(),
   key: z.string(),
   description: z.string(),
-  status: OrderStatusEnum,
-  itemKey: z.string().nullable(),
   createdBy: z.string(),
   createdAt: z.iso.datetime(),
   updatedBy: z.string(),
@@ -21,10 +15,10 @@ export const OrderSchema = z.object({
   _actions: z.array(HateoasActionSchema).optional(),
 });
 
-export type Order = z.infer<typeof OrderSchema>;
+export type Item = z.infer<typeof ItemSchema>;
 
-// Input for creating an order
-export const CreateOrderSchema = z
+// Input for creating an item
+export const CreateItemSchema = z
   .object({
     key: z
       .string()
@@ -35,14 +29,13 @@ export const CreateOrderSchema = z
         "Key must be alphanumeric with hyphens",
       ),
     description: z.string().max(2000).optional().default(""),
-    itemKey: z.string().max(100).optional(),
   })
   .strict();
 
-export type CreateOrder = z.infer<typeof CreateOrderSchema>;
+export type CreateItem = z.infer<typeof CreateItemSchema>;
 
-// Input for updating an order
-export const UpdateOrderSchema = z
+// Input for updating an item
+export const UpdateItemSchema = z
   .object({
     key: z
       .string()
@@ -54,26 +47,23 @@ export const UpdateOrderSchema = z
       )
       .optional(),
     description: z.string().max(2000).optional(),
-    status: OrderStatusEnum.optional(),
-    itemKey: z.string().max(100).nullable().optional(),
   })
   .strict();
 
-export type UpdateOrder = z.infer<typeof UpdateOrderSchema>;
+export type UpdateItem = z.infer<typeof UpdateItemSchema>;
 
-// Query params for listing orders
-export const OrderListQuerySchema = z.object({
+// Query params for listing items
+export const ItemListQuerySchema = z.object({
   page: z.coerce.number().int().min(1).optional().default(1),
   pageSize: z.coerce.number().int().min(1).max(100).optional().default(20),
-  status: z.enum(["active", "archived"]).optional(),
   search: z.string().optional(),
 });
 
-export type OrderListQuery = z.infer<typeof OrderListQuerySchema>;
+export type ItemListQuery = z.infer<typeof ItemListQuerySchema>;
 
 // List response
-export const OrderListResponseSchema = z.object({
-  items: z.array(OrderSchema),
+export const ItemListResponseSchema = z.object({
+  items: z.array(ItemSchema),
   total: z.number(),
   page: z.number(),
   pageSize: z.number(),
@@ -81,4 +71,4 @@ export const OrderListResponseSchema = z.object({
   _actions: z.array(HateoasActionSchema).optional(),
 });
 
-export type OrderListResponse = z.infer<typeof OrderListResponseSchema>;
+export type ItemListResponse = z.infer<typeof ItemListResponseSchema>;
