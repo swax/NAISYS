@@ -1,4 +1,4 @@
-import type { HateoasAction } from "@naisys/common";
+import type { HateoasAction, HateoasLink } from "@naisys/common";
 import {
   ErrorResponseSchema,
   OperationRunListResponseSchema,
@@ -11,7 +11,7 @@ import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod/v4";
 
 import type { ErpUser } from "../auth-middleware.js";
-import { hasPermission } from "../auth-middleware.js";
+import { hasPermission, requirePermission } from "../auth-middleware.js";
 import { conflict, notFound } from "../error-handler.js";
 import { API_PREFIX, selfLink } from "../hateoas.js";
 import {
@@ -41,65 +41,76 @@ function opRunItemActions(
   status: string,
   user: ErpUser | undefined,
 ): HateoasAction[] {
-  if (!hasPermission(user, "manage_runs")) return [];
   const href = `${API_PREFIX}/${opRunResource(orderKey, runId)}/${id}`;
   const actions: HateoasAction[] = [];
+  const isExecutor = hasPermission(user, "order_executor");
+  const isManager = hasPermission(user, "order_manager");
 
   if (status === OperationRunStatus.pending) {
-    actions.push(
-      {
-        rel: "update",
-        href,
-        method: "PUT",
-        title: "Update",
-        schema: `${API_PREFIX}/schemas/UpdateOperationRun`,
-      },
-      {
-        rel: "start",
-        href: `${href}/start`,
-        method: "POST",
-        title: "Start",
-      },
-      {
+    if (isExecutor) {
+      actions.push(
+        {
+          rel: "update",
+          href,
+          method: "PUT",
+          title: "Update",
+          schema: `${API_PREFIX}/schemas/UpdateOperationRun`,
+        },
+        {
+          rel: "start",
+          href: `${href}/start`,
+          method: "POST",
+          title: "Start",
+        },
+      );
+    }
+    if (isManager) {
+      actions.push({
         rel: "skip",
         href: `${href}/skip`,
         method: "POST",
         title: "Skip",
-      },
-    );
+      });
+    }
   } else if (status === OperationRunStatus.in_progress) {
-    actions.push(
-      {
-        rel: "update",
-        href,
-        method: "PUT",
-        title: "Update",
-        schema: `${API_PREFIX}/schemas/UpdateOperationRun`,
-      },
-      {
-        rel: "complete",
-        href: `${href}/complete`,
-        method: "POST",
-        title: "Complete",
-      },
-      {
+    if (isExecutor) {
+      actions.push(
+        {
+          rel: "update",
+          href,
+          method: "PUT",
+          title: "Update",
+          schema: `${API_PREFIX}/schemas/UpdateOperationRun`,
+        },
+        {
+          rel: "complete",
+          href: `${href}/complete`,
+          method: "POST",
+          title: "Complete",
+        },
+      );
+    }
+    if (isManager) {
+      actions.push({
         rel: "fail",
         href: `${href}/fail`,
         method: "POST",
         title: "Fail",
-      },
-    );
+      });
+    }
   } else if (
     status === OperationRunStatus.completed ||
     status === OperationRunStatus.skipped ||
     status === OperationRunStatus.failed
   ) {
-    actions.push({
-      rel: "reopen",
-      href: `${href}/reopen`,
-      method: "POST",
-      title: "Reopen",
-    });
+    if (isManager) {
+      actions.push({
+        rel: "reopen",
+        href: `${href}/reopen`,
+        method: "POST",
+        title: "Reopen",
+      });
+    }
   }
 
   return actions;
@@ -133,15 +144,22 @@ export function formatOpRun(
     completedAt: formatDate(opRun.completedAt),
     feedback: opRun.feedback,
     ...formatAuditFields(opRun),
-    _links: childItemLinks(
-      "/" + opRunResource(orderKey, runId),
-      opRun.id,
-      "Operation Runs",
-      "/orders/" + orderKey + "/runs/" + runId,
-      "Order Run",
-      "OperationRun",
-      "run",
-    ),
+    _links: [
+      ...childItemLinks(
+        "/" + opRunResource(orderKey, runId),
+        opRun.id,
+        "Operation Runs",
+        "/orders/" + orderKey + "/runs/" + runId,
+        "Order Run",
+        "OperationRun",
+        "run",
+      ),
+      {
+        rel: "steps",
+        href: `${API_PREFIX}/${opRunResource(orderKey, runId)}/${opRun.id}/steps`,
+        title: "Step Runs",
+      } as HateoasLink,
+    ],
     _actions: opRunItemActions(orderKey, runId, opRun.id, opRun.status, user),
   };
 }
@@ -233,6 +251,7 @@ export default function operationRunRoutes(fastify: FastifyInstance) {
         409: ErrorResponseSchema,
       },
     },
+    preHandler: requirePermission("order_executor"),
     handler: async (request, reply) => {
       const { orderKey, runId, id } = request.params;
       const userId = request.erpUser!.id;

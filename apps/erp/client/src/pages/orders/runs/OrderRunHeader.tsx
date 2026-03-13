@@ -160,8 +160,11 @@ export const OrderRunHeader: React.FC<Props> = ({
               size="xs"
               c={orderRun.status === OrderRunStatus.closed ? "green" : "orange"}
             >
-              {orderRun.status === OrderRunStatus.closed ? "Closed" : "Cancelled"}{" "}
-              by {orderRun.updatedBy} on {new Date(orderRun.updatedAt).toLocaleString()}
+              {orderRun.status === OrderRunStatus.closed
+                ? "Closed"
+                : "Cancelled"}{" "}
+              by {orderRun.updatedBy} on{" "}
+              {new Date(orderRun.updatedAt).toLocaleString()}
             </Text>
             <ActionIcon
               size="xs"

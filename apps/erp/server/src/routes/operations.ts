@@ -1,3 +1,4 @@
+import type { HateoasLink } from "@naisys/common";
 import {
   CreateOperationSchema,
   ErrorResponseSchema,
@@ -11,7 +12,7 @@ import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod/v4";
 
 import type { ErpUser } from "../auth-middleware.js";
-import { hasPermission } from "../auth-middleware.js";
+import { hasPermission, requirePermission } from "../auth-middleware.js";
 import { conflict, notFound } from "../error-handler.js";
 import type { OperationModel } from "../generated/prisma/models/Operation.js";
 import { API_PREFIX, selfLink } from "../hateoas.js";
@@ -62,14 +63,21 @@ function formatOperation(
     title: operation.title,
     description: operation.description,
     ...formatAuditFields(operation),
-    _links: childItemLinks(
-      base,
-      operation.seqNo,
-      "Operations",
-      `/orders/${orderKey}/revs/${revNo}`,
-      "Revision",
-      "Operation",
-    ),
+    _links: [
+      ...childItemLinks(
+        base,
+        operation.seqNo,
+        "Operations",
+        `/orders/${orderKey}/revs/${revNo}`,
+        "Revision",
+        "Operation",
+      ),
+      {
+        rel: "steps",
+        href: `${API_PREFIX}${base}/${operation.seqNo}/steps`,
+        title: "Steps",
+      } as HateoasLink,
+    ],
     _actions: draftCrudActions(
       `${API_PREFIX}${base}/${operation.seqNo}`,
       "UpdateOperation",
@@ -109,13 +117,19 @@ export default function operationRoutes(fastify: FastifyInstance) {
       const base = opBasePath(orderKey, revNo);
       return {
         items: items.map((operation) =>
-          formatOperation(orderKey, revNo, resolved.rev.status, user, operation),
+          formatOperation(
+            orderKey,
+            revNo,
+            resolved.rev.status,
+            user,
+            operation,
+          ),
         ),
         total: items.length,
         nextSeqNo: calcNextSeqNo(maxSeq),
         _links: [selfLink(base)],
         _actions:
-          hasPermission(user, "manage_orders") &&
+          hasPermission(user, "order_planner") &&
           resolved.rev.status === RevisionStatus.draft
             ? [
                 {
@@ -144,6 +158,7 @@ export default function operationRoutes(fastify: FastifyInstance) {
         409: ErrorResponseSchema,
       },
     },
+    preHandler: requirePermission("order_planner"),
     handler: async (request, reply) => {
       const { orderKey, revNo } = request.params;
       const { seqNo: requestedSeqNo, title, description } = request.body;
@@ -227,6 +242,7 @@ export default function operationRoutes(fastify: FastifyInstance) {
         409: ErrorResponseSchema,
       },
     },
+    preHandler: requirePermission("order_planner"),
     handler: async (request, reply) => {
       const { orderKey, revNo, seqNo } = request.params;
       const { title, description, seqNo: newSeqNo } = request.body;
@@ -277,6 +293,7 @@ export default function operationRoutes(fastify: FastifyInstance) {
         409: ErrorResponseSchema,
       },
     },
+    preHandler: requirePermission("order_planner"),
     handler: async (request, reply) => {
       const { orderKey, revNo, seqNo } = request.params;
 

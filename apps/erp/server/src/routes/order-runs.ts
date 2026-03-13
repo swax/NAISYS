@@ -1,4 +1,4 @@
-import type { HateoasAction } from "@naisys/common";
+import type { HateoasAction, HateoasLink } from "@naisys/common";
 import {
   CreateOrderRunSchema,
   ErrorResponseSchema,
@@ -13,7 +13,7 @@ import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod/v4";
 
 import type { ErpUser } from "../auth-middleware.js";
-import { hasPermission } from "../auth-middleware.js";
+import { hasPermission, requirePermission } from "../auth-middleware.js";
 import { conflict, notFound } from "../error-handler.js";
 import { API_PREFIX, paginationLinks, selfLink } from "../hateoas.js";
 import {
@@ -44,74 +44,83 @@ function orderRunItemActions(
   status: string,
   user: ErpUser | undefined,
 ): HateoasAction[] {
-  if (!hasPermission(user, "manage_runs")) return [];
   const href = `${API_PREFIX}/${runResource(orderKey)}/${id}`;
   const actions: HateoasAction[] = [];
+  const isExecutor = hasPermission(user, "order_executor");
+  const isManager = hasPermission(user, "order_manager");
 
   if (status === OrderRunStatus.released) {
-    actions.push(
-      {
-        rel: "update",
-        href,
-        method: "PUT",
-        title: "Update",
-        schema: `${API_PREFIX}/schemas/UpdateOrderRun`,
-      },
-      {
-        rel: "start",
-        href: `${href}/start`,
-        method: "POST",
-        title: "Start",
-      },
-      {
-        rel: "cancel",
-        href: `${href}/cancel`,
-        method: "POST",
-        title: "Cancel",
-      },
-      {
-        rel: "delete",
-        href,
-        method: "DELETE",
-        title: "Delete",
-      },
-    );
+    if (isExecutor) {
+      actions.push(
+        {
+          rel: "update",
+          href,
+          method: "PUT",
+          title: "Update",
+          schema: `${API_PREFIX}/schemas/UpdateOrderRun`,
+        },
+        {
+          rel: "start",
+          href: `${href}/start`,
+          method: "POST",
+          title: "Start",
+        },
+      );
+    }
+    if (isManager) {
+      actions.push(
+        {
+          rel: "cancel",
+          href: `${href}/cancel`,
+          method: "POST",
+          title: "Cancel",
+        },
+        {
+          rel: "delete",
+          href,
+          method: "DELETE",
+          title: "Delete",
+        },
+      );
+    }
   } else if (status === OrderRunStatus.started) {
-    actions.push(
-      {
-        rel: "update",
-        href,
-        method: "PUT",
-        title: "Update",
-        schema: `${API_PREFIX}/schemas/UpdateOrderRun`,
-      },
-      {
-        rel: "close",
-        href: `${href}/close`,
-        method: "POST",
-        title: "Close",
-      },
-      {
+    if (isExecutor) {
+      actions.push(
+        {
+          rel: "update",
+          href,
+          method: "PUT",
+          title: "Update",
+          schema: `${API_PREFIX}/schemas/UpdateOrderRun`,
+        },
+        {
+          rel: "close",
+          href: `${href}/close`,
+          method: "POST",
+          title: "Close",
+        },
+      );
+    }
+    if (isManager) {
+      actions.push({
         rel: "cancel",
         href: `${href}/cancel`,
         method: "POST",
         title: "Cancel",
-      },
-    );
-  } else if (status === OrderRunStatus.closed) {
-    actions.push({
-      rel: "reopen",
-      href: `${href}/reopen`,
-      method: "POST",
-      title: "Reopen",
-    });
-  } else if (status === OrderRunStatus.cancelled) {
-    actions.push({
-      rel: "reopen",
-      href: `${href}/reopen`,
-      method: "POST",
-      title: "Reopen",
-    });
+      });
+    }
+  } else if (
+    status === OrderRunStatus.closed ||
+    status === OrderRunStatus.cancelled
+  ) {
+    if (isManager) {
+      actions.push({
+        rel: "reopen",
+        href: `${href}/reopen`,
+        method: "POST",
+        title: "Reopen",
+      });
+    }
   }
 
   return actions;
@@ -145,15 +154,22 @@ export function formatRun(
     assignedTo: run.assignedTo,
     notes: run.notes,
     ...formatAuditFields(run),
-    _links: childItemLinks(
-      "/" + runResource(orderKey),
-      run.id,
-      "Runs",
-      "/orders/" + orderKey,
-      "Order",
-      "OrderRun",
-      "order",
-    ),
+    _links: [
+      ...childItemLinks(
+        "/" + runResource(orderKey),
+        run.id,
+        "Runs",
+        "/orders/" + orderKey,
+        "Order",
+        "OrderRun",
+        "order",
+      ),
+      {
+        rel: "operations",
+        href: `${API_PREFIX}/${runResource(orderKey)}/${run.id}/ops`,
+        title: "Operation Runs",
+      } as HateoasLink,
+    ],
     _actions: orderRunItemActions(orderKey, run.id, run.status, user),
   };
 }
@@ -224,7 +240,7 @@ export default function orderRunRoutes(fastify: FastifyInstance) {
     },
   });
 
-  // CREATE
+  // CREATE (cut order)
   app.post("/", {
     schema: {
       description: "Create a new order run for an order",
@@ -236,6 +252,7 @@ export default function orderRunRoutes(fastify: FastifyInstance) {
         404: ErrorResponseSchema,
       },
     },
+    preHandler: requirePermission("order_manager"),
     handler: async (request, reply) => {
       const { orderKey } = request.params;
       const { revNo, priority, scheduledStartAt, dueAt, assignedTo, notes } =
@@ -314,6 +331,7 @@ export default function orderRunRoutes(fastify: FastifyInstance) {
         409: ErrorResponseSchema,
       },
     },
+    preHandler: requirePermission("order_executor"),
     handler: async (request, reply) => {
       const { orderKey, id } = request.params;
       const data = request.body;
@@ -356,6 +374,7 @@ export default function orderRunRoutes(fastify: FastifyInstance) {
         409: ErrorResponseSchema,
       },
     },
+    preHandler: requirePermission("order_manager"),
     handler: async (request, reply) => {
       const { orderKey, id } = request.params;
 

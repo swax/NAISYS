@@ -302,9 +302,10 @@ model User {
 
 enum ErpPermission {
   erp_admin
-  manage_orders
-  manage_runs
-  view_all
+  order_planner
+  order_executor
+  order_manager
+  item_manager
 }
 
 model UserPermission {

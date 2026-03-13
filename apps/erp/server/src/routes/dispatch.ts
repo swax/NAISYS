@@ -9,14 +9,14 @@ import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import erpDb from "../erpDb.js";
 import { paginationLinks, selfLink } from "../hateoas.js";
 import { formatAuditFields, formatDate } from "../route-helpers.js";
-import { includeRev, type OrderRunWithRev } from "../services/order-run-service.js";
+import {
+  includeRev,
+  type OrderRunWithRev,
+} from "../services/order-run-service.js";
 
 const OPEN_STATUSES = [OrderRunStatus.released, OrderRunStatus.started];
 
-function formatDispatchRun(
-  orderKey: string,
-  run: OrderRunWithRev,
-) {
+function formatDispatchRun(orderKey: string, run: OrderRunWithRev) {
   return {
     id: run.id,
     runNo: run.runNo,
@@ -77,9 +77,7 @@ export default function dispatchRoutes(fastify: FastifyInstance) {
       ]);
 
       return {
-        items: items.map((run) =>
-          formatDispatchRun(run.order.key, run),
-        ),
+        items: items.map((run) => formatDispatchRun(run.order.key, run)),
         total,
         page,
         pageSize,

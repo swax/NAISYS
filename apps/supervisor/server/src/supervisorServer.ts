@@ -139,7 +139,7 @@ export const startServer: StartServer = async (
   await fastify.register(cookie);
 
   // Rate limiting
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   await fastify.register(rateLimit as any, {
     max: 100,
     timeWindow: "1 minute",

@@ -6,6 +6,7 @@ import {
 import { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 
+import { requirePermission } from "../auth-middleware.js";
 import { conflict, notFound, unprocessable } from "../error-handler.js";
 import { checkOrderRunStarted, resolveOrderRun } from "../route-helpers.js";
 import {
@@ -33,6 +34,7 @@ export default function operationRunTransitionRoutes(fastify: FastifyInstance) {
         422: ErrorResponseSchema,
       },
     },
+    preHandler: requirePermission("order_executor"),
     handler: async (request, reply) => {
       const { orderKey, runId, id } = request.params;
       const userId = request.erpUser!.id;
@@ -81,6 +83,7 @@ export default function operationRunTransitionRoutes(fastify: FastifyInstance) {
         422: ErrorResponseSchema,
       },
     },
+    preHandler: requirePermission("order_executor"),
     handler: async (request, reply) => {
       const { orderKey, runId, id } = request.params;
       const userId = request.erpUser!.id;
@@ -126,6 +129,7 @@ export default function operationRunTransitionRoutes(fastify: FastifyInstance) {
         409: ErrorResponseSchema,
       },
     },
+    preHandler: requirePermission("order_manager"),
     handler: async (request, reply) => {
       const { orderKey, runId, id } = request.params;
       const userId = request.erpUser!.id;
@@ -167,6 +171,7 @@ export default function operationRunTransitionRoutes(fastify: FastifyInstance) {
         409: ErrorResponseSchema,
       },
     },
+    preHandler: requirePermission("order_manager"),
     handler: async (request, reply) => {
       const { orderKey, runId, id } = request.params;
       const userId = request.erpUser!.id;
@@ -208,6 +213,7 @@ export default function operationRunTransitionRoutes(fastify: FastifyInstance) {
         409: ErrorResponseSchema,
       },
     },
+    preHandler: requirePermission("order_manager"),
     handler: async (request, reply) => {
       const { orderKey, runId, id } = request.params;
       const userId = request.erpUser!.id;

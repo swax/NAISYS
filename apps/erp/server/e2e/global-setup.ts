@@ -66,7 +66,13 @@ export default function globalSetup() {
     `INSERT INTO user_permissions (user_id, permission, granted_at)
      VALUES (?, ?, datetime('now'))`,
   );
-  const permissions = ["erp_admin", "manage_orders", "manage_runs", "view_all"];
+  const permissions = [
+    "erp_admin",
+    "order_planner",
+    "order_executor",
+    "order_manager",
+    "item_manager",
+  ];
   for (let i = 0; i < TEST_USER_COUNT; i++) {
     const uuid = `00000000-0000-0000-0000-${String(i).padStart(12, "0")}`;
     const result = insertUser.run(uuid, `e2e-test-${i}`, TEST_PASSWORD_HASH);

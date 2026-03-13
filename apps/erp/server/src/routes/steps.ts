@@ -11,7 +11,7 @@ import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod/v4";
 
 import type { ErpUser } from "../auth-middleware.js";
-import { hasPermission } from "../auth-middleware.js";
+import { hasPermission, requirePermission } from "../auth-middleware.js";
 import { conflict, notFound } from "../error-handler.js";
 import { API_PREFIX, selfLink } from "../hateoas.js";
 import {
@@ -125,7 +125,7 @@ export default function stepRoutes(fastify: FastifyInstance) {
         nextSeqNo: calcNextSeqNo(maxSeq),
         _links: [selfLink(base)],
         _actions:
-          hasPermission(user, "manage_orders") &&
+          hasPermission(user, "order_planner") &&
           resolved.rev.status === RevisionStatus.draft
             ? [
                 {
@@ -154,6 +154,7 @@ export default function stepRoutes(fastify: FastifyInstance) {
         409: ErrorResponseSchema,
       },
     },
+    preHandler: requirePermission("order_planner"),
     handler: async (request, reply) => {
       const { orderKey, revNo, seqNo } = request.params;
       const { seqNo: requestedSeqNo, instructions } = request.body;
@@ -238,6 +239,7 @@ export default function stepRoutes(fastify: FastifyInstance) {
         409: ErrorResponseSchema,
       },
     },
+    preHandler: requirePermission("order_planner"),
     handler: async (request, reply) => {
       const { orderKey, revNo, seqNo, stepSeqNo } = request.params;
       const { instructions, seqNo: newSeqNo } = request.body;
@@ -289,6 +291,7 @@ export default function stepRoutes(fastify: FastifyInstance) {
         409: ErrorResponseSchema,
       },
     },
+    preHandler: requirePermission("order_planner"),
     handler: async (request, reply) => {
       const { orderKey, revNo, seqNo, stepSeqNo } = request.params;
 

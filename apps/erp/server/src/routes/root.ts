@@ -1,5 +1,7 @@
 import { FastifyInstance } from "fastify";
 
+import { hasPermission } from "../auth-middleware.js";
+
 export default function rootRoute(fastify: FastifyInstance) {
   fastify.get("/", {
     schema: {
@@ -24,6 +26,12 @@ export default function rootRoute(fastify: FastifyInstance) {
           method: "GET",
         },
         {
+          rel: "items",
+          href: "/api/erp/items",
+          title: "Items",
+          method: "GET",
+        },
+        {
           rel: "dispatch",
           href: "/api/erp/dispatch",
           title: "Dispatch (open order runs)",
@@ -42,16 +50,32 @@ export default function rootRoute(fastify: FastifyInstance) {
       ];
 
       if (request.erpUser) {
+        const authLinks = [
+          {
+            rel: "self",
+            href: "/api/erp/",
+            title: "API Root",
+          },
+          {
+            rel: "me",
+            href: "/api/erp/auth/me",
+            title: "Current User",
+          },
+          ...readLinks,
+        ];
+
+        if (hasPermission(request.erpUser, "erp_admin")) {
+          authLinks.push({
+            rel: "users",
+            href: "/api/erp/users",
+            title: "Users",
+            method: "GET",
+          });
+        }
+
         return {
           ...base,
-          _links: [
-            {
-              rel: "self",
-              href: "/api/erp/",
-              title: "API Root",
-            },
-            ...readLinks,
-          ],
+          _links: authLinks,
           _actions: [
             {
               rel: "logout",

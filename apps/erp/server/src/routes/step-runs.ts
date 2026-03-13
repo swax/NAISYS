@@ -13,7 +13,7 @@ import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod/v4";
 
 import type { ErpUser } from "../auth-middleware.js";
-import { hasPermission } from "../auth-middleware.js";
+import { hasPermission, requirePermission } from "../auth-middleware.js";
 import { conflict, notFound, unprocessable } from "../error-handler.js";
 import { API_PREFIX, selfLink } from "../hateoas.js";
 import {
@@ -47,7 +47,7 @@ function stepRunItemActions(
   opRunStatus: string,
   user: ErpUser | undefined,
 ): HateoasAction[] {
-  if (!hasPermission(user, "manage_runs")) return [];
+  if (!hasPermission(user, "order_executor")) return [];
   // Only allow updates when the parent operation run is in_progress
   if (opRunStatus !== OperationRunStatus.in_progress) return [];
 
@@ -93,14 +93,16 @@ function formatStepRun(
   stepRun: StepRunWithStep,
 ) {
   const canUpdate =
-    hasPermission(user, "manage_runs") &&
+    hasPermission(user, "order_executor") &&
     opRunStatus === OperationRunStatus.in_progress;
 
   const stepRunHref = `${API_PREFIX}/${stepRunResource(orderKey, runId, opRunId)}/${stepRun.id}`;
 
   // Merge field definitions with stored values + validation + actions
   const fieldValues = stepRun.step.fields.map((field) => {
-    const stored = stepRun.fieldValues.find((fv) => fv.stepFieldId === field.id);
+    const stored = stepRun.fieldValues.find(
+      (fv) => fv.stepFieldId === field.id,
+    );
     const value = stored?.value ?? "";
     return {
       stepFieldId: field.id,
@@ -243,6 +245,7 @@ export default function stepRunRoutes(fastify: FastifyInstance) {
         422: ErrorResponseSchema,
       },
     },
+    preHandler: requirePermission("order_executor"),
     handler: async (request, reply) => {
       const { orderKey, runId, opRunId, id } = request.params;
       const { completed, fieldValues } = request.body;
@@ -300,6 +303,7 @@ export default function stepRunRoutes(fastify: FastifyInstance) {
         409: ErrorResponseSchema,
       },
     },
+    preHandler: requirePermission("order_executor"),
     handler: async (request, reply) => {
       const { orderKey, runId, opRunId, id, stepFieldId } = request.params;
       const { value } = request.body;
