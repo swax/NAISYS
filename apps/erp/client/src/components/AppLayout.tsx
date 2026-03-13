@@ -19,6 +19,7 @@ import { LoginModal } from "./LoginModal";
 
 const navLinks = [
   { label: "Orders", path: "/orders" },
+  { label: "Dispatch", path: "/dispatch" },
   { label: "Users", path: "/users" },
 ];
 

@@ -20,6 +20,7 @@ import { OperationRunDetail } from "./pages/orders/runs/OperationRunDetail";
 import { OrderRunCreate } from "./pages/orders/runs/OrderRunCreate";
 import { OrderRunLayout } from "./pages/orders/runs/OrderRunDetail";
 import { OrderRunList } from "./pages/orders/runs/OrderRunList";
+import { DispatchList } from "./pages/dispatch/DispatchList";
 import { UserDetail } from "./pages/users/UserDetail";
 import { UserList } from "./pages/users/UserList";
 
@@ -73,6 +74,7 @@ const AppContent: React.FC = () => {
           <Route path="header" element={<HeaderRunDetail />} />
           <Route path="ops/:opRunId" element={<OperationRunDetail />} />
         </Route>
+        <Route path="/dispatch" element={<DispatchList />} />
         <Route path="/users" element={<UserList />} />
         <Route path="/users/:username" element={<UserDetail />} />
       </Route>
