@@ -1,11 +1,4 @@
-import {
-  afterEach,
-  beforeEach,
-  describe,
-  expect,
-  jest,
-  test,
-} from "@jest/globals";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import {
   cleanupTestDir,
@@ -26,7 +19,7 @@ import {
  * and exits cleanly.
  */
 
-jest.setTimeout(60000);
+vi.setConfig({ testTimeout: 60000 });
 
 describe("NAISYS Startup E2E", () => {
   let testDir: string;

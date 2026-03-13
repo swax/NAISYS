@@ -1,6 +1,3 @@
-import assert from "node:assert/strict";
-import { describe, test } from "node:test";
-
 import {
   ErpPermissionEnum,
   OperationRunStatusEnum,
@@ -10,6 +7,7 @@ import {
   RevisionStatusEnum,
   StepFieldTypeEnum,
 } from "@naisys-erp/shared";
+import { describe, expect, test } from "vitest";
 
 import {
   ErpPermission as DbErpPermission,
@@ -29,25 +27,19 @@ function assertEnumSync(
   const shared = [...sharedOptions].sort();
   const db = Object.values(dbValues).sort();
 
-  assert.deepStrictEqual(
-    shared,
-    db,
-    `${name} enums are out of sync.\n` +
-      `  Shared: [${shared.join(", ")}]\n` +
-      `  DB:     [${db.join(", ")}]`,
-  );
+  expect(shared, `${name} enums are out of sync`).toEqual(db);
 }
 
-void describe("shared enums match database enums", () => {
-  void test("ErpPermission", () => {
+describe("shared enums match database enums", () => {
+  test("ErpPermission", () => {
     assertEnumSync("ErpPermission", ErpPermissionEnum.options, DbErpPermission);
   });
 
-  void test("OrderStatus", () => {
+  test("OrderStatus", () => {
     assertEnumSync("OrderStatus", OrderStatusEnum.options, DbOrderStatus);
   });
 
-  void test("RevisionStatus", () => {
+  test("RevisionStatus", () => {
     assertEnumSync(
       "RevisionStatus",
       RevisionStatusEnum.options,
@@ -55,7 +47,7 @@ void describe("shared enums match database enums", () => {
     );
   });
 
-  void test("OrderRunStatus", () => {
+  test("OrderRunStatus", () => {
     assertEnumSync(
       "OrderRunStatus",
       OrderRunStatusEnum.options,
@@ -63,7 +55,7 @@ void describe("shared enums match database enums", () => {
     );
   });
 
-  void test("OrderRunPriority", () => {
+  test("OrderRunPriority", () => {
     assertEnumSync(
       "OrderRunPriority",
       OrderRunPriorityEnum.options,
@@ -71,7 +63,7 @@ void describe("shared enums match database enums", () => {
     );
   });
 
-  void test("OperationRunStatus", () => {
+  test("OperationRunStatus", () => {
     assertEnumSync(
       "OperationRunStatus",
       OperationRunStatusEnum.options,
@@ -79,7 +71,7 @@ void describe("shared enums match database enums", () => {
     );
   });
 
-  void test("StepFieldType", () => {
+  test("StepFieldType", () => {
     assertEnumSync("StepFieldType", StepFieldTypeEnum.options, DbStepFieldType);
   });
 });

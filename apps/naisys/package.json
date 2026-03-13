@@ -15,7 +15,7 @@
     "clean": "rimraf dist",
     "build": "tsc",
     "eslint": "npx eslint src",
-    "test": "tsc && node --experimental-vm-modules ../../node_modules/jest/bin/jest.js --testPathPatterns=dist/__tests__",
+    "test": "vitest run",
     "npm:publish:dryrun": "npm run clean && npm run build && npm publish --dry-run",
     "postinstall": "node -e \"process.platform !== 'win32' && require('child_process').execSync('chmod +x ./bin/*')\""
   },
@@ -35,7 +35,6 @@
   "license": "MIT",
   "homepage": "https://naisys.org",
   "devDependencies": {
-    "@jest/globals": "^30.3.0",
     "@naisys/hub-database": "file:../../packages/hub-database",
     "@types/escape-html": "^1.0.4",
     "@types/js-yaml": "^4.0.9",
@@ -44,11 +43,11 @@
     "@typescript-eslint/eslint-plugin": "^8.57.0",
     "@typescript-eslint/parser": "^8.57.0",
     "eslint": "^10.0.3",
-    "jest": "^30.3.0",
     "playwright": "^1.58.2",
     "prettier": "^3.8.1",
     "ts-node": "^10.9.2",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.0"
   },
   "peerDependencies": {
     "@naisys/hub": "file:../hub"

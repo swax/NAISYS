@@ -1,4 +1,4 @@
-import { describe, expect, test } from "@jest/globals";
+import { describe, expect, test } from "vitest";
 
 // Simple unit test for the calculation function without needing the full module
 describe("calculatePeriodBoundaries", () => {

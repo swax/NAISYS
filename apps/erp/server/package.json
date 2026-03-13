@@ -18,7 +18,7 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",
-    "test": "tsx --test src/tests/*.test.ts && npx playwright test"
+    "test": "vitest run && npx playwright test"
   },
   "files": [
     "dist",
@@ -30,11 +30,11 @@
     "@fastify/rate-limit": "^10.3.0",
     "@fastify/static": "^9.0.0",
     "@fastify/swagger": "^9.7.0",
+    "@naisys-erp/shared": "file:../shared",
     "@naisys/common": "file:../../../packages/common",
     "@naisys/common-node": "file:../../../packages/common-node",
     "@naisys/hub-database": "file:../../../packages/hub-database",
     "@naisys/supervisor-database": "file:../../../packages/supervisor-database",
-    "@naisys-erp/shared": "file:../shared",
     "@prisma/adapter-better-sqlite3": "^7.5.0",
     "@prisma/client": "^7.5.0",
     "@scalar/fastify-api-reference": "^1.48.7",
@@ -52,7 +52,8 @@
     "@types/node": "^25.5.0",
     "prisma": "^7.5.0",
     "tsx": "^4.21.0",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.0"
   },
   "engines": {
     "node": ">=18.0.0"
