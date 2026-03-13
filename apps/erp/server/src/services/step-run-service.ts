@@ -10,7 +10,13 @@ export const includeStep = {
       seqNo: true,
       instructions: true,
       fields: {
-        select: { id: true, label: true, type: true, required: true },
+        select: {
+          id: true,
+          seqNo: true,
+          label: true,
+          type: true,
+          required: true,
+        },
         orderBy: { seqNo: "asc" as const },
       },
     },
@@ -32,7 +38,13 @@ export type StepRunWithStep = {
   step: {
     seqNo: number;
     instructions: string;
-    fields: { id: number; label: string; type: string; required: boolean }[];
+    fields: {
+      id: number;
+      seqNo: number;
+      label: string;
+      type: string;
+      required: boolean;
+    }[];
   };
   fieldValues: { stepFieldId: number; value: string }[];
   createdBy: { username: string };
@@ -70,7 +82,7 @@ export async function findExisting(id: number, opRunId: number) {
 export async function findStepRunWithField(
   id: number,
   opRunId: number,
-  stepFieldId: number,
+  fieldSeqNo: number,
 ) {
   const stepRun = await erpDb.stepRun.findUnique({
     where: { id },
@@ -78,8 +90,14 @@ export async function findStepRunWithField(
       step: {
         select: {
           fields: {
-            where: { id: stepFieldId },
-            select: { id: true, label: true, type: true, required: true },
+            where: { seqNo: fieldSeqNo },
+            select: {
+              id: true,
+              seqNo: true,
+              label: true,
+              type: true,
+              required: true,
+            },
           },
         },
       },

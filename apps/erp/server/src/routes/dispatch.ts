@@ -31,7 +31,7 @@ function formatDispatchRun(orderKey: string, run: OrderRunWithRev) {
     assignedTo: run.assignedTo,
     notes: run.notes,
     ...formatAuditFields(run),
-    _links: [selfLink(`/orders/${orderKey}/runs/${run.id}`)],
+    _links: [selfLink(`/orders/${orderKey}/runs/${run.runNo}`)],
   };
 }
 

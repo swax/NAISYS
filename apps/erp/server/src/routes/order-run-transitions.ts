@@ -8,25 +8,24 @@ import type { ZodTypeProvider } from "fastify-type-provider-zod";
 
 import { requirePermission } from "../auth-middleware.js";
 import { conflict, notFound, unprocessable } from "../error-handler.js";
-import { resolveOrder } from "../route-helpers.js";
+import { resolveOrderRun } from "../route-helpers.js";
 import {
   checkOpsComplete,
-  findExisting,
   getReopenTarget,
   transitionStatus,
   validateStatusFor,
 } from "../services/order-run-service.js";
-import { formatRun, IdParamsSchema } from "./order-runs.js";
+import { formatRun, RunNoParamsSchema } from "./order-runs.js";
 
 export default function orderRunTransitionRoutes(fastify: FastifyInstance) {
   const app = fastify.withTypeProvider<ZodTypeProvider>();
 
   // START (released -> started)
-  app.post("/:id/start", {
+  app.post("/:runNo/start", {
     schema: {
       description: "Start an order run (released -> started)",
       tags: ["Order Runs"],
-      params: IdParamsSchema,
+      params: RunNoParamsSchema,
       response: {
         200: OrderRunSchema,
         404: ErrorResponseSchema,
@@ -35,29 +34,21 @@ export default function orderRunTransitionRoutes(fastify: FastifyInstance) {
     },
     preHandler: requirePermission("order_executor"),
     handler: async (request, reply) => {
-      const { orderKey, id } = request.params;
+      const { orderKey, runNo } = request.params;
 
-      const order = await resolveOrder(orderKey);
-      if (!order) {
-        return notFound(reply, `Order '${orderKey}' not found`);
+      const resolved = await resolveOrderRun(orderKey, runNo);
+      if (!resolved) {
+        return notFound(reply, `Order run not found for order '${orderKey}'`);
       }
 
-      const existing = await findExisting(id, order.id);
-      if (!existing) {
-        return notFound(
-          reply,
-          `Order run ${id} not found for order '${orderKey}'`,
-        );
-      }
-
-      const statusErr = validateStatusFor("start", existing.status, [
+      const statusErr = validateStatusFor("start", resolved.run.status, [
         OrderRunStatus.released,
       ]);
       if (statusErr) return conflict(reply, statusErr);
 
       const userId = request.erpUser!.id;
       const run = await transitionStatus(
-        id,
+        resolved.run.id,
         "start",
         OrderRunStatus.released,
         OrderRunStatus.started,
@@ -69,11 +60,11 @@ export default function orderRunTransitionRoutes(fastify: FastifyInstance) {
   });
 
   // CLOSE (started -> closed)
-  app.post("/:id/close", {
+  app.post("/:runNo/close", {
     schema: {
       description: "Close an order run (started -> closed)",
       tags: ["Order Runs"],
-      params: IdParamsSchema,
+      params: RunNoParamsSchema,
       response: {
         200: OrderRunSchema,
         404: ErrorResponseSchema,
@@ -83,33 +74,25 @@ export default function orderRunTransitionRoutes(fastify: FastifyInstance) {
     },
     preHandler: requirePermission("order_executor"),
     handler: async (request, reply) => {
-      const { orderKey, id } = request.params;
+      const { orderKey, runNo } = request.params;
 
-      const order = await resolveOrder(orderKey);
-      if (!order) {
-        return notFound(reply, `Order '${orderKey}' not found`);
+      const resolved = await resolveOrderRun(orderKey, runNo);
+      if (!resolved) {
+        return notFound(reply, `Order run not found for order '${orderKey}'`);
       }
 
-      const existing = await findExisting(id, order.id);
-      if (!existing) {
-        return notFound(
-          reply,
-          `Order run ${id} not found for order '${orderKey}'`,
-        );
-      }
-
-      const statusErr = validateStatusFor("close", existing.status, [
+      const statusErr = validateStatusFor("close", resolved.run.status, [
         OrderRunStatus.started,
       ]);
       if (statusErr) return conflict(reply, statusErr);
 
       // Validate all operation runs are completed or skipped
-      const opsErr = await checkOpsComplete(id);
+      const opsErr = await checkOpsComplete(resolved.run.id);
       if (opsErr) return unprocessable(reply, opsErr);
 
       const userId = request.erpUser!.id;
       const run = await transitionStatus(
-        id,
+        resolved.run.id,
         "close",
         OrderRunStatus.started,
         OrderRunStatus.closed,
@@ -121,11 +104,11 @@ export default function orderRunTransitionRoutes(fastify: FastifyInstance) {
   });
 
   // CANCEL (released/started -> cancelled)
-  app.post("/:id/cancel", {
+  app.post("/:runNo/cancel", {
     schema: {
       description: "Cancel an order run (released/started -> cancelled)",
       tags: ["Order Runs"],
-      params: IdParamsSchema,
+      params: RunNoParamsSchema,
       response: {
         200: OrderRunSchema,
         404: ErrorResponseSchema,
@@ -134,22 +117,14 @@ export default function orderRunTransitionRoutes(fastify: FastifyInstance) {
     },
     preHandler: requirePermission("order_manager"),
     handler: async (request, reply) => {
-      const { orderKey, id } = request.params;
+      const { orderKey, runNo } = request.params;
 
-      const order = await resolveOrder(orderKey);
-      if (!order) {
-        return notFound(reply, `Order '${orderKey}' not found`);
+      const resolved = await resolveOrderRun(orderKey, runNo);
+      if (!resolved) {
+        return notFound(reply, `Order run not found for order '${orderKey}'`);
       }
 
-      const existing = await findExisting(id, order.id);
-      if (!existing) {
-        return notFound(
-          reply,
-          `Order run ${id} not found for order '${orderKey}'`,
-        );
-      }
-
-      const statusErr = validateStatusFor("cancel", existing.status, [
+      const statusErr = validateStatusFor("cancel", resolved.run.status, [
         OrderRunStatus.released,
         OrderRunStatus.started,
       ]);
@@ -157,9 +132,9 @@ export default function orderRunTransitionRoutes(fastify: FastifyInstance) {
 
       const userId = request.erpUser!.id;
       const run = await transitionStatus(
-        id,
+        resolved.run.id,
         "cancel",
-        existing.status as
+        resolved.run.status as
           | typeof OrderRunStatus.released
           | typeof OrderRunStatus.started,
         OrderRunStatus.cancelled,
@@ -171,12 +146,12 @@ export default function orderRunTransitionRoutes(fastify: FastifyInstance) {
   });
 
   // REOPEN (closed -> started, cancelled -> released)
-  app.post("/:id/reopen", {
+  app.post("/:runNo/reopen", {
     schema: {
       description:
         "Reopen an order run (closed -> started, cancelled -> released)",
       tags: ["Order Runs"],
-      params: IdParamsSchema,
+      params: RunNoParamsSchema,
       response: {
         200: OrderRunSchema,
         404: ErrorResponseSchema,
@@ -185,38 +160,30 @@ export default function orderRunTransitionRoutes(fastify: FastifyInstance) {
     },
     preHandler: requirePermission("order_manager"),
     handler: async (request, reply) => {
-      const { orderKey, id } = request.params;
+      const { orderKey, runNo } = request.params;
 
-      const order = await resolveOrder(orderKey);
-      if (!order) {
-        return notFound(reply, `Order '${orderKey}' not found`);
+      const resolved = await resolveOrderRun(orderKey, runNo);
+      if (!resolved) {
+        return notFound(reply, `Order run not found for order '${orderKey}'`);
       }
 
-      const existing = await findExisting(id, order.id);
-      if (!existing) {
-        return notFound(
-          reply,
-          `Order run ${id} not found for order '${orderKey}'`,
-        );
-      }
-
-      const statusErr = validateStatusFor("reopen", existing.status, [
+      const statusErr = validateStatusFor("reopen", resolved.run.status, [
         OrderRunStatus.closed,
         OrderRunStatus.cancelled,
       ]);
       if (statusErr) return conflict(reply, statusErr);
 
       const reopenTo = getReopenTarget(
-        existing.status as
+        resolved.run.status as
           | typeof OrderRunStatus.closed
           | typeof OrderRunStatus.cancelled,
       );
 
       const userId = request.erpUser!.id;
       const run = await transitionStatus(
-        id,
+        resolved.run.id,
         "reopen",
-        existing.status as
+        resolved.run.status as
           | typeof OrderRunStatus.closed
           | typeof OrderRunStatus.cancelled,
         reopenTo,

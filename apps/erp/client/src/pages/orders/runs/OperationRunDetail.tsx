@@ -32,14 +32,10 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 export const OperationRunDetail: React.FC = () => {
-  const {
-    orderKey,
-    id: runId,
-    opRunId,
-  } = useParams<{
+  const { orderKey, runNo, seqNo } = useParams<{
     orderKey: string;
-    id: string;
-    opRunId: string;
+    runNo: string;
+    seqNo: string;
   }>();
   const { onOperationUpdate } = useOutletContext<OrderRunOutletContext>();
   const [opRun, setOpRun] = useState<OperationRun | null>(null);
@@ -49,11 +45,11 @@ export const OperationRunDetail: React.FC = () => {
   const feedbackRef = useRef("");
 
   const fetchOpRun = useCallback(async () => {
-    if (!orderKey || !runId || !opRunId) return;
+    if (!orderKey || !runNo || !seqNo) return;
     setLoading(true);
     try {
       const result = await api.get<OperationRun>(
-        apiEndpoints.operationRun(orderKey, runId, opRunId),
+        apiEndpoints.operationRun(orderKey, runNo, seqNo),
       );
       setOpRun(result);
     } catch (err) {
@@ -61,7 +57,7 @@ export const OperationRunDetail: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [orderKey, runId, opRunId]);
+  }, [orderKey, runNo, seqNo]);
 
   useEffect(() => {
     void fetchOpRun();
@@ -74,12 +70,12 @@ export const OperationRunDetail: React.FC = () => {
   }, [opRun?.feedback]);
 
   const saveFeedback = async () => {
-    if (!orderKey || !runId || !opRunId) return;
+    if (!orderKey || !runNo || !seqNo) return;
     const trimmed = feedbackDraft.trim();
     if (trimmed === (feedbackRef.current ?? "")) return;
     try {
       const updated = await api.put<OperationRun>(
-        apiEndpoints.operationRun(orderKey, runId, opRunId),
+        apiEndpoints.operationRun(orderKey, runNo, seqNo),
         { feedback: trimmed || null },
       );
       setOpRun(updated);
@@ -91,7 +87,7 @@ export const OperationRunDetail: React.FC = () => {
   const handleAction = async (
     action: "start" | "complete" | "skip" | "fail" | "reopen",
   ) => {
-    if (!orderKey || !runId || !opRunId) return;
+    if (!orderKey || !runNo || !seqNo) return;
     const endpointMap = {
       start: apiEndpoints.operationRunStart,
       complete: apiEndpoints.operationRunComplete,
@@ -101,7 +97,7 @@ export const OperationRunDetail: React.FC = () => {
     };
     try {
       const updated = await api.post<OperationRun>(
-        endpointMap[action](orderKey, runId, opRunId),
+        endpointMap[action](orderKey, runNo, seqNo),
         {},
       );
       setOpRun(updated);
@@ -256,8 +252,8 @@ export const OperationRunDetail: React.FC = () => {
 
         <StepRunList
           orderKey={orderKey!}
-          runId={runId!}
-          opRunId={opRunId!}
+          runNo={runNo!}
+          seqNo={seqNo!}
           refreshKey={refreshKey}
         />
 

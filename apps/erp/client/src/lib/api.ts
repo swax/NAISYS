@@ -112,65 +112,66 @@ export const apiEndpoints = {
   ) =>
     `orders/${key}/revs/${revNo}/ops/${seqNo}/steps/${stepSeqNo}/fields/${fieldSeqNo}`,
   orderRuns: (key: string) => `orders/${key}/runs`,
-  orderRun: (key: string, id: number | string) => `orders/${key}/runs/${id}`,
-  orderRunStart: (key: string, id: number | string) =>
-    `orders/${key}/runs/${id}/start`,
-  orderRunClose: (key: string, id: number | string) =>
-    `orders/${key}/runs/${id}/close`,
-  orderRunCancel: (key: string, id: number | string) =>
-    `orders/${key}/runs/${id}/cancel`,
-  orderRunReopen: (key: string, id: number | string) =>
-    `orders/${key}/runs/${id}/reopen`,
+  orderRun: (key: string, runNo: number | string) =>
+    `orders/${key}/runs/${runNo}`,
+  orderRunStart: (key: string, runNo: number | string) =>
+    `orders/${key}/runs/${runNo}/start`,
+  orderRunClose: (key: string, runNo: number | string) =>
+    `orders/${key}/runs/${runNo}/close`,
+  orderRunCancel: (key: string, runNo: number | string) =>
+    `orders/${key}/runs/${runNo}/cancel`,
+  orderRunReopen: (key: string, runNo: number | string) =>
+    `orders/${key}/runs/${runNo}/reopen`,
   users: "users",
   user: (username: string) => `users/${username}`,
   userPermissions: (username: string) => `users/${username}/permissions`,
   userPermission: (username: string, perm: string) =>
     `users/${username}/permissions/${perm}`,
-  operationRuns: (key: string, runId: number | string) =>
-    `orders/${key}/runs/${runId}/ops`,
-  operationRun: (key: string, runId: number | string, id: number | string) =>
-    `orders/${key}/runs/${runId}/ops/${id}`,
+  operationRuns: (key: string, runNo: number | string) =>
+    `orders/${key}/runs/${runNo}/ops`,
+  operationRun: (key: string, runNo: number | string, seqNo: number | string) =>
+    `orders/${key}/runs/${runNo}/ops/${seqNo}`,
   operationRunStart: (
     key: string,
-    runId: number | string,
-    id: number | string,
-  ) => `orders/${key}/runs/${runId}/ops/${id}/start`,
+    runNo: number | string,
+    seqNo: number | string,
+  ) => `orders/${key}/runs/${runNo}/ops/${seqNo}/start`,
   operationRunComplete: (
     key: string,
-    runId: number | string,
-    id: number | string,
-  ) => `orders/${key}/runs/${runId}/ops/${id}/complete`,
+    runNo: number | string,
+    seqNo: number | string,
+  ) => `orders/${key}/runs/${runNo}/ops/${seqNo}/complete`,
   operationRunSkip: (
     key: string,
-    runId: number | string,
-    id: number | string,
-  ) => `orders/${key}/runs/${runId}/ops/${id}/skip`,
+    runNo: number | string,
+    seqNo: number | string,
+  ) => `orders/${key}/runs/${runNo}/ops/${seqNo}/skip`,
   operationRunFail: (
     key: string,
-    runId: number | string,
-    id: number | string,
-  ) => `orders/${key}/runs/${runId}/ops/${id}/fail`,
+    runNo: number | string,
+    seqNo: number | string,
+  ) => `orders/${key}/runs/${runNo}/ops/${seqNo}/fail`,
   operationRunReopen: (
     key: string,
-    runId: number | string,
-    id: number | string,
-  ) => `orders/${key}/runs/${runId}/ops/${id}/reopen`,
-  stepRuns: (key: string, runId: number | string, opRunId: number | string) =>
-    `orders/${key}/runs/${runId}/ops/${opRunId}/steps`,
+    runNo: number | string,
+    seqNo: number | string,
+  ) => `orders/${key}/runs/${runNo}/ops/${seqNo}/reopen`,
+  stepRuns: (key: string, runNo: number | string, seqNo: number | string) =>
+    `orders/${key}/runs/${runNo}/ops/${seqNo}/steps`,
   stepRun: (
     key: string,
-    runId: number | string,
-    opRunId: number | string,
-    id: number | string,
-  ) => `orders/${key}/runs/${runId}/ops/${opRunId}/steps/${id}`,
+    runNo: number | string,
+    seqNo: number | string,
+    stepSeqNo: number | string,
+  ) => `orders/${key}/runs/${runNo}/ops/${seqNo}/steps/${stepSeqNo}`,
   stepRunFieldValue: (
     key: string,
-    runId: number | string,
-    opRunId: number | string,
-    id: number | string,
-    stepFieldId: number | string,
+    runNo: number | string,
+    seqNo: number | string,
+    stepSeqNo: number | string,
+    fieldSeqNo: number | string,
   ) =>
-    `orders/${key}/runs/${runId}/ops/${opRunId}/steps/${id}/fields/${stepFieldId}`,
+    `orders/${key}/runs/${runNo}/ops/${seqNo}/steps/${stepSeqNo}/fields/${fieldSeqNo}`,
   userRotateKey: (username: string) => `users/${username}/rotate-key`,
   changePassword: "users/me/password",
   audit: (entityType: string, entityId: number | string) =>

@@ -136,13 +136,13 @@ export const erpPlugin: FastifyPluginAsync = async (fastify) => {
     prefix: "/api/erp/orders/:orderKey/revs/:revNo/ops",
   });
   fastify.register(operationRunRoutes, {
-    prefix: "/api/erp/orders/:orderKey/runs/:runId/ops",
+    prefix: "/api/erp/orders/:orderKey/runs/:runNo/ops",
   });
   fastify.register(operationRunTransitionRoutes, {
-    prefix: "/api/erp/orders/:orderKey/runs/:runId/ops",
+    prefix: "/api/erp/orders/:orderKey/runs/:runNo/ops",
   });
   fastify.register(stepRunRoutes, {
-    prefix: "/api/erp/orders/:orderKey/runs/:runId/ops/:opRunId/steps",
+    prefix: "/api/erp/orders/:orderKey/runs/:runNo/ops/:seqNo/steps",
   });
   fastify.register(stepRoutes, {
     prefix: "/api/erp/orders/:orderKey/revs/:revNo/ops/:seqNo/steps",

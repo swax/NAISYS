@@ -22,9 +22,9 @@ import {
   childItemLinks,
   formatAuditFields,
   resolveOpRun,
+  resolveStepRun,
 } from "../route-helpers.js";
 import {
-  findExisting,
   findStepRunWithField,
   getStepRun,
   listStepRuns,
@@ -35,15 +35,15 @@ import {
   validateFieldValue,
 } from "../services/step-run-service.js";
 
-function stepRunResource(orderKey: string, runId: number, opRunId: number) {
-  return `orders/${orderKey}/runs/${runId}/ops/${opRunId}/steps`;
+function stepRunResource(orderKey: string, runNo: number, seqNo: number) {
+  return `orders/${orderKey}/runs/${runNo}/ops/${seqNo}/steps`;
 }
 
 function stepRunItemActions(
   orderKey: string,
-  runId: number,
-  opRunId: number,
-  id: number,
+  runNo: number,
+  seqNo: number,
+  stepSeqNo: number,
   opRunStatus: string,
   user: ErpUser | undefined,
 ): HateoasAction[] {
@@ -51,7 +51,7 @@ function stepRunItemActions(
   // Only allow updates when the parent operation run is in_progress
   if (opRunStatus !== OperationRunStatus.in_progress) return [];
 
-  const href = `${API_PREFIX}/${stepRunResource(orderKey, runId, opRunId)}/${id}`;
+  const href = `${API_PREFIX}/${stepRunResource(orderKey, runNo, seqNo)}/${stepSeqNo}`;
   return [
     {
       rel: "update",
@@ -63,31 +63,31 @@ function stepRunItemActions(
   ];
 }
 
-const OpRunParamsSchema = z.object({
+const OpSeqNoParamsSchema = z.object({
   orderKey: z.string(),
-  runId: z.coerce.number().int(),
-  opRunId: z.coerce.number().int(),
+  runNo: z.coerce.number().int(),
+  seqNo: z.coerce.number().int(),
 });
 
-const IdParamsSchema = z.object({
+const StepSeqNoParamsSchema = z.object({
   orderKey: z.string(),
-  runId: z.coerce.number().int(),
-  opRunId: z.coerce.number().int(),
-  id: z.coerce.number().int(),
+  runNo: z.coerce.number().int(),
+  seqNo: z.coerce.number().int(),
+  stepSeqNo: z.coerce.number().int(),
 });
 
-const FieldValueParamsSchema = z.object({
+const FieldSeqNoParamsSchema = z.object({
   orderKey: z.string(),
-  runId: z.coerce.number().int(),
-  opRunId: z.coerce.number().int(),
-  id: z.coerce.number().int(),
-  stepFieldId: z.coerce.number().int(),
+  runNo: z.coerce.number().int(),
+  seqNo: z.coerce.number().int(),
+  stepSeqNo: z.coerce.number().int(),
+  fieldSeqNo: z.coerce.number().int(),
 });
 
 function formatStepRun(
   orderKey: string,
-  runId: number,
-  opRunId: number,
+  runNo: number,
+  seqNo: number,
   opRunStatus: string,
   user: ErpUser | undefined,
   stepRun: StepRunWithStep,
@@ -96,7 +96,8 @@ function formatStepRun(
     hasPermission(user, "order_executor") &&
     opRunStatus === OperationRunStatus.in_progress;
 
-  const stepRunHref = `${API_PREFIX}/${stepRunResource(orderKey, runId, opRunId)}/${stepRun.id}`;
+  const stepSeqNo = stepRun.step.seqNo;
+  const stepRunHref = `${API_PREFIX}/${stepRunResource(orderKey, runNo, seqNo)}/${stepSeqNo}`;
 
   // Merge field definitions with stored values + validation + actions
   const fieldValues = stepRun.step.fields.map((field) => {
@@ -106,6 +107,7 @@ function formatStepRun(
     const value = stored?.value ?? "";
     return {
       stepFieldId: field.id,
+      fieldSeqNo: field.seqNo,
       label: field.label,
       type: field.type,
       required: field.required,
@@ -115,7 +117,7 @@ function formatStepRun(
         ? [
             {
               rel: "update" as const,
-              href: `${stepRunHref}/fields/${field.id}`,
+              href: `${stepRunHref}/fields/${field.seqNo}`,
               method: "PUT" as const,
               title: "Update Field Value",
               schema: `${API_PREFIX}/schemas/UpdateStepFieldValue`,
@@ -129,25 +131,25 @@ function formatStepRun(
     id: stepRun.id,
     operationRunId: stepRun.operationRunId,
     stepId: stepRun.stepId,
-    seqNo: stepRun.step.seqNo,
+    seqNo: stepSeqNo,
     instructions: stepRun.step.instructions,
     completed: stepRun.completed,
     fieldValues,
     ...formatAuditFields(stepRun),
     _links: childItemLinks(
-      "/" + stepRunResource(orderKey, runId, opRunId),
-      stepRun.id,
+      "/" + stepRunResource(orderKey, runNo, seqNo),
+      stepSeqNo,
       "Step Runs",
-      "/orders/" + orderKey + "/runs/" + runId + "/ops/" + opRunId,
+      "/orders/" + orderKey + "/runs/" + runNo + "/ops/" + seqNo,
       "Operation Run",
       "StepRun",
       "operationRun",
     ),
     _actions: stepRunItemActions(
       orderKey,
-      runId,
-      opRunId,
-      stepRun.id,
+      runNo,
+      seqNo,
+      stepSeqNo,
       opRunStatus,
       user,
     ),
@@ -162,67 +164,67 @@ export default function stepRunRoutes(fastify: FastifyInstance) {
     schema: {
       description: "List step runs for an operation run",
       tags: ["Step Runs"],
-      params: OpRunParamsSchema,
+      params: OpSeqNoParamsSchema,
       response: {
         200: StepRunListResponseSchema,
         404: ErrorResponseSchema,
       },
     },
     handler: async (request, reply) => {
-      const { orderKey, runId, opRunId } = request.params;
+      const { orderKey, runNo, seqNo } = request.params;
 
-      const resolved = await resolveOpRun(orderKey, runId, opRunId);
+      const resolved = await resolveOpRun(orderKey, runNo, seqNo);
       if (!resolved) {
         return notFound(reply, `Operation run not found`);
       }
 
-      const items = await listStepRuns(opRunId);
+      const items = await listStepRuns(resolved.opRun.id);
 
       return {
         items: items.map((stepRun) =>
           formatStepRun(
             orderKey,
-            runId,
-            opRunId,
+            runNo,
+            seqNo,
             resolved.opRun.status,
             request.erpUser,
             stepRun,
           ),
         ),
         total: items.length,
-        _links: [selfLink(`/${stepRunResource(orderKey, runId, opRunId)}`)],
+        _links: [selfLink(`/${stepRunResource(orderKey, runNo, seqNo)}`)],
       };
     },
   });
 
-  // GET by ID
-  app.get("/:id", {
+  // GET by stepSeqNo
+  app.get("/:stepSeqNo", {
     schema: {
-      description: "Get a single step run by ID",
+      description: "Get a single step run by step sequence number",
       tags: ["Step Runs"],
-      params: IdParamsSchema,
+      params: StepSeqNoParamsSchema,
       response: {
         200: StepRunSchema,
         404: ErrorResponseSchema,
       },
     },
     handler: async (request, reply) => {
-      const { orderKey, runId, opRunId, id } = request.params;
+      const { orderKey, runNo, seqNo, stepSeqNo } = request.params;
 
-      const resolved = await resolveOpRun(orderKey, runId, opRunId);
+      const resolved = await resolveStepRun(orderKey, runNo, seqNo, stepSeqNo);
       if (!resolved) {
-        return notFound(reply, `Operation run not found`);
+        return notFound(reply, `Step run not found`);
       }
 
-      const stepRun = await getStepRun(id);
-      if (!stepRun || stepRun.operationRunId !== opRunId) {
-        return notFound(reply, `Step run ${id} not found`);
+      const stepRun = await getStepRun(resolved.stepRun.id);
+      if (!stepRun) {
+        return notFound(reply, `Step run not found`);
       }
 
       return formatStepRun(
         orderKey,
-        runId,
-        opRunId,
+        runNo,
+        seqNo,
         resolved.opRun.status,
         request.erpUser,
         stepRun,
@@ -231,12 +233,12 @@ export default function stepRunRoutes(fastify: FastifyInstance) {
   });
 
   // UPDATE — batch update completed flag + field values
-  app.put("/:id", {
+  app.put("/:stepSeqNo", {
     schema: {
       description:
         "Update a step run — set completed and/or field values (operation run must be in_progress)",
       tags: ["Step Runs"],
-      params: IdParamsSchema,
+      params: StepSeqNoParamsSchema,
       body: UpdateStepRunSchema,
       response: {
         200: StepRunSchema,
@@ -247,13 +249,13 @@ export default function stepRunRoutes(fastify: FastifyInstance) {
     },
     preHandler: requirePermission("order_executor"),
     handler: async (request, reply) => {
-      const { orderKey, runId, opRunId, id } = request.params;
+      const { orderKey, runNo, seqNo, stepSeqNo } = request.params;
       const { completed, fieldValues } = request.body;
       const userId = request.erpUser!.id;
 
-      const resolved = await resolveOpRun(orderKey, runId, opRunId);
+      const resolved = await resolveStepRun(orderKey, runNo, seqNo, stepSeqNo);
       if (!resolved) {
-        return notFound(reply, `Operation run not found`);
+        return notFound(reply, `Step run not found`);
       }
 
       const orderErr = checkOrderRunStarted(resolved.run.status);
@@ -262,8 +264,8 @@ export default function stepRunRoutes(fastify: FastifyInstance) {
       const opErr = checkOpRunInProgress(resolved.opRun.status);
       if (opErr) return conflict(reply, opErr);
 
-      const existing = await findExisting(id, opRunId);
-      if (!existing) return notFound(reply, `Step run ${id} not found`);
+      const existing = await getStepRun(resolved.stepRun.id);
+      if (!existing) return notFound(reply, `Step run not found`);
 
       // Block field updates on a completed step unless also reopening
       if (existing.completed && completed !== false && fieldValues?.length) {
@@ -276,12 +278,17 @@ export default function stepRunRoutes(fastify: FastifyInstance) {
         if (completionErr) return unprocessable(reply, completionErr);
       }
 
-      const stepRun = await updateStepRun(id, completed, fieldValues, userId);
+      const stepRun = await updateStepRun(
+        resolved.stepRun.id,
+        completed,
+        fieldValues,
+        userId,
+      );
 
       return formatStepRun(
         orderKey,
-        runId,
-        opRunId,
+        runNo,
+        seqNo,
         resolved.opRun.status,
         request.erpUser,
         stepRun,
@@ -290,12 +297,12 @@ export default function stepRunRoutes(fastify: FastifyInstance) {
   });
 
   // UPDATE single field value
-  app.put("/:id/fields/:stepFieldId", {
+  app.put("/:stepSeqNo/fields/:fieldSeqNo", {
     schema: {
       description:
         "Update a single field value on a step run (operation run must be in_progress)",
       tags: ["Step Runs"],
-      params: FieldValueParamsSchema,
+      params: FieldSeqNoParamsSchema,
       body: UpdateStepFieldValueSchema,
       response: {
         200: StepFieldValueSchema,
@@ -305,13 +312,13 @@ export default function stepRunRoutes(fastify: FastifyInstance) {
     },
     preHandler: requirePermission("order_executor"),
     handler: async (request, reply) => {
-      const { orderKey, runId, opRunId, id, stepFieldId } = request.params;
+      const { orderKey, runNo, seqNo, stepSeqNo, fieldSeqNo } = request.params;
       const { value } = request.body;
       const userId = request.erpUser!.id;
 
-      const resolved = await resolveOpRun(orderKey, runId, opRunId);
+      const resolved = await resolveStepRun(orderKey, runNo, seqNo, stepSeqNo);
       if (!resolved) {
-        return notFound(reply, `Operation run not found`);
+        return notFound(reply, `Step run not found`);
       }
 
       const orderErr = checkOrderRunStarted(resolved.run.status);
@@ -320,8 +327,12 @@ export default function stepRunRoutes(fastify: FastifyInstance) {
       const opErr = checkOpRunInProgress(resolved.opRun.status);
       if (opErr) return conflict(reply, opErr);
 
-      const stepRun = await findStepRunWithField(id, opRunId, stepFieldId);
-      if (!stepRun) return notFound(reply, `Step run ${id} not found`);
+      const stepRun = await findStepRunWithField(
+        resolved.stepRun.id,
+        resolved.opRun.id,
+        fieldSeqNo,
+      );
+      if (!stepRun) return notFound(reply, `Step run not found`);
 
       if (stepRun.completed) {
         return conflict(reply, `Cannot update field: step run is completed`);
@@ -329,14 +340,15 @@ export default function stepRunRoutes(fastify: FastifyInstance) {
 
       const field = stepRun.step.fields[0];
       if (!field) {
-        return notFound(reply, `Step field ${stepFieldId} not found`);
+        return notFound(reply, `Step field not found`);
       }
 
-      await upsertFieldValue(id, stepFieldId, value, userId);
+      await upsertFieldValue(resolved.stepRun.id, field.id, value, userId);
 
-      const stepRunHref = `${API_PREFIX}/${stepRunResource(orderKey, runId, opRunId)}/${id}`;
+      const stepRunHref = `${API_PREFIX}/${stepRunResource(orderKey, runNo, seqNo)}/${stepSeqNo}`;
       return {
         stepFieldId: field.id,
+        fieldSeqNo: field.seqNo,
         label: field.label,
         type: field.type,
         required: field.required,
@@ -345,7 +357,7 @@ export default function stepRunRoutes(fastify: FastifyInstance) {
         _actions: [
           {
             rel: "update" as const,
-            href: `${stepRunHref}/fields/${field.id}`,
+            href: `${stepRunHref}/fields/${field.seqNo}`,
             method: "PUT" as const,
             title: "Update Field Value",
             schema: `${API_PREFIX}/schemas/UpdateStepFieldValue`,

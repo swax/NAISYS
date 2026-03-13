@@ -21,11 +21,11 @@ import {
   formatAuditFields,
   formatDate,
   resolveOrder,
+  resolveOrderRun,
 } from "../route-helpers.js";
 import {
   createOrderRun,
   deleteOrderRun,
-  findExisting,
   findOrderRevision,
   getOrderRun,
   listOrderRuns,
@@ -40,17 +40,25 @@ function runResource(orderKey: string) {
 
 function orderRunItemActions(
   orderKey: string,
-  id: number,
+  runNo: number,
   status: string,
   user: ErpUser | undefined,
 ): HateoasAction[] {
-  const href = `${API_PREFIX}/${runResource(orderKey)}/${id}`;
+  const href = `${API_PREFIX}/${runResource(orderKey)}/${runNo}`;
   const actions: HateoasAction[] = [];
   const isExecutor = hasPermission(user, "order_executor");
   const isManager = hasPermission(user, "order_manager");
 
   if (status === OrderRunStatus.released) {
     if (isExecutor) {
+      actions.push({
+        rel: "start",
+        href: `${href}/start`,
+        method: "POST",
+        title: "Start",
+      });
+    }
+    if (isManager) {
       actions.push(
         {
           rel: "update",
@@ -59,16 +67,6 @@ function orderRunItemActions(
           title: "Update",
           schema: `${API_PREFIX}/schemas/UpdateOrderRun`,
         },
-        {
-          rel: "start",
-          href: `${href}/start`,
-          method: "POST",
-          title: "Start",
-        },
-      );
-    }
-    if (isManager) {
-      actions.push(
         {
           rel: "cancel",
           href: `${href}/cancel`,
@@ -85,6 +83,14 @@ function orderRunItemActions(
     }
   } else if (status === OrderRunStatus.started) {
     if (isExecutor) {
+      actions.push({
+        rel: "close",
+        href: `${href}/close`,
+        method: "POST",
+        title: "Close",
+      });
+    }
+    if (isManager) {
       actions.push(
         {
           rel: "update",
@@ -94,20 +100,12 @@ function orderRunItemActions(
           schema: `${API_PREFIX}/schemas/UpdateOrderRun`,
         },
         {
-          rel: "close",
-          href: `${href}/close`,
+          rel: "cancel",
+          href: `${href}/cancel`,
           method: "POST",
-          title: "Close",
+          title: "Cancel",
         },
       );
-    }
-    if (isManager) {
-      actions.push({
-        rel: "cancel",
-        href: `${href}/cancel`,
-        method: "POST",
-        title: "Cancel",
-      });
     }
   } else if (
     status === OrderRunStatus.closed ||
@@ -130,9 +128,9 @@ const OrderKeyParamsSchema = z.object({
   orderKey: z.string(),
 });
 
-export const IdParamsSchema = z.object({
+export const RunNoParamsSchema = z.object({
   orderKey: z.string(),
-  id: z.coerce.number().int(),
+  runNo: z.coerce.number().int(),
 });
 
 export function formatRun(
@@ -157,7 +155,7 @@ export function formatRun(
     _links: [
       ...childItemLinks(
         "/" + runResource(orderKey),
-        run.id,
+        run.runNo,
         "Runs",
         "/orders/" + orderKey,
         "Order",
@@ -166,11 +164,11 @@ export function formatRun(
       ),
       {
         rel: "operations",
-        href: `${API_PREFIX}/${runResource(orderKey)}/${run.id}/ops`,
+        href: `${API_PREFIX}/${runResource(orderKey)}/${run.runNo}/ops`,
         title: "Operation Runs",
       } as HateoasLink,
     ],
-    _actions: orderRunItemActions(orderKey, run.id, run.status, user),
+    _actions: orderRunItemActions(orderKey, run.runNo, run.status, user),
   };
 }
 
@@ -182,7 +180,7 @@ function formatListRun(
   const { _actions, ...rest } = formatRun(orderKey, user, run);
   return {
     ...rest,
-    _links: [selfLink(`/${runResource(orderKey)}/${run.id}`)],
+    _links: [selfLink(`/${runResource(orderKey)}/${run.runNo}`)],
   };
 }
 
@@ -287,31 +285,28 @@ export default function orderRunRoutes(fastify: FastifyInstance) {
     },
   });
 
-  // GET by ID
-  app.get("/:id", {
+  // GET by runNo
+  app.get("/:runNo", {
     schema: {
-      description: "Get a single order run by ID",
+      description: "Get a single order run by run number",
       tags: ["Order Runs"],
-      params: IdParamsSchema,
+      params: RunNoParamsSchema,
       response: {
         200: OrderRunSchema,
         404: ErrorResponseSchema,
       },
     },
     handler: async (request, reply) => {
-      const { orderKey, id } = request.params;
+      const { orderKey, runNo } = request.params;
 
-      const order = await resolveOrder(orderKey);
-      if (!order) {
-        return notFound(reply, `Order '${orderKey}' not found`);
+      const resolved = await resolveOrderRun(orderKey, runNo);
+      if (!resolved) {
+        return notFound(reply, `Order run not found for order '${orderKey}'`);
       }
 
-      const run = await getOrderRun(id);
-      if (!run || run.orderId !== order.id) {
-        return notFound(
-          reply,
-          `Order run ${id} not found for order '${orderKey}'`,
-        );
+      const run = await getOrderRun(resolved.run.id);
+      if (!run) {
+        return notFound(reply, `Order run not found`);
       }
 
       return formatRun(orderKey, request.erpUser, run);
@@ -319,11 +314,11 @@ export default function orderRunRoutes(fastify: FastifyInstance) {
   });
 
   // UPDATE (released/started only)
-  app.put("/:id", {
+  app.put("/:runNo", {
     schema: {
       description: "Update an order run (released or started status only)",
       tags: ["Order Runs"],
-      params: IdParamsSchema,
+      params: RunNoParamsSchema,
       body: UpdateOrderRunSchema,
       response: {
         200: OrderRunSchema,
@@ -331,43 +326,35 @@ export default function orderRunRoutes(fastify: FastifyInstance) {
         409: ErrorResponseSchema,
       },
     },
-    preHandler: requirePermission("order_executor"),
+    preHandler: requirePermission("order_manager"),
     handler: async (request, reply) => {
-      const { orderKey, id } = request.params;
+      const { orderKey, runNo } = request.params;
       const data = request.body;
       const userId = request.erpUser!.id;
 
-      const order = await resolveOrder(orderKey);
-      if (!order) {
-        return notFound(reply, `Order '${orderKey}' not found`);
+      const resolved = await resolveOrderRun(orderKey, runNo);
+      if (!resolved) {
+        return notFound(reply, `Order run not found for order '${orderKey}'`);
       }
 
-      const existing = await findExisting(id, order.id);
-      if (!existing) {
-        return notFound(
-          reply,
-          `Order run ${id} not found for order '${orderKey}'`,
-        );
-      }
-
-      const statusErr = validateStatusFor("update", existing.status, [
+      const statusErr = validateStatusFor("update", resolved.run.status, [
         OrderRunStatus.released,
         OrderRunStatus.started,
       ]);
       if (statusErr) return conflict(reply, statusErr);
 
-      const run = await updateOrderRun(id, data, userId);
+      const run = await updateOrderRun(resolved.run.id, data, userId);
 
       return formatRun(orderKey, request.erpUser, run);
     },
   });
 
   // DELETE (released only)
-  app.delete("/:id", {
+  app.delete("/:runNo", {
     schema: {
       description: "Delete an order run (released status only)",
       tags: ["Order Runs"],
-      params: IdParamsSchema,
+      params: RunNoParamsSchema,
       response: {
         204: z.void(),
         404: ErrorResponseSchema,
@@ -376,29 +363,21 @@ export default function orderRunRoutes(fastify: FastifyInstance) {
     },
     preHandler: requirePermission("order_manager"),
     handler: async (request, reply) => {
-      const { orderKey, id } = request.params;
+      const { orderKey, runNo } = request.params;
 
-      const order = await resolveOrder(orderKey);
-      if (!order) {
-        return notFound(reply, `Order '${orderKey}' not found`);
+      const resolved = await resolveOrderRun(orderKey, runNo);
+      if (!resolved) {
+        return notFound(reply, `Order run not found for order '${orderKey}'`);
       }
 
-      const existing = await findExisting(id, order.id);
-      if (!existing) {
-        return notFound(
-          reply,
-          `Order run ${id} not found for order '${orderKey}'`,
-        );
-      }
-
-      if (existing.status !== OrderRunStatus.released) {
+      if (resolved.run.status !== OrderRunStatus.released) {
         return conflict(
           reply,
-          `Cannot delete order run in ${existing.status} status`,
+          `Cannot delete order run in ${resolved.run.status} status`,
         );
       }
 
-      await deleteOrderRun(id);
+      await deleteOrderRun(resolved.run.id);
       reply.status(204);
     },
   });

@@ -24,14 +24,14 @@ const PRIORITY_COLORS: Record<string, string> = {
 interface Props {
   orderRun: OrderRun;
   orderKey: string;
-  runId: string;
+  runNo: string;
   onUpdate: (orderRun: OrderRun) => void;
 }
 
 export const OrderRunHeader: React.FC<Props> = ({
   orderRun,
   orderKey,
-  runId,
+  runNo,
   onUpdate,
 }) => {
   const navigate = useNavigate();
@@ -47,7 +47,7 @@ export const OrderRunHeader: React.FC<Props> = ({
     };
     try {
       const updated = await api.post<OrderRun>(
-        endpointMap[action](orderKey, runId),
+        endpointMap[action](orderKey, runNo),
         {},
       );
       onUpdate(updated);
@@ -59,7 +59,7 @@ export const OrderRunHeader: React.FC<Props> = ({
   const handleDelete = async () => {
     if (!confirm("Delete this order run?")) return;
     try {
-      await api.delete(apiEndpoints.orderRun(orderKey, runId));
+      await api.delete(apiEndpoints.orderRun(orderKey, runNo));
       void navigate(`/orders/${orderKey}/runs`);
     } catch (err) {
       showErrorNotification(err);

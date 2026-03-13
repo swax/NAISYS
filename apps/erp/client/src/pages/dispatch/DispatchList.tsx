@@ -160,7 +160,7 @@ export const DispatchList: React.FC = () => {
             </Table.Thead>
             <Table.Tbody>
               {data.items.map((item) => {
-                const runLink = `/orders/${item.orderKey}/runs/${item.id}`;
+                const runLink = `/orders/${item.orderKey}/runs/${item.runNo}`;
                 return (
                   <Table.Tr key={item.id} style={{ cursor: "pointer" }}>
                     <Table.Td>

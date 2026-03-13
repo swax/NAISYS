@@ -31,9 +31,9 @@ export interface OrderRunOutletContext {
 const SIDEBAR_WIDTH = 260;
 
 export const OrderRunLayout: React.FC = () => {
-  const { orderKey, id } = useParams<{
+  const { orderKey, runNo } = useParams<{
     orderKey: string;
-    id: string;
+    runNo: string;
   }>();
   const location = useLocation();
   const [orderRun, setOrderRun] = useState<OrderRun | null>(null);
@@ -50,11 +50,11 @@ export const OrderRunLayout: React.FC = () => {
   };
 
   const fetchOrderRun = useCallback(async () => {
-    if (!orderKey || !id) return;
+    if (!orderKey || !runNo) return;
     setLoading(true);
     try {
       const result = await api.get<OrderRun>(
-        apiEndpoints.orderRun(orderKey, id),
+        apiEndpoints.orderRun(orderKey, runNo),
       );
       setOrderRun(result);
     } catch (err) {
@@ -62,7 +62,7 @@ export const OrderRunLayout: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [orderKey, id]);
+  }, [orderKey, runNo]);
 
   useEffect(() => {
     void fetchOrderRun();
@@ -81,7 +81,7 @@ export const OrderRunLayout: React.FC = () => {
     );
   }
 
-  if (!orderRun || !orderKey || !id) {
+  if (!orderRun || !orderKey || !runNo) {
     return (
       <Box p="md">
         <Text>Order run not found.</Text>
@@ -101,7 +101,7 @@ export const OrderRunLayout: React.FC = () => {
       <OrderRunHeader
         orderRun={orderRun}
         orderKey={orderKey}
-        runId={id}
+        runNo={runNo}
         onUpdate={setOrderRun}
       />
 
@@ -176,7 +176,7 @@ export const OrderRunLayout: React.FC = () => {
               </Group>
               <OperationRunSidebar
                 orderKey={orderKey}
-                runId={id}
+                runNo={runNo}
                 refreshKey={opsRefreshKey}
               />
             </Box>
@@ -206,7 +206,7 @@ export const OrderRunLayout: React.FC = () => {
       >
         <OperationRunSidebar
           orderKey={orderKey}
-          runId={id}
+          runNo={runNo}
           refreshKey={opsRefreshKey}
         />
       </Drawer>

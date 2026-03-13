@@ -13,6 +13,7 @@ export type StepFieldValidation = z.infer<typeof StepFieldValidationSchema>;
 // A single field value within a step run
 export const StepFieldValueSchema = z.object({
   stepFieldId: z.number(),
+  fieldSeqNo: z.number(),
   label: z.string(),
   type: z.string(),
   required: z.boolean(),

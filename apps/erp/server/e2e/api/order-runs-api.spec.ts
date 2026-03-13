@@ -6,8 +6,9 @@ const API = "http://localhost:3201/api/erp";
 test.describe("Order Runs - API happy path", () => {
   let orderKey: string;
   let revNo: number;
-  let orderRunId: number;
-  let orderRunId2: number;
+  let orderRunNo: number;
+  let orderRunDbId: number; // database ID for audit queries
+  let orderRunNo2: number;
   let api: APIRequestContext;
 
   test.beforeAll(async ({ playwright }) => {
@@ -72,7 +73,8 @@ test.describe("Order Runs - API happy path", () => {
     expect(body._links).toEqual(
       expect.arrayContaining([expect.objectContaining({ rel: "order" })]),
     );
-    orderRunId = body.id;
+    orderRunNo = body.runNo;
+    orderRunDbId = body.id;
   });
 
   test("list order runs", async () => {
@@ -84,12 +86,12 @@ test.describe("Order Runs - API happy path", () => {
     expect(body.items.length).toBeGreaterThanOrEqual(1);
   });
 
-  test("get order run by id", async () => {
-    const res = await api.get(`${API}/orders/${orderKey}/runs/${orderRunId}`);
+  test("get order run by runNo", async () => {
+    const res = await api.get(`${API}/orders/${orderKey}/runs/${orderRunNo}`);
     expect(res.status()).toBe(200);
 
     const body = await res.json();
-    expect(body.id).toBe(orderRunId);
+    expect(body.runNo).toBe(orderRunNo);
     expect(body.status).toBe("released");
     expect(body._links).toEqual(
       expect.arrayContaining([
@@ -100,7 +102,7 @@ test.describe("Order Runs - API happy path", () => {
   });
 
   test("update released order run", async () => {
-    const res = await api.put(`${API}/orders/${orderKey}/runs/${orderRunId}`, {
+    const res = await api.put(`${API}/orders/${orderKey}/runs/${orderRunNo}`, {
       data: {
         priority: "critical",
         notes: "Updated notes",
@@ -115,7 +117,7 @@ test.describe("Order Runs - API happy path", () => {
 
   test("start order run (released → started)", async () => {
     const res = await api.post(
-      `${API}/orders/${orderKey}/runs/${orderRunId}/start`,
+      `${API}/orders/${orderKey}/runs/${orderRunNo}/start`,
     );
     expect(res.status()).toBe(200);
 
@@ -124,7 +126,7 @@ test.describe("Order Runs - API happy path", () => {
 
     // Verify audit entry was created
     const auditRes = await api.get(
-      `${API}/audit?entityType=OrderRun&entityId=${orderRunId}`,
+      `${API}/audit?entityType=OrderRun&entityId=${orderRunDbId}`,
     );
     const audit = await auditRes.json();
     expect(audit.items).toEqual(
@@ -156,7 +158,7 @@ test.describe("Order Runs - API happy path", () => {
 
   test("cannot delete started order run (409)", async () => {
     const res = await api.delete(
-      `${API}/orders/${orderKey}/runs/${orderRunId}`,
+      `${API}/orders/${orderKey}/runs/${orderRunNo}`,
     );
     expect(res.status()).toBe(409);
     const body = await res.json();
@@ -167,7 +169,7 @@ test.describe("Order Runs - API happy path", () => {
 
   test("close order run (started → closed)", async () => {
     const res = await api.post(
-      `${API}/orders/${orderKey}/runs/${orderRunId}/close`,
+      `${API}/orders/${orderKey}/runs/${orderRunNo}/close`,
     );
     expect(res.status()).toBe(200);
 
@@ -176,7 +178,7 @@ test.describe("Order Runs - API happy path", () => {
 
     // Verify audit entry was created
     const auditRes = await api.get(
-      `${API}/audit?entityType=OrderRun&entityId=${orderRunId}`,
+      `${API}/audit?entityType=OrderRun&entityId=${orderRunDbId}`,
     );
     const audit = await auditRes.json();
     expect(audit.items).toEqual(
@@ -196,7 +198,7 @@ test.describe("Order Runs - API happy path", () => {
 
   test("cannot start closed order run (409)", async () => {
     const res = await api.post(
-      `${API}/orders/${orderKey}/runs/${orderRunId}/start`,
+      `${API}/orders/${orderKey}/runs/${orderRunNo}/start`,
     );
     expect(res.status()).toBe(409);
     const body = await res.json();
@@ -207,7 +209,7 @@ test.describe("Order Runs - API happy path", () => {
 
   test("cannot cancel closed order run (409)", async () => {
     const res = await api.post(
-      `${API}/orders/${orderKey}/runs/${orderRunId}/cancel`,
+      `${API}/orders/${orderKey}/runs/${orderRunNo}/cancel`,
     );
     expect(res.status()).toBe(409);
     const body = await res.json();
@@ -227,11 +229,11 @@ test.describe("Order Runs - API happy path", () => {
     expect(createRes.status()).toBe(201);
     const created = await createRes.json();
     expect(created.runNo).toBe(2);
-    orderRunId2 = created.id;
+    orderRunNo2 = created.runNo;
 
     // Cancel it
     const cancelRes = await api.post(
-      `${API}/orders/${orderKey}/runs/${orderRunId2}/cancel`,
+      `${API}/orders/${orderKey}/runs/${orderRunNo2}/cancel`,
     );
     expect(cancelRes.status()).toBe(200);
 
