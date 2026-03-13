@@ -28,7 +28,7 @@ import {
   findExisting,
   getRevision,
   listRevisions,
-  type OrderRevisionWithUsers,
+  type OrderRevisionWithRelations,
   updateRevision,
   validateDraftStatus,
 } from "../services/order-revision-service.js";
@@ -102,7 +102,7 @@ export const RevNoParamsSchema = z.object({
 export function formatItem(
   orderKey: string,
   user: ErpUser | undefined,
-  item: OrderRevisionWithUsers,
+  item: OrderRevisionWithRelations,
 ) {
   return {
     id: item.id,
@@ -111,6 +111,7 @@ export function formatItem(
     status: item.status,
     description: item.description,
     changeSummary: item.changeSummary,
+    itemKey: item.order?.item?.key ?? null,
     ...formatAuditFields(item),
     _links: childItemLinks(
       `/${PARENT_RESOURCE}/${orderKey}/revs`,
@@ -133,7 +134,7 @@ export function formatItem(
 function formatListItem(
   orderKey: string,
   user: ErpUser | undefined,
-  item: OrderRevisionWithUsers,
+  item: OrderRevisionWithRelations,
 ) {
   return {
     ...formatItem(orderKey, user, item),

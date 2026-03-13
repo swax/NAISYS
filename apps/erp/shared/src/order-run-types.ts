@@ -27,6 +27,7 @@ export const OrderRunSchema = z.object({
   orderId: z.number(),
   orderKey: z.string(),
   revNo: z.number(),
+  itemKey: z.string().nullable(),
   status: OrderRunStatusEnum,
   priority: OrderRunPriorityEnum,
   scheduledStartAt: z.iso.datetime().nullable(),

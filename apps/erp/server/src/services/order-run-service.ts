@@ -13,12 +13,14 @@ import type { OrderRunModel } from "../generated/prisma/models/OrderRun.js";
 
 export const includeRev = {
   orderRev: { select: { revNo: true } },
+  order: { select: { item: { select: { key: true } } } },
   createdBy: { select: { username: true } },
   updatedBy: { select: { username: true } },
 } as const;
 
 export type OrderRunWithRev = OrderRunModel & {
   orderRev: { revNo: number };
+  order: { item: { key: string } | null };
   createdBy: { username: string };
   updatedBy: { username: string };
 };

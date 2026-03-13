@@ -14,7 +14,7 @@ import type {
 } from "@naisys-erp/shared";
 import { OrderRunPriority } from "@naisys-erp/shared";
 import { useCallback, useEffect, useState } from "react";
-import { useOutletContext, useParams } from "react-router";
+import { Link, useOutletContext, useParams } from "react-router";
 
 import { CompactMarkdown } from "../../../components/CompactMarkdown";
 import { MetadataTooltip } from "../../../components/MetadataTooltip";
@@ -114,6 +114,24 @@ export const HeaderRunDetail: React.FC = () => {
             />
           ) : (
             <Stack gap="sm">
+              <Group>
+                <Text fw={600} w={140}>
+                  Produces Item:
+                </Text>
+                {item.itemKey ? (
+                  <Text
+                    component={Link}
+                    to={`/items/${item.itemKey}`}
+                    size="sm"
+                    c="blue"
+                    style={{ textDecoration: "none" }}
+                  >
+                    {item.itemKey}
+                  </Text>
+                ) : (
+                  <Text c="dimmed">{"\u2014"}</Text>
+                )}
+              </Group>
               <Group align="flex-start">
                 <Text fw={600} w={140}>
                   Description:

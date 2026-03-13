@@ -1,5 +1,4 @@
 import {
-  Badge,
   Button,
   Card,
   Container,
@@ -7,31 +6,33 @@ import {
   Loader,
   Stack,
   Text,
+  Textarea,
+  TextInput,
   Title,
 } from "@mantine/core";
-import type { Order, UpdateOrder } from "@naisys-erp/shared";
-import { OrderStatus } from "@naisys-erp/shared";
+import type { Item, UpdateItem } from "@naisys-erp/shared";
 import { useCallback, useEffect, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router";
+import { useNavigate, useParams } from "react-router";
 
 import { MetadataTooltip } from "../../components/MetadataTooltip";
-import { OrderForm } from "../../components/OrderForm";
-import { OrderRevisions } from "../../components/OrderRevisions";
 import { api, apiEndpoints, showErrorNotification } from "../../lib/api";
 import { hasAction } from "../../lib/hateoas";
 
-export const OrderDetail: React.FC = () => {
+export const ItemDetail: React.FC = () => {
   const { key } = useParams<{ key: string }>();
   const navigate = useNavigate();
-  const [item, setItem] = useState<Order | null>(null);
+  const [item, setItem] = useState<Item | null>(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
+  const [editKey, setEditKey] = useState("");
+  const [description, setDescription] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   const fetchItem = useCallback(async () => {
     if (!key) return;
     setLoading(true);
     try {
-      const result = await api.get<Order>(apiEndpoints.order(key));
+      const result = await api.get<Item>(apiEndpoints.item(key));
       setItem(result);
     } catch (err) {
       showErrorNotification(err);
@@ -44,22 +45,37 @@ export const OrderDetail: React.FC = () => {
     void fetchItem();
   }, [fetchItem]);
 
-  const handleUpdate = async (data: UpdateOrder) => {
+  const handleEdit = () => {
+    if (!item) return;
+    setEditKey(item.key);
+    setDescription(item.description);
+    setEditing(true);
+  };
+
+  const handleUpdate = async () => {
     if (!key) return;
-    await api.put(apiEndpoints.order(key), data);
-    setEditing(false);
-    if (data.key && data.key !== key) {
-      void navigate(`/orders/${data.key}`, { replace: true });
-    } else {
-      await fetchItem();
+    setSubmitting(true);
+    try {
+      const data: UpdateItem = { key: editKey, description };
+      await api.put(apiEndpoints.item(key), data);
+      setEditing(false);
+      if (editKey !== key) {
+        void navigate(`/items/${editKey}`, { replace: true });
+      } else {
+        await fetchItem();
+      }
+    } catch (err) {
+      showErrorNotification(err);
+    } finally {
+      setSubmitting(false);
     }
   };
 
   const handleDelete = async () => {
-    if (!key || !confirm("Delete this order?")) return;
+    if (!key || !confirm("Delete this item?")) return;
     try {
-      await api.delete(apiEndpoints.order(key));
-      void navigate("/orders");
+      await api.delete(apiEndpoints.item(key));
+      void navigate("/items");
     } catch (err) {
       showErrorNotification(err);
     }
@@ -78,7 +94,7 @@ export const OrderDetail: React.FC = () => {
   if (!item) {
     return (
       <Container size="md" py="xl">
-        <Text>Order not found.</Text>
+        <Text>Item not found.</Text>
       </Container>
     );
   }
@@ -87,19 +103,32 @@ export const OrderDetail: React.FC = () => {
     return (
       <Container size="md" py="xl">
         <Title order={2} mb="lg">
-          Edit Order
+          Edit Item
         </Title>
-        <OrderForm<true>
-          initialData={{
-            key: item.key,
-            description: item.description,
-            status: item.status,
-            itemKey: item.itemKey,
-          }}
-          isEdit
-          onSubmit={handleUpdate}
-          onCancel={() => setEditing(false)}
-        />
+        <Stack>
+          <TextInput
+            label="Key"
+            description="Alphanumeric with hyphens"
+            value={editKey}
+            onChange={(e) => setEditKey(e.currentTarget.value)}
+            required
+          />
+          <Textarea
+            label="Description"
+            value={description}
+            onChange={(e) => setDescription(e.currentTarget.value)}
+            autosize
+            minRows={2}
+          />
+          <Group justify="flex-end">
+            <Button variant="subtle" onClick={() => setEditing(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleUpdate} loading={submitting}>
+              Save
+            </Button>
+          </Group>
+        </Stack>
       </Container>
     );
   }
@@ -115,23 +144,13 @@ export const OrderDetail: React.FC = () => {
             updatedBy={item.updatedBy}
             updatedAt={item.updatedAt}
           />
-          <Badge
-            color={item.status === OrderStatus.active ? "green" : "gray"}
-            variant="light"
-            size="lg"
-          >
-            {item.status}
-          </Badge>
         </Group>
         <Group>
-          <Button variant="subtle" onClick={() => navigate("/orders")}>
+          <Button variant="subtle" onClick={() => navigate("/items")}>
             Back
           </Button>
-          <Button variant="light" component={Link} to={`/orders/${key}/runs`}>
-            View Runs
-          </Button>
           {hasAction(item._actions, "update") && (
-            <Button onClick={() => setEditing(true)}>Edit</Button>
+            <Button onClick={handleEdit}>Edit</Button>
           )}
           {hasAction(item._actions, "delete") && (
             <Button color="red" variant="outline" onClick={handleDelete}>
@@ -145,31 +164,12 @@ export const OrderDetail: React.FC = () => {
         <Stack gap="sm">
           <Group>
             <Text fw={600} w={120}>
-              Produces Item:
-            </Text>
-            {item.itemKey ? (
-              <Text
-                component={Link}
-                to={`/items/${item.itemKey}`}
-                c="blue"
-                style={{ textDecoration: "none" }}
-              >
-                {item.itemKey}
-              </Text>
-            ) : (
-              <Text>—</Text>
-            )}
-          </Group>
-          <Group>
-            <Text fw={600} w={120}>
               Description:
             </Text>
             <Text>{item.description || "—"}</Text>
           </Group>
         </Stack>
       </Card>
-
-      <OrderRevisions orderKey={key!} />
     </Container>
   );
 };

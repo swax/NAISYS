@@ -51,11 +51,13 @@ model Order {
   key         String      @unique
   description String      @default("")
   status      OrderStatus @default(active)
+  itemId      Int?        @map("item_id")
   createdById Int         @map("created_by")
   createdAt   DateTime    @default(now()) @map("created_at")
   updatedById Int         @map("updated_by")
   updatedAt   DateTime    @updatedAt @map("updated_at")
 
+  item       Item?                   @relation(fields: [itemId], references: [id], onDelete: Restrict)
   createdBy  User                    @relation("orderCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
   updatedBy  User                    @relation("orderUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
   revisions  OrderRevision[]
@@ -63,6 +65,7 @@ model Order {
 
   @@index([status]) // LIST filter in orders.ts
   @@index([createdAt]) // LIST orderBy in orders.ts
+  @@index([itemId]) // FK lookup for item relation
   @@map("orders")
 }
 
@@ -241,6 +244,23 @@ model StepFieldValue {
   @@map("step_field_values")
 }
 
+model Item {
+  id          Int      @id @default(autoincrement())
+  key         String   @unique
+  description String   @default("")
+  createdAt   DateTime @default(now()) @map("created_at")
+  createdById Int      @map("created_by")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  updatedById Int      @map("updated_by")
+
+  createdBy User    @relation("itemCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy User    @relation("itemUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+  orders    Order[]
+
+  @@index([createdAt])
+  @@map("items")
+}
+
 model User {
   id           Int       @id @default(autoincrement())
   uuid         String    @unique
@@ -252,6 +272,8 @@ model User {
   updatedAt    DateTime  @updatedAt @map("updated_at")
   deletedAt    DateTime? @map("deleted_at")
 
+  itemsCreated         Item[]                  @relation("itemCreatedBy")
+  itemsUpdated         Item[]                  @relation("itemUpdatedBy")
   ordersCreated        Order[]                 @relation("orderCreatedBy")
   ordersUpdated        Order[]                 @relation("orderUpdatedBy")
   orderRevsCreated     OrderRevision[]         @relation("orderRevCreatedBy")

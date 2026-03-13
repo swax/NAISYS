@@ -10,7 +10,13 @@ import { includeUsers, type WithAuditUsers } from "../route-helpers.js";
 
 // --- Prisma include & result type ---
 
-export type OrderRevisionWithUsers = OrderRevisionModel & WithAuditUsers;
+const includeRevisionRelations = {
+  ...includeUsers,
+  order: { select: { item: { select: { key: true } } } },
+} as const;
+
+export type OrderRevisionWithRelations = OrderRevisionModel &
+  WithAuditUsers & { order: { item: { key: string } | null } };
 
 // --- Lookups ---
 
@@ -19,12 +25,12 @@ export async function listRevisions(
   where: Record<string, unknown>,
   page: number,
   pageSize: number,
-): Promise<[OrderRevisionWithUsers[], number]> {
+): Promise<[OrderRevisionWithRelations[], number]> {
   const fullWhere = { orderId, ...where };
   return Promise.all([
     erpDb.orderRevision.findMany({
       where: fullWhere,
-      include: includeUsers,
+      include: includeRevisionRelations,
       skip: (page - 1) * pageSize,
       take: pageSize,
       orderBy: { revNo: "desc" },
@@ -36,17 +42,17 @@ export async function listRevisions(
 export async function getRevision(
   orderId: number,
   revNo: number,
-): Promise<OrderRevisionWithUsers | null> {
+): Promise<OrderRevisionWithRelations | null> {
   return erpDb.orderRevision.findFirst({
     where: { orderId, revNo },
-    include: includeUsers,
+    include: includeRevisionRelations,
   });
 }
 
 export async function findExisting(orderId: number, revNo: number) {
   return erpDb.orderRevision.findFirst({
     where: { orderId, revNo },
-    include: includeUsers,
+    include: includeRevisionRelations,
   });
 }
 
@@ -77,7 +83,7 @@ export async function createRevision(
   orderId: number,
   data: { description?: string; changeSummary?: string | null },
   userId: number,
-): Promise<OrderRevisionWithUsers> {
+): Promise<OrderRevisionWithRelations> {
   return erpDb.$transaction(async (erpTx) => {
     const prevRev = await erpTx.orderRevision.findFirst({
       where: { orderId },
@@ -116,7 +122,7 @@ export async function createRevision(
         createdById: userId,
         updatedById: userId,
       },
-      include: includeUsers,
+      include: includeRevisionRelations,
     });
 
     // Copy operations, steps, and fields from the previous revision
@@ -169,7 +175,7 @@ export async function updateRevision(
   id: number,
   data: { description?: string; changeSummary?: string | null },
   userId: number,
-): Promise<OrderRevisionWithUsers> {
+): Promise<OrderRevisionWithRelations> {
   return erpDb.orderRevision.update({
     where: { id },
     data: {
@@ -179,7 +185,7 @@ export async function updateRevision(
         : {}),
       updatedById: userId,
     },
-    include: includeUsers,
+    include: includeRevisionRelations,
   });
 }
 
@@ -193,12 +199,12 @@ export async function transitionStatus(
   fromStatus: RevisionStatus,
   toStatus: RevisionStatus,
   userId: number,
-): Promise<OrderRevisionWithUsers> {
+): Promise<OrderRevisionWithRelations> {
   return erpDb.$transaction(async (erpTx) => {
     const updated = await erpTx.orderRevision.update({
       where: { id },
       data: { status: toStatus, updatedById: userId },
-      include: includeUsers,
+      include: includeRevisionRelations,
     });
     await writeAuditEntry(
       erpTx,
