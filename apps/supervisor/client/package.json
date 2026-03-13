@@ -11,28 +11,28 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "@mantine/charts": "^8.3.15",
-    "@mantine/core": "^8.3.15",
-    "@mantine/dropzone": "^8.3.15",
-    "@mantine/form": "^8.3.15",
-    "@mantine/hooks": "^8.3.15",
-    "@mantine/notifications": "^8.3.15",
+    "@mantine/charts": "^8.3.16",
+    "@mantine/core": "^8.3.16",
+    "@mantine/dropzone": "^8.3.16",
+    "@mantine/form": "^8.3.16",
+    "@mantine/hooks": "^8.3.16",
+    "@mantine/notifications": "^8.3.16",
     "@naisys-supervisor/shared": "file:../shared",
     "@naisys/common": "file:../../../packages/common",
     "@naisys/hub-protocol": "file:../../../packages/hub-protocol",
-    "@tabler/icons-react": "^3.38.0",
+    "@tabler/icons-react": "^3.40.0",
     "@tanstack/react-query": "^5.90.21",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "react-router-dom": "^7.13.1",
-    "recharts": "^3.7.0",
+    "recharts": "^3.8.0",
     "socket.io-client": "^4.8.3"
   },
   "devDependencies": {
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react": "^5.1.4",
+    "@vitejs/plugin-react": "^6.0.0",
     "typescript": "^5.9.3",
-    "vite": "^7.3.1"
+    "vite": "^8.0.0"
   }
 }

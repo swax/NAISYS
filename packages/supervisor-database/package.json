@@ -28,10 +28,10 @@
     "@naisys/common": "file:../common",
     "@naisys/common-node": "file:../common-node",
     "bcrypt": "^6.0.0",
-    "@prisma/adapter-better-sqlite3": "^7.4.2",
-    "@prisma/client": "^7.4.2",
+    "@prisma/adapter-better-sqlite3": "^7.5.0",
+    "@prisma/client": "^7.5.0",
     "better-sqlite3": "^12.6.2",
     "dotenv": "^17.3.1",
-    "prisma": "^7.4.2"
+    "prisma": "^7.5.0"
   }
 }
