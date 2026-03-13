@@ -31,7 +31,6 @@ export const OrderRunSchema = z.object({
   priority: OrderRunPriorityEnum,
   scheduledStartAt: z.iso.datetime().nullable(),
   dueAt: z.iso.datetime().nullable(),
-  releasedAt: z.iso.datetime(),
   assignedTo: z.string().nullable(),
   notes: z.string().nullable(),
   createdAt: z.iso.datetime(),

@@ -131,7 +131,7 @@ export function formatItem(
     description: item.operation.description,
     status: item.status,
     completedAt: formatDate(item.completedAt),
-    notes: item.notes,
+    feedback: item.feedback,
     ...formatAuditFields(item),
     _links: childItemLinks(
       "/" + opRunResource(orderKey, runId),

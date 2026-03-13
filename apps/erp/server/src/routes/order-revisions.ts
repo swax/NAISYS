@@ -109,7 +109,7 @@ export function formatItem(
     orderId: item.orderId,
     revNo: item.revNo,
     status: item.status,
-    notes: item.notes,
+    description: item.description,
     changeSummary: item.changeSummary,
     ...formatAuditFields(item),
     _links: childItemLinks(
@@ -213,7 +213,7 @@ export default function orderRevisionRoutes(fastify: FastifyInstance) {
     },
     handler: async (request, reply) => {
       const { orderKey } = request.params;
-      const { notes, changeSummary } = request.body;
+      const { description, changeSummary } = request.body;
       const userId = request.erpUser!.id;
 
       const order = await resolveOrder(orderKey);
@@ -223,7 +223,7 @@ export default function orderRevisionRoutes(fastify: FastifyInstance) {
 
       const item = await createRevision(
         order.id,
-        { notes, changeSummary },
+        { description, changeSummary },
         userId,
       );
 
@@ -278,7 +278,7 @@ export default function orderRevisionRoutes(fastify: FastifyInstance) {
     },
     handler: async (request, reply) => {
       const { orderKey, revNo } = request.params;
-      const { notes, changeSummary } = request.body;
+      const { description, changeSummary } = request.body;
       const userId = request.erpUser!.id;
 
       const order = await resolveOrder(orderKey);
@@ -301,7 +301,7 @@ export default function orderRevisionRoutes(fastify: FastifyInstance) {
 
       const item = await updateRevision(
         existing.id,
-        { notes, changeSummary },
+        { description, changeSummary },
         userId,
       );
 

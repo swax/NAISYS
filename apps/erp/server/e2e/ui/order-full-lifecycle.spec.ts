@@ -4,7 +4,6 @@ import { createOrderWithRevision } from "./helpers/order-setup";
 
 test.describe.serial("Full order lifecycle with operations (UI)", () => {
   const uniqueKey = `e2e-full-${Date.now()}`;
-  const orderName = "Full Lifecycle Test";
   const orderDesc = "End-to-end test with operation, step, and field";
   const opTitle = "Assembly";
   const stepInstructions = "Assemble the components per specification";
@@ -30,7 +29,7 @@ test.describe.serial("Full order lifecycle with operations (UI)", () => {
   // ── Design-time: build the order structure ───────────────────────────
 
   test("create order with revision", async () => {
-    await createOrderWithRevision(page, { uniqueKey, orderName, orderDesc });
+    await createOrderWithRevision(page, { uniqueKey, orderDesc });
   });
 
   test("add an operation", async () => {

@@ -141,7 +141,6 @@ export function formatItem(
     priority: item.priority,
     scheduledStartAt: formatDate(item.scheduledStartAt),
     dueAt: formatDate(item.dueAt),
-    releasedAt: item.releasedAt.toISOString(),
     assignedTo: item.assignedTo,
     notes: item.notes,
     ...formatAuditFields(item),

@@ -47,14 +47,12 @@ export async function checkHasRevisions(orderId: number): Promise<boolean> {
 
 export async function createOrder(
   key: string,
-  name: string,
   description: string | undefined,
   userId: number,
 ): Promise<OrderWithUsers> {
   return erpDb.order.create({
     data: {
       key,
-      name,
       description,
       createdById: userId,
       updatedById: userId,

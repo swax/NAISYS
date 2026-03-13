@@ -87,7 +87,6 @@ export const OrderDetail: React.FC = () => {
         </Title>
         <OrderForm<true>
           initialData={{
-            name: item.name,
             description: item.description,
             status: item.status,
           }}
@@ -103,7 +102,7 @@ export const OrderDetail: React.FC = () => {
     <Container size="md" py="xl">
       <Group justify="space-between" mb="lg">
         <Group>
-          <Title order={2}>{item.name}</Title>
+          <Title order={2}>{item.key}</Title>
           <MetadataTooltip
             createdBy={item.createdBy}
             createdAt={item.createdAt}

@@ -75,7 +75,7 @@ export async function checkHasOrderRuns(
 
 export async function createRevision(
   orderId: number,
-  data: { notes?: string | null; changeSummary?: string | null },
+  data: { description?: string; changeSummary?: string | null },
   userId: number,
 ): Promise<OrderRevisionWithUsers> {
   return erpDb.$transaction(async (erpTx) => {
@@ -94,11 +94,24 @@ export async function createRevision(
     });
     const nextRevNo = (prevRev?.revNo ?? 0) + 1;
 
+    // Seed description: explicit value > previous rev's description > order's description
+    let resolvedDescription = data.description;
+    if (resolvedDescription === undefined) {
+      if (prevRev) {
+        resolvedDescription = prevRev.description;
+      } else {
+        const order = await erpTx.order.findUniqueOrThrow({
+          where: { id: orderId },
+        });
+        resolvedDescription = order.description;
+      }
+    }
+
     const newRev = await erpTx.orderRevision.create({
       data: {
         orderId,
         revNo: nextRevNo,
-        notes: data.notes ?? null,
+        description: resolvedDescription,
         changeSummary: data.changeSummary ?? null,
         createdById: userId,
         updatedById: userId,
@@ -154,13 +167,13 @@ export async function createRevision(
 
 export async function updateRevision(
   id: number,
-  data: { notes?: string | null; changeSummary?: string | null },
+  data: { description?: string; changeSummary?: string | null },
   userId: number,
 ): Promise<OrderRevisionWithUsers> {
   return erpDb.orderRevision.update({
     where: { id },
     data: {
-      ...(data.notes !== undefined ? { notes: data.notes } : {}),
+      ...(data.description !== undefined ? { description: data.description } : {}),
       ...(data.changeSummary !== undefined
         ? { changeSummary: data.changeSummary }
         : {}),

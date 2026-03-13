@@ -110,7 +110,6 @@ export const OrderList: React.FC = () => {
             <Table.Thead>
               <Table.Tr>
                 <Table.Th>Key</Table.Th>
-                <Table.Th>Name</Table.Th>
                 <Table.Th>Status</Table.Th>
                 <Table.Th>Created</Table.Th>
               </Table.Tr>
@@ -127,7 +126,6 @@ export const OrderList: React.FC = () => {
                       {item.key}
                     </Text>
                   </Table.Td>
-                  <Table.Td>{item.name}</Table.Td>
                   <Table.Td>
                     <Badge
                       color={

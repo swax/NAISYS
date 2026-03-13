@@ -90,13 +90,13 @@ export const RevisionHeader: React.FC<Props> = ({
         >
           {item.status}
         </Badge>
-        {item.notes && (
+        {item.description && (
           <>
             <Text size="sm" c="dimmed">
               |
             </Text>
             <Text size="sm" c="dimmed" lineClamp={1} maw={300}>
-              {item.notes}
+              {item.description}
             </Text>
           </>
         )}

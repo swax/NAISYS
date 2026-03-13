@@ -112,7 +112,6 @@ function formatItem(item: OrderWithUsers, user: ErpUser | undefined) {
   return {
     id: item.id,
     key: item.key,
-    name: item.name,
     description: item.description,
     status: item.status,
     ...formatAuditFields(item),
@@ -152,7 +151,6 @@ export default function orderRoutes(fastify: FastifyInstance) {
       if (status) where.status = status;
       if (search) {
         where.OR = [
-          { name: { contains: search } },
           { key: { contains: search } },
           { description: { contains: search } },
         ];
@@ -195,10 +193,10 @@ export default function orderRoutes(fastify: FastifyInstance) {
       },
     },
     handler: async (request, reply) => {
-      const { key, name, description } = request.body;
+      const { key, description } = request.body;
       const userId = request.erpUser!.id;
 
-      const item = await createOrder(key, name, description, userId);
+      const item = await createOrder(key, description, userId);
 
       reply.status(201);
       return formatItem(item, request.erpUser);

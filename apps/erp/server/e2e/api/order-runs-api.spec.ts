@@ -26,7 +26,6 @@ test.describe("Order Runs - API happy path", () => {
     const orderRes = await api.post(`${API}/orders`, {
       data: {
         key: orderKey,
-        name: "E2E Run Test Order",
         description: "Order for order run e2e testing",
       },
     });
@@ -35,7 +34,7 @@ test.describe("Order Runs - API happy path", () => {
     // Create revision
     const revRes = await api.post(`${API}/orders/${orderKey}/revs`, {
       data: {
-        notes: "Test revision",
+        description: "Test revision",
         changeSummary: "Initial",
       },
     });
@@ -62,7 +61,6 @@ test.describe("Order Runs - API happy path", () => {
     expect(body.assignedTo).toBe("test-user");
     expect(body.orderKey).toBe(orderKey);
     expect(body.revNo).toBe(revNo);
-    expect(body.releasedAt).toBeTruthy();
     expect(body._actions).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ rel: "start" }),
@@ -281,7 +279,7 @@ test.describe("Order Runs - API happy path", () => {
   test("cannot delete draft revision with order runs (409)", async () => {
     // Create a new draft revision, then create an order run against it
     const revRes = await api.post(`${API}/orders/${orderKey}/revs`, {
-      data: { notes: "Draft with order runs" },
+      data: { description: "Draft with order runs" },
     });
     expect(revRes.status()).toBe(201);
     const rev = await revRes.json();

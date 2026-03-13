@@ -158,6 +158,7 @@ export const OrderRunList: React.FC = () => {
             <Table.Thead>
               <Table.Tr>
                 <Table.Th>Run #</Table.Th>
+                <Table.Th>Rev</Table.Th>
                 <Table.Th>Status</Table.Th>
                 <Table.Th>Priority</Table.Th>
                 <Table.Th>Assigned To</Table.Th>
@@ -179,6 +180,11 @@ export const OrderRunList: React.FC = () => {
                         <Text size="sm" ff="monospace">
                           {item.runNo}
                         </Text>
+                      </Link>
+                    </Table.Td>
+                    <Table.Td>
+                      <Link to={runLink} style={cellLinkStyle}>
+                        {item.revNo}
                       </Link>
                     </Table.Td>
                     <Table.Td>
