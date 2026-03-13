@@ -146,6 +146,7 @@ export const OrderRunForm = <TEdit extends boolean = false>({
           label="Notes"
           placeholder="Additional notes..."
           {...form.getInputProps("notes")}
+          autosize
           minRows={3}
         />
         {error && (

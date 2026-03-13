@@ -4,26 +4,22 @@ import {
   Card,
   Group,
   Loader,
-  Modal,
   Pagination,
   Stack,
   Table,
   Text,
-  Textarea,
   Title,
 } from "@mantine/core";
-import { useForm } from "@mantine/form";
 import type {
   OrderRevision,
   OrderRevisionListResponse,
 } from "@naisys-erp/shared";
-import { CreateOrderRevisionSchema, RevisionStatus } from "@naisys-erp/shared";
+import { RevisionStatus } from "@naisys-erp/shared";
 import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router";
 
 import { api, apiEndpoints, showErrorNotification } from "../lib/api";
 import { hasAction } from "../lib/hateoas";
-import { zodResolver } from "../lib/zod-resolver";
 
 const cellLinkStyle = {
   display: "block",
@@ -48,16 +44,7 @@ export const OrderRevisions: React.FC<Props> = ({ orderKey }) => {
   const [data, setData] = useState<OrderRevisionListResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-
-  const form = useForm({
-    initialValues: {
-      description: "",
-      changeSummary: "",
-    },
-    validate: zodResolver(CreateOrderRevisionSchema),
-  });
+  const [creating, setCreating] = useState(false);
 
   const fetchRevisions = useCallback(async () => {
     setLoading(true);
@@ -77,29 +64,19 @@ export const OrderRevisions: React.FC<Props> = ({ orderKey }) => {
     void fetchRevisions();
   }, [fetchRevisions]);
 
-  const handleCreate = async (values: typeof form.values) => {
-    setSubmitting(true);
+  const handleCreate = async () => {
+    setCreating(true);
     try {
       const created = await api.post<OrderRevision>(
         apiEndpoints.orderRevs(orderKey),
-        {
-          description: values.description || undefined,
-          changeSummary: values.changeSummary || undefined,
-        },
+        {},
       );
-      setModalOpen(false);
-      form.reset();
-      void navigate(`/orders/${orderKey}/revs/${created.revNo}`);
+      void navigate(`/orders/${orderKey}/revs/${created.revNo}/header`);
     } catch (err) {
       showErrorNotification(err);
     } finally {
-      setSubmitting(false);
+      setCreating(false);
     }
-  };
-
-  const handleCloseModal = () => {
-    setModalOpen(false);
-    form.reset();
   };
 
   const handleApprove = async (rev: OrderRevision) => {
@@ -139,7 +116,7 @@ export const OrderRevisions: React.FC<Props> = ({ orderKey }) => {
       <Group justify="space-between" mb="md">
         <Title order={4}>Revisions</Title>
         {data && hasAction(data._actions, "create") && (
-          <Button size="sm" onClick={() => setModalOpen(true)}>
+          <Button size="sm" onClick={handleCreate} loading={creating}>
             New Revision
           </Button>
         )}
@@ -259,32 +236,6 @@ export const OrderRevisions: React.FC<Props> = ({ orderKey }) => {
         </>
       )}
 
-      <Modal opened={modalOpen} onClose={handleCloseModal} title="New Revision">
-        <form onSubmit={form.onSubmit(handleCreate)}>
-          <Stack gap="md">
-            <Textarea
-              label="Description"
-              placeholder="Optional description for this revision..."
-              {...form.getInputProps("description")}
-              minRows={2}
-            />
-            <Textarea
-              label="Change Summary"
-              placeholder="What changed in this revision..."
-              {...form.getInputProps("changeSummary")}
-              minRows={2}
-            />
-            <Group justify="flex-end">
-              <Button variant="subtle" onClick={handleCloseModal}>
-                Cancel
-              </Button>
-              <Button type="submit" loading={submitting}>
-                Create
-              </Button>
-            </Group>
-          </Stack>
-        </form>
-      </Modal>
     </Card>
   );
 };

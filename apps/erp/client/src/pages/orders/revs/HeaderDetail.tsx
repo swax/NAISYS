@@ -4,47 +4,43 @@ import {
   Container,
   Group,
   Loader,
-  NumberInput,
   Stack,
   Text,
   Textarea,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
-import type { Operation, UpdateOperation } from "@naisys-erp/shared";
-import { UpdateOperationSchema } from "@naisys-erp/shared";
+import type { OrderRevision, UpdateOrderRevision } from "@naisys-erp/shared";
+import { UpdateOrderRevisionSchema } from "@naisys-erp/shared";
 import { useCallback, useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router";
+import { useParams } from "react-router";
 
 import { CompactMarkdown } from "../../../components/CompactMarkdown";
 import { MetadataTooltip } from "../../../components/MetadataTooltip";
 import { api, apiEndpoints, showErrorNotification } from "../../../lib/api";
 import { hasAction } from "../../../lib/hateoas";
 import { zodResolver } from "../../../lib/zod-resolver";
-import { StepList } from "./StepList";
 
-export const OperationDetail: React.FC = () => {
-  const { orderKey, revNo, seqNo } = useParams<{
+export const HeaderDetail: React.FC = () => {
+  const { orderKey, revNo } = useParams<{
     orderKey: string;
     revNo: string;
-    seqNo: string;
   }>();
-  const navigate = useNavigate();
-  const [item, setItem] = useState<Operation | null>(null);
+  const [item, setItem] = useState<OrderRevision | null>(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const form = useForm<UpdateOperation>({
-    initialValues: { description: "", seqNo: 10 },
-    validate: zodResolver(UpdateOperationSchema),
+  const form = useForm<UpdateOrderRevision>({
+    initialValues: { description: "", changeSummary: "" },
+    validate: zodResolver(UpdateOrderRevisionSchema),
   });
 
   const fetchItem = useCallback(async () => {
-    if (!orderKey || !revNo || !seqNo) return;
+    if (!orderKey || !revNo) return;
     setLoading(true);
     try {
-      const result = await api.get<Operation>(
-        apiEndpoints.orderRevOp(orderKey, revNo, seqNo),
+      const result = await api.get<OrderRevision>(
+        apiEndpoints.orderRev(orderKey, revNo),
       );
       setItem(result);
     } catch (err) {
@@ -52,7 +48,7 @@ export const OperationDetail: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [orderKey, revNo, seqNo]);
+  }, [orderKey, revNo]);
 
   useEffect(() => {
     void fetchItem();
@@ -61,43 +57,26 @@ export const OperationDetail: React.FC = () => {
   const startEditing = () => {
     if (!item) return;
     form.setValues({
-      description: item.description,
-      seqNo: item.seqNo,
+      description: item.description || "",
+      changeSummary: item.changeSummary || "",
     });
     setEditing(true);
   };
 
-  const handleSave = async (values: UpdateOperation) => {
+  const handleSave = async (values: UpdateOrderRevision) => {
     if (!item) return;
     setSaving(true);
     try {
-      const updated = await api.put<Operation>(
-        apiEndpoints.orderRevOp(orderKey!, revNo!, item.seqNo),
+      const updated = await api.put<OrderRevision>(
+        apiEndpoints.orderRev(orderKey!, revNo!),
         values,
       );
       setItem(updated);
       setEditing(false);
-      // If seqNo changed, navigate to the new URL
-      if (values.seqNo && values.seqNo !== item.seqNo) {
-        void navigate(
-          `/orders/${orderKey}/revs/${revNo}/ops/${updated.seqNo}`,
-          { replace: true },
-        );
-      }
     } catch (err) {
       showErrorNotification(err);
     } finally {
       setSaving(false);
-    }
-  };
-
-  const handleDelete = async () => {
-    if (!item || !confirm(`Delete operation "${item.title}"?`)) return;
-    try {
-      await api.delete(apiEndpoints.orderRevOp(orderKey!, revNo!, item.seqNo));
-      void navigate(`/orders/${orderKey}/revs/${revNo}`);
-    } catch (err) {
-      showErrorNotification(err);
     }
   };
 
@@ -112,7 +91,7 @@ export const OperationDetail: React.FC = () => {
   if (!item) {
     return (
       <Stack p="md">
-        <Text>Operation not found.</Text>
+        <Text>Revision not found.</Text>
       </Stack>
     );
   }
@@ -124,9 +103,7 @@ export const OperationDetail: React.FC = () => {
       <Stack gap="md">
         <Group justify="space-between">
           <Group gap="xs">
-            <Text fw={600}>
-              OPERATION {item.seqNo}. {item.title}
-            </Text>
+            <Text fw={600}>HEADER</Text>
             <MetadataTooltip
               createdBy={item.createdBy}
               createdAt={item.createdAt}
@@ -134,41 +111,30 @@ export const OperationDetail: React.FC = () => {
               updatedAt={item.updatedAt}
             />
           </Group>
-          <Group gap="xs">
-            {canEdit && !editing && (
-              <Button size="xs" variant="light" onClick={startEditing}>
-                Edit
-              </Button>
-            )}
-            {hasAction(item._actions, "delete") && (
-              <Button
-                size="xs"
-                color="red"
-                variant="outline"
-                onClick={handleDelete}
-              >
-                Delete
-              </Button>
-            )}
-          </Group>
+          {canEdit && !editing && (
+            <Button size="xs" variant="light" onClick={startEditing}>
+              Edit
+            </Button>
+          )}
         </Group>
 
         <Card withBorder p="lg">
           {editing ? (
             <form onSubmit={form.onSubmit(handleSave)}>
               <Stack gap="sm">
-                <NumberInput
-                  label="Sequence #"
-                  min={1}
-                  step={10}
-                  {...form.getInputProps("seqNo")}
-                />
                 <Textarea
                   label="Description"
-                  placeholder="Operation description..."
+                  placeholder="Revision description..."
                   autosize
                   minRows={3}
                   {...form.getInputProps("description")}
+                />
+                <Textarea
+                  label="Change Summary"
+                  placeholder="What changed in this revision..."
+                  autosize
+                  minRows={3}
+                  {...form.getInputProps("changeSummary")}
                 />
                 <Group justify="flex-end" mt="xs">
                   <Button
@@ -184,14 +150,31 @@ export const OperationDetail: React.FC = () => {
                 </Group>
               </Stack>
             </form>
-          ) : item.description ? (
-            <CompactMarkdown>{item.description}</CompactMarkdown>
           ) : (
-            <Text c="dimmed">No description</Text>
+            <Stack gap="md">
+              <div>
+                <Text size="sm" fw={500} mb={4}>
+                  Description
+                </Text>
+                {item.description ? (
+                  <CompactMarkdown>{item.description}</CompactMarkdown>
+                ) : (
+                  <Text c="dimmed">No description</Text>
+                )}
+              </div>
+              <div>
+                <Text size="sm" fw={500} mb={4}>
+                  Change Summary
+                </Text>
+                {item.changeSummary ? (
+                  <CompactMarkdown>{item.changeSummary}</CompactMarkdown>
+                ) : (
+                  <Text c="dimmed">No change summary</Text>
+                )}
+              </div>
+            </Stack>
           )}
         </Card>
-
-        <StepList orderKey={orderKey!} revNo={revNo!} opSeqNo={seqNo!} />
       </Stack>
     </Container>
   );

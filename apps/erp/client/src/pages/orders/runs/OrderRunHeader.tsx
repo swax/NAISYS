@@ -1,11 +1,9 @@
 import { ActionIcon, Anchor, Badge, Button, Group, Text } from "@mantine/core";
-import type { OrderRun, UpdateOrderRun } from "@naisys-erp/shared";
+import type { OrderRun } from "@naisys-erp/shared";
 import { OrderRunPriority, OrderRunStatus } from "@naisys-erp/shared";
 import { IconArrowBackUp } from "@tabler/icons-react";
-import { useState } from "react";
 import { useNavigate } from "react-router";
 
-import { OrderRunForm } from "../../../components/OrderRunForm";
 import { api, apiEndpoints, showErrorNotification } from "../../../lib/api";
 import { hasAction } from "../../../lib/hateoas";
 
@@ -37,16 +35,6 @@ export const OrderRunHeader: React.FC<Props> = ({
   onUpdate,
 }) => {
   const navigate = useNavigate();
-  const [editing, setEditing] = useState(false);
-
-  const handleUpdate = async (data: UpdateOrderRun) => {
-    const updated = await api.put<OrderRun>(
-      apiEndpoints.orderRun(orderKey, runId),
-      data,
-    );
-    setEditing(false);
-    onUpdate(updated);
-  };
 
   const handleAction = async (
     action: "start" | "close" | "cancel" | "reopen",
@@ -77,33 +65,6 @@ export const OrderRunHeader: React.FC<Props> = ({
       showErrorNotification(err);
     }
   };
-
-  if (editing) {
-    return (
-      <div
-        style={{
-          borderBottom:
-            "calc(0.125rem * var(--mantine-scale)) solid var(--mantine-color-dark-4)",
-          padding: "var(--mantine-spacing-md)",
-        }}
-      >
-        <OrderRunForm<true>
-          initialData={{
-            priority: item.priority,
-            scheduledStartAt: item.scheduledStartAt
-              ? item.scheduledStartAt.slice(0, 16)
-              : "",
-            dueAt: item.dueAt ? item.dueAt.slice(0, 16) : "",
-            assignedTo: item.assignedTo ?? "",
-            notes: item.notes ?? "",
-          }}
-          isEdit
-          onSubmit={handleUpdate}
-          onCancel={() => setEditing(false)}
-        />
-      </div>
-    );
-  }
 
   return (
     <Group
@@ -173,11 +134,6 @@ export const OrderRunHeader: React.FC<Props> = ({
         )}
       </Group>
       <Group gap="xs">
-        {hasAction(item._actions, "update") && (
-          <Button size="xs" variant="light" onClick={() => setEditing(true)}>
-            Edit
-          </Button>
-        )}
         {hasAction(item._actions, "start") && (
           <Button
             size="xs"
