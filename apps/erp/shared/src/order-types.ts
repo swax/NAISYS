@@ -10,7 +10,6 @@ export const OrderStatus = OrderStatusEnum.enum;
 export const OrderSchema = z.object({
   id: z.number(),
   key: z.string(),
-  name: z.string(),
   description: z.string(),
   status: OrderStatusEnum,
   createdBy: z.string(),
@@ -34,7 +33,6 @@ export const CreateOrderSchema = z
         /^[a-z0-9]+(-[a-z0-9]+)*$/,
         "Key must be lowercase alphanumeric with hyphens",
       ),
-    name: z.string().min(1).max(200),
     description: z.string().max(2000).optional().default(""),
   })
   .strict();
@@ -44,7 +42,6 @@ export type CreateOrder = z.infer<typeof CreateOrderSchema>;
 // Input for updating an order
 export const UpdateOrderSchema = z
   .object({
-    name: z.string().min(1).max(200).optional(),
     description: z.string().max(2000).optional(),
     status: OrderStatusEnum.optional(),
   })

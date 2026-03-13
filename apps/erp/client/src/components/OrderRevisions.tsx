@@ -53,7 +53,7 @@ export const OrderRevisions: React.FC<Props> = ({ orderKey }) => {
 
   const form = useForm({
     initialValues: {
-      notes: "",
+      description: "",
       changeSummary: "",
     },
     validate: zodResolver(CreateOrderRevisionSchema),
@@ -83,7 +83,7 @@ export const OrderRevisions: React.FC<Props> = ({ orderKey }) => {
       const created = await api.post<OrderRevision>(
         apiEndpoints.orderRevs(orderKey),
         {
-          notes: values.notes || undefined,
+          description: values.description || undefined,
           changeSummary: values.changeSummary || undefined,
         },
       );
@@ -158,7 +158,6 @@ export const OrderRevisions: React.FC<Props> = ({ orderKey }) => {
               <Table.Tr>
                 <Table.Th>Rev #</Table.Th>
                 <Table.Th>Status</Table.Th>
-                <Table.Th>Notes</Table.Th>
                 <Table.Th>Change Summary</Table.Th>
                 <Table.Th>Created</Table.Th>
                 <Table.Th>Actions</Table.Th>
@@ -187,11 +186,6 @@ export const OrderRevisions: React.FC<Props> = ({ orderKey }) => {
                         >
                           {rev.status}
                         </Badge>
-                      </Link>
-                    </Table.Td>
-                    <Table.Td>
-                      <Link to={revLink} style={cellLinkStyle}>
-                        {rev.notes ?? "—"}
                       </Link>
                     </Table.Td>
                     <Table.Td>
@@ -269,9 +263,9 @@ export const OrderRevisions: React.FC<Props> = ({ orderKey }) => {
         <form onSubmit={form.onSubmit(handleCreate)}>
           <Stack gap="md">
             <Textarea
-              label="Notes"
-              placeholder="Optional notes for this revision..."
-              {...form.getInputProps("notes")}
+              label="Description"
+              placeholder="Optional description for this revision..."
+              {...form.getInputProps("description")}
               minRows={2}
             />
             <Textarea

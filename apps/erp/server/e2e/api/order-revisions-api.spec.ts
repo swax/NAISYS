@@ -23,7 +23,6 @@ test.describe("Order Revisions - API happy path", () => {
     const res = await api.post(`${API}/orders`, {
       data: {
         key: orderKey,
-        name: "E2E Revision Test Order",
         description: "Order created for revision e2e testing",
       },
     });
@@ -49,7 +48,7 @@ test.describe("Order Revisions - API happy path", () => {
   test("create first revision", async () => {
     const res = await api.post(`${API}/orders/${orderKey}/revs`, {
       data: {
-        notes: "Initial draft",
+        description: "Initial draft",
         changeSummary: "First version of the order",
       },
     });
@@ -58,7 +57,7 @@ test.describe("Order Revisions - API happy path", () => {
     const body = await res.json();
     expect(body.revNo).toBe(1);
     expect(body.status).toBe("draft");
-    expect(body.notes).toBe("Initial draft");
+    expect(body.description).toBe("Initial draft");
     expect(body.changeSummary).toBe("First version of the order");
     expect(body._actions).toEqual(
       expect.arrayContaining([
@@ -73,14 +72,14 @@ test.describe("Order Revisions - API happy path", () => {
   test("update draft revision", async () => {
     const res = await api.put(`${API}/orders/${orderKey}/revs/1`, {
       data: {
-        notes: "Updated draft notes",
+        description: "Updated draft description",
         changeSummary: "Updated summary",
       },
     });
     expect(res.status()).toBe(200);
 
     const body = await res.json();
-    expect(body.notes).toBe("Updated draft notes");
+    expect(body.description).toBe("Updated draft description");
     expect(body.changeSummary).toBe("Updated summary");
     expect(body.status).toBe("draft");
   });
@@ -122,7 +121,7 @@ test.describe("Order Revisions - API happy path", () => {
 
   test("cannot update approved revision (409)", async () => {
     const res = await api.put(`${API}/orders/${orderKey}/revs/1`, {
-      data: { notes: "should fail" },
+      data: { description: "should fail" },
     });
     expect(res.status()).toBe(409);
     const body = await res.json();
@@ -153,7 +152,7 @@ test.describe("Order Revisions - API happy path", () => {
   test("create second revision (auto-increments revNo)", async () => {
     const res = await api.post(`${API}/orders/${orderKey}/revs`, {
       data: {
-        notes: "Second revision",
+        description: "Second revision",
         changeSummary: "Improvements based on feedback",
       },
     });

@@ -12,7 +12,7 @@ export const OrderRevisionSchema = z.object({
   orderId: z.number(),
   revNo: z.number(),
   status: RevisionStatusEnum,
-  notes: z.string().nullable(),
+  description: z.string(),
   changeSummary: z.string().nullable(),
   createdAt: z.iso.datetime(),
   createdBy: z.string(),
@@ -27,7 +27,7 @@ export type OrderRevision = z.infer<typeof OrderRevisionSchema>;
 // Input for creating a revision
 export const CreateOrderRevisionSchema = z
   .object({
-    notes: z.string().max(2000).optional(),
+    description: z.string().max(2000).optional(),
     changeSummary: z.string().max(2000).optional(),
   })
   .strict();
@@ -37,7 +37,7 @@ export type CreateOrderRevision = z.infer<typeof CreateOrderRevisionSchema>;
 // Input for updating a revision
 export const UpdateOrderRevisionSchema = z
   .object({
-    notes: z.string().max(2000).optional(),
+    description: z.string().max(2000).optional(),
     changeSummary: z.string().max(2000).optional(),
   })
   .strict();

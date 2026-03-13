@@ -117,7 +117,7 @@ export const OrderRunHeader: React.FC<Props> = ({
     >
       <Group gap="sm">
         <Text size="lg">
-          ORDER RUN:{" "}
+          ORDER:{" "}
           <Anchor
             href={`/erp/orders/${orderKey}`}
             onClick={(e: React.MouseEvent) => {
@@ -129,19 +129,23 @@ export const OrderRunHeader: React.FC<Props> = ({
             {orderKey}
           </Anchor>
           {" / "}
-          <Anchor
-            href={`/erp/orders/${orderKey}/revs/${item.revNo}`}
-            onClick={(e: React.MouseEvent) => {
-              if (e.button === 1 || e.ctrlKey || e.metaKey) return;
-              e.preventDefault();
-              void navigate(`/orders/${orderKey}/revs/${item.revNo}`);
-            }}
-          >
-            REV {item.revNo}
-          </Anchor>
-          {" / "}
-          SN {item.runNo}
+          RUN {item.runNo}
         </Text>
+        <Badge
+          component="a"
+          href={`/erp/orders/${orderKey}/revs/${item.revNo}`}
+          onClick={(e: React.MouseEvent) => {
+            if (e.button === 1 || e.ctrlKey || e.metaKey) return;
+            e.preventDefault();
+            void navigate(`/orders/${orderKey}/revs/${item.revNo}`);
+          }}
+          color="violet"
+          variant="light"
+          size="sm"
+          style={{ cursor: "pointer" }}
+        >
+          REV {item.revNo}
+        </Badge>
         <Badge
           color={STATUS_COLORS[item.status] ?? "gray"}
           variant="light"

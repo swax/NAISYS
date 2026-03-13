@@ -2,6 +2,7 @@ import type { AuthUser, Permission } from "@naisys-supervisor/shared";
 import React, { createContext, useContext, useEffect, useState } from "react";
 
 import { getMe, login as apiLogin, logout as apiLogout } from "../lib/apiAuth";
+import { queryClient } from "../lib/queryClient";
 
 interface SessionContextType {
   user: AuthUser | null;
@@ -38,6 +39,7 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({
   const login = async (username: string, password: string) => {
     const result = await apiLogin(username, password);
     setUser(result.user);
+    void queryClient.invalidateQueries();
   };
 
   const logout = async () => {

@@ -2,7 +2,6 @@ import { expect, type Page } from "@playwright/test";
 
 export interface OrderSetupParams {
   uniqueKey: string;
-  orderName: string;
   orderDesc: string;
 }
 
@@ -12,14 +11,13 @@ export interface OrderSetupParams {
  */
 export async function createOrderWithRevision(
   page: Page,
-  { uniqueKey, orderName, orderDesc }: OrderSetupParams,
+  { uniqueKey, orderDesc }: OrderSetupParams,
 ) {
   // Create order
   await page.goto("/erp/orders");
   await page.getByRole("button", { name: "Create New" }).click();
 
   await page.getByLabel("Key").fill(uniqueKey);
-  await page.getByLabel("Name").fill(orderName);
   await page.getByLabel("Description").fill(orderDesc);
   await page.getByRole("button", { name: "Create" }).click();
 
@@ -28,11 +26,11 @@ export async function createOrderWithRevision(
 
   // Navigate into the newly created order
   await page.getByText(uniqueKey).click();
-  await expect(page.getByRole("heading", { name: orderName })).toBeVisible();
+  await expect(page.getByRole("heading", { name: uniqueKey })).toBeVisible();
 
   // Create revision
   await page.getByRole("button", { name: "New Revision" }).click();
-  await page.getByLabel("Notes").fill("Initial revision notes");
+  await page.getByLabel("Description").fill("Initial revision description");
   await page.getByLabel("Change Summary").fill("First draft of the order");
   await page.getByRole("button", { name: "Create" }).click();
 

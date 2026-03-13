@@ -8,11 +8,12 @@ import {
   Loader,
   Stack,
   Text,
+  Textarea,
 } from "@mantine/core";
 import type { OperationRun } from "@naisys-erp/shared";
 import { OperationRunStatus } from "@naisys-erp/shared";
 import { IconArrowBackUp } from "@tabler/icons-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useOutletContext, useParams } from "react-router";
 
 import { CompactMarkdown } from "../../../components/CompactMarkdown";
@@ -47,6 +48,8 @@ export const OperationRunDetail: React.FC = () => {
   const [item, setItem] = useState<OperationRun | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [feedbackDraft, setFeedbackDraft] = useState("");
+  const feedbackRef = useRef("");
 
   const fetchItem = useCallback(async () => {
     if (!orderKey || !runId || !opRunId) return;
@@ -66,6 +69,27 @@ export const OperationRunDetail: React.FC = () => {
   useEffect(() => {
     void fetchItem();
   }, [fetchItem]);
+
+  useEffect(() => {
+    const value = item?.feedback ?? "";
+    setFeedbackDraft(value);
+    feedbackRef.current = value;
+  }, [item?.feedback]);
+
+  const saveFeedback = async () => {
+    if (!orderKey || !runId || !opRunId) return;
+    const trimmed = feedbackDraft.trim();
+    if (trimmed === (feedbackRef.current ?? "")) return;
+    try {
+      const updated = await api.put<OperationRun>(
+        apiEndpoints.operationRun(orderKey, runId, opRunId),
+        { feedback: trimmed || null },
+      );
+      setItem(updated);
+    } catch (err) {
+      showErrorNotification(err);
+    }
+  };
 
   const handleAction = async (
     action: "start" | "complete" | "skip" | "fail" | "reopen",
@@ -230,14 +254,6 @@ export const OperationRunDetail: React.FC = () => {
                 <Text>{new Date(item.completedAt).toLocaleString()}</Text>
               </Group>
             )}
-            <Group align="flex-start">
-              <Text fw={600} w={120}>
-                Notes:
-              </Text>
-              <Text style={{ whiteSpace: "pre-wrap" }}>
-                {item.notes || "\u2014"}
-              </Text>
-            </Group>
           </Stack>
         </Card>
 
@@ -247,6 +263,24 @@ export const OperationRunDetail: React.FC = () => {
           opRunId={opRunId!}
           refreshKey={refreshKey}
         />
+
+        <Stack gap="xs">
+          <Text fw={600}>Feedback</Text>
+          {item.status === OperationRunStatus.in_progress ? (
+            <Textarea
+              autosize
+              minRows={2}
+              placeholder="Enter feedback..."
+              value={feedbackDraft}
+              onChange={(e) => setFeedbackDraft(e.currentTarget.value)}
+              onBlur={() => void saveFeedback()}
+            />
+          ) : (
+            <Text style={{ whiteSpace: "pre-wrap" }}>
+              {item.feedback || "\u2014"}
+            </Text>
+          )}
+        </Stack>
       </Stack>
     </Container>
   );

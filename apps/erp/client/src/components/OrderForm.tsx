@@ -24,7 +24,6 @@ type FormData<TEdit extends boolean> = TEdit extends true
 
 interface Props<TEdit extends boolean = boolean> {
   initialData?: {
-    name?: string;
     description?: string;
     status?: string;
   };
@@ -44,7 +43,6 @@ export const OrderForm = <TEdit extends boolean = false>({
   const form = useForm({
     initialValues: {
       key: "",
-      name: initialData?.name ?? "",
       description: initialData?.description ?? "",
       status: initialData?.status ?? OrderStatus.active,
     },
@@ -59,13 +57,11 @@ export const OrderForm = <TEdit extends boolean = false>({
     try {
       const input: Record<string, unknown> = isEdit
         ? {
-            name: values.name,
             description: values.description,
             status: values.status,
           }
         : {
             key: values.key,
-            name: values.name,
             description: values.description,
           };
       const parsed = schema.parse(input);
@@ -88,11 +84,6 @@ export const OrderForm = <TEdit extends boolean = false>({
             {...form.getInputProps("key")}
           />
         )}
-        <TextInput
-          label="Name"
-          placeholder="Standard Order"
-          {...form.getInputProps("name")}
-        />
         <Textarea
           label="Description"
           placeholder="Describe this order..."

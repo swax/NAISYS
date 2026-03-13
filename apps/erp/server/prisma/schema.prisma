@@ -49,7 +49,6 @@ enum StepFieldType {
 model Order {
   id          Int         @id @default(autoincrement())
   key         String      @unique
-  name        String
   description String      @default("")
   status      OrderStatus @default(active)
   createdById Int         @map("created_by")
@@ -72,7 +71,7 @@ model OrderRevision {
   orderId       Int       @map("order_id")
   revNo         Int       @map("rev_no")
   status        RevisionStatus @default(draft)
-  notes         String?
+  description   String    @default("")
   changeSummary String?   @map("change_summary")
   createdAt     DateTime  @default(now()) @map("created_at")
   createdById   Int       @map("created_by")
@@ -159,7 +158,6 @@ model OrderRun {
   priority         OrderRunPriority @default(medium)
   scheduledStartAt DateTime? @map("scheduled_start_at")
   dueAt            DateTime? @map("due_at")
-  releasedAt       DateTime  @default(now()) @map("released_at")
   assignedTo       String?   @map("assigned_to")
   notes            String?
   createdAt        DateTime  @default(now()) @map("created_at")
@@ -187,7 +185,7 @@ model OperationRun {
   operationId Int       @map("operation_id")
   status      OperationRunStatus @default(pending)
   completedAt DateTime? @map("completed_at")
-  notes       String?
+  feedback    String?
   createdAt   DateTime  @default(now()) @map("created_at")
   createdById Int       @map("created_by")
   updatedAt   DateTime  @updatedAt @map("updated_at")
