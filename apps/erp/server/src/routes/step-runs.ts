@@ -84,23 +84,23 @@ const FieldValueParamsSchema = z.object({
   stepFieldId: z.coerce.number().int(),
 });
 
-function formatItem(
+function formatStepRun(
   orderKey: string,
   runId: number,
   opRunId: number,
   opRunStatus: string,
   user: ErpUser | undefined,
-  item: StepRunWithStep,
+  stepRun: StepRunWithStep,
 ) {
   const canUpdate =
     hasPermission(user, "manage_runs") &&
     opRunStatus === OperationRunStatus.in_progress;
 
-  const stepRunHref = `${API_PREFIX}/${stepRunResource(orderKey, runId, opRunId)}/${item.id}`;
+  const stepRunHref = `${API_PREFIX}/${stepRunResource(orderKey, runId, opRunId)}/${stepRun.id}`;
 
   // Merge field definitions with stored values + validation + actions
-  const fieldValues = item.step.fields.map((field) => {
-    const stored = item.fieldValues.find((fv) => fv.stepFieldId === field.id);
+  const fieldValues = stepRun.step.fields.map((field) => {
+    const stored = stepRun.fieldValues.find((fv) => fv.stepFieldId === field.id);
     const value = stored?.value ?? "";
     return {
       stepFieldId: field.id,
@@ -124,17 +124,17 @@ function formatItem(
   });
 
   return {
-    id: item.id,
-    operationRunId: item.operationRunId,
-    stepId: item.stepId,
-    seqNo: item.step.seqNo,
-    instructions: item.step.instructions,
-    completed: item.completed,
+    id: stepRun.id,
+    operationRunId: stepRun.operationRunId,
+    stepId: stepRun.stepId,
+    seqNo: stepRun.step.seqNo,
+    instructions: stepRun.step.instructions,
+    completed: stepRun.completed,
     fieldValues,
-    ...formatAuditFields(item),
+    ...formatAuditFields(stepRun),
     _links: childItemLinks(
       "/" + stepRunResource(orderKey, runId, opRunId),
-      item.id,
+      stepRun.id,
       "Step Runs",
       "/orders/" + orderKey + "/runs/" + runId + "/ops/" + opRunId,
       "Operation Run",
@@ -145,7 +145,7 @@ function formatItem(
       orderKey,
       runId,
       opRunId,
-      item.id,
+      stepRun.id,
       opRunStatus,
       user,
     ),
@@ -177,14 +177,14 @@ export default function stepRunRoutes(fastify: FastifyInstance) {
       const items = await listStepRuns(opRunId);
 
       return {
-        items: items.map((item) =>
-          formatItem(
+        items: items.map((stepRun) =>
+          formatStepRun(
             orderKey,
             runId,
             opRunId,
             resolved.opRun.status,
             request.erpUser,
-            item,
+            stepRun,
           ),
         ),
         total: items.length,
@@ -212,18 +212,18 @@ export default function stepRunRoutes(fastify: FastifyInstance) {
         return notFound(reply, `Operation run not found`);
       }
 
-      const item = await getStepRun(id);
-      if (!item || item.operationRunId !== opRunId) {
+      const stepRun = await getStepRun(id);
+      if (!stepRun || stepRun.operationRunId !== opRunId) {
         return notFound(reply, `Step run ${id} not found`);
       }
 
-      return formatItem(
+      return formatStepRun(
         orderKey,
         runId,
         opRunId,
         resolved.opRun.status,
         request.erpUser,
-        item,
+        stepRun,
       );
     },
   });
@@ -273,15 +273,15 @@ export default function stepRunRoutes(fastify: FastifyInstance) {
         if (completionErr) return unprocessable(reply, completionErr);
       }
 
-      const item = await updateStepRun(id, completed, fieldValues, userId);
+      const stepRun = await updateStepRun(id, completed, fieldValues, userId);
 
-      return formatItem(
+      return formatStepRun(
         orderKey,
         runId,
         opRunId,
         resolved.opRun.status,
         request.erpUser,
-        item,
+        stepRun,
       );
     },
   });

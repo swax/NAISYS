@@ -15,7 +15,7 @@ import {
   transitionStatus,
   validateStatusFor,
 } from "../services/operation-run-service.js";
-import { formatItem, IdParamsSchema } from "./operation-runs.js";
+import { formatOpRun, IdParamsSchema } from "./operation-runs.js";
 
 export default function operationRunTransitionRoutes(fastify: FastifyInstance) {
   const app = fastify.withTypeProvider<ZodTypeProvider>();
@@ -57,14 +57,14 @@ export default function operationRunTransitionRoutes(fastify: FastifyInstance) {
       );
       if (priorErr) return unprocessable(reply, priorErr);
 
-      const item = await transitionStatus(
+      const opRun = await transitionStatus(
         id,
         "start",
         OperationRunStatus.pending,
         OperationRunStatus.in_progress,
         userId,
       );
-      return formatItem(orderKey, runId, request.erpUser, item);
+      return formatOpRun(orderKey, runId, request.erpUser, opRun);
     },
   });
 
@@ -102,7 +102,7 @@ export default function operationRunTransitionRoutes(fastify: FastifyInstance) {
       const stepsErr = await checkStepsComplete(id);
       if (stepsErr) return unprocessable(reply, stepsErr);
 
-      const item = await transitionStatus(
+      const opRun = await transitionStatus(
         id,
         "complete",
         OperationRunStatus.in_progress,
@@ -110,7 +110,7 @@ export default function operationRunTransitionRoutes(fastify: FastifyInstance) {
         userId,
         { completedAt: new Date() },
       );
-      return formatItem(orderKey, runId, request.erpUser, item);
+      return formatOpRun(orderKey, runId, request.erpUser, opRun);
     },
   });
 
@@ -144,14 +144,14 @@ export default function operationRunTransitionRoutes(fastify: FastifyInstance) {
       ]);
       if (statusErr) return conflict(reply, statusErr);
 
-      const item = await transitionStatus(
+      const opRun = await transitionStatus(
         id,
         "skip",
         OperationRunStatus.pending,
         OperationRunStatus.skipped,
         userId,
       );
-      return formatItem(orderKey, runId, request.erpUser, item);
+      return formatOpRun(orderKey, runId, request.erpUser, opRun);
     },
   });
 
@@ -185,14 +185,14 @@ export default function operationRunTransitionRoutes(fastify: FastifyInstance) {
       ]);
       if (statusErr) return conflict(reply, statusErr);
 
-      const item = await transitionStatus(
+      const opRun = await transitionStatus(
         id,
         "fail",
         OperationRunStatus.in_progress,
         OperationRunStatus.failed,
         userId,
       );
-      return formatItem(orderKey, runId, request.erpUser, item);
+      return formatOpRun(orderKey, runId, request.erpUser, opRun);
     },
   });
 
@@ -233,7 +233,7 @@ export default function operationRunTransitionRoutes(fastify: FastifyInstance) {
           ? OperationRunStatus.pending
           : OperationRunStatus.in_progress;
 
-      const item = await transitionStatus(
+      const opRun = await transitionStatus(
         id,
         "reopen",
         existing.status,
@@ -241,7 +241,7 @@ export default function operationRunTransitionRoutes(fastify: FastifyInstance) {
         userId,
         { completedAt: null },
       );
-      return formatItem(orderKey, runId, request.erpUser, item);
+      return formatOpRun(orderKey, runId, request.erpUser, opRun);
     },
   });
 }

@@ -34,7 +34,7 @@ import {
   updateOrder,
 } from "../services/order-service.js";
 
-function itemLinks(
+function orderLinks(
   resource: string,
   key: string,
   schemaName: string,
@@ -46,7 +46,7 @@ function itemLinks(
   ];
 }
 
-function itemActions(
+function orderActions(
   resource: string,
   key: string,
   status: string,
@@ -109,27 +109,27 @@ const KeyParamsSchema = z.object({
   key: z.string(),
 });
 
-function formatItem(item: OrderWithRelations, user: ErpUser | undefined) {
+function formatOrder(order: OrderWithRelations, user: ErpUser | undefined) {
   return {
-    id: item.id,
-    key: item.key,
-    description: item.description,
-    status: item.status,
-    itemKey: item.item?.key ?? null,
-    ...formatAuditFields(item),
+    id: order.id,
+    key: order.key,
+    description: order.description,
+    status: order.status,
+    itemKey: order.item?.key ?? null,
+    ...formatAuditFields(order),
     _links: [
-      ...itemLinks(RESOURCE, item.key, "Order"),
-      revisionCollectionLink(RESOURCE, item.key),
+      ...orderLinks(RESOURCE, order.key, "Order"),
+      revisionCollectionLink(RESOURCE, order.key),
     ],
-    _actions: itemActions(RESOURCE, item.key, item.status, user),
+    _actions: orderActions(RESOURCE, order.key, order.status, user),
   };
 }
 
-function formatListItem(item: OrderWithRelations, user: ErpUser | undefined) {
-  const { _actions, ...rest } = formatItem(item, user);
+function formatListOrder(order: OrderWithRelations, user: ErpUser | undefined) {
+  const { _actions, ...rest } = formatOrder(order, user);
   return {
     ...rest,
-    _links: [selfLink(`/${RESOURCE}/${item.key}`)],
+    _links: [selfLink(`/${RESOURCE}/${order.key}`)],
   };
 }
 
@@ -161,7 +161,7 @@ export default function orderRoutes(fastify: FastifyInstance) {
       const [items, total] = await listOrders(where, page, pageSize);
 
       return {
-        items: items.map((item) => formatListItem(item, request.erpUser)),
+        items: items.map((order) => formatListOrder(order, request.erpUser)),
         total,
         page,
         pageSize,
@@ -211,7 +211,7 @@ export default function orderRoutes(fastify: FastifyInstance) {
       const order = await createOrder(key, description, itemId, userId);
 
       reply.status(201);
-      return formatItem(order, request.erpUser);
+      return formatOrder(order, request.erpUser);
     },
   });
 
@@ -229,12 +229,12 @@ export default function orderRoutes(fastify: FastifyInstance) {
     handler: async (request, reply) => {
       const { key } = request.params;
 
-      const item = await findExisting(key);
-      if (!item) {
+      const order = await findExisting(key);
+      if (!order) {
         return notFound(reply, `Order '${key}' not found`);
       }
 
-      return formatItem(item, request.erpUser);
+      return formatOrder(order, request.erpUser);
     },
   });
 
@@ -275,7 +275,7 @@ export default function orderRoutes(fastify: FastifyInstance) {
 
       const order = await updateOrder(key, dbData, userId);
 
-      return formatItem(order, request.erpUser);
+      return formatOrder(order, request.erpUser);
     },
   });
 

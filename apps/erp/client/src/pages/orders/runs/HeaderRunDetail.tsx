@@ -40,7 +40,7 @@ export const HeaderRunDetail: React.FC = () => {
     orderKey: string;
     id: string;
   }>();
-  const { orderRun: item, onOrderRunUpdate } =
+  const { orderRun, onOrderRunUpdate } =
     useOutletContext<OrderRunOutletContext>();
   const [editing, setEditing] = useState(false);
   const [revDescription, setRevDescription] = useState<string | null>(null);
@@ -49,13 +49,13 @@ export const HeaderRunDetail: React.FC = () => {
     if (!orderKey) return;
     try {
       const rev = await api.get<OrderRevision>(
-        apiEndpoints.orderRev(orderKey, item.revNo),
+        apiEndpoints.orderRev(orderKey, orderRun.revNo),
       );
       setRevDescription(rev.description || null);
     } catch {
       // ignore – revision description is supplementary
     }
-  }, [orderKey, item.revNo]);
+  }, [orderKey, orderRun.revNo]);
 
   useEffect(() => {
     void fetchRevision();
@@ -74,7 +74,7 @@ export const HeaderRunDetail: React.FC = () => {
     }
   };
 
-  const canEdit = hasAction(item._actions, "update");
+  const canEdit = hasAction(orderRun._actions, "update");
 
   return (
     <Container size="md" py="xl" w="100%">
@@ -83,10 +83,10 @@ export const HeaderRunDetail: React.FC = () => {
           <Group gap="xs">
             <Text fw={600}>HEADER</Text>
             <MetadataTooltip
-              createdBy={item.createdBy}
-              createdAt={item.createdAt}
-              updatedBy={item.updatedBy}
-              updatedAt={item.updatedAt}
+              createdBy={orderRun.createdBy}
+              createdAt={orderRun.createdAt}
+              updatedBy={orderRun.updatedBy}
+              updatedAt={orderRun.updatedAt}
             />
           </Group>
           {canEdit && !editing && (
@@ -100,13 +100,13 @@ export const HeaderRunDetail: React.FC = () => {
           {editing ? (
             <OrderRunForm<true>
               initialData={{
-                priority: item.priority,
-                scheduledStartAt: item.scheduledStartAt
-                  ? item.scheduledStartAt.slice(0, 16)
+                priority: orderRun.priority,
+                scheduledStartAt: orderRun.scheduledStartAt
+                  ? orderRun.scheduledStartAt.slice(0, 16)
                   : "",
-                dueAt: item.dueAt ? item.dueAt.slice(0, 16) : "",
-                assignedTo: item.assignedTo ?? "",
-                notes: item.notes ?? "",
+                dueAt: orderRun.dueAt ? orderRun.dueAt.slice(0, 16) : "",
+                assignedTo: orderRun.assignedTo ?? "",
+                notes: orderRun.notes ?? "",
               }}
               isEdit
               onSubmit={handleUpdate}
@@ -118,15 +118,15 @@ export const HeaderRunDetail: React.FC = () => {
                 <Text fw={600} w={140}>
                   Produces Item:
                 </Text>
-                {item.itemKey ? (
+                {orderRun.itemKey ? (
                   <Text
                     component={Link}
-                    to={`/items/${item.itemKey}`}
+                    to={`/items/${orderRun.itemKey}`}
                     size="sm"
                     c="blue"
                     style={{ textDecoration: "none" }}
                   >
-                    {item.itemKey}
+                    {orderRun.itemKey}
                   </Text>
                 ) : (
                   <Text c="dimmed">{"\u2014"}</Text>
@@ -147,36 +147,36 @@ export const HeaderRunDetail: React.FC = () => {
                   Priority:
                 </Text>
                 <Badge
-                  color={PRIORITY_COLORS[item.priority] ?? "gray"}
+                  color={PRIORITY_COLORS[orderRun.priority] ?? "gray"}
                   variant="light"
                 >
-                  {item.priority}
+                  {orderRun.priority}
                 </Badge>
               </Group>
               <Group>
                 <Text fw={600} w={140}>
                   Scheduled Start:
                 </Text>
-                <Text>{formatDateTime(item.scheduledStartAt)}</Text>
+                <Text>{formatDateTime(orderRun.scheduledStartAt)}</Text>
               </Group>
               <Group>
                 <Text fw={600} w={140}>
                   Due Date:
                 </Text>
-                <Text>{formatDateTime(item.dueAt)}</Text>
+                <Text>{formatDateTime(orderRun.dueAt)}</Text>
               </Group>
               <Group>
                 <Text fw={600} w={140}>
                   Assigned To:
                 </Text>
-                <Text>{item.assignedTo ?? "\u2014"}</Text>
+                <Text>{orderRun.assignedTo ?? "\u2014"}</Text>
               </Group>
               <Group align="flex-start">
                 <Text fw={600} w={140}>
                   Notes:
                 </Text>
                 <Text style={{ whiteSpace: "pre-wrap" }}>
-                  {item.notes ?? "\u2014"}
+                  {orderRun.notes ?? "\u2014"}
                 </Text>
               </Group>
             </Stack>

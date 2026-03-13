@@ -15,7 +15,7 @@ import {
   transitionStatus,
   validateStatusFor,
 } from "../services/order-run-service.js";
-import { formatItem, IdParamsSchema } from "./order-runs.js";
+import { formatRun, IdParamsSchema } from "./order-runs.js";
 
 export default function orderRunTransitionRoutes(fastify: FastifyInstance) {
   const app = fastify.withTypeProvider<ZodTypeProvider>();
@@ -54,7 +54,7 @@ export default function orderRunTransitionRoutes(fastify: FastifyInstance) {
       if (statusErr) return conflict(reply, statusErr);
 
       const userId = request.erpUser!.id;
-      const item = await transitionStatus(
+      const run = await transitionStatus(
         id,
         "start",
         OrderRunStatus.released,
@@ -62,7 +62,7 @@ export default function orderRunTransitionRoutes(fastify: FastifyInstance) {
         userId,
       );
 
-      return formatItem(orderKey, request.erpUser, item);
+      return formatRun(orderKey, request.erpUser, run);
     },
   });
 
@@ -105,7 +105,7 @@ export default function orderRunTransitionRoutes(fastify: FastifyInstance) {
       if (opsErr) return unprocessable(reply, opsErr);
 
       const userId = request.erpUser!.id;
-      const item = await transitionStatus(
+      const run = await transitionStatus(
         id,
         "close",
         OrderRunStatus.started,
@@ -113,7 +113,7 @@ export default function orderRunTransitionRoutes(fastify: FastifyInstance) {
         userId,
       );
 
-      return formatItem(orderKey, request.erpUser, item);
+      return formatRun(orderKey, request.erpUser, run);
     },
   });
 
@@ -152,7 +152,7 @@ export default function orderRunTransitionRoutes(fastify: FastifyInstance) {
       if (statusErr) return conflict(reply, statusErr);
 
       const userId = request.erpUser!.id;
-      const item = await transitionStatus(
+      const run = await transitionStatus(
         id,
         "cancel",
         existing.status as
@@ -162,7 +162,7 @@ export default function orderRunTransitionRoutes(fastify: FastifyInstance) {
         userId,
       );
 
-      return formatItem(orderKey, request.erpUser, item);
+      return formatRun(orderKey, request.erpUser, run);
     },
   });
 
@@ -208,7 +208,7 @@ export default function orderRunTransitionRoutes(fastify: FastifyInstance) {
       );
 
       const userId = request.erpUser!.id;
-      const item = await transitionStatus(
+      const run = await transitionStatus(
         id,
         "reopen",
         existing.status as
@@ -218,7 +218,7 @@ export default function orderRunTransitionRoutes(fastify: FastifyInstance) {
         userId,
       );
 
-      return formatItem(orderKey, request.erpUser, item);
+      return formatRun(orderKey, request.erpUser, run);
     },
   });
 }

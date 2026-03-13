@@ -116,46 +116,46 @@ export const IdParamsSchema = z.object({
   id: z.coerce.number().int(),
 });
 
-export function formatItem(
+export function formatOpRun(
   orderKey: string,
   runId: number,
   user: ErpUser | undefined,
-  item: OpRunWithOp,
+  opRun: OpRunWithOp,
 ) {
   return {
-    id: item.id,
-    orderRunId: item.orderRunId,
-    operationId: item.operationId,
-    seqNo: item.operation.seqNo,
-    title: item.operation.title,
-    description: item.operation.description,
-    status: item.status,
-    completedAt: formatDate(item.completedAt),
-    feedback: item.feedback,
-    ...formatAuditFields(item),
+    id: opRun.id,
+    orderRunId: opRun.orderRunId,
+    operationId: opRun.operationId,
+    seqNo: opRun.operation.seqNo,
+    title: opRun.operation.title,
+    description: opRun.operation.description,
+    status: opRun.status,
+    completedAt: formatDate(opRun.completedAt),
+    feedback: opRun.feedback,
+    ...formatAuditFields(opRun),
     _links: childItemLinks(
       "/" + opRunResource(orderKey, runId),
-      item.id,
+      opRun.id,
       "Operation Runs",
       "/orders/" + orderKey + "/runs/" + runId,
       "Order Run",
       "OperationRun",
       "run",
     ),
-    _actions: opRunItemActions(orderKey, runId, item.id, item.status, user),
+    _actions: opRunItemActions(orderKey, runId, opRun.id, opRun.status, user),
   };
 }
 
-function formatListItem(
+function formatListOpRun(
   orderKey: string,
   runId: number,
   user: ErpUser | undefined,
-  item: OpRunWithOp,
+  opRun: OpRunWithOp,
 ) {
-  const { _actions, ...rest } = formatItem(orderKey, runId, user, item);
+  const { _actions, ...rest } = formatOpRun(orderKey, runId, user, opRun);
   return {
     ...rest,
-    _links: [selfLink(`/${opRunResource(orderKey, runId)}/${item.id}`)],
+    _links: [selfLink(`/${opRunResource(orderKey, runId)}/${opRun.id}`)],
   };
 }
 
@@ -183,8 +183,8 @@ export default function operationRunRoutes(fastify: FastifyInstance) {
       const items = await listOpRuns(runId);
 
       return {
-        items: items.map((item) =>
-          formatListItem(orderKey, runId, request.erpUser, item),
+        items: items.map((opRun) =>
+          formatListOpRun(orderKey, runId, request.erpUser, opRun),
         ),
         total: items.length,
         _links: [selfLink(`/${opRunResource(orderKey, runId)}`)],
@@ -210,12 +210,12 @@ export default function operationRunRoutes(fastify: FastifyInstance) {
         return notFound(reply, `Order run not found`);
       }
 
-      const item = await getOpRun(id);
-      if (!item || item.orderRunId !== runId) {
+      const opRun = await getOpRun(id);
+      if (!opRun || opRun.orderRunId !== runId) {
         return notFound(reply, `Operation run ${id} not found`);
       }
 
-      return formatItem(orderKey, runId, request.erpUser, item);
+      return formatOpRun(orderKey, runId, request.erpUser, opRun);
     },
   });
 
@@ -252,8 +252,8 @@ export default function operationRunRoutes(fastify: FastifyInstance) {
       ]);
       if (statusErr) return conflict(reply, statusErr);
 
-      const item = await updateOpRun(id, request.body, userId);
-      return formatItem(orderKey, runId, request.erpUser, item);
+      const opRun = await updateOpRun(id, request.body, userId);
+      return formatOpRun(orderKey, runId, request.erpUser, opRun);
     },
   });
 }

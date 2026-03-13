@@ -99,23 +99,23 @@ export const RevNoParamsSchema = z.object({
   revNo: z.coerce.number().int(),
 });
 
-export function formatItem(
+export function formatRevision(
   orderKey: string,
   user: ErpUser | undefined,
-  item: OrderRevisionWithRelations,
+  revision: OrderRevisionWithRelations,
 ) {
   return {
-    id: item.id,
-    orderId: item.orderId,
-    revNo: item.revNo,
-    status: item.status,
-    description: item.description,
-    changeSummary: item.changeSummary,
-    itemKey: item.order?.item?.key ?? null,
-    ...formatAuditFields(item),
+    id: revision.id,
+    orderId: revision.orderId,
+    revNo: revision.revNo,
+    status: revision.status,
+    description: revision.description,
+    changeSummary: revision.changeSummary,
+    itemKey: revision.order?.item?.key ?? null,
+    ...formatAuditFields(revision),
     _links: childItemLinks(
       `/${PARENT_RESOURCE}/${orderKey}/revs`,
-      item.revNo,
+      revision.revNo,
       "Revisions",
       `/${PARENT_RESOURCE}/${orderKey}`,
       "Order",
@@ -124,21 +124,21 @@ export function formatItem(
     _actions: revisionItemActions(
       PARENT_RESOURCE,
       orderKey,
-      item.revNo,
-      item.status,
+      revision.revNo,
+      revision.status,
       user,
     ),
   };
 }
 
-function formatListItem(
+function formatListRevision(
   orderKey: string,
   user: ErpUser | undefined,
-  item: OrderRevisionWithRelations,
+  revision: OrderRevisionWithRelations,
 ) {
   return {
-    ...formatItem(orderKey, user, item),
-    _links: [selfLink(`/${PARENT_RESOURCE}/${orderKey}/revs/${item.revNo}`)],
+    ...formatRevision(orderKey, user, revision),
+    _links: [selfLink(`/${PARENT_RESOURCE}/${orderKey}/revs/${revision.revNo}`)],
   };
 }
 
@@ -178,8 +178,8 @@ export default function orderRevisionRoutes(fastify: FastifyInstance) {
 
       const revBasePath = `${PARENT_RESOURCE}/${orderKey}/revs`;
       return {
-        items: items.map((item) =>
-          formatListItem(orderKey, request.erpUser, item),
+        items: items.map((revision) =>
+          formatListRevision(orderKey, request.erpUser, revision),
         ),
         total,
         page,
@@ -222,14 +222,14 @@ export default function orderRevisionRoutes(fastify: FastifyInstance) {
         return notFound(reply, `Order '${orderKey}' not found`);
       }
 
-      const item = await createRevision(
+      const revision = await createRevision(
         order.id,
         { description, changeSummary },
         userId,
       );
 
       reply.status(201);
-      return formatItem(orderKey, request.erpUser, item);
+      return formatRevision(orderKey, request.erpUser, revision);
     },
   });
 
@@ -252,15 +252,15 @@ export default function orderRevisionRoutes(fastify: FastifyInstance) {
         return notFound(reply, `Order '${orderKey}' not found`);
       }
 
-      const item = await getRevision(order.id, revNo);
-      if (!item) {
+      const revision = await getRevision(order.id, revNo);
+      if (!revision) {
         return notFound(
           reply,
           `Revision ${revNo} not found for order '${orderKey}'`,
         );
       }
 
-      return formatItem(orderKey, request.erpUser, item);
+      return formatRevision(orderKey, request.erpUser, revision);
     },
   });
 
@@ -300,13 +300,13 @@ export default function orderRevisionRoutes(fastify: FastifyInstance) {
         return conflict(reply, statusError);
       }
 
-      const item = await updateRevision(
+      const revision = await updateRevision(
         existing.id,
         { description, changeSummary },
         userId,
       );
 
-      return formatItem(orderKey, request.erpUser, item);
+      return formatRevision(orderKey, request.erpUser, revision);
     },
   });
 

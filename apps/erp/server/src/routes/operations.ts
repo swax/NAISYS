@@ -47,31 +47,31 @@ function opBasePath(orderKey: string, revNo: number) {
   return `/orders/${orderKey}/revs/${revNo}/ops`;
 }
 
-function formatItem(
+function formatOperation(
   orderKey: string,
   revNo: number,
   revStatus: string,
   user: ErpUser | undefined,
-  item: OperationModel & WithAuditUsers,
+  operation: OperationModel & WithAuditUsers,
 ) {
   const base = opBasePath(orderKey, revNo);
   return {
-    id: item.id,
-    orderRevId: item.orderRevId,
-    seqNo: item.seqNo,
-    title: item.title,
-    description: item.description,
-    ...formatAuditFields(item),
+    id: operation.id,
+    orderRevId: operation.orderRevId,
+    seqNo: operation.seqNo,
+    title: operation.title,
+    description: operation.description,
+    ...formatAuditFields(operation),
     _links: childItemLinks(
       base,
-      item.seqNo,
+      operation.seqNo,
       "Operations",
       `/orders/${orderKey}/revs/${revNo}`,
       "Revision",
       "Operation",
     ),
     _actions: draftCrudActions(
-      `${API_PREFIX}${base}/${item.seqNo}`,
+      `${API_PREFIX}${base}/${operation.seqNo}`,
       "UpdateOperation",
       revStatus,
       user,
@@ -108,8 +108,8 @@ export default function operationRoutes(fastify: FastifyInstance) {
       const user = request.erpUser;
       const base = opBasePath(orderKey, revNo);
       return {
-        items: items.map((item) =>
-          formatItem(orderKey, revNo, resolved.rev.status, user, item),
+        items: items.map((operation) =>
+          formatOperation(orderKey, revNo, resolved.rev.status, user, operation),
         ),
         total: items.length,
         nextSeqNo: calcNextSeqNo(maxSeq),
@@ -161,7 +161,7 @@ export default function operationRoutes(fastify: FastifyInstance) {
         );
       }
 
-      const item = await createOperation(
+      const operation = await createOperation(
         resolved.rev.id,
         requestedSeqNo,
         title,
@@ -170,12 +170,12 @@ export default function operationRoutes(fastify: FastifyInstance) {
       );
 
       reply.status(201);
-      return formatItem(
+      return formatOperation(
         orderKey,
         revNo,
         resolved.rev.status,
         request.erpUser,
-        item,
+        operation,
       );
     },
   });
@@ -199,17 +199,17 @@ export default function operationRoutes(fastify: FastifyInstance) {
         return notFound(reply, `Revision not found`);
       }
 
-      const item = await getOperation(resolved.rev.id, seqNo);
-      if (!item) {
+      const operation = await getOperation(resolved.rev.id, seqNo);
+      if (!operation) {
         return notFound(reply, `Operation ${seqNo} not found`);
       }
 
-      return formatItem(
+      return formatOperation(
         orderKey,
         revNo,
         resolved.rev.status,
         request.erpUser,
-        item,
+        operation,
       );
     },
   });
@@ -249,18 +249,18 @@ export default function operationRoutes(fastify: FastifyInstance) {
         return notFound(reply, `Operation ${seqNo} not found`);
       }
 
-      const item = await updateOperation(
+      const operation = await updateOperation(
         existing.id,
         { title, description, seqNo: newSeqNo },
         userId,
       );
 
-      return formatItem(
+      return formatOperation(
         orderKey,
         revNo,
         resolved.rev.status,
         request.erpUser,
-        item,
+        operation,
       );
     },
   });

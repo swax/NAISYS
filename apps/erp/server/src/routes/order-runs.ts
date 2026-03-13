@@ -126,47 +126,47 @@ export const IdParamsSchema = z.object({
   id: z.coerce.number().int(),
 });
 
-export function formatItem(
+export function formatRun(
   orderKey: string,
   user: ErpUser | undefined,
-  item: OrderRunWithRev,
+  run: OrderRunWithRev,
 ) {
   return {
-    id: item.id,
-    runNo: item.runNo,
-    orderId: item.orderId,
+    id: run.id,
+    runNo: run.runNo,
+    orderId: run.orderId,
     orderKey,
-    revNo: item.orderRev.revNo,
-    itemKey: item.order?.item?.key ?? null,
-    status: item.status,
-    priority: item.priority,
-    scheduledStartAt: formatDate(item.scheduledStartAt),
-    dueAt: formatDate(item.dueAt),
-    assignedTo: item.assignedTo,
-    notes: item.notes,
-    ...formatAuditFields(item),
+    revNo: run.orderRev.revNo,
+    itemKey: run.order?.item?.key ?? null,
+    status: run.status,
+    priority: run.priority,
+    scheduledStartAt: formatDate(run.scheduledStartAt),
+    dueAt: formatDate(run.dueAt),
+    assignedTo: run.assignedTo,
+    notes: run.notes,
+    ...formatAuditFields(run),
     _links: childItemLinks(
       "/" + runResource(orderKey),
-      item.id,
+      run.id,
       "Runs",
       "/orders/" + orderKey,
       "Order",
       "OrderRun",
       "order",
     ),
-    _actions: orderRunItemActions(orderKey, item.id, item.status, user),
+    _actions: orderRunItemActions(orderKey, run.id, run.status, user),
   };
 }
 
-function formatListItem(
+function formatListRun(
   orderKey: string,
   user: ErpUser | undefined,
-  item: OrderRunWithRev,
+  run: OrderRunWithRev,
 ) {
-  const { _actions, ...rest } = formatItem(orderKey, user, item);
+  const { _actions, ...rest } = formatRun(orderKey, user, run);
   return {
     ...rest,
-    _links: [selfLink(`/${runResource(orderKey)}/${item.id}`)],
+    _links: [selfLink(`/${runResource(orderKey)}/${run.id}`)],
   };
 }
 
@@ -209,8 +209,8 @@ export default function orderRunRoutes(fastify: FastifyInstance) {
       const resource = runResource(orderKey);
 
       return {
-        items: items.map((item) =>
-          formatListItem(orderKey, request.erpUser, item),
+        items: items.map((run) =>
+          formatListRun(orderKey, request.erpUser, run),
         ),
         total,
         page,
@@ -258,7 +258,7 @@ export default function orderRunRoutes(fastify: FastifyInstance) {
         );
       }
 
-      const item = await createOrderRun(
+      const run = await createOrderRun(
         orderId,
         orderRev.id,
         { priority, scheduledStartAt, dueAt, assignedTo, notes },
@@ -266,7 +266,7 @@ export default function orderRunRoutes(fastify: FastifyInstance) {
       );
 
       reply.status(201);
-      return formatItem(orderKey, request.erpUser, item);
+      return formatRun(orderKey, request.erpUser, run);
     },
   });
 
@@ -289,15 +289,15 @@ export default function orderRunRoutes(fastify: FastifyInstance) {
         return notFound(reply, `Order '${orderKey}' not found`);
       }
 
-      const item = await getOrderRun(id);
-      if (!item || item.orderId !== order.id) {
+      const run = await getOrderRun(id);
+      if (!run || run.orderId !== order.id) {
         return notFound(
           reply,
           `Order run ${id} not found for order '${orderKey}'`,
         );
       }
 
-      return formatItem(orderKey, request.erpUser, item);
+      return formatRun(orderKey, request.erpUser, run);
     },
   });
 
@@ -338,9 +338,9 @@ export default function orderRunRoutes(fastify: FastifyInstance) {
       ]);
       if (statusErr) return conflict(reply, statusErr);
 
-      const item = await updateOrderRun(id, data, userId);
+      const run = await updateOrderRun(id, data, userId);
 
-      return formatItem(orderKey, request.erpUser, item);
+      return formatRun(orderKey, request.erpUser, run);
     },
   });
 

@@ -22,14 +22,14 @@ const PRIORITY_COLORS: Record<string, string> = {
 };
 
 interface Props {
-  item: OrderRun;
+  orderRun: OrderRun;
   orderKey: string;
   runId: string;
-  onUpdate: (item: OrderRun) => void;
+  onUpdate: (orderRun: OrderRun) => void;
 }
 
 export const OrderRunHeader: React.FC<Props> = ({
-  item,
+  orderRun,
   orderKey,
   runId,
   onUpdate,
@@ -90,51 +90,51 @@ export const OrderRunHeader: React.FC<Props> = ({
             {orderKey}
           </Anchor>
           {" / "}
-          RUN {item.runNo}
+          RUN {orderRun.runNo}
         </Text>
         <Badge
           component="a"
-          href={`/erp/orders/${orderKey}/revs/${item.revNo}`}
+          href={`/erp/orders/${orderKey}/revs/${orderRun.revNo}`}
           onClick={(e: React.MouseEvent) => {
             if (e.button === 1 || e.ctrlKey || e.metaKey) return;
             e.preventDefault();
-            void navigate(`/orders/${orderKey}/revs/${item.revNo}`);
+            void navigate(`/orders/${orderKey}/revs/${orderRun.revNo}`);
           }}
           color="violet"
           variant="light"
           size="sm"
           style={{ cursor: "pointer" }}
         >
-          REV {item.revNo}
+          REV {orderRun.revNo}
         </Badge>
         <Badge
-          color={STATUS_COLORS[item.status] ?? "gray"}
+          color={STATUS_COLORS[orderRun.status] ?? "gray"}
           variant="light"
           size="sm"
           data-testid="order-run-status"
         >
-          {item.status}
+          {orderRun.status}
         </Badge>
         <Badge
-          color={PRIORITY_COLORS[item.priority] ?? "gray"}
+          color={PRIORITY_COLORS[orderRun.priority] ?? "gray"}
           variant="light"
           size="sm"
         >
-          {item.priority}
+          {orderRun.priority}
         </Badge>
-        {item.notes && (
+        {orderRun.notes && (
           <>
             <Text size="sm" c="dimmed">
               |
             </Text>
             <Text size="sm" c="dimmed" lineClamp={1} maw={300}>
-              {item.notes}
+              {orderRun.notes}
             </Text>
           </>
         )}
       </Group>
       <Group gap="xs">
-        {hasAction(item._actions, "start") && (
+        {hasAction(orderRun._actions, "start") && (
           <Button
             size="xs"
             color="green"
@@ -144,7 +144,7 @@ export const OrderRunHeader: React.FC<Props> = ({
             Start
           </Button>
         )}
-        {hasAction(item._actions, "close") && (
+        {hasAction(orderRun._actions, "close") && (
           <Button
             size="xs"
             color="green"
@@ -154,27 +154,27 @@ export const OrderRunHeader: React.FC<Props> = ({
             Close
           </Button>
         )}
-        {hasAction(item._actions, "reopen") && (
+        {hasAction(orderRun._actions, "reopen") && (
           <Group gap="xs" align="center">
             <Text
               size="xs"
-              c={item.status === OrderRunStatus.closed ? "green" : "orange"}
+              c={orderRun.status === OrderRunStatus.closed ? "green" : "orange"}
             >
-              {item.status === OrderRunStatus.closed ? "Closed" : "Cancelled"}{" "}
-              by {item.updatedBy} on {new Date(item.updatedAt).toLocaleString()}
+              {orderRun.status === OrderRunStatus.closed ? "Closed" : "Cancelled"}{" "}
+              by {orderRun.updatedBy} on {new Date(orderRun.updatedAt).toLocaleString()}
             </Text>
             <ActionIcon
               size="xs"
               variant="subtle"
               color="gray"
               onClick={() => handleAction("reopen")}
-              title={`Undo ${item.status === OrderRunStatus.closed ? "close" : "cancel"}`}
+              title={`Undo ${orderRun.status === OrderRunStatus.closed ? "close" : "cancel"}`}
             >
               <IconArrowBackUp size={14} />
             </ActionIcon>
           </Group>
         )}
-        {hasAction(item._actions, "cancel") && (
+        {hasAction(orderRun._actions, "cancel") && (
           <Button
             size="xs"
             color="orange"
@@ -188,7 +188,7 @@ export const OrderRunHeader: React.FC<Props> = ({
             Cancel
           </Button>
         )}
-        {hasAction(item._actions, "delete") && (
+        {hasAction(orderRun._actions, "delete") && (
           <Button
             size="xs"
             color="red"

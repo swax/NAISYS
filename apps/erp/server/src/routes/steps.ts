@@ -49,39 +49,39 @@ function stepBasePath(orderKey: string, revNo: number, opSeqNo: number) {
   return `/orders/${orderKey}/revs/${revNo}/ops/${opSeqNo}/steps`;
 }
 
-function formatItem(
+function formatStep(
   orderKey: string,
   revNo: number,
   opSeqNo: number,
   revStatus: string,
   user: ErpUser | undefined,
-  item: StepWithUsersAndFields,
+  step: StepWithUsersAndFields,
 ) {
   return {
-    id: item.id,
-    operationId: item.operationId,
-    seqNo: item.seqNo,
-    instructions: item.instructions,
-    ...formatAuditFields(item),
+    id: step.id,
+    operationId: step.operationId,
+    seqNo: step.seqNo,
+    instructions: step.instructions,
+    ...formatAuditFields(step),
     fields: formatFieldListResponse(
       orderKey,
       revNo,
       opSeqNo,
-      item.seqNo,
+      step.seqNo,
       revStatus,
       user,
-      item.fields,
+      step.fields,
     ),
     _links: childItemLinks(
       stepBasePath(orderKey, revNo, opSeqNo),
-      item.seqNo,
+      step.seqNo,
       "Steps",
       `/orders/${orderKey}/revs/${revNo}/ops/${opSeqNo}`,
       "Operation",
       "Step",
     ),
     _actions: draftCrudActions(
-      `${API_PREFIX}${stepBasePath(orderKey, revNo, opSeqNo)}/${item.seqNo}`,
+      `${API_PREFIX}${stepBasePath(orderKey, revNo, opSeqNo)}/${step.seqNo}`,
       "UpdateStep",
       revStatus,
       user,
@@ -118,8 +118,8 @@ export default function stepRoutes(fastify: FastifyInstance) {
       const user = request.erpUser;
       const base = stepBasePath(orderKey, revNo, seqNo);
       return {
-        items: items.map((item) =>
-          formatItem(orderKey, revNo, seqNo, resolved.rev.status, user, item),
+        items: items.map((step) =>
+          formatStep(orderKey, revNo, seqNo, resolved.rev.status, user, step),
         ),
         total: items.length,
         nextSeqNo: calcNextSeqNo(maxSeq),
@@ -171,7 +171,7 @@ export default function stepRoutes(fastify: FastifyInstance) {
         );
       }
 
-      const item = await createStep(
+      const step = await createStep(
         resolved.operation.id,
         requestedSeqNo,
         instructions,
@@ -179,13 +179,13 @@ export default function stepRoutes(fastify: FastifyInstance) {
       );
 
       reply.status(201);
-      return formatItem(
+      return formatStep(
         orderKey,
         revNo,
         seqNo,
         resolved.rev.status,
         request.erpUser,
-        item,
+        step,
       );
     },
   });
@@ -209,18 +209,18 @@ export default function stepRoutes(fastify: FastifyInstance) {
         return notFound(reply, "Operation not found");
       }
 
-      const item = await getStep(resolved.operation.id, stepSeqNo);
-      if (!item) {
+      const step = await getStep(resolved.operation.id, stepSeqNo);
+      if (!step) {
         return notFound(reply, `Step ${stepSeqNo} not found`);
       }
 
-      return formatItem(
+      return formatStep(
         orderKey,
         revNo,
         seqNo,
         resolved.rev.status,
         request.erpUser,
-        item,
+        step,
       );
     },
   });
@@ -260,19 +260,19 @@ export default function stepRoutes(fastify: FastifyInstance) {
         return notFound(reply, `Step ${stepSeqNo} not found`);
       }
 
-      const item = await updateStep(
+      const step = await updateStep(
         existing.id,
         { instructions, seqNo: newSeqNo },
         userId,
       );
 
-      return formatItem(
+      return formatStep(
         orderKey,
         revNo,
         seqNo,
         resolved.rev.status,
         request.erpUser,
-        item,
+        step,
       );
     },
   });

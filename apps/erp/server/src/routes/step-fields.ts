@@ -60,15 +60,15 @@ export function formatFieldListResponse(
   const maxSeq = items.length > 0 ? items[items.length - 1].seqNo : 0;
   const base = fieldBasePath(orderKey, revNo, opSeqNo, stepSeqNo);
   return {
-    items: items.map((item) =>
-      formatFieldItem(
+    items: items.map((field) =>
+      formatField(
         orderKey,
         revNo,
         opSeqNo,
         stepSeqNo,
         revStatus,
         user,
-        item,
+        field,
       ),
     ),
     total: items.length,
@@ -98,34 +98,34 @@ export function fieldBasePath(
   return `/orders/${orderKey}/revs/${revNo}/ops/${opSeqNo}/steps/${stepSeqNo}/fields`;
 }
 
-export function formatFieldItem(
+export function formatField(
   orderKey: string,
   revNo: number,
   opSeqNo: number,
   stepSeqNo: number,
   revStatus: string,
   user: ErpUser | undefined,
-  item: StepFieldWithUsers,
+  field: StepFieldWithUsers,
 ) {
   const base = fieldBasePath(orderKey, revNo, opSeqNo, stepSeqNo);
   return {
-    id: item.id,
-    stepId: item.stepId,
-    seqNo: item.seqNo,
-    label: item.label,
-    type: item.type,
-    required: item.required,
-    ...formatAuditFields(item),
+    id: field.id,
+    stepId: field.stepId,
+    seqNo: field.seqNo,
+    label: field.label,
+    type: field.type,
+    required: field.required,
+    ...formatAuditFields(field),
     _links: childItemLinks(
       base,
-      item.seqNo,
+      field.seqNo,
       "Step Fields",
       `/orders/${orderKey}/revs/${revNo}/ops/${opSeqNo}/steps/${stepSeqNo}`,
       "Step",
       "StepField",
     ),
     _actions: draftCrudActions(
-      `${API_PREFIX}${base}/${item.seqNo}`,
+      `${API_PREFIX}${base}/${field.seqNo}`,
       "UpdateStepField",
       revStatus,
       user,
@@ -167,15 +167,15 @@ export default function stepFieldRoutes(fastify: FastifyInstance) {
       const user = request.erpUser;
       const base = fieldBasePath(orderKey, revNo, seqNo, stepSeqNo);
       return {
-        items: items.map((item) =>
-          formatFieldItem(
+        items: items.map((field) =>
+          formatField(
             orderKey,
             revNo,
             seqNo,
             stepSeqNo,
             resolved.rev.status,
             user,
-            item,
+            field,
           ),
         ),
         total: items.length,
@@ -233,21 +233,21 @@ export default function stepFieldRoutes(fastify: FastifyInstance) {
         );
       }
 
-      const item = await createStepField(
+      const field = await createStepField(
         resolved.step.id,
         { seqNo: requestedSeqNo, label, type, required },
         userId,
       );
 
       reply.status(201);
-      return formatFieldItem(
+      return formatField(
         orderKey,
         revNo,
         seqNo,
         stepSeqNo,
         resolved.rev.status,
         request.erpUser,
-        item,
+        field,
       );
     },
   });
@@ -276,19 +276,19 @@ export default function stepFieldRoutes(fastify: FastifyInstance) {
         return notFound(reply, "Step not found");
       }
 
-      const item = await getStepField(resolved.step.id, fieldSeqNo);
-      if (!item) {
+      const field = await getStepField(resolved.step.id, fieldSeqNo);
+      if (!field) {
         return notFound(reply, `Field ${fieldSeqNo} not found`);
       }
 
-      return formatFieldItem(
+      return formatField(
         orderKey,
         revNo,
         seqNo,
         stepSeqNo,
         resolved.rev.status,
         request.erpUser,
-        item,
+        field,
       );
     },
   });
@@ -333,20 +333,20 @@ export default function stepFieldRoutes(fastify: FastifyInstance) {
         return notFound(reply, `Field ${fieldSeqNo} not found`);
       }
 
-      const item = await updateStepField(
+      const field = await updateStepField(
         existing.id,
         { label, type, required, seqNo: newSeqNo },
         userId,
       );
 
-      return formatFieldItem(
+      return formatField(
         orderKey,
         revNo,
         seqNo,
         stepSeqNo,
         resolved.rev.status,
         request.erpUser,
-        item,
+        field,
       );
     },
   });

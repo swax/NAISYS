@@ -23,16 +23,16 @@ import { hasAction } from "../../lib/hateoas";
 export const OrderDetail: React.FC = () => {
   const { key } = useParams<{ key: string }>();
   const navigate = useNavigate();
-  const [item, setItem] = useState<Order | null>(null);
+  const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
 
-  const fetchItem = useCallback(async () => {
+  const fetchOrder = useCallback(async () => {
     if (!key) return;
     setLoading(true);
     try {
       const result = await api.get<Order>(apiEndpoints.order(key));
-      setItem(result);
+      setOrder(result);
     } catch (err) {
       showErrorNotification(err);
     } finally {
@@ -41,8 +41,8 @@ export const OrderDetail: React.FC = () => {
   }, [key]);
 
   useEffect(() => {
-    void fetchItem();
-  }, [fetchItem]);
+    void fetchOrder();
+  }, [fetchOrder]);
 
   const handleUpdate = async (data: UpdateOrder) => {
     if (!key) return;
@@ -51,7 +51,7 @@ export const OrderDetail: React.FC = () => {
     if (data.key && data.key !== key) {
       void navigate(`/orders/${data.key}`, { replace: true });
     } else {
-      await fetchItem();
+      await fetchOrder();
     }
   };
 
@@ -75,7 +75,7 @@ export const OrderDetail: React.FC = () => {
     );
   }
 
-  if (!item) {
+  if (!order) {
     return (
       <Container size="md" py="xl">
         <Text>Order not found.</Text>
@@ -91,10 +91,10 @@ export const OrderDetail: React.FC = () => {
         </Title>
         <OrderForm<true>
           initialData={{
-            key: item.key,
-            description: item.description,
-            status: item.status,
-            itemKey: item.itemKey,
+            key: order.key,
+            description: order.description,
+            status: order.status,
+            itemKey: order.itemKey,
           }}
           isEdit
           onSubmit={handleUpdate}
@@ -108,19 +108,19 @@ export const OrderDetail: React.FC = () => {
     <Container size="md" py="xl">
       <Group justify="space-between" mb="lg">
         <Group>
-          <Title order={2}>{item.key}</Title>
+          <Title order={2}>{order.key}</Title>
           <MetadataTooltip
-            createdBy={item.createdBy}
-            createdAt={item.createdAt}
-            updatedBy={item.updatedBy}
-            updatedAt={item.updatedAt}
+            createdBy={order.createdBy}
+            createdAt={order.createdAt}
+            updatedBy={order.updatedBy}
+            updatedAt={order.updatedAt}
           />
           <Badge
-            color={item.status === OrderStatus.active ? "green" : "gray"}
+            color={order.status === OrderStatus.active ? "green" : "gray"}
             variant="light"
             size="lg"
           >
-            {item.status}
+            {order.status}
           </Badge>
         </Group>
         <Group>
@@ -130,10 +130,10 @@ export const OrderDetail: React.FC = () => {
           <Button variant="light" component={Link} to={`/orders/${key}/runs`}>
             View Runs
           </Button>
-          {hasAction(item._actions, "update") && (
+          {hasAction(order._actions, "update") && (
             <Button onClick={() => setEditing(true)}>Edit</Button>
           )}
-          {hasAction(item._actions, "delete") && (
+          {hasAction(order._actions, "delete") && (
             <Button color="red" variant="outline" onClick={handleDelete}>
               Delete
             </Button>
@@ -147,14 +147,14 @@ export const OrderDetail: React.FC = () => {
             <Text fw={600} w={120}>
               Produces Item:
             </Text>
-            {item.itemKey ? (
+            {order.itemKey ? (
               <Text
                 component={Link}
-                to={`/items/${item.itemKey}`}
+                to={`/items/${order.itemKey}`}
                 c="blue"
                 style={{ textDecoration: "none" }}
               >
-                {item.itemKey}
+                {order.itemKey}
               </Text>
             ) : (
               <Text>—</Text>
@@ -164,7 +164,7 @@ export const OrderDetail: React.FC = () => {
             <Text fw={600} w={120}>
               Description:
             </Text>
-            <Text>{item.description || "—"}</Text>
+            <Text>{order.description || "—"}</Text>
           </Group>
         </Stack>
       </Card>
