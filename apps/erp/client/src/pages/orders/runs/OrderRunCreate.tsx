@@ -12,11 +12,11 @@ export const OrderRunCreate: React.FC = () => {
   const prefillRevNo = Number(searchParams.get("revNo")) || 0;
 
   const handleCreate = async (data: CreateOrderRun) => {
-    const res = await api.post<{ id: number }>(
+    const res = await api.post<{ runNo: number }>(
       apiEndpoints.orderRuns(orderKey!),
       data,
     );
-    void navigate(`/orders/${orderKey}/runs/${res.id}`);
+    void navigate(`/orders/${orderKey}/runs/${res.runNo}`);
   };
 
   return (

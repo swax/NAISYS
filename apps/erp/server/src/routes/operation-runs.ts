@@ -19,10 +19,10 @@ import {
   childItemLinks,
   formatAuditFields,
   formatDate,
+  resolveOpRun,
   resolveOrderRun,
 } from "../route-helpers.js";
 import {
-  findExisting,
   getOpRun,
   listOpRuns,
   type OpRunWithOp,
@@ -30,18 +30,18 @@ import {
   validateStatusFor,
 } from "../services/operation-run-service.js";
 
-function opRunResource(orderKey: string, runId: number) {
-  return `orders/${orderKey}/runs/${runId}/ops`;
+function opRunResource(orderKey: string, runNo: number) {
+  return `orders/${orderKey}/runs/${runNo}/ops`;
 }
 
 function opRunItemActions(
   orderKey: string,
-  runId: number,
-  id: number,
+  runNo: number,
+  seqNo: number,
   status: string,
   user: ErpUser | undefined,
 ): HateoasAction[] {
-  const href = `${API_PREFIX}/${opRunResource(orderKey, runId)}/${id}`;
+  const href = `${API_PREFIX}/${opRunResource(orderKey, runNo)}/${seqNo}`;
   const actions: HateoasAction[] = [];
   const isExecutor = hasPermission(user, "order_executor");
   const isManager = hasPermission(user, "order_manager");
@@ -116,28 +116,29 @@ function opRunItemActions(
   return actions;
 }
 
-const RunParamsSchema = z.object({
+const RunNoParamsSchema = z.object({
   orderKey: z.string(),
-  runId: z.coerce.number().int(),
+  runNo: z.coerce.number().int(),
 });
 
-export const IdParamsSchema = z.object({
+export const SeqNoParamsSchema = z.object({
   orderKey: z.string(),
-  runId: z.coerce.number().int(),
-  id: z.coerce.number().int(),
+  runNo: z.coerce.number().int(),
+  seqNo: z.coerce.number().int(),
 });
 
 export function formatOpRun(
   orderKey: string,
-  runId: number,
+  runNo: number,
   user: ErpUser | undefined,
   opRun: OpRunWithOp,
 ) {
+  const seqNo = opRun.operation.seqNo;
   return {
     id: opRun.id,
     orderRunId: opRun.orderRunId,
     operationId: opRun.operationId,
-    seqNo: opRun.operation.seqNo,
+    seqNo,
     title: opRun.operation.title,
     description: opRun.operation.description,
     status: opRun.status,
@@ -146,34 +147,36 @@ export function formatOpRun(
     ...formatAuditFields(opRun),
     _links: [
       ...childItemLinks(
-        "/" + opRunResource(orderKey, runId),
-        opRun.id,
+        "/" + opRunResource(orderKey, runNo),
+        seqNo,
         "Operation Runs",
-        "/orders/" + orderKey + "/runs/" + runId,
+        "/orders/" + orderKey + "/runs/" + runNo,
         "Order Run",
         "OperationRun",
         "run",
       ),
       {
         rel: "steps",
-        href: `${API_PREFIX}/${opRunResource(orderKey, runId)}/${opRun.id}/steps`,
+        href: `${API_PREFIX}/${opRunResource(orderKey, runNo)}/${seqNo}/steps`,
         title: "Step Runs",
       } as HateoasLink,
     ],
-    _actions: opRunItemActions(orderKey, runId, opRun.id, opRun.status, user),
+    _actions: opRunItemActions(orderKey, runNo, seqNo, opRun.status, user),
   };
 }
 
 function formatListOpRun(
   orderKey: string,
-  runId: number,
+  runNo: number,
   user: ErpUser | undefined,
   opRun: OpRunWithOp,
 ) {
-  const { _actions, ...rest } = formatOpRun(orderKey, runId, user, opRun);
+  const { _actions, ...rest } = formatOpRun(orderKey, runNo, user, opRun);
   return {
     ...rest,
-    _links: [selfLink(`/${opRunResource(orderKey, runId)}/${opRun.id}`)],
+    _links: [
+      selfLink(`/${opRunResource(orderKey, runNo)}/${opRun.operation.seqNo}`),
+    ],
   };
 }
 
@@ -185,65 +188,67 @@ export default function operationRunRoutes(fastify: FastifyInstance) {
     schema: {
       description: "List operation runs for an order run",
       tags: ["Operation Runs"],
-      params: RunParamsSchema,
+      params: RunNoParamsSchema,
       response: {
         200: OperationRunListResponseSchema,
         404: ErrorResponseSchema,
       },
     },
     handler: async (request, reply) => {
-      const { orderKey, runId } = request.params;
+      const { orderKey, runNo } = request.params;
 
-      if (!(await resolveOrderRun(orderKey, runId))) {
+      const resolved = await resolveOrderRun(orderKey, runNo);
+      if (!resolved) {
         return notFound(reply, `Order run not found`);
       }
 
-      const items = await listOpRuns(runId);
+      const items = await listOpRuns(resolved.run.id);
 
       return {
         items: items.map((opRun) =>
-          formatListOpRun(orderKey, runId, request.erpUser, opRun),
+          formatListOpRun(orderKey, runNo, request.erpUser, opRun),
         ),
         total: items.length,
-        _links: [selfLink(`/${opRunResource(orderKey, runId)}`)],
+        _links: [selfLink(`/${opRunResource(orderKey, runNo)}`)],
       };
     },
   });
 
-  // GET by ID
-  app.get("/:id", {
+  // GET by seqNo
+  app.get("/:seqNo", {
     schema: {
-      description: "Get a single operation run by ID",
+      description: "Get a single operation run by operation sequence number",
       tags: ["Operation Runs"],
-      params: IdParamsSchema,
+      params: SeqNoParamsSchema,
       response: {
         200: OperationRunSchema,
         404: ErrorResponseSchema,
       },
     },
     handler: async (request, reply) => {
-      const { orderKey, runId, id } = request.params;
+      const { orderKey, runNo, seqNo } = request.params;
 
-      if (!(await resolveOrderRun(orderKey, runId))) {
-        return notFound(reply, `Order run not found`);
+      const resolved = await resolveOpRun(orderKey, runNo, seqNo);
+      if (!resolved) {
+        return notFound(reply, `Operation run not found`);
       }
 
-      const opRun = await getOpRun(id);
-      if (!opRun || opRun.orderRunId !== runId) {
-        return notFound(reply, `Operation run ${id} not found`);
+      const opRun = await getOpRun(resolved.opRun.id);
+      if (!opRun) {
+        return notFound(reply, `Operation run not found`);
       }
 
-      return formatOpRun(orderKey, runId, request.erpUser, opRun);
+      return formatOpRun(orderKey, runNo, request.erpUser, opRun);
     },
   });
 
   // UPDATE (pending/in_progress only)
-  app.put("/:id", {
+  app.put("/:seqNo", {
     schema: {
       description:
         "Update an operation run (pending or in_progress status only)",
       tags: ["Operation Runs"],
-      params: IdParamsSchema,
+      params: SeqNoParamsSchema,
       body: UpdateOperationRunSchema,
       response: {
         200: OperationRunSchema,
@@ -253,26 +258,23 @@ export default function operationRunRoutes(fastify: FastifyInstance) {
     },
     preHandler: requirePermission("order_executor"),
     handler: async (request, reply) => {
-      const { orderKey, runId, id } = request.params;
+      const { orderKey, runNo, seqNo } = request.params;
       const userId = request.erpUser!.id;
 
-      const resolved = await resolveOrderRun(orderKey, runId);
-      if (!resolved) return notFound(reply, `Order run not found`);
+      const resolved = await resolveOpRun(orderKey, runNo, seqNo);
+      if (!resolved) return notFound(reply, `Operation run not found`);
 
       const orderErr = checkOrderRunStarted(resolved.run.status);
       if (orderErr) return conflict(reply, orderErr);
 
-      const existing = await findExisting(id, runId);
-      if (!existing) return notFound(reply, `Operation run ${id} not found`);
-
-      const statusErr = validateStatusFor("update", existing.status, [
+      const statusErr = validateStatusFor("update", resolved.opRun.status, [
         OperationRunStatus.pending,
         OperationRunStatus.in_progress,
       ]);
       if (statusErr) return conflict(reply, statusErr);
 
-      const opRun = await updateOpRun(id, request.body, userId);
-      return formatOpRun(orderKey, runId, request.erpUser, opRun);
+      const opRun = await updateOpRun(resolved.opRun.id, request.body, userId);
+      return formatOpRun(orderKey, runNo, request.erpUser, opRun);
     },
   });
 }

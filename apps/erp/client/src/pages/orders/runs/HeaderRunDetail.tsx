@@ -36,9 +36,9 @@ function formatDateTime(iso: string | null): string {
 }
 
 export const HeaderRunDetail: React.FC = () => {
-  const { orderKey, id: runId } = useParams<{
+  const { orderKey, runNo } = useParams<{
     orderKey: string;
-    id: string;
+    runNo: string;
   }>();
   const { orderRun, onOrderRunUpdate } =
     useOutletContext<OrderRunOutletContext>();
@@ -64,7 +64,7 @@ export const HeaderRunDetail: React.FC = () => {
   const handleUpdate = async (data: UpdateOrderRun) => {
     try {
       const updated = await api.put<OrderRun>(
-        apiEndpoints.orderRun(orderKey!, runId!),
+        apiEndpoints.orderRun(orderKey!, runNo!),
         data,
       );
       onOrderRunUpdate(updated);

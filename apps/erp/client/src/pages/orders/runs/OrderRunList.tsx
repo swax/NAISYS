@@ -168,7 +168,7 @@ export const OrderRunList: React.FC = () => {
             </Table.Thead>
             <Table.Tbody>
               {data.items.map((item) => {
-                const runLink = `/orders/${orderKey}/runs/${item.id}`;
+                const runLink = `/orders/${orderKey}/runs/${item.runNo}`;
                 return (
                   <Table.Tr
                     key={item.id}

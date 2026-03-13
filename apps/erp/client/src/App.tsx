@@ -72,10 +72,13 @@ const AppContent: React.FC = () => {
         </Route>
         <Route path="/orders/:orderKey/runs" element={<OrderRunList />} />
         <Route path="/orders/:orderKey/runs/new" element={<OrderRunCreate />} />
-        <Route path="/orders/:orderKey/runs/:id" element={<OrderRunLayout />}>
+        <Route
+          path="/orders/:orderKey/runs/:runNo"
+          element={<OrderRunLayout />}
+        >
           <Route index element={<Navigate to="header" replace />} />
           <Route path="header" element={<HeaderRunDetail />} />
-          <Route path="ops/:opRunId" element={<OperationRunDetail />} />
+          <Route path="ops/:seqNo" element={<OperationRunDetail />} />
         </Route>
         <Route path="/items" element={<ItemList />} />
         <Route path="/items/new" element={<ItemCreate />} />

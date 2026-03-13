@@ -8,25 +8,24 @@ import type { ZodTypeProvider } from "fastify-type-provider-zod";
 
 import { requirePermission } from "../auth-middleware.js";
 import { conflict, notFound, unprocessable } from "../error-handler.js";
-import { checkOrderRunStarted, resolveOrderRun } from "../route-helpers.js";
+import { checkOrderRunStarted, resolveOpRun } from "../route-helpers.js";
 import {
   checkPriorOpsComplete,
   checkStepsComplete,
-  findExisting,
   transitionStatus,
   validateStatusFor,
 } from "../services/operation-run-service.js";
-import { formatOpRun, IdParamsSchema } from "./operation-runs.js";
+import { formatOpRun, SeqNoParamsSchema } from "./operation-runs.js";
 
 export default function operationRunTransitionRoutes(fastify: FastifyInstance) {
   const app = fastify.withTypeProvider<ZodTypeProvider>();
 
   // START (pending → in_progress)
-  app.post("/:id/start", {
+  app.post("/:seqNo/start", {
     schema: {
       description: "Start an operation run (pending → in_progress)",
       tags: ["Operation Runs"],
-      params: IdParamsSchema,
+      params: SeqNoParamsSchema,
       response: {
         200: OperationRunSchema,
         404: ErrorResponseSchema,
@@ -36,46 +35,40 @@ export default function operationRunTransitionRoutes(fastify: FastifyInstance) {
     },
     preHandler: requirePermission("order_executor"),
     handler: async (request, reply) => {
-      const { orderKey, runId, id } = request.params;
+      const { orderKey, runNo, seqNo } = request.params;
       const userId = request.erpUser!.id;
 
-      const resolved = await resolveOrderRun(orderKey, runId);
-      if (!resolved) return notFound(reply, `Order run not found`);
+      const resolved = await resolveOpRun(orderKey, runNo, seqNo);
+      if (!resolved) return notFound(reply, `Operation run not found`);
 
       const orderErr = checkOrderRunStarted(resolved.run.status);
       if (orderErr) return conflict(reply, orderErr);
 
-      const existing = await findExisting(id, runId);
-      if (!existing) return notFound(reply, `Operation run ${id} not found`);
-
-      const statusErr = validateStatusFor("start", existing.status, [
+      const statusErr = validateStatusFor("start", resolved.opRun.status, [
         OperationRunStatus.pending,
       ]);
       if (statusErr) return conflict(reply, statusErr);
 
-      const priorErr = await checkPriorOpsComplete(
-        runId,
-        existing.operation.seqNo,
-      );
+      const priorErr = await checkPriorOpsComplete(resolved.run.id, seqNo);
       if (priorErr) return unprocessable(reply, priorErr);
 
       const opRun = await transitionStatus(
-        id,
+        resolved.opRun.id,
         "start",
         OperationRunStatus.pending,
         OperationRunStatus.in_progress,
         userId,
       );
-      return formatOpRun(orderKey, runId, request.erpUser, opRun);
+      return formatOpRun(orderKey, runNo, request.erpUser, opRun);
     },
   });
 
   // COMPLETE (in_progress → completed)
-  app.post("/:id/complete", {
+  app.post("/:seqNo/complete", {
     schema: {
       description: "Complete an operation run (in_progress → completed)",
       tags: ["Operation Runs"],
-      params: IdParamsSchema,
+      params: SeqNoParamsSchema,
       response: {
         200: OperationRunSchema,
         404: ErrorResponseSchema,
@@ -85,44 +78,41 @@ export default function operationRunTransitionRoutes(fastify: FastifyInstance) {
     },
     preHandler: requirePermission("order_executor"),
     handler: async (request, reply) => {
-      const { orderKey, runId, id } = request.params;
+      const { orderKey, runNo, seqNo } = request.params;
       const userId = request.erpUser!.id;
 
-      const resolved = await resolveOrderRun(orderKey, runId);
-      if (!resolved) return notFound(reply, `Order run not found`);
+      const resolved = await resolveOpRun(orderKey, runNo, seqNo);
+      if (!resolved) return notFound(reply, `Operation run not found`);
 
       const orderErr = checkOrderRunStarted(resolved.run.status);
       if (orderErr) return conflict(reply, orderErr);
 
-      const existing = await findExisting(id, runId);
-      if (!existing) return notFound(reply, `Operation run ${id} not found`);
-
-      const statusErr = validateStatusFor("complete", existing.status, [
+      const statusErr = validateStatusFor("complete", resolved.opRun.status, [
         OperationRunStatus.in_progress,
       ]);
       if (statusErr) return conflict(reply, statusErr);
 
-      const stepsErr = await checkStepsComplete(id);
+      const stepsErr = await checkStepsComplete(resolved.opRun.id);
       if (stepsErr) return unprocessable(reply, stepsErr);
 
       const opRun = await transitionStatus(
-        id,
+        resolved.opRun.id,
         "complete",
         OperationRunStatus.in_progress,
         OperationRunStatus.completed,
         userId,
         { completedAt: new Date() },
       );
-      return formatOpRun(orderKey, runId, request.erpUser, opRun);
+      return formatOpRun(orderKey, runNo, request.erpUser, opRun);
     },
   });
 
   // SKIP (pending → skipped)
-  app.post("/:id/skip", {
+  app.post("/:seqNo/skip", {
     schema: {
       description: "Skip an operation run (pending → skipped)",
       tags: ["Operation Runs"],
-      params: IdParamsSchema,
+      params: SeqNoParamsSchema,
       response: {
         200: OperationRunSchema,
         404: ErrorResponseSchema,
@@ -131,40 +121,37 @@ export default function operationRunTransitionRoutes(fastify: FastifyInstance) {
     },
     preHandler: requirePermission("order_manager"),
     handler: async (request, reply) => {
-      const { orderKey, runId, id } = request.params;
+      const { orderKey, runNo, seqNo } = request.params;
       const userId = request.erpUser!.id;
 
-      const resolved = await resolveOrderRun(orderKey, runId);
-      if (!resolved) return notFound(reply, `Order run not found`);
+      const resolved = await resolveOpRun(orderKey, runNo, seqNo);
+      if (!resolved) return notFound(reply, `Operation run not found`);
 
       const orderErr = checkOrderRunStarted(resolved.run.status);
       if (orderErr) return conflict(reply, orderErr);
 
-      const existing = await findExisting(id, runId);
-      if (!existing) return notFound(reply, `Operation run ${id} not found`);
-
-      const statusErr = validateStatusFor("skip", existing.status, [
+      const statusErr = validateStatusFor("skip", resolved.opRun.status, [
         OperationRunStatus.pending,
       ]);
       if (statusErr) return conflict(reply, statusErr);
 
       const opRun = await transitionStatus(
-        id,
+        resolved.opRun.id,
         "skip",
         OperationRunStatus.pending,
         OperationRunStatus.skipped,
         userId,
       );
-      return formatOpRun(orderKey, runId, request.erpUser, opRun);
+      return formatOpRun(orderKey, runNo, request.erpUser, opRun);
     },
   });
 
   // FAIL (in_progress → failed)
-  app.post("/:id/fail", {
+  app.post("/:seqNo/fail", {
     schema: {
       description: "Fail an operation run (in_progress → failed)",
       tags: ["Operation Runs"],
-      params: IdParamsSchema,
+      params: SeqNoParamsSchema,
       response: {
         200: OperationRunSchema,
         404: ErrorResponseSchema,
@@ -173,40 +160,37 @@ export default function operationRunTransitionRoutes(fastify: FastifyInstance) {
     },
     preHandler: requirePermission("order_manager"),
     handler: async (request, reply) => {
-      const { orderKey, runId, id } = request.params;
+      const { orderKey, runNo, seqNo } = request.params;
       const userId = request.erpUser!.id;
 
-      const resolved = await resolveOrderRun(orderKey, runId);
-      if (!resolved) return notFound(reply, `Order run not found`);
+      const resolved = await resolveOpRun(orderKey, runNo, seqNo);
+      if (!resolved) return notFound(reply, `Operation run not found`);
 
       const orderErr = checkOrderRunStarted(resolved.run.status);
       if (orderErr) return conflict(reply, orderErr);
 
-      const existing = await findExisting(id, runId);
-      if (!existing) return notFound(reply, `Operation run ${id} not found`);
-
-      const statusErr = validateStatusFor("fail", existing.status, [
+      const statusErr = validateStatusFor("fail", resolved.opRun.status, [
         OperationRunStatus.in_progress,
       ]);
       if (statusErr) return conflict(reply, statusErr);
 
       const opRun = await transitionStatus(
-        id,
+        resolved.opRun.id,
         "fail",
         OperationRunStatus.in_progress,
         OperationRunStatus.failed,
         userId,
       );
-      return formatOpRun(orderKey, runId, request.erpUser, opRun);
+      return formatOpRun(orderKey, runNo, request.erpUser, opRun);
     },
   });
 
   // REOPEN (completed/skipped/failed → in_progress/pending)
-  app.post("/:id/reopen", {
+  app.post("/:seqNo/reopen", {
     schema: {
       description: "Reopen an operation run (completed → in_progress)",
       tags: ["Operation Runs"],
-      params: IdParamsSchema,
+      params: SeqNoParamsSchema,
       response: {
         200: OperationRunSchema,
         404: ErrorResponseSchema,
@@ -215,19 +199,16 @@ export default function operationRunTransitionRoutes(fastify: FastifyInstance) {
     },
     preHandler: requirePermission("order_manager"),
     handler: async (request, reply) => {
-      const { orderKey, runId, id } = request.params;
+      const { orderKey, runNo, seqNo } = request.params;
       const userId = request.erpUser!.id;
 
-      const resolved = await resolveOrderRun(orderKey, runId);
-      if (!resolved) return notFound(reply, `Order run not found`);
+      const resolved = await resolveOpRun(orderKey, runNo, seqNo);
+      if (!resolved) return notFound(reply, `Operation run not found`);
 
       const orderErr = checkOrderRunStarted(resolved.run.status);
       if (orderErr) return conflict(reply, orderErr);
 
-      const existing = await findExisting(id, runId);
-      if (!existing) return notFound(reply, `Operation run ${id} not found`);
-
-      const statusErr = validateStatusFor("reopen", existing.status, [
+      const statusErr = validateStatusFor("reopen", resolved.opRun.status, [
         OperationRunStatus.completed,
         OperationRunStatus.skipped,
         OperationRunStatus.failed,
@@ -235,19 +216,19 @@ export default function operationRunTransitionRoutes(fastify: FastifyInstance) {
       if (statusErr) return conflict(reply, statusErr);
 
       const reopenTo =
-        existing.status === OperationRunStatus.skipped
+        resolved.opRun.status === OperationRunStatus.skipped
           ? OperationRunStatus.pending
           : OperationRunStatus.in_progress;
 
       const opRun = await transitionStatus(
-        id,
+        resolved.opRun.id,
         "reopen",
-        existing.status,
+        resolved.opRun.status,
         reopenTo,
         userId,
         { completedAt: null },
       );
-      return formatOpRun(orderKey, runId, request.erpUser, opRun);
+      return formatOpRun(orderKey, runNo, request.erpUser, opRun);
     },
   });
 }

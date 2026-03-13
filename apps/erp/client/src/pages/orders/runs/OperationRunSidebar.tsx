@@ -15,18 +15,18 @@ const STATUS_COLORS: Record<string, string> = {
 
 interface Props {
   orderKey: string;
-  runId: string;
+  runNo: string;
   refreshKey?: number;
 }
 
 export const OperationRunSidebar: React.FC<Props> = ({
   orderKey,
-  runId,
+  runNo,
   refreshKey,
 }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { opRunId: currentOpRunId } = useParams<{ opRunId: string }>();
+  const { seqNo: currentSeqNo } = useParams<{ seqNo: string }>();
   const isHeaderActive = location.pathname.endsWith("/header");
   const [data, setData] = useState<OperationRunListResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -35,7 +35,7 @@ export const OperationRunSidebar: React.FC<Props> = ({
     setLoading(true);
     try {
       const result = await api.get<OperationRunListResponse>(
-        apiEndpoints.operationRuns(orderKey, runId),
+        apiEndpoints.operationRuns(orderKey, runNo),
       );
       setData(result);
     } catch (err) {
@@ -43,7 +43,7 @@ export const OperationRunSidebar: React.FC<Props> = ({
     } finally {
       setLoading(false);
     }
-  }, [orderKey, runId]);
+  }, [orderKey, runNo]);
 
   useEffect(() => {
     void fetchOps();
@@ -56,11 +56,11 @@ export const OperationRunSidebar: React.FC<Props> = ({
         radius="md"
         withBorder
         component="a"
-        href={`/erp/orders/${orderKey}/runs/${runId}/header`}
+        href={`/erp/orders/${orderKey}/runs/${runNo}/header`}
         onClick={(e: React.MouseEvent) => {
           if (e.button === 1 || e.ctrlKey || e.metaKey) return;
           e.preventDefault();
-          void navigate(`/orders/${orderKey}/runs/${runId}/header`);
+          void navigate(`/orders/${orderKey}/runs/${runNo}/header`);
         }}
         style={{
           cursor: "pointer",
@@ -86,7 +86,7 @@ export const OperationRunSidebar: React.FC<Props> = ({
         </Text>
       ) : (
         data.items.map((op) => {
-          const url = `/orders/${orderKey}/runs/${runId}/ops/${op.id}`;
+          const url = `/orders/${orderKey}/runs/${runNo}/ops/${op.seqNo}`;
           return (
             <Card
               key={op.id}
@@ -105,7 +105,7 @@ export const OperationRunSidebar: React.FC<Props> = ({
                 textDecoration: "none",
                 color: "inherit",
                 backgroundColor:
-                  currentOpRunId === String(op.id)
+                  currentSeqNo === String(op.seqNo)
                     ? "var(--mantine-color-blue-9)"
                     : undefined,
               }}

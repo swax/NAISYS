@@ -30,8 +30,8 @@ type FieldSaveStatus = "saving" | "saved" | "error";
 
 interface Props {
   orderKey: string;
-  runId: string;
-  opRunId: string;
+  runNo: string;
+  seqNo: string;
   refreshKey?: number;
 }
 
@@ -41,15 +41,15 @@ interface StepRunState {
 
 export const StepRunList: React.FC<Props> = ({
   orderKey,
-  runId,
-  opRunId,
+  runNo,
+  seqNo,
   refreshKey,
 }) => {
   const [data, setData] = useState<StepRunListResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [savingStep, setSavingStep] = useState<number | null>(null);
   const [edits, setEdits] = useState<Record<number, StepRunState>>({});
-  const [loadedOpRunId, setLoadedOpRunId] = useState(opRunId);
+  const [loadedSeqNo, setLoadedSeqNo] = useState(seqNo);
   // key: "stepId:stepFieldId"
   const [fieldStatus, setFieldStatus] = useState<
     Record<string, FieldSaveStatus>
@@ -57,8 +57,8 @@ export const StepRunList: React.FC<Props> = ({
   const savedTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
   // Clear stale data when operation run changes
-  if (opRunId !== loadedOpRunId) {
-    setLoadedOpRunId(opRunId);
+  if (seqNo !== loadedSeqNo) {
+    setLoadedSeqNo(seqNo);
     setData(null);
     setLoading(true);
     setEdits({});
@@ -68,7 +68,7 @@ export const StepRunList: React.FC<Props> = ({
     setLoading(true);
     try {
       const result = await api.get<StepRunListResponse>(
-        apiEndpoints.stepRuns(orderKey, runId, opRunId),
+        apiEndpoints.stepRuns(orderKey, runNo, seqNo),
       );
       setData(result);
       // Initialize edit state from fetched data
@@ -86,7 +86,7 @@ export const StepRunList: React.FC<Props> = ({
     } finally {
       setLoading(false);
     }
-  }, [orderKey, runId, opRunId, refreshKey]);
+  }, [orderKey, runNo, seqNo, refreshKey]);
 
   useEffect(() => {
     void fetchSteps();
@@ -152,13 +152,14 @@ export const StepRunList: React.FC<Props> = ({
     setFieldSaveStatus(step.id, [stepFieldId], "saving");
 
     try {
+      const fv = step.fieldValues.find((f) => f.stepFieldId === stepFieldId);
       const updated = await api.put<StepFieldValue>(
         apiEndpoints.stepRunFieldValue(
           orderKey,
-          runId,
-          opRunId,
-          step.id,
-          stepFieldId,
+          runNo,
+          seqNo,
+          step.seqNo,
+          fv!.fieldSeqNo,
         ),
         { value: editedValue },
       );
@@ -194,7 +195,7 @@ export const StepRunList: React.FC<Props> = ({
     try {
       const body: UpdateStepRun = { completed };
       const updated = await api.put<StepRun>(
-        apiEndpoints.stepRun(orderKey, runId, opRunId, step.id),
+        apiEndpoints.stepRun(orderKey, runNo, seqNo, step.seqNo),
         body,
       );
       applyStepUpdate(updated);

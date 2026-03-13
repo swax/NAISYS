@@ -157,24 +157,50 @@ export async function resolveStep(
   return { ...result, step };
 }
 
-export async function resolveOrderRun(orderKey: string, runId: number) {
+export async function resolveOrderRun(orderKey: string, runNo: number) {
   const order = await resolveOrder(orderKey);
   if (!order) return null;
-  const run = await erpDb.orderRun.findUnique({ where: { id: runId } });
-  if (!run || run.orderId !== order.id) return null;
+  const run = await erpDb.orderRun.findUnique({
+    where: { orderId_runNo: { orderId: order.id, runNo } },
+  });
+  if (!run) return null;
   return { order, run };
 }
 
 export async function resolveOpRun(
   orderKey: string,
-  runId: number,
-  opRunId: number,
+  runNo: number,
+  seqNo: number,
 ) {
-  const result = await resolveOrderRun(orderKey, runId);
+  const result = await resolveOrderRun(orderKey, runNo);
   if (!result) return null;
-  const opRun = await erpDb.operationRun.findUnique({
-    where: { id: opRunId },
+  const operation = await erpDb.operation.findFirst({
+    where: { orderRevId: result.run.orderRevId, seqNo },
   });
-  if (!opRun || opRun.orderRunId !== runId) return null;
+  if (!operation) return null;
+  const opRun = await erpDb.operationRun.findUnique({
+    where: {
+      orderRunId_operationId: {
+        orderRunId: result.run.id,
+        operationId: operation.id,
+      },
+    },
+  });
+  if (!opRun) return null;
   return { ...result, opRun };
+}
+
+export async function resolveStepRun(
+  orderKey: string,
+  runNo: number,
+  seqNo: number,
+  stepSeqNo: number,
+) {
+  const result = await resolveOpRun(orderKey, runNo, seqNo);
+  if (!result) return null;
+  const stepRun = await erpDb.stepRun.findFirst({
+    where: { operationRunId: result.opRun.id, step: { seqNo: stepSeqNo } },
+  });
+  if (!stepRun) return null;
+  return { ...result, stepRun };
 }
