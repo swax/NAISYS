@@ -15,12 +15,18 @@ import {
   IconLayoutSidebarLeftExpand,
   IconListDetails,
 } from "@tabler/icons-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Outlet, useLocation, useParams } from "react-router";
 
 import { api, apiEndpoints, showErrorNotification } from "../../../lib/api";
 import { OperationRunSidebar } from "./OperationRunSidebar";
 import { OrderRunHeader } from "./OrderRunHeader";
+
+export interface OrderRunOutletContext {
+  onOperationUpdate: () => void;
+  orderRun: OrderRun;
+  onOrderRunUpdate: (item: OrderRun) => void;
+}
 
 const SIDEBAR_WIDTH = 260;
 
@@ -36,12 +42,12 @@ export const OrderRunLayout: React.FC = () => {
   const [drawerOpened, { open: openDrawer, close: closeDrawer }] =
     useDisclosure();
   const [opsRefreshKey, setOpsRefreshKey] = useState(0);
-  const outletContext = useMemo(
-    () => ({
-      onOperationUpdate: () => setOpsRefreshKey((k) => k + 1),
-    }),
-    [],
-  );
+
+  const outletContext: OrderRunOutletContext = {
+    onOperationUpdate: () => setOpsRefreshKey((k) => k + 1),
+    orderRun: item!,
+    onOrderRunUpdate: setItem,
+  };
 
   const fetchItem = useCallback(async () => {
     if (!orderKey || !id) return;

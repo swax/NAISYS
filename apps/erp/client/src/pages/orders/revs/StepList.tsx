@@ -191,6 +191,7 @@ export const StepList: React.FC<StepListProps> = ({
                     <Textarea
                       label="Instructions (markdown)"
                       placeholder="Step instructions..."
+                      autosize
                       minRows={3}
                       {...editForm.getInputProps("instructions")}
                     />
@@ -280,6 +281,7 @@ export const StepList: React.FC<StepListProps> = ({
                   <Textarea
                     label="Instructions (markdown)"
                     placeholder="Step instructions..."
+                    autosize
                     minRows={3}
                     {...createForm.getInputProps("instructions")}
                   />

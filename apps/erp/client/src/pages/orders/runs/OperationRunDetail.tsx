@@ -20,6 +20,7 @@ import { CompactMarkdown } from "../../../components/CompactMarkdown";
 import { MetadataTooltip } from "../../../components/MetadataTooltip";
 import { api, apiEndpoints, showErrorNotification } from "../../../lib/api";
 import { hasAction } from "../../../lib/hateoas";
+import type { OrderRunOutletContext } from "./OrderRunDetail";
 import { StepRunList } from "./StepRunList";
 
 const STATUS_COLORS: Record<string, string> = {
@@ -29,10 +30,6 @@ const STATUS_COLORS: Record<string, string> = {
   skipped: "gray",
   failed: "red",
 };
-
-export interface OrderRunOutletContext {
-  onOperationUpdate: () => void;
-}
 
 export const OperationRunDetail: React.FC = () => {
   const {
@@ -132,7 +129,7 @@ export const OperationRunDetail: React.FC = () => {
   }
 
   return (
-    <Container size="md" py="xl">
+    <Container size="md" py="xl" w="100%">
       <Stack gap="md">
         <Group justify="space-between">
           <Group gap="xs">

@@ -1,7 +1,7 @@
 import { Badge, Card, Loader, Stack, Text } from "@mantine/core";
 import type { OperationRunListResponse } from "@naisys-erp/shared";
 import { useCallback, useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router";
+import { useLocation, useNavigate, useParams } from "react-router";
 
 import { api, apiEndpoints, showErrorNotification } from "../../../lib/api";
 
@@ -25,7 +25,9 @@ export const OperationRunSidebar: React.FC<Props> = ({
   refreshKey,
 }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { opRunId: currentOpRunId } = useParams<{ opRunId: string }>();
+  const isHeaderActive = location.pathname.endsWith("/header");
   const [data, setData] = useState<OperationRunListResponse | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -47,18 +49,33 @@ export const OperationRunSidebar: React.FC<Props> = ({
     void fetchOps();
   }, [fetchOps, refreshKey]);
 
-  // Auto-navigate to first operation run when none is selected
-  useEffect(() => {
-    if (!currentOpRunId && data && data.items.length > 0) {
-      void navigate(
-        `/orders/${orderKey}/runs/${runId}/ops/${data.items[0].id}`,
-        { replace: true },
-      );
-    }
-  }, [currentOpRunId, data, navigate, orderKey, runId]);
-
   return (
     <Stack gap="xs">
+      <Card
+        padding="sm"
+        radius="md"
+        withBorder
+        component="a"
+        href={`/erp/orders/${orderKey}/runs/${runId}/header`}
+        onClick={(e: React.MouseEvent) => {
+          if (e.button === 1 || e.ctrlKey || e.metaKey) return;
+          e.preventDefault();
+          void navigate(`/orders/${orderKey}/runs/${runId}/header`);
+        }}
+        style={{
+          cursor: "pointer",
+          textDecoration: "none",
+          color: "inherit",
+          backgroundColor: isHeaderActive
+            ? "var(--mantine-color-blue-9)"
+            : undefined,
+        }}
+      >
+        <Text size="sm" fw={500}>
+          Header
+        </Text>
+      </Card>
+
       {loading ? (
         <Stack align="center" py="md">
           <Loader size="sm" />

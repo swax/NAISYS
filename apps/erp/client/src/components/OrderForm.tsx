@@ -88,6 +88,7 @@ export const OrderForm = <TEdit extends boolean = false>({
           label="Description"
           placeholder="Describe this order..."
           {...form.getInputProps("description")}
+          autosize
           minRows={3}
         />
         {isEdit && (

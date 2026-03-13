@@ -15,7 +15,7 @@ import type { Operation, OperationListResponse } from "@naisys-erp/shared";
 import { CreateOperationSchema } from "@naisys-erp/shared";
 import { IconPlus } from "@tabler/icons-react";
 import { useCallback, useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router";
+import { useLocation, useNavigate, useParams } from "react-router";
 
 import { api, apiEndpoints, showErrorNotification } from "../../../lib/api";
 import { hasAction } from "../../../lib/hateoas";
@@ -28,7 +28,9 @@ interface Props {
 
 export const OperationSidebar: React.FC<Props> = ({ orderKey, revNo }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { seqNo: currentSeqNo } = useParams<{ seqNo: string }>();
+  const isHeaderActive = location.pathname.endsWith("/header");
   const [data, setData] = useState<OperationListResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
@@ -57,15 +59,6 @@ export const OperationSidebar: React.FC<Props> = ({ orderKey, revNo }) => {
     void fetchOps();
   }, [fetchOps]);
 
-  // Auto-navigate to first operation when none is selected
-  useEffect(() => {
-    if (!currentSeqNo && data && data.items.length > 0) {
-      void navigate(
-        `/orders/${orderKey}/revs/${revNo}/ops/${data.items[0].seqNo}`,
-        { replace: true },
-      );
-    }
-  }, [currentSeqNo, data, navigate, orderKey, revNo]);
 
   const openCreateModal = () => {
     form.setFieldValue("seqNo", data?.nextSeqNo ?? 10);
@@ -97,6 +90,31 @@ export const OperationSidebar: React.FC<Props> = ({ orderKey, revNo }) => {
   return (
     <>
       <Stack gap="xs">
+        <Card
+          padding="sm"
+          radius="md"
+          withBorder
+          component="a"
+          href={`/erp/orders/${orderKey}/revs/${revNo}/header`}
+          onClick={(e: React.MouseEvent) => {
+            if (e.button === 1 || e.ctrlKey || e.metaKey) return;
+            e.preventDefault();
+            void navigate(`/orders/${orderKey}/revs/${revNo}/header`);
+          }}
+          style={{
+            cursor: "pointer",
+            textDecoration: "none",
+            color: "inherit",
+            backgroundColor: isHeaderActive
+              ? "var(--mantine-color-blue-9)"
+              : undefined,
+          }}
+        >
+          <Text size="sm" fw={500}>
+            Header
+          </Text>
+        </Card>
+
         {loading ? (
           <Stack align="center" py="md">
             <Loader size="sm" />
@@ -179,6 +197,7 @@ export const OperationSidebar: React.FC<Props> = ({ orderKey, revNo }) => {
               label="Description"
               placeholder="Optional description..."
               {...form.getInputProps("description")}
+              autosize
               minRows={2}
             />
             <Group justify="flex-end">
