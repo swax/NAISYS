@@ -92,3 +92,14 @@ export const OrderRunListResponseSchema = z.object({
 });
 
 export type OrderRunListResponse = z.infer<typeof OrderRunListResponseSchema>;
+
+// Query params for dispatch view (open runs across all orders)
+export const DispatchListQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).optional().default(1),
+  pageSize: z.coerce.number().int().min(1).max(100).optional().default(20),
+  status: OrderRunStatusEnum.optional(),
+  priority: OrderRunPriorityEnum.optional(),
+  search: z.string().optional(),
+});
+
+export type DispatchListQuery = z.infer<typeof DispatchListQuerySchema>;
