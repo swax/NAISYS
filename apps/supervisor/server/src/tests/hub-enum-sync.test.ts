@@ -1,6 +1,3 @@
-import assert from "node:assert/strict";
-import { test } from "node:test";
-
 import {
   AttachmentPurpose as DbAttachmentPurpose,
   ContextLogRole as DbContextLogRole,
@@ -28,6 +25,7 @@ import {
   ModelTypeEnum,
   RecipientTypeEnum,
 } from "@naisys-supervisor/shared";
+import { expect, test } from "vitest";
 
 function assertEnumSync(
   name: string,
@@ -36,16 +34,10 @@ function assertEnumSync(
 ) {
   const shared = [...zodOptions].sort();
   const db = [...dbValues].sort();
-  assert.deepStrictEqual(
-    shared,
-    db,
-    `${name} enums are out of sync.\n` +
-      `  Shared: [${shared.join(", ")}]\n` +
-      `  DB:     [${db.join(", ")}]`,
-  );
+  expect(shared, `${name} enums are out of sync`).toEqual(db);
 }
 
-void test("ContextLogRole: supervisor/shared matches DB", () => {
+test("ContextLogRole: supervisor/shared matches DB", () => {
   assertEnumSync(
     "ContextLogRole",
     LogRoleSchema.options,
@@ -53,7 +45,7 @@ void test("ContextLogRole: supervisor/shared matches DB", () => {
   );
 });
 
-void test("ContextLogRole: hub-protocol matches DB", () => {
+test("ContextLogRole: hub-protocol matches DB", () => {
   assertEnumSync(
     "ContextLogRole",
     LogRoleEnum.options,
@@ -61,7 +53,7 @@ void test("ContextLogRole: hub-protocol matches DB", () => {
   );
 });
 
-void test("ContextLogSource: supervisor/shared matches DB", () => {
+test("ContextLogSource: supervisor/shared matches DB", () => {
   assertEnumSync(
     "ContextLogSource",
     LogSourceSchema.options,
@@ -69,7 +61,7 @@ void test("ContextLogSource: supervisor/shared matches DB", () => {
   );
 });
 
-void test("ContextLogSource: hub-protocol matches DB", () => {
+test("ContextLogSource: hub-protocol matches DB", () => {
   assertEnumSync(
     "ContextLogSource",
     LogSourceEnum.options,
@@ -77,7 +69,7 @@ void test("ContextLogSource: hub-protocol matches DB", () => {
   );
 });
 
-void test("ContextLogType: supervisor/shared matches DB", () => {
+test("ContextLogType: supervisor/shared matches DB", () => {
   assertEnumSync(
     "ContextLogType",
     LogTypeSchema.options,
@@ -85,7 +77,7 @@ void test("ContextLogType: supervisor/shared matches DB", () => {
   );
 });
 
-void test("ContextLogType: hub-protocol matches DB", () => {
+test("ContextLogType: hub-protocol matches DB", () => {
   assertEnumSync(
     "ContextLogType",
     LogTypeEnum.options,
@@ -93,7 +85,7 @@ void test("ContextLogType: hub-protocol matches DB", () => {
   );
 });
 
-void test("MessageKind: shared matches DB", () => {
+test("MessageKind: shared matches DB", () => {
   assertEnumSync(
     "MessageKind",
     MessageKindSchema.options,
@@ -101,7 +93,7 @@ void test("MessageKind: shared matches DB", () => {
   );
 });
 
-void test("RecipientType: shared matches DB", () => {
+test("RecipientType: shared matches DB", () => {
   assertEnumSync(
     "RecipientType",
     RecipientTypeEnum.options,
@@ -109,7 +101,7 @@ void test("RecipientType: shared matches DB", () => {
   );
 });
 
-void test("AttachmentPurpose: shared matches DB", () => {
+test("AttachmentPurpose: shared matches DB", () => {
   assertEnumSync(
     "AttachmentPurpose",
     AttachmentPurposeEnum.options,
@@ -117,11 +109,11 @@ void test("AttachmentPurpose: shared matches DB", () => {
   );
 });
 
-void test("HostType: shared matches DB", () => {
+test("HostType: shared matches DB", () => {
   assertEnumSync("HostType", HostTypeEnum.options, Object.values(DbHostType));
 });
 
-void test("ModelType: shared matches DB", () => {
+test("ModelType: shared matches DB", () => {
   assertEnumSync(
     "ModelType",
     ModelTypeEnum.options,
@@ -129,7 +121,7 @@ void test("ModelType: shared matches DB", () => {
   );
 });
 
-void test("CostSource: shared matches DB", () => {
+test("CostSource: shared matches DB", () => {
   assertEnumSync(
     "CostSource",
     CostSourceEnum.options,

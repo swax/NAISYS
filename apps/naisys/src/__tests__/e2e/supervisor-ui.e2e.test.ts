@@ -1,15 +1,8 @@
-import {
-  afterEach,
-  beforeEach,
-  describe,
-  expect,
-  jest,
-  test,
-} from "@jest/globals";
 import { sleep } from "@naisys/common";
 import { writeFileSync } from "fs";
 import { join } from "path";
 import { type Browser, chromium, type Page } from "playwright";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import {
   cleanupTestDir,
@@ -29,7 +22,7 @@ import {
  * the ns-agent switch CLI command.
  */
 
-jest.setTimeout(120000);
+vi.setConfig({ testTimeout: 120000 });
 
 describe("Supervisor UI E2E", () => {
   let testDir: string;

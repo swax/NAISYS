@@ -1,4 +1,4 @@
-import { describe, expect, test } from "@jest/globals";
+import { describe, expect, test } from "vitest";
 
 import { createCommandHandler } from "../../command/commandHandler.js";
 import { createCommandRegistry } from "../../command/commandRegistry.js";

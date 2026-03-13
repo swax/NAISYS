@@ -1,4 +1,4 @@
-import { describe, expect, it, jest } from "@jest/globals";
+import { describe, expect, it, vi } from "vitest";
 
 import { LlmMessage } from "../../llm/llmDtos.js";
 import { createOutputService } from "../../utils/output.js";
@@ -8,7 +8,7 @@ const mockLogService = createMockLogService();
 
 // Mock logService module
 mockLogService.write =
-  jest.fn<(message: LlmMessage, filepath?: string) => void>();
+  vi.fn<(message: LlmMessage, filepath?: string) => void>();
 
 // Load target module
 const output = createOutputService(mockLogService);

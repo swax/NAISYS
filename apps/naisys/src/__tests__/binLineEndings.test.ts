@@ -1,7 +1,7 @@
-import { expect, test } from "@jest/globals";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import { expect, test } from "vitest";
 
 test("all files in bin folder have LF line endings", () => {
   const url = new URL("../../bin", import.meta.url);

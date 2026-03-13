@@ -1,14 +1,7 @@
-import {
-  afterEach,
-  beforeEach,
-  describe,
-  expect,
-  jest,
-  test,
-} from "@jest/globals";
 import { sleep } from "@naisys/common";
 import { writeFileSync } from "fs";
 import { join } from "path";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import {
   cleanupTestDir,
@@ -34,7 +27,7 @@ import {
  * 4. /api/erp/auth/me returns the correct agent identity
  */
 
-jest.setTimeout(120000);
+vi.setConfig({ testTimeout: 120000 });
 
 describe("ERP API Key Auth E2E", () => {
   let testDir: string;

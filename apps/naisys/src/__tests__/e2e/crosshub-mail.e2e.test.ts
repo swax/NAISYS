@@ -1,14 +1,7 @@
-import {
-  afterEach,
-  beforeEach,
-  describe,
-  expect,
-  jest,
-  test,
-} from "@jest/globals";
 import { sleep } from "@naisys/common";
 import { mkdirSync, writeFileSync } from "fs";
 import { join } from "path";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import {
   cleanupTestDir,
@@ -38,7 +31,7 @@ import {
  * 4. Bob receives the mail
  */
 
-jest.setTimeout(180000);
+vi.setConfig({ testTimeout: 180000 });
 
 describe("Cross-Hub Mail E2E", () => {
   let testDir: string;

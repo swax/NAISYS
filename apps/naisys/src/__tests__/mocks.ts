@@ -1,6 +1,6 @@
-import { jest, test } from "@jest/globals";
 import { type HubDatabaseService, PrismaClient } from "@naisys/hub-database";
 import { MailMessageData } from "@naisys/hub-protocol";
+import { vi } from "vitest";
 
 import { AgentConfig } from "../agent/agentConfig.js";
 import {
@@ -41,9 +41,9 @@ export function createMockDatabaseService(): HubDatabaseService {
 
 export function createMockRunService(): RunService {
   return {
-    incrementSession: jest.fn(() => Promise.resolve()),
-    getRunId: jest.fn(() => -1),
-    getSessionId: jest.fn(() => -1),
+    incrementSession: vi.fn(() => Promise.resolve()),
+    getRunId: vi.fn(() => -1),
+    getSessionId: vi.fn(() => -1),
   };
 }
 
@@ -59,11 +59,11 @@ export function createMockPromptBuilder(
   userHostPathPrompt: string,
 ) {
   const promptBuilder: PromptBuilder = {
-    getPrompt: jest.fn(() => Promise.resolve(`${userHostPathPrompt}$ `)),
-    getUserHostPrompt: jest.fn(() => userHostPrompt),
-    getUserHostPathPrompt: jest.fn(() => Promise.resolve(userHostPathPrompt)),
-    getInput: jest.fn(() => Promise.resolve("")),
-    getCommandConfirmation: jest.fn(() => Promise.resolve("y")),
+    getPrompt: vi.fn(() => Promise.resolve(`${userHostPathPrompt}$ `)),
+    getUserHostPrompt: vi.fn(() => userHostPrompt),
+    getUserHostPathPrompt: vi.fn(() => Promise.resolve(userHostPathPrompt)),
+    getInput: vi.fn(() => Promise.resolve("")),
+    getCommandConfirmation: vi.fn(() => Promise.resolve("y")),
   };
 
   return promptBuilder;
@@ -71,10 +71,10 @@ export function createMockPromptBuilder(
 
 export function createMockShellCommand() {
   const shellCommand: ShellCommand = {
-    handleCommand: jest.fn(() => Promise.resolve(false)),
-    isShellSuspended: jest.fn(() => false),
-    getCommandElapsedTimeString: jest.fn(() => ""),
-    getCurrentCommandName: jest.fn(() => ""),
+    handleCommand: vi.fn(() => Promise.resolve(false)),
+    isShellSuspended: vi.fn(() => false),
+    getCommandElapsedTimeString: vi.fn(() => ""),
+    getCurrentCommandName: vi.fn(() => ""),
   };
 
   return shellCommand;
@@ -83,15 +83,15 @@ export function createMockShellCommand() {
 export function createMockGenImg() {
   return {
     command: genImgCmd,
-    handleCommand: jest.fn(() => ""),
+    handleCommand: vi.fn(() => ""),
   } satisfies GenImg;
 }
 
 export function createMockSubagent() {
   const subagent: SubagentService = {
     command: subagentCmd,
-    handleCommand: jest.fn(() => ""),
-    raiseSwitchEvent: jest.fn(),
+    handleCommand: vi.fn(() => ""),
+    raiseSwitchEvent: vi.fn(),
   };
 
   return subagent;
@@ -100,15 +100,15 @@ export function createMockSubagent() {
 export function createMockMailService() {
   const mailService: MailService = {
     command: mailCmd,
-    handleCommand: jest.fn(() => ""),
-    getUnreadMessages: jest.fn(
+    handleCommand: vi.fn(() => ""),
+    getUnreadMessages: vi.fn(
       (): Promise<MailMessageData[]> => Promise.resolve([]),
     ),
-    sendMessage: jest.fn(() => Promise.resolve("")),
-    getAllUserNames: jest.fn(() => []),
-    hasMultipleUsers: jest.fn(() => false),
-    checkAndNotify: jest.fn(() => Promise.resolve()),
-    cleanup: jest.fn(),
+    sendMessage: vi.fn(() => Promise.resolve("")),
+    getAllUserNames: vi.fn(() => []),
+    hasMultipleUsers: vi.fn(() => false),
+    checkAndNotify: vi.fn(() => Promise.resolve()),
+    cleanup: vi.fn(),
   };
 
   return mailService;
@@ -117,10 +117,10 @@ export function createMockMailService() {
 export function createMockChatService() {
   const chatService: ChatService = {
     command: chatCmd,
-    handleCommand: jest.fn(() => ""),
-    checkAndNotify: jest.fn(() => Promise.resolve()),
-    sendToUser: jest.fn(() => Promise.resolve("")),
-    cleanup: jest.fn(),
+    handleCommand: vi.fn(() => ""),
+    checkAndNotify: vi.fn(() => Promise.resolve()),
+    sendToUser: vi.fn(() => Promise.resolve("")),
+    cleanup: vi.fn(),
   };
 
   return chatService;
@@ -129,8 +129,8 @@ export function createMockChatService() {
 export function createMockLynxService() {
   const lynxService: LynxService = {
     command: lynxCmd,
-    handleCommand: jest.fn(() => ""),
-    clear: jest.fn(),
+    handleCommand: vi.fn(() => ""),
+    clear: vi.fn(),
   };
 
   return lynxService;
@@ -139,34 +139,34 @@ export function createMockLynxService() {
 export function createMockSessionService() {
   const sessionService: SessionService = {
     command: sessionCmd,
-    handleCommand: jest.fn(() => ""),
-    getResumeCommands: jest.fn(() => []),
+    handleCommand: vi.fn(() => ""),
+    getResumeCommands: vi.fn(() => []),
   };
 
   return sessionService;
 }
 
 export function createMockContextManager() {
-  const append = jest.fn(() => Promise.resolve());
-  const clear = jest.fn();
-  const setMessagesTokenCount = jest.fn();
-  const getTokenCount = jest.fn(() => 0);
-  const getCombinedMessages = jest.fn((): LlmMessage[] => []);
+  const append = vi.fn(() => Promise.resolve());
+  const clear = vi.fn();
+  const setMessagesTokenCount = vi.fn();
+  const getTokenCount = vi.fn(() => 0);
+  const getCombinedMessages = vi.fn((): LlmMessage[] => []);
   const exportedForTesting = {
-    getMessages: jest.fn((): LlmMessage[] => []),
+    getMessages: vi.fn((): LlmMessage[] => []),
   };
 
-  const appendImage = jest.fn();
-  const appendAudio = jest.fn();
+  const appendImage = vi.fn();
+  const appendAudio = vi.fn();
 
   const contextManager: ContextManager = {
     append,
     appendImage,
     appendAudio,
-    scrubRecentMedia: jest.fn(() => false),
+    scrubRecentMedia: vi.fn(() => false),
     clear,
     setMessagesTokenCount,
-    getLastQueryTime: jest.fn(() => 0),
+    getLastQueryTime: vi.fn(() => 0),
     getTokenCount,
     getCombinedMessages,
     exportedForTesting,
@@ -178,10 +178,10 @@ export function createMockContextManager() {
 export function createMockWorkspacesFeature() {
   const workspaces: WorkspacesFeature = {
     command: workspaceCmd,
-    handleCommand: jest.fn(() => ""),
-    getContext: jest.fn(() => ""),
-    listFiles: jest.fn(() => ""),
-    hasFiles: jest.fn(() => false),
+    handleCommand: vi.fn(() => ""),
+    getContext: vi.fn(() => ""),
+    listFiles: vi.fn(() => ""),
+    hasFiles: vi.fn(() => false),
   };
 
   return workspaces;
@@ -189,15 +189,15 @@ export function createMockWorkspacesFeature() {
 
 export function createMockCostTracker() {
   const costTracker: CostTracker = {
-    recordTokens: jest.fn(),
-    recordCost: jest.fn(),
-    calculateCostFromTokens: jest.fn(() => 0),
-    checkSpendLimit: jest.fn(),
-    cleanup: jest.fn(),
-    getModelCosts: jest.fn(() => new Map()),
-    getTotalCost: jest.fn(() => 0),
-    getPeriodInfo: jest.fn(() => null),
-    resetCosts: jest.fn(),
+    recordTokens: vi.fn(),
+    recordCost: vi.fn(),
+    calculateCostFromTokens: vi.fn(() => 0),
+    checkSpendLimit: vi.fn(),
+    cleanup: vi.fn(),
+    getModelCosts: vi.fn(() => new Map()),
+    getTotalCost: vi.fn(() => 0),
+    getPeriodInfo: vi.fn(() => null),
+    resetCosts: vi.fn(),
   };
 
   return costTracker;
@@ -205,14 +205,14 @@ export function createMockCostTracker() {
 
 export function createMockOutputService() {
   const output: OutputService = {
-    write: jest.fn(),
-    comment: jest.fn(),
-    commentAndLog: jest.fn(() => Promise.resolve()),
-    error: jest.fn(),
-    errorAndLog: jest.fn(() => Promise.resolve()),
+    write: vi.fn(),
+    comment: vi.fn(),
+    commentAndLog: vi.fn(() => Promise.resolve()),
+    error: vi.fn(),
+    errorAndLog: vi.fn(() => Promise.resolve()),
     consoleBuffer: [],
-    isConsoleEnabled: jest.fn(() => false),
-    setConsoleEnabled: jest.fn(),
+    isConsoleEnabled: vi.fn(() => false),
+    setConsoleEnabled: vi.fn(),
   };
 
   return output;
@@ -220,16 +220,16 @@ export function createMockOutputService() {
 
 export function createMockInputMode() {
   return {
-    setLLM: jest.fn(),
-    setDebug: jest.fn(),
-    toggle: jest.fn(),
-    isLLM: jest.fn(() => false),
-    isDebug: jest.fn(() => true),
+    setLLM: vi.fn(),
+    setDebug: vi.fn(),
+    toggle: vi.fn(),
+    isLLM: vi.fn(() => false),
+    isDebug: vi.fn(() => true),
   };
 }
 
 export function createMockCommandProtection() {
-  const validateCommand = jest.fn(() =>
+  const validateCommand = vi.fn(() =>
     Promise.resolve({
       commandAllowed: true,
     }),
@@ -242,7 +242,7 @@ export function createMockCommandProtection() {
 
 export function createMockGlobalConfig(): GlobalConfig {
   return {
-    waitForConfig: jest.fn(() => Promise.resolve()),
+    waitForConfig: vi.fn(() => Promise.resolve()),
     globalConfig: () => ({
       hostname: "test",
       shellCommand: {
@@ -271,9 +271,9 @@ export function createMockGlobalConfig(): GlobalConfig {
 export function createMockAgentConfig(): AgentConfig {
   return {
     command: agentConfigCmd,
-    handleCommand: jest.fn(() => ""),
-    reloadAgentConfig: jest.fn(async () => {}),
-    updateConfigField: jest.fn(async () => {}),
+    handleCommand: vi.fn(() => ""),
+    reloadAgentConfig: vi.fn(async () => {}),
+    updateConfigField: vi.fn(async () => {}),
     agentConfig: () => ({
       username: "test",
       title: "Test Agent",
@@ -306,5 +306,3 @@ export function mockCommandProtection() {
     commandProtection: instance,
   };
 }
-
-test("nothing", () => {});

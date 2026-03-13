@@ -1,13 +1,6 @@
-import {
-  afterEach,
-  beforeEach,
-  describe,
-  expect,
-  jest,
-  test,
-} from "@jest/globals";
 import { appendFileSync } from "fs";
 import { join } from "path";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import {
   cleanupTestDir,
@@ -28,7 +21,7 @@ import {
  * switches to bob, and validates the mail notification appears.
  */
 
-jest.setTimeout(120000);
+vi.setConfig({ testTimeout: 120000 });
 
 describe("Basic Mail E2E", () => {
   let testDir: string;
