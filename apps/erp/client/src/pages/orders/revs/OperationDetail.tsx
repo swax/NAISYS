@@ -29,7 +29,7 @@ export const OperationDetail: React.FC = () => {
     seqNo: string;
   }>();
   const navigate = useNavigate();
-  const [item, setItem] = useState<Operation | null>(null);
+  const [operation, setOperation] = useState<Operation | null>(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -39,14 +39,14 @@ export const OperationDetail: React.FC = () => {
     validate: zodResolver(UpdateOperationSchema),
   });
 
-  const fetchItem = useCallback(async () => {
+  const fetchOperation = useCallback(async () => {
     if (!orderKey || !revNo || !seqNo) return;
     setLoading(true);
     try {
       const result = await api.get<Operation>(
         apiEndpoints.orderRevOp(orderKey, revNo, seqNo),
       );
-      setItem(result);
+      setOperation(result);
     } catch (err) {
       showErrorNotification(err);
     } finally {
@@ -55,30 +55,30 @@ export const OperationDetail: React.FC = () => {
   }, [orderKey, revNo, seqNo]);
 
   useEffect(() => {
-    void fetchItem();
-  }, [fetchItem]);
+    void fetchOperation();
+  }, [fetchOperation]);
 
   const startEditing = () => {
-    if (!item) return;
+    if (!operation) return;
     form.setValues({
-      description: item.description,
-      seqNo: item.seqNo,
+      description: operation.description,
+      seqNo: operation.seqNo,
     });
     setEditing(true);
   };
 
   const handleSave = async (values: UpdateOperation) => {
-    if (!item) return;
+    if (!operation) return;
     setSaving(true);
     try {
       const updated = await api.put<Operation>(
-        apiEndpoints.orderRevOp(orderKey!, revNo!, item.seqNo),
+        apiEndpoints.orderRevOp(orderKey!, revNo!, operation.seqNo),
         values,
       );
-      setItem(updated);
+      setOperation(updated);
       setEditing(false);
       // If seqNo changed, navigate to the new URL
-      if (values.seqNo && values.seqNo !== item.seqNo) {
+      if (values.seqNo && values.seqNo !== operation.seqNo) {
         void navigate(
           `/orders/${orderKey}/revs/${revNo}/ops/${updated.seqNo}`,
           { replace: true },
@@ -92,9 +92,9 @@ export const OperationDetail: React.FC = () => {
   };
 
   const handleDelete = async () => {
-    if (!item || !confirm(`Delete operation "${item.title}"?`)) return;
+    if (!operation || !confirm(`Delete operation "${operation.title}"?`)) return;
     try {
-      await api.delete(apiEndpoints.orderRevOp(orderKey!, revNo!, item.seqNo));
+      await api.delete(apiEndpoints.orderRevOp(orderKey!, revNo!, operation.seqNo));
       void navigate(`/orders/${orderKey}/revs/${revNo}`);
     } catch (err) {
       showErrorNotification(err);
@@ -109,7 +109,7 @@ export const OperationDetail: React.FC = () => {
     );
   }
 
-  if (!item) {
+  if (!operation) {
     return (
       <Stack p="md">
         <Text>Operation not found.</Text>
@@ -117,7 +117,7 @@ export const OperationDetail: React.FC = () => {
     );
   }
 
-  const canEdit = hasAction(item._actions, "update");
+  const canEdit = hasAction(operation._actions, "update");
 
   return (
     <Container size="md" py="xl" w="100%">
@@ -125,13 +125,13 @@ export const OperationDetail: React.FC = () => {
         <Group justify="space-between">
           <Group gap="xs">
             <Text fw={600}>
-              OPERATION {item.seqNo}. {item.title}
+              OPERATION {operation.seqNo}. {operation.title}
             </Text>
             <MetadataTooltip
-              createdBy={item.createdBy}
-              createdAt={item.createdAt}
-              updatedBy={item.updatedBy}
-              updatedAt={item.updatedAt}
+              createdBy={operation.createdBy}
+              createdAt={operation.createdAt}
+              updatedBy={operation.updatedBy}
+              updatedAt={operation.updatedAt}
             />
           </Group>
           <Group gap="xs">
@@ -140,7 +140,7 @@ export const OperationDetail: React.FC = () => {
                 Edit
               </Button>
             )}
-            {hasAction(item._actions, "delete") && (
+            {hasAction(operation._actions, "delete") && (
               <Button
                 size="xs"
                 color="red"
@@ -184,8 +184,8 @@ export const OperationDetail: React.FC = () => {
                 </Group>
               </Stack>
             </form>
-          ) : item.description ? (
-            <CompactMarkdown>{item.description}</CompactMarkdown>
+          ) : operation.description ? (
+            <CompactMarkdown>{operation.description}</CompactMarkdown>
           ) : (
             <Text c="dimmed">No description</Text>
           )}

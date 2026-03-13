@@ -12,7 +12,7 @@ import {
   findExisting,
   transitionStatus,
 } from "../services/order-revision-service.js";
-import { formatItem, RevNoParamsSchema } from "./order-revisions.js";
+import { formatRevision, RevNoParamsSchema } from "./order-revisions.js";
 
 export default function orderRevisionTransitionRoutes(
   fastify: FastifyInstance,
@@ -55,7 +55,7 @@ export default function orderRevisionTransitionRoutes(
       }
 
       const userId = request.erpUser!.id;
-      const item = await transitionStatus(
+      const revision = await transitionStatus(
         existing.id,
         "approve",
         RevisionStatus.draft,
@@ -63,7 +63,7 @@ export default function orderRevisionTransitionRoutes(
         userId,
       );
 
-      return formatItem(orderKey, request.erpUser, item);
+      return formatRevision(orderKey, request.erpUser, revision);
     },
   });
 
@@ -103,7 +103,7 @@ export default function orderRevisionTransitionRoutes(
       }
 
       const userId = request.erpUser!.id;
-      const item = await transitionStatus(
+      const revision = await transitionStatus(
         existing.id,
         "obsolete",
         RevisionStatus.approved,
@@ -111,7 +111,7 @@ export default function orderRevisionTransitionRoutes(
         userId,
       );
 
-      return formatItem(orderKey, request.erpUser, item);
+      return formatRevision(orderKey, request.erpUser, revision);
     },
   });
 }

@@ -13,25 +13,25 @@ import { includeRev, type OrderRunWithRev } from "../services/order-run-service.
 
 const OPEN_STATUSES = [OrderRunStatus.released, OrderRunStatus.started];
 
-function formatDispatchItem(
+function formatDispatchRun(
   orderKey: string,
-  item: OrderRunWithRev,
+  run: OrderRunWithRev,
 ) {
   return {
-    id: item.id,
-    runNo: item.runNo,
-    orderId: item.orderId,
+    id: run.id,
+    runNo: run.runNo,
+    orderId: run.orderId,
     orderKey,
-    revNo: item.orderRev.revNo,
-    itemKey: item.order?.item?.key ?? null,
-    status: item.status,
-    priority: item.priority,
-    scheduledStartAt: formatDate(item.scheduledStartAt),
-    dueAt: formatDate(item.dueAt),
-    assignedTo: item.assignedTo,
-    notes: item.notes,
-    ...formatAuditFields(item),
-    _links: [selfLink(`/orders/${orderKey}/runs/${item.id}`)],
+    revNo: run.orderRev.revNo,
+    itemKey: run.order?.item?.key ?? null,
+    status: run.status,
+    priority: run.priority,
+    scheduledStartAt: formatDate(run.scheduledStartAt),
+    dueAt: formatDate(run.dueAt),
+    assignedTo: run.assignedTo,
+    notes: run.notes,
+    ...formatAuditFields(run),
+    _links: [selfLink(`/orders/${orderKey}/runs/${run.id}`)],
   };
 }
 
@@ -77,8 +77,8 @@ export default function dispatchRoutes(fastify: FastifyInstance) {
       ]);
 
       return {
-        items: items.map((item) =>
-          formatDispatchItem(item.order.key, item),
+        items: items.map((run) =>
+          formatDispatchRun(run.order.key, run),
         ),
         total,
         page,

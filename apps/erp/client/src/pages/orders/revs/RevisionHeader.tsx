@@ -13,14 +13,14 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 interface Props {
-  item: OrderRevision;
+  revision: OrderRevision;
   orderKey: string;
   revNo: string;
   onRefresh: () => void;
 }
 
 export const RevisionHeader: React.FC<Props> = ({
-  item,
+  revision,
   orderKey,
   revNo,
   onRefresh,
@@ -81,44 +81,44 @@ export const RevisionHeader: React.FC<Props> = ({
             {orderKey}
           </Anchor>
           {" / "}
-          REV {item.revNo}
+          REV {revision.revNo}
         </Text>
         <Badge
-          color={STATUS_COLORS[item.status] ?? "gray"}
+          color={STATUS_COLORS[revision.status] ?? "gray"}
           variant="light"
           size="sm"
         >
-          {item.status}
+          {revision.status}
         </Badge>
-        {item.description && (
+        {revision.description && (
           <>
             <Text size="sm" c="dimmed">
               |
             </Text>
             <Text size="sm" c="dimmed" lineClamp={1} maw={300}>
-              {item.description}
+              {revision.description}
             </Text>
           </>
         )}
       </Group>
       <Group gap="xs">
-        {hasAction(item._actions, "approve") && (
+        {hasAction(revision._actions, "approve") && (
           <Button size="xs" color="green" onClick={handleApprove}>
             Approve
           </Button>
         )}
-        {hasAction(item._actions, "cut-order") && (
+        {hasAction(revision._actions, "cut-order") && (
           <Button
             size="xs"
             color="teal"
             onClick={() =>
-              navigate(`/orders/${orderKey}/runs/new?revNo=${item.revNo}`)
+              navigate(`/orders/${orderKey}/runs/new?revNo=${revision.revNo}`)
             }
           >
             Cut Order
           </Button>
         )}
-        {hasAction(item._actions, "obsolete") && (
+        {hasAction(revision._actions, "obsolete") && (
           <Button
             size="xs"
             color="gray"
@@ -128,7 +128,7 @@ export const RevisionHeader: React.FC<Props> = ({
             Obsolete
           </Button>
         )}
-        {hasAction(item._actions, "delete") && (
+        {hasAction(revision._actions, "delete") && (
           <Button
             size="xs"
             color="red"

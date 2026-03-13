@@ -42,20 +42,20 @@ export const OperationRunDetail: React.FC = () => {
     opRunId: string;
   }>();
   const { onOperationUpdate } = useOutletContext<OrderRunOutletContext>();
-  const [item, setItem] = useState<OperationRun | null>(null);
+  const [opRun, setOpRun] = useState<OperationRun | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshKey, setRefreshKey] = useState(0);
   const [feedbackDraft, setFeedbackDraft] = useState("");
   const feedbackRef = useRef("");
 
-  const fetchItem = useCallback(async () => {
+  const fetchOpRun = useCallback(async () => {
     if (!orderKey || !runId || !opRunId) return;
     setLoading(true);
     try {
       const result = await api.get<OperationRun>(
         apiEndpoints.operationRun(orderKey, runId, opRunId),
       );
-      setItem(result);
+      setOpRun(result);
     } catch (err) {
       showErrorNotification(err);
     } finally {
@@ -64,14 +64,14 @@ export const OperationRunDetail: React.FC = () => {
   }, [orderKey, runId, opRunId]);
 
   useEffect(() => {
-    void fetchItem();
-  }, [fetchItem]);
+    void fetchOpRun();
+  }, [fetchOpRun]);
 
   useEffect(() => {
-    const value = item?.feedback ?? "";
+    const value = opRun?.feedback ?? "";
     setFeedbackDraft(value);
     feedbackRef.current = value;
-  }, [item?.feedback]);
+  }, [opRun?.feedback]);
 
   const saveFeedback = async () => {
     if (!orderKey || !runId || !opRunId) return;
@@ -82,7 +82,7 @@ export const OperationRunDetail: React.FC = () => {
         apiEndpoints.operationRun(orderKey, runId, opRunId),
         { feedback: trimmed || null },
       );
-      setItem(updated);
+      setOpRun(updated);
     } catch (err) {
       showErrorNotification(err);
     }
@@ -104,7 +104,7 @@ export const OperationRunDetail: React.FC = () => {
         endpointMap[action](orderKey, runId, opRunId),
         {},
       );
-      setItem(updated);
+      setOpRun(updated);
       setRefreshKey((k) => k + 1);
       onOperationUpdate();
     } catch (err) {
@@ -120,7 +120,7 @@ export const OperationRunDetail: React.FC = () => {
     );
   }
 
-  if (!item) {
+  if (!opRun) {
     return (
       <Stack p="md">
         <Text>Operation run not found.</Text>
@@ -134,24 +134,24 @@ export const OperationRunDetail: React.FC = () => {
         <Group justify="space-between">
           <Group gap="xs">
             <Text fw={600}>
-              OPERATION {item.seqNo}. {item.title}
+              OPERATION {opRun.seqNo}. {opRun.title}
             </Text>
             <MetadataTooltip
-              createdBy={item.createdBy}
-              createdAt={item.createdAt}
-              updatedBy={item.updatedBy}
-              updatedAt={item.updatedAt}
+              createdBy={opRun.createdBy}
+              createdAt={opRun.createdAt}
+              updatedBy={opRun.updatedBy}
+              updatedAt={opRun.updatedAt}
             />
             <Badge
-              color={STATUS_COLORS[item.status] ?? "gray"}
+              color={STATUS_COLORS[opRun.status] ?? "gray"}
               variant="light"
               size="sm"
             >
-              {item.status}
+              {opRun.status}
             </Badge>
           </Group>
           <Group gap="xs">
-            {hasAction(item._actions, "start") && (
+            {hasAction(opRun._actions, "start") && (
               <Button
                 size="xs"
                 color="green"
@@ -160,7 +160,7 @@ export const OperationRunDetail: React.FC = () => {
                 Start
               </Button>
             )}
-            {hasAction(item._actions, "complete") && (
+            {hasAction(opRun._actions, "complete") && (
               <Button
                 size="xs"
                 color="green"
@@ -169,7 +169,7 @@ export const OperationRunDetail: React.FC = () => {
                 Complete
               </Button>
             )}
-            {hasAction(item._actions, "reopen") &&
+            {hasAction(opRun._actions, "reopen") &&
               (() => {
                 const labelMap: Record<
                   string,
@@ -188,15 +188,15 @@ export const OperationRunDetail: React.FC = () => {
                     color: "red",
                   },
                 };
-                const { label, color } = labelMap[item.status] ?? {
-                  label: item.status,
+                const { label, color } = labelMap[opRun.status] ?? {
+                  label: opRun.status,
                   color: "gray",
                 };
                 return (
                   <Group gap="xs" align="center">
                     <Text size="xs" c={color}>
-                      {label} by {item.updatedBy} on{" "}
-                      {new Date(item.updatedAt).toLocaleString()}
+                      {label} by {opRun.updatedBy} on{" "}
+                      {new Date(opRun.updatedAt).toLocaleString()}
                     </Text>
                     <ActionIcon
                       size="xs"
@@ -210,7 +210,7 @@ export const OperationRunDetail: React.FC = () => {
                   </Group>
                 );
               })()}
-            {hasAction(item._actions, "skip") && (
+            {hasAction(opRun._actions, "skip") && (
               <Button
                 size="xs"
                 color="gray"
@@ -220,7 +220,7 @@ export const OperationRunDetail: React.FC = () => {
                 Skip
               </Button>
             )}
-            {hasAction(item._actions, "fail") && (
+            {hasAction(opRun._actions, "fail") && (
               <Button
                 size="xs"
                 color="red"
@@ -235,20 +235,20 @@ export const OperationRunDetail: React.FC = () => {
 
         <Card withBorder p="lg">
           <Stack gap="sm">
-            {item.description && (
+            {opRun.description && (
               <Group align="flex-start">
                 <Text fw={600} w={120}>
                   Description:
                 </Text>
-                <CompactMarkdown>{item.description}</CompactMarkdown>
+                <CompactMarkdown>{opRun.description}</CompactMarkdown>
               </Group>
             )}
-            {item.completedAt && (
+            {opRun.completedAt && (
               <Group>
                 <Text fw={600} w={120}>
                   Completed At:
                 </Text>
-                <Text>{new Date(item.completedAt).toLocaleString()}</Text>
+                <Text>{new Date(opRun.completedAt).toLocaleString()}</Text>
               </Group>
             )}
           </Stack>
@@ -263,7 +263,7 @@ export const OperationRunDetail: React.FC = () => {
 
         <Stack gap="xs">
           <Text fw={600}>Feedback</Text>
-          {item.status === OperationRunStatus.in_progress ? (
+          {opRun.status === OperationRunStatus.in_progress ? (
             <Textarea
               autosize
               minRows={2}
@@ -274,7 +274,7 @@ export const OperationRunDetail: React.FC = () => {
             />
           ) : (
             <Text style={{ whiteSpace: "pre-wrap" }}>
-              {item.feedback || "\u2014"}
+              {opRun.feedback || "\u2014"}
             </Text>
           )}
         </Stack>

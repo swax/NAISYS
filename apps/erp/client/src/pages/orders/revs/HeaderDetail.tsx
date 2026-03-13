@@ -25,7 +25,7 @@ export const HeaderDetail: React.FC = () => {
     orderKey: string;
     revNo: string;
   }>();
-  const [item, setItem] = useState<OrderRevision | null>(null);
+  const [revision, setRevision] = useState<OrderRevision | null>(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -35,14 +35,14 @@ export const HeaderDetail: React.FC = () => {
     validate: zodResolver(UpdateOrderRevisionSchema),
   });
 
-  const fetchItem = useCallback(async () => {
+  const fetchRevision = useCallback(async () => {
     if (!orderKey || !revNo) return;
     setLoading(true);
     try {
       const result = await api.get<OrderRevision>(
         apiEndpoints.orderRev(orderKey, revNo),
       );
-      setItem(result);
+      setRevision(result);
     } catch (err) {
       showErrorNotification(err);
     } finally {
@@ -51,27 +51,27 @@ export const HeaderDetail: React.FC = () => {
   }, [orderKey, revNo]);
 
   useEffect(() => {
-    void fetchItem();
-  }, [fetchItem]);
+    void fetchRevision();
+  }, [fetchRevision]);
 
   const startEditing = () => {
-    if (!item) return;
+    if (!revision) return;
     form.setValues({
-      description: item.description || "",
-      changeSummary: item.changeSummary || "",
+      description: revision.description || "",
+      changeSummary: revision.changeSummary || "",
     });
     setEditing(true);
   };
 
   const handleSave = async (values: UpdateOrderRevision) => {
-    if (!item) return;
+    if (!revision) return;
     setSaving(true);
     try {
       const updated = await api.put<OrderRevision>(
         apiEndpoints.orderRev(orderKey!, revNo!),
         values,
       );
-      setItem(updated);
+      setRevision(updated);
       setEditing(false);
     } catch (err) {
       showErrorNotification(err);
@@ -88,7 +88,7 @@ export const HeaderDetail: React.FC = () => {
     );
   }
 
-  if (!item) {
+  if (!revision) {
     return (
       <Stack p="md">
         <Text>Revision not found.</Text>
@@ -96,7 +96,7 @@ export const HeaderDetail: React.FC = () => {
     );
   }
 
-  const canEdit = hasAction(item._actions, "update");
+  const canEdit = hasAction(revision._actions, "update");
 
   return (
     <Container size="md" py="xl" w="100%">
@@ -105,10 +105,10 @@ export const HeaderDetail: React.FC = () => {
           <Group gap="xs">
             <Text fw={600}>HEADER</Text>
             <MetadataTooltip
-              createdBy={item.createdBy}
-              createdAt={item.createdAt}
-              updatedBy={item.updatedBy}
-              updatedAt={item.updatedAt}
+              createdBy={revision.createdBy}
+              createdAt={revision.createdAt}
+              updatedBy={revision.updatedBy}
+              updatedAt={revision.updatedAt}
             />
           </Group>
           {canEdit && !editing && (
@@ -156,15 +156,15 @@ export const HeaderDetail: React.FC = () => {
                 <Text size="sm" fw={500} mb={4}>
                   Produces Item
                 </Text>
-                {item.itemKey ? (
+                {revision.itemKey ? (
                   <Text
                     component={Link}
-                    to={`/items/${item.itemKey}`}
+                    to={`/items/${revision.itemKey}`}
                     size="sm"
                     c="blue"
                     style={{ textDecoration: "none" }}
                   >
-                    {item.itemKey}
+                    {revision.itemKey}
                   </Text>
                 ) : (
                   <Text c="dimmed">None</Text>
@@ -174,8 +174,8 @@ export const HeaderDetail: React.FC = () => {
                 <Text size="sm" fw={500} mb={4}>
                   Description
                 </Text>
-                {item.description ? (
-                  <CompactMarkdown>{item.description}</CompactMarkdown>
+                {revision.description ? (
+                  <CompactMarkdown>{revision.description}</CompactMarkdown>
                 ) : (
                   <Text c="dimmed">No description</Text>
                 )}
@@ -184,8 +184,8 @@ export const HeaderDetail: React.FC = () => {
                 <Text size="sm" fw={500} mb={4}>
                   Change Summary
                 </Text>
-                {item.changeSummary ? (
-                  <CompactMarkdown>{item.changeSummary}</CompactMarkdown>
+                {revision.changeSummary ? (
+                  <CompactMarkdown>{revision.changeSummary}</CompactMarkdown>
                 ) : (
                   <Text c="dimmed">No change summary</Text>
                 )}

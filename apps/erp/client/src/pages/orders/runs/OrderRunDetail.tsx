@@ -25,7 +25,7 @@ import { OrderRunHeader } from "./OrderRunHeader";
 export interface OrderRunOutletContext {
   onOperationUpdate: () => void;
   orderRun: OrderRun;
-  onOrderRunUpdate: (item: OrderRun) => void;
+  onOrderRunUpdate: (orderRun: OrderRun) => void;
 }
 
 const SIDEBAR_WIDTH = 260;
@@ -36,7 +36,7 @@ export const OrderRunLayout: React.FC = () => {
     id: string;
   }>();
   const location = useLocation();
-  const [item, setItem] = useState<OrderRun | null>(null);
+  const [orderRun, setOrderRun] = useState<OrderRun | null>(null);
   const [loading, setLoading] = useState(true);
   const [sidebarCollapsed, { toggle: toggleSidebar }] = useDisclosure();
   const [drawerOpened, { open: openDrawer, close: closeDrawer }] =
@@ -45,18 +45,18 @@ export const OrderRunLayout: React.FC = () => {
 
   const outletContext: OrderRunOutletContext = {
     onOperationUpdate: () => setOpsRefreshKey((k) => k + 1),
-    orderRun: item!,
-    onOrderRunUpdate: setItem,
+    orderRun: orderRun!,
+    onOrderRunUpdate: setOrderRun,
   };
 
-  const fetchItem = useCallback(async () => {
+  const fetchOrderRun = useCallback(async () => {
     if (!orderKey || !id) return;
     setLoading(true);
     try {
       const result = await api.get<OrderRun>(
         apiEndpoints.orderRun(orderKey, id),
       );
-      setItem(result);
+      setOrderRun(result);
     } catch (err) {
       showErrorNotification(err);
     } finally {
@@ -65,8 +65,8 @@ export const OrderRunLayout: React.FC = () => {
   }, [orderKey, id]);
 
   useEffect(() => {
-    void fetchItem();
-  }, [fetchItem]);
+    void fetchOrderRun();
+  }, [fetchOrderRun]);
 
   // Close drawer on navigation
   useEffect(() => {
@@ -81,7 +81,7 @@ export const OrderRunLayout: React.FC = () => {
     );
   }
 
-  if (!item || !orderKey || !id) {
+  if (!orderRun || !orderKey || !id) {
     return (
       <Box p="md">
         <Text>Order run not found.</Text>
@@ -99,10 +99,10 @@ export const OrderRunLayout: React.FC = () => {
     >
       {/* Header */}
       <OrderRunHeader
-        item={item}
+        orderRun={orderRun}
         orderKey={orderKey}
         runId={id}
-        onUpdate={setItem}
+        onUpdate={setOrderRun}
       />
 
       {/* Body: sidebar + content */}

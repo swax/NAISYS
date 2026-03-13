@@ -30,20 +30,20 @@ export const RevisionLayout: React.FC = () => {
     revNo: string;
   }>();
   const location = useLocation();
-  const [item, setItem] = useState<OrderRevision | null>(null);
+  const [revision, setRevision] = useState<OrderRevision | null>(null);
   const [loading, setLoading] = useState(true);
   const [sidebarCollapsed, { toggle: toggleSidebar }] = useDisclosure();
   const [drawerOpened, { open: openDrawer, close: closeDrawer }] =
     useDisclosure();
 
-  const fetchItem = useCallback(async () => {
+  const fetchRevision = useCallback(async () => {
     if (!orderKey || !revNo) return;
     setLoading(true);
     try {
       const result = await api.get<OrderRevision>(
         apiEndpoints.orderRev(orderKey, revNo),
       );
-      setItem(result);
+      setRevision(result);
     } catch (err) {
       showErrorNotification(err);
     } finally {
@@ -52,8 +52,8 @@ export const RevisionLayout: React.FC = () => {
   }, [orderKey, revNo]);
 
   useEffect(() => {
-    void fetchItem();
-  }, [fetchItem]);
+    void fetchRevision();
+  }, [fetchRevision]);
 
   // Close drawer on navigation
   useEffect(() => {
@@ -68,7 +68,7 @@ export const RevisionLayout: React.FC = () => {
     );
   }
 
-  if (!item || !orderKey || !revNo) {
+  if (!revision || !orderKey || !revNo) {
     return (
       <Box p="md">
         <Text>Revision not found.</Text>
@@ -86,10 +86,10 @@ export const RevisionLayout: React.FC = () => {
     >
       {/* Header */}
       <RevisionHeader
-        item={item}
+        revision={revision}
         orderKey={orderKey}
         revNo={revNo}
-        onRefresh={fetchItem}
+        onRefresh={fetchRevision}
       />
 
       {/* Body: sidebar + content */}
