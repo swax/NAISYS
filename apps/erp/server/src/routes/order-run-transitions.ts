@@ -6,6 +6,7 @@ import {
 import { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 
+import { requirePermission } from "../auth-middleware.js";
 import { conflict, notFound, unprocessable } from "../error-handler.js";
 import { resolveOrder } from "../route-helpers.js";
 import {
@@ -32,6 +33,7 @@ export default function orderRunTransitionRoutes(fastify: FastifyInstance) {
         409: ErrorResponseSchema,
       },
     },
+    preHandler: requirePermission("order_executor"),
     handler: async (request, reply) => {
       const { orderKey, id } = request.params;
 
@@ -79,6 +81,7 @@ export default function orderRunTransitionRoutes(fastify: FastifyInstance) {
         422: ErrorResponseSchema,
       },
     },
+    preHandler: requirePermission("order_executor"),
     handler: async (request, reply) => {
       const { orderKey, id } = request.params;
 
@@ -129,6 +132,7 @@ export default function orderRunTransitionRoutes(fastify: FastifyInstance) {
         409: ErrorResponseSchema,
       },
     },
+    preHandler: requirePermission("order_manager"),
     handler: async (request, reply) => {
       const { orderKey, id } = request.params;
 
@@ -179,6 +183,7 @@ export default function orderRunTransitionRoutes(fastify: FastifyInstance) {
         409: ErrorResponseSchema,
       },
     },
+    preHandler: requirePermission("order_manager"),
     handler: async (request, reply) => {
       const { orderKey, id } = request.params;
 

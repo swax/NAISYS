@@ -268,7 +268,8 @@ export const StepRunList: React.FC<Props> = ({
                           : fv.label;
                         return (
                           <Group key={fv.stepFieldId} gap="xs" align="flex-end">
-                            {hasAction(fv._actions, "update") && !step.completed ? (
+                            {hasAction(fv._actions, "update") &&
+                            !step.completed ? (
                               <TextInput
                                 label={fieldLabel}
                                 size="xs"

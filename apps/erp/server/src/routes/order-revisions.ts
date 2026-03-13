@@ -1,4 +1,5 @@
 import type { HateoasAction } from "@naisys/common";
+import type { HateoasLink } from "@naisys/common";
 import {
   CreateOrderRevisionSchema,
   ErrorResponseSchema,
@@ -13,7 +14,7 @@ import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod/v4";
 
 import type { ErpUser } from "../auth-middleware.js";
-import { hasPermission } from "../auth-middleware.js";
+import { hasPermission, requirePermission } from "../auth-middleware.js";
 import { conflict, notFound } from "../error-handler.js";
 import { API_PREFIX, paginationLinks, selfLink } from "../hateoas.js";
 import {
@@ -40,7 +41,7 @@ function revisionItemActions(
   status: string,
   user: ErpUser | undefined,
 ): HateoasAction[] {
-  if (!hasPermission(user, "manage_orders")) return [];
+  if (!hasPermission(user, "order_planner")) return [];
   const href = `${API_PREFIX}/${parentResource}/${orderKey}/revs/${revNo}`;
   const actions: HateoasAction[] = [];
 
@@ -67,7 +68,7 @@ function revisionItemActions(
       },
     );
   } else if (status === RevisionStatus.approved) {
-    if (hasPermission(user, "manage_runs")) {
+    if (hasPermission(user, "order_manager")) {
       actions.push({
         rel: "cut-order",
         href: `${API_PREFIX}/orders/${orderKey}/runs`,
@@ -113,14 +114,21 @@ export function formatRevision(
     changeSummary: revision.changeSummary,
     itemKey: revision.order?.item?.key ?? null,
     ...formatAuditFields(revision),
-    _links: childItemLinks(
-      `/${PARENT_RESOURCE}/${orderKey}/revs`,
-      revision.revNo,
-      "Revisions",
-      `/${PARENT_RESOURCE}/${orderKey}`,
-      "Order",
-      "OrderRevision",
-    ),
+    _links: [
+      ...childItemLinks(
+        `/${PARENT_RESOURCE}/${orderKey}/revs`,
+        revision.revNo,
+        "Revisions",
+        `/${PARENT_RESOURCE}/${orderKey}`,
+        "Order",
+        "OrderRevision",
+      ),
+      {
+        rel: "operations",
+        href: `${API_PREFIX}/${PARENT_RESOURCE}/${orderKey}/revs/${revision.revNo}/ops`,
+        title: "Operations",
+      } as HateoasLink,
+    ],
     _actions: revisionItemActions(
       PARENT_RESOURCE,
       orderKey,
@@ -138,7 +146,9 @@ function formatListRevision(
 ) {
   return {
     ...formatRevision(orderKey, user, revision),
-    _links: [selfLink(`/${PARENT_RESOURCE}/${orderKey}/revs/${revision.revNo}`)],
+    _links: [
+      selfLink(`/${PARENT_RESOURCE}/${orderKey}/revs/${revision.revNo}`),
+    ],
   };
 }
 
@@ -185,7 +195,7 @@ export default function orderRevisionRoutes(fastify: FastifyInstance) {
         page,
         pageSize,
         _links: paginationLinks(revBasePath, page, pageSize, total, { status }),
-        _actions: hasPermission(request.erpUser, "manage_orders")
+        _actions: hasPermission(request.erpUser, "order_planner")
           ? [
               {
                 rel: "create",
@@ -212,6 +222,7 @@ export default function orderRevisionRoutes(fastify: FastifyInstance) {
         404: ErrorResponseSchema,
       },
     },
+    preHandler: requirePermission("order_planner"),
     handler: async (request, reply) => {
       const { orderKey } = request.params;
       const { description, changeSummary } = request.body;
@@ -277,6 +288,7 @@ export default function orderRevisionRoutes(fastify: FastifyInstance) {
         409: ErrorResponseSchema,
       },
     },
+    preHandler: requirePermission("order_planner"),
     handler: async (request, reply) => {
       const { orderKey, revNo } = request.params;
       const { description, changeSummary } = request.body;
@@ -322,6 +334,7 @@ export default function orderRevisionRoutes(fastify: FastifyInstance) {
         409: ErrorResponseSchema,
       },
     },
+    preHandler: requirePermission("order_planner"),
     handler: async (request, reply) => {
       const { orderKey, revNo } = request.params;
 

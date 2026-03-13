@@ -25,9 +25,7 @@ export async function listItems(
   ]);
 }
 
-export async function findExisting(
-  key: string,
-): Promise<ItemWithUsers | null> {
+export async function findExisting(key: string): Promise<ItemWithUsers | null> {
   return erpDb.item.findUnique({
     where: { key },
     include: includeUsers,

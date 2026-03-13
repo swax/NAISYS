@@ -77,7 +77,7 @@ export function draftCrudActions(
   user: ErpUser | undefined,
 ): HateoasAction[] {
   if (
-    !hasPermission(user, "manage_orders") ||
+    !hasPermission(user, "order_planner") ||
     revStatus !== RevisionStatus.draft
   )
     return [];

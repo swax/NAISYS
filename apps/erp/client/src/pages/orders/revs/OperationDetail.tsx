@@ -92,9 +92,12 @@ export const OperationDetail: React.FC = () => {
   };
 
   const handleDelete = async () => {
-    if (!operation || !confirm(`Delete operation "${operation.title}"?`)) return;
+    if (!operation || !confirm(`Delete operation "${operation.title}"?`))
+      return;
     try {
-      await api.delete(apiEndpoints.orderRevOp(orderKey!, revNo!, operation.seqNo));
+      await api.delete(
+        apiEndpoints.orderRevOp(orderKey!, revNo!, operation.seqNo),
+      );
       void navigate(`/orders/${orderKey}/revs/${revNo}`);
     } catch (err) {
       showErrorNotification(err);

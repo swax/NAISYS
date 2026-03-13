@@ -59,7 +59,6 @@ export const OperationSidebar: React.FC<Props> = ({ orderKey, revNo }) => {
     void fetchOps();
   }, [fetchOps]);
 
-
   const openCreateModal = () => {
     form.setFieldValue("seqNo", data?.nextSeqNo ?? 10);
     setModalOpen(true);

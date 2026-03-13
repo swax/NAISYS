@@ -11,7 +11,7 @@ import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod/v4";
 
 import type { ErpUser } from "../auth-middleware.js";
-import { hasPermission } from "../auth-middleware.js";
+import { hasPermission, requirePermission } from "../auth-middleware.js";
 import { conflict, notFound } from "../error-handler.js";
 import { API_PREFIX, selfLink } from "../hateoas.js";
 import {
@@ -61,21 +61,13 @@ export function formatFieldListResponse(
   const base = fieldBasePath(orderKey, revNo, opSeqNo, stepSeqNo);
   return {
     items: items.map((field) =>
-      formatField(
-        orderKey,
-        revNo,
-        opSeqNo,
-        stepSeqNo,
-        revStatus,
-        user,
-        field,
-      ),
+      formatField(orderKey, revNo, opSeqNo, stepSeqNo, revStatus, user, field),
     ),
     total: items.length,
     nextSeqNo: calcNextSeqNo(maxSeq),
     _links: [selfLink(base)],
     _actions:
-      hasPermission(user, "manage_orders") && revStatus === RevisionStatus.draft
+      hasPermission(user, "order_planner") && revStatus === RevisionStatus.draft
         ? [
             {
               rel: "create" as const,
@@ -182,7 +174,7 @@ export default function stepFieldRoutes(fastify: FastifyInstance) {
         nextSeqNo: calcNextSeqNo(maxSeq),
         _links: [selfLink(base)],
         _actions:
-          hasPermission(user, "manage_orders") &&
+          hasPermission(user, "order_planner") &&
           resolved.rev.status === RevisionStatus.draft
             ? [
                 {
@@ -211,6 +203,7 @@ export default function stepFieldRoutes(fastify: FastifyInstance) {
         409: ErrorResponseSchema,
       },
     },
+    preHandler: requirePermission("order_planner"),
     handler: async (request, reply) => {
       const { orderKey, revNo, seqNo, stepSeqNo } = request.params;
       const { seqNo: requestedSeqNo, label, type, required } = request.body;
@@ -306,6 +299,7 @@ export default function stepFieldRoutes(fastify: FastifyInstance) {
         409: ErrorResponseSchema,
       },
     },
+    preHandler: requirePermission("order_planner"),
     handler: async (request, reply) => {
       const { orderKey, revNo, seqNo, stepSeqNo, fieldSeqNo } = request.params;
       const { label, type, required, seqNo: newSeqNo } = request.body;
@@ -363,6 +357,7 @@ export default function stepFieldRoutes(fastify: FastifyInstance) {
         409: ErrorResponseSchema,
       },
     },
+    preHandler: requirePermission("order_planner"),
     handler: async (request, reply) => {
       const { orderKey, revNo, seqNo, stepSeqNo, fieldSeqNo } = request.params;
 

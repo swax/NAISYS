@@ -162,12 +162,12 @@ export const DispatchList: React.FC = () => {
               {data.items.map((item) => {
                 const runLink = `/orders/${item.orderKey}/runs/${item.id}`;
                 return (
-                  <Table.Tr
-                    key={item.id}
-                    style={{ cursor: "pointer" }}
-                  >
+                  <Table.Tr key={item.id} style={{ cursor: "pointer" }}>
                     <Table.Td>
-                      <Link to={`/orders/${item.orderKey}`} style={cellLinkStyle}>
+                      <Link
+                        to={`/orders/${item.orderKey}`}
+                        style={cellLinkStyle}
+                      >
                         <Text size="sm" ff="monospace">
                           {item.orderKey}
                         </Text>

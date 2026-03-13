@@ -13,7 +13,7 @@ import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod/v4";
 
 import type { ErpUser } from "../auth-middleware.js";
-import { hasPermission } from "../auth-middleware.js";
+import { hasPermission, requirePermission } from "../auth-middleware.js";
 import { conflict, notFound } from "../error-handler.js";
 import {
   API_PREFIX,
@@ -52,42 +52,45 @@ function orderActions(
   status: string,
   user: ErpUser | undefined,
 ): HateoasAction[] {
-  if (!hasPermission(user, "manage_orders")) return [];
   const href = `${API_PREFIX}/${resource}/${key}`;
-  const actions: HateoasAction[] = [
-    {
+  const actions: HateoasAction[] = [];
+
+  if (hasPermission(user, "order_planner")) {
+    actions.push({
       rel: "update",
       href,
       method: "PUT",
       title: "Update",
       schema: `${API_PREFIX}/schemas/UpdateOrder`,
-    },
-  ];
+    });
 
-  if (status === OrderStatus.active) {
-    actions.push({
-      rel: "archive",
-      href,
-      method: "PUT",
-      title: "Archive",
-      body: { status: OrderStatus.archived },
-    });
-  } else {
-    actions.push({
-      rel: "activate",
-      href,
-      method: "PUT",
-      title: "Activate",
-      body: { status: OrderStatus.active },
-    });
+    if (status === OrderStatus.active) {
+      actions.push({
+        rel: "archive",
+        href,
+        method: "PUT",
+        title: "Archive",
+        body: { status: OrderStatus.archived },
+      });
+    } else {
+      actions.push({
+        rel: "activate",
+        href,
+        method: "PUT",
+        title: "Activate",
+        body: { status: OrderStatus.active },
+      });
+    }
   }
 
-  actions.push({
-    rel: "delete",
-    href,
-    method: "DELETE",
-    title: "Delete",
-  });
+  if (hasPermission(user, "order_manager")) {
+    actions.push({
+      rel: "delete",
+      href,
+      method: "DELETE",
+      title: "Delete",
+    });
+  }
 
   return actions;
 }
@@ -100,6 +103,14 @@ function revisionCollectionLink(
     rel: "revisions",
     href: `${API_PREFIX}/${parentResource}/${key}/revs`,
     title: "Revisions",
+  };
+}
+
+function runsCollectionLink(parentResource: string, key: string): HateoasLink {
+  return {
+    rel: "runs",
+    href: `${API_PREFIX}/${parentResource}/${key}/runs`,
+    title: "Order Runs",
   };
 }
 
@@ -120,6 +131,7 @@ function formatOrder(order: OrderWithRelations, user: ErpUser | undefined) {
     _links: [
       ...orderLinks(RESOURCE, order.key, "Order"),
       revisionCollectionLink(RESOURCE, order.key),
+      runsCollectionLink(RESOURCE, order.key),
     ],
     _actions: orderActions(RESOURCE, order.key, order.status, user),
   };
@@ -169,7 +181,7 @@ export default function orderRoutes(fastify: FastifyInstance) {
           status,
           search,
         }),
-        _actions: hasPermission(request.erpUser, "manage_orders")
+        _actions: hasPermission(request.erpUser, "order_planner")
           ? [
               {
                 rel: "create",
@@ -195,6 +207,7 @@ export default function orderRoutes(fastify: FastifyInstance) {
         404: ErrorResponseSchema,
       },
     },
+    preHandler: requirePermission("order_planner"),
     handler: async (request, reply) => {
       const { key, description, itemKey } = request.body;
       const userId = request.erpUser!.id;
@@ -250,6 +263,7 @@ export default function orderRoutes(fastify: FastifyInstance) {
         404: ErrorResponseSchema,
       },
     },
+    preHandler: requirePermission("order_planner"),
     handler: async (request, reply) => {
       const { key } = request.params;
       const { itemKey, ...rest } = request.body;
@@ -291,6 +305,7 @@ export default function orderRoutes(fastify: FastifyInstance) {
         409: ErrorResponseSchema,
       },
     },
+    preHandler: requirePermission("order_manager"),
     handler: async (request, reply) => {
       const { key } = request.params;
 

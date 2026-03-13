@@ -2,9 +2,10 @@ import { z } from "zod/v4";
 
 export const ErpPermissionEnum = z.enum([
   "erp_admin",
-  "manage_orders",
-  "manage_runs",
-  "view_all",
+  "order_planner",
+  "order_executor",
+  "order_manager",
+  "item_manager",
 ]);
 export type ErpPermission = z.infer<typeof ErpPermissionEnum>;
 export const ErpPermission = ErpPermissionEnum.enum;

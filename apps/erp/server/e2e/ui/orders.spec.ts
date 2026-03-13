@@ -15,6 +15,6 @@ test("orders page renders with title and create button", async ({
   // Verify the page title renders
   await expect(page.getByRole("heading", { name: "Orders" })).toBeVisible();
 
-  // Verify the "Create New" button exists (gated on manage_orders permission)
+  // Verify the "Create New" button exists (gated on order_planner permission)
   await expect(page.getByRole("button", { name: "Create New" })).toBeVisible();
 });

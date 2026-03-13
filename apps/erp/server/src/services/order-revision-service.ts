@@ -179,7 +179,9 @@ export async function updateRevision(
   return erpDb.orderRevision.update({
     where: { id },
     data: {
-      ...(data.description !== undefined ? { description: data.description } : {}),
+      ...(data.description !== undefined
+        ? { description: data.description }
+        : {}),
       ...(data.changeSummary !== undefined
         ? { changeSummary: data.changeSummary }
         : {}),

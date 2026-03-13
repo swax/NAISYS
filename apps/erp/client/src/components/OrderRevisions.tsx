@@ -235,7 +235,6 @@ export const OrderRevisions: React.FC<Props> = ({ orderKey }) => {
           )}
         </>
       )}
-
     </Card>
   );
 };

@@ -12,7 +12,7 @@ import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod/v4";
 
 import type { ErpUser } from "../auth-middleware.js";
-import { hasPermission } from "../auth-middleware.js";
+import { hasPermission, requirePermission } from "../auth-middleware.js";
 import { notFound } from "../error-handler.js";
 import {
   API_PREFIX,
@@ -46,7 +46,7 @@ function itemLinks(key: string): HateoasLink[] {
 }
 
 function itemActions(key: string, user: ErpUser | undefined): HateoasAction[] {
-  if (!hasPermission(user, "manage_orders")) return [];
+  if (!hasPermission(user, "item_manager")) return [];
   const href = `${API_PREFIX}/${RESOURCE}/${key}`;
   return [
     {
@@ -118,7 +118,7 @@ export default function itemRoutes(fastify: FastifyInstance) {
         page,
         pageSize,
         _links: paginationLinks(RESOURCE, page, pageSize, total, { search }),
-        _actions: hasPermission(request.erpUser, "manage_orders")
+        _actions: hasPermission(request.erpUser, "item_manager")
           ? [
               {
                 rel: "create",
@@ -143,6 +143,7 @@ export default function itemRoutes(fastify: FastifyInstance) {
         201: ItemSchema,
       },
     },
+    preHandler: requirePermission("item_manager"),
     handler: async (request, reply) => {
       const { key, description } = request.body;
       const userId = request.erpUser!.id;
@@ -189,6 +190,7 @@ export default function itemRoutes(fastify: FastifyInstance) {
         404: ErrorResponseSchema,
       },
     },
+    preHandler: requirePermission("item_manager"),
     handler: async (request, reply) => {
       const { key } = request.params;
       const data = request.body;
@@ -216,6 +218,7 @@ export default function itemRoutes(fastify: FastifyInstance) {
         404: ErrorResponseSchema,
       },
     },
+    preHandler: requirePermission("item_manager"),
     handler: async (request, reply) => {
       const { key } = request.params;
 

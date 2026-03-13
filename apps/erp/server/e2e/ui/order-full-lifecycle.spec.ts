@@ -95,10 +95,10 @@ test.describe.serial("Full order lifecycle with operations (UI)", () => {
   });
 
   test("start the operation run", async () => {
-    // The sidebar auto-navigates to the first operation run
+    // Navigate to the operation run via the sidebar
+    await page.getByRole("link", { name: `10. ${opTitle}` }).click();
     await expect(page.getByText(`OPERATION 10. ${opTitle}`)).toBeVisible();
 
-    // The header Start is gone (now shows Close), so this is the op's Start
     await page.getByRole("button", { name: "Start" }).click();
 
     // Status should change to in_progress (matches both detail badge and sidebar)
