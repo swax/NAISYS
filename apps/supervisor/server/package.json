@@ -38,12 +38,12 @@
     "@naisys/hub-database": "file:../../../packages/hub-database",
     "@naisys/hub-protocol": "file:../../../packages/hub-protocol",
     "@naisys/supervisor-database": "file:../../../packages/supervisor-database",
-    "@scalar/fastify-api-reference": "^1.46.2",
+    "@scalar/fastify-api-reference": "^1.48.7",
     "@types/archiver": "^7.0.0",
     "archiver": "^7.0.1",
     "bcrypt": "^6.0.0",
     "dotenv": "^17.3.1",
-    "fastify": "^5.7.4",
+    "fastify": "^5.8.2",
     "fastify-type-provider-zod": "^6.1.0",
     "js-yaml": "^4.1.1",
     "pino-pretty": "^13.1.3",
@@ -54,7 +54,7 @@
   "devDependencies": {
     "@types/bcrypt": "^6.0.0",
     "@types/js-yaml": "^4.0.9",
-    "@types/node": "^25.3.3",
+    "@types/node": "^25.5.0",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3"
   },

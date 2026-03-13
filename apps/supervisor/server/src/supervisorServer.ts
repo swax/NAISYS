@@ -5,7 +5,7 @@ import "./schema-registry.js";
 import cookie from "@fastify/cookie";
 import cors from "@fastify/cors";
 import multipart from "@fastify/multipart";
-import rateLimit from "@fastify/rate-limit";
+import { fastifyRateLimit as rateLimit } from "@fastify/rate-limit";
 import staticFiles from "@fastify/static";
 import swagger from "@fastify/swagger";
 import {
@@ -139,10 +139,11 @@ export const startServer: StartServer = async (
   await fastify.register(cookie);
 
   // Rate limiting
-  await fastify.register(rateLimit, {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await fastify.register(rateLimit as any, {
     max: 100,
     timeWindow: "1 minute",
-    allowList: (request) => !request.url.startsWith("/api/"),
+    allowList: (request: { url: string }) => !request.url.startsWith("/api/"),
   });
 
   await fastify.register(multipart, {
