@@ -10,6 +10,7 @@ import agentRunsRoutes from "./agentRuns.js";
 import agentsRoutes from "./agents.js";
 import attachmentRoutes from "./attachments.js";
 import authRoutes from "./auth.js";
+import costsRoutes from "./costs.js";
 import hostsRoutes from "./hosts.js";
 import modelsRoutes from "./models.js";
 import rootRoutes from "./root.js";
@@ -56,6 +57,9 @@ export default async function apiRoutes(
 
   // Register variables routes
   await fastify.register(variablesRoutes, { prefix: "/variables" });
+
+  // Register costs routes
+  await fastify.register(costsRoutes, { prefix: "/costs" });
 
   // Register admin routes
   await fastify.register(adminRoutes, { prefix: "/admin" });

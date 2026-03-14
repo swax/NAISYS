@@ -19,7 +19,7 @@ import {
 import { LoginDialog } from "./components/LoginDialog";
 import { NotFoundPage } from "./components/NotFoundPage";
 import { RootErrorPage } from "./components/RootErrorPage";
-import { ROUTER_BASENAME } from "./constants";
+import { HEADER_ROW_HEIGHT, ROUTER_BASENAME } from "./constants";
 import { AgentDataProvider } from "./contexts/AgentDataContext";
 import { HostDataProvider } from "./contexts/HostDataContext";
 import { SessionProvider, useSession } from "./contexts/SessionContext";
@@ -33,6 +33,7 @@ import { AgentDetail } from "./pages/agents/AgentDetail";
 import { AgentIndex } from "./pages/agents/AgentIndex";
 import { AgentsLayout } from "./pages/agents/AgentsLayout";
 import { AgentChat } from "./pages/chat/AgentChat";
+import { CostsPage } from "./pages/costs/CostsPage";
 import { HostIndex } from "./pages/hosts/HostIndex";
 import { HostPage } from "./pages/hosts/HostPage";
 import { HostsLayout } from "./pages/hosts/HostsLayout";
@@ -87,7 +88,7 @@ const AppContent: React.FC = () => {
 
   return (
     <AppShell
-      header={{ height: 48 }}
+      header={{ height: HEADER_ROW_HEIGHT }}
       navbar={{
         width: 300,
         breakpoint: "sm",
@@ -161,6 +162,7 @@ const router = createBrowserRouter(
         <Route path="calculator" element={<ModelCalculator />} />
         <Route path=":key" element={<ModelPage />} />
       </Route>
+      <Route path="/costs" element={<CostsPage />} />
       <Route path="/variables" element={<VariablesPage />} />
       <Route path="/admin" element={<AdminPage />} />
       <Route path="/users" element={<UserList />} />

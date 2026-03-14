@@ -242,9 +242,7 @@ export default function agentLifecycleRoutes(
         return notFound(reply, "Agent not found");
       }
 
-      const subordinateIds = recursive
-        ? await findSubordinates(id)
-        : [];
+      const subordinateIds = recursive ? await findSubordinates(id) : [];
 
       await enableAgent(id);
       await Promise.all(subordinateIds.map((subId) => enableAgent(subId)));
@@ -292,9 +290,7 @@ export default function agentLifecycleRoutes(
         return notFound(reply, "Agent not found");
       }
 
-      const subordinateIds = recursive
-        ? await findSubordinates(id)
-        : [];
+      const subordinateIds = recursive ? await findSubordinates(id) : [];
       const allIds = [id, ...subordinateIds];
 
       // Disable all in DB first, then try to stop any active ones

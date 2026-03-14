@@ -13,6 +13,7 @@ import type {
   ChatMessage,
   ChatMessagesResponse,
   ContextLogResponse,
+  CostsHistogramResponse,
   CreateAgentConfigResponse,
   DeleteModelResponse,
   DeleteVariableResponse,
@@ -62,6 +63,7 @@ export type {
   ChatMessage,
   ChatMessagesResponse,
   ContextLogResponse,
+  CostsHistogramResponse,
   CreateAgentConfigResponse,
   DeleteModelResponse,
   DeleteVariableResponse,
@@ -186,6 +188,21 @@ export const apiEndpoints = {
   variables: "/variables",
   saveVariable: (key: string) => `/variables/${encodeURIComponent(key)}`,
   deleteVariable: (key: string) => `/variables/${encodeURIComponent(key)}`,
+  costs: (params?: {
+    start?: string;
+    end?: string;
+    bucketHours?: number;
+    leadUsername?: string;
+  }) => {
+    const search = new URLSearchParams();
+    if (params?.start) search.set("start", params.start);
+    if (params?.end) search.set("end", params.end);
+    if (params?.bucketHours)
+      search.set("bucketHours", String(params.bucketHours));
+    if (params?.leadUsername) search.set("leadUsername", params.leadUsername);
+    const qs = search.toString();
+    return `/costs${qs ? `?${qs}` : ""}`;
+  },
   attachmentDownload: (id: number) => `/attachments/${id}`,
   permissions: "/permissions",
   admin: "/admin",

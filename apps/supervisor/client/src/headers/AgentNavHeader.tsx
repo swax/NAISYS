@@ -1,9 +1,19 @@
-import { Alert, Group, Indicator, Tabs, Text } from "@mantine/core";
+import {
+  Alert,
+  Box,
+  Divider,
+  Group,
+  Indicator,
+  Tabs,
+  Text,
+  UnstyledButton,
+} from "@mantine/core";
 import {
   IconHistory,
   IconInfoCircle,
   IconMail,
   IconMessageCircle,
+  IconRobot,
   IconSettings,
 } from "@tabler/icons-react";
 import React, { useEffect, useState } from "react";
@@ -15,10 +25,12 @@ import { getAgentDetail } from "../lib/apiAgents";
 
 interface AgentNavHeaderProps {
   agentUsername?: string;
+  onAgentNameClick?: () => void;
 }
 
 export const AgentNavHeader: React.FC<AgentNavHeaderProps> = ({
   agentUsername,
+  onAgentNameClick,
 }) => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -99,13 +111,43 @@ export const AgentNavHeader: React.FC<AgentNavHeaderProps> = ({
   };
 
   return (
-    <div style={{ flex: 1 }}>
-      <Group gap="md" align="center">
+    <div
+      style={{
+        flex: 1,
+        height: "100%",
+        overflowX: "auto",
+        overflowY: "hidden",
+      }}
+    >
+      <Group gap={0} align="center" wrap="nowrap" style={{ height: "100%" }}>
+        {/* Agent name (mobile only) */}
+        <UnstyledButton
+          onClick={onAgentNameClick}
+          hiddenFrom="md"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "var(--mantine-spacing-xs)",
+            flexShrink: 0,
+          }}
+        >
+          <IconRobot size="1.2rem" color="var(--mantine-color-dimmed)" />
+          {agentUsername && (
+            <Text size="sm" fw={600}>
+              {agentUsername}
+            </Text>
+          )}
+        </UnstyledButton>
+        <Box hiddenFrom="md" px="xs" style={{ flexShrink: 0 }}>
+          <Divider orientation="vertical" h={20} />
+        </Box>
+
         <Tabs
           value={currentSection || "detail"}
           style={{ flex: 1, height: "100%" }}
+          styles={{ tab: { height: "100%" } }}
         >
-          <Tabs.List>
+          <Tabs.List style={{ flexWrap: "nowrap", height: "100%" }}>
             <Tabs.Tab
               value="detail"
               leftSection={<IconInfoCircle size="1rem" />}

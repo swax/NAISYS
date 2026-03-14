@@ -1,12 +1,17 @@
-import { ActionIcon, Box, Drawer, Group } from "@mantine/core";
+import { Box, Drawer, Group, Text, UnstyledButton } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import type { HateoasAction } from "@naisys/common";
 import { IconCpu } from "@tabler/icons-react";
 import React from "react";
-import { Outlet, useLocation, useOutletContext } from "react-router-dom";
+import {
+  Outlet,
+  useLocation,
+  useOutletContext,
+  useParams,
+} from "react-router-dom";
 
 import { CollapsibleSidebar } from "../../components/CollapsibleSidebar";
-import { SIDEBAR_WIDTH } from "../../constants";
+import { HEADER_ROW_HEIGHT, SIDEBAR_WIDTH } from "../../constants";
 import { ModelSidebar } from "../../headers/ModelSidebar";
 import {
   api,
@@ -32,6 +37,7 @@ export const ModelsLayout: React.FC = () => {
   const [drawerOpened, { open: openDrawer, close: closeDrawer }] =
     useDisclosure();
   const location = useLocation();
+  const { key: modelKey } = useParams<{ key: string }>();
   const [llmModels, setLlmModels] = React.useState<LlmModelDetail[]>([]);
   const [imageModels, setImageModels] = React.useState<ImageModelDetail[]>([]);
   const [actions, setActions] = React.useState<HateoasAction[] | undefined>();
@@ -56,6 +62,13 @@ export const ModelsLayout: React.FC = () => {
   React.useEffect(() => {
     closeDrawer();
   }, [location.pathname]);
+
+  // Derive mobile sub-header label from route
+  const mobileLabel = modelKey
+    ? modelKey
+    : location.pathname.endsWith("/calculator")
+      ? "Calculator"
+      : "Overview";
 
   const context: ModelsOutletContext = {
     llmModels,
@@ -91,24 +104,25 @@ export const ModelsLayout: React.FC = () => {
           minWidth: 0,
         }}
       >
-        {/* Sub-header: mobile model icon */}
-        <Group
-          gap="xs"
-          pl={{ base: "md", sm: 0 }}
+        {/* Sub-header: mobile model picker */}
+        <UnstyledButton
+          onClick={openDrawer}
+          hiddenFrom="sm"
+          h={HEADER_ROW_HEIGHT}
+          pl="md"
           style={{
+            flexShrink: 0,
             borderBottom:
               "calc(0.125rem * var(--mantine-scale)) solid var(--mantine-color-dark-4)",
           }}
         >
-          <ActionIcon
-            variant="subtle"
-            color="gray"
-            onClick={openDrawer}
-            hiddenFrom="sm"
-          >
-            <IconCpu size="1.2rem" />
-          </ActionIcon>
-        </Group>
+          <Group gap="xs" style={{ height: "100%" }}>
+            <IconCpu size="1.2rem" color="var(--mantine-color-dimmed)" />
+            <Text size="sm" fw={600}>
+              {mobileLabel}
+            </Text>
+          </Group>
+        </UnstyledButton>
 
         {/* Route content */}
         <div

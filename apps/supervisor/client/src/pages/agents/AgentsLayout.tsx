@@ -1,6 +1,5 @@
-import { ActionIcon, Box, Drawer, Group } from "@mantine/core";
+import { Box, Drawer } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
-import { IconRobot } from "@tabler/icons-react";
 import React from "react";
 import {
   Outlet,
@@ -10,7 +9,7 @@ import {
 } from "react-router-dom";
 
 import { CollapsibleSidebar } from "../../components/CollapsibleSidebar";
-import { SIDEBAR_WIDTH } from "../../constants";
+import { HEADER_ROW_HEIGHT, SIDEBAR_WIDTH } from "../../constants";
 import { AgentNavHeader } from "../../headers/AgentNavHeader";
 import { AgentSidebar } from "../../headers/AgentSidebar";
 
@@ -52,35 +51,17 @@ export const AgentsLayout: React.FC = () => {
           minWidth: 0,
         }}
       >
-        {/* Mobile agent picker row */}
-        <Group
-          gap="xs"
+        {/* Agent nav header (agent name on mobile + tabs) */}
+        <Box
           pl={{ base: "md", md: 0 }}
-          hiddenFrom="md"
-          style={{ cursor: "pointer" }}
-          onClick={openDrawer}
+          h={HEADER_ROW_HEIGHT}
+          style={{ flexShrink: 0 }}
         >
-          <ActionIcon variant="subtle" color="gray">
-            <IconRobot size="1.2rem" />
-          </ActionIcon>
-          {username && (
-            <Box fw={600} fz="sm">
-              {username}
-            </Box>
-          )}
-        </Group>
-
-        {/* Agent nav tabs */}
-        <Group
-          gap="xs"
-          pl={{ base: "md", md: 0 }}
-          style={{
-            borderBottom:
-              "calc(0.125rem * var(--mantine-scale)) solid var(--mantine-color-dark-4)",
-          }}
-        >
-          <AgentNavHeader agentUsername={username} />
-        </Group>
+          <AgentNavHeader
+            agentUsername={username}
+            onAgentNameClick={openDrawer}
+          />
+        </Box>
 
         {/* Route content */}
         <div

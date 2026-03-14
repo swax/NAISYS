@@ -20,6 +20,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 
 import { useSession } from "../contexts/SessionContext";
 import { ConnectionStatus } from "./ConnectionStatus";
+import { navTabs } from "./navTabs";
 
 interface AppHeaderProps {
   onBurgerClick: () => void;
@@ -49,27 +50,14 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
     return () => mql.removeEventListener("change", handler);
   }, []);
 
-  const isAgentsPage = location.pathname.startsWith("/agents");
-  const isHostsPage = location.pathname.startsWith("/hosts");
-  const isModelsPage = location.pathname.startsWith("/models");
-  const isVariablesPage = location.pathname.startsWith("/variables");
-  const isUsersPage = location.pathname.startsWith("/users");
-  const isAdminPage = location.pathname.startsWith("/admin");
+  const visibleTabs = navTabs.filter(
+    (tab) => !tab.permission || hasPermission(tab.permission),
+  );
 
-  const currentTabName = isAdminPage
-    ? "Admin"
-    : isUsersPage
-      ? "Users"
-      : isVariablesPage
-        ? "Variables"
-        : isModelsPage
-          ? "Models"
-          : isHostsPage
-            ? "Hosts"
-            : "Agents";
-  const showVariablesTab = hasPermission("manage_variables");
-  const showUsersTab = hasPermission("supervisor_admin");
-  const showAdminTab = hasPermission("supervisor_admin");
+  const activeTab = visibleTabs.find((tab) =>
+    location.pathname.startsWith(tab.path),
+  );
+  const currentTabName = activeTab?.label ?? "Agents";
 
   return (
     <Group h="100%" px="md" wrap="nowrap" gap="xs">
@@ -149,138 +137,33 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         wrap="nowrap"
         style={{ flex: 1, minWidth: 0, overflow: "hidden" }}
       >
-        <UnstyledButton
-          component={Link}
-          to="/agents"
-          px="sm"
-          py={4}
-          style={(theme) => ({
-            borderRadius: theme.radius.sm,
-            flexShrink: 0,
-            backgroundColor: isAgentsPage
-              ? "var(--mantine-color-dark-5)"
-              : undefined,
-          })}
-        >
-          <Text
-            size="sm"
-            fw={isAgentsPage ? 600 : 400}
-            c={!isAgentsPage ? "dimmed" : undefined}
-          >
-            Agents
-          </Text>
-        </UnstyledButton>
-        <UnstyledButton
-          component={Link}
-          to="/hosts"
-          px="sm"
-          py={4}
-          style={(theme) => ({
-            borderRadius: theme.radius.sm,
-            flexShrink: 0,
-            backgroundColor: isHostsPage
-              ? "var(--mantine-color-dark-5)"
-              : undefined,
-          })}
-        >
-          <Text
-            size="sm"
-            fw={isHostsPage ? 600 : 400}
-            c={!isHostsPage ? "dimmed" : undefined}
-          >
-            Hosts
-          </Text>
-        </UnstyledButton>
-        <UnstyledButton
-          component={Link}
-          to="/models"
-          px="sm"
-          py={4}
-          style={(theme) => ({
-            borderRadius: theme.radius.sm,
-            flexShrink: 0,
-            backgroundColor: isModelsPage
-              ? "var(--mantine-color-dark-5)"
-              : undefined,
-          })}
-        >
-          <Text
-            size="sm"
-            fw={isModelsPage ? 600 : 400}
-            c={!isModelsPage ? "dimmed" : undefined}
-          >
-            Models
-          </Text>
-        </UnstyledButton>
-        {showVariablesTab && (
-          <UnstyledButton
-            component={Link}
-            to="/variables"
-            px="sm"
-            py={4}
-            style={(theme) => ({
-              borderRadius: theme.radius.sm,
-              flexShrink: 0,
-              backgroundColor: isVariablesPage
-                ? "var(--mantine-color-dark-5)"
-                : undefined,
-            })}
-          >
-            <Text
-              size="sm"
-              fw={isVariablesPage ? 600 : 400}
-              c={!isVariablesPage ? "dimmed" : undefined}
+        {visibleTabs.map((tab) => {
+          const isActive = activeTab === tab;
+          return (
+            <UnstyledButton
+              key={tab.path}
+              component={Link}
+              to={tab.path}
+              px="sm"
+              py={4}
+              style={(theme) => ({
+                borderRadius: theme.radius.sm,
+                flexShrink: 0,
+                backgroundColor: isActive
+                  ? "var(--mantine-color-dark-5)"
+                  : undefined,
+              })}
             >
-              Variables
-            </Text>
-          </UnstyledButton>
-        )}
-        {showUsersTab && (
-          <UnstyledButton
-            component={Link}
-            to="/users"
-            px="sm"
-            py={4}
-            style={(theme) => ({
-              borderRadius: theme.radius.sm,
-              flexShrink: 0,
-              backgroundColor: isUsersPage
-                ? "var(--mantine-color-dark-5)"
-                : undefined,
-            })}
-          >
-            <Text
-              size="sm"
-              fw={isUsersPage ? 600 : 400}
-              c={!isUsersPage ? "dimmed" : undefined}
-            >
-              Users
-            </Text>
-          </UnstyledButton>
-        )}
-        {showAdminTab && (
-          <UnstyledButton
-            component={Link}
-            to="/admin"
-            px="sm"
-            py={4}
-            style={(theme) => ({
-              borderRadius: theme.radius.sm,
-              flexShrink: 0,
-              backgroundColor: isAdminPage
-                ? "var(--mantine-color-dark-5)"
-                : undefined,
-            })}
-          >
-            <Text
-              size="sm"
-              fw={isAdminPage ? 600 : 400}
-              c={!isAdminPage ? "dimmed" : undefined}
-            >
-              Admin
-            </Text>
-          </UnstyledButton>
-        )}
+              <Text
+                size="sm"
+                fw={isActive ? 600 : 400}
+                c={!isActive ? "dimmed" : undefined}
+              >
+                {tab.label}
+              </Text>
+            </UnstyledButton>
+          );
+        })}
       </Group>
 
       {/* Spacer when nav is hidden on mobile */}
