@@ -10,7 +10,13 @@ export const AgentStatusEventSchema = z.object({
   agents: z.record(
     z.string(),
     z.object({
-      status: z.enum(["active", "available", "disabled", "offline", "suspended"]),
+      status: z.enum([
+        "active",
+        "available",
+        "disabled",
+        "offline",
+        "suspended",
+      ]),
       latestLogId: z.number(),
       latestMailId: z.number(),
     }),

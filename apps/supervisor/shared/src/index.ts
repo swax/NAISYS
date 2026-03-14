@@ -4,6 +4,7 @@ export * from "./agents-types.js";
 export * from "./api-types.js";
 export * from "./auth-types.js";
 export * from "./chat-types.js";
+export * from "./costs-types.js";
 export * from "./error-types.js";
 export * from "./log-types.js";
 export * from "./mail-types.js";

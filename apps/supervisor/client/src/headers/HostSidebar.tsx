@@ -1,7 +1,9 @@
 import {
+  Anchor,
   Badge,
   Button,
   Card,
+  Code,
   Group,
   Modal,
   Stack,
@@ -29,6 +31,7 @@ export const HostSidebar: React.FC = () => {
   const { status: connectionStatus } = useConnectionStatus();
 
   const [createOpen, setCreateOpen] = useState(false);
+  const [showManualCreate, setShowManualCreate] = useState(false);
   const [newHostName, setNewHostName] = useState("");
   const [creating, setCreating] = useState(false);
 
@@ -165,32 +168,59 @@ export const HostSidebar: React.FC = () => {
 
       <Modal
         opened={createOpen}
-        onClose={() => setCreateOpen(false)}
-        title="Create Host"
+        onClose={() => {
+          setCreateOpen(false);
+          setShowManualCreate(false);
+          setNewHostName("");
+        }}
+        title="Add Host"
         size="sm"
       >
         <Stack gap="md">
-          <TextInput
-            label="Host Name"
-            placeholder="my-host"
-            value={newHostName}
-            onChange={(e) => setNewHostName(e.currentTarget.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") void handleCreate();
-            }}
-          />
-          <Group justify="flex-end">
-            <Button variant="default" onClick={() => setCreateOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              loading={creating}
-              disabled={!newHostName.trim()}
-              onClick={handleCreate}
+          <Text size="sm">
+            Use the hub key found on the{" "}
+            <Anchor href="/admin" fw={500}>
+              Admin
+            </Anchor>{" "}
+            page to configure a NAISYS instance with the environment variables{" "}
+            <Code>NAISYS_HOSTNAME</Code> and <Code>HUB_ACCESS_KEY</Code>. On
+            connect, the host will be created automatically if it doesn't
+            already exist.
+          </Text>
+
+          {!showManualCreate ? (
+            <Anchor
+              size="sm"
+              component="button"
+              onClick={() => setShowManualCreate(true)}
             >
-              Create
-            </Button>
-          </Group>
+              Manually create host
+            </Anchor>
+          ) : (
+            <Stack gap="sm">
+              <TextInput
+                label="Host Name"
+                placeholder="my-host"
+                value={newHostName}
+                onChange={(e) => setNewHostName(e.currentTarget.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") void handleCreate();
+                }}
+              />
+              <Group justify="flex-end">
+                <Button variant="default" onClick={() => setCreateOpen(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  loading={creating}
+                  disabled={!newHostName.trim()}
+                  onClick={handleCreate}
+                >
+                  Create
+                </Button>
+              </Group>
+            </Stack>
+          )}
         </Stack>
       </Modal>
     </>

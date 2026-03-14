@@ -25,7 +25,9 @@ export const AgentSchema = z.object({
   latestMailId: z.number(),
   enabled: z.boolean().optional(),
   archived: z.boolean().optional(),
-  status: z.enum(["active", "available", "disabled", "offline", "suspended"]).optional(),
+  status: z
+    .enum(["active", "available", "disabled", "offline", "suspended"])
+    .optional(),
   _links: z.array(LinkSchema).optional(),
 });
 
@@ -71,7 +73,9 @@ export const AgentDetailResponseSchema = z.object({
   latestMailId: z.number(),
   enabled: z.boolean().optional(),
   archived: z.boolean().optional(),
-  status: z.enum(["active", "available", "disabled", "offline", "suspended"]).optional(),
+  status: z
+    .enum(["active", "available", "disabled", "offline", "suspended"])
+    .optional(),
   costSuspendedReason: z.string().optional(),
   config: AgentConfigFileSchema,
   assignedHosts: z

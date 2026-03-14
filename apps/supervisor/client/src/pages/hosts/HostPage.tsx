@@ -1,4 +1,5 @@
 import {
+  ActionIcon,
   Badge,
   Button,
   Group,
@@ -14,7 +15,7 @@ import { notifications } from "@mantine/notifications";
 import type { HateoasAction } from "@naisys/common";
 import { hasAction } from "@naisys/common";
 import type { HostDetailResponse } from "@naisys-supervisor/shared";
-import { IconPlus, IconTrash, IconX } from "@tabler/icons-react";
+import { IconEdit, IconPlus, IconTrash, IconX } from "@tabler/icons-react";
 import { useQueryClient } from "@tanstack/react-query";
 import React, { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
@@ -46,6 +47,8 @@ export const HostPage: React.FC = () => {
   const [editName, setEditName] = useState("");
   const [editRestricted, setEditRestricted] = useState(false);
 
+  const [nameEditable, setNameEditable] = useState(false);
+
   // Action states
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -75,6 +78,7 @@ export const HostPage: React.FC = () => {
       return;
     }
     setLoading(true);
+    setNameEditable(false);
     void fetchDetail();
   }, [hostname, fetchDetail]);
 
@@ -98,6 +102,7 @@ export const HostPage: React.FC = () => {
           message: result.message,
           color: "green",
         });
+        setNameEditable(false);
         void queryClient.invalidateQueries({ queryKey: ["host-data"] });
         if (updates.name && updates.name !== hostname) {
           void navigate(`/hosts/${updates.name}`, { replace: true });
@@ -126,6 +131,7 @@ export const HostPage: React.FC = () => {
     if (!hostDetail) return;
     setEditName(hostDetail.name);
     setEditRestricted(hostDetail.restricted);
+    setNameEditable(false);
   };
 
   const handleDelete = async () => {
@@ -265,7 +271,7 @@ export const HostPage: React.FC = () => {
       {/* Header */}
       <Group justify="space-between" align="flex-start">
         <Group gap="sm" align="center">
-          {hasAction(actions, "update") ? (
+          {hasAction(actions, "update") && nameEditable ? (
             <TextInput
               value={editName}
               onChange={(e) => setEditName(e.currentTarget.value)}
@@ -273,7 +279,24 @@ export const HostPage: React.FC = () => {
               styles={{ input: { fontWeight: 700 } }}
             />
           ) : (
-            <Title order={2}>{host?.name ?? hostname}</Title>
+            <>
+              <Title order={2}>{host?.name ?? hostname}</Title>
+              {hasAction(actions, "update") && (
+                <ActionIcon
+                  variant="subtle"
+                  color="gray"
+                  onClick={() => {
+                    const confirmed = window.confirm(
+                      "Changing the host name here will not change the name on the NAISYS instance. " +
+                        "You must also update the NAISYS_HOSTNAME environment variable in the instance's .env file.",
+                    );
+                    if (confirmed) setNameEditable(true);
+                  }}
+                >
+                  <IconEdit size={16} />
+                </ActionIcon>
+              )}
+            </>
           )}
           {hostDetail?.hostType && (
             <Badge
