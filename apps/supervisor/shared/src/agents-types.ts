@@ -23,8 +23,9 @@ export const AgentSchema = z.object({
   leadUsername: z.string().optional(),
   latestLogId: z.number(),
   latestMailId: z.number(),
+  enabled: z.boolean().optional(),
   archived: z.boolean().optional(),
-  status: z.enum(["active", "available", "offline", "suspended"]).optional(),
+  status: z.enum(["active", "available", "disabled", "offline", "suspended"]).optional(),
   _links: z.array(LinkSchema).optional(),
 });
 
@@ -68,8 +69,9 @@ export const AgentDetailResponseSchema = z.object({
   leadUsername: z.string().optional(),
   latestLogId: z.number(),
   latestMailId: z.number(),
+  enabled: z.boolean().optional(),
   archived: z.boolean().optional(),
-  status: z.enum(["active", "available", "offline", "suspended"]).optional(),
+  status: z.enum(["active", "available", "disabled", "offline", "suspended"]).optional(),
   costSuspendedReason: z.string().optional(),
   config: AgentConfigFileSchema,
   assignedHosts: z
@@ -121,6 +123,13 @@ export const AgentStartResultSchema = z.object({
   hostname: z.string().optional(),
 });
 export type AgentStartResult = z.infer<typeof AgentStartResultSchema>;
+
+export const AgentToggleRequestSchema = z
+  .object({
+    recursive: z.boolean().optional(),
+  })
+  .strict();
+export type AgentToggleRequest = z.infer<typeof AgentToggleRequestSchema>;
 
 export const AgentStopRequestSchema = z
   .object({

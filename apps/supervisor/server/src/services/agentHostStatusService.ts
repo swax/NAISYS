@@ -8,6 +8,7 @@ import type {
 import { getIO } from "./browserSocketService.js";
 
 const activeAgentIds = new Set<number>();
+const disabledAgentIds = new Set<number>();
 const costSuspendedAgentIds = new Set<number>();
 const connectedHostIds = new Set<number>();
 const agentNotifications = new Map<
@@ -136,6 +137,20 @@ export function updateAgentHostAssignments(
   }
 }
 
+// --- Enabled status cache ---
+
+export function updateAgentEnabledStatus(
+  agents: { agentId: number; enabled: boolean }[],
+): void {
+  for (const { agentId, enabled } of agents) {
+    if (!enabled) {
+      disabledAgentIds.add(agentId);
+    } else {
+      disabledAgentIds.delete(agentId);
+    }
+  }
+}
+
 // --- Cost suspension cache ---
 
 export function updateCostSuspendedAgents(
@@ -171,6 +186,7 @@ function hasNonRestrictedOnlineHost(): boolean {
 export function getAgentStatus(agentId: number): AgentStatus {
   return determineAgentStatus({
     isActive: activeAgentIds.has(agentId),
+    isEnabled: !disabledAgentIds.has(agentId),
     isSuspended: costSuspendedAgentIds.has(agentId),
     assignedHostIds: agentHostAssignments.get(agentId),
     isHostOnline: (hid) => connectedHostIds.has(hid),

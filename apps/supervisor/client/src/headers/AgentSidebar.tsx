@@ -223,7 +223,11 @@ export const AgentSidebar: React.FC = () => {
         backgroundColor: isAgentSelected(agent)
           ? "var(--mantine-color-blue-9)"
           : undefined,
-        opacity: dimmed ? 0.4 : agent.status === "offline" ? 0.5 : 1,
+        opacity: dimmed
+          ? 0.4
+          : agent.status === "disabled" || agent.status === "offline"
+            ? 0.5
+            : 1,
         marginLeft: agent.depth ? `${agent.depth * 1.5}rem` : undefined,
         textDecoration: "none",
         color: "inherit",

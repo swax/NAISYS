@@ -10,6 +10,7 @@ export const UserListResponseSchema = z.object({
       z.object({
         userId: z.number(),
         username: z.string(),
+        enabled: z.boolean(),
         leadUserId: z.number().optional(),
         config: AgentConfigFileSchema,
         assignedHostIds: z.array(z.number()).optional(),

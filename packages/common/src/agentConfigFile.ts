@@ -176,6 +176,7 @@ export const adminAgentConfig = {
 export interface UserEntry {
   userId: number;
   username: string;
+  enabled: boolean;
   leadUserId?: number;
   assignedHostIds?: number[];
   apiKey?: string;

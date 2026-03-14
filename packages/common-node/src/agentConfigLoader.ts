@@ -51,6 +51,7 @@ export function loadAgentConfigs(startupPath: string): Map<number, UserEntry> {
     userMap.set(userId, {
       userId,
       username: entry.username,
+      enabled: true,
       leadUserId,
       config: entry.config,
     });

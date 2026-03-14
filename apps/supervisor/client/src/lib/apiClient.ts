@@ -165,6 +165,8 @@ export const apiEndpoints = {
     `/agents/${username}/runs/${runId}/sessions/${sessionId}/logs`,
   agentStart: (username: string) => `/agents/${username}/start`,
   agentStop: (username: string) => `/agents/${username}/stop`,
+  agentEnable: (username: string) => `/agents/${username}/enable`,
+  agentDisable: (username: string) => `/agents/${username}/disable`,
   agentArchive: (username: string) => `/agents/${username}/archive`,
   agentUnarchive: (username: string) => `/agents/${username}/unarchive`,
   agentLead: (username: string) => `/agents/${username}/lead`,

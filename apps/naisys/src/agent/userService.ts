@@ -170,12 +170,15 @@ export function createUserService(
       .filter((name): name is string => !!name);
   }
 
-  function getUserStatus(userId: number): "Active" | "Available" | "Offline" {
+  function getUserStatus(
+    userId: number,
+  ): "Active" | "Available" | "Disabled" | "Offline" {
     if (!hubClient) return "Available";
 
     const user = userMap.get(userId);
     const status = determineAgentStatus({
       isActive: isUserActive(userId),
+      isEnabled: user?.enabled ?? true,
       isSuspended: false,
       assignedHostIds: user?.assignedHostIds,
       isHostOnline: hostService.isHostActive,
@@ -185,6 +188,7 @@ export function createUserService(
     return (status.charAt(0).toUpperCase() + status.slice(1)) as
       | "Active"
       | "Available"
+      | "Disabled"
       | "Offline";
   }
 
@@ -195,6 +199,7 @@ export function createUserService(
       map.set(user.userId, {
         userId: user.userId,
         username: user.username,
+        enabled: user.enabled,
         leadUserId: user.leadUserId,
         assignedHostIds: user.assignedHostIds,
         apiKey: user.apiKey,

@@ -9,6 +9,8 @@ import {
   AgentStopRequestSchema,
   AgentStopResult,
   AgentStopResultSchema,
+  AgentToggleRequest,
+  AgentToggleRequestSchema,
   AgentUsernameParams,
   AgentUsernameParamsSchema,
   ErrorResponse,
@@ -25,6 +27,8 @@ import { isAgentActive } from "../services/agentHostStatusService.js";
 import {
   archiveAgent,
   deleteAgent,
+  disableAgent,
+  enableAgent,
   getAgent,
   resolveAgentId,
   unarchiveAgent,
@@ -37,24 +41,25 @@ import {
   sendUserListChanged,
 } from "../services/hubConnectionService.js";
 
-async function findRunningSubordinates(
+async function findSubordinates(
   parentUserId: number,
+  filter?: (userId: number) => boolean,
 ): Promise<number[]> {
   const allUsers = await hubDb.users.findMany({
     select: { id: true, lead_user_id: true },
   });
   const result: number[] = [];
-  function collectSubordinates(parentId: number) {
+  function collect(parentId: number) {
     for (const user of allUsers) {
       if (user.lead_user_id === parentId) {
-        if (isAgentActive(user.id)) {
+        if (!filter || filter(user.id)) {
           result.push(user.id);
         }
-        collectSubordinates(user.id);
+        collect(user.id);
       }
     }
   }
-  collectSubordinates(parentUserId);
+  collect(parentUserId);
   return result;
 }
 
@@ -174,7 +179,7 @@ export default function agentLifecycleRoutes(
 
       // Fire-and-forget stops for subordinates when recursive
       if (recursive) {
-        const subordinates = await findRunningSubordinates(id);
+        const subordinates = await findSubordinates(id, isAgentActive);
         void Promise.all(
           subordinates.map((subId) =>
             sendAgentStop(subId, "Stopped from supervisor (recursive)").catch(
@@ -203,6 +208,125 @@ export default function agentLifecycleRoutes(
           message: response.error || "Failed to stop agent",
         });
       }
+    },
+  );
+
+  // POST /:username/enable — Enable agent
+  fastify.post<{
+    Params: AgentUsernameParams;
+    Body: AgentToggleRequest;
+    Reply: AgentActionResult | ErrorResponse;
+  }>(
+    "/:username/enable",
+    {
+      preHandler: [requirePermission("manage_agents")],
+      schema: {
+        description: "Enable an agent",
+        tags: ["Agents"],
+        params: AgentUsernameParamsSchema,
+        body: AgentToggleRequestSchema,
+        response: {
+          200: AgentActionResultSchema,
+          400: ErrorResponseSchema,
+          500: ErrorResponseSchema,
+        },
+        security: [{ cookieAuth: [] }],
+      },
+    },
+    async (request, reply) => {
+      const { username } = request.params;
+      const { recursive } = request.body;
+      const id = resolveAgentId(username);
+
+      if (!id) {
+        return notFound(reply, "Agent not found");
+      }
+
+      const subordinateIds = recursive
+        ? await findSubordinates(id)
+        : [];
+
+      await enableAgent(id);
+      await Promise.all(subordinateIds.map((subId) => enableAgent(subId)));
+      sendUserListChanged();
+
+      const count = subordinateIds.length + 1;
+      return {
+        success: true,
+        message:
+          recursive && count > 1
+            ? `Enabled ${count} agent(s)`
+            : "Agent enabled",
+      };
+    },
+  );
+
+  // POST /:username/disable — Disable agent
+  fastify.post<{
+    Params: AgentUsernameParams;
+    Body: AgentToggleRequest;
+    Reply: AgentActionResult | ErrorResponse;
+  }>(
+    "/:username/disable",
+    {
+      preHandler: [requirePermission("manage_agents")],
+      schema: {
+        description: "Disable an agent",
+        tags: ["Agents"],
+        params: AgentUsernameParamsSchema,
+        body: AgentToggleRequestSchema,
+        response: {
+          200: AgentActionResultSchema,
+          400: ErrorResponseSchema,
+          500: ErrorResponseSchema,
+        },
+        security: [{ cookieAuth: [] }],
+      },
+    },
+    async (request, reply) => {
+      const { username } = request.params;
+      const { recursive } = request.body;
+      const id = resolveAgentId(username);
+
+      if (!id) {
+        return notFound(reply, "Agent not found");
+      }
+
+      const subordinateIds = recursive
+        ? await findSubordinates(id)
+        : [];
+      const allIds = [id, ...subordinateIds];
+
+      // Disable all in DB first, then try to stop any active ones
+      await Promise.all(allIds.map((agentId) => disableAgent(agentId)));
+      sendUserListChanged();
+
+      if (isHubConnected()) {
+        const activeIds = allIds.filter((agentId) => isAgentActive(agentId));
+        if (activeIds.length > 0) {
+          void Promise.all(
+            activeIds.map((agentId) =>
+              sendAgentStop(agentId, "Agent disabled").catch((err) =>
+                request.log.error(
+                  err,
+                  `Failed to stop disabled agent ${agentId}`,
+                ),
+              ),
+            ),
+          );
+        }
+      }
+
+      const count = allIds.length;
+      return {
+        success: true,
+        message:
+          recursive && count > 1
+            ? `Disabled ${count} agent(s); stop requested for active ones`
+            : isAgentActive(id)
+              ? "Agent disabled; stop requested"
+              : "Agent disabled",
+      };
     },
   );
 

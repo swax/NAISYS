@@ -72,9 +72,25 @@ export function createHubAgentService(
     return bestHostId;
   }
 
+  /** Check if a user is enabled (not disabled or archived) */
+  async function isAgentEnabled(userId: number): Promise<boolean> {
+    const user = await hubDb.users.findUnique({
+      where: { id: userId },
+      select: { enabled: true, archived: true },
+    });
+    return !!user?.enabled && !user?.archived;
+  }
+
   /** Try to start an agent on the best available host (fire-and-forget) */
   async function tryStartAgent(startUserId: number): Promise<boolean> {
     try {
+      if (!(await isAgentEnabled(startUserId))) {
+        logService.log(
+          `[Hub:Agents] Auto-start: agent ${startUserId} is disabled or archived`,
+        );
+        return false;
+      }
+
       const bestHostId = await findBestHost(startUserId);
       if (bestHostId === null) {
         logService.log(
@@ -118,6 +134,14 @@ export function createHubAgentService(
       try {
         const parsed = AgentStartRequestSchema.parse(data);
         const requesterUserId = parsed.requesterUserId;
+
+        if (!(await isAgentEnabled(parsed.startUserId))) {
+          ack({
+            success: false,
+            error: `Agent ${parsed.startUserId} is disabled`,
+          });
+          return;
+        }
 
         const bestHostId = await findBestHost(parsed.startUserId);
 

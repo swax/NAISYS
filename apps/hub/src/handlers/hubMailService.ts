@@ -43,6 +43,7 @@ export function createHubMailService(
       const unreadRecipients = await hubDb.mail_recipients.findMany({
         where: {
           read_at: null,
+          user: { enabled: true, archived: false },
         },
         select: {
           user_id: true,
