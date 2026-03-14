@@ -91,10 +91,14 @@ export function createDebugCommands(
           (a) => a.agentUserId !== localUserId,
         );
 
-        for (const agent of otherAgents) {
-          output.comment(`Stopping agent '${agent.agentUsername}'...`);
-          await agentManager.stopAgent(agent.agentUserId, "exit all");
-        }
+        output.comment(
+          `Stopping agents: ${otherAgents.map((a) => a.agentUsername).join(", ")}...`,
+        );
+        await Promise.all(
+          otherAgents.map((agent) =>
+            agentManager.stopAgent(agent.agentUserId, "exit all"),
+          ),
+        );
 
         output.comment(`Stopped ${otherAgents.length} agent(s)`);
       }

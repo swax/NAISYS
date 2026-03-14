@@ -175,15 +175,17 @@ export default function agentLifecycleRoutes(
       // Fire-and-forget stops for subordinates when recursive
       if (recursive) {
         const subordinates = await findRunningSubordinates(id);
-        for (const subId of subordinates) {
-          sendAgentStop(subId, "Stopped from supervisor (recursive)").catch(
-            (err) =>
-              request.log.error(
-                err,
-                `Failed to stop subordinate agent ${subId}`,
-              ),
-          );
-        }
+        void Promise.all(
+          subordinates.map((subId) =>
+            sendAgentStop(subId, "Stopped from supervisor (recursive)").catch(
+              (err) =>
+                request.log.error(
+                  err,
+                  `Failed to stop subordinate agent ${subId}`,
+                ),
+            ),
+          ),
+        );
       }
 
       const response = await sendAgentStop(id, "Stopped from supervisor");
