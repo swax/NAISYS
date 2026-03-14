@@ -374,17 +374,19 @@ export function createSubagentService(
       }
 
       // Stop subordinates (fire-and-forget, don't block on results)
-      for (const subId of subordinateIds) {
-        void hubClient
-          .sendRequest(HubEvents.AGENT_STOP, { userId: subId, reason })
-          .catch(() => {});
-      }
+      void Promise.all(
+        subordinateIds.map((subId) =>
+          hubClient
+            .sendRequest(HubEvents.AGENT_STOP, { userId: subId, reason })
+            .catch(() => {}),
+        ),
+      );
     } else {
-      // Non-hub mode: stop agents locally
-      for (const subId of subordinateIds) {
-        void agentManager.stopAgent(subId, reason);
-      }
-      void agentManager.stopAgent(userId, reason);
+      // Non-hub mode: stop all agents simultaneously
+      void Promise.all([
+        ...subordinateIds.map((subId) => agentManager.stopAgent(subId, reason)),
+        agentManager.stopAgent(userId, reason),
+      ]);
     }
 
     const stoppedCount = subordinateIds.length + 1;
