@@ -142,6 +142,26 @@ export const stopAgent = async (
   );
 };
 
+export const enableAgent = async (
+  username: string,
+  recursive?: boolean,
+): Promise<AgentActionResult> => {
+  return await api.post<{ recursive?: boolean }, AgentActionResult>(
+    apiEndpoints.agentEnable(username),
+    recursive ? { recursive } : {},
+  );
+};
+
+export const disableAgent = async (
+  username: string,
+  recursive?: boolean,
+): Promise<AgentActionResult> => {
+  return await api.post<{ recursive?: boolean }, AgentActionResult>(
+    apiEndpoints.agentDisable(username),
+    recursive ? { recursive } : {},
+  );
+};
+
 export const archiveAgent = async (
   username: string,
 ): Promise<AgentActionResult> => {

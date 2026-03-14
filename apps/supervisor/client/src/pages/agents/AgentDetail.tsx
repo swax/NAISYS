@@ -18,6 +18,7 @@ import {
   IconPlayerPause,
   IconPlayerPlay,
   IconPlayerStop,
+  IconPower,
   IconTrash,
 } from "@tabler/icons-react";
 import React, { useEffect, useState } from "react";
@@ -29,6 +30,8 @@ import { useConnectionStatus } from "../../hooks/useConnectionStatus";
 import {
   archiveAgent,
   deleteAgentPermanently,
+  disableAgent,
+  enableAgent,
   getAgentDetail,
   startAgent,
   stopAgent,
@@ -58,6 +61,7 @@ export const AgentDetail: React.FC = () => {
   const [taskInput, setTaskInput] = useState("");
   const [starting, setStarting] = useState(false);
   const [stopping, setStopping] = useState(false);
+  const [toggling, setToggling] = useState(false);
   const [archiving, setArchiving] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -154,6 +158,52 @@ export const AgentDetail: React.FC = () => {
       });
     } finally {
       setStopping(false);
+    }
+  };
+
+  const handleToggleEnabled = async (recursive?: boolean) => {
+    if (!username) return;
+    const isEnabled = hasAction(actions, "disable");
+
+    if (isEnabled) {
+      const confirmed = window.confirm(
+        recursive
+          ? `Disable agent "${agentData?.name}" and all subordinates? Active agents will be stopped.`
+          : `Disable agent "${agentData?.name}"? This will prevent it from being started.` +
+              (agentData?.status === "active"
+                ? " The agent is currently active and will be stopped."
+                : ""),
+      );
+      if (!confirmed) return;
+    }
+
+    setToggling(true);
+    try {
+      const result = isEnabled
+        ? await disableAgent(username, recursive)
+        : await enableAgent(username, recursive);
+      if (result.success) {
+        notifications.show({
+          title: isEnabled ? "Agent Disabled" : "Agent Enabled",
+          message: result.message,
+          color: isEnabled ? "orange" : "green",
+        });
+        await fetchDetail();
+      } else {
+        notifications.show({
+          title: isEnabled ? "Disable Failed" : "Enable Failed",
+          message: result.message,
+          color: "red",
+        });
+      }
+    } catch (err) {
+      notifications.show({
+        title: isEnabled ? "Disable Failed" : "Enable Failed",
+        message: err instanceof Error ? err.message : "Unknown error",
+        color: "red",
+      });
+    } finally {
+      setToggling(false);
     }
   };
 
@@ -278,6 +328,50 @@ export const AgentDetail: React.FC = () => {
   return (
     <Stack p="xs">
       <Group>
+        {(hasAction(actions, "enable") || hasAction(actions, "disable")) && (
+          <Group gap={0}>
+            <Button
+              color={hasAction(actions, "disable") ? "teal" : "gray"}
+              variant={hasAction(actions, "disable") ? "filled" : "outline"}
+              loading={toggling}
+              leftSection={<IconPower size={16} />}
+              onClick={() => handleToggleEnabled()}
+              style={{ borderTopRightRadius: 0, borderBottomRightRadius: 0 }}
+            >
+              <Text visibleFrom="sm" span>
+                {hasAction(actions, "disable") ? "Enabled" : "Disabled"}
+              </Text>
+            </Button>
+            <Menu position="bottom-end" withinPortal>
+              <Menu.Target>
+                <Button
+                  color={hasAction(actions, "disable") ? "teal" : "gray"}
+                  variant={hasAction(actions, "disable") ? "filled" : "outline"}
+                  disabled={toggling}
+                  style={{
+                    borderTopLeftRadius: 0,
+                    borderBottomLeftRadius: 0,
+                    borderLeft: "1px solid rgba(255,255,255,0.3)",
+                    paddingLeft: 6,
+                    paddingRight: 6,
+                  }}
+                >
+                  <IconChevronDown size={16} />
+                </Button>
+              </Menu.Target>
+              <Menu.Dropdown>
+                <Menu.Item
+                  leftSection={<IconPower size={14} />}
+                  onClick={() => handleToggleEnabled(true)}
+                >
+                  {hasAction(actions, "disable")
+                    ? "Disable with Subordinates"
+                    : "Enable with Subordinates"}
+                </Menu.Item>
+              </Menu.Dropdown>
+            </Menu>
+          </Group>
+        )}
         {hasAction(actions, "start") ? (
           <Group gap={0} style={{ flex: 1 }}>
             <TextInput

@@ -39,13 +39,14 @@ import {
 function agentActions(
   username: string,
   hasManagePermission: boolean,
+  enabled: boolean,
   archived: boolean,
   agentId?: number,
 ): HateoasAction[] {
   const actions: HateoasAction[] = [];
   const active = agentId ? isAgentActive(agentId) : false;
 
-  if (hasManagePermission && !active && !archived) {
+  if (hasManagePermission && !active && !archived && enabled) {
     actions.push({
       rel: "start",
       href: `${API_PREFIX}/agents/${username}/start`,
@@ -61,6 +62,23 @@ function agentActions(
       method: "POST",
       title: "Stop Agent",
     });
+  }
+  if (hasManagePermission && !archived) {
+    if (enabled) {
+      actions.push({
+        rel: "disable",
+        href: `${API_PREFIX}/agents/${username}/disable`,
+        method: "POST",
+        title: "Disable Agent",
+      });
+    } else if (!active) {
+      actions.push({
+        rel: "enable",
+        href: `${API_PREFIX}/agents/${username}/enable`,
+        method: "POST",
+        title: "Enable Agent",
+      });
+    }
   }
   if (hasManagePermission && !active && !archived) {
     actions.push({
@@ -218,7 +236,7 @@ export default function agentsRoutes(
           message: `Agent '${name}' created successfully`,
           name,
           _links: agentLinks(name, config),
-          _actions: agentActions(name, true, false),
+          _actions: agentActions(name, true, true, false),
         };
       } catch (error) {
         request.log.error(error, "Error in POST /agents route");
@@ -278,6 +296,7 @@ export default function agentsRoutes(
         _actions: agentActions(
           username,
           hasManagePermission,
+          agent.enabled ?? false,
           agent.archived ?? false,
           id,
         ),

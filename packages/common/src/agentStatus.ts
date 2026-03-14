@@ -1,13 +1,21 @@
-export type AgentStatus = "active" | "available" | "offline" | "suspended";
+export type AgentStatus =
+  | "active"
+  | "available"
+  | "disabled"
+  | "offline"
+  | "suspended";
 
 export function determineAgentStatus(opts: {
   isActive: boolean;
+  isEnabled: boolean;
   isSuspended: boolean;
   assignedHostIds: number[] | undefined;
   isHostOnline: (hostId: number) => boolean;
   hasNonRestrictedOnlineHost: boolean;
 }): AgentStatus {
-  // Priority: offline > suspended > active > available
+  // Priority: disabled > offline > suspended > active > available
+  if (!opts.isEnabled) return "disabled";
+
   const isOffline = opts.assignedHostIds?.length
     ? !opts.assignedHostIds.some(opts.isHostOnline)
     : !opts.hasNonRestrictedOnlineHost;

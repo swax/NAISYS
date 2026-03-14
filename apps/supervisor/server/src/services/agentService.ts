@@ -3,6 +3,7 @@ import { Agent, AgentDetailResponse } from "@naisys-supervisor/shared";
 
 import { hubDb } from "../database/hubDb.js";
 import {
+  updateAgentEnabledStatus,
   updateAgentHostAssignments,
   updateCostSuspendedAgents,
 } from "./agentHostStatusService.js";
@@ -18,6 +19,7 @@ export async function getAgents(
       uuid: true,
       username: true,
       title: true,
+      enabled: true,
       archived: true,
       config: true,
       lead_user: { select: { username: true } },
@@ -52,6 +54,7 @@ export async function getAgents(
     leadUsername: user.lead_user?.username || undefined,
     latestLogId: user.user_notifications?.latest_log_id ?? 0,
     latestMailId: user.user_notifications?.latest_mail_id ?? 0,
+    enabled: user.enabled,
     archived: user.archived,
     config: parseConfig(user.config),
   }));
@@ -67,6 +70,13 @@ export async function getAgents(
     users.map((user) => ({
       agentId: user.id,
       isSuspended: !!user.user_notifications?.cost_suspended_reason,
+    })),
+  );
+
+  updateAgentEnabledStatus(
+    users.map((user) => ({
+      agentId: user.id,
+      enabled: user.enabled,
     })),
   );
 
@@ -129,6 +139,7 @@ export async function getAgent(
       id: true,
       username: true,
       title: true,
+      enabled: true,
       archived: true,
       config: true,
       lead_user: { select: { username: true } },
@@ -171,6 +182,7 @@ export async function getAgent(
     leadUsername: user.lead_user?.username || undefined,
     latestLogId: user.user_notifications?.latest_log_id ?? 0,
     latestMailId: user.user_notifications?.latest_mail_id ?? 0,
+    enabled: user.enabled,
     archived: user.archived,
     costSuspendedReason:
       user.user_notifications?.cost_suspended_reason ?? undefined,
@@ -181,6 +193,20 @@ export async function getAgent(
     })),
     _links: [],
   };
+}
+
+export async function enableAgent(id: number): Promise<void> {
+  await hubDb.users.update({
+    where: { id },
+    data: { enabled: true },
+  });
+}
+
+export async function disableAgent(id: number): Promise<void> {
+  await hubDb.users.update({
+    where: { id },
+    data: { enabled: false },
+  });
 }
 
 export async function archiveAgent(id: number): Promise<void> {

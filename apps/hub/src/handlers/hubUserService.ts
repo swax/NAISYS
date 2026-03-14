@@ -16,6 +16,7 @@ export function createHubUserService(
       select: {
         id: true,
         username: true,
+        enabled: true,
         config: true,
         lead_user_id: true,
         api_key: true,
@@ -28,6 +29,7 @@ export function createHubUserService(
     const users = dbUsers.map((u) => ({
       userId: u.id,
       username: u.username,
+      enabled: u.enabled,
       leadUserId: u.lead_user_id || undefined,
       config: JSON.parse(u.config),
       assignedHostIds:

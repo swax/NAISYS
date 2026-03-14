@@ -235,6 +235,10 @@ export function createSubagentService(
 
     const user = validateUser(agentName);
 
+    if (!user.enabled) {
+      throw `Agent '${agentName}' is disabled`;
+    }
+
     if (!inputMode.isDebug() && !isSubordinate(user.userId)) {
       throw "You're not authorized to start this agent — not your subordinate";
     }

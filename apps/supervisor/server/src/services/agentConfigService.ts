@@ -62,6 +62,7 @@ export async function createAgentConfig(
       title: defaultConfig.title,
       config: jsonContent,
       api_key: randomBytes(32).toString("hex"),
+      enabled: true,
     },
   });
 

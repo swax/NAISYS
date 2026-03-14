@@ -182,6 +182,7 @@ model users {
   config             String              @default("{}")
   created_at         DateTime            @default(now())
   updated_at         DateTime            @updatedAt
+  enabled            Boolean             @default(true)
   archived           Boolean             @default(false)
   lead_user          users?              @relation("lead_to_subagents", fields: [lead_user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   subagents          users[]             @relation("lead_to_subagents")
