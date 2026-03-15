@@ -1,6 +1,7 @@
 import {
   Anchor,
   Box,
+  Container,
   Image,
   Paper,
   ScrollArea,
@@ -78,7 +79,8 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
 
   return (
     <ScrollArea style={{ flex: 1 }} viewportRef={viewport}>
-      <Stack gap="xs" p="md">
+      <Container size="md" w="100%" p="md">
+      <Stack gap="xs">
         {messages.map((msg) => {
           const isOwn = msg.fromUserId === currentAgentId;
           const msgDate = formatDate(msg.createdAt);
@@ -205,6 +207,7 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
           );
         })}
       </Stack>
+      </Container>
     </ScrollArea>
   );
 };

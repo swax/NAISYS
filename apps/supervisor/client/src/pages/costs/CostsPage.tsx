@@ -284,14 +284,14 @@ export const CostsPage: React.FC = () => {
                   content: ({ payload, label }) => {
                     if (!payload?.length) return null;
                     const items = payload
-                      .filter((p: { value?: number }) => (p.value ?? 0) > 0)
+                      .filter((p) => Number(p.value ?? 0) > 0)
                       .sort(
-                        (a: { value?: number }, b: { value?: number }) =>
-                          (b.value ?? 0) - (a.value ?? 0),
+                        (a, b) =>
+                          Number(b.value ?? 0) - Number(a.value ?? 0),
                       );
                     if (!items.length) return null;
                     const total = items.reduce(
-                      (s: number, p: { value?: number }) => s + (p.value ?? 0),
+                      (s, p) => s + Number(p.value ?? 0),
                       0,
                     );
                     return (
@@ -304,29 +304,25 @@ export const CostsPage: React.FC = () => {
                         <Text size="xs" fw={500} mb={4}>
                           {label as string}
                         </Text>
-                        {items.map(
-                          (p: {
-                            name?: string;
-                            value?: number;
-                            color?: string;
-                          }) => {
-                            const title = titleMap.get(p.name ?? "");
-                            const displayName = title
-                              ? `${p.name} (${title})`
-                              : p.name;
-                            return (
-                              <Group key={p.name} gap={6}>
-                                <ColorSwatch
-                                  color={p.color ?? "gray"}
-                                  size={10}
-                                />
-                                <Text size="xs">
-                                  {displayName}: ${(p.value ?? 0).toFixed(2)}
-                                </Text>
-                              </Group>
-                            );
-                          },
-                        )}
+                        {items.map((p) => {
+                          const name = String(p.name ?? "");
+                          const title = titleMap.get(name);
+                          const displayName = title
+                            ? `${name} (${title})`
+                            : name;
+                          return (
+                            <Group key={name} gap={6}>
+                              <ColorSwatch
+                                color={p.color ?? "gray"}
+                                size={10}
+                              />
+                              <Text size="xs">
+                                {displayName}: $
+                                {Number(p.value ?? 0).toFixed(2)}
+                              </Text>
+                            </Group>
+                          );
+                        })}
                         <Text size="xs" fw={500} mt={4}>
                           Total: ${total.toFixed(2)}
                         </Text>
