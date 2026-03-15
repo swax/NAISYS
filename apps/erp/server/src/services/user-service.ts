@@ -86,6 +86,25 @@ export async function getUserApiKey(id: number): Promise<string | null> {
 
 // --- Mutations ---
 
+export async function getUserByUuid(uuid: string) {
+  return erpDb.user.findFirst({
+    where: { uuid },
+    include: includePermissions,
+  });
+}
+
+export async function createUserForAgent(username: string, uuid: string) {
+  return erpDb.user.create({
+    data: {
+      username,
+      uuid,
+      passwordHash: "",
+      isAgent: true,
+    },
+    include: includePermissions,
+  });
+}
+
 export async function createUserWithPassword(data: {
   username: string;
   password: string;

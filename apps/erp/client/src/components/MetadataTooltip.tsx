@@ -2,9 +2,9 @@ import { ActionIcon, Stack, Text, Tooltip } from "@mantine/core";
 import { IconInfoCircle } from "@tabler/icons-react";
 
 interface MetadataTooltipProps {
-  createdBy: string;
+  createdBy?: string;
   createdAt: string;
-  updatedBy: string;
+  updatedBy?: string;
   updatedAt: string;
 }
 
@@ -17,10 +17,12 @@ export const MetadataTooltip: React.FC<MetadataTooltipProps> = ({
   const label = (
     <Stack gap={4}>
       <Text size="xs">
-        Created by {createdBy}, {new Date(createdAt).toLocaleString()}
+        Created{createdBy ? ` by ${createdBy}` : ""},{" "}
+        {new Date(createdAt).toLocaleString()}
       </Text>
       <Text size="xs">
-        Modified by {updatedBy}, {new Date(updatedAt).toLocaleString()}
+        Modified{updatedBy ? ` by ${updatedBy}` : ""},{" "}
+        {new Date(updatedAt).toLocaleString()}
       </Text>
     </Stack>
   );

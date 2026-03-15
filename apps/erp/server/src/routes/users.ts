@@ -1,6 +1,8 @@
 import type { HateoasAction, HateoasLink } from "@naisys/common";
+import { getHubAgentById } from "@naisys/hub-database";
 import {
   ChangePasswordSchema,
+  CreateAgentUserSchema,
   CreateUserSchema,
   type ErpPermission,
   UpdateUserSchema,
@@ -22,14 +24,17 @@ import {
   selfLink,
 } from "../hateoas.js";
 import {
+  createUserForAgent,
   createUserWithPassword,
   deleteUser,
   getUserApiKey,
   getUserById,
   getUserByUsername,
+  getUserByUuid,
   listUsers,
   updateUser,
 } from "../services/user-service.js";
+import { isSupervisorAuth } from "../supervisorAuth.js";
 
 function userItemLinks(username: string): HateoasLink[] {
   return [
@@ -218,6 +223,16 @@ export default function userRoutes(fastify: FastifyInstance) {
         },
       ];
 
+      if (isSupervisorAuth()) {
+        actions.push({
+          rel: "create-from-agent",
+          href: `${API_PREFIX}/users/from-agent`,
+          method: "POST",
+          title: "Create Agent User",
+          schema: `${API_PREFIX}/schemas/CreateAgentUser`,
+        });
+      }
+
       return {
         items: result.items.map(formatListUser),
         total: result.total,
@@ -283,6 +298,87 @@ export default function userRoutes(fastify: FastifyInstance) {
         if (err instanceof Error && err.message.includes("Unique constraint")) {
           reply.code(409);
           return { success: false, message: "Username already exists" };
+        }
+        throw err;
+      }
+    },
+  );
+
+  // CREATE AGENT USER (from hub agent)
+  app.post(
+    "/from-agent",
+    {
+      preHandler: adminPreHandler,
+      schema: {
+        description: "Create an ERP user from an existing hub agent",
+        tags: ["Users"],
+        body: CreateAgentUserSchema,
+      },
+    },
+    async (request, reply) => {
+      if (!isSupervisorAuth()) {
+        reply.code(400);
+        return {
+          statusCode: 400,
+          error: "Bad Request",
+          message: "Supervisor auth is not enabled",
+        };
+      }
+
+      const { agentId } = request.body;
+
+      const hubAgent = await getHubAgentById(agentId);
+      if (!hubAgent) {
+        reply.code(404);
+        return {
+          statusCode: 404,
+          error: "Not Found",
+          message: "Agent not found",
+        };
+      }
+
+      const existingByUuid = await getUserByUuid(hubAgent.uuid);
+      if (existingByUuid) {
+        reply.code(409);
+        return {
+          statusCode: 409,
+          error: "Conflict",
+          message: "A user with this agent's UUID already exists",
+        };
+      }
+
+      const existingByUsername = await getUserByUsername(hubAgent.username);
+      if (existingByUsername) {
+        reply.code(409);
+        return {
+          statusCode: 409,
+          error: "Conflict",
+          message: "Username already exists",
+        };
+      }
+
+      try {
+        const user = await createUserForAgent(
+          hubAgent.username,
+          hubAgent.uuid,
+        );
+        reply.code(201);
+        return formatUser(
+          user,
+          request.erpUser!.id,
+          request.erpUser!.permissions,
+        );
+      } catch (err: unknown) {
+        if (
+          err instanceof Error &&
+          err.message.includes("Unique constraint")
+        ) {
+          reply.code(409);
+          return {
+            statusCode: 409,
+            error: "Conflict",
+            message: "Username already exists",
+          };
         }
         throw err;
       }

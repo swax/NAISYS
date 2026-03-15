@@ -45,6 +45,14 @@ export const GrantPermissionSchema = z
 
 export type GrantPermission = z.infer<typeof GrantPermissionSchema>;
 
+export const CreateAgentUserSchema = z
+  .object({
+    agentId: z.number().int(),
+  })
+  .strict();
+
+export type CreateAgentUser = z.infer<typeof CreateAgentUserSchema>;
+
 export const ChangePasswordSchema = z
   .object({
     password: z.string().min(6),

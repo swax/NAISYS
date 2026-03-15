@@ -172,6 +172,7 @@ export const apiEndpoints = {
     fieldSeqNo: number | string,
   ) =>
     `orders/${key}/runs/${runNo}/ops/${seqNo}/steps/${stepSeqNo}/fields/${fieldSeqNo}`,
+  usersFromAgent: "users/from-agent",
   userRotateKey: (username: string) => `users/${username}/rotate-key`,
   changePassword: "users/me/password",
   audit: (entityType: string, entityId: number | string) =>

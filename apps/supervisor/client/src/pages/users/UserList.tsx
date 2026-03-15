@@ -15,7 +15,7 @@ import {
 } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import { useCallback, useEffect, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 
 import { getAgentData } from "../../lib/apiAgents";
 import { createAgentUser, createUser, getUsers } from "../../lib/apiUsers";
@@ -28,6 +28,7 @@ const cellLinkStyle = {
 
 export const UserList: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
 
   const page = Number(searchParams.get("page")) || 1;
   const search = searchParams.get("search") || "";
@@ -72,9 +73,9 @@ export const UserList: React.FC = () => {
     try {
       await createUser({ username: newUsername, password: newPassword });
       closeCreate();
+      navigate(`/users/${newUsername}`);
       setNewUsername("");
       setNewPassword("");
-      void fetchData();
     } catch (err) {
       setCreateError(
         err instanceof Error ? err.message : "Failed to create user",
@@ -116,9 +117,9 @@ export const UserList: React.FC = () => {
     setCreatingAgent(true);
     setAgentError("");
     try {
-      await createAgentUser(Number(selectedAgentId));
+      const result = await createAgentUser(Number(selectedAgentId));
       closeAgent();
-      void fetchData();
+      navigate(`/users/${result.username}`);
     } catch (err) {
       setAgentError(
         err instanceof Error ? err.message : "Failed to create agent user",
