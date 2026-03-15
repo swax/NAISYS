@@ -22,22 +22,14 @@ export function createHubRunService(
     createdAt: string;
     lastActive: string;
   }) {
-    const payload = {
+    naisysServer.broadcastToSupervisors(HubEvents.SESSION_PUSH, {
       session: {
         ...session,
         latestLogId: 0,
         totalLines: 0,
         totalCost: 0,
       },
-    };
-    for (const connection of naisysServer.getConnectedClients()) {
-      if (connection.getHostType() !== "supervisor") continue;
-      naisysServer.sendMessage(
-        connection.getHostId(),
-        HubEvents.SESSION_PUSH,
-        payload,
-      );
-    }
+    });
   }
 
   naisysServer.registerEvent(

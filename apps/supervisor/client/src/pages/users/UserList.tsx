@@ -73,7 +73,7 @@ export const UserList: React.FC = () => {
     try {
       await createUser({ username: newUsername, password: newPassword });
       closeCreate();
-      navigate(`/users/${newUsername}`);
+      void navigate(`/users/${newUsername}`);
       setNewUsername("");
       setNewPassword("");
     } catch (err) {
@@ -119,7 +119,7 @@ export const UserList: React.FC = () => {
     try {
       const result = await createAgentUser(Number(selectedAgentId));
       closeAgent();
-      navigate(`/users/${result.username}`);
+      void navigate(`/users/${result.username}`);
     } catch (err) {
       setAgentError(
         err instanceof Error ? err.message : "Failed to create agent user",

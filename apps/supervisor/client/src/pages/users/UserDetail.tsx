@@ -17,8 +17,8 @@ import {
 } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import { hasAction } from "@naisys/common";
-import { IconInfoCircle } from "@tabler/icons-react";
 import type { Permission } from "@naisys-supervisor/shared";
+import { IconInfoCircle } from "@tabler/icons-react";
 import { useCallback, useEffect, useState } from "react";
 import {
   Link,

@@ -61,44 +61,38 @@ export async function createHubConfigService(
   async function broadcastConfig() {
     try {
       const payload = await buildConfigPayload();
-      const clients = naisysServer.getConnectedClients();
 
-      logService.log(
-        `[Hub:Config] Broadcasting config to ${clients.length} clients`,
-      );
+      logService.log(`[Hub:Config] Broadcasting config to all clients`);
 
-      for (const connection of clients) {
-        naisysServer.sendMessage(
-          connection.getHostId(),
-          HubEvents.VARIABLES_UPDATED,
-          payload,
-        );
-      }
+      naisysServer.broadcastToAll(HubEvents.VARIABLES_UPDATED, payload);
     } catch (error) {
       logService.error(`[Hub:Config] Error broadcasting config: ${error}`);
     }
   }
 
   // Push config to newly connected clients
-  naisysServer.registerEvent(HubEvents.CLIENT_CONNECTED, async (hostId) => {
-    try {
-      const payload = await buildConfigPayload();
+  naisysServer.registerEvent(
+    HubEvents.CLIENT_CONNECTED,
+    async (hostId, connection) => {
+      try {
+        const payload = await buildConfigPayload();
 
-      logService.log(
-        `[Hub:Config] Pushing config to naisys instance ${hostId}`,
-      );
+        logService.log(
+          `[Hub:Config] Pushing config to instance ${hostId}`,
+        );
 
-      naisysServer.sendMessage(hostId, HubEvents.VARIABLES_UPDATED, payload);
-    } catch (error) {
-      logService.error(
-        `[Hub:Config] Error sending config to naisys instance ${hostId}: ${error}`,
-      );
-      naisysServer.sendMessage(hostId, HubEvents.VARIABLES_UPDATED, {
-        success: false,
-        error: String(error),
-      });
-    }
-  });
+        connection.sendMessage(HubEvents.VARIABLES_UPDATED, payload);
+      } catch (error) {
+        logService.error(
+          `[Hub:Config] Error sending config to instance ${hostId}: ${error}`,
+        );
+        connection.sendMessage(HubEvents.VARIABLES_UPDATED, {
+          success: false,
+          error: String(error),
+        });
+      }
+    },
+  );
 
   // Broadcast config to all clients when variables change
   naisysServer.registerEvent(HubEvents.VARIABLES_CHANGED, async () => {

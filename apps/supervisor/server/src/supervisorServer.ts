@@ -77,12 +77,6 @@ export const startServer: StartServer = async (
   // Populate in-memory user lookup for username ↔ id resolution
   await refreshUserLookup();
 
-  // Connect to hub via Socket.IO for agent management
-  const hubUrl = hubPort ? `https://localhost:${hubPort}` : process.env.HUB_URL;
-  if (hubUrl) {
-    initHubConnection(hubUrl);
-  }
-
   const superAdminResult = await ensureSuperAdmin();
   if (superAdminResult.created) {
     console.log(
@@ -125,6 +119,12 @@ export const startServer: StartServer = async (
   }).withTypeProvider<ZodTypeProvider>();
 
   initLogger(fastify.log);
+
+  // Connect to hub via Socket.IO for agent management
+  const hubUrl = hubPort ? `https://localhost:${hubPort}` : process.env.HUB_URL;
+  if (hubUrl) {
+    initHubConnection(hubUrl);
+  }
 
   // Set Zod validator and serializer compilers
   fastify.setValidatorCompiler(validatorCompiler);
@@ -268,13 +268,13 @@ export const startServer: StartServer = async (
       try {
         await fastify.listen({ port, host });
         initBrowserSocket(fastify.server, isProd);
-        console.log(
-          `[Supervisor] Running on http://${host}:${port}/supervisor, logs written to file`,
+        fastify.log.info(
+          `[Supervisor] Running on http://${host}:${port}/supervisor`,
         );
         return port;
       } catch (err: any) {
         if (err.code === "EADDRINUSE") {
-          console.log(
+          fastify.log.warn(
             `[Supervisor] Port ${port} is in use, trying port ${port + 1}...`,
           );
           port++;

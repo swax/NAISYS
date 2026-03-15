@@ -44,44 +44,40 @@ export async function createHubModelsService(
   async function broadcastModels() {
     try {
       const payload = await buildModelsPayload();
-      const clients = naisysServer.getConnectedClients();
 
       logService.log(
-        `[Hub:Models] Broadcasting ${payload.llmModels?.length ?? 0} LLM + ${payload.imageModels?.length ?? 0} image models to ${clients.length} clients`,
+        `[Hub:Models] Broadcasting ${payload.llmModels?.length ?? 0} LLM + ${payload.imageModels?.length ?? 0} image models to all clients`,
       );
 
-      for (const connection of clients) {
-        naisysServer.sendMessage(
-          connection.getHostId(),
-          HubEvents.MODELS_UPDATED,
-          payload,
-        );
-      }
+      naisysServer.broadcastToAll(HubEvents.MODELS_UPDATED, payload);
     } catch (error) {
       logService.error(`[Hub:Models] Error broadcasting models: ${error}`);
     }
   }
 
   // Push models to newly connected clients
-  naisysServer.registerEvent(HubEvents.CLIENT_CONNECTED, async (hostId) => {
-    try {
-      const payload = await buildModelsPayload();
+  naisysServer.registerEvent(
+    HubEvents.CLIENT_CONNECTED,
+    async (hostId, connection) => {
+      try {
+        const payload = await buildModelsPayload();
 
-      logService.log(
-        `[Hub:Models] Pushing ${payload.llmModels?.length ?? 0} LLM + ${payload.imageModels?.length ?? 0} image models to naisys instance ${hostId}`,
-      );
+        logService.log(
+          `[Hub:Models] Pushing ${payload.llmModels?.length ?? 0} LLM + ${payload.imageModels?.length ?? 0} image models to instance ${hostId}`,
+        );
 
-      naisysServer.sendMessage(hostId, HubEvents.MODELS_UPDATED, payload);
-    } catch (error) {
-      logService.error(
-        `[Hub:Models] Error querying models for naisys instance ${hostId}: ${error}`,
-      );
-      naisysServer.sendMessage(hostId, HubEvents.MODELS_UPDATED, {
-        success: false,
-        error: String(error),
-      });
-    }
-  });
+        connection.sendMessage(HubEvents.MODELS_UPDATED, payload);
+      } catch (error) {
+        logService.error(
+          `[Hub:Models] Error querying models for instance ${hostId}: ${error}`,
+        );
+        connection.sendMessage(HubEvents.MODELS_UPDATED, {
+          success: false,
+          error: String(error),
+        });
+      }
+    },
+  );
 
   // Broadcast models to all clients when supervisor saves/deletes a model
   naisysServer.registerEvent(HubEvents.MODELS_CHANGED, async () => {

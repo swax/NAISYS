@@ -108,14 +108,9 @@ export function createHubCostService(
 
       // Push cost deltas to supervisor connections
       if (costPushEntries.length > 0) {
-        for (const connection of naisysServer.getConnectedClients()) {
-          if (connection.getHostType() !== "supervisor") continue;
-          naisysServer.sendMessage(
-            connection.getHostId(),
-            HubEvents.COST_PUSH,
-            { entries: costPushEntries },
-          );
-        }
+        naisysServer.broadcastToSupervisors(HubEvents.COST_PUSH, {
+          entries: costPushEntries,
+        });
       }
 
       // Re-send cost_control to any suspended users still writing costs

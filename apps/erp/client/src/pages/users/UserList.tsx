@@ -84,7 +84,7 @@ export const UserList: React.FC = () => {
         password: newPassword,
       });
       closeCreate();
-      navigate(`/users/${newUsername}`);
+      void navigate(`/users/${newUsername}`);
       setNewUsername("");
       setNewPassword("");
     } catch (err) {
@@ -139,7 +139,7 @@ export const UserList: React.FC = () => {
         { agentId: Number(selectedAgentId) },
       );
       closeAgent();
-      navigate(`/users/${result.username}`);
+      void navigate(`/users/${result.username}`);
     } catch (err) {
       showErrorNotification(err);
     } finally {
