@@ -6,6 +6,7 @@ import {
   Modal,
   Pagination,
   PasswordInput,
+  Select,
   Stack,
   Table,
   Text,
@@ -17,7 +18,7 @@ import { useDisclosure } from "@mantine/hooks";
 import type { UserListResponse } from "@naisys-erp/shared";
 import { IconAlertTriangle } from "@tabler/icons-react";
 import { useCallback, useEffect, useState } from "react";
-import { Link, useOutletContext, useSearchParams } from "react-router";
+import { Link, useNavigate, useOutletContext, useSearchParams } from "react-router";
 
 import type { AppOutletContext } from "../../components/AppLayout";
 import { api, apiEndpoints, showErrorNotification } from "../../lib/api";
@@ -30,6 +31,7 @@ const cellLinkStyle = {
 
 export const UserList: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   const { supervisorAuth } = useOutletContext<AppOutletContext>();
 
   const page = Number(searchParams.get("page")) || 1;
@@ -42,6 +44,14 @@ export const UserList: React.FC = () => {
   const [newUsername, setNewUsername] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [creating, setCreating] = useState(false);
+
+  const [agentOpened, { open: openAgent, close: closeAgent }] = useDisclosure();
+  const [availableAgents, setAvailableAgents] = useState<
+    { value: string; label: string }[]
+  >([]);
+  const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
+  const [creatingAgent, setCreatingAgent] = useState(false);
+  const [loadingAgents, setLoadingAgents] = useState(false);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -74,13 +84,66 @@ export const UserList: React.FC = () => {
         password: newPassword,
       });
       closeCreate();
+      navigate(`/users/${newUsername}`);
       setNewUsername("");
       setNewPassword("");
-      void fetchData();
     } catch (err) {
       showErrorNotification(err);
     } finally {
       setCreating(false);
+    }
+  };
+
+  const handleOpenAgentModal = async () => {
+    openAgent();
+    setSelectedAgentId(null);
+    setLoadingAgents(true);
+    try {
+      const agentResponse = await api.get<{
+        items: { id: number; uuid: string; name: string; archived?: boolean }[];
+      }>("/api/supervisor/agents");
+
+      // Fetch all ERP users to filter out agents that already have users
+      let allUsers: UserListResponse["items"] = [];
+      let userPage = 1;
+      let userResult: UserListResponse;
+      do {
+        userResult = await api.get<UserListResponse>(
+          `${apiEndpoints.users}?page=${userPage}&pageSize=100`,
+        );
+        allUsers = allUsers.concat(userResult.items);
+        userPage++;
+      } while (allUsers.length < userResult.total);
+
+      const existingUsernames = new Set(
+        allUsers.filter((u) => u.isAgent).map((u) => u.username),
+      );
+      const filtered = agentResponse.items
+        .filter((a) => !a.archived && !existingUsernames.has(a.name))
+        .map((a) => ({ value: String(a.id), label: a.name }));
+      setAvailableAgents(filtered);
+    } catch (err) {
+      showErrorNotification(err);
+      closeAgent();
+    } finally {
+      setLoadingAgents(false);
+    }
+  };
+
+  const handleCreateAgentUser = async () => {
+    if (!selectedAgentId) return;
+    setCreatingAgent(true);
+    try {
+      const result = await api.post<{ username: string }>(
+        apiEndpoints.usersFromAgent,
+        { agentId: Number(selectedAgentId) },
+      );
+      closeAgent();
+      navigate(`/users/${result.username}`);
+    } catch (err) {
+      showErrorNotification(err);
+    } finally {
+      setCreatingAgent(false);
     }
   };
 
@@ -90,7 +153,14 @@ export const UserList: React.FC = () => {
     <Container size="lg" py="xl">
       <Group justify="space-between" mb="lg">
         <Title order={2}>Users</Title>
-        <Button onClick={openCreate}>Create User</Button>
+        <Group>
+          {supervisorAuth && (
+            <Button variant="outline" onClick={handleOpenAgentModal}>
+              Create Agent User
+            </Button>
+          )}
+          <Button onClick={openCreate}>Create User</Button>
+        </Group>
       </Group>
 
       <Group mb="md">
@@ -206,6 +276,38 @@ export const UserList: React.FC = () => {
               onClick={handleCreate}
               loading={creating}
               disabled={!newUsername || newPassword.length < 6}
+            >
+              Create
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
+      <Modal
+        opened={agentOpened}
+        onClose={closeAgent}
+        title="Create Agent User"
+      >
+        <Stack>
+          {loadingAgents ? (
+            <Loader size="sm" />
+          ) : (
+            <Select
+              label="Agent"
+              placeholder="Select an agent"
+              data={availableAgents}
+              value={selectedAgentId}
+              onChange={setSelectedAgentId}
+              searchable
+            />
+          )}
+          <Group justify="flex-end">
+            <Button variant="subtle" onClick={closeAgent}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleCreateAgentUser}
+              loading={creatingAgent}
+              disabled={!selectedAgentId}
             >
               Create
             </Button>

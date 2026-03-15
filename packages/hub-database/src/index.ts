@@ -10,6 +10,7 @@ export {
   createHubDatabaseClient,
   findAgentByApiKey,
   getAgentApiKeyByUuid,
+  getHubAgentById,
   rotateAgentApiKeyByUuid,
 } from "./hubSessionService.js";
 // Re-export Prisma Client and all generated types

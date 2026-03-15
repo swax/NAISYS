@@ -39,6 +39,20 @@ export async function findAgentByApiKey(
 }
 
 /**
+ * Find a hub agent by its numeric ID.
+ */
+export async function getHubAgentById(
+  id: number,
+): Promise<{ id: number; uuid: string; username: string } | null> {
+  if (!prisma) return null;
+
+  return prisma.users.findUnique({
+    where: { id },
+    select: { id: true, uuid: true, username: true },
+  });
+}
+
+/**
  * Look up an agent's API key by UUID.
  */
 export async function getAgentApiKeyByUuid(

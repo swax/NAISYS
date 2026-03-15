@@ -34,6 +34,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useOutletContext, useParams } from "react-router";
 
 import type { AppOutletContext } from "../../components/AppLayout";
+import { MetadataTooltip } from "../../components/MetadataTooltip";
 import { api, apiEndpoints, showErrorNotification } from "../../lib/api";
 import { hasAction } from "../../lib/hateoas";
 
@@ -190,7 +191,13 @@ export const UserDetail: React.FC = () => {
   return (
     <Container size="md" py="xl">
       <Group justify="space-between" mb="lg">
-        <Title order={2}>{user.username}</Title>
+        <Group>
+          <Title order={2}>{user.username}</Title>
+          <MetadataTooltip
+            createdAt={user.createdAt}
+            updatedAt={user.updatedAt}
+          />
+        </Group>
         <Group>
           <Button variant="subtle" onClick={() => navigate("/users")}>
             Back
@@ -242,12 +249,6 @@ export const UserDetail: React.FC = () => {
         <Stack gap="sm">
           <Group>
             <Text fw={600} w={120}>
-              ID:
-            </Text>
-            <Text>{user.id}</Text>
-          </Group>
-          <Group>
-            <Text fw={600} w={120}>
               Username:
             </Text>
             <Text ff="monospace">{user.username}</Text>
@@ -257,18 +258,6 @@ export const UserDetail: React.FC = () => {
               Type:
             </Text>
             <Text>{user.isAgent ? "Agent" : "User"}</Text>
-          </Group>
-          <Group>
-            <Text fw={600} w={120}>
-              Created:
-            </Text>
-            <Text>{new Date(user.createdAt).toLocaleString()}</Text>
-          </Group>
-          <Group>
-            <Text fw={600} w={120}>
-              Updated:
-            </Text>
-            <Text>{new Date(user.updatedAt).toLocaleString()}</Text>
           </Group>
           {(user.apiKey || hasAction(user._actions, "rotate-key")) && (
             <Group>

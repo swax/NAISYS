@@ -1,4 +1,5 @@
 import {
+  ActionIcon,
   Button,
   Card,
   Container,
@@ -12,9 +13,11 @@ import {
   Text,
   TextInput,
   Title,
+  Tooltip,
 } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import { hasAction } from "@naisys/common";
+import { IconInfoCircle } from "@tabler/icons-react";
 import type { Permission } from "@naisys-supervisor/shared";
 import { useCallback, useEffect, useState } from "react";
 import {
@@ -200,7 +203,27 @@ export const UserDetail: React.FC = () => {
   return (
     <Container size="md" py="xl" w="100%">
       <Group justify="space-between" mb="lg">
-        <Title order={2}>{user.username}</Title>
+        <Group>
+          <Title order={2}>{user.username}</Title>
+          <Tooltip
+            label={
+              <Stack gap={4}>
+                <Text size="xs">
+                  Created, {new Date(user.createdAt).toLocaleString()}
+                </Text>
+                <Text size="xs">
+                  Modified, {new Date(user.updatedAt).toLocaleString()}
+                </Text>
+              </Stack>
+            }
+            multiline
+            withArrow
+          >
+            <ActionIcon variant="subtle" size="sm" color="gray">
+              <IconInfoCircle size={16} />
+            </ActionIcon>
+          </Tooltip>
+        </Group>
         <Group>
           <Button
             variant="subtle"
@@ -245,12 +268,6 @@ export const UserDetail: React.FC = () => {
         <Stack gap="sm">
           <Group>
             <Text fw={600} w={120}>
-              ID:
-            </Text>
-            <Text>{user.id}</Text>
-          </Group>
-          <Group>
-            <Text fw={600} w={120}>
               Type:
             </Text>
             <Text>{user.isAgent ? "Agent" : "User"}</Text>
@@ -277,18 +294,6 @@ export const UserDetail: React.FC = () => {
               </Group>
             );
           })()}
-          <Group>
-            <Text fw={600} w={120}>
-              Created:
-            </Text>
-            <Text>{new Date(user.createdAt).toLocaleString()}</Text>
-          </Group>
-          <Group>
-            <Text fw={600} w={120}>
-              Updated:
-            </Text>
-            <Text>{new Date(user.updatedAt).toLocaleString()}</Text>
-          </Group>
           {(apiKey || hasAction(user._actions, "rotate-key")) && (
             <Group>
               <Text fw={600} w={120}>
