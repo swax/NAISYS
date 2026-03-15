@@ -82,7 +82,11 @@ export const ChatConversationList: React.FC<ChatConversationListProps> = ({
                 component={Link}
                 to={`/agents/${agentName}/chat/${otherParticipants}`}
                 onClick={onNavLinkClick}
-                label={conv.participantNames.join(", ")}
+                label={
+                  conv.participantNames.length === 1
+                    ? `${conv.participantNames[0]} (${conv.participantTitles[0]})`
+                    : conv.participantNames.join(", ")
+                }
                 description={
                   <Text size="xs" c="dimmed" lineClamp={1}>
                     {conv.lastMessageFrom}: {conv.lastMessage}

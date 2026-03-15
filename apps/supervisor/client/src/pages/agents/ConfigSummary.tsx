@@ -3,7 +3,7 @@ import {
   Badge,
   Code,
   Group,
-  Spoiler,
+
   Stack,
   Table,
   Text,
@@ -182,9 +182,7 @@ export const ConfigSummary: React.FC<{
         <Text size="sm" c="dimmed" mb={4}>
           Agent Prompt
         </Text>
-        <Spoiler maxHeight={100} showLabel="Show more" hideLabel="Show less">
-          <Code block>{config.agentPrompt}</Code>
-        </Spoiler>
+        <Code block>{config.agentPrompt}</Code>
       </div>
 
       {config.initialCommands && config.initialCommands.length > 0 && (

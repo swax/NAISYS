@@ -8,6 +8,7 @@ export type RecipientType = z.infer<typeof RecipientTypeEnum>;
 export const MailRecipientSchema = z.object({
   userId: z.number(),
   username: z.string(),
+  title: z.string(),
   type: RecipientTypeEnum,
   readAt: z.string().nullable(), // ISO date or null
 });
@@ -22,6 +23,7 @@ export const MailMessageSchema = z.object({
   id: z.number(),
   fromUserId: z.number(),
   fromUsername: z.string(),
+  fromTitle: z.string(),
   subject: z.string(),
   body: z.string(),
   createdAt: z.string(),

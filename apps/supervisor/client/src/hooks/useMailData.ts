@@ -20,6 +20,10 @@ export const useMailData = (agentUsername: string, enabled: boolean = true) => {
     () => new Map(agents.map((a) => [a.id, a.name])),
     [agents],
   );
+  const titleLookup = useMemo(
+    () => new Map(agents.map((a) => [a.id, a.title])),
+    [agents],
+  );
   const [, setCacheVersion] = useState(0);
 
   const mergeMail = useCallback(
@@ -50,12 +54,14 @@ export const useMailData = (agentUsername: string, enabled: boolean = true) => {
             fromUserId: event.fromUserId,
             fromUsername:
               userLookup.get(event.fromUserId) ?? String(event.fromUserId),
+            fromTitle: titleLookup.get(event.fromUserId) ?? "",
             subject: event.subject ?? "",
             body: event.body,
             createdAt: event.createdAt,
             recipients: event.recipientUserIds.map((uid) => ({
               userId: uid,
               username: userLookup.get(uid) ?? String(uid),
+              title: titleLookup.get(uid) ?? "",
               type: "to",
               readAt: null,
             })),
@@ -85,7 +91,7 @@ export const useMailData = (agentUsername: string, enabled: boolean = true) => {
         }
       }
     },
-    [agentUsername, mergeMail, userLookup],
+    [agentUsername, mergeMail, userLookup, titleLookup],
   );
 
   const queryFn = useCallback(async ({ queryKey }: any) => {

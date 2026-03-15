@@ -59,7 +59,7 @@ export async function getMailDataByUserId(
       body: true,
       created_at: true,
       from_user: {
-        select: { username: true },
+        select: { username: true, title: true },
       },
       recipients: {
         select: {
@@ -67,7 +67,7 @@ export async function getMailDataByUserId(
           type: true,
           read_at: true,
           user: {
-            select: { username: true },
+            select: { username: true, title: true },
           },
         },
       },
@@ -85,12 +85,14 @@ export async function getMailDataByUserId(
     id: msg.id,
     fromUserId: msg.from_user_id,
     fromUsername: msg.from_user.username,
+    fromTitle: msg.from_user.title,
     subject: msg.subject,
     body: msg.body,
     createdAt: msg.created_at.toISOString(),
     recipients: msg.recipients.map((r) => ({
       userId: r.user_id,
       username: r.user.username,
+      title: r.user.title,
       type: r.type,
       readAt: r.read_at?.toISOString() ?? null,
     })),

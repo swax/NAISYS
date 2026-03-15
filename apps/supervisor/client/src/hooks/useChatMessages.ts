@@ -24,6 +24,10 @@ export const useChatMessages = (
     () => new Map(agents.map((a) => [a.id, a.name])),
     [agents],
   );
+  const titleLookup = useMemo(
+    () => new Map(agents.map((a) => [a.id, a.title])),
+    [agents],
+  );
   const [, setCacheVersion] = useState(0);
   const cacheKey = `${agentUsername}:${participants}`;
 
@@ -55,6 +59,7 @@ export const useChatMessages = (
             fromUserId: event.fromUserId,
             fromUsername:
               userLookup.get(event.fromUserId) ?? String(event.fromUserId),
+            fromTitle: titleLookup.get(event.fromUserId) ?? "",
             body: event.body,
             createdAt: event.createdAt,
             attachments: event.attachments,
@@ -81,7 +86,7 @@ export const useChatMessages = (
         }
       }
     },
-    [cacheKey, mergeMessages, userLookup],
+    [cacheKey, mergeMessages, userLookup, titleLookup],
   );
 
   const queryFn = useCallback(async () => {

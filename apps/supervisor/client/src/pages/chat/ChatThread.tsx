@@ -113,7 +113,7 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
                 >
                   {!isOwn && (
                     <Text size="xs" fw={600} c="dimmed" mb={2}>
-                      {msg.fromUsername}
+                      {msg.fromUsername} ({msg.fromTitle})
                     </Text>
                   )}
                   <Text
