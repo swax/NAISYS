@@ -1,6 +1,7 @@
 import {
   Anchor,
   Box,
+  Container,
   Divider,
   Group,
   Image,
@@ -13,6 +14,7 @@ import { formatFileSize } from "@naisys/common";
 import { IconCheck, IconChecks, IconFile } from "@tabler/icons-react";
 import React, { useRef } from "react";
 
+import { CompactMarkdown } from "../../components/CompactMarkdown";
 import type { MailMessage } from "../../lib/apiClient";
 import { API_BASE, apiEndpoints } from "../../lib/apiClient";
 
@@ -78,7 +80,8 @@ export const MailThread: React.FC<MailThreadProps> = ({
 
   return (
     <ScrollArea style={{ flex: 1 }} viewportRef={viewport}>
-      <Stack gap="sm" p="md">
+      <Container size="md" w="100%" p="md">
+      <Stack gap="sm">
         {sortedMessages.map((msg, index) => {
           const isOwn = msg.fromUsername === currentAgentName;
           const msgDate = formatDate(msg.createdAt);
@@ -170,11 +173,10 @@ export const MailThread: React.FC<MailThreadProps> = ({
                 <Text
                   size="sm"
                   style={{
-                    whiteSpace: "pre-wrap",
                     wordBreak: "break-word",
                   }}
                 >
-                  {msg.body}
+                  <CompactMarkdown>{msg.body}</CompactMarkdown>
                 </Text>
 
                 {/* Attachments */}
@@ -231,6 +233,7 @@ export const MailThread: React.FC<MailThreadProps> = ({
           );
         })}
       </Stack>
+      </Container>
     </ScrollArea>
   );
 };
