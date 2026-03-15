@@ -20,6 +20,10 @@ export const useChatConversations = (
     () => new Map(agents.map((a) => [a.id, a.name])),
     [agents],
   );
+  const titleLookup = useMemo(
+    () => new Map(agents.map((a) => [a.id, a.title])),
+    [agents],
+  );
   const [, setCacheVersion] = useState(0);
 
   const mergeConversations = useCallback(
@@ -58,6 +62,9 @@ export const useChatConversations = (
       const conv: ChatConversation = {
         participants: event.participants,
         participantNames: allIds.map((id) => userLookup.get(id) ?? String(id)),
+        participantTitles: allIds.map(
+          (id) => titleLookup.get(id) ?? "",
+        ),
         lastMessage: event.body,
         lastMessageAt: event.createdAt,
         lastMessageFrom:
@@ -65,7 +72,7 @@ export const useChatConversations = (
       };
       mergeConversations([conv]);
     },
-    [mergeConversations, userLookup],
+    [mergeConversations, userLookup, titleLookup],
   );
 
   const query = useQuery({

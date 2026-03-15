@@ -4,6 +4,7 @@ import { z } from "zod";
 export const ChatConversationSchema = z.object({
   participants: z.string(),
   participantNames: z.array(z.string()),
+  participantTitles: z.array(z.string()),
   lastMessage: z.string(),
   lastMessageAt: z.string(),
   lastMessageFrom: z.string(),
@@ -19,6 +20,7 @@ export const ChatMessageSchema = z.object({
   id: z.number(),
   fromUserId: z.number(),
   fromUsername: z.string(),
+  fromTitle: z.string(),
   body: z.string(),
   createdAt: z.string(),
   attachments: z.array(ChatAttachmentSchema).optional(),

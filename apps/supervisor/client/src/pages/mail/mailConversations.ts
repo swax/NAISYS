@@ -30,6 +30,7 @@ export interface MailConversation {
   key: string;
   normalizedSubject: string;
   participantNames: string[];
+  participantTitles: string[];
   messageCount: number;
   lastMessageAt: string;
   lastMessagePreview: string;
@@ -74,22 +75,28 @@ export function groupIntoConversations(
     const maxMailId = Math.max(...sorted.map((m) => m.id));
     const normalizedSubject = normalizeSubject(latest.subject);
 
-    // Collect unique participant names across all messages in conversation
-    const nameSet = new Set<string>();
+    // Collect unique participant names and titles across all messages in conversation
+    const titleMap = new Map<string, string>();
     for (const msg of sorted) {
-      nameSet.add(msg.fromUsername);
+      if (!titleMap.has(msg.fromUsername)) {
+        titleMap.set(msg.fromUsername, msg.fromTitle);
+      }
       for (const r of msg.recipients) {
-        nameSet.add(r.username);
+        if (!titleMap.has(r.username)) {
+          titleMap.set(r.username, r.title);
+        }
       }
     }
 
     const hasUnread =
       lastReadMailId !== null ? maxMailId > lastReadMailId : false;
 
+    const participantNames = [...titleMap.keys()];
     conversations.push({
       key,
       normalizedSubject,
-      participantNames: [...nameSet],
+      participantNames,
+      participantTitles: participantNames.map((n) => titleMap.get(n) ?? ""),
       messageCount: messages.length,
       lastMessageAt: latest.createdAt,
       lastMessagePreview: latest.body.split("\n")[0].slice(0, 100),

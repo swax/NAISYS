@@ -10,6 +10,8 @@ import {
 import { hasAction } from "@naisys/common";
 import {
   IconArchive,
+  IconChevronDown,
+  IconChevronRight,
   IconFileText,
   IconMail,
   IconPlus,
@@ -32,6 +34,14 @@ export const AgentSidebar: React.FC = () => {
   const { status: connectionStatus } = useConnectionStatus();
   const [modalOpened, setModalOpened] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
+  const [collapsedAgents, setExpandedAgents] = useState<Set<string>>(() => {
+    try {
+      const stored = localStorage.getItem("sidebar-collapsed-agents");
+      return stored ? new Set(JSON.parse(stored) as string[]) : new Set();
+    } catch {
+      return new Set();
+    }
+  });
 
   const isAgentSelected = (agent: Agent) => {
     return currentUsername === agent.name;
@@ -84,7 +94,7 @@ export const AgentSidebar: React.FC = () => {
     );
   }
 
-  type AgentWithDepth = Agent & { depth: number };
+  type AgentWithDepth = Agent & { depth: number; hasChildren: boolean };
 
   const organizeAgentsHierarchically = (agents: Agent[]): AgentWithDepth[] => {
     const agentsByName = new Map(agents.map((agent) => [agent.name, agent]));
@@ -117,10 +127,10 @@ export const AgentSidebar: React.FC = () => {
       }
 
       visiting.add(agent.name);
-      organizedAgents.push({ ...agent, depth });
+      const children = childrenMap.get(agent.name) ?? [];
+      organizedAgents.push({ ...agent, depth, hasChildren: children.length > 0 });
       visited.add(agent.name);
 
-      const children = childrenMap.get(agent.name) ?? [];
       children.forEach((child) => traverse(child, depth + 1));
 
       visiting.delete(agent.name);
@@ -134,6 +144,40 @@ export const AgentSidebar: React.FC = () => {
       .forEach((agent) => traverse(agent, 0));
 
     return organizedAgents;
+  };
+
+  const filterCollapsedAgents = (
+    agents: AgentWithDepth[],
+  ): AgentWithDepth[] => {
+    const result: AgentWithDepth[] = [];
+    let skipBelowDepth: number | null = null;
+
+    for (const agent of agents) {
+      if (skipBelowDepth !== null && agent.depth > skipBelowDepth) {
+        continue;
+      }
+      skipBelowDepth = null;
+      result.push(agent);
+      if (collapsedAgents.has(agent.name)) {
+        skipBelowDepth = agent.depth;
+      }
+    }
+    return result;
+  };
+
+  const toggleCollapse = (agentName: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setExpandedAgents((prev) => {
+      const next = new Set(prev);
+      if (next.has(agentName)) {
+        next.delete(agentName);
+      } else {
+        next.add(agentName);
+      }
+      localStorage.setItem("sidebar-collapsed-agents", JSON.stringify([...next]));
+      return next;
+    });
   };
 
   const getUnreadLogBadge = (agent: Agent) => {
@@ -228,7 +272,7 @@ export const AgentSidebar: React.FC = () => {
           : agent.status === "disabled" || agent.status === "offline"
             ? 0.5
             : 1,
-        marginLeft: agent.depth ? `${agent.depth * 1.5}rem` : undefined,
+        marginLeft: agent.depth ? `${agent.depth * 0.75}rem` : undefined,
         textDecoration: "none",
         color: "inherit",
         display: "block",
@@ -273,9 +317,26 @@ export const AgentSidebar: React.FC = () => {
             </Badge>
           )}
         </Group>
-        <Text size="xs" c="dimmed" truncate="end">
-          {agent.title}
-        </Text>
+        <Group gap="xs" align="center" wrap="nowrap" style={{ paddingLeft: agent.hasChildren ? 0 : "calc(1rem + 0.625rem)" }}>
+          {agent.hasChildren ? (
+            collapsedAgents.has(agent.name) ? (
+              <IconChevronRight
+                size="1rem"
+                style={{ flexShrink: 0, cursor: "pointer" }}
+                onClick={(e) => toggleCollapse(agent.name, e)}
+              />
+            ) : (
+              <IconChevronDown
+                size="1rem"
+                style={{ flexShrink: 0, cursor: "pointer" }}
+                onClick={(e) => toggleCollapse(agent.name, e)}
+              />
+            )
+          ) : null}
+          <Text size="xs" c="dimmed" truncate="end">
+            {agent.title}
+          </Text>
+        </Group>
       </Stack>
     </Card>
   );
@@ -283,7 +344,9 @@ export const AgentSidebar: React.FC = () => {
   return (
     <>
       <Stack gap="xs">
-        {orderedActiveAgents.map((agent) => renderAgentCard(agent))}
+        {filterCollapsedAgents(orderedActiveAgents).map((agent) =>
+          renderAgentCard(agent),
+        )}
         {hasAction(actions, "create") && (
           <Button
             variant="subtle"
@@ -311,7 +374,7 @@ export const AgentSidebar: React.FC = () => {
             </Button>
             <Collapse in={showArchived}>
               <Stack gap="xs">
-                {orderedArchivedAgents.map((agent) =>
+                {filterCollapsedAgents(orderedArchivedAgents).map((agent) =>
                   renderAgentCard(agent, true),
                 )}
               </Stack>

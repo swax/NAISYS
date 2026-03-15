@@ -88,7 +88,9 @@ export const MailThread: React.FC<MailThreadProps> = ({
           const showDateDivider = msgDate !== lastDate;
           lastDate = msgDate;
 
-          const recipientNames = msg.recipients.map((r) => r.username);
+          const recipientNames = msg.recipients.map(
+            (r) => `${r.username} (${r.title})`,
+          );
 
           // In newest-first order, show divider after the newest unread message
           // i.e. between msg.id > lastReadMailId and msg.id <= lastReadMailId
@@ -128,7 +130,7 @@ export const MailThread: React.FC<MailThreadProps> = ({
                         c={isOwn ? "blue" : undefined}
                         size="xs"
                       >
-                        {msg.fromUsername}
+                        {msg.fromUsername} ({msg.fromTitle})
                       </Text>
                       {" → "}
                       {recipientNames.join(", ")}

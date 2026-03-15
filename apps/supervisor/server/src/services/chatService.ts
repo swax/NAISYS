@@ -32,9 +32,22 @@ export async function getConversations(
       participants: true,
       body: true,
       created_at: true,
-      from_user: { select: { username: true } },
+      from_user: { select: { username: true, title: true } },
     },
   });
+
+  // Look up titles for all participant usernames
+  const allUsernames = new Set<string>();
+  for (const msg of messages) {
+    for (const name of msg.participants.split(",")) {
+      allUsernames.add(name);
+    }
+  }
+  const users = await hubDb.users.findMany({
+    where: { username: { in: [...allUsernames] } },
+    select: { username: true, title: true },
+  });
+  const titleMap = new Map(users.map((u) => [u.username, u.title]));
 
   // Group by participants and take the latest message for each
   const conversationMap = new Map<
@@ -70,6 +83,9 @@ export async function getConversations(
     conversations.push({
       participants,
       participantNames,
+      participantTitles: participantNames.map(
+        (n) => titleMap.get(n) ?? "",
+      ),
       lastMessage: conv.lastMessage,
       lastMessageAt: conv.lastMessageAt.toISOString(),
       lastMessageFrom: conv.lastMessageFrom,
@@ -122,7 +138,7 @@ export async function getMessages(
       from_user_id: true,
       body: true,
       created_at: true,
-      from_user: { select: { username: true } },
+      from_user: { select: { username: true, title: true } },
       recipients: {
         select: { user_id: true, read_at: true },
       },
@@ -145,6 +161,7 @@ export async function getMessages(
       id: msg.id,
       fromUserId: msg.from_user_id,
       fromUsername: msg.from_user.username,
+      fromTitle: msg.from_user.title,
       body: msg.body,
       createdAt: msg.created_at.toISOString(),
       attachments:
