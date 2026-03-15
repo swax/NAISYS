@@ -2,9 +2,10 @@ import { HostList, HubEvents } from "@naisys/hub-protocol";
 
 import { HostRegistrar } from "../services/hostRegistrar.js";
 import { HubServerLog } from "../services/hubServerLog.js";
+import { NaisysConnection } from "../services/naisysConnection.js";
 import { NaisysServer } from "../services/naisysServer.js";
 
-/** Pushes the host list to all NAISYS instances when connected hosts change */
+/** Pushes the host list to all connections when connected hosts change */
 export function createHubHostService(
   naisysServer: NaisysServer,
   hostRegistrar: HostRegistrar,
@@ -12,7 +13,7 @@ export function createHubHostService(
 ) {
   let cachedHostListJson = "";
 
-  function broadcastHostList(excludeHostId?: number) {
+  function broadcastHostList(newConnection?: NaisysConnection) {
     const connectedHostIds = new Set(
       naisysServer.getConnectedClients().map((c) => c.getHostId()),
     );
@@ -25,12 +26,13 @@ export function createHubHostService(
     const payload: HostList = { hosts };
     const json = JSON.stringify(payload);
 
-    // Send to the excluded host (newly connecting) directly
-    if (excludeHostId !== undefined) {
-      naisysServer.sendMessage(excludeHostId, HubEvents.HOSTS_UPDATED, payload);
+    // Send to the newly connecting client directly
+    if (newConnection) {
+      newConnection.sendMessage(HubEvents.HOSTS_UPDATED, payload);
     }
 
-    // Broadcast to other existing connections only if the list changed
+    // Broadcast to all connections only if the list changed
+    // (new connection may get a harmless duplicate — HOSTS_UPDATED is idempotent)
     if (json !== cachedHostListJson) {
       cachedHostListJson = json;
 
@@ -38,21 +40,16 @@ export function createHubHostService(
         `[Hub:Hosts] Broadcasting host list (${hosts.length} hosts)`,
       );
 
-      for (const connection of naisysServer.getConnectedClients()) {
-        if (connection.getHostId() !== excludeHostId) {
-          naisysServer.sendMessage(
-            connection.getHostId(),
-            HubEvents.HOSTS_UPDATED,
-            payload,
-          );
-        }
-      }
+      naisysServer.broadcastToAll(HubEvents.HOSTS_UPDATED, payload);
     }
   }
 
-  naisysServer.registerEvent(HubEvents.CLIENT_CONNECTED, (hostId) => {
-    broadcastHostList(hostId);
-  });
+  naisysServer.registerEvent(
+    HubEvents.CLIENT_CONNECTED,
+    (_hostId, connection) => {
+      broadcastHostList(connection);
+    },
+  );
 
   naisysServer.registerEvent(HubEvents.HOSTS_CHANGED, async () => {
     logService.log("[Hub:Hosts] Received HOSTS_CHANGED, refreshing cache...");

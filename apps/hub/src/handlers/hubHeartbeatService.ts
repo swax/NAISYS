@@ -87,13 +87,7 @@ export function createHubHeartbeatService(
     if (json === lastPushedJson) return;
     lastPushedJson = json;
 
-    for (const connection of naisysServer.getConnectedClients()) {
-      naisysServer.sendMessage(
-        connection.getHostId(),
-        HubEvents.AGENTS_STATUS,
-        payload,
-      );
-    }
+    naisysServer.broadcastToAll(HubEvents.AGENTS_STATUS, payload);
   }
 
   /** Throttled push for agent start/stop changes — at most once per 500ms */

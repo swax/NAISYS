@@ -70,12 +70,14 @@ export function createHubMailService(
   }
 
   // When a NAISYS host connects, check for pending unread mail and auto-start agents
-  naisysServer.registerEvent(HubEvents.CLIENT_CONNECTED, (hostId) => {
-    const conn = naisysServer.getConnectionByHostId(hostId);
-    if (conn?.getHostType() === "naisys") {
-      void checkPendingAutoStarts();
-    }
-  });
+  naisysServer.registerEvent(
+    HubEvents.CLIENT_CONNECTED,
+    (_hostId, connection) => {
+      if (connection.getHostType() === "naisys") {
+        void checkPendingAutoStarts();
+      }
+    },
+  );
 
   const pendingAutoStartInterval = setInterval(
     () => void checkPendingAutoStarts(),
@@ -303,14 +305,7 @@ export function createHubMailService(
             participants,
           };
 
-          for (const connection of naisysServer.getConnectedClients()) {
-            if (connection.getHostType() !== "supervisor") continue;
-            naisysServer.sendMessage(
-              connection.getHostId(),
-              HubEvents.MAIL_READ_PUSH,
-              payload,
-            );
-          }
+          naisysServer.broadcastToSupervisors(HubEvents.MAIL_READ_PUSH, payload);
         }
       } catch (error) {
         logService.error(

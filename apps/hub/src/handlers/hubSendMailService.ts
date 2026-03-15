@@ -143,7 +143,7 @@ export function createHubSendMailService(
     }
 
     // Push full message data to supervisor connections
-    const mailPush: MailPush = {
+    naisysServer.broadcastToSupervisors(HubEvents.MAIL_PUSH, {
       recipientUserIds: params.recipientUserIds,
       fromUserId: params.fromUserId,
       kind: params.kind,
@@ -153,15 +153,7 @@ export function createHubSendMailService(
       createdAt: now.toISOString(),
       participants,
       attachments,
-    };
-    for (const connection of naisysServer.getConnectedClients()) {
-      if (connection.getHostType() !== "supervisor") continue;
-      naisysServer.sendMessage(
-        connection.getHostId(),
-        HubEvents.MAIL_PUSH,
-        mailPush,
-      );
-    }
+    });
   }
 
   return { sendMail };

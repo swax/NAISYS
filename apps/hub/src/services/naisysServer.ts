@@ -44,8 +44,10 @@ export function createNaisysServer(
   hostRegistrar: HostRegistrar,
 ) {
   let hubAccessKey = initialHubAccessKey;
-  // Track connected NAISYS instances
+  // Track connected NAISYS instances (keyed by hostId)
   const naisysConnections = new Map<number, NaisysConnection>();
+  // Track connected supervisor instances (multiple allowed, all share one hostId)
+  const supervisorConnections: NaisysConnection[] = [];
 
   // Generic event handlers registry - maps event name to set of registered handlers
   const eventHandlers = new Map<string, Set<RegisteredHandler>>();
@@ -189,8 +191,8 @@ export function createNaisysServer(
         socket.handshake.address,
       );
 
-      // Reject if this host already has an active connection
-      if (naisysConnections.has(hostId)) {
+      // Reject duplicate naisys connections (supervisors may have multiple)
+      if (hostType === "naisys" && naisysConnections.has(hostId)) {
         logService.log(
           `[Hub] Connection rejected: host '${hostName}' is already connected`,
         );
@@ -213,31 +215,45 @@ export function createNaisysServer(
 
   // Handle new connections
   nsp.on("connection", (socket) => {
-    const { hostId, hostName } = socket.data;
+    const { hostId, hostName, hostType } = socket.data;
 
     // Create connection handler for this socket, passing our emit function
-    const naisysConnection = createNaisysConnection(
+    const connection = createNaisysConnection(
       socket,
       {
         hostId,
         hostName,
         connectedAt: new Date(),
-        hostType: socket.data.hostType,
+        hostType,
       },
       raiseEvent,
       logService,
     );
 
-    naisysConnections.set(hostId, naisysConnection);
-    raiseEvent("client_connected", hostId, naisysConnection);
+    if (hostType === "supervisor") {
+      supervisorConnections.push(connection);
+    } else {
+      naisysConnections.set(hostId, connection);
+    }
 
-    logService.log(`[Hub] Active connections: ${naisysConnections.size}`);
+    raiseEvent("client_connected", hostId, connection);
+
+    logService.log(
+      `[Hub] Active connections: naisys=${naisysConnections.size}, supervisors=${supervisorConnections.length}`,
+    );
 
     // Clean up on disconnect
     socket.on("disconnect", () => {
-      naisysConnections.delete(hostId);
+      if (hostType === "supervisor") {
+        const idx = supervisorConnections.indexOf(connection);
+        if (idx !== -1) supervisorConnections.splice(idx, 1);
+      } else {
+        naisysConnections.delete(hostId);
+      }
       raiseEvent("client_disconnected", hostId);
-      logService.log(`[Hub] Active connections: ${naisysConnections.size}`);
+      logService.log(
+        `[Hub] Active connections: naisys=${naisysConnections.size}, supervisors=${supervisorConnections.length}`,
+      );
     });
   });
 
@@ -251,6 +267,32 @@ export function createNaisysServer(
     for (const connection of naisysConnections.values()) {
       connection.disconnect();
     }
+    for (const connection of supervisorConnections) {
+      connection.disconnect();
+    }
+  }
+
+  /** Broadcast an event to all supervisor connections */
+  function broadcastToSupervisors<E extends HubSupervisorPushEventName>(
+    event: E,
+    payload: HubSupervisorPushEvents[E],
+  ) {
+    for (const conn of supervisorConnections) {
+      conn.sendMessage(event, payload);
+    }
+  }
+
+  /** Broadcast an event to all connections (naisys + supervisors) */
+  function broadcastToAll<E extends HubPushEventName>(
+    event: E,
+    payload: HubPushEvents[E],
+  ) {
+    for (const conn of naisysConnections.values()) {
+      conn.sendMessage(event, payload);
+    }
+    for (const conn of supervisorConnections) {
+      conn.sendMessage(event, payload);
+    }
   }
 
   // Return control interface
@@ -258,9 +300,12 @@ export function createNaisysServer(
     registerEvent,
     unregisterEvent,
     sendMessage,
+    broadcastToSupervisors,
+    broadcastToAll,
     getConnectedClients: () => Array.from(naisysConnections.values()),
     getConnectionByHostId: (hostId: number) => naisysConnections.get(hostId),
     getConnectionCount: () => naisysConnections.size,
+    getSupervisorConnectionCount: () => supervisorConnections.length,
     updateHubAccessKey,
     disconnectAllClients,
   };

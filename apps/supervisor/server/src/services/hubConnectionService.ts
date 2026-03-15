@@ -23,6 +23,7 @@ import {
 } from "@naisys/hub-protocol";
 import { io, Socket } from "socket.io-client";
 
+import { getLogger } from "../logger.js";
 import {
   emitAgentsListChanged,
   emitHubConnectionStatus,
@@ -43,13 +44,13 @@ export function initHubConnection(hubUrl: string) {
   resolvedHubUrl = hubUrl;
 
   if (!hubAccessKey) {
-    console.warn(
+    getLogger().warn(
       "[Supervisor:HubClient] HUB_ACCESS_KEY not set, skipping hub connection",
     );
     return;
   }
 
-  console.log(`[Supervisor:HubClient] Connecting to ${hubUrl}...`);
+  getLogger().info(`[Supervisor:HubClient] Connecting to ${hubUrl}...`);
 
   // Verify the hub's TLS certificate fingerprint matches the access key
   const { fingerprintPrefix } = parseHubAccessKey(hubAccessKey);
@@ -57,7 +58,7 @@ export function initHubConnection(hubUrl: string) {
   verifyHubCertificate(url.hostname, Number(url.port) || 443, fingerprintPrefix)
     .then(() => connectSocket(hubUrl))
     .catch((err) => {
-      console.error(
+      getLogger().error(
         `[Supervisor:HubClient] Certificate verification failed: ${err.message}`,
       );
     });
@@ -81,14 +82,14 @@ function connectSocket(hubUrl: string) {
 
   socket.on("connect", () => {
     connected = true;
-    console.log(`[Supervisor:HubClient] Connected to ${hubUrl}`);
+    getLogger().info(`[Supervisor:HubClient] Connected to ${hubUrl}`);
     void refreshUserLookup();
     emitHubConnectionStatus(true);
   });
 
   socket.on("disconnect", (reason) => {
     connected = false;
-    console.log(`[Supervisor:HubClient] Disconnected: ${reason}`);
+    getLogger().info(`[Supervisor:HubClient] Disconnected: ${reason}`);
     emitHubConnectionStatus(false);
 
     // Server-initiated disconnects don't auto-reconnect in Socket.IO
@@ -98,14 +99,14 @@ function connectSocket(hubUrl: string) {
   });
 
   socket.on("connect_error", (error) => {
-    console.warn(`[Supervisor:HubClient] Connection error: ${error.message}`);
+    getLogger().warn(`[Supervisor:HubClient] Connection error: ${error.message}`);
   });
 
   socket.on(HubEvents.AGENTS_STATUS, (data) => {
     const parsed = AgentsStatusSchema.safeParse(data);
     if (!parsed.success) {
-      console.warn(
-        "[Supervisor:HubClient] Invalid agents status:",
+      getLogger().warn(
+        "[Supervisor:HubClient] Invalid agents status: %o",
         parsed.error,
       );
       return;
@@ -120,7 +121,7 @@ function connectSocket(hubUrl: string) {
   socket.on(HubEvents.HOSTS_UPDATED, (data) => {
     const parsed = HostListSchema.safeParse(data);
     if (!parsed.success) {
-      console.warn("[Supervisor:HubClient] Invalid host list:", parsed.error);
+      getLogger().warn("[Supervisor:HubClient] Invalid host list: %o", parsed.error);
       return;
     }
 
@@ -130,7 +131,7 @@ function connectSocket(hubUrl: string) {
   socket.on(HubEvents.LOG_PUSH, (data) => {
     const parsed = LogPushSchema.safeParse(data);
     if (!parsed.success) {
-      console.warn("[Supervisor:HubClient] Invalid log push:", parsed.error);
+      getLogger().warn("[Supervisor:HubClient] Invalid log push: %o", parsed.error);
       return;
     }
 
@@ -161,7 +162,7 @@ function connectSocket(hubUrl: string) {
   socket.on(HubEvents.COST_PUSH, (data) => {
     const parsed = CostPushSchema.safeParse(data);
     if (!parsed.success) {
-      console.warn("[Supervisor:HubClient] Invalid cost push:", parsed.error);
+      getLogger().warn("[Supervisor:HubClient] Invalid cost push: %o", parsed.error);
       return;
     }
 
@@ -177,8 +178,8 @@ function connectSocket(hubUrl: string) {
   socket.on(HubEvents.SESSION_PUSH, (data) => {
     const parsed = SessionPushSchema.safeParse(data);
     if (!parsed.success) {
-      console.warn(
-        "[Supervisor:HubClient] Invalid session push:",
+      getLogger().warn(
+        "[Supervisor:HubClient] Invalid session push: %o",
         parsed.error,
       );
       return;
@@ -196,7 +197,7 @@ function connectSocket(hubUrl: string) {
   socket.on(HubEvents.MAIL_PUSH, (data) => {
     const parsed = MailPushSchema.safeParse(data);
     if (!parsed.success) {
-      console.warn("[Supervisor:HubClient] Invalid mail push:", parsed.error);
+      getLogger().warn("[Supervisor:HubClient] Invalid mail push: %o", parsed.error);
       return;
     }
 
@@ -230,8 +231,8 @@ function connectSocket(hubUrl: string) {
   socket.on(HubEvents.MAIL_READ_PUSH, (data) => {
     const parsed = MailReadPushSchema.safeParse(data);
     if (!parsed.success) {
-      console.warn(
-        "[Supervisor:HubClient] Invalid mail read push:",
+      getLogger().warn(
+        "[Supervisor:HubClient] Invalid mail read push: %o",
         parsed.error,
       );
       return;
@@ -334,7 +335,7 @@ export function sendMailViaHub(
 
 export function sendUserListChanged(): void {
   if (!socket || !connected) {
-    console.warn(
+    getLogger().warn(
       "[Supervisor:HubClient] Not connected to hub, cannot send user list changed",
     );
     return;
@@ -345,7 +346,7 @@ export function sendUserListChanged(): void {
 
 export function sendModelsChanged(): void {
   if (!socket || !connected) {
-    console.warn(
+    getLogger().warn(
       "[Supervisor:HubClient] Not connected to hub, cannot send models changed",
     );
     return;
@@ -356,7 +357,7 @@ export function sendModelsChanged(): void {
 
 export function sendVariablesChanged(): void {
   if (!socket || !connected) {
-    console.warn(
+    getLogger().warn(
       "[Supervisor:HubClient] Not connected to hub, cannot send variables changed",
     );
     return;
@@ -367,7 +368,7 @@ export function sendVariablesChanged(): void {
 
 export function sendHostsChanged(): void {
   if (!socket || !connected) {
-    console.warn(
+    getLogger().warn(
       "[Supervisor:HubClient] Not connected to hub, cannot send hosts changed",
     );
     return;

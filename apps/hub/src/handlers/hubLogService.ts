@@ -112,18 +112,10 @@ export function createHubLogService(
       }
 
       // Push full log data to supervisor connections
-      const pushPayload = {
+      naisysServer.broadcastToSupervisors(HubEvents.LOG_PUSH, {
         entries: pushEntries,
         sessionUpdates: Array.from(sessionUpdates.values()),
-      };
-      for (const connection of naisysServer.getConnectedClients()) {
-        if (connection.getHostType() !== "supervisor") continue;
-        naisysServer.sendMessage(
-          connection.getHostId(),
-          HubEvents.LOG_PUSH,
-          pushPayload,
-        );
-      }
+      });
 
       // Trigger throttled push after all entries processed
       heartbeatService.throttledPushAgentsStatus();

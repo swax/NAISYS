@@ -45,44 +45,40 @@ export function createHubUserService(
   async function broadcastUserList() {
     try {
       const payload = await buildUserListPayload();
-      const clients = naisysServer.getConnectedClients();
 
       logService.log(
-        `[Hub:Users] Broadcasting ${payload.users?.length ?? 0} users to ${clients.length} clients`,
+        `[Hub:Users] Broadcasting ${payload.users?.length ?? 0} users to all clients`,
       );
 
-      for (const connection of clients) {
-        naisysServer.sendMessage(
-          connection.getHostId(),
-          HubEvents.USERS_UPDATED,
-          payload,
-        );
-      }
+      naisysServer.broadcastToAll(HubEvents.USERS_UPDATED, payload);
     } catch (error) {
       logService.error(`[Hub:Users] Error broadcasting user list: ${error}`);
     }
   }
 
   // Push user list to newly connected clients
-  naisysServer.registerEvent(HubEvents.CLIENT_CONNECTED, async (hostId) => {
-    try {
-      const payload = await buildUserListPayload();
+  naisysServer.registerEvent(
+    HubEvents.CLIENT_CONNECTED,
+    async (hostId, connection) => {
+      try {
+        const payload = await buildUserListPayload();
 
-      logService.log(
-        `[Hub:Users] Pushing ${payload.users?.length ?? 0} users to naisys instance ${hostId}`,
-      );
+        logService.log(
+          `[Hub:Users] Pushing ${payload.users?.length ?? 0} users to instance ${hostId}`,
+        );
 
-      naisysServer.sendMessage(hostId, HubEvents.USERS_UPDATED, payload);
-    } catch (error) {
-      logService.error(
-        `[Hub:Users] Error querying users for naisys instance ${hostId}: ${error}`,
-      );
-      naisysServer.sendMessage(hostId, HubEvents.USERS_UPDATED, {
-        success: false,
-        error: String(error),
-      });
-    }
-  });
+        connection.sendMessage(HubEvents.USERS_UPDATED, payload);
+      } catch (error) {
+        logService.error(
+          `[Hub:Users] Error querying users for instance ${hostId}: ${error}`,
+        );
+        connection.sendMessage(HubEvents.USERS_UPDATED, {
+          success: false,
+          error: String(error),
+        });
+      }
+    },
+  );
 
   // Broadcast user list to all clients when users are created/edited
   naisysServer.registerEvent(HubEvents.USERS_CHANGED, async () => {
