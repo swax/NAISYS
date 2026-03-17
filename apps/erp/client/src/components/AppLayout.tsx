@@ -291,9 +291,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ supervisorAuth }) => {
               body: { flex: "initial" as const },
             }}
           >
-            <Text size="xs">
-              Public read-only mode — login for full access
-            </Text>
+            <Text size="xs">Public read-only mode — login for full access</Text>
           </Alert>
         )}
         <Outlet context={{ supervisorAuth }} />

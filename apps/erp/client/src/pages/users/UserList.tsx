@@ -18,7 +18,12 @@ import { useDisclosure } from "@mantine/hooks";
 import type { UserListResponse } from "@naisys-erp/shared";
 import { IconAlertTriangle } from "@tabler/icons-react";
 import { useCallback, useEffect, useState } from "react";
-import { Link, useNavigate, useOutletContext, useSearchParams } from "react-router";
+import {
+  Link,
+  useNavigate,
+  useOutletContext,
+  useSearchParams,
+} from "react-router";
 
 import type { AppOutletContext } from "../../components/AppLayout";
 import { api, apiEndpoints, showErrorNotification } from "../../lib/api";

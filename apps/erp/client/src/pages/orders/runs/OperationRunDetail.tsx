@@ -25,8 +25,8 @@ import { hasAction } from "../../../lib/hateoas";
 import { DependencyList } from "../revs/DependencyList";
 import type { LaborActions } from "./LaborTicketList";
 import { LaborTicketList } from "./LaborTicketList";
-import type { OrderRunOutletContext } from "./OrderRunDetail";
 import classes from "./OperationRunDetail.module.css";
+import type { OrderRunOutletContext } from "./OrderRunDetail";
 import { StepRunList } from "./StepRunList";
 
 const STATUS_COLORS: Record<string, string> = {
@@ -52,7 +52,10 @@ export const OperationRunDetail: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string | null>("description");
   const [feedbackDraft, setFeedbackDraft] = useState("");
   const feedbackRef = useRef("");
-  const [laborActions, setLaborActions] = useState<LaborActions>({ canClockIn: false, canClockOut: false });
+  const [laborActions, setLaborActions] = useState<LaborActions>({
+    canClockIn: false,
+    canClockOut: false,
+  });
   const [laborActing, setLaborActing] = useState(false);
 
   const fetchOpRun = useCallback(async () => {
@@ -126,7 +129,10 @@ export const OperationRunDetail: React.FC = () => {
     if (!orderKey || !runNo || !seqNo) return;
     setLaborActing(true);
     try {
-      await api.post(apiEndpoints.laborTicketClockIn(orderKey, runNo, seqNo), {});
+      await api.post(
+        apiEndpoints.laborTicketClockIn(orderKey, runNo, seqNo),
+        {},
+      );
       setRefreshKey((k) => k + 1);
     } catch (err) {
       showErrorNotification(err);
@@ -139,7 +145,10 @@ export const OperationRunDetail: React.FC = () => {
     if (!orderKey || !runNo || !seqNo) return;
     setLaborActing(true);
     try {
-      await api.post(apiEndpoints.laborTicketClockOut(orderKey, runNo, seqNo), {});
+      await api.post(
+        apiEndpoints.laborTicketClockOut(orderKey, runNo, seqNo),
+        {},
+      );
       setRefreshKey((k) => k + 1);
     } catch (err) {
       showErrorNotification(err);
@@ -305,7 +314,12 @@ export const OperationRunDetail: React.FC = () => {
           </Tabs.List>
 
           <div className={classes.panelGrid}>
-            <Tabs.Panel value="description" pt="sm" keepMounted data-active={activeTab === "description" || undefined}>
+            <Tabs.Panel
+              value="description"
+              pt="sm"
+              keepMounted
+              data-active={activeTab === "description" || undefined}
+            >
               <Card withBorder p="lg">
                 <Stack gap="sm">
                   {opRun.description && (
@@ -315,7 +329,12 @@ export const OperationRunDetail: React.FC = () => {
               </Card>
             </Tabs.Panel>
 
-            <Tabs.Panel value="dependencies" pt="sm" keepMounted data-active={activeTab === "dependencies" || undefined}>
+            <Tabs.Panel
+              value="dependencies"
+              pt="sm"
+              keepMounted
+              data-active={activeTab === "dependencies" || undefined}
+            >
               <DependencyList
                 orderKey={orderKey!}
                 revNo={String(orderRun.revNo)}
@@ -324,7 +343,12 @@ export const OperationRunDetail: React.FC = () => {
               />
             </Tabs.Panel>
 
-            <Tabs.Panel value="labor" pt="sm" keepMounted data-active={activeTab === "labor" || undefined}>
+            <Tabs.Panel
+              value="labor"
+              pt="sm"
+              keepMounted
+              data-active={activeTab === "labor" || undefined}
+            >
               <LaborTicketList
                 orderKey={orderKey!}
                 runNo={runNo!}
@@ -335,7 +359,12 @@ export const OperationRunDetail: React.FC = () => {
               />
             </Tabs.Panel>
 
-            <Tabs.Panel value="feedback" pt="sm" keepMounted data-active={activeTab === "feedback" || undefined}>
+            <Tabs.Panel
+              value="feedback"
+              pt="sm"
+              keepMounted
+              data-active={activeTab === "feedback" || undefined}
+            >
               {opRun.status === OperationRunStatus.in_progress ? (
                 <Stack gap="xs">
                   <Textarea
@@ -348,7 +377,9 @@ export const OperationRunDetail: React.FC = () => {
                   <Group gap="xs">
                     <Button
                       size="xs"
-                      disabled={feedbackDraft.trim() === (feedbackRef.current ?? "")}
+                      disabled={
+                        feedbackDraft.trim() === (feedbackRef.current ?? "")
+                      }
                       onClick={() => void saveFeedback()}
                     >
                       Save

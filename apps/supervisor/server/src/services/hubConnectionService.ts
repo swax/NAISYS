@@ -99,7 +99,9 @@ function connectSocket(hubUrl: string) {
   });
 
   socket.on("connect_error", (error) => {
-    getLogger().warn(`[Supervisor:HubClient] Connection error: ${error.message}`);
+    getLogger().warn(
+      `[Supervisor:HubClient] Connection error: ${error.message}`,
+    );
   });
 
   socket.on(HubEvents.AGENTS_STATUS, (data) => {
@@ -121,7 +123,10 @@ function connectSocket(hubUrl: string) {
   socket.on(HubEvents.HOSTS_UPDATED, (data) => {
     const parsed = HostListSchema.safeParse(data);
     if (!parsed.success) {
-      getLogger().warn("[Supervisor:HubClient] Invalid host list: %o", parsed.error);
+      getLogger().warn(
+        "[Supervisor:HubClient] Invalid host list: %o",
+        parsed.error,
+      );
       return;
     }
 
@@ -131,7 +136,10 @@ function connectSocket(hubUrl: string) {
   socket.on(HubEvents.LOG_PUSH, (data) => {
     const parsed = LogPushSchema.safeParse(data);
     if (!parsed.success) {
-      getLogger().warn("[Supervisor:HubClient] Invalid log push: %o", parsed.error);
+      getLogger().warn(
+        "[Supervisor:HubClient] Invalid log push: %o",
+        parsed.error,
+      );
       return;
     }
 
@@ -162,7 +170,10 @@ function connectSocket(hubUrl: string) {
   socket.on(HubEvents.COST_PUSH, (data) => {
     const parsed = CostPushSchema.safeParse(data);
     if (!parsed.success) {
-      getLogger().warn("[Supervisor:HubClient] Invalid cost push: %o", parsed.error);
+      getLogger().warn(
+        "[Supervisor:HubClient] Invalid cost push: %o",
+        parsed.error,
+      );
       return;
     }
 
@@ -197,7 +208,10 @@ function connectSocket(hubUrl: string) {
   socket.on(HubEvents.MAIL_PUSH, (data) => {
     const parsed = MailPushSchema.safeParse(data);
     if (!parsed.success) {
-      getLogger().warn("[Supervisor:HubClient] Invalid mail push: %o", parsed.error);
+      getLogger().warn(
+        "[Supervisor:HubClient] Invalid mail push: %o",
+        parsed.error,
+      );
       return;
     }
 

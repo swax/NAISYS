@@ -52,8 +52,7 @@ function formatDependency(
     createdAt: dep.createdAt.toISOString(),
     createdBy: dep.createdBy.username,
     _actions:
-      hasPermission(user, "order_planner") &&
-      revStatus === RevisionStatus.draft
+      hasPermission(user, "order_planner") && revStatus === RevisionStatus.draft
         ? [
             {
               rel: "delete" as const,

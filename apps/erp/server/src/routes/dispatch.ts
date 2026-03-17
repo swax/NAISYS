@@ -22,8 +22,7 @@ export default function dispatchRoutes(fastify: FastifyInstance) {
 
   app.get("/", {
     schema: {
-      description:
-        "List operation runs across open orders (dispatch view)",
+      description: "List operation runs across open orders (dispatch view)",
       tags: ["Dispatch"],
       querystring: DispatchListQuerySchema,
       response: {

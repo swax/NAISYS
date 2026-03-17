@@ -286,8 +286,7 @@ export const CostsPage: React.FC = () => {
                     const items = payload
                       .filter((p) => Number(p.value ?? 0) > 0)
                       .sort(
-                        (a, b) =>
-                          Number(b.value ?? 0) - Number(a.value ?? 0),
+                        (a, b) => Number(b.value ?? 0) - Number(a.value ?? 0),
                       );
                     if (!items.length) return null;
                     const total = items.reduce(

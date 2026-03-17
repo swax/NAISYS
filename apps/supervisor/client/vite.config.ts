@@ -14,7 +14,13 @@ export default defineConfig({
     },
   },
   resolve: {
-    dedupe: ["react", "react-dom", "@mantine/core", "@mantine/hooks", "@mantine/store"],
+    dedupe: [
+      "react",
+      "react-dom",
+      "@mantine/core",
+      "@mantine/hooks",
+      "@mantine/store",
+    ],
   },
   build: {
     outDir: "dist",

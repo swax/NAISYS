@@ -15,7 +15,6 @@ import type { ErpUser } from "../auth-middleware.js";
 import { hasPermission, requirePermission } from "../auth-middleware.js";
 import { conflict, notFound } from "../error-handler.js";
 import type { OperationModel } from "../generated/prisma/models/Operation.js";
-import type { OperationWithSummary } from "../services/operation-service.js";
 import { API_PREFIX, selfLink } from "../hateoas.js";
 import {
   calcNextSeqNo,
@@ -55,7 +54,10 @@ function formatOperation(
   revStatus: string,
   user: ErpUser | undefined,
   operation: OperationModel & WithAuditUsers,
-  summary?: { stepCount: number; predecessors: Array<{ seqNo: number; title: string }> },
+  summary?: {
+    stepCount: number;
+    predecessors: Array<{ seqNo: number; title: string }>;
+  },
 ) {
   const base = opBasePath(orderKey, revNo);
   return {
@@ -64,10 +66,12 @@ function formatOperation(
     seqNo: operation.seqNo,
     title: operation.title,
     description: operation.description,
-    ...(summary ? {
-      stepCount: summary.stepCount,
-      predecessors: summary.predecessors,
-    } : {}),
+    ...(summary
+      ? {
+          stepCount: summary.stepCount,
+          predecessors: summary.predecessors,
+        }
+      : {}),
     ...formatAuditFields(operation),
     _links: [
       ...childItemLinks(

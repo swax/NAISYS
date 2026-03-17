@@ -83,9 +83,7 @@ export async function getConversations(
     conversations.push({
       participants,
       participantNames,
-      participantTitles: participantNames.map(
-        (n) => titleMap.get(n) ?? "",
-      ),
+      participantTitles: participantNames.map((n) => titleMap.get(n) ?? ""),
       lastMessage: conv.lastMessage,
       lastMessageAt: conv.lastMessageAt.toISOString(),
       lastMessageFrom: conv.lastMessageFrom,

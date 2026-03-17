@@ -104,7 +104,11 @@ export default function operationRunTransitionRoutes(fastify: FastifyInstance) {
       if (statusErr) return conflict(reply, statusErr);
 
       const clockedIn = await isUserClockedIn(resolved.opRun.id, userId);
-      if (!clockedIn) return conflict(reply, `You must be clocked in to complete an operation`);
+      if (!clockedIn)
+        return conflict(
+          reply,
+          `You must be clocked in to complete an operation`,
+        );
 
       const stepsErr = await checkStepsComplete(resolved.opRun.id);
       if (stepsErr) return unprocessable(reply, stepsErr);
