@@ -54,6 +54,7 @@ export const StepFieldList: React.FC<StepFieldListProps> = ({
       seqNo: 10,
       label: "",
       type: StepFieldType.string,
+      multiValue: false,
       required: false,
     },
     validate: zodResolver(UpdateStepFieldSchema),
@@ -64,6 +65,7 @@ export const StepFieldList: React.FC<StepFieldListProps> = ({
       seqNo: 10,
       label: "",
       type: StepFieldType.string,
+      multiValue: false,
       required: false,
     },
     validate: zodResolver(CreateStepFieldSchema),
@@ -74,6 +76,7 @@ export const StepFieldList: React.FC<StepFieldListProps> = ({
       seqNo: field.seqNo,
       label: field.label,
       type: field.type,
+      multiValue: field.multiValue,
       required: field.required,
     });
     setEditingFieldId(field.id);
@@ -136,6 +139,7 @@ export const StepFieldList: React.FC<StepFieldListProps> = ({
       seqNo: fields.nextSeqNo,
       label: "",
       type: StepFieldType.string,
+      multiValue: false,
       required: false,
     });
     setAddingField(true);
@@ -182,12 +186,13 @@ export const StepFieldList: React.FC<StepFieldListProps> = ({
         label="Type"
         data={StepFieldTypeEnum.options.map((v) => ({
           value: v,
-          label:
-            v === StepFieldType.StringArray
-              ? "String Array"
-              : v.charAt(0).toUpperCase() + v.slice(1),
+          label: v.charAt(0).toUpperCase() + v.slice(1),
         }))}
         {...form.getInputProps("type")}
+      />
+      <Checkbox
+        label="Accept multiple values"
+        {...form.getInputProps("multiValue", { type: "checkbox" })}
       />
       <Checkbox
         label="Required"
@@ -239,6 +244,11 @@ export const StepFieldList: React.FC<StepFieldListProps> = ({
                 <Badge size="xs" variant="light">
                   {field.type}
                 </Badge>
+                {field.multiValue && (
+                  <Badge size="xs" variant="light" color="blue">
+                    multiple
+                  </Badge>
+                )}
                 {field.required && (
                   <Badge size="xs" variant="light" color="red">
                     required

@@ -106,6 +106,7 @@ export function formatField(
     seqNo: field.seqNo,
     label: field.label,
     type: field.type,
+    multiValue: field.multiValue,
     required: field.required,
     ...formatAuditFields(field),
     _links: childItemLinks(
@@ -206,7 +207,7 @@ export default function stepFieldRoutes(fastify: FastifyInstance) {
     preHandler: requirePermission("order_planner"),
     handler: async (request, reply) => {
       const { orderKey, revNo, seqNo, stepSeqNo } = request.params;
-      const { seqNo: requestedSeqNo, label, type, required } = request.body;
+      const { seqNo: requestedSeqNo, label, type, multiValue, required } = request.body;
       const userId = request.erpUser!.id;
 
       const resolved = await resolveStepForField(
@@ -228,7 +229,7 @@ export default function stepFieldRoutes(fastify: FastifyInstance) {
 
       const field = await createStepField(
         resolved.step.id,
-        { seqNo: requestedSeqNo, label, type, required },
+        { seqNo: requestedSeqNo, label, type, multiValue, required },
         userId,
       );
 
@@ -302,7 +303,7 @@ export default function stepFieldRoutes(fastify: FastifyInstance) {
     preHandler: requirePermission("order_planner"),
     handler: async (request, reply) => {
       const { orderKey, revNo, seqNo, stepSeqNo, fieldSeqNo } = request.params;
-      const { label, type, required, seqNo: newSeqNo } = request.body;
+      const { label, type, multiValue, required, seqNo: newSeqNo } = request.body;
       const userId = request.erpUser!.id;
 
       const resolved = await resolveStepForField(
@@ -329,7 +330,7 @@ export default function stepFieldRoutes(fastify: FastifyInstance) {
 
       const field = await updateStepField(
         existing.id,
-        { label, type, required, seqNo: newSeqNo },
+        { label, type, multiValue, required, seqNo: newSeqNo },
         userId,
       );
 

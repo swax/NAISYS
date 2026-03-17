@@ -111,9 +111,10 @@ function formatStepRun(
       fieldSeqNo: field.seqNo,
       label: field.label,
       type: field.type,
+      multiValue: field.multiValue,
       required: field.required,
       value,
-      validation: validateFieldValue(field.type, field.required, value),
+      validation: validateFieldValue(field.type, field.multiValue, field.required, value),
       _actions: canUpdate
         ? [
             {
@@ -360,9 +361,10 @@ export default function stepRunRoutes(fastify: FastifyInstance) {
         fieldSeqNo: field.seqNo,
         label: field.label,
         type: field.type,
+        multiValue: field.multiValue,
         required: field.required,
         value,
-        validation: validateFieldValue(field.type, field.required, value),
+        validation: validateFieldValue(field.type, field.multiValue, field.required, value),
         _actions: [
           {
             rel: "update" as const,

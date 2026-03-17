@@ -60,6 +60,7 @@ export async function createStepField(
     seqNo?: number | null;
     label: string;
     type?: StepFieldType | null;
+    multiValue?: boolean | null;
     required?: boolean | null;
   },
   userId: number,
@@ -79,6 +80,7 @@ export async function createStepField(
         seqNo: nextSeqNo,
         label: data.label,
         type: data.type ?? StepFieldType.string,
+        multiValue: data.multiValue ?? false,
         required: data.required ?? false,
         createdById: userId,
         updatedById: userId,
@@ -93,6 +95,7 @@ export async function updateStepField(
   data: {
     label?: string;
     type?: StepFieldType;
+    multiValue?: boolean;
     required?: boolean;
     seqNo?: number;
   },
@@ -103,6 +106,7 @@ export async function updateStepField(
     data: {
       ...(data.label !== undefined ? { label: data.label } : {}),
       ...(data.type !== undefined ? { type: data.type } : {}),
+      ...(data.multiValue !== undefined ? { multiValue: data.multiValue } : {}),
       ...(data.required !== undefined ? { required: data.required } : {}),
       ...(data.seqNo !== undefined ? { seqNo: data.seqNo } : {}),
       updatedById: userId,
