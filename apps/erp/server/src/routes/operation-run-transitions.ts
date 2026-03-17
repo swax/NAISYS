@@ -14,9 +14,11 @@ import {
   clockOutAllForOpRun,
 } from "../services/labor-ticket-service.js";
 import {
-  checkPriorOpsComplete,
+  checkPredecessorsComplete,
   checkStepsComplete,
+  reblockSuccessors,
   transitionStatus,
+  unblockSuccessors,
   validateStatusFor,
 } from "../services/operation-run-service.js";
 import { formatOpRun, SeqNoParamsSchema } from "./operation-runs.js";
@@ -53,7 +55,10 @@ export default function operationRunTransitionRoutes(fastify: FastifyInstance) {
       ]);
       if (statusErr) return conflict(reply, statusErr);
 
-      const priorErr = await checkPriorOpsComplete(resolved.run.id, seqNo);
+      const priorErr = await checkPredecessorsComplete(
+        resolved.run.id,
+        resolved.opRun.operationId,
+      );
       if (priorErr) return unprocessable(reply, priorErr);
 
       const opRun = await transitionStatus(
@@ -109,6 +114,11 @@ export default function operationRunTransitionRoutes(fastify: FastifyInstance) {
         { completedAt: new Date() },
       );
       await clockOutAllForOpRun(resolved.opRun.id, userId);
+      await unblockSuccessors(
+        resolved.run.id,
+        resolved.opRun.operationId,
+        userId,
+      );
       return formatOpRun(orderKey, runNo, request.erpUser, opRun);
     },
   });
@@ -137,6 +147,7 @@ export default function operationRunTransitionRoutes(fastify: FastifyInstance) {
       if (orderErr) return conflict(reply, orderErr);
 
       const statusErr = validateStatusFor("skip", resolved.opRun.status, [
+        OperationRunStatus.blocked,
         OperationRunStatus.pending,
       ]);
       if (statusErr) return conflict(reply, statusErr);
@@ -144,8 +155,15 @@ export default function operationRunTransitionRoutes(fastify: FastifyInstance) {
       const opRun = await transitionStatus(
         resolved.opRun.id,
         "skip",
-        OperationRunStatus.pending,
+        resolved.opRun.status as
+          | typeof OperationRunStatus.blocked
+          | typeof OperationRunStatus.pending,
         OperationRunStatus.skipped,
+        userId,
+      );
+      await unblockSuccessors(
+        resolved.run.id,
+        resolved.opRun.operationId,
         userId,
       );
       return formatOpRun(orderKey, runNo, request.erpUser, opRun);
@@ -233,6 +251,12 @@ export default function operationRunTransitionRoutes(fastify: FastifyInstance) {
         reopenTo,
         userId,
         { completedAt: null },
+      );
+      // Re-block successor ops that are still pending
+      await reblockSuccessors(
+        resolved.run.id,
+        resolved.opRun.operationId,
+        userId,
       );
       return formatOpRun(orderKey, runNo, request.erpUser, opRun);
     },

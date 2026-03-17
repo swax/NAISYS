@@ -24,9 +24,10 @@ import { zodResolver } from "../../../lib/zod-resolver";
 interface Props {
   orderKey: string;
   revNo: string;
+  refreshKey?: number;
 }
 
-export const OperationSidebar: React.FC<Props> = ({ orderKey, revNo }) => {
+export const OperationSidebar: React.FC<Props> = ({ orderKey, revNo, refreshKey }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { seqNo: currentSeqNo } = useParams<{ seqNo: string }>();
@@ -57,7 +58,7 @@ export const OperationSidebar: React.FC<Props> = ({ orderKey, revNo }) => {
 
   useEffect(() => {
     void fetchOps();
-  }, [fetchOps]);
+  }, [fetchOps, refreshKey]);
 
   const openCreateModal = () => {
     form.setFieldValue("seqNo", data?.nextSeqNo ?? 10);

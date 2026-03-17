@@ -33,6 +33,7 @@ enum OrderRunPriority {
 }
 
 enum OperationRunStatus {
+  blocked
   pending
   in_progress
   completed
@@ -106,9 +107,26 @@ model Operation {
   orderRev       OrderRevision  @relation(fields: [orderRevId], references: [id], onDelete: Restrict)
   steps          Step[]
   operationRuns  OperationRun[]
+  predecessors   OperationDependency[] @relation("opSuccessor")
+  successors     OperationDependency[] @relation("opPredecessor")
 
   @@unique([orderRevId, seqNo])
   @@map("operations")
+}
+
+model OperationDependency {
+  id             Int      @id @default(autoincrement())
+  successorId    Int      @map("successor_id")
+  predecessorId  Int      @map("predecessor_id")
+  createdAt      DateTime @default(now()) @map("created_at")
+  createdById    Int      @map("created_by")
+
+  successor    Operation @relation("opSuccessor", fields: [successorId], references: [id], onDelete: Cascade)
+  predecessor  Operation @relation("opPredecessor", fields: [predecessorId], references: [id], onDelete: Cascade)
+  createdBy    User      @relation("opDepCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+
+  @@unique([successorId, predecessorId])
+  @@map("operation_dependencies")
 }
 
 model Step {
@@ -283,6 +301,7 @@ model User {
   orderRunsUpdated     OrderRun[]              @relation("orderRunUpdatedBy")
   opsCreated           Operation[]             @relation("opCreatedBy")
   opsUpdated           Operation[]             @relation("opUpdatedBy")
+  opDepsCreated        OperationDependency[]   @relation("opDepCreatedBy")
   stepsCreated         Step[]                  @relation("stepCreatedBy")
   stepsUpdated         Step[]                  @relation("stepUpdatedBy")
   stepFieldsCreated    StepField[]             @relation("stepFieldCreatedBy")

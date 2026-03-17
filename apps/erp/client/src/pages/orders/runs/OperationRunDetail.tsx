@@ -20,11 +20,13 @@ import { CompactMarkdown } from "../../../components/CompactMarkdown";
 import { MetadataTooltip } from "../../../components/MetadataTooltip";
 import { api, apiEndpoints, showErrorNotification } from "../../../lib/api";
 import { hasAction } from "../../../lib/hateoas";
+import { DependencyList } from "../revs/DependencyList";
 import type { OrderRunOutletContext } from "./OrderRunDetail";
 import { LaborTicketList } from "./LaborTicketList";
 import { StepRunList } from "./StepRunList";
 
 const STATUS_COLORS: Record<string, string> = {
+  blocked: "orange",
   pending: "gray",
   in_progress: "yellow",
   completed: "green",
@@ -38,7 +40,8 @@ export const OperationRunDetail: React.FC = () => {
     runNo: string;
     seqNo: string;
   }>();
-  const { onOperationUpdate } = useOutletContext<OrderRunOutletContext>();
+  const { onOperationUpdate, orderRun } =
+    useOutletContext<OrderRunOutletContext>();
   const [opRun, setOpRun] = useState<OperationRun | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -250,6 +253,12 @@ export const OperationRunDetail: React.FC = () => {
             )}
           </Stack>
         </Card>
+
+        <DependencyList
+          orderKey={orderKey!}
+          revNo={String(orderRun.revNo)}
+          opSeqNo={seqNo!}
+        />
 
         <LaborTicketList
           orderKey={orderKey!}

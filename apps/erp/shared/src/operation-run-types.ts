@@ -3,6 +3,7 @@ import { z } from "zod/v4";
 import { HateoasActionSchema, HateoasLinkSchema } from "./hateoas-types.js";
 
 export const OperationRunStatusEnum = z.enum([
+  "blocked",
   "pending",
   "in_progress",
   "completed",

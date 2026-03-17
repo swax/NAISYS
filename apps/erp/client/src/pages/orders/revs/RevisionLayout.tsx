@@ -18,6 +18,10 @@ import {
 import { useCallback, useEffect, useState } from "react";
 import { Outlet, useLocation, useParams } from "react-router";
 
+export interface RevisionOutletContext {
+  onOperationUpdate: () => void;
+}
+
 import { api, apiEndpoints, showErrorNotification } from "../../../lib/api";
 import { OperationSidebar } from "./OperationSidebar";
 import { RevisionHeader } from "./RevisionHeader";
@@ -35,6 +39,11 @@ export const RevisionLayout: React.FC = () => {
   const [sidebarCollapsed, { toggle: toggleSidebar }] = useDisclosure();
   const [drawerOpened, { open: openDrawer, close: closeDrawer }] =
     useDisclosure();
+  const [opsRefreshKey, setOpsRefreshKey] = useState(0);
+
+  const outletContext: RevisionOutletContext = {
+    onOperationUpdate: () => setOpsRefreshKey((k) => k + 1),
+  };
 
   const fetchRevision = useCallback(async () => {
     if (!orderKey || !revNo) return;
@@ -161,7 +170,7 @@ export const RevisionLayout: React.FC = () => {
                   </ActionIcon>
                 </Tooltip>
               </Group>
-              <OperationSidebar orderKey={orderKey} revNo={revNo} />
+              <OperationSidebar orderKey={orderKey} revNo={revNo} refreshKey={opsRefreshKey} />
             </Box>
           )}
         </Box>
@@ -176,7 +185,7 @@ export const RevisionLayout: React.FC = () => {
             flexDirection: "column",
           }}
         >
-          <Outlet />
+          <Outlet context={outletContext} />
         </div>
       </Box>
 
@@ -187,7 +196,7 @@ export const RevisionLayout: React.FC = () => {
         title="Operations"
         size={SIDEBAR_WIDTH}
       >
-        <OperationSidebar orderKey={orderKey} revNo={revNo} />
+        <OperationSidebar orderKey={orderKey} revNo={revNo} refreshKey={opsRefreshKey} />
       </Drawer>
     </Box>
   );

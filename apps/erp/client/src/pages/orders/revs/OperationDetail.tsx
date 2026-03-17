@@ -8,18 +8,22 @@ import {
   Stack,
   Text,
   Textarea,
+  TextInput,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import type { Operation, UpdateOperation } from "@naisys-erp/shared";
 import { UpdateOperationSchema } from "@naisys-erp/shared";
 import { useCallback, useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router";
+import { useNavigate, useOutletContext, useParams } from "react-router";
+
+import type { RevisionOutletContext } from "./RevisionLayout";
 
 import { CompactMarkdown } from "../../../components/CompactMarkdown";
 import { MetadataTooltip } from "../../../components/MetadataTooltip";
 import { api, apiEndpoints, showErrorNotification } from "../../../lib/api";
 import { hasAction } from "../../../lib/hateoas";
 import { zodResolver } from "../../../lib/zod-resolver";
+import { DependencyList } from "./DependencyList";
 import { StepList } from "./StepList";
 
 export const OperationDetail: React.FC = () => {
@@ -29,13 +33,14 @@ export const OperationDetail: React.FC = () => {
     seqNo: string;
   }>();
   const navigate = useNavigate();
+  const { onOperationUpdate } = useOutletContext<RevisionOutletContext>();
   const [operation, setOperation] = useState<Operation | null>(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const form = useForm<UpdateOperation>({
-    initialValues: { description: "", seqNo: 10 },
+    initialValues: { title: "", description: "", seqNo: 10 },
     validate: zodResolver(UpdateOperationSchema),
   });
 
@@ -61,6 +66,7 @@ export const OperationDetail: React.FC = () => {
   const startEditing = () => {
     if (!operation) return;
     form.setValues({
+      title: operation.title,
       description: operation.description,
       seqNo: operation.seqNo,
     });
@@ -77,6 +83,7 @@ export const OperationDetail: React.FC = () => {
       );
       setOperation(updated);
       setEditing(false);
+      onOperationUpdate();
       // If seqNo changed, navigate to the new URL
       if (values.seqNo && values.seqNo !== operation.seqNo) {
         void navigate(
@@ -160,6 +167,11 @@ export const OperationDetail: React.FC = () => {
           {editing ? (
             <form onSubmit={form.onSubmit(handleSave)}>
               <Stack gap="sm">
+                <TextInput
+                  label="Title"
+                  placeholder="Operation title..."
+                  {...form.getInputProps("title")}
+                />
                 <NumberInput
                   label="Sequence #"
                   min={1}
@@ -193,6 +205,8 @@ export const OperationDetail: React.FC = () => {
             <Text c="dimmed">No description</Text>
           )}
         </Card>
+
+        <DependencyList orderKey={orderKey!} revNo={revNo!} opSeqNo={seqNo!} />
 
         <StepList orderKey={orderKey!} revNo={revNo!} opSeqNo={seqNo!} />
       </Stack>
