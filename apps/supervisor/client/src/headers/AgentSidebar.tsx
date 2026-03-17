@@ -128,7 +128,11 @@ export const AgentSidebar: React.FC = () => {
 
       visiting.add(agent.name);
       const children = childrenMap.get(agent.name) ?? [];
-      organizedAgents.push({ ...agent, depth, hasChildren: children.length > 0 });
+      organizedAgents.push({
+        ...agent,
+        depth,
+        hasChildren: children.length > 0,
+      });
       visited.add(agent.name);
 
       children.forEach((child) => traverse(child, depth + 1));
@@ -175,7 +179,10 @@ export const AgentSidebar: React.FC = () => {
       } else {
         next.add(agentName);
       }
-      localStorage.setItem("sidebar-collapsed-agents", JSON.stringify([...next]));
+      localStorage.setItem(
+        "sidebar-collapsed-agents",
+        JSON.stringify([...next]),
+      );
       return next;
     });
   };
@@ -317,7 +324,14 @@ export const AgentSidebar: React.FC = () => {
             </Badge>
           )}
         </Group>
-        <Group gap="xs" align="center" wrap="nowrap" style={{ paddingLeft: agent.hasChildren ? 0 : "calc(1rem + 0.625rem)" }}>
+        <Group
+          gap="xs"
+          align="center"
+          wrap="nowrap"
+          style={{
+            paddingLeft: agent.hasChildren ? 0 : "calc(1rem + 0.625rem)",
+          }}
+        >
           {agent.hasChildren ? (
             collapsedAgents.has(agent.name) ? (
               <IconChevronRight

@@ -1,12 +1,4 @@
-import {
-  Anchor,
-  Badge,
-  Code,
-  Group,
-  Stack,
-  Table,
-  Text,
-} from "@mantine/core";
+import { Anchor, Badge, Code, Group, Stack, Table, Text } from "@mantine/core";
 import { AgentDetailResponse } from "@naisys-supervisor/shared";
 import React from "react";
 import { Link } from "react-router-dom";

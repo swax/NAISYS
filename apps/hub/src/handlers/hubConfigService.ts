@@ -77,9 +77,7 @@ export async function createHubConfigService(
       try {
         const payload = await buildConfigPayload();
 
-        logService.log(
-          `[Hub:Config] Pushing config to instance ${hostId}`,
-        );
+        logService.log(`[Hub:Config] Pushing config to instance ${hostId}`);
 
         connection.sendMessage(HubEvents.VARIABLES_UPDATED, payload);
       } catch (error) {

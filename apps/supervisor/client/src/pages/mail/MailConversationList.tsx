@@ -97,9 +97,7 @@ export const MailConversationList: React.FC<MailConversationListProps> = ({
               otherIndices.length === 1
                 ? `${conv.participantNames[otherIndices[0]]} (${conv.participantTitles[otherIndices[0]]})`
                 : otherIndices.length > 0
-                  ? otherIndices
-                      .map((i) => conv.participantNames[i])
-                      .join(", ")
+                  ? otherIndices.map((i) => conv.participantNames[i]).join(", ")
                   : conv.participantNames.join(", ");
 
             // Build link URL based on grouping mode

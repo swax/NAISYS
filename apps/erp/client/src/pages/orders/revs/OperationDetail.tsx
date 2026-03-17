@@ -16,14 +16,13 @@ import { UpdateOperationSchema } from "@naisys-erp/shared";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useOutletContext, useParams } from "react-router";
 
-import type { RevisionOutletContext } from "./RevisionLayout";
-
 import { CompactMarkdown } from "../../../components/CompactMarkdown";
 import { MetadataTooltip } from "../../../components/MetadataTooltip";
 import { api, apiEndpoints, showErrorNotification } from "../../../lib/api";
 import { hasAction } from "../../../lib/hateoas";
 import { zodResolver } from "../../../lib/zod-resolver";
 import { DependencyList } from "./DependencyList";
+import type { RevisionOutletContext } from "./RevisionLayout";
 import { StepList } from "./StepList";
 
 export const OperationDetail: React.FC = () => {

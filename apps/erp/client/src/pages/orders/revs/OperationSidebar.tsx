@@ -27,7 +27,11 @@ interface Props {
   refreshKey?: number;
 }
 
-export const OperationSidebar: React.FC<Props> = ({ orderKey, revNo, refreshKey }) => {
+export const OperationSidebar: React.FC<Props> = ({
+  orderKey,
+  revNo,
+  refreshKey,
+}) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { seqNo: currentSeqNo } = useParams<{ seqNo: string }>();

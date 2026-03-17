@@ -24,15 +24,11 @@ import {
   clockIn,
   clockOut,
   deleteLaborTicket,
-  listLaborTickets,
   type LaborTicketWithUser,
+  listLaborTickets,
 } from "../services/labor-ticket-service.js";
 
-function laborResource(
-  orderKey: string,
-  runNo: number,
-  seqNo: number,
-) {
+function laborResource(orderKey: string, runNo: number, seqNo: number) {
   return `orders/${orderKey}/runs/${runNo}/ops/${seqNo}/labor`;
 }
 
@@ -122,17 +118,9 @@ function formatLaborTicket(
     cost: ticket.cost,
     ...formatAuditFields(ticket),
     _links: [
-      selfLink(
-        `/${laborResource(orderKey, runNo, seqNo)}/${ticket.id}`,
-      ),
+      selfLink(`/${laborResource(orderKey, runNo, seqNo)}/${ticket.id}`),
     ],
-    _actions: laborTicketItemActions(
-      orderKey,
-      runNo,
-      seqNo,
-      ticket.id,
-      user,
-    ),
+    _actions: laborTicketItemActions(orderKey, runNo, seqNo, ticket.id, user),
   };
 }
 
@@ -194,7 +182,8 @@ export default function laborTicketRoutes(fastify: FastifyInstance) {
   // CLOCK IN
   app.post("/clock-in", {
     schema: {
-      description: "Clock in to an operation run (auto clocks out any open tickets for this user)",
+      description:
+        "Clock in to an operation run (auto clocks out any open tickets for this user)",
       tags: ["Labor Tickets"],
       params: LaborParamsSchema,
       response: {
@@ -218,13 +207,7 @@ export default function laborTicketRoutes(fastify: FastifyInstance) {
       }
 
       const ticket = await clockIn(resolved.opRun.id, userId, userId);
-      return formatLaborTicket(
-        orderKey,
-        runNo,
-        seqNo,
-        request.erpUser,
-        ticket,
-      );
+      return formatLaborTicket(orderKey, runNo, seqNo, request.erpUser, ticket);
     },
   });
 
@@ -273,7 +256,7 @@ export default function laborTicketRoutes(fastify: FastifyInstance) {
         };
       }
 
-      const updated = await clockOut(resolved.opRun.id, opts, userId);
+      await clockOut(resolved.opRun.id, opts, userId);
 
       // Return full list after clock-out
       const items = await listLaborTickets(resolved.opRun.id);

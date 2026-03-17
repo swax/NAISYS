@@ -170,7 +170,11 @@ export const RevisionLayout: React.FC = () => {
                   </ActionIcon>
                 </Tooltip>
               </Group>
-              <OperationSidebar orderKey={orderKey} revNo={revNo} refreshKey={opsRefreshKey} />
+              <OperationSidebar
+                orderKey={orderKey}
+                revNo={revNo}
+                refreshKey={opsRefreshKey}
+              />
             </Box>
           )}
         </Box>
@@ -196,7 +200,11 @@ export const RevisionLayout: React.FC = () => {
         title="Operations"
         size={SIDEBAR_WIDTH}
       >
-        <OperationSidebar orderKey={orderKey} revNo={revNo} refreshKey={opsRefreshKey} />
+        <OperationSidebar
+          orderKey={orderKey}
+          revNo={revNo}
+          refreshKey={opsRefreshKey}
+        />
       </Drawer>
     </Box>
   );

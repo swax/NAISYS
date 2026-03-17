@@ -46,8 +46,9 @@ export const HeaderRunDetail: React.FC = () => {
     useOutletContext<OrderRunOutletContext>();
   const [editing, setEditing] = useState(false);
   const [revDescription, setRevDescription] = useState<string | null>(null);
-  const [operations, setOperations] =
-    useState<OperationRunListResponse | null>(null);
+  const [operations, setOperations] = useState<OperationRunListResponse | null>(
+    null,
+  );
   const [opsLoading, setOpsLoading] = useState(true);
 
   const fetchRevision = useCallback(async () => {

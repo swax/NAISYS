@@ -305,7 +305,10 @@ export function createHubMailService(
             participants,
           };
 
-          naisysServer.broadcastToSupervisors(HubEvents.MAIL_READ_PUSH, payload);
+          naisysServer.broadcastToSupervisors(
+            HubEvents.MAIL_READ_PUSH,
+            payload,
+          );
         }
       } catch (error) {
         logService.error(

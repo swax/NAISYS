@@ -358,10 +358,7 @@ export default function userRoutes(fastify: FastifyInstance) {
       }
 
       try {
-        const user = await createUserForAgent(
-          hubAgent.username,
-          hubAgent.uuid,
-        );
+        const user = await createUserForAgent(hubAgent.username, hubAgent.uuid);
         reply.code(201);
         return formatUser(
           user,
@@ -369,10 +366,7 @@ export default function userRoutes(fastify: FastifyInstance) {
           request.erpUser!.permissions,
         );
       } catch (err: unknown) {
-        if (
-          err instanceof Error &&
-          err.message.includes("Unique constraint")
-        ) {
+        if (err instanceof Error && err.message.includes("Unique constraint")) {
           reply.code(409);
           return {
             statusCode: 409,

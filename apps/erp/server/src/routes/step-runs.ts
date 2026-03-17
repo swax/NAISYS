@@ -266,7 +266,8 @@ export default function stepRunRoutes(fastify: FastifyInstance) {
       if (opErr) return conflict(reply, opErr);
 
       const clockedIn = await isUserClockedIn(resolved.opRun.id, userId);
-      if (!clockedIn) return conflict(reply, `You must be clocked in to update steps`);
+      if (!clockedIn)
+        return conflict(reply, `You must be clocked in to update steps`);
 
       const existing = await getStepRun(resolved.stepRun.id);
       if (!existing) return notFound(reply, `Step run not found`);
@@ -332,7 +333,8 @@ export default function stepRunRoutes(fastify: FastifyInstance) {
       if (opErr) return conflict(reply, opErr);
 
       const clockedIn = await isUserClockedIn(resolved.opRun.id, userId);
-      if (!clockedIn) return conflict(reply, `You must be clocked in to update field values`);
+      if (!clockedIn)
+        return conflict(reply, `You must be clocked in to update field values`);
 
       const stepRun = await findStepRunWithField(
         resolved.stepRun.id,
