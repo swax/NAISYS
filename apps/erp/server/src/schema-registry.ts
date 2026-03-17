@@ -1,5 +1,6 @@
 import {
   ChangePasswordSchema,
+  ClockOutLaborTicketSchema,
   CreateItemSchema,
   CreateOperationSchema,
   CreateOrderRevisionSchema,
@@ -48,6 +49,7 @@ export const schemaRegistry: Record<string, $ZodType> = {
   UpdateUser: UpdateUserSchema,
   GrantPermission: GrantPermissionSchema,
   ChangePassword: ChangePasswordSchema,
+  ClockOutLaborTicket: ClockOutLaborTicketSchema,
 };
 
 // Register schemas with Zod global registry for OpenAPI components/schemas population

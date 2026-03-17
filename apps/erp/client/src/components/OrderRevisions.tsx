@@ -133,7 +133,7 @@ export const OrderRevisions: React.FC<Props> = ({ orderKey }) => {
           <Table striped highlightOnHover>
             <Table.Thead>
               <Table.Tr>
-                <Table.Th>Rev #</Table.Th>
+                <Table.Th>Rev</Table.Th>
                 <Table.Th>Status</Table.Th>
                 <Table.Th>Change Summary</Table.Th>
                 <Table.Th>Created</Table.Th>
@@ -151,7 +151,9 @@ export const OrderRevisions: React.FC<Props> = ({ orderKey }) => {
                   >
                     <Table.Td>
                       <Link to={revLink} style={cellLinkStyle}>
-                        {rev.revNo}
+                        <Badge color="violet" variant="light">
+                          REV {rev.revNo}
+                        </Badge>
                       </Link>
                     </Table.Td>
                     <Table.Td>

@@ -11,7 +11,9 @@ export {
   findAgentByApiKey,
   getAgentApiKeyByUuid,
   getHubAgentById,
+  getLatestRunIdByUuid,
   rotateAgentApiKeyByUuid,
+  sumCostsByUuid,
 } from "./hubSessionService.js";
 // Re-export Prisma Client and all generated types
 export * from "./generated/prisma/client.js";
