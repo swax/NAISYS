@@ -46,7 +46,17 @@ function opRunItemActions(
   const isExecutor = hasPermission(user, "order_executor");
   const isManager = hasPermission(user, "order_manager");
 
-  if (status === OperationRunStatus.pending) {
+  if (status === OperationRunStatus.blocked) {
+    // Blocked ops can only be skipped by managers
+    if (isManager) {
+      actions.push({
+        rel: "skip",
+        href: `${href}/skip`,
+        method: "POST",
+        title: "Skip",
+      });
+    }
+  } else if (status === OperationRunStatus.pending) {
     if (isExecutor) {
       actions.push(
         {

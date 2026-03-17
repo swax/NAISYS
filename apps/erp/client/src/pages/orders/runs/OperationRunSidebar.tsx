@@ -6,6 +6,7 @@ import { useLocation, useNavigate, useParams } from "react-router";
 import { api, apiEndpoints, showErrorNotification } from "../../../lib/api";
 
 const STATUS_COLORS: Record<string, string> = {
+  blocked: "orange",
   pending: "gray",
   in_progress: "yellow",
   completed: "green",

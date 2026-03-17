@@ -56,7 +56,7 @@ export async function createOperation(
     const defaultSeqNo = calcNextSeqNo(maxSeq?.seqNo ?? 0);
     const nextSeqNo = requestedSeqNo ?? defaultSeqNo;
 
-    return erpTx.operation.create({
+    const created = await erpTx.operation.create({
       data: {
         orderRevId,
         seqNo: nextSeqNo,
@@ -67,6 +67,25 @@ export async function createOperation(
       },
       include: includeUsers,
     });
+
+    // Auto-create dependency on the previous operation (by seqNo)
+    const previousOp = await erpTx.operation.findFirst({
+      where: { orderRevId, seqNo: { lt: nextSeqNo } },
+      orderBy: { seqNo: "desc" },
+      select: { id: true },
+    });
+
+    if (previousOp) {
+      await erpTx.operationDependency.create({
+        data: {
+          successorId: created.id,
+          predecessorId: previousOp.id,
+          createdById: userId,
+        },
+      });
+    }
+
+    return created;
   });
 }
 

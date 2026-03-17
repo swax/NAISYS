@@ -64,14 +64,27 @@ export function validateStatusFor(
   return null;
 }
 
-export async function checkPriorOpsComplete(
+/**
+ * Check that all predecessor dependencies for this operation are complete.
+ * Uses the OperationDependency graph rather than seqNo ordering.
+ */
+export async function checkPredecessorsComplete(
   runId: number,
-  seqNo: number,
+  operationId: number,
 ): Promise<string | null> {
+  // Get predecessor operation IDs from dependency graph
+  const deps = await erpDb.operationDependency.findMany({
+    where: { successorId: operationId },
+    select: { predecessorId: true },
+  });
+  if (deps.length === 0) return null;
+
+  const predecessorIds = deps.map((d) => d.predecessorId);
+
   const incompletePrior = await erpDb.operationRun.findMany({
     where: {
       orderRunId: runId,
-      operation: { seqNo: { lt: seqNo } },
+      operationId: { in: predecessorIds },
       status: {
         notIn: [
           OperationRunStatusValues.completed,
@@ -85,7 +98,97 @@ export async function checkPriorOpsComplete(
   const labels = incompletePrior.map(
     (op) => `Op ${op.operation.seqNo} "${op.operation.title}" (${op.status})`,
   );
-  return `Cannot start: prior operations not complete — ${labels.join(", ")}`;
+  return `Cannot start: predecessor operations not complete — ${labels.join(", ")}`;
+}
+
+/**
+ * After completing/skipping an operation, unblock successor ops
+ * whose predecessors are now all complete.
+ */
+export async function unblockSuccessors(
+  runId: number,
+  operationId: number,
+  userId: number,
+): Promise<void> {
+  // Find successor operations via dependency graph
+  const successorDeps = await erpDb.operationDependency.findMany({
+    where: { predecessorId: operationId },
+    select: { successorId: true },
+  });
+  if (successorDeps.length === 0) return;
+
+  for (const { successorId } of successorDeps) {
+    // Only unblock if the successor op run is currently blocked
+    const successorRun = await erpDb.operationRun.findFirst({
+      where: {
+        orderRunId: runId,
+        operationId: successorId,
+        status: OperationRunStatusValues.blocked,
+      },
+    });
+    if (!successorRun) continue;
+
+    // Check if ALL predecessors of this successor are complete
+    const allPredDeps = await erpDb.operationDependency.findMany({
+      where: { successorId },
+      select: { predecessorId: true },
+    });
+    const predIds = allPredDeps.map((d) => d.predecessorId);
+
+    const incompleteCount = await erpDb.operationRun.count({
+      where: {
+        orderRunId: runId,
+        operationId: { in: predIds },
+        status: {
+          notIn: [
+            OperationRunStatusValues.completed,
+            OperationRunStatusValues.skipped,
+          ],
+        },
+      },
+    });
+
+    if (incompleteCount === 0) {
+      await erpDb.operationRun.update({
+        where: { id: successorRun.id },
+        data: {
+          status: OperationRunStatusValues.pending,
+          updatedById: userId,
+        },
+      });
+    }
+  }
+}
+
+/**
+ * After reopening an operation, re-block successor ops that are still pending
+ * (haven't been started yet) if this operation is one of their prerequisites.
+ */
+export async function reblockSuccessors(
+  runId: number,
+  operationId: number,
+  userId: number,
+): Promise<void> {
+  const successorDeps = await erpDb.operationDependency.findMany({
+    where: { predecessorId: operationId },
+    select: { successorId: true },
+  });
+  if (successorDeps.length === 0) return;
+
+  for (const { successorId } of successorDeps) {
+    // Only re-block if successor is still pending (not started/in_progress/etc.)
+    await erpDb.operationRun.updateMany({
+      where: {
+        orderRunId: runId,
+        operationId: successorId,
+        status: OperationRunStatusValues.pending,
+      },
+      data: {
+        status: OperationRunStatusValues.blocked,
+        updatedById: userId,
+      },
+    });
+  }
 }
 
 export async function checkStepsComplete(

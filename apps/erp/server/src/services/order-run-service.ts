@@ -141,16 +141,24 @@ export async function createOrderRun(
           include: { fields: true },
           orderBy: { seqNo: "asc" },
         },
+        predecessors: { select: { predecessorId: true } },
       },
       orderBy: { seqNo: "asc" },
     });
 
     // Create OperationRun -> StepRun -> StepFieldValue rows
     for (const op of operations) {
+      // Ops with predecessors start blocked; ops without start pending
+      const initialStatus =
+        op.predecessors.length > 0
+          ? OperationRunStatusValues.blocked
+          : OperationRunStatusValues.pending;
+
       const opRun = await erpTx.operationRun.create({
         data: {
           orderRunId: orderRun.id,
           operationId: op.id,
+          status: initialStatus,
           createdById: userId,
           updatedById: userId,
         },

@@ -38,6 +38,7 @@ import itemRoutes from "./routes/items.js";
 import laborTicketRoutes from "./routes/labor-tickets.js";
 import operationRunTransitionRoutes from "./routes/operation-run-transitions.js";
 import operationRunRoutes from "./routes/operation-runs.js";
+import operationDependencyRoutes from "./routes/operation-dependencies.js";
 import operationRoutes from "./routes/operations.js";
 import orderRevisionTransitionRoutes from "./routes/order-revision-transitions.js";
 import orderRevisionRoutes from "./routes/order-revisions.js";
@@ -135,6 +136,9 @@ export const erpPlugin: FastifyPluginAsync = async (fastify) => {
   });
   fastify.register(operationRoutes, {
     prefix: "/api/erp/orders/:orderKey/revs/:revNo/ops",
+  });
+  fastify.register(operationDependencyRoutes, {
+    prefix: "/api/erp/orders/:orderKey/revs/:revNo/ops/:seqNo/deps",
   });
   fastify.register(operationRunRoutes, {
     prefix: "/api/erp/orders/:orderKey/runs/:runNo/ops",
