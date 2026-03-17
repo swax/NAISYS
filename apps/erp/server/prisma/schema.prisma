@@ -1,3 +1,6 @@
+// NOTE: After adding a migration, update ERP_DB_VERSION in src/dbConfig.ts
+// to match the new schema version number in the migration SQL.
+
 datasource db {
   provider = "sqlite"
 }
@@ -44,7 +47,6 @@ enum OperationRunStatus {
 enum StepFieldType {
   string
   number
-  StringArray
 }
 
 model Order {
@@ -155,6 +157,7 @@ model StepField {
   seqNo       Int      @map("seq_no")
   label       String
   type        StepFieldType @default(string)
+  multiValue  Boolean  @default(false) @map("multi_value")
   required    Boolean  @default(false)
   createdAt   DateTime @default(now()) @map("created_at")
   createdById Int      @map("created_by")

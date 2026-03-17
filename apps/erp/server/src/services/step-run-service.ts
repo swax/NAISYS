@@ -15,6 +15,7 @@ export const includeStep = {
           seqNo: true,
           label: true,
           type: true,
+          multiValue: true,
           required: true,
         },
         orderBy: { seqNo: "asc" as const },
@@ -43,6 +44,7 @@ export type StepRunWithStep = {
       seqNo: number;
       label: string;
       type: string;
+      multiValue: boolean;
       required: boolean;
     }[];
   };
@@ -96,6 +98,7 @@ export async function findStepRunWithField(
               seqNo: true,
               label: true,
               type: true,
+              multiValue: true,
               required: true,
             },
           },
@@ -109,17 +112,39 @@ export async function findStepRunWithField(
 
 // --- Validation ---
 
+function validateSingleValue(
+  type: string,
+  value: string,
+): string | null {
+  if (value.trim() && type === StepFieldType.number) {
+    if (isNaN(Number(value))) {
+      return "Must be a number";
+    }
+  }
+  return null;
+}
+
 export function validateFieldValue(
   type: string,
+  multiValue: boolean,
   required: boolean,
   value: string,
 ): StepFieldValidation {
   if (required && !value.trim()) {
     return { valid: false, error: "Required" };
   }
-  if (value.trim() && type === StepFieldType.number) {
-    if (isNaN(Number(value))) {
-      return { valid: false, error: "Must be a number" };
+  if (multiValue) {
+    const items = value.split(",").map((v) => v.trim());
+    for (let i = 0; i < items.length; i++) {
+      const err = validateSingleValue(type, items[i]);
+      if (err) {
+        return { valid: false, error: `Item ${i + 1}: ${err}` };
+      }
+    }
+  } else {
+    const err = validateSingleValue(type, value);
+    if (err) {
+      return { valid: false, error: err };
     }
   }
   return { valid: true };
@@ -139,7 +164,7 @@ export function validateCompletionFields(
   const errors: string[] = [];
   for (const field of existing.step.fields) {
     const value = submittedMap.get(field.id) ?? storedMap.get(field.id) ?? "";
-    const result = validateFieldValue(field.type, field.required, value);
+    const result = validateFieldValue(field.type, field.multiValue, field.required, value);
     if (!result.valid) {
       errors.push(`${field.label}: ${result.error}`);
     }

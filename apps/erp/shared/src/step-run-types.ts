@@ -16,6 +16,7 @@ export const StepFieldValueSchema = z.object({
   fieldSeqNo: z.number(),
   label: z.string(),
   type: z.string(),
+  multiValue: z.boolean(),
   required: z.boolean(),
   value: z.string(),
   validation: StepFieldValidationSchema,
