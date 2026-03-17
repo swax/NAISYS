@@ -80,9 +80,10 @@ export const RevisionHeader: React.FC<Props> = ({
           >
             {orderKey}
           </Anchor>
-          {" / "}
-          REV {revision.revNo}
         </Text>
+        <Badge color="violet" variant="light" size="sm">
+          REV {revision.revNo}
+        </Badge>
         <Badge
           color={STATUS_COLORS[revision.status] ?? "gray"}
           variant="light"

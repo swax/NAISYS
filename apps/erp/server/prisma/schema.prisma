@@ -199,6 +199,7 @@ model OperationRun {
   orderRun  OrderRun  @relation(fields: [orderRunId], references: [id], onDelete: Restrict)
   operation Operation @relation(fields: [operationId], references: [id], onDelete: Restrict)
   stepRuns  StepRun[]
+  laborTickets LaborTicket[]
 
   @@unique([orderRunId, operationId])
   @@index([status])
@@ -292,6 +293,9 @@ model User {
   stepRunsUpdated      StepRun[]               @relation("stepRunUpdatedBy")
   stepFieldValuesCreated StepFieldValue[]       @relation("stepFieldValueCreatedBy")
   stepFieldValuesUpdated StepFieldValue[]       @relation("stepFieldValueUpdatedBy")
+  laborTicketsWorked   LaborTicket[]           @relation("laborTicketUser")
+  laborTicketsCreated  LaborTicket[]           @relation("laborTicketCreatedBy")
+  laborTicketsUpdated  LaborTicket[]           @relation("laborTicketUpdatedBy")
   auditLogs            AuditLog[]
   sessions             Session[]
   permissions          UserPermission[]        @relation("userPermissions")
@@ -339,6 +343,29 @@ model SchemaVersion {
   updated String
 
   @@map("schema_version")
+}
+
+model LaborTicket {
+  id             Int       @id @default(autoincrement())
+  operationRunId Int       @map("operation_run_id")
+  userId         Int       @map("user_id")
+  runId          Int?      @map("run_id")
+  clockIn        DateTime  @map("clock_in")
+  clockOut       DateTime? @map("clock_out")
+  cost           Float?
+  createdAt      DateTime  @default(now()) @map("created_at")
+  createdById    Int       @map("created_by")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+  updatedById    Int       @map("updated_by")
+
+  operationRun OperationRun @relation(fields: [operationRunId], references: [id], onDelete: Restrict)
+  user         User         @relation("laborTicketUser", fields: [userId], references: [id], onDelete: Restrict)
+  createdBy    User         @relation("laborTicketCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy    User         @relation("laborTicketUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+
+  @@index([operationRunId])
+  @@index([userId, clockOut])
+  @@map("labor_tickets")
 }
 
 model AuditLog {

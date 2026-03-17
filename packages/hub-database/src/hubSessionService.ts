@@ -69,6 +69,56 @@ export async function getAgentApiKeyByUuid(
 }
 
 /**
+ * Get the latest run_id for a hub user by UUID.
+ */
+export async function getLatestRunIdByUuid(
+  uuid: string,
+): Promise<number | null> {
+  if (!prisma) return null;
+
+  const user = await prisma.users.findFirst({
+    where: { uuid },
+    select: { id: true },
+  });
+  if (!user) return null;
+
+  const latest = await prisma.run_session.findFirst({
+    where: { user_id: user.id },
+    select: { run_id: true },
+    orderBy: { run_id: "desc" },
+  });
+
+  return latest?.run_id ?? null;
+}
+
+/**
+ * Sum the cost of all cost entries for a hub user (by UUID) within a time range.
+ */
+export async function sumCostsByUuid(
+  uuid: string,
+  from: Date,
+  to: Date,
+): Promise<number> {
+  if (!prisma) return 0;
+
+  const user = await prisma.users.findFirst({
+    where: { uuid },
+    select: { id: true },
+  });
+  if (!user) return 0;
+
+  const result = await prisma.costs.aggregate({
+    _sum: { cost: true },
+    where: {
+      user_id: user.id,
+      created_at: { gte: from, lte: to },
+    },
+  });
+
+  return result._sum.cost ?? 0;
+}
+
+/**
  * Rotate an agent's API key by UUID.
  */
 export async function rotateAgentApiKeyByUuid(

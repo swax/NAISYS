@@ -101,6 +101,10 @@ export const DispatchListQuerySchema = z.object({
   status: OrderRunStatusEnum.optional(),
   priority: OrderRunPriorityEnum.optional(),
   search: z.string().optional(),
+  clockedIn: z
+    .union([z.literal("true"), z.literal("false")])
+    .transform((v) => v === "true")
+    .optional(),
 });
 
 export type DispatchListQuery = z.infer<typeof DispatchListQuerySchema>;

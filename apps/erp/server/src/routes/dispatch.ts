@@ -48,7 +48,8 @@ export default function dispatchRoutes(fastify: FastifyInstance) {
       },
     },
     handler: async (request) => {
-      const { page, pageSize, status, priority, search } = request.query;
+      const { page, pageSize, status, priority, search, clockedIn } =
+        request.query;
 
       const where: Record<string, unknown> = {
         status: { in: status ? [status] : OPEN_STATUSES },
@@ -60,6 +61,11 @@ export default function dispatchRoutes(fastify: FastifyInstance) {
           { notes: { contains: search } },
           { order: { key: { contains: search } } },
         ];
+      }
+      if (clockedIn) {
+        where.operationRuns = {
+          some: { laborTickets: { some: { clockOut: null } } },
+        };
       }
 
       const [items, total] = await Promise.all([
@@ -85,6 +91,7 @@ export default function dispatchRoutes(fastify: FastifyInstance) {
           status,
           priority,
           search,
+          clockedIn: clockedIn ? "true" : undefined,
         }),
       };
     },

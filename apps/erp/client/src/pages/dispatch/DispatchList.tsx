@@ -1,5 +1,6 @@
 import {
   Badge,
+  Checkbox,
   Container,
   Group,
   Loader,
@@ -54,6 +55,7 @@ export const DispatchList: React.FC = () => {
   const status = searchParams.get("status") || undefined;
   const priority = searchParams.get("priority") || undefined;
   const search = searchParams.get("search") || "";
+  const clockedIn = searchParams.get("clockedIn") === "true";
 
   const [data, setData] = useState<OrderRunListResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -67,6 +69,7 @@ export const DispatchList: React.FC = () => {
       if (status) params.set("status", status);
       if (priority) params.set("priority", priority);
       if (search) params.set("search", search);
+      if (clockedIn) params.set("clockedIn", "true");
 
       const result = await api.get<OrderRunListResponse>(
         `${apiEndpoints.dispatch}?${params}`,
@@ -77,7 +80,7 @@ export const DispatchList: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [page, status, priority, search]);
+  }, [page, status, priority, search, clockedIn]);
 
   useEffect(() => {
     void fetchData();
@@ -137,6 +140,18 @@ export const DispatchList: React.FC = () => {
           }}
           clearable
         />
+        <Checkbox
+          label="Clocked In"
+          checked={clockedIn}
+          onChange={(e) => {
+            setSearchParams((prev) => {
+              if (e.currentTarget.checked) prev.set("clockedIn", "true");
+              else prev.delete("clockedIn");
+              prev.set("page", "1");
+              return prev;
+            });
+          }}
+        />
       </Group>
 
       {loading ? (
@@ -149,8 +164,7 @@ export const DispatchList: React.FC = () => {
             <Table.Thead>
               <Table.Tr>
                 <Table.Th>Order</Table.Th>
-                <Table.Th>Run #</Table.Th>
-                <Table.Th>Rev</Table.Th>
+                <Table.Th>Run</Table.Th>
                 <Table.Th>Status</Table.Th>
                 <Table.Th>Priority</Table.Th>
                 <Table.Th>Assigned To</Table.Th>
@@ -164,25 +178,32 @@ export const DispatchList: React.FC = () => {
                 return (
                   <Table.Tr key={item.id} style={{ cursor: "pointer" }}>
                     <Table.Td>
-                      <Link
-                        to={`/orders/${item.orderKey}`}
-                        style={cellLinkStyle}
-                      >
-                        <Text size="sm" ff="monospace">
-                          {item.orderKey}
-                        </Text>
-                      </Link>
+                      <Group gap="xs" wrap="nowrap">
+                        <Link
+                          to={`/orders/${item.orderKey}`}
+                          style={cellLinkStyle}
+                        >
+                          <Text size="sm" ff="monospace">
+                            {item.orderKey}
+                          </Text>
+                        </Link>
+                        <Badge
+                          component={Link}
+                          to={`/orders/${item.orderKey}/revs/${item.revNo}`}
+                          color="violet"
+                          variant="light"
+                          size="sm"
+                          style={{ cursor: "pointer" }}
+                        >
+                          REV {item.revNo}
+                        </Badge>
+                      </Group>
                     </Table.Td>
                     <Table.Td>
                       <Link to={runLink} style={cellLinkStyle}>
                         <Text size="sm" ff="monospace">
                           {item.runNo}
                         </Text>
-                      </Link>
-                    </Table.Td>
-                    <Table.Td>
-                      <Link to={runLink} style={cellLinkStyle}>
-                        {item.revNo}
                       </Link>
                     </Table.Td>
                     <Table.Td>

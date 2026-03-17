@@ -172,6 +172,24 @@ export const apiEndpoints = {
     fieldSeqNo: number | string,
   ) =>
     `orders/${key}/runs/${runNo}/ops/${seqNo}/steps/${stepSeqNo}/fields/${fieldSeqNo}`,
+  laborTickets: (key: string, runNo: number | string, seqNo: number | string) =>
+    `orders/${key}/runs/${runNo}/ops/${seqNo}/labor`,
+  laborTicketClockIn: (
+    key: string,
+    runNo: number | string,
+    seqNo: number | string,
+  ) => `orders/${key}/runs/${runNo}/ops/${seqNo}/labor/clock-in`,
+  laborTicketClockOut: (
+    key: string,
+    runNo: number | string,
+    seqNo: number | string,
+  ) => `orders/${key}/runs/${runNo}/ops/${seqNo}/labor/clock-out`,
+  laborTicket: (
+    key: string,
+    runNo: number | string,
+    seqNo: number | string,
+    ticketId: number | string,
+  ) => `orders/${key}/runs/${runNo}/ops/${seqNo}/labor/${ticketId}`,
   usersFromAgent: "users/from-agent",
   userRotateKey: (username: string) => `users/${username}/rotate-key`,
   changePassword: "users/me/password",

@@ -89,8 +89,6 @@ export const OrderRunHeader: React.FC<Props> = ({
           >
             {orderKey}
           </Anchor>
-          {" / "}
-          RUN {orderRun.runNo}
         </Text>
         <Badge
           component="a"
@@ -107,6 +105,9 @@ export const OrderRunHeader: React.FC<Props> = ({
         >
           REV {orderRun.revNo}
         </Badge>
+        <Text size="lg" fw="bold">
+          RUN {orderRun.runNo}
+        </Text>
         <Badge
           color={STATUS_COLORS[orderRun.status] ?? "gray"}
           variant="light"

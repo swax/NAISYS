@@ -21,6 +21,7 @@ import { MetadataTooltip } from "../../../components/MetadataTooltip";
 import { api, apiEndpoints, showErrorNotification } from "../../../lib/api";
 import { hasAction } from "../../../lib/hateoas";
 import type { OrderRunOutletContext } from "./OrderRunDetail";
+import { LaborTicketList } from "./LaborTicketList";
 import { StepRunList } from "./StepRunList";
 
 const STATUS_COLORS: Record<string, string> = {
@@ -249,6 +250,13 @@ export const OperationRunDetail: React.FC = () => {
             )}
           </Stack>
         </Card>
+
+        <LaborTicketList
+          orderKey={orderKey!}
+          runNo={runNo!}
+          seqNo={seqNo!}
+          refreshKey={refreshKey}
+        />
 
         <StepRunList
           orderKey={orderKey!}

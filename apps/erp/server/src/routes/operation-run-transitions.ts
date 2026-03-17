@@ -10,6 +10,10 @@ import { requirePermission } from "../auth-middleware.js";
 import { conflict, notFound, unprocessable } from "../error-handler.js";
 import { checkOrderRunStarted, resolveOpRun } from "../route-helpers.js";
 import {
+  clockIn,
+  clockOutAllForOpRun,
+} from "../services/labor-ticket-service.js";
+import {
   checkPriorOpsComplete,
   checkStepsComplete,
   transitionStatus,
@@ -59,6 +63,7 @@ export default function operationRunTransitionRoutes(fastify: FastifyInstance) {
         OperationRunStatus.in_progress,
         userId,
       );
+      await clockIn(resolved.opRun.id, userId, userId);
       return formatOpRun(orderKey, runNo, request.erpUser, opRun);
     },
   });
@@ -103,6 +108,7 @@ export default function operationRunTransitionRoutes(fastify: FastifyInstance) {
         userId,
         { completedAt: new Date() },
       );
+      await clockOutAllForOpRun(resolved.opRun.id, userId);
       return formatOpRun(orderKey, runNo, request.erpUser, opRun);
     },
   });

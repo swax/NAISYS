@@ -160,6 +160,11 @@ export function formatOpRun(
         href: `${API_PREFIX}/${opRunResource(orderKey, runNo)}/${seqNo}/steps`,
         title: "Step Runs",
       } as HateoasLink,
+      {
+        rel: "labor",
+        href: `${API_PREFIX}/${opRunResource(orderKey, runNo)}/${seqNo}/labor`,
+        title: "Labor Tickets",
+      } as HateoasLink,
     ],
     _actions: opRunItemActions(orderKey, runNo, seqNo, opRun.status, user),
   };
