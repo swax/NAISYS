@@ -327,53 +327,9 @@ export const AgentDetail: React.FC = () => {
 
   return (
     <Stack p="xs">
-      <Group>
-        {(hasAction(actions, "enable") || hasAction(actions, "disable")) && (
-          <Group gap={0}>
-            <Button
-              color={hasAction(actions, "disable") ? "teal" : "gray"}
-              variant={hasAction(actions, "disable") ? "filled" : "outline"}
-              loading={toggling}
-              leftSection={<IconPower size={16} />}
-              onClick={() => handleToggleEnabled()}
-              style={{ borderTopRightRadius: 0, borderBottomRightRadius: 0 }}
-            >
-              <Text visibleFrom="sm" span>
-                {hasAction(actions, "disable") ? "Enabled" : "Disabled"}
-              </Text>
-            </Button>
-            <Menu position="bottom-end" withinPortal>
-              <Menu.Target>
-                <Button
-                  color={hasAction(actions, "disable") ? "teal" : "gray"}
-                  variant={hasAction(actions, "disable") ? "filled" : "outline"}
-                  disabled={toggling}
-                  style={{
-                    borderTopLeftRadius: 0,
-                    borderBottomLeftRadius: 0,
-                    borderLeft: "1px solid rgba(255,255,255,0.3)",
-                    paddingLeft: 6,
-                    paddingRight: 6,
-                  }}
-                >
-                  <IconChevronDown size={16} />
-                </Button>
-              </Menu.Target>
-              <Menu.Dropdown>
-                <Menu.Item
-                  leftSection={<IconPower size={14} />}
-                  onClick={() => handleToggleEnabled(true)}
-                >
-                  {hasAction(actions, "disable")
-                    ? "Disable with Subordinates"
-                    : "Enable with Subordinates"}
-                </Menu.Item>
-              </Menu.Dropdown>
-            </Menu>
-          </Group>
-        )}
+      <Group wrap="nowrap" style={{ overflowX: "auto" }}>
         {hasAction(actions, "start") ? (
-          <Group gap={0} style={{ flex: 1 }}>
+          <Group gap={0} wrap="nowrap" style={{ flex: 1 }}>
             <TextInput
               placeholder="Task description (optional)"
               value={taskInput}
@@ -420,7 +376,7 @@ export const AgentDetail: React.FC = () => {
             Pause
           </Text>
         </Button>
-        <Group gap={0}>
+        <Group gap={0} wrap="nowrap">
           <Button
             color="red"
             disabled={!hasAction(actions, "stop")}
@@ -459,6 +415,48 @@ export const AgentDetail: React.FC = () => {
             </Menu.Dropdown>
           </Menu>
         </Group>
+        {(hasAction(actions, "enable") || hasAction(actions, "disable")) && (
+          <Group gap={0} wrap="nowrap">
+            <Button
+              color={hasAction(actions, "disable") ? "gray" : "teal"}
+              loading={toggling}
+              leftSection={<IconPower size={16} />}
+              onClick={() => handleToggleEnabled()}
+              style={{ borderTopRightRadius: 0, borderBottomRightRadius: 0 }}
+            >
+              <Text visibleFrom="sm" span>
+                {hasAction(actions, "disable") ? "Disable" : "Enable"}
+              </Text>
+            </Button>
+            <Menu position="bottom-end" withinPortal>
+              <Menu.Target>
+                <Button
+                  color={hasAction(actions, "disable") ? "gray" : "teal"}
+                  disabled={toggling}
+                  style={{
+                    borderTopLeftRadius: 0,
+                    borderBottomLeftRadius: 0,
+                    borderLeft: "1px solid rgba(255,255,255,0.3)",
+                    paddingLeft: 6,
+                    paddingRight: 6,
+                  }}
+                >
+                  <IconChevronDown size={16} />
+                </Button>
+              </Menu.Target>
+              <Menu.Dropdown>
+                <Menu.Item
+                  leftSection={<IconPower size={14} />}
+                  onClick={() => handleToggleEnabled(true)}
+                >
+                  {hasAction(actions, "disable")
+                    ? "Disable with Subordinates"
+                    : "Enable with Subordinates"}
+                </Menu.Item>
+              </Menu.Dropdown>
+            </Menu>
+          </Group>
+        )}
         {hasAction(actions, "archive") && (
           <Button
             color="orange"

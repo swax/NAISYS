@@ -2,7 +2,7 @@ import { Divider, Group, Text, UnstyledButton } from "@mantine/core";
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
 
-import { HEADER_ROW_HEIGHT } from "../constants";
+import { NAV_HEADER_ROW_HEIGHT } from "../constants";
 import { useSession } from "../contexts/SessionContext";
 import { navTabs } from "./navTabs";
 
@@ -21,7 +21,7 @@ export const AppNavbar: React.FC<AppNavbarProps> = ({ onClose, hasErp }) => {
 
   return (
     <>
-      <Group gap={6} px="sm" py={4} h={HEADER_ROW_HEIGHT}>
+      <Group gap={6} px="sm" py={4} h={NAV_HEADER_ROW_HEIGHT}>
         <Text size="sm" fw={700}>
           Supervisor
         </Text>

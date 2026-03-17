@@ -19,7 +19,7 @@ import {
 import { LoginDialog } from "./components/LoginDialog";
 import { NotFoundPage } from "./components/NotFoundPage";
 import { RootErrorPage } from "./components/RootErrorPage";
-import { HEADER_ROW_HEIGHT, ROUTER_BASENAME } from "./constants";
+import { NAV_HEADER_ROW_HEIGHT, ROUTER_BASENAME } from "./constants";
 import { AgentDataProvider } from "./contexts/AgentDataContext";
 import { HostDataProvider } from "./contexts/HostDataContext";
 import { SessionProvider, useSession } from "./contexts/SessionContext";
@@ -88,7 +88,7 @@ const AppContent: React.FC = () => {
 
   return (
     <AppShell
-      header={{ height: HEADER_ROW_HEIGHT }}
+      header={{ height: NAV_HEADER_ROW_HEIGHT }}
       navbar={{
         width: 300,
         breakpoint: "sm",
@@ -115,6 +115,7 @@ const AppContent: React.FC = () => {
           flexDirection: "column",
         }}
       >
+        <DisconnectedBanner />
         <Box
           px={{ base: 0, sm: "xs" }}
           pt={0}
@@ -127,7 +128,6 @@ const AppContent: React.FC = () => {
             overflow: "auto",
           }}
         >
-          <DisconnectedBanner />
           <Outlet context={{ permissions }} />
         </Box>
       </AppShell.Main>

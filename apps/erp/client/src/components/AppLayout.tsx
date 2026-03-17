@@ -11,6 +11,7 @@ import {
   UnstyledButton,
 } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
+import { NAV_HEADER_ROW_HEIGHT } from "@naisys/common";
 import naisysLogo from "@naisys/common/assets/naisys-logo.webp";
 import { IconApi, IconLogout, IconUser } from "@tabler/icons-react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router";
@@ -51,7 +52,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ supervisorAuth }) => {
 
   return (
     <AppShell
-      header={{ height: 50 }}
+      header={{ height: NAV_HEADER_ROW_HEIGHT }}
       navbar={{
         width: 250,
         breakpoint: "sm",
