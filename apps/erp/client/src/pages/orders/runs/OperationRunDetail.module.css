@@ -1,0 +1,14 @@
+.panelGrid {
+  display: grid;
+}
+
+.panelGrid > [role="tabpanel"] {
+  grid-row: 1;
+  grid-column: 1;
+  display: block !important;
+  visibility: hidden;
+}
+
+.panelGrid > [role="tabpanel"][data-active] {
+  visibility: visible;
+}

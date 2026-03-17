@@ -1,5 +1,6 @@
 import {
   ActionIcon,
+  Alert,
   AppShell,
   Box,
   Button,
@@ -13,7 +14,7 @@ import {
 import { useDisclosure } from "@mantine/hooks";
 import { NAV_HEADER_ROW_HEIGHT } from "@naisys/common";
 import naisysLogo from "@naisys/common/assets/naisys-logo.webp";
-import { IconApi, IconLogout, IconUser } from "@tabler/icons-react";
+import { IconApi, IconEye, IconLogout, IconUser } from "@tabler/icons-react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router";
 
 import { useAuth } from "../lib/AuthContext";
@@ -275,6 +276,26 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ supervisorAuth }) => {
       </AppShell.Navbar>
 
       <AppShell.Main>
+        {!user && (
+          <Alert
+            variant="light"
+            color="violet"
+            icon={<IconEye size="1rem" />}
+            py={4}
+            radius={0}
+            styles={{
+              wrapper: {
+                justifyContent: "center" as const,
+                alignItems: "center" as const,
+              },
+              body: { flex: "initial" as const },
+            }}
+          >
+            <Text size="xs">
+              Public read-only mode — login for full access
+            </Text>
+          </Alert>
+        )}
         <Outlet context={{ supervisorAuth }} />
       </AppShell.Main>
 

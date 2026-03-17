@@ -24,6 +24,7 @@ import {
   resolveOpRun,
   resolveStepRun,
 } from "../route-helpers.js";
+import { isUserClockedIn } from "../services/labor-ticket-service.js";
 import {
   findStepRunWithField,
   getStepRun,
@@ -264,6 +265,9 @@ export default function stepRunRoutes(fastify: FastifyInstance) {
       const opErr = checkOpRunInProgress(resolved.opRun.status);
       if (opErr) return conflict(reply, opErr);
 
+      const clockedIn = await isUserClockedIn(resolved.opRun.id, userId);
+      if (!clockedIn) return conflict(reply, `You must be clocked in to update steps`);
+
       const existing = await getStepRun(resolved.stepRun.id);
       if (!existing) return notFound(reply, `Step run not found`);
 
@@ -326,6 +330,9 @@ export default function stepRunRoutes(fastify: FastifyInstance) {
 
       const opErr = checkOpRunInProgress(resolved.opRun.status);
       if (opErr) return conflict(reply, opErr);
+
+      const clockedIn = await isUserClockedIn(resolved.opRun.id, userId);
+      if (!clockedIn) return conflict(reply, `You must be clocked in to update field values`);
 
       const stepRun = await findStepRunWithField(
         resolved.stepRun.id,

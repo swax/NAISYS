@@ -1,6 +1,7 @@
 import { z } from "zod/v4";
 
 import { HateoasActionSchema, HateoasLinkSchema } from "./hateoas-types.js";
+import { OperationPredecessorSchema } from "./operation-types.js";
 
 export const OperationRunStatusEnum = z.enum([
   "blocked",
@@ -21,6 +22,8 @@ export const OperationRunSchema = z.object({
   seqNo: z.number(),
   title: z.string(),
   description: z.string(),
+  stepCount: z.number().optional(),
+  predecessors: z.array(OperationPredecessorSchema).optional(),
   status: OperationRunStatusEnum,
   completedAt: z.iso.datetime().nullable(),
   feedback: z.string().nullable(),

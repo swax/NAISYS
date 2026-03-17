@@ -42,34 +42,45 @@ function laborTicketListActions(
   seqNo: number,
   opRunStatus: string,
   user: ErpUser | undefined,
+  tickets: LaborTicketWithUser[],
 ): HateoasAction[] {
   const actions: HateoasAction[] = [];
   if (opRunStatus !== OperationRunStatus.in_progress) return actions;
 
   const base = `${API_PREFIX}/${laborResource(orderKey, runNo, seqNo)}`;
 
+  const userHasOpenTicket =
+    user != null && tickets.some((t) => t.userId === user.id && !t.clockOut);
+  const anyOpenTickets = tickets.some((t) => !t.clockOut);
+
   if (hasPermission(user, "order_executor")) {
-    actions.push({
-      rel: "clock-in",
-      href: `${base}/clock-in`,
-      method: "POST",
-      title: "Clock In",
-    });
-    actions.push({
-      rel: "clock-out",
-      href: `${base}/clock-out`,
-      method: "POST",
-      title: "Clock Out",
-      schema: `${API_PREFIX}/schemas/ClockOutLaborTicket`,
-    });
+    if (!userHasOpenTicket) {
+      actions.push({
+        rel: "clock-in",
+        href: `${base}/clock-in`,
+        method: "POST",
+        title: "Clock In",
+      });
+    }
+    if (userHasOpenTicket) {
+      actions.push({
+        rel: "clock-out",
+        href: `${base}/clock-out`,
+        method: "POST",
+        title: "Clock Out",
+        schema: `${API_PREFIX}/schemas/ClockOutLaborTicket`,
+      });
+    }
   } else if (hasPermission(user, "order_manager")) {
-    actions.push({
-      rel: "clock-out",
-      href: `${base}/clock-out`,
-      method: "POST",
-      title: "Clock Out",
-      schema: `${API_PREFIX}/schemas/ClockOutLaborTicket`,
-    });
+    if (anyOpenTickets) {
+      actions.push({
+        rel: "clock-out",
+        href: `${base}/clock-out`,
+        method: "POST",
+        title: "Clock Out",
+        schema: `${API_PREFIX}/schemas/ClockOutLaborTicket`,
+      });
+    }
   }
 
   return actions;
@@ -174,6 +185,7 @@ export default function laborTicketRoutes(fastify: FastifyInstance) {
           seqNo,
           resolved.opRun.status,
           request.erpUser,
+          items,
         ),
       };
     },
@@ -277,6 +289,7 @@ export default function laborTicketRoutes(fastify: FastifyInstance) {
           seqNo,
           resolved.opRun.status,
           request.erpUser,
+          items,
         ),
       };
     },

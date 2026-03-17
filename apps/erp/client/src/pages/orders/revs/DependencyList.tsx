@@ -25,12 +25,14 @@ interface DependencyListProps {
   orderKey: string;
   revNo: string;
   opSeqNo: string;
+  showTitle?: boolean;
 }
 
 export const DependencyList: React.FC<DependencyListProps> = ({
   orderKey,
   revNo,
   opSeqNo,
+  showTitle = true,
 }) => {
   const [deps, setDeps] = useState<OperationDependencyListResponse | null>(
     null,
@@ -118,7 +120,7 @@ export const DependencyList: React.FC<DependencyListProps> = ({
   return (
     <>
       <Group justify="space-between">
-        <Title order={5}>Dependencies</Title>
+        {showTitle && <Title order={5}>Dependencies</Title>}
         {hasAction(deps?._actions, "create") && !adding && (
           <Button
             size="xs"

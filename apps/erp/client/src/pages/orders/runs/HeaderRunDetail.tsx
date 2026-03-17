@@ -8,6 +8,7 @@ import {
   Text,
 } from "@mantine/core";
 import type {
+  OperationRunListResponse,
   OrderRevision,
   OrderRun,
   UpdateOrderRun,
@@ -18,6 +19,7 @@ import { Link, useOutletContext, useParams } from "react-router";
 
 import { CompactMarkdown } from "../../../components/CompactMarkdown";
 import { MetadataTooltip } from "../../../components/MetadataTooltip";
+import { OperationSummaryTable } from "../../../components/OperationSummaryTable";
 import { OrderRunForm } from "../../../components/OrderRunForm";
 import { api, apiEndpoints, showErrorNotification } from "../../../lib/api";
 import { hasAction } from "../../../lib/hateoas";
@@ -44,6 +46,9 @@ export const HeaderRunDetail: React.FC = () => {
     useOutletContext<OrderRunOutletContext>();
   const [editing, setEditing] = useState(false);
   const [revDescription, setRevDescription] = useState<string | null>(null);
+  const [operations, setOperations] =
+    useState<OperationRunListResponse | null>(null);
+  const [opsLoading, setOpsLoading] = useState(true);
 
   const fetchRevision = useCallback(async () => {
     if (!orderKey) return;
@@ -57,9 +62,25 @@ export const HeaderRunDetail: React.FC = () => {
     }
   }, [orderKey, orderRun.revNo]);
 
+  const fetchOperations = useCallback(async () => {
+    if (!orderKey || !runNo) return;
+    setOpsLoading(true);
+    try {
+      const result = await api.get<OperationRunListResponse>(
+        apiEndpoints.operationRuns(orderKey, runNo),
+      );
+      setOperations(result);
+    } catch (err) {
+      showErrorNotification(err);
+    } finally {
+      setOpsLoading(false);
+    }
+  }, [orderKey, runNo]);
+
   useEffect(() => {
     void fetchRevision();
-  }, [fetchRevision]);
+    void fetchOperations();
+  }, [fetchRevision, fetchOperations]);
 
   const handleUpdate = async (data: UpdateOrderRun) => {
     try {
@@ -182,6 +203,14 @@ export const HeaderRunDetail: React.FC = () => {
             </Stack>
           )}
         </Card>
+
+        <OperationSummaryTable
+          items={operations?.items ?? null}
+          loading={opsLoading}
+          linkBuilder={(seqNo) =>
+            `/orders/${orderKey}/runs/${runNo}/ops/${seqNo}`
+          }
+        />
       </Stack>
     </Container>
   );

@@ -57,6 +57,16 @@ async function getAgentRunId(userId: number): Promise<number | null> {
 
 // --- Lookups ---
 
+export async function isUserClockedIn(
+  operationRunId: number,
+  userId: number,
+): Promise<boolean> {
+  const ticket = await erpDb.laborTicket.findFirst({
+    where: { operationRunId, userId, clockOut: null },
+  });
+  return !!ticket;
+}
+
 export async function listLaborTickets(
   operationRunId: number,
 ): Promise<LaborTicketWithUser[]> {

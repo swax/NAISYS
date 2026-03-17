@@ -10,14 +10,28 @@ import {
 
 export type OperationWithUsers = OperationModel & WithAuditUsers;
 
+export type OperationWithSummary = OperationWithUsers & {
+  _count: { steps: number };
+  predecessors: Array<{
+    predecessor: { seqNo: number; title: string };
+  }>;
+};
+
 // --- Lookups ---
 
 export async function listOperations(
   orderRevId: number,
-): Promise<OperationWithUsers[]> {
+): Promise<OperationWithSummary[]> {
   return erpDb.operation.findMany({
     where: { orderRevId },
-    include: includeUsers,
+    include: {
+      ...includeUsers,
+      _count: { select: { steps: true } },
+      predecessors: {
+        include: { predecessor: { select: { seqNo: true, title: true } } },
+        orderBy: { predecessor: { seqNo: "asc" } },
+      },
+    },
     orderBy: { seqNo: "asc" },
   });
 }

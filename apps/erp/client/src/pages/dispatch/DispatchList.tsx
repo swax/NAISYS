@@ -12,13 +12,13 @@ import {
   TextInput,
   Title,
 } from "@mantine/core";
-import type { OrderRunListResponse } from "@naisys-erp/shared";
+import type { DispatchListResponse } from "@naisys-erp/shared";
 import {
-  OrderRunPriority,
+  OperationRunStatus,
   OrderRunPriorityEnum,
-  OrderRunStatus,
 } from "@naisys-erp/shared";
-import { useCallback, useEffect, useState } from "react";
+import { useDebouncedValue } from "@mantine/hooks";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router";
 
 import { api, apiEndpoints, showErrorNotification } from "../../lib/api";
@@ -30,22 +30,25 @@ const cellLinkStyle = {
 };
 
 const STATUS_COLORS: Record<string, string> = {
-  [OrderRunStatus.released]: "blue",
-  [OrderRunStatus.started]: "yellow",
-  [OrderRunStatus.closed]: "green",
-  [OrderRunStatus.cancelled]: "gray",
+  [OperationRunStatus.blocked]: "gray",
+  [OperationRunStatus.pending]: "blue",
+  [OperationRunStatus.in_progress]: "yellow",
+  [OperationRunStatus.completed]: "green",
+  [OperationRunStatus.skipped]: "gray",
+  [OperationRunStatus.failed]: "red",
 };
 
 const PRIORITY_COLORS: Record<string, string> = {
-  [OrderRunPriority.low]: "gray",
-  [OrderRunPriority.medium]: "blue",
-  [OrderRunPriority.high]: "orange",
-  [OrderRunPriority.critical]: "red",
+  low: "gray",
+  medium: "blue",
+  high: "orange",
+  critical: "red",
 };
 
-const OPEN_STATUSES = [
-  { value: OrderRunStatus.released, label: "Released" },
-  { value: OrderRunStatus.started, label: "Started" },
+const STATUS_OPTIONS = [
+  { value: OperationRunStatus.pending, label: "Pending" },
+  { value: OperationRunStatus.in_progress, label: "In Progress" },
+  { value: OperationRunStatus.blocked, label: "Blocked" },
 ];
 
 export const DispatchList: React.FC = () => {
@@ -57,7 +60,25 @@ export const DispatchList: React.FC = () => {
   const search = searchParams.get("search") || "";
   const clockedIn = searchParams.get("clockedIn") === "true";
 
-  const [data, setData] = useState<OrderRunListResponse | null>(null);
+  const [searchInput, setSearchInput] = useState(search);
+  const [debouncedSearch] = useDebouncedValue(searchInput, 300);
+  const isFirstRender = useRef(true);
+
+  // Sync debounced value to search params
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    setSearchParams((prev) => {
+      if (debouncedSearch) prev.set("search", debouncedSearch);
+      else prev.delete("search");
+      prev.set("page", "1");
+      return prev;
+    });
+  }, [debouncedSearch, setSearchParams]);
+
+  const [data, setData] = useState<DispatchListResponse | null>(null);
   const [loading, setLoading] = useState(true);
 
   const fetchData = useCallback(async () => {
@@ -71,7 +92,7 @@ export const DispatchList: React.FC = () => {
       if (search) params.set("search", search);
       if (clockedIn) params.set("clockedIn", "true");
 
-      const result = await api.get<OrderRunListResponse>(
+      const result = await api.get<DispatchListResponse>(
         `${apiEndpoints.dispatch}?${params}`,
       );
       setData(result);
@@ -97,21 +118,13 @@ export const DispatchList: React.FC = () => {
       <Group mb="md">
         <TextInput
           placeholder="Search..."
-          value={search}
-          onChange={(e) => {
-            const val = e.currentTarget.value;
-            setSearchParams((prev) => {
-              if (val) prev.set("search", val);
-              else prev.delete("search");
-              prev.set("page", "1");
-              return prev;
-            });
-          }}
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.currentTarget.value)}
           style={{ flex: 1 }}
         />
         <Select
           placeholder="All open"
-          data={OPEN_STATUSES}
+          data={STATUS_OPTIONS}
           value={status ?? null}
           onChange={(val) => {
             setSearchParams((prev) => {
@@ -165,16 +178,16 @@ export const DispatchList: React.FC = () => {
               <Table.Tr>
                 <Table.Th>Order</Table.Th>
                 <Table.Th>Run</Table.Th>
+                <Table.Th>Operation</Table.Th>
                 <Table.Th>Status</Table.Th>
                 <Table.Th>Priority</Table.Th>
                 <Table.Th>Assigned To</Table.Th>
                 <Table.Th>Due</Table.Th>
-                <Table.Th>Created</Table.Th>
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
               {data.items.map((item) => {
-                const runLink = `/orders/${item.orderKey}/runs/${item.runNo}`;
+                const opRunLink = `/orders/${item.orderKey}/runs/${item.runNo}/ops/${item.seqNo}`;
                 return (
                   <Table.Tr key={item.id} style={{ cursor: "pointer" }}>
                     <Table.Td>
@@ -200,14 +213,28 @@ export const DispatchList: React.FC = () => {
                       </Group>
                     </Table.Td>
                     <Table.Td>
-                      <Link to={runLink} style={cellLinkStyle}>
+                      <Link
+                        to={`/orders/${item.orderKey}/runs/${item.runNo}`}
+                        style={cellLinkStyle}
+                      >
                         <Text size="sm" ff="monospace">
                           {item.runNo}
                         </Text>
                       </Link>
                     </Table.Td>
                     <Table.Td>
-                      <Link to={runLink} style={cellLinkStyle}>
+                      <Link to={opRunLink} style={cellLinkStyle}>
+                        <Text size="sm">
+                          <Text span ff="monospace">
+                            {item.seqNo}
+                          </Text>
+                          {" \u2014 "}
+                          {item.title}
+                        </Text>
+                      </Link>
+                    </Table.Td>
+                    <Table.Td>
+                      <Link to={opRunLink} style={cellLinkStyle}>
                         <Badge
                           color={STATUS_COLORS[item.status] ?? "gray"}
                           variant="light"
@@ -217,7 +244,7 @@ export const DispatchList: React.FC = () => {
                       </Link>
                     </Table.Td>
                     <Table.Td>
-                      <Link to={runLink} style={cellLinkStyle}>
+                      <Link to={opRunLink} style={cellLinkStyle}>
                         <Badge
                           color={PRIORITY_COLORS[item.priority] ?? "gray"}
                           variant="light"
@@ -227,20 +254,15 @@ export const DispatchList: React.FC = () => {
                       </Link>
                     </Table.Td>
                     <Table.Td>
-                      <Link to={runLink} style={cellLinkStyle}>
+                      <Link to={opRunLink} style={cellLinkStyle}>
                         {item.assignedTo ?? "\u2014"}
                       </Link>
                     </Table.Td>
                     <Table.Td>
-                      <Link to={runLink} style={cellLinkStyle}>
+                      <Link to={opRunLink} style={cellLinkStyle}>
                         {item.dueAt
                           ? new Date(item.dueAt).toLocaleDateString()
                           : "\u2014"}
-                      </Link>
-                    </Table.Td>
-                    <Table.Td>
-                      <Link to={runLink} style={cellLinkStyle}>
-                        {new Date(item.createdAt).toLocaleDateString()}
                       </Link>
                     </Table.Td>
                   </Table.Tr>
@@ -265,7 +287,7 @@ export const DispatchList: React.FC = () => {
         </>
       ) : (
         <Text c="dimmed" ta="center" py="xl">
-          No open order runs found.
+          No open operations found.
         </Text>
       )}
     </Container>
