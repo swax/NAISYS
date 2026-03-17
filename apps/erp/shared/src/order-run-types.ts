@@ -1,6 +1,7 @@
 import { z } from "zod/v4";
 
 import { HateoasActionSchema, HateoasLinkSchema } from "./hateoas-types.js";
+import { OperationRunStatusEnum } from "./operation-run-types.js";
 
 export const OrderRunStatusEnum = z.enum([
   "released",
@@ -94,11 +95,11 @@ export const OrderRunListResponseSchema = z.object({
 
 export type OrderRunListResponse = z.infer<typeof OrderRunListResponseSchema>;
 
-// Query params for dispatch view (open runs across all orders)
+// Query params for dispatch view (operation runs across open orders)
 export const DispatchListQuerySchema = z.object({
   page: z.coerce.number().int().min(1).optional().default(1),
   pageSize: z.coerce.number().int().min(1).max(100).optional().default(20),
-  status: OrderRunStatusEnum.optional(),
+  status: OperationRunStatusEnum.optional(),
   priority: OrderRunPriorityEnum.optional(),
   search: z.string().optional(),
   clockedIn: z
@@ -108,3 +109,31 @@ export const DispatchListQuerySchema = z.object({
 });
 
 export type DispatchListQuery = z.infer<typeof DispatchListQuerySchema>;
+
+// Dispatch item = operation run with parent order/run context
+export const DispatchItemSchema = z.object({
+  id: z.number(),
+  orderKey: z.string(),
+  revNo: z.number(),
+  runNo: z.number(),
+  seqNo: z.number(),
+  title: z.string(),
+  status: OperationRunStatusEnum,
+  priority: OrderRunPriorityEnum,
+  assignedTo: z.string().nullable(),
+  dueAt: z.iso.datetime().nullable(),
+  createdAt: z.iso.datetime(),
+  _links: z.array(HateoasLinkSchema),
+});
+
+export type DispatchItem = z.infer<typeof DispatchItemSchema>;
+
+export const DispatchListResponseSchema = z.object({
+  items: z.array(DispatchItemSchema),
+  total: z.number(),
+  page: z.number(),
+  pageSize: z.number(),
+  _links: z.array(HateoasLinkSchema),
+});
+
+export type DispatchListResponse = z.infer<typeof DispatchListResponseSchema>;

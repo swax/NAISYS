@@ -9,13 +9,18 @@ import {
   Textarea,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
-import type { OrderRevision, UpdateOrderRevision } from "@naisys-erp/shared";
+import type {
+  OperationListResponse,
+  OrderRevision,
+  UpdateOrderRevision,
+} from "@naisys-erp/shared";
 import { UpdateOrderRevisionSchema } from "@naisys-erp/shared";
 import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router";
 
 import { CompactMarkdown } from "../../../components/CompactMarkdown";
 import { MetadataTooltip } from "../../../components/MetadataTooltip";
+import { OperationSummaryTable } from "../../../components/OperationSummaryTable";
 import { api, apiEndpoints, showErrorNotification } from "../../../lib/api";
 import { hasAction } from "../../../lib/hateoas";
 import { zodResolver } from "../../../lib/zod-resolver";
@@ -35,6 +40,11 @@ export const HeaderDetail: React.FC = () => {
     validate: zodResolver(UpdateOrderRevisionSchema),
   });
 
+  const [operations, setOperations] = useState<OperationListResponse | null>(
+    null,
+  );
+  const [opsLoading, setOpsLoading] = useState(true);
+
   const fetchRevision = useCallback(async () => {
     if (!orderKey || !revNo) return;
     setLoading(true);
@@ -50,9 +60,25 @@ export const HeaderDetail: React.FC = () => {
     }
   }, [orderKey, revNo]);
 
+  const fetchOperations = useCallback(async () => {
+    if (!orderKey || !revNo) return;
+    setOpsLoading(true);
+    try {
+      const result = await api.get<OperationListResponse>(
+        apiEndpoints.orderRevOps(orderKey, revNo),
+      );
+      setOperations(result);
+    } catch (err) {
+      showErrorNotification(err);
+    } finally {
+      setOpsLoading(false);
+    }
+  }, [orderKey, revNo]);
+
   useEffect(() => {
     void fetchRevision();
-  }, [fetchRevision]);
+    void fetchOperations();
+  }, [fetchRevision, fetchOperations]);
 
   const startEditing = () => {
     if (!revision) return;
@@ -193,6 +219,14 @@ export const HeaderDetail: React.FC = () => {
             </Stack>
           )}
         </Card>
+
+        <OperationSummaryTable
+          items={operations?.items ?? null}
+          loading={opsLoading}
+          linkBuilder={(seqNo) =>
+            `/orders/${orderKey}/revs/${revNo}/ops/${seqNo}`
+          }
+        />
       </Stack>
     </Container>
   );

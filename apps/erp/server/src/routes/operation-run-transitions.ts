@@ -12,6 +12,7 @@ import { checkOrderRunStarted, resolveOpRun } from "../route-helpers.js";
 import {
   clockIn,
   clockOutAllForOpRun,
+  isUserClockedIn,
 } from "../services/labor-ticket-service.js";
 import {
   checkPredecessorsComplete,
@@ -101,6 +102,9 @@ export default function operationRunTransitionRoutes(fastify: FastifyInstance) {
         OperationRunStatus.in_progress,
       ]);
       if (statusErr) return conflict(reply, statusErr);
+
+      const clockedIn = await isUserClockedIn(resolved.opRun.id, userId);
+      if (!clockedIn) return conflict(reply, `You must be clocked in to complete an operation`);
 
       const stepsErr = await checkStepsComplete(resolved.opRun.id);
       if (stepsErr) return unprocessable(reply, stepsErr);

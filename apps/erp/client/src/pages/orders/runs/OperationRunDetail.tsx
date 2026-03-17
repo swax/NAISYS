@@ -4,9 +4,11 @@ import {
   Button,
   Card,
   Container,
+  Divider,
   Group,
   Loader,
   Stack,
+  Tabs,
   Text,
   Textarea,
 } from "@mantine/core";
@@ -21,8 +23,10 @@ import { MetadataTooltip } from "../../../components/MetadataTooltip";
 import { api, apiEndpoints, showErrorNotification } from "../../../lib/api";
 import { hasAction } from "../../../lib/hateoas";
 import { DependencyList } from "../revs/DependencyList";
-import type { OrderRunOutletContext } from "./OrderRunDetail";
+import type { LaborActions } from "./LaborTicketList";
 import { LaborTicketList } from "./LaborTicketList";
+import type { OrderRunOutletContext } from "./OrderRunDetail";
+import classes from "./OperationRunDetail.module.css";
 import { StepRunList } from "./StepRunList";
 
 const STATUS_COLORS: Record<string, string> = {
@@ -45,8 +49,11 @@ export const OperationRunDetail: React.FC = () => {
   const [opRun, setOpRun] = useState<OperationRun | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [activeTab, setActiveTab] = useState<string | null>("description");
   const [feedbackDraft, setFeedbackDraft] = useState("");
   const feedbackRef = useRef("");
+  const [laborActions, setLaborActions] = useState<LaborActions>({ canClockIn: false, canClockOut: false });
+  const [laborActing, setLaborActing] = useState(false);
 
   const fetchOpRun = useCallback(async () => {
     if (!orderKey || !runNo || !seqNo) return;
@@ -82,7 +89,10 @@ export const OperationRunDetail: React.FC = () => {
         apiEndpoints.operationRun(orderKey, runNo, seqNo),
         { feedback: trimmed || null },
       );
+      const value = updated.feedback ?? "";
       setOpRun(updated);
+      setFeedbackDraft(value);
+      feedbackRef.current = value;
     } catch (err) {
       showErrorNotification(err);
     }
@@ -109,6 +119,32 @@ export const OperationRunDetail: React.FC = () => {
       onOperationUpdate();
     } catch (err) {
       showErrorNotification(err);
+    }
+  };
+
+  const handleClockIn = async () => {
+    if (!orderKey || !runNo || !seqNo) return;
+    setLaborActing(true);
+    try {
+      await api.post(apiEndpoints.laborTicketClockIn(orderKey, runNo, seqNo), {});
+      setRefreshKey((k) => k + 1);
+    } catch (err) {
+      showErrorNotification(err);
+    } finally {
+      setLaborActing(false);
+    }
+  };
+
+  const handleClockOut = async () => {
+    if (!orderKey || !runNo || !seqNo) return;
+    setLaborActing(true);
+    try {
+      await api.post(apiEndpoints.laborTicketClockOut(orderKey, runNo, seqNo), {});
+      setRefreshKey((k) => k + 1);
+    } catch (err) {
+      showErrorNotification(err);
+    } finally {
+      setLaborActing(false);
     }
   };
 
@@ -151,6 +187,33 @@ export const OperationRunDetail: React.FC = () => {
             </Badge>
           </Group>
           <Group gap="xs">
+            {(laborActions.canClockIn || laborActions.canClockOut) && (
+              <>
+                {laborActions.canClockIn && (
+                  <Button
+                    size="xs"
+                    color="green"
+                    variant="outline"
+                    loading={laborActing}
+                    onClick={() => void handleClockIn()}
+                  >
+                    Clock In
+                  </Button>
+                )}
+                {laborActions.canClockOut && (
+                  <Button
+                    size="xs"
+                    color="orange"
+                    variant="outline"
+                    loading={laborActing}
+                    onClick={() => void handleClockOut()}
+                  >
+                    Clock Out
+                  </Button>
+                )}
+                <Divider orientation="vertical" />
+              </>
+            )}
             {hasAction(opRun._actions, "start") && (
               <Button
                 size="xs"
@@ -233,39 +296,83 @@ export const OperationRunDetail: React.FC = () => {
           </Group>
         </Group>
 
-        <Card withBorder p="lg">
-          <Stack gap="sm">
-            {opRun.description && (
-              <Group align="flex-start">
-                <Text fw={600} w={120}>
-                  Description:
-                </Text>
-                <CompactMarkdown>{opRun.description}</CompactMarkdown>
-              </Group>
-            )}
-            {opRun.completedAt && (
-              <Group>
-                <Text fw={600} w={120}>
-                  Completed At:
-                </Text>
-                <Text>{new Date(opRun.completedAt).toLocaleString()}</Text>
-              </Group>
-            )}
-          </Stack>
-        </Card>
+        <Tabs value={activeTab} onChange={setActiveTab}>
+          <Tabs.List>
+            <Tabs.Tab value="description">Description</Tabs.Tab>
+            <Tabs.Tab value="dependencies">Dependencies</Tabs.Tab>
+            <Tabs.Tab value="labor">Labor Tickets</Tabs.Tab>
+            <Tabs.Tab value="feedback">Feedback</Tabs.Tab>
+          </Tabs.List>
 
-        <DependencyList
-          orderKey={orderKey!}
-          revNo={String(orderRun.revNo)}
-          opSeqNo={seqNo!}
-        />
+          <div className={classes.panelGrid}>
+            <Tabs.Panel value="description" pt="sm" keepMounted data-active={activeTab === "description" || undefined}>
+              <Card withBorder p="lg">
+                <Stack gap="sm">
+                  {opRun.description && (
+                    <CompactMarkdown>{opRun.description}</CompactMarkdown>
+                  )}
+                </Stack>
+              </Card>
+            </Tabs.Panel>
 
-        <LaborTicketList
-          orderKey={orderKey!}
-          runNo={runNo!}
-          seqNo={seqNo!}
-          refreshKey={refreshKey}
-        />
+            <Tabs.Panel value="dependencies" pt="sm" keepMounted data-active={activeTab === "dependencies" || undefined}>
+              <DependencyList
+                orderKey={orderKey!}
+                revNo={String(orderRun.revNo)}
+                opSeqNo={seqNo!}
+                showTitle={false}
+              />
+            </Tabs.Panel>
+
+            <Tabs.Panel value="labor" pt="sm" keepMounted data-active={activeTab === "labor" || undefined}>
+              <LaborTicketList
+                orderKey={orderKey!}
+                runNo={runNo!}
+                seqNo={seqNo!}
+                refreshKey={refreshKey}
+                showTitle={false}
+                onActionsChange={setLaborActions}
+              />
+            </Tabs.Panel>
+
+            <Tabs.Panel value="feedback" pt="sm" keepMounted data-active={activeTab === "feedback" || undefined}>
+              {opRun.status === OperationRunStatus.in_progress ? (
+                <Stack gap="xs">
+                  <Textarea
+                    autosize
+                    minRows={2}
+                    placeholder="Enter feedback..."
+                    value={feedbackDraft}
+                    onChange={(e) => setFeedbackDraft(e.currentTarget.value)}
+                  />
+                  <Group gap="xs">
+                    <Button
+                      size="xs"
+                      disabled={feedbackDraft.trim() === (feedbackRef.current ?? "")}
+                      onClick={() => void saveFeedback()}
+                    >
+                      Save
+                    </Button>
+                    {feedbackDraft.trim() !== (feedbackRef.current ?? "") && (
+                      <Button
+                        size="xs"
+                        variant="outline"
+                        color="gray"
+                        onClick={() => setFeedbackDraft(feedbackRef.current)}
+                      >
+                        Discard
+                      </Button>
+                    )}
+                  </Group>
+                </Stack>
+              ) : (
+                <Text style={{ whiteSpace: "pre-wrap" }}>
+                  {opRun.feedback || "\u2014"}
+                </Text>
+              )}
+            </Tabs.Panel>
+          </div>
+        </Tabs>
 
         <StepRunList
           orderKey={orderKey!}
@@ -273,24 +380,6 @@ export const OperationRunDetail: React.FC = () => {
           seqNo={seqNo!}
           refreshKey={refreshKey}
         />
-
-        <Stack gap="xs">
-          <Text fw={600}>Feedback</Text>
-          {opRun.status === OperationRunStatus.in_progress ? (
-            <Textarea
-              autosize
-              minRows={2}
-              placeholder="Enter feedback..."
-              value={feedbackDraft}
-              onChange={(e) => setFeedbackDraft(e.currentTarget.value)}
-              onBlur={() => void saveFeedback()}
-            />
-          ) : (
-            <Text style={{ whiteSpace: "pre-wrap" }}>
-              {opRun.feedback || "\u2014"}
-            </Text>
-          )}
-        </Stack>
       </Stack>
     </Container>
   );

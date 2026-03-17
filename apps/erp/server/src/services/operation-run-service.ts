@@ -21,12 +21,39 @@ export type OpRunWithOp = OperationRunModel & {
   updatedBy: { username: string };
 };
 
+export type OpRunWithSummary = OpRunWithOp & {
+  _count: { stepRuns: number };
+  operation: {
+    seqNo: number;
+    title: string;
+    description: string;
+    predecessors: Array<{
+      predecessor: { seqNo: number; title: string };
+    }>;
+  };
+};
+
 // --- Lookups ---
 
-export async function listOpRuns(runId: number): Promise<OpRunWithOp[]> {
+export async function listOpRuns(runId: number): Promise<OpRunWithSummary[]> {
   return erpDb.operationRun.findMany({
     where: { orderRunId: runId },
-    include: includeOp,
+    include: {
+      operation: {
+        select: {
+          seqNo: true,
+          title: true,
+          description: true,
+          predecessors: {
+            include: { predecessor: { select: { seqNo: true, title: true } } },
+            orderBy: { predecessor: { seqNo: "asc" } },
+          },
+        },
+      },
+      _count: { select: { stepRuns: true } },
+      createdBy: { select: { username: true } },
+      updatedBy: { select: { username: true } },
+    },
     orderBy: { operation: { seqNo: "asc" } },
   });
 }

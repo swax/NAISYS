@@ -26,6 +26,7 @@ import {
   getOpRun,
   listOpRuns,
   type OpRunWithOp,
+  type OpRunWithSummary,
   updateOpRun,
   validateStatusFor,
 } from "../services/operation-run-service.js";
@@ -184,11 +185,16 @@ function formatListOpRun(
   orderKey: string,
   runNo: number,
   user: ErpUser | undefined,
-  opRun: OpRunWithOp,
+  opRun: OpRunWithSummary,
 ) {
   const { _actions, ...rest } = formatOpRun(orderKey, runNo, user, opRun);
   return {
     ...rest,
+    stepCount: opRun._count.stepRuns,
+    predecessors: opRun.operation.predecessors.map((d) => ({
+      seqNo: d.predecessor.seqNo,
+      title: d.predecessor.title,
+    })),
     _links: [
       selfLink(`/${opRunResource(orderKey, runNo)}/${opRun.operation.seqNo}`),
     ],

@@ -1,50 +1,33 @@
 import {
   DispatchListQuerySchema,
-  OrderRunListResponseSchema,
+  DispatchListResponseSchema,
+  OperationRunStatus,
   OrderRunStatus,
 } from "@naisys-erp/shared";
 import { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 
 import erpDb from "../erpDb.js";
-import { paginationLinks, selfLink } from "../hateoas.js";
-import { formatAuditFields, formatDate } from "../route-helpers.js";
-import {
-  includeRev,
-  type OrderRunWithRev,
-} from "../services/order-run-service.js";
+import { paginationLinks } from "../hateoas.js";
+import { formatDate } from "../route-helpers.js";
 
-const OPEN_STATUSES = [OrderRunStatus.released, OrderRunStatus.started];
-
-function formatDispatchRun(orderKey: string, run: OrderRunWithRev) {
-  return {
-    id: run.id,
-    runNo: run.runNo,
-    orderId: run.orderId,
-    orderKey,
-    revNo: run.orderRev.revNo,
-    itemKey: run.order?.item?.key ?? null,
-    status: run.status,
-    priority: run.priority,
-    scheduledStartAt: formatDate(run.scheduledStartAt),
-    dueAt: formatDate(run.dueAt),
-    assignedTo: run.assignedTo,
-    notes: run.notes,
-    ...formatAuditFields(run),
-    _links: [selfLink(`/orders/${orderKey}/runs/${run.runNo}`)],
-  };
-}
+const OPEN_ORDER_STATUSES = [OrderRunStatus.released, OrderRunStatus.started];
+const DEFAULT_OP_STATUSES = [
+  OperationRunStatus.pending,
+  OperationRunStatus.in_progress,
+];
 
 export default function dispatchRoutes(fastify: FastifyInstance) {
   const app = fastify.withTypeProvider<ZodTypeProvider>();
 
   app.get("/", {
     schema: {
-      description: "List open order runs across all orders (dispatch view)",
+      description:
+        "List operation runs across open orders (dispatch view)",
       tags: ["Dispatch"],
       querystring: DispatchListQuerySchema,
       response: {
-        200: OrderRunListResponseSchema,
+        200: DispatchListResponseSchema,
       },
     },
     handler: async (request) => {
@@ -52,38 +35,63 @@ export default function dispatchRoutes(fastify: FastifyInstance) {
         request.query;
 
       const where: Record<string, unknown> = {
-        status: { in: status ? [status] : OPEN_STATUSES },
+        status: { in: status ? [status] : DEFAULT_OP_STATUSES },
+        orderRun: {
+          status: { in: OPEN_ORDER_STATUSES },
+          ...(priority ? { priority } : {}),
+        },
       };
-      if (priority) where.priority = priority;
+
       if (search) {
         where.OR = [
-          { assignedTo: { contains: search } },
-          { notes: { contains: search } },
-          { order: { key: { contains: search } } },
+          { operation: { title: { contains: search } } },
+          { orderRun: { assignedTo: { contains: search } } },
+          { orderRun: { order: { key: { contains: search } } } },
         ];
       }
+
       if (clockedIn) {
-        where.operationRuns = {
-          some: { laborTickets: { some: { clockOut: null } } },
-        };
+        where.laborTickets = { some: { clockOut: null } };
       }
 
       const [items, total] = await Promise.all([
-        erpDb.orderRun.findMany({
+        erpDb.operationRun.findMany({
           where,
           include: {
-            ...includeRev,
-            order: { select: { key: true, item: { select: { key: true } } } },
+            operation: { select: { seqNo: true, title: true } },
+            orderRun: {
+              select: {
+                runNo: true,
+                priority: true,
+                assignedTo: true,
+                dueAt: true,
+                order: { select: { key: true } },
+                orderRev: { select: { revNo: true } },
+              },
+            },
           },
           skip: (page - 1) * pageSize,
           take: pageSize,
           orderBy: { createdAt: "desc" },
         }),
-        erpDb.orderRun.count({ where }),
+        erpDb.operationRun.count({ where }),
       ]);
 
       return {
-        items: items.map((run) => formatDispatchRun(run.order.key, run)),
+        items: items.map((opRun) => ({
+          id: opRun.id,
+          orderKey: opRun.orderRun.order.key,
+          revNo: opRun.orderRun.orderRev.revNo,
+          runNo: opRun.orderRun.runNo,
+          seqNo: opRun.operation.seqNo,
+          title: opRun.operation.title,
+          status: opRun.status,
+          priority: opRun.orderRun.priority,
+          assignedTo: opRun.orderRun.assignedTo,
+          dueAt: formatDate(opRun.orderRun.dueAt),
+          createdAt: opRun.createdAt.toISOString(),
+          _links: [],
+        })),
         total,
         page,
         pageSize,

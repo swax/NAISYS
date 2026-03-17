@@ -2,6 +2,14 @@ import { z } from "zod/v4";
 
 import { HateoasActionSchema, HateoasLinkSchema } from "./hateoas-types.js";
 
+// Predecessor summary (included in list responses)
+export const OperationPredecessorSchema = z.object({
+  seqNo: z.number(),
+  title: z.string(),
+});
+
+export type OperationPredecessor = z.infer<typeof OperationPredecessorSchema>;
+
 // Full operation response shape
 export const OperationSchema = z.object({
   id: z.number(),
@@ -9,6 +17,8 @@ export const OperationSchema = z.object({
   seqNo: z.number(),
   title: z.string(),
   description: z.string(),
+  stepCount: z.number().optional(),
+  predecessors: z.array(OperationPredecessorSchema).optional(),
   createdAt: z.iso.datetime(),
   createdBy: z.string(),
   updatedAt: z.iso.datetime(),

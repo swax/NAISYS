@@ -2,8 +2,6 @@ import {
   ActionIcon,
   Anchor,
   Badge,
-  Button,
-  Group,
   Loader,
   Stack,
   Table,
@@ -17,11 +15,18 @@ import { useCallback, useEffect, useState } from "react";
 import { api, apiEndpoints, showErrorNotification } from "../../../lib/api";
 import { hasAction } from "../../../lib/hateoas";
 
+export interface LaborActions {
+  canClockIn: boolean;
+  canClockOut: boolean;
+}
+
 interface Props {
   orderKey: string;
   runNo: string;
   seqNo: string;
   refreshKey?: number;
+  showTitle?: boolean;
+  onActionsChange?: (actions: LaborActions) => void;
 }
 
 function formatDuration(clockIn: string, clockOut: string | null): string {
@@ -39,10 +44,11 @@ export const LaborTicketList: React.FC<Props> = ({
   runNo,
   seqNo,
   refreshKey,
+  showTitle = true,
+  onActionsChange,
 }) => {
   const [data, setData] = useState<LaborTicketListResponse | null>(null);
   const [loading, setLoading] = useState(true);
-  const [acting, setActing] = useState(false);
   const [loadedSeqNo, setLoadedSeqNo] = useState(seqNo);
 
   if (seqNo !== loadedSeqNo) {
@@ -69,32 +75,12 @@ export const LaborTicketList: React.FC<Props> = ({
     void fetchTickets();
   }, [fetchTickets]);
 
-  const handleClockIn = async () => {
-    setActing(true);
-    try {
-      await api.post(apiEndpoints.laborTicketClockIn(orderKey, runNo, seqNo), {});
-      await fetchTickets();
-    } catch (err) {
-      showErrorNotification(err);
-    } finally {
-      setActing(false);
-    }
-  };
-
-  const handleClockOut = async () => {
-    setActing(true);
-    try {
-      const result = await api.post<LaborTicketListResponse>(
-        apiEndpoints.laborTicketClockOut(orderKey, runNo, seqNo),
-        {},
-      );
-      setData(result);
-    } catch (err) {
-      showErrorNotification(err);
-    } finally {
-      setActing(false);
-    }
-  };
+  useEffect(() => {
+    onActionsChange?.({
+      canClockIn: !!data && !!hasAction(data._actions, "clock-in"),
+      canClockOut: !!data && !!hasAction(data._actions, "clock-out"),
+    });
+  }, [data, onActionsChange]);
 
   const handleDelete = async (ticketId: number) => {
     try {
@@ -109,31 +95,7 @@ export const LaborTicketList: React.FC<Props> = ({
 
   return (
     <>
-      <Group justify="space-between" align="center">
-        <Title order={5}>Labor Tickets</Title>
-        <Group gap="xs">
-          {data && hasAction(data._actions, "clock-in") && (
-            <Button
-              size="xs"
-              color="green"
-              loading={acting}
-              onClick={() => void handleClockIn()}
-            >
-              Clock In
-            </Button>
-          )}
-          {data && hasAction(data._actions, "clock-out") && (
-            <Button
-              size="xs"
-              color="orange"
-              loading={acting}
-              onClick={() => void handleClockOut()}
-            >
-              Clock Out
-            </Button>
-          )}
-        </Group>
-      </Group>
+      {showTitle && <Title order={5}>Labor Tickets</Title>}
 
       {loading ? (
         <Stack align="center" py="sm">
