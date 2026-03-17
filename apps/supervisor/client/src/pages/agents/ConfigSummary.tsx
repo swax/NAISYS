@@ -181,7 +181,9 @@ export const ConfigSummary: React.FC<{
         <Text size="sm" c="dimmed" mb={4}>
           Agent Prompt
         </Text>
-        <Code block>{config.agentPrompt}</Code>
+        <Code block style={{ whiteSpace: "pre-wrap" }}>
+          {config.agentPrompt}
+        </Code>
       </div>
 
       {config.initialCommands && config.initialCommands.length > 0 && (
