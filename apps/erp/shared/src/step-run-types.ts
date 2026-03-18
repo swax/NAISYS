@@ -1,6 +1,10 @@
 import { z } from "zod/v4";
 
-import { HateoasActionSchema, HateoasLinkSchema } from "./hateoas-types.js";
+import {
+  HateoasActionSchema,
+  HateoasActionTemplateSchema,
+  HateoasLinkSchema,
+} from "./hateoas-types.js";
 
 // Validation result for a field value
 export const StepFieldValidationSchema = z.object({
@@ -21,7 +25,6 @@ export const StepFieldValueSchema = z.object({
   setIndex: z.number(),
   value: z.string(),
   validation: StepFieldValidationSchema,
-  _actions: z.array(HateoasActionSchema).optional(),
 });
 
 export type StepFieldValue = z.infer<typeof StepFieldValueSchema>;
@@ -42,6 +45,7 @@ export const StepRunSchema = z.object({
   updatedBy: z.string(),
   _links: z.array(HateoasLinkSchema),
   _actions: z.array(HateoasActionSchema).optional(),
+  _actionTemplates: z.array(HateoasActionTemplateSchema).optional(),
 });
 
 export type StepRun = z.infer<typeof StepRunSchema>;

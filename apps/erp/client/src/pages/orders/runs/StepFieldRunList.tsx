@@ -30,7 +30,7 @@ function formatDate(d: Date): string {
 function formatDateTime(d: Date): string {
   return `${formatDate(d)}T${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 }
-import { hasAction } from "../../../lib/hateoas";
+import { hasActionTemplate } from "../../../lib/hateoas";
 
 /** Composite key for edits map: fieldId + setIndex */
 function editKey(stepFieldId: number, setIndex: number): string {
@@ -358,9 +358,8 @@ export const StepFieldRunList: React.FC<Props> = ({
     }
   }
 
-  const canEdit = !step.completed && currentFieldValues.some(
-    (fv) => hasAction(fv._actions, "update"),
-  );
+  const canEdit =
+    !step.completed && !!hasActionTemplate(step._actionTemplates, "updateField");
 
   return (
     <Stack gap="xs" mt="xs">
@@ -412,8 +411,7 @@ export const StepFieldRunList: React.FC<Props> = ({
         const key = editKey(fv.stepFieldId, fv.setIndex);
         const status = fieldStatus[key];
         const fieldLabel = fv.required ? `${fv.label} *` : fv.label;
-        const fieldCanEdit =
-          hasAction(fv._actions, "update") && !step.completed;
+        const fieldCanEdit = canEdit;
         const editedValue = edits[key] ?? fv.value;
 
         if (!fieldCanEdit) {

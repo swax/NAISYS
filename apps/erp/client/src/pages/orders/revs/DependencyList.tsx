@@ -18,7 +18,7 @@ import { CreateOperationDependencySchema } from "@naisys-erp/shared";
 import { useCallback, useEffect, useState } from "react";
 
 import { api, apiEndpoints, showErrorNotification } from "../../../lib/api";
-import { hasAction } from "../../../lib/hateoas";
+import { hasAction, hasActionTemplate } from "../../../lib/hateoas";
 import { zodResolver } from "../../../lib/zod-resolver";
 
 interface DependencyListProps {
@@ -146,7 +146,7 @@ export const DependencyList: React.FC<DependencyListProps> = ({
               <Badge variant="light" size="lg">
                 {dep.predecessorSeqNo}. {dep.predecessorTitle}
               </Badge>
-              {hasAction(dep._actions, "delete") && (
+              {hasActionTemplate(deps?._actionTemplates, "deleteDependency") && (
                 <Button
                   size="compact-xs"
                   color="red"

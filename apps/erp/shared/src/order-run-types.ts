@@ -1,6 +1,10 @@
 import { z } from "zod/v4";
 
-import { HateoasActionSchema, HateoasLinkSchema } from "./hateoas-types.js";
+import {
+  HateoasActionSchema,
+  HateoasActionTemplateSchema,
+  HateoasLinkSchema,
+} from "./hateoas-types.js";
 import { OperationRunStatusEnum } from "./operation-run-types.js";
 
 export const OrderRunStatusEnum = z.enum([
@@ -123,7 +127,6 @@ export const DispatchItemSchema = z.object({
   assignedTo: z.string().nullable(),
   dueAt: z.iso.datetime().nullable(),
   createdAt: z.iso.datetime(),
-  _links: z.array(HateoasLinkSchema),
 });
 
 export type DispatchItem = z.infer<typeof DispatchItemSchema>;
@@ -134,6 +137,7 @@ export const DispatchListResponseSchema = z.object({
   page: z.number(),
   pageSize: z.number(),
   _links: z.array(HateoasLinkSchema),
+  _actionTemplates: z.array(HateoasActionTemplateSchema).optional(),
 });
 
 export type DispatchListResponse = z.infer<typeof DispatchListResponseSchema>;

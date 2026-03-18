@@ -82,20 +82,19 @@ function laborTicketListActions(
   return actions;
 }
 
-function laborTicketItemActions(
+function laborTicketActionTemplates(
   orderKey: string,
   runNo: number,
   seqNo: number,
-  ticketId: number,
   user: ErpUser | undefined,
-): HateoasAction[] {
+) {
   if (!hasPermission(user, "order_manager")) return [];
   return [
     {
-      rel: "delete",
-      href: `${API_PREFIX}/${laborResource(orderKey, runNo, seqNo)}/${ticketId}`,
+      rel: "deleteTicket",
+      hrefTemplate: `${API_PREFIX}/${laborResource(orderKey, runNo, seqNo)}/{ticketId}`,
       method: "DELETE",
-      title: "Delete",
+      title: "Delete Ticket",
     },
   ];
 }
@@ -104,7 +103,6 @@ function formatLaborTicket(
   orderKey: string,
   runNo: number,
   seqNo: number,
-  user: ErpUser | undefined,
   ticket: LaborTicketWithUser,
 ) {
   return {
@@ -120,7 +118,6 @@ function formatLaborTicket(
     _links: [
       selfLink(`/${laborResource(orderKey, runNo, seqNo)}/${ticket.id}`),
     ],
-    _actions: laborTicketItemActions(orderKey, runNo, seqNo, ticket.id, user),
   };
 }
 
@@ -163,7 +160,7 @@ export default function laborTicketRoutes(fastify: FastifyInstance) {
 
       return {
         items: items.map((ticket) =>
-          formatLaborTicket(orderKey, runNo, seqNo, request.erpUser, ticket),
+          formatLaborTicket(orderKey, runNo, seqNo, ticket),
         ),
         total: items.length,
         _links: [selfLink(`/${laborResource(orderKey, runNo, seqNo)}`)],
@@ -174,6 +171,12 @@ export default function laborTicketRoutes(fastify: FastifyInstance) {
           resolved.opRun.status,
           request.erpUser,
           items,
+        ),
+        _actionTemplates: laborTicketActionTemplates(
+          orderKey,
+          runNo,
+          seqNo,
+          request.erpUser,
         ),
       };
     },
@@ -207,7 +210,7 @@ export default function laborTicketRoutes(fastify: FastifyInstance) {
       }
 
       const ticket = await clockIn(resolved.opRun.id, userId, userId);
-      return formatLaborTicket(orderKey, runNo, seqNo, request.erpUser, ticket);
+      return formatLaborTicket(orderKey, runNo, seqNo, ticket);
     },
   });
 
@@ -262,7 +265,7 @@ export default function laborTicketRoutes(fastify: FastifyInstance) {
       const items = await listLaborTickets(resolved.opRun.id);
       return {
         items: items.map((ticket) =>
-          formatLaborTicket(orderKey, runNo, seqNo, request.erpUser, ticket),
+          formatLaborTicket(orderKey, runNo, seqNo, ticket),
         ),
         total: items.length,
         _links: [selfLink(`/${laborResource(orderKey, runNo, seqNo)}`)],
@@ -273,6 +276,12 @@ export default function laborTicketRoutes(fastify: FastifyInstance) {
           resolved.opRun.status,
           request.erpUser,
           items,
+        ),
+        _actionTemplates: laborTicketActionTemplates(
+          orderKey,
+          runNo,
+          seqNo,
+          request.erpUser,
         ),
       };
     },
