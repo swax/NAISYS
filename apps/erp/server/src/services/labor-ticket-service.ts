@@ -168,6 +168,16 @@ export async function clockOutAllForOpRun(
   await clockOut(operationRunId, {}, actorId);
 }
 
+export async function sumLaborTicketCosts(
+  operationRunId: number,
+): Promise<number> {
+  const result = await erpDb.laborTicket.aggregate({
+    where: { operationRunId },
+    _sum: { cost: true },
+  });
+  return Math.round((result._sum.cost ?? 0) * 100) / 100;
+}
+
 export async function deleteLaborTicket(
   ticketId: number,
   actorId: number,

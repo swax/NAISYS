@@ -14,6 +14,7 @@ import {
   checkOpsComplete,
   completeOrderRun,
   getReopenTarget,
+  sumOpRunCosts,
   transitionStatus,
   validateStatusFor,
 } from "../services/order-run-service.js";
@@ -93,12 +94,14 @@ export default function orderRunTransitionRoutes(fastify: FastifyInstance) {
       if (opsErr) return unprocessable(reply, opsErr);
 
       const userId = request.erpUser!.id;
+      const cost = await sumOpRunCosts(resolved.run.id);
       const run = await transitionStatus(
         resolved.run.id,
         "close",
         OrderRunStatus.started,
         OrderRunStatus.closed,
         userId,
+        { cost },
       );
 
       return formatRun(orderKey, request.erpUser, run);
@@ -182,6 +185,7 @@ export default function orderRunTransitionRoutes(fastify: FastifyInstance) {
       if (statusErr) return conflict(reply, statusErr);
 
       const userId = request.erpUser!.id;
+      const cost = await sumOpRunCosts(resolved.run.id);
       const run = await transitionStatus(
         resolved.run.id,
         "cancel",
@@ -190,6 +194,7 @@ export default function orderRunTransitionRoutes(fastify: FastifyInstance) {
           | typeof OrderRunStatus.started,
         OrderRunStatus.cancelled,
         userId,
+        cost > 0 ? { cost } : undefined,
       );
 
       return formatRun(orderKey, request.erpUser, run);

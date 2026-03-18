@@ -9,4 +9,4 @@ export function erpDbUrl(): string {
 }
 
 /** We run migration scripts if this is greater than what's in the schema_version table */
-export const ERP_DB_VERSION = 29;
+export const ERP_DB_VERSION = 30;
