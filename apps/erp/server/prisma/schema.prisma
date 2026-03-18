@@ -214,6 +214,7 @@ model OrderRun {
   order         Order          @relation(fields: [orderId], references: [id], onDelete: Restrict)
   orderRev      OrderRevision  @relation(fields: [orderRevId], references: [id], onDelete: Restrict)
   operationRuns OperationRun[]
+  itemInstances ItemInstance[]
 
   @@unique([orderId, runNo])
   @@index([status]) // LIST filter in order-runs.ts
@@ -299,13 +300,35 @@ model Item {
   updatedAt   DateTime @updatedAt @map("updated_at")
   updatedById Int      @map("updated_by")
 
-  createdBy User      @relation("itemCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
-  updatedBy User      @relation("itemUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
-  fieldSet  FieldSet? @relation(fields: [fieldSetId], references: [id])
-  orders    Order[]
+  createdBy     User           @relation("itemCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy     User           @relation("itemUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+  fieldSet      FieldSet?      @relation(fields: [fieldSetId], references: [id])
+  orders        Order[]
+  itemInstances ItemInstance[]
 
   @@index([createdAt])
   @@map("items")
+}
+
+model ItemInstance {
+  id          Int      @id @default(autoincrement())
+  itemId      Int      @map("item_id")
+  orderRunId  Int?     @map("order_run_id")
+  key         String
+  quantity    Float?
+  createdAt   DateTime @default(now()) @map("created_at")
+  createdById Int      @map("created_by")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  updatedById Int      @map("updated_by")
+
+  item      Item     @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  orderRun  OrderRun? @relation(fields: [orderRunId], references: [id], onDelete: Restrict)
+  createdBy User     @relation("itemInstanceCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy User     @relation("itemInstanceUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+
+  @@unique([itemId, key])
+  @@index([orderRunId])
+  @@map("item_instances")
 }
 
 model User {
@@ -341,6 +364,8 @@ model User {
   stepRunsUpdated        StepRun[]             @relation("stepRunUpdatedBy")
   stepFieldValuesCreated StepFieldValue[]      @relation("stepFieldValueCreatedBy")
   stepFieldValuesUpdated StepFieldValue[]      @relation("stepFieldValueUpdatedBy")
+  itemInstancesCreated   ItemInstance[]        @relation("itemInstanceCreatedBy")
+  itemInstancesUpdated   ItemInstance[]        @relation("itemInstanceUpdatedBy")
   laborTicketsWorked     LaborTicket[]         @relation("laborTicketUser")
   laborTicketsCreated    LaborTicket[]         @relation("laborTicketCreatedBy")
   laborTicketsUpdated    LaborTicket[]         @relation("laborTicketUpdatedBy")
