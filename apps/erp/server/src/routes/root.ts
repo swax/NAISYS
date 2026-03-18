@@ -65,12 +65,20 @@ export default function rootRoute(fastify: FastifyInstance) {
         ];
 
         if (hasPermission(request.erpUser, "erp_admin")) {
-          authLinks.push({
-            rel: "users",
-            href: "/api/erp/users",
-            title: "Users",
-            method: "GET",
-          });
+          authLinks.push(
+            {
+              rel: "users",
+              href: "/api/erp/users",
+              title: "Users",
+              method: "GET",
+            },
+            {
+              rel: "admin",
+              href: "/api/erp/admin",
+              title: "Admin",
+              method: "GET",
+            },
+          );
         }
 
         return {

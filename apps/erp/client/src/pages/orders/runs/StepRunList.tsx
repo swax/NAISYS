@@ -9,6 +9,7 @@ import {
   Title,
 } from "@mantine/core";
 import type {
+  FieldAttachment,
   StepFieldValue,
   StepRun,
   StepRunListResponse,
@@ -215,6 +216,35 @@ export const StepRunList: React.FC<Props> = ({
     );
   };
 
+  const handleAttachmentUploaded = (
+    stepId: number,
+    stepFieldId: number,
+    setIndex: number,
+    attachment: FieldAttachment,
+  ) => {
+    setData((prev) =>
+      prev
+        ? {
+            ...prev,
+            items: prev.items.map((s) => {
+              if (s.id !== stepId) return s;
+              return {
+                ...s,
+                fieldValues: s.fieldValues.map((fv) =>
+                  fv.stepFieldId === stepFieldId && fv.setIndex === setIndex
+                    ? {
+                        ...fv,
+                        attachments: [...(fv.attachments ?? []), attachment],
+                      }
+                    : fv,
+                ),
+              };
+            }),
+          }
+        : prev,
+    );
+  };
+
   const handleSetDeleted = (_stepId: number) => {
     // Refetch to get re-indexed data from server
     void fetchSteps();
@@ -306,6 +336,14 @@ export const StepRunList: React.FC<Props> = ({
                       }
                       onSetAdded={() => handleSetAdded(step.id, step)}
                       onSetDeleted={() => handleSetDeleted(step.id)}
+                      onAttachmentUploaded={(stepFieldId, setIndex, att) =>
+                        handleAttachmentUploaded(
+                          step.id,
+                          stepFieldId,
+                          setIndex,
+                          att,
+                        )
+                      }
                     />
                   )}
                 </Stack>

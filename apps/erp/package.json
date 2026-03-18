@@ -18,5 +18,8 @@
   "devDependencies": {
     "concurrently": "^9.2.1",
     "prettier": "^3.6.2"
+  },
+  "dependencies": {
+    "@fastify/multipart": "^9.4.0"
   }
 }

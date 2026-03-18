@@ -25,6 +25,7 @@ const navLinks = [
   { label: "Orders", path: "/orders" },
   { label: "Dispatch", path: "/dispatch" },
   { label: "Users", path: "/users" },
+  { label: "Admin", path: "/admin" },
 ];
 
 export interface AppOutletContext {

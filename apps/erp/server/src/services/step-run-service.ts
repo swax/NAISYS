@@ -24,7 +24,19 @@ export const includeStep = {
     },
   },
   fieldValues: {
-    select: { stepFieldId: true, setIndex: true, value: true },
+    select: {
+      id: true,
+      stepFieldId: true,
+      setIndex: true,
+      value: true,
+      stepFieldAttachments: {
+        select: {
+          attachment: {
+            select: { id: true, filename: true, fileSize: true },
+          },
+        },
+      },
+    },
     orderBy: { setIndex: "asc" as const },
   },
   createdBy: { select: { username: true } },
@@ -51,7 +63,15 @@ export type StepRunWithStep = {
       required: boolean;
     }[];
   };
-  fieldValues: { stepFieldId: number; setIndex: number; value: string }[];
+  fieldValues: {
+    id: number;
+    stepFieldId: number;
+    setIndex: number;
+    value: string;
+    stepFieldAttachments: {
+      attachment: { id: number; filename: string; fileSize: number };
+    }[];
+  }[];
   createdBy: { username: string };
   updatedBy: { username: string };
 };

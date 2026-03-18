@@ -1,5 +1,6 @@
 import type { AgentConfigFile } from "@naisys/common";
 import type {
+  AdminAttachmentListResponse,
   AdminInfoResponse,
   Agent,
   AgentActionResult,
@@ -49,6 +50,7 @@ import type {
 export const API_BASE = "/api/supervisor";
 
 export type {
+  AdminAttachmentListResponse,
   AdminInfoResponse,
   Agent,
   AgentActionResult,
@@ -206,6 +208,7 @@ export const apiEndpoints = {
   attachmentDownload: (id: number) => `/attachments/${id}`,
   permissions: "/permissions",
   admin: "/admin",
+  adminAttachments: "/admin/attachments",
   adminExportConfig: "/admin/export-config",
   adminRotateAccessKey: "/admin/rotate-access-key",
   adminLogs: (file: string, lines?: number, minLevel?: number) =>

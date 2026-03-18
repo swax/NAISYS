@@ -51,6 +51,7 @@ enum StepFieldType {
   datetime
   yesNo
   checkbox
+  attachment
 }
 
 model Order {
@@ -64,11 +65,11 @@ model Order {
   updatedById Int         @map("updated_by")
   updatedAt   DateTime    @updatedAt @map("updated_at")
 
-  item       Item?                   @relation(fields: [itemId], references: [id], onDelete: Restrict)
-  createdBy  User                    @relation("orderCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
-  updatedBy  User                    @relation("orderUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
-  revisions  OrderRevision[]
-  orderRuns     OrderRun[]
+  item      Item?           @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  createdBy User            @relation("orderCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy User            @relation("orderUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+  revisions OrderRevision[]
+  orderRuns OrderRun[]
 
   @@index([status]) // LIST filter in orders.ts
   @@index([createdAt]) // LIST orderBy in orders.ts
@@ -77,127 +78,127 @@ model Order {
 }
 
 model OrderRevision {
-  id            Int       @id @default(autoincrement())
-  orderId       Int       @map("order_id")
-  revNo         Int       @map("rev_no")
+  id            Int            @id @default(autoincrement())
+  orderId       Int            @map("order_id")
+  revNo         Int            @map("rev_no")
   status        RevisionStatus @default(draft)
-  description   String    @default("")
-  changeSummary String?   @map("change_summary")
-  createdAt     DateTime  @default(now()) @map("created_at")
-  createdById   Int       @map("created_by")
-  updatedAt     DateTime  @updatedAt @map("updated_at")
-  updatedById   Int       @map("updated_by")
-  createdBy  User          @relation("orderRevCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
-  updatedBy  User          @relation("orderRevUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
-  order      Order         @relation(fields: [orderId], references: [id], onDelete: Restrict)
-  orderRuns  OrderRun[]
-  operations Operation[]
+  description   String         @default("")
+  changeSummary String?        @map("change_summary")
+  createdAt     DateTime       @default(now()) @map("created_at")
+  createdById   Int            @map("created_by")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+  updatedById   Int            @map("updated_by")
+  createdBy     User           @relation("orderRevCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy     User           @relation("orderRevUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+  order         Order          @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  orderRuns     OrderRun[]
+  operations    Operation[]
 
   @@unique([orderId, revNo])
   @@map("order_revisions")
 }
 
 model Operation {
-  id             Int      @id @default(autoincrement())
-  orderRevId     Int      @map("order_rev_id")
-  seqNo          Int      @map("seq_no")
-  title          String
-  description    String   @default("")
-  createdAt      DateTime @default(now()) @map("created_at")
-  createdById    Int      @map("created_by")
-  updatedAt      DateTime @updatedAt @map("updated_at")
-  updatedById    Int      @map("updated_by")
+  id          Int      @id @default(autoincrement())
+  orderRevId  Int      @map("order_rev_id")
+  seqNo       Int      @map("seq_no")
+  title       String
+  description String   @default("")
+  createdAt   DateTime @default(now()) @map("created_at")
+  createdById Int      @map("created_by")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  updatedById Int      @map("updated_by")
 
-  createdBy      User           @relation("opCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
-  updatedBy      User           @relation("opUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
-  orderRev       OrderRevision  @relation(fields: [orderRevId], references: [id], onDelete: Restrict)
-  steps          Step[]
-  operationRuns  OperationRun[]
-  predecessors   OperationDependency[] @relation("opSuccessor")
-  successors     OperationDependency[] @relation("opPredecessor")
+  createdBy     User                  @relation("opCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy     User                  @relation("opUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+  orderRev      OrderRevision         @relation(fields: [orderRevId], references: [id], onDelete: Restrict)
+  steps         Step[]
+  operationRuns OperationRun[]
+  predecessors  OperationDependency[] @relation("opSuccessor")
+  successors    OperationDependency[] @relation("opPredecessor")
 
   @@unique([orderRevId, seqNo])
   @@map("operations")
 }
 
 model OperationDependency {
-  id             Int      @id @default(autoincrement())
-  successorId    Int      @map("successor_id")
-  predecessorId  Int      @map("predecessor_id")
-  createdAt      DateTime @default(now()) @map("created_at")
-  createdById    Int      @map("created_by")
+  id            Int      @id @default(autoincrement())
+  successorId   Int      @map("successor_id")
+  predecessorId Int      @map("predecessor_id")
+  createdAt     DateTime @default(now()) @map("created_at")
+  createdById   Int      @map("created_by")
 
-  successor    Operation @relation("opSuccessor", fields: [successorId], references: [id], onDelete: Cascade)
-  predecessor  Operation @relation("opPredecessor", fields: [predecessorId], references: [id], onDelete: Cascade)
-  createdBy    User      @relation("opDepCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  successor   Operation @relation("opSuccessor", fields: [successorId], references: [id], onDelete: Cascade)
+  predecessor Operation @relation("opPredecessor", fields: [predecessorId], references: [id], onDelete: Cascade)
+  createdBy   User      @relation("opDepCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
 
   @@unique([successorId, predecessorId])
   @@map("operation_dependencies")
 }
 
 model Step {
-  id          Int      @id @default(autoincrement())
-  operationId Int      @map("operation_id")
-  seqNo       Int      @map("seq_no")
-  instructions String  @default("")
-  multiSet    Boolean  @default(false) @map("multi_set")
-  createdAt   DateTime @default(now()) @map("created_at")
-  createdById Int      @map("created_by")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-  updatedById Int      @map("updated_by")
+  id           Int      @id @default(autoincrement())
+  operationId  Int      @map("operation_id")
+  seqNo        Int      @map("seq_no")
+  instructions String   @default("")
+  multiSet     Boolean  @default(false) @map("multi_set")
+  createdAt    DateTime @default(now()) @map("created_at")
+  createdById  Int      @map("created_by")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+  updatedById  Int      @map("updated_by")
 
-  createdBy  User      @relation("stepCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
-  updatedBy  User      @relation("stepUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
-  operation  Operation @relation(fields: [operationId], references: [id], onDelete: Cascade)
-  fields     StepField[]
-  stepRuns   StepRun[]
+  createdBy User        @relation("stepCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy User        @relation("stepUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+  operation Operation   @relation(fields: [operationId], references: [id], onDelete: Cascade)
+  fields    StepField[]
+  stepRuns  StepRun[]
 
   @@unique([operationId, seqNo])
   @@map("steps")
 }
 
 model StepField {
-  id          Int      @id @default(autoincrement())
-  stepId      Int      @map("step_id")
-  seqNo       Int      @map("seq_no")
+  id          Int           @id @default(autoincrement())
+  stepId      Int           @map("step_id")
+  seqNo       Int           @map("seq_no")
   label       String
   type        StepFieldType @default(string)
-  multiValue  Boolean  @default(false) @map("multi_value")
-  required    Boolean  @default(false)
-  createdAt   DateTime @default(now()) @map("created_at")
-  createdById Int      @map("created_by")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-  updatedById Int      @map("updated_by")
+  multiValue  Boolean       @default(false) @map("multi_value")
+  required    Boolean       @default(false)
+  createdAt   DateTime      @default(now()) @map("created_at")
+  createdById Int           @map("created_by")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+  updatedById Int           @map("updated_by")
 
-  createdBy    User             @relation("stepFieldCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
-  updatedBy    User             @relation("stepFieldUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
-  step         Step             @relation(fields: [stepId], references: [id], onDelete: Cascade)
-  fieldValues  StepFieldValue[]
+  createdBy   User             @relation("stepFieldCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy   User             @relation("stepFieldUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+  step        Step             @relation(fields: [stepId], references: [id], onDelete: Cascade)
+  fieldValues StepFieldValue[]
 
   @@unique([stepId, seqNo])
   @@map("step_fields")
 }
 
 model OrderRun {
-  id               Int       @id @default(autoincrement())
-  runNo            Int       @map("run_no")
-  orderId          Int       @map("order_id")
-  orderRevId       Int       @map("order_rev_id")
+  id               Int              @id @default(autoincrement())
+  runNo            Int              @map("run_no")
+  orderId          Int              @map("order_id")
+  orderRevId       Int              @map("order_rev_id")
   status           OrderRunStatus   @default(released)
   priority         OrderRunPriority @default(medium)
-  scheduledStartAt DateTime? @map("scheduled_start_at")
-  dueAt            DateTime? @map("due_at")
-  assignedTo       String?   @map("assigned_to")
+  scheduledStartAt DateTime?        @map("scheduled_start_at")
+  dueAt            DateTime?        @map("due_at")
+  assignedTo       String?          @map("assigned_to")
   notes            String?
-  createdAt        DateTime  @default(now()) @map("created_at")
-  createdById      Int       @map("created_by")
-  updatedAt        DateTime  @updatedAt @map("updated_at")
-  updatedById      Int       @map("updated_by")
+  createdAt        DateTime         @default(now()) @map("created_at")
+  createdById      Int              @map("created_by")
+  updatedAt        DateTime         @updatedAt @map("updated_at")
+  updatedById      Int              @map("updated_by")
 
-  createdBy    User                  @relation("orderRunCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
-  updatedBy    User                  @relation("orderRunUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
-  order         Order                 @relation(fields: [orderId], references: [id], onDelete: Restrict)
-  orderRev      OrderRevision         @relation(fields: [orderRevId], references: [id], onDelete: Restrict)
+  createdBy     User           @relation("orderRunCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy     User           @relation("orderRunUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+  order         Order          @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  orderRev      OrderRevision  @relation(fields: [orderRevId], references: [id], onDelete: Restrict)
   operationRuns OperationRun[]
 
   @@unique([orderId, runNo])
@@ -209,22 +210,22 @@ model OrderRun {
 }
 
 model OperationRun {
-  id          Int       @id @default(autoincrement())
-  orderRunId  Int       @map("order_run_id")
-  operationId Int       @map("operation_id")
+  id          Int                @id @default(autoincrement())
+  orderRunId  Int                @map("order_run_id")
+  operationId Int                @map("operation_id")
   status      OperationRunStatus @default(pending)
-  completedAt DateTime? @map("completed_at")
+  completedAt DateTime?          @map("completed_at")
   feedback    String?
-  createdAt   DateTime  @default(now()) @map("created_at")
-  createdById Int       @map("created_by")
-  updatedAt   DateTime  @updatedAt @map("updated_at")
-  updatedById Int       @map("updated_by")
+  createdAt   DateTime           @default(now()) @map("created_at")
+  createdById Int                @map("created_by")
+  updatedAt   DateTime           @updatedAt @map("updated_at")
+  updatedById Int                @map("updated_by")
 
-  createdBy User      @relation("opRunCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
-  updatedBy User      @relation("opRunUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
-  orderRun  OrderRun  @relation(fields: [orderRunId], references: [id], onDelete: Restrict)
-  operation Operation @relation(fields: [operationId], references: [id], onDelete: Restrict)
-  stepRuns  StepRun[]
+  createdBy    User          @relation("opRunCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy    User          @relation("opRunUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+  orderRun     OrderRun      @relation(fields: [orderRunId], references: [id], onDelete: Restrict)
+  operation    Operation     @relation(fields: [operationId], references: [id], onDelete: Restrict)
+  stepRuns     StepRun[]
   laborTickets LaborTicket[]
 
   @@unique([orderRunId, operationId])
@@ -242,10 +243,10 @@ model StepRun {
   updatedAt      DateTime @updatedAt @map("updated_at")
   updatedById    Int      @map("updated_by")
 
-  createdBy    User           @relation("stepRunCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
-  updatedBy    User           @relation("stepRunUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
-  operationRun OperationRun   @relation(fields: [operationRunId], references: [id], onDelete: Restrict)
-  step         Step           @relation(fields: [stepId], references: [id], onDelete: Restrict)
+  createdBy    User             @relation("stepRunCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy    User             @relation("stepRunUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+  operationRun OperationRun     @relation(fields: [operationRunId], references: [id], onDelete: Restrict)
+  step         Step             @relation(fields: [stepId], references: [id], onDelete: Restrict)
   fieldValues  StepFieldValue[]
 
   @@unique([operationRunId, stepId])
@@ -263,10 +264,12 @@ model StepFieldValue {
   updatedAt   DateTime @updatedAt @map("updated_at")
   updatedById Int      @map("updated_by")
 
-  createdBy User     @relation("stepFieldValueCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
-  updatedBy User     @relation("stepFieldValueUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
-  stepRun   StepRun  @relation(fields: [stepRunId], references: [id], onDelete: Restrict)
+  createdBy User      @relation("stepFieldValueCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy User      @relation("stepFieldValueUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+  stepRun   StepRun   @relation(fields: [stepRunId], references: [id], onDelete: Restrict)
   stepField StepField @relation(fields: [stepFieldId], references: [id], onDelete: Restrict)
+
+  stepFieldAttachments StepFieldAttachment[]
 
   @@unique([stepRunId, stepFieldId, setIndex])
   @@map("step_field_values")
@@ -300,34 +303,35 @@ model User {
   updatedAt    DateTime  @updatedAt @map("updated_at")
   deletedAt    DateTime? @map("deleted_at")
 
-  itemsCreated         Item[]                  @relation("itemCreatedBy")
-  itemsUpdated         Item[]                  @relation("itemUpdatedBy")
-  ordersCreated        Order[]                 @relation("orderCreatedBy")
-  ordersUpdated        Order[]                 @relation("orderUpdatedBy")
-  orderRevsCreated     OrderRevision[]         @relation("orderRevCreatedBy")
-  orderRevsUpdated     OrderRevision[]         @relation("orderRevUpdatedBy")
-  orderRunsCreated     OrderRun[]              @relation("orderRunCreatedBy")
-  orderRunsUpdated     OrderRun[]              @relation("orderRunUpdatedBy")
-  opsCreated           Operation[]             @relation("opCreatedBy")
-  opsUpdated           Operation[]             @relation("opUpdatedBy")
-  opDepsCreated        OperationDependency[]   @relation("opDepCreatedBy")
-  stepsCreated         Step[]                  @relation("stepCreatedBy")
-  stepsUpdated         Step[]                  @relation("stepUpdatedBy")
-  stepFieldsCreated    StepField[]             @relation("stepFieldCreatedBy")
-  stepFieldsUpdated    StepField[]             @relation("stepFieldUpdatedBy")
-  opRunsCreated        OperationRun[]          @relation("opRunCreatedBy")
-  opRunsUpdated        OperationRun[]          @relation("opRunUpdatedBy")
-  stepRunsCreated      StepRun[]               @relation("stepRunCreatedBy")
-  stepRunsUpdated      StepRun[]               @relation("stepRunUpdatedBy")
-  stepFieldValuesCreated StepFieldValue[]       @relation("stepFieldValueCreatedBy")
-  stepFieldValuesUpdated StepFieldValue[]       @relation("stepFieldValueUpdatedBy")
-  laborTicketsWorked   LaborTicket[]           @relation("laborTicketUser")
-  laborTicketsCreated  LaborTicket[]           @relation("laborTicketCreatedBy")
-  laborTicketsUpdated  LaborTicket[]           @relation("laborTicketUpdatedBy")
-  auditLogs            AuditLog[]
-  sessions             Session[]
-  permissions          UserPermission[]        @relation("userPermissions")
-  grantedPermissions   UserPermission[]        @relation("permissionGrantedBy")
+  itemsCreated           Item[]                @relation("itemCreatedBy")
+  itemsUpdated           Item[]                @relation("itemUpdatedBy")
+  ordersCreated          Order[]               @relation("orderCreatedBy")
+  ordersUpdated          Order[]               @relation("orderUpdatedBy")
+  orderRevsCreated       OrderRevision[]       @relation("orderRevCreatedBy")
+  orderRevsUpdated       OrderRevision[]       @relation("orderRevUpdatedBy")
+  orderRunsCreated       OrderRun[]            @relation("orderRunCreatedBy")
+  orderRunsUpdated       OrderRun[]            @relation("orderRunUpdatedBy")
+  opsCreated             Operation[]           @relation("opCreatedBy")
+  opsUpdated             Operation[]           @relation("opUpdatedBy")
+  opDepsCreated          OperationDependency[] @relation("opDepCreatedBy")
+  stepsCreated           Step[]                @relation("stepCreatedBy")
+  stepsUpdated           Step[]                @relation("stepUpdatedBy")
+  stepFieldsCreated      StepField[]           @relation("stepFieldCreatedBy")
+  stepFieldsUpdated      StepField[]           @relation("stepFieldUpdatedBy")
+  opRunsCreated          OperationRun[]        @relation("opRunCreatedBy")
+  opRunsUpdated          OperationRun[]        @relation("opRunUpdatedBy")
+  stepRunsCreated        StepRun[]             @relation("stepRunCreatedBy")
+  stepRunsUpdated        StepRun[]             @relation("stepRunUpdatedBy")
+  stepFieldValuesCreated StepFieldValue[]      @relation("stepFieldValueCreatedBy")
+  stepFieldValuesUpdated StepFieldValue[]      @relation("stepFieldValueUpdatedBy")
+  laborTicketsWorked     LaborTicket[]         @relation("laborTicketUser")
+  laborTicketsCreated    LaborTicket[]         @relation("laborTicketCreatedBy")
+  laborTicketsUpdated    LaborTicket[]         @relation("laborTicketUpdatedBy")
+  auditLogs              AuditLog[]
+  sessions               Session[]
+  permissions            UserPermission[]      @relation("userPermissions")
+  grantedPermissions     UserPermission[]      @relation("permissionGrantedBy")
+  attachmentsUploaded    Attachment[]          @relation("attachmentUploadedBy")
 
   @@map("users")
 }
@@ -344,10 +348,10 @@ model UserPermission {
   id         Int           @id @default(autoincrement())
   userId     Int           @map("user_id")
   permission ErpPermission
-  grantedAt  DateTime @default(now()) @map("granted_at")
-  grantedBy  Int?     @map("granted_by")
+  grantedAt  DateTime      @default(now()) @map("granted_at")
+  grantedBy  Int?          @map("granted_by")
 
-  user        User @relation("userPermissions", fields: [userId], references: [id], onDelete: Cascade)
+  user          User  @relation("userPermissions", fields: [userId], references: [id], onDelete: Cascade)
   grantedByUser User? @relation("permissionGrantedBy", fields: [grantedBy], references: [id], onDelete: SetNull)
 
   @@unique([userId, permission])
@@ -411,4 +415,32 @@ model AuditLog {
 
   @@index([entityType, entityId])
   @@map("audit_log")
+}
+
+model Attachment {
+  id           Int      @id @default(autoincrement())
+  filepath     String
+  filename     String
+  fileSize     Int      @map("file_size")
+  fileHash     String   @map("file_hash")
+  uploadedById Int      @map("uploaded_by")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  uploadedBy           User                  @relation("attachmentUploadedBy", fields: [uploadedById], references: [id], onDelete: Restrict)
+  stepFieldAttachments StepFieldAttachment[]
+
+  @@index([fileHash])
+  @@map("attachments")
+}
+
+model StepFieldAttachment {
+  stepFieldValueId Int      @map("step_field_value_id")
+  attachmentId     Int      @map("attachment_id")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  stepFieldValue StepFieldValue @relation(fields: [stepFieldValueId], references: [id], onDelete: Cascade)
+  attachment     Attachment     @relation(fields: [attachmentId], references: [id], onDelete: Restrict)
+
+  @@id([stepFieldValueId, attachmentId])
+  @@map("step_field_attachments")
 }

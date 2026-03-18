@@ -109,7 +109,7 @@ function formatStepRun(
   );
   const setCount = Math.max(1, maxSetIndex + 1);
 
-  // Merge field definitions with stored values + validation
+  // Merge field definitions with stored values + validation + attachments
   const fieldValues: {
     stepFieldId: number;
     fieldSeqNo: number;
@@ -119,6 +119,7 @@ function formatStepRun(
     required: boolean;
     setIndex: number;
     value: string;
+    attachments?: { id: number; filename: string; fileSize: number }[];
     validation: ReturnType<typeof validateFieldValue>;
   }[] = [];
   for (let si = 0; si < setCount; si++) {
@@ -127,6 +128,10 @@ function formatStepRun(
         (fv) => fv.stepFieldId === field.id && fv.setIndex === si,
       );
       const value = stored?.value ?? "";
+      const attachments =
+        field.type === "attachment" && stored
+          ? stored.stepFieldAttachments.map((sfa) => sfa.attachment)
+          : undefined;
       fieldValues.push({
         stepFieldId: field.id,
         fieldSeqNo: field.seqNo,
@@ -136,6 +141,7 @@ function formatStepRun(
         required: field.required,
         setIndex: si,
         value,
+        attachments,
         validation: validateFieldValue(
           field.type,
           field.multiValue,
@@ -145,6 +151,10 @@ function formatStepRun(
       });
     }
   }
+
+  const hasAttachmentFields = stepRun.step.fields.some(
+    (f) => f.type === "attachment",
+  );
 
   // Action templates — one per action type instead of per-field/set
   const actionTemplates = canUpdate
@@ -162,6 +172,22 @@ function formatStepRun(
           method: "DELETE" as const,
           title: "Delete Set",
         },
+        ...(hasAttachmentFields
+          ? [
+              {
+                rel: "uploadAttachment",
+                hrefTemplate: `${stepRunHref}/fields/{fieldSeqNo}/attachments`,
+                method: "POST" as const,
+                title: "Upload Attachment",
+                alternateEncoding: {
+                  contentType: "multipart/form-data",
+                  description:
+                    "Upload file as multipart with field 'file' and optional 'setIndex'",
+                  fileFields: ["file"],
+                },
+              },
+            ]
+          : []),
       ]
     : [];
 

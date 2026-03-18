@@ -6,6 +6,7 @@ import {
   createWriteStream,
   existsSync,
   mkdirSync,
+  renameSync,
   statSync,
   unlinkSync,
 } from "fs";
@@ -118,20 +119,18 @@ export function createHubAttachmentService(
       return;
     }
 
-    // Build storage path: NAISYS_FOLDER/attachments/<purpose>/YYYY-MM-DD/<timestamp>_<userId>_<safeFilename>
-    const now = new Date();
-    const dateDir = now.toISOString().slice(0, 10);
-    const safeFilename = filename.replace(/[^a-zA-Z0-9._-]/g, "_");
-    const storageDir = join(naisysFolder, "attachments", purpose, dateDir);
-    mkdirSync(storageDir, { recursive: true });
+    // Stream to temp file, then move to content-addressable path
+    const tmpDir = join(naisysFolder, "attachments", "tmp");
+    mkdirSync(tmpDir, { recursive: true });
 
-    const storageName = `${now.getTime()}_${userId}_${safeFilename}`;
-    const storagePath = join(storageDir, storageName);
+    const tmpPath = join(
+      tmpDir,
+      `${Date.now()}_${userId}_${Math.random().toString(36).slice(2)}`,
+    );
 
-    // Stream request body to disk and compute SHA-256
     const hash = createHash("sha256");
     let bytesWritten = 0;
-    const fileStream = createWriteStream(storagePath);
+    const fileStream = createWriteStream(tmpPath);
 
     const success = await new Promise<boolean>((resolve) => {
       const sizeChecker = new Writable({
@@ -153,7 +152,7 @@ export function createHubAttachmentService(
         if (err) {
           fileStream.destroy();
           try {
-            unlinkSync(storagePath);
+            unlinkSync(tmpPath);
           } catch {
             /* ignore */
           }
@@ -176,7 +175,7 @@ export function createHubAttachmentService(
     const computedHash = hash.digest("hex");
     if (computedHash !== fileHash) {
       try {
-        unlinkSync(storagePath);
+        unlinkSync(tmpPath);
       } catch {
         /* ignore */
       }
@@ -187,6 +186,28 @@ export function createHubAttachmentService(
         }),
       );
       return;
+    }
+
+    // Move to content-addressable path: attachments/hub/<first2>/<next2>/<fullhash>
+    const storageDir = join(
+      naisysFolder,
+      "attachments",
+      "hub",
+      computedHash.slice(0, 2),
+      computedHash.slice(2, 4),
+    );
+    mkdirSync(storageDir, { recursive: true });
+    const storagePath = join(storageDir, computedHash);
+
+    if (existsSync(storagePath)) {
+      // Dedup: identical file already on disk, discard temp
+      try {
+        unlinkSync(tmpPath);
+      } catch {
+        /* ignore */
+      }
+    } else {
+      renameSync(tmpPath, storagePath);
     }
 
     // Create DB record
