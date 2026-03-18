@@ -47,6 +47,10 @@ enum OperationRunStatus {
 enum StepFieldType {
   string
   number
+  date
+  datetime
+  yesNo
+  checkbox
 }
 
 model Order {

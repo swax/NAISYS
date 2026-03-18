@@ -1,12 +1,16 @@
 import {
   ActionIcon,
+  Checkbox,
   Group,
   Loader,
   Stack,
+  Switch,
   Text,
   TextInput,
 } from "@mantine/core";
+import { DateInput, DateTimePicker } from "@mantine/dates";
 import type { StepFieldValue, StepRun } from "@naisys-erp/shared";
+import { StepFieldType } from "@naisys-erp/shared";
 import {
   IconAlertCircle,
   IconCheck,
@@ -16,6 +20,14 @@ import {
 import { useRef, useState } from "react";
 
 import { api, apiEndpoints, showErrorNotification } from "../../../lib/api";
+
+function formatDate(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function formatDateTime(d: Date): string {
+  return `${formatDate(d)}T${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+}
 import { hasAction } from "../../../lib/hateoas";
 
 type FieldSaveStatus = "saving" | "saved" | "error";
@@ -28,6 +40,13 @@ interface Props {
   edits: Record<number, string>; // stepFieldId → value
   onFieldChange: (stepFieldId: number, value: string) => void;
   onFieldSaved: (stepFieldId: number, updated: StepFieldValue) => void;
+}
+
+function StatusIcon({ status }: { status?: FieldSaveStatus }) {
+  if (status === "saving") return <Loader size={14} />;
+  if (status === "saved") return <IconCheck size={14} color="green" />;
+  if (status === "error") return <IconAlertCircle size={14} color="red" />;
+  return null;
 }
 
 export const StepFieldRunList: React.FC<Props> = ({
@@ -88,6 +107,14 @@ export const StepFieldRunList: React.FC<Props> = ({
     }
   };
 
+  /** Save immediately (for controls that don't have a blur event) */
+  const changeAndSave = (fv: StepFieldValue, newValue: string) => {
+    onFieldChange(fv.stepFieldId, newValue);
+    void saveFieldValue(fv, newValue);
+  };
+
+  // --- multi-value helpers ---
+
   const getArrayItems = (value: string): string[] => {
     if (!value) return [""];
     const items = value.split(",");
@@ -116,6 +143,139 @@ export const StepFieldRunList: React.FC<Props> = ({
     void saveFieldValue(fv, newValue);
   };
 
+  // --- single-value input renderer ---
+
+  function renderInput(
+    fv: StepFieldValue,
+    value: string,
+    status: FieldSaveStatus | undefined,
+    opts: {
+      label?: string;
+      onTextChange: (newValue: string) => void;
+      onImmediateChange: (newValue: string) => void;
+      onBlurSave?: () => void;
+    },
+  ) {
+    const { label, onTextChange, onImmediateChange, onBlurSave } = opts;
+    const errorMsg =
+      fv.validation && !fv.validation.valid ? fv.validation.error : undefined;
+
+    switch (fv.type) {
+      case StepFieldType.date:
+        return (
+          <DateInput
+            label={label}
+            size="xs"
+            style={{ flex: 1 }}
+            valueFormat="YYYY-MM-DD"
+            clearable
+            error={errorMsg}
+            value={value ? new Date(value + "T00:00:00") : null}
+            onChange={(d) =>
+              onImmediateChange(
+                d
+                  ? typeof d === "string"
+                    ? d
+                    : formatDate(d)
+                  : "",
+              )
+            }
+            rightSection={<StatusIcon status={status} />}
+          />
+        );
+
+      case StepFieldType.datetime:
+        return (
+          <DateTimePicker
+            label={label}
+            size="xs"
+            style={{ flex: 1 }}
+            valueFormat="YYYY-MM-DD HH:mm"
+            clearable
+            error={errorMsg}
+            value={value ? new Date(value) : null}
+            onChange={(d) =>
+              onImmediateChange(
+                d
+                  ? typeof d === "string"
+                    ? d
+                    : formatDateTime(d)
+                  : "",
+              )
+            }
+            rightSection={<StatusIcon status={status} />}
+          />
+        );
+
+      case StepFieldType.yesNo:
+        return (
+          <Group gap="xs" align="center">
+            {label && (
+              <Text size="xs" fw={500}>
+                {label}
+              </Text>
+            )}
+            <Switch
+              size="xs"
+              onLabel="Yes"
+              offLabel="No"
+              checked={value === "Yes"}
+              onChange={(e) =>
+                onImmediateChange(e.currentTarget.checked ? "Yes" : "No")
+              }
+            />
+            <StatusIcon status={status} />
+          </Group>
+        );
+
+      case StepFieldType.checkbox:
+        return (
+          <Group gap="xs" align="center">
+            <Checkbox
+              label={label}
+              size="xs"
+              checked={value === "checked"}
+              onChange={(e) =>
+                onImmediateChange(e.currentTarget.checked ? "checked" : "")
+              }
+            />
+            <StatusIcon status={status} />
+          </Group>
+        );
+
+      default:
+        // string, number — plain text input
+        return (
+          <TextInput
+            label={label}
+            size="xs"
+            style={{ flex: 1 }}
+            error={errorMsg}
+            value={value}
+            onChange={(e) => onTextChange(e.currentTarget.value)}
+            onBlur={onBlurSave}
+            rightSection={<StatusIcon status={status} />}
+          />
+        );
+    }
+  }
+
+  // --- read-only display ---
+
+  function formatReadOnlyValue(fv: StepFieldValue): string {
+    if (!fv.value) return "—";
+    switch (fv.type) {
+      case StepFieldType.date:
+        return new Date(fv.value + "T00:00:00").toLocaleDateString();
+      case StepFieldType.datetime:
+        return new Date(fv.value).toLocaleString();
+      case StepFieldType.checkbox:
+        return fv.value === "checked" ? "Checked" : "—";
+      default:
+        return fv.value;
+    }
+  }
+
   return (
     <Stack gap="xs" mt="xs">
       <Text size="xs" fw={600} c="dimmed">
@@ -133,9 +293,7 @@ export const StepFieldRunList: React.FC<Props> = ({
               <Text size="xs" fw={500}>
                 {fieldLabel}:
               </Text>
-              <Text size="xs">
-                {fv.value || "—"}
-              </Text>
+              <Text size="xs">{formatReadOnlyValue(fv)}</Text>
               {fv.validation && !fv.validation.valid && (
                 <Text size="xs" c="red">
                   {fv.validation.error}
@@ -153,25 +311,21 @@ export const StepFieldRunList: React.FC<Props> = ({
                 <Text size="xs" fw={500}>
                   {fieldLabel}
                 </Text>
-                {status === "saving" ? (
-                  <Loader size={14} />
-                ) : status === "saved" ? (
-                  <IconCheck size={14} color="green" />
-                ) : status === "error" ? (
-                  <IconAlertCircle size={14} color="red" />
-                ) : null}
+                <StatusIcon status={status} />
               </Group>
               {items.map((item, index) => (
                 <Group key={index} gap={4} align="flex-end">
-                  <TextInput
-                    size="xs"
-                    style={{ flex: 1 }}
-                    value={item}
-                    onChange={(e) =>
-                      setArrayItem(fv, index, e.currentTarget.value)
-                    }
-                    onBlur={() => void saveFieldValue(fv, editedValue)}
-                  />
+                  {renderInput(fv, item, undefined, {
+                    onTextChange: (v) => setArrayItem(fv, index, v),
+                    onImmediateChange: (v) => {
+                      const newItems = [...items];
+                      newItems[index] = v;
+                      const joined = newItems.join(",");
+                      onFieldChange(fv.stepFieldId, joined);
+                      void saveFieldValue(fv, joined);
+                    },
+                    onBlurSave: () => void saveFieldValue(fv, editedValue),
+                  })}
                   {items.length > 1 && (
                     <ActionIcon
                       size="xs"
@@ -206,30 +360,12 @@ export const StepFieldRunList: React.FC<Props> = ({
 
         return (
           <Group key={fv.stepFieldId} gap="xs" align="flex-end">
-            <TextInput
-              label={fieldLabel}
-              size="xs"
-              style={{ flex: 1 }}
-              error={
-                fv.validation && !fv.validation.valid
-                  ? fv.validation.error
-                  : undefined
-              }
-              value={editedValue}
-              onChange={(e) =>
-                onFieldChange(fv.stepFieldId, e.currentTarget.value)
-              }
-              onBlur={() => void saveFieldValue(fv, editedValue)}
-              rightSection={
-                status === "saving" ? (
-                  <Loader size={14} />
-                ) : status === "saved" ? (
-                  <IconCheck size={14} color="green" />
-                ) : status === "error" ? (
-                  <IconAlertCircle size={14} color="red" />
-                ) : null
-              }
-            />
+            {renderInput(fv, editedValue, status, {
+              label: fieldLabel,
+              onTextChange: (v) => onFieldChange(fv.stepFieldId, v),
+              onImmediateChange: (v) => changeAndSave(fv, v),
+              onBlurSave: () => void saveFieldValue(fv, editedValue),
+            })}
           </Group>
         );
       })}
