@@ -13,6 +13,7 @@ import type { ItemInstance, UpdateItemInstance } from "@naisys-erp/shared";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 
+import { FieldValueRunList } from "../../components/FieldValueList";
 import { MetadataTooltip } from "../../components/MetadataTooltip";
 import { api, apiEndpoints, showErrorNotification } from "../../lib/api";
 import { hasAction } from "../../lib/hateoas";
@@ -23,6 +24,7 @@ export const ItemInstanceDetail: React.FC = () => {
   const [instance, setInstance] = useState<ItemInstance | null>(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
+  const [editingFields, setEditingFields] = useState(false);
   const [editKey, setEditKey] = useState("");
   const [editQuantity, setEditQuantity] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -49,9 +51,7 @@ export const ItemInstanceDetail: React.FC = () => {
   const handleEdit = () => {
     if (!instance) return;
     setEditKey(instance.key);
-    setEditQuantity(
-      instance.quantity != null ? String(instance.quantity) : "",
-    );
+    setEditQuantity(instance.quantity != null ? String(instance.quantity) : "");
     setEditing(true);
   };
 
@@ -133,6 +133,9 @@ export const ItemInstanceDetail: React.FC = () => {
     );
   }
 
+  const hasFieldValues = instance.fieldValues.length > 0;
+  const canEditFields = hasAction(instance._actions, "update");
+
   return (
     <Container size="md" py="xl">
       <Group justify="space-between" mb="lg">
@@ -176,17 +179,51 @@ export const ItemInstanceDetail: React.FC = () => {
               Quantity:
             </Text>
             <Text>
-              {instance.quantity != null ? instance.quantity : "—"}
+              {instance.quantity != null ? instance.quantity : "\u2014"}
             </Text>
           </Group>
           <Group>
             <Text fw={600} w={120}>
               Order Run:
             </Text>
-            <Text>{instance.orderRunKey || "—"}</Text>
+            <Text>{instance.orderRunKey || "\u2014"}</Text>
           </Group>
         </Stack>
       </Card>
+
+      {hasFieldValues && (
+        <Card withBorder p="lg" mt="md">
+          <Group justify="space-between" mb="xs">
+            <Text fw={600}>Field Values</Text>
+            {canEditFields && (
+              <Button
+                size="xs"
+                variant={editingFields ? "filled" : "light"}
+                onClick={() => setEditingFields((prev) => !prev)}
+              >
+                {editingFields ? "Done Editing" : "Edit Fields"}
+              </Button>
+            )}
+          </Group>
+          <FieldValueRunList
+            fieldValues={instance.fieldValues}
+            multiSet={false}
+            completed={!editingFields}
+            _actionTemplates={
+              editingFields ? instance._actionTemplates : undefined
+            }
+            fieldValueEndpoint={(fieldSeqNo) =>
+              apiEndpoints.itemInstanceFieldValue(key!, instanceId!, fieldSeqNo)
+            }
+            deleteSetEndpoint={(setIndex) =>
+              apiEndpoints.itemInstanceDeleteSet(key!, instanceId!, setIndex)
+            }
+            attachmentEndpoint={() => ""}
+            attachmentDownloadUrl={() => ""}
+            onSetDeleted={() => void fetchInstance()}
+          />
+        </Card>
+      )}
     </Container>
   );
 };

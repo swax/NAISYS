@@ -177,9 +177,7 @@ export const ItemInstanceList: React.FC = () => {
                 <Table.Tr
                   key={inst.id}
                   style={{ cursor: "pointer" }}
-                  onClick={() =>
-                    navigate(`/items/${key}/instances/${inst.id}`)
-                  }
+                  onClick={() => navigate(`/items/${key}/instances/${inst.id}`)}
                 >
                   <Table.Td>
                     <Text size="sm" ff="monospace">

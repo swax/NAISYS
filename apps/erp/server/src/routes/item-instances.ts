@@ -2,9 +2,11 @@ import type { HateoasAction, HateoasLink } from "@naisys/common";
 import {
   CreateItemInstanceSchema,
   ErrorResponseSchema,
+  FieldValueEntrySchema,
   ItemInstanceListQuerySchema,
   ItemInstanceListResponseSchema,
   ItemInstanceSchema,
+  UpdateFieldValueSchema,
   UpdateItemInstanceSchema,
 } from "@naisys-erp/shared";
 import { FastifyInstance } from "fastify";
@@ -14,17 +16,29 @@ import { z } from "zod/v4";
 import type { ErpUser } from "../auth-middleware.js";
 import { hasPermission, requirePermission } from "../auth-middleware.js";
 import { notFound } from "../error-handler.js";
-import { API_PREFIX, paginationLinks, schemaLink, selfLink } from "../hateoas.js";
+import {
+  API_PREFIX,
+  paginationLinks,
+  schemaLink,
+  selfLink,
+} from "../hateoas.js";
 import { formatAuditFields } from "../route-helpers.js";
-import { findExisting as findItem } from "../services/item-service.js";
 import {
   createItemInstance,
   deleteItemInstance,
+  ensureItemInstanceFieldRecord,
   findItemInstance,
+  findItemInstanceWithField,
   type ItemInstanceWithRelations,
   listItemInstances,
   updateItemInstance,
 } from "../services/item-instance-service.js";
+import { findExisting as findItem } from "../services/item-service.js";
+import {
+  deleteFieldValueSet,
+  upsertFieldValue,
+  validateFieldValue,
+} from "../services/step-run-service.js";
 
 const ParamsSchema = z.object({
   key: z.string(),
@@ -35,14 +49,23 @@ const InstanceParamsSchema = z.object({
   instanceId: z.coerce.number(),
 });
 
+const FieldSeqNoParamsSchema = z.object({
+  key: z.string(),
+  instanceId: z.coerce.number(),
+  fieldSeqNo: z.coerce.number().int(),
+});
+
+const SetIndexParamsSchema = z.object({
+  key: z.string(),
+  instanceId: z.coerce.number(),
+  setIndex: z.coerce.number().int(),
+});
+
 function instanceBasePath(itemKey: string): string {
   return `items/${itemKey}/instances`;
 }
 
-function instanceLinks(
-  itemKey: string,
-  instanceId: number,
-): HateoasLink[] {
+function instanceLinks(itemKey: string, instanceId: number): HateoasLink[] {
   const base = instanceBasePath(itemKey);
   return [
     selfLink(`/${base}/${instanceId}`),
@@ -84,32 +107,120 @@ function instanceActions(
   ];
 }
 
-function orderRunKey(
-  inst: ItemInstanceWithRelations,
-): string | null {
+function orderRunKey(inst: ItemInstanceWithRelations): string | null {
   if (!inst.orderRun) return null;
   return `${inst.orderRun.order.key}#${inst.orderRun.runNo}`;
+}
+
+function buildFieldValues(inst: ItemInstanceWithRelations) {
+  const fields = inst.item.fieldSet?.fields ?? [];
+  if (fields.length === 0) return [];
+
+  const storedFieldValues = inst.fieldRecord?.fieldValues ?? [];
+  const maxSetIndex = storedFieldValues.reduce(
+    (max, fv) => Math.max(max, fv.setIndex),
+    -1,
+  );
+  const setCount = Math.max(1, maxSetIndex + 1);
+
+  const fieldValues: {
+    fieldId: number;
+    fieldSeqNo: number;
+    label: string;
+    type: string;
+    multiValue: boolean;
+    required: boolean;
+    setIndex: number;
+    value: string;
+    attachments?: { id: number; filename: string; fileSize: number }[];
+    validation: ReturnType<typeof validateFieldValue>;
+  }[] = [];
+
+  for (let si = 0; si < setCount; si++) {
+    for (const field of fields) {
+      const stored = storedFieldValues.find(
+        (fv) => fv.fieldId === field.id && fv.setIndex === si,
+      );
+      const value = stored?.value ?? "";
+      const attachments =
+        field.type === "attachment" && stored
+          ? stored.fieldAttachments.map((sfa) => sfa.attachment)
+          : undefined;
+      fieldValues.push({
+        fieldId: field.id,
+        fieldSeqNo: field.seqNo,
+        label: field.label,
+        type: field.type,
+        multiValue: field.multiValue,
+        required: field.required,
+        setIndex: si,
+        value,
+        attachments,
+        validation: validateFieldValue(
+          field.type,
+          field.multiValue,
+          field.required,
+          value,
+        ),
+      });
+    }
+  }
+
+  return fieldValues;
+}
+
+function buildActionTemplates(
+  itemKey: string,
+  instanceId: number,
+  user: ErpUser | undefined,
+  hasFields: boolean,
+) {
+  if (!hasPermission(user, "item_manager") || !hasFields) return [];
+  const instanceHref = `${API_PREFIX}/${instanceBasePath(itemKey)}/${instanceId}`;
+  return [
+    {
+      rel: "updateField",
+      hrefTemplate: `${instanceHref}/fields/{fieldSeqNo}`,
+      method: "PUT" as const,
+      title: "Update Field Value",
+      schema: `${API_PREFIX}/schemas/UpdateFieldValue`,
+    },
+    {
+      rel: "deleteSet",
+      hrefTemplate: `${instanceHref}/sets/{setIndex}`,
+      method: "DELETE" as const,
+      title: "Delete Set",
+    },
+  ];
 }
 
 function formatInstance(
   inst: ItemInstanceWithRelations,
   user: ErpUser | undefined,
 ) {
+  const hasFields = (inst.item.fieldSet?.fields ?? []).length > 0;
   return {
     id: inst.id,
     itemKey: inst.item.key,
     orderRunKey: orderRunKey(inst),
     key: inst.key,
     quantity: inst.quantity,
+    fieldValues: buildFieldValues(inst),
     ...formatAuditFields(inst),
     _links: instanceLinks(inst.item.key, inst.id),
     _actions: instanceActions(inst.item.key, inst.id, user),
+    _actionTemplates: buildActionTemplates(
+      inst.item.key,
+      inst.id,
+      user,
+      hasFields,
+    ),
   };
 }
 
 function formatListInstance(
   inst: ItemInstanceWithRelations,
-  user: ErpUser | undefined,
+  _user: ErpUser | undefined,
 ) {
   return {
     id: inst.id,
@@ -117,8 +228,15 @@ function formatListInstance(
     orderRunKey: orderRunKey(inst),
     key: inst.key,
     quantity: inst.quantity,
+    fieldValues: buildFieldValues(inst),
     ...formatAuditFields(inst),
     _links: [selfLink(`/${instanceBasePath(inst.item.key)}/${inst.id}`)],
+    _actionTemplates: [] as {
+      rel: string;
+      hrefTemplate: string;
+      method: string;
+      title: string;
+    }[],
   };
 }
 
@@ -224,7 +342,8 @@ export default function itemInstanceRoutes(fastify: FastifyInstance) {
       const { instanceId } = request.params;
 
       const inst = await findItemInstance(instanceId);
-      if (!inst) return notFound(reply, `Item instance ${instanceId} not found`);
+      if (!inst)
+        return notFound(reply, `Item instance ${instanceId} not found`);
 
       return formatInstance(inst, request.erpUser);
     },
@@ -278,6 +397,92 @@ export default function itemInstanceRoutes(fastify: FastifyInstance) {
 
       await deleteItemInstance(instanceId);
       reply.status(204);
+    },
+  });
+
+  // UPDATE single field value
+  app.put("/:instanceId/fields/:fieldSeqNo", {
+    schema: {
+      description: "Update a single field value on an item instance",
+      tags: ["Item Instances"],
+      params: FieldSeqNoParamsSchema,
+      body: UpdateFieldValueSchema,
+      response: {
+        200: FieldValueEntrySchema,
+        404: ErrorResponseSchema,
+      },
+    },
+    preHandler: requirePermission("item_manager"),
+    handler: async (request, reply) => {
+      const { instanceId, fieldSeqNo } = request.params;
+      const { value, setIndex } = request.body;
+      const si = setIndex ?? 0;
+      const userId = request.erpUser!.id;
+
+      const inst = await findItemInstanceWithField(instanceId, fieldSeqNo);
+      if (!inst)
+        return notFound(reply, `Item instance ${instanceId} not found`);
+
+      const field = inst.item.fieldSet?.fields[0];
+      if (!field) return notFound(reply, `Field not found`);
+
+      const fieldRecordId = await ensureItemInstanceFieldRecord(
+        instanceId,
+        userId,
+      );
+      if (!fieldRecordId) return notFound(reply, "Item has no field set");
+
+      await upsertFieldValue(fieldRecordId, field.id, si, value, userId);
+
+      return {
+        fieldId: field.id,
+        fieldSeqNo: field.seqNo,
+        label: field.label,
+        type: field.type,
+        multiValue: field.multiValue,
+        required: field.required,
+        setIndex: si,
+        value,
+        validation: validateFieldValue(
+          field.type,
+          field.multiValue,
+          field.required,
+          value,
+        ),
+      };
+    },
+  });
+
+  // DELETE a field value set
+  app.delete("/:instanceId/sets/:setIndex", {
+    schema: {
+      description:
+        "Delete all field values for a set and re-index remaining sets",
+      tags: ["Item Instances"],
+      params: SetIndexParamsSchema,
+      response: {
+        200: ItemInstanceSchema,
+        404: ErrorResponseSchema,
+      },
+    },
+    preHandler: requirePermission("item_manager"),
+    handler: async (request, reply) => {
+      const { instanceId, setIndex } = request.params;
+
+      const existing = await findItemInstance(instanceId);
+      if (!existing)
+        return notFound(reply, `Item instance ${instanceId} not found`);
+
+      if (!existing.fieldRecord) {
+        return notFound(reply, "No field values to delete");
+      }
+      await deleteFieldValueSet(existing.fieldRecord.id, setIndex);
+
+      const inst = await findItemInstance(instanceId);
+      if (!inst)
+        return notFound(reply, `Item instance ${instanceId} not found`);
+
+      return formatInstance(inst, request.erpUser);
     },
   });
 }

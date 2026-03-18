@@ -14,10 +14,10 @@ import type { Item, UpdateItem } from "@naisys-erp/shared";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 
+import { FieldDefList } from "../../components/FieldDefList";
 import { MetadataTooltip } from "../../components/MetadataTooltip";
 import { api, apiEndpoints, showErrorNotification } from "../../lib/api";
 import { hasAction } from "../../lib/hateoas";
-import { FieldList } from "../orders/revs/StepFieldList";
 
 export const ItemDetail: React.FC = () => {
   const { key } = useParams<{ key: string }>();
@@ -182,7 +182,7 @@ export const ItemDetail: React.FC = () => {
       </Group>
 
       {/* Field definitions */}
-      <FieldList
+      <FieldDefList
         fieldsEndpoint={apiEndpoints.itemFields(item.key)}
         fieldEndpoint={(seqNo) => apiEndpoints.itemField(item.key, seqNo)}
         initialData={item.fields}

@@ -43,7 +43,7 @@ export async function findExistingField(
   });
 }
 
-// --- FieldSet helper ---
+// --- FieldSet / FieldRecord helpers ---
 
 export async function ensureFieldSet(
   fieldSetId: number | null,
@@ -54,6 +54,44 @@ export async function ensureFieldSet(
     data: { createdById: userId },
   });
   return fs.id;
+}
+
+export async function ensureFieldRecord(
+  fieldRecordId: number | null,
+  fieldSetId: number,
+  userId: number,
+): Promise<number> {
+  if (fieldRecordId) return fieldRecordId;
+  const fr = await erpDb.fieldRecord.create({
+    data: { fieldSetId, createdById: userId },
+  });
+  return fr.id;
+}
+
+/**
+ * Get or create a FieldRecord for a StepRun, linking it back.
+ * Returns the fieldRecordId, or null if the step has no fieldSet.
+ */
+export async function ensureStepRunFieldRecord(
+  stepRunId: number,
+  userId: number,
+): Promise<number | null> {
+  const sr = await erpDb.stepRun.findUniqueOrThrow({
+    where: { id: stepRunId },
+    select: { fieldRecordId: true, step: { select: { fieldSetId: true } } },
+  });
+  if (sr.fieldRecordId) return sr.fieldRecordId;
+  if (!sr.step.fieldSetId) return null;
+  const fieldRecordId = await ensureFieldRecord(
+    null,
+    sr.step.fieldSetId,
+    userId,
+  );
+  await erpDb.stepRun.update({
+    where: { id: stepRunId },
+    data: { fieldRecordId },
+  });
+  return fieldRecordId;
 }
 
 // --- Mutations ---

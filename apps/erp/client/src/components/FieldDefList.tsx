@@ -24,10 +24,10 @@ import {
 } from "@naisys-erp/shared";
 import { useState } from "react";
 
-import { MetadataTooltip } from "../../../components/MetadataTooltip";
-import { api, showErrorNotification } from "../../../lib/api";
-import { hasAction } from "../../../lib/hateoas";
-import { zodResolver } from "../../../lib/zod-resolver";
+import { api, showErrorNotification } from "../lib/api";
+import { hasAction } from "../lib/hateoas";
+import { zodResolver } from "../lib/zod-resolver";
+import { MetadataTooltip } from "./MetadataTooltip";
 
 const TYPE_LABELS: Record<string, string> = {
   string: "String",
@@ -49,7 +49,7 @@ interface FieldListProps {
   initialData: FieldListResponse;
 }
 
-export const FieldList: React.FC<FieldListProps> = ({
+export const FieldDefList: React.FC<FieldListProps> = ({
   fieldsEndpoint,
   fieldEndpoint,
   initialData,
@@ -98,10 +98,7 @@ export const FieldList: React.FC<FieldListProps> = ({
     if (!field) return;
     setSaving(true);
     try {
-      const updated = await api.put<Field>(
-        fieldEndpoint(field.seqNo),
-        values,
-      );
+      const updated = await api.put<Field>(fieldEndpoint(field.seqNo), values);
       setEditingFieldId(null);
       setFields({
         ...fields,
@@ -145,10 +142,7 @@ export const FieldList: React.FC<FieldListProps> = ({
   const handleCreate = async (values: CreateField) => {
     setSaving(true);
     try {
-      const created = await api.post<Field>(
-        fieldsEndpoint,
-        values,
-      );
+      const created = await api.post<Field>(fieldsEndpoint, values);
       setAddingField(false);
       setFields({
         ...fields,

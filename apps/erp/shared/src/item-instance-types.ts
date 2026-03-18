@@ -1,6 +1,11 @@
 import { z } from "zod/v4";
 
-import { HateoasActionSchema, HateoasLinkSchema } from "./hateoas-types.js";
+import {
+  HateoasActionSchema,
+  HateoasActionTemplateSchema,
+  HateoasLinkSchema,
+} from "./hateoas-types.js";
+import { FieldValueEntrySchema } from "./step-run-types.js";
 
 // Full item instance response shape
 export const ItemInstanceSchema = z.object({
@@ -9,12 +14,14 @@ export const ItemInstanceSchema = z.object({
   orderRunKey: z.string().nullable(),
   key: z.string(),
   quantity: z.number().nullable(),
+  fieldValues: z.array(FieldValueEntrySchema),
   createdBy: z.string(),
   createdAt: z.iso.datetime(),
   updatedBy: z.string(),
   updatedAt: z.iso.datetime(),
   _links: z.array(HateoasLinkSchema),
   _actions: z.array(HateoasActionSchema).optional(),
+  _actionTemplates: z.array(HateoasActionTemplateSchema).optional(),
 });
 
 export type ItemInstance = z.infer<typeof ItemInstanceSchema>;
@@ -22,10 +29,7 @@ export type ItemInstance = z.infer<typeof ItemInstanceSchema>;
 // Input for creating an item instance
 export const CreateItemInstanceSchema = z
   .object({
-    key: z
-      .string()
-      .min(1)
-      .max(200),
+    key: z.string().min(1).max(200),
     quantity: z.number().nullable().optional(),
     orderRunId: z.number().nullable().optional(),
   })

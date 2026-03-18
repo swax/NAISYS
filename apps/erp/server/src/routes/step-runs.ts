@@ -1,11 +1,11 @@
 import type { HateoasAction } from "@naisys/common";
 import {
   ErrorResponseSchema,
+  FieldValueEntrySchema,
   OperationRunStatus,
-  StepFieldValueSchema,
   StepRunListResponseSchema,
   StepRunSchema,
-  UpdateStepFieldValueSchema,
+  UpdateFieldValueSchema,
   UpdateStepRunSchema,
 } from "@naisys-erp/shared";
 import { FastifyInstance } from "fastify";
@@ -24,6 +24,7 @@ import {
   resolveOpRun,
   resolveStepRun,
 } from "../route-helpers.js";
+import { ensureStepRunFieldRecord } from "../services/field-service.js";
 import { isUserClockedIn } from "../services/labor-ticket-service.js";
 import {
   deleteFieldValueSet,
@@ -103,7 +104,8 @@ function formatStepRun(
   const stepRunHref = `${API_PREFIX}/${stepRunResource(orderKey, runNo, seqNo)}/${stepSeqNo}`;
 
   // Determine how many sets exist
-  const maxSetIndex = stepRun.fieldValues.reduce(
+  const storedFieldValues = stepRun.fieldRecord?.fieldValues ?? [];
+  const maxSetIndex = storedFieldValues.reduce(
     (max, fv) => Math.max(max, fv.setIndex),
     -1,
   );
@@ -111,7 +113,7 @@ function formatStepRun(
 
   // Merge field definitions with stored values + validation + attachments
   const fieldValues: {
-    stepFieldId: number;
+    fieldId: number;
     fieldSeqNo: number;
     label: string;
     type: string;
@@ -124,16 +126,16 @@ function formatStepRun(
   }[] = [];
   for (let si = 0; si < setCount; si++) {
     for (const field of stepRun.step.fieldSet?.fields ?? []) {
-      const stored = stepRun.fieldValues.find(
-        (fv) => fv.stepFieldId === field.id && fv.setIndex === si,
+      const stored = storedFieldValues.find(
+        (fv) => fv.fieldId === field.id && fv.setIndex === si,
       );
       const value = stored?.value ?? "";
       const attachments =
         field.type === "attachment" && stored
-          ? stored.stepFieldAttachments.map((sfa) => sfa.attachment)
+          ? stored.fieldAttachments.map((sfa) => sfa.attachment)
           : undefined;
       fieldValues.push({
-        stepFieldId: field.id,
+        fieldId: field.id,
         fieldSeqNo: field.seqNo,
         label: field.label,
         type: field.type,
@@ -164,7 +166,7 @@ function formatStepRun(
           hrefTemplate: `${stepRunHref}/fields/{fieldSeqNo}`,
           method: "PUT" as const,
           title: "Update Field Value",
-          schema: `${API_PREFIX}/schemas/UpdateStepFieldValue`,
+          schema: `${API_PREFIX}/schemas/UpdateFieldValue`,
         },
         {
           rel: "deleteSet",
@@ -373,9 +375,9 @@ export default function stepRunRoutes(fastify: FastifyInstance) {
         "Update a single field value on a step run (operation run must be in_progress)",
       tags: ["Step Runs"],
       params: FieldSeqNoParamsSchema,
-      body: UpdateStepFieldValueSchema,
+      body: UpdateFieldValueSchema,
       response: {
-        200: StepFieldValueSchema,
+        200: FieldValueEntrySchema,
         404: ErrorResponseSchema,
         409: ErrorResponseSchema,
       },
@@ -418,10 +420,16 @@ export default function stepRunRoutes(fastify: FastifyInstance) {
         return notFound(reply, `Step field not found`);
       }
 
-      await upsertFieldValue(resolved.stepRun.id, field.id, si, value, userId);
+      const fieldRecordId = await ensureStepRunFieldRecord(
+        resolved.stepRun.id,
+        userId,
+      );
+      if (!fieldRecordId) return notFound(reply, "Step has no field set");
+
+      await upsertFieldValue(fieldRecordId, field.id, si, value, userId);
 
       return {
-        stepFieldId: field.id,
+        fieldId: field.id,
         fieldSeqNo: field.seqNo,
         label: field.label,
         type: field.type,
@@ -487,7 +495,10 @@ export default function stepRunRoutes(fastify: FastifyInstance) {
         return conflict(reply, `Cannot delete set: step run is completed`);
       }
 
-      await deleteFieldValueSet(resolved.stepRun.id, setIndex);
+      if (!existing.fieldRecord) {
+        return notFound(reply, "No field values to delete");
+      }
+      await deleteFieldValueSet(existing.fieldRecord.id, setIndex);
 
       const stepRun = await getStepRun(resolved.stepRun.id);
       if (!stepRun) return notFound(reply, `Step run not found`);

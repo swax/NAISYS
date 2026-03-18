@@ -114,6 +114,16 @@ export const apiEndpoints = {
   itemInstances: (key: string) => `items/${key}/instances`,
   itemInstance: (key: string, instanceId: number | string) =>
     `items/${key}/instances/${instanceId}`,
+  itemInstanceFieldValue: (
+    key: string,
+    instanceId: number | string,
+    fieldSeqNo: number | string,
+  ) => `items/${key}/instances/${instanceId}/fields/${fieldSeqNo}`,
+  itemInstanceDeleteSet: (
+    key: string,
+    instanceId: number | string,
+    setIndex: number,
+  ) => `items/${key}/instances/${instanceId}/sets/${setIndex}`,
   orders: "orders",
   order: (key: string) => `orders/${key}`,
   orderRevs: (key: string) => `orders/${key}/revs`,
