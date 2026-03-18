@@ -96,6 +96,7 @@ export async function createRevision(
                 fieldSet: { include: { fields: true } },
               },
             },
+            predecessors: true,
           },
         },
       },
@@ -127,8 +128,10 @@ export async function createRevision(
       include: includeRevisionRelations,
     });
 
-    // Copy operations, steps, and fields from the previous revision
+    // Copy operations, steps, fields, and dependencies from the previous revision
     if (prevRev) {
+      const oldToNewOpId = new Map<number, number>();
+
       for (const op of prevRev.operations) {
         const newOp = await erpTx.operation.create({
           data: {
@@ -140,6 +143,7 @@ export async function createRevision(
             updatedById: userId,
           },
         });
+        oldToNewOpId.set(op.id, newOp.id);
 
         for (const step of op.steps) {
           const fields = step.fieldSet?.fields ?? [];
@@ -178,6 +182,23 @@ export async function createRevision(
               updatedById: userId,
             },
           });
+        }
+      }
+
+      // Copy operation dependencies using the old-to-new ID mapping
+      for (const op of prevRev.operations) {
+        for (const dep of op.predecessors) {
+          const newSuccessorId = oldToNewOpId.get(dep.successorId);
+          const newPredecessorId = oldToNewOpId.get(dep.predecessorId);
+          if (newSuccessorId && newPredecessorId) {
+            await erpTx.operationDependency.create({
+              data: {
+                successorId: newSuccessorId,
+                predecessorId: newPredecessorId,
+                createdById: userId,
+              },
+            });
+          }
         }
       }
     }
