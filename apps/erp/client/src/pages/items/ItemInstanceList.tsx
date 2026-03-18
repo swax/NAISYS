@@ -68,11 +68,8 @@ export const ItemInstanceList: React.FC = () => {
         key: newKey,
         quantity: newQuantity ? Number(newQuantity) : null,
       };
-      await api.post(apiEndpoints.itemInstances(key), body);
-      setCreating(false);
-      setNewKey("");
-      setNewQuantity("");
-      await fetchData();
+      const result = await api.post<{ id: number }>(apiEndpoints.itemInstances(key), body);
+      navigate(`/items/${key}/instances/${result.id}`);
     } catch (err) {
       showErrorNotification(err);
     } finally {
