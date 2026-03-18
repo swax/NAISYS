@@ -13,7 +13,7 @@ import { LlmApiType, LlmModelSchema } from "@naisys/common";
 import { IconCheck, IconX } from "@tabler/icons-react";
 
 import type { LlmModelDetail } from "../lib/apiClient";
-import { zodResolver } from "../lib/zod-resolver";
+import { zodResolver } from "@naisys/common-browser";
 
 interface LlmFormValues {
   key: string;

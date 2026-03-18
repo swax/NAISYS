@@ -1,8 +1,6 @@
 import {
-  ActionIcon,
   Button,
   Card,
-  Code,
   Container,
   Group,
   Loader,
@@ -14,22 +12,15 @@ import {
   Text,
   TextInput,
   Title,
-  Tooltip,
 } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
-import { notifications } from "@mantine/notifications";
+import { SecretField } from "@naisys/common-browser";
 import {
   type ErpPermission,
   ErpPermissionEnum,
   type User,
 } from "@naisys-erp/shared";
-import {
-  IconAlertTriangle,
-  IconCopy,
-  IconEye,
-  IconEyeOff,
-  IconRefresh,
-} from "@tabler/icons-react";
+import { IconAlertTriangle } from "@tabler/icons-react";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useOutletContext, useParams } from "react-router";
 
@@ -54,7 +45,6 @@ export const UserDetail: React.FC = () => {
   const [newPassword, setNewPassword] = useState("");
   const [pwSaving, setPwSaving] = useState(false);
   const [pwError, setPwError] = useState("");
-  const [keyVisible, setKeyVisible] = useState(false);
 
   const fetchUser = useCallback(async () => {
     if (!routeUsername) return;
@@ -264,64 +254,15 @@ export const UserDetail: React.FC = () => {
               <Text fw={600} w={120}>
                 API Key:
               </Text>
-              <Group gap="xs" align="center">
-                {user.apiKey ? (
-                  <>
-                    <Code>
-                      {keyVisible
-                        ? user.apiKey
-                        : "\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022"}
-                    </Code>
-                    <Tooltip label={keyVisible ? "Hide" : "Show"}>
-                      <ActionIcon
-                        variant="subtle"
-                        size="sm"
-                        onClick={() => setKeyVisible((v) => !v)}
-                      >
-                        {keyVisible ? (
-                          <IconEyeOff size={14} />
-                        ) : (
-                          <IconEye size={14} />
-                        )}
-                      </ActionIcon>
-                    </Tooltip>
-                    <Tooltip label="Copy to clipboard">
-                      <ActionIcon
-                        variant="subtle"
-                        size="sm"
-                        onClick={() => {
-                          void navigator.clipboard.writeText(user.apiKey!);
-                          notifications.show({
-                            title: "Copied",
-                            message: "Copied to clipboard",
-                            color: "green",
-                          });
-                        }}
-                      >
-                        <IconCopy size={14} />
-                      </ActionIcon>
-                    </Tooltip>
-                  </>
-                ) : (
-                  <Text c="dimmed" size="sm">
-                    Not set
-                  </Text>
-                )}
-                {hasAction(user._actions, "rotate-key") && (
-                  <Tooltip
-                    label={user.apiKey ? "Rotate key" : "Generate API key"}
-                  >
-                    <ActionIcon
-                      variant="subtle"
-                      size="sm"
-                      loading={rotating}
-                      onClick={handleRotateKey}
-                    >
-                      <IconRefresh size={14} />
-                    </ActionIcon>
-                  </Tooltip>
-                )}
-              </Group>
+              <SecretField
+                value={user.apiKey ?? null}
+                onRotate={
+                  hasAction(user._actions, "rotate-key")
+                    ? handleRotateKey
+                    : undefined
+                }
+                rotating={rotating}
+              />
             </Group>
           )}
         </Stack>

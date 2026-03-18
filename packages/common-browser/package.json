@@ -1,0 +1,31 @@
+{
+  "name": "@naisys/common-browser",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Shared React/Mantine components and utilities for NAISYS client apps",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "clean": "rimraf dist",
+    "build": "tsc",
+    "prepare": "npm run build"
+  },
+  "dependencies": {
+    "@naisys/common": "file:../common"
+  },
+  "peerDependencies": {
+    "@mantine/core": "^8.0.0",
+    "@mantine/notifications": "^8.0.0",
+    "@tabler/icons-react": "^3.0.0",
+    "react": "^19.0.0",
+    "react-markdown": "^10.0.0",
+    "remark-gfm": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.14",
+    "typescript": "^5.9.3"
+  }
+}

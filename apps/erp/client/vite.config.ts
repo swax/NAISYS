@@ -5,7 +5,7 @@ export default defineConfig({
   plugins: [react()],
   base: "/erp/",
   resolve: {
-    dedupe: ["react", "react-dom"],
+    dedupe: ["react", "react-dom", "@mantine/core", "@mantine/hooks", "@mantine/notifications", "@mantine/store"],
   },
   server: {
     port: 3202,

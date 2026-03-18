@@ -5,7 +5,7 @@ import { useState } from "react";
 
 import { showErrorNotification } from "../lib/api";
 import { useAuth } from "../lib/AuthContext";
-import { zodResolver } from "../lib/zod-resolver";
+import { zodResolver } from "@naisys/common-browser";
 
 interface Props {
   opened: boolean;

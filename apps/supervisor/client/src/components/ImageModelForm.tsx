@@ -12,7 +12,7 @@ import { ImageModelSchema } from "@naisys/common";
 import { IconCheck, IconX } from "@tabler/icons-react";
 
 import type { ImageModelDetail } from "../lib/apiClient";
-import { zodResolver } from "../lib/zod-resolver";
+import { zodResolver } from "@naisys/common-browser";
 
 interface ImageFormValues {
   key: string;

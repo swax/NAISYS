@@ -19,7 +19,7 @@ import { useLocation, useNavigate, useParams } from "react-router";
 
 import { api, apiEndpoints, showErrorNotification } from "../../../lib/api";
 import { hasAction } from "../../../lib/hateoas";
-import { zodResolver } from "../../../lib/zod-resolver";
+import { zodResolver } from "@naisys/common-browser";
 
 interface Props {
   orderKey: string;

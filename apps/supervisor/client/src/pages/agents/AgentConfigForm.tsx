@@ -16,7 +16,7 @@ import { IconCheck, IconX } from "@tabler/icons-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useBlocker } from "react-router-dom";
 
-import { zodResolver } from "../../lib/zod-resolver";
+import { zodResolver } from "@naisys/common-browser";
 
 interface ModelOption {
   value: string;

@@ -26,7 +26,7 @@ import { useState } from "react";
 
 import { api, showErrorNotification } from "../lib/api";
 import { hasAction } from "../lib/hateoas";
-import { zodResolver } from "../lib/zod-resolver";
+import { zodResolver } from "@naisys/common-browser";
 import { MetadataTooltip } from "./MetadataTooltip";
 
 const TYPE_LABELS: Record<string, string> = {

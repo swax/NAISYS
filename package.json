@@ -6,6 +6,7 @@
   "packageManager": "npm@11.11.1",
   "type": "module",
   "workspaces": [
+    "packages/common-browser",
     "packages/common",
     "packages/common-node",
     "packages/hub-database",

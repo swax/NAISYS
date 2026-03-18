@@ -9,36 +9,58 @@ import {
   Title,
 } from "@mantine/core";
 import { formatFileSize } from "@naisys/common";
-import type { AdminAttachmentListResponse } from "@naisys-erp/shared";
 import { IconDownload, IconRefresh } from "@tabler/icons-react";
 import { useCallback, useEffect, useState } from "react";
 
-import { api, apiEndpoints } from "../../lib/api";
+export interface AttachmentItem {
+  id: number;
+  filename: string;
+  fileSize: number;
+  uploadedBy: string;
+  createdAt: string;
+  [key: string]: unknown;
+}
+
+export interface AttachmentListData {
+  attachments: AttachmentItem[];
+  total: number;
+  pageSize: number;
+}
+
+export interface AttachmentListProps {
+  fetchAttachments: (
+    page: number,
+    pageSize: number,
+  ) => Promise<AttachmentListData>;
+  getDownloadUrl: (id: number) => string;
+  extraColumns?: {
+    header: string;
+    render: (attachment: AttachmentItem) => React.ReactNode;
+  }[];
+}
 
 const PAGE_SIZE = 50;
 
-export const AttachmentList: React.FC = () => {
-  const [data, setData] = useState<AdminAttachmentListResponse | null>(null);
+export const AttachmentList: React.FC<AttachmentListProps> = ({
+  fetchAttachments: fetchAttachmentsFn,
+  getDownloadUrl,
+  extraColumns,
+}) => {
+  const [data, setData] = useState<AttachmentListData | null>(null);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
 
   const fetchAttachments = useCallback(async () => {
     setLoading(true);
     try {
-      const params = new URLSearchParams();
-      params.set("page", String(page));
-      params.set("pageSize", String(PAGE_SIZE));
-
-      const result = await api.get<AdminAttachmentListResponse>(
-        `${apiEndpoints.adminAttachments}?${params}`,
-      );
+      const result = await fetchAttachmentsFn(page, PAGE_SIZE);
       setData(result);
     } catch {
       setData(null);
     } finally {
       setLoading(false);
     }
-  }, [page]);
+  }, [page, fetchAttachmentsFn]);
 
   useEffect(() => {
     void fetchAttachments();
@@ -46,7 +68,7 @@ export const AttachmentList: React.FC = () => {
 
   const handleDownload = (id: number, filename: string) => {
     const link = document.createElement("a");
-    link.href = apiEndpoints.adminAttachmentDownload(id);
+    link.href = getDownloadUrl(id);
     link.download = filename;
     link.click();
   };
@@ -87,6 +109,9 @@ export const AttachmentList: React.FC = () => {
               <Table.Tr>
                 <Table.Th>Filename</Table.Th>
                 <Table.Th>Size</Table.Th>
+                {extraColumns?.map((col) => (
+                  <Table.Th key={col.header}>{col.header}</Table.Th>
+                ))}
                 <Table.Th>Uploaded By</Table.Th>
                 <Table.Th>Date</Table.Th>
                 <Table.Th />
@@ -101,8 +126,13 @@ export const AttachmentList: React.FC = () => {
                 >
                   <Table.Td>{att.filename}</Table.Td>
                   <Table.Td>{formatFileSize(att.fileSize)}</Table.Td>
+                  {extraColumns?.map((col) => (
+                    <Table.Td key={col.header}>{col.render(att)}</Table.Td>
+                  ))}
                   <Table.Td>{att.uploadedBy}</Table.Td>
-                  <Table.Td>{new Date(att.createdAt).toLocaleString()}</Table.Td>
+                  <Table.Td>
+                    {new Date(att.createdAt).toLocaleString()}
+                  </Table.Td>
                   <Table.Td>
                     <IconDownload size={16} />
                   </Table.Td>

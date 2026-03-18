@@ -23,7 +23,7 @@ import {
 import { useCallback, useEffect, useState } from "react";
 
 import { api, apiEndpoints } from "../lib/api";
-import { zodResolver } from "../lib/zod-resolver";
+import { zodResolver } from "@naisys/common-browser";
 
 type FormData<TEdit extends boolean> = TEdit extends true
   ? UpdateOrder

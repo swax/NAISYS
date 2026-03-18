@@ -1,11 +1,14 @@
 import { Container, Loader, Stack, Table, Tabs, Title } from "@mantine/core";
 import { formatFileSize, hasAction } from "@naisys/common";
+import type {
+  AttachmentListData,
+  ServerLogResponse,
+} from "@naisys/common-browser";
+import { AttachmentList, ServerLogViewer } from "@naisys/common-browser";
 import type { AdminInfoResponse } from "@naisys-erp/shared";
 import { useCallback, useEffect, useState } from "react";
 
 import { api, apiEndpoints } from "../../lib/api";
-import { AttachmentList } from "./AttachmentList";
-import { ServerLogViewer } from "./ServerLogViewer";
 
 export const AdminPage: React.FC = () => {
   const [data, setData] = useState<AdminInfoResponse | null>(null);
@@ -31,6 +34,28 @@ export const AdminPage: React.FC = () => {
   const canViewAttachments = data
     ? !!hasAction(data._actions, "view-attachments")
     : false;
+
+  const fetchLogs = useCallback(
+    async (_file: string | undefined, minLevel: number | undefined) => {
+      return api.get<ServerLogResponse>(apiEndpoints.adminLogs(undefined, minLevel));
+    },
+    [],
+  );
+
+  const fetchAttachments = useCallback(
+    async (page: number, pageSize: number) => {
+      const params = new URLSearchParams();
+      params.set("page", String(page));
+      params.set("pageSize", String(pageSize));
+      return api.get<AttachmentListData>(`${apiEndpoints.adminAttachments}?${params}`);
+    },
+    [],
+  );
+
+  const getDownloadUrl = useCallback(
+    (id: number) => apiEndpoints.adminAttachmentDownload(id),
+    [],
+  );
 
   return (
     <Container size="lg" py="xl" w="100%">
@@ -69,13 +94,13 @@ export const AdminPage: React.FC = () => {
 
           {canViewLogs && (
             <Tabs.Panel value="logs" pt="md">
-              <ServerLogViewer />
+              <ServerLogViewer fetchLogs={fetchLogs} />
             </Tabs.Panel>
           )}
 
           {canViewAttachments && (
             <Tabs.Panel value="attachments" pt="md">
-              <AttachmentList />
+              <AttachmentList fetchAttachments={fetchAttachments} getDownloadUrl={getDownloadUrl} />
             </Tabs.Panel>
           )}
         </Tabs>

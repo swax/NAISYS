@@ -17,7 +17,7 @@ import {
 } from "@naisys-erp/shared";
 import { useState } from "react";
 
-import { zodResolver } from "../lib/zod-resolver";
+import { zodResolver } from "@naisys/common-browser";
 
 type FormData<TEdit extends boolean> = TEdit extends true
   ? UpdateOrderRun

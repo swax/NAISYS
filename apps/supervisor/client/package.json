@@ -18,6 +18,7 @@
     "@mantine/hooks": "^8.3.16",
     "@mantine/notifications": "^8.3.16",
     "@naisys-supervisor/shared": "file:../shared",
+    "@naisys/common-browser": "file:../../../packages/common-browser",
     "@naisys/common": "file:../../../packages/common",
     "@naisys/hub-protocol": "file:../../../packages/hub-protocol",
     "@tabler/icons-react": "^3.40.0",

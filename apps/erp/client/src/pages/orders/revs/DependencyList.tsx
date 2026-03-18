@@ -19,7 +19,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { api, apiEndpoints, showErrorNotification } from "../../../lib/api";
 import { hasAction, hasActionTemplate } from "../../../lib/hateoas";
-import { zodResolver } from "../../../lib/zod-resolver";
+import { zodResolver } from "@naisys/common-browser";
 
 interface DependencyListProps {
   orderKey: string;
