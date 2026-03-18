@@ -71,7 +71,7 @@ function formatStep(
       step.seqNo,
       revStatus,
       user,
-      step.fields,
+      step.fieldSet?.fields ?? [],
     ),
     _links: childItemLinks(
       stepBasePath(orderKey, revNo, opSeqNo),

@@ -1,7 +1,7 @@
 import { z } from "zod/v4";
 
 import { HateoasActionSchema, HateoasLinkSchema } from "./hateoas-types.js";
-import { StepFieldListResponseSchema } from "./step-field-types.js";
+import { FieldListResponseSchema } from "./field-types.js";
 
 // Full step response shape
 export const StepSchema = z.object({
@@ -14,7 +14,7 @@ export const StepSchema = z.object({
   createdBy: z.string(),
   updatedAt: z.iso.datetime(),
   updatedBy: z.string(),
-  fields: StepFieldListResponseSchema,
+  fields: FieldListResponseSchema,
   _links: z.array(HateoasLinkSchema),
   _actions: z.array(HateoasActionSchema).optional(),
 });

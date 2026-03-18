@@ -11,21 +11,21 @@ import {
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import type {
-  CreateStepField,
-  StepField,
-  StepFieldListResponse,
-  UpdateStepField,
+  CreateField,
+  Field,
+  FieldListResponse,
+  UpdateField,
 } from "@naisys-erp/shared";
 import {
-  CreateStepFieldSchema,
-  StepFieldType,
-  StepFieldTypeEnum,
-  UpdateStepFieldSchema,
+  CreateFieldSchema,
+  FieldType,
+  FieldTypeEnum,
+  UpdateFieldSchema,
 } from "@naisys-erp/shared";
 import { useState } from "react";
 
 import { MetadataTooltip } from "../../../components/MetadataTooltip";
-import { api, apiEndpoints, showErrorNotification } from "../../../lib/api";
+import { api, showErrorNotification } from "../../../lib/api";
 import { hasAction } from "../../../lib/hateoas";
 import { zodResolver } from "../../../lib/zod-resolver";
 
@@ -43,49 +43,45 @@ function fieldTypeLabel(type: string): string {
   return TYPE_LABELS[type] ?? type;
 }
 
-interface StepFieldListProps {
-  orderKey: string;
-  revNo: string;
-  opSeqNo: string;
-  stepSeqNo: number;
-  initialData: StepFieldListResponse;
+interface FieldListProps {
+  fieldsEndpoint: string;
+  fieldEndpoint: (seqNo: number | string) => string;
+  initialData: FieldListResponse;
 }
 
-export const StepFieldList: React.FC<StepFieldListProps> = ({
-  orderKey,
-  revNo,
-  opSeqNo,
-  stepSeqNo,
+export const FieldList: React.FC<FieldListProps> = ({
+  fieldsEndpoint,
+  fieldEndpoint,
   initialData,
 }) => {
-  const [fields, setFields] = useState<StepFieldListResponse>(initialData);
+  const [fields, setFields] = useState<FieldListResponse>(initialData);
   const [editingFieldId, setEditingFieldId] = useState<number | null>(null);
   const [addingField, setAddingField] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const editForm = useForm<UpdateStepField>({
+  const editForm = useForm<UpdateField>({
     initialValues: {
       seqNo: 10,
       label: "",
-      type: StepFieldType.string,
+      type: FieldType.string,
       multiValue: false,
       required: false,
     },
-    validate: zodResolver(UpdateStepFieldSchema),
+    validate: zodResolver(UpdateFieldSchema),
   });
 
-  const createForm = useForm<CreateStepField>({
+  const createForm = useForm<CreateField>({
     initialValues: {
       seqNo: 10,
       label: "",
-      type: StepFieldType.string,
+      type: FieldType.string,
       multiValue: false,
       required: false,
     },
-    validate: zodResolver(CreateStepFieldSchema),
+    validate: zodResolver(CreateFieldSchema),
   });
 
-  const startEditing = (field: StepField) => {
+  const startEditing = (field: Field) => {
     editForm.setValues({
       seqNo: field.seqNo,
       label: field.label,
@@ -97,19 +93,13 @@ export const StepFieldList: React.FC<StepFieldListProps> = ({
     setAddingField(false);
   };
 
-  const handleSave = async (values: UpdateStepField) => {
+  const handleSave = async (values: UpdateField) => {
     const field = fields.items.find((f) => f.id === editingFieldId);
     if (!field) return;
     setSaving(true);
     try {
-      const updated = await api.put<StepField>(
-        apiEndpoints.orderRevOpStepField(
-          orderKey,
-          revNo,
-          opSeqNo,
-          stepSeqNo,
-          field.seqNo,
-        ),
+      const updated = await api.put<Field>(
+        fieldEndpoint(field.seqNo),
         values,
       );
       setEditingFieldId(null);
@@ -126,18 +116,10 @@ export const StepFieldList: React.FC<StepFieldListProps> = ({
     }
   };
 
-  const handleDelete = async (field: StepField) => {
+  const handleDelete = async (field: Field) => {
     if (!confirm(`Delete field "${field.label}"?`)) return;
     try {
-      await api.delete(
-        apiEndpoints.orderRevOpStepField(
-          orderKey,
-          revNo,
-          opSeqNo,
-          stepSeqNo,
-          field.seqNo,
-        ),
-      );
+      await api.delete(fieldEndpoint(field.seqNo));
       setFields({
         ...fields,
         items: fields.items.filter((f) => f.id !== field.id),
@@ -152,7 +134,7 @@ export const StepFieldList: React.FC<StepFieldListProps> = ({
     createForm.setValues({
       seqNo: fields.nextSeqNo,
       label: "",
-      type: StepFieldType.string,
+      type: FieldType.string,
       multiValue: false,
       required: false,
     });
@@ -160,11 +142,11 @@ export const StepFieldList: React.FC<StepFieldListProps> = ({
     setEditingFieldId(null);
   };
 
-  const handleCreate = async (values: CreateStepField) => {
+  const handleCreate = async (values: CreateField) => {
     setSaving(true);
     try {
-      const created = await api.post<StepField>(
-        apiEndpoints.orderRevOpStepFields(orderKey, revNo, opSeqNo, stepSeqNo),
+      const created = await api.post<Field>(
+        fieldsEndpoint,
         values,
       );
       setAddingField(false);
@@ -182,7 +164,7 @@ export const StepFieldList: React.FC<StepFieldListProps> = ({
   };
 
   const fieldFormFields = (
-    form: ReturnType<typeof useForm<CreateStepField | UpdateStepField>>,
+    form: ReturnType<typeof useForm<CreateField | UpdateField>>,
   ) => (
     <>
       <NumberInput
@@ -198,7 +180,7 @@ export const StepFieldList: React.FC<StepFieldListProps> = ({
       />
       <Select
         label="Type"
-        data={StepFieldTypeEnum.options.map((v) => ({
+        data={FieldTypeEnum.options.map((v) => ({
           value: v,
           label: fieldTypeLabel(v),
         }))}

@@ -37,6 +37,7 @@ import adminRoutes from "./routes/admin.js";
 import auditRoutes from "./routes/audit.js";
 import authRoutes from "./routes/auth.js";
 import dispatchRoutes from "./routes/dispatch.js";
+import itemFieldRoutes from "./routes/item-fields.js";
 import itemRoutes from "./routes/items.js";
 import laborTicketRoutes from "./routes/labor-tickets.js";
 import operationDependencyRoutes from "./routes/operation-dependencies.js";
@@ -165,6 +166,9 @@ export const erpPlugin: FastifyPluginAsync = async (fastify) => {
   fastify.register(dispatchRoutes, { prefix: "/api/erp/dispatch" });
   fastify.register(rootRoute, { prefix: "/api/erp" });
   fastify.register(itemRoutes, { prefix: "/api/erp/items" });
+  fastify.register(itemFieldRoutes, {
+    prefix: "/api/erp/items/:key/fields",
+  });
   fastify.register(orderRoutes, {
     prefix: "/api/erp/orders",
   });

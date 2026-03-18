@@ -138,7 +138,7 @@ export async function createOrderRun(
       where: { orderRevId },
       include: {
         steps: {
-          include: { fields: true },
+          include: { fieldSet: { include: { fields: true } } },
           orderBy: { seqNo: "asc" },
         },
         predecessors: { select: { predecessorId: true } },
@@ -174,7 +174,7 @@ export async function createOrderRun(
           },
         });
 
-        for (const field of step.fields) {
+        for (const field of step.fieldSet?.fields ?? []) {
           await erpTx.stepFieldValue.create({
             data: {
               stepRunId: stepRun.id,

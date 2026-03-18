@@ -26,7 +26,7 @@ import { MetadataTooltip } from "../../../components/MetadataTooltip";
 import { api, apiEndpoints, showErrorNotification } from "../../../lib/api";
 import { hasAction } from "../../../lib/hateoas";
 import { zodResolver } from "../../../lib/zod-resolver";
-import { StepFieldList } from "./StepFieldList";
+import { FieldList } from "./StepFieldList";
 
 interface StepListProps {
   orderKey: string;
@@ -268,11 +268,9 @@ export const StepList: React.FC<StepListProps> = ({
                   </Group>
                 </Group>
               )}
-              <StepFieldList
-                orderKey={orderKey}
-                revNo={revNo}
-                opSeqNo={opSeqNo}
-                stepSeqNo={step.seqNo}
+              <FieldList
+                fieldsEndpoint={apiEndpoints.orderRevOpStepFields(orderKey, revNo, opSeqNo, step.seqNo)}
+                fieldEndpoint={(seqNo) => apiEndpoints.orderRevOpStepField(orderKey, revNo, opSeqNo, step.seqNo, seqNo)}
                 initialData={step.fields}
               />
             </Card>

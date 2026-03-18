@@ -44,7 +44,7 @@ enum OperationRunStatus {
   failed
 }
 
-enum StepFieldType {
+enum FieldType {
   string
   number
   date
@@ -136,9 +136,45 @@ model OperationDependency {
   @@map("operation_dependencies")
 }
 
+model FieldSet {
+  id          Int      @id @default(autoincrement())
+  createdAt   DateTime @default(now()) @map("created_at")
+  createdById Int      @map("created_by")
+
+  createdBy User    @relation("fieldSetCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  fields    Field[]
+  steps     Step[]
+  items     Item[]
+
+  @@map("field_sets")
+}
+
+model Field {
+  id          Int       @id @default(autoincrement())
+  fieldSetId  Int       @map("field_set_id")
+  seqNo       Int       @map("seq_no")
+  label       String
+  type        FieldType @default(string)
+  multiValue  Boolean   @default(false) @map("multi_value")
+  required    Boolean   @default(false)
+  createdAt   DateTime  @default(now()) @map("created_at")
+  createdById Int       @map("created_by")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  updatedById Int       @map("updated_by")
+
+  createdBy   User             @relation("fieldCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy   User             @relation("fieldUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+  fieldSet    FieldSet         @relation(fields: [fieldSetId], references: [id], onDelete: Cascade)
+  fieldValues StepFieldValue[]
+
+  @@unique([fieldSetId, seqNo])
+  @@map("fields")
+}
+
 model Step {
   id           Int      @id @default(autoincrement())
   operationId  Int      @map("operation_id")
+  fieldSetId   Int?     @map("field_set_id")
   seqNo        Int      @map("seq_no")
   instructions String   @default("")
   multiSet     Boolean  @default(false) @map("multi_set")
@@ -147,36 +183,14 @@ model Step {
   updatedAt    DateTime @updatedAt @map("updated_at")
   updatedById  Int      @map("updated_by")
 
-  createdBy User        @relation("stepCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
-  updatedBy User        @relation("stepUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
-  operation Operation   @relation(fields: [operationId], references: [id], onDelete: Cascade)
-  fields    StepField[]
+  createdBy User       @relation("stepCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy User       @relation("stepUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+  operation Operation  @relation(fields: [operationId], references: [id], onDelete: Cascade)
+  fieldSet  FieldSet?  @relation(fields: [fieldSetId], references: [id])
   stepRuns  StepRun[]
 
   @@unique([operationId, seqNo])
   @@map("steps")
-}
-
-model StepField {
-  id          Int           @id @default(autoincrement())
-  stepId      Int           @map("step_id")
-  seqNo       Int           @map("seq_no")
-  label       String
-  type        StepFieldType @default(string)
-  multiValue  Boolean       @default(false) @map("multi_value")
-  required    Boolean       @default(false)
-  createdAt   DateTime      @default(now()) @map("created_at")
-  createdById Int           @map("created_by")
-  updatedAt   DateTime      @updatedAt @map("updated_at")
-  updatedById Int           @map("updated_by")
-
-  createdBy   User             @relation("stepFieldCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
-  updatedBy   User             @relation("stepFieldUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
-  step        Step             @relation(fields: [stepId], references: [id], onDelete: Cascade)
-  fieldValues StepFieldValue[]
-
-  @@unique([stepId, seqNo])
-  @@map("step_fields")
 }
 
 model OrderRun {
@@ -267,7 +281,7 @@ model StepFieldValue {
   createdBy User      @relation("stepFieldValueCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
   updatedBy User      @relation("stepFieldValueUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
   stepRun   StepRun   @relation(fields: [stepRunId], references: [id], onDelete: Restrict)
-  stepField StepField @relation(fields: [stepFieldId], references: [id], onDelete: Restrict)
+  field     Field     @relation(fields: [stepFieldId], references: [id], onDelete: Restrict)
 
   stepFieldAttachments StepFieldAttachment[]
 
@@ -279,13 +293,15 @@ model Item {
   id          Int      @id @default(autoincrement())
   key         String   @unique
   description String   @default("")
+  fieldSetId  Int?     @map("field_set_id")
   createdAt   DateTime @default(now()) @map("created_at")
   createdById Int      @map("created_by")
   updatedAt   DateTime @updatedAt @map("updated_at")
   updatedById Int      @map("updated_by")
 
-  createdBy User    @relation("itemCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
-  updatedBy User    @relation("itemUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+  createdBy User      @relation("itemCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy User      @relation("itemUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+  fieldSet  FieldSet? @relation(fields: [fieldSetId], references: [id])
   orders    Order[]
 
   @@index([createdAt])
@@ -314,10 +330,11 @@ model User {
   opsCreated             Operation[]           @relation("opCreatedBy")
   opsUpdated             Operation[]           @relation("opUpdatedBy")
   opDepsCreated          OperationDependency[] @relation("opDepCreatedBy")
+  fieldSetsCreated       FieldSet[]            @relation("fieldSetCreatedBy")
   stepsCreated           Step[]                @relation("stepCreatedBy")
   stepsUpdated           Step[]                @relation("stepUpdatedBy")
-  stepFieldsCreated      StepField[]           @relation("stepFieldCreatedBy")
-  stepFieldsUpdated      StepField[]           @relation("stepFieldUpdatedBy")
+  fieldsCreated          Field[]               @relation("fieldCreatedBy")
+  fieldsUpdated          Field[]               @relation("fieldUpdatedBy")
   opRunsCreated          OperationRun[]        @relation("opRunCreatedBy")
   opRunsUpdated          OperationRun[]        @relation("opRunUpdatedBy")
   stepRunsCreated        StepRun[]             @relation("stepRunCreatedBy")

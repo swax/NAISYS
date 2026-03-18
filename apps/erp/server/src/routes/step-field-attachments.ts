@@ -91,7 +91,7 @@ export default function stepFieldAttachmentRoutes(fastify: FastifyInstance) {
         return conflict(reply, `Cannot upload: step run is completed`);
       }
 
-      const field = stepRun.step.fields[0];
+      const field = stepRun.step.fieldSet?.fields[0];
       if (!field) {
         return notFound(reply, `Step field not found`);
       }

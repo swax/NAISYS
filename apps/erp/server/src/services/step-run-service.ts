@@ -1,4 +1,4 @@
-import { StepFieldType, type StepFieldValidation } from "@naisys-erp/shared";
+import { FieldType, type FieldValidation } from "@naisys-erp/shared";
 
 import erpDb from "../erpDb.js";
 
@@ -10,16 +10,20 @@ export const includeStep = {
       seqNo: true,
       instructions: true,
       multiSet: true,
-      fields: {
+      fieldSet: {
         select: {
-          id: true,
-          seqNo: true,
-          label: true,
-          type: true,
-          multiValue: true,
-          required: true,
+          fields: {
+            select: {
+              id: true,
+              seqNo: true,
+              label: true,
+              type: true,
+              multiValue: true,
+              required: true,
+            },
+            orderBy: { seqNo: "asc" as const },
+          },
         },
-        orderBy: { seqNo: "asc" as const },
       },
     },
   },
@@ -54,14 +58,16 @@ export type StepRunWithStep = {
     seqNo: number;
     instructions: string;
     multiSet: boolean;
-    fields: {
-      id: number;
-      seqNo: number;
-      label: string;
-      type: string;
-      multiValue: boolean;
-      required: boolean;
-    }[];
+    fieldSet: {
+      fields: {
+        id: number;
+        seqNo: number;
+        label: string;
+        type: string;
+        multiValue: boolean;
+        required: boolean;
+      }[];
+    } | null;
   };
   fieldValues: {
     id: number;
@@ -114,15 +120,19 @@ export async function findStepRunWithField(
     include: {
       step: {
         select: {
-          fields: {
-            where: { seqNo: fieldSeqNo },
+          fieldSet: {
             select: {
-              id: true,
-              seqNo: true,
-              label: true,
-              type: true,
-              multiValue: true,
-              required: true,
+              fields: {
+                where: { seqNo: fieldSeqNo },
+                select: {
+                  id: true,
+                  seqNo: true,
+                  label: true,
+                  type: true,
+                  multiValue: true,
+                  required: true,
+                },
+              },
             },
           },
         },
@@ -143,21 +153,21 @@ function validateSingleValue(type: string, value: string): string | null {
   if (!v) return null;
 
   switch (type) {
-    case StepFieldType.number:
+    case FieldType.number:
       if (isNaN(Number(v))) return "Must be a number";
       break;
-    case StepFieldType.date:
+    case FieldType.date:
       if (!DATE_RE.test(v) || isNaN(Date.parse(v)))
         return "Must be a valid date (YYYY-MM-DD)";
       break;
-    case StepFieldType.datetime:
+    case FieldType.datetime:
       if (!DATETIME_RE.test(v) || isNaN(Date.parse(v)))
         return "Must be a valid date/time (YYYY-MM-DDTHH:mm)";
       break;
-    case StepFieldType.yesNo:
+    case FieldType.yesNo:
       if (v !== "Yes" && v !== "No") return 'Must be "Yes" or "No"';
       break;
-    case StepFieldType.checkbox:
+    case FieldType.checkbox:
       if (v !== "checked") return "Invalid checkbox value";
       break;
   }
@@ -169,7 +179,7 @@ export function validateFieldValue(
   multiValue: boolean,
   required: boolean,
   value: string,
-): StepFieldValidation {
+): FieldValidation {
   if (required && !value.trim()) {
     return { valid: false, error: "Required" };
   }
@@ -224,7 +234,7 @@ export function validateCompletionFields(
 
   const errors: string[] = [];
   for (const si of [...allSetIndexes].sort((a, b) => a - b)) {
-    for (const field of existing.step.fields) {
+    for (const field of existing.step.fieldSet?.fields ?? []) {
       const key = fieldValueKey(field.id, si);
       const value = submittedMap.get(key) ?? storedMap.get(key) ?? "";
       const result = validateFieldValue(
