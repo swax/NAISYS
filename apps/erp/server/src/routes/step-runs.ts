@@ -109,7 +109,7 @@ function formatStepRun(
   );
   const setCount = Math.max(1, maxSetIndex + 1);
 
-  // Merge field definitions with stored values + validation + actions
+  // Merge field definitions with stored values + validation
   const fieldValues: {
     stepFieldId: number;
     fieldSeqNo: number;
@@ -120,7 +120,6 @@ function formatStepRun(
     setIndex: number;
     value: string;
     validation: ReturnType<typeof validateFieldValue>;
-    _actions: { rel: string; href: string; method: string; title: string; schema: string }[];
   }[] = [];
   for (let si = 0; si < setCount; si++) {
     for (const field of stepRun.step.fields) {
@@ -138,20 +137,28 @@ function formatStepRun(
         setIndex: si,
         value,
         validation: validateFieldValue(field.type, field.multiValue, field.required, value),
-        _actions: canUpdate
-          ? [
-              {
-                rel: "update" as const,
-                href: `${stepRunHref}/fields/${field.seqNo}`,
-                method: "PUT" as const,
-                title: "Update Field Value",
-                schema: `${API_PREFIX}/schemas/UpdateStepFieldValue`,
-              },
-            ]
-          : [],
       });
     }
   }
+
+  // Action templates — one per action type instead of per-field/set
+  const actionTemplates = canUpdate
+    ? [
+        {
+          rel: "updateField",
+          hrefTemplate: `${stepRunHref}/fields/{fieldSeqNo}`,
+          method: "PUT" as const,
+          title: "Update Field Value",
+          schema: `${API_PREFIX}/schemas/UpdateStepFieldValue`,
+        },
+        {
+          rel: "deleteSet",
+          hrefTemplate: `${stepRunHref}/sets/{setIndex}`,
+          method: "DELETE" as const,
+          title: "Delete Set",
+        },
+      ]
+    : [];
 
   return {
     id: stepRun.id,
@@ -180,6 +187,7 @@ function formatStepRun(
       opRunStatus,
       user,
     ),
+    _actionTemplates: actionTemplates,
   };
 }
 
@@ -381,7 +389,6 @@ export default function stepRunRoutes(fastify: FastifyInstance) {
 
       await upsertFieldValue(resolved.stepRun.id, field.id, si, value, userId);
 
-      const stepRunHref = `${API_PREFIX}/${stepRunResource(orderKey, runNo, seqNo)}/${stepSeqNo}`;
       return {
         stepFieldId: field.id,
         fieldSeqNo: field.seqNo,
@@ -392,15 +399,6 @@ export default function stepRunRoutes(fastify: FastifyInstance) {
         setIndex: si,
         value,
         validation: validateFieldValue(field.type, field.multiValue, field.required, value),
-        _actions: [
-          {
-            rel: "update" as const,
-            href: `${stepRunHref}/fields/${field.seqNo}`,
-            method: "PUT" as const,
-            title: "Update Field Value",
-            schema: `${API_PREFIX}/schemas/UpdateStepFieldValue`,
-          },
-        ],
       };
     },
   });

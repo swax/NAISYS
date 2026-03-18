@@ -1,1 +1,1 @@
-export { hasAction } from "@naisys/common";
+export { hasAction, hasActionTemplate } from "@naisys/common";

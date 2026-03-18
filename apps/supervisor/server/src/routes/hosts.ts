@@ -75,16 +75,15 @@ function hostActions(
   return actions;
 }
 
-function assignedAgentActions(
+function hostActionTemplates(
   hostname: string,
-  agentName: string,
   hasManageHostsPermission: boolean,
-): HateoasAction[] {
+) {
   if (!hasManageHostsPermission) return [];
   return [
     {
-      rel: "unassign",
-      href: `${API_PREFIX}/hosts/${hostname}/agents/${agentName}`,
+      rel: "unassignAgent",
+      hrefTemplate: `${API_PREFIX}/hosts/${hostname}/agents/{agentName}`,
       method: "DELETE",
       title: "Unassign Agent",
     },
@@ -235,16 +234,10 @@ export default function hostsRoutes(
       return {
         ...host,
         online,
-        assignedAgents: host.assignedAgents.map((agent) => ({
-          ...agent,
-          _actions: assignedAgentActions(
-            hostname,
-            agent.name,
-            hasManageHostsPermission,
-          ),
-        })),
+        assignedAgents: host.assignedAgents,
         _links: [selfLink(`/hosts/${hostname}`)],
         _actions: hostActions(hostname, hasManageHostsPermission, online),
+        _actionTemplates: hostActionTemplates(hostname, hasManageHostsPermission),
       };
     },
   );

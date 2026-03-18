@@ -8,7 +8,7 @@ import { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 
 import erpDb from "../erpDb.js";
-import { paginationLinks } from "../hateoas.js";
+import { API_PREFIX, paginationLinks } from "../hateoas.js";
 import { formatDate } from "../route-helpers.js";
 
 const OPEN_ORDER_STATUSES = [OrderRunStatus.released, OrderRunStatus.started];
@@ -89,7 +89,6 @@ export default function dispatchRoutes(fastify: FastifyInstance) {
           assignedTo: opRun.orderRun.assignedTo,
           dueAt: formatDate(opRun.orderRun.dueAt),
           createdAt: opRun.createdAt.toISOString(),
-          _links: [],
         })),
         total,
         page,
@@ -100,6 +99,14 @@ export default function dispatchRoutes(fastify: FastifyInstance) {
           search,
           clockedIn: clockedIn ? "true" : undefined,
         }),
+        _actionTemplates: [
+          {
+            rel: "viewOperationRun",
+            hrefTemplate: `${API_PREFIX}/orders/{orderKey}/runs/{runNo}/ops/{seqNo}`,
+            method: "GET",
+            title: "View Operation Run",
+          },
+        ],
       };
     },
   });

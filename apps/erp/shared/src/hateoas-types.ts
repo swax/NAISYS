@@ -1,6 +1,8 @@
 export {
   type HateoasAction,
   HateoasActionSchema,
+  type HateoasActionTemplate,
+  HateoasActionTemplateSchema,
   type HateoasLink,
   type HateoasLinks,
   HateoasLinkSchema,

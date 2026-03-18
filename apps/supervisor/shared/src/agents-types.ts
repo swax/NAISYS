@@ -1,6 +1,7 @@
 import {
   AgentConfigFileSchema,
   HateoasActionSchema,
+  HateoasActionTemplateSchema,
   URL_SAFE_KEY_MESSAGE,
   URL_SAFE_KEY_REGEX,
 } from "@naisys/common";
@@ -154,7 +155,6 @@ const AssignedAgentSchema = z.object({
   id: z.number(),
   name: z.string(),
   title: z.string(),
-  _actions: z.array(HateoasActionSchema).optional(),
 });
 
 export const HostDetailResponseSchema = z.object({
@@ -168,6 +168,7 @@ export const HostDetailResponseSchema = z.object({
   assignedAgents: z.array(AssignedAgentSchema),
   _links: z.array(LinkSchema),
   _actions: z.array(HateoasActionSchema).optional(),
+  _actionTemplates: z.array(HateoasActionTemplateSchema).optional(),
 });
 export type HostDetailResponse = z.infer<typeof HostDetailResponseSchema>;
 

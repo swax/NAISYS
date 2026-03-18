@@ -39,30 +39,31 @@ function depBasePath(orderKey: string, revNo: number, seqNo: number) {
   return `/orders/${orderKey}/revs/${revNo}/ops/${seqNo}/deps`;
 }
 
-function formatDependency(
-  basePath: string,
-  revStatus: string,
-  user: ErpUser | undefined,
-  dep: DependencyWithDetails,
-) {
+function formatDependency(dep: DependencyWithDetails) {
   return {
     id: dep.id,
     predecessorSeqNo: dep.predecessor.seqNo,
     predecessorTitle: dep.predecessor.title,
     createdAt: dep.createdAt.toISOString(),
     createdBy: dep.createdBy.username,
-    _actions:
-      hasPermission(user, "order_planner") && revStatus === RevisionStatus.draft
-        ? [
-            {
-              rel: "delete" as const,
-              href: `${API_PREFIX}${basePath}/${dep.predecessor.seqNo}`,
-              method: "DELETE" as const,
-              title: "Remove Dependency",
-            },
-          ]
-        : [],
   };
+}
+
+function depActionTemplates(
+  basePath: string,
+  revStatus: string,
+  user: ErpUser | undefined,
+) {
+  if (!hasPermission(user, "order_planner") || revStatus !== RevisionStatus.draft)
+    return [];
+  return [
+    {
+      rel: "deleteDependency",
+      hrefTemplate: `${API_PREFIX}${basePath}/{predecessorSeqNo}`,
+      method: "DELETE" as const,
+      title: "Remove Dependency",
+    },
+  ];
 }
 
 export default function operationDependencyRoutes(fastify: FastifyInstance) {
@@ -97,9 +98,7 @@ export default function operationDependencyRoutes(fastify: FastifyInstance) {
       const base = depBasePath(orderKey, revNo, seqNo);
 
       return {
-        items: items.map((dep) =>
-          formatDependency(base, resolved.rev.status, user, dep),
-        ),
+        items: items.map((dep) => formatDependency(dep)),
         total: items.length,
         _links: [selfLink(base)],
         _actions:
@@ -115,6 +114,7 @@ export default function operationDependencyRoutes(fastify: FastifyInstance) {
                 },
               ]
             : [],
+        _actionTemplates: depActionTemplates(base, resolved.rev.status, user),
       };
     },
   });
@@ -168,10 +168,9 @@ export default function operationDependencyRoutes(fastify: FastifyInstance) {
       }
 
       const dep = await createDependency(successor.id, predecessor.id, userId);
-      const base = depBasePath(orderKey, revNo, seqNo);
 
       reply.status(201);
-      return formatDependency(base, resolved.rev.status, request.erpUser, dep);
+      return formatDependency(dep);
     },
   });
 

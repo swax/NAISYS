@@ -13,7 +13,7 @@ import { IconTrash } from "@tabler/icons-react";
 import { useCallback, useEffect, useState } from "react";
 
 import { api, apiEndpoints, showErrorNotification } from "../../../lib/api";
-import { hasAction } from "../../../lib/hateoas";
+import { hasAction, hasActionTemplate } from "../../../lib/hateoas";
 
 export interface LaborActions {
   canClockIn: boolean;
@@ -151,7 +151,7 @@ export const LaborTicketList: React.FC<Props> = ({
                       {ticket.cost != null ? `$${ticket.cost.toFixed(2)}` : "—"}
                     </Table.Td>
                     <Table.Td>
-                      {hasAction(ticket._actions, "delete") && (
+                      {hasActionTemplate(data._actionTemplates, "deleteTicket") && (
                         <ActionIcon
                           size="xs"
                           variant="subtle"

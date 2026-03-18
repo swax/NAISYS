@@ -1,6 +1,10 @@
 import { z } from "zod/v4";
 
-import { HateoasActionSchema, HateoasLinkSchema } from "./hateoas-types.js";
+import {
+  HateoasActionSchema,
+  HateoasActionTemplateSchema,
+  HateoasLinkSchema,
+} from "./hateoas-types.js";
 
 export const LaborTicketSchema = z.object({
   id: z.number(),
@@ -16,7 +20,6 @@ export const LaborTicketSchema = z.object({
   updatedAt: z.iso.datetime(),
   updatedBy: z.string(),
   _links: z.array(HateoasLinkSchema),
-  _actions: z.array(HateoasActionSchema).optional(),
 });
 
 export type LaborTicket = z.infer<typeof LaborTicketSchema>;
@@ -35,6 +38,7 @@ export const LaborTicketListResponseSchema = z.object({
   total: z.number(),
   _links: z.array(HateoasLinkSchema),
   _actions: z.array(HateoasActionSchema).optional(),
+  _actionTemplates: z.array(HateoasActionTemplateSchema).optional(),
 });
 
 export type LaborTicketListResponse = z.infer<
