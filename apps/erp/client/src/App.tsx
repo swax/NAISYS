@@ -12,6 +12,7 @@ import { AppLayout } from "./components/AppLayout";
 import { AuthProvider, useAuth } from "./lib/AuthContext";
 import { AdminPage } from "./pages/admin/AdminPage";
 import { DispatchList } from "./pages/dispatch/DispatchList";
+import { InventoryList } from "./pages/inventory/InventoryList";
 import { ItemCreate } from "./pages/items/ItemCreate";
 import { ItemDetail } from "./pages/items/ItemDetail";
 import { ItemInstanceDetail } from "./pages/items/ItemInstanceDetail";
@@ -94,6 +95,7 @@ const AppContent: React.FC = () => {
           element={<ItemInstanceDetail />}
         />
         <Route path="/dispatch" element={<DispatchList />} />
+        <Route path="/inventory" element={<InventoryList />} />
         <Route path="/users" element={<UserList />} />
         <Route path="/users/:username" element={<UserDetail />} />
         <Route path="/admin" element={<AdminPage />} />

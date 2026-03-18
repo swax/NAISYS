@@ -5,6 +5,7 @@ export * from "./auth-types.js";
 export * from "./error-types.js";
 export * from "./field-types.js";
 export * from "./hateoas-types.js";
+export * from "./inventory-types.js";
 export * from "./item-instance-types.js";
 export * from "./item-types.js";
 export * from "./labor-ticket-types.js";

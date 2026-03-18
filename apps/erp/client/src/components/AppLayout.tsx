@@ -24,6 +24,7 @@ const navLinks = [
   { label: "Items", path: "/items" },
   { label: "Orders", path: "/orders" },
   { label: "Dispatch", path: "/dispatch" },
+  { label: "Inventory", path: "/inventory" },
   { label: "Users", path: "/users" },
   { label: "Admin", path: "/admin" },
 ];
