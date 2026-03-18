@@ -1,6 +1,6 @@
 import { z } from "zod/v4";
 
-import { HateoasActionSchema } from "./hateoas-types.js";
+import { HateoasActionSchema, HateoasLinkSchema } from "./hateoas-types.js";
 
 export const AdminInfoResponseSchema = z.object({
   erpDbPath: z.string(),
@@ -18,8 +18,20 @@ export const AdminAttachmentItemSchema = z.object({
 });
 export type AdminAttachmentItem = z.infer<typeof AdminAttachmentItemSchema>;
 
+export const AdminAttachmentListRequestSchema = z.object({
+  page: z.coerce.number().optional().default(1),
+  pageSize: z.coerce.number().optional().default(50),
+});
+export type AdminAttachmentListRequest = z.infer<
+  typeof AdminAttachmentListRequestSchema
+>;
+
 export const AdminAttachmentListResponseSchema = z.object({
   attachments: z.array(AdminAttachmentItemSchema),
+  total: z.number(),
+  page: z.number(),
+  pageSize: z.number(),
+  _links: z.array(HateoasLinkSchema),
 });
 export type AdminAttachmentListResponse = z.infer<
   typeof AdminAttachmentListResponseSchema

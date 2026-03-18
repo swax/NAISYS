@@ -3,6 +3,8 @@ import fs from "node:fs/promises";
 
 import type { HateoasAction } from "@naisys/common";
 import {
+  AdminAttachmentListRequest,
+  AdminAttachmentListRequestSchema,
   AdminAttachmentListResponse,
   AdminAttachmentListResponseSchema,
   AdminInfoResponse,
@@ -20,6 +22,7 @@ import { hasPermission, requirePermission } from "../auth-middleware.js";
 import { erpDbPath } from "../dbConfig.js";
 import erpDb from "../erpDb.js";
 import { notFound } from "../error-handler.js";
+import { paginationLinks } from "../hateoas.js";
 import { getErpLogPath, tailLogFile } from "../services/log-file-service.js";
 
 const API_PREFIX = "/api/erp";
@@ -122,6 +125,7 @@ export default function adminRoutes(
 
   // GET /attachments — List all attachments
   fastify.get<{
+    Querystring: AdminAttachmentListRequest;
     Reply: AdminAttachmentListResponse | ErrorResponse;
   }>(
     "/attachments",
@@ -130,6 +134,7 @@ export default function adminRoutes(
       schema: {
         description: "List all uploaded attachments",
         tags: ["Admin"],
+        querystring: AdminAttachmentListRequestSchema,
         response: {
           200: AdminAttachmentListResponseSchema,
           500: ErrorResponseSchema,
@@ -137,13 +142,21 @@ export default function adminRoutes(
         security: [{ cookieAuth: [] }],
       },
     },
-    async (_request, _reply) => {
-      const rows = await erpDb.attachment.findMany({
-        orderBy: { createdAt: "desc" },
-        include: {
-          uploadedBy: { select: { username: true } },
-        },
-      });
+    async (request, _reply) => {
+      const { page, pageSize } = request.query;
+      const skip = (page - 1) * pageSize;
+
+      const [rows, total] = await Promise.all([
+        erpDb.attachment.findMany({
+          orderBy: { createdAt: "desc" },
+          include: {
+            uploadedBy: { select: { username: true } },
+          },
+          skip,
+          take: pageSize,
+        }),
+        erpDb.attachment.count(),
+      ]);
 
       return {
         attachments: rows.map((r) => ({
@@ -154,6 +167,10 @@ export default function adminRoutes(
           uploadedBy: r.uploadedBy.username,
           createdAt: r.createdAt.toISOString(),
         })),
+        total,
+        page,
+        pageSize,
+        _links: paginationLinks("admin/attachments", page, pageSize, total),
       };
     },
   );

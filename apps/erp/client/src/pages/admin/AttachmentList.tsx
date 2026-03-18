@@ -2,6 +2,7 @@ import {
   Button,
   Group,
   Loader,
+  Pagination,
   Stack,
   Table,
   Text,
@@ -14,15 +15,22 @@ import { useCallback, useEffect, useState } from "react";
 
 import { api, apiEndpoints } from "../../lib/api";
 
+const PAGE_SIZE = 50;
+
 export const AttachmentList: React.FC = () => {
   const [data, setData] = useState<AdminAttachmentListResponse | null>(null);
   const [loading, setLoading] = useState(false);
+  const [page, setPage] = useState(1);
 
   const fetchAttachments = useCallback(async () => {
     setLoading(true);
     try {
+      const params = new URLSearchParams();
+      params.set("page", String(page));
+      params.set("pageSize", String(PAGE_SIZE));
+
       const result = await api.get<AdminAttachmentListResponse>(
-        apiEndpoints.adminAttachments,
+        `${apiEndpoints.adminAttachments}?${params}`,
       );
       setData(result);
     } catch {
@@ -30,7 +38,7 @@ export const AttachmentList: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [page]);
 
   useEffect(() => {
     void fetchAttachments();
@@ -42,6 +50,8 @@ export const AttachmentList: React.FC = () => {
     link.download = filename;
     link.click();
   };
+
+  const totalPages = data ? Math.ceil(data.total / data.pageSize) : 0;
 
   return (
     <>
@@ -61,7 +71,7 @@ export const AttachmentList: React.FC = () => {
         </Button>
         {data && (
           <Text size="sm" c="dimmed">
-            {data.attachments.length} file{data.attachments.length !== 1 && "s"}
+            {data.total} file{data.total !== 1 && "s"}
           </Text>
         )}
       </Group>
@@ -71,34 +81,45 @@ export const AttachmentList: React.FC = () => {
           <Loader size="sm" />
         </Stack>
       ) : data && data.attachments.length > 0 ? (
-        <Table striped highlightOnHover>
-          <Table.Thead>
-            <Table.Tr>
-              <Table.Th>Filename</Table.Th>
-              <Table.Th>Size</Table.Th>
-              <Table.Th>Uploaded By</Table.Th>
-              <Table.Th>Date</Table.Th>
-              <Table.Th />
-            </Table.Tr>
-          </Table.Thead>
-          <Table.Tbody>
-            {data.attachments.map((att) => (
-              <Table.Tr
-                key={att.id}
-                style={{ cursor: "pointer" }}
-                onClick={() => handleDownload(att.id, att.filename)}
-              >
-                <Table.Td>{att.filename}</Table.Td>
-                <Table.Td>{formatFileSize(att.fileSize)}</Table.Td>
-                <Table.Td>{att.uploadedBy}</Table.Td>
-                <Table.Td>{new Date(att.createdAt).toLocaleString()}</Table.Td>
-                <Table.Td>
-                  <IconDownload size={16} />
-                </Table.Td>
+        <>
+          <Table striped highlightOnHover>
+            <Table.Thead>
+              <Table.Tr>
+                <Table.Th>Filename</Table.Th>
+                <Table.Th>Size</Table.Th>
+                <Table.Th>Uploaded By</Table.Th>
+                <Table.Th>Date</Table.Th>
+                <Table.Th />
               </Table.Tr>
-            ))}
-          </Table.Tbody>
-        </Table>
+            </Table.Thead>
+            <Table.Tbody>
+              {data.attachments.map((att) => (
+                <Table.Tr
+                  key={att.id}
+                  style={{ cursor: "pointer" }}
+                  onClick={() => handleDownload(att.id, att.filename)}
+                >
+                  <Table.Td>{att.filename}</Table.Td>
+                  <Table.Td>{formatFileSize(att.fileSize)}</Table.Td>
+                  <Table.Td>{att.uploadedBy}</Table.Td>
+                  <Table.Td>{new Date(att.createdAt).toLocaleString()}</Table.Td>
+                  <Table.Td>
+                    <IconDownload size={16} />
+                  </Table.Td>
+                </Table.Tr>
+              ))}
+            </Table.Tbody>
+          </Table>
+          {totalPages > 1 && (
+            <Group justify="center" mt="md">
+              <Pagination
+                total={totalPages}
+                value={page}
+                onChange={setPage}
+              />
+            </Group>
+          )}
+        </>
       ) : (
         <Text c="dimmed" ta="center" py="md">
           No attachments found
