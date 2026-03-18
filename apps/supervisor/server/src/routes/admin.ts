@@ -3,6 +3,8 @@ import fs from "node:fs/promises";
 import type { HateoasAction, ModelDbRow } from "@naisys/common";
 import { supervisorDbPath } from "@naisys/supervisor-database";
 import {
+  AdminAttachmentListRequest,
+  AdminAttachmentListRequestSchema,
   AdminAttachmentListResponse,
   AdminAttachmentListResponseSchema,
   AdminInfoResponse,
@@ -21,7 +23,7 @@ import { FastifyInstance, FastifyPluginOptions } from "fastify";
 
 import { hasPermission, requirePermission } from "../auth-middleware.js";
 import { getNaisysDatabasePath, hubDb } from "../database/hubDb.js";
-import { API_PREFIX } from "../hateoas.js";
+import { API_PREFIX, paginationLinks } from "../hateoas.js";
 import {
   buildExportFiles,
   type ExportUserRow,
@@ -249,6 +251,7 @@ export default function adminRoutes(
 
   // GET /attachments — List all attachments
   fastify.get<{
+    Querystring: AdminAttachmentListRequest;
     Reply: AdminAttachmentListResponse | ErrorResponse;
   }>(
     "/attachments",
@@ -257,6 +260,7 @@ export default function adminRoutes(
       schema: {
         description: "List all uploaded attachments",
         tags: ["Admin"],
+        querystring: AdminAttachmentListRequestSchema,
         response: {
           200: AdminAttachmentListResponseSchema,
           500: ErrorResponseSchema,
@@ -264,13 +268,21 @@ export default function adminRoutes(
         security: [{ cookieAuth: [] }],
       },
     },
-    async (_request, _reply) => {
-      const rows = await hubDb.attachments.findMany({
-        orderBy: { created_at: "desc" },
-        include: {
-          uploader: { select: { username: true } },
-        },
-      });
+    async (request, _reply) => {
+      const { page, pageSize } = request.query;
+      const skip = (page - 1) * pageSize;
+
+      const [rows, total] = await Promise.all([
+        hubDb.attachments.findMany({
+          orderBy: { created_at: "desc" },
+          include: {
+            uploader: { select: { username: true } },
+          },
+          skip,
+          take: pageSize,
+        }),
+        hubDb.attachments.count(),
+      ]);
 
       return {
         attachments: rows.map((r) => ({
@@ -282,6 +294,10 @@ export default function adminRoutes(
           uploadedBy: r.uploader.username,
           createdAt: r.created_at.toISOString(),
         })),
+        total,
+        page,
+        pageSize,
+        _links: paginationLinks("admin/attachments", page, pageSize, total),
       };
     },
   );
