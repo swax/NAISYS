@@ -237,7 +237,10 @@ export default function hostsRoutes(
         assignedAgents: host.assignedAgents,
         _links: [selfLink(`/hosts/${hostname}`)],
         _actions: hostActions(hostname, hasManageHostsPermission, online),
-        _actionTemplates: hostActionTemplates(hostname, hasManageHostsPermission),
+        _actionTemplates: hostActionTemplates(
+          hostname,
+          hasManageHostsPermission,
+        ),
       };
     },
   );

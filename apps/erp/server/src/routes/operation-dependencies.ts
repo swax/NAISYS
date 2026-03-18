@@ -54,7 +54,10 @@ function depActionTemplates(
   revStatus: string,
   user: ErpUser | undefined,
 ) {
-  if (!hasPermission(user, "order_planner") || revStatus !== RevisionStatus.draft)
+  if (
+    !hasPermission(user, "order_planner") ||
+    revStatus !== RevisionStatus.draft
+  )
     return [];
   return [
     {

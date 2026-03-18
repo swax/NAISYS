@@ -157,8 +157,7 @@ export const StepRunList: React.FC<Props> = ({
                 ...s,
                 fieldValues: exists
                   ? s.fieldValues.map((fv) =>
-                      fv.stepFieldId === stepFieldId &&
-                      fv.setIndex === setIndex
+                      fv.stepFieldId === stepFieldId && fv.setIndex === setIndex
                         ? updated
                         : fv,
                     )

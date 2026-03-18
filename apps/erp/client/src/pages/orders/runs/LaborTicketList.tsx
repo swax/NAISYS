@@ -151,7 +151,10 @@ export const LaborTicketList: React.FC<Props> = ({
                       {ticket.cost != null ? `$${ticket.cost.toFixed(2)}` : "—"}
                     </Table.Td>
                     <Table.Td>
-                      {hasActionTemplate(data._actionTemplates, "deleteTicket") && (
+                      {hasActionTemplate(
+                        data._actionTemplates,
+                        "deleteTicket",
+                      ) && (
                         <ActionIcon
                           size="xs"
                           variant="subtle"

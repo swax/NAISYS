@@ -207,7 +207,13 @@ export default function stepFieldRoutes(fastify: FastifyInstance) {
     preHandler: requirePermission("order_planner"),
     handler: async (request, reply) => {
       const { orderKey, revNo, seqNo, stepSeqNo } = request.params;
-      const { seqNo: requestedSeqNo, label, type, multiValue, required } = request.body;
+      const {
+        seqNo: requestedSeqNo,
+        label,
+        type,
+        multiValue,
+        required,
+      } = request.body;
       const userId = request.erpUser!.id;
 
       const resolved = await resolveStepForField(
@@ -303,7 +309,13 @@ export default function stepFieldRoutes(fastify: FastifyInstance) {
     preHandler: requirePermission("order_planner"),
     handler: async (request, reply) => {
       const { orderKey, revNo, seqNo, stepSeqNo, fieldSeqNo } = request.params;
-      const { label, type, multiValue, required, seqNo: newSeqNo } = request.body;
+      const {
+        label,
+        type,
+        multiValue,
+        required,
+        seqNo: newSeqNo,
+      } = request.body;
       const userId = request.erpUser!.id;
 
       const resolved = await resolveStepForField(
