@@ -12,7 +12,7 @@ import { z } from "zod/v4";
 import type { ErpUser } from "../auth-middleware.js";
 import { hasPermission, requirePermission } from "../auth-middleware.js";
 import erpDb from "../erpDb.js";
-import { conflict, notFound } from "../error-handler.js";
+import { notFound } from "../error-handler.js";
 import { API_PREFIX, selfLink } from "../hateoas.js";
 import {
   calcNextSeqNo,
@@ -23,8 +23,8 @@ import {
   createField,
   deleteField,
   ensureFieldSet,
-  findExistingField,
   type FieldWithUsers,
+  findExistingField,
   getField,
   listFields,
   updateField,
@@ -103,9 +103,7 @@ export default function itemFieldRoutes(fastify: FastifyInstance) {
       const item = await findExistingItem(key);
       if (!item) return notFound(reply, `Item '${key}' not found`);
 
-      const fields = item.fieldSetId
-        ? await listFields(item.fieldSetId)
-        : [];
+      const fields = item.fieldSetId ? await listFields(item.fieldSetId) : [];
       const maxSeq = fields.length > 0 ? fields[fields.length - 1].seqNo : 0;
       const base = fieldBasePath(key);
       return {

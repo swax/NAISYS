@@ -1,22 +1,22 @@
 import {
   ErpPermissionEnum,
+  FieldTypeEnum,
   OperationRunStatusEnum,
   OrderRunPriorityEnum,
   OrderRunStatusEnum,
   OrderStatusEnum,
   RevisionStatusEnum,
-  FieldTypeEnum,
 } from "@naisys-erp/shared";
 import { describe, expect, test } from "vitest";
 
 import {
   ErpPermission as DbErpPermission,
+  FieldType as DbFieldType,
   OperationRunStatus as DbOperationRunStatus,
   OrderRunPriority as DbOrderRunPriority,
   OrderRunStatus as DbOrderRunStatus,
   OrderStatus as DbOrderStatus,
   RevisionStatus as DbRevisionStatus,
-  FieldType as DbFieldType,
 } from "../generated/prisma/enums.js";
 
 function assertEnumSync(

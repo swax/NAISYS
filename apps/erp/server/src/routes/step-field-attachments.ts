@@ -19,6 +19,7 @@ import {
   getAttachmentFilePath,
   uploadAttachment,
 } from "../services/attachment-service.js";
+import { ensureStepRunFieldRecord } from "../services/field-service.js";
 import { isUserClockedIn } from "../services/labor-ticket-service.js";
 import {
   findStepRunWithField,
@@ -121,21 +122,23 @@ export default function stepFieldAttachmentRoutes(fastify: FastifyInstance) {
       const setIndexField = (data.fields.setIndex as any)?.value;
       const setIndex = setIndexField ? parseInt(setIndexField, 10) : 0;
 
-      // Ensure a StepFieldValue row exists for this field+set
-      await upsertFieldValue(
+      const fieldRecordId = await ensureStepRunFieldRecord(
         resolved.stepRun.id,
-        field.id,
-        setIndex,
-        "",
         userId,
       );
+      if (!fieldRecordId) {
+        return notFound(reply, "Step has no field set");
+      }
+
+      // Ensure a FieldValue row exists for this field+set
+      await upsertFieldValue(fieldRecordId, field.id, setIndex, "", userId);
 
       // Find the field value ID
-      const fieldValueRow = await erpDb.stepFieldValue.findUnique({
+      const fieldValueRow = await erpDb.fieldValue.findUnique({
         where: {
-          stepRunId_stepFieldId_setIndex: {
-            stepRunId: resolved.stepRun.id,
-            stepFieldId: field.id,
+          fieldRecordId_fieldId_setIndex: {
+            fieldRecordId,
+            fieldId: field.id,
             setIndex,
           },
         },

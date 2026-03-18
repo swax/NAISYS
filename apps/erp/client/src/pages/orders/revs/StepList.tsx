@@ -22,11 +22,11 @@ import { CreateStepSchema, UpdateStepSchema } from "@naisys-erp/shared";
 import { useCallback, useEffect, useState } from "react";
 
 import { CompactMarkdown } from "../../../components/CompactMarkdown";
+import { FieldDefList } from "../../../components/FieldDefList";
 import { MetadataTooltip } from "../../../components/MetadataTooltip";
 import { api, apiEndpoints, showErrorNotification } from "../../../lib/api";
 import { hasAction } from "../../../lib/hateoas";
 import { zodResolver } from "../../../lib/zod-resolver";
-import { FieldList } from "./StepFieldList";
 
 interface StepListProps {
   orderKey: string;
@@ -268,9 +268,22 @@ export const StepList: React.FC<StepListProps> = ({
                   </Group>
                 </Group>
               )}
-              <FieldList
-                fieldsEndpoint={apiEndpoints.orderRevOpStepFields(orderKey, revNo, opSeqNo, step.seqNo)}
-                fieldEndpoint={(seqNo) => apiEndpoints.orderRevOpStepField(orderKey, revNo, opSeqNo, step.seqNo, seqNo)}
+              <FieldDefList
+                fieldsEndpoint={apiEndpoints.orderRevOpStepFields(
+                  orderKey,
+                  revNo,
+                  opSeqNo,
+                  step.seqNo,
+                )}
+                fieldEndpoint={(seqNo) =>
+                  apiEndpoints.orderRevOpStepField(
+                    orderKey,
+                    revNo,
+                    opSeqNo,
+                    step.seqNo,
+                    seqNo,
+                  )
+                }
                 initialData={step.fields}
               />
             </Card>

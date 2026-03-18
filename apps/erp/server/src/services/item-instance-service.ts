@@ -6,19 +6,84 @@ import { includeUsers, type WithAuditUsers } from "../route-helpers.js";
 
 export const includeItemInstanceRelations = {
   ...includeUsers,
-  item: { select: { key: true } },
+  item: {
+    select: {
+      key: true,
+      fieldSet: {
+        select: {
+          id: true,
+          fields: {
+            select: {
+              id: true,
+              seqNo: true,
+              label: true,
+              type: true,
+              multiValue: true,
+              required: true,
+            },
+            orderBy: { seqNo: "asc" as const },
+          },
+        },
+      },
+    },
+  },
   orderRun: {
     select: {
       runNo: true,
       order: { select: { key: true } },
     },
   },
+  fieldRecord: {
+    include: {
+      fieldValues: {
+        select: {
+          id: true,
+          fieldId: true,
+          setIndex: true,
+          value: true,
+          fieldAttachments: {
+            select: {
+              attachment: {
+                select: { id: true, filename: true, fileSize: true },
+              },
+            },
+          },
+        },
+        orderBy: { setIndex: "asc" as const },
+      },
+    },
+  },
 } as const;
+
+type FieldDef = {
+  id: number;
+  seqNo: number;
+  label: string;
+  type: string;
+  multiValue: boolean;
+  required: boolean;
+};
 
 export type ItemInstanceWithRelations = ItemInstanceModel &
   WithAuditUsers & {
-    item: { key: string };
+    item: {
+      key: string;
+      fieldSet: { id: number; fields: FieldDef[] } | null;
+    };
     orderRun: { runNo: number; order: { key: string } } | null;
+    fieldRecordId: number | null;
+    fieldRecord: {
+      id: number;
+      fieldValues: {
+        id: number;
+        fieldId: number;
+        setIndex: number;
+        value: string;
+        fieldAttachments: {
+          attachment: { id: number; filename: string; fileSize: number };
+        }[];
+      }[];
+    } | null;
   };
 
 // --- Lookups ---
@@ -59,6 +124,37 @@ export async function findItemInstanceByItemAndKey(
   });
 }
 
+export async function findItemInstanceWithField(
+  id: number,
+  fieldSeqNo: number,
+) {
+  return erpDb.itemInstance.findUnique({
+    where: { id },
+    include: {
+      item: {
+        select: {
+          fieldSet: {
+            select: {
+              id: true,
+              fields: {
+                where: { seqNo: fieldSeqNo },
+                select: {
+                  id: true,
+                  seqNo: true,
+                  label: true,
+                  type: true,
+                  multiValue: true,
+                  required: true,
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  });
+}
+
 // --- Mutations ---
 
 export async function createItemInstance(
@@ -95,4 +191,32 @@ export async function updateItemInstance(
 
 export async function deleteItemInstance(id: number): Promise<void> {
   await erpDb.itemInstance.delete({ where: { id } });
+}
+
+/**
+ * Get or create a FieldRecord for an ItemInstance, linking it back.
+ * Returns the fieldRecordId, or null if the item has no fieldSet.
+ */
+export async function ensureItemInstanceFieldRecord(
+  instanceId: number,
+  userId: number,
+): Promise<number | null> {
+  const inst = await erpDb.itemInstance.findUniqueOrThrow({
+    where: { id: instanceId },
+    select: {
+      fieldRecordId: true,
+      item: { select: { fieldSetId: true } },
+    },
+  });
+  if (inst.fieldRecordId) return inst.fieldRecordId;
+  if (!inst.item.fieldSetId) return null;
+
+  const fr = await erpDb.fieldRecord.create({
+    data: { fieldSetId: inst.item.fieldSetId, createdById: userId },
+  });
+  await erpDb.itemInstance.update({
+    where: { id: instanceId },
+    data: { fieldRecordId: fr.id },
+  });
+  return fr.id;
 }

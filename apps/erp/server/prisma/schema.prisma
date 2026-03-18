@@ -141,12 +141,28 @@ model FieldSet {
   createdAt   DateTime @default(now()) @map("created_at")
   createdById Int      @map("created_by")
 
-  createdBy User    @relation("fieldSetCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
-  fields    Field[]
-  steps     Step[]
-  items     Item[]
+  createdBy    User          @relation("fieldSetCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  fields       Field[]
+  fieldRecords FieldRecord[]
+  steps        Step[]
+  items        Item[]
 
   @@map("field_sets")
+}
+
+model FieldRecord {
+  id          Int      @id @default(autoincrement())
+  fieldSetId  Int      @map("field_set_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  createdById Int      @map("created_by")
+
+  createdBy     User           @relation("fieldRecordCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  fieldSet      FieldSet       @relation(fields: [fieldSetId], references: [id])
+  fieldValues   FieldValue[]
+  stepRuns      StepRun[]
+  itemInstances ItemInstance[]
+
+  @@map("field_records")
 }
 
 model Field {
@@ -162,10 +178,10 @@ model Field {
   updatedAt   DateTime  @updatedAt @map("updated_at")
   updatedById Int       @map("updated_by")
 
-  createdBy   User             @relation("fieldCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
-  updatedBy   User             @relation("fieldUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
-  fieldSet    FieldSet         @relation(fields: [fieldSetId], references: [id], onDelete: Cascade)
-  fieldValues StepFieldValue[]
+  createdBy   User         @relation("fieldCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy   User         @relation("fieldUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+  fieldSet    FieldSet     @relation(fields: [fieldSetId], references: [id], onDelete: Cascade)
+  fieldValues FieldValue[]
 
   @@unique([fieldSetId, seqNo])
   @@map("fields")
@@ -252,42 +268,42 @@ model StepRun {
   id             Int      @id @default(autoincrement())
   operationRunId Int      @map("operation_run_id")
   stepId         Int      @map("step_id")
+  fieldRecordId  Int?     @map("field_record_id")
   completed      Boolean  @default(false)
   createdAt      DateTime @default(now()) @map("created_at")
   createdById    Int      @map("created_by")
   updatedAt      DateTime @updatedAt @map("updated_at")
   updatedById    Int      @map("updated_by")
 
-  createdBy    User             @relation("stepRunCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
-  updatedBy    User             @relation("stepRunUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
-  operationRun OperationRun     @relation(fields: [operationRunId], references: [id], onDelete: Restrict)
-  step         Step             @relation(fields: [stepId], references: [id], onDelete: Restrict)
-  fieldValues  StepFieldValue[]
+  createdBy    User          @relation("stepRunCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy    User          @relation("stepRunUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+  operationRun OperationRun  @relation(fields: [operationRunId], references: [id], onDelete: Restrict)
+  step         Step          @relation(fields: [stepId], references: [id], onDelete: Restrict)
+  fieldRecord  FieldRecord?  @relation(fields: [fieldRecordId], references: [id])
 
   @@unique([operationRunId, stepId])
   @@map("step_runs")
 }
 
-model StepFieldValue {
-  id          Int      @id @default(autoincrement())
-  stepRunId   Int      @map("step_run_id")
-  stepFieldId Int      @map("step_field_id")
-  setIndex    Int      @default(0) @map("set_index")
-  value       String   @default("")
-  createdAt   DateTime @default(now()) @map("created_at")
-  createdById Int      @map("created_by")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-  updatedById Int      @map("updated_by")
+model FieldValue {
+  id            Int      @id @default(autoincrement())
+  fieldRecordId Int      @map("field_record_id")
+  fieldId       Int      @map("field_id")
+  setIndex      Int      @default(0) @map("set_index")
+  value         String   @default("")
+  createdAt     DateTime @default(now()) @map("created_at")
+  createdById   Int      @map("created_by")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+  updatedById   Int      @map("updated_by")
 
-  createdBy User      @relation("stepFieldValueCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
-  updatedBy User      @relation("stepFieldValueUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
-  stepRun   StepRun   @relation(fields: [stepRunId], references: [id], onDelete: Restrict)
-  field     Field     @relation(fields: [stepFieldId], references: [id], onDelete: Restrict)
+  createdBy        User              @relation("fieldValueCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy        User              @relation("fieldValueUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+  fieldRecord      FieldRecord       @relation(fields: [fieldRecordId], references: [id], onDelete: Restrict)
+  field            Field             @relation(fields: [fieldId], references: [id], onDelete: Restrict)
+  fieldAttachments FieldAttachment[]
 
-  stepFieldAttachments StepFieldAttachment[]
-
-  @@unique([stepRunId, stepFieldId, setIndex])
-  @@map("step_field_values")
+  @@unique([fieldRecordId, fieldId, setIndex])
+  @@map("field_values")
 }
 
 model Item {
@@ -311,20 +327,22 @@ model Item {
 }
 
 model ItemInstance {
-  id          Int      @id @default(autoincrement())
-  itemId      Int      @map("item_id")
-  orderRunId  Int?     @map("order_run_id")
-  key         String
-  quantity    Float?
-  createdAt   DateTime @default(now()) @map("created_at")
-  createdById Int      @map("created_by")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-  updatedById Int      @map("updated_by")
+  id            Int      @id @default(autoincrement())
+  itemId        Int      @map("item_id")
+  orderRunId    Int?     @map("order_run_id")
+  fieldRecordId Int?     @map("field_record_id")
+  key           String
+  quantity      Float?
+  createdAt     DateTime @default(now()) @map("created_at")
+  createdById   Int      @map("created_by")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+  updatedById   Int      @map("updated_by")
 
-  item      Item     @relation(fields: [itemId], references: [id], onDelete: Restrict)
-  orderRun  OrderRun? @relation(fields: [orderRunId], references: [id], onDelete: Restrict)
-  createdBy User     @relation("itemInstanceCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
-  updatedBy User     @relation("itemInstanceUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+  item        Item          @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  orderRun    OrderRun?     @relation(fields: [orderRunId], references: [id], onDelete: Restrict)
+  fieldRecord FieldRecord?  @relation(fields: [fieldRecordId], references: [id])
+  createdBy   User          @relation("itemInstanceCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy   User          @relation("itemInstanceUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
 
   @@unique([itemId, key])
   @@index([orderRunId])
@@ -362,8 +380,9 @@ model User {
   opRunsUpdated          OperationRun[]        @relation("opRunUpdatedBy")
   stepRunsCreated        StepRun[]             @relation("stepRunCreatedBy")
   stepRunsUpdated        StepRun[]             @relation("stepRunUpdatedBy")
-  stepFieldValuesCreated StepFieldValue[]      @relation("stepFieldValueCreatedBy")
-  stepFieldValuesUpdated StepFieldValue[]      @relation("stepFieldValueUpdatedBy")
+  fieldRecordsCreated    FieldRecord[]         @relation("fieldRecordCreatedBy")
+  fieldValuesCreated     FieldValue[]          @relation("fieldValueCreatedBy")
+  fieldValuesUpdated     FieldValue[]          @relation("fieldValueUpdatedBy")
   itemInstancesCreated   ItemInstance[]        @relation("itemInstanceCreatedBy")
   itemInstancesUpdated   ItemInstance[]        @relation("itemInstanceUpdatedBy")
   laborTicketsWorked     LaborTicket[]         @relation("laborTicketUser")
@@ -468,21 +487,21 @@ model Attachment {
   uploadedById Int      @map("uploaded_by")
   createdAt    DateTime @default(now()) @map("created_at")
 
-  uploadedBy           User                  @relation("attachmentUploadedBy", fields: [uploadedById], references: [id], onDelete: Restrict)
-  stepFieldAttachments StepFieldAttachment[]
+  uploadedBy       User              @relation("attachmentUploadedBy", fields: [uploadedById], references: [id], onDelete: Restrict)
+  fieldAttachments FieldAttachment[]
 
   @@index([fileHash])
   @@map("attachments")
 }
 
-model StepFieldAttachment {
-  stepFieldValueId Int      @map("step_field_value_id")
-  attachmentId     Int      @map("attachment_id")
-  createdAt        DateTime @default(now()) @map("created_at")
+model FieldAttachment {
+  fieldValueId Int      @map("field_value_id")
+  attachmentId Int      @map("attachment_id")
+  createdAt    DateTime @default(now()) @map("created_at")
 
-  stepFieldValue StepFieldValue @relation(fields: [stepFieldValueId], references: [id], onDelete: Cascade)
-  attachment     Attachment     @relation(fields: [attachmentId], references: [id], onDelete: Restrict)
+  fieldValue FieldValue @relation(fields: [fieldValueId], references: [id], onDelete: Cascade)
+  attachment Attachment @relation(fields: [attachmentId], references: [id], onDelete: Restrict)
 
-  @@id([stepFieldValueId, attachmentId])
-  @@map("step_field_attachments")
+  @@id([fieldValueId, attachmentId])
+  @@map("field_attachments")
 }

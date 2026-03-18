@@ -23,9 +23,9 @@ export const FieldAttachmentSchema = z.object({
 
 export type FieldAttachment = z.infer<typeof FieldAttachmentSchema>;
 
-// A single field value within a step run
-export const StepFieldValueSchema = z.object({
-  stepFieldId: z.number(),
+// A single field value entry (API response shape)
+export const FieldValueEntrySchema = z.object({
+  fieldId: z.number(),
   fieldSeqNo: z.number(),
   label: z.string(),
   type: z.string(),
@@ -37,7 +37,7 @@ export const StepFieldValueSchema = z.object({
   validation: FieldValidationSchema,
 });
 
-export type StepFieldValue = z.infer<typeof StepFieldValueSchema>;
+export type FieldValueEntry = z.infer<typeof FieldValueEntrySchema>;
 
 // Upload attachment response
 export const UploadAttachmentResponseSchema = z.object({
@@ -59,7 +59,7 @@ export const StepRunSchema = z.object({
   instructions: z.string(),
   multiSet: z.boolean(),
   completed: z.boolean(),
-  fieldValues: z.array(StepFieldValueSchema),
+  fieldValues: z.array(FieldValueEntrySchema),
   createdAt: z.iso.datetime(),
   createdBy: z.string(),
   updatedAt: z.iso.datetime(),
@@ -72,14 +72,14 @@ export const StepRunSchema = z.object({
 export type StepRun = z.infer<typeof StepRunSchema>;
 
 // Single field value update
-export const UpdateStepFieldValueSchema = z
+export const UpdateFieldValueSchema = z
   .object({
     value: z.string().max(2000),
     setIndex: z.number().int().min(0).optional(),
   })
   .strict();
 
-export type UpdateStepFieldValue = z.infer<typeof UpdateStepFieldValueSchema>;
+export type UpdateFieldValue = z.infer<typeof UpdateFieldValueSchema>;
 
 // Batch update input — completed flag + field values
 export const UpdateStepRunSchema = z
@@ -88,7 +88,7 @@ export const UpdateStepRunSchema = z
     fieldValues: z
       .array(
         z.object({
-          stepFieldId: z.number().int(),
+          fieldId: z.number().int(),
           value: z.string().max(2000),
           setIndex: z.number().int().min(0).optional(),
         }),

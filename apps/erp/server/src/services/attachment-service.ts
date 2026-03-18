@@ -26,13 +26,13 @@ export interface UploadResult {
 /**
  * Store a file buffer as a content-addressable attachment under
  * attachments/erp/<first2>/<next2>/<fullhash>
- * and create the DB records (Attachment + StepFieldAttachment).
+ * and create the DB records (Attachment + FieldAttachment).
  */
 export async function uploadAttachment(
   fileBuffer: Buffer,
   filename: string,
   uploadedById: number,
-  stepFieldValueId: number,
+  fieldValueId: number,
 ): Promise<UploadResult> {
   if (fileBuffer.length === 0) {
     throw new Error("Empty file");
@@ -78,7 +78,7 @@ export async function uploadAttachment(
     renameSync(tmpPath, storagePath);
   }
 
-  // Create Attachment + StepFieldAttachment in a transaction
+  // Create Attachment + FieldAttachment in a transaction
   const attachment = await erpDb.$transaction(async (tx) => {
     const att = await tx.attachment.create({
       data: {
@@ -90,9 +90,9 @@ export async function uploadAttachment(
       },
     });
 
-    await tx.stepFieldAttachment.create({
+    await tx.fieldAttachment.create({
       data: {
-        stepFieldValueId,
+        fieldValueId,
         attachmentId: att.id,
       },
     });
@@ -109,13 +109,13 @@ export async function uploadAttachment(
 }
 
 /**
- * List attachments for a step field value.
+ * List attachments for a field value.
  */
 export async function listAttachmentsForFieldValue(
-  stepFieldValueId: number,
+  fieldValueId: number,
 ): Promise<{ id: number; filename: string; fileSize: number }[]> {
-  const links = await erpDb.stepFieldAttachment.findMany({
-    where: { stepFieldValueId },
+  const links = await erpDb.fieldAttachment.findMany({
+    where: { fieldValueId },
     include: {
       attachment: {
         select: { id: true, filename: true, fileSize: true },
@@ -139,16 +139,16 @@ export async function getAttachmentFilePath(
 }
 
 /**
- * Delete a step field attachment link. Does NOT delete the file on disk
+ * Delete a field attachment link. Does NOT delete the file on disk
  * (other records may reference the same content-addressable file).
  */
-export async function deleteStepFieldAttachment(
-  stepFieldValueId: number,
+export async function deleteFieldAttachment(
+  fieldValueId: number,
   attachmentId: number,
 ): Promise<void> {
-  await erpDb.stepFieldAttachment.delete({
+  await erpDb.fieldAttachment.delete({
     where: {
-      stepFieldValueId_attachmentId: { stepFieldValueId, attachmentId },
+      fieldValueId_attachmentId: { fieldValueId, attachmentId },
     },
   });
 }

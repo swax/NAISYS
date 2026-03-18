@@ -146,7 +146,7 @@ export async function createOrderRun(
       orderBy: { seqNo: "asc" },
     });
 
-    // Create OperationRun -> StepRun -> StepFieldValue rows
+    // Create OperationRun -> StepRun -> FieldRecord -> FieldValue rows
     for (const op of operations) {
       // Ops with predecessors start blocked; ops without start pending
       const initialStatus =
@@ -174,16 +174,26 @@ export async function createOrderRun(
           },
         });
 
-        for (const field of step.fieldSet?.fields ?? []) {
-          await erpTx.stepFieldValue.create({
-            data: {
-              stepRunId: stepRun.id,
-              stepFieldId: field.id,
-              value: "",
-              createdById: userId,
-              updatedById: userId,
-            },
+        const fields = step.fieldSet?.fields ?? [];
+        if (fields.length > 0 && step.fieldSetId) {
+          const fieldRecord = await erpTx.fieldRecord.create({
+            data: { fieldSetId: step.fieldSetId, createdById: userId },
           });
+          await erpTx.stepRun.update({
+            where: { id: stepRun.id },
+            data: { fieldRecordId: fieldRecord.id },
+          });
+          for (const field of fields) {
+            await erpTx.fieldValue.create({
+              data: {
+                fieldRecordId: fieldRecord.id,
+                fieldId: field.id,
+                value: "",
+                createdById: userId,
+                updatedById: userId,
+              },
+            });
+          }
         }
       }
     }
