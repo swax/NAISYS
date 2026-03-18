@@ -67,6 +67,41 @@ export const api = {
     request<T>(path, { method: "PUT", body: JSON.stringify(body) }),
 
   delete: (path: string) => request<void>(path, { method: "DELETE" }),
+
+  /** Upload a file via multipart/form-data */
+  upload: <T>(
+    path: string,
+    file: File,
+    extraFields?: Record<string, string>,
+  ) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    if (extraFields) {
+      for (const [key, value] of Object.entries(extraFields)) {
+        formData.append(key, value);
+      }
+    }
+    const url = path.startsWith("/") ? path : `${API_BASE}/${path}`;
+    return fetch(url, {
+      method: "POST",
+      credentials: "include",
+      body: formData,
+      // No Content-Type header — browser sets it with boundary
+    }).then(async (res) => {
+      if (res.status === 401) {
+        window.dispatchEvent(new CustomEvent("erp:unauthorized"));
+      }
+      const data = await res.json();
+      if (!res.ok) {
+        throw new ApiError(
+          data.statusCode ?? res.status,
+          data.error ?? "Error",
+          data.message || `Upload failed: ${res.status}`,
+        );
+      }
+      return data as T;
+    });
+  },
 };
 
 export const apiEndpoints = {
@@ -191,6 +226,23 @@ export const apiEndpoints = {
     setIndex: number,
   ) =>
     `orders/${key}/runs/${runNo}/ops/${seqNo}/steps/${stepSeqNo}/sets/${setIndex}`,
+  stepFieldAttachments: (
+    key: string,
+    runNo: number | string,
+    seqNo: number | string,
+    stepSeqNo: number | string,
+    fieldSeqNo: number | string,
+  ) =>
+    `orders/${key}/runs/${runNo}/ops/${seqNo}/steps/${stepSeqNo}/fields/${fieldSeqNo}/attachments`,
+  stepFieldAttachmentDownload: (
+    key: string,
+    runNo: number | string,
+    seqNo: number | string,
+    stepSeqNo: number | string,
+    fieldSeqNo: number | string,
+    attachmentId: number | string,
+  ) =>
+    `orders/${key}/runs/${runNo}/ops/${seqNo}/steps/${stepSeqNo}/fields/${fieldSeqNo}/attachments/${attachmentId}`,
   laborTickets: (key: string, runNo: number | string, seqNo: number | string) =>
     `orders/${key}/runs/${runNo}/ops/${seqNo}/labor`,
   laborTicketClockIn: (
@@ -214,6 +266,17 @@ export const apiEndpoints = {
   changePassword: "users/me/password",
   audit: (entityType: string, entityId: number | string) =>
     `audit?entityType=${entityType}&entityId=${entityId}`,
+  admin: "admin",
+  adminAttachments: "admin/attachments",
+  adminAttachmentDownload: (id: number | string) =>
+    `/api/erp/admin/attachments/${id}`,
+  adminLogs: (lines?: number, minLevel?: number) => {
+    const params = new URLSearchParams();
+    if (lines != null) params.set("lines", String(lines));
+    if (minLevel != null) params.set("minLevel", String(minLevel));
+    const qs = params.toString();
+    return `admin/logs${qs ? `?${qs}` : ""}`;
+  },
 };
 
 export const authApi = {

@@ -3,6 +3,8 @@ import fs from "node:fs/promises";
 import type { HateoasAction, ModelDbRow } from "@naisys/common";
 import { supervisorDbPath } from "@naisys/supervisor-database";
 import {
+  AdminAttachmentListResponse,
+  AdminAttachmentListResponseSchema,
   AdminInfoResponse,
   AdminInfoResponseSchema,
   ErrorResponse,
@@ -47,6 +49,12 @@ function adminActions(hasAdminPermission: boolean): HateoasAction[] {
         href: `${API_PREFIX}/admin/logs`,
         method: "GET",
         title: "View Logs",
+      },
+      {
+        rel: "view-attachments",
+        href: `${API_PREFIX}/admin/attachments`,
+        method: "GET",
+        title: "View Attachments",
       },
     );
 
@@ -235,6 +243,45 @@ export default function adminRoutes(
         entries,
         fileName: `${file}.log`,
         fileSize,
+      };
+    },
+  );
+
+  // GET /attachments — List all attachments
+  fastify.get<{
+    Reply: AdminAttachmentListResponse | ErrorResponse;
+  }>(
+    "/attachments",
+    {
+      preHandler: [requirePermission("supervisor_admin")],
+      schema: {
+        description: "List all uploaded attachments",
+        tags: ["Admin"],
+        response: {
+          200: AdminAttachmentListResponseSchema,
+          500: ErrorResponseSchema,
+        },
+        security: [{ cookieAuth: [] }],
+      },
+    },
+    async (_request, _reply) => {
+      const rows = await hubDb.attachments.findMany({
+        orderBy: { created_at: "desc" },
+        include: {
+          uploader: { select: { username: true } },
+        },
+      });
+
+      return {
+        attachments: rows.map((r) => ({
+          id: r.id,
+          filename: r.filename,
+          fileSize: r.file_size,
+          fileHash: r.file_hash,
+          purpose: r.purpose,
+          uploadedBy: r.uploader.username,
+          createdAt: r.created_at.toISOString(),
+        })),
       };
     },
   );

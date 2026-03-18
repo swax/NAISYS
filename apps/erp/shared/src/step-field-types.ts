@@ -9,6 +9,7 @@ export const StepFieldTypeEnum = z.enum([
   "datetime",
   "yesNo",
   "checkbox",
+  "attachment",
 ]);
 export type StepFieldType = z.infer<typeof StepFieldTypeEnum>;
 export const StepFieldType = StepFieldTypeEnum.enum;

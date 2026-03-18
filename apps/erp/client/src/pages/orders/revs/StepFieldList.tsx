@@ -36,6 +36,7 @@ const TYPE_LABELS: Record<string, string> = {
   datetime: "Date/Time",
   yesNo: "Yes/No",
   checkbox: "Checkbox",
+  attachment: "Attachment",
 };
 
 function fieldTypeLabel(type: string): string {

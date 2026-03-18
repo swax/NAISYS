@@ -1,7 +1,9 @@
 import {
   ActionIcon,
+  Anchor,
   Button,
   Checkbox,
+  FileButton,
   Group,
   Loader,
   Stack,
@@ -10,13 +12,20 @@ import {
   TextInput,
 } from "@mantine/core";
 import { DateInput, DateTimePicker } from "@mantine/dates";
-import type { StepFieldValue, StepRun } from "@naisys-erp/shared";
+import type {
+  FieldAttachment,
+  StepFieldValue,
+  StepRun,
+  UploadAttachmentResponse,
+} from "@naisys-erp/shared";
 import { StepFieldType } from "@naisys-erp/shared";
 import {
   IconAlertCircle,
   IconCheck,
+  IconFile,
   IconPlus,
   IconTrash,
+  IconUpload,
   IconX,
 } from "@tabler/icons-react";
 import { useRef, useState } from "react";
@@ -53,6 +62,11 @@ interface Props {
   ) => void;
   onSetAdded: () => void;
   onSetDeleted: (setIndex: number) => void;
+  onAttachmentUploaded: (
+    stepFieldId: number,
+    setIndex: number,
+    attachment: FieldAttachment,
+  ) => void;
 }
 
 function StatusIcon({ status }: { status?: FieldSaveStatus }) {
@@ -74,6 +88,7 @@ export const StepFieldRunList: React.FC<Props> = ({
   onFieldSaved,
   onSetAdded,
   onSetDeleted,
+  onAttachmentUploaded,
 }) => {
   const [fieldStatus, setFieldStatus] = useState<
     Record<string, FieldSaveStatus>
@@ -81,6 +96,7 @@ export const StepFieldRunList: React.FC<Props> = ({
   const savedTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const [currentSetIndex, setCurrentSetIndex] = useState(0);
   const [deletingSet, setDeletingSet] = useState(false);
+  const [uploadingField, setUploadingField] = useState<string | null>(null);
 
   // Determine distinct set indexes from field values
   const setIndexes = [
@@ -222,6 +238,112 @@ export const StepFieldRunList: React.FC<Props> = ({
     }
   };
 
+  // --- attachment upload ---
+
+  const canUploadAttachment = !!hasActionTemplate(
+    step._actionTemplates,
+    "uploadAttachment",
+  );
+
+  const handleAttachmentUpload = async (
+    fv: StepFieldValue,
+    file: File | null,
+  ) => {
+    if (!file) return;
+    const key = editKey(fv.stepFieldId, fv.setIndex);
+    setUploadingField(key);
+    try {
+      const result = await api.upload<UploadAttachmentResponse>(
+        apiEndpoints.stepFieldAttachments(
+          orderKey,
+          runNo,
+          seqNo,
+          step.seqNo,
+          fv.fieldSeqNo,
+        ),
+        file,
+        { setIndex: String(fv.setIndex) },
+      );
+      onAttachmentUploaded(fv.stepFieldId, fv.setIndex, {
+        id: result.attachmentId,
+        filename: result.filename,
+        fileSize: result.fileSize,
+      });
+    } catch (err) {
+      showErrorNotification(err);
+    } finally {
+      setUploadingField(null);
+    }
+  };
+
+  function formatFileSize(bytes: number): string {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  }
+
+  function renderAttachmentField(
+    fv: StepFieldValue,
+    fieldLabel: string,
+    canEdit: boolean,
+  ) {
+    const attachments = fv.attachments ?? [];
+    const key = editKey(fv.stepFieldId, fv.setIndex);
+    const isUploading = uploadingField === key;
+
+    return (
+      <Stack key={key} gap={4}>
+        <Text size="xs" fw={500}>
+          {fieldLabel}
+        </Text>
+        {attachments.map((att) => (
+          <Group key={att.id} gap="xs">
+            <IconFile size={14} />
+            <Anchor
+              size="xs"
+              href={`/api/erp/${apiEndpoints.stepFieldAttachmentDownload(
+                orderKey,
+                runNo,
+                seqNo,
+                step.seqNo,
+                fv.fieldSeqNo,
+                att.id,
+              )}`}
+              target="_blank"
+            >
+              {att.filename}
+            </Anchor>
+            <Text size="xs" c="dimmed">
+              ({formatFileSize(att.fileSize)})
+            </Text>
+          </Group>
+        ))}
+        {attachments.length === 0 && !canEdit && (
+          <Text size="xs" c="dimmed">
+            No attachments
+          </Text>
+        )}
+        {canEdit && canUploadAttachment && (
+          <FileButton onChange={(file) => handleAttachmentUpload(fv, file)}>
+            {(props) => (
+              <Button
+                {...props}
+                size="compact-xs"
+                variant="light"
+                leftSection={
+                  isUploading ? <Loader size={14} /> : <IconUpload size={14} />
+                }
+                loading={isUploading}
+              >
+                Upload File
+              </Button>
+            )}
+          </FileButton>
+        )}
+      </Stack>
+    );
+  }
+
   // --- single-value input renderer ---
 
   function renderInput(
@@ -314,6 +436,10 @@ export const StepFieldRunList: React.FC<Props> = ({
           </Group>
         );
 
+      case StepFieldType.attachment:
+        // Handled separately by renderAttachmentField
+        return null;
+
       default:
         // string, number — plain text input
         return (
@@ -403,6 +529,11 @@ export const StepFieldRunList: React.FC<Props> = ({
         const fieldLabel = fv.required ? `${fv.label} *` : fv.label;
         const fieldCanEdit = canEdit;
         const editedValue = edits[key] ?? fv.value;
+
+        // Attachment fields have their own renderer
+        if (fv.type === StepFieldType.attachment) {
+          return renderAttachmentField(fv, fieldLabel, fieldCanEdit);
+        }
 
         if (!fieldCanEdit) {
           return (

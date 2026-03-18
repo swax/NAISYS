@@ -10,6 +10,7 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router";
 
 import { AppLayout } from "./components/AppLayout";
 import { AuthProvider, useAuth } from "./lib/AuthContext";
+import { AdminPage } from "./pages/admin/AdminPage";
 import { DispatchList } from "./pages/dispatch/DispatchList";
 import { ItemCreate } from "./pages/items/ItemCreate";
 import { ItemDetail } from "./pages/items/ItemDetail";
@@ -88,6 +89,7 @@ const AppContent: React.FC = () => {
         <Route path="/dispatch" element={<DispatchList />} />
         <Route path="/users" element={<UserList />} />
         <Route path="/users/:username" element={<UserDetail />} />
+        <Route path="/admin" element={<AdminPage />} />
       </Route>
     </Routes>
   );

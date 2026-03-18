@@ -14,6 +14,15 @@ export const StepFieldValidationSchema = z.object({
 
 export type StepFieldValidation = z.infer<typeof StepFieldValidationSchema>;
 
+// Attachment metadata within a field value
+export const FieldAttachmentSchema = z.object({
+  id: z.number(),
+  filename: z.string(),
+  fileSize: z.number(),
+});
+
+export type FieldAttachment = z.infer<typeof FieldAttachmentSchema>;
+
 // A single field value within a step run
 export const StepFieldValueSchema = z.object({
   stepFieldId: z.number(),
@@ -24,10 +33,22 @@ export const StepFieldValueSchema = z.object({
   required: z.boolean(),
   setIndex: z.number(),
   value: z.string(),
+  attachments: z.array(FieldAttachmentSchema).optional(),
   validation: StepFieldValidationSchema,
 });
 
 export type StepFieldValue = z.infer<typeof StepFieldValueSchema>;
+
+// Upload attachment response
+export const UploadAttachmentResponseSchema = z.object({
+  attachmentId: z.number(),
+  filename: z.string(),
+  fileSize: z.number(),
+});
+
+export type UploadAttachmentResponse = z.infer<
+  typeof UploadAttachmentResponseSchema
+>;
 
 // Full step run response shape
 export const StepRunSchema = z.object({
