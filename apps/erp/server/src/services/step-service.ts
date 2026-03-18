@@ -57,6 +57,7 @@ export async function createStep(
   operationId: number,
   requestedSeqNo: number | undefined | null,
   instructions: string | undefined | null,
+  multiSet: boolean | undefined | null,
   userId: number,
 ): Promise<StepWithUsersAndFields> {
   return erpDb.$transaction(async (erpTx) => {
@@ -73,6 +74,7 @@ export async function createStep(
         operationId,
         seqNo: nextSeqNo,
         instructions: instructions ?? "",
+        multiSet: multiSet ?? false,
         createdById: userId,
         updatedById: userId,
       },
@@ -83,7 +85,7 @@ export async function createStep(
 
 export async function updateStep(
   id: number,
-  data: { instructions?: string; seqNo?: number },
+  data: { instructions?: string; seqNo?: number; multiSet?: boolean },
   userId: number,
 ): Promise<StepWithUsersAndFields> {
   return erpDb.step.update({
@@ -93,6 +95,7 @@ export async function updateStep(
         ? { instructions: data.instructions }
         : {}),
       ...(data.seqNo !== undefined ? { seqNo: data.seqNo } : {}),
+      ...(data.multiSet !== undefined ? { multiSet: data.multiSet } : {}),
       updatedById: userId,
     },
     include: includeUsersAndFields,

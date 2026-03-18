@@ -1,6 +1,8 @@
 import {
+  Badge,
   Button,
   Card,
+  Checkbox,
   Group,
   Loader,
   NumberInput,
@@ -54,12 +56,12 @@ export const StepList: React.FC<StepListProps> = ({
   }
 
   const editForm = useForm<UpdateStep>({
-    initialValues: { seqNo: 10, instructions: "" },
+    initialValues: { seqNo: 10, instructions: "", multiSet: false },
     validate: zodResolver(UpdateStepSchema),
   });
 
   const createForm = useForm<CreateStep>({
-    initialValues: { seqNo: 10, instructions: "" },
+    initialValues: { seqNo: 10, instructions: "", multiSet: false },
     validate: zodResolver(CreateStepSchema),
   });
 
@@ -85,6 +87,7 @@ export const StepList: React.FC<StepListProps> = ({
     editForm.setValues({
       seqNo: step.seqNo,
       instructions: step.instructions,
+      multiSet: step.multiSet,
     });
     setEditingStepId(step.id);
     setAddingStep(false);
@@ -195,6 +198,10 @@ export const StepList: React.FC<StepListProps> = ({
                       minRows={3}
                       {...editForm.getInputProps("instructions")}
                     />
+                    <Checkbox
+                      label="Allow multiple field value sets"
+                      {...editForm.getInputProps("multiSet", { type: "checkbox" })}
+                    />
                     <Group justify="flex-end" mt="xs">
                       <Button
                         variant="subtle"
@@ -212,9 +219,16 @@ export const StepList: React.FC<StepListProps> = ({
               ) : (
                 <Group justify="space-between" align="flex-start" wrap="nowrap">
                   <Stack gap={4} style={{ flex: 1, minWidth: 0 }}>
-                    <Text fw={600} size="sm">
-                      STEP {step.seqNo}
-                    </Text>
+                    <Group gap="xs">
+                      <Text fw={600} size="sm">
+                        STEP {step.seqNo}
+                      </Text>
+                      {step.multiSet && (
+                        <Badge size="xs" variant="light" color="violet">
+                          multi-set
+                        </Badge>
+                      )}
+                    </Group>
                     {step.instructions ? (
                       <CompactMarkdown>{step.instructions}</CompactMarkdown>
                     ) : (
@@ -284,6 +298,10 @@ export const StepList: React.FC<StepListProps> = ({
                     autosize
                     minRows={3}
                     {...createForm.getInputProps("instructions")}
+                  />
+                  <Checkbox
+                    label="Allow multiple field value sets"
+                    {...createForm.getInputProps("multiSet", { type: "checkbox" })}
                   />
                   <Group justify="flex-end" mt="xs">
                     <Button

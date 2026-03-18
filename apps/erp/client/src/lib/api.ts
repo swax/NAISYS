@@ -183,6 +183,14 @@ export const apiEndpoints = {
     fieldSeqNo: number | string,
   ) =>
     `orders/${key}/runs/${runNo}/ops/${seqNo}/steps/${stepSeqNo}/fields/${fieldSeqNo}`,
+  stepRunDeleteSet: (
+    key: string,
+    runNo: number | string,
+    seqNo: number | string,
+    stepSeqNo: number | string,
+    setIndex: number,
+  ) =>
+    `orders/${key}/runs/${runNo}/ops/${seqNo}/steps/${stepSeqNo}/sets/${setIndex}`,
   laborTickets: (key: string, runNo: number | string, seqNo: number | string) =>
     `orders/${key}/runs/${runNo}/ops/${seqNo}/labor`,
   laborTicketClockIn: (

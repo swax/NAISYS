@@ -9,6 +9,7 @@ export const includeStep = {
     select: {
       seqNo: true,
       instructions: true,
+      multiSet: true,
       fields: {
         select: {
           id: true,
@@ -23,7 +24,8 @@ export const includeStep = {
     },
   },
   fieldValues: {
-    select: { stepFieldId: true, value: true },
+    select: { stepFieldId: true, setIndex: true, value: true },
+    orderBy: { setIndex: "asc" as const },
   },
   createdBy: { select: { username: true } },
   updatedBy: { select: { username: true } },
@@ -39,6 +41,7 @@ export type StepRunWithStep = {
   step: {
     seqNo: number;
     instructions: string;
+    multiSet: boolean;
     fields: {
       id: number;
       seqNo: number;
@@ -48,7 +51,7 @@ export type StepRunWithStep = {
       required: boolean;
     }[];
   };
-  fieldValues: { stepFieldId: number; value: string }[];
+  fieldValues: { stepFieldId: number; setIndex: number; value: string }[];
   createdBy: { username: string };
   updatedBy: { username: string };
 };
@@ -170,23 +173,43 @@ export function validateFieldValue(
   return { valid: true };
 }
 
+function fieldValueKey(stepFieldId: number, setIndex: number): string {
+  return `${stepFieldId}_${setIndex}`;
+}
+
 export function validateCompletionFields(
   existing: StepRunWithStep,
-  submittedFieldValues?: { stepFieldId: number; value: string }[],
+  submittedFieldValues?: { stepFieldId: number; value: string; setIndex?: number }[],
 ): string | null {
   const submittedMap = new Map(
-    (submittedFieldValues ?? []).map((fv) => [fv.stepFieldId, fv.value]),
+    (submittedFieldValues ?? []).map((fv) => [
+      fieldValueKey(fv.stepFieldId, fv.setIndex ?? 0),
+      fv.value,
+    ]),
   );
   const storedMap = new Map(
-    existing.fieldValues.map((fv) => [fv.stepFieldId, fv.value]),
+    existing.fieldValues.map((fv) => [
+      fieldValueKey(fv.stepFieldId, fv.setIndex),
+      fv.value,
+    ]),
   );
 
+  // Determine how many sets exist
+  const allSetIndexes = new Set<number>();
+  for (const fv of existing.fieldValues) allSetIndexes.add(fv.setIndex);
+  for (const fv of submittedFieldValues ?? []) allSetIndexes.add(fv.setIndex ?? 0);
+  if (allSetIndexes.size === 0) allSetIndexes.add(0);
+
   const errors: string[] = [];
-  for (const field of existing.step.fields) {
-    const value = submittedMap.get(field.id) ?? storedMap.get(field.id) ?? "";
-    const result = validateFieldValue(field.type, field.multiValue, field.required, value);
-    if (!result.valid) {
-      errors.push(`${field.label}: ${result.error}`);
+  for (const si of [...allSetIndexes].sort((a, b) => a - b)) {
+    for (const field of existing.step.fields) {
+      const key = fieldValueKey(field.id, si);
+      const value = submittedMap.get(key) ?? storedMap.get(key) ?? "";
+      const result = validateFieldValue(field.type, field.multiValue, field.required, value);
+      if (!result.valid) {
+        const prefix = existing.step.multiSet ? `Set ${si + 1} / ` : "";
+        errors.push(`${prefix}${field.label}: ${result.error}`);
+      }
     }
   }
 
@@ -201,7 +224,7 @@ export function validateCompletionFields(
 export async function updateStepRun(
   id: number,
   completed: boolean | undefined,
-  fieldValues: { stepFieldId: number; value: string }[] | undefined,
+  fieldValues: { stepFieldId: number; value: string; setIndex?: number }[] | undefined,
   userId: number,
 ): Promise<StepRunWithStep> {
   return erpDb.$transaction(async (erpTx) => {
@@ -214,16 +237,19 @@ export async function updateStepRun(
 
     if (fieldValues && fieldValues.length > 0) {
       for (const fv of fieldValues) {
+        const setIndex = fv.setIndex ?? 0;
         await erpTx.stepFieldValue.upsert({
           where: {
-            stepRunId_stepFieldId: {
+            stepRunId_stepFieldId_setIndex: {
               stepRunId: id,
               stepFieldId: fv.stepFieldId,
+              setIndex,
             },
           },
           create: {
             stepRunId: id,
             stepFieldId: fv.stepFieldId,
+            setIndex,
             value: fv.value,
             createdById: userId,
             updatedById: userId,
@@ -246,16 +272,18 @@ export async function updateStepRun(
 export async function upsertFieldValue(
   stepRunId: number,
   stepFieldId: number,
+  setIndex: number,
   value: string,
   userId: number,
 ) {
   await erpDb.stepFieldValue.upsert({
     where: {
-      stepRunId_stepFieldId: { stepRunId, stepFieldId },
+      stepRunId_stepFieldId_setIndex: { stepRunId, stepFieldId, setIndex },
     },
     create: {
       stepRunId,
       stepFieldId,
+      setIndex,
       value,
       createdById: userId,
       updatedById: userId,
@@ -264,5 +292,24 @@ export async function upsertFieldValue(
       value,
       updatedById: userId,
     },
+  });
+}
+
+export async function deleteFieldValueSet(
+  stepRunId: number,
+  setIndex: number,
+): Promise<void> {
+  await erpDb.$transaction(async (erpTx) => {
+    // Delete all field values for this set
+    await erpTx.stepFieldValue.deleteMany({
+      where: { stepRunId, setIndex },
+    });
+
+    // Re-index higher sets to fill the gap
+    await erpTx.$executeRawUnsafe(
+      `UPDATE step_field_values SET set_index = set_index - 1 WHERE step_run_id = ? AND set_index > ?`,
+      stepRunId,
+      setIndex,
+    );
   });
 }

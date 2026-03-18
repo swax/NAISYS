@@ -9,6 +9,7 @@ export const StepSchema = z.object({
   operationId: z.number(),
   seqNo: z.number(),
   instructions: z.string(),
+  multiSet: z.boolean(),
   createdAt: z.iso.datetime(),
   createdBy: z.string(),
   updatedAt: z.iso.datetime(),
@@ -25,6 +26,7 @@ export const CreateStepSchema = z
   .object({
     seqNo: z.number().int().min(1).optional(),
     instructions: z.string().max(10000).optional(),
+    multiSet: z.boolean().optional(),
   })
   .strict();
 
@@ -35,6 +37,7 @@ export const UpdateStepSchema = z
   .object({
     seqNo: z.number().int().min(1).optional(),
     instructions: z.string().max(10000).optional(),
+    multiSet: z.boolean().optional(),
   })
   .strict();
 
