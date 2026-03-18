@@ -1,85 +1,89 @@
-import { StepFieldType } from "@naisys-erp/shared";
+import { FieldType } from "@naisys-erp/shared";
 
 import erpDb from "../erpDb.js";
-import type { StepFieldModel } from "../generated/prisma/models/StepField.js";
+import type { FieldModel } from "../generated/prisma/models/Field.js";
 import {
   calcNextSeqNo,
   includeUsers,
-  resolveStep,
   type WithAuditUsers,
 } from "../route-helpers.js";
 
 // --- Prisma include & result type ---
 
-export type StepFieldWithUsers = StepFieldModel & WithAuditUsers;
+export type FieldWithUsers = FieldModel & WithAuditUsers;
 
 // --- Lookups ---
 
-export async function listStepFields(
-  stepId: number,
-): Promise<StepFieldWithUsers[]> {
-  return erpDb.stepField.findMany({
-    where: { stepId },
+export async function listFields(
+  fieldSetId: number,
+): Promise<FieldWithUsers[]> {
+  return erpDb.field.findMany({
+    where: { fieldSetId },
     include: includeUsers,
     orderBy: { seqNo: "asc" },
   });
 }
 
-export async function getStepField(
-  stepId: number,
+export async function getField(
+  fieldSetId: number,
   fieldSeqNo: number,
-): Promise<StepFieldWithUsers | null> {
-  return erpDb.stepField.findFirst({
-    where: { stepId, seqNo: fieldSeqNo },
+): Promise<FieldWithUsers | null> {
+  return erpDb.field.findFirst({
+    where: { fieldSetId, seqNo: fieldSeqNo },
     include: includeUsers,
   });
 }
 
-export async function findExisting(stepId: number, fieldSeqNo: number) {
-  return erpDb.stepField.findFirst({
-    where: { stepId, seqNo: fieldSeqNo },
+export async function findExistingField(
+  fieldSetId: number,
+  fieldSeqNo: number,
+) {
+  return erpDb.field.findFirst({
+    where: { fieldSetId, seqNo: fieldSeqNo },
   });
 }
 
-// --- Validation ---
+// --- FieldSet helper ---
 
-export async function resolveStepForField(
-  orderKey: string,
-  revNo: number,
-  opSeqNo: number,
-  stepSeqNo: number,
-) {
-  return resolveStep(orderKey, revNo, opSeqNo, stepSeqNo);
+export async function ensureFieldSet(
+  fieldSetId: number | null,
+  userId: number,
+): Promise<number> {
+  if (fieldSetId) return fieldSetId;
+  const fs = await erpDb.fieldSet.create({
+    data: { createdById: userId },
+  });
+  return fs.id;
 }
 
 // --- Mutations ---
 
-export async function createStepField(
-  stepId: number,
+export async function createField(
+  fieldSetId: number,
   data: {
     seqNo?: number | null;
     label: string;
-    type?: StepFieldType | null;
+    type?: FieldType | null;
     multiValue?: boolean | null;
     required?: boolean | null;
   },
   userId: number,
-): Promise<StepFieldWithUsers> {
+): Promise<FieldWithUsers> {
   return erpDb.$transaction(async (erpTx) => {
-    const maxSeq = await erpTx.stepField.findFirst({
-      where: { stepId },
+    const maxSeq = await erpTx.field.findFirst({
+      where: { fieldSetId },
       orderBy: { seqNo: "desc" },
       select: { seqNo: true },
     });
     const defaultSeqNo = calcNextSeqNo(maxSeq?.seqNo ?? 0);
     const nextSeqNo = data.seqNo ?? defaultSeqNo;
 
-    return erpTx.stepField.create({
+    return erpTx.field.create({
       data: {
-        stepId,
+        fieldSetId,
         seqNo: nextSeqNo,
         label: data.label,
-        type: data.type ?? StepFieldType.string,
+        type: data.type ?? FieldType.string,
         multiValue: data.multiValue ?? false,
         required: data.required ?? false,
         createdById: userId,
@@ -87,21 +91,21 @@ export async function createStepField(
       },
       include: includeUsers,
     });
-  }) as Promise<StepFieldWithUsers>;
+  }) as Promise<FieldWithUsers>;
 }
 
-export async function updateStepField(
+export async function updateField(
   id: number,
   data: {
     label?: string;
-    type?: StepFieldType;
+    type?: FieldType;
     multiValue?: boolean;
     required?: boolean;
     seqNo?: number;
   },
   userId: number,
-): Promise<StepFieldWithUsers> {
-  return erpDb.stepField.update({
+): Promise<FieldWithUsers> {
+  return erpDb.field.update({
     where: { id },
     data: {
       ...(data.label !== undefined ? { label: data.label } : {}),
@@ -115,6 +119,6 @@ export async function updateStepField(
   });
 }
 
-export async function deleteStepField(id: number): Promise<void> {
-  await erpDb.stepField.delete({ where: { id } });
+export async function deleteField(id: number): Promise<void> {
+  await erpDb.field.delete({ where: { id } });
 }

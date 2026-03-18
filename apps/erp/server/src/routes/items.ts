@@ -21,7 +21,12 @@ import {
   schemaLink,
   selfLink,
 } from "../hateoas.js";
-import { formatAuditFields } from "../route-helpers.js";
+import {
+  calcNextSeqNo,
+  childItemLinks,
+  formatAuditFields,
+} from "../route-helpers.js";
+import type { FieldWithUsers } from "../services/field-service.js";
 import {
   createItem,
   deleteItem,
@@ -65,22 +70,101 @@ function itemActions(key: string, user: ErpUser | undefined): HateoasAction[] {
   ];
 }
 
+function formatItemFieldListResponse(
+  itemKey: string,
+  user: ErpUser | undefined,
+  fields: FieldWithUsers[],
+) {
+  const maxSeq = fields.length > 0 ? fields[fields.length - 1].seqNo : 0;
+  const base = `/items/${itemKey}/fields`;
+  return {
+    items: fields.map((field) => formatItemField(itemKey, user, field)),
+    total: fields.length,
+    nextSeqNo: calcNextSeqNo(maxSeq),
+    _links: [selfLink(base)],
+    _actions: hasPermission(user, "item_manager")
+      ? [
+          {
+            rel: "create" as const,
+            href: `${API_PREFIX}${base}`,
+            method: "POST" as const,
+            title: "Add Field",
+            schema: `${API_PREFIX}/schemas/CreateField`,
+          },
+        ]
+      : [],
+  };
+}
+
+function formatItemField(
+  itemKey: string,
+  user: ErpUser | undefined,
+  field: FieldWithUsers,
+) {
+  const base = `/items/${itemKey}/fields`;
+  return {
+    id: field.id,
+    fieldSetId: field.fieldSetId,
+    seqNo: field.seqNo,
+    label: field.label,
+    type: field.type,
+    multiValue: field.multiValue,
+    required: field.required,
+    ...formatAuditFields(field),
+    _links: childItemLinks(
+      base,
+      field.seqNo,
+      "Fields",
+      `/items/${itemKey}`,
+      "Item",
+      "Field",
+    ),
+    _actions: hasPermission(user, "item_manager")
+      ? [
+          {
+            rel: "update",
+            href: `${API_PREFIX}${base}/${field.seqNo}`,
+            method: "PUT" as const,
+            title: "Update",
+            schema: `${API_PREFIX}/schemas/UpdateField`,
+          },
+          {
+            rel: "delete",
+            href: `${API_PREFIX}${base}/${field.seqNo}`,
+            method: "DELETE" as const,
+            title: "Delete",
+          },
+        ]
+      : [],
+  };
+}
+
 function formatItem(item: ItemWithUsers, user: ErpUser | undefined) {
   return {
     id: item.id,
     key: item.key,
     description: item.description,
+    fields: formatItemFieldListResponse(
+      item.key,
+      user,
+      item.fieldSet?.fields ?? [],
+    ),
     ...formatAuditFields(item),
     _links: itemLinks(item.key),
     _actions: itemActions(item.key, user),
   };
 }
 
-function formatListItem(item: ItemWithUsers) {
+function formatListItem(item: ItemWithUsers, user: ErpUser | undefined) {
   return {
     id: item.id,
     key: item.key,
     description: item.description,
+    fields: formatItemFieldListResponse(
+      item.key,
+      user,
+      item.fieldSet?.fields ?? [],
+    ),
     ...formatAuditFields(item),
     _links: [selfLink(`/${RESOURCE}/${item.key}`)],
   };
@@ -113,7 +197,7 @@ export default function itemRoutes(fastify: FastifyInstance) {
       const [items, total] = await listItems(where, page, pageSize);
 
       return {
-        items: items.map((item) => formatListItem(item)),
+        items: items.map((item) => formatListItem(item, request.erpUser)),
         total,
         page,
         pageSize,

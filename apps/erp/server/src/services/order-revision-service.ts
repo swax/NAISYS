@@ -92,7 +92,9 @@ export async function createRevision(
         operations: {
           include: {
             steps: {
-              include: { fields: true },
+              include: {
+                fieldSet: { include: { fields: true } },
+              },
             },
           },
         },
@@ -140,29 +142,42 @@ export async function createRevision(
         });
 
         for (const step of op.steps) {
-          const newStep = await erpTx.step.create({
+          const fields = step.fieldSet?.fields ?? [];
+          let newFieldSetId: number | null = null;
+
+          if (fields.length > 0) {
+            const newFieldSet = await erpTx.fieldSet.create({
+              data: { createdById: userId },
+            });
+            newFieldSetId = newFieldSet.id;
+
+            for (const field of fields) {
+              await erpTx.field.create({
+                data: {
+                  fieldSetId: newFieldSet.id,
+                  seqNo: field.seqNo,
+                  label: field.label,
+                  type: field.type,
+                  multiValue: field.multiValue,
+                  required: field.required,
+                  createdById: userId,
+                  updatedById: userId,
+                },
+              });
+            }
+          }
+
+          await erpTx.step.create({
             data: {
               operationId: newOp.id,
               seqNo: step.seqNo,
               instructions: step.instructions,
+              multiSet: step.multiSet,
+              fieldSetId: newFieldSetId,
               createdById: userId,
               updatedById: userId,
             },
           });
-
-          for (const field of step.fields) {
-            await erpTx.stepField.create({
-              data: {
-                stepId: newStep.id,
-                seqNo: field.seqNo,
-                label: field.label,
-                type: field.type,
-                required: field.required,
-                createdById: userId,
-                updatedById: userId,
-              },
-            });
-          }
         }
       }
     }
@@ -203,13 +218,16 @@ export async function deleteRevision(id: number): Promise<void> {
     if (opIds.length > 0) {
       const steps = await erpTx.step.findMany({
         where: { operationId: { in: opIds } },
-        select: { id: true },
+        select: { id: true, fieldSetId: true },
       });
-      const stepIds = steps.map((s) => s.id);
+      const fieldSetIds = steps
+        .map((s) => s.fieldSetId)
+        .filter((id): id is number => id !== null);
 
-      if (stepIds.length > 0) {
-        await erpTx.stepField.deleteMany({
-          where: { stepId: { in: stepIds } },
+      // Fields cascade-delete from field_sets; steps cascade-delete from operations
+      if (fieldSetIds.length > 0) {
+        await erpTx.fieldSet.deleteMany({
+          where: { id: { in: fieldSetIds } },
         });
       }
       await erpTx.step.deleteMany({

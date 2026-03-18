@@ -1,10 +1,10 @@
 import {
-  CreateStepFieldSchema,
+  CreateFieldSchema,
   ErrorResponseSchema,
+  FieldListResponseSchema,
+  FieldSchema,
   RevisionStatus,
-  StepFieldListResponseSchema,
-  StepFieldSchema,
-  UpdateStepFieldSchema,
+  UpdateFieldSchema,
 } from "@naisys-erp/shared";
 import { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
@@ -12,6 +12,7 @@ import { z } from "zod/v4";
 
 import type { ErpUser } from "../auth-middleware.js";
 import { hasPermission, requirePermission } from "../auth-middleware.js";
+import erpDb from "../erpDb.js";
 import { conflict, notFound } from "../error-handler.js";
 import { API_PREFIX, selfLink } from "../hateoas.js";
 import {
@@ -19,17 +20,18 @@ import {
   childItemLinks,
   draftCrudActions,
   formatAuditFields,
+  resolveStep,
 } from "../route-helpers.js";
 import {
-  createStepField,
-  deleteStepField,
-  findExisting,
-  getStepField,
-  listStepFields,
-  resolveStepForField,
-  type StepFieldWithUsers,
-  updateStepField,
-} from "../services/step-field-service.js";
+  createField,
+  deleteField,
+  ensureFieldSet,
+  findExistingField,
+  type FieldWithUsers,
+  getField,
+  listFields,
+  updateField,
+} from "../services/field-service.js";
 
 const ParamsSchema = z.object({
   orderKey: z.string(),
@@ -46,7 +48,7 @@ const FieldParamsSchema = z.object({
   fieldSeqNo: z.coerce.number().int(),
 });
 
-export { type StepFieldWithUsers } from "../services/step-field-service.js";
+export { type FieldWithUsers } from "../services/field-service.js";
 
 export function formatFieldListResponse(
   orderKey: string,
@@ -55,7 +57,7 @@ export function formatFieldListResponse(
   stepSeqNo: number,
   revStatus: string,
   user: ErpUser | undefined,
-  items: StepFieldWithUsers[],
+  items: FieldWithUsers[],
 ) {
   const maxSeq = items.length > 0 ? items[items.length - 1].seqNo : 0;
   const base = fieldBasePath(orderKey, revNo, opSeqNo, stepSeqNo);
@@ -74,7 +76,7 @@ export function formatFieldListResponse(
               href: `${API_PREFIX}${base}`,
               method: "POST" as const,
               title: "Add Field",
-              schema: `${API_PREFIX}/schemas/CreateStepField`,
+              schema: `${API_PREFIX}/schemas/CreateField`,
             },
           ]
         : [],
@@ -97,12 +99,12 @@ export function formatField(
   stepSeqNo: number,
   revStatus: string,
   user: ErpUser | undefined,
-  field: StepFieldWithUsers,
+  field: FieldWithUsers,
 ) {
   const base = fieldBasePath(orderKey, revNo, opSeqNo, stepSeqNo);
   return {
     id: field.id,
-    stepId: field.stepId,
+    fieldSetId: field.fieldSetId,
     seqNo: field.seqNo,
     label: field.label,
     type: field.type,
@@ -112,14 +114,14 @@ export function formatField(
     _links: childItemLinks(
       base,
       field.seqNo,
-      "Step Fields",
+      "Fields",
       `/orders/${orderKey}/revs/${revNo}/ops/${opSeqNo}/steps/${stepSeqNo}`,
       "Step",
-      "StepField",
+      "Field",
     ),
     _actions: draftCrudActions(
       `${API_PREFIX}${base}/${field.seqNo}`,
-      "UpdateStepField",
+      "UpdateField",
       revStatus,
       user,
     ),
@@ -136,14 +138,14 @@ export default function stepFieldRoutes(fastify: FastifyInstance) {
       tags: ["Step Fields"],
       params: ParamsSchema,
       response: {
-        200: StepFieldListResponseSchema,
+        200: FieldListResponseSchema,
         404: ErrorResponseSchema,
       },
     },
     handler: async (request, reply) => {
       const { orderKey, revNo, seqNo, stepSeqNo } = request.params;
 
-      const resolved = await resolveStepForField(
+      const resolved = await resolveStep(
         orderKey,
         revNo,
         seqNo,
@@ -153,7 +155,9 @@ export default function stepFieldRoutes(fastify: FastifyInstance) {
         return notFound(reply, "Step not found");
       }
 
-      const items = await listStepFields(resolved.step.id);
+      const items = resolved.step.fieldSetId
+        ? await listFields(resolved.step.fieldSetId)
+        : [];
 
       const maxSeq = items.length > 0 ? items[items.length - 1].seqNo : 0;
 
@@ -183,7 +187,7 @@ export default function stepFieldRoutes(fastify: FastifyInstance) {
                   href: `${API_PREFIX}${base}`,
                   method: "POST" as const,
                   title: "Add Field",
-                  schema: `${API_PREFIX}/schemas/CreateStepField`,
+                  schema: `${API_PREFIX}/schemas/CreateField`,
                 },
               ]
             : [],
@@ -197,9 +201,9 @@ export default function stepFieldRoutes(fastify: FastifyInstance) {
       description: "Create a field for a step",
       tags: ["Step Fields"],
       params: ParamsSchema,
-      body: CreateStepFieldSchema,
+      body: CreateFieldSchema,
       response: {
-        201: StepFieldSchema,
+        201: FieldSchema,
         404: ErrorResponseSchema,
         409: ErrorResponseSchema,
       },
@@ -216,7 +220,7 @@ export default function stepFieldRoutes(fastify: FastifyInstance) {
       } = request.body;
       const userId = request.erpUser!.id;
 
-      const resolved = await resolveStepForField(
+      const resolved = await resolveStep(
         orderKey,
         revNo,
         seqNo,
@@ -233,8 +237,18 @@ export default function stepFieldRoutes(fastify: FastifyInstance) {
         );
       }
 
-      const field = await createStepField(
-        resolved.step.id,
+      // Ensure step has a field set
+      let fieldSetId = resolved.step.fieldSetId;
+      if (!fieldSetId) {
+        fieldSetId = await ensureFieldSet(null, userId);
+        await erpDb.step.update({
+          where: { id: resolved.step.id },
+          data: { fieldSetId },
+        });
+      }
+
+      const field = await createField(
+        fieldSetId,
         { seqNo: requestedSeqNo, label, type, multiValue, required },
         userId,
       );
@@ -259,14 +273,14 @@ export default function stepFieldRoutes(fastify: FastifyInstance) {
       tags: ["Step Fields"],
       params: FieldParamsSchema,
       response: {
-        200: StepFieldSchema,
+        200: FieldSchema,
         404: ErrorResponseSchema,
       },
     },
     handler: async (request, reply) => {
       const { orderKey, revNo, seqNo, stepSeqNo, fieldSeqNo } = request.params;
 
-      const resolved = await resolveStepForField(
+      const resolved = await resolveStep(
         orderKey,
         revNo,
         seqNo,
@@ -276,7 +290,11 @@ export default function stepFieldRoutes(fastify: FastifyInstance) {
         return notFound(reply, "Step not found");
       }
 
-      const field = await getStepField(resolved.step.id, fieldSeqNo);
+      if (!resolved.step.fieldSetId) {
+        return notFound(reply, `Field ${fieldSeqNo} not found`);
+      }
+
+      const field = await getField(resolved.step.fieldSetId, fieldSeqNo);
       if (!field) {
         return notFound(reply, `Field ${fieldSeqNo} not found`);
       }
@@ -299,9 +317,9 @@ export default function stepFieldRoutes(fastify: FastifyInstance) {
       description: "Update a step field (draft revision only)",
       tags: ["Step Fields"],
       params: FieldParamsSchema,
-      body: UpdateStepFieldSchema,
+      body: UpdateFieldSchema,
       response: {
-        200: StepFieldSchema,
+        200: FieldSchema,
         404: ErrorResponseSchema,
         409: ErrorResponseSchema,
       },
@@ -318,7 +336,7 @@ export default function stepFieldRoutes(fastify: FastifyInstance) {
       } = request.body;
       const userId = request.erpUser!.id;
 
-      const resolved = await resolveStepForField(
+      const resolved = await resolveStep(
         orderKey,
         revNo,
         seqNo,
@@ -335,12 +353,16 @@ export default function stepFieldRoutes(fastify: FastifyInstance) {
         );
       }
 
-      const existing = await findExisting(resolved.step.id, fieldSeqNo);
+      if (!resolved.step.fieldSetId) {
+        return notFound(reply, `Field ${fieldSeqNo} not found`);
+      }
+
+      const existing = await findExistingField(resolved.step.fieldSetId, fieldSeqNo);
       if (!existing) {
         return notFound(reply, `Field ${fieldSeqNo} not found`);
       }
 
-      const field = await updateStepField(
+      const field = await updateField(
         existing.id,
         { label, type, multiValue, required, seqNo: newSeqNo },
         userId,
@@ -374,7 +396,7 @@ export default function stepFieldRoutes(fastify: FastifyInstance) {
     handler: async (request, reply) => {
       const { orderKey, revNo, seqNo, stepSeqNo, fieldSeqNo } = request.params;
 
-      const resolved = await resolveStepForField(
+      const resolved = await resolveStep(
         orderKey,
         revNo,
         seqNo,
@@ -391,12 +413,16 @@ export default function stepFieldRoutes(fastify: FastifyInstance) {
         );
       }
 
-      const existing = await findExisting(resolved.step.id, fieldSeqNo);
+      if (!resolved.step.fieldSetId) {
+        return notFound(reply, `Field ${fieldSeqNo} not found`);
+      }
+
+      const existing = await findExistingField(resolved.step.fieldSetId, fieldSeqNo);
       if (!existing) {
         return notFound(reply, `Field ${fieldSeqNo} not found`);
       }
 
-      await deleteStepField(existing.id);
+      await deleteField(existing.id);
       reply.status(204);
     },
   });

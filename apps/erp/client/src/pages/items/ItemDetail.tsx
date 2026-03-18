@@ -17,6 +17,7 @@ import { useNavigate, useParams } from "react-router";
 import { MetadataTooltip } from "../../components/MetadataTooltip";
 import { api, apiEndpoints, showErrorNotification } from "../../lib/api";
 import { hasAction } from "../../lib/hateoas";
+import { FieldList } from "../orders/revs/StepFieldList";
 
 export const ItemDetail: React.FC = () => {
   const { key } = useParams<{ key: string }>();
@@ -170,6 +171,13 @@ export const ItemDetail: React.FC = () => {
           </Group>
         </Stack>
       </Card>
+
+      {/* Field definitions */}
+      <FieldList
+        fieldsEndpoint={apiEndpoints.itemFields(item.key)}
+        fieldEndpoint={(seqNo) => apiEndpoints.itemField(item.key, seqNo)}
+        initialData={item.fields}
+      />
     </Container>
   );
 };

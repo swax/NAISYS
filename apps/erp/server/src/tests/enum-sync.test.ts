@@ -5,7 +5,7 @@ import {
   OrderRunStatusEnum,
   OrderStatusEnum,
   RevisionStatusEnum,
-  StepFieldTypeEnum,
+  FieldTypeEnum,
 } from "@naisys-erp/shared";
 import { describe, expect, test } from "vitest";
 
@@ -16,7 +16,7 @@ import {
   OrderRunStatus as DbOrderRunStatus,
   OrderStatus as DbOrderStatus,
   RevisionStatus as DbRevisionStatus,
-  StepFieldType as DbStepFieldType,
+  FieldType as DbFieldType,
 } from "../generated/prisma/enums.js";
 
 function assertEnumSync(
@@ -71,7 +71,7 @@ describe("shared enums match database enums", () => {
     );
   });
 
-  test("StepFieldType", () => {
-    assertEnumSync("StepFieldType", StepFieldTypeEnum.options, DbStepFieldType);
+  test("FieldType", () => {
+    assertEnumSync("FieldType", FieldTypeEnum.options, DbFieldType);
   });
 });

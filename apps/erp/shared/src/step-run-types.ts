@@ -7,12 +7,12 @@ import {
 } from "./hateoas-types.js";
 
 // Validation result for a field value
-export const StepFieldValidationSchema = z.object({
+export const FieldValidationSchema = z.object({
   valid: z.boolean(),
   error: z.string().optional(),
 });
 
-export type StepFieldValidation = z.infer<typeof StepFieldValidationSchema>;
+export type FieldValidation = z.infer<typeof FieldValidationSchema>;
 
 // Attachment metadata within a field value
 export const FieldAttachmentSchema = z.object({
@@ -34,7 +34,7 @@ export const StepFieldValueSchema = z.object({
   setIndex: z.number(),
   value: z.string(),
   attachments: z.array(FieldAttachmentSchema).optional(),
-  validation: StepFieldValidationSchema,
+  validation: FieldValidationSchema,
 });
 
 export type StepFieldValue = z.infer<typeof StepFieldValueSchema>;

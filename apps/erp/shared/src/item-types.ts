@@ -1,5 +1,6 @@
 import { z } from "zod/v4";
 
+import { FieldListResponseSchema } from "./field-types.js";
 import { HateoasActionSchema, HateoasLinkSchema } from "./hateoas-types.js";
 
 // Full item response shape
@@ -7,6 +8,7 @@ export const ItemSchema = z.object({
   id: z.number(),
   key: z.string(),
   description: z.string(),
+  fields: FieldListResponseSchema,
   createdBy: z.string(),
   createdAt: z.iso.datetime(),
   updatedBy: z.string(),

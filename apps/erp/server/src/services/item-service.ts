@@ -1,10 +1,26 @@
 import erpDb from "../erpDb.js";
 import type { ItemModel } from "../generated/prisma/models/Item.js";
 import { includeUsers, type WithAuditUsers } from "../route-helpers.js";
+import type { FieldWithUsers } from "./field-service.js";
 
 // --- Prisma include & result type ---
 
-export type ItemWithUsers = ItemModel & WithAuditUsers;
+export const includeUsersAndFieldSet = {
+  ...includeUsers,
+  fieldSet: {
+    include: {
+      fields: {
+        include: includeUsers,
+        orderBy: { seqNo: "asc" as const },
+      },
+    },
+  },
+} as const;
+
+export type ItemWithUsers = ItemModel &
+  WithAuditUsers & {
+    fieldSet: { fields: FieldWithUsers[] } | null;
+  };
 
 // --- Lookups ---
 
@@ -16,7 +32,7 @@ export async function listItems(
   return Promise.all([
     erpDb.item.findMany({
       where,
-      include: includeUsers,
+      include: includeUsersAndFieldSet,
       skip: (page - 1) * pageSize,
       take: pageSize,
       orderBy: { createdAt: "desc" },
@@ -28,7 +44,7 @@ export async function listItems(
 export async function findExisting(key: string): Promise<ItemWithUsers | null> {
   return erpDb.item.findUnique({
     where: { key },
-    include: includeUsers,
+    include: includeUsersAndFieldSet,
   });
 }
 
@@ -46,7 +62,7 @@ export async function createItem(
       createdById: userId,
       updatedById: userId,
     },
-    include: includeUsers,
+    include: includeUsersAndFieldSet,
   });
 }
 
@@ -58,7 +74,7 @@ export async function updateItem(
   return erpDb.item.update({
     where: { key },
     data: { ...data, updatedById: userId },
-    include: includeUsers,
+    include: includeUsersAndFieldSet,
   });
 }
 

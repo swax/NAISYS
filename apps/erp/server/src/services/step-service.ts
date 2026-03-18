@@ -5,21 +5,25 @@ import {
   includeUsers,
   type WithAuditUsers,
 } from "../route-helpers.js";
-import type { StepFieldWithUsers } from "../routes/step-fields.js";
+import type { FieldWithUsers } from "./field-service.js";
 
 // --- Prisma include & result type ---
 
 export const includeUsersAndFields = {
   ...includeUsers,
-  fields: {
-    include: includeUsers,
-    orderBy: { seqNo: "asc" as const },
+  fieldSet: {
+    include: {
+      fields: {
+        include: includeUsers,
+        orderBy: { seqNo: "asc" as const },
+      },
+    },
   },
 } as const;
 
 export type StepWithUsersAndFields = StepModel &
   WithAuditUsers & {
-    fields: StepFieldWithUsers[];
+    fieldSet: { fields: FieldWithUsers[] } | null;
   };
 
 // --- Lookups ---

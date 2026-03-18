@@ -18,7 +18,7 @@ import type {
   StepRun,
   UploadAttachmentResponse,
 } from "@naisys-erp/shared";
-import { StepFieldType } from "@naisys-erp/shared";
+import { FieldType } from "@naisys-erp/shared";
 import {
   IconAlertCircle,
   IconCheck,
@@ -362,7 +362,7 @@ export const StepFieldRunList: React.FC<Props> = ({
       fv.validation && !fv.validation.valid ? fv.validation.error : undefined;
 
     switch (fv.type) {
-      case StepFieldType.date:
+      case FieldType.date:
         return (
           <DateInput
             label={label}
@@ -381,7 +381,7 @@ export const StepFieldRunList: React.FC<Props> = ({
           />
         );
 
-      case StepFieldType.datetime:
+      case FieldType.datetime:
         return (
           <DateTimePicker
             label={label}
@@ -400,7 +400,7 @@ export const StepFieldRunList: React.FC<Props> = ({
           />
         );
 
-      case StepFieldType.yesNo:
+      case FieldType.yesNo:
         return (
           <Group gap="xs" align="center">
             {label && (
@@ -421,7 +421,7 @@ export const StepFieldRunList: React.FC<Props> = ({
           </Group>
         );
 
-      case StepFieldType.checkbox:
+      case FieldType.checkbox:
         return (
           <Group gap="xs" align="center">
             <Checkbox
@@ -436,7 +436,7 @@ export const StepFieldRunList: React.FC<Props> = ({
           </Group>
         );
 
-      case StepFieldType.attachment:
+      case FieldType.attachment:
         // Handled separately by renderAttachmentField
         return null;
 
@@ -462,11 +462,11 @@ export const StepFieldRunList: React.FC<Props> = ({
   function formatReadOnlyValue(fv: StepFieldValue): string {
     if (!fv.value) return "\u2014";
     switch (fv.type) {
-      case StepFieldType.date:
+      case FieldType.date:
         return new Date(fv.value + "T00:00:00").toLocaleDateString();
-      case StepFieldType.datetime:
+      case FieldType.datetime:
         return new Date(fv.value).toLocaleString();
-      case StepFieldType.checkbox:
+      case FieldType.checkbox:
         return fv.value === "checked" ? "Checked" : "\u2014";
       default:
         return fv.value;
@@ -531,7 +531,7 @@ export const StepFieldRunList: React.FC<Props> = ({
         const editedValue = edits[key] ?? fv.value;
 
         // Attachment fields have their own renderer
-        if (fv.type === StepFieldType.attachment) {
+        if (fv.type === FieldType.attachment) {
           return renderAttachmentField(fv, fieldLabel, fieldCanEdit);
         }
 

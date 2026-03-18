@@ -2,7 +2,7 @@ import { z } from "zod/v4";
 
 import { HateoasActionSchema, HateoasLinkSchema } from "./hateoas-types.js";
 
-export const StepFieldTypeEnum = z.enum([
+export const FieldTypeEnum = z.enum([
   "string",
   "number",
   "date",
@@ -11,16 +11,16 @@ export const StepFieldTypeEnum = z.enum([
   "checkbox",
   "attachment",
 ]);
-export type StepFieldType = z.infer<typeof StepFieldTypeEnum>;
-export const StepFieldType = StepFieldTypeEnum.enum;
+export type FieldType = z.infer<typeof FieldTypeEnum>;
+export const FieldType = FieldTypeEnum.enum;
 
-// Full step field response shape
-export const StepFieldSchema = z.object({
+// Full field response shape
+export const FieldSchema = z.object({
   id: z.number(),
-  stepId: z.number(),
+  fieldSetId: z.number(),
   seqNo: z.number(),
   label: z.string(),
-  type: StepFieldTypeEnum,
+  type: FieldTypeEnum,
   multiValue: z.boolean(),
   required: z.boolean(),
   createdAt: z.iso.datetime(),
@@ -31,41 +31,41 @@ export const StepFieldSchema = z.object({
   _actions: z.array(HateoasActionSchema).optional(),
 });
 
-export type StepField = z.infer<typeof StepFieldSchema>;
+export type Field = z.infer<typeof FieldSchema>;
 
-// Input for creating a step field
-export const CreateStepFieldSchema = z
+// Input for creating a field
+export const CreateFieldSchema = z
   .object({
     seqNo: z.number().int().min(1).optional(),
     label: z.string().min(1).max(200),
-    type: StepFieldTypeEnum.optional(),
+    type: FieldTypeEnum.optional(),
     multiValue: z.boolean().optional(),
     required: z.boolean().optional(),
   })
   .strict();
 
-export type CreateStepField = z.infer<typeof CreateStepFieldSchema>;
+export type CreateField = z.infer<typeof CreateFieldSchema>;
 
-// Input for updating a step field
-export const UpdateStepFieldSchema = z
+// Input for updating a field
+export const UpdateFieldSchema = z
   .object({
     seqNo: z.number().int().min(1).optional(),
     label: z.string().min(1).max(200).optional(),
-    type: StepFieldTypeEnum.optional(),
+    type: FieldTypeEnum.optional(),
     multiValue: z.boolean().optional(),
     required: z.boolean().optional(),
   })
   .strict();
 
-export type UpdateStepField = z.infer<typeof UpdateStepFieldSchema>;
+export type UpdateField = z.infer<typeof UpdateFieldSchema>;
 
 // List response
-export const StepFieldListResponseSchema = z.object({
-  items: z.array(StepFieldSchema),
+export const FieldListResponseSchema = z.object({
+  items: z.array(FieldSchema),
   total: z.number(),
   nextSeqNo: z.number(),
   _links: z.array(HateoasLinkSchema),
   _actions: z.array(HateoasActionSchema).optional(),
 });
 
-export type StepFieldListResponse = z.infer<typeof StepFieldListResponseSchema>;
+export type FieldListResponse = z.infer<typeof FieldListResponseSchema>;

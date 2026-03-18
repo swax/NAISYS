@@ -123,7 +123,7 @@ function formatStepRun(
     validation: ReturnType<typeof validateFieldValue>;
   }[] = [];
   for (let si = 0; si < setCount; si++) {
-    for (const field of stepRun.step.fields) {
+    for (const field of stepRun.step.fieldSet?.fields ?? []) {
       const stored = stepRun.fieldValues.find(
         (fv) => fv.stepFieldId === field.id && fv.setIndex === si,
       );
@@ -152,7 +152,7 @@ function formatStepRun(
     }
   }
 
-  const hasAttachmentFields = stepRun.step.fields.some(
+  const hasAttachmentFields = (stepRun.step.fieldSet?.fields ?? []).some(
     (f) => f.type === "attachment",
   );
 
@@ -413,7 +413,7 @@ export default function stepRunRoutes(fastify: FastifyInstance) {
         return conflict(reply, `Cannot update field: step run is completed`);
       }
 
-      const field = stepRun.step.fields[0];
+      const field = stepRun.step.fieldSet?.fields[0];
       if (!field) {
         return notFound(reply, `Step field not found`);
       }

@@ -108,6 +108,9 @@ export const apiEndpoints = {
   dispatch: "dispatch",
   items: "items",
   item: (key: string) => `items/${key}`,
+  itemFields: (key: string) => `items/${key}/fields`,
+  itemField: (key: string, fieldSeqNo: number | string) =>
+    `items/${key}/fields/${fieldSeqNo}`,
   orders: "orders",
   order: (key: string) => `orders/${key}`,
   orderRevs: (key: string) => `orders/${key}/revs`,
