@@ -14,12 +14,15 @@ import { formatFileSize, hasAction } from "@naisys/common";
 import { IconInfoCircle } from "@tabler/icons-react";
 import { useCallback, useEffect, useState } from "react";
 
-import { SecretField } from "../../components/SecretField";
+import {
+  AttachmentList,
+  SecretField,
+  ServerLogViewer,
+} from "@naisys/common-browser";
+import type { AttachmentListData, ServerLogResponse } from "@naisys/common-browser";
 import { downloadExportConfig, rotateHubAccessKey } from "../../lib/apiAdmin";
 import type { AdminInfoResponse } from "../../lib/apiClient";
-import { api, apiEndpoints } from "../../lib/apiClient";
-import { AttachmentList } from "./AttachmentList";
-import { ServerLogViewer } from "./ServerLogViewer";
+import { api, API_BASE, apiEndpoints } from "../../lib/apiClient";
 
 export const AdminPage: React.FC = () => {
   const [data, setData] = useState<AdminInfoResponse | null>(null);
@@ -79,6 +82,34 @@ export const AdminPage: React.FC = () => {
   const canViewAttachments = data
     ? !!hasAction(data._actions, "view-attachments")
     : false;
+
+  const LOG_TABS = [
+    { value: "supervisor", label: "Supervisor" },
+    { value: "hub-server", label: "Hub Server" },
+    { value: "hub-client", label: "Hub Client" },
+  ];
+
+  const fetchLogs = useCallback(
+    async (file: string | undefined, minLevel: number | undefined) => {
+      return api.get<ServerLogResponse>(apiEndpoints.adminLogs(file!, undefined, minLevel));
+    },
+    [],
+  );
+
+  const fetchAttachments = useCallback(
+    async (page: number, pageSize: number) => {
+      const params = new URLSearchParams();
+      params.set("page", String(page));
+      params.set("pageSize", String(pageSize));
+      return api.get<AttachmentListData>(`${apiEndpoints.adminAttachments}?${params}`);
+    },
+    [],
+  );
+
+  const getDownloadUrl = useCallback(
+    (id: number) => `${API_BASE}${apiEndpoints.attachmentDownload(id)}`,
+    [],
+  );
 
   return (
     <Container size="lg" py="xl" w="100%">
@@ -177,13 +208,26 @@ export const AdminPage: React.FC = () => {
 
           {canViewLogs && (
             <Tabs.Panel value="logs" pt="md">
-              <ServerLogViewer />
+              <ServerLogViewer fetchLogs={fetchLogs} logFiles={LOG_TABS} />
             </Tabs.Panel>
           )}
 
           {canViewAttachments && (
             <Tabs.Panel value="attachments" pt="md">
-              <AttachmentList />
+              <AttachmentList
+                fetchAttachments={fetchAttachments}
+                getDownloadUrl={getDownloadUrl}
+                extraColumns={[
+                  {
+                    header: "Purpose",
+                    render: (att) => (
+                      <Badge size="sm" variant="light">
+                        {att.purpose as string}
+                      </Badge>
+                    ),
+                  },
+                ]}
+              />
             </Tabs.Panel>
           )}
         </Tabs>

@@ -21,12 +21,12 @@ import type {
 import { CreateStepSchema, UpdateStepSchema } from "@naisys-erp/shared";
 import { useCallback, useEffect, useState } from "react";
 
-import { CompactMarkdown } from "../../../components/CompactMarkdown";
+import { CompactMarkdown } from "@naisys/common-browser";
 import { FieldDefList } from "../../../components/FieldDefList";
 import { MetadataTooltip } from "../../../components/MetadataTooltip";
 import { api, apiEndpoints, showErrorNotification } from "../../../lib/api";
 import { hasAction } from "../../../lib/hateoas";
-import { zodResolver } from "../../../lib/zod-resolver";
+import { zodResolver } from "@naisys/common-browser";
 
 interface StepListProps {
   orderKey: string;

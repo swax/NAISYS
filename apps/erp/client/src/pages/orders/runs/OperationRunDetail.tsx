@@ -19,7 +19,7 @@ import { IconArrowBackUp } from "@tabler/icons-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useOutletContext, useParams } from "react-router";
 
-import { CompactMarkdown } from "../../../components/CompactMarkdown";
+import { CompactMarkdown } from "@naisys/common-browser";
 import { MetadataTooltip } from "../../../components/MetadataTooltip";
 import { api, apiEndpoints, showErrorNotification } from "../../../lib/api";
 import { hasAction } from "../../../lib/hateoas";

@@ -16,7 +16,7 @@ import type {
 import { IconArrowBackUp } from "@tabler/icons-react";
 import { useCallback, useEffect, useState } from "react";
 
-import { CompactMarkdown } from "../../../components/CompactMarkdown";
+import { CompactMarkdown } from "@naisys/common-browser";
 import { FieldValueRunList } from "../../../components/FieldValueList";
 import { api, apiEndpoints, showErrorNotification } from "../../../lib/api";
 import { hasAction } from "../../../lib/hateoas";

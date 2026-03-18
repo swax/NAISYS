@@ -15,8 +15,25 @@ import { formatFileSize } from "@naisys/common";
 import { IconRefresh } from "@tabler/icons-react";
 import { useCallback, useEffect, useState } from "react";
 
-import type { PinoLogEntry, ServerLogResponse } from "../../lib/apiClient";
-import { api, apiEndpoints } from "../../lib/apiClient";
+export interface PinoLogEntry {
+  time: string | number;
+  level: number;
+  msg: string;
+  detail?: string;
+}
+
+export interface ServerLogResponse {
+  entries: PinoLogEntry[];
+  fileSize?: number;
+}
+
+export interface ServerLogViewerProps {
+  fetchLogs: (
+    file: string | undefined,
+    minLevel: number | undefined,
+  ) => Promise<ServerLogResponse>;
+  logFiles?: { value: string; label: string }[];
+}
 
 function pinoLevelDisplay(level: number): { label: string; color: string } {
   if (level >= 60) return { label: "FATAL", color: "red" };
@@ -27,32 +44,32 @@ function pinoLevelDisplay(level: number): { label: string; color: string } {
   return { label: "TRACE", color: "gray" };
 }
 
-const LOG_TABS = [
-  { value: "supervisor", label: "Supervisor" },
-  { value: "hub-server", label: "Hub Server" },
-  { value: "hub-client", label: "Hub Client" },
-] as const;
-
-export const ServerLogViewer: React.FC = () => {
-  const [logTab, setLogTab] = useState<string>("supervisor");
+export const ServerLogViewer: React.FC<ServerLogViewerProps> = ({
+  fetchLogs: fetchLogsFn,
+  logFiles,
+}) => {
+  const [logTab, setLogTab] = useState<string | undefined>(
+    logFiles?.[0]?.value,
+  );
   const [logData, setLogData] = useState<ServerLogResponse | null>(null);
   const [logLoading, setLogLoading] = useState(false);
   const [levelFilter, setLevelFilter] = useState<string>("all");
 
-  const fetchLogs = useCallback(async (file: string, filter: string) => {
-    setLogLoading(true);
-    try {
-      const minLevel = filter === "errors" ? 50 : undefined;
-      const result = await api.get<ServerLogResponse>(
-        apiEndpoints.adminLogs(file, undefined, minLevel),
-      );
-      setLogData(result);
-    } catch {
-      setLogData(null);
-    } finally {
-      setLogLoading(false);
-    }
-  }, []);
+  const fetchLogs = useCallback(
+    async (file: string | undefined, filter: string) => {
+      setLogLoading(true);
+      try {
+        const minLevel = filter === "errors" ? 50 : undefined;
+        const result = await fetchLogsFn(file, minLevel);
+        setLogData(result);
+      } catch {
+        setLogData(null);
+      } finally {
+        setLogLoading(false);
+      }
+    },
+    [fetchLogsFn],
+  );
 
   useEffect(() => {
     void fetchLogs(logTab, levelFilter);
@@ -63,15 +80,18 @@ export const ServerLogViewer: React.FC = () => {
       <Title order={3} mt="xl">
         Server Logs
       </Title>
-      <Tabs value={logTab} onChange={(v) => v && setLogTab(v)}>
-        <Tabs.List>
-          {LOG_TABS.map((tab) => (
-            <Tabs.Tab key={tab.value} value={tab.value}>
-              {tab.label}
-            </Tabs.Tab>
-          ))}
-        </Tabs.List>
-      </Tabs>
+
+      {logFiles && (
+        <Tabs value={logTab} onChange={(v) => v && setLogTab(v)}>
+          <Tabs.List>
+            {logFiles.map((tab) => (
+              <Tabs.Tab key={tab.value} value={tab.value}>
+                {tab.label}
+              </Tabs.Tab>
+            ))}
+          </Tabs.List>
+        </Tabs>
+      )}
 
       <Group>
         <Button

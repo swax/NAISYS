@@ -17,6 +17,7 @@
     "@mantine/hooks": "^8.3.18",
     "@mantine/notifications": "^8.3.18",
     "@naisys-erp/shared": "file:../shared",
+    "@naisys/common-browser": "file:../../../packages/common-browser",
     "@naisys/common": "file:../../../packages/common",
     "@tabler/icons-react": "^3.40.0",
     "dayjs": "^1.11.20",

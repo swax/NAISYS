@@ -28,7 +28,7 @@ import {
 } from "react-router-dom";
 
 import type { AppOutletContext } from "../../App";
-import { SecretField } from "../../components/SecretField";
+import { SecretField } from "@naisys/common-browser";
 import { useSession } from "../../contexts/SessionContext";
 import {
   changePassword,

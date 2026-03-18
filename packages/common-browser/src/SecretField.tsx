@@ -8,7 +8,7 @@ import {
 } from "@tabler/icons-react";
 import { useState } from "react";
 
-interface SecretFieldProps {
+export interface SecretFieldProps {
   value: string | null;
   onRotate?: () => void;
   rotating?: boolean;
@@ -25,7 +25,7 @@ export const SecretField: React.FC<SecretFieldProps> = ({
     <Group gap="xs" align="center">
       {value ? (
         <>
-          <Code>{visible ? value : "••••••••••••••••"}</Code>
+          <Code>{visible ? value : "\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022"}</Code>
           <Tooltip label={visible ? "Hide" : "Show"}>
             <ActionIcon
               variant="subtle"
