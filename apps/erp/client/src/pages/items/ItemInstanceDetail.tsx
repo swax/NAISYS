@@ -6,65 +6,66 @@ import {
   Loader,
   Stack,
   Text,
-  Textarea,
   TextInput,
   Title,
 } from "@mantine/core";
-import type { Item, UpdateItem } from "@naisys-erp/shared";
+import type { ItemInstance, UpdateItemInstance } from "@naisys-erp/shared";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 
 import { MetadataTooltip } from "../../components/MetadataTooltip";
 import { api, apiEndpoints, showErrorNotification } from "../../lib/api";
 import { hasAction } from "../../lib/hateoas";
-import { FieldList } from "../orders/revs/StepFieldList";
 
-export const ItemDetail: React.FC = () => {
-  const { key } = useParams<{ key: string }>();
+export const ItemInstanceDetail: React.FC = () => {
+  const { key, instanceId } = useParams<{ key: string; instanceId: string }>();
   const navigate = useNavigate();
-  const [item, setItem] = useState<Item | null>(null);
+  const [instance, setInstance] = useState<ItemInstance | null>(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [editKey, setEditKey] = useState("");
-  const [description, setDescription] = useState("");
+  const [editQuantity, setEditQuantity] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  const fetchItem = useCallback(async () => {
-    if (!key) return;
+  const fetchInstance = useCallback(async () => {
+    if (!key || !instanceId) return;
     setLoading(true);
     try {
-      const result = await api.get<Item>(apiEndpoints.item(key));
-      setItem(result);
+      const result = await api.get<ItemInstance>(
+        apiEndpoints.itemInstance(key, instanceId),
+      );
+      setInstance(result);
     } catch (err) {
       showErrorNotification(err);
     } finally {
       setLoading(false);
     }
-  }, [key]);
+  }, [key, instanceId]);
 
   useEffect(() => {
-    void fetchItem();
-  }, [fetchItem]);
+    void fetchInstance();
+  }, [fetchInstance]);
 
   const handleEdit = () => {
-    if (!item) return;
-    setEditKey(item.key);
-    setDescription(item.description);
+    if (!instance) return;
+    setEditKey(instance.key);
+    setEditQuantity(
+      instance.quantity != null ? String(instance.quantity) : "",
+    );
     setEditing(true);
   };
 
   const handleUpdate = async () => {
-    if (!key) return;
+    if (!key || !instanceId) return;
     setSubmitting(true);
     try {
-      const data: UpdateItem = { key: editKey, description };
-      await api.put(apiEndpoints.item(key), data);
+      const data: UpdateItemInstance = {
+        key: editKey,
+        quantity: editQuantity ? Number(editQuantity) : null,
+      };
+      await api.put(apiEndpoints.itemInstance(key, instanceId), data);
       setEditing(false);
-      if (editKey !== key) {
-        void navigate(`/items/${editKey}`, { replace: true });
-      } else {
-        await fetchItem();
-      }
+      await fetchInstance();
     } catch (err) {
       showErrorNotification(err);
     } finally {
@@ -73,10 +74,10 @@ export const ItemDetail: React.FC = () => {
   };
 
   const handleDelete = async () => {
-    if (!key || !confirm("Delete this item?")) return;
+    if (!key || !instanceId || !confirm("Delete this instance?")) return;
     try {
-      await api.delete(apiEndpoints.item(key));
-      void navigate("/items");
+      await api.delete(apiEndpoints.itemInstance(key, instanceId));
+      void navigate(`/items/${key}/instances`);
     } catch (err) {
       showErrorNotification(err);
     }
@@ -92,10 +93,10 @@ export const ItemDetail: React.FC = () => {
     );
   }
 
-  if (!item) {
+  if (!instance) {
     return (
       <Container size="md" py="xl">
-        <Text>Item not found.</Text>
+        <Text>Instance not found.</Text>
       </Container>
     );
   }
@@ -104,22 +105,20 @@ export const ItemDetail: React.FC = () => {
     return (
       <Container size="md" py="xl">
         <Title order={2} mb="lg">
-          Edit Item
+          Edit Instance
         </Title>
         <Stack>
           <TextInput
-            label="Key"
-            description="Alphanumeric with hyphens"
+            label="Key (lot/serial number)"
             value={editKey}
             onChange={(e) => setEditKey(e.currentTarget.value)}
             required
           />
-          <Textarea
-            label="Description"
-            value={description}
-            onChange={(e) => setDescription(e.currentTarget.value)}
-            autosize
-            minRows={2}
+          <TextInput
+            label="Quantity"
+            type="number"
+            value={editQuantity}
+            onChange={(e) => setEditQuantity(e.currentTarget.value)}
           />
           <Group justify="flex-end">
             <Button variant="subtle" onClick={() => setEditing(false)}>
@@ -138,22 +137,25 @@ export const ItemDetail: React.FC = () => {
     <Container size="md" py="xl">
       <Group justify="space-between" mb="lg">
         <Group>
-          <Title order={2}>{item.key}</Title>
+          <Title order={2}>{instance.key}</Title>
           <MetadataTooltip
-            createdBy={item.createdBy}
-            createdAt={item.createdAt}
-            updatedBy={item.updatedBy}
-            updatedAt={item.updatedAt}
+            createdBy={instance.createdBy}
+            createdAt={instance.createdAt}
+            updatedBy={instance.updatedBy}
+            updatedAt={instance.updatedAt}
           />
         </Group>
         <Group>
-          <Button variant="subtle" onClick={() => navigate("/items")}>
+          <Button
+            variant="subtle"
+            onClick={() => navigate(`/items/${key}/instances`)}
+          >
             Back
           </Button>
-          {hasAction(item._actions, "update") && (
+          {hasAction(instance._actions, "update") && (
             <Button onClick={handleEdit}>Edit</Button>
           )}
-          {hasAction(item._actions, "delete") && (
+          {hasAction(instance._actions, "delete") && (
             <Button color="red" variant="outline" onClick={handleDelete}>
               Delete
             </Button>
@@ -165,28 +167,26 @@ export const ItemDetail: React.FC = () => {
         <Stack gap="sm">
           <Group>
             <Text fw={600} w={120}>
-              Description:
+              Key:
             </Text>
-            <Text>{item.description || "—"}</Text>
+            <Text ff="monospace">{instance.key}</Text>
+          </Group>
+          <Group>
+            <Text fw={600} w={120}>
+              Quantity:
+            </Text>
+            <Text>
+              {instance.quantity != null ? instance.quantity : "—"}
+            </Text>
+          </Group>
+          <Group>
+            <Text fw={600} w={120}>
+              Order Run:
+            </Text>
+            <Text>{instance.orderRunKey || "—"}</Text>
           </Group>
         </Stack>
       </Card>
-
-      <Group mt="lg">
-        <Button
-          variant="light"
-          onClick={() => navigate(`/items/${item.key}/instances`)}
-        >
-          View Instances
-        </Button>
-      </Group>
-
-      {/* Field definitions */}
-      <FieldList
-        fieldsEndpoint={apiEndpoints.itemFields(item.key)}
-        fieldEndpoint={(seqNo) => apiEndpoints.itemField(item.key, seqNo)}
-        initialData={item.fields}
-      />
     </Container>
   );
 };

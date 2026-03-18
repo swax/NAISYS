@@ -14,6 +14,8 @@ import { AdminPage } from "./pages/admin/AdminPage";
 import { DispatchList } from "./pages/dispatch/DispatchList";
 import { ItemCreate } from "./pages/items/ItemCreate";
 import { ItemDetail } from "./pages/items/ItemDetail";
+import { ItemInstanceDetail } from "./pages/items/ItemInstanceDetail";
+import { ItemInstanceList } from "./pages/items/ItemInstanceList";
 import { ItemList } from "./pages/items/ItemList";
 import { LoginPage } from "./pages/LoginPage";
 import { OrderCreate } from "./pages/orders/OrderCreate";
@@ -86,6 +88,11 @@ const AppContent: React.FC = () => {
         <Route path="/items" element={<ItemList />} />
         <Route path="/items/new" element={<ItemCreate />} />
         <Route path="/items/:key" element={<ItemDetail />} />
+        <Route path="/items/:key/instances" element={<ItemInstanceList />} />
+        <Route
+          path="/items/:key/instances/:instanceId"
+          element={<ItemInstanceDetail />}
+        />
         <Route path="/dispatch" element={<DispatchList />} />
         <Route path="/users" element={<UserList />} />
         <Route path="/users/:username" element={<UserDetail />} />
