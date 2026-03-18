@@ -29,6 +29,19 @@ import { api, apiEndpoints, showErrorNotification } from "../../../lib/api";
 import { hasAction } from "../../../lib/hateoas";
 import { zodResolver } from "../../../lib/zod-resolver";
 
+const TYPE_LABELS: Record<string, string> = {
+  string: "String",
+  number: "Number",
+  date: "Date",
+  datetime: "Date/Time",
+  yesNo: "Yes/No",
+  checkbox: "Checkbox",
+};
+
+function fieldTypeLabel(type: string): string {
+  return TYPE_LABELS[type] ?? type;
+}
+
 interface StepFieldListProps {
   orderKey: string;
   revNo: string;
@@ -186,7 +199,7 @@ export const StepFieldList: React.FC<StepFieldListProps> = ({
         label="Type"
         data={StepFieldTypeEnum.options.map((v) => ({
           value: v,
-          label: v.charAt(0).toUpperCase() + v.slice(1),
+          label: fieldTypeLabel(v),
         }))}
         {...form.getInputProps("type")}
       />
@@ -242,7 +255,7 @@ export const StepFieldList: React.FC<StepFieldListProps> = ({
                   {field.label}
                 </Text>
                 <Badge size="xs" variant="light">
-                  {field.type}
+                  {fieldTypeLabel(field.type)}
                 </Badge>
                 {field.multiValue && (
                   <Badge size="xs" variant="light" color="blue">

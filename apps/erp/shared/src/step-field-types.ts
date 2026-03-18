@@ -2,7 +2,14 @@ import { z } from "zod/v4";
 
 import { HateoasActionSchema, HateoasLinkSchema } from "./hateoas-types.js";
 
-export const StepFieldTypeEnum = z.enum(["string", "number"]);
+export const StepFieldTypeEnum = z.enum([
+  "string",
+  "number",
+  "date",
+  "datetime",
+  "yesNo",
+  "checkbox",
+]);
 export type StepFieldType = z.infer<typeof StepFieldTypeEnum>;
 export const StepFieldType = StepFieldTypeEnum.enum;
 

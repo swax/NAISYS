@@ -112,14 +112,34 @@ export async function findStepRunWithField(
 
 // --- Validation ---
 
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const DATETIME_RE = /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(:\d{2})?$/;
+
 function validateSingleValue(
   type: string,
   value: string,
 ): string | null {
-  if (value.trim() && type === StepFieldType.number) {
-    if (isNaN(Number(value))) {
-      return "Must be a number";
-    }
+  const v = value.trim();
+  if (!v) return null;
+
+  switch (type) {
+    case StepFieldType.number:
+      if (isNaN(Number(v))) return "Must be a number";
+      break;
+    case StepFieldType.date:
+      if (!DATE_RE.test(v) || isNaN(Date.parse(v)))
+        return "Must be a valid date (YYYY-MM-DD)";
+      break;
+    case StepFieldType.datetime:
+      if (!DATETIME_RE.test(v) || isNaN(Date.parse(v)))
+        return "Must be a valid date/time (YYYY-MM-DDTHH:mm)";
+      break;
+    case StepFieldType.yesNo:
+      if (v !== "Yes" && v !== "No") return 'Must be "Yes" or "No"';
+      break;
+    case StepFieldType.checkbox:
+      if (v !== "checked") return "Invalid checkbox value";
+      break;
   }
   return null;
 }

@@ -1,0 +1,2 @@
+-- No DDL needed: SQLite stores enums as TEXT.
+-- New StepFieldType values: date, datetime, yesNo, checkbox

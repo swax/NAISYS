@@ -1,7 +1,9 @@
 import "@mantine/core/styles.css";
+import "@mantine/dates/styles.css";
 import "@mantine/notifications/styles.css";
 
 import { MantineProvider } from "@mantine/core";
+import { DatesProvider } from "@mantine/dates";
 import { Notifications } from "@mantine/notifications";
 import React from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router";
@@ -94,12 +96,14 @@ const AppContent: React.FC = () => {
 const App: React.FC = () => {
   return (
     <MantineProvider defaultColorScheme="dark">
-      <Notifications position="top-right" />
-      <BrowserRouter basename="/erp">
-        <AuthProvider>
-          <AppContent />
-        </AuthProvider>
-      </BrowserRouter>
+      <DatesProvider settings={{ consistentWeeks: true }}>
+        <Notifications position="top-right" />
+        <BrowserRouter basename="/erp">
+          <AuthProvider>
+            <AppContent />
+          </AuthProvider>
+        </BrowserRouter>
+      </DatesProvider>
     </MantineProvider>
   );
 };
