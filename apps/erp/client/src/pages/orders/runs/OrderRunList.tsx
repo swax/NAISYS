@@ -161,6 +161,7 @@ export const OrderRunList: React.FC = () => {
                 <Table.Th>Rev</Table.Th>
                 <Table.Th>Status</Table.Th>
                 <Table.Th>Priority</Table.Th>
+                <Table.Th>Cost</Table.Th>
                 <Table.Th>Assigned To</Table.Th>
                 <Table.Th>Due</Table.Th>
                 <Table.Th>Created</Table.Th>
@@ -205,6 +206,11 @@ export const OrderRunList: React.FC = () => {
                         >
                           {item.priority}
                         </Badge>
+                      </Link>
+                    </Table.Td>
+                    <Table.Td>
+                      <Link to={runLink} style={cellLinkStyle}>
+                        {item.cost ? `$${item.cost.toFixed(2)}` : "\u2014"}
                       </Link>
                     </Table.Td>
                     <Table.Td>

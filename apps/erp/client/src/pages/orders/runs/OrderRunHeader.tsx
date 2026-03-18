@@ -235,6 +235,7 @@ export const OrderRunHeader: React.FC<Props> = ({
                 : "Cancelled"}{" "}
               by {orderRun.updatedBy} on{" "}
               {new Date(orderRun.updatedAt).toLocaleString()}
+              {orderRun.cost ? ` for $${orderRun.cost.toFixed(2)}` : ""}
             </Text>
             <ActionIcon
               size="xs"

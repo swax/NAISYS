@@ -25,6 +25,7 @@ export const OperationRunSchema = z.object({
   stepCount: z.number().optional(),
   predecessors: z.array(OperationPredecessorSchema).optional(),
   status: OperationRunStatusEnum,
+  cost: z.number().nullable(),
   completedAt: z.iso.datetime().nullable(),
   feedback: z.string().nullable(),
   createdAt: z.iso.datetime(),

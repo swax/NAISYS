@@ -283,6 +283,7 @@ export const OperationRunDetail: React.FC = () => {
                     <Text size="xs" c={color}>
                       {label} by {opRun.updatedBy} on{" "}
                       {new Date(opRun.updatedAt).toLocaleString()}
+                      {opRun.cost ? ` for $${opRun.cost.toFixed(2)}` : ""}
                     </Text>
                     <ActionIcon
                       size="xs"

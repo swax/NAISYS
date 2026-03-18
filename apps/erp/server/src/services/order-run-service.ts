@@ -95,6 +95,14 @@ export async function checkOpsComplete(
   return `Cannot close order run: incomplete operations — ${labels.join(", ")}`;
 }
 
+export async function sumOpRunCosts(orderRunId: number): Promise<number> {
+  const result = await erpDb.operationRun.aggregate({
+    where: { orderRunId },
+    _sum: { cost: true },
+  });
+  return Math.round((result._sum.cost ?? 0) * 100) / 100;
+}
+
 // --- Mutations ---
 
 export async function createOrderRun(
@@ -245,11 +253,12 @@ export async function transitionStatus(
   fromStatus: OrderRunStatus,
   toStatus: OrderRunStatus,
   userId: number,
+  extraData?: Record<string, unknown>,
 ): Promise<OrderRunWithRev> {
   return erpDb.$transaction(async (erpTx) => {
     const updated = await erpTx.orderRun.update({
       where: { id },
-      data: { status: toStatus, updatedById: userId },
+      data: { status: toStatus, updatedById: userId, ...extraData },
       include: includeRev,
     });
     await writeAuditEntry(
@@ -398,11 +407,18 @@ export async function completeOrderRun(
       }
     }
 
-    // Transition run to closed
+    // Sum operation run costs and transition run to closed
+    const costResult = await erpTx.operationRun.aggregate({
+      where: { orderRunId },
+      _sum: { cost: true },
+    });
+    const cost = Math.round((costResult._sum.cost ?? 0) * 100) / 100;
+
     const updated = await erpTx.orderRun.update({
       where: { id: orderRunId },
       data: {
         status: OrderRunStatusValues.closed,
+        cost,
         updatedById: userId,
       },
       include: includeRev,

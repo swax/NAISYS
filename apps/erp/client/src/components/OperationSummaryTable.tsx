@@ -7,6 +7,7 @@ export interface OperationSummaryItem {
   seqNo: number;
   title: string;
   stepCount?: number;
+  cost?: number | null;
   predecessors?: OperationPredecessor[];
 }
 
@@ -41,6 +42,7 @@ export const OperationSummaryTable: React.FC<OperationSummaryTableProps> = ({
                 <Table.Th>Title</Table.Th>
                 <Table.Th>Prerequisites</Table.Th>
                 <Table.Th>Steps</Table.Th>
+                <Table.Th>Cost</Table.Th>
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
@@ -74,6 +76,9 @@ export const OperationSummaryTable: React.FC<OperationSummaryTableProps> = ({
                     )}
                   </Table.Td>
                   <Table.Td>{op.stepCount ?? 0}</Table.Td>
+                  <Table.Td>
+                    {op.cost ? `$${op.cost.toFixed(2)}` : "\u2014"}
+                  </Table.Td>
                 </Table.Tr>
               ))}
             </Table.Tbody>

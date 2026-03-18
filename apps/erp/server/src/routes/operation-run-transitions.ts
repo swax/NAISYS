@@ -13,6 +13,7 @@ import {
   clockIn,
   clockOutAllForOpRun,
   isUserClockedIn,
+  sumLaborTicketCosts,
 } from "../services/labor-ticket-service.js";
 import {
   checkPredecessorsComplete,
@@ -113,15 +114,16 @@ export default function operationRunTransitionRoutes(fastify: FastifyInstance) {
       const stepsErr = await checkStepsComplete(resolved.opRun.id);
       if (stepsErr) return unprocessable(reply, stepsErr);
 
+      await clockOutAllForOpRun(resolved.opRun.id, userId);
+      const cost = await sumLaborTicketCosts(resolved.opRun.id);
       const opRun = await transitionStatus(
         resolved.opRun.id,
         "complete",
         OperationRunStatus.in_progress,
         OperationRunStatus.completed,
         userId,
-        { completedAt: new Date() },
+        { completedAt: new Date(), cost },
       );
-      await clockOutAllForOpRun(resolved.opRun.id, userId);
       await unblockSuccessors(
         resolved.run.id,
         resolved.opRun.operationId,
@@ -160,6 +162,7 @@ export default function operationRunTransitionRoutes(fastify: FastifyInstance) {
       ]);
       if (statusErr) return conflict(reply, statusErr);
 
+      const cost = await sumLaborTicketCosts(resolved.opRun.id);
       const opRun = await transitionStatus(
         resolved.opRun.id,
         "skip",
@@ -168,6 +171,7 @@ export default function operationRunTransitionRoutes(fastify: FastifyInstance) {
           | typeof OperationRunStatus.pending,
         OperationRunStatus.skipped,
         userId,
+        cost > 0 ? { cost } : undefined,
       );
       await unblockSuccessors(
         resolved.run.id,
@@ -206,12 +210,15 @@ export default function operationRunTransitionRoutes(fastify: FastifyInstance) {
       ]);
       if (statusErr) return conflict(reply, statusErr);
 
+      await clockOutAllForOpRun(resolved.opRun.id, userId);
+      const cost = await sumLaborTicketCosts(resolved.opRun.id);
       const opRun = await transitionStatus(
         resolved.opRun.id,
         "fail",
         OperationRunStatus.in_progress,
         OperationRunStatus.failed,
         userId,
+        cost > 0 ? { cost } : undefined,
       );
       return formatOpRun(orderKey, runNo, request.erpUser, opRun);
     },
