@@ -182,6 +182,8 @@ export const apiEndpoints = {
     `orders/${key}/runs/${runNo}/close`,
   orderRunCancel: (key: string, runNo: number | string) =>
     `orders/${key}/runs/${runNo}/cancel`,
+  orderRunComplete: (key: string, runNo: number | string) =>
+    `orders/${key}/runs/${runNo}/complete`,
   orderRunReopen: (key: string, runNo: number | string) =>
     `orders/${key}/runs/${runNo}/reopen`,
   users: "users",

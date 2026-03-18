@@ -33,6 +33,8 @@ export const OrderRunSchema = z.object({
   orderKey: z.string(),
   revNo: z.number(),
   itemKey: z.string().nullable(),
+  instanceId: z.number().nullable(),
+  instanceKey: z.string().nullable(),
   status: OrderRunStatusEnum,
   priority: OrderRunPriorityEnum,
   scheduledStartAt: z.iso.datetime().nullable(),
@@ -75,6 +77,25 @@ export const UpdateOrderRunSchema = z
   .strict();
 
 export type UpdateOrderRun = z.infer<typeof UpdateOrderRunSchema>;
+
+// Input for completing an order run (creates item instance + closes run)
+export const CompleteOrderRunSchema = z
+  .object({
+    instanceKey: z.string().max(200).optional(),
+    quantity: z.number().nullable().optional(),
+    fieldValues: z
+      .array(
+        z.object({
+          fieldId: z.number().int(),
+          value: z.string().max(2000),
+          setIndex: z.number().int().min(0).optional(),
+        }),
+      )
+      .optional(),
+  })
+  .strict();
+
+export type CompleteOrderRun = z.infer<typeof CompleteOrderRunSchema>;
 
 // Query params for listing order runs
 export const OrderRunListQuerySchema = z.object({

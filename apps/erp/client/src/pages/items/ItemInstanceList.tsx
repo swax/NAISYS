@@ -190,7 +190,11 @@ export const ItemInstanceList: React.FC = () => {
                     </Text>
                   </Table.Td>
                   <Table.Td>
-                    <Text size="sm">{inst.orderRunKey || "—"}</Text>
+                    <Text size="sm">
+                      {inst.orderKey
+                        ? `${inst.orderKey} Run ${inst.orderRunNo}`
+                        : "—"}
+                    </Text>
                   </Table.Td>
                   <Table.Td>
                     {new Date(inst.createdAt).toLocaleDateString()}

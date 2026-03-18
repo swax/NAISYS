@@ -1,4 +1,13 @@
-import { ActionIcon, Anchor, Badge, Button, Group, Text } from "@mantine/core";
+import {
+  ActionIcon,
+  Anchor,
+  Badge,
+  Button,
+  Group,
+  Text,
+  Tooltip,
+} from "@mantine/core";
+import { useDisclosure } from "@mantine/hooks";
 import type { OrderRun } from "@naisys-erp/shared";
 import { OrderRunPriority, OrderRunStatus } from "@naisys-erp/shared";
 import { IconArrowBackUp } from "@tabler/icons-react";
@@ -6,6 +15,7 @@ import { useNavigate } from "react-router";
 
 import { api, apiEndpoints, showErrorNotification } from "../../../lib/api";
 import { hasAction } from "../../../lib/hateoas";
+import { CompletionDialog } from "./CompletionDialog";
 
 const STATUS_COLORS: Record<string, string> = {
   [OrderRunStatus.released]: "blue",
@@ -35,6 +45,8 @@ export const OrderRunHeader: React.FC<Props> = ({
   onUpdate,
 }) => {
   const navigate = useNavigate();
+  const [completionOpened, { open: openCompletion, close: closeCompletion }] =
+    useDisclosure();
 
   const handleAction = async (
     action: "start" | "close" | "cancel" | "reopen",
@@ -133,6 +145,29 @@ export const OrderRunHeader: React.FC<Props> = ({
             </Text>
           </>
         )}
+        {orderRun.instanceKey && orderRun.itemKey && (
+          <>
+            <Text size="sm" c="dimmed">
+              |
+            </Text>
+            <Text size="sm" c="dimmed">
+              Completed into{" "}
+              <Anchor
+                size="sm"
+                href={`/erp/items/${orderRun.itemKey}/instances/${orderRun.instanceId}`}
+                onClick={(e: React.MouseEvent) => {
+                  if (e.button === 1 || e.ctrlKey || e.metaKey) return;
+                  e.preventDefault();
+                  void navigate(
+                    `/items/${orderRun.itemKey}/instances/${orderRun.instanceId}`,
+                  );
+                }}
+              >
+                {orderRun.itemKey} {orderRun.instanceKey}
+              </Anchor>
+            </Text>
+          </>
+        )}
       </Group>
       <Group gap="xs">
         {hasAction(orderRun._actions, "start") && (
@@ -145,16 +180,50 @@ export const OrderRunHeader: React.FC<Props> = ({
             Start
           </Button>
         )}
-        {hasAction(orderRun._actions, "close") && (
-          <Button
-            size="xs"
-            color="green"
-            data-testid="order-run-close"
-            onClick={() => handleAction("close")}
-          >
-            Close
-          </Button>
-        )}
+        {(() => {
+          const completeAction = hasAction(orderRun._actions, "complete");
+          if (!completeAction) return null;
+          const btn = (
+            <Button
+              size="xs"
+              color="green"
+              data-testid="order-run-complete"
+              disabled={completeAction.disabled}
+              onClick={openCompletion}
+            >
+              Complete
+            </Button>
+          );
+          return completeAction.disabledReason ? (
+            <Tooltip label={completeAction.disabledReason} multiline maw={350}>
+              {btn}
+            </Tooltip>
+          ) : (
+            btn
+          );
+        })()}
+        {(() => {
+          const closeAction = hasAction(orderRun._actions, "close");
+          if (!closeAction) return null;
+          const btn = (
+            <Button
+              size="xs"
+              color="green"
+              data-testid="order-run-close"
+              disabled={closeAction.disabled}
+              onClick={() => handleAction("close")}
+            >
+              Close
+            </Button>
+          );
+          return closeAction.disabledReason ? (
+            <Tooltip label={closeAction.disabledReason} multiline maw={350}>
+              {btn}
+            </Tooltip>
+          ) : (
+            btn
+          );
+        })()}
         {hasAction(orderRun._actions, "reopen") && (
           <Group gap="xs" align="center">
             <Text
@@ -203,6 +272,15 @@ export const OrderRunHeader: React.FC<Props> = ({
           </Button>
         )}
       </Group>
+
+      <CompletionDialog
+        opened={completionOpened}
+        onClose={closeCompletion}
+        orderRun={orderRun}
+        orderKey={orderKey}
+        runNo={runNo}
+        onCompleted={onUpdate}
+      />
     </Group>
   );
 };

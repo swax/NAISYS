@@ -23,6 +23,7 @@ import {
   resolveOrderRun,
 } from "../route-helpers.js";
 import {
+  checkStepsComplete,
   getOpRun,
   listOpRuns,
   type OpRunWithOp,
@@ -35,13 +36,14 @@ function opRunResource(orderKey: string, runNo: number) {
   return `orders/${orderKey}/runs/${runNo}/ops`;
 }
 
-function opRunItemActions(
+async function opRunItemActions(
   orderKey: string,
   runNo: number,
   seqNo: number,
+  opRunId: number,
   status: string,
   user: ErpUser | undefined,
-): HateoasAction[] {
+): Promise<HateoasAction[]> {
   const href = `${API_PREFIX}/${opRunResource(orderKey, runNo)}/${seqNo}`;
   const actions: HateoasAction[] = [];
   const isExecutor = hasPermission(user, "order_executor");
@@ -84,6 +86,8 @@ function opRunItemActions(
       });
     }
   } else if (status === OperationRunStatus.in_progress) {
+    const stepsErr = isExecutor ? await checkStepsComplete(opRunId) : null;
+
     if (isExecutor) {
       actions.push(
         {
@@ -98,6 +102,7 @@ function opRunItemActions(
           href: `${href}/complete`,
           method: "POST",
           title: "Complete",
+          ...(stepsErr ? { disabled: true, disabledReason: stepsErr } : {}),
         },
       );
     }
@@ -138,7 +143,7 @@ export const SeqNoParamsSchema = z.object({
   seqNo: z.coerce.number().int(),
 });
 
-export function formatOpRun(
+export async function formatOpRun(
   orderKey: string,
   runNo: number,
   user: ErpUser | undefined,
@@ -177,26 +182,34 @@ export function formatOpRun(
         title: "Labor Tickets",
       } as HateoasLink,
     ],
-    _actions: opRunItemActions(orderKey, runNo, seqNo, opRun.status, user),
+    _actions: await opRunItemActions(orderKey, runNo, seqNo, opRun.id, opRun.status, user),
   };
 }
 
 function formatListOpRun(
   orderKey: string,
   runNo: number,
-  user: ErpUser | undefined,
   opRun: OpRunWithSummary,
 ) {
-  const { _actions, ...rest } = formatOpRun(orderKey, runNo, user, opRun);
+  const seqNo = opRun.operation.seqNo;
   return {
-    ...rest,
+    id: opRun.id,
+    orderRunId: opRun.orderRunId,
+    operationId: opRun.operationId,
+    seqNo,
+    title: opRun.operation.title,
+    description: opRun.operation.description,
+    status: opRun.status,
+    completedAt: formatDate(opRun.completedAt),
+    feedback: opRun.feedback,
+    ...formatAuditFields(opRun),
     stepCount: opRun._count.stepRuns,
     predecessors: opRun.operation.predecessors.map((d) => ({
       seqNo: d.predecessor.seqNo,
       title: d.predecessor.title,
     })),
     _links: [
-      selfLink(`/${opRunResource(orderKey, runNo)}/${opRun.operation.seqNo}`),
+      selfLink(`/${opRunResource(orderKey, runNo)}/${seqNo}`),
     ],
   };
 }
@@ -227,7 +240,7 @@ export default function operationRunRoutes(fastify: FastifyInstance) {
 
       return {
         items: items.map((opRun) =>
-          formatListOpRun(orderKey, runNo, request.erpUser, opRun),
+          formatListOpRun(orderKey, runNo, opRun),
         ),
         total: items.length,
         _links: [selfLink(`/${opRunResource(orderKey, runNo)}`)],

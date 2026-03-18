@@ -1,4 +1,5 @@
 import {
+  Anchor,
   Button,
   Card,
   Container,
@@ -184,9 +185,24 @@ export const ItemInstanceDetail: React.FC = () => {
           </Group>
           <Group>
             <Text fw={600} w={120}>
-              Order Run:
+              Produced By:
             </Text>
-            <Text>{instance.orderRunKey || "\u2014"}</Text>
+            {instance.orderKey ? (
+              <Anchor
+                href={`/erp/orders/${instance.orderKey}/runs/${instance.orderRunNo}`}
+                onClick={(e: React.MouseEvent) => {
+                  if (e.button === 1 || e.ctrlKey || e.metaKey) return;
+                  e.preventDefault();
+                  void navigate(
+                    `/orders/${instance.orderKey}/runs/${instance.orderRunNo}`,
+                  );
+                }}
+              >
+                {instance.orderKey} Order Run {instance.orderRunNo}
+              </Anchor>
+            ) : (
+              <Text>{"\u2014"}</Text>
+            )}
           </Group>
         </Stack>
       </Card>

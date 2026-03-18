@@ -65,9 +65,13 @@ function instanceBasePath(itemKey: string): string {
   return `items/${itemKey}/instances`;
 }
 
-function instanceLinks(itemKey: string, instanceId: number): HateoasLink[] {
+function instanceLinks(
+  itemKey: string,
+  instanceId: number,
+  inst: ItemInstanceWithRelations,
+): HateoasLink[] {
   const base = instanceBasePath(itemKey);
-  return [
+  const links: HateoasLink[] = [
     selfLink(`/${base}/${instanceId}`),
     {
       rel: "collection",
@@ -81,6 +85,14 @@ function instanceLinks(itemKey: string, instanceId: number): HateoasLink[] {
     },
     schemaLink("ItemInstance"),
   ];
+  if (inst.orderRun) {
+    links.push({
+      rel: "orderRun",
+      href: `${API_PREFIX}/orders/${inst.orderRun.order.key}/runs/${inst.orderRun.runNo}`,
+      title: "Order Run",
+    });
+  }
+  return links;
 }
 
 function instanceActions(
@@ -107,9 +119,12 @@ function instanceActions(
   ];
 }
 
-function orderRunKey(inst: ItemInstanceWithRelations): string | null {
-  if (!inst.orderRun) return null;
-  return `${inst.orderRun.order.key}#${inst.orderRun.runNo}`;
+function orderKey(inst: ItemInstanceWithRelations): string | null {
+  return inst.orderRun?.order.key ?? null;
+}
+
+function orderRunNo(inst: ItemInstanceWithRelations): number | null {
+  return inst.orderRun?.runNo ?? null;
 }
 
 function buildFieldValues(inst: ItemInstanceWithRelations) {
@@ -202,12 +217,13 @@ function formatInstance(
   return {
     id: inst.id,
     itemKey: inst.item.key,
-    orderRunKey: orderRunKey(inst),
+    orderKey: orderKey(inst),
+    orderRunNo: orderRunNo(inst),
     key: inst.key,
     quantity: inst.quantity,
     fieldValues: buildFieldValues(inst),
     ...formatAuditFields(inst),
-    _links: instanceLinks(inst.item.key, inst.id),
+    _links: instanceLinks(inst.item.key, inst.id, inst),
     _actions: instanceActions(inst.item.key, inst.id, user),
     _actionTemplates: buildActionTemplates(
       inst.item.key,
@@ -225,7 +241,8 @@ function formatListInstance(
   return {
     id: inst.id,
     itemKey: inst.item.key,
-    orderRunKey: orderRunKey(inst),
+    orderKey: orderKey(inst),
+    orderRunNo: orderRunNo(inst),
     key: inst.key,
     quantity: inst.quantity,
     fieldValues: buildFieldValues(inst),
