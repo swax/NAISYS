@@ -1,7 +1,4 @@
-import type {
-  HateoasAction,
-  HateoasActionTemplate,
-} from "./hateoas-types.js";
+import type { HateoasAction, HateoasActionTemplate } from "./hateoas-types.js";
 
 export function hasAction(
   actions: HateoasAction[] | undefined,

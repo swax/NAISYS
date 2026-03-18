@@ -125,10 +125,7 @@ export const StepFieldRunList: React.FC<Props> = ({
     setFieldStatus((prev) => ({ ...prev, [key]: status }));
   };
 
-  const saveFieldValue = async (
-    fv: StepFieldValue,
-    newValue: string,
-  ) => {
+  const saveFieldValue = async (fv: StepFieldValue, newValue: string) => {
     const currentValue = fv.value;
     if (newValue === currentValue) return;
 
@@ -255,11 +252,7 @@ export const StepFieldRunList: React.FC<Props> = ({
             value={value ? new Date(value + "T00:00:00") : null}
             onChange={(d) =>
               onImmediateChange(
-                d
-                  ? typeof d === "string"
-                    ? d
-                    : formatDate(d)
-                  : "",
+                d ? (typeof d === "string" ? d : formatDate(d)) : "",
               )
             }
             rightSection={<StatusIcon status={status} />}
@@ -278,11 +271,7 @@ export const StepFieldRunList: React.FC<Props> = ({
             value={value ? new Date(value) : null}
             onChange={(d) =>
               onImmediateChange(
-                d
-                  ? typeof d === "string"
-                    ? d
-                    : formatDateTime(d)
-                  : "",
+                d ? (typeof d === "string" ? d : formatDateTime(d)) : "",
               )
             }
             rightSection={<StatusIcon status={status} />}
@@ -359,7 +348,8 @@ export const StepFieldRunList: React.FC<Props> = ({
   }
 
   const canEdit =
-    !step.completed && !!hasActionTemplate(step._actionTemplates, "updateField");
+    !step.completed &&
+    !!hasActionTemplate(step._actionTemplates, "updateField");
 
   return (
     <Stack gap="xs" mt="xs">

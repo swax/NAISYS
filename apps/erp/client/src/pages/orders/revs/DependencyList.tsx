@@ -146,7 +146,10 @@ export const DependencyList: React.FC<DependencyListProps> = ({
               <Badge variant="light" size="lg">
                 {dep.predecessorSeqNo}. {dep.predecessorTitle}
               </Badge>
-              {hasActionTemplate(deps?._actionTemplates, "deleteDependency") && (
+              {hasActionTemplate(
+                deps?._actionTemplates,
+                "deleteDependency",
+              ) && (
                 <Button
                   size="compact-xs"
                   color="red"

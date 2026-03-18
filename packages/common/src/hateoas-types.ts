@@ -38,9 +38,7 @@ export const HateoasActionTemplateSchema = z.object({
   schema: z.string().optional(),
 });
 
-export type HateoasActionTemplate = z.infer<
-  typeof HateoasActionTemplateSchema
->;
+export type HateoasActionTemplate = z.infer<typeof HateoasActionTemplateSchema>;
 
 export const HateoasLinksSchema = z.object({
   _links: z.array(HateoasLinkSchema),

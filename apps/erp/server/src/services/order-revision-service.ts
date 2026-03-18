@@ -192,7 +192,36 @@ export async function updateRevision(
 }
 
 export async function deleteRevision(id: number): Promise<void> {
-  await erpDb.orderRevision.delete({ where: { id } });
+  await erpDb.$transaction(async (erpTx) => {
+    // Delete child records bottom-up: step fields → steps → operations → revision
+    const operations = await erpTx.operation.findMany({
+      where: { orderRevId: id },
+      select: { id: true },
+    });
+    const opIds = operations.map((op) => op.id);
+
+    if (opIds.length > 0) {
+      const steps = await erpTx.step.findMany({
+        where: { operationId: { in: opIds } },
+        select: { id: true },
+      });
+      const stepIds = steps.map((s) => s.id);
+
+      if (stepIds.length > 0) {
+        await erpTx.stepField.deleteMany({
+          where: { stepId: { in: stepIds } },
+        });
+      }
+      await erpTx.step.deleteMany({
+        where: { operationId: { in: opIds } },
+      });
+      await erpTx.operation.deleteMany({
+        where: { orderRevId: id },
+      });
+    }
+
+    await erpTx.orderRevision.delete({ where: { id } });
+  });
 }
 
 export async function transitionStatus(

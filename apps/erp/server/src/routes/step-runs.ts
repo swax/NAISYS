@@ -136,7 +136,12 @@ function formatStepRun(
         required: field.required,
         setIndex: si,
         value,
-        validation: validateFieldValue(field.type, field.multiValue, field.required, value),
+        validation: validateFieldValue(
+          field.type,
+          field.multiValue,
+          field.required,
+          value,
+        ),
       });
     }
   }
@@ -398,7 +403,12 @@ export default function stepRunRoutes(fastify: FastifyInstance) {
         required: field.required,
         setIndex: si,
         value,
-        validation: validateFieldValue(field.type, field.multiValue, field.required, value),
+        validation: validateFieldValue(
+          field.type,
+          field.multiValue,
+          field.required,
+          value,
+        ),
       };
     },
   });

@@ -118,10 +118,7 @@ export async function findStepRunWithField(
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const DATETIME_RE = /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(:\d{2})?$/;
 
-function validateSingleValue(
-  type: string,
-  value: string,
-): string | null {
+function validateSingleValue(type: string, value: string): string | null {
   const v = value.trim();
   if (!v) return null;
 
@@ -179,7 +176,11 @@ function fieldValueKey(stepFieldId: number, setIndex: number): string {
 
 export function validateCompletionFields(
   existing: StepRunWithStep,
-  submittedFieldValues?: { stepFieldId: number; value: string; setIndex?: number }[],
+  submittedFieldValues?: {
+    stepFieldId: number;
+    value: string;
+    setIndex?: number;
+  }[],
 ): string | null {
   const submittedMap = new Map(
     (submittedFieldValues ?? []).map((fv) => [
@@ -197,7 +198,8 @@ export function validateCompletionFields(
   // Determine how many sets exist
   const allSetIndexes = new Set<number>();
   for (const fv of existing.fieldValues) allSetIndexes.add(fv.setIndex);
-  for (const fv of submittedFieldValues ?? []) allSetIndexes.add(fv.setIndex ?? 0);
+  for (const fv of submittedFieldValues ?? [])
+    allSetIndexes.add(fv.setIndex ?? 0);
   if (allSetIndexes.size === 0) allSetIndexes.add(0);
 
   const errors: string[] = [];
@@ -205,7 +207,12 @@ export function validateCompletionFields(
     for (const field of existing.step.fields) {
       const key = fieldValueKey(field.id, si);
       const value = submittedMap.get(key) ?? storedMap.get(key) ?? "";
-      const result = validateFieldValue(field.type, field.multiValue, field.required, value);
+      const result = validateFieldValue(
+        field.type,
+        field.multiValue,
+        field.required,
+        value,
+      );
       if (!result.valid) {
         const prefix = existing.step.multiSet ? `Set ${si + 1} / ` : "";
         errors.push(`${prefix}${field.label}: ${result.error}`);
@@ -224,7 +231,9 @@ export function validateCompletionFields(
 export async function updateStepRun(
   id: number,
   completed: boolean | undefined,
-  fieldValues: { stepFieldId: number; value: string; setIndex?: number }[] | undefined,
+  fieldValues:
+    | { stepFieldId: number; value: string; setIndex?: number }[]
+    | undefined,
   userId: number,
 ): Promise<StepRunWithStep> {
   return erpDb.$transaction(async (erpTx) => {

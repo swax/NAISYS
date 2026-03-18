@@ -417,7 +417,10 @@ export const HostPage: React.FC = () => {
               >
                 <Table.Td>{agent.name}</Table.Td>
                 <Table.Td>{agent.title}</Table.Td>
-                {hasActionTemplate(hostDetail?._actionTemplates, "unassignAgent") && (
+                {hasActionTemplate(
+                  hostDetail?._actionTemplates,
+                  "unassignAgent",
+                ) && (
                   <Table.Td>
                     <Button
                       size="compact-xs"

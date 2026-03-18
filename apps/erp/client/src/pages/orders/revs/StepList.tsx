@@ -200,7 +200,9 @@ export const StepList: React.FC<StepListProps> = ({
                     />
                     <Checkbox
                       label="Allow multiple field value sets"
-                      {...editForm.getInputProps("multiSet", { type: "checkbox" })}
+                      {...editForm.getInputProps("multiSet", {
+                        type: "checkbox",
+                      })}
                     />
                     <Group justify="flex-end" mt="xs">
                       <Button
@@ -301,7 +303,9 @@ export const StepList: React.FC<StepListProps> = ({
                   />
                   <Checkbox
                     label="Allow multiple field value sets"
-                    {...createForm.getInputProps("multiSet", { type: "checkbox" })}
+                    {...createForm.getInputProps("multiSet", {
+                      type: "checkbox",
+                    })}
                   />
                   <Group justify="flex-end" mt="xs">
                     <Button
