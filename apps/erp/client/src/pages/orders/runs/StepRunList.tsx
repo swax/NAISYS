@@ -20,7 +20,7 @@ import { useCallback, useEffect, useState } from "react";
 import { CompactMarkdown } from "../../../components/CompactMarkdown";
 import { api, apiEndpoints, showErrorNotification } from "../../../lib/api";
 import { hasAction } from "../../../lib/hateoas";
-import { StepFieldRunList } from "./StepFieldRunList";
+import { editKey, StepFieldRunList } from "./StepFieldRunList";
 
 interface Props {
   orderKey: string;
@@ -30,7 +30,18 @@ interface Props {
 }
 
 interface StepRunState {
-  fieldValues: Record<number, string>; // stepFieldId → value
+  fieldValues: Record<string, string>; // editKey → value
+}
+
+function buildEdits(step: StepRun): StepRunState {
+  return {
+    fieldValues: Object.fromEntries(
+      step.fieldValues.map((fv) => [
+        editKey(fv.stepFieldId, fv.setIndex),
+        fv.value,
+      ]),
+    ),
+  };
 }
 
 export const StepRunList: React.FC<Props> = ({
@@ -60,14 +71,9 @@ export const StepRunList: React.FC<Props> = ({
         apiEndpoints.stepRuns(orderKey, runNo, seqNo),
       );
       setData(result);
-      // Initialize edit state from fetched data
       const newEdits: Record<number, StepRunState> = {};
       for (const step of result.items) {
-        newEdits[step.id] = {
-          fieldValues: Object.fromEntries(
-            step.fieldValues.map((fv) => [fv.stepFieldId, fv.value]),
-          ),
-        };
+        newEdits[step.id] = buildEdits(step);
       }
       setEdits(newEdits);
     } catch (err) {
@@ -92,11 +98,7 @@ export const StepRunList: React.FC<Props> = ({
     );
     setEdits((prev) => ({
       ...prev,
-      [updated.id]: {
-        fieldValues: Object.fromEntries(
-          updated.fieldValues.map((fv) => [fv.stepFieldId, fv.value]),
-        ),
-      },
+      [updated.id]: buildEdits(updated),
     }));
   };
 
@@ -120,13 +122,15 @@ export const StepRunList: React.FC<Props> = ({
   const updateFieldValue = (
     stepId: number,
     stepFieldId: number,
+    setIndex: number,
     value: string,
   ) => {
+    const key = editKey(stepFieldId, setIndex);
     setEdits((prev) => ({
       ...prev,
       [stepId]: {
         ...prev[stepId],
-        fieldValues: { ...prev[stepId]?.fieldValues, [stepFieldId]: value },
+        fieldValues: { ...prev[stepId]?.fieldValues, [key]: value },
       },
     }));
   };
@@ -134,25 +138,87 @@ export const StepRunList: React.FC<Props> = ({
   const handleFieldSaved = (
     stepId: number,
     stepFieldId: number,
+    setIndex: number,
     updated: StepFieldValue,
   ) => {
+    const key = editKey(stepFieldId, setIndex);
+    setData((prev) =>
+      prev
+        ? {
+            ...prev,
+            items: prev.items.map((s) => {
+              if (s.id !== stepId) return s;
+              // Update existing or add new field value
+              const exists = s.fieldValues.some(
+                (fv) =>
+                  fv.stepFieldId === stepFieldId && fv.setIndex === setIndex,
+              );
+              return {
+                ...s,
+                fieldValues: exists
+                  ? s.fieldValues.map((fv) =>
+                      fv.stepFieldId === stepFieldId &&
+                      fv.setIndex === setIndex
+                        ? updated
+                        : fv,
+                    )
+                  : [...s.fieldValues, updated],
+              };
+            }),
+          }
+        : prev,
+    );
+    setEdits((prev) => ({
+      ...prev,
+      [stepId]: {
+        ...prev[stepId],
+        fieldValues: {
+          ...prev[stepId]?.fieldValues,
+          [key]: updated.value,
+        },
+      },
+    }));
+  };
+
+  const handleSetAdded = (stepId: number, step: StepRun) => {
+    // Determine the next set index
+    const maxSetIndex = step.fieldValues.reduce(
+      (max, fv) => Math.max(max, fv.setIndex),
+      -1,
+    );
+    const nextSetIndex = maxSetIndex + 1;
+
+    // Add empty field values for the new set (client-side only until saved)
+    // Get unique field definitions from set 0
+    const fieldDefs = step.fieldValues.filter((fv) => fv.setIndex === 0);
+    if (fieldDefs.length === 0) return;
+
+    const newFieldValues: StepFieldValue[] = fieldDefs.map((fv) => ({
+      ...fv,
+      setIndex: nextSetIndex,
+      value: "",
+      validation: fv.required
+        ? { valid: false, error: "Required" }
+        : { valid: true },
+    }));
+
     setData((prev) =>
       prev
         ? {
             ...prev,
             items: prev.items.map((s) =>
               s.id === stepId
-                ? {
-                    ...s,
-                    fieldValues: s.fieldValues.map((fv) =>
-                      fv.stepFieldId === stepFieldId ? updated : fv,
-                    ),
-                  }
+                ? { ...s, fieldValues: [...s.fieldValues, ...newFieldValues] }
                 : s,
             ),
           }
         : prev,
     );
+  };
+
+  const handleSetDeleted = (_stepId: number) => {
+    // Refetch to get re-indexed data from server
+    void fetchSteps();
   };
 
   return (
@@ -172,15 +238,45 @@ export const StepRunList: React.FC<Props> = ({
             return (
               <Card key={step.id} withBorder p="sm">
                 <Stack gap="xs">
-                  <Group justify="space-between" align="flex-start">
+                  <Group justify="space-between" align="center">
                     <Text fw={600} size="sm">
                       STEP {step.seqNo}
                     </Text>
-                    {!canUpdate && step.completed && (
-                      <Text size="xs" c="green">
-                        Completed
-                      </Text>
-                    )}
+                    <Group gap="xs">
+                      {canUpdate && !step.completed && (
+                        <Button
+                          size="xs"
+                          color="green"
+                          loading={savingStep === step.id}
+                          onClick={() => saveStep(step, true)}
+                        >
+                          Complete
+                        </Button>
+                      )}
+                      {canUpdate && step.completed && (
+                        <Group gap="xs" align="center">
+                          <Text size="xs" c="green">
+                            Completed by {step.updatedBy} on{" "}
+                            {new Date(step.updatedAt).toLocaleString()}
+                          </Text>
+                          <ActionIcon
+                            size="xs"
+                            variant="subtle"
+                            color="gray"
+                            loading={savingStep === step.id}
+                            onClick={() => saveStep(step, false)}
+                            title="Undo completion"
+                          >
+                            <IconArrowBackUp size={14} />
+                          </ActionIcon>
+                        </Group>
+                      )}
+                      {!canUpdate && step.completed && (
+                        <Text size="xs" c="green">
+                          Completed
+                        </Text>
+                      )}
+                    </Group>
                   </Group>
 
                   {step.instructions ? (
@@ -198,45 +294,20 @@ export const StepRunList: React.FC<Props> = ({
                       seqNo={seqNo}
                       step={step}
                       edits={edit?.fieldValues ?? {}}
-                      onFieldChange={(stepFieldId, value) =>
-                        updateFieldValue(step.id, stepFieldId, value)
+                      onFieldChange={(stepFieldId, setIndex, value) =>
+                        updateFieldValue(step.id, stepFieldId, setIndex, value)
                       }
-                      onFieldSaved={(stepFieldId, updated) =>
-                        handleFieldSaved(step.id, stepFieldId, updated)
+                      onFieldSaved={(stepFieldId, setIndex, updated) =>
+                        handleFieldSaved(
+                          step.id,
+                          stepFieldId,
+                          setIndex,
+                          updated,
+                        )
                       }
+                      onSetAdded={() => handleSetAdded(step.id, step)}
+                      onSetDeleted={() => handleSetDeleted(step.id)}
                     />
-                  )}
-
-                  {canUpdate && (
-                    <Group justify="flex-end" mt="xs">
-                      {step.completed ? (
-                        <Group gap="xs" align="center">
-                          <Text size="xs" c="green">
-                            Completed by {step.updatedBy} on{" "}
-                            {new Date(step.updatedAt).toLocaleString()}
-                          </Text>
-                          <ActionIcon
-                            size="xs"
-                            variant="subtle"
-                            color="gray"
-                            loading={savingStep === step.id}
-                            onClick={() => saveStep(step, false)}
-                            title="Undo completion"
-                          >
-                            <IconArrowBackUp size={14} />
-                          </ActionIcon>
-                        </Group>
-                      ) : (
-                        <Button
-                          size="xs"
-                          color="green"
-                          loading={savingStep === step.id}
-                          onClick={() => saveStep(step, true)}
-                        >
-                          Complete
-                        </Button>
-                      )}
-                    </Group>
                   )}
                 </Stack>
               </Card>

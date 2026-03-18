@@ -1,5 +1,6 @@
 import {
   ActionIcon,
+  Button,
   Checkbox,
   Group,
   Loader,
@@ -15,6 +16,7 @@ import {
   IconAlertCircle,
   IconCheck,
   IconPlus,
+  IconTrash,
   IconX,
 } from "@tabler/icons-react";
 import { useRef, useState } from "react";
@@ -30,6 +32,11 @@ function formatDateTime(d: Date): string {
 }
 import { hasAction } from "../../../lib/hateoas";
 
+/** Composite key for edits map: fieldId + setIndex */
+function editKey(stepFieldId: number, setIndex: number): string {
+  return `${stepFieldId}_${setIndex}`;
+}
+
 type FieldSaveStatus = "saving" | "saved" | "error";
 
 interface Props {
@@ -37,9 +44,15 @@ interface Props {
   runNo: string;
   seqNo: string;
   step: StepRun;
-  edits: Record<number, string>; // stepFieldId → value
-  onFieldChange: (stepFieldId: number, value: string) => void;
-  onFieldSaved: (stepFieldId: number, updated: StepFieldValue) => void;
+  edits: Record<string, string>; // editKey → value
+  onFieldChange: (stepFieldId: number, setIndex: number, value: string) => void;
+  onFieldSaved: (
+    stepFieldId: number,
+    setIndex: number,
+    updated: StepFieldValue,
+  ) => void;
+  onSetAdded: () => void;
+  onSetDeleted: (setIndex: number) => void;
 }
 
 function StatusIcon({ status }: { status?: FieldSaveStatus }) {
@@ -49,6 +62,8 @@ function StatusIcon({ status }: { status?: FieldSaveStatus }) {
   return null;
 }
 
+export { editKey };
+
 export const StepFieldRunList: React.FC<Props> = ({
   orderKey,
   runNo,
@@ -57,14 +72,42 @@ export const StepFieldRunList: React.FC<Props> = ({
   edits,
   onFieldChange,
   onFieldSaved,
+  onSetAdded,
+  onSetDeleted,
 }) => {
   const [fieldStatus, setFieldStatus] = useState<
     Record<string, FieldSaveStatus>
   >({});
   const savedTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  const [currentSetIndex, setCurrentSetIndex] = useState(0);
+  const [deletingSet, setDeletingSet] = useState(false);
 
-  const setFieldSaveStatus = (fieldId: number, status: FieldSaveStatus) => {
-    const key = String(fieldId);
+  // Determine distinct set indexes from field values
+  const setIndexes = [
+    ...new Set(step.fieldValues.map((fv) => fv.setIndex)),
+  ].sort((a, b) => a - b);
+  if (setIndexes.length === 0) setIndexes.push(0);
+
+  // Clamp currentSetIndex if sets were deleted
+  const clampedSetIndex = Math.min(
+    currentSetIndex,
+    setIndexes[setIndexes.length - 1],
+  );
+  if (clampedSetIndex !== currentSetIndex) {
+    setCurrentSetIndex(clampedSetIndex);
+  }
+
+  // Filter field values for the current set
+  const currentFieldValues = step.fieldValues.filter(
+    (fv) => fv.setIndex === clampedSetIndex,
+  );
+
+  const setFieldSaveStatus = (
+    fieldId: number,
+    setIdx: number,
+    status: FieldSaveStatus,
+  ) => {
+    const key = editKey(fieldId, setIdx);
     if (savedTimers.current[key]) {
       clearTimeout(savedTimers.current[key]);
       delete savedTimers.current[key];
@@ -82,11 +125,14 @@ export const StepFieldRunList: React.FC<Props> = ({
     setFieldStatus((prev) => ({ ...prev, [key]: status }));
   };
 
-  const saveFieldValue = async (fv: StepFieldValue, newValue: string) => {
+  const saveFieldValue = async (
+    fv: StepFieldValue,
+    newValue: string,
+  ) => {
     const currentValue = fv.value;
     if (newValue === currentValue) return;
 
-    setFieldSaveStatus(fv.stepFieldId, "saving");
+    setFieldSaveStatus(fv.stepFieldId, fv.setIndex, "saving");
 
     try {
       const updated = await api.put<StepFieldValue>(
@@ -97,19 +143,19 @@ export const StepFieldRunList: React.FC<Props> = ({
           step.seqNo,
           fv.fieldSeqNo,
         ),
-        { value: newValue },
+        { value: newValue, setIndex: fv.setIndex },
       );
-      onFieldSaved(fv.stepFieldId, updated);
-      setFieldSaveStatus(fv.stepFieldId, "saved");
+      onFieldSaved(fv.stepFieldId, fv.setIndex, updated);
+      setFieldSaveStatus(fv.stepFieldId, fv.setIndex, "saved");
     } catch (err) {
       showErrorNotification(err);
-      setFieldSaveStatus(fv.stepFieldId, "error");
+      setFieldSaveStatus(fv.stepFieldId, fv.setIndex, "error");
     }
   };
 
   /** Save immediately (for controls that don't have a blur event) */
   const changeAndSave = (fv: StepFieldValue, newValue: string) => {
-    onFieldChange(fv.stepFieldId, newValue);
+    onFieldChange(fv.stepFieldId, fv.setIndex, newValue);
     void saveFieldValue(fv, newValue);
   };
 
@@ -122,25 +168,61 @@ export const StepFieldRunList: React.FC<Props> = ({
   };
 
   const setArrayItem = (fv: StepFieldValue, index: number, item: string) => {
-    const currentValue = edits[fv.stepFieldId] ?? fv.value;
+    const currentValue =
+      edits[editKey(fv.stepFieldId, fv.setIndex)] ?? fv.value;
     const items = getArrayItems(currentValue);
     items[index] = item;
-    onFieldChange(fv.stepFieldId, items.join(","));
+    onFieldChange(fv.stepFieldId, fv.setIndex, items.join(","));
   };
 
   const addArrayItem = (fv: StepFieldValue) => {
-    const currentValue = edits[fv.stepFieldId] ?? fv.value;
+    const currentValue =
+      edits[editKey(fv.stepFieldId, fv.setIndex)] ?? fv.value;
     const newValue = currentValue ? currentValue + "," : "";
-    onFieldChange(fv.stepFieldId, newValue);
+    onFieldChange(fv.stepFieldId, fv.setIndex, newValue);
   };
 
   const removeArrayItem = (fv: StepFieldValue, index: number) => {
-    const currentValue = edits[fv.stepFieldId] ?? fv.value;
+    const currentValue =
+      edits[editKey(fv.stepFieldId, fv.setIndex)] ?? fv.value;
     const items = getArrayItems(currentValue);
     items.splice(index, 1);
     const newValue = items.join(",");
-    onFieldChange(fv.stepFieldId, newValue);
+    onFieldChange(fv.stepFieldId, fv.setIndex, newValue);
     void saveFieldValue(fv, newValue);
+  };
+
+  // --- set management ---
+
+  const handleAddSet = () => {
+    const nextSetIndex =
+      setIndexes.length > 0 ? setIndexes[setIndexes.length - 1] + 1 : 0;
+    setCurrentSetIndex(nextSetIndex);
+    onSetAdded();
+  };
+
+  const handleDeleteSet = async (setIdx: number) => {
+    setDeletingSet(true);
+    try {
+      await api.delete(
+        apiEndpoints.stepRunDeleteSet(
+          orderKey,
+          runNo,
+          seqNo,
+          step.seqNo,
+          setIdx,
+        ),
+      );
+      // Move to previous set if deleting current
+      if (clampedSetIndex >= setIdx && clampedSetIndex > 0) {
+        setCurrentSetIndex(clampedSetIndex - 1);
+      }
+      onSetDeleted(setIdx);
+    } catch (err) {
+      showErrorNotification(err);
+    } finally {
+      setDeletingSet(false);
+    }
   };
 
   // --- single-value input renderer ---
@@ -263,33 +345,80 @@ export const StepFieldRunList: React.FC<Props> = ({
   // --- read-only display ---
 
   function formatReadOnlyValue(fv: StepFieldValue): string {
-    if (!fv.value) return "—";
+    if (!fv.value) return "\u2014";
     switch (fv.type) {
       case StepFieldType.date:
         return new Date(fv.value + "T00:00:00").toLocaleDateString();
       case StepFieldType.datetime:
         return new Date(fv.value).toLocaleString();
       case StepFieldType.checkbox:
-        return fv.value === "checked" ? "Checked" : "—";
+        return fv.value === "checked" ? "Checked" : "\u2014";
       default:
         return fv.value;
     }
   }
+
+  const canEdit = !step.completed && currentFieldValues.some(
+    (fv) => hasAction(fv._actions, "update"),
+  );
 
   return (
     <Stack gap="xs" mt="xs">
       <Text size="xs" fw={600} c="dimmed">
         Data Fields
       </Text>
-      {step.fieldValues.map((fv) => {
-        const status = fieldStatus[String(fv.stepFieldId)];
-        const fieldLabel = fv.required ? `${fv.label} *` : fv.label;
-        const canEdit = hasAction(fv._actions, "update") && !step.completed;
-        const editedValue = edits[fv.stepFieldId] ?? fv.value;
 
-        if (!canEdit) {
+      {/* Set selector bar for multiSet steps */}
+      {step.multiSet && (
+        <Group gap={4}>
+          {setIndexes.map((si) => (
+            <Button
+              key={si}
+              size="compact-xs"
+              variant={si === clampedSetIndex ? "filled" : "light"}
+              onClick={() => setCurrentSetIndex(si)}
+            >
+              Set {si + 1}
+            </Button>
+          ))}
+          {canEdit && (
+            <>
+              <ActionIcon
+                size="xs"
+                variant="subtle"
+                onClick={handleAddSet}
+                title="Add set"
+              >
+                <IconPlus size={14} />
+              </ActionIcon>
+              {setIndexes.length > 1 && (
+                <ActionIcon
+                  size="xs"
+                  variant="subtle"
+                  color="red"
+                  loading={deletingSet}
+                  onClick={() => handleDeleteSet(clampedSetIndex)}
+                  title="Delete current set"
+                >
+                  <IconTrash size={14} />
+                </ActionIcon>
+              )}
+            </>
+          )}
+        </Group>
+      )}
+
+      {currentFieldValues.map((fv) => {
+        const key = editKey(fv.stepFieldId, fv.setIndex);
+        const status = fieldStatus[key];
+        const fieldLabel = fv.required ? `${fv.label} *` : fv.label;
+        const fieldCanEdit =
+          hasAction(fv._actions, "update") && !step.completed;
+        const editedValue = edits[key] ?? fv.value;
+
+        if (!fieldCanEdit) {
           return (
-            <Group key={fv.stepFieldId} gap="xs">
+            <Group key={key} gap="xs">
               <Text size="xs" fw={500}>
                 {fieldLabel}:
               </Text>
@@ -306,7 +435,7 @@ export const StepFieldRunList: React.FC<Props> = ({
         if (fv.multiValue) {
           const items = getArrayItems(editedValue);
           return (
-            <Stack key={fv.stepFieldId} gap={4}>
+            <Stack key={key} gap={4}>
               <Group gap="xs" align="center">
                 <Text size="xs" fw={500}>
                   {fieldLabel}
@@ -321,7 +450,7 @@ export const StepFieldRunList: React.FC<Props> = ({
                       const newItems = [...items];
                       newItems[index] = v;
                       const joined = newItems.join(",");
-                      onFieldChange(fv.stepFieldId, joined);
+                      onFieldChange(fv.stepFieldId, fv.setIndex, joined);
                       void saveFieldValue(fv, joined);
                     },
                     onBlurSave: () => void saveFieldValue(fv, editedValue),
@@ -359,10 +488,11 @@ export const StepFieldRunList: React.FC<Props> = ({
         }
 
         return (
-          <Group key={fv.stepFieldId} gap="xs" align="flex-end">
+          <Group key={key} gap="xs" align="flex-end">
             {renderInput(fv, editedValue, status, {
               label: fieldLabel,
-              onTextChange: (v) => onFieldChange(fv.stepFieldId, v),
+              onTextChange: (v) =>
+                onFieldChange(fv.stepFieldId, fv.setIndex, v),
               onImmediateChange: (v) => changeAndSave(fv, v),
               onBlurSave: () => void saveFieldValue(fv, editedValue),
             })}

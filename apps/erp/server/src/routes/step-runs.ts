@@ -26,6 +26,7 @@ import {
 } from "../route-helpers.js";
 import { isUserClockedIn } from "../services/labor-ticket-service.js";
 import {
+  deleteFieldValueSet,
   findStepRunWithField,
   getStepRun,
   listStepRuns,
@@ -98,36 +99,59 @@ function formatStepRun(
     opRunStatus === OperationRunStatus.in_progress;
 
   const stepSeqNo = stepRun.step.seqNo;
+  const multiSet = stepRun.step.multiSet;
   const stepRunHref = `${API_PREFIX}/${stepRunResource(orderKey, runNo, seqNo)}/${stepSeqNo}`;
 
+  // Determine how many sets exist
+  const maxSetIndex = stepRun.fieldValues.reduce(
+    (max, fv) => Math.max(max, fv.setIndex),
+    -1,
+  );
+  const setCount = Math.max(1, maxSetIndex + 1);
+
   // Merge field definitions with stored values + validation + actions
-  const fieldValues = stepRun.step.fields.map((field) => {
-    const stored = stepRun.fieldValues.find(
-      (fv) => fv.stepFieldId === field.id,
-    );
-    const value = stored?.value ?? "";
-    return {
-      stepFieldId: field.id,
-      fieldSeqNo: field.seqNo,
-      label: field.label,
-      type: field.type,
-      multiValue: field.multiValue,
-      required: field.required,
-      value,
-      validation: validateFieldValue(field.type, field.multiValue, field.required, value),
-      _actions: canUpdate
-        ? [
-            {
-              rel: "update" as const,
-              href: `${stepRunHref}/fields/${field.seqNo}`,
-              method: "PUT" as const,
-              title: "Update Field Value",
-              schema: `${API_PREFIX}/schemas/UpdateStepFieldValue`,
-            },
-          ]
-        : [],
-    };
-  });
+  const fieldValues: {
+    stepFieldId: number;
+    fieldSeqNo: number;
+    label: string;
+    type: string;
+    multiValue: boolean;
+    required: boolean;
+    setIndex: number;
+    value: string;
+    validation: ReturnType<typeof validateFieldValue>;
+    _actions: { rel: string; href: string; method: string; title: string; schema: string }[];
+  }[] = [];
+  for (let si = 0; si < setCount; si++) {
+    for (const field of stepRun.step.fields) {
+      const stored = stepRun.fieldValues.find(
+        (fv) => fv.stepFieldId === field.id && fv.setIndex === si,
+      );
+      const value = stored?.value ?? "";
+      fieldValues.push({
+        stepFieldId: field.id,
+        fieldSeqNo: field.seqNo,
+        label: field.label,
+        type: field.type,
+        multiValue: field.multiValue,
+        required: field.required,
+        setIndex: si,
+        value,
+        validation: validateFieldValue(field.type, field.multiValue, field.required, value),
+        _actions: canUpdate
+          ? [
+              {
+                rel: "update" as const,
+                href: `${stepRunHref}/fields/${field.seqNo}`,
+                method: "PUT" as const,
+                title: "Update Field Value",
+                schema: `${API_PREFIX}/schemas/UpdateStepFieldValue`,
+              },
+            ]
+          : [],
+      });
+    }
+  }
 
   return {
     id: stepRun.id,
@@ -135,6 +159,7 @@ function formatStepRun(
     stepId: stepRun.stepId,
     seqNo: stepSeqNo,
     instructions: stepRun.step.instructions,
+    multiSet,
     completed: stepRun.completed,
     fieldValues,
     ...formatAuditFields(stepRun),
@@ -319,7 +344,8 @@ export default function stepRunRoutes(fastify: FastifyInstance) {
     preHandler: requirePermission("order_executor"),
     handler: async (request, reply) => {
       const { orderKey, runNo, seqNo, stepSeqNo, fieldSeqNo } = request.params;
-      const { value } = request.body;
+      const { value, setIndex } = request.body;
+      const si = setIndex ?? 0;
       const userId = request.erpUser!.id;
 
       const resolved = await resolveStepRun(orderKey, runNo, seqNo, stepSeqNo);
@@ -353,7 +379,7 @@ export default function stepRunRoutes(fastify: FastifyInstance) {
         return notFound(reply, `Step field not found`);
       }
 
-      await upsertFieldValue(resolved.stepRun.id, field.id, value, userId);
+      await upsertFieldValue(resolved.stepRun.id, field.id, si, value, userId);
 
       const stepRunHref = `${API_PREFIX}/${stepRunResource(orderKey, runNo, seqNo)}/${stepSeqNo}`;
       return {
@@ -363,6 +389,7 @@ export default function stepRunRoutes(fastify: FastifyInstance) {
         type: field.type,
         multiValue: field.multiValue,
         required: field.required,
+        setIndex: si,
         value,
         validation: validateFieldValue(field.type, field.multiValue, field.required, value),
         _actions: [
@@ -375,6 +402,70 @@ export default function stepRunRoutes(fastify: FastifyInstance) {
           },
         ],
       };
+    },
+  });
+
+  // DELETE a field value set
+  const SetIndexParamsSchema = z.object({
+    orderKey: z.string(),
+    runNo: z.coerce.number().int(),
+    seqNo: z.coerce.number().int(),
+    stepSeqNo: z.coerce.number().int(),
+    setIndex: z.coerce.number().int(),
+  });
+
+  app.delete("/:stepSeqNo/sets/:setIndex", {
+    schema: {
+      description:
+        "Delete all field values for a set and re-index remaining sets",
+      tags: ["Step Runs"],
+      params: SetIndexParamsSchema,
+      response: {
+        200: StepRunSchema,
+        404: ErrorResponseSchema,
+        409: ErrorResponseSchema,
+      },
+    },
+    preHandler: requirePermission("order_executor"),
+    handler: async (request, reply) => {
+      const { orderKey, runNo, seqNo, stepSeqNo, setIndex } = request.params;
+      const userId = request.erpUser!.id;
+
+      const resolved = await resolveStepRun(orderKey, runNo, seqNo, stepSeqNo);
+      if (!resolved) {
+        return notFound(reply, `Step run not found`);
+      }
+
+      const orderErr = checkOrderRunStarted(resolved.run.status);
+      if (orderErr) return conflict(reply, orderErr);
+
+      const opErr = checkOpRunInProgress(resolved.opRun.status);
+      if (opErr) return conflict(reply, opErr);
+
+      const clockedIn = await isUserClockedIn(resolved.opRun.id, userId);
+      if (!clockedIn)
+        return conflict(reply, `You must be clocked in to delete sets`);
+
+      const existing = await getStepRun(resolved.stepRun.id);
+      if (!existing) return notFound(reply, `Step run not found`);
+
+      if (existing.completed) {
+        return conflict(reply, `Cannot delete set: step run is completed`);
+      }
+
+      await deleteFieldValueSet(resolved.stepRun.id, setIndex);
+
+      const stepRun = await getStepRun(resolved.stepRun.id);
+      if (!stepRun) return notFound(reply, `Step run not found`);
+
+      return formatStepRun(
+        orderKey,
+        runNo,
+        seqNo,
+        resolved.opRun.status,
+        request.erpUser,
+        stepRun,
+      );
     },
   });
 }

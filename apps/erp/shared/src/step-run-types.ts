@@ -18,6 +18,7 @@ export const StepFieldValueSchema = z.object({
   type: z.string(),
   multiValue: z.boolean(),
   required: z.boolean(),
+  setIndex: z.number(),
   value: z.string(),
   validation: StepFieldValidationSchema,
   _actions: z.array(HateoasActionSchema).optional(),
@@ -32,6 +33,7 @@ export const StepRunSchema = z.object({
   stepId: z.number(),
   seqNo: z.number(),
   instructions: z.string(),
+  multiSet: z.boolean(),
   completed: z.boolean(),
   fieldValues: z.array(StepFieldValueSchema),
   createdAt: z.iso.datetime(),
@@ -48,6 +50,7 @@ export type StepRun = z.infer<typeof StepRunSchema>;
 export const UpdateStepFieldValueSchema = z
   .object({
     value: z.string().max(2000),
+    setIndex: z.number().int().min(0).optional(),
   })
   .strict();
 
@@ -62,6 +65,7 @@ export const UpdateStepRunSchema = z
         z.object({
           stepFieldId: z.number().int(),
           value: z.string().max(2000),
+          setIndex: z.number().int().min(0).optional(),
         }),
       )
       .optional(),
