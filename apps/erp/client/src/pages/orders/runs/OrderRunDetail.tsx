@@ -26,6 +26,7 @@ export interface OrderRunOutletContext {
   onOperationUpdate: () => void;
   orderRun: OrderRun;
   onOrderRunUpdate: (orderRun: OrderRun) => void;
+  refreshOrderRun: () => void;
 }
 
 const SIDEBAR_WIDTH = 260;
@@ -47,6 +48,7 @@ export const OrderRunLayout: React.FC = () => {
     onOperationUpdate: () => setOpsRefreshKey((k) => k + 1),
     orderRun: orderRun!,
     onOrderRunUpdate: setOrderRun,
+    refreshOrderRun: () => void fetchOrderRun(),
   };
 
   const fetchOrderRun = useCallback(async () => {

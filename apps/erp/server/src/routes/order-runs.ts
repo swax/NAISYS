@@ -24,6 +24,7 @@ import {
   resolveOrderRun,
 } from "../route-helpers.js";
 import {
+  checkOpsComplete,
   createOrderRun,
   deleteOrderRun,
   findOrderRevision,
@@ -38,12 +39,14 @@ function runResource(orderKey: string) {
   return `orders/${orderKey}/runs`;
 }
 
-function orderRunItemActions(
+async function orderRunItemActions(
   orderKey: string,
   runNo: number,
+  runId: number,
   status: string,
+  itemKey: string | null,
   user: ErpUser | undefined,
-): HateoasAction[] {
+): Promise<HateoasAction[]> {
   const href = `${API_PREFIX}/${runResource(orderKey)}/${runNo}`;
   const actions: HateoasAction[] = [];
   const isExecutor = hasPermission(user, "order_executor");
@@ -82,13 +85,27 @@ function orderRunItemActions(
       );
     }
   } else if (status === OrderRunStatus.started) {
+    const opsErr = isExecutor ? await checkOpsComplete(runId) : null;
+
     if (isExecutor) {
-      actions.push({
-        rel: "close",
-        href: `${href}/close`,
-        method: "POST",
-        title: "Close",
-      });
+      if (itemKey) {
+        actions.push({
+          rel: "complete",
+          href: `${href}/complete`,
+          method: "POST",
+          title: "Complete",
+          schema: `${API_PREFIX}/schemas/CompleteOrderRun`,
+          ...(opsErr ? { disabled: true, disabledReason: opsErr } : {}),
+        });
+      } else {
+        actions.push({
+          rel: "close",
+          href: `${href}/close`,
+          method: "POST",
+          title: "Close",
+          ...(opsErr ? { disabled: true, disabledReason: opsErr } : {}),
+        });
+      }
     }
     if (isManager) {
       actions.push(
@@ -133,18 +150,52 @@ export const RunNoParamsSchema = z.object({
   runNo: z.coerce.number().int(),
 });
 
-export function formatRun(
+export async function formatRun(
   orderKey: string,
   user: ErpUser | undefined,
   run: OrderRunWithRev,
 ) {
+  const itemKey = run.order?.item?.key ?? null;
+  const instance = run.itemInstances[0] ?? null;
+  const links: HateoasLink[] = [
+    ...childItemLinks(
+      "/" + runResource(orderKey),
+      run.runNo,
+      "Runs",
+      "/orders/" + orderKey,
+      "Order",
+      "OrderRun",
+      "order",
+    ),
+    {
+      rel: "operations",
+      href: `${API_PREFIX}/${runResource(orderKey)}/${run.runNo}/ops`,
+      title: "Operation Runs",
+    },
+  ];
+  if (itemKey) {
+    links.push({
+      rel: "completion-fields",
+      href: `${API_PREFIX}/items/${itemKey}/fields`,
+      title: "Completion Fields",
+    });
+  }
+  if (instance) {
+    links.push({
+      rel: "itemInstance",
+      href: `${API_PREFIX}/items/${itemKey}/instances/${instance.id}`,
+      title: "Item Instance",
+    });
+  }
   return {
     id: run.id,
     runNo: run.runNo,
     orderId: run.orderId,
     orderKey,
     revNo: run.orderRev.revNo,
-    itemKey: run.order?.item?.key ?? null,
+    itemKey,
+    instanceId: instance?.id ?? null,
+    instanceKey: instance?.key ?? null,
     status: run.status,
     priority: run.priority,
     scheduledStartAt: formatDate(run.scheduledStartAt),
@@ -152,34 +203,33 @@ export function formatRun(
     assignedTo: run.assignedTo,
     notes: run.notes,
     ...formatAuditFields(run),
-    _links: [
-      ...childItemLinks(
-        "/" + runResource(orderKey),
-        run.runNo,
-        "Runs",
-        "/orders/" + orderKey,
-        "Order",
-        "OrderRun",
-        "order",
-      ),
-      {
-        rel: "operations",
-        href: `${API_PREFIX}/${runResource(orderKey)}/${run.runNo}/ops`,
-        title: "Operation Runs",
-      } as HateoasLink,
-    ],
-    _actions: orderRunItemActions(orderKey, run.runNo, run.status, user),
+    _links: links,
+    _actions: await orderRunItemActions(orderKey, run.runNo, run.id, run.status, itemKey, user),
   };
 }
 
 function formatListRun(
   orderKey: string,
-  user: ErpUser | undefined,
   run: OrderRunWithRev,
 ) {
-  const { _actions, ...rest } = formatRun(orderKey, user, run);
+  const itemKey = run.order?.item?.key ?? null;
+  const instance = run.itemInstances[0] ?? null;
   return {
-    ...rest,
+    id: run.id,
+    runNo: run.runNo,
+    orderId: run.orderId,
+    orderKey,
+    revNo: run.orderRev.revNo,
+    itemKey,
+    instanceId: instance?.id ?? null,
+    instanceKey: instance?.key ?? null,
+    status: run.status,
+    priority: run.priority,
+    scheduledStartAt: formatDate(run.scheduledStartAt),
+    dueAt: formatDate(run.dueAt),
+    assignedTo: run.assignedTo,
+    notes: run.notes,
+    ...formatAuditFields(run),
     _links: [selfLink(`/${runResource(orderKey)}/${run.runNo}`)],
   };
 }
@@ -223,9 +273,7 @@ export default function orderRunRoutes(fastify: FastifyInstance) {
       const resource = runResource(orderKey);
 
       return {
-        items: items.map((run) =>
-          formatListRun(orderKey, request.erpUser, run),
-        ),
+        items: items.map((run) => formatListRun(orderKey, run)),
         total,
         page,
         pageSize,

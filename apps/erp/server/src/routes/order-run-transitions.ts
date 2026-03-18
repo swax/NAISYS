@@ -1,4 +1,5 @@
 import {
+  CompleteOrderRunSchema,
   ErrorResponseSchema,
   OrderRunSchema,
   OrderRunStatus,
@@ -11,6 +12,7 @@ import { conflict, notFound, unprocessable } from "../error-handler.js";
 import { resolveOrderRun } from "../route-helpers.js";
 import {
   checkOpsComplete,
+  completeOrderRun,
   getReopenTarget,
   transitionStatus,
   validateStatusFor,
@@ -100,6 +102,55 @@ export default function orderRunTransitionRoutes(fastify: FastifyInstance) {
       );
 
       return formatRun(orderKey, request.erpUser, run);
+    },
+  });
+
+  // COMPLETE (started -> closed, creates item instance)
+  app.post("/:runNo/complete", {
+    schema: {
+      description:
+        "Complete an order run — creates an item instance and closes the run",
+      tags: ["Order Runs"],
+      params: RunNoParamsSchema,
+      body: CompleteOrderRunSchema,
+      response: {
+        200: OrderRunSchema,
+        404: ErrorResponseSchema,
+        409: ErrorResponseSchema,
+        422: ErrorResponseSchema,
+      },
+    },
+    preHandler: requirePermission("order_executor"),
+    handler: async (request, reply) => {
+      const { orderKey, runNo } = request.params;
+
+      const resolved = await resolveOrderRun(orderKey, runNo);
+      if (!resolved) {
+        return notFound(reply, `Order run not found for order '${orderKey}'`);
+      }
+
+      const statusErr = validateStatusFor("complete", resolved.run.status, [
+        OrderRunStatus.started,
+      ]);
+      if (statusErr) return conflict(reply, statusErr);
+
+      // Validate all operation runs are completed or skipped
+      const opsErr = await checkOpsComplete(resolved.run.id);
+      if (opsErr) return unprocessable(reply, opsErr);
+
+      const userId = request.erpUser!.id;
+      const result = await completeOrderRun(
+        resolved.run.id,
+        resolved.order.id,
+        request.body,
+        userId,
+      );
+
+      if (result.error) {
+        return unprocessable(reply, result.error);
+      }
+
+      return formatRun(orderKey, request.erpUser, result.run!);
     },
   });
 

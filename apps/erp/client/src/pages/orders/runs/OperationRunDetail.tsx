@@ -11,6 +11,7 @@ import {
   Tabs,
   Text,
   Textarea,
+  Tooltip,
 } from "@mantine/core";
 import type { OperationRun } from "@naisys-erp/shared";
 import { OperationRunStatus } from "@naisys-erp/shared";
@@ -44,7 +45,7 @@ export const OperationRunDetail: React.FC = () => {
     runNo: string;
     seqNo: string;
   }>();
-  const { onOperationUpdate, orderRun } =
+  const { onOperationUpdate, orderRun, refreshOrderRun } =
     useOutletContext<OrderRunOutletContext>();
   const [opRun, setOpRun] = useState<OperationRun | null>(null);
   const [loading, setLoading] = useState(true);
@@ -120,6 +121,7 @@ export const OperationRunDetail: React.FC = () => {
       setOpRun(updated);
       setRefreshKey((k) => k + 1);
       onOperationUpdate();
+      refreshOrderRun();
     } catch (err) {
       showErrorNotification(err);
     }
@@ -232,15 +234,27 @@ export const OperationRunDetail: React.FC = () => {
                 Start
               </Button>
             )}
-            {hasAction(opRun._actions, "complete") && (
-              <Button
-                size="xs"
-                color="green"
-                onClick={() => handleAction("complete")}
-              >
-                Complete
-              </Button>
-            )}
+            {(() => {
+              const completeAction = hasAction(opRun._actions, "complete");
+              if (!completeAction) return null;
+              const btn = (
+                <Button
+                  size="xs"
+                  color="green"
+                  disabled={completeAction.disabled}
+                  onClick={() => handleAction("complete")}
+                >
+                  Complete
+                </Button>
+              );
+              return completeAction.disabledReason ? (
+                <Tooltip label={completeAction.disabledReason} multiline maw={350}>
+                  {btn}
+                </Tooltip>
+              ) : (
+                btn
+              );
+            })()}
             {hasAction(opRun._actions, "reopen") &&
               (() => {
                 const labelMap: Record<
@@ -410,6 +424,7 @@ export const OperationRunDetail: React.FC = () => {
           runNo={runNo!}
           seqNo={seqNo!}
           refreshKey={refreshKey}
+          onStepUpdate={fetchOpRun}
         />
       </Stack>
     </Container>

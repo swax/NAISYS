@@ -11,7 +11,8 @@ import { FieldValueEntrySchema } from "./step-run-types.js";
 export const ItemInstanceSchema = z.object({
   id: z.number(),
   itemKey: z.string(),
-  orderRunKey: z.string().nullable(),
+  orderKey: z.string().nullable(),
+  orderRunNo: z.number().nullable(),
   key: z.string(),
   quantity: z.number().nullable(),
   fieldValues: z.array(FieldValueEntrySchema),

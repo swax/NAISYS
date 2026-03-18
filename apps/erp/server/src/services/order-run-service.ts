@@ -14,6 +14,7 @@ import type { OrderRunModel } from "../generated/prisma/models/OrderRun.js";
 export const includeRev = {
   orderRev: { select: { revNo: true } },
   order: { select: { item: { select: { key: true } } } },
+  itemInstances: { select: { id: true, key: true }, take: 1 },
   createdBy: { select: { username: true } },
   updatedBy: { select: { username: true } },
 } as const;
@@ -21,6 +22,7 @@ export const includeRev = {
 export type OrderRunWithRev = OrderRunModel & {
   orderRev: { revNo: number };
   order: { item: { key: string } | null };
+  itemInstances: { id: number; key: string }[];
   createdBy: { username: string };
   updatedBy: { username: string };
 };
@@ -274,4 +276,149 @@ export function getReopenTarget(currentStatus: OrderRunStatus): OrderRunStatus {
   return currentStatus === OrderRunStatusValues.closed
     ? OrderRunStatusValues.started
     : OrderRunStatusValues.released;
+}
+
+// --- Completion ---
+
+/**
+ * Auto-generate an instance key by finding the last instance for the item,
+ * parsing its key as a number, and incrementing. Returns the generated key
+ * or an error string if the last key is not numeric.
+ */
+async function autoGenerateInstanceKey(
+  erpTx: Parameters<Parameters<typeof erpDb.$transaction>[0]>[0],
+  itemId: number,
+): Promise<{ key: string } | { error: string }> {
+  const last = await erpTx.itemInstance.findFirst({
+    where: { itemId },
+    orderBy: { createdAt: "desc" },
+    select: { key: true },
+  });
+  if (!last) return { key: "1" };
+  const num = Number(last.key);
+  if (isNaN(num)) {
+    return {
+      error: `Cannot auto-generate instance key: last key "${last.key}" is not numeric. Please provide a key manually.`,
+    };
+  }
+  return { key: String(Math.floor(num) + 1) };
+}
+
+export async function completeOrderRun(
+  orderRunId: number,
+  orderId: number,
+  data: {
+    instanceKey?: string;
+    quantity?: number | null;
+    fieldValues?: { fieldId: number; value: string; setIndex?: number }[];
+  },
+  userId: number,
+): Promise<
+  | { run: OrderRunWithRev; error?: undefined }
+  | { error: string; run?: undefined }
+> {
+  return erpDb.$transaction(async (erpTx) => {
+    // Load the order with its item
+    const order = await erpTx.order.findUniqueOrThrow({
+      where: { id: orderId },
+      select: {
+        item: {
+          select: {
+            id: true,
+            fieldSetId: true,
+            fieldSet: {
+              select: {
+                fields: {
+                  select: { id: true },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!order.item) {
+      return { error: "Order has no item assigned — cannot complete" };
+    }
+
+    // Determine instance key
+    let instanceKey = data.instanceKey;
+    if (!instanceKey) {
+      const result = await autoGenerateInstanceKey(erpTx, order.item.id);
+      if ("error" in result) return result;
+      instanceKey = result.key;
+    }
+
+    // Check for duplicate key
+    const existing = await erpTx.itemInstance.findUnique({
+      where: { itemId_key: { itemId: order.item.id, key: instanceKey } },
+    });
+    if (existing) {
+      return { error: `Instance key "${instanceKey}" already exists for this item` };
+    }
+
+    // Create the item instance
+    const instance = await erpTx.itemInstance.create({
+      data: {
+        itemId: order.item.id,
+        orderRunId: orderRunId,
+        key: instanceKey,
+        quantity: data.quantity ?? null,
+        createdById: userId,
+        updatedById: userId,
+      },
+    });
+
+    // Create field record and field values if item has a field set
+    if (order.item.fieldSetId && (data.fieldValues?.length ?? 0) > 0) {
+      const fieldRecord = await erpTx.fieldRecord.create({
+        data: {
+          fieldSetId: order.item.fieldSetId,
+          createdById: userId,
+        },
+      });
+
+      await erpTx.itemInstance.update({
+        where: { id: instance.id },
+        data: { fieldRecordId: fieldRecord.id },
+      });
+
+      for (const fv of data.fieldValues ?? []) {
+        await erpTx.fieldValue.create({
+          data: {
+            fieldRecordId: fieldRecord.id,
+            fieldId: fv.fieldId,
+            setIndex: fv.setIndex ?? 0,
+            value: fv.value,
+            createdById: userId,
+            updatedById: userId,
+          },
+        });
+      }
+    }
+
+    // Transition run to closed
+    const updated = await erpTx.orderRun.update({
+      where: { id: orderRunId },
+      data: {
+        status: OrderRunStatusValues.closed,
+        updatedById: userId,
+      },
+      include: includeRev,
+    });
+
+    await writeAuditEntry(
+      erpTx,
+      "OrderRun",
+      orderRunId,
+      "complete",
+      "status",
+      OrderRunStatusValues.started,
+      OrderRunStatusValues.closed,
+      userId,
+    );
+
+    return { run: updated };
+  });
 }

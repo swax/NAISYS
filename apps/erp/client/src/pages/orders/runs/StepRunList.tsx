@@ -26,6 +26,7 @@ interface Props {
   runNo: string;
   seqNo: string;
   refreshKey?: number;
+  onStepUpdate?: () => void;
 }
 
 export const StepRunList: React.FC<Props> = ({
@@ -33,6 +34,7 @@ export const StepRunList: React.FC<Props> = ({
   runNo,
   seqNo,
   refreshKey,
+  onStepUpdate,
 }) => {
   const [data, setData] = useState<StepRunListResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -81,6 +83,7 @@ export const StepRunList: React.FC<Props> = ({
             }
           : prev,
       );
+      onStepUpdate?.();
     } catch (err) {
       showErrorNotification(err);
     } finally {

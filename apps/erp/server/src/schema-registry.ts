@@ -1,6 +1,7 @@
 import {
   ChangePasswordSchema,
   ClockOutLaborTicketSchema,
+  CompleteOrderRunSchema,
   CreateFieldSchema,
   CreateItemInstanceSchema,
   CreateItemSchema,
@@ -40,6 +41,7 @@ export const schemaRegistry: Record<string, $ZodType> = {
   UpdateOrderRevision: UpdateOrderRevisionSchema,
   CreateOrderRun: CreateOrderRunSchema,
   UpdateOrderRun: UpdateOrderRunSchema,
+  CompleteOrderRun: CompleteOrderRunSchema,
   CreateOperation: CreateOperationSchema,
   CreateOperationDependency: CreateOperationDependencySchema,
   UpdateOperation: UpdateOperationSchema,
