@@ -588,7 +588,13 @@ export const FieldValueRunList: React.FC<FieldValueRunListProps> = ({
               <Text size="xs" fw={500}>
                 {fieldLabel}:
               </Text>
-              <Text size="xs">{formatReadOnlyValue(fv)}</Text>
+              {fv.value?.startsWith("http") ? (
+                <Anchor size="xs" href={fv.value} target="_blank">
+                  {fv.value}
+                </Anchor>
+              ) : (
+                <Text size="xs">{formatReadOnlyValue(fv)}</Text>
+              )}
               {fv.validation && !fv.validation.valid && (
                 <Text size="xs" c="red">
                   {fv.validation.error}
