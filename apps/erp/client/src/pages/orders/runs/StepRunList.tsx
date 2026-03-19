@@ -142,7 +142,8 @@ export const StepRunList: React.FC<Props> = ({
                       )}
                       {!canUpdate && step.completed && (
                         <Text size="xs" c="green">
-                          Completed
+                          Completed by {step.updatedBy} on{" "}
+                          {new Date(step.updatedAt).toLocaleString()}
                         </Text>
                       )}
                     </Group>
