@@ -1,8 +1,11 @@
 dist/
 logs/
 node_modules/
-.claude
 .env*
+.claude/*
+!.claude/commands/
+!.claude/commands/.env.nsapi.example
+.claude/commands/.env.nsapi
 .test-naisys
 .turbo
 *.tsbuildinfo
