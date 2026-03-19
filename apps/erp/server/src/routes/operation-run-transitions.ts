@@ -2,6 +2,7 @@ import {
   ErrorResponseSchema,
   OperationRunSchema,
   OperationRunStatus,
+  OrderRunStatus,
 } from "@naisys-erp/shared";
 import { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
@@ -23,6 +24,7 @@ import {
   unblockSuccessors,
   validateStatusFor,
 } from "../services/operation-run-service.js";
+import { transitionStatus as transitionOrderRunStatus } from "../services/order-run-service.js";
 import { formatOpRun, SeqNoParamsSchema } from "./operation-runs.js";
 
 export default function operationRunTransitionRoutes(fastify: FastifyInstance) {
@@ -49,8 +51,19 @@ export default function operationRunTransitionRoutes(fastify: FastifyInstance) {
       const resolved = await resolveOpRun(orderKey, runNo, seqNo);
       if (!resolved) return notFound(reply, `Operation run not found`);
 
-      const orderErr = checkOrderRunStarted(resolved.run.status);
-      if (orderErr) return conflict(reply, orderErr);
+      // Auto-start the order run if it's still in released status
+      if (resolved.run.status === OrderRunStatus.released) {
+        await transitionOrderRunStatus(
+          resolved.run.id,
+          "start",
+          OrderRunStatus.released,
+          OrderRunStatus.started,
+          userId,
+        );
+      } else {
+        const orderErr = checkOrderRunStarted(resolved.run.status);
+        if (orderErr) return conflict(reply, orderErr);
+      }
 
       const statusErr = validateStatusFor("start", resolved.opRun.status, [
         OperationRunStatus.pending,
