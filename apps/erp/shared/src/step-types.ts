@@ -8,6 +8,7 @@ export const StepSchema = z.object({
   id: z.number(),
   operationId: z.number(),
   seqNo: z.number(),
+  title: z.string(),
   instructions: z.string(),
   multiSet: z.boolean(),
   createdAt: z.iso.datetime(),
@@ -25,6 +26,7 @@ export type Step = z.infer<typeof StepSchema>;
 export const CreateStepSchema = z
   .object({
     seqNo: z.number().int().min(1).optional(),
+    title: z.string().max(200).optional(),
     instructions: z.string().max(10000).optional(),
     multiSet: z.boolean().optional(),
   })
@@ -36,6 +38,7 @@ export type CreateStep = z.infer<typeof CreateStepSchema>;
 export const UpdateStepSchema = z
   .object({
     seqNo: z.number().int().min(1).optional(),
+    title: z.string().max(200).optional(),
     instructions: z.string().max(10000).optional(),
     multiSet: z.boolean().optional(),
   })

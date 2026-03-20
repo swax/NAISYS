@@ -60,6 +60,7 @@ export async function findExisting(operationId: number, seqNo: number) {
 export async function createStep(
   operationId: number,
   requestedSeqNo: number | undefined | null,
+  title: string | undefined | null,
   instructions: string | undefined | null,
   multiSet: boolean | undefined | null,
   userId: number,
@@ -77,6 +78,7 @@ export async function createStep(
       data: {
         operationId,
         seqNo: nextSeqNo,
+        title: title ?? "",
         instructions: instructions ?? "",
         multiSet: multiSet ?? false,
         createdById: userId,
@@ -89,12 +91,13 @@ export async function createStep(
 
 export async function updateStep(
   id: number,
-  data: { instructions?: string; seqNo?: number; multiSet?: boolean },
+  data: { title?: string; instructions?: string; seqNo?: number; multiSet?: boolean },
   userId: number,
 ): Promise<StepWithUsersAndFields> {
   return erpDb.step.update({
     where: { id },
     data: {
+      ...(data.title !== undefined ? { title: data.title } : {}),
       ...(data.instructions !== undefined
         ? { instructions: data.instructions }
         : {}),

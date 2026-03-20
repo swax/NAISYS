@@ -136,6 +136,7 @@ export const StepRunList: React.FC<Props> = ({
                   <Group justify="space-between" align="center">
                     <Text fw={600} size="sm">
                       STEP {step.seqNo}
+                      {step.title ? `: ${step.title}` : ""}
                     </Text>
                     <Group gap="xs">
                       {canUpdate && !step.completed && (

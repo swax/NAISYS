@@ -8,6 +8,7 @@ export const includeStep = {
   step: {
     select: {
       seqNo: true,
+      title: true,
       instructions: true,
       multiSet: true,
       fieldSet: {
@@ -61,6 +62,7 @@ export type StepRunWithStep = {
   updatedAt: Date;
   step: {
     seqNo: number;
+    title: string;
     instructions: string;
     multiSet: boolean;
     fieldSet: {

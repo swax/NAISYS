@@ -9,6 +9,7 @@ import {
   Stack,
   Text,
   Textarea,
+  TextInput,
   Title,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
@@ -56,12 +57,12 @@ export const StepList: React.FC<StepListProps> = ({
   }
 
   const editForm = useForm<UpdateStep>({
-    initialValues: { seqNo: 10, instructions: "", multiSet: false },
+    initialValues: { seqNo: 10, title: "", instructions: "", multiSet: false },
     validate: zodResolver(UpdateStepSchema),
   });
 
   const createForm = useForm<CreateStep>({
-    initialValues: { seqNo: 10, instructions: "", multiSet: false },
+    initialValues: { seqNo: 10, title: "", instructions: "", multiSet: false },
     validate: zodResolver(CreateStepSchema),
   });
 
@@ -86,6 +87,7 @@ export const StepList: React.FC<StepListProps> = ({
   const startEditing = (step: Step) => {
     editForm.setValues({
       seqNo: step.seqNo,
+      title: step.title,
       instructions: step.instructions,
       multiSet: step.multiSet,
     });
@@ -135,6 +137,7 @@ export const StepList: React.FC<StepListProps> = ({
   const startAdding = () => {
     createForm.setValues({
       seqNo: steps?.nextSeqNo ?? 10,
+      title: "",
       instructions: "",
     });
     setAddingStep(true);
@@ -191,6 +194,11 @@ export const StepList: React.FC<StepListProps> = ({
                       step={10}
                       {...editForm.getInputProps("seqNo")}
                     />
+                    <TextInput
+                      label="Title"
+                      placeholder="Short step name"
+                      {...editForm.getInputProps("title")}
+                    />
                     <Textarea
                       label="Instructions (markdown)"
                       placeholder="Step instructions..."
@@ -224,6 +232,7 @@ export const StepList: React.FC<StepListProps> = ({
                     <Group gap="xs">
                       <Text fw={600} size="sm">
                         STEP {step.seqNo}
+                        {step.title ? `: ${step.title}` : ""}
                       </Text>
                       {step.multiSet && (
                         <Badge size="xs" variant="light" color="violet">
@@ -304,6 +313,11 @@ export const StepList: React.FC<StepListProps> = ({
                     min={1}
                     step={10}
                     {...createForm.getInputProps("seqNo")}
+                  />
+                  <TextInput
+                    label="Title"
+                    placeholder="Short step name"
+                    {...createForm.getInputProps("title")}
                   />
                   <Textarea
                     label="Instructions (markdown)"
