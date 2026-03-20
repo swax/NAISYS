@@ -32,11 +32,6 @@ const PRIORITY_COLORS: Record<string, string> = {
   [OrderRunPriority.critical]: "red",
 };
 
-function formatDateTime(iso: string | null): string {
-  if (!iso) return "\u2014";
-  return new Date(iso).toLocaleString();
-}
-
 export const HeaderRunDetail: React.FC = () => {
   const { orderKey, runNo } = useParams<{
     orderKey: string;
@@ -123,10 +118,7 @@ export const HeaderRunDetail: React.FC = () => {
             <OrderRunForm<true>
               initialData={{
                 priority: orderRun.priority,
-                scheduledStartAt: orderRun.scheduledStartAt
-                  ? orderRun.scheduledStartAt.slice(0, 16)
-                  : "",
-                dueAt: orderRun.dueAt ? orderRun.dueAt.slice(0, 16) : "",
+                dueAt: orderRun.dueAt ?? "",
                 releaseNote: orderRun.releaseNote ?? "",
               }}
               isEdit
@@ -176,15 +168,9 @@ export const HeaderRunDetail: React.FC = () => {
               </Group>
               <Group>
                 <Text fw={600} w={140}>
-                  Scheduled Start:
-                </Text>
-                <Text>{formatDateTime(orderRun.scheduledStartAt)}</Text>
-              </Group>
-              <Group>
-                <Text fw={600} w={140}>
                   Due Date:
                 </Text>
-                <Text>{formatDateTime(orderRun.dueAt)}</Text>
+                <Text>{orderRun.dueAt ?? "\u2014"}</Text>
               </Group>
               <Group align="flex-start">
                 <Text fw={600} w={140}>

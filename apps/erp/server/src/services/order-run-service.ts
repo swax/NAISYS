@@ -110,7 +110,6 @@ export async function createOrderRun(
   orderRevId: number,
   data: {
     priority: OrderRunPriority;
-    scheduledStartAt?: string | null;
     dueAt?: string | null;
     releaseNote?: string | null;
   },
@@ -130,10 +129,7 @@ export async function createOrderRun(
         orderId,
         orderRevId,
         priority: data.priority,
-        scheduledStartAt: data.scheduledStartAt
-          ? new Date(data.scheduledStartAt)
-          : null,
-        dueAt: data.dueAt ? new Date(data.dueAt) : null,
+        dueAt: data.dueAt ?? null,
         releaseNote: data.releaseNote ?? null,
         createdById: userId,
         updatedById: userId,
@@ -215,7 +211,6 @@ export async function updateOrderRun(
   data: {
     priority?: OrderRunPriority;
     releaseNote?: string | null;
-    scheduledStartAt?: string | null;
     dueAt?: string | null;
   },
   userId: number,
@@ -223,14 +218,7 @@ export async function updateOrderRun(
   const updateData: Record<string, unknown> = { updatedById: userId };
   if (data.priority !== undefined) updateData.priority = data.priority;
   if (data.releaseNote !== undefined) updateData.releaseNote = data.releaseNote;
-  if (data.scheduledStartAt !== undefined) {
-    updateData.scheduledStartAt = data.scheduledStartAt
-      ? new Date(data.scheduledStartAt)
-      : null;
-  }
-  if (data.dueAt !== undefined) {
-    updateData.dueAt = data.dueAt ? new Date(data.dueAt) : null;
-  }
+  if (data.dueAt !== undefined) updateData.dueAt = data.dueAt;
 
   return erpDb.orderRun.update({
     where: { id },

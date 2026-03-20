@@ -224,8 +224,7 @@ model OrderRun {
   status           OrderRunStatus   @default(released)
   priority         OrderRunPriority @default(medium)
   cost             Float?
-  scheduledStartAt DateTime?        @map("scheduled_start_at")
-  dueAt            DateTime?        @map("due_at")
+  dueAt            String?          @map("due_at")
   releaseNote      String?        @map("release_note")
   createdAt        DateTime         @default(now()) @map("created_at")
   createdById      Int              @map("created_by")

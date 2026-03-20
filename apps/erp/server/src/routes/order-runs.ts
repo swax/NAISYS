@@ -19,7 +19,6 @@ import { API_PREFIX, paginationLinks, selfLink } from "../hateoas.js";
 import {
   childItemLinks,
   formatAuditFields,
-  formatDate,
   resolveOrder,
   resolveOrderRun,
 } from "../route-helpers.js";
@@ -199,8 +198,7 @@ export async function formatRun(
     status: run.status,
     priority: run.priority,
     cost: run.cost,
-    scheduledStartAt: formatDate(run.scheduledStartAt),
-    dueAt: formatDate(run.dueAt),
+    dueAt: run.dueAt,
     releaseNote: run.releaseNote,
     ...formatAuditFields(run),
     _links: links,
@@ -226,8 +224,7 @@ function formatListRun(
     status: run.status,
     priority: run.priority,
     cost: run.cost,
-    scheduledStartAt: formatDate(run.scheduledStartAt),
-    dueAt: formatDate(run.dueAt),
+    dueAt: run.dueAt,
     releaseNote: run.releaseNote,
     ...formatAuditFields(run),
     _links: [selfLink(`/${runResource(orderKey)}/${run.runNo}`)],
@@ -298,8 +295,7 @@ export default function orderRunRoutes(fastify: FastifyInstance) {
     preHandler: requirePermission("order_manager"),
     handler: async (request, reply) => {
       const { orderKey } = request.params;
-      const { revNo, priority, scheduledStartAt, dueAt, releaseNote } =
-        request.body;
+      const { revNo, priority, dueAt, releaseNote } = request.body;
       const userId = request.erpUser!.id;
 
       const order = await resolveOrder(orderKey);
@@ -321,7 +317,7 @@ export default function orderRunRoutes(fastify: FastifyInstance) {
       const run = await createOrderRun(
         orderId,
         orderRev.id,
-        { priority, scheduledStartAt, dueAt, releaseNote },
+        { priority, dueAt, releaseNote },
         userId,
       );
 
