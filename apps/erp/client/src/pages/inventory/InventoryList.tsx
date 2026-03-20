@@ -15,12 +15,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router";
 
 import { api, apiEndpoints, showErrorNotification } from "../../lib/api";
-
-const cellLinkStyle = {
-  display: "block",
-  color: "inherit",
-  textDecoration: "none",
-};
+import { cellLinkStyle } from "../../lib/tableStyles";
 
 export const InventoryList: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -110,7 +105,7 @@ export const InventoryList: React.FC = () => {
                 const instanceLink = `/items/${item.itemKey}/instances/${item.id}`;
                 return (
                   <Table.Tr key={item.id} style={{ cursor: "pointer" }}>
-                    <Table.Td>
+                    <Table.Td style={{ padding: 0 }}>
                       <Link
                         to={`/items/${item.itemKey}`}
                         style={cellLinkStyle}
@@ -120,19 +115,19 @@ export const InventoryList: React.FC = () => {
                         </Text>
                       </Link>
                     </Table.Td>
-                    <Table.Td>
+                    <Table.Td style={{ padding: 0 }}>
                       <Link to={instanceLink} style={cellLinkStyle}>
                         <Text size="sm" ff="monospace">
                           {item.key}
                         </Text>
                       </Link>
                     </Table.Td>
-                    <Table.Td>
+                    <Table.Td style={{ padding: 0 }}>
                       <Link to={instanceLink} style={cellLinkStyle}>
                         {item.quantity != null ? item.quantity : "\u2014"}
                       </Link>
                     </Table.Td>
-                    <Table.Td>
+                    <Table.Td style={{ padding: 0 }}>
                       <Link to={instanceLink} style={cellLinkStyle}>
                         {item.orderKey ? (
                           <Text size="sm">
@@ -143,7 +138,7 @@ export const InventoryList: React.FC = () => {
                         )}
                       </Link>
                     </Table.Td>
-                    <Table.Td>
+                    <Table.Td style={{ padding: 0 }}>
                       <Link to={instanceLink} style={cellLinkStyle}>
                         {new Date(item.createdAt).toLocaleDateString()}
                       </Link>

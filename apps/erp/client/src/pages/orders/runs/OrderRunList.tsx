@@ -23,12 +23,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router";
 
 import { api, apiEndpoints, showErrorNotification } from "../../../lib/api";
-
-const cellLinkStyle = {
-  display: "block",
-  color: "inherit",
-  textDecoration: "none",
-};
+import { cellLinkStyle } from "../../../lib/tableStyles";
 
 const STATUS_COLORS: Record<string, string> = {
   [OrderRunStatus.released]: "blue",
@@ -175,19 +170,19 @@ export const OrderRunList: React.FC = () => {
                     style={{ cursor: "pointer" }}
                     data-testid={`order-run-row-${item.runNo}`}
                   >
-                    <Table.Td>
+                    <Table.Td style={{ padding: 0 }}>
                       <Link to={runLink} style={cellLinkStyle}>
                         <Text size="sm" ff="monospace">
                           {item.runNo}
                         </Text>
                       </Link>
                     </Table.Td>
-                    <Table.Td>
+                    <Table.Td style={{ padding: 0 }}>
                       <Link to={runLink} style={cellLinkStyle}>
                         {item.revNo}
                       </Link>
                     </Table.Td>
-                    <Table.Td>
+                    <Table.Td style={{ padding: 0 }}>
                       <Link to={runLink} style={cellLinkStyle}>
                         <Badge
                           color={STATUS_COLORS[item.status] ?? "gray"}
@@ -197,7 +192,7 @@ export const OrderRunList: React.FC = () => {
                         </Badge>
                       </Link>
                     </Table.Td>
-                    <Table.Td>
+                    <Table.Td style={{ padding: 0 }}>
                       <Link to={runLink} style={cellLinkStyle}>
                         <Badge
                           color={PRIORITY_COLORS[item.priority] ?? "gray"}
@@ -207,19 +202,19 @@ export const OrderRunList: React.FC = () => {
                         </Badge>
                       </Link>
                     </Table.Td>
-                    <Table.Td>
+                    <Table.Td style={{ padding: 0 }}>
                       <Link to={runLink} style={cellLinkStyle}>
                         {item.cost ? `$${item.cost.toFixed(2)}` : "\u2014"}
                       </Link>
                     </Table.Td>
-                    <Table.Td>
+                    <Table.Td style={{ padding: 0 }}>
                       <Link to={runLink} style={cellLinkStyle}>
                         {item.dueAt
                           ? new Date(item.dueAt).toLocaleDateString()
                           : "—"}
                       </Link>
                     </Table.Td>
-                    <Table.Td>
+                    <Table.Td style={{ padding: 0 }}>
                       <Link to={runLink} style={cellLinkStyle}>
                         {new Date(item.createdAt).toLocaleDateString()}
                       </Link>

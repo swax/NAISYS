@@ -27,12 +27,7 @@ import {
 
 import type { AppOutletContext } from "../../components/AppLayout";
 import { api, apiEndpoints, showErrorNotification } from "../../lib/api";
-
-const cellLinkStyle = {
-  display: "block",
-  color: "inherit",
-  textDecoration: "none",
-};
+import { cellLinkStyle } from "../../lib/tableStyles";
 
 export const UserList: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -203,14 +198,14 @@ export const UserList: React.FC = () => {
             <Table.Tbody>
               {data.items.map((item) => (
                 <Table.Tr key={item.id} style={{ cursor: "pointer" }}>
-                  <Table.Td>
+                  <Table.Td style={{ padding: 0 }}>
                     <Link to={`/users/${item.username}`} style={cellLinkStyle}>
                       <Text size="sm" ff="monospace">
                         {item.username}
                       </Text>
                     </Link>
                   </Table.Td>
-                  <Table.Td>
+                  <Table.Td style={{ padding: 0 }}>
                     <Link to={`/users/${item.username}`} style={cellLinkStyle}>
                       <Group gap={4} wrap="nowrap">
                         {item.isAgent ? "Agent" : "User"}
@@ -225,12 +220,12 @@ export const UserList: React.FC = () => {
                       </Group>
                     </Link>
                   </Table.Td>
-                  <Table.Td>
+                  <Table.Td style={{ padding: 0 }}>
                     <Link to={`/users/${item.username}`} style={cellLinkStyle}>
                       {item.permissionCount}
                     </Link>
                   </Table.Td>
-                  <Table.Td>
+                  <Table.Td style={{ padding: 0 }}>
                     <Link to={`/users/${item.username}`} style={cellLinkStyle}>
                       {new Date(item.createdAt).toLocaleDateString()}
                     </Link>

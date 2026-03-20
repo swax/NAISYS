@@ -19,12 +19,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router";
 
 import { api, apiEndpoints, showErrorNotification } from "../../lib/api";
-
-const cellLinkStyle = {
-  display: "block",
-  color: "inherit",
-  textDecoration: "none",
-};
+import { cellLinkStyle } from "../../lib/tableStyles";
 
 const STATUS_COLORS: Record<string, string> = {
   [OperationRunStatus.blocked]: "gray",
@@ -187,29 +182,23 @@ export const DispatchList: React.FC = () => {
                 const opRunLink = `/orders/${item.orderKey}/runs/${item.runNo}/ops/${item.seqNo}`;
                 return (
                   <Table.Tr key={item.id} style={{ cursor: "pointer" }}>
-                    <Table.Td>
-                      <Group gap="xs" wrap="nowrap">
-                        <Link
-                          to={`/orders/${item.orderKey}`}
-                          style={cellLinkStyle}
-                        >
+                    <Table.Td style={{ padding: 0 }}>
+                      <Link to={opRunLink} style={cellLinkStyle}>
+                        <Group gap="xs" wrap="nowrap">
                           <Text size="sm" ff="monospace">
                             {item.orderKey}
                           </Text>
-                        </Link>
-                        <Badge
-                          component={Link}
-                          to={`/orders/${item.orderKey}/revs/${item.revNo}`}
-                          color="violet"
-                          variant="light"
-                          size="sm"
-                          style={{ cursor: "pointer" }}
-                        >
-                          REV {item.revNo}
-                        </Badge>
-                      </Group>
+                          <Badge
+                            color="violet"
+                            variant="light"
+                            size="sm"
+                          >
+                            REV {item.revNo}
+                          </Badge>
+                        </Group>
+                      </Link>
                     </Table.Td>
-                    <Table.Td>
+                    <Table.Td style={{ padding: 0 }}>
                       <Link
                         to={`/orders/${item.orderKey}/runs/${item.runNo}`}
                         style={cellLinkStyle}
@@ -219,7 +208,7 @@ export const DispatchList: React.FC = () => {
                         </Text>
                       </Link>
                     </Table.Td>
-                    <Table.Td>
+                    <Table.Td style={{ padding: 0 }}>
                       <Link to={opRunLink} style={cellLinkStyle}>
                         <Text size="sm">
                           <Text span ff="monospace">
@@ -230,7 +219,7 @@ export const DispatchList: React.FC = () => {
                         </Text>
                       </Link>
                     </Table.Td>
-                    <Table.Td>
+                    <Table.Td style={{ padding: 0 }}>
                       <Link to={opRunLink} style={cellLinkStyle}>
                         <Badge
                           color={STATUS_COLORS[item.status] ?? "gray"}
@@ -240,7 +229,7 @@ export const DispatchList: React.FC = () => {
                         </Badge>
                       </Link>
                     </Table.Td>
-                    <Table.Td>
+                    <Table.Td style={{ padding: 0 }}>
                       <Link to={opRunLink} style={cellLinkStyle}>
                         <Badge
                           color={PRIORITY_COLORS[item.priority] ?? "gray"}
@@ -250,12 +239,12 @@ export const DispatchList: React.FC = () => {
                         </Badge>
                       </Link>
                     </Table.Td>
-                    <Table.Td>
+                    <Table.Td style={{ padding: 0 }}>
                       <Link to={opRunLink} style={cellLinkStyle}>
                         {item.assignedTo ?? "\u2014"}
                       </Link>
                     </Table.Td>
-                    <Table.Td>
+                    <Table.Td style={{ padding: 0 }}>
                       <Link to={opRunLink} style={cellLinkStyle}>
                         {item.dueAt
                           ? new Date(item.dueAt).toLocaleDateString()

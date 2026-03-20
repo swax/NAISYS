@@ -16,10 +16,11 @@ import type {
   ItemInstanceListResponse,
 } from "@naisys-erp/shared";
 import { useCallback, useEffect, useState } from "react";
-import { useNavigate, useParams, useSearchParams } from "react-router";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router";
 
 import { api, apiEndpoints, showErrorNotification } from "../../lib/api";
 import { hasAction } from "../../lib/hateoas";
+import { cellLinkStyle } from "../../lib/tableStyles";
 
 export const ItemInstanceList: React.FC = () => {
   const { key } = useParams<{ key: string }>();
@@ -170,34 +171,41 @@ export const ItemInstanceList: React.FC = () => {
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
-              {data.items.map((inst) => (
-                <Table.Tr
-                  key={inst.id}
-                  style={{ cursor: "pointer" }}
-                  onClick={() => navigate(`/items/${key}/instances/${inst.id}`)}
-                >
-                  <Table.Td>
-                    <Text size="sm" ff="monospace">
-                      {inst.key}
-                    </Text>
-                  </Table.Td>
-                  <Table.Td>
-                    <Text size="sm">
-                      {inst.quantity != null ? inst.quantity : "—"}
-                    </Text>
-                  </Table.Td>
-                  <Table.Td>
-                    <Text size="sm">
-                      {inst.orderKey
-                        ? `${inst.orderKey} Run ${inst.orderRunNo}`
-                        : "—"}
-                    </Text>
-                  </Table.Td>
-                  <Table.Td>
-                    {new Date(inst.createdAt).toLocaleDateString()}
-                  </Table.Td>
-                </Table.Tr>
-              ))}
+              {data.items.map((inst) => {
+                const instLink = `/items/${key}/instances/${inst.id}`;
+                return (
+                  <Table.Tr key={inst.id} style={{ cursor: "pointer" }}>
+                    <Table.Td style={{ padding: 0 }}>
+                      <Link to={instLink} style={cellLinkStyle}>
+                        <Text size="sm" ff="monospace">
+                          {inst.key}
+                        </Text>
+                      </Link>
+                    </Table.Td>
+                    <Table.Td style={{ padding: 0 }}>
+                      <Link to={instLink} style={cellLinkStyle}>
+                        <Text size="sm">
+                          {inst.quantity != null ? inst.quantity : "—"}
+                        </Text>
+                      </Link>
+                    </Table.Td>
+                    <Table.Td style={{ padding: 0 }}>
+                      <Link to={instLink} style={cellLinkStyle}>
+                        <Text size="sm">
+                          {inst.orderKey
+                            ? `${inst.orderKey} Run ${inst.orderRunNo}`
+                            : "—"}
+                        </Text>
+                      </Link>
+                    </Table.Td>
+                    <Table.Td style={{ padding: 0 }}>
+                      <Link to={instLink} style={cellLinkStyle}>
+                        {new Date(inst.createdAt).toLocaleDateString()}
+                      </Link>
+                    </Table.Td>
+                  </Table.Tr>
+                );
+              })}
             </Table.Tbody>
           </Table>
           {totalPages > 1 && (

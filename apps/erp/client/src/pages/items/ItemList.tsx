@@ -12,10 +12,11 @@ import {
 } from "@mantine/core";
 import type { ItemListResponse } from "@naisys-erp/shared";
 import { useCallback, useEffect, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router";
+import { Link, useNavigate, useSearchParams } from "react-router";
 
 import { api, apiEndpoints, showErrorNotification } from "../../lib/api";
 import { hasAction } from "../../lib/hateoas";
+import { cellLinkStyle } from "../../lib/tableStyles";
 
 export const ItemList: React.FC = () => {
   const navigate = useNavigate();
@@ -93,27 +94,32 @@ export const ItemList: React.FC = () => {
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
-              {data.items.map((item) => (
-                <Table.Tr
-                  key={item.id}
-                  style={{ cursor: "pointer" }}
-                  onClick={() => navigate(`/items/${item.key}`)}
-                >
-                  <Table.Td>
-                    <Text size="sm" ff="monospace">
-                      {item.key}
-                    </Text>
-                  </Table.Td>
-                  <Table.Td>
-                    <Text size="sm" lineClamp={1}>
-                      {item.description || "—"}
-                    </Text>
-                  </Table.Td>
-                  <Table.Td>
-                    {new Date(item.createdAt).toLocaleDateString()}
-                  </Table.Td>
-                </Table.Tr>
-              ))}
+              {data.items.map((item) => {
+                const itemLink = `/items/${item.key}`;
+                return (
+                  <Table.Tr key={item.id} style={{ cursor: "pointer" }}>
+                    <Table.Td style={{ padding: 0 }}>
+                      <Link to={itemLink} style={cellLinkStyle}>
+                        <Text size="sm" ff="monospace">
+                          {item.key}
+                        </Text>
+                      </Link>
+                    </Table.Td>
+                    <Table.Td style={{ padding: 0 }}>
+                      <Link to={itemLink} style={cellLinkStyle}>
+                        <Text size="sm" lineClamp={1}>
+                          {item.description || "—"}
+                        </Text>
+                      </Link>
+                    </Table.Td>
+                    <Table.Td style={{ padding: 0 }}>
+                      <Link to={itemLink} style={cellLinkStyle}>
+                        {new Date(item.createdAt).toLocaleDateString()}
+                      </Link>
+                    </Table.Td>
+                  </Table.Tr>
+                );
+              })}
             </Table.Tbody>
           </Table>
           {totalPages > 1 && (
