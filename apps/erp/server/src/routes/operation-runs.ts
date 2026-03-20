@@ -88,6 +88,7 @@ async function opRunItemActions(
       path: "/complete",
       method: "POST",
       title: "Complete",
+      schema: `${API_PREFIX}/schemas/CompleteOperationRun`,
       permission: "order_executor",
       statuses: [OperationRunStatus.in_progress],
       disabledWhen: () => stepsErr,
@@ -147,6 +148,7 @@ export async function formatOpRun(
     status: opRun.status,
     assignedTo: opRun.assignedTo?.username ?? null,
     cost: opRun.cost,
+    completionNote: opRun.completionNote ?? null,
     completedAt: formatDate(opRun.completedAt),
     ...formatAuditFields(opRun),
     _links: [
@@ -195,6 +197,7 @@ function formatListOpRun(
     status: opRun.status,
     assignedTo: opRun.assignedTo?.username ?? null,
     cost: opRun.cost,
+    completionNote: opRun.completionNote ?? null,
     completedAt: formatDate(opRun.completedAt),
     ...formatAuditFields(opRun),
     stepCount: opRun._count.stepRuns,

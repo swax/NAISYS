@@ -7,16 +7,19 @@ import {
   Divider,
   Group,
   Loader,
+  Menu,
+  Modal,
   Popover,
   SegmentedControl,
   Select,
   Stack,
   Tabs,
   Text,
+  Textarea,
 } from "@mantine/core";
 import type { OperationRun, UserListResponse } from "@naisys-erp/shared";
 import { OperationRunStatus } from "@naisys-erp/shared";
-import { IconArrowBackUp, IconX } from "@tabler/icons-react";
+import { IconArrowBackUp, IconChevronDown, IconNote, IconX } from "@tabler/icons-react";
 import { useCallback, useEffect, useState } from "react";
 import { useOutletContext, useParams } from "react-router";
 
@@ -63,6 +66,9 @@ export const OperationRunDetail: React.FC = () => {
     canClockOut: false,
   });
   const [laborActing, setLaborActing] = useState(false);
+  const [completeNoteOpen, setCompleteNoteOpen] = useState(false);
+  const [completeNoteText, setCompleteNoteText] = useState("");
+  const [submittingNote, setSubmittingNote] = useState(false);
 
   const fetchOpRun = useCallback(async () => {
     if (!orderKey || !runNo || !seqNo) return;
@@ -115,6 +121,7 @@ export const OperationRunDetail: React.FC = () => {
 
   const handleAction = async (
     action: "start" | "complete" | "skip" | "fail" | "reopen",
+    body: Record<string, unknown> = {},
   ) => {
     if (!orderKey || !runNo || !seqNo) return;
     const endpointMap = {
@@ -127,7 +134,7 @@ export const OperationRunDetail: React.FC = () => {
     try {
       const updated = await api.post<OperationRun>(
         endpointMap[action](orderKey, runNo, seqNo),
-        {},
+        body,
       );
       setOpRun(updated);
       setRefreshKey((k) => k + 1);
@@ -167,6 +174,19 @@ export const OperationRunDetail: React.FC = () => {
       showErrorNotification(err);
     } finally {
       setLaborActing(false);
+    }
+  };
+
+  const handleCompleteWithNote = async () => {
+    setSubmittingNote(true);
+    try {
+      await handleAction("complete", {
+        completionNote: completeNoteText.trim() || undefined,
+      });
+      setCompleteNoteOpen(false);
+      setCompleteNoteText("");
+    } finally {
+      setSubmittingNote(false);
     }
   };
 
@@ -298,15 +318,54 @@ export const OperationRunDetail: React.FC = () => {
             >
               Start
             </ActionButton>
-            <ActionButton
-              actions={opRun._actions}
-              rel="complete"
-              size="xs"
-              color="green"
-              onClick={() => handleAction("complete")}
-            >
-              Complete
-            </ActionButton>
+            {hasAction(opRun._actions, "complete", { includeDisabled: true }) &&
+              (() => {
+                const completeAction = hasAction(opRun._actions, "complete", { includeDisabled: true })!;
+                return (
+                  <Group gap={0}>
+                    <Button
+                      size="xs"
+                      color="green"
+                      disabled={completeAction.disabled}
+                      onClick={() => handleAction("complete")}
+                      style={{
+                        borderTopRightRadius: 0,
+                        borderBottomRightRadius: 0,
+                      }}
+                    >
+                      Complete
+                    </Button>
+                    <Menu position="bottom-end" withinPortal>
+                      <Menu.Target>
+                        <Button
+                          size="xs"
+                          color="green"
+                          px={6}
+                          disabled={completeAction.disabled}
+                          style={{
+                            borderTopLeftRadius: 0,
+                            borderBottomLeftRadius: 0,
+                            borderLeft: "1px solid rgba(255,255,255,0.3)",
+                          }}
+                        >
+                          <IconChevronDown size={14} />
+                        </Button>
+                      </Menu.Target>
+                      <Menu.Dropdown>
+                        <Menu.Item
+                          leftSection={<IconNote size={14} />}
+                          onClick={() => {
+                            setCompleteNoteOpen(true);
+                            setCompleteNoteText("");
+                          }}
+                        >
+                          Complete with note
+                        </Menu.Item>
+                      </Menu.Dropdown>
+                    </Menu>
+                  </Group>
+                );
+              })()}
             {hasAction(opRun._actions, "reopen") &&
               (() => {
                 const labelMap: Record<
@@ -391,6 +450,11 @@ export const OperationRunDetail: React.FC = () => {
                   {opRun.description && (
                     <CompactMarkdown>{opRun.description}</CompactMarkdown>
                   )}
+                  {opRun.completionNote && (
+                    <Text size="xs" c="dimmed" fs="italic">
+                      Completion Note: {opRun.completionNote}
+                    </Text>
+                  )}
                 </Stack>
               </Card>
             </Tabs.Panel>
@@ -463,6 +527,38 @@ export const OperationRunDetail: React.FC = () => {
           />
         </div>
       </Stack>
+
+      <Modal
+        opened={completeNoteOpen}
+        onClose={() => setCompleteNoteOpen(false)}
+        title="Complete with Note"
+        size="sm"
+      >
+        <Stack gap="md">
+          <Textarea
+            label="Completion note"
+            placeholder="Enter a note..."
+            value={completeNoteText}
+            onChange={(e) => setCompleteNoteText(e.currentTarget.value)}
+            autosize
+            minRows={3}
+            maxRows={6}
+            data-autofocus
+          />
+          <Group justify="flex-end">
+            <Button variant="subtle" onClick={() => setCompleteNoteOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              color="green"
+              onClick={() => void handleCompleteWithNote()}
+              loading={submittingNote}
+            >
+              Complete
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
     </Container>
   );
 };

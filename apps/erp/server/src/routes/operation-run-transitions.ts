@@ -1,4 +1,5 @@
 import {
+  CompleteOperationRunSchema,
   ErrorResponseSchema,
   OperationRunSchema,
   OperationRunStatus,
@@ -95,6 +96,7 @@ export default function operationRunTransitionRoutes(fastify: FastifyInstance) {
       description: "Complete an operation run (in_progress → completed)",
       tags: ["Operation Runs"],
       params: SeqNoParamsSchema,
+      body: CompleteOperationRunSchema,
       response: {
         200: OperationRunSchema,
         404: ErrorResponseSchema,
@@ -105,6 +107,7 @@ export default function operationRunTransitionRoutes(fastify: FastifyInstance) {
     preHandler: requirePermission("order_executor"),
     handler: async (request, reply) => {
       const { orderKey, runNo, seqNo } = request.params;
+      const { completionNote } = request.body;
       const userId = request.erpUser!.id;
 
       const resolved = await resolveOpRun(orderKey, runNo, seqNo);
@@ -136,7 +139,7 @@ export default function operationRunTransitionRoutes(fastify: FastifyInstance) {
         OperationRunStatus.in_progress,
         OperationRunStatus.completed,
         userId,
-        { completedAt: new Date(), cost },
+        { completedAt: new Date(), cost, completionNote: completionNote ?? null },
       );
       await unblockSuccessors(
         resolved.run.id,
@@ -279,7 +282,7 @@ export default function operationRunTransitionRoutes(fastify: FastifyInstance) {
         resolved.opRun.status,
         reopenTo,
         userId,
-        { completedAt: null },
+        { completedAt: null, completionNote: null },
       );
       // Re-block successor ops that are still pending
       await reblockSuccessors(
