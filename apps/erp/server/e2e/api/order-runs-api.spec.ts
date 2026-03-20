@@ -49,7 +49,7 @@ test.describe("Order Runs - API happy path", () => {
       data: {
         revNo,
         priority: "high",
-        notes: "First order run",
+        releaseNote: "First order run",
       },
     });
     expect(res.status()).toBe(201);
@@ -103,14 +103,14 @@ test.describe("Order Runs - API happy path", () => {
     const res = await api.put(`${API}/orders/${orderKey}/runs/${orderRunNo}`, {
       data: {
         priority: "critical",
-        notes: "Updated notes",
+        releaseNote: "Updated release note",
       },
     });
     expect(res.status()).toBe(200);
 
     const body = await res.json();
     expect(body.priority).toBe("critical");
-    expect(body.notes).toBe("Updated notes");
+    expect(body.releaseNote).toBe("Updated release note");
   });
 
   test("start order run (released → started)", async () => {

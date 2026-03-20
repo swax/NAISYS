@@ -135,13 +135,13 @@ export const OrderRunHeader: React.FC<Props> = ({
         >
           {orderRun.priority}
         </Badge>
-        {orderRun.notes && (
+        {orderRun.releaseNote && (
           <>
             <Text size="sm" c="dimmed">
               |
             </Text>
             <Text size="sm" c="dimmed" lineClamp={1} maw={300}>
-              {orderRun.notes}
+              {orderRun.releaseNote}
             </Text>
           </>
         )}

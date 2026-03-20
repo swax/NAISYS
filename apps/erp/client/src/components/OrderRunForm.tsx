@@ -29,7 +29,7 @@ interface Props<TEdit extends boolean = boolean> {
     priority: string;
     scheduledStartAt: string;
     dueAt: string;
-    notes: string;
+    releaseNote: string;
   }>;
   isEdit?: TEdit;
   onSubmit: (data: FormData<TEdit>) => Promise<void>;
@@ -47,7 +47,7 @@ function transformFormValues(
     priority: string;
     scheduledStartAt: string;
     dueAt: string;
-    notes: string;
+    releaseNote: string;
   },
   isEdit?: boolean,
 ): Record<string, unknown> {
@@ -55,13 +55,13 @@ function transformFormValues(
     priority: values.priority || undefined,
     scheduledStartAt: toISOOrEmpty(values.scheduledStartAt),
     dueAt: toISOOrEmpty(values.dueAt),
-    notes: values.notes || undefined,
+    releaseNote: values.releaseNote || undefined,
   };
   if (isEdit) {
     // For updates, convert empty optional fields to null (to clear them)
     if (!values.scheduledStartAt) result.scheduledStartAt = null;
     if (!values.dueAt) result.dueAt = null;
-    if (!values.notes) result.notes = null;
+    if (!values.releaseNote) result.releaseNote = null;
   } else {
     result.revNo = typeof values.revNo === "number" ? values.revNo : undefined;
   }
@@ -82,7 +82,7 @@ export const OrderRunForm = <TEdit extends boolean = false>({
       priority: initialData?.priority ?? OrderRunPriority.medium,
       scheduledStartAt: initialData?.scheduledStartAt ?? "",
       dueAt: initialData?.dueAt ?? "",
-      notes: initialData?.notes ?? "",
+      releaseNote: initialData?.releaseNote ?? "",
     },
     validate: (values) =>
       zodResolver(schema)(transformFormValues(values, isEdit)),
@@ -133,9 +133,9 @@ export const OrderRunForm = <TEdit extends boolean = false>({
           {...form.getInputProps("dueAt")}
         />
         <Textarea
-          label="Notes"
+          label="Release Note"
           placeholder="Additional notes..."
-          {...form.getInputProps("notes")}
+          {...form.getInputProps("releaseNote")}
           autosize
           minRows={3}
         />
