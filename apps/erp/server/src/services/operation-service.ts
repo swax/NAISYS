@@ -59,6 +59,7 @@ export async function createOperation(
   requestedSeqNo: number | undefined,
   title: string,
   description: string | undefined,
+  predecessorSeqNos: number[] | undefined,
   userId: number,
 ): Promise<OperationWithUsers> {
   return erpDb.$transaction(async (erpTx) => {
@@ -82,21 +83,40 @@ export async function createOperation(
       include: includeUsers,
     });
 
-    // Auto-create dependency on the previous operation (by seqNo)
-    const previousOp = await erpTx.operation.findFirst({
-      where: { orderRevId, seqNo: { lt: nextSeqNo } },
-      orderBy: { seqNo: "desc" },
-      select: { id: true },
-    });
-
-    if (previousOp) {
-      await erpTx.operationDependency.create({
-        data: {
-          successorId: created.id,
-          predecessorId: previousOp.id,
-          createdById: userId,
-        },
+    if (predecessorSeqNos !== undefined) {
+      // Use explicitly provided predecessors
+      for (const predSeqNo of predecessorSeqNos) {
+        const predOp = await erpTx.operation.findFirst({
+          where: { orderRevId, seqNo: predSeqNo },
+          select: { id: true },
+        });
+        if (predOp) {
+          await erpTx.operationDependency.create({
+            data: {
+              successorId: created.id,
+              predecessorId: predOp.id,
+              createdById: userId,
+            },
+          });
+        }
+      }
+    } else {
+      // Auto-create dependency on the previous operation (by seqNo)
+      const previousOp = await erpTx.operation.findFirst({
+        where: { orderRevId, seqNo: { lt: nextSeqNo } },
+        orderBy: { seqNo: "desc" },
+        select: { id: true },
       });
+
+      if (previousOp) {
+        await erpTx.operationDependency.create({
+          data: {
+            successorId: created.id,
+            predecessorId: previousOp.id,
+            createdById: userId,
+          },
+        });
+      }
     }
 
     return created;
