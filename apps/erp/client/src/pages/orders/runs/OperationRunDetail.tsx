@@ -7,16 +7,16 @@ import {
   Divider,
   Group,
   Loader,
+  SegmentedControl,
   Stack,
   Tabs,
   Text,
-  Textarea,
   Tooltip,
 } from "@mantine/core";
 import type { OperationRun } from "@naisys-erp/shared";
 import { OperationRunStatus } from "@naisys-erp/shared";
 import { IconArrowBackUp } from "@tabler/icons-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useOutletContext, useParams } from "react-router";
 
 import { CompactMarkdown } from "@naisys/common-browser";
@@ -24,6 +24,7 @@ import { MetadataTooltip } from "../../../components/MetadataTooltip";
 import { api, apiEndpoints, showErrorNotification } from "../../../lib/api";
 import { hasAction } from "../../../lib/hateoas";
 import { DependencyList } from "../revs/DependencyList";
+import { CommentList } from "./CommentList";
 import type { LaborActions } from "./LaborTicketList";
 import { LaborTicketList } from "./LaborTicketList";
 import classes from "./OperationRunDetail.module.css";
@@ -51,8 +52,9 @@ export const OperationRunDetail: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [refreshKey, setRefreshKey] = useState(0);
   const [activeTab, setActiveTab] = useState<string | null>("description");
-  const [feedbackDraft, setFeedbackDraft] = useState("");
-  const feedbackRef = useRef("");
+  const [bottomView, setBottomView] = useState("steps");
+  const [stepCount, setStepCount] = useState<number | null>(null);
+  const [commentCount, setCommentCount] = useState<number | null>(null);
   const [laborActions, setLaborActions] = useState<LaborActions>({
     canClockIn: false,
     canClockOut: false,
@@ -77,30 +79,6 @@ export const OperationRunDetail: React.FC = () => {
   useEffect(() => {
     void fetchOpRun();
   }, [fetchOpRun]);
-
-  useEffect(() => {
-    const value = opRun?.feedback ?? "";
-    setFeedbackDraft(value);
-    feedbackRef.current = value;
-  }, [opRun?.feedback]);
-
-  const saveFeedback = async () => {
-    if (!orderKey || !runNo || !seqNo) return;
-    const trimmed = feedbackDraft.trim();
-    if (trimmed === (feedbackRef.current ?? "")) return;
-    try {
-      const updated = await api.put<OperationRun>(
-        apiEndpoints.operationRun(orderKey, runNo, seqNo),
-        { feedback: trimmed || null },
-      );
-      const value = updated.feedback ?? "";
-      setOpRun(updated);
-      setFeedbackDraft(value);
-      feedbackRef.current = value;
-    } catch (err) {
-      showErrorNotification(err);
-    }
-  };
 
   const handleAction = async (
     action: "start" | "complete" | "skip" | "fail" | "reopen",
@@ -325,7 +303,6 @@ export const OperationRunDetail: React.FC = () => {
             <Tabs.Tab value="description">Description</Tabs.Tab>
             <Tabs.Tab value="dependencies">Dependencies</Tabs.Tab>
             <Tabs.Tab value="labor">Labor Tickets</Tabs.Tab>
-            <Tabs.Tab value="feedback">Feedback</Tabs.Tab>
           </Tabs.List>
 
           <div className={classes.panelGrid}>
@@ -374,59 +351,43 @@ export const OperationRunDetail: React.FC = () => {
               />
             </Tabs.Panel>
 
-            <Tabs.Panel
-              value="feedback"
-              pt="sm"
-              keepMounted
-              data-active={activeTab === "feedback" || undefined}
-            >
-              {opRun.status === OperationRunStatus.in_progress ? (
-                <Stack gap="xs">
-                  <Textarea
-                    autosize
-                    minRows={2}
-                    placeholder="Enter feedback..."
-                    value={feedbackDraft}
-                    onChange={(e) => setFeedbackDraft(e.currentTarget.value)}
-                  />
-                  <Group gap="xs">
-                    <Button
-                      size="xs"
-                      disabled={
-                        feedbackDraft.trim() === (feedbackRef.current ?? "")
-                      }
-                      onClick={() => void saveFeedback()}
-                    >
-                      Save
-                    </Button>
-                    {feedbackDraft.trim() !== (feedbackRef.current ?? "") && (
-                      <Button
-                        size="xs"
-                        variant="outline"
-                        color="gray"
-                        onClick={() => setFeedbackDraft(feedbackRef.current)}
-                      >
-                        Discard
-                      </Button>
-                    )}
-                  </Group>
-                </Stack>
-              ) : (
-                <Text style={{ whiteSpace: "pre-wrap" }}>
-                  {opRun.feedback || "\u2014"}
-                </Text>
-              )}
-            </Tabs.Panel>
           </div>
         </Tabs>
 
-        <StepRunList
-          orderKey={orderKey!}
-          runNo={runNo!}
-          seqNo={seqNo!}
-          refreshKey={refreshKey}
-          onStepUpdate={fetchOpRun}
+        <SegmentedControl
+          value={bottomView}
+          onChange={setBottomView}
+          data={[
+            {
+              value: "steps",
+              label: `Steps${stepCount ? ` (${stepCount})` : ""}`,
+            },
+            {
+              value: "comments",
+              label: `Comments${commentCount ? ` (${commentCount})` : ""}`,
+            },
+          ]}
         />
+
+        <div style={{ display: bottomView === "steps" ? undefined : "none" }}>
+          <StepRunList
+            orderKey={orderKey!}
+            runNo={runNo!}
+            seqNo={seqNo!}
+            refreshKey={refreshKey}
+            onStepUpdate={fetchOpRun}
+            onCountChange={setStepCount}
+          />
+        </div>
+        <div style={{ display: bottomView === "comments" ? undefined : "none" }}>
+          <CommentList
+            orderKey={orderKey!}
+            runNo={runNo!}
+            seqNo={seqNo!}
+            refreshKey={refreshKey}
+            onCountChange={setCommentCount}
+          />
+        </div>
       </Stack>
     </Container>
   );

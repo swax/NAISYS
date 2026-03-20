@@ -234,15 +234,12 @@ export async function checkStepsComplete(
 
 export async function updateOpRun(
   id: number,
-  data: { feedback?: string | null },
+  _data: Record<string, never>,
   userId: number,
 ): Promise<OpRunWithOp> {
-  const updateData: Record<string, unknown> = { updatedById: userId };
-  if (data.feedback !== undefined) updateData.feedback = data.feedback;
-
   return erpDb.operationRun.update({
     where: { id },
-    data: updateData,
+    data: { updatedById: userId },
     include: includeOp,
   });
 }

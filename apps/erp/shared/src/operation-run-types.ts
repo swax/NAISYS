@@ -27,7 +27,6 @@ export const OperationRunSchema = z.object({
   status: OperationRunStatusEnum,
   cost: z.number().nullable(),
   completedAt: z.iso.datetime().nullable(),
-  feedback: z.string().nullable(),
   createdAt: z.iso.datetime(),
   createdBy: z.string(),
   updatedAt: z.iso.datetime(),
@@ -39,11 +38,7 @@ export const OperationRunSchema = z.object({
 export type OperationRun = z.infer<typeof OperationRunSchema>;
 
 // Input for updating an operation run
-export const UpdateOperationRunSchema = z
-  .object({
-    feedback: z.string().max(2000).nullable().optional(),
-  })
-  .strict();
+export const UpdateOperationRunSchema = z.object({}).strict();
 
 export type UpdateOperationRun = z.infer<typeof UpdateOperationRunSchema>;
 

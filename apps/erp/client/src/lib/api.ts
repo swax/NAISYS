@@ -280,6 +280,11 @@ export const apiEndpoints = {
     seqNo: number | string,
     ticketId: number | string,
   ) => `orders/${key}/runs/${runNo}/ops/${seqNo}/labor/${ticketId}`,
+  operationRunComments: (
+    key: string,
+    runNo: number | string,
+    seqNo: number | string,
+  ) => `orders/${key}/runs/${runNo}/ops/${seqNo}/comments`,
   usersFromAgent: "users/from-agent",
   userRotateKey: (username: string) => `users/${username}/rotate-key`,
   changePassword: "users/me/password",

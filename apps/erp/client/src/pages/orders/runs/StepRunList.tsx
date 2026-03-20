@@ -6,7 +6,6 @@ import {
   Loader,
   Stack,
   Text,
-  Title,
 } from "@mantine/core";
 import type {
   StepRun,
@@ -27,6 +26,7 @@ interface Props {
   seqNo: string;
   refreshKey?: number;
   onStepUpdate?: () => void;
+  onCountChange?: (count: number) => void;
 }
 
 export const StepRunList: React.FC<Props> = ({
@@ -35,6 +35,7 @@ export const StepRunList: React.FC<Props> = ({
   seqNo,
   refreshKey,
   onStepUpdate,
+  onCountChange,
 }) => {
   const [data, setData] = useState<StepRunListResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -55,6 +56,7 @@ export const StepRunList: React.FC<Props> = ({
         apiEndpoints.stepRuns(orderKey, runNo, seqNo),
       );
       setData(result);
+      onCountChange?.(result.total);
     } catch (err) {
       showErrorNotification(err);
     } finally {
@@ -93,8 +95,6 @@ export const StepRunList: React.FC<Props> = ({
 
   return (
     <>
-      <Title order={5}>Steps</Title>
-
       {loading ? (
         <Stack align="center" py="sm">
           <Loader size="sm" />
