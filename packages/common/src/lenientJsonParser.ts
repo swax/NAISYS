@@ -25,7 +25,7 @@ export function registerLenientJsonParser(fastify: FastifyLike): void {
     { parseAs: "string" },
     (_req, body, done) => {
       try {
-        done(null, body.length > 0 ? JSON.parse(body) : undefined);
+        done(null, body.length > 0 ? JSON.parse(body) : {});
       } catch (err: unknown) {
         (err as { statusCode?: number }).statusCode = 400;
         done(err as Error, undefined);
