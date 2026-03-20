@@ -131,7 +131,9 @@ export const OrderList: React.FC = () => {
                       <Link to={orderLink} style={cellLinkStyle}>
                         <Badge
                           color={
-                            item.status === OrderStatus.active ? "green" : "gray"
+                            item.status === OrderStatus.active
+                              ? "green"
+                              : "gray"
                           }
                           variant="light"
                         >

@@ -348,7 +348,9 @@ export async function completeOrderRun(
       where: { itemId_key: { itemId: order.item.id, key: instanceKey } },
     });
     if (existing) {
-      return { error: `Instance key "${instanceKey}" already exists for this item` };
+      return {
+        error: `Instance key "${instanceKey}" already exists for this item`,
+      };
     }
 
     // Create the item instance

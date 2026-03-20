@@ -156,9 +156,7 @@ export const CompletionDialog: React.FC<Props> = ({
             </Text>
             {fields.map((field) => {
               const value = fieldValues[field.id] ?? "";
-              const label = field.required
-                ? `${field.label} *`
-                : field.label;
+              const label = field.required ? `${field.label} *` : field.label;
 
               switch (field.type) {
                 case FieldType.date:
@@ -173,11 +171,7 @@ export const CompletionDialog: React.FC<Props> = ({
                       onChange={(d) =>
                         setFieldValue(
                           field.id,
-                          d
-                            ? typeof d === "string"
-                              ? d
-                              : formatDate(d)
-                            : "",
+                          d ? (typeof d === "string" ? d : formatDate(d)) : "",
                         )
                       }
                     />
@@ -272,11 +266,7 @@ export const CompletionDialog: React.FC<Props> = ({
           <Button variant="subtle" onClick={handleClose}>
             Cancel
           </Button>
-          <Button
-            color="green"
-            onClick={handleSubmit}
-            loading={submitting}
-          >
+          <Button color="green" onClick={handleSubmit} loading={submitting}>
             Complete
           </Button>
         </Group>

@@ -38,86 +38,104 @@ function opRunResource(orderKey: string, runNo: number) {
 }
 
 async function opRunItemActions(
-  orderKey: string, runNo: number, seqNo: number,
-  opRunId: number, status: string, user: ErpUser | undefined,
+  orderKey: string,
+  runNo: number,
+  seqNo: number,
+  opRunId: number,
+  status: string,
+  user: ErpUser | undefined,
 ): Promise<HateoasAction[]> {
   const href = `${API_PREFIX}/${opRunResource(orderKey, runNo)}/${seqNo}`;
   const isExecutor = hasPermission(user, "order_executor");
-  const stepsErr = isExecutor && status === OperationRunStatus.in_progress
-    ? await checkStepsComplete(opRunId) : null;
+  const stepsErr =
+    isExecutor && status === OperationRunStatus.in_progress
+      ? await checkStepsComplete(opRunId)
+      : null;
 
-  return resolveActions([
-    {
-      rel: "assign",
-      method: "PUT",
-      title: "Assign",
-      schema: `${API_PREFIX}/schemas/UpdateOperationRun`,
-      permission: "order_manager",
-      statuses: [OperationRunStatus.blocked, OperationRunStatus.pending, OperationRunStatus.in_progress],
-    },
-    {
-      rel: "add-comment",
-      path: "/comments",
-      method: "POST",
-      title: "Add Comment",
-      schema: `${API_PREFIX}/schemas/CreateOperationRunComment`,
-      permission: "order_executor",
-    },
-    {
-      rel: "start",
-      path: "/start",
-      method: "POST",
-      title: "Start",
-      permission: "order_executor",
-      statuses: [OperationRunStatus.blocked, OperationRunStatus.pending],
-      disabledWhen: (ctx) =>
-        ctx.status === OperationRunStatus.blocked
-          ? "Operation is blocked by incomplete predecessors"
-          : null,
-    },
-    {
-      rel: "update",
-      method: "PUT",
-      title: "Update",
-      schema: `${API_PREFIX}/schemas/UpdateOperationRun`,
-      permission: "order_executor",
-      statuses: [OperationRunStatus.pending, OperationRunStatus.in_progress],
-    },
-    {
-      rel: "complete",
-      path: "/complete",
-      method: "POST",
-      title: "Complete",
-      schema: `${API_PREFIX}/schemas/CompleteOperationRun`,
-      permission: "order_executor",
-      statuses: [OperationRunStatus.in_progress],
-      disabledWhen: () => stepsErr,
-    },
-    {
-      rel: "skip",
-      path: "/skip",
-      method: "POST",
-      title: "Skip",
-      permission: "order_manager",
-      statuses: [OperationRunStatus.blocked, OperationRunStatus.pending],
-    },
-    {
-      rel: "fail",
-      path: "/fail",
-      method: "POST",
-      title: "Fail",
-      permission: "order_manager",
-      statuses: [OperationRunStatus.in_progress],
-    },
-    {
-      rel: "reopen",
-      path: "/reopen",
-      method: "POST",
-      title: "Reopen",
-      permission: "order_manager",
-      statuses: [OperationRunStatus.completed, OperationRunStatus.skipped, OperationRunStatus.failed],
-    },
-  ], href, { status, user });
+  return resolveActions(
+    [
+      {
+        rel: "assign",
+        method: "PUT",
+        title: "Assign",
+        schema: `${API_PREFIX}/schemas/UpdateOperationRun`,
+        permission: "order_manager",
+        statuses: [
+          OperationRunStatus.blocked,
+          OperationRunStatus.pending,
+          OperationRunStatus.in_progress,
+        ],
+      },
+      {
+        rel: "add-comment",
+        path: "/comments",
+        method: "POST",
+        title: "Add Comment",
+        schema: `${API_PREFIX}/schemas/CreateOperationRunComment`,
+        permission: "order_executor",
+      },
+      {
+        rel: "start",
+        path: "/start",
+        method: "POST",
+        title: "Start",
+        permission: "order_executor",
+        statuses: [OperationRunStatus.blocked, OperationRunStatus.pending],
+        disabledWhen: (ctx) =>
+          ctx.status === OperationRunStatus.blocked
+            ? "Operation is blocked by incomplete predecessors"
+            : null,
+      },
+      {
+        rel: "update",
+        method: "PUT",
+        title: "Update",
+        schema: `${API_PREFIX}/schemas/UpdateOperationRun`,
+        permission: "order_executor",
+        statuses: [OperationRunStatus.pending, OperationRunStatus.in_progress],
+      },
+      {
+        rel: "complete",
+        path: "/complete",
+        method: "POST",
+        title: "Complete",
+        schema: `${API_PREFIX}/schemas/CompleteOperationRun`,
+        permission: "order_executor",
+        statuses: [OperationRunStatus.in_progress],
+        disabledWhen: () => stepsErr,
+      },
+      {
+        rel: "skip",
+        path: "/skip",
+        method: "POST",
+        title: "Skip",
+        permission: "order_manager",
+        statuses: [OperationRunStatus.blocked, OperationRunStatus.pending],
+      },
+      {
+        rel: "fail",
+        path: "/fail",
+        method: "POST",
+        title: "Fail",
+        permission: "order_manager",
+        statuses: [OperationRunStatus.in_progress],
+      },
+      {
+        rel: "reopen",
+        path: "/reopen",
+        method: "POST",
+        title: "Reopen",
+        permission: "order_manager",
+        statuses: [
+          OperationRunStatus.completed,
+          OperationRunStatus.skipped,
+          OperationRunStatus.failed,
+        ],
+      },
+    ],
+    href,
+    { status, user },
+  );
 }
 
 const RunNoParamsSchema = z.object({
@@ -177,7 +195,14 @@ export async function formatOpRun(
         title: "Comments",
       } as HateoasLink,
     ],
-    _actions: await opRunItemActions(orderKey, runNo, seqNo, opRun.id, opRun.status, user),
+    _actions: await opRunItemActions(
+      orderKey,
+      runNo,
+      seqNo,
+      opRun.id,
+      opRun.status,
+      user,
+    ),
   };
 }
 
@@ -205,9 +230,7 @@ function formatListOpRun(
       seqNo: d.predecessor.seqNo,
       title: d.predecessor.title,
     })),
-    _links: [
-      selfLink(`/${opRunResource(orderKey, runNo)}/${seqNo}`),
-    ],
+    _links: [selfLink(`/${opRunResource(orderKey, runNo)}/${seqNo}`)],
   };
 }
 
@@ -236,9 +259,7 @@ export default function operationRunRoutes(fastify: FastifyInstance) {
       const items = await listOpRuns(resolved.run.id);
 
       return {
-        items: items.map((opRun) =>
-          formatListOpRun(orderKey, runNo, opRun),
-        ),
+        items: items.map((opRun) => formatListOpRun(orderKey, runNo, opRun)),
         total: items.length,
         _links: [selfLink(`/${opRunResource(orderKey, runNo)}`)],
       };

@@ -1,11 +1,4 @@
-import {
-  ActionIcon,
-  Anchor,
-  Badge,
-  Button,
-  Group,
-  Text,
-} from "@mantine/core";
+import { ActionIcon, Anchor, Badge, Button, Group, Text } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import { ActionButton } from "@naisys/common-browser";
 import type { OrderRun } from "@naisys-erp/shared";

@@ -11,9 +11,9 @@ import swagger from "@fastify/swagger";
 import {
   commonErrorHandler,
   MAX_ATTACHMENT_SIZE,
+  registerLenientJsonParser,
   type StartServer,
   SUPER_ADMIN_USERNAME,
-  registerLenientJsonParser,
 } from "@naisys/common";
 import { createHubDatabaseClient } from "@naisys/hub-database";
 import {

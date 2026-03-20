@@ -11,16 +11,16 @@ import {
   TextInput,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
+import { CompactMarkdown } from "@naisys/common-browser";
+import { zodResolver } from "@naisys/common-browser";
 import type { Operation, UpdateOperation } from "@naisys-erp/shared";
 import { UpdateOperationSchema } from "@naisys-erp/shared";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useOutletContext, useParams } from "react-router";
 
-import { CompactMarkdown } from "@naisys/common-browser";
 import { MetadataTooltip } from "../../../components/MetadataTooltip";
 import { api, apiEndpoints, showErrorNotification } from "../../../lib/api";
 import { hasAction } from "../../../lib/hateoas";
-import { zodResolver } from "@naisys/common-browser";
 import { DependencyList } from "./DependencyList";
 import type { RevisionOutletContext } from "./RevisionLayout";
 import { StepList } from "./StepList";

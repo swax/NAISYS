@@ -44,24 +44,32 @@ function stepRunResource(orderKey: string, runNo: number, seqNo: number) {
 }
 
 function stepRunItemActions(
-  orderKey: string, runNo: number, seqNo: number,
-  stepSeqNo: number, opRunStatus: string, user: ErpUser | undefined,
+  orderKey: string,
+  runNo: number,
+  seqNo: number,
+  stepSeqNo: number,
+  opRunStatus: string,
+  user: ErpUser | undefined,
 ): HateoasAction[] {
   const href = `${API_PREFIX}/${stepRunResource(orderKey, runNo, seqNo)}/${stepSeqNo}`;
 
-  return resolveActions([
-    {
-      rel: "update",
-      method: "PUT",
-      title: "Update",
-      schema: `${API_PREFIX}/schemas/UpdateStepRun`,
-      permission: "order_executor",
-      disabledWhen: (ctx) =>
-        ctx.status !== OperationRunStatus.in_progress
-          ? "Parent operation must be in progress"
-          : null,
-    },
-  ], href, { status: opRunStatus, user });
+  return resolveActions(
+    [
+      {
+        rel: "update",
+        method: "PUT",
+        title: "Update",
+        schema: `${API_PREFIX}/schemas/UpdateStepRun`,
+        permission: "order_executor",
+        disabledWhen: (ctx) =>
+          ctx.status !== OperationRunStatus.in_progress
+            ? "Parent operation must be in progress"
+            : null,
+      },
+    ],
+    href,
+    { status: opRunStatus, user },
+  );
 }
 
 const OpSeqNoParamsSchema = z.object({

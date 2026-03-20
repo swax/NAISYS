@@ -37,70 +37,77 @@ import {
 } from "../services/order-revision-service.js";
 
 function revisionItemActions(
-  parentResource: string, orderKey: string, revNo: number,
-  status: string, user: ErpUser | undefined,
+  parentResource: string,
+  orderKey: string,
+  revNo: number,
+  status: string,
+  user: ErpUser | undefined,
 ): HateoasAction[] {
   const href = `${API_PREFIX}/${parentResource}/${orderKey}/revs/${revNo}`;
 
-  return resolveActions([
-    {
-      rel: "update",
-      method: "PUT",
-      title: "Update",
-      schema: `${API_PREFIX}/schemas/UpdateOrderRevision`,
-      permission: "order_planner",
-      statuses: [RevisionStatus.draft, RevisionStatus.approved],
-      disabledWhen: (ctx) =>
-        ctx.status === RevisionStatus.approved
-          ? "Revision is no longer in draft"
-          : null,
-    },
-    {
-      rel: "approve",
-      path: "/approve",
-      method: "POST",
-      title: "Approve",
-      permission: "order_planner",
-      statuses: [RevisionStatus.draft, RevisionStatus.approved],
-      disabledWhen: (ctx) =>
-        ctx.status === RevisionStatus.approved
-          ? "Revision has already been approved"
-          : null,
-    },
-    {
-      rel: "delete",
-      method: "DELETE",
-      title: "Delete",
-      permission: "order_planner",
-      statuses: [RevisionStatus.draft],
-      hideWithoutPermission: true,
-    },
-    {
-      rel: "cut-order",
-      href: `${API_PREFIX}/orders/${orderKey}/runs`,
-      method: "POST",
-      title: "Cut Order",
-      schema: `${API_PREFIX}/schemas/CreateOrderRun`,
-      permission: "order_manager",
-      statuses: [RevisionStatus.draft, RevisionStatus.approved],
-      disabledWhen: (ctx) =>
-        ctx.status === RevisionStatus.draft
-          ? "Revision must be approved before cutting an order run"
-          : null,
-    },
-    {
-      rel: "obsolete",
-      path: "/obsolete",
-      method: "POST",
-      title: "Mark Obsolete",
-      permission: "order_planner",
-      statuses: [RevisionStatus.draft, RevisionStatus.approved],
-      disabledWhen: (ctx) =>
-        ctx.status === RevisionStatus.draft
-          ? "Revision must be approved before marking obsolete"
-          : null,
-    },
-  ], href, { status, user });
+  return resolveActions(
+    [
+      {
+        rel: "update",
+        method: "PUT",
+        title: "Update",
+        schema: `${API_PREFIX}/schemas/UpdateOrderRevision`,
+        permission: "order_planner",
+        statuses: [RevisionStatus.draft, RevisionStatus.approved],
+        disabledWhen: (ctx) =>
+          ctx.status === RevisionStatus.approved
+            ? "Revision is no longer in draft"
+            : null,
+      },
+      {
+        rel: "approve",
+        path: "/approve",
+        method: "POST",
+        title: "Approve",
+        permission: "order_planner",
+        statuses: [RevisionStatus.draft, RevisionStatus.approved],
+        disabledWhen: (ctx) =>
+          ctx.status === RevisionStatus.approved
+            ? "Revision has already been approved"
+            : null,
+      },
+      {
+        rel: "delete",
+        method: "DELETE",
+        title: "Delete",
+        permission: "order_planner",
+        statuses: [RevisionStatus.draft],
+        hideWithoutPermission: true,
+      },
+      {
+        rel: "cut-order",
+        href: `${API_PREFIX}/orders/${orderKey}/runs`,
+        method: "POST",
+        title: "Cut Order",
+        schema: `${API_PREFIX}/schemas/CreateOrderRun`,
+        permission: "order_manager",
+        statuses: [RevisionStatus.draft, RevisionStatus.approved],
+        disabledWhen: (ctx) =>
+          ctx.status === RevisionStatus.draft
+            ? "Revision must be approved before cutting an order run"
+            : null,
+      },
+      {
+        rel: "obsolete",
+        path: "/obsolete",
+        method: "POST",
+        title: "Mark Obsolete",
+        permission: "order_planner",
+        statuses: [RevisionStatus.draft, RevisionStatus.approved],
+        disabledWhen: (ctx) =>
+          ctx.status === RevisionStatus.draft
+            ? "Revision must be approved before marking obsolete"
+            : null,
+      },
+    ],
+    href,
+    { status, user },
+  );
 }
 
 const PARENT_RESOURCE = "orders";
@@ -209,14 +216,19 @@ export default function orderRevisionRoutes(fastify: FastifyInstance) {
         page,
         pageSize,
         _links: paginationLinks(revBasePath, page, pageSize, total, { status }),
-        _actions: [{
-          rel: "create",
-          href: `${API_PREFIX}/${revBasePath}`,
-          method: "POST" as const,
-          title: "New Revision",
-          schema: `${API_PREFIX}/schemas/CreateOrderRevision`,
-          ...permGate(hasPermission(request.erpUser, "order_planner"), "order_planner"),
-        }],
+        _actions: [
+          {
+            rel: "create",
+            href: `${API_PREFIX}/${revBasePath}`,
+            method: "POST" as const,
+            title: "New Revision",
+            schema: `${API_PREFIX}/schemas/CreateOrderRevision`,
+            ...permGate(
+              hasPermission(request.erpUser, "order_planner"),
+              "order_planner",
+            ),
+          },
+        ],
       };
     },
   });

@@ -139,7 +139,11 @@ export default function operationRunTransitionRoutes(fastify: FastifyInstance) {
         OperationRunStatus.in_progress,
         OperationRunStatus.completed,
         userId,
-        { completedAt: new Date(), cost, completionNote: completionNote ?? null },
+        {
+          completedAt: new Date(),
+          cost,
+          completionNote: completionNote ?? null,
+        },
       );
       await unblockSuccessors(
         resolved.run.id,

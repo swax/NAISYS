@@ -146,18 +146,24 @@ export default function operationRoutes(fastify: FastifyInstance) {
         total: items.length,
         nextSeqNo: calcNextSeqNo(maxSeq),
         _links: [selfLink(base)],
-        _actions: [{
-          rel: "create",
-          href: `${API_PREFIX}${base}`,
-          method: "POST" as const,
-          title: "Add Operation",
-          schema: `${API_PREFIX}/schemas/CreateOperation`,
-          ...(!hasPermission(user, "order_planner")
-            ? permGate(false, "order_planner")
-            : resolved.rev.status !== RevisionStatus.draft
-              ? { disabled: true, disabledReason: "Can only add operations in draft revisions" }
-              : {}),
-        }],
+        _actions: [
+          {
+            rel: "create",
+            href: `${API_PREFIX}${base}`,
+            method: "POST" as const,
+            title: "Add Operation",
+            schema: `${API_PREFIX}/schemas/CreateOperation`,
+            ...(!hasPermission(user, "order_planner")
+              ? permGate(false, "order_planner")
+              : resolved.rev.status !== RevisionStatus.draft
+                ? {
+                    disabled: true,
+                    disabledReason:
+                      "Can only add operations in draft revisions",
+                  }
+                : {}),
+          },
+        ],
       };
     },
   });

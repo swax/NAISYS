@@ -142,11 +142,7 @@ export const AttachmentList: React.FC<AttachmentListProps> = ({
           </Table>
           {totalPages > 1 && (
             <Group justify="center" mt="md">
-              <Pagination
-                total={totalPages}
-                value={page}
-                onChange={setPage}
-              />
+              <Pagination total={totalPages} value={page} onChange={setPage} />
             </Group>
           )}
         </>

@@ -9,6 +9,7 @@ import {
   Title,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
+import { zodResolver } from "@naisys/common-browser";
 import type {
   CreateOperationDependency,
   OperationDependency,
@@ -19,7 +20,6 @@ import { useCallback, useEffect, useState } from "react";
 
 import { api, apiEndpoints, showErrorNotification } from "../../../lib/api";
 import { hasAction, hasActionTemplate } from "../../../lib/hateoas";
-import { zodResolver } from "@naisys/common-browser";
 
 interface DependencyListProps {
   orderKey: string;

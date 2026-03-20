@@ -127,18 +127,23 @@ export default function stepRoutes(fastify: FastifyInstance) {
         total: items.length,
         nextSeqNo: calcNextSeqNo(maxSeq),
         _links: [selfLink(base)],
-        _actions: [{
-          rel: "create",
-          href: `${API_PREFIX}${base}`,
-          method: "POST" as const,
-          title: "Add Step",
-          schema: `${API_PREFIX}/schemas/CreateStep`,
-          ...(!hasPermission(user, "order_planner")
-            ? permGate(false, "order_planner")
-            : resolved.rev.status !== RevisionStatus.draft
-              ? { disabled: true, disabledReason: "Can only add steps in draft revisions" }
-              : {}),
-        }],
+        _actions: [
+          {
+            rel: "create",
+            href: `${API_PREFIX}${base}`,
+            method: "POST" as const,
+            title: "Add Step",
+            schema: `${API_PREFIX}/schemas/CreateStep`,
+            ...(!hasPermission(user, "order_planner")
+              ? permGate(false, "order_planner")
+              : resolved.rev.status !== RevisionStatus.draft
+                ? {
+                    disabled: true,
+                    disabledReason: "Can only add steps in draft revisions",
+                  }
+                : {}),
+          },
+        ],
       };
     },
   });
@@ -159,7 +164,12 @@ export default function stepRoutes(fastify: FastifyInstance) {
     preHandler: requirePermission("order_planner"),
     handler: async (request, reply) => {
       const { orderKey, revNo, seqNo } = request.params;
-      const { seqNo: requestedSeqNo, title, instructions, multiSet } = request.body;
+      const {
+        seqNo: requestedSeqNo,
+        title,
+        instructions,
+        multiSet,
+      } = request.body;
       const userId = request.erpUser!.id;
 
       const resolved = await resolveOperation(orderKey, revNo, seqNo);

@@ -9,6 +9,8 @@ import {
   Textarea,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
+import { CompactMarkdown } from "@naisys/common-browser";
+import { zodResolver } from "@naisys/common-browser";
 import type {
   OperationListResponse,
   OrderRevision,
@@ -18,12 +20,10 @@ import { UpdateOrderRevisionSchema } from "@naisys-erp/shared";
 import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router";
 
-import { CompactMarkdown } from "@naisys/common-browser";
 import { MetadataTooltip } from "../../../components/MetadataTooltip";
 import { OperationSummaryTable } from "../../../components/OperationSummaryTable";
 import { api, apiEndpoints, showErrorNotification } from "../../../lib/api";
 import { hasAction } from "../../../lib/hateoas";
-import { zodResolver } from "@naisys/common-browser";
 
 export const HeaderDetail: React.FC = () => {
   const { orderKey, revNo } = useParams<{

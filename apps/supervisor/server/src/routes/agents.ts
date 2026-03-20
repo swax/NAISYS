@@ -17,6 +17,7 @@ import {
 } from "@naisys-supervisor/shared";
 import { FastifyInstance, FastifyPluginOptions } from "fastify";
 
+import type { SupervisorUser } from "../auth-middleware.js";
 import { hasPermission, requirePermission } from "../auth-middleware.js";
 import { badRequest, notFound } from "../error-helpers.js";
 import {
@@ -25,7 +26,7 @@ import {
   schemaLink,
   selfLink,
 } from "../hateoas.js";
-import { permGate, resolveActions } from "../route-helpers.js";
+import { resolveActions } from "../route-helpers.js";
 import { createAgentConfig } from "../services/agentConfigService.js";
 import {
   getAgentStatus,
@@ -36,8 +37,6 @@ import {
   getAgents,
   resolveAgentId,
 } from "../services/agentService.js";
-
-import type { SupervisorUser } from "../auth-middleware.js";
 
 type AgentCtx = {
   user: SupervisorUser | undefined;
@@ -212,7 +211,10 @@ export default function agentsRoutes(
           schema: `${API_PREFIX}/schemas/CreateAgent`,
           ...(hasManagePermission
             ? {}
-            : { disabled: true, disabledReason: "Requires manage_agents permission" }),
+            : {
+                disabled: true,
+                disabledReason: "Requires manage_agents permission",
+              }),
         },
       ];
 
