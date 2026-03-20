@@ -143,7 +143,7 @@ export const startServer: StartServer = async (
   // Rate limiting
 
   await fastify.register(rateLimit as any, {
-    max: 100,
+    max: 500,
     timeWindow: "1 minute",
     allowList: (request: { url: string }) => !request.url.startsWith("/api/"),
   });
