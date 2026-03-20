@@ -1,3 +1,5 @@
+export { ActionButton } from "./ActionButton.js";
+export type { ActionButtonProps } from "./ActionButton.js";
 export { AttachmentList } from "./AttachmentList.js";
 export type {
   AttachmentItem,

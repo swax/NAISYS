@@ -13,7 +13,6 @@ import {
   Stack,
   Tabs,
   Text,
-  Tooltip,
 } from "@mantine/core";
 import type { OperationRun, UserListResponse } from "@naisys-erp/shared";
 import { OperationRunStatus } from "@naisys-erp/shared";
@@ -21,7 +20,7 @@ import { IconArrowBackUp, IconX } from "@tabler/icons-react";
 import { useCallback, useEffect, useState } from "react";
 import { useOutletContext, useParams } from "react-router";
 
-import { CompactMarkdown } from "@naisys/common-browser";
+import { ActionButton, CompactMarkdown } from "@naisys/common-browser";
 import { MetadataTooltip } from "../../../components/MetadataTooltip";
 import { api, apiEndpoints, showErrorNotification } from "../../../lib/api";
 import { hasAction } from "../../../lib/hateoas";
@@ -290,36 +289,24 @@ export const OperationRunDetail: React.FC = () => {
                 <Divider orientation="vertical" />
               </>
             )}
-            {hasAction(opRun._actions, "start") && (
-              <Button
-                size="xs"
-                color="green"
-                onClick={() => handleAction("start")}
-              >
-                Start
-              </Button>
-            )}
-            {(() => {
-              const completeAction = hasAction(opRun._actions, "complete");
-              if (!completeAction) return null;
-              const btn = (
-                <Button
-                  size="xs"
-                  color="green"
-                  disabled={completeAction.disabled}
-                  onClick={() => handleAction("complete")}
-                >
-                  Complete
-                </Button>
-              );
-              return completeAction.disabledReason ? (
-                <Tooltip label={completeAction.disabledReason} multiline maw={350}>
-                  {btn}
-                </Tooltip>
-              ) : (
-                btn
-              );
-            })()}
+            <ActionButton
+              actions={opRun._actions}
+              rel="start"
+              size="xs"
+              color="green"
+              onClick={() => handleAction("start")}
+            >
+              Start
+            </ActionButton>
+            <ActionButton
+              actions={opRun._actions}
+              rel="complete"
+              size="xs"
+              color="green"
+              onClick={() => handleAction("complete")}
+            >
+              Complete
+            </ActionButton>
             {hasAction(opRun._actions, "reopen") &&
               (() => {
                 const labelMap: Record<

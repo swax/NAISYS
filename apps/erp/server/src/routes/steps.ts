@@ -19,6 +19,7 @@ import {
   childItemLinks,
   draftCrudActions,
   formatAuditFields,
+  permGate,
   resolveOperation,
 } from "../route-helpers.js";
 import {
@@ -126,19 +127,18 @@ export default function stepRoutes(fastify: FastifyInstance) {
         total: items.length,
         nextSeqNo: calcNextSeqNo(maxSeq),
         _links: [selfLink(base)],
-        _actions:
-          hasPermission(user, "order_planner") &&
-          resolved.rev.status === RevisionStatus.draft
-            ? [
-                {
-                  rel: "create",
-                  href: `${API_PREFIX}${base}`,
-                  method: "POST" as const,
-                  title: "Add Step",
-                  schema: `${API_PREFIX}/schemas/CreateStep`,
-                },
-              ]
-            : [],
+        _actions: [{
+          rel: "create",
+          href: `${API_PREFIX}${base}`,
+          method: "POST" as const,
+          title: "Add Step",
+          schema: `${API_PREFIX}/schemas/CreateStep`,
+          ...(!hasPermission(user, "order_planner")
+            ? permGate(false, "order_planner")
+            : resolved.rev.status !== RevisionStatus.draft
+              ? { disabled: true, disabledReason: "Can only add steps in draft revisions" }
+              : {}),
+        }],
       };
     },
   });

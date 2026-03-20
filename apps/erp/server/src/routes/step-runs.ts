@@ -21,6 +21,7 @@ import {
   checkOrderRunStarted,
   childItemLinks,
   formatAuditFields,
+  resolveActions,
   resolveOpRun,
   resolveStepRun,
 } from "../route-helpers.js";
@@ -43,27 +44,24 @@ function stepRunResource(orderKey: string, runNo: number, seqNo: number) {
 }
 
 function stepRunItemActions(
-  orderKey: string,
-  runNo: number,
-  seqNo: number,
-  stepSeqNo: number,
-  opRunStatus: string,
-  user: ErpUser | undefined,
+  orderKey: string, runNo: number, seqNo: number,
+  stepSeqNo: number, opRunStatus: string, user: ErpUser | undefined,
 ): HateoasAction[] {
-  if (!hasPermission(user, "order_executor")) return [];
-  // Only allow updates when the parent operation run is in_progress
-  if (opRunStatus !== OperationRunStatus.in_progress) return [];
-
   const href = `${API_PREFIX}/${stepRunResource(orderKey, runNo, seqNo)}/${stepSeqNo}`;
-  return [
+
+  return resolveActions([
     {
       rel: "update",
-      href,
       method: "PUT",
       title: "Update",
       schema: `${API_PREFIX}/schemas/UpdateStepRun`,
+      permission: "order_executor",
+      disabledWhen: (ctx) =>
+        ctx.status !== OperationRunStatus.in_progress
+          ? "Parent operation must be in progress"
+          : null,
     },
-  ];
+  ], href, { status: opRunStatus, user });
 }
 
 const OpSeqNoParamsSchema = z.object({

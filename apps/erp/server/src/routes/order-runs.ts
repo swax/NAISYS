@@ -19,6 +19,7 @@ import { API_PREFIX, paginationLinks, selfLink } from "../hateoas.js";
 import {
   childItemLinks,
   formatAuditFields,
+  resolveActions,
   resolveOrder,
   resolveOrderRun,
 } from "../route-helpers.js";
@@ -39,105 +40,76 @@ function runResource(orderKey: string) {
 }
 
 async function orderRunItemActions(
-  orderKey: string,
-  runNo: number,
-  runId: number,
-  status: string,
-  itemKey: string | null,
-  user: ErpUser | undefined,
+  orderKey: string, runNo: number, runId: number,
+  status: string, itemKey: string | null, user: ErpUser | undefined,
 ): Promise<HateoasAction[]> {
   const href = `${API_PREFIX}/${runResource(orderKey)}/${runNo}`;
-  const actions: HateoasAction[] = [];
   const isExecutor = hasPermission(user, "order_executor");
-  const isManager = hasPermission(user, "order_manager");
+  const opsErr = isExecutor && status === OrderRunStatus.started
+    ? await checkOpsComplete(runId) : null;
 
-  if (status === OrderRunStatus.released) {
-    if (isExecutor) {
-      actions.push({
-        rel: "start",
-        href: `${href}/start`,
-        method: "POST",
-        title: "Start",
-      });
-    }
-    if (isManager) {
-      actions.push(
-        {
-          rel: "update",
-          href,
-          method: "PUT",
-          title: "Update",
-          schema: `${API_PREFIX}/schemas/UpdateOrderRun`,
-        },
-        {
-          rel: "cancel",
-          href: `${href}/cancel`,
-          method: "POST",
-          title: "Cancel",
-        },
-        {
-          rel: "delete",
-          href,
-          method: "DELETE",
-          title: "Delete",
-        },
-      );
-    }
-  } else if (status === OrderRunStatus.started) {
-    const opsErr = isExecutor ? await checkOpsComplete(runId) : null;
-
-    if (isExecutor) {
-      if (itemKey) {
-        actions.push({
-          rel: "complete",
-          href: `${href}/complete`,
-          method: "POST",
-          title: "Complete",
-          schema: `${API_PREFIX}/schemas/CompleteOrderRun`,
-          ...(opsErr ? { disabled: true, disabledReason: opsErr } : {}),
-        });
-      } else {
-        actions.push({
-          rel: "close",
-          href: `${href}/close`,
-          method: "POST",
-          title: "Close",
-          ...(opsErr ? { disabled: true, disabledReason: opsErr } : {}),
-        });
-      }
-    }
-    if (isManager) {
-      actions.push(
-        {
-          rel: "update",
-          href,
-          method: "PUT",
-          title: "Update",
-          schema: `${API_PREFIX}/schemas/UpdateOrderRun`,
-        },
-        {
-          rel: "cancel",
-          href: `${href}/cancel`,
-          method: "POST",
-          title: "Cancel",
-        },
-      );
-    }
-  } else if (
-    status === OrderRunStatus.closed ||
-    status === OrderRunStatus.cancelled
-  ) {
-    if (isManager) {
-      actions.push({
-        rel: "reopen",
-        href: `${href}/reopen`,
-        method: "POST",
-        title: "Reopen",
-      });
-    }
-  }
-
-  return actions;
+  return resolveActions([
+    {
+      rel: "start",
+      path: "/start",
+      method: "POST",
+      title: "Start",
+      permission: "order_executor",
+      statuses: [OrderRunStatus.released],
+    },
+    {
+      rel: "complete",
+      path: "/complete",
+      method: "POST",
+      title: "Complete",
+      schema: `${API_PREFIX}/schemas/CompleteOrderRun`,
+      permission: "order_executor",
+      statuses: [OrderRunStatus.started],
+      visibleWhen: (ctx) => !!ctx.itemKey,
+      disabledWhen: (ctx) => ctx.opsErr,
+    },
+    {
+      rel: "close",
+      path: "/close",
+      method: "POST",
+      title: "Close",
+      permission: "order_executor",
+      statuses: [OrderRunStatus.started],
+      visibleWhen: (ctx) => !ctx.itemKey,
+      disabledWhen: (ctx) => ctx.opsErr,
+    },
+    {
+      rel: "update",
+      method: "PUT",
+      title: "Update",
+      schema: `${API_PREFIX}/schemas/UpdateOrderRun`,
+      permission: "order_manager",
+      statuses: [OrderRunStatus.released, OrderRunStatus.started],
+    },
+    {
+      rel: "cancel",
+      path: "/cancel",
+      method: "POST",
+      title: "Cancel",
+      permission: "order_manager",
+      statuses: [OrderRunStatus.released, OrderRunStatus.started],
+    },
+    {
+      rel: "delete",
+      method: "DELETE",
+      title: "Delete",
+      permission: "order_manager",
+      statuses: [OrderRunStatus.released],
+    },
+    {
+      rel: "reopen",
+      path: "/reopen",
+      method: "POST",
+      title: "Reopen",
+      permission: "order_manager",
+      statuses: [OrderRunStatus.closed, OrderRunStatus.cancelled],
+    },
+  ], href, { status, user, itemKey, opsErr });
 }
 
 const OrderKeyParamsSchema = z.object({
