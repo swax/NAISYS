@@ -90,7 +90,7 @@ export const erpPlugin: FastifyPluginAsync = async (fastify) => {
 
   // Rate limiting — moderate global default, strict overrides on sensitive routes
   await fastify.register(rateLimit, {
-    max: 300,
+    max: 500,
     timeWindow: "1 minute",
     allowList: (request) => !request.url.startsWith("/api/"),
   });
@@ -251,6 +251,15 @@ export const erpPlugin: FastifyPluginAsync = async (fastify) => {
       scope.get("/erp/*", (_request, reply) => {
         const url = _request.url;
         if (url.startsWith("/erp/api-reference")) return reply.callNotFound();
+        // If the URL has a file extension, it's a static asset that wasn't matched
+        // by the registered routes — likely because the client was rebuilt while
+        // the server was running. Return 404 instead of silently serving index.html.
+        if (/\.\w+$/.test(url)) {
+          reply.code(404).send({
+            error: `Static file not found: ${url} — server restart may be needed after a client rebuild`,
+          });
+          return;
+        }
         reply.sendFile("index.html", clientDistPath);
       });
     });
