@@ -17,13 +17,18 @@ import {
   Text,
   Textarea,
 } from "@mantine/core";
+import { ActionButton, CompactMarkdown } from "@naisys/common-browser";
 import type { OperationRun, UserListResponse } from "@naisys-erp/shared";
 import { OperationRunStatus } from "@naisys-erp/shared";
-import { IconArrowBackUp, IconChevronDown, IconNote, IconX } from "@tabler/icons-react";
+import {
+  IconArrowBackUp,
+  IconChevronDown,
+  IconNote,
+  IconX,
+} from "@tabler/icons-react";
 import { useCallback, useEffect, useState } from "react";
 import { useOutletContext, useParams } from "react-router";
 
-import { ActionButton, CompactMarkdown } from "@naisys/common-browser";
 import { MetadataTooltip } from "../../../components/MetadataTooltip";
 import { api, apiEndpoints, showErrorNotification } from "../../../lib/api";
 import { hasAction } from "../../../lib/hateoas";
@@ -320,7 +325,9 @@ export const OperationRunDetail: React.FC = () => {
             </ActionButton>
             {hasAction(opRun._actions, "complete", { includeDisabled: true }) &&
               (() => {
-                const completeAction = hasAction(opRun._actions, "complete", { includeDisabled: true })!;
+                const completeAction = hasAction(opRun._actions, "complete", {
+                  includeDisabled: true,
+                })!;
                 return (
                   <Group gap={0}>
                     <Button
@@ -488,7 +495,6 @@ export const OperationRunDetail: React.FC = () => {
                 onActionsChange={setLaborActions}
               />
             </Tabs.Panel>
-
           </div>
         </Tabs>
 
@@ -517,7 +523,9 @@ export const OperationRunDetail: React.FC = () => {
             onCountChange={setStepCount}
           />
         </div>
-        <div style={{ display: bottomView === "comments" ? undefined : "none" }}>
+        <div
+          style={{ display: bottomView === "comments" ? undefined : "none" }}
+        >
           <CommentList
             orderKey={orderKey!}
             runNo={runNo!}

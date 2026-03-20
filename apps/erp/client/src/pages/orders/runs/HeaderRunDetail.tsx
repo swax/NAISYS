@@ -7,6 +7,7 @@ import {
   Stack,
   Text,
 } from "@mantine/core";
+import { CompactMarkdown } from "@naisys/common-browser";
 import type {
   OperationRunListResponse,
   OrderRevision,
@@ -17,7 +18,6 @@ import { OrderRunPriority } from "@naisys-erp/shared";
 import { useCallback, useEffect, useState } from "react";
 import { Link, useOutletContext, useParams } from "react-router";
 
-import { CompactMarkdown } from "@naisys/common-browser";
 import { MetadataTooltip } from "../../../components/MetadataTooltip";
 import { OperationSummaryTable } from "../../../components/OperationSummaryTable";
 import { OrderRunForm } from "../../../components/OrderRunForm";

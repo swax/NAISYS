@@ -11,15 +11,18 @@ import {
   Tooltip,
 } from "@mantine/core";
 import { formatFileSize, hasAction } from "@naisys/common";
-import { IconInfoCircle } from "@tabler/icons-react";
-import { useCallback, useEffect, useState } from "react";
-
+import type {
+  AttachmentListData,
+  ServerLogResponse,
+} from "@naisys/common-browser";
 import {
   AttachmentList,
   SecretField,
   ServerLogViewer,
 } from "@naisys/common-browser";
-import type { AttachmentListData, ServerLogResponse } from "@naisys/common-browser";
+import { IconInfoCircle } from "@tabler/icons-react";
+import { useCallback, useEffect, useState } from "react";
+
 import { downloadExportConfig, rotateHubAccessKey } from "../../lib/apiAdmin";
 import type { AdminInfoResponse } from "../../lib/apiClient";
 import { api, API_BASE, apiEndpoints } from "../../lib/apiClient";
@@ -91,7 +94,9 @@ export const AdminPage: React.FC = () => {
 
   const fetchLogs = useCallback(
     async (file: string | undefined, minLevel: number | undefined) => {
-      return api.get<ServerLogResponse>(apiEndpoints.adminLogs(file!, undefined, minLevel));
+      return api.get<ServerLogResponse>(
+        apiEndpoints.adminLogs(file!, undefined, minLevel),
+      );
     },
     [],
   );
@@ -101,7 +106,9 @@ export const AdminPage: React.FC = () => {
       const params = new URLSearchParams();
       params.set("page", String(page));
       params.set("pageSize", String(pageSize));
-      return api.get<AttachmentListData>(`${apiEndpoints.adminAttachments}?${params}`);
+      return api.get<AttachmentListData>(
+        `${apiEndpoints.adminAttachments}?${params}`,
+      );
     },
     [],
   );

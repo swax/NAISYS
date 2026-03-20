@@ -1,11 +1,11 @@
 import { Button, Group, Modal, Stack, TextInput } from "@mantine/core";
 import { useForm } from "@mantine/form";
+import { zodResolver } from "@naisys/common-browser";
 import { LoginRequestSchema } from "@naisys-erp/shared";
 import { useState } from "react";
 
 import { showErrorNotification } from "../lib/api";
 import { useAuth } from "../lib/AuthContext";
-import { zodResolver } from "@naisys/common-browser";
 
 interface Props {
   opened: boolean;

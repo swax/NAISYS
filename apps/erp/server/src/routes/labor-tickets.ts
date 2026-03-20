@@ -90,7 +90,12 @@ function laborTicketListActions(
   }
 
   // manager clock-out: for non-executor managers only
-  if (!isExecutor && hasPermission(user, "order_manager") && isInProgress && anyOpenTickets) {
+  if (
+    !isExecutor &&
+    hasPermission(user, "order_manager") &&
+    isInProgress &&
+    anyOpenTickets
+  ) {
     actions.push({
       rel: "clock-out",
       href: `${base}/clock-out`,

@@ -10,10 +10,10 @@ import {
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { LlmApiType, LlmModelSchema } from "@naisys/common";
+import { zodResolver } from "@naisys/common-browser";
 import { IconCheck, IconX } from "@tabler/icons-react";
 
 import type { LlmModelDetail } from "../lib/apiClient";
-import { zodResolver } from "@naisys/common-browser";
 
 interface LlmFormValues {
   key: string;

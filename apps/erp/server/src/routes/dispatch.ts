@@ -10,7 +10,6 @@ import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import erpDb from "../erpDb.js";
 import { API_PREFIX, paginationLinks } from "../hateoas.js";
 
-
 const OPEN_ORDER_STATUSES = [OrderRunStatus.released, OrderRunStatus.started];
 const DEFAULT_OP_STATUSES = [
   OperationRunStatus.pending,

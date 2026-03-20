@@ -243,7 +243,8 @@ export async function updateOpRun(
   userId: number,
 ): Promise<OpRunWithOp> {
   const updateData: Record<string, unknown> = { updatedById: userId };
-  if (data.assignedToId !== undefined) updateData.assignedToId = data.assignedToId;
+  if (data.assignedToId !== undefined)
+    updateData.assignedToId = data.assignedToId;
 
   return erpDb.operationRun.update({
     where: { id },

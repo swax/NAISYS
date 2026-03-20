@@ -25,7 +25,11 @@ export const SecretField: React.FC<SecretFieldProps> = ({
     <Group gap="xs" align="center">
       {value ? (
         <>
-          <Code>{visible ? value : "\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022"}</Code>
+          <Code>
+            {visible
+              ? value
+              : "\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022"}
+          </Code>
           <Tooltip label={visible ? "Hide" : "Show"}>
             <ActionIcon
               variant="subtle"

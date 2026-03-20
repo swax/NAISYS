@@ -91,7 +91,12 @@ export async function createStep(
 
 export async function updateStep(
   id: number,
-  data: { title?: string; instructions?: string; seqNo?: number; multiSet?: boolean },
+  data: {
+    title?: string;
+    instructions?: string;
+    seqNo?: number;
+    multiSet?: boolean;
+  },
   userId: number,
 ): Promise<StepWithUsersAndFields> {
   return erpDb.step.update({

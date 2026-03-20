@@ -10,6 +10,7 @@ import {
   Text,
   Textarea,
 } from "@mantine/core";
+import { CompactMarkdown } from "@naisys/common-browser";
 import type {
   StepRun,
   StepRunListResponse,
@@ -22,7 +23,6 @@ import {
 } from "@tabler/icons-react";
 import { useCallback, useEffect, useState } from "react";
 
-import { CompactMarkdown } from "@naisys/common-browser";
 import { FieldValueRunList } from "../../../components/FieldValueList";
 import { api, apiEndpoints, showErrorNotification } from "../../../lib/api";
 import { hasAction } from "../../../lib/hateoas";

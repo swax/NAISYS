@@ -40,76 +40,86 @@ function runResource(orderKey: string) {
 }
 
 async function orderRunItemActions(
-  orderKey: string, runNo: number, runId: number,
-  status: string, itemKey: string | null, user: ErpUser | undefined,
+  orderKey: string,
+  runNo: number,
+  runId: number,
+  status: string,
+  itemKey: string | null,
+  user: ErpUser | undefined,
 ): Promise<HateoasAction[]> {
   const href = `${API_PREFIX}/${runResource(orderKey)}/${runNo}`;
   const isExecutor = hasPermission(user, "order_executor");
-  const opsErr = isExecutor && status === OrderRunStatus.started
-    ? await checkOpsComplete(runId) : null;
+  const opsErr =
+    isExecutor && status === OrderRunStatus.started
+      ? await checkOpsComplete(runId)
+      : null;
 
-  return resolveActions([
-    {
-      rel: "start",
-      path: "/start",
-      method: "POST",
-      title: "Start",
-      permission: "order_executor",
-      statuses: [OrderRunStatus.released],
-    },
-    {
-      rel: "complete",
-      path: "/complete",
-      method: "POST",
-      title: "Complete",
-      schema: `${API_PREFIX}/schemas/CompleteOrderRun`,
-      permission: "order_executor",
-      statuses: [OrderRunStatus.started],
-      visibleWhen: (ctx) => !!ctx.itemKey,
-      disabledWhen: (ctx) => ctx.opsErr,
-    },
-    {
-      rel: "close",
-      path: "/close",
-      method: "POST",
-      title: "Close",
-      permission: "order_executor",
-      statuses: [OrderRunStatus.started],
-      visibleWhen: (ctx) => !ctx.itemKey,
-      disabledWhen: (ctx) => ctx.opsErr,
-    },
-    {
-      rel: "update",
-      method: "PUT",
-      title: "Update",
-      schema: `${API_PREFIX}/schemas/UpdateOrderRun`,
-      permission: "order_manager",
-      statuses: [OrderRunStatus.released, OrderRunStatus.started],
-    },
-    {
-      rel: "cancel",
-      path: "/cancel",
-      method: "POST",
-      title: "Cancel",
-      permission: "order_manager",
-      statuses: [OrderRunStatus.released, OrderRunStatus.started],
-    },
-    {
-      rel: "delete",
-      method: "DELETE",
-      title: "Delete",
-      permission: "order_manager",
-      statuses: [OrderRunStatus.released],
-    },
-    {
-      rel: "reopen",
-      path: "/reopen",
-      method: "POST",
-      title: "Reopen",
-      permission: "order_manager",
-      statuses: [OrderRunStatus.closed, OrderRunStatus.cancelled],
-    },
-  ], href, { status, user, itemKey, opsErr });
+  return resolveActions(
+    [
+      {
+        rel: "start",
+        path: "/start",
+        method: "POST",
+        title: "Start",
+        permission: "order_executor",
+        statuses: [OrderRunStatus.released],
+      },
+      {
+        rel: "complete",
+        path: "/complete",
+        method: "POST",
+        title: "Complete",
+        schema: `${API_PREFIX}/schemas/CompleteOrderRun`,
+        permission: "order_executor",
+        statuses: [OrderRunStatus.started],
+        visibleWhen: (ctx) => !!ctx.itemKey,
+        disabledWhen: (ctx) => ctx.opsErr,
+      },
+      {
+        rel: "close",
+        path: "/close",
+        method: "POST",
+        title: "Close",
+        permission: "order_executor",
+        statuses: [OrderRunStatus.started],
+        visibleWhen: (ctx) => !ctx.itemKey,
+        disabledWhen: (ctx) => ctx.opsErr,
+      },
+      {
+        rel: "update",
+        method: "PUT",
+        title: "Update",
+        schema: `${API_PREFIX}/schemas/UpdateOrderRun`,
+        permission: "order_manager",
+        statuses: [OrderRunStatus.released, OrderRunStatus.started],
+      },
+      {
+        rel: "cancel",
+        path: "/cancel",
+        method: "POST",
+        title: "Cancel",
+        permission: "order_manager",
+        statuses: [OrderRunStatus.released, OrderRunStatus.started],
+      },
+      {
+        rel: "delete",
+        method: "DELETE",
+        title: "Delete",
+        permission: "order_manager",
+        statuses: [OrderRunStatus.released],
+      },
+      {
+        rel: "reopen",
+        path: "/reopen",
+        method: "POST",
+        title: "Reopen",
+        permission: "order_manager",
+        statuses: [OrderRunStatus.closed, OrderRunStatus.cancelled],
+      },
+    ],
+    href,
+    { status, user, itemKey, opsErr },
+  );
 }
 
 const OrderKeyParamsSchema = z.object({
@@ -174,14 +184,18 @@ export async function formatRun(
     releaseNote: run.releaseNote,
     ...formatAuditFields(run),
     _links: links,
-    _actions: await orderRunItemActions(orderKey, run.runNo, run.id, run.status, itemKey, user),
+    _actions: await orderRunItemActions(
+      orderKey,
+      run.runNo,
+      run.id,
+      run.status,
+      itemKey,
+      user,
+    ),
   };
 }
 
-function formatListRun(
-  orderKey: string,
-  run: OrderRunWithRev,
-) {
+function formatListRun(orderKey: string, run: OrderRunWithRev) {
   const itemKey = run.order?.item?.key ?? null;
   const instance = run.itemInstances[0] ?? null;
   return {

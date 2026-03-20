@@ -11,10 +11,10 @@ import {
   Text,
 } from "@mantine/core";
 import { formatFileSize } from "@naisys/common";
+import { CompactMarkdown } from "@naisys/common-browser";
 import { IconCheck, IconChecks, IconFile } from "@tabler/icons-react";
 import React, { useRef } from "react";
 
-import { CompactMarkdown } from "@naisys/common-browser";
 import type { MailMessage } from "../../lib/apiClient";
 import { API_BASE, apiEndpoints } from "../../lib/apiClient";
 

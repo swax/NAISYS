@@ -26,18 +26,24 @@ function commentResource(orderKey: string, runNo: number, seqNo: number) {
 }
 
 function commentListActions(
-  orderKey: string, runNo: number, seqNo: number,
+  orderKey: string,
+  runNo: number,
+  seqNo: number,
   user: ErpUser | undefined,
 ): HateoasAction[] {
-  return resolveActions([
-    {
-      rel: "create",
-      method: "POST",
-      title: "Add Comment",
-      schema: `${API_PREFIX}/schemas/CreateOperationRunComment`,
-      permission: "order_executor",
-    },
-  ], `${API_PREFIX}/${commentResource(orderKey, runNo, seqNo)}`, { user });
+  return resolveActions(
+    [
+      {
+        rel: "create",
+        method: "POST",
+        title: "Add Comment",
+        schema: `${API_PREFIX}/schemas/CreateOperationRunComment`,
+        permission: "order_executor",
+      },
+    ],
+    `${API_PREFIX}/${commentResource(orderKey, runNo, seqNo)}`,
+    { user },
+  );
 }
 
 function formatComment(
@@ -54,9 +60,7 @@ function formatComment(
     createdAt: comment.createdAt.toISOString(),
     createdBy: comment.createdBy.username,
     _links: [
-      selfLink(
-        `/${commentResource(orderKey, runNo, seqNo)}/${comment.id}`,
-      ),
+      selfLink(`/${commentResource(orderKey, runNo, seqNo)}/${comment.id}`),
     ],
   };
 }

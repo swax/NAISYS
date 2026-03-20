@@ -330,7 +330,9 @@ export const AgentDetail: React.FC = () => {
     <Stack p="xs">
       <Group wrap="nowrap" style={{ overflowX: "auto" }}>
         {(() => {
-          const startAction = hasAction(actions, "start", { includeDisabled: true });
+          const startAction = hasAction(actions, "start", {
+            includeDisabled: true,
+          });
           if (!startAction) return null;
 
           if (startAction.disabled) {
@@ -346,11 +348,7 @@ export const AgentDetail: React.FC = () => {
               </Button>
             );
             return startAction.disabledReason ? (
-              <Tooltip
-                label={startAction.disabledReason}
-                multiline
-                maw={350}
-              >
+              <Tooltip label={startAction.disabledReason} multiline maw={350}>
                 {btn}
               </Tooltip>
             ) : (
@@ -398,7 +396,9 @@ export const AgentDetail: React.FC = () => {
           </Text>
         </Button>
         {(() => {
-          const stopAction = hasAction(actions, "stop", { includeDisabled: true });
+          const stopAction = hasAction(actions, "stop", {
+            includeDisabled: true,
+          });
           const stopDisabled = !stopAction || !!stopAction.disabled;
           return (
             <Group gap={0} wrap="nowrap">
@@ -488,7 +488,9 @@ export const AgentDetail: React.FC = () => {
           </Group>
         )}
         {(() => {
-          const archiveAction = hasAction(actions, "archive", { includeDisabled: true });
+          const archiveAction = hasAction(actions, "archive", {
+            includeDisabled: true,
+          });
           if (!archiveAction) return null;
           const btn = (
             <Button
@@ -504,11 +506,7 @@ export const AgentDetail: React.FC = () => {
             </Button>
           );
           return archiveAction.disabledReason ? (
-            <Tooltip
-              label={archiveAction.disabledReason}
-              multiline
-              maw={350}
-            >
+            <Tooltip label={archiveAction.disabledReason} multiline maw={350}>
               {btn}
             </Tooltip>
           ) : (

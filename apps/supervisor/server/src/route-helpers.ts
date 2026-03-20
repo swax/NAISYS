@@ -15,9 +15,11 @@ export interface ActionDef<T> extends Omit<ActionDefBase<T>, "permission"> {
   permission?: Permission;
 }
 
-export function resolveActions<
-  T extends { user: SupervisorUser | undefined },
->(defs: ActionDef<T>[], baseHref: string, ctx: T): HateoasAction[] {
+export function resolveActions<T extends { user: SupervisorUser | undefined }>(
+  defs: ActionDef<T>[],
+  baseHref: string,
+  ctx: T,
+): HateoasAction[] {
   return resolveActionsBase(defs, baseHref, ctx, (perm) =>
     hasPermission(ctx.user, perm as Permission),
   );

@@ -188,11 +188,7 @@ export const DispatchList: React.FC = () => {
                           <Text size="sm" ff="monospace">
                             {item.orderKey}
                           </Text>
-                          <Badge
-                            color="violet"
-                            variant="light"
-                            size="sm"
-                          >
+                          <Badge color="violet" variant="light" size="sm">
                             REV {item.revNo}
                           </Badge>
                         </Group>

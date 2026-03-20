@@ -15,12 +15,13 @@ If the curl fails because .env.nsapi is missing or the key is empty, tell the us
 "Copy .claude/commands/.env.nsapi.example to .claude/commands/.env.nsapi and add your API key from the User Details page."
 
 The API has two HATEOAS entry points:
+
 - $NS_API_URL/supervisor/ — agent management, hosts, models, variables, permissions
 - $NS_API_URL/erp/ — ERP system
 
-Start at the appropriate entry point and follow _links and _actions to discover
+Start at the appropriate entry point and follow \_links and \_actions to discover
 endpoints. Do NOT fetch the entry point first if you can infer the path from
-the _links structure (e.g. agents are at $NS_API_URL/supervisor/agents).
+the \_links structure (e.g. agents are at $NS_API_URL/supervisor/agents).
 Use GET to explore, POST/PUT/DELETE for mutations.
 
 User's request: $ARGUMENTS

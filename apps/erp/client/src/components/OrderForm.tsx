@@ -9,6 +9,7 @@ import {
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { useDebouncedValue } from "@mantine/hooks";
+import { zodResolver } from "@naisys/common-browser";
 import type {
   CreateOrder,
   ItemListResponse,
@@ -23,7 +24,6 @@ import {
 import { useCallback, useEffect, useState } from "react";
 
 import { api, apiEndpoints } from "../lib/api";
-import { zodResolver } from "@naisys/common-browser";
 
 type FormData<TEdit extends boolean> = TEdit extends true
   ? UpdateOrder

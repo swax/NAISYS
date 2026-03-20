@@ -106,10 +106,7 @@ export const InventoryList: React.FC = () => {
                 return (
                   <Table.Tr key={item.id} style={{ cursor: "pointer" }}>
                     <Table.Td style={{ padding: 0 }}>
-                      <Link
-                        to={`/items/${item.itemKey}`}
-                        style={cellLinkStyle}
-                      >
+                      <Link to={`/items/${item.itemKey}`} style={cellLinkStyle}>
                         <Text size="sm" ff="monospace">
                           {item.itemKey}
                         </Text>

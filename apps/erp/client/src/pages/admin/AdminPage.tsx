@@ -37,7 +37,9 @@ export const AdminPage: React.FC = () => {
 
   const fetchLogs = useCallback(
     async (_file: string | undefined, minLevel: number | undefined) => {
-      return api.get<ServerLogResponse>(apiEndpoints.adminLogs(undefined, minLevel));
+      return api.get<ServerLogResponse>(
+        apiEndpoints.adminLogs(undefined, minLevel),
+      );
     },
     [],
   );
@@ -47,7 +49,9 @@ export const AdminPage: React.FC = () => {
       const params = new URLSearchParams();
       params.set("page", String(page));
       params.set("pageSize", String(pageSize));
-      return api.get<AttachmentListData>(`${apiEndpoints.adminAttachments}?${params}`);
+      return api.get<AttachmentListData>(
+        `${apiEndpoints.adminAttachments}?${params}`,
+      );
     },
     [],
   );
@@ -100,7 +104,10 @@ export const AdminPage: React.FC = () => {
 
           {canViewAttachments && (
             <Tabs.Panel value="attachments" pt="md">
-              <AttachmentList fetchAttachments={fetchAttachments} getDownloadUrl={getDownloadUrl} />
+              <AttachmentList
+                fetchAttachments={fetchAttachments}
+                getDownloadUrl={getDownloadUrl}
+              />
             </Tabs.Panel>
           )}
         </Tabs>

@@ -8,6 +8,7 @@ import {
   TextInput,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
+import { zodResolver } from "@naisys/common-browser";
 import type { CreateOrderRun, UpdateOrderRun } from "@naisys-erp/shared";
 import {
   CreateOrderRunSchema,
@@ -16,8 +17,6 @@ import {
   UpdateOrderRunSchema,
 } from "@naisys-erp/shared";
 import { useState } from "react";
-
-import { zodResolver } from "@naisys/common-browser";
 
 type FormData<TEdit extends boolean> = TEdit extends true
   ? UpdateOrderRun

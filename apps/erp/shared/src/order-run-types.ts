@@ -66,7 +66,11 @@ export type CreateOrderRun = z.infer<typeof CreateOrderRunSchema>;
 export const UpdateOrderRunSchema = z
   .object({
     priority: OrderRunPriorityEnum.optional(),
-    dueAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Must be YYYY-MM-DD").nullable().optional(),
+    dueAt: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/, "Must be YYYY-MM-DD")
+      .nullable()
+      .optional(),
     releaseNote: z.string().max(2000).nullable().optional(),
   })
   .strict();

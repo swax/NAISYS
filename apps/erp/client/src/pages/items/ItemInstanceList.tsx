@@ -69,8 +69,11 @@ export const ItemInstanceList: React.FC = () => {
         key: newKey,
         quantity: newQuantity ? Number(newQuantity) : null,
       };
-      const result = await api.post<{ id: number }>(apiEndpoints.itemInstances(key), body);
-      navigate(`/items/${key}/instances/${result.id}`);
+      const result = await api.post<{ id: number }>(
+        apiEndpoints.itemInstances(key),
+        body,
+      );
+      void navigate(`/items/${key}/instances/${result.id}`);
     } catch (err) {
       showErrorNotification(err);
     } finally {

@@ -69,18 +69,23 @@ export function formatFieldListResponse(
     total: items.length,
     nextSeqNo: calcNextSeqNo(maxSeq),
     _links: [selfLink(base)],
-    _actions: [{
-      rel: "create" as const,
-      href: `${API_PREFIX}${base}`,
-      method: "POST" as const,
-      title: "Add Field",
-      schema: `${API_PREFIX}/schemas/CreateField`,
-      ...(!hasPermission(user, "order_planner")
-        ? permGate(false, "order_planner")
-        : revStatus !== RevisionStatus.draft
-          ? { disabled: true, disabledReason: "Can only add fields in draft revisions" }
-          : {}),
-    }],
+    _actions: [
+      {
+        rel: "create" as const,
+        href: `${API_PREFIX}${base}`,
+        method: "POST" as const,
+        title: "Add Field",
+        schema: `${API_PREFIX}/schemas/CreateField`,
+        ...(!hasPermission(user, "order_planner")
+          ? permGate(false, "order_planner")
+          : revStatus !== RevisionStatus.draft
+            ? {
+                disabled: true,
+                disabledReason: "Can only add fields in draft revisions",
+              }
+            : {}),
+      },
+    ],
   };
 }
 
@@ -174,18 +179,23 @@ export default function stepFieldRoutes(fastify: FastifyInstance) {
         total: items.length,
         nextSeqNo: calcNextSeqNo(maxSeq),
         _links: [selfLink(base)],
-        _actions: [{
-          rel: "create",
-          href: `${API_PREFIX}${base}`,
-          method: "POST" as const,
-          title: "Add Field",
-          schema: `${API_PREFIX}/schemas/CreateField`,
-          ...(!hasPermission(user, "order_planner")
-            ? permGate(false, "order_planner")
-            : resolved.rev.status !== RevisionStatus.draft
-              ? { disabled: true, disabledReason: "Can only add fields in draft revisions" }
-              : {}),
-        }],
+        _actions: [
+          {
+            rel: "create",
+            href: `${API_PREFIX}${base}`,
+            method: "POST" as const,
+            title: "Add Field",
+            schema: `${API_PREFIX}/schemas/CreateField`,
+            ...(!hasPermission(user, "order_planner")
+              ? permGate(false, "order_planner")
+              : resolved.rev.status !== RevisionStatus.draft
+                ? {
+                    disabled: true,
+                    disabledReason: "Can only add fields in draft revisions",
+                  }
+                : {}),
+          },
+        ],
       };
     },
   });
