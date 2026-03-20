@@ -201,6 +201,7 @@ function formatStepRun(
     instructions: stepRun.step.instructions,
     multiSet,
     completed: stepRun.completed,
+    completionNote: stepRun.completionNote ?? null,
     fieldValues,
     ...formatAuditFields(stepRun),
     _links: childItemLinks(
@@ -318,7 +319,7 @@ export default function stepRunRoutes(fastify: FastifyInstance) {
     preHandler: requirePermission("order_executor"),
     handler: async (request, reply) => {
       const { orderKey, runNo, seqNo, stepSeqNo } = request.params;
-      const { completed, fieldValues } = request.body;
+      const { completed, completionNote, fieldValues } = request.body;
       const userId = request.erpUser!.id;
 
       const resolved = await resolveStepRun(orderKey, runNo, seqNo, stepSeqNo);
@@ -353,6 +354,7 @@ export default function stepRunRoutes(fastify: FastifyInstance) {
       const stepRun = await updateStepRun(
         resolved.stepRun.id,
         completed,
+        completionNote,
         fieldValues,
         userId,
       );

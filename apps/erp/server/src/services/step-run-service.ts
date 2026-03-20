@@ -56,6 +56,7 @@ export type StepRunWithStep = {
   operationRunId: number;
   stepId: number;
   completed: boolean;
+  completionNote: string | null;
   createdAt: Date;
   updatedAt: Date;
   step: {
@@ -270,6 +271,7 @@ export function validateCompletionFields(
 export async function updateStepRun(
   id: number,
   completed: boolean | undefined,
+  completionNote: string | undefined,
   fieldValues:
     | { fieldId: number; value: string; setIndex?: number }[]
     | undefined,
@@ -279,7 +281,11 @@ export async function updateStepRun(
     if (completed !== undefined) {
       await erpTx.stepRun.update({
         where: { id },
-        data: { completed, updatedById: userId },
+        data: {
+          completed,
+          completionNote: completed ? (completionNote ?? null) : null,
+          updatedById: userId,
+        },
       });
     }
 

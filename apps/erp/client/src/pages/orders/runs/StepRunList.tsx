@@ -4,15 +4,22 @@ import {
   Card,
   Group,
   Loader,
+  Menu,
+  Modal,
   Stack,
   Text,
+  Textarea,
 } from "@mantine/core";
 import type {
   StepRun,
   StepRunListResponse,
   UpdateStepRun,
 } from "@naisys-erp/shared";
-import { IconArrowBackUp } from "@tabler/icons-react";
+import {
+  IconArrowBackUp,
+  IconChevronDown,
+  IconNote,
+} from "@tabler/icons-react";
 import { useCallback, useEffect, useState } from "react";
 
 import { CompactMarkdown } from "@naisys/common-browser";
@@ -41,6 +48,9 @@ export const StepRunList: React.FC<Props> = ({
   const [loading, setLoading] = useState(true);
   const [savingStep, setSavingStep] = useState<number | null>(null);
   const [loadedSeqNo, setLoadedSeqNo] = useState(seqNo);
+  const [noteModalStep, setNoteModalStep] = useState<StepRun | null>(null);
+  const [noteText, setNoteText] = useState("");
+  const [submittingNote, setSubmittingNote] = useState(false);
 
   // Clear stale data when operation run changes
   if (seqNo !== loadedSeqNo) {
@@ -68,11 +78,15 @@ export const StepRunList: React.FC<Props> = ({
     void fetchSteps();
   }, [fetchSteps]);
 
-  const saveStep = async (step: StepRun, completed: boolean) => {
+  const saveStep = async (
+    step: StepRun,
+    completed: boolean,
+    completionNote?: string,
+  ) => {
     setSavingStep(step.id);
 
     try {
-      const body: UpdateStepRun = { completed };
+      const body: UpdateStepRun = { completed, completionNote };
       const updated = await api.put<StepRun>(
         apiEndpoints.stepRun(orderKey, runNo, seqNo, step.seqNo),
         body,
@@ -90,6 +104,18 @@ export const StepRunList: React.FC<Props> = ({
       showErrorNotification(err);
     } finally {
       setSavingStep(null);
+    }
+  };
+
+  const handleNoteSubmit = async () => {
+    if (!noteModalStep) return;
+    setSubmittingNote(true);
+    try {
+      await saveStep(noteModalStep, true, noteText.trim() || undefined);
+      setNoteModalStep(null);
+      setNoteText("");
+    } finally {
+      setSubmittingNote(false);
     }
   };
 
@@ -113,14 +139,48 @@ export const StepRunList: React.FC<Props> = ({
                     </Text>
                     <Group gap="xs">
                       {canUpdate && !step.completed && (
-                        <Button
-                          size="xs"
-                          color="green"
-                          loading={savingStep === step.id}
-                          onClick={() => saveStep(step, true)}
-                        >
-                          Complete
-                        </Button>
+                        <Group gap={0}>
+                          <Button
+                            size="xs"
+                            color="green"
+                            loading={savingStep === step.id}
+                            onClick={() => saveStep(step, true)}
+                            style={{
+                              borderTopRightRadius: 0,
+                              borderBottomRightRadius: 0,
+                            }}
+                          >
+                            Complete
+                          </Button>
+                          <Menu position="bottom-end" withinPortal>
+                            <Menu.Target>
+                              <Button
+                                size="xs"
+                                color="green"
+                                px={6}
+                                disabled={savingStep === step.id}
+                                style={{
+                                  borderTopLeftRadius: 0,
+                                  borderBottomLeftRadius: 0,
+                                  borderLeft: "1px solid rgba(255,255,255,0.3)",
+                                }}
+                              >
+                                <IconChevronDown size={14} />
+                              </Button>
+                            </Menu.Target>
+                            <Menu.Dropdown>
+                              <Menu.Item
+                                leftSection={<IconNote size={14} />}
+                                onClick={() => {
+                                  setNoteModalStep(step);
+                                  setNoteText("");
+                                }}
+                              >
+                                Complete with note
+                              </Menu.Item>
+                            </Menu.Dropdown>
+                          </Menu>
+                        </Group>
                       )}
                       {canUpdate && step.completed && (
                         <Group gap="xs" align="center">
@@ -154,6 +214,12 @@ export const StepRunList: React.FC<Props> = ({
                   ) : (
                     <Text size="sm" c="dimmed">
                       No instructions
+                    </Text>
+                  )}
+
+                  {step.completionNote && (
+                    <Text size="xs" c="dimmed" fs="italic">
+                      Completion Note: {step.completionNote}
                     </Text>
                   )}
 
@@ -215,6 +281,38 @@ export const StepRunList: React.FC<Props> = ({
           )}
         </Stack>
       )}
+
+      <Modal
+        opened={noteModalStep !== null}
+        onClose={() => setNoteModalStep(null)}
+        title="Complete with Note"
+        size="sm"
+      >
+        <Stack gap="md">
+          <Textarea
+            label="Completion note"
+            placeholder="Enter a note..."
+            value={noteText}
+            onChange={(e) => setNoteText(e.currentTarget.value)}
+            autosize
+            minRows={3}
+            maxRows={6}
+            data-autofocus
+          />
+          <Group justify="flex-end">
+            <Button variant="subtle" onClick={() => setNoteModalStep(null)}>
+              Cancel
+            </Button>
+            <Button
+              color="green"
+              onClick={handleNoteSubmit}
+              loading={submittingNote}
+            >
+              Complete
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
     </>
   );
 };
