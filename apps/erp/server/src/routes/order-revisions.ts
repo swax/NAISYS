@@ -6,6 +6,8 @@ import {
   OrderRevisionListQuerySchema,
   OrderRevisionListResponseSchema,
   OrderRevisionSchema,
+  RevisionDiffQuerySchema,
+  RevisionDiffResponseSchema,
   RevisionStatus,
   UpdateOrderRevisionSchema,
 } from "@naisys-erp/shared";
@@ -35,6 +37,7 @@ import {
   updateRevision,
   validateDraftStatus,
 } from "../services/order-revision-service.js";
+import { diffRevisions } from "../services/revision-diff-service.js";
 
 function revisionItemActions(
   parentResource: string,
@@ -230,6 +233,39 @@ export default function orderRevisionRoutes(fastify: FastifyInstance) {
           },
         ],
       };
+    },
+  });
+
+  // DIFF two revisions
+  app.get("/diff", {
+    schema: {
+      description: "Compare two revisions and return a structured diff",
+      tags: ["Order Revisions"],
+      params: OrderKeyParamsSchema,
+      querystring: RevisionDiffQuerySchema,
+      response: {
+        200: RevisionDiffResponseSchema,
+        404: ErrorResponseSchema,
+      },
+    },
+    handler: async (request, reply) => {
+      const { orderKey } = request.params;
+      const { from, to } = request.query;
+
+      const order = await resolveOrder(orderKey);
+      if (!order) {
+        return notFound(reply, `Order '${orderKey}' not found`);
+      }
+
+      const diff = await diffRevisions(order.id, from, to);
+      if (!diff) {
+        return notFound(
+          reply,
+          `One or both revisions not found (rev ${from}, rev ${to})`,
+        );
+      }
+
+      return diff;
     },
   });
 

@@ -24,6 +24,7 @@ import { OrderDetail } from "./pages/orders/OrderDetail";
 import { OrderList } from "./pages/orders/OrderList";
 import { HeaderDetail } from "./pages/orders/revs/HeaderDetail";
 import { OperationDetail } from "./pages/orders/revs/OperationDetail";
+import { RevisionDiff } from "./pages/orders/revs/RevisionDiff";
 import { RevisionLayout } from "./pages/orders/revs/RevisionLayout";
 import { HeaderRunDetail } from "./pages/orders/runs/HeaderRunDetail";
 import { OperationRunDetail } from "./pages/orders/runs/OperationRunDetail";
@@ -68,6 +69,10 @@ const AppContent: React.FC = () => {
         <Route path="/orders" element={<OrderList />} />
         <Route path="/orders/new" element={<OrderCreate />} />
         <Route path="/orders/:key" element={<OrderDetail />} />
+        <Route
+          path="/orders/:orderKey/revs/diff"
+          element={<RevisionDiff />}
+        />
         <Route
           path="/orders/:orderKey/revs/:revNo"
           element={<RevisionLayout />}

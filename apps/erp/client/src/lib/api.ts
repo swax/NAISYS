@@ -130,6 +130,8 @@ export const apiEndpoints = {
   orderRevs: (key: string) => `orders/${key}/revs`,
   orderRev: (key: string, revNo: number | string) =>
     `orders/${key}/revs/${revNo}`,
+  orderRevDiff: (key: string, fromRevNo: number | string, toRevNo: number | string) =>
+    `orders/${key}/revs/diff?from=${fromRevNo}&to=${toRevNo}`,
   orderRevApprove: (key: string, revNo: number | string) =>
     `orders/${key}/revs/${revNo}/approve`,
   orderRevObsolete: (key: string, revNo: number | string) =>
