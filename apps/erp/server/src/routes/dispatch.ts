@@ -9,7 +9,7 @@ import type { ZodTypeProvider } from "fastify-type-provider-zod";
 
 import erpDb from "../erpDb.js";
 import { API_PREFIX, paginationLinks } from "../hateoas.js";
-import { formatDate } from "../route-helpers.js";
+
 
 const OPEN_ORDER_STATUSES = [OrderRunStatus.released, OrderRunStatus.started];
 const DEFAULT_OP_STATUSES = [
@@ -71,7 +71,7 @@ export default function dispatchRoutes(fastify: FastifyInstance) {
           },
           skip: (page - 1) * pageSize,
           take: pageSize,
-          orderBy: { createdAt: "desc" },
+          orderBy: { orderRun: { dueAt: "asc" } },
         }),
         erpDb.operationRun.count({ where }),
       ]);
@@ -87,7 +87,7 @@ export default function dispatchRoutes(fastify: FastifyInstance) {
           status: opRun.status,
           priority: opRun.orderRun.priority,
           assignedTo: opRun.assignedTo?.username ?? null,
-          dueAt: formatDate(opRun.orderRun.dueAt),
+          dueAt: opRun.orderRun.dueAt,
           createdAt: opRun.createdAt.toISOString(),
         })),
         total,

@@ -27,7 +27,6 @@ interface Props<TEdit extends boolean = boolean> {
   initialData?: Partial<{
     revNo: number;
     priority: string;
-    scheduledStartAt: string;
     dueAt: string;
     releaseNote: string;
   }>;
@@ -36,16 +35,14 @@ interface Props<TEdit extends boolean = boolean> {
   onCancel: () => void;
 }
 
-function toISOOrEmpty(datetimeLocal: string): string | undefined {
-  if (!datetimeLocal) return undefined;
-  return new Date(datetimeLocal).toISOString();
+function todayStr(): string {
+  return new Date().toISOString().slice(0, 10);
 }
 
 function transformFormValues(
   values: {
     revNo: number | string;
     priority: string;
-    scheduledStartAt: string;
     dueAt: string;
     releaseNote: string;
   },
@@ -53,13 +50,10 @@ function transformFormValues(
 ): Record<string, unknown> {
   const result: Record<string, unknown> = {
     priority: values.priority || undefined,
-    scheduledStartAt: toISOOrEmpty(values.scheduledStartAt),
-    dueAt: toISOOrEmpty(values.dueAt),
+    dueAt: values.dueAt || undefined,
     releaseNote: values.releaseNote || undefined,
   };
   if (isEdit) {
-    // For updates, convert empty optional fields to null (to clear them)
-    if (!values.scheduledStartAt) result.scheduledStartAt = null;
     if (!values.dueAt) result.dueAt = null;
     if (!values.releaseNote) result.releaseNote = null;
   } else {
@@ -80,8 +74,7 @@ export const OrderRunForm = <TEdit extends boolean = false>({
     initialValues: {
       revNo: (initialData?.revNo ?? "") as number | string,
       priority: initialData?.priority ?? OrderRunPriority.medium,
-      scheduledStartAt: initialData?.scheduledStartAt ?? "",
-      dueAt: initialData?.dueAt ?? "",
+      dueAt: initialData?.dueAt ?? (isEdit ? "" : todayStr()),
       releaseNote: initialData?.releaseNote ?? "",
     },
     validate: (values) =>
@@ -123,13 +116,8 @@ export const OrderRunForm = <TEdit extends boolean = false>({
           {...form.getInputProps("priority")}
         />
         <TextInput
-          label="Scheduled Start"
-          type="datetime-local"
-          {...form.getInputProps("scheduledStartAt")}
-        />
-        <TextInput
           label="Due Date"
-          type="datetime-local"
+          type="date"
           {...form.getInputProps("dueAt")}
         />
         <Textarea

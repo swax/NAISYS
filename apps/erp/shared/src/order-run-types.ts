@@ -38,8 +38,7 @@ export const OrderRunSchema = z.object({
   status: OrderRunStatusEnum,
   priority: OrderRunPriorityEnum,
   cost: z.number().nullable(),
-  scheduledStartAt: z.iso.datetime().nullable(),
-  dueAt: z.iso.datetime().nullable(),
+  dueAt: z.string().nullable(),
   releaseNote: z.string().nullable(),
   createdAt: z.iso.datetime(),
   createdBy: z.string(),
@@ -56,8 +55,7 @@ export const CreateOrderRunSchema = z
   .object({
     revNo: z.number().int().min(1),
     priority: OrderRunPriorityEnum.optional().default("medium"),
-    scheduledStartAt: z.iso.datetime().optional(),
-    dueAt: z.iso.datetime().optional(),
+    dueAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Must be YYYY-MM-DD"),
     releaseNote: z.string().max(2000).optional(),
   })
   .strict();
@@ -68,8 +66,7 @@ export type CreateOrderRun = z.infer<typeof CreateOrderRunSchema>;
 export const UpdateOrderRunSchema = z
   .object({
     priority: OrderRunPriorityEnum.optional(),
-    scheduledStartAt: z.iso.datetime().nullable().optional(),
-    dueAt: z.iso.datetime().nullable().optional(),
+    dueAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Must be YYYY-MM-DD").nullable().optional(),
     releaseNote: z.string().max(2000).nullable().optional(),
   })
   .strict();
@@ -144,7 +141,7 @@ export const DispatchItemSchema = z.object({
   status: OperationRunStatusEnum,
   priority: OrderRunPriorityEnum,
   assignedTo: z.string().nullable(),
-  dueAt: z.iso.datetime().nullable(),
+  dueAt: z.string().nullable(),
   createdAt: z.iso.datetime(),
 });
 
