@@ -44,7 +44,7 @@ export default function dispatchRoutes(fastify: FastifyInstance) {
       if (search) {
         where.OR = [
           { operation: { title: { contains: search } } },
-          { orderRun: { assignedTo: { contains: search } } },
+          { assignedTo: { username: { contains: search } } },
           { orderRun: { order: { key: { contains: search } } } },
         ];
       }
@@ -58,11 +58,11 @@ export default function dispatchRoutes(fastify: FastifyInstance) {
           where,
           include: {
             operation: { select: { seqNo: true, title: true } },
+            assignedTo: { select: { username: true } },
             orderRun: {
               select: {
                 runNo: true,
                 priority: true,
-                assignedTo: true,
                 dueAt: true,
                 order: { select: { key: true } },
                 orderRev: { select: { revNo: true } },
@@ -86,7 +86,7 @@ export default function dispatchRoutes(fastify: FastifyInstance) {
           title: opRun.operation.title,
           status: opRun.status,
           priority: opRun.orderRun.priority,
-          assignedTo: opRun.orderRun.assignedTo,
+          assignedTo: opRun.assignedTo?.username ?? null,
           dueAt: formatDate(opRun.orderRun.dueAt),
           createdAt: opRun.createdAt.toISOString(),
         })),

@@ -49,6 +49,22 @@ async function opRunItemActions(
   const isExecutor = hasPermission(user, "order_executor");
   const isManager = hasPermission(user, "order_manager");
 
+  // Managers can assign/unassign in any active status
+  if (
+    isManager &&
+    status !== OperationRunStatus.completed &&
+    status !== OperationRunStatus.skipped &&
+    status !== OperationRunStatus.failed
+  ) {
+    actions.push({
+      rel: "assign",
+      href,
+      method: "PUT",
+      title: "Assign",
+      schema: `${API_PREFIX}/schemas/UpdateOperationRun`,
+    });
+  }
+
   // Comments can be added in any status by executors
   if (isExecutor) {
     actions.push({
@@ -169,6 +185,7 @@ export async function formatOpRun(
     title: opRun.operation.title,
     description: opRun.operation.description,
     status: opRun.status,
+    assignedTo: opRun.assignedTo?.username ?? null,
     cost: opRun.cost,
     completedAt: formatDate(opRun.completedAt),
     ...formatAuditFields(opRun),
@@ -216,6 +233,7 @@ function formatListOpRun(
     title: opRun.operation.title,
     description: opRun.operation.description,
     status: opRun.status,
+    assignedTo: opRun.assignedTo?.username ?? null,
     cost: opRun.cost,
     completedAt: formatDate(opRun.completedAt),
     ...formatAuditFields(opRun),

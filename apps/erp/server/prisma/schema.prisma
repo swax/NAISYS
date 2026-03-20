@@ -225,7 +225,6 @@ model OrderRun {
   cost             Float?
   scheduledStartAt DateTime?        @map("scheduled_start_at")
   dueAt            DateTime?        @map("due_at")
-  assignedTo       String?          @map("assigned_to")
   notes            String?
   createdAt        DateTime         @default(now()) @map("created_at")
   createdById      Int              @map("created_by")
@@ -251,14 +250,16 @@ model OperationRun {
   id          Int                @id @default(autoincrement())
   orderRunId  Int                @map("order_run_id")
   operationId Int                @map("operation_id")
-  status      OperationRunStatus @default(pending)
-  cost        Float?
+  status       OperationRunStatus @default(pending)
+  assignedToId Int?               @map("assigned_to_id")
+  cost         Float?
   completedAt DateTime?          @map("completed_at")
   createdAt   DateTime           @default(now()) @map("created_at")
   createdById Int                @map("created_by")
   updatedAt   DateTime           @updatedAt @map("updated_at")
   updatedById Int                @map("updated_by")
 
+  assignedTo   User?         @relation("opRunAssignedTo", fields: [assignedToId], references: [id], onDelete: Restrict)
   createdBy    User          @relation("opRunCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
   updatedBy    User          @relation("opRunUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
   orderRun     OrderRun      @relation(fields: [orderRunId], references: [id], onDelete: Restrict)
@@ -402,6 +403,7 @@ model User {
   grantedPermissions     UserPermission[]      @relation("permissionGrantedBy")
   attachmentsUploaded    Attachment[]          @relation("attachmentUploadedBy")
   commentsCreated        OperationRunComment[] @relation("commentCreatedBy")
+  opRunsAssigned         OperationRun[]        @relation("opRunAssignedTo")
 
   @@map("users")
 }

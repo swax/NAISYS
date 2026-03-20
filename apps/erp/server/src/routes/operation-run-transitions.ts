@@ -82,6 +82,7 @@ export default function operationRunTransitionRoutes(fastify: FastifyInstance) {
         OperationRunStatus.pending,
         OperationRunStatus.in_progress,
         userId,
+        { assignedToId: userId },
       );
       await clockIn(resolved.opRun.id, userId, userId);
       return formatOpRun(orderKey, runNo, request.erpUser, opRun);

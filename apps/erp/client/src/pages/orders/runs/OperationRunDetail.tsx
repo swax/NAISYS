@@ -7,15 +7,17 @@ import {
   Divider,
   Group,
   Loader,
+  Popover,
   SegmentedControl,
+  Select,
   Stack,
   Tabs,
   Text,
   Tooltip,
 } from "@mantine/core";
-import type { OperationRun } from "@naisys-erp/shared";
+import type { OperationRun, UserListResponse } from "@naisys-erp/shared";
 import { OperationRunStatus } from "@naisys-erp/shared";
-import { IconArrowBackUp } from "@tabler/icons-react";
+import { IconArrowBackUp, IconX } from "@tabler/icons-react";
 import { useCallback, useEffect, useState } from "react";
 import { useOutletContext, useParams } from "react-router";
 
@@ -55,6 +57,8 @@ export const OperationRunDetail: React.FC = () => {
   const [bottomView, setBottomView] = useState("steps");
   const [stepCount, setStepCount] = useState<number | null>(null);
   const [commentCount, setCommentCount] = useState<number | null>(null);
+  const [assignOpen, setAssignOpen] = useState(false);
+  const [users, setUsers] = useState<{ value: string; label: string }[]>([]);
   const [laborActions, setLaborActions] = useState<LaborActions>({
     canClockIn: false,
     canClockOut: false,
@@ -79,6 +83,36 @@ export const OperationRunDetail: React.FC = () => {
   useEffect(() => {
     void fetchOpRun();
   }, [fetchOpRun]);
+
+  const fetchUsers = async () => {
+    try {
+      const result = await api.get<UserListResponse>(
+        apiEndpoints.users + "?pageSize=100",
+      );
+      setUsers(
+        result.items.map((u) => ({
+          value: String(u.id),
+          label: u.username,
+        })),
+      );
+    } catch (err) {
+      showErrorNotification(err);
+    }
+  };
+
+  const handleAssign = async (userId: number | null) => {
+    if (!orderKey || !runNo || !seqNo) return;
+    try {
+      const updated = await api.put<OperationRun>(
+        apiEndpoints.operationRun(orderKey, runNo, seqNo),
+        { assignedToId: userId },
+      );
+      setOpRun(updated);
+      setAssignOpen(false);
+    } catch (err) {
+      showErrorNotification(err);
+    }
+  };
 
   const handleAction = async (
     action: "start" | "complete" | "skip" | "fail" | "reopen",
@@ -174,6 +208,59 @@ export const OperationRunDetail: React.FC = () => {
             >
               {opRun.status}
             </Badge>
+            {opRun.assignedTo ? (
+              <Group gap={4}>
+                <Text size="sm" c="dimmed">
+                  assigned to {opRun.assignedTo}
+                </Text>
+                {hasAction(opRun._actions, "assign") && (
+                  <ActionIcon
+                    size="xs"
+                    variant="subtle"
+                    color="gray"
+                    onClick={() => void handleAssign(null)}
+                    title="Unassign"
+                  >
+                    <IconX size={12} />
+                  </ActionIcon>
+                )}
+              </Group>
+            ) : (
+              hasAction(opRun._actions, "assign") && (
+                <Popover
+                  opened={assignOpen}
+                  onChange={setAssignOpen}
+                  position="bottom"
+                  withArrow
+                >
+                  <Popover.Target>
+                    <Text
+                      size="sm"
+                      c="blue"
+                      style={{ cursor: "pointer" }}
+                      onClick={() => {
+                        if (users.length === 0) void fetchUsers();
+                        setAssignOpen(true);
+                      }}
+                    >
+                      assign
+                    </Text>
+                  </Popover.Target>
+                  <Popover.Dropdown>
+                    <Select
+                      placeholder="Select user..."
+                      data={users}
+                      searchable
+                      size="xs"
+                      w={200}
+                      onChange={(val) => {
+                        if (val) void handleAssign(Number(val));
+                      }}
+                    />
+                  </Popover.Dropdown>
+                </Popover>
+              )
+            )}
           </Group>
           <Group gap="xs">
             {(laborActions.canClockIn || laborActions.canClockOut) && (
