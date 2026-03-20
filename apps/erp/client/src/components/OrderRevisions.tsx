@@ -2,6 +2,7 @@ import {
   Badge,
   Button,
   Card,
+  Checkbox,
   Group,
   Loader,
   Pagination,
@@ -40,6 +41,8 @@ export const OrderRevisions: React.FC<Props> = ({ orderKey }) => {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [creating, setCreating] = useState(false);
+  const [comparing, setComparing] = useState(false);
+  const [selected, setSelected] = useState<number[]>([]);
 
   const fetchRevisions = useCallback(async () => {
     setLoading(true);
@@ -104,17 +107,51 @@ export const OrderRevisions: React.FC<Props> = ({ orderKey }) => {
     }
   };
 
+  const toggleSelect = (revNo: number) => {
+    setSelected((prev) => {
+      if (prev.includes(revNo)) return prev.filter((r) => r !== revNo);
+      if (prev.length >= 2) return [prev[1], revNo];
+      return [...prev, revNo];
+    });
+  };
+
+  const handleCompare = () => {
+    if (selected.length !== 2) return;
+    const [a, b] = selected.sort((x, y) => x - y);
+    void navigate(
+      `/orders/${orderKey}/revs/diff?from=${a}&to=${b}`,
+    );
+  };
+
   const totalPages = data ? Math.ceil(data.total / PAGE_SIZE) : 0;
 
   return (
     <Card withBorder p="lg" mt="lg">
       <Group justify="space-between" mb="md">
         <Title order={4}>Revisions</Title>
-        {data && hasAction(data._actions, "create") && (
-          <Button size="sm" onClick={handleCreate} loading={creating}>
-            New Revision
+        <Group gap="xs">
+          {comparing && selected.length === 2 && (
+            <Button size="sm" variant="light" onClick={handleCompare}>
+              Compare
+            </Button>
+          )}
+          <Button
+            size="sm"
+            variant={comparing ? "filled" : "light"}
+            color={comparing ? "gray" : "violet"}
+            onClick={() => {
+              setComparing((v) => !v);
+              setSelected([]);
+            }}
+          >
+            {comparing ? "Cancel" : "Compare"}
           </Button>
-        )}
+          {data && hasAction(data._actions, "create") && (
+            <Button size="sm" onClick={handleCreate} loading={creating}>
+              New Revision
+            </Button>
+          )}
+        </Group>
       </Group>
 
       {loading ? (
@@ -128,11 +165,12 @@ export const OrderRevisions: React.FC<Props> = ({ orderKey }) => {
           <Table striped highlightOnHover>
             <Table.Thead>
               <Table.Tr>
+                {comparing && <Table.Th w={40} />}
                 <Table.Th>Rev</Table.Th>
                 <Table.Th>Status</Table.Th>
                 <Table.Th>Change Summary</Table.Th>
                 <Table.Th>Created</Table.Th>
-                <Table.Th>Actions</Table.Th>
+                {!comparing && <Table.Th>Actions</Table.Th>}
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
@@ -144,6 +182,14 @@ export const OrderRevisions: React.FC<Props> = ({ orderKey }) => {
                     style={{ cursor: "pointer" }}
                     data-testid={`revision-row-${rev.revNo}`}
                   >
+                    {comparing && (
+                      <Table.Td>
+                        <Checkbox
+                          checked={selected.includes(rev.revNo)}
+                          onChange={() => toggleSelect(rev.revNo)}
+                        />
+                      </Table.Td>
+                    )}
                     <Table.Td style={{ padding: 0 }}>
                       <Link to={revLink} style={cellLinkStyle}>
                         <Badge color="violet" variant="light">
@@ -172,53 +218,55 @@ export const OrderRevisions: React.FC<Props> = ({ orderKey }) => {
                         {new Date(rev.createdAt).toLocaleString()}
                       </Link>
                     </Table.Td>
-                    <Table.Td>
-                      <Group gap="xs">
-                        {hasAction(rev._actions, "approve") && (
-                          <Button
-                            size="xs"
-                            variant="light"
-                            color="green"
-                            onClick={() => handleApprove(rev)}
-                            data-testid={`revision-approve-${rev.revNo}`}
-                          >
-                            Approve
-                          </Button>
-                        )}
-                        {hasAction(rev._actions, "delete") && (
-                          <Button
-                            size="xs"
-                            variant="light"
-                            color="red"
-                            onClick={() => handleDelete(rev)}
-                          >
-                            Delete
-                          </Button>
-                        )}
-                        {hasAction(rev._actions, "cut-order") && (
-                          <Button
-                            size="xs"
-                            variant="light"
-                            color="teal"
-                            component={Link}
-                            to={`/orders/${orderKey}/runs/new?revNo=${rev.revNo}`}
-                            data-testid={`revision-cut-order-${rev.revNo}`}
-                          >
-                            Cut Order
-                          </Button>
-                        )}
-                        {hasAction(rev._actions, "obsolete") && (
-                          <Button
-                            size="xs"
-                            variant="light"
-                            color="gray"
-                            onClick={() => handleObsolete(rev)}
-                          >
-                            Mark Obsolete
-                          </Button>
-                        )}
-                      </Group>
-                    </Table.Td>
+                    {!comparing && (
+                      <Table.Td>
+                        <Group gap="xs">
+                          {hasAction(rev._actions, "approve") && (
+                            <Button
+                              size="xs"
+                              variant="light"
+                              color="green"
+                              onClick={() => handleApprove(rev)}
+                              data-testid={`revision-approve-${rev.revNo}`}
+                            >
+                              Approve
+                            </Button>
+                          )}
+                          {hasAction(rev._actions, "delete") && (
+                            <Button
+                              size="xs"
+                              variant="light"
+                              color="red"
+                              onClick={() => handleDelete(rev)}
+                            >
+                              Delete
+                            </Button>
+                          )}
+                          {hasAction(rev._actions, "cut-order") && (
+                            <Button
+                              size="xs"
+                              variant="light"
+                              color="teal"
+                              component={Link}
+                              to={`/orders/${orderKey}/runs/new?revNo=${rev.revNo}`}
+                              data-testid={`revision-cut-order-${rev.revNo}`}
+                            >
+                              Cut Order
+                            </Button>
+                          )}
+                          {hasAction(rev._actions, "obsolete") && (
+                            <Button
+                              size="xs"
+                              variant="light"
+                              color="gray"
+                              onClick={() => handleObsolete(rev)}
+                            >
+                              Mark Obsolete
+                            </Button>
+                          )}
+                        </Group>
+                      </Table.Td>
+                    )}
                   </Table.Tr>
                 );
               })}
