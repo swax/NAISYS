@@ -88,6 +88,11 @@ function formatOperation(
         href: `${API_PREFIX}${base}/${operation.seqNo}/steps`,
         title: "Steps",
       } as HateoasLink,
+      {
+        rel: "dependencies",
+        href: `${API_PREFIX}${base}/${operation.seqNo}/deps`,
+        title: "Dependencies",
+      } as HateoasLink,
     ],
     _actions: draftCrudActions(
       `${API_PREFIX}${base}/${operation.seqNo}`,
@@ -184,7 +189,12 @@ export default function operationRoutes(fastify: FastifyInstance) {
     preHandler: requirePermission("order_planner"),
     handler: async (request, reply) => {
       const { orderKey, revNo } = request.params;
-      const { seqNo: requestedSeqNo, title, description } = request.body;
+      const {
+        seqNo: requestedSeqNo,
+        title,
+        description,
+        predecessorSeqNos,
+      } = request.body;
       const userId = request.erpUser!.id;
 
       const resolved = await resolveRevision(orderKey, revNo);
@@ -204,6 +214,7 @@ export default function operationRoutes(fastify: FastifyInstance) {
         requestedSeqNo,
         title,
         description,
+        predecessorSeqNos,
         userId,
       );
 

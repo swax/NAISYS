@@ -35,6 +35,7 @@ export const CreateOperationSchema = z
     seqNo: z.number().int().min(1).optional(),
     title: z.string().min(1).max(200),
     description: z.string().max(2000).optional(),
+    predecessorSeqNos: z.array(z.number().int().min(1)).optional(),
   })
   .strict();
 
