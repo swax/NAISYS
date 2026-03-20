@@ -18,6 +18,7 @@ import {
   checkOpRunInProgress,
   formatAuditFields,
   formatDate,
+  permGate,
   resolveOpRun,
 } from "../route-helpers.js";
 import {
@@ -41,42 +42,62 @@ function laborTicketListActions(
   tickets: LaborTicketWithUser[],
 ): HateoasAction[] {
   const actions: HateoasAction[] = [];
-  if (opRunStatus !== OperationRunStatus.in_progress) return actions;
-
   const base = `${API_PREFIX}/${laborResource(orderKey, runNo, seqNo)}`;
+  const isInProgress = opRunStatus === OperationRunStatus.in_progress;
+  const isExecutor = hasPermission(user, "order_executor");
+  const executorGate = permGate(isExecutor, "order_executor");
 
   const userHasOpenTicket =
     user != null && tickets.some((t) => t.userId === user.id && !t.clockOut);
   const anyOpenTickets = tickets.some((t) => !t.clockOut);
 
-  if (hasPermission(user, "order_executor")) {
-    if (!userHasOpenTicket) {
-      actions.push({
-        rel: "clock-in",
-        href: `${base}/clock-in`,
-        method: "POST",
-        title: "Clock In",
-      });
-    }
-    if (userHasOpenTicket) {
-      actions.push({
-        rel: "clock-out",
-        href: `${base}/clock-out`,
-        method: "POST",
-        title: "Clock Out",
-        schema: `${API_PREFIX}/schemas/ClockOutLaborTicket`,
-      });
-    }
-  } else if (hasPermission(user, "order_manager")) {
-    if (anyOpenTickets) {
-      actions.push({
-        rel: "clock-out",
-        href: `${base}/clock-out`,
-        method: "POST",
-        title: "Clock Out",
-        schema: `${API_PREFIX}/schemas/ClockOutLaborTicket`,
-      });
-    }
+  // clock-in: show for non-executors (disabled for permission), or executors with status logic
+  if (!isExecutor) {
+    actions.push({
+      rel: "clock-in",
+      href: `${base}/clock-in`,
+      method: "POST",
+      title: "Clock In",
+      ...executorGate,
+    });
+  } else if (!isInProgress) {
+    actions.push({
+      rel: "clock-in",
+      href: `${base}/clock-in`,
+      method: "POST",
+      title: "Clock In",
+      disabled: true,
+      disabledReason: "Operation must be in progress to clock in",
+    });
+  } else if (!userHasOpenTicket) {
+    actions.push({
+      rel: "clock-in",
+      href: `${base}/clock-in`,
+      method: "POST",
+      title: "Clock In",
+    });
+  }
+
+  // clock-out for executor
+  if (isExecutor && isInProgress && userHasOpenTicket) {
+    actions.push({
+      rel: "clock-out",
+      href: `${base}/clock-out`,
+      method: "POST",
+      title: "Clock Out",
+      schema: `${API_PREFIX}/schemas/ClockOutLaborTicket`,
+    });
+  }
+
+  // manager clock-out: for non-executor managers only
+  if (!isExecutor && hasPermission(user, "order_manager") && isInProgress && anyOpenTickets) {
+    actions.push({
+      rel: "clock-out",
+      href: `${base}/clock-out`,
+      method: "POST",
+      title: "Clock Out",
+      schema: `${API_PREFIX}/schemas/ClockOutLaborTicket`,
+    });
   }
 
   return actions;

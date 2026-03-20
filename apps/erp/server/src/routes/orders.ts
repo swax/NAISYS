@@ -22,7 +22,7 @@ import {
   schemaLink,
   selfLink,
 } from "../hateoas.js";
-import { formatAuditFields } from "../route-helpers.js";
+import { formatAuditFields, permGate, resolveActions } from "../route-helpers.js";
 import {
   checkHasRevisions,
   createOrder,
@@ -47,52 +47,41 @@ function orderLinks(
 }
 
 function orderActions(
-  resource: string,
-  key: string,
-  status: string,
-  user: ErpUser | undefined,
+  resource: string, key: string, status: string, user: ErpUser | undefined,
 ): HateoasAction[] {
   const href = `${API_PREFIX}/${resource}/${key}`;
-  const actions: HateoasAction[] = [];
 
-  if (hasPermission(user, "order_planner")) {
-    actions.push({
+  return resolveActions([
+    {
       rel: "update",
-      href,
       method: "PUT",
       title: "Update",
       schema: `${API_PREFIX}/schemas/UpdateOrder`,
-    });
-
-    if (status === OrderStatus.active) {
-      actions.push({
-        rel: "archive",
-        href,
-        method: "PUT",
-        title: "Archive",
-        body: { status: OrderStatus.archived },
-      });
-    } else {
-      actions.push({
-        rel: "activate",
-        href,
-        method: "PUT",
-        title: "Activate",
-        body: { status: OrderStatus.active },
-      });
-    }
-  }
-
-  if (hasPermission(user, "order_manager")) {
-    actions.push({
+      permission: "order_planner",
+    },
+    {
+      rel: "archive",
+      method: "PUT",
+      title: "Archive",
+      body: { status: OrderStatus.archived },
+      permission: "order_planner",
+      statuses: [OrderStatus.active],
+    },
+    {
+      rel: "activate",
+      method: "PUT",
+      title: "Activate",
+      body: { status: OrderStatus.active },
+      permission: "order_planner",
+      statuses: [OrderStatus.archived],
+    },
+    {
       rel: "delete",
-      href,
       method: "DELETE",
       title: "Delete",
-    });
-  }
-
-  return actions;
+      permission: "order_manager",
+    },
+  ], href, { status, user });
 }
 
 function revisionCollectionLink(
@@ -181,17 +170,14 @@ export default function orderRoutes(fastify: FastifyInstance) {
           status,
           search,
         }),
-        _actions: hasPermission(request.erpUser, "order_planner")
-          ? [
-              {
-                rel: "create",
-                href: `${API_PREFIX}/${RESOURCE}`,
-                method: "POST" as const,
-                title: "Create Order",
-                schema: `${API_PREFIX}/schemas/CreateOrder`,
-              },
-            ]
-          : [],
+        _actions: [{
+          rel: "create",
+          href: `${API_PREFIX}/${RESOURCE}`,
+          method: "POST" as const,
+          title: "Create Order",
+          schema: `${API_PREFIX}/schemas/CreateOrder`,
+          ...permGate(hasPermission(request.erpUser, "order_planner"), "order_planner"),
+        }],
       };
     },
   });

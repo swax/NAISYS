@@ -7,6 +7,7 @@ import {
   Stack,
   Text,
   TextInput,
+  Tooltip,
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { hasAction, type HateoasAction } from "@naisys/common";
@@ -328,45 +329,65 @@ export const AgentDetail: React.FC = () => {
   return (
     <Stack p="xs">
       <Group wrap="nowrap" style={{ overflowX: "auto" }}>
-        {hasAction(actions, "start") ? (
-          <Group gap={0} wrap="nowrap" style={{ flex: 1 }}>
-            <TextInput
-              placeholder="Task description (optional)"
-              value={taskInput}
-              onChange={(e) => setTaskInput(e.currentTarget.value)}
-              disabled={agentData?.status === "offline"}
-              style={{ flex: 1 }}
-              styles={{
-                input: {
-                  borderTopRightRadius: 0,
-                  borderBottomRightRadius: 0,
-                },
-              }}
-            />
-            <Button
-              color="green"
-              loading={starting}
-              disabled={agentData?.status === "offline"}
-              leftSection={<IconPlayerPlay size={16} />}
-              onClick={handleStart}
-              style={{ borderTopLeftRadius: 0, borderBottomLeftRadius: 0 }}
-            >
-              <Text visibleFrom="sm" span>
-                Start
-              </Text>
-            </Button>
-          </Group>
-        ) : (
-          <Button
-            color="green"
-            disabled
-            leftSection={<IconPlayerPlay size={16} />}
-          >
-            <Text visibleFrom="sm" span>
-              Start
-            </Text>
-          </Button>
-        )}
+        {(() => {
+          const startAction = hasAction(actions, "start", { includeDisabled: true });
+          if (!startAction) return null;
+
+          if (startAction.disabled) {
+            const btn = (
+              <Button
+                color="green"
+                disabled
+                leftSection={<IconPlayerPlay size={16} />}
+              >
+                <Text visibleFrom="sm" span>
+                  Start
+                </Text>
+              </Button>
+            );
+            return startAction.disabledReason ? (
+              <Tooltip
+                label={startAction.disabledReason}
+                multiline
+                maw={350}
+              >
+                {btn}
+              </Tooltip>
+            ) : (
+              btn
+            );
+          }
+
+          return (
+            <Group gap={0} wrap="nowrap" style={{ flex: 1 }}>
+              <TextInput
+                placeholder="Task description (optional)"
+                value={taskInput}
+                onChange={(e) => setTaskInput(e.currentTarget.value)}
+                disabled={agentData?.status === "offline"}
+                style={{ flex: 1 }}
+                styles={{
+                  input: {
+                    borderTopRightRadius: 0,
+                    borderBottomRightRadius: 0,
+                  },
+                }}
+              />
+              <Button
+                color="green"
+                loading={starting}
+                disabled={agentData?.status === "offline"}
+                leftSection={<IconPlayerPlay size={16} />}
+                onClick={handleStart}
+                style={{ borderTopLeftRadius: 0, borderBottomLeftRadius: 0 }}
+              >
+                <Text visibleFrom="sm" span>
+                  Start
+                </Text>
+              </Button>
+            </Group>
+          );
+        })()}
         <Button
           color="yellow"
           disabled
@@ -376,45 +397,54 @@ export const AgentDetail: React.FC = () => {
             Pause
           </Text>
         </Button>
-        <Group gap={0} wrap="nowrap">
-          <Button
-            color="red"
-            disabled={!hasAction(actions, "stop")}
-            loading={stopping}
-            leftSection={<IconPlayerStop size={16} />}
-            onClick={() => handleStop()}
-            style={{ borderTopRightRadius: 0, borderBottomRightRadius: 0 }}
-          >
-            <Text visibleFrom="sm" span>
-              Stop
-            </Text>
-          </Button>
-          <Menu position="bottom-end" withinPortal>
-            <Menu.Target>
+        {(() => {
+          const stopAction = hasAction(actions, "stop", { includeDisabled: true });
+          const stopDisabled = !stopAction || !!stopAction.disabled;
+          return (
+            <Group gap={0} wrap="nowrap">
               <Button
                 color="red"
-                disabled={!hasAction(actions, "stop") || stopping}
+                disabled={stopDisabled}
+                loading={stopping}
+                leftSection={<IconPlayerStop size={16} />}
+                onClick={() => handleStop()}
                 style={{
-                  borderTopLeftRadius: 0,
-                  borderBottomLeftRadius: 0,
-                  borderLeft: "1px solid rgba(255,255,255,0.3)",
-                  paddingLeft: 6,
-                  paddingRight: 6,
+                  borderTopRightRadius: 0,
+                  borderBottomRightRadius: 0,
                 }}
               >
-                <IconChevronDown size={16} />
+                <Text visibleFrom="sm" span>
+                  Stop
+                </Text>
               </Button>
-            </Menu.Target>
-            <Menu.Dropdown>
-              <Menu.Item
-                leftSection={<IconPlayerStop size={14} />}
-                onClick={() => handleStop(true)}
-              >
-                Stop with Subordinates
-              </Menu.Item>
-            </Menu.Dropdown>
-          </Menu>
-        </Group>
+              <Menu position="bottom-end" withinPortal>
+                <Menu.Target>
+                  <Button
+                    color="red"
+                    disabled={stopDisabled || stopping}
+                    style={{
+                      borderTopLeftRadius: 0,
+                      borderBottomLeftRadius: 0,
+                      borderLeft: "1px solid rgba(255,255,255,0.3)",
+                      paddingLeft: 6,
+                      paddingRight: 6,
+                    }}
+                  >
+                    <IconChevronDown size={16} />
+                  </Button>
+                </Menu.Target>
+                <Menu.Dropdown>
+                  <Menu.Item
+                    leftSection={<IconPlayerStop size={14} />}
+                    onClick={() => handleStop(true)}
+                  >
+                    Stop with Subordinates
+                  </Menu.Item>
+                </Menu.Dropdown>
+              </Menu>
+            </Group>
+          );
+        })()}
         {(hasAction(actions, "enable") || hasAction(actions, "disable")) && (
           <Group gap={0} wrap="nowrap">
             <Button
@@ -457,18 +487,34 @@ export const AgentDetail: React.FC = () => {
             </Menu>
           </Group>
         )}
-        {hasAction(actions, "archive") && (
-          <Button
-            color="orange"
-            loading={archiving}
-            leftSection={<IconArchive size={16} />}
-            onClick={handleArchive}
-          >
-            <Text visibleFrom="sm" span>
-              Archive
-            </Text>
-          </Button>
-        )}
+        {(() => {
+          const archiveAction = hasAction(actions, "archive", { includeDisabled: true });
+          if (!archiveAction) return null;
+          const btn = (
+            <Button
+              color="orange"
+              loading={archiving}
+              disabled={archiveAction.disabled}
+              leftSection={<IconArchive size={16} />}
+              onClick={archiveAction.disabled ? undefined : handleArchive}
+            >
+              <Text visibleFrom="sm" span>
+                Archive
+              </Text>
+            </Button>
+          );
+          return archiveAction.disabledReason ? (
+            <Tooltip
+              label={archiveAction.disabledReason}
+              multiline
+              maw={350}
+            >
+              {btn}
+            </Tooltip>
+          ) : (
+            btn
+          );
+        })()}
         {hasAction(actions, "unarchive") && (
           <Button
             color="teal"

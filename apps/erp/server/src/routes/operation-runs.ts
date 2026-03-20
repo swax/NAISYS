@@ -19,6 +19,7 @@ import {
   childItemLinks,
   formatAuditFields,
   formatDate,
+  resolveActions,
   resolveOpRun,
   resolveOrderRun,
 } from "../route-helpers.js";
@@ -37,126 +38,85 @@ function opRunResource(orderKey: string, runNo: number) {
 }
 
 async function opRunItemActions(
-  orderKey: string,
-  runNo: number,
-  seqNo: number,
-  opRunId: number,
-  status: string,
-  user: ErpUser | undefined,
+  orderKey: string, runNo: number, seqNo: number,
+  opRunId: number, status: string, user: ErpUser | undefined,
 ): Promise<HateoasAction[]> {
   const href = `${API_PREFIX}/${opRunResource(orderKey, runNo)}/${seqNo}`;
-  const actions: HateoasAction[] = [];
   const isExecutor = hasPermission(user, "order_executor");
-  const isManager = hasPermission(user, "order_manager");
+  const stepsErr = isExecutor && status === OperationRunStatus.in_progress
+    ? await checkStepsComplete(opRunId) : null;
 
-  // Managers can assign/unassign in any active status
-  if (
-    isManager &&
-    status !== OperationRunStatus.completed &&
-    status !== OperationRunStatus.skipped &&
-    status !== OperationRunStatus.failed
-  ) {
-    actions.push({
+  return resolveActions([
+    {
       rel: "assign",
-      href,
       method: "PUT",
       title: "Assign",
       schema: `${API_PREFIX}/schemas/UpdateOperationRun`,
-    });
-  }
-
-  // Comments can be added in any status by executors
-  if (isExecutor) {
-    actions.push({
+      permission: "order_manager",
+      statuses: [OperationRunStatus.blocked, OperationRunStatus.pending, OperationRunStatus.in_progress],
+    },
+    {
       rel: "add-comment",
-      href: `${href}/comments`,
+      path: "/comments",
       method: "POST",
       title: "Add Comment",
       schema: `${API_PREFIX}/schemas/CreateOperationRunComment`,
-    });
-  }
-
-  if (status === OperationRunStatus.blocked) {
-    // Blocked ops can only be skipped by managers
-    if (isManager) {
-      actions.push({
-        rel: "skip",
-        href: `${href}/skip`,
-        method: "POST",
-        title: "Skip",
-      });
-    }
-  } else if (status === OperationRunStatus.pending) {
-    if (isExecutor) {
-      actions.push(
-        {
-          rel: "update",
-          href,
-          method: "PUT",
-          title: "Update",
-          schema: `${API_PREFIX}/schemas/UpdateOperationRun`,
-        },
-        {
-          rel: "start",
-          href: `${href}/start`,
-          method: "POST",
-          title: "Start",
-        },
-      );
-    }
-    if (isManager) {
-      actions.push({
-        rel: "skip",
-        href: `${href}/skip`,
-        method: "POST",
-        title: "Skip",
-      });
-    }
-  } else if (status === OperationRunStatus.in_progress) {
-    const stepsErr = isExecutor ? await checkStepsComplete(opRunId) : null;
-
-    if (isExecutor) {
-      actions.push(
-        {
-          rel: "update",
-          href,
-          method: "PUT",
-          title: "Update",
-          schema: `${API_PREFIX}/schemas/UpdateOperationRun`,
-        },
-        {
-          rel: "complete",
-          href: `${href}/complete`,
-          method: "POST",
-          title: "Complete",
-          ...(stepsErr ? { disabled: true, disabledReason: stepsErr } : {}),
-        },
-      );
-    }
-    if (isManager) {
-      actions.push({
-        rel: "fail",
-        href: `${href}/fail`,
-        method: "POST",
-        title: "Fail",
-      });
-    }
-  } else if (
-    status === OperationRunStatus.completed ||
-    status === OperationRunStatus.skipped ||
-    status === OperationRunStatus.failed
-  ) {
-    if (isManager) {
-      actions.push({
-        rel: "reopen",
-        href: `${href}/reopen`,
-        method: "POST",
-        title: "Reopen",
-      });
-    }
-  }
-
-  return actions;
+      permission: "order_executor",
+    },
+    {
+      rel: "start",
+      path: "/start",
+      method: "POST",
+      title: "Start",
+      permission: "order_executor",
+      statuses: [OperationRunStatus.blocked, OperationRunStatus.pending],
+      disabledWhen: (ctx) =>
+        ctx.status === OperationRunStatus.blocked
+          ? "Operation is blocked by incomplete predecessors"
+          : null,
+    },
+    {
+      rel: "update",
+      method: "PUT",
+      title: "Update",
+      schema: `${API_PREFIX}/schemas/UpdateOperationRun`,
+      permission: "order_executor",
+      statuses: [OperationRunStatus.pending, OperationRunStatus.in_progress],
+    },
+    {
+      rel: "complete",
+      path: "/complete",
+      method: "POST",
+      title: "Complete",
+      permission: "order_executor",
+      statuses: [OperationRunStatus.in_progress],
+      disabledWhen: () => stepsErr,
+    },
+    {
+      rel: "skip",
+      path: "/skip",
+      method: "POST",
+      title: "Skip",
+      permission: "order_manager",
+      statuses: [OperationRunStatus.blocked, OperationRunStatus.pending],
+    },
+    {
+      rel: "fail",
+      path: "/fail",
+      method: "POST",
+      title: "Fail",
+      permission: "order_manager",
+      statuses: [OperationRunStatus.in_progress],
+    },
+    {
+      rel: "reopen",
+      path: "/reopen",
+      method: "POST",
+      title: "Reopen",
+      permission: "order_manager",
+      statuses: [OperationRunStatus.completed, OperationRunStatus.skipped, OperationRunStatus.failed],
+    },
+  ], href, { status, user });
 }
 
 const RunNoParamsSchema = z.object({

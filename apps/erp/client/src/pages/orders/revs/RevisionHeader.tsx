@@ -1,4 +1,5 @@
 import { Anchor, Badge, Button, Group, Text } from "@mantine/core";
+import { ActionButton } from "@naisys/common-browser";
 import type { OrderRevision } from "@naisys-erp/shared";
 import { RevisionStatus } from "@naisys-erp/shared";
 import { useNavigate } from "react-router";
@@ -108,27 +109,27 @@ export const RevisionHeader: React.FC<Props> = ({
             Approve
           </Button>
         )}
-        {hasAction(revision._actions, "cut-order") && (
-          <Button
-            size="xs"
-            color="teal"
-            onClick={() =>
-              navigate(`/orders/${orderKey}/runs/new?revNo=${revision.revNo}`)
-            }
-          >
-            Cut Order
-          </Button>
-        )}
-        {hasAction(revision._actions, "obsolete") && (
-          <Button
-            size="xs"
-            color="gray"
-            variant="outline"
-            onClick={handleObsolete}
-          >
-            Obsolete
-          </Button>
-        )}
+        <ActionButton
+          actions={revision._actions}
+          rel="cut-order"
+          size="xs"
+          color="teal"
+          onClick={() =>
+            navigate(`/orders/${orderKey}/runs/new?revNo=${revision.revNo}`)
+          }
+        >
+          Cut Order
+        </ActionButton>
+        <ActionButton
+          actions={revision._actions}
+          rel="obsolete"
+          size="xs"
+          color="gray"
+          variant="outline"
+          onClick={handleObsolete}
+        >
+          Obsolete
+        </ActionButton>
         {hasAction(revision._actions, "delete") && (
           <Button
             size="xs"

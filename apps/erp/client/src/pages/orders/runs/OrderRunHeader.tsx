@@ -5,9 +5,9 @@ import {
   Button,
   Group,
   Text,
-  Tooltip,
 } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
+import { ActionButton } from "@naisys/common-browser";
 import type { OrderRun } from "@naisys-erp/shared";
 import { OrderRunPriority, OrderRunStatus } from "@naisys-erp/shared";
 import { IconArrowBackUp } from "@tabler/icons-react";
@@ -170,60 +170,36 @@ export const OrderRunHeader: React.FC<Props> = ({
         )}
       </Group>
       <Group gap="xs">
-        {hasAction(orderRun._actions, "start") && (
-          <Button
-            size="xs"
-            color="green"
-            data-testid="order-run-start"
-            onClick={() => handleAction("start")}
-          >
-            Start
-          </Button>
-        )}
-        {(() => {
-          const completeAction = hasAction(orderRun._actions, "complete");
-          if (!completeAction) return null;
-          const btn = (
-            <Button
-              size="xs"
-              color="green"
-              data-testid="order-run-complete"
-              disabled={completeAction.disabled}
-              onClick={openCompletion}
-            >
-              Complete
-            </Button>
-          );
-          return completeAction.disabledReason ? (
-            <Tooltip label={completeAction.disabledReason} multiline maw={350}>
-              {btn}
-            </Tooltip>
-          ) : (
-            btn
-          );
-        })()}
-        {(() => {
-          const closeAction = hasAction(orderRun._actions, "close");
-          if (!closeAction) return null;
-          const btn = (
-            <Button
-              size="xs"
-              color="green"
-              data-testid="order-run-close"
-              disabled={closeAction.disabled}
-              onClick={() => handleAction("close")}
-            >
-              Close
-            </Button>
-          );
-          return closeAction.disabledReason ? (
-            <Tooltip label={closeAction.disabledReason} multiline maw={350}>
-              {btn}
-            </Tooltip>
-          ) : (
-            btn
-          );
-        })()}
+        <ActionButton
+          actions={orderRun._actions}
+          rel="start"
+          size="xs"
+          color="green"
+          data-testid="order-run-start"
+          onClick={() => handleAction("start")}
+        >
+          Start
+        </ActionButton>
+        <ActionButton
+          actions={orderRun._actions}
+          rel="complete"
+          size="xs"
+          color="green"
+          data-testid="order-run-complete"
+          onClick={openCompletion}
+        >
+          Complete
+        </ActionButton>
+        <ActionButton
+          actions={orderRun._actions}
+          rel="close"
+          size="xs"
+          color="green"
+          data-testid="order-run-close"
+          onClick={() => handleAction("close")}
+        >
+          Close
+        </ActionButton>
         {hasAction(orderRun._actions, "reopen") && (
           <Group gap="xs" align="center">
             <Text

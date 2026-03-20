@@ -20,9 +20,11 @@ import {
 } from "@naisys-supervisor/shared";
 import { FastifyInstance, FastifyPluginOptions } from "fastify";
 
+import type { SupervisorUser } from "../auth-middleware.js";
 import { hasPermission, requirePermission } from "../auth-middleware.js";
 import { badRequest, conflict, notFound } from "../error-helpers.js";
 import { API_PREFIX, selfLink } from "../hateoas.js";
+import { permGate, resolveActions } from "../route-helpers.js";
 import {
   emitHostsListChanged,
   isHostConnected,
@@ -41,38 +43,45 @@ import {
   sendUserListChanged,
 } from "../services/hubConnectionService.js";
 
+type HostCtx = {
+  user: SupervisorUser | undefined;
+  isOnline: boolean;
+};
+
 function hostActions(
   hostname: string,
-  hasManageHostsPermission: boolean,
+  user: SupervisorUser | undefined,
   isOnline: boolean,
 ): HateoasAction[] {
-  const actions: HateoasAction[] = [];
+  const href = `${API_PREFIX}/hosts/${hostname}`;
 
-  if (hasManageHostsPermission) {
-    actions.push({
-      rel: "update",
-      href: `${API_PREFIX}/hosts/${hostname}`,
-      method: "PUT",
-      title: "Update Host",
-    });
-    actions.push({
-      rel: "assign-agent",
-      href: `${API_PREFIX}/hosts/${hostname}/agents`,
-      method: "POST",
-      title: "Assign Agent",
-    });
-  }
-
-  if (hasManageHostsPermission && !isOnline) {
-    actions.push({
-      rel: "delete",
-      href: `${API_PREFIX}/hosts/${hostname}`,
-      method: "DELETE",
-      title: "Delete Host",
-    });
-  }
-
-  return actions;
+  return resolveActions<HostCtx>(
+    [
+      {
+        rel: "update",
+        method: "PUT",
+        title: "Update Host",
+        permission: "manage_hosts",
+      },
+      {
+        rel: "assign-agent",
+        path: "/agents",
+        method: "POST",
+        title: "Assign Agent",
+        permission: "manage_hosts",
+      },
+      {
+        rel: "delete",
+        method: "DELETE",
+        title: "Delete Host",
+        permission: "manage_hosts",
+        disabledWhen: (ctx) =>
+          ctx.isOnline ? "Host must be offline before deletion" : null,
+      },
+    ],
+    href,
+    { user, isOnline },
+  );
 }
 
 function hostActionTemplates(
@@ -112,40 +121,31 @@ export default function hostsRoutes(
     async (request, _reply) => {
       const hosts = await getHosts();
 
-      const hasManageHostsPermission = hasPermission(
-        request.supervisorUser,
-        "manage_hosts",
-      );
+      const user = request.supervisorUser;
+      const hasManageHostsPermission = hasPermission(user, "manage_hosts");
 
       const items = hosts.map((host) => {
         const online = isHostConnected(host.id);
-        const actions = hostActions(
-          host.name,
-          hasManageHostsPermission,
-          online,
-        );
         return {
           ...host,
           online,
           _links: [selfLink(`/hosts/${host.name}`)],
-          _actions: actions.length > 0 ? actions : undefined,
+          _actions: hostActions(host.name, user, online),
         };
       });
-
-      const collectionActions: HateoasAction[] = [];
-      if (hasManageHostsPermission) {
-        collectionActions.push({
-          rel: "create",
-          href: `${API_PREFIX}/hosts`,
-          method: "POST",
-          title: "Create Host",
-        });
-      }
 
       return {
         items,
         _links: [selfLink("/hosts")],
-        _actions: collectionActions.length > 0 ? collectionActions : undefined,
+        _actions: [
+          {
+            rel: "create",
+            href: `${API_PREFIX}/hosts`,
+            method: "POST" as const,
+            title: "Create Host",
+            ...permGate(hasManageHostsPermission, "manage_hosts"),
+          },
+        ],
       };
     },
   );
@@ -224,11 +224,8 @@ export default function hostsRoutes(
         return notFound(reply, `Host "${hostname}" not found`);
       }
 
-      const hasManageHostsPermission = hasPermission(
-        request.supervisorUser,
-        "manage_hosts",
-      );
-
+      const user = request.supervisorUser;
+      const hasManageHostsPermission = hasPermission(user, "manage_hosts");
       const online = isHostConnected(host.id);
 
       return {
@@ -236,7 +233,7 @@ export default function hostsRoutes(
         online,
         assignedAgents: host.assignedAgents,
         _links: [selfLink(`/hosts/${hostname}`)],
-        _actions: hostActions(hostname, hasManageHostsPermission, online),
+        _actions: hostActions(hostname, user, online),
         _actionTemplates: hostActionTemplates(
           hostname,
           hasManageHostsPermission,

@@ -25,6 +25,7 @@ import {
   schemaLink,
   selfLink,
 } from "../hateoas.js";
+import { permGate, resolveActions } from "../route-helpers.js";
 import { createAgentConfig } from "../services/agentConfigService.js";
 import {
   getAgentStatus,
@@ -36,91 +37,115 @@ import {
   resolveAgentId,
 } from "../services/agentService.js";
 
+import type { SupervisorUser } from "../auth-middleware.js";
+
+type AgentCtx = {
+  user: SupervisorUser | undefined;
+  active: boolean;
+  archived: boolean;
+  enabled: boolean;
+};
+
 function agentActions(
   username: string,
-  hasManagePermission: boolean,
+  user: SupervisorUser | undefined,
   enabled: boolean,
   archived: boolean,
   agentId?: number,
 ): HateoasAction[] {
-  const actions: HateoasAction[] = [];
   const active = agentId ? isAgentActive(agentId) : false;
+  const href = `${API_PREFIX}/agents/${username}`;
 
-  if (hasManagePermission && !active && !archived && enabled) {
-    actions.push({
-      rel: "start",
-      href: `${API_PREFIX}/agents/${username}/start`,
-      method: "POST",
-      title: "Start Agent",
-      schema: `${API_PREFIX}/schemas/StartAgent`,
-    });
-  }
-  if (hasManagePermission && active) {
-    actions.push({
-      rel: "stop",
-      href: `${API_PREFIX}/agents/${username}/stop`,
-      method: "POST",
-      title: "Stop Agent",
-    });
-  }
-  if (hasManagePermission && !archived) {
-    if (enabled) {
-      actions.push({
+  return resolveActions<AgentCtx>(
+    [
+      {
+        rel: "start",
+        path: "/start",
+        method: "POST",
+        title: "Start Agent",
+        schema: `${API_PREFIX}/schemas/StartAgent`,
+        permission: "manage_agents",
+        disabledWhen: (ctx) =>
+          ctx.active
+            ? "Agent is already running"
+            : ctx.archived
+              ? "Agent is archived"
+              : !ctx.enabled
+                ? "Agent is disabled"
+                : null,
+      },
+      {
+        rel: "stop",
+        path: "/stop",
+        method: "POST",
+        title: "Stop Agent",
+        permission: "manage_agents",
+        disabledWhen: (ctx) => (!ctx.active ? "Agent is not running" : null),
+      },
+      {
         rel: "disable",
-        href: `${API_PREFIX}/agents/${username}/disable`,
+        path: "/disable",
         method: "POST",
         title: "Disable Agent",
-      });
-    } else if (!active) {
-      actions.push({
+        permission: "manage_agents",
+        visibleWhen: (ctx) => !ctx.archived && ctx.enabled,
+      },
+      {
         rel: "enable",
-        href: `${API_PREFIX}/agents/${username}/enable`,
+        path: "/enable",
         method: "POST",
         title: "Enable Agent",
-      });
-    }
-  }
-  if (hasManagePermission && !active && !archived) {
-    actions.push({
-      rel: "archive",
-      href: `${API_PREFIX}/agents/${username}/archive`,
-      method: "POST",
-      title: "Archive Agent",
-    });
-  }
-  if (hasManagePermission && archived) {
-    actions.push({
-      rel: "unarchive",
-      href: `${API_PREFIX}/agents/${username}/unarchive`,
-      method: "POST",
-      title: "Unarchive Agent",
-    });
-  }
-  if (hasManagePermission && !active && archived) {
-    actions.push({
-      rel: "delete",
-      href: `${API_PREFIX}/agents/${username}`,
-      method: "DELETE",
-      title: "Delete Agent",
-    });
-  }
-  if (hasManagePermission && !archived) {
-    actions.push({
-      rel: "update-config",
-      href: `${API_PREFIX}/agents/${username}/config`,
-      method: "PUT",
-      title: "Update Agent Config",
-      schema: `${API_PREFIX}/schemas/UpdateAgentConfig`,
-    });
-    actions.push({
-      rel: "set-lead",
-      href: `${API_PREFIX}/agents/${username}/lead`,
-      method: "PUT",
-      title: "Set Lead Agent",
-      schema: `${API_PREFIX}/schemas/SetLeadAgent`,
-    });
-  }
-  return actions;
+        permission: "manage_agents",
+        visibleWhen: (ctx) => !ctx.archived && !ctx.enabled && !ctx.active,
+      },
+      {
+        rel: "archive",
+        path: "/archive",
+        method: "POST",
+        title: "Archive Agent",
+        permission: "manage_agents",
+        visibleWhen: (ctx) => !ctx.archived,
+        disabledWhen: (ctx) =>
+          ctx.active ? "Stop the agent before archiving" : null,
+      },
+      {
+        rel: "unarchive",
+        path: "/unarchive",
+        method: "POST",
+        title: "Unarchive Agent",
+        permission: "manage_agents",
+        visibleWhen: (ctx) => ctx.archived,
+      },
+      {
+        rel: "delete",
+        method: "DELETE",
+        title: "Delete Agent",
+        permission: "manage_agents",
+        visibleWhen: (ctx) => !ctx.active && ctx.archived,
+        hideWithoutPermission: true,
+      },
+      {
+        rel: "update-config",
+        path: "/config",
+        method: "PUT",
+        title: "Update Agent Config",
+        schema: `${API_PREFIX}/schemas/UpdateAgentConfig`,
+        permission: "manage_agents",
+        visibleWhen: (ctx) => !ctx.archived,
+      },
+      {
+        rel: "set-lead",
+        path: "/lead",
+        method: "PUT",
+        title: "Set Lead Agent",
+        schema: `${API_PREFIX}/schemas/SetLeadAgent`,
+        permission: "manage_agents",
+        visibleWhen: (ctx) => !ctx.archived,
+      },
+    ],
+    href,
+    { user, active, archived, enabled },
+  );
 }
 
 function agentLinks(
@@ -178,22 +203,24 @@ export default function agentsRoutes(
         "manage_agents",
       );
 
-      const actions: HateoasAction[] = [];
-      if (hasManagePermission) {
-        actions.push({
+      const actions: HateoasAction[] = [
+        {
           rel: "create",
           href: `${API_PREFIX}/agents`,
           method: "POST",
           title: "Create Agent",
           schema: `${API_PREFIX}/schemas/CreateAgent`,
-        });
-      }
+          ...(hasManagePermission
+            ? {}
+            : { disabled: true, disabledReason: "Requires manage_agents permission" }),
+        },
+      ];
 
       return {
         items,
         timestamp: new Date().toISOString(),
         _links: [selfLink("/agents"), schemaLink("CreateAgent")],
-        _actions: actions.length > 0 ? actions : undefined,
+        _actions: actions,
       };
     },
   );
@@ -236,7 +263,7 @@ export default function agentsRoutes(
           message: `Agent '${name}' created successfully`,
           name,
           _links: agentLinks(name, config),
-          _actions: agentActions(name, true, true, false),
+          _actions: agentActions(name, request.supervisorUser, true, false),
         };
       } catch (error) {
         request.log.error(error, "Error in POST /agents route");
@@ -284,18 +311,13 @@ export default function agentsRoutes(
         return notFound(reply, `Agent '${username}' not found`);
       }
 
-      const hasManagePermission = hasPermission(
-        request.supervisorUser,
-        "manage_agents",
-      );
-
       return {
         ...agent,
         status: getAgentStatus(id),
         _links: agentLinks(username, agent.config),
         _actions: agentActions(
           username,
-          hasManagePermission,
+          request.supervisorUser,
           agent.enabled ?? false,
           agent.archived ?? false,
           id,

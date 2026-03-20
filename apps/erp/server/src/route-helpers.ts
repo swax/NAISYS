@@ -1,5 +1,11 @@
 import type { HateoasAction, HateoasLink } from "@naisys/common";
 import {
+  type ActionDef as ActionDefBase,
+  permGate,
+  resolveActions as resolveActionsBase,
+} from "@naisys/common";
+import {
+  type ErpPermission,
   OperationRunStatus,
   OrderRunStatus,
   RevisionStatus,
@@ -70,32 +76,55 @@ export function childItemLinks(
   ];
 }
 
+// --- Declarative action resolver (wraps @naisys/common with ERP permission types) ---
+
+export { permGate };
+
+export interface ActionDef<T> extends Omit<ActionDefBase<T>, "permission"> {
+  permission?: ErpPermission;
+}
+
+export function resolveActions<T extends { user: ErpUser | undefined }>(
+  defs: ActionDef<T>[],
+  baseHref: string,
+  ctx: T,
+): HateoasAction[] {
+  return resolveActionsBase(defs, baseHref, ctx, (perm) =>
+    hasPermission(ctx.user, perm as ErpPermission),
+  );
+}
+
 export function draftCrudActions(
   href: string,
   updateSchemaName: string,
   revStatus: string,
   user: ErpUser | undefined,
 ): HateoasAction[] {
-  if (
-    !hasPermission(user, "order_planner") ||
-    revStatus !== RevisionStatus.draft
-  )
-    return [];
-  return [
-    {
-      rel: "update",
-      href,
-      method: "PUT",
-      title: "Update",
-      schema: `${API_PREFIX}/schemas/${updateSchemaName}`,
-    },
-    {
-      rel: "delete",
-      href,
-      method: "DELETE",
-      title: "Delete",
-    },
-  ];
+  return resolveActions(
+    [
+      {
+        rel: "update",
+        method: "PUT",
+        title: "Update",
+        schema: `${API_PREFIX}/schemas/${updateSchemaName}`,
+        permission: "order_planner",
+        disabledWhen: (ctx) =>
+          ctx.status !== RevisionStatus.draft
+            ? "Can only edit in draft revisions"
+            : null,
+      },
+      {
+        rel: "delete",
+        method: "DELETE",
+        title: "Delete",
+        permission: "order_planner",
+        statuses: [RevisionStatus.draft],
+        hideWithoutPermission: true,
+      },
+    ],
+    href,
+    { status: revStatus, user },
+  );
 }
 
 // --- Status guards (return error message or null) ---

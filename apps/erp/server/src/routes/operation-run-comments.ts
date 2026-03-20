@@ -11,10 +11,10 @@ import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod/v4";
 
 import type { ErpUser } from "../auth-middleware.js";
-import { hasPermission, requirePermission } from "../auth-middleware.js";
+import { requirePermission } from "../auth-middleware.js";
 import { notFound } from "../error-handler.js";
 import { API_PREFIX, selfLink } from "../hateoas.js";
-import { resolveOpRun } from "../route-helpers.js";
+import { resolveActions, resolveOpRun } from "../route-helpers.js";
 import {
   type CommentWithUser,
   createComment,
@@ -26,22 +26,18 @@ function commentResource(orderKey: string, runNo: number, seqNo: number) {
 }
 
 function commentListActions(
-  orderKey: string,
-  runNo: number,
-  seqNo: number,
+  orderKey: string, runNo: number, seqNo: number,
   user: ErpUser | undefined,
 ): HateoasAction[] {
-  if (!hasPermission(user, "order_executor")) return [];
-
-  return [
+  return resolveActions([
     {
       rel: "create",
-      href: `${API_PREFIX}/${commentResource(orderKey, runNo, seqNo)}`,
       method: "POST",
       title: "Add Comment",
       schema: `${API_PREFIX}/schemas/CreateOperationRunComment`,
+      permission: "order_executor",
     },
-  ];
+  ], `${API_PREFIX}/${commentResource(orderKey, runNo, seqNo)}`, { user });
 }
 
 function formatComment(
