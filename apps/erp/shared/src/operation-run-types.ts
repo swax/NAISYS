@@ -27,6 +27,7 @@ export const OperationRunSchema = z.object({
   status: OperationRunStatusEnum,
   assignedTo: z.string().nullable(),
   cost: z.number().nullable(),
+  completionNote: z.string().nullable(),
   completedAt: z.iso.datetime().nullable(),
   createdAt: z.iso.datetime(),
   createdBy: z.string(),
@@ -46,6 +47,15 @@ export const UpdateOperationRunSchema = z
   .strict();
 
 export type UpdateOperationRun = z.infer<typeof UpdateOperationRunSchema>;
+
+// Input for completing an operation run
+export const CompleteOperationRunSchema = z
+  .object({
+    completionNote: z.string().max(2000).optional(),
+  })
+  .strict();
+
+export type CompleteOperationRun = z.infer<typeof CompleteOperationRunSchema>;
 
 // List response
 export const OperationRunListResponseSchema = z.object({

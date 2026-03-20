@@ -252,8 +252,9 @@ model OperationRun {
   operationId Int                @map("operation_id")
   status       OperationRunStatus @default(pending)
   assignedToId Int?               @map("assigned_to_id")
-  cost         Float?
-  completedAt DateTime?          @map("completed_at")
+  cost           Float?
+  completionNote String?          @map("completion_note")
+  completedAt    DateTime?        @map("completed_at")
   createdAt   DateTime           @default(now()) @map("created_at")
   createdById Int                @map("created_by")
   updatedAt   DateTime           @updatedAt @map("updated_at")
