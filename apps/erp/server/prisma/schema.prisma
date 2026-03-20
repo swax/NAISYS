@@ -44,6 +44,12 @@ enum OperationRunStatus {
   failed
 }
 
+enum OperationRunCommentType {
+  note
+  issue
+  feedback
+}
+
 enum FieldType {
   string
   number
@@ -248,7 +254,6 @@ model OperationRun {
   status      OperationRunStatus @default(pending)
   cost        Float?
   completedAt DateTime?          @map("completed_at")
-  feedback    String?
   createdAt   DateTime           @default(now()) @map("created_at")
   createdById Int                @map("created_by")
   updatedAt   DateTime           @updatedAt @map("updated_at")
@@ -260,6 +265,7 @@ model OperationRun {
   operation    Operation     @relation(fields: [operationId], references: [id], onDelete: Restrict)
   stepRuns     StepRun[]
   laborTickets LaborTicket[]
+  comments     OperationRunComment[]
 
   @@unique([orderRunId, operationId])
   @@index([status])
@@ -395,6 +401,7 @@ model User {
   permissions            UserPermission[]      @relation("userPermissions")
   grantedPermissions     UserPermission[]      @relation("permissionGrantedBy")
   attachmentsUploaded    Attachment[]          @relation("attachmentUploadedBy")
+  commentsCreated        OperationRunComment[] @relation("commentCreatedBy")
 
   @@map("users")
 }
@@ -506,4 +513,19 @@ model FieldAttachment {
 
   @@id([fieldValueId, attachmentId])
   @@map("field_attachments")
+}
+
+model OperationRunComment {
+  id             Int                     @id @default(autoincrement())
+  operationRunId Int                     @map("operation_run_id")
+  type           OperationRunCommentType @default(note)
+  body           String
+  createdAt      DateTime                @default(now()) @map("created_at")
+  createdById    Int                     @map("created_by")
+
+  operationRun OperationRun @relation(fields: [operationRunId], references: [id], onDelete: Restrict)
+  createdBy    User         @relation("commentCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+
+  @@index([operationRunId])
+  @@map("operation_run_comments")
 }

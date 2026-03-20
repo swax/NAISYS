@@ -49,6 +49,17 @@ async function opRunItemActions(
   const isExecutor = hasPermission(user, "order_executor");
   const isManager = hasPermission(user, "order_manager");
 
+  // Comments can be added in any status by executors
+  if (isExecutor) {
+    actions.push({
+      rel: "add-comment",
+      href: `${href}/comments`,
+      method: "POST",
+      title: "Add Comment",
+      schema: `${API_PREFIX}/schemas/CreateOperationRunComment`,
+    });
+  }
+
   if (status === OperationRunStatus.blocked) {
     // Blocked ops can only be skipped by managers
     if (isManager) {
@@ -160,7 +171,6 @@ export async function formatOpRun(
     status: opRun.status,
     cost: opRun.cost,
     completedAt: formatDate(opRun.completedAt),
-    feedback: opRun.feedback,
     ...formatAuditFields(opRun),
     _links: [
       ...childItemLinks(
@@ -181,6 +191,11 @@ export async function formatOpRun(
         rel: "labor",
         href: `${API_PREFIX}/${opRunResource(orderKey, runNo)}/${seqNo}/labor`,
         title: "Labor Tickets",
+      } as HateoasLink,
+      {
+        rel: "comments",
+        href: `${API_PREFIX}/${opRunResource(orderKey, runNo)}/${seqNo}/comments`,
+        title: "Comments",
       } as HateoasLink,
     ],
     _actions: await opRunItemActions(orderKey, runNo, seqNo, opRun.id, opRun.status, user),
@@ -203,7 +218,6 @@ function formatListOpRun(
     status: opRun.status,
     cost: opRun.cost,
     completedAt: formatDate(opRun.completedAt),
-    feedback: opRun.feedback,
     ...formatAuditFields(opRun),
     stepCount: opRun._count.stepRuns,
     predecessors: opRun.operation.predecessors.map((d) => ({
