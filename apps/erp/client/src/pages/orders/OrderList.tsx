@@ -15,10 +15,11 @@ import {
 import type { OrderListResponse } from "@naisys-erp/shared";
 import { OrderStatus, OrderStatusEnum } from "@naisys-erp/shared";
 import { useCallback, useEffect, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router";
+import { Link, useNavigate, useSearchParams } from "react-router";
 
 import { api, apiEndpoints, showErrorNotification } from "../../lib/api";
 import { hasAction } from "../../lib/hateoas";
+import { cellLinkStyle } from "../../lib/tableStyles";
 
 export const OrderList: React.FC = () => {
   const navigate = useNavigate();
@@ -115,32 +116,37 @@ export const OrderList: React.FC = () => {
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
-              {data.items.map((item) => (
-                <Table.Tr
-                  key={item.id}
-                  style={{ cursor: "pointer" }}
-                  onClick={() => navigate(`/orders/${item.key}`)}
-                >
-                  <Table.Td>
-                    <Text size="sm" ff="monospace">
-                      {item.key}
-                    </Text>
-                  </Table.Td>
-                  <Table.Td>
-                    <Badge
-                      color={
-                        item.status === OrderStatus.active ? "green" : "gray"
-                      }
-                      variant="light"
-                    >
-                      {item.status}
-                    </Badge>
-                  </Table.Td>
-                  <Table.Td>
-                    {new Date(item.createdAt).toLocaleDateString()}
-                  </Table.Td>
-                </Table.Tr>
-              ))}
+              {data.items.map((item) => {
+                const orderLink = `/orders/${item.key}`;
+                return (
+                  <Table.Tr key={item.id} style={{ cursor: "pointer" }}>
+                    <Table.Td style={{ padding: 0 }}>
+                      <Link to={orderLink} style={cellLinkStyle}>
+                        <Text size="sm" ff="monospace">
+                          {item.key}
+                        </Text>
+                      </Link>
+                    </Table.Td>
+                    <Table.Td style={{ padding: 0 }}>
+                      <Link to={orderLink} style={cellLinkStyle}>
+                        <Badge
+                          color={
+                            item.status === OrderStatus.active ? "green" : "gray"
+                          }
+                          variant="light"
+                        >
+                          {item.status}
+                        </Badge>
+                      </Link>
+                    </Table.Td>
+                    <Table.Td style={{ padding: 0 }}>
+                      <Link to={orderLink} style={cellLinkStyle}>
+                        {new Date(item.createdAt).toLocaleDateString()}
+                      </Link>
+                    </Table.Td>
+                  </Table.Tr>
+                );
+              })}
             </Table.Tbody>
           </Table>
           {totalPages > 1 && (

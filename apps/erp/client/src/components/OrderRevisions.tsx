@@ -20,12 +20,7 @@ import { Link, useNavigate } from "react-router";
 
 import { api, apiEndpoints, showErrorNotification } from "../lib/api";
 import { hasAction } from "../lib/hateoas";
-
-const cellLinkStyle = {
-  display: "block",
-  color: "inherit",
-  textDecoration: "none",
-};
+import { cellLinkStyle } from "../lib/tableStyles";
 
 const STATUS_COLORS: Record<string, string> = {
   [RevisionStatus.draft]: "blue",
@@ -149,14 +144,14 @@ export const OrderRevisions: React.FC<Props> = ({ orderKey }) => {
                     style={{ cursor: "pointer" }}
                     data-testid={`revision-row-${rev.revNo}`}
                   >
-                    <Table.Td>
+                    <Table.Td style={{ padding: 0 }}>
                       <Link to={revLink} style={cellLinkStyle}>
                         <Badge color="violet" variant="light">
                           REV {rev.revNo}
                         </Badge>
                       </Link>
                     </Table.Td>
-                    <Table.Td>
+                    <Table.Td style={{ padding: 0 }}>
                       <Link to={revLink} style={cellLinkStyle}>
                         <Badge
                           color={STATUS_COLORS[rev.status] ?? "gray"}
@@ -167,12 +162,12 @@ export const OrderRevisions: React.FC<Props> = ({ orderKey }) => {
                         </Badge>
                       </Link>
                     </Table.Td>
-                    <Table.Td>
+                    <Table.Td style={{ padding: 0 }}>
                       <Link to={revLink} style={cellLinkStyle}>
                         {rev.changeSummary ?? "—"}
                       </Link>
                     </Table.Td>
-                    <Table.Td>
+                    <Table.Td style={{ padding: 0 }}>
                       <Link to={revLink} style={cellLinkStyle}>
                         {new Date(rev.createdAt).toLocaleString()}
                       </Link>
