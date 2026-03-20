@@ -175,6 +175,7 @@ export async function createRevision(
             data: {
               operationId: newOp.id,
               seqNo: step.seqNo,
+              title: step.title,
               instructions: step.instructions,
               multiSet: step.multiSet,
               fieldSetId: newFieldSetId,
@@ -245,15 +246,16 @@ export async function deleteRevision(id: number): Promise<void> {
         .map((s) => s.fieldSetId)
         .filter((id): id is number => id !== null);
 
-      // Fields cascade-delete from field_sets; steps cascade-delete from operations
+      // Steps reference field_sets via FK, so delete steps first
+      await erpTx.step.deleteMany({
+        where: { operationId: { in: opIds } },
+      });
+      // Fields cascade-delete from field_sets
       if (fieldSetIds.length > 0) {
         await erpTx.fieldSet.deleteMany({
           where: { id: { in: fieldSetIds } },
         });
       }
-      await erpTx.step.deleteMany({
-        where: { operationId: { in: opIds } },
-      });
       await erpTx.operation.deleteMany({
         where: { orderRevId: id },
       });
