@@ -61,6 +61,7 @@ function formatStep(
     id: step.id,
     operationId: step.operationId,
     seqNo: step.seqNo,
+    title: step.title,
     instructions: step.instructions,
     multiSet: step.multiSet,
     ...formatAuditFields(step),
@@ -158,7 +159,7 @@ export default function stepRoutes(fastify: FastifyInstance) {
     preHandler: requirePermission("order_planner"),
     handler: async (request, reply) => {
       const { orderKey, revNo, seqNo } = request.params;
-      const { seqNo: requestedSeqNo, instructions, multiSet } = request.body;
+      const { seqNo: requestedSeqNo, title, instructions, multiSet } = request.body;
       const userId = request.erpUser!.id;
 
       const resolved = await resolveOperation(orderKey, revNo, seqNo);
@@ -176,6 +177,7 @@ export default function stepRoutes(fastify: FastifyInstance) {
       const step = await createStep(
         resolved.operation.id,
         requestedSeqNo,
+        title,
         instructions,
         multiSet,
         userId,
@@ -244,7 +246,7 @@ export default function stepRoutes(fastify: FastifyInstance) {
     preHandler: requirePermission("order_planner"),
     handler: async (request, reply) => {
       const { orderKey, revNo, seqNo, stepSeqNo } = request.params;
-      const { instructions, seqNo: newSeqNo, multiSet } = request.body;
+      const { title, instructions, seqNo: newSeqNo, multiSet } = request.body;
       const userId = request.erpUser!.id;
 
       const resolved = await resolveOperation(orderKey, revNo, seqNo);
@@ -266,7 +268,7 @@ export default function stepRoutes(fastify: FastifyInstance) {
 
       const step = await updateStep(
         existing.id,
-        { instructions, seqNo: newSeqNo, multiSet },
+        { title, instructions, seqNo: newSeqNo, multiSet },
         userId,
       );
 

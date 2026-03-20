@@ -226,10 +226,12 @@ export async function checkStepsComplete(
 ): Promise<string | null> {
   const incompleteSteps = await erpDb.stepRun.findMany({
     where: { operationRunId: opRunId, completed: false },
-    include: { step: { select: { seqNo: true } } },
+    include: { step: { select: { seqNo: true, title: true } } },
   });
   if (incompleteSteps.length === 0) return null;
-  const labels = incompleteSteps.map((s) => `Step ${s.step.seqNo}`);
+  const labels = incompleteSteps.map(
+    (s) => `Step ${s.step.seqNo}${s.step.title ? ` "${s.step.title}"` : ""}`,
+  );
   return `Cannot complete operation: incomplete steps — ${labels.join(", ")}`;
 }
 

@@ -198,6 +198,7 @@ model Step {
   operationId  Int      @map("operation_id")
   fieldSetId   Int?     @map("field_set_id")
   seqNo        Int      @map("seq_no")
+  title        String   @default("")
   instructions String   @default("")
   multiSet     Boolean  @default(false) @map("multi_set")
   createdAt    DateTime @default(now()) @map("created_at")

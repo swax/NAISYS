@@ -56,6 +56,7 @@ export const StepRunSchema = z.object({
   operationRunId: z.number(),
   stepId: z.number(),
   seqNo: z.number(),
+  title: z.string(),
   instructions: z.string(),
   multiSet: z.boolean(),
   completed: z.boolean(),

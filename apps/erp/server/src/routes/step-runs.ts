@@ -198,6 +198,7 @@ function formatStepRun(
     operationRunId: stepRun.operationRunId,
     stepId: stepRun.stepId,
     seqNo: stepSeqNo,
+    title: stepRun.step.title,
     instructions: stepRun.step.instructions,
     multiSet,
     completed: stepRun.completed,

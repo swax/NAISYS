@@ -134,7 +134,7 @@ export const OperationDetail: React.FC = () => {
         <Group justify="space-between">
           <Group gap="xs">
             <Text fw={600}>
-              OPERATION {operation.seqNo}. {operation.title}
+              OPERATION {operation.seqNo}: {operation.title}
             </Text>
             <MetadataTooltip
               createdBy={operation.createdBy}
