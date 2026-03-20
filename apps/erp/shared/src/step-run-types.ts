@@ -59,6 +59,7 @@ export const StepRunSchema = z.object({
   instructions: z.string(),
   multiSet: z.boolean(),
   completed: z.boolean(),
+  completionNote: z.string().nullable(),
   fieldValues: z.array(FieldValueEntrySchema),
   createdAt: z.iso.datetime(),
   createdBy: z.string(),
@@ -85,6 +86,7 @@ export type UpdateFieldValue = z.infer<typeof UpdateFieldValueSchema>;
 export const UpdateStepRunSchema = z
   .object({
     completed: z.boolean().optional(),
+    completionNote: z.string().max(2000).optional(),
     fieldValues: z
       .array(
         z.object({
