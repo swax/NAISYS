@@ -13,6 +13,7 @@ import {
   MAX_ATTACHMENT_SIZE,
   type StartServer,
   SUPER_ADMIN_USERNAME,
+  registerLenientJsonParser,
 } from "@naisys/common";
 import { createHubDatabaseClient } from "@naisys/hub-database";
 import {
@@ -129,6 +130,7 @@ export const startServer: StartServer = async (
   // Set Zod validator and serializer compilers
   fastify.setValidatorCompiler(validatorCompiler);
   fastify.setSerializerCompiler(serializerCompiler);
+  registerLenientJsonParser(fastify);
 
   fastify.setErrorHandler(commonErrorHandler);
 

@@ -9,6 +9,7 @@ export * from "./errorHandler.js";
 export * from "./formatFileSize.js";
 export * from "./globalConfigLoader.js";
 export * from "./hateoas.js";
+export * from "./lenientJsonParser.js";
 export * from "./hateoas-types.js";
 export * from "./hostedServices.js";
 export * from "./modelTypes.js";
