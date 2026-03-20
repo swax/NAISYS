@@ -225,7 +225,7 @@ model OrderRun {
   cost             Float?
   scheduledStartAt DateTime?        @map("scheduled_start_at")
   dueAt            DateTime?        @map("due_at")
-  notes            String?
+  releaseNote      String?        @map("release_note")
   createdAt        DateTime         @default(now()) @map("created_at")
   createdById      Int              @map("created_by")
   updatedAt        DateTime         @updatedAt @map("updated_at")

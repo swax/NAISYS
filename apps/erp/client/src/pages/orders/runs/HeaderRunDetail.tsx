@@ -127,7 +127,7 @@ export const HeaderRunDetail: React.FC = () => {
                   ? orderRun.scheduledStartAt.slice(0, 16)
                   : "",
                 dueAt: orderRun.dueAt ? orderRun.dueAt.slice(0, 16) : "",
-                notes: orderRun.notes ?? "",
+                releaseNote: orderRun.releaseNote ?? "",
               }}
               isEdit
               onSubmit={handleUpdate}
@@ -188,10 +188,10 @@ export const HeaderRunDetail: React.FC = () => {
               </Group>
               <Group align="flex-start">
                 <Text fw={600} w={140}>
-                  Notes:
+                  Release Note:
                 </Text>
                 <Text style={{ whiteSpace: "pre-wrap" }}>
-                  {orderRun.notes ?? "\u2014"}
+                  {orderRun.releaseNote ?? "\u2014"}
                 </Text>
               </Group>
             </Stack>

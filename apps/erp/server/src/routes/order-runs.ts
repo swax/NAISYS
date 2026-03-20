@@ -201,7 +201,7 @@ export async function formatRun(
     cost: run.cost,
     scheduledStartAt: formatDate(run.scheduledStartAt),
     dueAt: formatDate(run.dueAt),
-    notes: run.notes,
+    releaseNote: run.releaseNote,
     ...formatAuditFields(run),
     _links: links,
     _actions: await orderRunItemActions(orderKey, run.runNo, run.id, run.status, itemKey, user),
@@ -228,7 +228,7 @@ function formatListRun(
     cost: run.cost,
     scheduledStartAt: formatDate(run.scheduledStartAt),
     dueAt: formatDate(run.dueAt),
-    notes: run.notes,
+    releaseNote: run.releaseNote,
     ...formatAuditFields(run),
     _links: [selfLink(`/${runResource(orderKey)}/${run.runNo}`)],
   };
@@ -262,7 +262,7 @@ export default function orderRunRoutes(fastify: FastifyInstance) {
       if (status) where.status = status;
       if (priority) where.priority = priority;
       if (search) {
-        where.OR = [{ notes: { contains: search } }];
+        where.OR = [{ releaseNote: { contains: search } }];
       }
 
       const { items, total } = await listOrderRuns(where, page, pageSize);
@@ -298,7 +298,7 @@ export default function orderRunRoutes(fastify: FastifyInstance) {
     preHandler: requirePermission("order_manager"),
     handler: async (request, reply) => {
       const { orderKey } = request.params;
-      const { revNo, priority, scheduledStartAt, dueAt, notes } =
+      const { revNo, priority, scheduledStartAt, dueAt, releaseNote } =
         request.body;
       const userId = request.erpUser!.id;
 
@@ -321,7 +321,7 @@ export default function orderRunRoutes(fastify: FastifyInstance) {
       const run = await createOrderRun(
         orderId,
         orderRev.id,
-        { priority, scheduledStartAt, dueAt, notes },
+        { priority, scheduledStartAt, dueAt, releaseNote },
         userId,
       );
 
