@@ -8,7 +8,7 @@ import multipart from "@fastify/multipart";
 import { fastifyRateLimit as rateLimit } from "@fastify/rate-limit";
 import staticFiles from "@fastify/static";
 import swagger from "@fastify/swagger";
-import { commonErrorHandler } from "@naisys/common";
+import { commonErrorHandler, registerLenientJsonParser } from "@naisys/common";
 import {
   createHubDatabaseClient,
   deployPrismaMigrations,
@@ -272,6 +272,7 @@ async function startServer() {
 
   fastify.setValidatorCompiler(validatorCompiler);
   fastify.setSerializerCompiler(serializerCompiler);
+  registerLenientJsonParser(fastify);
 
   await fastify.register(cors, {
     origin: isProd ? false : ["http://localhost:3202"],
