@@ -2,6 +2,8 @@ import { Badge, Card, Group, Loader, Stack, Table, Text } from "@mantine/core";
 import type { OperationPredecessor } from "@naisys-erp/shared";
 import { Link } from "react-router";
 
+import { cellLinkStyle } from "../lib/tableStyles";
+
 export interface OperationSummaryItem {
   id: number;
   seqNo: number;
@@ -46,41 +48,50 @@ export const OperationSummaryTable: React.FC<OperationSummaryTableProps> = ({
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
-              {items.map((op) => (
-                <Table.Tr key={op.id}>
-                  <Table.Td>{op.seqNo}</Table.Td>
-                  <Table.Td>
-                    <Text
-                      component={Link}
-                      to={linkBuilder(op.seqNo)}
-                      size="sm"
-                      c="blue"
-                      style={{ textDecoration: "none" }}
-                    >
-                      {op.title}
-                    </Text>
-                  </Table.Td>
-                  <Table.Td>
-                    {op.predecessors && op.predecessors.length > 0 ? (
-                      <Group gap={4}>
-                        {op.predecessors.map((p) => (
-                          <Badge key={p.seqNo} variant="light" size="sm">
-                            {p.seqNo}. {p.title}
-                          </Badge>
-                        ))}
-                      </Group>
-                    ) : (
-                      <Text c="dimmed" size="sm">
-                        None
-                      </Text>
-                    )}
-                  </Table.Td>
-                  <Table.Td>{op.stepCount ?? 0}</Table.Td>
-                  <Table.Td>
-                    {op.cost ? `$${op.cost.toFixed(2)}` : "\u2014"}
-                  </Table.Td>
-                </Table.Tr>
-              ))}
+              {items.map((op) => {
+                const opLink = linkBuilder(op.seqNo);
+                return (
+                  <Table.Tr key={op.id} style={{ cursor: "pointer" }}>
+                    <Table.Td style={{ padding: 0 }}>
+                      <Link to={opLink} style={cellLinkStyle}>
+                        {op.seqNo}
+                      </Link>
+                    </Table.Td>
+                    <Table.Td style={{ padding: 0 }}>
+                      <Link to={opLink} style={cellLinkStyle}>
+                        {op.title}
+                      </Link>
+                    </Table.Td>
+                    <Table.Td style={{ padding: 0 }}>
+                      <Link to={opLink} style={cellLinkStyle}>
+                        {op.predecessors && op.predecessors.length > 0 ? (
+                          <Group gap={4}>
+                            {op.predecessors.map((p) => (
+                              <Badge key={p.seqNo} variant="light" size="sm">
+                                {p.seqNo}. {p.title}
+                              </Badge>
+                            ))}
+                          </Group>
+                        ) : (
+                          <Text c="dimmed" size="sm">
+                            None
+                          </Text>
+                        )}
+                      </Link>
+                    </Table.Td>
+                    <Table.Td style={{ padding: 0 }}>
+                      <Link to={opLink} style={cellLinkStyle}>
+                        {op.stepCount ?? 0}
+                      </Link>
+                    </Table.Td>
+                    <Table.Td style={{ padding: 0 }}>
+                      <Link to={opLink} style={cellLinkStyle}>
+                        {op.cost ? `$${op.cost.toFixed(2)}` : "\u2014"}
+                      </Link>
+                    </Table.Td>
+                  </Table.Tr>
+                );
+              })}
             </Table.Tbody>
           </Table>
         )}
