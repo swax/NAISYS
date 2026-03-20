@@ -162,7 +162,6 @@ export const OrderRunList: React.FC = () => {
                 <Table.Th>Status</Table.Th>
                 <Table.Th>Priority</Table.Th>
                 <Table.Th>Cost</Table.Th>
-                <Table.Th>Assigned To</Table.Th>
                 <Table.Th>Due</Table.Th>
                 <Table.Th>Created</Table.Th>
               </Table.Tr>
@@ -211,11 +210,6 @@ export const OrderRunList: React.FC = () => {
                     <Table.Td>
                       <Link to={runLink} style={cellLinkStyle}>
                         {item.cost ? `$${item.cost.toFixed(2)}` : "\u2014"}
-                      </Link>
-                    </Table.Td>
-                    <Table.Td>
-                      <Link to={runLink} style={cellLinkStyle}>
-                        {item.assignedTo ?? "—"}
                       </Link>
                     </Table.Td>
                     <Table.Td>

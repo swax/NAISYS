@@ -127,7 +127,6 @@ export const HeaderRunDetail: React.FC = () => {
                   ? orderRun.scheduledStartAt.slice(0, 16)
                   : "",
                 dueAt: orderRun.dueAt ? orderRun.dueAt.slice(0, 16) : "",
-                assignedTo: orderRun.assignedTo ?? "",
                 notes: orderRun.notes ?? "",
               }}
               isEdit
@@ -186,12 +185,6 @@ export const HeaderRunDetail: React.FC = () => {
                   Due Date:
                 </Text>
                 <Text>{formatDateTime(orderRun.dueAt)}</Text>
-              </Group>
-              <Group>
-                <Text fw={600} w={140}>
-                  Assigned To:
-                </Text>
-                <Text>{orderRun.assignedTo ?? "\u2014"}</Text>
               </Group>
               <Group align="flex-start">
                 <Text fw={600} w={140}>

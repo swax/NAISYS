@@ -112,7 +112,6 @@ export async function createOrderRun(
     priority: OrderRunPriority;
     scheduledStartAt?: string | null;
     dueAt?: string | null;
-    assignedTo?: string | null;
     notes?: string | null;
   },
   userId: number,
@@ -135,7 +134,6 @@ export async function createOrderRun(
           ? new Date(data.scheduledStartAt)
           : null,
         dueAt: data.dueAt ? new Date(data.dueAt) : null,
-        assignedTo: data.assignedTo ?? null,
         notes: data.notes ?? null,
         createdById: userId,
         updatedById: userId,
@@ -216,7 +214,6 @@ export async function updateOrderRun(
   id: number,
   data: {
     priority?: OrderRunPriority;
-    assignedTo?: string | null;
     notes?: string | null;
     scheduledStartAt?: string | null;
     dueAt?: string | null;
@@ -225,7 +222,6 @@ export async function updateOrderRun(
 ): Promise<OrderRunWithRev> {
   const updateData: Record<string, unknown> = { updatedById: userId };
   if (data.priority !== undefined) updateData.priority = data.priority;
-  if (data.assignedTo !== undefined) updateData.assignedTo = data.assignedTo;
   if (data.notes !== undefined) updateData.notes = data.notes;
   if (data.scheduledStartAt !== undefined) {
     updateData.scheduledStartAt = data.scheduledStartAt

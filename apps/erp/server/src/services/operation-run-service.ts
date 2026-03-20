@@ -11,12 +11,14 @@ import type { OperationRunModel } from "../generated/prisma/models/OperationRun.
 
 export const includeOp = {
   operation: { select: { seqNo: true, title: true, description: true } },
+  assignedTo: { select: { username: true } },
   createdBy: { select: { username: true } },
   updatedBy: { select: { username: true } },
 } as const;
 
 export type OpRunWithOp = OperationRunModel & {
   operation: { seqNo: number; title: string; description: string };
+  assignedTo: { username: string } | null;
   createdBy: { username: string };
   updatedBy: { username: string };
 };
@@ -51,6 +53,7 @@ export async function listOpRuns(runId: number): Promise<OpRunWithSummary[]> {
         },
       },
       _count: { select: { stepRuns: true } },
+      assignedTo: { select: { username: true } },
       createdBy: { select: { username: true } },
       updatedBy: { select: { username: true } },
     },
@@ -234,12 +237,15 @@ export async function checkStepsComplete(
 
 export async function updateOpRun(
   id: number,
-  _data: Record<string, never>,
+  data: { assignedToId?: number | null },
   userId: number,
 ): Promise<OpRunWithOp> {
+  const updateData: Record<string, unknown> = { updatedById: userId };
+  if (data.assignedToId !== undefined) updateData.assignedToId = data.assignedToId;
+
   return erpDb.operationRun.update({
     where: { id },
-    data: { updatedById: userId },
+    data: updateData,
     include: includeOp,
   });
 }

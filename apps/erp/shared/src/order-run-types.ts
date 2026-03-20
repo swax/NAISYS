@@ -40,7 +40,6 @@ export const OrderRunSchema = z.object({
   cost: z.number().nullable(),
   scheduledStartAt: z.iso.datetime().nullable(),
   dueAt: z.iso.datetime().nullable(),
-  assignedTo: z.string().nullable(),
   notes: z.string().nullable(),
   createdAt: z.iso.datetime(),
   createdBy: z.string(),
@@ -59,7 +58,6 @@ export const CreateOrderRunSchema = z
     priority: OrderRunPriorityEnum.optional().default("medium"),
     scheduledStartAt: z.iso.datetime().optional(),
     dueAt: z.iso.datetime().optional(),
-    assignedTo: z.string().max(200).optional(),
     notes: z.string().max(2000).optional(),
   })
   .strict();
@@ -72,7 +70,6 @@ export const UpdateOrderRunSchema = z
     priority: OrderRunPriorityEnum.optional(),
     scheduledStartAt: z.iso.datetime().nullable().optional(),
     dueAt: z.iso.datetime().nullable().optional(),
-    assignedTo: z.string().max(200).nullable().optional(),
     notes: z.string().max(2000).nullable().optional(),
   })
   .strict();

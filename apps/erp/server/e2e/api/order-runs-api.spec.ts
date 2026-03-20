@@ -49,7 +49,6 @@ test.describe("Order Runs - API happy path", () => {
       data: {
         revNo,
         priority: "high",
-        assignedTo: "test-user",
         notes: "First order run",
       },
     });
@@ -59,7 +58,6 @@ test.describe("Order Runs - API happy path", () => {
     expect(body.runNo).toBe(1);
     expect(body.status).toBe("released");
     expect(body.priority).toBe("high");
-    expect(body.assignedTo).toBe("test-user");
     expect(body.orderKey).toBe(orderKey);
     expect(body.revNo).toBe(revNo);
     expect(body._actions).toEqual(

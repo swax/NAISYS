@@ -29,7 +29,6 @@ interface Props<TEdit extends boolean = boolean> {
     priority: string;
     scheduledStartAt: string;
     dueAt: string;
-    assignedTo: string;
     notes: string;
   }>;
   isEdit?: TEdit;
@@ -48,7 +47,6 @@ function transformFormValues(
     priority: string;
     scheduledStartAt: string;
     dueAt: string;
-    assignedTo: string;
     notes: string;
   },
   isEdit?: boolean,
@@ -57,14 +55,12 @@ function transformFormValues(
     priority: values.priority || undefined,
     scheduledStartAt: toISOOrEmpty(values.scheduledStartAt),
     dueAt: toISOOrEmpty(values.dueAt),
-    assignedTo: values.assignedTo || undefined,
     notes: values.notes || undefined,
   };
   if (isEdit) {
     // For updates, convert empty optional fields to null (to clear them)
     if (!values.scheduledStartAt) result.scheduledStartAt = null;
     if (!values.dueAt) result.dueAt = null;
-    if (!values.assignedTo) result.assignedTo = null;
     if (!values.notes) result.notes = null;
   } else {
     result.revNo = typeof values.revNo === "number" ? values.revNo : undefined;
@@ -86,7 +82,6 @@ export const OrderRunForm = <TEdit extends boolean = false>({
       priority: initialData?.priority ?? OrderRunPriority.medium,
       scheduledStartAt: initialData?.scheduledStartAt ?? "",
       dueAt: initialData?.dueAt ?? "",
-      assignedTo: initialData?.assignedTo ?? "",
       notes: initialData?.notes ?? "",
     },
     validate: (values) =>
@@ -136,11 +131,6 @@ export const OrderRunForm = <TEdit extends boolean = false>({
           label="Due Date"
           type="datetime-local"
           {...form.getInputProps("dueAt")}
-        />
-        <TextInput
-          label="Assigned To"
-          placeholder="Person or team"
-          {...form.getInputProps("assignedTo")}
         />
         <Textarea
           label="Notes"

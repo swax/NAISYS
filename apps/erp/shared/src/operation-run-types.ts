@@ -25,6 +25,7 @@ export const OperationRunSchema = z.object({
   stepCount: z.number().optional(),
   predecessors: z.array(OperationPredecessorSchema).optional(),
   status: OperationRunStatusEnum,
+  assignedTo: z.string().nullable(),
   cost: z.number().nullable(),
   completedAt: z.iso.datetime().nullable(),
   createdAt: z.iso.datetime(),
@@ -38,7 +39,11 @@ export const OperationRunSchema = z.object({
 export type OperationRun = z.infer<typeof OperationRunSchema>;
 
 // Input for updating an operation run
-export const UpdateOperationRunSchema = z.object({}).strict();
+export const UpdateOperationRunSchema = z
+  .object({
+    assignedToId: z.number().int().nullable().optional(),
+  })
+  .strict();
 
 export type UpdateOperationRun = z.infer<typeof UpdateOperationRunSchema>;
 
