@@ -152,7 +152,7 @@ export async function updateAgentConfigById(
   id: number,
   config: AgentConfigFile,
   setUsername: boolean,
-): Promise<void> {
+): Promise<AgentConfigFile> {
   if (setUsername) {
     // Normal edit: push config.username to the DB column
   } else {
@@ -180,4 +180,6 @@ export async function updateAgentConfigById(
 
   // Notify hub to broadcast updated user list to all NAISYS clients
   sendUserListChanged();
+
+  return config;
 }
