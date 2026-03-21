@@ -1,4 +1,5 @@
 import {
+  BatchCreateStepSchema,
   CreateStepSchema,
   ErrorResponseSchema,
   RevisionStatus,
@@ -11,19 +12,21 @@ import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod/v4";
 
 import type { ErpUser } from "../auth-middleware.js";
-import { hasPermission, requirePermission } from "../auth-middleware.js";
+import { requirePermission } from "../auth-middleware.js";
 import { conflict, notFound } from "../error-handler.js";
 import { API_PREFIX, selfLink } from "../hateoas.js";
 import {
+  type ActionDef,
   calcNextSeqNo,
   childItemLinks,
   draftCrudActions,
   formatAuditFields,
-  permGate,
+  resolveActions,
   resolveOperation,
 } from "../route-helpers.js";
 import {
   createStep,
+  createSteps,
   deleteStep,
   findExisting,
   getStep,
@@ -92,6 +95,43 @@ function formatStep(
   };
 }
 
+const draftCreateDef: ActionDef<{ status: string }> = {
+  rel: "create",
+  method: "POST",
+  title: "Add Step",
+  schema: `${API_PREFIX}/schemas/CreateStep`,
+  permission: "order_planner",
+  disabledWhen: (ctx) =>
+    ctx.status !== RevisionStatus.draft
+      ? "Can only add steps in draft revisions"
+      : null,
+};
+
+const draftBatchCreateDef: ActionDef<{ status: string }> = {
+  rel: "batch-create",
+  path: "/batch",
+  method: "POST",
+  title: "Add Steps (Batch)",
+  schema: `${API_PREFIX}/schemas/BatchCreateStep`,
+  permission: "order_planner",
+  disabledWhen: (ctx) =>
+    ctx.status !== RevisionStatus.draft
+      ? "Can only add steps in draft revisions"
+      : null,
+};
+
+function stepListActions(
+  base: string,
+  revStatus: string,
+  user: ErpUser | undefined,
+) {
+  return resolveActions(
+    [draftCreateDef, draftBatchCreateDef],
+    `${API_PREFIX}${base}`,
+    { status: revStatus, user },
+  );
+}
+
 export default function stepRoutes(fastify: FastifyInstance) {
   const app = fastify.withTypeProvider<ZodTypeProvider>();
 
@@ -127,23 +167,62 @@ export default function stepRoutes(fastify: FastifyInstance) {
         total: items.length,
         nextSeqNo: calcNextSeqNo(maxSeq),
         _links: [selfLink(base)],
-        _actions: [
-          {
-            rel: "create",
-            href: `${API_PREFIX}${base}`,
-            method: "POST" as const,
-            title: "Add Step",
-            schema: `${API_PREFIX}/schemas/CreateStep`,
-            ...(!hasPermission(user, "order_planner")
-              ? permGate(false, "order_planner")
-              : resolved.rev.status !== RevisionStatus.draft
-                ? {
-                    disabled: true,
-                    disabledReason: "Can only add steps in draft revisions",
-                  }
-                : {}),
-          },
-        ],
+        _actions: stepListActions(base, resolved.rev.status, user),
+      };
+    },
+  });
+
+  // BATCH CREATE
+  app.post("/batch", {
+    schema: {
+      description: "Create multiple steps for an operation in one request",
+      tags: ["Steps"],
+      params: ParamsSchema,
+      body: BatchCreateStepSchema,
+      response: {
+        201: StepListResponseSchema,
+        404: ErrorResponseSchema,
+        409: ErrorResponseSchema,
+      },
+    },
+    preHandler: requirePermission("order_planner"),
+    handler: async (request, reply) => {
+      const { orderKey, revNo, seqNo } = request.params;
+      const { items } = request.body;
+      const userId = request.erpUser!.id;
+
+      const resolved = await resolveOperation(orderKey, revNo, seqNo);
+      if (!resolved) {
+        return notFound(reply, "Operation not found");
+      }
+
+      if (resolved.rev.status !== RevisionStatus.draft) {
+        return conflict(
+          reply,
+          `Cannot add steps to a ${resolved.rev.status} revision`,
+        );
+      }
+
+      const created = await createSteps(
+        resolved.operation.id,
+        items,
+        userId,
+      );
+
+      const maxSeq =
+        created.length > 0 ? created[created.length - 1].seqNo : 0;
+      const user = request.erpUser;
+      const base = stepBasePath(orderKey, revNo, seqNo);
+
+      reply.status(201);
+      return {
+        items: created.map((step) =>
+          formatStep(orderKey, revNo, seqNo, resolved.rev.status, user, step),
+        ),
+        total: created.length,
+        nextSeqNo: calcNextSeqNo(maxSeq),
+        _links: [selfLink(base)],
+        _actions: [],
       };
     },
   });
