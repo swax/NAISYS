@@ -37,6 +37,7 @@ export const UpdateAgentConfigRequestSchema = z
 export const UpdateAgentConfigResponseSchema = z.object({
   success: z.boolean(),
   message: z.string(),
+  config: AgentConfigFileSchema.optional(),
 });
 
 export const ImportAgentConfigRequestSchema = z
@@ -48,6 +49,7 @@ export const ImportAgentConfigRequestSchema = z
 export const ImportAgentConfigResponseSchema = z.object({
   success: z.boolean(),
   message: z.string(),
+  config: AgentConfigFileSchema.optional(),
 });
 
 export const GetAgentConfigResponseSchema = z.object({

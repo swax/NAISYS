@@ -183,11 +183,12 @@ export default function agentConfigRoutes(
           return badRequest(reply, modelError);
         }
 
-        await updateAgentConfigById(id, config, true);
+        const updatedConfig = await updateAgentConfigById(id, config, true);
 
         return {
           success: true,
           message: "Agent configuration updated successfully",
+          config: updatedConfig,
         };
       } catch (error) {
         request.log.error(error, "Error in PUT /agents/:username/config route");
@@ -310,11 +311,12 @@ export default function agentConfigRoutes(
           return badRequest(reply, modelError);
         }
 
-        await updateAgentConfigById(id, config, false);
+        const updatedConfig = await updateAgentConfigById(id, config, false);
 
         return {
           success: true,
           message: "Agent configuration imported successfully",
+          config: updatedConfig,
         };
       } catch (error) {
         request.log.error(
