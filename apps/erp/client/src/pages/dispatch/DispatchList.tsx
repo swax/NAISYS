@@ -41,6 +41,7 @@ const STATUS_OPTIONS = [
   { value: OperationRunStatus.pending, label: "Pending" },
   { value: OperationRunStatus.in_progress, label: "In Progress" },
   { value: OperationRunStatus.blocked, label: "Blocked" },
+  { value: OperationRunStatus.failed, label: "Failed" },
 ];
 
 export const DispatchList: React.FC = () => {
