@@ -19,6 +19,7 @@ import { API_PREFIX, selfLink } from "../hateoas.js";
 import {
   checkOpRunInProgress,
   checkOrderRunStarted,
+  checkWorkCenterAccess,
   childItemLinks,
   formatAuditFields,
   resolveActions,
@@ -334,6 +335,9 @@ export default function stepRunRoutes(fastify: FastifyInstance) {
         return notFound(reply, `Step run not found`);
       }
 
+      const wcErr = await checkWorkCenterAccess(resolved.opRun.operationId, userId);
+      if (wcErr) return conflict(reply, wcErr);
+
       const orderErr = checkOrderRunStarted(resolved.run.status);
       if (orderErr) return conflict(reply, orderErr);
 
@@ -402,6 +406,9 @@ export default function stepRunRoutes(fastify: FastifyInstance) {
       if (!resolved) {
         return notFound(reply, `Step run not found`);
       }
+
+      const wcErr = await checkWorkCenterAccess(resolved.opRun.operationId, userId);
+      if (wcErr) return conflict(reply, wcErr);
 
       const orderErr = checkOrderRunStarted(resolved.run.status);
       if (orderErr) return conflict(reply, orderErr);
@@ -486,6 +493,9 @@ export default function stepRunRoutes(fastify: FastifyInstance) {
       if (!resolved) {
         return notFound(reply, `Step run not found`);
       }
+
+      const wcErr = await checkWorkCenterAccess(resolved.opRun.operationId, userId);
+      if (wcErr) return conflict(reply, wcErr);
 
       const orderErr = checkOrderRunStarted(resolved.run.status);
       if (orderErr) return conflict(reply, orderErr);

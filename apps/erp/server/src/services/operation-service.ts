@@ -8,7 +8,12 @@ import {
 
 // --- Prisma include & result type ---
 
-export type OperationWithUsers = OperationModel & WithAuditUsers;
+const includeWorkCenter = {
+  workCenter: { select: { key: true } },
+} as const;
+
+export type OperationWithUsers = OperationModel &
+  WithAuditUsers & { workCenter?: { key: string } | null };
 
 export type OperationWithSummary = OperationWithUsers & {
   _count: { steps: number };
@@ -26,6 +31,7 @@ export async function listOperations(
     where: { orderRevId },
     include: {
       ...includeUsers,
+      ...includeWorkCenter,
       _count: { select: { steps: true } },
       predecessors: {
         include: { predecessor: { select: { seqNo: true, title: true } } },
@@ -42,7 +48,7 @@ export async function getOperation(
 ): Promise<OperationWithUsers | null> {
   return erpDb.operation.findFirst({
     where: { orderRevId, seqNo },
-    include: includeUsers,
+    include: { ...includeUsers, ...includeWorkCenter },
   });
 }
 
@@ -59,6 +65,7 @@ export async function createOperation(
   requestedSeqNo: number | undefined,
   title: string,
   description: string | undefined,
+  workCenterId: number | null | undefined,
   predecessorSeqNos: number[] | undefined,
   userId: number,
 ): Promise<OperationWithSummary> {
@@ -77,6 +84,7 @@ export async function createOperation(
         seqNo: nextSeqNo,
         title,
         description: description ?? "",
+        ...(workCenterId !== undefined ? { workCenterId } : {}),
         createdById: userId,
         updatedById: userId,
       },
@@ -123,6 +131,7 @@ export async function createOperation(
       where: { id: created.id },
       include: {
         ...includeUsers,
+        ...includeWorkCenter,
         _count: { select: { steps: true } },
         predecessors: {
           include: { predecessor: { select: { seqNo: true, title: true } } },
@@ -138,6 +147,7 @@ export async function updateOperation(
   data: {
     title?: string;
     description?: string;
+    workCenterId?: number | null;
     seqNo?: number;
   },
   userId: number,
@@ -149,10 +159,13 @@ export async function updateOperation(
       ...(data.description !== undefined
         ? { description: data.description }
         : {}),
+      ...(data.workCenterId !== undefined
+        ? { workCenterId: data.workCenterId }
+        : {}),
       ...(data.seqNo !== undefined ? { seqNo: data.seqNo } : {}),
       updatedById: userId,
     },
-    include: includeUsers,
+    include: { ...includeUsers, ...includeWorkCenter },
   });
 }
 

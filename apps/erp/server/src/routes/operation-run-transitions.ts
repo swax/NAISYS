@@ -10,7 +10,11 @@ import type { ZodTypeProvider } from "fastify-type-provider-zod";
 
 import { requirePermission } from "../auth-middleware.js";
 import { conflict, notFound, unprocessable } from "../error-handler.js";
-import { checkOrderRunStarted, resolveOpRun } from "../route-helpers.js";
+import {
+  checkOrderRunStarted,
+  checkWorkCenterAccess,
+  resolveOpRun,
+} from "../route-helpers.js";
 import {
   clockIn,
   clockOutAllForOpRun,
@@ -51,6 +55,9 @@ export default function operationRunTransitionRoutes(fastify: FastifyInstance) {
 
       const resolved = await resolveOpRun(orderKey, runNo, seqNo);
       if (!resolved) return notFound(reply, `Operation run not found`);
+
+      const wcErr = await checkWorkCenterAccess(resolved.opRun.operationId, userId);
+      if (wcErr) return conflict(reply, wcErr);
 
       // Auto-start the order run if it's still in released status
       if (resolved.run.status === OrderRunStatus.released) {
@@ -113,6 +120,9 @@ export default function operationRunTransitionRoutes(fastify: FastifyInstance) {
       const resolved = await resolveOpRun(orderKey, runNo, seqNo);
       if (!resolved) return notFound(reply, `Operation run not found`);
 
+      const wcErr = await checkWorkCenterAccess(resolved.opRun.operationId, userId);
+      if (wcErr) return conflict(reply, wcErr);
+
       const orderErr = checkOrderRunStarted(resolved.run.status);
       if (orderErr) return conflict(reply, orderErr);
 
@@ -174,6 +184,9 @@ export default function operationRunTransitionRoutes(fastify: FastifyInstance) {
       const resolved = await resolveOpRun(orderKey, runNo, seqNo);
       if (!resolved) return notFound(reply, `Operation run not found`);
 
+      const wcErr = await checkWorkCenterAccess(resolved.opRun.operationId, userId);
+      if (wcErr) return conflict(reply, wcErr);
+
       const orderErr = checkOrderRunStarted(resolved.run.status);
       if (orderErr) return conflict(reply, orderErr);
 
@@ -223,6 +236,9 @@ export default function operationRunTransitionRoutes(fastify: FastifyInstance) {
       const resolved = await resolveOpRun(orderKey, runNo, seqNo);
       if (!resolved) return notFound(reply, `Operation run not found`);
 
+      const wcErr = await checkWorkCenterAccess(resolved.opRun.operationId, userId);
+      if (wcErr) return conflict(reply, wcErr);
+
       const orderErr = checkOrderRunStarted(resolved.run.status);
       if (orderErr) return conflict(reply, orderErr);
 
@@ -264,6 +280,9 @@ export default function operationRunTransitionRoutes(fastify: FastifyInstance) {
 
       const resolved = await resolveOpRun(orderKey, runNo, seqNo);
       if (!resolved) return notFound(reply, `Operation run not found`);
+
+      const wcErr = await checkWorkCenterAccess(resolved.opRun.operationId, userId);
+      if (wcErr) return conflict(reply, wcErr);
 
       const orderErr = checkOrderRunStarted(resolved.run.status);
       if (orderErr) return conflict(reply, orderErr);

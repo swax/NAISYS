@@ -141,6 +141,30 @@ export function checkOpRunInProgress(status: string): string | null {
     : null;
 }
 
+/**
+ * If the operation has a work center, check that the user is assigned to it.
+ * Returns an error message or null if access is allowed.
+ */
+export async function checkWorkCenterAccess(
+  operationId: number,
+  userId: number,
+): Promise<string | null> {
+  const operation = await erpDb.operation.findUnique({
+    where: { id: operationId },
+    select: {
+      workCenter: {
+        select: {
+          key: true,
+          userAssignments: { where: { userId }, select: { userId: true } },
+        },
+      },
+    },
+  });
+  if (!operation?.workCenter) return null; // no work center = open to all
+  if (operation.workCenter.userAssignments.length > 0) return null;
+  return `You are not assigned to work center '${operation.workCenter.key}'`;
+}
+
 // --- Resolution chains ---
 
 export async function resolveOrder(orderKey: string) {

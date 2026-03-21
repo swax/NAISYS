@@ -16,6 +16,7 @@ import { conflict, notFound } from "../error-handler.js";
 import { API_PREFIX, selfLink } from "../hateoas.js";
 import {
   checkOrderRunStarted,
+  checkWorkCenterAccess,
   childItemLinks,
   formatAuditFields,
   formatDate,
@@ -42,6 +43,7 @@ async function opRunItemActions(
   runNo: number,
   seqNo: number,
   opRunId: number,
+  operationId: number,
   status: string,
   user: ErpUser | undefined,
 ): Promise<HateoasAction[]> {
@@ -51,6 +53,9 @@ async function opRunItemActions(
     isExecutor && status === OperationRunStatus.in_progress
       ? await checkStepsComplete(opRunId)
       : null;
+  const wcErr = user
+    ? await checkWorkCenterAccess(operationId, user.id)
+    : null;
 
   return resolveActions(
     [
@@ -82,9 +87,10 @@ async function opRunItemActions(
         permission: "order_executor",
         statuses: [OperationRunStatus.blocked, OperationRunStatus.pending],
         disabledWhen: (ctx) =>
-          ctx.status === OperationRunStatus.blocked
+          wcErr ??
+          (ctx.status === OperationRunStatus.blocked
             ? "Operation is blocked by incomplete predecessors"
-            : null,
+            : null),
       },
       {
         rel: "update",
@@ -102,7 +108,7 @@ async function opRunItemActions(
         schema: `${API_PREFIX}/schemas/CompleteOperationRun`,
         permission: "order_executor",
         statuses: [OperationRunStatus.in_progress],
-        disabledWhen: () => stepsErr,
+        disabledWhen: () => wcErr ?? stepsErr,
       },
       {
         rel: "skip",
@@ -111,6 +117,7 @@ async function opRunItemActions(
         title: "Skip",
         permission: "order_manager",
         statuses: [OperationRunStatus.blocked, OperationRunStatus.pending],
+        disabledWhen: () => wcErr,
       },
       {
         rel: "fail",
@@ -119,6 +126,7 @@ async function opRunItemActions(
         title: "Fail",
         permission: "order_manager",
         statuses: [OperationRunStatus.in_progress],
+        disabledWhen: () => wcErr,
       },
       {
         rel: "reopen",
@@ -131,6 +139,7 @@ async function opRunItemActions(
           OperationRunStatus.skipped,
           OperationRunStatus.failed,
         ],
+        disabledWhen: () => wcErr,
       },
     ],
     href,
@@ -163,6 +172,7 @@ export async function formatOpRun(
     seqNo,
     title: opRun.operation.title,
     description: opRun.operation.description,
+    workCenterKey: opRun.operation.workCenter?.key ?? null,
     status: opRun.status,
     assignedTo: opRun.assignedTo?.username ?? null,
     cost: opRun.cost,
@@ -200,6 +210,7 @@ export async function formatOpRun(
       runNo,
       seqNo,
       opRun.id,
+      opRun.operationId,
       opRun.status,
       user,
     ),
@@ -219,6 +230,7 @@ function formatListOpRun(
     seqNo,
     title: opRun.operation.title,
     description: opRun.operation.description,
+    workCenterKey: opRun.operation.workCenter?.key ?? null,
     status: opRun.status,
     assignedTo: opRun.assignedTo?.username ?? null,
     cost: opRun.cost,

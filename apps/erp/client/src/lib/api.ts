@@ -287,6 +287,11 @@ export const apiEndpoints = {
     runNo: number | string,
     seqNo: number | string,
   ) => `orders/${key}/runs/${runNo}/ops/${seqNo}/comments`,
+  workCenters: "work-centers",
+  workCenter: (key: string) => `work-centers/${key}`,
+  workCenterUsers: (key: string) => `work-centers/${key}/users`,
+  workCenterUser: (key: string, username: string) =>
+    `work-centers/${key}/users/${username}`,
   usersFromAgent: "users/from-agent",
   userRotateKey: (username: string) => `users/${username}/rotate-key`,
   changePassword: "users/me/password",

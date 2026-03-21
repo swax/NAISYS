@@ -17,6 +17,7 @@ export const OperationSchema = z.object({
   seqNo: z.number(),
   title: z.string(),
   description: z.string(),
+  workCenterKey: z.string().nullable(),
   stepCount: z.number().optional(),
   predecessors: z.array(OperationPredecessorSchema).optional(),
   createdAt: z.iso.datetime(),
@@ -35,6 +36,7 @@ export const CreateOperationSchema = z
     seqNo: z.number().int().min(1).optional(),
     title: z.string().min(1).max(200),
     description: z.string().max(2000).optional(),
+    workCenterKey: z.string().max(100).nullable().optional(),
     predecessorSeqNos: z.array(z.number().int().min(1)).optional(),
   })
   .strict();
@@ -46,6 +48,7 @@ export const UpdateOperationSchema = z
   .object({
     title: z.string().min(1).max(200).optional(),
     description: z.string().max(2000).optional(),
+    workCenterKey: z.string().max(100).nullable().optional(),
     seqNo: z.number().int().min(1).optional(),
   })
   .strict();

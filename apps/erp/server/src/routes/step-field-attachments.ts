@@ -13,6 +13,7 @@ import { conflict, notFound } from "../error-handler.js";
 import {
   checkOpRunInProgress,
   checkOrderRunStarted,
+  checkWorkCenterAccess,
   resolveStepRun,
 } from "../route-helpers.js";
 import {
@@ -70,6 +71,9 @@ export default function stepFieldAttachmentRoutes(fastify: FastifyInstance) {
       if (!resolved) {
         return notFound(reply, `Step run not found`);
       }
+
+      const wcErr = await checkWorkCenterAccess(resolved.opRun.operationId, userId);
+      if (wcErr) return conflict(reply, wcErr);
 
       const orderErr = checkOrderRunStarted(resolved.run.status);
       if (orderErr) return conflict(reply, orderErr);

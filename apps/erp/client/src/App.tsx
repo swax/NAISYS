@@ -33,6 +33,9 @@ import { OrderRunLayout } from "./pages/orders/runs/OrderRunDetail";
 import { OrderRunList } from "./pages/orders/runs/OrderRunList";
 import { UserDetail } from "./pages/users/UserDetail";
 import { UserList } from "./pages/users/UserList";
+import { WorkCenterCreate } from "./pages/work-centers/WorkCenterCreate";
+import { WorkCenterDetail } from "./pages/work-centers/WorkCenterDetail";
+import { WorkCenterList } from "./pages/work-centers/WorkCenterList";
 
 const AppContent: React.FC = () => {
   const [publicRead, setPublicRead] = React.useState(false);
@@ -99,6 +102,9 @@ const AppContent: React.FC = () => {
           path="/items/:key/instances/:instanceId"
           element={<ItemInstanceDetail />}
         />
+        <Route path="/work-centers" element={<WorkCenterList />} />
+        <Route path="/work-centers/new" element={<WorkCenterCreate />} />
+        <Route path="/work-centers/:key" element={<WorkCenterDetail />} />
         <Route path="/dispatch" element={<DispatchList />} />
         <Route path="/inventory" element={<InventoryList />} />
         <Route path="/users" element={<UserList />} />

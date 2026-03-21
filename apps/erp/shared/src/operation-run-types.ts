@@ -22,6 +22,7 @@ export const OperationRunSchema = z.object({
   seqNo: z.number(),
   title: z.string(),
   description: z.string(),
+  workCenterKey: z.string().nullable(),
   stepCount: z.number().optional(),
   predecessors: z.array(OperationPredecessorSchema).optional(),
   status: OperationRunStatusEnum,

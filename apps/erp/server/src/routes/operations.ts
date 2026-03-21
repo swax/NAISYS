@@ -33,6 +33,18 @@ import {
   listOperations,
   updateOperation,
 } from "../services/operation-service.js";
+import { findWorkCenterByKey } from "../services/work-center-service.js";
+
+/** Resolve an optional workCenterKey to a workCenterId. Returns undefined (skip), null (clear), or the ID. */
+async function resolveWorkCenterId(
+  workCenterKey: string | null | undefined,
+): Promise<{ id: number | null | undefined } | { error: string }> {
+  if (workCenterKey === undefined) return { id: undefined };
+  if (workCenterKey === null) return { id: null };
+  const wc = await findWorkCenterByKey(workCenterKey);
+  if (!wc) return { error: `Work center '${workCenterKey}' not found` };
+  return { id: wc.id };
+}
 
 const ParamsSchema = z.object({
   orderKey: z.string(),
@@ -54,7 +66,7 @@ function formatOperation(
   revNo: number,
   revStatus: string,
   user: ErpUser | undefined,
-  operation: OperationModel & WithAuditUsers,
+  operation: OperationModel & WithAuditUsers & { workCenter?: { key: string } | null },
   summary?: {
     stepCount: number;
     predecessors: Array<{ seqNo: number; title: string }>;
@@ -67,6 +79,7 @@ function formatOperation(
     seqNo: operation.seqNo,
     title: operation.title,
     description: operation.description,
+    workCenterKey: operation.workCenter?.key ?? null,
     ...(summary
       ? {
           stepCount: summary.stepCount,
@@ -93,6 +106,15 @@ function formatOperation(
         href: `${API_PREFIX}${base}/${operation.seqNo}/deps`,
         title: "Dependencies",
       } as HateoasLink,
+      ...(operation.workCenter
+        ? [
+            {
+              rel: "workCenter",
+              href: `${API_PREFIX}/work-centers/${operation.workCenter.key}`,
+              title: "Work Center",
+            } as HateoasLink,
+          ]
+        : []),
     ],
     _actions: draftCrudActions(
       `${API_PREFIX}${base}/${operation.seqNo}`,
@@ -193,6 +215,7 @@ export default function operationRoutes(fastify: FastifyInstance) {
         seqNo: requestedSeqNo,
         title,
         description,
+        workCenterKey,
         predecessorSeqNos,
       } = request.body;
       const userId = request.erpUser!.id;
@@ -209,11 +232,17 @@ export default function operationRoutes(fastify: FastifyInstance) {
         );
       }
 
+      const wcResult = await resolveWorkCenterId(workCenterKey);
+      if ("error" in wcResult) {
+        return notFound(reply, wcResult.error);
+      }
+
       const operation = await createOperation(
         resolved.rev.id,
         requestedSeqNo,
         title,
         description,
+        wcResult.id,
         predecessorSeqNos,
         userId,
       );
@@ -286,7 +315,7 @@ export default function operationRoutes(fastify: FastifyInstance) {
     preHandler: requirePermission("order_planner"),
     handler: async (request, reply) => {
       const { orderKey, revNo, seqNo } = request.params;
-      const { title, description, seqNo: newSeqNo } = request.body;
+      const { title, description, workCenterKey, seqNo: newSeqNo } = request.body;
       const userId = request.erpUser!.id;
 
       const resolved = await resolveRevision(orderKey, revNo);
@@ -306,9 +335,14 @@ export default function operationRoutes(fastify: FastifyInstance) {
         return notFound(reply, `Operation ${seqNo} not found`);
       }
 
+      const wcResult = await resolveWorkCenterId(workCenterKey);
+      if ("error" in wcResult) {
+        return notFound(reply, wcResult.error);
+      }
+
       const operation = await updateOperation(
         existing.id,
-        { title, description, seqNo: newSeqNo },
+        { title, description, workCenterId: wcResult.id, seqNo: newSeqNo },
         userId,
       );
 
