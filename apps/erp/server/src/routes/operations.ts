@@ -225,6 +225,13 @@ export default function operationRoutes(fastify: FastifyInstance) {
         resolved.rev.status,
         request.erpUser,
         operation,
+        {
+          stepCount: operation._count.steps,
+          predecessors: operation.predecessors.map((d) => ({
+            seqNo: d.predecessor.seqNo,
+            title: d.predecessor.title,
+          })),
+        },
       );
     },
   });

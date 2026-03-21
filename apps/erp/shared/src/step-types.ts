@@ -34,6 +34,13 @@ export const CreateStepSchema = z
 
 export type CreateStep = z.infer<typeof CreateStepSchema>;
 
+// Input for batch creating steps
+export const BatchCreateStepSchema = z.object({
+  items: z.array(CreateStepSchema).min(1).max(100),
+});
+
+export type BatchCreateStep = z.infer<typeof BatchCreateStepSchema>;
+
 // Input for updating a step
 export const UpdateStepSchema = z
   .object({

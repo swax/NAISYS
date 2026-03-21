@@ -46,6 +46,13 @@ export const CreateFieldSchema = z
 
 export type CreateField = z.infer<typeof CreateFieldSchema>;
 
+// Input for batch creating fields
+export const BatchCreateFieldSchema = z.object({
+  items: z.array(CreateFieldSchema).min(1).max(100),
+});
+
+export type BatchCreateField = z.infer<typeof BatchCreateFieldSchema>;
+
 // Input for updating a field
 export const UpdateFieldSchema = z
   .object({

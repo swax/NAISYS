@@ -96,6 +96,50 @@ export async function ensureStepRunFieldRecord(
 
 // --- Mutations ---
 
+export async function createFields(
+  fieldSetId: number,
+  items: Array<{
+    seqNo?: number | null;
+    label: string;
+    type?: FieldType | null;
+    multiValue?: boolean | null;
+    required?: boolean | null;
+  }>,
+  userId: number,
+): Promise<FieldWithUsers[]> {
+  return erpDb.$transaction(async (erpTx) => {
+    const maxSeq = await erpTx.field.findFirst({
+      where: { fieldSetId },
+      orderBy: { seqNo: "desc" },
+      select: { seqNo: true },
+    });
+    let nextSeqNo = calcNextSeqNo(maxSeq?.seqNo ?? 0);
+
+    const created: FieldWithUsers[] = [];
+    for (const item of items) {
+      const seqNo = item.seqNo ?? nextSeqNo;
+      const field = await erpTx.field.create({
+        data: {
+          fieldSetId,
+          seqNo,
+          label: item.label,
+          type: item.type ?? FieldType.string,
+          multiValue: item.multiValue ?? false,
+          required: item.required ?? false,
+          createdById: userId,
+          updatedById: userId,
+        },
+        include: includeUsers,
+      });
+      created.push(field as FieldWithUsers);
+      if (!item.seqNo) {
+        nextSeqNo = calcNextSeqNo(seqNo);
+      }
+    }
+    return created;
+  });
+}
+
 export async function createField(
   fieldSetId: number,
   data: {
@@ -107,29 +151,8 @@ export async function createField(
   },
   userId: number,
 ): Promise<FieldWithUsers> {
-  return erpDb.$transaction(async (erpTx) => {
-    const maxSeq = await erpTx.field.findFirst({
-      where: { fieldSetId },
-      orderBy: { seqNo: "desc" },
-      select: { seqNo: true },
-    });
-    const defaultSeqNo = calcNextSeqNo(maxSeq?.seqNo ?? 0);
-    const nextSeqNo = data.seqNo ?? defaultSeqNo;
-
-    return erpTx.field.create({
-      data: {
-        fieldSetId,
-        seqNo: nextSeqNo,
-        label: data.label,
-        type: data.type ?? FieldType.string,
-        multiValue: data.multiValue ?? false,
-        required: data.required ?? false,
-        createdById: userId,
-        updatedById: userId,
-      },
-      include: includeUsers,
-    });
-  }) as Promise<FieldWithUsers>;
+  const [field] = await createFields(fieldSetId, [data], userId);
+  return field;
 }
 
 export async function updateField(

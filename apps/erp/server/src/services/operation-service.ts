@@ -61,7 +61,7 @@ export async function createOperation(
   description: string | undefined,
   predecessorSeqNos: number[] | undefined,
   userId: number,
-): Promise<OperationWithUsers> {
+): Promise<OperationWithSummary> {
   return erpDb.$transaction(async (erpTx) => {
     const maxSeq = await erpTx.operation.findFirst({
       where: { orderRevId },
@@ -80,7 +80,6 @@ export async function createOperation(
         createdById: userId,
         updatedById: userId,
       },
-      include: includeUsers,
     });
 
     if (predecessorSeqNos !== undefined) {
@@ -119,7 +118,18 @@ export async function createOperation(
       }
     }
 
-    return created;
+    // Re-fetch with summary data (predecessors + step count)
+    return erpTx.operation.findUniqueOrThrow({
+      where: { id: created.id },
+      include: {
+        ...includeUsers,
+        _count: { select: { steps: true } },
+        predecessors: {
+          include: { predecessor: { select: { seqNo: true, title: true } } },
+          orderBy: { predecessor: { seqNo: "asc" } },
+        },
+      },
+    });
   });
 }
 

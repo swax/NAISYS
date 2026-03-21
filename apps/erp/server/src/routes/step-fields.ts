@@ -1,4 +1,5 @@
 import {
+  BatchCreateFieldSchema,
   CreateFieldSchema,
   ErrorResponseSchema,
   FieldListResponseSchema,
@@ -11,20 +12,22 @@ import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod/v4";
 
 import type { ErpUser } from "../auth-middleware.js";
-import { hasPermission, requirePermission } from "../auth-middleware.js";
+import { requirePermission } from "../auth-middleware.js";
 import erpDb from "../erpDb.js";
 import { conflict, notFound } from "../error-handler.js";
 import { API_PREFIX, selfLink } from "../hateoas.js";
 import {
+  type ActionDef,
   calcNextSeqNo,
   childItemLinks,
   draftCrudActions,
   formatAuditFields,
-  permGate,
+  resolveActions,
   resolveStep,
 } from "../route-helpers.js";
 import {
   createField,
+  createFields,
   deleteField,
   ensureFieldSet,
   type FieldWithUsers,
@@ -51,6 +54,43 @@ const FieldParamsSchema = z.object({
 
 export { type FieldWithUsers } from "../services/field-service.js";
 
+const draftCreateDef: ActionDef<{ status: string }> = {
+  rel: "create",
+  method: "POST",
+  title: "Add Field",
+  schema: `${API_PREFIX}/schemas/CreateField`,
+  permission: "order_planner",
+  disabledWhen: (ctx) =>
+    ctx.status !== RevisionStatus.draft
+      ? "Can only add fields in draft revisions"
+      : null,
+};
+
+const draftBatchCreateDef: ActionDef<{ status: string }> = {
+  rel: "batch-create",
+  path: "/batch",
+  method: "POST",
+  title: "Add Fields (Batch)",
+  schema: `${API_PREFIX}/schemas/BatchCreateField`,
+  permission: "order_planner",
+  disabledWhen: (ctx) =>
+    ctx.status !== RevisionStatus.draft
+      ? "Can only add fields in draft revisions"
+      : null,
+};
+
+function fieldListActions(
+  base: string,
+  revStatus: string,
+  user: ErpUser | undefined,
+) {
+  return resolveActions(
+    [draftCreateDef, draftBatchCreateDef],
+    `${API_PREFIX}${base}`,
+    { status: revStatus, user },
+  );
+}
+
 export function formatFieldListResponse(
   orderKey: string,
   revNo: number,
@@ -69,23 +109,7 @@ export function formatFieldListResponse(
     total: items.length,
     nextSeqNo: calcNextSeqNo(maxSeq),
     _links: [selfLink(base)],
-    _actions: [
-      {
-        rel: "create" as const,
-        href: `${API_PREFIX}${base}`,
-        method: "POST" as const,
-        title: "Add Field",
-        schema: `${API_PREFIX}/schemas/CreateField`,
-        ...(!hasPermission(user, "order_planner")
-          ? permGate(false, "order_planner")
-          : revStatus !== RevisionStatus.draft
-            ? {
-                disabled: true,
-                disabledReason: "Can only add fields in draft revisions",
-              }
-            : {}),
-      },
-    ],
+    _actions: fieldListActions(base, revStatus, user),
   };
 }
 
@@ -179,24 +203,63 @@ export default function stepFieldRoutes(fastify: FastifyInstance) {
         total: items.length,
         nextSeqNo: calcNextSeqNo(maxSeq),
         _links: [selfLink(base)],
-        _actions: [
-          {
-            rel: "create",
-            href: `${API_PREFIX}${base}`,
-            method: "POST" as const,
-            title: "Add Field",
-            schema: `${API_PREFIX}/schemas/CreateField`,
-            ...(!hasPermission(user, "order_planner")
-              ? permGate(false, "order_planner")
-              : resolved.rev.status !== RevisionStatus.draft
-                ? {
-                    disabled: true,
-                    disabledReason: "Can only add fields in draft revisions",
-                  }
-                : {}),
-          },
-        ],
+        _actions: fieldListActions(base, resolved.rev.status, user),
       };
+    },
+  });
+
+  // BATCH CREATE
+  app.post("/batch", {
+    schema: {
+      description: "Create multiple fields for a step in one request",
+      tags: ["Step Fields"],
+      params: ParamsSchema,
+      body: BatchCreateFieldSchema,
+      response: {
+        201: FieldListResponseSchema,
+        404: ErrorResponseSchema,
+        409: ErrorResponseSchema,
+      },
+    },
+    preHandler: requirePermission("order_planner"),
+    handler: async (request, reply) => {
+      const { orderKey, revNo, seqNo, stepSeqNo } = request.params;
+      const { items } = request.body;
+      const userId = request.erpUser!.id;
+
+      const resolved = await resolveStep(orderKey, revNo, seqNo, stepSeqNo);
+      if (!resolved) {
+        return notFound(reply, "Step not found");
+      }
+
+      if (resolved.rev.status !== RevisionStatus.draft) {
+        return conflict(
+          reply,
+          `Cannot add fields to a ${resolved.rev.status} revision`,
+        );
+      }
+
+      let fieldSetId = resolved.step.fieldSetId;
+      if (!fieldSetId) {
+        fieldSetId = await ensureFieldSet(null, userId);
+        await erpDb.step.update({
+          where: { id: resolved.step.id },
+          data: { fieldSetId },
+        });
+      }
+
+      const created = await createFields(fieldSetId, items, userId);
+
+      reply.status(201);
+      return formatFieldListResponse(
+        orderKey,
+        revNo,
+        seqNo,
+        stepSeqNo,
+        resolved.rev.status,
+        request.erpUser,
+        created,
+      );
     },
   });
 

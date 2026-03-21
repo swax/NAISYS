@@ -57,6 +57,48 @@ export async function findExisting(operationId: number, seqNo: number) {
 
 // --- Mutations ---
 
+export async function createSteps(
+  operationId: number,
+  items: Array<{
+    seqNo?: number | null;
+    title?: string | null;
+    instructions?: string | null;
+    multiSet?: boolean | null;
+  }>,
+  userId: number,
+): Promise<StepWithUsersAndFields[]> {
+  return erpDb.$transaction(async (erpTx) => {
+    const maxSeq = await erpTx.step.findFirst({
+      where: { operationId },
+      orderBy: { seqNo: "desc" },
+      select: { seqNo: true },
+    });
+    let nextSeqNo = calcNextSeqNo(maxSeq?.seqNo ?? 0);
+
+    const created: StepWithUsersAndFields[] = [];
+    for (const item of items) {
+      const seqNo = item.seqNo ?? nextSeqNo;
+      const step = await erpTx.step.create({
+        data: {
+          operationId,
+          seqNo,
+          title: item.title ?? "",
+          instructions: item.instructions ?? "",
+          multiSet: item.multiSet ?? false,
+          createdById: userId,
+          updatedById: userId,
+        },
+        include: includeUsersAndFields,
+      });
+      created.push(step);
+      if (!item.seqNo) {
+        nextSeqNo = calcNextSeqNo(seqNo);
+      }
+    }
+    return created;
+  });
+}
+
 export async function createStep(
   operationId: number,
   requestedSeqNo: number | undefined | null,
@@ -65,28 +107,12 @@ export async function createStep(
   multiSet: boolean | undefined | null,
   userId: number,
 ): Promise<StepWithUsersAndFields> {
-  return erpDb.$transaction(async (erpTx) => {
-    const maxSeq = await erpTx.step.findFirst({
-      where: { operationId },
-      orderBy: { seqNo: "desc" },
-      select: { seqNo: true },
-    });
-    const defaultSeqNo = calcNextSeqNo(maxSeq?.seqNo ?? 0);
-    const nextSeqNo = requestedSeqNo ?? defaultSeqNo;
-
-    return erpTx.step.create({
-      data: {
-        operationId,
-        seqNo: nextSeqNo,
-        title: title ?? "",
-        instructions: instructions ?? "",
-        multiSet: multiSet ?? false,
-        createdById: userId,
-        updatedById: userId,
-      },
-      include: includeUsersAndFields,
-    });
-  });
+  const [step] = await createSteps(
+    operationId,
+    [{ seqNo: requestedSeqNo, title, instructions, multiSet }],
+    userId,
+  );
+  return step;
 }
 
 export async function updateStep(
