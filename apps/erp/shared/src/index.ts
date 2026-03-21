@@ -20,3 +20,4 @@ export * from "./order-types.js";
 export * from "./step-run-types.js";
 export * from "./step-types.js";
 export * from "./user-types.js";
+export * from "./work-center-types.js";

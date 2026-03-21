@@ -126,6 +126,11 @@ export const DispatchListQuerySchema = z.object({
   status: OperationRunStatusEnum.optional(),
   priority: OrderRunPriorityEnum.optional(),
   search: z.string().optional(),
+  viewAs: z.string().optional(),
+  canWork: z
+    .union([z.literal("true"), z.literal("false")])
+    .transform((v) => v === "true")
+    .optional(),
   clockedIn: z
     .union([z.literal("true"), z.literal("false")])
     .transform((v) => v === "true")
@@ -142,6 +147,8 @@ export const DispatchItemSchema = z.object({
   runNo: z.number(),
   seqNo: z.number(),
   title: z.string(),
+  workCenterKey: z.string().nullable(),
+  canWork: z.boolean(),
   status: OperationRunStatusEnum,
   priority: OrderRunPriorityEnum,
   assignedTo: z.string().nullable(),

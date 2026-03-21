@@ -10,14 +10,26 @@ import type { OperationRunModel } from "../generated/prisma/models/OperationRun.
 // --- Prisma include & result type ---
 
 export const includeOp = {
-  operation: { select: { seqNo: true, title: true, description: true } },
+  operation: {
+    select: {
+      seqNo: true,
+      title: true,
+      description: true,
+      workCenter: { select: { key: true } },
+    },
+  },
   assignedTo: { select: { username: true } },
   createdBy: { select: { username: true } },
   updatedBy: { select: { username: true } },
 } as const;
 
 export type OpRunWithOp = OperationRunModel & {
-  operation: { seqNo: number; title: string; description: string };
+  operation: {
+    seqNo: number;
+    title: string;
+    description: string;
+    workCenter: { key: string } | null;
+  };
   assignedTo: { username: string } | null;
   createdBy: { username: string };
   updatedBy: { username: string };
@@ -29,6 +41,7 @@ export type OpRunWithSummary = OpRunWithOp & {
     seqNo: number;
     title: string;
     description: string;
+    workCenter: { key: string } | null;
     predecessors: Array<{
       predecessor: { seqNo: number; title: string };
     }>;
@@ -46,6 +59,7 @@ export async function listOpRuns(runId: number): Promise<OpRunWithSummary[]> {
           seqNo: true,
           title: true,
           description: true,
+          workCenter: { select: { key: true } },
           predecessors: {
             include: { predecessor: { select: { seqNo: true, title: true } } },
             orderBy: { predecessor: { seqNo: "asc" } },

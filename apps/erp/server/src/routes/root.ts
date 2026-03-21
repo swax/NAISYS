@@ -64,6 +64,13 @@ export default function rootRoute(fastify: FastifyInstance) {
           ...readLinks,
         ];
 
+        authLinks.push({
+          rel: "work-centers",
+          href: "/api/erp/work-centers",
+          title: "Work Centers",
+          method: "GET",
+        });
+
         if (hasPermission(request.erpUser, "erp_admin")) {
           authLinks.push(
             {

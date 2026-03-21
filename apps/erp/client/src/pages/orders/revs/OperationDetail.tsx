@@ -19,6 +19,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useOutletContext, useParams } from "react-router";
 
 import { MetadataTooltip } from "../../../components/MetadataTooltip";
+import { WorkCenterAutocomplete } from "../../../components/WorkCenterAutocomplete";
 import { api, apiEndpoints, showErrorNotification } from "../../../lib/api";
 import { hasAction } from "../../../lib/hateoas";
 import { DependencyList } from "./DependencyList";
@@ -39,7 +40,7 @@ export const OperationDetail: React.FC = () => {
   const [saving, setSaving] = useState(false);
 
   const form = useForm<UpdateOperation>({
-    initialValues: { title: "", description: "", seqNo: 10 },
+    initialValues: { title: "", description: "", workCenterKey: "", seqNo: 10 },
     validate: zodResolver(UpdateOperationSchema),
   });
 
@@ -67,6 +68,7 @@ export const OperationDetail: React.FC = () => {
     form.setValues({
       title: operation.title,
       description: operation.description,
+      workCenterKey: operation.workCenterKey ?? "",
       seqNo: operation.seqNo,
     });
     setEditing(true);
@@ -76,9 +78,13 @@ export const OperationDetail: React.FC = () => {
     if (!operation) return;
     setSaving(true);
     try {
+      const payload = {
+        ...values,
+        workCenterKey: values.workCenterKey || null,
+      };
       const updated = await api.put<Operation>(
         apiEndpoints.orderRevOp(orderKey!, revNo!, operation.seqNo),
-        values,
+        payload,
       );
       setOperation(updated);
       setEditing(false);
@@ -136,6 +142,11 @@ export const OperationDetail: React.FC = () => {
             <Text fw={600}>
               OPERATION {operation.seqNo}: {operation.title}
             </Text>
+            {operation.workCenterKey && (
+              <Text size="sm" c="dimmed">
+                [{operation.workCenterKey}]
+              </Text>
+            )}
             <MetadataTooltip
               createdBy={operation.createdBy}
               createdAt={operation.createdAt}
@@ -176,6 +187,13 @@ export const OperationDetail: React.FC = () => {
                   min={1}
                   step={10}
                   {...form.getInputProps("seqNo")}
+                />
+
+                <WorkCenterAutocomplete
+                  label="Work Center"
+                  placeholder="Search work centers..."
+                  value={form.values.workCenterKey ?? ""}
+                  onChange={(val) => form.setFieldValue("workCenterKey", val)}
                 />
                 <Textarea
                   label="Description"

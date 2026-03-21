@@ -139,6 +139,7 @@ export async function createRevision(
             seqNo: op.seqNo,
             title: op.title,
             description: op.description,
+            workCenterId: op.workCenterId,
             createdById: userId,
             updatedById: userId,
           },

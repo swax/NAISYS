@@ -105,19 +105,21 @@ model OrderRevision {
 }
 
 model Operation {
-  id          Int      @id @default(autoincrement())
-  orderRevId  Int      @map("order_rev_id")
-  seqNo       Int      @map("seq_no")
-  title       String
-  description String   @default("")
-  createdAt   DateTime @default(now()) @map("created_at")
-  createdById Int      @map("created_by")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-  updatedById Int      @map("updated_by")
+  id           Int      @id @default(autoincrement())
+  orderRevId   Int      @map("order_rev_id")
+  workCenterId Int?     @map("work_center_id")
+  seqNo        Int      @map("seq_no")
+  title        String
+  description  String   @default("")
+  createdAt    DateTime @default(now()) @map("created_at")
+  createdById  Int      @map("created_by")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+  updatedById  Int      @map("updated_by")
 
   createdBy     User                  @relation("opCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
   updatedBy     User                  @relation("opUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
   orderRev      OrderRevision         @relation(fields: [orderRevId], references: [id], onDelete: Restrict)
+  workCenter    WorkCenter?           @relation(fields: [workCenterId], references: [id], onDelete: SetNull)
   steps         Step[]
   operationRuns OperationRun[]
   predecessors  OperationDependency[] @relation("opSuccessor")
@@ -140,6 +142,38 @@ model OperationDependency {
 
   @@unique([successorId, predecessorId])
   @@map("operation_dependencies")
+}
+
+model WorkCenter {
+  id          Int      @id @default(autoincrement())
+  key         String   @unique
+  description String   @default("")
+  createdAt   DateTime @default(now()) @map("created_at")
+  createdById Int      @map("created_by")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  updatedById Int      @map("updated_by")
+
+  createdBy       User             @relation("workCenterCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy       User             @relation("workCenterUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+  userAssignments WorkCenterUser[]
+  operations      Operation[]
+
+  @@index([createdAt])
+  @@map("work_centers")
+}
+
+model WorkCenterUser {
+  workCenterId Int      @map("work_center_id")
+  userId       Int      @map("user_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+  createdById  Int      @map("created_by")
+
+  workCenter WorkCenter @relation(fields: [workCenterId], references: [id], onDelete: Cascade)
+  user       User       @relation("workCenterAssignment", fields: [userId], references: [id], onDelete: Cascade)
+  createdBy  User       @relation("workCenterUserCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+
+  @@id([workCenterId, userId])
+  @@map("work_center_users")
 }
 
 model FieldSet {
@@ -406,6 +440,10 @@ model User {
   attachmentsUploaded    Attachment[]          @relation("attachmentUploadedBy")
   commentsCreated        OperationRunComment[] @relation("commentCreatedBy")
   opRunsAssigned         OperationRun[]        @relation("opRunAssignedTo")
+  workCentersCreated     WorkCenter[]          @relation("workCenterCreatedBy")
+  workCentersUpdated     WorkCenter[]          @relation("workCenterUpdatedBy")
+  workCenterAssignments  WorkCenterUser[]      @relation("workCenterAssignment")
+  workCenterUsersCreated WorkCenterUser[]      @relation("workCenterUserCreatedBy")
 
   @@map("users")
 }

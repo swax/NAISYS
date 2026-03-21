@@ -30,6 +30,9 @@ import {
   UpdateStepRunSchema,
   UpdateStepSchema,
   UpdateUserSchema,
+  AssignWorkCenterUserSchema,
+  CreateWorkCenterSchema,
+  UpdateWorkCenterSchema,
 } from "@naisys-erp/shared";
 import { z } from "zod/v4";
 import type { $ZodType } from "zod/v4/core";
@@ -66,6 +69,9 @@ export const schemaRegistry: Record<string, $ZodType> = {
   GrantPermission: GrantPermissionSchema,
   ChangePassword: ChangePasswordSchema,
   ClockOutLaborTicket: ClockOutLaborTicketSchema,
+  CreateWorkCenter: CreateWorkCenterSchema,
+  UpdateWorkCenter: UpdateWorkCenterSchema,
+  AssignWorkCenterUser: AssignWorkCenterUserSchema,
 };
 
 // Register schemas with Zod global registry for OpenAPI components/schemas population

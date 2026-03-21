@@ -11,14 +11,13 @@ import {
   Modal,
   Popover,
   SegmentedControl,
-  Select,
   Stack,
   Tabs,
   Text,
   Textarea,
 } from "@mantine/core";
 import { ActionButton, CompactMarkdown } from "@naisys/common-browser";
-import type { OperationRun, UserListResponse } from "@naisys-erp/shared";
+import type { OperationRun } from "@naisys-erp/shared";
 import { OperationRunStatus } from "@naisys-erp/shared";
 import {
   IconArrowBackUp,
@@ -30,6 +29,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useOutletContext, useParams } from "react-router";
 
 import { MetadataTooltip } from "../../../components/MetadataTooltip";
+import { UserAutocomplete } from "../../../components/UserAutocomplete";
 import { api, apiEndpoints, showErrorNotification } from "../../../lib/api";
 import { hasAction } from "../../../lib/hateoas";
 import { DependencyList } from "../revs/DependencyList";
@@ -65,7 +65,7 @@ export const OperationRunDetail: React.FC = () => {
   const [stepCount, setStepCount] = useState<number | null>(null);
   const [commentCount, setCommentCount] = useState<number | null>(null);
   const [assignOpen, setAssignOpen] = useState(false);
-  const [users, setUsers] = useState<{ value: string; label: string }[]>([]);
+  const [assignSearch, setAssignSearch] = useState("");
   const [laborActions, setLaborActions] = useState<LaborActions>({
     canClockIn: false,
     canClockOut: false,
@@ -93,22 +93,6 @@ export const OperationRunDetail: React.FC = () => {
   useEffect(() => {
     void fetchOpRun();
   }, [fetchOpRun]);
-
-  const fetchUsers = async () => {
-    try {
-      const result = await api.get<UserListResponse>(
-        apiEndpoints.users + "?pageSize=100",
-      );
-      setUsers(
-        result.items.map((u) => ({
-          value: String(u.id),
-          label: u.username,
-        })),
-      );
-    } catch (err) {
-      showErrorNotification(err);
-    }
-  };
 
   const handleAssign = async (userId: number | null) => {
     if (!orderKey || !runNo || !seqNo) return;
@@ -219,6 +203,11 @@ export const OperationRunDetail: React.FC = () => {
             <Text fw={600}>
               OPERATION {opRun.seqNo}: {opRun.title}
             </Text>
+            {opRun.workCenterKey && (
+              <Text size="sm" c="dimmed">
+                [{opRun.workCenterKey}]
+              </Text>
+            )}
             <MetadataTooltip
               createdBy={opRun.createdBy}
               createdAt={opRun.createdAt}
@@ -262,24 +251,22 @@ export const OperationRunDetail: React.FC = () => {
                       size="sm"
                       c="blue"
                       style={{ cursor: "pointer" }}
-                      onClick={() => {
-                        if (users.length === 0) void fetchUsers();
-                        setAssignOpen(true);
-                      }}
+                      onClick={() => setAssignOpen(true)}
                     >
                       assign
                     </Text>
                   </Popover.Target>
                   <Popover.Dropdown>
-                    <Select
-                      placeholder="Select user..."
-                      data={users}
-                      searchable
+                    <UserAutocomplete
+                      placeholder="Search users..."
+                      value={assignSearch}
+                      onChange={setAssignSearch}
+                      onUserSelect={(user) => {
+                        setAssignSearch("");
+                        void handleAssign(user.id);
+                      }}
                       size="xs"
                       w={200}
-                      onChange={(val) => {
-                        if (val) void handleAssign(Number(val));
-                      }}
                     />
                   </Popover.Dropdown>
                 </Popover>

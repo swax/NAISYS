@@ -60,6 +60,7 @@ import stepRunRoutes from "./routes/step-runs.js";
 import stepRoutes from "./routes/steps.js";
 import userPermissionRoutes from "./routes/user-permissions.js";
 import userRoutes from "./routes/users.js";
+import workCenterRoutes from "./routes/work-centers.js";
 import { isSupervisorAuth } from "./supervisorAuth.js";
 import {
   ensureLocalSuperAdmin,
@@ -226,6 +227,7 @@ export const erpPlugin: FastifyPluginAsync = async (fastify) => {
   fastify.register(schemaRoutes, { prefix: "/api/erp/schemas" });
   fastify.register(userRoutes, { prefix: "/api/erp/users" });
   fastify.register(userPermissionRoutes, { prefix: "/api/erp/users" });
+  fastify.register(workCenterRoutes, { prefix: "/api/erp/work-centers" });
 
   // Public endpoint to expose client configuration (publicRead, etc.)
   fastify.get("/api/erp/client-config", { schema: { hide: true } }, () => ({
