@@ -23,6 +23,10 @@ export const FieldAttachmentSchema = z.object({
 
 export type FieldAttachment = z.infer<typeof FieldAttachmentSchema>;
 
+// Field value: string for scalar fields, string[] for multiValue fields
+export const FieldValueSchema = z.union([z.string(), z.array(z.string())]);
+export type FieldValue = z.infer<typeof FieldValueSchema>;
+
 // A single field value entry (API response shape)
 export const FieldValueEntrySchema = z.object({
   fieldId: z.number(),
@@ -32,7 +36,7 @@ export const FieldValueEntrySchema = z.object({
   multiValue: z.boolean(),
   required: z.boolean(),
   setIndex: z.number(),
-  value: z.string(),
+  value: FieldValueSchema,
   attachments: z.array(FieldAttachmentSchema).optional(),
   validation: FieldValidationSchema,
 });
@@ -76,7 +80,7 @@ export type StepRun = z.infer<typeof StepRunSchema>;
 // Single field value update
 export const UpdateFieldValueSchema = z
   .object({
-    value: z.string().max(2000),
+    value: z.union([z.string().max(2000), z.array(z.string().max(2000))]),
     setIndex: z.number().int().min(0).optional(),
   })
   .strict();
@@ -92,7 +96,7 @@ export const UpdateStepRunSchema = z
       .array(
         z.object({
           fieldId: z.number().int(),
-          value: z.string().max(2000),
+          value: z.union([z.string().max(2000), z.array(z.string().max(2000))]),
           setIndex: z.number().int().min(0).optional(),
         }),
       )

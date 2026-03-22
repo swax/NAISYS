@@ -14,6 +14,7 @@ import {
 import { DateInput, DateTimePicker } from "@mantine/dates";
 import type {
   FieldAttachment,
+  FieldValue,
   FieldValueEntry,
   HateoasActionTemplate,
   UploadAttachmentResponse,
@@ -47,10 +48,23 @@ function editKey(fieldId: number, setIndex: number): string {
 }
 
 /** Build edits map from field values */
-function buildEdits(fieldValues: FieldValueEntry[]): Record<string, string> {
+function buildEdits(
+  fieldValues: FieldValueEntry[],
+): Record<string, FieldValue> {
   return Object.fromEntries(
     fieldValues.map((fv) => [editKey(fv.fieldId, fv.setIndex), fv.value]),
   );
+}
+
+/** Get a string value from FieldValue (for scalar fields) */
+function asString(v: FieldValue): string {
+  return typeof v === "string" ? v : v.join(", ");
+}
+
+/** Get an array value from FieldValue (for multiValue fields) */
+function asArray(v: FieldValue): string[] {
+  if (Array.isArray(v)) return v.length > 0 ? v : [""];
+  return v ? [v] : [""];
 }
 
 type FieldSaveStatus = "saving" | "saved" | "error";
@@ -92,7 +106,9 @@ export const FieldValueRunList: React.FC<FieldValueRunListProps> = ({
 }) => {
   // --- Internal state ---
   const [fieldValues, setFieldValues] = useState(fieldValuesProp);
-  const [edits, setEdits] = useState(() => buildEdits(fieldValuesProp));
+  const [edits, setEdits] = useState<Record<string, FieldValue>>(() =>
+    buildEdits(fieldValuesProp),
+  );
   const [fieldStatus, setFieldStatus] = useState<
     Record<string, FieldSaveStatus>
   >({});
@@ -113,7 +129,11 @@ export const FieldValueRunList: React.FC<FieldValueRunListProps> = ({
 
   // --- Field change / save ---
 
-  const onFieldChange = (fieldId: number, setIndex: number, value: string) => {
+  const onFieldChange = (
+    fieldId: number,
+    setIndex: number,
+    value: FieldValue,
+  ) => {
     const k = editKey(fieldId, setIndex);
     setEdits((prev) => ({ ...prev, [k]: value }));
   };
@@ -134,7 +154,10 @@ export const FieldValueRunList: React.FC<FieldValueRunListProps> = ({
           )
         : [...prev, updated];
     });
-    setEdits((prev) => ({ ...prev, [k]: updated.value }));
+    setEdits((prev: Record<string, FieldValue>) => ({
+      ...prev,
+      [k]: updated.value,
+    }));
   };
 
   // --- Set management ---
@@ -151,7 +174,7 @@ export const FieldValueRunList: React.FC<FieldValueRunListProps> = ({
     const newFieldValues: FieldValueEntry[] = fieldDefs.map((fv) => ({
       ...fv,
       setIndex: nextSetIndex,
-      value: "",
+      value: fv.multiValue ? [] : "",
       validation: fv.required
         ? { valid: false, error: "Required" }
         : { valid: true },
@@ -219,9 +242,9 @@ export const FieldValueRunList: React.FC<FieldValueRunListProps> = ({
     setFieldStatus((prev) => ({ ...prev, [key]: status }));
   };
 
-  const saveFieldValue = async (fv: FieldValueEntry, newValue: string) => {
+  const saveFieldValue = async (fv: FieldValueEntry, newValue: FieldValue) => {
     const currentValue = fv.value;
-    if (newValue === currentValue) return;
+    if (JSON.stringify(newValue) === JSON.stringify(currentValue)) return;
 
     setFieldSaveStatus(fv.fieldId, fv.setIndex, "saving");
 
@@ -239,39 +262,32 @@ export const FieldValueRunList: React.FC<FieldValueRunListProps> = ({
   };
 
   /** Save immediately (for controls that don't have a blur event) */
-  const changeAndSave = (fv: FieldValueEntry, newValue: string) => {
+  const changeAndSave = (fv: FieldValueEntry, newValue: FieldValue) => {
     onFieldChange(fv.fieldId, fv.setIndex, newValue);
     void saveFieldValue(fv, newValue);
   };
 
   // --- multi-value helpers ---
 
-  const getArrayItems = (value: string): string[] => {
-    if (!value) return [""];
-    const items = value.split(",");
-    return items.length === 0 ? [""] : items;
-  };
-
   const setArrayItem = (fv: FieldValueEntry, index: number, item: string) => {
     const currentValue = edits[editKey(fv.fieldId, fv.setIndex)] ?? fv.value;
-    const items = getArrayItems(currentValue);
+    const items = [...asArray(currentValue)];
     items[index] = item;
-    onFieldChange(fv.fieldId, fv.setIndex, items.join(","));
+    onFieldChange(fv.fieldId, fv.setIndex, items);
   };
 
   const addArrayItem = (fv: FieldValueEntry) => {
     const currentValue = edits[editKey(fv.fieldId, fv.setIndex)] ?? fv.value;
-    const newValue = currentValue ? currentValue + "," : "";
-    onFieldChange(fv.fieldId, fv.setIndex, newValue);
+    const items = [...asArray(currentValue), ""];
+    onFieldChange(fv.fieldId, fv.setIndex, items);
   };
 
   const removeArrayItem = (fv: FieldValueEntry, index: number) => {
     const currentValue = edits[editKey(fv.fieldId, fv.setIndex)] ?? fv.value;
-    const items = getArrayItems(currentValue);
+    const items = [...asArray(currentValue)];
     items.splice(index, 1);
-    const newValue = items.join(",");
-    onFieldChange(fv.fieldId, fv.setIndex, newValue);
-    void saveFieldValue(fv, newValue);
+    onFieldChange(fv.fieldId, fv.setIndex, items);
+    void saveFieldValue(fv, items);
   };
 
   // --- set management ---
@@ -508,16 +524,20 @@ export const FieldValueRunList: React.FC<FieldValueRunListProps> = ({
   // --- read-only display ---
 
   function formatReadOnlyValue(fv: FieldValueEntry): string {
-    if (!fv.value) return "\u2014";
+    const v = asString(fv.value);
+    if (!v) return "\u2014";
+    if (fv.multiValue && Array.isArray(fv.value)) {
+      return fv.value.filter(Boolean).join(", ") || "\u2014";
+    }
     switch (fv.type) {
       case FieldType.date:
-        return new Date(fv.value + "T00:00:00").toLocaleDateString();
+        return new Date(v + "T00:00:00").toLocaleDateString();
       case FieldType.datetime:
-        return new Date(fv.value).toLocaleString();
+        return new Date(v).toLocaleString();
       case FieldType.checkbox:
-        return fv.value === "checked" ? "Checked" : "\u2014";
+        return v === "checked" ? "Checked" : "\u2014";
       default:
-        return fv.value;
+        return v;
     }
   }
 
@@ -588,7 +608,7 @@ export const FieldValueRunList: React.FC<FieldValueRunListProps> = ({
               <Text size="xs" fw={500}>
                 {fieldLabel}:
               </Text>
-              {fv.value?.startsWith("http") ? (
+              {typeof fv.value === "string" && fv.value?.startsWith("http") ? (
                 <Anchor size="xs" href={fv.value} target="_blank">
                   {fv.value}
                 </Anchor>
@@ -605,7 +625,7 @@ export const FieldValueRunList: React.FC<FieldValueRunListProps> = ({
         }
 
         if (fv.multiValue) {
-          const items = getArrayItems(editedValue);
+          const items = asArray(editedValue);
           return (
             <Stack key={key} gap={4}>
               <Group gap="xs" align="center">
@@ -621,9 +641,8 @@ export const FieldValueRunList: React.FC<FieldValueRunListProps> = ({
                     onImmediateChange: (v) => {
                       const newItems = [...items];
                       newItems[index] = v;
-                      const joined = newItems.join(",");
-                      onFieldChange(fv.fieldId, fv.setIndex, joined);
-                      void saveFieldValue(fv, joined);
+                      onFieldChange(fv.fieldId, fv.setIndex, newItems);
+                      void saveFieldValue(fv, newItems);
                     },
                     onBlurSave: () => void saveFieldValue(fv, editedValue),
                   })}
@@ -661,7 +680,7 @@ export const FieldValueRunList: React.FC<FieldValueRunListProps> = ({
 
         return (
           <Group key={key} gap="xs" align="flex-end">
-            {renderInput(fv, editedValue, status, {
+            {renderInput(fv, asString(editedValue), status, {
               label: fieldLabel,
               onTextChange: (v) => onFieldChange(fv.fieldId, fv.setIndex, v),
               onImmediateChange: (v) => changeAndSave(fv, v),

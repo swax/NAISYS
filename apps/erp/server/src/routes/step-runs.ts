@@ -30,9 +30,11 @@ import { ensureStepRunFieldRecord } from "../services/field-service.js";
 import { isUserClockedIn } from "../services/labor-ticket-service.js";
 import {
   deleteFieldValueSet,
+  deserializeFieldValue,
   findStepRunWithField,
   getStepRun,
   listStepRuns,
+  serializeFieldValue,
   type StepRunWithStep,
   updateStepRun,
   upsertFieldValue,
@@ -127,7 +129,7 @@ function formatStepRun(
     multiValue: boolean;
     required: boolean;
     setIndex: number;
-    value: string;
+    value: string | string[];
     attachments?: { id: number; filename: string; fileSize: number }[];
     validation: ReturnType<typeof validateFieldValue>;
   }[] = [];
@@ -136,7 +138,10 @@ function formatStepRun(
       const stored = storedFieldValues.find(
         (fv) => fv.fieldId === field.id && fv.setIndex === si,
       );
-      const value = stored?.value ?? "";
+      const value = deserializeFieldValue(
+        stored?.value ?? "",
+        field.multiValue,
+      );
       const attachments =
         field.type === "attachment" && stored
           ? stored.fieldAttachments.map((sfa) => sfa.attachment)
@@ -393,6 +398,7 @@ export default function stepRunRoutes(fastify: FastifyInstance) {
         200: FieldValueEntrySchema,
         404: ErrorResponseSchema,
         409: ErrorResponseSchema,
+        422: ErrorResponseSchema,
       },
     },
     preHandler: requirePermission("order_executor"),
@@ -436,6 +442,14 @@ export default function stepRunRoutes(fastify: FastifyInstance) {
         return notFound(reply, `Step field not found`);
       }
 
+      // Reject setIndex > 0 on non-multiSet steps
+      if (si > 0 && !stepRun.step.multiSet) {
+        return unprocessable(
+          reply,
+          `setIndex > 0 is only allowed on multi-set steps. For multi-value fields, pass an array of strings instead.`,
+        );
+      }
+
       const fieldRecordId = await ensureStepRunFieldRecord(
         resolved.stepRun.id,
         userId,
@@ -443,6 +457,12 @@ export default function stepRunRoutes(fastify: FastifyInstance) {
       if (!fieldRecordId) return notFound(reply, "Step has no field set");
 
       await upsertFieldValue(fieldRecordId, field.id, si, value, userId);
+
+      // Return deserialized value
+      const responseValue = deserializeFieldValue(
+        serializeFieldValue(value),
+        field.multiValue,
+      );
 
       return {
         fieldId: field.id,
@@ -452,12 +472,12 @@ export default function stepRunRoutes(fastify: FastifyInstance) {
         multiValue: field.multiValue,
         required: field.required,
         setIndex: si,
-        value,
+        value: responseValue,
         validation: validateFieldValue(
           field.type,
           field.multiValue,
           field.required,
-          value,
+          responseValue,
         ),
       };
     },
