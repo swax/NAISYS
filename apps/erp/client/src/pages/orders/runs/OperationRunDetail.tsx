@@ -15,6 +15,7 @@ import {
   Tabs,
   Text,
   Textarea,
+  Tooltip,
 } from "@mantine/core";
 import { ActionButton, CompactMarkdown } from "@naisys/common-browser";
 import type { OperationRun } from "@naisys-erp/shared";
@@ -360,8 +361,11 @@ export const OperationRunDetail: React.FC = () => {
                   </Group>
                 );
               })()}
-            {hasAction(opRun._actions, "reopen") &&
-              (() => {
+            {(() => {
+                const reopenAction = hasAction(opRun._actions, "reopen", {
+                  includeDisabled: true,
+                });
+                if (!reopenAction) return null;
                 const labelMap: Record<
                   string,
                   { label: string; color: string }
@@ -383,6 +387,25 @@ export const OperationRunDetail: React.FC = () => {
                   label: opRun.status,
                   color: "gray",
                 };
+                const icon = (
+                  <ActionIcon
+                    size="xs"
+                    variant="subtle"
+                    color="gray"
+                    disabled={reopenAction.disabled}
+                    onClick={
+                      reopenAction.disabled
+                        ? undefined
+                        : () => handleAction("reopen")
+                    }
+                    title={
+                      reopenAction.disabledReason ??
+                      `Undo ${label.toLowerCase()}`
+                    }
+                  >
+                    <IconArrowBackUp size={14} />
+                  </ActionIcon>
+                );
                 return (
                   <Group gap="xs" align="center">
                     <Text size="xs" c={color}>
@@ -390,15 +413,13 @@ export const OperationRunDetail: React.FC = () => {
                       {new Date(opRun.updatedAt).toLocaleString()}
                       {opRun.cost ? ` for $${opRun.cost.toFixed(2)}` : ""}
                     </Text>
-                    <ActionIcon
-                      size="xs"
-                      variant="subtle"
-                      color="gray"
-                      onClick={() => handleAction("reopen")}
-                      title={`Undo ${label.toLowerCase()}`}
-                    >
-                      <IconArrowBackUp size={14} />
-                    </ActionIcon>
+                    {reopenAction.disabledReason ? (
+                      <Tooltip label={reopenAction.disabledReason}>
+                        {icon}
+                      </Tooltip>
+                    ) : (
+                      icon
+                    )}
                   </Group>
                 );
               })()}
