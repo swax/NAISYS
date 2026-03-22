@@ -349,9 +349,12 @@ export default function stepRunRoutes(fastify: FastifyInstance) {
       const opErr = checkOpRunInProgress(resolved.opRun.status);
       if (opErr) return conflict(reply, opErr);
 
-      const clockedIn = await isUserClockedIn(resolved.opRun.id, userId);
-      if (!clockedIn)
-        return conflict(reply, `You must be clocked in to update steps`);
+      // Reopening a step doesn't require being clocked in
+      if (completed !== false) {
+        const clockedIn = await isUserClockedIn(resolved.opRun.id, userId);
+        if (!clockedIn)
+          return conflict(reply, `You must be clocked in to update steps`);
+      }
 
       const existing = await getStepRun(resolved.stepRun.id);
       if (!existing) return notFound(reply, `Step run not found`);
