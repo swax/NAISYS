@@ -239,6 +239,15 @@ export const apiEndpoints = {
     fieldSeqNo: number | string,
   ) =>
     `orders/${key}/runs/${runNo}/ops/${seqNo}/steps/${stepSeqNo}/fields/${fieldSeqNo}`,
+  stepRunSetFieldValue: (
+    key: string,
+    runNo: number | string,
+    seqNo: number | string,
+    stepSeqNo: number | string,
+    setIndex: number | string,
+    fieldSeqNo: number | string,
+  ) =>
+    `orders/${key}/runs/${runNo}/ops/${seqNo}/steps/${stepSeqNo}/sets/${setIndex}/fields/${fieldSeqNo}`,
   stepRunDeleteSet: (
     key: string,
     runNo: number | string,
@@ -255,6 +264,15 @@ export const apiEndpoints = {
     fieldSeqNo: number | string,
   ) =>
     `orders/${key}/runs/${runNo}/ops/${seqNo}/steps/${stepSeqNo}/fields/${fieldSeqNo}/attachments`,
+  stepFieldSetAttachments: (
+    key: string,
+    runNo: number | string,
+    seqNo: number | string,
+    stepSeqNo: number | string,
+    setIndex: number | string,
+    fieldSeqNo: number | string,
+  ) =>
+    `orders/${key}/runs/${runNo}/ops/${seqNo}/steps/${stepSeqNo}/sets/${setIndex}/fields/${fieldSeqNo}/attachments`,
   stepFieldAttachmentDownload: (
     key: string,
     runNo: number | string,

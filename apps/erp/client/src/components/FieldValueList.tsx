@@ -74,9 +74,9 @@ interface FieldValueRunListProps {
   multiSet: boolean;
   completed: boolean;
   _actionTemplates?: HateoasActionTemplate[];
-  fieldValueEndpoint: (fieldSeqNo: number | string) => string;
+  fieldValueEndpoint: (fieldSeqNo: number | string, setIndex: number) => string;
   deleteSetEndpoint: (setIndex: number) => string;
-  attachmentEndpoint: (fieldSeqNo: number | string) => string;
+  attachmentEndpoint: (fieldSeqNo: number | string, setIndex: number) => string;
   attachmentDownloadUrl: (
     fieldSeqNo: number | string,
     attachmentId: number | string,
@@ -250,8 +250,8 @@ export const FieldValueRunList: React.FC<FieldValueRunListProps> = ({
 
     try {
       const updated = await api.put<FieldValueEntry>(
-        fieldValueEndpoint(fv.fieldSeqNo),
-        { value: newValue, setIndex: fv.setIndex },
+        fieldValueEndpoint(fv.fieldSeqNo, fv.setIndex),
+        { value: newValue },
       );
       onFieldSaved(fv.fieldId, fv.setIndex, updated);
       setFieldSaveStatus(fv.fieldId, fv.setIndex, "saved");
@@ -331,9 +331,8 @@ export const FieldValueRunList: React.FC<FieldValueRunListProps> = ({
     setUploadingField(key);
     try {
       const result = await api.upload<UploadAttachmentResponse>(
-        attachmentEndpoint(fv.fieldSeqNo),
+        attachmentEndpoint(fv.fieldSeqNo, fv.setIndex),
         file,
-        { setIndex: String(fv.setIndex) },
       );
       onAttachmentUploaded(fv.fieldId, fv.setIndex, {
         id: result.attachmentId,

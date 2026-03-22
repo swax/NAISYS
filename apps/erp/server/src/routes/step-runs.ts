@@ -96,6 +96,15 @@ const FieldSeqNoParamsSchema = z.object({
   fieldSeqNo: z.coerce.number().int(),
 });
 
+const SetFieldSeqNoParamsSchema = z.object({
+  orderKey: z.string(),
+  runNo: z.coerce.number().int(),
+  seqNo: z.coerce.number().int(),
+  stepSeqNo: z.coerce.number().int(),
+  setIndex: z.coerce.number().int().min(0),
+  fieldSeqNo: z.coerce.number().int(),
+});
+
 function formatStepRun(
   orderKey: string,
   runNo: number,
@@ -171,32 +180,43 @@ function formatStepRun(
   );
 
   // Action templates — one per action type instead of per-field/set
+  // For multiSet steps, field URLs include /sets/{setIndex}/ so the AI agent
+  // knows to specify which set row to update. For non-multiSet steps, the
+  // simpler /fields/{fieldSeqNo} path is used (implicit set 0).
   const actionTemplates = canUpdate
     ? [
         {
           rel: "updateField",
-          hrefTemplate: `${stepRunHref}/fields/{fieldSeqNo}`,
+          hrefTemplate: multiSet
+            ? `${stepRunHref}/sets/{setIndex}/fields/{fieldSeqNo}`
+            : `${stepRunHref}/fields/{fieldSeqNo}`,
           method: "PUT" as const,
           title: "Update Field Value",
           schema: `${API_PREFIX}/schemas/UpdateFieldValue`,
         },
-        {
-          rel: "deleteSet",
-          hrefTemplate: `${stepRunHref}/sets/{setIndex}`,
-          method: "DELETE" as const,
-          title: "Delete Set",
-        },
+        ...(multiSet
+          ? [
+              {
+                rel: "deleteSet",
+                hrefTemplate: `${stepRunHref}/sets/{setIndex}`,
+                method: "DELETE" as const,
+                title: "Delete Set",
+              },
+            ]
+          : []),
         ...(hasAttachmentFields
           ? [
               {
                 rel: "uploadAttachment",
-                hrefTemplate: `${stepRunHref}/fields/{fieldSeqNo}/attachments`,
+                hrefTemplate: multiSet
+                  ? `${stepRunHref}/sets/{setIndex}/fields/{fieldSeqNo}/attachments`
+                  : `${stepRunHref}/fields/{fieldSeqNo}/attachments`,
                 method: "POST" as const,
                 title: "Upload Attachment",
                 alternateEncoding: {
                   contentType: "multipart/form-data",
                   description:
-                    "Upload file as multipart with field 'file' and optional 'setIndex'",
+                    "Upload file as multipart/form-data with field 'file'",
                   fileFields: ["file"],
                 },
               },
@@ -389,11 +409,99 @@ export default function stepRunRoutes(fastify: FastifyInstance) {
     },
   });
 
-  // UPDATE single field value
+  // Shared handler for updating a single field value
+  async function handleFieldUpdate(
+    request: any,
+    reply: any,
+    setIndex: number,
+  ) {
+    const { orderKey, runNo, seqNo, stepSeqNo, fieldSeqNo } = request.params;
+    const { value } = request.body;
+    const userId = request.erpUser!.id;
+
+    const resolved = await resolveStepRun(orderKey, runNo, seqNo, stepSeqNo);
+    if (!resolved) {
+      return notFound(reply, `Step run not found`);
+    }
+
+    const wcErr = await checkWorkCenterAccess(
+      resolved.opRun.operationId,
+      request.erpUser!,
+    );
+    if (wcErr) return conflict(reply, wcErr);
+
+    const orderErr = checkOrderRunStarted(resolved.run.status);
+    if (orderErr) return conflict(reply, orderErr);
+
+    const opErr = checkOpRunInProgress(resolved.opRun.status);
+    if (opErr) return conflict(reply, opErr);
+
+    const clockedIn = await isUserClockedIn(resolved.opRun.id, userId);
+    if (!clockedIn)
+      return conflict(reply, `You must be clocked in to update field values`);
+
+    const stepRun = await findStepRunWithField(
+      resolved.stepRun.id,
+      resolved.opRun.id,
+      fieldSeqNo,
+    );
+    if (!stepRun) return notFound(reply, `Step run not found`);
+
+    if (stepRun.completed) {
+      return conflict(reply, `Cannot update field: step run is completed`);
+    }
+
+    const field = stepRun.step.fieldSet?.fields[0];
+    if (!field) {
+      return notFound(reply, `Step field not found`);
+    }
+
+    // Reject setIndex > 0 on non-multiSet steps
+    if (setIndex > 0 && !stepRun.step.multiSet) {
+      return unprocessable(
+        reply,
+        `setIndex > 0 is only allowed on multi-set steps. For multi-value fields, pass an array of strings instead.`,
+      );
+    }
+
+    const fieldRecordId = await ensureStepRunFieldRecord(
+      resolved.stepRun.id,
+      userId,
+    );
+    if (!fieldRecordId) return notFound(reply, "Step has no field set");
+
+    await upsertFieldValue(fieldRecordId, field.id, setIndex, value, userId);
+
+    // Return deserialized value
+    const responseValue = deserializeFieldValue(
+      serializeFieldValue(value),
+      field.multiValue,
+    );
+
+    return {
+      fieldId: field.id,
+      fieldSeqNo: field.seqNo,
+      label: field.label,
+      type: field.type,
+      multiValue: field.multiValue,
+      required: field.required,
+      setIndex,
+      value: responseValue,
+      validation: validateFieldValue(
+        field.type,
+        field.multiValue,
+        field.required,
+        responseValue,
+      ),
+    };
+  }
+
+  // UPDATE single field value (non-multiSet shorthand — implicit set 0)
   app.put("/:stepSeqNo/fields/:fieldSeqNo", {
     schema: {
       description:
-        "Update a single field value on a step run (operation run must be in_progress)",
+        "Update a single field value on a step run (implicit set 0). " +
+        "For multi-set steps, use /sets/{setIndex}/fields/{fieldSeqNo} instead.",
       tags: ["Step Runs"],
       params: FieldSeqNoParamsSchema,
       body: UpdateFieldValueSchema,
@@ -405,85 +513,27 @@ export default function stepRunRoutes(fastify: FastifyInstance) {
       },
     },
     preHandler: requirePermission("order_executor"),
-    handler: async (request, reply) => {
-      const { orderKey, runNo, seqNo, stepSeqNo, fieldSeqNo } = request.params;
-      const { value, setIndex } = request.body;
-      const si = setIndex ?? 0;
-      const userId = request.erpUser!.id;
+    handler: async (request, reply) => handleFieldUpdate(request, reply, 0),
+  });
 
-      const resolved = await resolveStepRun(orderKey, runNo, seqNo, stepSeqNo);
-      if (!resolved) {
-        return notFound(reply, `Step run not found`);
-      }
-
-      const wcErr = await checkWorkCenterAccess(resolved.opRun.operationId, request.erpUser!);
-      if (wcErr) return conflict(reply, wcErr);
-
-      const orderErr = checkOrderRunStarted(resolved.run.status);
-      if (orderErr) return conflict(reply, orderErr);
-
-      const opErr = checkOpRunInProgress(resolved.opRun.status);
-      if (opErr) return conflict(reply, opErr);
-
-      const clockedIn = await isUserClockedIn(resolved.opRun.id, userId);
-      if (!clockedIn)
-        return conflict(reply, `You must be clocked in to update field values`);
-
-      const stepRun = await findStepRunWithField(
-        resolved.stepRun.id,
-        resolved.opRun.id,
-        fieldSeqNo,
-      );
-      if (!stepRun) return notFound(reply, `Step run not found`);
-
-      if (stepRun.completed) {
-        return conflict(reply, `Cannot update field: step run is completed`);
-      }
-
-      const field = stepRun.step.fieldSet?.fields[0];
-      if (!field) {
-        return notFound(reply, `Step field not found`);
-      }
-
-      // Reject setIndex > 0 on non-multiSet steps
-      if (si > 0 && !stepRun.step.multiSet) {
-        return unprocessable(
-          reply,
-          `setIndex > 0 is only allowed on multi-set steps. For multi-value fields, pass an array of strings instead.`,
-        );
-      }
-
-      const fieldRecordId = await ensureStepRunFieldRecord(
-        resolved.stepRun.id,
-        userId,
-      );
-      if (!fieldRecordId) return notFound(reply, "Step has no field set");
-
-      await upsertFieldValue(fieldRecordId, field.id, si, value, userId);
-
-      // Return deserialized value
-      const responseValue = deserializeFieldValue(
-        serializeFieldValue(value),
-        field.multiValue,
-      );
-
-      return {
-        fieldId: field.id,
-        fieldSeqNo: field.seqNo,
-        label: field.label,
-        type: field.type,
-        multiValue: field.multiValue,
-        required: field.required,
-        setIndex: si,
-        value: responseValue,
-        validation: validateFieldValue(
-          field.type,
-          field.multiValue,
-          field.required,
-          responseValue,
-        ),
-      };
+  // UPDATE single field value (explicit set index for multi-set steps)
+  app.put("/:stepSeqNo/sets/:setIndex/fields/:fieldSeqNo", {
+    schema: {
+      description:
+        "Update a single field value on a specific set of a multi-set step run",
+      tags: ["Step Runs"],
+      params: SetFieldSeqNoParamsSchema,
+      body: UpdateFieldValueSchema,
+      response: {
+        200: FieldValueEntrySchema,
+        404: ErrorResponseSchema,
+        409: ErrorResponseSchema,
+        422: ErrorResponseSchema,
+      },
     },
+    preHandler: requirePermission("order_executor"),
+    handler: async (request, reply) =>
+      handleFieldUpdate(request, reply, request.params.setIndex),
   });
 
   // DELETE a field value set
