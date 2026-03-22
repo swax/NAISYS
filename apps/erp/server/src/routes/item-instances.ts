@@ -36,6 +36,8 @@ import {
 import { findExisting as findItem } from "../services/item-service.js";
 import {
   deleteFieldValueSet,
+  deserializeFieldValue,
+  serializeFieldValue,
   upsertFieldValue,
   validateFieldValue,
 } from "../services/step-run-service.js";
@@ -146,7 +148,7 @@ function buildFieldValues(inst: ItemInstanceWithRelations) {
     multiValue: boolean;
     required: boolean;
     setIndex: number;
-    value: string;
+    value: string | string[];
     attachments?: { id: number; filename: string; fileSize: number }[];
     validation: ReturnType<typeof validateFieldValue>;
   }[] = [];
@@ -156,7 +158,10 @@ function buildFieldValues(inst: ItemInstanceWithRelations) {
       const stored = storedFieldValues.find(
         (fv) => fv.fieldId === field.id && fv.setIndex === si,
       );
-      const value = stored?.value ?? "";
+      const value = deserializeFieldValue(
+        stored?.value ?? "",
+        field.multiValue,
+      );
       const attachments =
         field.type === "attachment" && stored
           ? stored.fieldAttachments.map((sfa) => sfa.attachment)
@@ -451,6 +456,12 @@ export default function itemInstanceRoutes(fastify: FastifyInstance) {
 
       await upsertFieldValue(fieldRecordId, field.id, si, value, userId);
 
+      // Return deserialized value
+      const responseValue = deserializeFieldValue(
+        serializeFieldValue(value),
+        field.multiValue,
+      );
+
       return {
         fieldId: field.id,
         fieldSeqNo: field.seqNo,
@@ -459,12 +470,12 @@ export default function itemInstanceRoutes(fastify: FastifyInstance) {
         multiValue: field.multiValue,
         required: field.required,
         setIndex: si,
-        value,
+        value: responseValue,
         validation: validateFieldValue(
           field.type,
           field.multiValue,
           field.required,
-          value,
+          responseValue,
         ),
       };
     },

@@ -1,4 +1,8 @@
-import { FieldType, type FieldValidation } from "@naisys-erp/shared";
+import {
+  FieldType,
+  type FieldValidation,
+  type FieldValue,
+} from "@naisys-erp/shared";
 
 import erpDb from "../erpDb.js";
 
@@ -131,6 +135,7 @@ export async function findStepRunWithField(
     include: {
       step: {
         select: {
+          multiSet: true,
           fieldSet: {
             select: {
               fields: {
@@ -185,17 +190,55 @@ function validateSingleValue(type: string, value: string): string | null {
   return null;
 }
 
+/**
+ * Serialize a field value for DB storage.
+ * - Scalar (string): stored as-is
+ * - Array (string[]): stored as JSON array string
+ */
+export function serializeFieldValue(value: FieldValue): string {
+  if (Array.isArray(value)) {
+    return JSON.stringify(value);
+  }
+  return value;
+}
+
+/**
+ * Deserialize a DB-stored value back to the API shape.
+ * - multiValue fields: parse JSON array, falling back to comma-split for legacy data
+ * - Scalar fields: return as-is
+ */
+export function deserializeFieldValue(
+  dbValue: string,
+  multiValue: boolean,
+): FieldValue {
+  if (!multiValue) return dbValue;
+  if (!dbValue) return [];
+
+  // Try JSON array first (new format)
+  if (dbValue.startsWith("[")) {
+    try {
+      const parsed = JSON.parse(dbValue);
+      if (Array.isArray(parsed)) return parsed as string[];
+    } catch {
+      // fall through to legacy
+    }
+  }
+
+  // Legacy: comma-separated string — migrate on read
+  return dbValue.split(",").map((v) => v.trim());
+}
+
 export function validateFieldValue(
   type: string,
   multiValue: boolean,
   required: boolean,
-  value: string,
+  value: FieldValue,
 ): FieldValidation {
-  if (required && !value.trim()) {
-    return { valid: false, error: "Required" };
-  }
   if (multiValue) {
-    const items = value.split(",").map((v) => v.trim());
+    const items = Array.isArray(value) ? value : [value];
+    if (required && items.every((v) => !v.trim())) {
+      return { valid: false, error: "Required" };
+    }
     for (let i = 0; i < items.length; i++) {
       const err = validateSingleValue(type, items[i]);
       if (err) {
@@ -203,7 +246,11 @@ export function validateFieldValue(
       }
     }
   } else {
-    const err = validateSingleValue(type, value);
+    const v = typeof value === "string" ? value : value.join("");
+    if (required && !v.trim()) {
+      return { valid: false, error: "Required" };
+    }
+    const err = validateSingleValue(type, v);
     if (err) {
       return { valid: false, error: err };
     }
@@ -219,7 +266,7 @@ export function validateCompletionFields(
   existing: StepRunWithStep,
   submittedFieldValues?: {
     fieldId: number;
-    value: string;
+    value: FieldValue;
     setIndex?: number;
   }[],
 ): string | null {
@@ -230,11 +277,20 @@ export function validateCompletionFields(
     ]),
   );
   const existingFieldValues = existing.fieldRecord?.fieldValues ?? [];
+
+  // Build a map of field definitions keyed by id for multiValue lookup
+  const fieldDefs = new Map(
+    (existing.step.fieldSet?.fields ?? []).map((f) => [f.id, f]),
+  );
+
   const storedMap = new Map(
-    existingFieldValues.map((fv) => [
-      fieldValueKey(fv.fieldId, fv.setIndex),
-      fv.value,
-    ]),
+    existingFieldValues.map((fv) => {
+      const def = fieldDefs.get(fv.fieldId);
+      return [
+        fieldValueKey(fv.fieldId, fv.setIndex),
+        deserializeFieldValue(fv.value, def?.multiValue ?? false),
+      ];
+    }),
   );
 
   // Determine how many sets exist
@@ -275,7 +331,7 @@ export async function updateStepRun(
   completed: boolean | undefined,
   completionNote: string | undefined,
   fieldValues:
-    | { fieldId: number; value: string; setIndex?: number }[]
+    | { fieldId: number; value: FieldValue; setIndex?: number }[]
     | undefined,
   userId: number,
 ): Promise<StepRunWithStep> {
@@ -315,6 +371,7 @@ export async function updateStepRun(
       if (fieldRecordId) {
         for (const fv of fieldValues) {
           const setIndex = fv.setIndex ?? 0;
+          const dbValue = serializeFieldValue(fv.value);
           await erpTx.fieldValue.upsert({
             where: {
               fieldRecordId_fieldId_setIndex: {
@@ -327,12 +384,12 @@ export async function updateStepRun(
               fieldRecordId,
               fieldId: fv.fieldId,
               setIndex,
-              value: fv.value,
+              value: dbValue,
               createdById: userId,
               updatedById: userId,
             },
             update: {
-              value: fv.value,
+              value: dbValue,
               updatedById: userId,
             },
           });
@@ -351,9 +408,10 @@ export async function upsertFieldValue(
   fieldRecordId: number,
   fieldId: number,
   setIndex: number,
-  value: string,
+  value: FieldValue,
   userId: number,
 ) {
+  const dbValue = serializeFieldValue(value);
   await erpDb.fieldValue.upsert({
     where: {
       fieldRecordId_fieldId_setIndex: { fieldRecordId, fieldId, setIndex },
@@ -362,12 +420,12 @@ export async function upsertFieldValue(
       fieldRecordId,
       fieldId,
       setIndex,
-      value,
+      value: dbValue,
       createdById: userId,
       updatedById: userId,
     },
     update: {
-      value,
+      value: dbValue,
       updatedById: userId,
     },
   });
