@@ -72,7 +72,7 @@ export default function stepFieldAttachmentRoutes(fastify: FastifyInstance) {
         return notFound(reply, `Step run not found`);
       }
 
-      const wcErr = await checkWorkCenterAccess(resolved.opRun.operationId, userId);
+      const wcErr = await checkWorkCenterAccess(resolved.opRun.operationId, request.erpUser!);
       if (wcErr) return conflict(reply, wcErr);
 
       const orderErr = checkOrderRunStarted(resolved.run.status);

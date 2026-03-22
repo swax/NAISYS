@@ -147,15 +147,20 @@ export function checkOpRunInProgress(status: string): string | null {
  */
 export async function checkWorkCenterAccess(
   operationId: number,
-  userId: number,
+  user: ErpUser,
 ): Promise<string | null> {
+  if (hasPermission(user, "erp_admin")) return null;
+
   const operation = await erpDb.operation.findUnique({
     where: { id: operationId },
     select: {
       workCenter: {
         select: {
           key: true,
-          userAssignments: { where: { userId }, select: { userId: true } },
+          userAssignments: {
+            where: { userId: user.id },
+            select: { userId: true },
+          },
         },
       },
     },

@@ -54,7 +54,7 @@ async function opRunItemActions(
       ? await checkStepsComplete(opRunId)
       : null;
   const wcErr = user
-    ? await checkWorkCenterAccess(operationId, user.id)
+    ? await checkWorkCenterAccess(operationId, user)
     : null;
 
   return resolveActions(

@@ -340,7 +340,7 @@ export default function stepRunRoutes(fastify: FastifyInstance) {
         return notFound(reply, `Step run not found`);
       }
 
-      const wcErr = await checkWorkCenterAccess(resolved.opRun.operationId, userId);
+      const wcErr = await checkWorkCenterAccess(resolved.opRun.operationId, request.erpUser!);
       if (wcErr) return conflict(reply, wcErr);
 
       const orderErr = checkOrderRunStarted(resolved.run.status);
@@ -416,7 +416,7 @@ export default function stepRunRoutes(fastify: FastifyInstance) {
         return notFound(reply, `Step run not found`);
       }
 
-      const wcErr = await checkWorkCenterAccess(resolved.opRun.operationId, userId);
+      const wcErr = await checkWorkCenterAccess(resolved.opRun.operationId, request.erpUser!);
       if (wcErr) return conflict(reply, wcErr);
 
       const orderErr = checkOrderRunStarted(resolved.run.status);
@@ -517,7 +517,7 @@ export default function stepRunRoutes(fastify: FastifyInstance) {
         return notFound(reply, `Step run not found`);
       }
 
-      const wcErr = await checkWorkCenterAccess(resolved.opRun.operationId, userId);
+      const wcErr = await checkWorkCenterAccess(resolved.opRun.operationId, request.erpUser!);
       if (wcErr) return conflict(reply, wcErr);
 
       const orderErr = checkOrderRunStarted(resolved.run.status);
