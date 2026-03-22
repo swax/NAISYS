@@ -228,13 +228,13 @@ export const ItemInstanceDetail: React.FC = () => {
             _actionTemplates={
               editingFields ? instance._actionTemplates : undefined
             }
-            fieldValueEndpoint={(fieldSeqNo) =>
+            fieldValueEndpoint={(fieldSeqNo, _setIndex) =>
               apiEndpoints.itemInstanceFieldValue(key!, instanceId!, fieldSeqNo)
             }
             deleteSetEndpoint={(setIndex) =>
               apiEndpoints.itemInstanceDeleteSet(key!, instanceId!, setIndex)
             }
-            attachmentEndpoint={() => ""}
+            attachmentEndpoint={(_fieldSeqNo, _setIndex) => ""}
             attachmentDownloadUrl={() => ""}
             onSetDeleted={() => void fetchInstance()}
           />

@@ -63,6 +63,13 @@ const SetIndexParamsSchema = z.object({
   setIndex: z.coerce.number().int(),
 });
 
+const SetFieldSeqNoParamsSchema = z.object({
+  key: z.string(),
+  instanceId: z.coerce.number(),
+  setIndex: z.coerce.number().int().min(0),
+  fieldSeqNo: z.coerce.number().int(),
+});
+
 function instanceBasePath(itemKey: string): string {
   return `items/${itemKey}/instances`;
 }
@@ -204,12 +211,6 @@ function buildActionTemplates(
       method: "PUT" as const,
       title: "Update Field Value",
       schema: `${API_PREFIX}/schemas/UpdateFieldValue`,
-    },
-    {
-      rel: "deleteSet",
-      hrefTemplate: `${instanceHref}/sets/{setIndex}`,
-      method: "DELETE" as const,
-      title: "Delete Set",
     },
   ];
 }
@@ -422,10 +423,61 @@ export default function itemInstanceRoutes(fastify: FastifyInstance) {
     },
   });
 
-  // UPDATE single field value
+  // Shared handler for updating a single field value
+  async function handleFieldUpdate(
+    request: any,
+    reply: any,
+    setIndex: number,
+  ) {
+    const { instanceId, fieldSeqNo } = request.params;
+    const { value } = request.body;
+    const userId = request.erpUser!.id;
+
+    const inst = await findItemInstanceWithField(instanceId, fieldSeqNo);
+    if (!inst)
+      return notFound(reply, `Item instance ${instanceId} not found`);
+
+    const field = inst.item.fieldSet?.fields[0];
+    if (!field) return notFound(reply, `Field not found`);
+
+    const fieldRecordId = await ensureItemInstanceFieldRecord(
+      instanceId,
+      userId,
+    );
+    if (!fieldRecordId) return notFound(reply, "Item has no field set");
+
+    await upsertFieldValue(fieldRecordId, field.id, setIndex, value, userId);
+
+    // Return deserialized value
+    const responseValue = deserializeFieldValue(
+      serializeFieldValue(value),
+      field.multiValue,
+    );
+
+    return {
+      fieldId: field.id,
+      fieldSeqNo: field.seqNo,
+      label: field.label,
+      type: field.type,
+      multiValue: field.multiValue,
+      required: field.required,
+      setIndex,
+      value: responseValue,
+      validation: validateFieldValue(
+        field.type,
+        field.multiValue,
+        field.required,
+        responseValue,
+      ),
+    };
+  }
+
+  // UPDATE single field value (implicit set 0)
   app.put("/:instanceId/fields/:fieldSeqNo", {
     schema: {
-      description: "Update a single field value on an item instance",
+      description:
+        "Update a single field value on an item instance (implicit set 0). " +
+        "For multi-set items, use /sets/{setIndex}/fields/{fieldSeqNo} instead.",
       tags: ["Item Instances"],
       params: FieldSeqNoParamsSchema,
       body: UpdateFieldValueSchema,
@@ -435,50 +487,25 @@ export default function itemInstanceRoutes(fastify: FastifyInstance) {
       },
     },
     preHandler: requirePermission("item_manager"),
-    handler: async (request, reply) => {
-      const { instanceId, fieldSeqNo } = request.params;
-      const { value, setIndex } = request.body;
-      const si = setIndex ?? 0;
-      const userId = request.erpUser!.id;
+    handler: async (request, reply) => handleFieldUpdate(request, reply, 0),
+  });
 
-      const inst = await findItemInstanceWithField(instanceId, fieldSeqNo);
-      if (!inst)
-        return notFound(reply, `Item instance ${instanceId} not found`);
-
-      const field = inst.item.fieldSet?.fields[0];
-      if (!field) return notFound(reply, `Field not found`);
-
-      const fieldRecordId = await ensureItemInstanceFieldRecord(
-        instanceId,
-        userId,
-      );
-      if (!fieldRecordId) return notFound(reply, "Item has no field set");
-
-      await upsertFieldValue(fieldRecordId, field.id, si, value, userId);
-
-      // Return deserialized value
-      const responseValue = deserializeFieldValue(
-        serializeFieldValue(value),
-        field.multiValue,
-      );
-
-      return {
-        fieldId: field.id,
-        fieldSeqNo: field.seqNo,
-        label: field.label,
-        type: field.type,
-        multiValue: field.multiValue,
-        required: field.required,
-        setIndex: si,
-        value: responseValue,
-        validation: validateFieldValue(
-          field.type,
-          field.multiValue,
-          field.required,
-          responseValue,
-        ),
-      };
+  // UPDATE single field value (explicit set index)
+  app.put("/:instanceId/sets/:setIndex/fields/:fieldSeqNo", {
+    schema: {
+      description:
+        "Update a single field value on a specific set of an item instance",
+      tags: ["Item Instances"],
+      params: SetFieldSeqNoParamsSchema,
+      body: UpdateFieldValueSchema,
+      response: {
+        200: FieldValueEntrySchema,
+        404: ErrorResponseSchema,
+      },
     },
+    preHandler: requirePermission("item_manager"),
+    handler: async (request, reply) =>
+      handleFieldUpdate(request, reply, request.params.setIndex),
   });
 
   // DELETE a field value set

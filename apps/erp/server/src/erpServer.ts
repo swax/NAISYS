@@ -217,6 +217,10 @@ export const erpPlugin: FastifyPluginAsync = async (fastify) => {
     prefix:
       "/api/erp/orders/:orderKey/runs/:runNo/ops/:seqNo/steps/:stepSeqNo/fields/:fieldSeqNo/attachments",
   });
+  fastify.register(stepFieldAttachmentRoutes, {
+    prefix:
+      "/api/erp/orders/:orderKey/runs/:runNo/ops/:seqNo/steps/:stepSeqNo/sets/:setIndex/fields/:fieldSeqNo/attachments",
+  });
   fastify.register(stepRoutes, {
     prefix: "/api/erp/orders/:orderKey/revs/:revNo/ops/:seqNo/steps",
   });

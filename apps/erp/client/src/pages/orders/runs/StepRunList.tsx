@@ -230,14 +230,23 @@ export const StepRunList: React.FC<Props> = ({
                       multiSet={step.multiSet}
                       completed={step.completed}
                       _actionTemplates={step._actionTemplates}
-                      fieldValueEndpoint={(fieldSeqNo) =>
-                        apiEndpoints.stepRunFieldValue(
-                          orderKey,
-                          runNo,
-                          seqNo,
-                          step.seqNo,
-                          fieldSeqNo,
-                        )
+                      fieldValueEndpoint={(fieldSeqNo, setIndex) =>
+                        step.multiSet
+                          ? apiEndpoints.stepRunSetFieldValue(
+                              orderKey,
+                              runNo,
+                              seqNo,
+                              step.seqNo,
+                              setIndex,
+                              fieldSeqNo,
+                            )
+                          : apiEndpoints.stepRunFieldValue(
+                              orderKey,
+                              runNo,
+                              seqNo,
+                              step.seqNo,
+                              fieldSeqNo,
+                            )
                       }
                       deleteSetEndpoint={(setIndex) =>
                         apiEndpoints.stepRunDeleteSet(
@@ -248,14 +257,23 @@ export const StepRunList: React.FC<Props> = ({
                           setIndex,
                         )
                       }
-                      attachmentEndpoint={(fieldSeqNo) =>
-                        apiEndpoints.stepFieldAttachments(
-                          orderKey,
-                          runNo,
-                          seqNo,
-                          step.seqNo,
-                          fieldSeqNo,
-                        )
+                      attachmentEndpoint={(fieldSeqNo, setIndex) =>
+                        step.multiSet
+                          ? apiEndpoints.stepFieldSetAttachments(
+                              orderKey,
+                              runNo,
+                              seqNo,
+                              step.seqNo,
+                              setIndex,
+                              fieldSeqNo,
+                            )
+                          : apiEndpoints.stepFieldAttachments(
+                              orderKey,
+                              runNo,
+                              seqNo,
+                              step.seqNo,
+                              fieldSeqNo,
+                            )
                       }
                       attachmentDownloadUrl={(fieldSeqNo, attachmentId) =>
                         `/api/erp/${apiEndpoints.stepFieldAttachmentDownload(

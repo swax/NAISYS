@@ -32,6 +32,7 @@ const FieldSeqNoParamsSchema = z.object({
   runNo: z.coerce.number().int(),
   seqNo: z.coerce.number().int(),
   stepSeqNo: z.coerce.number().int(),
+  setIndex: z.coerce.number().int().optional(),
   fieldSeqNo: z.coerce.number().int(),
 });
 
@@ -40,6 +41,7 @@ const AttachmentIdParamsSchema = z.object({
   runNo: z.coerce.number().int(),
   seqNo: z.coerce.number().int(),
   stepSeqNo: z.coerce.number().int(),
+  setIndex: z.coerce.number().int().optional(),
   fieldSeqNo: z.coerce.number().int(),
   attachmentId: z.coerce.number().int(),
 });
@@ -122,9 +124,8 @@ export default function stepFieldAttachmentRoutes(fastify: FastifyInstance) {
       const fileBuffer = await data.toBuffer();
       const filename = data.filename || "unnamed_file";
 
-      // Parse setIndex from multipart field if present, default 0
-      const setIndexField = (data.fields.setIndex as any)?.value;
-      const setIndex = setIndexField ? parseInt(setIndexField, 10) : 0;
+      // setIndex comes from URL params (via /sets/:setIndex/ path), default 0
+      const setIndex = request.params.setIndex ?? 0;
 
       const fieldRecordId = await ensureStepRunFieldRecord(
         resolved.stepRun.id,

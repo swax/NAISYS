@@ -77,11 +77,10 @@ export const StepRunSchema = z.object({
 
 export type StepRun = z.infer<typeof StepRunSchema>;
 
-// Single field value update
+// Single field value update (setIndex is specified via URL path, not body)
 export const UpdateFieldValueSchema = z
   .object({
     value: z.union([z.string().max(2000), z.array(z.string().max(2000))]),
-    setIndex: z.number().int().min(0).optional(),
   })
   .strict();
 
