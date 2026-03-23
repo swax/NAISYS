@@ -17,6 +17,7 @@ import {
   resolveStepRun,
 } from "../route-helpers.js";
 import {
+  deleteFieldAttachment,
   getAttachmentFilePath,
   uploadAttachment,
 } from "../services/attachment-service.js";
@@ -24,6 +25,7 @@ import { ensureStepRunFieldRecord } from "../services/field-service.js";
 import { isUserClockedIn } from "../services/labor-ticket-service.js";
 import {
   findStepRunWithField,
+  rebuildAttachmentFieldValue,
   upsertFieldValue,
 } from "../services/field-value-service.js";
 
@@ -161,6 +163,15 @@ export default function stepFieldAttachmentRoutes(fastify: FastifyInstance) {
         fieldValueRow.id,
       );
 
+      // Auto-set the field value to reflect all current attachments
+      await rebuildAttachmentFieldValue(
+        fieldRecordId,
+        field.id,
+        setIndex,
+        field.multiValue,
+        userId,
+      );
+
       return {
         attachmentId: result.attachmentId,
         filename: result.filename,
@@ -203,4 +214,90 @@ export default function stepFieldAttachmentRoutes(fastify: FastifyInstance) {
       return reply.send(createReadStream(att.filepath));
     },
   );
+
+  // DELETE attachment from a field value
+  app.delete("/:attachmentId", {
+    schema: {
+      description: "Delete an attachment from a field (also updates the field value)",
+      tags: ["Attachments"],
+      params: AttachmentIdParamsSchema,
+      response: {
+        200: z.object({ deleted: z.literal(true) }),
+        404: ErrorResponseSchema,
+        409: ErrorResponseSchema,
+      },
+    },
+    preHandler: requirePermission("order_executor"),
+    handler: async (request, reply) => {
+      const { orderKey, runNo, seqNo, stepSeqNo, fieldSeqNo, attachmentId } =
+        request.params;
+      const userId = request.erpUser!.id;
+
+      const resolved = await resolveStepRun(orderKey, runNo, seqNo, stepSeqNo);
+      if (!resolved) return notFound(reply, "Step run not found");
+
+      const wcErr = await checkWorkCenterAccess(
+        resolved.opRun.operationId,
+        request.erpUser!,
+      );
+      if (wcErr) return conflict(reply, wcErr);
+
+      const orderErr = checkOrderRunStarted(resolved.run.status);
+      if (orderErr) return conflict(reply, orderErr);
+
+      const opErr = checkOpRunInProgress(resolved.opRun.status);
+      if (opErr) return conflict(reply, opErr);
+
+      const clockedIn = await isUserClockedIn(resolved.opRun.id, userId);
+      if (!clockedIn)
+        return conflict(reply, "You must be clocked in to delete attachments");
+
+      const stepRun = await findStepRunWithField(
+        resolved.stepRun.id,
+        resolved.opRun.id,
+        fieldSeqNo,
+      );
+      if (!stepRun) return notFound(reply, "Step run not found");
+
+      if (stepRun.completed)
+        return conflict(reply, "Cannot delete: step run is completed");
+
+      const field = stepRun.step.fieldSet?.fields[0];
+      if (!field) return notFound(reply, "Step field not found");
+
+      const setIndex = request.params.setIndex ?? 0;
+
+      const fieldRecordId = await ensureStepRunFieldRecord(
+        resolved.stepRun.id,
+        userId,
+      );
+      if (!fieldRecordId) return notFound(reply, "Step has no field set");
+
+      const fieldValueRow = await erpDb.fieldValue.findUnique({
+        where: {
+          fieldRecordId_fieldId_setIndex: {
+            fieldRecordId,
+            fieldId: field.id,
+            setIndex,
+          },
+        },
+        select: { id: true },
+      });
+
+      if (!fieldValueRow) return notFound(reply, "Field value not found");
+
+      await deleteFieldAttachment(fieldValueRow.id, attachmentId);
+
+      // Rebuild field value to reflect remaining attachments
+      await rebuildAttachmentFieldValue(
+        fieldRecordId,
+        field.id,
+        setIndex,
+        field.multiValue,
+        userId,
+      );
+
+      return { deleted: true as const };
+    },
+  });
 }
