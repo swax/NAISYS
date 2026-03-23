@@ -1,3 +1,4 @@
+import { formatFileSize } from "@naisys/common";
 import {
   FieldType,
   type FieldValidation,
@@ -195,6 +196,82 @@ export function validateCompletionFields(
     return `Cannot complete step:\n${errors.join("\n")}`;
   }
   return null;
+}
+
+// --- Attachment value helpers ---
+
+export function formatAttachmentLabel(
+  filename: string,
+  fileSize: number,
+): string {
+  return `${filename} (${formatFileSize(fileSize)})`;
+}
+
+/**
+ * Query current attachments for a field value and rebuild the stored value
+ * to reflect them. Returns the new API-shape value.
+ */
+export async function rebuildAttachmentFieldValue(
+  fieldRecordId: number,
+  fieldId: number,
+  setIndex: number,
+  multiValue: boolean,
+  userId: number,
+): Promise<FieldValue> {
+  const fieldValue = await erpDb.fieldValue.findUnique({
+    where: {
+      fieldRecordId_fieldId_setIndex: { fieldRecordId, fieldId, setIndex },
+    },
+    include: {
+      fieldAttachments: {
+        include: {
+          attachment: { select: { filename: true, fileSize: true } },
+        },
+      },
+    },
+  });
+
+  const labels = (fieldValue?.fieldAttachments ?? []).map((fa) =>
+    formatAttachmentLabel(fa.attachment.filename, fa.attachment.fileSize),
+  );
+
+  const value: FieldValue =
+    labels.length === 0
+      ? multiValue
+        ? []
+        : ""
+      : multiValue
+        ? labels
+        : labels[0];
+
+  await upsertFieldValue(fieldRecordId, fieldId, setIndex, value, userId);
+  return value;
+}
+
+/**
+ * Clear an attachment field: delete all FieldAttachment links and set value to empty.
+ */
+export async function clearAttachmentFieldValue(
+  fieldRecordId: number,
+  fieldId: number,
+  setIndex: number,
+  userId: number,
+): Promise<void> {
+  const fieldValue = await erpDb.fieldValue.findUnique({
+    where: {
+      fieldRecordId_fieldId_setIndex: { fieldRecordId, fieldId, setIndex },
+    },
+    select: { id: true },
+  });
+
+  if (fieldValue) {
+    await erpDb.fieldAttachment.deleteMany({
+      where: { fieldValueId: fieldValue.id },
+    });
+  }
+
+  const empty: FieldValue = "";
+  await upsertFieldValue(fieldRecordId, fieldId, setIndex, empty, userId);
 }
 
 // --- Mutations ---

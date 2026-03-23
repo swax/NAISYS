@@ -8,9 +8,9 @@ import {
 } from "fs";
 import { join } from "path";
 
-import erpDb from "../erpDb.js";
+import { MAX_ATTACHMENT_SIZE } from "@naisys/common";
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+import erpDb from "../erpDb.js";
 
 function attachmentsDir(): string {
   return join(process.env.NAISYS_FOLDER || "", "attachments");
@@ -37,8 +37,8 @@ export async function uploadAttachment(
   if (fileBuffer.length === 0) {
     throw new Error("Empty file");
   }
-  if (fileBuffer.length > MAX_FILE_SIZE) {
-    throw new Error(`File too large. Max size: ${MAX_FILE_SIZE} bytes`);
+  if (fileBuffer.length > MAX_ATTACHMENT_SIZE) {
+    throw new Error(`File too large. Max size: ${MAX_ATTACHMENT_SIZE} bytes`);
   }
 
   const fileHash = createHash("sha256").update(fileBuffer).digest("hex");

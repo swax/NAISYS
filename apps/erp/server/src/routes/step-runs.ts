@@ -160,6 +160,14 @@ export function buildStepRunActionTemplates(
               fileFields: ["file"],
             },
           },
+          {
+            rel: "deleteAttachment",
+            hrefTemplate: multiSet
+              ? `${stepRunHref}/sets/{setIndex}/fields/{fieldSeqNo}/attachments/{attachmentId}`
+              : `${stepRunHref}/fields/{fieldSeqNo}/attachments/{attachmentId}`,
+            method: "DELETE" as const,
+            title: "Delete Attachment",
+          },
         ]
       : []),
   ];

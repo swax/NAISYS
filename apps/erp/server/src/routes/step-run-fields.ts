@@ -19,6 +19,7 @@ import {
   resolveStepRun,
 } from "../route-helpers.js";
 import {
+  clearAttachmentFieldValue,
   deleteFieldValueSet,
   deserializeFieldValue,
   findStepRunWithField,
@@ -121,19 +122,46 @@ export default function stepRunFieldRoutes(fastify: FastifyInstance) {
       );
     }
 
+    // Block explicit value setting for attachment fields (managed by uploads)
+    if (field.type === "attachment") {
+      const isEmpty = Array.isArray(value)
+        ? value.every((v) => !v.trim())
+        : !value.trim();
+      if (!isEmpty) {
+        return reply.code(400).send({
+          statusCode: 400,
+          error: "Bad Request",
+          message:
+            "Attachment field values are managed by file uploads. " +
+            "Use the upload endpoint to add files, or set an empty value to clear.",
+        });
+      }
+    }
+
     const fieldRecordId = await ensureStepRunFieldRecord(
       resolved.stepRun.id,
       userId,
     );
     if (!fieldRecordId) return notFound(reply, "Step has no field set");
 
-    await upsertFieldValue(fieldRecordId, field.id, setIndex, value, userId);
+    if (field.type === "attachment") {
+      await clearAttachmentFieldValue(
+        fieldRecordId,
+        field.id,
+        setIndex,
+        userId,
+      );
+    } else {
+      await upsertFieldValue(fieldRecordId, field.id, setIndex, value, userId);
+    }
 
     // Return deserialized value + updated step-level actions
-    const responseValue = deserializeFieldValue(
-      serializeFieldValue(value),
-      field.multiValue,
-    );
+    const responseValue =
+      field.type === "attachment"
+        ? field.multiValue
+          ? []
+          : ""
+        : deserializeFieldValue(serializeFieldValue(value), field.multiValue);
 
     const hasAttachmentFields = (stepRun.step.fieldSet?.fields ?? []).some(
       (f) => f.type === "attachment",
@@ -264,10 +292,18 @@ export default function stepRunFieldRoutes(fastify: FastifyInstance) {
       (existing.step.fieldSet?.fields ?? []).map((f) => [f.seqNo, f]),
     );
 
-    // Validate all fieldSeqNos exist
+    // Validate all fieldSeqNos exist and block attachment fields
     for (const item of fields) {
       if (!fieldDefs.has(item.fieldSeqNo)) {
         return notFound(reply, `Step field ${item.fieldSeqNo} not found`);
+      }
+      const def = fieldDefs.get(item.fieldSeqNo)!;
+      if (def.type === "attachment") {
+        return reply.code(400).send({
+          statusCode: 400,
+          error: "Bad Request",
+          message: `Field "${def.label}" is an attachment field. Attachment values are managed by file uploads, not batch updates.`,
+        });
       }
     }
 
