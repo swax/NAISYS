@@ -239,7 +239,40 @@ export async function updateOrderRun(
 }
 
 export async function deleteOrderRun(id: number): Promise<void> {
-  await erpDb.orderRun.delete({ where: { id } });
+  await erpDb.$transaction(async (tx) => {
+    const opRuns = await tx.operationRun.findMany({
+      where: { orderRunId: id },
+      select: { id: true },
+    });
+    const opRunIds = opRuns.map((r) => r.id);
+
+    if (opRunIds.length > 0) {
+      const stepRuns = await tx.stepRun.findMany({
+        where: { operationRunId: { in: opRunIds } },
+        select: { fieldRecordId: true },
+      });
+      const fieldRecordIds = stepRuns
+        .map((s) => s.fieldRecordId)
+        .filter((id): id is number => id !== null);
+
+      if (fieldRecordIds.length > 0) {
+        await tx.fieldValue.deleteMany({
+          where: { fieldRecordId: { in: fieldRecordIds } },
+        });
+      }
+      await tx.stepRun.deleteMany({
+        where: { operationRunId: { in: opRunIds } },
+      });
+      if (fieldRecordIds.length > 0) {
+        await tx.fieldRecord.deleteMany({
+          where: { id: { in: fieldRecordIds } },
+        });
+      }
+      await tx.operationRun.deleteMany({ where: { orderRunId: id } });
+    }
+
+    await tx.orderRun.delete({ where: { id } });
+  });
 }
 
 export async function transitionStatus(
