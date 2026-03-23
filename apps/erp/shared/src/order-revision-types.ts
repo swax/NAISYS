@@ -61,6 +61,11 @@ export const OrderRevisionListQuerySchema = z.object({
   page: z.coerce.number().int().min(1).optional().default(1),
   pageSize: z.coerce.number().int().min(1).max(100).optional().default(20),
   status: RevisionStatusEnum.optional(),
+  includeObsolete: z
+    .enum(["true", "false"])
+    .transform((v) => v === "true")
+    .optional()
+    .default(false),
 });
 
 export type OrderRevisionListQuery = z.infer<

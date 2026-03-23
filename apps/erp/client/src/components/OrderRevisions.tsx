@@ -43,12 +43,18 @@ export const OrderRevisions: React.FC<Props> = ({ orderKey }) => {
   const [creating, setCreating] = useState(false);
   const [comparing, setComparing] = useState(false);
   const [selected, setSelected] = useState<number[]>([]);
+  const [includeObsolete, setIncludeObsolete] = useState(false);
 
   const fetchRevisions = useCallback(async () => {
     setLoading(true);
     try {
+      const params = new URLSearchParams({
+        page: String(page),
+        pageSize: String(PAGE_SIZE),
+      });
+      if (includeObsolete) params.set("includeObsolete", "true");
       const result = await api.get<OrderRevisionListResponse>(
-        `${apiEndpoints.orderRevs(orderKey)}?page=${page}&pageSize=${PAGE_SIZE}`,
+        `${apiEndpoints.orderRevs(orderKey)}?${params}`,
       );
       setData(result);
     } catch (err) {
@@ -56,7 +62,7 @@ export const OrderRevisions: React.FC<Props> = ({ orderKey }) => {
     } finally {
       setLoading(false);
     }
-  }, [orderKey, page]);
+  }, [orderKey, page, includeObsolete]);
 
   useEffect(() => {
     void fetchRevisions();
@@ -130,6 +136,14 @@ export const OrderRevisions: React.FC<Props> = ({ orderKey }) => {
       <Group justify="space-between" mb="md">
         <Title order={4}>Revisions</Title>
         <Group gap="xs">
+          <Checkbox
+            label="Show obsolete"
+            checked={includeObsolete}
+            onChange={(e) => {
+              setIncludeObsolete(e.currentTarget.checked);
+              setPage(1);
+            }}
+          />
           {comparing && selected.length === 2 && (
             <Button size="sm" variant="light" onClick={handleCompare}>
               Compare
