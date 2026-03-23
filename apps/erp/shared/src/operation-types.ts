@@ -8,6 +8,12 @@ export const OperationPredecessorSchema = z.object({
   title: z.string(),
 });
 
+// Step summary (included in single operation GET responses)
+export const StepSummarySchema = z.object({
+  seqNo: z.number(),
+  title: z.string(),
+});
+
 export type OperationPredecessor = z.infer<typeof OperationPredecessorSchema>;
 
 // Full operation response shape
@@ -19,6 +25,7 @@ export const OperationSchema = z.object({
   description: z.string(),
   workCenterKey: z.string().nullable(),
   stepCount: z.number().optional(),
+  stepSummary: z.array(StepSummarySchema).optional(),
   predecessors: z.array(OperationPredecessorSchema).optional(),
   createdAt: z.iso.datetime(),
   createdBy: z.string(),

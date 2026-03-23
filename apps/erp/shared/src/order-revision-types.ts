@@ -2,6 +2,16 @@ import { z } from "zod/v4";
 
 import { HateoasActionSchema, HateoasLinkSchema } from "./hateoas-types.js";
 
+// Operation summary embedded in revision GET responses
+export const RevisionOperationSummarySchema = z.object({
+  seqNo: z.number(),
+  title: z.string(),
+});
+
+export type RevisionOperationSummary = z.infer<
+  typeof RevisionOperationSummarySchema
+>;
+
 export const RevisionStatusEnum = z.enum(["draft", "approved", "obsolete"]);
 export type RevisionStatus = z.infer<typeof RevisionStatusEnum>;
 export const RevisionStatus = RevisionStatusEnum.enum;
@@ -15,6 +25,7 @@ export const OrderRevisionSchema = z.object({
   description: z.string(),
   changeSummary: z.string().nullable(),
   itemKey: z.string().nullable(),
+  operationSummary: z.array(RevisionOperationSummarySchema).optional(),
   createdAt: z.iso.datetime(),
   createdBy: z.string(),
   updatedAt: z.iso.datetime(),

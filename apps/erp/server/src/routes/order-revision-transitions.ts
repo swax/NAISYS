@@ -65,7 +65,7 @@ export default function orderRevisionTransitionRoutes(
         userId,
       );
 
-      return formatRevision(orderKey, request.erpUser, revision);
+      return await formatRevision(orderKey, request.erpUser, revision);
     },
   });
 
@@ -114,7 +114,7 @@ export default function orderRevisionTransitionRoutes(
         userId,
       );
 
-      return formatRevision(orderKey, request.erpUser, revision);
+      return await formatRevision(orderKey, request.erpUser, revision);
     },
   });
 }

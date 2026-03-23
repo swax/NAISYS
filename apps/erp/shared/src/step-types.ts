@@ -11,6 +11,7 @@ export const StepSchema = z.object({
   title: z.string(),
   instructions: z.string(),
   multiSet: z.boolean(),
+  fieldCount: z.number().optional(),
   createdAt: z.iso.datetime(),
   createdBy: z.string(),
   updatedAt: z.iso.datetime(),

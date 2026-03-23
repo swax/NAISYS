@@ -2,7 +2,7 @@ import erpDb from "../erpDb.js";
 
 // --- Prisma include & result type ---
 
-export const includeStep = {
+export const includeStepRunWithFields = {
   step: {
     select: {
       seqNo: true,
@@ -50,7 +50,7 @@ export const includeStep = {
   updatedBy: { select: { username: true } },
 } as const;
 
-export type StepRunWithStep = {
+export type StepRunWithStepAndFields = {
   id: number;
   operationRunId: number;
   stepId: number;
@@ -91,6 +91,48 @@ export type StepRunWithStep = {
   updatedBy: { username: string };
 };
 
+// --- Lightweight include (step metadata only, no field values) ---
+
+export const includeStepRun = {
+  step: {
+    select: {
+      seqNo: true,
+      title: true,
+      instructions: true,
+      multiSet: true,
+      fieldSet: {
+        select: {
+          _count: { select: { fields: true } },
+        },
+      },
+    },
+  },
+  createdBy: { select: { username: true } },
+  updatedBy: { select: { username: true } },
+} as const;
+
+export type StepRunWithStep = {
+  id: number;
+  operationRunId: number;
+  stepId: number;
+  completed: boolean;
+  completionNote: string | null;
+  fieldRecordId: number | null;
+  createdAt: Date;
+  updatedAt: Date;
+  step: {
+    seqNo: number;
+    title: string;
+    instructions: string;
+    multiSet: boolean;
+    fieldSet: {
+      _count: { fields: number };
+    } | null;
+  };
+  createdBy: { username: string };
+  updatedBy: { username: string };
+};
+
 // --- Lookups ---
 
 export async function listStepRuns(
@@ -98,25 +140,26 @@ export async function listStepRuns(
 ): Promise<StepRunWithStep[]> {
   return erpDb.stepRun.findMany({
     where: { operationRunId: opRunId },
-    include: includeStep,
+    include: includeStepRun,
     orderBy: { step: { seqNo: "asc" } },
   });
 }
 
-export async function getStepRun(id: number): Promise<StepRunWithStep | null> {
-  return erpDb.stepRun.findUnique({
-    where: { id },
-    include: includeStep,
+export async function listStepRunsWithFields(
+  opRunId: number,
+): Promise<StepRunWithStepAndFields[]> {
+  return erpDb.stepRun.findMany({
+    where: { operationRunId: opRunId },
+    include: includeStepRunWithFields,
+    orderBy: { step: { seqNo: "asc" } },
   });
 }
 
-export async function findExisting(id: number, opRunId: number) {
-  const existing = await erpDb.stepRun.findUnique({
+export async function getStepRunWithFields(id: number): Promise<StepRunWithStepAndFields | null> {
+  return erpDb.stepRun.findUnique({
     where: { id },
-    include: includeStep,
+    include: includeStepRunWithFields,
   });
-  if (!existing || existing.operationRunId !== opRunId) return null;
-  return existing;
 }
 
 // --- Mutations ---
@@ -126,7 +169,7 @@ export async function updateStepRun(
   completed: boolean | undefined,
   completionNote: string | undefined,
   userId: number,
-): Promise<StepRunWithStep> {
+): Promise<StepRunWithStepAndFields> {
   if (completed !== undefined) {
     await erpDb.stepRun.update({
       where: { id },
@@ -140,6 +183,6 @@ export async function updateStepRun(
 
   return erpDb.stepRun.findUniqueOrThrow({
     where: { id },
-    include: includeStep,
+    include: includeStepRunWithFields,
   });
 }

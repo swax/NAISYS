@@ -6,7 +6,7 @@ import {
 } from "@naisys-erp/shared";
 
 import erpDb from "../erpDb.js";
-import type { StepRunWithStep } from "./step-run-service.js";
+import type { StepRunWithStepAndFields } from "./step-run-service.js";
 
 // --- Lookups ---
 
@@ -150,7 +150,7 @@ function fieldValueKey(fieldId: number, setIndex: number): string {
 }
 
 export function validateCompletionFields(
-  existing: StepRunWithStep,
+  existing: StepRunWithStepAndFields,
 ): string | null {
   const existingFieldValues = existing.fieldRecord?.fieldValues ?? [];
 

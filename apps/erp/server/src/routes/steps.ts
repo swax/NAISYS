@@ -68,6 +68,7 @@ function formatStep(
     title: step.title,
     instructions: step.instructions,
     multiSet: step.multiSet,
+    fieldCount: step.fieldSet?.fields.length ?? 0,
     ...formatAuditFields(step),
     fields: formatFieldListResponse(
       orderKey,
