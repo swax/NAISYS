@@ -12,7 +12,12 @@ import {
   Tooltip,
 } from "@mantine/core";
 import { CompactMarkdown } from "@naisys/common-browser";
-import type { StepRun, StepRunListResponse } from "@naisys-erp/shared";
+import type {
+  HateoasAction,
+  HateoasActionTemplate,
+  StepRun,
+  StepRunListResponse,
+} from "@naisys-erp/shared";
 import {
   IconArrowBackUp,
   IconChevronDown,
@@ -87,6 +92,25 @@ export const StepRunList: React.FC<Props> = ({
     onStepUpdate?.();
   };
 
+  const updateStepActions = (
+    stepId: number,
+    actions: HateoasAction[],
+    actionTemplates: HateoasActionTemplate[],
+  ) => {
+    setData((prev) =>
+      prev
+        ? {
+            ...prev,
+            items: prev.items.map((s) =>
+              s.id === stepId
+                ? { ...s, _actions: actions, _actionTemplates: actionTemplates }
+                : s,
+            ),
+          }
+        : prev,
+    );
+  };
+
   const handleComplete = async (
     step: StepRun,
     completionNote?: string,
@@ -158,60 +182,61 @@ export const StepRunList: React.FC<Props> = ({
                     </Text>
                     <Group gap="xs">
                       {completeAction && (
-                        <Group gap={0}>
-                          <Button
-                            size="xs"
-                            color="green"
-                            disabled={completeAction.disabled}
-                            loading={savingStep === step.id}
-                            onClick={() => handleComplete(step)}
-                            style={{
-                              borderTopRightRadius: 0,
-                              borderBottomRightRadius: 0,
-                            }}
-                          >
-                            Complete
-                          </Button>
-                          <Menu position="bottom-end" withinPortal>
-                            <Menu.Target>
-                              <Button
-                                size="xs"
-                                color="green"
-                                px={6}
-                                disabled={
-                                  completeAction.disabled ||
-                                  savingStep === step.id
-                                }
-                                style={{
-                                  borderTopLeftRadius: 0,
-                                  borderBottomLeftRadius: 0,
-                                  borderLeft:
-                                    "1px solid rgba(255,255,255,0.3)",
-                                }}
-                              >
-                                <IconChevronDown size={14} />
-                              </Button>
-                            </Menu.Target>
-                            <Menu.Dropdown>
-                              <Menu.Item
-                                leftSection={<IconNote size={14} />}
-                                onClick={() => {
-                                  setNoteModalStep(step);
-                                  setNoteText("");
-                                }}
-                              >
-                                Complete with note
-                              </Menu.Item>
-                            </Menu.Dropdown>
-                          </Menu>
-                          {completeAction.disabledReason && (
-                            <Tooltip label={completeAction.disabledReason}>
-                              <Text size="xs" c="dimmed" style={{ cursor: "help" }}>
-                                {completeAction.disabledReason}
-                              </Text>
-                            </Tooltip>
-                          )}
-                        </Group>
+                        <Tooltip
+                          label={completeAction.disabledReason}
+                          disabled={!completeAction.disabledReason}
+                          multiline
+                          maw={400}
+                          style={{ whiteSpace: "pre-line" }}
+                        >
+                          <Group gap={0}>
+                            <Button
+                              size="xs"
+                              color="green"
+                              disabled={completeAction.disabled}
+                              loading={savingStep === step.id}
+                              onClick={() => handleComplete(step)}
+                              style={{
+                                borderTopRightRadius: 0,
+                                borderBottomRightRadius: 0,
+                              }}
+                            >
+                              Complete
+                            </Button>
+                            <Menu position="bottom-end" withinPortal>
+                              <Menu.Target>
+                                <Button
+                                  size="xs"
+                                  color="green"
+                                  px={6}
+                                  disabled={
+                                    completeAction.disabled ||
+                                    savingStep === step.id
+                                  }
+                                  style={{
+                                    borderTopLeftRadius: 0,
+                                    borderBottomLeftRadius: 0,
+                                    borderLeft:
+                                      "1px solid rgba(255,255,255,0.3)",
+                                  }}
+                                >
+                                  <IconChevronDown size={14} />
+                                </Button>
+                              </Menu.Target>
+                              <Menu.Dropdown>
+                                <Menu.Item
+                                  leftSection={<IconNote size={14} />}
+                                  onClick={() => {
+                                    setNoteModalStep(step);
+                                    setNoteText("");
+                                  }}
+                                >
+                                  Complete with note
+                                </Menu.Item>
+                              </Menu.Dropdown>
+                            </Menu>
+                          </Group>
+                        </Tooltip>
                       )}
                       {reopenAction && (
                         <Group gap="xs" align="center">
@@ -335,6 +360,9 @@ export const StepRunList: React.FC<Props> = ({
                         )}`
                       }
                       onSetDeleted={() => void fetchSteps()}
+                      onActionsUpdated={(actions, actionTemplates) =>
+                        updateStepActions(step.id, actions, actionTemplates)
+                      }
                     />
                   )}
                 </Stack>

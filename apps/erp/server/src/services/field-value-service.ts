@@ -192,7 +192,7 @@ export function validateCompletionFields(
   }
 
   if (errors.length > 0) {
-    return `Cannot complete step: ${errors.join(", ")}`;
+    return `Cannot complete step:\n${errors.join("\n")}`;
   }
   return null;
 }

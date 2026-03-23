@@ -33,7 +33,11 @@ import {
   type StepRunWithStep,
 } from "../services/step-run-service.js";
 
-function stepRunResource(orderKey: string, runNo: number, seqNo: number) {
+export function stepRunResource(
+  orderKey: string,
+  runNo: number,
+  seqNo: number,
+) {
   return `orders/${orderKey}/runs/${runNo}/ops/${seqNo}/steps`;
 }
 
@@ -102,6 +106,105 @@ async function stepRunItemActions(
     href,
     { status: opRunStatus, user },
   );
+}
+
+export function buildStepRunActionTemplates(
+  stepRunHref: string,
+  canUpdate: boolean,
+  multiSet: boolean,
+  hasAttachmentFields: boolean,
+) {
+  if (!canUpdate) return [];
+  return [
+    {
+      rel: "updateField",
+      hrefTemplate: multiSet
+        ? `${stepRunHref}/sets/{setIndex}/fields/{fieldSeqNo}`
+        : `${stepRunHref}/fields/{fieldSeqNo}`,
+      method: "PUT" as const,
+      title: "Update Field Value",
+      schema: `${API_PREFIX}/schemas/UpdateFieldValue`,
+    },
+    {
+      rel: "batchUpdateFields",
+      hrefTemplate: multiSet
+        ? `${stepRunHref}/sets/{setIndex}/fields`
+        : `${stepRunHref}/fields`,
+      method: "PUT" as const,
+      title: "Batch Update Field Values",
+      schema: `${API_PREFIX}/schemas/BatchUpdateFieldValues`,
+    },
+    ...(multiSet
+      ? [
+          {
+            rel: "deleteSet",
+            hrefTemplate: `${stepRunHref}/sets/{setIndex}`,
+            method: "DELETE" as const,
+            title: "Delete Set",
+          },
+        ]
+      : []),
+    ...(hasAttachmentFields
+      ? [
+          {
+            rel: "uploadAttachment",
+            hrefTemplate: multiSet
+              ? `${stepRunHref}/sets/{setIndex}/fields/{fieldSeqNo}/attachments`
+              : `${stepRunHref}/fields/{fieldSeqNo}/attachments`,
+            method: "POST" as const,
+            title: "Upload Attachment",
+            alternateEncoding: {
+              contentType: "multipart/form-data",
+              description:
+                "Upload file as multipart/form-data with field 'file'",
+              fileFields: ["file"],
+            },
+          },
+        ]
+      : []),
+  ];
+}
+
+/** Compute just the HATEOAS actions + action templates for a step run */
+export async function computeStepRunHateoas(
+  orderKey: string,
+  runNo: number,
+  seqNo: number,
+  stepSeqNo: number,
+  opRunId: number,
+  operationId: number,
+  opRunStatus: string,
+  completed: boolean,
+  stepRunId: number,
+  multiSet: boolean,
+  hasAttachmentFields: boolean,
+  user: ErpUser | undefined,
+) {
+  const canUpdate =
+    hasPermission(user, "order_executor") &&
+    opRunStatus === OperationRunStatus.in_progress;
+  const stepRunHref = `${API_PREFIX}/${stepRunResource(orderKey, runNo, seqNo)}/${stepSeqNo}`;
+
+  return {
+    _actions: await stepRunItemActions(
+      orderKey,
+      runNo,
+      seqNo,
+      stepSeqNo,
+      opRunId,
+      operationId,
+      opRunStatus,
+      completed,
+      stepRunId,
+      user,
+    ),
+    _actionTemplates: buildStepRunActionTemplates(
+      stepRunHref,
+      canUpdate,
+      multiSet,
+      hasAttachmentFields,
+    ),
+  };
 }
 
 const OpSeqNoParamsSchema = z.object({
@@ -193,60 +296,20 @@ export async function formatStepRun(
     (f) => f.type === "attachment",
   );
 
-  // Action templates — one per action type instead of per-field/set
-  // For multiSet steps, field URLs include /sets/{setIndex}/ so the AI agent
-  // knows to specify which set row to update. For non-multiSet steps, the
-  // simpler /fields/{fieldSeqNo} path is used (implicit set 0).
-  const actionTemplates = canUpdate
-    ? [
-        {
-          rel: "updateField",
-          hrefTemplate: multiSet
-            ? `${stepRunHref}/sets/{setIndex}/fields/{fieldSeqNo}`
-            : `${stepRunHref}/fields/{fieldSeqNo}`,
-          method: "PUT" as const,
-          title: "Update Field Value",
-          schema: `${API_PREFIX}/schemas/UpdateFieldValue`,
-        },
-        {
-          rel: "batchUpdateFields",
-          hrefTemplate: multiSet
-            ? `${stepRunHref}/sets/{setIndex}/fields`
-            : `${stepRunHref}/fields`,
-          method: "PUT" as const,
-          title: "Batch Update Field Values",
-          schema: `${API_PREFIX}/schemas/BatchUpdateFieldValues`,
-        },
-        ...(multiSet
-          ? [
-              {
-                rel: "deleteSet",
-                hrefTemplate: `${stepRunHref}/sets/{setIndex}`,
-                method: "DELETE" as const,
-                title: "Delete Set",
-              },
-            ]
-          : []),
-        ...(hasAttachmentFields
-          ? [
-              {
-                rel: "uploadAttachment",
-                hrefTemplate: multiSet
-                  ? `${stepRunHref}/sets/{setIndex}/fields/{fieldSeqNo}/attachments`
-                  : `${stepRunHref}/fields/{fieldSeqNo}/attachments`,
-                method: "POST" as const,
-                title: "Upload Attachment",
-                alternateEncoding: {
-                  contentType: "multipart/form-data",
-                  description:
-                    "Upload file as multipart/form-data with field 'file'",
-                  fileFields: ["file"],
-                },
-              },
-            ]
-          : []),
-      ]
-    : [];
+  const hateoas = await computeStepRunHateoas(
+    orderKey,
+    runNo,
+    seqNo,
+    stepSeqNo,
+    opRunId,
+    operationId,
+    opRunStatus,
+    stepRun.completed,
+    stepRun.id,
+    multiSet,
+    hasAttachmentFields,
+    user,
+  );
 
   return {
     id: stepRun.id,
@@ -269,19 +332,7 @@ export async function formatStepRun(
       "StepRun",
       "operationRun",
     ),
-    _actions: await stepRunItemActions(
-      orderKey,
-      runNo,
-      seqNo,
-      stepSeqNo,
-      opRunId,
-      operationId,
-      opRunStatus,
-      stepRun.completed,
-      stepRun.id,
-      user,
-    ),
-    _actionTemplates: actionTemplates,
+    ...hateoas,
   };
 }
 

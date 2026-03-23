@@ -16,6 +16,8 @@ import type {
   FieldAttachment,
   FieldValue,
   FieldValueEntry,
+  FieldValueUpdateResponse,
+  HateoasAction,
   HateoasActionTemplate,
   UploadAttachmentResponse,
 } from "@naisys-erp/shared";
@@ -82,6 +84,10 @@ interface FieldValueRunListProps {
     attachmentId: number | string,
   ) => string;
   onSetDeleted: () => void;
+  onActionsUpdated?: (
+    actions: HateoasAction[],
+    actionTemplates: HateoasActionTemplate[],
+  ) => void;
 }
 
 function StatusIcon({ status }: { status?: FieldSaveStatus }) {
@@ -103,6 +109,7 @@ export const FieldValueRunList: React.FC<FieldValueRunListProps> = ({
   attachmentEndpoint,
   attachmentDownloadUrl,
   onSetDeleted,
+  onActionsUpdated,
 }) => {
   // --- Internal state ---
   const [fieldValues, setFieldValues] = useState(fieldValuesProp);
@@ -249,12 +256,15 @@ export const FieldValueRunList: React.FC<FieldValueRunListProps> = ({
     setFieldSaveStatus(fv.fieldId, fv.setIndex, "saving");
 
     try {
-      const updated = await api.put<FieldValueEntry>(
+      const updated = await api.put<FieldValueUpdateResponse>(
         fieldValueEndpoint(fv.fieldSeqNo, fv.setIndex),
         { value: newValue },
       );
       onFieldSaved(fv.fieldId, fv.setIndex, updated);
       setFieldSaveStatus(fv.fieldId, fv.setIndex, "saved");
+      if (updated._actions && updated._actionTemplates) {
+        onActionsUpdated?.(updated._actions, updated._actionTemplates);
+      }
     } catch (err) {
       showErrorNotification(err);
       setFieldSaveStatus(fv.fieldId, fv.setIndex, "error");
