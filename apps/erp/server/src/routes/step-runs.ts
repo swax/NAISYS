@@ -228,6 +228,46 @@ const StepSeqNoParamsSchema = z.object({
   stepSeqNo: z.coerce.number().int(),
 });
 
+export async function formatStepRunTransition(
+  orderKey: string,
+  runNo: number,
+  seqNo: number,
+  opRunId: number,
+  operationId: number,
+  opRunStatus: string,
+  user: ErpUser | undefined,
+  stepRun: StepRunWithStep,
+) {
+  const stepSeqNo = stepRun.step.seqNo;
+  const multiSet = stepRun.step.multiSet;
+  const hasAttachmentFields = (stepRun.step.fieldSet?.fields ?? []).some(
+    (f) => f.type === "attachment",
+  );
+
+  const hateoas = await computeStepRunHateoas(
+    orderKey,
+    runNo,
+    seqNo,
+    stepSeqNo,
+    opRunId,
+    operationId,
+    opRunStatus,
+    stepRun.completed,
+    stepRun.id,
+    multiSet,
+    hasAttachmentFields,
+    user,
+  );
+
+  return {
+    id: stepRun.id,
+    completed: stepRun.completed,
+    completionNote: stepRun.completionNote ?? null,
+    ...formatAuditFields(stepRun),
+    ...hateoas,
+  };
+}
+
 export async function formatStepRun(
   orderKey: string,
   runNo: number,

@@ -1,7 +1,7 @@
 import {
   CompleteStepRunSchema,
   ErrorResponseSchema,
-  StepRunSchema,
+  StepRunTransitionSchema,
 } from "@naisys-erp/shared";
 import { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
@@ -21,7 +21,7 @@ import {
   getStepRun,
   updateStepRun,
 } from "../services/step-run-service.js";
-import { formatStepRun } from "./step-runs.js";
+import { formatStepRunTransition } from "./step-runs.js";
 
 const StepSeqNoParamsSchema = z.object({
   orderKey: z.string(),
@@ -42,7 +42,7 @@ export default function stepRunTransitionRoutes(fastify: FastifyInstance) {
       params: StepSeqNoParamsSchema,
       body: CompleteStepRunSchema,
       response: {
-        200: StepRunSchema,
+        200: StepRunTransitionSchema,
         404: ErrorResponseSchema,
         409: ErrorResponseSchema,
         422: ErrorResponseSchema,
@@ -92,7 +92,7 @@ export default function stepRunTransitionRoutes(fastify: FastifyInstance) {
         userId,
       );
 
-      return formatStepRun(
+      return formatStepRunTransition(
         orderKey,
         runNo,
         seqNo,
@@ -112,7 +112,7 @@ export default function stepRunTransitionRoutes(fastify: FastifyInstance) {
       tags: ["Step Runs"],
       params: StepSeqNoParamsSchema,
       response: {
-        200: StepRunSchema,
+        200: StepRunTransitionSchema,
         404: ErrorResponseSchema,
         409: ErrorResponseSchema,
       },
@@ -148,7 +148,7 @@ export default function stepRunTransitionRoutes(fastify: FastifyInstance) {
         userId,
       );
 
-      return formatStepRun(
+      return formatStepRunTransition(
         orderKey,
         runNo,
         seqNo,

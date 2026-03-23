@@ -217,6 +217,33 @@ export async function formatOpRun(
   };
 }
 
+export async function formatOpRunTransition(
+  orderKey: string,
+  runNo: number,
+  user: ErpUser | undefined,
+  opRun: OpRunWithOp,
+) {
+  const seqNo = opRun.operation.seqNo;
+  return {
+    id: opRun.id,
+    status: opRun.status,
+    assignedTo: opRun.assignedTo?.username ?? null,
+    cost: opRun.cost,
+    completionNote: opRun.completionNote ?? null,
+    completedAt: formatDate(opRun.completedAt),
+    ...formatAuditFields(opRun),
+    _actions: await opRunItemActions(
+      orderKey,
+      runNo,
+      seqNo,
+      opRun.id,
+      opRun.operationId,
+      opRun.status,
+      user,
+    ),
+  };
+}
+
 function formatListOpRun(
   orderKey: string,
   runNo: number,

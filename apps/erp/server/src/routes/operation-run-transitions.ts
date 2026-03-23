@@ -1,8 +1,8 @@
 import {
   CompleteOperationRunSchema,
   ErrorResponseSchema,
-  OperationRunSchema,
   OperationRunStatus,
+  OperationRunTransitionSchema,
   OrderRunStatus,
 } from "@naisys-erp/shared";
 import { FastifyInstance } from "fastify";
@@ -30,7 +30,7 @@ import {
   validateStatusFor,
 } from "../services/operation-run-service.js";
 import { transitionStatus as transitionOrderRunStatus } from "../services/order-run-service.js";
-import { formatOpRun, SeqNoParamsSchema } from "./operation-runs.js";
+import { formatOpRunTransition, SeqNoParamsSchema } from "./operation-runs.js";
 
 export default function operationRunTransitionRoutes(fastify: FastifyInstance) {
   const app = fastify.withTypeProvider<ZodTypeProvider>();
@@ -42,7 +42,7 @@ export default function operationRunTransitionRoutes(fastify: FastifyInstance) {
       tags: ["Operation Runs"],
       params: SeqNoParamsSchema,
       response: {
-        200: OperationRunSchema,
+        200: OperationRunTransitionSchema,
         404: ErrorResponseSchema,
         409: ErrorResponseSchema,
         422: ErrorResponseSchema,
@@ -93,7 +93,7 @@ export default function operationRunTransitionRoutes(fastify: FastifyInstance) {
         { assignedToId: userId },
       );
       await clockIn(resolved.opRun.id, userId, userId);
-      return formatOpRun(orderKey, runNo, request.erpUser, opRun);
+      return formatOpRunTransition(orderKey, runNo, request.erpUser, opRun);
     },
   });
 
@@ -105,7 +105,7 @@ export default function operationRunTransitionRoutes(fastify: FastifyInstance) {
       params: SeqNoParamsSchema,
       body: CompleteOperationRunSchema,
       response: {
-        200: OperationRunSchema,
+        200: OperationRunTransitionSchema,
         404: ErrorResponseSchema,
         409: ErrorResponseSchema,
         422: ErrorResponseSchema,
@@ -160,7 +160,7 @@ export default function operationRunTransitionRoutes(fastify: FastifyInstance) {
         resolved.opRun.operationId,
         userId,
       );
-      return formatOpRun(orderKey, runNo, request.erpUser, opRun);
+      return formatOpRunTransition(orderKey, runNo, request.erpUser, opRun);
     },
   });
 
@@ -171,7 +171,7 @@ export default function operationRunTransitionRoutes(fastify: FastifyInstance) {
       tags: ["Operation Runs"],
       params: SeqNoParamsSchema,
       response: {
-        200: OperationRunSchema,
+        200: OperationRunTransitionSchema,
         404: ErrorResponseSchema,
         409: ErrorResponseSchema,
       },
@@ -212,7 +212,7 @@ export default function operationRunTransitionRoutes(fastify: FastifyInstance) {
         resolved.opRun.operationId,
         userId,
       );
-      return formatOpRun(orderKey, runNo, request.erpUser, opRun);
+      return formatOpRunTransition(orderKey, runNo, request.erpUser, opRun);
     },
   });
 
@@ -223,7 +223,7 @@ export default function operationRunTransitionRoutes(fastify: FastifyInstance) {
       tags: ["Operation Runs"],
       params: SeqNoParamsSchema,
       response: {
-        200: OperationRunSchema,
+        200: OperationRunTransitionSchema,
         404: ErrorResponseSchema,
         409: ErrorResponseSchema,
       },
@@ -257,7 +257,7 @@ export default function operationRunTransitionRoutes(fastify: FastifyInstance) {
         userId,
         cost > 0 ? { cost } : undefined,
       );
-      return formatOpRun(orderKey, runNo, request.erpUser, opRun);
+      return formatOpRunTransition(orderKey, runNo, request.erpUser, opRun);
     },
   });
 
@@ -268,7 +268,7 @@ export default function operationRunTransitionRoutes(fastify: FastifyInstance) {
       tags: ["Operation Runs"],
       params: SeqNoParamsSchema,
       response: {
-        200: OperationRunSchema,
+        200: OperationRunTransitionSchema,
         404: ErrorResponseSchema,
         409: ErrorResponseSchema,
       },
@@ -313,7 +313,7 @@ export default function operationRunTransitionRoutes(fastify: FastifyInstance) {
         resolved.opRun.operationId,
         userId,
       );
-      return formatOpRun(orderKey, runNo, request.erpUser, opRun);
+      return formatOpRunTransition(orderKey, runNo, request.erpUser, opRun);
     },
   });
 }

@@ -142,6 +142,19 @@ export const DeleteSetResponseSchema = z.object({
 
 export type DeleteSetResponse = z.infer<typeof DeleteSetResponseSchema>;
 
+// Slim transition response (complete/reopen)
+export const StepRunTransitionSchema = z.object({
+  id: z.number(),
+  completed: z.boolean(),
+  completionNote: z.string().nullable(),
+  updatedAt: z.iso.datetime(),
+  updatedBy: z.string(),
+  _actions: z.array(HateoasActionSchema).optional(),
+  _actionTemplates: z.array(HateoasActionTemplateSchema).optional(),
+});
+
+export type StepRunTransition = z.infer<typeof StepRunTransitionSchema>;
+
 // Input for completing a step run
 export const CompleteStepRunSchema = z
   .object({

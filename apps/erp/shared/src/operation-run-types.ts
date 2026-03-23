@@ -58,6 +58,23 @@ export const CompleteOperationRunSchema = z
 
 export type CompleteOperationRun = z.infer<typeof CompleteOperationRunSchema>;
 
+// Slim transition response (start/complete/skip/fail/reopen)
+export const OperationRunTransitionSchema = z.object({
+  id: z.number(),
+  status: OperationRunStatusEnum,
+  assignedTo: z.string().nullable(),
+  cost: z.number().nullable(),
+  completionNote: z.string().nullable(),
+  completedAt: z.iso.datetime().nullable(),
+  updatedAt: z.iso.datetime(),
+  updatedBy: z.string(),
+  _actions: z.array(HateoasActionSchema).optional(),
+});
+
+export type OperationRunTransition = z.infer<
+  typeof OperationRunTransitionSchema
+>;
+
 // List response
 export const OperationRunListResponseSchema = z.object({
   items: z.array(OperationRunSchema),
