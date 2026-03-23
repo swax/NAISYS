@@ -9,13 +9,10 @@ import {
   Stack,
   Text,
   Textarea,
+  Tooltip,
 } from "@mantine/core";
 import { CompactMarkdown } from "@naisys/common-browser";
-import type {
-  StepRun,
-  StepRunListResponse,
-  UpdateStepRun,
-} from "@naisys-erp/shared";
+import type { StepRun, StepRunListResponse } from "@naisys-erp/shared";
 import {
   IconArrowBackUp,
   IconChevronDown,
@@ -78,28 +75,44 @@ export const StepRunList: React.FC<Props> = ({
     void fetchSteps();
   }, [fetchSteps]);
 
-  const saveStep = async (
+  const updateStep = (updated: StepRun) => {
+    setData((prev) =>
+      prev
+        ? {
+            ...prev,
+            items: prev.items.map((s) => (s.id === updated.id ? updated : s)),
+          }
+        : prev,
+    );
+    onStepUpdate?.();
+  };
+
+  const handleComplete = async (
     step: StepRun,
-    completed: boolean,
     completionNote?: string,
   ) => {
     setSavingStep(step.id);
-
     try {
-      const body: UpdateStepRun = { completed, completionNote };
-      const updated = await api.put<StepRun>(
-        apiEndpoints.stepRun(orderKey, runNo, seqNo, step.seqNo),
-        body,
+      const updated = await api.post<StepRun>(
+        apiEndpoints.stepRunComplete(orderKey, runNo, seqNo, step.seqNo),
+        { completionNote },
       );
-      setData((prev) =>
-        prev
-          ? {
-              ...prev,
-              items: prev.items.map((s) => (s.id === updated.id ? updated : s)),
-            }
-          : prev,
+      updateStep(updated);
+    } catch (err) {
+      showErrorNotification(err);
+    } finally {
+      setSavingStep(null);
+    }
+  };
+
+  const handleReopen = async (step: StepRun) => {
+    setSavingStep(step.id);
+    try {
+      const updated = await api.post<StepRun>(
+        apiEndpoints.stepRunReopen(orderKey, runNo, seqNo, step.seqNo),
+        {},
       );
-      onStepUpdate?.();
+      updateStep(updated);
     } catch (err) {
       showErrorNotification(err);
     } finally {
@@ -111,7 +124,7 @@ export const StepRunList: React.FC<Props> = ({
     if (!noteModalStep) return;
     setSubmittingNote(true);
     try {
-      await saveStep(noteModalStep, true, noteText.trim() || undefined);
+      await handleComplete(noteModalStep, noteText.trim() || undefined);
       setNoteModalStep(null);
       setNoteText("");
     } finally {
@@ -128,7 +141,12 @@ export const StepRunList: React.FC<Props> = ({
       ) : (
         <Stack gap="xs">
           {data?.items.map((step) => {
-            const canUpdate = hasAction(step._actions, "update");
+            const completeAction = hasAction(step._actions, "complete", {
+              includeDisabled: true,
+            });
+            const reopenAction = hasAction(step._actions, "reopen", {
+              includeDisabled: true,
+            });
 
             return (
               <Card key={step.id} withBorder p="sm">
@@ -139,13 +157,14 @@ export const StepRunList: React.FC<Props> = ({
                       {step.title ? `: ${step.title}` : ""}
                     </Text>
                     <Group gap="xs">
-                      {canUpdate && !step.completed && (
+                      {completeAction && (
                         <Group gap={0}>
                           <Button
                             size="xs"
                             color="green"
+                            disabled={completeAction.disabled}
                             loading={savingStep === step.id}
-                            onClick={() => saveStep(step, true)}
+                            onClick={() => handleComplete(step)}
                             style={{
                               borderTopRightRadius: 0,
                               borderBottomRightRadius: 0,
@@ -159,11 +178,15 @@ export const StepRunList: React.FC<Props> = ({
                                 size="xs"
                                 color="green"
                                 px={6}
-                                disabled={savingStep === step.id}
+                                disabled={
+                                  completeAction.disabled ||
+                                  savingStep === step.id
+                                }
                                 style={{
                                   borderTopLeftRadius: 0,
                                   borderBottomLeftRadius: 0,
-                                  borderLeft: "1px solid rgba(255,255,255,0.3)",
+                                  borderLeft:
+                                    "1px solid rgba(255,255,255,0.3)",
                                 }}
                               >
                                 <IconChevronDown size={14} />
@@ -181,27 +204,53 @@ export const StepRunList: React.FC<Props> = ({
                               </Menu.Item>
                             </Menu.Dropdown>
                           </Menu>
+                          {completeAction.disabledReason && (
+                            <Tooltip label={completeAction.disabledReason}>
+                              <Text size="xs" c="dimmed" style={{ cursor: "help" }}>
+                                {completeAction.disabledReason}
+                              </Text>
+                            </Tooltip>
+                          )}
                         </Group>
                       )}
-                      {canUpdate && step.completed && (
+                      {reopenAction && (
                         <Group gap="xs" align="center">
                           <Text size="xs" c="green">
                             Completed by {step.updatedBy} on{" "}
                             {new Date(step.updatedAt).toLocaleString()}
                           </Text>
-                          <ActionIcon
-                            size="xs"
-                            variant="subtle"
-                            color="gray"
-                            loading={savingStep === step.id}
-                            onClick={() => saveStep(step, false)}
-                            title="Undo completion"
-                          >
-                            <IconArrowBackUp size={14} />
-                          </ActionIcon>
+                          {(() => {
+                            const icon = (
+                              <ActionIcon
+                                size="xs"
+                                variant="subtle"
+                                color="gray"
+                                disabled={reopenAction.disabled}
+                                loading={savingStep === step.id}
+                                onClick={
+                                  reopenAction.disabled
+                                    ? undefined
+                                    : () => handleReopen(step)
+                                }
+                                title={
+                                  reopenAction.disabledReason ??
+                                  "Undo completion"
+                                }
+                              >
+                                <IconArrowBackUp size={14} />
+                              </ActionIcon>
+                            );
+                            return reopenAction.disabledReason ? (
+                              <Tooltip label={reopenAction.disabledReason}>
+                                {icon}
+                              </Tooltip>
+                            ) : (
+                              icon
+                            );
+                          })()}
                         </Group>
                       )}
-                      {!canUpdate && step.completed && (
+                      {!completeAction && !reopenAction && step.completed && (
                         <Text size="xs" c="green">
                           Completed by {step.updatedBy} on{" "}
                           {new Date(step.updatedAt).toLocaleString()}
@@ -324,7 +373,7 @@ export const StepRunList: React.FC<Props> = ({
             </Button>
             <Button
               color="green"
-              onClick={handleNoteSubmit}
+              onClick={() => void handleNoteSubmit()}
               loading={submittingNote}
             >
               Complete

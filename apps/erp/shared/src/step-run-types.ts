@@ -112,16 +112,14 @@ export type BatchFieldValueResponse = z.infer<
   typeof BatchFieldValueResponseSchema
 >;
 
-// Update step run — completion state only (field values are updated via
-// dedicated per-field and batch-field endpoints)
-export const UpdateStepRunSchema = z
+// Input for completing a step run
+export const CompleteStepRunSchema = z
   .object({
-    completed: z.boolean().optional(),
     completionNote: z.string().max(2000).optional(),
   })
   .strict();
 
-export type UpdateStepRun = z.infer<typeof UpdateStepRunSchema>;
+export type CompleteStepRun = z.infer<typeof CompleteStepRunSchema>;
 
 // List response
 export const StepRunListResponseSchema = z.object({
