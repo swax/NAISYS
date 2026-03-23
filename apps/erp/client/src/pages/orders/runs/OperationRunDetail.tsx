@@ -18,7 +18,7 @@ import {
   Tooltip,
 } from "@mantine/core";
 import { ActionButton, CompactMarkdown } from "@naisys/common-browser";
-import type { OperationRun } from "@naisys-erp/shared";
+import type { OperationRun, OperationRunTransition } from "@naisys-erp/shared";
 import { OperationRunStatus } from "@naisys-erp/shared";
 import {
   IconArrowBackUp,
@@ -122,11 +122,11 @@ export const OperationRunDetail: React.FC = () => {
       reopen: apiEndpoints.operationRunReopen,
     };
     try {
-      const updated = await api.post<OperationRun>(
+      const updated = await api.post<OperationRunTransition>(
         endpointMap[action](orderKey, runNo, seqNo),
         body,
       );
-      setOpRun(updated);
+      setOpRun((prev) => (prev ? { ...prev, ...updated } : prev));
       setRefreshKey((k) => k + 1);
       onOperationUpdate();
       refreshOrderRun();

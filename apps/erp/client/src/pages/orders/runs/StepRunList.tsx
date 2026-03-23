@@ -17,6 +17,7 @@ import type {
   HateoasActionTemplate,
   StepRun,
   StepRunListResponse,
+  StepRunTransition,
 } from "@naisys-erp/shared";
 import {
   IconArrowBackUp,
@@ -80,12 +81,14 @@ export const StepRunList: React.FC<Props> = ({
     void fetchSteps();
   }, [fetchSteps]);
 
-  const updateStep = (updated: StepRun) => {
+  const mergeStepTransition = (updated: StepRunTransition) => {
     setData((prev) =>
       prev
         ? {
             ...prev,
-            items: prev.items.map((s) => (s.id === updated.id ? updated : s)),
+            items: prev.items.map((s) =>
+              s.id === updated.id ? { ...s, ...updated } : s,
+            ),
           }
         : prev,
     );
@@ -117,11 +120,11 @@ export const StepRunList: React.FC<Props> = ({
   ) => {
     setSavingStep(step.id);
     try {
-      const updated = await api.post<StepRun>(
+      const updated = await api.post<StepRunTransition>(
         apiEndpoints.stepRunComplete(orderKey, runNo, seqNo, step.seqNo),
         { completionNote },
       );
-      updateStep(updated);
+      mergeStepTransition(updated);
     } catch (err) {
       showErrorNotification(err);
     } finally {
@@ -132,11 +135,11 @@ export const StepRunList: React.FC<Props> = ({
   const handleReopen = async (step: StepRun) => {
     setSavingStep(step.id);
     try {
-      const updated = await api.post<StepRun>(
+      const updated = await api.post<StepRunTransition>(
         apiEndpoints.stepRunReopen(orderKey, runNo, seqNo, step.seqNo),
         {},
       );
-      updateStep(updated);
+      mergeStepTransition(updated);
     } catch (err) {
       showErrorNotification(err);
     } finally {
