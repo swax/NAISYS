@@ -309,6 +309,13 @@ export async function findOrderRevision(orderId: number, revNo: number) {
   });
 }
 
+export async function findLatestApprovedRevision(orderId: number) {
+  return erpDb.orderRevision.findFirst({
+    where: { orderId, status: "approved" },
+    orderBy: { revNo: "desc" },
+  });
+}
+
 export function getReopenTarget(currentStatus: OrderRunStatus): OrderRunStatus {
   return currentStatus === OrderRunStatusValues.closed
     ? OrderRunStatusValues.started
