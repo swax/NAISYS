@@ -1,9 +1,9 @@
 import {
-  BatchFieldValueResponseSchema,
+  BatchFieldValueUpdateResponseSchema,
   BatchUpdateFieldValuesSchema,
+  DeleteSetResponseSchema,
   ErrorResponseSchema,
-  FieldValueEntrySchema,
-  StepRunSchema,
+  FieldValueUpdateResponseSchema,
   UpdateFieldValueSchema,
 } from "@naisys-erp/shared";
 import { FastifyInstance } from "fastify";
@@ -29,7 +29,7 @@ import {
 import { ensureStepRunFieldRecord } from "../services/field-service.js";
 import { isUserClockedIn } from "../services/labor-ticket-service.js";
 import { getStepRun } from "../services/step-run-service.js";
-import { formatStepRun } from "./step-runs.js";
+import { computeStepRunHateoas } from "./step-runs.js";
 
 const FieldSeqNoParamsSchema = z.object({
   orderKey: z.string(),
@@ -129,10 +129,29 @@ export default function stepRunFieldRoutes(fastify: FastifyInstance) {
 
     await upsertFieldValue(fieldRecordId, field.id, setIndex, value, userId);
 
-    // Return deserialized value
+    // Return deserialized value + updated step-level actions
     const responseValue = deserializeFieldValue(
       serializeFieldValue(value),
       field.multiValue,
+    );
+
+    const hasAttachmentFields = (stepRun.step.fieldSet?.fields ?? []).some(
+      (f) => f.type === "attachment",
+    );
+
+    const hateoas = await computeStepRunHateoas(
+      orderKey,
+      runNo,
+      seqNo,
+      stepSeqNo,
+      resolved.opRun.id,
+      resolved.opRun.operationId,
+      resolved.opRun.status,
+      stepRun.completed,
+      resolved.stepRun.id,
+      stepRun.step.multiSet,
+      hasAttachmentFields,
+      request.erpUser,
     );
 
     return {
@@ -150,6 +169,7 @@ export default function stepRunFieldRoutes(fastify: FastifyInstance) {
         field.required,
         responseValue,
       ),
+      ...hateoas,
     };
   }
 
@@ -163,7 +183,7 @@ export default function stepRunFieldRoutes(fastify: FastifyInstance) {
       params: FieldSeqNoParamsSchema,
       body: UpdateFieldValueSchema,
       response: {
-        200: FieldValueEntrySchema,
+        200: FieldValueUpdateResponseSchema,
         404: ErrorResponseSchema,
         409: ErrorResponseSchema,
         422: ErrorResponseSchema,
@@ -182,7 +202,7 @@ export default function stepRunFieldRoutes(fastify: FastifyInstance) {
       params: SetFieldSeqNoParamsSchema,
       body: UpdateFieldValueSchema,
       response: {
-        200: FieldValueEntrySchema,
+        200: FieldValueUpdateResponseSchema,
         404: ErrorResponseSchema,
         409: ErrorResponseSchema,
         422: ErrorResponseSchema,
@@ -285,7 +305,26 @@ export default function stepRunFieldRoutes(fastify: FastifyInstance) {
       });
     }
 
-    return { items: results, total: results.length };
+    const hasAttachmentFields = (existing.step.fieldSet?.fields ?? []).some(
+      (f) => f.type === "attachment",
+    );
+
+    const hateoas = await computeStepRunHateoas(
+      orderKey,
+      runNo,
+      seqNo,
+      stepSeqNo,
+      resolved.opRun.id,
+      resolved.opRun.operationId,
+      resolved.opRun.status,
+      existing.completed,
+      resolved.stepRun.id,
+      existing.step.multiSet,
+      hasAttachmentFields,
+      request.erpUser,
+    );
+
+    return { items: results, total: results.length, ...hateoas };
   }
 
   // BATCH UPDATE field values (non-multiSet shorthand — implicit set 0)
@@ -298,7 +337,7 @@ export default function stepRunFieldRoutes(fastify: FastifyInstance) {
       params: StepSeqNoParamsSchema,
       body: BatchUpdateFieldValuesSchema,
       response: {
-        200: BatchFieldValueResponseSchema,
+        200: BatchFieldValueUpdateResponseSchema,
         404: ErrorResponseSchema,
         409: ErrorResponseSchema,
         422: ErrorResponseSchema,
@@ -318,7 +357,7 @@ export default function stepRunFieldRoutes(fastify: FastifyInstance) {
       params: SetFieldSeqNoParamsSchema.omit({ fieldSeqNo: true }),
       body: BatchUpdateFieldValuesSchema,
       response: {
-        200: BatchFieldValueResponseSchema,
+        200: BatchFieldValueUpdateResponseSchema,
         404: ErrorResponseSchema,
         409: ErrorResponseSchema,
         422: ErrorResponseSchema,
@@ -337,7 +376,7 @@ export default function stepRunFieldRoutes(fastify: FastifyInstance) {
       tags: ["Step Runs"],
       params: SetIndexParamsSchema,
       response: {
-        200: StepRunSchema,
+        200: DeleteSetResponseSchema,
         404: ErrorResponseSchema,
         409: ErrorResponseSchema,
       },
@@ -377,19 +416,35 @@ export default function stepRunFieldRoutes(fastify: FastifyInstance) {
       }
       await deleteFieldValueSet(existing.fieldRecord.id, setIndex);
 
-      const stepRun = await getStepRun(resolved.stepRun.id);
-      if (!stepRun) return notFound(reply, `Step run not found`);
+      // Compute new set count from remaining field values
+      const updated = await getStepRun(resolved.stepRun.id);
+      const storedFieldValues = updated?.fieldRecord?.fieldValues ?? [];
+      const maxSetIndex = storedFieldValues.reduce(
+        (max, fv) => Math.max(max, fv.setIndex),
+        -1,
+      );
+      const setCount = Math.max(1, maxSetIndex + 1);
 
-      return formatStepRun(
+      const hasAttachmentFields = (existing.step.fieldSet?.fields ?? []).some(
+        (f) => f.type === "attachment",
+      );
+
+      const hateoas = await computeStepRunHateoas(
         orderKey,
         runNo,
         seqNo,
+        stepSeqNo,
         resolved.opRun.id,
         resolved.opRun.operationId,
         resolved.opRun.status,
+        existing.completed,
+        resolved.stepRun.id,
+        existing.step.multiSet,
+        hasAttachmentFields,
         request.erpUser,
-        stepRun,
       );
+
+      return { setCount, ...hateoas };
     },
   });
 }

@@ -112,6 +112,36 @@ export type BatchFieldValueResponse = z.infer<
   typeof BatchFieldValueResponseSchema
 >;
 
+// Response for single field value update — field entry + step-level actions
+export const FieldValueUpdateResponseSchema = FieldValueEntrySchema.extend({
+  _actions: z.array(HateoasActionSchema).optional(),
+  _actionTemplates: z.array(HateoasActionTemplateSchema).optional(),
+});
+
+export type FieldValueUpdateResponse = z.infer<
+  typeof FieldValueUpdateResponseSchema
+>;
+
+// Response for batch field value update — field entries + step-level actions
+export const BatchFieldValueUpdateResponseSchema =
+  BatchFieldValueResponseSchema.extend({
+    _actions: z.array(HateoasActionSchema).optional(),
+    _actionTemplates: z.array(HateoasActionTemplateSchema).optional(),
+  });
+
+export type BatchFieldValueUpdateResponse = z.infer<
+  typeof BatchFieldValueUpdateResponseSchema
+>;
+
+// Response for deleting a field value set
+export const DeleteSetResponseSchema = z.object({
+  setCount: z.number(),
+  _actions: z.array(HateoasActionSchema).optional(),
+  _actionTemplates: z.array(HateoasActionTemplateSchema).optional(),
+});
+
+export type DeleteSetResponse = z.infer<typeof DeleteSetResponseSchema>;
+
 // Input for completing a step run
 export const CompleteStepRunSchema = z
   .object({
