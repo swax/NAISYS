@@ -1,11 +1,9 @@
 import type { HateoasAction } from "@naisys/common";
 import {
   ErrorResponseSchema,
-  FieldValueEntrySchema,
   OperationRunStatus,
   StepRunListResponseSchema,
   StepRunSchema,
-  UpdateFieldValueSchema,
   UpdateStepRunSchema,
 } from "@naisys-erp/shared";
 import { FastifyInstance } from "fastify";
@@ -26,20 +24,17 @@ import {
   resolveOpRun,
   resolveStepRun,
 } from "../route-helpers.js";
-import { ensureStepRunFieldRecord } from "../services/field-service.js";
-import { isUserClockedIn } from "../services/labor-ticket-service.js";
 import {
-  deleteFieldValueSet,
   deserializeFieldValue,
-  findStepRunWithField,
-  getStepRun,
-  listStepRuns,
-  serializeFieldValue,
-  type StepRunWithStep,
-  updateStepRun,
-  upsertFieldValue,
   validateCompletionFields,
   validateFieldValue,
+} from "../services/field-value-service.js";
+import { isUserClockedIn } from "../services/labor-ticket-service.js";
+import {
+  getStepRun,
+  listStepRuns,
+  type StepRunWithStep,
+  updateStepRun,
 } from "../services/step-run-service.js";
 
 function stepRunResource(orderKey: string, runNo: number, seqNo: number) {
@@ -88,24 +83,7 @@ const StepSeqNoParamsSchema = z.object({
   stepSeqNo: z.coerce.number().int(),
 });
 
-const FieldSeqNoParamsSchema = z.object({
-  orderKey: z.string(),
-  runNo: z.coerce.number().int(),
-  seqNo: z.coerce.number().int(),
-  stepSeqNo: z.coerce.number().int(),
-  fieldSeqNo: z.coerce.number().int(),
-});
-
-const SetFieldSeqNoParamsSchema = z.object({
-  orderKey: z.string(),
-  runNo: z.coerce.number().int(),
-  seqNo: z.coerce.number().int(),
-  stepSeqNo: z.coerce.number().int(),
-  setIndex: z.coerce.number().int().min(0),
-  fieldSeqNo: z.coerce.number().int(),
-});
-
-function formatStepRun(
+export function formatStepRun(
   orderKey: string,
   runNo: number,
   seqNo: number,
@@ -193,6 +171,15 @@ function formatStepRun(
           method: "PUT" as const,
           title: "Update Field Value",
           schema: `${API_PREFIX}/schemas/UpdateFieldValue`,
+        },
+        {
+          rel: "batchUpdateFields",
+          hrefTemplate: multiSet
+            ? `${stepRunHref}/sets/{setIndex}/fields`
+            : `${stepRunHref}/fields`,
+          method: "PUT" as const,
+          title: "Batch Update Field Values",
+          schema: `${API_PREFIX}/schemas/BatchUpdateFieldValues`,
         },
         ...(multiSet
           ? [
@@ -334,11 +321,11 @@ export default function stepRunRoutes(fastify: FastifyInstance) {
     },
   });
 
-  // UPDATE — batch update completed flag + field values
+  // UPDATE — set completed flag and/or completion note
   app.put("/:stepSeqNo", {
     schema: {
       description:
-        "Update a step run — set completed and/or field values (operation run must be in_progress)",
+        "Update a step run — set completed and/or completion note (operation run must be in_progress)",
       tags: ["Step Runs"],
       params: StepSeqNoParamsSchema,
       body: UpdateStepRunSchema,
@@ -352,7 +339,7 @@ export default function stepRunRoutes(fastify: FastifyInstance) {
     preHandler: requirePermission("order_executor"),
     handler: async (request, reply) => {
       const { orderKey, runNo, seqNo, stepSeqNo } = request.params;
-      const { completed, completionNote, fieldValues } = request.body;
+      const { completed, completionNote } = request.body;
       const userId = request.erpUser!.id;
 
       const resolved = await resolveStepRun(orderKey, runNo, seqNo, stepSeqNo);
@@ -376,17 +363,12 @@ export default function stepRunRoutes(fastify: FastifyInstance) {
           return conflict(reply, `You must be clocked in to update steps`);
       }
 
-      const existing = await getStepRun(resolved.stepRun.id);
-      if (!existing) return notFound(reply, `Step run not found`);
-
-      // Block field updates on a completed step unless also reopening
-      if (existing.completed && completed !== false && fieldValues?.length) {
-        return conflict(reply, `Cannot update fields: step run is completed`);
-      }
-
-      // When completing, validate all field values
+      // When completing, validate all stored field values
       if (completed === true) {
-        const completionErr = validateCompletionFields(existing, fieldValues);
+        const existing = await getStepRun(resolved.stepRun.id);
+        if (!existing) return notFound(reply, `Step run not found`);
+
+        const completionErr = validateCompletionFields(existing);
         if (completionErr) return unprocessable(reply, completionErr);
       }
 
@@ -394,206 +376,8 @@ export default function stepRunRoutes(fastify: FastifyInstance) {
         resolved.stepRun.id,
         completed,
         completionNote,
-        fieldValues,
         userId,
       );
-
-      return formatStepRun(
-        orderKey,
-        runNo,
-        seqNo,
-        resolved.opRun.status,
-        request.erpUser,
-        stepRun,
-      );
-    },
-  });
-
-  // Shared handler for updating a single field value
-  async function handleFieldUpdate(
-    request: any,
-    reply: any,
-    setIndex: number,
-  ) {
-    const { orderKey, runNo, seqNo, stepSeqNo, fieldSeqNo } = request.params;
-    const { value } = request.body;
-    const userId = request.erpUser!.id;
-
-    const resolved = await resolveStepRun(orderKey, runNo, seqNo, stepSeqNo);
-    if (!resolved) {
-      return notFound(reply, `Step run not found`);
-    }
-
-    const wcErr = await checkWorkCenterAccess(
-      resolved.opRun.operationId,
-      request.erpUser!,
-    );
-    if (wcErr) return conflict(reply, wcErr);
-
-    const orderErr = checkOrderRunStarted(resolved.run.status);
-    if (orderErr) return conflict(reply, orderErr);
-
-    const opErr = checkOpRunInProgress(resolved.opRun.status);
-    if (opErr) return conflict(reply, opErr);
-
-    const clockedIn = await isUserClockedIn(resolved.opRun.id, userId);
-    if (!clockedIn)
-      return conflict(reply, `You must be clocked in to update field values`);
-
-    const stepRun = await findStepRunWithField(
-      resolved.stepRun.id,
-      resolved.opRun.id,
-      fieldSeqNo,
-    );
-    if (!stepRun) return notFound(reply, `Step run not found`);
-
-    if (stepRun.completed) {
-      return conflict(reply, `Cannot update field: step run is completed`);
-    }
-
-    const field = stepRun.step.fieldSet?.fields[0];
-    if (!field) {
-      return notFound(reply, `Step field not found`);
-    }
-
-    // Reject setIndex > 0 on non-multiSet steps
-    if (setIndex > 0 && !stepRun.step.multiSet) {
-      return unprocessable(
-        reply,
-        `setIndex > 0 is only allowed on multi-set steps. For multi-value fields, pass an array of strings instead.`,
-      );
-    }
-
-    const fieldRecordId = await ensureStepRunFieldRecord(
-      resolved.stepRun.id,
-      userId,
-    );
-    if (!fieldRecordId) return notFound(reply, "Step has no field set");
-
-    await upsertFieldValue(fieldRecordId, field.id, setIndex, value, userId);
-
-    // Return deserialized value
-    const responseValue = deserializeFieldValue(
-      serializeFieldValue(value),
-      field.multiValue,
-    );
-
-    return {
-      fieldId: field.id,
-      fieldSeqNo: field.seqNo,
-      label: field.label,
-      type: field.type,
-      multiValue: field.multiValue,
-      required: field.required,
-      setIndex,
-      value: responseValue,
-      validation: validateFieldValue(
-        field.type,
-        field.multiValue,
-        field.required,
-        responseValue,
-      ),
-    };
-  }
-
-  // UPDATE single field value (non-multiSet shorthand — implicit set 0)
-  app.put("/:stepSeqNo/fields/:fieldSeqNo", {
-    schema: {
-      description:
-        "Update a single field value on a step run (implicit set 0). " +
-        "For multi-set steps, use /sets/{setIndex}/fields/{fieldSeqNo} instead.",
-      tags: ["Step Runs"],
-      params: FieldSeqNoParamsSchema,
-      body: UpdateFieldValueSchema,
-      response: {
-        200: FieldValueEntrySchema,
-        404: ErrorResponseSchema,
-        409: ErrorResponseSchema,
-        422: ErrorResponseSchema,
-      },
-    },
-    preHandler: requirePermission("order_executor"),
-    handler: async (request, reply) => handleFieldUpdate(request, reply, 0),
-  });
-
-  // UPDATE single field value (explicit set index for multi-set steps)
-  app.put("/:stepSeqNo/sets/:setIndex/fields/:fieldSeqNo", {
-    schema: {
-      description:
-        "Update a single field value on a specific set of a multi-set step run",
-      tags: ["Step Runs"],
-      params: SetFieldSeqNoParamsSchema,
-      body: UpdateFieldValueSchema,
-      response: {
-        200: FieldValueEntrySchema,
-        404: ErrorResponseSchema,
-        409: ErrorResponseSchema,
-        422: ErrorResponseSchema,
-      },
-    },
-    preHandler: requirePermission("order_executor"),
-    handler: async (request, reply) =>
-      handleFieldUpdate(request, reply, request.params.setIndex),
-  });
-
-  // DELETE a field value set
-  const SetIndexParamsSchema = z.object({
-    orderKey: z.string(),
-    runNo: z.coerce.number().int(),
-    seqNo: z.coerce.number().int(),
-    stepSeqNo: z.coerce.number().int(),
-    setIndex: z.coerce.number().int(),
-  });
-
-  app.delete("/:stepSeqNo/sets/:setIndex", {
-    schema: {
-      description:
-        "Delete all field values for a set and re-index remaining sets",
-      tags: ["Step Runs"],
-      params: SetIndexParamsSchema,
-      response: {
-        200: StepRunSchema,
-        404: ErrorResponseSchema,
-        409: ErrorResponseSchema,
-      },
-    },
-    preHandler: requirePermission("order_executor"),
-    handler: async (request, reply) => {
-      const { orderKey, runNo, seqNo, stepSeqNo, setIndex } = request.params;
-      const userId = request.erpUser!.id;
-
-      const resolved = await resolveStepRun(orderKey, runNo, seqNo, stepSeqNo);
-      if (!resolved) {
-        return notFound(reply, `Step run not found`);
-      }
-
-      const wcErr = await checkWorkCenterAccess(resolved.opRun.operationId, request.erpUser!);
-      if (wcErr) return conflict(reply, wcErr);
-
-      const orderErr = checkOrderRunStarted(resolved.run.status);
-      if (orderErr) return conflict(reply, orderErr);
-
-      const opErr = checkOpRunInProgress(resolved.opRun.status);
-      if (opErr) return conflict(reply, opErr);
-
-      const clockedIn = await isUserClockedIn(resolved.opRun.id, userId);
-      if (!clockedIn)
-        return conflict(reply, `You must be clocked in to delete sets`);
-
-      const existing = await getStepRun(resolved.stepRun.id);
-      if (!existing) return notFound(reply, `Step run not found`);
-
-      if (existing.completed) {
-        return conflict(reply, `Cannot delete set: step run is completed`);
-      }
-
-      if (!existing.fieldRecord) {
-        return notFound(reply, "No field values to delete");
-      }
-      await deleteFieldValueSet(existing.fieldRecord.id, setIndex);
-
-      const stepRun = await getStepRun(resolved.stepRun.id);
-      if (!stepRun) return notFound(reply, `Step run not found`);
 
       return formatStepRun(
         orderKey,
