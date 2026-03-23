@@ -5,6 +5,7 @@ import {
   Checkbox,
   FileButton,
   Group,
+  Image,
   Loader,
   Stack,
   Switch,
@@ -43,6 +44,21 @@ function formatDateTime(d: Date): string {
   return `${formatDate(d)}T${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 }
 import { hasActionTemplate } from "../lib/hateoas";
+
+const IMAGE_EXTENSIONS = new Set([
+  ".jpg",
+  ".jpeg",
+  ".png",
+  ".gif",
+  ".webp",
+  ".svg",
+  ".bmp",
+]);
+
+function isImageFilename(filename: string): boolean {
+  const ext = filename.slice(filename.lastIndexOf(".")).toLowerCase();
+  return IMAGE_EXTENSIONS.has(ext);
+}
 
 /** Composite key for edits map: fieldId + setIndex */
 function editKey(fieldId: number, setIndex: number): string {
@@ -331,6 +347,10 @@ export const FieldValueRunList: React.FC<FieldValueRunListProps> = ({
     _actionTemplates,
     "uploadAttachment",
   );
+  const canDeleteAttachment = !!hasActionTemplate(
+    _actionTemplates,
+    "deleteAttachment",
+  );
 
   const handleAttachmentUpload = async (
     fv: FieldValueEntry,
@@ -356,6 +376,39 @@ export const FieldValueRunList: React.FC<FieldValueRunListProps> = ({
     }
   };
 
+  const [deletingAttachment, setDeletingAttachment] = useState<string | null>(
+    null,
+  );
+
+  const handleAttachmentDelete = async (
+    fv: FieldValueEntry,
+    attachmentId: number,
+  ) => {
+    const delKey = `${editKey(fv.fieldId, fv.setIndex)}_${attachmentId}`;
+    setDeletingAttachment(delKey);
+    try {
+      await api.delete(
+        `${attachmentEndpoint(fv.fieldSeqNo, fv.setIndex)}/${attachmentId}`,
+      );
+      setFieldValues((prev) =>
+        prev.map((f) =>
+          f.fieldId === fv.fieldId && f.setIndex === fv.setIndex
+            ? {
+                ...f,
+                attachments: (f.attachments ?? []).filter(
+                  (a) => a.id !== attachmentId,
+                ),
+              }
+            : f,
+        ),
+      );
+    } catch (err) {
+      showErrorNotification(err);
+    } finally {
+      setDeletingAttachment(null);
+    }
+  };
+
   function formatFileSize(bytes: number): string {
     if (bytes < 1024) return `${bytes} B`;
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
@@ -370,33 +423,69 @@ export const FieldValueRunList: React.FC<FieldValueRunListProps> = ({
     const attachments = fv.attachments ?? [];
     const key = editKey(fv.fieldId, fv.setIndex);
     const isUploading = uploadingField === key;
+    const showUpload =
+      canEdit &&
+      canUploadAttachment &&
+      (fv.multiValue || attachments.length === 0);
 
     return (
       <Stack key={key} gap={4}>
         <Text size="xs" fw={500}>
           {fieldLabel}
         </Text>
-        {attachments.map((att) => (
-          <Group key={att.id} gap="xs">
-            <IconFile size={14} />
-            <Anchor
-              size="xs"
-              href={attachmentDownloadUrl(fv.fieldSeqNo, att.id)}
-              target="_blank"
-            >
-              {att.filename}
-            </Anchor>
-            <Text size="xs" c="dimmed">
-              ({formatFileSize(att.fileSize)})
-            </Text>
-          </Group>
-        ))}
+        {attachments.map((att) => {
+          const delKey = `${key}_${att.id}`;
+          const isDeleting = deletingAttachment === delKey;
+          const downloadUrl = attachmentDownloadUrl(fv.fieldSeqNo, att.id);
+          const isImage = isImageFilename(att.filename);
+          return (
+            <Stack key={att.id} gap={4}>
+              {isImage && (
+                <Anchor href={downloadUrl} target="_blank">
+                  <Image
+                    src={downloadUrl}
+                    alt={att.filename}
+                    maw={200}
+                    mah={200}
+                    fit="contain"
+                    radius="sm"
+                  />
+                </Anchor>
+              )}
+              <Group gap="xs">
+                {!isImage && <IconFile size={14} />}
+                <Anchor
+                  size="xs"
+                  href={downloadUrl}
+                  target="_blank"
+                >
+                  {att.filename}
+                </Anchor>
+                <Text size="xs" c="dimmed">
+                  ({formatFileSize(att.fileSize)})
+                </Text>
+                {canEdit && canDeleteAttachment && (
+                  <ActionIcon
+                    size="xs"
+                    variant="subtle"
+                    color="red"
+                    loading={isDeleting}
+                    onClick={() => handleAttachmentDelete(fv, att.id)}
+                    title="Remove attachment"
+                  >
+                    <IconX size={14} />
+                  </ActionIcon>
+                )}
+              </Group>
+            </Stack>
+          );
+        })}
         {attachments.length === 0 && !canEdit && (
           <Text size="xs" c="dimmed">
             No attachments
           </Text>
         )}
-        {canEdit && canUploadAttachment && (
+        {showUpload && (
           <FileButton onChange={(file) => handleAttachmentUpload(fv, file)}>
             {(props) => (
               <Button

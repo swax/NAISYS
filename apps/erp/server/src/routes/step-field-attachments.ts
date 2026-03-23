@@ -29,6 +29,21 @@ import {
   upsertFieldValue,
 } from "../services/field-value-service.js";
 
+const IMAGE_MIME: Record<string, string> = {
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".png": "image/png",
+  ".gif": "image/gif",
+  ".webp": "image/webp",
+  ".svg": "image/svg+xml",
+  ".bmp": "image/bmp",
+};
+
+function mimeTypeFromFilename(filename: string): string {
+  const ext = filename.slice(filename.lastIndexOf(".")).toLowerCase();
+  return IMAGE_MIME[ext] ?? "application/octet-stream";
+}
+
 const FieldSeqNoParamsSchema = z.object({
   orderKey: z.string(),
   runNo: z.coerce.number().int(),
@@ -137,6 +152,28 @@ export default function stepFieldAttachmentRoutes(fastify: FastifyInstance) {
         return notFound(reply, "Step has no field set");
       }
 
+      // For non-multiValue fields, reject if an attachment already exists
+      if (!field.multiValue) {
+        const existing = await erpDb.fieldValue.findUnique({
+          where: {
+            fieldRecordId_fieldId_setIndex: {
+              fieldRecordId,
+              fieldId: field.id,
+              setIndex,
+            },
+          },
+          select: { _count: { select: { fieldAttachments: true } } },
+        });
+        if (existing && existing._count.fieldAttachments > 0) {
+          return reply.code(400).send({
+            statusCode: 400,
+            error: "Bad Request",
+            message:
+              "Field already has an attachment. Delete the existing attachment before uploading a new one, or enable multi-value on the field.",
+          });
+        }
+      }
+
       // Ensure a FieldValue row exists for this field+set
       await upsertFieldValue(fieldRecordId, field.id, setIndex, "", userId);
 
@@ -203,11 +240,13 @@ export default function stepFieldAttachmentRoutes(fastify: FastifyInstance) {
       }
 
       const stat = statSync(att.filepath);
+      const mimeType = mimeTypeFromFilename(att.filename);
+      const isImage = mimeType.startsWith("image/");
 
-      reply.header("content-type", "application/octet-stream");
+      reply.header("content-type", mimeType);
       reply.header(
         "content-disposition",
-        `attachment; filename="${att.filename.replace(/"/g, '\\"')}"`,
+        `${isImage ? "inline" : "attachment"}; filename="${att.filename.replace(/"/g, '\\"')}"`,
       );
       reply.header("content-length", stat.size);
 
