@@ -1,5 +1,5 @@
 import { Button, type ButtonProps, Tooltip } from "@mantine/core";
-import { hasAction, type HateoasAction } from "@naisys/common";
+import { formatDisabledReason, hasAction, type HateoasAction } from "@naisys/common";
 
 export interface ActionButtonProps extends Omit<ButtonProps, "disabled"> {
   actions: HateoasAction[] | undefined;
@@ -33,8 +33,10 @@ export function ActionButton({
     />
   );
 
-  return action.disabledReason ? (
-    <Tooltip label={action.disabledReason} multiline maw={350}>
+  const reason = formatDisabledReason(action.disabledReason);
+
+  return reason ? (
+    <Tooltip label={reason} multiline maw={350} style={{ whiteSpace: "pre-line" }}>
       {btn}
     </Tooltip>
   ) : (
