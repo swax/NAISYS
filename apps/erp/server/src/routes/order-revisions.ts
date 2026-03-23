@@ -213,7 +213,7 @@ export default function orderRevisionRoutes(fastify: FastifyInstance) {
     },
     handler: async (request, reply) => {
       const { orderKey } = request.params;
-      const { page, pageSize, status } = request.query;
+      const { page, pageSize, status, includeObsolete } = request.query;
 
       const order = await resolveOrder(orderKey);
       if (!order) {
@@ -221,7 +221,11 @@ export default function orderRevisionRoutes(fastify: FastifyInstance) {
       }
 
       const where: Record<string, unknown> = {};
-      if (status) where.status = status;
+      if (status) {
+        where.status = status;
+      } else if (!includeObsolete) {
+        where.status = { not: RevisionStatus.obsolete };
+      }
 
       const [items, total] = await listRevisions(
         order.id,
@@ -238,7 +242,10 @@ export default function orderRevisionRoutes(fastify: FastifyInstance) {
         total,
         page,
         pageSize,
-        _links: paginationLinks(revBasePath, page, pageSize, total, { status }),
+        _links: paginationLinks(revBasePath, page, pageSize, total, {
+          status,
+          includeObsolete: includeObsolete ? "true" : undefined,
+        }),
         _actions: [
           {
             rel: "create",
