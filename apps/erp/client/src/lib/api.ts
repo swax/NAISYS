@@ -231,6 +231,18 @@ export const apiEndpoints = {
     seqNo: number | string,
     stepSeqNo: number | string,
   ) => `orders/${key}/runs/${runNo}/ops/${seqNo}/steps/${stepSeqNo}`,
+  stepRunComplete: (
+    key: string,
+    runNo: number | string,
+    seqNo: number | string,
+    stepSeqNo: number | string,
+  ) => `orders/${key}/runs/${runNo}/ops/${seqNo}/steps/${stepSeqNo}/complete`,
+  stepRunReopen: (
+    key: string,
+    runNo: number | string,
+    seqNo: number | string,
+    stepSeqNo: number | string,
+  ) => `orders/${key}/runs/${runNo}/ops/${seqNo}/steps/${stepSeqNo}/reopen`,
   stepRunFieldValue: (
     key: string,
     runNo: number | string,

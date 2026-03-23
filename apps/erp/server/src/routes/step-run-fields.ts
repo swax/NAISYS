@@ -384,6 +384,8 @@ export default function stepRunFieldRoutes(fastify: FastifyInstance) {
         orderKey,
         runNo,
         seqNo,
+        resolved.opRun.id,
+        resolved.opRun.operationId,
         resolved.opRun.status,
         request.erpUser,
         stepRun,

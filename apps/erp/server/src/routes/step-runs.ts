@@ -4,19 +4,16 @@ import {
   OperationRunStatus,
   StepRunListResponseSchema,
   StepRunSchema,
-  UpdateStepRunSchema,
 } from "@naisys-erp/shared";
 import { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod/v4";
 
 import type { ErpUser } from "../auth-middleware.js";
-import { hasPermission, requirePermission } from "../auth-middleware.js";
-import { conflict, notFound, unprocessable } from "../error-handler.js";
+import { hasPermission } from "../auth-middleware.js";
+import { notFound } from "../error-handler.js";
 import { API_PREFIX, selfLink } from "../hateoas.js";
 import {
-  checkOpRunInProgress,
-  checkOrderRunStarted,
   checkWorkCenterAccess,
   childItemLinks,
   formatAuditFields,
@@ -34,35 +31,72 @@ import {
   getStepRun,
   listStepRuns,
   type StepRunWithStep,
-  updateStepRun,
 } from "../services/step-run-service.js";
 
 function stepRunResource(orderKey: string, runNo: number, seqNo: number) {
   return `orders/${orderKey}/runs/${runNo}/ops/${seqNo}/steps`;
 }
 
-function stepRunItemActions(
+async function stepRunItemActions(
   orderKey: string,
   runNo: number,
   seqNo: number,
   stepSeqNo: number,
+  opRunId: number,
+  operationId: number,
   opRunStatus: string,
+  completed: boolean,
+  stepRunId: number,
   user: ErpUser | undefined,
-): HateoasAction[] {
+): Promise<HateoasAction[]> {
   const href = `${API_PREFIX}/${stepRunResource(orderKey, runNo, seqNo)}/${stepSeqNo}`;
+  const isExecutor = hasPermission(user, "order_executor");
+  const isInProgress = opRunStatus === OperationRunStatus.in_progress;
+
+  // Pre-compute disabled reasons for complete action
+  const wcErr = user
+    ? await checkWorkCenterAccess(operationId, user)
+    : null;
+  const clockedInErr =
+    isExecutor && isInProgress && !completed
+      ? (await isUserClockedIn(opRunId, user!.id))
+        ? null
+        : "You must be clocked in to complete steps"
+      : null;
+  const fieldsErr =
+    isExecutor && isInProgress && !completed
+      ? await (async () => {
+          const existing = await getStepRun(stepRunId);
+          return existing ? validateCompletionFields(existing) : null;
+        })()
+      : null;
 
   return resolveActions(
     [
       {
-        rel: "update",
-        method: "PUT",
-        title: "Update",
-        schema: `${API_PREFIX}/schemas/UpdateStepRun`,
+        rel: "complete",
+        path: "/complete",
+        method: "POST",
+        title: "Complete",
+        schema: `${API_PREFIX}/schemas/CompleteStepRun`,
         permission: "order_executor",
-        disabledWhen: (ctx) =>
-          ctx.status !== OperationRunStatus.in_progress
+        visibleWhen: () => !completed,
+        disabledWhen: () =>
+          !isInProgress
             ? "Parent operation must be in progress"
-            : null,
+            : wcErr ?? clockedInErr ?? fieldsErr,
+      },
+      {
+        rel: "reopen",
+        path: "/reopen",
+        method: "POST",
+        title: "Reopen",
+        permission: "order_executor",
+        visibleWhen: () => completed,
+        disabledWhen: () =>
+          !isInProgress
+            ? "Parent operation must be in progress"
+            : wcErr,
       },
     ],
     href,
@@ -83,10 +117,12 @@ const StepSeqNoParamsSchema = z.object({
   stepSeqNo: z.coerce.number().int(),
 });
 
-export function formatStepRun(
+export async function formatStepRun(
   orderKey: string,
   runNo: number,
   seqNo: number,
+  opRunId: number,
+  operationId: number,
   opRunStatus: string,
   user: ErpUser | undefined,
   stepRun: StepRunWithStep,
@@ -233,12 +269,16 @@ export function formatStepRun(
       "StepRun",
       "operationRun",
     ),
-    _actions: stepRunItemActions(
+    _actions: await stepRunItemActions(
       orderKey,
       runNo,
       seqNo,
       stepSeqNo,
+      opRunId,
+      operationId,
       opRunStatus,
+      stepRun.completed,
+      stepRun.id,
       user,
     ),
     _actionTemplates: actionTemplates,
@@ -270,14 +310,18 @@ export default function stepRunRoutes(fastify: FastifyInstance) {
       const items = await listStepRuns(resolved.opRun.id);
 
       return {
-        items: items.map((stepRun) =>
-          formatStepRun(
-            orderKey,
-            runNo,
-            seqNo,
-            resolved.opRun.status,
-            request.erpUser,
-            stepRun,
+        items: await Promise.all(
+          items.map((stepRun) =>
+            formatStepRun(
+              orderKey,
+              runNo,
+              seqNo,
+              resolved.opRun.id,
+              resolved.opRun.operationId,
+              resolved.opRun.status,
+              request.erpUser,
+              stepRun,
+            ),
           ),
         ),
         total: items.length,
@@ -314,75 +358,8 @@ export default function stepRunRoutes(fastify: FastifyInstance) {
         orderKey,
         runNo,
         seqNo,
-        resolved.opRun.status,
-        request.erpUser,
-        stepRun,
-      );
-    },
-  });
-
-  // UPDATE — set completed flag and/or completion note
-  app.put("/:stepSeqNo", {
-    schema: {
-      description:
-        "Update a step run — set completed and/or completion note (operation run must be in_progress)",
-      tags: ["Step Runs"],
-      params: StepSeqNoParamsSchema,
-      body: UpdateStepRunSchema,
-      response: {
-        200: StepRunSchema,
-        404: ErrorResponseSchema,
-        409: ErrorResponseSchema,
-        422: ErrorResponseSchema,
-      },
-    },
-    preHandler: requirePermission("order_executor"),
-    handler: async (request, reply) => {
-      const { orderKey, runNo, seqNo, stepSeqNo } = request.params;
-      const { completed, completionNote } = request.body;
-      const userId = request.erpUser!.id;
-
-      const resolved = await resolveStepRun(orderKey, runNo, seqNo, stepSeqNo);
-      if (!resolved) {
-        return notFound(reply, `Step run not found`);
-      }
-
-      const wcErr = await checkWorkCenterAccess(resolved.opRun.operationId, request.erpUser!);
-      if (wcErr) return conflict(reply, wcErr);
-
-      const orderErr = checkOrderRunStarted(resolved.run.status);
-      if (orderErr) return conflict(reply, orderErr);
-
-      const opErr = checkOpRunInProgress(resolved.opRun.status);
-      if (opErr) return conflict(reply, opErr);
-
-      // Reopening a step doesn't require being clocked in
-      if (completed !== false) {
-        const clockedIn = await isUserClockedIn(resolved.opRun.id, userId);
-        if (!clockedIn)
-          return conflict(reply, `You must be clocked in to update steps`);
-      }
-
-      // When completing, validate all stored field values
-      if (completed === true) {
-        const existing = await getStepRun(resolved.stepRun.id);
-        if (!existing) return notFound(reply, `Step run not found`);
-
-        const completionErr = validateCompletionFields(existing);
-        if (completionErr) return unprocessable(reply, completionErr);
-      }
-
-      const stepRun = await updateStepRun(
-        resolved.stepRun.id,
-        completed,
-        completionNote,
-        userId,
-      );
-
-      return formatStepRun(
-        orderKey,
-        runNo,
-        seqNo,
+        resolved.opRun.id,
+        resolved.opRun.operationId,
         resolved.opRun.status,
         request.erpUser,
         stepRun,

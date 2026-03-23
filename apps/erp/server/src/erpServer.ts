@@ -57,6 +57,7 @@ import schemaRoutes from "./routes/schemas.js";
 import stepFieldAttachmentRoutes from "./routes/step-field-attachments.js";
 import stepFieldRoutes from "./routes/step-fields.js";
 import stepRunFieldRoutes from "./routes/step-run-fields.js";
+import stepRunTransitionRoutes from "./routes/step-run-transitions.js";
 import stepRunRoutes from "./routes/step-runs.js";
 import stepRoutes from "./routes/steps.js";
 import userPermissionRoutes from "./routes/user-permissions.js";
@@ -212,6 +213,9 @@ export const erpPlugin: FastifyPluginAsync = async (fastify) => {
     prefix: "/api/erp/orders/:orderKey/runs/:runNo/ops/:seqNo/comments",
   });
   fastify.register(stepRunRoutes, {
+    prefix: "/api/erp/orders/:orderKey/runs/:runNo/ops/:seqNo/steps",
+  });
+  fastify.register(stepRunTransitionRoutes, {
     prefix: "/api/erp/orders/:orderKey/runs/:runNo/ops/:seqNo/steps",
   });
   fastify.register(stepRunFieldRoutes, {
