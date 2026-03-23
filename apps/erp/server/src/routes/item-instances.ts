@@ -40,7 +40,7 @@ import {
   serializeFieldValue,
   upsertFieldValue,
   validateFieldValue,
-} from "../services/step-run-service.js";
+} from "../services/field-value-service.js";
 
 const ParamsSchema = z.object({
   key: z.string(),

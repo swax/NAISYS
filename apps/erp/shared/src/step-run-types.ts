@@ -86,20 +86,38 @@ export const UpdateFieldValueSchema = z
 
 export type UpdateFieldValue = z.infer<typeof UpdateFieldValueSchema>;
 
-// Batch update input — completed flag + field values
+// Batch field value update (setIndex is specified via URL path, not body)
+export const BatchUpdateFieldValuesSchema = z
+  .object({
+    items: z.array(
+      z.object({
+        fieldSeqNo: z.number().int(),
+        value: z.union([z.string().max(2000), z.array(z.string().max(2000))]),
+      }),
+    ),
+  })
+  .strict();
+
+export type BatchUpdateFieldValues = z.infer<
+  typeof BatchUpdateFieldValuesSchema
+>;
+
+// Batch field value response
+export const BatchFieldValueResponseSchema = z.object({
+  items: z.array(FieldValueEntrySchema),
+  total: z.number(),
+});
+
+export type BatchFieldValueResponse = z.infer<
+  typeof BatchFieldValueResponseSchema
+>;
+
+// Update step run — completion state only (field values are updated via
+// dedicated per-field and batch-field endpoints)
 export const UpdateStepRunSchema = z
   .object({
     completed: z.boolean().optional(),
     completionNote: z.string().max(2000).optional(),
-    fieldValues: z
-      .array(
-        z.object({
-          fieldId: z.number().int(),
-          value: z.union([z.string().max(2000), z.array(z.string().max(2000))]),
-          setIndex: z.number().int().min(0).optional(),
-        }),
-      )
-      .optional(),
   })
   .strict();
 
