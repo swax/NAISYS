@@ -18,7 +18,7 @@ import {
 import { validateCompletionFields } from "../services/field-value-service.js";
 import { isUserClockedIn } from "../services/labor-ticket-service.js";
 import {
-  getStepRun,
+  getStepRunWithFields,
   updateStepRun,
 } from "../services/step-run-service.js";
 import { formatStepRunTransition } from "./step-runs.js";
@@ -79,7 +79,7 @@ export default function stepRunTransitionRoutes(fastify: FastifyInstance) {
       }
 
       // Validate all stored field values
-      const existing = await getStepRun(resolved.stepRun.id);
+      const existing = await getStepRunWithFields(resolved.stepRun.id);
       if (!existing) return notFound(reply, `Step run not found`);
 
       const completionErr = validateCompletionFields(existing);

@@ -29,7 +29,7 @@ import {
 } from "../services/field-value-service.js";
 import { ensureStepRunFieldRecord } from "../services/field-service.js";
 import { isUserClockedIn } from "../services/labor-ticket-service.js";
-import { getStepRun } from "../services/step-run-service.js";
+import { getStepRunWithFields } from "../services/step-run-service.js";
 import { computeStepRunHateoas } from "./step-runs.js";
 
 const FieldSeqNoParamsSchema = z.object({
@@ -272,7 +272,7 @@ export default function stepRunFieldRoutes(fastify: FastifyInstance) {
     if (!clockedIn)
       return conflict(reply, `You must be clocked in to update field values`);
 
-    const existing = await getStepRun(resolved.stepRun.id);
+    const existing = await getStepRunWithFields(resolved.stepRun.id);
     if (!existing) return notFound(reply, `Step run not found`);
 
     if (existing.completed) {
@@ -440,7 +440,7 @@ export default function stepRunFieldRoutes(fastify: FastifyInstance) {
       if (!clockedIn)
         return conflict(reply, `You must be clocked in to delete sets`);
 
-      const existing = await getStepRun(resolved.stepRun.id);
+      const existing = await getStepRunWithFields(resolved.stepRun.id);
       if (!existing) return notFound(reply, `Step run not found`);
 
       if (existing.completed) {
@@ -453,7 +453,7 @@ export default function stepRunFieldRoutes(fastify: FastifyInstance) {
       await deleteFieldValueSet(existing.fieldRecord.id, setIndex);
 
       // Compute new set count from remaining field values
-      const updated = await getStepRun(resolved.stepRun.id);
+      const updated = await getStepRunWithFields(resolved.stepRun.id);
       const storedFieldValues = updated?.fieldRecord?.fieldValues ?? [];
       const maxSetIndex = storedFieldValues.reduce(
         (max, fv) => Math.max(max, fv.setIndex),

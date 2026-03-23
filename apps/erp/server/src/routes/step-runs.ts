@@ -2,6 +2,7 @@ import type { HateoasAction } from "@naisys/common";
 import {
   ErrorResponseSchema,
   OperationRunStatus,
+  StepRunListQuerySchema,
   StepRunListResponseSchema,
   StepRunSchema,
 } from "@naisys-erp/shared";
@@ -28,9 +29,11 @@ import {
 } from "../services/field-value-service.js";
 import { isUserClockedIn } from "../services/labor-ticket-service.js";
 import {
-  getStepRun,
+  getStepRunWithFields,
   listStepRuns,
+  listStepRunsWithFields,
   type StepRunWithStep,
+  type StepRunWithStepAndFields,
 } from "../services/step-run-service.js";
 
 export function stepRunResource(
@@ -70,7 +73,7 @@ async function stepRunItemActions(
   const fieldsErr =
     isExecutor && isInProgress && !completed
       ? await (async () => {
-          const existing = await getStepRun(stepRunId);
+          const existing = await getStepRunWithFields(stepRunId);
           return existing ? validateCompletionFields(existing) : null;
         })()
       : null;
@@ -236,7 +239,7 @@ export async function formatStepRunTransition(
   operationId: number,
   opRunStatus: string,
   user: ErpUser | undefined,
-  stepRun: StepRunWithStep,
+  stepRun: StepRunWithStepAndFields,
 ) {
   const stepSeqNo = stepRun.step.seqNo;
   const multiSet = stepRun.step.multiSet;
@@ -268,7 +271,7 @@ export async function formatStepRunTransition(
   };
 }
 
-export async function formatStepRun(
+export async function formatStepRunWithFields(
   orderKey: string,
   runNo: number,
   seqNo: number,
@@ -276,7 +279,7 @@ export async function formatStepRun(
   operationId: number,
   opRunStatus: string,
   user: ErpUser | undefined,
-  stepRun: StepRunWithStep,
+  stepRun: StepRunWithStepAndFields,
 ) {
   const canUpdate =
     hasPermission(user, "order_executor") &&
@@ -369,6 +372,7 @@ export async function formatStepRun(
     multiSet,
     completed: stepRun.completed,
     completionNote: stepRun.completionNote ?? null,
+    fieldCount: stepRun.step.fieldSet?.fields.length ?? 0,
     fieldValues,
     ...formatAuditFields(stepRun),
     _links: childItemLinks(
@@ -384,6 +388,39 @@ export async function formatStepRun(
   };
 }
 
+function formatListStepRun(
+  orderKey: string,
+  runNo: number,
+  seqNo: number,
+  stepRun: StepRunWithStep,
+) {
+  const stepSeqNo = stepRun.step.seqNo;
+  const fieldCount = stepRun.step.fieldSet?._count.fields ?? 0;
+
+  return {
+    id: stepRun.id,
+    operationRunId: stepRun.operationRunId,
+    stepId: stepRun.stepId,
+    seqNo: stepSeqNo,
+    title: stepRun.step.title,
+    instructions: stepRun.step.instructions,
+    multiSet: stepRun.step.multiSet,
+    completed: stepRun.completed,
+    completionNote: stepRun.completionNote ?? null,
+    fieldCount,
+    ...formatAuditFields(stepRun),
+    _links: childItemLinks(
+      "/" + stepRunResource(orderKey, runNo, seqNo),
+      stepSeqNo,
+      "Step Runs",
+      "/orders/" + orderKey + "/runs/" + runNo + "/ops/" + seqNo,
+      "Operation Run",
+      "StepRun",
+      "operationRun",
+    ),
+  };
+}
+
 export default function stepRunRoutes(fastify: FastifyInstance) {
   const app = fastify.withTypeProvider<ZodTypeProvider>();
 
@@ -393,6 +430,7 @@ export default function stepRunRoutes(fastify: FastifyInstance) {
       description: "List step runs for an operation run",
       tags: ["Step Runs"],
       params: OpSeqNoParamsSchema,
+      querystring: StepRunListQuerySchema,
       response: {
         200: StepRunListResponseSchema,
         404: ErrorResponseSchema,
@@ -400,28 +438,39 @@ export default function stepRunRoutes(fastify: FastifyInstance) {
     },
     handler: async (request, reply) => {
       const { orderKey, runNo, seqNo } = request.params;
+      const { includeFields } = request.query;
 
       const resolved = await resolveOpRun(orderKey, runNo, seqNo);
       if (!resolved) {
         return notFound(reply, `Operation run not found`);
       }
 
-      const items = await listStepRuns(resolved.opRun.id);
-
-      return {
-        items: await Promise.all(
-          items.map((stepRun) =>
-            formatStepRun(
-              orderKey,
-              runNo,
-              seqNo,
-              resolved.opRun.id,
-              resolved.opRun.operationId,
-              resolved.opRun.status,
-              request.erpUser,
-              stepRun,
+      if (includeFields) {
+        const items = await listStepRunsWithFields(resolved.opRun.id);
+        return {
+          items: await Promise.all(
+            items.map((stepRun) =>
+              formatStepRunWithFields(
+                orderKey,
+                runNo,
+                seqNo,
+                resolved.opRun.id,
+                resolved.opRun.operationId,
+                resolved.opRun.status,
+                request.erpUser,
+                stepRun,
+              ),
             ),
           ),
+          total: items.length,
+          _links: [selfLink(`/${stepRunResource(orderKey, runNo, seqNo)}`)],
+        };
+      }
+
+      const items = await listStepRuns(resolved.opRun.id);
+      return {
+        items: items.map((stepRun) =>
+          formatListStepRun(orderKey, runNo, seqNo, stepRun),
         ),
         total: items.length,
         _links: [selfLink(`/${stepRunResource(orderKey, runNo, seqNo)}`)],
@@ -448,12 +497,12 @@ export default function stepRunRoutes(fastify: FastifyInstance) {
         return notFound(reply, `Step run not found`);
       }
 
-      const stepRun = await getStepRun(resolved.stepRun.id);
+      const stepRun = await getStepRunWithFields(resolved.stepRun.id);
       if (!stepRun) {
         return notFound(reply, `Step run not found`);
       }
 
-      return formatStepRun(
+      return formatStepRunWithFields(
         orderKey,
         runNo,
         seqNo,

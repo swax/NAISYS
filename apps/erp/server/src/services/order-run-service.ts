@@ -60,6 +60,17 @@ export async function findExisting(id: number, orderId: number) {
   return existing;
 }
 
+export async function getOrderRunOpSummary(orderRunId: number) {
+  return erpDb.operationRun.findMany({
+    where: { orderRunId },
+    select: {
+      operation: { select: { seqNo: true, title: true } },
+      status: true,
+    },
+    orderBy: { operation: { seqNo: "asc" } },
+  });
+}
+
 // --- Validation ---
 
 export function validateStatusFor(

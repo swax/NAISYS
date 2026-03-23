@@ -223,8 +223,13 @@ export const apiEndpoints = {
     runNo: number | string,
     seqNo: number | string,
   ) => `orders/${key}/runs/${runNo}/ops/${seqNo}/reopen`,
-  stepRuns: (key: string, runNo: number | string, seqNo: number | string) =>
-    `orders/${key}/runs/${runNo}/ops/${seqNo}/steps`,
+  stepRuns: (
+    key: string,
+    runNo: number | string,
+    seqNo: number | string,
+    includeFields?: boolean,
+  ) =>
+    `orders/${key}/runs/${runNo}/ops/${seqNo}/steps${includeFields ? "?includeFields=true" : ""}`,
   stepRun: (
     key: string,
     runNo: number | string,

@@ -66,7 +66,7 @@ export const StepRunList: React.FC<Props> = ({
     setLoading(true);
     try {
       const result = await api.get<StepRunListResponse>(
-        apiEndpoints.stepRuns(orderKey, runNo, seqNo),
+        apiEndpoints.stepRuns(orderKey, runNo, seqNo, true),
       );
       setData(result);
       onCountChange?.(result.total);
@@ -301,9 +301,9 @@ export const StepRunList: React.FC<Props> = ({
                     </Text>
                   )}
 
-                  {step.fieldValues.length > 0 && (
+                  {(step.fieldValues?.length ?? 0) > 0 && (
                     <FieldValueRunList
-                      fieldValues={step.fieldValues}
+                      fieldValues={step.fieldValues!}
                       multiSet={step.multiSet}
                       completed={step.completed}
                       _actionTemplates={step._actionTemplates}

@@ -29,6 +29,7 @@ import {
   deleteOrderRun,
   findOrderRevision,
   getOrderRun,
+  getOrderRunOpSummary,
   listOrderRuns,
   type OrderRunWithRev,
   updateOrderRun,
@@ -168,6 +169,7 @@ export async function formatRun(
       title: "Item Instance",
     });
   }
+  const opSummaryRows = await getOrderRunOpSummary(run.id);
   return {
     id: run.id,
     runNo: run.runNo,
@@ -182,6 +184,11 @@ export async function formatRun(
     cost: run.cost,
     dueAt: run.dueAt,
     releaseNote: run.releaseNote,
+    operationSummary: opSummaryRows.map((r) => ({
+      seqNo: r.operation.seqNo,
+      title: r.operation.title,
+      status: r.status,
+    })),
     ...formatAuditFields(run),
     _links: links,
     _actions: await orderRunItemActions(

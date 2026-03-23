@@ -65,7 +65,8 @@ export const StepRunSchema = z.object({
   multiSet: z.boolean(),
   completed: z.boolean(),
   completionNote: z.string().nullable(),
-  fieldValues: z.array(FieldValueEntrySchema),
+  fieldCount: z.number().optional(),
+  fieldValues: z.array(FieldValueEntrySchema).optional(),
   createdAt: z.iso.datetime(),
   createdBy: z.string(),
   updatedAt: z.iso.datetime(),
@@ -163,6 +164,16 @@ export const CompleteStepRunSchema = z
   .strict();
 
 export type CompleteStepRun = z.infer<typeof CompleteStepRunSchema>;
+
+// Query params for listing step runs
+export const StepRunListQuerySchema = z.object({
+  includeFields: z
+    .union([z.literal("true"), z.literal("false")])
+    .transform((v) => v === "true")
+    .optional(),
+});
+
+export type StepRunListQuery = z.infer<typeof StepRunListQuerySchema>;
 
 // List response
 export const StepRunListResponseSchema = z.object({

@@ -95,6 +95,17 @@ export async function findExisting(id: number, runId: number) {
   return existing;
 }
 
+export async function getOpRunStepSummary(opRunId: number) {
+  return erpDb.stepRun.findMany({
+    where: { operationRunId: opRunId },
+    select: {
+      step: { select: { seqNo: true, title: true } },
+      completed: true,
+    },
+    orderBy: { step: { seqNo: "asc" } },
+  });
+}
+
 // --- Validation ---
 
 export function validateStatusFor(

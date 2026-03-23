@@ -7,6 +7,15 @@ import {
 } from "./hateoas-types.js";
 import { OperationRunStatusEnum } from "./operation-run-types.js";
 
+// Operation summary embedded in order run GET responses
+export const OperationRunSummarySchema = z.object({
+  seqNo: z.number(),
+  title: z.string(),
+  status: OperationRunStatusEnum,
+});
+
+export type OperationRunSummary = z.infer<typeof OperationRunSummarySchema>;
+
 export const OrderRunStatusEnum = z.enum([
   "released",
   "started",
@@ -40,6 +49,7 @@ export const OrderRunSchema = z.object({
   cost: z.number().nullable(),
   dueAt: z.string().nullable(),
   releaseNote: z.string().nullable(),
+  operationSummary: z.array(OperationRunSummarySchema).optional(),
   createdAt: z.iso.datetime(),
   createdBy: z.string(),
   updatedAt: z.iso.datetime(),

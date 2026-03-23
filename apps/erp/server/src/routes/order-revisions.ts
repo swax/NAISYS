@@ -32,6 +32,7 @@ import {
   deleteRevision,
   findExisting,
   getRevision,
+  getRevisionOpSummary,
   listRevisions,
   type OrderRevisionWithRelations,
   updateRevision,
@@ -124,11 +125,12 @@ export const RevNoParamsSchema = z.object({
   revNo: z.coerce.number().int(),
 });
 
-export function formatRevision(
+export async function formatRevision(
   orderKey: string,
   user: ErpUser | undefined,
   revision: OrderRevisionWithRelations,
 ) {
+  const opSummaryRows = await getRevisionOpSummary(revision.id);
   return {
     id: revision.id,
     orderId: revision.orderId,
@@ -137,6 +139,10 @@ export function formatRevision(
     description: revision.description,
     changeSummary: revision.changeSummary,
     itemKey: revision.order?.item?.key ?? null,
+    operationSummary: opSummaryRows.map((op) => ({
+      seqNo: op.seqNo,
+      title: op.title,
+    })),
     ...formatAuditFields(revision),
     _links: [
       ...childItemLinks(
@@ -169,10 +175,24 @@ function formatListRevision(
   revision: OrderRevisionWithRelations,
 ) {
   return {
-    ...formatRevision(orderKey, user, revision),
+    id: revision.id,
+    orderId: revision.orderId,
+    revNo: revision.revNo,
+    status: revision.status,
+    description: revision.description,
+    changeSummary: revision.changeSummary,
+    itemKey: revision.order?.item?.key ?? null,
+    ...formatAuditFields(revision),
     _links: [
       selfLink(`/${PARENT_RESOURCE}/${orderKey}/revs/${revision.revNo}`),
     ],
+    _actions: revisionItemActions(
+      PARENT_RESOURCE,
+      orderKey,
+      revision.revNo,
+      revision.status,
+      user,
+    ),
   };
 }
 
@@ -299,7 +319,7 @@ export default function orderRevisionRoutes(fastify: FastifyInstance) {
       );
 
       reply.status(201);
-      return formatRevision(orderKey, request.erpUser, revision);
+      return await formatRevision(orderKey, request.erpUser, revision);
     },
   });
 
@@ -330,7 +350,7 @@ export default function orderRevisionRoutes(fastify: FastifyInstance) {
         );
       }
 
-      return formatRevision(orderKey, request.erpUser, revision);
+      return await formatRevision(orderKey, request.erpUser, revision);
     },
   });
 
@@ -377,7 +397,7 @@ export default function orderRevisionRoutes(fastify: FastifyInstance) {
         userId,
       );
 
-      return formatRevision(orderKey, request.erpUser, revision);
+      return await formatRevision(orderKey, request.erpUser, revision);
     },
   });
 

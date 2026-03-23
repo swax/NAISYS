@@ -18,6 +18,14 @@ const includeRevisionRelations = {
 export type OrderRevisionWithRelations = OrderRevisionModel &
   WithAuditUsers & { order: { item: { key: string } | null } };
 
+export async function getRevisionOpSummary(orderRevId: number) {
+  return erpDb.operation.findMany({
+    where: { orderRevId },
+    select: { seqNo: true, title: true },
+    orderBy: { seqNo: "asc" },
+  });
+}
+
 // --- Lookups ---
 
 export async function listRevisions(

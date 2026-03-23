@@ -3,6 +3,15 @@ import { z } from "zod/v4";
 import { HateoasActionSchema, HateoasLinkSchema } from "./hateoas-types.js";
 import { OperationPredecessorSchema } from "./operation-types.js";
 
+// Step summary embedded in operation run GET responses
+export const StepRunSummarySchema = z.object({
+  seqNo: z.number(),
+  title: z.string(),
+  completed: z.boolean(),
+});
+
+export type StepRunSummary = z.infer<typeof StepRunSummarySchema>;
+
 export const OperationRunStatusEnum = z.enum([
   "blocked",
   "pending",
@@ -30,6 +39,7 @@ export const OperationRunSchema = z.object({
   cost: z.number().nullable(),
   completionNote: z.string().nullable(),
   completedAt: z.iso.datetime().nullable(),
+  stepSummary: z.array(StepRunSummarySchema).optional(),
   createdAt: z.iso.datetime(),
   createdBy: z.string(),
   updatedAt: z.iso.datetime(),

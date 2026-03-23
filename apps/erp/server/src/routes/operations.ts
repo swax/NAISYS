@@ -68,8 +68,9 @@ function formatOperation(
   user: ErpUser | undefined,
   operation: OperationModel & WithAuditUsers & { workCenter?: { key: string } | null },
   summary?: {
-    stepCount: number;
-    predecessors: Array<{ seqNo: number; title: string }>;
+    stepCount?: number;
+    stepSummary?: Array<{ seqNo: number; title: string }>;
+    predecessors?: Array<{ seqNo: number; title: string }>;
   },
 ) {
   const base = opBasePath(orderKey, revNo);
@@ -80,12 +81,11 @@ function formatOperation(
     title: operation.title,
     description: operation.description,
     workCenterKey: operation.workCenter?.key ?? null,
-    ...(summary
-      ? {
-          stepCount: summary.stepCount,
-          predecessors: summary.predecessors,
-        }
+    ...(summary?.stepCount !== undefined
+      ? { stepCount: summary.stepCount }
       : {}),
+    ...(summary?.stepSummary ? { stepSummary: summary.stepSummary } : {}),
+    ...(summary?.predecessors ? { predecessors: summary.predecessors } : {}),
     ...formatAuditFields(operation),
     _links: [
       ...childItemLinks(
@@ -295,6 +295,13 @@ export default function operationRoutes(fastify: FastifyInstance) {
         resolved.rev.status,
         request.erpUser,
         operation,
+        {
+          stepCount: operation.steps.length,
+          stepSummary: operation.steps.map((s) => ({
+            seqNo: s.seqNo,
+            title: s.title,
+          })),
+        },
       );
     },
   });

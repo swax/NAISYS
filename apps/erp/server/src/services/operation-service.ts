@@ -42,13 +42,24 @@ export async function listOperations(
   });
 }
 
+export type OperationWithStepSummary = OperationWithUsers & {
+  steps: Array<{ seqNo: number; title: string }>;
+};
+
 export async function getOperation(
   orderRevId: number,
   seqNo: number,
-): Promise<OperationWithUsers | null> {
+): Promise<OperationWithStepSummary | null> {
   return erpDb.operation.findFirst({
     where: { orderRevId, seqNo },
-    include: { ...includeUsers, ...includeWorkCenter },
+    include: {
+      ...includeUsers,
+      ...includeWorkCenter,
+      steps: {
+        select: { seqNo: true, title: true },
+        orderBy: { seqNo: "asc" },
+      },
+    },
   });
 }
 
