@@ -37,7 +37,7 @@ export interface ActionDef<T> {
   statuses?: string[];
   visibleWhen?: (ctx: T) => boolean;
   hideWithoutPermission?: boolean;
-  disabledWhen?: (ctx: T) => string | null;
+  disabledWhen?: (ctx: T) => string | string[] | null;
 }
 
 export function resolveActions<T>(
@@ -91,4 +91,12 @@ export function permGate(hasPerm: boolean, permission: string) {
         disabled: true as const,
         disabledReason: `Requires ${permission} permission`,
       };
+}
+
+/** Normalize a `disabledReason` (string | string[] | undefined) to a single display string. */
+export function formatDisabledReason(
+  reason: string | string[] | undefined,
+): string | undefined {
+  if (!reason) return undefined;
+  return Array.isArray(reason) ? reason.join("\n") : reason;
 }

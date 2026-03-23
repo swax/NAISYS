@@ -28,7 +28,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { FieldValueRunList } from "../../../components/FieldValueList";
 import { api, apiEndpoints, showErrorNotification } from "../../../lib/api";
-import { hasAction } from "../../../lib/hateoas";
+import { formatDisabledReason, hasAction } from "../../../lib/hateoas";
 
 interface Props {
   orderKey: string;
@@ -186,7 +186,7 @@ export const StepRunList: React.FC<Props> = ({
                     <Group gap="xs">
                       {completeAction && (
                         <Tooltip
-                          label={completeAction.disabledReason}
+                          label={formatDisabledReason(completeAction.disabledReason)}
                           disabled={!completeAction.disabledReason}
                           multiline
                           maw={400}
@@ -261,15 +261,16 @@ export const StepRunList: React.FC<Props> = ({
                                     : () => handleReopen(step)
                                 }
                                 title={
-                                  reopenAction.disabledReason ??
+                                  formatDisabledReason(reopenAction.disabledReason) ??
                                   "Undo completion"
                                 }
                               >
                                 <IconArrowBackUp size={14} />
                               </ActionIcon>
                             );
-                            return reopenAction.disabledReason ? (
-                              <Tooltip label={reopenAction.disabledReason}>
+                            const reason = formatDisabledReason(reopenAction.disabledReason);
+                            return reason ? (
+                              <Tooltip label={reason} multiline maw={350} style={{ whiteSpace: "pre-line" }}>
                                 {icon}
                               </Tooltip>
                             ) : (

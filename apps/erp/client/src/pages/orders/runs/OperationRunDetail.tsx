@@ -32,7 +32,7 @@ import { useOutletContext, useParams } from "react-router";
 import { MetadataTooltip } from "../../../components/MetadataTooltip";
 import { UserAutocomplete } from "../../../components/UserAutocomplete";
 import { api, apiEndpoints, showErrorNotification } from "../../../lib/api";
-import { hasAction } from "../../../lib/hateoas";
+import { formatDisabledReason, hasAction } from "../../../lib/hateoas";
 import { DependencyList } from "../revs/DependencyList";
 import { CommentList } from "./CommentList";
 import type { LaborActions } from "./LaborTicketList";
@@ -399,7 +399,7 @@ export const OperationRunDetail: React.FC = () => {
                         : () => handleAction("reopen")
                     }
                     title={
-                      reopenAction.disabledReason ??
+                      formatDisabledReason(reopenAction.disabledReason) ??
                       `Undo ${label.toLowerCase()}`
                     }
                   >
@@ -413,13 +413,16 @@ export const OperationRunDetail: React.FC = () => {
                       {new Date(opRun.updatedAt).toLocaleString()}
                       {opRun.cost ? ` for $${opRun.cost.toFixed(2)}` : ""}
                     </Text>
-                    {reopenAction.disabledReason ? (
-                      <Tooltip label={reopenAction.disabledReason}>
-                        {icon}
-                      </Tooltip>
-                    ) : (
-                      icon
-                    )}
+                    {(() => {
+                      const reason = formatDisabledReason(reopenAction.disabledReason);
+                      return reason ? (
+                        <Tooltip label={reason} multiline maw={350} style={{ whiteSpace: "pre-line" }}>
+                          {icon}
+                        </Tooltip>
+                      ) : (
+                        icon
+                      );
+                    })()}
                   </Group>
                 );
               })()}
