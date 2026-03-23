@@ -220,7 +220,7 @@ export default function stepRunFieldRoutes(fastify: FastifyInstance) {
     setIndex: number,
   ) {
     const { orderKey, runNo, seqNo, stepSeqNo } = request.params;
-    const { items } = request.body;
+    const { fields } = request.body;
     const userId = request.erpUser!.id;
 
     const resolved = await resolveStepRun(orderKey, runNo, seqNo, stepSeqNo);
@@ -265,7 +265,7 @@ export default function stepRunFieldRoutes(fastify: FastifyInstance) {
     );
 
     // Validate all fieldSeqNos exist
-    for (const item of items) {
+    for (const item of fields) {
       if (!fieldDefs.has(item.fieldSeqNo)) {
         return notFound(reply, `Step field ${item.fieldSeqNo} not found`);
       }
@@ -279,7 +279,7 @@ export default function stepRunFieldRoutes(fastify: FastifyInstance) {
 
     // Upsert all field values
     const results = [];
-    for (const item of items) {
+    for (const item of fields) {
       const field = fieldDefs.get(item.fieldSeqNo)!;
       await upsertFieldValue(fieldRecordId, field.id, setIndex, item.value, userId);
 
