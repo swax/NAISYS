@@ -27,6 +27,7 @@ import {
   checkOpsComplete,
   createOrderRun,
   deleteOrderRun,
+  findLatestApprovedRevision,
   findOrderRevision,
   getOrderRun,
   getOrderRunOpSummary,
@@ -298,12 +299,16 @@ export default function orderRunRoutes(fastify: FastifyInstance) {
 
       const orderId = order.id;
 
-      // Validate revision exists and belongs to the order
-      const orderRev = await findOrderRevision(orderId, revNo);
+      // Resolve revision: explicit revNo or latest approved
+      const orderRev = revNo
+        ? await findOrderRevision(orderId, revNo)
+        : await findLatestApprovedRevision(orderId);
       if (!orderRev) {
         return notFound(
           reply,
-          `Order revision ${revNo} not found for order '${orderKey}'`,
+          revNo
+            ? `Order revision ${revNo} not found for order '${orderKey}'`
+            : `No approved revision found for order '${orderKey}'`,
         );
       }
 

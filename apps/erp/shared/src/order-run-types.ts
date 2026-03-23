@@ -63,7 +63,7 @@ export type OrderRun = z.infer<typeof OrderRunSchema>;
 // Input for creating an order run
 export const CreateOrderRunSchema = z
   .object({
-    revNo: z.number().int().min(1),
+    revNo: z.number().int().min(1).optional(),
     priority: OrderRunPriorityEnum.optional().default("medium"),
     dueAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Must be YYYY-MM-DD"),
     releaseNote: z.string().max(2000).optional(),

@@ -102,6 +102,7 @@ export const OrderRunForm = <TEdit extends boolean = false>({
         {!isEdit && (
           <NumberInput
             label="Rev No"
+            placeholder="Latest approved"
             min={1}
             {...form.getInputProps("revNo")}
           />
