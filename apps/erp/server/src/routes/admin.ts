@@ -17,6 +17,7 @@ import {
   ServerLogResponseSchema,
 } from "@naisys-erp/shared";
 import { FastifyInstance, FastifyPluginOptions } from "fastify";
+import { z } from "zod/v4";
 
 import { hasPermission, requirePermission } from "../auth-middleware.js";
 import { erpDbPath } from "../dbConfig.js";
@@ -185,11 +186,7 @@ export default function adminRoutes(
       schema: {
         description: "Download an attachment file by ID",
         tags: ["Admin"],
-        params: {
-          type: "object",
-          properties: { id: { type: "string" } },
-          required: ["id"],
-        },
+        params: z.object({ id: z.string() }),
       },
     },
     async (request, reply) => {
