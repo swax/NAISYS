@@ -1,6 +1,10 @@
 import { z } from "zod/v4";
 
-import { HateoasActionSchema, HateoasLinkSchema } from "./hateoas-types.js";
+import {
+  HateoasActionSchema,
+  HateoasLinkSchema,
+  HateoasLinkTemplateSchema,
+} from "./hateoas-types.js";
 
 export const OrderStatusEnum = z.enum(["active", "archived"]);
 export type OrderStatus = z.infer<typeof OrderStatusEnum>;
@@ -17,7 +21,7 @@ export const OrderSchema = z.object({
   createdAt: z.iso.datetime(),
   updatedBy: z.string(),
   updatedAt: z.iso.datetime(),
-  _links: z.array(HateoasLinkSchema),
+  _links: z.array(HateoasLinkSchema).optional(),
   _actions: z.array(HateoasActionSchema).optional(),
 });
 
@@ -78,6 +82,7 @@ export const OrderListResponseSchema = z.object({
   page: z.number(),
   pageSize: z.number(),
   _links: z.array(HateoasLinkSchema),
+  _linkTemplates: z.array(HateoasLinkTemplateSchema).optional(),
   _actions: z.array(HateoasActionSchema).optional(),
 });
 

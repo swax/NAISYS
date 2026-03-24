@@ -1,6 +1,10 @@
 import { z } from "zod/v4";
 
-import { HateoasActionSchema, HateoasLinkSchema } from "./hateoas-types.js";
+import {
+  HateoasActionSchema,
+  HateoasLinkSchema,
+  HateoasLinkTemplateSchema,
+} from "./hateoas-types.js";
 
 export const OperationRunCommentTypeEnum = z.enum([
   "note",
@@ -19,7 +23,7 @@ export const OperationRunCommentSchema = z.object({
   body: z.string(),
   createdAt: z.iso.datetime(),
   createdBy: z.string(),
-  _links: z.array(HateoasLinkSchema),
+  _links: z.array(HateoasLinkSchema).optional(),
 });
 
 export type OperationRunComment = z.infer<typeof OperationRunCommentSchema>;
@@ -39,6 +43,7 @@ export const OperationRunCommentListResponseSchema = z.object({
   items: z.array(OperationRunCommentSchema),
   total: z.number(),
   _links: z.array(HateoasLinkSchema),
+  _linkTemplates: z.array(HateoasLinkTemplateSchema).optional(),
   _actions: z.array(HateoasActionSchema).optional(),
 });
 

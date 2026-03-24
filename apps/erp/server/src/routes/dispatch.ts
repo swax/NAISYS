@@ -189,6 +189,12 @@ export default function dispatchRoutes(fastify: FastifyInstance) {
             title: "Work Centers",
           },
         ],
+        _linkTemplates: [
+          {
+            rel: "item",
+            hrefTemplate: `${API_PREFIX}/orders/{orderKey}/runs/{runNo}/ops/{seqNo}`,
+          },
+        ],
         _actionTemplates: [
           {
             rel: "viewOperationRun",

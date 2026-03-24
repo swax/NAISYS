@@ -121,7 +121,6 @@ function formatListItem(wc: WorkCenterWithDetail) {
     description: wc.description,
     userCount: wc._count.userAssignments,
     ...formatAuditFields(wc),
-    _links: [selfLink(`/${RESOURCE}/${wc.key}`)],
   };
 }
 
@@ -157,6 +156,12 @@ export default function workCenterRoutes(fastify: FastifyInstance) {
         page,
         pageSize,
         _links: paginationLinks(RESOURCE, page, pageSize, total, { search }),
+        _linkTemplates: [
+          {
+            rel: "item",
+            hrefTemplate: `${API_PREFIX}/work-centers/{key}`,
+          },
+        ],
         _actions: hasPermission(request.erpUser, "erp_admin")
           ? [
               {

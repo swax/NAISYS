@@ -276,7 +276,6 @@ function formatListOpRun(
       seqNo: d.predecessor.seqNo,
       title: d.predecessor.title,
     })),
-    _links: [selfLink(`/${opRunResource(orderKey, runNo)}/${seqNo}`)],
   };
 }
 
@@ -308,6 +307,12 @@ export default function operationRunRoutes(fastify: FastifyInstance) {
         items: items.map((opRun) => formatListOpRun(orderKey, runNo, opRun)),
         total: items.length,
         _links: [selfLink(`/${opRunResource(orderKey, runNo)}`)],
+        _linkTemplates: [
+          {
+            rel: "item",
+            hrefTemplate: `${API_PREFIX}/orders/${orderKey}/runs/${runNo}/ops/{seqNo}`,
+          },
+        ],
       };
     },
   });

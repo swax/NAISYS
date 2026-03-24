@@ -1,6 +1,10 @@
 import { z } from "zod/v4";
 
-import { HateoasActionSchema, HateoasLinkSchema } from "./hateoas-types.js";
+import {
+  HateoasActionSchema,
+  HateoasLinkSchema,
+  HateoasLinkTemplateSchema,
+} from "./hateoas-types.js";
 
 // Work center user assignment (embedded in detail response)
 export const WorkCenterUserSchema = z.object({
@@ -92,7 +96,6 @@ export const WorkCenterListItemSchema = z.object({
   createdBy: z.string(),
   updatedAt: z.iso.datetime(),
   updatedBy: z.string(),
-  _links: z.array(HateoasLinkSchema),
 });
 
 export type WorkCenterListItem = z.infer<typeof WorkCenterListItemSchema>;
@@ -104,6 +107,7 @@ export const WorkCenterListResponseSchema = z.object({
   page: z.number(),
   pageSize: z.number(),
   _links: z.array(HateoasLinkSchema),
+  _linkTemplates: z.array(HateoasLinkTemplateSchema).optional(),
   _actions: z.array(HateoasActionSchema).optional(),
 });
 

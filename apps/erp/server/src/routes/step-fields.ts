@@ -103,12 +103,27 @@ export function formatFieldListResponse(
   const maxSeq = items.length > 0 ? items[items.length - 1].seqNo : 0;
   const base = fieldBasePath(orderKey, revNo, opSeqNo, stepSeqNo);
   return {
-    items: items.map((field) =>
-      formatField(orderKey, revNo, opSeqNo, stepSeqNo, revStatus, user, field),
-    ),
+    items: items.map((field) => {
+      const { _links, ...rest } = formatField(
+        orderKey,
+        revNo,
+        opSeqNo,
+        stepSeqNo,
+        revStatus,
+        user,
+        field,
+      );
+      return rest;
+    }),
     total: items.length,
     nextSeqNo: calcNextSeqNo(maxSeq),
     _links: [selfLink(base)],
+    _linkTemplates: [
+      {
+        rel: "item",
+        hrefTemplate: `${API_PREFIX}${fieldBasePath(orderKey, revNo, opSeqNo, stepSeqNo)}/{seqNo}`,
+      },
+    ],
     _actions: fieldListActions(base, revStatus, user),
   };
 }
@@ -189,8 +204,8 @@ export default function stepFieldRoutes(fastify: FastifyInstance) {
       const user = request.erpUser;
       const base = fieldBasePath(orderKey, revNo, seqNo, stepSeqNo);
       return {
-        items: items.map((field) =>
-          formatField(
+        items: items.map((field) => {
+          const { _links, ...rest } = formatField(
             orderKey,
             revNo,
             seqNo,
@@ -198,11 +213,18 @@ export default function stepFieldRoutes(fastify: FastifyInstance) {
             resolved.rev.status,
             user,
             field,
-          ),
-        ),
+          );
+          return rest;
+        }),
         total: items.length,
         nextSeqNo: calcNextSeqNo(maxSeq),
         _links: [selfLink(base)],
+        _linkTemplates: [
+          {
+            rel: "item",
+            hrefTemplate: `${API_PREFIX}${fieldBasePath(orderKey, revNo, seqNo, stepSeqNo)}/{seqNo}`,
+          },
+        ],
         _actions: fieldListActions(base, resolved.rev.status, user),
       };
     },

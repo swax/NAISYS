@@ -256,13 +256,6 @@ function formatListInstance(
     quantity: inst.quantity,
     fieldValues: buildFieldValues(inst),
     ...formatAuditFields(inst),
-    _links: [selfLink(`/${instanceBasePath(inst.item.key)}/${inst.id}`)],
-    _actionTemplates: [] as {
-      rel: string;
-      hrefTemplate: string;
-      method: string;
-      title: string;
-    }[],
   };
 }
 
@@ -304,6 +297,12 @@ export default function itemInstanceRoutes(fastify: FastifyInstance) {
         page,
         pageSize,
         _links: paginationLinks(base, page, pageSize, total, { search }),
+        _linkTemplates: [
+          {
+            rel: "item",
+            hrefTemplate: `${API_PREFIX}/items/${key}/instances/{id}`,
+          },
+        ],
         _actions: hasPermission(request.erpUser, "item_manager")
           ? [
               {

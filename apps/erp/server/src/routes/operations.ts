@@ -154,8 +154,8 @@ export default function operationRoutes(fastify: FastifyInstance) {
       const user = request.erpUser;
       const base = opBasePath(orderKey, revNo);
       return {
-        items: items.map((operation) =>
-          formatOperation(
+        items: items.map((operation) => {
+          const formatted = formatOperation(
             orderKey,
             revNo,
             resolved.rev.status,
@@ -168,11 +168,19 @@ export default function operationRoutes(fastify: FastifyInstance) {
                 title: d.predecessor.title,
               })),
             },
-          ),
-        ),
+          );
+          const { _links, ...rest } = formatted;
+          return rest;
+        }),
         total: items.length,
         nextSeqNo: calcNextSeqNo(maxSeq),
         _links: [selfLink(base)],
+        _linkTemplates: [
+          {
+            rel: "item",
+            hrefTemplate: `${API_PREFIX}/orders/${orderKey}/revs/${revNo}/ops/{seqNo}`,
+          },
+        ],
         _actions: [
           {
             rel: "create",

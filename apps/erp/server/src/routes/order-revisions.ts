@@ -18,7 +18,7 @@ import { z } from "zod/v4";
 import type { ErpUser } from "../auth-middleware.js";
 import { hasPermission, requirePermission } from "../auth-middleware.js";
 import { conflict, notFound } from "../error-handler.js";
-import { API_PREFIX, paginationLinks, selfLink } from "../hateoas.js";
+import { API_PREFIX, paginationLinks } from "../hateoas.js";
 import {
   childItemLinks,
   formatAuditFields,
@@ -183,9 +183,6 @@ function formatListRevision(
     changeSummary: revision.changeSummary,
     itemKey: revision.order?.item?.key ?? null,
     ...formatAuditFields(revision),
-    _links: [
-      selfLink(`/${PARENT_RESOURCE}/${orderKey}/revs/${revision.revNo}`),
-    ],
     _actions: revisionItemActions(
       PARENT_RESOURCE,
       orderKey,
@@ -246,6 +243,12 @@ export default function orderRevisionRoutes(fastify: FastifyInstance) {
           status,
           includeObsolete: includeObsolete ? "true" : undefined,
         }),
+        _linkTemplates: [
+          {
+            rel: "item",
+            hrefTemplate: `${API_PREFIX}/orders/${orderKey}/revs/{revNo}`,
+          },
+        ],
         _actions: [
           {
             rel: "create",

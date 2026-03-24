@@ -185,11 +185,23 @@ export default function laborTicketRoutes(fastify: FastifyInstance) {
       const items = await listLaborTickets(resolved.opRun.id);
 
       return {
-        items: items.map((ticket) =>
-          formatLaborTicket(orderKey, runNo, seqNo, ticket),
-        ),
+        items: items.map((ticket) => {
+          const { _links, ...rest } = formatLaborTicket(
+            orderKey,
+            runNo,
+            seqNo,
+            ticket,
+          );
+          return rest;
+        }),
         total: items.length,
         _links: [selfLink(`/${laborResource(orderKey, runNo, seqNo)}`)],
+        _linkTemplates: [
+          {
+            rel: "item",
+            hrefTemplate: `${API_PREFIX}/${laborResource(orderKey, runNo, seqNo)}/{id}`,
+          },
+        ],
         _actions: laborTicketListActions(
           orderKey,
           runNo,
@@ -290,11 +302,23 @@ export default function laborTicketRoutes(fastify: FastifyInstance) {
       // Return full list after clock-out
       const items = await listLaborTickets(resolved.opRun.id);
       return {
-        items: items.map((ticket) =>
-          formatLaborTicket(orderKey, runNo, seqNo, ticket),
-        ),
+        items: items.map((ticket) => {
+          const { _links, ...rest } = formatLaborTicket(
+            orderKey,
+            runNo,
+            seqNo,
+            ticket,
+          );
+          return rest;
+        }),
         total: items.length,
         _links: [selfLink(`/${laborResource(orderKey, runNo, seqNo)}`)],
+        _linkTemplates: [
+          {
+            rel: "item",
+            hrefTemplate: `${API_PREFIX}/${laborResource(orderKey, runNo, seqNo)}/{id}`,
+          },
+        ],
         _actions: laborTicketListActions(
           orderKey,
           runNo,

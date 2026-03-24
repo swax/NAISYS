@@ -170,7 +170,6 @@ function formatListUser(
     isAgent: user.isAgent,
     createdAt: user.createdAt.toISOString(),
     permissionCount: user.permissions.length,
-    _links: [selfLink(`/users/${user.username}`)],
   };
 }
 
@@ -250,6 +249,9 @@ export default function userRoutes(
         _links: paginationLinks("users", page, pageSize, result.total, {
           search,
         }),
+        _linkTemplates: [
+          { rel: "item", hrefTemplate: `${API_PREFIX}/users/{username}` },
+        ],
         _actions: actions,
       };
     },

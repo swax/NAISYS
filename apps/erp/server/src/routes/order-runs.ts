@@ -15,7 +15,7 @@ import { z } from "zod/v4";
 import type { ErpUser } from "../auth-middleware.js";
 import { hasPermission, requirePermission } from "../auth-middleware.js";
 import { conflict, notFound } from "../error-handler.js";
-import { API_PREFIX, paginationLinks, selfLink } from "../hateoas.js";
+import { API_PREFIX, paginationLinks } from "../hateoas.js";
 import {
   childItemLinks,
   formatAuditFields,
@@ -221,7 +221,6 @@ function formatListRun(orderKey: string, run: OrderRunWithRev) {
     dueAt: run.dueAt,
     releaseNote: run.releaseNote,
     ...formatAuditFields(run),
-    _links: [selfLink(`/${runResource(orderKey)}/${run.runNo}`)],
   };
 }
 
@@ -270,6 +269,12 @@ export default function orderRunRoutes(fastify: FastifyInstance) {
           priority,
           search,
         }),
+        _linkTemplates: [
+          {
+            rel: "item",
+            hrefTemplate: `${API_PREFIX}/orders/${orderKey}/runs/{runNo}`,
+          },
+        ],
       };
     },
   });

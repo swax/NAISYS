@@ -1,4 +1,4 @@
-import { HateoasLinkSchema } from "@naisys/common";
+import { HateoasLinkSchema, HateoasLinkTemplateSchema } from "@naisys/common";
 import { z } from "zod";
 
 import { LogEntrySchema } from "./log-types.js";
@@ -14,7 +14,6 @@ export const RunSessionSchema = z.object({
   latestLogId: z.number(),
   totalLines: z.number(),
   totalCost: z.number(),
-  _links: z.array(HateoasLinkSchema).optional(),
 });
 
 export const RunsDataRequestSchema = z.object({
@@ -34,6 +33,7 @@ export const RunsDataResponseSchema = z.object({
     })
     .optional(),
   _links: z.array(HateoasLinkSchema).optional(),
+  _linkTemplates: z.array(HateoasLinkTemplateSchema).optional(),
 });
 
 export const ContextLogParamsSchema = z.object({

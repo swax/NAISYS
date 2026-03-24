@@ -412,15 +412,6 @@ function formatListStepRun(
     note: stepRun.statusNote ?? null,
     fieldCount,
     ...formatAuditFields(stepRun),
-    _links: childItemLinks(
-      "/" + stepRunResource(orderKey, runNo, seqNo),
-      stepSeqNo,
-      "Step Runs",
-      "/orders/" + orderKey + "/runs/" + runNo + "/ops/" + seqNo,
-      "Operation Run",
-      "StepRun",
-      "operationRun",
-    ),
   };
 }
 
@@ -450,23 +441,31 @@ export default function stepRunRoutes(fastify: FastifyInstance) {
 
       if (includeFields) {
         const items = await listStepRunsWithFields(resolved.opRun.id);
+        const formatted = await Promise.all(
+          items.map(async (stepRun) => {
+            const { _links, ...rest } = await formatStepRunWithFields(
+              orderKey,
+              runNo,
+              seqNo,
+              resolved.opRun.id,
+              resolved.opRun.operationId,
+              resolved.opRun.status,
+              request.erpUser,
+              stepRun,
+            );
+            return rest;
+          }),
+        );
         return {
-          items: await Promise.all(
-            items.map((stepRun) =>
-              formatStepRunWithFields(
-                orderKey,
-                runNo,
-                seqNo,
-                resolved.opRun.id,
-                resolved.opRun.operationId,
-                resolved.opRun.status,
-                request.erpUser,
-                stepRun,
-              ),
-            ),
-          ),
+          items: formatted,
           total: items.length,
           _links: [selfLink(`/${stepRunResource(orderKey, runNo, seqNo)}`)],
+          _linkTemplates: [
+            {
+              rel: "item",
+              hrefTemplate: `${API_PREFIX}/${stepRunResource(orderKey, runNo, seqNo)}/{seqNo}`,
+            },
+          ],
         };
       }
 
@@ -477,6 +476,12 @@ export default function stepRunRoutes(fastify: FastifyInstance) {
         ),
         total: items.length,
         _links: [selfLink(`/${stepRunResource(orderKey, runNo, seqNo)}`)],
+        _linkTemplates: [
+          {
+            rel: "item",
+            hrefTemplate: `${API_PREFIX}/${stepRunResource(orderKey, runNo, seqNo)}/{seqNo}`,
+          },
+        ],
       };
     },
   });
