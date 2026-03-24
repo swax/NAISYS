@@ -251,6 +251,7 @@ export async function createAgentRuntime(
     commandProtection,
     promptBuilder,
     shellCommand,
+    shellWrapper,
     commandRegistry,
     contextManager,
     output,
