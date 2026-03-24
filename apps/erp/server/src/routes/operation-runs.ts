@@ -27,6 +27,7 @@ import {
 import {
   checkStepsComplete,
   getOpRun,
+  getOpRunFieldRefSummary,
   getOpRunStepSummary,
   listOpRuns,
   type OpRunWithOp,
@@ -166,7 +167,10 @@ export async function formatOpRun(
   opRun: OpRunWithOp,
 ) {
   const seqNo = opRun.operation.seqNo;
-  const stepSummaryRows = await getOpRunStepSummary(opRun.id);
+  const [stepSummaryRows, fieldRefSummary] = await Promise.all([
+    getOpRunStepSummary(opRun.id),
+    getOpRunFieldRefSummary(opRun.operationId, opRun.orderRunId),
+  ]);
   return {
     id: opRun.id,
     orderRunId: opRun.orderRunId,
@@ -185,6 +189,7 @@ export async function formatOpRun(
       title: sr.step.title,
       completed: sr.completed,
     })),
+    ...(fieldRefSummary.length > 0 ? { fieldRefSummary } : {}),
     ...formatAuditFields(opRun),
     _links: [
       ...childItemLinks(

@@ -136,9 +136,10 @@ export async function createRevision(
       include: includeRevisionRelations,
     });
 
-    // Copy operations, steps, fields, and dependencies from the previous revision
+    // Copy operations, steps, fields, dependencies, and field refs from the previous revision
     if (prevRev) {
       const oldToNewOpId = new Map<number, number>();
+      const oldToNewStepId = new Map<number, number>();
 
       for (const op of prevRev.operations) {
         const newOp = await erpTx.operation.create({
@@ -180,7 +181,7 @@ export async function createRevision(
             }
           }
 
-          await erpTx.step.create({
+          const newStep = await erpTx.step.create({
             data: {
               operationId: newOp.id,
               seqNo: step.seqNo,
@@ -192,6 +193,7 @@ export async function createRevision(
               updatedById: userId,
             },
           });
+          oldToNewStepId.set(step.id, newStep.id);
         }
       }
 
@@ -209,6 +211,30 @@ export async function createRevision(
               },
             });
           }
+        }
+      }
+
+      // Copy field refs using old-to-new operation and step ID mappings
+      const oldFieldRefs = await erpTx.operationFieldRef.findMany({
+        where: {
+          operationId: {
+            in: [...oldToNewOpId.keys()],
+          },
+        },
+      });
+      for (const ref of oldFieldRefs) {
+        const newOpId = oldToNewOpId.get(ref.operationId);
+        const newStepId = oldToNewStepId.get(ref.sourceStepId);
+        if (newOpId && newStepId) {
+          await erpTx.operationFieldRef.create({
+            data: {
+              operationId: newOpId,
+              seqNo: ref.seqNo,
+              title: ref.title,
+              sourceStepId: newStepId,
+              createdById: userId,
+            },
+          });
         }
       }
     }
@@ -247,6 +273,11 @@ export async function deleteRevision(id: number): Promise<void> {
     const opIds = operations.map((op) => op.id);
 
     if (opIds.length > 0) {
+      // Delete field refs first (sourceStepId FK is Restrict, so must go before steps)
+      await erpTx.operationFieldRef.deleteMany({
+        where: { operationId: { in: opIds } },
+      });
+
       const steps = await erpTx.step.findMany({
         where: { operationId: { in: opIds } },
         select: { id: true, fieldSetId: true },

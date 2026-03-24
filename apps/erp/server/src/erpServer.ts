@@ -43,6 +43,7 @@ import itemInstanceRoutes from "./routes/item-instances.js";
 import itemRoutes from "./routes/items.js";
 import laborTicketRoutes from "./routes/labor-tickets.js";
 import operationDependencyRoutes from "./routes/operation-dependencies.js";
+import operationFieldRefRoutes from "./routes/operation-field-refs.js";
 import operationRunCommentRoutes from "./routes/operation-run-comments.js";
 import operationRunTransitionRoutes from "./routes/operation-run-transitions.js";
 import operationRunRoutes from "./routes/operation-runs.js";
@@ -199,6 +200,9 @@ export const erpPlugin: FastifyPluginAsync = async (fastify) => {
   });
   fastify.register(operationDependencyRoutes, {
     prefix: "/api/erp/orders/:orderKey/revs/:revNo/ops/:seqNo/deps",
+  });
+  fastify.register(operationFieldRefRoutes, {
+    prefix: "/api/erp/orders/:orderKey/revs/:revNo/ops/:seqNo/field-refs",
   });
   fastify.register(operationRunRoutes, {
     prefix: "/api/erp/orders/:orderKey/runs/:runNo/ops",

@@ -3,6 +3,7 @@ export * from "./api-types.js";
 export * from "./audit-types.js";
 export * from "./auth-types.js";
 export * from "./error-types.js";
+export * from "./field-ref-types.js";
 export * from "./field-types.js";
 export * from "./hateoas-types.js";
 export * from "./inventory-types.js";

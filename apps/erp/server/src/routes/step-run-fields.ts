@@ -12,6 +12,7 @@ import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod/v4";
 
 import { requirePermission } from "../auth-middleware.js";
+import erpDb from "../erpDb.js";
 import { conflict, notFound, unprocessable } from "../error-handler.js";
 import {
   checkOpRunInProgress,
@@ -164,9 +165,11 @@ export default function stepRunFieldRoutes(fastify: FastifyInstance) {
           : ""
         : deserializeFieldValue(serializeFieldValue(value), field.multiValue);
 
-    const hasAttachmentFields = (stepRun.step.fieldSet?.fields ?? []).some(
-      (f) => f.type === "attachment",
-    );
+    // Check ALL fields in the fieldSet for attachment type (not just the
+    // filtered single field) so that _actionTemplates include upload/delete
+    const attachmentCount = await erpDb.field.count({
+      where: { fieldSetId: field.fieldSetId, type: "attachment" },
+    });
 
     const hateoas = await computeStepRunHateoas(
       orderKey,
@@ -179,7 +182,7 @@ export default function stepRunFieldRoutes(fastify: FastifyInstance) {
       stepRun.completed,
       resolved.stepRun.id,
       stepRun.step.multiSet,
-      hasAttachmentFields,
+      attachmentCount > 0,
       request.erpUser,
     );
 
