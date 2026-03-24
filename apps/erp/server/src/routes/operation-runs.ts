@@ -178,7 +178,7 @@ export async function formatOpRun(
     status: opRun.status,
     assignedTo: opRun.assignedTo?.username ?? null,
     cost: opRun.cost,
-    completionNote: opRun.completionNote ?? null,
+    note: opRun.statusNote ?? null,
     completedAt: formatDate(opRun.completedAt),
     stepSummary: stepSummaryRows.map((sr) => ({
       seqNo: sr.step.seqNo,
@@ -236,7 +236,7 @@ export async function formatOpRunTransition(
     status: opRun.status,
     assignedTo: opRun.assignedTo?.username ?? null,
     cost: opRun.cost,
-    completionNote: opRun.completionNote ?? null,
+    note: opRun.statusNote ?? null,
     completedAt: formatDate(opRun.completedAt),
     ...formatAuditFields(opRun),
     _actions: await opRunItemActions(
@@ -268,7 +268,7 @@ function formatListOpRun(
     status: opRun.status,
     assignedTo: opRun.assignedTo?.username ?? null,
     cost: opRun.cost,
-    completionNote: opRun.completionNote ?? null,
+    note: opRun.statusNote ?? null,
     completedAt: formatDate(opRun.completedAt),
     ...formatAuditFields(opRun),
     stepCount: opRun._count.stepRuns,

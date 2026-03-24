@@ -64,7 +64,7 @@ export const StepRunSchema = z.object({
   instructions: z.string(),
   multiSet: z.boolean(),
   completed: z.boolean(),
-  completionNote: z.string().nullable(),
+  note: z.string().nullable(),
   fieldCount: z.number().optional(),
   fieldValues: z.array(FieldValueEntrySchema).optional(),
   createdAt: z.iso.datetime(),
@@ -147,7 +147,7 @@ export type DeleteSetResponse = z.infer<typeof DeleteSetResponseSchema>;
 export const StepRunTransitionSchema = z.object({
   id: z.number(),
   completed: z.boolean(),
-  completionNote: z.string().nullable(),
+  note: z.string().nullable(),
   updatedAt: z.iso.datetime(),
   updatedBy: z.string(),
   _actions: z.array(HateoasActionSchema).optional(),
@@ -156,14 +156,6 @@ export const StepRunTransitionSchema = z.object({
 
 export type StepRunTransition = z.infer<typeof StepRunTransitionSchema>;
 
-// Input for completing a step run
-export const CompleteStepRunSchema = z
-  .object({
-    completionNote: z.string().max(2000).optional(),
-  })
-  .strict();
-
-export type CompleteStepRun = z.infer<typeof CompleteStepRunSchema>;
 
 // Query params for listing step runs
 export const StepRunListQuerySchema = z.object({

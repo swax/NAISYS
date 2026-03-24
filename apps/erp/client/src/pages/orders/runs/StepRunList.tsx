@@ -116,13 +116,13 @@ export const StepRunList: React.FC<Props> = ({
 
   const handleComplete = async (
     step: StepRun,
-    completionNote?: string,
+    note?: string,
   ) => {
     setSavingStep(step.id);
     try {
       const updated = await api.post<StepRunTransition>(
         apiEndpoints.stepRunComplete(orderKey, runNo, seqNo, step.seqNo),
-        { completionNote },
+        { note },
       );
       mergeStepTransition(updated);
     } catch (err) {
@@ -296,9 +296,9 @@ export const StepRunList: React.FC<Props> = ({
                     </Text>
                   )}
 
-                  {step.completionNote && (
+                  {step.note && (
                     <Text size="xs" c="dimmed" fs="italic">
-                      Completion Note: {step.completionNote}
+                      Note: {step.note}
                     </Text>
                   )}
 
@@ -385,12 +385,12 @@ export const StepRunList: React.FC<Props> = ({
       <Modal
         opened={noteModalStep !== null}
         onClose={() => setNoteModalStep(null)}
-        title="Complete with Note"
+        title="Complete with note"
         size="sm"
       >
         <Stack gap="md">
           <Textarea
-            label="Completion note"
+            label="Note"
             placeholder="Enter a note..."
             value={noteText}
             onChange={(e) => setNoteText(e.currentTarget.value)}

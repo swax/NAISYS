@@ -37,7 +37,7 @@ export const OperationRunSchema = z.object({
   status: OperationRunStatusEnum,
   assignedTo: z.string().nullable(),
   cost: z.number().nullable(),
-  completionNote: z.string().nullable(),
+  note: z.string().nullable(),
   completedAt: z.iso.datetime().nullable(),
   stepSummary: z.array(StepRunSummarySchema).optional(),
   createdAt: z.iso.datetime(),
@@ -59,14 +59,14 @@ export const UpdateOperationRunSchema = z
 
 export type UpdateOperationRun = z.infer<typeof UpdateOperationRunSchema>;
 
-// Input for completing an operation run
-export const CompleteOperationRunSchema = z
+// Body for any status transition that accepts an optional note
+export const TransitionNoteSchema = z
   .object({
-    completionNote: z.string().max(2000).optional(),
+    note: z.string().max(2000).optional(),
   })
   .strict();
 
-export type CompleteOperationRun = z.infer<typeof CompleteOperationRunSchema>;
+export type TransitionNote = z.infer<typeof TransitionNoteSchema>;
 
 // Slim transition response (start/complete/skip/fail/reopen)
 export const OperationRunTransitionSchema = z.object({
@@ -74,7 +74,7 @@ export const OperationRunTransitionSchema = z.object({
   status: OperationRunStatusEnum,
   assignedTo: z.string().nullable(),
   cost: z.number().nullable(),
-  completionNote: z.string().nullable(),
+  note: z.string().nullable(),
   completedAt: z.iso.datetime().nullable(),
   updatedAt: z.iso.datetime(),
   updatedBy: z.string(),

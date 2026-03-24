@@ -171,7 +171,7 @@ export const OperationRunDetail: React.FC = () => {
     setSubmittingNote(true);
     try {
       await handleAction("complete", {
-        completionNote: completeNoteText.trim() || undefined,
+        note: completeNoteText.trim() || undefined,
       });
       setCompleteNoteOpen(false);
       setCompleteNoteText("");
@@ -468,9 +468,9 @@ export const OperationRunDetail: React.FC = () => {
                   {opRun.description && (
                     <CompactMarkdown>{opRun.description}</CompactMarkdown>
                   )}
-                  {opRun.completionNote && (
+                  {opRun.note && (
                     <Text size="xs" c="dimmed" fs="italic">
-                      Completion Note: {opRun.completionNote}
+                      Note: {opRun.note}
                     </Text>
                   )}
                 </Stack>
@@ -550,12 +550,12 @@ export const OperationRunDetail: React.FC = () => {
       <Modal
         opened={completeNoteOpen}
         onClose={() => setCompleteNoteOpen(false)}
-        title="Complete with Note"
+        title="Complete with note"
         size="sm"
       >
         <Stack gap="md">
           <Textarea
-            label="Completion note"
+            label="Note"
             placeholder="Enter a note..."
             value={completeNoteText}
             onChange={(e) => setCompleteNoteText(e.currentTarget.value)}
