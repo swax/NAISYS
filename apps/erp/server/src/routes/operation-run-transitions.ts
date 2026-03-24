@@ -58,7 +58,10 @@ export default function operationRunTransitionRoutes(fastify: FastifyInstance) {
       const resolved = await resolveOpRun(orderKey, runNo, seqNo);
       if (!resolved) return notFound(reply, `Operation run not found`);
 
-      const wcErr = await checkWorkCenterAccess(resolved.opRun.operationId, request.erpUser!);
+      const wcErr = await checkWorkCenterAccess(
+        resolved.opRun.operationId,
+        request.erpUser!,
+      );
       if (wcErr) return conflict(reply, wcErr);
 
       // Auto-start the order run if it's still in released status
@@ -122,7 +125,10 @@ export default function operationRunTransitionRoutes(fastify: FastifyInstance) {
       const resolved = await resolveOpRun(orderKey, runNo, seqNo);
       if (!resolved) return notFound(reply, `Operation run not found`);
 
-      const wcErr = await checkWorkCenterAccess(resolved.opRun.operationId, request.erpUser!);
+      const wcErr = await checkWorkCenterAccess(
+        resolved.opRun.operationId,
+        request.erpUser!,
+      );
       if (wcErr) return conflict(reply, wcErr);
 
       const orderErr = checkOrderRunStarted(resolved.run.status);
@@ -188,7 +194,10 @@ export default function operationRunTransitionRoutes(fastify: FastifyInstance) {
       const resolved = await resolveOpRun(orderKey, runNo, seqNo);
       if (!resolved) return notFound(reply, `Operation run not found`);
 
-      const wcErr = await checkWorkCenterAccess(resolved.opRun.operationId, request.erpUser!);
+      const wcErr = await checkWorkCenterAccess(
+        resolved.opRun.operationId,
+        request.erpUser!,
+      );
       if (wcErr) return conflict(reply, wcErr);
 
       const orderErr = checkOrderRunStarted(resolved.run.status);
@@ -242,7 +251,10 @@ export default function operationRunTransitionRoutes(fastify: FastifyInstance) {
       const resolved = await resolveOpRun(orderKey, runNo, seqNo);
       if (!resolved) return notFound(reply, `Operation run not found`);
 
-      const wcErr = await checkWorkCenterAccess(resolved.opRun.operationId, request.erpUser!);
+      const wcErr = await checkWorkCenterAccess(
+        resolved.opRun.operationId,
+        request.erpUser!,
+      );
       if (wcErr) return conflict(reply, wcErr);
 
       const orderErr = checkOrderRunStarted(resolved.run.status);
@@ -289,7 +301,10 @@ export default function operationRunTransitionRoutes(fastify: FastifyInstance) {
       const resolved = await resolveOpRun(orderKey, runNo, seqNo);
       if (!resolved) return notFound(reply, `Operation run not found`);
 
-      const wcErr = await checkWorkCenterAccess(resolved.opRun.operationId, request.erpUser!);
+      const wcErr = await checkWorkCenterAccess(
+        resolved.opRun.operationId,
+        request.erpUser!,
+      );
       if (wcErr) return conflict(reply, wcErr);
 
       const orderErr = checkOrderRunStarted(resolved.run.status);

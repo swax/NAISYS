@@ -1,4 +1,8 @@
-import type { HateoasAction, HateoasActionTemplate, HateoasLinkTemplate } from "./hateoas-types.js";
+import type {
+  HateoasAction,
+  HateoasActionTemplate,
+  HateoasLinkTemplate,
+} from "./hateoas-types.js";
 
 /**
  * Returns the action if it exists and is enabled.

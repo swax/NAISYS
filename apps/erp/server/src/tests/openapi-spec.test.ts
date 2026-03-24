@@ -5,6 +5,8 @@
  * passed where Zod schemas are expected (which causes "Cannot read properties of
  * undefined (reading 'parent')" at runtime).
  */
+import "../schema-registry.js";
+
 import cookie from "@fastify/cookie";
 import multipart from "@fastify/multipart";
 import swagger from "@fastify/swagger";
@@ -16,8 +18,6 @@ import {
   validatorCompiler,
 } from "fastify-type-provider-zod";
 import { describe, expect, test } from "vitest";
-
-import "../schema-registry.js";
 
 import adminRoutes from "../routes/admin.js";
 import auditRoutes from "../routes/audit.js";
@@ -115,10 +115,7 @@ describe("OpenAPI spec generation", () => {
         operationRunCommentRoutes,
         "/api/erp/orders/:orderKey/runs/:runNo/ops/:seqNo/comments",
       ],
-      [
-        stepRunRoutes,
-        "/api/erp/orders/:orderKey/runs/:runNo/ops/:seqNo/steps",
-      ],
+      [stepRunRoutes, "/api/erp/orders/:orderKey/runs/:runNo/ops/:seqNo/steps"],
       [
         stepRunTransitionRoutes,
         "/api/erp/orders/:orderKey/runs/:runNo/ops/:seqNo/steps",
@@ -131,10 +128,7 @@ describe("OpenAPI spec generation", () => {
         stepFieldAttachmentRoutes,
         "/api/erp/orders/:orderKey/runs/:runNo/ops/:seqNo/steps/:stepSeqNo/fields/:fieldSeqNo/attachments",
       ],
-      [
-        stepRoutes,
-        "/api/erp/orders/:orderKey/revs/:revNo/ops/:seqNo/steps",
-      ],
+      [stepRoutes, "/api/erp/orders/:orderKey/revs/:revNo/ops/:seqNo/steps"],
       [
         stepFieldRoutes,
         "/api/erp/orders/:orderKey/revs/:revNo/ops/:seqNo/steps/:stepSeqNo/fields",

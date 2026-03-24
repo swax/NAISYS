@@ -37,11 +37,11 @@ export type FieldValue = z.infer<typeof FieldValueSchema>;
 /** Human/AI-readable hint for the expected value format per field type. */
 export const VALUE_FORMAT_HINTS: Record<string, string> = {
   string: "any text",
-  number: "numeric string, e.g. \"42\" or \"3.14\"",
-  date: "YYYY-MM-DD, e.g. \"2024-06-15\"",
-  datetime: "YYYY-MM-DDTHH:mm, e.g. \"2024-06-15T09:30\"",
-  yesNo: "\"Yes\" or \"No\"",
-  checkbox: "\"checked\" or \"\" (empty string to uncheck)",
+  number: 'numeric string, e.g. "42" or "3.14"',
+  date: 'YYYY-MM-DD, e.g. "2024-06-15"',
+  datetime: 'YYYY-MM-DDTHH:mm, e.g. "2024-06-15T09:30"',
+  yesNo: '"Yes" or "No"',
+  checkbox: '"checked" or "" (empty string to uncheck)',
   attachment: "managed by file upload endpoints, not set directly",
 };
 
@@ -180,7 +180,6 @@ export const StepRunTransitionSchema = z.object({
 });
 
 export type StepRunTransition = z.infer<typeof StepRunTransitionSchema>;
-
 
 // Query params for listing step runs
 export const StepRunListQuerySchema = z.object({

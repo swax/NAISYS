@@ -10,8 +10,10 @@ interface UserOption {
   username: string;
 }
 
-interface UserAutocompleteProps
-  extends Omit<AutocompleteProps, "data" | "onChange"> {
+interface UserAutocompleteProps extends Omit<
+  AutocompleteProps,
+  "data" | "onChange"
+> {
   value: string;
   onChange: (value: string) => void;
   /** Called with the full user option when a dropdown item is selected */

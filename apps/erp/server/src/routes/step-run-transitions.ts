@@ -36,8 +36,7 @@ export default function stepRunTransitionRoutes(fastify: FastifyInstance) {
   // COMPLETE (not completed → completed)
   app.post("/:stepSeqNo/complete", {
     schema: {
-      description:
-        "Complete a step run (operation run must be in_progress)",
+      description: "Complete a step run (operation run must be in_progress)",
       tags: ["Step Runs"],
       params: StepSeqNoParamsSchema,
       body: TransitionNoteSchema,

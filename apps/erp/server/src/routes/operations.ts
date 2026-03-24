@@ -66,7 +66,8 @@ function formatOperation(
   revNo: number,
   revStatus: string,
   user: ErpUser | undefined,
-  operation: OperationModel & WithAuditUsers & { workCenter?: { key: string } | null },
+  operation: OperationModel &
+    WithAuditUsers & { workCenter?: { key: string } | null },
   summary?: {
     stepCount?: number;
     stepSummary?: Array<{ seqNo: number; title: string }>;
@@ -330,7 +331,12 @@ export default function operationRoutes(fastify: FastifyInstance) {
     preHandler: requirePermission("order_planner"),
     handler: async (request, reply) => {
       const { orderKey, revNo, seqNo } = request.params;
-      const { title, description, workCenterKey, seqNo: newSeqNo } = request.body;
+      const {
+        title,
+        description,
+        workCenterKey,
+        seqNo: newSeqNo,
+      } = request.body;
       const userId = request.erpUser!.id;
 
       const resolved = await resolveRevision(orderKey, revNo);

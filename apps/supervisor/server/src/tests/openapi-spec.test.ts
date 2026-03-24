@@ -5,6 +5,8 @@
  * passed where Zod schemas are expected (which causes "Cannot read properties of
  * undefined (reading 'parent')" at runtime).
  */
+import "../schema-registry.js";
+
 import cookie from "@fastify/cookie";
 import multipart from "@fastify/multipart";
 import swagger from "@fastify/swagger";
@@ -17,8 +19,6 @@ import {
   validatorCompiler,
 } from "fastify-type-provider-zod";
 import { describe, expect, test } from "vitest";
-
-import "../schema-registry.js";
 
 import apiRoutes from "../routes/api.js";
 

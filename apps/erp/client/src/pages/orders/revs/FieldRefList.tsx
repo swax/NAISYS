@@ -13,10 +13,7 @@ import {
   Title,
   UnstyledButton,
 } from "@mantine/core";
-import type {
-  FieldRef,
-  FieldRefListResponse,
-} from "@naisys-erp/shared";
+import type { FieldRef, FieldRefListResponse } from "@naisys-erp/shared";
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router";
 
@@ -111,9 +108,7 @@ export const FieldRefList: React.FC<FieldRefListProps> = ({
         prev
           ? {
               ...prev,
-              items: [...prev.items, created].sort(
-                (a, b) => a.seqNo - b.seqNo,
-              ),
+              items: [...prev.items, created].sort((a, b) => a.seqNo - b.seqNo),
               total: prev.total + 1,
             }
           : prev,
@@ -160,9 +155,14 @@ export const FieldRefList: React.FC<FieldRefListProps> = ({
         <Stack gap="xs">
           {data?.items.map((ref) => (
             <Card key={ref.id} withBorder p="sm">
-              <Group justify="space-between" mb={ref.fields.length > 0 ? "xs" : undefined}>
+              <Group
+                justify="space-between"
+                mb={ref.fields.length > 0 ? "xs" : undefined}
+              >
                 <Group gap="xs">
-                  <Text size="sm" fw={500}>{ref.title}</Text>
+                  <Text size="sm" fw={500}>
+                    {ref.title}
+                  </Text>
                   <Anchor
                     component={Link}
                     to={`/orders/${orderKey}/revs/${revNo}/ops/${ref.sourceOpSeqNo}`}
@@ -189,13 +189,17 @@ export const FieldRefList: React.FC<FieldRefListProps> = ({
                     {ref.fields.map((f) => (
                       <Table.Tr key={f.seqNo}>
                         <Table.Td w={40}>
-                          <Text size="xs" c="dimmed">{f.seqNo}</Text>
+                          <Text size="xs" c="dimmed">
+                            {f.seqNo}
+                          </Text>
                         </Table.Td>
                         <Table.Td>
                           <Text size="xs">{f.label}</Text>
                         </Table.Td>
                         <Table.Td w={100}>
-                          <Badge variant="light" size="xs">{f.type}</Badge>
+                          <Badge variant="light" size="xs">
+                            {f.type}
+                          </Badge>
                         </Table.Td>
                       </Table.Tr>
                     ))}
@@ -248,9 +252,7 @@ export const FieldRefList: React.FC<FieldRefListProps> = ({
                   onClick={() => {
                     setSelected(step);
                     if (!titleInput.trim()) {
-                      setTitleInput(
-                        `${step.opTitle} - ${step.stepTitle}`,
-                      );
+                      setTitleInput(`${step.opTitle} - ${step.stepTitle}`);
                     }
                   }}
                   style={(theme) => ({
@@ -285,10 +287,7 @@ export const FieldRefList: React.FC<FieldRefListProps> = ({
           )}
 
           <Group justify="flex-end">
-            <Button
-              variant="subtle"
-              onClick={() => setDialogOpen(false)}
-            >
+            <Button variant="subtle" onClick={() => setDialogOpen(false)}>
               Cancel
             </Button>
             <Button

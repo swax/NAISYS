@@ -218,14 +218,9 @@ export default function stepRoutes(fastify: FastifyInstance) {
         );
       }
 
-      const created = await createSteps(
-        resolved.operation.id,
-        items,
-        userId,
-      );
+      const created = await createSteps(resolved.operation.id, items, userId);
 
-      const maxSeq =
-        created.length > 0 ? created[created.length - 1].seqNo : 0;
+      const maxSeq = created.length > 0 ? created[created.length - 1].seqNo : 0;
       const user = request.erpUser;
       const base = stepBasePath(orderKey, revNo, seqNo);
 

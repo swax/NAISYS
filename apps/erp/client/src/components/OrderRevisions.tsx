@@ -124,9 +124,7 @@ export const OrderRevisions: React.FC<Props> = ({ orderKey }) => {
   const handleCompare = () => {
     if (selected.length !== 2) return;
     const [a, b] = selected.sort((x, y) => x - y);
-    void navigate(
-      `/orders/${orderKey}/revs/diff?from=${a}&to=${b}`,
-    );
+    void navigate(`/orders/${orderKey}/revs/diff?from=${a}&to=${b}`);
   };
 
   const totalPages = data ? Math.ceil(data.total / PAGE_SIZE) : 0;

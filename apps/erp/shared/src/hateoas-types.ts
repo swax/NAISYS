@@ -4,9 +4,9 @@ export {
   type HateoasActionTemplate,
   HateoasActionTemplateSchema,
   type HateoasLink,
-  type HateoasLinkTemplate,
   type HateoasLinks,
   HateoasLinkSchema,
-  HateoasLinkTemplateSchema,
   HateoasLinksSchema,
+  type HateoasLinkTemplate,
+  HateoasLinkTemplateSchema,
 } from "@naisys/common";

@@ -20,6 +20,7 @@ import {
   checkWorkCenterAccess,
   resolveStepRun,
 } from "../route-helpers.js";
+import { ensureStepRunFieldRecord } from "../services/field-service.js";
 import {
   clearAttachmentFieldValue,
   deleteFieldValueSet,
@@ -29,7 +30,6 @@ import {
   upsertFieldValue,
   validateFieldValue,
 } from "../services/field-value-service.js";
-import { ensureStepRunFieldRecord } from "../services/field-service.js";
 import { isUserClockedIn } from "../services/labor-ticket-service.js";
 import { getStepRunWithFields } from "../services/step-run-service.js";
 import { computeStepRunHateoas } from "./step-runs.js";
@@ -70,11 +70,7 @@ export default function stepRunFieldRoutes(fastify: FastifyInstance) {
   const app = fastify.withTypeProvider<ZodTypeProvider>();
 
   // Shared handler for updating a single field value
-  async function handleFieldUpdate(
-    request: any,
-    reply: any,
-    setIndex: number,
-  ) {
+  async function handleFieldUpdate(request: any, reply: any, setIndex: number) {
     const { orderKey, runNo, seqNo, stepSeqNo, fieldSeqNo } = request.params;
     const { value } = request.body;
     const userId = request.erpUser!.id;
@@ -322,7 +318,13 @@ export default function stepRunFieldRoutes(fastify: FastifyInstance) {
     const results = [];
     for (const item of fields) {
       const field = fieldDefs.get(item.fieldSeqNo)!;
-      await upsertFieldValue(fieldRecordId, field.id, setIndex, item.value, userId);
+      await upsertFieldValue(
+        fieldRecordId,
+        field.id,
+        setIndex,
+        item.value,
+        userId,
+      );
 
       const responseValue = deserializeFieldValue(
         serializeFieldValue(item.value),
@@ -465,8 +467,7 @@ export default function stepRunFieldRoutes(fastify: FastifyInstance) {
         404: ErrorResponseSchema,
       },
     },
-    handler: async (request, reply) =>
-      handleBatchFieldGet(request, reply),
+    handler: async (request, reply) => handleBatchFieldGet(request, reply),
   });
 
   // BATCH GET field values (explicit set index for multi-set steps)
@@ -549,7 +550,10 @@ export default function stepRunFieldRoutes(fastify: FastifyInstance) {
         return notFound(reply, `Step run not found`);
       }
 
-      const wcErr = await checkWorkCenterAccess(resolved.opRun.operationId, request.erpUser!);
+      const wcErr = await checkWorkCenterAccess(
+        resolved.opRun.operationId,
+        request.erpUser!,
+      );
       if (wcErr) return conflict(reply, wcErr);
 
       const orderErr = checkOrderRunStarted(resolved.run.status);

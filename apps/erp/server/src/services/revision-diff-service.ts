@@ -32,9 +32,7 @@ const includeFullTree = {
   },
 };
 
-type RevisionTree = NonNullable<
-  Awaited<ReturnType<typeof getRevisionTree>>
->;
+type RevisionTree = NonNullable<Awaited<ReturnType<typeof getRevisionTree>>>;
 type OpTree = RevisionTree["operations"][number];
 type StepTree = OpTree["steps"][number];
 type FieldTree = NonNullable<StepTree["fieldSet"]>["fields"][number];
@@ -49,9 +47,7 @@ async function getRevisionTree(orderId: number, revNo: number) {
 
 // --- Comparison helpers ---
 
-function compareProps(
-  pairs: [string, unknown, unknown][],
-): PropertyChange[] {
+function compareProps(pairs: [string, unknown, unknown][]): PropertyChange[] {
   const changes: PropertyChange[] = [];
   for (const [field, from, to] of pairs) {
     if (from !== to) {
@@ -101,10 +97,7 @@ function diffFields(
   return result;
 }
 
-function diffSteps(
-  fromSteps: StepTree[],
-  toSteps: StepTree[],
-): StepDiff[] {
+function diffSteps(fromSteps: StepTree[], toSteps: StepTree[]): StepDiff[] {
   const fromMap = new Map(fromSteps.map((s) => [s.seqNo, s]));
   const toMap = new Map(toSteps.map((s) => [s.seqNo, s]));
   const allSeqNos = new Set([...fromMap.keys(), ...toMap.keys()]);
@@ -144,10 +137,7 @@ function diffSteps(
   return result;
 }
 
-function diffDeps(
-  fromDeps: DepTree[],
-  toDeps: DepTree[],
-): DependencyDiff[] {
+function diffDeps(fromDeps: DepTree[], toDeps: DepTree[]): DependencyDiff[] {
   const fromSet = new Map(
     fromDeps.map((d) => [d.predecessor.seqNo, d.predecessor.title]),
   );
@@ -185,10 +175,7 @@ function diffDeps(
   return result;
 }
 
-function diffOperations(
-  fromOps: OpTree[],
-  toOps: OpTree[],
-): OperationDiff[] {
+function diffOperations(fromOps: OpTree[], toOps: OpTree[]): OperationDiff[] {
   const fromMap = new Map(fromOps.map((op) => [op.seqNo, op]));
   const toMap = new Map(toOps.map((op) => [op.seqNo, op]));
   const allSeqNos = new Set([...fromMap.keys(), ...toMap.keys()]);
@@ -211,8 +198,7 @@ function diffOperations(
       const deps = diffDeps(from.predecessors, to.predecessors);
       const hasStepChanges = steps.some((s) => s.status !== "unchanged");
       const hasDepChanges = deps.some((d) => d.status !== "unchanged");
-      const isModified =
-        changes.length > 0 || hasStepChanges || hasDepChanges;
+      const isModified = changes.length > 0 || hasStepChanges || hasDepChanges;
 
       result.push({
         seqNo,

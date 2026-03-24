@@ -1,3 +1,4 @@
+import { MAX_ATTACHMENT_SIZE } from "@naisys/common";
 import { createHash } from "crypto";
 import {
   createWriteStream,
@@ -7,8 +8,6 @@ import {
   unlinkSync,
 } from "fs";
 import { join } from "path";
-
-import { MAX_ATTACHMENT_SIZE } from "@naisys/common";
 
 import erpDb from "../erpDb.js";
 

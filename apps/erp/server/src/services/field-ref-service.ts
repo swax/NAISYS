@@ -73,10 +73,7 @@ export async function deleteFieldRef(id: number) {
   await erpDb.operationFieldRef.delete({ where: { id } });
 }
 
-export async function findExistingFieldRef(
-  operationId: number,
-  seqNo: number,
-) {
+export async function findExistingFieldRef(operationId: number, seqNo: number) {
   return erpDb.operationFieldRef.findFirst({
     where: { operationId, seqNo },
     select: { id: true },

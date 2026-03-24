@@ -10,7 +10,7 @@ import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod/v4";
 
 import type { ErpUser } from "../auth-middleware.js";
-import { hasPermission, requirePermission } from "../auth-middleware.js";
+import { requirePermission } from "../auth-middleware.js";
 import erpDb from "../erpDb.js";
 import { conflict, notFound } from "../error-handler.js";
 import { API_PREFIX, selfLink } from "../hateoas.js";
@@ -18,8 +18,6 @@ import {
   type ActionDef,
   calcNextSeqNo,
   childItemLinks,
-  formatAuditFields,
-  permGate,
   resolveActions,
   resolveOperation,
 } from "../route-helpers.js";
@@ -173,10 +171,7 @@ export default function operationFieldRefRoutes(fastify: FastifyInstance) {
           operation: { select: { seqNo: true, title: true } },
           fieldSet: { select: { _count: { select: { fields: true } } } },
         },
-        orderBy: [
-          { operation: { seqNo: "asc" } },
-          { seqNo: "asc" },
-        ],
+        orderBy: [{ operation: { seqNo: "asc" } }, { seqNo: "asc" }],
       });
 
       // Exclude steps already referenced by this operation
@@ -245,11 +240,10 @@ export default function operationFieldRefRoutes(fastify: FastifyInstance) {
             hrefTemplate: `${API_PREFIX}${base}/{seqNo}`,
           },
         ],
-        _actions: resolveActions(
-          [draftCreateDef],
-          `${API_PREFIX}${base}`,
-          { status: resolved.rev.status, user: request.erpUser },
-        ),
+        _actions: resolveActions([draftCreateDef], `${API_PREFIX}${base}`, {
+          status: resolved.rev.status,
+          user: request.erpUser,
+        }),
       };
     },
   });
@@ -271,8 +265,12 @@ export default function operationFieldRefRoutes(fastify: FastifyInstance) {
     preHandler: requirePermission("order_planner"),
     handler: async (request, reply) => {
       const { orderKey, revNo, seqNo } = request.params;
-      const { seqNo: requestedSeqNo, title, sourceOpSeqNo, sourceStepSeqNo } =
-        request.body;
+      const {
+        seqNo: requestedSeqNo,
+        title,
+        sourceOpSeqNo,
+        sourceStepSeqNo,
+      } = request.body;
       const userId = request.erpUser!.id;
 
       const resolved = await resolveOperation(orderKey, revNo, seqNo);
@@ -292,10 +290,7 @@ export default function operationFieldRefRoutes(fastify: FastifyInstance) {
         where: { orderRevId: resolved.rev.id, seqNo: sourceOpSeqNo },
       });
       if (!sourceOp) {
-        return notFound(
-          reply,
-          `Source operation ${sourceOpSeqNo} not found`,
-        );
+        return notFound(reply, `Source operation ${sourceOpSeqNo} not found`);
       }
 
       const sourceStep = await erpDb.step.findFirst({
