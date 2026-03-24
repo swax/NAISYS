@@ -1,6 +1,3 @@
-// Aggregate costs within this time window (in milliseconds)
-export const COST_AGGREGATION_WINDOW_MS = 5 * 60 * 1000; // 5 minutes
-
 /**
  * Calculate the current period boundaries based on a given number of hours.
  * Periods are fixed multiples of hours from midnight (server local time).

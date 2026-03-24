@@ -11,7 +11,7 @@ export {
   findAgentByApiKey,
   getAgentApiKeyByUuid,
   getHubAgentById,
-  getLatestRunIdByUuid,
+  getLatestRunInfoByUuid,
   rotateAgentApiKeyByUuid,
   sumCostsByUuid,
 } from "./hubSessionService.js";

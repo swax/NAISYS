@@ -1,4 +1,4 @@
-import { getLatestRunIdByUuid, sumCostsByUuid } from "@naisys/hub-database";
+import { getLatestRunInfoByUuid, sumCostsByUuid } from "@naisys/hub-database";
 
 import { writeAuditEntry } from "../audit.js";
 import erpDb from "../erpDb.js";
@@ -42,9 +42,11 @@ async function computeCost(
 }
 
 /**
- * Get the current hub run_id for an agent user, or null for non-agents.
+ * Get the current hub run info (run_id + session start) for an agent user.
  */
-async function getAgentRunId(userId: number): Promise<number | null> {
+async function getAgentRunInfo(
+  userId: number,
+): Promise<{ runId: number; sessionStart: Date } | null> {
   const user = await erpDb.user.findUnique({
     where: { id: userId },
     select: { isAgent: true, uuid: true },
@@ -52,7 +54,7 @@ async function getAgentRunId(userId: number): Promise<number | null> {
 
   if (!user?.isAgent) return null;
 
-  return getLatestRunIdByUuid(user.uuid);
+  return getLatestRunInfoByUuid(user.uuid);
 }
 
 // --- Lookups ---
@@ -85,7 +87,8 @@ export async function clockIn(
   actorId: number,
 ): Promise<LaborTicketWithUser> {
   const now = new Date();
-  const runId = await getAgentRunId(userId);
+  const runInfo = await getAgentRunInfo(userId);
+  const runId = runInfo?.runId ?? null;
 
   // If already clocked into this op run, just return the existing ticket
   const existing = await erpDb.laborTicket.findFirst({
@@ -108,13 +111,26 @@ export async function clockIn(
       });
     }
 
+    // If no tickets were auto-closed and this is the first ticket for the
+    // current run/session, backdate clockIn to the session start so that
+    // startup costs (before the agent called clock-in) are captured.
+    let clockInTime = now;
+    if (runInfo && openTickets.length === 0) {
+      const existingForRun = await tx.laborTicket.findFirst({
+        where: { userId, runId },
+      });
+      if (!existingForRun) {
+        clockInTime = runInfo.sessionStart;
+      }
+    }
+
     // Create new ticket
     return tx.laborTicket.create({
       data: {
         operationRunId,
         userId,
         runId,
-        clockIn: now,
+        clockIn: clockInTime,
         createdById: actorId,
         updatedById: actorId,
         updatedAt: now,
