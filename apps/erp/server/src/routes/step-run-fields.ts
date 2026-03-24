@@ -4,6 +4,7 @@ import {
   DeleteSetResponseSchema,
   ErrorResponseSchema,
   FieldValueUpdateResponseSchema,
+  getValueFormatHint,
   UpdateFieldValueSchema,
 } from "@naisys-erp/shared";
 import { FastifyInstance } from "fastify";
@@ -187,6 +188,7 @@ export default function stepRunFieldRoutes(fastify: FastifyInstance) {
       fieldSeqNo: field.seqNo,
       label: field.label,
       type: field.type,
+      valueFormat: getValueFormatHint(field.type),
       multiValue: field.multiValue,
       required: field.required,
       setIndex,
@@ -328,6 +330,7 @@ export default function stepRunFieldRoutes(fastify: FastifyInstance) {
         fieldSeqNo: field.seqNo,
         label: field.label,
         type: field.type,
+        valueFormat: getValueFormatHint(field.type),
         multiValue: field.multiValue,
         required: field.required,
         setIndex,
