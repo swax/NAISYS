@@ -30,10 +30,39 @@ export function registerApiReference(fastify: FastifyInstance) {
       },
       paths: filteredPaths,
       "x-tagGroups": [
-        { name: "General", tags: ["Discovery", "Auth"] },
+        { name: "General", tags: ["Discovery", "Auth", "Users"] },
         {
-          name: "Orders",
-          tags: ["Orders", "Order Revisions", "Order Runs"],
+          name: "Planning",
+          tags: [
+            "Orders",
+            "Order Revisions",
+            "Operations",
+            "Operation Dependencies",
+            "Operation Field Refs",
+            "Steps",
+            "Step Fields",
+          ],
+        },
+        {
+          name: "Execution",
+          tags: [
+            "Dispatch",
+            "Order Runs",
+            "Operation Runs",
+            "Operation Run Comments",
+            "Labor Tickets",
+            "Step Runs",
+            "Attachments",
+            "Work Centers",
+          ],
+        },
+        {
+          name: "Inventory",
+          tags: ["Items", "Item Fields", "Item Instances", "Inventory"],
+        },
+        {
+          name: "Administration",
+          tags: ["Admin", "Audit"],
         },
       ],
     };

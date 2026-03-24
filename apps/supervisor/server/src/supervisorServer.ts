@@ -23,7 +23,6 @@ import {
   handleResetPassword,
 } from "@naisys/supervisor-database";
 import { PermissionEnum } from "@naisys-supervisor/shared";
-import scalarReference from "@scalar/fastify-api-reference";
 import Fastify from "fastify";
 import {
   jsonSchemaTransform,
@@ -35,6 +34,7 @@ import {
 import path from "path";
 import { fileURLToPath } from "url";
 
+import { registerApiReference } from "./api-reference.js";
 import { initHubDb } from "./database/hubDb.js";
 import { initSupervisorDb } from "./database/supervisorDb.js";
 import { initLogger } from "./logger.js";
@@ -174,43 +174,7 @@ export const startServer: StartServer = async (
     transformObject: jsonSchemaTransformObject,
   });
 
-  await fastify.register(scalarReference as any, {
-    routePrefix: "/supervisor/api-reference",
-    configuration: {
-      spec: { url: "/api/supervisor/openapi.json" },
-      theme: "kepler",
-    },
-  });
-
-  // Serve the OpenAPI spec with tag groups (filtered to supervisor paths only)
-  fastify.get("/api/supervisor/openapi.json", () => {
-    const spec = fastify.swagger();
-    const filteredPaths: Record<string, unknown> = {};
-    for (const [path, value] of Object.entries(spec.paths || {})) {
-      if (path.startsWith("/api/supervisor/")) {
-        filteredPaths[path] = value;
-      }
-    }
-    return {
-      ...spec,
-      paths: filteredPaths,
-      "x-tagGroups": [
-        {
-          name: "General",
-          tags: ["Discovery", "Authentication", "Hosts", "Status", "Users"],
-        },
-        { name: "Agents", tags: ["Agents", "Chat", "Mail", "Runs"] },
-        {
-          name: "Configuration",
-          tags: ["Models", "Variables"],
-        },
-        {
-          name: "Administration",
-          tags: ["Admin"],
-        },
-      ],
-    };
-  });
+  await registerApiReference(fastify);
 
   fastify.get("/", { schema: { hide: true } }, async (_request, reply) => {
     return reply.redirect("/supervisor/");
