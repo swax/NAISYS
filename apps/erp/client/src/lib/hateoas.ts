@@ -1,1 +1,5 @@
-export { formatDisabledReason, hasAction, hasActionTemplate } from "@naisys/common";
+export {
+  formatDisabledReason,
+  hasAction,
+  hasActionTemplate,
+} from "@naisys/common";

@@ -53,10 +53,7 @@ function wcLinks(key: string): HateoasLink[] {
   ];
 }
 
-function wcActions(
-  key: string,
-  user: ErpUser | undefined,
-): HateoasAction[] {
+function wcActions(key: string, user: ErpUser | undefined): HateoasAction[] {
   if (!hasPermission(user, "erp_admin")) return [];
   const href = `${API_PREFIX}/${RESOURCE}/${key}`;
   return [
@@ -83,10 +80,7 @@ function wcActions(
   ];
 }
 
-function formatWorkCenter(
-  wc: WorkCenterWithDetail,
-  user: ErpUser | undefined,
-) {
+function formatWorkCenter(wc: WorkCenterWithDetail, user: ErpUser | undefined) {
   const isAdmin = hasPermission(user, "erp_admin");
   return {
     id: wc.id,

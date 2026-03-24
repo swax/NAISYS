@@ -25,6 +25,13 @@ import {
 } from "../hateoas.js";
 import { formatAuditFields } from "../route-helpers.js";
 import {
+  deleteFieldValueSet,
+  deserializeFieldValue,
+  serializeFieldValue,
+  upsertFieldValue,
+  validateFieldValue,
+} from "../services/field-value-service.js";
+import {
   createItemInstance,
   deleteItemInstance,
   ensureItemInstanceFieldRecord,
@@ -35,13 +42,6 @@ import {
   updateItemInstance,
 } from "../services/item-instance-service.js";
 import { findExisting as findItem } from "../services/item-service.js";
-import {
-  deleteFieldValueSet,
-  deserializeFieldValue,
-  serializeFieldValue,
-  upsertFieldValue,
-  validateFieldValue,
-} from "../services/field-value-service.js";
 
 const ParamsSchema = z.object({
   key: z.string(),
@@ -426,18 +426,13 @@ export default function itemInstanceRoutes(fastify: FastifyInstance) {
   });
 
   // Shared handler for updating a single field value
-  async function handleFieldUpdate(
-    request: any,
-    reply: any,
-    setIndex: number,
-  ) {
+  async function handleFieldUpdate(request: any, reply: any, setIndex: number) {
     const { instanceId, fieldSeqNo } = request.params;
     const { value } = request.body;
     const userId = request.erpUser!.id;
 
     const inst = await findItemInstanceWithField(instanceId, fieldSeqNo);
-    if (!inst)
-      return notFound(reply, `Item instance ${instanceId} not found`);
+    if (!inst) return notFound(reply, `Item instance ${instanceId} not found`);
 
     const field = inst.item.fieldSet?.fields[0];
     if (!field) return notFound(reply, `Field not found`);

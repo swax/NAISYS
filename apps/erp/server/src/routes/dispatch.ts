@@ -32,8 +32,16 @@ export default function dispatchRoutes(fastify: FastifyInstance) {
       },
     },
     handler: async (request) => {
-      const { page, pageSize, status, priority, search, viewAs, canWork, clockedIn } =
-        request.query;
+      const {
+        page,
+        pageSize,
+        status,
+        priority,
+        search,
+        viewAs,
+        canWork,
+        clockedIn,
+      } = request.query;
 
       // Resolve the perspective user for canWork computation
       let perspectiveUserId = request.erpUser?.id;
@@ -92,7 +100,9 @@ export default function dispatchRoutes(fastify: FastifyInstance) {
         const filteredStatuses = currentStatuses.filter((s) =>
           workableStatuses.includes(s),
         );
-        where.status = { in: filteredStatuses.length > 0 ? filteredStatuses : ["__none__"] };
+        where.status = {
+          in: filteredStatuses.length > 0 ? filteredStatuses : ["__none__"],
+        };
 
         // Work center access
         if (userWcIds.length > 0) {
@@ -150,9 +160,7 @@ export default function dispatchRoutes(fastify: FastifyInstance) {
 
           // canWork: work center access + permission for the op status
           const hasStatusPerm =
-            opRun.status === OperationRunStatus.failed
-              ? isManager
-              : isExecutor;
+            opRun.status === OperationRunStatus.failed ? isManager : isExecutor;
           const itemCanWork = hasWcAccess && hasStatusPerm;
 
           return {

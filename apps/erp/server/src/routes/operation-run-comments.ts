@@ -97,12 +97,7 @@ export default function operationRunCommentRoutes(fastify: FastifyInstance) {
 
       return {
         items: items.map((c) => {
-          const { _links, ...rest } = formatComment(
-            orderKey,
-            runNo,
-            seqNo,
-            c,
-          );
+          const { _links, ...rest } = formatComment(orderKey, runNo, seqNo, c);
           return rest;
         }),
         total: items.length,

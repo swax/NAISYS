@@ -454,11 +454,7 @@ export const FieldValueRunList: React.FC<FieldValueRunListProps> = ({
               )}
               <Group gap="xs">
                 {!isImage && <IconFile size={14} />}
-                <Anchor
-                  size="xs"
-                  href={downloadUrl}
-                  target="_blank"
-                >
+                <Anchor size="xs" href={downloadUrl} target="_blank">
                   {att.filename}
                 </Anchor>
                 <Text size="xs" c="dimmed">

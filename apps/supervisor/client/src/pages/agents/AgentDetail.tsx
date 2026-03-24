@@ -10,7 +10,11 @@ import {
   Tooltip,
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
-import { formatDisabledReason, hasAction, type HateoasAction } from "@naisys/common";
+import {
+  formatDisabledReason,
+  hasAction,
+  type HateoasAction,
+} from "@naisys/common";
 import { AgentDetailResponse } from "@naisys-supervisor/shared";
 import {
   IconArchive,
@@ -349,7 +353,12 @@ export const AgentDetail: React.FC = () => {
             );
             const reason = formatDisabledReason(startAction.disabledReason);
             return reason ? (
-              <Tooltip label={reason} multiline maw={350} style={{ whiteSpace: "pre-line" }}>
+              <Tooltip
+                label={reason}
+                multiline
+                maw={350}
+                style={{ whiteSpace: "pre-line" }}
+              >
                 {btn}
               </Tooltip>
             ) : (
@@ -508,7 +517,12 @@ export const AgentDetail: React.FC = () => {
           );
           const reason = formatDisabledReason(archiveAction.disabledReason);
           return reason ? (
-            <Tooltip label={reason} multiline maw={350} style={{ whiteSpace: "pre-line" }}>
+            <Tooltip
+              label={reason}
+              multiline
+              maw={350}
+              style={{ whiteSpace: "pre-line" }}
+            >
               {btn}
             </Tooltip>
           ) : (

@@ -68,7 +68,9 @@ const FieldRefCard: React.FC<{
   return (
     <Card withBorder p="sm">
       <Group gap="xs" mb="xs">
-        <Text size="sm" fw={500}>{ref_.title}</Text>
+        <Text size="sm" fw={500}>
+          {ref_.title}
+        </Text>
         <Anchor
           component={Link}
           to={`/orders/${orderKey}/runs/${runNo}/ops/${ref_.sourceOpSeqNo}`}
@@ -413,14 +415,12 @@ export const OperationRunDetail: React.FC = () => {
                 );
               })()}
             {(() => {
-                const reopenAction = hasAction(opRun._actions, "reopen", {
-                  includeDisabled: true,
-                });
-                if (!reopenAction) return null;
-                const labelMap: Record<
-                  string,
-                  { label: string; color: string }
-                > = {
+              const reopenAction = hasAction(opRun._actions, "reopen", {
+                includeDisabled: true,
+              });
+              if (!reopenAction) return null;
+              const labelMap: Record<string, { label: string; color: string }> =
+                {
                   [OperationRunStatus.completed]: {
                     label: "Completed",
                     color: "green",
@@ -434,49 +434,56 @@ export const OperationRunDetail: React.FC = () => {
                     color: "red",
                   },
                 };
-                const { label, color } = labelMap[opRun.status] ?? {
-                  label: opRun.status,
-                  color: "gray",
-                };
-                const icon = (
-                  <ActionIcon
-                    size="xs"
-                    variant="subtle"
-                    color="gray"
-                    disabled={reopenAction.disabled}
-                    onClick={
-                      reopenAction.disabled
-                        ? undefined
-                        : () => handleAction("reopen")
-                    }
-                    title={
-                      formatDisabledReason(reopenAction.disabledReason) ??
-                      `Undo ${label.toLowerCase()}`
-                    }
-                  >
-                    <IconArrowBackUp size={14} />
-                  </ActionIcon>
-                );
-                return (
-                  <Group gap="xs" align="center">
-                    <Text size="xs" c={color}>
-                      {label} by {opRun.updatedBy} on{" "}
-                      {new Date(opRun.updatedAt).toLocaleString()}
-                      {opRun.cost ? ` for $${opRun.cost.toFixed(2)}` : ""}
-                    </Text>
-                    {(() => {
-                      const reason = formatDisabledReason(reopenAction.disabledReason);
-                      return reason ? (
-                        <Tooltip label={reason} multiline maw={350} style={{ whiteSpace: "pre-line" }}>
-                          {icon}
-                        </Tooltip>
-                      ) : (
-                        icon
-                      );
-                    })()}
-                  </Group>
-                );
-              })()}
+              const { label, color } = labelMap[opRun.status] ?? {
+                label: opRun.status,
+                color: "gray",
+              };
+              const icon = (
+                <ActionIcon
+                  size="xs"
+                  variant="subtle"
+                  color="gray"
+                  disabled={reopenAction.disabled}
+                  onClick={
+                    reopenAction.disabled
+                      ? undefined
+                      : () => handleAction("reopen")
+                  }
+                  title={
+                    formatDisabledReason(reopenAction.disabledReason) ??
+                    `Undo ${label.toLowerCase()}`
+                  }
+                >
+                  <IconArrowBackUp size={14} />
+                </ActionIcon>
+              );
+              return (
+                <Group gap="xs" align="center">
+                  <Text size="xs" c={color}>
+                    {label} by {opRun.updatedBy} on{" "}
+                    {new Date(opRun.updatedAt).toLocaleString()}
+                    {opRun.cost ? ` for $${opRun.cost.toFixed(2)}` : ""}
+                  </Text>
+                  {(() => {
+                    const reason = formatDisabledReason(
+                      reopenAction.disabledReason,
+                    );
+                    return reason ? (
+                      <Tooltip
+                        label={reason}
+                        multiline
+                        maw={350}
+                        style={{ whiteSpace: "pre-line" }}
+                      >
+                        {icon}
+                      </Tooltip>
+                    ) : (
+                      icon
+                    );
+                  })()}
+                </Group>
+              );
+            })()}
             {hasAction(opRun._actions, "skip") && (
               <Button
                 size="xs"

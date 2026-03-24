@@ -139,9 +139,7 @@ export async function removeUser(
 
 // --- Work center ID lookups for dispatch ---
 
-export async function getUserWorkCenterIds(
-  userId: number,
-): Promise<number[]> {
+export async function getUserWorkCenterIds(userId: number): Promise<number[]> {
   const assignments = await erpDb.workCenterUser.findMany({
     where: { userId },
     select: { workCenterId: true },

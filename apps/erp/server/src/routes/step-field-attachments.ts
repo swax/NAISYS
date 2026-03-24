@@ -22,12 +22,12 @@ import {
   uploadAttachment,
 } from "../services/attachment-service.js";
 import { ensureStepRunFieldRecord } from "../services/field-service.js";
-import { isUserClockedIn } from "../services/labor-ticket-service.js";
 import {
   findStepRunWithField,
   rebuildAttachmentFieldValue,
   upsertFieldValue,
 } from "../services/field-value-service.js";
+import { isUserClockedIn } from "../services/labor-ticket-service.js";
 
 const IMAGE_MIME: Record<string, string> = {
   ".jpg": "image/jpeg",
@@ -91,7 +91,10 @@ export default function stepFieldAttachmentRoutes(fastify: FastifyInstance) {
         return notFound(reply, `Step run not found`);
       }
 
-      const wcErr = await checkWorkCenterAccess(resolved.opRun.operationId, request.erpUser!);
+      const wcErr = await checkWorkCenterAccess(
+        resolved.opRun.operationId,
+        request.erpUser!,
+      );
       if (wcErr) return conflict(reply, wcErr);
 
       const orderErr = checkOrderRunStarted(resolved.run.status);
@@ -257,7 +260,8 @@ export default function stepFieldAttachmentRoutes(fastify: FastifyInstance) {
   // DELETE attachment from a field value
   app.delete("/:attachmentId", {
     schema: {
-      description: "Delete an attachment from a field (also updates the field value)",
+      description:
+        "Delete an attachment from a field (also updates the field value)",
       tags: ["Attachments"],
       params: AttachmentIdParamsSchema,
       response: {

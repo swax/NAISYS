@@ -5,15 +5,19 @@ import { useCallback, useEffect, useState } from "react";
 
 import { api, apiEndpoints } from "../lib/api";
 
-interface WorkCenterAutocompleteProps
-  extends Omit<AutocompleteProps, "data" | "onChange"> {
+interface WorkCenterAutocompleteProps extends Omit<
+  AutocompleteProps,
+  "data" | "onChange"
+> {
   value: string;
   onChange: (value: string) => void;
 }
 
-export const WorkCenterAutocomplete: React.FC<
-  WorkCenterAutocompleteProps
-> = ({ value, onChange, ...rest }) => {
+export const WorkCenterAutocomplete: React.FC<WorkCenterAutocompleteProps> = ({
+  value,
+  onChange,
+  ...rest
+}) => {
   const [debouncedValue] = useDebouncedValue(value, 300);
   const [options, setOptions] = useState<string[]>([]);
 
@@ -36,11 +40,6 @@ export const WorkCenterAutocomplete: React.FC<
   }, [debouncedValue, fetchOptions]);
 
   return (
-    <Autocomplete
-      data={options}
-      value={value}
-      onChange={onChange}
-      {...rest}
-    />
+    <Autocomplete data={options} value={value} onChange={onChange} {...rest} />
   );
 };

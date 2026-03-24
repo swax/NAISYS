@@ -62,9 +62,7 @@ async function stepRunItemActions(
   const isInProgress = opRunStatus === OperationRunStatus.in_progress;
 
   // Pre-compute disabled reasons for complete action
-  const wcErr = user
-    ? await checkWorkCenterAccess(operationId, user)
-    : null;
+  const wcErr = user ? await checkWorkCenterAccess(operationId, user) : null;
   const clockedInErr =
     isExecutor && isInProgress && !completed
       ? (await isUserClockedIn(opRunId, user!.id))
@@ -92,7 +90,7 @@ async function stepRunItemActions(
         disabledWhen: () =>
           !isInProgress
             ? "Parent operation must be in progress"
-            : wcErr ?? clockedInErr ?? fieldsErr,
+            : (wcErr ?? clockedInErr ?? fieldsErr),
       },
       {
         rel: "reopen",
@@ -102,9 +100,7 @@ async function stepRunItemActions(
         permission: "order_executor",
         visibleWhen: () => completed,
         disabledWhen: () =>
-          !isInProgress
-            ? "Parent operation must be in progress"
-            : wcErr,
+          !isInProgress ? "Parent operation must be in progress" : wcErr,
       },
     ],
     href,
@@ -282,13 +278,8 @@ export async function formatStepRunWithFields(
   user: ErpUser | undefined,
   stepRun: StepRunWithStepAndFields,
 ) {
-  const canUpdate =
-    hasPermission(user, "order_executor") &&
-    opRunStatus === OperationRunStatus.in_progress;
-
   const stepSeqNo = stepRun.step.seqNo;
   const multiSet = stepRun.step.multiSet;
-  const stepRunHref = `${API_PREFIX}/${stepRunResource(orderKey, runNo, seqNo)}/${stepSeqNo}`;
 
   // Determine how many sets exist
   const storedFieldValues = stepRun.fieldRecord?.fieldValues ?? [];
@@ -391,12 +382,7 @@ export async function formatStepRunWithFields(
   };
 }
 
-function formatListStepRun(
-  orderKey: string,
-  runNo: number,
-  seqNo: number,
-  stepRun: StepRunWithStep,
-) {
+function formatListStepRun(stepRun: StepRunWithStep) {
   const stepSeqNo = stepRun.step.seqNo;
   const fieldCount = stepRun.step.fieldSet?._count.fields ?? 0;
 
@@ -471,9 +457,7 @@ export default function stepRunRoutes(fastify: FastifyInstance) {
 
       const items = await listStepRuns(resolved.opRun.id);
       return {
-        items: items.map((stepRun) =>
-          formatListStepRun(orderKey, runNo, seqNo, stepRun),
-        ),
+        items: items.map((stepRun) => formatListStepRun(stepRun)),
         total: items.length,
         _links: [selfLink(`/${stepRunResource(orderKey, runNo, seqNo)}`)],
         _linkTemplates: [

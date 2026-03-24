@@ -114,10 +114,7 @@ export const StepRunList: React.FC<Props> = ({
     );
   };
 
-  const handleComplete = async (
-    step: StepRun,
-    note?: string,
-  ) => {
+  const handleComplete = async (step: StepRun, note?: string) => {
     setSavingStep(step.id);
     try {
       const updated = await api.post<StepRunTransition>(
@@ -186,7 +183,9 @@ export const StepRunList: React.FC<Props> = ({
                     <Group gap="xs">
                       {completeAction && (
                         <Tooltip
-                          label={formatDisabledReason(completeAction.disabledReason)}
+                          label={formatDisabledReason(
+                            completeAction.disabledReason,
+                          )}
                           disabled={!completeAction.disabledReason}
                           multiline
                           maw={400}
@@ -261,16 +260,24 @@ export const StepRunList: React.FC<Props> = ({
                                     : () => handleReopen(step)
                                 }
                                 title={
-                                  formatDisabledReason(reopenAction.disabledReason) ??
-                                  "Undo completion"
+                                  formatDisabledReason(
+                                    reopenAction.disabledReason,
+                                  ) ?? "Undo completion"
                                 }
                               >
                                 <IconArrowBackUp size={14} />
                               </ActionIcon>
                             );
-                            const reason = formatDisabledReason(reopenAction.disabledReason);
+                            const reason = formatDisabledReason(
+                              reopenAction.disabledReason,
+                            );
                             return reason ? (
-                              <Tooltip label={reason} multiline maw={350} style={{ whiteSpace: "pre-line" }}>
+                              <Tooltip
+                                label={reason}
+                                multiline
+                                maw={350}
+                                style={{ whiteSpace: "pre-line" }}
+                              >
                                 {icon}
                               </Tooltip>
                             ) : (

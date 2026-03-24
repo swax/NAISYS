@@ -55,9 +55,7 @@ async function opRunItemActions(
     isExecutor && status === OperationRunStatus.in_progress
       ? await checkStepsComplete(opRunId)
       : null;
-  const wcErr = user
-    ? await checkWorkCenterAccess(operationId, user)
-    : null;
+  const wcErr = user ? await checkWorkCenterAccess(operationId, user) : null;
 
   return resolveActions(
     [
@@ -256,11 +254,7 @@ export async function formatOpRunTransition(
   };
 }
 
-function formatListOpRun(
-  orderKey: string,
-  runNo: number,
-  opRun: OpRunWithSummary,
-) {
+function formatListOpRun(opRun: OpRunWithSummary) {
   const seqNo = opRun.operation.seqNo;
   return {
     id: opRun.id,
@@ -309,7 +303,7 @@ export default function operationRunRoutes(fastify: FastifyInstance) {
       const items = await listOpRuns(resolved.run.id);
 
       return {
-        items: items.map((opRun) => formatListOpRun(orderKey, runNo, opRun)),
+        items: items.map((opRun) => formatListOpRun(opRun)),
         total: items.length,
         _links: [selfLink(`/${opRunResource(orderKey, runNo)}`)],
         _linkTemplates: [

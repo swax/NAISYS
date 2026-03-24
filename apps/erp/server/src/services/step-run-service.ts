@@ -155,7 +155,9 @@ export async function listStepRunsWithFields(
   });
 }
 
-export async function getStepRunWithFields(id: number): Promise<StepRunWithStepAndFields | null> {
+export async function getStepRunWithFields(
+  id: number,
+): Promise<StepRunWithStepAndFields | null> {
   return erpDb.stepRun.findUnique({
     where: { id },
     include: includeStepRunWithFields,

@@ -72,10 +72,7 @@ const AppContent: React.FC = () => {
         <Route path="/orders" element={<OrderList />} />
         <Route path="/orders/new" element={<OrderCreate />} />
         <Route path="/orders/:key" element={<OrderDetail />} />
-        <Route
-          path="/orders/:orderKey/revs/diff"
-          element={<RevisionDiff />}
-        />
+        <Route path="/orders/:orderKey/revs/diff" element={<RevisionDiff />} />
         <Route
           path="/orders/:orderKey/revs/:revNo"
           element={<RevisionLayout />}
