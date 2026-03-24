@@ -4,6 +4,7 @@ import {
   HateoasActionSchema,
   HateoasActionTemplateSchema,
   HateoasLinkSchema,
+  HateoasLinkTemplateSchema,
 } from "./hateoas-types.js";
 
 // Validation result for a field value
@@ -94,7 +95,7 @@ export const StepRunSchema = z.object({
   createdBy: z.string(),
   updatedAt: z.iso.datetime(),
   updatedBy: z.string(),
-  _links: z.array(HateoasLinkSchema),
+  _links: z.array(HateoasLinkSchema).optional(),
   _actions: z.array(HateoasActionSchema).optional(),
   _actionTemplates: z.array(HateoasActionTemplateSchema).optional(),
 });
@@ -196,6 +197,7 @@ export const StepRunListResponseSchema = z.object({
   items: z.array(StepRunSchema),
   total: z.number(),
   _links: z.array(HateoasLinkSchema),
+  _linkTemplates: z.array(HateoasLinkTemplateSchema).optional(),
   _actions: z.array(HateoasActionSchema).optional(),
 });
 

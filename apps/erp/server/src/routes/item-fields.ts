@@ -107,10 +107,19 @@ export default function itemFieldRoutes(fastify: FastifyInstance) {
       const maxSeq = fields.length > 0 ? fields[fields.length - 1].seqNo : 0;
       const base = fieldBasePath(key);
       return {
-        items: fields.map((f) => formatField(key, request.erpUser, f)),
+        items: fields.map((f) => {
+          const { _links, ...rest } = formatField(key, request.erpUser, f);
+          return rest;
+        }),
         total: fields.length,
         nextSeqNo: calcNextSeqNo(maxSeq),
         _links: [selfLink(base)],
+        _linkTemplates: [
+          {
+            rel: "item",
+            hrefTemplate: `${API_PREFIX}${base}/{seqNo}`,
+          },
+        ],
         _actions: hasPermission(request.erpUser, "item_manager")
           ? [
               {

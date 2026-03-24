@@ -2,6 +2,7 @@ import {
   AgentConfigFileSchema,
   HateoasActionSchema,
   HateoasActionTemplateSchema,
+  HateoasLinkTemplateSchema,
   URL_SAFE_KEY_MESSAGE,
   URL_SAFE_KEY_REGEX,
 } from "@naisys/common";
@@ -29,7 +30,6 @@ export const AgentSchema = z.object({
   status: z
     .enum(["active", "available", "disabled", "offline", "suspended"])
     .optional(),
-  _links: z.array(LinkSchema).optional(),
 });
 
 export const HostSchema = z.object({
@@ -40,7 +40,6 @@ export const HostSchema = z.object({
   restricted: z.boolean().optional(),
   hostType: z.string().optional(),
   online: z.boolean().optional(),
-  _links: z.array(LinkSchema).optional(),
   _actions: z.array(HateoasActionSchema).optional(),
 });
 
@@ -56,6 +55,7 @@ export const AgentListResponseSchema = z.object({
   items: z.array(AgentSchema),
   timestamp: z.string(),
   _links: z.array(LinkSchema),
+  _linkTemplates: z.array(HateoasLinkTemplateSchema).optional(),
   _actions: z.array(HateoasActionSchema).optional(),
 });
 
@@ -89,6 +89,7 @@ export const AgentDetailResponseSchema = z.object({
 export const HostListResponseSchema = z.object({
   items: z.array(HostSchema),
   _links: z.array(LinkSchema),
+  _linkTemplates: z.array(HateoasLinkTemplateSchema).optional(),
   _actions: z.array(HateoasActionSchema).optional(),
 });
 

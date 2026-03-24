@@ -1,6 +1,10 @@
 import { z } from "zod/v4";
 
-import { HateoasActionSchema, HateoasLinkSchema } from "./hateoas-types.js";
+import {
+  HateoasActionSchema,
+  HateoasLinkSchema,
+  HateoasLinkTemplateSchema,
+} from "./hateoas-types.js";
 
 // Operation summary embedded in revision GET responses
 export const RevisionOperationSummarySchema = z.object({
@@ -30,7 +34,7 @@ export const OrderRevisionSchema = z.object({
   createdBy: z.string(),
   updatedAt: z.iso.datetime(),
   updatedBy: z.string(),
-  _links: z.array(HateoasLinkSchema),
+  _links: z.array(HateoasLinkSchema).optional(),
   _actions: z.array(HateoasActionSchema).optional(),
 });
 
@@ -79,6 +83,7 @@ export const OrderRevisionListResponseSchema = z.object({
   page: z.number(),
   pageSize: z.number(),
   _links: z.array(HateoasLinkSchema),
+  _linkTemplates: z.array(HateoasLinkTemplateSchema).optional(),
   _actions: z.array(HateoasActionSchema).optional(),
 });
 

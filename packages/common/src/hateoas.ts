@@ -1,4 +1,4 @@
-import type { HateoasAction, HateoasActionTemplate } from "./hateoas-types.js";
+import type { HateoasAction, HateoasActionTemplate, HateoasLinkTemplate } from "./hateoas-types.js";
 
 /**
  * Returns the action if it exists and is enabled.
@@ -20,6 +20,13 @@ export function hasActionTemplate(
   templates: HateoasActionTemplate[] | undefined,
   rel: string,
 ): HateoasActionTemplate | undefined {
+  return templates?.find((t) => t.rel === rel);
+}
+
+export function hasLinkTemplate(
+  templates: HateoasLinkTemplate[] | undefined,
+  rel: string,
+): HateoasLinkTemplate | undefined {
   return templates?.find((t) => t.rel === rel);
 }
 

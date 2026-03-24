@@ -194,7 +194,6 @@ export default function agentsRoutes(
       const items = agents.map((agent) => ({
         ...agent,
         status: getAgentStatus(agent.id),
-        _links: [selfLink(`/agents/${agent.name}`)],
       }));
 
       const hasManagePermission = hasPermission(
@@ -222,6 +221,9 @@ export default function agentsRoutes(
         items,
         timestamp: new Date().toISOString(),
         _links: [selfLink("/agents"), schemaLink("CreateAgent")],
+        _linkTemplates: [
+          { rel: "item", hrefTemplate: `${API_PREFIX}/agents/{name}` },
+        ],
         _actions: actions,
       };
     },

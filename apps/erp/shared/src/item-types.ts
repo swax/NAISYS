@@ -1,7 +1,11 @@
 import { z } from "zod/v4";
 
 import { FieldListResponseSchema } from "./field-types.js";
-import { HateoasActionSchema, HateoasLinkSchema } from "./hateoas-types.js";
+import {
+  HateoasActionSchema,
+  HateoasLinkSchema,
+  HateoasLinkTemplateSchema,
+} from "./hateoas-types.js";
 
 // Full item response shape
 export const ItemSchema = z.object({
@@ -13,7 +17,7 @@ export const ItemSchema = z.object({
   createdAt: z.iso.datetime(),
   updatedBy: z.string(),
   updatedAt: z.iso.datetime(),
-  _links: z.array(HateoasLinkSchema),
+  _links: z.array(HateoasLinkSchema).optional(),
   _actions: z.array(HateoasActionSchema).optional(),
 });
 
@@ -70,6 +74,7 @@ export const ItemListResponseSchema = z.object({
   page: z.number(),
   pageSize: z.number(),
   _links: z.array(HateoasLinkSchema),
+  _linkTemplates: z.array(HateoasLinkTemplateSchema).optional(),
   _actions: z.array(HateoasActionSchema).optional(),
 });
 

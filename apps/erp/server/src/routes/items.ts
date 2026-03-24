@@ -166,7 +166,6 @@ function formatListItem(item: ItemWithUsers, user: ErpUser | undefined) {
       item.fieldSet?.fields ?? [],
     ),
     ...formatAuditFields(item),
-    _links: [selfLink(`/${RESOURCE}/${item.key}`)],
   };
 }
 
@@ -202,6 +201,9 @@ export default function itemRoutes(fastify: FastifyInstance) {
         page,
         pageSize,
         _links: paginationLinks(RESOURCE, page, pageSize, total, { search }),
+        _linkTemplates: [
+          { rel: "item", hrefTemplate: `${API_PREFIX}/items/{key}` },
+        ],
         _actions: hasPermission(request.erpUser, "item_manager")
           ? [
               {

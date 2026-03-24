@@ -88,7 +88,6 @@ export const UserListItemSchema = z.object({
   isAgent: z.boolean(),
   createdAt: z.string(),
   permissionCount: z.number(),
-  _links: z.array(z.any()).optional(),
 });
 
 export type UserListItem = z.infer<typeof UserListItemSchema>;
@@ -99,6 +98,7 @@ export const UserListResponseSchema = z.object({
   page: z.number(),
   pageSize: z.number(),
   _links: z.array(z.any()).optional(),
+  _linkTemplates: z.array(z.any()).optional(),
   _actions: z.array(z.any()).optional(),
 });
 

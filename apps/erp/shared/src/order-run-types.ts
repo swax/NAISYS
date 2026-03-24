@@ -4,6 +4,7 @@ import {
   HateoasActionSchema,
   HateoasActionTemplateSchema,
   HateoasLinkSchema,
+  HateoasLinkTemplateSchema,
 } from "./hateoas-types.js";
 import { OperationRunStatusEnum } from "./operation-run-types.js";
 
@@ -54,7 +55,7 @@ export const OrderRunSchema = z.object({
   createdBy: z.string(),
   updatedAt: z.iso.datetime(),
   updatedBy: z.string(),
-  _links: z.array(HateoasLinkSchema),
+  _links: z.array(HateoasLinkSchema).optional(),
   _actions: z.array(HateoasActionSchema).optional(),
 });
 
@@ -124,6 +125,7 @@ export const OrderRunListResponseSchema = z.object({
   page: z.number(),
   pageSize: z.number(),
   _links: z.array(HateoasLinkSchema),
+  _linkTemplates: z.array(HateoasLinkTemplateSchema).optional(),
   _actions: z.array(HateoasActionSchema).optional(),
 });
 
@@ -174,6 +176,7 @@ export const DispatchListResponseSchema = z.object({
   page: z.number(),
   pageSize: z.number(),
   _links: z.array(HateoasLinkSchema),
+  _linkTemplates: z.array(HateoasLinkTemplateSchema).optional(),
   _actionTemplates: z.array(HateoasActionTemplateSchema).optional(),
 });
 

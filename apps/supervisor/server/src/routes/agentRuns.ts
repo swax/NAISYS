@@ -56,18 +56,13 @@ export default function agentRunsRoutes(
       return {
         success: true,
         message: "Runs data retrieved successfully",
-        data: data && {
-          ...data,
-          runs: data.runs.map((run) => ({
-            ...run,
-            _links: [
-              {
-                rel: "logs",
-                href: `${API_PREFIX}/agents/${username}/runs/${run.runId}/sessions/${run.sessionId}/logs`,
-              },
-            ],
-          })),
-        },
+        data: data ?? undefined,
+        _linkTemplates: [
+          {
+            rel: "logs",
+            hrefTemplate: `${API_PREFIX}/agents/${username}/runs/{runId}/sessions/{sessionId}/logs`,
+          },
+        ],
         _links: data
           ? [
               {

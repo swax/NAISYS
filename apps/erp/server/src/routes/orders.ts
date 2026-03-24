@@ -139,10 +139,8 @@ function formatOrder(order: OrderWithRelations, user: ErpUser | undefined) {
 
 function formatListOrder(order: OrderWithRelations, user: ErpUser | undefined) {
   const { _actions, ...rest } = formatOrder(order, user);
-  return {
-    ...rest,
-    _links: [selfLink(`/${RESOURCE}/${order.key}`)],
-  };
+  const { _links: _, ...withoutLinks } = rest;
+  return withoutLinks;
 }
 
 export default function orderRoutes(fastify: FastifyInstance) {
@@ -181,6 +179,9 @@ export default function orderRoutes(fastify: FastifyInstance) {
           status,
           search,
         }),
+        _linkTemplates: [
+          { rel: "item", hrefTemplate: `${API_PREFIX}/orders/{key}` },
+        ],
         _actions: [
           {
             rel: "create",

@@ -96,9 +96,23 @@ export default function operationRunCommentRoutes(fastify: FastifyInstance) {
       const items = await listComments(resolved.opRun.id);
 
       return {
-        items: items.map((c) => formatComment(orderKey, runNo, seqNo, c)),
+        items: items.map((c) => {
+          const { _links, ...rest } = formatComment(
+            orderKey,
+            runNo,
+            seqNo,
+            c,
+          );
+          return rest;
+        }),
         total: items.length,
         _links: [selfLink(`/${commentResource(orderKey, runNo, seqNo)}`)],
+        _linkTemplates: [
+          {
+            rel: "item",
+            hrefTemplate: `${API_PREFIX}/${commentResource(orderKey, runNo, seqNo)}/{id}`,
+          },
+        ],
         _actions: commentListActions(orderKey, runNo, seqNo, request.erpUser),
       };
     },

@@ -129,7 +129,6 @@ export default function hostsRoutes(
         return {
           ...host,
           online,
-          _links: [selfLink(`/hosts/${host.name}`)],
           _actions: hostActions(host.name, user, online),
         };
       });
@@ -137,6 +136,9 @@ export default function hostsRoutes(
       return {
         items,
         _links: [selfLink("/hosts")],
+        _linkTemplates: [
+          { rel: "item", hrefTemplate: `${API_PREFIX}/hosts/{name}` },
+        ],
         _actions: [
           {
             rel: "create",

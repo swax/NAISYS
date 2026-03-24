@@ -162,12 +162,26 @@ export default function stepRoutes(fastify: FastifyInstance) {
       const user = request.erpUser;
       const base = stepBasePath(orderKey, revNo, seqNo);
       return {
-        items: items.map((step) =>
-          formatStep(orderKey, revNo, seqNo, resolved.rev.status, user, step),
-        ),
+        items: items.map((step) => {
+          const { _links, ...rest } = formatStep(
+            orderKey,
+            revNo,
+            seqNo,
+            resolved.rev.status,
+            user,
+            step,
+          );
+          return rest;
+        }),
         total: items.length,
         nextSeqNo: calcNextSeqNo(maxSeq),
         _links: [selfLink(base)],
+        _linkTemplates: [
+          {
+            rel: "item",
+            hrefTemplate: `${API_PREFIX}${stepBasePath(orderKey, revNo, seqNo)}/{seqNo}`,
+          },
+        ],
         _actions: stepListActions(base, resolved.rev.status, user),
       };
     },
@@ -217,12 +231,26 @@ export default function stepRoutes(fastify: FastifyInstance) {
 
       reply.status(201);
       return {
-        items: created.map((step) =>
-          formatStep(orderKey, revNo, seqNo, resolved.rev.status, user, step),
-        ),
+        items: created.map((step) => {
+          const { _links, ...rest } = formatStep(
+            orderKey,
+            revNo,
+            seqNo,
+            resolved.rev.status,
+            user,
+            step,
+          );
+          return rest;
+        }),
         total: created.length,
         nextSeqNo: calcNextSeqNo(maxSeq),
         _links: [selfLink(base)],
+        _linkTemplates: [
+          {
+            rel: "item",
+            hrefTemplate: `${API_PREFIX}${stepBasePath(orderKey, revNo, seqNo)}/{seqNo}`,
+          },
+        ],
         _actions: [],
       };
     },

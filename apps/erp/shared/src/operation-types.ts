@@ -1,6 +1,10 @@
 import { z } from "zod/v4";
 
-import { HateoasActionSchema, HateoasLinkSchema } from "./hateoas-types.js";
+import {
+  HateoasActionSchema,
+  HateoasLinkSchema,
+  HateoasLinkTemplateSchema,
+} from "./hateoas-types.js";
 
 // Predecessor summary (included in list responses)
 export const OperationPredecessorSchema = z.object({
@@ -31,7 +35,7 @@ export const OperationSchema = z.object({
   createdBy: z.string(),
   updatedAt: z.iso.datetime(),
   updatedBy: z.string(),
-  _links: z.array(HateoasLinkSchema),
+  _links: z.array(HateoasLinkSchema).optional(),
   _actions: z.array(HateoasActionSchema).optional(),
 });
 
@@ -68,6 +72,7 @@ export const OperationListResponseSchema = z.object({
   total: z.number(),
   nextSeqNo: z.number(),
   _links: z.array(HateoasLinkSchema),
+  _linkTemplates: z.array(HateoasLinkTemplateSchema).optional(),
   _actions: z.array(HateoasActionSchema).optional(),
 });
 
