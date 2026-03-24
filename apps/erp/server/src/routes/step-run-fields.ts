@@ -366,6 +366,122 @@ export default function stepRunFieldRoutes(fastify: FastifyInstance) {
     return { items: results, total: results.length, ...hateoas };
   }
 
+  // Shared handler for batch reading field values
+  async function handleBatchFieldGet(
+    request: any,
+    reply: any,
+    setIndex?: number,
+  ) {
+    const { orderKey, runNo, seqNo, stepSeqNo } = request.params;
+
+    const resolved = await resolveStepRun(orderKey, runNo, seqNo, stepSeqNo);
+    if (!resolved) {
+      return notFound(reply, `Step run not found`);
+    }
+
+    const existing = await getStepRunWithFields(resolved.stepRun.id);
+    if (!existing) return notFound(reply, `Step run not found`);
+
+    const storedFieldValues = existing.fieldRecord?.fieldValues ?? [];
+    const maxSetIndex = storedFieldValues.reduce(
+      (max, fv) => Math.max(max, fv.setIndex),
+      -1,
+    );
+    const totalSets = Math.max(1, maxSetIndex + 1);
+
+    const startSet = setIndex ?? 0;
+    const endSet = setIndex !== undefined ? setIndex + 1 : totalSets;
+
+    const items = [];
+    for (let si = startSet; si < endSet; si++) {
+      for (const field of existing.step.fieldSet?.fields ?? []) {
+        const stored = storedFieldValues.find(
+          (fv) => fv.fieldId === field.id && fv.setIndex === si,
+        );
+        const value = deserializeFieldValue(
+          stored?.value ?? "",
+          field.multiValue,
+        );
+        const attachments =
+          field.type === "attachment" && stored
+            ? stored.fieldAttachments.map((sfa) => sfa.attachment)
+            : undefined;
+        items.push({
+          fieldId: field.id,
+          fieldSeqNo: field.seqNo,
+          label: field.label,
+          type: field.type,
+          valueFormat: getValueFormatHint(field.type),
+          multiValue: field.multiValue,
+          required: field.required,
+          setIndex: si,
+          value,
+          attachments,
+          validation: validateFieldValue(
+            field.type,
+            field.multiValue,
+            field.required,
+            value,
+          ),
+        });
+      }
+    }
+
+    const hasAttachmentFields = (existing.step.fieldSet?.fields ?? []).some(
+      (f) => f.type === "attachment",
+    );
+
+    const hateoas = await computeStepRunHateoas(
+      orderKey,
+      runNo,
+      seqNo,
+      stepSeqNo,
+      resolved.opRun.id,
+      resolved.opRun.operationId,
+      resolved.opRun.status,
+      existing.completed,
+      resolved.stepRun.id,
+      existing.step.multiSet,
+      hasAttachmentFields,
+      request.erpUser,
+    );
+
+    return { items, total: items.length, ...hateoas };
+  }
+
+  // BATCH GET field values (non-multiSet shorthand — all sets)
+  app.get("/:stepSeqNo/fields", {
+    schema: {
+      description:
+        "Get all field values on a step run. " +
+        "For multi-set steps, use /sets/{setIndex}/fields to get a specific set.",
+      tags: ["Step Runs"],
+      params: StepSeqNoParamsSchema,
+      response: {
+        200: BatchFieldValueUpdateResponseSchema,
+        404: ErrorResponseSchema,
+      },
+    },
+    handler: async (request, reply) =>
+      handleBatchFieldGet(request, reply),
+  });
+
+  // BATCH GET field values (explicit set index for multi-set steps)
+  app.get("/:stepSeqNo/sets/:setIndex/fields", {
+    schema: {
+      description:
+        "Get field values for a specific set of a multi-set step run",
+      tags: ["Step Runs"],
+      params: SetFieldSeqNoParamsSchema.omit({ fieldSeqNo: true }),
+      response: {
+        200: BatchFieldValueUpdateResponseSchema,
+        404: ErrorResponseSchema,
+      },
+    },
+    handler: async (request, reply) =>
+      handleBatchFieldGet(request, reply, request.params.setIndex),
+  });
+
   // BATCH UPDATE field values (non-multiSet shorthand — implicit set 0)
   app.put("/:stepSeqNo/fields", {
     schema: {
