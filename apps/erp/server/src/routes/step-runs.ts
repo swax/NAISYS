@@ -1,6 +1,7 @@
 import type { HateoasAction } from "@naisys/common";
 import {
   ErrorResponseSchema,
+  getValueFormatHint,
   OperationRunStatus,
   StepRunListQuerySchema,
   StepRunListResponseSchema,
@@ -303,6 +304,7 @@ export async function formatStepRunWithFields(
     fieldSeqNo: number;
     label: string;
     type: string;
+    valueFormat: string;
     multiValue: boolean;
     required: boolean;
     setIndex: number;
@@ -328,6 +330,7 @@ export async function formatStepRunWithFields(
         fieldSeqNo: field.seqNo,
         label: field.label,
         type: field.type,
+        valueFormat: getValueFormatHint(field.type),
         multiValue: field.multiValue,
         required: field.required,
         setIndex: si,

@@ -3,6 +3,7 @@ import {
   CreateItemInstanceSchema,
   ErrorResponseSchema,
   FieldValueEntrySchema,
+  getValueFormatHint,
   ItemInstanceListQuerySchema,
   ItemInstanceListResponseSchema,
   ItemInstanceSchema,
@@ -152,6 +153,7 @@ function buildFieldValues(inst: ItemInstanceWithRelations) {
     fieldSeqNo: number;
     label: string;
     type: string;
+    valueFormat: string;
     multiValue: boolean;
     required: boolean;
     setIndex: number;
@@ -178,6 +180,7 @@ function buildFieldValues(inst: ItemInstanceWithRelations) {
         fieldSeqNo: field.seqNo,
         label: field.label,
         type: field.type,
+        valueFormat: getValueFormatHint(field.type),
         multiValue: field.multiValue,
         required: field.required,
         setIndex: si,
@@ -459,6 +462,7 @@ export default function itemInstanceRoutes(fastify: FastifyInstance) {
       fieldSeqNo: field.seqNo,
       label: field.label,
       type: field.type,
+      valueFormat: getValueFormatHint(field.type),
       multiValue: field.multiValue,
       required: field.required,
       setIndex,
