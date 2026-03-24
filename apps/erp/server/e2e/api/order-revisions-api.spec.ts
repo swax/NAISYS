@@ -113,10 +113,11 @@ test.describe("Order Revisions - API happy path", () => {
         expect.objectContaining({ rel: "cut-order" }),
       ]),
     );
-    // Should NOT have update or delete actions
-    expect(body._actions).not.toEqual(
-      expect.arrayContaining([expect.objectContaining({ rel: "update" })]),
+    // Update should be disabled (not removed) after approval
+    const updateAction = body._actions.find(
+      (a: { rel: string }) => a.rel === "update",
     );
+    expect(updateAction?.disabled).toBe(true);
   });
 
   test("cannot update approved revision (409)", async () => {
@@ -164,7 +165,9 @@ test.describe("Order Revisions - API happy path", () => {
   });
 
   test("list revisions shows both (ordered by revNo desc)", async () => {
-    const res = await api.get(`${API}/orders/${orderKey}/revs`);
+    const res = await api.get(
+      `${API}/orders/${orderKey}/revs?includeObsolete=true`,
+    );
     expect(res.status()).toBe(200);
 
     const body = await res.json();
@@ -204,8 +207,10 @@ test.describe("Order Revisions - API happy path", () => {
     const res = await api.delete(`${API}/orders/${orderKey}/revs/2`);
     expect(res.status()).toBe(204);
 
-    // Verify only 1 revision left
-    const afterRes = await api.get(`${API}/orders/${orderKey}/revs`);
+    // Verify only 1 revision left (the obsolete one)
+    const afterRes = await api.get(
+      `${API}/orders/${orderKey}/revs?includeObsolete=true`,
+    );
     const after = await afterRes.json();
     expect(after.total).toBe(1);
   });
