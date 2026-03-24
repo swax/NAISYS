@@ -1,7 +1,6 @@
 import {
   AgentConfigFileSchema,
   calculatePeriodBoundaries,
-  COST_AGGREGATION_WINDOW_MS,
 } from "@naisys/common";
 import type { HubDatabaseService } from "@naisys/hub-database";
 import { PrismaClient } from "@naisys/hub-database";
@@ -39,52 +38,21 @@ export function createHubCostService(
       const costPushEntries: CostPushEntry[] = [];
 
       for (const entry of parsed.entries) {
-        // Find the most recent cost record for this combination
-        const existingRecord = await hubDb.costs.findFirst({
-          where: {
+        await hubDb.costs.create({
+          data: {
             user_id: entry.userId,
             run_id: entry.runId,
             session_id: entry.sessionId,
+            host_id: hostId,
             source: entry.source,
             model: entry.model,
+            cost: entry.cost,
+            input_tokens: entry.inputTokens,
+            output_tokens: entry.outputTokens,
+            cache_write_tokens: entry.cacheWriteTokens,
+            cache_read_tokens: entry.cacheReadTokens,
           },
-          orderBy: { created_at: "desc" },
-          select: { id: true, created_at: true },
         });
-
-        // Update existing record if within aggregation window, otherwise create new
-        if (
-          existingRecord &&
-          Date.now() - existingRecord.created_at.getTime() <
-            COST_AGGREGATION_WINDOW_MS
-        ) {
-          await hubDb.costs.update({
-            where: { id: existingRecord.id },
-            data: {
-              cost: { increment: entry.cost },
-              input_tokens: { increment: entry.inputTokens },
-              output_tokens: { increment: entry.outputTokens },
-              cache_write_tokens: { increment: entry.cacheWriteTokens },
-              cache_read_tokens: { increment: entry.cacheReadTokens },
-            },
-          });
-        } else {
-          await hubDb.costs.create({
-            data: {
-              user_id: entry.userId,
-              run_id: entry.runId,
-              session_id: entry.sessionId,
-              host_id: hostId,
-              source: entry.source,
-              model: entry.model,
-              cost: entry.cost,
-              input_tokens: entry.inputTokens,
-              output_tokens: entry.outputTokens,
-              cache_write_tokens: entry.cacheWriteTokens,
-              cache_read_tokens: entry.cacheReadTokens,
-            },
-          });
-        }
 
         // Update run_session total_cost
         await hubDb.run_session.updateMany({

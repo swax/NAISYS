@@ -69,11 +69,11 @@ export async function getAgentApiKeyByUuid(
 }
 
 /**
- * Get the latest run_id for a hub user by UUID.
+ * Get the latest run_id and current session start time for a hub user by UUID.
  */
-export async function getLatestRunIdByUuid(
+export async function getLatestRunInfoByUuid(
   uuid: string,
-): Promise<number | null> {
+): Promise<{ runId: number; sessionStart: Date } | null> {
   if (!prisma) return null;
 
   const user = await prisma.users.findFirst({
@@ -84,11 +84,12 @@ export async function getLatestRunIdByUuid(
 
   const latest = await prisma.run_session.findFirst({
     where: { user_id: user.id },
-    select: { run_id: true },
-    orderBy: { run_id: "desc" },
+    orderBy: [{ run_id: "desc" }, { session_id: "desc" }],
+    select: { run_id: true, created_at: true },
   });
+  if (!latest) return null;
 
-  return latest?.run_id ?? null;
+  return { runId: latest.run_id, sessionStart: latest.created_at };
 }
 
 /**
