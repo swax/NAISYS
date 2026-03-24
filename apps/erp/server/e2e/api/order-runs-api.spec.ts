@@ -49,6 +49,7 @@ test.describe("Order Runs - API happy path", () => {
       data: {
         revNo,
         priority: "high",
+        dueAt: "2099-12-31",
         releaseNote: "First order run",
       },
     });
@@ -222,6 +223,7 @@ test.describe("Order Runs - API happy path", () => {
       data: {
         revNo,
         priority: "low",
+        dueAt: "2099-12-31",
       },
     });
     expect(createRes.status()).toBe(201);
@@ -284,6 +286,7 @@ test.describe("Order Runs - API happy path", () => {
       data: {
         revNo: rev.revNo,
         priority: "low",
+        dueAt: "2099-12-31",
       },
     });
     expect(runRes.status()).toBe(201);

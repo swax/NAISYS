@@ -40,7 +40,7 @@ test.describe.serial("Full order lifecycle with operations (UI)", () => {
     await page.getByRole("button", { name: "Create" }).click();
 
     // Should navigate to the operation detail
-    await expect(page.getByText(`OPERATION 10. ${opTitle}`)).toBeVisible();
+    await expect(page.getByText(`OPERATION 10: ${opTitle}`)).toBeVisible();
   });
 
   test("add a step", async () => {
@@ -97,7 +97,7 @@ test.describe.serial("Full order lifecycle with operations (UI)", () => {
   test("start the operation run", async () => {
     // Navigate to the operation run via the sidebar
     await page.getByRole("link", { name: `10. ${opTitle}` }).click();
-    await expect(page.getByText(`OPERATION 10. ${opTitle}`)).toBeVisible();
+    await expect(page.getByText(`OPERATION 10: ${opTitle}`)).toBeVisible();
 
     await page.getByRole("button", { name: "Start" }).click();
 
