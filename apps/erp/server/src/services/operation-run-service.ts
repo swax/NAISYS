@@ -3,9 +3,18 @@ import {
   OperationRunStatus as OperationRunStatusValues,
 } from "@naisys-erp/shared";
 
+import {
+  type FieldRefValueSummary,
+  getValueFormatHint,
+} from "@naisys-erp/shared";
+
 import { writeAuditEntry } from "../audit.js";
 import erpDb from "../erpDb.js";
 import type { OperationRunModel } from "../generated/prisma/models/OperationRun.js";
+import {
+  deserializeFieldValue,
+  validateFieldValue,
+} from "./field-value-service.js";
 
 // --- Prisma include & result type ---
 
@@ -103,6 +112,147 @@ export async function getOpRunStepSummary(opRunId: number) {
       completed: true,
     },
     orderBy: { step: { seqNo: "asc" } },
+  });
+}
+
+/**
+ * Resolve field reference values for an operation run.
+ * Looks up the plan-level field refs, finds the corresponding step runs
+ * in the same order run, and returns FieldValueEntry-shaped data
+ * compatible with the FieldValueRunList component.
+ */
+export async function getOpRunFieldRefSummary(
+  operationId: number,
+  orderRunId: number,
+): Promise<FieldRefValueSummary[]> {
+  // Get field refs from the plan-level operation
+  const fieldRefs = await erpDb.operationFieldRef.findMany({
+    where: { operationId },
+    include: {
+      sourceStep: {
+        select: {
+          id: true,
+          seqNo: true,
+          title: true,
+          multiSet: true,
+          operation: { select: { seqNo: true, title: true } },
+          fieldSet: {
+            select: {
+              fields: {
+                select: {
+                  id: true,
+                  seqNo: true,
+                  label: true,
+                  type: true,
+                  multiValue: true,
+                  required: true,
+                },
+                orderBy: { seqNo: "asc" as const },
+              },
+            },
+          },
+        },
+      },
+    },
+    orderBy: { seqNo: "asc" },
+  });
+
+  if (fieldRefs.length === 0) return [];
+
+  // Collect all source step IDs to batch-fetch their step runs
+  const sourceStepIds = fieldRefs.map((r) => r.sourceStep.id);
+
+  // Find the step runs for these source steps in the same order run
+  // Include attachments for attachment-type fields
+  const stepRuns = await erpDb.stepRun.findMany({
+    where: {
+      operationRun: { orderRunId },
+      stepId: { in: sourceStepIds },
+    },
+    select: {
+      stepId: true,
+      fieldRecord: {
+        select: {
+          fieldValues: {
+            select: {
+              fieldId: true,
+              setIndex: true,
+              value: true,
+              fieldAttachments: {
+                include: {
+                  attachment: {
+                    select: { id: true, filename: true, fileSize: true },
+                  },
+                },
+              },
+            },
+            orderBy: { setIndex: "asc" },
+          },
+        },
+      },
+    },
+  });
+
+  const stepRunMap = new Map(stepRuns.map((sr) => [sr.stepId, sr]));
+
+  return fieldRefs.map((ref) => {
+    const sr = stepRunMap.get(ref.sourceStep.id);
+    const storedFieldValues = sr?.fieldRecord?.fieldValues ?? [];
+    const fields = ref.sourceStep.fieldSet?.fields ?? [];
+
+    // Determine set count
+    const maxSetIndex = storedFieldValues.reduce(
+      (max, fv) => Math.max(max, fv.setIndex),
+      -1,
+    );
+    const setCount = Math.max(1, maxSetIndex + 1);
+
+    // Build FieldValueEntry-shaped objects for each set × field
+    const fieldValues: FieldRefValueSummary["fieldValues"] = [];
+    for (let si = 0; si < setCount; si++) {
+      for (const field of fields) {
+        const stored = storedFieldValues.find(
+          (fv) => fv.fieldId === field.id && fv.setIndex === si,
+        );
+        const value = deserializeFieldValue(
+          stored?.value ?? "",
+          field.multiValue,
+        );
+        const attachments =
+          field.type === "attachment" && stored
+            ? stored.fieldAttachments.map((sfa) => sfa.attachment)
+            : undefined;
+        fieldValues.push({
+          fieldId: field.id,
+          fieldSeqNo: field.seqNo,
+          label: field.label,
+          type: field.type,
+          valueFormat: getValueFormatHint(field.type),
+          multiValue: field.multiValue,
+          required: field.required,
+          setIndex: si,
+          value,
+          attachments,
+          validation: validateFieldValue(
+            field.type,
+            field.multiValue,
+            field.required,
+            value,
+          ),
+        });
+      }
+    }
+
+    return {
+      seqNo: ref.seqNo,
+      title: ref.title,
+      sourceOpSeqNo: ref.sourceStep.operation.seqNo,
+      sourceOpTitle: ref.sourceStep.operation.title,
+      sourceStepSeqNo: ref.sourceStep.seqNo,
+      sourceStepTitle: ref.sourceStep.title,
+      multiSet: ref.sourceStep.multiSet,
+      fieldValues,
+    };
   });
 }
 

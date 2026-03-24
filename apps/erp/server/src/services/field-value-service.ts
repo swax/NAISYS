@@ -27,6 +27,7 @@ export async function findStepRunWithField(
                 where: { seqNo: fieldSeqNo },
                 select: {
                   id: true,
+                  fieldSetId: true,
                   seqNo: true,
                   label: true,
                   type: true,

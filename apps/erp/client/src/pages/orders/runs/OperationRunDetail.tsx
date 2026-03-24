@@ -1,5 +1,6 @@
 import {
   ActionIcon,
+  Anchor,
   Badge,
   Button,
   Card,
@@ -15,10 +16,15 @@ import {
   Tabs,
   Text,
   Textarea,
+  Title,
   Tooltip,
 } from "@mantine/core";
 import { ActionButton, CompactMarkdown } from "@naisys/common-browser";
-import type { OperationRun, OperationRunTransition } from "@naisys-erp/shared";
+import type {
+  FieldRefValueSummary,
+  OperationRun,
+  OperationRunTransition,
+} from "@naisys-erp/shared";
 import { OperationRunStatus } from "@naisys-erp/shared";
 import {
   IconArrowBackUp,
@@ -27,8 +33,9 @@ import {
   IconX,
 } from "@tabler/icons-react";
 import { useCallback, useEffect, useState } from "react";
-import { useOutletContext, useParams } from "react-router";
+import { Link, useOutletContext, useParams } from "react-router";
 
+import { FieldValueRunList } from "../../../components/FieldValueList";
 import { MetadataTooltip } from "../../../components/MetadataTooltip";
 import { UserAutocomplete } from "../../../components/UserAutocomplete";
 import { api, apiEndpoints, showErrorNotification } from "../../../lib/api";
@@ -48,6 +55,50 @@ const STATUS_COLORS: Record<string, string> = {
   completed: "green",
   skipped: "gray",
   failed: "red",
+};
+
+const FieldRefCard: React.FC<{
+  ref_: FieldRefValueSummary;
+  orderKey: string;
+  runNo: string;
+}> = ({ ref_, orderKey, runNo }) => {
+  // Dummy no-op functions for read-only mode
+  const noop = () => "";
+
+  return (
+    <Card withBorder p="sm">
+      <Group gap="xs" mb="xs">
+        <Text size="sm" fw={500}>{ref_.title}</Text>
+        <Anchor
+          component={Link}
+          to={`/orders/${orderKey}/runs/${runNo}/ops/${ref_.sourceOpSeqNo}`}
+          size="xs"
+          c="dimmed"
+        >
+          Op {ref_.sourceOpSeqNo} / Step {ref_.sourceStepSeqNo}
+        </Anchor>
+      </Group>
+      <FieldValueRunList
+        fieldValues={ref_.fieldValues}
+        multiSet={ref_.multiSet}
+        completed={true}
+        fieldValueEndpoint={noop}
+        deleteSetEndpoint={noop}
+        attachmentEndpoint={noop}
+        attachmentDownloadUrl={(fieldSeqNo, attachmentId) =>
+          `/api/erp/${apiEndpoints.stepFieldAttachmentDownload(
+            orderKey,
+            runNo,
+            String(ref_.sourceOpSeqNo),
+            String(ref_.sourceStepSeqNo),
+            fieldSeqNo,
+            attachmentId,
+          )}`
+        }
+        onSetDeleted={noop}
+      />
+    </Card>
+  );
 };
 
 export const OperationRunDetail: React.FC = () => {
@@ -508,6 +559,20 @@ export const OperationRunDetail: React.FC = () => {
             </Tabs.Panel>
           </div>
         </Tabs>
+
+        {opRun.fieldRefSummary && opRun.fieldRefSummary.length > 0 && (
+          <Stack gap="sm">
+            <Title order={5}>Referenced Fields</Title>
+            {opRun.fieldRefSummary.map((ref) => (
+              <FieldRefCard
+                key={ref.seqNo}
+                ref_={ref}
+                orderKey={orderKey!}
+                runNo={runNo!}
+              />
+            ))}
+          </Stack>
+        )}
 
         <SegmentedControl
           value={bottomView}

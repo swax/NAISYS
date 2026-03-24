@@ -121,12 +121,31 @@ model Operation {
   orderRev      OrderRevision         @relation(fields: [orderRevId], references: [id], onDelete: Restrict)
   workCenter    WorkCenter?           @relation(fields: [workCenterId], references: [id], onDelete: SetNull)
   steps         Step[]
+  fieldRefs     OperationFieldRef[] @relation("opFieldRefs")
   operationRuns OperationRun[]
   predecessors  OperationDependency[] @relation("opSuccessor")
   successors    OperationDependency[] @relation("opPredecessor")
 
   @@unique([orderRevId, seqNo])
   @@map("operations")
+}
+
+model OperationFieldRef {
+  id           Int      @id @default(autoincrement())
+  operationId  Int      @map("operation_id")
+  seqNo        Int      @map("seq_no")
+  title        String
+  sourceStepId Int      @map("source_step_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+  createdById  Int      @map("created_by")
+
+  operation  Operation @relation("opFieldRefs", fields: [operationId], references: [id], onDelete: Cascade)
+  sourceStep Step      @relation("fieldRefSource", fields: [sourceStepId], references: [id], onDelete: Restrict)
+  createdBy  User      @relation("fieldRefCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+
+  @@unique([operationId, seqNo])
+  @@unique([operationId, sourceStepId])
+  @@map("operation_field_refs")
 }
 
 model OperationDependency {
@@ -245,6 +264,7 @@ model Step {
   operation Operation  @relation(fields: [operationId], references: [id], onDelete: Cascade)
   fieldSet  FieldSet?  @relation(fields: [fieldSetId], references: [id])
   stepRuns  StepRun[]
+  fieldRefSources OperationFieldRef[] @relation("fieldRefSource")
 
   @@unique([operationId, seqNo])
   @@map("steps")
@@ -416,6 +436,7 @@ model User {
   opsCreated             Operation[]           @relation("opCreatedBy")
   opsUpdated             Operation[]           @relation("opUpdatedBy")
   opDepsCreated          OperationDependency[] @relation("opDepCreatedBy")
+  fieldRefsCreated       OperationFieldRef[]   @relation("fieldRefCreatedBy")
   fieldSetsCreated       FieldSet[]            @relation("fieldSetCreatedBy")
   stepsCreated           Step[]                @relation("stepCreatedBy")
   stepsUpdated           Step[]                @relation("stepUpdatedBy")

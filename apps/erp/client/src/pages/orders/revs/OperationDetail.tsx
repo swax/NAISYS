@@ -23,6 +23,7 @@ import { WorkCenterAutocomplete } from "../../../components/WorkCenterAutocomple
 import { api, apiEndpoints, showErrorNotification } from "../../../lib/api";
 import { hasAction } from "../../../lib/hateoas";
 import { DependencyList } from "./DependencyList";
+import { FieldRefList } from "./FieldRefList";
 import type { RevisionOutletContext } from "./RevisionLayout";
 import { StepList } from "./StepList";
 
@@ -224,6 +225,8 @@ export const OperationDetail: React.FC = () => {
         </Card>
 
         <DependencyList orderKey={orderKey!} revNo={revNo!} opSeqNo={seqNo!} />
+
+        <FieldRefList orderKey={orderKey!} revNo={revNo!} opSeqNo={seqNo!} />
 
         <StepList orderKey={orderKey!} revNo={revNo!} opSeqNo={seqNo!} />
       </Stack>

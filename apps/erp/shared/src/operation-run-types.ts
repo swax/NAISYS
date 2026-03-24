@@ -1,5 +1,6 @@
 import { z } from "zod/v4";
 
+import { FieldRefValueSummarySchema } from "./field-ref-types.js";
 import {
   HateoasActionSchema,
   HateoasLinkSchema,
@@ -44,6 +45,7 @@ export const OperationRunSchema = z.object({
   note: z.string().nullable(),
   completedAt: z.iso.datetime().nullable(),
   stepSummary: z.array(StepRunSummarySchema).optional(),
+  fieldRefSummary: z.array(FieldRefValueSummarySchema).optional(),
   createdAt: z.iso.datetime(),
   createdBy: z.string(),
   updatedAt: z.iso.datetime(),
