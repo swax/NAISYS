@@ -287,7 +287,7 @@ model OperationRun {
   status       OperationRunStatus @default(pending)
   assignedToId Int?               @map("assigned_to_id")
   cost           Float?
-  completionNote String?          @map("completion_note")
+  statusNote     String?          @map("status_note")
   completedAt    DateTime?        @map("completed_at")
   createdAt   DateTime           @default(now()) @map("created_at")
   createdById Int                @map("created_by")
@@ -314,7 +314,7 @@ model StepRun {
   stepId         Int      @map("step_id")
   fieldRecordId  Int?     @map("field_record_id")
   completed      Boolean  @default(false)
-  completionNote String?  @map("completion_note")
+  statusNote     String?  @map("status_note")
   createdAt      DateTime @default(now()) @map("created_at")
   createdById    Int      @map("created_by")
   updatedAt      DateTime @updatedAt @map("updated_at")

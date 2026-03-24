@@ -55,7 +55,7 @@ export type StepRunWithStepAndFields = {
   operationRunId: number;
   stepId: number;
   completed: boolean;
-  completionNote: string | null;
+  statusNote: string | null;
   createdAt: Date;
   updatedAt: Date;
   step: {
@@ -116,7 +116,7 @@ export type StepRunWithStep = {
   operationRunId: number;
   stepId: number;
   completed: boolean;
-  completionNote: string | null;
+  statusNote: string | null;
   fieldRecordId: number | null;
   createdAt: Date;
   updatedAt: Date;
@@ -167,7 +167,7 @@ export async function getStepRunWithFields(id: number): Promise<StepRunWithStepA
 export async function updateStepRun(
   id: number,
   completed: boolean | undefined,
-  completionNote: string | undefined,
+  statusNote: string | undefined,
   userId: number,
 ): Promise<StepRunWithStepAndFields> {
   if (completed !== undefined) {
@@ -175,7 +175,7 @@ export async function updateStepRun(
       where: { id },
       data: {
         completed,
-        completionNote: completed ? (completionNote ?? null) : null,
+        statusNote: statusNote ?? null,
         updatedById: userId,
       },
     });

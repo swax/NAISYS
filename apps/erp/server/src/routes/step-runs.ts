@@ -265,7 +265,7 @@ export async function formatStepRunTransition(
   return {
     id: stepRun.id,
     completed: stepRun.completed,
-    completionNote: stepRun.completionNote ?? null,
+    note: stepRun.statusNote ?? null,
     ...formatAuditFields(stepRun),
     ...hateoas,
   };
@@ -371,7 +371,7 @@ export async function formatStepRunWithFields(
     instructions: stepRun.step.instructions,
     multiSet,
     completed: stepRun.completed,
-    completionNote: stepRun.completionNote ?? null,
+    note: stepRun.statusNote ?? null,
     fieldCount: stepRun.step.fieldSet?.fields.length ?? 0,
     fieldValues,
     ...formatAuditFields(stepRun),
@@ -406,7 +406,7 @@ function formatListStepRun(
     instructions: stepRun.step.instructions,
     multiSet: stepRun.step.multiSet,
     completed: stepRun.completed,
-    completionNote: stepRun.completionNote ?? null,
+    note: stepRun.statusNote ?? null,
     fieldCount,
     ...formatAuditFields(stepRun),
     _links: childItemLinks(

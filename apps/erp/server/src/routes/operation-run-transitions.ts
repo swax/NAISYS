@@ -1,9 +1,9 @@
 import {
-  CompleteOperationRunSchema,
   ErrorResponseSchema,
   OperationRunStatus,
   OperationRunTransitionSchema,
   OrderRunStatus,
+  TransitionNoteSchema,
 } from "@naisys-erp/shared";
 import { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
@@ -41,6 +41,7 @@ export default function operationRunTransitionRoutes(fastify: FastifyInstance) {
       description: "Start an operation run (pending → in_progress)",
       tags: ["Operation Runs"],
       params: SeqNoParamsSchema,
+      body: TransitionNoteSchema,
       response: {
         200: OperationRunTransitionSchema,
         404: ErrorResponseSchema,
@@ -51,6 +52,7 @@ export default function operationRunTransitionRoutes(fastify: FastifyInstance) {
     preHandler: requirePermission("order_executor"),
     handler: async (request, reply) => {
       const { orderKey, runNo, seqNo } = request.params;
+      const { note } = request.body;
       const userId = request.erpUser!.id;
 
       const resolved = await resolveOpRun(orderKey, runNo, seqNo);
@@ -90,7 +92,7 @@ export default function operationRunTransitionRoutes(fastify: FastifyInstance) {
         OperationRunStatus.pending,
         OperationRunStatus.in_progress,
         userId,
-        { assignedToId: userId },
+        { assignedToId: userId, statusNote: note ?? null },
       );
       await clockIn(resolved.opRun.id, userId, userId);
       return formatOpRunTransition(orderKey, runNo, request.erpUser, opRun);
@@ -103,7 +105,7 @@ export default function operationRunTransitionRoutes(fastify: FastifyInstance) {
       description: "Complete an operation run (in_progress → completed)",
       tags: ["Operation Runs"],
       params: SeqNoParamsSchema,
-      body: CompleteOperationRunSchema,
+      body: TransitionNoteSchema,
       response: {
         200: OperationRunTransitionSchema,
         404: ErrorResponseSchema,
@@ -114,7 +116,7 @@ export default function operationRunTransitionRoutes(fastify: FastifyInstance) {
     preHandler: requirePermission("order_executor"),
     handler: async (request, reply) => {
       const { orderKey, runNo, seqNo } = request.params;
-      const { completionNote } = request.body;
+      const { note } = request.body;
       const userId = request.erpUser!.id;
 
       const resolved = await resolveOpRun(orderKey, runNo, seqNo);
@@ -152,7 +154,7 @@ export default function operationRunTransitionRoutes(fastify: FastifyInstance) {
         {
           completedAt: new Date(),
           cost,
-          completionNote: completionNote ?? null,
+          statusNote: note ?? null,
         },
       );
       await unblockSuccessors(
@@ -170,6 +172,7 @@ export default function operationRunTransitionRoutes(fastify: FastifyInstance) {
       description: "Skip an operation run (pending → skipped)",
       tags: ["Operation Runs"],
       params: SeqNoParamsSchema,
+      body: TransitionNoteSchema,
       response: {
         200: OperationRunTransitionSchema,
         404: ErrorResponseSchema,
@@ -179,6 +182,7 @@ export default function operationRunTransitionRoutes(fastify: FastifyInstance) {
     preHandler: requirePermission("order_manager"),
     handler: async (request, reply) => {
       const { orderKey, runNo, seqNo } = request.params;
+      const { note } = request.body;
       const userId = request.erpUser!.id;
 
       const resolved = await resolveOpRun(orderKey, runNo, seqNo);
@@ -205,7 +209,7 @@ export default function operationRunTransitionRoutes(fastify: FastifyInstance) {
           | typeof OperationRunStatus.pending,
         OperationRunStatus.skipped,
         userId,
-        cost > 0 ? { cost } : undefined,
+        { ...(cost > 0 ? { cost } : undefined), statusNote: note ?? null },
       );
       await unblockSuccessors(
         resolved.run.id,
@@ -222,6 +226,7 @@ export default function operationRunTransitionRoutes(fastify: FastifyInstance) {
       description: "Fail an operation run (in_progress → failed)",
       tags: ["Operation Runs"],
       params: SeqNoParamsSchema,
+      body: TransitionNoteSchema,
       response: {
         200: OperationRunTransitionSchema,
         404: ErrorResponseSchema,
@@ -231,6 +236,7 @@ export default function operationRunTransitionRoutes(fastify: FastifyInstance) {
     preHandler: requirePermission("order_manager"),
     handler: async (request, reply) => {
       const { orderKey, runNo, seqNo } = request.params;
+      const { note } = request.body;
       const userId = request.erpUser!.id;
 
       const resolved = await resolveOpRun(orderKey, runNo, seqNo);
@@ -255,7 +261,7 @@ export default function operationRunTransitionRoutes(fastify: FastifyInstance) {
         OperationRunStatus.in_progress,
         OperationRunStatus.failed,
         userId,
-        cost > 0 ? { cost } : undefined,
+        { ...(cost > 0 ? { cost } : undefined), statusNote: note ?? null },
       );
       return formatOpRunTransition(orderKey, runNo, request.erpUser, opRun);
     },
@@ -267,6 +273,7 @@ export default function operationRunTransitionRoutes(fastify: FastifyInstance) {
       description: "Reopen an operation run (completed → in_progress)",
       tags: ["Operation Runs"],
       params: SeqNoParamsSchema,
+      body: TransitionNoteSchema,
       response: {
         200: OperationRunTransitionSchema,
         404: ErrorResponseSchema,
@@ -276,6 +283,7 @@ export default function operationRunTransitionRoutes(fastify: FastifyInstance) {
     preHandler: requirePermission("order_manager"),
     handler: async (request, reply) => {
       const { orderKey, runNo, seqNo } = request.params;
+      const { note } = request.body;
       const userId = request.erpUser!.id;
 
       const resolved = await resolveOpRun(orderKey, runNo, seqNo);
@@ -305,7 +313,7 @@ export default function operationRunTransitionRoutes(fastify: FastifyInstance) {
         resolved.opRun.status,
         reopenTo,
         userId,
-        { completedAt: null, completionNote: null },
+        { completedAt: null, statusNote: note ?? null },
       );
       // Re-block successor ops that are still pending
       await reblockSuccessors(

@@ -1,7 +1,7 @@
 import {
-  CompleteStepRunSchema,
   ErrorResponseSchema,
   StepRunTransitionSchema,
+  TransitionNoteSchema,
 } from "@naisys-erp/shared";
 import { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
@@ -40,7 +40,7 @@ export default function stepRunTransitionRoutes(fastify: FastifyInstance) {
         "Complete a step run (operation run must be in_progress)",
       tags: ["Step Runs"],
       params: StepSeqNoParamsSchema,
-      body: CompleteStepRunSchema,
+      body: TransitionNoteSchema,
       response: {
         200: StepRunTransitionSchema,
         404: ErrorResponseSchema,
@@ -51,7 +51,7 @@ export default function stepRunTransitionRoutes(fastify: FastifyInstance) {
     preHandler: requirePermission("order_executor"),
     handler: async (request, reply) => {
       const { orderKey, runNo, seqNo, stepSeqNo } = request.params;
-      const { completionNote } = request.body;
+      const { note } = request.body;
       const userId = request.erpUser!.id;
 
       const resolved = await resolveStepRun(orderKey, runNo, seqNo, stepSeqNo);
@@ -88,7 +88,7 @@ export default function stepRunTransitionRoutes(fastify: FastifyInstance) {
       const stepRun = await updateStepRun(
         resolved.stepRun.id,
         true,
-        completionNote,
+        note,
         userId,
       );
 
@@ -111,6 +111,7 @@ export default function stepRunTransitionRoutes(fastify: FastifyInstance) {
       description: "Reopen a completed step run",
       tags: ["Step Runs"],
       params: StepSeqNoParamsSchema,
+      body: TransitionNoteSchema,
       response: {
         200: StepRunTransitionSchema,
         404: ErrorResponseSchema,
@@ -120,6 +121,7 @@ export default function stepRunTransitionRoutes(fastify: FastifyInstance) {
     preHandler: requirePermission("order_executor"),
     handler: async (request, reply) => {
       const { orderKey, runNo, seqNo, stepSeqNo } = request.params;
+      const { note } = request.body;
       const userId = request.erpUser!.id;
 
       const resolved = await resolveStepRun(orderKey, runNo, seqNo, stepSeqNo);
@@ -144,7 +146,7 @@ export default function stepRunTransitionRoutes(fastify: FastifyInstance) {
       const stepRun = await updateStepRun(
         resolved.stepRun.id,
         false,
-        undefined,
+        note,
         userId,
       );
 
