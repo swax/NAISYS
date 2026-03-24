@@ -15,6 +15,7 @@ import {
   createMockPromptBuilder,
   createMockSessionService,
   createMockShellCommand,
+  createMockShellWrapper,
   createMockSubagent,
 } from "../mocks.js";
 
@@ -44,6 +45,7 @@ function createPopFirstCommand() {
     createMockCommandProtection(),
     promptBuilder,
     shellCommand,
+    createMockShellWrapper(),
     commandRegistry,
     createMockContextManager(),
     createMockOutputService(),

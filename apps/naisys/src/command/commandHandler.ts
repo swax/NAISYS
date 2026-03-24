@@ -15,6 +15,7 @@ import {
 } from "./commandRegistry.js";
 import { PromptBuilder } from "./promptBuilder.js";
 import { ShellCommand } from "./shellCommand.js";
+import { ShellWrapper } from "./shellWrapper.js";
 
 export function createCommandHandler(
   _globalConfig: GlobalConfig,
@@ -22,6 +23,7 @@ export function createCommandHandler(
   commandProtection: CommandProtection,
   promptBuilder: PromptBuilder,
   shellCommand: ShellCommand,
+  shellWrapper: ShellWrapper,
   commandRegistry: CommandRegistry,
   contextManager: ContextManager,
   output: OutputService,
@@ -86,7 +88,19 @@ export function createCommandHandler(
       // Check command registry first
       const registeredCommand = commandRegistry.get(command);
       if (registeredCommand) {
-        const response = await registeredCommand.handleCommand(cmdArgs);
+        // Expand env vars and ~ in args via the shell so ns- commands
+        // handle paths like $MY_FOLDER/file.png the same way bash does
+        let expandedArgs = cmdArgs;
+        if (/[$~]/.test(cmdArgs)) {
+          const expanded = (
+            await shellWrapper.executeCommand(`echo ${cmdArgs}`)
+          ).trim();
+          if (expanded) {
+            expandedArgs = expanded;
+          }
+        }
+
+        const response = await registeredCommand.handleCommand(expandedArgs);
 
         // Handle string or CommandResponse
         if (typeof response === "string") {

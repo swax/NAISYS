@@ -16,6 +16,7 @@ import {
 import { CommandProtection } from "../command/commandProtection.js";
 import { PromptBuilder } from "../command/promptBuilder.js";
 import { ShellCommand } from "../command/shellCommand.js";
+import { ShellWrapper } from "../command/shellWrapper.js";
 import { GenImg } from "../features/genImg.js";
 import { LynxService } from "../features/lynx.js";
 import { SessionService } from "../features/session.js";
@@ -78,6 +79,21 @@ export function createMockShellCommand() {
   };
 
   return shellCommand;
+}
+
+export function createMockShellWrapper() {
+  const shellWrapper: ShellWrapper = {
+    executeCommand: vi.fn(() => Promise.resolve("")),
+    continueCommand: vi.fn(() => Promise.resolve("")),
+    getCurrentPath: vi.fn(() => Promise.resolve("/home/bob")),
+    resolvePaths: vi.fn((paths: string[]) => Promise.resolve(paths)),
+    terminate: vi.fn(() => Promise.resolve()),
+    isShellSuspended: vi.fn(() => false),
+    getCommandElapsedTimeString: vi.fn(() => ""),
+    getCurrentCommandName: vi.fn(() => ""),
+  };
+
+  return shellWrapper;
 }
 
 export function createMockGenImg() {
