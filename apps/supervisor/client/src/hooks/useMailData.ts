@@ -1,5 +1,5 @@
 import type { HateoasAction } from "@naisys/common";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { useAgentDataContext } from "../contexts/AgentDataContext";
@@ -14,6 +14,9 @@ const updatedSinceCache = new Map<string, string | undefined>();
 const totalCache = new Map<string, number>();
 let actionsCache: HateoasAction[] | undefined = undefined;
 
+// Tracks gap recovery attempts per agent to prevent re-fetch loops
+const gapRecoveryAttempted = new Map<string, Set<string>>();
+
 export const useMailData = (agentUsername: string, enabled: boolean = true) => {
   const { agents } = useAgentDataContext();
   const userLookup = useMemo(
@@ -25,6 +28,14 @@ export const useMailData = (agentUsername: string, enabled: boolean = true) => {
     [agents],
   );
   const [, setCacheVersion] = useState(0);
+  const queryClient = useQueryClient();
+
+  // Clean up gap recovery state when leaving an agent's mail
+  useEffect(() => {
+    return () => {
+      gapRecoveryAttempted.delete(agentUsername);
+    };
+  }, [agentUsername]);
 
   const mergeMail = useCallback(
     (updatedMail: MailMessage[], total?: number) => {
@@ -43,6 +54,27 @@ export const useMailData = (agentUsername: string, enabled: boolean = true) => {
       }
     },
     [agentUsername],
+  );
+
+  const recoverMail = useCallback(
+    (previousMessageId: number, currentMessageId: number) => {
+      const gapKey = `${previousMessageId}-${currentMessageId}`;
+      const attempted = gapRecoveryAttempted.get(agentUsername) ?? new Set();
+      if (attempted.has(gapKey)) return;
+      attempted.add(gapKey);
+      gapRecoveryAttempted.set(agentUsername, attempted);
+
+      console.info(
+        `[useMailData] Gap recovery for ${agentUsername}: clearing cache and refetching`,
+      );
+
+      // Clear timestamp so next fetch gets all messages
+      updatedSinceCache.delete(agentUsername);
+      void queryClient.invalidateQueries({
+        queryKey: ["mail-data", agentUsername],
+      });
+    },
+    [agentUsername, queryClient],
   );
 
   const handleMailPush = useCallback(
@@ -68,6 +100,22 @@ export const useMailData = (agentUsername: string, enabled: boolean = true) => {
             attachments: event.attachments,
           };
           mergeMail([msg]);
+
+          // Gap detection: check if previousMessageId exists in cache
+          if (event.previousMessageId != null) {
+            const cached = mailCache.get(agentUsername);
+            if (cached && cached.length > 0) {
+              const hasPrevious = cached.some(
+                (m) => m.id === event.previousMessageId,
+              );
+              if (!hasPrevious) {
+                console.warn(
+                  `[useMailData] Gap detected for ${agentUsername}: missing previousMessageId ${event.previousMessageId}`,
+                );
+                recoverMail(event.previousMessageId, event.messageId);
+              }
+            }
+          }
           break;
         }
         case "read-receipt": {
@@ -91,7 +139,7 @@ export const useMailData = (agentUsername: string, enabled: boolean = true) => {
         }
       }
     },
-    [agentUsername, mergeMail, userLookup, titleLookup],
+    [agentUsername, mergeMail, recoverMail, userLookup, titleLookup],
   );
 
   const queryFn = useCallback(async ({ queryKey }: any) => {
