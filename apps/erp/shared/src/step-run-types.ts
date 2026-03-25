@@ -115,7 +115,7 @@ export type UpdateFieldValue = z.infer<typeof UpdateFieldValueSchema>;
 // Batch field value update (setIndex is specified via URL path, not body)
 export const BatchUpdateFieldValuesSchema = z
   .object({
-    fields: z.array(
+    fieldValues: z.array(
       z.object({
         fieldSeqNo: z.number().int(),
         value: z.union([coercedStringMax, z.array(coercedStringMax)]),
