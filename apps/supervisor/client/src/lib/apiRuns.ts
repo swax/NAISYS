@@ -32,6 +32,7 @@ export interface ContextLogParams {
   runId: number;
   sessionId: number;
   logsAfter?: number;
+  logsBefore?: number;
 }
 
 export const getContextLog = async (
@@ -40,6 +41,9 @@ export const getContextLog = async (
   const queryParams = new URLSearchParams();
   if (params.logsAfter !== undefined) {
     queryParams.append("logsAfter", String(params.logsAfter));
+  }
+  if (params.logsBefore !== undefined) {
+    queryParams.append("logsBefore", String(params.logsBefore));
   }
 
   const query = queryParams.toString();

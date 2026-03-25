@@ -44,6 +44,7 @@ export const ContextLogParamsSchema = z.object({
 
 export const ContextLogRequestSchema = z.object({
   logsAfter: z.coerce.number().optional(),
+  logsBefore: z.coerce.number().optional(),
 });
 
 export const ContextLogResponseSchema = z.object({

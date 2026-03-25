@@ -97,14 +97,20 @@ export default function agentRunsRoutes(
     },
     async (request, reply) => {
       const { username, runId, sessionId } = request.params;
-      const { logsAfter } = request.query;
+      const { logsAfter, logsBefore } = request.query;
       const id = resolveAgentId(username);
 
       if (!id) {
         return notFound(reply, `Agent '${username}' not found`);
       }
 
-      const data = await getContextLog(id, runId, sessionId, logsAfter);
+      const data = await getContextLog(
+        id,
+        runId,
+        sessionId,
+        logsAfter,
+        logsBefore,
+      );
 
       const maxLogId = data?.logs.length
         ? Math.max(...data.logs.map((l) => l.id))

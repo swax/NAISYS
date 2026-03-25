@@ -17,6 +17,9 @@ export function createHubLogService(
   logService: HubServerLog,
   heartbeatService: HubHeartbeatService,
 ) {
+  // Track last pushed log ID per session for gap detection
+  const lastPushedLogId = new Map<string, number>();
+
   naisysServer.registerEvent(HubEvents.LOG_WRITE, async (hostId, data) => {
     try {
       const parsed = LogWriteRequestSchema.parse(data);
@@ -79,8 +82,12 @@ export function createHubLogService(
         );
 
         // Collect push entry with DB-assigned ID
+        const sessionKey = `${entry.userId}-${entry.runId}-${entry.sessionId}`;
+        const previousId = lastPushedLogId.get(sessionKey) ?? null;
+
         pushEntries.push({
           id: log.id,
+          previousId,
           userId: entry.userId,
           runId: entry.runId,
           sessionId: entry.sessionId,
@@ -92,8 +99,9 @@ export function createHubLogService(
           attachmentId: entry.attachmentId,
         });
 
+        lastPushedLogId.set(sessionKey, log.id);
+
         // Track session delta (accumulate totalLinesDelta, keep latest logId)
-        const sessionKey = `${entry.userId}-${entry.runId}-${entry.sessionId}`;
         const existing = sessionUpdates.get(sessionKey);
         if (existing) {
           existing.latestLogId = Math.max(existing.latestLogId, log.id);

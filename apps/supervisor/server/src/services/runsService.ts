@@ -73,6 +73,7 @@ export async function getContextLog(
   runId: number,
   sessionId: number,
   logsAfter?: number,
+  logsBefore?: number,
 ): Promise<ContextLogData> {
   const where: any = {
     user_id: userId,
@@ -80,9 +81,11 @@ export async function getContextLog(
     session_id: sessionId,
   };
 
-  // If logsAfter is provided, only fetch logs after that ID
-  if (logsAfter !== undefined) {
-    where.id = { gt: logsAfter };
+  // Build ID range filter for incremental fetches / gap recovery
+  if (logsAfter !== undefined || logsBefore !== undefined) {
+    where.id = {};
+    if (logsAfter !== undefined) where.id.gt = logsAfter;
+    if (logsBefore !== undefined) where.id.lt = logsBefore;
   }
 
   const dbLogs = await hubDb.context_log.findMany({
