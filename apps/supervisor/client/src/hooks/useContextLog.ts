@@ -11,6 +11,9 @@ import { useSubscription } from "./useSubscription";
 const logsCache = new Map<string, LogEntry[]>();
 const logsAfterCache = new Map<string, number | undefined>();
 
+// Tracks gap recovery attempts per session to prevent re-fetch loops
+const gapRecoveryAttempted = new Map<string, Set<string>>();
+
 export const useContextLog = (
   agentUsername: string,
   runId: number,
@@ -28,6 +31,13 @@ export const useContextLog = (
   const sessionKey = `${agentUsername}-${runId}-${sessionId}`;
   // Version counter to trigger re-renders when cache updates
   const [, setCacheVersion] = useState(0);
+
+  // Clean up gap recovery state when leaving a session
+  useEffect(() => {
+    return () => {
+      gapRecoveryAttempted.delete(sessionKey);
+    };
+  }, [sessionKey]);
 
   const mergeLogs = useCallback(
     (newLogs: LogEntry[]) => {
@@ -59,6 +69,49 @@ export const useContextLog = (
     [sessionKey],
   );
 
+  // Fetch a bounded range of missing logs to fill a detected gap
+  const recoverGap = useCallback(
+    async (gapPreviousId: number, gapFirstId: number) => {
+      const gapKey = `${gapPreviousId}-${gapFirstId}`;
+      const attempted = gapRecoveryAttempted.get(sessionKey) ?? new Set();
+      if (attempted.has(gapKey)) return;
+      attempted.add(gapKey);
+      gapRecoveryAttempted.set(sessionKey, attempted);
+
+      try {
+        // Find the highest ID we have below the gap to narrow the range
+        const existingLogs = logsCache.get(sessionKey) ?? [];
+        const logsBeforeGap = existingLogs.filter(
+          (l) => l.id < gapFirstId,
+        );
+        const rangeStart =
+          logsBeforeGap.length > 0
+            ? logsBeforeGap[logsBeforeGap.length - 1].id
+            : undefined;
+
+        const result = await getContextLog({
+          agentUsername,
+          runId,
+          sessionId,
+          logsAfter: rangeStart,
+          logsBefore: gapFirstId,
+        });
+        if (result.success && result.data) {
+          console.info(
+            `[useContextLog] Gap recovery for ${sessionKey}: fetched ${result.data.logs.length} logs (after=${rangeStart}, before=${gapFirstId})`,
+          );
+          mergeLogs(result.data.logs);
+        }
+      } catch (err) {
+        console.error(
+          `[useContextLog] Gap recovery failed for ${sessionKey}:`,
+          err,
+        );
+      }
+    },
+    [agentUsername, runId, sessionId, sessionKey, mergeLogs],
+  );
+
   // Handle push entries: resolve userId to username from agent context
   const handlePushEntries = useCallback(
     (entries: LogPushEntry[]) => {
@@ -75,8 +128,25 @@ export const useContextLog = (
           : undefined,
       }));
       mergeLogs(logs);
+
+      // Gap detection: check if first entry's previousId exists in our cache
+      const firstEntry = entries[0];
+      if (firstEntry?.previousId != null) {
+        const existingLogs = logsCache.get(sessionKey);
+        if (existingLogs && existingLogs.length > 0) {
+          const hasPrevious = existingLogs.some(
+            (l) => l.id === firstEntry.previousId,
+          );
+          if (!hasPrevious) {
+            console.warn(
+              `[useContextLog] Gap detected in ${sessionKey}: missing previousId ${firstEntry.previousId}, recovering before id ${firstEntry.id}`,
+            );
+            void recoverGap(firstEntry.previousId, firstEntry.id);
+          }
+        }
+      }
     },
-    [mergeLogs, userLookup],
+    [mergeLogs, userLookup, sessionKey, recoverGap],
   );
 
   const queryFn = useCallback(

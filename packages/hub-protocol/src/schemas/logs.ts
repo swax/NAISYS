@@ -35,6 +35,8 @@ export type LogWriteRequest = z.infer<typeof LogWriteRequestSchema>;
 /** A single log entry pushed from hub to supervisor (includes DB-assigned ID) */
 export const LogPushEntrySchema = z.object({
   id: z.number(),
+  /** ID of the previous log entry for this session, null if unknown (e.g. hub restart) */
+  previousId: z.number().nullable(),
   userId: z.number(),
   runId: z.number(),
   sessionId: z.number(),
