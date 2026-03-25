@@ -296,6 +296,7 @@ export async function createAgentRuntime(
       abortController.abort(reason);
     },
     completeShutdown: async () => {
+      commandLoop.cleanup();
       costTracker.cleanup();
       await logService.cleanup();
       mailService.cleanup();
