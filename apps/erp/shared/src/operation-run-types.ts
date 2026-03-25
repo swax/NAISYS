@@ -66,11 +66,17 @@ export const UpdateOperationRunSchema = z
 export type UpdateOperationRun = z.infer<typeof UpdateOperationRunSchema>;
 
 // Body for any status transition that accepts an optional note
+// Accept null/undefined so callers don't need to send -d '{}' on POST
+// endpoints where the body is entirely optional. A simpler
+// .nullable().default({}) doesn't narrow the output type in zod v4,
+// so we use a union + transform instead.
 export const TransitionNoteSchema = z
-  .object({
-    note: z.string().max(2000).optional(),
-  })
-  .strict();
+  .union([
+    z.object({ note: z.string().max(2000).optional() }).strict(),
+    z.null(),
+    z.undefined(),
+  ])
+  .transform((v) => v ?? {});
 
 export type TransitionNote = z.infer<typeof TransitionNoteSchema>;
 
