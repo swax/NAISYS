@@ -104,6 +104,8 @@ export function createCommandLoop(
       }
     }
 
+    clearTimeout(preemptiveCompactTimeout);
+
     if (abortSignal?.aborted) {
       output.commentAndLog(`AGENT STOPPED (${abortSignal.reason})`);
       return String(abortSignal.reason);
@@ -559,6 +561,7 @@ export function createCommandLoop(
 
   return {
     run,
+    cleanup: () => clearTimeout(preemptiveCompactTimeout),
   };
 }
 
