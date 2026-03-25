@@ -2,7 +2,11 @@ import type { MailPush } from "@naisys/hub-protocol";
 
 /** Discriminated union for events pushed to mail/chat browser rooms */
 export type MessageRoomEvent =
-  | ({ type: "new-message" } & MailPush)
+  | ({
+      type: "new-message";
+      /** ID of the previous message pushed to this room, null if unknown */
+      previousMessageId: number | null;
+    } & MailPush)
   | { type: "read-receipt"; messageIds: number[]; userId: number };
 
 interface MergeCacheItem {
@@ -50,6 +54,12 @@ export function mergeIntoCache<K, T extends MergeCacheItem>(
     totalCache.set(key, (totalCache.get(key) || 0) + newCount);
   }
 
-  updatedSinceCache.set(key, new Date().toISOString());
+  // Use the latest server timestamp from merged items rather than client time.
+  // This ensures updatedSince tracks actual message times and isn't affected
+  // by client/server clock skew, so missed messages stay recoverable.
+  if (merged.length > 0) {
+    const newest = newestFirst ? merged[0] : merged[merged.length - 1];
+    updatedSinceCache.set(key, newest.createdAt);
+  }
   return true;
 }

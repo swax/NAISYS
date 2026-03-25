@@ -1,5 +1,5 @@
 import type { HateoasAction } from "@naisys/common";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { useAgentDataContext } from "../contexts/AgentDataContext";
@@ -13,6 +13,9 @@ const messagesCache = new Map<string, ChatMessage[]>();
 const updatedSinceCache = new Map<string, string | undefined>();
 const totalCache = new Map<string, number>();
 let actionsCache: HateoasAction[] | undefined = undefined;
+
+// Tracks gap recovery attempts per cache key to prevent re-fetch loops
+const gapRecoveryAttempted = new Map<string, Set<string>>();
 
 export const useChatMessages = (
   agentUsername: string,
@@ -30,6 +33,14 @@ export const useChatMessages = (
   );
   const [, setCacheVersion] = useState(0);
   const cacheKey = `${agentUsername}:${participants}`;
+  const queryClient = useQueryClient();
+
+  // Clean up gap recovery state when leaving a conversation
+  useEffect(() => {
+    return () => {
+      gapRecoveryAttempted.delete(cacheKey);
+    };
+  }, [cacheKey]);
 
   const mergeMessages = useCallback(
     (newMessages: ChatMessage[], total?: number) => {
@@ -50,6 +61,27 @@ export const useChatMessages = (
     [cacheKey],
   );
 
+  const recoverMessages = useCallback(
+    (previousMessageId: number, currentMessageId: number) => {
+      const gapKey = `${previousMessageId}-${currentMessageId}`;
+      const attempted = gapRecoveryAttempted.get(cacheKey) ?? new Set();
+      if (attempted.has(gapKey)) return;
+      attempted.add(gapKey);
+      gapRecoveryAttempted.set(cacheKey, attempted);
+
+      console.info(
+        `[useChatMessages] Gap recovery for ${cacheKey}: clearing cache and refetching`,
+      );
+
+      // Clear timestamp so next fetch gets all messages
+      updatedSinceCache.delete(cacheKey);
+      void queryClient.invalidateQueries({
+        queryKey: ["chat-messages", agentUsername, participants],
+      });
+    },
+    [cacheKey, agentUsername, participants, queryClient],
+  );
+
   const handleChatPush = useCallback(
     (event: MessageRoomEvent) => {
       switch (event.type) {
@@ -65,6 +97,22 @@ export const useChatMessages = (
             attachments: event.attachments,
           };
           mergeMessages([msg]);
+
+          // Gap detection: check if previousMessageId exists in cache
+          if (event.previousMessageId != null) {
+            const cached = messagesCache.get(cacheKey);
+            if (cached && cached.length > 0) {
+              const hasPrevious = cached.some(
+                (m) => m.id === event.previousMessageId,
+              );
+              if (!hasPrevious) {
+                console.warn(
+                  `[useChatMessages] Gap detected in ${cacheKey}: missing previousMessageId ${event.previousMessageId}`,
+                );
+                recoverMessages(event.previousMessageId, event.messageId);
+              }
+            }
+          }
           break;
         }
         case "read-receipt": {
@@ -86,7 +134,7 @@ export const useChatMessages = (
         }
       }
     },
-    [cacheKey, mergeMessages, userLookup, titleLookup],
+    [cacheKey, mergeMessages, recoverMessages, userLookup, titleLookup],
   );
 
   const queryFn = useCallback(async () => {

@@ -205,6 +205,9 @@ function connectSocket(hubUrl: string) {
     browserIO.to(room).emit(room, { type: "new-session", ...session });
   });
 
+  // Track last pushed message ID per room for gap detection
+  const lastPushedMessageId = new Map<string, number>();
+
   socket.on(HubEvents.MAIL_PUSH, (data) => {
     const parsed = MailPushSchema.safeParse(data);
     if (!parsed.success) {
@@ -216,7 +219,6 @@ function connectSocket(hubUrl: string) {
     }
 
     const msg = parsed.data;
-    const payload = { type: "new-message" as const, ...msg };
     const affectedUserIds = new Set([...msg.recipientUserIds, msg.fromUserId]);
     const browserIO = getIO();
 
@@ -225,19 +227,32 @@ function connectSocket(hubUrl: string) {
         const username = resolveUsername(uid);
         if (!username) continue;
         const room = `mail:${username}`;
-        browserIO.to(room).emit(room, payload);
+        const previousMessageId = lastPushedMessageId.get(room) ?? null;
+        browserIO
+          .to(room)
+          .emit(room, { type: "new-message", previousMessageId, ...msg });
+        lastPushedMessageId.set(room, msg.messageId);
       }
     } else if (msg.kind === "chat") {
       // Chat messages — room keyed by participants (not user-specific)
       const msgRoom = `chat-messages:${msg.participants}`;
-      browserIO.to(msgRoom).emit(msgRoom, payload);
+      const previousMessageId = lastPushedMessageId.get(msgRoom) ?? null;
+      browserIO
+        .to(msgRoom)
+        .emit(msgRoom, { type: "new-message", previousMessageId, ...msg });
+      lastPushedMessageId.set(msgRoom, msg.messageId);
 
-      // Chat conversations — rooms keyed by username
+      // Chat conversations — rooms keyed by username (no gap tracking needed here)
+      const convPayload = {
+        type: "new-message" as const,
+        previousMessageId: null,
+        ...msg,
+      };
       for (const uid of affectedUserIds) {
         const username = resolveUsername(uid);
         if (!username) continue;
         const convRoom = `chat-conversations:${username}`;
-        browserIO.to(convRoom).emit(convRoom, payload);
+        browserIO.to(convRoom).emit(convRoom, convPayload);
       }
     }
   });
