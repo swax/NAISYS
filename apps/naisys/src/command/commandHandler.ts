@@ -126,6 +126,19 @@ export function createCommandHandler(
       if (command != "ns-comment" && firstCommand) {
         firstCommand = false;
       }
+
+      // After the first real command, check if we've exceeded the token limit.
+      // Break early so the LLM can re-evaluate and decide to compact.
+      if (
+        !firstCommand &&
+        commandList.length > 0 &&
+        contextManager.getTokenCount() > agentConfig().tokenMax
+      ) {
+        output.errorAndLog(
+          `Token limit exceeded mid-response, breaking to allow session compaction`,
+        );
+        break;
+      }
     } // End loop processing LLM response
 
     // display unprocessed lines to aid in debugging
