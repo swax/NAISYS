@@ -9,6 +9,7 @@ import {
 
 import { writeAuditEntry } from "../audit.js";
 import erpDb from "../erpDb.js";
+import { API_PREFIX } from "../hateoas.js";
 import type { OperationRunModel } from "../generated/prisma/models/OperationRun.js";
 import {
   deserializeFieldValue,
@@ -123,6 +124,8 @@ export async function getOpRunStepSummary(opRunId: number) {
 export async function getOpRunFieldRefSummary(
   operationId: number,
   orderRunId: number,
+  orderKey: string,
+  runNo: number,
 ): Promise<FieldRefValueSummary[]> {
   // Get field refs from the plan-level operation
   const fieldRefs = await erpDb.operationFieldRef.findMany({
@@ -217,9 +220,16 @@ export async function getOpRunFieldRefSummary(
           stored?.value ?? "",
           field.multiValue,
         );
+        const setPath = ref.sourceStep.multiSet
+          ? `/sets/${si}/fields/${field.seqNo}`
+          : `/fields/${field.seqNo}`;
+        const stepsHref = `${API_PREFIX}/orders/${orderKey}/runs/${runNo}/ops/${ref.sourceStep.operation.seqNo}/steps/${ref.sourceStep.seqNo}`;
         const attachments =
           field.type === "attachment" && stored
-            ? stored.fieldAttachments.map((sfa) => sfa.attachment)
+            ? stored.fieldAttachments.map((sfa) => ({
+                ...sfa.attachment,
+                downloadHref: `${stepsHref}${setPath}/attachments/${sfa.attachment.id}`,
+              }))
             : undefined;
         fieldValues.push({
           fieldId: field.id,

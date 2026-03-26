@@ -32,7 +32,8 @@ import {
 } from "../services/field-value-service.js";
 import { isUserClockedIn } from "../services/labor-ticket-service.js";
 import { getStepRunWithFields } from "../services/step-run-service.js";
-import { computeStepRunHateoas } from "./step-runs.js";
+import { computeStepRunHateoas, stepRunResource } from "./step-runs.js";
+import { API_PREFIX } from "../hateoas.js";
 
 const FieldSeqNoParamsSchema = z.object({
   orderKey: z.string(),
@@ -397,6 +398,8 @@ export default function stepRunFieldRoutes(fastify: FastifyInstance) {
     const startSet = setIndex ?? 0;
     const endSet = setIndex !== undefined ? setIndex + 1 : totalSets;
 
+    const stepRunHref = `${API_PREFIX}/${stepRunResource(orderKey, runNo, seqNo)}/${stepSeqNo}`;
+    const isMultiSet = existing.step.multiSet;
     const items = [];
     for (let si = startSet; si < endSet; si++) {
       for (const field of existing.step.fieldSet?.fields ?? []) {
@@ -407,9 +410,15 @@ export default function stepRunFieldRoutes(fastify: FastifyInstance) {
           stored?.value ?? "",
           field.multiValue,
         );
+        const setPath = isMultiSet
+          ? `/sets/${si}/fields/${field.seqNo}`
+          : `/fields/${field.seqNo}`;
         const attachments =
           field.type === "attachment" && stored
-            ? stored.fieldAttachments.map((sfa) => sfa.attachment)
+            ? stored.fieldAttachments.map((sfa) => ({
+                ...sfa.attachment,
+                downloadHref: `${stepRunHref}${setPath}/attachments/${sfa.attachment.id}`,
+              }))
             : undefined;
         items.push({
           fieldId: field.id,
