@@ -20,6 +20,7 @@ export const FieldAttachmentSchema = z.object({
   id: z.number(),
   filename: z.string(),
   fileSize: z.number(),
+  downloadHref: z.string().optional(),
 });
 
 export type FieldAttachment = z.infer<typeof FieldAttachmentSchema>;

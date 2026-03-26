@@ -167,7 +167,7 @@ export async function formatOpRun(
   const seqNo = opRun.operation.seqNo;
   const [stepSummaryRows, fieldRefSummary] = await Promise.all([
     getOpRunStepSummary(opRun.id),
-    getOpRunFieldRefSummary(opRun.operationId, opRun.orderRunId),
+    getOpRunFieldRefSummary(opRun.operationId, opRun.orderRunId, orderKey, runNo),
   ]);
   return {
     id: opRun.id,
@@ -187,7 +187,11 @@ export async function formatOpRun(
       title: sr.step.title,
       completed: sr.completed,
     })),
-    ...(fieldRefSummary.length > 0 ? { fieldRefSummary } : {}),
+    ...(fieldRefSummary.length > 0
+      ? {
+          fieldRefSummary,
+        }
+      : {}),
     ...formatAuditFields(opRun),
     _links: [
       ...childItemLinks(

@@ -161,6 +161,14 @@ export function buildStepRunActionTemplates(
             },
           },
           {
+            rel: "downloadAttachment",
+            hrefTemplate: multiSet
+              ? `${stepRunHref}/sets/{setIndex}/fields/{fieldSeqNo}/attachments/{attachmentId}`
+              : `${stepRunHref}/fields/{fieldSeqNo}/attachments/{attachmentId}`,
+            method: "GET" as const,
+            title: "Download Attachment",
+          },
+          {
             rel: "deleteAttachment",
             hrefTemplate: multiSet
               ? `${stepRunHref}/sets/{setIndex}/fields/{fieldSeqNo}/attachments/{attachmentId}`
@@ -300,9 +308,15 @@ export async function formatStepRunWithFields(
     required: boolean;
     setIndex: number;
     value: string | string[];
-    attachments?: { id: number; filename: string; fileSize: number }[];
+    attachments?: {
+      id: number;
+      filename: string;
+      fileSize: number;
+      downloadHref?: string;
+    }[];
     validation: ReturnType<typeof validateFieldValue>;
   }[] = [];
+  const stepRunHref = `${API_PREFIX}/${stepRunResource(orderKey, runNo, seqNo)}/${stepSeqNo}`;
   for (let si = 0; si < setCount; si++) {
     for (const field of stepRun.step.fieldSet?.fields ?? []) {
       const stored = storedFieldValues.find(
@@ -312,9 +326,15 @@ export async function formatStepRunWithFields(
         stored?.value ?? "",
         field.multiValue,
       );
+      const setPath = multiSet
+        ? `/sets/${si}/fields/${field.seqNo}`
+        : `/fields/${field.seqNo}`;
       const attachments =
         field.type === "attachment" && stored
-          ? stored.fieldAttachments.map((sfa) => sfa.attachment)
+          ? stored.fieldAttachments.map((sfa) => ({
+              ...sfa.attachment,
+              downloadHref: `${stepRunHref}${setPath}/attachments/${sfa.attachment.id}`,
+            }))
           : undefined;
       fieldValues.push({
         fieldId: field.id,
