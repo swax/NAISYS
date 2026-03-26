@@ -136,10 +136,12 @@ export const FieldRefList: React.FC<FieldRefListProps> = ({
     }
   };
 
+  const isEmpty = !loading && data !== null && data.items.length === 0;
+
   return (
     <>
       <Group justify="space-between">
-        <Title order={5}>Referenced Fields</Title>
+        {!isEmpty && <Title order={5}>Referenced Fields</Title>}
         {hasAction(data?._actions, "create") && (
           <Button size="xs" variant="light" onClick={openDialog}>
             Add Reference
@@ -209,11 +211,6 @@ export const FieldRefList: React.FC<FieldRefListProps> = ({
             </Card>
           ))}
 
-          {data && data.items.length === 0 && (
-            <Text size="sm" c="dimmed">
-              No referenced fields.
-            </Text>
-          )}
         </Stack>
       )}
 
