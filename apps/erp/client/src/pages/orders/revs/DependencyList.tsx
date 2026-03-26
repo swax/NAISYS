@@ -5,7 +5,6 @@ import {
   Loader,
   NumberInput,
   Stack,
-  Text,
   Title,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
@@ -117,10 +116,12 @@ export const DependencyList: React.FC<DependencyListProps> = ({
     }
   };
 
+  const isEmpty = !loading && deps !== null && deps.items.length === 0 && !adding;
+
   return (
     <>
       <Group justify="space-between">
-        {showTitle && <Title order={5}>Dependencies</Title>}
+        {showTitle && !isEmpty && <Title order={5}>Dependencies</Title>}
         {hasAction(deps?._actions, "create") && !adding && (
           <Button
             size="xs"
@@ -161,12 +162,6 @@ export const DependencyList: React.FC<DependencyListProps> = ({
               )}
             </Group>
           ))}
-
-          {deps && deps.items.length === 0 && !adding && (
-            <Text size="sm" c="dimmed">
-              No dependencies.
-            </Text>
-          )}
 
           {adding && (
             <form onSubmit={createForm.onSubmit(handleCreate)}>
