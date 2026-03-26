@@ -1,6 +1,7 @@
 import type { HateoasAction, HateoasLink } from "@naisys/common";
 import {
   ErrorResponseSchema,
+  MutateResponseSchema,
   OperationRunListResponseSchema,
   OperationRunSchema,
   OperationRunStatus,
@@ -23,6 +24,8 @@ import {
   resolveActions,
   resolveOpRun,
   resolveOrderRun,
+  useFullSerializer,
+  wantsFullResponse,
 } from "../route-helpers.js";
 import {
   checkStepsComplete,
@@ -357,7 +360,7 @@ export default function operationRunRoutes(fastify: FastifyInstance) {
       params: SeqNoParamsSchema,
       body: UpdateOperationRunSchema,
       response: {
-        200: OperationRunSchema,
+        200: MutateResponseSchema,
         404: ErrorResponseSchema,
         409: ErrorResponseSchema,
       },
@@ -380,7 +383,14 @@ export default function operationRunRoutes(fastify: FastifyInstance) {
       if (statusErr) return conflict(reply, statusErr);
 
       const opRun = await updateOpRun(resolved.opRun.id, request.body, userId);
-      return formatOpRun(orderKey, runNo, request.erpUser, opRun);
+
+      if (wantsFullResponse(request)) {
+        useFullSerializer(reply);
+        return formatOpRun(orderKey, runNo, request.erpUser, opRun);
+      }
+      return {
+        _actions: await opRunItemActions(orderKey, runNo, seqNo, opRun.id, opRun.operationId, opRun.status, request.erpUser),
+      };
     },
   });
 }

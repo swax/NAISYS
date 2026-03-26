@@ -1,6 +1,7 @@
 import type { HateoasAction } from "@naisys/common";
 import {
   CreateOperationRunCommentSchema,
+  CreateResponseSchema,
   ErrorResponseSchema,
   OperationRunCommentListResponseSchema,
   OperationRunCommentSchema,
@@ -14,7 +15,7 @@ import type { ErpUser } from "../auth-middleware.js";
 import { requirePermission } from "../auth-middleware.js";
 import { notFound } from "../error-handler.js";
 import { API_PREFIX, selfLink } from "../hateoas.js";
-import { resolveActions, resolveOpRun } from "../route-helpers.js";
+import { mutationResult, resolveActions, resolveOpRun } from "../route-helpers.js";
 import {
   type CommentWithUser,
   createComment,
@@ -121,7 +122,7 @@ export default function operationRunCommentRoutes(fastify: FastifyInstance) {
       params: CommentParamsSchema,
       body: CreateOperationRunCommentSchema,
       response: {
-        201: OperationRunCommentSchema,
+        201: CreateResponseSchema,
         404: ErrorResponseSchema,
       },
     },
@@ -143,8 +144,12 @@ export default function operationRunCommentRoutes(fastify: FastifyInstance) {
         userId,
       );
 
+      const full = formatComment(orderKey, runNo, seqNo, comment);
       reply.status(201);
-      return formatComment(orderKey, runNo, seqNo, comment);
+      return mutationResult(request, reply, full, {
+        id: full.id,
+        _links: full._links,
+      });
     },
   });
 }

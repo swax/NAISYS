@@ -1,12 +1,15 @@
 import type { HateoasAction, HateoasLink } from "@naisys/common";
 import {
   CreateItemInstanceSchema,
+  DeleteSetMutateResponseSchema,
   ErrorResponseSchema,
-  FieldValueEntrySchema,
+  FieldValueMutateResponseSchema,
   getValueFormatHint,
   ItemInstanceListQuerySchema,
   ItemInstanceListResponseSchema,
   ItemInstanceSchema,
+  KeyCreateResponseSchema,
+  MutateResponseSchema,
   UpdateFieldValueSchema,
   UpdateItemInstanceSchema,
 } from "@naisys-erp/shared";
@@ -23,7 +26,12 @@ import {
   schemaLink,
   selfLink,
 } from "../hateoas.js";
-import { formatAuditFields } from "../route-helpers.js";
+import {
+  formatAuditFields,
+  mutationResult,
+  useFullSerializer,
+  wantsFullResponse,
+} from "../route-helpers.js";
 import {
   deleteFieldValueSet,
   deserializeFieldValue,
@@ -326,7 +334,7 @@ export default function itemInstanceRoutes(fastify: FastifyInstance) {
       params: ParamsSchema,
       body: CreateItemInstanceSchema,
       response: {
-        201: ItemInstanceSchema,
+        201: KeyCreateResponseSchema,
         404: ErrorResponseSchema,
       },
     },
@@ -347,8 +355,14 @@ export default function itemInstanceRoutes(fastify: FastifyInstance) {
         userId,
       );
 
+      const full = formatInstance(inst, request.erpUser);
       reply.status(201);
-      return formatInstance(inst, request.erpUser);
+      return mutationResult(request, reply, full, {
+        id: full.id,
+        key: full.key,
+        _links: full._links,
+        _actions: full._actions,
+      });
     },
   });
 
@@ -382,7 +396,7 @@ export default function itemInstanceRoutes(fastify: FastifyInstance) {
       params: InstanceParamsSchema,
       body: UpdateItemInstanceSchema,
       response: {
-        200: ItemInstanceSchema,
+        200: MutateResponseSchema,
         404: ErrorResponseSchema,
       },
     },
@@ -397,7 +411,10 @@ export default function itemInstanceRoutes(fastify: FastifyInstance) {
         return notFound(reply, `Item instance ${instanceId} not found`);
 
       const inst = await updateItemInstance(instanceId, data, userId);
-      return formatInstance(inst, request.erpUser);
+      const full = formatInstance(inst, request.erpUser);
+      return mutationResult(request, reply, full, {
+        _actions: full._actions,
+      });
     },
   });
 
@@ -451,7 +468,14 @@ export default function itemInstanceRoutes(fastify: FastifyInstance) {
       field.multiValue,
     );
 
-    return {
+    const validation = validateFieldValue(
+      field.type,
+      field.multiValue,
+      field.required,
+      responseValue,
+    );
+
+    const full = {
       fieldId: field.id,
       fieldSeqNo: field.seqNo,
       label: field.label,
@@ -461,13 +485,13 @@ export default function itemInstanceRoutes(fastify: FastifyInstance) {
       required: field.required,
       setIndex,
       value: responseValue,
-      validation: validateFieldValue(
-        field.type,
-        field.multiValue,
-        field.required,
-        responseValue,
-      ),
+      validation,
     };
+
+    return mutationResult(request, reply, full, {
+      value: responseValue,
+      validation,
+    });
   }
 
   // UPDATE single field value (implicit set 0)
@@ -480,7 +504,7 @@ export default function itemInstanceRoutes(fastify: FastifyInstance) {
       params: FieldSeqNoParamsSchema,
       body: UpdateFieldValueSchema,
       response: {
-        200: FieldValueEntrySchema,
+        200: FieldValueMutateResponseSchema,
         404: ErrorResponseSchema,
       },
     },
@@ -497,7 +521,7 @@ export default function itemInstanceRoutes(fastify: FastifyInstance) {
       params: SetFieldSeqNoParamsSchema,
       body: UpdateFieldValueSchema,
       response: {
-        200: FieldValueEntrySchema,
+        200: FieldValueMutateResponseSchema,
         404: ErrorResponseSchema,
       },
     },
@@ -514,7 +538,7 @@ export default function itemInstanceRoutes(fastify: FastifyInstance) {
       tags: ["Item Instances"],
       params: SetIndexParamsSchema,
       response: {
-        200: ItemInstanceSchema,
+        200: DeleteSetMutateResponseSchema,
         404: ErrorResponseSchema,
       },
     },
@@ -535,7 +559,23 @@ export default function itemInstanceRoutes(fastify: FastifyInstance) {
       if (!inst)
         return notFound(reply, `Item instance ${instanceId} not found`);
 
-      return formatInstance(inst, request.erpUser);
+      if (wantsFullResponse(request)) {
+        useFullSerializer(reply);
+        return formatInstance(inst, request.erpUser) as any;
+      }
+
+      // Compute set count from remaining field values
+      const storedFieldValues = inst.fieldRecord?.fieldValues ?? [];
+      const maxSetIndex = storedFieldValues.reduce(
+        (max, fv) => Math.max(max, fv.setIndex),
+        -1,
+      );
+      const setCount = Math.max(1, maxSetIndex + 1);
+
+      return {
+        setCount,
+        _actions: instanceActions(inst.item.key, inst.id, request.erpUser),
+      };
     },
   });
 }

@@ -1,6 +1,6 @@
 import {
   ErrorResponseSchema,
-  StepRunTransitionSchema,
+  StepRunTransitionSlimSchema,
   TransitionNoteSchema,
 } from "@naisys-erp/shared";
 import { FastifyInstance } from "fastify";
@@ -13,6 +13,7 @@ import {
   checkOpRunInProgress,
   checkOrderRunStarted,
   checkWorkCenterAccess,
+  mutationResult,
   resolveStepRun,
 } from "../route-helpers.js";
 import { validateCompletionFields } from "../services/field-value-service.js";
@@ -41,7 +42,7 @@ export default function stepRunTransitionRoutes(fastify: FastifyInstance) {
       params: StepSeqNoParamsSchema,
       body: TransitionNoteSchema,
       response: {
-        200: StepRunTransitionSchema,
+        200: StepRunTransitionSlimSchema,
         404: ErrorResponseSchema,
         409: ErrorResponseSchema,
         422: ErrorResponseSchema,
@@ -91,7 +92,7 @@ export default function stepRunTransitionRoutes(fastify: FastifyInstance) {
         userId,
       );
 
-      return formatStepRunTransition(
+      const full = await formatStepRunTransition(
         orderKey,
         runNo,
         seqNo,
@@ -101,6 +102,10 @@ export default function stepRunTransitionRoutes(fastify: FastifyInstance) {
         request.erpUser,
         stepRun,
       );
+      return mutationResult(request, reply, full, {
+        completed: stepRun.completed,
+        _actions: full._actions,
+      });
     },
   });
 
@@ -112,7 +117,7 @@ export default function stepRunTransitionRoutes(fastify: FastifyInstance) {
       params: StepSeqNoParamsSchema,
       body: TransitionNoteSchema,
       response: {
-        200: StepRunTransitionSchema,
+        200: StepRunTransitionSlimSchema,
         404: ErrorResponseSchema,
         409: ErrorResponseSchema,
       },
@@ -149,7 +154,7 @@ export default function stepRunTransitionRoutes(fastify: FastifyInstance) {
         userId,
       );
 
-      return formatStepRunTransition(
+      const full = await formatStepRunTransition(
         orderKey,
         runNo,
         seqNo,
@@ -159,6 +164,10 @@ export default function stepRunTransitionRoutes(fastify: FastifyInstance) {
         request.erpUser,
         stepRun,
       );
+      return mutationResult(request, reply, full, {
+        completed: stepRun.completed,
+        _actions: full._actions,
+      });
     },
   });
 }

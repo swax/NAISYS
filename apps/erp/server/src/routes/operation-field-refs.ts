@@ -4,6 +4,7 @@ import {
   FieldRefListResponseSchema,
   FieldRefSchema,
   RevisionStatus,
+  SeqNoCreateResponseSchema,
 } from "@naisys-erp/shared";
 import { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
@@ -18,6 +19,7 @@ import {
   type ActionDef,
   calcNextSeqNo,
   childItemLinks,
+  mutationResult,
   resolveActions,
   resolveOperation,
 } from "../route-helpers.js";
@@ -257,7 +259,7 @@ export default function operationFieldRefRoutes(fastify: FastifyInstance) {
       params: ParamsSchema,
       body: CreateFieldRefSchema,
       response: {
-        201: FieldRefSchema,
+        201: SeqNoCreateResponseSchema,
         404: ErrorResponseSchema,
         409: ErrorResponseSchema,
       },
@@ -325,8 +327,7 @@ export default function operationFieldRefRoutes(fastify: FastifyInstance) {
         userId,
       );
 
-      reply.status(201);
-      return formatFieldRef(
+      const full = formatFieldRef(
         orderKey,
         revNo,
         seqNo,
@@ -334,6 +335,13 @@ export default function operationFieldRefRoutes(fastify: FastifyInstance) {
         request.erpUser,
         ref,
       );
+      reply.status(201);
+      return mutationResult(request, reply, full, {
+        id: full.id,
+        seqNo: full.seqNo,
+        _links: full._links,
+        _actions: full._actions,
+      });
     },
   });
 

@@ -1,9 +1,10 @@
 import {
+  BatchFieldValueMutateResponseSchema,
   BatchFieldValueUpdateResponseSchema,
   BatchUpdateFieldValuesSchema,
-  DeleteSetResponseSchema,
+  DeleteSetMutateResponseSchema,
   ErrorResponseSchema,
-  FieldValueUpdateResponseSchema,
+  FieldValueMutateResponseSchema,
   getValueFormatHint,
   UpdateFieldValueSchema,
 } from "@naisys-erp/shared";
@@ -18,6 +19,7 @@ import {
   checkOpRunInProgress,
   checkOrderRunStarted,
   checkWorkCenterAccess,
+  mutationResult,
   resolveStepRun,
 } from "../route-helpers.js";
 import { ensureStepRunFieldRecord } from "../services/field-service.js";
@@ -183,7 +185,14 @@ export default function stepRunFieldRoutes(fastify: FastifyInstance) {
       request.erpUser,
     );
 
-    return {
+    const validation = validateFieldValue(
+      field.type,
+      field.multiValue,
+      field.required,
+      responseValue,
+    );
+
+    const full = {
       fieldId: field.id,
       fieldSeqNo: field.seqNo,
       label: field.label,
@@ -193,14 +202,15 @@ export default function stepRunFieldRoutes(fastify: FastifyInstance) {
       required: field.required,
       setIndex,
       value: responseValue,
-      validation: validateFieldValue(
-        field.type,
-        field.multiValue,
-        field.required,
-        responseValue,
-      ),
+      validation,
       ...hateoas,
     };
+
+    return mutationResult(request, reply, full, {
+      value: responseValue,
+      validation,
+      _actions: hateoas._actions,
+    });
   }
 
   // UPDATE single field value (non-multiSet shorthand — implicit set 0)
@@ -213,7 +223,7 @@ export default function stepRunFieldRoutes(fastify: FastifyInstance) {
       params: FieldSeqNoParamsSchema,
       body: UpdateFieldValueSchema,
       response: {
-        200: FieldValueUpdateResponseSchema,
+        200: FieldValueMutateResponseSchema,
         404: ErrorResponseSchema,
         409: ErrorResponseSchema,
         422: ErrorResponseSchema,
@@ -232,7 +242,7 @@ export default function stepRunFieldRoutes(fastify: FastifyInstance) {
       params: SetFieldSeqNoParamsSchema,
       body: UpdateFieldValueSchema,
       response: {
-        200: FieldValueUpdateResponseSchema,
+        200: FieldValueMutateResponseSchema,
         404: ErrorResponseSchema,
         409: ErrorResponseSchema,
         422: ErrorResponseSchema,
@@ -369,7 +379,17 @@ export default function stepRunFieldRoutes(fastify: FastifyInstance) {
       request.erpUser,
     );
 
-    return { items: results, total: results.length, ...hateoas };
+    const full = { items: results, total: results.length, ...hateoas };
+
+    return mutationResult(request, reply, full, {
+      items: results.map((r) => ({
+        fieldSeqNo: r.fieldSeqNo,
+        value: r.value,
+        validation: r.validation,
+      })),
+      total: results.length,
+      _actions: hateoas._actions,
+    });
   }
 
   // Shared handler for batch reading field values
@@ -505,7 +525,7 @@ export default function stepRunFieldRoutes(fastify: FastifyInstance) {
       params: StepSeqNoParamsSchema,
       body: BatchUpdateFieldValuesSchema,
       response: {
-        200: BatchFieldValueUpdateResponseSchema,
+        200: BatchFieldValueMutateResponseSchema,
         404: ErrorResponseSchema,
         409: ErrorResponseSchema,
         422: ErrorResponseSchema,
@@ -525,7 +545,7 @@ export default function stepRunFieldRoutes(fastify: FastifyInstance) {
       params: SetFieldSeqNoParamsSchema.omit({ fieldSeqNo: true }),
       body: BatchUpdateFieldValuesSchema,
       response: {
-        200: BatchFieldValueUpdateResponseSchema,
+        200: BatchFieldValueMutateResponseSchema,
         404: ErrorResponseSchema,
         409: ErrorResponseSchema,
         422: ErrorResponseSchema,
@@ -544,7 +564,7 @@ export default function stepRunFieldRoutes(fastify: FastifyInstance) {
       tags: ["Step Runs"],
       params: SetIndexParamsSchema,
       response: {
-        200: DeleteSetResponseSchema,
+        200: DeleteSetMutateResponseSchema,
         404: ErrorResponseSchema,
         409: ErrorResponseSchema,
       },
@@ -615,7 +635,12 @@ export default function stepRunFieldRoutes(fastify: FastifyInstance) {
         request.erpUser,
       );
 
-      return { setCount, ...hateoas };
+      const full = { setCount, ...hateoas };
+
+      return mutationResult(request, reply, full, {
+        setCount,
+        _actions: hateoas._actions,
+      });
     },
   });
 }

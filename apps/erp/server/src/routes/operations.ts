@@ -2,9 +2,11 @@ import type { HateoasLink } from "@naisys/common";
 import {
   CreateOperationSchema,
   ErrorResponseSchema,
+  MutateResponseSchema,
   OperationListResponseSchema,
   OperationSchema,
   RevisionStatus,
+  SeqNoCreateResponseSchema,
   UpdateOperationSchema,
 } from "@naisys-erp/shared";
 import { FastifyInstance } from "fastify";
@@ -21,6 +23,7 @@ import {
   childItemLinks,
   draftCrudActions,
   formatAuditFields,
+  mutationResult,
   permGate,
   resolveRevision,
   type WithAuditUsers,
@@ -212,7 +215,7 @@ export default function operationRoutes(fastify: FastifyInstance) {
       params: ParamsSchema,
       body: CreateOperationSchema,
       response: {
-        201: OperationSchema,
+        201: SeqNoCreateResponseSchema,
         404: ErrorResponseSchema,
         409: ErrorResponseSchema,
       },
@@ -256,8 +259,7 @@ export default function operationRoutes(fastify: FastifyInstance) {
         userId,
       );
 
-      reply.status(201);
-      return formatOperation(
+      const full = formatOperation(
         orderKey,
         revNo,
         resolved.rev.status,
@@ -271,6 +273,13 @@ export default function operationRoutes(fastify: FastifyInstance) {
           })),
         },
       );
+      reply.status(201);
+      return mutationResult(request, reply, full, {
+        id: full.id,
+        seqNo: full.seqNo,
+        _links: full._links,
+        _actions: full._actions,
+      });
     },
   });
 
@@ -323,7 +332,7 @@ export default function operationRoutes(fastify: FastifyInstance) {
       params: OpParamsSchema,
       body: UpdateOperationSchema,
       response: {
-        200: OperationSchema,
+        200: MutateResponseSchema,
         404: ErrorResponseSchema,
         409: ErrorResponseSchema,
       },
@@ -367,13 +376,16 @@ export default function operationRoutes(fastify: FastifyInstance) {
         userId,
       );
 
-      return formatOperation(
+      const full = formatOperation(
         orderKey,
         revNo,
         resolved.rev.status,
         request.erpUser,
         operation,
       );
+      return mutationResult(request, reply, full, {
+        _actions: full._actions,
+      });
     },
   });
 

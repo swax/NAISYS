@@ -302,11 +302,12 @@ export default function userRoutes(
       try {
         const user = await userService.createUserWithPassword(request.body);
         reply.code(201);
-        return formatUser(
-          user,
-          request.supervisorUser!.id,
-          request.supervisorUser!.permissions,
-        );
+        return {
+          success: true,
+          message: "User created",
+          id: user.id,
+          username: user.username,
+        };
       } catch (err: unknown) {
         if (err instanceof Error && err.message.includes("Unique constraint")) {
           return conflict(reply, "Username already exists");
@@ -353,11 +354,12 @@ export default function userRoutes(
         hubAgent.uuid,
       );
       reply.code(201);
-      return formatUser(
-        user,
-        request.supervisorUser!.id,
-        request.supervisorUser!.permissions,
-      );
+      return {
+        success: true,
+        message: "Agent user created",
+        id: user.id,
+        username: user.username,
+      };
     },
   );
 
@@ -428,13 +430,9 @@ export default function userRoutes(
       const body = isAdmin ? request.body : { password: request.body.password };
 
       try {
-        const user = await userService.updateUser(targetUser.id, body);
+        await userService.updateUser(targetUser.id, body);
         authCache.clear();
-        return formatUser(
-          user,
-          request.supervisorUser!.id,
-          request.supervisorUser!.permissions,
-        );
+        return { success: true, message: "User updated" };
       } catch (err: unknown) {
         if (err instanceof Error && err.message.includes("Unique constraint")) {
           return conflict(reply, "Username already exists");
@@ -525,12 +523,7 @@ export default function userRoutes(
           request.supervisorUser!.id,
         );
         authCache.clear();
-        const user = await userService.getUserById(targetUser.id);
-        return formatUser(
-          user,
-          request.supervisorUser!.id,
-          request.supervisorUser!.permissions,
-        );
+        return { success: true, message: "Permission granted" };
       } catch (err: unknown) {
         if (err instanceof Error && err.message.includes("Unique constraint")) {
           return conflict(reply, "Permission already granted");
@@ -577,12 +570,7 @@ export default function userRoutes(
 
       await userService.revokePermission(targetUser.id, permission);
       authCache.clear();
-      const user = await userService.getUserById(targetUser.id);
-      return formatUser(
-        user,
-        request.supervisorUser!.id,
-        request.supervisorUser!.permissions,
-      );
+      return { success: true, message: "Permission revoked" };
     },
   );
 }

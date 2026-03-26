@@ -2,6 +2,8 @@ import type { HateoasAction, HateoasLink } from "@naisys/common";
 import {
   CreateOrderSchema,
   ErrorResponseSchema,
+  KeyCreateResponseSchema,
+  MutateResponseSchema,
   OrderListQuerySchema,
   OrderListResponseSchema,
   OrderSchema,
@@ -24,6 +26,7 @@ import {
 } from "../hateoas.js";
 import {
   formatAuditFields,
+  mutationResult,
   permGate,
   resolveActions,
 } from "../route-helpers.js";
@@ -206,7 +209,7 @@ export default function orderRoutes(fastify: FastifyInstance) {
       tags: ["Orders"],
       body: CreateOrderSchema,
       response: {
-        201: OrderSchema,
+        201: KeyCreateResponseSchema,
         404: ErrorResponseSchema,
       },
     },
@@ -226,8 +229,14 @@ export default function orderRoutes(fastify: FastifyInstance) {
 
       const order = await createOrder(key, description, itemId, userId);
 
+      const full = formatOrder(order, request.erpUser);
       reply.status(201);
-      return formatOrder(order, request.erpUser);
+      return mutationResult(request, reply, full, {
+        id: full.id,
+        key: full.key,
+        _links: full._links,
+        _actions: full._actions,
+      });
     },
   });
 
@@ -262,7 +271,7 @@ export default function orderRoutes(fastify: FastifyInstance) {
       params: KeyParamsSchema,
       body: UpdateOrderSchema,
       response: {
-        200: OrderSchema,
+        200: MutateResponseSchema,
         404: ErrorResponseSchema,
       },
     },
@@ -292,7 +301,10 @@ export default function orderRoutes(fastify: FastifyInstance) {
 
       const order = await updateOrder(key, dbData, userId);
 
-      return formatOrder(order, request.erpUser);
+      const full = formatOrder(order, request.erpUser);
+      return mutationResult(request, reply, full, {
+        _actions: full._actions,
+      });
     },
   });
 

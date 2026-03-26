@@ -5,7 +5,9 @@ import {
   CreateAgentUserSchema,
   CreateUserSchema,
   type ErpPermission,
+  MutateResponseSchema,
   UpdateUserSchema,
+  UserCreateResponseSchema,
 } from "@naisys-erp/shared";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
@@ -34,6 +36,7 @@ import {
   listUsers,
   updateUser,
 } from "../services/user-service.js";
+import { mutationResult } from "../route-helpers.js";
 import { isSupervisorAuth } from "../supervisorAuth.js";
 
 function userItemLinks(username: string): HateoasLink[] {
@@ -293,12 +296,19 @@ export default function userRoutes(fastify: FastifyInstance) {
     async (request, reply) => {
       try {
         const user = await createUserWithPassword(request.body);
-        reply.code(201);
-        return formatUser(
+        const full = formatUser(
           user,
           request.erpUser!.id,
           request.erpUser!.permissions,
         );
+        reply.code(201);
+        return mutationResult(request, reply, full, {
+          id: full!.id,
+          username: full!.username,
+          apiKey: full!.apiKey,
+          _links: full!._links,
+          _actions: full!._actions,
+        });
       } catch (err: unknown) {
         if (err instanceof Error && err.message.includes("Unique constraint")) {
           reply.code(409);
@@ -364,12 +374,19 @@ export default function userRoutes(fastify: FastifyInstance) {
 
       try {
         const user = await createUserForAgent(hubAgent.username, hubAgent.uuid);
-        reply.code(201);
-        return formatUser(
+        const full = formatUser(
           user,
           request.erpUser!.id,
           request.erpUser!.permissions,
         );
+        reply.code(201);
+        return mutationResult(request, reply, full, {
+          id: full!.id,
+          username: full!.username,
+          apiKey: full!.apiKey,
+          _links: full!._links,
+          _actions: full!._actions,
+        });
       } catch (err: unknown) {
         if (err instanceof Error && err.message.includes("Unique constraint")) {
           reply.code(409);
@@ -440,11 +457,14 @@ export default function userRoutes(fastify: FastifyInstance) {
       try {
         const user = await updateUser(targetUser.id, body);
         authCache.clear();
-        return formatUser(
+        const full = formatUser(
           user,
           request.erpUser!.id,
           request.erpUser!.permissions,
         );
+        return mutationResult(request, reply, full, {
+          _actions: full!._actions,
+        });
       } catch (err: unknown) {
         if (err instanceof Error && err.message.includes("Unique constraint")) {
           reply.code(409);

@@ -1,4 +1,5 @@
 import type { HateoasAction, HateoasLink } from "@naisys/common";
+import type { FastifyReply, FastifyRequest } from "fastify";
 import {
   type ActionDef as ActionDefBase,
   permGate,
@@ -15,6 +16,49 @@ import type { ErpUser } from "./auth-middleware.js";
 import { hasPermission } from "./auth-middleware.js";
 import erpDb from "./erpDb.js";
 import { API_PREFIX, schemaLink, selfLink } from "./hateoas.js";
+
+// --- Prefer: return=representation (RFC 7240) ---
+
+/**
+ * Returns true when the caller wants the full entity in the mutation response.
+ * UI clients send `Prefer: return=representation`; agents get the slim default.
+ */
+export function wantsFullResponse(request: FastifyRequest): boolean {
+  const prefer = request.headers["prefer"];
+  return (
+    typeof prefer === "string" && prefer.includes("return=representation")
+  );
+}
+
+/**
+ * Override Fastify's schema-driven serializer so every field in the
+ * response object is emitted (not just the ones in the slim schema).
+ */
+export function useFullSerializer(reply: FastifyReply) {
+  reply.header("content-type", "application/json; charset=utf-8");
+  reply.serializer(JSON.stringify);
+}
+
+/**
+ * Return `slim` by default, or `full` when the caller sends
+ * `Prefer: return=representation`.
+ *
+ * For full responses we override the serializer so that Fastify
+ * emits all fields instead of stripping them down to the (slim)
+ * response schema.
+ */
+export function mutationResult<TFull, TSlim>(
+  request: FastifyRequest,
+  reply: FastifyReply,
+  full: TFull,
+  slim: TSlim,
+): TFull | TSlim {
+  if (wantsFullResponse(request)) {
+    useFullSerializer(reply);
+    return full;
+  }
+  return slim;
+}
 
 // --- Shared Prisma include for audit user fields ---
 

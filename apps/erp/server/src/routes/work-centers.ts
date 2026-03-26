@@ -3,6 +3,8 @@ import {
   AssignWorkCenterUserSchema,
   CreateWorkCenterSchema,
   ErrorResponseSchema,
+  KeyCreateResponseSchema,
+  MutateResponseSchema,
   UpdateWorkCenterSchema,
   WorkCenterListQuerySchema,
   WorkCenterListResponseSchema,
@@ -22,7 +24,7 @@ import {
   schemaLink,
   selfLink,
 } from "../hateoas.js";
-import { formatAuditFields } from "../route-helpers.js";
+import { formatAuditFields, mutationResult } from "../route-helpers.js";
 import {
   assignUser,
   createWorkCenter,
@@ -178,7 +180,7 @@ export default function workCenterRoutes(fastify: FastifyInstance) {
       tags: ["Work Centers"],
       body: CreateWorkCenterSchema,
       response: {
-        201: WorkCenterSchema,
+        201: KeyCreateResponseSchema,
       },
     },
     preHandler: requirePermission("erp_admin"),
@@ -188,8 +190,14 @@ export default function workCenterRoutes(fastify: FastifyInstance) {
 
       const wc = await createWorkCenter(key, description, userId);
 
+      const full = formatWorkCenter(wc, request.erpUser);
       reply.status(201);
-      return formatWorkCenter(wc, request.erpUser);
+      return mutationResult(request, reply, full, {
+        id: full.id,
+        key: full.key,
+        _links: full._links,
+        _actions: full._actions,
+      });
     },
   });
 
@@ -224,7 +232,7 @@ export default function workCenterRoutes(fastify: FastifyInstance) {
       params: KeyParamsSchema,
       body: UpdateWorkCenterSchema,
       response: {
-        200: WorkCenterSchema,
+        200: MutateResponseSchema,
         404: ErrorResponseSchema,
       },
     },
@@ -241,7 +249,10 @@ export default function workCenterRoutes(fastify: FastifyInstance) {
 
       const wc = await updateWorkCenter(key, data, userId);
 
-      return formatWorkCenter(wc, request.erpUser);
+      const full = formatWorkCenter(wc, request.erpUser);
+      return mutationResult(request, reply, full, {
+        _actions: full._actions,
+      });
     },
   });
 
@@ -278,7 +289,7 @@ export default function workCenterRoutes(fastify: FastifyInstance) {
       params: KeyParamsSchema,
       body: AssignWorkCenterUserSchema,
       response: {
-        200: WorkCenterSchema,
+        200: MutateResponseSchema,
         404: ErrorResponseSchema,
       },
     },
@@ -295,7 +306,10 @@ export default function workCenterRoutes(fastify: FastifyInstance) {
 
       const wc = await assignUser(key, username, userId);
 
-      return formatWorkCenter(wc, request.erpUser);
+      const full = formatWorkCenter(wc, request.erpUser);
+      return mutationResult(request, reply, full, {
+        _actions: full._actions,
+      });
     },
   });
 

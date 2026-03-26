@@ -1,7 +1,7 @@
 import {
   CompleteOrderRunSchema,
   ErrorResponseSchema,
-  OrderRunSchema,
+  OrderRunTransitionSchema,
   OrderRunStatus,
 } from "@naisys-erp/shared";
 import { FastifyInstance } from "fastify";
@@ -9,7 +9,7 @@ import type { ZodTypeProvider } from "fastify-type-provider-zod";
 
 import { requirePermission } from "../auth-middleware.js";
 import { conflict, notFound, unprocessable } from "../error-handler.js";
-import { resolveOrderRun } from "../route-helpers.js";
+import { resolveOrderRun, useFullSerializer, wantsFullResponse } from "../route-helpers.js";
 import {
   checkOpsComplete,
   completeOrderRun,
@@ -18,7 +18,11 @@ import {
   transitionStatus,
   validateStatusFor,
 } from "../services/order-run-service.js";
-import { formatRun, RunNoParamsSchema } from "./order-runs.js";
+import {
+  formatRun,
+  orderRunItemActions,
+  RunNoParamsSchema,
+} from "./order-runs.js";
 
 export default function orderRunTransitionRoutes(fastify: FastifyInstance) {
   const app = fastify.withTypeProvider<ZodTypeProvider>();
@@ -30,7 +34,7 @@ export default function orderRunTransitionRoutes(fastify: FastifyInstance) {
       tags: ["Order Runs"],
       params: RunNoParamsSchema,
       response: {
-        200: OrderRunSchema,
+        200: OrderRunTransitionSchema,
         404: ErrorResponseSchema,
         409: ErrorResponseSchema,
       },
@@ -58,7 +62,15 @@ export default function orderRunTransitionRoutes(fastify: FastifyInstance) {
         userId,
       );
 
-      return formatRun(orderKey, request.erpUser, run);
+      if (wantsFullResponse(request)) {
+        useFullSerializer(reply);
+        return formatRun(orderKey, request.erpUser, run);
+      }
+      const itemKey = run.order?.item?.key ?? null;
+      return {
+        status: run.status,
+        _actions: await orderRunItemActions(orderKey, runNo, run.id, run.status, itemKey, request.erpUser),
+      };
     },
   });
 
@@ -69,7 +81,7 @@ export default function orderRunTransitionRoutes(fastify: FastifyInstance) {
       tags: ["Order Runs"],
       params: RunNoParamsSchema,
       response: {
-        200: OrderRunSchema,
+        200: OrderRunTransitionSchema,
         404: ErrorResponseSchema,
         409: ErrorResponseSchema,
         422: ErrorResponseSchema,
@@ -104,7 +116,15 @@ export default function orderRunTransitionRoutes(fastify: FastifyInstance) {
         { cost },
       );
 
-      return formatRun(orderKey, request.erpUser, run);
+      if (wantsFullResponse(request)) {
+        useFullSerializer(reply);
+        return formatRun(orderKey, request.erpUser, run);
+      }
+      const itemKey = run.order?.item?.key ?? null;
+      return {
+        status: run.status,
+        _actions: await orderRunItemActions(orderKey, runNo, run.id, run.status, itemKey, request.erpUser),
+      };
     },
   });
 
@@ -117,7 +137,7 @@ export default function orderRunTransitionRoutes(fastify: FastifyInstance) {
       params: RunNoParamsSchema,
       body: CompleteOrderRunSchema,
       response: {
-        200: OrderRunSchema,
+        200: OrderRunTransitionSchema,
         404: ErrorResponseSchema,
         409: ErrorResponseSchema,
         422: ErrorResponseSchema,
@@ -153,7 +173,17 @@ export default function orderRunTransitionRoutes(fastify: FastifyInstance) {
         return unprocessable(reply, result.error);
       }
 
-      return formatRun(orderKey, request.erpUser, result.run!);
+      const run = result.run!;
+      
+      if (wantsFullResponse(request)) {
+        useFullSerializer(reply);
+        return formatRun(orderKey, request.erpUser, run);
+      }
+      const itemKey = run.order?.item?.key ?? null;
+      return {
+        status: run.status,
+        _actions: await orderRunItemActions(orderKey, runNo, run.id, run.status, itemKey, request.erpUser),
+      };
     },
   });
 
@@ -164,7 +194,7 @@ export default function orderRunTransitionRoutes(fastify: FastifyInstance) {
       tags: ["Order Runs"],
       params: RunNoParamsSchema,
       response: {
-        200: OrderRunSchema,
+        200: OrderRunTransitionSchema,
         404: ErrorResponseSchema,
         409: ErrorResponseSchema,
       },
@@ -197,7 +227,15 @@ export default function orderRunTransitionRoutes(fastify: FastifyInstance) {
         cost > 0 ? { cost } : undefined,
       );
 
-      return formatRun(orderKey, request.erpUser, run);
+      if (wantsFullResponse(request)) {
+        useFullSerializer(reply);
+        return formatRun(orderKey, request.erpUser, run);
+      }
+      const itemKey = run.order?.item?.key ?? null;
+      return {
+        status: run.status,
+        _actions: await orderRunItemActions(orderKey, runNo, run.id, run.status, itemKey, request.erpUser),
+      };
     },
   });
 
@@ -209,7 +247,7 @@ export default function orderRunTransitionRoutes(fastify: FastifyInstance) {
       tags: ["Order Runs"],
       params: RunNoParamsSchema,
       response: {
-        200: OrderRunSchema,
+        200: OrderRunTransitionSchema,
         404: ErrorResponseSchema,
         409: ErrorResponseSchema,
       },
@@ -246,7 +284,15 @@ export default function orderRunTransitionRoutes(fastify: FastifyInstance) {
         userId,
       );
 
-      return formatRun(orderKey, request.erpUser, run);
+      if (wantsFullResponse(request)) {
+        useFullSerializer(reply);
+        return formatRun(orderKey, request.erpUser, run);
+      }
+      const itemKey = run.order?.item?.key ?? null;
+      return {
+        status: run.status,
+        _actions: await orderRunItemActions(orderKey, runNo, run.id, run.status, itemKey, request.erpUser),
+      };
     },
   });
 }

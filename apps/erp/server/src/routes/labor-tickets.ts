@@ -1,9 +1,11 @@
 import type { HateoasAction } from "@naisys/common";
 import {
   ClockOutLaborTicketSchema,
+  CreateResponseSchema,
   ErrorResponseSchema,
   LaborTicketListResponseSchema,
   LaborTicketSchema,
+  MutateResponseSchema,
   OperationRunStatus,
 } from "@naisys-erp/shared";
 import { FastifyInstance } from "fastify";
@@ -18,6 +20,7 @@ import {
   checkOpRunInProgress,
   formatAuditFields,
   formatDate,
+  mutationResult,
   permGate,
   resolveOpRun,
 } from "../route-helpers.js";
@@ -228,7 +231,7 @@ export default function laborTicketRoutes(fastify: FastifyInstance) {
       tags: ["Labor Tickets"],
       params: LaborParamsSchema,
       response: {
-        200: LaborTicketSchema,
+        200: CreateResponseSchema,
         404: ErrorResponseSchema,
         409: ErrorResponseSchema,
       },
@@ -248,7 +251,11 @@ export default function laborTicketRoutes(fastify: FastifyInstance) {
       }
 
       const ticket = await clockIn(resolved.opRun.id, userId, userId);
-      return formatLaborTicket(orderKey, runNo, seqNo, ticket);
+      const full = formatLaborTicket(orderKey, runNo, seqNo, ticket);
+      return mutationResult(request, reply, full, {
+        id: full.id,
+        _links: full._links,
+      });
     },
   });
 
@@ -260,7 +267,7 @@ export default function laborTicketRoutes(fastify: FastifyInstance) {
       params: LaborParamsSchema,
       body: ClockOutLaborTicketSchema,
       response: {
-        200: LaborTicketListResponseSchema,
+        200: MutateResponseSchema,
         404: ErrorResponseSchema,
         409: ErrorResponseSchema,
       },
@@ -301,7 +308,7 @@ export default function laborTicketRoutes(fastify: FastifyInstance) {
 
       // Return full list after clock-out
       const items = await listLaborTickets(resolved.opRun.id);
-      return {
+      const full = {
         items: items.map((ticket) => {
           const { _links, ...rest } = formatLaborTicket(
             orderKey,
@@ -334,6 +341,9 @@ export default function laborTicketRoutes(fastify: FastifyInstance) {
           request.erpUser,
         ),
       };
+      return mutationResult(request, reply, full, {
+        _actions: full._actions,
+      });
     },
   });
 

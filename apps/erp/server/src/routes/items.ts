@@ -5,6 +5,8 @@ import {
   ItemListQuerySchema,
   ItemListResponseSchema,
   ItemSchema,
+  KeyCreateResponseSchema,
+  MutateResponseSchema,
   UpdateItemSchema,
 } from "@naisys-erp/shared";
 import { FastifyInstance } from "fastify";
@@ -25,6 +27,7 @@ import {
   calcNextSeqNo,
   childItemLinks,
   formatAuditFields,
+  mutationResult,
 } from "../route-helpers.js";
 import type { FieldWithUsers } from "../services/field-service.js";
 import {
@@ -226,7 +229,7 @@ export default function itemRoutes(fastify: FastifyInstance) {
       tags: ["Items"],
       body: CreateItemSchema,
       response: {
-        201: ItemSchema,
+        201: KeyCreateResponseSchema,
       },
     },
     preHandler: requirePermission("item_manager"),
@@ -236,8 +239,14 @@ export default function itemRoutes(fastify: FastifyInstance) {
 
       const item = await createItem(key, description, userId);
 
+      const full = formatItem(item, request.erpUser);
       reply.status(201);
-      return formatItem(item, request.erpUser);
+      return mutationResult(request, reply, full, {
+        id: full.id,
+        key: full.key,
+        _links: full._links,
+        _actions: full._actions,
+      });
     },
   });
 
@@ -272,7 +281,7 @@ export default function itemRoutes(fastify: FastifyInstance) {
       params: KeyParamsSchema,
       body: UpdateItemSchema,
       response: {
-        200: ItemSchema,
+        200: MutateResponseSchema,
         404: ErrorResponseSchema,
       },
     },
@@ -289,7 +298,10 @@ export default function itemRoutes(fastify: FastifyInstance) {
 
       const item = await updateItem(key, data, userId);
 
-      return formatItem(item, request.erpUser);
+      const full = formatItem(item, request.erpUser);
+      return mutationResult(request, reply, full, {
+        _actions: full._actions,
+      });
     },
   });
 

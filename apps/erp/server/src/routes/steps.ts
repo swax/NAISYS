@@ -1,8 +1,11 @@
 import {
   BatchCreateStepSchema,
+  BatchSeqNoCreateResponseSchema,
   CreateStepSchema,
   ErrorResponseSchema,
+  MutateResponseSchema,
   RevisionStatus,
+  SeqNoCreateResponseSchema,
   StepListResponseSchema,
   StepSchema,
   UpdateStepSchema,
@@ -21,6 +24,7 @@ import {
   childItemLinks,
   draftCrudActions,
   formatAuditFields,
+  mutationResult,
   resolveActions,
   resolveOperation,
 } from "../route-helpers.js";
@@ -195,7 +199,7 @@ export default function stepRoutes(fastify: FastifyInstance) {
       params: ParamsSchema,
       body: BatchCreateStepSchema,
       response: {
-        201: StepListResponseSchema,
+        201: BatchSeqNoCreateResponseSchema,
         404: ErrorResponseSchema,
         409: ErrorResponseSchema,
       },
@@ -224,8 +228,7 @@ export default function stepRoutes(fastify: FastifyInstance) {
       const user = request.erpUser;
       const base = stepBasePath(orderKey, revNo, seqNo);
 
-      reply.status(201);
-      return {
+      const full = {
         items: created.map((step) => {
           const { _links, ...rest } = formatStep(
             orderKey,
@@ -248,6 +251,12 @@ export default function stepRoutes(fastify: FastifyInstance) {
         ],
         _actions: [],
       };
+      reply.status(201);
+      return mutationResult(request, reply, full, {
+        items: created.map((s) => ({ id: s.id, seqNo: s.seqNo })),
+        total: created.length,
+        _actions: full._actions,
+      });
     },
   });
 
@@ -259,7 +268,7 @@ export default function stepRoutes(fastify: FastifyInstance) {
       params: ParamsSchema,
       body: CreateStepSchema,
       response: {
-        201: StepSchema,
+        201: SeqNoCreateResponseSchema,
         404: ErrorResponseSchema,
         409: ErrorResponseSchema,
       },
@@ -296,8 +305,7 @@ export default function stepRoutes(fastify: FastifyInstance) {
         userId,
       );
 
-      reply.status(201);
-      return formatStep(
+      const full = formatStep(
         orderKey,
         revNo,
         seqNo,
@@ -305,6 +313,13 @@ export default function stepRoutes(fastify: FastifyInstance) {
         request.erpUser,
         step,
       );
+      reply.status(201);
+      return mutationResult(request, reply, full, {
+        id: full.id,
+        seqNo: full.seqNo,
+        _links: full._links,
+        _actions: full._actions,
+      });
     },
   });
 
@@ -351,7 +366,7 @@ export default function stepRoutes(fastify: FastifyInstance) {
       params: StepParamsSchema,
       body: UpdateStepSchema,
       response: {
-        200: StepSchema,
+        200: MutateResponseSchema,
         404: ErrorResponseSchema,
         409: ErrorResponseSchema,
       },
@@ -385,7 +400,7 @@ export default function stepRoutes(fastify: FastifyInstance) {
         userId,
       );
 
-      return formatStep(
+      const full = formatStep(
         orderKey,
         revNo,
         seqNo,
@@ -393,6 +408,9 @@ export default function stepRoutes(fastify: FastifyInstance) {
         request.erpUser,
         step,
       );
+      return mutationResult(request, reply, full, {
+        _actions: full._actions,
+      });
     },
   });
 

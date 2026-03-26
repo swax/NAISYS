@@ -10,6 +10,7 @@ export * from "./inventory-types.js";
 export * from "./item-instance-types.js";
 export * from "./item-types.js";
 export * from "./labor-ticket-types.js";
+export * from "./mutation-types.js";
 export * from "./operation-dependency-types.js";
 export * from "./operation-run-comment-types.js";
 export * from "./operation-run-types.js";
