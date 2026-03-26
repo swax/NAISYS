@@ -88,17 +88,7 @@ export function createCommandHandler(
       // Check command registry first
       const registeredCommand = commandRegistry.get(command);
       if (registeredCommand) {
-        // Expand env vars and ~ in args via the shell so ns- commands
-        // handle paths like $MY_FOLDER/file.png the same way bash does
-        let expandedArgs = cmdArgs;
-        if (/[$~]/.test(cmdArgs)) {
-          const expanded = (
-            await shellWrapper.executeCommand(`echo ${cmdArgs}`)
-          ).trim();
-          if (expanded) {
-            expandedArgs = expanded;
-          }
-        }
+        const expandedArgs = await expandShellArgs(cmdArgs);
 
         const response = await registeredCommand.handleCommand(expandedArgs);
 
@@ -246,6 +236,58 @@ export function createCommandHandler(
     }
 
     return { input, splitResult };
+  }
+
+  /**
+   * Expand env vars, command substitutions ($(...)), and ~ in args via the
+   * shell.  Parses args first so each one is expanded individually,
+   * preserving argument boundaries (plain `echo $args` flattens all quoting
+   * and breaks multi-word values).
+   */
+  async function expandShellArgs(cmdArgs: string): Promise<string> {
+    if (!/[$~]/.test(cmdArgs)) {
+      return cmdArgs;
+    }
+
+    const parsedArgs = stringArgv(cmdArgs);
+    const expandedParts: string[] = [];
+    let anyExpanded = false;
+
+    for (let arg of parsedArgs) {
+      // Convert ~ to $HOME so it expands inside double quotes
+      if (arg.startsWith("~")) {
+        arg = "$HOME" + arg.slice(1);
+      }
+
+      if (/\$/.test(arg)) {
+        // Escape \, ", and ` but keep $ for shell expansion
+        const safe = arg
+          .replace(/\\/g, "\\\\")
+          .replace(/"/g, '\\"')
+          .replace(/`/g, "\\`");
+        const expanded = (
+          await shellWrapper.executeCommand(`printf '%s' "${safe}"`)
+        ).trimEnd();
+        expandedParts.push(expanded);
+        anyExpanded = true;
+      } else {
+        expandedParts.push(arg);
+      }
+    }
+
+    if (!anyExpanded) {
+      return cmdArgs;
+    }
+
+    // Re-encode as quoted args so downstream stringArgv preserves boundaries
+    return expandedParts
+      .map((part) => {
+        const escaped = part
+          .replace(/\\/g, "\\\\")
+          .replace(/"/g, '\\"');
+        return `"${escaped}"`;
+      })
+      .join(" ");
   }
 
   return {
