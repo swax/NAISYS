@@ -63,6 +63,7 @@ function agentActions(
         method: "POST",
         title: "Start Agent",
         schema: `${API_PREFIX}/schemas/StartAgent`,
+        body: { task: "" },
         permission: "manage_agents",
         disabledWhen: (ctx) =>
           ctx.active
@@ -138,6 +139,7 @@ function agentActions(
         method: "PUT",
         title: "Set Lead Agent",
         schema: `${API_PREFIX}/schemas/SetLeadAgent`,
+        body: { leadAgentUsername: "" },
         permission: "manage_agents",
         visibleWhen: (ctx) => !ctx.archived,
       },
@@ -208,6 +210,7 @@ export default function agentsRoutes(
           method: "POST",
           title: "Create Agent",
           schema: `${API_PREFIX}/schemas/CreateAgent`,
+          body: { name: "" },
           ...(hasManagePermission
             ? {}
             : {

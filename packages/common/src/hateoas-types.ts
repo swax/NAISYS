@@ -38,6 +38,7 @@ export const HateoasActionTemplateSchema = z.object({
   method: z.string(),
   title: z.string().optional(),
   schema: z.string().optional(),
+  body: z.record(z.string(), z.unknown()).optional(),
   alternateEncoding: AlternateEncodingSchema.optional(),
 });
 

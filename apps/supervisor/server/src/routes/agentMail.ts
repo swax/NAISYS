@@ -85,6 +85,7 @@ export default function agentMailRoutes(
                 method: "POST" as const,
                 title: "Send Mail",
                 schema: `${API_PREFIX}/schemas/SendMail`,
+                body: { fromId: 0, toIds: [0], subject: "", message: "" },
                 alternateEncoding: {
                   contentType: "multipart/form-data",
                   description: "Send as multipart to include file attachments",

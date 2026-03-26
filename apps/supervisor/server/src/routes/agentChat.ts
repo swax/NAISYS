@@ -34,6 +34,7 @@ function sendChatAction(username: string) {
     method: "POST" as const,
     title: "Send Chat Message",
     schema: `${API_PREFIX}/schemas/SendChat`,
+    body: { fromId: 0, toIds: [0], message: "" },
     alternateEncoding: {
       contentType: "multipart/form-data",
       description: "Send as multipart to include file attachments",

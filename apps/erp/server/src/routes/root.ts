@@ -127,6 +127,7 @@ export default function rootRoute(fastify: FastifyInstance) {
             method: "POST",
             title: "Login",
             schema: "/api/erp/schemas/LoginRequest",
+            body: { username: "", password: "" },
           },
         ],
       };
