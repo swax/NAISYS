@@ -1,9 +1,14 @@
-import { ErpPermissionEnum, GrantPermissionSchema } from "@naisys-erp/shared";
+import {
+  ErpPermissionEnum,
+  GrantPermissionSchema,
+  MutateResponseSchema,
+} from "@naisys-erp/shared";
 import { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod/v4";
 
 import { authCache, requirePermission } from "../auth-middleware.js";
+import { mutationResult } from "../route-helpers.js";
 import {
   getUserById,
   getUserByUsername,
@@ -69,11 +74,14 @@ export default function userPermissionRoutes(fastify: FastifyInstance) {
         );
         authCache.clear();
         const user = await getUserById(targetUser.id);
-        return formatUser(
+        const full = formatUser(
           user,
           request.erpUser!.id,
           request.erpUser!.permissions,
         );
+        return mutationResult(request, reply, full, {
+          _actions: full!._actions,
+        });
       } catch (err: unknown) {
         if (err instanceof Error && err.message.includes("Unique constraint")) {
           reply.code(409);
@@ -125,11 +133,14 @@ export default function userPermissionRoutes(fastify: FastifyInstance) {
       await revokePermission(targetUser.id, permission);
       authCache.clear();
       const user = await getUserById(targetUser.id);
-      return formatUser(
+      const full = formatUser(
         user,
         request.erpUser!.id,
         request.erpUser!.permissions,
       );
+      return mutationResult(request, reply, full, {
+        _actions: full!._actions,
+      });
     },
   );
 }

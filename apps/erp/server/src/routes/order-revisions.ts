@@ -3,9 +3,11 @@ import type { HateoasLink } from "@naisys/common";
 import {
   CreateOrderRevisionSchema,
   ErrorResponseSchema,
+  MutateResponseSchema,
   OrderRevisionListQuerySchema,
   OrderRevisionListResponseSchema,
   OrderRevisionSchema,
+  RevisionCreateResponseSchema,
   RevisionDiffQuerySchema,
   RevisionDiffResponseSchema,
   RevisionStatus,
@@ -22,6 +24,7 @@ import { API_PREFIX, paginationLinks } from "../hateoas.js";
 import {
   childItemLinks,
   formatAuditFields,
+  mutationResult,
   permGate,
   resolveActions,
   resolveOrder,
@@ -40,7 +43,7 @@ import {
 } from "../services/order-revision-service.js";
 import { diffRevisions } from "../services/revision-diff-service.js";
 
-function revisionItemActions(
+export function revisionItemActions(
   parentResource: string,
   orderKey: string,
   revNo: number,
@@ -307,7 +310,7 @@ export default function orderRevisionRoutes(fastify: FastifyInstance) {
       params: OrderKeyParamsSchema,
       body: CreateOrderRevisionSchema,
       response: {
-        201: OrderRevisionSchema,
+        201: RevisionCreateResponseSchema,
         404: ErrorResponseSchema,
       },
     },
@@ -328,8 +331,14 @@ export default function orderRevisionRoutes(fastify: FastifyInstance) {
         userId,
       );
 
+      const full = await formatRevision(orderKey, request.erpUser, revision);
       reply.status(201);
-      return await formatRevision(orderKey, request.erpUser, revision);
+      return mutationResult(request, reply, full, {
+        id: full.id,
+        revNo: full.revNo,
+        _links: full._links,
+        _actions: full._actions,
+      });
     },
   });
 
@@ -372,7 +381,7 @@ export default function orderRevisionRoutes(fastify: FastifyInstance) {
       params: RevNoParamsSchema,
       body: UpdateOrderRevisionSchema,
       response: {
-        200: OrderRevisionSchema,
+        200: MutateResponseSchema,
         404: ErrorResponseSchema,
         409: ErrorResponseSchema,
       },
@@ -407,7 +416,10 @@ export default function orderRevisionRoutes(fastify: FastifyInstance) {
         userId,
       );
 
-      return await formatRevision(orderKey, request.erpUser, revision);
+      const full = await formatRevision(orderKey, request.erpUser, revision);
+      return mutationResult(request, reply, full, {
+        _actions: full._actions,
+      });
     },
   });
 

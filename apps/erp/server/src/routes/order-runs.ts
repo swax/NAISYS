@@ -2,10 +2,12 @@ import type { HateoasAction, HateoasLink } from "@naisys/common";
 import {
   CreateOrderRunSchema,
   ErrorResponseSchema,
+  MutateResponseSchema,
   OrderRunListQuerySchema,
   OrderRunListResponseSchema,
   OrderRunSchema,
   OrderRunStatus,
+  RunCreateResponseSchema,
   UpdateOrderRunSchema,
 } from "@naisys-erp/shared";
 import { FastifyInstance } from "fastify";
@@ -19,6 +21,7 @@ import { API_PREFIX, paginationLinks } from "../hateoas.js";
 import {
   childItemLinks,
   formatAuditFields,
+  mutationResult,
   resolveActions,
   resolveOrder,
   resolveOrderRun,
@@ -41,7 +44,7 @@ function runResource(orderKey: string) {
   return `orders/${orderKey}/runs`;
 }
 
-async function orderRunItemActions(
+export async function orderRunItemActions(
   orderKey: string,
   runNo: number,
   runId: number,
@@ -287,7 +290,7 @@ export default function orderRunRoutes(fastify: FastifyInstance) {
       params: OrderKeyParamsSchema,
       body: CreateOrderRunSchema,
       response: {
-        201: OrderRunSchema,
+        201: RunCreateResponseSchema,
         404: ErrorResponseSchema,
       },
     },
@@ -324,8 +327,14 @@ export default function orderRunRoutes(fastify: FastifyInstance) {
         userId,
       );
 
+      const full = await formatRun(orderKey, request.erpUser, run);
       reply.status(201);
-      return formatRun(orderKey, request.erpUser, run);
+      return mutationResult(request, reply, full, {
+        id: full.id,
+        runNo: full.runNo,
+        _links: full._links,
+        _actions: full._actions,
+      });
     },
   });
 
@@ -365,7 +374,7 @@ export default function orderRunRoutes(fastify: FastifyInstance) {
       params: RunNoParamsSchema,
       body: UpdateOrderRunSchema,
       response: {
-        200: OrderRunSchema,
+        200: MutateResponseSchema,
         404: ErrorResponseSchema,
         409: ErrorResponseSchema,
       },
@@ -389,7 +398,10 @@ export default function orderRunRoutes(fastify: FastifyInstance) {
 
       const run = await updateOrderRun(resolved.run.id, data, userId);
 
-      return formatRun(orderKey, request.erpUser, run);
+      const full = await formatRun(orderKey, request.erpUser, run);
+      return mutationResult(request, reply, full, {
+        _actions: full._actions,
+      });
     },
   });
 

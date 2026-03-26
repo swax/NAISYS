@@ -3,6 +3,8 @@ import {
   ErrorResponseSchema,
   FieldListResponseSchema,
   FieldSchema,
+  MutateResponseSchema,
+  SeqNoCreateResponseSchema,
   UpdateFieldSchema,
 } from "@naisys-erp/shared";
 import { FastifyInstance } from "fastify";
@@ -18,6 +20,7 @@ import {
   calcNextSeqNo,
   childItemLinks,
   formatAuditFields,
+  mutationResult,
 } from "../route-helpers.js";
 import {
   createField,
@@ -143,7 +146,7 @@ export default function itemFieldRoutes(fastify: FastifyInstance) {
       params: ParamsSchema,
       body: CreateFieldSchema,
       response: {
-        201: FieldSchema,
+        201: SeqNoCreateResponseSchema,
         404: ErrorResponseSchema,
       },
     },
@@ -176,8 +179,14 @@ export default function itemFieldRoutes(fastify: FastifyInstance) {
         { seqNo: requestedSeqNo, label, type, multiValue, required },
         userId,
       );
+      const full = formatField(key, request.erpUser, field);
       reply.status(201);
-      return formatField(key, request.erpUser, field);
+      return mutationResult(request, reply, full, {
+        id: full.id,
+        seqNo: full.seqNo,
+        _links: full._links,
+        _actions: full._actions,
+      });
     },
   });
 
@@ -213,7 +222,7 @@ export default function itemFieldRoutes(fastify: FastifyInstance) {
       params: FieldParamsSchema,
       body: UpdateFieldSchema,
       response: {
-        200: FieldSchema,
+        200: MutateResponseSchema,
         404: ErrorResponseSchema,
       },
     },
@@ -242,7 +251,10 @@ export default function itemFieldRoutes(fastify: FastifyInstance) {
         { label, type, multiValue, required, seqNo: newSeqNo },
         userId,
       );
-      return formatField(key, request.erpUser, field);
+      const full = formatField(key, request.erpUser, field);
+      return mutationResult(request, reply, full, {
+        _actions: full._actions,
+      });
     },
   });
 

@@ -1,6 +1,6 @@
 import {
   ErrorResponseSchema,
-  OrderRevisionSchema,
+  OrderRevisionTransitionSchema,
   RevisionStatus,
 } from "@naisys-erp/shared";
 import { FastifyInstance } from "fastify";
@@ -8,12 +8,16 @@ import type { ZodTypeProvider } from "fastify-type-provider-zod";
 
 import { requirePermission } from "../auth-middleware.js";
 import { conflict, notFound } from "../error-handler.js";
-import { resolveOrder } from "../route-helpers.js";
+import { resolveOrder, useFullSerializer, wantsFullResponse } from "../route-helpers.js";
 import {
   findExisting,
   transitionStatus,
 } from "../services/order-revision-service.js";
-import { formatRevision, RevNoParamsSchema } from "./order-revisions.js";
+import {
+  formatRevision,
+  revisionItemActions,
+  RevNoParamsSchema,
+} from "./order-revisions.js";
 
 export default function orderRevisionTransitionRoutes(
   fastify: FastifyInstance,
@@ -27,7 +31,7 @@ export default function orderRevisionTransitionRoutes(
       tags: ["Order Revisions"],
       params: RevNoParamsSchema,
       response: {
-        200: OrderRevisionSchema,
+        200: OrderRevisionTransitionSchema,
         404: ErrorResponseSchema,
         409: ErrorResponseSchema,
       },
@@ -65,7 +69,14 @@ export default function orderRevisionTransitionRoutes(
         userId,
       );
 
-      return await formatRevision(orderKey, request.erpUser, revision);
+      if (wantsFullResponse(request)) {
+        useFullSerializer(reply);
+        return await formatRevision(orderKey, request.erpUser, revision);
+      }
+      return {
+        status: revision.status,
+        _actions: revisionItemActions("orders", orderKey, revNo, revision.status, request.erpUser),
+      };
     },
   });
 
@@ -76,7 +87,7 @@ export default function orderRevisionTransitionRoutes(
       tags: ["Order Revisions"],
       params: RevNoParamsSchema,
       response: {
-        200: OrderRevisionSchema,
+        200: OrderRevisionTransitionSchema,
         404: ErrorResponseSchema,
         409: ErrorResponseSchema,
       },
@@ -114,7 +125,14 @@ export default function orderRevisionTransitionRoutes(
         userId,
       );
 
-      return await formatRevision(orderKey, request.erpUser, revision);
+      if (wantsFullResponse(request)) {
+        useFullSerializer(reply);
+        return await formatRevision(orderKey, request.erpUser, revision);
+      }
+      return {
+        status: revision.status,
+        _actions: revisionItemActions("orders", orderKey, revNo, revision.status, request.erpUser),
+      };
     },
   });
 }

@@ -1,10 +1,13 @@
 import {
   BatchCreateFieldSchema,
+  BatchSeqNoCreateResponseSchema,
   CreateFieldSchema,
   ErrorResponseSchema,
   FieldListResponseSchema,
   FieldSchema,
+  MutateResponseSchema,
   RevisionStatus,
+  SeqNoCreateResponseSchema,
   UpdateFieldSchema,
 } from "@naisys-erp/shared";
 import { FastifyInstance } from "fastify";
@@ -22,6 +25,7 @@ import {
   childItemLinks,
   draftCrudActions,
   formatAuditFields,
+  mutationResult,
   resolveActions,
   resolveStep,
 } from "../route-helpers.js";
@@ -238,7 +242,7 @@ export default function stepFieldRoutes(fastify: FastifyInstance) {
       params: ParamsSchema,
       body: BatchCreateFieldSchema,
       response: {
-        201: FieldListResponseSchema,
+        201: BatchSeqNoCreateResponseSchema,
         404: ErrorResponseSchema,
         409: ErrorResponseSchema,
       },
@@ -272,8 +276,7 @@ export default function stepFieldRoutes(fastify: FastifyInstance) {
 
       const created = await createFields(fieldSetId, items, userId);
 
-      reply.status(201);
-      return formatFieldListResponse(
+      const full = formatFieldListResponse(
         orderKey,
         revNo,
         seqNo,
@@ -282,6 +285,12 @@ export default function stepFieldRoutes(fastify: FastifyInstance) {
         request.erpUser,
         created,
       );
+      reply.status(201);
+      return mutationResult(request, reply, full, {
+        items: created.map((f) => ({ id: f.id, seqNo: f.seqNo })),
+        total: created.length,
+        _actions: full._actions,
+      });
     },
   });
 
@@ -293,7 +302,7 @@ export default function stepFieldRoutes(fastify: FastifyInstance) {
       params: ParamsSchema,
       body: CreateFieldSchema,
       response: {
-        201: FieldSchema,
+        201: SeqNoCreateResponseSchema,
         404: ErrorResponseSchema,
         409: ErrorResponseSchema,
       },
@@ -338,8 +347,7 @@ export default function stepFieldRoutes(fastify: FastifyInstance) {
         userId,
       );
 
-      reply.status(201);
-      return formatField(
+      const full = formatField(
         orderKey,
         revNo,
         seqNo,
@@ -348,6 +356,13 @@ export default function stepFieldRoutes(fastify: FastifyInstance) {
         request.erpUser,
         field,
       );
+      reply.status(201);
+      return mutationResult(request, reply, full, {
+        id: full.id,
+        seqNo: full.seqNo,
+        _links: full._links,
+        _actions: full._actions,
+      });
     },
   });
 
@@ -399,7 +414,7 @@ export default function stepFieldRoutes(fastify: FastifyInstance) {
       params: FieldParamsSchema,
       body: UpdateFieldSchema,
       response: {
-        200: FieldSchema,
+        200: MutateResponseSchema,
         404: ErrorResponseSchema,
         409: ErrorResponseSchema,
       },
@@ -446,7 +461,7 @@ export default function stepFieldRoutes(fastify: FastifyInstance) {
         userId,
       );
 
-      return formatField(
+      const full = formatField(
         orderKey,
         revNo,
         seqNo,
@@ -455,6 +470,9 @@ export default function stepFieldRoutes(fastify: FastifyInstance) {
         request.erpUser,
         field,
       );
+      return mutationResult(request, reply, full, {
+        _actions: full._actions,
+      });
     },
   });
 

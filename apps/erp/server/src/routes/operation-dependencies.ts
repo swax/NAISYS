@@ -1,5 +1,6 @@
 import {
   CreateOperationDependencySchema,
+  CreateResponseSchema,
   ErrorResponseSchema,
   OperationDependencyListResponseSchema,
   OperationDependencySchema,
@@ -13,7 +14,7 @@ import type { ErpUser } from "../auth-middleware.js";
 import { hasPermission, requirePermission } from "../auth-middleware.js";
 import { conflict, notFound } from "../error-handler.js";
 import { API_PREFIX, selfLink } from "../hateoas.js";
-import { resolveRevision } from "../route-helpers.js";
+import { mutationResult, resolveRevision } from "../route-helpers.js";
 import {
   createDependency,
   deleteDependency,
@@ -130,7 +131,7 @@ export default function operationDependencyRoutes(fastify: FastifyInstance) {
       params: ParamsSchema,
       body: CreateOperationDependencySchema,
       response: {
-        201: OperationDependencySchema,
+        201: CreateResponseSchema,
         404: ErrorResponseSchema,
         409: ErrorResponseSchema,
       },
@@ -172,8 +173,11 @@ export default function operationDependencyRoutes(fastify: FastifyInstance) {
 
       const dep = await createDependency(successor.id, predecessor.id, userId);
 
+      const full = formatDependency(dep);
       reply.status(201);
-      return formatDependency(dep);
+      return mutationResult(request, reply, full, {
+        id: full.id,
+      });
     },
   });
 

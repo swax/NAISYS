@@ -61,12 +61,24 @@ export const api = {
   get: <T>(path: string) => request<T>(path),
 
   post: <T>(path: string, body: unknown) =>
-    request<T>(path, { method: "POST", body: JSON.stringify(body) }),
+    request<T>(path, {
+      method: "POST",
+      body: JSON.stringify(body),
+      headers: { Prefer: "return=representation" },
+    }),
 
   put: <T>(path: string, body: unknown) =>
-    request<T>(path, { method: "PUT", body: JSON.stringify(body) }),
+    request<T>(path, {
+      method: "PUT",
+      body: JSON.stringify(body),
+      headers: { Prefer: "return=representation" },
+    }),
 
-  delete: (path: string) => request<void>(path, { method: "DELETE" }),
+  delete: (path: string) =>
+    request<void>(path, {
+      method: "DELETE",
+      headers: { Prefer: "return=representation" },
+    }),
 
   /** Upload a file via multipart/form-data */
   upload: <T>(
