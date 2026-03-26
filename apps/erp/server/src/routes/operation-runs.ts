@@ -67,6 +67,7 @@ async function opRunItemActions(
         method: "PUT",
         title: "Assign",
         schema: `${API_PREFIX}/schemas/UpdateOperationRun`,
+        body: { assignedToId: 0 },
         permission: "order_manager",
         statuses: [
           OperationRunStatus.blocked,
@@ -80,6 +81,7 @@ async function opRunItemActions(
         method: "POST",
         title: "Add Comment",
         schema: `${API_PREFIX}/schemas/CreateOperationRunComment`,
+        body: { body: "" },
         permission: "order_executor",
       },
       {
@@ -100,6 +102,7 @@ async function opRunItemActions(
         method: "PUT",
         title: "Update",
         schema: `${API_PREFIX}/schemas/UpdateOperationRun`,
+        body: { assignedToId: 0 },
         permission: "order_executor",
         statuses: [OperationRunStatus.pending, OperationRunStatus.in_progress],
       },
@@ -109,6 +112,7 @@ async function opRunItemActions(
         method: "POST",
         title: "Complete",
         schema: `${API_PREFIX}/schemas/CompleteOperationRun`,
+        body: { note: "" },
         permission: "order_executor",
         statuses: [OperationRunStatus.in_progress],
         disabledWhen: () => wcErr ?? stepsErr,

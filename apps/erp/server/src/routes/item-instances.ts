@@ -127,6 +127,7 @@ function instanceActions(
       method: "PUT",
       title: "Update",
       schema: `${API_PREFIX}/schemas/UpdateItemInstance`,
+      body: { key: "" },
     },
     {
       rel: "delete",
@@ -222,6 +223,7 @@ function buildActionTemplates(
       method: "PUT" as const,
       title: "Update Field Value",
       schema: `${API_PREFIX}/schemas/UpdateFieldValue`,
+      body: { value: "" },
     },
   ];
 }
@@ -319,6 +321,7 @@ export default function itemInstanceRoutes(fastify: FastifyInstance) {
                 method: "POST" as const,
                 title: "Create Instance",
                 schema: `${API_PREFIX}/schemas/CreateItemInstance`,
+                body: { key: "" },
               },
             ]
           : [],

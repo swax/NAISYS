@@ -85,6 +85,7 @@ async function stepRunItemActions(
         method: "POST",
         title: "Complete",
         schema: `${API_PREFIX}/schemas/CompleteStepRun`,
+        body: { note: "" },
         permission: "order_executor",
         visibleWhen: () => !completed,
         disabledWhen: () =>
@@ -124,6 +125,7 @@ export function buildStepRunActionTemplates(
       method: "PUT" as const,
       title: "Update Field Value",
       schema: `${API_PREFIX}/schemas/UpdateFieldValue`,
+      body: { value: "" },
     },
     {
       rel: "batchUpdateFields",
@@ -133,6 +135,7 @@ export function buildStepRunActionTemplates(
       method: "PUT" as const,
       title: "Batch Update Field Values",
       schema: `${API_PREFIX}/schemas/BatchUpdateFieldValues`,
+      body: { fieldValues: [{ fieldSeqNo: 0, "value": "" }] },
     },
     ...(multiSet
       ? [

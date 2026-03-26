@@ -34,6 +34,7 @@ function variableActions(hasManagePermission: boolean): HateoasAction[] {
         method: "PUT",
         title: "Save Variable",
         schema: `${API_PREFIX}/schemas/SaveVariable`,
+        body: { value: "" },
       },
       {
         rel: "delete",

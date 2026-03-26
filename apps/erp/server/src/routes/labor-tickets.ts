@@ -89,6 +89,7 @@ function laborTicketListActions(
       method: "POST",
       title: "Clock Out",
       schema: `${API_PREFIX}/schemas/ClockOutLaborTicket`,
+      body: {},
     });
   }
 
@@ -105,6 +106,7 @@ function laborTicketListActions(
       method: "POST",
       title: "Clock Out",
       schema: `${API_PREFIX}/schemas/ClockOutLaborTicket`,
+      body: { userId: 0, ticketId: 0 },
     });
   }
 

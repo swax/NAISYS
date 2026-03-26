@@ -67,6 +67,7 @@ function userActions(
       method: "PUT",
       title: "Update",
       schema: `${API_PREFIX}/schemas/UpdateUser`,
+      body: { username: "" },
     });
   }
 
@@ -78,6 +79,7 @@ function userActions(
       method: "POST",
       title: "Change Password",
       schema: `${API_PREFIX}/schemas/ChangePassword`,
+      body: { password: "" },
     });
   }
 
@@ -88,6 +90,7 @@ function userActions(
       method: "POST",
       title: "Grant Permission",
       schema: `${API_PREFIX}/schemas/GrantPermission`,
+      body: { permission: "" },
     });
 
     actions.push({
@@ -232,6 +235,7 @@ export default function userRoutes(
           method: "POST",
           title: "Create User",
           schema: `${API_PREFIX}/schemas/CreateUser`,
+          body: { username: "", password: "" },
         },
         {
           rel: "create-from-agent",
@@ -239,6 +243,7 @@ export default function userRoutes(
           method: "POST",
           title: "Import User from Agent",
           schema: `${API_PREFIX}/schemas/CreateAgentUser`,
+          body: { agentId: 0 },
         },
       ];
 
