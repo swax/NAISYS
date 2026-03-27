@@ -527,7 +527,11 @@ export const OperationRunDetail: React.FC = () => {
                     <CompactMarkdown>{opRun.description}</CompactMarkdown>
                   )}
                   {opRun.note && (
-                    <Text size="xs" c="dimmed" fs="italic">
+                    <Text
+                      size="xs"
+                      c={STATUS_COLORS[opRun.status] ?? "dimmed"}
+                      fs="italic"
+                    >
                       Note: {opRun.note}
                     </Text>
                   )}
