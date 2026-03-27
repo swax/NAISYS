@@ -27,9 +27,15 @@ export const ChatMessageSchema = z.object({
   readBy: z.array(z.number()).optional(), // user IDs who have read
 });
 
+export const ChatConversationsRequestSchema = z.object({
+  page: z.coerce.number().optional().default(1),
+  count: z.coerce.number().optional().default(50),
+});
+
 export const ChatConversationsResponseSchema = z.object({
   success: z.boolean(),
   conversations: z.array(ChatConversationSchema),
+  total: z.number().optional(),
   _actions: z.array(HateoasActionSchema).optional(),
 });
 
@@ -64,6 +70,9 @@ export const SendChatResponseSchema = z.object({
 export type ChatAttachment = z.infer<typeof ChatAttachmentSchema>;
 export type ChatConversation = z.infer<typeof ChatConversationSchema>;
 export type ChatMessage = z.infer<typeof ChatMessageSchema>;
+export type ChatConversationsRequest = z.infer<
+  typeof ChatConversationsRequestSchema
+>;
 export type ChatConversationsResponse = z.infer<
   typeof ChatConversationsResponseSchema
 >;

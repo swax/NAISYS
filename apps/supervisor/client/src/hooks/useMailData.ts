@@ -1,6 +1,6 @@
 import type { HateoasAction } from "@naisys/common";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useAgentDataContext } from "../contexts/AgentDataContext";
 import { MailMessage } from "../lib/apiClient";
@@ -12,6 +12,7 @@ import { useSubscription } from "./useSubscription";
 const mailCache = new Map<string, MailMessage[]>();
 const updatedSinceCache = new Map<string, string | undefined>();
 const totalCache = new Map<string, number>();
+const pagesLoadedCache = new Map<string, number>();
 let actionsCache: HateoasAction[] | undefined = undefined;
 
 // Tracks gap recovery attempts per agent to prevent re-fetch loops
@@ -183,8 +184,36 @@ export const useMailData = (agentUsername: string, enabled: boolean = true) => {
     handleMailPush,
   );
 
+  // Load more (next page of historical data)
+  const [loadingMore, setLoadingMore] = useState(false);
+  const loadingMoreRef = useRef(false);
+
+  const loadMore = useCallback(async () => {
+    if (loadingMoreRef.current) return;
+    loadingMoreRef.current = true;
+    setLoadingMore(true);
+    try {
+      const nextPage = (pagesLoadedCache.get(agentUsername) || 1) + 1;
+      const result = await getMailData({
+        agentUsername,
+        page: nextPage,
+        count: 50,
+      });
+      if (result.success && result.data) {
+        mergeMail(result.data.mail, result.data.total);
+        pagesLoadedCache.set(agentUsername, nextPage);
+      }
+    } catch (err) {
+      console.error("Error loading more mail:", err);
+    } finally {
+      loadingMoreRef.current = false;
+      setLoadingMore(false);
+    }
+  }, [agentUsername, mergeMail]);
+
   const mail = mailCache.get(agentUsername) || [];
   const total = totalCache.get(agentUsername) || 0;
+  const hasMore = mail.length < total;
 
   return {
     mail,
@@ -192,5 +221,8 @@ export const useMailData = (agentUsername: string, enabled: boolean = true) => {
     actions: actionsCache,
     isLoading: query.isLoading,
     error: query.error,
+    loadMore,
+    loadingMore,
+    hasMore,
   };
 };

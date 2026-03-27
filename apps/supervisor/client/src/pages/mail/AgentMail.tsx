@@ -51,6 +51,9 @@ export const AgentMail: React.FC = () => {
     actions: mailActions,
     isLoading: mailLoading,
     error: mailError,
+    loadMore,
+    loadingMore,
+    hasMore,
   } = useMailData(username ?? "", Boolean(username));
 
   const canSend = !!hasAction(mailActions, "send");
@@ -234,6 +237,11 @@ export const AgentMail: React.FC = () => {
       onToggleGroupBySubject={handleToggleGroupBySubject}
       currentAgentName={agentName}
       agentName={username}
+      totalMessages={totalMail}
+      loadedMessages={allMail.length}
+      hasMore={hasMore}
+      loadingMore={loadingMore}
+      onLoadMore={loadMore}
     />
   );
 
@@ -355,11 +363,6 @@ export const AgentMail: React.FC = () => {
               showSubject={!groupBySubject}
             />
 
-            {totalMail > 0 && (
-              <Text c="dimmed" ta="center" size="xs" pb="xs">
-                Showing {Math.min(50, totalMail)} / {totalMail} messages
-              </Text>
-            )}
           </>
         )}
       </Box>

@@ -1,5 +1,6 @@
 import {
   Badge,
+  Button,
   Group,
   Loader,
   NavLink,
@@ -22,6 +23,9 @@ interface RunsSidebarProps {
   activeRunKey: string | undefined;
   onNavLinkClick?: () => void;
   hasUnreadLogs: (run: RunSession) => boolean;
+  hasMore: boolean;
+  loadingMore: boolean;
+  onLoadMore: () => void;
 }
 
 const formatPrimaryTime = (dateString: string) => {
@@ -95,6 +99,9 @@ export const RunsSidebar: React.FC<RunsSidebarProps> = ({
   activeRunKey,
   onNavLinkClick,
   hasUnreadLogs,
+  hasMore,
+  loadingMore,
+  onLoadMore,
 }) => {
   return (
     <Stack gap={0} style={{ height: "100%" }}>
@@ -210,15 +217,26 @@ export const RunsSidebar: React.FC<RunsSidebarProps> = ({
       </ScrollArea>
 
       {totalRuns > 0 && (
-        <Text
-          c="dimmed"
-          ta="center"
-          size="xs"
+        <Stack
+          gap={4}
+          align="center"
           p="xs"
           style={{ borderTop: "1px solid var(--mantine-color-dark-6)" }}
         >
-          Showing {Math.min(50, totalRuns)} / {totalRuns} runs
-        </Text>
+          <Text c="dimmed" ta="center" size="xs">
+            Showing {runs.length} / {totalRuns} runs
+          </Text>
+          {hasMore && (
+            <Button
+              variant="subtle"
+              size="compact-xs"
+              loading={loadingMore}
+              onClick={onLoadMore}
+            >
+              Load More
+            </Button>
+          )}
+        </Stack>
       )}
     </Stack>
   );

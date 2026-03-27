@@ -23,6 +23,11 @@ interface MailConversationListProps {
   onToggleGroupBySubject: () => void;
   currentAgentName: string;
   agentName: string;
+  totalMessages: number;
+  loadedMessages: number;
+  hasMore: boolean;
+  loadingMore: boolean;
+  onLoadMore: () => void;
 }
 
 export const MailConversationList: React.FC<MailConversationListProps> = ({
@@ -35,6 +40,11 @@ export const MailConversationList: React.FC<MailConversationListProps> = ({
   onToggleGroupBySubject,
   currentAgentName,
   agentName,
+  totalMessages,
+  loadedMessages,
+  hasMore,
+  loadingMore,
+  onLoadMore,
 }) => {
   const formatTime = (dateStr: string) => {
     const date = new Date(dateStr);
@@ -142,6 +152,29 @@ export const MailConversationList: React.FC<MailConversationListProps> = ({
           })
         )}
       </ScrollArea>
+
+      {totalMessages > 0 && (
+        <Stack
+          gap={4}
+          align="center"
+          p="xs"
+          style={{ borderTop: "1px solid var(--mantine-color-dark-6)" }}
+        >
+          <Text c="dimmed" ta="center" size="xs">
+            Showing {loadedMessages} / {totalMessages} messages
+          </Text>
+          {hasMore && (
+            <Button
+              variant="subtle"
+              size="compact-xs"
+              loading={loadingMore}
+              onClick={onLoadMore}
+            >
+              Load More
+            </Button>
+          )}
+        </Stack>
+      )}
     </Stack>
   );
 };

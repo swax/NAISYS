@@ -47,9 +47,13 @@ export const AgentChat: React.FC = () => {
 
   const {
     conversations,
+    total: totalConversations,
     actions: convActions,
     isLoading: convLoading,
     error: convError,
+    loadMore: loadMoreConversations,
+    loadingMore: loadingMoreConversations,
+    hasMore: hasMoreConversations,
   } = useChatConversations(username ?? "", Boolean(username));
 
   // Auto-select first conversation when no URL param and conversations exist
@@ -64,7 +68,14 @@ export const AgentChat: React.FC = () => {
     }
   }, [conversations, participantsParam, username, navigate]);
 
-  const { messages, isLoading: msgLoading } = useChatMessages(
+  const {
+    messages,
+    total: totalMessages,
+    isLoading: msgLoading,
+    loadMore: loadMoreMessages,
+    loadingMore: loadingMoreMessages,
+    hasMore: hasMoreMessages,
+  } = useChatMessages(
     username ?? "",
     selectedParticipants,
     Boolean(selectedParticipants),
@@ -160,6 +171,10 @@ export const AgentChat: React.FC = () => {
       agents={agents}
       currentAgentId={agentId}
       agentName={username}
+      totalConversations={totalConversations}
+      hasMore={hasMoreConversations}
+      loadingMore={loadingMoreConversations}
+      onLoadMore={loadMoreConversations}
     />
   );
 
@@ -266,7 +281,14 @@ export const AgentChat: React.FC = () => {
                 <Loader size="md" />
               </Box>
             ) : (
-              <ChatThread messages={messages} currentAgentId={agentId} />
+              <ChatThread
+                messages={messages}
+                currentAgentId={agentId}
+                total={totalMessages}
+                hasMore={hasMoreMessages}
+                loadingMore={loadingMoreMessages}
+                onLoadMore={loadMoreMessages}
+              />
             )}
             {canSend && (
               <ChatInput
