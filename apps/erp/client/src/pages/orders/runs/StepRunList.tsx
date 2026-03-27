@@ -304,7 +304,7 @@ export const StepRunList: React.FC<Props> = ({
                   )}
 
                   {step.note && (
-                    <Text size="xs" c="dimmed" fs="italic">
+                    <Text size="xs" c="green" fs="italic">
                       Note: {step.note}
                     </Text>
                   )}
