@@ -13,7 +13,6 @@ import type { OrderRevision } from "@naisys-erp/shared";
 import {
   IconLayoutSidebarLeftCollapse,
   IconLayoutSidebarLeftExpand,
-  IconListDetails,
 } from "@tabler/icons-react";
 import { useCallback, useEffect, useState } from "react";
 import { Outlet, useLocation, useParams } from "react-router";
@@ -99,27 +98,11 @@ export const RevisionLayout: React.FC = () => {
         orderKey={orderKey}
         revNo={revNo}
         onRefresh={fetchRevision}
+        onOpenOperations={openDrawer}
       />
 
       {/* Body: sidebar + content */}
       <Box display="flex" style={{ flex: 1, minHeight: 0 }}>
-        {/* Mobile operation picker */}
-        <Group
-          gap="xs"
-          px="md"
-          py="xs"
-          hiddenFrom="md"
-          style={{ cursor: "pointer" }}
-          onClick={openDrawer}
-        >
-          <ActionIcon variant="subtle" color="gray">
-            <IconListDetails size="1.2rem" />
-          </ActionIcon>
-          <Text size="sm" fw={500}>
-            Operations
-          </Text>
-        </Group>
-
         {/* Desktop sidebar */}
         <Box
           visibleFrom="md"

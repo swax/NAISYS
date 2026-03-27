@@ -1,7 +1,8 @@
-import { Anchor, Badge, Button, Group, Text } from "@mantine/core";
+import { ActionIcon, Anchor, Badge, Button, Group, Text } from "@mantine/core";
 import { ActionButton } from "@naisys/common-browser";
 import type { OrderRevision } from "@naisys-erp/shared";
 import { RevisionStatus } from "@naisys-erp/shared";
+import { IconListDetails } from "@tabler/icons-react";
 import { useNavigate } from "react-router";
 
 import { api, apiEndpoints, showErrorNotification } from "../../../lib/api";
@@ -18,6 +19,7 @@ interface Props {
   orderKey: string;
   revNo: string;
   onRefresh: () => void;
+  onOpenOperations?: () => void;
 }
 
 export const RevisionHeader: React.FC<Props> = ({
@@ -25,6 +27,7 @@ export const RevisionHeader: React.FC<Props> = ({
   orderKey,
   revNo,
   onRefresh,
+  onOpenOperations,
 }) => {
   const navigate = useNavigate();
 
@@ -69,6 +72,16 @@ export const RevisionHeader: React.FC<Props> = ({
       }}
     >
       <Group gap="sm">
+        {onOpenOperations && (
+          <ActionIcon
+            variant="subtle"
+            color="gray"
+            hiddenFrom="md"
+            onClick={onOpenOperations}
+          >
+            <IconListDetails size="1.2rem" />
+          </ActionIcon>
+        )}
         <Text size="lg">
           ORDER:{" "}
           <Anchor
