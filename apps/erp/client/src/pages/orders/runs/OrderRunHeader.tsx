@@ -3,7 +3,7 @@ import { useDisclosure } from "@mantine/hooks";
 import { ActionButton } from "@naisys/common-browser";
 import type { OrderRun } from "@naisys-erp/shared";
 import { OrderRunPriority, OrderRunStatus } from "@naisys-erp/shared";
-import { IconArrowBackUp } from "@tabler/icons-react";
+import { IconArrowBackUp, IconListDetails } from "@tabler/icons-react";
 import { useNavigate } from "react-router";
 
 import { api, apiEndpoints, showErrorNotification } from "../../../lib/api";
@@ -29,6 +29,7 @@ interface Props {
   orderKey: string;
   runNo: string;
   onUpdate: (orderRun: OrderRun) => void;
+  onOpenOperations?: () => void;
 }
 
 export const OrderRunHeader: React.FC<Props> = ({
@@ -36,6 +37,7 @@ export const OrderRunHeader: React.FC<Props> = ({
   orderKey,
   runNo,
   onUpdate,
+  onOpenOperations,
 }) => {
   const navigate = useNavigate();
   const [completionOpened, { open: openCompletion, close: closeCompletion }] =
@@ -82,6 +84,16 @@ export const OrderRunHeader: React.FC<Props> = ({
       }}
     >
       <Group gap="sm">
+        {onOpenOperations && (
+          <ActionIcon
+            variant="subtle"
+            color="gray"
+            hiddenFrom="md"
+            onClick={onOpenOperations}
+          >
+            <IconListDetails size="1.2rem" />
+          </ActionIcon>
+        )}
         <Text size="lg">
           ORDER:{" "}
           <Anchor
