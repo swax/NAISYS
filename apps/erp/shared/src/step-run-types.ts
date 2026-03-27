@@ -25,13 +25,13 @@ export const FieldAttachmentSchema = z.object({
 
 export type FieldAttachment = z.infer<typeof FieldAttachmentSchema>;
 
-// Field value: string for scalar fields, string[] for multiValue fields
+// Field value: string for scalar fields, string[] for array fields (type ends with "[]")
 // Coerce non-strings (e.g. numbers, booleans) to strings so callers don't
 // get an opaque "Invalid input" error when they send 2024 instead of "2024".
 const coercedString = z.coerce.string();
 export const FieldValueSchema = z.union([
-  coercedString,
   z.array(coercedString),
+  coercedString,
 ]);
 export type FieldValue = z.infer<typeof FieldValueSchema>;
 
@@ -46,9 +46,20 @@ export const VALUE_FORMAT_HINTS: Record<string, string> = {
   attachment: "managed by file upload endpoints, not set directly",
 };
 
-/** Look up the valueFormat hint for a given field type. */
+/** Return the API-facing type string, appending "[]" for array fields. */
+export function fieldTypeString(type: string, isArray: boolean): string {
+  return isArray ? `${type}[]` : type;
+}
+
+/** Look up the valueFormat hint for a given field type (handles "[]" suffix). */
 export function getValueFormatHint(type: string): string {
-  return VALUE_FORMAT_HINTS[type] ?? "any text";
+  const isArray = type.endsWith("[]");
+  const baseType = isArray ? type.slice(0, -2) : type;
+  const hint = VALUE_FORMAT_HINTS[baseType] ?? "any text";
+  if (isArray) {
+    return `value must be a native JSON array (not a string), e.g. ["value1", "value2"]. Each element: ${hint}`;
+  }
+  return hint;
 }
 
 // A single field value entry (API response shape)
@@ -58,7 +69,6 @@ export const FieldValueEntrySchema = z.object({
   label: z.string(),
   type: z.string(),
   valueFormat: z.string(),
-  multiValue: z.boolean(),
   required: z.boolean(),
   setIndex: z.number(),
   value: FieldValueSchema,
@@ -107,7 +117,7 @@ export type StepRun = z.infer<typeof StepRunSchema>;
 const coercedStringMax = z.coerce.string().max(2000);
 export const UpdateFieldValueSchema = z
   .object({
-    value: z.union([coercedStringMax, z.array(coercedStringMax)]),
+    value: z.union([z.array(coercedStringMax), coercedStringMax]),
   })
   .strict();
 
@@ -119,7 +129,7 @@ export const BatchUpdateFieldValuesSchema = z
     fieldValues: z.array(
       z.object({
         fieldSeqNo: z.number().int(),
-        value: z.union([coercedStringMax, z.array(coercedStringMax)]),
+        value: z.union([z.array(coercedStringMax), coercedStringMax]),
       }),
     ),
   })

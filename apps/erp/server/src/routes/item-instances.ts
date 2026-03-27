@@ -4,6 +4,7 @@ import {
   DeleteSetMutateResponseSchema,
   ErrorResponseSchema,
   FieldValueMutateResponseSchema,
+  fieldTypeString,
   getValueFormatHint,
   ItemInstanceListQuerySchema,
   ItemInstanceListResponseSchema,
@@ -19,7 +20,7 @@ import { z } from "zod/v4";
 
 import type { ErpUser } from "../auth-middleware.js";
 import { hasPermission, requirePermission } from "../auth-middleware.js";
-import { notFound } from "../error-handler.js";
+import { notFound, unprocessable } from "../error-handler.js";
 import {
   API_PREFIX,
   paginationLinks,
@@ -33,6 +34,7 @@ import {
   wantsFullResponse,
 } from "../route-helpers.js";
 import {
+  checkFieldValueShape,
   deleteFieldValueSet,
   deserializeFieldValue,
   serializeFieldValue,
@@ -163,7 +165,6 @@ function buildFieldValues(inst: ItemInstanceWithRelations) {
     label: string;
     type: string;
     valueFormat: string;
-    multiValue: boolean;
     required: boolean;
     setIndex: number;
     value: string | string[];
@@ -178,26 +179,26 @@ function buildFieldValues(inst: ItemInstanceWithRelations) {
       );
       const value = deserializeFieldValue(
         stored?.value ?? "",
-        field.multiValue,
+        field.isArray,
       );
       const attachments =
         field.type === "attachment" && stored
           ? stored.fieldAttachments.map((sfa) => sfa.attachment)
           : undefined;
+      const fieldType = fieldTypeString(field.type, field.isArray);
       fieldValues.push({
         fieldId: field.id,
         fieldSeqNo: field.seqNo,
         label: field.label,
-        type: field.type,
-        valueFormat: getValueFormatHint(field.type),
-        multiValue: field.multiValue,
+        type: fieldType,
+        valueFormat: getValueFormatHint(fieldType),
         required: field.required,
         setIndex: si,
         value,
         attachments,
         validation: validateFieldValue(
           field.type,
-          field.multiValue,
+          field.isArray,
           field.required,
           value,
         ),
@@ -457,6 +458,9 @@ export default function itemInstanceRoutes(fastify: FastifyInstance) {
     const field = inst.item.fieldSet?.fields[0];
     if (!field) return notFound(reply, `Field not found`);
 
+    const shapeErr = checkFieldValueShape(field.label, field.type, field.isArray, value);
+    if (shapeErr) return unprocessable(reply, shapeErr);
+
     const fieldRecordId = await ensureItemInstanceFieldRecord(
       instanceId,
       userId,
@@ -468,23 +472,23 @@ export default function itemInstanceRoutes(fastify: FastifyInstance) {
     // Return deserialized value
     const responseValue = deserializeFieldValue(
       serializeFieldValue(value),
-      field.multiValue,
+      field.isArray,
     );
 
     const validation = validateFieldValue(
       field.type,
-      field.multiValue,
+      field.isArray,
       field.required,
       responseValue,
     );
 
+    const fieldType = fieldTypeString(field.type, field.isArray);
     const full = {
       fieldId: field.id,
       fieldSeqNo: field.seqNo,
       label: field.label,
-      type: field.type,
-      valueFormat: getValueFormatHint(field.type),
-      multiValue: field.multiValue,
+      type: fieldType,
+      valueFormat: getValueFormatHint(fieldType),
       required: field.required,
       setIndex,
       value: responseValue,

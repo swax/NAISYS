@@ -25,7 +25,7 @@ export const FieldSchema = z.object({
   seqNo: z.number(),
   label: z.string(),
   type: FieldTypeEnum,
-  multiValue: z.boolean(),
+  isArray: z.boolean(),
   required: z.boolean(),
   createdAt: z.iso.datetime(),
   createdBy: z.string(),
@@ -43,7 +43,7 @@ export const CreateFieldSchema = z
     seqNo: z.number().int().min(1).optional(),
     label: z.string().min(1).max(200),
     type: FieldTypeEnum.optional(),
-    multiValue: z.boolean().optional(),
+    isArray: z.boolean().optional(),
     required: z.boolean().optional(),
   })
   .strict();
@@ -63,7 +63,7 @@ export const UpdateFieldSchema = z
     seqNo: z.number().int().min(1).optional(),
     label: z.string().min(1).max(200).optional(),
     type: FieldTypeEnum.optional(),
-    multiValue: z.boolean().optional(),
+    isArray: z.boolean().optional(),
     required: z.boolean().optional(),
   })
   .strict();

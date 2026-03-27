@@ -155,8 +155,8 @@ export default function stepFieldAttachmentRoutes(fastify: FastifyInstance) {
         return notFound(reply, "Step has no field set");
       }
 
-      // For non-multiValue fields, reject if an attachment already exists
-      if (!field.multiValue) {
+      // For non-isArray fields, reject if an attachment already exists
+      if (!field.isArray) {
         const existing = await erpDb.fieldValue.findUnique({
           where: {
             fieldRecordId_fieldId_setIndex: {
@@ -208,7 +208,7 @@ export default function stepFieldAttachmentRoutes(fastify: FastifyInstance) {
         fieldRecordId,
         field.id,
         setIndex,
-        field.multiValue,
+        field.isArray,
         userId,
       );
 
@@ -336,7 +336,7 @@ export default function stepFieldAttachmentRoutes(fastify: FastifyInstance) {
         fieldRecordId,
         field.id,
         setIndex,
-        field.multiValue,
+        field.isArray,
         userId,
       );
 

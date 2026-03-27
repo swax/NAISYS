@@ -4,6 +4,7 @@ import {
 } from "@naisys-erp/shared";
 import {
   type FieldRefValueSummary,
+  fieldTypeString,
   getValueFormatHint,
 } from "@naisys-erp/shared";
 
@@ -146,7 +147,7 @@ export async function getOpRunFieldRefSummary(
                   seqNo: true,
                   label: true,
                   type: true,
-                  multiValue: true,
+                  isArray: true,
                   required: true,
                 },
                 orderBy: { seqNo: "asc" as const },
@@ -218,7 +219,7 @@ export async function getOpRunFieldRefSummary(
         );
         const value = deserializeFieldValue(
           stored?.value ?? "",
-          field.multiValue,
+          field.isArray,
         );
         const setPath = ref.sourceStep.multiSet
           ? `/sets/${si}/fields/${field.seqNo}`
@@ -231,20 +232,20 @@ export async function getOpRunFieldRefSummary(
                 downloadHref: `${stepsHref}${setPath}/attachments/${sfa.attachment.id}`,
               }))
             : undefined;
+        const fieldType = fieldTypeString(field.type, field.isArray);
         fieldValues.push({
           fieldId: field.id,
           fieldSeqNo: field.seqNo,
           label: field.label,
-          type: field.type,
-          valueFormat: getValueFormatHint(field.type),
-          multiValue: field.multiValue,
+          type: fieldType,
+          valueFormat: getValueFormatHint(fieldType),
           required: field.required,
           setIndex: si,
           value,
           attachments,
           validation: validateFieldValue(
             field.type,
-            field.multiValue,
+            field.isArray,
             field.required,
             value,
           ),
