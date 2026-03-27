@@ -215,6 +215,18 @@ export const HeaderDetail: React.FC = () => {
                 ) : (
                   <Text c="dimmed">No change summary</Text>
                 )}
+                {Number(revNo) > 1 && (
+                  <Text
+                    component={Link}
+                    to={`/orders/${orderKey}/revs/diff?from=${Number(revNo) - 1}&to=${revNo}`}
+                    size="xs"
+                    c="blue"
+                    mt="xs"
+                    style={{ textDecoration: "none", display: "inline-block" }}
+                  >
+                    Diff with previous revision
+                  </Text>
+                )}
               </div>
             </Stack>
           )}
