@@ -194,9 +194,11 @@ export const FieldDefList: React.FC<FieldListProps> = ({
   return (
     <Stack gap="xs" mt="xs">
       <Group justify="space-between">
-        <Text size="xs" fw={600} c="dimmed">
-          Data Fields
-        </Text>
+        {fields.items.length > 0 && (
+          <Text size="xs" fw={600} c="dimmed">
+            Data Fields
+          </Text>
+        )}
         {hasAction(fields._actions, "create") && !addingField && (
           <Button size="compact-xs" variant="subtle" onClick={startAdding}>
             Add Field
@@ -277,11 +279,7 @@ export const FieldDefList: React.FC<FieldListProps> = ({
         </div>
       ))}
 
-      {fields.items.length === 0 && !addingField && (
-        <Text size="xs" c="dimmed">
-          No data fields.
-        </Text>
-      )}
+
 
       {addingField && (
         <form onSubmit={createForm.onSubmit(handleCreate)}>
