@@ -82,7 +82,7 @@ function diffFields(
       const changes = compareProps([
         ["label", from.label, to.label],
         ["type", from.type, to.type],
-        ["multiValue", from.multiValue, to.multiValue],
+        ["isArray", from.isArray, to.isArray],
         ["required", from.required, to.required],
       ]);
       result.push({

@@ -31,7 +31,7 @@ export async function findStepRunWithField(
                   seqNo: true,
                   label: true,
                   type: true,
-                  multiValue: true,
+                  isArray: true,
                   required: true,
                 },
               },
@@ -61,14 +61,14 @@ export function serializeFieldValue(value: FieldValue): string {
 
 /**
  * Deserialize a DB-stored value back to the API shape.
- * - multiValue fields: parse JSON array, falling back to comma-split for legacy data
+ * - isArray fields: parse JSON array, falling back to comma-split for legacy data
  * - Scalar fields: return as-is
  */
 export function deserializeFieldValue(
   dbValue: string,
-  multiValue: boolean,
+  isArray: boolean,
 ): FieldValue {
-  if (!multiValue) return dbValue;
+  if (!isArray) return dbValue;
   if (!dbValue) return [];
 
   // Try JSON array first (new format)
@@ -116,14 +116,36 @@ function validateSingleValue(type: string, value: string): string | null {
   return null;
 }
 
+/**
+ * Check that the value shape matches the field's isArray flag.
+ * Returns an error string if mismatched, or null if OK.
+ */
+export function checkFieldValueShape(
+  label: string,
+  type: string,
+  isArray: boolean,
+  value: FieldValue,
+): string | null {
+  if (isArray && !Array.isArray(value)) {
+    return `Field "${label}" is an array field (type: ${type}[]) — value must be a JSON array, e.g. ["value1", "value2"]`;
+  }
+  if (!isArray && Array.isArray(value)) {
+    return `Field "${label}" is not an array field — value must be a string, not an array`;
+  }
+  return null;
+}
+
 export function validateFieldValue(
   type: string,
-  multiValue: boolean,
+  isArray: boolean,
   required: boolean,
   value: FieldValue,
 ): FieldValidation {
-  if (multiValue) {
-    const items = Array.isArray(value) ? value : [value];
+  const shapeErr = checkFieldValueShape("field", type, isArray, value);
+  if (shapeErr) return { valid: false, error: shapeErr };
+
+  if (isArray) {
+    const items = value as string[];
     if (required && items.every((v) => !v.trim())) {
       return { valid: false, error: "Required" };
     }
@@ -134,7 +156,7 @@ export function validateFieldValue(
       }
     }
   } else {
-    const v = typeof value === "string" ? value : value.join("");
+    const v = value as string;
     if (required && !v.trim()) {
       return { valid: false, error: "Required" };
     }
@@ -155,7 +177,7 @@ export function validateCompletionFields(
 ): string | null {
   const existingFieldValues = existing.fieldRecord?.fieldValues ?? [];
 
-  // Build a map of field definitions keyed by id for multiValue lookup
+  // Build a map of field definitions keyed by id for isArray lookup
   const fieldDefs = new Map(
     (existing.step.fieldSet?.fields ?? []).map((f) => [f.id, f]),
   );
@@ -165,7 +187,7 @@ export function validateCompletionFields(
       const def = fieldDefs.get(fv.fieldId);
       return [
         fieldValueKey(fv.fieldId, fv.setIndex),
-        deserializeFieldValue(fv.value, def?.multiValue ?? false),
+        deserializeFieldValue(fv.value, def?.isArray ?? false),
       ];
     }),
   );
@@ -182,7 +204,7 @@ export function validateCompletionFields(
       const value = storedMap.get(key) ?? "";
       const result = validateFieldValue(
         field.type,
-        field.multiValue,
+        field.isArray,
         field.required,
         value,
       );
@@ -216,7 +238,7 @@ export async function rebuildAttachmentFieldValue(
   fieldRecordId: number,
   fieldId: number,
   setIndex: number,
-  multiValue: boolean,
+  isArray: boolean,
   userId: number,
 ): Promise<FieldValue> {
   const fieldValue = await erpDb.fieldValue.findUnique({
@@ -238,10 +260,10 @@ export async function rebuildAttachmentFieldValue(
 
   const value: FieldValue =
     labels.length === 0
-      ? multiValue
+      ? isArray
         ? []
         : ""
-      : multiValue
+      : isArray
         ? labels
         : labels[0];
 

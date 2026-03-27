@@ -102,7 +102,7 @@ export async function createFields(
     seqNo?: number | null;
     label: string;
     type?: FieldType | null;
-    multiValue?: boolean | null;
+    isArray?: boolean | null;
     required?: boolean | null;
   }>,
   userId: number,
@@ -124,7 +124,7 @@ export async function createFields(
           seqNo,
           label: item.label,
           type: item.type ?? FieldType.string,
-          multiValue: item.multiValue ?? false,
+          isArray: item.isArray ?? false,
           required: item.required ?? false,
           createdById: userId,
           updatedById: userId,
@@ -146,7 +146,7 @@ export async function createField(
     seqNo?: number | null;
     label: string;
     type?: FieldType | null;
-    multiValue?: boolean | null;
+    isArray?: boolean | null;
     required?: boolean | null;
   },
   userId: number,
@@ -160,7 +160,7 @@ export async function updateField(
   data: {
     label?: string;
     type?: FieldType;
-    multiValue?: boolean;
+    isArray?: boolean;
     required?: boolean;
     seqNo?: number;
   },
@@ -171,7 +171,7 @@ export async function updateField(
     data: {
       ...(data.label !== undefined ? { label: data.label } : {}),
       ...(data.type !== undefined ? { type: data.type } : {}),
-      ...(data.multiValue !== undefined ? { multiValue: data.multiValue } : {}),
+      ...(data.isArray !== undefined ? { isArray: data.isArray } : {}),
       ...(data.required !== undefined ? { required: data.required } : {}),
       ...(data.seqNo !== undefined ? { seqNo: data.seqNo } : {}),
       updatedById: userId,

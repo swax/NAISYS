@@ -157,7 +157,7 @@ export function formatField(
     seqNo: field.seqNo,
     label: field.label,
     type: field.type,
-    multiValue: field.multiValue,
+    isArray: field.isArray,
     required: field.required,
     ...formatAuditFields(field),
     _links: childItemLinks(
@@ -314,7 +314,7 @@ export default function stepFieldRoutes(fastify: FastifyInstance) {
         seqNo: requestedSeqNo,
         label,
         type,
-        multiValue,
+        isArray,
         required,
       } = request.body;
       const userId = request.erpUser!.id;
@@ -343,7 +343,7 @@ export default function stepFieldRoutes(fastify: FastifyInstance) {
 
       const field = await createField(
         fieldSetId,
-        { seqNo: requestedSeqNo, label, type, multiValue, required },
+        { seqNo: requestedSeqNo, label, type, isArray, required },
         userId,
       );
 
@@ -425,7 +425,7 @@ export default function stepFieldRoutes(fastify: FastifyInstance) {
       const {
         label,
         type,
-        multiValue,
+        isArray,
         required,
         seqNo: newSeqNo,
       } = request.body;
@@ -457,7 +457,7 @@ export default function stepFieldRoutes(fastify: FastifyInstance) {
 
       const field = await updateField(
         existing.id,
-        { label, type, multiValue, required, seqNo: newSeqNo },
+        { label, type, isArray, required, seqNo: newSeqNo },
         userId,
       );
 

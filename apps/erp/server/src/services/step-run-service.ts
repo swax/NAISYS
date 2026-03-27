@@ -17,7 +17,7 @@ export const includeStepRunWithFields = {
               seqNo: true,
               label: true,
               type: true,
-              multiValue: true,
+              isArray: true,
               required: true,
             },
             orderBy: { seqNo: "asc" as const },
@@ -69,7 +69,7 @@ export type StepRunWithStepAndFields = {
         seqNo: number;
         label: string;
         type: string;
-        multiValue: boolean;
+        isArray: boolean;
         required: boolean;
       }[];
     } | null;

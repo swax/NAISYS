@@ -18,7 +18,7 @@ export const includeItemInstanceRelations = {
               seqNo: true,
               label: true,
               type: true,
-              multiValue: true,
+              isArray: true,
               required: true,
             },
             orderBy: { seqNo: "asc" as const },
@@ -60,7 +60,7 @@ type FieldDef = {
   seqNo: number;
   label: string;
   type: string;
-  multiValue: boolean;
+  isArray: boolean;
   required: boolean;
 };
 
@@ -143,7 +143,7 @@ export async function findItemInstanceWithField(
                   seqNo: true,
                   label: true,
                   type: true,
-                  multiValue: true,
+                  isArray: true,
                   required: true,
                 },
               },

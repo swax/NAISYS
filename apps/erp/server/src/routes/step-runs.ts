@@ -1,6 +1,7 @@
 import type { HateoasAction } from "@naisys/common";
 import {
   ErrorResponseSchema,
+  fieldTypeString,
   getValueFormatHint,
   OperationRunStatus,
   StepRunListQuerySchema,
@@ -114,8 +115,19 @@ export function buildStepRunActionTemplates(
   canUpdate: boolean,
   multiSet: boolean,
   hasAttachmentFields: boolean,
+  hasArrayFields: boolean,
 ) {
   if (!canUpdate) return [];
+
+  // Show array example in body hints when there are array fields
+  const valueHint: string | string[] = hasArrayFields ? [""] : "";
+  const batchValueHint = hasArrayFields
+    ? [
+        { fieldSeqNo: 0, value: "" },
+        { fieldSeqNo: 0, value: [""] },
+      ]
+    : [{ fieldSeqNo: 0, value: "" }];
+
   return [
     {
       rel: "updateField",
@@ -125,7 +137,7 @@ export function buildStepRunActionTemplates(
       method: "PUT" as const,
       title: "Update Field Value",
       schema: `${API_PREFIX}/schemas/UpdateFieldValue`,
-      body: { value: "" },
+      body: { value: valueHint },
     },
     {
       rel: "batchUpdateFields",
@@ -135,7 +147,7 @@ export function buildStepRunActionTemplates(
       method: "PUT" as const,
       title: "Batch Update Field Values",
       schema: `${API_PREFIX}/schemas/BatchUpdateFieldValues`,
-      body: { fieldValues: [{ fieldSeqNo: 0, "value": "" }] },
+      body: { fieldValues: batchValueHint },
     },
     ...(multiSet
       ? [
@@ -197,6 +209,7 @@ export async function computeStepRunHateoas(
   stepRunId: number,
   multiSet: boolean,
   hasAttachmentFields: boolean,
+  hasArrayFields: boolean,
   user: ErpUser | undefined,
 ) {
   const canUpdate =
@@ -222,6 +235,7 @@ export async function computeStepRunHateoas(
       canUpdate,
       multiSet,
       hasAttachmentFields,
+      hasArrayFields,
     ),
   };
 }
@@ -251,9 +265,9 @@ export async function formatStepRunTransition(
 ) {
   const stepSeqNo = stepRun.step.seqNo;
   const multiSet = stepRun.step.multiSet;
-  const hasAttachmentFields = (stepRun.step.fieldSet?.fields ?? []).some(
-    (f) => f.type === "attachment",
-  );
+  const fields = stepRun.step.fieldSet?.fields ?? [];
+  const hasAttachmentFields = fields.some((f) => f.type === "attachment");
+  const hasArrayFields = fields.some((f) => f.isArray);
 
   const hateoas = await computeStepRunHateoas(
     orderKey,
@@ -267,6 +281,7 @@ export async function formatStepRunTransition(
     stepRun.id,
     multiSet,
     hasAttachmentFields,
+    hasArrayFields,
     user,
   );
 
@@ -307,7 +322,6 @@ export async function formatStepRunWithFields(
     label: string;
     type: string;
     valueFormat: string;
-    multiValue: boolean;
     required: boolean;
     setIndex: number;
     value: string | string[];
@@ -327,7 +341,7 @@ export async function formatStepRunWithFields(
       );
       const value = deserializeFieldValue(
         stored?.value ?? "",
-        field.multiValue,
+        field.isArray,
       );
       const setPath = multiSet
         ? `/sets/${si}/fields/${field.seqNo}`
@@ -339,20 +353,20 @@ export async function formatStepRunWithFields(
               downloadHref: `${stepRunHref}${setPath}/attachments/${sfa.attachment.id}`,
             }))
           : undefined;
+      const fieldType = fieldTypeString(field.type, field.isArray);
       fieldValues.push({
         fieldId: field.id,
         fieldSeqNo: field.seqNo,
         label: field.label,
-        type: field.type,
-        valueFormat: getValueFormatHint(field.type),
-        multiValue: field.multiValue,
+        type: fieldType,
+        valueFormat: getValueFormatHint(fieldType),
         required: field.required,
         setIndex: si,
         value,
         attachments,
         validation: validateFieldValue(
           field.type,
-          field.multiValue,
+          field.isArray,
           field.required,
           value,
         ),
@@ -360,9 +374,9 @@ export async function formatStepRunWithFields(
     }
   }
 
-  const hasAttachmentFields = (stepRun.step.fieldSet?.fields ?? []).some(
-    (f) => f.type === "attachment",
-  );
+  const allFields = stepRun.step.fieldSet?.fields ?? [];
+  const hasAttachmentFields = allFields.some((f) => f.type === "attachment");
+  const hasArrayFields = allFields.some((f) => f.isArray);
 
   const hateoas = await computeStepRunHateoas(
     orderKey,
@@ -376,6 +390,7 @@ export async function formatStepRunWithFields(
     stepRun.id,
     multiSet,
     hasAttachmentFields,
+    hasArrayFields,
     user,
   );
 

@@ -60,6 +60,16 @@ function isImageFilename(filename: string): boolean {
   return IMAGE_EXTENSIONS.has(ext);
 }
 
+/** Check if a field type represents an array (e.g. "string[]") */
+function isArrayType(type: string): boolean {
+  return type.endsWith("[]");
+}
+
+/** Strip the "[]" suffix to get the base field type */
+function baseFieldType(type: string): string {
+  return type.endsWith("[]") ? type.slice(0, -2) : type;
+}
+
 /** Composite key for edits map: fieldId + setIndex */
 function editKey(fieldId: number, setIndex: number): string {
   return `${fieldId}_${setIndex}`;
@@ -79,7 +89,7 @@ function asString(v: FieldValue): string {
   return typeof v === "string" ? v : v.join(", ");
 }
 
-/** Get an array value from FieldValue (for multiValue fields) */
+/** Get an array value from FieldValue (for array fields) */
 function asArray(v: FieldValue): string[] {
   if (Array.isArray(v)) return v.length > 0 ? v : [""];
   return v ? [v] : [""];
@@ -197,7 +207,7 @@ export const FieldValueRunList: React.FC<FieldValueRunListProps> = ({
     const newFieldValues: FieldValueEntry[] = fieldDefs.map((fv) => ({
       ...fv,
       setIndex: nextSetIndex,
-      value: fv.multiValue ? [] : "",
+      value: isArrayType(fv.type) ? [] : "",
       validation: fv.required
         ? { valid: false, error: "Required" }
         : { valid: true },
@@ -426,7 +436,7 @@ export const FieldValueRunList: React.FC<FieldValueRunListProps> = ({
     const showUpload =
       canEdit &&
       canUploadAttachment &&
-      (fv.multiValue || attachments.length === 0);
+      (isArrayType(fv.type) || attachments.length === 0);
 
     return (
       <Stack key={key} gap={4}>
@@ -519,7 +529,7 @@ export const FieldValueRunList: React.FC<FieldValueRunListProps> = ({
     const errorMsg =
       fv.validation && !fv.validation.valid ? fv.validation.error : undefined;
 
-    switch (fv.type) {
+    switch (baseFieldType(fv.type)) {
       case FieldType.date:
         return (
           <DateInput
@@ -620,10 +630,10 @@ export const FieldValueRunList: React.FC<FieldValueRunListProps> = ({
   function formatReadOnlyValue(fv: FieldValueEntry): string {
     const v = asString(fv.value);
     if (!v) return "\u2014";
-    if (fv.multiValue && Array.isArray(fv.value)) {
+    if (isArrayType(fv.type) && Array.isArray(fv.value)) {
       return fv.value.filter(Boolean).join(", ") || "\u2014";
     }
-    switch (fv.type) {
+    switch (baseFieldType(fv.type)) {
       case FieldType.date:
         return new Date(v + "T00:00:00").toLocaleDateString();
       case FieldType.datetime:
@@ -692,11 +702,27 @@ export const FieldValueRunList: React.FC<FieldValueRunListProps> = ({
         const editedValue = edits[key] ?? fv.value;
 
         // Attachment fields have their own renderer
-        if (fv.type === FieldType.attachment) {
+        if (baseFieldType(fv.type) === FieldType.attachment) {
           return renderAttachmentField(fv, fieldLabel, fieldCanEdit);
         }
 
         if (!fieldCanEdit) {
+          // Multi-value: show each item on its own line
+          if (isArrayType(fv.type) && Array.isArray(fv.value) && fv.value.filter(Boolean).length > 0) {
+            return (
+              <Stack key={key} gap={2}>
+                <Text size="xs" fw={500}>
+                  {fieldLabel}:
+                </Text>
+                {fv.value.filter(Boolean).map((item, i) => (
+                  <Text key={i} size="xs" pl="sm">
+                    • {item}
+                  </Text>
+                ))}
+              </Stack>
+            );
+          }
+
           return (
             <Group key={key} gap="xs">
               <Text size="xs" fw={500}>
@@ -718,7 +744,7 @@ export const FieldValueRunList: React.FC<FieldValueRunListProps> = ({
           );
         }
 
-        if (fv.multiValue) {
+        if (isArrayType(fv.type)) {
           const items = asArray(editedValue);
           return (
             <Stack key={key} gap={4}>

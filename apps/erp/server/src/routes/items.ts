@@ -111,7 +111,7 @@ function formatItemField(
     seqNo: field.seqNo,
     label: field.label,
     type: field.type,
-    multiValue: field.multiValue,
+    isArray: field.isArray,
     required: field.required,
     ...formatAuditFields(field),
     _links: childItemLinks(

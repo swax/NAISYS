@@ -5,6 +5,7 @@ import {
   DeleteSetMutateResponseSchema,
   ErrorResponseSchema,
   FieldValueMutateResponseSchema,
+  fieldTypeString,
   getValueFormatHint,
   UpdateFieldValueSchema,
 } from "@naisys-erp/shared";
@@ -24,6 +25,7 @@ import {
 } from "../route-helpers.js";
 import { ensureStepRunFieldRecord } from "../services/field-service.js";
 import {
+  checkFieldValueShape,
   clearAttachmentFieldValue,
   deleteFieldValueSet,
   deserializeFieldValue,
@@ -115,6 +117,9 @@ export default function stepRunFieldRoutes(fastify: FastifyInstance) {
       return notFound(reply, `Step field not found`);
     }
 
+    const shapeErr = checkFieldValueShape(field.label, field.type, field.isArray, value);
+    if (shapeErr) return unprocessable(reply, shapeErr);
+
     // Reject setIndex > 0 on non-multiSet steps
     if (setIndex > 0 && !stepRun.step.multiSet) {
       return unprocessable(
@@ -159,16 +164,17 @@ export default function stepRunFieldRoutes(fastify: FastifyInstance) {
     // Return deserialized value + updated step-level actions
     const responseValue =
       field.type === "attachment"
-        ? field.multiValue
+        ? field.isArray
           ? []
           : ""
-        : deserializeFieldValue(serializeFieldValue(value), field.multiValue);
+        : deserializeFieldValue(serializeFieldValue(value), field.isArray);
 
-    // Check ALL fields in the fieldSet for attachment type (not just the
-    // filtered single field) so that _actionTemplates include upload/delete
-    const attachmentCount = await erpDb.field.count({
-      where: { fieldSetId: field.fieldSetId, type: "attachment" },
-    });
+    // Check ALL fields in the fieldSet (not just the filtered single field)
+    // so that _actionTemplates include the right hints
+    const [attachmentCount, arrayCount] = await Promise.all([
+      erpDb.field.count({ where: { fieldSetId: field.fieldSetId, type: "attachment" } }),
+      erpDb.field.count({ where: { fieldSetId: field.fieldSetId, isArray: true } }),
+    ]);
 
     const hateoas = await computeStepRunHateoas(
       orderKey,
@@ -182,23 +188,24 @@ export default function stepRunFieldRoutes(fastify: FastifyInstance) {
       resolved.stepRun.id,
       stepRun.step.multiSet,
       attachmentCount > 0,
+      arrayCount > 0,
       request.erpUser,
     );
 
     const validation = validateFieldValue(
       field.type,
-      field.multiValue,
+      field.isArray,
       field.required,
       responseValue,
     );
 
+    const fieldType = fieldTypeString(field.type, field.isArray);
     const full = {
       fieldId: field.id,
       fieldSeqNo: field.seqNo,
       label: field.label,
-      type: field.type,
-      valueFormat: getValueFormatHint(field.type),
-      multiValue: field.multiValue,
+      type: fieldType,
+      valueFormat: getValueFormatHint(fieldType),
       required: field.required,
       setIndex,
       value: responseValue,
@@ -304,7 +311,7 @@ export default function stepRunFieldRoutes(fastify: FastifyInstance) {
       (existing.step.fieldSet?.fields ?? []).map((f) => [f.seqNo, f]),
     );
 
-    // Validate all fieldSeqNos exist and block attachment fields
+    // Validate all fieldSeqNos exist, block attachments, enforce array shape
     for (const item of fieldValues) {
       if (!fieldDefs.has(item.fieldSeqNo)) {
         return notFound(reply, `Step field ${item.fieldSeqNo} not found`);
@@ -317,6 +324,8 @@ export default function stepRunFieldRoutes(fastify: FastifyInstance) {
           message: `Field "${def.label}" is an attachment field. Attachment values are managed by file uploads, not batch updates.`,
         });
       }
+      const shapeErr = checkFieldValueShape(def.label, def.type, def.isArray, item.value);
+      if (shapeErr) return unprocessable(reply, shapeErr);
     }
 
     const fieldRecordId = await ensureStepRunFieldRecord(
@@ -339,30 +348,30 @@ export default function stepRunFieldRoutes(fastify: FastifyInstance) {
 
       const responseValue = deserializeFieldValue(
         serializeFieldValue(item.value),
-        field.multiValue,
+        field.isArray,
       );
+      const fieldType = fieldTypeString(field.type, field.isArray);
       results.push({
         fieldId: field.id,
         fieldSeqNo: field.seqNo,
         label: field.label,
-        type: field.type,
-        valueFormat: getValueFormatHint(field.type),
-        multiValue: field.multiValue,
+        type: fieldType,
+        valueFormat: getValueFormatHint(fieldType),
         required: field.required,
         setIndex,
         value: responseValue,
         validation: validateFieldValue(
           field.type,
-          field.multiValue,
+          field.isArray,
           field.required,
           responseValue,
         ),
       });
     }
 
-    const hasAttachmentFields = (existing.step.fieldSet?.fields ?? []).some(
-      (f) => f.type === "attachment",
-    );
+    const allFields = existing.step.fieldSet?.fields ?? [];
+    const hasAttachmentFields = allFields.some((f) => f.type === "attachment");
+    const hasArrayFields = allFields.some((f) => f.isArray);
 
     const hateoas = await computeStepRunHateoas(
       orderKey,
@@ -376,6 +385,7 @@ export default function stepRunFieldRoutes(fastify: FastifyInstance) {
       resolved.stepRun.id,
       existing.step.multiSet,
       hasAttachmentFields,
+      hasArrayFields,
       request.erpUser,
     );
 
@@ -428,7 +438,7 @@ export default function stepRunFieldRoutes(fastify: FastifyInstance) {
         );
         const value = deserializeFieldValue(
           stored?.value ?? "",
-          field.multiValue,
+          field.isArray,
         );
         const setPath = isMultiSet
           ? `/sets/${si}/fields/${field.seqNo}`
@@ -440,20 +450,20 @@ export default function stepRunFieldRoutes(fastify: FastifyInstance) {
                 downloadHref: `${stepRunHref}${setPath}/attachments/${sfa.attachment.id}`,
               }))
             : undefined;
+        const fieldType = fieldTypeString(field.type, field.isArray);
         items.push({
           fieldId: field.id,
           fieldSeqNo: field.seqNo,
           label: field.label,
-          type: field.type,
-          valueFormat: getValueFormatHint(field.type),
-          multiValue: field.multiValue,
+          type: fieldType,
+          valueFormat: getValueFormatHint(fieldType),
           required: field.required,
           setIndex: si,
           value,
           attachments,
           validation: validateFieldValue(
             field.type,
-            field.multiValue,
+            field.isArray,
             field.required,
             value,
           ),
@@ -461,9 +471,9 @@ export default function stepRunFieldRoutes(fastify: FastifyInstance) {
       }
     }
 
-    const hasAttachmentFields = (existing.step.fieldSet?.fields ?? []).some(
-      (f) => f.type === "attachment",
-    );
+    const allFields2 = existing.step.fieldSet?.fields ?? [];
+    const hasAttachmentFields = allFields2.some((f) => f.type === "attachment");
+    const hasArrayFields = allFields2.some((f) => f.isArray);
 
     const hateoas = await computeStepRunHateoas(
       orderKey,
@@ -477,6 +487,7 @@ export default function stepRunFieldRoutes(fastify: FastifyInstance) {
       resolved.stepRun.id,
       existing.step.multiSet,
       hasAttachmentFields,
+      hasArrayFields,
       request.erpUser,
     );
 
@@ -616,9 +627,9 @@ export default function stepRunFieldRoutes(fastify: FastifyInstance) {
       );
       const setCount = Math.max(1, maxSetIndex + 1);
 
-      const hasAttachmentFields = (existing.step.fieldSet?.fields ?? []).some(
-        (f) => f.type === "attachment",
-      );
+      const delFields = existing.step.fieldSet?.fields ?? [];
+      const hasAttachmentFields = delFields.some((f) => f.type === "attachment");
+      const hasArrayFields = delFields.some((f) => f.isArray);
 
       const hateoas = await computeStepRunHateoas(
         orderKey,
@@ -632,6 +643,7 @@ export default function stepRunFieldRoutes(fastify: FastifyInstance) {
         resolved.stepRun.id,
         existing.step.multiSet,
         hasAttachmentFields,
+        hasArrayFields,
         request.erpUser,
       );
 

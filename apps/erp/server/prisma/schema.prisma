@@ -230,7 +230,7 @@ model Field {
   seqNo       Int       @map("seq_no")
   label       String
   type        FieldType @default(string)
-  multiValue  Boolean   @default(false) @map("multi_value")
+  isArray     Boolean   @default(false) @map("is_array")
   required    Boolean   @default(false)
   createdAt   DateTime  @default(now()) @map("created_at")
   createdById Int       @map("created_by")

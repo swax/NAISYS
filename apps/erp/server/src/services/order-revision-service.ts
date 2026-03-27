@@ -172,7 +172,7 @@ export async function createRevision(
                   seqNo: field.seqNo,
                   label: field.label,
                   type: field.type,
-                  multiValue: field.multiValue,
+                  isArray: field.isArray,
                   required: field.required,
                   createdById: userId,
                   updatedById: userId,

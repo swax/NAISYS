@@ -64,7 +64,7 @@ export const FieldDefList: React.FC<FieldListProps> = ({
       seqNo: 10,
       label: "",
       type: FieldType.string,
-      multiValue: false,
+      isArray: false,
       required: false,
     },
     validate: zodResolver(UpdateFieldSchema),
@@ -75,7 +75,7 @@ export const FieldDefList: React.FC<FieldListProps> = ({
       seqNo: 10,
       label: "",
       type: FieldType.string,
-      multiValue: false,
+      isArray: false,
       required: false,
     },
     validate: zodResolver(CreateFieldSchema),
@@ -86,7 +86,7 @@ export const FieldDefList: React.FC<FieldListProps> = ({
       seqNo: field.seqNo,
       label: field.label,
       type: field.type,
-      multiValue: field.multiValue,
+      isArray: field.isArray,
       required: field.required,
     });
     setEditingFieldId(field.id);
@@ -132,7 +132,7 @@ export const FieldDefList: React.FC<FieldListProps> = ({
       seqNo: fields.nextSeqNo,
       label: "",
       type: FieldType.string,
-      multiValue: false,
+      isArray: false,
       required: false,
     });
     setAddingField(true);
@@ -181,8 +181,8 @@ export const FieldDefList: React.FC<FieldListProps> = ({
         {...form.getInputProps("type")}
       />
       <Checkbox
-        label="Accept multiple values"
-        {...form.getInputProps("multiValue", { type: "checkbox" })}
+        label="Array (accepts multiple values)"
+        {...form.getInputProps("isArray", { type: "checkbox" })}
       />
       <Checkbox
         label="Required"
@@ -236,9 +236,9 @@ export const FieldDefList: React.FC<FieldListProps> = ({
                 <Badge size="xs" variant="light">
                   {fieldTypeLabel(field.type)}
                 </Badge>
-                {field.multiValue && (
+                {field.isArray && (
                   <Badge size="xs" variant="light" color="blue">
-                    multiple
+                    []
                   </Badge>
                 )}
                 {field.required && (
