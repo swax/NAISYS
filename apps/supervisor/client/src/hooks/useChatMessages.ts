@@ -1,6 +1,6 @@
 import type { HateoasAction } from "@naisys/common";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useAgentDataContext } from "../contexts/AgentDataContext";
 import { ChatMessagesParams, getChatMessages } from "../lib/apiChat";
@@ -12,6 +12,7 @@ import { useSubscription } from "./useSubscription";
 const messagesCache = new Map<string, ChatMessage[]>();
 const updatedSinceCache = new Map<string, string | undefined>();
 const totalCache = new Map<string, number>();
+const pagesLoadedCache = new Map<string, number>();
 let actionsCache: HateoasAction[] | undefined = undefined;
 
 // Tracks gap recovery attempts per cache key to prevent re-fetch loops
@@ -181,8 +182,37 @@ export const useChatMessages = (
     handleChatPush,
   );
 
+  // Load more (next page of historical data)
+  const [loadingMore, setLoadingMore] = useState(false);
+  const loadingMoreRef = useRef(false);
+
+  const loadMore = useCallback(async () => {
+    if (loadingMoreRef.current || !participants) return;
+    loadingMoreRef.current = true;
+    setLoadingMore(true);
+    try {
+      const nextPage = (pagesLoadedCache.get(cacheKey) || 1) + 1;
+      const result = await getChatMessages({
+        agentUsername,
+        participants,
+        page: nextPage,
+        count: 50,
+      });
+      if (result.success && result.messages) {
+        mergeMessages(result.messages, result.total);
+        pagesLoadedCache.set(cacheKey, nextPage);
+      }
+    } catch (err) {
+      console.error("Error loading more chat messages:", err);
+    } finally {
+      loadingMoreRef.current = false;
+      setLoadingMore(false);
+    }
+  }, [agentUsername, participants, cacheKey, mergeMessages]);
+
   const messages = messagesCache.get(cacheKey) || [];
   const total = totalCache.get(cacheKey) || 0;
+  const hasMore = messages.length < total;
 
   return {
     messages,
@@ -190,5 +220,8 @@ export const useChatMessages = (
     actions: actionsCache,
     isLoading: query.isLoading,
     error: query.error,
+    loadMore,
+    loadingMore,
+    hasMore,
   };
 };

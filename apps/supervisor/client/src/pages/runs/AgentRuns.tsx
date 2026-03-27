@@ -51,6 +51,9 @@ export const AgentRuns: React.FC = () => {
     isLoading: runsLoading,
     error: runsError,
     isFetchedAfterMount,
+    loadMore,
+    loadingMore,
+    hasMore,
   } = useRunsData(username ?? "", Boolean(username));
 
   // There's a bug where even through isFetchedAfterMount is true, the latest log id of all runs is still old.
@@ -167,6 +170,9 @@ export const AgentRuns: React.FC = () => {
       activeRunKey={runKey}
       onNavLinkClick={closeDrawer}
       hasUnreadLogs={hasUnreadLogs}
+      hasMore={hasMore}
+      loadingMore={loadingMore}
+      onLoadMore={loadMore}
     />
   );
 

@@ -1,4 +1,11 @@
-import { Button, Group, NavLink, ScrollArea, Stack, Text } from "@mantine/core";
+import {
+  Button,
+  Group,
+  NavLink,
+  ScrollArea,
+  Stack,
+  Text,
+} from "@mantine/core";
 import { IconMessagePlus } from "@tabler/icons-react";
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
@@ -15,6 +22,10 @@ interface ChatConversationListProps {
   agents: Agent[];
   currentAgentId: number;
   agentName: string;
+  totalConversations: number;
+  hasMore: boolean;
+  loadingMore: boolean;
+  onLoadMore: () => void;
 }
 
 export const ChatConversationList: React.FC<ChatConversationListProps> = ({
@@ -26,6 +37,10 @@ export const ChatConversationList: React.FC<ChatConversationListProps> = ({
   agents,
   currentAgentId,
   agentName,
+  totalConversations,
+  hasMore,
+  loadingMore,
+  onLoadMore,
 }) => {
   const [newChatOpened, setNewChatOpened] = useState(false);
 
@@ -107,6 +122,29 @@ export const ChatConversationList: React.FC<ChatConversationListProps> = ({
           })
         )}
       </ScrollArea>
+
+      {totalConversations > 0 && (
+        <Stack
+          gap={4}
+          align="center"
+          p="xs"
+          style={{ borderTop: "1px solid var(--mantine-color-dark-6)" }}
+        >
+          <Text c="dimmed" ta="center" size="xs">
+            Showing {conversations.length} / {totalConversations} conversations
+          </Text>
+          {hasMore && (
+            <Button
+              variant="subtle"
+              size="compact-xs"
+              loading={loadingMore}
+              onClick={onLoadMore}
+            >
+              Load More
+            </Button>
+          )}
+        </Stack>
+      )}
 
       <NewChatDialog
         opened={newChatOpened}

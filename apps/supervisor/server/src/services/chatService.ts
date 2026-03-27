@@ -9,7 +9,9 @@ import { sendMailViaHub } from "./hubConnectionService.js";
  */
 export async function getConversations(
   userId: number,
-): Promise<ChatConversation[]> {
+  page: number = 1,
+  count: number = 50,
+): Promise<{ conversations: ChatConversation[]; total: number }> {
   // Look up the current user's username for filtering
   const currentUser = await hubDb.users.findUnique({
     where: { id: userId },
@@ -96,7 +98,11 @@ export async function getConversations(
       new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime(),
   );
 
-  return conversations;
+  const total = conversations.length;
+  const start = (page - 1) * count;
+  const paginated = conversations.slice(start, start + count);
+
+  return { conversations: paginated, total };
 }
 
 /**

@@ -6,12 +6,26 @@ import type {
 } from "./apiClient";
 import { api, API_BASE, apiEndpoints } from "./apiClient";
 
+export interface ChatConversationsParams {
+  agentUsername: string;
+  page?: number;
+  count?: number;
+}
+
 export const getChatConversations = async (
-  agentUsername: string,
+  params: ChatConversationsParams,
 ): Promise<ChatConversationsResponse> => {
-  return await api.get<ChatConversationsResponse>(
-    apiEndpoints.agentChat(agentUsername),
-  );
+  const queryParams = new URLSearchParams();
+  if (params.page !== undefined) {
+    queryParams.append("page", params.page.toString());
+  }
+  if (params.count !== undefined) {
+    queryParams.append("count", params.count.toString());
+  }
+
+  const query = queryParams.toString();
+  const url = `${apiEndpoints.agentChat(params.agentUsername)}${query ? `?${query}` : ""}`;
+  return await api.get<ChatConversationsResponse>(url);
 };
 
 export interface ChatMessagesParams {

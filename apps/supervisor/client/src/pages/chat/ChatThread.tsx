@@ -1,6 +1,7 @@
 import {
   Anchor,
   Box,
+  Button,
   Container,
   Image,
   Paper,
@@ -22,11 +23,19 @@ function isImageFilename(filename: string): boolean {
 interface ChatThreadProps {
   messages: ChatMessage[];
   currentAgentId: number;
+  total: number;
+  hasMore: boolean;
+  loadingMore: boolean;
+  onLoadMore: () => void;
 }
 
 export const ChatThread: React.FC<ChatThreadProps> = ({
   messages,
   currentAgentId,
+  total,
+  hasMore,
+  loadingMore,
+  onLoadMore,
 }) => {
   const viewport = useRef<HTMLDivElement>(null);
   const prevMessageCount = useRef(0);
@@ -81,6 +90,21 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
     <ScrollArea style={{ flex: 1 }} viewportRef={viewport}>
       <Container size="md" w="100%" p="md">
         <Stack gap="xs">
+          {hasMore && (
+            <Stack gap={4} align="center" py="xs">
+              <Text c="dimmed" size="xs">
+                Showing {messages.length} / {total} messages
+              </Text>
+              <Button
+                variant="subtle"
+                size="compact-xs"
+                loading={loadingMore}
+                onClick={onLoadMore}
+              >
+                Load Older Messages
+              </Button>
+            </Stack>
+          )}
           {messages.map((msg) => {
             const isOwn = msg.fromUserId === currentAgentId;
             const msgDate = formatDate(msg.createdAt);

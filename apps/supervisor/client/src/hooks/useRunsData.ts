@@ -5,7 +5,7 @@ import type {
 } from "@naisys/hub-protocol";
 import { RunSession as BaseRunSession } from "@naisys-supervisor/shared";
 import { useQuery } from "@tanstack/react-query";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { getRunsData, RunsDataParams } from "../lib/apiRuns";
 import { RunSession } from "../types/runSession";
@@ -17,6 +17,7 @@ type RunSessionWithFlag = RunSession & { isFirst?: boolean };
 const runsCache = new Map<string, BaseRunSession[]>();
 const updatedSinceCache = new Map<string, string | undefined>();
 const totalCache = new Map<string, number>();
+const pagesLoadedCache = new Map<string, number>();
 
 type RunsLogUpdate = LogPushSessionUpdate & { type: "log-update" };
 type RunsCostUpdate = CostPushEntry & { type: "cost-update" };
@@ -156,6 +157,33 @@ export const useRunsData = (agentUsername: string, enabled: boolean = true) => {
     handleRunsEvent,
   );
 
+  // Load more (next page of historical data)
+  const [loadingMore, setLoadingMore] = useState(false);
+  const loadingMoreRef = useRef(false);
+
+  const loadMore = useCallback(async () => {
+    if (loadingMoreRef.current) return;
+    loadingMoreRef.current = true;
+    setLoadingMore(true);
+    try {
+      const nextPage = (pagesLoadedCache.get(agentUsername) || 1) + 1;
+      const result = await getRunsData({
+        agentUsername,
+        page: nextPage,
+        count: 50,
+      });
+      if (result.success && result.data) {
+        mergeRuns(result.data.runs, result.data.total);
+        pagesLoadedCache.set(agentUsername, nextPage);
+      }
+    } catch (err) {
+      console.error("Error loading more runs:", err);
+    } finally {
+      loadingMoreRef.current = false;
+      setLoadingMore(false);
+    }
+  }, [agentUsername, mergeRuns]);
+
   // Get current runs from cache, compute isOnline at read time
   const baseRuns = runsCache.get(agentUsername) || [];
   const runs: RunSessionWithFlag[] = baseRuns.map((run, index) => ({
@@ -164,6 +192,7 @@ export const useRunsData = (agentUsername: string, enabled: boolean = true) => {
     isFirst: index === 0,
   }));
   const total = totalCache.get(agentUsername) || 0;
+  const hasMore = runs.length < total;
 
   return {
     runs,
@@ -171,6 +200,9 @@ export const useRunsData = (agentUsername: string, enabled: boolean = true) => {
     isLoading: query.isLoading,
     error: query.error,
     isFetchedAfterMount: query.isFetchedAfterMount,
+    loadMore,
+    loadingMore,
+    hasMore,
   };
 };
 

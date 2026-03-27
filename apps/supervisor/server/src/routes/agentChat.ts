@@ -2,6 +2,8 @@ import { MultipartFile } from "@fastify/multipart";
 import {
   AgentUsernameParams,
   AgentUsernameParamsSchema,
+  ChatConversationsRequest,
+  ChatConversationsRequestSchema,
   ChatConversationsResponse,
   ChatConversationsResponseSchema,
   ChatMessagesRequest,
@@ -50,6 +52,7 @@ export default function agentChatRoutes(
   // GET /:username/chat — List conversations for agent
   fastify.get<{
     Params: AgentUsernameParams;
+    Querystring: ChatConversationsRequest;
     Reply: ChatConversationsResponse | ErrorResponse;
   }>(
     "/:username/chat",
@@ -58,6 +61,7 @@ export default function agentChatRoutes(
         description: "Get chat conversations for a specific agent",
         tags: ["Chat"],
         params: AgentUsernameParamsSchema,
+        querystring: ChatConversationsRequestSchema,
         response: {
           200: ChatConversationsResponseSchema,
           500: ErrorResponseSchema,
@@ -66,13 +70,14 @@ export default function agentChatRoutes(
     },
     async (request, reply) => {
       const { username } = request.params;
+      const { page, count } = request.query;
       const id = resolveAgentId(username);
 
       if (!id) {
         return notFound(reply, `Agent '${username}' not found`);
       }
 
-      const conversations = await getConversations(id);
+      const { conversations, total } = await getConversations(id, page, count);
 
       const canSend = hasPermission(
         request.supervisorUser,
@@ -82,6 +87,7 @@ export default function agentChatRoutes(
       return {
         success: true,
         conversations,
+        total,
         _actions: canSend ? [sendChatAction(username)] : undefined,
       };
     },
