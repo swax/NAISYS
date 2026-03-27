@@ -45,7 +45,7 @@ export const ConfigSummary: React.FC<{
                       to={`/agents/${leadAgent.name}`}
                       size="sm"
                     >
-                      {leadUsername}
+                      {leadAgent.title ? `${leadUsername} (${leadAgent.title})` : leadUsername}
                     </Anchor>
                   ) : (
                     leadUsername

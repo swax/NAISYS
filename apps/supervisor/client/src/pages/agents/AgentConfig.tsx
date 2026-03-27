@@ -136,7 +136,7 @@ export const AgentConfig: React.FC = () => {
 
   const leadAgentOptions = agents
     .filter((a) => a.name !== username && !a.archived)
-    .map((a) => ({ value: a.name, label: a.name }));
+    .map((a) => ({ value: a.name, label: a.title ? `${a.name} (${a.title})` : a.name }));
 
   const currentLeadValue = agentData?.leadUsername;
 
