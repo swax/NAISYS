@@ -29,13 +29,14 @@ export function createHubCostService(
   const suspendedByGlobal = new Set<number>();
   const suspendedByAgent = new Set<number>();
 
-  naisysServer.registerEvent(HubEvents.COST_WRITE, async (hostId, data) => {
+  naisysServer.registerEvent(HubEvents.COST_WRITE, async (hostId, data, ack) => {
     try {
       const parsed = CostWriteRequestSchema.parse(data);
 
-      // Collect unique user IDs from this batch
-      const batchUserIds = new Set(parsed.entries.map((e) => e.userId));
-      const costPushEntries: CostPushEntry[] = [];
+      // Roll up cost deltas by user/run/session for supervisor push,
+      // and per-user totals for budget_left decrement
+      const costPushMap = new Map<string, CostPushEntry>();
+      const userCostTotals = new Map<number, number>();
 
       for (const entry of parsed.entries) {
         await hubDb.costs.create({
@@ -66,31 +67,51 @@ export function createHubCostService(
           },
         });
 
-        costPushEntries.push({
-          userId: entry.userId,
-          runId: entry.runId,
-          sessionId: entry.sessionId,
-          costDelta: entry.cost,
-        });
+        const key = `${entry.userId}:${entry.runId}:${entry.sessionId}`;
+        const existing = costPushMap.get(key);
+        if (existing) {
+          existing.costDelta += entry.cost;
+        } else {
+          costPushMap.set(key, {
+            userId: entry.userId,
+            runId: entry.runId,
+            sessionId: entry.sessionId,
+            costDelta: entry.cost,
+          });
+        }
+
+        userCostTotals.set(
+          entry.userId,
+          (userCostTotals.get(entry.userId) ?? 0) + entry.cost,
+        );
       }
 
-      // Push cost deltas to supervisor connections
-      if (costPushEntries.length > 0) {
+      // Push rolled-up cost deltas to supervisor connections
+      if (costPushMap.size > 0) {
         naisysServer.broadcastToSupervisors(HubEvents.COST_PUSH, {
-          entries: costPushEntries,
+          entries: Array.from(costPushMap.values()),
         });
       }
 
       // Re-send cost_control to any suspended users still writing costs
-      for (const userId of batchUserIds) {
+      for (const userId of userCostTotals.keys()) {
         if (suspendedByGlobal.has(userId) || suspendedByAgent.has(userId)) {
           sendCostControl(userId, false, "Spend limit exceeded");
         }
       }
+
+      // Decrement budget_left and return updated values
+      const budgets = await Promise.all(
+        Array.from(userCostTotals.entries()).map(([userId, batchCost]) =>
+          decrementBudgetLeft(hubDb, userId, batchCost),
+        ),
+      );
+      ack({ budgets });
     } catch (error) {
       logService.error(
         `[Hub:Costs] Error processing cost_write from host ${hostId}: ${error}`,
       );
+      ack({ budgets: [] });
     }
   });
 
@@ -276,6 +297,13 @@ export function createHubCostService(
     const isOverLimit = periodCost >= spendLimit;
     const wasSuspended = suspendedByAgent.has(userId);
 
+    // Persist budget_left for supervisor display
+    const budgetLeft = Math.max(0, spendLimit - periodCost);
+    await hubDb.user_notifications.updateMany({
+      where: { user_id: userId },
+      data: { budget_left: budgetLeft },
+    });
+
     if (isOverLimit && !wasSuspended) {
       const reason = `Spend limit of $${spendLimit} reached (current: $${periodCost.toFixed(2)})`;
       logService.log(`[Hub:Costs] Suspending user ${userId}: ${reason}`);
@@ -291,6 +319,32 @@ export function createHubCostService(
       if (!suspendedByGlobal.has(userId)) {
         await setCostSuspendedReason(hubDb, userId, null);
       }
+    }
+  }
+
+  /** Decrement budget_left by the batch cost and return the updated value */
+  async function decrementBudgetLeft(
+    hubDb: PrismaClient,
+    userId: number,
+    batchCost: number,
+  ): Promise<{ userId: number; budgetLeft: number | null }> {
+    try {
+      const notification = await hubDb.user_notifications.findUnique({
+        where: { user_id: userId },
+        select: { budget_left: true },
+      });
+      if (notification?.budget_left == null) {
+        return { userId, budgetLeft: null };
+      }
+
+      const budgetLeft = Math.max(0, Number(notification.budget_left) - batchCost);
+      await hubDb.user_notifications.update({
+        where: { user_id: userId },
+        data: { budget_left: budgetLeft },
+      });
+      return { userId, budgetLeft };
+    } catch {
+      return { userId, budgetLeft: null };
     }
   }
 

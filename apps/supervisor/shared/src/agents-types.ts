@@ -27,6 +27,7 @@ export const AgentSchema = z.object({
   latestMailId: z.number(),
   enabled: z.boolean().optional(),
   archived: z.boolean().optional(),
+  budgetLeft: z.number().nullable().optional(),
   status: z
     .enum(["active", "available", "disabled", "offline", "suspended"])
     .optional(),

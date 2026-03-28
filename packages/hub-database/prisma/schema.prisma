@@ -209,6 +209,7 @@ model user_notifications {
   last_active           DateTime?
   cost_suspended_reason  String?
   spend_limit_reset_at   DateTime?
+  budget_left            Decimal?
   updated_at             DateTime  @updatedAt
   users                 users     @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   host                  hosts?    @relation(fields: [latest_host_id], references: [id])

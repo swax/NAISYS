@@ -8,6 +8,7 @@ import { createGlobalConfig } from "./globalConfig.js";
 import { createHubClient, HubClient } from "./hub/hubClient.js";
 import { createHubClientConfig } from "./hub/hubClientConfig.js";
 import { createHubClientLog } from "./hub/hubClientLog.js";
+import { createHubCostBuffer, HubCostBuffer } from "./hub/hubCostBuffer.js";
 import { createHeartbeatService } from "./services/heartbeatService.js";
 import { createHostService } from "./services/hostService.js";
 import { createModelService } from "./services/modelService.js";
@@ -61,6 +62,7 @@ if (integratedHub) {
 const promptNotification = createPromptNotificationService();
 
 let hubClient: HubClient | undefined;
+let hubCostBuffer: HubCostBuffer | undefined;
 if (hubUrl) {
   const hubClientConfig = createHubClientConfig(hubUrl);
   const hubClientLog = createHubClientLog();
@@ -69,6 +71,7 @@ if (hubUrl) {
     hubClientLog,
     promptNotification,
   );
+  hubCostBuffer = createHubCostBuffer(hubClient);
 }
 
 const globalConfig = createGlobalConfig(hubClient, supervisorPort);
@@ -98,6 +101,7 @@ console.log(`[NAISYS] Started`);
 const agentManager = new AgentManager(
   globalConfig,
   hubClient,
+  hubCostBuffer,
   hostService,
   userService,
   modelService,
@@ -118,6 +122,7 @@ for (const userId of startupUserIds) {
 
 await agentManager.waitForAllAgentsToComplete();
 
+hubCostBuffer?.cleanup();
 heartbeatService.cleanup();
 
 console.log(`[NAISYS] Exited`);

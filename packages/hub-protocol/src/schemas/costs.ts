@@ -35,6 +35,19 @@ export const CostWriteRequestSchema = z.object({
 });
 export type CostWriteRequest = z.infer<typeof CostWriteRequestSchema>;
 
+/** Per-user budget entry in the COST_WRITE response */
+export const CostWriteBudgetEntrySchema = z.object({
+  userId: z.number(),
+  /** Remaining budget for this agent, or null if no per-agent limit */
+  budgetLeft: z.number().nullable(),
+});
+
+/** Response to COST_WRITE — returns per-agent budget info for each user in the batch */
+export const CostWriteResponseSchema = z.object({
+  budgets: z.array(CostWriteBudgetEntrySchema),
+});
+export type CostWriteResponse = z.infer<typeof CostWriteResponseSchema>;
+
 /** Cost delta pushed from hub to supervisor after DB write */
 export const CostPushEntrySchema = z.object({
   userId: z.number(),

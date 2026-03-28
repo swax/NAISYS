@@ -15,6 +15,7 @@ import { createSubagentService } from "../features/subagent.js";
 import { createWorkspacesFeature } from "../features/workspaces.js";
 import { GlobalConfig } from "../globalConfig.js";
 import { HubClient } from "../hub/hubClient.js";
+import { HubCostBuffer } from "../hub/hubCostBuffer.js";
 import { createCommandTools } from "../llm/commandTool.js";
 import { createContextManager } from "../llm/contextManager.js";
 import { createCostDisplayService } from "../llm/costDisplayService.js";
@@ -43,6 +44,7 @@ export async function createAgentRuntime(
   localUserId: number,
   globalConfig: GlobalConfig,
   hubClient: HubClient | undefined,
+  hubCostBuffer: HubCostBuffer | undefined,
   hostService: HostService,
   userService: UserService,
   modelService: ModelService,
@@ -99,6 +101,7 @@ export async function createAgentRuntime(
     modelService,
     runService,
     hubClient,
+    hubCostBuffer,
     localUserId,
     promptNotification,
   );
@@ -188,6 +191,7 @@ export async function createAgentRuntime(
     agentConfig,
     shellWrapper,
     contextManager,
+    costTracker,
     output,
     inputMode,
     platformConfig,

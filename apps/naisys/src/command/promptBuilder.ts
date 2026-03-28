@@ -3,6 +3,7 @@ import chalk from "chalk";
 import { AgentConfig } from "../agent/agentConfig.js";
 import { GlobalConfig } from "../globalConfig.js";
 import { ContextManager } from "../llm/contextManager.js";
+import { CostTracker } from "../llm/costTracker.js";
 import { isElevated, PlatformConfig } from "../services/shellPlatform.js";
 import { InputModeService } from "../utils/inputMode.js";
 import { OutputService } from "../utils/output.js";
@@ -15,6 +16,7 @@ export function createPromptBuilder(
   { agentConfig }: AgentConfig,
   shellWrapper: ShellWrapper,
   contextManager: ContextManager,
+  costTracker: CostTracker,
   output: OutputService,
   inputMode: InputModeService,
   platformConfig: PlatformConfig,
@@ -51,7 +53,11 @@ export function createPromptBuilder(
         hour12: false,
       });
 
-    return `[${timestamp}] ${await getUserHostPathPrompt()}${tokenSuffix}${pause}${promptSuffix} `;
+    const budgetLeft = costTracker.getBudgetLeft();
+    const budgetSuffix =
+      budgetLeft !== null ? ` [Budget: $${budgetLeft.toFixed(2)}]` : "";
+
+    return `[${timestamp}] ${await getUserHostPathPrompt()}${tokenSuffix}${budgetSuffix}${pause}${promptSuffix} `;
   }
 
   async function getUserHostPathPrompt() {
