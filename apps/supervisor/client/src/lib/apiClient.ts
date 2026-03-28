@@ -184,6 +184,7 @@ export const apiEndpoints = {
   agentArchive: (username: string) => `/agents/${username}/archive`,
   agentUnarchive: (username: string) => `/agents/${username}/unarchive`,
   agentLead: (username: string) => `/agents/${username}/lead`,
+  agentResetSpend: (username: string) => `/agents/${username}/reset-spend`,
   agentDelete: (username: string) => `/agents/${username}`,
   hostDetail: (hostname: string) => `/hosts/${hostname}`,
   hostUpdate: (hostname: string) => `/hosts/${hostname}`,

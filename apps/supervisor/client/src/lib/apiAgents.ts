@@ -189,6 +189,15 @@ export const unarchiveAgent = async (
   );
 };
 
+export const resetAgentSpend = async (
+  username: string,
+): Promise<AgentActionResult> => {
+  return await api.post<{}, AgentActionResult>(
+    apiEndpoints.agentResetSpend(username),
+    {},
+  );
+};
+
 export const setAgentLead = async (
   username: string,
   leadAgentUsername: string | null,

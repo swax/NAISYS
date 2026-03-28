@@ -44,6 +44,7 @@ import {
   enableAgent,
   getAgentDetail,
   getConfigRevisions,
+  resetAgentSpend,
   startAgent,
   stopAgent,
   unarchiveAgent,
@@ -75,6 +76,11 @@ export const AgentDetail: React.FC = () => {
   const [toggling, setToggling] = useState(false);
   const [archiving, setArchiving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [resetting, setResetting] = useState(false);
+  const [currentSpend, setCurrentSpend] = useState<number | undefined>();
+  const [spendLimitResetAt, setSpendLimitResetAt] = useState<
+    string | undefined
+  >();
   const [revisions, setRevisions] = useState<ConfigRevision[]>([]);
   const [selectedRevision, setSelectedRevision] =
     useState<ConfigRevision | null>(null);
@@ -87,6 +93,8 @@ export const AgentDetail: React.FC = () => {
       setConfig(data.config);
       setAssignedHosts(data.assignedHosts);
       setCostSuspendedReason(data.costSuspendedReason);
+      setCurrentSpend(data.currentSpend);
+      setSpendLimitResetAt(data.spendLimitResetAt);
       setActions(data._actions);
     } catch (err) {
       console.error("Error fetching agent detail:", err);
@@ -345,6 +353,41 @@ export const AgentDetail: React.FC = () => {
       });
     } finally {
       setDeleting(false);
+    }
+  };
+
+  const handleResetSpend = async () => {
+    if (!username) return;
+    const confirmed = window.confirm(
+      `Reset the spend counter for "${agentData?.name}"? This will not delete any cost data.`,
+    );
+    if (!confirmed) return;
+
+    setResetting(true);
+    try {
+      const result = await resetAgentSpend(username);
+      if (result.success) {
+        notifications.show({
+          title: "Spend Reset",
+          message: result.message,
+          color: "green",
+        });
+        await fetchDetail();
+      } else {
+        notifications.show({
+          title: "Reset Failed",
+          message: result.message,
+          color: "red",
+        });
+      }
+    } catch (err) {
+      notifications.show({
+        title: "Reset Failed",
+        message: err instanceof Error ? err.message : "Unknown error",
+        color: "red",
+      });
+    } finally {
+      setResetting(false);
     }
   };
 
@@ -624,6 +667,11 @@ export const AgentDetail: React.FC = () => {
           assignedHosts={assignedHosts}
           hosts={hosts}
           agents={agents}
+          currentSpend={currentSpend}
+          spendLimitResetAt={spendLimitResetAt}
+          canResetSpend={!!hasAction(actions, "reset-spend")}
+          resettingSpend={resetting}
+          onResetSpend={handleResetSpend}
         />
       )}
 

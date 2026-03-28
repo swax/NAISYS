@@ -78,6 +78,8 @@ export const AgentDetailResponseSchema = z.object({
     .enum(["active", "available", "disabled", "offline", "suspended"])
     .optional(),
   costSuspendedReason: z.string().optional(),
+  currentSpend: z.number().optional(),
+  spendLimitResetAt: z.string().optional(),
   config: AgentConfigFileSchema,
   assignedHosts: z
     .array(z.object({ id: z.number(), name: z.string() }))

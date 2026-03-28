@@ -130,7 +130,13 @@ export function createHubCostService(
     // 2. Per-agent spend limit checks — costs for individual agents
     const users = await hubDb.users.findMany({
       where: { id: { in: Array.from(usersToCheck) } },
-      select: { id: true, config: true },
+      select: {
+        id: true,
+        config: true,
+        user_notifications: {
+          select: { spend_limit_reset_at: true },
+        },
+      },
     });
 
     for (const user of users) {
@@ -146,6 +152,7 @@ export function createHubCostService(
           user.id,
           config.spendLimitDollars,
           config.spendLimitHours,
+          user.user_notifications?.spend_limit_reset_at ?? undefined,
         );
       } catch (userError) {
         logService.error(
@@ -164,15 +171,26 @@ export function createHubCostService(
     hubDb: PrismaClient,
     spendLimitHours: number | undefined,
     userIdFilter?: number,
+    spendLimitResetAt?: Date,
   ): Promise<number> {
     const where: Record<string, unknown> = {};
     if (userIdFilter) {
       where.user_id = userIdFilter;
     }
 
+    let effectiveStart: Date | undefined;
     if (spendLimitHours !== undefined) {
       const { periodStart } = calculatePeriodBoundaries(spendLimitHours);
-      where.created_at = { gte: periodStart };
+      effectiveStart = periodStart;
+    }
+    if (
+      spendLimitResetAt &&
+      (!effectiveStart || spendLimitResetAt > effectiveStart)
+    ) {
+      effectiveStart = spendLimitResetAt;
+    }
+    if (effectiveStart) {
+      where.created_at = { gte: effectiveStart };
     }
 
     const result = await hubDb.costs.aggregate({
@@ -247,8 +265,14 @@ export function createHubCostService(
     userId: number,
     spendLimit: number,
     spendLimitHours: number | undefined,
+    spendLimitResetAt?: Date,
   ) {
-    const periodCost = await queryCostSum(hubDb, spendLimitHours, userId);
+    const periodCost = await queryCostSum(
+      hubDb,
+      spendLimitHours,
+      userId,
+      spendLimitResetAt,
+    );
     const isOverLimit = periodCost >= spendLimit;
     const wasSuspended = suspendedByAgent.has(userId);
 
