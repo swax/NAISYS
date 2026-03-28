@@ -86,6 +86,19 @@ export function createHubSendMailService(
         })),
       });
 
+      // Add sender as 'from' recipient for archive tracking (pre-read since they wrote it)
+      if (!params.recipientUserIds.includes(params.fromUserId)) {
+        await hubTx.mail_recipients.create({
+          data: {
+            message_id: msg.id,
+            user_id: params.fromUserId,
+            type: "from",
+            read_at: now,
+            created_at: now,
+          },
+        });
+      }
+
       const notificationField =
         params.kind === "chat" ? "latest_chat_id" : "latest_mail_id";
       await hubTx.user_notifications.updateMany({

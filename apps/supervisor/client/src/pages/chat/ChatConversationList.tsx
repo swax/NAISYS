@@ -6,7 +6,7 @@ import {
   Stack,
   Text,
 } from "@mantine/core";
-import { IconMessagePlus } from "@tabler/icons-react";
+import { IconArchive, IconMessagePlus } from "@tabler/icons-react";
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 
@@ -26,6 +26,8 @@ interface ChatConversationListProps {
   hasMore: boolean;
   loadingMore: boolean;
   onLoadMore: () => void;
+  canArchive: boolean;
+  onArchiveAll: () => void;
 }
 
 export const ChatConversationList: React.FC<ChatConversationListProps> = ({
@@ -41,6 +43,8 @@ export const ChatConversationList: React.FC<ChatConversationListProps> = ({
   hasMore,
   loadingMore,
   onLoadMore,
+  canArchive,
+  onArchiveAll,
 }) => {
   const [newChatOpened, setNewChatOpened] = useState(false);
 
@@ -98,17 +102,40 @@ export const ChatConversationList: React.FC<ChatConversationListProps> = ({
                 to={`/agents/${agentName}/chat/${otherParticipants}`}
                 onClick={onNavLinkClick}
                 label={
-                  conv.participantNames.length === 1
-                    ? `${conv.participantNames[0]} (${conv.participantTitles[0]})`
-                    : conv.participantNames.join(", ")
+                  <Group gap={6} wrap="nowrap">
+                    {conv.isArchived && (
+                      <IconArchive
+                        size={14}
+                        style={{ opacity: 0.5, flexShrink: 0 }}
+                      />
+                    )}
+                    <Text
+                      size="sm"
+                      lineClamp={1}
+                      style={conv.isArchived ? { opacity: 0.5 } : undefined}
+                    >
+                      {conv.participantNames.length === 1
+                        ? `${conv.participantNames[0]} (${conv.participantTitles[0]})`
+                        : conv.participantNames.join(", ")}
+                    </Text>
+                  </Group>
                 }
                 description={
-                  <Text size="xs" c="dimmed" lineClamp={1}>
+                  <Text
+                    size="xs"
+                    c="dimmed"
+                    lineClamp={1}
+                    style={conv.isArchived ? { opacity: 0.5 } : undefined}
+                  >
                     {conv.lastMessageFrom}: {conv.lastMessage}
                   </Text>
                 }
                 rightSection={
-                  <Text size="xs" c="dimmed">
+                  <Text
+                    size="xs"
+                    c="dimmed"
+                    style={conv.isArchived ? { opacity: 0.5 } : undefined}
+                  >
                     {formatTime(conv.lastMessageAt)}
                   </Text>
                 }
@@ -130,6 +157,25 @@ export const ChatConversationList: React.FC<ChatConversationListProps> = ({
           p="xs"
           style={{ borderTop: "1px solid var(--mantine-color-dark-6)" }}
         >
+          {canArchive && (
+            <Button
+              variant="subtle"
+              size="compact-xs"
+              color="gray"
+              leftSection={<IconArchive size={14} />}
+              onClick={() => {
+                if (
+                  window.confirm(
+                    "Archive all chat messages? They will still be visible in supervisor, but hidden from the agent.",
+                  )
+                ) {
+                  onArchiveAll();
+                }
+              }}
+            >
+              Archive All
+            </Button>
+          )}
           <Text c="dimmed" ta="center" size="xs">
             Showing {conversations.length} / {totalConversations} conversations
           </Text>

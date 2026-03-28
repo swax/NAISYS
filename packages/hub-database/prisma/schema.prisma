@@ -41,6 +41,7 @@ enum RecipientType {
   to
   cc
   bcc
+  from
 }
 
 enum AttachmentPurpose {

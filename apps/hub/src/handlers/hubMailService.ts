@@ -39,10 +39,11 @@ export function createHubMailService(
 
       const activeUserIds = heartbeatService.getActiveUserIds();
 
-      // Find distinct users with unread mail from real senders
+      // Find distinct users with unread mail (exclude 'from' type - senders pre-mark as read)
       const unreadRecipients = await hubDb.mail_recipients.findMany({
         where: {
           read_at: null,
+          type: { not: "from" },
           user: { enabled: true, archived: false },
         },
         select: {
@@ -177,7 +178,7 @@ export function createHubMailService(
 
       const messageData = messages.map((m) => {
         const myRecipient = m.recipients.find(
-          (r) => r.user_id === parsed.userId,
+          (r) => r.user_id === parsed.userId && r.type !== "from",
         );
         const isUnread =
           m.from_user_id !== parsed.userId && !myRecipient?.read_at;
@@ -186,7 +187,9 @@ export function createHubMailService(
           id: m.id,
           fromUsername: m.from_user.username,
           fromTitle: m.from_user.title,
-          recipientUsernames: m.recipients.map((r) => r.user.username),
+          recipientUsernames: m.recipients
+            .filter((r) => r.type !== "from")
+            .map((r) => r.user.username),
           subject: m.subject,
           createdAt: m.created_at.toISOString(),
           isUnread,
@@ -247,7 +250,9 @@ export function createHubMailService(
           subject: message.subject,
           fromUsername: message.from_user.username,
           fromTitle: message.from_user.title,
-          recipientUsernames: message.recipients.map((r) => r.user.username),
+          recipientUsernames: message.recipients
+            .filter((r) => r.type !== "from")
+            .map((r) => r.user.username),
           createdAt: message.created_at.toISOString(),
           body: message.body,
           attachments: message.mail_attachments.length
@@ -459,7 +464,9 @@ export function createHubMailService(
             subject: m.subject,
             fromUsername: m.from_user.username,
             fromTitle: m.from_user.title,
-            recipientUsernames: m.recipients.map((r) => r.user.username),
+            recipientUsernames: m.recipients
+              .filter((r) => r.type !== "from")
+              .map((r) => r.user.username),
             createdAt: m.created_at.toISOString(),
             body: m.body,
             attachments: m.mail_attachments.length

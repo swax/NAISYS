@@ -211,6 +211,15 @@ export const useMailData = (agentUsername: string, enabled: boolean = true) => {
     }
   }, [agentUsername, mergeMail]);
 
+  const refresh = useCallback(async () => {
+    mailCache.delete(agentUsername);
+    updatedSinceCache.delete(agentUsername);
+    totalCache.delete(agentUsername);
+    pagesLoadedCache.delete(agentUsername);
+    setCacheVersion((v) => v + 1);
+    await query.refetch();
+  }, [agentUsername, query]);
+
   const mail = mailCache.get(agentUsername) || [];
   const total = totalCache.get(agentUsername) || 0;
   const hasMore = mail.length < total;
@@ -224,5 +233,6 @@ export const useMailData = (agentUsername: string, enabled: boolean = true) => {
     loadMore,
     loadingMore,
     hasMore,
+    refresh,
   };
 };

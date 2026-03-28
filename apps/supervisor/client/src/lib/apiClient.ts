@@ -8,6 +8,8 @@ import type {
   AgentListResponse,
   AgentStartResult,
   AgentStopResult,
+  ArchiveChatResponse,
+  ArchiveMailResponse,
   AuthUser,
   ChatConversation,
   ChatConversationsResponse,
@@ -60,6 +62,8 @@ export type {
   AgentListResponse,
   AgentStartResult,
   AgentStopResult,
+  ArchiveChatResponse,
+  ArchiveMailResponse,
   AuthUser,
   ChatConversation,
   ChatConversationsResponse,
@@ -169,6 +173,8 @@ export const apiEndpoints = {
   agentChat: (username: string) => `/agents/${username}/chat`,
   agentChatMessages: (username: string, participants: string) =>
     `/agents/${username}/chat/${participants}`,
+  agentChatArchive: (username: string) => `/agents/${username}/chat/archive`,
+  agentMailArchive: (username: string) => `/agents/${username}/mail/archive`,
   agentContextLog: (username: string, runId: number, sessionId: number) =>
     `/agents/${username}/runs/${runId}/sessions/${sessionId}/logs`,
   agentStart: (username: string) => `/agents/${username}/start`,

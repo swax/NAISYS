@@ -35,6 +35,10 @@ export async function getConversations(
       body: true,
       created_at: true,
       from_user: { select: { username: true, title: true } },
+      recipients: {
+        where: { user_id: userId },
+        select: { archived_at: true },
+      },
     },
   });
 
@@ -58,17 +62,22 @@ export async function getConversations(
       lastMessage: string;
       lastMessageAt: Date;
       lastMessageFrom: string;
+      recipientRecords: Array<{ archived_at: Date | null }>;
     }
   >();
 
   for (const msg of messages) {
     const key = msg.participants;
-    if (!conversationMap.has(key)) {
+    const existing = conversationMap.get(key);
+    if (!existing) {
       conversationMap.set(key, {
         lastMessage: msg.body,
         lastMessageAt: msg.created_at,
         lastMessageFrom: msg.from_user.username,
+        recipientRecords: [...msg.recipients],
       });
+    } else {
+      existing.recipientRecords.push(...msg.recipients);
     }
   }
 
@@ -82,6 +91,11 @@ export async function getConversations(
       ? names.filter((n) => n !== currentUsername)
       : names;
 
+    // Conversation is archived if there are recipient records and all are archived
+    const isArchived =
+      conv.recipientRecords.length > 0 &&
+      conv.recipientRecords.every((r) => r.archived_at !== null);
+
     conversations.push({
       participants,
       participantNames,
@@ -89,6 +103,7 @@ export async function getConversations(
       lastMessage: conv.lastMessage,
       lastMessageAt: conv.lastMessageAt.toISOString(),
       lastMessageFrom: conv.lastMessageFrom,
+      isArchived,
     });
   }
 
@@ -144,7 +159,7 @@ export async function getMessages(
       created_at: true,
       from_user: { select: { username: true, title: true } },
       recipients: {
-        select: { user_id: true, read_at: true },
+        select: { user_id: true, read_at: true, type: true },
       },
       mail_attachments: {
         include: {
@@ -158,7 +173,7 @@ export async function getMessages(
 
   const messages: ChatMessage[] = dbMessages.map((msg) => {
     const readByIds = msg.recipients
-      .filter((r) => r.read_at !== null)
+      .filter((r) => r.read_at !== null && r.type !== "from")
       .map((r) => r.user_id);
 
     return {
@@ -185,6 +200,27 @@ export async function getMessages(
     total,
     timestamp: new Date().toISOString(),
   };
+}
+
+/**
+ * Archive all chat messages where the user is a recipient
+ */
+export async function archiveAllChatMessages(
+  userId: number,
+): Promise<number> {
+  const result = await hubDb.mail_recipients.updateMany({
+    where: {
+      user_id: userId,
+      archived_at: null,
+      message: {
+        kind: "chat",
+      },
+    },
+    data: {
+      archived_at: new Date(),
+    },
+  });
+  return result.count;
 }
 
 /**

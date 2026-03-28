@@ -2,6 +2,8 @@ import { MultipartFile } from "@fastify/multipart";
 import {
   AgentUsernameParams,
   AgentUsernameParamsSchema,
+  ArchiveChatResponse,
+  ArchiveChatResponseSchema,
   ChatConversationsRequest,
   ChatConversationsRequestSchema,
   ChatConversationsResponse,
@@ -24,6 +26,7 @@ import { API_PREFIX } from "../hateoas.js";
 import { resolveAgentId } from "../services/agentService.js";
 import { uploadToHub } from "../services/attachmentProxyService.js";
 import {
+  archiveAllChatMessages,
   getConversations,
   getMessages,
   sendChatMessage,
@@ -42,6 +45,15 @@ function sendChatAction(username: string) {
       description: "Send as multipart to include file attachments",
       fileFields: ["attachments"],
     },
+  };
+}
+
+function archiveChatAction(username: string) {
+  return {
+    rel: "archive",
+    href: `${API_PREFIX}/agents/${username}/chat/archive`,
+    method: "POST" as const,
+    title: "Archive All Chat Messages",
   };
 }
 
@@ -88,7 +100,9 @@ export default function agentChatRoutes(
         success: true,
         conversations,
         total,
-        _actions: canSend ? [sendChatAction(username)] : undefined,
+        _actions: canSend
+          ? [sendChatAction(username), archiveChatAction(username)]
+          : undefined,
       };
     },
   );
@@ -129,6 +143,38 @@ export default function agentChatRoutes(
         timestamp: data.timestamp,
         _actions: canSend ? [sendChatAction(username)] : undefined,
       };
+    },
+  );
+
+  // POST /:username/chat/archive — Archive all chat messages
+  fastify.post<{
+    Params: AgentUsernameParams;
+    Reply: ArchiveChatResponse | ErrorResponse;
+  }>(
+    "/:username/chat/archive",
+    {
+      preHandler: [requirePermission("agent_communication")],
+      schema: {
+        description: "Archive all chat messages for an agent",
+        tags: ["Chat"],
+        params: AgentUsernameParamsSchema,
+        response: {
+          200: ArchiveChatResponseSchema,
+          500: ErrorResponseSchema,
+        },
+        security: [{ cookieAuth: [] }],
+      },
+    },
+    async (request, reply) => {
+      const { username } = request.params;
+      const id = resolveAgentId(username);
+
+      if (!id) {
+        return notFound(reply, `Agent '${username}' not found`);
+      }
+
+      const archivedCount = await archiveAllChatMessages(id);
+      return { success: true, archivedCount };
     },
   );
 

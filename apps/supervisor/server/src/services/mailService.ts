@@ -66,6 +66,7 @@ export async function getMailDataByUserId(
           user_id: true,
           type: true,
           read_at: true,
+          archived_at: true,
           user: {
             select: { username: true, title: true },
           },
@@ -95,6 +96,7 @@ export async function getMailDataByUserId(
       title: r.user.title,
       type: r.type,
       readAt: r.read_at?.toISOString() ?? null,
+      archivedAt: r.archived_at?.toISOString() ?? null,
     })),
     attachments:
       msg.mail_attachments.length > 0
@@ -111,6 +113,27 @@ export async function getMailDataByUserId(
     timestamp: new Date().toISOString(),
     total,
   };
+}
+
+/**
+ * Archive all mail messages where the user is a recipient
+ */
+export async function archiveAllMailMessages(
+  userId: number,
+): Promise<number> {
+  const result = await hubDb.mail_recipients.updateMany({
+    where: {
+      user_id: userId,
+      archived_at: null,
+      message: {
+        kind: "mail",
+      },
+    },
+    data: {
+      archived_at: new Date(),
+    },
+  });
+  return result.count;
 }
 
 /**

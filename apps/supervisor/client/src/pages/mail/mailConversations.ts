@@ -37,6 +37,7 @@ export interface MailConversation {
   lastMessageFrom: string;
   maxMailId: number;
   hasUnread: boolean;
+  isArchived: boolean;
 }
 
 /**
@@ -49,6 +50,7 @@ export function groupIntoConversations(
   mail: MailMessage[],
   lastReadMailId: number | null,
   groupBySubject: boolean,
+  currentAgentName?: string,
 ): MailConversation[] {
   const groups = new Map<string, MailMessage[]>();
 
@@ -91,6 +93,17 @@ export function groupIntoConversations(
     const hasUnread =
       lastReadMailId !== null ? maxMailId > lastReadMailId : false;
 
+    // Check if all messages where the current agent is a recipient are archived
+    let isArchived = false;
+    if (currentAgentName) {
+      const recipientRecords = sorted.flatMap((msg) =>
+        msg.recipients.filter((r) => r.username === currentAgentName),
+      );
+      isArchived =
+        recipientRecords.length > 0 &&
+        recipientRecords.every((r) => r.archivedAt != null);
+    }
+
     const participantNames = [...titleMap.keys()];
     conversations.push({
       key,
@@ -103,6 +116,7 @@ export function groupIntoConversations(
       lastMessageFrom: latest.fromUsername,
       maxMailId,
       hasUnread,
+      isArchived,
     });
   }
 

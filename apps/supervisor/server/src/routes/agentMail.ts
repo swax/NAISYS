@@ -2,6 +2,9 @@ import { MultipartFile } from "@fastify/multipart";
 import {
   AgentUsernameParams,
   AgentUsernameParamsSchema,
+  ArchiveMailResponse,
+  ArchiveMailResponseSchema,
+  ErrorResponse,
   ErrorResponseSchema,
   MailDataRequest,
   MailDataRequestSchema,
@@ -17,7 +20,11 @@ import { hasPermission, requirePermission } from "../auth-middleware.js";
 import { badRequest, notFound } from "../error-helpers.js";
 import { API_PREFIX } from "../hateoas.js";
 import { resolveAgentId } from "../services/agentService.js";
-import { getMailDataByUserId, sendMessage } from "../services/mailService.js";
+import {
+  archiveAllMailMessages,
+  getMailDataByUserId,
+  sendMessage,
+} from "../services/mailService.js";
 
 export default function agentMailRoutes(
   fastify: FastifyInstance,
@@ -92,9 +99,47 @@ export default function agentMailRoutes(
                   fileFields: ["attachments"],
                 },
               },
+              {
+                rel: "archive",
+                href: `${API_PREFIX}/agents/${username}/mail/archive`,
+                method: "POST" as const,
+                title: "Archive All Mail Messages",
+              },
             ]
           : undefined,
       };
+    },
+  );
+
+  // POST /:username/mail/archive — Archive all mail messages
+  fastify.post<{
+    Params: AgentUsernameParams;
+    Reply: ArchiveMailResponse | ErrorResponse;
+  }>(
+    "/:username/mail/archive",
+    {
+      preHandler: [requirePermission("agent_communication")],
+      schema: {
+        description: "Archive all mail messages for an agent",
+        tags: ["Mail"],
+        params: AgentUsernameParamsSchema,
+        response: {
+          200: ArchiveMailResponseSchema,
+          500: ErrorResponseSchema,
+        },
+        security: [{ cookieAuth: [] }],
+      },
+    },
+    async (request, reply) => {
+      const { username } = request.params;
+      const id = resolveAgentId(username);
+
+      if (!id) {
+        return notFound(reply, `Agent '${username}' not found`);
+      }
+
+      const archivedCount = await archiveAllMailMessages(id);
+      return { success: true, archivedCount };
     },
   );
 
