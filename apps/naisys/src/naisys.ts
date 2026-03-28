@@ -9,6 +9,7 @@ import { createHubClient, HubClient } from "./hub/hubClient.js";
 import { createHubClientConfig } from "./hub/hubClientConfig.js";
 import { createHubClientLog } from "./hub/hubClientLog.js";
 import { createHubCostBuffer, HubCostBuffer } from "./hub/hubCostBuffer.js";
+import { createHubLogBuffer, HubLogBuffer } from "./hub/hubLogBuffer.js";
 import { createHeartbeatService } from "./services/heartbeatService.js";
 import { createHostService } from "./services/hostService.js";
 import { createModelService } from "./services/modelService.js";
@@ -63,6 +64,7 @@ const promptNotification = createPromptNotificationService();
 
 let hubClient: HubClient | undefined;
 let hubCostBuffer: HubCostBuffer | undefined;
+let hubLogBuffer: HubLogBuffer | undefined;
 if (hubUrl) {
   const hubClientConfig = createHubClientConfig(hubUrl);
   const hubClientLog = createHubClientLog();
@@ -72,6 +74,7 @@ if (hubUrl) {
     promptNotification,
   );
   hubCostBuffer = createHubCostBuffer(hubClient);
+  hubLogBuffer = createHubLogBuffer(hubClient);
 }
 
 const globalConfig = createGlobalConfig(hubClient, supervisorPort);
@@ -102,6 +105,7 @@ const agentManager = new AgentManager(
   globalConfig,
   hubClient,
   hubCostBuffer,
+  hubLogBuffer,
   hostService,
   userService,
   modelService,
@@ -122,6 +126,7 @@ for (const userId of startupUserIds) {
 
 await agentManager.waitForAllAgentsToComplete();
 
+hubLogBuffer?.cleanup();
 hubCostBuffer?.cleanup();
 heartbeatService.cleanup();
 
