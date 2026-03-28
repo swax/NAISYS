@@ -43,6 +43,7 @@ type AgentCtx = {
   active: boolean;
   archived: boolean;
   enabled: boolean;
+  hasSpendLimit: boolean;
 };
 
 function agentActions(
@@ -51,6 +52,7 @@ function agentActions(
   enabled: boolean,
   archived: boolean,
   agentId?: number,
+  hasSpendLimit?: boolean,
 ): HateoasAction[] {
   const active = agentId ? isAgentActive(agentId) : false;
   const href = `${API_PREFIX}/agents/${username}`;
@@ -143,9 +145,17 @@ function agentActions(
         permission: "manage_agents",
         visibleWhen: (ctx) => !ctx.archived,
       },
+      {
+        rel: "reset-spend",
+        path: "/reset-spend",
+        method: "POST",
+        title: "Reset Spend",
+        permission: "manage_agents",
+        visibleWhen: (ctx) => !ctx.archived && ctx.hasSpendLimit,
+      },
     ],
     href,
-    { user, active, archived, enabled },
+    { user, active, archived, enabled, hasSpendLimit: hasSpendLimit ?? false },
   );
 }
 
@@ -328,6 +338,7 @@ export default function agentsRoutes(
           agent.enabled ?? false,
           agent.archived ?? false,
           id,
+          agent.config?.spendLimitDollars != null,
         ),
       };
     },

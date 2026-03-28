@@ -1,4 +1,8 @@
-import { AgentConfigFile, AgentConfigFileSchema } from "@naisys/common";
+import {
+  AgentConfigFile,
+  AgentConfigFileSchema,
+  calculatePeriodBoundaries,
+} from "@naisys/common";
 import { Agent, AgentDetailResponse } from "@naisys-supervisor/shared";
 
 import { hubDb } from "../database/hubDb.js";
@@ -155,6 +159,7 @@ export async function getAgent(
           latest_mail_id: true,
           last_active: true,
           cost_suspended_reason: true,
+          spend_limit_reset_at: true,
           updated_at: true,
           host: { select: { name: true } },
         },
@@ -173,6 +178,14 @@ export async function getAgent(
     },
   ]);
 
+  const config = parseConfig(user.config)!;
+  const currentSpend = await getAgentCurrentSpend(
+    user.id,
+    config.spendLimitDollars,
+    config.spendLimitHours,
+    user.user_notifications?.spend_limit_reset_at ?? null,
+  );
+
   return {
     id: user.id,
     name: user.username,
@@ -186,7 +199,10 @@ export async function getAgent(
     archived: user.archived,
     costSuspendedReason:
       user.user_notifications?.cost_suspended_reason ?? undefined,
-    config: parseConfig(user.config)!,
+    currentSpend,
+    spendLimitResetAt:
+      user.user_notifications?.spend_limit_reset_at?.toISOString() ?? undefined,
+    config,
     assignedHosts: user.user_hosts.map((uh) => ({
       id: uh.host.id,
       name: uh.host.name,
@@ -252,6 +268,48 @@ export async function updateLeadAgent(
   await hubDb.users.update({
     where: { id },
     data: { lead_user_id: leadUserId },
+  });
+}
+
+async function getAgentCurrentSpend(
+  userId: number,
+  spendLimitDollars: number | undefined,
+  spendLimitHours: number | undefined,
+  spendLimitResetAt: Date | null,
+): Promise<number | undefined> {
+  if (spendLimitDollars === undefined) return undefined;
+
+  const where: Record<string, unknown> = { user_id: userId };
+
+  let effectiveStart: Date | undefined;
+  if (spendLimitHours !== undefined) {
+    const { periodStart } = calculatePeriodBoundaries(spendLimitHours);
+    effectiveStart = periodStart;
+  }
+  if (
+    spendLimitResetAt &&
+    (!effectiveStart || spendLimitResetAt > effectiveStart)
+  ) {
+    effectiveStart = spendLimitResetAt;
+  }
+  if (effectiveStart) {
+    where.created_at = { gte: effectiveStart };
+  }
+
+  const result = await hubDb.costs.aggregate({
+    where,
+    _sum: { cost: true },
+  });
+  return Math.round((result._sum.cost ?? 0) * 100) / 100;
+}
+
+export async function resetAgentSpend(id: number): Promise<void> {
+  await hubDb.user_notifications.updateMany({
+    where: { user_id: id },
+    data: {
+      spend_limit_reset_at: new Date(),
+      cost_suspended_reason: null,
+    },
   });
 }
 

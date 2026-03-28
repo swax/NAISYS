@@ -1,4 +1,15 @@
-import { Anchor, Badge, Code, Group, Stack, Table, Text } from "@mantine/core";
+import {
+  ActionIcon,
+  Anchor,
+  Badge,
+  Code,
+  Group,
+  Stack,
+  Table,
+  Text,
+  Tooltip,
+} from "@mantine/core";
+import { IconRefresh } from "@tabler/icons-react";
 import { AgentDetailResponse } from "@naisys-supervisor/shared";
 import React from "react";
 import { Link } from "react-router-dom";
@@ -11,7 +22,23 @@ export const ConfigSummary: React.FC<{
   assignedHosts?: { id: number; name: string }[];
   hosts?: Host[];
   agents?: Agent[];
-}> = ({ config, leadUsername, assignedHosts, hosts, agents }) => {
+  currentSpend?: number;
+  spendLimitResetAt?: string;
+  canResetSpend?: boolean;
+  resettingSpend?: boolean;
+  onResetSpend?: () => void;
+}> = ({
+  config,
+  leadUsername,
+  assignedHosts,
+  hosts,
+  agents,
+  currentSpend,
+  spendLimitResetAt,
+  canResetSpend,
+  resettingSpend,
+  onResetSpend,
+}) => {
   const features: string[] = [];
   if (config.mailEnabled) features.push("Mail");
   if (config.chatEnabled) features.push("Chat");
@@ -138,9 +165,42 @@ export const ConfigSummary: React.FC<{
             <Table.Tr>
               <Table.Td c="dimmed">Spend Limit</Table.Td>
               <Table.Td>
-                ${config.spendLimitDollars}
-                {config.spendLimitHours != null &&
-                  ` / ${config.spendLimitHours}h`}
+                <Group gap="xs" align="center">
+                  <Text size="sm">
+                    ${currentSpend?.toFixed(2) ?? "..."} / $
+                    {config.spendLimitDollars}
+                  </Text>
+                  <Badge
+                    size="xs"
+                    variant="light"
+                    color={
+                      config.spendLimitHours != null ? "blue" : "gray"
+                    }
+                  >
+                    {config.spendLimitHours != null
+                      ? `${config.spendLimitHours}h window`
+                      : "Total"}
+                  </Badge>
+                  {canResetSpend && (
+                    <Tooltip
+                      label={
+                        spendLimitResetAt
+                          ? `Last reset: ${new Date(spendLimitResetAt).toLocaleString()}`
+                          : "Reset spend counter"
+                      }
+                    >
+                      <ActionIcon
+                        variant="subtle"
+                        size="sm"
+                        color="blue"
+                        loading={resettingSpend}
+                        onClick={onResetSpend}
+                      >
+                        <IconRefresh size={14} />
+                      </ActionIcon>
+                    </Tooltip>
+                  )}
+                </Group>
               </Table.Td>
             </Table.Tr>
           )}

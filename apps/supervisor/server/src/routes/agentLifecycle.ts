@@ -30,6 +30,7 @@ import {
   disableAgent,
   enableAgent,
   getAgent,
+  resetAgentSpend,
   resolveAgentId,
   unarchiveAgent,
   updateLeadAgent,
@@ -443,6 +444,40 @@ export default function agentLifecycleRoutes(
           ? "Lead agent updated"
           : "Lead agent cleared",
       };
+    },
+  );
+
+  // POST /:username/reset-spend — Reset agent spend counter
+  fastify.post<{
+    Params: AgentUsernameParams;
+    Reply: AgentActionResult | ErrorResponse;
+  }>(
+    "/:username/reset-spend",
+    {
+      preHandler: [requirePermission("manage_agents")],
+      schema: {
+        description: "Reset an agent's spend counter",
+        tags: ["Agents"],
+        params: AgentUsernameParamsSchema,
+        response: {
+          200: AgentActionResultSchema,
+          400: ErrorResponseSchema,
+          500: ErrorResponseSchema,
+        },
+        security: [{ cookieAuth: [] }],
+      },
+    },
+    async (request, reply) => {
+      const { username } = request.params;
+      const id = resolveAgentId(username);
+
+      if (!id) {
+        return notFound(reply, "Agent not found");
+      }
+
+      await resetAgentSpend(id);
+
+      return { success: true, message: "Spend counter reset" };
     },
   );
 
