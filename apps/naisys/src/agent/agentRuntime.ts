@@ -16,6 +16,7 @@ import { createWorkspacesFeature } from "../features/workspaces.js";
 import { GlobalConfig } from "../globalConfig.js";
 import { HubClient } from "../hub/hubClient.js";
 import { HubCostBuffer } from "../hub/hubCostBuffer.js";
+import { HubLogBuffer } from "../hub/hubLogBuffer.js";
 import { createCommandTools } from "../llm/commandTool.js";
 import { createContextManager } from "../llm/contextManager.js";
 import { createCostDisplayService } from "../llm/costDisplayService.js";
@@ -45,6 +46,7 @@ export async function createAgentRuntime(
   globalConfig: GlobalConfig,
   hubClient: HubClient | undefined,
   hubCostBuffer: HubCostBuffer | undefined,
+  hubLogBuffer: HubLogBuffer | undefined,
   hostService: HostService,
   userService: UserService,
   modelService: ModelService,
@@ -70,7 +72,7 @@ export async function createAgentRuntime(
     localUserId,
   );
   const logService = createLogService(
-    hubClient,
+    hubLogBuffer,
     runService,
     localUserId,
     attachmentService,
@@ -302,7 +304,6 @@ export async function createAgentRuntime(
     completeShutdown: async () => {
       commandLoop.cleanup();
       costTracker.cleanup();
-      await logService.cleanup();
       mailService.cleanup();
       chatService.cleanup();
     },

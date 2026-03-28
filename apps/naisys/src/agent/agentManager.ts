@@ -10,6 +10,7 @@ import stripAnsi from "strip-ansi";
 import { GlobalConfig } from "../globalConfig.js";
 import { HubClient } from "../hub/hubClient.js";
 import { HubCostBuffer } from "../hub/hubCostBuffer.js";
+import { HubLogBuffer } from "../hub/hubLogBuffer.js";
 import { HostService } from "../services/hostService.js";
 import { ModelService } from "../services/modelService.js";
 import { OutputColor } from "../utils/output.js";
@@ -27,6 +28,7 @@ export class AgentManager {
     private globalConfig: GlobalConfig,
     private hubClient: HubClient | undefined,
     private hubCostBuffer: HubCostBuffer | undefined,
+    private hubLogBuffer: HubLogBuffer | undefined,
     private hostService: HostService,
     private userService: UserService,
     private modelService: ModelService,
@@ -121,6 +123,7 @@ export class AgentManager {
       this.globalConfig,
       this.hubClient,
       this.hubCostBuffer,
+      this.hubLogBuffer,
       this.hostService,
       this.userService,
       this.modelService,
