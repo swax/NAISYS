@@ -192,8 +192,10 @@ model users {
   context_logs       context_log[]       @relation("context_log_user")
   costs              costs[]             @relation("costs_user")
   uploaded_attachments attachments[]      @relation("uploaded_attachments")
-  user_notifications   user_notifications?
-  user_hosts           user_hosts[]
+  user_notifications     user_notifications?
+  user_hosts             user_hosts[]
+  config_revisions       config_revisions[]  @relation("config_revision_user")
+  config_changes_made    config_revisions[]  @relation("config_revision_changed_by")
   // username has @unique which creates an implicit index
 }
 
@@ -262,6 +264,19 @@ model hosts {
   costs              costs[]
   context_logs       context_log[]
   user_hosts         user_hosts[]
+}
+
+model config_revisions {
+  id            Int      @id @default(autoincrement())
+  user_id       Int
+  config        String
+  changed_by_id Int
+  created_at    DateTime @default(now())
+
+  user       users @relation("config_revision_user", fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  changed_by users @relation("config_revision_changed_by", fields: [changed_by_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([user_id, created_at(sort: Desc)], map: "idx_config_revisions_user_created_desc")
 }
 
 model variables {

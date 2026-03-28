@@ -1,6 +1,7 @@
 import {
   Badge,
   Button,
+  Code,
   Group,
   Loader,
   Menu,
@@ -15,11 +16,15 @@ import {
   hasAction,
   type HateoasAction,
 } from "@naisys/common";
-import { AgentDetailResponse } from "@naisys-supervisor/shared";
+import {
+  AgentDetailResponse,
+  type ConfigRevision,
+} from "@naisys-supervisor/shared";
 import {
   IconArchive,
   IconArchiveOff,
   IconChevronDown,
+  IconHistory,
   IconPlayerPause,
   IconPlayerPlay,
   IconPlayerStop,
@@ -38,6 +43,7 @@ import {
   disableAgent,
   enableAgent,
   getAgentDetail,
+  getConfigRevisions,
   startAgent,
   stopAgent,
   unarchiveAgent,
@@ -69,6 +75,10 @@ export const AgentDetail: React.FC = () => {
   const [toggling, setToggling] = useState(false);
   const [archiving, setArchiving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [revisions, setRevisions] = useState<ConfigRevision[]>([]);
+  const [selectedRevision, setSelectedRevision] =
+    useState<ConfigRevision | null>(null);
+  const [showHistory, setShowHistory] = useState(false);
 
   const fetchDetail = async () => {
     if (!username) return;
@@ -93,6 +103,27 @@ export const AgentDetail: React.FC = () => {
 
     void fetchDetail();
   }, [username]);
+
+  const fetchRevisions = async () => {
+    if (!username) return;
+    try {
+      const data = await getConfigRevisions(username);
+      setRevisions(data.items);
+    } catch (err) {
+      console.error("Error fetching config revisions:", err);
+    }
+  };
+
+  const handleToggleHistory = () => {
+    const next = !showHistory;
+    setShowHistory(next);
+    if (next && revisions.length === 0) {
+      void fetchRevisions();
+    }
+    if (!next) {
+      setSelectedRevision(null);
+    }
+  };
 
   const handleStart = async () => {
     if (!username) return;
@@ -594,6 +625,57 @@ export const AgentDetail: React.FC = () => {
           hosts={hosts}
           agents={agents}
         />
+      )}
+
+      <Button
+        variant="subtle"
+        size="compact-sm"
+        leftSection={<IconHistory size={14} />}
+        onClick={handleToggleHistory}
+      >
+        {showHistory ? "Hide Config History" : "Config History"}
+      </Button>
+
+      {showHistory && (
+        <Stack gap="xs">
+          {revisions.length === 0 ? (
+            <Text size="sm" c="dimmed">
+              No previous revisions
+            </Text>
+          ) : (
+            <>
+              <Group gap="xs" wrap="wrap">
+                {revisions.map((rev) => (
+                  <Button
+                    key={rev.id}
+                    size="compact-xs"
+                    variant={
+                      selectedRevision?.id === rev.id ? "filled" : "light"
+                    }
+                    onClick={() =>
+                      setSelectedRevision(
+                        selectedRevision?.id === rev.id ? null : rev,
+                      )
+                    }
+                  >
+                    {new Date(rev.createdAt).toLocaleString()}
+                  </Button>
+                ))}
+              </Group>
+              {selectedRevision && (
+                <Stack gap={4}>
+                  <Text size="xs" c="dimmed">
+                    Changed by {selectedRevision.changedByUsername} on{" "}
+                    {new Date(selectedRevision.createdAt).toLocaleString()}
+                  </Text>
+                  <Code block style={{ whiteSpace: "pre-wrap" }}>
+                    {selectedRevision.config}
+                  </Code>
+                </Stack>
+              )}
+            </>
+          )}
+        </Stack>
       )}
     </Stack>
   );
