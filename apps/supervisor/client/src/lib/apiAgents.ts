@@ -6,6 +6,7 @@ import type {
   AgentListResponse,
   AgentStartResult,
   AgentStopResult,
+  ConfigRevisionListResponse,
   CreateAgentConfigResponse,
   ExportAgentConfigResponse,
   GetAgentConfigResponse,
@@ -101,6 +102,14 @@ export const exportAgentConfig = async (
 ): Promise<ExportAgentConfigResponse> => {
   return await api.get<ExportAgentConfigResponse>(
     apiEndpoints.agentConfigExport(username),
+  );
+};
+
+export const getConfigRevisions = async (
+  username: string,
+): Promise<ConfigRevisionListResponse> => {
+  return await api.get<ConfigRevisionListResponse>(
+    apiEndpoints.agentConfigRevisions(username),
   );
 };
 

@@ -3,6 +3,8 @@ import { AgentConfigFileSchema } from "@naisys/common";
 import {
   AgentUsernameParams,
   AgentUsernameParamsSchema,
+  ConfigRevisionListResponse,
+  ConfigRevisionListResponseSchema,
   ErrorResponse,
   ErrorResponseSchema,
   ExportAgentConfigResponse,
@@ -26,6 +28,7 @@ import { badRequest, notFound } from "../error-helpers.js";
 import { API_PREFIX } from "../hateoas.js";
 import {
   getAgentConfigById,
+  getConfigRevisions,
   updateAgentConfigById,
 } from "../services/agentConfigService.js";
 import { resolveAgentId } from "../services/agentService.js";
@@ -183,7 +186,12 @@ export default function agentConfigRoutes(
           return badRequest(reply, modelError);
         }
 
-        const updatedConfig = await updateAgentConfigById(id, config, true);
+        const updatedConfig = await updateAgentConfigById(
+          id,
+          config,
+          true,
+          request.supervisorUser?.id,
+        );
 
         return {
           success: true,
@@ -311,7 +319,12 @@ export default function agentConfigRoutes(
           return badRequest(reply, modelError);
         }
 
-        const updatedConfig = await updateAgentConfigById(id, config, false);
+        const updatedConfig = await updateAgentConfigById(
+          id,
+          config,
+          false,
+          request.supervisorUser?.id,
+        );
 
         return {
           success: true,
@@ -330,6 +343,52 @@ export default function agentConfigRoutes(
           return notFound(reply, errorMessage);
         }
 
+        throw error;
+      }
+    },
+  );
+
+  // GET /:username/config/revisions — List config revision history
+  fastify.get<{
+    Params: AgentUsernameParams;
+    Reply: ConfigRevisionListResponse | ErrorResponse;
+  }>(
+    "/:username/config/revisions",
+    {
+      schema: {
+        description: "List config revision history for an agent",
+        tags: ["Agents"],
+        params: AgentUsernameParamsSchema,
+        response: {
+          200: ConfigRevisionListResponseSchema,
+          404: ErrorResponseSchema,
+          500: ErrorResponseSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      try {
+        const { username } = request.params;
+        const id = resolveAgentId(username);
+
+        if (!id) {
+          return notFound(reply, `Agent '${username}' not found`);
+        }
+
+        const revisions = await getConfigRevisions(id);
+
+        return {
+          items: revisions.map((r) => ({
+            ...r,
+            config: yaml.dump(JSON.parse(r.config), { lineWidth: -1 }),
+            createdAt: r.createdAt.toISOString(),
+          })),
+        };
+      } catch (error) {
+        request.log.error(
+          error,
+          "Error in GET /agents/:username/config/revisions route",
+        );
         throw error;
       }
     },

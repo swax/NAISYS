@@ -146,13 +146,20 @@ function canonicalConfigOrder(
 
 /**
  * Update agent configuration by user ID. Always updates DB.
- * Writes to file only if agent_path is non-null.
+ * Snapshots the previous config as a revision before overwriting.
  */
 export async function updateAgentConfigById(
   id: number,
   config: AgentConfigFile,
   setUsername: boolean,
+  changedById?: number,
 ): Promise<AgentConfigFile> {
+  // Snapshot the current config before overwriting
+  const currentUser = await hubDb.users.findUnique({
+    where: { id },
+    select: { config: true },
+  });
+
   if (setUsername) {
     // Normal edit: push config.username to the DB column
   } else {
@@ -165,6 +172,17 @@ export async function updateAgentConfigById(
 
   const ordered = canonicalConfigOrder(config);
   const jsonStr = JSON.stringify(ordered);
+
+  // Save revision of the old config (if it exists and differs)
+  if (currentUser?.config && currentUser.config !== jsonStr) {
+    await hubDb.config_revisions.create({
+      data: {
+        user_id: id,
+        config: currentUser.config,
+        changed_by_id: changedById ?? id,
+      },
+    });
+  }
 
   await hubDb.users.update({
     where: { id },
@@ -182,4 +200,30 @@ export async function updateAgentConfigById(
   sendUserListChanged();
 
   return config;
+}
+
+/**
+ * Get config revision history for an agent.
+ */
+export async function getConfigRevisions(
+  userId: number,
+  limit = 50,
+): Promise<
+  { id: number; config: string; changedByUsername: string; createdAt: Date }[]
+> {
+  const revisions = await hubDb.config_revisions.findMany({
+    where: { user_id: userId },
+    orderBy: { created_at: "desc" },
+    take: limit,
+    include: {
+      changed_by: { select: { username: true } },
+    },
+  });
+
+  return revisions.map((r) => ({
+    id: r.id,
+    config: r.config,
+    changedByUsername: r.changed_by.username,
+    createdAt: r.created_at,
+  }));
 }

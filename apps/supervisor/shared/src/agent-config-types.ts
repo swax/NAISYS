@@ -61,7 +61,22 @@ export const ExportAgentConfigResponseSchema = z.object({
   yaml: z.string(),
 });
 
+export const ConfigRevisionSchema = z.object({
+  id: z.number(),
+  config: z.string(),
+  changedByUsername: z.string(),
+  createdAt: z.string(),
+});
+
+export const ConfigRevisionListResponseSchema = z.object({
+  items: z.array(ConfigRevisionSchema),
+});
+
 // Inferred types
+export type ConfigRevision = z.infer<typeof ConfigRevisionSchema>;
+export type ConfigRevisionListResponse = z.infer<
+  typeof ConfigRevisionListResponseSchema
+>;
 export type CreateAgentConfigRequest = z.infer<
   typeof CreateAgentConfigRequestSchema
 >;
