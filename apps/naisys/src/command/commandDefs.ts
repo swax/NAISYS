@@ -178,7 +178,9 @@ export const subagentCmd: CommandDef = {
 
 export const usersCmd: CommandDef = {
   name: "ns-users",
-  description: "Display a list of users in the organization",
+  usage: "[username]",
+  description:
+    "Display relevant users: superiors, peers, subordinates, and top-level agents. Optionally specify a username for their perspective",
 };
 
 export const workspaceCmd: CommandDef = {

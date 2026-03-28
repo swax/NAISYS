@@ -152,7 +152,7 @@ export async function createAgentRuntime(
     output,
     modelService.getImageModel,
   );
-  const userDisplayService = createUserDisplayService(userService, inputMode);
+  const userDisplayService = createUserDisplayService(userService, inputMode, localUserId);
   const mailDisplayService = hubClient
     ? createMailDisplayService(hubClient, localUserId)
     : null;
