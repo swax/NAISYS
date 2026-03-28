@@ -112,7 +112,18 @@ export function createShellWrapper(
         `NEW ${platformConfig.shellName.toUpperCase()} SHELL OPENED. PID: ${pid}`,
       );
 
-      // If we want to give agent a home folder, we can add mkir/cd ${username} folder in the initCommands of the agent
+      // Set initial working directory based on mode
+      const naisysFolder = process.env.NAISYS_FOLDER;
+      if (naisysFolder) {
+        // Hub mode: give each agent their own home directory
+        const homeDir = path.join(naisysFolder, "home", agentConfig().username);
+        errorIfNotEmpty(
+          await executeCommand(platformConfig.mkdirCommand(homeDir)),
+        );
+        errorIfNotEmpty(
+          await executeCommand(platformConfig.cdCommand(homeDir)),
+        );
+      }
     } else {
       output.commentAndLog(
         `${platformConfig.shellName.toUpperCase()} SHELL RESTORED. PID: ${pid}`,
