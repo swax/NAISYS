@@ -32,7 +32,7 @@ export const AgentConfigFileSchema = z.object({
     .min(0, "Must be non-negative")
     .optional()
     .describe(
-      "Local spend limit in dollars for this agent, defaults to the SPEND_LIMIT_DOLLARS variable",
+      "Spend limit in dollars for this agent. When set, this agent is exempt from the global spend limit. Defaults to the SPEND_LIMIT_DOLLARS variable",
     ),
 
   spendLimitHours: z

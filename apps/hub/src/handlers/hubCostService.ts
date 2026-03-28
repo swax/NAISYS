@@ -138,17 +138,7 @@ export function createHubCostService(
     const spendLimitDollars = config?.spendLimitDollars;
     const spendLimitHours = config?.spendLimitHours;
 
-    // 1. Global spend limit check — costs across ALL agents
-    if (spendLimitDollars !== undefined) {
-      await checkGlobalSpendLimit(
-        hubDb,
-        usersToCheck,
-        spendLimitDollars,
-        spendLimitHours,
-      );
-    }
-
-    // 2. Per-agent spend limit checks — costs for individual agents
+    // Query user configs (needed by both global and per-agent checks)
     const users = await hubDb.users.findMany({
       where: { id: { in: Array.from(usersToCheck) } },
       select: {
@@ -160,6 +150,31 @@ export function createHubCostService(
       },
     });
 
+    // Identify which users have per-agent spend limits (exempt from global)
+    const usersWithAgentLimit = new Set<number>();
+    for (const user of users) {
+      try {
+        const parsed = AgentConfigFileSchema.safeParse(JSON.parse(user.config));
+        if (parsed.success && parsed.data.spendLimitDollars !== undefined) {
+          usersWithAgentLimit.add(user.id);
+        }
+      } catch {
+        /* ignore parse errors */
+      }
+    }
+
+    // 1. Global spend limit — only applies to agents WITHOUT a per-agent limit
+    if (spendLimitDollars !== undefined) {
+      await checkGlobalSpendLimit(
+        hubDb,
+        usersToCheck,
+        spendLimitDollars,
+        spendLimitHours,
+        usersWithAgentLimit,
+      );
+    }
+
+    // 2. Per-agent spend limit checks
     for (const user of users) {
       try {
         const parsed = AgentConfigFileSchema.safeParse(JSON.parse(user.config));
@@ -244,17 +259,37 @@ export function createHubCostService(
     });
   }
 
-  /** Check the global spend limit across all agents */
+  /** Check the global spend limit — only applies to agents without a per-agent limit */
   async function checkGlobalSpendLimit(
     hubDb: PrismaClient,
     usersToCheck: Set<number>,
     spendLimit: number,
     spendLimitHours: number | undefined,
+    usersWithAgentLimit: Set<number>,
   ) {
     const totalCost = await queryCostSum(hubDb, spendLimitHours);
     const isOverLimit = totalCost >= spendLimit;
 
+    async function resumeFromGlobal(userId: number, reason: string) {
+      logService.log(
+        `[Hub:Costs] Resuming user ${userId} (global limit): ${reason}`,
+      );
+      sendCostControl(userId, true, reason);
+      suspendedByGlobal.delete(userId);
+      if (!suspendedByAgent.has(userId)) {
+        await setCostSuspendedReason(hubDb, userId, null);
+      }
+    }
+
     for (const userId of usersToCheck) {
+      // Agents with their own spend limit are exempt from the global limit
+      if (usersWithAgentLimit.has(userId)) {
+        if (suspendedByGlobal.has(userId)) {
+          await resumeFromGlobal(userId, "Agent has per-agent spend limit");
+        }
+        continue;
+      }
+
       const wasSuspended = suspendedByGlobal.has(userId);
 
       if (isOverLimit && !wasSuspended) {
@@ -266,16 +301,10 @@ export function createHubCostService(
         suspendedByGlobal.add(userId);
         await setCostSuspendedReason(hubDb, userId, reason);
       } else if (!isOverLimit && wasSuspended) {
-        const reason = `Global spend limit period reset (total: $${totalCost.toFixed(2)}, limit: $${spendLimit})`;
-        logService.log(
-          `[Hub:Costs] Resuming user ${userId} (global limit): ${reason}`,
+        await resumeFromGlobal(
+          userId,
+          `Global spend limit period reset (total: $${totalCost.toFixed(2)}, limit: $${spendLimit})`,
         );
-        sendCostControl(userId, true, reason);
-        suspendedByGlobal.delete(userId);
-        // Only clear DB reason if not also suspended by per-agent limit
-        if (!suspendedByAgent.has(userId)) {
-          await setCostSuspendedReason(hubDb, userId, null);
-        }
       }
     }
   }
@@ -315,10 +344,7 @@ export function createHubCostService(
       logService.log(`[Hub:Costs] Resuming user ${userId}: ${reason}`);
       sendCostControl(userId, true, reason);
       suspendedByAgent.delete(userId);
-      // Only clear DB reason if not also suspended by global limit
-      if (!suspendedByGlobal.has(userId)) {
-        await setCostSuspendedReason(hubDb, userId, null);
-      }
+      await setCostSuspendedReason(hubDb, userId, null);
     }
   }
 
