@@ -1,4 +1,5 @@
 import type {
+  ArchiveChatResponse,
   ChatConversationsResponse,
   ChatMessagesResponse,
   SendChatRequest,
@@ -53,6 +54,15 @@ export const getChatMessages = async (
   const query = queryParams.toString();
   const url = `${apiEndpoints.agentChatMessages(params.agentUsername, params.participants)}${query ? `?${query}` : ""}`;
   return await api.get<ChatMessagesResponse>(url);
+};
+
+export const archiveAllChat = async (
+  agentUsername: string,
+): Promise<ArchiveChatResponse> => {
+  return await api.post<Record<string, never>, ArchiveChatResponse>(
+    apiEndpoints.agentChatArchive(agentUsername),
+    {},
+  );
 };
 
 export const sendChatMessage = async (

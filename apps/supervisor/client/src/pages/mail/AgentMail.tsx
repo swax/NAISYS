@@ -20,7 +20,7 @@ import { CollapsibleSidebar } from "../../components/CollapsibleSidebar";
 import { SIDEBAR_WIDTH } from "../../constants";
 import { useAgentDataContext } from "../../contexts/AgentDataContext";
 import { useMailData } from "../../hooks/useMailData";
-import { sendMail } from "../../lib/apiMail";
+import { archiveAllMail, sendMail } from "../../lib/apiMail";
 import { MailConversationList } from "./MailConversationList";
 import {
   getConversationMessages,
@@ -54,9 +54,16 @@ export const AgentMail: React.FC = () => {
     loadMore,
     loadingMore,
     hasMore,
+    refresh: refreshMail,
   } = useMailData(username ?? "", Boolean(username));
 
   const canSend = !!hasAction(mailActions, "send");
+  const canArchive = !!hasAction(mailActions, "archive");
+
+  const handleArchiveAll = useCallback(async () => {
+    await archiveAllMail(username ?? "");
+    await refreshMail();
+  }, [username, refreshMail]);
 
   // Save the initial lastReadMailId to determine where to show the divider
   const [lastReadMailId] = useState<number | null>(
@@ -101,8 +108,9 @@ export const AgentMail: React.FC = () => {
 
   // Group into conversations
   const conversations = useMemo(
-    () => groupIntoConversations(allMail, lastReadMailId, groupBySubject),
-    [allMail, lastReadMailId, groupBySubject],
+    () =>
+      groupIntoConversations(allMail, lastReadMailId, groupBySubject, agentName),
+    [allMail, lastReadMailId, groupBySubject, agentName],
   );
 
   // Derive selectedKey from URL
@@ -242,6 +250,8 @@ export const AgentMail: React.FC = () => {
       hasMore={hasMore}
       loadingMore={loadingMore}
       onLoadMore={loadMore}
+      canArchive={canArchive}
+      onArchiveAll={handleArchiveAll}
     />
   );
 

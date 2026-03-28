@@ -7,7 +7,7 @@ import {
   Stack,
   Text,
 } from "@mantine/core";
-import { IconPlus } from "@tabler/icons-react";
+import { IconArchive, IconPlus } from "@tabler/icons-react";
 import React from "react";
 import { Link } from "react-router-dom";
 
@@ -28,6 +28,8 @@ interface MailConversationListProps {
   hasMore: boolean;
   loadingMore: boolean;
   onLoadMore: () => void;
+  canArchive: boolean;
+  onArchiveAll: () => void;
 }
 
 export const MailConversationList: React.FC<MailConversationListProps> = ({
@@ -45,6 +47,8 @@ export const MailConversationList: React.FC<MailConversationListProps> = ({
   hasMore,
   loadingMore,
   onLoadMore,
+  canArchive,
+  onArchiveAll,
 }) => {
   const formatTime = (dateStr: string) => {
     const date = new Date(dateStr);
@@ -126,19 +130,40 @@ export const MailConversationList: React.FC<MailConversationListProps> = ({
                 to={to}
                 onClick={onNavLinkClick}
                 label={
-                  <Text size="sm" lineClamp={1}>
-                    {groupBySubject ? conv.normalizedSubject : displayNames}
-                  </Text>
+                  <Group gap={6} wrap="nowrap">
+                    {conv.isArchived && (
+                      <IconArchive
+                        size={14}
+                        style={{ opacity: 0.5, flexShrink: 0 }}
+                      />
+                    )}
+                    <Text
+                      size="sm"
+                      lineClamp={1}
+                      style={conv.isArchived ? { opacity: 0.5 } : undefined}
+                    >
+                      {groupBySubject ? conv.normalizedSubject : displayNames}
+                    </Text>
+                  </Group>
                 }
                 description={
-                  <Text size="xs" c="dimmed" lineClamp={1}>
+                  <Text
+                    size="xs"
+                    c="dimmed"
+                    lineClamp={1}
+                    style={conv.isArchived ? { opacity: 0.5 } : undefined}
+                  >
                     {groupBySubject
                       ? `${displayNames} (${conv.messageCount})`
                       : `${conv.lastMessageFrom}: ${conv.lastMessagePreview}`}
                   </Text>
                 }
                 rightSection={
-                  <Text size="xs" c="dimmed">
+                  <Text
+                    size="xs"
+                    c="dimmed"
+                    style={conv.isArchived ? { opacity: 0.5 } : undefined}
+                  >
                     {formatTime(conv.lastMessageAt)}
                   </Text>
                 }
@@ -160,6 +185,25 @@ export const MailConversationList: React.FC<MailConversationListProps> = ({
           p="xs"
           style={{ borderTop: "1px solid var(--mantine-color-dark-6)" }}
         >
+          {canArchive && (
+            <Button
+              variant="subtle"
+              size="compact-xs"
+              color="gray"
+              leftSection={<IconArchive size={14} />}
+              onClick={() => {
+                if (
+                  window.confirm(
+                    "Archive all mail messages? They will still be visible in supervisor, but hidden from the agent.",
+                  )
+                ) {
+                  onArchiveAll();
+                }
+              }}
+            >
+              Archive All
+            </Button>
+          )}
           <Text c="dimmed" ta="center" size="xs">
             Showing {loadedMessages} / {totalMessages} messages
           </Text>

@@ -12,7 +12,12 @@ import {
 } from "@mantine/core";
 import { formatFileSize } from "@naisys/common";
 import { CompactMarkdown } from "@naisys/common-browser";
-import { IconCheck, IconChecks, IconFile } from "@tabler/icons-react";
+import {
+  IconArchive,
+  IconCheck,
+  IconChecks,
+  IconFile,
+} from "@tabler/icons-react";
 import React, { useRef } from "react";
 
 import type { MailMessage } from "../../lib/apiClient";
@@ -88,9 +93,9 @@ export const MailThread: React.FC<MailThreadProps> = ({
             const showDateDivider = msgDate !== lastDate;
             lastDate = msgDate;
 
-            const recipientNames = msg.recipients.map(
-              (r) => `${r.username} (${r.title})`,
-            );
+            const recipientNames = msg.recipients
+              .filter((r) => r.type !== "from")
+              .map((r) => `${r.username} (${r.title})`);
 
             // In newest-first order, show divider after the newest unread message
             // i.e. between msg.id > lastReadMailId and msg.id <= lastReadMailId
@@ -147,8 +152,21 @@ export const MailThread: React.FC<MailThreadProps> = ({
                       }}
                     >
                       {formatTime(msg.createdAt)}
+                      {msg.recipients.some(
+                        (r) =>
+                          r.username === currentAgentName &&
+                          r.archivedAt != null,
+                      ) && (
+                        <IconArchive
+                          size={14}
+                          color="var(--mantine-color-dimmed)"
+                          title="Archived"
+                        />
+                      )}
                       {isOwn &&
-                        (msg.recipients.some((r) => r.readAt) ? (
+                        (msg.recipients.some(
+                          (r) => r.type !== "from" && r.readAt,
+                        ) ? (
                           <IconChecks
                             size={14}
                             color="var(--mantine-color-blue-filled)"

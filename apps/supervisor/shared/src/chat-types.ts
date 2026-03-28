@@ -8,6 +8,7 @@ export const ChatConversationSchema = z.object({
   lastMessage: z.string(),
   lastMessageAt: z.string(),
   lastMessageFrom: z.string(),
+  isArchived: z.boolean().optional(),
 });
 
 export const ChatAttachmentSchema = z.object({
@@ -66,7 +67,14 @@ export const SendChatResponseSchema = z.object({
   message: z.string().optional(),
 });
 
+export const ArchiveChatResponseSchema = z.object({
+  success: z.boolean(),
+  archivedCount: z.number().optional(),
+  message: z.string().optional(),
+});
+
 // Inferred types
+export type ArchiveChatResponse = z.infer<typeof ArchiveChatResponseSchema>;
 export type ChatAttachment = z.infer<typeof ChatAttachmentSchema>;
 export type ChatConversation = z.infer<typeof ChatConversationSchema>;
 export type ChatMessage = z.infer<typeof ChatMessageSchema>;

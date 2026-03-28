@@ -2,7 +2,7 @@ import { HateoasActionSchema, HateoasLinkSchema } from "@naisys/common";
 import { z } from "zod";
 
 // Zod schemas for the new flat message model
-export const RecipientTypeEnum = z.enum(["to", "cc", "bcc"]);
+export const RecipientTypeEnum = z.enum(["to", "cc", "bcc", "from"]);
 export type RecipientType = z.infer<typeof RecipientTypeEnum>;
 
 export const MailRecipientSchema = z.object({
@@ -11,6 +11,7 @@ export const MailRecipientSchema = z.object({
   title: z.string(),
   type: RecipientTypeEnum,
   readAt: z.string().nullable(), // ISO date or null
+  archivedAt: z.string().nullable().optional(), // ISO date or null
 });
 
 export const MailAttachmentSchema = z.object({
@@ -66,7 +67,14 @@ export const MailDataResponseSchema = z.object({
   _actions: z.array(HateoasActionSchema).optional(),
 });
 
+export const ArchiveMailResponseSchema = z.object({
+  success: z.boolean(),
+  archivedCount: z.number().optional(),
+  message: z.string().optional(),
+});
+
 // Inferred types
+export type ArchiveMailResponse = z.infer<typeof ArchiveMailResponseSchema>;
 export type MailAttachment = z.infer<typeof MailAttachmentSchema>;
 export type MailRecipient = z.infer<typeof MailRecipientSchema>;
 export type MailMessage = z.infer<typeof MailMessageSchema>;

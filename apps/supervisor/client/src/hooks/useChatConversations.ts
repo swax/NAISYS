@@ -140,6 +140,14 @@ export const useChatConversations = (
     }
   }, [agentUsername, mergeConversations]);
 
+  const refresh = useCallback(async () => {
+    conversationsCache.delete(agentUsername);
+    totalCache.delete(agentUsername);
+    pagesLoadedCache.delete(agentUsername);
+    setCacheVersion((v) => v + 1);
+    await query.refetch();
+  }, [agentUsername, query]);
+
   const conversations = conversationsCache.get(agentUsername) || [];
   const total = totalCache.get(agentUsername) || 0;
   const hasMore = conversations.length < total;
@@ -154,5 +162,6 @@ export const useChatConversations = (
     loadMore,
     loadingMore,
     hasMore,
+    refresh,
   };
 };

@@ -1,4 +1,5 @@
 import type {
+  ArchiveMailResponse,
   MailDataResponse,
   SendMailRequest,
   SendMailResponse,
@@ -29,6 +30,15 @@ export const getMailData = async (
   const query = queryParams.toString();
   const url = `${apiEndpoints.agentMail(params.agentUsername)}${query ? `?${query}` : ""}`;
   return await api.get<MailDataResponse>(url);
+};
+
+export const archiveAllMail = async (
+  agentUsername: string,
+): Promise<ArchiveMailResponse> => {
+  return await api.post<Record<string, never>, ArchiveMailResponse>(
+    apiEndpoints.agentMailArchive(agentUsername),
+    {},
+  );
 };
 
 export const sendMail = async (

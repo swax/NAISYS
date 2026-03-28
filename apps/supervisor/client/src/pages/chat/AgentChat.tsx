@@ -20,7 +20,7 @@ import { SIDEBAR_WIDTH } from "../../constants";
 import { useAgentDataContext } from "../../contexts/AgentDataContext";
 import { useChatConversations } from "../../hooks/useChatConversations";
 import { useChatMessages } from "../../hooks/useChatMessages";
-import { sendChatMessage } from "../../lib/apiChat";
+import { archiveAllChat, sendChatMessage } from "../../lib/apiChat";
 import { ChatConversationList } from "./ChatConversationList";
 import { ChatInput } from "./ChatInput";
 import { ChatThread } from "./ChatThread";
@@ -54,6 +54,7 @@ export const AgentChat: React.FC = () => {
     loadMore: loadMoreConversations,
     loadingMore: loadingMoreConversations,
     hasMore: hasMoreConversations,
+    refresh: refreshConversations,
   } = useChatConversations(username ?? "", Boolean(username));
 
   // Auto-select first conversation when no URL param and conversations exist
@@ -82,6 +83,12 @@ export const AgentChat: React.FC = () => {
   );
 
   const canSend = !!hasAction(convActions, "send");
+  const canArchive = !!hasAction(convActions, "archive");
+
+  const handleArchiveAll = useCallback(async () => {
+    await archiveAllChat(username ?? "");
+    await refreshConversations();
+  }, [username, refreshConversations]);
 
   const handleSendMessage = useCallback(
     async (message: string, files?: File[]) => {
@@ -175,6 +182,8 @@ export const AgentChat: React.FC = () => {
       hasMore={hasMoreConversations}
       loadingMore={loadingMoreConversations}
       onLoadMore={loadMoreConversations}
+      canArchive={canArchive}
+      onArchiveAll={handleArchiveAll}
     />
   );
 
