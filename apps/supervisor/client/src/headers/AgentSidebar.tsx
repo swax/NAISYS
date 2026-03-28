@@ -328,28 +328,36 @@ export const AgentSidebar: React.FC = () => {
           gap="xs"
           align="center"
           wrap="nowrap"
+          justify="space-between"
           style={{
             paddingLeft: agent.hasChildren ? 0 : "calc(1rem + 0.625rem)",
           }}
         >
-          {agent.hasChildren ? (
-            collapsedAgents.has(agent.name) ? (
-              <IconChevronRight
-                size="1rem"
-                style={{ flexShrink: 0, cursor: "pointer" }}
-                onClick={(e) => toggleCollapse(agent.name, e)}
-              />
-            ) : (
-              <IconChevronDown
-                size="1rem"
-                style={{ flexShrink: 0, cursor: "pointer" }}
-                onClick={(e) => toggleCollapse(agent.name, e)}
-              />
-            )
-          ) : null}
-          <Text size="xs" c="dimmed" truncate="end">
-            {agent.title}
-          </Text>
+          <Group gap="xs" align="center" wrap="nowrap" style={{ minWidth: 0 }}>
+            {agent.hasChildren ? (
+              collapsedAgents.has(agent.name) ? (
+                <IconChevronRight
+                  size="1rem"
+                  style={{ flexShrink: 0, cursor: "pointer" }}
+                  onClick={(e) => toggleCollapse(agent.name, e)}
+                />
+              ) : (
+                <IconChevronDown
+                  size="1rem"
+                  style={{ flexShrink: 0, cursor: "pointer" }}
+                  onClick={(e) => toggleCollapse(agent.name, e)}
+                />
+              )
+            ) : null}
+            <Text size="xs" c="dimmed" truncate="end">
+              {agent.title}
+            </Text>
+          </Group>
+          {agent.budgetLeft != null && (
+            <Text size="xs" c="dimmed" style={{ flexShrink: 0 }}>
+              ${agent.budgetLeft.toFixed(2)}
+            </Text>
+          )}
         </Group>
       </Stack>
     </Card>

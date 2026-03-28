@@ -213,6 +213,7 @@ export function createMockCostTracker() {
     getModelCosts: vi.fn(() => new Map()),
     getTotalCost: vi.fn(() => 0),
     getPeriodInfo: vi.fn(() => null),
+    getBudgetLeft: vi.fn(() => null),
     resetCosts: vi.fn(),
   };
 

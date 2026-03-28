@@ -1,15 +1,14 @@
 import { calculatePeriodBoundaries } from "@naisys/common";
 import {
-  COST_FLUSH_INTERVAL_MS,
   CostControlSchema,
   type CostSource,
-  CostWriteEntry,
   HubEvents,
 } from "@naisys/hub-protocol";
 
 import { AgentConfig } from "../agent/agentConfig.js";
 import { GlobalConfig } from "../globalConfig.js";
 import { HubClient } from "../hub/hubClient.js";
+import { HubCostBuffer } from "../hub/hubCostBuffer.js";
 import { ModelService } from "../services/modelService.js";
 import { RunService } from "../services/runService.js";
 import { PromptNotificationService } from "../utils/promptNotificationService.js";
@@ -57,6 +56,7 @@ export function createCostTracker(
   modelService: ModelService,
   runService: RunService,
   hubClient: HubClient | undefined,
+  hubCostBuffer: HubCostBuffer | undefined,
   localUserId: number,
   promptNotification: PromptNotificationService,
 ) {
@@ -70,12 +70,16 @@ export function createCostTracker(
   let periodCost = 0;
   let currentPeriodEnd = 0;
 
-  // Hub mode: buffer for batched cost writes
-  const buffer: CostWriteEntry[] = [];
+  // Hub mode: budget tracking from COST_WRITE responses
+  let hubBudgetLeft: number | null = null;
+  let costSinceLastSnapshot = 0;
 
-  let flushInterval: NodeJS.Timeout | null = null;
-  if (hubClient) {
-    flushInterval = setInterval(flush, COST_FLUSH_INTERVAL_MS);
+  // Register for budget updates from the shared buffer
+  if (hubCostBuffer) {
+    hubCostBuffer.registerBudgetCallback(localUserId, (budgetLeft) => {
+      hubBudgetLeft = budgetLeft;
+      costSinceLastSnapshot = 0;
+    });
   }
 
   // Hub mode: receive cost control messages from hub
@@ -125,6 +129,7 @@ export function createCostTracker(
     }
 
     totalCost += cost;
+    costSinceLastSnapshot += cost;
     addCostToPeriod(cost);
   }
 
@@ -137,20 +142,18 @@ export function createCostTracker(
     cacheWriteTokens: number,
     cacheReadTokens: number,
   ) {
-    const { getRunId, getSessionId } = runService;
-
-    buffer.push({
-      userId: localUserId,
-      runId: getRunId(),
-      sessionId: getSessionId(),
+    hubCostBuffer!.pushEntry(
+      localUserId,
+      runService.getRunId(),
+      runService.getSessionId(),
       source,
-      model: modelKey,
+      modelKey,
       cost,
       inputTokens,
       outputTokens,
       cacheWriteTokens,
       cacheReadTokens,
-    });
+    );
   }
 
   // Record token usage for LLM calls
@@ -180,7 +183,7 @@ export function createCostTracker(
       cacheReadTokens,
     );
 
-    if (hubClient) {
+    if (hubCostBuffer) {
       pushToBuffer(
         source,
         modelKey,
@@ -197,7 +200,7 @@ export function createCostTracker(
   function recordCost(cost: number, source: CostSource, modelKey: string) {
     updateInMemory(modelKey, cost, 0, 0, 0, 0);
 
-    if (hubClient) {
+    if (hubCostBuffer) {
       pushToBuffer(source, modelKey, cost, 0, 0, 0, 0);
     }
   }
@@ -291,22 +294,9 @@ export function createCostTracker(
     }
   }
 
-  // Hub buffer flush
-  function flush() {
-    if (!hubClient) return;
-    if (buffer.length === 0) return;
-
-    const entries = buffer.splice(0, buffer.length);
-    hubClient.sendMessage(HubEvents.COST_WRITE, { entries });
-  }
-
   function cleanup() {
-    if (flushInterval) {
-      clearInterval(flushInterval);
-      flushInterval = null;
-    }
-    if (hubClient) {
-      flush();
+    if (hubCostBuffer) {
+      hubCostBuffer.unregisterBudgetCallback(localUserId);
     }
   }
 
@@ -335,6 +325,12 @@ export function createCostTracker(
     periodCost = 0;
   }
 
+  /** Returns the estimated remaining budget, or null if no per-agent limit */
+  function getBudgetLeft(): number | null {
+    if (hubBudgetLeft === null) return null;
+    return Math.max(0, hubBudgetLeft - costSinceLastSnapshot);
+  }
+
   return {
     recordTokens,
     recordCost,
@@ -344,6 +340,7 @@ export function createCostTracker(
     getModelCosts,
     getTotalCost,
     getPeriodInfo,
+    getBudgetLeft,
     resetCosts,
   };
 }

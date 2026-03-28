@@ -23,6 +23,7 @@ import type {
   CostControl,
   CostPush,
   CostWriteRequest,
+  CostWriteResponse,
 } from "./schemas/costs.js";
 import type { AgentsStatus, Heartbeat } from "./schemas/heartbeat.js";
 import type { HostList } from "./schemas/hosts.js";
@@ -114,6 +115,10 @@ export interface HubRequestEvents {
     request: RotateAccessKeyRequest;
     response: RotateAccessKeyResponse;
   };
+  [HubEvents.COST_WRITE]: {
+    request: CostWriteRequest;
+    response: CostWriteResponse;
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -124,7 +129,6 @@ export interface HubRequestEvents {
 export interface HubFireAndForgetEvents {
   [HubEvents.HEARTBEAT]: Heartbeat;
   [HubEvents.LOG_WRITE]: LogWriteRequest;
-  [HubEvents.COST_WRITE]: CostWriteRequest;
 }
 
 // ---------------------------------------------------------------------------

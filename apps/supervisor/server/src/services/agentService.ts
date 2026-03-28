@@ -34,6 +34,7 @@ export async function getAgents(
           latest_mail_id: true,
           last_active: true,
           cost_suspended_reason: true,
+          budget_left: true,
           updated_at: true,
           host: { select: { name: true } },
         },
@@ -60,6 +61,9 @@ export async function getAgents(
     latestMailId: user.user_notifications?.latest_mail_id ?? 0,
     enabled: user.enabled,
     archived: user.archived,
+    budgetLeft: user.user_notifications?.budget_left != null
+      ? Number(user.user_notifications.budget_left)
+      : undefined,
     config: parseConfig(user.config),
   }));
 
