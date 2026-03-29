@@ -10,8 +10,7 @@
   ],
   "scripts": {
     "clean": "rimraf dist",
-    "build": "tsc",
-    "prepare": "npm run build"
+    "build": "tsc"
   },
   "dependencies": {
     "@naisys/common": "file:../common",
