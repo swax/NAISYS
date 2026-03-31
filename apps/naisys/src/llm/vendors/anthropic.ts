@@ -2,6 +2,10 @@ import Anthropic from "@anthropic-ai/sdk";
 import { MessageParam } from "@anthropic-ai/sdk/resources";
 
 import { ContentBlock, LlmMessage } from "../llmDtos.js";
+import {
+  extractDesktopActions,
+  prepareComputerUse,
+} from "./anthropic-computer-use.js";
 import { QueryResult, QuerySources, VendorDeps } from "./vendorTypes.js";
 
 const clientCache = new Map<string, Anthropic>();
@@ -31,6 +35,7 @@ export async function sendWithAnthropic(
     tools,
     useToolsForLlmConsoleResponses,
     useThinking,
+    desktopConfig,
   } = deps;
   const model = modelService.getLlmModel(modelKey);
 
@@ -77,13 +82,11 @@ export async function sendWithAnthropic(
     };
   }
 
+  // Build tools array — console and desktop tools can coexist
   if (source === "console" && useToolsForLlmConsoleResponses) {
     createParams.tools = [tools.consoleToolAnthropic];
     if (useThinking) {
-      createParams.tool_choice = {
-        // With thinking enabled, only "auto" is supported
-        type: "auto",
-      };
+      createParams.tool_choice = { type: "auto" };
     } else {
       createParams.tool_choice = {
         type: "tool",
@@ -92,9 +95,31 @@ export async function sendWithAnthropic(
     }
   }
 
-  const msgResponse = await anthropic.messages.create(createParams, {
-    signal: abortSignal,
-  });
+  // Computer use: add tool, resize screenshots, scale dimensions
+  let desktopScaleFactor = 1;
+
+  if (desktopConfig) {
+    const setup = await prepareComputerUse(
+      desktopConfig,
+      createParams.messages as any[],
+    );
+    desktopScaleFactor = setup.scaleFactor;
+
+    if (createParams.tools) {
+      createParams.tools.push(setup.computerTool as any);
+      createParams.tool_choice = { type: "auto" };
+    } else {
+      createParams.tools = [setup.computerTool as any];
+    }
+  }
+
+  // Use beta endpoint when computer use tool is present, otherwise normal
+  const msgResponse = desktopConfig
+    ? await (anthropic.beta.messages.create as Function)(
+        { ...createParams, betas: [desktopConfig.betaFlag] },
+        { signal: abortSignal },
+      )
+    : await anthropic.messages.create(createParams, { signal: abortSignal });
 
   // Record token usage
   if (!msgResponse.usage) {
@@ -106,9 +131,6 @@ export async function sendWithAnthropic(
   const cacheCreationTokens =
     msgResponse.usage.cache_creation_input_tokens || 0;
   const cacheReadTokens = msgResponse.usage.cache_read_input_tokens || 0;
-  // input_tokens only counts non-cached tokens, so add back cached portions for the full context size
-  // Excludes output_tokens because it contains thinking tokens that don't persist in context;
-  // the actual response text is estimated locally by contextManager.getTokenCount()
   const messagesTokenCount =
     inputTokens + cacheCreationTokens + cacheReadTokens;
 
@@ -117,22 +139,39 @@ export async function sendWithAnthropic(
     model.key,
     inputTokens,
     outputTokens,
-    msgResponse.usage.cache_creation_input_tokens || 0,
-    msgResponse.usage.cache_read_input_tokens || 0,
+    cacheCreationTokens,
+    cacheReadTokens,
   );
 
-  if (createParams.tools) {
-    const commandsFromTool = tools.getCommandsFromAnthropicToolUse(
-      msgResponse.content,
-    );
+  // Extract desktop actions, scaling coordinates back to native
+  const desktopActions = desktopConfig
+    ? extractDesktopActions(msgResponse.content, desktopScaleFactor)
+    : [];
 
-    if (commandsFromTool) {
-      return { responses: commandsFromTool, messagesTokenCount };
-    }
+  // Extract console commands (submit_commands tool_use blocks)
+  const consoleCommands = createParams.tools
+    ? tools.getCommandsFromAnthropicToolUse(msgResponse.content)
+    : undefined;
+
+  // Extract text blocks
+  const textParts: string[] = msgResponse.content
+    .filter((c: any) => c.type === "text" && c.text)
+    .map((c: any) => c.text);
+
+  // Desktop actions present — they take priority for the response flow.
+  // Console commands (if any) are folded into the text so the model sees them
+  // in context and can re-issue after the desktop actions complete.
+  if (desktopActions.length > 0) {
+    const allText = [...textParts, ...(consoleCommands || [])];
+    return { responses: allText, messagesTokenCount, desktopActions };
+  }
+
+  if (consoleCommands) {
+    return { responses: consoleCommands, messagesTokenCount };
   }
 
   return {
-    responses: [msgResponse.content.find((c) => c.type == "text")?.text || ""],
+    responses: textParts.length > 0 ? textParts : [""],
     messagesTokenCount,
   };
 }
@@ -155,10 +194,11 @@ function formatContentForAnthropic(
   }
   // ContentBlock[] — map to Anthropic content blocks
   const blocks = content.map((block, index) => {
+    const isLast = index === content.length - 1;
+
     if (block.type === "text") {
       const textBlock: any = { type: "text", text: block.text };
-      // Apply cache_control to the last block if cachePoint
-      if (cachePoint && index === content.length - 1) {
+      if (cachePoint && isLast) {
         textBlock.cache_control = { type: "ephemeral" };
       }
       return textBlock;
@@ -168,6 +208,35 @@ function formatContentForAnthropic(
         "Anthropic does not support audio input. Use an OpenAI or Google model for audio.",
       );
     }
+    if (block.type === "tool_use") {
+      return {
+        type: "tool_use",
+        id: block.id,
+        name: block.name,
+        input: block.input,
+      };
+    }
+    if (block.type === "tool_result") {
+      return {
+        type: "tool_result",
+        tool_use_id: block.toolUseId,
+        ...(block.isError ? { is_error: true } : {}),
+        content: block.resultContent.map((c) => {
+          if (c.type === "image") {
+            return {
+              type: "image",
+              source: {
+                type: "base64",
+                media_type: c.mimeType,
+                data: c.base64,
+              },
+            };
+          }
+          return { type: "text", text: c.text };
+        }),
+      };
+    }
+    // image block
     const imageBlock: any = {
       type: "image",
       source: {
@@ -176,8 +245,7 @@ function formatContentForAnthropic(
         data: block.base64,
       },
     };
-    // Apply cache_control to the last block if cachePoint
-    if (cachePoint && index === content.length - 1) {
+    if (cachePoint && isLast) {
       imageBlock.cache_control = { type: "ephemeral" };
     }
     return imageBlock;

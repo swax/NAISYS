@@ -49,6 +49,13 @@ export const genImgCmd: CommandDef = {
     "Generate an image with the description and save it to the given file path",
 };
 
+export const desktopCmd: CommandDef = {
+  name: "ns-desktop",
+  usage: 'cancel ["<reason>"]',
+  description:
+    "Reject the pending desktop action with optional feedback to try a different approach",
+};
+
 export const lynxCmd: CommandDef = {
   name: "ns-lynx",
   description:

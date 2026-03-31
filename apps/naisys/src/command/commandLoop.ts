@@ -3,6 +3,7 @@ import chalk from "chalk";
 import * as readline from "readline";
 
 import { AgentConfig } from "../agent/agentConfig.js";
+import { DesktopService } from "../features/desktop.js";
 import { LynxService } from "../features/lynx.js";
 import { SessionService } from "../features/session.js";
 import { WorkspacesFeature } from "../features/workspaces.js";
@@ -17,6 +18,7 @@ import { ContentSource } from "../llm/llmDtos.js";
 import { LLMService } from "../llm/llmService.js";
 import { ChatService } from "../mail/chat.js";
 import { MailService } from "../mail/mail.js";
+import { formatDesktopAction } from "../services/computerService.js";
 import { LogService } from "../services/logService.js";
 import { ModelService } from "../services/modelService.js";
 import { RunService } from "../services/runService.js";
@@ -51,6 +53,7 @@ export function createCommandLoop(
   hubClient: HubClient | undefined,
   sessionService: SessionService,
   modelService: ModelService,
+  desktopService: DesktopService,
 ) {
   let preemptiveCompactTimeout: NodeJS.Timeout | undefined;
   /** Tracks the current wait so preemptive compact can calculate remaining time */
@@ -326,9 +329,12 @@ export function createCommandLoop(
       }
 
       // If the user is in debug mode and they didn't enter anything, switch to LLM
+      if (inputMode.isDebug() && blankDebugInput) {
+        inputMode.setLLM();
+      }
       // If in LLM mode, auto switch back to debug
-      if ((inputMode.isDebug() && blankDebugInput) || inputMode.isLLM()) {
-        inputMode.toggle();
+      else if (inputMode.isLLM()) {
+        inputMode.setDebug();
       }
 
       return {
@@ -386,13 +392,22 @@ export function createCommandLoop(
       }
     }
 
+    // Execute pending desktop actions then continue straight to the LLM query.
+    // Skip the prompt append so no message gets inserted between tool_result and the next query.
+    const desktopActionsExecuted = desktopService.hasPendingActions();
+    if (desktopActionsExecuted) {
+      await desktopService.executePendingActions();
+    }
+
     checkContextLimitWarning();
 
     if (agentConfig().workspacesEnabled && workspaces.hasFiles()) {
       output.comment(workspaces.listFiles());
     }
 
-    contextManager.append(prompt, ContentSource.ConsolePrompt);
+    if (!desktopActionsExecuted) {
+      contextManager.append(prompt, ContentSource.ConsolePrompt);
+    }
 
     // If commands were generated from notifications, skip the LLM query and run them directly,
     // most often ns-session preemptive-compact commands from the preemptive compact notification
@@ -426,9 +441,35 @@ export function createCommandLoop(
           "console",
           queryController.signal,
         );
-        commands = queryResult.responses;
         contextManager.setMessagesTokenCount(queryResult.messagesTokenCount);
         schedulePreemptiveCompact();
+
+        // Desktop actions: store as pending, preview, return to debug for review
+        if (queryResult.desktopActions?.length) {
+          const textContent = queryResult.responses.join("\n");
+
+          clearPromptMessage(workingMsg);
+
+          for (const action of queryResult.desktopActions) {
+            output.commentAndLog(
+              `Desktop Request: ${formatDesktopAction(action.input)} (To cancel use ns-desktop cancel <reason>)`,
+            );
+          }
+
+          desktopService.setPendingBatch(
+            textContent,
+            queryResult.desktopActions,
+          );
+
+          inputMode.setDebug();
+          return {
+            outcome: "skip",
+            llmErrorCount,
+            pauseSeconds: agentConfig().debugPauseSeconds,
+          };
+        }
+
+        commands = queryResult.responses;
       } catch (queryError) {
         // Check if this was an ESC cancellation
         if (queryController.signal.aborted) {

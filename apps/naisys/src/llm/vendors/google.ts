@@ -127,12 +127,23 @@ function formatPartsForGoogle(content: string | ContentBlock[]): Array<any> {
   if (typeof content === "string") {
     return [{ text: content }];
   }
-  return content.map((block) => {
-    if (block.type === "text") {
-      return { text: block.text };
-    }
-    return {
-      inlineData: { mimeType: block.mimeType, data: block.base64 },
-    };
-  });
+  return content
+    .map((block) => {
+      if (block.type === "text") {
+        return { text: block.text };
+      }
+      if (block.type === "image" || block.type === "audio") {
+        return {
+          inlineData: { mimeType: block.mimeType, data: block.base64 },
+        };
+      }
+      if (block.type === "tool_use") {
+        return { text: `[Desktop action: ${JSON.stringify(block.input)}]` };
+      }
+      if (block.type === "tool_result") {
+        return { text: "[Desktop screenshot]" };
+      }
+      return null;
+    })
+    .filter(Boolean);
 }

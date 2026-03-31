@@ -14,14 +14,6 @@ export function createInputMode() {
     inputMode = InputMode.Debug;
   }
 
-  function toggle() {
-    if (inputMode == InputMode.Debug) {
-      inputMode = InputMode.LLM;
-    } else if (inputMode == InputMode.LLM) {
-      inputMode = InputMode.Debug;
-    }
-  }
-
   function isLLM() {
     return inputMode === InputMode.LLM;
   }
@@ -33,7 +25,6 @@ export function createInputMode() {
   return {
     setLLM,
     setDebug,
-    toggle,
     isLLM,
     isDebug,
   };

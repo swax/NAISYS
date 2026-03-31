@@ -166,6 +166,7 @@ export const builtInLlmModels: LlmModel[] = [
     cacheReadCost: 0.5,
     cacheTtlSeconds: 300,
     supportsVision: true,
+    supportsComputerUse: true,
   },
   {
     key: "claude4sonnet",
@@ -180,6 +181,7 @@ export const builtInLlmModels: LlmModel[] = [
     cacheReadCost: 0.3,
     cacheTtlSeconds: 300,
     supportsVision: true,
+    supportsComputerUse: true,
   },
   {
     key: "claude4haiku",
@@ -194,6 +196,7 @@ export const builtInLlmModels: LlmModel[] = [
     cacheReadCost: 0.1,
     cacheTtlSeconds: 300,
     supportsVision: true,
+    supportsComputerUse: true,
   },
 ];
 

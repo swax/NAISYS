@@ -115,15 +115,27 @@ function formatContentForOpenAI(
   if (typeof content === "string") {
     return content;
   }
-  return content.map((block) => {
-    if (block.type === "text") {
-      return { type: "text", text: block.text };
-    }
-    return {
-      type: "image_url",
-      image_url: {
-        url: `data:${block.mimeType};base64,${block.base64}`,
-      },
-    };
-  });
+  return content
+    .map((block) => {
+      if (block.type === "text") {
+        return { type: "text", text: block.text };
+      }
+      if (block.type === "image") {
+        return {
+          type: "image_url",
+          image_url: {
+            url: `data:${block.mimeType};base64,${block.base64}`,
+          },
+        };
+      }
+      // tool_use/tool_result: convert to text fallback
+      if (block.type === "tool_use") {
+        return { type: "text", text: `[Desktop action: ${JSON.stringify(block.input)}]` };
+      }
+      if (block.type === "tool_result") {
+        return { type: "text", text: "[Desktop screenshot]" };
+      }
+      return null;
+    })
+    .filter(Boolean);
 }

@@ -6,7 +6,9 @@ import { createDebugCommands } from "../command/debugCommand.js";
 import { createPromptBuilder } from "../command/promptBuilder.js";
 import { createShellCommand } from "../command/shellCommand.js";
 import { createShellWrapper } from "../command/shellWrapper.js";
+import { createDesktopService } from "../features/desktop.js";
 import { createGenImg } from "../features/genImg.js";
+import { createComputerService } from "../services/computerService.js";
 import { createListenService } from "../features/listen.js";
 import { createLookService } from "../features/look.js";
 import { createLynxService } from "../features/lynx.js";
@@ -122,12 +124,14 @@ export async function createAgentRuntime(
     logService,
     inputMode,
   );
+  const computerService = createComputerService();
   const llmService = createLLMService(
     globalConfig,
     agentConfig,
     costTracker,
     tools,
     modelService,
+    computerService,
   );
 
   // Features
@@ -144,6 +148,11 @@ export async function createAgentRuntime(
     contextManager,
     llmService,
     shellWrapper,
+  );
+  const desktopService = createDesktopService(
+    computerService,
+    contextManager,
+    output,
   );
   const genimg = createGenImg(
     globalConfig,
@@ -238,6 +247,7 @@ export async function createAgentRuntime(
   const commandRegistry = createCommandRegistry(inputMode, [
     lynxService,
     genimg,
+    desktopService,
     lookService,
     listenService,
     subagentService,
@@ -285,6 +295,7 @@ export async function createAgentRuntime(
     hubClient,
     sessionService,
     modelService,
+    desktopService,
   );
 
   const abortController = new AbortController();

@@ -127,6 +127,13 @@ export const AgentConfigFileSchema = z.object({
     .describe(
       "Experimental: Allows the LLM to pin files to the end of the context. Each turn the agent sees the latest version without old versions taking up context space",
     ),
+
+  controlDesktop: z
+    .boolean()
+    .optional()
+    .describe(
+      "Allow the agent to interact with the desktop GUI via computer use (screenshots, mouse, keyboard). Requires a model with supportsComputerUse",
+    ),
 });
 
 export type AgentConfigFile = z.infer<typeof AgentConfigFileSchema>;

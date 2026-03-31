@@ -96,6 +96,12 @@ export function createSystemMessage(
     ${sessionSubcommands.join("\n    ")}`;
   }
 
+  let desktopStr = "";
+  if (agentConfig().controlDesktop && shellModel.supportsComputerUse) {
+    desktopStr = `\nDesktop Access Enabled: Use it as needed, but preference using the shell.
+  Be decisive with desktop actions — click directly rather than hovering to verify. Each action costs time and tokens.`;
+  }
+
   let tokenNote = "";
 
   if (globalConfig().compactSessionEnabled) {
@@ -153,7 +159,7 @@ ${platformConfig.displayName} Commands:
   }
   Do not input notes after the prompt. Only valid commands.
 NAISYS Commands: (cannot be used with other commands on the same prompt)${mailStr}${chatStr}${subagentStr}${lynxStr}${genImgStr}${lookStr}${listenStr}${workspaceStr}
-  ${commentCmd.name} ${commentCmd.usage}: ${commentCmd.description}${sessionCmdStr}
+  ${commentCmd.name} ${commentCmd.usage}: ${commentCmd.description}${sessionCmdStr}${desktopStr}
 Tokens:
   The console log can only hold a certain number of tokens that is specified in the prompt.${tokenNote}`;
 

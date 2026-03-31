@@ -1,0 +1,423 @@
+/**
+ * Low-level computer interaction service.
+ * Handles screenshots, mouse/keyboard actions, and computer use API config.
+ * No NAISYS-specific dependencies (no context manager, agent config, etc.)
+ */
+
+import { execFileSync } from "child_process";
+import fs from "fs";
+import os from "os";
+import path from "path";
+import sharp from "sharp";
+
+import { DesktopConfig } from "../llm/vendors/vendorTypes.js";
+
+// --- Screenshot capture ---
+
+async function captureScreenshot(): Promise<{
+  base64: string;
+  width: number;
+  height: number;
+}> {
+  const tmpFile = path.join(os.tmpdir(), `naisys-desktop-${Date.now()}.png`);
+
+  try {
+    if (process.platform === "win32") {
+      // SetProcessDPIAware ensures we capture at native resolution on scaled displays.
+      // GetCursorInfo + DrawIconEx draws the actual cursor onto the screenshot
+      // (CopyFromScreen doesn't capture the cursor).
+      const psScript = `
+Add-Type -AssemblyName System.Windows.Forms
+Add-Type -AssemblyName System.Drawing
+Add-Type @"
+using System;
+using System.Runtime.InteropServices;
+public class ScreenCapture {
+  [DllImport("user32.dll")] public static extern bool SetProcessDPIAware();
+  [DllImport("user32.dll")] public static extern bool GetCursorInfo(ref CURSORINFO pci);
+  [DllImport("user32.dll")] public static extern bool DrawIconEx(IntPtr hdc, int x, int y, IntPtr hIcon, int w, int h, uint step, IntPtr brush, uint flags);
+  public const uint DI_NORMAL = 3;
+}
+[StructLayout(LayoutKind.Sequential)] public struct POINT { public int X; public int Y; }
+[StructLayout(LayoutKind.Sequential)] public struct CURSORINFO { public int cbSize; public int flags; public IntPtr hCursor; public POINT ptScreenPos; }
+"@
+[ScreenCapture]::SetProcessDPIAware()
+$s = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
+$b = New-Object System.Drawing.Bitmap($s.Width, $s.Height)
+$g = [System.Drawing.Graphics]::FromImage($b)
+try {
+  $g.CopyFromScreen($s.Left, $s.Top, 0, 0, $s.Size)
+  $ci = New-Object CURSORINFO
+  $ci.cbSize = [System.Runtime.InteropServices.Marshal]::SizeOf([type][CURSORINFO])
+  if ([ScreenCapture]::GetCursorInfo([ref]$ci)) {
+    $hdc = $g.GetHdc()
+    [ScreenCapture]::DrawIconEx($hdc, $ci.ptScreenPos.X - $s.Left, $ci.ptScreenPos.Y - $s.Top, $ci.hCursor, 0, 0, 0, [IntPtr]::Zero, [ScreenCapture]::DI_NORMAL)
+    $g.ReleaseHdc($hdc)
+  }
+  $b.Save('${tmpFile}', [System.Drawing.Imaging.ImageFormat]::Png)
+} finally {
+  $g.Dispose()
+  $b.Dispose()
+}
+`.trim();
+
+      execFileSync(
+        "powershell.exe",
+        ["-NoProfile", "-Command", psScript],
+        { stdio: "pipe" },
+      );
+    } else {
+      try {
+        execFileSync("scrot", [tmpFile], { stdio: "pipe" });
+      } catch {
+        execFileSync("import", ["-window", "root", tmpFile], {
+          stdio: "pipe",
+        });
+      }
+    }
+
+    const buffer = fs.readFileSync(tmpFile);
+    const metadata = await sharp(buffer).metadata();
+
+    return {
+      base64: buffer.toString("base64"),
+      width: metadata.width || 1920,
+      height: metadata.height || 1080,
+    };
+  } finally {
+    try {
+      fs.unlinkSync(tmpFile);
+    } catch {
+      /* ignore cleanup errors */
+    }
+  }
+}
+
+// --- Action execution ---
+
+function runPowerShell(command: string) {
+  execFileSync("powershell.exe", ["-NoProfile", "-Command", command], {
+    stdio: "pipe",
+  });
+}
+
+const PS_INPUT_TYPE = `
+Add-Type @"
+using System;
+using System.Runtime.InteropServices;
+public class NaisysInput {
+  [DllImport("user32.dll")] public static extern bool SetCursorPos(int x, int y);
+  [DllImport("user32.dll")] public static extern void mouse_event(uint f, int dx, int dy, int d, IntPtr e);
+  [DllImport("user32.dll")] public static extern bool SetProcessDPIAware();
+  public const uint LEFTDOWN=2, LEFTUP=4, RIGHTDOWN=8, RIGHTUP=16, MIDDLEDOWN=32, MIDDLEUP=64, WHEEL=0x800;
+}
+"@
+[NaisysInput]::SetProcessDPIAware()
+`.trim();
+
+function mouseClick(
+  x: number,
+  y: number,
+  button: "left" | "right" | "middle",
+) {
+  if (process.platform === "win32") {
+    const down =
+      button === "right"
+        ? "RIGHTDOWN"
+        : button === "middle"
+          ? "MIDDLEDOWN"
+          : "LEFTDOWN";
+    const up =
+      button === "right"
+        ? "RIGHTUP"
+        : button === "middle"
+          ? "MIDDLEUP"
+          : "LEFTUP";
+    runPowerShell(
+      `${PS_INPUT_TYPE}; [NaisysInput]::SetCursorPos(${x},${y}); Start-Sleep -Milliseconds 50; [NaisysInput]::mouse_event([NaisysInput]::${down},0,0,0,[IntPtr]::Zero); [NaisysInput]::mouse_event([NaisysInput]::${up},0,0,0,[IntPtr]::Zero)`,
+    );
+  } else {
+    const btn = button === "right" ? "3" : button === "middle" ? "2" : "1";
+    execFileSync("xdotool", ["mousemove", String(x), String(y), "click", btn]);
+  }
+}
+
+function mouseDoubleClick(x: number, y: number) {
+  if (process.platform === "win32") {
+    runPowerShell(
+      `${PS_INPUT_TYPE}; [NaisysInput]::SetCursorPos(${x},${y}); Start-Sleep -Milliseconds 50; [NaisysInput]::mouse_event([NaisysInput]::LEFTDOWN,0,0,0,[IntPtr]::Zero); [NaisysInput]::mouse_event([NaisysInput]::LEFTUP,0,0,0,[IntPtr]::Zero); Start-Sleep -Milliseconds 50; [NaisysInput]::mouse_event([NaisysInput]::LEFTDOWN,0,0,0,[IntPtr]::Zero); [NaisysInput]::mouse_event([NaisysInput]::LEFTUP,0,0,0,[IntPtr]::Zero)`,
+    );
+  } else {
+    execFileSync("xdotool", [
+      "mousemove",
+      String(x),
+      String(y),
+      "click",
+      "--repeat",
+      "2",
+      "1",
+    ]);
+  }
+}
+
+function mouseMove(x: number, y: number) {
+  if (process.platform === "win32") {
+    runPowerShell(
+      `${PS_INPUT_TYPE}; [NaisysInput]::SetCursorPos(${x},${y})`,
+    );
+  } else {
+    execFileSync("xdotool", ["mousemove", String(x), String(y)]);
+  }
+}
+
+function typeText(text: string) {
+  if (process.platform === "win32") {
+    runPowerShell(
+      `Set-Clipboard -Value '${text.replace(/'/g, "''")}'; Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.SendKeys]::SendWait('^v')`,
+    );
+  } else {
+    execFileSync("xdotool", ["type", "--clearmodifiers", text]);
+  }
+}
+
+function pressKey(keyCombo: string) {
+  if (process.platform === "win32") {
+    const sendKeysStr = keyCombo
+      .split("+")
+      .map((k) => {
+        const key = k.trim().toLowerCase();
+        switch (key) {
+          case "ctrl":
+          case "control":
+            return "^";
+          case "alt":
+            return "%";
+          case "shift":
+            return "+";
+          case "enter":
+          case "return":
+            return "{ENTER}";
+          case "tab":
+            return "{TAB}";
+          case "escape":
+          case "esc":
+            return "{ESC}";
+          case "backspace":
+            return "{BACKSPACE}";
+          case "delete":
+            return "{DELETE}";
+          case "space":
+            return " ";
+          case "up":
+            return "{UP}";
+          case "down":
+            return "{DOWN}";
+          case "left":
+            return "{LEFT}";
+          case "right":
+            return "{RIGHT}";
+          case "home":
+            return "{HOME}";
+          case "end":
+            return "{END}";
+          case "pageup":
+          case "page_up":
+            return "{PGUP}";
+          case "pagedown":
+          case "page_down":
+            return "{PGDN}";
+          case "super":
+          case "win":
+            return "^{ESC}";
+          default:
+            if (key.startsWith("f") && key.length <= 3) {
+              return `{${key.toUpperCase()}}`;
+            }
+            return key;
+        }
+      })
+      .join("");
+    runPowerShell(
+      `Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.SendKeys]::SendWait('${sendKeysStr}')`,
+    );
+  } else {
+    execFileSync("xdotool", ["key", keyCombo]);
+  }
+}
+
+function mouseScroll(
+  x: number,
+  y: number,
+  direction: string,
+  amount: number,
+) {
+  if (process.platform === "win32") {
+    const delta = direction === "up" ? 120 * amount : -120 * amount;
+    runPowerShell(
+      `${PS_INPUT_TYPE}; [NaisysInput]::SetCursorPos(${x},${y}); [NaisysInput]::mouse_event([NaisysInput]::WHEEL,0,0,${delta},[IntPtr]::Zero)`,
+    );
+  } else {
+    const btn = direction === "up" ? "4" : "5";
+    execFileSync("xdotool", [
+      "mousemove",
+      String(x),
+      String(y),
+      "click",
+      "--repeat",
+      String(amount),
+      btn,
+    ]);
+  }
+}
+
+async function executeAction(
+  action: Record<string, unknown>,
+): Promise<void> {
+  const coord = action.coordinate as number[] | undefined;
+
+  switch (action.action) {
+    case "left_click":
+      mouseClick(coord![0], coord![1], "left");
+      break;
+    case "right_click":
+      mouseClick(coord![0], coord![1], "right");
+      break;
+    case "middle_click":
+      mouseClick(coord![0], coord![1], "middle");
+      break;
+    case "double_click":
+      mouseDoubleClick(coord![0], coord![1]);
+      break;
+    case "triple_click":
+      mouseDoubleClick(coord![0], coord![1]);
+      mouseClick(coord![0], coord![1], "left");
+      break;
+    case "type":
+      typeText(action.text as string);
+      break;
+    case "key":
+      pressKey(action.text as string);
+      break;
+    case "mouse_move":
+      mouseMove(coord![0], coord![1]);
+      break;
+    case "scroll":
+      mouseScroll(
+        coord![0],
+        coord![1],
+        action.scroll_direction as string,
+        (action.scroll_amount as number) || 3,
+      );
+      break;
+    case "screenshot":
+      break; // no-op, screenshot is captured after
+    case "wait":
+      await new Promise((r) => setTimeout(r, 5000));
+      break;
+    default:
+      break;
+  }
+
+  // Pause to let UI update after action
+  await new Promise((r) => setTimeout(r, 5000));
+}
+
+// --- Display formatting ---
+
+/** Format a computer use action for human-readable display */
+export function formatDesktopAction(input: Record<string, unknown>): string {
+  const action = input.action;
+  const coordinate = input.coordinate as number[] | undefined;
+  const coord = coordinate ? `(${coordinate.join(", ")})` : "";
+
+  switch (action) {
+    case "screenshot":
+      return "Take screenshot";
+    case "left_click":
+      return `Left click at ${coord}`;
+    case "right_click":
+      return `Right click at ${coord}`;
+    case "double_click":
+      return `Double click at ${coord}`;
+    case "triple_click":
+      return `Triple click at ${coord}`;
+    case "middle_click":
+      return `Middle click at ${coord}`;
+    case "type":
+      return `Type "${input.text}"`;
+    case "key":
+      return `Press key "${input.text}"`;
+    case "mouse_move":
+      return `Move mouse to ${coord}`;
+    case "scroll":
+      return `Scroll ${input.scroll_direction} by ${input.scroll_amount} at ${coord}`;
+    case "left_click_drag": {
+      const startCoord = input.start_coordinate as number[] | undefined;
+      return `Drag from (${startCoord?.join(", ")}) to ${coord}`;
+    }
+    case "wait":
+      return "Wait";
+    default:
+      return `${action} ${JSON.stringify(input)}`;
+  }
+}
+
+// --- Computer use API config ---
+
+/** Determine the computer use tool type and beta flag based on model version */
+function getComputerUseVersionConfig(versionName: string): {
+  toolType: string;
+  betaFlag: string;
+} {
+  if (versionName.includes("4-6") || versionName.includes("4-5")) {
+    return {
+      toolType: "computer_20251124",
+      betaFlag: "computer-use-2025-11-24",
+    };
+  }
+  return {
+    toolType: "computer_20250124",
+    betaFlag: "computer-use-2025-01-24",
+  };
+}
+
+// --- Service factory ---
+
+export function createComputerService() {
+  let nativeDimensions: { width: number; height: number } | null = null;
+
+  /** Capture screenshot at native resolution */
+  async function capture(): Promise<{
+    base64: string;
+    width: number;
+    height: number;
+  }> {
+    const result = await captureScreenshot();
+    nativeDimensions = { width: result.width, height: result.height };
+    return result;
+  }
+
+  /** Execute an action using native screen coordinates */
+  async function execute(action: Record<string, unknown>) {
+    await executeAction(action);
+  }
+
+  /** Build the DesktopConfig with native display dimensions. Vendors handle their own resizing. */
+  function getConfig(versionName: string): DesktopConfig {
+    const { toolType, betaFlag } = getComputerUseVersionConfig(versionName);
+    return {
+      toolType,
+      betaFlag,
+      displayWidth: nativeDimensions?.width || 1920,
+      displayHeight: nativeDimensions?.height || 1080,
+    };
+  }
+
+  return {
+    captureScreenshot: capture,
+    executeAction: execute,
+    getConfig,
+  };
+}
+
+export type ComputerService = ReturnType<typeof createComputerService>;

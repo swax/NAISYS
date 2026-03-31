@@ -28,7 +28,26 @@ export interface AudioBlock {
   mimeType: string;
 }
 
-export type ContentBlock = TextBlock | ImageBlock | AudioBlock;
+export interface ToolUseBlock {
+  type: "tool_use";
+  id: string;
+  name: string;
+  input: Record<string, unknown>;
+}
+
+export interface ToolResultBlock {
+  type: "tool_result";
+  toolUseId: string;
+  isError?: boolean;
+  resultContent: Array<TextBlock | ImageBlock>;
+}
+
+export type ContentBlock =
+  | TextBlock
+  | ImageBlock
+  | AudioBlock
+  | ToolUseBlock
+  | ToolResultBlock;
 
 /** Extract text content from a message's content field. Returns "[Image]" placeholder for image blocks. */
 export function getTextContent(content: string | ContentBlock[]): string {
