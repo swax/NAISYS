@@ -120,13 +120,24 @@ function formatContentForResponses(
     return [{ type: "input_text", text: content }];
   }
 
-  return content.map((block) => {
-    if (block.type === "text") {
-      return { type: "input_text", text: block.text };
-    }
-    return {
-      type: "input_image",
-      image_url: `data:${block.mimeType};base64,${block.base64}`,
-    };
-  });
+  return content
+    .map((block) => {
+      if (block.type === "text") {
+        return { type: "input_text", text: block.text };
+      }
+      if (block.type === "image") {
+        return {
+          type: "input_image",
+          image_url: `data:${block.mimeType};base64,${block.base64}`,
+        };
+      }
+      if (block.type === "tool_use") {
+        return { type: "input_text", text: `[Desktop action: ${JSON.stringify(block.input)}]` };
+      }
+      if (block.type === "tool_result") {
+        return { type: "input_text", text: "[Desktop screenshot]" };
+      }
+      return null;
+    })
+    .filter(Boolean);
 }

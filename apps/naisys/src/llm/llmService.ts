@@ -2,6 +2,7 @@ import { LlmApiType } from "@naisys/common";
 
 import { AgentConfig } from "../agent/agentConfig.js";
 import { GlobalConfig } from "../globalConfig.js";
+import { ComputerService } from "../services/computerService.js";
 import { ModelService } from "../services/modelService.js";
 import { CommandTools } from "./commandTool.js";
 import { CostTracker } from "./costTracker.js";
@@ -25,6 +26,7 @@ export function createLLMService(
   costTracker: CostTracker,
   tools: CommandTools,
   modelService: ModelService,
+  computerService?: ComputerService,
 ) {
   async function query(
     modelKey: string,
@@ -68,6 +70,14 @@ export function createLLMService(
       throw "Error, last message on context is not a user message";
     }
 
+    // Derive desktop config from agent + model flags
+    const desktopConfig =
+      agentConfig().controlDesktop &&
+      model.supportsComputerUse &&
+      computerService
+        ? computerService.getConfig(model.versionName)
+        : undefined;
+
     const deps: VendorDeps = {
       modelService,
       costTracker,
@@ -75,6 +85,7 @@ export function createLLMService(
       useToolsForLlmConsoleResponses:
         globalConfig().useToolsForLlmConsoleResponses,
       useThinking,
+      desktopConfig,
     };
 
     if (model.apiType == LlmApiType.Google) {

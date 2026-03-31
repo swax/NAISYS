@@ -4,7 +4,15 @@ import { LogService } from "../services/logService.js";
 import { InputModeService } from "../utils/inputMode.js";
 import { OutputColor, OutputService } from "../utils/output.js";
 import * as utilities from "../utils/utilities.js";
-import { ContentBlock, ContentSource, LlmMessage } from "./llmDtos.js";
+import {
+  ContentBlock,
+  ContentSource,
+  ImageBlock,
+  LlmMessage,
+  TextBlock,
+  ToolResultBlock,
+  ToolUseBlock,
+} from "./llmDtos.js";
 
 export function createContextManager(
   { agentConfig }: AgentConfig,
@@ -125,6 +133,97 @@ export function createContextManager(
 
     // Display placeholder to console
     output.write(text, OutputColor.console);
+  }
+
+  /** Add an assistant message containing text and tool_use blocks (for computer use).
+   *  Always writes to context regardless of input mode — the tool_use/tool_result
+   *  protocol requires these for the model to see actions and rejections. */
+  function appendToolResponse(
+    text: string,
+    toolUseBlocks: Array<{
+      id: string;
+      name: string;
+      input: Record<string, unknown>;
+    }>,
+  ) {
+
+    const contentBlocks: ContentBlock[] = [];
+    if (text) {
+      contentBlocks.push({ type: "text", text } satisfies TextBlock);
+    }
+    for (const block of toolUseBlocks) {
+      contentBlocks.push({
+        type: "tool_use",
+        id: block.id,
+        name: block.name,
+        input: block.input,
+      } satisfies ToolUseBlock);
+    }
+
+    const llmMessage: LlmMessage = {
+      source: ContentSource.LLM,
+      role: "assistant",
+      content: contentBlocks,
+    };
+    messages.push(llmMessage);
+
+    if (text) {
+      output.write(text, OutputColor.llm);
+    }
+    logService.write(llmMessage);
+  }
+
+  /** Add a user message with a tool_result containing a screenshot image */
+  function appendToolResult(
+    toolUseId: string,
+    screenshotBase64: string,
+    screenshotMimeType: string,
+  ) {
+
+    const resultContent: Array<TextBlock | ImageBlock> = [
+      {
+        type: "image",
+        base64: screenshotBase64,
+        mimeType: screenshotMimeType,
+      },
+    ];
+
+    const llmMessage: LlmMessage = {
+      source: ContentSource.Console,
+      role: "user",
+      content: [
+        {
+          type: "tool_result",
+          toolUseId,
+          resultContent,
+        } satisfies ToolResultBlock,
+      ],
+    };
+    messages.push(llmMessage);
+
+    output.write("[Desktop screenshot]", OutputColor.console);
+    logService.write(llmMessage);
+  }
+
+  /** Add a user message with an error tool_result (for rejected desktop actions) */
+  function appendToolResultError(toolUseId: string, errorText: string) {
+
+    const llmMessage: LlmMessage = {
+      source: ContentSource.Console,
+      role: "user",
+      content: [
+        {
+          type: "tool_result",
+          toolUseId,
+          isError: true,
+          resultContent: [{ type: "text", text: errorText }],
+        } satisfies ToolResultBlock,
+      ],
+    };
+    messages.push(llmMessage);
+
+    output.write(`[Desktop action rejected: ${errorText}]`, OutputColor.error);
+    logService.write(llmMessage);
   }
 
   /** Scrub non-text content blocks (image, audio) from recent user messages,
@@ -294,6 +393,9 @@ export function createContextManager(
     append,
     appendImage,
     appendAudio,
+    appendToolResponse,
+    appendToolResult,
+    appendToolResultError,
     scrubRecentMedia,
     clear,
     setMessagesTokenCount,

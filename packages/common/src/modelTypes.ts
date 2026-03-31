@@ -30,6 +30,7 @@ export const LlmModelSchema = z
     cacheTtlSeconds: z.number().int().positive().optional(),
     supportsVision: z.boolean().optional(),
     supportsHearing: z.boolean().optional(),
+    supportsComputerUse: z.boolean().optional(),
   })
   .superRefine((data, ctx) => {
     if (
@@ -84,6 +85,7 @@ const LlmMetaSchema = z.object({
   cacheTtlSeconds: z.number().int().positive().optional(),
   supportsVision: z.boolean().optional(),
   supportsHearing: z.boolean().optional(),
+  supportsComputerUse: z.boolean().optional(),
 });
 
 const ImageMetaSchema = z.object({

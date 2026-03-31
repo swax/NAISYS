@@ -10,10 +10,25 @@ export type QuerySources =
   | "look"
   | "listen";
 
+export interface DesktopAction {
+  id: string;
+  name: string;
+  input: Record<string, unknown>;
+}
+
+export interface DesktopConfig {
+  toolType: string;
+  betaFlag: string;
+  displayWidth: number;
+  displayHeight: number;
+}
+
 export interface QueryResult {
   responses: string[];
   /** Total input context size (excludes output/thinking tokens which don't persist) */
   messagesTokenCount: number;
+  /** Computer use actions returned by the model (desktop mode only) */
+  desktopActions?: DesktopAction[];
 }
 
 export interface VendorDeps {
@@ -22,4 +37,5 @@ export interface VendorDeps {
   tools: CommandTools;
   useToolsForLlmConsoleResponses: boolean;
   useThinking: boolean;
+  desktopConfig?: DesktopConfig;
 }
