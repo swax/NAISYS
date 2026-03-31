@@ -146,7 +146,7 @@ export function extractDesktopActions(
       actions.push({
         id: block.id,
         name: block.name,
-        input: scaleActionToNative(block.input, scaleFactor),
+        input: { actions: [scaleActionToNative(block.input, scaleFactor)] },
       });
     }
   }

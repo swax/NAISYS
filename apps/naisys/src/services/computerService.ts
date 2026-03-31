@@ -10,7 +10,7 @@ import os from "os";
 import path from "path";
 import sharp from "sharp";
 
-import { DesktopConfig } from "../llm/vendors/vendorTypes.js";
+import { DesktopAction, DesktopConfig } from "../llm/vendors/vendorTypes.js";
 
 // --- Screenshot capture ---
 
@@ -170,6 +170,32 @@ function mouseMove(x: number, y: number) {
   }
 }
 
+function mouseDrag(
+  startX: number,
+  startY: number,
+  endX: number,
+  endY: number,
+) {
+  if (process.platform === "win32") {
+    runPowerShell(
+      `${PS_INPUT_TYPE}; [NaisysInput]::SetCursorPos(${startX},${startY}); Start-Sleep -Milliseconds 50; [NaisysInput]::mouse_event([NaisysInput]::LEFTDOWN,0,0,0,[IntPtr]::Zero); Start-Sleep -Milliseconds 50; [NaisysInput]::SetCursorPos(${endX},${endY}); Start-Sleep -Milliseconds 50; [NaisysInput]::mouse_event([NaisysInput]::LEFTUP,0,0,0,[IntPtr]::Zero)`,
+    );
+  } else {
+    execFileSync("xdotool", [
+      "mousemove",
+      String(startX),
+      String(startY),
+      "mousedown",
+      "1",
+      "mousemove",
+      String(endX),
+      String(endY),
+      "mouseup",
+      "1",
+    ]);
+  }
+}
+
 function typeText(text: string) {
   if (process.platform === "win32") {
     runPowerShell(
@@ -270,7 +296,7 @@ function mouseScroll(
   }
 }
 
-async function executeAction(
+async function executeSingleAction(
   action: Record<string, unknown>,
 ): Promise<void> {
   const coord = action.coordinate as number[] | undefined;
@@ -301,6 +327,11 @@ async function executeAction(
     case "mouse_move":
       mouseMove(coord![0], coord![1]);
       break;
+    case "left_click_drag": {
+      const startCoord = action.start_coordinate as number[];
+      mouseDrag(startCoord[0], startCoord[1], coord![0], coord![1]);
+      break;
+    }
     case "scroll":
       mouseScroll(
         coord![0],
@@ -322,10 +353,19 @@ async function executeAction(
   await new Promise((r) => setTimeout(r, 5000));
 }
 
+/** Execute actions. All actions are stored as { actions: [...] } — single or batched. */
+async function executeAction(
+  action: DesktopAction["input"],
+): Promise<void> {
+  for (const subAction of action.actions) {
+    await executeSingleAction(subAction);
+  }
+}
+
 // --- Display formatting ---
 
-/** Format a computer use action for human-readable display */
-export function formatDesktopAction(input: Record<string, unknown>): string {
+/** Format a single action for human-readable display */
+function formatSingleAction(input: Record<string, unknown>): string {
   const action = input.action;
   const coordinate = input.coordinate as number[] | undefined;
   const coord = coordinate ? `(${coordinate.join(", ")})` : "";
@@ -362,6 +402,11 @@ export function formatDesktopAction(input: Record<string, unknown>): string {
   }
 }
 
+/** Format a computer use action for human-readable display. Actions are always { actions: [...] }. */
+export function formatDesktopAction(input: DesktopAction["input"]): string {
+  return input.actions.map(formatSingleAction).join(", then ");
+}
+
 // --- Computer use API config ---
 
 /** Determine the computer use tool type and beta flag based on model version */
@@ -369,6 +414,11 @@ function getComputerUseVersionConfig(versionName: string): {
   toolType: string;
   betaFlag: string;
 } {
+  // OpenAI models — GA computer tool, no beta flag needed
+  if (versionName.startsWith("gpt-")) {
+    return { toolType: "computer", betaFlag: "" };
+  }
+  // Anthropic models
   if (versionName.includes("4-6") || versionName.includes("4-5")) {
     return {
       toolType: "computer_20251124",
@@ -398,7 +448,7 @@ export function createComputerService() {
   }
 
   /** Execute an action using native screen coordinates */
-  async function execute(action: Record<string, unknown>) {
+  async function execute(action: DesktopAction["input"]) {
     await executeAction(action);
   }
 

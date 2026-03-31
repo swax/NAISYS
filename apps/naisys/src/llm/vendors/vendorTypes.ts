@@ -13,7 +13,7 @@ export type QuerySources =
 export interface DesktopAction {
   id: string;
   name: string;
-  input: Record<string, unknown>;
+  input: { actions: Record<string, unknown>[] };
 }
 
 export interface DesktopConfig {

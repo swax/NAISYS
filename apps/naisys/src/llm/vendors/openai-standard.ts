@@ -1,6 +1,11 @@
 import OpenAI from "openai";
 
-import { LlmMessage } from "../llmDtos.js";
+import { ContentBlock, LlmMessage } from "../llmDtos.js";
+import {
+  extractDesktopActions,
+  formatInputWithComputerUse,
+  prepareComputerUse,
+} from "./openai-computer-use.js";
 import { QueryResult, QuerySources, VendorDeps } from "./vendorTypes.js";
 
 const clientCache = new Map<string, OpenAI>();
@@ -30,6 +35,7 @@ export async function sendWithOpenAiStandard(
     tools,
     useToolsForLlmConsoleResponses,
     useThinking,
+    desktopConfig,
   } = deps;
   const model = modelService.getLlmModel(modelKey);
 
@@ -39,34 +45,54 @@ export async function sendWithOpenAiStandard(
 
   const openAI = getClient(apiKey, model.baseUrl);
 
-  const useTools = source === "console" && useToolsForLlmConsoleResponses;
+  const useConsoleTools = source === "console" && useToolsForLlmConsoleResponses;
+
+  // Build tools array — console and desktop tools can coexist
+  const toolsDefs: any[] = [];
+  if (useConsoleTools) {
+    toolsDefs.push({
+      type: "function" as const,
+      name: tools.consoleToolOpenAI.function.name,
+      description: tools.consoleToolOpenAI.function.description,
+      parameters: tools.consoleToolOpenAI.function.parameters,
+      strict: false,
+    });
+  }
+  if (desktopConfig) {
+    toolsDefs.push({ type: "computer" });
+  }
+
+  // Force console tool only when desktop is not also enabled
+  let toolChoice: any = undefined;
+  if (useConsoleTools && !desktopConfig) {
+    toolChoice = {
+      type: "function" as const,
+      name: tools.consoleToolOpenAI.function.name,
+    };
+  }
+
+  // Computer use: compute scale factor for image resizing / coordinate mapping
+  const cuSetup = desktopConfig ? prepareComputerUse(desktopConfig) : undefined;
 
   const response = await openAI.responses.create(
     {
       model: model.versionName,
       instructions: systemMessage,
-      input: context.map((m) => ({
-        role: m.role,
-        content: formatContentForResponses(m.content),
-      })),
+      input: desktopConfig
+        ? await formatInputWithComputerUse(
+            context,
+            desktopConfig,
+            cuSetup!.scaleFactor,
+            formatContentBlocks,
+            formatSingleBlock,
+          )
+        : context.map((m) => ({
+            role: m.role === "assistant" ? "assistant" : "user",
+            content: formatContentBlocks(m.content),
+          })),
       reasoning: { effort: useThinking ? "medium" : "none" },
-      tools: useTools
-        ? [
-            {
-              type: "function" as const,
-              name: tools.consoleToolOpenAI.function.name,
-              description: tools.consoleToolOpenAI.function.description,
-              parameters: tools.consoleToolOpenAI.function.parameters,
-              strict: false,
-            },
-          ]
-        : undefined,
-      tool_choice: useTools
-        ? {
-            type: "function" as const,
-            name: tools.consoleToolOpenAI.function.name,
-          }
-        : undefined,
+      tools: toolsDefs.length > 0 ? toolsDefs : undefined,
+      tool_choice: toolChoice,
     },
     { signal: abortSignal },
   );
@@ -91,53 +117,80 @@ export async function sendWithOpenAiStandard(
     cacheReadTokens,
   );
 
-  if (useTools) {
-    // Convert Responses API function_call items to Chat Completions format for parsing
-    const toolCalls = response.output
-      .filter((item: any) => item.type === "function_call")
-      .map((item: any) => ({
-        type: "function",
-        function: { name: item.name, arguments: item.arguments },
-      }));
+  // Extract desktop actions (computer_call items), scaling coordinates back to native
+  const desktopActions = desktopConfig
+    ? extractDesktopActions(response.output, cuSetup!.scaleFactor)
+    : [];
 
-    const commandsFromTool = tools.getCommandsFromOpenAiToolUse(toolCalls);
+  // Extract console commands (function_call items)
+  const consoleCommands = useConsoleTools
+    ? extractConsoleCommands(response.output, tools)
+    : undefined;
 
-    if (commandsFromTool) {
-      return { responses: commandsFromTool, messagesTokenCount };
-    }
+  // Extract text
+  const textParts: string[] = response.output_text
+    ? [response.output_text]
+    : [];
+
+  // Desktop actions take priority (same pattern as Anthropic vendor)
+  if (desktopActions.length > 0) {
+    const allText = [...textParts, ...(consoleCommands || [])];
+    return { responses: allText, messagesTokenCount, desktopActions };
+  }
+
+  if (consoleCommands) {
+    return { responses: consoleCommands, messagesTokenCount };
   }
 
   return {
-    responses: [response.output_text || ""],
+    responses: textParts.length > 0 ? textParts : [""],
     messagesTokenCount,
   };
 }
 
-function formatContentForResponses(
-  content: string | LlmMessage["content"],
-): Array<any> {
+function extractConsoleCommands(
+  output: any[],
+  tools: VendorDeps["tools"],
+): string[] | undefined {
+  const toolCalls = output
+    .filter((item: any) => item.type === "function_call")
+    .map((item: any) => ({
+      type: "function",
+      function: { name: item.name, arguments: item.arguments },
+    }));
+
+  return tools.getCommandsFromOpenAiToolUse(toolCalls) || undefined;
+}
+
+// --- Content formatting helpers (shared with openai-computer-use) ---
+
+function formatContentBlocks(content: string | ContentBlock[]): any[] {
   if (typeof content === "string") {
     return [{ type: "input_text", text: content }];
   }
+  return content.map(formatSingleBlock).filter(Boolean);
+}
 
-  return content
-    .map((block) => {
-      if (block.type === "text") {
-        return { type: "input_text", text: block.text };
-      }
-      if (block.type === "image") {
-        return {
-          type: "input_image",
-          image_url: `data:${block.mimeType};base64,${block.base64}`,
-        };
-      }
-      if (block.type === "tool_use") {
-        return { type: "input_text", text: `[Desktop action: ${JSON.stringify(block.input)}]` };
-      }
-      if (block.type === "tool_result") {
-        return { type: "input_text", text: "[Desktop screenshot]" };
-      }
+function formatSingleBlock(block: ContentBlock): any | null {
+  switch (block.type) {
+    case "text":
+      return { type: "input_text", text: block.text };
+    case "image":
+      return {
+        type: "input_image",
+        image_url: `data:${block.mimeType};base64,${block.base64}`,
+      };
+    case "tool_use":
+      // Fallback when desktop is not enabled — include as text description
+      return {
+        type: "input_text",
+        text: `[Desktop action: ${JSON.stringify(block.input)}]`,
+      };
+    case "tool_result":
+      return { type: "input_text", text: "[Desktop screenshot]" };
+    case "audio":
       return null;
-    })
-    .filter(Boolean);
+    default:
+      return null;
+  }
 }
