@@ -87,6 +87,7 @@ export const builtInLlmModels: LlmModel[] = [
     cacheReadCost: 0.25,
     cacheTtlSeconds: 300,
     supportsVision: true,
+    supportsComputerUse: true,
   },
   {
     key: "gpt5mini",

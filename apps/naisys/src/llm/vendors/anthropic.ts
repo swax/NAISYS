@@ -209,11 +209,16 @@ function formatContentForAnthropic(
       );
     }
     if (block.type === "tool_use") {
+      // Unwrap the standardized { actions: [...] } back to a single action for Anthropic
+      const input =
+        block.name === "computer"
+          ? (block.input.actions as Record<string, unknown>[])[0]
+          : block.input;
       return {
         type: "tool_use",
         id: block.id,
         name: block.name,
-        input: block.input,
+        input,
       };
     }
     if (block.type === "tool_result") {
