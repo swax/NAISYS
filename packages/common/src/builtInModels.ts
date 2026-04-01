@@ -149,8 +149,25 @@ export const builtInLlmModels: LlmModel[] = [
     cacheTtlSeconds: 300,
     supportsVision: true,
     supportsHearing: true,
+    supportsComputerUse: true,
   },
-
+    {
+    key: "gemini2pro",
+    label: "Gemini 2 Pro",
+    versionName: "gemini-2.5-computer-use-preview-10-2025",
+    apiType: LlmApiType.Google,
+    apiKeyVar: "GOOGLE_API_KEY",
+    maxTokens: 2_000_000,
+    inputCost: 2.0,
+    outputCost: 12.0,
+    cacheWriteCost: 0.2,
+    cacheReadCost: 0.2,
+    cacheTtlSeconds: 300,
+    supportsVision: true,
+    supportsHearing: true,
+    supportsComputerUse: true,
+  },
+  
   // ── Anthropic Models ─────────────────────────────────────────────────
   // https://platform.claude.com/docs/en/about-claude/pricing
   // Cache: 5m write = 1.25× input, read = 0.1× input

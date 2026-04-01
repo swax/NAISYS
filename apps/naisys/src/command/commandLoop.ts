@@ -441,6 +441,11 @@ export function createCommandLoop(
           "console",
           queryController.signal,
         );
+
+        // Clear "Working..." immediately so any subsequent output
+        // (token warnings, desktop requests, etc.) starts on a clean line
+        clearPromptMessage(workingMsg);
+
         contextManager.setMessagesTokenCount(queryResult.messagesTokenCount);
         schedulePreemptiveCompact();
 
@@ -448,11 +453,10 @@ export function createCommandLoop(
         if (queryResult.desktopActions?.length) {
           const textContent = queryResult.responses.join("\n");
 
-          clearPromptMessage(workingMsg);
-
           for (const action of queryResult.desktopActions) {
+            const desc = formatDesktopAction(action.input) || action.name;
             output.commentAndLog(
-              `Desktop Request: ${formatDesktopAction(action.input)} (To cancel use ns-desktop cancel <reason>)`,
+              `Desktop Request: ${desc} (To cancel use ns-desktop cancel <reason>)`,
             );
           }
 
@@ -488,10 +492,8 @@ export function createCommandLoop(
         inputMode.setDebug();
         return { outcome: "skip", llmErrorCount, pauseSeconds: undefined };
       }
-
-      clearPromptMessage(workingMsg);
     } catch (e) {
-      // Can't do this in a finally because it needs to happen before the error is printed
+      // Clear "Working..." before printing error output
       clearPromptMessage(workingMsg);
 
       // Check if the error is a bad request (400) that might be caused by media content
@@ -523,11 +525,12 @@ export function createCommandLoop(
     return { outcome: "commands", commands };
   }
 
-  function clearPromptMessage(waitingMessage: string) {
+  function clearPromptMessage(_waitingMessage: string) {
     if (output.isConsoleEnabled()) {
-      readline.moveCursor(process.stdout, -waitingMessage.length, 0);
-      process.stdout.write(" ".repeat(waitingMessage.length));
-      readline.moveCursor(process.stdout, -waitingMessage.length, 0);
+      // Use cursorTo + clearLine instead of precise cursor math — robust
+      // even if unexpected output was written to stdout during the query
+      readline.cursorTo(process.stdout, 0);
+      readline.clearLine(process.stdout, 0);
     }
   }
 

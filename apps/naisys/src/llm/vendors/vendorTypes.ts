@@ -17,8 +17,6 @@ export interface DesktopAction {
 }
 
 export interface DesktopConfig {
-  toolType: string;
-  betaFlag: string;
   displayWidth: number;
   displayHeight: number;
 }
