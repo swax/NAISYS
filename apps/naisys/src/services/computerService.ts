@@ -1,7 +1,6 @@
 /**
- * Low-level computer interaction service.
- * Handles screenshots, mouse/keyboard actions, and computer use API config.
- * No NAISYS-specific dependencies (no context manager, agent config, etc.)
+ * Computer interaction service.
+ * Handles screenshots, mouse/keyboard actions, and display config.
  */
 
 import { execFileSync } from "child_process";
@@ -10,7 +9,9 @@ import os from "os";
 import path from "path";
 import sharp from "sharp";
 
+import { AgentConfig } from "../agent/agentConfig.js";
 import { DesktopAction, DesktopConfig } from "../llm/vendors/vendorTypes.js";
+import { OutputService } from "../utils/output.js";
 
 // --- Screenshot capture ---
 
@@ -61,11 +62,9 @@ try {
 }
 `.trim();
 
-      execFileSync(
-        "powershell.exe",
-        ["-NoProfile", "-Command", psScript],
-        { stdio: "pipe" },
-      );
+      execFileSync("powershell.exe", ["-NoProfile", "-Command", psScript], {
+        stdio: "pipe",
+      });
     } else {
       try {
         execFileSync("scrot", [tmpFile], { stdio: "pipe" });
@@ -115,11 +114,7 @@ public class NaisysInput {
 [NaisysInput]::SetProcessDPIAware()
 `.trim();
 
-function mouseClick(
-  x: number,
-  y: number,
-  button: "left" | "right" | "middle",
-) {
+function mouseClick(x: number, y: number, button: "left" | "right" | "middle") {
   if (process.platform === "win32") {
     const down =
       button === "right"
@@ -162,20 +157,13 @@ function mouseDoubleClick(x: number, y: number) {
 
 function mouseMove(x: number, y: number) {
   if (process.platform === "win32") {
-    runPowerShell(
-      `${PS_INPUT_TYPE}; [NaisysInput]::SetCursorPos(${x},${y})`,
-    );
+    runPowerShell(`${PS_INPUT_TYPE}; [NaisysInput]::SetCursorPos(${x},${y})`);
   } else {
     execFileSync("xdotool", ["mousemove", String(x), String(y)]);
   }
 }
 
-function mouseDrag(
-  startX: number,
-  startY: number,
-  endX: number,
-  endY: number,
-) {
+function mouseDrag(startX: number, startY: number, endX: number, endY: number) {
   if (process.platform === "win32") {
     runPowerShell(
       `${PS_INPUT_TYPE}; [NaisysInput]::SetCursorPos(${startX},${startY}); Start-Sleep -Milliseconds 50; [NaisysInput]::mouse_event([NaisysInput]::LEFTDOWN,0,0,0,[IntPtr]::Zero); Start-Sleep -Milliseconds 50; [NaisysInput]::SetCursorPos(${endX},${endY}); Start-Sleep -Milliseconds 50; [NaisysInput]::mouse_event([NaisysInput]::LEFTUP,0,0,0,[IntPtr]::Zero)`,
@@ -271,12 +259,7 @@ function pressKey(keyCombo: string) {
   }
 }
 
-function mouseScroll(
-  x: number,
-  y: number,
-  direction: string,
-  amount: number,
-) {
+function mouseScroll(x: number, y: number, direction: string, amount: number) {
   if (process.platform === "win32") {
     const delta = direction === "up" ? 120 * amount : -120 * amount;
     runPowerShell(
@@ -354,9 +337,7 @@ async function executeSingleAction(
 }
 
 /** Execute actions. All actions are stored as { actions: [...] } — single or batched. */
-async function executeAction(
-  action: DesktopAction["input"],
-): Promise<void> {
+async function executeAction(action: DesktopAction["input"]): Promise<void> {
   for (const subAction of action.actions) {
     await executeSingleAction(subAction);
   }
@@ -407,33 +388,12 @@ export function formatDesktopAction(input: DesktopAction["input"]): string {
   return input.actions.map(formatSingleAction).join(", then ");
 }
 
-// --- Computer use API config ---
-
-/** Determine the computer use tool type and beta flag based on model version */
-function getComputerUseVersionConfig(versionName: string): {
-  toolType: string;
-  betaFlag: string;
-} {
-  // OpenAI models — GA computer tool, no beta flag needed
-  if (versionName.startsWith("gpt-")) {
-    return { toolType: "computer", betaFlag: "" };
-  }
-  // Anthropic models
-  if (versionName.includes("4-6") || versionName.includes("4-5")) {
-    return {
-      toolType: "computer_20251124",
-      betaFlag: "computer-use-2025-11-24",
-    };
-  }
-  return {
-    toolType: "computer_20250124",
-    betaFlag: "computer-use-2025-01-24",
-  };
-}
-
 // --- Service factory ---
 
-export function createComputerService() {
+export async function createComputerService(
+  { agentConfig }: AgentConfig,
+  output: OutputService,
+) {
   let nativeDimensions: { width: number; height: number } | null = null;
 
   /** Capture screenshot at native resolution */
@@ -447,19 +407,28 @@ export function createComputerService() {
     return result;
   }
 
+  // Seed native display dimensions on startup when desktop mode is enabled
+  if (agentConfig().controlDesktop) {
+    try {
+      await capture();
+    } catch (e) {
+      output.errorAndLog(
+        `Desktop: failed to capture initial screenshot — desktop mode disabled. ${e}`,
+      );
+    }
+  }
+
   /** Execute an action using native screen coordinates */
   async function execute(action: DesktopAction["input"]) {
     await executeAction(action);
   }
 
-  /** Build the DesktopConfig with native display dimensions. Vendors handle their own resizing. */
-  function getConfig(versionName: string): DesktopConfig {
-    const { toolType, betaFlag } = getComputerUseVersionConfig(versionName);
+  /** Build the DesktopConfig with native display dimensions. Returns undefined if init failed. */
+  function getConfig(): DesktopConfig | undefined {
+    if (!nativeDimensions) return undefined;
     return {
-      toolType,
-      betaFlag,
-      displayWidth: nativeDimensions?.width || 1920,
-      displayHeight: nativeDimensions?.height || 1080,
+      displayWidth: nativeDimensions.width,
+      displayHeight: nativeDimensions.height,
     };
   }
 
@@ -470,4 +439,4 @@ export function createComputerService() {
   };
 }
 
-export type ComputerService = ReturnType<typeof createComputerService>;
+export type ComputerService = Awaited<ReturnType<typeof createComputerService>>;

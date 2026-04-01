@@ -75,7 +75,7 @@ export function createLLMService(
       agentConfig().controlDesktop &&
       model.supportsComputerUse &&
       computerService
-        ? computerService.getConfig(model.versionName)
+        ? computerService.getConfig()
         : undefined;
 
     const deps: VendorDeps = {

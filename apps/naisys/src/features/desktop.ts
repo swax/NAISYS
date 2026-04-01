@@ -75,9 +75,8 @@ export function createDesktopService(
 
     // Execute each action and add its tool_result immediately after
     for (const action of actions) {
-      output.commentAndLog(
-        `Executing: ${formatDesktopAction(action.input)}`,
-      );
+      const desc = formatDesktopAction(action.input) || action.name;
+      output.commentAndLog(`Executing: ${desc}`);
       await computerService.executeAction(action.input);
 
       const { base64 } = await computerService.captureScreenshot();

@@ -87,21 +87,44 @@ async function resizeToolResultImages(
   }
 }
 
+// --- Anthropic version config ---
+
+/** Determine the computer use tool type and beta flag for an Anthropic model */
+function getVersionConfig(versionName: string): {
+  toolType: string;
+  betaFlag: string;
+} {
+  if (versionName.includes("4-6") || versionName.includes("4-5")) {
+    return {
+      toolType: "computer_20251124",
+      betaFlag: "computer-use-2025-11-24",
+    };
+  }
+  return {
+    toolType: "computer_20250124",
+    betaFlag: "computer-use-2025-01-24",
+  };
+}
+
 // --- Public API ---
 
 export interface ComputerUseSetup {
   computerTool: any;
   scaleFactor: number;
+  betaFlag: string;
 }
 
 /**
  * Prepare the computer use tool definition and resize screenshot images.
- * Returns the tool to add to the request and the scale factor for coordinate mapping.
+ * Returns the tool to add to the request, the scale factor for coordinate
+ * mapping, and the beta flag for the API request.
  */
 export async function prepareComputerUse(
   desktopConfig: DesktopConfig,
+  versionName: string,
   messages: any[],
 ): Promise<ComputerUseSetup> {
+  const { toolType, betaFlag } = getVersionConfig(versionName);
   const scaleFactor = getScaleFactor(
     desktopConfig.displayWidth,
     desktopConfig.displayHeight,
@@ -114,7 +137,7 @@ export async function prepareComputerUse(
   );
 
   const computerTool = {
-    type: desktopConfig.toolType,
+    type: toolType,
     name: "computer",
     display_width_px: scaledWidth,
     display_height_px: scaledHeight,
@@ -129,7 +152,7 @@ export async function prepareComputerUse(
     );
   }
 
-  return { computerTool, scaleFactor };
+  return { computerTool, scaleFactor, betaFlag };
 }
 
 /**

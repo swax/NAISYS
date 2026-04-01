@@ -1,6 +1,12 @@
 import { GoogleGenAI } from "@google/genai";
 
 import { ContentBlock, LlmMessage } from "../llmDtos.js";
+import {
+  extractDesktopActions,
+  formatContextWithComputerUse,
+  isGoogleComputerUseAction,
+  prepareComputerUse,
+} from "./google-computer-use.js";
 import { QueryResult, QuerySources, VendorDeps } from "./vendorTypes.js";
 
 const clientCache = new Map<string, GoogleGenAI>();
@@ -33,6 +39,7 @@ export async function sendWithGoogle(
     tools,
     useToolsForLlmConsoleResponses,
     useThinking,
+    desktopConfig,
   } = deps;
   const model = modelService.getLlmModel(modelKey);
 
@@ -44,13 +51,32 @@ export async function sendWithGoogle(
 
   const lastMessage = context[context.length - 1];
 
+  // Computer use: compute image scale factor for screenshot resizing
+  const cuSetup = desktopConfig ? prepareComputerUse(desktopConfig) : undefined;
+
   // Build history from context (excluding last message)
-  const history = context
-    .filter((m) => m !== lastMessage)
-    .map((m) => ({
-      role: m.role === "assistant" ? "model" : "user",
-      parts: formatPartsForGoogle(m.content),
-    }));
+  let history: any[];
+  // Last message parts formatted for sendMessage
+  let cuLastMessageParts: any[] | undefined;
+  if (desktopConfig) {
+    // Format ALL messages in one pass so the tool_use ID → name map is
+    // available when processing tool_result blocks (which may be the last message)
+    const allFormatted = await formatContextWithComputerUse(
+      context,
+      desktopConfig,
+      cuSetup!.imageScaleFactor,
+      formatPartsForGoogle,
+    );
+    history = allFormatted.slice(0, -1);
+    cuLastMessageParts = allFormatted[allFormatted.length - 1]?.parts;
+  } else {
+    history = context
+      .filter((m) => m !== lastMessage)
+      .map((m) => ({
+        role: m.role === "assistant" ? "model" : "user",
+        parts: formatPartsForGoogle(m.content),
+      }));
+  }
 
   // Prepare config with system instruction
   const chatConfig: any = {
@@ -65,27 +91,48 @@ export async function sendWithGoogle(
     history,
   };
 
-  // Add tool if console source and tools are enabled
-  if (source === "console" && useToolsForLlmConsoleResponses) {
-    chatConfig.config.tools = [
-      {
-        functionDeclarations: [tools.consoleToolGoogle],
-      },
-    ];
+  // Build tools array — console and desktop tools can coexist
+  const toolsDefs: any[] = [];
 
-    chatConfig.config.toolConfig = {
-      functionCallingConfig: {
-        // Set the mode to "ANY" to force the model to use the tool response
-        mode: "ANY",
-      },
-    };
+  if (source === "console" && useToolsForLlmConsoleResponses) {
+    toolsDefs.push({
+      functionDeclarations: [tools.consoleToolGoogle],
+    });
+  }
+
+  if (desktopConfig) {
+    toolsDefs.push({
+      computerUse: { environment: "ENVIRONMENT_BROWSER" },
+    });
+  }
+
+  if (toolsDefs.length > 0) {
+    chatConfig.config.tools = toolsDefs;
+
+    // Only force console tool when desktop is not also enabled
+    if (
+      source === "console" &&
+      useToolsForLlmConsoleResponses &&
+      !desktopConfig
+    ) {
+      chatConfig.config.toolConfig = {
+        functionCallingConfig: {
+          mode: "ANY",
+        },
+      };
+    }
   }
 
   const chat = ai.chats.create(chatConfig);
 
+  const lastMessageParts = cuLastMessageParts
+    || formatPartsForGoogle(lastMessage.content);
+
   const result = await chat.sendMessage({
-    message: formatPartsForGoogle(lastMessage.content),
-    config: abortSignal ? { abortSignal } : undefined,
+    message: lastMessageParts,
+    // Merge abortSignal into the full config — passing { abortSignal } alone
+    // replaces the chat config entirely, losing tools and other settings
+    config: abortSignal ? { ...chatConfig.config, abortSignal } : undefined,
   });
 
   // Use actual token counts from Google API response
@@ -109,18 +156,58 @@ export async function sendWithGoogle(
     cachedTokenCount, // Cache read tokens
   );
 
-  // Check for function calls if tools were enabled
-  if (chatConfig.config.tools) {
-    const commandsFromTool = tools.getCommandsFromGoogleToolUse(
-      result.functionCalls,
-    );
+  // Extract desktop actions from raw response parts (not result.functionCalls)
+  // so we can capture thoughtSignature which lives at the Part level
+  const responseParts = (result.candidates?.[0]?.content?.parts || []) as any[];
 
-    if (commandsFromTool) {
-      return { responses: commandsFromTool, messagesTokenCount };
+  const desktopActions = desktopConfig
+    ? extractDesktopActions(
+        responseParts.filter(
+          (p: any) =>
+            p.functionCall && isGoogleComputerUseAction(p.functionCall.name),
+        ),
+        desktopConfig.displayWidth,
+        desktopConfig.displayHeight,
+      )
+    : [];
+
+  // Extract console commands (non-computer-use function calls)
+  const consoleFunctionCalls = responseParts
+    .filter(
+      (p: any) =>
+        p.functionCall && !isGoogleComputerUseAction(p.functionCall.name),
+    )
+    .map((p: any) => p.functionCall);
+  const consoleCommands = chatConfig.config.tools
+    ? tools.getCommandsFromGoogleToolUse(consoleFunctionCalls)
+    : undefined;
+
+  // Extract text directly from response parts to avoid the SDK warning
+  // that fires when accessing .text on a response containing function calls
+  const textParts: string[] = [];
+  const candidateParts = result.candidates?.[0]?.content?.parts;
+  if (candidateParts) {
+    for (const part of candidateParts as any[]) {
+      if (part.text) {
+        textParts.push(part.text);
+      }
     }
   }
 
-  return { responses: [result.text || ""], messagesTokenCount };
+  // Desktop actions take priority (same pattern as Anthropic/OpenAI vendors)
+  if (desktopActions.length > 0) {
+    const allText = [...textParts, ...(consoleCommands || [])];
+    return { responses: allText, messagesTokenCount, desktopActions };
+  }
+
+  if (consoleCommands) {
+    return { responses: consoleCommands, messagesTokenCount };
+  }
+
+  return {
+    responses: textParts.length > 0 ? textParts : [""],
+    messagesTokenCount,
+  };
 }
 
 function formatPartsForGoogle(content: string | ContentBlock[]): Array<any> {
