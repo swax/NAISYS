@@ -419,13 +419,106 @@ async function executeAction(action: DesktopAction["input"]): Promise<void> {
   }
 }
 
+// --- Shared image/coordinate helpers (used by vendor computer-use modules) ---
+
+/** Resize a base64 screenshot to fit within a vendor's constraints */
+export async function resizeScreenshot(
+  base64: string,
+  scaleFactor: number,
+  nativeWidth: number,
+  nativeHeight: number,
+): Promise<string> {
+  if (scaleFactor >= 1) return base64;
+  const scaledWidth = Math.floor(nativeWidth * scaleFactor);
+  const scaledHeight = Math.floor(nativeHeight * scaleFactor);
+  const resized = await sharp(Buffer.from(base64, "base64"))
+    .resize(scaledWidth, scaledHeight)
+    .png()
+    .toBuffer();
+  return resized.toString("base64");
+}
+
+/** Scale coordinates in a computer use action from API space back to native screen space */
+export function scaleActionToNative(
+  input: Record<string, unknown>,
+  scaleFactor: number,
+): Record<string, unknown> {
+  if (scaleFactor >= 1) return input;
+
+  const result = { ...input };
+  if (Array.isArray(result.coordinate)) {
+    result.coordinate = [
+      Math.round((result.coordinate as number[])[0] / scaleFactor),
+      Math.round((result.coordinate as number[])[1] / scaleFactor),
+    ];
+  }
+  if (Array.isArray(result.start_coordinate)) {
+    result.start_coordinate = [
+      Math.round((result.start_coordinate as number[])[0] / scaleFactor),
+      Math.round((result.start_coordinate as number[])[1] / scaleFactor),
+    ];
+  }
+  return result;
+}
+
+/**
+ * Check if any coordinates in an action exceed native screen bounds.
+ * Returns an error message referencing the API-space coordinates and
+ * the scaled resolution the LLM was told, or undefined if all OK.
+ */
+export function checkActionBounds(
+  input: DesktopAction["input"],
+  nativeWidth: number,
+  nativeHeight: number,
+  coordScale: CoordScale,
+): string | undefined {
+  const apiW = Math.round(nativeWidth * coordScale.x);
+  const apiH = Math.round(nativeHeight * coordScale.y);
+
+  for (const action of input.actions) {
+    const coord = action.coordinate as number[] | undefined;
+    if (coord && (coord[0] >= nativeWidth || coord[1] >= nativeHeight || coord[0] < 0 || coord[1] < 0)) {
+      const apiX = Math.round(coord[0] * coordScale.x);
+      const apiY = Math.round(coord[1] * coordScale.y);
+      return `Coordinate (${apiX}, ${apiY}) is outside the screen resolution ${apiW}x${apiH}`;
+    }
+    const startCoord = action.start_coordinate as number[] | undefined;
+    if (startCoord && (startCoord[0] >= nativeWidth || startCoord[1] >= nativeHeight || startCoord[0] < 0 || startCoord[1] < 0)) {
+      const apiX = Math.round(startCoord[0] * coordScale.x);
+      const apiY = Math.round(startCoord[1] * coordScale.y);
+      return `Start coordinate (${apiX}, ${apiY}) is outside the screen resolution ${apiW}x${apiH}`;
+    }
+  }
+  return undefined;
+}
+
 // --- Display formatting ---
 
+/** Coordinate scale for converting native screen coordinates to API-space coordinates */
+export interface CoordScale {
+  x: number;
+  y: number;
+}
+
+/** Format a coordinate pair, optionally showing API-space coordinates */
+function fmtCoord(
+  coord: number[],
+  scale?: CoordScale,
+): string {
+  if (!scale) return `(${coord.join(", ")})`;
+  const apiX = Math.round(coord[0] * scale.x);
+  const apiY = Math.round(coord[1] * scale.y);
+  return `(${apiX}, ${apiY}) → screen (${coord.join(", ")})`;
+}
+
 /** Format a single action for human-readable display */
-function formatSingleAction(input: Record<string, unknown>): string {
+function formatSingleAction(
+  input: Record<string, unknown>,
+  scale?: CoordScale,
+): string {
   const action = input.action;
   const coordinate = input.coordinate as number[] | undefined;
-  const coord = coordinate ? `(${coordinate.join(", ")})` : "";
+  const coord = coordinate ? fmtCoord(coordinate, scale) : "";
 
   switch (action) {
     case "screenshot":
@@ -450,7 +543,8 @@ function formatSingleAction(input: Record<string, unknown>): string {
       return `Scroll ${input.scroll_direction} by ${input.scroll_amount} at ${coord}`;
     case "left_click_drag": {
       const startCoord = input.start_coordinate as number[] | undefined;
-      return `Drag from (${startCoord?.join(", ")}) to ${coord}`;
+      const startStr = startCoord ? fmtCoord(startCoord, scale) : "";
+      return `Drag from ${startStr} to ${coord}`;
     }
     case "wait":
       return "Wait";
@@ -460,8 +554,11 @@ function formatSingleAction(input: Record<string, unknown>): string {
 }
 
 /** Format a computer use action for human-readable display. Actions are always { actions: [...] }. */
-export function formatDesktopAction(input: DesktopAction["input"]): string {
-  return input.actions.map(formatSingleAction).join(", then ");
+export function formatDesktopAction(
+  input: DesktopAction["input"],
+  coordScale?: CoordScale,
+): string {
+  return input.actions.map((a) => formatSingleAction(a, coordScale)).join(", then ");
 }
 
 // --- Service factory ---

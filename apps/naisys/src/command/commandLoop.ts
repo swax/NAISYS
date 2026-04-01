@@ -18,7 +18,10 @@ import { ContentSource } from "../llm/llmDtos.js";
 import { LLMService } from "../llm/llmService.js";
 import { ChatService } from "../mail/chat.js";
 import { MailService } from "../mail/mail.js";
-import { formatDesktopAction } from "../services/computerService.js";
+import {
+  CoordScale,
+  formatDesktopAction,
+} from "../services/computerService.js";
 import { LogService } from "../services/logService.js";
 import { ModelService } from "../services/modelService.js";
 import { RunService } from "../services/runService.js";
@@ -26,6 +29,7 @@ import { createEscKeyListener } from "../utils/escKeyListener.js";
 import { InputModeService } from "../utils/inputMode.js";
 import { OutputColor, OutputService } from "../utils/output.js";
 import { PromptNotificationService } from "../utils/promptNotificationService.js";
+import { getPlatformConfig } from "../services/shellPlatform.js";
 import { CommandHandler } from "./commandHandler.js";
 import { NextCommandAction } from "./commandRegistry.js";
 import { PromptBuilder } from "./promptBuilder.js";
@@ -58,6 +62,12 @@ export function createCommandLoop(
   let preemptiveCompactTimeout: NodeJS.Timeout | undefined;
   /** Tracks the current wait so preemptive compact can calculate remaining time */
   let currentWait: { startTime: number; totalSeconds: number } | undefined;
+
+  // Pre-computed desktop scaling info from llmService init
+  const desktopInfo = llmService.getDesktopInfo();
+  const coordScale: CoordScale | undefined = desktopInfo
+    ? { x: desktopInfo.coordScaleX, y: desktopInfo.coordScaleY }
+    : undefined;
 
   async function run(abortSignal?: AbortSignal): Promise<string> {
     output.commentAndLog(`AGENT STARTED`);
@@ -207,6 +217,21 @@ export function createCommandLoop(
     }
 
     output.commentAndLog("Use ns-help to see all available commands");
+
+    // Log desktop info to context and comment log
+    if (desktopInfo) {
+      const { nativeWidth, nativeHeight, scaledWidth, scaledHeight, coordScaleX } = desktopInfo;
+      const platformName = getPlatformConfig().displayName;
+      contextManager.append(
+        `Desktop Access Enabled: ${platformName} desktop, screen resolution ${scaledWidth}x${scaledHeight}. Use it as needed, but prefer the shell.` +
+          ` Be decisive with desktop actions — click directly rather than hovering to verify. Each action costs time and tokens.`,
+        ContentSource.Console,
+      );
+      output.commentAndLog(
+        `Desktop: ${platformName}, native ${nativeWidth}x${nativeHeight}, scaled to ${scaledWidth}x${scaledHeight} (scale: ${coordScaleX.toFixed(2)})`,
+      );
+    }
+
     output.commentAndLog("Starting Context:");
 
     // Check for mail that arrived before/during startup (e.g. task mail)
@@ -454,7 +479,7 @@ export function createCommandLoop(
           const textContent = queryResult.responses.join("\n");
 
           for (const action of queryResult.desktopActions) {
-            const desc = formatDesktopAction(action.input) || action.name;
+            const desc = formatDesktopAction(action.input, coordScale) || action.name;
             output.commentAndLog(
               `Desktop Request: ${desc} (To cancel use ns-desktop cancel <reason>)`,
             );
@@ -463,6 +488,7 @@ export function createCommandLoop(
           desktopService.setPendingBatch(
             textContent,
             queryResult.desktopActions,
+            coordScale,
           );
 
           inputMode.setDebug();

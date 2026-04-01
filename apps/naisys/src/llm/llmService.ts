@@ -8,11 +8,15 @@ import { CommandTools } from "./commandTool.js";
 import { CostTracker } from "./costTracker.js";
 import { LlmMessage } from "./llmDtos.js";
 import { sendWithAnthropic } from "./vendors/anthropic.js";
+import { getScaleFactor as anthropicScale } from "./vendors/anthropic-computer-use.js";
 import { sendWithGoogle } from "./vendors/google.js";
+import { getImageScaleFactor as googleScale } from "./vendors/google-computer-use.js";
 import { sendWithMock } from "./vendors/mock.js";
 import { sendWithOpenAiCompatible } from "./vendors/openai-compatible.js";
+import { getScaleFactor as openaiScale } from "./vendors/openai-computer-use.js";
 import { sendWithOpenAiStandard } from "./vendors/openai-standard.js";
 import {
+  DesktopInfo,
   QueryResult,
   QuerySources,
   VendorDeps,
@@ -28,6 +32,51 @@ export function createLLMService(
   modelService: ModelService,
   computerService?: ComputerService,
 ) {
+  // Pre-compute desktop config and scaling info at init time
+  const shellModel = modelService.getLlmModel(agentConfig().shellModel);
+  const desktopConfig =
+    agentConfig().controlDesktop &&
+    shellModel.supportsComputerUse &&
+    computerService
+      ? computerService.getConfig()
+      : undefined;
+
+  let desktopInfo: DesktopInfo | undefined;
+  if (desktopConfig) {
+    const { displayWidth: w, displayHeight: h } = desktopConfig;
+    let scaleFactor: number;
+    let coordScaleX: number;
+    let coordScaleY: number;
+
+    switch (shellModel.apiType) {
+      case LlmApiType.Anthropic:
+        scaleFactor = anthropicScale(w, h);
+        coordScaleX = coordScaleY = scaleFactor;
+        break;
+      case LlmApiType.OpenAI:
+        scaleFactor = openaiScale(w, h);
+        coordScaleX = coordScaleY = scaleFactor;
+        break;
+      case LlmApiType.Google:
+        scaleFactor = googleScale(w, h);
+        coordScaleX = 1000 / w;
+        coordScaleY = 1000 / h;
+        break;
+      default:
+        scaleFactor = 1;
+        coordScaleX = coordScaleY = 1;
+    }
+
+    desktopInfo = {
+      nativeWidth: w,
+      nativeHeight: h,
+      scaledWidth: Math.floor(w * scaleFactor),
+      scaledHeight: Math.floor(h * scaleFactor),
+      coordScaleX,
+      coordScaleY,
+    };
+  }
+
   async function query(
     modelKey: string,
     systemMessage: string,
@@ -70,13 +119,9 @@ export function createLLMService(
       throw "Error, last message on context is not a user message";
     }
 
-    // Derive desktop config from agent + model flags
-    const desktopConfig =
-      agentConfig().controlDesktop &&
-      model.supportsComputerUse &&
-      computerService
-        ? computerService.getConfig()
-        : undefined;
+    // Use pre-computed desktop config only if current model supports computer use
+    const effectiveDesktopConfig =
+      model.supportsComputerUse ? desktopConfig : undefined;
 
     const deps: VendorDeps = {
       modelService,
@@ -85,7 +130,7 @@ export function createLLMService(
       useToolsForLlmConsoleResponses:
         globalConfig().useToolsForLlmConsoleResponses,
       useThinking,
-      desktopConfig,
+      desktopConfig: effectiveDesktopConfig,
     };
 
     if (model.apiType == LlmApiType.Google) {
@@ -129,6 +174,7 @@ export function createLLMService(
 
   return {
     query,
+    getDesktopInfo: () => desktopInfo,
   };
 }
 

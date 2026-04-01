@@ -5,18 +5,22 @@ import { RegistrableCommand } from "../command/commandRegistry.js";
 import { ContextManager } from "../llm/contextManager.js";
 import { DesktopAction } from "../llm/vendors/vendorTypes.js";
 import {
+  CoordScale,
   ComputerService,
+  checkActionBounds,
   formatDesktopAction,
 } from "../services/computerService.js";
 import { OutputService } from "../utils/output.js";
 
 // Re-export for consumers
 export { formatDesktopAction } from "../services/computerService.js";
+export type { CoordScale } from "../services/computerService.js";
 
 /** Pending desktop batch: the full LLM response (text + actions) deferred until execution */
 interface PendingBatch {
   textContent: string;
   actions: DesktopAction[];
+  coordScale?: CoordScale;
 }
 
 export function createDesktopService(
@@ -67,15 +71,36 @@ export function createDesktopService(
   async function executePendingActions(): Promise<void> {
     if (!pendingBatch) return;
 
-    const { textContent, actions } = pendingBatch;
+    const { textContent, actions, coordScale } = pendingBatch;
     pendingBatch = null;
 
     // Add the deferred assistant response (text + tool_use blocks) to context NOW
     contextManager.appendToolResponse(textContent, actions);
 
     // Execute each action and add its tool_result immediately after
+    const desktopConfig = computerService.getConfig();
+
     for (const action of actions) {
-      const desc = formatDesktopAction(action.input) || action.name;
+      // Reject actions with out-of-bounds coordinates
+      if (desktopConfig && coordScale) {
+        const boundsError = checkActionBounds(
+          action.input,
+          desktopConfig.displayWidth,
+          desktopConfig.displayHeight,
+          coordScale,
+        );
+        if (boundsError) {
+          const { base64 } = await computerService.captureScreenshot();
+          contextManager.appendToolResultError(
+            action.id,
+            `${boundsError}. All coordinates must be within bounds. Use the screenshot to identify the correct position and retry.`,
+            { base64, mimeType: "image/png" },
+          );
+          continue;
+        }
+      }
+
+      const desc = formatDesktopAction(action.input, coordScale) || action.name;
       output.commentAndLog(`Executing: ${desc}`);
       await computerService.executeAction(action.input);
 
@@ -89,8 +114,12 @@ export function createDesktopService(
     return pendingBatch !== null;
   }
 
-  function setPendingBatch(textContent: string, actions: DesktopAction[]): void {
-    pendingBatch = { textContent, actions };
+  function setPendingBatch(
+    textContent: string,
+    actions: DesktopAction[],
+    coordScale?: CoordScale,
+  ): void {
+    pendingBatch = { textContent, actions, coordScale };
   }
 
   const registrableCommand: RegistrableCommand = {
