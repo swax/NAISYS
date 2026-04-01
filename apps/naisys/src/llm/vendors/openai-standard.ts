@@ -5,7 +5,7 @@ import {
   extractDesktopActions,
   formatInputWithComputerUse,
   prepareComputerUse,
-} from "./openai-computer-use.js";
+} from "../../computer-use/openai-computer-use.js";
 import { QueryResult, QuerySources, VendorDeps } from "./vendorTypes.js";
 
 const clientCache = new Map<string, OpenAI>();

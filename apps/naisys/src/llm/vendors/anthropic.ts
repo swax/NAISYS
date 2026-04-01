@@ -5,7 +5,7 @@ import { ContentBlock, LlmMessage } from "../llmDtos.js";
 import {
   extractDesktopActions,
   prepareComputerUse,
-} from "./anthropic-computer-use.js";
+} from "../../computer-use/anthropic-computer-use.js";
 import { QueryResult, QuerySources, VendorDeps } from "./vendorTypes.js";
 
 const clientCache = new Map<string, Anthropic>();

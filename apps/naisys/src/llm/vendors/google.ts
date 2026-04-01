@@ -6,7 +6,7 @@ import {
   formatContextWithComputerUse,
   isGoogleComputerUseAction,
   prepareComputerUse,
-} from "./google-computer-use.js";
+} from "../../computer-use/google-computer-use.js";
 import { QueryResult, QuerySources, VendorDeps } from "./vendorTypes.js";
 
 const clientCache = new Map<string, GoogleGenAI>();

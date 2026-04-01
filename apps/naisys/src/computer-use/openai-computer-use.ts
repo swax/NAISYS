@@ -5,12 +5,12 @@
  * responses, and context formatting for computer_call / computer_call_output items.
  */
 
-import { ContentBlock, LlmMessage } from "../llmDtos.js";
+import { ContentBlock, LlmMessage } from "../llm/llmDtos.js";
 import {
   resizeScreenshot,
   scaleActionToNative,
-} from "../../services/computerService.js";
-import { DesktopAction, DesktopConfig } from "./vendorTypes.js";
+} from "./computerService.js";
+import { DesktopAction, DesktopConfig } from "../llm/vendors/vendorTypes.js";
 
 // --- Scale factor ---
 // OpenAI recommends 1440x900 or 1600x900 for best performance.
