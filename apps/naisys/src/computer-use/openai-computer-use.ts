@@ -7,25 +7,11 @@
 
 import { ContentBlock, LlmMessage } from "../llm/llmDtos.js";
 import {
+  getTargetScaleFactor,
   resizeScreenshot,
   scaleActionToNative,
 } from "./computerService.js";
 import { DesktopAction, DesktopConfig } from "../llm/vendors/vendorTypes.js";
-
-// --- Scale factor ---
-// OpenAI recommends 1440x900 or 1600x900 for best performance.
-// We downscale to fit within these bounds to save tokens.
-
-const DOWNSCALE_SCREENSHOTS = true;
-const TARGET_WIDTH = 1600;
-const TARGET_HEIGHT = 900;
-
-export function getScaleFactor(width: number, height: number): number {
-  if (!DOWNSCALE_SCREENSHOTS) return 1;
-  const scaleX = TARGET_WIDTH / width;
-  const scaleY = TARGET_HEIGHT / height;
-  return Math.min(1.0, scaleX, scaleY);
-}
 
 // --- Action format conversion ---
 
@@ -165,7 +151,7 @@ export interface OpenAiComputerUseSetup {
 export function prepareComputerUse(
   desktopConfig: DesktopConfig,
 ): OpenAiComputerUseSetup {
-  const scaleFactor = getScaleFactor(
+  const scaleFactor = getTargetScaleFactor(
     desktopConfig.displayWidth,
     desktopConfig.displayHeight,
   );

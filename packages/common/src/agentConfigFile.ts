@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { TARGET_MEGAPIXELS } from "./constants.js";
 import { URL_SAFE_KEY_MESSAGE, URL_SAFE_KEY_REGEX } from "./urlSafeKey.js";
 
 export const commandProtectionValues = ["none", "manual", "auto"] as const;
@@ -132,7 +133,7 @@ export const AgentConfigFileSchema = z.object({
     .boolean()
     .optional()
     .describe(
-      "Allow the agent to interact with the desktop GUI via computer use (screenshots, mouse, keyboard). Requires a model with supportsComputerUse",
+      `Allow the agent to operate the desktop GUI. Requires a model with supportsComputerUse. Ideal screen resolution <= ${TARGET_MEGAPIXELS}MP to avoid downscaling`,
     ),
 });
 
