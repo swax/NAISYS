@@ -51,9 +51,19 @@ export const genImgCmd: CommandDef = {
 
 export const desktopCmd: CommandDef = {
   name: "ns-desktop",
-  usage: 'cancel ["<reason>"]',
-  description:
-    "Reject the pending desktop action with optional feedback to try a different approach",
+  description: "Desktop interaction commands",
+  subcommands: {
+    cancel: {
+      usage: 'cancel ["<reason>"]',
+      description:
+        "Reject the pending desktop action with optional feedback to try a different approach",
+    },
+    screenshot: {
+      usage: "screenshot",
+      description:
+        "Save a full-size and LLM-scaled screenshot with cursor to the screenshots folder",
+    },
+  },
 };
 
 export const lynxCmd: CommandDef = {
