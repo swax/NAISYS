@@ -253,9 +253,17 @@ export async function formatInputWithComputerUse(
 
   for (const msg of context) {
     if (typeof msg.content === "string") {
+      const isAssistantStr = msg.role === "assistant";
+      const blocks = formatContentBlocks(msg.content);
       items.push({
-        role: msg.role === "assistant" ? "assistant" : "user",
-        content: formatContentBlocks(msg.content),
+        role: isAssistantStr ? "assistant" : "user",
+        content: isAssistantStr
+          ? blocks.map((b: any) =>
+              b?.type === "input_text"
+                ? { type: "output_text", text: b.text }
+                : b,
+            )
+          : blocks,
       });
       continue;
     }
@@ -272,7 +280,14 @@ export async function formatInputWithComputerUse(
       if (textBlocks.length > 0) {
         items.push({
           role: "assistant",
-          content: textBlocks.map(formatSingleBlock).filter(Boolean),
+          content: textBlocks
+            .map(formatSingleBlock)
+            .filter(Boolean)
+            .map((b: any) =>
+              b?.type === "input_text"
+                ? { type: "output_text", text: b.text }
+                : b,
+            ),
         });
       }
 
@@ -302,13 +317,12 @@ export async function formatInputWithComputerUse(
               (c) => c.type === "text",
             );
             items.push({
-              role: "user",
-              content: [
-                {
-                  type: "input_text",
-                  text: `[Desktop action error: ${errorText?.type === "text" ? errorText.text : "unknown error"}]`,
-                },
-              ],
+              type: "computer_call_output",
+              call_id: block.toolUseId,
+              output: {
+                type: "output_text",
+                text: `[Desktop action error: ${errorText?.type === "text" ? errorText.text : "unknown error"}]`,
+              },
             });
           } else {
             const imageContent = block.resultContent?.find(
@@ -338,9 +352,17 @@ export async function formatInputWithComputerUse(
     }
 
     // Regular ContentBlock[] message (no tool blocks)
+    const isAssistant = msg.role === "assistant";
+    const formatted = content.map(formatSingleBlock).filter(Boolean);
     items.push({
-      role: msg.role === "assistant" ? "assistant" : "user",
-      content: content.map(formatSingleBlock).filter(Boolean),
+      role: isAssistant ? "assistant" : "user",
+      content: isAssistant
+        ? formatted.map((b: any) =>
+            b?.type === "input_text"
+              ? { type: "output_text", text: b.text }
+              : b,
+          )
+        : formatted,
     });
   }
 
