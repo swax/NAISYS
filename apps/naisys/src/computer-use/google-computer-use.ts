@@ -6,9 +6,9 @@
  * screenshots, and context formatting with function_call/function_response.
  */
 
-import { ContentBlock, LlmMessage } from "../llmDtos.js";
-import { resizeScreenshot } from "../../services/computerService.js";
-import { DesktopAction, DesktopConfig } from "./vendorTypes.js";
+import { ContentBlock, LlmMessage } from "../llm/llmDtos.js";
+import { resizeScreenshot } from "./computerService.js";
+import { DesktopAction, DesktopConfig } from "../llm/vendors/vendorTypes.js";
 
 // --- Coordinate normalization ---
 // Google uses a 0-999 normalized grid regardless of screen resolution.

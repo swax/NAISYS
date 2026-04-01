@@ -2,18 +2,18 @@ import { LlmApiType } from "@naisys/common";
 
 import { AgentConfig } from "../agent/agentConfig.js";
 import { GlobalConfig } from "../globalConfig.js";
-import { ComputerService } from "../services/computerService.js";
+import { ComputerService } from "../computer-use/computerService.js";
 import { ModelService } from "../services/modelService.js";
 import { CommandTools } from "./commandTool.js";
 import { CostTracker } from "./costTracker.js";
 import { LlmMessage } from "./llmDtos.js";
 import { sendWithAnthropic } from "./vendors/anthropic.js";
-import { getScaleFactor as anthropicScale } from "./vendors/anthropic-computer-use.js";
+import { getScaleFactor as anthropicScale } from "../computer-use/anthropic-computer-use.js";
 import { sendWithGoogle } from "./vendors/google.js";
-import { getImageScaleFactor as googleScale } from "./vendors/google-computer-use.js";
+import { getImageScaleFactor as googleScale } from "../computer-use/google-computer-use.js";
 import { sendWithMock } from "./vendors/mock.js";
 import { sendWithOpenAiCompatible } from "./vendors/openai-compatible.js";
-import { getScaleFactor as openaiScale } from "./vendors/openai-computer-use.js";
+import { getScaleFactor as openaiScale } from "../computer-use/openai-computer-use.js";
 import { sendWithOpenAiStandard } from "./vendors/openai-standard.js";
 import {
   DesktopInfo,

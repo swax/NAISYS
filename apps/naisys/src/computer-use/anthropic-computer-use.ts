@@ -8,8 +8,8 @@
 import {
   resizeScreenshot,
   scaleActionToNative,
-} from "../../services/computerService.js";
-import { DesktopAction, DesktopConfig } from "./vendorTypes.js";
+} from "./computerService.js";
+import { DesktopAction, DesktopConfig } from "../llm/vendors/vendorTypes.js";
 
 // --- Anthropic image constraints ---
 const MAX_LONG_EDGE = 1568;

@@ -9,12 +9,12 @@ import {
   ComputerService,
   checkActionBounds,
   formatDesktopAction,
-} from "../services/computerService.js";
+} from "./computerService.js";
 import { OutputService } from "../utils/output.js";
 
 // Re-export for consumers
-export { formatDesktopAction } from "../services/computerService.js";
-export type { CoordScale } from "../services/computerService.js";
+export { formatDesktopAction } from "./computerService.js";
+export type { CoordScale } from "./computerService.js";
 
 /** Pending desktop batch: the full LLM response (text + actions) deferred until execution */
 interface PendingBatch {

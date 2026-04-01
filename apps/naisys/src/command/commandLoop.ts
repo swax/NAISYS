@@ -3,7 +3,7 @@ import chalk from "chalk";
 import * as readline from "readline";
 
 import { AgentConfig } from "../agent/agentConfig.js";
-import { DesktopService } from "../features/desktop.js";
+import { DesktopService } from "../computer-use/desktop.js";
 import { LynxService } from "../features/lynx.js";
 import { SessionService } from "../features/session.js";
 import { WorkspacesFeature } from "../features/workspaces.js";
@@ -21,7 +21,7 @@ import { MailService } from "../mail/mail.js";
 import {
   CoordScale,
   formatDesktopAction,
-} from "../services/computerService.js";
+} from "../computer-use/computerService.js";
 import { LogService } from "../services/logService.js";
 import { ModelService } from "../services/modelService.js";
 import { RunService } from "../services/runService.js";
