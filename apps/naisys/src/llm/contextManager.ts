@@ -206,7 +206,21 @@ export function createContextManager(
   }
 
   /** Add a user message with an error tool_result (for rejected desktop actions) */
-  function appendToolResultError(toolUseId: string, errorText: string) {
+  function appendToolResultError(
+    toolUseId: string,
+    errorText: string,
+    screenshot?: { base64: string; mimeType: string },
+  ) {
+    const resultContent: Array<TextBlock | ImageBlock> = [
+      { type: "text", text: errorText },
+    ];
+    if (screenshot) {
+      resultContent.push({
+        type: "image",
+        base64: screenshot.base64,
+        mimeType: screenshot.mimeType,
+      });
+    }
 
     const llmMessage: LlmMessage = {
       source: ContentSource.Console,
@@ -215,8 +229,10 @@ export function createContextManager(
         {
           type: "tool_result",
           toolUseId,
-          isError: true,
-          resultContent: [{ type: "text", text: errorText }],
+          // Anthropic API requires all content to be text when is_error is true,
+          // so only set the flag when there's no screenshot attached
+          isError: !screenshot,
+          resultContent,
         } satisfies ToolResultBlock,
       ],
     };

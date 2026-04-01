@@ -5,60 +5,22 @@
  * desktop action extraction from responses.
  */
 
-import sharp from "sharp";
-
+import {
+  resizeScreenshot,
+  scaleActionToNative,
+} from "../../services/computerService.js";
 import { DesktopAction, DesktopConfig } from "./vendorTypes.js";
 
 // --- Anthropic image constraints ---
 const MAX_LONG_EDGE = 1568;
 const MAX_PIXELS = 1_150_000;
 
-function getScaleFactor(width: number, height: number): number {
+export function getScaleFactor(width: number, height: number): number {
   const longEdge = Math.max(width, height);
   const totalPixels = width * height;
   const longEdgeScale = MAX_LONG_EDGE / longEdge;
   const totalPixelsScale = Math.sqrt(MAX_PIXELS / totalPixels);
   return Math.min(1.0, longEdgeScale, totalPixelsScale);
-}
-
-/** Scale coordinates in a computer use action from API space back to native screen space */
-function scaleActionToNative(
-  input: Record<string, unknown>,
-  scaleFactor: number,
-): Record<string, unknown> {
-  if (scaleFactor >= 1) return input;
-
-  const result = { ...input };
-  if (Array.isArray(result.coordinate)) {
-    result.coordinate = [
-      Math.round((result.coordinate as number[])[0] / scaleFactor),
-      Math.round((result.coordinate as number[])[1] / scaleFactor),
-    ];
-  }
-  if (Array.isArray(result.start_coordinate)) {
-    result.start_coordinate = [
-      Math.round((result.start_coordinate as number[])[0] / scaleFactor),
-      Math.round((result.start_coordinate as number[])[1] / scaleFactor),
-    ];
-  }
-  return result;
-}
-
-/** Resize a base64 image to fit within Anthropic's constraints */
-async function resizeImageForApi(
-  base64: string,
-  scaleFactor: number,
-  nativeWidth: number,
-  nativeHeight: number,
-): Promise<string> {
-  if (scaleFactor >= 1) return base64;
-  const scaledWidth = Math.floor(nativeWidth * scaleFactor);
-  const scaledHeight = Math.floor(nativeHeight * scaleFactor);
-  const resized = await sharp(Buffer.from(base64, "base64"))
-    .resize(scaledWidth, scaledHeight)
-    .png()
-    .toBuffer();
-  return resized.toString("base64");
 }
 
 /** Walk formatted messages and resize base64 images inside tool_result blocks */
@@ -75,7 +37,7 @@ async function resizeToolResultImages(
         continue;
       for (const inner of block.content) {
         if (inner.type === "image" && inner.source?.type === "base64") {
-          inner.source.data = await resizeImageForApi(
+          inner.source.data = await resizeScreenshot(
             inner.source.data,
             scaleFactor,
             nativeWidth,

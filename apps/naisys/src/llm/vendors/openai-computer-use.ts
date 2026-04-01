@@ -5,12 +5,14 @@
  * responses, and context formatting for computer_call / computer_call_output items.
  */
 
-import sharp from "sharp";
-
 import { ContentBlock, LlmMessage } from "../llmDtos.js";
+import {
+  resizeScreenshot,
+  scaleActionToNative,
+} from "../../services/computerService.js";
 import { DesktopAction, DesktopConfig } from "./vendorTypes.js";
 
-// --- Image resizing ---
+// --- Scale factor ---
 // OpenAI recommends 1440x900 or 1600x900 for best performance.
 // We downscale to fit within these bounds to save tokens.
 
@@ -18,51 +20,11 @@ const DOWNSCALE_SCREENSHOTS = true;
 const TARGET_WIDTH = 1600;
 const TARGET_HEIGHT = 900;
 
-function getScaleFactor(width: number, height: number): number {
+export function getScaleFactor(width: number, height: number): number {
   if (!DOWNSCALE_SCREENSHOTS) return 1;
   const scaleX = TARGET_WIDTH / width;
   const scaleY = TARGET_HEIGHT / height;
   return Math.min(1.0, scaleX, scaleY);
-}
-
-async function resizeScreenshot(
-  base64: string,
-  scaleFactor: number,
-  nativeWidth: number,
-  nativeHeight: number,
-): Promise<string> {
-  if (scaleFactor >= 1) return base64;
-  const scaledWidth = Math.floor(nativeWidth * scaleFactor);
-  const scaledHeight = Math.floor(nativeHeight * scaleFactor);
-  const resized = await sharp(Buffer.from(base64, "base64"))
-    .resize(scaledWidth, scaledHeight)
-    .png()
-    .toBuffer();
-  return resized.toString("base64");
-}
-
-// --- Coordinate scaling ---
-
-/** Scale coordinates from API (downscaled) space back to native screen space */
-function scaleToNative(
-  action: Record<string, unknown>,
-  scaleFactor: number,
-): Record<string, unknown> {
-  if (scaleFactor >= 1) return action;
-  const result = { ...action };
-  if (Array.isArray(result.coordinate)) {
-    result.coordinate = [
-      Math.round((result.coordinate as number[])[0] / scaleFactor),
-      Math.round((result.coordinate as number[])[1] / scaleFactor),
-    ];
-  }
-  if (Array.isArray(result.start_coordinate)) {
-    result.start_coordinate = [
-      Math.round((result.start_coordinate as number[])[0] / scaleFactor),
-      Math.round((result.start_coordinate as number[])[1] / scaleFactor),
-    ];
-  }
-  return result;
 }
 
 // --- Action format conversion ---
@@ -224,7 +186,7 @@ export function extractDesktopActions(
     if (item.type === "computer_call") {
       const internalActions = (item.actions || []).map(
         (a: Record<string, any>) =>
-          scaleToNative(convertOpenAiActionToInternal(a), scaleFactor),
+          scaleActionToNative(convertOpenAiActionToInternal(a), scaleFactor),
       );
       actions.push({
         id: item.call_id,

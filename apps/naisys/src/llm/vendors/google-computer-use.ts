@@ -6,9 +6,8 @@
  * screenshots, and context formatting with function_call/function_response.
  */
 
-import sharp from "sharp";
-
 import { ContentBlock, LlmMessage } from "../llmDtos.js";
+import { resizeScreenshot } from "../../services/computerService.js";
 import { DesktopAction, DesktopConfig } from "./vendorTypes.js";
 
 // --- Coordinate normalization ---
@@ -37,27 +36,11 @@ const DOWNSCALE_SCREENSHOTS = true;
 const TARGET_WIDTH = 1440;
 const TARGET_HEIGHT = 900;
 
-function getImageScaleFactor(width: number, height: number): number {
+export function getImageScaleFactor(width: number, height: number): number {
   if (!DOWNSCALE_SCREENSHOTS) return 1;
   const scaleX = TARGET_WIDTH / width;
   const scaleY = TARGET_HEIGHT / height;
   return Math.min(1.0, scaleX, scaleY);
-}
-
-async function resizeScreenshot(
-  base64: string,
-  scaleFactor: number,
-  nativeWidth: number,
-  nativeHeight: number,
-): Promise<string> {
-  if (scaleFactor >= 1) return base64;
-  const scaledWidth = Math.floor(nativeWidth * scaleFactor);
-  const scaledHeight = Math.floor(nativeHeight * scaleFactor);
-  const resized = await sharp(Buffer.from(base64, "base64"))
-    .resize(scaledWidth, scaledHeight)
-    .png()
-    .toBuffer();
-  return resized.toString("base64");
 }
 
 // --- Known Google Computer Use action names ---
