@@ -1,14 +1,21 @@
+import fs from "fs";
+import os from "os";
+import path from "path";
 import stringArgv from "string-argv";
 
+import { AgentConfig } from "../agent/agentConfig.js";
 import { desktopCmd } from "../command/commandDefs.js";
 import { RegistrableCommand } from "../command/commandRegistry.js";
 import { ContextManager } from "../llm/contextManager.js";
+import { getImageScaleForApiType } from "../llm/llmService.js";
 import { DesktopAction } from "../llm/vendors/vendorTypes.js";
+import { ModelService } from "../services/modelService.js";
 import {
   CoordScale,
   ComputerService,
   checkActionBounds,
   formatDesktopAction,
+  resizeScreenshot,
 } from "./computerService.js";
 import { OutputService } from "../utils/output.js";
 
@@ -27,13 +34,63 @@ export function createDesktopService(
   computerService: ComputerService,
   contextManager: ContextManager,
   output: OutputService,
+  agentConfig: AgentConfig,
+  modelService: ModelService,
 ) {
   let pendingBatch: PendingBatch | null = null;
 
-  /** Handle ns-desktop commands (cancel with feedback) */
+  /** Handle the screenshot subcommand */
+  async function handleScreenshot(): Promise<string> {
+    const config = computerService.getConfig();
+    if (!config) {
+      return "Desktop mode is not enabled or failed to initialize.";
+    }
+
+    const baseDir = process.env.NAISYS_FOLDER || os.tmpdir();
+    const outDir = path.join(baseDir, "home", agentConfig.agentConfig().username, "screenshots");
+    fs.mkdirSync(outDir, { recursive: true });
+
+    const { base64, width, height } = await computerService.captureScreenshot();
+    const buffer = Buffer.from(base64, "base64");
+
+    const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+    const fullPath = path.join(outDir, `screenshot-${timestamp}-full.png`);
+    fs.writeFileSync(fullPath, buffer);
+
+    const model = modelService.getLlmModel(agentConfig.agentConfig().shellModel);
+    const scaleFactor = getImageScaleForApiType(model.apiType, width, height);
+    const scaledWidth = Math.floor(width * scaleFactor);
+    const scaledHeight = Math.floor(height * scaleFactor);
+
+    let scaledPath: string;
+    if (scaleFactor < 1) {
+      const scaledBase64 = await resizeScreenshot(
+        base64,
+        scaleFactor,
+        width,
+        height,
+      );
+      scaledPath = path.join(
+        outDir,
+        `screenshot-${timestamp}-${scaledWidth}x${scaledHeight}.png`,
+      );
+      fs.writeFileSync(scaledPath, Buffer.from(scaledBase64, "base64"));
+    } else {
+      // No scaling needed — full size is what the LLM sees
+      scaledPath = fullPath;
+    }
+
+    return `Full: ${fullPath}\nScaled (${scaledWidth}x${scaledHeight}): ${scaledPath}`;
+  }
+
+  /** Handle ns-desktop commands */
   async function handleCommand(args: string): Promise<string> {
     const argv = stringArgv(args);
     const firstArg = (argv[0] || "").toLowerCase();
+
+    if (firstArg === "screenshot") {
+      return handleScreenshot();
+    }
 
     if (firstArg === "cancel") {
       if (!pendingBatch) {
@@ -60,7 +117,7 @@ export function createDesktopService(
       return `Pending actions: ${pendingBatch?.actions.length ?? 0}.`;
     }
 
-    return `Usage: ${desktopCmd.name} ${desktopCmd.usage}`;
+    return `Usage: ${desktopCmd.name} cancel ["<reason>"] | screenshot`;
   }
 
   /**

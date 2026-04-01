@@ -24,6 +24,24 @@ import {
 
 const useThinking = true;
 
+/** Get the image scale factor for a given API type and native dimensions */
+export function getImageScaleForApiType(
+  apiType: string,
+  width: number,
+  height: number,
+): number {
+  switch (apiType) {
+    case LlmApiType.Anthropic:
+      return anthropicScale(width, height);
+    case LlmApiType.OpenAI:
+      return openaiScale(width, height);
+    case LlmApiType.Google:
+      return googleScale(width, height);
+    default:
+      return 1;
+  }
+}
+
 export function createLLMService(
   { globalConfig }: GlobalConfig,
   { agentConfig }: AgentConfig,
@@ -44,27 +62,17 @@ export function createLLMService(
   let desktopInfo: DesktopInfo | undefined;
   if (desktopConfig) {
     const { displayWidth: w, displayHeight: h } = desktopConfig;
-    let scaleFactor: number;
+    const scaleFactor = getImageScaleForApiType(shellModel.apiType, w, h);
     let coordScaleX: number;
     let coordScaleY: number;
 
     switch (shellModel.apiType) {
-      case LlmApiType.Anthropic:
-        scaleFactor = anthropicScale(w, h);
-        coordScaleX = coordScaleY = scaleFactor;
-        break;
-      case LlmApiType.OpenAI:
-        scaleFactor = openaiScale(w, h);
-        coordScaleX = coordScaleY = scaleFactor;
-        break;
       case LlmApiType.Google:
-        scaleFactor = googleScale(w, h);
         coordScaleX = 1000 / w;
         coordScaleY = 1000 / h;
         break;
       default:
-        scaleFactor = 1;
-        coordScaleX = coordScaleY = 1;
+        coordScaleX = coordScaleY = scaleFactor;
     }
 
     desktopInfo = {
