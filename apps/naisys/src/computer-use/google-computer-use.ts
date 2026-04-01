@@ -7,7 +7,7 @@
  */
 
 import { ContentBlock, LlmMessage } from "../llm/llmDtos.js";
-import { resizeScreenshot } from "./computerService.js";
+import { getTargetScaleFactor, resizeScreenshot } from "./computerService.js";
 import { DesktopAction, DesktopConfig } from "../llm/vendors/vendorTypes.js";
 
 // --- Coordinate normalization ---
@@ -30,18 +30,6 @@ function normalizeY(pixel: number, screenHeight: number): number {
   return Math.round((pixel / screenHeight) * NORMALIZED_MAX);
 }
 
-// --- Image resizing ---
-// Google recommends 1440x900 for computer use. Downscale to save tokens.
-const DOWNSCALE_SCREENSHOTS = true;
-const TARGET_WIDTH = 1440;
-const TARGET_HEIGHT = 900;
-
-export function getImageScaleFactor(width: number, height: number): number {
-  if (!DOWNSCALE_SCREENSHOTS) return 1;
-  const scaleX = TARGET_WIDTH / width;
-  const scaleY = TARGET_HEIGHT / height;
-  return Math.min(1.0, scaleX, scaleY);
-}
 
 // --- Known Google Computer Use action names ---
 
@@ -263,7 +251,7 @@ export function prepareComputerUse(
   desktopConfig: DesktopConfig,
 ): GoogleComputerUseSetup {
   return {
-    imageScaleFactor: getImageScaleFactor(
+    imageScaleFactor: getTargetScaleFactor(
       desktopConfig.displayWidth,
       desktopConfig.displayHeight,
     ),

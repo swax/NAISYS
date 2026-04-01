@@ -1,3 +1,4 @@
+import { LlmApiType, TARGET_MEGAPIXELS } from "@naisys/common";
 import fs from "fs";
 import os from "os";
 import path from "path";
@@ -7,14 +8,16 @@ import { AgentConfig } from "../agent/agentConfig.js";
 import { desktopCmd } from "../command/commandDefs.js";
 import { RegistrableCommand } from "../command/commandRegistry.js";
 import { ContextManager } from "../llm/contextManager.js";
-import { getImageScaleForApiType } from "../llm/llmService.js";
-import { DesktopAction } from "../llm/vendors/vendorTypes.js";
+import { ContentSource } from "../llm/llmDtos.js";
+import { DesktopAction, DesktopInfo } from "../llm/vendors/vendorTypes.js";
 import { ModelService } from "../services/modelService.js";
+import { getPlatformConfig } from "../services/shellPlatform.js";
 import {
   CoordScale,
   ComputerService,
   checkActionBounds,
   formatDesktopAction,
+  getTargetScaleFactor,
   resizeScreenshot,
 } from "./computerService.js";
 import { OutputService } from "../utils/output.js";
@@ -57,8 +60,7 @@ export function createDesktopService(
     const fullPath = path.join(outDir, `screenshot-${timestamp}-full.png`);
     fs.writeFileSync(fullPath, buffer);
 
-    const model = modelService.getLlmModel(agentConfig.agentConfig().shellModel);
-    const scaleFactor = getImageScaleForApiType(model.apiType, width, height);
+    const scaleFactor = getTargetScaleFactor(width, height);
     const scaledWidth = Math.floor(width * scaleFactor);
     const scaledHeight = Math.floor(height * scaleFactor);
 
@@ -179,6 +181,41 @@ export function createDesktopService(
     pendingBatch = { textContent, actions, coordScale };
   }
 
+  /** Log desktop dimensions, scale info, and Anthropic warnings at startup */
+  function logStartup(desktopInfo: DesktopInfo): void {
+    const { nativeWidth, nativeHeight, scaledWidth, scaledHeight } = desktopInfo;
+    const nativeMP = ((nativeWidth * nativeHeight) / 1_000_000).toFixed(2);
+    const scaledMP = ((scaledWidth * scaledHeight) / 1_000_000).toFixed(2);
+    const platformName = getPlatformConfig().displayName;
+
+    contextManager.append(
+      `Desktop Access Enabled: ${platformName} desktop, screen resolution ${scaledWidth}x${scaledHeight}. Use it as needed, but prefer the shell.` +
+        ` Each action costs time and tokens. Avoid repeating the same action over and over if it is not working.`,
+      ContentSource.Console,
+    );
+    output.commentAndLog(
+      `Desktop: ${platformName}, native ${nativeWidth}x${nativeHeight} (${nativeMP}MP), scaled to ${scaledWidth}x${scaledHeight} (${scaledMP}MP, target ${TARGET_MEGAPIXELS}MP)`,
+    );
+
+    // Anthropic constrains images to 1568px longest edge and ~1.15MP.
+    // If we exceed either limit, the API silently downscales, wasting the
+    // resolution we carefully chose. Warn so TARGET_MEGAPIXELS can be reduced.
+    const shellModel = modelService.getLlmModel(agentConfig.agentConfig().shellModel);
+    if (shellModel.apiType === LlmApiType.Anthropic) {
+      const longestEdge = Math.max(scaledWidth, scaledHeight);
+      const scaledPixels = scaledWidth * scaledHeight;
+      if (longestEdge > 1568) {
+        output.errorAndLog(
+          `Warning: Scaled longest edge ${longestEdge}px exceeds Anthropic's 1568px limit — API will internally downscale. Reduce TARGET_MEGAPIXELS to avoid.`,
+        );
+      } else if (scaledPixels > 1_150_000) {
+        output.errorAndLog(
+          `Warning: Scaled resolution ${scaledWidth}x${scaledHeight} (${scaledMP}MP) exceeds Anthropic's ~1.15MP limit — API will internally downscale. Reduce TARGET_MEGAPIXELS to avoid.`,
+        );
+      }
+    }
+  }
+
   const registrableCommand: RegistrableCommand = {
     command: desktopCmd,
     handleCommand,
@@ -186,6 +223,7 @@ export function createDesktopService(
 
   return {
     ...registrableCommand,
+    logStartup,
     hasPendingActions,
     setPendingBatch,
     executePendingActions,

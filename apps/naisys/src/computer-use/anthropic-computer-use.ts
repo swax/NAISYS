@@ -6,22 +6,11 @@
  */
 
 import {
+  getTargetScaleFactor,
   resizeScreenshot,
   scaleActionToNative,
 } from "./computerService.js";
 import { DesktopAction, DesktopConfig } from "../llm/vendors/vendorTypes.js";
-
-// --- Anthropic image constraints ---
-const MAX_LONG_EDGE = 1568;
-const MAX_PIXELS = 1_150_000;
-
-export function getScaleFactor(width: number, height: number): number {
-  const longEdge = Math.max(width, height);
-  const totalPixels = width * height;
-  const longEdgeScale = MAX_LONG_EDGE / longEdge;
-  const totalPixelsScale = Math.sqrt(MAX_PIXELS / totalPixels);
-  return Math.min(1.0, longEdgeScale, totalPixelsScale);
-}
 
 /** Walk formatted messages and resize base64 images inside tool_result blocks */
 async function resizeToolResultImages(
@@ -87,7 +76,7 @@ export async function prepareComputerUse(
   messages: any[],
 ): Promise<ComputerUseSetup> {
   const { toolType, betaFlag } = getVersionConfig(versionName);
-  const scaleFactor = getScaleFactor(
+  const scaleFactor = getTargetScaleFactor(
     desktopConfig.displayWidth,
     desktopConfig.displayHeight,
   );

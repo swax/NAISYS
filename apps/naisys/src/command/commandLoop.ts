@@ -3,6 +3,10 @@ import chalk from "chalk";
 import * as readline from "readline";
 
 import { AgentConfig } from "../agent/agentConfig.js";
+import {
+  CoordScale,
+  formatDesktopAction,
+} from "../computer-use/computerService.js";
 import { DesktopService } from "../computer-use/desktop.js";
 import { LynxService } from "../features/lynx.js";
 import { SessionService } from "../features/session.js";
@@ -18,10 +22,6 @@ import { ContentSource } from "../llm/llmDtos.js";
 import { LLMService } from "../llm/llmService.js";
 import { ChatService } from "../mail/chat.js";
 import { MailService } from "../mail/mail.js";
-import {
-  CoordScale,
-  formatDesktopAction,
-} from "../computer-use/computerService.js";
 import { LogService } from "../services/logService.js";
 import { ModelService } from "../services/modelService.js";
 import { RunService } from "../services/runService.js";
@@ -29,7 +29,6 @@ import { createEscKeyListener } from "../utils/escKeyListener.js";
 import { InputModeService } from "../utils/inputMode.js";
 import { OutputColor, OutputService } from "../utils/output.js";
 import { PromptNotificationService } from "../utils/promptNotificationService.js";
-import { getPlatformConfig } from "../services/shellPlatform.js";
 import { CommandHandler } from "./commandHandler.js";
 import { NextCommandAction } from "./commandRegistry.js";
 import { PromptBuilder } from "./promptBuilder.js";
@@ -218,18 +217,8 @@ export function createCommandLoop(
 
     output.commentAndLog("Use ns-help to see all available commands");
 
-    // Log desktop info to context and comment log
     if (desktopInfo) {
-      const { nativeWidth, nativeHeight, scaledWidth, scaledHeight, coordScaleX } = desktopInfo;
-      const platformName = getPlatformConfig().displayName;
-      contextManager.append(
-        `Desktop Access Enabled: ${platformName} desktop, screen resolution ${scaledWidth}x${scaledHeight}. Use it as needed, but prefer the shell.` +
-          ` Be decisive with desktop actions — click directly rather than hovering to verify. Each action costs time and tokens.`,
-        ContentSource.Console,
-      );
-      output.commentAndLog(
-        `Desktop: ${platformName}, native ${nativeWidth}x${nativeHeight}, scaled to ${scaledWidth}x${scaledHeight} (scale: ${coordScaleX.toFixed(2)})`,
-      );
+      desktopService.logStartup(desktopInfo);
     }
 
     output.commentAndLog("Starting Context:");

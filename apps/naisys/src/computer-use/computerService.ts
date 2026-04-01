@@ -4,6 +4,7 @@
  * Platform-specific code lives in windowsDesktop.ts / linuxDesktop.ts.
  */
 
+import { TARGET_MEGAPIXELS } from "@naisys/common";
 import fs from "fs";
 import os from "os";
 import path from "path";
@@ -110,6 +111,27 @@ async function executeAction(action: DesktopAction["input"]): Promise<void> {
   for (const subAction of action.actions) {
     await executeSingleAction(subAction);
   }
+}
+
+// --- Shared scaling logic ---
+
+/**
+ * Compute a scale factor to fit the native resolution into TARGET_MEGAPIXELS
+ * while maintaining aspect ratio. The scaled width is rounded down to a
+ * multiple of 20 so the result stays at or under the target.
+ * Returns 1 if the native resolution is already at or below the target.
+ */
+export function getTargetScaleFactor(nativeWidth: number, nativeHeight: number): number {
+  const nativePixels = nativeWidth * nativeHeight;
+  const targetPixels = TARGET_MEGAPIXELS * 1_000_000;
+
+  if (nativePixels <= targetPixels) return 1;
+
+  const aspectRatio = nativeWidth / nativeHeight;
+  const exactWidth = Math.sqrt(targetPixels * aspectRatio);
+  const roundedWidth = Math.floor(exactWidth / 20) * 20;
+
+  return Math.min(1, roundedWidth / nativeWidth);
 }
 
 // --- Shared image/coordinate helpers (used by vendor computer-use modules) ---

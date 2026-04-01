@@ -2,18 +2,15 @@ import { LlmApiType } from "@naisys/common";
 
 import { AgentConfig } from "../agent/agentConfig.js";
 import { GlobalConfig } from "../globalConfig.js";
-import { ComputerService } from "../computer-use/computerService.js";
+import { ComputerService, getTargetScaleFactor } from "../computer-use/computerService.js";
 import { ModelService } from "../services/modelService.js";
 import { CommandTools } from "./commandTool.js";
 import { CostTracker } from "./costTracker.js";
 import { LlmMessage } from "./llmDtos.js";
 import { sendWithAnthropic } from "./vendors/anthropic.js";
-import { getScaleFactor as anthropicScale } from "../computer-use/anthropic-computer-use.js";
 import { sendWithGoogle } from "./vendors/google.js";
-import { getImageScaleFactor as googleScale } from "../computer-use/google-computer-use.js";
 import { sendWithMock } from "./vendors/mock.js";
 import { sendWithOpenAiCompatible } from "./vendors/openai-compatible.js";
-import { getScaleFactor as openaiScale } from "../computer-use/openai-computer-use.js";
 import { sendWithOpenAiStandard } from "./vendors/openai-standard.js";
 import {
   DesktopInfo,
@@ -23,24 +20,6 @@ import {
 } from "./vendors/vendorTypes.js";
 
 const useThinking = true;
-
-/** Get the image scale factor for a given API type and native dimensions */
-export function getImageScaleForApiType(
-  apiType: string,
-  width: number,
-  height: number,
-): number {
-  switch (apiType) {
-    case LlmApiType.Anthropic:
-      return anthropicScale(width, height);
-    case LlmApiType.OpenAI:
-      return openaiScale(width, height);
-    case LlmApiType.Google:
-      return googleScale(width, height);
-    default:
-      return 1;
-  }
-}
 
 export function createLLMService(
   { globalConfig }: GlobalConfig,
@@ -62,7 +41,7 @@ export function createLLMService(
   let desktopInfo: DesktopInfo | undefined;
   if (desktopConfig) {
     const { displayWidth: w, displayHeight: h } = desktopConfig;
-    const scaleFactor = getImageScaleForApiType(shellModel.apiType, w, h);
+    const scaleFactor = getTargetScaleFactor(w, h);
     let coordScaleX: number;
     let coordScaleY: number;
 
