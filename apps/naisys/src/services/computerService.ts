@@ -107,8 +107,10 @@ using System.Runtime.InteropServices;
 public class NaisysInput {
   [DllImport("user32.dll")] public static extern bool SetCursorPos(int x, int y);
   [DllImport("user32.dll")] public static extern void mouse_event(uint f, int dx, int dy, int d, IntPtr e);
+  [DllImport("user32.dll")] public static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, IntPtr dwExtraInfo);
   [DllImport("user32.dll")] public static extern bool SetProcessDPIAware();
   public const uint LEFTDOWN=2, LEFTUP=4, RIGHTDOWN=8, RIGHTUP=16, MIDDLEDOWN=32, MIDDLEUP=64, WHEEL=0x800;
+  public const uint KEYEVENTF_KEYUP=2;
 }
 "@
 [NaisysInput]::SetProcessDPIAware()
@@ -194,12 +196,89 @@ function typeText(text: string) {
   }
 }
 
+/** Map a key name to a Windows virtual-key code (hex string) for keybd_event */
+function winVirtualKey(key: string): string {
+  switch (key) {
+    case "ctrl":
+    case "control":
+      return "0xA2";
+    case "alt":
+      return "0xA4";
+    case "shift":
+      return "0xA0";
+    case "enter":
+    case "return":
+      return "0x0D";
+    case "tab":
+      return "0x09";
+    case "escape":
+    case "esc":
+      return "0x1B";
+    case "backspace":
+      return "0x08";
+    case "delete":
+      return "0x2E";
+    case "space":
+      return "0x20";
+    case "up":
+      return "0x26";
+    case "down":
+      return "0x28";
+    case "left":
+      return "0x25";
+    case "right":
+      return "0x27";
+    case "home":
+      return "0x24";
+    case "end":
+      return "0x23";
+    case "pageup":
+    case "page_up":
+      return "0x21";
+    case "pagedown":
+    case "page_down":
+      return "0x22";
+    default:
+      if (key.startsWith("f") && key.length <= 3) {
+        const n = parseInt(key.slice(1));
+        return `0x${(0x6f + n).toString(16).toUpperCase()}`; // F1=0x70 …
+      }
+      // Single character — use its uppercase ASCII code (A=0x41, I=0x49, …)
+      return `0x${key.toUpperCase().charCodeAt(0).toString(16).toUpperCase()}`;
+  }
+}
+
 function pressKey(keyCombo: string) {
   if (process.platform === "win32") {
-    const sendKeysStr = keyCombo
-      .split("+")
-      .map((k) => {
-        const key = k.trim().toLowerCase();
+    const keys = keyCombo.split("+").map((k) => k.trim().toLowerCase());
+    const hasWin = keys.some((k) => k === "win" || k === "super");
+
+    if (hasWin) {
+      // SendKeys has no Windows-key modifier — use keybd_event (VK_LWIN = 0x5B)
+      const otherKeys = keys.filter((k) => k !== "win" && k !== "super");
+      const presses = otherKeys.map(
+        (k) =>
+          `[NaisysInput]::keybd_event(${winVirtualKey(k)},0,0,[IntPtr]::Zero)`,
+      );
+      const releases = [...otherKeys].reverse().map(
+        (k) =>
+          `[NaisysInput]::keybd_event(${winVirtualKey(k)},0,[NaisysInput]::KEYEVENTF_KEYUP,[IntPtr]::Zero)`,
+      );
+      runPowerShell(
+        [
+          PS_INPUT_TYPE,
+          `[NaisysInput]::keybd_event(0x5B,0,0,[IntPtr]::Zero)`,
+          `Start-Sleep -Milliseconds 50`,
+          ...presses,
+          ...releases,
+          `[NaisysInput]::keybd_event(0x5B,0,[NaisysInput]::KEYEVENTF_KEYUP,[IntPtr]::Zero)`,
+        ].join("; "),
+      );
+      return;
+    }
+
+    const sendKeysStr = keys
+      .map((key) => {
         switch (key) {
           case "ctrl":
           case "control":
@@ -240,9 +319,6 @@ function pressKey(keyCombo: string) {
           case "pagedown":
           case "page_down":
             return "{PGDN}";
-          case "super":
-          case "win":
-            return "^{ESC}";
           default:
             if (key.startsWith("f") && key.length <= 3) {
               return `{${key.toUpperCase()}}`;
@@ -333,7 +409,7 @@ async function executeSingleAction(
   }
 
   // Pause to let UI update after action
-  await new Promise((r) => setTimeout(r, 5000));
+  await new Promise((r) => setTimeout(r, 2000));
 }
 
 /** Execute actions. All actions are stored as { actions: [...] } — single or batched. */
