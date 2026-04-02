@@ -8,7 +8,6 @@
 import { ContentBlock, LlmMessage } from "../llm/llmDtos.js";
 import {
   getTargetScaleFactor,
-  resizeScreenshot,
   scaleActionToNative,
 } from "./computerService.js";
 import { DesktopAction, DesktopConfig } from "../llm/vendors/vendorTypes.js";
@@ -277,18 +276,12 @@ export async function formatInputWithComputerUse(
               (c) => c.type === "image",
             );
             if (imageContent && imageContent.type === "image") {
-              const resizedBase64 = await resizeScreenshot(
-                imageContent.base64,
-                scaleFactor,
-                desktopConfig.displayWidth,
-                desktopConfig.displayHeight,
-              );
               items.push({
                 type: "computer_call_output",
                 call_id: block.toolUseId,
                 output: {
                   type: "computer_screenshot",
-                  image_url: `data:${imageContent.mimeType};base64,${resizedBase64}`,
+                  image_url: `data:${imageContent.mimeType};base64,${imageContent.base64}`,
                   detail: "original",
                 },
               });

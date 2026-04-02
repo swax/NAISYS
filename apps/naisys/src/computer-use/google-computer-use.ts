@@ -7,7 +7,7 @@
  */
 
 import { ContentBlock, LlmMessage } from "../llm/llmDtos.js";
-import { getTargetScaleFactor, resizeScreenshot } from "./computerService.js";
+import { getTargetScaleFactor } from "./computerService.js";
 import { DesktopAction, DesktopConfig } from "../llm/vendors/vendorTypes.js";
 
 // --- Coordinate normalization ---
@@ -394,14 +394,8 @@ export async function formatContextWithComputerUse(
           const frParts: any[] = [];
           for (const rc of block.resultContent) {
             if (rc.type === "image") {
-              const resized = await resizeScreenshot(
-                rc.base64,
-                imageScaleFactor,
-                displayWidth,
-                displayHeight,
-              );
               frParts.push({
-                inlineData: { mimeType: rc.mimeType, data: resized },
+                inlineData: { mimeType: rc.mimeType, data: rc.base64 },
               });
             }
           }

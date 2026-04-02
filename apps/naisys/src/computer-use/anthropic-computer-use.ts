@@ -7,36 +7,9 @@
 
 import {
   getTargetScaleFactor,
-  resizeScreenshot,
   scaleActionToNative,
 } from "./computerService.js";
 import { DesktopAction, DesktopConfig } from "../llm/vendors/vendorTypes.js";
-
-/** Walk formatted messages and resize base64 images inside tool_result blocks */
-async function resizeToolResultImages(
-  messages: any[],
-  scaleFactor: number,
-  nativeWidth: number,
-  nativeHeight: number,
-): Promise<void> {
-  for (const msg of messages) {
-    if (!Array.isArray(msg.content)) continue;
-    for (const block of msg.content) {
-      if (block.type !== "tool_result" || !Array.isArray(block.content))
-        continue;
-      for (const inner of block.content) {
-        if (inner.type === "image" && inner.source?.type === "base64") {
-          inner.source.data = await resizeScreenshot(
-            inner.source.data,
-            scaleFactor,
-            nativeWidth,
-            nativeHeight,
-          );
-        }
-      }
-    }
-  }
-}
 
 // --- Anthropic version config ---
 
@@ -66,15 +39,15 @@ export interface ComputerUseSetup {
 }
 
 /**
- * Prepare the computer use tool definition and resize screenshot images.
+ * Prepare the computer use tool definition.
  * Returns the tool to add to the request, the scale factor for coordinate
  * mapping, and the beta flag for the API request.
+ * Screenshots are already scaled at capture time by ComputerService.
  */
-export async function prepareComputerUse(
+export function prepareComputerUse(
   desktopConfig: DesktopConfig,
   versionName: string,
-  messages: any[],
-): Promise<ComputerUseSetup> {
+): ComputerUseSetup {
   const { toolType, betaFlag } = getVersionConfig(versionName);
   const scaleFactor = getTargetScaleFactor(
     desktopConfig.displayWidth,
@@ -93,15 +66,6 @@ export async function prepareComputerUse(
     display_width_px: scaledWidth,
     display_height_px: scaledHeight,
   };
-
-  if (scaleFactor < 1) {
-    await resizeToolResultImages(
-      messages,
-      scaleFactor,
-      desktopConfig.displayWidth,
-      desktopConfig.displayHeight,
-    );
-  }
 
   return { computerTool, scaleFactor, betaFlag };
 }

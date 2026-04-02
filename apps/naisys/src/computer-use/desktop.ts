@@ -19,8 +19,6 @@ import {
   checkActionBounds,
   formatDesktopAction,
   formatDesktopActions,
-  getTargetScaleFactor,
-  resizeScreenshot,
 } from "./computerService.js";
 import { OutputService } from "../utils/output.js";
 import { getSharedReadline } from "../utils/sharedReadline.js";
@@ -48,36 +46,22 @@ export function createDesktopService(
     const outDir = path.join(baseDir, "home", agentConfig.agentConfig().username, "screenshots");
     fs.mkdirSync(outDir, { recursive: true });
 
-    const { base64, width, height } = await computerService.captureScreenshot();
-    const buffer = Buffer.from(base64, "base64");
-
     const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+
+    // Save full-size native screenshot
+    const native = await computerService.captureNativeScreenshot();
     const fullPath = path.join(outDir, `screenshot-${timestamp}-full.png`);
-    fs.writeFileSync(fullPath, buffer);
+    fs.writeFileSync(fullPath, Buffer.from(native.base64, "base64"));
 
-    const scaleFactor = getTargetScaleFactor(width, height);
-    const scaledWidth = Math.floor(width * scaleFactor);
-    const scaledHeight = Math.floor(height * scaleFactor);
+    // Save scaled screenshot (same resolution the LLM sees)
+    const scaled = await computerService.captureScaledScreenshot();
+    const scaledPath = path.join(
+      outDir,
+      `screenshot-${timestamp}-scaled.png`,
+    );
+    fs.copyFileSync(scaled.filepath, scaledPath);
 
-    let scaledPath: string;
-    if (scaleFactor < 1) {
-      const scaledBase64 = await resizeScreenshot(
-        base64,
-        scaleFactor,
-        width,
-        height,
-      );
-      scaledPath = path.join(
-        outDir,
-        `screenshot-${timestamp}-${scaledWidth}x${scaledHeight}.png`,
-      );
-      fs.writeFileSync(scaledPath, Buffer.from(scaledBase64, "base64"));
-    } else {
-      // No scaling needed — full size is what the LLM sees
-      scaledPath = fullPath;
-    }
-
-    return `Full: ${fullPath}\nScaled (${scaledWidth}x${scaledHeight}): ${scaledPath}`;
+    return `Full: ${fullPath}\nScaled: ${scaledPath}`;
   }
 
   /** Handle ns-desktop commands */
@@ -130,7 +114,7 @@ export function createDesktopService(
           );
           if (boundsError) {
             const { base64, filepath } =
-              await computerService.captureScreenshot();
+              await computerService.captureScaledScreenshot();
             contextManager.appendDesktopError(
               action.id,
               `${boundsError}. All coordinates must be within bounds. Use the screenshot to identify the correct position and retry.`,
@@ -145,7 +129,7 @@ export function createDesktopService(
         output.commentAndLog(`[Executing: ${desc}]`);
         await computerService.executeAction(action.input);
 
-        const { base64, filepath } = await computerService.captureScreenshot();
+        const { base64, filepath } = await computerService.captureScaledScreenshot();
         contextManager.appendDesktopResult(
           action.id,
           base64,

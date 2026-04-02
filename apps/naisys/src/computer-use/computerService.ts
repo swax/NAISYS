@@ -169,6 +169,7 @@ export async function resizeScreenshot(
   const scaledWidth = Math.floor(nativeWidth * scaleFactor);
   const scaledHeight = Math.floor(nativeHeight * scaleFactor);
   const resized = await sharp(Buffer.from(base64, "base64"))
+    .removeAlpha()
     .resize(scaledWidth, scaledHeight)
     .png()
     .toBuffer();
@@ -315,8 +316,8 @@ export async function createComputerService(
   startScreenshotCleanup();
   let nativeDimensions: { width: number; height: number } | null = null;
 
-  /** Capture screenshot at native resolution */
-  async function capture(): Promise<{
+  /** Capture screenshot at native resolution (used by ns-desktop screenshot) */
+  async function captureNativeScreenshot(): Promise<{
     base64: string;
     width: number;
     height: number;
@@ -327,10 +328,38 @@ export async function createComputerService(
     return result;
   }
 
+  /** Capture screenshot scaled to TARGET_MEGAPIXELS and saved to disk */
+  async function captureScaledScreenshot(): Promise<{
+    base64: string;
+    filepath: string;
+  }> {
+    const raw = await captureNativeScreenshot();
+
+    const scaleFactor = getTargetScaleFactor(raw.width, raw.height);
+    if (scaleFactor < 1) {
+      const scaledBase64 = await resizeScreenshot(
+        raw.base64,
+        scaleFactor,
+        raw.width,
+        raw.height,
+      );
+      const scaledWidth = Math.floor(raw.width * scaleFactor);
+      const scaledHeight = Math.floor(raw.height * scaleFactor);
+      const scaledPath = raw.filepath.replace(
+        ".png",
+        `-${scaledWidth}x${scaledHeight}.png`,
+      );
+      fs.writeFileSync(scaledPath, Buffer.from(scaledBase64, "base64"));
+      return { base64: scaledBase64, filepath: scaledPath };
+    }
+
+    return { base64: raw.base64, filepath: raw.filepath };
+  }
+
   // Seed native display dimensions on startup when desktop mode is enabled
   if (agentConfig().controlDesktop) {
     try {
-      await capture();
+      await captureNativeScreenshot();
     } catch (e) {
       output.errorAndLog(
         `Desktop: failed to capture initial screenshot — desktop mode disabled. ${e}`,
@@ -353,7 +382,8 @@ export async function createComputerService(
   }
 
   return {
-    captureScreenshot: capture,
+    captureScaledScreenshot,
+    captureNativeScreenshot,
     executeAction: execute,
     getConfig,
   };
