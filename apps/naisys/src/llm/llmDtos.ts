@@ -1,6 +1,6 @@
 export type LlmRole = "assistant" | "user" | "system";
 
-export type LlmMessageType = "comment" | "error" | "system" | "workspace";
+export type LlmMessageType = "comment" | "error" | "system" | "tool";
 
 export enum ContentSource {
   ConsolePrompt = "startPrompt",
@@ -68,4 +68,6 @@ export interface LlmMessage {
   type?: LlmMessageType;
   source?: ContentSource;
   cachePoint?: boolean;
+  /** Override text logged to the hub, when content blocks don't contain displayable text */
+  logMessage?: string;
 }

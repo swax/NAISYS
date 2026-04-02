@@ -53,6 +53,7 @@ function transformFormValues(values: FormValues): Record<string, unknown> {
   if (values.wakeOnMessage) result.wakeOnMessage = true;
   if (values.workspacesEnabled) result.workspacesEnabled = true;
   if (values.multipleCommandsEnabled) result.multipleCommandsEnabled = true;
+  if (values.controlDesktop) result.controlDesktop = true;
 
   if (values.commandProtection && values.commandProtection !== "none")
     result.commandProtection = values.commandProtection;
@@ -83,6 +84,7 @@ interface FormValues {
   wakeOnMessage: boolean;
   workspacesEnabled: boolean;
   multipleCommandsEnabled: boolean;
+  controlDesktop: boolean;
   commandProtection: string;
   debugPauseSeconds: number | string;
   initialCommands: string;
@@ -163,6 +165,7 @@ export const AgentConfigForm: React.FC<AgentConfigFormProps> = ({
       wakeOnMessage: config.wakeOnMessage ?? false,
       workspacesEnabled: config.workspacesEnabled ?? false,
       multipleCommandsEnabled: config.multipleCommandsEnabled ?? false,
+      controlDesktop: config.controlDesktop ?? false,
       commandProtection: config.commandProtection ?? "none",
       debugPauseSeconds: config.debugPauseSeconds ?? 0,
       initialCommands: config.initialCommands?.join("\n\n") ?? "",
@@ -328,6 +331,11 @@ export const AgentConfigForm: React.FC<AgentConfigFormProps> = ({
           {...form.getInputProps("multipleCommandsEnabled", {
             type: "checkbox",
           })}
+        />
+        <Switch
+          label="Control Desktop"
+          description={desc("controlDesktop")}
+          {...form.getInputProps("controlDesktop", { type: "checkbox" })}
         />
 
         {/* Advanced */}
