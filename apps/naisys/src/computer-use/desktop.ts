@@ -1,4 +1,5 @@
 import { LlmApiType, TARGET_MEGAPIXELS } from "@naisys/common";
+import chalk from "chalk";
 import fs from "fs";
 import os from "os";
 import path from "path";
@@ -22,17 +23,11 @@ import {
   resizeScreenshot,
 } from "./computerService.js";
 import { OutputService } from "../utils/output.js";
+import { getSharedReadline } from "../utils/sharedReadline.js";
 
 // Re-export for consumers
 export { formatDesktopAction } from "./computerService.js";
 export type { CoordScale } from "./computerService.js";
-
-/** Pending desktop batch: the full LLM response (text + actions) deferred until execution */
-interface PendingBatch {
-  textContent: string;
-  actions: DesktopAction[];
-  coordScale?: CoordScale;
-}
 
 export function createDesktopService(
   computerService: ComputerService,
@@ -41,7 +36,6 @@ export function createDesktopService(
   agentConfig: AgentConfig,
   modelService: ModelService,
 ) {
-  let pendingBatch: PendingBatch | null = null;
 
   /** Handle the screenshot subcommand */
   async function handleScreenshot(): Promise<string> {
@@ -95,96 +89,117 @@ export function createDesktopService(
       return handleScreenshot();
     }
 
-    if (firstArg === "cancel") {
-      if (!pendingBatch) {
-        return "No pending desktop actions to cancel.";
-      }
-
-      const reason = argv[1] || "Action cancelled by operator";
-
-      // Add the deferred assistant response + error tool_results so the model sees the rejection
-      contextManager.appendDesktopRequest(
-        pendingBatch.textContent,
-        pendingBatch.actions,
-        formatDesktopActions(pendingBatch.actions, pendingBatch.coordScale),
-      );
-      for (const action of pendingBatch.actions) {
-        contextManager.appendDesktopError(action.id, reason);
-      }
-
-      pendingBatch = null;
-
-      return "";
-    }
-
-    if (!firstArg) {
-      return `Pending actions: ${pendingBatch?.actions.length ?? 0}.`;
-    }
-
-    return `Usage: ${desktopCmd.name} cancel ["<reason>"] | screenshot`;
+    return `Usage: ${desktopCmd.name} screenshot`;
   }
 
   /**
-   * Execute all pending actions.
-   * Adds the deferred tool_use (assistant) and tool_result (user) back-to-back
-   * so they're always adjacent in context.
+   * Show preview, prompt for y/n confirmation (defaults to yes on timeout),
+   * then execute or reject the desktop actions.
    */
-  async function executePendingActions(): Promise<void> {
-    if (!pendingBatch) return;
+  async function confirmAndExecuteActions(
+    textContent: string,
+    actions: DesktopAction[],
+    coordScale?: CoordScale,
+  ): Promise<void> {
+    for (const action of actions) {
+      const desc = formatDesktopAction(action.input, coordScale) || action.name;
+      output.commentAndLog(`Desktop Action: ${desc}`);
+    }
 
-    const { textContent, actions, coordScale } = pendingBatch;
-    pendingBatch = null;
+    const approved = await getDesktopConfirmation(
+      agentConfig.agentConfig().debugPauseSeconds,
+    );
 
-    // Add the deferred assistant response (text + tool_use blocks) to context NOW
+    // Add the deferred assistant response (text + tool_use blocks) to context
     contextManager.appendDesktopRequest(
       textContent,
       actions,
       formatDesktopActions(actions, coordScale),
     );
 
-    // Execute each action and add its tool_result immediately after
-    const desktopConfig = computerService.getConfig();
+    if (approved) {
+      const desktopConfig = computerService.getConfig();
 
-    for (const action of actions) {
-      // Reject actions with out-of-bounds coordinates
-      if (desktopConfig && coordScale) {
-        const boundsError = checkActionBounds(
-          action.input,
-          desktopConfig.displayWidth,
-          desktopConfig.displayHeight,
-          coordScale,
-        );
-        if (boundsError) {
-          const { base64, filepath } = await computerService.captureScreenshot();
-          contextManager.appendDesktopError(
-            action.id,
-            `${boundsError}. All coordinates must be within bounds. Use the screenshot to identify the correct position and retry.`,
-            { base64, mimeType: "image/png", filepath },
+      for (const action of actions) {
+        if (desktopConfig && coordScale) {
+          const boundsError = checkActionBounds(
+            action.input,
+            desktopConfig.displayWidth,
+            desktopConfig.displayHeight,
+            coordScale,
           );
-          continue;
+          if (boundsError) {
+            const { base64, filepath } =
+              await computerService.captureScreenshot();
+            contextManager.appendDesktopError(
+              action.id,
+              `${boundsError}. All coordinates must be within bounds. Use the screenshot to identify the correct position and retry.`,
+              { base64, mimeType: "image/png", filepath },
+            );
+            continue;
+          }
         }
+
+        const desc =
+          formatDesktopAction(action.input, coordScale) || action.name;
+        output.commentAndLog(`[Executing: ${desc}]`);
+        await computerService.executeAction(action.input);
+
+        const { base64, filepath } = await computerService.captureScreenshot();
+        contextManager.appendDesktopResult(
+          action.id,
+          base64,
+          "image/png",
+          filepath,
+        );
       }
-
-      const desc = formatDesktopAction(action.input, coordScale) || action.name;
-      output.commentAndLog(`[Executing: ${desc}]`);
-      await computerService.executeAction(action.input);
-
-      const { base64, filepath } = await computerService.captureScreenshot();
-
-      contextManager.appendDesktopResult(action.id, base64, "image/png", filepath);
+    } else {
+      for (const action of actions) {
+        contextManager.appendDesktopError(
+          action.id,
+          "Action rejected by operator",
+        );
+      }
     }
   }
 
-  function hasPendingActions(): boolean {
-    return pendingBatch !== null;
-  }
+  /** Prompt for y/n confirmation with a timeout that defaults to yes */
+  function getDesktopConfirmation(timeoutSeconds: number): Promise<boolean> {
+    return new Promise<boolean>((resolve) => {
+      if (!output.isConsoleEnabled()) {
+        resolve(true);
+        return;
+      }
 
-  function setPendingBatch(
-    textContent: string,
-    actions: DesktopAction[],
-    coordScale?: CoordScale,
-  ): void {
-    pendingBatch = { textContent, actions, coordScale };
+      const rl = getSharedReadline();
+      const controller = new AbortController();
+      let timeout: NodeJS.Timeout | undefined;
+
+      if (timeoutSeconds > 0) {
+        timeout = setTimeout(() => {
+          controller.abort();
+          try {
+            rl.pause();
+          } catch {
+            // On Windows, readline may already be closed after abort
+          }
+          resolve(true);
+        }, timeoutSeconds * 1000);
+      }
+
+      rl.question(
+        chalk.greenBright(
+          `Execute desktop actions? [Y/n]${timeoutSeconds > 0 ? ` (${timeoutSeconds}s)` : ""} `,
+        ),
+        { signal: controller.signal },
+        (answer) => {
+          clearTimeout(timeout);
+          rl.pause();
+          const trimmed = answer.trim().toLowerCase();
+          resolve(trimmed !== "n" && trimmed !== "no");
+        },
+      );
+    });
   }
 
   /** Log desktop dimensions, scale info, and Anthropic warnings at startup */
@@ -230,9 +245,7 @@ export function createDesktopService(
   return {
     ...registrableCommand,
     logStartup,
-    hasPendingActions,
-    setPendingBatch,
-    executePendingActions,
+    confirmAndExecuteActions,
   };
 }
 

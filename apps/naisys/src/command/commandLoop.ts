@@ -3,10 +3,7 @@ import chalk from "chalk";
 import * as readline from "readline";
 
 import { AgentConfig } from "../agent/agentConfig.js";
-import {
-  CoordScale,
-  formatDesktopAction,
-} from "../computer-use/computerService.js";
+import { CoordScale } from "../computer-use/computerService.js";
 import { DesktopService } from "../computer-use/desktop.js";
 import { LynxService } from "../features/lynx.js";
 import { SessionService } from "../features/session.js";
@@ -20,6 +17,7 @@ import {
 } from "../llm/costTracker.js";
 import { ContentSource } from "../llm/llmDtos.js";
 import { LLMService } from "../llm/llmService.js";
+import { DesktopAction } from "../llm/vendors/vendorTypes.js";
 import { ChatService } from "../mail/chat.js";
 import { MailService } from "../mail/mail.js";
 import { LogService } from "../services/logService.js";
@@ -326,6 +324,20 @@ export function createCommandLoop(
         };
       }
 
+      if (result.outcome === "desktop") {
+        const { textContent, actions, coordScale: scale } = result.desktop;
+        await desktopService.confirmAndExecuteActions(
+          textContent,
+          actions,
+          scale,
+        );
+        return {
+          nextCommandAction: NextCommandAction.Continue,
+          pauseSeconds: undefined,
+          llmErrorCount,
+        };
+      }
+
       commandList = result.commands;
     } else {
       throw `Unreachable: Invalid input mode`;
@@ -376,6 +388,14 @@ export function createCommandLoop(
         outcome: "skip";
         llmErrorCount: number;
         pauseSeconds: number | undefined;
+      }
+    | {
+        outcome: "desktop";
+        desktop: {
+          textContent: string;
+          actions: DesktopAction[];
+          coordScale?: CoordScale;
+        };
       };
 
   async function getLlmCommands(
@@ -406,22 +426,13 @@ export function createCommandLoop(
       }
     }
 
-    // Execute pending desktop actions then continue straight to the LLM query.
-    // Skip the prompt append so no message gets inserted between tool_result and the next query.
-    const desktopActionsExecuted = desktopService.hasPendingActions();
-    if (desktopActionsExecuted) {
-      await desktopService.executePendingActions();
-    }
-
     checkContextLimitWarning();
 
     if (agentConfig().workspacesEnabled && workspaces.hasFiles()) {
       output.comment(workspaces.listFiles());
     }
 
-    if (!desktopActionsExecuted) {
-      contextManager.append(prompt, ContentSource.ConsolePrompt);
-    }
+    contextManager.append(prompt, ContentSource.ConsolePrompt);
 
     // If commands were generated from notifications, skip the LLM query and run them directly,
     // most often ns-session preemptive-compact commands from the preemptive compact notification
@@ -463,28 +474,15 @@ export function createCommandLoop(
         contextManager.setMessagesTokenCount(queryResult.messagesTokenCount);
         schedulePreemptiveCompact();
 
-        // Desktop actions: store as pending, preview, return to debug for review
+        // Desktop actions: return for confirmation and execution
         if (queryResult.desktopActions?.length) {
-          const textContent = queryResult.responses.join("\n");
-
-          for (const action of queryResult.desktopActions) {
-            const desc = formatDesktopAction(action.input, coordScale) || action.name;
-            output.commentAndLog(
-              `Desktop Request Preview: ${desc} (To cancel use ns-desktop cancel <reason>)`,
-            );
-          }
-
-          desktopService.setPendingBatch(
-            textContent,
-            queryResult.desktopActions,
-            coordScale,
-          );
-
-          inputMode.setDebug();
           return {
-            outcome: "skip",
-            llmErrorCount,
-            pauseSeconds: agentConfig().debugPauseSeconds,
+            outcome: "desktop",
+            desktop: {
+              textContent: queryResult.responses.join("\n"),
+              actions: queryResult.desktopActions,
+              coordScale,
+            },
           };
         }
 
