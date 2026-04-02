@@ -470,7 +470,7 @@ export function createCommandLoop(
           for (const action of queryResult.desktopActions) {
             const desc = formatDesktopAction(action.input, coordScale) || action.name;
             output.commentAndLog(
-              `Desktop Request: ${desc} (To cancel use ns-desktop cancel <reason>)`,
+              `Desktop Request Preview: ${desc} (To cancel use ns-desktop cancel <reason>)`,
             );
           }
 

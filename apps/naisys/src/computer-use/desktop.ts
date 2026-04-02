@@ -17,6 +17,7 @@ import {
   ComputerService,
   checkActionBounds,
   formatDesktopAction,
+  formatDesktopActions,
   getTargetScaleFactor,
   resizeScreenshot,
 } from "./computerService.js";
@@ -99,15 +100,16 @@ export function createDesktopService(
         return "No pending desktop actions to cancel.";
       }
 
-      const reason = argv[1] || "Action rejected by operator";
+      const reason = argv[1] || "Action cancelled by operator";
 
       // Add the deferred assistant response + error tool_results so the model sees the rejection
-      contextManager.appendToolResponse(
+      contextManager.appendDesktopRequest(
         pendingBatch.textContent,
         pendingBatch.actions,
+        formatDesktopActions(pendingBatch.actions, pendingBatch.coordScale),
       );
       for (const action of pendingBatch.actions) {
-        contextManager.appendToolResultError(action.id, reason);
+        contextManager.appendDesktopError(action.id, reason);
       }
 
       pendingBatch = null;
@@ -134,7 +136,11 @@ export function createDesktopService(
     pendingBatch = null;
 
     // Add the deferred assistant response (text + tool_use blocks) to context NOW
-    contextManager.appendToolResponse(textContent, actions);
+    contextManager.appendDesktopRequest(
+      textContent,
+      actions,
+      formatDesktopActions(actions, coordScale),
+    );
 
     // Execute each action and add its tool_result immediately after
     const desktopConfig = computerService.getConfig();
@@ -149,23 +155,23 @@ export function createDesktopService(
           coordScale,
         );
         if (boundsError) {
-          const { base64 } = await computerService.captureScreenshot();
-          contextManager.appendToolResultError(
+          const { base64, filepath } = await computerService.captureScreenshot();
+          contextManager.appendDesktopError(
             action.id,
             `${boundsError}. All coordinates must be within bounds. Use the screenshot to identify the correct position and retry.`,
-            { base64, mimeType: "image/png" },
+            { base64, mimeType: "image/png", filepath },
           );
           continue;
         }
       }
 
       const desc = formatDesktopAction(action.input, coordScale) || action.name;
-      output.commentAndLog(`Executing: ${desc}`);
+      output.commentAndLog(`[Executing: ${desc}]`);
       await computerService.executeAction(action.input);
 
-      const { base64 } = await computerService.captureScreenshot();
+      const { base64, filepath } = await computerService.captureScreenshot();
 
-      contextManager.appendToolResult(action.id, base64, "image/png");
+      contextManager.appendDesktopResult(action.id, base64, "image/png", filepath);
     }
   }
 

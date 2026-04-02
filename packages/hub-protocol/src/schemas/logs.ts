@@ -10,7 +10,7 @@ export const LogSourceEnum = z.enum([
   "console",
   "llm",
 ]);
-export const LogTypeEnum = z.enum(["comment", "error", "system", "workspace"]);
+export const LogTypeEnum = z.enum(["comment", "error", "system", "tool"]);
 
 /** A single log entry sent from NAISYS instance to hub */
 export const LogWriteEntrySchema = z.object({

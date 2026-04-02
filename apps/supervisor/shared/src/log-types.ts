@@ -11,7 +11,7 @@ export const LogTypeSchema = z.enum([
   "comment",
   "error",
   "system",
-  "workspace",
+  "tool",
 ]);
 export const LogRoleSchema = z.enum(["NAISYS", "LLM"]);
 

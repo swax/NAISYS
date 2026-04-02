@@ -132,6 +132,8 @@ function canonicalConfigOrder(
     ordered.workspacesEnabled = config.workspacesEnabled;
   if (config.multipleCommandsEnabled !== undefined)
     ordered.multipleCommandsEnabled = config.multipleCommandsEnabled;
+  if (config.controlDesktop !== undefined)
+    ordered.controlDesktop = config.controlDesktop;
 
   // Advanced
   if (config.commandProtection !== undefined)

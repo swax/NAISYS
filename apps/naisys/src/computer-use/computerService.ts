@@ -18,33 +18,55 @@ import * as windowsDesktop from "./windowsDesktop.js";
 
 const platform = process.platform === "win32" ? windowsDesktop : linuxDesktop;
 
+// --- Screenshot cleanup ---
+
+const SCREENSHOT_MAX_AGE_MS = 10 * 60 * 1000; // 10 minutes
+const SCREENSHOT_DIR = path.join(os.tmpdir(), "naisys");
+let cleanupStarted = false;
+
+function startScreenshotCleanup() {
+  if (cleanupStarted) return;
+  cleanupStarted = true;
+  fs.mkdirSync(SCREENSHOT_DIR, { recursive: true });
+
+  const clean = () => {
+    try {
+      const now = Date.now();
+      for (const file of fs.readdirSync(SCREENSHOT_DIR)) {
+        const filepath = path.join(SCREENSHOT_DIR, file);
+        const stat = fs.statSync(filepath);
+        if (stat.isFile() && now - stat.mtimeMs > SCREENSHOT_MAX_AGE_MS) {
+          fs.unlinkSync(filepath);
+        }
+      }
+    } catch { /* ignore */ }
+  };
+
+  clean();
+  setInterval(clean, SCREENSHOT_MAX_AGE_MS).unref();
+}
+
 // --- Screenshot capture ---
 
-async function captureScreenshot(): Promise<{
+async function captureScreenshot(username: string): Promise<{
   base64: string;
   width: number;
   height: number;
+  filepath: string;
 }> {
-  const tmpFile = path.join(os.tmpdir(), `naisys-desktop-${Date.now()}.png`);
+  const filepath = path.join(SCREENSHOT_DIR, `${username}-${Date.now()}.png`);
 
-  try {
-    platform.captureScreenshot(tmpFile);
+  platform.captureScreenshot(filepath);
 
-    const buffer = fs.readFileSync(tmpFile);
-    const metadata = await sharp(buffer).metadata();
+  const buffer = fs.readFileSync(filepath);
+  const metadata = await sharp(buffer).metadata();
 
-    return {
-      base64: buffer.toString("base64"),
-      width: metadata.width || 1920,
-      height: metadata.height || 1080,
-    };
-  } finally {
-    try {
-      fs.unlinkSync(tmpFile);
-    } catch {
-      /* ignore cleanup errors */
-    }
-  }
+  return {
+    base64: buffer.toString("base64"),
+    width: metadata.width || 1920,
+    height: metadata.height || 1080,
+    filepath,
+  };
 }
 
 // --- Action execution ---
@@ -276,12 +298,21 @@ export function formatDesktopAction(
   return input.actions.map((a) => formatSingleAction(a, coordScale)).join(", then ");
 }
 
+/** Format a batch of desktop actions for human-readable display */
+export function formatDesktopActions(
+  actions: DesktopAction[],
+  coordScale?: CoordScale,
+): string {
+  return actions.map((a) => formatDesktopAction(a.input, coordScale)).join(", then ");
+}
+
 // --- Service factory ---
 
 export async function createComputerService(
   { agentConfig }: AgentConfig,
   output: OutputService,
 ) {
+  startScreenshotCleanup();
   let nativeDimensions: { width: number; height: number } | null = null;
 
   /** Capture screenshot at native resolution */
@@ -289,8 +320,9 @@ export async function createComputerService(
     base64: string;
     width: number;
     height: number;
+    filepath: string;
   }> {
-    const result = await captureScreenshot();
+    const result = await captureScreenshot(agentConfig().username);
     nativeDimensions = { width: result.width, height: result.height };
     return result;
   }

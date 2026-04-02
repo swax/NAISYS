@@ -29,7 +29,7 @@ enum ContextLogType {
   comment
   error
   system
-  workspace
+  tool
 }
 
 enum MessageKind {

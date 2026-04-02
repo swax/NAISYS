@@ -138,13 +138,14 @@ export function createContextManager(
   /** Add an assistant message containing text and tool_use blocks (for computer use).
    *  Always writes to context regardless of input mode — the tool_use/tool_result
    *  protocol requires these for the model to see actions and rejections. */
-  function appendToolResponse(
+  function appendDesktopRequest(
     text: string,
     toolUseBlocks: Array<{
       id: string;
       name: string;
       input: Record<string, unknown>;
     }>,
+    actionDesc: string,
   ) {
 
     const contentBlocks: ContentBlock[] = [];
@@ -160,24 +161,29 @@ export function createContextManager(
       } satisfies ToolUseBlock);
     }
 
+    const logMessage = [text, `[Desktop Request: ${actionDesc}]`]
+      .filter(Boolean)
+      .join("\n");
+
     const llmMessage: LlmMessage = {
       source: ContentSource.LLM,
       role: "assistant",
+      type: "tool",
       content: contentBlocks,
+      logMessage,
     };
     messages.push(llmMessage);
 
-    if (text) {
-      output.write(text, OutputColor.llm);
-    }
+    output.write(logMessage, OutputColor.llm);
     logService.write(llmMessage);
   }
 
   /** Add a user message with a tool_result containing a screenshot image */
-  function appendToolResult(
+  function appendDesktopResult(
     toolUseId: string,
     screenshotBase64: string,
     screenshotMimeType: string,
+    filepath?: string,
   ) {
 
     const resultContent: Array<TextBlock | ImageBlock> = [
@@ -188,9 +194,11 @@ export function createContextManager(
       },
     ];
 
+    const logMessage = "[Desktop screenshot]";
     const llmMessage: LlmMessage = {
       source: ContentSource.Console,
       role: "user",
+      type: "tool",
       content: [
         {
           type: "tool_result",
@@ -198,18 +206,19 @@ export function createContextManager(
           resultContent,
         } satisfies ToolResultBlock,
       ],
+      logMessage,
     };
     messages.push(llmMessage);
 
-    output.write("[Desktop screenshot]", OutputColor.console);
-    logService.write(llmMessage);
+    output.write(logMessage, OutputColor.console);
+    logService.write(llmMessage, filepath);
   }
 
   /** Add a user message with an error tool_result (for rejected desktop actions) */
-  function appendToolResultError(
+  function appendDesktopError(
     toolUseId: string,
     errorText: string,
-    screenshot?: { base64: string; mimeType: string },
+    screenshot?: { base64: string; mimeType: string; filepath?: string },
   ) {
     const resultContent: Array<TextBlock | ImageBlock> = [
       { type: "text", text: errorText },
@@ -222,9 +231,11 @@ export function createContextManager(
       });
     }
 
+    const logMessage = `[Desktop Request Cancelled: ${errorText}]`;
     const llmMessage: LlmMessage = {
       source: ContentSource.Console,
       role: "user",
+      type: "tool",
       content: [
         {
           type: "tool_result",
@@ -235,11 +246,12 @@ export function createContextManager(
           resultContent,
         } satisfies ToolResultBlock,
       ],
+      logMessage,
     };
     messages.push(llmMessage);
 
-    output.write(`[Desktop action rejected: ${errorText}]`, OutputColor.error);
-    logService.write(llmMessage);
+    output.write(logMessage, OutputColor.error);
+    logService.write(llmMessage, screenshot?.filepath);
   }
 
   /** Scrub non-text content blocks (image, audio) from recent user messages,
@@ -409,9 +421,9 @@ export function createContextManager(
     append,
     appendImage,
     appendAudio,
-    appendToolResponse,
-    appendToolResult,
-    appendToolResultError,
+    appendDesktopRequest,
+    appendDesktopResult,
+    appendDesktopError,
     scrubRecentMedia,
     clear,
     setMessagesTokenCount,

@@ -47,6 +47,7 @@ export const ConfigSummary: React.FC<{
   if (config.wakeOnMessage) features.push("Wake On Message");
   if (config.workspacesEnabled) features.push("Workspaces");
   if (config.multipleCommandsEnabled) features.push("Multiple Commands");
+  if (config.controlDesktop) features.push("Control Desktop");
 
   return (
     <Stack gap="sm">

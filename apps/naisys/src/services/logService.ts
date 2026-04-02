@@ -21,7 +21,7 @@ export function createLogService(
       role: toSimpleRole(message.role),
       source: message.source ?? null,
       type: message.type ?? null,
-      message: getTextContent(message.content),
+      message: message.logMessage ?? getTextContent(message.content),
       createdAt: new Date().toISOString(),
     };
 
