@@ -62,9 +62,10 @@ export function createCommandLoop(
 
   // Pre-computed desktop scaling info from llmService init
   const desktopInfo = llmService.getDesktopInfo();
-  const coordScale: CoordScale | undefined = desktopInfo
-    ? { x: desktopInfo.coordScaleX, y: desktopInfo.coordScaleY }
-    : undefined;
+  const coordScale: CoordScale | undefined =
+    desktopInfo && !desktopInfo.initError
+      ? { x: desktopInfo.coordScaleX!, y: desktopInfo.coordScaleY! }
+      : undefined;
 
   async function run(abortSignal?: AbortSignal): Promise<string> {
     output.commentAndLog(`AGENT STARTED`);

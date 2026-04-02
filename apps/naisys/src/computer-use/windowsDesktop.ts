@@ -77,9 +77,15 @@ try {
 }
 `.trim();
 
-  execFileSync("powershell.exe", ["-NoProfile", "-Command", psScript], {
-    stdio: "pipe",
-  });
+  try {
+    execFileSync("powershell.exe", ["-NoProfile", "-Command", psScript], {
+      stdio: "pipe",
+    });
+  } catch (e: any) {
+    throw new Error(
+      `Windows screenshot capture failed. Ensure PowerShell and .NET Framework are available. ${e?.message || e}`,
+    );
+  }
 }
 
 export function mouseClick(

@@ -1,16 +1,41 @@
 /**
- * Linux-specific desktop interaction via xdotool / scrot.
+ * Linux X11-specific desktop interaction via xdotool / scrot.
  */
 
 import { execFileSync } from "child_process";
 
 export function captureScreenshot(tmpFile: string): void {
+  // scrot: common lightweight screenshot tool
   try {
     execFileSync("scrot", [tmpFile], { stdio: "pipe" });
+    return;
   } catch {
+    // not available
+  }
+
+  // import: ImageMagick's screenshot tool
+  try {
     execFileSync("import", ["-window", "root", tmpFile], {
       stdio: "pipe",
     });
+    return;
+  } catch {
+    // not available
+  }
+
+  throw new Error(
+    "No X11 screenshot tool available. Install one of: scrot, imagemagick (for import)",
+  );
+}
+
+function xdotool(args: string[]) {
+  try {
+    execFileSync("xdotool", args, { stdio: "pipe" });
+  } catch (e: any) {
+    if (e?.code === "ENOENT") {
+      throw new Error("xdotool is not installed. Install it with: sudo apt install xdotool");
+    }
+    throw e;
   }
 }
 
@@ -20,11 +45,11 @@ export function mouseClick(
   button: "left" | "right" | "middle",
 ) {
   const btn = button === "right" ? "3" : button === "middle" ? "2" : "1";
-  execFileSync("xdotool", ["mousemove", String(x), String(y), "click", btn]);
+  xdotool(["mousemove", String(x), String(y), "click", btn]);
 }
 
 export function mouseDoubleClick(x: number, y: number) {
-  execFileSync("xdotool", [
+  xdotool([
     "mousemove",
     String(x),
     String(y),
@@ -36,7 +61,7 @@ export function mouseDoubleClick(x: number, y: number) {
 }
 
 export function mouseMove(x: number, y: number) {
-  execFileSync("xdotool", ["mousemove", String(x), String(y)]);
+  xdotool(["mousemove", String(x), String(y)]);
 }
 
 export function mouseDrag(
@@ -45,7 +70,7 @@ export function mouseDrag(
   endX: number,
   endY: number,
 ) {
-  execFileSync("xdotool", [
+  xdotool([
     "mousemove",
     String(startX),
     String(startY),
@@ -60,11 +85,11 @@ export function mouseDrag(
 }
 
 export function typeText(text: string) {
-  execFileSync("xdotool", ["type", "--clearmodifiers", text]);
+  xdotool(["type", "--clearmodifiers", text]);
 }
 
 export function pressKey(keyCombo: string) {
-  execFileSync("xdotool", ["key", keyCombo]);
+  xdotool(["key", keyCombo]);
 }
 
 export function mouseScroll(
@@ -74,7 +99,7 @@ export function mouseScroll(
   amount: number,
 ) {
   const btn = direction === "up" ? "4" : "5";
-  execFileSync("xdotool", [
+  xdotool([
     "mousemove",
     String(x),
     String(y),

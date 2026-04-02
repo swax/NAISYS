@@ -1,7 +1,7 @@
 /**
  * Computer interaction service.
  * Handles screenshots, mouse/keyboard actions, and display config.
- * Platform-specific code lives in windowsDesktop.ts / linuxDesktop.ts.
+ * Platform-specific code lives in windowsDesktop.ts / x11Desktop.ts / waylandDesktop.ts.
  */
 
 import { TARGET_MEGAPIXELS } from "@naisys/common";
@@ -13,10 +13,22 @@ import sharp from "sharp";
 import { AgentConfig } from "../agent/agentConfig.js";
 import { DesktopAction, DesktopConfig } from "../llm/vendors/vendorTypes.js";
 import { OutputService } from "../utils/output.js";
-import * as linuxDesktop from "./linuxDesktop.js";
+import * as waylandDesktop from "./waylandDesktop.js";
 import * as windowsDesktop from "./windowsDesktop.js";
+import * as x11Desktop from "./x11Desktop.js";
 
-const platform = process.platform === "win32" ? windowsDesktop : linuxDesktop;
+type Platform = { backend: typeof windowsDesktop; name: string };
+
+function detectPlatform(): Platform | null {
+  if (process.platform === "win32") return { backend: windowsDesktop, name: "Windows" };
+
+  const sessionType = process.env.XDG_SESSION_TYPE;
+  if (sessionType === "wayland" || process.env.WAYLAND_DISPLAY) return { backend: waylandDesktop, name: "Linux (Wayland)" };
+  if (sessionType === "x11" || process.env.DISPLAY) return { backend: x11Desktop, name: "Linux (X11)" };
+
+  // No display server detected (headless, macOS, TTY, etc.)
+  return null;
+}
 
 // --- Screenshot cleanup ---
 
@@ -48,7 +60,7 @@ function startScreenshotCleanup() {
 
 // --- Screenshot capture ---
 
-async function captureScreenshot(username: string): Promise<{
+async function captureScreenshot(username: string, platform: Platform): Promise<{
   base64: string;
   width: number;
   height: number;
@@ -56,7 +68,7 @@ async function captureScreenshot(username: string): Promise<{
 }> {
   const filepath = path.join(SCREENSHOT_DIR, `${username}-${Date.now()}.png`);
 
-  platform.captureScreenshot(filepath);
+  platform.backend.captureScreenshot(filepath);
 
   const buffer = fs.readFileSync(filepath);
   const metadata = await sharp(buffer).metadata();
@@ -73,42 +85,44 @@ async function captureScreenshot(username: string): Promise<{
 
 async function executeSingleAction(
   action: Record<string, unknown>,
+  platform: Platform,
 ): Promise<void> {
+  const { backend } = platform;
   const coord = action.coordinate as number[] | undefined;
 
   switch (action.action) {
     case "left_click":
-      platform.mouseClick(coord![0], coord![1], "left");
+      backend.mouseClick(coord![0], coord![1], "left");
       break;
     case "right_click":
-      platform.mouseClick(coord![0], coord![1], "right");
+      backend.mouseClick(coord![0], coord![1], "right");
       break;
     case "middle_click":
-      platform.mouseClick(coord![0], coord![1], "middle");
+      backend.mouseClick(coord![0], coord![1], "middle");
       break;
     case "double_click":
-      platform.mouseDoubleClick(coord![0], coord![1]);
+      backend.mouseDoubleClick(coord![0], coord![1]);
       break;
     case "triple_click":
-      platform.mouseDoubleClick(coord![0], coord![1]);
-      platform.mouseClick(coord![0], coord![1], "left");
+      backend.mouseDoubleClick(coord![0], coord![1]);
+      backend.mouseClick(coord![0], coord![1], "left");
       break;
     case "type":
-      platform.typeText(action.text as string);
+      backend.typeText(action.text as string);
       break;
     case "key":
-      platform.pressKey(action.text as string);
+      backend.pressKey(action.text as string);
       break;
     case "mouse_move":
-      platform.mouseMove(coord![0], coord![1]);
+      backend.mouseMove(coord![0], coord![1]);
       break;
     case "left_click_drag": {
       const startCoord = action.start_coordinate as number[];
-      platform.mouseDrag(startCoord[0], startCoord[1], coord![0], coord![1]);
+      backend.mouseDrag(startCoord[0], startCoord[1], coord![0], coord![1]);
       break;
     }
     case "scroll":
-      platform.mouseScroll(
+      backend.mouseScroll(
         coord![0],
         coord![1],
         action.scroll_direction as string,
@@ -129,9 +143,9 @@ async function executeSingleAction(
 }
 
 /** Execute actions. All actions are stored as { actions: [...] } — single or batched. */
-async function executeAction(action: DesktopAction["input"]): Promise<void> {
+async function executeAction(action: DesktopAction["input"], platform: Platform): Promise<void> {
   for (const subAction of action.actions) {
-    await executeSingleAction(subAction);
+    await executeSingleAction(subAction, platform);
   }
 }
 
@@ -314,6 +328,7 @@ export async function createComputerService(
   output: OutputService,
 ) {
   startScreenshotCleanup();
+  const platform = agentConfig().controlDesktop ? detectPlatform() : null;
   let nativeDimensions: { width: number; height: number } | null = null;
 
   /** Capture screenshot at native resolution (used by ns-desktop screenshot) */
@@ -323,7 +338,10 @@ export async function createComputerService(
     height: number;
     filepath: string;
   }> {
-    const result = await captureScreenshot(agentConfig().username);
+    if (!platform) {
+      throw new Error("Desktop mode is not enabled or no display server detected.");
+    }
+    const result = await captureScreenshot(agentConfig().username, platform);
     nativeDimensions = { width: result.width, height: result.height };
     return result;
   }
@@ -356,28 +374,36 @@ export async function createComputerService(
     return { base64: raw.base64, filepath: raw.filepath };
   }
 
+  let initError: string | undefined;
+
   // Seed native display dimensions on startup when desktop mode is enabled
   if (agentConfig().controlDesktop) {
-    try {
-      await captureNativeScreenshot();
-    } catch (e) {
-      output.errorAndLog(
-        `Desktop: failed to capture initial screenshot — desktop mode disabled. ${e}`,
-      );
+    if (!platform) {
+      initError = "No display server detected (no X11 or Wayland session).";
+    } else {
+      try {
+        await captureNativeScreenshot();
+      } catch (e) {
+        initError = e instanceof Error ? e.message : String(e);
+      }
     }
   }
 
   /** Execute an action using native screen coordinates */
   async function execute(action: DesktopAction["input"]) {
-    await executeAction(action);
+    if (!platform) {
+      throw new Error("Desktop mode is not enabled or no display server detected.");
+    }
+    await executeAction(action, platform);
   }
 
-  /** Build the DesktopConfig with native display dimensions. Returns undefined if init failed. */
+  /** Build the DesktopConfig with native display dimensions. Returns undefined if no platform or init failed. */
   function getConfig(): DesktopConfig | undefined {
-    if (!nativeDimensions) return undefined;
+    if (!platform || !nativeDimensions) return undefined;
     return {
       displayWidth: nativeDimensions.width,
       displayHeight: nativeDimensions.height,
+      desktopPlatform: platform.name,
     };
   }
 
@@ -386,6 +412,8 @@ export async function createComputerService(
     captureNativeScreenshot,
     executeAction: execute,
     getConfig,
+    platformName: platform?.name,
+    initError,
   };
 }
 
