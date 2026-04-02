@@ -1,3 +1,4 @@
+import { mimeFromFilename } from "@naisys/common";
 import fs from "fs";
 import path from "path";
 
@@ -16,14 +17,6 @@ const SUPPORTED_EXTENSIONS = new Set([
   ".gif",
   ".webp",
 ]);
-
-const MIME_TYPES: Record<string, string> = {
-  ".png": "image/png",
-  ".jpg": "image/jpeg",
-  ".jpeg": "image/jpeg",
-  ".gif": "image/gif",
-  ".webp": "image/webp",
-};
 
 /** Detect actual MIME type from file magic bytes, ignoring the file extension */
 function detectMimeType(buffer: Buffer): string | undefined {
@@ -128,7 +121,7 @@ export function createLookService(
 
     // Detect actual MIME type from file content, fall back to extension
     const detectedMime = detectMimeType(fileBuffer);
-    const extensionMime = MIME_TYPES[ext];
+    const extensionMime = mimeFromFilename(filepath);
     const mimeType = detectedMime ?? extensionMime;
 
     if (!mimeType) {

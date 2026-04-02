@@ -1,4 +1,4 @@
-import { FastifyInstance, FastifyPluginOptions } from "fastify";
+import { FastifyInstance, FastifyPluginOptions, FastifyReply, FastifyRequest } from "fastify";
 
 import { proxyDownloadFromHub } from "../services/attachmentProxyService.js";
 
@@ -6,24 +6,28 @@ export default function attachmentRoutes(
   fastify: FastifyInstance,
   _options: FastifyPluginOptions,
 ) {
-  // GET /:id — Download attachment (proxied through hub)
-  fastify.get<{
-    Params: { id: string };
-  }>(
-    "/:id",
-    {
-      schema: {
-        description: "Download an attachment by ID (proxied from hub)",
-        tags: ["Attachments"],
-      },
-    },
-    async (request, reply) => {
-      const attachmentId = parseInt(request.params.id, 10);
-      if (isNaN(attachmentId)) {
-        return reply.code(400).send({ error: "Invalid attachment ID" });
-      }
+  // GET /:id or /:id/:filename — Download attachment (proxied through hub)
+  const handler = async (
+    request: FastifyRequest<{ Params: { id: string } }>,
+    reply: FastifyReply,
+  ) => {
+    const attachmentId = parseInt((request.params as { id: string }).id, 10);
+    if (isNaN(attachmentId)) {
+      return reply.code(400).send({ error: "Invalid attachment ID" });
+    }
 
-      await proxyDownloadFromHub(attachmentId, reply);
-    },
+    await proxyDownloadFromHub(attachmentId, reply);
+  };
+
+  const schema = {
+    description: "Download an attachment by ID (proxied from hub)",
+    tags: ["Attachments"],
+  };
+
+  fastify.get<{ Params: { id: string } }>("/:id", { schema }, handler);
+  fastify.get<{ Params: { id: string; filename: string } }>(
+    "/:id/:filename",
+    { schema },
+    handler,
   );
 }

@@ -12,6 +12,7 @@ export * from "./hateoas.js";
 export * from "./hateoas-types.js";
 export * from "./hostedServices.js";
 export * from "./lenientJsonParser.js";
+export * from "./mimeTypes.js";
 export * from "./modelTypes.js";
 export * from "./sleep.js";
 export * from "./urlSafeKey.js";

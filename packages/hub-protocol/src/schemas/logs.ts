@@ -46,6 +46,8 @@ export const LogPushEntrySchema = z.object({
   message: z.string(),
   createdAt: z.string(),
   attachmentId: z.number().optional(),
+  attachmentFilename: z.string().optional(),
+  attachmentFileSize: z.number().optional(),
 });
 export type LogPushEntry = z.infer<typeof LogPushEntrySchema>;
 

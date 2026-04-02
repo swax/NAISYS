@@ -26,7 +26,7 @@ const LogAttachmentDisplay: React.FC<{ log: LogEntry }> = ({ log }) => {
   if (!log.attachment) return null;
 
   const att = log.attachment;
-  const downloadUrl = `${API_BASE}${apiEndpoints.attachmentDownload(att.id)}`;
+  const downloadUrl = `${API_BASE}${apiEndpoints.attachmentDownload(att.id, att.filename)}`;
 
   if (isImageFilename(att.filename)) {
     return (

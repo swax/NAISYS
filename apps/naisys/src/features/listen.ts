@@ -1,3 +1,4 @@
+import { mimeFromFilename } from "@naisys/common";
 import fs from "fs";
 import path from "path";
 
@@ -17,15 +18,6 @@ const SUPPORTED_EXTENSIONS = new Set([
   ".ogg",
   ".webm",
 ]);
-
-const MIME_TYPES: Record<string, string> = {
-  ".wav": "audio/wav",
-  ".mp3": "audio/mpeg",
-  ".m4a": "audio/mp4",
-  ".flac": "audio/flac",
-  ".ogg": "audio/ogg",
-  ".webm": "audio/webm",
-};
 
 export function createListenService(
   { agentConfig }: AgentConfig,
@@ -81,7 +73,7 @@ export function createListenService(
     // Read file and encode to base64
     const fileBuffer = fs.readFileSync(filepath);
     const base64 = fileBuffer.toString("base64");
-    const mimeType = MIME_TYPES[ext];
+    const mimeType = mimeFromFilename(filepath);
 
     if (transcribe) {
       // One-shot: send audio to LLM for a text transcription
