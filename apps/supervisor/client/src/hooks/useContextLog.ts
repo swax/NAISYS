@@ -124,7 +124,11 @@ export const useContextLog = (
         message: e.message,
         createdAt: e.createdAt,
         attachment: e.attachmentId
-          ? { id: e.attachmentId, filename: "", fileSize: 0 }
+          ? {
+              id: e.attachmentId,
+              filename: e.attachmentFilename ?? "",
+              fileSize: e.attachmentFileSize ?? 0,
+            }
           : undefined,
       }));
       mergeLogs(logs);

@@ -1,3 +1,4 @@
+import { mimeFromFilename } from "@naisys/common";
 import type { HubDatabaseService } from "@naisys/hub-database";
 import { AttachmentPurpose } from "@naisys/hub-database";
 import { createHash } from "crypto";
@@ -18,6 +19,7 @@ import { pipeline, Writable } from "stream";
 import { HubServerLog } from "../services/hubServerLog.js";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+
 
 /**
  * HTTP attachment upload/download service.
@@ -46,7 +48,11 @@ export function createHubAttachmentService(
           res.end(JSON.stringify({ error: "Internal server error" }));
         }
       });
-    } else if (pathname.startsWith("/attachments/") && req.method === "GET") {
+    } else if (
+      pathname.startsWith("/attachments/") &&
+      pathname !== "/attachments/" &&
+      req.method === "GET"
+    ) {
       handleDownload(url, pathname, req, res).catch((err) => {
         logService.error(`[Hub:Attachment] Download error: ${err}`);
         if (!res.writableEnded) {
@@ -251,9 +257,9 @@ export function createHubAttachmentService(
       return;
     }
 
-    // Parse attachment ID from /attachments/<id>
-    const idStr = pathname.slice("/attachments/".length);
-    const attachmentId = parseInt(idStr, 10);
+    // Parse attachment ID from /attachments/<id> or /attachments/<id>/<filename>
+    const segments = pathname.slice("/attachments/".length).split("/");
+    const attachmentId = parseInt(segments[0], 10);
     if (isNaN(attachmentId)) {
       res.writeHead(400, { "Content-Type": "application/json" });
       res.end(JSON.stringify({ error: "Invalid attachment ID" }));
@@ -277,9 +283,11 @@ export function createHubAttachmentService(
     }
 
     const stat = statSync(attachment.filepath);
+    const contentType = mimeFromFilename(attachment.filename);
+    const disposition = contentType.startsWith("image/") ? "inline" : "attachment";
     res.writeHead(200, {
-      "Content-Type": "application/octet-stream",
-      "Content-Disposition": `attachment; filename="${attachment.filename.replace(/"/g, '\\"')}"`,
+      "Content-Type": contentType,
+      "Content-Disposition": `${disposition}; filename="${attachment.filename.replace(/"/g, '\\"')}"`,
       "Content-Length": stat.size,
     });
 

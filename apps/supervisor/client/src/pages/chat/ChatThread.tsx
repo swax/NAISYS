@@ -153,7 +153,7 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
                     {msg.attachments && msg.attachments.length > 0 && (
                       <Stack gap={4} mt="xs">
                         {msg.attachments.map((att) => {
-                          const downloadUrl = `${API_BASE}${apiEndpoints.attachmentDownload(att.id)}`;
+                          const downloadUrl = `${API_BASE}${apiEndpoints.attachmentDownload(att.id, att.filename)}`;
                           if (isImageFilename(att.filename)) {
                             return (
                               <Box key={att.id}>

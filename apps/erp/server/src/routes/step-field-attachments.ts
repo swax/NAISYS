@@ -2,6 +2,7 @@ import {
   ErrorResponseSchema,
   UploadAttachmentResponseSchema,
 } from "@naisys-erp/shared";
+import { mimeFromFilename } from "@naisys/common";
 import { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { createReadStream, existsSync, statSync } from "fs";
@@ -28,21 +29,6 @@ import {
   upsertFieldValue,
 } from "../services/field-value-service.js";
 import { isUserClockedIn } from "../services/labor-ticket-service.js";
-
-const IMAGE_MIME: Record<string, string> = {
-  ".jpg": "image/jpeg",
-  ".jpeg": "image/jpeg",
-  ".png": "image/png",
-  ".gif": "image/gif",
-  ".webp": "image/webp",
-  ".svg": "image/svg+xml",
-  ".bmp": "image/bmp",
-};
-
-function mimeTypeFromFilename(filename: string): string {
-  const ext = filename.slice(filename.lastIndexOf(".")).toLowerCase();
-  return IMAGE_MIME[ext] ?? "application/octet-stream";
-}
 
 const FieldSeqNoParamsSchema = z.object({
   orderKey: z.string(),
@@ -243,7 +229,7 @@ export default function stepFieldAttachmentRoutes(fastify: FastifyInstance) {
       }
 
       const stat = statSync(att.filepath);
-      const mimeType = mimeTypeFromFilename(att.filename);
+      const mimeType = mimeFromFilename(att.filename);
       const isImage = mimeType.startsWith("image/");
 
       reply.header("content-type", mimeType);

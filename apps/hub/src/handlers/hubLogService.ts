@@ -81,6 +81,20 @@ export function createHubLogService(
           log.id,
         );
 
+        // Look up attachment metadata if present
+        let attachmentFilename: string | undefined;
+        let attachmentFileSize: number | undefined;
+        if (entry.attachmentId) {
+          const att = await hubDb.attachments.findUnique({
+            where: { id: entry.attachmentId },
+            select: { filename: true, file_size: true },
+          });
+          if (att) {
+            attachmentFilename = att.filename;
+            attachmentFileSize = att.file_size;
+          }
+        }
+
         // Collect push entry with DB-assigned ID
         const sessionKey = `${entry.userId}-${entry.runId}-${entry.sessionId}`;
         const previousId = lastPushedLogId.get(sessionKey) ?? null;
@@ -97,6 +111,8 @@ export function createHubLogService(
           message: entry.message,
           createdAt: entry.createdAt,
           attachmentId: entry.attachmentId,
+          attachmentFilename,
+          attachmentFileSize,
         });
 
         lastPushedLogId.set(sessionKey, log.id);

@@ -216,7 +216,10 @@ export const apiEndpoints = {
     const qs = search.toString();
     return `/costs${qs ? `?${qs}` : ""}`;
   },
-  attachmentDownload: (id: number) => `/attachments/${id}`,
+  attachmentDownload: (id: number, filename?: string) =>
+    filename
+      ? `/attachments/${id}/${encodeURIComponent(filename)}`
+      : `/attachments/${id}`,
   permissions: "/permissions",
   admin: "/admin",
   adminAttachments: "/admin/attachments",
