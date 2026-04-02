@@ -22,19 +22,6 @@ export interface DesktopConfig {
   desktopPlatform: string;
 }
 
-export interface DesktopInfo {
-  desktopPlatform: string;
-  initError?: string;
-  nativeWidth?: number;
-  nativeHeight?: number;
-  /** Image/coordinate resolution the LLM works with */
-  scaledWidth?: number;
-  scaledHeight?: number;
-  /** Multiply native coordinate by these to get approximate API-space coordinate */
-  coordScaleX?: number;
-  coordScaleY?: number;
-}
-
 export interface QueryResult {
   responses: string[];
   /** Total input context size (excludes output/thinking tokens which don't persist) */

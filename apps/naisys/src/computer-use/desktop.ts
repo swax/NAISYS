@@ -10,7 +10,7 @@ import { desktopCmd } from "../command/commandDefs.js";
 import { RegistrableCommand } from "../command/commandRegistry.js";
 import { ContextManager } from "../llm/contextManager.js";
 import { ContentSource } from "../llm/llmDtos.js";
-import { DesktopAction, DesktopInfo } from "../llm/vendors/vendorTypes.js";
+import { DesktopAction } from "../llm/vendors/vendorTypes.js";
 import { ModelService } from "../services/modelService.js";
 import {
   CoordScale,
@@ -18,13 +18,10 @@ import {
   checkActionBounds,
   formatDesktopAction,
   formatDesktopActions,
+  getTargetScaleFactor,
 } from "./computerService.js";
 import { OutputService } from "../utils/output.js";
 import { getSharedReadline } from "../utils/sharedReadline.js";
-
-// Re-export for consumers
-export { formatDesktopAction } from "./computerService.js";
-export type { CoordScale } from "./computerService.js";
 
 export function createDesktopService(
   computerService: ComputerService,
@@ -33,6 +30,28 @@ export function createDesktopService(
   agentConfig: AgentConfig,
   modelService: ModelService,
 ) {
+  // Pre-compute desktop scaling info at init time
+  const shellModel = modelService.getLlmModel(agentConfig.agentConfig().shellModel);
+  const desktopConfig =
+    agentConfig.agentConfig().controlDesktop && shellModel.supportsComputerUse
+      ? computerService.getConfig()
+      : undefined;
+
+  let coordScale: CoordScale | undefined;
+  let scaledWidth: number | undefined;
+  let scaledHeight: number | undefined;
+
+  if (desktopConfig) {
+    const { displayWidth: w, displayHeight: h } = desktopConfig;
+    const scaleFactor = getTargetScaleFactor(w, h);
+    scaledWidth = Math.floor(w * scaleFactor);
+    scaledHeight = Math.floor(h * scaleFactor);
+
+    coordScale =
+      shellModel.apiType === LlmApiType.Google
+        ? { x: 1000 / w, y: 1000 / h }
+        : { x: scaleFactor, y: scaleFactor };
+  }
 
   /** Handle the screenshot subcommand */
   async function handleScreenshot(): Promise<string> {
@@ -82,7 +101,6 @@ export function createDesktopService(
   async function confirmAndExecuteActions(
     textContent: string,
     actions: DesktopAction[],
-    coordScale?: CoordScale,
   ): Promise<void> {
     for (const action of actions) {
       const desc = formatDesktopAction(action.input, coordScale) || action.name;
@@ -193,18 +211,21 @@ export function createDesktopService(
   }
 
   /** Log desktop dimensions, scale info, and Anthropic warnings at startup */
-  function logStartup(desktopInfo: DesktopInfo): void {
-    const { desktopPlatform, initError } = desktopInfo;
+  function logStartup(): void {
+    if (!agentConfig.agentConfig().controlDesktop) return;
 
-    if (initError) {
+    if (computerService.initError) {
+      const platform = computerService.platformName ?? "Unknown";
       output.errorAndLog(
-        `Desktop: ${desktopPlatform} — failed to initialize, desktop mode disabled. ${initError}`,
+        `Desktop: ${platform} — failed to initialize, desktop mode disabled. ${computerService.initError}`,
       );
       return;
     }
 
-    const { nativeWidth, nativeHeight, scaledWidth, scaledHeight } = desktopInfo;
-    const nativeMP = ((nativeWidth! * nativeHeight!) / 1_000_000).toFixed(2);
+    if (!desktopConfig) return;
+
+    const { displayWidth: nativeWidth, displayHeight: nativeHeight, desktopPlatform } = desktopConfig;
+    const nativeMP = ((nativeWidth * nativeHeight) / 1_000_000).toFixed(2);
     const scaledMP = ((scaledWidth! * scaledHeight!) / 1_000_000).toFixed(2);
 
     contextManager.append(
@@ -219,7 +240,6 @@ export function createDesktopService(
     // Anthropic constrains images to 1568px longest edge and ~1.15MP.
     // If we exceed either limit, the API silently downscales, wasting the
     // resolution we carefully chose. Warn so TARGET_MEGAPIXELS can be reduced.
-    const shellModel = modelService.getLlmModel(agentConfig.agentConfig().shellModel);
     if (shellModel.apiType === LlmApiType.Anthropic) {
       const longestEdge = Math.max(scaledWidth!, scaledHeight!);
       const scaledPixels = scaledWidth! * scaledHeight!;
