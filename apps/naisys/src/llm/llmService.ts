@@ -2,7 +2,7 @@ import { LlmApiType } from "@naisys/common";
 
 import { AgentConfig } from "../agent/agentConfig.js";
 import { GlobalConfig } from "../globalConfig.js";
-import { ComputerService, getTargetScaleFactor } from "../computer-use/computerService.js";
+import { ComputerService } from "../computer-use/computerService.js";
 import { ModelService } from "../services/modelService.js";
 import { CommandTools } from "./commandTool.js";
 import { CostTracker } from "./costTracker.js";
@@ -13,7 +13,6 @@ import { sendWithMock } from "./vendors/mock.js";
 import { sendWithOpenAiCompatible } from "./vendors/openai-compatible.js";
 import { sendWithOpenAiStandard } from "./vendors/openai-standard.js";
 import {
-  DesktopInfo,
   QueryResult,
   QuerySources,
   VendorDeps,
@@ -37,38 +36,6 @@ export function createLLMService(
     computerService
       ? computerService.getConfig()
       : undefined;
-
-  let desktopInfo: DesktopInfo | undefined;
-  if (desktopConfig) {
-    const { displayWidth: w, displayHeight: h } = desktopConfig;
-    const scaleFactor = getTargetScaleFactor(w, h);
-    let coordScaleX: number;
-    let coordScaleY: number;
-
-    switch (shellModel.apiType) {
-      case LlmApiType.Google:
-        coordScaleX = 1000 / w;
-        coordScaleY = 1000 / h;
-        break;
-      default:
-        coordScaleX = coordScaleY = scaleFactor;
-    }
-
-    desktopInfo = {
-      desktopPlatform: desktopConfig.desktopPlatform,
-      nativeWidth: w,
-      nativeHeight: h,
-      scaledWidth: Math.floor(w * scaleFactor),
-      scaledHeight: Math.floor(h * scaleFactor),
-      coordScaleX,
-      coordScaleY,
-    };
-  } else if (computerService?.initError) {
-    desktopInfo = {
-      desktopPlatform: computerService.platformName ?? "Unknown",
-      initError: computerService.initError,
-    };
-  }
 
   async function query(
     modelKey: string,
@@ -167,7 +134,6 @@ export function createLLMService(
 
   return {
     query,
-    getDesktopInfo: () => desktopInfo,
   };
 }
 

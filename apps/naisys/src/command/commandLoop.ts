@@ -3,7 +3,6 @@ import chalk from "chalk";
 import * as readline from "readline";
 
 import { AgentConfig } from "../agent/agentConfig.js";
-import { CoordScale } from "../computer-use/computerService.js";
 import { DesktopService } from "../computer-use/desktop.js";
 import { LynxService } from "../features/lynx.js";
 import { SessionService } from "../features/session.js";
@@ -59,13 +58,6 @@ export function createCommandLoop(
   let preemptiveCompactTimeout: NodeJS.Timeout | undefined;
   /** Tracks the current wait so preemptive compact can calculate remaining time */
   let currentWait: { startTime: number; totalSeconds: number } | undefined;
-
-  // Pre-computed desktop scaling info from llmService init
-  const desktopInfo = llmService.getDesktopInfo();
-  const coordScale: CoordScale | undefined =
-    desktopInfo && !desktopInfo.initError
-      ? { x: desktopInfo.coordScaleX!, y: desktopInfo.coordScaleY! }
-      : undefined;
 
   async function run(abortSignal?: AbortSignal): Promise<string> {
     output.commentAndLog(`AGENT STARTED`);
@@ -216,9 +208,7 @@ export function createCommandLoop(
 
     output.commentAndLog("Use ns-help to see all available commands");
 
-    if (desktopInfo) {
-      desktopService.logStartup(desktopInfo);
-    }
+    desktopService.logStartup();
 
     output.commentAndLog("Starting Context:");
 
@@ -326,11 +316,9 @@ export function createCommandLoop(
       }
 
       if (result.outcome === "desktop") {
-        const { textContent, actions, coordScale: scale } = result.desktop;
         await desktopService.confirmAndExecuteActions(
-          textContent,
-          actions,
-          scale,
+          result.desktop.textContent,
+          result.desktop.actions,
         );
         return {
           nextCommandAction: NextCommandAction.Continue,
@@ -395,7 +383,6 @@ export function createCommandLoop(
         desktop: {
           textContent: string;
           actions: DesktopAction[];
-          coordScale?: CoordScale;
         };
       };
 
@@ -482,7 +469,6 @@ export function createCommandLoop(
             desktop: {
               textContent: queryResult.responses.join("\n"),
               actions: queryResult.desktopActions,
-              coordScale,
             },
           };
         }
