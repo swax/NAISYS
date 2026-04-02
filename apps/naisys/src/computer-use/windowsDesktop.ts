@@ -59,7 +59,7 @@ public class ScreenCapture {
 try { [void][ScreenCapture]::SetProcessDpiAwarenessContext([IntPtr]::new(-4)) } catch { }
 [ScreenCapture]::SetProcessDPIAware()
 $s = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
-$b = New-Object System.Drawing.Bitmap($s.Width, $s.Height)
+$b = New-Object System.Drawing.Bitmap($s.Width, $s.Height, [System.Drawing.Imaging.PixelFormat]::Format32bppRgb)
 $g = [System.Drawing.Graphics]::FromImage($b)
 try {
   $g.CopyFromScreen($s.Left, $s.Top, 0, 0, $s.Size)

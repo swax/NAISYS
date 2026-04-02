@@ -95,15 +95,14 @@ export async function sendWithAnthropic(
     }
   }
 
-  // Computer use: add tool, resize screenshots, scale dimensions
+  // Computer use: add tool, scale dimensions
   let desktopScaleFactor = 1;
   let desktopBetaFlag = "";
 
   if (desktopConfig) {
-    const setup = await prepareComputerUse(
+    const setup = prepareComputerUse(
       desktopConfig,
       model.versionName,
-      createParams.messages as any[],
     );
     desktopScaleFactor = setup.scaleFactor;
     desktopBetaFlag = setup.betaFlag;

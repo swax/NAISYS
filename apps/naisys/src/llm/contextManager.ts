@@ -1,3 +1,4 @@
+import { TARGET_MEGAPIXELS } from "@naisys/common";
 import { AgentConfig } from "../agent/agentConfig.js";
 import { WorkspacesFeature } from "../features/workspaces.js";
 import { LogService } from "../services/logService.js";
@@ -13,6 +14,9 @@ import {
   ToolResultBlock,
   ToolUseBlock,
 } from "./llmDtos.js";
+
+const IMAGE_TOKENS_PER_MEGAPIXEL = 1000;
+const IMAGE_TOKEN_ESTIMATE = IMAGE_TOKENS_PER_MEGAPIXEL * TARGET_MEGAPIXELS;
 
 export function createContextManager(
   { agentConfig }: AgentConfig,
@@ -307,6 +311,12 @@ export function createContextManager(
     lastQueryTime = Date.now();
   }
 
+  function estimateBlockTokens(block: TextBlock | ImageBlock) {
+    return block.type === "image"
+      ? IMAGE_TOKEN_ESTIMATE
+      : utilities.getTokenCount(block.text);
+  }
+
   function estimateMessagesTokenCount(messages: LlmMessage[]) {
     return messages.reduce((acc, message) => {
       if (typeof message.content === "string") {
@@ -314,8 +324,12 @@ export function createContextManager(
       }
       let tokens = 0;
       for (const block of message.content) {
-        if (block.type === "text") {
-          tokens += utilities.getTokenCount(block.text);
+        if (block.type === "text" || block.type === "image") {
+          tokens += estimateBlockTokens(block);
+        } else if (block.type === "tool_result") {
+          for (const inner of block.resultContent) {
+            tokens += estimateBlockTokens(inner);
+          }
         }
       }
       return acc + tokens;
