@@ -55,12 +55,18 @@ export function createLLMService(
     }
 
     desktopInfo = {
+      desktopPlatform: desktopConfig.desktopPlatform,
       nativeWidth: w,
       nativeHeight: h,
       scaledWidth: Math.floor(w * scaleFactor),
       scaledHeight: Math.floor(h * scaleFactor),
       coordScaleX,
       coordScaleY,
+    };
+  } else if (computerService?.initError) {
+    desktopInfo = {
+      desktopPlatform: computerService.platformName ?? "Unknown",
+      initError: computerService.initError,
     };
   }
 

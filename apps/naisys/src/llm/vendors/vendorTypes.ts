@@ -19,17 +19,20 @@ export interface DesktopAction {
 export interface DesktopConfig {
   displayWidth: number;
   displayHeight: number;
+  desktopPlatform: string;
 }
 
 export interface DesktopInfo {
-  nativeWidth: number;
-  nativeHeight: number;
+  desktopPlatform: string;
+  initError?: string;
+  nativeWidth?: number;
+  nativeHeight?: number;
   /** Image/coordinate resolution the LLM works with */
-  scaledWidth: number;
-  scaledHeight: number;
+  scaledWidth?: number;
+  scaledHeight?: number;
   /** Multiply native coordinate by these to get approximate API-space coordinate */
-  coordScaleX: number;
-  coordScaleY: number;
+  coordScaleX?: number;
+  coordScaleY?: number;
 }
 
 export interface QueryResult {

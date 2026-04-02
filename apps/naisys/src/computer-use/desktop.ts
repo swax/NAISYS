@@ -12,7 +12,6 @@ import { ContextManager } from "../llm/contextManager.js";
 import { ContentSource } from "../llm/llmDtos.js";
 import { DesktopAction, DesktopInfo } from "../llm/vendors/vendorTypes.js";
 import { ModelService } from "../services/modelService.js";
-import { getPlatformConfig } from "../services/shellPlatform.js";
 import {
   CoordScale,
   ComputerService,
@@ -127,15 +126,22 @@ export function createDesktopService(
         const desc =
           formatDesktopAction(action.input, coordScale) || action.name;
         output.commentAndLog(`[Executing: ${desc}]`);
-        await computerService.executeAction(action.input);
 
-        const { base64, filepath } = await computerService.captureScaledScreenshot();
-        contextManager.appendDesktopResult(
-          action.id,
-          base64,
-          "image/png",
-          filepath,
-        );
+        try {
+          await computerService.executeAction(action.input);
+
+          const { base64, filepath } = await computerService.captureScaledScreenshot();
+          contextManager.appendDesktopResult(
+            action.id,
+            base64,
+            "image/png",
+            filepath,
+          );
+        } catch (e) {
+          const msg = e instanceof Error ? e.message : String(e);
+          output.errorAndLog(`Desktop action failed: ${msg}`);
+          contextManager.appendDesktopError(action.id, msg);
+        }
       }
     } else {
       for (const action of actions) {
@@ -188,18 +194,26 @@ export function createDesktopService(
 
   /** Log desktop dimensions, scale info, and Anthropic warnings at startup */
   function logStartup(desktopInfo: DesktopInfo): void {
+    const { desktopPlatform, initError } = desktopInfo;
+
+    if (initError) {
+      output.errorAndLog(
+        `Desktop: ${desktopPlatform} — failed to initialize, desktop mode disabled. ${initError}`,
+      );
+      return;
+    }
+
     const { nativeWidth, nativeHeight, scaledWidth, scaledHeight } = desktopInfo;
-    const nativeMP = ((nativeWidth * nativeHeight) / 1_000_000).toFixed(2);
-    const scaledMP = ((scaledWidth * scaledHeight) / 1_000_000).toFixed(2);
-    const platformName = getPlatformConfig().displayName;
+    const nativeMP = ((nativeWidth! * nativeHeight!) / 1_000_000).toFixed(2);
+    const scaledMP = ((scaledWidth! * scaledHeight!) / 1_000_000).toFixed(2);
 
     contextManager.append(
-      `Desktop Access Enabled: ${platformName} desktop, screen resolution ${scaledWidth}x${scaledHeight}. Use it as needed, but prefer the shell.` +
+      `Desktop Access Enabled: ${desktopPlatform} desktop, screen resolution ${scaledWidth}x${scaledHeight}. Use it as needed, but prefer the shell.` +
         ` Each action costs time and tokens. Avoid repeating the same action over and over if it is not working.`,
       ContentSource.Console,
     );
     output.commentAndLog(
-      `Desktop: ${platformName}, native ${nativeWidth}x${nativeHeight} (${nativeMP}MP), scaled to ${scaledWidth}x${scaledHeight} (${scaledMP}MP, target ${TARGET_MEGAPIXELS}MP)`,
+      `Desktop: ${desktopPlatform}, native ${nativeWidth}x${nativeHeight} (${nativeMP}MP), scaled to ${scaledWidth}x${scaledHeight} (${scaledMP}MP, target ${TARGET_MEGAPIXELS}MP)`,
     );
 
     // Anthropic constrains images to 1568px longest edge and ~1.15MP.
@@ -207,8 +221,8 @@ export function createDesktopService(
     // resolution we carefully chose. Warn so TARGET_MEGAPIXELS can be reduced.
     const shellModel = modelService.getLlmModel(agentConfig.agentConfig().shellModel);
     if (shellModel.apiType === LlmApiType.Anthropic) {
-      const longestEdge = Math.max(scaledWidth, scaledHeight);
-      const scaledPixels = scaledWidth * scaledHeight;
+      const longestEdge = Math.max(scaledWidth!, scaledHeight!);
+      const scaledPixels = scaledWidth! * scaledHeight!;
       if (longestEdge > 1568) {
         output.errorAndLog(
           `Warning: Scaled longest edge ${longestEdge}px exceeds Anthropic's 1568px limit — API will internally downscale. Reduce TARGET_MEGAPIXELS to avoid.`,
