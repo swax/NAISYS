@@ -53,11 +53,6 @@ export const desktopCmd: CommandDef = {
   name: "ns-desktop",
   description: "Desktop interaction commands",
   subcommands: {
-    cancel: {
-      usage: 'cancel ["<reason>"]',
-      description:
-        "Reject the pending desktop action with optional feedback to try a different approach",
-    },
     screenshot: {
       usage: "screenshot",
       description:
