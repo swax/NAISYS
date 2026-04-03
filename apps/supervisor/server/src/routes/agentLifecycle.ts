@@ -8,7 +8,7 @@ import type {
   AgentUsernameParams,
   ErrorResponse,
   SetLeadAgentRequest,
-} from "@naisys-supervisor/shared";
+} from "@naisys/supervisor-shared";
 import {
   AgentActionResultSchema,
   AgentStartRequestSchema,
@@ -19,7 +19,7 @@ import {
   AgentUsernameParamsSchema,
   ErrorResponseSchema,
   SetLeadAgentRequestSchema,
-} from "@naisys-supervisor/shared";
+} from "@naisys/supervisor-shared";
 import type { FastifyInstance, FastifyPluginOptions } from "fastify";
 
 import { requirePermission } from "../auth-middleware.js";

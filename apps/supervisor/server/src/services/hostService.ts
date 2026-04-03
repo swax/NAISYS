@@ -1,5 +1,5 @@
 import { assertUrlSafeKey } from "@naisys/common";
-import type { Host, HostDetailResponse } from "@naisys-supervisor/shared";
+import type { Host, HostDetailResponse } from "@naisys/supervisor-shared";
 
 import { hubDb } from "../database/hubDb.js";
 import { resolveAgentId } from "./agentService.js";

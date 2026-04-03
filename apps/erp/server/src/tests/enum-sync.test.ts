@@ -6,7 +6,7 @@ import {
   OrderRunStatusEnum,
   OrderStatusEnum,
   RevisionStatusEnum,
-} from "@naisys-erp/shared";
+} from "@naisys/erp-shared";
 import { describe, expect, test } from "vitest";
 
 import {

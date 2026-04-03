@@ -177,8 +177,8 @@ export const startHub: StartHub = async (
     let supervisorPort: number | undefined;
     if (startSupervisor) {
       // Don't import the whole fastify web server module tree unless needed
-      // Use variable to avoid compile-time type dependency on @naisys-supervisor/server (allows parallel builds)
-      const supervisorModule = "@naisys-supervisor/server";
+      // Use variable to avoid compile-time type dependency on @naisys/supervisor (allows parallel builds)
+      const supervisorModule = "@naisys/supervisor";
       const { startServer } = (await import(supervisorModule)) as {
         startServer: StartServer;
       };

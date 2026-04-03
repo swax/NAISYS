@@ -3,7 +3,7 @@ import {
   AgentConfigFileSchema,
   calculatePeriodBoundaries,
 } from "@naisys/common";
-import type { Agent, AgentDetailResponse } from "@naisys-supervisor/shared";
+import type { Agent, AgentDetailResponse } from "@naisys/supervisor-shared";
 
 import { hubDb } from "../database/hubDb.js";
 import {

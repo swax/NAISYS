@@ -8,13 +8,13 @@
     "bundle": {
       "outputs": ["client-dist/**"]
     },
-    "@naisys-erp/server#bundle": {
-      "dependsOn": ["@naisys-erp/client#build", "@naisys-erp/server#build"]
+    "@naisys/erp#bundle": {
+      "dependsOn": ["@naisys/erp-client#build", "@naisys/erp#build"]
     },
-    "@naisys-supervisor/server#bundle": {
+    "@naisys/supervisor#bundle": {
       "dependsOn": [
-        "@naisys-supervisor/client#build",
-        "@naisys-supervisor/server#build"
+        "@naisys/supervisor-client#build",
+        "@naisys/supervisor#build"
       ]
     },
     "clean": {

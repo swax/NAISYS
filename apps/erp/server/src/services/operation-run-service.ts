@@ -1,12 +1,12 @@
 import {
   type OperationRunStatus,
   OperationRunStatus as OperationRunStatusValues,
-} from "@naisys-erp/shared";
+} from "@naisys/erp-shared";
 import {
   type FieldRefValueSummary,
   fieldTypeString,
   getValueFormatHint,
-} from "@naisys-erp/shared";
+} from "@naisys/erp-shared";
 
 import { writeAuditEntry } from "../audit.js";
 import erpDb from "../erpDb.js";

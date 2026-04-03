@@ -10,7 +10,7 @@ import {
   TextInput,
   Title,
 } from "@mantine/core";
-import type { Item, UpdateItem } from "@naisys-erp/shared";
+import type { Item, UpdateItem } from "@naisys/erp-shared";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 

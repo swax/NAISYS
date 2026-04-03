@@ -1,8 +1,8 @@
 {
   "name": "@naisys/hub-database",
-  "version": "1.0.0",
+  "version": "3.0.0",
   "type": "module",
-  "description": "Shared database schema and Prisma client for NAISYS",
+  "description": "[internal] Hub database schema and Prisma client for NAISYS",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": [
@@ -16,15 +16,16 @@
     "prisma:generate": "prisma generate",
     "prisma:studio": "prisma studio",
     "build": "npm run prisma:generate && tsc",
-    "npm:publish:dryrun": "npm run clean && npm run build && npm publish --dry-run"
+    "npm:publish:dryrun": "npm publish --dry-run",
+    "npm:publish": "npm publish --access public"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.13",
     "typescript": "^5.9.3"
   },
   "dependencies": {
-    "@naisys/common": "file:../common",
-    "@naisys/common-node": "file:../common-node",
+    "@naisys/common": "3.0.0",
+    "@naisys/common-node": "3.0.0",
     "@prisma/adapter-better-sqlite3": "^7.5.0",
     "@prisma/client": "^7.5.0",
     "better-sqlite3": "^12.6.2",

@@ -1,4 +1,4 @@
-import type { OperationRunCommentType } from "@naisys-erp/shared";
+import type { OperationRunCommentType } from "@naisys/erp-shared";
 
 import erpDb from "../erpDb.js";
 import type { OperationRunCommentModel } from "../generated/prisma/models/OperationRunComment.js";

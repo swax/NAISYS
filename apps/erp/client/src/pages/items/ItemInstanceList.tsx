@@ -14,7 +14,7 @@ import {
 import type {
   CreateItemInstance,
   ItemInstanceListResponse,
-} from "@naisys-erp/shared";
+} from "@naisys/erp-shared";
 import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router";
 

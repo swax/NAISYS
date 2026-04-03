@@ -13,8 +13,8 @@ import {
   Title,
 } from "@mantine/core";
 import { useDebouncedValue } from "@mantine/hooks";
-import type { DispatchListResponse } from "@naisys-erp/shared";
-import { OperationRunStatus, OrderRunPriorityEnum } from "@naisys-erp/shared";
+import type { DispatchListResponse } from "@naisys/erp-shared";
+import { OperationRunStatus, OrderRunPriorityEnum } from "@naisys/erp-shared";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router";
 

@@ -5,7 +5,7 @@ import type {
   ContextLogResponse,
   RunsDataRequest,
   RunsDataResponse,
-} from "@naisys-supervisor/shared";
+} from "@naisys/supervisor-shared";
 import {
   AgentUsernameParamsSchema,
   ContextLogParamsSchema,
@@ -13,7 +13,7 @@ import {
   ContextLogResponseSchema,
   RunsDataRequestSchema,
   RunsDataResponseSchema,
-} from "@naisys-supervisor/shared";
+} from "@naisys/supervisor-shared";
 import type { FastifyInstance, FastifyPluginOptions } from "fastify";
 
 import { notFound } from "../error-helpers.js";

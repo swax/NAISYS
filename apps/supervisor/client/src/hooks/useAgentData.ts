@@ -2,7 +2,7 @@ import type { HateoasAction } from "@naisys/common";
 import type {
   Agent as BaseAgent,
   AgentStatusEvent,
-} from "@naisys-supervisor/shared";
+} from "@naisys/supervisor-shared";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useState } from "react";
 

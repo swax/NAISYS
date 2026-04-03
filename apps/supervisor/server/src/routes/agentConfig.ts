@@ -10,7 +10,7 @@ import type {
   ImportAgentConfigResponse,
   UpdateAgentConfigRequest,
   UpdateAgentConfigResponse,
-} from "@naisys-supervisor/shared";
+} from "@naisys/supervisor-shared";
 import {
   AgentUsernameParamsSchema,
   ConfigRevisionListResponseSchema,
@@ -21,7 +21,7 @@ import {
   ImportAgentConfigResponseSchema,
   UpdateAgentConfigRequestSchema,
   UpdateAgentConfigResponseSchema,
-} from "@naisys-supervisor/shared";
+} from "@naisys/supervisor-shared";
 import type { FastifyInstance, FastifyPluginOptions } from "fastify";
 import yaml from "js-yaml";
 

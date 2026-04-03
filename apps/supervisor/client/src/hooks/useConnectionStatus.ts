@@ -1,4 +1,4 @@
-import type { HubStatusEvent } from "@naisys-supervisor/shared";
+import type { HubStatusEvent } from "@naisys/supervisor-shared";
 import { useCallback, useEffect, useState } from "react";
 
 import { useSession } from "../contexts/SessionContext";

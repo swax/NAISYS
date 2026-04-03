@@ -1,5 +1,5 @@
 import { Permission as DbPermission } from "@naisys/supervisor-database";
-import { PermissionEnum } from "@naisys-supervisor/shared";
+import { PermissionEnum } from "@naisys/supervisor-shared";
 import { expect, test } from "vitest";
 
 test("shared PermissionEnum matches database Permission enum", () => {

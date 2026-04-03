@@ -6,7 +6,7 @@ import type {
   SaveVariableRequest,
   SaveVariableResponse,
   VariablesResponse,
-} from "@naisys-supervisor/shared";
+} from "@naisys/supervisor-shared";
 import {
   DeleteVariableParamsSchema,
   DeleteVariableResponseSchema,
@@ -14,7 +14,7 @@ import {
   SaveVariableRequestSchema,
   SaveVariableResponseSchema,
   VariablesResponseSchema,
-} from "@naisys-supervisor/shared";
+} from "@naisys/supervisor-shared";
 import type { FastifyInstance, FastifyPluginOptions } from "fastify";
 
 import { hasPermission, requirePermission } from "../auth-middleware.js";

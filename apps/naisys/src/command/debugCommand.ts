@@ -116,7 +116,7 @@ export function createDebugCommands(
     const nsAdminPw: RegistrableCommand = {
       command: superadminPasswordCmd,
       handleCommand: (cmdArgs) => {
-        const serverUrl = import.meta.resolve("@naisys-supervisor/server");
+        const serverUrl = import.meta.resolve("@naisys/supervisor");
         const serverPath = fileURLToPath(serverUrl);
 
         const args = [serverPath, "--reset-password"];

@@ -13,7 +13,7 @@ import {
   MutateResponseSchema,
   UpdateFieldValueSchema,
   UpdateItemInstanceSchema,
-} from "@naisys-erp/shared";
+} from "@naisys/erp-shared";
 import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod/v4";

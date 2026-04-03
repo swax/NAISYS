@@ -1,7 +1,7 @@
 import {
   type RevisionStatus,
   RevisionStatus as RevisionStatusValues,
-} from "@naisys-erp/shared";
+} from "@naisys/erp-shared";
 
 import { writeAuditEntry } from "../audit.js";
 import erpDb from "../erpDb.js";

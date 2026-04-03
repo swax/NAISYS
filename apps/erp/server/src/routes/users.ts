@@ -6,7 +6,7 @@ import {
   CreateUserSchema,
   type ErpPermission,
   UpdateUserSchema,
-} from "@naisys-erp/shared";
+} from "@naisys/erp-shared";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod/v4";

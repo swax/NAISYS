@@ -1,5 +1,5 @@
 import { Badge, Card, Loader, Stack, Text } from "@mantine/core";
-import type { OperationRunListResponse } from "@naisys-erp/shared";
+import type { OperationRunListResponse } from "@naisys/erp-shared";
 import { useCallback, useEffect, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router";
 

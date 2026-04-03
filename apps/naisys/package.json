@@ -1,7 +1,7 @@
 {
   "name": "naisys",
-  "description": "Networked Agents Interface System",
-  "version": "2.3.0",
+  "description": "NAISYS - Autonomous AI agent runner with built-in context management and cost tracking",
+  "version": "3.0.0",
   "type": "module",
   "main": "dist/naisys.js",
   "preferGlobal": true,
@@ -16,7 +16,8 @@
     "build": "tsc",
     "eslint": "npx eslint src",
     "test": "vitest run",
-    "npm:publish:dryrun": "npm run clean && npm run build && npm publish --dry-run",
+    "npm:publish:dryrun": "npm publish --dry-run",
+    "npm:publish": "npm publish",
     "postinstall": "node -e \"process.platform !== 'win32' && require('child_process').execSync('chmod +x ./bin/*')\""
   },
   "repository": {
@@ -35,7 +36,7 @@
   "license": "MIT",
   "homepage": "https://naisys.org",
   "devDependencies": {
-    "@naisys/hub-database": "file:../../packages/hub-database",
+    "@naisys/hub-database": "3.0.0",
     "@types/escape-html": "^1.0.4",
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^25.5.0",
@@ -50,15 +51,20 @@
     "vitest": "^4.1.0"
   },
   "peerDependencies": {
-    "@naisys/hub": "file:../hub"
+    "@naisys/hub": "3.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@naisys/hub": {
+      "optional": true
+    }
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.78.0",
     "@google/genai": "^1.45.0",
     "@modelcontextprotocol/sdk": "^1.27.1",
-    "@naisys/common": "file:../../packages/common",
-    "@naisys/common-node": "file:../../packages/common-node",
-    "@naisys/hub-protocol": "file:../../packages/hub-protocol",
+    "@naisys/common": "3.0.0",
+    "@naisys/common-node": "3.0.0",
+    "@naisys/hub-protocol": "3.0.0",
     "@xterm/headless": "^6.0.0",
     "chalk": "^5.6.2",
     "commander": "^14.0.3",

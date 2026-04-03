@@ -2,7 +2,7 @@ import {
   getAgentApiKeyByUuid,
   rotateAgentApiKeyByUuid,
 } from "@naisys/hub-database";
-import type { ErpPermission } from "@naisys-erp/shared";
+import type { ErpPermission } from "@naisys/erp-shared";
 import bcrypt from "bcrypt";
 import { randomBytes, randomUUID } from "crypto";
 

@@ -2,7 +2,7 @@ import type { AgentStatus } from "@naisys/common";
 import type {
   Agent as BaseAgent,
   Host as BaseHost,
-} from "@naisys-supervisor/shared";
+} from "@naisys/supervisor-shared";
 
 /**
  * Client-side Agent type with computed properties

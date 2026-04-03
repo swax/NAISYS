@@ -1,7 +1,7 @@
 {
   "name": "@naisys/hub",
-  "version": "1.0.0",
-  "description": "NAISYS Hub - Enables monitoring and communication of between multiple NAISYS agent managers",
+  "version": "3.0.0",
+  "description": "NAISYS Hub - Adds persistence and multi-instance coordination to NAISYS",
   "type": "module",
   "main": "dist/naisysHub.js",
   "exports": {
@@ -14,19 +14,26 @@
     "dev": "tsx watch src/naisysHub.ts",
     "start": "node dist/naisysHub.js",
     "build": "tsc",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "npm:publish:dryrun": "npm publish --dry-run",
+    "npm:publish": "npm publish --access public"
   },
   "files": [
     "dist"
   ],
   "peerDependencies": {
-    "@naisys-supervisor/server": "file:../supervisor/server"
+    "@naisys/supervisor": "3.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@naisys/supervisor": {
+      "optional": true
+    }
   },
   "dependencies": {
-    "@naisys/common": "file:../../packages/common",
-    "@naisys/common-node": "file:../../packages/common-node",
-    "@naisys/hub-database": "file:../../packages/hub-database",
-    "@naisys/hub-protocol": "file:../../packages/hub-protocol",
+    "@naisys/common": "3.0.0",
+    "@naisys/common-node": "3.0.0",
+    "@naisys/hub-database": "3.0.0",
+    "@naisys/hub-protocol": "3.0.0",
     "commander": "^14.0.3",
     "dotenv": "^17.3.1",
     "js-yaml": "^4.1.1",

@@ -4,7 +4,7 @@ import "@mantine/notifications/styles.css";
 import { AppShell, Box, MantineProvider } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import { Notifications } from "@mantine/notifications";
-import type { Permission } from "@naisys-supervisor/shared";
+import type { Permission } from "@naisys/supervisor-shared";
 import { QueryClientProvider } from "@tanstack/react-query";
 import React from "react";
 import {

@@ -14,13 +14,13 @@ import type {
   CreateOrder,
   ItemListResponse,
   UpdateOrder,
-} from "@naisys-erp/shared";
+} from "@naisys/erp-shared";
 import {
   CreateOrderSchema,
   OrderStatus,
   OrderStatusEnum,
   UpdateOrderSchema,
-} from "@naisys-erp/shared";
+} from "@naisys/erp-shared";
 import { useCallback, useEffect, useState } from "react";
 
 import { api, apiEndpoints } from "../lib/api";

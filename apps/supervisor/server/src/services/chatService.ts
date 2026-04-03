@@ -1,4 +1,4 @@
-import type { ChatConversation, ChatMessage } from "@naisys-supervisor/shared";
+import type { ChatConversation, ChatMessage } from "@naisys/supervisor-shared";
 
 import { hubDb } from "../database/hubDb.js";
 import { getLogger } from "../logger.js";

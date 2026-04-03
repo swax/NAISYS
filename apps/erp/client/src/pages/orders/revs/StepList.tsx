@@ -20,8 +20,8 @@ import type {
   Step,
   StepListResponse,
   UpdateStep,
-} from "@naisys-erp/shared";
-import { CreateStepSchema, UpdateStepSchema } from "@naisys-erp/shared";
+} from "@naisys/erp-shared";
+import { CreateStepSchema, UpdateStepSchema } from "@naisys/erp-shared";
 import { useCallback, useEffect, useState } from "react";
 
 import { FieldDefList } from "../../../components/FieldDefList";

@@ -13,7 +13,7 @@ import {
   Title,
   UnstyledButton,
 } from "@mantine/core";
-import type { FieldRef, FieldRefListResponse } from "@naisys-erp/shared";
+import type { FieldRef, FieldRefListResponse } from "@naisys/erp-shared";
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router";
 

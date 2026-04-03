@@ -8,7 +8,7 @@ import {
   Text,
   Title,
 } from "@mantine/core";
-import type { LaborTicketListResponse } from "@naisys-erp/shared";
+import type { LaborTicketListResponse } from "@naisys/erp-shared";
 import { IconTrash } from "@tabler/icons-react";
 import { useCallback, useEffect, useState } from "react";
 

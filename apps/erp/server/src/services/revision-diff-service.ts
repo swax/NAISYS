@@ -5,7 +5,7 @@ import type {
   PropertyChange,
   RevisionDiffResponse,
   StepDiff,
-} from "@naisys-erp/shared";
+} from "@naisys/erp-shared";
 
 import erpDb from "../erpDb.js";
 

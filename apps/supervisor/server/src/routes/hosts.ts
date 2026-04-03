@@ -8,7 +8,7 @@ import type {
   HostListResponse,
   HostNameParams,
   UpdateHostRequest,
-} from "@naisys-supervisor/shared";
+} from "@naisys/supervisor-shared";
 import {
   AgentActionResultSchema,
   AgentNameParamSchema,
@@ -19,7 +19,7 @@ import {
   HostListResponseSchema,
   HostNameParamsSchema,
   UpdateHostRequestSchema,
-} from "@naisys-supervisor/shared";
+} from "@naisys/supervisor-shared";
 import type { FastifyInstance, FastifyPluginOptions } from "fastify";
 
 import type { SupervisorUser } from "../auth-middleware.js";

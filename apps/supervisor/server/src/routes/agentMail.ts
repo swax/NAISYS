@@ -7,7 +7,7 @@ import type {
   MailDataResponse,
   SendMailRequest,
   SendMailResponse,
-} from "@naisys-supervisor/shared";
+} from "@naisys/supervisor-shared";
 import {
   AgentUsernameParamsSchema,
   ArchiveMailResponseSchema,
@@ -15,7 +15,7 @@ import {
   MailDataRequestSchema,
   MailDataResponseSchema,
   SendMailResponseSchema,
-} from "@naisys-supervisor/shared";
+} from "@naisys/supervisor-shared";
 import type { FastifyInstance, FastifyPluginOptions } from "fastify";
 
 import { hasPermission, requirePermission } from "../auth-middleware.js";

@@ -2,12 +2,12 @@ import type {
   CostsHistogramRequest,
   CostsHistogramResponse,
   ErrorResponse,
-} from "@naisys-supervisor/shared";
+} from "@naisys/supervisor-shared";
 import {
   CostsHistogramRequestSchema,
   CostsHistogramResponseSchema,
   ErrorResponseSchema,
-} from "@naisys-supervisor/shared";
+} from "@naisys/supervisor-shared";
 import type { FastifyInstance, FastifyPluginOptions } from "fastify";
 
 import {

@@ -12,7 +12,7 @@ import {
 import type {
   OperationRunComment,
   OperationRunCommentListResponse,
-} from "@naisys-erp/shared";
+} from "@naisys/erp-shared";
 import { useCallback, useEffect, useState } from "react";
 
 import { api, apiEndpoints, showErrorNotification } from "../../../lib/api";

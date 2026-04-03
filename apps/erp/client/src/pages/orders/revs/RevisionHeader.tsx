@@ -1,7 +1,7 @@
 import { ActionIcon, Anchor, Badge, Button, Group, Text } from "@mantine/core";
 import { ActionButton } from "@naisys/common-browser";
-import type { OrderRevision } from "@naisys-erp/shared";
-import { RevisionStatus } from "@naisys-erp/shared";
+import type { OrderRevision } from "@naisys/erp-shared";
+import { RevisionStatus } from "@naisys/erp-shared";
 import { IconListDetails } from "@tabler/icons-react";
 import { useNavigate } from "react-router";
 

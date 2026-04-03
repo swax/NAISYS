@@ -24,8 +24,8 @@ import type {
   FieldRefValueSummary,
   OperationRun,
   OperationRunTransition,
-} from "@naisys-erp/shared";
-import { OperationRunStatus } from "@naisys-erp/shared";
+} from "@naisys/erp-shared";
+import { OperationRunStatus } from "@naisys/erp-shared";
 import {
   IconArrowBackUp,
   IconChevronDown,

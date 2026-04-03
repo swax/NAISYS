@@ -9,7 +9,7 @@ import {
   Text,
   Tooltip,
 } from "@mantine/core";
-import type { AgentDetailResponse } from "@naisys-supervisor/shared";
+import type { AgentDetailResponse } from "@naisys/supervisor-shared";
 import { IconRefresh } from "@tabler/icons-react";
 import React from "react";
 import { Link } from "react-router-dom";

@@ -1,4 +1,4 @@
-import { FieldType } from "@naisys-erp/shared";
+import { FieldType } from "@naisys/erp-shared";
 
 import erpDb from "../erpDb.js";
 import type { FieldModel } from "../generated/prisma/models/Field.js";

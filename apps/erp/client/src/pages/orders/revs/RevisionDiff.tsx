@@ -18,7 +18,7 @@ import type {
   PropertyChange,
   RevisionDiffResponse,
   StepDiff,
-} from "@naisys-erp/shared";
+} from "@naisys/erp-shared";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router";
 

@@ -48,7 +48,7 @@ import type {
   StatusResponse,
   UpdateAgentConfigResponse,
   VariablesResponse,
-} from "@naisys-supervisor/shared";
+} from "@naisys/supervisor-shared";
 
 export const API_BASE = "/api/supervisor";
 

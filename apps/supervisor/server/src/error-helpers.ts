@@ -1,4 +1,4 @@
-import type { ErrorResponse } from "@naisys-supervisor/shared";
+import type { ErrorResponse } from "@naisys/supervisor-shared";
 import type { FastifyReply } from "fastify";
 
 export function notFound(reply: FastifyReply, message: string): ErrorResponse {

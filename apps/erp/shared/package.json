@@ -1,20 +1,25 @@
 {
-  "name": "@naisys-erp/shared",
-  "version": "1.0.0",
-  "description": "NAISYS ERP - Shared types and utilities",
+  "name": "@naisys/erp-shared",
+  "version": "3.0.0",
+  "description": "[internal] NAISYS ERP shared types and validation schemas",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "clean": "rimraf dist",
     "build": "tsc",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "npm:publish:dryrun": "npm publish --dry-run",
+    "npm:publish": "npm publish --access public"
   },
   "devDependencies": {
     "typescript": "^5.9.3"
   },
   "dependencies": {
-    "@naisys/common": "file:../../../packages/common",
+    "@naisys/common": "3.0.0",
     "zod": "^4.3.6"
   }
 }
