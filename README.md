@@ -1,6 +1,12 @@
-# NAISYS Project
+# NAISYS 3.0
 
-A monorepo containing NAISYS (Networked Agents Interface System) — an autonomous agent runner with optional web-based management.
+Autonomous AI agent runner for Linux, Windows, and Mac.
+
+- **LLM support** — OpenAI, Google, Anthropic, and any OpenAI-compatible local LLM
+- **Console & desktop control** — Agents operate a shell and can control the GUI/desktop
+- **Multi-agent communication** — Agents collaborate via built-in mail and sub-agent systems
+- **Networked** — Flex agents across multiple machines, managed through a central hub server
+- **Web management** — Monitor agents, logs, costs, and messaging through a browser UI
 
 [NPM](https://www.npmjs.com/package/naisys) | [Website](https://naisys.org) | [Discord](https://discord.gg/JBUPWSbaEt) | [Demo Video](https://www.youtube.com/watch?v=Ttya3ixjumo)
 
@@ -18,75 +24,57 @@ npm install -g @naisys/erp                   # Web UI for AI-driven order/work m
 
 ## Components
 
-- **naisys** — Ephemeral agent runner. LLMs operate a Linux shell with built-in context management and cost tracking. No database required.
-- **@naisys/hub** — Adds persistence via SQLite. Tracks agents, logs, costs, mail, and coordinates multiple NAISYS instances over WebSocket.
-- **@naisys/supervisor** — Web UI for monitoring agents, viewing logs, and managing inter-agent messaging. Connects to Hub.
-- **@naisys/erp** — Web UI for AI-driven order/work management. Runs as a plugin inside Supervisor or standalone.
+- **naisys** — Agent runner. LLMs operate a Linux shell with built-in context management, multi-agent communication, and cost tracking.
+- **@naisys/hub** — Central server that adds persistence and enables agents to communicate across machines. Tracks logs, costs, and mail via SQLite. Optional Supervisor/ERP integration.
+- **@naisys/supervisor** — Web UI for monitoring agents, viewing logs, and managing inter-agent messaging.
+- **@naisys/erp** — AI-driven order and work management. Runs integrated with Supervisor or standalone.
 
-## Quick Start
+## Getting Started
 
-### From npm
+Create a `.env` file with your API keys (see `apps/naisys/.env.example`).
+
+### Ephemeral Mode
+
+Lightweight agent runner with no persistence or web UI. Runs agents on demand.
+
+```bash
+npm install -g naisys
+naisys agent.yaml
+```
+
+Pass a directory to run all agent yamls in that folder.
+
+### Integrated Mode
+
+Everything in a single process — Hub for persistence, Supervisor web UI, and optional ERP. The `<seed>` argument is an agent yaml or directory that seeds the Hub database on first run.
 
 ```bash
 npm install -g naisys @naisys/hub @naisys/supervisor @naisys/erp
-naisys path/to/agent.yaml --integrated-hub --supervisor --erp
+naisys <seed> --integrated-hub --supervisor --erp
 ```
-
-### From source
-
-```bash
-npm install
-npm run build
-cd apps/naisys
-node dist/naisys.js ../../agents/assistant.yaml --integrated-hub --supervisor --erp
-```
-
-### Configure Environment
-
-Create a `.env` file (see `apps/naisys/.env.example`) with your API keys.
 
 Open `http://localhost:3001/supervisor/` to monitor agents.
 
-## Startup Modes
+### Distributed Mode
 
-### Ephemeral (no persistence)
+Run Hub + Supervisor on a central server, then connect NAISYS runners from multiple machines. Manage all hosts and agents through the Supervisor web UI.
 
 ```bash
-# Run a single agent with no Hub — stateless, no web UI
-node dist/naisys.js path/to/agent.yaml
+# On the server
+npm install -g @naisys/hub @naisys/supervisor @naisys/erp
+naisys-hub [seed] --supervisor --erp
+
+# On each runner machine
+npm install -g naisys
+naisys --hub=https://hub-server:3101    # Set HUB_ACCESS_KEY in .env
 ```
 
-### All-in-one (single process)
+### From Source
 
 ```bash
-# Hub + Supervisor + ERP in one process (saves ~150MB vs separate processes)
-node dist/naisys.js agent.yaml --integrated-hub --supervisor --erp
-
-# Hub + Supervisor only (no ERP)
-node dist/naisys.js agent.yaml --integrated-hub --supervisor
-
-# Hub only (no web UI)
-node dist/naisys.js agent.yaml --integrated-hub
-```
-
-### Distributed (separate processes)
-
-Run each component independently for larger deployments:
-
-```bash
-# 1. Start Hub standalone (from apps/hub)
-node dist/naisysHub.js [agent-path] [--supervisor] [--erp]
-
-# 2. Start Supervisor standalone (from apps/supervisor/server)
-#    Set HUB_URL in .env to point to the Hub
-node dist/supervisorServer.js
-
-# 3. Start ERP standalone (from apps/erp/server)
-#    Has its own auth when running outside Supervisor
-node dist/erpServer.js
-
-# 4. Connect NAISYS instances to a remote Hub
-node dist/naisys.js agent.yaml --hub=https://hostname:3101
+npm install && npm run build
+cd apps/naisys
+node dist/naisys.js ../../agents/assistant.yaml --integrated-hub --supervisor --erp
 ```
 
 ## Additional Information

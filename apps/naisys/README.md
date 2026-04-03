@@ -94,9 +94,8 @@ initialCommands:
 # Additional custom variables can be defined here and/or in the agent config to be loaded into the agent prompt
 ```
 
-- Run `naisys <path to yaml or directory>`
-  - If a yaml file is passed, naisys will start a single agent
-  - If a directory is passed, naisys will start a tmux session with the screen split for each agent
+- Run `naisys <path to agent yaml or directory> [options]`
+  - Pass a directory to run all agent yamls in that folder
 
 ## Using NAISYS
 
@@ -140,6 +139,7 @@ initialCommands:
 
 ## Changelog
 
+- 3.0: ERP and Desktop Control
 - 2.2: NAISYS cross machine support enabled by a new hub process
 - 2.1: Monorepo architecture, allowing Supervisor to run in-process
 - 2.0: Agent multiplexing in the same process
