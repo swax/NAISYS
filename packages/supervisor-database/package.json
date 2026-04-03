@@ -3,8 +3,6 @@
   "version": "3.0.0",
   "type": "module",
   "description": "[internal] Supervisor database schema and Prisma client for NAISYS",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
   "files": [
     "dist",
     "prisma/schema.prisma",
@@ -33,5 +31,11 @@
     "better-sqlite3": "^12.6.2",
     "dotenv": "^17.3.1",
     "prisma": "^7.5.0"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
   }
 }

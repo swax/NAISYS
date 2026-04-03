@@ -3,8 +3,6 @@
   "version": "3.0.0",
   "type": "module",
   "description": "[internal] Protocol types and schemas for NAISYS Hub communication",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
   "files": [
     "dist"
   ],
@@ -20,5 +18,11 @@
   "dependencies": {
     "@naisys/common": "3.0.0",
     "zod": "^4.3.6"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
   }
 }

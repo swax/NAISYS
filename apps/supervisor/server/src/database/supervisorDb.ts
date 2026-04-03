@@ -7,7 +7,7 @@ type SupervisorDb = Awaited<ReturnType<typeof createPrismaClient>>;
 let _db: SupervisorDb | undefined;
 
 /** Lazily initialized Prisma client. First access creates the connection. */
-const supervisorDb = new Proxy({} as SupervisorDb, {
+const supervisorDb: SupervisorDb = new Proxy({} as SupervisorDb, {
   get(_target, prop, receiver) {
     if (!_db) {
       throw new Error(
