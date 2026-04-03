@@ -1,7 +1,7 @@
 /**
  * Computer interaction service.
  * Handles screenshots, mouse/keyboard actions, and display config.
- * Platform-specific code lives in windowsDesktop.ts / x11Desktop.ts / waylandDesktop.ts.
+ * Platform-specific code lives in windowsDesktop.ts / macosDesktop.ts / x11Desktop.ts / waylandDesktop.ts.
  */
 
 import { TARGET_MEGAPIXELS } from "@naisys/common";
@@ -13,6 +13,7 @@ import sharp from "sharp";
 import { AgentConfig } from "../agent/agentConfig.js";
 import { DesktopAction, DesktopConfig } from "../llm/vendors/vendorTypes.js";
 import { OutputService } from "../utils/output.js";
+import * as macosDesktop from "./macosDesktop.js";
 import * as waylandDesktop from "./waylandDesktop.js";
 import * as windowsDesktop from "./windowsDesktop.js";
 import * as x11Desktop from "./x11Desktop.js";
@@ -21,12 +22,13 @@ type Platform = { backend: typeof windowsDesktop; name: string };
 
 function detectPlatform(): Platform | null {
   if (process.platform === "win32") return { backend: windowsDesktop, name: "Windows" };
+  if (process.platform === "darwin") return { backend: macosDesktop, name: "macOS" };
 
   const sessionType = process.env.XDG_SESSION_TYPE;
   if (sessionType === "wayland" || process.env.WAYLAND_DISPLAY) return { backend: waylandDesktop, name: "Linux (Wayland)" };
   if (sessionType === "x11" || process.env.DISPLAY) return { backend: x11Desktop, name: "Linux (X11)" };
 
-  // No display server detected (headless, macOS, TTY, etc.)
+  // No display server detected (headless, TTY, etc.)
   return null;
 }
 
