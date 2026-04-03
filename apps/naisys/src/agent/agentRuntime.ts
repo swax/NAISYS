@@ -124,7 +124,7 @@ export async function createAgentRuntime(
     logService,
     inputMode,
   );
-  const computerService = await createComputerService(agentConfig, output);
+  const computerService = await createComputerService(agentConfig);
   const llmService = createLLMService(
     globalConfig,
     agentConfig,

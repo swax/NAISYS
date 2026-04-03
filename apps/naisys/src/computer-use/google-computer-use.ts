@@ -11,8 +11,6 @@ import type {
   DesktopAction,
   DesktopConfig,
 } from "../llm/vendors/vendorTypes.js";
-import { getTargetScaleFactor } from "./computerService.js";
-
 // --- Coordinate normalization ---
 // Google uses a 0-999 normalized grid regardless of screen resolution.
 const NORMALIZED_MAX = 1000;
@@ -240,24 +238,6 @@ function reconstructGoogleArgs(
 
 // --- Public API ---
 
-export interface GoogleComputerUseSetup {
-  imageScaleFactor: number;
-}
-
-/**
- * Compute image scale factor for Google computer use based on native display dimensions.
- */
-export function prepareComputerUse(
-  desktopConfig: DesktopConfig,
-): GoogleComputerUseSetup {
-  return {
-    imageScaleFactor: getTargetScaleFactor(
-      desktopConfig.displayWidth,
-      desktopConfig.displayHeight,
-    ),
-  };
-}
-
 /**
  * Extract desktop actions from Google response **parts** (not bare function calls).
  * Accepts full Part objects so we can capture `thoughtSignature` which lives
@@ -315,7 +295,6 @@ export function extractDesktopActions(
 export function formatContextWithComputerUse(
   context: LlmMessage[],
   desktopConfig: DesktopConfig,
-  _imageScaleFactor: number,
   formatPartsForGoogle: (content: string | ContentBlock[]) => any[],
 ): any[] {
   const { displayWidth, displayHeight } = desktopConfig;

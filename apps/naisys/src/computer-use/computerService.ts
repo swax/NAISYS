@@ -15,7 +15,6 @@ import type {
   DesktopAction,
   DesktopConfig,
 } from "../llm/vendors/vendorTypes.js";
-import type { OutputService } from "../utils/output.js";
 import * as macosDesktop from "./macosDesktop.js";
 import * as waylandDesktop from "./waylandDesktop.js";
 import * as windowsDesktop from "./windowsDesktop.js";
@@ -358,7 +357,6 @@ export function formatDesktopActions(
 
 export async function createComputerService(
   { agentConfig }: AgentConfig,
-  _output: OutputService,
 ) {
   startScreenshotCleanup();
   const platform = agentConfig().controlDesktop ? detectPlatform() : null;

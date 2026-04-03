@@ -194,8 +194,6 @@ export function extractDesktopActions(
  */
 export function formatInputWithComputerUse(
   context: LlmMessage[],
-  _desktopConfig: DesktopConfig,
-  _scaleFactor: number,
   formatContentBlocks: (content: string | ContentBlock[]) => any[],
   formatSingleBlock: (block: ContentBlock) => any | null,
 ): any[] {
