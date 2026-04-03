@@ -4,13 +4,13 @@ import path from "path";
 import sharp from "sharp";
 import stringArgv from "string-argv";
 
-import { AgentConfig } from "../agent/agentConfig.js";
+import type { AgentConfig } from "../agent/agentConfig.js";
 import { genImgCmd } from "../command/commandDefs.js";
-import { RegistrableCommand } from "../command/commandRegistry.js";
-import { GlobalConfig } from "../globalConfig.js";
-import { CostTracker } from "../llm/costTracker.js";
+import type { RegistrableCommand } from "../command/commandRegistry.js";
+import type { GlobalConfig } from "../globalConfig.js";
+import type { CostTracker } from "../llm/costTracker.js";
 import * as pathService from "../services/pathService.js";
-import { OutputService } from "../utils/output.js";
+import type { OutputService } from "../utils/output.js";
 
 export function createGenImg(
   { globalConfig }: GlobalConfig,

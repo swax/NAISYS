@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { LlmMessage } from "../../llm/llmDtos.js";
+import type { LlmMessage } from "../../llm/llmDtos.js";
 import { createOutputService } from "../../utils/output.js";
 import { createMockLogService } from "../mocks.js";
 

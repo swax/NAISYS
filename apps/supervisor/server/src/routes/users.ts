@@ -8,7 +8,7 @@ import {
   PermissionEnum,
   UpdateUserSchema,
 } from "@naisys-supervisor/shared";
-import {
+import type {
   FastifyInstance,
   FastifyPluginOptions,
   FastifyReply,

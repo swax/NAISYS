@@ -9,12 +9,12 @@ import {
   Text,
   Tooltip,
 } from "@mantine/core";
+import type { AgentDetailResponse } from "@naisys-supervisor/shared";
 import { IconRefresh } from "@tabler/icons-react";
-import { AgentDetailResponse } from "@naisys-supervisor/shared";
 import React from "react";
 import { Link } from "react-router-dom";
 
-import { Agent, Host } from "../../types/agent";
+import type { Agent, Host } from "../../types/agent";
 
 export const ConfigSummary: React.FC<{
   config: AgentDetailResponse["config"];
@@ -73,7 +73,9 @@ export const ConfigSummary: React.FC<{
                       to={`/agents/${leadAgent.name}`}
                       size="sm"
                     >
-                      {leadAgent.title ? `${leadUsername} (${leadAgent.title})` : leadUsername}
+                      {leadAgent.title
+                        ? `${leadUsername} (${leadAgent.title})`
+                        : leadUsername}
                     </Anchor>
                   ) : (
                     leadUsername
@@ -174,9 +176,7 @@ export const ConfigSummary: React.FC<{
                   <Badge
                     size="xs"
                     variant="light"
-                    color={
-                      config.spendLimitHours != null ? "blue" : "gray"
-                    }
+                    color={config.spendLimitHours != null ? "blue" : "gray"}
                   >
                     {config.spendLimitHours != null
                       ? `${config.spendLimitHours}h window`

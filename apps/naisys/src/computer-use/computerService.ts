@@ -10,9 +10,12 @@ import os from "os";
 import path from "path";
 import sharp from "sharp";
 
-import { AgentConfig } from "../agent/agentConfig.js";
-import { DesktopAction, DesktopConfig } from "../llm/vendors/vendorTypes.js";
-import { OutputService } from "../utils/output.js";
+import type { AgentConfig } from "../agent/agentConfig.js";
+import type {
+  DesktopAction,
+  DesktopConfig,
+} from "../llm/vendors/vendorTypes.js";
+import type { OutputService } from "../utils/output.js";
 import * as macosDesktop from "./macosDesktop.js";
 import * as waylandDesktop from "./waylandDesktop.js";
 import * as windowsDesktop from "./windowsDesktop.js";
@@ -21,12 +24,16 @@ import * as x11Desktop from "./x11Desktop.js";
 type Platform = { backend: typeof windowsDesktop; name: string };
 
 function detectPlatform(): Platform | null {
-  if (process.platform === "win32") return { backend: windowsDesktop, name: "Windows" };
-  if (process.platform === "darwin") return { backend: macosDesktop, name: "macOS" };
+  if (process.platform === "win32")
+    return { backend: windowsDesktop, name: "Windows" };
+  if (process.platform === "darwin")
+    return { backend: macosDesktop, name: "macOS" };
 
   const sessionType = process.env.XDG_SESSION_TYPE;
-  if (sessionType === "wayland" || process.env.WAYLAND_DISPLAY) return { backend: waylandDesktop, name: "Linux (Wayland)" };
-  if (sessionType === "x11" || process.env.DISPLAY) return { backend: x11Desktop, name: "Linux (X11)" };
+  if (sessionType === "wayland" || process.env.WAYLAND_DISPLAY)
+    return { backend: waylandDesktop, name: "Linux (Wayland)" };
+  if (sessionType === "x11" || process.env.DISPLAY)
+    return { backend: x11Desktop, name: "Linux (X11)" };
 
   // No display server detected (headless, TTY, etc.)
   return null;
@@ -53,7 +60,9 @@ function startScreenshotCleanup() {
           fs.unlinkSync(filepath);
         }
       }
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   };
 
   clean();
@@ -62,7 +71,10 @@ function startScreenshotCleanup() {
 
 // --- Screenshot capture ---
 
-async function captureScreenshot(username: string, platform: Platform): Promise<{
+async function captureScreenshot(
+  username: string,
+  platform: Platform,
+): Promise<{
   base64: string;
   width: number;
   height: number;
@@ -145,7 +157,10 @@ async function executeSingleAction(
 }
 
 /** Execute actions. All actions are stored as { actions: [...] } — single or batched. */
-async function executeAction(action: DesktopAction["input"], platform: Platform): Promise<void> {
+async function executeAction(
+  action: DesktopAction["input"],
+  platform: Platform,
+): Promise<void> {
   for (const subAction of action.actions) {
     await executeSingleAction(subAction, platform);
   }
@@ -159,7 +174,10 @@ async function executeAction(action: DesktopAction["input"], platform: Platform)
  * multiple of 20 so the result stays at or under the target.
  * Returns 1 if the native resolution is already at or below the target.
  */
-export function getTargetScaleFactor(nativeWidth: number, nativeHeight: number): number {
+export function getTargetScaleFactor(
+  nativeWidth: number,
+  nativeHeight: number,
+): number {
   const nativePixels = nativeWidth * nativeHeight;
   const targetPixels = TARGET_MEGAPIXELS * 1_000_000;
 
@@ -231,13 +249,25 @@ export function checkActionBounds(
 
   for (const action of input.actions) {
     const coord = action.coordinate as number[] | undefined;
-    if (coord && (coord[0] >= nativeWidth || coord[1] >= nativeHeight || coord[0] < 0 || coord[1] < 0)) {
+    if (
+      coord &&
+      (coord[0] >= nativeWidth ||
+        coord[1] >= nativeHeight ||
+        coord[0] < 0 ||
+        coord[1] < 0)
+    ) {
       const apiX = Math.round(coord[0] * coordScale.x);
       const apiY = Math.round(coord[1] * coordScale.y);
       return `Coordinate (${apiX}, ${apiY}) is outside the screen resolution ${apiW}x${apiH}`;
     }
     const startCoord = action.start_coordinate as number[] | undefined;
-    if (startCoord && (startCoord[0] >= nativeWidth || startCoord[1] >= nativeHeight || startCoord[0] < 0 || startCoord[1] < 0)) {
+    if (
+      startCoord &&
+      (startCoord[0] >= nativeWidth ||
+        startCoord[1] >= nativeHeight ||
+        startCoord[0] < 0 ||
+        startCoord[1] < 0)
+    ) {
       const apiX = Math.round(startCoord[0] * coordScale.x);
       const apiY = Math.round(startCoord[1] * coordScale.y);
       return `Start coordinate (${apiX}, ${apiY}) is outside the screen resolution ${apiW}x${apiH}`;
@@ -255,10 +285,7 @@ export interface CoordScale {
 }
 
 /** Format a coordinate pair, optionally showing API-space coordinates */
-function fmtCoord(
-  coord: number[],
-  scale?: CoordScale,
-): string {
+function fmtCoord(coord: number[], scale?: CoordScale): string {
   if (!scale) return `(${coord.join(", ")})`;
   const apiX = Math.round(coord[0] * scale.x);
   const apiY = Math.round(coord[1] * scale.y);
@@ -312,7 +339,9 @@ export function formatDesktopAction(
   input: DesktopAction["input"],
   coordScale?: CoordScale,
 ): string {
-  return input.actions.map((a) => formatSingleAction(a, coordScale)).join(", then ");
+  return input.actions
+    .map((a) => formatSingleAction(a, coordScale))
+    .join(", then ");
 }
 
 /** Format a batch of desktop actions for human-readable display */
@@ -320,14 +349,16 @@ export function formatDesktopActions(
   actions: DesktopAction[],
   coordScale?: CoordScale,
 ): string {
-  return actions.map((a) => formatDesktopAction(a.input, coordScale)).join(", then ");
+  return actions
+    .map((a) => formatDesktopAction(a.input, coordScale))
+    .join(", then ");
 }
 
 // --- Service factory ---
 
 export async function createComputerService(
   { agentConfig }: AgentConfig,
-  output: OutputService,
+  _output: OutputService,
 ) {
   startScreenshotCleanup();
   const platform = agentConfig().controlDesktop ? detectPlatform() : null;
@@ -341,7 +372,9 @@ export async function createComputerService(
     filepath: string;
   }> {
     if (!platform) {
-      throw new Error("Desktop mode is not enabled or no display server detected.");
+      throw new Error(
+        "Desktop mode is not enabled or no display server detected.",
+      );
     }
     const result = await captureScreenshot(agentConfig().username, platform);
     nativeDimensions = { width: result.width, height: result.height };
@@ -394,7 +427,9 @@ export async function createComputerService(
   /** Execute an action using native screen coordinates */
   async function execute(action: DesktopAction["input"]) {
     if (!platform) {
-      throw new Error("Desktop mode is not enabled or no display server detected.");
+      throw new Error(
+        "Desktop mode is not enabled or no display server detected.",
+      );
     }
     await executeAction(action, platform);
   }

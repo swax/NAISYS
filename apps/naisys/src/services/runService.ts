@@ -1,7 +1,7 @@
 import { HubEvents } from "@naisys/hub-protocol";
 
-import { AgentConfig } from "../agent/agentConfig.js";
-import { HubClient } from "../hub/hubClient.js";
+import type { AgentConfig } from "../agent/agentConfig.js";
+import type { HubClient } from "../hub/hubClient.js";
 
 export async function createRunService(
   { agentConfig }: AgentConfig,

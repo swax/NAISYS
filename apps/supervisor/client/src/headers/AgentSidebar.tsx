@@ -24,7 +24,7 @@ import { ROUTER_BASENAME } from "../constants";
 import { useAgentDataContext } from "../contexts/AgentDataContext";
 import { useConnectionStatus } from "../hooks/useConnectionStatus";
 import { AddAgentDialog } from "../pages/agents/AddAgentDialog";
-import { Agent } from "../types/agent";
+import type { Agent } from "../types/agent";
 
 export const AgentSidebar: React.FC = () => {
   const navigate = useNavigate();

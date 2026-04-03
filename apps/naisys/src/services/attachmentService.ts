@@ -3,8 +3,8 @@ import fs from "fs";
 import https from "https";
 import path from "path";
 
-import { UserService } from "../agent/userService.js";
-import { HubClient } from "../hub/hubClient.js";
+import type { UserService } from "../agent/userService.js";
+import type { HubClient } from "../hub/hubClient.js";
 
 /**
  * Upload a file to the hub and return the attachment ID.

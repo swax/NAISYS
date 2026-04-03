@@ -5,13 +5,13 @@ import {
   HubEvents,
 } from "@naisys/hub-protocol";
 
-import { AgentConfig } from "../agent/agentConfig.js";
-import { GlobalConfig } from "../globalConfig.js";
-import { HubClient } from "../hub/hubClient.js";
-import { HubCostBuffer } from "../hub/hubCostBuffer.js";
-import { ModelService } from "../services/modelService.js";
-import { RunService } from "../services/runService.js";
-import { PromptNotificationService } from "../utils/promptNotificationService.js";
+import type { AgentConfig } from "../agent/agentConfig.js";
+import type { GlobalConfig } from "../globalConfig.js";
+import type { HubClient } from "../hub/hubClient.js";
+import type { HubCostBuffer } from "../hub/hubCostBuffer.js";
+import type { ModelService } from "../services/modelService.js";
+import type { RunService } from "../services/runService.js";
+import type { PromptNotificationService } from "../utils/promptNotificationService.js";
 
 export const SPEND_LIMIT_TIMEOUT_SECONDS = 60;
 

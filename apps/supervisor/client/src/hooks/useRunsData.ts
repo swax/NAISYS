@@ -3,12 +3,13 @@ import type {
   LogPushSessionUpdate,
   SessionPush,
 } from "@naisys/hub-protocol";
-import { RunSession as BaseRunSession } from "@naisys-supervisor/shared";
+import type { RunSession as BaseRunSession } from "@naisys-supervisor/shared";
 import { useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { getRunsData, RunsDataParams } from "../lib/apiRuns";
-import { RunSession } from "../types/runSession";
+import type { RunsDataParams } from "../lib/apiRuns";
+import { getRunsData } from "../lib/apiRuns";
+import type { RunSession } from "../types/runSession";
 import { useSubscription } from "./useSubscription";
 
 type RunSessionWithFlag = RunSession & { isFirst?: boolean };

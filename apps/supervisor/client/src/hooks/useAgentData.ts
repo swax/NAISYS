@@ -1,5 +1,5 @@
 import type { HateoasAction } from "@naisys/common";
-import {
+import type {
   Agent as BaseAgent,
   AgentStatusEvent,
 } from "@naisys-supervisor/shared";
@@ -7,7 +7,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useState } from "react";
 
 import { getAgentData } from "../lib/apiAgents";
-import { Agent } from "../types/agent";
+import type { Agent } from "../types/agent";
 import { useSubscription } from "./useSubscription";
 
 // Module-level caches (shared across all hook instances and persist across remounts)

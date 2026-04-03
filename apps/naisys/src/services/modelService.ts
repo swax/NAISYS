@@ -3,7 +3,7 @@ import { getAllImageModels, getAllLlmModels } from "@naisys/common";
 import { loadCustomModels } from "@naisys/common-node";
 import { HubEvents, ModelsResponseSchema } from "@naisys/hub-protocol";
 
-import { HubClient } from "../hub/hubClient.js";
+import type { HubClient } from "../hub/hubClient.js";
 
 /** Provides model lookups, populated from hub (push) or disk (standalone) */
 export function createModelService(hubClient: HubClient | undefined) {

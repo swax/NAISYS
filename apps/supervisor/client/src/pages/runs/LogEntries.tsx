@@ -3,7 +3,8 @@ import { formatFileSize } from "@naisys/common";
 import { IconFile } from "@tabler/icons-react";
 import React from "react";
 
-import { API_BASE, apiEndpoints, LogEntry } from "../../lib/apiClient";
+import type { LogEntry } from "../../lib/apiClient";
+import { API_BASE, apiEndpoints } from "../../lib/apiClient";
 
 function isImageFilename(filename: string): boolean {
   return /\.(jpg|jpeg|png|gif|webp|svg|bmp)$/i.test(filename);

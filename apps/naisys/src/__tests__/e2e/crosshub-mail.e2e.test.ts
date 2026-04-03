@@ -3,14 +3,13 @@ import { mkdirSync, writeFileSync } from "fs";
 import { join } from "path";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
+import type { HubTestProcess, NaisysTestProcess } from "./e2eTestHelper.js";
 import {
   cleanupTestDir,
   createAgentYaml,
   createHubEnvFile,
   extractAccessKey,
   getTestDir,
-  HubTestProcess,
-  NaisysTestProcess,
   setupTestDir,
   spawnHub,
   spawnNaisys,

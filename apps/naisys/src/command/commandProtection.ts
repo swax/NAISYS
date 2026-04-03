@@ -1,7 +1,7 @@
-import { AgentConfig } from "../agent/agentConfig.js";
-import { LLMService } from "../llm/llmService.js";
-import { OutputService } from "../utils/output.js";
-import { PromptBuilder } from "./promptBuilder.js";
+import type { AgentConfig } from "../agent/agentConfig.js";
+import type { LLMService } from "../llm/llmService.js";
+import type { OutputService } from "../utils/output.js";
+import type { PromptBuilder } from "./promptBuilder.js";
 
 interface ValidateCommandResponse {
   commandAllowed: boolean;

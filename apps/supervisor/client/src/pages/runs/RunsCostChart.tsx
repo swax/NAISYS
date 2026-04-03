@@ -2,7 +2,7 @@ import { LineChart } from "@mantine/charts";
 import { Paper } from "@mantine/core";
 import React, { useMemo } from "react";
 
-import { RunSession } from "../../types/runSession";
+import type { RunSession } from "../../types/runSession";
 
 interface RunsCostChartProps {
   runs: RunSession[];

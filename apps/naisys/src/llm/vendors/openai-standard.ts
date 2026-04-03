@@ -1,12 +1,12 @@
 import OpenAI from "openai";
 
-import { ContentBlock, LlmMessage } from "../llmDtos.js";
 import {
   extractDesktopActions,
   formatInputWithComputerUse,
   prepareComputerUse,
 } from "../../computer-use/openai-computer-use.js";
-import { QueryResult, QuerySources, VendorDeps } from "./vendorTypes.js";
+import type { ContentBlock, LlmMessage } from "../llmDtos.js";
+import type { QueryResult, QuerySources, VendorDeps } from "./vendorTypes.js";
 
 const clientCache = new Map<string, OpenAI>();
 
@@ -45,7 +45,8 @@ export async function sendWithOpenAiStandard(
 
   const openAI = getClient(apiKey, model.baseUrl);
 
-  const useConsoleTools = source === "console" && useToolsForLlmConsoleResponses;
+  const useConsoleTools =
+    source === "console" && useToolsForLlmConsoleResponses;
 
   // Build tools array — console and desktop tools can coexist
   const toolsDefs: any[] = [];
@@ -79,7 +80,7 @@ export async function sendWithOpenAiStandard(
       model: model.versionName,
       instructions: systemMessage,
       input: desktopConfig
-        ? await formatInputWithComputerUse(
+        ? formatInputWithComputerUse(
             context,
             desktopConfig,
             cuSetup!.scaleFactor,

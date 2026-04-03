@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAgentDataContext } from "../contexts/AgentDataContext";
 import { getChatConversations } from "../lib/apiChat";
 import type { ChatConversation } from "../lib/apiClient";
-import { MessageRoomEvent } from "./messageCacheUtils";
+import type { MessageRoomEvent } from "./messageCacheUtils";
 import { useSubscription } from "./useSubscription";
 
 // Module-level cache (shared across hook instances, persists across remounts)
@@ -89,8 +89,7 @@ export const useChatConversations = (
 
   const query = useQuery({
     queryKey: ["chat-conversations", agentUsername],
-    queryFn: () =>
-      getChatConversations({ agentUsername, page: 1, count: 50 }),
+    queryFn: () => getChatConversations({ agentUsername, page: 1, count: 50 }),
     enabled: enabled && !!agentUsername,
     refetchInterval: false,
     refetchIntervalInBackground: false,

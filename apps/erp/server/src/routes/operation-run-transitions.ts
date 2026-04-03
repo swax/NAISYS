@@ -5,7 +5,7 @@ import {
   OrderRunStatus,
   TransitionNoteSchema,
 } from "@naisys-erp/shared";
-import { FastifyInstance } from "fastify";
+import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 
 import { requirePermission } from "../auth-middleware.js";
@@ -99,7 +99,12 @@ export default function operationRunTransitionRoutes(fastify: FastifyInstance) {
         { assignedToId: userId, statusNote: note ?? null },
       );
       await clockIn(resolved.opRun.id, userId, userId);
-      const full = await formatOpRunTransition(orderKey, runNo, request.erpUser, opRun);
+      const full = await formatOpRunTransition(
+        orderKey,
+        runNo,
+        request.erpUser,
+        opRun,
+      );
       return mutationResult(request, reply, full, {
         status: opRun.status,
         _actions: full._actions,
@@ -173,7 +178,12 @@ export default function operationRunTransitionRoutes(fastify: FastifyInstance) {
         resolved.opRun.operationId,
         userId,
       );
-      const full = await formatOpRunTransition(orderKey, runNo, request.erpUser, opRun);
+      const full = await formatOpRunTransition(
+        orderKey,
+        runNo,
+        request.erpUser,
+        opRun,
+      );
       return mutationResult(request, reply, full, {
         status: opRun.status,
         _actions: full._actions,
@@ -234,7 +244,12 @@ export default function operationRunTransitionRoutes(fastify: FastifyInstance) {
         resolved.opRun.operationId,
         userId,
       );
-      const full = await formatOpRunTransition(orderKey, runNo, request.erpUser, opRun);
+      const full = await formatOpRunTransition(
+        orderKey,
+        runNo,
+        request.erpUser,
+        opRun,
+      );
       return mutationResult(request, reply, full, {
         status: opRun.status,
         _actions: full._actions,
@@ -288,7 +303,12 @@ export default function operationRunTransitionRoutes(fastify: FastifyInstance) {
         userId,
         { ...(cost > 0 ? { cost } : undefined), statusNote: note ?? null },
       );
-      const full = await formatOpRunTransition(orderKey, runNo, request.erpUser, opRun);
+      const full = await formatOpRunTransition(
+        orderKey,
+        runNo,
+        request.erpUser,
+        opRun,
+      );
       return mutationResult(request, reply, full, {
         status: opRun.status,
         _actions: full._actions,
@@ -353,7 +373,12 @@ export default function operationRunTransitionRoutes(fastify: FastifyInstance) {
         resolved.opRun.operationId,
         userId,
       );
-      const full = await formatOpRunTransition(orderKey, runNo, request.erpUser, opRun);
+      const full = await formatOpRunTransition(
+        orderKey,
+        runNo,
+        request.erpUser,
+        opRun,
+      );
       return mutationResult(request, reply, full, {
         status: opRun.status,
         _actions: full._actions,

@@ -1,16 +1,14 @@
-import { determineAgentStatus, UserEntry } from "@naisys/common";
+import type { UserEntry } from "@naisys/common";
+import { determineAgentStatus } from "@naisys/common";
 import { loadAgentConfigs } from "@naisys/common-node";
-import {
-  HubEvents,
-  UserListResponse,
-  UserListResponseSchema,
-} from "@naisys/hub-protocol";
+import type { UserListResponse } from "@naisys/hub-protocol";
+import { HubEvents, UserListResponseSchema } from "@naisys/hub-protocol";
 
-import { HubClient } from "../hub/hubClient.js";
-import { HostService } from "../services/hostService.js";
-import { PromptNotificationService } from "../utils/promptNotificationService.js";
+import type { HubClient } from "../hub/hubClient.js";
+import type { HostService } from "../services/hostService.js";
+import type { PromptNotificationService } from "../utils/promptNotificationService.js";
 
-export { UserEntry };
+export type { UserEntry };
 
 /** Loads agent configs from yaml files or receives them pushed from the hub */
 export function createUserService(

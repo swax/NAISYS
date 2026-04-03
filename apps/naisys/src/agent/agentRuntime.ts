@@ -6,19 +6,19 @@ import { createDebugCommands } from "../command/debugCommand.js";
 import { createPromptBuilder } from "../command/promptBuilder.js";
 import { createShellCommand } from "../command/shellCommand.js";
 import { createShellWrapper } from "../command/shellWrapper.js";
+import { createComputerService } from "../computer-use/computerService.js";
 import { createDesktopService } from "../computer-use/desktop.js";
 import { createGenImg } from "../features/genImg.js";
-import { createComputerService } from "../computer-use/computerService.js";
 import { createListenService } from "../features/listen.js";
 import { createLookService } from "../features/look.js";
 import { createLynxService } from "../features/lynx.js";
 import { createSessionService } from "../features/session.js";
 import { createSubagentService } from "../features/subagent.js";
 import { createWorkspacesFeature } from "../features/workspaces.js";
-import { GlobalConfig } from "../globalConfig.js";
-import { HubClient } from "../hub/hubClient.js";
-import { HubCostBuffer } from "../hub/hubCostBuffer.js";
-import { HubLogBuffer } from "../hub/hubLogBuffer.js";
+import type { GlobalConfig } from "../globalConfig.js";
+import type { HubClient } from "../hub/hubClient.js";
+import type { HubCostBuffer } from "../hub/hubCostBuffer.js";
+import type { HubLogBuffer } from "../hub/hubLogBuffer.js";
 import { createCommandTools } from "../llm/commandTool.js";
 import { createContextManager } from "../llm/contextManager.js";
 import { createCostDisplayService } from "../llm/costDisplayService.js";
@@ -29,18 +29,18 @@ import { createChatService } from "../mail/chat.js";
 import { createMailService } from "../mail/mail.js";
 import { createMailDisplayService } from "../mail/mailDisplayService.js";
 import { createAttachmentService } from "../services/attachmentService.js";
-import { HostService } from "../services/hostService.js";
+import type { HostService } from "../services/hostService.js";
 import { createLogService } from "../services/logService.js";
-import { ModelService } from "../services/modelService.js";
+import type { ModelService } from "../services/modelService.js";
 import { createRunService } from "../services/runService.js";
 import { getPlatformConfig } from "../services/shellPlatform.js";
 import { createInputMode } from "../utils/inputMode.js";
 import { createOutputService } from "../utils/output.js";
-import { PromptNotificationService } from "../utils/promptNotificationService.js";
+import type { PromptNotificationService } from "../utils/promptNotificationService.js";
 import { createAgentConfig } from "./agentConfig.js";
-import { IAgentManager } from "./agentManagerInterface.js";
+import type { IAgentManager } from "./agentManagerInterface.js";
 import { createUserDisplayService } from "./userDisplayService.js";
-import { UserService } from "./userService.js";
+import type { UserService } from "./userService.js";
 
 export async function createAgentRuntime(
   agentManager: IAgentManager,
@@ -163,7 +163,11 @@ export async function createAgentRuntime(
     output,
     modelService.getImageModel,
   );
-  const userDisplayService = createUserDisplayService(userService, inputMode, localUserId);
+  const userDisplayService = createUserDisplayService(
+    userService,
+    inputMode,
+    localUserId,
+  );
   const mailDisplayService = hubClient
     ? createMailDisplayService(hubClient, localUserId)
     : null;
@@ -314,7 +318,7 @@ export async function createAgentRuntime(
     requestShutdown: (reason: string) => {
       abortController.abort(reason);
     },
-    completeShutdown: async () => {
+    completeShutdown: () => {
       commandLoop.cleanup();
       costTracker.cleanup();
       mailService.cleanup();

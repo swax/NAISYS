@@ -4,9 +4,9 @@ import {
   NAISYS_HEARTBEAT_INTERVAL_MS,
 } from "@naisys/hub-protocol";
 
-import { IAgentManager } from "../agent/agentManagerInterface.js";
-import { UserService } from "../agent/userService.js";
-import { HubClient } from "../hub/hubClient.js";
+import type { IAgentManager } from "../agent/agentManagerInterface.js";
+import type { UserService } from "../agent/userService.js";
+import type { HubClient } from "../hub/hubClient.js";
 
 export function createHeartbeatService(
   hubClient: HubClient | undefined,

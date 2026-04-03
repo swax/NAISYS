@@ -1,8 +1,8 @@
 import { HubEvents, RotateAccessKeyRequestSchema } from "@naisys/hub-protocol";
 
 import { rotateAccessKey } from "../services/certService.js";
-import { HubServerLog } from "../services/hubServerLog.js";
-import { NaisysServer } from "../services/naisysServer.js";
+import type { HubServerLog } from "../services/hubServerLog.js";
+import type { NaisysServer } from "../services/naisysServer.js";
 
 /**
  * Handles hub access key rotation requests from the supervisor.

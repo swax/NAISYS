@@ -1,24 +1,26 @@
 import type { HateoasAction } from "@naisys/common";
-import {
+import type {
   AgentActionResult,
+  AssignAgentToHostRequest,
+  CreateHostRequest,
+  ErrorResponse,
+  HostDetailResponse,
+  HostListResponse,
+  HostNameParams,
+  UpdateHostRequest,
+} from "@naisys-supervisor/shared";
+import {
   AgentActionResultSchema,
   AgentNameParamSchema,
-  AssignAgentToHostRequest,
   AssignAgentToHostRequestSchema,
-  CreateHostRequest,
   CreateHostRequestSchema,
-  ErrorResponse,
   ErrorResponseSchema,
-  HostDetailResponse,
   HostDetailResponseSchema,
-  HostListResponse,
   HostListResponseSchema,
-  HostNameParams,
   HostNameParamsSchema,
-  UpdateHostRequest,
   UpdateHostRequestSchema,
 } from "@naisys-supervisor/shared";
-import { FastifyInstance, FastifyPluginOptions } from "fastify";
+import type { FastifyInstance, FastifyPluginOptions } from "fastify";
 
 import type { SupervisorUser } from "../auth-middleware.js";
 import { hasPermission, requirePermission } from "../auth-middleware.js";

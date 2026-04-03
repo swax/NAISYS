@@ -1,6 +1,6 @@
-import { Socket } from "socket.io";
+import type { Socket } from "socket.io";
 
-import { HubServerLog } from "./hubServerLog.js";
+import type { HubServerLog } from "./hubServerLog.js";
 
 export interface HostConnectionInfo {
   hostId: number;

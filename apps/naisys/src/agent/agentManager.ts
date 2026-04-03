@@ -7,16 +7,17 @@ import {
 } from "@naisys/hub-protocol";
 import stripAnsi from "strip-ansi";
 
-import { GlobalConfig } from "../globalConfig.js";
-import { HubClient } from "../hub/hubClient.js";
-import { HubCostBuffer } from "../hub/hubCostBuffer.js";
-import { HubLogBuffer } from "../hub/hubLogBuffer.js";
-import { HostService } from "../services/hostService.js";
-import { ModelService } from "../services/modelService.js";
+import type { GlobalConfig } from "../globalConfig.js";
+import type { HubClient } from "../hub/hubClient.js";
+import type { HubCostBuffer } from "../hub/hubCostBuffer.js";
+import type { HubLogBuffer } from "../hub/hubLogBuffer.js";
+import type { HostService } from "../services/hostService.js";
+import type { ModelService } from "../services/modelService.js";
 import { OutputColor } from "../utils/output.js";
-import { PromptNotificationService } from "../utils/promptNotificationService.js";
-import { AgentRuntime, createAgentRuntime } from "./agentRuntime.js";
-import { UserService } from "./userService.js";
+import type { PromptNotificationService } from "../utils/promptNotificationService.js";
+import type { AgentRuntime } from "./agentRuntime.js";
+import { createAgentRuntime } from "./agentRuntime.js";
+import type { UserService } from "./userService.js";
 
 /** Handles the multiplexing of multiple concurrent agents in the process */
 export class AgentManager {
@@ -140,9 +141,9 @@ export class AgentManager {
     const runPromise = agent
       .runCommandLoop()
       .catch((ex: any) => `error: ${ex}`)
-      .then(async (exitReason) => {
+      .then((exitReason) => {
         onStop?.(exitReason);
-        await this.cleanupAgent(agent);
+        this.cleanupAgent(agent);
       });
 
     this.runPromises.set(userId, runPromise);
@@ -174,7 +175,7 @@ export class AgentManager {
     }
   }
 
-  private async cleanupAgent(agent: AgentRuntime) {
+  private cleanupAgent(agent: AgentRuntime) {
     if (agent.output.isConsoleEnabled()) {
       const switchToAgent = this.runningAgents.find((a) => a !== agent);
 
@@ -189,7 +190,7 @@ export class AgentManager {
     }
 
     this.onHeartbeatNeeded?.();
-    await agent.completeShutdown();
+    agent.completeShutdown();
     this.runPromises.delete(agent.agentUserId);
   }
 

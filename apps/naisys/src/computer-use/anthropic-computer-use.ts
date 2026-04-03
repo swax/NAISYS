@@ -5,11 +5,14 @@
  * desktop action extraction from responses.
  */
 
+import type {
+  DesktopAction,
+  DesktopConfig,
+} from "../llm/vendors/vendorTypes.js";
 import {
   getTargetScaleFactor,
   scaleActionToNative,
 } from "./computerService.js";
-import { DesktopAction, DesktopConfig } from "../llm/vendors/vendorTypes.js";
 
 // --- Anthropic version config ---
 
@@ -53,12 +56,8 @@ export function prepareComputerUse(
     desktopConfig.displayWidth,
     desktopConfig.displayHeight,
   );
-  const scaledWidth = Math.floor(
-    desktopConfig.displayWidth * scaleFactor,
-  );
-  const scaledHeight = Math.floor(
-    desktopConfig.displayHeight * scaleFactor,
-  );
+  const scaledWidth = Math.floor(desktopConfig.displayWidth * scaleFactor);
+  const scaledHeight = Math.floor(desktopConfig.displayHeight * scaleFactor);
 
   const computerTool = {
     type: toolType,

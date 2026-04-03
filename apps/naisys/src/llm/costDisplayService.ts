@@ -1,12 +1,12 @@
 import stringArgv from "string-argv";
 
-import { AgentConfig } from "../agent/agentConfig.js";
+import type { AgentConfig } from "../agent/agentConfig.js";
 import { costCmd } from "../command/commandDefs.js";
-import { RegistrableCommand } from "../command/commandRegistry.js";
-import { GlobalConfig } from "../globalConfig.js";
-import { ModelService } from "../services/modelService.js";
-import { OutputService } from "../utils/output.js";
-import { CostTracker, LlmModelCosts } from "./costTracker.js";
+import type { RegistrableCommand } from "../command/commandRegistry.js";
+import type { GlobalConfig } from "../globalConfig.js";
+import type { ModelService } from "../services/modelService.js";
+import type { OutputService } from "../utils/output.js";
+import type { CostTracker, LlmModelCosts } from "./costTracker.js";
 
 export function createCostDisplayService(
   { globalConfig }: GlobalConfig,

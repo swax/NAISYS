@@ -10,13 +10,13 @@ import {
   MailUnreadRequestSchema,
 } from "@naisys/hub-protocol";
 
-import { HubServerLog } from "../services/hubServerLog.js";
-import { NaisysServer } from "../services/naisysServer.js";
-import { HubAgentService } from "./hubAgentService.js";
+import type { HubServerLog } from "../services/hubServerLog.js";
+import type { NaisysServer } from "../services/naisysServer.js";
+import type { HubAgentService } from "./hubAgentService.js";
 import type { HubConfigService } from "./hubConfigService.js";
 import type { HubCostService } from "./hubCostService.js";
-import { HubHeartbeatService } from "./hubHeartbeatService.js";
-import { HubSendMailService } from "./hubSendMailService.js";
+import type { HubHeartbeatService } from "./hubHeartbeatService.js";
+import type { HubSendMailService } from "./hubSendMailService.js";
 
 const MAIL_AUTOSTART_CHECK_INTERVAL_MS = 10_000;
 

@@ -5,23 +5,22 @@ import os from "os";
 import path from "path";
 import stringArgv from "string-argv";
 
-import { AgentConfig } from "../agent/agentConfig.js";
+import type { AgentConfig } from "../agent/agentConfig.js";
 import { desktopCmd } from "../command/commandDefs.js";
-import { RegistrableCommand } from "../command/commandRegistry.js";
-import { ContextManager } from "../llm/contextManager.js";
+import type { RegistrableCommand } from "../command/commandRegistry.js";
+import type { ContextManager } from "../llm/contextManager.js";
 import { ContentSource } from "../llm/llmDtos.js";
-import { DesktopAction } from "../llm/vendors/vendorTypes.js";
-import { ModelService } from "../services/modelService.js";
+import type { DesktopAction } from "../llm/vendors/vendorTypes.js";
+import type { ModelService } from "../services/modelService.js";
+import type { OutputService } from "../utils/output.js";
+import { getSharedReadline } from "../utils/sharedReadline.js";
+import type { ComputerService, CoordScale } from "./computerService.js";
 import {
-  CoordScale,
-  ComputerService,
   checkActionBounds,
   formatDesktopAction,
   formatDesktopActions,
   getTargetScaleFactor,
 } from "./computerService.js";
-import { OutputService } from "../utils/output.js";
-import { getSharedReadline } from "../utils/sharedReadline.js";
 
 export function createDesktopService(
   computerService: ComputerService,
@@ -31,7 +30,9 @@ export function createDesktopService(
   modelService: ModelService,
 ) {
   // Pre-compute desktop scaling info at init time
-  const shellModel = modelService.getLlmModel(agentConfig.agentConfig().shellModel);
+  const shellModel = modelService.getLlmModel(
+    agentConfig.agentConfig().shellModel,
+  );
   const desktopConfig =
     agentConfig.agentConfig().controlDesktop && shellModel.supportsComputerUse
       ? computerService.getConfig()
@@ -61,7 +62,12 @@ export function createDesktopService(
     }
 
     const baseDir = process.env.NAISYS_FOLDER || os.tmpdir();
-    const outDir = path.join(baseDir, "home", agentConfig.agentConfig().username, "screenshots");
+    const outDir = path.join(
+      baseDir,
+      "home",
+      agentConfig.agentConfig().username,
+      "screenshots",
+    );
     fs.mkdirSync(outDir, { recursive: true });
 
     const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
@@ -73,10 +79,7 @@ export function createDesktopService(
 
     // Save scaled screenshot (same resolution the LLM sees)
     const scaled = await computerService.captureScaledScreenshot();
-    const scaledPath = path.join(
-      outDir,
-      `screenshot-${timestamp}-scaled.png`,
-    );
+    const scaledPath = path.join(outDir, `screenshot-${timestamp}-scaled.png`);
     fs.copyFileSync(scaled.filepath, scaledPath);
 
     return `Full: ${fullPath}\nScaled: ${scaledPath}`;
@@ -148,7 +151,8 @@ export function createDesktopService(
         try {
           await computerService.executeAction(action.input);
 
-          const { base64, filepath } = await computerService.captureScaledScreenshot();
+          const { base64, filepath } =
+            await computerService.captureScaledScreenshot();
           contextManager.appendDesktopResult(
             action.id,
             base64,
@@ -224,7 +228,11 @@ export function createDesktopService(
 
     if (!desktopConfig) return;
 
-    const { displayWidth: nativeWidth, displayHeight: nativeHeight, desktopPlatform } = desktopConfig;
+    const {
+      displayWidth: nativeWidth,
+      displayHeight: nativeHeight,
+      desktopPlatform,
+    } = desktopConfig;
     const nativeMP = ((nativeWidth * nativeHeight) / 1_000_000).toFixed(2);
     const scaledMP = ((scaledWidth! * scaledHeight!) / 1_000_000).toFixed(2);
 

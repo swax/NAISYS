@@ -2,23 +2,20 @@ import { SUPER_ADMIN_USERNAME } from "@naisys/common";
 import { spawnSync } from "child_process";
 import { fileURLToPath } from "url";
 
-import { IAgentManager } from "../agent/agentManagerInterface.js";
-import { GlobalConfig } from "../globalConfig.js";
-import { ContextManager } from "../llm/contextManager.js";
+import type { IAgentManager } from "../agent/agentManagerInterface.js";
+import type { GlobalConfig } from "../globalConfig.js";
+import type { ContextManager } from "../llm/contextManager.js";
 import type { LlmRole } from "../llm/llmDtos.js";
-import { InputModeService } from "../utils/inputMode.js";
-import { OutputService } from "../utils/output.js";
+import type { InputModeService } from "../utils/inputMode.js";
+import type { OutputService } from "../utils/output.js";
 import {
   contextCmd,
   exitCmd,
   superadminPasswordCmd,
   talkCmd,
 } from "./commandDefs.js";
-import {
-  CommandResponse,
-  NextCommandAction,
-  RegistrableCommand,
-} from "./commandRegistry.js";
+import type { CommandResponse, RegistrableCommand } from "./commandRegistry.js";
+import { NextCommandAction } from "./commandRegistry.js";
 
 export function createDebugCommands(
   globalConfig: GlobalConfig,

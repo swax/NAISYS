@@ -21,7 +21,8 @@ import {
   MailReadPushSchema,
   SessionPushSchema,
 } from "@naisys/hub-protocol";
-import { io, Socket } from "socket.io-client";
+import type { Socket } from "socket.io-client";
+import { io } from "socket.io-client";
 
 import { getLogger } from "../logger.js";
 import {

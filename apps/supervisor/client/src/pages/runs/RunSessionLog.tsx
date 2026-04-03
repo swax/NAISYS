@@ -20,7 +20,7 @@ import { useParams } from "react-router-dom";
 
 import { useAgentDataContext } from "../../contexts/AgentDataContext";
 import { useContextLog } from "../../hooks/useContextLog";
-import { RunSession } from "../../types/runSession";
+import type { RunSession } from "../../types/runSession";
 import { GroupedLogComponent, groupPromptEntries } from "./LogEntries";
 
 export const RunSessionLog: React.FC<{

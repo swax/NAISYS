@@ -10,15 +10,13 @@ import type {
   HubSupervisorPushEvents,
   HubTriggerEventName,
 } from "@naisys/hub-protocol";
-import { Namespace } from "socket.io";
-import { ZodSchema } from "zod";
+import type { Namespace } from "socket.io";
+import type { ZodSchema } from "zod";
 
-import { HostRegistrar } from "./hostRegistrar.js";
-import { HubServerLog } from "./hubServerLog.js";
-import {
-  createNaisysConnection,
-  NaisysConnection,
-} from "./naisysConnection.js";
+import type { HostRegistrar } from "./hostRegistrar.js";
+import type { HubServerLog } from "./hubServerLog.js";
+import type { NaisysConnection } from "./naisysConnection.js";
+import { createNaisysConnection } from "./naisysConnection.js";
 
 type EventHandler = (hostId: number, ...args: any[]) => void;
 

@@ -24,10 +24,18 @@ let backingScaleFactor: number | undefined;
 function getBackingScaleFactor(): number {
   if (backingScaleFactor !== undefined) return backingScaleFactor;
   try {
-    const result = execFileSync("osascript", [
-      "-l", "JavaScript",
-      "-e", "ObjC.import('AppKit'); $.NSScreen.mainScreen.backingScaleFactor",
-    ], { stdio: "pipe" }).toString().trim();
+    const result = execFileSync(
+      "osascript",
+      [
+        "-l",
+        "JavaScript",
+        "-e",
+        "ObjC.import('AppKit'); $.NSScreen.mainScreen.backingScaleFactor",
+      ],
+      { stdio: "pipe" },
+    )
+      .toString()
+      .trim();
     backingScaleFactor = parseFloat(result) || 1;
   } catch {
     backingScaleFactor = 1;
@@ -88,12 +96,14 @@ export function mouseClick(
   if (button === "middle") {
     // cliclick doesn't support middle-click; use CoreGraphics events
     // kCGEventOtherMouseDown=25, kCGEventOtherMouseUp=26, button 2=middle, kCGHIDEventTap=0
-    jxa(`
+    jxa(
+      `
 ObjC.import('CoreGraphics');
 var p = {x: ${lx}, y: ${ly}};
 $.CGEventPost(0, $.CGEventCreateMouseEvent(null, 25, p, 2));
 $.CGEventPost(0, $.CGEventCreateMouseEvent(null, 26, p, 2));
-    `.trim());
+    `.trim(),
+    );
     return;
   }
   const cmd = button === "right" ? "rc" : "c";
@@ -131,8 +141,17 @@ export function typeText(text: string) {
 // --- Key mapping ---
 
 const MODIFIERS = new Set([
-  "ctrl", "control", "alt", "option", "shift",
-  "super", "win", "cmd", "command", "meta", "fn",
+  "ctrl",
+  "control",
+  "alt",
+  "option",
+  "shift",
+  "super",
+  "win",
+  "cmd",
+  "command",
+  "meta",
+  "fn",
 ]);
 
 /** Map a modifier name to cliclick's modifier name */
@@ -228,15 +247,19 @@ export function mouseScroll(
   // kCGScrollEventUnitLine=0, kCGHIDEventTap=0
   if (direction === "left" || direction === "right") {
     const hDelta = direction === "left" ? amount : -amount;
-    jxa(`
+    jxa(
+      `
 ObjC.import('CoreGraphics');
 $.CGEventPost(0, $.CGEventCreateScrollWheelEvent(null, 0, 2, 0, ${hDelta}));
-    `.trim());
+    `.trim(),
+    );
   } else {
     const vDelta = direction === "up" ? amount : -amount;
-    jxa(`
+    jxa(
+      `
 ObjC.import('CoreGraphics');
 $.CGEventPost(0, $.CGEventCreateScrollWheelEvent(null, 0, 1, ${vDelta}));
-    `.trim());
+    `.trim(),
+    );
   }
 }

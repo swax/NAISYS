@@ -5,8 +5,8 @@ import {
   SessionIncrementRequestSchema,
 } from "@naisys/hub-protocol";
 
-import { HubServerLog } from "../services/hubServerLog.js";
-import { NaisysServer } from "../services/naisysServer.js";
+import type { HubServerLog } from "../services/hubServerLog.js";
+import type { NaisysServer } from "../services/naisysServer.js";
 
 /** Handles session_create and session_increment requests from NAISYS instances */
 export function createHubRunService(

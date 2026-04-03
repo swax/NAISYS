@@ -16,10 +16,8 @@ import {
   hasAction,
   type HateoasAction,
 } from "@naisys/common";
-import {
-  AgentDetailResponse,
-  type ConfigRevision,
-} from "@naisys-supervisor/shared";
+import type { AgentDetailResponse } from "@naisys-supervisor/shared";
+import { type ConfigRevision } from "@naisys-supervisor/shared";
 import {
   IconArchive,
   IconArchiveOff,

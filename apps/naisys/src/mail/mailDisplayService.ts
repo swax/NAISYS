@@ -2,7 +2,7 @@ import { formatFileSize } from "@naisys/common";
 import { HubEvents } from "@naisys/hub-protocol";
 import table from "text-table";
 
-import { HubClient } from "../hub/hubClient.js";
+import type { HubClient } from "../hub/hubClient.js";
 
 /** Content carried with mail delivery */
 export interface MailContent {

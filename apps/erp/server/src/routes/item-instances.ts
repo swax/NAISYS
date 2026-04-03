@@ -3,8 +3,8 @@ import {
   CreateItemInstanceSchema,
   DeleteSetMutateResponseSchema,
   ErrorResponseSchema,
-  FieldValueMutateResponseSchema,
   fieldTypeString,
+  FieldValueMutateResponseSchema,
   getValueFormatHint,
   ItemInstanceListQuerySchema,
   ItemInstanceListResponseSchema,
@@ -14,7 +14,7 @@ import {
   UpdateFieldValueSchema,
   UpdateItemInstanceSchema,
 } from "@naisys-erp/shared";
-import { FastifyInstance } from "fastify";
+import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod/v4";
 
@@ -177,10 +177,7 @@ function buildFieldValues(inst: ItemInstanceWithRelations) {
       const stored = storedFieldValues.find(
         (fv) => fv.fieldId === field.id && fv.setIndex === si,
       );
-      const value = deserializeFieldValue(
-        stored?.value ?? "",
-        field.isArray,
-      );
+      const value = deserializeFieldValue(stored?.value ?? "", field.isArray);
       const attachments =
         field.type === "attachment" && stored
           ? stored.fieldAttachments.map((sfa) => sfa.attachment)
@@ -458,7 +455,12 @@ export default function itemInstanceRoutes(fastify: FastifyInstance) {
     const field = inst.item.fieldSet?.fields[0];
     if (!field) return notFound(reply, `Field not found`);
 
-    const shapeErr = checkFieldValueShape(field.label, field.type, field.isArray, value);
+    const shapeErr = checkFieldValueShape(
+      field.label,
+      field.type,
+      field.isArray,
+      value,
+    );
     if (shapeErr) return unprocessable(reply, shapeErr);
 
     const fieldRecordId = await ensureItemInstanceFieldRecord(

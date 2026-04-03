@@ -4,18 +4,19 @@ import {
   BatchUpdateFieldValuesSchema,
   DeleteSetMutateResponseSchema,
   ErrorResponseSchema,
-  FieldValueMutateResponseSchema,
   fieldTypeString,
+  FieldValueMutateResponseSchema,
   getValueFormatHint,
   UpdateFieldValueSchema,
 } from "@naisys-erp/shared";
-import { FastifyInstance } from "fastify";
+import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod/v4";
 
 import { requirePermission } from "../auth-middleware.js";
 import erpDb from "../erpDb.js";
 import { conflict, notFound, unprocessable } from "../error-handler.js";
+import { API_PREFIX } from "../hateoas.js";
 import {
   checkOpRunInProgress,
   checkOrderRunStarted,
@@ -37,7 +38,6 @@ import {
 import { isUserClockedIn } from "../services/labor-ticket-service.js";
 import { getStepRunWithFields } from "../services/step-run-service.js";
 import { computeStepRunHateoas, stepRunResource } from "./step-runs.js";
-import { API_PREFIX } from "../hateoas.js";
 
 const FieldSeqNoParamsSchema = z.object({
   orderKey: z.string(),
@@ -117,7 +117,12 @@ export default function stepRunFieldRoutes(fastify: FastifyInstance) {
       return notFound(reply, `Step field not found`);
     }
 
-    const shapeErr = checkFieldValueShape(field.label, field.type, field.isArray, value);
+    const shapeErr = checkFieldValueShape(
+      field.label,
+      field.type,
+      field.isArray,
+      value,
+    );
     if (shapeErr) return unprocessable(reply, shapeErr);
 
     // Reject setIndex > 0 on non-multiSet steps
@@ -172,8 +177,12 @@ export default function stepRunFieldRoutes(fastify: FastifyInstance) {
     // Check ALL fields in the fieldSet (not just the filtered single field)
     // so that _actionTemplates include the right hints
     const [attachmentCount, arrayCount] = await Promise.all([
-      erpDb.field.count({ where: { fieldSetId: field.fieldSetId, type: "attachment" } }),
-      erpDb.field.count({ where: { fieldSetId: field.fieldSetId, isArray: true } }),
+      erpDb.field.count({
+        where: { fieldSetId: field.fieldSetId, type: "attachment" },
+      }),
+      erpDb.field.count({
+        where: { fieldSetId: field.fieldSetId, isArray: true },
+      }),
     ]);
 
     const hateoas = await computeStepRunHateoas(
@@ -324,7 +333,12 @@ export default function stepRunFieldRoutes(fastify: FastifyInstance) {
           message: `Field "${def.label}" is an attachment field. Attachment values are managed by file uploads, not batch updates.`,
         });
       }
-      const shapeErr = checkFieldValueShape(def.label, def.type, def.isArray, item.value);
+      const shapeErr = checkFieldValueShape(
+        def.label,
+        def.type,
+        def.isArray,
+        item.value,
+      );
       if (shapeErr) return unprocessable(reply, shapeErr);
     }
 
@@ -436,10 +450,7 @@ export default function stepRunFieldRoutes(fastify: FastifyInstance) {
         const stored = storedFieldValues.find(
           (fv) => fv.fieldId === field.id && fv.setIndex === si,
         );
-        const value = deserializeFieldValue(
-          stored?.value ?? "",
-          field.isArray,
-        );
+        const value = deserializeFieldValue(stored?.value ?? "", field.isArray);
         const setPath = isMultiSet
           ? `/sets/${si}/fields/${field.seqNo}`
           : `/fields/${field.seqNo}`;
@@ -628,7 +639,9 @@ export default function stepRunFieldRoutes(fastify: FastifyInstance) {
       const setCount = Math.max(1, maxSetIndex + 1);
 
       const delFields = existing.step.fieldSet?.fields ?? [];
-      const hasAttachmentFields = delFields.some((f) => f.type === "attachment");
+      const hasAttachmentFields = delFields.some(
+        (f) => f.type === "attachment",
+      );
       const hasArrayFields = delFields.some((f) => f.isArray);
 
       const hateoas = await computeStepRunHateoas(

@@ -12,7 +12,7 @@ import { IconFileText } from "@tabler/icons-react";
 import React from "react";
 import { Link } from "react-router-dom";
 
-import { RunSession } from "../../types/runSession";
+import type { RunSession } from "../../types/runSession";
 import { RunsCostChart } from "./RunsCostChart";
 
 interface RunsSidebarProps {

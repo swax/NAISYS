@@ -1,15 +1,16 @@
 import chalk from "chalk";
 
-import { AgentConfig } from "../agent/agentConfig.js";
-import { GlobalConfig } from "../globalConfig.js";
-import { ContextManager } from "../llm/contextManager.js";
-import { CostTracker } from "../llm/costTracker.js";
-import { isElevated, PlatformConfig } from "../services/shellPlatform.js";
-import { InputModeService } from "../utils/inputMode.js";
-import { OutputService } from "../utils/output.js";
-import { PromptNotificationService } from "../utils/promptNotificationService.js";
+import type { AgentConfig } from "../agent/agentConfig.js";
+import type { GlobalConfig } from "../globalConfig.js";
+import type { ContextManager } from "../llm/contextManager.js";
+import type { CostTracker } from "../llm/costTracker.js";
+import type { PlatformConfig } from "../services/shellPlatform.js";
+import { isElevated } from "../services/shellPlatform.js";
+import type { InputModeService } from "../utils/inputMode.js";
+import type { OutputService } from "../utils/output.js";
+import type { PromptNotificationService } from "../utils/promptNotificationService.js";
 import { getSharedReadline } from "../utils/sharedReadline.js";
-import { ShellWrapper } from "./shellWrapper.js";
+import type { ShellWrapper } from "./shellWrapper.js";
 
 export function createPromptBuilder(
   { globalConfig }: GlobalConfig,

@@ -1,12 +1,12 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { MessageParam } from "@anthropic-ai/sdk/resources";
+import type { MessageParam } from "@anthropic-ai/sdk/resources";
 
-import { ContentBlock, LlmMessage } from "../llmDtos.js";
 import {
   extractDesktopActions,
   prepareComputerUse,
 } from "../../computer-use/anthropic-computer-use.js";
-import { QueryResult, QuerySources, VendorDeps } from "./vendorTypes.js";
+import type { ContentBlock, LlmMessage } from "../llmDtos.js";
+import type { QueryResult, QuerySources, VendorDeps } from "./vendorTypes.js";
 
 const clientCache = new Map<string, Anthropic>();
 
@@ -100,10 +100,7 @@ export async function sendWithAnthropic(
   let desktopBetaFlag = "";
 
   if (desktopConfig) {
-    const setup = prepareComputerUse(
-      desktopConfig,
-      model.versionName,
-    );
+    const setup = prepareComputerUse(desktopConfig, model.versionName);
     desktopScaleFactor = setup.scaleFactor;
     desktopBetaFlag = setup.betaFlag;
 

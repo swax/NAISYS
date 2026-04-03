@@ -1,5 +1,5 @@
+import type { AgentConfigFile } from "@naisys/common";
 import {
-  AgentConfigFile,
   AgentConfigFileSchema,
   assertUrlSafeKey,
   buildDefaultAgentConfig,

@@ -1,5 +1,6 @@
 import xterm from "@xterm/headless";
-import { ChildProcessWithoutNullStreams, spawn } from "child_process";
+import type { ChildProcessWithoutNullStreams } from "child_process";
+import { spawn } from "child_process";
 import crypto from "crypto";
 import * as fs from "fs";
 import os from "os";
@@ -7,12 +8,12 @@ import path from "path";
 import stripAnsi from "strip-ansi";
 import treeKill from "tree-kill";
 
-import { AgentConfig } from "../agent/agentConfig.js";
-import { UserService } from "../agent/userService.js";
-import { GlobalConfig } from "../globalConfig.js";
+import type { AgentConfig } from "../agent/agentConfig.js";
+import type { UserService } from "../agent/userService.js";
+import type { GlobalConfig } from "../globalConfig.js";
 import * as pathService from "../services/pathService.js";
 import { getPlatformConfig } from "../services/shellPlatform.js";
-import { OutputService } from "../utils/output.js";
+import type { OutputService } from "../utils/output.js";
 
 type ShellEvent = "stdout" | "stderr" | "exit";
 

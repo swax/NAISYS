@@ -1,13 +1,13 @@
 import type { HubDatabaseService } from "@naisys/hub-database";
+import type { MailReceivedPush } from "@naisys/hub-protocol";
 import {
   HubEvents,
   type MailPush,
-  MailReceivedPush,
   type MessageKind,
 } from "@naisys/hub-protocol";
 
-import { NaisysServer } from "../services/naisysServer.js";
-import { HubHeartbeatService } from "./hubHeartbeatService.js";
+import type { NaisysServer } from "../services/naisysServer.js";
+import type { HubHeartbeatService } from "./hubHeartbeatService.js";
 
 /** Pure send-mail service with no auto-start logic, breaking the circular dependency */
 export function createHubSendMailService(

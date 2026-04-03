@@ -5,9 +5,7 @@ import {
   CreateAgentUserSchema,
   CreateUserSchema,
   type ErpPermission,
-  MutateResponseSchema,
   UpdateUserSchema,
-  UserCreateResponseSchema,
 } from "@naisys-erp/shared";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
@@ -25,18 +23,18 @@ import {
   schemaLink,
   selfLink,
 } from "../hateoas.js";
+import { mutationResult } from "../route-helpers.js";
+import type { getUserById } from "../services/user-service.js";
 import {
   createUserForAgent,
   createUserWithPassword,
   deleteUser,
   getUserApiKey,
-  getUserById,
   getUserByUsername,
   getUserByUuid,
   listUsers,
   updateUser,
 } from "../services/user-service.js";
-import { mutationResult } from "../route-helpers.js";
 import { isSupervisorAuth } from "../supervisorAuth.js";
 
 function userItemLinks(username: string): HateoasLink[] {

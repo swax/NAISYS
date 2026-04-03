@@ -18,7 +18,7 @@ import { CollapsibleSidebar } from "../../components/CollapsibleSidebar";
 import { SIDEBAR_WIDTH } from "../../constants";
 import { useAgentDataContext } from "../../contexts/AgentDataContext";
 import { useRunsData } from "../../hooks/useRunsData";
-import { RunSession } from "../../types/runSession";
+import type { RunSession } from "../../types/runSession";
 import { RunSessionLog } from "./RunSessionLog";
 import {
   formatCost,

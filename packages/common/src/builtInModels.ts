@@ -151,7 +151,7 @@ export const builtInLlmModels: LlmModel[] = [
     supportsHearing: true,
     supportsComputerUse: true,
   },
-    {
+  {
     key: "gemini2pro",
     label: "Gemini 2 Pro",
     versionName: "gemini-2.5-computer-use-preview-10-2025",
@@ -167,7 +167,7 @@ export const builtInLlmModels: LlmModel[] = [
     supportsHearing: true,
     supportsComputerUse: true,
   },
-  
+
   // ── Anthropic Models ─────────────────────────────────────────────────
   // https://platform.claude.com/docs/en/about-claude/pricing
   // Cache: 5m write = 1.25× input, read = 0.1× input

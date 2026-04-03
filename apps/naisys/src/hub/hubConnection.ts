@@ -3,10 +3,11 @@ import {
   resolveHubAccessKey,
   verifyHubCertificate,
 } from "@naisys/common-node";
-import { io, Socket } from "socket.io-client";
+import type { Socket } from "socket.io-client";
+import { io } from "socket.io-client";
 
-import { HubClientConfig } from "./hubClientConfig.js";
-import { HubClientLog } from "./hubClientLog.js";
+import type { HubClientConfig } from "./hubClientConfig.js";
+import type { HubClientLog } from "./hubClientLog.js";
 
 /** Generic raise event function type */
 export type RaiseEventFn = (event: string, ...args: unknown[]) => void;

@@ -11,7 +11,8 @@ import {
   TextInput,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
-import { AgentConfigFile, AgentConfigFileSchema } from "@naisys/common";
+import type { AgentConfigFile } from "@naisys/common";
+import { AgentConfigFileSchema } from "@naisys/common";
 import { zodResolver } from "@naisys/common-browser";
 import { IconCheck, IconX } from "@tabler/icons-react";
 import { useCallback, useEffect, useMemo, useState } from "react";

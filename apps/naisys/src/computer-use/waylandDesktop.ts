@@ -33,14 +33,23 @@ export function captureScreenshot(tmpFile: string): void {
 
   // GNOME Shell D-Bus Screenshot interface
   try {
-    execFileSync("gdbus", [
-      "call",
-      "--session",
-      "--dest", "org.gnome.Shell.Screenshot",
-      "--object-path", "/org/gnome/Shell/Screenshot",
-      "--method", "org.gnome.Shell.Screenshot.Screenshot",
-      "true", "false", tmpFile,
-    ], { stdio: "pipe" });
+    execFileSync(
+      "gdbus",
+      [
+        "call",
+        "--session",
+        "--dest",
+        "org.gnome.Shell.Screenshot",
+        "--object-path",
+        "/org/gnome/Shell/Screenshot",
+        "--method",
+        "org.gnome.Shell.Screenshot.Screenshot",
+        "true",
+        "false",
+        tmpFile,
+      ],
+      { stdio: "pipe" },
+    );
     return;
   } catch {
     // not available or access denied
@@ -78,7 +87,9 @@ function ydotool(args: string[]) {
     execFileSync("ydotool", args, { stdio: "pipe" });
   } catch (e: any) {
     if (e?.code === "ENOENT") {
-      throw new Error("ydotool is not installed. Install it with: sudo apt install ydotool");
+      throw new Error(
+        "ydotool is not installed. Install it with: sudo apt install ydotool",
+      );
     }
     throw e;
   }

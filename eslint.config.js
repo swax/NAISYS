@@ -40,6 +40,7 @@ export default [
     rules: {
       "@typescript-eslint/await-thenable": "error",
       "@typescript-eslint/require-await": "error",
+      "@typescript-eslint/consistent-type-imports": "error",
       "@typescript-eslint/no-floating-promises": "error",
       "simple-import-sort/imports": "error",
       "simple-import-sort/exports": "error",

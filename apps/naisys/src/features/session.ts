@@ -1,19 +1,19 @@
 import stringArgv from "string-argv";
 
-import { AgentConfig } from "../agent/agentConfig.js";
-import { UserService } from "../agent/userService.js";
+import type { AgentConfig } from "../agent/agentConfig.js";
+import type { UserService } from "../agent/userService.js";
 import { sessionCmd } from "../command/commandDefs.js";
-import {
+import type {
   CommandResponse,
-  NextCommandAction,
   RegistrableCommand,
 } from "../command/commandRegistry.js";
-import { ShellCommand } from "../command/shellCommand.js";
-import { GlobalConfig } from "../globalConfig.js";
-import { ContextManager } from "../llm/contextManager.js";
-import { LLMService } from "../llm/llmService.js";
-import { MailService } from "../mail/mail.js";
-import { OutputService } from "../utils/output.js";
+import { NextCommandAction } from "../command/commandRegistry.js";
+import type { ShellCommand } from "../command/shellCommand.js";
+import type { GlobalConfig } from "../globalConfig.js";
+import type { ContextManager } from "../llm/contextManager.js";
+import type { LLMService } from "../llm/llmService.js";
+import type { MailService } from "../mail/mail.js";
+import type { OutputService } from "../utils/output.js";
 import { getTokenCount, trimChars } from "../utils/utilities.js";
 
 export function createSessionService(

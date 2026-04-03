@@ -2,12 +2,12 @@ import { appendFileSync } from "fs";
 import { join } from "path";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
+import type { NaisysTestProcess } from "./e2eTestHelper.js";
 import {
   cleanupTestDir,
   createAgentYaml,
   createEnvFile,
   getTestDir,
-  NaisysTestProcess,
   setupTestDir,
   spawnNaisys,
 } from "./e2eTestHelper.js";

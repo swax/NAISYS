@@ -1,24 +1,26 @@
-import {
+import type {
   AgentActionResult,
-  AgentActionResultSchema,
   AgentStartRequest,
-  AgentStartRequestSchema,
   AgentStartResult,
-  AgentStartResultSchema,
   AgentStopRequest,
-  AgentStopRequestSchema,
   AgentStopResult,
-  AgentStopResultSchema,
   AgentToggleRequest,
-  AgentToggleRequestSchema,
   AgentUsernameParams,
-  AgentUsernameParamsSchema,
   ErrorResponse,
-  ErrorResponseSchema,
   SetLeadAgentRequest,
+} from "@naisys-supervisor/shared";
+import {
+  AgentActionResultSchema,
+  AgentStartRequestSchema,
+  AgentStartResultSchema,
+  AgentStopRequestSchema,
+  AgentStopResultSchema,
+  AgentToggleRequestSchema,
+  AgentUsernameParamsSchema,
+  ErrorResponseSchema,
   SetLeadAgentRequestSchema,
 } from "@naisys-supervisor/shared";
-import { FastifyInstance, FastifyPluginOptions } from "fastify";
+import type { FastifyInstance, FastifyPluginOptions } from "fastify";
 
 import { requirePermission } from "../auth-middleware.js";
 import { hubDb } from "../database/hubDb.js";

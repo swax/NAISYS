@@ -279,8 +279,6 @@ export const FieldDefList: React.FC<FieldListProps> = ({
         </div>
       ))}
 
-
-
       {addingField && (
         <form onSubmit={createForm.onSubmit(handleCreate)}>
           <Stack gap="xs">

@@ -10,7 +10,7 @@ import {
   SeqNoCreateResponseSchema,
   UpdateFieldSchema,
 } from "@naisys-erp/shared";
-import { FastifyInstance } from "fastify";
+import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod/v4";
 
@@ -422,13 +422,7 @@ export default function stepFieldRoutes(fastify: FastifyInstance) {
     preHandler: requirePermission("order_planner"),
     handler: async (request, reply) => {
       const { orderKey, revNo, seqNo, stepSeqNo, fieldSeqNo } = request.params;
-      const {
-        label,
-        type,
-        isArray,
-        required,
-        seqNo: newSeqNo,
-      } = request.body;
+      const { label, type, isArray, required, seqNo: newSeqNo } = request.body;
       const userId = request.erpUser!.id;
 
       const resolved = await resolveStep(orderKey, revNo, seqNo, stepSeqNo);

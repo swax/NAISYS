@@ -1,8 +1,9 @@
-import { type HubDatabaseService, PrismaClient } from "@naisys/hub-database";
-import { MailMessageData } from "@naisys/hub-protocol";
+import type { PrismaClient } from "@naisys/hub-database";
+import { type HubDatabaseService } from "@naisys/hub-database";
+import type { MailMessageData } from "@naisys/hub-protocol";
 import { vi } from "vitest";
 
-import { AgentConfig } from "../agent/agentConfig.js";
+import type { AgentConfig } from "../agent/agentConfig.js";
 import {
   agentConfigCmd,
   chatCmd,
@@ -13,24 +14,24 @@ import {
   subagentCmd,
   workspaceCmd,
 } from "../command/commandDefs.js";
-import { CommandProtection } from "../command/commandProtection.js";
-import { PromptBuilder } from "../command/promptBuilder.js";
-import { ShellCommand } from "../command/shellCommand.js";
-import { ShellWrapper } from "../command/shellWrapper.js";
-import { GenImg } from "../features/genImg.js";
-import { LynxService } from "../features/lynx.js";
-import { SessionService } from "../features/session.js";
-import { SubagentService } from "../features/subagent.js";
-import { WorkspacesFeature } from "../features/workspaces.js";
-import { GlobalConfig } from "../globalConfig.js";
-import { ContextManager } from "../llm/contextManager.js";
-import { CostTracker } from "../llm/costTracker.js";
-import { LlmMessage } from "../llm/llmDtos.js";
-import { ChatService } from "../mail/chat.js";
-import { MailService } from "../mail/mail.js";
-import { LogService } from "../services/logService.js";
-import { RunService } from "../services/runService.js";
-import { OutputService } from "../utils/output.js";
+import type { CommandProtection } from "../command/commandProtection.js";
+import type { PromptBuilder } from "../command/promptBuilder.js";
+import type { ShellCommand } from "../command/shellCommand.js";
+import type { ShellWrapper } from "../command/shellWrapper.js";
+import type { GenImg } from "../features/genImg.js";
+import type { LynxService } from "../features/lynx.js";
+import type { SessionService } from "../features/session.js";
+import type { SubagentService } from "../features/subagent.js";
+import type { WorkspacesFeature } from "../features/workspaces.js";
+import type { GlobalConfig } from "../globalConfig.js";
+import type { ContextManager } from "../llm/contextManager.js";
+import type { CostTracker } from "../llm/costTracker.js";
+import type { LlmMessage } from "../llm/llmDtos.js";
+import type { ChatService } from "../mail/chat.js";
+import type { MailService } from "../mail/mail.js";
+import type { LogService } from "../services/logService.js";
+import type { RunService } from "../services/runService.js";
+import type { OutputService } from "../utils/output.js";
 
 export function createMockDatabaseService(): HubDatabaseService {
   return {

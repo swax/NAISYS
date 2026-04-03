@@ -1,4 +1,9 @@
-import { FastifyInstance, FastifyPluginOptions, FastifyReply, FastifyRequest } from "fastify";
+import type {
+  FastifyInstance,
+  FastifyPluginOptions,
+  FastifyReply,
+  FastifyRequest,
+} from "fastify";
 
 import { proxyDownloadFromHub } from "../services/attachmentProxyService.js";
 

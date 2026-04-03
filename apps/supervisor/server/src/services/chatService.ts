@@ -1,4 +1,4 @@
-import { ChatConversation, ChatMessage } from "@naisys-supervisor/shared";
+import type { ChatConversation, ChatMessage } from "@naisys-supervisor/shared";
 
 import { hubDb } from "../database/hubDb.js";
 import { getLogger } from "../logger.js";
@@ -205,9 +205,7 @@ export async function getMessages(
 /**
  * Archive all chat messages where the user is a recipient
  */
-export async function archiveAllChatMessages(
-  userId: number,
-): Promise<number> {
+export async function archiveAllChatMessages(userId: number): Promise<number> {
   const result = await hubDb.mail_recipients.updateMany({
     where: {
       user_id: userId,

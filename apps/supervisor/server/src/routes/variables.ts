@@ -1,19 +1,21 @@
 import type { HateoasAction } from "@naisys/common";
-import {
+import type {
   DeleteVariableParams,
-  DeleteVariableParamsSchema,
   DeleteVariableResponse,
-  DeleteVariableResponseSchema,
   ErrorResponse,
-  ErrorResponseSchema,
   SaveVariableRequest,
-  SaveVariableRequestSchema,
   SaveVariableResponse,
-  SaveVariableResponseSchema,
   VariablesResponse,
+} from "@naisys-supervisor/shared";
+import {
+  DeleteVariableParamsSchema,
+  DeleteVariableResponseSchema,
+  ErrorResponseSchema,
+  SaveVariableRequestSchema,
+  SaveVariableResponseSchema,
   VariablesResponseSchema,
 } from "@naisys-supervisor/shared";
-import { FastifyInstance, FastifyPluginOptions } from "fastify";
+import type { FastifyInstance, FastifyPluginOptions } from "fastify";
 
 import { hasPermission, requirePermission } from "../auth-middleware.js";
 import { API_PREFIX } from "../hateoas.js";

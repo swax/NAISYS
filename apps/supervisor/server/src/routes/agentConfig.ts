@@ -1,26 +1,28 @@
 import type { AgentConfigFile, ModelDbRow } from "@naisys/common";
 import { AgentConfigFileSchema } from "@naisys/common";
-import {
+import type {
   AgentUsernameParams,
-  AgentUsernameParamsSchema,
   ConfigRevisionListResponse,
-  ConfigRevisionListResponseSchema,
   ErrorResponse,
-  ErrorResponseSchema,
   ExportAgentConfigResponse,
-  ExportAgentConfigResponseSchema,
   GetAgentConfigResponse,
-  GetAgentConfigResponseSchema,
   ImportAgentConfigRequest,
-  ImportAgentConfigRequestSchema,
   ImportAgentConfigResponse,
-  ImportAgentConfigResponseSchema,
   UpdateAgentConfigRequest,
-  UpdateAgentConfigRequestSchema,
   UpdateAgentConfigResponse,
+} from "@naisys-supervisor/shared";
+import {
+  AgentUsernameParamsSchema,
+  ConfigRevisionListResponseSchema,
+  ErrorResponseSchema,
+  ExportAgentConfigResponseSchema,
+  GetAgentConfigResponseSchema,
+  ImportAgentConfigRequestSchema,
+  ImportAgentConfigResponseSchema,
+  UpdateAgentConfigRequestSchema,
   UpdateAgentConfigResponseSchema,
 } from "@naisys-supervisor/shared";
-import { FastifyInstance, FastifyPluginOptions } from "fastify";
+import type { FastifyInstance, FastifyPluginOptions } from "fastify";
 import yaml from "js-yaml";
 
 import { hasPermission, requirePermission } from "../auth-middleware.js";

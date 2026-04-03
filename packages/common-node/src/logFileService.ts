@@ -1,4 +1,4 @@
-import fs from "node:fs";
+import type fs from "node:fs";
 import fsp from "node:fs/promises";
 
 export interface PinoLogEntry {

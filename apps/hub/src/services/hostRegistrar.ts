@@ -1,6 +1,6 @@
 import { toUrlSafeKey } from "@naisys/common";
 import type { HubDatabaseService } from "@naisys/hub-database";
-import { HostType } from "@naisys/hub-database";
+import type { HostType } from "@naisys/hub-database";
 
 export async function createHostRegistrar({ hubDb }: HubDatabaseService) {
   /** Cache of all known hosts keyed by id */

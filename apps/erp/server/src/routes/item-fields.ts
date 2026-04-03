@@ -7,7 +7,7 @@ import {
   SeqNoCreateResponseSchema,
   UpdateFieldSchema,
 } from "@naisys-erp/shared";
-import { FastifyInstance } from "fastify";
+import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod/v4";
 
@@ -229,13 +229,7 @@ export default function itemFieldRoutes(fastify: FastifyInstance) {
     preHandler: requirePermission("item_manager"),
     handler: async (request, reply) => {
       const { key, fieldSeqNo } = request.params;
-      const {
-        label,
-        type,
-        isArray,
-        required,
-        seqNo: newSeqNo,
-      } = request.body;
+      const { label, type, isArray, required, seqNo: newSeqNo } = request.body;
       const userId = request.erpUser!.id;
 
       const item = await findExistingItem(key);

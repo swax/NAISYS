@@ -6,23 +6,25 @@ import {
   LlmModelSchema,
   type ModelDbRow,
 } from "@naisys/common";
-import {
+import type {
   DeleteModelParams,
-  DeleteModelParamsSchema,
   DeleteModelResponse,
-  DeleteModelResponseSchema,
   ErrorResponse,
-  ErrorResponseSchema,
   ModelsResponse,
-  ModelsResponseSchema,
   SaveImageModelRequest,
-  SaveImageModelRequestSchema,
   SaveLlmModelRequest,
-  SaveLlmModelRequestSchema,
   SaveModelResponse,
+} from "@naisys-supervisor/shared";
+import {
+  DeleteModelParamsSchema,
+  DeleteModelResponseSchema,
+  ErrorResponseSchema,
+  ModelsResponseSchema,
+  SaveImageModelRequestSchema,
+  SaveLlmModelRequestSchema,
   SaveModelResponseSchema,
 } from "@naisys-supervisor/shared";
-import { FastifyInstance, FastifyPluginOptions } from "fastify";
+import type { FastifyInstance, FastifyPluginOptions } from "fastify";
 
 import { hasPermission, requirePermission } from "../auth-middleware.js";
 import { badRequest } from "../error-helpers.js";

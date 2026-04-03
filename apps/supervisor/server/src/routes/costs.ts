@@ -1,12 +1,14 @@
-import {
+import type {
   CostsHistogramRequest,
-  CostsHistogramRequestSchema,
   CostsHistogramResponse,
-  CostsHistogramResponseSchema,
   ErrorResponse,
+} from "@naisys-supervisor/shared";
+import {
+  CostsHistogramRequestSchema,
+  CostsHistogramResponseSchema,
   ErrorResponseSchema,
 } from "@naisys-supervisor/shared";
-import { FastifyInstance, FastifyPluginOptions } from "fastify";
+import type { FastifyInstance, FastifyPluginOptions } from "fastify";
 
 import {
   findUserIdsForLead,

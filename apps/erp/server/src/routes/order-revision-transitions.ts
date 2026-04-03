@@ -3,12 +3,16 @@ import {
   OrderRevisionTransitionSchema,
   RevisionStatus,
 } from "@naisys-erp/shared";
-import { FastifyInstance } from "fastify";
+import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 
 import { requirePermission } from "../auth-middleware.js";
 import { conflict, notFound } from "../error-handler.js";
-import { resolveOrder, useFullSerializer, wantsFullResponse } from "../route-helpers.js";
+import {
+  resolveOrder,
+  useFullSerializer,
+  wantsFullResponse,
+} from "../route-helpers.js";
 import {
   findExisting,
   transitionStatus,
@@ -75,7 +79,13 @@ export default function orderRevisionTransitionRoutes(
       }
       return {
         status: revision.status,
-        _actions: revisionItemActions("orders", orderKey, revNo, revision.status, request.erpUser),
+        _actions: revisionItemActions(
+          "orders",
+          orderKey,
+          revNo,
+          revision.status,
+          request.erpUser,
+        ),
       };
     },
   });
@@ -131,7 +141,13 @@ export default function orderRevisionTransitionRoutes(
       }
       return {
         status: revision.status,
-        _actions: revisionItemActions("orders", orderKey, revNo, revision.status, request.erpUser),
+        _actions: revisionItemActions(
+          "orders",
+          orderKey,
+          revNo,
+          revision.status,
+          request.erpUser,
+        ),
       };
     },
   });

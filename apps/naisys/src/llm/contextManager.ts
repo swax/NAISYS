@@ -1,19 +1,21 @@
 import { TARGET_MEGAPIXELS } from "@naisys/common";
-import { AgentConfig } from "../agent/agentConfig.js";
-import { WorkspacesFeature } from "../features/workspaces.js";
-import { LogService } from "../services/logService.js";
-import { InputModeService } from "../utils/inputMode.js";
-import { OutputColor, OutputService } from "../utils/output.js";
+
+import type { AgentConfig } from "../agent/agentConfig.js";
+import type { WorkspacesFeature } from "../features/workspaces.js";
+import type { LogService } from "../services/logService.js";
+import type { InputModeService } from "../utils/inputMode.js";
+import type { OutputService } from "../utils/output.js";
+import { OutputColor } from "../utils/output.js";
 import * as utilities from "../utils/utilities.js";
-import {
+import type {
   ContentBlock,
-  ContentSource,
   ImageBlock,
   LlmMessage,
   TextBlock,
   ToolResultBlock,
   ToolUseBlock,
 } from "./llmDtos.js";
+import { ContentSource } from "./llmDtos.js";
 
 const IMAGE_TOKENS_PER_MEGAPIXEL = 1000;
 const IMAGE_TOKEN_ESTIMATE = IMAGE_TOKENS_PER_MEGAPIXEL * TARGET_MEGAPIXELS;
@@ -151,7 +153,6 @@ export function createContextManager(
     }>,
     actionDesc: string,
   ) {
-
     const contentBlocks: ContentBlock[] = [];
     if (text) {
       contentBlocks.push({ type: "text", text } satisfies TextBlock);
@@ -189,7 +190,6 @@ export function createContextManager(
     screenshotMimeType: string,
     filepath?: string,
   ) {
-
     const resultContent: Array<TextBlock | ImageBlock> = [
       {
         type: "image",

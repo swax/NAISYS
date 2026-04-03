@@ -1,7 +1,8 @@
-import { HubLogBuffer } from "../hub/hubLogBuffer.js";
-import { getTextContent, LlmMessage, type LlmRole } from "../llm/llmDtos.js";
-import { AttachmentService } from "./attachmentService.js";
-import { RunService } from "./runService.js";
+import type { HubLogBuffer } from "../hub/hubLogBuffer.js";
+import type { LlmMessage } from "../llm/llmDtos.js";
+import { getTextContent, type LlmRole } from "../llm/llmDtos.js";
+import type { AttachmentService } from "./attachmentService.js";
+import type { RunService } from "./runService.js";
 
 export function createLogService(
   hubLogBuffer: HubLogBuffer | undefined,

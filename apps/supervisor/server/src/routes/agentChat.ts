@@ -1,24 +1,26 @@
-import { MultipartFile } from "@fastify/multipart";
-import {
+import type { MultipartFile } from "@fastify/multipart";
+import type {
   AgentUsernameParams,
-  AgentUsernameParamsSchema,
   ArchiveChatResponse,
-  ArchiveChatResponseSchema,
   ChatConversationsRequest,
-  ChatConversationsRequestSchema,
   ChatConversationsResponse,
-  ChatConversationsResponseSchema,
   ChatMessagesRequest,
-  ChatMessagesRequestSchema,
   ChatMessagesResponse,
-  ChatMessagesResponseSchema,
   ErrorResponse,
-  ErrorResponseSchema,
   SendChatRequest,
   SendChatResponse,
+} from "@naisys-supervisor/shared";
+import {
+  AgentUsernameParamsSchema,
+  ArchiveChatResponseSchema,
+  ChatConversationsRequestSchema,
+  ChatConversationsResponseSchema,
+  ChatMessagesRequestSchema,
+  ChatMessagesResponseSchema,
+  ErrorResponseSchema,
   SendChatResponseSchema,
 } from "@naisys-supervisor/shared";
-import { FastifyInstance, FastifyPluginOptions } from "fastify";
+import type { FastifyInstance, FastifyPluginOptions } from "fastify";
 
 import { hasPermission, requirePermission } from "../auth-middleware.js";
 import { badRequest, notFound } from "../error-helpers.js";

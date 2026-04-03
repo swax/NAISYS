@@ -210,7 +210,6 @@ export const FieldRefList: React.FC<FieldRefListProps> = ({
               )}
             </Card>
           ))}
-
         </Stack>
       )}
 
