@@ -45,7 +45,8 @@ export const startHub: StartHub = async (
 
     // Load or generate self-signed TLS cert and access key
     const certInfo = await loadOrCreateCert();
-    logService.log(`[Hub] Hub access key: ${certInfo.hubAccessKey}`);
+    const naisysFolder = process.env.NAISYS_FOLDER || "";
+    logService.log(`[Hub] Hub access key located at: ${naisysFolder}/cert/hub-access-key`);
 
     // Schema version for sync protocol - should match NAISYS instance
     const hubDatabaseService = await createHubDatabaseService();
