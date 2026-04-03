@@ -13,6 +13,46 @@ export interface ContextLogData {
   timestamp: string;
 }
 
+const VOWELS = "aeiou";
+const CONSONANTS = "bcdfghjklmnpqrstvwxyz";
+const DIGITS = "0123456789";
+
+function randomChar(pool: string): string {
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
+/** Replace each letter/digit with a random one of the same class (vowel/consonant/digit), preserving case and all other characters. */
+function obfuscateText(text: string): string {
+  let result = "";
+  for (const ch of text) {
+    const lower = ch.toLowerCase();
+    if (DIGITS.includes(lower)) {
+      result += randomChar(DIGITS);
+    } else if (VOWELS.includes(lower)) {
+      const r = randomChar(VOWELS);
+      result += ch === lower ? r : r.toUpperCase();
+    } else if (CONSONANTS.includes(lower)) {
+      const r = randomChar(CONSONANTS);
+      result += ch === lower ? r : r.toUpperCase();
+    } else {
+      result += ch;
+    }
+  }
+  return result;
+}
+
+/** Obfuscate all log message text for public preview. */
+export function obfuscateLogs(data: ContextLogData): ContextLogData {
+  return {
+    ...data,
+    logs: data.logs.map((log) => ({
+      ...log,
+      message: obfuscateText(log.message),
+      attachment: undefined,
+    })),
+  };
+}
+
 export async function getRunsData(
   userId: number,
   updatedSince?: string,

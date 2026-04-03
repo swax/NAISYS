@@ -14,6 +14,7 @@ enum Permission {
   agent_communication
   manage_models
   manage_variables
+  view_run_logs
 }
 
 model User {
