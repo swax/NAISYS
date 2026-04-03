@@ -10,7 +10,7 @@
  * Once exported the system message is essentially cached
  */
 
-import { AgentConfig } from "../agent/agentConfig.js";
+import type { AgentConfig } from "../agent/agentConfig.js";
 import {
   chatCmd,
   commentCmd,
@@ -24,8 +24,8 @@ import {
   usersCmd,
   workspaceCmd,
 } from "../command/commandDefs.js";
-import { GlobalConfig } from "../globalConfig.js";
-import { ModelService } from "../services/modelService.js";
+import type { GlobalConfig } from "../globalConfig.js";
+import type { ModelService } from "../services/modelService.js";
 import { getPlatformConfig } from "../services/shellPlatform.js";
 
 export function createSystemMessage(

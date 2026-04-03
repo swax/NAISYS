@@ -3,8 +3,8 @@ import path from "path";
 import stringArgv from "string-argv";
 
 import { workspaceCmd } from "../command/commandDefs.js";
-import { RegistrableCommand } from "../command/commandRegistry.js";
-import { ShellWrapper } from "../command/shellWrapper.js";
+import type { RegistrableCommand } from "../command/commandRegistry.js";
+import type { ShellWrapper } from "../command/shellWrapper.js";
 import * as utilities from "../utils/utilities.js";
 
 export function createWorkspacesFeature(shellWrapper: ShellWrapper) {

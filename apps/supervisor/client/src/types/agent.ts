@@ -1,5 +1,5 @@
 import type { AgentStatus } from "@naisys/common";
-import {
+import type {
   Agent as BaseAgent,
   Host as BaseHost,
 } from "@naisys-supervisor/shared";

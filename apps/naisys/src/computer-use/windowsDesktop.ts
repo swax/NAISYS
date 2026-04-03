@@ -202,10 +202,12 @@ export function pressKey(keyCombo: string) {
       (k) =>
         `[NaisysInput]::keybd_event(${winVirtualKey(k)},0,0,[IntPtr]::Zero)`,
     );
-    const releases = [...otherKeys].reverse().map(
-      (k) =>
-        `[NaisysInput]::keybd_event(${winVirtualKey(k)},0,[NaisysInput]::KEYEVENTF_KEYUP,[IntPtr]::Zero)`,
-    );
+    const releases = [...otherKeys]
+      .reverse()
+      .map(
+        (k) =>
+          `[NaisysInput]::keybd_event(${winVirtualKey(k)},0,[NaisysInput]::KEYEVENTF_KEYUP,[IntPtr]::Zero)`,
+      );
     runPowerShell(
       [
         PS_INPUT_TYPE,

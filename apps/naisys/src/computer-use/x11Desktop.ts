@@ -33,7 +33,9 @@ function xdotool(args: string[]) {
     execFileSync("xdotool", args, { stdio: "pipe" });
   } catch (e: any) {
     if (e?.code === "ENOENT") {
-      throw new Error("xdotool is not installed. Install it with: sudo apt install xdotool");
+      throw new Error(
+        "xdotool is not installed. Install it with: sudo apt install xdotool",
+      );
     }
     throw e;
   }
@@ -49,15 +51,7 @@ export function mouseClick(
 }
 
 export function mouseDoubleClick(x: number, y: number) {
-  xdotool([
-    "mousemove",
-    String(x),
-    String(y),
-    "click",
-    "--repeat",
-    "2",
-    "1",
-  ]);
+  xdotool(["mousemove", String(x), String(y), "click", "--repeat", "2", "1"]);
 }
 
 export function mouseMove(x: number, y: number) {

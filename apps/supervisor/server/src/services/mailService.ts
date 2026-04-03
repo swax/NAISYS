@@ -1,4 +1,4 @@
-import {
+import type {
   MailMessage,
   SendMailRequest,
   SendMailResponse,
@@ -118,9 +118,7 @@ export async function getMailDataByUserId(
 /**
  * Archive all mail messages where the user is a recipient
  */
-export async function archiveAllMailMessages(
-  userId: number,
-): Promise<number> {
+export async function archiveAllMailMessages(userId: number): Promise<number> {
   const result = await hubDb.mail_recipients.updateMany({
     where: {
       user_id: userId,

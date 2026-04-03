@@ -2,7 +2,7 @@ import type { HateoasAction } from "@naisys/common";
 import React, { createContext, useContext, useEffect, useState } from "react";
 
 import { useAgentData } from "../hooks/useAgentData";
-import { Agent } from "../types/agent";
+import type { Agent } from "../types/agent";
 
 export interface ClientReadStatus {
   lastReadLogId: number;

@@ -5,12 +5,15 @@
  * responses, and context formatting for computer_call / computer_call_output items.
  */
 
-import { ContentBlock, LlmMessage } from "../llm/llmDtos.js";
+import type { ContentBlock, LlmMessage } from "../llm/llmDtos.js";
+import type {
+  DesktopAction,
+  DesktopConfig,
+} from "../llm/vendors/vendorTypes.js";
 import {
   getTargetScaleFactor,
   scaleActionToNative,
 } from "./computerService.js";
-import { DesktopAction, DesktopConfig } from "../llm/vendors/vendorTypes.js";
 
 // --- Action format conversion ---
 
@@ -189,13 +192,13 @@ export function extractDesktopActions(
  * computer_call / computer_call_output input items, resizing screenshot images
  * to the downscaled resolution.
  */
-export async function formatInputWithComputerUse(
+export function formatInputWithComputerUse(
   context: LlmMessage[],
-  desktopConfig: DesktopConfig,
-  scaleFactor: number,
+  _desktopConfig: DesktopConfig,
+  _scaleFactor: number,
   formatContentBlocks: (content: string | ContentBlock[]) => any[],
   formatSingleBlock: (block: ContentBlock) => any | null,
-): Promise<any[]> {
+): any[] {
   const items: any[] = [];
 
   for (const msg of context) {

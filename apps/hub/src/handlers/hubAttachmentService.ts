@@ -1,6 +1,6 @@
 import { mimeFromFilename } from "@naisys/common";
 import type { HubDatabaseService } from "@naisys/hub-database";
-import { AttachmentPurpose } from "@naisys/hub-database";
+import type { AttachmentPurpose } from "@naisys/hub-database";
 import { createHash } from "crypto";
 import {
   createReadStream,
@@ -16,10 +16,9 @@ import type { Server as HttpsServer } from "https";
 import { join } from "path";
 import { pipeline, Writable } from "stream";
 
-import { HubServerLog } from "../services/hubServerLog.js";
+import type { HubServerLog } from "../services/hubServerLog.js";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
-
 
 /**
  * HTTP attachment upload/download service.
@@ -284,7 +283,9 @@ export function createHubAttachmentService(
 
     const stat = statSync(attachment.filepath);
     const contentType = mimeFromFilename(attachment.filename);
-    const disposition = contentType.startsWith("image/") ? "inline" : "attachment";
+    const disposition = contentType.startsWith("image/")
+      ? "inline"
+      : "attachment";
     res.writeHead(200, {
       "Content-Type": contentType,
       "Content-Disposition": `${disposition}; filename="${attachment.filename.replace(/"/g, '\\"')}"`,

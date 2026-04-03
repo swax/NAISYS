@@ -1,18 +1,18 @@
 import { LlmApiType } from "@naisys/common";
 
-import { AgentConfig } from "../agent/agentConfig.js";
-import { GlobalConfig } from "../globalConfig.js";
-import { ComputerService } from "../computer-use/computerService.js";
-import { ModelService } from "../services/modelService.js";
-import { CommandTools } from "./commandTool.js";
-import { CostTracker } from "./costTracker.js";
-import { LlmMessage } from "./llmDtos.js";
+import type { AgentConfig } from "../agent/agentConfig.js";
+import type { ComputerService } from "../computer-use/computerService.js";
+import type { GlobalConfig } from "../globalConfig.js";
+import type { ModelService } from "../services/modelService.js";
+import type { CommandTools } from "./commandTool.js";
+import type { CostTracker } from "./costTracker.js";
+import type { LlmMessage } from "./llmDtos.js";
 import { sendWithAnthropic } from "./vendors/anthropic.js";
 import { sendWithGoogle } from "./vendors/google.js";
 import { sendWithMock } from "./vendors/mock.js";
 import { sendWithOpenAiCompatible } from "./vendors/openai-compatible.js";
 import { sendWithOpenAiStandard } from "./vendors/openai-standard.js";
-import {
+import type {
   QueryResult,
   QuerySources,
   VendorDeps,
@@ -80,8 +80,9 @@ export function createLLMService(
     }
 
     // Use pre-computed desktop config only if current model supports computer use
-    const effectiveDesktopConfig =
-      model.supportsComputerUse ? desktopConfig : undefined;
+    const effectiveDesktopConfig = model.supportsComputerUse
+      ? desktopConfig
+      : undefined;
 
     const deps: VendorDeps = {
       modelService,

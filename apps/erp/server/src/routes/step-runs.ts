@@ -8,7 +8,7 @@ import {
   StepRunListResponseSchema,
   StepRunSchema,
 } from "@naisys-erp/shared";
-import { FastifyInstance } from "fastify";
+import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod/v4";
 
@@ -339,10 +339,7 @@ export async function formatStepRunWithFields(
       const stored = storedFieldValues.find(
         (fv) => fv.fieldId === field.id && fv.setIndex === si,
       );
-      const value = deserializeFieldValue(
-        stored?.value ?? "",
-        field.isArray,
-      );
+      const value = deserializeFieldValue(stored?.value ?? "", field.isArray);
       const setPath = multiSet
         ? `/sets/${si}/fields/${field.seqNo}`
         : `/fields/${field.seqNo}`;

@@ -1,8 +1,8 @@
 import OpenAI from "openai";
-import { ChatCompletionCreateParamsNonStreaming } from "openai/resources";
+import type { ChatCompletionCreateParamsNonStreaming } from "openai/resources";
 
-import { ContentBlock, LlmMessage } from "../llmDtos.js";
-import { QueryResult, QuerySources, VendorDeps } from "./vendorTypes.js";
+import type { ContentBlock, LlmMessage } from "../llmDtos.js";
+import type { QueryResult, QuerySources, VendorDeps } from "./vendorTypes.js";
 
 const clientCache = new Map<string, OpenAI>();
 
@@ -130,7 +130,10 @@ function formatContentForOpenAI(
       }
       // tool_use/tool_result: convert to text fallback
       if (block.type === "tool_use") {
-        return { type: "text", text: `[Desktop action: ${JSON.stringify(block.input)}]` };
+        return {
+          type: "text",
+          text: `[Desktop action: ${JSON.stringify(block.input)}]`,
+        };
       }
       if (block.type === "tool_result") {
         return { type: "text", text: "[Desktop screenshot]" };

@@ -3,9 +3,11 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useAgentDataContext } from "../contexts/AgentDataContext";
-import { ChatMessagesParams, getChatMessages } from "../lib/apiChat";
+import type { ChatMessagesParams } from "../lib/apiChat";
+import { getChatMessages } from "../lib/apiChat";
 import type { ChatMessage } from "../lib/apiClient";
-import { mergeIntoCache, MessageRoomEvent } from "./messageCacheUtils";
+import type { MessageRoomEvent } from "./messageCacheUtils";
+import { mergeIntoCache } from "./messageCacheUtils";
 import { useSubscription } from "./useSubscription";
 
 // Module-level caches (persist across remounts)

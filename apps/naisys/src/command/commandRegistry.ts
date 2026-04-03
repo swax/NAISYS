@@ -3,8 +3,9 @@
  * Each service exports its command metadata and handler function.
  */
 
-import { InputModeService } from "../utils/inputMode.js";
-import { CommandDef, helpCmd } from "./commandDefs.js";
+import type { InputModeService } from "../utils/inputMode.js";
+import type { CommandDef } from "./commandDefs.js";
+import { helpCmd } from "./commandDefs.js";
 
 export enum NextCommandAction {
   Continue,

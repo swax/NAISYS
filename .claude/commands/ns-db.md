@@ -10,14 +10,15 @@ There are three SQLite databases:
    - Schema: `apps/erp/server/prisma/schema.prisma`
 
 Database locations:
+
 - Dev: `~/.naisys/database/`
 - SCDB: `/var/scdb-ops/naisys/database/`
 
 Database names:
+
 - naisys_hub.db
 - supervisor
 - naisys_erp.db
-
 
 Read the relevant schema.prisma file to understand the table structure before
 querying. Use `sqlite3` to run queries against the database files.

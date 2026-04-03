@@ -116,7 +116,8 @@ export const DependencyList: React.FC<DependencyListProps> = ({
     }
   };
 
-  const isEmpty = !loading && deps !== null && deps.items.length === 0 && !adding;
+  const isEmpty =
+    !loading && deps !== null && deps.items.length === 0 && !adding;
 
   return (
     <>

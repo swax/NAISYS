@@ -4,10 +4,9 @@ import {
   CreateResponseSchema,
   ErrorResponseSchema,
   OperationRunCommentListResponseSchema,
-  OperationRunCommentSchema,
   OperationRunCommentType,
 } from "@naisys-erp/shared";
-import { FastifyInstance } from "fastify";
+import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod/v4";
 
@@ -15,7 +14,11 @@ import type { ErpUser } from "../auth-middleware.js";
 import { requirePermission } from "../auth-middleware.js";
 import { notFound } from "../error-handler.js";
 import { API_PREFIX, selfLink } from "../hateoas.js";
-import { mutationResult, resolveActions, resolveOpRun } from "../route-helpers.js";
+import {
+  mutationResult,
+  resolveActions,
+  resolveOpRun,
+} from "../route-helpers.js";
 import {
   type CommentWithUser,
   createComment,

@@ -1,21 +1,22 @@
 import chalk from "chalk";
 import stringArgv from "string-argv";
 
-import { AgentConfig } from "../agent/agentConfig.js";
-import { GlobalConfig } from "../globalConfig.js";
-import { ContextManager } from "../llm/contextManager.js";
+import type { AgentConfig } from "../agent/agentConfig.js";
+import type { GlobalConfig } from "../globalConfig.js";
+import type { ContextManager } from "../llm/contextManager.js";
 import { ContentSource } from "../llm/llmDtos.js";
-import { InputModeService } from "../utils/inputMode.js";
-import { OutputColor, OutputService } from "../utils/output.js";
-import { CommandProtection } from "./commandProtection.js";
-import {
+import type { InputModeService } from "../utils/inputMode.js";
+import type { OutputService } from "../utils/output.js";
+import { OutputColor } from "../utils/output.js";
+import type { CommandProtection } from "./commandProtection.js";
+import type {
   CommandRegistry,
-  NextCommandAction,
   NextCommandResponse,
 } from "./commandRegistry.js";
-import { PromptBuilder } from "./promptBuilder.js";
-import { ShellCommand } from "./shellCommand.js";
-import { ShellWrapper } from "./shellWrapper.js";
+import { NextCommandAction } from "./commandRegistry.js";
+import type { PromptBuilder } from "./promptBuilder.js";
+import type { ShellCommand } from "./shellCommand.js";
+import type { ShellWrapper } from "./shellWrapper.js";
 
 export function createCommandHandler(
   _globalConfig: GlobalConfig,
@@ -295,9 +296,7 @@ export function createCommandHandler(
     // Re-encode as quoted args so downstream stringArgv preserves boundaries
     return expandedParts
       .map((part) => {
-        const escaped = part
-          .replace(/\\/g, "\\\\")
-          .replace(/"/g, '\\"');
+        const escaped = part.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
         return `"${escaped}"`;
       })
       .join(" ");

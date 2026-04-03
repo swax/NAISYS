@@ -1,9 +1,9 @@
 import table from "text-table";
 
 import { usersCmd } from "../command/commandDefs.js";
-import { RegistrableCommand } from "../command/commandRegistry.js";
-import { InputModeService } from "../utils/inputMode.js";
-import { UserService } from "./userService.js";
+import type { RegistrableCommand } from "../command/commandRegistry.js";
+import type { InputModeService } from "../utils/inputMode.js";
+import type { UserService } from "./userService.js";
 
 interface UserNode {
   userId: number;

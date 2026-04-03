@@ -3,8 +3,9 @@ import { useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { useAgentDataContext } from "../contexts/AgentDataContext";
-import { LogEntry } from "../lib/apiClient";
-import { ContextLogParams, getContextLog } from "../lib/apiRuns";
+import type { LogEntry } from "../lib/apiClient";
+import type { ContextLogParams } from "../lib/apiRuns";
+import { getContextLog } from "../lib/apiRuns";
 import { useSubscription } from "./useSubscription";
 
 // Module-level caches (shared across all hook instances and persist across remounts)
@@ -81,9 +82,7 @@ export const useContextLog = (
       try {
         // Find the highest ID we have below the gap to narrow the range
         const existingLogs = logsCache.get(sessionKey) ?? [];
-        const logsBeforeGap = existingLogs.filter(
-          (l) => l.id < gapFirstId,
-        );
+        const logsBeforeGap = existingLogs.filter((l) => l.id < gapFirstId);
         const rangeStart =
           logsBeforeGap.length > 0
             ? logsBeforeGap[logsBeforeGap.length - 1].id

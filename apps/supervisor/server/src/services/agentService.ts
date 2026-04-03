@@ -1,9 +1,9 @@
+import type { AgentConfigFile } from "@naisys/common";
 import {
-  AgentConfigFile,
   AgentConfigFileSchema,
   calculatePeriodBoundaries,
 } from "@naisys/common";
-import { Agent, AgentDetailResponse } from "@naisys-supervisor/shared";
+import type { Agent, AgentDetailResponse } from "@naisys-supervisor/shared";
 
 import { hubDb } from "../database/hubDb.js";
 import {
@@ -61,9 +61,10 @@ export async function getAgents(
     latestMailId: user.user_notifications?.latest_mail_id ?? 0,
     enabled: user.enabled,
     archived: user.archived,
-    budgetLeft: user.user_notifications?.budget_left != null
-      ? Number(user.user_notifications.budget_left)
-      : undefined,
+    budgetLeft:
+      user.user_notifications?.budget_left != null
+        ? Number(user.user_notifications.budget_left)
+        : undefined,
     config: parseConfig(user.config),
   }));
 

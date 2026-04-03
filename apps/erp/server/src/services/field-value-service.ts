@@ -259,13 +259,7 @@ export async function rebuildAttachmentFieldValue(
   );
 
   const value: FieldValue =
-    labels.length === 0
-      ? isArray
-        ? []
-        : ""
-      : isArray
-        ? labels
-        : labels[0];
+    labels.length === 0 ? (isArray ? [] : "") : isArray ? labels : labels[0];
 
   await upsertFieldValue(fieldRecordId, fieldId, setIndex, value, userId);
   return value;

@@ -2,21 +2,23 @@ import { createReadStream, existsSync, statSync } from "node:fs";
 import fs from "node:fs/promises";
 
 import type { HateoasAction } from "@naisys/common";
-import {
+import type {
   AdminAttachmentListRequest,
-  AdminAttachmentListRequestSchema,
   AdminAttachmentListResponse,
-  AdminAttachmentListResponseSchema,
   AdminInfoResponse,
-  AdminInfoResponseSchema,
   ErrorResponse,
-  ErrorResponseSchema,
   ServerLogRequest,
-  ServerLogRequestSchema,
   ServerLogResponse,
+} from "@naisys-erp/shared";
+import {
+  AdminAttachmentListRequestSchema,
+  AdminAttachmentListResponseSchema,
+  AdminInfoResponseSchema,
+  ErrorResponseSchema,
+  ServerLogRequestSchema,
   ServerLogResponseSchema,
 } from "@naisys-erp/shared";
-import { FastifyInstance, FastifyPluginOptions } from "fastify";
+import type { FastifyInstance, FastifyPluginOptions } from "fastify";
 import { z } from "zod/v4";
 
 import { hasPermission, requirePermission } from "../auth-middleware.js";

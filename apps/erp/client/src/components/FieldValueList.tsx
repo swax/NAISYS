@@ -708,7 +708,11 @@ export const FieldValueRunList: React.FC<FieldValueRunListProps> = ({
 
         if (!fieldCanEdit) {
           // Multi-value: show each item on its own line
-          if (isArrayType(fv.type) && Array.isArray(fv.value) && fv.value.filter(Boolean).length > 0) {
+          if (
+            isArrayType(fv.type) &&
+            Array.isArray(fv.value) &&
+            fv.value.filter(Boolean).length > 0
+          ) {
             return (
               <Stack key={key} gap={2}>
                 <Text size="xs" fw={500}>

@@ -1,13 +1,13 @@
 import { GoogleGenAI } from "@google/genai";
 
-import { ContentBlock, LlmMessage } from "../llmDtos.js";
 import {
   extractDesktopActions,
   formatContextWithComputerUse,
   isGoogleComputerUseAction,
   prepareComputerUse,
 } from "../../computer-use/google-computer-use.js";
-import { QueryResult, QuerySources, VendorDeps } from "./vendorTypes.js";
+import type { ContentBlock, LlmMessage } from "../llmDtos.js";
+import type { QueryResult, QuerySources, VendorDeps } from "./vendorTypes.js";
 
 const clientCache = new Map<string, GoogleGenAI>();
 
@@ -61,7 +61,7 @@ export async function sendWithGoogle(
   if (desktopConfig) {
     // Format ALL messages in one pass so the tool_use ID → name map is
     // available when processing tool_result blocks (which may be the last message)
-    const allFormatted = await formatContextWithComputerUse(
+    const allFormatted = formatContextWithComputerUse(
       context,
       desktopConfig,
       cuSetup!.imageScaleFactor,
@@ -125,8 +125,8 @@ export async function sendWithGoogle(
 
   const chat = ai.chats.create(chatConfig);
 
-  const lastMessageParts = cuLastMessageParts
-    || formatPartsForGoogle(lastMessage.content);
+  const lastMessageParts =
+    cuLastMessageParts || formatPartsForGoogle(lastMessage.content);
 
   const result = await chat.sendMessage({
     message: lastMessageParts,

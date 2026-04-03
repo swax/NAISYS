@@ -109,7 +109,12 @@ export const AgentMail: React.FC = () => {
   // Group into conversations
   const conversations = useMemo(
     () =>
-      groupIntoConversations(allMail, lastReadMailId, groupBySubject, agentName),
+      groupIntoConversations(
+        allMail,
+        lastReadMailId,
+        groupBySubject,
+        agentName,
+      ),
     [allMail, lastReadMailId, groupBySubject, agentName],
   );
 
@@ -372,7 +377,6 @@ export const AgentMail: React.FC = () => {
               lastReadMailId={lastReadMailId}
               showSubject={!groupBySubject}
             />
-
           </>
         )}
       </Box>

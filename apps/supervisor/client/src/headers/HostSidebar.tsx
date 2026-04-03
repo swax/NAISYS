@@ -21,7 +21,7 @@ import { ROUTER_BASENAME } from "../constants";
 import { useHostDataContext } from "../contexts/HostDataContext";
 import { useConnectionStatus } from "../hooks/useConnectionStatus";
 import { createHostApi } from "../lib/apiAgents";
-import { Host } from "../types/agent";
+import type { Host } from "../types/agent";
 
 export const HostSidebar: React.FC = () => {
   const navigate = useNavigate();

@@ -1,9 +1,10 @@
-import { HostList, HubEvents } from "@naisys/hub-protocol";
+import type { HostList } from "@naisys/hub-protocol";
+import { HubEvents } from "@naisys/hub-protocol";
 
-import { HostRegistrar } from "../services/hostRegistrar.js";
-import { HubServerLog } from "../services/hubServerLog.js";
-import { NaisysConnection } from "../services/naisysConnection.js";
-import { NaisysServer } from "../services/naisysServer.js";
+import type { HostRegistrar } from "../services/hostRegistrar.js";
+import type { HubServerLog } from "../services/hubServerLog.js";
+import type { NaisysConnection } from "../services/naisysConnection.js";
+import type { NaisysServer } from "../services/naisysServer.js";
 
 /** Pushes the host list to all connections when connected hosts change */
 export function createHubHostService(

@@ -2,13 +2,13 @@ import { mimeFromFilename } from "@naisys/common";
 import fs from "fs";
 import path from "path";
 
-import { AgentConfig } from "../agent/agentConfig.js";
+import type { AgentConfig } from "../agent/agentConfig.js";
 import { listenCmd } from "../command/commandDefs.js";
-import { RegistrableCommand } from "../command/commandRegistry.js";
-import { ShellWrapper } from "../command/shellWrapper.js";
-import { ContextManager } from "../llm/contextManager.js";
-import { LLMService } from "../llm/llmService.js";
-import { ModelService } from "../services/modelService.js";
+import type { RegistrableCommand } from "../command/commandRegistry.js";
+import type { ShellWrapper } from "../command/shellWrapper.js";
+import type { ContextManager } from "../llm/contextManager.js";
+import type { LLMService } from "../llm/llmService.js";
+import type { ModelService } from "../services/modelService.js";
 
 const SUPPORTED_EXTENSIONS = new Set([
   ".wav",

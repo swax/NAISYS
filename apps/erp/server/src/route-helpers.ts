@@ -1,5 +1,4 @@
 import type { HateoasAction, HateoasLink } from "@naisys/common";
-import type { FastifyReply, FastifyRequest } from "fastify";
 import {
   type ActionDef as ActionDefBase,
   permGate,
@@ -11,6 +10,7 @@ import {
   OrderRunStatus,
   RevisionStatus,
 } from "@naisys-erp/shared";
+import type { FastifyReply, FastifyRequest } from "fastify";
 
 import type { ErpUser } from "./auth-middleware.js";
 import { hasPermission } from "./auth-middleware.js";
@@ -25,9 +25,7 @@ import { API_PREFIX, schemaLink, selfLink } from "./hateoas.js";
  */
 export function wantsFullResponse(request: FastifyRequest): boolean {
   const prefer = request.headers["prefer"];
-  return (
-    typeof prefer === "string" && prefer.includes("return=representation")
-  );
+  return typeof prefer === "string" && prefer.includes("return=representation");
 }
 
 /**

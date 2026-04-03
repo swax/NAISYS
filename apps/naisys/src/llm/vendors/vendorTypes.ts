@@ -1,6 +1,6 @@
-import { ModelService } from "../../services/modelService.js";
-import { CommandTools } from "../commandTool.js";
-import { CostTracker } from "../costTracker.js";
+import type { ModelService } from "../../services/modelService.js";
+import type { CommandTools } from "../commandTool.js";
+import type { CostTracker } from "../costTracker.js";
 
 export type QuerySources =
   | "console"

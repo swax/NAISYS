@@ -1,11 +1,4 @@
-import {
-  Button,
-  Group,
-  NavLink,
-  ScrollArea,
-  Stack,
-  Text,
-} from "@mantine/core";
+import { Button, Group, NavLink, ScrollArea, Stack, Text } from "@mantine/core";
 import { IconArchive, IconMessagePlus } from "@tabler/icons-react";
 import React, { useState } from "react";
 import { Link } from "react-router-dom";

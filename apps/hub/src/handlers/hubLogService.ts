@@ -6,9 +6,9 @@ import {
   LogWriteRequestSchema,
 } from "@naisys/hub-protocol";
 
-import { HubServerLog } from "../services/hubServerLog.js";
-import { NaisysServer } from "../services/naisysServer.js";
-import { HubHeartbeatService } from "./hubHeartbeatService.js";
+import type { HubServerLog } from "../services/hubServerLog.js";
+import type { NaisysServer } from "../services/naisysServer.js";
+import type { HubHeartbeatService } from "./hubHeartbeatService.js";
 
 /** Handles log_write events from NAISYS instances (fire-and-forget) */
 export function createHubLogService(

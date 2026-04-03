@@ -2,34 +2,35 @@ import { LlmApiType, sleep } from "@naisys/common";
 import chalk from "chalk";
 import * as readline from "readline";
 
-import { AgentConfig } from "../agent/agentConfig.js";
-import { DesktopService } from "../computer-use/desktop.js";
-import { LynxService } from "../features/lynx.js";
-import { SessionService } from "../features/session.js";
-import { WorkspacesFeature } from "../features/workspaces.js";
-import { GlobalConfig } from "../globalConfig.js";
-import { HubClient } from "../hub/hubClient.js";
-import { ContextManager } from "../llm/contextManager.js";
+import type { AgentConfig } from "../agent/agentConfig.js";
+import type { DesktopService } from "../computer-use/desktop.js";
+import type { LynxService } from "../features/lynx.js";
+import type { SessionService } from "../features/session.js";
+import type { WorkspacesFeature } from "../features/workspaces.js";
+import type { GlobalConfig } from "../globalConfig.js";
+import type { HubClient } from "../hub/hubClient.js";
+import type { ContextManager } from "../llm/contextManager.js";
 import {
   SPEND_LIMIT_TIMEOUT_SECONDS,
   SpendLimitError,
 } from "../llm/costTracker.js";
 import { ContentSource } from "../llm/llmDtos.js";
-import { LLMService } from "../llm/llmService.js";
-import { DesktopAction } from "../llm/vendors/vendorTypes.js";
-import { ChatService } from "../mail/chat.js";
-import { MailService } from "../mail/mail.js";
-import { LogService } from "../services/logService.js";
-import { ModelService } from "../services/modelService.js";
-import { RunService } from "../services/runService.js";
+import type { LLMService } from "../llm/llmService.js";
+import type { DesktopAction } from "../llm/vendors/vendorTypes.js";
+import type { ChatService } from "../mail/chat.js";
+import type { MailService } from "../mail/mail.js";
+import type { LogService } from "../services/logService.js";
+import type { ModelService } from "../services/modelService.js";
+import type { RunService } from "../services/runService.js";
 import { createEscKeyListener } from "../utils/escKeyListener.js";
-import { InputModeService } from "../utils/inputMode.js";
-import { OutputColor, OutputService } from "../utils/output.js";
-import { PromptNotificationService } from "../utils/promptNotificationService.js";
-import { CommandHandler } from "./commandHandler.js";
+import type { InputModeService } from "../utils/inputMode.js";
+import type { OutputService } from "../utils/output.js";
+import { OutputColor } from "../utils/output.js";
+import type { PromptNotificationService } from "../utils/promptNotificationService.js";
+import type { CommandHandler } from "./commandHandler.js";
 import { NextCommandAction } from "./commandRegistry.js";
-import { PromptBuilder } from "./promptBuilder.js";
-import { ShellCommand } from "./shellCommand.js";
+import type { PromptBuilder } from "./promptBuilder.js";
+import type { ShellCommand } from "./shellCommand.js";
 
 export function createCommandLoop(
   { globalConfig }: GlobalConfig,

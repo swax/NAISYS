@@ -14,7 +14,7 @@ import {
   LoginResponseSchema,
   LogoutResponseSchema,
 } from "@naisys-supervisor/shared";
-import { FastifyInstance, FastifyPluginOptions } from "fastify";
+import type { FastifyInstance, FastifyPluginOptions } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 
 import { authCache } from "../auth-middleware.js";

@@ -6,9 +6,12 @@
  * screenshots, and context formatting with function_call/function_response.
  */
 
-import { ContentBlock, LlmMessage } from "../llm/llmDtos.js";
+import type { ContentBlock, LlmMessage } from "../llm/llmDtos.js";
+import type {
+  DesktopAction,
+  DesktopConfig,
+} from "../llm/vendors/vendorTypes.js";
 import { getTargetScaleFactor } from "./computerService.js";
-import { DesktopAction, DesktopConfig } from "../llm/vendors/vendorTypes.js";
 
 // --- Coordinate normalization ---
 // Google uses a 0-999 normalized grid regardless of screen resolution.
@@ -29,7 +32,6 @@ function normalizeX(pixel: number, screenWidth: number): number {
 function normalizeY(pixel: number, screenHeight: number): number {
   return Math.round((pixel / screenHeight) * NORMALIZED_MAX);
 }
-
 
 // --- Known Google Computer Use action names ---
 
@@ -199,8 +201,7 @@ function reconstructGoogleArgs(
       return { keys: (internalActions[0]?.text as string) || "" };
     case "scroll_document":
       return {
-        direction:
-          (internalActions[0]?.scroll_direction as string) || "down",
+        direction: (internalActions[0]?.scroll_direction as string) || "down",
       };
     case "scroll_at": {
       const coord = getCoord(internalActions[0]);
@@ -208,8 +209,7 @@ function reconstructGoogleArgs(
       return {
         x: nx(coord![0]),
         y: ny(coord![1]),
-        direction:
-          (internalActions[0]?.scroll_direction as string) || "down",
+        direction: (internalActions[0]?.scroll_direction as string) || "down",
         magnitude: amount * 200,
       };
     }
@@ -312,12 +312,12 @@ export function extractDesktopActions(
  * Google's function_call/function_response parts, resizing screenshot
  * images for token efficiency.
  */
-export async function formatContextWithComputerUse(
+export function formatContextWithComputerUse(
   context: LlmMessage[],
   desktopConfig: DesktopConfig,
-  imageScaleFactor: number,
+  _imageScaleFactor: number,
   formatPartsForGoogle: (content: string | ContentBlock[]) => any[],
-): Promise<any[]> {
+): any[] {
   const { displayWidth, displayHeight } = desktopConfig;
   // Map tool_use IDs to their Google function names for function_response reconstruction
   const toolUseIdToName = new Map<string, string>();
@@ -386,9 +386,7 @@ export async function formatContextWithComputerUse(
               (c) => c.type === "text",
             );
             response.error =
-              textContent?.type === "text"
-                ? textContent.text
-                : "Action failed";
+              textContent?.type === "text" ? textContent.text : "Action failed";
           }
 
           const frParts: any[] = [];

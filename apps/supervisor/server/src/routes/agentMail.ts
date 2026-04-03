@@ -1,20 +1,22 @@
-import { MultipartFile } from "@fastify/multipart";
-import {
+import type { MultipartFile } from "@fastify/multipart";
+import type {
   AgentUsernameParams,
-  AgentUsernameParamsSchema,
   ArchiveMailResponse,
-  ArchiveMailResponseSchema,
   ErrorResponse,
-  ErrorResponseSchema,
   MailDataRequest,
-  MailDataRequestSchema,
   MailDataResponse,
-  MailDataResponseSchema,
   SendMailRequest,
   SendMailResponse,
+} from "@naisys-supervisor/shared";
+import {
+  AgentUsernameParamsSchema,
+  ArchiveMailResponseSchema,
+  ErrorResponseSchema,
+  MailDataRequestSchema,
+  MailDataResponseSchema,
   SendMailResponseSchema,
 } from "@naisys-supervisor/shared";
-import { FastifyInstance, FastifyPluginOptions } from "fastify";
+import type { FastifyInstance, FastifyPluginOptions } from "fastify";
 
 import { hasPermission, requirePermission } from "../auth-middleware.js";
 import { badRequest, notFound } from "../error-helpers.js";

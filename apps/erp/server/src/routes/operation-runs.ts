@@ -7,7 +7,7 @@ import {
   OperationRunStatus,
   UpdateOperationRunSchema,
 } from "@naisys-erp/shared";
-import { FastifyInstance } from "fastify";
+import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod/v4";
 
@@ -174,7 +174,12 @@ export async function formatOpRun(
   const seqNo = opRun.operation.seqNo;
   const [stepSummaryRows, fieldRefSummary] = await Promise.all([
     getOpRunStepSummary(opRun.id),
-    getOpRunFieldRefSummary(opRun.operationId, opRun.orderRunId, orderKey, runNo),
+    getOpRunFieldRefSummary(
+      opRun.operationId,
+      opRun.orderRunId,
+      orderKey,
+      runNo,
+    ),
   ]);
   return {
     id: opRun.id,
@@ -393,7 +398,15 @@ export default function operationRunRoutes(fastify: FastifyInstance) {
         return formatOpRun(orderKey, runNo, request.erpUser, opRun);
       }
       return {
-        _actions: await opRunItemActions(orderKey, runNo, seqNo, opRun.id, opRun.operationId, opRun.status, request.erpUser),
+        _actions: await opRunItemActions(
+          orderKey,
+          runNo,
+          seqNo,
+          opRun.id,
+          opRun.operationId,
+          opRun.status,
+          request.erpUser,
+        ),
       };
     },
   });

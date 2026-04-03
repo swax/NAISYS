@@ -6,11 +6,11 @@ import {
   HubEvents,
 } from "@naisys/hub-protocol";
 
-import { HostRegistrar } from "../services/hostRegistrar.js";
-import { HubServerLog } from "../services/hubServerLog.js";
-import { NaisysServer } from "../services/naisysServer.js";
-import { HubHeartbeatService } from "./hubHeartbeatService.js";
-import { HubSendMailService } from "./hubSendMailService.js";
+import type { HostRegistrar } from "../services/hostRegistrar.js";
+import type { HubServerLog } from "../services/hubServerLog.js";
+import type { NaisysServer } from "../services/naisysServer.js";
+import type { HubHeartbeatService } from "./hubHeartbeatService.js";
+import type { HubSendMailService } from "./hubSendMailService.js";
 
 /** Handles agent_start requests by routing them to the least-loaded eligible host */
 export function createHubAgentService(

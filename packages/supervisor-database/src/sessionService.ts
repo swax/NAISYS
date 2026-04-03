@@ -6,7 +6,7 @@ import { existsSync } from "fs";
 import readline from "readline/promises";
 
 import { supervisorDbPath } from "./dbConfig.js";
-import { PrismaClient } from "./generated/prisma/client.js";
+import type { PrismaClient } from "./generated/prisma/client.js";
 import { createPrismaClient } from "./prismaClient.js";
 
 const SESSION_DURATION_MS = 30 * 24 * 60 * 60 * 1000; // 30 days

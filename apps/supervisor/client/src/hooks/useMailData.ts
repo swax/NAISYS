@@ -3,9 +3,11 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useAgentDataContext } from "../contexts/AgentDataContext";
-import { MailMessage } from "../lib/apiClient";
-import { getMailData, MailDataParams } from "../lib/apiMail";
-import { mergeIntoCache, MessageRoomEvent } from "./messageCacheUtils";
+import type { MailMessage } from "../lib/apiClient";
+import type { MailDataParams } from "../lib/apiMail";
+import { getMailData } from "../lib/apiMail";
+import type { MessageRoomEvent } from "./messageCacheUtils";
+import { mergeIntoCache } from "./messageCacheUtils";
 import { useSubscription } from "./useSubscription";
 
 // Module-level caches (shared across all hook instances and persist across remounts)

@@ -1,21 +1,23 @@
 import type { AgentConfigFile, HateoasAction } from "@naisys/common";
-import {
+import type {
   AgentDetailResponse,
-  AgentDetailResponseSchema,
   AgentListRequest,
-  AgentListRequestSchema,
   AgentListResponse,
-  AgentListResponseSchema,
   AgentUsernameParams,
-  AgentUsernameParamsSchema,
   CreateAgentConfigRequest,
-  CreateAgentConfigRequestSchema,
   CreateAgentConfigResponse,
-  CreateAgentConfigResponseSchema,
   ErrorResponse,
+} from "@naisys-supervisor/shared";
+import {
+  AgentDetailResponseSchema,
+  AgentListRequestSchema,
+  AgentListResponseSchema,
+  AgentUsernameParamsSchema,
+  CreateAgentConfigRequestSchema,
+  CreateAgentConfigResponseSchema,
   ErrorResponseSchema,
 } from "@naisys-supervisor/shared";
-import { FastifyInstance, FastifyPluginOptions } from "fastify";
+import type { FastifyInstance, FastifyPluginOptions } from "fastify";
 
 import type { SupervisorUser } from "../auth-middleware.js";
 import { hasPermission, requirePermission } from "../auth-middleware.js";

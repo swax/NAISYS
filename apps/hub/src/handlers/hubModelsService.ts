@@ -13,10 +13,11 @@ import {
   type HubDatabaseService,
   type PrismaClient,
 } from "@naisys/hub-database";
-import { HubEvents, ModelsResponse } from "@naisys/hub-protocol";
+import type { ModelsResponse } from "@naisys/hub-protocol";
+import { HubEvents } from "@naisys/hub-protocol";
 
-import { HubServerLog } from "../services/hubServerLog.js";
-import { NaisysServer } from "../services/naisysServer.js";
+import type { HubServerLog } from "../services/hubServerLog.js";
+import type { NaisysServer } from "../services/naisysServer.js";
 
 /** Hub handler that seeds models on startup, pushes them on connect, and broadcasts on change */
 export async function createHubModelsService(

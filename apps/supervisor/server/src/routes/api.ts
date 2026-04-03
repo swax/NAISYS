@@ -1,4 +1,4 @@
-import { FastifyInstance, FastifyPluginOptions } from "fastify";
+import type { FastifyInstance, FastifyPluginOptions } from "fastify";
 
 import { registerAuthMiddleware } from "../auth-middleware.js";
 import adminRoutes from "./admin.js";

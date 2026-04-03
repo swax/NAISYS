@@ -1,9 +1,5 @@
-import {
-  adminAgentConfig,
-  AgentConfigFile,
-  AgentConfigFileSchema,
-  UserEntry,
-} from "@naisys/common";
+import type { AgentConfigFile, UserEntry } from "@naisys/common";
+import { adminAgentConfig, AgentConfigFileSchema } from "@naisys/common";
 import * as fs from "fs";
 import yaml from "js-yaml";
 import * as path from "path";

@@ -3,17 +3,17 @@ import {
   calculatePeriodBoundaries,
 } from "@naisys/common";
 import type { HubDatabaseService } from "@naisys/hub-database";
-import { PrismaClient } from "@naisys/hub-database";
+import type { PrismaClient } from "@naisys/hub-database";
 import {
   type CostPushEntry,
   CostWriteRequestSchema,
   HubEvents,
 } from "@naisys/hub-protocol";
 
-import { HubServerLog } from "../services/hubServerLog.js";
-import { NaisysServer } from "../services/naisysServer.js";
-import { HubConfigService } from "./hubConfigService.js";
-import { HubHeartbeatService } from "./hubHeartbeatService.js";
+import type { HubServerLog } from "../services/hubServerLog.js";
+import type { NaisysServer } from "../services/naisysServer.js";
+import type { HubConfigService } from "./hubConfigService.js";
+import type { HubHeartbeatService } from "./hubHeartbeatService.js";
 
 const SPEND_LIMIT_CHECK_INTERVAL_MS = 10_000;
 
@@ -29,91 +29,94 @@ export function createHubCostService(
   const suspendedByGlobal = new Set<number>();
   const suspendedByAgent = new Set<number>();
 
-  naisysServer.registerEvent(HubEvents.COST_WRITE, async (hostId, data, ack) => {
-    try {
-      const parsed = CostWriteRequestSchema.parse(data);
+  naisysServer.registerEvent(
+    HubEvents.COST_WRITE,
+    async (hostId, data, ack) => {
+      try {
+        const parsed = CostWriteRequestSchema.parse(data);
 
-      // Roll up cost deltas by user/run/session for supervisor push,
-      // and per-user totals for budget_left decrement
-      const costPushMap = new Map<string, CostPushEntry>();
-      const userCostTotals = new Map<number, number>();
+        // Roll up cost deltas by user/run/session for supervisor push,
+        // and per-user totals for budget_left decrement
+        const costPushMap = new Map<string, CostPushEntry>();
+        const userCostTotals = new Map<number, number>();
 
-      for (const entry of parsed.entries) {
-        await hubDb.costs.create({
-          data: {
-            user_id: entry.userId,
-            run_id: entry.runId,
-            session_id: entry.sessionId,
-            host_id: hostId,
-            source: entry.source,
-            model: entry.model,
-            cost: entry.cost,
-            input_tokens: entry.inputTokens,
-            output_tokens: entry.outputTokens,
-            cache_write_tokens: entry.cacheWriteTokens,
-            cache_read_tokens: entry.cacheReadTokens,
-          },
-        });
+        for (const entry of parsed.entries) {
+          await hubDb.costs.create({
+            data: {
+              user_id: entry.userId,
+              run_id: entry.runId,
+              session_id: entry.sessionId,
+              host_id: hostId,
+              source: entry.source,
+              model: entry.model,
+              cost: entry.cost,
+              input_tokens: entry.inputTokens,
+              output_tokens: entry.outputTokens,
+              cache_write_tokens: entry.cacheWriteTokens,
+              cache_read_tokens: entry.cacheReadTokens,
+            },
+          });
 
-        // Update run_session total_cost
-        await hubDb.run_session.updateMany({
-          where: {
-            user_id: entry.userId,
-            run_id: entry.runId,
-            session_id: entry.sessionId,
-          },
-          data: {
-            total_cost: { increment: entry.cost },
-          },
-        });
+          // Update run_session total_cost
+          await hubDb.run_session.updateMany({
+            where: {
+              user_id: entry.userId,
+              run_id: entry.runId,
+              session_id: entry.sessionId,
+            },
+            data: {
+              total_cost: { increment: entry.cost },
+            },
+          });
 
-        const key = `${entry.userId}:${entry.runId}:${entry.sessionId}`;
-        const existing = costPushMap.get(key);
-        if (existing) {
-          existing.costDelta += entry.cost;
-        } else {
-          costPushMap.set(key, {
-            userId: entry.userId,
-            runId: entry.runId,
-            sessionId: entry.sessionId,
-            costDelta: entry.cost,
+          const key = `${entry.userId}:${entry.runId}:${entry.sessionId}`;
+          const existing = costPushMap.get(key);
+          if (existing) {
+            existing.costDelta += entry.cost;
+          } else {
+            costPushMap.set(key, {
+              userId: entry.userId,
+              runId: entry.runId,
+              sessionId: entry.sessionId,
+              costDelta: entry.cost,
+            });
+          }
+
+          userCostTotals.set(
+            entry.userId,
+            (userCostTotals.get(entry.userId) ?? 0) + entry.cost,
+          );
+        }
+
+        // Push rolled-up cost deltas to supervisor connections
+        if (costPushMap.size > 0) {
+          naisysServer.broadcastToSupervisors(HubEvents.COST_PUSH, {
+            entries: Array.from(costPushMap.values()),
           });
         }
 
-        userCostTotals.set(
-          entry.userId,
-          (userCostTotals.get(entry.userId) ?? 0) + entry.cost,
-        );
-      }
-
-      // Push rolled-up cost deltas to supervisor connections
-      if (costPushMap.size > 0) {
-        naisysServer.broadcastToSupervisors(HubEvents.COST_PUSH, {
-          entries: Array.from(costPushMap.values()),
-        });
-      }
-
-      // Re-send cost_control to any suspended users still writing costs
-      for (const userId of userCostTotals.keys()) {
-        if (suspendedByGlobal.has(userId) || suspendedByAgent.has(userId)) {
-          sendCostControl(userId, false, "Spend limit exceeded");
+        // Re-send cost_control to any suspended users still writing costs
+        for (const userId of userCostTotals.keys()) {
+          if (suspendedByGlobal.has(userId) || suspendedByAgent.has(userId)) {
+            sendCostControl(userId, false, "Spend limit exceeded");
+          }
         }
-      }
 
-      // Decrement budget_left and return updated values
-      const budgets = await Promise.all(
-        Array.from(userCostTotals.entries()).map(([userId, batchCost]) =>
-          decrementBudgetLeft(hubDb, userId, batchCost),
-        ),
-      );
-      ack({ budgets });
-    } catch (error) {
-      logService.error(
-        `[Hub:Costs] Error processing cost_write from host ${hostId}: ${error}`,
-      );
-      ack({ budgets: [] });
-    }
-  });
+        // Decrement budget_left and return updated values
+        const budgets = await Promise.all(
+          Array.from(userCostTotals.entries()).map(([userId, batchCost]) =>
+            decrementBudgetLeft(hubDb, userId, batchCost),
+          ),
+        );
+        ack({ budgets });
+      } catch (error) {
+        logService.error(
+          `[Hub:Costs] Error processing cost_write from host ${hostId}: ${error}`,
+        );
+        ack({ budgets: [] });
+      }
+    },
+  );
 
   // Periodic spend limit checking
   const spendLimitCheckInterval = setInterval(
@@ -363,7 +366,10 @@ export function createHubCostService(
         return { userId, budgetLeft: null };
       }
 
-      const budgetLeft = Math.max(0, Number(notification.budget_left) - batchCost);
+      const budgetLeft = Math.max(
+        0,
+        Number(notification.budget_left) - batchCost,
+      );
       await hubDb.user_notifications.update({
         where: { user_id: userId },
         data: { budget_left: budgetLeft },

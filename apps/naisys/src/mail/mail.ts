@@ -1,27 +1,22 @@
-import {
-  HubEvents,
-  MailMessageData,
-  MailReceivedPush,
-} from "@naisys/hub-protocol";
+import type { MailMessageData, MailReceivedPush } from "@naisys/hub-protocol";
+import { HubEvents } from "@naisys/hub-protocol";
 import stringArgv from "string-argv";
 
-import { IAgentManager } from "../agent/agentManagerInterface.js";
-import { UserEntry, UserService } from "../agent/userService.js";
+import type { IAgentManager } from "../agent/agentManagerInterface.js";
+import type { UserEntry } from "../agent/userService.js";
+import type { UserService } from "../agent/userService.js";
 import { mailCmd } from "../command/commandDefs.js";
-import {
+import type {
   CommandResponse,
   RegistrableCommand,
 } from "../command/commandRegistry.js";
-import { ShellWrapper } from "../command/shellWrapper.js";
-import { GlobalConfig } from "../globalConfig.js";
-import { HubClient } from "../hub/hubClient.js";
-import { AttachmentService } from "../services/attachmentService.js";
-import { PromptNotificationService } from "../utils/promptNotificationService.js";
-import {
-  formatMessageDisplay,
-  MailContent,
-  MailDisplayService,
-} from "./mailDisplayService.js";
+import type { ShellWrapper } from "../command/shellWrapper.js";
+import type { GlobalConfig } from "../globalConfig.js";
+import type { HubClient } from "../hub/hubClient.js";
+import type { AttachmentService } from "../services/attachmentService.js";
+import type { PromptNotificationService } from "../utils/promptNotificationService.js";
+import type { MailContent, MailDisplayService } from "./mailDisplayService.js";
+import { formatMessageDisplay } from "./mailDisplayService.js";
 
 export function createMailService(
   hubClient: HubClient | undefined,

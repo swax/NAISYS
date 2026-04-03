@@ -10,8 +10,8 @@ import {
 
 import { writeAuditEntry } from "../audit.js";
 import erpDb from "../erpDb.js";
-import { API_PREFIX } from "../hateoas.js";
 import type { OperationRunModel } from "../generated/prisma/models/OperationRun.js";
+import { API_PREFIX } from "../hateoas.js";
 import {
   deserializeFieldValue,
   validateFieldValue,
@@ -217,10 +217,7 @@ export async function getOpRunFieldRefSummary(
         const stored = storedFieldValues.find(
           (fv) => fv.fieldId === field.id && fv.setIndex === si,
         );
-        const value = deserializeFieldValue(
-          stored?.value ?? "",
-          field.isArray,
-        );
+        const value = deserializeFieldValue(stored?.value ?? "", field.isArray);
         const setPath = ref.sourceStep.multiSet
           ? `/sets/${si}/fields/${field.seqNo}`
           : `/fields/${field.seqNo}`;

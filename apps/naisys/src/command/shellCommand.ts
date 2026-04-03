@@ -1,9 +1,9 @@
-import { GlobalConfig } from "../globalConfig.js";
-import { ContextManager } from "../llm/contextManager.js";
+import type { GlobalConfig } from "../globalConfig.js";
+import type { ContextManager } from "../llm/contextManager.js";
 import { getPlatformConfig } from "../services/shellPlatform.js";
-import { InputModeService } from "../utils/inputMode.js";
+import type { InputModeService } from "../utils/inputMode.js";
 import * as utilities from "../utils/utilities.js";
-import { ShellWrapper } from "./shellWrapper.js";
+import type { ShellWrapper } from "./shellWrapper.js";
 
 export function createShellCommand(
   { globalConfig }: GlobalConfig,

@@ -1,10 +1,13 @@
 import type { HateoasAction } from "@naisys/common";
-import { Host as BaseHost, HostStatusEvent } from "@naisys-supervisor/shared";
+import type {
+  Host as BaseHost,
+  HostStatusEvent,
+} from "@naisys-supervisor/shared";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useState } from "react";
 
 import { getHostData } from "../lib/apiAgents";
-import { Host } from "../types/agent";
+import type { Host } from "../types/agent";
 import { useSubscription } from "./useSubscription";
 
 // Module-level cache (shared across all hook instances and persists across remounts)

@@ -1,8 +1,8 @@
 import type { HubDatabaseService } from "@naisys/hub-database";
 import { HubEvents, type UserListResponse } from "@naisys/hub-protocol";
 
-import { HubServerLog } from "../services/hubServerLog.js";
-import { NaisysServer } from "../services/naisysServer.js";
+import type { HubServerLog } from "../services/hubServerLog.js";
+import type { NaisysServer } from "../services/naisysServer.js";
 
 /** Pushes the user list to NAISYS instances when they connect or when users change */
 export function createHubUserService(

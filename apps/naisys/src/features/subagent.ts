@@ -3,15 +3,15 @@ import stringArgv from "string-argv";
 import stripAnsi from "strip-ansi";
 import table from "text-table";
 
-import { IAgentManager } from "../agent/agentManagerInterface.js";
-import { UserService } from "../agent/userService.js";
+import type { IAgentManager } from "../agent/agentManagerInterface.js";
+import type { UserService } from "../agent/userService.js";
 import { subagentCmd } from "../command/commandDefs.js";
-import { RegistrableCommand } from "../command/commandRegistry.js";
-import { HubClient } from "../hub/hubClient.js";
-import { MailService } from "../mail/mail.js";
-import { InputModeService } from "../utils/inputMode.js";
-import { OutputService } from "../utils/output.js";
-import { PromptNotificationService } from "../utils/promptNotificationService.js";
+import type { RegistrableCommand } from "../command/commandRegistry.js";
+import type { HubClient } from "../hub/hubClient.js";
+import type { MailService } from "../mail/mail.js";
+import type { InputModeService } from "../utils/inputMode.js";
+import type { OutputService } from "../utils/output.js";
+import type { PromptNotificationService } from "../utils/promptNotificationService.js";
 
 interface Subagent {
   userId: number;

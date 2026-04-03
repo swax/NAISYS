@@ -1,4 +1,5 @@
-import { toUrlSafeKey, UserEntry } from "@naisys/common";
+import type { UserEntry } from "@naisys/common";
+import { toUrlSafeKey } from "@naisys/common";
 import { loadAgentConfigs } from "@naisys/common-node";
 import {
   type HubDatabaseService,
@@ -6,7 +7,7 @@ import {
 } from "@naisys/hub-database";
 import { randomBytes, randomUUID } from "crypto";
 
-import { HubServerLog } from "./hubServerLog.js";
+import type { HubServerLog } from "./hubServerLog.js";
 
 /** Seeds agent configs from YAML files into an empty database. Skips if users already exist. */
 export async function seedAgentConfigs(

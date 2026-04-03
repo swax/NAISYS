@@ -1,7 +1,7 @@
 import { existsSync } from "fs";
 
 import { hubDbPath } from "./dbConfig.js";
-import { PrismaClient } from "./generated/prisma/client.js";
+import type { PrismaClient } from "./generated/prisma/client.js";
 import { createPrismaClient } from "./prismaClient.js";
 
 let prisma: PrismaClient | null = null;

@@ -1,4 +1,4 @@
-import { QueryResult } from "./vendorTypes.js";
+import type { QueryResult } from "./vendorTypes.js";
 
 /**
  * @param abortSignal 5 second mock delay, to simulate network latency and test ESC command

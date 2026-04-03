@@ -1,4 +1,4 @@
-import { LogEntry, RunSession } from "@naisys-supervisor/shared";
+import type { LogEntry, RunSession } from "@naisys-supervisor/shared";
 
 import { hubDb } from "../database/hubDb.js";
 

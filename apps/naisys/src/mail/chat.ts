@@ -1,20 +1,21 @@
 import { formatFileSize } from "@naisys/common";
-import {
-  HubEvents,
+import type {
   MailAttachmentData,
   MailListMessageData,
   MailMessageData,
   MailReceivedPush,
 } from "@naisys/hub-protocol";
+import { HubEvents } from "@naisys/hub-protocol";
 import stringArgv from "string-argv";
 
-import { UserEntry, UserService } from "../agent/userService.js";
+import type { UserEntry } from "../agent/userService.js";
+import type { UserService } from "../agent/userService.js";
 import { chatCmd } from "../command/commandDefs.js";
-import { RegistrableCommand } from "../command/commandRegistry.js";
-import { ShellWrapper } from "../command/shellWrapper.js";
-import { HubClient } from "../hub/hubClient.js";
-import { AttachmentService } from "../services/attachmentService.js";
-import { PromptNotificationService } from "../utils/promptNotificationService.js";
+import type { RegistrableCommand } from "../command/commandRegistry.js";
+import type { ShellWrapper } from "../command/shellWrapper.js";
+import type { HubClient } from "../hub/hubClient.js";
+import type { AttachmentService } from "../services/attachmentService.js";
+import type { PromptNotificationService } from "../utils/promptNotificationService.js";
 
 /** Format inline attachment suffix, e.g. " [file.txt 2.1KB]" */
 function formatAttachmentSuffix(attachments?: MailAttachmentData[]): string {

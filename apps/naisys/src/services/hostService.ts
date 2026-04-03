@@ -2,8 +2,8 @@ import { HostListSchema, HubEvents } from "@naisys/hub-protocol";
 import table from "text-table";
 
 import { hostCmd } from "../command/commandDefs.js";
-import { GlobalConfig } from "../globalConfig.js";
-import { HubClient } from "../hub/hubClient.js";
+import type { GlobalConfig } from "../globalConfig.js";
+import type { HubClient } from "../hub/hubClient.js";
 
 interface HostEntry {
   hostName: string;

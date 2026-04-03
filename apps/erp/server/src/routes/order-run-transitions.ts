@@ -1,15 +1,19 @@
 import {
   CompleteOrderRunSchema,
   ErrorResponseSchema,
-  OrderRunTransitionSchema,
   OrderRunStatus,
+  OrderRunTransitionSchema,
 } from "@naisys-erp/shared";
-import { FastifyInstance } from "fastify";
+import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 
 import { requirePermission } from "../auth-middleware.js";
 import { conflict, notFound, unprocessable } from "../error-handler.js";
-import { resolveOrderRun, useFullSerializer, wantsFullResponse } from "../route-helpers.js";
+import {
+  resolveOrderRun,
+  useFullSerializer,
+  wantsFullResponse,
+} from "../route-helpers.js";
 import {
   checkOpsComplete,
   completeOrderRun,
@@ -69,7 +73,14 @@ export default function orderRunTransitionRoutes(fastify: FastifyInstance) {
       const itemKey = run.order?.item?.key ?? null;
       return {
         status: run.status,
-        _actions: await orderRunItemActions(orderKey, runNo, run.id, run.status, itemKey, request.erpUser),
+        _actions: await orderRunItemActions(
+          orderKey,
+          runNo,
+          run.id,
+          run.status,
+          itemKey,
+          request.erpUser,
+        ),
       };
     },
   });
@@ -123,7 +134,14 @@ export default function orderRunTransitionRoutes(fastify: FastifyInstance) {
       const itemKey = run.order?.item?.key ?? null;
       return {
         status: run.status,
-        _actions: await orderRunItemActions(orderKey, runNo, run.id, run.status, itemKey, request.erpUser),
+        _actions: await orderRunItemActions(
+          orderKey,
+          runNo,
+          run.id,
+          run.status,
+          itemKey,
+          request.erpUser,
+        ),
       };
     },
   });
@@ -174,7 +192,7 @@ export default function orderRunTransitionRoutes(fastify: FastifyInstance) {
       }
 
       const run = result.run!;
-      
+
       if (wantsFullResponse(request)) {
         useFullSerializer(reply);
         return formatRun(orderKey, request.erpUser, run);
@@ -182,7 +200,14 @@ export default function orderRunTransitionRoutes(fastify: FastifyInstance) {
       const itemKey = run.order?.item?.key ?? null;
       return {
         status: run.status,
-        _actions: await orderRunItemActions(orderKey, runNo, run.id, run.status, itemKey, request.erpUser),
+        _actions: await orderRunItemActions(
+          orderKey,
+          runNo,
+          run.id,
+          run.status,
+          itemKey,
+          request.erpUser,
+        ),
       };
     },
   });
@@ -234,7 +259,14 @@ export default function orderRunTransitionRoutes(fastify: FastifyInstance) {
       const itemKey = run.order?.item?.key ?? null;
       return {
         status: run.status,
-        _actions: await orderRunItemActions(orderKey, runNo, run.id, run.status, itemKey, request.erpUser),
+        _actions: await orderRunItemActions(
+          orderKey,
+          runNo,
+          run.id,
+          run.status,
+          itemKey,
+          request.erpUser,
+        ),
       };
     },
   });
@@ -291,7 +323,14 @@ export default function orderRunTransitionRoutes(fastify: FastifyInstance) {
       const itemKey = run.order?.item?.key ?? null;
       return {
         status: run.status,
-        _actions: await orderRunItemActions(orderKey, runNo, run.id, run.status, itemKey, request.erpUser),
+        _actions: await orderRunItemActions(
+          orderKey,
+          runNo,
+          run.id,
+          run.status,
+          itemKey,
+          request.erpUser,
+        ),
       };
     },
   });

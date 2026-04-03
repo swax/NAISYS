@@ -9,10 +9,10 @@ import * as os from "os";
 import stringArgv from "string-argv";
 
 import { lynxCmd } from "../command/commandDefs.js";
-import { RegistrableCommand } from "../command/commandRegistry.js";
-import { GlobalConfig } from "../globalConfig.js";
-import { CostTracker } from "../llm/costTracker.js";
-import { OutputService } from "../utils/output.js";
+import type { RegistrableCommand } from "../command/commandRegistry.js";
+import type { GlobalConfig } from "../globalConfig.js";
+import type { CostTracker } from "../llm/costTracker.js";
+import type { OutputService } from "../utils/output.js";
 import * as utilities from "../utils/utilities.js";
 
 export function createLynxService(

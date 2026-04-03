@@ -1,9 +1,9 @@
+import { mimeFromFilename } from "@naisys/common";
 import {
   ErrorResponseSchema,
   UploadAttachmentResponseSchema,
 } from "@naisys-erp/shared";
-import { mimeFromFilename } from "@naisys/common";
-import { FastifyInstance } from "fastify";
+import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { createReadStream, existsSync, statSync } from "fs";
 import { z } from "zod/v4";

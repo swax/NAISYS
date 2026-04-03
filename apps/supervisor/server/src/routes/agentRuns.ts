@@ -1,18 +1,20 @@
-import {
+import type {
   AgentUsernameParams,
-  AgentUsernameParamsSchema,
   ContextLogParams,
-  ContextLogParamsSchema,
   ContextLogRequest,
-  ContextLogRequestSchema,
   ContextLogResponse,
-  ContextLogResponseSchema,
   RunsDataRequest,
-  RunsDataRequestSchema,
   RunsDataResponse,
+} from "@naisys-supervisor/shared";
+import {
+  AgentUsernameParamsSchema,
+  ContextLogParamsSchema,
+  ContextLogRequestSchema,
+  ContextLogResponseSchema,
+  RunsDataRequestSchema,
   RunsDataResponseSchema,
 } from "@naisys-supervisor/shared";
-import { FastifyInstance, FastifyPluginOptions } from "fastify";
+import type { FastifyInstance, FastifyPluginOptions } from "fastify";
 
 import { notFound } from "../error-helpers.js";
 import { API_PREFIX } from "../hateoas.js";
