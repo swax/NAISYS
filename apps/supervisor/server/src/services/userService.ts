@@ -6,7 +6,7 @@ import {
 } from "@naisys/hub-database";
 import type { Permission } from "@naisys/supervisor-database";
 import { updateUserPassword } from "@naisys/supervisor-database";
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import { randomBytes, randomUUID } from "crypto";
 
 import supervisorDb from "../database/supervisorDb.js";

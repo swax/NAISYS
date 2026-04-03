@@ -1,6 +1,6 @@
 import { SUPER_ADMIN_USERNAME } from "@naisys/common";
 import { ensureSuperAdmin } from "@naisys/supervisor-database";
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import { randomBytes, randomUUID } from "crypto";
 import readline from "readline/promises";
 
