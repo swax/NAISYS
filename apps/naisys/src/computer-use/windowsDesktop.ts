@@ -8,6 +8,7 @@ import { execFileSync } from "child_process";
 function runPowerShell(command: string) {
   execFileSync("powershell.exe", ["-NoProfile", "-Command", command], {
     stdio: "pipe",
+    timeout: 10000,
   });
 }
 
@@ -80,6 +81,7 @@ try {
   try {
     execFileSync("powershell.exe", ["-NoProfile", "-Command", psScript], {
       stdio: "pipe",
+      timeout: 5000,
     });
   } catch (e: any) {
     throw new Error(

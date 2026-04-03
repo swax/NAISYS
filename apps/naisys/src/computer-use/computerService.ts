@@ -355,9 +355,7 @@ export function formatDesktopActions(
 
 // --- Service factory ---
 
-export async function createComputerService(
-  { agentConfig }: AgentConfig,
-) {
+export async function createComputerService({ agentConfig }: AgentConfig) {
   startScreenshotCleanup();
   const platform = agentConfig().controlDesktop ? detectPlatform() : null;
   let nativeDimensions: { width: number; height: number } | null = null;
