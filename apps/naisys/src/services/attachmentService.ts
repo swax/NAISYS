@@ -14,6 +14,7 @@ function uploadFileToHub(
   apiKey: string,
   filepath: string,
   purpose: string,
+  agent: https.Agent | null,
 ): Promise<number> {
   const fileBuffer = fs.readFileSync(filepath);
   const fileHash = createHash("sha256").update(fileBuffer).digest("hex");
@@ -32,8 +33,8 @@ function uploadFileToHub(
       url,
       {
         method: "POST",
-        rejectUnauthorized: false,
         headers: { "Content-Length": fileSize },
+        agent: agent ?? undefined,
       },
       (res) => {
         let body = "";
@@ -84,7 +85,13 @@ export function createAttachmentService(
     const apiKey = userService.getUserById(localUserId)?.apiKey;
     if (!apiKey) throw "No API key configured for this user.";
 
-    return uploadFileToHub(hubClient.getHubUrl(), apiKey, filepath, purpose);
+    return uploadFileToHub(
+      hubClient.getHubUrl(),
+      apiKey,
+      filepath,
+      purpose,
+      hubClient.getPinnedAgent(),
+    );
   }
 
   /**

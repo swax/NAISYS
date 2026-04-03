@@ -1,5 +1,6 @@
 import { createHash } from "crypto";
 import { existsSync, readFileSync } from "fs";
+import https from "https";
 import { join } from "path";
 import tls from "tls";
 
@@ -45,15 +46,16 @@ export function computeCertFingerprint(derCert: Buffer): string {
 }
 
 /**
- * Connect to a TLS server and verify that the certificate fingerprint
- * starts with the expected prefix. Rejects if the fingerprint doesn't match.
+ * Connect to a TLS server, verify that the certificate fingerprint matches
+ * the expected prefix, and return the PEM-encoded certificate for use as a
+ * trusted CA in subsequent connections.
  */
 export async function verifyHubCertificate(
   host: string,
   port: number,
   fingerprintPrefix: string,
-): Promise<void> {
-  const fingerprint = await new Promise<string>((resolve, reject) => {
+): Promise<string> {
+  return new Promise<string>((resolve, reject) => {
     const sock = tls.connect(port, host, { rejectUnauthorized: false }, () => {
       const cert = sock.getPeerCertificate(true);
       sock.destroy();
@@ -61,14 +63,35 @@ export async function verifyHubCertificate(
         reject(new Error("No certificate received from hub"));
         return;
       }
-      resolve(computeCertFingerprint(cert.raw));
+      const fingerprint = computeCertFingerprint(cert.raw);
+      if (!fingerprint.startsWith(fingerprintPrefix)) {
+        reject(
+          new Error(
+            `Hub certificate fingerprint mismatch: expected prefix ${fingerprintPrefix}, got ${fingerprint.substring(0, fingerprintPrefix.length)}`,
+          ),
+        );
+        return;
+      }
+      // Convert DER to PEM so it can be used as a trusted CA
+      const pem =
+        "-----BEGIN CERTIFICATE-----\n" +
+        cert.raw.toString("base64") +
+        "\n-----END CERTIFICATE-----\n";
+      resolve(pem);
     });
     sock.on("error", reject);
   });
+}
 
-  if (!fingerprint.startsWith(fingerprintPrefix)) {
-    throw new Error(
-      `Hub certificate fingerprint mismatch: expected prefix ${fingerprintPrefix}, got ${fingerprint.substring(0, fingerprintPrefix.length)}`,
-    );
-  }
+/**
+ * Create an https.Agent that trusts only the given PEM certificate.
+ * Used after verifyHubCertificate to pin all subsequent connections
+ * to the same cert (no TOCTOU gap since Node's TLS layer enforces it).
+ */
+export function createPinnedHttpsAgent(certPem: string): https.Agent {
+  return new https.Agent({
+    ca: certPem,
+    // Skip hostname check — cert is already pinned by fingerprint
+    checkServerIdentity: () => undefined,
+  });
 }

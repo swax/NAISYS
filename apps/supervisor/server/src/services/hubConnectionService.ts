@@ -1,4 +1,5 @@
 import {
+  createPinnedHttpsAgent,
   parseHubAccessKey,
   resolveHubAccessKey,
   verifyHubCertificate,
@@ -53,11 +54,16 @@ export function initHubConnection(hubUrl: string) {
 
   getLogger().info(`[Supervisor:HubClient] Connecting to ${hubUrl}...`);
 
-  // Verify the hub's TLS certificate fingerprint matches the access key
+  // Verify the hub's TLS cert fingerprint, then pin all subsequent connections
+  // to that exact cert via a custom HTTPS agent
   const { fingerprintPrefix } = parseHubAccessKey(hubAccessKey);
-  const url = new URL(hubUrl);
-  verifyHubCertificate(url.hostname, Number(url.port) || 443, fingerprintPrefix)
-    .then(() => connectSocket(hubUrl))
+  const parsedUrl = new URL(hubUrl);
+  verifyHubCertificate(
+    parsedUrl.hostname,
+    Number(parsedUrl.port) || 443,
+    fingerprintPrefix,
+  )
+    .then((certPem) => connectSocket(hubUrl, certPem))
     .catch((err) => {
       getLogger().error(
         `[Supervisor:HubClient] Certificate verification failed: ${err.message}`,
@@ -65,7 +71,9 @@ export function initHubConnection(hubUrl: string) {
     });
 }
 
-function connectSocket(hubUrl: string) {
+function connectSocket(hubUrl: string, certPem: string) {
+  const pinnedAgent = createPinnedHttpsAgent(certPem);
+
   socket = io(hubUrl + "/naisys", {
     auth: (cb) => {
       // Re-read access key on each connection attempt so rotated keys are picked up
@@ -75,7 +83,8 @@ function connectSocket(hubUrl: string) {
         hostType: "supervisor",
       });
     },
-    rejectUnauthorized: false,
+    // Type is narrowed to `string | boolean` for browser compat, but Node accepts an Agent
+    agent: pinnedAgent as any,
     reconnection: true,
     reconnectionDelay: 1000,
     reconnectionDelayMax: 30000,
