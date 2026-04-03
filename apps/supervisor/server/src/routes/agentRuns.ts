@@ -16,10 +16,15 @@ import {
 } from "@naisys/supervisor-shared";
 import type { FastifyInstance, FastifyPluginOptions } from "fastify";
 
+import { hasPermission } from "../auth-middleware.js";
 import { notFound } from "../error-helpers.js";
 import { API_PREFIX } from "../hateoas.js";
 import { resolveAgentId } from "../services/agentService.js";
-import { getContextLog, getRunsData } from "../services/runsService.js";
+import {
+  getContextLog,
+  getRunsData,
+  obfuscateLogs,
+} from "../services/runsService.js";
 
 export default function agentRunsRoutes(
   fastify: FastifyInstance,
@@ -106,13 +111,18 @@ export default function agentRunsRoutes(
         return notFound(reply, `Agent '${username}' not found`);
       }
 
-      const data = await getContextLog(
+      let data = await getContextLog(
         id,
         runId,
         sessionId,
         logsAfter,
         logsBefore,
       );
+
+      // Obfuscate log text for users without view_run_logs permission
+      if (!hasPermission(request.supervisorUser, "view_run_logs")) {
+        data = obfuscateLogs(data);
+      }
 
       const maxLogId = data?.logs.length
         ? Math.max(...data.logs.map((l) => l.id))

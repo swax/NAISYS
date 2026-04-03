@@ -8,6 +8,7 @@ export const PermissionEnum = z.enum([
   "agent_communication",
   "manage_models",
   "manage_variables",
+  "view_run_logs",
 ]);
 export type Permission = z.infer<typeof PermissionEnum>;
 
