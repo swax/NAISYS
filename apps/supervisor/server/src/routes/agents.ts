@@ -7,7 +7,7 @@ import type {
   CreateAgentConfigRequest,
   CreateAgentConfigResponse,
   ErrorResponse,
-} from "@naisys-supervisor/shared";
+} from "@naisys/supervisor-shared";
 import {
   AgentDetailResponseSchema,
   AgentListRequestSchema,
@@ -16,7 +16,7 @@ import {
   CreateAgentConfigRequestSchema,
   CreateAgentConfigResponseSchema,
   ErrorResponseSchema,
-} from "@naisys-supervisor/shared";
+} from "@naisys/supervisor-shared";
 import type { FastifyInstance, FastifyPluginOptions } from "fastify";
 
 import type { SupervisorUser } from "../auth-middleware.js";

@@ -13,7 +13,7 @@ import {
   LoginRequestSchema,
   LoginResponseSchema,
   LogoutResponseSchema,
-} from "@naisys-supervisor/shared";
+} from "@naisys/supervisor-shared";
 import type { FastifyInstance, FastifyPluginOptions } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 

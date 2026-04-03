@@ -1,4 +1,4 @@
-import type { CostBucket, CostByAgent } from "@naisys-supervisor/shared";
+import type { CostBucket, CostByAgent } from "@naisys/supervisor-shared";
 
 import { hubDb } from "../database/hubDb.js";
 

@@ -35,7 +35,7 @@ import {
   UpdateStepSchema,
   UpdateUserSchema,
   UpdateWorkCenterSchema,
-} from "@naisys-erp/shared";
+} from "@naisys/erp-shared";
 import { z } from "zod/v4";
 import type { $ZodType } from "zod/v4/core";
 

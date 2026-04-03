@@ -3,7 +3,7 @@ import {
   type OrderRunPriority,
   type OrderRunStatus,
   OrderRunStatus as OrderRunStatusValues,
-} from "@naisys-erp/shared";
+} from "@naisys/erp-shared";
 
 import { writeAuditEntry } from "../audit.js";
 import erpDb from "../erpDb.js";

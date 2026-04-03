@@ -1,4 +1,4 @@
-import type { AuthUser } from "@naisys-erp/shared";
+import type { AuthUser } from "@naisys/erp-shared";
 import {
   createContext,
   useCallback,

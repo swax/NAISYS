@@ -1,5 +1,5 @@
 import { Badge, Card, Group, Loader, Stack, Table, Text } from "@mantine/core";
-import type { OperationPredecessor } from "@naisys-erp/shared";
+import type { OperationPredecessor } from "@naisys/erp-shared";
 import { Link } from "react-router";
 
 import { cellLinkStyle } from "../lib/tableStyles";

@@ -1,5 +1,5 @@
 import type { HateoasLink } from "@naisys/common";
-import { PermissionEnum } from "@naisys-supervisor/shared";
+import { PermissionEnum } from "@naisys/supervisor-shared";
 import type { FastifyInstance, FastifyPluginOptions } from "fastify";
 
 const API_PREFIX = "/api/supervisor";

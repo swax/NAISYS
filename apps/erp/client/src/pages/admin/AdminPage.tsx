@@ -5,7 +5,7 @@ import type {
   ServerLogResponse,
 } from "@naisys/common-browser";
 import { AttachmentList, ServerLogViewer } from "@naisys/common-browser";
-import type { AdminInfoResponse } from "@naisys-erp/shared";
+import type { AdminInfoResponse } from "@naisys/erp-shared";
 import { useCallback, useEffect, useState } from "react";
 
 import { api, apiEndpoints } from "../../lib/api";

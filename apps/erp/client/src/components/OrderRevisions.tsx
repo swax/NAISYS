@@ -14,8 +14,8 @@ import {
 import type {
   OrderRevision,
   OrderRevisionListResponse,
-} from "@naisys-erp/shared";
-import { RevisionStatus } from "@naisys-erp/shared";
+} from "@naisys/erp-shared";
+import { RevisionStatus } from "@naisys/erp-shared";
 import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router";
 

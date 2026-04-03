@@ -1,16 +1,16 @@
 {
   "name": "naisys-monorepo",
-  "version": "1.0.0",
+  "version": "3.0.0",
   "description": "NAISYS monorepo containing NAISYS core and related applications",
   "private": true,
   "packageManager": "npm@11.11.1",
   "type": "module",
   "workspaces": [
-    "packages/common-browser",
     "packages/common",
     "packages/common-node",
-    "packages/hub-database",
+    "packages/common-browser",
     "packages/hub-protocol",
+    "packages/hub-database",
     "packages/supervisor-database",
     "apps/erp/shared",
     "apps/erp/client",
@@ -28,6 +28,7 @@
     "lint:fix": "eslint . --fix",
     "prettier": "prettier --write .",
     "publish:dryrun": "npm run clean && npm run build && npm run npm:publish:dryrun --workspaces --if-present",
+    "publish:all": "echo '⚠ This will publish ALL packages to npm. Press Ctrl+C to cancel.' && read -p 'Type YES to continue: ' confirm && [ \"$confirm\" = 'YES' ] && npm run clean && npm run build && npm run npm:publish --workspaces --if-present || echo 'Cancelled.'",
     "updates:check": "npm-check-updates && npm-check-updates --workspaces",
     "updates:apply": "npm-check-updates -u && npm-check-updates --workspaces -u && npm install"
   },

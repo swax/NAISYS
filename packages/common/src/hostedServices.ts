@@ -17,7 +17,7 @@ export type StartHub = (
   supervisorPort?: number;
 }>;
 
-/** Starts the Supervisor web server. Exported by @naisys-supervisor/server */
+/** Starts the Supervisor web server. Exported by @naisys/supervisor */
 export type StartServer = (
   startupType: "standalone" | "hosted",
   plugins?: "erp"[],

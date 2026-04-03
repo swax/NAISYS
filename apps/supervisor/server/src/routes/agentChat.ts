@@ -9,7 +9,7 @@ import type {
   ErrorResponse,
   SendChatRequest,
   SendChatResponse,
-} from "@naisys-supervisor/shared";
+} from "@naisys/supervisor-shared";
 import {
   AgentUsernameParamsSchema,
   ArchiveChatResponseSchema,
@@ -19,7 +19,7 @@ import {
   ChatMessagesResponseSchema,
   ErrorResponseSchema,
   SendChatResponseSchema,
-} from "@naisys-supervisor/shared";
+} from "@naisys/supervisor-shared";
 import type { FastifyInstance, FastifyPluginOptions } from "fastify";
 
 import { hasPermission, requirePermission } from "../auth-middleware.js";

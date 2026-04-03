@@ -10,7 +10,7 @@ import type {
   RotateAccessKeyResult,
   ServerLogRequest,
   ServerLogResponse,
-} from "@naisys-supervisor/shared";
+} from "@naisys/supervisor-shared";
 import {
   AdminAttachmentListRequestSchema,
   AdminAttachmentListResponseSchema,
@@ -19,7 +19,7 @@ import {
   RotateAccessKeyResultSchema,
   ServerLogRequestSchema,
   ServerLogResponseSchema,
-} from "@naisys-supervisor/shared";
+} from "@naisys/supervisor-shared";
 import archiver from "archiver";
 import type { FastifyInstance, FastifyPluginOptions } from "fastify";
 

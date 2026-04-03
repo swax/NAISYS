@@ -3,7 +3,7 @@ import type {
   LogPushSessionUpdate,
   SessionPush,
 } from "@naisys/hub-protocol";
-import type { RunSession as BaseRunSession } from "@naisys-supervisor/shared";
+import type { RunSession as BaseRunSession } from "@naisys/supervisor-shared";
 import { useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
 

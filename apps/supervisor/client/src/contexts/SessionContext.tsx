@@ -1,4 +1,4 @@
-import type { AuthUser, Permission } from "@naisys-supervisor/shared";
+import type { AuthUser, Permission } from "@naisys/supervisor-shared";
 import React, { createContext, useContext, useEffect, useState } from "react";
 
 import { getMe, login as apiLogin, logout as apiLogout } from "../lib/apiAuth";

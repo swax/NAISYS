@@ -13,8 +13,8 @@ import type {
   OrderRevision,
   OrderRun,
   UpdateOrderRun,
-} from "@naisys-erp/shared";
-import { OrderRunPriority } from "@naisys-erp/shared";
+} from "@naisys/erp-shared";
+import { OrderRunPriority } from "@naisys/erp-shared";
 import { useCallback, useEffect, useState } from "react";
 import { Link, useOutletContext, useParams } from "react-router";
 

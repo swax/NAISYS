@@ -1,4 +1,4 @@
-import type { ErrorResponse } from "@naisys-erp/shared";
+import type { ErrorResponse } from "@naisys/erp-shared";
 import type { FastifyReply } from "fastify";
 
 function send(

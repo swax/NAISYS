@@ -1,8 +1,8 @@
-import type { StatusResponse } from "@naisys-supervisor/shared";
+import type { StatusResponse } from "@naisys/supervisor-shared";
 import {
   ErrorResponseSchema,
   StatusResponseSchema,
-} from "@naisys-supervisor/shared";
+} from "@naisys/supervisor-shared";
 import type { FastifyInstance, FastifyPluginOptions } from "fastify";
 
 import { isHubConnected } from "../services/hubConnectionService.js";

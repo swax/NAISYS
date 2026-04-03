@@ -1,6 +1,6 @@
 import { Autocomplete, type AutocompleteProps } from "@mantine/core";
 import { useDebouncedValue } from "@mantine/hooks";
-import type { WorkCenterListResponse } from "@naisys-erp/shared";
+import type { WorkCenterListResponse } from "@naisys/erp-shared";
 import { useCallback, useEffect, useState } from "react";
 
 import { api, apiEndpoints } from "../lib/api";

@@ -18,7 +18,7 @@ import type {
   StepRun,
   StepRunListResponse,
   StepRunTransition,
-} from "@naisys-erp/shared";
+} from "@naisys/erp-shared";
 import {
   IconArrowBackUp,
   IconChevronDown,

@@ -21,8 +21,8 @@ import type {
   HateoasAction,
   HateoasActionTemplate,
   UploadAttachmentResponse,
-} from "@naisys-erp/shared";
-import { FieldType } from "@naisys-erp/shared";
+} from "@naisys/erp-shared";
+import { FieldType } from "@naisys/erp-shared";
 import {
   IconAlertCircle,
   IconCheck,

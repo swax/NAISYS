@@ -9,7 +9,7 @@ import {
   Tooltip,
 } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
-import type { OrderRun } from "@naisys-erp/shared";
+import type { OrderRun } from "@naisys/erp-shared";
 import {
   IconLayoutSidebarLeftCollapse,
   IconLayoutSidebarLeftExpand,

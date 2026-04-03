@@ -9,7 +9,7 @@ import type {
   ErrorResponse,
   ServerLogRequest,
   ServerLogResponse,
-} from "@naisys-erp/shared";
+} from "@naisys/erp-shared";
 import {
   AdminAttachmentListRequestSchema,
   AdminAttachmentListResponseSchema,
@@ -17,7 +17,7 @@ import {
   ErrorResponseSchema,
   ServerLogRequestSchema,
   ServerLogResponseSchema,
-} from "@naisys-erp/shared";
+} from "@naisys/erp-shared";
 import type { FastifyInstance, FastifyPluginOptions } from "fastify";
 import { z } from "zod/v4";
 

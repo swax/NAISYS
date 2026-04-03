@@ -14,7 +14,7 @@ import type {
   SaveImageModelRequest,
   SaveLlmModelRequest,
   SaveModelResponse,
-} from "@naisys-supervisor/shared";
+} from "@naisys/supervisor-shared";
 import {
   DeleteModelParamsSchema,
   DeleteModelResponseSchema,
@@ -23,7 +23,7 @@ import {
   SaveImageModelRequestSchema,
   SaveLlmModelRequestSchema,
   SaveModelResponseSchema,
-} from "@naisys-supervisor/shared";
+} from "@naisys/supervisor-shared";
 import type { FastifyInstance, FastifyPluginOptions } from "fastify";
 
 import { hasPermission, requirePermission } from "../auth-middleware.js";

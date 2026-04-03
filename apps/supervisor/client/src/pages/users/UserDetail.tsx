@@ -18,7 +18,7 @@ import {
 import { useDisclosure } from "@mantine/hooks";
 import { hasAction } from "@naisys/common";
 import { SecretField } from "@naisys/common-browser";
-import type { Permission } from "@naisys-supervisor/shared";
+import type { Permission } from "@naisys/supervisor-shared";
 import { IconInfoCircle } from "@tabler/icons-react";
 import { useCallback, useEffect, useState } from "react";
 import {

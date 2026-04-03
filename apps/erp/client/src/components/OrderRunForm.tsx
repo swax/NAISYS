@@ -9,13 +9,13 @@ import {
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { zodResolver } from "@naisys/common-browser";
-import type { CreateOrderRun, UpdateOrderRun } from "@naisys-erp/shared";
+import type { CreateOrderRun, UpdateOrderRun } from "@naisys/erp-shared";
 import {
   CreateOrderRunSchema,
   OrderRunPriority,
   OrderRunPriorityEnum,
   UpdateOrderRunSchema,
-} from "@naisys-erp/shared";
+} from "@naisys/erp-shared";
 import { useState } from "react";
 
 type FormData<TEdit extends boolean> = TEdit extends true

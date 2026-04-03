@@ -1,7 +1,7 @@
 import path from "node:path";
 
 import { tailLogFile } from "@naisys/common-node";
-import type { ServerLogFile } from "@naisys-supervisor/shared";
+import type { ServerLogFile } from "@naisys/supervisor-shared";
 
 export { tailLogFile };
 

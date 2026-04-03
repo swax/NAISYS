@@ -22,7 +22,7 @@ import {
   ensureSuperAdmin,
   handleResetPassword,
 } from "@naisys/supervisor-database";
-import { PermissionEnum } from "@naisys-supervisor/shared";
+import { PermissionEnum } from "@naisys/supervisor-shared";
 import Fastify from "fastify";
 import {
   jsonSchemaTransform,
@@ -195,8 +195,8 @@ export const startServer: StartServer = async (
 
   // Conditionally load ERP plugin
   if (plugins.includes("erp")) {
-    // Use variable to avoid compile-time type dependency on @naisys-erp/server (allows parallel builds)
-    const erpModule = "@naisys-erp/server";
+    // Use variable to avoid compile-time type dependency on @naisys/erp (allows parallel builds)
+    const erpModule = "@naisys/erp";
     const { erpPlugin, enableSupervisorAuth } = (await import(erpModule)) as {
       erpPlugin: any;
       enableSupervisorAuth: any;

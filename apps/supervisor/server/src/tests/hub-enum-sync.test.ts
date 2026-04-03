@@ -24,7 +24,7 @@ import {
   LogTypeSchema,
   ModelTypeEnum,
   RecipientTypeEnum,
-} from "@naisys-supervisor/shared";
+} from "@naisys/supervisor-shared";
 import { expect, test } from "vitest";
 
 function assertEnumSync(

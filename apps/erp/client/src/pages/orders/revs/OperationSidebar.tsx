@@ -12,8 +12,8 @@ import {
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { zodResolver } from "@naisys/common-browser";
-import type { Operation, OperationListResponse } from "@naisys-erp/shared";
-import { CreateOperationSchema } from "@naisys-erp/shared";
+import type { Operation, OperationListResponse } from "@naisys/erp-shared";
+import { CreateOperationSchema } from "@naisys/erp-shared";
 import { IconPlus } from "@tabler/icons-react";
 import { useCallback, useEffect, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router";

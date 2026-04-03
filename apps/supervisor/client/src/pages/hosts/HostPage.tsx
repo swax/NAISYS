@@ -14,7 +14,7 @@ import {
 import { notifications } from "@mantine/notifications";
 import type { HateoasAction } from "@naisys/common";
 import { hasAction, hasActionTemplate } from "@naisys/common";
-import type { HostDetailResponse } from "@naisys-supervisor/shared";
+import type { HostDetailResponse } from "@naisys/supervisor-shared";
 import { IconEdit, IconPlus, IconTrash, IconX } from "@tabler/icons-react";
 import { useQueryClient } from "@tanstack/react-query";
 import React, { useCallback, useEffect, useState } from "react";

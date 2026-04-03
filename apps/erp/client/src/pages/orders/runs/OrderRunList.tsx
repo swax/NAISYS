@@ -12,13 +12,13 @@ import {
   TextInput,
   Title,
 } from "@mantine/core";
-import type { OrderRunListResponse } from "@naisys-erp/shared";
+import type { OrderRunListResponse } from "@naisys/erp-shared";
 import {
   OrderRunPriority,
   OrderRunPriorityEnum,
   OrderRunStatus,
   OrderRunStatusEnum,
-} from "@naisys-erp/shared";
+} from "@naisys/erp-shared";
 import { useCallback, useEffect, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router";
 

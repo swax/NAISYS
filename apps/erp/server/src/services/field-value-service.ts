@@ -3,7 +3,7 @@ import {
   FieldType,
   type FieldValidation,
   type FieldValue,
-} from "@naisys-erp/shared";
+} from "@naisys/erp-shared";
 
 import erpDb from "../erpDb.js";
 import type { StepRunWithStepAndFields } from "./step-run-service.js";

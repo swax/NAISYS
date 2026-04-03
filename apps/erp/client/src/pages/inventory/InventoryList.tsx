@@ -10,7 +10,7 @@ import {
   Title,
 } from "@mantine/core";
 import { useDebouncedValue } from "@mantine/hooks";
-import type { InventoryListResponse } from "@naisys-erp/shared";
+import type { InventoryListResponse } from "@naisys/erp-shared";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router";
 

@@ -15,8 +15,8 @@ import type {
   OperationListResponse,
   OrderRevision,
   UpdateOrderRevision,
-} from "@naisys-erp/shared";
-import { UpdateOrderRevisionSchema } from "@naisys-erp/shared";
+} from "@naisys/erp-shared";
+import { UpdateOrderRevisionSchema } from "@naisys/erp-shared";
 import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router";
 

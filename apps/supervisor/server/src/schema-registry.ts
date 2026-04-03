@@ -13,7 +13,7 @@ import {
   SetLeadAgentRequestSchema,
   UpdateAgentConfigRequestSchema,
   UpdateUserSchema,
-} from "@naisys-supervisor/shared";
+} from "@naisys/supervisor-shared";
 import { z } from "zod/v4";
 import type { $ZodType } from "zod/v4/core";
 

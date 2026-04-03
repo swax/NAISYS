@@ -2,7 +2,7 @@ import type {
   MailMessage,
   SendMailRequest,
   SendMailResponse,
-} from "@naisys-supervisor/shared";
+} from "@naisys/supervisor-shared";
 
 import { hubDb } from "../database/hubDb.js";
 import { getLogger } from "../logger.js";

@@ -12,8 +12,8 @@ import {
   TextInput,
   Title,
 } from "@mantine/core";
-import type { OrderListResponse } from "@naisys-erp/shared";
-import { OrderStatus, OrderStatusEnum } from "@naisys-erp/shared";
+import type { OrderListResponse } from "@naisys/erp-shared";
+import { OrderStatus, OrderStatusEnum } from "@naisys/erp-shared";
 import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router";
 

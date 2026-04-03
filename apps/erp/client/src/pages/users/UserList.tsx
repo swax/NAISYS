@@ -15,7 +15,7 @@ import {
   Tooltip,
 } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
-import type { UserListResponse } from "@naisys-erp/shared";
+import type { UserListResponse } from "@naisys/erp-shared";
 import { IconAlertTriangle } from "@tabler/icons-react";
 import { useCallback, useEffect, useState } from "react";
 import {

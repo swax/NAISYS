@@ -1,7 +1,7 @@
 {
-  "name": "@naisys-supervisor/server",
-  "version": "1.0.0",
-  "description": "NAISYS Supervisor - Fastify backend server",
+  "name": "@naisys/supervisor",
+  "version": "3.0.0",
+  "description": "NAISYS Supervisor - Web UI for monitoring agents, logs, and messaging",
   "type": "module",
   "main": "dist/supervisorServer.js",
   "exports": {
@@ -16,14 +16,20 @@
     "bundle": "npx shx rm -rf client-dist && npx shx cp -r ../client/dist client-dist",
     "test": "vitest run",
     "type-check": "tsc --noEmit",
-    "npm:publish:dryrun": "npm run clean && npm run build && npm publish --dry-run"
+    "npm:publish:dryrun": "npm publish --dry-run",
+    "npm:publish": "npm publish --access public"
   },
   "files": [
     "dist",
     "client-dist"
   ],
   "peerDependencies": {
-    "@naisys-erp/server": "file:../../erp/server"
+    "@naisys/erp": "3.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@naisys/erp": {
+      "optional": true
+    }
   },
   "dependencies": {
     "@fastify/cookie": "^11.0.2",
@@ -32,12 +38,12 @@
     "@fastify/rate-limit": "^10.3.0",
     "@fastify/static": "^9.0.0",
     "@fastify/swagger": "^9.7.0",
-    "@naisys-supervisor/shared": "file:../shared",
-    "@naisys/common": "file:../../../packages/common",
-    "@naisys/common-node": "file:../../../packages/common-node",
-    "@naisys/hub-database": "file:../../../packages/hub-database",
-    "@naisys/hub-protocol": "file:../../../packages/hub-protocol",
-    "@naisys/supervisor-database": "file:../../../packages/supervisor-database",
+    "@naisys/supervisor-shared": "3.0.0",
+    "@naisys/common": "3.0.0",
+    "@naisys/common-node": "3.0.0",
+    "@naisys/hub-database": "3.0.0",
+    "@naisys/hub-protocol": "3.0.0",
+    "@naisys/supervisor-database": "3.0.0",
     "@scalar/fastify-api-reference": "^1.48.7",
     "@types/archiver": "^7.0.0",
     "archiver": "^7.0.1",

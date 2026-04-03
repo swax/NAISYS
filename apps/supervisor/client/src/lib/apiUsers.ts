@@ -1,4 +1,4 @@
-import type { Permission } from "@naisys-supervisor/shared";
+import type { Permission } from "@naisys/supervisor-shared";
 
 import { api } from "./apiClient";
 

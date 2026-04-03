@@ -9,8 +9,8 @@ import {
   Text,
   Title,
 } from "@mantine/core";
-import type { Order, UpdateOrder } from "@naisys-erp/shared";
-import { OrderStatus } from "@naisys-erp/shared";
+import type { Order, UpdateOrder } from "@naisys/erp-shared";
+import { OrderStatus } from "@naisys/erp-shared";
 import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 

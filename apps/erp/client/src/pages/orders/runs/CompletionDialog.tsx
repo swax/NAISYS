@@ -11,8 +11,8 @@ import {
   TextInput,
 } from "@mantine/core";
 import { DateInput, DateTimePicker } from "@mantine/dates";
-import type { Field, FieldListResponse, OrderRun } from "@naisys-erp/shared";
-import { FieldType } from "@naisys-erp/shared";
+import type { Field, FieldListResponse, OrderRun } from "@naisys/erp-shared";
+import { FieldType } from "@naisys/erp-shared";
 import { useEffect, useState } from "react";
 
 import { api, apiEndpoints, showErrorNotification } from "../../../lib/api";

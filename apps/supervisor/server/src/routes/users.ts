@@ -7,7 +7,7 @@ import {
   GrantPermissionSchema,
   PermissionEnum,
   UpdateUserSchema,
-} from "@naisys-supervisor/shared";
+} from "@naisys/supervisor-shared";
 import type {
   FastifyInstance,
   FastifyPluginOptions,

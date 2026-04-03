@@ -16,13 +16,13 @@ import type {
   Field,
   FieldListResponse,
   UpdateField,
-} from "@naisys-erp/shared";
+} from "@naisys/erp-shared";
 import {
   CreateFieldSchema,
   FieldType,
   FieldTypeEnum,
   UpdateFieldSchema,
-} from "@naisys-erp/shared";
+} from "@naisys/erp-shared";
 import { useState } from "react";
 
 import { api, showErrorNotification } from "../lib/api";

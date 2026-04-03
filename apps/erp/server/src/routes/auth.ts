@@ -12,7 +12,7 @@ import {
   ErrorResponseSchema,
   LoginRequestSchema,
   LoginResponseSchema,
-} from "@naisys-erp/shared";
+} from "@naisys/erp-shared";
 import bcrypt from "bcrypt";
 import { randomUUID } from "crypto";
 import type { FastifyInstance } from "fastify";

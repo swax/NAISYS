@@ -19,7 +19,7 @@ import {
   type ErpPermission,
   ErpPermissionEnum,
   type User,
-} from "@naisys-erp/shared";
+} from "@naisys/erp-shared";
 import { IconAlertTriangle } from "@tabler/icons-react";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useOutletContext, useParams } from "react-router";

@@ -9,7 +9,7 @@ import {
   OperationRunStatus,
   OrderRunStatus,
   RevisionStatus,
-} from "@naisys-erp/shared";
+} from "@naisys/erp-shared";
 import type { FastifyReply, FastifyRequest } from "fastify";
 
 import type { ErpUser } from "./auth-middleware.js";

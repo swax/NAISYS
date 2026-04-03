@@ -12,7 +12,7 @@ import {
   TextInput,
   Title,
 } from "@mantine/core";
-import type { UpdateWorkCenter, WorkCenter } from "@naisys-erp/shared";
+import type { UpdateWorkCenter, WorkCenter } from "@naisys/erp-shared";
 import { IconTrash } from "@tabler/icons-react";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";

@@ -3,7 +3,7 @@ import type {
   AgentStatusEvent,
   HostStatusEvent,
   HubStatusEvent,
-} from "@naisys-supervisor/shared";
+} from "@naisys/supervisor-shared";
 
 import { getIO } from "./browserSocketService.js";
 

@@ -1,8 +1,8 @@
 {
   "name": "@naisys/common-node",
-  "version": "1.0.0",
+  "version": "3.0.0",
   "type": "module",
-  "description": "Node-only utilities for NAISYS (better-sqlite3, js-yaml, crypto, fs)",
+  "description": "[internal] Node-only utilities for NAISYS",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": [
@@ -10,10 +10,12 @@
   ],
   "scripts": {
     "clean": "rimraf dist",
-    "build": "tsc"
+    "build": "tsc",
+    "npm:publish:dryrun": "npm publish --dry-run",
+    "npm:publish": "npm publish --access public"
   },
   "dependencies": {
-    "@naisys/common": "file:../common",
+    "@naisys/common": "3.0.0",
     "better-sqlite3": "^12.6.2",
     "js-yaml": "^4.1.1"
   },
