@@ -32,7 +32,7 @@ function getBackingScaleFactor(): number {
         "-e",
         "ObjC.import('AppKit'); $.NSScreen.mainScreen.backingScaleFactor",
       ],
-      { stdio: "pipe" },
+      { stdio: "pipe", timeout: 5000 },
     )
       .toString()
       .trim();
@@ -56,7 +56,7 @@ function toLogical(x: number, y: number): [number, number] {
 
 function cliclick(args: string[]) {
   try {
-    execFileSync("cliclick", args, { stdio: "pipe" });
+    execFileSync("cliclick", args, { stdio: "pipe", timeout: 10000 });
   } catch (e: any) {
     if (e?.code === "ENOENT") {
       throw new Error(
@@ -71,6 +71,7 @@ function cliclick(args: string[]) {
 function jxa(script: string) {
   execFileSync("osascript", ["-l", "JavaScript", "-e", script], {
     stdio: "pipe",
+    timeout: 10000,
   });
 }
 
@@ -79,7 +80,10 @@ function jxa(script: string) {
 export function captureScreenshot(tmpFile: string): void {
   try {
     // -x: no shutter sound, -C: include cursor
-    execFileSync("screencapture", ["-x", "-C", tmpFile], { stdio: "pipe" });
+    execFileSync("screencapture", ["-x", "-C", tmpFile], {
+      stdio: "pipe",
+      timeout: 5000,
+    });
   } catch (e: any) {
     throw new Error(
       `macOS screenshot failed. Grant Screen Recording permission in System Settings → Privacy & Security. ${e?.message || e}`,
@@ -134,7 +138,11 @@ export function mouseDrag(
 export function typeText(text: string) {
   // Use clipboard paste for reliable handling of special/Unicode characters.
   // Pipe text to pbcopy via stdin to avoid shell escaping issues.
-  execFileSync("pbcopy", [], { input: text, stdio: ["pipe", "pipe", "pipe"] });
+  execFileSync("pbcopy", [], {
+    input: text,
+    stdio: ["pipe", "pipe", "pipe"],
+    timeout: 5000,
+  });
   cliclick(["kd:cmd", "kp:v", "ku:cmd"]);
 }
 

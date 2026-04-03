@@ -7,7 +7,7 @@ import { execFileSync } from "child_process";
 export function captureScreenshot(tmpFile: string): void {
   // scrot: common lightweight screenshot tool
   try {
-    execFileSync("scrot", [tmpFile], { stdio: "pipe" });
+    execFileSync("scrot", [tmpFile], { stdio: "pipe", timeout: 5000 });
     return;
   } catch {
     // not available
@@ -17,6 +17,7 @@ export function captureScreenshot(tmpFile: string): void {
   try {
     execFileSync("import", ["-window", "root", tmpFile], {
       stdio: "pipe",
+      timeout: 5000,
     });
     return;
   } catch {
@@ -30,7 +31,7 @@ export function captureScreenshot(tmpFile: string): void {
 
 function xdotool(args: string[]) {
   try {
-    execFileSync("xdotool", args, { stdio: "pipe" });
+    execFileSync("xdotool", args, { stdio: "pipe", timeout: 10000 });
   } catch (e: any) {
     if (e?.code === "ENOENT") {
       throw new Error(

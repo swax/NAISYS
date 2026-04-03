@@ -17,7 +17,7 @@ import { execFileSync } from "child_process";
 export function captureScreenshot(tmpFile: string): void {
   // grim: works on wlroots compositors (sway, Hyprland, etc.)
   try {
-    execFileSync("grim", [tmpFile], { stdio: "pipe" });
+    execFileSync("grim", [tmpFile], { stdio: "pipe", timeout: 5000 });
     return;
   } catch {
     // not available or not a wlroots compositor
@@ -25,7 +25,10 @@ export function captureScreenshot(tmpFile: string): void {
 
   // gnome-screenshot: works on GNOME Wayland
   try {
-    execFileSync("gnome-screenshot", ["-f", tmpFile], { stdio: "pipe" });
+    execFileSync("gnome-screenshot", ["-f", tmpFile], {
+      stdio: "pipe",
+      timeout: 5000,
+    });
     return;
   } catch {
     // not available
@@ -48,7 +51,7 @@ export function captureScreenshot(tmpFile: string): void {
         "false",
         tmpFile,
       ],
-      { stdio: "pipe" },
+      { stdio: "pipe", timeout: 5000 },
     );
     return;
   } catch {
@@ -71,6 +74,7 @@ function detectYdotoolVersion(): "legacy" | "modern" {
   try {
     const out = execFileSync("ydotool", ["mousemove", "--help"], {
       stdio: "pipe",
+      timeout: 5000,
     }).toString();
     // v0.1.x: "Usage: mousemove [--delay <ms>] <x> <y>"
     // v1.0+:  "--absolute" appears in help
@@ -84,7 +88,7 @@ function detectYdotoolVersion(): "legacy" | "modern" {
 
 function ydotool(args: string[]) {
   try {
-    execFileSync("ydotool", args, { stdio: "pipe" });
+    execFileSync("ydotool", args, { stdio: "pipe", timeout: 10000 });
   } catch (e: any) {
     if (e?.code === "ENOENT") {
       throw new Error(
