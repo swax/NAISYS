@@ -133,7 +133,7 @@ export async function grantPermission(
 }
 
 export async function revokePermission(userId: number, permission: Permission) {
-  return supervisorDb.userPermission.deleteMany({
+  await supervisorDb.userPermission.deleteMany({
     where: { userId, permission },
   });
 }

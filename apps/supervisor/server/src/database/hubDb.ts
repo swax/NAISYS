@@ -15,7 +15,7 @@ type HubDb = Awaited<ReturnType<typeof createPrismaClient>>;
 let _db: HubDb | undefined;
 
 /** Lazily initialized Prisma client. First access creates the connection. */
-export const hubDb = new Proxy({} as HubDb, {
+export const hubDb: HubDb = new Proxy({} as HubDb, {
   get(_target, prop, receiver) {
     if (!_db) {
       throw new Error(

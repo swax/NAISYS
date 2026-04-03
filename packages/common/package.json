@@ -3,10 +3,9 @@
   "version": "3.0.0",
   "type": "module",
   "description": "[internal] Common utilities and constants for NAISYS",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
   "files": [
-    "dist"
+    "dist",
+    "assets"
   ],
   "scripts": {
     "clean": "rimraf dist",
@@ -19,5 +18,12 @@
   },
   "devDependencies": {
     "typescript": "^5.9.3"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./assets/*": "./assets/*"
   }
 }

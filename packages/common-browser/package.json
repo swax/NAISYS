@@ -4,8 +4,6 @@
   "private": true,
   "type": "module",
   "description": "Shared React/Mantine components and utilities for NAISYS client apps",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
   "files": [
     "dist"
   ],
@@ -27,5 +25,11 @@
   "devDependencies": {
     "@types/react": "^19.2.14",
     "typescript": "^5.9.3"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
   }
 }
