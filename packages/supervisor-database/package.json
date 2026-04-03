@@ -18,14 +18,13 @@
     "npm:publish": "npm publish --access public"
   },
   "devDependencies": {
-    "@types/bcrypt": "^6.0.0",
     "@types/better-sqlite3": "^7.6.13",
     "typescript": "^5.9.3"
   },
   "dependencies": {
     "@naisys/common": "3.0.0",
     "@naisys/common-node": "3.0.0",
-    "bcrypt": "^6.0.0",
+    "bcryptjs": "^3.0.2",
     "@prisma/adapter-better-sqlite3": "^7.5.0",
     "@prisma/client": "^7.5.0",
     "better-sqlite3": "^12.6.2",

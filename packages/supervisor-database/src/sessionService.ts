@@ -1,6 +1,6 @@
 import { SUPER_ADMIN_USERNAME } from "@naisys/common";
 import { hashToken } from "@naisys/common-node";
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import { randomBytes, randomUUID } from "crypto";
 import { existsSync } from "fs";
 import readline from "readline/promises";

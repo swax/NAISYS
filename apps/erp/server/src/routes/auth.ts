@@ -13,7 +13,7 @@ import {
   LoginRequestSchema,
   LoginResponseSchema,
 } from "@naisys/erp-shared";
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import { randomUUID } from "crypto";
 import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";

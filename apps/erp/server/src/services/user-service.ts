@@ -3,7 +3,7 @@ import {
   rotateAgentApiKeyByUuid,
 } from "@naisys/hub-database";
 import type { ErpPermission } from "@naisys/erp-shared";
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import { randomBytes, randomUUID } from "crypto";
 
 import erpDb from "../erpDb.js";
