@@ -18,7 +18,7 @@ The application provides a web interface to monitor NAISYS agents, view their lo
 
 ### Prerequisites
 
-- Node.js 18.0.0 or higher
+- Node.js 20.0.0 or higher
 - NPM or compatible package manager
 - Access to a NAISYS database
 
