@@ -4,6 +4,9 @@
   "description": "NAISYS Supervisor - Web UI for monitoring agents, logs, and messaging",
   "type": "module",
   "main": "dist/supervisorServer.js",
+  "bin": {
+    "naisys-supervisor": "bin/naisys-supervisor"
+  },
   "exports": {
     ".": "./dist/supervisorServer.js"
   },
@@ -21,7 +24,8 @@
   },
   "files": [
     "dist",
-    "client-dist"
+    "client-dist",
+    "bin"
   ],
   "peerDependencies": {
     "@naisys/erp": "3.0.0"

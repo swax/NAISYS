@@ -4,6 +4,9 @@
   "description": "NAISYS Hub - Adds persistence and multi-instance coordination to NAISYS",
   "type": "module",
   "main": "dist/naisysHub.js",
+  "bin": {
+    "naisys-hub": "bin/naisys-hub"
+  },
   "exports": {
     ".": "./dist/naisysHub.js",
     "./services/hubServerLog": "./dist/services/hubServerLog.js",
@@ -19,7 +22,8 @@
     "npm:publish": "npm publish --access public"
   },
   "files": [
-    "dist"
+    "dist",
+    "bin"
   ],
   "peerDependencies": {
     "@naisys/supervisor": "3.0.0"

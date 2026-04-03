@@ -4,6 +4,9 @@
   "description": "NAISYS ERP - Web UI for AI-driven order and work management",
   "type": "module",
   "main": "dist/erpServer.js",
+  "bin": {
+    "naisys-erp": "bin/naisys-erp"
+  },
   "exports": {
     ".": "./dist/erpServer.js"
   },
@@ -24,7 +27,8 @@
   },
   "files": [
     "dist",
-    "client-dist"
+    "client-dist",
+    "bin"
   ],
   "dependencies": {
     "@fastify/cookie": "^11.0.2",
