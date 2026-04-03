@@ -82,8 +82,6 @@ export async function sendWithOpenAiStandard(
       input: desktopConfig
         ? formatInputWithComputerUse(
             context,
-            desktopConfig,
-            cuSetup!.scaleFactor,
             formatContentBlocks,
             formatSingleBlock,
           )

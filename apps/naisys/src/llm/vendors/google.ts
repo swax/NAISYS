@@ -4,7 +4,6 @@ import {
   extractDesktopActions,
   formatContextWithComputerUse,
   isGoogleComputerUseAction,
-  prepareComputerUse,
 } from "../../computer-use/google-computer-use.js";
 import type { ContentBlock, LlmMessage } from "../llmDtos.js";
 import type { QueryResult, QuerySources, VendorDeps } from "./vendorTypes.js";
@@ -51,9 +50,6 @@ export async function sendWithGoogle(
 
   const lastMessage = context[context.length - 1];
 
-  // Computer use: compute image scale factor for screenshot resizing
-  const cuSetup = desktopConfig ? prepareComputerUse(desktopConfig) : undefined;
-
   // Build history from context (excluding last message)
   let history: any[];
   // Last message parts formatted for sendMessage
@@ -64,7 +60,6 @@ export async function sendWithGoogle(
     const allFormatted = formatContextWithComputerUse(
       context,
       desktopConfig,
-      cuSetup!.imageScaleFactor,
       formatPartsForGoogle,
     );
     history = allFormatted.slice(0, -1);
