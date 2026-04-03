@@ -1,4 +1,5 @@
 import {
+  createPinnedHttpsAgent,
   parseHubAccessKey,
   resolveHubAccessKey,
   verifyHubCertificate,
@@ -27,6 +28,7 @@ export function createHubConnection(
 
   let socket: Socket | null = null;
   let connected = false;
+  let pinnedAgent: ReturnType<typeof createPinnedHttpsAgent> | null = null;
 
   function connect() {
     hubClientLog.write(`[NAISYS:HubClient] Connecting to ${hubUrl}...`);
@@ -37,8 +39,8 @@ export function createHubConnection(
       return;
     }
 
-    // Verify the hub's TLS certificate fingerprint matches the access key
-    // before establishing the socket.io connection
+    // Verify the hub's TLS cert fingerprint, then pin all subsequent connections
+    // to that exact cert via a custom HTTPS agent
     const { fingerprintPrefix } = parseHubAccessKey(hubAccessKey);
     const url = new URL(hubUrl);
     verifyHubCertificate(
@@ -46,7 +48,7 @@ export function createHubConnection(
       Number(url.port) || 443,
       fingerprintPrefix,
     )
-      .then(() => connectSocket())
+      .then((certPem) => connectSocket(certPem))
       .catch((err) => {
         hubClientLog.write(
           `[NAISYS:HubClient] Certificate verification failed: ${err.message}`,
@@ -55,7 +57,9 @@ export function createHubConnection(
       });
   }
 
-  function connectSocket() {
+  function connectSocket(certPem: string) {
+    pinnedAgent = createPinnedHttpsAgent(certPem);
+
     socket = io(hubUrl + "/naisys", {
       auth: (cb) => {
         // Re-read access key on each connection attempt so rotated keys are picked up
@@ -65,7 +69,8 @@ export function createHubConnection(
           hostType: "naisys",
         });
       },
-      rejectUnauthorized: false,
+      // Type is narrowed to `string | boolean` for browser compat, but Node accepts an Agent
+      agent: pinnedAgent as any,
       reconnection: true,
       reconnectionDelay: 1000,
       reconnectionDelayMax: 30000,
@@ -151,6 +156,7 @@ export function createHubConnection(
     disconnect,
     isConnected,
     getUrl,
+    getPinnedAgent: () => pinnedAgent,
     sendMessage,
   };
 }
