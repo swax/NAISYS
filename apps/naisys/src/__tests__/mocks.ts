@@ -276,6 +276,7 @@ export function createMockGlobalConfig(): GlobalConfig {
       preemptiveCompactEnabled: false,
       naisysFolder: "/naisys",
       variableMap: {},
+      shellVariableMap: {},
       googleSearchEngineId: undefined,
       spendLimitDollars: undefined,
       spendLimitHours: undefined,

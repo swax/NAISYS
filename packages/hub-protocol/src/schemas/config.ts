@@ -16,6 +16,7 @@ export const ConfigResponseSchema = z.object({
       compactSessionEnabled: z.boolean(),
       preemptiveCompactEnabled: z.boolean(),
       variableMap: z.record(z.string(), z.string()),
+      shellVariableMap: z.record(z.string(), z.string()),
       googleSearchEngineId: z.string().optional(),
       spendLimitDollars: z.number().optional(),
       spendLimitHours: z.number().optional(),

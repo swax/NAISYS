@@ -63,11 +63,7 @@ export function createShellWrapper(
    * then removes NAISYS-specific vars that could conflict with the spawned process.
    */
   function getCleanEnv() {
-    const cleanEnv = { ...process.env, ...globalConfig().variableMap };
-    delete cleanEnv.OPENAI_API_KEY;
-    delete cleanEnv.GOOGLE_API_KEY;
-    delete cleanEnv.ANTHROPIC_API_KEY;
-    delete cleanEnv.WEBSITE_URL;
+    const cleanEnv = { ...process.env, ...globalConfig().shellVariableMap };
     if (_apiKey) {
       cleanEnv.NAISYS_API_KEY = _apiKey;
     }

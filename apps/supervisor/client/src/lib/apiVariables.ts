@@ -4,12 +4,13 @@ import { api, apiEndpoints } from "./apiClient";
 export const saveVariable = async (
   key: string,
   value: string,
+  exportToShell: boolean,
 ): Promise<SaveVariableResponse> => {
   try {
-    return await api.put<{ value: string }, SaveVariableResponse>(
-      apiEndpoints.saveVariable(key),
-      { value },
-    );
+    return await api.put<
+      { value: string; exportToShell: boolean },
+      SaveVariableResponse
+    >(apiEndpoints.saveVariable(key), { value, exportToShell });
   } catch (error) {
     return {
       success: false,
