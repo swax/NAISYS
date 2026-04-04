@@ -18,6 +18,7 @@ import {
   ChatMessagesRequestSchema,
   ChatMessagesResponseSchema,
   ErrorResponseSchema,
+  SendChatRequestSchema,
   SendChatResponseSchema,
 } from "@naisys/supervisor-shared";
 import type { FastifyInstance, FastifyPluginOptions } from "fastify";
@@ -221,7 +222,11 @@ export default function agentChatRoutes(
                 fromId = Number(field.value);
                 break;
               case "toIds":
-                toIds = JSON.parse(field.value);
+                try {
+                  toIds = JSON.parse(field.value);
+                } catch {
+                  return badRequest(reply, "toIds must be valid JSON array");
+                }
                 break;
               case "message":
                 message = field.value;
@@ -245,12 +250,15 @@ export default function agentChatRoutes(
         message = body.message;
       }
 
-      if (!fromId || !toIds?.length || !message) {
-        return badRequest(
-          reply,
-          "Missing required fields: fromId, toIds, message",
-        );
+      const parsed = SendChatRequestSchema.safeParse({
+        fromId,
+        toIds,
+        message,
+      });
+      if (!parsed.success) {
+        return badRequest(reply, parsed.error.message);
       }
+      ({ fromId, toIds, message } = parsed.data);
 
       // Upload attachments to hub and collect IDs
       let attachmentIds: number[] | undefined;
