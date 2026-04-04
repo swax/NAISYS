@@ -12,6 +12,7 @@ import {
   commonErrorHandler,
   MAX_ATTACHMENT_SIZE,
   registerLenientJsonParser,
+  registerSecurityHeaders,
   type StartServer,
   SUPER_ADMIN_USERNAME,
 } from "@naisys/common";
@@ -137,6 +138,8 @@ export const startServer: StartServer = async (
   await fastify.register(cors, {
     origin: isProd ? false : ["http://localhost:3002"],
   });
+
+  registerSecurityHeaders(fastify, { enforceHsts: isProd });
 
   await fastify.register(cookie);
 

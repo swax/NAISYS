@@ -8,7 +8,11 @@ import multipart from "@fastify/multipart";
 import { fastifyRateLimit as rateLimit } from "@fastify/rate-limit";
 import staticFiles from "@fastify/static";
 import swagger from "@fastify/swagger";
-import { commonErrorHandler, registerLenientJsonParser } from "@naisys/common";
+import {
+  commonErrorHandler,
+  registerLenientJsonParser,
+  registerSecurityHeaders,
+} from "@naisys/common";
 import {
   createHubDatabaseClient,
   deployPrismaMigrations,
@@ -305,6 +309,8 @@ async function startServer() {
     origin: isProd ? false : ["http://localhost:3202"],
     credentials: true,
   });
+
+  registerSecurityHeaders(fastify, { enforceHsts: isProd });
 
   // Swagger (schema collection); Scalar API reference is served by erpPlugin
   await fastify.register(swagger, {
