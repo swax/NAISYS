@@ -163,7 +163,7 @@ export default function adminRoutes(
 
       return {
         attachments: rows.map((r) => ({
-          id: r.id,
+          id: r.publicId,
           filename: r.filename,
           fileSize: r.fileSize,
           fileHash: r.fileHash,
@@ -192,9 +192,8 @@ export default function adminRoutes(
       },
     },
     async (request, reply) => {
-      const attachmentId = Number(request.params.id);
       const att = await erpDb.attachment.findUnique({
-        where: { id: attachmentId },
+        where: { publicId: request.params.id },
         select: { filepath: true, filename: true, fileSize: true },
       });
 

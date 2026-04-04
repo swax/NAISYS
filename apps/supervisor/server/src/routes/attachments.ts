@@ -16,12 +16,12 @@ export default function attachmentRoutes(
     request: FastifyRequest<{ Params: { id: string } }>,
     reply: FastifyReply,
   ) => {
-    const attachmentId = parseInt((request.params as { id: string }).id, 10);
-    if (isNaN(attachmentId)) {
-      return reply.code(400).send({ error: "Invalid attachment ID" });
+    const publicId = (request.params as { id: string }).id;
+    if (!publicId) {
+      return reply.code(400).send({ error: "Missing attachment ID" });
     }
 
-    await proxyDownloadFromHub(attachmentId, reply);
+    await proxyDownloadFromHub(publicId, reply);
   };
 
   const schema = {

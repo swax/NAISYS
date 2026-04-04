@@ -12,7 +12,7 @@ export const ChatConversationSchema = z.object({
 });
 
 export const ChatAttachmentSchema = z.object({
-  id: z.number(),
+  id: z.string(),
   filename: z.string(),
   fileSize: z.number(),
 });

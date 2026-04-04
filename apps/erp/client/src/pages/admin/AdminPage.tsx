@@ -57,7 +57,7 @@ export const AdminPage: React.FC = () => {
   );
 
   const getDownloadUrl = useCallback(
-    (id: number) => apiEndpoints.adminAttachmentDownload(id),
+    (id: string) => apiEndpoints.adminAttachmentDownload(id),
     [],
   );
 

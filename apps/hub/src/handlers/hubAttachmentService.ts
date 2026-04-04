@@ -1,7 +1,7 @@
 import { mimeFromFilename } from "@naisys/common";
 import type { HubDatabaseService } from "@naisys/hub-database";
 import type { AttachmentPurpose } from "@naisys/hub-database";
-import { createHash } from "crypto";
+import { createHash, randomBytes } from "crypto";
 import {
   createReadStream,
   createWriteStream,
@@ -218,6 +218,7 @@ export function createHubAttachmentService(
     // Create DB record
     const record = await hubDb.attachments.create({
       data: {
+        public_id: randomBytes(8).toString("base64url").slice(0, 10),
         filepath: storagePath,
         filename,
         file_size: bytesWritten,
@@ -256,17 +257,17 @@ export function createHubAttachmentService(
       return;
     }
 
-    // Parse attachment ID from /attachments/<id> or /attachments/<id>/<filename>
+    // Parse public ID from /attachments/<publicId> or /attachments/<publicId>/<filename>
     const segments = pathname.slice("/attachments/".length).split("/");
-    const attachmentId = parseInt(segments[0], 10);
-    if (isNaN(attachmentId)) {
+    const publicId = segments[0];
+    if (!publicId) {
       res.writeHead(400, { "Content-Type": "application/json" });
-      res.end(JSON.stringify({ error: "Invalid attachment ID" }));
+      res.end(JSON.stringify({ error: "Missing attachment ID" }));
       return;
     }
 
     const attachment = await hubDb.attachments.findUnique({
-      where: { id: attachmentId },
+      where: { public_id: publicId },
     });
 
     if (!attachment) {

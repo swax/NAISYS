@@ -45,7 +45,7 @@ export const LogPushEntrySchema = z.object({
   type: LogTypeEnum.nullable(),
   message: z.string(),
   createdAt: z.string(),
-  attachmentId: z.number().optional(),
+  attachmentId: z.string().optional(),
   attachmentFilename: z.string().optional(),
   attachmentFileSize: z.number().optional(),
 });

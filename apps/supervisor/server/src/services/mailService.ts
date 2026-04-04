@@ -75,7 +75,7 @@ export async function getMailDataByUserId(
       mail_attachments: {
         include: {
           attachment: {
-            select: { id: true, filename: true, file_size: true },
+            select: { public_id: true, filename: true, file_size: true },
           },
         },
       },
@@ -101,7 +101,7 @@ export async function getMailDataByUserId(
     attachments:
       msg.mail_attachments.length > 0
         ? msg.mail_attachments.map((ma) => ({
-            id: ma.attachment.id,
+            id: ma.attachment.public_id,
             filename: ma.attachment.filename,
             fileSize: ma.attachment.file_size,
           }))

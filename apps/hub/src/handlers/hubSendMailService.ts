@@ -146,10 +146,10 @@ export function createHubSendMailService(
     if (params.attachmentIds?.length) {
       const rows = await hubDb.attachments.findMany({
         where: { id: { in: params.attachmentIds } },
-        select: { id: true, filename: true, file_size: true },
+        select: { public_id: true, filename: true, file_size: true },
       });
       attachments = rows.map((r) => ({
-        id: r.id,
+        id: r.public_id,
         filename: r.filename,
         fileSize: r.file_size,
       }));

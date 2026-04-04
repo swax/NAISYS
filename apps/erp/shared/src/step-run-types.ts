@@ -17,7 +17,7 @@ export type FieldValidation = z.infer<typeof FieldValidationSchema>;
 
 // Attachment metadata within a field value
 export const FieldAttachmentSchema = z.object({
-  id: z.number(),
+  id: z.string(),
   filename: z.string(),
   fileSize: z.number(),
   downloadHref: z.string().optional(),
@@ -80,7 +80,7 @@ export type FieldValueEntry = z.infer<typeof FieldValueEntrySchema>;
 
 // Upload attachment response
 export const UploadAttachmentResponseSchema = z.object({
-  attachmentId: z.number(),
+  attachmentId: z.string(),
   filename: z.string(),
   fileSize: z.number(),
 });

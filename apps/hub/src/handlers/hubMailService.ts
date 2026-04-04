@@ -166,7 +166,7 @@ export function createHubMailService(
           mail_attachments: {
             include: {
               attachment: {
-                select: { id: true, filename: true, file_size: true },
+                select: { public_id: true, filename: true, file_size: true },
               },
             },
           },
@@ -196,7 +196,7 @@ export function createHubMailService(
           ...(parsed.kind === "chat" ? { body: m.body } : {}),
           attachments: m.mail_attachments.length
             ? m.mail_attachments.map((ma) => ({
-                id: ma.attachment.id,
+                id: ma.attachment.public_id,
                 filename: ma.attachment.filename,
                 fileSize: ma.attachment.file_size,
               }))
@@ -228,7 +228,7 @@ export function createHubMailService(
           mail_attachments: {
             include: {
               attachment: {
-                select: { id: true, filename: true, file_size: true },
+                select: { public_id: true, filename: true, file_size: true },
               },
             },
           },
@@ -257,7 +257,7 @@ export function createHubMailService(
           body: message.body,
           attachments: message.mail_attachments.length
             ? message.mail_attachments.map((ma) => ({
-                id: ma.attachment.id,
+                id: ma.attachment.public_id,
                 filename: ma.attachment.filename,
                 fileSize: ma.attachment.file_size,
               }))
@@ -449,7 +449,7 @@ export function createHubMailService(
             mail_attachments: {
               include: {
                 attachment: {
-                  select: { id: true, filename: true, file_size: true },
+                  select: { public_id: true, filename: true, file_size: true },
                 },
               },
             },
@@ -471,7 +471,7 @@ export function createHubMailService(
             body: m.body,
             attachments: m.mail_attachments.length
               ? m.mail_attachments.map((ma) => ({
-                  id: ma.attachment.id,
+                  id: ma.attachment.public_id,
                   filename: ma.attachment.filename,
                   fileSize: ma.attachment.file_size,
                 }))

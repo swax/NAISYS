@@ -46,7 +46,7 @@ const AttachmentIdParamsSchema = z.object({
   stepSeqNo: z.coerce.number().int(),
   setIndex: z.coerce.number().int().optional(),
   fieldSeqNo: z.coerce.number().int(),
-  attachmentId: z.coerce.number().int(),
+  attachmentId: z.string(),
 });
 
 export default function stepFieldAttachmentRoutes(fastify: FastifyInstance) {
@@ -217,9 +217,7 @@ export default function stepFieldAttachmentRoutes(fastify: FastifyInstance) {
       },
     },
     async (request, reply) => {
-      const attachmentId = Number(request.params.attachmentId);
-
-      const att = await getAttachmentFilePath(attachmentId);
+      const att = await getAttachmentFilePath(request.params.attachmentId);
       if (!att) {
         return notFound(reply, `Attachment not found`);
       }

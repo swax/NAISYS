@@ -552,6 +552,7 @@ model AuditLog {
 
 model Attachment {
   id           Int      @id @default(autoincrement())
+  publicId     String   @unique @map("public_id")
   filepath     String
   filename     String
   fileSize     Int      @map("file_size")

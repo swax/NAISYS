@@ -90,7 +90,7 @@ export async function uploadToHub(
  * Streams the file directly from hub to client.
  */
 export async function proxyDownloadFromHub(
-  attachmentId: number,
+  publicId: string,
   reply: FastifyReply,
 ): Promise<void> {
   const hubUrl = getHubUrl();
@@ -100,7 +100,7 @@ export async function proxyDownloadFromHub(
 
   // Look up the attachment to get the uploader's user ID
   const attachment = await hubDb.attachments.findUnique({
-    where: { id: attachmentId },
+    where: { public_id: publicId },
     select: { uploaded_by: true },
   });
 
@@ -120,7 +120,7 @@ export async function proxyDownloadFromHub(
     return;
   }
 
-  const url = new URL(`/attachments/${attachmentId}`, hubUrl);
+  const url = new URL(`/attachments/${publicId}`, hubUrl);
   url.searchParams.set("apiKey", user.api_key);
 
   return new Promise<void>((resolve, reject) => {

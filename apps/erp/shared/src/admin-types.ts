@@ -9,7 +9,7 @@ export const AdminInfoResponseSchema = z.object({
 });
 
 export const AdminAttachmentItemSchema = z.object({
-  id: z.number(),
+  id: z.string(),
   filename: z.string(),
   fileSize: z.number(),
   fileHash: z.string(),

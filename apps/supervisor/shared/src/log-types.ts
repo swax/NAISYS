@@ -11,7 +11,7 @@ export const LogTypeSchema = z.enum(["comment", "error", "system", "tool"]);
 export const LogRoleSchema = z.enum(["NAISYS", "LLM"]);
 
 export const LogAttachmentSchema = z.object({
-  id: z.number(),
+  id: z.string(),
   filename: z.string(),
   fileSize: z.number(),
 });

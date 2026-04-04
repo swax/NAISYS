@@ -14,7 +14,7 @@ export const AdminInfoResponseSchema = z.object({
 export type AdminInfoResponse = z.infer<typeof AdminInfoResponseSchema>;
 
 export const AdminAttachmentItemSchema = z.object({
-  id: z.number(),
+  id: z.string(),
   filename: z.string(),
   fileSize: z.number(),
   fileHash: z.string(),
