@@ -1,6 +1,9 @@
 import "dotenv/config";
 import "./schema-registry.js";
 
+import { expandNaisysFolder } from "@naisys/common-node";
+expandNaisysFolder();
+
 // Important to load dotenv before any other imports, to ensure environment variables are available
 import cookie from "@fastify/cookie";
 import cors from "@fastify/cors";
@@ -50,14 +53,11 @@ export const startServer: StartServer = async (
   plugins = [],
   hubPort?,
 ) => {
-  const isProd = process.env.NODE_ENV === "production";
-
-  if (startupType === "hosted" && !isProd) {
-    console.error(
-      "[Supervisor] --supervisor can only be used when .env NODE_ENV=production",
-    );
-    process.exit(1);
+  if (startupType === "hosted") {
+    process.env.NODE_ENV = "production";
   }
+
+  const isProd = process.env.NODE_ENV === "production";
 
   // Auto-migrate supervisor database
   await deploySupervisorMigrations();

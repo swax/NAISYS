@@ -2,6 +2,7 @@ dist/
 logs/
 node_modules/
 .env*
+!.env*.example
 .claude/*
 !.claude/commands/
 !.claude/commands/.env.nsapi.example
