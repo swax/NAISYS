@@ -79,6 +79,7 @@ node dist/naisys.js ../../agents/assistant.yaml --integrated-hub --supervisor --
 
 ## Additional Information
 
+- See [agents/template.yaml](agents/template.yaml) for all agent configuration options and supported models
 - See [apps/naisys/README.md](apps/naisys/README.md) for detailed NAISYS documentation
 - See [apps/supervisor/README.md](apps/supervisor/README.md) for Supervisor documentation
 

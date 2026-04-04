@@ -32,66 +32,17 @@ you can allow agents to start their own sub-agents on demand with instructions d
 
 - Create a `.env` file based off the `.env.example` file
 
-- Create an agent configuration file `smith.yaml`:
+- Create an agent configuration file — see [`agents/template.yaml`](../../agents/template.yaml) for all available options and supported models. A minimal example:
 
 ```yaml
-# Used to identify the agent on the prompt, logs, home dir, mail, etc..
 username: smith
-
-# How other agents will understand the role of this agent
 title: Software Engineer
-
-# The model to use for console interactions
-# (gpt4turbo, gpt4turbo, gemini-pro, claude3sonnet, claude3opus, local)
-shellModel: gpt4turbo
-
-# The model used by the 'ns-genimg' command. If not defined then the ns-genimg command is not available to the LLM
-# Valid values: dalle2-256, dalle2-512, dalle2-1024, dalle3-1024, dalle3-1024-HD
-imageModel: dalle3-1024
-
-# A system like prompt explaining the agent's role and responsibilities
-# You can use config variables in this string
+shellModel: claude4sonnet
 agentPrompt: |
-  You are ${agent.username} a ${agent.title} with the job of creating a Neon Genesis Evangelion fan website.
-  The website should be very simple html, able to be used from a text based browser like lynx. Pages should be relatively short.
-  The location of the website files should be in ${env.WEBSITE_FOLDER} 
-  The website can be tested with 'ns-lynx open ${env.WEBSITE_URL}' to see how it looks in a text based browser.
-  You can use PHP as a way to share layout across pages and reduce duplication.
-  Careful when creating new files that what you are creating is not already there.
-
-# The number of tokens you want to limit a session to, independent of the LLM token max itself
-# A lower max relies more on the LLM ending the session with good enough notes to not get lost when the session restarts
-# A higher max allows the LLM to do more without losing track, but is more expensive
-tokenMax: 5000
-
-# The number of seconds to pause after each console interaction for debugging and rate limiting
-# No value or zero means wait indefinitely (debug driven)
+  You are ${agent.username} a ${agent.title} with the job of building a website.
+tokenMax: 50000
 debugPauseSeconds: 5
-
-# If true, regardless of the debugPauseSeconds, the agent will wake up on messages
-# Useful for agents with long debugPauseSeconds, so that they can wake up and reply quickly
-wakeOnMessage: false
-
-# The maximum amount to spend on LLM interactions
-# Once reached the agent will stop and this value will need to be increased to continue
-spendLimitDollars: 2.00
-
-# Command Protection: Useful for agents you want to restrict from modifying the system
-#   None: Commands from the LLM run automatically, this is the default setting as well if the value is not set
-#   Manual: Every command the LLM wants to run has to be approved [y/n]. Not very autonomous.
-#   Auto: All commands are run through the separate LLM instace that will check to see if the command is safe
-commandProtection: "none"
-
-# Enable the `ns-session complete` command for this agent (default: false)
-# When enabled, the agent can use `ns-session complete` to signal task completion, helping to avoid hanging waiting agents
-completeSessionEnabled: true
-
-# Run these commands on session start, in the example below the agent will see how to use mail and a list of other agents
-initialCommands:
-  - ns-users
-  - ns-mail help
-
-# Additional custom variables can be defined here and/or in the agent config to be loaded into the agent prompt
+spendLimitDollars: 5.00
 ```
 
 - Run `naisys <path to agent yaml or directory> [options]`
