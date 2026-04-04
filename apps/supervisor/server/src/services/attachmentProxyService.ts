@@ -4,7 +4,7 @@ import https from "https";
 
 import { hubDb } from "../database/hubDb.js";
 import { getLogger } from "../logger.js";
-import { getHubUrl } from "./hubConnectionService.js";
+import { getHubPinnedAgent, getHubUrl } from "./hubConnectionService.js";
 
 /**
  * Upload a file buffer to the hub's attachment endpoint.
@@ -46,7 +46,7 @@ export async function uploadToHub(
       url,
       {
         method: "POST",
-        rejectUnauthorized: false,
+        agent: getHubPinnedAgent() ?? undefined,
         headers: {
           "Content-Length": fileBuffer.length,
         },
@@ -128,7 +128,7 @@ export async function proxyDownloadFromHub(
       url,
       {
         method: "GET",
-        rejectUnauthorized: false,
+        agent: getHubPinnedAgent() ?? undefined,
       },
       (res) => {
         if (res.statusCode !== 200) {
