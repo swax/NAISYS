@@ -23,10 +23,43 @@ export const formatLogTitle = (log: LogEntry) => {
   return `ID: ${log.id}\nDate: ${date}\nType: ${log.type}\nSource: ${log.source}\nRole: ${log.role}`;
 };
 
+const NoAccessPlaceholder = "/supervisor/apple-touch-icon.png";
+
 const LogAttachmentDisplay: React.FC<{ log: LogEntry }> = ({ log }) => {
   if (!log.attachment) return null;
 
   const att = log.attachment;
+
+  if (att.id === "no-access") {
+    if (isImageFilename(att.filename)) {
+      return (
+        <Box mt={4}>
+          <Image
+            src={NoAccessPlaceholder}
+            alt="Restricted attachment"
+            maw={300}
+            radius="sm"
+            style={{ opacity: 0.6 }}
+          />
+          <Text size="xs" c="dimmed" mt={2}>
+            {att.filename} (restricted)
+          </Text>
+        </Box>
+      );
+    }
+    return (
+      <Text
+        size="xs"
+        c="dimmed"
+        mt={4}
+        style={{ display: "flex", alignItems: "center", gap: 4 }}
+      >
+        <IconFile size={14} />
+        {att.filename} (restricted)
+      </Text>
+    );
+  }
+
   const downloadUrl = `${API_BASE}${apiEndpoints.attachmentDownload(att.id, att.filename)}`;
 
   if (isImageFilename(att.filename)) {

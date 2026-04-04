@@ -26,6 +26,8 @@ import {
 import type { Socket } from "socket.io-client";
 import { io } from "socket.io-client";
 
+import type { SupervisorUser } from "../auth-middleware.js";
+import { hasPermission } from "../auth-middleware.js";
 import { getLogger } from "../logger.js";
 import {
   emitAgentsListChanged,
@@ -37,6 +39,7 @@ import {
 } from "./agentHostStatusService.js";
 import { refreshUserLookup, resolveUsername } from "./agentService.js";
 import { getIO } from "./browserSocketService.js";
+import { obfuscatePushEntries } from "./runsService.js";
 
 let socket: Socket<SupervisorListenEvents, SupervisorEmitEvents> | null = null;
 let connected = false;
@@ -167,7 +170,25 @@ function connectSocket(hubUrl: string, certPem: string) {
       bySession.get(room)!.push(entry);
     }
     for (const [room, entries] of bySession) {
-      browserIO.to(room).emit(room, entries);
+      // Split broadcast by permission: privileged sockets get full data,
+      // unprivileged sockets get obfuscated text and no-access attachments
+      const socketIds = browserIO.sockets.adapter.rooms.get(room);
+      if (!socketIds || socketIds.size === 0) continue;
+
+      let obfuscated: typeof entries | undefined;
+
+      for (const socketId of socketIds) {
+        const sock = browserIO.sockets.sockets.get(socketId);
+        if (!sock) continue;
+
+        const user = sock.data.user as SupervisorUser | undefined;
+        if (hasPermission(user, "view_run_logs")) {
+          sock.emit(room, entries);
+        } else {
+          obfuscated ??= obfuscatePushEntries(entries);
+          sock.emit(room, obfuscated);
+        }
+      }
     }
 
     // Emit session deltas to runs rooms

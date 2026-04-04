@@ -38,7 +38,7 @@ export function formatMessageDisplay(
     if (hubUrl) {
       output += "\n  Download:";
       for (const att of content.attachments) {
-        output += `\n    curl -k "${hubUrl}/attachments/${att.id}?apiKey=$NAISYS_API_KEY" -o ${att.filename}`;
+        output += `\n    curl -k -H "X-API-Key: $NAISYS_API_KEY" "${hubUrl}/attachments/${att.id}" -o ${att.filename}`;
       }
     }
   }
