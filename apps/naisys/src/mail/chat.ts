@@ -62,10 +62,10 @@ export function createChatService(
       case "help": {
         const subs = chatCmd.subcommands!;
         const lines = [`${chatCmd.name} <command>`];
-        lines.push(`  ${subs.send.usage.padEnd(40)}${subs.send.description}`);
+        lines.push(`  ${subs.send.usage.padEnd(45)}${subs.send.description}`);
         if (hubClient) {
           lines.push(
-            `  ${subs.recent.usage.padEnd(40)}${subs.recent.description}`,
+            `  ${subs.recent.usage.padEnd(45)}${subs.recent.description}`,
           );
         }
         return lines.join("\n");

@@ -1,3 +1,4 @@
+import { commentCmd } from "../command/commandDefs.js";
 import { createCommandHandler } from "../command/commandHandler.js";
 import { createCommandLoop } from "../command/commandLoop.js";
 import { createCommandProtection } from "../command/commandProtection.js";
@@ -235,7 +236,6 @@ export async function createAgentRuntime(
   );
   const commandProtection = createCommandProtection(
     agentConfig,
-    promptBuilder,
     llmService,
     output,
   );
@@ -250,7 +250,16 @@ export async function createAgentRuntime(
     localUserId,
   );
 
+  const commentCommand = {
+    command: commentCmd,
+    handleCommand: () =>
+      // Important - Hint the LLM to turn their thoughts into actions
+      // ./bin/ns-comment shell script has the same message
+      "Comment noted. Try running commands now to achieve your goal.",
+  };
+
   const commandRegistry = createCommandRegistry(inputMode, [
+    commentCommand,
     lynxService,
     genimg,
     desktopService,
