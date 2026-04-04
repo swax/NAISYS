@@ -175,31 +175,11 @@ export function createPromptBuilder(
     });
   }
 
-  function getCommandConfirmation() {
-    return new Promise<string>((resolve) => {
-      const prompt = "Allow command to run? [y/n] ";
-
-      if (!output.isConsoleEnabled()) {
-        output.comment(prompt + "<denied because console disabled>");
-        resolve("n");
-        return;
-      } else {
-        const readlineInterface = getSharedReadline();
-
-        readlineInterface.question(chalk.greenBright(prompt), (answer) => {
-          readlineInterface.pause();
-          resolve(answer);
-        });
-      }
-    });
-  }
-
   return {
     getPrompt,
     getUserHostPathPrompt,
     getUserHostPrompt,
     getInput,
-    getCommandConfirmation,
   };
 }
 

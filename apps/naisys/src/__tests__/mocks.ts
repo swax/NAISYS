@@ -64,7 +64,6 @@ export function createMockPromptBuilder(
     getUserHostPrompt: vi.fn(() => userHostPrompt),
     getUserHostPathPrompt: vi.fn(() => Promise.resolve(userHostPathPrompt)),
     getInput: vi.fn(() => Promise.resolve("")),
-    getCommandConfirmation: vi.fn(() => Promise.resolve("y")),
   };
 
   return promptBuilder;

@@ -70,14 +70,17 @@ export function createCommandHandler(
           contextManager.append(input, ContentSource.LLM);
         }
 
-        // Run write protection checks if enabled
-        const { commandAllowed, rejectReason } =
-          await commandProtection.validateCommand(input);
+        // Skip write protection for internal NAISYS commands
+        const commandName = stringArgv(input)[0];
+        if (!commandRegistry.get(commandName)) {
+          const { commandAllowed, rejectReason } =
+            await commandProtection.validateCommand(input);
 
-        if (!commandAllowed) {
-          output.errorAndLog(`Write Protection Triggered`);
-          contextManager.append(rejectReason || "Unknown");
-          break;
+          if (!commandAllowed) {
+            output.errorAndLog(`Write Protection Triggered`);
+            contextManager.append(rejectReason || "Unknown");
+            break;
+          }
         }
       }
 
@@ -104,25 +107,13 @@ export function createCommandHandler(
             return response.nextCommandResponse;
           }
         }
-      } else
-        switch (command) {
-          case "ns-comment": {
-            // Important - Hint the LLM to turn their thoughts into accounts
-            // ./bin/ns-comment shell script has the same message
-            contextManager.append(
-              "Comment noted. Try running commands now to achieve your goal.",
-            );
-            break;
-          }
+      } else {
+        const exitApp = await shellCommand.handleCommand(input);
 
-          default: {
-            const exitApp = await shellCommand.handleCommand(input);
-
-            nextCommandAction = exitApp
-              ? NextCommandAction.ExitApplication
-              : NextCommandAction.Continue;
-          }
-        } // End switch
+        nextCommandAction = exitApp
+          ? NextCommandAction.ExitApplication
+          : NextCommandAction.Continue;
+      }
 
       if (command != "ns-comment" && firstCommand) {
         firstCommand = false;

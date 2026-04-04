@@ -3,7 +3,12 @@ import { z } from "zod";
 import { TARGET_MEGAPIXELS } from "./constants.js";
 import { URL_SAFE_KEY_MESSAGE, URL_SAFE_KEY_REGEX } from "./urlSafeKey.js";
 
-export const commandProtectionValues = ["none", "manual", "auto"] as const;
+export const commandProtectionValues = [
+  "none",
+  "manual",
+  "semi-auto",
+  "auto",
+] as const;
 
 // Zod schema for validation
 export const AgentConfigFileSchema = z.object({

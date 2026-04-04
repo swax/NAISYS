@@ -1,5 +1,4 @@
 import { LlmApiType, TARGET_MEGAPIXELS } from "@naisys/common";
-import chalk from "chalk";
 import fs from "fs";
 import os from "os";
 import path from "path";
@@ -12,8 +11,8 @@ import type { ContextManager } from "../llm/contextManager.js";
 import { ContentSource } from "../llm/llmDtos.js";
 import type { DesktopAction } from "../llm/vendors/vendorTypes.js";
 import type { ModelService } from "../services/modelService.js";
+import { getConfirmation } from "../utils/confirmation.js";
 import type { OutputService } from "../utils/output.js";
-import { getSharedReadline } from "../utils/sharedReadline.js";
 import type { ComputerService, CoordScale } from "./computerService.js";
 import {
   checkActionBounds,
@@ -110,8 +109,13 @@ export function createDesktopService(
       output.commentAndLog(`Desktop Action: ${desc}`);
     }
 
-    const approved = await getDesktopConfirmation(
-      agentConfig.agentConfig().debugPauseSeconds,
+    const approved = await getConfirmation(
+      output,
+      "Execute desktop actions? [Y/n]",
+      {
+        defaultAccept: true,
+        timeoutSeconds: agentConfig.agentConfig().debugPauseSeconds,
+      },
     );
 
     // Add the deferred assistant response (text + tool_use blocks) to context
@@ -173,45 +177,6 @@ export function createDesktopService(
         );
       }
     }
-  }
-
-  /** Prompt for y/n confirmation with a timeout that defaults to yes */
-  function getDesktopConfirmation(timeoutSeconds: number): Promise<boolean> {
-    return new Promise<boolean>((resolve) => {
-      if (!output.isConsoleEnabled()) {
-        resolve(true);
-        return;
-      }
-
-      const rl = getSharedReadline();
-      const controller = new AbortController();
-      let timeout: NodeJS.Timeout | undefined;
-
-      if (timeoutSeconds > 0) {
-        timeout = setTimeout(() => {
-          controller.abort();
-          try {
-            rl.pause();
-          } catch {
-            // On Windows, readline may already be closed after abort
-          }
-          resolve(true);
-        }, timeoutSeconds * 1000);
-      }
-
-      rl.question(
-        chalk.greenBright(
-          `Execute desktop actions? [Y/n]${timeoutSeconds > 0 ? ` (${timeoutSeconds}s)` : ""} `,
-        ),
-        { signal: controller.signal },
-        (answer) => {
-          clearTimeout(timeout);
-          rl.pause();
-          const trimmed = answer.trim().toLowerCase();
-          resolve(trimmed !== "n" && trimmed !== "no");
-        },
-      );
-    });
   }
 
   /** Log desktop dimensions, scale info, and Anthropic warnings at startup */
