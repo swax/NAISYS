@@ -1,0 +1,98 @@
+# Agent Configuration Template
+# Reference for all available options. See packages/common/src/agentConfigFile.ts for the source schema.
+# Copy this file and fill in the values to create a new agent configuration.
+
+# --- Required Fields ---
+
+# The name the agent identifies itself with when communicating with other agents.
+# Must be URL-safe (lowercase letters, numbers, hyphens).
+username: my-agent
+
+# Displayed to other agents to give context about this agent's role in the system.
+title: Assistant
+
+# Gives the agent instructions and/or purpose when starting up.
+# Supports ${agent.*} and ${env.*} template variables.
+agentPrompt: |
+  You are ${agent.username} a ${agent.title} with the job of helping out the admin with what they want to do.
+
+# How many tokens this agent is allocated per session before it must end or compact the context.
+tokenMax: 50000
+
+# Primary LLM used for shell interactions.
+# Shell models:
+#   claude4opus     - Claude Opus 4.6      (Anthropic, vision + computer use)
+#   claude4sonnet   - Claude Sonnet 4.6    (Anthropic, vision + computer use)
+#   claude4haiku    - Claude Haiku 4.5     (Anthropic, vision + computer use)
+#   gpt5            - GPT 5.4             (OpenAI, vision + computer use)
+#   gpt5mini        - GPT 5 Mini          (OpenAI, vision)
+#   gpt5nano        - GPT 5 Nano          (OpenAI, vision)
+#   gemini3pro      - Gemini 3.1 Pro      (Google, vision + hearing)
+#   gemini3flash    - Gemini 3 Flash      (Google, vision + hearing + computer use)
+#   grok4           - Grok 4              (xAI, vision)
+#   grok4fast       - Grok 4.1 Fast       (xAI, vision)
+#   llama4          - Llama 4 Maverick    (OpenRouter, vision)
+shellModel: claude4sonnet
+
+# --- Optional Fields ---
+
+# Spend limit in dollars for this agent. When set, this agent is exempt from the global spend limit.
+# Defaults to the SPEND_LIMIT_DOLLARS variable.
+#spendLimitDollars: 5.00
+
+# Rolling time window in hours for spend limit. Defaults to the SPEND_LIMIT_HOURS variable.
+# If neither are set then the spend limit is fixed and not rolling.
+#spendLimitHours: 24
+
+# Model used for image generation.
+# Image models:
+#   gptimage1high   - GPT Image 1.5 High   (~$0.17/image)
+#   gptimage1medium - GPT Image 1.5 Medium  (~$0.04/image)
+#   gptimage1low    - GPT Image 1.5 Low     (~$0.01/image)
+#   dalle3-1024-HD  - DALL-E 3 1024 HD      (~$0.08/image)
+#   dalle3-1024     - DALL-E 3 1024          (~$0.04/image)
+#imageModel: gptimage1medium
+
+# Show mail commands to the agent. Mail encourages verbose communication which can be distracting.
+#mailEnabled: true
+
+# Show chat commands to the agent. Chat encourages more concise communication.
+#chatEnabled: true
+
+# Allow agent to browse the web with Lynx, a text based browser.
+#webEnabled: true
+
+# Allow the agent to end its session. Once ended, it can only be restarted explicitly or via
+# mail if wakeOnMessage is enabled. Disable on root agents to prevent the system from going unresponsive.
+#completeSessionEnabled: true
+
+# Seconds to wait at the debug prompt before auto-continuing, only applies when the agent's
+# console is in focus. Unset waits indefinitely for manual input.
+#debugPauseSeconds: 5
+
+# When mail or chat is received, start the agent automatically, or wake it from its wait state.
+#wakeOnMessage: true
+
+# None allows the LLM to run any command, Manual requires user confirmation for each command,
+# Semi-auto uses a secondary LLM to validate but pauses on flagged commands,
+# and Auto uses a secondary LLM to try to validate a command is safe.
+# Values: none | manual | semi-auto | auto
+#commandProtection: semi-auto
+
+# Shell commands to run at session start before the first LLM prompt,
+# providing additional context to the agent.
+#initialCommands:
+#  - cat ~/instructions.md
+#  - git status
+
+# Allow the LLM to run multiple commands per turn.
+# Faster but the LLM may get ahead of itself and produce errors.
+#multipleCommandsEnabled: true
+
+# Experimental: Allows the LLM to pin files to the end of the context.
+# Each turn the agent sees the latest version without old versions taking up context space.
+#workspacesEnabled: true
+
+# Allow the agent to operate the desktop GUI. Requires a model with supportsComputerUse.
+# Ideal screen resolution <= 1MP to avoid downscaling.
+#controlDesktop: true
