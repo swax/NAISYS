@@ -1,5 +1,5 @@
 import { MAX_ATTACHMENT_SIZE } from "@naisys/common";
-import { createHash } from "crypto";
+import { createHash, randomBytes } from "crypto";
 import {
   createWriteStream,
   existsSync,
@@ -16,7 +16,7 @@ function attachmentsDir(): string {
 }
 
 export interface UploadResult {
-  attachmentId: number;
+  attachmentId: string;
   filename: string;
   fileSize: number;
   fileHash: string;
@@ -81,6 +81,7 @@ export async function uploadAttachment(
   const attachment = await erpDb.$transaction(async (tx) => {
     const att = await tx.attachment.create({
       data: {
+        publicId: randomBytes(8).toString("base64url").slice(0, 10),
         filepath: storagePath,
         filename,
         fileSize: fileBuffer.length,
@@ -100,7 +101,7 @@ export async function uploadAttachment(
   });
 
   return {
-    attachmentId: attachment.id,
+    attachmentId: attachment.publicId,
     filename: attachment.filename,
     fileSize: attachment.fileSize,
     fileHash: attachment.fileHash,
@@ -112,26 +113,30 @@ export async function uploadAttachment(
  */
 export async function listAttachmentsForFieldValue(
   fieldValueId: number,
-): Promise<{ id: number; filename: string; fileSize: number }[]> {
+): Promise<{ id: string; filename: string; fileSize: number }[]> {
   const links = await erpDb.fieldAttachment.findMany({
     where: { fieldValueId },
     include: {
       attachment: {
-        select: { id: true, filename: true, fileSize: true },
+        select: { publicId: true, filename: true, fileSize: true },
       },
     },
   });
-  return links.map((l) => l.attachment);
+  return links.map((l) => ({
+    id: l.attachment.publicId,
+    filename: l.attachment.filename,
+    fileSize: l.attachment.fileSize,
+  }));
 }
 
 /**
  * Get an attachment's file path for download.
  */
 export async function getAttachmentFilePath(
-  attachmentId: number,
+  publicId: string,
 ): Promise<{ filepath: string; filename: string } | null> {
   const att = await erpDb.attachment.findUnique({
-    where: { id: attachmentId },
+    where: { publicId },
     select: { filepath: true, filename: true },
   });
   return att;
@@ -143,11 +148,17 @@ export async function getAttachmentFilePath(
  */
 export async function deleteFieldAttachment(
   fieldValueId: number,
-  attachmentId: number,
+  publicId: string,
 ): Promise<void> {
+  const att = await erpDb.attachment.findUnique({
+    where: { publicId },
+    select: { id: true },
+  });
+  if (!att) throw new Error("Attachment not found");
+
   await erpDb.fieldAttachment.delete({
     where: {
-      fieldValueId_attachmentId: { fieldValueId, attachmentId },
+      fieldValueId_attachmentId: { fieldValueId, attachmentId: att.id },
     },
   });
 }

@@ -326,7 +326,7 @@ export async function formatStepRunWithFields(
     setIndex: number;
     value: string | string[];
     attachments?: {
-      id: number;
+      id: string;
       filename: string;
       fileSize: number;
       downloadHref?: string;
@@ -346,8 +346,10 @@ export async function formatStepRunWithFields(
       const attachments =
         field.type === "attachment" && stored
           ? stored.fieldAttachments.map((sfa) => ({
-              ...sfa.attachment,
-              downloadHref: `${stepRunHref}${setPath}/attachments/${sfa.attachment.id}`,
+              id: sfa.attachment.publicId,
+              filename: sfa.attachment.filename,
+              fileSize: sfa.attachment.fileSize,
+              downloadHref: `${stepRunHref}${setPath}/attachments/${sfa.attachment.publicId}`,
             }))
           : undefined;
       const fieldType = fieldTypeString(field.type, field.isArray);

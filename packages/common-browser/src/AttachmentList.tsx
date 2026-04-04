@@ -13,7 +13,7 @@ import { IconDownload, IconRefresh } from "@tabler/icons-react";
 import { useCallback, useEffect, useState } from "react";
 
 export interface AttachmentItem {
-  id: number;
+  id: string;
   filename: string;
   fileSize: number;
   uploadedBy: string;
@@ -32,7 +32,7 @@ export interface AttachmentListProps {
     page: number,
     pageSize: number,
   ) => Promise<AttachmentListData>;
-  getDownloadUrl: (id: number) => string;
+  getDownloadUrl: (id: string) => string;
   extraColumns?: {
     header: string;
     render: (attachment: AttachmentItem) => React.ReactNode;
@@ -66,7 +66,7 @@ export const AttachmentList: React.FC<AttachmentListProps> = ({
     void fetchAttachments();
   }, [fetchAttachments]);
 
-  const handleDownload = (id: number, filename: string) => {
+  const handleDownload = (id: string, filename: string) => {
     const link = document.createElement("a");
     link.href = getDownloadUrl(id);
     link.download = filename;

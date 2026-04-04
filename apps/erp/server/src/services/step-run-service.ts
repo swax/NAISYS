@@ -37,7 +37,7 @@ export const includeStepRunWithFields = {
           fieldAttachments: {
             select: {
               attachment: {
-                select: { id: true, filename: true, fileSize: true },
+                select: { publicId: true, filename: true, fileSize: true },
               },
             },
           },
@@ -83,7 +83,7 @@ export type StepRunWithStepAndFields = {
       setIndex: number;
       value: string;
       fieldAttachments: {
-        attachment: { id: number; filename: string; fileSize: number };
+        attachment: { publicId: string; filename: string; fileSize: number };
       }[];
     }[];
   } | null;

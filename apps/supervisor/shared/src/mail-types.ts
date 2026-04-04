@@ -15,7 +15,7 @@ export const MailRecipientSchema = z.object({
 });
 
 export const MailAttachmentSchema = z.object({
-  id: z.number(),
+  id: z.string(),
   filename: z.string(),
   fileSize: z.number(),
 });

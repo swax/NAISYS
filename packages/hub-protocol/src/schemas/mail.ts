@@ -49,7 +49,7 @@ export type MailListRequest = z.infer<typeof MailListRequestSchema>;
 
 /** Attachment metadata included in message responses */
 export const MailAttachmentDataSchema = z.object({
-  id: z.number(),
+  id: z.string(),
   filename: z.string(),
   fileSize: z.number(),
 });

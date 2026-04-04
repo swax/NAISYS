@@ -168,7 +168,7 @@ function buildFieldValues(inst: ItemInstanceWithRelations) {
     required: boolean;
     setIndex: number;
     value: string | string[];
-    attachments?: { id: number; filename: string; fileSize: number }[];
+    attachments?: { id: string; filename: string; fileSize: number }[];
     validation: ReturnType<typeof validateFieldValue>;
   }[] = [];
 
@@ -180,7 +180,11 @@ function buildFieldValues(inst: ItemInstanceWithRelations) {
       const value = deserializeFieldValue(stored?.value ?? "", field.isArray);
       const attachments =
         field.type === "attachment" && stored
-          ? stored.fieldAttachments.map((sfa) => sfa.attachment)
+          ? stored.fieldAttachments.map((sfa) => ({
+              id: sfa.attachment.publicId,
+              filename: sfa.attachment.filename,
+              fileSize: sfa.attachment.fileSize,
+            }))
           : undefined;
       const fieldType = fieldTypeString(field.type, field.isArray);
       fieldValues.push({

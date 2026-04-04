@@ -135,6 +135,7 @@ model mail_messages {
 
 model attachments {
   id               Int                @id @default(autoincrement())
+  public_id        String             @unique
   filepath         String
   filename         String
   file_size        Int

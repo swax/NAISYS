@@ -12,7 +12,7 @@ export interface MailContent {
   subject: string;
   body: string;
   createdAt: string;
-  attachments?: { id: number; filename: string; fileSize: number }[];
+  attachments?: { id: string; filename: string; fileSize: number }[];
   /** Local-mode file paths (no hub upload) */
   filePaths?: string[];
 }

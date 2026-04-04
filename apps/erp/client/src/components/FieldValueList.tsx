@@ -392,7 +392,7 @@ export const FieldValueRunList: React.FC<FieldValueRunListProps> = ({
 
   const handleAttachmentDelete = async (
     fv: FieldValueEntry,
-    attachmentId: number,
+    attachmentId: string,
   ) => {
     const delKey = `${editKey(fv.fieldId, fv.setIndex)}_${attachmentId}`;
     setDeletingAttachment(delKey);

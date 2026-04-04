@@ -457,8 +457,10 @@ export default function stepRunFieldRoutes(fastify: FastifyInstance) {
         const attachments =
           field.type === "attachment" && stored
             ? stored.fieldAttachments.map((sfa) => ({
-                ...sfa.attachment,
-                downloadHref: `${stepRunHref}${setPath}/attachments/${sfa.attachment.id}`,
+                id: sfa.attachment.publicId,
+                filename: sfa.attachment.filename,
+                fileSize: sfa.attachment.fileSize,
+                downloadHref: `${stepRunHref}${setPath}/attachments/${sfa.attachment.publicId}`,
               }))
             : undefined;
         const fieldType = fieldTypeString(field.type, field.isArray);

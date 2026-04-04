@@ -288,7 +288,7 @@ export default function adminRoutes(
 
       return {
         attachments: rows.map((r) => ({
-          id: r.id,
+          id: r.public_id,
           filename: r.filename,
           fileSize: r.file_size,
           fileHash: r.file_hash,

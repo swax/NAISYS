@@ -145,7 +145,7 @@ export async function getContextLog(
       },
       attachment: {
         select: {
-          id: true,
+          public_id: true,
           filename: true,
           file_size: true,
         },
@@ -163,7 +163,7 @@ export async function getContextLog(
     createdAt: log.created_at.toISOString(),
     ...(log.attachment && {
       attachment: {
-        id: log.attachment.id,
+        id: log.attachment.public_id,
         filename: log.attachment.filename,
         fileSize: log.attachment.file_size,
       },

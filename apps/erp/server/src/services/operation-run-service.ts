@@ -184,7 +184,7 @@ export async function getOpRunFieldRefSummary(
               fieldAttachments: {
                 include: {
                   attachment: {
-                    select: { id: true, filename: true, fileSize: true },
+                    select: { publicId: true, filename: true, fileSize: true },
                   },
                 },
               },
@@ -225,8 +225,10 @@ export async function getOpRunFieldRefSummary(
         const attachments =
           field.type === "attachment" && stored
             ? stored.fieldAttachments.map((sfa) => ({
-                ...sfa.attachment,
-                downloadHref: `${stepsHref}${setPath}/attachments/${sfa.attachment.id}`,
+                id: sfa.attachment.publicId,
+                filename: sfa.attachment.filename,
+                fileSize: sfa.attachment.fileSize,
+                downloadHref: `${stepsHref}${setPath}/attachments/${sfa.attachment.publicId}`,
               }))
             : undefined;
         const fieldType = fieldTypeString(field.type, field.isArray);

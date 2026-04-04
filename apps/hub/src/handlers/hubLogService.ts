@@ -82,14 +82,16 @@ export function createHubLogService(
         );
 
         // Look up attachment metadata if present
+        let attachmentPublicId: string | undefined;
         let attachmentFilename: string | undefined;
         let attachmentFileSize: number | undefined;
         if (entry.attachmentId) {
           const att = await hubDb.attachments.findUnique({
             where: { id: entry.attachmentId },
-            select: { filename: true, file_size: true },
+            select: { public_id: true, filename: true, file_size: true },
           });
           if (att) {
+            attachmentPublicId = att.public_id;
             attachmentFilename = att.filename;
             attachmentFileSize = att.file_size;
           }
@@ -110,7 +112,7 @@ export function createHubLogService(
           type: entry.type,
           message: entry.message,
           createdAt: entry.createdAt,
-          attachmentId: entry.attachmentId,
+          attachmentId: attachmentPublicId,
           attachmentFilename,
           attachmentFileSize,
         });

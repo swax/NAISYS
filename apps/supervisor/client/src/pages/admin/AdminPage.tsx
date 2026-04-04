@@ -114,7 +114,7 @@ export const AdminPage: React.FC = () => {
   );
 
   const getDownloadUrl = useCallback(
-    (id: number) => `${API_BASE}${apiEndpoints.attachmentDownload(id)}`,
+    (id: string) => `${API_BASE}${apiEndpoints.attachmentDownload(id)}`,
     [],
   );
 
