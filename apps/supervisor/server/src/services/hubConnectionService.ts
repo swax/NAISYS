@@ -4,6 +4,7 @@ import {
   resolveHubAccessKey,
   verifyHubCertificate,
 } from "@naisys/common-node";
+import https from "https";
 import type {
   AgentStartResponse,
   AgentStopResponse,
@@ -40,6 +41,7 @@ import { getIO } from "./browserSocketService.js";
 let socket: Socket<SupervisorListenEvents, SupervisorEmitEvents> | null = null;
 let connected = false;
 let resolvedHubUrl: string | undefined;
+let pinnedAgent: https.Agent | null = null;
 
 export function initHubConnection(hubUrl: string) {
   const hubAccessKey = resolveHubAccessKey();
@@ -72,7 +74,7 @@ export function initHubConnection(hubUrl: string) {
 }
 
 function connectSocket(hubUrl: string, certPem: string) {
-  const pinnedAgent = createPinnedHttpsAgent(certPem);
+  pinnedAgent = createPinnedHttpsAgent(certPem);
 
   socket = io(hubUrl + "/naisys", {
     auth: (cb) => {
@@ -322,6 +324,10 @@ export function getHubAccessKey(): string | undefined {
 
 export function getHubUrl(): string | undefined {
   return resolvedHubUrl;
+}
+
+export function getHubPinnedAgent(): https.Agent | null {
+  return pinnedAgent;
 }
 
 export function sendAgentStart(

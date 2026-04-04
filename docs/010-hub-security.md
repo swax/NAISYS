@@ -43,7 +43,7 @@ Both sides of the connection are verified:
 - **Server verifies the client** — The hub's Socket.IO middleware checks that the client presents the correct full access key (fingerprint prefix + secret). This prevents unauthorized clients from connecting.
 - **Client verifies the server** — Before establishing the Socket.IO connection, the client makes a TLS probe to the hub, retrieves the server's certificate, computes its SHA-256 fingerprint, and checks that it starts with the fingerprint prefix from the access key. This prevents MITM attacks — an attacker cannot produce a certificate whose fingerprint matches the expected prefix.
 
-Clients connect with `rejectUnauthorized: false` since the cert is self-signed and won't pass standard CA validation. The fingerprint prefix check compensates for this, similar to SSH host key verification.
+The initial TLS probe uses `rejectUnauthorized: false` to retrieve the certificate for fingerprint verification (similar to SSH host key verification). Once verified, a pinned `https.Agent` is created that trusts only that specific certificate, and all subsequent connections (Socket.IO, attachment uploads/downloads) use this pinned agent.
 
 ### Why not a traditional CA-signed cert?
 
@@ -77,7 +77,7 @@ The access key only needs to be copied once per client machine. If the hub's cer
 - **Private key permissions** — `hub-key.pem` is also written with mode `0o600`.
 - **No downgrade** — The hub only serves HTTPS. There is no HTTP fallback.
 - **Cert persistence** — Certs and the access key survive restarts. Deleting the `cert/` directory forces regeneration.
-- **MITM protection** — Clients verify the server's certificate fingerprint before connecting, preventing man-in-the-middle attacks even with `rejectUnauthorized: false`.
+- **MITM protection** — Clients verify the server's certificate fingerprint on first contact, then pin the certificate for all subsequent connections. Only the initial TLS probe uses `rejectUnauthorized: false`; everything after that goes through the pinned agent.
 - **Access key required** — Clients that don't have a `HUB_ACCESS_KEY` configured will fail fast with an error rather than attempting an unauthenticated connection.
 
 ## Environment variables
