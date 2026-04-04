@@ -39,8 +39,9 @@ export function createShellWrapper(
   let _currentCommandTimeout: NodeJS.Timeout | undefined;
   let _currentCommandText: string | undefined;
 
-  /** How we know the command has completed when running the command inside a shell like bash or wsl */
-  const _commandDelimiter = "__COMMAND_END_X7YUTT__";
+  /** How we know the command has completed when running the command inside a shell like bash or wsl.
+   *  Random suffix per session so the LLM cannot spoof it with crafted output. */
+  const _commandDelimiter = `__COMMAND_END_${crypto.randomBytes(8).toString("hex")}__`;
 
   let _wrapperSuspended = false;
 
