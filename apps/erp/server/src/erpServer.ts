@@ -1,6 +1,9 @@
 import "dotenv/config";
 import "./schema-registry.js";
 
+import { expandNaisysFolder } from "@naisys/common-node";
+expandNaisysFolder();
+
 // Important to load dotenv before any other imports, to ensure environment variables are available
 import cookie from "@fastify/cookie";
 import cors from "@fastify/cors";

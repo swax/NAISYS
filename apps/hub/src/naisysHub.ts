@@ -1,4 +1,5 @@
 import type { StartHub, StartServer } from "@naisys/common";
+import { expandNaisysFolder } from "@naisys/common-node";
 import { createHubDatabaseService } from "@naisys/hub-database";
 import { program } from "commander";
 import dotenv from "dotenv";
@@ -196,6 +197,7 @@ export const startHub: StartHub = async (
 // Start server if this file is run directly
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   dotenv.config({ quiet: true });
+  expandNaisysFolder();
 
   program
     .argument(
