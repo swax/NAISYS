@@ -14,6 +14,7 @@ import {
   ErrorResponseSchema,
   MailDataRequestSchema,
   MailDataResponseSchema,
+  SendMailRequestSchema,
   SendMailResponseSchema,
 } from "@naisys/supervisor-shared";
 import type { FastifyInstance, FastifyPluginOptions } from "fastify";
@@ -186,7 +187,11 @@ export default function agentMailRoutes(
                 fromId = Number(field.value);
                 break;
               case "toIds":
-                toIds = JSON.parse(field.value as string);
+                try {
+                  toIds = JSON.parse(field.value as string);
+                } catch {
+                  return badRequest(reply, "toIds must be valid JSON array");
+                }
                 break;
               case "subject":
                 subject = field.value;
@@ -214,12 +219,16 @@ export default function agentMailRoutes(
         message = body.message;
       }
 
-      if (!fromId || toIds.length === 0 || !subject || !message) {
-        return badRequest(
-          reply,
-          "Missing required fields: fromId, toIds, subject, message",
-        );
+      const parsed = SendMailRequestSchema.safeParse({
+        fromId,
+        toIds,
+        subject,
+        message,
+      });
+      if (!parsed.success) {
+        return badRequest(reply, parsed.error.message);
       }
+      ({ fromId, toIds, subject, message } = parsed.data);
 
       const result = await sendMessage(
         { fromId, toIds, subject, message },
