@@ -1,7 +1,7 @@
 import { sleep } from "@naisys/common";
 import type { ChildProcess } from "child_process";
 import { spawn } from "child_process";
-import { existsSync, mkdirSync, rmSync, writeFileSync } from "fs";
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "fs";
 import { tmpdir } from "os";
 import { dirname, join, resolve } from "path";
 import { fileURLToPath } from "url";
@@ -146,19 +146,15 @@ HUB_PORT=${options.port}
 }
 
 /**
- * Extract the hub access key from hub stdout.
- * The hub logs: "[Hub] Hub access key: <fingerprint_prefix>+<secret>"
+ * Extract the hub access key by reading it from the cert directory.
+ * The hub writes the key to ${naisysFolder}/cert/hub-access-key on startup.
  */
-export function extractAccessKey(hubOutput: string): string {
-  const match = hubOutput.match(
-    /Hub access key:\s*([0-9a-f]{16}\+[0-9a-f]{16})/i,
-  );
-  if (!match) {
-    throw new Error(
-      `Could not find hub access key in hub output:\n${hubOutput}`,
-    );
+export function extractAccessKey(naisysFolder: string): string {
+  const keyPath = join(naisysFolder, "cert", "hub-access-key");
+  if (!existsSync(keyPath)) {
+    throw new Error(`Hub access key file not found at: ${keyPath}`);
   }
-  return match[1];
+  return readFileSync(keyPath, "utf-8").trim();
 }
 
 export interface HubTestProcess {

@@ -104,7 +104,7 @@ HUB_ACCESS_KEY=${hubAccessKey}
     // --- Start Hub ---
     hub = spawnHub(hubDir);
     await hub.waitForOutput("Running on wss://localhost:", 30000);
-    const hubAccessKey = extractAccessKey(hub.getFullOutput());
+    const hubAccessKey = extractAccessKey(hubDir);
     await sleep(500);
 
     // --- Start Host A (admin starts automatically) ---
