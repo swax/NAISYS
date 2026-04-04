@@ -73,18 +73,24 @@ export function createHubAttachmentService(
     req: IncomingMessage,
     res: ServerResponse,
   ) {
-    const apiKey = url.searchParams.get("apiKey");
+    const apiKey = req.headers["x-api-key"] as string | undefined;
     const filename = url.searchParams.get("filename");
     const fileSizeStr = url.searchParams.get("filesize");
     const fileHash = url.searchParams.get("filehash");
     const purpose = url.searchParams.get("purpose");
 
-    if (!apiKey || !filename || !fileSizeStr || !fileHash || !purpose) {
+    if (!apiKey) {
+      res.writeHead(401, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: "Missing X-API-Key header" }));
+      return;
+    }
+
+    if (!filename || !fileSizeStr || !fileHash || !purpose) {
       res.writeHead(400, { "Content-Type": "application/json" });
       res.end(
         JSON.stringify({
           error:
-            "Missing required query params: apiKey, filename, filesize, filehash, purpose",
+            "Missing required query params: filename, filesize, filehash, purpose",
         }),
       );
       return;
@@ -240,13 +246,13 @@ export function createHubAttachmentService(
   async function handleDownload(
     url: URL,
     pathname: string,
-    _req: IncomingMessage,
+    req: IncomingMessage,
     res: ServerResponse,
   ) {
-    const apiKey = url.searchParams.get("apiKey");
+    const apiKey = req.headers["x-api-key"] as string | undefined;
     if (!apiKey) {
       res.writeHead(401, { "Content-Type": "application/json" });
-      res.end(JSON.stringify({ error: "Missing apiKey" }));
+      res.end(JSON.stringify({ error: "Missing X-API-Key header" }));
       return;
     }
 
