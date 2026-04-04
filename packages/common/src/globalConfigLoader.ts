@@ -14,6 +14,7 @@ export interface ClientConfig {
   spendLimitDollars?: number;
   spendLimitHours?: number;
   variableMap: Record<string, string>;
+  shellVariableMap: Record<string, string>;
   useToolsForLlmConsoleResponses: boolean;
   autoStartAgentsOnMessage: boolean;
 }
@@ -31,9 +32,12 @@ const EXCLUDED_KEYS = [
 /**
  * Builds hub-distributable config from the provided env vars.
  * @param variables - Env var source: process.env (ephemeral) or DB-sourced map (hub).
+ * @param shellExportKeys - Set of variable keys that should be exported to the shell.
+ *   When undefined (e.g. .env fallback), all variables are exported for backwards compat.
  */
 export function buildClientConfig(
   variables: Record<string, string | undefined>,
+  shellExportKeys?: Set<string>,
 ): ClientConfig {
   const shellCommand = {
     outputTokenMax: 7500,
@@ -48,9 +52,14 @@ export function buildClientConfig(
 
   // Build variableMap, filtering out excluded keys and undefined values
   const variableMap: Record<string, string> = {};
+  const shellVariableMap: Record<string, string> = {};
   for (const [key, value] of Object.entries(variables)) {
     if (value !== undefined && !EXCLUDED_KEYS.includes(key)) {
       variableMap[key] = value;
+      // When shellExportKeys is undefined (standalone .env mode), export all
+      if (!shellExportKeys || shellExportKeys.has(key)) {
+        shellVariableMap[key] = value;
+      }
     }
   }
 
@@ -69,6 +78,7 @@ export function buildClientConfig(
     compactSessionEnabled,
     preemptiveCompactEnabled,
     variableMap,
+    shellVariableMap,
     googleSearchEngineId,
     spendLimitDollars,
     spendLimitHours,

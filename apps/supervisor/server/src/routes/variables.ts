@@ -36,7 +36,7 @@ function variableActions(hasManagePermission: boolean): HateoasAction[] {
         method: "PUT",
         title: "Save Variable",
         schema: `${API_PREFIX}/schemas/SaveVariable`,
-        body: { value: "" },
+        body: { value: "", exportToShell: false },
       },
       {
         rel: "delete",
@@ -74,7 +74,11 @@ export default function variablesRoutes(
       );
       const actions = variableActions(hasManagePermission);
       return {
-        items: items.map((v) => ({ key: v.key, value: v.value })),
+        items: items.map((v) => ({
+          key: v.key,
+          value: v.value,
+          exportToShell: v.export_to_shell,
+        })),
         _actions: actions.length > 0 ? actions : undefined,
       };
     },
@@ -104,10 +108,11 @@ export default function variablesRoutes(
     async (request, reply) => {
       try {
         const { key } = request.params;
-        const { value } = request.body;
+        const { value, exportToShell } = request.body;
         const result = await saveVariable(
           key,
           value,
+          exportToShell,
           request.supervisorUser!.uuid,
         );
         sendVariablesChanged();

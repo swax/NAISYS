@@ -1,6 +1,7 @@
 import {
   ActionIcon,
   Button,
+  Checkbox,
   Container,
   Group,
   Loader,
@@ -9,9 +10,16 @@ import {
   Text,
   TextInput,
   Title,
+  Tooltip,
 } from "@mantine/core";
 import { hasAction } from "@naisys/common";
-import { IconCheck, IconPencil, IconTrash, IconX } from "@tabler/icons-react";
+import {
+  IconCheck,
+  IconInfoCircle,
+  IconPencil,
+  IconTrash,
+  IconX,
+} from "@tabler/icons-react";
 import { useCallback, useEffect, useState } from "react";
 
 import type { VariablesResponse } from "../../lib/apiClient";
@@ -21,6 +29,7 @@ import { deleteVariable, saveVariable } from "../../lib/apiVariables";
 interface VariableRow {
   key: string;
   value: string;
+  exportToShell: boolean;
 }
 
 export const VariablesPage: React.FC = () => {
@@ -30,11 +39,13 @@ export const VariablesPage: React.FC = () => {
   // New row state
   const [newKey, setNewKey] = useState("");
   const [newValue, setNewValue] = useState("");
+  const [newExportToShell, setNewExportToShell] = useState(false);
   const [saving, setSaving] = useState(false);
 
   // Inline edit state
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
+  const [editExportToShell, setEditExportToShell] = useState(false);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -58,10 +69,15 @@ export const VariablesPage: React.FC = () => {
     if (!newKey.trim() || !newValue.trim()) return;
     setSaving(true);
     try {
-      const result = await saveVariable(newKey.trim(), newValue.trim());
+      const result = await saveVariable(
+        newKey.trim(),
+        newValue.trim(),
+        newExportToShell,
+      );
       if (result.success) {
         setNewKey("");
         setNewValue("");
+        setNewExportToShell(false);
         void fetchData();
       }
     } finally {
@@ -72,7 +88,7 @@ export const VariablesPage: React.FC = () => {
   const handleSaveEdit = async (key: string) => {
     setSaving(true);
     try {
-      const result = await saveVariable(key, editValue);
+      const result = await saveVariable(key, editValue, editExportToShell);
       if (result.success) {
         setEditingKey(null);
         void fetchData();
@@ -93,6 +109,7 @@ export const VariablesPage: React.FC = () => {
   const startEdit = (row: VariableRow) => {
     setEditingKey(row.key);
     setEditValue(row.value);
+    setEditExportToShell(row.exportToShell);
   };
 
   const cancelEdit = () => {
@@ -115,6 +132,18 @@ export const VariablesPage: React.FC = () => {
             <Table.Tr>
               <Table.Th>Key</Table.Th>
               <Table.Th>Value</Table.Th>
+              <Table.Th w={60}>
+                <Group gap={4} wrap="nowrap">
+                  Shell
+                  <Tooltip
+                    label="Export this variable into the agent's shell environment. Leave unchecked for variables only used internally by NAISYS (e.g. API keys)."
+                    multiline
+                    w={250}
+                  >
+                    <IconInfoCircle size={14} style={{ opacity: 0.5 }} />
+                  </Tooltip>
+                </Group>
+              </Table.Th>
               {canManage && <Table.Th w={100}>Actions</Table.Th>}
             </Table.Tr>
           </Table.Thead>
@@ -136,6 +165,23 @@ export const VariablesPage: React.FC = () => {
                     />
                   ) : (
                     item.value
+                  )}
+                </Table.Td>
+                <Table.Td>
+                  {editingKey === item.key ? (
+                    <Checkbox
+                      checked={editExportToShell}
+                      onChange={(e) =>
+                        setEditExportToShell(e.currentTarget.checked)
+                      }
+                      size="xs"
+                    />
+                  ) : (
+                    <Checkbox
+                      checked={item.exportToShell}
+                      readOnly
+                      size="xs"
+                    />
                   )}
                 </Table.Td>
                 {canManage && (
@@ -207,6 +253,15 @@ export const VariablesPage: React.FC = () => {
                   />
                 </Table.Td>
                 <Table.Td>
+                  <Checkbox
+                    checked={newExportToShell}
+                    onChange={(e) =>
+                      setNewExportToShell(e.currentTarget.checked)
+                    }
+                    size="xs"
+                  />
+                </Table.Td>
+                <Table.Td>
                   <Button
                     size="xs"
                     onClick={handleSaveNew}
@@ -220,7 +275,7 @@ export const VariablesPage: React.FC = () => {
             )}
             {(!data || data.items.length === 0) && !canManage && (
               <Table.Tr>
-                <Table.Td colSpan={2}>
+                <Table.Td colSpan={3}>
                   <Text c="dimmed" ta="center" py="md">
                     No variables found.
                   </Text>

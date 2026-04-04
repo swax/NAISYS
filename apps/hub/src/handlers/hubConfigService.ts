@@ -47,13 +47,17 @@ export async function createHubConfigService(
   async function buildConfigPayload(): Promise<ConfigResponse> {
     const rows = await hubDb.variables.findMany();
     const variableMap: Record<string, string> = {};
+    const shellExportKeys = new Set<string>();
     for (const row of rows) {
       variableMap[row.key] = row.value;
+      if (row.export_to_shell) {
+        shellExportKeys.add(row.key);
+      }
     }
 
     cachedConfig = {
       success: true,
-      config: buildClientConfig(variableMap),
+      config: buildClientConfig(variableMap, shellExportKeys),
     };
     return cachedConfig;
   }
