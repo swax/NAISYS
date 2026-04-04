@@ -1,3 +1,4 @@
+import type { LogPushEntry } from "@naisys/hub-protocol";
 import type { LogEntry, RunSession } from "@naisys/supervisor-shared";
 
 import { hubDb } from "../database/hubDb.js";
@@ -41,6 +42,12 @@ function obfuscateText(text: string): string {
   return result;
 }
 
+function obfuscateFilename(filename: string): string {
+  const dotIndex = filename.lastIndexOf(".");
+  if (dotIndex <= 0) return "attachment";
+  return `attachment${filename.slice(dotIndex)}`;
+}
+
 /** Obfuscate all log message text for public preview. */
 export function obfuscateLogs(data: ContextLogData): ContextLogData {
   return {
@@ -48,9 +55,26 @@ export function obfuscateLogs(data: ContextLogData): ContextLogData {
     logs: data.logs.map((log) => ({
       ...log,
       message: obfuscateText(log.message),
-      attachment: undefined,
+      attachment: log.attachment
+        ? { id: "no-access", filename: obfuscateFilename(log.attachment.filename), fileSize: 0 }
+        : undefined,
     })),
   };
+}
+
+/** Obfuscate log push entries for WebSocket broadcast to unprivileged clients. */
+export function obfuscatePushEntries(
+  entries: LogPushEntry[],
+): LogPushEntry[] {
+  return entries.map((entry) => ({
+    ...entry,
+    message: obfuscateText(entry.message),
+    attachmentId: entry.attachmentId ? "no-access" : undefined,
+    attachmentFilename: entry.attachmentFilename
+      ? obfuscateFilename(entry.attachmentFilename)
+      : undefined,
+    attachmentFileSize: entry.attachmentId ? 0 : undefined,
+  }));
 }
 
 export async function getRunsData(
