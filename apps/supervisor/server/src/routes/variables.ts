@@ -57,6 +57,7 @@ export default function variablesRoutes(
   fastify.get<{ Reply: VariablesResponse | ErrorResponse }>(
     "/",
     {
+      preHandler: [requirePermission("manage_variables")],
       schema: {
         description: "List all variables",
         tags: ["Variables"],
