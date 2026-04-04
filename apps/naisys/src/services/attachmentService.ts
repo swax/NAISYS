@@ -22,7 +22,6 @@ function uploadFileToHub(
   const fileSize = fileBuffer.length;
 
   const url = new URL(`${hubUrl}/attachments`);
-  url.searchParams.set("apiKey", apiKey);
   url.searchParams.set("filename", filename);
   url.searchParams.set("filesize", String(fileSize));
   url.searchParams.set("filehash", fileHash);
@@ -33,7 +32,7 @@ function uploadFileToHub(
       url,
       {
         method: "POST",
-        headers: { "Content-Length": fileSize },
+        headers: { "Content-Length": fileSize, "X-API-Key": apiKey },
         agent: agent ?? undefined,
       },
       (res) => {

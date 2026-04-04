@@ -35,7 +35,6 @@ export async function uploadToHub(
   const fileHash = createHash("sha256").update(fileBuffer).digest("hex");
 
   const url = new URL("/attachments", hubUrl);
-  url.searchParams.set("apiKey", user.api_key);
   url.searchParams.set("filename", filename);
   url.searchParams.set("filesize", String(fileBuffer.length));
   url.searchParams.set("filehash", fileHash);
@@ -49,6 +48,7 @@ export async function uploadToHub(
         agent: getHubPinnedAgent() ?? undefined,
         headers: {
           "Content-Length": fileBuffer.length,
+          "X-API-Key": user.api_key,
         },
       },
       (res) => {
@@ -121,7 +121,6 @@ export async function proxyDownloadFromHub(
   }
 
   const url = new URL(`/attachments/${publicId}`, hubUrl);
-  url.searchParams.set("apiKey", user.api_key);
 
   return new Promise<void>((resolve, reject) => {
     const req = https.request(
@@ -129,6 +128,9 @@ export async function proxyDownloadFromHub(
       {
         method: "GET",
         agent: getHubPinnedAgent() ?? undefined,
+        headers: {
+          "X-API-Key": user.api_key,
+        },
       },
       (res) => {
         if (res.statusCode !== 200) {
