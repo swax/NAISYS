@@ -1,4 +1,5 @@
 import { mimeFromFilename } from "@naisys/common";
+import { extractBearerToken } from "@naisys/common-node";
 import type { HubDatabaseService } from "@naisys/hub-database";
 import type { AttachmentPurpose } from "@naisys/hub-database";
 import { createHash, randomBytes } from "crypto";
@@ -73,7 +74,7 @@ export function createHubAttachmentService(
     req: IncomingMessage,
     res: ServerResponse,
   ) {
-    const apiKey = req.headers["x-api-key"] as string | undefined;
+    const apiKey = extractBearerToken(req.headers.authorization);
     const filename = url.searchParams.get("filename");
     const fileSizeStr = url.searchParams.get("filesize");
     const fileHash = url.searchParams.get("filehash");
@@ -81,7 +82,7 @@ export function createHubAttachmentService(
 
     if (!apiKey) {
       res.writeHead(401, { "Content-Type": "application/json" });
-      res.end(JSON.stringify({ error: "Missing X-API-Key header" }));
+      res.end(JSON.stringify({ error: "Missing Authorization header" }));
       return;
     }
 
@@ -249,10 +250,10 @@ export function createHubAttachmentService(
     req: IncomingMessage,
     res: ServerResponse,
   ) {
-    const apiKey = req.headers["x-api-key"] as string | undefined;
+    const apiKey = extractBearerToken(req.headers.authorization);
     if (!apiKey) {
       res.writeHead(401, { "Content-Type": "application/json" });
-      res.end(JSON.stringify({ error: "Missing X-API-Key header" }));
+      res.end(JSON.stringify({ error: "Missing Authorization header" }));
       return;
     }
 

@@ -32,7 +32,7 @@ function uploadFileToHub(
       url,
       {
         method: "POST",
-        headers: { "Content-Length": fileSize, "X-API-Key": apiKey },
+        headers: { "Content-Length": fileSize, Authorization: `Bearer ${apiKey}` },
         agent: agent ?? undefined,
       },
       (res) => {

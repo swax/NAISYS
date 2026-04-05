@@ -1,5 +1,9 @@
 import { AuthCache } from "@naisys/common";
-import { hashToken, SESSION_COOKIE_NAME } from "@naisys/common-node";
+import {
+  extractBearerToken,
+  hashToken,
+  SESSION_COOKIE_NAME,
+} from "@naisys/common-node";
 import { findAgentByApiKey } from "@naisys/hub-database";
 import { findSession, findUserByApiKey } from "@naisys/supervisor-database";
 import type { ErpPermission } from "@naisys/erp-shared";
@@ -151,7 +155,7 @@ export function registerAuthMiddleware(fastify: FastifyInstance) {
 
     // API key auth (for agents / machine-to-machine)
     if (!request.erpUser) {
-      const apiKey = request.headers["x-api-key"] as string | undefined;
+      const apiKey = extractBearerToken(request.headers.authorization);
       if (apiKey) {
         const apiKeyHash = hashToken(apiKey);
         const cacheKey = `apikey:${apiKeyHash}`;

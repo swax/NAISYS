@@ -2,6 +2,8 @@ import type http from "node:http";
 
 import { Server as SocketIOServer } from "socket.io";
 
+import { extractBearerToken } from "@naisys/common-node";
+
 import {
   resolveUserFromApiKey,
   resolveUserFromToken,
@@ -34,7 +36,9 @@ export function initBrowserSocket(httpServer: http.Server, isProd: boolean) {
     }
 
     // Try API key auth
-    const apiKey = socket.handshake.headers["x-api-key"] as string | undefined;
+    const apiKey = extractBearerToken(
+      socket.handshake.headers.authorization,
+    );
     if (apiKey) {
       const user = await resolveUserFromApiKey(apiKey);
       if (user) {

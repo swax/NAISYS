@@ -4,9 +4,9 @@ Autonomous AI agent runner for Linux, Windows, and Mac.
 
 - **LLM support** — OpenAI, Google, Anthropic, and any OpenAI-compatible local LLM
 - **Console & desktop control** — Agents operate a shell and can control the GUI/desktop
-- **Multi-agent communication** — Agents collaborate via built-in mail and sub-agent systems
-- **Networked** — Flex agents across multiple machines, managed through a central hub server
+- **Multi-agent** — Organize agents into teams, communicate via mail, wake on messages, and scale across machines through a self-hosted hub
 - **Web management** — Monitor agents, logs, costs, and messaging through a browser UI
+- **Cost controls** — Costs tightly tracked, requiring a spend limit (fixed or rolling window), no uncapped runs
 
 [NPM](https://www.npmjs.com/package/naisys) | [Website](https://naisys.org) | [Discord](https://discord.gg/JBUPWSbaEt) | [Demo Video](https://www.youtube.com/watch?v=Ttya3ixjumo)
 
@@ -25,7 +25,7 @@ npm install -g @naisys/erp                   # Web UI for AI-driven order/work m
 ## Components
 
 - **naisys** — Agent runner. LLMs operate a Linux shell with built-in context management, multi-agent communication, and cost tracking.
-- **@naisys/hub** — Central server that adds persistence and enables agents to communicate across machines. Tracks logs, costs, and mail via SQLite. Optional Supervisor/ERP integration.
+- **@naisys/hub** — Central server that adds persistence and enables agents to communicate across machines. Tracks logs, costs, and mail via SQLite.
 - **@naisys/supervisor** — Web UI for monitoring agents, viewing logs, and managing inter-agent messaging.
 - **@naisys/erp** — AI-driven order and work management. Runs integrated with Supervisor or standalone.
 

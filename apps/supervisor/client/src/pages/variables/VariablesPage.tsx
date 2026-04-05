@@ -118,9 +118,15 @@ export const VariablesPage: React.FC = () => {
 
   return (
     <Container size="lg" py="xl" w="100%">
-      <Title order={2} mb="lg">
+      <Title order={2} mb="xs">
         Variables
       </Title>
+      <Text size="sm" c="dimmed" mb="lg">
+        Variables are used by NAISYS itself, LLM configurations, and agent
+        prompts. You can define your own to share text across agent prompts.
+        Variables marked with export are available to shell commands your agent
+        calls.
+      </Text>
 
       {loading ? (
         <Stack align="center" py="xl">

@@ -94,7 +94,7 @@ SUPERVISOR_PORT=${SUPERVISOR_PORT}
     // --- Send curl command using $api_key variable ---
     naisys.flushOutput();
     naisys.sendCommand(
-      `curl -s -H "X-API-Key: $NAISYS_API_KEY" http://localhost:${SUPERVISOR_PORT}/api/erp/auth/me`,
+      `curl -s -H "Authorization: Bearer $NAISYS_API_KEY" http://localhost:${SUPERVISOR_PORT}/api/erp/auth/me`,
     );
     await naisys.waitForOutput("testbot", 30000);
     await naisys.waitForPrompt();
