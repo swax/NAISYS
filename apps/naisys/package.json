@@ -59,7 +59,7 @@
     }
   },
   "engines": {
-    "node": ">=20.0.0"
+    "node": ">=22.0.0"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.78.0",
@@ -75,6 +75,7 @@
     "escape-html": "^1.0.3",
     "js-yaml": "^4.1.1",
     "openai": "^6.27.0",
+    "pino": "^10.3.1",
     "sharp": "^0.34.5",
     "socket.io-client": "^4.8.3",
     "string-argv": "^0.3.2",

@@ -4,7 +4,8 @@
   "description": "[internal] NAISYS Supervisor shared types and validation schemas",
   "type": "module",
   "files": [
-    "dist"
+    "dist",
+    "!dist/**/*.map"
   ],
   "scripts": {
     "clean": "rimraf dist",

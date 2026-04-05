@@ -28,7 +28,10 @@
   "files": [
     "dist",
     "client-dist",
-    "bin"
+    "bin",
+    "!dist/**/*.map",
+    "!dist/**/tests",
+    "!dist/**/*.test.*"
   ],
   "dependencies": {
     "@fastify/cookie": "^11.0.2",
@@ -61,6 +64,6 @@
     "vitest": "^4.1.0"
   },
   "engines": {
-    "node": ">=20.0.0"
+    "node": ">=22.0.0"
   }
 }

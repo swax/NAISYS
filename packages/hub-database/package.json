@@ -5,8 +5,10 @@
   "description": "[internal] Hub database schema and Prisma client for NAISYS",
   "files": [
     "dist",
+    "prisma.config.ts",
     "prisma/schema.prisma",
-    "prisma/migrations"
+    "prisma/migrations",
+    "!dist/**/*.map"
   ],
   "scripts": {
     "clean": "rimraf dist",
