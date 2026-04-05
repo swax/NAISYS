@@ -24,7 +24,9 @@
   "files": [
     "dist",
     "bin",
-    "!dist/**/*.map"
+    "!dist/**/*.map",
+    "!dist/**/*.d.ts",
+    "!dist/**/*.d.ts.map"
   ],
   "peerDependencies": {
     "@naisys/supervisor": "3.0.0"

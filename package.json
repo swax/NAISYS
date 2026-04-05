@@ -13,10 +13,10 @@
     "packages/hub-database",
     "packages/supervisor-database",
     "apps/erp/shared",
-    "apps/erp/client",
-    "apps/erp/server",
     "apps/supervisor/shared",
+    "apps/erp/client",
     "apps/supervisor/client",
+    "apps/erp/server",
     "apps/supervisor/server",
     "apps/hub",
     "apps/naisys"
@@ -29,8 +29,8 @@
     "prettier": "prettier --write .",
     "publish:dryrun": "npm run clean && npm run build && npm run npm:publish:dryrun --workspaces --if-present",
     "publish:beta": "bash scripts/publish-beta.sh",
-    "unpublish:beta": "bash scripts/unpublish-beta.sh",
-    "publish:all": "echo '⚠ This will publish ALL packages to npm. Press Ctrl+C to cancel.' && read -p 'Type YES to continue: ' confirm && [ \"$confirm\" = 'YES' ] && npm run clean && npm run build && npm run npm:publish --workspaces --if-present || echo 'Cancelled.'",
+    "deprecate:beta": "bash scripts/deprecate-beta.sh",
+    "publish:release": "bash scripts/publish-release.sh",
     "updates:check": "npm-check-updates && npm-check-updates --workspaces",
     "updates:apply": "npm-check-updates -u && npm-check-updates --workspaces -u && npm install"
   },

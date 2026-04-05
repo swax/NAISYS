@@ -8,7 +8,9 @@
     "prisma.config.ts",
     "prisma/schema.prisma",
     "prisma/migrations",
-    "!dist/**/*.map"
+    "!dist/**/*.map",
+    "!dist/**/*.d.ts",
+    "!dist/**/*.d.ts.map"
   ],
   "scripts": {
     "clean": "rimraf dist",

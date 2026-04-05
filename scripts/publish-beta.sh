@@ -6,50 +6,40 @@ set -euo pipefail
 # Example: ./scripts/publish-beta.sh 3   →  3.0.0-beta.3
 # Default beta number is 0.
 
-BETA_NUM="${1:-0}"
-ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-SCRIPTS="$ROOT/scripts"
+source "$(dirname "$0")/_publish-helpers.sh"
 cd "$ROOT"
 
-# Get the current version from the root package.json
+BETA_NUM="${1:-0}"
 BASE_VERSION=$(node -e "console.log(require('./package.json').version)")
 BETA_VERSION="$BASE_VERSION-beta.$BETA_NUM"
 
-# Don't append -beta if it's already a prerelease
 if [[ "$BASE_VERSION" == *-* ]]; then
   echo "Error: Current version ($BASE_VERSION) is already a prerelease."
   echo "Reset to a stable version first: $SCRIPTS/set-version.sh $BASE_VERSION <stable-version>"
   exit 1
 fi
 
+collect_packages
+
 echo "=== Publish Beta ==="
-echo "  $BASE_VERSION → $BETA_VERSION"
-echo ""
+echo "Will publish version $BETA_VERSION for:"
+show_packages "$BETA_VERSION"
 
-read -p "Continue? (y/N) " confirm
-if [[ "$confirm" != "y" && "$confirm" != "Y" ]]; then
-  echo "Cancelled."
-  exit 0
-fi
+confirm_or_exit
 
-# Step 1: Bump versions
 "$SCRIPTS/set-version.sh" "$BASE_VERSION" "$BETA_VERSION"
 
-# Step 2: Clean and build
-echo ""
-echo "=== Building ==="
-npm run clean
-npm run build
+# Always revert versions and readme, even if build or publish fails
+trap "restore_readme; $SCRIPTS/set-version.sh $BETA_VERSION $BASE_VERSION; echo; echo '=== Reverted version bumps ==='" EXIT
 
-# Step 3: Publish with --tag beta
-echo ""
-echo "=== Publishing ==="
-npm run npm:publish --workspaces --if-present -- --tag beta
+setup_readme
+build_and_format
+publish_packages beta
 
-# Step 4: Revert version changes
-echo ""
-echo "=== Reverting version bumps ==="
-"$SCRIPTS/set-version.sh" "$BETA_VERSION" "$BASE_VERSION"
+# Deprecate previous beta if it exists
+if [[ "$BETA_NUM" -gt 0 ]]; then
+  "$SCRIPTS/deprecate-beta.sh" "$((BETA_NUM - 1))" "superseded by $BETA_VERSION"
+fi
 
 echo ""
 echo "=== Done! Install with: npm install -g naisys@beta ==="

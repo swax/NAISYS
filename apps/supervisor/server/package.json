@@ -27,6 +27,8 @@
     "client-dist",
     "bin",
     "!dist/**/*.map",
+    "!dist/**/*.d.ts",
+    "!dist/**/*.d.ts.map",
     "!dist/**/tests",
     "!dist/**/*.test.*"
   ],
