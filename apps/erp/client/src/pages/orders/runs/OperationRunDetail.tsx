@@ -88,7 +88,7 @@ const FieldRefCard: React.FC<{
         deleteSetEndpoint={noop}
         attachmentEndpoint={noop}
         attachmentDownloadUrl={(fieldSeqNo, attachmentId) =>
-          `/api/erp/${apiEndpoints.stepFieldAttachmentDownload(
+          `/erp/api/${apiEndpoints.stepFieldAttachmentDownload(
             orderKey,
             runNo,
             String(ref_.sourceOpSeqNo),

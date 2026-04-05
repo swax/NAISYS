@@ -1,6 +1,6 @@
 import type { HateoasLink } from "@naisys/common";
 
-export const API_PREFIX = "/api/erp";
+export const API_PREFIX = "/erp/api";
 
 export function selfLink(path: string, title?: string): HateoasLink {
   return { rel: "self", href: `${API_PREFIX}${path}`, title };

@@ -93,27 +93,27 @@ When `ensureAdminUser()` creates the initial admin user, it should also grant `s
 
 ## API Design
 
-**Base path**: `/api/supervisor/users`
+**Base path**: `/supervisor/api/users`
 
 All access endpoints require authentication. Endpoints that modify users or permissions additionally require the `supervisor_admin` permission (enforced server-side).
 
 ### API Root Discovery
 
-The supervisor API root (`GET /api/supervisor/`) should be updated to include access links:
+The supervisor API root (`GET /supervisor/api/`) should be updated to include access links:
 
 ```json
 {
   "_links": [
-    { "rel": "users", "href": "/api/supervisor/users", "title": "Users" },
-    { "rel": "schemas", "href": "/api/supervisor/schemas/", "title": "Schemas" }
+    { "rel": "users", "href": "/supervisor/api/users", "title": "Users" },
+    { "rel": "schemas", "href": "/supervisor/api/schemas/", "title": "Schemas" }
   ],
   "_actions": [
     {
       "rel": "create-user",
-      "href": "/api/supervisor/users",
+      "href": "/supervisor/api/users",
       "method": "POST",
       "title": "Create User",
-      "schema": "/api/supervisor/schemas/CreateUser"
+      "schema": "/supervisor/api/schemas/CreateUser"
     }
   ]
 }
@@ -126,7 +126,7 @@ The `schemas` link is always present (it serves all supervisor schemas). The `us
 #### List Users
 
 ```
-GET /api/supervisor/users?page=1&pageSize=20&search=
+GET /supervisor/api/users?page=1&pageSize=20&search=
 ```
 
 Response:
@@ -140,24 +140,24 @@ Response:
       "authType": "password",
       "createdAt": "2025-01-01T00:00:00.000Z",
       "updatedAt": "2025-01-01T00:00:00.000Z",
-      "_links": [{ "rel": "self", "href": "/api/supervisor/users/1" }]
+      "_links": [{ "rel": "self", "href": "/supervisor/api/users/1" }]
     }
   ],
   "total": 1,
   "page": 1,
   "pageSize": 20,
   "_links": [
-    { "rel": "self", "href": "/api/supervisor/users?page=1&pageSize=20" },
-    { "rel": "first", "href": "/api/supervisor/users?page=1&pageSize=20" },
-    { "rel": "last", "href": "/api/supervisor/users?page=1&pageSize=20" }
+    { "rel": "self", "href": "/supervisor/api/users?page=1&pageSize=20" },
+    { "rel": "first", "href": "/supervisor/api/users?page=1&pageSize=20" },
+    { "rel": "last", "href": "/supervisor/api/users?page=1&pageSize=20" }
   ],
   "_actions": [
     {
       "rel": "create",
-      "href": "/api/supervisor/users",
+      "href": "/supervisor/api/users",
       "method": "POST",
       "title": "Create User",
-      "schema": "/api/supervisor/schemas/CreateUser"
+      "schema": "/supervisor/api/schemas/CreateUser"
     }
   ]
 }
@@ -168,7 +168,7 @@ The `authType` field is stored on the User model. Users created via the web UI a
 #### Get User Detail
 
 ```
-GET /api/supervisor/users/:id
+GET /supervisor/api/users/:id
 ```
 
 Response:
@@ -193,28 +193,28 @@ Response:
     }
   ],
   "_links": [
-    { "rel": "self", "href": "/api/supervisor/users/1" },
-    { "rel": "collection", "href": "/api/supervisor/users" },
-    { "rel": "schema", "href": "/api/supervisor/schemas/User" }
+    { "rel": "self", "href": "/supervisor/api/users/1" },
+    { "rel": "collection", "href": "/supervisor/api/users" },
+    { "rel": "schema", "href": "/supervisor/api/schemas/User" }
   ],
   "_actions": [
     {
       "rel": "update",
-      "href": "/api/supervisor/users/1",
+      "href": "/supervisor/api/users/1",
       "method": "PUT",
       "title": "Update User",
-      "schema": "/api/supervisor/schemas/UpdateUser"
+      "schema": "/supervisor/api/schemas/UpdateUser"
     },
     {
       "rel": "grant-permission",
-      "href": "/api/supervisor/users/1/permissions",
+      "href": "/supervisor/api/users/1/permissions",
       "method": "POST",
       "title": "Grant Permission",
-      "schema": "/api/supervisor/schemas/GrantPermission"
+      "schema": "/supervisor/api/schemas/GrantPermission"
     },
     {
       "rel": "delete",
-      "href": "/api/supervisor/users/1",
+      "href": "/supervisor/api/users/1",
       "method": "DELETE",
       "title": "Delete User"
     }
@@ -232,7 +232,7 @@ Each permission entry also includes an action to revoke it:
   "_actions": [
     {
       "rel": "revoke",
-      "href": "/api/supervisor/users/1/permissions/manage_agents",
+      "href": "/supervisor/api/users/1/permissions/manage_agents",
       "method": "DELETE",
       "title": "Revoke Permission"
     }
@@ -245,7 +245,7 @@ Each permission entry also includes an action to revoke it:
 #### Create User
 
 ```
-POST /api/supervisor/users
+POST /supervisor/api/users
 ```
 
 ```json
@@ -260,7 +260,7 @@ Response: `201` with the full user detail (same as GET).
 #### Update User
 
 ```
-PUT /api/supervisor/users/:id
+PUT /supervisor/api/users/:id
 ```
 
 ```json
@@ -277,7 +277,7 @@ Response: `200` with the full user detail.
 #### Delete User
 
 ```
-DELETE /api/supervisor/users/:id
+DELETE /supervisor/api/users/:id
 ```
 
 Response: `204 No Content`.
@@ -289,7 +289,7 @@ Guard: cannot delete self (409 Conflict).
 #### Grant Permission
 
 ```
-POST /api/supervisor/users/:userId/permissions
+POST /supervisor/api/users/:userId/permissions
 ```
 
 ```json
@@ -305,7 +305,7 @@ If the permission is already granted, returns 409 Conflict.
 #### Revoke Permission
 
 ```
-DELETE /api/supervisor/users/:userId/permissions/:permission
+DELETE /supervisor/api/users/:userId/permissions/:permission
 ```
 
 Response: `200` with the updated user detail.
@@ -317,8 +317,8 @@ Guard: cannot revoke own `supervisor_admin` (409 Conflict).
 Following the ERP pattern, schemas are a single top-level endpoint serving all supervisor schemas (not scoped per module). As new supervisor features add schemas, they register with the same catalog.
 
 ```
-GET /api/supervisor/schemas/          → List all available schema names
-GET /api/supervisor/schemas/:name     → Get a single JSON Schema
+GET /supervisor/api/schemas/          → List all available schema names
+GET /supervisor/api/schemas/:name     → Get a single JSON Schema
 ```
 
 Schemas added by the access module: `CreateUser`, `UpdateUser`, `GrantPermission`, `User`.
@@ -347,7 +347,7 @@ function requirePermission(permission: Permission) {
 }
 ```
 
-All `/api/supervisor/users/*` routes use `requirePermission("supervisor_admin")`.
+All `/supervisor/api/users/*` routes use `requirePermission("supervisor_admin")`.
 
 The `manage_agents` permission is enforced on agent configuration endpoints (create, update, delete agent config). This is a future enhancement noted here for completeness.
 
@@ -394,7 +394,7 @@ The HATEOAS type definitions (`HateoasLinkSchema`, `HateoasActionSchema`, `Hateo
 A `hateoas.ts` file in the supervisor server provides helper functions following the ERP pattern:
 
 ```typescript
-const API_PREFIX = "/api/supervisor/users";
+const API_PREFIX = "/supervisor/api/users";
 
 function selfLink(path: string): HateoasLink { ... }
 function collectionLink(): HateoasLink { ... }
@@ -542,38 +542,38 @@ The Prisma schema adds:
 
 | Method | Path                                          | Description                      | Permission         |
 | ------ | --------------------------------------------- | -------------------------------- | ------------------ |
-| GET    | `/api/supervisor/users`                       | List users (paginated)           | `supervisor_admin` |
-| POST   | `/api/supervisor/users`                       | Create user                      | `supervisor_admin` |
-| GET    | `/api/supervisor/users/:id`                   | Get user detail                  | `supervisor_admin` |
-| PUT    | `/api/supervisor/users/:id`                   | Update user                      | `supervisor_admin` |
-| DELETE | `/api/supervisor/users/:id`                   | Delete user                      | `supervisor_admin` |
-| POST   | `/api/supervisor/users/:id/permissions`       | Grant permission                 | `supervisor_admin` |
-| DELETE | `/api/supervisor/users/:id/permissions/:perm` | Revoke permission                | `supervisor_admin` |
-| GET    | `/api/supervisor/schemas/`                    | List all supervisor schema names | (authenticated)    |
-| GET    | `/api/supervisor/schemas/:name`               | Get a single JSON Schema         | (authenticated)    |
+| GET    | `/supervisor/api/users`                       | List users (paginated)           | `supervisor_admin` |
+| POST   | `/supervisor/api/users`                       | Create user                      | `supervisor_admin` |
+| GET    | `/supervisor/api/users/:id`                   | Get user detail                  | `supervisor_admin` |
+| PUT    | `/supervisor/api/users/:id`                   | Update user                      | `supervisor_admin` |
+| DELETE | `/supervisor/api/users/:id`                   | Delete user                      | `supervisor_admin` |
+| POST   | `/supervisor/api/users/:id/permissions`       | Grant permission                 | `supervisor_admin` |
+| DELETE | `/supervisor/api/users/:id/permissions/:perm` | Revoke permission                | `supervisor_admin` |
+| GET    | `/supervisor/api/schemas/`                    | List all supervisor schema names | (authenticated)    |
+| GET    | `/supervisor/api/schemas/:name`               | Get a single JSON Schema         | (authenticated)    |
 
 ## Example AI Agent Workflow
 
 ```
-1. GET /api/supervisor/
+1. GET /supervisor/api/
    → Discover _links including "users" and _actions including "create-user"
 
-2. GET /api/supervisor/users
+2. GET /supervisor/api/users
    → List all users, see pagination links and create action
 
-3. GET /api/supervisor/schemas/CreateUser
+3. GET /supervisor/api/schemas/CreateUser
    → Learn required fields: username, password
 
-4. POST /api/supervisor/users { "username": "operator", "password": "..." }
+4. POST /supervisor/api/users { "username": "operator", "password": "..." }
    → 201: New user with _actions: [update, grant-permission, delete]
 
-5. GET /api/supervisor/schemas/GrantPermission
+5. GET /supervisor/api/schemas/GrantPermission
    → Learn: { permission: enum["supervisor_admin", "manage_agents"] }
 
-6. POST /api/supervisor/users/2/permissions { "permission": "manage_agents" }
+6. POST /supervisor/api/users/2/permissions { "permission": "manage_agents" }
    → 200: Updated user with manage_agents in permissions list
 
-7. GET /api/supervisor/users/2
+7. GET /supervisor/api/users/2
    → See user detail with permission entries, each with revoke _action
 ```
 

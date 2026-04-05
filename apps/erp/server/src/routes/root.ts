@@ -21,25 +21,25 @@ export default function rootRoute(fastify: FastifyInstance) {
       const readLinks = [
         {
           rel: "orders",
-          href: "/api/erp/orders",
+          href: "/erp/api/orders",
           title: "Orders",
           method: "GET",
         },
         {
           rel: "items",
-          href: "/api/erp/items",
+          href: "/erp/api/items",
           title: "Items",
           method: "GET",
         },
         {
           rel: "dispatch",
-          href: "/api/erp/dispatch",
+          href: "/erp/api/dispatch",
           title: "Dispatch (open order runs)",
           method: "GET",
         },
         {
           rel: "schemas",
-          href: "/api/erp/schemas/",
+          href: "/erp/api/schemas/",
           title: "Schema Catalog",
         },
         {
@@ -53,12 +53,12 @@ export default function rootRoute(fastify: FastifyInstance) {
         const authLinks = [
           {
             rel: "self",
-            href: "/api/erp/",
+            href: "/erp/api/",
             title: "API Root",
           },
           {
             rel: "me",
-            href: "/api/erp/auth/me",
+            href: "/erp/api/auth/me",
             title: "Current User",
           },
           ...readLinks,
@@ -66,7 +66,7 @@ export default function rootRoute(fastify: FastifyInstance) {
 
         authLinks.push({
           rel: "work-centers",
-          href: "/api/erp/work-centers",
+          href: "/erp/api/work-centers",
           title: "Work Centers",
           method: "GET",
         });
@@ -75,13 +75,13 @@ export default function rootRoute(fastify: FastifyInstance) {
           authLinks.push(
             {
               rel: "users",
-              href: "/api/erp/users",
+              href: "/erp/api/users",
               title: "Users",
               method: "GET",
             },
             {
               rel: "admin",
-              href: "/api/erp/admin",
+              href: "/erp/api/admin",
               title: "Admin",
               method: "GET",
             },
@@ -94,7 +94,7 @@ export default function rootRoute(fastify: FastifyInstance) {
           _actions: [
             {
               rel: "logout",
-              href: "/api/erp/auth/logout",
+              href: "/erp/api/auth/logout",
               method: "POST",
               title: "Logout",
             },
@@ -107,7 +107,7 @@ export default function rootRoute(fastify: FastifyInstance) {
         _links: [
           {
             rel: "self",
-            href: "/api/erp/",
+            href: "/erp/api/",
             title: "API Root",
           },
           ...(publicRead
@@ -115,7 +115,7 @@ export default function rootRoute(fastify: FastifyInstance) {
             : [
                 {
                   rel: "schemas",
-                  href: "/api/erp/schemas/",
+                  href: "/erp/api/schemas/",
                   title: "Schema Catalog",
                 },
               ]),
@@ -123,10 +123,10 @@ export default function rootRoute(fastify: FastifyInstance) {
         _actions: [
           {
             rel: "login",
-            href: "/api/erp/auth/login",
+            href: "/erp/api/auth/login",
             method: "POST",
             title: "Login",
-            schema: "/api/erp/schemas/LoginRequest",
+            schema: "/erp/api/schemas/LoginRequest",
             body: { username: "", password: "" },
           },
         ],

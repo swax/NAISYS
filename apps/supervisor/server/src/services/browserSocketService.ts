@@ -14,7 +14,7 @@ let io: SocketIOServer | null = null;
 
 export function initBrowserSocket(httpServer: http.Server, isProd: boolean) {
   io = new SocketIOServer(httpServer, {
-    path: "/api/supervisor/ws",
+    path: "/supervisor/api/ws",
     cors: isProd
       ? undefined
       : { origin: ["http://localhost:3002"], credentials: true },

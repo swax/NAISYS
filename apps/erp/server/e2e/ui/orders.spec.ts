@@ -6,7 +6,7 @@ test("orders page renders with title and create button", async ({
 }, testInfo) => {
   // Login via page's request context so cookies are shared
   const creds = getTestCredentials(testInfo.workerIndex);
-  await page.request.post("http://localhost:3201/api/erp/auth/login", {
+  await page.request.post("http://localhost:3201/erp/api/auth/login", {
     data: creds,
   });
 

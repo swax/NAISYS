@@ -50,7 +50,7 @@ describe("OpenAPI spec generation", () => {
       transformObject: jsonSchemaTransformObject,
     });
 
-    fastify.register(apiRoutes, { prefix: "/api/supervisor" });
+    fastify.register(apiRoutes, { prefix: "/supervisor/api" });
 
     await fastify.ready();
 

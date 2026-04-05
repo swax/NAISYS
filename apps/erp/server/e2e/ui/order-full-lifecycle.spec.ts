@@ -16,7 +16,7 @@ test.describe.serial("Full order lifecycle with operations (UI)", () => {
 
     const creds = getTestCredentials(test.info().workerIndex);
     const res = await page.request.post(
-      "http://localhost:3201/api/erp/auth/login",
+      "http://localhost:3201/erp/api/auth/login",
       { data: creds },
     );
     expect(res.status()).toBe(200);

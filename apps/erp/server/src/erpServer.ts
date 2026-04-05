@@ -103,7 +103,8 @@ export const erpPlugin: FastifyPluginAsync = async (fastify) => {
   await fastify.register(rateLimit, {
     max: 500,
     timeWindow: "1 minute",
-    allowList: (request) => !request.url.startsWith("/api/"),
+    allowList: (request) =>
+      !request.url.match(/^\/(supervisor|erp)\/api\//),
   });
 
   // Auto-migrate ERP database
@@ -149,7 +150,7 @@ export const erpPlugin: FastifyPluginAsync = async (fastify) => {
     erpFileLogger.info("ERP plugin initialized");
 
     fastify.addHook("onResponse", async (request, reply) => {
-      if (!request.url.startsWith("/api/erp")) return;
+      if (!request.url.startsWith("/erp/api")) return;
       const logFn =
         reply.statusCode >= 400 ? erpFileLogger.error : erpFileLogger.info;
       logFn.call(
@@ -163,7 +164,7 @@ export const erpPlugin: FastifyPluginAsync = async (fastify) => {
     });
 
     fastify.addHook("onError", async (request, _reply, error) => {
-      if (!request.url.startsWith("/api/erp")) return;
+      if (!request.url.startsWith("/erp/api")) return;
       erpFileLogger.error(
         {
           err: { message: error.message, stack: error.stack },
@@ -173,87 +174,87 @@ export const erpPlugin: FastifyPluginAsync = async (fastify) => {
     });
   }
 
-  // API routes under /api/erp prefix
-  fastify.register(adminRoutes, { prefix: "/api/erp/admin" });
-  fastify.register(auditRoutes, { prefix: "/api/erp/audit" });
-  fastify.register(authRoutes, { prefix: "/api/erp/auth" });
-  fastify.register(dispatchRoutes, { prefix: "/api/erp/dispatch" });
-  fastify.register(inventoryRoutes, { prefix: "/api/erp/inventory" });
-  fastify.register(rootRoute, { prefix: "/api/erp" });
-  fastify.register(itemRoutes, { prefix: "/api/erp/items" });
+  // API routes under /erp/api prefix
+  fastify.register(adminRoutes, { prefix: "/erp/api/admin" });
+  fastify.register(auditRoutes, { prefix: "/erp/api/audit" });
+  fastify.register(authRoutes, { prefix: "/erp/api/auth" });
+  fastify.register(dispatchRoutes, { prefix: "/erp/api/dispatch" });
+  fastify.register(inventoryRoutes, { prefix: "/erp/api/inventory" });
+  fastify.register(rootRoute, { prefix: "/erp/api" });
+  fastify.register(itemRoutes, { prefix: "/erp/api/items" });
   fastify.register(itemFieldRoutes, {
-    prefix: "/api/erp/items/:key/fields",
+    prefix: "/erp/api/items/:key/fields",
   });
   fastify.register(itemInstanceRoutes, {
-    prefix: "/api/erp/items/:key/instances",
+    prefix: "/erp/api/items/:key/instances",
   });
   fastify.register(orderRoutes, {
-    prefix: "/api/erp/orders",
+    prefix: "/erp/api/orders",
   });
   fastify.register(orderRevisionRoutes, {
-    prefix: "/api/erp/orders/:orderKey/revs",
+    prefix: "/erp/api/orders/:orderKey/revs",
   });
   fastify.register(orderRevisionTransitionRoutes, {
-    prefix: "/api/erp/orders/:orderKey/revs",
+    prefix: "/erp/api/orders/:orderKey/revs",
   });
   fastify.register(orderRunRoutes, {
-    prefix: "/api/erp/orders/:orderKey/runs",
+    prefix: "/erp/api/orders/:orderKey/runs",
   });
   fastify.register(orderRunTransitionRoutes, {
-    prefix: "/api/erp/orders/:orderKey/runs",
+    prefix: "/erp/api/orders/:orderKey/runs",
   });
   fastify.register(operationRoutes, {
-    prefix: "/api/erp/orders/:orderKey/revs/:revNo/ops",
+    prefix: "/erp/api/orders/:orderKey/revs/:revNo/ops",
   });
   fastify.register(operationDependencyRoutes, {
-    prefix: "/api/erp/orders/:orderKey/revs/:revNo/ops/:seqNo/deps",
+    prefix: "/erp/api/orders/:orderKey/revs/:revNo/ops/:seqNo/deps",
   });
   fastify.register(operationFieldRefRoutes, {
-    prefix: "/api/erp/orders/:orderKey/revs/:revNo/ops/:seqNo/field-refs",
+    prefix: "/erp/api/orders/:orderKey/revs/:revNo/ops/:seqNo/field-refs",
   });
   fastify.register(operationRunRoutes, {
-    prefix: "/api/erp/orders/:orderKey/runs/:runNo/ops",
+    prefix: "/erp/api/orders/:orderKey/runs/:runNo/ops",
   });
   fastify.register(operationRunTransitionRoutes, {
-    prefix: "/api/erp/orders/:orderKey/runs/:runNo/ops",
+    prefix: "/erp/api/orders/:orderKey/runs/:runNo/ops",
   });
   fastify.register(laborTicketRoutes, {
-    prefix: "/api/erp/orders/:orderKey/runs/:runNo/ops/:seqNo/labor",
+    prefix: "/erp/api/orders/:orderKey/runs/:runNo/ops/:seqNo/labor",
   });
   fastify.register(operationRunCommentRoutes, {
-    prefix: "/api/erp/orders/:orderKey/runs/:runNo/ops/:seqNo/comments",
+    prefix: "/erp/api/orders/:orderKey/runs/:runNo/ops/:seqNo/comments",
   });
   fastify.register(stepRunRoutes, {
-    prefix: "/api/erp/orders/:orderKey/runs/:runNo/ops/:seqNo/steps",
+    prefix: "/erp/api/orders/:orderKey/runs/:runNo/ops/:seqNo/steps",
   });
   fastify.register(stepRunTransitionRoutes, {
-    prefix: "/api/erp/orders/:orderKey/runs/:runNo/ops/:seqNo/steps",
+    prefix: "/erp/api/orders/:orderKey/runs/:runNo/ops/:seqNo/steps",
   });
   fastify.register(stepRunFieldRoutes, {
-    prefix: "/api/erp/orders/:orderKey/runs/:runNo/ops/:seqNo/steps",
+    prefix: "/erp/api/orders/:orderKey/runs/:runNo/ops/:seqNo/steps",
   });
   fastify.register(stepFieldAttachmentRoutes, {
     prefix:
-      "/api/erp/orders/:orderKey/runs/:runNo/ops/:seqNo/steps/:stepSeqNo/fields/:fieldSeqNo/attachments",
+      "/erp/api/orders/:orderKey/runs/:runNo/ops/:seqNo/steps/:stepSeqNo/fields/:fieldSeqNo/attachments",
   });
   fastify.register(stepFieldAttachmentRoutes, {
     prefix:
-      "/api/erp/orders/:orderKey/runs/:runNo/ops/:seqNo/steps/:stepSeqNo/sets/:setIndex/fields/:fieldSeqNo/attachments",
+      "/erp/api/orders/:orderKey/runs/:runNo/ops/:seqNo/steps/:stepSeqNo/sets/:setIndex/fields/:fieldSeqNo/attachments",
   });
   fastify.register(stepRoutes, {
-    prefix: "/api/erp/orders/:orderKey/revs/:revNo/ops/:seqNo/steps",
+    prefix: "/erp/api/orders/:orderKey/revs/:revNo/ops/:seqNo/steps",
   });
   fastify.register(stepFieldRoutes, {
     prefix:
-      "/api/erp/orders/:orderKey/revs/:revNo/ops/:seqNo/steps/:stepSeqNo/fields",
+      "/erp/api/orders/:orderKey/revs/:revNo/ops/:seqNo/steps/:stepSeqNo/fields",
   });
-  fastify.register(schemaRoutes, { prefix: "/api/erp/schemas" });
-  fastify.register(userRoutes, { prefix: "/api/erp/users" });
-  fastify.register(userPermissionRoutes, { prefix: "/api/erp/users" });
-  fastify.register(workCenterRoutes, { prefix: "/api/erp/work-centers" });
+  fastify.register(schemaRoutes, { prefix: "/erp/api/schemas" });
+  fastify.register(userRoutes, { prefix: "/erp/api/users" });
+  fastify.register(userPermissionRoutes, { prefix: "/erp/api/users" });
+  fastify.register(workCenterRoutes, { prefix: "/erp/api/work-centers" });
 
   // Public endpoint to expose client configuration (publicRead, etc.)
-  fastify.get("/api/erp/client-config", { schema: { hide: true } }, () => ({
+  fastify.get("/erp/api/client-config", { schema: { hide: true } }, () => ({
     publicRead: process.env.PUBLIC_READ === "true",
     supervisorAuth: isSupervisorAuth(),
   }));

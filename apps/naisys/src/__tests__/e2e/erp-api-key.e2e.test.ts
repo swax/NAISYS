@@ -24,7 +24,7 @@ import {
  * 1. Agent is registered with an API key in the hub database
  * 2. $api_key variable in shell commands is replaced with the actual key
  * 3. ERP API accepts the API key and auto-provisions a local user
- * 4. /api/erp/auth/me returns the correct agent identity
+ * 4. /erp/api/auth/me returns the correct agent identity
  */
 
 vi.setConfig({ testTimeout: 120000 });
@@ -94,7 +94,7 @@ SUPERVISOR_PORT=${SUPERVISOR_PORT}
     // --- Send curl command using $api_key variable ---
     naisys.flushOutput();
     naisys.sendCommand(
-      `curl -s -H "Authorization: Bearer $NAISYS_API_KEY" http://localhost:${SUPERVISOR_PORT}/api/erp/auth/me`,
+      `curl -s -H "Authorization: Bearer $NAISYS_API_KEY" http://localhost:${SUPERVISOR_PORT}/erp/api/auth/me`,
     );
     await naisys.waitForOutput("testbot", 30000);
     await naisys.waitForPrompt();

@@ -148,7 +148,8 @@ export const startServer: StartServer = async (
   await fastify.register(rateLimit as any, {
     max: 500,
     timeWindow: "1 minute",
-    allowList: (request: { url: string }) => !request.url.startsWith("/api/"),
+    allowList: (request: { url: string }) =>
+      !request.url.match(/^\/(supervisor|erp)\/api\//),
   });
 
   await fastify.register(multipart, {
@@ -183,11 +184,11 @@ export const startServer: StartServer = async (
     return reply.redirect("/supervisor/");
   });
 
-  fastify.register(apiRoutes, { prefix: "/api/supervisor" });
+  fastify.register(apiRoutes, { prefix: "/supervisor/api" });
 
   // Public endpoint to expose client configuration (plugins, publicRead, etc.)
   fastify.get(
-    "/api/supervisor/client-config",
+    "/supervisor/api/client-config",
     { schema: { hide: true } },
     () => ({
       plugins,
@@ -217,7 +218,7 @@ export const startServer: StartServer = async (
     });
 
     fastify.setNotFoundHandler((request, reply) => {
-      if (request.url.startsWith("/api/")) {
+      if (request.url.match(/^\/(supervisor|erp)\/api\//)) {
         reply.code(404).send({ error: "API endpoint not found" });
       } else if (request.url.startsWith("/supervisor")) {
         reply.sendFile("index.html");

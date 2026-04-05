@@ -1,7 +1,7 @@
 import { notifications } from "@mantine/notifications";
 import type { AuthUser, LoginResponse } from "@naisys/erp-shared";
 
-const API_BASE = "/api/erp";
+const API_BASE = "/erp/api";
 
 export class ApiError extends Error {
   statusCode: number;
@@ -366,7 +366,7 @@ export const apiEndpoints = {
   admin: "admin",
   adminAttachments: "admin/attachments",
   adminAttachmentDownload: (id: number | string) =>
-    `/api/erp/admin/attachments/${id}`,
+    `/erp/api/admin/attachments/${id}`,
   adminLogs: (lines?: number, minLevel?: number) => {
     const params = new URLSearchParams();
     if (lines != null) params.set("lines", String(lines));
@@ -378,9 +378,9 @@ export const apiEndpoints = {
 
 export const authApi = {
   login: (username: string, password: string) =>
-    api.post<LoginResponse>("/api/erp/auth/login", { username, password }),
+    api.post<LoginResponse>("/erp/api/auth/login", { username, password }),
 
-  logout: () => api.post<{ ok: boolean }>("/api/erp/auth/logout", {}),
+  logout: () => api.post<{ ok: boolean }>("/erp/api/auth/logout", {}),
 
-  me: () => api.get<AuthUser>("/api/erp/auth/me"),
+  me: () => api.get<AuthUser>("/erp/api/auth/me"),
 };

@@ -45,7 +45,7 @@ const AppContent: React.FC = () => {
 
   // Fetch client config on mount
   React.useEffect(() => {
-    fetch("/api/erp/client-config")
+    fetch("/erp/api/client-config")
       .then((r) => r.json())
       .then((d) => {
         setPublicRead(d.publicRead);

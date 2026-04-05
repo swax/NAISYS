@@ -36,7 +36,7 @@ Each app registers a global `onRequest` hook scoped to its API prefix:
 - Public routes (login, API root, schemas) bypass auth
 - `PUBLIC_READ=true` env var allows unauthenticated GET requests (useful for development and AI agent read access)
 
-The ERP middleware only gates `/api/erp` routes, so when co-hosted it doesn't block supervisor routes (and vice versa).
+The ERP middleware only gates `/erp/api` routes, so when co-hosted it doesn't block supervisor routes (and vice versa).
 
 ## Current Implementation
 

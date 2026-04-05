@@ -8,24 +8,26 @@ import { registerAuthMiddleware } from "./auth-middleware.js";
  * for the Supervisor service.
  */
 export async function registerApiReference(fastify: FastifyInstance) {
-  await fastify.register(scalarReference as any, {
-    routePrefix: "/supervisor/api-reference",
-    configuration: {
-      spec: { url: "/api/supervisor/openapi.json" },
-      theme: "kepler",
-    },
-  });
-
-  // Wrap in a scoped plugin so registerAuthMiddleware gates access
-  // (respects PUBLIC_READ for GETs, requires auth otherwise)
+  // Both the reference page and spec endpoint are inside the auth scope.
+  // isPublicRoute treats /supervisor/api-reference as non-public (starts
+  // with /supervisor/api), so PUBLIC_READ=true allows GET access while
+  // PUBLIC_READ=false requires authentication.
   await fastify.register(async (scope) => {
     registerAuthMiddleware(scope);
 
-    scope.get("/api/supervisor/openapi.json", () => {
+    await scope.register(scalarReference as any, {
+      routePrefix: "/supervisor/api-reference",
+      configuration: {
+        spec: { url: "/supervisor/api/openapi.json" },
+        theme: "kepler",
+      },
+    });
+
+    scope.get("/supervisor/api/openapi.json", () => {
       const spec = fastify.swagger();
       const filteredPaths: Record<string, unknown> = {};
       for (const [path, value] of Object.entries(spec.paths || {})) {
-        if (path.startsWith("/api/supervisor/")) {
+        if (path.startsWith("/supervisor/api/")) {
           filteredPaths[path] = value;
         }
       }

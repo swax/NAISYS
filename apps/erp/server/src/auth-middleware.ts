@@ -24,7 +24,7 @@ declare module "fastify" {
   }
 }
 
-const PUBLIC_PREFIXES = ["/api/erp/auth/login", "/api/erp/client-config"];
+const PUBLIC_PREFIXES = ["/erp/api/auth/login", "/erp/api/client-config"];
 
 export const authCache = new AuthCache<ErpUser>();
 
@@ -70,7 +70,7 @@ export function requirePermission(permission: ErpPermission) {
 
 function isPublicRoute(url: string): boolean {
   // Exact match: API root
-  if (url === "/api/erp/" || url === "/api/erp") return true;
+  if (url === "/erp/api/" || url === "/erp/api") return true;
 
   // Prefix matches
   for (const prefix of PUBLIC_PREFIXES) {
@@ -78,10 +78,10 @@ function isPublicRoute(url: string): boolean {
   }
 
   // Schema routes
-  if (url.startsWith("/api/erp/schemas")) return true;
+  if (url.startsWith("/erp/api/schemas")) return true;
 
   // Non-ERP-API paths (static files, supervisor routes, etc.)
-  if (!url.startsWith("/api/erp")) return true;
+  if (!url.startsWith("/erp/api")) return true;
 
   return false;
 }
