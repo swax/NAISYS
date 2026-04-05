@@ -5,7 +5,9 @@
   "description": "[internal] Protocol types and schemas for NAISYS Hub communication",
   "files": [
     "dist",
-    "!dist/**/*.map"
+    "!dist/**/*.map",
+    "!dist/**/*.d.ts",
+    "!dist/**/*.d.ts.map"
   ],
   "scripts": {
     "clean": "rimraf dist",
