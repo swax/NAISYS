@@ -28,7 +28,7 @@ import { notFound } from "../error-handler.js";
 import { paginationLinks } from "../hateoas.js";
 import { getErpLogPath, tailLogFile } from "../services/log-file-service.js";
 
-const API_PREFIX = "/api/erp";
+const API_PREFIX = "/erp/api";
 
 function adminActions(hasAdminPermission: boolean): HateoasAction[] {
   const actions: HateoasAction[] = [];

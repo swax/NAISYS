@@ -361,7 +361,7 @@ export const StepRunList: React.FC<Props> = ({
                             )
                       }
                       attachmentDownloadUrl={(fieldSeqNo, attachmentId) =>
-                        `/api/erp/${apiEndpoints.stepFieldAttachmentDownload(
+                        `/erp/api/${apiEndpoints.stepFieldAttachmentDownload(
                           orderKey,
                           runNo,
                           seqNo,

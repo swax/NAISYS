@@ -63,7 +63,7 @@ const AppContent: React.FC = () => {
 
   // Fetch client config (plugins, publicRead, permissions) on mount
   React.useEffect(() => {
-    fetch("/api/supervisor/client-config")
+    fetch("/supervisor/api/client-config")
       .then((r) => r.json())
       .then((d) => {
         setPlugins(d.plugins);

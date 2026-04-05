@@ -28,19 +28,19 @@ declare module "fastify" {
   }
 }
 
-const PUBLIC_PREFIXES = ["/api/supervisor/auth/login"];
+const PUBLIC_PREFIXES = ["/supervisor/api/auth/login"];
 
 export const authCache = new AuthCache<SupervisorUser>();
 
 function isPublicRoute(url: string): boolean {
-  if (url === "/api/supervisor/" || url === "/api/supervisor") return true;
+  if (url === "/supervisor/api/" || url === "/supervisor/api") return true;
 
   for (const prefix of PUBLIC_PREFIXES) {
     if (url.startsWith(prefix)) return true;
   }
 
   // Non-supervisor-API paths (static files, ERP routes, etc.)
-  if (!url.startsWith("/api/supervisor")) return true;
+  if (!url.startsWith("/supervisor/api")) return true;
 
   return false;
 }

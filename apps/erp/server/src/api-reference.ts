@@ -13,11 +13,11 @@ import path from "path";
  */
 export function registerApiReference(fastify: FastifyInstance) {
   // Serve ERP OpenAPI spec filtered to ERP paths only
-  fastify.get("/api/erp/openapi.json", () => {
+  fastify.get("/erp/api/openapi.json", () => {
     const spec = fastify.swagger();
     const filteredPaths: Record<string, unknown> = {};
     for (const [p, value] of Object.entries(spec.paths || {})) {
-      if (p.startsWith("/api/erp/")) {
+      if (p.startsWith("/erp/api/")) {
         filteredPaths[p] = value;
       }
     }
@@ -113,7 +113,7 @@ export function registerApiReference(fastify: FastifyInstance) {
     <script src="/erp/api-reference/js/scalar.js"><\/script>
     <script type="text/javascript">
       Scalar.createApiReference('#app', {
-        url: "/api/erp/openapi.json",
+        url: "/erp/api/openapi.json",
         theme: "kepler"
       })
     <\/script>

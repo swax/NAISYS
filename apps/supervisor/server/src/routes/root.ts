@@ -2,7 +2,7 @@ import type { HateoasLink } from "@naisys/common";
 import { PermissionEnum } from "@naisys/supervisor-shared";
 import type { FastifyInstance, FastifyPluginOptions } from "fastify";
 
-const API_PREFIX = "/api/supervisor";
+const API_PREFIX = "/supervisor/api";
 
 export default function rootRoutes(
   fastify: FastifyInstance,

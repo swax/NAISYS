@@ -101,7 +101,7 @@ export const UserList: React.FC = () => {
     try {
       const agentResponse = await api.get<{
         items: { id: number; uuid: string; name: string; archived?: boolean }[];
-      }>("/api/supervisor/agents");
+      }>("/supervisor/api/agents");
 
       // Fetch all ERP users to filter out agents that already have users
       let allUsers: UserListResponse["items"] = [];

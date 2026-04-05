@@ -4,7 +4,7 @@
 
 ## Overview
 
-The NAISYS ERP is an AI-first enterprise resource planning system designed to be operated primarily by AI agents and monitored by humans. The core design principle is that an AI agent should be able to start at a single root URL (`GET /api/erp/`) and fully discover, understand, and operate the entire system through HATEOAS (Hypermedia as the Engine of Application State) without any hardcoded knowledge of endpoints or schemas.
+The NAISYS ERP is an AI-first enterprise resource planning system designed to be operated primarily by AI agents and monitored by humans. The core design principle is that an AI agent should be able to start at a single root URL (`GET /erp/api/`) and fully discover, understand, and operate the entire system through HATEOAS (Hypermedia as the Engine of Application State) without any hardcoded knowledge of endpoints or schemas.
 
 ## Design Philosophy
 
@@ -34,12 +34,12 @@ An agent workflow becomes: fetch resource, read `_actions`, pick the appropriate
 
 API schemas are discoverable through three complementary mechanisms:
 
-1. **Per-schema endpoint** at `/api/erp/schemas/:name` - Returns a single JSON Schema for a named schema (e.g., `CreateOrder`). This is what HATEOAS `_actions` and `_links` point to, so an agent can fetch only the schema it needs for a specific action without downloading the entire API spec.
-2. **Schema catalog** at `/api/erp/schemas/` - Lists all available schema names, useful for agent discovery.
-3. **OpenAPI spec** at `/api/erp/openapi.json` - Full machine-readable API contract auto-generated from Zod schemas, with `components/schemas` populated. Useful for tools like Scalar UI or for caching the complete API surface.
+1. **Per-schema endpoint** at `/erp/api/schemas/:name` - Returns a single JSON Schema for a named schema (e.g., `CreateOrder`). This is what HATEOAS `_actions` and `_links` point to, so an agent can fetch only the schema it needs for a specific action without downloading the entire API spec.
+2. **Schema catalog** at `/erp/api/schemas/` - Lists all available schema names, useful for agent discovery.
+3. **OpenAPI spec** at `/erp/api/openapi.json` - Full machine-readable API contract auto-generated from Zod schemas, with `components/schemas` populated. Useful for tools like Scalar UI or for caching the complete API surface.
 4. **Interactive API reference** at `/erp/api-reference` - Scalar UI for human exploration and testing.
 
-The per-schema endpoint is the primary mechanism for agents. When an agent sees an action like `{ "rel": "update", "schema": "/api/erp/schemas/UpdateOrder" }`, it fetches that URL to get the exact JSON Schema for the request body — field names, types, constraints, enums — without the overhead of the full OpenAPI spec.
+The per-schema endpoint is the primary mechanism for agents. When an agent sees an action like `{ "rel": "update", "schema": "/erp/api/schemas/UpdateOrder" }`, it fetches that URL to get the exact JSON Schema for the request body — field names, types, constraints, enums — without the overhead of the full OpenAPI spec.
 
 ## Architecture
 
@@ -72,21 +72,21 @@ The ERP is built as a **Fastify plugin** (`erpPlugin`) that can be:
 ### API Root Discovery
 
 ```
-GET /api/erp/
+GET /erp/api/
 
 {
   "name": "NAISYS ERP API",
   "version": "1.0.0",
   "description": "AI-first ERP system",
   "_links": [
-    { "rel": "self", "href": "/api/erp/" },
-    { "rel": "orders", "href": "/api/erp/orders" },
-    { "rel": "schemas", "href": "/api/erp/schemas/" },
+    { "rel": "self", "href": "/erp/api/" },
+    { "rel": "orders", "href": "/erp/api/orders" },
+    { "rel": "schemas", "href": "/erp/api/schemas/" },
     { "rel": "api-reference", "href": "/erp/api-reference" }
   ],
   "_actions": [
-    { "rel": "create-order", "href": "/api/erp/orders", "method": "POST",
-      "schema": "/api/erp/schemas/CreateOrder" }
+    { "rel": "create-order", "href": "/erp/api/orders", "method": "POST",
+      "schema": "/erp/api/schemas/CreateOrder" }
   ]
 }
 ```
@@ -200,7 +200,7 @@ The `_actions` array in each response is **state-dependent**. The server evaluat
 | OrderRun | closed    | (none)                        |
 | OrderRun | cancelled | (none)                        |
 
-Each action includes a `schema` URL (e.g., `/api/erp/schemas/UpdateOrder`) that the agent can fetch to get the JSON Schema for the request body. Some actions include a `body` template with required fields pre-filled (e.g., a status transition action that requires `{ status: "archived" }`).
+Each action includes a `schema` URL (e.g., `/erp/api/schemas/UpdateOrder`) that the agent can fetch to get the JSON Schema for the request body. Some actions include a `body` template with required fields pre-filled (e.g., a status transition action that requires `{ status: "archived" }`).
 
 ## API Endpoints
 
@@ -208,21 +208,21 @@ Each action includes a `schema` URL (e.g., `/api/erp/schemas/UpdateOrder`) that 
 
 | Method | Path                  | Description                  |
 | ------ | --------------------- | ---------------------------- |
-| GET    | `/api/erp/orders`     | List (paginated, filterable) |
-| POST   | `/api/erp/orders`     | Create                       |
-| GET    | `/api/erp/orders/:id` | Get single                   |
-| PUT    | `/api/erp/orders/:id` | Update                       |
-| DELETE | `/api/erp/orders/:id` | Delete (if no revisions)     |
+| GET    | `/erp/api/orders`     | List (paginated, filterable) |
+| POST   | `/erp/api/orders`     | Create                       |
+| GET    | `/erp/api/orders/:id` | Get single                   |
+| PUT    | `/erp/api/orders/:id` | Update                       |
+| DELETE | `/erp/api/orders/:id` | Delete (if no revisions)     |
 
 ### Order Revisions
 
 | Method | Path                                    | Description          |
 | ------ | --------------------------------------- | -------------------- |
-| GET    | `/api/erp/orders/:orderKey/revs`        | List                 |
-| POST   | `/api/erp/orders/:orderKey/revs`        | Create               |
-| GET    | `/api/erp/orders/:orderKey/revs/:revNo` | Get single           |
-| PUT    | `/api/erp/orders/:orderKey/revs/:revNo` | Update (draft only)  |
-| DELETE | `/api/erp/orders/:orderKey/revs/:revNo` | Delete (draft only)  |
+| GET    | `/erp/api/orders/:orderKey/revs`        | List                 |
+| POST   | `/erp/api/orders/:orderKey/revs`        | Create               |
+| GET    | `/erp/api/orders/:orderKey/revs/:revNo` | Get single           |
+| PUT    | `/erp/api/orders/:orderKey/revs/:revNo` | Update (draft only)  |
+| DELETE | `/erp/api/orders/:orderKey/revs/:revNo` | Delete (draft only)  |
 | POST   | `.../revs/:revNo/approve`               | Draft -> Approved    |
 | POST   | `.../revs/:revNo/obsolete`              | Approved -> Obsolete |
 
@@ -230,21 +230,21 @@ Each action includes a `schema` URL (e.g., `/api/erp/schemas/UpdateOrder`) that 
 
 | Method | Path                                        | Description               |
 | ------ | ------------------------------------------- | ------------------------- |
-| GET    | `/api/erp/orders/:orderKey/runs`            | List (paginated)          |
-| POST   | `/api/erp/orders/:orderKey/runs`            | Create                    |
-| GET    | `/api/erp/orders/:orderKey/runs/:id`        | Get single                |
-| PUT    | `/api/erp/orders/:orderKey/runs/:id`        | Update (released/started) |
-| DELETE | `/api/erp/orders/:orderKey/runs/:id`        | Delete (released only)    |
-| POST   | `/api/erp/orders/:orderKey/runs/:id/start`  | Released -> Started       |
-| POST   | `/api/erp/orders/:orderKey/runs/:id/close`  | Started -> Closed         |
-| POST   | `/api/erp/orders/:orderKey/runs/:id/cancel` | -> Cancelled              |
+| GET    | `/erp/api/orders/:orderKey/runs`            | List (paginated)          |
+| POST   | `/erp/api/orders/:orderKey/runs`            | Create                    |
+| GET    | `/erp/api/orders/:orderKey/runs/:id`        | Get single                |
+| PUT    | `/erp/api/orders/:orderKey/runs/:id`        | Update (released/started) |
+| DELETE | `/erp/api/orders/:orderKey/runs/:id`        | Delete (released only)    |
+| POST   | `/erp/api/orders/:orderKey/runs/:id/start`  | Released -> Started       |
+| POST   | `/erp/api/orders/:orderKey/runs/:id/close`  | Started -> Closed         |
+| POST   | `/erp/api/orders/:orderKey/runs/:id/cancel` | -> Cancelled              |
 
 ### Schemas
 
 | Method | Path                           | Description                     |
 | ------ | ------------------------------ | ------------------------------- |
-| GET    | `/api/erp/schemas/`            | List all available schema names |
-| GET    | `/api/erp/schemas/:schemaName` | Get a single JSON Schema        |
+| GET    | `/erp/api/schemas/`            | List all available schema names |
+| GET    | `/erp/api/schemas/:schemaName` | Get a single JSON Schema        |
 
 Available schemas: `CreateOrder`, `UpdateOrder`, `CreateOrderRevision`, `UpdateOrderRevision`, `CreateOrderRun`, `UpdateOrderRun`.
 
@@ -261,43 +261,43 @@ All list endpoints support `page` (default 1) and `pageSize` (default 20, max 10
 This illustrates how an agent with zero prior knowledge can operate the system:
 
 ```
-1. GET /api/erp/
+1. GET /erp/api/
    -> Learn about available resources, get links and actions
 
 2. Read the "create-order" action from _actions
-   -> { href: "/api/erp/orders", method: "POST",
-        schema: "/api/erp/schemas/CreateOrder" }
+   -> { href: "/erp/api/orders", method: "POST",
+        schema: "/erp/api/schemas/CreateOrder" }
 
-3. GET /api/erp/schemas/CreateOrder
+3. GET /erp/api/schemas/CreateOrder
    -> JSON Schema with required fields, types, constraints
       (lightweight ~200 bytes, not the full OpenAPI spec)
 
-4. POST /api/erp/orders { key: "widget-assembly", name: "Widget Assembly", ... }
+4. POST /erp/api/orders { key: "widget-assembly", name: "Widget Assembly", ... }
    -> Response includes _links (self, revisions) and _actions (update, delete, archive)
 
-5. Follow "revisions" link -> GET /api/erp/orders/widget-assembly/revs
+5. Follow "revisions" link -> GET /erp/api/orders/widget-assembly/revs
    -> Empty list, use create action
 
-6. POST /api/erp/orders/widget-assembly/revs { notes: "Initial plan", ... }
+6. POST /erp/api/orders/widget-assembly/revs { notes: "Initial plan", ... }
    -> Response: revision in "draft" status, _actions: [update, approve, delete]
 
 7. POST .../revs/1/approve  (from _actions)
    -> Response: "approved" status, _actions: [cut-order, obsolete]
 
 8. Follow "cut-order" action from the approved revision
-   -> { href: "/api/erp/orders/widget-assembly/runs", method: "POST",
-        schema: "/api/erp/schemas/CreateOrderRun" }
+   -> { href: "/erp/api/orders/widget-assembly/runs", method: "POST",
+        schema: "/erp/api/schemas/CreateOrderRun" }
 
-9. GET /api/erp/schemas/CreateOrderRun
+9. GET /erp/api/schemas/CreateOrderRun
    -> Learn required fields: orderRevId, etc.
 
-10. POST /api/erp/orders/widget-assembly/runs { orderRevId: 1, priority: "high", ... }
+10. POST /erp/api/orders/widget-assembly/runs { orderRevId: 1, priority: "high", ... }
     -> Response: order run in "released" status, _actions: [update, start, cancel, delete]
 
-11. POST /api/erp/orders/widget-assembly/runs/1/start  (from _actions)
+11. POST /erp/api/orders/widget-assembly/runs/1/start  (from _actions)
     -> Response: "started" status, _actions: [update, close, cancel]
 
-12. POST /api/erp/orders/widget-assembly/runs/1/close  (from _actions)
+12. POST /erp/api/orders/widget-assembly/runs/1/close  (from _actions)
     -> Response: "closed" status, _actions: []  (terminal state)
 ```
 

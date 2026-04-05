@@ -32,7 +32,7 @@ export default defineConfig({
   server: {
     port: 3002,
     proxy: {
-      "/api/supervisor": {
+      "/supervisor/api": {
         target: "http://localhost:3001",
         changeOrigin: true,
       },

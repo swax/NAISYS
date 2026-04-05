@@ -50,7 +50,7 @@ import type {
   VariablesResponse,
 } from "@naisys/supervisor-shared";
 
-export const API_BASE = "/api/supervisor";
+export const API_BASE = "/supervisor/api";
 
 export type {
   AdminAttachmentListResponse,
