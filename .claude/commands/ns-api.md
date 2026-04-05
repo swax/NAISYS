@@ -4,7 +4,7 @@ IMPORTANT: Never read .env.ns-api with the Read tool — that exposes API keys.
 Always source it inline with bash commands.
 
 All curl commands follow this pattern — just pick the right key and go:
-source .claude/commands/.env.ns-api && curl -sS -H "x-api-key: $NS_ADMIN_API_KEY" "$NS_API_URL/<path>" | jq
+source .claude/commands/.env.ns-api && curl -sS -H "Authorization: Bearer $NS_ADMIN_API_KEY" "$NS_API_URL/<path>" | jq
 
 If the user specifies a role (e.g. "planner"), use the matching key variable
 (e.g. $NS_PLANNER_API_KEY). If no role is specified, use the first available key.

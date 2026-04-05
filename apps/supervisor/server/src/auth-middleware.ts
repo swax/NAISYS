@@ -1,5 +1,9 @@
 import { AuthCache } from "@naisys/common";
-import { hashToken, SESSION_COOKIE_NAME } from "@naisys/common-node";
+import {
+  extractBearerToken,
+  hashToken,
+  SESSION_COOKIE_NAME,
+} from "@naisys/common-node";
 import { findAgentByApiKey } from "@naisys/hub-database";
 import type { Permission } from "@naisys/supervisor-database";
 import { findSession, findUserByApiKey } from "@naisys/supervisor-database";
@@ -120,7 +124,7 @@ export function registerAuthMiddleware(fastify: FastifyInstance) {
 
     // API key auth (for agents / machine-to-machine)
     if (!request.supervisorUser) {
-      const apiKey = request.headers["x-api-key"] as string | undefined;
+      const apiKey = extractBearerToken(request.headers.authorization);
       if (apiKey) {
         const user = await resolveUserFromApiKey(apiKey);
         if (user) request.supervisorUser = user;

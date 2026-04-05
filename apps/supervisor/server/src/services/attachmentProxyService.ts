@@ -48,7 +48,7 @@ export async function uploadToHub(
         agent: getHubPinnedAgent() ?? undefined,
         headers: {
           "Content-Length": fileBuffer.length,
-          "X-API-Key": user.api_key,
+          Authorization: `Bearer ${user.api_key}`,
         },
       },
       (res) => {
@@ -129,7 +129,7 @@ export async function proxyDownloadFromHub(
         method: "GET",
         agent: getHubPinnedAgent() ?? undefined,
         headers: {
-          "X-API-Key": user.api_key,
+          Authorization: `Bearer ${user.api_key}`,
         },
       },
       (res) => {
