@@ -3,6 +3,7 @@ logs/
 node_modules/
 .env*
 !.env*.example
+.npmrc
 .claude/*
 !.claude/commands/
 !.claude/commands/.env.nsapi.example

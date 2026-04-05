@@ -1,0 +1,3 @@
+# Create a Granular Access Token at https://www.npmjs.com/settings/tokens
+# Copy this file to .npmrc and add your token
+//registry.npmjs.org/:_authToken=

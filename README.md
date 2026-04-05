@@ -85,7 +85,7 @@ node dist/naisys.js ../../agents/assistant.yaml --integrated-hub --supervisor --
 
 ## Requirements
 
-- Node.js 20 or higher
+- Node.js 22 or higher
 - Linux, Mac, Windows
 - lynx browser: `apt install lynx` (Linux) or `brew install lynx` (macOS)
 

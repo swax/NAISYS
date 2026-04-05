@@ -4,7 +4,8 @@
   "type": "module",
   "description": "[internal] Node-only utilities for NAISYS",
   "files": [
-    "dist"
+    "dist",
+    "!dist/**/*.map"
   ],
   "scripts": {
     "clean": "rimraf dist",

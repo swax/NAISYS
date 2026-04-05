@@ -25,7 +25,10 @@
   "files": [
     "dist",
     "client-dist",
-    "bin"
+    "bin",
+    "!dist/**/*.map",
+    "!dist/**/tests",
+    "!dist/**/*.test.*"
   ],
   "peerDependencies": {
     "@naisys/erp": "3.0.0"
@@ -69,6 +72,6 @@
     "vitest": "^4.1.0"
   },
   "engines": {
-    "node": ">=20.0.0"
+    "node": ">=22.0.0"
   }
 }
