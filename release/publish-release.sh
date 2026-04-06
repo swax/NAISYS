@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # Publish all packages to npm as a stable release.
-# Usage: ./scripts/publish-release.sh
+# Usage: ./release/publish-release.sh
 
 source "$(dirname "$0")/_publish-helpers.sh"
 cd "$ROOT"

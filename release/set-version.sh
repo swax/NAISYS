@@ -2,8 +2,8 @@
 set -euo pipefail
 
 # Replace one version string with another across all package.json files.
-# Usage: ./scripts/set-version.sh <from> <to>
-# Example: ./scripts/set-version.sh 3.0.0 3.0.0-beta.1
+# Usage: ./release/set-version.sh <from> <to>
+# Example: ./release/set-version.sh 3.0.0 3.0.0-beta.1
 
 if [[ $# -ne 2 ]]; then
   echo "Usage: $0 <from-version> <to-version>"
