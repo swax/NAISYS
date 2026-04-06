@@ -32,7 +32,6 @@
     "@prisma/adapter-better-sqlite3": "^7.5.0",
     "@prisma/client": "^7.5.0",
     "better-sqlite3": "^12.6.2",
-    "dotenv": "^17.3.1",
     "prisma": "^7.5.0"
   },
   "exports": {
