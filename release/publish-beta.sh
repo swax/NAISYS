@@ -2,8 +2,8 @@
 set -euo pipefail
 
 # Publish all packages to npm with a beta tag.
-# Usage: ./scripts/publish-beta.sh [beta-number]
-# Example: ./scripts/publish-beta.sh 3   →  3.0.0-beta.3
+# Usage: ./release/publish-beta.sh [beta-number]
+# Example: ./release/publish-beta.sh 3   →  3.0.0-beta.3
 # Default beta number is 0.
 
 source "$(dirname "$0")/_publish-helpers.sh"
@@ -38,7 +38,7 @@ publish_packages beta
 
 # Deprecate previous beta if it exists
 if [[ "$BETA_NUM" -gt 0 ]]; then
-  "$SCRIPTS/deprecate-beta.sh" "$((BETA_NUM - 1))" "superseded by $BETA_VERSION"
+  "$SCRIPTS/deprecate-beta.sh" "$((BETA_NUM - 1))" "superseded by $BETA_VERSION" "$BASE_VERSION"
 fi
 
 echo ""

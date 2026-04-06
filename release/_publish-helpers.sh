@@ -2,7 +2,7 @@
 # Shared helpers for publish scripts. Source this file, don't execute it.
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-SCRIPTS="$ROOT/scripts"
+SCRIPTS="$ROOT/release"
 
 # Populates PACKAGE_DIRS and PACKAGE_NAMES arrays with publishable packages
 # in workspace order (dependency order from root package.json).

@@ -28,9 +28,6 @@
     "lint:fix": "eslint . --fix",
     "prettier": "prettier --write .",
     "publish:dryrun": "npm run clean && npm run build && npm run npm:publish:dryrun --workspaces --if-present",
-    "publish:beta": "bash scripts/publish-beta.sh",
-    "deprecate:beta": "bash scripts/deprecate-beta.sh",
-    "publish:release": "bash scripts/publish-release.sh",
     "updates:check": "npm-check-updates && npm-check-updates --workspaces",
     "updates:apply": "npm-check-updates -u && npm-check-updates --workspaces -u && npm install"
   },
