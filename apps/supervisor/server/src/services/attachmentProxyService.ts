@@ -1,10 +1,11 @@
 import { createHash } from "crypto";
 import type { FastifyReply } from "fastify";
+import http from "http";
 import https from "https";
 
 import { hubDb } from "../database/hubDb.js";
 import { getLogger } from "../logger.js";
-import { getHubPinnedAgent, getHubUrl } from "./hubConnectionService.js";
+import { getHubUrl } from "./hubConnectionService.js";
 
 /**
  * Upload a file buffer to the hub's attachment endpoint.
@@ -34,18 +35,19 @@ export async function uploadToHub(
   // Compute SHA-256 of file buffer
   const fileHash = createHash("sha256").update(fileBuffer).digest("hex");
 
-  const url = new URL("/attachments", hubUrl);
+  const url = new URL(`${hubUrl}/attachments`);
   url.searchParams.set("filename", filename);
   url.searchParams.set("filesize", String(fileBuffer.length));
   url.searchParams.set("filehash", fileHash);
   url.searchParams.set("purpose", purpose);
 
+  const httpModule = url.protocol === "https:" ? https : http;
+
   const response = await new Promise<{ id: number }>((resolve, reject) => {
-    const req = https.request(
+    const req = httpModule.request(
       url,
       {
         method: "POST",
-        agent: getHubPinnedAgent() ?? undefined,
         headers: {
           "Content-Length": fileBuffer.length,
           Authorization: `Bearer ${user.api_key}`,
@@ -120,14 +122,14 @@ export async function proxyDownloadFromHub(
     return;
   }
 
-  const url = new URL(`/attachments/${publicId}`, hubUrl);
+  const url = new URL(`${hubUrl}/attachments/${publicId}`);
+  const httpModule = url.protocol === "https:" ? https : http;
 
   return new Promise<void>((resolve, reject) => {
-    const req = https.request(
+    const req = httpModule.request(
       url,
       {
         method: "GET",
-        agent: getHubPinnedAgent() ?? undefined,
         headers: {
           Authorization: `Bearer ${user.api_key}`,
         },

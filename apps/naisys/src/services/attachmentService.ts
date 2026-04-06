@@ -1,5 +1,6 @@
 import { createHash } from "crypto";
 import fs from "fs";
+import http from "http";
 import https from "https";
 import path from "path";
 
@@ -14,7 +15,6 @@ function uploadFileToHub(
   apiKey: string,
   filepath: string,
   purpose: string,
-  agent: https.Agent | null,
 ): Promise<number> {
   const fileBuffer = fs.readFileSync(filepath);
   const fileHash = createHash("sha256").update(fileBuffer).digest("hex");
@@ -27,8 +27,10 @@ function uploadFileToHub(
   url.searchParams.set("filehash", fileHash);
   url.searchParams.set("purpose", purpose);
 
+  const httpModule = url.protocol === "https:" ? https : http;
+
   return new Promise<number>((resolve, reject) => {
-    const req = https.request(
+    const req = httpModule.request(
       url,
       {
         method: "POST",
@@ -36,7 +38,6 @@ function uploadFileToHub(
           "Content-Length": fileSize,
           Authorization: `Bearer ${apiKey}`,
         },
-        agent: agent ?? undefined,
       },
       (res) => {
         let body = "";
@@ -87,13 +88,7 @@ export function createAttachmentService(
     const apiKey = userService.getUserById(localUserId)?.apiKey;
     if (!apiKey) throw "No API key configured for this user.";
 
-    return uploadFileToHub(
-      hubClient.getHubUrl(),
-      apiKey,
-      filepath,
-      purpose,
-      hubClient.getPinnedAgent(),
-    );
+    return uploadFileToHub(hubClient.getHubUrl(), apiKey, filepath, purpose);
   }
 
   /**

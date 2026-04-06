@@ -10,7 +10,7 @@ import type {
   HubSupervisorPushEvents,
   HubTriggerEventName,
 } from "@naisys/hub-protocol";
-import type { Namespace } from "socket.io";
+import type { Server } from "socket.io";
 import type { ZodSchema } from "zod";
 
 import type { HostRegistrar } from "./hostRegistrar.js";
@@ -36,7 +36,7 @@ interface RegisteredHandler {
  * Creates the NAISYS namespace server that accepts NAISYS instance connections.
  */
 export function createNaisysServer(
-  nsp: Namespace,
+  nsp: Server,
   initialHubAccessKey: string,
   logService: HubServerLog,
   hostRegistrar: HostRegistrar,
