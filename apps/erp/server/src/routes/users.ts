@@ -1,5 +1,4 @@
 import type { HateoasAction, HateoasLink } from "@naisys/common";
-import { getHubAgentById } from "@naisys/hub-database";
 import {
   ChangePasswordSchema,
   CreateAgentUserSchema,
@@ -7,6 +6,7 @@ import {
   type ErpPermission,
   UpdateUserSchema,
 } from "@naisys/erp-shared";
+import { getHubAgentById } from "@naisys/hub-database";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod/v4";

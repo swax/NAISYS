@@ -1,4 +1,5 @@
 import type { StartHub } from "@naisys/common";
+import { expandNaisysFolder } from "@naisys/common-node";
 import { program } from "commander";
 import dotenv from "dotenv";
 
@@ -17,8 +18,6 @@ import { createHeartbeatService } from "./services/heartbeatService.js";
 import { createHostService } from "./services/hostService.js";
 import { createModelService } from "./services/modelService.js";
 import { createPromptNotificationService } from "./utils/promptNotificationService.js";
-
-import { expandNaisysFolder } from "@naisys/common-node";
 
 dotenv.config({ quiet: true });
 expandNaisysFolder();

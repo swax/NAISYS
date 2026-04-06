@@ -56,16 +56,18 @@ export function obfuscateLogs(data: ContextLogData): ContextLogData {
       ...log,
       message: obfuscateText(log.message),
       attachment: log.attachment
-        ? { id: "no-access", filename: obfuscateFilename(log.attachment.filename), fileSize: 0 }
+        ? {
+            id: "no-access",
+            filename: obfuscateFilename(log.attachment.filename),
+            fileSize: 0,
+          }
         : undefined,
     })),
   };
 }
 
 /** Obfuscate log push entries for WebSocket broadcast to unprivileged clients. */
-export function obfuscatePushEntries(
-  entries: LogPushEntry[],
-): LogPushEntry[] {
+export function obfuscatePushEntries(entries: LogPushEntry[]): LogPushEntry[] {
   return entries.map((entry) => ({
     ...entry,
     message: obfuscateText(entry.message),

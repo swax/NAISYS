@@ -103,8 +103,7 @@ export const erpPlugin: FastifyPluginAsync = async (fastify) => {
   await fastify.register(rateLimit, {
     max: 500,
     timeWindow: "1 minute",
-    allowList: (request) =>
-      !request.url.match(/^\/(supervisor|erp)\/api\//),
+    allowList: (request) => !request.url.match(/^\/(supervisor|erp)\/api\//),
   });
 
   // Auto-migrate ERP database

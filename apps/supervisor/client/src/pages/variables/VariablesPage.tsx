@@ -183,11 +183,7 @@ export const VariablesPage: React.FC = () => {
                       size="xs"
                     />
                   ) : (
-                    <Checkbox
-                      checked={item.exportToShell}
-                      readOnly
-                      size="xs"
-                    />
+                    <Checkbox checked={item.exportToShell} readOnly size="xs" />
                   )}
                 </Table.Td>
                 {canManage && (
