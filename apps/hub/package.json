@@ -5,7 +5,7 @@
   "type": "module",
   "main": "dist/naisysHub.js",
   "bin": {
-    "naisys-hub": "bin/naisys-hub"
+    "naisys-hub": "bin/naisys-hub.js"
   },
   "exports": {
     ".": "./dist/naisysHub.js",
