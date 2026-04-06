@@ -4,15 +4,15 @@ import {
   sessionCookieOptions,
 } from "@naisys/common-node";
 import {
-  authenticateAndCreateSession,
-  deleteSession,
-} from "@naisys/supervisor-database";
-import {
   AuthUserSchema,
   ErrorResponseSchema,
   LoginRequestSchema,
   LoginResponseSchema,
 } from "@naisys/erp-shared";
+import {
+  authenticateAndCreateSession,
+  deleteSession,
+} from "@naisys/supervisor-database";
 import bcrypt from "bcryptjs";
 import { randomUUID } from "crypto";
 import type { FastifyInstance } from "fastify";

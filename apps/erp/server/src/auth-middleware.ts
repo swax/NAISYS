@@ -4,9 +4,9 @@ import {
   hashToken,
   SESSION_COOKIE_NAME,
 } from "@naisys/common-node";
+import type { ErpPermission } from "@naisys/erp-shared";
 import { findAgentByApiKey } from "@naisys/hub-database";
 import { findSession, findUserByApiKey } from "@naisys/supervisor-database";
-import type { ErpPermission } from "@naisys/erp-shared";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 
 import erpDb from "./erpDb.js";

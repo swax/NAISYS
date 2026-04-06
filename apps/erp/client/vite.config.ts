@@ -7,7 +7,10 @@ function zodJitless(): Plugin {
   return {
     name: "zod-jitless",
     transform(code, id) {
-      if (id.includes("zod") && code.includes("export const globalConfig = {};")) {
+      if (
+        id.includes("zod") &&
+        code.includes("export const globalConfig = {};")
+      ) {
         patched = true;
         return code.replace(
           "export const globalConfig = {};",

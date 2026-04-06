@@ -4,7 +4,6 @@ import {
   resolveHubAccessKey,
   verifyHubCertificate,
 } from "@naisys/common-node";
-import https from "https";
 import type {
   AgentStartResponse,
   AgentStopResponse,
@@ -23,6 +22,7 @@ import {
   MailReadPushSchema,
   SessionPushSchema,
 } from "@naisys/hub-protocol";
+import type https from "https";
 import type { Socket } from "socket.io-client";
 import { io } from "socket.io-client";
 

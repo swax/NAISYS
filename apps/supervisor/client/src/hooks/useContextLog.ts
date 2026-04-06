@@ -128,7 +128,7 @@ export const useContextLog = (
               filename: e.attachmentFilename ?? "",
               fileSize: e.attachmentFileSize ?? 0,
             }
-          : undefined,  // attachmentId is now a string (public_id)
+          : undefined, // attachmentId is now a string (public_id)
       }));
       mergeLogs(logs);
 

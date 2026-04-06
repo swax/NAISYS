@@ -53,7 +53,7 @@ export function createHubAttachmentService(
       pathname !== "/attachments/" &&
       req.method === "GET"
     ) {
-      handleDownload(url, pathname, req, res).catch((err) => {
+      handleDownload(pathname, req, res).catch((err) => {
         logService.error(`[Hub:Attachment] Download error: ${err}`);
         if (!res.writableEnded) {
           res.writeHead(500, { "Content-Type": "application/json" });
@@ -245,7 +245,6 @@ export function createHubAttachmentService(
   }
 
   async function handleDownload(
-    url: URL,
     pathname: string,
     req: IncomingMessage,
     res: ServerResponse,
