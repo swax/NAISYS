@@ -37,7 +37,6 @@
   "homepage": "https://naisys.org",
   "devDependencies": {
     "@naisys/hub-database": "3.0.0",
-    "@types/escape-html": "^1.0.4",
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^25.5.0",
     "@types/text-table": "^0.2.5",
@@ -64,7 +63,6 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.78.0",
     "@google/genai": "^1.45.0",
-    "@modelcontextprotocol/sdk": "^1.27.1",
     "@naisys/common": "3.0.0",
     "@naisys/common-node": "3.0.0",
     "@naisys/hub-protocol": "3.0.0",
@@ -72,7 +70,6 @@
     "chalk": "^5.6.2",
     "commander": "^14.0.3",
     "dotenv": "^17.3.1",
-    "escape-html": "^1.0.3",
     "js-yaml": "^4.1.1",
     "openai": "^6.27.0",
     "pino": "^10.3.1",
@@ -82,7 +79,6 @@
     "strip-ansi": "^7.2.0",
     "text-table": "^0.2.0",
     "tiktoken": "^1.0.22",
-    "tree-kill": "^1.2.2",
-    "web-streams-polyfill": "^4.2.0"
+    "tree-kill": "^1.2.2"
   }
 }
