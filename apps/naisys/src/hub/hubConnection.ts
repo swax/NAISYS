@@ -1,9 +1,4 @@
-import {
-  createPinnedHttpsAgent,
-  parseHubAccessKey,
-  resolveHubAccessKey,
-  verifyHubCertificate,
-} from "@naisys/common-node";
+import { resolveHubAccessKey } from "@naisys/common-node";
 import type { Socket } from "socket.io-client";
 import { io } from "socket.io-client";
 
@@ -26,9 +21,14 @@ export function createHubConnection(
 ) {
   const hubUrl = hubClientConfig.hubUrl;
 
+  // Extract origin and base path from hub URL (e.g. "http://localhost:3101/hub" → origin + "/hub")
+  // Socket.IO needs origin for connection and base path for its transport path
+  const hubUrlParsed = new URL(hubUrl);
+  const hubOrigin = hubUrlParsed.origin;
+  const hubBasePath = hubUrlParsed.pathname.replace(/\/$/, "");
+
   let socket: Socket | null = null;
   let connected = false;
-  let pinnedAgent: ReturnType<typeof createPinnedHttpsAgent> | null = null;
 
   function connect() {
     hubClientLog.write(`[NAISYS:HubClient] Connecting to ${hubUrl}...`);
@@ -39,28 +39,8 @@ export function createHubConnection(
       return;
     }
 
-    // Verify the hub's TLS cert fingerprint, then pin all subsequent connections
-    // to that exact cert via a custom HTTPS agent
-    const { fingerprintPrefix } = parseHubAccessKey(hubAccessKey);
-    const url = new URL(hubUrl);
-    verifyHubCertificate(
-      url.hostname,
-      Number(url.port) || 443,
-      fingerprintPrefix,
-    )
-      .then((certPem) => connectSocket(certPem))
-      .catch((err) => {
-        hubClientLog.write(
-          `[NAISYS:HubClient] Certificate verification failed: ${err.message}`,
-        );
-        onConnectError(err.message);
-      });
-  }
-
-  function connectSocket(certPem: string) {
-    pinnedAgent = createPinnedHttpsAgent(certPem);
-
-    socket = io(hubUrl + "/naisys", {
+    socket = io(hubOrigin, {
+      path: hubBasePath + "/socket.io",
       auth: (cb) => {
         // Re-read access key on each connection attempt so rotated keys are picked up
         cb({
@@ -69,8 +49,6 @@ export function createHubConnection(
           hostType: "naisys",
         });
       },
-      // Type is narrowed to `string | boolean` for browser compat, but Node accepts an Agent
-      agent: pinnedAgent as any,
       reconnection: true,
       reconnectionDelay: 1000,
       reconnectionDelayMax: 30000,
@@ -156,7 +134,6 @@ export function createHubConnection(
     disconnect,
     isConnected,
     getUrl,
-    getPinnedAgent: () => pinnedAgent,
     sendMessage,
   };
 }

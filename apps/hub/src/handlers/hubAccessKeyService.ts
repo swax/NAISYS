@@ -1,6 +1,6 @@
 import { HubEvents, RotateAccessKeyRequestSchema } from "@naisys/hub-protocol";
 
-import { rotateAccessKey } from "../services/certService.js";
+import { rotateAccessKey } from "../services/accessKeyService.js";
 import type { HubServerLog } from "../services/hubServerLog.js";
 import type { NaisysServer } from "../services/naisysServer.js";
 
@@ -13,13 +13,12 @@ import type { NaisysServer } from "../services/naisysServer.js";
 export function createHubAccessKeyService(
   naisysServer: NaisysServer,
   logService: HubServerLog,
-  hubCert: string,
 ) {
   naisysServer.registerEvent(
     HubEvents.ROTATE_ACCESS_KEY,
     (_hostId, _data, ack) => {
       try {
-        const newAccessKey = rotateAccessKey(hubCert);
+        const newAccessKey = rotateAccessKey();
 
         // Update the hub's auth middleware to accept the new key
         naisysServer.updateHubAccessKey(newAccessKey);

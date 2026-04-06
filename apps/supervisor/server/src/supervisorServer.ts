@@ -123,7 +123,9 @@ export const startServer: StartServer = async (
   initLogger(fastify.log);
 
   // Connect to hub via Socket.IO for agent management
-  const hubUrl = hubPort ? `https://localhost:${hubPort}` : process.env.HUB_URL;
+  const hubUrl = hubPort
+    ? `http://localhost:${hubPort}/hub`
+    : process.env.HUB_URL;
   if (hubUrl) {
     initHubConnection(hubUrl);
   }

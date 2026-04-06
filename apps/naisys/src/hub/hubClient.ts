@@ -214,7 +214,6 @@ export function createHubClient(
     // HubClient API
     getConnectionInfo,
     getHubUrl: () => hubUrl,
-    getPinnedAgent: () => activeConnection?.getPinnedAgent() ?? null,
     isConnected,
     waitForConnection,
     registerEvent,

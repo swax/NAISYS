@@ -43,7 +43,7 @@ describe("Cross-Hub Mail E2E", () => {
   let hostB: NaisysTestProcess | null = null;
 
   const HUB_PORT = 4101;
-  const HUB_URL = `https://localhost:${HUB_PORT}`;
+  const HUB_URL = `http://localhost:${HUB_PORT}/hub`;
 
   beforeEach(() => {
     testDir = getTestDir("crosshub_mail");
@@ -103,7 +103,7 @@ HUB_ACCESS_KEY=${hubAccessKey}
 
     // --- Start Hub ---
     hub = spawnHub(hubDir);
-    await hub.waitForOutput("Running on wss://localhost:", 30000);
+    await hub.waitForOutput("Running on http://localhost:", 30000);
     const hubAccessKey = extractAccessKey(hubDir);
     await sleep(500);
 

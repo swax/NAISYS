@@ -37,7 +37,7 @@ function formatDownloadFooter(
     allAttachments
       .map(
         (a) =>
-          `  curl -k -H "Authorization: Bearer $NAISYS_API_KEY" "${hubUrl}/attachments/${a.id}" -o ${a.filename}`,
+          `  curl -H "Authorization: Bearer $NAISYS_API_KEY" "${hubUrl}/attachments/${a.id}" -o ${a.filename}`,
       )
       .join("\n")
   );

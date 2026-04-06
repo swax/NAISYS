@@ -3,7 +3,7 @@ import { expandNaisysFolder } from "@naisys/common-node";
 import { createHubDatabaseService } from "@naisys/hub-database";
 import { program } from "commander";
 import dotenv from "dotenv";
-import https from "https";
+import http from "http";
 import { Server } from "socket.io";
 import { fileURLToPath } from "url";
 
@@ -20,8 +20,8 @@ import { createHubModelsService } from "./handlers/hubModelsService.js";
 import { createHubRunService } from "./handlers/hubRunService.js";
 import { createHubSendMailService } from "./handlers/hubSendMailService.js";
 import { createHubUserService } from "./handlers/hubUserService.js";
+import { loadOrCreateAccessKey } from "./services/accessKeyService.js";
 import { seedAgentConfigs } from "./services/agentRegistrar.js";
-import { loadOrCreateCert } from "./services/certService.js";
 import { createHostRegistrar } from "./services/hostRegistrar.js";
 import { createHubServerLog } from "./services/hubServerLog.js";
 import { createNaisysServer } from "./services/naisysServer.js";
@@ -44,8 +44,8 @@ export const startHub: StartHub = async (
 
     const hubPort = Number(process.env.HUB_PORT) || 3101;
 
-    // Load or generate self-signed TLS cert and access key
-    const certInfo = await loadOrCreateCert();
+    // Load or generate hub access key for client authentication
+    const hubAccessKey = loadOrCreateAccessKey();
     const naisysFolder = process.env.NAISYS_FOLDER || "";
     logService.log(
       `[Hub] Hub access key located at: ${naisysFolder}/cert/hub-access-key`,
@@ -60,32 +60,29 @@ export const startHub: StartHub = async (
     // Create host registrar for tracking NAISYS instance connections
     const hostRegistrar = await createHostRegistrar(hubDatabaseService);
 
-    // Create shared HTTPS server and Socket.IO instance
-    const httpsServer = https.createServer({
-      key: certInfo.key,
-      cert: certInfo.cert,
-    });
+    // Create HTTP server and Socket.IO instance (TLS is handled by the reverse proxy)
+    const httpServer = http.createServer();
 
     // Register HTTP attachment upload/download handler before Socket.IO
-    createHubAttachmentService(httpsServer, hubDatabaseService, logService);
+    createHubAttachmentService(httpServer, hubDatabaseService, logService);
 
-    const io = new Server(httpsServer, {
+    const io = new Server(httpServer, {
+      path: "/hub/socket.io",
       cors: {
         origin: "*", // In production, restrict this
         methods: ["GET", "POST"],
       },
     });
 
-    // Create NAISYS server on /naisys namespace
     const naisysServer = createNaisysServer(
-      io.of("/naisys"),
-      certInfo.hubAccessKey,
+      io,
+      hubAccessKey,
       logService,
       hostRegistrar,
     );
 
     // Register hub access key rotation handler
-    createHubAccessKeyService(naisysServer, logService, certInfo.cert);
+    createHubAccessKeyService(naisysServer, logService);
 
     // Register hub config service for config_get requests from NAISYS instances
     const configService = await createHubConfigService(
@@ -161,16 +158,16 @@ export const startHub: StartHub = async (
 
     // Start listening
     await new Promise<void>((resolve, reject) => {
-      httpsServer.once("error", reject);
-      httpsServer.listen(hubPort, () => {
-        httpsServer.removeListener("error", reject);
+      httpServer.once("error", reject);
+      httpServer.listen(hubPort, () => {
+        httpServer.removeListener("error", reject);
         logService.log(`[Hub] Server listening on port ${hubPort}`);
         resolve();
       });
     });
 
     logService.log(
-      `[Hub] Running on wss://localhost:${hubPort}, logs written to file`,
+      `[Hub] Running on http://localhost:${hubPort}/hub, logs written to file`,
     );
     logService.disableConsole();
 

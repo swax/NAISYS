@@ -61,7 +61,7 @@ if (integratedHub) {
     plugins,
     agentPath,
   );
-  hubUrl = `https://localhost:${hubResult.hubPort}`;
+  hubUrl = `http://localhost:${hubResult.hubPort}/hub`;
   supervisorPort = hubResult.supervisorPort;
 }
 

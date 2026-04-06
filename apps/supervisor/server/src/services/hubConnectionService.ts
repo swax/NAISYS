@@ -1,9 +1,4 @@
-import {
-  createPinnedHttpsAgent,
-  parseHubAccessKey,
-  resolveHubAccessKey,
-  verifyHubCertificate,
-} from "@naisys/common-node";
+import { resolveHubAccessKey } from "@naisys/common-node";
 import type {
   AgentStartResponse,
   AgentStopResponse,
@@ -22,7 +17,6 @@ import {
   MailReadPushSchema,
   SessionPushSchema,
 } from "@naisys/hub-protocol";
-import type https from "https";
 import type { Socket } from "socket.io-client";
 import { io } from "socket.io-client";
 
@@ -44,7 +38,6 @@ import { obfuscatePushEntries } from "./runsService.js";
 let socket: Socket<SupervisorListenEvents, SupervisorEmitEvents> | null = null;
 let connected = false;
 let resolvedHubUrl: string | undefined;
-let pinnedAgent: https.Agent | null = null;
 
 export function initHubConnection(hubUrl: string) {
   const hubAccessKey = resolveHubAccessKey();
@@ -59,27 +52,13 @@ export function initHubConnection(hubUrl: string) {
 
   getLogger().info(`[Supervisor:HubClient] Connecting to ${hubUrl}...`);
 
-  // Verify the hub's TLS cert fingerprint, then pin all subsequent connections
-  // to that exact cert via a custom HTTPS agent
-  const { fingerprintPrefix } = parseHubAccessKey(hubAccessKey);
-  const parsedUrl = new URL(hubUrl);
-  verifyHubCertificate(
-    parsedUrl.hostname,
-    Number(parsedUrl.port) || 443,
-    fingerprintPrefix,
-  )
-    .then((certPem) => connectSocket(hubUrl, certPem))
-    .catch((err) => {
-      getLogger().error(
-        `[Supervisor:HubClient] Certificate verification failed: ${err.message}`,
-      );
-    });
-}
+  // Extract origin and base path from hub URL (e.g. "http://localhost:3101/hub")
+  const hubUrlParsed = new URL(hubUrl);
+  const hubOrigin = hubUrlParsed.origin;
+  const hubBasePath = hubUrlParsed.pathname.replace(/\/$/, "");
 
-function connectSocket(hubUrl: string, certPem: string) {
-  pinnedAgent = createPinnedHttpsAgent(certPem);
-
-  socket = io(hubUrl + "/naisys", {
+  socket = io(hubOrigin, {
+    path: hubBasePath + "/socket.io",
     auth: (cb) => {
       // Re-read access key on each connection attempt so rotated keys are picked up
       cb({
@@ -88,8 +67,6 @@ function connectSocket(hubUrl: string, certPem: string) {
         hostType: "supervisor",
       });
     },
-    // Type is narrowed to `string | boolean` for browser compat, but Node accepts an Agent
-    agent: pinnedAgent as any,
     reconnection: true,
     reconnectionDelay: 1000,
     reconnectionDelayMax: 30000,
@@ -345,10 +322,6 @@ export function getHubAccessKey(): string | undefined {
 
 export function getHubUrl(): string | undefined {
   return resolvedHubUrl;
-}
-
-export function getHubPinnedAgent(): https.Agent | null {
-  return pinnedAgent;
 }
 
 export function sendAgentStart(

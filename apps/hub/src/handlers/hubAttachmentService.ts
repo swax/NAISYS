@@ -12,8 +12,7 @@ import {
   statSync,
   unlinkSync,
 } from "fs";
-import type { IncomingMessage, ServerResponse } from "http";
-import type { Server as HttpsServer } from "https";
+import type { IncomingMessage, Server, ServerResponse } from "http";
 import { join } from "path";
 import { pipeline, Writable } from "stream";
 
@@ -27,20 +26,20 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
  * Non-matching paths are ignored so Socket.IO still works.
  */
 export function createHubAttachmentService(
-  httpsServer: HttpsServer,
+  httpServer: Server,
   { hubDb }: HubDatabaseService,
   logService: HubServerLog,
 ) {
   const naisysFolder = process.env.NAISYS_FOLDER || "";
 
-  httpsServer.on("request", (req: IncomingMessage, res: ServerResponse) => {
+  httpServer.on("request", (req: IncomingMessage, res: ServerResponse) => {
     const url = new URL(
       req.url || "",
       `https://${req.headers.host || "localhost"}`,
     );
     const pathname = url.pathname;
 
-    if (pathname === "/attachments" && req.method === "POST") {
+    if (pathname === "/hub/attachments" && req.method === "POST") {
       handleUpload(url, req, res).catch((err) => {
         logService.error(`[Hub:Attachment] Upload error: ${err}`);
         if (!res.writableEnded) {
@@ -49,8 +48,8 @@ export function createHubAttachmentService(
         }
       });
     } else if (
-      pathname.startsWith("/attachments/") &&
-      pathname !== "/attachments/" &&
+      pathname.startsWith("/hub/attachments/") &&
+      pathname !== "/hub/attachments/" &&
       req.method === "GET"
     ) {
       handleDownload(pathname, req, res).catch((err) => {
@@ -263,8 +262,8 @@ export function createHubAttachmentService(
       return;
     }
 
-    // Parse public ID from /attachments/<publicId> or /attachments/<publicId>/<filename>
-    const segments = pathname.slice("/attachments/".length).split("/");
+    // Parse public ID from /hub/attachments/<publicId> or /hub/attachments/<publicId>/<filename>
+    const segments = pathname.slice("/hub/attachments/".length).split("/");
     const publicId = segments[0];
     if (!publicId) {
       res.writeHead(400, { "Content-Type": "application/json" });
