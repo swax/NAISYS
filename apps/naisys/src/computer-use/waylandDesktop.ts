@@ -15,12 +15,14 @@
 import { execFileSync } from "child_process";
 
 export function captureScreenshot(tmpFile: string): void {
+  const errors: string[] = [];
+
   // grim: works on wlroots compositors (sway, Hyprland, etc.)
   try {
     execFileSync("grim", [tmpFile], { stdio: "pipe", timeout: 5000 });
     return;
-  } catch {
-    // not available or not a wlroots compositor
+  } catch (e: any) {
+    errors.push(`grim: ${e?.code === "ENOENT" ? "not installed" : (e?.stderr?.toString?.()?.trim() || e?.message || e)}`);
   }
 
   // gnome-screenshot: works on GNOME Wayland
@@ -30,8 +32,8 @@ export function captureScreenshot(tmpFile: string): void {
       timeout: 5000,
     });
     return;
-  } catch {
-    // not available
+  } catch (e: any) {
+    errors.push(`gnome-screenshot: ${e?.code === "ENOENT" ? "not installed" : (e?.stderr?.toString?.()?.trim() || e?.message || e)}`);
   }
 
   // GNOME Shell D-Bus Screenshot interface
@@ -54,12 +56,12 @@ export function captureScreenshot(tmpFile: string): void {
       { stdio: "pipe", timeout: 5000 },
     );
     return;
-  } catch {
-    // not available or access denied
+  } catch (e: any) {
+    errors.push(`gdbus: ${e?.code === "ENOENT" ? "not installed" : (e?.stderr?.toString?.()?.trim() || e?.message || e)}`);
   }
 
   throw new Error(
-    "No Wayland screenshot tool available. Install one of: gnome-screenshot (GNOME), grim (sway/wlroots)",
+    `No Wayland screenshot tool available. Install one of: gnome-screenshot (GNOME), grim (sway/wlroots). Errors: ${errors.join("; ")}`,
   );
 }
 
