@@ -50,8 +50,8 @@ function convertOpenAiActionToInternal(
       return { action: "mouse_move", coordinate: [action.x, action.y] };
     case "scroll": {
       // OpenAI follows Playwright/web convention: positive scrollY = down
-      const scrollY = action.scrollY || 0;
-      const scrollX = action.scrollX || 0;
+      const scrollY = action.scroll_y || 0;
+      const scrollX = action.scroll_x || 0;
       let direction: string;
       let amount: number;
       if (Math.abs(scrollY) >= Math.abs(scrollX)) {
@@ -121,8 +121,8 @@ function convertInternalActionToOpenAi(
         type: "scroll",
         x: coord?.[0],
         y: coord?.[1],
-        scrollX,
-        scrollY,
+        scroll_x: scrollX,
+        scroll_y: scrollY,
       };
     }
     case "key":
