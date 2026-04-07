@@ -97,7 +97,7 @@ export const useChatMessages = (
             fromTitle: titleLookup.get(event.fromUserId) ?? "",
             body: event.body,
             createdAt: event.createdAt,
-            attachments: event.attachments,
+            attachments: event.attachments as ChatMessage["attachments"],
           };
           mergeMessages([msg]);
 

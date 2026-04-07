@@ -1,7 +1,9 @@
+import { ATTACHMENT_NO_ACCESS } from "@naisys/common";
 import type { LogPushEntry } from "@naisys/hub-protocol";
 import type { LogEntry, RunSession } from "@naisys/supervisor-shared";
 
 import { hubDb } from "../database/hubDb.js";
+import { attachmentUrl } from "../hateoas.js";
 
 export interface RunsData {
   runs: RunSession[];
@@ -57,9 +59,10 @@ export function obfuscateLogs(data: ContextLogData): ContextLogData {
       message: obfuscateText(log.message),
       attachment: log.attachment
         ? {
-            id: "no-access",
+            id: ATTACHMENT_NO_ACCESS,
             filename: obfuscateFilename(log.attachment.filename),
             fileSize: 0,
+            downloadUrl: "",
           }
         : undefined,
     })),
@@ -71,7 +74,7 @@ export function obfuscatePushEntries(entries: LogPushEntry[]): LogPushEntry[] {
   return entries.map((entry) => ({
     ...entry,
     message: obfuscateText(entry.message),
-    attachmentId: entry.attachmentId ? "no-access" : undefined,
+    attachmentId: entry.attachmentId ? ATTACHMENT_NO_ACCESS : undefined,
     attachmentFilename: entry.attachmentFilename
       ? obfuscateFilename(entry.attachmentFilename)
       : undefined,
@@ -192,6 +195,7 @@ export async function getContextLog(
         id: log.attachment.public_id,
         filename: log.attachment.filename,
         fileSize: log.attachment.file_size,
+        downloadUrl: attachmentUrl(log.attachment.public_id, log.attachment.filename),
       },
     }),
   }));

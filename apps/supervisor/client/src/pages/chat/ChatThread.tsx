@@ -14,7 +14,7 @@ import { IconCheck, IconChecks, IconFile } from "@tabler/icons-react";
 import React, { useEffect, useRef } from "react";
 
 import type { ChatMessage } from "../../lib/apiClient";
-import { API_BASE, apiEndpoints } from "../../lib/apiClient";
+
 
 function isImageFilename(filename: string): boolean {
   return /\.(jpg|jpeg|png|gif|webp|svg|bmp)$/i.test(filename);
@@ -153,7 +153,7 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
                     {msg.attachments && msg.attachments.length > 0 && (
                       <Stack gap={4} mt="xs">
                         {msg.attachments.map((att) => {
-                          const downloadUrl = `${API_BASE}${apiEndpoints.attachmentDownload(att.id, att.filename)}`;
+                          const downloadUrl = att.downloadUrl;
                           if (isImageFilename(att.filename)) {
                             return (
                               <Box key={att.id}>

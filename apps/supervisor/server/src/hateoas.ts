@@ -2,6 +2,10 @@ import type { HateoasLink } from "@naisys/common";
 
 export const API_PREFIX = "/supervisor/api";
 
+export function attachmentUrl(id: string, filename: string): string {
+  return `${API_PREFIX}/attachments/${id}/${encodeURIComponent(filename)}`;
+}
+
 export function selfLink(path: string, title?: string): HateoasLink {
   return { rel: "self", href: `${API_PREFIX}${path}`, title };
 }

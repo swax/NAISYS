@@ -5,6 +5,7 @@ import type {
 } from "@naisys/supervisor-shared";
 
 import { hubDb } from "../database/hubDb.js";
+import { attachmentUrl } from "../hateoas.js";
 import { getLogger } from "../logger.js";
 import { uploadToHub } from "./attachmentProxyService.js";
 import { sendMailViaHub } from "./hubConnectionService.js";
@@ -104,6 +105,7 @@ export async function getMailDataByUserId(
             id: ma.attachment.public_id,
             filename: ma.attachment.filename,
             fileSize: ma.attachment.file_size,
+            downloadUrl: attachmentUrl(ma.attachment.public_id, ma.attachment.filename),
           }))
         : undefined,
   }));
