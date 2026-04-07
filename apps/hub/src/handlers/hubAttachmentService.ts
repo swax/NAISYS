@@ -131,7 +131,7 @@ export function createHubAttachmentService(
     }
 
     // Stream to temp file, then move to content-addressable path
-    const tmpDir = join(naisysFolder, "attachments", "tmp");
+    const tmpDir = join(naisysFolder, "tmp", "hub", "attachments");
     mkdirSync(tmpDir, { recursive: true });
 
     const tmpPath = join(
