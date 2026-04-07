@@ -1,4 +1,5 @@
 import { resolveHubAccessKey } from "@naisys/common-node";
+import { attachmentUrl } from "../hateoas.js";
 import type {
   AgentStartResponse,
   AgentStopResponse,
@@ -152,7 +153,14 @@ export function initHubConnection(hubUrl: string) {
       const socketIds = browserIO.sockets.adapter.rooms.get(room);
       if (!socketIds || socketIds.size === 0) continue;
 
-      let obfuscated: typeof entries | undefined;
+      // Enrich entries with downloadUrl for client consumption
+      const enriched = entries.map((e) => ({
+        ...e,
+        attachmentDownloadUrl: e.attachmentId
+          ? attachmentUrl(e.attachmentId, e.attachmentFilename ?? "")
+          : undefined,
+      }));
+      let obfuscated: typeof enriched | undefined;
 
       for (const socketId of socketIds) {
         const sock = browserIO.sockets.sockets.get(socketId);
@@ -160,9 +168,12 @@ export function initHubConnection(hubUrl: string) {
 
         const user = sock.data.user as SupervisorUser | undefined;
         if (hasPermission(user, "view_run_logs")) {
-          sock.emit(room, entries);
+          sock.emit(room, enriched);
         } else {
-          obfuscated ??= obfuscatePushEntries(entries);
+          obfuscated ??= obfuscatePushEntries(entries).map((e) => ({
+            ...e,
+            attachmentDownloadUrl: e.attachmentId ? "" : undefined,
+          }));
           sock.emit(room, obfuscated);
         }
       }
@@ -228,7 +239,13 @@ export function initHubConnection(hubUrl: string) {
       return;
     }
 
-    const msg = parsed.data;
+    const msg = {
+      ...parsed.data,
+      attachments: parsed.data.attachments?.map((a) => ({
+        ...a,
+        downloadUrl: attachmentUrl(a.id, a.filename),
+      })),
+    };
     const affectedUserIds = new Set([...msg.recipientUserIds, msg.fromUserId]);
     const browserIO = getIO();
 

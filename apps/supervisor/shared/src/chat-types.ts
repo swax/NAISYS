@@ -15,6 +15,7 @@ export const ChatAttachmentSchema = z.object({
   id: z.string(),
   filename: z.string(),
   fileSize: z.number(),
+  downloadUrl: z.string(),
 });
 
 export const ChatMessageSchema = z.object({

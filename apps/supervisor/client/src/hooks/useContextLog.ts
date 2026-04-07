@@ -113,7 +113,7 @@ export const useContextLog = (
 
   // Handle push entries: resolve userId to username from agent context
   const handlePushEntries = useCallback(
-    (entries: LogPushEntry[]) => {
+    (entries: (LogPushEntry & { attachmentDownloadUrl?: string })[]) => {
       const logs: LogEntry[] = entries.map((e) => ({
         id: e.id,
         username: userLookup.get(e.userId) ?? String(e.userId),
@@ -127,8 +127,9 @@ export const useContextLog = (
               id: e.attachmentId,
               filename: e.attachmentFilename ?? "",
               fileSize: e.attachmentFileSize ?? 0,
+              downloadUrl: e.attachmentDownloadUrl ?? "",
             }
-          : undefined, // attachmentId is now a string (public_id)
+          : undefined,
       }));
       mergeLogs(logs);
 

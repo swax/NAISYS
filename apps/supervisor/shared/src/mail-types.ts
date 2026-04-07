@@ -18,6 +18,7 @@ export const MailAttachmentSchema = z.object({
   id: z.string(),
   filename: z.string(),
   fileSize: z.number(),
+  downloadUrl: z.string(),
 });
 
 export const MailMessageSchema = z.object({
