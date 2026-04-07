@@ -23,16 +23,19 @@ export function getConfirmation(
   const timeoutSeconds = options?.timeoutSeconds;
 
   return new Promise<boolean>((resolve) => {
-    if (!output.isConsoleEnabled()) {
+    const rl = output.isConsoleEnabled() ? getSharedReadline() : null;
+
+    if (!rl) {
+      const reason = !output.isConsoleEnabled()
+        ? "console disabled"
+        : "no interactive terminal";
       output.comment(
         prompt +
-          (defaultAccept ? "<auto-approved>" : "<denied: console disabled>"),
+          (defaultAccept ? "<auto-approved>" : `<denied: ${reason}>`),
       );
       resolve(defaultAccept);
       return;
     }
-
-    const rl = getSharedReadline();
     const controller = new AbortController();
     let timeout: NodeJS.Timeout | undefined;
 
