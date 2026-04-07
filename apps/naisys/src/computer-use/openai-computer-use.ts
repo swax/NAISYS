@@ -194,24 +194,16 @@ export function extractDesktopActions(
  */
 export function formatInputWithComputerUse(
   context: LlmMessage[],
-  formatContentBlocks: (content: string | ContentBlock[]) => any[],
-  formatSingleBlock: (block: ContentBlock) => any | null,
+  formatContentBlocks: (content: string | ContentBlock[], role: string) => any[],
+  formatSingleBlock: (block: ContentBlock, role: string) => any | null,
 ): any[] {
   const items: any[] = [];
 
   for (const msg of context) {
     if (typeof msg.content === "string") {
-      const isAssistantStr = msg.role === "assistant";
-      const blocks = formatContentBlocks(msg.content);
       items.push({
-        role: isAssistantStr ? "assistant" : "user",
-        content: isAssistantStr
-          ? blocks.map((b: any) =>
-              b?.type === "input_text"
-                ? { type: "output_text", text: b.text }
-                : b,
-            )
-          : blocks,
+        role: msg.role === "assistant" ? "assistant" : "user",
+        content: formatContentBlocks(msg.content, msg.role),
       });
       continue;
     }
@@ -229,13 +221,8 @@ export function formatInputWithComputerUse(
         items.push({
           role: "assistant",
           content: textBlocks
-            .map(formatSingleBlock)
-            .filter(Boolean)
-            .map((b: any) =>
-              b?.type === "input_text"
-                ? { type: "output_text", text: b.text }
-                : b,
-            ),
+            .map((b) => formatSingleBlock(b, "assistant"))
+            .filter(Boolean),
         });
       }
 
@@ -294,17 +281,9 @@ export function formatInputWithComputerUse(
     }
 
     // Regular ContentBlock[] message (no tool blocks)
-    const isAssistant = msg.role === "assistant";
-    const formatted = content.map(formatSingleBlock).filter(Boolean);
     items.push({
-      role: isAssistant ? "assistant" : "user",
-      content: isAssistant
-        ? formatted.map((b: any) =>
-            b?.type === "input_text"
-              ? { type: "output_text", text: b.text }
-              : b,
-          )
-        : formatted,
+      role: msg.role === "assistant" ? "assistant" : "user",
+      content: content.map((b) => formatSingleBlock(b, msg.role)).filter(Boolean),
     });
   }
 

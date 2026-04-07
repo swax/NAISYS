@@ -87,7 +87,7 @@ export async function sendWithOpenAiStandard(
           )
         : context.map((m) => ({
             role: m.role === "assistant" ? "assistant" : "user",
-            content: formatContentBlocks(m.content),
+            content: formatContentBlocks(m.content, m.role),
           })),
       reasoning: { effort: useThinking ? "medium" : "none" },
       tools: toolsDefs.length > 0 ? toolsDefs : undefined,
@@ -163,17 +163,19 @@ function extractConsoleCommands(
 
 // --- Content formatting helpers (shared with openai-computer-use) ---
 
-function formatContentBlocks(content: string | ContentBlock[]): any[] {
+function formatContentBlocks(content: string | ContentBlock[], role: string): any[] {
+  const textType = role === "assistant" ? "output_text" : "input_text";
   if (typeof content === "string") {
-    return [{ type: "input_text", text: content }];
+    return [{ type: textType, text: content }];
   }
-  return content.map(formatSingleBlock).filter(Boolean);
+  return content.map((b) => formatSingleBlock(b, role)).filter(Boolean);
 }
 
-function formatSingleBlock(block: ContentBlock): any | null {
+function formatSingleBlock(block: ContentBlock, role: string): any | null {
+  const textType = role === "assistant" ? "output_text" : "input_text";
   switch (block.type) {
     case "text":
-      return { type: "input_text", text: block.text };
+      return { type: textType, text: block.text };
     case "image":
       return {
         type: "input_image",
@@ -182,11 +184,11 @@ function formatSingleBlock(block: ContentBlock): any | null {
     case "tool_use":
       // Fallback when desktop is not enabled — include as text description
       return {
-        type: "input_text",
+        type: textType,
         text: `[Desktop action: ${JSON.stringify(block.input)}]`,
       };
     case "tool_result":
-      return { type: "input_text", text: "[Desktop screenshot]" };
+      return { type: textType, text: "[Desktop screenshot]" };
     case "audio":
       return null;
     default:
