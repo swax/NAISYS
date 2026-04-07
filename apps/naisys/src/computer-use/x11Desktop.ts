@@ -5,12 +5,14 @@
 import { execFileSync } from "child_process";
 
 export function captureScreenshot(tmpFile: string): void {
+  const errors: string[] = [];
+
   // scrot: common lightweight screenshot tool
   try {
     execFileSync("scrot", [tmpFile], { stdio: "pipe", timeout: 5000 });
     return;
-  } catch {
-    // not available
+  } catch (e: any) {
+    errors.push(`scrot: ${e?.code === "ENOENT" ? "not installed" : (e?.stderr?.toString?.()?.trim() || e?.message || e)}`);
   }
 
   // import: ImageMagick's screenshot tool
@@ -20,12 +22,12 @@ export function captureScreenshot(tmpFile: string): void {
       timeout: 5000,
     });
     return;
-  } catch {
-    // not available
+  } catch (e: any) {
+    errors.push(`import: ${e?.code === "ENOENT" ? "not installed" : (e?.stderr?.toString?.()?.trim() || e?.message || e)}`);
   }
 
   throw new Error(
-    "No X11 screenshot tool available. Install one of: scrot, imagemagick (for import)",
+    `No X11 screenshot tool available. Install one of: scrot, imagemagick (for import). Errors: ${errors.join("; ")}`,
   );
 }
 
