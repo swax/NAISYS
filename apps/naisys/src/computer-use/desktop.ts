@@ -1,6 +1,5 @@
 import { LlmApiType, TARGET_MEGAPIXELS } from "@naisys/common";
 import fs from "fs";
-import os from "os";
 import path from "path";
 import stringArgv from "string-argv";
 
@@ -13,6 +12,7 @@ import type { DesktopAction } from "../llm/vendors/vendorTypes.js";
 import type { ModelService } from "../services/modelService.js";
 import { getConfirmation } from "../utils/confirmation.js";
 import type { OutputService } from "../utils/output.js";
+import type { ShellWrapper } from "../command/shellWrapper.js";
 import type { ComputerService, CoordScale } from "./computerService.js";
 import {
   checkActionBounds,
@@ -27,6 +27,7 @@ export function createDesktopService(
   output: OutputService,
   agentConfig: AgentConfig,
   modelService: ModelService,
+  shellWrapper: ShellWrapper,
 ) {
   // Pre-compute desktop scaling info at init time
   const shellModel = modelService.getLlmModel(
@@ -60,13 +61,8 @@ export function createDesktopService(
       return "Desktop mode is not enabled or failed to initialize.";
     }
 
-    const baseDir = process.env.NAISYS_FOLDER || os.tmpdir();
-    const outDir = path.join(
-      baseDir,
-      "home",
-      agentConfig.agentConfig().username,
-      "screenshots",
-    );
+    const cwd = await shellWrapper.getCurrentPath();
+    const outDir = path.join(cwd || process.cwd(), "screenshots");
     fs.mkdirSync(outDir, { recursive: true });
 
     const timestamp = new Date().toISOString().replace(/[:.]/g, "-");

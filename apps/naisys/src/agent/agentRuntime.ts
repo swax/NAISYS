@@ -156,6 +156,7 @@ export async function createAgentRuntime(
     output,
     agentConfig,
     modelService,
+    shellWrapper,
   );
   const genimg = createGenImg(
     globalConfig,

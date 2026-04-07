@@ -6,7 +6,6 @@
 
 import { TARGET_MEGAPIXELS } from "@naisys/common";
 import fs from "fs";
-import os from "os";
 import path from "path";
 import sharp from "sharp";
 
@@ -41,7 +40,12 @@ function detectPlatform(): Platform | null {
 // --- Screenshot cleanup ---
 
 const SCREENSHOT_MAX_AGE_MS = 10 * 60 * 1000; // 10 minutes
-const SCREENSHOT_DIR = path.join(os.tmpdir(), "naisys");
+const SCREENSHOT_DIR = path.join(
+  process.env.NAISYS_FOLDER || "",
+  "tmp",
+  "naisys",
+  "screenshots",
+);
 let cleanupStarted = false;
 
 function startScreenshotCleanup() {
