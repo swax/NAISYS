@@ -323,7 +323,14 @@ export async function createAgentRuntime(
     agentTitle: config.title,
     output,
     subagentService,
-    runCommandLoop: () => commandLoop.run(abortController.signal),
+    runCommandLoop: async () => {
+      try {
+        return await commandLoop.run(abortController.signal);
+      } catch (ex) {
+        output.errorAndLog(`AGENT CRASHED: ${ex}`);
+        return `error: ${ex}`;
+      }
+    },
     requestShutdown: (reason: string) => {
       abortController.abort(reason);
     },

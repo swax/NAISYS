@@ -140,7 +140,6 @@ export class AgentManager {
 
     const runPromise = agent
       .runCommandLoop()
-      .catch((ex: any) => `error: ${ex}`)
       .then((exitReason) => {
         onStop?.(exitReason);
         this.cleanupAgent(agent);

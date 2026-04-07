@@ -9,7 +9,10 @@ import * as readline from "readline";
  */
 let instance: readline.Interface | null = null;
 
-export function getSharedReadline(): readline.Interface {
+export function getSharedReadline(): readline.Interface | null {
+  if (!process.stdin.isTTY) {
+    return null;
+  }
   if (!instance) {
     instance = readline.createInterface({
       input: process.stdin,
