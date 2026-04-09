@@ -316,6 +316,11 @@ export const HostPage: React.FC = () => {
               {host?.online ? "online" : "offline"}
             </Badge>
           )}
+          {hostDetail?.version && host?.online && (
+            <Text size="sm" c="dimmed">
+              v{hostDetail.version}
+            </Text>
+          )}
           {hostDetail?.lastIp && (
             <Text size="sm" c="dimmed">
               IP: {hostDetail.lastIp}

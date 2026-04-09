@@ -7,6 +7,7 @@ export interface HostConnectionInfo {
   hostName: string;
   connectedAt: Date;
   hostType: string;
+  clientVersion: string;
 }
 
 /** Generic raise event function type - all events have hostId as first arg */
@@ -26,7 +27,8 @@ export function createNaisysConnection(
   raiseEvent: RaiseEventFn,
   logService: HubServerLog,
 ) {
-  const { hostId, hostName, connectedAt, hostType } = connectionInfo;
+  const { hostId, hostName, connectedAt, hostType, clientVersion } =
+    connectionInfo;
 
   logService.log(
     `[Hub:Connection] NAISYS instance connected: ${hostName} (${hostId})`,
@@ -79,6 +81,7 @@ export function createNaisysConnection(
     getConnectedAt: () => connectedAt,
     getSocketId: () => socket.id,
     getHostType: () => hostType,
+    getClientVersion: () => clientVersion,
   };
 }
 

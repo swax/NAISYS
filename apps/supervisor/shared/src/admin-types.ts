@@ -6,6 +6,7 @@ export const AdminInfoResponseSchema = z.object({
   supervisorDbPath: z.string(),
   supervisorDbSize: z.number().optional(),
   supervisorDbVersion: z.number(),
+  hubVersion: z.string(),
   hubDbPath: z.string(),
   hubDbSize: z.number().optional(),
   hubDbVersion: z.number(),

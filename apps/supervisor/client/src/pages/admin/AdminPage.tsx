@@ -140,14 +140,15 @@ export const AdminPage: React.FC = () => {
 
           <Tabs.Panel value="info" pt="md">
             <Stack>
+              <Title order={4}>Supervisor</Title>
               <Table striped highlightOnHover>
                 <Table.Tbody>
                   <Table.Tr>
-                    <Table.Td fw={600}>Supervisor Version</Table.Td>
+                    <Table.Td fw={600}>Version</Table.Td>
                     <Table.Td>{data.supervisorVersion}</Table.Td>
                   </Table.Tr>
                   <Table.Tr>
-                    <Table.Td fw={600}>Supervisor DB Path</Table.Td>
+                    <Table.Td fw={600}>DB Path</Table.Td>
                     <Table.Td>
                       {data.supervisorDbPath}
                       {data.supervisorDbSize != null &&
@@ -155,11 +156,45 @@ export const AdminPage: React.FC = () => {
                     </Table.Td>
                   </Table.Tr>
                   <Table.Tr>
-                    <Table.Td fw={600}>Supervisor DB Version</Table.Td>
+                    <Table.Td fw={600}>DB Version</Table.Td>
                     <Table.Td>{data.supervisorDbVersion}</Table.Td>
                   </Table.Tr>
+                </Table.Tbody>
+              </Table>
+
+              {canExport && (
+                <Button
+                  onClick={handleExport}
+                  loading={exporting}
+                  style={{ alignSelf: "flex-start" }}
+                >
+                  Export Config
+                </Button>
+              )}
+
+              <Title order={4} mt="md">
+                Hub
+              </Title>
+              <Table striped highlightOnHover>
+                <Table.Tbody>
                   <Table.Tr>
-                    <Table.Td fw={600}>Hub DB Path</Table.Td>
+                    <Table.Td fw={600}>Connection</Table.Td>
+                    <Table.Td>
+                      <Badge
+                        color={data.hubConnected ? "green" : "red"}
+                        variant="filled"
+                        size="sm"
+                      >
+                        {data.hubConnected ? "Connected" : "Disconnected"}
+                      </Badge>
+                    </Table.Td>
+                  </Table.Tr>
+                  <Table.Tr>
+                    <Table.Td fw={600}>Version</Table.Td>
+                    <Table.Td>{data.hubVersion || "—"}</Table.Td>
+                  </Table.Tr>
+                  <Table.Tr>
+                    <Table.Td fw={600}>DB Path</Table.Td>
                     <Table.Td>
                       {data.hubDbPath}
                       {data.hubDbSize != null &&
@@ -167,14 +202,14 @@ export const AdminPage: React.FC = () => {
                     </Table.Td>
                   </Table.Tr>
                   <Table.Tr>
-                    <Table.Td fw={600}>Hub DB Version</Table.Td>
+                    <Table.Td fw={600}>DB Version</Table.Td>
                     <Table.Td>{data.hubDbVersion}</Table.Td>
                   </Table.Tr>
                   {data.hubAccessKey && (
                     <Table.Tr>
                       <Table.Td fw={600}>
                         <Group gap={4}>
-                          Hub Access Key
+                          Access Key
                           <Tooltip
                             label="Set as HUB_ACCESS_KEY when installing NAISYS on other machines to connect to this hub"
                             multiline
@@ -198,30 +233,8 @@ export const AdminPage: React.FC = () => {
                       </Table.Td>
                     </Table.Tr>
                   )}
-                  <Table.Tr>
-                    <Table.Td fw={600}>Hub Connection</Table.Td>
-                    <Table.Td>
-                      <Badge
-                        color={data.hubConnected ? "green" : "red"}
-                        variant="filled"
-                        size="sm"
-                      >
-                        {data.hubConnected ? "Connected" : "Disconnected"}
-                      </Badge>
-                    </Table.Td>
-                  </Table.Tr>
                 </Table.Tbody>
               </Table>
-
-              {canExport && (
-                <Button
-                  onClick={handleExport}
-                  loading={exporting}
-                  style={{ alignSelf: "flex-start" }}
-                >
-                  Export Config
-                </Button>
-              )}
             </Stack>
           </Tabs.Panel>
 

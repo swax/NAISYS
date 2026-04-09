@@ -169,6 +169,7 @@ export const HostDetailResponseSchema = z.object({
   restricted: z.boolean(),
   hostType: z.string(),
   online: z.boolean(),
+  version: z.string(),
   assignedAgents: z.array(AssignedAgentSchema),
   _links: z.array(LinkSchema),
   _actions: z.array(HateoasActionSchema).optional(),

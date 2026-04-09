@@ -5,6 +5,7 @@ import type { HostRegistrar } from "../services/hostRegistrar.js";
 import type { HubServerLog } from "../services/hubServerLog.js";
 import type { NaisysConnection } from "../services/naisysConnection.js";
 import type { NaisysServer } from "../services/naisysServer.js";
+import { getHubVersion } from "../version.js";
 
 /** Pushes the host list to all connections when connected hosts change */
 export function createHubHostService(
@@ -15,16 +16,23 @@ export function createHubHostService(
   let cachedHostListJson = "";
 
   function broadcastHostList(newConnection?: NaisysConnection) {
-    const connectedHostIds = new Set(
-      naisysServer.getConnectedClients().map((c) => c.getHostId()),
+    // Index connected clients by hostId for O(1) lookup of online + version
+    const clientByHostId = new Map(
+      naisysServer
+        .getConnectedClients()
+        .map((c) => [c.getHostId(), c] as const),
     );
 
-    const hosts = hostRegistrar.getAllHosts().map((h) => ({
-      ...h,
-      online: connectedHostIds.has(h.hostId),
-    }));
+    const hosts = hostRegistrar.getAllHosts().map((h) => {
+      const client = clientByHostId.get(h.hostId);
+      return {
+        ...h,
+        online: !!client,
+        version: client?.getClientVersion() || "",
+      };
+    });
 
-    const payload: HostList = { hosts };
+    const payload: HostList = { hubVersion: getHubVersion(), hosts };
     const json = JSON.stringify(payload);
 
     // Send to the newly connecting client directly

@@ -15,9 +15,15 @@ const agentNotifications = new Map<
   number,
   { latestLogId: number; latestMailId: number }
 >();
-const hostOnlineStatus = new Map<number, boolean>();
-const hostRestrictedStatus = new Map<number, boolean>();
-const hostTypeStatus = new Map<number, string>();
+
+interface HostState {
+  online: boolean;
+  restricted: boolean;
+  hostType: string;
+  version: string;
+}
+const hostStates = new Map<number, HostState>();
+
 const agentHostAssignments = new Map<number, number[]>();
 
 function broadcast<T>(room: string, event: T) {
@@ -66,23 +72,25 @@ export function updateHostsStatus(
     online: boolean;
     restricted: boolean;
     hostType: string;
+    version: string;
   }[],
 ): void {
   // Detect if the set of host IDs changed
   const newHostIds = new Set(hosts.map((h) => h.hostId));
-  const prevHostIds = new Set(hostOnlineStatus.keys());
+  const prevHostIds = new Set(hostStates.keys());
   const hostSetChanged =
     newHostIds.size !== prevHostIds.size ||
     [...newHostIds].some((id) => !prevHostIds.has(id));
 
-  hostOnlineStatus.clear();
-  hostRestrictedStatus.clear();
-  hostTypeStatus.clear();
+  hostStates.clear();
   connectedHostIds.clear();
   for (const host of hosts) {
-    hostOnlineStatus.set(host.hostId, host.online);
-    hostRestrictedStatus.set(host.hostId, host.restricted);
-    hostTypeStatus.set(host.hostId, host.hostType);
+    hostStates.set(host.hostId, {
+      online: host.online,
+      restricted: host.restricted,
+      hostType: host.hostType,
+      version: host.version,
+    });
     if (host.online) {
       connectedHostIds.add(host.hostId);
     }
@@ -172,12 +180,8 @@ export function isAgentActive(userId: number): boolean {
 }
 
 function hasNonRestrictedOnlineHost(): boolean {
-  for (const [hostId, online] of hostOnlineStatus) {
-    if (
-      online &&
-      !hostRestrictedStatus.get(hostId) &&
-      hostTypeStatus.get(hostId) === "naisys"
-    )
+  for (const state of hostStates.values()) {
+    if (state.online && !state.restricted && state.hostType === "naisys")
       return true;
   }
   return false;
@@ -196,6 +200,10 @@ export function getAgentStatus(agentId: number): AgentStatus {
 
 export function isHostConnected(hostId: number): boolean {
   return connectedHostIds.has(hostId);
+}
+
+export function getHostVersion(hostId: number): string {
+  return hostStates.get(hostId)?.version ?? "";
 }
 
 /** Build a snapshot of all agent statuses from current state */
@@ -228,8 +236,8 @@ function getAgentSnapshot(): AgentStatusEvent {
 /** Build a snapshot of all host online statuses from current state */
 function getHostSnapshot(): HostStatusEvent {
   const hosts: HostStatusEvent["hosts"] = {};
-  for (const [hostId, online] of hostOnlineStatus) {
-    hosts[String(hostId)] = { online };
+  for (const [hostId, state] of hostStates) {
+    hosts[String(hostId)] = { online: state.online };
   }
   return { hosts };
 }
