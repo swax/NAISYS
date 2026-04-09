@@ -8,15 +8,22 @@ export async function saveVariable(
   key: string,
   value: string,
   exportToShell: boolean,
+  sensitive: boolean,
   userUuid: string,
 ): Promise<{ success: boolean; message: string }> {
   await hubDb.variables.upsert({
     where: { key },
-    update: { value, export_to_shell: exportToShell, updated_by: userUuid },
+    update: {
+      value,
+      export_to_shell: exportToShell,
+      sensitive,
+      updated_by: userUuid,
+    },
     create: {
       key,
       value,
       export_to_shell: exportToShell,
+      sensitive,
       created_by: userUuid,
       updated_by: userUuid,
     },

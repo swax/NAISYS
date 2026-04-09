@@ -5,6 +5,7 @@ export const VariableSchema = z.object({
   key: z.string(),
   value: z.string(),
   exportToShell: z.boolean(),
+  sensitive: z.boolean(),
 });
 
 export type Variable = z.infer<typeof VariableSchema>;
@@ -19,6 +20,7 @@ export type VariablesResponse = z.infer<typeof VariablesResponseSchema>;
 export const SaveVariableRequestSchema = z.object({
   value: z.string(),
   exportToShell: z.boolean(),
+  sensitive: z.boolean(),
 });
 
 export type SaveVariableRequest = z.infer<typeof SaveVariableRequestSchema>;

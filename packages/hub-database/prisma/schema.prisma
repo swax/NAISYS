@@ -287,6 +287,7 @@ model variables {
   key              String   @id
   value            String
   export_to_shell  Boolean  @default(false)
+  sensitive        Boolean  @default(false)
   created_by       String
   updated_by       String
   created_at       DateTime @default(now())
