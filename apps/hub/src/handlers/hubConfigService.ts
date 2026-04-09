@@ -43,6 +43,13 @@ export async function createHubConfigService(
     );
   }
 
+  // Ensure well-known variables exist so they show up in supervisor UI
+  await ensureVariables(hubDb, [
+    { key: "GOOGLE_SEARCH_ENGINE_ID" },
+    { key: "SPEND_LIMIT_DOLLARS" },
+    { key: "SPEND_LIMIT_HOURS" },
+  ]);
+
   /** Read variables from DB and build a ConfigResponse */
   async function buildConfigPayload(): Promise<ConfigResponse> {
     const rows = await hubDb.variables.findMany();
@@ -113,3 +120,25 @@ export async function createHubConfigService(
 export type HubConfigService = Awaited<
   ReturnType<typeof createHubConfigService>
 >;
+
+/** Create variable placeholders if they don't already exist */
+export async function ensureVariables(
+  hubDb: HubDatabaseService["hubDb"],
+  keys: { key: string; sensitive?: boolean }[],
+) {
+  for (const { key, sensitive } of keys) {
+    const existing = await hubDb.variables.findUnique({ where: { key } });
+    if (!existing) {
+      await hubDb.variables.create({
+        data: {
+          key,
+          value: "",
+          sensitive: sensitive ?? false,
+          export_to_shell: false,
+          created_by: "hub",
+          updated_by: "hub",
+        },
+      });
+    }
+  }
+}

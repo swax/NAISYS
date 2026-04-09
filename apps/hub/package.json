@@ -24,6 +24,7 @@
   "files": [
     "dist",
     "bin",
+    ".env.example",
     "!dist/**/*.map",
     "!dist/**/*.d.ts",
     "!dist/**/*.d.ts.map"

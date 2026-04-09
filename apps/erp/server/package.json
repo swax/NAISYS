@@ -29,6 +29,7 @@
     "dist",
     "client-dist",
     "bin",
+    ".env.example",
     "prisma.config.ts",
     "prisma/schema.prisma",
     "prisma/migrations",

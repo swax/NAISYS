@@ -46,12 +46,14 @@ Pass a directory to run all agent yamls in that folder.
 
 ### Integrated Mode
 
-Everything in a single process — Hub for persistence, Supervisor web UI, and optional ERP. The `<seed>` argument is an agent yaml or directory that seeds the Hub database on first run.
+Everything in a single process — Hub for persistence, Supervisor web UI, and optional ERP. 
 
 ```bash
 npm install -g naisys @naisys/hub @naisys/supervisor @naisys/erp
-naisys <seed> --integrated-hub --supervisor --erp
+naisys [seed] --integrated-hub --supervisor --erp
 ```
+
+The `[seed]` argument is an optional agent yaml or directory that seeds the Hub database on first run.
 
 Open `http://localhost:3001/supervisor/` to monitor agents.
 
