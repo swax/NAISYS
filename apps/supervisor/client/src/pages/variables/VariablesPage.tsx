@@ -15,6 +15,9 @@ import {
 import { hasAction } from "@naisys/common";
 import {
   IconCheck,
+  IconCopy,
+  IconEye,
+  IconEyeOff,
   IconInfoCircle,
   IconPencil,
   IconTrash,
@@ -30,6 +33,7 @@ interface VariableRow {
   key: string;
   value: string;
   exportToShell: boolean;
+  sensitive: boolean;
 }
 
 export const VariablesPage: React.FC = () => {
@@ -40,12 +44,17 @@ export const VariablesPage: React.FC = () => {
   const [newKey, setNewKey] = useState("");
   const [newValue, setNewValue] = useState("");
   const [newExportToShell, setNewExportToShell] = useState(false);
+  const [newSensitive, setNewSensitive] = useState(false);
   const [saving, setSaving] = useState(false);
 
   // Inline edit state
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
   const [editExportToShell, setEditExportToShell] = useState(false);
+  const [editSensitive, setEditSensitive] = useState(false);
+
+  // Visibility toggle for sensitive values
+  const [revealedKeys, setRevealedKeys] = useState<Set<string>>(new Set());
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -73,11 +82,13 @@ export const VariablesPage: React.FC = () => {
         newKey.trim(),
         newValue.trim(),
         newExportToShell,
+        newSensitive,
       );
       if (result.success) {
         setNewKey("");
         setNewValue("");
         setNewExportToShell(false);
+        setNewSensitive(false);
         void fetchData();
       }
     } finally {
@@ -88,7 +99,7 @@ export const VariablesPage: React.FC = () => {
   const handleSaveEdit = async (key: string) => {
     setSaving(true);
     try {
-      const result = await saveVariable(key, editValue, editExportToShell);
+      const result = await saveVariable(key, editValue, editExportToShell, editSensitive);
       if (result.success) {
         setEditingKey(null);
         void fetchData();
@@ -110,6 +121,23 @@ export const VariablesPage: React.FC = () => {
     setEditingKey(row.key);
     setEditValue(row.value);
     setEditExportToShell(row.exportToShell);
+    setEditSensitive(row.sensitive);
+  };
+
+  const toggleReveal = (key: string) => {
+    setRevealedKeys((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
+  };
+
+  const copyToClipboard = async (value: string) => {
+    await navigator.clipboard.writeText(value);
   };
 
   const cancelEdit = () => {
@@ -150,6 +178,18 @@ export const VariablesPage: React.FC = () => {
                   </Tooltip>
                 </Group>
               </Table.Th>
+              <Table.Th w={60}>
+                <Group gap={4} wrap="nowrap">
+                  Sensitive
+                  <Tooltip
+                    label="Mask this variable's value in the UI. Useful for API keys and secrets."
+                    multiline
+                    w={250}
+                  >
+                    <IconInfoCircle size={14} style={{ opacity: 0.5 }} />
+                  </Tooltip>
+                </Group>
+              </Table.Th>
               {canManage && <Table.Th w={100}>Actions</Table.Th>}
             </Table.Tr>
           </Table.Thead>
@@ -170,7 +210,41 @@ export const VariablesPage: React.FC = () => {
                       autoFocus
                     />
                   ) : (
-                    item.value
+                    <Group gap={4} wrap="nowrap">
+                      <Text size="sm" style={{ fontFamily: "monospace" }}>
+                        {item.sensitive && !revealedKeys.has(item.key)
+                          ? "••••••••"
+                          : item.value}
+                      </Text>
+                      {item.sensitive && (
+                        <>
+                          <Tooltip label={revealedKeys.has(item.key) ? "Hide value" : "Show value"}>
+                            <ActionIcon
+                              size="sm"
+                              variant="subtle"
+                              color="gray"
+                              onClick={() => toggleReveal(item.key)}
+                            >
+                              {revealedKeys.has(item.key) ? (
+                                <IconEyeOff size={14} />
+                              ) : (
+                                <IconEye size={14} />
+                              )}
+                            </ActionIcon>
+                          </Tooltip>
+                          <Tooltip label="Copy value">
+                            <ActionIcon
+                              size="sm"
+                              variant="subtle"
+                              color="gray"
+                              onClick={() => copyToClipboard(item.value)}
+                            >
+                              <IconCopy size={14} />
+                            </ActionIcon>
+                          </Tooltip>
+                        </>
+                      )}
+                    </Group>
                   )}
                 </Table.Td>
                 <Table.Td>
@@ -184,6 +258,19 @@ export const VariablesPage: React.FC = () => {
                     />
                   ) : (
                     <Checkbox checked={item.exportToShell} readOnly size="xs" />
+                  )}
+                </Table.Td>
+                <Table.Td>
+                  {editingKey === item.key ? (
+                    <Checkbox
+                      checked={editSensitive}
+                      onChange={(e) =>
+                        setEditSensitive(e.currentTarget.checked)
+                      }
+                      size="xs"
+                    />
+                  ) : (
+                    <Checkbox checked={item.sensitive} readOnly size="xs" />
                   )}
                 </Table.Td>
                 {canManage && (
@@ -264,6 +351,15 @@ export const VariablesPage: React.FC = () => {
                   />
                 </Table.Td>
                 <Table.Td>
+                  <Checkbox
+                    checked={newSensitive}
+                    onChange={(e) =>
+                      setNewSensitive(e.currentTarget.checked)
+                    }
+                    size="xs"
+                  />
+                </Table.Td>
+                <Table.Td>
                   <Button
                     size="xs"
                     onClick={handleSaveNew}
@@ -277,7 +373,7 @@ export const VariablesPage: React.FC = () => {
             )}
             {(!data || data.items.length === 0) && !canManage && (
               <Table.Tr>
-                <Table.Td colSpan={3}>
+                <Table.Td colSpan={4}>
                   <Text c="dimmed" ta="center" py="md">
                     No variables found.
                   </Text>
