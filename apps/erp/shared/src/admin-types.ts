@@ -3,8 +3,10 @@ import { z } from "zod/v4";
 import { HateoasActionSchema, HateoasLinkSchema } from "./hateoas-types.js";
 
 export const AdminInfoResponseSchema = z.object({
+  erpVersion: z.string(),
   erpDbPath: z.string(),
   erpDbSize: z.number().optional(),
+  erpDbVersion: z.number(),
   _actions: z.array(HateoasActionSchema).optional(),
 });
 

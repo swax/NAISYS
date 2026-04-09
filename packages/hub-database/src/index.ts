@@ -1,4 +1,5 @@
 // Re-export Database Service
+export { HUB_DB_VERSION } from "./dbConfig.js";
 export {
   createHubDatabaseService,
   type HubDatabaseService,

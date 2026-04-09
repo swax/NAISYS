@@ -3,12 +3,10 @@ import { existsSync, mkdirSync } from "fs";
 import { dirname } from "path";
 import { fileURLToPath } from "url";
 
-import { hubDbPath } from "./dbConfig.js";
+import { HUB_DB_VERSION, hubDbPath } from "./dbConfig.js";
 import { createPrismaClient } from "./prismaClient.js";
 
 export async function createHubDatabaseService() {
-  /** We run migration scripts if this is greater than what's in the schema_version table */
-  const HUB_DB_VERSION = 34;
 
   const dbPath = hubDbPath();
 

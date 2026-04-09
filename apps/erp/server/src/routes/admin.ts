@@ -22,11 +22,12 @@ import type { FastifyInstance, FastifyPluginOptions } from "fastify";
 import { z } from "zod/v4";
 
 import { hasPermission, requirePermission } from "../auth-middleware.js";
-import { erpDbPath } from "../dbConfig.js";
+import { ERP_DB_VERSION, erpDbPath } from "../dbConfig.js";
 import erpDb from "../erpDb.js";
 import { notFound } from "../error-handler.js";
 import { paginationLinks } from "../hateoas.js";
 import { getErpLogPath, tailLogFile } from "../services/log-file-service.js";
+import { getPackageVersion } from "../version.js";
 
 const API_PREFIX = "/erp/api";
 
@@ -83,8 +84,10 @@ export default function adminRoutes(
         .catch(() => undefined);
 
       return {
+        erpVersion: getPackageVersion(),
         erpDbPath: dbPath,
         erpDbSize,
+        erpDbVersion: ERP_DB_VERSION,
         _actions: actions.length > 0 ? actions : undefined,
       };
     },

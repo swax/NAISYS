@@ -143,6 +143,10 @@ export const AdminPage: React.FC = () => {
               <Table striped highlightOnHover>
                 <Table.Tbody>
                   <Table.Tr>
+                    <Table.Td fw={600}>Supervisor Version</Table.Td>
+                    <Table.Td>{data.supervisorVersion}</Table.Td>
+                  </Table.Tr>
+                  <Table.Tr>
                     <Table.Td fw={600}>Supervisor DB Path</Table.Td>
                     <Table.Td>
                       {data.supervisorDbPath}
@@ -151,12 +155,20 @@ export const AdminPage: React.FC = () => {
                     </Table.Td>
                   </Table.Tr>
                   <Table.Tr>
+                    <Table.Td fw={600}>Supervisor DB Version</Table.Td>
+                    <Table.Td>{data.supervisorDbVersion}</Table.Td>
+                  </Table.Tr>
+                  <Table.Tr>
                     <Table.Td fw={600}>Hub DB Path</Table.Td>
                     <Table.Td>
                       {data.hubDbPath}
                       {data.hubDbSize != null &&
                         ` (${formatFileSize(data.hubDbSize)})`}
                     </Table.Td>
+                  </Table.Tr>
+                  <Table.Tr>
+                    <Table.Td fw={600}>Hub DB Version</Table.Td>
+                    <Table.Td>{data.hubDbVersion}</Table.Td>
                   </Table.Tr>
                   {data.hubAccessKey && (
                     <Table.Tr>
