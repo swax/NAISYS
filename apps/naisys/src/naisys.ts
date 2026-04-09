@@ -1,5 +1,5 @@
 import type { StartHub } from "@naisys/common";
-import { expandNaisysFolder } from "@naisys/common-node";
+import { ensureDotEnv, expandNaisysFolder } from "@naisys/common-node";
 import { program } from "commander";
 import dotenv from "dotenv";
 
@@ -20,6 +20,17 @@ import { createModelService } from "./services/modelService.js";
 import { createPromptNotificationService } from "./utils/promptNotificationService.js";
 
 dotenv.config({ quiet: true });
+
+const isHubClient = process.argv.some(
+  (a) => a === "--hub" || a.startsWith("--hub="),
+);
+await ensureDotEnv(
+  new URL(
+    isHubClient ? "../.env.hub-client.example" : "../.env.example",
+    import.meta.url,
+  ),
+);
+
 expandNaisysFolder();
 
 program

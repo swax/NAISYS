@@ -1,7 +1,7 @@
 import "dotenv/config";
 import "./schema-registry.js";
 
-import { expandNaisysFolder } from "@naisys/common-node";
+import { ensureDotEnv, expandNaisysFolder } from "@naisys/common-node";
 expandNaisysFolder();
 
 // Important to load dotenv before any other imports, to ensure environment variables are available
@@ -294,6 +294,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
       password,
     });
   } else {
+    await ensureDotEnv(new URL("../.env.example", import.meta.url));
     void startServer("standalone");
   }
 }

@@ -1,5 +1,5 @@
 import type { UserEntry } from "@naisys/common";
-import { toUrlSafeKey } from "@naisys/common";
+import { adminAgentConfig, toUrlSafeKey } from "@naisys/common";
 import { loadAgentConfigs } from "@naisys/common-node";
 import {
   type HubDatabaseService,
@@ -24,9 +24,21 @@ export async function seedAgentConfigs(
     return;
   }
 
-  // Default to CWD when no path specified (matches standalone hub behavior)
-  const users = loadAgentConfigs(startupAgentPath || "");
-  await seedUsersToDatabase(hubDb, logService, users);
+  if (startupAgentPath) {
+    const users = loadAgentConfigs(startupAgentPath);
+    await seedUsersToDatabase(hubDb, logService, users);
+  } else {
+    // No seed path: just create the admin agent
+    const adminUsers = new Map<number, UserEntry>();
+    adminUsers.set(1, {
+      userId: 1,
+      username: adminAgentConfig.username,
+      enabled: true,
+      leadUserId: undefined,
+      config: adminAgentConfig,
+    });
+    await seedUsersToDatabase(hubDb, logService, adminUsers);
+  }
 }
 
 async function seedUsersToDatabase(

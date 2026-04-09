@@ -87,7 +87,7 @@ export function createUserService(
     if (hubClient) {
       notify(
         adminId,
-        `No agents running yet. Supervisor/Hub will start agents on demand.`,
+        `No agents running yet. Supervisor/Hub will start agents on demand. The admin shell can be used for diagnostics.`,
       );
       return [adminId];
     }
@@ -97,7 +97,7 @@ export function createUserService(
     );
 
     if (leadAgents.length === 0) {
-      notify(adminId, `No agents found to start`);
+      notify(adminId, `No agent param include at startup so you are in the admin shell which can be used for diagnostics.`);
       return [adminId];
     }
 

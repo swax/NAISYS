@@ -1,6 +1,7 @@
 export * from "./agentConfigLoader.js";
 export * from "./bearerToken.js";
 export * from "./customModelsLoader.js";
+export * from "./ensureDotEnv.js";
 export * from "./expandEnv.js";
 export * from "./hashToken.js";
 export * from "./hubCertVerification.js";

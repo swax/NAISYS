@@ -18,6 +18,7 @@ import { HubEvents } from "@naisys/hub-protocol";
 
 import type { HubServerLog } from "../services/hubServerLog.js";
 import type { NaisysServer } from "../services/naisysServer.js";
+import { ensureVariables } from "./hubConfigService.js";
 
 /** Hub handler that seeds models on startup, pushes them on connect, and broadcasts on change */
 export async function createHubModelsService(
@@ -148,4 +149,18 @@ async function seedModels(hubDb: PrismaClient, logService: HubServerLog) {
   } else {
     logService.log(`[Hub:Models] Models already seeded`);
   }
+
+  // Ensure API key variables referenced by built-in models exist in the variables table
+  // so they show up in the supervisor UI for the user to configure
+  const apiKeyVars = [
+    ...new Set(
+      [...builtInLlmModels, ...builtInImageModels]
+        .map((m) => m.apiKeyVar)
+        .filter(Boolean),
+    ),
+  ];
+  await ensureVariables(
+    hubDb,
+    apiKeyVars.map((key) => ({ key, sensitive: true })),
+  );
 }
