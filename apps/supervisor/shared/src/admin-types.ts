@@ -2,10 +2,13 @@ import { HateoasActionSchema, HateoasLinkSchema } from "@naisys/common";
 import { z } from "zod";
 
 export const AdminInfoResponseSchema = z.object({
+  supervisorVersion: z.string(),
   supervisorDbPath: z.string(),
   supervisorDbSize: z.number().optional(),
+  supervisorDbVersion: z.number(),
   hubDbPath: z.string(),
   hubDbSize: z.number().optional(),
+  hubDbVersion: z.number(),
   hubConnected: z.boolean(),
   hubAccessKey: z.string().optional(),
   _actions: z.array(HateoasActionSchema).optional(),

@@ -1,7 +1,11 @@
 import fs from "node:fs/promises";
 
 import type { HateoasAction, ModelDbRow } from "@naisys/common";
-import { supervisorDbPath } from "@naisys/supervisor-database";
+import { HUB_DB_VERSION } from "@naisys/hub-database";
+import {
+  SUPERVISOR_DB_VERSION,
+  supervisorDbPath,
+} from "@naisys/supervisor-database";
 import type {
   AdminAttachmentListRequest,
   AdminAttachmentListResponse,
@@ -25,6 +29,7 @@ import type { FastifyInstance, FastifyPluginOptions } from "fastify";
 
 import { hasPermission, requirePermission } from "../auth-middleware.js";
 import { getNaisysDatabasePath, hubDb } from "../database/hubDb.js";
+import { getPackageVersion } from "../version.js";
 import { API_PREFIX, paginationLinks } from "../hateoas.js";
 import {
   buildExportFiles,
@@ -116,10 +121,13 @@ export default function adminRoutes(
       ]);
 
       return {
+        supervisorVersion: getPackageVersion(),
         supervisorDbPath: supervisorDbPath(),
         supervisorDbSize,
+        supervisorDbVersion: SUPERVISOR_DB_VERSION,
         hubDbPath: getNaisysDatabasePath(),
         hubDbSize,
+        hubDbVersion: HUB_DB_VERSION,
         hubConnected: isHubConnected(),
         hubAccessKey: getHubAccessKey(),
         _actions: actions.length > 0 ? actions : undefined,

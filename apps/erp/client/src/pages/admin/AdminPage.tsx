@@ -85,12 +85,20 @@ export const AdminPage: React.FC = () => {
             <Table striped highlightOnHover>
               <Table.Tbody>
                 <Table.Tr>
+                  <Table.Td fw={600}>ERP Version</Table.Td>
+                  <Table.Td>{data.erpVersion}</Table.Td>
+                </Table.Tr>
+                <Table.Tr>
                   <Table.Td fw={600}>ERP DB Path</Table.Td>
                   <Table.Td>
                     {data.erpDbPath}
                     {data.erpDbSize != null &&
                       ` (${formatFileSize(data.erpDbSize)})`}
                   </Table.Td>
+                </Table.Tr>
+                <Table.Tr>
+                  <Table.Td fw={600}>ERP DB Version</Table.Td>
+                  <Table.Td>{data.erpDbVersion}</Table.Td>
                 </Table.Tr>
               </Table.Tbody>
             </Table>
