@@ -5,6 +5,7 @@ export type HostType = z.infer<typeof HostTypeEnum>;
 
 /** Pushed from hub to all NAISYS instances when the set of known hosts changes */
 export const HostListSchema = z.object({
+  hubVersion: z.string(),
   hosts: z.array(
     z.object({
       hostId: z.number(),
@@ -12,6 +13,7 @@ export const HostListSchema = z.object({
       restricted: z.boolean(),
       hostType: HostTypeEnum,
       online: z.boolean(),
+      version: z.string(),
     }),
   ),
 });

@@ -29,6 +29,7 @@ import { API_PREFIX, selfLink } from "../hateoas.js";
 import { permGate, resolveActions } from "../route-helpers.js";
 import {
   emitHostsListChanged,
+  getHostVersion,
   isHostConnected,
 } from "../services/agentHostStatusService.js";
 import {
@@ -235,6 +236,7 @@ export default function hostsRoutes(
       return {
         ...host,
         online,
+        version: getHostVersion(host.id),
         assignedAgents: host.assignedAgents,
         _links: [selfLink(`/hosts/${hostname}`)],
         _actions: hostActions(hostname, user, online),

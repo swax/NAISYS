@@ -1,5 +1,7 @@
 import { resolveHubAccessKey } from "@naisys/common-node";
+
 import { attachmentUrl } from "../hateoas.js";
+import { getPackageVersion } from "../version.js";
 import type {
   AgentStartResponse,
   AgentStopResponse,
@@ -39,6 +41,7 @@ import { obfuscatePushEntries } from "./runsService.js";
 let socket: Socket<SupervisorListenEvents, SupervisorEmitEvents> | null = null;
 let connected = false;
 let resolvedHubUrl: string | undefined;
+let hubVersion = "";
 
 export function initHubConnection(hubUrl: string) {
   const hubAccessKey = resolveHubAccessKey();
@@ -66,6 +69,7 @@ export function initHubConnection(hubUrl: string) {
         hubAccessKey: resolveHubAccessKey(),
         hostName: "SUPERVISOR",
         hostType: "supervisor",
+        clientVersion: getPackageVersion(),
       });
     },
     reconnection: true,
@@ -122,6 +126,8 @@ export function initHubConnection(hubUrl: string) {
       );
       return;
     }
+
+    hubVersion = parsed.data.hubVersion;
 
     updateHostsStatus(parsed.data.hosts);
   });
@@ -339,6 +345,10 @@ export function getHubAccessKey(): string | undefined {
 
 export function getHubUrl(): string | undefined {
   return resolvedHubUrl;
+}
+
+export function getHubVersion(): string {
+  return hubVersion;
 }
 
 export function sendAgentStart(

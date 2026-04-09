@@ -165,6 +165,7 @@ export function createNaisysServer(
       hubAccessKey: clientAccessKey,
       hostName,
       hostType: rawHostType,
+      clientVersion,
     } = socket.handshake.auth;
 
     if (!clientAccessKey || clientAccessKey !== hubAccessKey) {
@@ -202,6 +203,8 @@ export function createNaisysServer(
       socket.data.hostId = hostId;
       socket.data.hostName = hostName;
       socket.data.hostType = hostType;
+      socket.data.clientVersion =
+        typeof clientVersion === "string" ? clientVersion : "";
       next();
     } catch (err) {
       logService.error(
@@ -213,7 +216,7 @@ export function createNaisysServer(
 
   // Handle new connections
   nsp.on("connection", (socket) => {
-    const { hostId, hostName, hostType } = socket.data;
+    const { hostId, hostName, hostType, clientVersion } = socket.data;
 
     // Create connection handler for this socket, passing our emit function
     const connection = createNaisysConnection(
@@ -223,6 +226,7 @@ export function createNaisysServer(
         hostName,
         connectedAt: new Date(),
         hostType,
+        clientVersion,
       },
       raiseEvent,
       logService,

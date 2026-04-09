@@ -47,6 +47,7 @@ export function createHubConnection(
           hubAccessKey: resolveHubAccessKey(),
           hostName: hubClientConfig.hostname,
           hostType: "naisys",
+          clientVersion: hubClientConfig.clientVersion,
         });
       },
       reconnection: true,

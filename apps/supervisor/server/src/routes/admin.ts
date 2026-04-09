@@ -37,6 +37,7 @@ import {
 } from "../services/configExportService.js";
 import {
   getHubAccessKey,
+  getHubVersion,
   isHubConnected,
   sendRotateAccessKey,
 } from "../services/hubConnectionService.js";
@@ -125,6 +126,7 @@ export default function adminRoutes(
         supervisorDbPath: supervisorDbPath(),
         supervisorDbSize,
         supervisorDbVersion: SUPERVISOR_DB_VERSION,
+        hubVersion: getHubVersion(),
         hubDbPath: getNaisysDatabasePath(),
         hubDbSize,
         hubDbVersion: HUB_DB_VERSION,

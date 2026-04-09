@@ -59,7 +59,8 @@ export async function getHostDetail(
     lastIp: host.last_ip ?? null,
     restricted: host.restricted,
     hostType: host.host_type,
-    online: false, // Caller sets this from agentHostStatusService
+    online: false, // Caller overrides from agentHostStatusService
+    version: "", // Caller overrides from agentHostStatusService
     assignedAgents: host.user_hosts.map((uh) => ({
       id: uh.users.id,
       name: uh.users.username,
