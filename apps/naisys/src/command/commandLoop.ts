@@ -297,7 +297,13 @@ export function createCommandLoop(
         currentWait = { startTime: Date.now(), totalSeconds: pauseSeconds };
       }
 
-      commandList = [await promptBuilder.getInput(`${prompt}`, pauseSeconds)];
+      commandList = [
+        await promptBuilder.getInput(`${prompt}`, pauseSeconds, () => {
+          // User started typing — cancel preemptive compact since a new
+          // LLM query will follow and reschedule with fresh timing
+          clearTimeout(preemptiveCompactTimeout);
+        }),
+      ];
 
       currentWait = undefined;
       blankDebugInput = commandList[0].trim().length == 0;

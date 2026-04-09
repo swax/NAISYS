@@ -71,7 +71,11 @@ export function createPromptBuilder(
     return `${agentConfig().username}@${globalConfig().hostname}`;
   }
 
-  function getInput(commandPrompt: string, pauseSeconds: number) {
+  function getInput(
+    commandPrompt: string,
+    pauseSeconds: number,
+    onTimerCancelled?: () => void,
+  ) {
     return new Promise<string>((resolve) => {
       const questionController = new AbortController();
       let timeout: NodeJS.Timeout | undefined;
@@ -110,6 +114,7 @@ export function createPromptBuilder(
           return;
         }
         // Else timeout interrupted by user input
+        onTimerCancelled?.();
 
         // Update the prompt to remove timeout information so the user
         // doesn't think the timeout is still active
