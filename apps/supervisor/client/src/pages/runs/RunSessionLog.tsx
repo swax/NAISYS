@@ -21,6 +21,7 @@ import { useParams } from "react-router-dom";
 import { useAgentDataContext } from "../../contexts/AgentDataContext";
 import { useContextLog } from "../../hooks/useContextLog";
 import type { RunSession } from "../../types/runSession";
+import { ImageGalleryProvider } from "./ImageGallery";
 import { GroupedLogComponent, groupPromptEntries } from "./LogEntries";
 
 export const RunSessionLog: React.FC<{
@@ -284,7 +285,7 @@ export const RunSessionLog: React.FC<{
   };
 
   return (
-    <>
+    <ImageGalleryProvider logs={logs}>
       <div
         style={{
           display: "flex",
@@ -328,6 +329,6 @@ export const RunSessionLog: React.FC<{
           </Box>
         </Portal>
       )}
-    </>
+    </ImageGalleryProvider>
   );
 };

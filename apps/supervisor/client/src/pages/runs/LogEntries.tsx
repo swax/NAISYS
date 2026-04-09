@@ -4,11 +4,7 @@ import { IconFile } from "@tabler/icons-react";
 import React from "react";
 
 import type { LogEntry } from "../../lib/apiClient";
-
-
-function isImageFilename(filename: string): boolean {
-  return /\.(jpg|jpeg|png|gif|webp|svg|bmp)$/i.test(filename);
-}
+import { isImageFilename, useImageGallery } from "./ImageGallery";
 
 export const getLogColor = (log: LogEntry) => {
   if (log.type === "comment") return "green";
@@ -26,6 +22,8 @@ export const formatLogTitle = (log: LogEntry) => {
 const NoAccessPlaceholder = "/supervisor/apple-touch-icon.png";
 
 const LogAttachmentDisplay: React.FC<{ log: LogEntry }> = ({ log }) => {
+  const { openImage } = useImageGallery();
+
   if (!log.attachment) return null;
 
   const att = log.attachment;
@@ -71,7 +69,7 @@ const LogAttachmentDisplay: React.FC<{ log: LogEntry }> = ({ log }) => {
           maw={300}
           radius="sm"
           style={{ cursor: "pointer" }}
-          onClick={() => window.open(downloadUrl, "_blank")}
+          onClick={() => openImage(downloadUrl)}
         />
         <Text size="xs" c="dimmed" mt={2}>
           {att.filename} ({formatFileSize(att.fileSize)})
