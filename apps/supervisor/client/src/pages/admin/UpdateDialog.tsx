@@ -13,6 +13,7 @@ import {
   Title,
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
+import { formatVersion } from "@naisys/common";
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useState } from "react";
 
@@ -27,7 +28,7 @@ interface UpdateDialogProps {
   currentVersion: string;
 }
 
-type VersionOption = "latest" | "beta" | "custom";
+type VersionOption = "none" | "latest" | "beta" | "custom";
 
 export const UpdateDialog: React.FC<UpdateDialogProps> = ({
   opened,
@@ -42,12 +43,17 @@ export const UpdateDialog: React.FC<UpdateDialogProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [selectedOption, setSelectedOption] = useState<VersionOption>("latest");
+  const [selectedOption, setSelectedOption] =
+    useState<VersionOption>("latest");
   const [customVersion, setCustomVersion] = useState("");
   const [customValid, setCustomValid] = useState<boolean | null>(null);
   const [validating, setValidating] = useState(false);
 
+  const [commitHash, setCommitHash] = useState("");
+
   const [saving, setSaving] = useState(false);
+
+  const hasGitHosts = hosts.some((h) => h.version?.includes("/"));
 
   const fetchNpmVersions = useCallback(async () => {
     setLoading(true);
@@ -72,6 +78,7 @@ export const UpdateDialog: React.FC<UpdateDialogProps> = ({
       setSelectedOption("latest");
       setCustomVersion("");
       setCustomValid(null);
+      setCommitHash("");
     }
   }, [opened, fetchNpmVersions]);
 
@@ -91,8 +98,10 @@ export const UpdateDialog: React.FC<UpdateDialogProps> = ({
     }
   };
 
-  const getSelectedVersion = (): string => {
+  const getSelectedNpmVersion = (): string => {
     switch (selectedOption) {
+      case "none":
+        return "";
       case "latest":
         return npmData?.latest ?? "";
       case "beta":
@@ -102,31 +111,45 @@ export const UpdateDialog: React.FC<UpdateDialogProps> = ({
     }
   };
 
+  const getTargetVersion = (): string => {
+    const npmVersion = getSelectedNpmVersion();
+    const hash = commitHash.trim();
+    if (hash) return `${npmVersion}/${hash}`;
+    return npmVersion;
+  };
+
   const canApply = (): boolean => {
     if (saving) return false;
-    const version = getSelectedVersion();
-    if (!version) return false;
-    if (selectedOption === "custom" && customValid === null) return false;
+    const npmVersion = getSelectedNpmVersion();
+    const hash = commitHash.trim();
+    if (!npmVersion && !hash) return false;
+    if (
+      selectedOption === "custom" &&
+      npmVersion &&
+      customValid === null
+    )
+      return false;
     return true;
   };
 
   const handleApply = async () => {
-    const version = getSelectedVersion();
+    const version = getTargetVersion();
     if (!version) return;
 
-    if (selectedOption === "custom" && customValid === false) {
+    const npmVersion = getSelectedNpmVersion();
+    if (selectedOption === "custom" && npmVersion && customValid === false) {
       const confirmed = window.confirm(
-        `Version "${version}" was not found on npm. Set it as target anyway?`,
+        `Version "${npmVersion}" was not found on npm. Set it as target anyway?`,
       );
       if (!confirmed) return;
     }
 
     setSaving(true);
     try {
-      const result = await api.put<{ version: string }, { success: boolean; message: string }>(
-        apiEndpoints.adminTargetVersion,
-        { version },
-      );
+      const result = await api.put<
+        { version: string },
+        { success: boolean; message: string }
+      >(apiEndpoints.adminTargetVersion, { version });
       if (result.success) {
         setNpmData((prev) =>
           prev ? { ...prev, targetVersion: version } : prev,
@@ -160,10 +183,10 @@ export const UpdateDialog: React.FC<UpdateDialogProps> = ({
   const handleClear = async () => {
     setSaving(true);
     try {
-      const result = await api.put<{ version: string }, { success: boolean; message: string }>(
-        apiEndpoints.adminTargetVersion,
-        { version: "" },
-      );
+      const result = await api.put<
+        { version: string },
+        { success: boolean; message: string }
+      >(apiEndpoints.adminTargetVersion, { version: "" });
       if (result.success) {
         setNpmData((prev) =>
           prev ? { ...prev, targetVersion: "" } : prev,
@@ -212,7 +235,7 @@ export const UpdateDialog: React.FC<UpdateDialogProps> = ({
             <Table.Tbody>
               <Table.Tr>
                 <Table.Td fw={600}>Installed Version</Table.Td>
-                <Table.Td>{currentVersion}</Table.Td>
+                <Table.Td>{formatVersion(currentVersion)}</Table.Td>
               </Table.Tr>
               <Table.Tr>
                 <Table.Td fw={600}>Latest Stable</Table.Td>
@@ -229,7 +252,7 @@ export const UpdateDialog: React.FC<UpdateDialogProps> = ({
                 <Table.Td>
                   {npmData.targetVersion ? (
                     <Badge variant="light" color="blue">
-                      {npmData.targetVersion}
+                      {formatVersion(npmData.targetVersion)}
                     </Badge>
                   ) : (
                     <Text span c="dimmed" size="sm">
@@ -246,7 +269,7 @@ export const UpdateDialog: React.FC<UpdateDialogProps> = ({
             onChange={(v) => setSelectedOption(v as VersionOption)}
             label={
               <Group gap="xs">
-                <span>Set target version to</span>
+                <span>Set npm target version</span>
                 <Anchor
                   href="https://www.npmjs.com/package/naisys?activeTab=versions"
                   target="_blank"
@@ -258,6 +281,7 @@ export const UpdateDialog: React.FC<UpdateDialogProps> = ({
             }
           >
             <Stack gap="xs" mt="xs">
+              {hasGitHosts && <Radio value="none" label="None" />}
               <Radio
                 value="latest"
                 label={`Latest stable (${npmData.latest})`}
@@ -307,6 +331,16 @@ export const UpdateDialog: React.FC<UpdateDialogProps> = ({
             </Stack>
           </Radio.Group>
 
+          {hasGitHosts && (
+            <TextInput
+              label="Git commit hash"
+              description="Full commit hash for git-based hosts"
+              placeholder="e.g. a1b2c3d4e5f6..."
+              value={commitHash}
+              onChange={(e) => setCommitHash(e.currentTarget.value)}
+            />
+          )}
+
           <Title order={5} mt="xs">
             Hosts
           </Title>
@@ -331,7 +365,9 @@ export const UpdateDialog: React.FC<UpdateDialogProps> = ({
                 hosts.map((host) => (
                   <Table.Tr key={host.id}>
                     <Table.Td>{host.name}</Table.Td>
-                    <Table.Td>{host.version || "\u2014"}</Table.Td>
+                    <Table.Td>
+                      {host.version ? formatVersion(host.version) : "\u2014"}
+                    </Table.Td>
                     <Table.Td>
                       <Badge
                         size="sm"

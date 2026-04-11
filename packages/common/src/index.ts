@@ -7,6 +7,7 @@ export * from "./constants.js";
 export * from "./costUtils.js";
 export * from "./errorHandler.js";
 export * from "./formatFileSize.js";
+export * from "./formatVersion.js";
 export * from "./globalConfigLoader.js";
 export * from "./hateoas.js";
 export * from "./hateoas-types.js";

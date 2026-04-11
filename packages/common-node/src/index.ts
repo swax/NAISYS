@@ -1,4 +1,5 @@
 export * from "./agentConfigLoader.js";
+export * from "./gitInfo.js";
 export * from "./bearerToken.js";
 export * from "./customModelsLoader.js";
 export * from "./ensureDotEnv.js";

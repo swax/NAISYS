@@ -10,7 +10,7 @@ import {
   Title,
   Tooltip,
 } from "@mantine/core";
-import { formatFileSize, hasAction } from "@naisys/common";
+import { formatFileSize, formatVersion, hasAction } from "@naisys/common";
 import type {
   AttachmentListData,
   ServerLogResponse,
@@ -152,7 +152,7 @@ export const AdminPage: React.FC = () => {
                     <Table.Td fw={600}>Version</Table.Td>
                     <Table.Td>
                       <Group gap="xs">
-                        <span>{data.supervisorVersion}</span>
+                        <span>{formatVersion(data.supervisorVersion)}</span>
                         {data.targetVersion && (
                           <Badge
                             size="sm"
@@ -163,7 +163,7 @@ export const AdminPage: React.FC = () => {
                                 : "red"
                             }
                           >
-                            target: {data.targetVersion}
+                            target: {formatVersion(data.targetVersion)}
                           </Badge>
                         )}
                       </Group>
@@ -222,7 +222,7 @@ export const AdminPage: React.FC = () => {
                   </Table.Tr>
                   <Table.Tr>
                     <Table.Td fw={600}>Version</Table.Td>
-                    <Table.Td>{data.hubVersion || "—"}</Table.Td>
+                    <Table.Td>{data.hubVersion ? formatVersion(data.hubVersion) : "—"}</Table.Td>
                   </Table.Tr>
                   <Table.Tr>
                     <Table.Td fw={600}>DB Path</Table.Td>

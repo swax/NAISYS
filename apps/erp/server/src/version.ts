@@ -1,3 +1,4 @@
+import { getGitCommitHash } from "@naisys/common-node";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -9,6 +10,8 @@ const pkg = JSON.parse(
   readFileSync(join(__dirname, "..", "package.json"), "utf-8"),
 ) as { version: string };
 
+const commitHash = getGitCommitHash(__dirname);
+
 export function getPackageVersion(): string {
-  return pkg.version;
+  return commitHash ? `${pkg.version}/${commitHash}` : pkg.version;
 }

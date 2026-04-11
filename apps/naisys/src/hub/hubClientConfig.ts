@@ -1,4 +1,4 @@
-import { resolveHubAccessKey } from "@naisys/common-node";
+import { getGitCommitHash, resolveHubAccessKey } from "@naisys/common-node";
 import { readFileSync } from "node:fs";
 import os from "os";
 
@@ -21,6 +21,11 @@ export function createHubClientConfig(hubUrl: string) {
     clientVersion = pkg.version;
   } catch {
     // version unavailable
+  }
+
+  const commitHash = getGitCommitHash(getInstallPath());
+  if (commitHash) {
+    clientVersion += `/${commitHash}`;
   }
 
   return {

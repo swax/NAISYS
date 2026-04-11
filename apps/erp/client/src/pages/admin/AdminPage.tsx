@@ -1,5 +1,5 @@
 import { Container, Loader, Stack, Table, Tabs, Title } from "@mantine/core";
-import { formatFileSize, hasAction } from "@naisys/common";
+import { formatFileSize, formatVersion, hasAction } from "@naisys/common";
 import type {
   AttachmentListData,
   ServerLogResponse,
@@ -86,7 +86,7 @@ export const AdminPage: React.FC = () => {
               <Table.Tbody>
                 <Table.Tr>
                   <Table.Td fw={600}>ERP Version</Table.Td>
-                  <Table.Td>{data.erpVersion}</Table.Td>
+                  <Table.Td>{formatVersion(data.erpVersion)}</Table.Td>
                 </Table.Tr>
                 <Table.Tr>
                   <Table.Td fw={600}>ERP DB Path</Table.Td>
