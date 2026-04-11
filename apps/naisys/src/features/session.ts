@@ -1,3 +1,4 @@
+import { ADMIN_USERNAME } from "@naisys/common";
 import stringArgv from "string-argv";
 
 import type { AgentConfig } from "../agent/agentConfig.js";
@@ -207,7 +208,7 @@ export function createSessionService(
 
     const localUser = userService.getUserById(localUserId);
     const recipientId =
-      localUser?.leadUserId ?? userService.getUserByName("admin")?.userId;
+      localUser?.leadUserId ?? userService.getUserByName(ADMIN_USERNAME)?.userId;
 
     const recipient = recipientId
       ? userService.getUserById(recipientId)

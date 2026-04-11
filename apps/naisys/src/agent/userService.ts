@@ -1,5 +1,5 @@
 import type { UserEntry } from "@naisys/common";
-import { determineAgentStatus } from "@naisys/common";
+import { ADMIN_USERNAME, determineAgentStatus } from "@naisys/common";
 import { loadAgentConfigs } from "@naisys/common-node";
 import type { UserListResponse } from "@naisys/hub-protocol";
 import { HubEvents, UserListResponseSchema } from "@naisys/hub-protocol";
@@ -73,7 +73,7 @@ export function createUserService(
 
   /** In hub mode, we just start the admin user, otherwise we start all lead agents */
   function getStartupUserIds(): number[] {
-    const adminUser = getUserByName("admin");
+    const adminUser = getUserByName(ADMIN_USERNAME);
     const adminId = adminUser?.userId ?? 0;
 
     const notify = (userId: number, message: string) => {

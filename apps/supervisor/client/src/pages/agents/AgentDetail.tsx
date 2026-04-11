@@ -12,6 +12,7 @@ import {
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import {
+  ADMIN_USERNAME,
   formatDisabledReason,
   hasAction,
   type HateoasAction,
@@ -167,7 +168,7 @@ export const AgentDetail: React.FC = () => {
   const handleStop = async (recursive?: boolean) => {
     if (!username) return;
 
-    if (agentData?.name === "admin") {
+    if (agentData?.name === ADMIN_USERNAME) {
       const confirmed = window.confirm(
         "The admin agent keeps the NAISYS process running when all other agents are stopped. " +
           "Stopping it may end the process. Are you sure?",
