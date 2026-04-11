@@ -175,7 +175,14 @@ export function createUpdateService(
       return false;
     }
 
-    // Build from repo root
+    // Clean stale build artifacts and turbo cache, then build
+    log(`Running npm run clean...`);
+    try {
+      await runSpawn("npm", ["run", "clean"], repoRoot);
+    } catch {
+      // clean failing is non-fatal
+    }
+
     log(`Running npm run build...`);
     try {
       await runSpawn("npm", ["run", "build"], repoRoot);
