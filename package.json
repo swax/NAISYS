@@ -22,9 +22,9 @@
     "apps/naisys"
   ],
   "scripts": {
-    "clean": "turbo clean && rm -rf .turbo",
-    "build": "turbo build bundle",
-    "test": "turbo test",
+    "clean": "npx turbo clean && rm -rf .turbo",
+    "build": "npx turbo build bundle",
+    "test": "npx turbo test",
     "lint:fix": "eslint . --fix",
     "prettier": "prettier --write .",
     "publish:dryrun": "npm run clean && npm run build && npm run npm:publish:dryrun --workspaces --if-present",
