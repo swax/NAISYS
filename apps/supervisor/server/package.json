@@ -11,7 +11,7 @@
     ".": "./dist/supervisorServer.js"
   },
   "scripts": {
-    "clean": "rimraf dist client-dist",
+    "clean": "npx rimraf dist client-dist",
     "dev": "tsx watch src/supervisorServer.ts",
     "start": "node dist/supervisorServer.js",
     "start:reset-password": "node dist/supervisorServer.js --reset-password",

@@ -10,7 +10,7 @@
     "!dist/**/*.d.ts.map"
   ],
   "scripts": {
-    "clean": "rimraf dist",
+    "clean": "npx rimraf dist",
     "build": "tsc",
     "type-check": "tsc --noEmit",
     "npm:publish:dryrun": "npm publish --dry-run",

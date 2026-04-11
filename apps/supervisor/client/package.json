@@ -5,7 +5,7 @@
   "description": "NAISYS Supervisor - React frontend with Vite and TypeScript",
   "type": "module",
   "scripts": {
-    "clean": "rimraf dist",
+    "clean": "npx rimraf dist",
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",

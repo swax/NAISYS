@@ -13,7 +13,7 @@
     "./services/runnerServer": "./dist/services/runnerServer.js"
   },
   "scripts": {
-    "clean": "rimraf dist",
+    "clean": "npx rimraf dist",
     "dev": "tsx watch src/naisysHub.ts",
     "start": "node dist/naisysHub.js",
     "build": "tsc",

@@ -11,7 +11,7 @@
     ".": "./dist/erpServer.js"
   },
   "scripts": {
-    "clean": "rimraf dist client-dist .test-naisys",
+    "clean": "npx rimraf dist client-dist .test-naisys",
     "dev": "tsx watch src/erpServer.ts",
     "build": "prisma generate && tsc",
     "bundle": "npx shx rm -rf client-dist && npx shx cp -r ../client/dist client-dist",
