@@ -17,6 +17,7 @@ import { createHubLogBuffer } from "./hub/hubLogBuffer.js";
 import { createHeartbeatService } from "./services/heartbeatService.js";
 import { createHostService } from "./services/hostService.js";
 import { createModelService } from "./services/modelService.js";
+import { createUpdateService } from "./services/updateService.js";
 import { createPromptNotificationService } from "./utils/promptNotificationService.js";
 
 dotenv.config({ quiet: true });
@@ -134,6 +135,8 @@ const heartbeatService = createHeartbeatService(
   userService,
 );
 
+const updateService = createUpdateService(globalConfig, agentManager);
+
 // Resolve the agent path to a username (or admin if no path) and start the agent
 const startupUserIds = userService.getStartupUserIds();
 for (const userId of startupUserIds) {
@@ -145,6 +148,11 @@ await agentManager.waitForAllAgentsToComplete();
 hubLogBuffer?.cleanup();
 hubCostBuffer?.cleanup();
 heartbeatService.cleanup();
+
+if (updateService.isUpdateInProgress()) {
+  // Update handler will call process.exit(0) after install and PM2 setup complete
+  await new Promise(() => {});
+}
 
 console.log(`[NAISYS] Exited`);
 

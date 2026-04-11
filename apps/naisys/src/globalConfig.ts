@@ -18,6 +18,8 @@ export function createGlobalConfig(
 
   let cachedConfig: FullClientConfig;
   let configReadyPromise: Promise<void>;
+  let updateHandler: ((targetVersion: string) => void) | undefined;
+  let initialConfigReceived = false;
 
   init();
 
@@ -43,6 +45,18 @@ export function createGlobalConfig(
 
           cachedConfig = await appendClientConfig(response.config);
           resolveConfig();
+
+          // After initial config, check for version updates
+          if (initialConfigReceived && updateHandler) {
+            const targetVersion = cachedConfig.variableMap.TARGET_VERSION;
+            if (
+              targetVersion &&
+              targetVersion !== cachedConfig.packageVersion
+            ) {
+              updateHandler(targetVersion);
+            }
+          }
+          initialConfigReceived = true;
         } catch (error) {
           rejectConfig(
             error instanceof Error ? error : new Error(String(error)),
@@ -112,6 +126,9 @@ export function createGlobalConfig(
   return {
     globalConfig: () => cachedConfig,
     waitForConfig: () => configReadyPromise,
+    onUpdateAvailable: (handler: (targetVersion: string) => void) => {
+      updateHandler = handler;
+    },
   };
 }
 
