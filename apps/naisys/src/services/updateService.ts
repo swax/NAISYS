@@ -127,19 +127,21 @@ export function createUpdateService(
       `Git update: ${currentHash.substring(0, 8)} → ${targetHash.substring(0, 8)}`,
     );
 
-    // Check for dirty working tree
+    // Stash any local changes (e.g. package-lock.json, file mode changes from install)
+    let didStash = false;
     try {
-      const status = execSync("git status --porcelain", {
-        cwd: repoRoot,
-        encoding: "utf-8",
-        stdio: ["pipe", "pipe", "pipe"],
-      }).trim();
-      if (status) {
-        logError(`Cannot update: working tree is not clean\n${status}`);
-        return false;
-      }
+      const stashOutput = execSync(
+        'git stash push -m "NAISYS auto-update"',
+        {
+          cwd: repoRoot,
+          encoding: "utf-8",
+          stdio: ["pipe", "pipe", "pipe"],
+        },
+      ).trim();
+      didStash = !stashOutput.includes("No local changes");
+      if (didStash) log(`Stashed local changes`);
     } catch (error) {
-      logError(`Failed to check git status: ${error}`);
+      logError(`Failed to stash local changes: ${error}`);
       return false;
     }
 
@@ -168,7 +170,7 @@ export function createUpdateService(
       logError(
         `npm install failed, rolling back to ${currentHash.substring(0, 8)}...`,
       );
-      await rollbackGit(currentHash, repoRoot, logError);
+      await rollbackGit(currentHash, repoRoot, didStash, logError);
       return false;
     }
 
@@ -180,7 +182,7 @@ export function createUpdateService(
       logError(
         `Build failed, rolling back to ${currentHash.substring(0, 8)}...`,
       );
-      await rollbackGit(currentHash, repoRoot, logError);
+      await rollbackGit(currentHash, repoRoot, didStash, logError);
       return false;
     }
 
@@ -191,10 +193,12 @@ export function createUpdateService(
   async function rollbackGit(
     previousHash: string,
     repoRoot: string,
+    popStash: boolean,
     logError: (msg: string) => void,
   ) {
     try {
       await runSpawn("git", ["checkout", previousHash], repoRoot);
+      if (popStash) await runSpawn("git", ["stash", "pop"], repoRoot);
       await runSpawn("npm", ["install"], repoRoot);
       await runSpawn("npm", ["run", "build"], repoRoot);
     } catch (rollbackError) {
