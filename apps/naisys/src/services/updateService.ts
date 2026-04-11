@@ -198,6 +198,9 @@ export function createUpdateService(
   ) {
     try {
       await runSpawn("git", ["checkout", previousHash], repoRoot);
+      // Clean working tree (e.g. package-lock.json changed by target's npm install)
+      // before popping stash, otherwise stash pop conflicts with dirty files
+      await runSpawn("git", ["restore", "."], repoRoot);
       if (popStash) await runSpawn("git", ["stash", "pop"], repoRoot);
       await runSpawn("npm", ["install"], repoRoot);
       await runSpawn("npm", ["run", "build"], repoRoot);
