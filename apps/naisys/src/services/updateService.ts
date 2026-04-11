@@ -264,6 +264,7 @@ function runSpawn(
       cwd: cwd ?? process.cwd(),
       stdio: "inherit",
       shell: true,
+      env: { ...process.env, npm_config_yes: "true" },
     });
     child.on("close", (code) => {
       if (code === 0) resolve();
