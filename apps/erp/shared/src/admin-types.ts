@@ -7,6 +7,7 @@ export const AdminInfoResponseSchema = z.object({
   erpDbPath: z.string(),
   erpDbSize: z.number().optional(),
   erpDbVersion: z.number(),
+  targetVersion: z.string().optional(),
   _actions: z.array(HateoasActionSchema).optional(),
 });
 

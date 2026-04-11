@@ -1,29 +1,12 @@
+import { ADMIN_USERNAME, parseVersion } from "@naisys/common";
+import { getGitCommitHash, getGitRepoRoot } from "@naisys/common-node";
 import { execSync, spawn } from "child_process";
 import { readFileSync } from "fs";
 import path from "path";
 
-import { ADMIN_USERNAME } from "@naisys/common";
-import { getGitCommitHash, getGitRepoRoot } from "@naisys/common-node";
-
 import type { AgentManager } from "../agent/agentManager.js";
 import type { GlobalConfig } from "../globalConfig.js";
 import { getInstallPath } from "./pathService.js";
-
-/**
- * Parse a target version string into npm version and commit hash parts.
- * Format: "npmVersion/commitHash" — either part may be empty.
- * Examples: "1.2.3/abc123", "1.2.3", "/abc123"
- */
-function parseTargetVersion(target: string) {
-  const slashIndex = target.indexOf("/");
-  if (slashIndex === -1) {
-    return { npmVersion: target, commitHash: "" };
-  }
-  return {
-    npmVersion: target.substring(0, slashIndex),
-    commitHash: target.substring(slashIndex + 1),
-  };
-}
 
 export function createUpdateService(
   globalConfig: GlobalConfig,
@@ -43,7 +26,7 @@ export function createUpdateService(
       globalConfig.globalConfig()?.variableMap.TARGET_VERSION;
     if (!targetVersion) return;
 
-    const { npmVersion, commitHash } = parseTargetVersion(targetVersion);
+    const { npm: npmVersion, hash: commitHash } = parseVersion(targetVersion);
 
     // Determine if this target is relevant for our install type
     if (repoRoot) {

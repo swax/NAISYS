@@ -18,6 +18,7 @@ import {
   ServerLogRequestSchema,
   ServerLogResponseSchema,
 } from "@naisys/erp-shared";
+import { getHubVariable } from "@naisys/hub-database";
 import type { FastifyInstance, FastifyPluginOptions } from "fastify";
 import { z } from "zod/v4";
 
@@ -78,16 +79,20 @@ export default function adminRoutes(
       const actions = adminActions(hasAdminPerm);
 
       const dbPath = erpDbPath();
-      const erpDbSize = await fs
-        .stat(dbPath)
-        .then((s) => s.size)
-        .catch(() => undefined);
+      const [erpDbSize, targetVersion] = await Promise.all([
+        fs
+          .stat(dbPath)
+          .then((s) => s.size)
+          .catch(() => undefined),
+        getHubVariable("TARGET_VERSION"),
+      ]);
 
       return {
         erpVersion: getPackageVersion(),
         erpDbPath: dbPath,
         erpDbSize,
         erpDbVersion: ERP_DB_VERSION,
+        targetVersion: targetVersion || undefined,
         _actions: actions.length > 0 ? actions : undefined,
       };
     },
