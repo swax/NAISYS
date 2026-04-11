@@ -31,6 +31,7 @@ export const HostStatusEventSchema = z.object({
     z.string(),
     z.object({
       online: z.boolean(),
+      version: z.string().optional(),
     }),
   ),
   hostsListChanged: z.boolean().optional(),

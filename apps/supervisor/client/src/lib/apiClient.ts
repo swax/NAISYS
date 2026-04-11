@@ -34,6 +34,7 @@ import type {
   MailDataResponse,
   MailMessage,
   ModelsResponse,
+  NpmVersionsResponse,
   PinoLogEntry,
   RotateAccessKeyResult,
   RunsDataResponse,
@@ -88,6 +89,7 @@ export type {
   MailDataResponse,
   MailMessage,
   ModelsResponse,
+  NpmVersionsResponse,
   PinoLogEntry,
   RotateAccessKeyResult,
   RunsDataResponse,
@@ -227,4 +229,8 @@ export const apiEndpoints = {
   adminRotateAccessKey: "/admin/rotate-access-key",
   adminLogs: (file: string, lines?: number, minLevel?: number) =>
     `/admin/logs?file=${file}${lines ? `&lines=${lines}` : ""}${minLevel ? `&minLevel=${minLevel}` : ""}`,
+  adminNpmVersions: "/admin/npm-versions",
+  adminNpmVersionsCheck: (version: string) =>
+    `/admin/npm-versions?check=${encodeURIComponent(version)}`,
+  adminTargetVersion: "/admin/target-version",
 };
