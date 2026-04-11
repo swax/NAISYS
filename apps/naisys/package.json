@@ -8,6 +8,16 @@
   "bin": {
     "naisys": "bin/naisys.js"
   },
+  "files": [
+    "dist",
+    "bin",
+    ".env.example",
+    ".env.hub-client.example",
+    "!dist/**/*.map",
+    "!dist/**/*.d.ts",
+    "!dist/**/*.d.ts.map",
+    "!dist/__tests__"
+  ],
   "scripts": {
     "build/run/attachable": "tsc && node --inspect dist/naisys.js ../../agents/assistant.yaml --supervisor",
     "agent:assistant": "node dist/naisys.js ../../agents/assistant.yaml --integrated-hub --supervisor --erp",
