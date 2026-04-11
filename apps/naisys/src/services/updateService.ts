@@ -163,10 +163,10 @@ export function createUpdateService(
       return false;
     }
 
-    // Install dependencies from repo root
-    log(`Running npm install...`);
+    // Clean install to avoid stale/misresolved packages from the previous commit
+    log(`Running npm ci...`);
     try {
-      await runSpawn("npm", ["install"], repoRoot);
+      await runSpawn("npm", ["ci"], repoRoot);
     } catch (error) {
       logError(
         `npm install failed, rolling back to ${currentHash.substring(0, 8)}...`,
@@ -205,10 +205,10 @@ export function createUpdateService(
     logError: (msg: string) => void,
   ) {
     try {
-      await runSpawn("git", ["checkout", previousHash], repoRoot);
-      // Clean working tree (e.g. package-lock.json changed by target's npm install)
-      // before popping stash, otherwise stash pop conflicts with dirty files
+      // Clean working tree first (e.g. package-lock.json changed by target's npm install)
+      // so checkout and stash pop don't conflict with dirty files
       await runSpawn("git", ["restore", "."], repoRoot);
+      await runSpawn("git", ["checkout", previousHash], repoRoot);
       if (popStash) await runSpawn("git", ["stash", "pop"], repoRoot);
       await runSpawn("npm", ["install"], repoRoot);
       await runSpawn("npm", ["run", "build"], repoRoot);
