@@ -262,7 +262,7 @@ export function createMockCommandProtection() {
 export function createMockGlobalConfig(): GlobalConfig {
   return {
     waitForConfig: vi.fn(() => Promise.resolve()),
-    onTargetVersionChanged: vi.fn(),
+    onConfigChanged: vi.fn(),
     globalConfig: () => ({
       hostname: "test",
       shellCommand: {
